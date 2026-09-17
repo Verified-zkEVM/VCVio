@@ -84,9 +84,9 @@ Choose the space on the underlying data type once; `Option`, products, and subty
 their inherited measurable-space instances rather than separate local top spaces.
 Genuinely measure-indexed results retain their selected measurable spaces as explicit parameters.
 Every `𝒟[mx]` automatically satisfies `IsSubprobabilityMeasure`. The upper mass bound also
-propagates automatically through raw `Measure.map` and `Measure.bind`, without measurability
-hypotheses; this uses upstream's zero pushforward for a nonmeasurable map and its one-sided bind
-bound. Exact mass preservation requires measurability. `pure` infers a probability-measure
+propagates automatically through raw `Measure.map`, whose nonmeasurable fallback has mass at
+most one. For raw `Measure.bind`, use `isSubprobabilityMeasure_bind` with an explicit
+almost-everywhere measurability proof. Exact mass preservation requires measurability. `pure` infers a probability-measure
 instance even for continuous-answer specifications. Lifting a computation whose measure already
 has an `IsProbabilityMeasure` instance into `OptionT` or `ExceptT` also infers that instance,
 including through `liftM`. These lifts introduce no failure mass; arbitrary optional or exceptional

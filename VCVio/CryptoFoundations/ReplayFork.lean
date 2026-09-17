@@ -330,10 +330,10 @@ theorem contextForkWitness_success
   obtain ⟨second, hsecond, hresult⟩ := mem_support_map_peel _ _ h
   by_cases haccept : (classifyForkView main qb i cf s
       { occurrence := located.occurrence, first := located.completion, second := second }).isSome
-  · rw [acceptContextForkWitness, if_pos haccept, Option.some.injEq] at hresult
+  · rw [acceptContextForkWitness, ite_eq_left haccept, Option.some.injEq] at hresult
     subst hresult
     exact ⟨hsecond, (classifyForkView_isSome main qb i cf s _).mp haccept⟩
-  · rw [acceptContextForkWitness, if_neg haccept] at hresult
+  · rw [acceptContextForkWitness, ite_eq_right haccept] at hresult
     cases hresult
 
 /-- Successful contextual forks expose the selected path, its certified
@@ -666,7 +666,6 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
         (P := spec.toPFunctor) i main path s with _ | located
     · rfl
     · simp [PFunctor.FreeM.Cursor.Located.fork]
-      rfl
   have hinner : ∀ path : PFunctor.FreeM.Path main,
       Pr[= (some s : Option (Fin (qb i + 1))) | viewCollision path] ≤
         Pr[= (some s : Option (Fin (qb i + 1))) | answerCollision path] := by

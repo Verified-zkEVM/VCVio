@@ -226,19 +226,19 @@ theorem countP_of_mem_support_drawUntil (accept : S → Bool) (n : ℕ) :
         cases hacc : accept ((x :: xs)[(i : ℕ)]) with
         | false =>
             rw [hacc] at hrest
-            simp only [Bool.false_eq_true, if_false] at hrest
+            simp only [Bool.false_eq_true, ite_false] at hrest
             have hcount := ih _ _ hlen rest hrest
             have hneg := List.countP_eraseIdx_of_neg hi hacc
             rw [List.countP_cons, hacc]
-            simp only [Bool.false_eq_true, if_false]
+            simp only [Bool.false_eq_true, ite_false]
             omega
         | true =>
             rw [hacc] at hrest
-            simp only [if_true] at hrest
+            simp only [ite_true] at hrest
             have hcount := ih _ _ hlen rest hrest
             have hpos := List.countP_eraseIdx_of_pos hi hacc
             rw [List.countP_cons, hacc]
-            simp only [if_true]
+            simp only [ite_true]
             omega
 
 /-! ## Expected number of draws -/
@@ -251,7 +251,7 @@ private theorem sum_map_ite (l : List S) (p : S → Bool) (a b : ℝ≥0∞) :
   | cons x xs ih =>
       rw [List.map_cons, List.sum_cons, ih, List.countP_cons, List.countP_cons]
       cases hx : p x <;>
-        · simp only [Bool.not_false, Bool.not_true, if_true, if_false, Bool.false_eq_true]
+        · simp only [Bool.not_false, Bool.not_true, ite_true, ite_false, Bool.false_eq_true]
           push_cast
           ring
 
@@ -310,10 +310,10 @@ theorem lintegral_evalDist_length_drawUntil (accept : S → Bool) (n : ℕ) :
           congr 1
           cases hacc : accept ((x :: xs)[(i : ℕ)]'(by simpa using i.isLt)) with
           | false =>
-              simp only [Bool.false_eq_true, if_false]
+              simp only [Bool.false_eq_true, ite_false]
               rw [List.countP_eraseIdx_of_neg hi hacc]
           | true =>
-              simp only [if_true]
+              simp only [ite_true]
               have hcount : ((x :: xs).eraseIdx i).countP accept = G - 1 := by
                 have h := List.countP_eraseIdx_of_pos hi hacc
                 omega

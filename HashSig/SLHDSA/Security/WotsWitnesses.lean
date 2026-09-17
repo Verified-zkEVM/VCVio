@@ -535,7 +535,7 @@ theorem findWotsChainWitness_isSome_of_lt (prims : Primitives p) [DecidableEq pr
           (p.w - 1 - chainStepsCore prims.core msg' i.val)) :
     (findWotsChainWitness prims sig msg sig' msg' pk adrs i).isSome := by
   rw [findWotsChainWitness]
-  simp only [hlt, if_true]
+  simp only [hlt, ite_true]
   split
   · simp
   · rename_i hadv

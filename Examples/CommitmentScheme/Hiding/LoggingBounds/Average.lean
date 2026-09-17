@@ -806,7 +806,7 @@ lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_su
             (fun z : Bool × HidingCountState M S C => (z.2.2 s - qchoose.2.2 s : ℝ≥0∞))) := by
     gcongr with s hs z
     by_cases hslt : qchoose.2.2 s < z.2.2 s
-    · simp only [OracleComp.ProgramLogic.propInd, if_pos hslt]
+    · simp only [OracleComp.ProgramLogic.propInd, ite_eq_left hslt]
       exact_mod_cast (Nat.succ_le_of_lt (Nat.sub_pos_of_lt hslt))
     · simp [OracleComp.ProgramLogic.propInd, hslt]
   exact le_trans hmono hres
@@ -1092,7 +1092,7 @@ lemma sum_chooseHitIndicators_le_sumCounts [Fintype S]
   refine Finset.sum_le_sum ?_
   intro s hs
   by_cases hpos : 0 < counts s
-  · simp only [OracleComp.ProgramLogic.propInd, if_pos hpos]
+  · simp only [OracleComp.ProgramLogic.propInd, ite_eq_left hpos]
     exact_mod_cast hpos
   · simp [OracleComp.ProgramLogic.propInd, hpos]
 

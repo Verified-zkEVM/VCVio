@@ -88,8 +88,8 @@ This is the quantitative analogue of Loom's pure proposition assertion, but
 targets the expectation carrier rather than the current assertion lattice. -/
 noncomputable def propInd (P : Prop) : ℝ≥0∞ := if P then 1 else 0
 
-@[simp] lemma propInd_true : propInd True = 1 := if_pos trivial
-@[simp] lemma propInd_false : propInd False = 0 := if_neg id
+@[simp] lemma propInd_true : propInd True = 1 := ite_eq_left trivial
+@[simp] lemma propInd_false : propInd False = 0 := ite_eq_right id
 
 lemma propInd_eq_ite {P : Prop} [Decidable P] : propInd P = if P then 1 else 0 := by simp [propInd]
 

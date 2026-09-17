@@ -238,7 +238,7 @@ lemma probOutput_map_injective (mx : m α) {f : α → β} (hf : f.Injective) (x
   refine (tsum_eq_single x fun y hy => ?_).trans (by
     simp only [Function.comp_apply, probOutput_pure_self, mul_one])
   simp only [Function.comp_apply, probOutput_pure, mul_ite, mul_one, mul_zero]
-  exact if_neg fun h => hy (hf h.symm)
+  exact ite_eq_right fun h => hy (hf h.symm)
 
 lemma probOutput_map_eq_probOutput (mx : m α)
     {f : α → β} (hf : ∀ x x', f x = f x' → x = x') (x : α) :

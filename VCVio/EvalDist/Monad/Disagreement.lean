@@ -136,9 +136,9 @@ lemma probEvent_bind_le_add_bad_disagree {mx : m α}
           (fun x => Pr[ q | oc x] + Pr[ r | ob x] + (if D x then 1 else 0) + ε₂) := by
         gcongr with x hx
         by_cases hDx : D x
-        · simp only [if_pos hDx]
+        · simp only [ite_eq_left hDx]
           exact probEvent_le_one.trans (le_add_right (le_add_left le_rfl))
-        · simp only [if_neg hDx, add_zero]; exact h x hx hDx
+        · simp only [ite_eq_right hDx, add_zero]; exact h x hx hDx
     _ = expectedValue mx (fun x => Pr[ q | oc x]) + expectedValue mx (fun x => Pr[ r | ob x])
           + Pr[ D | mx] + expectedValue mx (fun _ => ε₂) := by
         rw [expectedValue_add, expectedValue_add, expectedValue_add, expectedValue_ite_one]

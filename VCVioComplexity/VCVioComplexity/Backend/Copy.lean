@@ -97,7 +97,7 @@ private theorem loop (tag : Option Bool) (x initial : Word) :
         · intro i hi
           have hne : i + 1 ≠ c.output.head := by rw [hp.1]; omega
           change (c.output.write .blank).cells (i + 1) = _
-          rw [Tape.write, if_neg (show c.output.head ≠ 0 by rw [hp.1]; omega)]
+          rw [Tape.write, ite_eq_right (show c.output.head ≠ 0 by rw [hp.1]; omega)]
           simp only
           rw [Function.update_of_ne hne]
           exact hp.2.1 i hi

@@ -132,7 +132,7 @@ private theorem base2bFill_consume (b : ℕ) (x : List Byte) :
         | nil => rfl
         | cons y ys =>
             simp only [base2bFill]
-            rw [if_pos hble]
+            rw [ite_eq_left hble]
       · have hclt : c < x.length := by
           rcases Nat.lt_or_ge c x.length with h | h
           · exact h
@@ -144,7 +144,7 @@ private theorem base2bFill_consume (b : ℕ) (x : List Byte) :
         refine ⟨c', by omega, h2, h3, ?_⟩
         rw [List.drop_eq_getElem_cons hclt]
         simp only [base2bFill]
-        rw [if_neg hble, ← htake,
+        rw [ite_eq_right hble, ← htake,
           show 8 * c - b * j + 8 = 8 * (c + 1) - b * j by omega]
         exact h4
 

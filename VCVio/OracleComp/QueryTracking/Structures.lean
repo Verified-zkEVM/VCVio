@@ -5,7 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import Mathlib.Data.Real.ENatENNReal
+public import Mathlib.Basic.Real.ENatENNReal
 public import Mathlib.Data.Set.Card
 public import PolyFun.PFunctor.Trace
 public import VCVio.OracleComp.SimSemantics.SimulateQ
@@ -501,13 +501,13 @@ lemma countQ_eq_occurrences [spec.DecidableEq] (log : QueryLog spec) (t : ι) :
       rcases entry with ⟨t', u⟩
       by_cases h : t' = t
       · subst t'
-        simp only [QueryLog.countQ, QueryLog.getQ_cons, if_pos trivial,
+        simp only [QueryLog.countQ, QueryLog.getQ_cons, ite_eq_left trivial,
           List.length_cons]
         rw [PFunctor.TraceList.occurrences,
           List.countP_cons_of_pos (by simp)]
         rw [PFunctor.TraceList.occurrences] at ih
         simpa [QueryLog.countQ] using ih
-      · simp only [QueryLog.countQ, QueryLog.getQ_cons, if_neg h]
+      · simp only [QueryLog.countQ, QueryLog.getQ_cons, ite_eq_right h]
         rw [PFunctor.TraceList.occurrences,
           List.countP_cons_of_neg (by simp [h])]
         rw [PFunctor.TraceList.occurrences] at ih

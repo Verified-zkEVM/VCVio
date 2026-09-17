@@ -133,7 +133,7 @@ lemma condOnMap_apply_of_not_mem_fiber {α β : Type*} (p : PMF α) (f : α → 
     (b : β) {a : α} (ha : a ∉ fiber f b)
     (hb : ∃ a ∈ fiber f b, a ∈ p.support) :
     condOnMap p f b a = 0 := by
-  rw [condOnMap, dif_pos hb]
+  rw [condOnMap, dite_eq_left hb]
   exact PMF.filter_apply_eq_zero_of_notMem (p := p) (s := fiber f b) (h := hb) ha
 
 lemma condOnMap_apply_of_mem_support {α β : Type*} (p : PMF α) (f : α → β)
@@ -142,7 +142,7 @@ lemma condOnMap_apply_of_mem_support {α β : Type*} (p : PMF α) (f : α → β
   classical
   let : DecidableEq β := Classical.decEq β
   have hb : ∃ x ∈ fiber f (f a), x ∈ p.support := ⟨a, rfl, ha⟩
-  rw [condOnMap, dif_pos hb, PMF.filter_apply,
+  rw [condOnMap, dite_eq_left hb, PMF.filter_apply,
     Set.indicator_of_mem (show a ∈ fiber f (f a) from rfl)]
   simp only [PMF.map_apply, Set.indicator_apply, fiber, Set.mem_ofPred_eq, eq_comm]
 
@@ -167,7 +167,7 @@ lemma map_bind_condOnMap {α β : Type*} (p : PMF α) (f : α → β) :
     intro b
     by_cases hbmem : ∃ x ∈ fiber f b, x ∈ p.support
     · rw [show condOnMap p f b a = 0 by
-        rw [condOnMap, dif_pos hbmem, PMF.filter_apply_eq_zero_iff]; exact Or.inr ha, mul_zero]
+        rw [condOnMap, dite_eq_left hbmem, PMF.filter_apply_eq_zero_iff]; exact Or.inr ha, mul_zero]
     · rw [show (PMF.map f p) b = 0 by
         rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
         exact fun ⟨x, hx, hfx⟩ => hbmem ⟨x, hfx, hx⟩, zero_mul]
@@ -202,7 +202,7 @@ lemma map_bind_mapKernelWithFallback {α β γ : Type*}
     intro b hb
     obtain ⟨a, ha, hfa⟩ := (PMF.mem_support_map_iff f p b).1 hb
     have hex : ∃ a ∈ fiber f b, a ∈ p.support := ⟨a, hfa, ha⟩
-    simp only [K, mapKernelWithFallback, condOnMap, dif_pos hex]
+    simp only [K, mapKernelWithFallback, condOnMap, dite_eq_left hex]
   rw [hbind]
   simp only [K, ← PMF.map_bind, map_bind_condOnMap]
 
@@ -213,13 +213,13 @@ lemma mapKernelWithFallback_eq_pure_of {α β γ : Type*}
     (b : β) (hb : ¬ bad b) :
     mapKernelWithFallback p f out fallback b = pure (fallback b) := by
   by_cases hex : ∃ a ∈ fiber f b, a ∈ p.support
-  · rw [mapKernelWithFallback, dif_pos hex]
+  · rw [mapKernelWithFallback, dite_eq_left hex]
     refine PMF.eq_pure_of_forall_ne_eq_zero _ (fallback b) ?_
     intro y hy
     rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
     rintro ⟨a, ha, rfl⟩
     exact hy (h_eq a b ((PMF.mem_support_filter_iff hex).1 ha).1 hb)
-  · rw [mapKernelWithFallback, dif_neg hex]
+  · rw [mapKernelWithFallback, dite_eq_right hex]
 
 end PMF
 
@@ -484,7 +484,7 @@ theorem relTriple'_iff_couplingPost
         apply Finset.sum_congr rfl
         intro z _
         by_cases hz : R z.1.1 z.2.1
-        · simp only [hz, if_true, probOutput_def, evalSPMF_def, monadLift_self]
+        · simp only [hz, ite_true, probOutput_def, evalSPMF_def, monadLift_self]
           exact (SPMF.apply_eq_toPMF_some c.1 z).symm
         · simp [hz]
       have hlift_obj :
@@ -906,7 +906,7 @@ private lemma eRelWP_indicator_eqRel_le
     _ = ∑' a, Pr[= (a, a) | c.1] := by
         rw [ENNReal.tsum_prod']
         congr 1; ext a
-        rw [tsum_eq_single a (fun b hb => if_neg (Ne.symm hb))]
+        rw [tsum_eq_single a (fun b hb => ite_eq_right (Ne.symm hb))]
         simp
     _ ≤ ∑' a, min (Pr[= a | 𝒮[oa]]) (Pr[= a | 𝒮[ob]]) :=
         ENNReal.tsum_le_tsum fun a => probOutput_diag_le_min_marginals c a
@@ -995,7 +995,7 @@ private lemma tsum_min_le_eRelWP
   have hfst_sum : ∀ a, ∑' b, cf (some (a, b)) = P a := by
     intro a
     change ∑' b, ((if a = b then min (P a) (Q a) else 0) + rP a * rQ b * δ⁻¹) = P a
-    rw [ENNReal.tsum_add, tsum_eq_single a (fun b hb => if_neg (Ne.symm hb))]
+    rw [ENNReal.tsum_add, tsum_eq_single a (fun b hb => ite_eq_right (Ne.symm hb))]
     simp only [ite_true]
     simp_rw [mul_right_comm (rP a) (rQ _) δ⁻¹]
     rw [ENNReal.tsum_mul_left, hδ_eq_rQ, mul_assoc, mul_comm δ⁻¹ δ, hmul_δ]
@@ -1009,7 +1009,7 @@ private lemma tsum_min_le_eRelWP
         (fun a => if a = b then min (Q b) (P b) else 0) from by
           ext a
           split <;> simp_all [min_comm]]
-    rw [tsum_eq_single b (fun a ha => if_neg ha)]
+    rw [tsum_eq_single b (fun a ha => ite_eq_right ha)]
     simp only [ite_true]
     have htsum_rQ : ∑' a, rP a * rQ b * δ⁻¹ = rQ b := by
       simp_rw [mul_rotate (rP _) (rQ b) δ⁻¹]
@@ -1049,7 +1049,8 @@ private lemma tsum_min_le_eRelWP
     rw [hpa_apply]
     change ∑' z : α × α, (if a = z.1 then cf (some z) else 0) = P a
     rw [ENNReal.tsum_prod', tsum_congr fun a₁ => hite_tsum (a = a₁) (fun b => cf (some (a₁, b))),
-      tsum_eq_single a (fun a' (ha' : a' ≠ a) => if_neg (Ne.symm ha')), if_pos rfl, hfst_sum]
+      tsum_eq_single a (fun a' (ha' : a' ≠ a) => ite_eq_right (Ne.symm ha')),
+        ite_eq_left rfl, hfst_sum]
   have hcpl_snd : Prod.snd <$> c_spmf = pb := by
     apply SPMF.ext; intro b
     rw [show (Prod.snd <$> c_spmf) b = Pr[= b | Prod.snd <$> c_spmf] by
@@ -1061,7 +1062,8 @@ private lemma tsum_min_le_eRelWP
     change ∑' z : α × α, (if b = z.2 then cf (some z) else 0) = Q b
     rw [ENNReal.tsum_prod', ENNReal.tsum_comm,
       tsum_congr fun b₁ => hite_tsum (b = b₁) (fun a => cf (some (a, b₁))),
-      tsum_eq_single b (fun b' (hb' : b' ≠ b) => if_neg (Ne.symm hb')), if_pos rfl, hsnd_sum]
+      tsum_eq_single b (fun b' (hb' : b' ≠ b) => ite_eq_right (Ne.symm hb')),
+        ite_eq_left rfl, hsnd_sum]
   let c : SPMF.Coupling pa pb := ⟨c_spmf, hcpl_fst, hcpl_snd⟩
   have hobj_eq : ∑' z : α × α, Pr[= z | c.1] * RelPost.indicator (EqRel α) z.1 z.2 =
       ∑' a, cf (some (a, a)) := by

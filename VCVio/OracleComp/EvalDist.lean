@@ -524,7 +524,7 @@ lemma reachableWhen_liftM (o : QueryImpl spec Set) (q : OracleQuery spec α) :
     reachableWhen o (liftM q : OracleComp spec α) = q.cont '' o q.input := by
   change (PFunctor.FreeM.liftObj q).reachableUnder
     (fun (t : spec.Domain) (u : spec.Range t) ↦ u ∈ o t) = q.cont '' o q.input
-  simpa using (PFunctor.FreeM.reachableUnder_liftObj (P := spec.toPFunctor)
+  exact (PFunctor.FreeM.reachableUnder_liftObj (P := spec.toPFunctor)
     (fun (t : spec.Domain) (u : spec.Range t) ↦ u ∈ o t) q)
 
 lemma reachableWhen_query (o : QueryImpl spec Set) (t : spec.Domain) :

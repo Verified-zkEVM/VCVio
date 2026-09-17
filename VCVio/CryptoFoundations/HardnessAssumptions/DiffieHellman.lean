@@ -315,14 +315,20 @@ theorem dlogSuccess_sq_le_cdhSuccess_dlogToCDHReduction
   refine ENNReal.tsum_le_tsum fun b => ?_
   calc w a * f a * (w b * f b)
       = w a * (w b * (f a * (f b * (if (a * b) • g = (a * b) • g then 1 else 0)))) := by
-        simp only [if_true, mul_one]
+        simp only [ite_true, mul_one]
         ring
     _ ≤ ∑' (b' : F), w a * (w b * (f a *
           (Pr[= b' | adversary g (b • g)] *
-            (if (a * b') • g = (a * b) • g then 1 else 0)))) := ENNReal.le_tsum b
+            (if (a * b') • g = (a * b) • g then 1 else 0)))) := by
+      exact ENNReal.le_tsum (f := fun b' => w a * (w b * (f a *
+        (Pr[= b' | adversary g (b • g)] *
+          (if (a * b') • g = (a * b) • g then 1 else 0))))) b
     _ ≤ ∑' (a' : F) (b' : F), w a * (w b * (Pr[= a' | adversary g (a • g)] *
           (Pr[= b' | adversary g (b • g)] *
-            (if (a' * b') • g = (a * b) • g then 1 else 0)))) := ENNReal.le_tsum a
+            (if (a' * b') • g = (a * b) • g then 1 else 0)))) := by
+      exact ENNReal.le_tsum (f := fun a' => ∑' b', w a * (w b *
+        (Pr[= a' | adversary g (a • g)] * (Pr[= b' | adversary g (b • g)] *
+          (if (a' * b') • g = (a * b) • g then 1 else 0))))) a
 
 /-- Concrete form of the hardness implication `DDH ⇒ DLog`, obtained by composing the previous two
 adversary-map reductions. -/

@@ -25,7 +25,7 @@ open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork DynSystem
 variable {Message Cipher Random SendKey ReceiveKey Memory Advice : Type}
 
 attribute [local implicit_reducible] effects ports envAnswer port signature Response
-  diagram assembly DynComputation.ofFreeM PFunctor.Obj PFunctor.Idx
+  diagram assembly DynComputation.ofFreeM PFunctor.Idx
   HandledDiagram.network Diagram.withEnvironment HandledAssembly.ofDiagram
 
 /-- Twenty-nine token activations execute the complete six-actor conversation. -/
@@ -52,6 +52,10 @@ theorem experiment_eq (encoding : Encoding Message Cipher Random SendKey Receive
   intro advice
   apply bind_congr
   intro permitted
-  cases permitted <;> simp [Function.update] <;> rfl
+  cases permitted <;>
+    simp only [Bool.false_eq_true, ↓reduceIte, DynComputation.view_ofFreeM_liftBind,
+      DynComputation.ofFreeM_State, pure_bind, Function.update, ↓reduceDIte,
+      Function.update_idem, Nat.reduceAdd, List.nil_append, reduceCtorEq,
+      Function.update_eq_self, Functor.map_map, DynComputation.view_ofFreeM_pure] <;> rfl
 
 end OneTimePad.Separated

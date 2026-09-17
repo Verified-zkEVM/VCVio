@@ -291,8 +291,8 @@ lemma probEvent_bind_le_probEvent [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
   rw [probEvent_bind_eq_expectedValue, ← expectedValue_ite_one]
   gcongr with x hx
   by_cases hp : p x
-  · simp only [if_pos hp]; exact probEvent_le_one
-  · simp only [if_neg hp, h x hx hp, le_refl]
+  · simp only [ite_eq_left hp]; exact probEvent_le_one
+  · simp only [ite_eq_right hp, h x hx hp, le_refl]
 
 /-- If a continuation event is bounded by `ε` exactly on a prefix event and is
 impossible off that event, then only the prefix mass is charged. -/
@@ -306,8 +306,8 @@ lemma probEvent_bind_le_probEvent_mul [MonadLiftT m SPMF] [LawfulMonadLiftT m SP
   rw [probEvent_bind_eq_expectedValue, ← expectedValue_ite_one, ← expectedValue_mul_const]
   gcongr with x hx
   by_cases hp : p x
-  · simp only [if_pos hp, one_mul]; exact hle x hx hp
-  · simp only [if_neg hp, zero_mul, hzero x hx hp, le_refl]
+  · simp only [ite_eq_left hp, one_mul]; exact hle x hx hp
+  · simp only [ite_eq_right hp, zero_mul, hzero x hx hp, le_refl]
 
 /-- Division-form corollary of `probEvent_bind_le_probEvent_mul`. -/
 lemma probEvent_bind_le_probEvent_div [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
@@ -340,9 +340,9 @@ lemma probEvent_bind_le_probEvent_convex [MonadLiftT m SPMF] [LawfulMonadLiftT m
       ≤ expectedValue mx (fun x => (if p x then 1 else 0) + (if ¬ p x then 1 else 0) * ε) := by
         gcongr with x hx
         by_cases hp : p x
-        · simp only [if_pos hp, if_neg (not_not_intro hp), zero_mul, add_zero]
+        · simp only [ite_eq_left hp, ite_eq_right (not_not_intro hp), zero_mul, add_zero]
           exact probEvent_le_one
-        · simp only [if_neg hp, if_pos hp, zero_add, one_mul]; exact h x hx hp
+        · simp only [ite_eq_right hp, ite_eq_left hp, zero_add, one_mul]; exact h x hx hp
     _ = Pr[ p | mx] + Pr[ fun x => ¬ p x | mx] * ε := by
         rw [expectedValue_add, expectedValue_mul_const, expectedValue_ite_one,
           expectedValue_ite_one]

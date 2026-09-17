@@ -309,10 +309,10 @@ private lemma evalSPMF_uniformSample_vector_succ (N : ℕ) :
     · rw [probOutput_bind_eq_tsum, tsum_eq_single rest]
       · simp
       · intro b hb
-        rw [probOutput_pure, if_neg (by simp [List.Vector.eq_cons_iff, Ne.symm hb]), mul_zero]
+        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]), mul_zero]
     · intro b hb
       rw [probOutput_bind_eq_tsum, ENNReal.tsum_eq_zero.2 (fun r => by
-        rw [probOutput_pure, if_neg (by simp [List.Vector.eq_cons_iff, Ne.symm hb]),
+        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]),
           mul_zero]), mul_zero]
   have hL :
       Pr[= (out ::ᵥ rest) | ($ᵗ (List.Vector O (N + 1)))]
@@ -727,10 +727,10 @@ private lemma probOutput_genCollisionExp_bind_le (N : ℕ) (c : (S →ₒ S × O
       intro s
       cases hcs : c.isCached s with
       | true =>
-        rw [probOutput_genCollisionExp_succ_of_isCached N s c hcs, if_pos rfl]
+        rw [probOutput_genCollisionExp_succ_of_isCached N s c hcs, ite_eq_left rfl]
         exact le_self_add
       | false =>
-        rw [if_neg (by simp), zero_add]
+        rw [ite_eq_right (by simp), zero_add]
         have hcnone : c s = none := by simpa [QueryCache.isCached] using hcs
         rw [genCollisionExp_succ_of_none N s c hcnone]
         -- Replace each fresh cache value by a fixed one (domain invariance), then drop the

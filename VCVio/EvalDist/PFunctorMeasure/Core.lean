@@ -151,8 +151,9 @@ theorem denote_bind [MeasurableSpace α] [MeasurableSpace β]
   induction program with
   | pure x => simpa using (Measure.dirac_bind hf x).symm
   | lift_bind a cont ih =>
-      rw [FreeM.liftBind_bind,
-        denote_liftBind _ _ Measurable.of_discrete.aemeasurable,
+      change denote (FreeM.liftBind a (fun b => (cont b).bind f)) =
+        Measure.bind (denote (FreeM.liftBind a cont)) (fun x => denote (f x))
+      rw [denote_liftBind _ _ Measurable.of_discrete.aemeasurable,
         denote_liftBind _ _ Measurable.of_discrete.aemeasurable]
       rw [Measure.bind_bind (Measurable.of_discrete).aemeasurable hf.aemeasurable]
       exact Measure.bind_congr_right (Filter.Eventually.of_forall fun b => ih b)
@@ -210,6 +211,7 @@ theorem denote_apply_univ_le_one [MeasurableSpace α] (program : FreeM P α) :
   induction program with
   | pure _ => simp
   | lift_bind a cont ih =>
+      change denote (FreeM.liftBind a cont) Set.univ ≤ 1
       by_cases h : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a)
       · rw [denote_liftBind a cont h, Measure.bind_apply MeasurableSet.univ h]
         calc
@@ -265,7 +267,8 @@ theorem evalDist_lift_bind_pure [MeasurableSpace α] (a : P.A) (f : P.B a → α
       (IsMeasureSpec.toMeasure a) := by
     change AEMeasurable (Measure.dirac ∘ f) (IsMeasureSpec.toMeasure a)
     exact (Measure.measurable_dirac.comp hf).aemeasurable
-  rw [FreeM.lift_bind, evalDist_liftBind (P := P) a _ hcont, evalDist_lift (P := P)]
+  change 𝒟[FreeM.liftBind a (fun b => pure (f b))] = _
+  rw [evalDist_liftBind (P := P) a _ hcont, evalDist_lift (P := P)]
   simp only [evalDist_pure]
   exact Measure.bind_dirac_eq_map _ hf
 

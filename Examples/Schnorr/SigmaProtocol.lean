@@ -302,7 +302,7 @@ theorem sigma_simChalUniformGivenCommit (g : G) :
             (if r • g = c₀ then (1 : ℝ≥0∞) else 0) by
       simp_rw [probOutput_uniformSample, probEvent_pure]
       by_cases hr : r • g = c₀
-      · simp only [hr, if_true]
+      · simp only [hr, ite_true]
         rw [ENNReal.tsum_mul_left, ENNReal.tsum_const,
           ENat.card_eq_coe_fintype_card, mul_one, ENat.toENNReal_coe,
           ENNReal.inv_mul_cancel hcard_ne_zero hcard_ne_top]

@@ -70,7 +70,7 @@ theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
     simp only [simulateQ_query_bind]
     change Prod.fst <$> ((spec.enforceOracle t).run qb >>=
       fun p => (simulateQ enforceOracle (mx p.1)).run p.2) = liftM (query t) >>= mx
-    rw [run_apply, if_pos hpos]
+    rw [run_apply, ite_eq_left hpos]
     simp only [monad_norm, Function.comp]
     exact bind_congr fun u => by
       simpa only [map_eq_bind_pure_comp] using ih u (hcont u)

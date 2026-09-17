@@ -34,7 +34,7 @@ namespace PMF
 lemma eq_pure_of_forall_ne_eq_zero {γ : Type*} (p : PMF γ) (a : γ)
     (h : ∀ x, x ≠ a → p x = 0) : p = PMF.pure a := by
   ext x; by_cases hx : x = a
-  · subst hx; simp only [PMF.pure_apply, if_true]
+  · subst hx; simp only [PMF.pure_apply, ite_true]
     rw [← p.tsum_coe]; exact (tsum_eq_single x (fun b hb => h b hb)).symm
   · simp [PMF.pure_apply, hx, h x hx]
 

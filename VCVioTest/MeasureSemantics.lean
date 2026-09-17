@@ -159,8 +159,9 @@ example : (1 : ℝ≥0∞) ≤
     MeasureProgramLogic.eRelWP (pure true : FreeM coinSpec Bool)
       (pure false : FreeM coinSpec Bool)
       (fun a b => if a && !b then 1 else 0) := by
-  apply MeasureProgramLogic.le_eRelWP_pure_pure
-  fun_prop
+  exact MeasureProgramLogic.le_eRelWP_pure_pure
+    (m₁ := FreeM coinSpec) (m₂ := FreeM coinSpec) true false
+    (fun a b => if a && !b then 1 else 0) (by fun_prop)
 
 /-- On a discrete interface the two denotations agree, so a `Pr[…]` result proved against the
 `PMF` semantics can be read off the measure semantics. -/

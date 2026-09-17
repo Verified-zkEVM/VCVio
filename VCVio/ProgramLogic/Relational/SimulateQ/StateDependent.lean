@@ -560,12 +560,12 @@ private theorem ofReal_tvDist_simulateQ_run_le_expectedQuerySlack_plus_probEvent
           rw [isQueryBoundP_query_bind_iff] at h_qb
           obtain ⟨h_can, h_cont⟩ := h_qb
           by_cases hSt : chargedQuery t
-          · simp only [hSt, if_true] at h_cont
+          · simp only [hSt, ite_true] at h_cont
             have hq_pos : 0 < queryBudget := h_can.resolve_left (· hSt)
             exact ofReal_tvDist_simulateQ_run_costly_query_bind_le_expectedQuerySlack
               impl₁ impl₂ chargedQuery querySlack h_step_tv_charged t cont hSt hq_pos
               (fun u p' => ih u (h_cont u) p') s
-          · simp only [hSt, if_false] at h_cont
+          · simp only [hSt, ite_false] at h_cont
             exact ofReal_tvDist_simulateQ_run_free_query_bind_le_expectedQuerySlack
               impl₁ impl₂ chargedQuery querySlack h_step_eq_uncharged t cont hSt
               (fun u p' => ih u (h_cont u) p') s
@@ -713,7 +713,7 @@ lemma expectedQuerySlack_const_le_queryBudget_mul
           · have hq_pos : 0 < queryBudget := h_can.resolve_left (· hSt)
             obtain ⟨n, rfl⟩ : ∃ n, queryBudget = n + 1 :=
               ⟨queryBudget - 1, (Nat.succ_pred_eq_of_pos hq_pos).symm⟩
-            simp only [hSt, if_true, Nat.add_sub_cancel] at h_cont
+            simp only [hSt, ite_true, Nat.add_sub_cancel] at h_cont
             rw [expectedQuerySlack_query_bind,
               expectedQuerySlackStep_costly_pos _ _ _ _ _ _ _ hSt hq_pos, Nat.add_sub_cancel]
             refine le_trans (add_le_add le_rfl (tsum_probOutput_mul_le_const
@@ -721,7 +721,7 @@ lemma expectedQuerySlack_const_le_queryBudget_mul
             push_cast
             ring
           -- a free query costs nothing and passes on the whole budget
-          · simp only [hSt, if_false] at h_cont
+          · simp only [hSt, ite_false] at h_cont
             rw [expectedQuerySlack_query_bind, expectedQuerySlackStep_free _ _ _ _ _ _ _ hSt]
             exact tsum_probOutput_mul_le_const ((impl t).run (s, false))
               fun z => ih z.1 (h_cont z.1) z.2
@@ -767,7 +767,7 @@ lemma expectedQuerySlack_resource_le
           slackSum n ≤ (n : ℝ≥0∞) * ζ + (n : ℝ≥0∞) * B * β from by
         by_cases hSt : chargedQuery t
         · let qS': ℕ := qS - 1
-          simp only [hSt, if_true] at hcontS
+          simp only [hSt, ite_true] at hcontS
           have hqS_pos : 0 < qS := hcanS.resolve_left (· hSt)
           have hqS_cast : (((qS - 1 : ℕ) : ℝ≥0∞) + 1) = (qS : ℝ≥0∞) := by
             exact_mod_cast Nat.sub_add_cancel hqS_pos
@@ -790,7 +790,7 @@ lemma expectedQuerySlack_resource_le
                 · exact (le_self_add : R s ≤ R s + (qS : ℝ≥0∞)).trans le_self_add
                 · exact h_tail qS' hcontS hbudget
           _ = (qS : ℝ≥0∞) * ζ + (qS : ℝ≥0∞) * B * β := by rw [← hqS_cast]; ring
-        · simp only [hSt, if_false] at hcontS
+        · simp only [hSt, ite_false] at hcontS
           rw [expectedQuerySlack_query_bind, expectedQuerySlackStep_free _ _ _ _ _ _ _ hSt]
           have hbudget : ∀ z ∈ support ((impl t).run (s, false)), R z.2.1 + qS + qH' ≤ B := by
             intro z hz
@@ -855,7 +855,7 @@ lemma expectedQuerySlack_expected_resource_le
       obtain ⟨hcanS, hcontS⟩ := h_qS
       obtain ⟨hcanH, hcontH⟩ := h_qH
       by_cases hSt : chargedQuery t
-      · simp only [hSt, if_true] at hcontS
+      · simp only [hSt, ite_true] at hcontS
         have hqS_pos : 0 < qS := hcanS.resolve_left (· hSt)
         obtain ⟨m, rfl⟩ : ∃ m, qS = m + 1 := ⟨qS - 1, by omega⟩
         rw [expectedQuerySlack_query_bind,
@@ -916,7 +916,7 @@ lemma expectedQuerySlack_expected_resource_le
               + (((m + 1 : ℕ) : ℝ≥0∞) * R s + ((m + 1 : ℕ) : ℝ≥0∞) * (qH : ℝ≥0∞)
                 + (((m + 1).choose 2 : ℕ) : ℝ≥0∞) * g) * β := by
               rw [Nat.cast_add_one, hch]
-      · simp only [hSt, if_false] at hcontS
+      · simp only [hSt, ite_false] at hcontS
         rw [expectedQuerySlack_query_bind, expectedQuerySlackStep_free _ _ _ _ _ _ _ hSt]
         have h_z : ∀ z ∈ support ((impl t).run (s, false)),
             expectedQuerySlack impl chargedQuery (fun s => ζ + R s * β) (cont z.1) qS z.2
@@ -932,7 +932,7 @@ lemma expectedQuerySlack_expected_resource_le
                 have hqH_cast : ((qH - 1 : ℕ) : ℝ≥0∞) + 1 = (qH : ℝ≥0∞) := by
                   exact_mod_cast Nat.sub_add_cancel hqH_pos
                 have hRs' : R s' ≤ R s + 1 := h_growth t (s, false) rfl hSt hHt _ hz
-                rw [if_pos hHt]
+                rw [ite_eq_left hHt]
                 calc (qS : ℝ≥0∞) * ζ + ((qS : ℝ≥0∞) * R s'
                         + (qS : ℝ≥0∞) * ((qH - 1 : ℕ) : ℝ≥0∞)
                         + (qS.choose 2 : ℝ≥0∞) * g) * β
@@ -945,7 +945,7 @@ lemma expectedQuerySlack_expected_resource_le
                   _ = (qS : ℝ≥0∞) * ζ + ((qS : ℝ≥0∞) * R s + (qS : ℝ≥0∞) * (qH : ℝ≥0∞)
                         + (qS.choose 2 : ℝ≥0∞) * g) * β := by rw [hqH_cast]
               · have hRs' : R s' ≤ R s := h_free t (s, false) rfl hSt hHt _ hz
-                rw [if_neg hHt]
+                rw [ite_eq_right hHt]
                 gcongr
         exact tsum_probOutput_mul_le_const_of_mem_support _ h_z
 
@@ -997,7 +997,7 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
       obtain ⟨hcanH, hcontH⟩ := h_qH
       by_cases hSt : chargedQuery t
       · -- Charged read: pays `R s · β`, does not grow `R`, continuation budget `qS - 1`.
-        simp only [hSt, if_true] at hcontS
+        simp only [hSt, ite_true] at hcontS
         have hqS_pos : 0 < qS := hcanS.resolve_left (· hSt)
         obtain ⟨m, rfl⟩ : ∃ m, qS = m + 1 := ⟨qS - 1, by omega⟩
         rw [expectedQuerySlack_query_bind,
@@ -1028,13 +1028,13 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
               exact le_self_add
           _ = ((m + 1 : ℕ) : ℝ≥0∞) * (R s + (qH : ℝ≥0∞) * g) * β := by push_cast; ring
       · -- Uncharged query: no charge. Split growth vs. free.
-        simp only [hSt, if_false] at hcontS
+        simp only [hSt, ite_false] at hcontS
         rw [expectedQuerySlack_query_bind, expectedQuerySlackStep_free _ _ _ _ _ _ _ hSt]
         by_cases hHt : growthQuery t
         · -- Growth query: `R` grows by `≤ g` in expectation, charged budget unchanged.
           have hqH_pos : 0 < qH := hcanH.resolve_left (· hHt)
           obtain ⟨h, rfl⟩ : ∃ h, qH = h + 1 := ⟨qH - 1, by omega⟩
-          simp only [hHt, if_true] at hcontH
+          simp only [hHt, ite_true] at hcontH
           simp only [Nat.add_sub_cancel] at hcontH
           calc (∑' z : spec.Range t × σ × Bool,
                 Pr[= z | (impl t).run (s, false)] *
@@ -1066,7 +1066,7 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
                       exact mul_le_of_le_one_left (by positivity) tsum_probOutput_le_one
             _ = (qS : ℝ≥0∞) * (R s + ((h + 1 : ℕ) : ℝ≥0∞) * g) * β := by push_cast; ring
         · -- Free query: `R` does not grow, budgets unchanged.
-          simp only [hHt, if_false] at hcontH
+          simp only [hHt, ite_false] at hcontH
           apply tsum_probOutput_mul_le_const_of_mem_support
           rintro ⟨u, s', bad'⟩ hz
           cases bad' with

@@ -1351,17 +1351,17 @@ theorem nonempty_countingInterface_iff {ix PkS Tw Msg Nd : Type} [Fintype Msg] [
              multipleMass := fun k => if k = 0 then 2 * d else 0
              openPRE_decomposition := by
                rw [hone]
-               simp only [Finset.sum_ite_eq', Finset.mem_univ, if_true]
+               simp only [Finset.sum_ite_eq', Finset.mem_univ, ite_true]
                exact (tsub_add_cancel_of_le hc1).symm
              dspr_decomposition := by
                rw [SM_DT_OpenPRE_SourceFinalValidity.reciprocalMass]
-               simp only [mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, if_true,
+               simp only [mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, ite_true,
                  Fin.val_zero, zero_add, Nat.cast_ofNat]
                rw [tsub_tsub, hsum, he]
                exact (ENNReal.sub_sub_cancel one_ne_top hD1).symm
              tcr_strata_le := by
                rw [SM_DT_OpenPRE_SourceFinalValidity.collisionMass]
-               simp only [mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, if_true,
+               simp only [mul_ite, mul_zero, Finset.sum_ite_eq', Finset.mem_univ, ite_true,
                  Fin.val_zero, zero_add, Nat.cast_ofNat]
                rw [show ((2 - 1 : ℕ) : ℝ≥0∞) = 1 by norm_num, hhalf]
                exact hTle }⟩

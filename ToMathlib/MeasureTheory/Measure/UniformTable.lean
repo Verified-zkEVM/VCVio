@@ -68,13 +68,13 @@ theorem uniformOn_univ_bind_map_update {D R : Type*} [Finite D] [DecidableEq D]
           · rintro ⟨r, rfl⟩
             subst hu; simp
         rw [hset, Finset.card_image_of_injective _
-          (fun r₁ r₂ hr => by simpa using congrFun hr t), Finset.card_univ, if_pos hu]
-      · rw [if_neg hu, Nat.cast_eq_zero, Finset.card_eq_zero, Finset.filter_eq_empty_iff]
+          (fun r₁ r₂ hr => by simpa using congrFun hr t), Finset.card_univ, ite_eq_left hu]
+      · rw [ite_eq_right hu, Nat.cast_eq_zero, Finset.card_eq_zero, Finset.filter_eq_empty_iff]
         rintro g - rfl
         simp at hu
     rw [hcard, ENNReal.div_eq_inv_mul, mul_ite, mul_zero, mul_comm]
   simp_rw [hinner, mul_ite, mul_zero]
-  rw [Finset.sum_ite_eq' Finset.univ (h t), if_pos (Finset.mem_univ _),
+  rw [Finset.sum_ite_eq' Finset.univ (h t), ite_eq_left (Finset.mem_univ _),
     ← mul_assoc, ENNReal.inv_mul_cancel (by simp [Fintype.card_ne_zero])
       (ENNReal.natCast_ne_top _), one_mul]
   simp [uniformOn_univ]

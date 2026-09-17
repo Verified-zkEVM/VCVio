@@ -19,10 +19,10 @@ Mathlib has no such class. `IsZeroOrProbabilityMeasure` is a different condition
 total mass `0` or `1`, and so cannot describe a computation that fails with probability strictly
 between the two.
 
-The class has automatic instances for `dirac`, `map`, and `bind` against a subprobability family.
-These upper mass bounds hold without measurability: Mathlib assigns zero to a nonmeasurable
-pushforward, and `Measure.bind_apply_le` bounds a bind before measurability is known. Exact mass
-preservation and probability-measure instances still require the relevant measurability proofs.
+The class has automatic instances for `dirac` and `map`. A nonmeasurable pushforward of a
+nonzero measure is a Dirac mass, which still has mass at most one. Bind preserves the bound
+for an almost-everywhere measurable subprobability family. Exact mass preservation also
+requires the relevant measurability proofs.
 -/
 
 @[expose] public section
@@ -81,16 +81,19 @@ theorem isSubprobabilityMeasure_map (μ : Measure α) [IsSubprobabilityMeasure �
     (hf : Measurable f) : IsSubprobabilityMeasure (μ.map f) :=
   ⟨by rw [Measure.map_apply hf MeasurableSet.univ, Set.preimage_univ]; exact measure_univ_le μ⟩
 
-/-- Every pushforward of a subprobability measure is a subprobability measure, including the
-zero measure Mathlib assigns when the map is not almost-everywhere measurable. -/
+/-- Pushforward preserves the subprobability bound, including the Dirac fallback for a
+nonmeasurable map from a nonzero measure. -/
 instance Measure.isSubprobabilityMeasure_map (μ : Measure α) [IsSubprobabilityMeasure μ]
     (f : α → β) : IsSubprobabilityMeasure (μ.map f) := by
   by_cases hf : AEMeasurable f μ
   · refine ⟨?_⟩
     rw [Measure.map_apply_of_aemeasurable hf MeasurableSet.univ, Set.preimage_univ]
     exact measure_univ_le μ
-  · rw [Measure.map_of_not_aemeasurable hf]
-    infer_instance
+  · by_cases hμ : μ = 0
+    · subst μ
+      simpa only [Measure.map_zero] using (inferInstance : IsSubprobabilityMeasure (0 : Measure β))
+    · rw [Measure.map_of_not_aemeasurable_of_ne_zero hf hμ]
+      infer_instance
 
 /-- Giry bind of a subprobability family against a subprobability measure stays a
 subprobability measure. The measurability hypothesis is the one `Measure.bind_apply` needs. -/
@@ -102,17 +105,6 @@ theorem isSubprobabilityMeasure_bind {μ : Measure α} [IsSubprobabilityMeasure 
   rw [Measure.bind_apply MeasurableSet.univ hf]
   calc ∫⁻ a, f a Set.univ ∂μ
       ≤ ∫⁻ _, 1 ∂μ := lintegral_mono fun a => measure_univ_le (f a)
-    _ = μ Set.univ := by simp
-    _ ≤ 1 := measure_univ_le μ
-
-/-- Giry bind of subprobability measures has mass at most one even before the continuation's
-measurability is known. -/
-instance Measure.isSubprobabilityMeasure_bind (μ : Measure α) [IsSubprobabilityMeasure μ]
-    (f : α → Measure β) [∀ a, IsSubprobabilityMeasure (f a)] :
-    IsSubprobabilityMeasure (μ.bind f) := by
-  refine ⟨(Measure.bind_apply_le _ MeasurableSet.univ).trans ?_⟩
-  calc ∫⁻ a, f a Set.univ ∂μ
-      ≤ ∫⁻ _, 1 ∂μ := lintegral_mono fun a ↦ measure_univ_le (f a)
     _ = μ Set.univ := by simp
     _ ≤ 1 := measure_univ_le μ
 

@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import Mathlib.Data.Real.ENatENNReal
+public import Mathlib.Basic.Real.ENatENNReal
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.StateSeparating.IdenticalUntilBad
@@ -223,12 +223,12 @@ private theorem cmaReal_step_normal_form
             (Resp := Resp) (Stmt := Stmt) t then (1 : ℝ≥0∞) else 0) := by
   rcases p with ⟨⟨log, cache, keypair⟩, bad⟩
   rcases t with n | mc | m | ⟨⟩
-  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, if_false,
+  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, ite_false,
       StateT.run_mk, support_bind, Set.mem_iUnion, support_pure, Set.mem_singleton_iff,
       exists_prop] at hz ⊢
     obtain ⟨r, _, rfl⟩ := hz
     exact ⟨rfl, fun h => by simpa [CmaData.Valid] using h, by simp⟩
-  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, if_true,
+  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, ite_true,
       StateT.run_mk] at hz ⊢
     cases hcache : cache mc with
     | none =>
@@ -241,7 +241,7 @@ private theorem cmaReal_step_normal_form
         simp only [hcache, support_pure, Set.mem_singleton_iff] at hz
         subst z
         exact ⟨rfl, fun h => by simpa [CmaData.Valid] using h, le_self_add⟩
-  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, true_or, if_true,
+  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, true_or, ite_true,
       StateT.run_mk] at hz ⊢
     rcases keypair with keypair | ⟨pk, sk⟩
     · simp only [support_bind, Set.mem_iUnion, exists_prop] at hz
@@ -273,7 +273,7 @@ private theorem cmaReal_step_normal_form
           obtain ⟨π, _, rfl⟩ := hrest
           exact ⟨rfl, fun h => by simpa [CmaData.Valid] using h, le_self_add⟩
   · simp only [fs_simp, cmaReal, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or,
-      if_false, StateT.run_mk] at hz ⊢
+      ite_false, StateT.run_mk] at hz ⊢
     rcases keypair with keypair | ⟨pk, sk⟩
     · simp only [support_bind, Set.mem_iUnion, support_pure, Set.mem_singleton_iff,
         exists_prop] at hz

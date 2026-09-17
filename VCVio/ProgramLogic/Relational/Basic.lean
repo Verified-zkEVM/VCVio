@@ -156,13 +156,13 @@ noncomputable instance instMAlgRelOrdered :
         apply (_root_.SPMF.mem_support_iff c.1 (a, b)).2
         exact hmass
       have hcut : CouplingPost (fa a) (fb b) post := hcCut (a, b) hab
-      simpa only [d, dif_pos hcut] using (Classical.choose hcut).2
+      simpa only [d, dite_eq_left hcut] using (Classical.choose hcut).2
     refine ⟨⟨c.1 >>= fun p => d p.1 p.2, ?_⟩, fun z hz => ?_⟩
     · simpa [evalSPMF_bind] using _root_.SPMF.IsCoupling.bind c d hd
     · rcases (mem_spmf_support_bind_iff c.1 (fun p => d p.1 p.2) z).1 hz with
         ⟨ab, hab, hz'⟩
       have hcut : CouplingPost (fa ab.1) (fb ab.2) post := hcCut ab hab
-      exact Classical.choose_spec hcut z (by simpa only [d, dif_pos hcut] using hz')
+      exact Classical.choose_spec hcut z (by simpa only [d, dite_eq_left hcut] using hz')
 
 /-- Anchoring instance for the qualitative `Prop`-valued relational logic on `OracleComp`.
 

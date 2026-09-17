@@ -39,7 +39,7 @@ theorem runKernel_ae_invariant (impl : KernelHandler P S) {I : S → Prop}
       rw [runKernel_pure]
       exact (ae_dirac_iff (hI.preimage measurable_snd)).2 hstate
   | lift_bind a next ih =>
-      rw [runKernel_liftBind]
+      rw [← FreeM.liftBind_eq, runKernel_liftBind]
       exact Measure.ae_bind_of_ae (measurable_runKernel_continuation impl next)
         (hI.preimage measurable_snd) ((hstep a state hstate).mono fun out hout => ih out.1 hout)
 
@@ -59,7 +59,7 @@ theorem map_runKernel_state (impl : KernelHandler P S) (target : KernelHandler P
   induction program generalizing state with
   | pure x => simp only [runKernel_pure, Measure.map_dirac' hm]
   | lift_bind a next ih =>
-      rw [runKernel_liftBind, runKernel_liftBind]
+      rw [← FreeM.liftBind_eq, runKernel_liftBind, runKernel_liftBind]
       rw [Measure.map_bind _ (measurable_runKernel_continuation impl next) hm]
       rw [Measure.bind_congr_right ((hinvariant a state hstate).mono fun out hout =>
         ih out.1 hout)]

@@ -445,11 +445,11 @@ theorem realSmcSemantics_run_distinct
   · change realCipherObserve sp
       (if msgClosed sp msg₀ = msgClosed sp msg₀ then msg₀ else msg₁) P =
       realCipherObserve sp msg₀ P
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
   · change realCipherObserve sp
       (if msgClosed sp msg₁ = msgClosed sp msg₀ then msg₀ else msg₁) P =
       realCipherObserve sp msg₁ P
-    rw [if_neg hne.symm]
+    rw [ite_eq_right hne.symm]
 
 /-! ## Open-world layer: three-port boundary `Δ_otp` -/
 

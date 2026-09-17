@@ -724,10 +724,10 @@ example (pos : LayerPosition toy) (layers : ℕ)
           fun w => ⟨⟨w.layer.val + 1, Nat.succ_lt_succ w.layer.isLt⟩, w.witness⟩ := by
   by_cases h : xmssPkFromSig toyPrimitives pos.leaf.val sigs.head msg () pos.toAdrs =
       xmssRoot toyPrimitives () () pos.toAdrs
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     exact findHypertreeWitness_eq_of_root toy toyPrimitives () () pos (layers + 1) hlayers msg
       msg' sigs h
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     exact findHypertreeWitness_eq_next_of_ne toy toyPrimitives () () pos layers hlayers msg msg'
       sigs h
 

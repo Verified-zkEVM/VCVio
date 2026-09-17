@@ -66,11 +66,11 @@ lemma probOutput_map_append_left [LawfulMonad m] [DecidableEq α]
       conv_lhs => rw [← List.take_append_drop xs.length ys, h]
     rw [probOutput_map_eq_tsum_ite]
     refine (tsum_eq_single (ys.drop xs.length) fun zs hzs =>
-      if_neg fun h' => hzs ?_).trans (if_pos heq)
+      ite_eq_right fun h' => hzs ?_).trans (ite_eq_left heq)
     exact (List.append_cancel_left (heq.symm.trans h')).symm
   · rw [probOutput_map_eq_tsum_ite]
     exact ENNReal.tsum_eq_zero.mpr fun zs =>
-      if_neg fun h' => h (by simp [h'])
+      ite_eq_right fun h' => h (by simp [h'])
 
 end cons_append
 
@@ -85,7 +85,7 @@ lemma probFailure_list_mapM_loop (xs : List α) (f : α → m β) (ys : List β)
     simp only [List.mapM.loop, List.map_cons, List.prod_cons]
     rw [probFailure_bind_eq_sub_mul _ _ (1 - (List.map (fun x ↦ 1 - Pr[⊥ | f x]) xs).prod)]
     · rw [ENNReal.sub_sub_cancel ENNReal.one_ne_top
-        ((List.prod_le_pow_card _ 1 (by simp)).trans (one_pow _).le)]
+        ((List.prod_le_pow_length _ 1 (by simp)).trans (one_pow _).le)]
     · simp
     · simp [h]
 
@@ -128,7 +128,7 @@ lemma probOutput_list_mapM_loop [DecidableEq β]
       rw [show ys.length = zs.length from hlen.symm, List.take_length] at htake
       subst htake
       simp
-    · rw [if_neg h, probOutput_pure, if_neg]
+    · rw [ite_eq_right h, probOutput_pure, ite_eq_right]
       rintro rfl
       exact h ⟨by simp, by simp⟩
   | cons x xs ih =>
@@ -137,17 +137,17 @@ lemma probOutput_list_mapM_loop [DecidableEq β]
     rw [probOutput_bind_eq_tsum]
     simp_rw [ih, List.length_cons, List.reverse_cons]
     by_cases hcond : zs.length = xs.length + 1 + ys.length ∧ zs.take ys.length = ys.reverse
-    · rw [if_pos hcond]
+    · rw [ite_eq_left hcond]
       obtain ⟨hlen, htake⟩ := hcond
       obtain ⟨z₀, htake_succ, hdrop_eq⟩ := take_drop_succ_aux (by omega) htake
-      rw [tsum_eq_single z₀ ?_, if_pos ⟨by omega, htake_succ⟩, hdrop_eq,
+      rw [tsum_eq_single z₀ ?_, ite_eq_left ⟨by omega, htake_succ⟩, hdrop_eq,
         List.zipWith_cons_cons, List.prod_cons]
       intro y hy
-      rw [if_neg fun ⟨_, h⟩ => hy <| by
+      rw [ite_eq_right fun ⟨_, h⟩ => hy <| by
         simpa using (List.append_cancel_left (htake_succ.symm.trans h)).symm, mul_zero]
-    · rw [if_neg hcond]
+    · rw [ite_eq_right hcond]
       refine ENNReal.tsum_eq_zero.mpr fun y => ?_
-      rw [if_neg fun ⟨_, ht⟩ => hcond ⟨by omega, take_eq_reverse_of_take_succ_aux ht⟩,
+      rw [ite_eq_right fun ⟨_, ht⟩ => hcond ⟨by omega, take_eq_reverse_of_take_succ_aux ht⟩,
         mul_zero]
 
 omit [ExactMonadAttach m] in
@@ -193,7 +193,7 @@ lemma probOutput_list_mapM [LawfulMonad m] (xs : List α) (f : α → m β) (ys 
       intro heq; subst heq
       have : zs.length = xs.length := by
         by_contra h
-        exact probOutput_ne_zero_of_mem_support hzs ((ih zs).trans (if_neg h))
+        exact probOutput_ne_zero_of_mem_support hzs ((ih zs).trans (ite_eq_right h))
       simp_all
 
 @[simp]
@@ -221,7 +221,7 @@ lemma probOutput_list_mapM' [LawfulMonad m] (xs : List α) (f : α → m β) (ys
       intro heq; subst heq
       have : zs.length = xs.length := by
         by_contra h
-        exact probOutput_ne_zero_of_mem_support hzs ((ih zs).trans (if_neg h))
+        exact probOutput_ne_zero_of_mem_support hzs ((ih zs).trans (ite_eq_right h))
       simp_all
 
 end mapM

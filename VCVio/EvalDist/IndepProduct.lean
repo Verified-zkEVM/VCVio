@@ -92,21 +92,21 @@ lemma probOutput_mOfFn (n : ℕ) (g : Fin n → m α) (v : Fin n → α) :
         intro a
         rw [probOutput_bind_eq_tsum]
         by_cases ha : a = v 0
-        · rw [if_pos ha]
+        · rw [ite_eq_left ha]
           refine (tsum_eq_single (Fin.tail v) fun rest hrest => ?_).trans ?_
-          · rw [probOutput_pure, if_neg (fun h => hrest ((hcons a rest).mp h).2), mul_zero]
-          · rw [probOutput_pure, if_pos ((hcons a (Fin.tail v)).mpr ⟨ha, rfl⟩), mul_one]
-        · rw [if_neg ha]
+          · rw [probOutput_pure, ite_eq_right (fun h => hrest ((hcons a rest).mp h).2), mul_zero]
+          · rw [probOutput_pure, ite_eq_left ((hcons a (Fin.tail v)).mpr ⟨ha, rfl⟩), mul_one]
+        · rw [ite_eq_right ha]
           have hzero : ∀ rest : Fin n → α,
               Pr[= rest | Fin.mOfFn n fun i => g i.succ] *
                   Pr[= v | (pure (Fin.cons a rest) : m (Fin (n + 1) → α))] = 0 := by
             intro rest
-            rw [probOutput_pure, if_neg (fun h => ha ((hcons a rest).mp h).1), mul_zero]
+            rw [probOutput_pure, ite_eq_right (fun h => ha ((hcons a rest).mp h).1), mul_zero]
           simp only [hzero, tsum_zero]
       simp only [Fin.mOfFn]
       rw [probOutput_bind_eq_tsum]
       simp only [hinner, mul_ite, mul_zero]
-      rw [tsum_eq_single (v 0) (fun a ha => if_neg ha), if_pos rfl,
+      rw [tsum_eq_single (v 0) (fun a ha => ite_eq_right ha), ite_eq_left rfl,
         ih (fun i => g i.succ) (Fin.tail v), Fin.prod_univ_succ]
       rfl
 
@@ -131,19 +131,19 @@ lemma probEvent_forall_coord_mOfFn (n : ℕ) (g : Fin n → m α) (p : (i : Fin 
         intro a
         rw [probEvent_bind_eq_tsum]
         by_cases ha : p 0 a
-        · rw [if_pos ha, probEvent_eq_tsum_ite]
+        · rw [ite_eq_left ha, probEvent_eq_tsum_ite]
           refine tsum_congr fun rest => ?_
           simp only [probEvent_pure, Fin.forall_fin_succ, Fin.cons_zero, Fin.cons_succ, ha,
             true_and]
           split <;> simp
-        · rw [if_neg ha]
+        · rw [ite_eq_right ha]
           have hzero : ∀ rest : Fin n → α,
               Pr[= rest | Fin.mOfFn n fun i => g i.succ] *
                   Pr[fun v => ∀ i, p i (v i) | (pure (Fin.cons a rest) : m (Fin (n + 1) → α))]
                 = 0 := by
             intro rest
             simp only [probEvent_pure, Fin.forall_fin_succ, Fin.cons_zero, ha, false_and,
-              if_false, mul_zero]
+              ite_false, mul_zero]
           simp only [hzero, tsum_zero]
       simp only [Fin.mOfFn]
       rw [probEvent_bind_eq_tsum]

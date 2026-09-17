@@ -383,7 +383,7 @@ theorem findWitness_eq_fors_of_pk [DecidableEq prims.Y] (sk : prims.SkSeed)
     findWitness sk pk msg sig target =
       some (.fors (findForsWitness prims sig.fors (schemeParts vp prims msg sig pk).md.toList sk
         pk.pkSeed (schemeParts vp prims msg sig pk).forsAdrs target)) := by
-  rw [findWitness, if_pos hpk]
+  rw [findWitness, ite_eq_left hpk]
 
 /-- And the hypertree arm fires exactly when it is not, on the full-depth walk from the digest's
 layer-zero position between the recovered FORS public key and the honest one. -/
@@ -400,7 +400,7 @@ theorem findWitness_eq_hypertree_of_ne [DecidableEq prims.Y] (sk : prims.SkSeed)
           (schemeParts vp prims msg sig pk).forsAdrs)
         (forsPkGen prims sk pk.pkSeed (schemeParts vp prims msg sig pk).forsAdrs)
         sig.hypertree).map .hypertree := by
-  rw [findWitness, if_neg hpk]
+  rw [findWitness, ite_eq_right hpk]
 
 /-- **Extractor soundness.**  Whatever `findWitness` returns satisfies `Witness.Valid` against the
 honest key material at `pk.pkSeed` and the digest the signature produces against `pk`.

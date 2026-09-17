@@ -195,7 +195,7 @@ private lemma chal_pinned_of_findWitness_none
       else none) = none := hnone i (List.mem_finRange i)
   rw [List.findSome?_eq_none_iff] at hi
   have hfe := hi e he
-  rw [if_pos (by simp [hstmt, hcom, hrep, hverE, hne])] at hfe
+  rw [ite_eq_left (by simp [hstmt, hcom, hrep, hverE, hne])] at hfe
   exact Option.some_ne_none _ hfe
 
 omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]

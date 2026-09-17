@@ -524,7 +524,7 @@ lemma wp_querySaltIndicator_prepend_eq_one
           QueryLog.countQ
             ((⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: z.1.2)
             (fun t' : (CMOracle M S C).Domain => t'.2 = s) := by
-      rw [QueryLog.countQ_cons, if_pos hsalt]
+      rw [QueryLog.countQ_cons, ite_eq_left hsalt]
       omega
     exact OracleComp.ProgramLogic.propInd_eq_one_iff.mpr hpos
   rw [hpost, OracleComp.ProgramLogic.wp_const]
@@ -577,7 +577,7 @@ lemma wp_querySaltIndicator_prepend_eq_of_ne
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) := by
     funext z
     simp only [Function.comp_apply]
-    rw [QueryLog.countQ_cons, if_neg hsalt]
+    rw [QueryLog.countQ_cons, ite_eq_right hsalt]
   rw [hpost]
 
 lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entries

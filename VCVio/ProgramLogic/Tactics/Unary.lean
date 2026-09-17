@@ -30,7 +30,7 @@ private def binderIdentsToNames (ids : Syntax.TSepArray `Lean.binderIdent ",") :
 private def runVCGenFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     -- Only `wp_*`, `propInd_*`, and `game_rule` are kept here; generic ring/if normalization
-    -- (`one_mul`, `zero_add`, `ite_true`, `if_false`, `dite_true`, …) is already in Mathlib's
+    -- (`one_mul`, `zero_add`, `ite_true`, `ite_false`, `dite_true`, …) is already in Mathlib's
     -- default simp-set and was rarely firing on the Triple/wp-shaped goals that reach this
     -- finish pass — building those extra simp entries on every `vcgen` invocation was a
     -- constant tax without an observed win.
@@ -334,12 +334,15 @@ Variants:
   then continues with exhaustive decomposition on all resulting goals.
 - `vcgen inv I` applies an explicit loop invariant `I` to the first `replicate`/`foldlM`/`mapM`
   goal, then continues with exhaustive decomposition. -/
+tactic_extension Lean.Parser.Tactic.vcgenMacro
+
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenBasic) "vcgen" : tactic
-@[inherit_doc vcgenBasic, tactic_alt vcgenBasic]
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenUsing) "vcgen" "using" term : tactic
-@[inherit_doc vcgenBasic, tactic_alt vcgenBasic]
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenInv) "vcgen" &"inv" term : tactic
-@[inherit_doc vcgenBasic, tactic_alt vcgenBasic]
+@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
 syntax (name := vcgenSuggestion) "vcgen?" : tactic
 
 elab_rules (kind := vcgenBasic) : tactic
@@ -365,7 +368,7 @@ elab_rules (kind := vcgenSuggestion) : tactic
             "OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_uniformSample, ",
             "OracleComp.ProgramLogic.wp_const, OracleComp.ProgramLogic.propInd_true, ",
             "OracleComp.ProgramLogic.propInd_false, OracleComp.ProgramLogic.propInd_eq_ite, ",
-            "ite_true, ite_false, if_true, if_false, dite_true, dite_false, ",
+            "ite_true, ite_false, ite_true, ite_false, dite_true, dite_false, ",
             "one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero, game_rule]",
           ],
           String.intercalate "" [
@@ -418,7 +421,7 @@ macro (name := expNorm) "exp_norm" : tactic =>
     OracleComp.ProgramLogic.wp_pure, OracleComp.ProgramLogic.wp_bind,
     OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_ite,
     OracleComp.ProgramLogic.wp_dite,
-    ite_true, ite_false, if_true, if_false, dite_true, dite_false,
+    ite_true, ite_false, ite_true, ite_false, dite_true, dite_false,
     one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero,
     game_rule])
 

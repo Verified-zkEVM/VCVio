@@ -134,9 +134,9 @@ lemma probOutput_uniformRange (n m : ℕ) (k : Fin (m + 1)) (h : n < m) :
       if n ≤ (k : ℕ) then 1 else 0 from ?_]
   · split <;> simp
   · by_cases hk : n ≤ (k : ℕ)
-    · rw [if_pos hk, Finset.card_eq_one]
+    · rw [ite_eq_left hk, Finset.card_eq_one]
       exact ⟨⟨k - n, by omega⟩, by ext i; simp [Fin.ext_iff]; omega⟩
-    · rw [if_neg hk, Finset.card_eq_zero, Finset.eq_empty_iff_forall_notMem]
+    · rw [ite_eq_right hk, Finset.card_eq_zero, Finset.eq_empty_iff_forall_notMem]
       intro x; simp; omega
 
 @[simp, grind =]
@@ -406,7 +406,7 @@ lemma support_uniformSelectArray : support ($ xs) = {x | x ∈ xs} := by
   ext x
   rcases Nat.eq_zero_or_pos xs.size with h | h
   · simp [Array.size_eq_zero_iff.mp h]
-  · rw [uniformSelectArray_def, dif_neg h.ne']
+  · rw [uniformSelectArray_def, dite_eq_right h.ne']
     simp [Array.mem_iff_getElem, Fin.exists_iff, eq_comm, Nat.sub_add_cancel h]
 
 @[simp, grind =]
@@ -419,7 +419,7 @@ lemma probFailure_uniformSelectArray : Pr[⊥ | $ xs] = if xs.size = 0 then 1 el
   by_cases h : xs.size = 0
   · have hxs : xs = #[] := Array.size_eq_zero_iff.mp h
     subst hxs; simp
-  · rw [uniformSelectArray_def, dif_neg h]
+  · rw [uniformSelectArray_def, dite_eq_right h]
     simp [h]
 
 -- TODO: `probOutput_uniformSelectArray` and `probEvent_uniformSelectArray` analogous to the

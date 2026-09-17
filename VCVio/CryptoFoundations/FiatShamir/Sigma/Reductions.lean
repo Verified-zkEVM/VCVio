@@ -292,9 +292,9 @@ private theorem perPk_extraction_bound
         forkSupportInvariant σ M qH pk x₁ log₁ ∧
         forkSupportInvariant σ M qH pk x₂ log₂
   swap
-  · rw [if_neg hE]
+  · rw [ite_eq_right hE]
     exact zero_le
-  rw [if_pos hE]
+  rw [ite_eq_left hE]
   by_cases hsupp : r ∈ support (contextFork wrappedMain qb (Sum.inr ()) cf)
   swap
   · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]
@@ -311,7 +311,8 @@ private theorem perPk_extraction_bound
   have hbranch : branchFn r = liftComp (σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2)
       (unifSpec + chalSpec) := by
     rw [hbranchFn_def, hreq]
-    simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂, dif_pos hc_eq, dif_pos hω_ne]
+    simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂, dite_eq_left hc_eq,
+      dite_eq_left hω_ne]
   rw [hbranch, probEvent_liftComp]
   -- The extractor returns a valid witness with probability one (special soundness).
   rw [show Pr[fun w : Wit => rel pk w = true |

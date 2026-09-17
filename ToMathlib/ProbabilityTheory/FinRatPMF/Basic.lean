@@ -405,9 +405,9 @@ lemma prob_uniformList_of_nodup [DecidableEq α] {l : List α} (hl : l ≠ []) (
     simp [Raw.uniformList, Raw.toList]
   rw [Raw.prob, htoList, probOfList_map_const_eq_length_filter]
   by_cases hx : x ∈ l
-  · rw [if_pos hx, filter_eq_singleton_of_nodup hnd hx]
+  · rw [ite_eq_left hx, filter_eq_singleton_of_nodup hnd hx]
     simp
-  · rw [if_neg hx]
+  · rw [ite_eq_right hx]
     have hnil : l.filter (fun a => a = x) = [] := by
       apply List.filter_eq_nil_iff.2
       intro y hy
@@ -433,7 +433,7 @@ lemma support_uniformList_of_nodup [DecidableEq α] {l : List α} (hl : l ≠ []
     have hmem : default ∈ FinEnum.toList α := FinEnum.mem_toList default
     simp [hnil] at hmem
   rw [Raw.uniform, prob_uniformList_of_nodup hl FinEnum.nodup_toList,
-    if_pos (FinEnum.mem_toList x)]
+    ite_eq_left (FinEnum.mem_toList x)]
   congr 1
 
 /-- `Raw.uniform` has full finite support. -/
@@ -702,7 +702,7 @@ private lemma probOfNormalizeMap_eq_prob [DecidableEq α] [BEq α] [Hashable α]
     have hacc' : q = p.prob x := by simpa [hopt] using hacc
     by_cases hq : q = 0
     · have hprob : p.prob x = 0 := hacc'.symm.trans hq
-      rw [Option.filter_some, if_neg (by simp [hq]), Option.getD_none]
+      rw [Option.filter_some, ite_eq_right (by simp [hq]), Option.getD_none]
       exact hprob.symm
     · have hprob : p.prob x ≠ 0 := by simpa [hacc'] using hq
       calc

@@ -207,6 +207,9 @@ syntax (name := pptBasic) "ppt" : tactic
 syntax (name := pptSuggestion) "ppt?" : tactic
 
 /-- Close a supported polynomial-time goal with exactly the user-supplied proof term. -/
+tactic_extension pptBasic
+
+@[tactic_alt pptBasic]
 syntax (name := pptUsing) "ppt" "using" term : tactic
 
 elab_rules (kind := pptBasic) : tactic

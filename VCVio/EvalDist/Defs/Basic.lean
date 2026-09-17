@@ -346,7 +346,7 @@ lemma probEvent_eq_sum_filter_finSupport [HasEvalFinset m] [DecidableEq α]
     Pr[ p | mx] = ∑ x ∈ (finSupport mx).filter p, Pr[= x | mx] :=
   (probEvent_eq_tsum_ite mx p).trans <|
     (tsum_eq_sum' <| by simp; tauto).trans
-      (Finset.sum_congr rfl <| fun x hx ↦ if_pos (Finset.mem_filter.1 hx).2)
+      (Finset.sum_congr rfl <| fun x hx ↦ ite_eq_left (Finset.mem_filter.1 hx).2)
 
 lemma probEvent_eq_sum_finSupport_ite [HasEvalFinset m] [DecidableEq α]
     (mx : m α) (p : α → Prop) [DecidablePred p] :

@@ -157,8 +157,7 @@ instance (priority := 100) instEvalDistCompatible [uniform : P.IsUniformSpec] :
         change support (FreeM.lift operation >>= next) =
           (𝒮[FreeM.lift operation >>= next]).support
         ext result
-        simp [-FreeM.lift_bind, -FreeM.lift_bind_eq_liftBind,
-          uniform.toPMF_eq_uniform, ih]
+        simp [uniform.toPMF_eq_uniform, ih]
 
 end FreeM
 end PFunctor

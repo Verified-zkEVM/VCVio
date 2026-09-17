@@ -433,7 +433,7 @@ theorem IsQueryBoundP.counting_bounded [DecidableEq ι] [Fintype ι]
         ih u (h.2 u) hu
       have hz_pos : 0 < z.2 t := Nat.pos_of_ne_zero hne
       by_cases hpt : p t
-      · simp only [if_pos hpt] at hrec
+      · simp only [ite_eq_left hpt] at hrec
         rw [sum_filter_update_of_pred_pos hpt hz_pos] at hrec
         have hp_pos : 0 < ∑ i ∈ Finset.univ.filter p, z.2 i :=
           Nat.lt_of_lt_of_le hz_pos
@@ -443,7 +443,7 @@ theorem IsQueryBoundP.counting_bounded [DecidableEq ι] [Fintype ι]
         have hshift : (∑ i ∈ Finset.univ.filter p, z.2 i) - 1 + 1 ≤ (n - 1) + 1 :=
           Nat.add_le_add_right hrec 1
         rwa [Nat.sub_add_cancel hp_pos, Nat.sub_add_cancel hn_pos] at hshift
-      · simp only [if_neg hpt] at hrec
+      · simp only [ite_eq_right hpt] at hrec
         rwa [sum_filter_update_of_not_pred hpt] at hrec
 
 /-- Residual bound via the counting oracle: after any partial counting-simulation of `oa`, the
@@ -470,7 +470,7 @@ theorem IsQueryBoundP.residual_of_mem_support_counting [DecidableEq ι] [Fintype
                 ∑ i ∈ Finset.univ.filter p, (Function.update z.2 t (z.2 t - 1)) i) :=
         ih u (h.2 u) hu
       by_cases hpt : p t
-      · simp only [if_pos hpt] at hrec
+      · simp only [ite_eq_left hpt] at hrec
         rw [sum_filter_update_of_pred_pos hpt hz_pos] at hrec
         have hp_pos : 0 < ∑ i ∈ Finset.univ.filter p, z.2 i :=
           Nat.lt_of_lt_of_le hz_pos
@@ -478,7 +478,7 @@ theorem IsQueryBoundP.residual_of_mem_support_counting [DecidableEq ι] [Fintype
               (Finset.mem_filter.mpr ⟨Finset.mem_univ t, hpt⟩))
         refine hrec.mono ?_
         rw [Nat.sub_sub, Nat.add_sub_of_le hp_pos]
-      · simp only [if_neg hpt] at hrec
+      · simp only [ite_eq_right hpt] at hrec
         rwa [sum_filter_update_of_not_pred hpt] at hrec
 
 /-- Predicate-targeted analogue of `isTotalQueryBound_iff_counting_total_le`: a
@@ -519,10 +519,10 @@ theorem isQueryBoundP_iff_counting_filter_le
         have hbound := h _ hbig'
         rw [hsplit] at hbound
         by_cases hpt : p t
-        · simp only [if_pos hpt]
+        · simp only [ite_eq_left hpt]
           rw [sum_single_filter_eq_one hpt] at hbound
           omega
-        · simp only [if_neg hpt]
+        · simp only [ite_eq_right hpt]
           rwa [sum_single_filter_eq_zero hpt, zero_add] at hbound
 
 end IsQueryBoundPRelations
@@ -550,9 +550,9 @@ theorem IsQueryBoundP.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSpec �
             ((liftM (impl t) : StateT σ (OracleComp spec') (spec.Range t)).run s) q
             (if p t then 1 else 0) := by
         by_cases hpt : p t
-        · simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift, if_pos hpt] using
+        · simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift, ite_eq_left hpt] using
             hstep_p t hpt s
-        · simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift, if_neg hpt] using
+        · simpa [OracleComp.liftM_run_StateT, MonadLift.monadLift, ite_eq_right hpt] using
             hstep_np t hpt s
       have hbound : (if p t then 1 else 0) + (if p t then n - 1 else n) = n := by grind
       simpa [hbound] using isQueryBoundP_bind hlift
@@ -577,8 +577,8 @@ theorem IsQueryBoundP.simulateQ_of_step {ι' : Type u} {spec' : OracleSpec ι'}
       simp only [simulateQ_query_bind, OracleQuery.input_query, monadLift_self]
       have hlift : IsQueryBoundP (impl t) q (if p t then 1 else 0) := by
         by_cases hpt : p t
-        · simpa [if_pos hpt] using hstep_p t hpt
-        · simpa [if_neg hpt] using hstep_np t hpt
+        · simpa [ite_eq_left hpt] using hstep_p t hpt
+        · simpa [ite_eq_right hpt] using hstep_np t hpt
       have hbound : (if p t then 1 else 0) + (if p t then n - 1 else n) = n := by grind
       simpa [hbound] using isQueryBoundP_bind hlift fun u _ => ih u (h.2 u)
 

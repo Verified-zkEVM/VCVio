@@ -240,9 +240,9 @@ lemma probOutput_seq_map_eq_mul_of_injective2 (hf : f.Injective2) (x : α) (y : 
   rw [probOutput_seq_map_eq_tsum]
   simp only [probOutput_pure_eq_indicator, Set.indicator, mul_ite, mul_zero]
   refine (tsum_eq_single x fun x' hx' => ?_).trans ?_
-  · exact ENNReal.tsum_eq_zero.mpr fun b => if_neg fun h' => hx' (hf h').1.symm
+  · exact ENNReal.tsum_eq_zero.mpr fun b => ite_eq_right fun h' => hx' (hf h').1.symm
   · refine (tsum_eq_single y fun y' hy' => ?_).trans ?_
-    · exact if_neg fun h' => hy' (hf h').2.symm
+    · exact ite_eq_right fun h' => hy' (hf h').2.symm
     · simp
 
 end injective2
@@ -327,9 +327,9 @@ lemma probEvent_seq_map_eq_mul (p : γ → Prop) (q1 : α → Prop) (q2 : β →
   intro x
   by_cases hx : x ∈ support mx
   · by_cases hq : q1 x
-    · simp only [if_pos hq]; congr 1
+    · simp only [ite_eq_left hq]; congr 1
       exact probEvent_ext fun y hy => (h x hx y hy).trans (by simp [hq])
-    · simp only [if_neg hq, zero_mul]
+    · simp only [ite_eq_right hq, zero_mul]
       rw [probEvent_eq_zero fun y hy => by
         simp only [Function.comp_apply, h x hx y hy]; simp [hq], mul_zero]
   · simp [probOutput_eq_zero_of_not_mem_support hx]

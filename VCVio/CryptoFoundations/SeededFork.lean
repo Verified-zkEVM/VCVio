@@ -495,7 +495,7 @@ private lemma probOutput_noGuardComp_value_step_le_add_aux (s : Fin (qb i + 1))
               (if cf x.1 = some s then pure (some (x₁, x.1)) else pure none))] := by
       refine probOutput_bind_mono fun x hx => ?_
       by_cases hxs : cf x.1 = some s <;> simp [hxs, hx₁, z, eq_comm]
-    rw [if_neg (by simpa using hu')]
+    rw [ite_eq_right (by simpa using hu')]
     simpa [monad_norm] using hmono
 
 omit [unifSpec ˡ⊂ₒ spec] in

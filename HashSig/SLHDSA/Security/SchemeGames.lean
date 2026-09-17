@@ -848,8 +848,8 @@ theorem loggedSignatures_internalLog
   refine List.filterMap_congr fun e _ => ?_
   simp only [Function.comp_apply]
   rcases eq_or_ne e.1 msg with h | h
-  · rw [if_pos h, if_pos (congrArg emptyContextMessage h)]
-  · rw [if_neg h, if_neg fun hc => h (emptyContextMessage_injective hc)]
+  · rw [ite_eq_left h, ite_eq_left (congrArg emptyContextMessage h)]
+  · rw [ite_eq_right h, ite_eq_right fun hc => h (emptyContextMessage_injective hc)]
 
 /-- And therefore neither does the randomizer reading.
 

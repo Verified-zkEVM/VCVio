@@ -448,12 +448,12 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       simp
     rw [hinner]
     by_cases hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript = true
-    · rw [if_pos hcb, mul_one, if_pos]
+    · rw [ite_eq_left hcb, mul_one, ite_eq_left]
       unfold cacheBadReader at hcb
       rw [decide_eq_true_eq] at hcb
       obtain ⟨tag, sid, _, hg⟩ := hcb
       exact ⟨(tag, sid), Finset.mem_univ _, hg⟩
-    · rw [if_neg hcb, mul_zero]; exact zero_le
+    · rw [ite_eq_right hcb, mul_zero]; exact zero_le
   refine hmono.trans ?_
   -- Step 2: union bound over the slot set.
   have hsum :
@@ -486,7 +486,7 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       by_cases h : gFine (slot, transcript.nonce) = transcript.auth
       · simp [h, probOutput_pure]
       · simp only [h, ite_false, probOutput_pure]
-        rw [if_neg (fun heq => h heq.symm), mul_zero]
+        rw [ite_eq_right (fun heq => h heq.symm), mul_zero]
     rw [hkey]
     exact probOutput_uniformSample_fun_eval (slot, transcript.nonce) transcript.auth
   rw [Finset.sum_congr rfl (fun slot _ => hcell slot)]

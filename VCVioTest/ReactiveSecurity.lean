@@ -101,7 +101,9 @@ theorem law_server_uniform : law (server ($ᵗ Bool)) (context 5) =
     rw [evalDist_uniformSample, ProbabilityTheory.uniformOn_univ]
     cases bit <;> simp
   rw [law_eq_evalDist, experiment_server, evalDist_map_of_discrete, hcoin]
-  rw [Measure.map_add _ _ Measurable.of_discrete, Measure.map_smul, Measure.map_smul]
+  rw [Measure.map_add _ _ Measurable.of_discrete,
+    Measure.map_smul _ Measurable.of_discrete.aemeasurable,
+    Measure.map_smul _ Measurable.of_discrete.aemeasurable]
   simp [Measure.map_dirac' Measurable.of_discrete]
 
 private theorem tvDist_dirac_half {α : Type} [MeasurableSpace α]

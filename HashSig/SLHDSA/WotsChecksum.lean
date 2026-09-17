@@ -178,7 +178,7 @@ private theorem checksum_each_le (w : ℕ) (digits : List ℕ)
 
 private theorem sum_le_length_mul (xs : List ℕ) (M : ℕ)
     (h : ∀ x ∈ xs, x ≤ M) : xs.sum ≤ xs.length * M :=
-  List.sum_le_card_nsmul xs M h
+  List.sum_le_length_nsmul xs M h
 
 theorem wotsChecksumValue_le {digits : List ℕ} {w l1 : ℕ}
     (hLen : digits.length = l1) (hBound : ∀ d ∈ digits, d < w) :
