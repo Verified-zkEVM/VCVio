@@ -71,7 +71,6 @@ insulated from `Sym` API churn.
 
 public meta section
 
-
 open Lean Elab Meta Lean.Meta
 open Lean.Elab.Tactic.Do.SpecAttr (SpecProof)
 
@@ -232,8 +231,8 @@ private def trailingArgsN? (e : Expr) (n : Nat) : Option (Array Expr) :=
     none
 
 /-- Preprocessed-body variant of `tripleGoalParts?` that also matches the
-unfolded `MAlgOrdered.Triple` head, as well as core's `Std.Internal.Do.Triple`
-which carries an extra trailing exception postcondition. Returns
+unfolded `MAlgOrdered.Triple` head and core's `Std.Internal.Do.Triple`, whose
+program argument precedes its WP evidence and assertion arguments. Returns
 `(pre, oa, post)`. -/
 private def tripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   let body := body.consumeMData

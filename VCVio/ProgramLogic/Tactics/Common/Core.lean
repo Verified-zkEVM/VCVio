@@ -20,7 +20,6 @@ Shared planning infrastructure for the unary and relational VCGen tactics.
 
 public meta section
 
-
 open Lean Elab Tactic Meta
 
 namespace OracleComp.ProgramLogic
@@ -392,7 +391,7 @@ private def findWpApp? (target : Expr) : Option (Expr × Nat) := do
   else
     none
 
-/-- Extract the computation from a algebra or core weakest-precondition expression. -/
+/-- Extract the computation from an algebra or core weakest-precondition expression. -/
 def wpGoalComp? (target : Expr) : Option Expr := do
   let (app, k) ← findWpApp? target
   let args ← trailingArgs? app k

@@ -46,7 +46,6 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 
 @[expose] public section
 
-
 open ENNReal OracleSpec OracleComp
 
 universe u

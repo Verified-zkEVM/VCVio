@@ -32,20 +32,8 @@ variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
 variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
 variable {α β : Type}
 
-/-- Qualitative `VCVio.ProgramLogic.RelWP` interpretation of pairs of `OracleComp`
-programs valued in `Prop`.
-
-The `rwpTrans` is the existing `Prop`-valued `MAlgRelOrdered.rwp` (i.e.
-`CouplingPost`); the two `EPost.Nil` arguments are ignored since
-neither side of an `OracleComp` pair has a first-class exception slot.
-The three `RelWP` axioms reduce to the existing
-`MAlgRelOrdered.{rwp_pure, rwp_bind_le, rwp_mono}` lemmas specialised
-at `l := Prop`.
-
-This is a `scoped instance` rather than a normal `instance` because
-`VCVio.ProgramLogic.RelWP`'s `Pred` is an `outParam`; making it scoped means it
-only participates in synthesis when the user `open`s this namespace,
-sidestepping the conflict with the default `ℝ≥0∞` carrier. -/
+/-- Relational weakest preconditions from probabilistic coupling.
+Enable with `open scoped OracleComp.Rel.Qualitative`. -/
 noncomputable scoped instance instRelWP :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prop
       Std.Internal.Do.EPost.Nil Std.Internal.Do.EPost.Nil where

@@ -33,18 +33,8 @@ namespace OracleComp.Qualitative
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α β : Type}
 
-/-- Qualitative `Std.Internal.Do.WP` interpretation of `OracleComp spec` valued in `Prop`.
-
-The `wpTrans` is the existing `Prop`-valued `MAlgOrdered.wp` (i.e.
-`∀ x ∈ support oa, post x`); the `EPost.Nil` argument is ignored since
-`OracleComp` has no first-class exception slot. The three `WP` axioms
-reduce to the existing `MAlgOrdered.{wp_pure, wp_bind, wp_mono}`
-specialised at `l := Prop`.
-
-This is a `scoped instance` rather than a normal `instance` because
-`Std.Internal.Do.WP`'s `Pred` is an `outParam`; making it scoped means it only
-participates in synthesis when the user `open`s this namespace,
-sidestepping the conflict with the default `ℝ≥0∞` carrier. -/
+/-- Core weakest preconditions for all structurally reachable outputs.
+Enable with `open scoped OracleComp.Qualitative`. -/
 noncomputable scoped instance instWP :
     Std.Internal.Do.WPMonad (OracleComp spec) Prop Std.Internal.Do.EPost.Nil :=
   MAlgOrdered.toWPMonad

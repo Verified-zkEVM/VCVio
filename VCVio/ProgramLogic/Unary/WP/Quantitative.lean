@@ -74,13 +74,8 @@ variable {ι : Type u} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
 variable {α β : Type}
 
-/-- Quantitative `Std.Internal.Do.WP` interpretation of `OracleComp spec` valued in `ℝ≥0∞`.
-
-The `wpTrans` is the existing `MAlgOrdered.wp` (i.e. expectation of
-`post` under `evalSPMF`); the `EPost.Nil` argument is ignored since
-`OracleComp` has no first-class exception slot. The three `WP` axioms
-reduce to the existing `MAlgOrdered.{wp_pure, wp_bind, wp_mono}`
-equalities. -/
+/-- Core weakest preconditions from the quantitative expectation algebra.
+Enable with `open scoped OracleComp.Quantitative`. -/
 noncomputable scoped instance instWP :
     Std.Internal.Do.WPMonad (OracleComp spec) ℝ≥0∞ Std.Internal.Do.EPost.Nil :=
   MAlgOrdered.toWPMonad

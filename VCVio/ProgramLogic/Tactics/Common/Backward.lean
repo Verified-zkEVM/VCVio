@@ -17,7 +17,6 @@ Shared native application helpers for `@[vcspec]` entries.
 
 public meta section
 
-
 open Lean Elab Tactic Meta
 
 namespace OracleComp.ProgramLogic
@@ -82,7 +81,7 @@ private def instantiateProofNoBridge (proof : Lean.Elab.Tactic.Do.SpecAttr.SpecP
 
 /--
 If `(prf, type)` proves a `Std.Internal.Do.Triple`, return the corresponding
-`pre ⊑ wp ...` proof via `Std.Internal.Do.Triple.iff`.
+`pre ⊑ wp ...` proof via `Std.Internal.Do.Triple.le_wp`.
 Relational `VCVio.ProgramLogic.RelTriple` is a reducible definition, so later raw
 normalization sees it by weak-head reducing the type to `pre ⊑ rwp ...`.
 Otherwise return the proof unchanged.

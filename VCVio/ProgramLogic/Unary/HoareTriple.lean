@@ -40,17 +40,9 @@ variable {α β σ : Type}
 
 /-! ## API contract
 
-- This unary quantitative interface is instantiated for `OracleComp spec`.
-- Probability/evaluation assumptions are `[spec.Fintype]` and `[spec.Inhabited]`.
-- The quantitative codomain is fixed to `ℝ≥0∞`.
-- Every `wp_*` lemma is stated as
-  `wp oa post = …`, every `triple_*` lemma as
-  `Triple pre oa post`.
-- For ergonomic call-site syntax, the abbreviations `wp` and `Triple`
-  reduce to the canonical heads with `epost :=`. They
-  are pure notation: every theorem is stated against the canonical
-  forms, and tactics (`vcgen`, `vcstep`, `@[wpStep]`, …) match on the
-  canonical heads after abbrev unfolding.
+This interface uses the uniform probability interpretation `[IsUniformSpec spec]`,
+with assertions in `ℝ≥0∞`. The abbreviations fix the empty exception postcondition
+while retaining core's WP and triple representations.
 -/
 
 /-- Quantitative weakest-precondition for `OracleComp spec`, fixing the
@@ -61,7 +53,7 @@ noncomputable abbrev wp (oa : OracleComp spec α) (post : α → ℝ≥0∞) : �
 
 /-- Quantitative Hoare triple for `OracleComp spec`, fixing the exception
 postcondition to `Lean.Order.bot`. Definitionally equal to
-`Std.Internal.Do.Triple pre oa post Lean.Order.bot`; see the API contract for
+`Std.Internal.Do.Triple oa pre post Lean.Order.bot`; see the API contract for
 details. -/
 noncomputable abbrev Triple (pre : ℝ≥0∞) (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) : Prop :=
@@ -89,24 +81,14 @@ theorem wp_eq_expectedValue (oa : OracleComp spec α) (post : α → ℝ≥0∞)
   rw [OracleComp.EvalDist.expectedValue_bind]
   simp only [OracleComp.EvalDist.expectedValue_pure]
 
-/-- Bridge between core's `Std.Internal.Do.Triple` and Mathlib's `≤` on
-`ℝ≥0∞`. Core defines `Std.Internal.Do.Triple.iff` against
-`Lean.Order.PartialOrder.rel`; on `ℝ≥0∞` our `Lean.Order.PartialOrder`
-instance defines `rel` as Mathlib's `≤`, so the two coincide. The
-explicit `Iff.rfl` re-exposes the equivalence in `≤`-form, which is what
-all the downstream `triple_*` proofs are stated against. -/
+/-- A quantitative core triple is the corresponding inequality of expectations. -/
 theorem triple_iff_le_wp
     (pre : ℝ≥0∞) (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     Triple pre oa post ↔
       pre ≤ wp oa post :=
   Std.Internal.Do.Triple.iff (epost := Lean.Order.bot)
 
-/-- Construct a `Triple …` from a `≤`-form proof
-`pre ≤ wp oa post`. Companion to
-`triple_iff_le_wp.mpr`; preferred as the constructor in concrete proofs
-because it avoids Lean's typeclass-projection unification failures
-that arise when calling `Std.Internal.Do.Triple.intro` directly with a `≤`
-proof. -/
+/-- Construct a quantitative triple from an expectation inequality. -/
 theorem triple_ofLE
     {pre : ℝ≥0∞} {oa : OracleComp spec α} {post : α → ℝ≥0∞}
     (h : pre ≤ wp oa post) :

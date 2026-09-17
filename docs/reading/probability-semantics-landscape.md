@@ -241,7 +241,7 @@ VCVio now has three related relational carriers:
 - an `ℝ≥0∞` quantitative expectation layer.
 
 The coherence results in
-[`ProgramLogic/Relational/Loom`](../../VCVio/ProgramLogic/Relational/Loom) show that this
+[`ProgramLogic/Relational/WP`](../../VCVio/ProgramLogic/Relational/WP) show that this
 is not merely duplication: indicator postconditions connect qualitative couplings to
 quantitative mass, and probability is a bounded presentation of the quantitative value.
 
@@ -674,7 +674,7 @@ review than either alone.
 The surface is narrower than the dependency's prominence suggests. VCVio imports exactly
 four loom2 modules — `Loom.WP.Basic`, `Loom.ExceptPost`, `Loom.Triple.Basic`, and
 `Loom.Triple.SpecLemmas` — and does so from only five files
-([`Unary/WP/{Qualitative,Probabilistic,Quantitative}.lean`](../../VCVio/ProgramLogic/Unary/Loom),
+([`Unary/WP/{Qualitative,Probabilistic,Quantitative}.lean`](../../VCVio/ProgramLogic/Unary/WP),
 [`Tactics/Unary/Internals.lean`](../../VCVio/ProgramLogic/Tactics/Unary/Internals.lean),
 and [`ToMathlib/Control/Monad/RelWP.lean`](../../ToMathlib/Control/Monad/RelWP.lean)).
 Everything else reaches Loom through the `Std.Do'` namespace, which is mentioned in 22
@@ -1345,8 +1345,8 @@ users retain ordinary discrete probability notation.
 - [`ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean)
 - [`ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean)
 - [`VCVio/ProgramLogic`](../../VCVio/ProgramLogic)
-- [`VCVio/ProgramLogic/Unary/Loom`](../../VCVio/ProgramLogic/Unary/Loom)
-- [`VCVio/ProgramLogic/Relational/Loom`](../../VCVio/ProgramLogic/Relational/Loom)
+- [`VCVio/ProgramLogic/Unary/WP`](../../VCVio/ProgramLogic/Unary/WP)
+- [`VCVio/ProgramLogic/Relational/WP`](../../VCVio/ProgramLogic/Relational/WP)
 - [`VCVio/OracleComp/Coinductive`](../../VCVio/OracleComp/Coinductive)
 - [`Examples/OneTimePad/Basic.lean`](../../Examples/OneTimePad/Basic.lean)
 - [`Examples/EvalDistCompatible/Basic.lean`](../../Examples/EvalDistCompatible/Basic.lean)

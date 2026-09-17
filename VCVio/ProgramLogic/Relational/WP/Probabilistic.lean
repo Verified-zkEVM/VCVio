@@ -62,19 +62,8 @@ private theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec
     (post : α → β → Prob) : rwpVal oa ob post ≤ 1 :=
   eRelWP_le_one_of_post_le_one oa ob _ (fun a b => (post a b).val_le_one)
 
-/-- Probabilistic `VCVio.ProgramLogic.RelWP` interpretation of pairs of
-`OracleComp` programs valued in `Prob = [0, 1] ⊆ ℝ≥0∞`.
-
-The `rwpTrans` is the existing quantitative `eRelWP` evaluated on
-`Prob`-valued postconditions and packaged into `Prob` via the `≤ 1`
-bound. The two `EPost.Nil` arguments are ignored since neither side of
-an `OracleComp` pair has a first-class exception slot.
-
-This is a `scoped instance` rather than a normal `instance`: only one
-`VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) _ _ _` instance
-can be visible at a time (`Pred` is an `outParam`), and the default is
-the quantitative `ℝ≥0∞` carrier. Open `OracleComp.Rel.Probabilistic`
-to switch into the probabilistic carrier. -/
+/-- Relational coupling expectations restricted to probability-valued assertions.
+Enable with `open scoped OracleComp.Rel.Probabilistic`. -/
 noncomputable scoped instance instRelWP_prob :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prob
       Std.Internal.Do.EPost.Nil Std.Internal.Do.EPost.Nil where

@@ -25,6 +25,11 @@ open scoped ENNReal
 
 namespace VCVioTest.ProgramLogic.CoreWP
 
+example : True := by
+  fail_if_success
+    let _ := (inferInstance : WPMonad ProbComp ℝ≥0∞ EPost.Nil)
+  trivial
+
 section Qualitative
 open scoped OracleComp.Qualitative
 

@@ -78,6 +78,7 @@ namespace OracleComp.Probabilistic
 
 variable {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
 
+/-- Oracle expectation preserves the probability bound. -/
 theorem wp_one_le (oa : OracleComp spec α) :
     MAlgOrdered.wp oa (fun _ => (1 : ℝ≥0∞)) ≤ 1 :=
   (OracleComp.ProgramLogic.wp_const oa 1).le

@@ -282,3 +282,71 @@ instances are scoped, so importing either layer does not choose a global semanti
 The legacy `Std.Do` handler bridge and the lattice-generic core WP API coexist.
 See [program-logic.md](program-logic.md#core-wp-and-the-symbolic-rewriter-boundary) for
 selection, tactic boundaries, and the v4.35 tracking links.
+
+## Restoring `private` correctly
+
+The module migration changed the meaning of `private`: a public exposed body
+cannot retain a reference to a private declaration. Classify each affected
+declaration before changing visibility.
+
+1. If it appears in a public type, theorem statement, default argument, or
+   deliberately exposed body, it is part of the public dependency closure.
+   Give it an intentional public name and docstring, or redesign the public
+   declaration so the helper no longer appears.
+2. If it is used only in proofs, keep it `private`. Public theorem proofs are
+   private module data and may use private proof helpers.
+3. If it is an executable helper used only by a public runtime entry point,
+   keep the helper `private` and make the entry point opaque when downstream
+   callers do not need to unfold it.
+4. If it is local example or test scaffolding, keep it private unless the
+   example explicitly demonstrates that declaration as reusable API.
+5. If callers genuinely need to reduce through it, expose the smallest
+   definition and cover it with public laws. Do not enable
+   `backward.privateInPublic` or `backward.proofsInPublic`.
+
+Renaming a private helper merely to make it public avoids a name collision but
+does not answer whether it belongs in the API. Record intentional promotions
+in review; restore all other helpers using the patterns above.
+
+## Validation and coordinated rollout
+
+The boundary has three canaries and one ratchet:
+
+- `scripts/check-polyfun-boundary.sh` rejects cross-package private imports;
+- `VCVioTest/PFunctorFacade.lean` exercises the direct PFunctor API and the
+  OracleSpec compatibility API;
+- the downstream scratch-consumer CI job imports the generic semantics and
+  checks the public handler operations; and
+- `scripts/check-expose-boundary.sh` holds the per-library count of files
+  that open a broad `@[expose] public section` at or below
+  `scripts/expose_boundary_baseline.tsv` (fixtures in
+  `scripts/test-expose-boundary.sh`; `--report` prints the delta against the
+  PR base). The lexical counter handles whitespace and section modifiers,
+  ignores comments and literals, and counts each file once. It does not
+  elaborate macros. Run `scripts/check-expose-boundary.sh --update-baseline`
+  in the PR that converts a file so the ceiling follows the decrease; raise
+  it only with a stated reason in the PR description.
+
+Start a conversion by switching to plain `public section` and building. The
+compiler identifies definitions that existing public declarations need exposed
+under "may need to be `@[expose]`d". Then review the intended downstream API:
+repository callers may exercise only some parameter sets. In particular,
+bundles with concrete type fields must expose those projections when callers
+need to supply ordinary values of those types. Add public-import canaries for
+such interfaces, including every exported specialization.
+
+Proof modules often need only a few selectively exposed definitions. Fixtures
+whose public proofs intentionally unfold nearly every definition may retain
+`@[expose] public section`; explain that need in the module docstring when it
+is not apparent from the contents. Runtime execution alone (including `main`)
+does not require exposing definition bodies to proof reduction.
+
+Changes that add PolyFun API and consume it from VCVio require two coordinated
+repository changes:
+
+1. merge and release the PolyFun public API;
+2. update VCVio's PolyFun revision;
+3. merge the VCVio aliases, proofs, and canaries.
+
+During local development, test VCVio against the matching PolyFun worktree,
+but do not merge a VCVio revision that refers to unpublished PolyFun names.

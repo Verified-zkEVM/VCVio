@@ -563,7 +563,7 @@ lemma sum_wp_hidingOa_eq_wp_choose [Fintype S]
                 (post s))) := by
         refine Finset.sum_congr rfl ?_
         intro s hs
-        simp [hidingOa, simulateQ_bind, StateT.run_bind, OracleComp.ProgramLogic.wp_bind]
+        simp [hidingOa, simulateQ_bind, StateT.run_bind]
     _ =
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
