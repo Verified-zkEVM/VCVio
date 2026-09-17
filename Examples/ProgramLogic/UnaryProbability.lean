@@ -20,7 +20,7 @@ and `by_hoare` support in the unary tactic layer.
 open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic
+open scoped OracleComp.ProgramLogic Std.Internal.Do OracleComp.Quantitative
 
 universe u
 

@@ -53,19 +53,6 @@ Lean 4.33 build. Subdirectory: `hax-lib/proof-libs/lean`.
 --   "492a34e3" / "hax-lib/proof-libs/lean"
 
 /-
-Loom2 provides the Loom-style WP / Triple program-logic abstractions used in
-`VCVio/ProgramLogic/`. Lean 4.33 includes the stable `Std.Do` foundations, but
-Loom2's `Std.Do'` layer retains the three-parameter `PredTrans`, `EPost`, and
-relational APIs consumed by VCVio. Migrating those clients to the redesigned
-`PostShape` API is separate work.
-
-The exact pin below is validated with VCVio's Lean 4.33 baseline.
--/
-require loom2 from git
-  "https://github.com/quangvdao/loom2" @
-  "2f65f311fae959c302586b07aa45390999b935d4"
-
-/-
 Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
 published `nightly-2026.07.11-15b9684`; keep it disabled until the VCVio bridge
 is tested separately and can be enabled without compatibility aliases.

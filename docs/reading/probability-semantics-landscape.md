@@ -654,7 +654,7 @@ VCVio-visible rename.
 
 VCVio depends on [`loom2`](https://github.com/quangvdao/loom2) for `Std.Do'`,
 `PredTrans`, `EPost`, `RelTriple`, and `rwp` — the substrate under
-`VCVio/ProgramLogic/{Unary,Relational}/Loom/`. It is omitted from the layering picture
+`VCVio/ProgramLogic/{Unary,Relational}/WP/`. It is omitted from the layering picture
 above, and it should not be: it is the least stable link in the chain.
 
 - It is pinned to a single commit and targets a Lean **v4.32.0** toolchain, while VCVio
@@ -674,7 +674,7 @@ review than either alone.
 The surface is narrower than the dependency's prominence suggests. VCVio imports exactly
 four loom2 modules — `Loom.WP.Basic`, `Loom.ExceptPost`, `Loom.Triple.Basic`, and
 `Loom.Triple.SpecLemmas` — and does so from only five files
-([`Unary/Loom/{Qualitative,Probabilistic,Quantitative}.lean`](../../VCVio/ProgramLogic/Unary/Loom),
+([`Unary/WP/{Qualitative,Probabilistic,Quantitative}.lean`](../../VCVio/ProgramLogic/Unary/Loom),
 [`Tactics/Unary/Internals.lean`](../../VCVio/ProgramLogic/Tactics/Unary/Internals.lean),
 and [`ToMathlib/Control/Monad/RelWP.lean`](../../ToMathlib/Control/Monad/RelWP.lean)).
 Everything else reaches Loom through the `Std.Do'` namespace, which is mentioned in 22
@@ -688,7 +688,7 @@ dependency graph, that would have to be swept.
 | `Triple`, `Triple.iff`, `Triple.bind` | 54 | `structure Triple` | `Std/WP/Triple/` | **Rename.** |
 | `Spec.get_StateT`, `set_StateT`, `read_ReaderT`, `modifyGet_StateT`, `monadLift_*` | 12 | `StateT.instWPMonad`, `ReaderT.instWPMonad` | `Std/WP/Monad/Instances.lean` | **Rename**, but re-derive against upstream's instance shape rather than porting the lemmas. |
 | `EPost.nil`, `EPost.nil.mk`, `EPost.cons`, `EPost.cons.mk`, `EPost.cons.pushOption` | 74 | `EPost.Nil`, `EPost.Cons` (capitalised) | **Restructured to `EStack`** | **Reshape — the one substantial item.** |
-| `WriterT.apply_wp`, `wp_tell`, `wp_pure` | 6 | absent | absent | **VCVio-owned already** — declared inside `namespace Std.Do'` in [`Unary/Loom/Quantitative.lean`](../../VCVio/ProgramLogic/Unary/Loom/Quantitative.lean). Moves with VCVio; only the enclosing namespace changes. |
+| `WriterT.apply_wp`, `wp_tell`, `wp_pure` | 6 | absent | absent | **VCVio-owned already** — declared inside `namespace Std.Do'` in [`Unary/WP/Quantitative.lean`](../../VCVio/ProgramLogic/Unary/WP/Quantitative.lean). Moves with VCVio; only the enclosing namespace changes. |
 | `RelTriple`, `rwp`, `RelWP` and their rules | 99 | absent | absent | **Stays downstream.** No relational layer upstream in either tree. |
 
 **The `EPost` → `EStack` reshape is the only part that is not a rename.** Upstream has

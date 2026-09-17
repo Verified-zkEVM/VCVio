@@ -504,7 +504,8 @@ lemma wp_freshDistinguishIncrement_eq
               OracleComp.ProgramLogic.propInd
                 (qchoose.2.2 s = 0 ∧ qch.2.2 s < z.2.2 s))) = fun _ => 0 := by
       funext qch
-      simp [hzero]
+      simp only [hzero, false_and, OracleComp.ProgramLogic.propInd_false]
+      exact OracleComp.ProgramLogic.wp_const _ 0
     rw [hpost, OracleComp.ProgramLogic.wp_const]
     simp [hzero]
 
@@ -1127,9 +1128,11 @@ lemma sum_wp_countIncrementIndicators_le_queryBound_of_run_hidingImplCountAll
               ss.sum fun s => OracleComp.ProgramLogic.propInd (st₀.2 s < z.2.2 s)) := by
       intro ss
       refine Finset.induction_on ss ?_ ?_
-      · simp [OracleComp.ProgramLogic.wp_const]
+      · simp only [Finset.sum_empty]
+        exact (OracleComp.ProgramLogic.wp_const run 0).symm
       · intro s ss hs ih
-        simp [hs, ih, OracleComp.ProgramLogic.wp_add]
+        simp only [Finset.sum_insert hs]
+        rw [OracleComp.ProgramLogic.wp_add, ih]
     simpa [run] using hsumFin Finset.univ
   rw [hsum, OracleComp.ProgramLogic.wp_eq_tsum]
   calc

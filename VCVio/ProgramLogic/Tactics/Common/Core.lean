@@ -20,6 +20,7 @@ Shared planning infrastructure for the unary and relational VCGen tactics.
 
 public meta section
 
+
 open Lean Elab Tactic Meta
 
 namespace OracleComp.ProgramLogic
@@ -356,14 +357,15 @@ def trailingArgs? (e : Expr) (n : Nat) : Option (Array Expr) :=
 def findAppWithHead? (head : Name) (e : Expr) : Option Expr :=
   (e.find? fun e' => e'.consumeMData.getAppFn.isConstOf head).map Expr.consumeMData
 
-/-- Extract both computations and the postcondition from a VCVio or Loom relational triple. -/
+/-- Extract both computations and the postcondition from a support or quantitative
+relational triple. -/
 def relTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
   if let some app := findAppWithHead? ``OracleComp.ProgramLogic.Relational.RelTriple target then
     let args ← trailingArgs? app 3
     let #[oa, ob, post] := args | none
     some (oa, ob, post)
   else
-    let app ← findAppWithHead? ``Std.Do'.RelTriple target
+    let app ← findAppWithHead? ``VCVio.ProgramLogic.RelTriple target
     let args ← trailingArgs? app 6
     let #[_pre, oa, ob, post, _epost₁, _epost₂] := args | none
     some (oa, ob, post)
@@ -375,9 +377,9 @@ def relWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
   let #[oa, ob, post] := args | none
   some (oa, ob, post)
 
-/-- Extract a Loom relational triple's precondition, computations, and postcondition. -/
+/-- Extract a quantitative relational triple's precondition, computations, and postcondition. -/
 def stdDoRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × Expr) := do
-  let app ← findAppWithHead? ``Std.Do'.RelTriple target
+  let app ← findAppWithHead? ``VCVio.ProgramLogic.RelTriple target
   let args ← trailingArgs? app 6
   let #[pre, oa, ob, post, _epost₁, _epost₂] := args | none
   some (pre, oa, ob, post)
@@ -385,12 +387,12 @@ def stdDoRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × E
 private def findWpApp? (target : Expr) : Option (Expr × Nat) := do
   if let some app := findAppWithHead? ``OracleComp.ProgramLogic.wp target then
     some (app, 2)
-  else if let some app := findAppWithHead? ``Std.Do'.wp target then
+  else if let some app := findAppWithHead? ``Std.Internal.Do.wp target then
     some (app, 3)
   else
     none
 
-/-- Extract the computation from a VCVio or Loom weakest-precondition expression. -/
+/-- Extract the computation from a algebra or core weakest-precondition expression. -/
 def wpGoalComp? (target : Expr) : Option Expr := do
   let (app, k) ← findWpApp? target
   let args ← trailingArgs? app k
@@ -416,22 +418,23 @@ def rawWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
 private def findTripleApp? (target : Expr) : Option (Expr × Nat) := do
   if let some app := findAppWithHead? ``OracleComp.ProgramLogic.Triple target then
     some (app, 3)
-  else if let some app := findAppWithHead? ``Std.Do'.Triple target then
-    some (app, 4)
+  else if let some app := findAppWithHead? ``Std.Internal.Do.Triple target then
+    some (app, 5)
   else
     none
 
-/-- Extract the computation from a VCVio or Loom unary triple. -/
+/-- Extract the computation from a VCVio or core unary triple. -/
 def tripleGoalComp? (target : Expr) : Option Expr := do
   let (app, k) ← findTripleApp? target
   let args ← trailingArgs? app k
-  some args[1]!
+  some args[if k == 5 then 0 else 1]!
 
 /-- Extract a unary triple's precondition, computation, and postcondition. -/
 def tripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
   let (app, k) ← findTripleApp? target
   let args ← trailingArgs? app k
-  some (args[0]!, args[1]!, args[2]!)
+  if k == 5 then some (args[2]!, args[0]!, args[3]!)
+  else some (args[0]!, args[1]!, args[2]!)
 
 /-- Check whether an expression contains an oracle simulation. -/
 def isSimulateQAction (e : Expr) : Bool :=

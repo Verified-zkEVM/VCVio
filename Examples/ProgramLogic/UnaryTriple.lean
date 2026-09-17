@@ -20,7 +20,7 @@ This file validates unary `Triple` stepping and structural `vcgen` decomposition
 open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic
+open scoped OracleComp.ProgramLogic Std.Internal.Do OracleComp.Quantitative
 
 universe u
 

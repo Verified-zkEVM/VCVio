@@ -127,11 +127,11 @@ from the LHS of a `wp comp post = …` equation.
 
 After `Sym.preprocessType`, the abbrev `OracleComp.ProgramLogic.wp` has been
 unfolded to either `MAlgOrdered.wp` (legacy structural form) or
-`Std.Do'.wp _ _ Order.bot` (Loom2-routed form, the canonical post-cutover
+`Std.Internal.Do.wp _ _ Order.bot` (core WP form, the canonical
 shape). All three heads are accepted; the `comp` argument is positionally:
 * `MAlgOrdered.wp m l … oa post` → 2nd-to-last explicit argument.
 * `OracleComp.ProgramLogic.wp ι spec … oa post` → 2nd-to-last explicit argument.
-* `Std.Do'.wp m Pred EPred α … oa post epost` → 3rd-to-last explicit argument. -/
+* `Std.Internal.Do.wp m Pred EPred α … oa post epost` → 3rd-to-last explicit argument. -/
 private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
   let body := body.consumeMData
   unless body.isAppOfArity ``Eq 3 do
@@ -139,9 +139,9 @@ private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
   let lhs := (body.getArg! 1).consumeMData
   let fn := lhs.getAppFn
   let n := lhs.getAppNumArgs
-  if fn.isConstOf ``Std.Do'.wp then
+  if fn.isConstOf ``Std.Internal.Do.wp then
     unless n ≥ 3 do
-      throwError m!"@[wpStep] `Std.Do'.wp` LHS has too few arguments:{indentExpr lhs}"
+      throwError m!"@[wpStep] `Std.Internal.Do.wp` LHS has too few arguments:{indentExpr lhs}"
     return (lhs.getArg! (n - 3), ())
   unless fn.isConstOf ``MAlgOrdered.wp || fn.isConstOf ``OracleComp.ProgramLogic.wp do
     throwError m!"@[wpStep] expects an `wp _ _` LHS; got:{indentExpr lhs}"

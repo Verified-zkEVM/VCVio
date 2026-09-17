@@ -40,7 +40,7 @@ not a proof that no equivalent API exists.
 | Batteries | `4488d40d0` | checkout under `.lake/packages` |
 | cslib | `v4.33.1` (`98e395a7`) on `main`, read from the `v4.33.0` (`3951377e`) checkout | inherited through PolyFun; `gh api repos/leanprover/cslib/compare/3951377e...98e395a7` lists only `lake-manifest.json`, `lakefile.toml`, `lean-toolchain`, so every `.lean` file cited is identical at both pins |
 | PolyFun | `c0c92369` (commit pin) | checkout `9442600` plus the GitHub API for the pin |
-| loom2 | `2f65f311` (2026-07-15) | checkout; upstream last commit 2026-04-19 |
+| loom2 (survey snapshot) | `2f65f311` (2026-07-15) | no longer a dependency; core WP migration is recorded below |
 
 Traps recorded by PolyFun and confirmed here: the newest local toolchain directory is not
 necessarily newer than the pin (check `bin/lean --version`); an API found on `master` but
@@ -122,19 +122,18 @@ needs an instance-synthesis check, not a grep.
 
 ### Track — heading into core, or blocked on a design decision
 
-**Program logic: migrate against the pinned APIs.** Lean v4.33.1 already publicly exposes
-`Std.Do.WP`; `VCVio/ProgramLogic/Unary/StdDoBridge.lean` uses it. Core's `mvcgen` and Sym-based
-`vcgen` coexist at this pin, and neither is deprecated. Loom's quantitative and relational
-clients use a different carrier-indexed interface, so replacing them requires a `PostShape`
-adapter and suitable order instances, not merely a future toolchain version.
+**Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
+`Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`. Quantitative,
+qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's
+`Set.Iic 1` with `MAlgOrdered.restrictIic`; no local lattice bridge is needed. The
+relational coupling interface belongs to VCVio and uses core assertion lattices.
+Loom2 is no longer a dependency.
 
-Core's `vcgen` and VCVio's `vcgen` are both in scope through the root `VCVio` import.
-`VCVioTest/VCGenAmbiguity.lean` checks that a framework `wp` goal still closes in that setting.
-The pinned `Sym.Simp.Theorems.rewrite`, `Sym.Simp.SimpM.run`, and `SymM.run` are public; the
-remaining work is adapting VCVio's registries and goals to their interfaces. See the
-[program-logic guide](../agents/program-logic.md#future-vcgen-bridge-deferred) and the
-[module-system guide](../agents/module-system.md) for the verified boundary from #653.
-Do not infer a release schedule or an API's absence from the original survey's searches.
+Core `vcgen` and VCVio's probability/coupling frontend coexist. The latter still owns
+its `@[vcspec]`/`@[wpStep]` dispatch; the older `Std.Do` handler bridge also remains a
+separate consumer. See the [program-logic guide](../agents/program-logic.md#core-wp-and-the-symbolic-rewriter-boundary)
+for these boundaries and the v4.35 tracking links. The source-count survey below
+records the earlier snapshot; its control/WP recommendations are superseded here.
 
 **Transparency.** `attribute [implicit_reducible] OracleSpec` (`VCVio/OracleComp/OracleSpec.lean:44`)
 was documented in the survey snapshot as helping instance synthesis, but at the pin
@@ -437,13 +436,10 @@ Mathlib `Preorder`) is the twin of core's `MonoBind` (`C:Init/Internal/Order/Bas
 230× vs 9×) and the `liftM`/`run_liftM` lemma pattern; `seq_eq_bind` (28 hits) is deprecated since
 2025-10-26 for `seq_eq_bind_map` (`C:Init/Control/Lawful/Basic.lean:188`). Mathlib's `@[monad_norm]`
 set is used 166×; `functor_norm` 0×; the local `handler_simp` set has effectively one use and can fold
-into `game_rule`. The carrier-indexed `WP m Pred EPred` with `outParam`s forces the
-`scoped instance (priority := 1100)` pattern (`V:VCVio/ProgramLogic/Unary/Loom/Qualitative.lean:49–56`);
-core's `WP m (ps : outParam PostShape)` avoids it because the shape is determined by the monad stack —
-a genuine design divergence. Three definitionally different qualitative WPs coexist
-(`MAlgOrdered.wp` over Mathlib lattices, 252 uses; loom2's `Std.Do'.wp`, 427; core `Std.Do.wp` bridged
-at `.pure` shape only, `V:VCVio/ProgramLogic/Unary/StdDoBridge.lean:70–76`); the missing lemma is
-`Std.Do.wp x Q = ⌜MAlgOrdered.wp x Q.1⌝` (both are `∀ a ∈ support x, …`).
+into `game_rule`. Carrier choice is explicit through scoped `WPMonad` instances. Structural
+qualitative support and quantitative expectation are separate interpretations. Their
+coherence theorems state the needed probability assumptions. PolyFun supplies the shared
+Mathlib-to-core lattice bridge and the restricted-carrier construction.
 
 **Integration candidates (ranked).**
 1. `V:ToMathlib/Control/Monad/Indexed.lean` is a verbatim copy of `PolyFun/Control/Monad/Indexed.lean`
@@ -452,12 +448,9 @@ at `.pure` shape only, `V:VCVio/ProgramLogic/Unary/StdDoBridge.lean:70–76`); t
 2. `SetM.pure_def/bind_def/run_eq` (`V:VCVio/EvalDist/Defs/Support.lean:31–41`) duplicate
    `SetM.run_pure/run_bind/run_map` (`V:ToMathlib/Data/Set/Functor.lean:36–45`) with a competing simp
    normal form; keep the `run_*` family (core's `StateT.run_*` idiom).
-3. One generic `[CompleteLattice α] → Lean.Order.{PartialOrder,CompleteLattice} α`
-   (`ToMathlib/Order/LeanOrder.lean`, `rel := (· ≤ ·)`, `has_sup c := ⟨sSup {x | c x}, …⟩`, low
-   priority so core's `Prop` instance stays first) replaces the four hand instances
-   (`V:VCVio/ProgramLogic/Unary/Loom/Quantitative.lean:121,132`, `Probabilistic.lean:106,134`); `Prob`'s
-   lattice comes free from `Set.Iic 1` (`M:Order/CompleteLatticeIntervals.lean:227`). This is also the
-   an order-adapter step for a possible Loom migration.
+3. **Adopted:** use PolyFun's Mathlib-to-core lattice bridge and `MAlgOrdered.restrictIic`.
+   `Prob` is Mathlib's `Set.Iic (1 : ℝ≥0∞)`; the four local order/lattice implementations
+   and the duplicate generic WriterT WP have been removed.
 4. `LawfulAppend` (`V:ToMathlib/Control/WriterT.lean:30`) is `Std.Associative (·++·)` +
    `Std.LawfulIdentity (·++·) ∅` (`C:Init/Core.lean:2478,2542`; `List` instances
    `C:Init/Data/List/Basic.lean:627,647`, re-proved locally at `WriterT.lean:51`). 49 uses.

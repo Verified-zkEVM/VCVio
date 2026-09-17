@@ -17,6 +17,7 @@ Shared native application helpers for `@[vcspec]` entries.
 
 public meta section
 
+
 open Lean Elab Tactic Meta
 
 namespace OracleComp.ProgramLogic
@@ -80,33 +81,16 @@ private def instantiateProofNoBridge (proof : Lean.Elab.Tactic.Do.SpecAttr.SpecP
   return (xs, bis, prf, type)
 
 /--
-If `(prf, type)` proves a `Std.Do'.Triple`, return the corresponding
-`pre ⊑ wp ...` proof via `Std.Do'.Triple.iff`.
-Relational `Std.Do'.RelTriple` is a reducible definition, so later raw
+If `(prf, type)` proves a `Std.Internal.Do.Triple`, return the corresponding
+`pre ⊑ wp ...` proof via `Std.Internal.Do.Triple.iff`.
+Relational `VCVio.ProgramLogic.RelTriple` is a reducible definition, so later raw
 normalization sees it by weak-head reducing the type to `pre ⊑ rwp ...`.
 Otherwise return the proof unchanged.
 -/
 private def bridgeTriple? (prf type : Expr) : MetaM (Expr × Expr) := do
   let type ← whnfR type
-  if type.isAppOfArity ``Std.Do'.Triple 12 then
-    let .const _ lvls := type.getAppFn
-      | return (prf, type)
-    let args := type.getAppArgs
-    let tripleIff := mkAppN (mkConst ``Std.Do'.Triple.iff lvls)
-      #[ args[0]!,  -- m
-         args[1]!,  -- Pred
-         args[2]!,  -- EPred
-         args[4]!,  -- Monad
-         args[5]!,  -- Assertion Pred
-         args[6]!,  -- Assertion EPred
-         args[7]!,  -- WP
-         args[3]!,  -- α
-         args[9]!,  -- x
-         args[8]!,  -- pre
-         args[10]!, -- post
-         args[11]!  -- epost
-       ]
-    let prf' ← mkAppM ``Iff.mp #[tripleIff, prf]
+  if type.isAppOfArity ``Std.Internal.Do.Triple 11 then
+    let prf' ← mkAppM ``Std.Internal.Do.Triple.le_wp #[prf]
     let type' ← instantiateMVars (← inferType prf')
     return (prf', type')
   return (prf, type)
@@ -141,7 +125,7 @@ private def rawRelParts? (type : Expr) : MetaM (Option (Expr × Expr)) := do
 
 private def stdDoWpParts? (rhs : Expr) : Option (Expr × Expr × Expr) := do
   let rhs := rhs.consumeMData
-  unless rhs.getAppFn.isConstOf ``Std.Do'.wp do none
+  unless rhs.getAppFn.isConstOf ``Std.Internal.Do.wp do none
   let args := rhs.getAppArgs
   unless args.size ≥ 3 do none
   let oa := args[args.size - 3]!
@@ -151,7 +135,7 @@ private def stdDoWpParts? (rhs : Expr) : Option (Expr × Expr × Expr) := do
 
 private def stdDoRelWpParts? (rhs : Expr) : Option (Expr × Expr × Expr × Expr × Expr) := do
   let rhs := rhs.consumeMData
-  unless rhs.getAppFn.isConstOf ``Std.Do'.rwp do none
+  unless rhs.getAppFn.isConstOf ``VCVio.ProgramLogic.rwp do none
   let args := rhs.getAppArgs
   unless args.size ≥ 5 do none
   let oa := args[args.size - 5]!
@@ -167,10 +151,10 @@ private def unaryTripleParts? (type : Expr) : Option (Expr × Expr × Expr) := d
     let args := type.getAppArgs
     unless args.size ≥ 3 do none
     return (args[args.size - 3]!, args[args.size - 2]!, args[args.size - 1]!)
-  if type.getAppFn.isConstOf ``Std.Do'.Triple then
+  if type.getAppFn.isConstOf ``Std.Internal.Do.Triple then
     let args := type.getAppArgs
-    unless args.size ≥ 4 do none
-    return (args[args.size - 4]!, args[args.size - 3]!, args[args.size - 2]!)
+    unless args.size ≥ 5 do none
+    return (args[args.size - 3]!, args[args.size - 5]!, args[args.size - 2]!)
   none
 
 private def mkOrderRel (lhs rhs : Expr) : MetaM Expr := do
@@ -296,7 +280,7 @@ backward rule source by abstracting concrete `post` and always abstracting
 `mkSpecBackwardProof`. -/
 private def mkUnarySpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := do
   let some (prog, postSpec, epostSpec) := stdDoWpParts? rhs
-    | throwError "expected a Std.Do'.wp RHS, got:{indentExpr rhs}"
+    | throwError "expected a Std.Internal.Do.wp RHS, got:{indentExpr rhs}"
   let mut postAbstract := postSpec.consumeMData
   let mut specApplied := specProof
   unless postAbstract.isMVar do
@@ -305,7 +289,7 @@ private def mkUnarySpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := 
     let hpostTy ← mkUnaryPostPointwisePremise postSpec postAbstract postTy
     let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
     specApplied ←
-      mkAppM ``Std.Do'.WP.wp_consequence_rel
+      mkAppM ``Std.Internal.Do.WP.wp_consequence_le
         #[prog, postSpec, postAbstract, epostSpec, hpost, specApplied]
   let preTy ← inferType pre
   let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
@@ -316,10 +300,10 @@ private def mkUnarySpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := 
 /-- Generalize a raw relational `pre ⊑ rwp left right post epost₁ epost₂`
 proof into a reusable backward rule source. This is the relational analogue of
 `mkUnarySpecBackwardProof`; qualitative and quantitative carriers share this
-path once they are expressed as `Std.Do'.RelTriple` / raw `Std.Do'.rwp`. -/
+path once they are expressed as `VCVio.ProgramLogic.RelTriple` / raw `VCVio.ProgramLogic.rwp`. -/
 private def mkRelSpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := do
   let some (oa, ob, postSpec, epost₁, epost₂) := stdDoRelWpParts? rhs
-    | throwError "expected a Std.Do'.rwp RHS, got:{indentExpr rhs}"
+    | throwError "expected a VCVio.ProgramLogic.rwp RHS, got:{indentExpr rhs}"
   let mut postAbstract := postSpec.consumeMData
   let mut specApplied := specProof
   unless postAbstract.isMVar do
@@ -328,7 +312,7 @@ private def mkRelSpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := do
     let hpostTy ← mkRelPostPointwisePremise postSpec postAbstract postTy
     let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
     specApplied ←
-      mkAppM ``Std.Do'.RelWP.rwp_consequence_rel
+      mkAppM ``VCVio.ProgramLogic.RelWP.rwp_consequence_rel
         #[oa, ob, postSpec, postAbstract, epost₁, epost₂, hpost, specApplied]
   let preTy ← inferType pre
   let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
@@ -346,8 +330,8 @@ private def mkBackwardRuleFromProofExpr (prf : Expr) :
   return (res, decl, rule)
 
 /-- Normalize a `pre ⊑ rhs` / `pre ≤ rhs` proof into a reusable backward-rule
-source by dispatching on the `rhs` weakest-precondition shape: raw `Std.Do'.wp`
-goes through `mkUnarySpecBackwardProof`, raw `Std.Do'.rwp` through
+source by dispatching on the `rhs` weakest-precondition shape: raw `Std.Internal.Do.wp`
+goes through `mkUnarySpecBackwardProof`, raw `VCVio.ProgramLogic.rwp` through
 `mkRelSpecBackwardProof`, and anything else is returned unchanged. -/
 private def normalizeRawRelProof (prf type : Expr) : MetaM Expr := do
   match ← rawRelParts? type with
@@ -426,7 +410,7 @@ def VCSpecEntry.hasProofPremise (entry : VCSpecEntry) : MetaM Bool := do
 
 /-- Apply a raw unary `@[vcspec]` theorem under consequence, constructing the
 proof directly against the current target. This is the unary analogue of the
-direct raw relational path and covers raw `Std.Do'.wp` goals with `epost⟨⟩`
+direct raw relational path and covers raw `Std.Internal.Do.wp` goals with `epost⟨⟩`
 without going through theorem-syntax replay. -/
 def VCSpecEntry.tryApplyRawUnaryConsequence (entry : VCSpecEntry) (mvarId : MVarId) :
     MetaM (Option (List MVarId)) := do
@@ -446,7 +430,7 @@ def VCSpecEntry.tryApplyRawUnaryConsequence (entry : VCSpecEntry) (mvarId : MVar
   let hpostTy ← mkUnaryPostPointwisePremise postSpec postTarget postTy
   let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
   let specApplied ←
-    mkAppM ``Std.Do'.WP.wp_consequence_rel
+    mkAppM ``Std.Internal.Do.WP.wp_consequence_le
       #[progSpec, postSpec, postTarget, epostSpec, hpost, specProof]
   let hpreTy ← mkOrderRel preTarget preSpec
   let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
@@ -493,7 +477,7 @@ def VCSpecEntry.tryApplyRawRelConsequence (entry : VCSpecEntry) (mvarId : MVarId
   let hpostTy ← mkRelPostPointwisePremise postSpec postTarget postTy
   let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
   let specApplied ←
-    mkAppM ``Std.Do'.RelWP.rwp_consequence_rel
+    mkAppM ``VCVio.ProgramLogic.RelWP.rwp_consequence_rel
       #[oaSpec, obSpec, postSpec, postTarget, epostSpec₁, epostSpec₂, hpost, specProof]
   let hpreTy ← mkOrderRel preTarget preSpec
   let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
@@ -607,7 +591,7 @@ errors and unchanged-goal failures.
 
 This is the single replacement for the previous open-coded `simp only [...]`
 blocks that peeled transformer `wp` layers (`apply_wp`, `*.run`, lifts,
-`Std.Do'.EPost.cons.push*`, `MAlgOrdered.wp_*`, the `Loom.wp_eq_mAlgOrdered_wp`
+`Std.Internal.Do.EPost.Cons.push*`, `MAlgOrdered.wp_*`, the `Quantitative.wp_eq_mAlgOrdered_wp`
 bridges, and the assorted monad/algebra rewrites). Tag a new normalization
 lemma with `@[vcspec_simp]` (or rely on the `@[vcspec]` fallback) instead of
 appending it to a tactic-local simp list. -/

@@ -7,49 +7,25 @@ Authors: Quang Dao
 module
 
 public import ToMathlib.Control.Monad.RelWP
-public import VCVio.ProgramLogic.Unary.Loom.Probabilistic
+public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Relational.Quantitative
 
 /-!
-# Probabilistic `RelWP` carrier for `OracleComp` (`Prob`, scoped)
+# Probability-bounded relational weakest preconditions
 
-Installs the probabilistic `Std.Do'.RelWP (OracleComp spec₁)
-(OracleComp spec₂) Prob EPost.nil EPost.nil` instance, where `Prob =
-{ x : ℝ≥0∞ // x ≤ 1 }` is the unit interval as a subtype of `ℝ≥0∞`
-(see `VCVio/ProgramLogic/Unary/Loom/Probabilistic.lean` for the
-`Prob` carrier and its `Lean.Order.{PartialOrder, CompleteLattice}`
-instances).
+`OracleComp.Rel.Probabilistic` supplies a scoped interpretation of `eRelWP` in
+`Prob`, Mathlib's interval `Set.Iic (1 : ℝ≥0∞)`. A coupling expectation of a
+probability-valued postcondition stays below one.
 
-Sitting between the qualitative `Prop` carrier and the quantitative
-`ℝ≥0∞` carrier, this tier is the natural home for relational
-probability-bounded reasoning: pRHL with quantitative slack, apRHL with
-ε-budgets that always live in `[0, 1]`, advantage / negligibility on the
-relational side.
-
-The carrier is a `noncomputable scoped instance` under `namespace
-OracleComp.Rel.Probabilistic`. Consumers `open` the namespace to enable
-it. See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" for
-the broader story (Galois connections, coherence lemmas).
-
-## Layout and discipline
-
-Because `Std.Do'.RelWP`'s `Pred`, `EPred₁`, `EPred₂` are `outParam`s,
-only one carrier can be visible to instance synthesis at a time. The
-default quantitative `ℝ≥0∞` carrier (in `Loom/Quantitative.lean`)
-remains a normal `instance` and is always live; this scoped instance
-is opt-in via `open OracleComp.Rel.Probabilistic`.
-
-The keystone alignment lemma `rwp_val_eq_eRelWP` confirms the
-underlying `ℝ≥0∞` value of `Std.Do'.rwp` agrees with `eRelWP` on the
-nose, so quantitative theorems still apply after coercing through
-`.val`.
+Use `open scoped OracleComp.Rel.Probabilistic` to select this carrier.
 -/
 
 @[expose] public section
 
 universe u
 
-open ENNReal Std.Do' OracleComp.ProgramLogic.Loom
+open VCVio.ProgramLogic
+open ENNReal Std.Internal.Do OracleComp.Quantitative
 
 namespace OracleComp.Rel.Probabilistic
 
@@ -86,22 +62,22 @@ private theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec
     (post : α → β → Prob) : rwpVal oa ob post ≤ 1 :=
   eRelWP_le_one_of_post_le_one oa ob _ (fun a b => (post a b).val_le_one)
 
-/-- Probabilistic `Std.Do'.RelWP` interpretation of pairs of
+/-- Probabilistic `VCVio.ProgramLogic.RelWP` interpretation of pairs of
 `OracleComp` programs valued in `Prob = [0, 1] ⊆ ℝ≥0∞`.
 
 The `rwpTrans` is the existing quantitative `eRelWP` evaluated on
 `Prob`-valued postconditions and packaged into `Prob` via the `≤ 1`
-bound. The two `EPost.nil` arguments are ignored since neither side of
+bound. The two `EPost.Nil` arguments are ignored since neither side of
 an `OracleComp` pair has a first-class exception slot.
 
 This is a `scoped instance` rather than a normal `instance`: only one
-`Std.Do'.RelWP (OracleComp spec₁) (OracleComp spec₂) _ _ _` instance
+`VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) _ _ _` instance
 can be visible at a time (`Pred` is an `outParam`), and the default is
 the quantitative `ℝ≥0∞` carrier. Open `OracleComp.Rel.Probabilistic`
 to switch into the probabilistic carrier. -/
-noncomputable scoped instance (priority := 1100) instRelWP_prob :
-    Std.Do'.RelWP (OracleComp spec₁) (OracleComp spec₂) Prob
-      Std.Do'.EPost.nil Std.Do'.EPost.nil where
+noncomputable scoped instance instRelWP_prob :
+    VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prob
+      Std.Internal.Do.EPost.Nil Std.Internal.Do.EPost.Nil where
   rwpTrans oa ob post _epost₁ _epost₂ :=
     ⟨rwpVal oa ob post, by exact rwpVal_le_one oa ob post⟩
   rwp_trans_pure a b := by
@@ -126,12 +102,12 @@ noncomputable scoped instance (priority := 1100) instRelWP_prob :
 /-! ## Definitional alignment with `eRelWP` (Prob)
 
 The keystone lemma confirms that the underlying `ℝ≥0∞` value of
-`Std.Do'.rwp` agrees with the quantitative `eRelWP` on the nose, so
+`VCVio.ProgramLogic.rwp` agrees with the quantitative `eRelWP` on the nose, so
 quantitative theorems still apply after coercing through `.val`. -/
 
 theorem rwp_val_eq_eRelWP
     (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (post : α → β → Prob) :
-    (Std.Do'.rwp oa ob post Lean.Order.bot Lean.Order.bot).val =
+    (VCVio.ProgramLogic.rwp oa ob post Lean.Order.bot Lean.Order.bot).val =
       OracleComp.ProgramLogic.Relational.eRelWP oa ob (fun a b => (post a b).val) := rfl
 
 end OracleComp.Rel.Probabilistic

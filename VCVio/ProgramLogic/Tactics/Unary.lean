@@ -47,7 +47,7 @@ private def runVCGenFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
       (← `(tactic| all_goals try
-        (refine Std.Do'.Triple.iff.mpr ?_
+        (refine Std.Internal.Do.Triple.intro ?_
          repeat intro _
          simp [Lean.Order.PartialOrder.rel,
            MonadStateOf.get, MonadStateOf.set, MonadReaderOf.read, MonadWriter.tell,
@@ -56,16 +56,16 @@ private def runVCGenFinish : TacticM Unit := do
            StateT.run_lift, StateT.run_map,
            ReaderT.run_bind, ReaderT.run_pure, ReaderT.run_monadLift, ReaderT.run_read,
            ReaderT.run_map,
-           Std.Do'.WriterT.apply_wp,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_bind,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_pure,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_tell,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_monadLift,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_map,
+           WriterT.wp_apply_eq,
+           OracleComp.Quantitative.WriterT.wp_bind,
+           OracleComp.Quantitative.WriterT.wp_pure,
+           OracleComp.Quantitative.WriterT.wp_tell,
+           OracleComp.Quantitative.WriterT.wp_monadLift,
+           OracleComp.Quantitative.WriterT.wp_map,
            WriterT.run_bind, WriterT.run_pure, WriterT.run_tell, WriterT.run_map,
            MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp_epost,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -81,12 +81,12 @@ private def runVCGenFinish : TacticM Unit := do
            ReaderT.run, ReaderT.run_read, ReaderT.run_pure, ReaderT.run_monadLift,
            TacticInternals.Unary.wp_ReaderT_run_read_layer,
            TacticInternals.Unary.wp_ReaderT_run_read_layer',
-           Std.Do'.WriterT.apply_wp,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_tell,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_monadLift,
+           WriterT.wp_apply_eq,
+           OracleComp.Quantitative.WriterT.wp_tell,
+           OracleComp.Quantitative.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp_epost,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
            MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
@@ -105,12 +105,12 @@ private def runVCGenFinish : TacticM Unit := do
            ReaderT.run, ReaderT.run_read, ReaderT.run_pure, ReaderT.run_monadLift,
            TacticInternals.Unary.wp_ReaderT_run_read_layer,
            TacticInternals.Unary.wp_ReaderT_run_read_layer',
-           Std.Do'.WriterT.apply_wp,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_tell,
-           OracleComp.ProgramLogic.Loom.WriterT.wp_monadLift,
+           WriterT.wp_apply_eq,
+           OracleComp.Quantitative.WriterT.wp_tell,
+           OracleComp.Quantitative.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp,
-           OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp_epost,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
+           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
            MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]

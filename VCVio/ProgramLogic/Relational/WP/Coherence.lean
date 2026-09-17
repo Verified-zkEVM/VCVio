@@ -6,51 +6,15 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.ProgramLogic.Relational.Loom.Probabilistic
-public import VCVio.ProgramLogic.Relational.Loom.Qualitative
+public import VCVio.ProgramLogic.Relational.WP.Probabilistic
+public import VCVio.ProgramLogic.Relational.WP.Qualitative
 
 /-!
-# Cross-tier coherence for the relational `RelWP` carriers
+# Coherence of relational assertion carriers
 
-The three relational tiers (Qualitative, Probabilistic, Quantitative)
-form a chain of refinements analogous to the unary case (see
-`VCVio/ProgramLogic/Unary/Loom/Coherence.lean`):
-
-```
-                       indicator                       .val
-  α → β → Prop  ─────────────────────▶  α → β → Prob  ─────────▶  α → β → ℝ≥0∞
-  (CouplingPost)                        ([0, 1])                  (eRelWP)
-```
-
-Both edges have *coherence* lemmas relating their `rwp` values:
-
-* **Probabilistic ↔ Quantitative** (definitional, `rfl`): the underlying
-  `ℝ≥0∞` value of a probabilistic `rwp` is the quantitative `rwp` on
-  the same post, viewed under `Subtype.val`. This is already proved as
-  `OracleComp.Rel.Probabilistic.rwp_val_eq_eRelWP` in
-  `…/Loom/Probabilistic.lean`.
-* **Qualitative ↔ Quantitative** (this file, non-trivial): a coupling
-  satisfying a `Prop`-valued relation `R` exists iff the quantitative
-  `eRelWP` on the indicator of `R` equals `1`. This reduces to the
-  existing `relTriple'_iff_couplingPost` bridge in
-  `VCVio/ProgramLogic/Relational/Quantitative.lean`.
-
-## Why state these against `eRelWP` rather than `Std.Do'.rwp`?
-
-Both `OracleComp.Rel.Qualitative.instRelWP` and
-`OracleComp.Rel.Probabilistic.instRelWP_prob` are `scoped instance`s.
-To use `Std.Do'.rwp` for both at once we would have to `open` two
-namespaces simultaneously, and `Std.Do'.RelWP`'s `Pred` is an
-`outParam`, which would back out instance synthesis. Stating the
-lemmas against `eRelWP` (and `CouplingPost`) directly sidesteps the
-conflict; once a downstream user has chosen a single carrier, they
-can rewrite from `Std.Do'.rwp _ _ _ _ _` to `eRelWP _ _ _` (or
-`CouplingPost _ _ _`) via the keystone `rfl` lemmas in the
-per-carrier files (`rwp_eq_eRelWP`, `rwp_eq_couplingPost`,
-`rwp_val_eq_eRelWP`).
-
-See `.ignore/wp-cutover-plan.md` §"Three-tier carrier design" for the
-broader story.
+The qualitative coupling, probability-bounded coupling expectation, and quantitative
+`eRelWP` interpretations agree under the assumptions in each theorem. Statements use
+the underlying semantics so carrier selection remains local to each consumer.
 -/
 
 @[expose] public section
@@ -59,7 +23,7 @@ universe u
 
 open ENNReal OracleComp.ProgramLogic.Relational
 
-namespace OracleComp.Rel.Loom.Coherence
+namespace OracleComp.Rel.WP.Coherence
 
 variable {ι₁ ι₂ : Type u}
 variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
@@ -86,12 +50,12 @@ theorem eRelWP_indicator_le_one
 
 /-! ## Probabilistic ↔ Quantitative
 
-The probabilistic `Std.Do'.rwp` agrees with the quantitative `eRelWP`
-under `Subtype.val` by `rfl`; that statement lives in
-`…/Loom/Probabilistic.lean` as
+The probabilistic `VCVio.ProgramLogic.rwp` agrees with the quantitative `eRelWP`
+under `Subtype.val`; that statement lives in
+`…/WP/Probabilistic.lean` as
 `OracleComp.Rel.Probabilistic.rwp_val_eq_eRelWP`. We do not restate it
 here because pulling `OracleComp.Rel.Probabilistic.instRelWP_prob`
-into scope to talk about `Std.Do'.rwp` requires
+into scope to talk about `VCVio.ProgramLogic.rwp` requires
 `open OracleComp.Rel.Probabilistic`, which then occludes the
 qualitative tier discussed below. -/
 
@@ -106,7 +70,7 @@ holds along some coupling iff the indicator of that relation has
 quantitative `eRelWP` equal to `1`.
 
 This is the relational analogue of
-`OracleComp.Loom.Coherence.wp_qual_iff_wp_prob_indicator_eq_one` in
+`OracleComp.WP.Coherence.wp_qual_iff_wp_prob_indicator_eq_one` in
 the unary file, and it reduces to the existing
 `relTriple'_iff_couplingPost` bridge plus the upper bound
 `eRelWP_indicator_le_one`. -/
@@ -126,4 +90,4 @@ theorem couplingPost_iff_relTriple'
     CouplingPost oa ob R ↔ RelTriple' oa ob R :=
   relTriple'_iff_couplingPost.symm
 
-end OracleComp.Rel.Loom.Coherence
+end OracleComp.Rel.WP.Coherence

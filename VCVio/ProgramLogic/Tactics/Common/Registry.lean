@@ -71,6 +71,7 @@ insulated from `Sym` API churn.
 
 public meta section
 
+
 open Lean Elab Meta Lean.Meta
 open Lean.Elab.Tactic.Do.SpecAttr (SpecProof)
 
@@ -199,19 +200,20 @@ robust to future reducibility shifts.
 /-- Unfolded cores of the unary triple / wp abbreviations; matched on the
 preprocessed theorem body alongside the folded heads. -/
 private def unaryTripleHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.Triple, ``MAlgOrdered.Triple, ``Std.Do'.Triple]
+  #[``OracleComp.ProgramLogic.Triple, ``MAlgOrdered.Triple, ``Std.Internal.Do.Triple]
 
 private def unaryWpHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.wp, ``MAlgOrdered.wp, ``Std.Do'.wp]
+  #[``OracleComp.ProgramLogic.wp, ``MAlgOrdered.wp, ``Std.Internal.Do.wp]
 
 private def relTripleHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.Relational.RelTriple, ``MAlgRelOrdered.Triple, ``Std.Do'.RelTriple]
+  #[``OracleComp.ProgramLogic.Relational.RelTriple, ``MAlgRelOrdered.Triple,
+    ``VCVio.ProgramLogic.RelTriple]
 
 private def relWpHeadNames : Array Name :=
   #[``OracleComp.ProgramLogic.Relational.RelWP,
     ``MAlgRelOrdered.RelWP,
     ``MAlgRelOrdered.rwp,
-    ``Std.Do'.rwp]
+    ``VCVio.ProgramLogic.rwp]
 
 /-- Head check that tolerates varying numbers of implicit / instance arguments.
 Each `@[vcspec]` target has a fixed number of *explicit* trailing arguments
@@ -230,28 +232,28 @@ private def trailingArgsN? (e : Expr) (n : Nat) : Option (Array Expr) :=
     none
 
 /-- Preprocessed-body variant of `tripleGoalParts?` that also matches the
-unfolded `MAlgOrdered.Triple` head, as well as Loom2's `Std.Do'.Triple`
+unfolded `MAlgOrdered.Triple` head, as well as core's `Std.Internal.Do.Triple`
 which carries an extra trailing exception postcondition. Returns
 `(pre, oa, post)`. -/
 private def tripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   let body := body.consumeMData
   unless headIsOneOf body unaryTripleHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.Do'.Triple then 4 else 3
+  let n := if body.getAppFn.isConstOf ``Std.Internal.Do.Triple then 5 else 3
   let args ← trailingArgsN? body n
-  if n == 4 then
-    let #[pre, oa, post, _epost] := args | none
+  if n == 5 then
+    let #[oa, _wp, pre, post, _epost] := args | none
     some (pre, oa, post)
   else
     let #[pre, oa, post] := args | none
     some (pre, oa, post)
 
 /-- Preprocessed-body variant of `wpGoalParts?` that also matches the unfolded
-`MAlgOrdered.wp` head and Loom2's `Std.Do'.wp` (which carries a trailing
+`MAlgOrdered.wp` head and core's `Std.Internal.Do.wp` (which carries a trailing
 exception postcondition). Returns `(oa, post)`. -/
 private def wpBodyParts? (body : Expr) : Option (Expr × Expr) := do
   let body := body.consumeMData
   unless headIsOneOf body unaryWpHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.Do'.wp then 3 else 2
+  let n := if body.getAppFn.isConstOf ``Std.Internal.Do.wp then 3 else 2
   let args ← trailingArgsN? body n
   if n == 3 then
     let #[oa, post, _epost] := args | none
@@ -272,10 +274,10 @@ private def rawWpBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   some (pre, oa, post)
 
 /-- Preprocessed-body variant of `relTripleGoalParts?` that also matches the
-unfolded `MAlgRelOrdered.Triple` head and Loom2's `Std.Do'.RelTriple`.
+unfolded `MAlgRelOrdered.Triple` head and `VCVio.ProgramLogic.RelTriple`.
 The folded `RelTriple` has three explicit trailing args `(oa, ob, post)`;
 the unfolded `MAlgRelOrdered.Triple` has four `(pre, oa, ob, post)`;
-`Std.Do'.RelTriple` has six `(pre, oa, ob, post, epost₁, epost₂)`.
+`VCVio.ProgramLogic.RelTriple` has six `(pre, oa, ob, post, epost₁, epost₂)`.
 Returns `(oa, ob, post)` in all cases. -/
 private def relTripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   let body := body.consumeMData
@@ -288,7 +290,7 @@ private def relTripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) :=
     let args ← trailingArgsN? body 4
     let #[_pre, oa, ob, post] := args | none
     some (oa, ob, post)
-  else if fn.isConstOf ``Std.Do'.RelTriple then
+  else if fn.isConstOf ``VCVio.ProgramLogic.RelTriple then
     let args ← trailingArgsN? body 6
     let #[_pre, oa, ob, post, _epost₁, _epost₂] := args | none
     some (oa, ob, post)
@@ -300,7 +302,7 @@ unfolded `MAlgRelOrdered.rwp` head. Returns `(oa, ob, post)`. -/
 private def relWpBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   let body := body.consumeMData
   unless headIsOneOf body relWpHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.Do'.rwp then 5 else 3
+  let n := if body.getAppFn.isConstOf ``VCVio.ProgramLogic.rwp then 5 else 3
   let args ← trailingArgsN? body n
   if n == 5 then
     let #[oa, ob, post, _epost₁, _epost₂] := args | none

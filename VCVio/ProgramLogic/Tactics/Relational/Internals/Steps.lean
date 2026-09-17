@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.Quantitative
-public import VCVio.ProgramLogic.Relational.Loom.Quantitative
+public import VCVio.ProgramLogic.Relational.WP.Quantitative
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public meta import VCVio.ProgramLogic.Tactics.Common
 
@@ -16,6 +16,8 @@ public meta import VCVio.ProgramLogic.Tactics.Common
 -/
 
 public meta section
+
+open scoped OracleComp.Rel.Quantitative
 
 open Lean Elab Tactic Meta
 
@@ -44,15 +46,15 @@ attribute [vcspec]
   OracleComp.ProgramLogic.Relational.relTriple_list_foldlM_same
   OracleComp.ProgramLogic.Relational.relTriple_uniformSample_bij
   OracleComp.ProgramLogic.Relational.relTriple_uniformSample_refl
-  -- Quantitative rules from the default `Std.Do'.RelTriple` carrier.
-  OracleComp.ProgramLogic.Relational.Loom.relTriple_pure
-  OracleComp.ProgramLogic.Relational.Loom.relTriple_bind
-  OracleComp.ProgramLogic.Relational.Loom.relTriple_uniformSample_bij
-  OracleComp.ProgramLogic.Relational.Loom.relTriple_uniformSample_refl
-  OracleComp.ProgramLogic.Relational.Loom.relTriple_query_bij
-  OracleComp.ProgramLogic.Relational.Loom.relTriple_query_refl
+  -- Quantitative rules from the default `VCVio.ProgramLogic.RelTriple` carrier.
+  OracleComp.Rel.Quantitative.relTriple_pure
+  OracleComp.Rel.Quantitative.relTriple_bind
+  OracleComp.Rel.Quantitative.relTriple_uniformSample_bij
+  OracleComp.Rel.Quantitative.relTriple_uniformSample_refl
+  OracleComp.Rel.Quantitative.relTriple_query_bij
+  OracleComp.Rel.Quantitative.relTriple_query_refl
   -- Raw relational WP rule from the Std.Do bridge
-  Std.Do'.RelWP.rwp_pure
+  VCVio.ProgramLogic.RelWP.rwp_pure
   -- `simulateQ`-aware rules from `Relational/SimulateQ.lean`
   OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run_eqRel_of_impl_eq_preservesInv
   OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_query_map_eq
@@ -117,7 +119,7 @@ private def relPostIsVacuous (post : Expr) : TacticM Bool := do
 
 Tries, in order:
 * `assumption` (catches a hypothesis matching the relational triple verbatim);
-* quantitative `Std.Do'.RelTriple` pure-pure leaves;
+* quantitative `VCVio.ProgramLogic.RelTriple` pure-pure leaves;
 * `relTriple_refl` (identical computations, equality coupling);
 * `relTriple_eqRel_of_eq rfl` (syntactically identical computations);
 * `relTriple_pure_pure rfl` (`pure x ⨯ pure x` with reflexive postcondition);
@@ -141,7 +143,7 @@ def tryCloseRelGoalImmediate : TacticM Bool := do
   if shape.isStdDo then
     if isPureExpr shape.oa && isPureExpr shape.ob then
       return (← tryEvalTacticSyntax (← `(tactic|
-        exact OracleComp.ProgramLogic.Relational.Loom.relTriple_pure _ _ _)))
+        exact OracleComp.Rel.Quantitative.relTriple_pure _ _ _)))
     return false
   if ← relCompsDefEq shape.oa shape.ob then
     if ← tryEvalTacticSyntax (← `(tactic|
@@ -201,7 +203,7 @@ def tryCloseRelGoalImmediate : TacticM Bool := do
         return true
     if shape.isStdDo && isPureExpr shape.oa && isPureExpr shape.ob then
       if ← tryEvalTacticSyntax (← `(tactic|
-          exact OracleComp.ProgramLogic.Relational.Loom.relTriple_pure _ _ _)) then
+          exact OracleComp.Rel.Quantitative.relTriple_pure _ _ _)) then
         return true
     saved.restore
   return false
@@ -271,24 +273,24 @@ def tryNormalizeRelBindStructure : TacticM Unit := do
 /-- Apply the quantitative relational rule for two pure computations. -/
 def runERelPureRule : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    exact OracleComp.ProgramLogic.Relational.Loom.relTriple_pure _ _ _))
+    exact OracleComp.Rel.Quantitative.relTriple_pure _ _ _))
 
 /-- Try reflexive quantitative coupling rules for oracle queries and uniform samples. -/
 def runERelRndRule : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    apply OracleComp.ProgramLogic.Relational.Loom.relTriple_query_refl)) <||>
+    apply OracleComp.Rel.Quantitative.relTriple_query_refl)) <||>
   tryEvalTacticSyntax (← `(tactic|
-    apply OracleComp.ProgramLogic.Relational.Loom.relTriple_uniformSample_refl))
+    apply OracleComp.Rel.Quantitative.relTriple_uniformSample_refl))
 
 /-- Apply quantitative relational bind composition. -/
 def runERelBindRule : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    refine OracleComp.ProgramLogic.Relational.Loom.relTriple_bind ?_ ?_))
+    refine OracleComp.Rel.Quantitative.relTriple_bind ?_ ?_))
 
 /-- Apply quantitative relational bind composition with an explicit intermediate assertion. -/
 def runERelBindRuleUsing (cut : TSyntax `term) : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    refine OracleComp.ProgramLogic.Relational.Loom.relTriple_bind (cut := $cut) ?_ ?_))
+    refine OracleComp.Rel.Quantitative.relTriple_bind (cut := $cut) ?_ ?_))
 
 private def runStdDoRelTripleBindLeftRule : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
@@ -300,7 +302,7 @@ private def runStdDoRelTripleBindLeftRule : TacticM Bool := do
     return false
   tryEvalTacticSyntax (← `(tactic|
     refine Lean.Order.PartialOrder.rel_trans ?_
-      (Std.Do'.RelWP.rwp_bind_left_le _ _ _ _ _ _)))
+      (VCVio.ProgramLogic.RelWP.rwp_bind_left_le _ _ _ _ _ _)))
 
 private def runStdDoRelTripleBindRightRule : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
@@ -312,7 +314,7 @@ private def runStdDoRelTripleBindRightRule : TacticM Bool := do
     return false
   tryEvalTacticSyntax (← `(tactic|
     refine Lean.Order.PartialOrder.rel_trans ?_
-      (Std.Do'.RelWP.rwp_bind_right_le _ _ _ _ _ _)))
+      (VCVio.ProgramLogic.RelWP.rwp_bind_right_le _ _ _ _ _ _)))
 
 /-- Monad-law normalization used as a fallback when a direct `relTriple_bind`
 attempt fails. Flattens nested binds (`bind_assoc`) and reduces `pure_bind` so
@@ -336,7 +338,8 @@ private def tryCloseRelOwnedGoal : TacticM Bool := do
   if ok then
     return (← getGoals).isEmpty
   let target ← instantiateMVars (← getMainTarget)
-  if (relationalGoalParts? target).isSome || (findAppWithHead? ``Std.Do'.rwp target).isSome then
+  if (relationalGoalParts? target).isSome ||
+      (findAppWithHead? ``VCVio.ProgramLogic.rwp target).isSome then
     return false
   let ok ← tryEvalTacticSyntax (← `(tactic|
       first
@@ -749,14 +752,14 @@ private def rawRelWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) :
       some (target.getArg! 3)
     else
       none
-  let app ← findAppWithHead? ``Std.Do'.rwp rhs
+  let app ← findAppWithHead? ``VCVio.ProgramLogic.rwp rhs
   let args ← trailingArgs? app 5
   let #[oa, ob, post, _epost₁, _epost₂] := args | none
   some (oa, ob, post)
 
 private def isRawStdDoRelWPGoal (target : Expr) : Bool :=
   (rawRelWPGoalParts? target).isSome ||
-    (findAppWithHead? ``Std.Do'.rwp target).isSome
+    (findAppWithHead? ``VCVio.ProgramLogic.rwp target).isSome
 
 private def rawRelWPGoalFullParts? (target : Expr) :
     Option (Expr × Expr × Expr × Expr × Expr × Expr) := do
@@ -768,7 +771,7 @@ private def rawRelWPGoalFullParts? (target : Expr) :
     else
       none
   let rhs := target.getArg! 3
-  let app ← findAppWithHead? ``Std.Do'.rwp rhs
+  let app ← findAppWithHead? ``VCVio.ProgramLogic.rwp rhs
   let args ← trailingArgs? app 5
   let #[oa, ob, post, epost₁, epost₂] := args | none
   some (pre, oa, ob, post, epost₁, epost₂)
@@ -798,7 +801,7 @@ private def runRawRelWPReflRule : TacticM Bool := do
     return false
   tryEvalTacticSyntax (← `(tactic| exact Lean.Order.PartialOrder.rel_refl))
 
-/-- Direct leaf rule for raw `Std.Do'.rwp` pure-pure goals.
+/-- Direct leaf rule for raw `VCVio.ProgramLogic.rwp` pure-pure goals.
 This handles the raw counterpart of the folded quantitative `RelTriple` pure
 case without first manufacturing a registered-rule consequence wrapper. -/
 private def runRawRelWPPureRule : TacticM Bool := do
@@ -818,7 +821,7 @@ private def runRawRelWPPureRule : TacticM Bool := do
         let pred ← inferType (mkApp2 post a b)
         let epred₁ ← inferType epost₁
         let epred₂ ← inferType epost₂
-        let prf ← mkAppOptM ``Std.Do'.RelWP.rwp_pure
+        let prf ← mkAppOptM ``VCVio.ProgramLogic.RelWP.rwp_pure
           #[some m₁, some m₂, some pred, some epred₁, some epred₂,
             none, none, none, none, none, none, none, none,
             none, none, some a, some b, some post, some epost₁, some epost₂]
@@ -835,7 +838,7 @@ private def runRawRelWPPureRule : TacticM Bool := do
       catch _ =>
         return false
 
-/-- Direct bind rule for raw `Std.Do'.rwp` goals with binds on both sides. -/
+/-- Direct bind rule for raw `VCVio.ProgramLogic.rwp` goals with binds on both sides. -/
 private def runRawRelWPBindRule : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
   let some (_pre, oa, ob, _post, _epost₁, _epost₂) := rawRelWPGoalFullParts? target
@@ -846,9 +849,9 @@ private def runRawRelWPBindRule : TacticM Bool := do
     return false
   tryEvalTacticSyntax (← `(tactic|
     refine Lean.Order.PartialOrder.rel_trans ?_
-      (Std.Do'.RelWP.rwp_bind_le _ _ _ _ _ _ _)))
+      (VCVio.ProgramLogic.RelWP.rwp_bind_le _ _ _ _ _ _ _)))
 
-/-- Explicit left-bind rule for raw `Std.Do'.rwp` goals. -/
+/-- Explicit left-bind rule for raw `VCVio.ProgramLogic.rwp` goals. -/
 private def runRawRelWPBindLeftRule : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
   let some (_pre, oa, ob, _post, _epost₁, _epost₂) := rawRelWPGoalFullParts? target
@@ -859,9 +862,9 @@ private def runRawRelWPBindLeftRule : TacticM Bool := do
     return false
   tryEvalTacticSyntax (← `(tactic|
     refine Lean.Order.PartialOrder.rel_trans ?_
-      (Std.Do'.RelWP.rwp_bind_left_le _ _ _ _ _ _)))
+      (VCVio.ProgramLogic.RelWP.rwp_bind_left_le _ _ _ _ _ _)))
 
-/-- Explicit right-bind rule for raw `Std.Do'.rwp` goals. -/
+/-- Explicit right-bind rule for raw `VCVio.ProgramLogic.rwp` goals. -/
 private def runRawRelWPBindRightRule : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
   let some (_pre, oa, ob, _post, _epost₁, _epost₂) := rawRelWPGoalFullParts? target
@@ -872,7 +875,7 @@ private def runRawRelWPBindRightRule : TacticM Bool := do
     return false
   tryEvalTacticSyntax (← `(tactic|
     refine Lean.Order.PartialOrder.rel_trans ?_
-      (Std.Do'.RelWP.rwp_bind_right_le _ _ _ _ _ _)))
+      (VCVio.ProgramLogic.RelWP.rwp_bind_right_le _ _ _ _ _ _)))
 
 /-- Try direct-hit registered `@[vcspec]` rules against a raw relational WP goal. -/
 private def runRawRelWPTheoremConseq (thm : TSyntax `term)
@@ -884,7 +887,7 @@ private def runRawRelWPTheoremConseq (thm : TSyntax `term)
     match ← observing? do
       let before ← getGoals
       evalTactic (← `(tactic|
-        refine Std.Do'.RelWP.rwp_consequence_rel _ _ _ _ _ _
+        refine VCVio.ProgramLogic.RelWP.rwp_consequence_rel _ _ _ _ _ _
           (by
             intro a b
             by_cases h : a = b <;> simp [h, Lean.Order.PartialOrder.rel])
@@ -916,10 +919,10 @@ private def structuralRelVCSpecDecls : List Name := [
 private def leafRelVCSpecDecls : List Name := [
   ``OracleComp.ProgramLogic.Relational.relTriple_pure_pure,
   ``OracleComp.ProgramLogic.Relational.relTriple_uniformSample_refl,
-  ``OracleComp.ProgramLogic.Relational.Loom.relTriple_pure,
-  ``OracleComp.ProgramLogic.Relational.Loom.relTriple_uniformSample_refl,
-  ``OracleComp.ProgramLogic.Relational.Loom.relTriple_query_refl,
-  ``Std.Do'.RelWP.rwp_pure
+  ``OracleComp.Rel.Quantitative.relTriple_pure,
+  ``OracleComp.Rel.Quantitative.relTriple_uniformSample_refl,
+  ``OracleComp.Rel.Quantitative.relTriple_query_refl,
+  ``VCVio.ProgramLogic.RelWP.rwp_pure
 ]
 
 /-- Registered relational rules that require an explicit user choice. -/
@@ -931,9 +934,9 @@ private def explicitRelVCSpecDecls : List Name := [
   ``OracleComp.ProgramLogic.Relational.relTriple_query_bij,
   ``OracleComp.ProgramLogic.Relational.relTriple_bind_uniformSample_bij,
   ``OracleComp.ProgramLogic.Relational.relTriple_bind_query_bij,
-  ``OracleComp.ProgramLogic.Relational.Loom.relTriple_bind,
-  ``OracleComp.ProgramLogic.Relational.Loom.relTriple_uniformSample_bij,
-  ``OracleComp.ProgramLogic.Relational.Loom.relTriple_query_bij
+  ``OracleComp.Rel.Quantitative.relTriple_bind,
+  ``OracleComp.Rel.Quantitative.relTriple_uniformSample_bij,
+  ``OracleComp.Rel.Quantitative.relTriple_query_bij
 ]
 
 private inductive RelVCSpecTier where

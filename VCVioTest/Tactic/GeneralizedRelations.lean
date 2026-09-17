@@ -59,7 +59,7 @@ example (h : ∀ x ∈ support mx, f x ≤ g x) : wp mx f ≤ wp mx g := by
   assumption
 
 example (h : ∀ x ∈ support mx, f x ≤ g x) :
-    Std.Do'.wp mx f Lean.Order.bot ≤ Std.Do'.wp mx g Lean.Order.bot := by
+    Std.Internal.Do.wp mx f Lean.Order.bot ≤ Std.Internal.Do.wp mx g Lean.Order.bot := by
   -- gap(gcongr, 2026-09-08): the raw WP head needs explicit facade normalization.
   fail_if_success gcongr
   change wp mx f ≤ wp mx g

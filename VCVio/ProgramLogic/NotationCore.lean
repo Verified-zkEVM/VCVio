@@ -46,6 +46,7 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 
 @[expose] public section
 
+
 open ENNReal OracleSpec OracleComp
 
 universe u
@@ -137,7 +138,7 @@ scoped macro_rules
   | `(wp⟦ $c ⟧)            => `(fun post => wp $c post)
 
 /-- Raw relational WP notation.
-`rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `Std.Do'.rwp`.
+`rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `VCVio.ProgramLogic.rwp`.
 The normal assertion carrier and both exception-post carriers are inferred from
 `post`, `epost₁`, and `epost₂`, so this notation also works for stateful and
 exception-aware `RelWP` instances. -/
@@ -146,7 +147,7 @@ scoped syntax:max (name := relWpBracket)
 
 scoped macro_rules (kind := relWpBracket)
   | `(rwp⟦ $c₁ ~ $c₂ | $post; $epost₁, $epost₂ ⟧) =>
-      `(Std.Do'.rwp $c₁ $c₂ $post $epost₁ $epost₂)
+      `(VCVio.ProgramLogic.rwp $c₁ $c₂ $post $epost₁ $epost₂)
 
 /-- Game equivalence: `g₁ ≡ₚ g₂` means `evalSPMF g₁ = evalSPMF g₂`.
 Uses `syntax` + `macro_rules` because `≡` conflicts with Mathlib's
@@ -162,11 +163,11 @@ scoped notation "⟪" c₁ " ≈[" ε "] " c₂ " | " R "⟫" =>
   Relational.ApproxRelTriple ε c₁ c₂ R
 
 /-- eRHL quantitative relational triple:
-`⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` means the quantitative `Std.Do'.RelTriple` form. -/
+`⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` means the quantitative `VCVio.ProgramLogic.RelTriple` form. -/
 scoped syntax:lead "⦃" term "⦄ " term:lead " ≈ₑ " term:lead " ⦃" term "⦄" : term
 macro_rules
   | `(⦃$f⦄ $c₁ ≈ₑ $c₂ ⦃$g⦄) =>
-      `(Std.Do'.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
+      `(VCVio.ProgramLogic.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
 
 /-! ## Bridge lemmas: numeric indicators and existing API -/
 

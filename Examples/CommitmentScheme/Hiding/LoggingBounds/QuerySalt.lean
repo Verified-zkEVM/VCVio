@@ -626,7 +626,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
             (oa := mx ((query t).cont qu.1)) (cache := qu.2)
             (t := t) (u := (query t).cont qu.1) (s := s) hsalt
         rw [hpost]
-        simp [OracleComp.ProgramLogic.wp_const]
+        simp only [OracleComp.ProgramLogic.wp_const]
       · have hpost :
             (fun qu : C × QueryCache (CMOracle M S C) =>
               OracleComp.ProgramLogic.wp

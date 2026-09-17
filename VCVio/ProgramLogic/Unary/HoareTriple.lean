@@ -6,40 +6,27 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.ProgramLogic.Unary.Loom.Quantitative
+public import VCVio.ProgramLogic.Unary.WP.Quantitative
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
-# Quantitative Hoare triples for `OracleComp`
+# Quantitative Hoare triples
 
-The user-facing `wp_*` and `triple_*` lemma library for the quantitative
-(`ℝ≥0∞`) program logic on `OracleComp spec`. After the Loom2 cutover the
-canonical heads are `Std.Do'.wp` and `Std.Do'.Triple`, both with the
-exception postcondition fixed to `Lean.Order.bot` on the empty
-`Std.Do'.EPost.nil` carrier (which we equip with a `Lean.Order.CCPO`
-instance in `Loom/Quantitative.lean`). All lemmas are stated against
-those canonical heads, exactly the shape that:
+`wp` and `Triple` expose the expectation interpretation of core's lattice-generic
+weakest-precondition API for `OracleComp`. Their equations follow from the ordered
+expectation algebra in `Unary/WP/Quantitative.lean`.
 
-* the user-facing notation `wp⟦c⟧ post` (in `NotationCore.lean`)
-  elaborates to,
-* Loom2's `⦃ pre ⦄ c ⦃ post ⦄` notation (in `Loom.Triple.Basic`)
-  elaborates to,
-* the `vcgen` / `vcstep` tactic infrastructure recognises after the
-  cutover.
-
-The keystone definitional alignment lives in `Loom/Quantitative.lean`:
-`wp _ _ = MAlgOrdered.wp _ _` is `rfl` for
-`OracleComp`, so existing `MAlgOrdered.wp_*` machinery transports
-directly into the `Std.Do'` shape. The `Std.Do'.Triple` analogue is
-inductive (not definitional) and bridged via `Std.Do'.Triple.iff`
-(`pre ⊑ wp …`) and `triple_ofLE`.
+Core's `⦃ pre ⦄ program ⦃ post ⦄` notation is available through
+`open scoped Std.Internal.Do OracleComp.Quantitative`. VCVio's quantitative facade
+keeps the carrier explicit in its definitions.
 -/
 
 @[expose] public section
 
 open ENNReal
-open Std.Do'
+open Std.Internal.Do
+open scoped OracleComp.Quantitative
 
 universe u
 
@@ -68,22 +55,22 @@ variable {α β σ : Type}
 
 /-- Quantitative weakest-precondition for `OracleComp spec`, fixing the
 exception postcondition to `Lean.Order.bot`. Definitionally equal to
-`Std.Do'.wp oa post Lean.Order.bot`; see the API contract for details. -/
+`Std.Internal.Do.wp oa post Lean.Order.bot`; see the API contract for details. -/
 noncomputable abbrev wp (oa : OracleComp spec α) (post : α → ℝ≥0∞) : ℝ≥0∞ :=
-  Std.Do'.wp oa post Lean.Order.bot
+  Std.Internal.Do.wp oa post Lean.Order.bot
 
 /-- Quantitative Hoare triple for `OracleComp spec`, fixing the exception
 postcondition to `Lean.Order.bot`. Definitionally equal to
-`Std.Do'.Triple pre oa post Lean.Order.bot`; see the API contract for
+`Std.Internal.Do.Triple pre oa post Lean.Order.bot`; see the API contract for
 details. -/
 noncomputable abbrev Triple (pre : ℝ≥0∞) (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) : Prop :=
-  Std.Do'.Triple pre oa post Lean.Order.bot
+  Std.Internal.Do.Triple oa pre post Lean.Order.bot
 
 /-! ## Internal alias
 
 `MAlgOrdered.wp` is `rfl`-equal to `wp _ _` on
-`OracleComp` via the `Loom.instWP` instance. The bridge `wp_eq_mAlgOrdered_wp`
+`OracleComp` via the `OracleComp.Quantitative.instWP` instance. The bridge `wp_eq_mAlgOrdered_wp`
 re-exposes this so existing `MAlgOrdered.wp_*` lemmas can be applied with
 a single rewrite. -/
 
@@ -102,8 +89,8 @@ theorem wp_eq_expectedValue (oa : OracleComp spec α) (post : α → ℝ≥0∞)
   rw [OracleComp.EvalDist.expectedValue_bind]
   simp only [OracleComp.EvalDist.expectedValue_pure]
 
-/-- Bridge between Loom2's inductive `Std.Do'.Triple` and Mathlib's `≤` on
-`ℝ≥0∞`. Loom2 defines `Std.Do'.Triple.iff` against
+/-- Bridge between core's `Std.Internal.Do.Triple` and Mathlib's `≤` on
+`ℝ≥0∞`. Core defines `Std.Internal.Do.Triple.iff` against
 `Lean.Order.PartialOrder.rel`; on `ℝ≥0∞` our `Lean.Order.PartialOrder`
 instance defines `rel` as Mathlib's `≤`, so the two coincide. The
 explicit `Iff.rfl` re-exposes the equivalence in `≤`-form, which is what
@@ -112,13 +99,13 @@ theorem triple_iff_le_wp
     (pre : ℝ≥0∞) (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     Triple pre oa post ↔
       pre ≤ wp oa post :=
-  Std.Do'.Triple.iff (epost := Lean.Order.bot)
+  Std.Internal.Do.Triple.iff (epost := Lean.Order.bot)
 
 /-- Construct a `Triple …` from a `≤`-form proof
 `pre ≤ wp oa post`. Companion to
 `triple_iff_le_wp.mpr`; preferred as the constructor in concrete proofs
 because it avoids Lean's typeclass-projection unification failures
-that arise when calling `Std.Do'.Triple.intro` directly with a `≤`
+that arise when calling `Std.Internal.Do.Triple.intro` directly with a `≤`
 proof. -/
 theorem triple_ofLE
     {pre : ℝ≥0∞} {oa : OracleComp spec α} {post : α → ℝ≥0∞}
@@ -233,7 +220,7 @@ theorem wp_ne_top_of_finite [Finite α] (oa : OracleComp spec α) {post : α →
 @[game_rule] theorem wp_map (f : α → β) (oa : OracleComp spec α) (post : β → ℝ≥0∞) :
     wp (f <$> oa) post =
       wp oa (post ∘ f) := by
-  simp [wp_eq_expectedValue, Function.comp_def]
+  simp [Function.comp_def]
 
 /-- General unfolding: `wp` as weighted sum over output probabilities. -/
 theorem wp_eq_tsum (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
@@ -262,8 +249,8 @@ theorem wp_const_mul (oa : OracleComp spec α) (f : α → ℝ≥0∞) (c : ℝ�
 
 /-! ## `Triple` lemmas (against `Triple _ _ _`)
 
-`Std.Do'.Triple` is an inductive wrapper around `pre ⊑ wp …`. The
-accessor `Std.Do'.Triple.iff` exchanges between the inductive form and
+`Std.Internal.Do.Triple` is an inductive wrapper around `pre ⊑ wp …`. The
+accessor `Std.Internal.Do.Triple.iff` exchanges between the inductive form and
 the `≤`-form; `triple_ofLE` packages a `≤`-proof into the
 constructor; pattern matching `match h with | .intro h => h` extracts
 the underlying inequality. -/

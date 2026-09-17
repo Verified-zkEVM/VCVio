@@ -9,7 +9,7 @@ module
 public meta import VCVio.ProgramLogic.Tactics.Common
 public import VCVio.ProgramLogic.Relational.Basic
 public meta import VCVio.ProgramLogic.Tactics.Relational.Internals
-public import Loom.Triple.SpecLemmas
+public import PolyFun.Control.Do.Spec
 public meta import VCVio.ProgramLogic.Tactics.Unary.Internals.Rules
 import all VCVio.ProgramLogic.Tactics.Unary.Internals.Rules
 public meta import VCVio.ProgramLogic.Tactics.Unary.Internals.Steps
@@ -152,6 +152,7 @@ def runVCGenStructuralCore : TacticM Bool := withVCGenStructuralTiming do
   -- immediate close before structural dispatch.
   if (tripleGoalComp? (← instantiateMVars (← getMainTarget))).isSome then
     peelKnownTransformerWPInGoal
+    if (← getGoals).isEmpty then return true
     if ← tryCloseNormalizedTransformerWP then return true
   let target ← instantiateMVars (← getMainTarget)
   match ← classifyUnaryGoalKind target with
@@ -337,11 +338,11 @@ def runVCGenStep : TacticM Bool := do
       return true
   let cheapCloseState ← saveState
   if ← tryEvalTacticSyntax (← `(tactic|
-      (refine Std.Do'.Triple.iff.mpr ?_
+      (refine Std.Internal.Do.Triple.intro ?_
        repeat intro _
        simp [Lean.Order.PartialOrder.rel, MonadLift.monadLift,
-         OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp,
-         OracleComp.ProgramLogic.Loom.wp_eq_mAlgOrdered_wp_epost,
+         OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
+         OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
          MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
          one_mul, mul_one]))) then
     if (← getGoals).isEmpty then

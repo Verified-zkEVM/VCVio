@@ -44,6 +44,7 @@ public import VCVioTest.PFunctorFacade
 public import VCVioTest.PRFNetworkKernel
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
+public import VCVioTest.ProgramLogic.CoreWP
 public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
