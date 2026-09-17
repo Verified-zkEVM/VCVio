@@ -128,6 +128,8 @@ or `VCVioTest/`. This contract is enforced by
 
 10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** Upstream is dismantling `PMF` construction by construction — the pinned Mathlib already deprecates `PMF.bernoulli` and `PMF.binomial` for measure-valued replacements. New semantic code uses `Measure`/`Kernel`; a change that touches a file still carrying explicit `PMF`/`SPMF` identifiers should leave that source count lower than it found it. `scripts/check-pmf-boundary.sh` enforces a per-file ceiling on every build (a file absent from the baseline has an allowance of zero) and reports the actual source-count trend against the base ref on every pull request; comments and string literals do not count. This is a syntactic migration proxy, not semantic dependency analysis. `SPMF` counts because `SPMF := OptionT PMF`. `--ratchet` is the opt-in mode for a deliberate reduction pass, with holds recorded in `scripts/pmf_boundary_holds.tsv`. See `docs/reading/denotational-probability-semantics.md`.
 
+11. **Name the reduction in security theorems.** Write `bound ≤ Pr[= true | exp (myReduction adv)]`, never `∃ B, bound ≤ Pr[= true | exp B]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers. If the reduction does not exist yet, use a named `sorry` definition or a warned placeholder instead. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
+
 For the full list, see `docs/agents/gotchas.md`.
 
 ## Naming Conventions
@@ -190,7 +192,11 @@ Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
 - Per-node samplers as data (`TypeTree.Sampler m tree` = `Decoration (fun X => m X) tree`): `PolyFun/Interaction/Basic/Sampler.lean`
 - `TypeTree.Fintype` / `TypeTree.Nonempty` ornaments + canonical uniform sampler: `PolyFun/Interaction/Basic/TypeTreeFintype.lean`, `VCVio/Interaction/UC/Runtime.lean`
 - Oracle-aware runtime semantics (monad-parametric process execution, `processSemanticsOracle`): `VCVio/Interaction/UC/Runtime.lean` (no `sampler` argument; pulled from `process.stepSampler`)
-- End-to-end UC `ObservedCompEmulates 0` at a three-port boundary: `Examples/OneTimePad/UC.lean`
+- Observation-interface `ObservedCompEmulates 0` smoke test: `Examples/OneTimePad/UC.lean`
+- Reactive single-use OTP execution and simulation with private environment state:
+  `Examples/OneTimePad/Reactive.lean`, `Examples/OneTimePad/Reactive/Security.lean`
+- Semantic counterexamples (plaintext leakage, wrong decoding, key reuse, delivery and fuel):
+  `Examples/OneTimePad/Reactive/Separation.lean`, `VCVioTest/ReactiveNetworkAdversarial.lean`
 - Interaction examples: `PolyFunTest/Interaction/TwoParty/Examples.lean`, `PolyFunTest/Interaction/Multiparty/Examples.lean`, `PolyFunTest/Interaction/Concurrent/Examples.lean`
 - Program logic tactics: `VCVio/ProgramLogic/Tactics.lean`
 - Program logic tactic walkthroughs: `Examples/ProgramLogic/`
@@ -230,12 +236,18 @@ lake exe cache get && lake build
 the fast path for framework-only work. `./scripts/validate.sh` runs the fast per-PR CI checks
 locally in CI's order (build and warning budget, umbrella check, boundary ratchets, style
 linters, agent-docs checks); `--lint` adds Batteries' environment linters, one process per
-proof library as in CI. `lake lint` is the direct Lake driver over the same libraries. Findings
-are compared against the grandfathered entries in `scripts/nolints.json`, a shrink-only baseline
-like the axiom one: a fixed finding is removed from the file and a new one fails the lint.
+proof library as in CI. `lake lint` runs both source-style and environment checks;
+`-- --style-only` and `-- --env-only` select either pass, and `-- --no-build` requires existing
+proof oleans. Findings must exactly match `scripts/nolints.json`: obsolete entries and unlisted
+findings fail. After fixing findings, `lake lint -- --prune-baseline` safely removes obsolete
+entries across all seven libraries and refuses additions. PR CI also checks that the baseline
+only shrinks against the merge base.
 `--test` adds `lake test` (the three test libraries, the smoke test,
 and the SLH-DSA test executables), `--ffi` adds the native ML-KEM / ML-DSA / Falcon
-executables to `--test`, and `--axioms` adds the axiom sweep.
+executables to `--test`, and `--axioms` adds the axiom sweep. The eager-initialisation
+ratchet runs in the default pass, after the boundary ratchets, since it reads the oleans
+the build just produced; `--test` runs it a second time over `VCVioTest` and
+`LatticeCryptoTest`, whose oleans `lake test` has just built.
 
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
@@ -261,14 +273,109 @@ baseline, since accepting it would widen the trusted computing base. The
 `VCVioAxiomSweepTestFixtures` library carries synthetic taint for the tool's own
 tests and is deliberately excluded from every aggregate.
 
+`python3 ./scripts/check-comment-fences.py` enforces one rule over every Lean source the
+repository tracks or would track — tracked files plus untracked ones that are not ignored, the
+vendored `third_party/` tree excluded and both lakefiles included: a block comment that begins
+its line must be the last thing on the line where it ends. A declaration written after the `-/`
+of the docstring that documents it parses, builds and runs, and a reader scanning the left
+margin does not see it. Two passes miss that, for two different reasons, and they are easy to
+confuse. `lake lint -- --style-only` runs Mathlib's four text-based linters, none of which has
+any notion of a comment. `linter.style.whitespace` is not part of that pass at all: it is a
+syntax linter that runs during elaboration under the package's `weak.linter.mathlibStandardSet`,
+and its warnings fail CI through the build log and `scripts/check-warning-log.py`. It does
+reject a command that does not start at the beginning of a line, and it does report the `/-`
+and `/-!` forms of this shape — but it is silent on the `/--` form, because a doc comment is
+part of the command it documents, so the command starts at the `/--`, at column 0. So this gate
+is the only thing that sees the doc-comment form anywhere; over the seven proof and three test
+libraries it deliberately repeats for the other forms what the whitespace linter already says;
+and in four further places it is the only check that can *fail* on any form of the shape, for
+three different reasons. `lakefile.lean` and `VCVioComplexity/lakefile.lean` are elaborated by
+Lake from `import Lake`, with no Mathlib linter registered. `Interop/` is not a default target
+and no job builds it. `scripts/` is built on every pull request, but nothing there imports
+Mathlib, so the `weak.` option is silently dropped and the linter is never registered — one
+Mathlib import in one axiom-sweep fixture would flip that. `VCVioComplexity/` sets
+`linter.style.whitespace` explicitly in its own lakefile and the blocking `complexity_backend`
+job builds it, so there the linter does run and does warn — what is missing is not the linter
+but the gate, since `check-warning-log.py` is invoked only with the proof- and test-library
+prefixes and `VCVioComplexity/scripts/test.sh` pipes its log nowhere. A block comment that
+opens part-way into a line is untouched however many lines it spans — that is an annotation
+inside an expression, a field or a tactic block, and wrapped field docstrings of that shape are
+common here. The rule is positional, so it also rejects five shapes that hide nothing: a
+comment at column 0 in front of a term, a structure field, a tactic or a list element, each of
+which Lean lets begin at column 0 when the enclosing indentation has run out, and a comment at
+column 0 whose line ends inside a second, still-open comment. Those five are clean Lean and are
+asserted, as rejections, in the fixture matrix. Not covered: a declaration indented on its own
+line, which the whitespace linter reports in the built libraries *unless* a margin docstring
+precedes it, in which case nothing reports it anywhere; a comment that starts mid-line; two
+declarations on one line; and a declaration after the closing quote of a multi-line string,
+which is the same hiding with a different delimiter and which `lakefile.lean`, a user of
+multi-line strings, could grow. The baseline is zero with no exception list;
+`scripts/test-comment-fences.sh` carries the fixtures, including the shapes the rule knowingly
+does not reach.
+
+`./scripts/test-initsweep.sh` and `lake exe initsweep --check` are the companion
+gate for what the *binary* does rather than what the kernel accepted. A top-level
+constant of non-function type is evaluated when its module is loaded, before any
+`main` runs, so
+
+```lean
+instance : Fintype limitedPrimitives.Y := inferInstanceAs (Fintype (Bytes 16))
+```
+
+builds a `Finset` of `2 ^ 128` vectors at start-up in every executable that
+imports the module — while elaborating cleanly and passing the build, the
+linters, every boundary ratchet and the axiom sweep. `lake exe initsweep --check`
+flags a constant when the module initialiser evaluates something for it (its own
+value, because the compiled declaration takes no parameters, or an `initialize`
+body registered for it) and that value either names one of the enumeration entry
+points listed in `scripts/InitSweep.lean` or names a *builder* of an enumeration
+class (`Fintype`, `FinEnum`) — an instance constructor or an instance that takes
+arguments, as opposed to an already-materialised nullary instance such as
+`Bool.fintype`, which costs a pointer copy and is deliberately not counted. The
+second disjunct is what makes the check a class test: writing the instance the
+elaborator would have found (`:= Pi.instFintype`) names none of the entry points
+and builds the same enumeration. The same sweep also walks the compiler-generated
+declarations the module initialiser assigns beside its constants, because a
+parameterless *specialisation* lifted out of a function is initialised at load and
+has no environment constant to read; those are tested by what the functions in
+their mangled name consume.
+
+Marking the instance `noncomputable` is *not* a fix: it removes the instance's
+own compiled code and leaves the compiled auxiliary that carries the enumeration,
+which is the constant the gate names. Adding a parameter is not reliably a fix
+either — `def cardY (_u : Unit) : Nat := Fintype.card T` still enumerates `T` at
+load, through the specialisation the compiler lifts out of it. Route the
+finiteness argument through `Fintype.ofFinite` instead, whose `Prop`-valued
+`Finite` argument leaves nothing compiled at all.
+
+The baseline `scripts/init_sweep_baseline.json` is a list of accepted constant
+names — the allowlist idea `scripts/axiom_baseline.json` uses, with a scope
+attached — rather than a per-library ceiling: accepting one benign instance costs
+exactly that name and leaves every other constant of its library at zero. It
+holds nine rows today; `scripts/InitSweep.lean` lists what each one does at load,
+read off the emitted C, including the two that turn out not to be initialised at
+all. A row is scoped to one constant under one library, so the same name flagged
+under another root, or gaining a new entry point, is still a regression. Adding a
+row is the escape hatch and needs an argument in review;
+`lake exe initsweep --update-baseline` writes it and preserves the rows of
+libraries the run did not sweep. `VCVioInitSweepTestFixtures` carries seven
+hazard modules, one per route by which loading a module can build an enumeration,
+one negative control per clause of the predicate, and the baseline's accept /
+drop / narrow / widen / re-scope / preserve behaviour; like the axiom-sweep
+fixtures it is kept out of every aggregate.
+
+The gate cannot see how *large* an enumeration is, and it does not look at values
+whose size is an argument rather than a type (`List.range n`,
+`Array.replicate n x`); `scripts/InitSweep.lean` lists what that leaves open,
+with the occurrences of each in the current tree.
+
 After adding new `.lean` files: `./scripts/update-lib.sh` (CI's `scripts/check-imports.sh`
 fails when a regenerated umbrella would differ from the committed one).
 
 Lean toolchain and Mathlib must stay in sync (both currently `v4.33.1`); the bump procedure
-is in `CONTRIBUTING.md`. Keep files reasonably sized: Mathlib's file-length linter is on at
-its default of 1500 lines, and each file above that carries a trailing
-`set_option linter.style.longFile <ceiling>` (the linter's own ratchet: the ceiling only
-moves down as the file is split, and the linter rejects a ceiling that is too generous).
+is in `CONTRIBUTING.md`. Mathlib's file-length linter is enabled at 1500 lines. Split
+files by responsibility before crossing that limit; retain an import façade when an existing
+module path forms part of the public API.
 
 ## Further Reading
 

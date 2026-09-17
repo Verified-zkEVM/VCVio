@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Quang Dao. All rights reserved.
+Copyright (c) 2026 Quang Dao, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Alexander Hicks
 -/
 
 module
@@ -69,18 +69,6 @@ def verifyInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
 
 /-! ## Naturality -/
 
-private theorem queryHom_hmsg {p : Params} (core : CorePrimitives p)
-    {m n : Type → Type*} [Monad m] [Monad n]
-    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
-    (F : HasQuery.QueryHom (publicHashSpec core) m n)
-    (r : core.Y) (pkSeed : core.PkSeed) (pkRoot : core.Y) (msg : List Byte) :
-    F.toMonadHom (PublicHash.hmsg core r pkSeed pkRoot msg) =
-      PublicHash.hmsg core r pkSeed pkRoot msg := by
-  change F.toMonadHom
-      (query (spec := publicHashSpec core) (.hmsg r pkSeed pkRoot msg)) =
-    query (spec := publicHashSpec core) (.hmsg r pkSeed pkRoot msg)
-  exact HasQuery.map_query F _
-
 /-- Query-preserving monad morphisms commute with general internal key generation. -/
 theorem keygenInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp.params)
     {m n : Type → Type*} [Monad m] [LawfulMonad m] [Monad n] [LawfulMonad n]
@@ -99,7 +87,7 @@ theorem signInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp.p
     (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
     F.toMonadHom (signInternalM vp core msg sk addrnd) =
       signInternalM vp core msg sk addrnd := by
-  simp [signInternalM, queryHom_hmsg core F, forsSignM_natural core F,
+  simp [signInternalM, PublicHash.hmsg_natural core F, forsSignM_natural core F,
     forsPkFromSigM_natural core F, GeneralHypertree.signM_natural vp core F]
 
 /-- Query-preserving monad morphisms commute with general internal verification. -/
@@ -111,7 +99,7 @@ theorem verifyInternalM_natural (vp : ValidatedParams) (core : CorePrimitives vp
     (msg : List Byte) (sig : SignatureCore vp core) (pk : PublicKeyCore core) :
     F.toMonadHom (verifyInternalM vp core msg sig pk) =
       verifyInternalM vp core msg sig pk := by
-  simp [verifyInternalM, queryHom_hmsg core F, forsPkFromSigM_natural core F,
+  simp [verifyInternalM, PublicHash.hmsg_natural core F, forsPkFromSigM_natural core F,
     GeneralHypertree.verifyM_natural vp core F]
 
 /-! ## Fixed-answer completeness -/
@@ -184,6 +172,89 @@ theorem simulateQ_verifyInternalM (vp : ValidatedParams) (prims : Primitives vp.
         (verifyInternalM vp prims.core msg sig pk :
           OracleComp (publicHashSpec prims.core) Bool) =
       verifyInternal vp prims msg sig pk := rfl
+
+/-! ## Pure API equations
+
+The three equations below are what a consumer of the pure interpretations rewrites with.  None of
+them is available by `rfl` downstream: `keygenInternalM` and `verifyInternalM` are `do` blocks over
+`publicHashSpec`, and their interpretation under `simulateQ (PublicHash.impl prims)` reduces only
+once the `bind` law — and, where an `H_msg` query is made, the handler equation for it — has fired.
+Each proof names the rewrites its own equation needs and no more: `verifyInternal_eq` names both,
+`keygenInternal_fst` and `keygenInternal_snd` only the `bind` law, because key generation makes no
+`H_msg` query at all, and `verifyInternal_eq_decide` names neither, being the previous equation
+composed with `GeneralHypertree.verify_eq_decide`.  Each closes the remainder inside this module,
+where the pure definitions' bodies are available.  Downstream the verification reduction is
+additionally stopped inside the component loops by `Vector.ofFnM`, whose body an importer cannot
+unfold. -/
+
+/-- The public key FIPS 205 Algorithm 18 publishes: the public seed it was given, and the general
+hypertree's top-layer root under the secret seed.
+
+This is the first component of the returned pair, which this repository orders `(PK, SK)` where
+FIPS 205 lists `(SK, PK)`.  The second component is stated by `keygenInternal_snd`. -/
+theorem keygenInternal_fst (vp : ValidatedParams) (prims : Primitives vp.params)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
+    (keygenInternal vp prims skSeed skPrf pkSeed).1 =
+      ⟨pkSeed, GeneralHypertree.root vp prims skSeed pkSeed⟩ := by
+  unfold keygenInternal keygenInternalM GeneralHypertree.root
+  simp only [simulateQ_bind]
+  rfl
+
+/-- The secret key FIPS 205 Algorithm 18 retains: the two secret values and the public seed it was
+given, and the same top-layer root the published key carries.
+
+This is the second component of the returned pair, stated as its own equation rather than as the
+second projection of one pair equation.  The two are consumed together: the only proof in the
+repository that rewrites with either is `SLHDSA.Security.generalAlg_keygen_eq`, which rewrites with
+both at one goal.  (`keygenInternal_fst` is additionally restated as a pin in
+`HashSigTest.SLHDSA.SchemeWitnesses`.)  Both name the `bind` law and no more, key generation making
+no `H_msg` query.
+
+The `pkRoot` field is the *published* root, not a second computation of it: this equation and
+`keygenInternal_fst` name one `GeneralHypertree.root` application, which is what lets a consumer
+identify `sk.pkRoot` with `pk.pkRoot` without unfolding either side. -/
+theorem keygenInternal_snd (vp : ValidatedParams) (prims : Primitives vp.params)
+    (skSeed : prims.SkSeed) (skPrf : prims.SkPrf) (pkSeed : prims.PkSeed) :
+    (keygenInternal vp prims skSeed skPrf pkSeed).2 =
+      ⟨skSeed, skPrf, pkSeed, GeneralHypertree.root vp prims skSeed pkSeed⟩ := by
+  unfold keygenInternal keygenInternalM GeneralHypertree.root
+  simp only [simulateQ_bind]
+  rfl
+
+/-- FIPS 205 Algorithm 20 in one equation: split the digest the signature's *own* randomizer
+produces against the public key, recover the FORS public key from the FORS half of the signature at
+the digest-derived FORS address, and hand that to the general hypertree verifier at the same digest.
+
+The randomizer is the signature's own, and the public key is whatever the verifier was handed;
+no honesty assumption is required.  Only the `H_msg` query is discharged by this equation — the
+FORS and hypertree halves stay in their own pure interpretations, which have their own equations. -/
+theorem verifyInternal_eq (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (msg : List Byte) (sig : SignatureCore vp prims.core)
+    (pk : PublicKeyCore prims.core) :
+    verifyInternal vp prims msg sig pk =
+      (let parts := splitDigest vp.params (prims.Hmsg sig.randomness pk.pkSeed pk.pkRoot msg)
+       GeneralHypertree.verify vp prims
+         (forsPkFromSig prims sig.fors parts.md.toList pk.pkSeed parts.forsAdrs)
+         sig.hypertree pk.pkSeed parts pk.pkRoot) := by
+  unfold verifyInternal verifyInternalM GeneralHypertree.verify forsPkFromSig
+  simp only [simulateQ_bind, PublicHash.simulateQ_hmsg]
+  rfl
+
+/-- The same equation with the final comparison of FIPS 205 Algorithm 20 exposed: verification is
+the decision of whether the recovered hypertree root is the published one.  This is
+`verifyInternal_eq` composed with `GeneralHypertree.verify_eq_decide`, and it is the form a case
+split on a verifying signature consumes. -/
+theorem verifyInternal_eq_decide (vp : ValidatedParams) (prims : Primitives vp.params)
+    [DecidableEq prims.Y] (msg : List Byte) (sig : SignatureCore vp prims.core)
+    (pk : PublicKeyCore prims.core) :
+    verifyInternal vp prims msg sig pk =
+      (let parts := splitDigest vp.params (prims.Hmsg sig.randomness pk.pkSeed pk.pkRoot msg)
+       decide (GeneralHypertree.pkFromSig vp prims
+         (forsPkFromSig prims sig.fors parts.md.toList pk.pkSeed parts.forsAdrs)
+         sig.hypertree pk.pkSeed parts = pk.pkRoot)) := by
+  rw [verifyInternal_eq, GeneralHypertree.verify_eq_decide]
+
+/-! ## Completeness -/
 
 /-- **General internal SLH-DSA correctness**: every honestly generated arbitrary-depth
 signature verifies for every choice of seeds, randomizer, message, and deterministic public-hash

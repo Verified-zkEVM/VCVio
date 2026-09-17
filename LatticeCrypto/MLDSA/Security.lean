@@ -228,8 +228,7 @@ The HVZK theorem `MLDSA.idsWithAbort_hvzk` is proven downstream in
 `LatticeCrypto.MLDSA.SecurityHVZK`, where the concrete simulator `hvzkSimulatorReal` and the
 extra-rejection-mass bound `hvzkBoundReal` are defined. The simulator reproduces the honest
 transcript pointwise on the accept event, so the total-variation distance is bounded by the
-honest prover's extra-rejection mass; see that file for the quantitative statement
-`idsWithAbort_hvzk_real` and the existential form `idsWithAbort_hvzk`. -/
+honest prover's extra-rejection mass; see that file for the quantitative statement. -/
 
 omit [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
 /-- Commitment recoverability for ML-DSA: the public commitment `w₁` can be reconstructed
@@ -294,17 +293,23 @@ variable {M : Type} [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec
 open scoped Classical in
 /-- **Main Security Theorem (EUF-CMA, Theorem 4, CRYPTO 2023).**
 
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only
-`hp : p_abort < 1` is assumed). Inherited from
-`FiatShamirWithAbort.cmaToNmaLoss`, the loss term
-`2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
-by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`, collapsing the
-bound to `adv.advantage ≤ Adv^MLWE + Adv^SelfTargetMSIS` with no statistical slack, which
-is generally false. In the final statement `ε`, `p_abort`, `δ` should be nonnegative
-(e.g. `ℝ≥0` or constrained by `0 ≤ ε`, `0 ≤ p_abort`, `0 ≤ δ` hypotheses) and identified
-with the concrete commitment guessing probability, abort probability, and regularity
-failure probability of the ML-DSA identification scheme.
+**WARNING: this is a placeholder statement with no security content.** Two defects must be
+fixed before it is proved:
+
+1. The MLWE distinguisher and the SelfTargetMSIS adversary are existentially quantified. Nothing
+   bounds their running time, so for cryptographic parameters there are adversaries of
+   advantage close to `1` (a brute-force secret search distinguishes MLWE), and the existential
+   form does not express a reduction. The final
+   statement must name the reductions: the distinguisher and extractor of
+   `LatticeCrypto.MLDSA.SecurityNMA` (`distinguisherBShort`, `extractorC`) applied to an explicit
+   with-aborts CMA-to-NMA simulator, which does not exist yet.
+2. `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only `hp : p_abort < 1` is
+   assumed). Inherited from `FiatShamirWithAbort.cmaToNmaLoss`, the loss term
+   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
+   by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`. In the final
+   statement `ε`, `p_abort`, `δ` should be nonnegative and identified with the concrete
+   commitment guessing probability, abort probability, and regularity failure probability of
+   the ML-DSA identification scheme.
 
 The proof is intentionally deferred. The statement also needs to be specialized to the
 actual ML-DSA parameters (eliminating the explicit quantitative HVZK simulator hypothesis)

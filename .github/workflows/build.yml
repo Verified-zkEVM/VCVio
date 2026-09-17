@@ -60,10 +60,33 @@ jobs:
           bash scripts/test-complexity-backend-isolation.sh
           bash scripts/check-complexity-backend-isolation.sh
 
+      # A declaration written after the `-/` of the comment that documents it parses,
+      # builds and runs, and is invisible to a reader scanning the left margin. Neither
+      # pass that might be expected to catch it does, and they are distinct passes.
+      # `lake lint -- --style-only` runs Mathlib's four text-based linters, none of which
+      # has any notion of a comment. `linter.style.whitespace` is not in that pass at all:
+      # it is a syntax linter that runs during elaboration under the package's
+      # `weak.linter.mathlibStandardSet`, and its warnings fail the build job through
+      # check-warning-log.py. It reports the `/-` and `/-!` forms in the seven proof and
+      # three test libraries, but never the `/--` form, whose command starts at the `/--`
+      # at column 0. This check is text only, so it belongs in this job rather than behind
+      # a build, and for lakefile.lean, VCVioComplexity/lakefile.lean, Interop/ and
+      # scripts/ it is the only check of any kind that reads them for this: Lake
+      # elaborates the two lakefiles from `import Lake` with no Mathlib linter registered,
+      # nothing builds Interop/, and scripts/ is built here but imports no Mathlib, so the
+      # `weak.` option is dropped. Over VCVioComplexity/ the linter does run and warn --
+      # its own lakefile enables it explicitly and the complexity_backend job builds it --
+      # but no step turns that warning into a failure.
+      - name: Check comment fences
+        run: |
+          bash scripts/test-comment-fences.sh
+          python3 scripts/check-comment-fences.py
+
       # Regenerates every umbrella with scripts/update-lib.sh and fails if any of them changes.
       - name: Check generated umbrella modules
         run: |
           python3 scripts/test-check-imports.py
+          python3 scripts/test-validation.py
           bash scripts/check-imports.sh
 
   complexity_backend:
@@ -272,6 +295,22 @@ jobs:
         run: ./scripts/test-axiomsweep.sh
       - name: Axiom sweep
         run: lake exe axiomsweep --check
+      # The eager-initialisation ratchet. A top-level constant of non-function type is
+      # evaluated when its module is loaded, before any `main` runs, so a finiteness
+      # instance written the obvious way builds an enumeration of its carrier at start-up
+      # in every executable that imports the module. That elaborates cleanly, builds
+      # cleanly, and passes every other gate here; it fails only when the binary runs.
+      # Needs the oleans the build above produced, as the axiom sweep does. The fixtures
+      # go first for the same reason: seven fixture modules, one per route by which loading
+      # a module can build such an enumeration — including the respelling that a name test
+      # accepts and the specialisations that have no environment constant to read — one
+      # negative control per clause of the predicate, and the baseline's own accept / drop /
+      # narrow / widen / re-scope / preserve behaviour, so the committed baseline is
+      # falsifiable rather than merely true.
+      - name: Test the init sweep tool
+        run: ./scripts/test-initsweep.sh
+      - name: Init sweep
+        run: lake exe initsweep --check
       # `lake test` runs the `test` script from `lakefile.lean`: it builds the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
       # and vectors, the SLH-DSA canaries) and runs the smoke test and the SLH-DSA test
@@ -295,6 +334,14 @@ jobs:
             --path-prefix LatticeCryptoTest.lean \
             --path-prefix HashSigTest/ \
             --label 'test-library warnings'
+      # The same ratchet over the test libraries, which only exist as oleans once `lake
+      # test` has built them — the incident this gate exists for would have been just as
+      # expensive written in a test library. `VCVioTest` and `LatticeCryptoTest` have
+      # umbrella modules and are swept; `HashSigTest` is a `submodules` glob with no
+      # umbrella and thirteen roots that each define `main`, so it is not, and
+      # `scripts/InitSweep.lean` records precisely what that leaves uncovered.
+      - name: Init sweep (test libraries)
+        run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
       - name: Save Lake cache
         if: success() && steps.lake-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -476,7 +523,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      # Batteries' environment linters over the seven proof libraries (the `lintDriver` in
+        with:
+          fetch-depth: 0
+      # Batteries' environment linters over the seven proof libraries (the lint driver in
       # `lakefile.lean`) import one whole environment per library; run inside `Build Project`
       # they pushed the hosted runner into a shutdown, so they get a fresh runner and the
       # oleans that job saved. `fail-on-cache-miss` keeps a missing cache from turning into a
@@ -498,11 +547,14 @@ jobs:
           use-mathlib-cache: false
       - name: Fetch Mathlib cache
         run: lake exe cache get
-      # One driver process per library bounds peak memory to one environment; `--no-build`
-      # because the oleans come from the restored cache. `scripts/nolints.json` is read from
-      # the repository root by every invocation.
-      - name: Lint each library
+      - name: Test lint orchestration
+        run: python3 scripts/test-lint.py
+      - name: Lint each library and check exact baseline
+        env:
+          LINT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
         run: |
-          for lib in ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets; do
-            lake exe runLinter --no-build "$lib"
-          done
+          args=(--env-only --no-build)
+          if [[ -n "$LINT_BASE_REF" ]]; then
+            args+=(--base-ref "$LINT_BASE_REF")
+          fi
+          lake lint -- "${args[@]}"
