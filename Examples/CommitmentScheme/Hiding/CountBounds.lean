@@ -506,7 +506,7 @@ lemma wp_freshDistinguishIncrement_eq
       funext qch
       simp only [hzero, false_and, OracleComp.ProgramLogic.propInd_false]
       exact OracleComp.ProgramLogic.wp_const _ 0
-    rw [hpost, OracleComp.ProgramLogic.wp_const]
+    rw [hpost]
     simp [hzero]
 
 omit [Finite C] [Inhabited C] in
@@ -1206,13 +1206,17 @@ lemma wp_countPred_le_initialPred_add_wp_countIncrement
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll oa).run st₀)
         (fun z : α × (QueryCache (CMOracle M S C) × (S → ℕ)) => (z.2.2 s - st₀.2 s : ℝ≥0∞)) := by
-  rw [← OracleComp.ProgramLogic.wp_const
-    ((simulateQ hidingImplCountAll oa).run st₀) (st₀.2 s - 1 : ℝ≥0∞),
-    ← OracleComp.ProgramLogic.wp_add]
-  gcongr with z hz
-  have hmono := count_mono_of_mem_support_run_hidingImplCountAll
-    (M := M) (S := S) (C := C) oa st₀ z hz s
-  exact_mod_cast (show z.2.2 s - 1 ≤ (st₀.2 s - 1) + (z.2.2 s - st₀.2 s) by omega)
+  calc
+    _ ≤ OracleComp.ProgramLogic.wp ((simulateQ hidingImplCountAll oa).run st₀)
+        (fun z => (st₀.2 s - 1 : ℝ≥0∞) + (z.2.2 s - st₀.2 s : ℝ≥0∞)) := by
+      gcongr with z hz
+      have hmono := count_mono_of_mem_support_run_hidingImplCountAll
+        (M := M) (S := S) (C := C) oa st₀ z hz s
+      exact_mod_cast (show z.2.2 s - 1 ≤ (st₀.2 s - 1) + (z.2.2 s - st₀.2 s) by omega)
+    _ = _ := by
+      rw [OracleComp.ProgramLogic.wp_add]
+      congr 1
+      exact OracleComp.ProgramLogic.wp_const _ _
 
 lemma sum_wp_countPred_le_sum_initialPred_add_sum_wp_countIncrements [Fintype S]
     {α : Type}

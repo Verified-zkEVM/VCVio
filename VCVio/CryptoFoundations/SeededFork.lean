@@ -223,15 +223,13 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
     wp (generateSeed spec qb js) (fun seed => wp ($ᵗ spec.Range i)
       (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u) CostModel.unit
         (fun n : ℕ => (n : ENNReal)))) ≤ qb i := by
-  let : Fintype ι := Fintype.ofFinite ι
-  rw [wp_eq_tsum]
-  conv_rhs => rw [← wp_const (generateSeed spec qb js) (qb i : ENNReal), wp_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun seed => ?_
-  by_cases hseed : seed ∈ support (generateSeed spec qb js)
-  · gcongr
-    exact expectedQueryCount_seededForkWithSeedValue_le_aux main qb i cf hmain
-      (generateSeed_covers_queryBound (spec := spec) qb js hjs hseed)
-  · simp [probOutput_eq_zero_of_not_mem_support hseed]
+  calc
+    _ ≤ wp (generateSeed spec qb js) (fun _ => (qb i : ENNReal)) := by
+      apply wp_mono_of_support
+      intro seed hseed
+      exact expectedQueryCount_seededForkWithSeedValue_le_aux main qb i cf hmain
+        (generateSeed_covers_queryBound (spec := spec) qb js hjs hseed)
+    _ = _ := wp_const _ _
 
 section forkRuntime
 

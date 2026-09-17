@@ -430,8 +430,10 @@ info: [vcspec cache] hit `triple_cacheTraceWrapped` (folded, unaryTriple)
 #guard_msgs in
 set_option vcvio.vcgen.traceCachedRules true in
 example :
-    (⦃ (1 : ℝ≥0∞) ⦄ (cacheTraceWrapped (spec := spec)) ⦃ fun _ => (1 : ℝ≥0∞) ⦄) ∧
-      (⦃ (1 : ℝ≥0∞) ⦄ (cacheTraceWrapped (spec := spec)) ⦃ fun _ => (1 : ℝ≥0∞) ⦄) := by
+    (⦃ (1 : ℝ≥0∞) ⦄ (cacheTraceWrapped (spec := spec))
+      ⦃ fun y => if y = true then (1 : ℝ≥0∞) else 0 ⦄) ∧
+      (⦃ (1 : ℝ≥0∞) ⦄ (cacheTraceWrapped (spec := spec))
+        ⦃ fun y => if y = true then (1 : ℝ≥0∞) else 0 ⦄) := by
   constructor <;> vcstep
 
 /-! ## `liftComp` -/
