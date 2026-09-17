@@ -26,7 +26,9 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 ### Prop indicator
 - `𝟙⟦P⟧` — inject `Prop` into `ℝ≥0∞` (1 if true, 0 if false)
 
-### Unary (Std.Do-inspired)
+### Unary (core WP)
+
+Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Quantitative`.
 - `wp⟦c⟧` — quantitative WP (partial application, use as `wp⟦c⟧ post`)
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 
@@ -84,8 +86,7 @@ theorem GameEquiv.probOutput_eq {g₁ g₂ : OracleComp spec₁ α}
 
 open scoped Classical in
 /-- Indicator embedding: lifts `P : Prop` into `ℝ≥0∞` as `1` (true) or `0` (false).
-This is the quantitative analogue of Loom's pure proposition assertion, but
-targets the expectation carrier rather than the current assertion lattice. -/
+It takes values in the expectation carrier `ℝ≥0∞`. -/
 noncomputable def propInd (P : Prop) : ℝ≥0∞ := if P then 1 else 0
 
 @[simp] lemma propInd_true : propInd True = 1 := ite_eq_left trivial
@@ -121,8 +122,7 @@ lemma propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
 /-! ## Notation -/
 
 /-- Numeric proposition indicator: `𝟙⟦P⟧ = 1` if `P` holds, `0` otherwise.
-This is deliberately distinct from Loom's `⌜P⌝`, which embeds propositions as
-top/bottom in the active assertion lattice. -/
+The true branch is the numeric value `1`, including for the unbounded expectation carrier. -/
 scoped notation "𝟙⟦" P "⟧" => propInd P
 
 /-- Quantitative WP notation. `wp⟦c⟧ post` directly elaborates to

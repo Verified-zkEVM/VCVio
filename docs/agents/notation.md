@@ -56,17 +56,19 @@ for the exact finite evaluator boundary and decidability requirements.
 
 ## Program Logic Notations
 
+Open `OracleComp.ProgramLogic` for VCVio notation. Unary triples additionally require
+`open scoped Std.Internal.Do` and an interpretation, such as `OracleComp.Quantitative`.
+
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝟙⟦P⟧` | Numeric proposition indicator (`propInd P`) | `VCVio/ProgramLogic/NotationCore.lean` |
-| `⌜P⌝` | Loom pure proposition assertion | `VCVio/ProgramLogic/NotationCore.lean` |
 | `wp⟦c⟧` | Quantitative WP (`wp c`) | `VCVio/ProgramLogic/NotationCore.lean` |
-| `rwp⟦c₁ ~ c₂ \| post; epost₁, epost₂⟧` | Relational WP (`Std.Do'.rwp c₁ c₂ post epost₁ epost₂`) | `VCVio/ProgramLogic/NotationCore.lean` |
-| `⦃P⦄ c ⦃Q⦄` | Loom unary Hoare triple (`Std.Do'.Triple`) | `VCVio/ProgramLogic/NotationCore.lean` |
+| `rwp⟦c₁ ~ c₂ \| post; epost₁, epost₂⟧` | Relational WP (`VCVio.ProgramLogic.rwp c₁ c₂ post epost₁ epost₂`) | `VCVio/ProgramLogic/NotationCore.lean` |
+| `⦃P⦄ c ⦃Q⦄` | Core unary Hoare triple (`Std.Internal.Do.Triple`) | Lean core `Std.Internal.Do.Triple.Basic` |
 | `g₁ ≡ₚ g₂` | Game equivalence (`GameEquiv`) | `VCVio/ProgramLogic/NotationCore.lean` |
 | `⟪c₁ ~ c₂ \| R⟫` | pRHL coupling (`RelTriple c₁ c₂ R`) | `VCVio/ProgramLogic/Notation.lean` |
 | `⟪c₁ ≈[ε] c₂ \| R⟫` | Approximate coupling (`ApproxRelTriple ε c₁ c₂ R`) | `VCVio/ProgramLogic/Notation.lean` |
-| `⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` | Quantitative relational triple (`Std.Do'.RelTriple f c₁ c₂ g Lean.Order.bot Lean.Order.bot`) | `VCVio/ProgramLogic/Notation.lean` |
+| `⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` | Quantitative relational triple (`VCVio.ProgramLogic.RelTriple f c₁ c₂ g Lean.Order.bot Lean.Order.bot`) | `VCVio/ProgramLogic/Notation.lean` |
 
 ## UC Composition Notations
 

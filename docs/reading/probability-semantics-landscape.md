@@ -4,6 +4,11 @@
 > use [`denotational-probability-semantics.md`](denotational-probability-semantics.md) and
 > [`docs/agents/probability.md`](../agents/probability.md).
 >
+> Current v4.34 implementation: Loom2 has been removed; unary carriers use core WP,
+> shared algebra/transformer constructions come from PolyFun, and coupling remains local.
+> See [upstream alignment](upstream-alignment.md) and the
+> [program-logic guide](../agents/program-logic.md) for the implemented boundary.
+>
 > Original snapshot: 2026-08-21. Section 19 preserves that audit in its original time context.
 > Section 20 records the focused 2026-08-30 recheck against current VCVio `main`, VCVio's pinned
 > PolyFun checkout, and PolyFun's canonical `main`. Unless §20 explicitly supersedes a volatile

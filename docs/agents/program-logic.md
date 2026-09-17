@@ -132,12 +132,12 @@ probability goals, automatically lowering `Pr[...]` into the quantitative engine
 classes of probability goals:
 
 1. **`Pr[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
-   - `Pr[p | oa] = 1` → `Triple 1 oa (fun x => ⌜p x⌝)`
+   - `Pr[p | oa] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`
    - `Pr[= x | oa] = 1` → `Triple 1 oa (fun y => if y = x then 1 else 0)`
 
 2. **Lower-bound event/output goals** → stay inside unary VCGen by reusing the same `Triple`
    shell:
-   - `r ≤ Pr[p | oa]` / `Pr[p | oa] ≥ r` → `Triple r oa (fun x => ⌜p x⌝)`
+   - `r ≤ Pr[p | oa]` / `Pr[p | oa] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
    - `r ≤ Pr[= x | oa]` / `Pr[= x | oa] ≥ r` → `Triple r oa (fun y => if y = x then 1 else 0)`
 
 3. **`Pr[...] = Pr[...]` equality**:
