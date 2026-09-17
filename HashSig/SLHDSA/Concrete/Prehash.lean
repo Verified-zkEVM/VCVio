@@ -165,7 +165,7 @@ theorem Algorithm.digest_eq_ok (algorithm : Algorithm) (message : List Byte) :
           rw [algorithm.digestRaw_size message]
           exact i.isLt)) := by
   unfold Algorithm.digest digestBytesExact
-  rw [dif_pos (algorithm.digestRaw_size message)]
+  rw [dite_eq_left (algorithm.digestRaw_size message)]
 
 /-- Canonical binding of one registry entry's DER OID and digest implementation. -/
 def Algorithm.descriptor (algorithm : Algorithm) : PrehashDescriptor where
@@ -238,7 +238,7 @@ def verify (vp : ValidatedParams) (prims : Primitives vp.params) [DecidableEq pr
 /-- A registry algorithm meeting the §10.2 strength policy passes the checked boundary. -/
 theorem requireStrength_eq_ok (p : Params) (algorithm : Algorithm)
     (h : algorithm.ValidFor p) : requireStrength p algorithm = .ok () :=
-  if_pos ((algorithm.validFor_iff p).mpr h)
+  ite_eq_left ((algorithm.validFor_iff p).mpr h)
 
 /-- **Checked pre-hash completeness** (Algorithms 21, 23, 25): under the FIPS 205 context
 bound and the §10.2 strength policy, checked pre-hash signing under an honestly generated key

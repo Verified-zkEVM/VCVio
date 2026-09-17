@@ -8,7 +8,7 @@ module
 public import PolyFun.Interaction.UC.Emulates
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
 public import VCVio.CryptoFoundations.Asymptotics.Security
-public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.MeasureTVDist
 
 /-!

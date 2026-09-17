@@ -17,6 +17,8 @@ User-facing relational VCGen tactics and syntax.
 
 public meta section
 
+open scoped OracleComp.Rel.Quantitative
+
 open Lean Elab Tactic Meta
 
 namespace OracleComp.ProgramLogic
@@ -48,7 +50,7 @@ private def runRVCGenStepWithTheoremNames
 
 It first lowers `GameEquiv` / `evalSPMF` equality goals into relational mode, then
 tries the obvious structural relational rule on `RelTriple` / `RelWP` / quantitative
-`Std.Do'.RelTriple` goals: synchronized conditionals, `simulateQ`, `Functor.map`,
+`VCVio.ProgramLogic.RelTriple` goals: synchronized conditionals, `simulateQ`, `Functor.map`,
 bounded traversals, bind decomposition, or random/query coupling.
 
 `rvcstep using t` supplies the explicit witness needed for the current shape:
@@ -62,7 +64,8 @@ bounded traversals, bind decomposition, or random/query coupling.
 - `simulateQ` state relation
 
 `rvcstep left` and `rvcstep right` expose controlled one-sided bind steps for
-raw `Std.Do'.rwp` and folded `Std.Do'.RelTriple` goals. They do not run as part
+raw `VCVio.ProgramLogic.rwp` and folded `VCVio.ProgramLogic.RelTriple` goals. They do not
+run as part
 of default relational automation, because choosing an asynchronous split fixes a
 coupling frontier.
 

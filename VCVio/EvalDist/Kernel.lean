@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.EvalDist.Defs.Semantics
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import ToMathlib.Probability.Kernel.Subprobability
 
 /-!
@@ -75,18 +75,30 @@ theorem isMarkovKernel_evalDistKernel [EvalDistSemantics m]
     IsMarkovKernel (evalDistKernel f hf) :=
   ⟨hProbability⟩
 
+instance evalDistKernel.instIsMarkovKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [MeasurableSpace α] (f : ρ → m α)
+    (hf : Measurable fun r ↦ 𝒟[f r]) [∀ r, IsProbabilityMeasure 𝒟[f r]] :
+    IsMarkovKernel (evalDistKernel f hf) :=
+  isMarkovKernel_evalDistKernel f hf fun _ ↦ inferInstance
+
+instance evalDistKernelOfDiscrete.instIsMarkovKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [DiscreteMeasurableSpace ρ] [MeasurableSpace α]
+    (f : ρ → m α) [∀ r, IsProbabilityMeasure 𝒟[f r]] :
+    IsMarkovKernel (evalDistKernelOfDiscrete f) :=
+  inferInstanceAs (IsMarkovKernel (evalDistKernel f Measurable.of_discrete))
+
 /-- Monad bind is composition of a measure with the continuation kernel. -/
 theorem evalDist_bind_eq_comp [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     [MeasurableSpace α] [MeasurableSpace β] (mx : m α) (f : α → m β)
     (hf : Measurable fun x => 𝒟[f x]) :
-    𝒟[mx >>= f] = evalDistKernel f hf ∘ₘ 𝒟[mx] :=
+    𝒟[mx >>= f] = Measure.bind 𝒟[mx] (evalDistKernel f hf) :=
   evalDist_bind mx f hf
 
 /-- Discrete-domain specialization of `evalDist_bind_eq_comp`. -/
 theorem evalDist_bind_eq_comp_of_discrete [Monad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] [MeasurableSpace α] [DiscreteMeasurableSpace α]
     [MeasurableSpace β] (mx : m α) (f : α → m β) :
-    𝒟[mx >>= f] = evalDistKernelOfDiscrete f ∘ₘ 𝒟[mx] :=
+    𝒟[mx >>= f] = Measure.bind 𝒟[mx] (evalDistKernelOfDiscrete f) :=
   evalDist_bind_of_discrete mx f
 
 namespace MeasureSemanticsVia
@@ -110,6 +122,14 @@ instance evalDistKernel.instIsSubprobabilityKernel (sem : MeasureSemanticsVia m)
     (hf : Measurable fun r => sem.evalDist (f r)) :
     IsSubprobabilityKernel (sem.evalDistKernel f hf) :=
   ⟨fun r => sem.evalDist_apply_univ_le_one (f r)⟩
+
+/-- A bundled family with lossless output measures denotes a Markov kernel. -/
+instance evalDistKernel.instIsMarkovKernel (sem : MeasureSemanticsVia m)
+    [MeasurableSpace ρ] [MeasurableSpace α] (f : ρ → m α)
+    (hf : Measurable fun r ↦ sem.evalDist (f r))
+    [∀ r, IsProbabilityMeasure (sem.evalDist (f r))] :
+    IsMarkovKernel (sem.evalDistKernel f hf) where
+  isProbabilityMeasure r := inferInstanceAs (IsProbabilityMeasure (sem.evalDist (f r)))
 
 end MeasureSemanticsVia
 
@@ -137,11 +157,35 @@ theorem evalDistKernel_apply [EvalDistSemantics m]
     (hMeasurable : Measurable fun environment => 𝒟[mx environment]) (environment : ρ) :
     ReaderT.evalDistKernel mx hMeasurable environment = 𝒟[mx environment] := rfl
 
+@[simp]
+theorem evalDistKernelOfDiscrete_apply [EvalDistSemantics m]
+    [MeasurableSpace ρ] [DiscreteMeasurableSpace ρ] [MeasurableSpace α]
+    (mx : ReaderT ρ m α) (environment : ρ) :
+    ReaderT.evalDistKernelOfDiscrete mx environment = 𝒟[mx environment] := rfl
+
 instance evalDistKernel.instIsSubprobabilityKernel [EvalDistSemantics m]
     [MeasurableSpace ρ] [MeasurableSpace α] (mx : ReaderT ρ m α)
     (hMeasurable : Measurable fun environment => 𝒟[mx environment]) :
     IsSubprobabilityKernel (ReaderT.evalDistKernel mx hMeasurable) :=
   ⟨fun environment => evalDist_apply_univ_le_one (mx environment)⟩
+
+instance evalDistKernelOfDiscrete.instIsSubprobabilityKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [DiscreteMeasurableSpace ρ] [MeasurableSpace α]
+    (mx : ReaderT ρ m α) : IsSubprobabilityKernel (ReaderT.evalDistKernelOfDiscrete mx) :=
+  inferInstanceAs (IsSubprobabilityKernel (_root_.evalDistKernelOfDiscrete mx))
+
+instance evalDistKernel.instIsMarkovKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [MeasurableSpace α] (mx : ReaderT ρ m α)
+    (hMeasurable : Measurable fun environment ↦ 𝒟[mx environment])
+    [∀ environment, IsProbabilityMeasure 𝒟[mx environment]] :
+    IsMarkovKernel (ReaderT.evalDistKernel mx hMeasurable) :=
+  inferInstanceAs (IsMarkovKernel (_root_.evalDistKernel mx hMeasurable))
+
+instance evalDistKernelOfDiscrete.instIsMarkovKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [DiscreteMeasurableSpace ρ] [MeasurableSpace α]
+    (mx : ReaderT ρ m α) [∀ environment, IsProbabilityMeasure 𝒟[mx environment]] :
+    IsMarkovKernel (ReaderT.evalDistKernelOfDiscrete mx) :=
+  inferInstanceAs (IsMarkovKernel (_root_.evalDistKernelOfDiscrete mx))
 
 /-- A lossless reader computation denotes a Markov kernel. -/
 theorem isMarkovKernel_evalDistKernel [EvalDistSemantics m]
@@ -175,11 +219,35 @@ theorem evalDistKernel_apply [EvalDistSemantics m]
     (hMeasurable : Measurable fun state => 𝒟[mx state]) (state : ρ) :
     StateT.evalDistKernel mx hMeasurable state = 𝒟[mx state] := rfl
 
+@[simp]
+theorem evalDistKernelOfDiscrete_apply [EvalDistSemantics m]
+    [MeasurableSpace ρ] [DiscreteMeasurableSpace ρ] [MeasurableSpace α]
+    (mx : StateT ρ m α) (state : ρ) :
+    StateT.evalDistKernelOfDiscrete mx state = 𝒟[mx state] := rfl
+
 instance evalDistKernel.instIsSubprobabilityKernel [EvalDistSemantics m]
     [MeasurableSpace ρ] [MeasurableSpace α] (mx : StateT ρ m α)
     (hMeasurable : Measurable fun state => 𝒟[mx state]) :
     IsSubprobabilityKernel (StateT.evalDistKernel mx hMeasurable) :=
   ⟨fun state => evalDist_apply_univ_le_one (mx state)⟩
+
+instance evalDistKernelOfDiscrete.instIsSubprobabilityKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [DiscreteMeasurableSpace ρ] [MeasurableSpace α]
+    (mx : StateT ρ m α) : IsSubprobabilityKernel (StateT.evalDistKernelOfDiscrete mx) :=
+  inferInstanceAs (IsSubprobabilityKernel (_root_.evalDistKernelOfDiscrete mx))
+
+instance evalDistKernel.instIsMarkovKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [MeasurableSpace α] (mx : StateT ρ m α)
+    (hMeasurable : Measurable fun state ↦ 𝒟[mx state])
+    [∀ state, IsProbabilityMeasure 𝒟[mx state]] :
+    IsMarkovKernel (StateT.evalDistKernel mx hMeasurable) :=
+  inferInstanceAs (IsMarkovKernel (_root_.evalDistKernel mx hMeasurable))
+
+instance evalDistKernelOfDiscrete.instIsMarkovKernel [EvalDistSemantics m]
+    [MeasurableSpace ρ] [DiscreteMeasurableSpace ρ] [MeasurableSpace α]
+    (mx : StateT ρ m α) [∀ state, IsProbabilityMeasure 𝒟[mx state]] :
+    IsMarkovKernel (StateT.evalDistKernelOfDiscrete mx) :=
+  inferInstanceAs (IsMarkovKernel (_root_.evalDistKernelOfDiscrete mx))
 
 /-- A lossless state computation denotes a Markov kernel. -/
 theorem isMarkovKernel_evalDistKernel [EvalDistSemantics m]
@@ -189,6 +257,15 @@ theorem isMarkovKernel_evalDistKernel [EvalDistSemantics m]
     IsMarkovKernel (StateT.evalDistKernel mx hMeasurable) :=
   _root_.isMarkovKernel_evalDistKernel mx hMeasurable hProbability
 
+/-- Discarding the final state maps its denotation along the first projection. -/
+@[simp↓, grind =]
+theorem evalDist_run' [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] [MeasurableSpace ρ] [MeasurableSpace α]
+    (mx : StateT ρ m α) (state : ρ) :
+    𝒟[mx.run' state] = (𝒟[mx state]).fst := by
+  rw [StateT.run'_eq, StateT.run, _root_.evalDist_map _ measurable_fst]
+  rfl
+
 /-- Discarding the final state is the first marginal of the state kernel. -/
 theorem evalDist_run'_eq_fst [Functor m] [EvalDistSemantics m]
     [MeasurableSpace ρ] [MeasurableSpace α]
@@ -196,7 +273,6 @@ theorem evalDist_run'_eq_fst [Functor m] [EvalDistSemantics m]
     (state : ρ)
     (hMap : 𝒟[Prod.fst <$> mx state] = (𝒟[mx state]).map Prod.fst) :
     𝒟[mx.run' state] = (StateT.evalDistKernel mx hMeasurable).fst state := by
-  change 𝒟[Prod.fst <$> mx state] = (StateT.evalDistKernel mx hMeasurable).fst state
-  rw [hMap, Kernel.fst_apply, StateT.evalDistKernel_apply]
+  rw [StateT.run', hMap, Kernel.fst_apply, StateT.evalDistKernel_apply]
 
 end StateT

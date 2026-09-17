@@ -248,7 +248,7 @@ theorem FPR.Bits.toReal_eq_of_exponent_ne_2047 (b : FPR.Bits) (h : b.exponent �
   by_cases he : b.exponent = 0
   · simp only [he]
     norm_num
-  · rw [if_neg he, if_neg h, if_neg he, max_eq_left (by omega : 1 ≤ b.exponent)]
+  · rw [ite_eq_right he, ite_eq_right h, ite_eq_right he, max_eq_left (by omega : 1 ≤ b.exponent)]
     have key : (2 : ℝ) ^ ((b.exponent : ℤ) - 1023 - 52) =
         (2 : ℝ) ^ ((b.exponent : ℤ) - 1023) / 2 ^ (52 : ℕ) := by
       rw [show (b.exponent : ℤ) - 1023 - 52 = ((b.exponent : ℤ) - 1023) - (52 : ℤ) by ring,
@@ -268,14 +268,14 @@ theorem FPR.Bits.abs_toReal_eq (b : FPR.Bits) :
   have hsign1 : |(if b.sign then (-1 : ℝ) else 1)| = 1 := by cases b.sign <;> simp
   unfold FPR.Bits.toReal
   by_cases h1 : b.exponent = 0
-  · rw [if_pos h1, if_pos h1, abs_mul, abs_mul, hsign1,
+  · rw [ite_eq_left h1, ite_eq_left h1, abs_mul, abs_mul, hsign1,
       abs_of_nonneg (by positivity : (0 : ℝ) ≤ (b.mantissa : ℝ)),
       abs_of_nonneg (by positivity : (0 : ℝ) ≤ (2 : ℝ) ^ (-(1074 : ℤ)))]
     ring
-  · rw [if_neg h1, if_neg h1]
+  · rw [ite_eq_right h1, ite_eq_right h1]
     by_cases h2 : b.exponent = 2047
-    · rw [if_pos h2, if_pos h2, abs_zero]
-    · rw [if_neg h2, if_neg h2, abs_mul, abs_mul, hsign1,
+    · rw [ite_eq_left h2, ite_eq_left h2, abs_zero]
+    · rw [ite_eq_right h2, ite_eq_right h2, abs_mul, abs_mul, hsign1,
         abs_of_nonneg (by positivity : (0 : ℝ) ≤ 1 + (b.mantissa : ℝ) / 2 ^ 52),
         abs_of_nonneg (by positivity : (0 : ℝ) ≤ (2 : ℝ) ^ ((b.exponent : ℤ) - 1023))]
       ring
@@ -319,7 +319,7 @@ ulp of the exact value. -/
 theorem FPR.ulpOfExponent_le_two_pow_neg52_mul_abs (b : FPR.Bits)
     (he0 : b.exponent ≠ 0) (he : b.exponent ≠ 2047) :
     FPR.ulpOfExponent b.exponent ≤ (2 : ℝ) ^ (-(52 : ℤ)) * |b.toReal| := by
-  rw [FPR.Bits.abs_toReal_eq, if_neg he0, if_neg he]
+  rw [FPR.Bits.abs_toReal_eq, ite_eq_right he0, ite_eq_right he]
   unfold FPR.ulpOfExponent
   rw [max_eq_left (show (1 : ℤ) ≤ (b.exponent : ℤ) by omega)]
   have hcomb : (2 : ℝ) ^ (-(52 : ℤ)) * (2 : ℝ) ^ ((b.exponent : ℤ) - 1023) =
@@ -445,7 +445,7 @@ private theorem FPR.Bits.abs_toReal_lt_iff_magKey_lt (b1 b2 : FPR.Bits)
     |b1.toReal| < |b2.toReal| ↔ b1.magKey < b2.magKey := by
   unfold FPR.Bits.magKey
   rw [FPR.Bits.abs_toReal_eq, FPR.Bits.abs_toReal_eq]
-  rw [if_neg h1, if_neg h2]
+  rw [ite_eq_right h1, ite_eq_right h2]
   split_ifs with he1 he2 he2
   · have hpos : (0 : ℝ) < (2 : ℝ) ^ (-(1074 : ℤ)) := by positivity
     rw [he1, he2]
@@ -722,9 +722,9 @@ private theorem shiftRight_add_two_pow_sub_one (k r : ℕ) (hr : r < 2 ^ k) :
   have hN : 0 < 2 ^ k := Nat.two_pow_pos k
   by_cases h : r = 0
   · subst h
-    rw [if_pos rfl]
+    rw [ite_eq_left rfl]
     exact Nat.div_eq_of_lt (by omega)
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     refine Nat.div_eq_of_lt_le ?_ ?_ <;> omega
 
 /-- Closed form of the sticky fold: it is `v` shifted right by `k + 1` and doubled, plus a single
@@ -737,7 +737,7 @@ private theorem stickyShift_eq (v k : ℕ) :
   unfold stickyShift
   rw [Nat.shiftRight_eq_div_pow]
   by_cases h : v % 2 ^ k = 0
-  · rw [if_pos h, Nat.or_zero]
+  · rw [ite_eq_left h, Nat.or_zero]
     have hvm : v = 2 ^ k * (v / 2 ^ k) := (Nat.mul_div_cancel' (Nat.dvd_of_mod_eq_zero h)).symm
     have hmod : v % 2 ^ (k + 1) = 2 ^ k * ((v / 2 ^ k) % 2) := by
       conv_lhs => rw [hvm]
@@ -750,16 +750,16 @@ private theorem stickyShift_eq (v k : ℕ) :
       · intro hc; rw [hc, Nat.mul_zero]
     rw [← hdiv]
     by_cases hm : (v / 2 ^ k) % 2 = 0
-    · rw [if_pos (hz.mpr hm)]; omega
-    · rw [if_neg (fun hc => hm (hz.mp hc))]; omega
-  · rw [if_neg h]
+    · rw [ite_eq_left (hz.mpr hm)]; omega
+    · rw [ite_eq_right (fun hc => hm (hz.mp hc))]; omega
+  · rw [ite_eq_right h]
     have h' : v % 2 ^ (k + 1) ≠ 0 := by
       intro hc
       apply h
       have hmm := Nat.mod_mod_of_dvd v (pow_dvd_pow 2 (Nat.le_succ k))
       rw [hc, Nat.zero_mod] at hmm
       exact hmm.symm
-    rw [if_neg h', or_one_eq, hdiv]
+    rw [ite_eq_right h', or_one_eq, hdiv]
 
 /-- The sticky fold vanishes exactly on `0`: no information about zero-ness is lost. -/
 private theorem stickyShift_eq_zero_iff (v k : ℕ) : stickyShift v k = 0 ↔ v = 0 := by
@@ -767,12 +767,12 @@ private theorem stickyShift_eq_zero_iff (v k : ℕ) : stickyShift v k = 0 ↔ v 
   · intro h
     rw [stickyShift_eq] at h
     by_cases hR : v % 2 ^ (k + 1) = 0
-    · rw [if_pos hR] at h
+    · rw [ite_eq_left hR] at h
       have hD : v / 2 ^ (k + 1) = 0 := by omega
       have hdm := Nat.div_add_mod v (2 ^ (k + 1))
       rw [hD, hR, Nat.mul_zero, Nat.add_zero] at hdm
       exact hdm.symm
-    · rw [if_neg hR] at h
+    · rw [ite_eq_right hR] at h
       omega
   · rintro rfl
     simp [stickyShift]
@@ -783,9 +783,9 @@ private theorem stickyShift_mod_two (v k : ℕ) :
     stickyShift v k % 2 = if v % 2 ^ (k + 1) = 0 then 0 else 1 := by
   rw [stickyShift_eq]
   by_cases hR : v % 2 ^ (k + 1) = 0
-  · rw [if_pos hR]
+  · rw [ite_eq_left hR]
     omega
-  · rw [if_neg hR]
+  · rw [ite_eq_right hR]
     omega
 
 /-- The sticky fold moves the value by strictly less than one output unit in the last place. -/
@@ -797,9 +797,9 @@ private theorem stickyShift_mul_lt (v k : ℕ) : stickyShift v k * 2 ^ k < v + 2
   have hlt := Nat.mod_lt v (Nat.two_pow_pos (k + 1))
   have hkey : 2 ^ (k + 1) * (v / 2 ^ (k + 1)) = 2 * 2 ^ k * (v / 2 ^ (k + 1)) := by rw [hp]
   by_cases hR : v % 2 ^ (k + 1) = 0
-  · rw [if_pos hR]
+  · rw [ite_eq_left hR]
     linarith
-  · rw [if_neg hR]
+  · rw [ite_eq_right hR]
     have : 0 < v % 2 ^ (k + 1) := Nat.pos_of_ne_zero hR
     linarith
 
@@ -813,9 +813,9 @@ private theorem lt_stickyShift_mul_add (v k : ℕ) : v < stickyShift v k * 2 ^ k
   have hlt := Nat.mod_lt v (Nat.two_pow_pos (k + 1))
   have hkey : 2 ^ (k + 1) * (v / 2 ^ (k + 1)) = 2 * 2 ^ k * (v / 2 ^ (k + 1)) := by rw [hp]
   by_cases hR : v % 2 ^ (k + 1) = 0
-  · rw [if_pos hR]
+  · rw [ite_eq_left hR]
     linarith
-  · rw [if_neg hR]
+  · rw [ite_eq_right hR]
     linarith
 
 /-! ### The sticky fold on `UInt64` -/
@@ -861,13 +861,13 @@ private theorem and_add_mask_shiftRight (v k : UInt64) (hk : k.toNat < 64) :
     rw [UInt64.toNat_add, hr, hM]
     exact Nat.mod_eq_of_lt (by omega)
   by_cases h : v &&& ((1 : UInt64) <<< k - 1) = 0
-  · rw [if_pos h, ← UInt64.toNat_inj, UInt64.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
+  · rw [ite_eq_left h, ← UInt64.toNat_inj, UInt64.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
       shiftRight_add_two_pow_sub_one _ _ hrlt,
-      if_pos ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mp h)]
+      ite_eq_left ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mp h)]
     rfl
-  · rw [if_neg h, ← UInt64.toNat_inj, UInt64.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
+  · rw [ite_eq_right h, ← UInt64.toNat_inj, UInt64.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
       shiftRight_add_two_pow_sub_one _ _ hrlt,
-      if_neg fun hc => h ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mpr hc)]
+      ite_eq_right fun hc => h ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mpr hc)]
     rfl
 
 /-- The sticky or-fold on `UInt64`: shifting `v ||| ((v &&& mask) + mask)` right by `k` yields
@@ -884,9 +884,10 @@ private theorem toNat_shiftRight_or_sticky (v k : UInt64) (hk : k.toNat < 64) :
       = stickyShift v.toNat k.toNat := by
   rw [UInt64.toNat_or, UInt64.toNat_shiftRight, Nat.mod_eq_of_lt hk, stickyShift]
   by_cases h : v &&& ((1 : UInt64) <<< k - 1) = 0
-  · rw [if_pos h, if_pos ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mp h)]
+  · rw [ite_eq_left h, ite_eq_left ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mp h)]
     rfl
-  · rw [if_neg h, if_neg fun hc => h ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mpr hc)]
+  · rw [ite_eq_right h,
+      ite_eq_right fun hc => h ((and_one_shiftLeft_sub_one_eq_zero_iff v k hk).mpr hc)]
     rfl
 
 /-- Semantics of the sticky or-fold: it computes exactly `stickyShift` of the underlying
@@ -990,12 +991,12 @@ private theorem shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
     have hsr : v >>> (0 : UInt64) = v := by
       rw [← UInt64.toNat_inj, UInt64.toNat_shiftRight]
       rfl
-    rw [hm, hz, if_pos rfl, hsr, or_and_self, or_zero]
+    rw [hm, hz, ite_eq_left rfl, hsr, or_and_self, or_zero]
   · have hm : (1 : UInt64) <<< (1 : UInt64) - 1 = 1 := by decide
     rw [hm]
     rcases and_one_eq_zero_or_one v with h | h
-    · rw [h, if_pos rfl]
-    · rw [h, if_neg (by decide : ¬ (1 : UInt64) = 0)]
+    · rw [h, ite_eq_left rfl]
+    · rw [h, ite_eq_right (by decide : ¬ (1 : UInt64) = 0)]
 
 /-- Semantics of the `FPR.mul` / `FPR.div` renormalisation step. -/
 private theorem toNat_shiftRight_or_and_one (v es : UInt64) (hes : es.toNat ≤ 1) :
@@ -1029,11 +1030,11 @@ private theorem uint32_add_mask_shiftRight_of_lt (v k : UInt32) (hk : k.toNat < 
     · rintro rfl; rfl
     · intro h; rw [← UInt32.toNat_inj, h]; rfl
   by_cases h : v = 0
-  · rw [if_pos h, ← UInt32.toNat_inj, UInt32.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
-      shiftRight_add_two_pow_sub_one _ _ hv, if_pos (hviff.mp h)]
+  · rw [ite_eq_left h, ← UInt32.toNat_inj, UInt32.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
+      shiftRight_add_two_pow_sub_one _ _ hv, ite_eq_left (hviff.mp h)]
     rfl
-  · rw [if_neg h, ← UInt32.toNat_inj, UInt32.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
-      shiftRight_add_two_pow_sub_one _ _ hv, if_neg fun hc => h (hviff.mpr hc)]
+  · rw [ite_eq_right h, ← UInt32.toNat_inj, UInt32.toNat_shiftRight, hsum, Nat.mod_eq_of_lt hk,
+      shiftRight_add_two_pow_sub_one _ _ hv, ite_eq_right fun hc => h (hviff.mpr hc)]
     rfl
 
 /-- The 25-bit sticky bit `FPR.mul` folds into the product: the low `25`-bit limbs `z0` and
@@ -1202,7 +1203,7 @@ private theorem toUInt32_shiftRight32_toNat (x : UInt64) :
     rw [Nat.div_lt_iff_lt_mul hb]
     calc x.toNat < 2 ^ 64 := UInt64.toNat_lt x
       _ = 2 ^ 32 * 2 ^ 32 := by norm_num
-  exact Nat.mod_eq_of_lt hlt
+  exact hlt
 
 /-- The "is it nonzero" idiom `y ||| (0 - y)` of `FPR.lzcnt64_nonzero`: a nonzero word or'd with
 its two's-complement negation always has its top bit set, since one of the two summands exceeds
@@ -1732,8 +1733,8 @@ private theorem toRealBits_make (s : UInt64) (e : Int32) (m : UInt64)
   · rw [toRealBits, FPR.decode_make_of_no_carry s e m hs he1 (by omega) hm1 hm2 hcase]
     unfold FPR.Bits.toReal
     simp only [decide_eq_true_eq]
-    rw [if_neg (by omega : ¬ (e.toInt + 1076).toNat + 1 = 0),
-      if_neg (by omega : ¬ (e.toInt + 1076).toNat + 1 = 2047)]
+    rw [ite_eq_right (by omega : ¬ (e.toInt + 1076).toNat + 1 = 0),
+      ite_eq_right (by omega : ¬ (e.toInt + 1076).toNat + 1 = 2047)]
     have hcast : (((roundQuarterTiesEven m.toNat - 2 ^ 52 : ℕ)) : ℝ) =
         (roundQuarterTiesEven m.toNat : ℝ) - 2 ^ 52 := by
       rw [Nat.cast_sub hlo]; norm_num
@@ -1749,8 +1750,8 @@ private theorem toRealBits_make (s : UInt64) (e : Int32) (m : UInt64)
   · rw [toRealBits, FPR.decode_make_of_carry s e m hs he1 (by omega) hm2 hcase]
     unfold FPR.Bits.toReal
     simp only [decide_eq_true_eq]
-    rw [if_neg (by omega : ¬ (e.toInt + 1076).toNat + 2 = 0),
-      if_neg (by omega : ¬ (e.toInt + 1076).toNat + 2 = 2047)]
+    rw [ite_eq_right (by omega : ¬ (e.toInt + 1076).toNat + 2 = 0),
+      ite_eq_right (by omega : ¬ (e.toInt + 1076).toNat + 2 = 2047)]
     have hexp : (((e.toInt + 1076).toNat + 2 : ℕ) : ℤ) - 1023 = e.toInt + 55 := by
       push_cast [hE]; ring
     rw [hexp, hcase]
@@ -2583,9 +2584,9 @@ entirely once `exponent ≠ 0` is known). -/
 private theorem abs_toReal_eq_significand_mul_two_zpow {bx : FPR.Bits} (h0 : bx.exponent ≠ 0)
     (h2047 : bx.exponent ≠ 2047) :
     |bx.toReal| = (bx.significand : ℝ) * (2 : ℝ) ^ ((bx.exponent : ℤ) - 1075) := by
-  rw [FPR.Bits.abs_toReal_eq, if_neg h0, if_neg h2047]
+  rw [FPR.Bits.abs_toReal_eq, ite_eq_right h0, ite_eq_right h2047]
   unfold FPR.Bits.significand
-  rw [if_neg h0]
+  rw [ite_eq_right h0]
   push_cast
   rw [show ((bx.exponent : ℤ) - 1075) = ((bx.exponent : ℤ) - 1023) + (-52 : ℤ) by ring,
     zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
@@ -2639,13 +2640,13 @@ private theorem flushMask_eq (n : UInt32) :
       = if 60 ≤ n.toNat ∧ n.toNat < 2 ^ 31 + 60 then 0 else 0xFFFFFFFFFFFFFFFF := by
   have h := toNat_flushSelector n
   by_cases hc : 60 ≤ n.toNat ∧ n.toNat < 2 ^ 31 + 60
-  · rw [if_pos hc] at h
+  · rw [ite_eq_left hc] at h
     have hsel : ((n - 60) >>> 31 : UInt32) = 0 := by rw [← UInt32.toNat_inj, h]; rfl
-    rw [if_pos hc, hsel]
+    rw [ite_eq_left hc, hsel]
     decide
-  · rw [if_neg hc] at h
+  · rw [ite_eq_right hc] at h
     have hsel : ((n - 60) >>> 31 : UInt32) = 1 := by rw [← UInt32.toNat_inj, h]; rfl
-    rw [if_neg hc, hsel]
+    rw [ite_eq_right hc, hsel]
     decide
 
 /-- Full characterisation of the flushed operand `yu'`. -/
@@ -2661,13 +2662,13 @@ private theorem addPipeline_yu'_eq (a b : FPR) :
 /-- No flush below an exponent gap of `60`. -/
 private theorem addPipeline_yu'_eq_yuRaw (a b : FPR) (h : (addPipeline a b).n.toNat < 60) :
     (addPipeline a b).yu' = (addPipeline a b).yu_ := by
-  rw [addPipeline_yu'_eq, if_neg (by omega)]
+  rw [addPipeline_yu'_eq, ite_eq_right (by omega)]
 
 /-- Flush to zero from an exponent gap of `60` on. -/
 private theorem addPipeline_yu'_eq_zero (a b : FPR) (h60 : 60 ≤ (addPipeline a b).n.toNat) :
     (addPipeline a b).yu' = 0 := by
   have hb := addPipeline_n_lt a b
-  rw [addPipeline_yu'_eq, if_pos ⟨h60, by omega⟩]
+  rw [addPipeline_yu'_eq, ite_eq_left ⟨h60, by omega⟩]
 
 /-- The flushed operand contributes nothing to the sum. -/
 private theorem addPipeline_yu_eq_zero (a b : FPR) (h60 : 60 ≤ (addPipeline a b).n.toNat) :
@@ -2758,16 +2759,16 @@ private theorem addPipeline_sx_eq_zero_or_one (a b : FPR) :
     (addPipeline a b).sx = 0 ∨ (addPipeline a b).sx = 1 := by
   have h := addPipeline_sx_toNat a b
   rcases Classical.em (FPR.decode (addPipeline a b).x').sign with hc | hc
-  · rw [if_pos hc] at h; right; apply UInt32.toNat_inj.mp; rw [h]; decide
-  · rw [if_neg hc] at h; left; apply UInt32.toNat_inj.mp; rw [h]; decide
+  · rw [ite_eq_left hc] at h; right; apply UInt32.toNat_inj.mp; rw [h]; decide
+  · rw [ite_eq_right hc] at h; left; apply UInt32.toNat_inj.mp; rw [h]; decide
 
 /-- The pipeline's `sy` field is a packed sign bit, hence `0` or `1`. -/
 private theorem addPipeline_sy_eq_zero_or_one (a b : FPR) :
     (addPipeline a b).sy = 0 ∨ (addPipeline a b).sy = 1 := by
   have h := addPipeline_sy_toNat a b
   rcases Classical.em (FPR.decode (addPipeline a b).y').sign with hc | hc
-  · rw [if_pos hc] at h; right; apply UInt32.toNat_inj.mp; rw [h]; decide
-  · rw [if_neg hc] at h; left; apply UInt32.toNat_inj.mp; rw [h]; decide
+  · rw [ite_eq_left hc] at h; right; apply UInt32.toNat_inj.mp; rw [h]; decide
+  · rw [ite_eq_right hc] at h; left; apply UInt32.toNat_inj.mp; rw [h]; decide
 
 /-- On matching (post-swap) signs, `FPR.add`'s combined significand is the plain sum. -/
 private theorem addPipeline_zu_eq_add_of_sx_eq_sy (a b : FPR)
@@ -2891,8 +2892,8 @@ private theorem toRealBits_make_of_no_carry (s : UInt64) (e : Int32) (m : UInt64
   rw [toRealBits, FPR.decode_make_of_no_carry s e m hs he1 he2 hm1 hm2 hnc]
   unfold FPR.Bits.toReal
   simp only [decide_eq_true_eq]
-  rw [if_neg (by omega : ¬ (e.toInt + 1076).toNat + 1 = 0),
-    if_neg (by omega : ¬ (e.toInt + 1076).toNat + 1 = 2047)]
+  rw [ite_eq_right (by omega : ¬ (e.toInt + 1076).toNat + 1 = 0),
+    ite_eq_right (by omega : ¬ (e.toInt + 1076).toNat + 1 = 2047)]
   have hcast : (((roundQuarterTiesEven m.toNat - 2 ^ 52 : ℕ)) : ℝ) =
       (roundQuarterTiesEven m.toNat : ℝ) - 2 ^ 52 := by
     rw [Nat.cast_sub hlo]; norm_num
@@ -2964,9 +2965,9 @@ private theorem toReal_eq_significand_mul_two_zpow {bx : FPR.Bits} (h0 : bx.expo
     bx.toReal = (if bx.sign then (-1 : ℝ) else 1) * (bx.significand : ℝ) *
       (2 : ℝ) ^ ((bx.exponent : ℤ) - 1075) := by
   unfold FPR.Bits.toReal
-  rw [if_neg h0, if_neg h2047]
+  rw [ite_eq_right h0, ite_eq_right h2047]
   unfold FPR.Bits.significand
-  rw [if_neg h0]
+  rw [ite_eq_right h0]
   push_cast
   rw [show ((bx.exponent : ℤ) - 1075) = ((bx.exponent : ℤ) - 1023) + (-52 : ℤ) by ring,
     zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0)]
@@ -2992,7 +2993,7 @@ private theorem addPipeline_sum_eq (a b : FPR) :
 private theorem significand_mem_of_isNormal {b : FPR.Bits} (h0 : b.exponent ≠ 0)
     (hm : b.mantissa < 2 ^ 52) : 2 ^ 52 ≤ b.significand ∧ b.significand < 2 ^ 53 := by
   unfold FPR.Bits.significand
-  rw [if_neg h0]
+  rw [ite_eq_right h0]
   omega
 
 private theorem addPipeline_xu_mem (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b) :
@@ -3067,7 +3068,7 @@ private theorem addPipeline_toReal_y'_eq (a b : FPR) (ha : FPR.IsNormal a) (hb :
 
 private theorem stickyShift_of_dvd (v k : ℕ) (h : v % 2 ^ k = 0) : stickyShift v k = v / 2 ^ k := by
   unfold stickyShift
-  rw [if_pos h, Nat.or_zero, Nat.shiftRight_eq_div_pow]
+  rw [ite_eq_left h, Nat.or_zero, Nat.shiftRight_eq_div_pow]
 
 private theorem addPipeline_align_lt (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b) :
     |((addPipeline a b).yu.toNat : ℝ)
@@ -3173,11 +3174,11 @@ private theorem addPipeline_zu_real (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.
   have hle := addPipeline_yu_le_xu a b ha hb
   have hxu := (addPipeline_xu_mem a b ha hb).2
   by_cases hs : (addPipeline a b).sx = (addPipeline a b).sy
-  · rw [if_pos hs, addPipeline_zu_eq_add_of_sx_eq_sy a b hs, UInt64.toNat_add]
+  · rw [ite_eq_left hs, addPipeline_zu_eq_add_of_sx_eq_sy a b hs, UInt64.toNat_add]
     rw [Nat.mod_eq_of_lt (by omega)]
     push_cast
     ring
-  · rw [if_neg hs, addPipeline_zu_toNat_eq_of_sx_ne_sy a b hs hle, Nat.cast_sub hle]
+  · rw [ite_eq_right hs, addPipeline_zu_toNat_eq_of_sx_ne_sy a b hs hle, Nat.cast_sub hle]
     ring
 
 private theorem addPipeline_S_eq (a b : FPR) (ha : FPR.IsNormal a) (hb : FPR.IsNormal b) :
@@ -3360,7 +3361,7 @@ private theorem addPipeline_pre_round (a b : FPR) (ha : FPR.IsNormal a) (hb : FP
   have hmn : FPR.minNormalReal = (2 : ℝ) ^ (-(1022 : ℤ)) := rfl
   by_cases hs : (addPipeline a b).sx = (addPipeline a b).sy
   · -- matching signs: no cancellation
-    rw [if_pos hs] at habsS hzr
+    rw [ite_eq_left hs] at habsS hzr
     rw [abs_of_nonneg (by linarith : (0 : ℝ) ≤ ((addPipeline a b).xu.toNat : ℝ)
       + 1 * (((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat))] at habsS
     rw [abs_lt] at hal
@@ -3381,7 +3382,7 @@ private theorem addPipeline_pre_round (a b : FPR) (ha : FPR.IsNormal a) (hb : FP
       rw [this]
       nlinarith
   · -- differing signs: cancellation
-    rw [if_neg hs] at habsS hzr
+    rw [ite_eq_right hs] at habsS hzr
     have hYleX : (((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat)
         ≤ ((addPipeline a b).xu.toNat : ℝ) := hYple
     rw [abs_of_nonneg (by linarith : (0 : ℝ) ≤ ((addPipeline a b).xu.toNat : ℝ)
@@ -3698,11 +3699,11 @@ private theorem addPipeline_zu_eq_zero_of_sum_eq_zero (a b : FPR) (ha : FPR.IsNo
       · exact h''
     · exact absurd h' (ne_of_gt hp)
   by_cases hs : (addPipeline a b).sx = (addPipeline a b).sy
-  · rw [if_pos hs] at hz
+  · rw [ite_eq_left hs] at hz
     exfalso
     have : (0 : ℝ) < (2 : ℝ) ^ (55 : ℕ) := by positivity
     linarith
-  · rw [if_neg hs] at hz
+  · rw [ite_eq_right hs] at hz
     have hpn : (0 : ℝ) < (2 : ℝ) ^ (addPipeline a b).n.toNat := by positivity
     have hdiv : ((addPipeline a b).yu_.toNat : ℝ) / 2 ^ (addPipeline a b).n.toNat
         = ((addPipeline a b).xu.toNat : ℝ) := by linarith
@@ -4443,8 +4444,10 @@ private theorem mulPipeline_zu'_toNat (x y : FPR) :
   rw [stickyShift, UInt64.toNat_or, mulPipeline_zu_eq_div, Nat.shiftRight_eq_div_pow]
   congr 1
   by_cases h : ((mulPipeline x y).z0 ||| ((mulPipeline x y).z1' &&& 0x01FFFFFF)) = 0
-  · rw [if_pos h, if_pos ((mulPipeline_stickyWord_eq_zero_iff x y).mp h)]; rfl
-  · rw [if_neg h, if_neg fun hc => h ((mulPipeline_stickyWord_eq_zero_iff x y).mpr hc)]; rfl
+  · rw [ite_eq_left h, ite_eq_left ((mulPipeline_stickyWord_eq_zero_iff x y).mp h)]; rfl
+  · rw [ite_eq_right h,
+      ite_eq_right fun hc => h ((mulPipeline_stickyWord_eq_zero_iff x y).mpr hc)]
+    rfl
 
 /-! ### Bracketing the sticky shift, and the renormalisation step -/
 
@@ -4687,7 +4690,7 @@ private theorem mulPipeline_abs_toReal_x (x y : FPR) (ha : FPR.IsNormal x) :
   change |(FPR.decode x).toReal| = _
   rw [abs_toReal_eq_significand_mul_two_zpow ha.1 ha.2]
   unfold FPR.Bits.significand
-  rw [if_neg ha.1]
+  rw [ite_eq_right ha.1]
 
 private theorem mulPipeline_abs_toReal_y (x y : FPR) (hb : FPR.IsNormal y) :
     |toReal y| = ((mulPipeline x y).yu.toNat : ℝ)
@@ -4696,7 +4699,7 @@ private theorem mulPipeline_abs_toReal_y (x y : FPR) (hb : FPR.IsNormal y) :
   change |(FPR.decode y).toReal| = _
   rw [abs_toReal_eq_significand_mul_two_zpow hb.1 hb.2]
   unfold FPR.Bits.significand
-  rw [if_neg hb.1]
+  rw [ite_eq_right hb.1]
 
 private theorem toNat_shiftRight_63_uint64 (w : UInt64) :
     (w >>> 63).toNat = w.toNat / 2 ^ 63 := by
@@ -4867,7 +4870,7 @@ private theorem toReal_ne_zero_of_isNormal {w : FPR} (h : FPR.IsNormal w) : toRe
   rw [hz, abs_zero] at habs
   have hsig : (2 : ℝ) ^ (52 : ℕ) ≤ ((FPR.decode w).significand : ℝ) := by
     have : (2 : ℕ) ^ 52 ≤ (FPR.decode w).significand := by
-      unfold FPR.Bits.significand; rw [if_neg h.1]; omega
+      unfold FPR.Bits.significand; rw [ite_eq_right h.1]; omega
     exact_mod_cast this
   have hp : (0 : ℝ) < (2 : ℝ) ^ (((FPR.decode w).exponent : ℤ) - 1075) := zpow_pos (by norm_num) _
   nlinarith
@@ -5258,14 +5261,14 @@ private theorem sqrtPipeline_loop_induction (x : FPR)
 private theorem sub_mask_of_lt (a c : UInt64) (ha : a.toNat < 2 ^ 63) (hc : c.toNat < 2 ^ 63) :
     ((a - c) >>> 63) - 1 = if c.toNat ≤ a.toNat then (0 : UInt64) - 1 else 0 := by
   by_cases h : c.toNat ≤ a.toNat
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     have hsub : (a - c).toNat = a.toNat - c.toNat := toNat_sub_of_le_uint64 a c h
     have hsh : ((a - c) >>> 63) = 0 := by
       rw [← UInt64.toNat_inj, toNat_shiftRight_63_uint64, hsub]
       simp only [UInt64.toNat_ofNat]
       omega
     rw [hsh]
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     push Not at h
     have hsub : (a - c).toNat = 2 ^ 64 - (c.toNat - a.toNat) := by
       rw [UInt64.toNat_sub]
@@ -5298,7 +5301,7 @@ private theorem divStep_toNat (yu : UInt64) (s : UInt64 × UInt64)
   simp only [divStep]
   rw [divStep_mask _ _ (by omega) hy]
   by_cases h : yu.toNat ≤ s.2.toNat
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     have hand : ((0 : UInt64) - 1) &&& yu = yu := allOnes_and yu
     have hand1 : ((0 : UInt64) - 1) &&& 1 = 1 := by decide
     rw [hand, hand1]
@@ -5306,22 +5309,22 @@ private theorem divStep_toNat (yu : UInt64) (s : UInt64 × UInt64)
     have hor : (s.1 ||| 1).toNat = s.1.toNat + 1 := by
       rw [UInt64.toNat_or, show (1 : UInt64).toNat = 1 from rfl, or_one_eq]; omega
     refine ⟨?_, ?_⟩
-    · rw [toNat_shiftLeft_one, hor, if_pos h]
+    · rw [toNat_shiftLeft_one, hor, ite_eq_left h]
       have : (s.1.toNat + 1) * 2 < 2 ^ 64 := by omega
       omega
-    · rw [toNat_shiftLeft_one, hsub, if_pos h]
+    · rw [toNat_shiftLeft_one, hsub, ite_eq_left h]
       have : (s.2.toNat - yu.toNat) * 2 < 2 ^ 64 := by omega
       omega
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     push Not at h
     rw [uint64_zero_and, uint64_zero_and]
     have hsub : (s.2 - 0).toNat = s.2.toNat := by simp
     have hor : (s.1 ||| 0).toNat = s.1.toNat := by rw [UInt64.toNat_or]; simp
     refine ⟨?_, ?_⟩
-    · rw [toNat_shiftLeft_one, hor, if_neg (by omega)]
+    · rw [toNat_shiftLeft_one, hor, ite_eq_right (by omega)]
       have : s.1.toNat * 2 < 2 ^ 64 := by omega
       omega
-    · rw [toNat_shiftLeft_one, hsub, if_neg (by omega)]
+    · rw [toNat_shiftLeft_one, hsub, ite_eq_right (by omega)]
       have : s.2.toNat * 2 < 2 ^ 64 := by omega
       omega
 
@@ -5358,21 +5361,21 @@ private theorem divLoop_invariant (xu yu : UInt64)
     refine ⟨?_, ?_, ?_, ?_⟩
     · rw [hq', hr', hpow]
       by_cases h : yu.toNat ≤ r
-      · rw [if_pos h, if_pos h,
+      · rw [ite_eq_left h, ite_eq_left h,
           show yu.toNat * (2 * (q + 1)) = 2 * (yu.toNat * q) + 2 * yu.toNat from by ring]
         omega
-      · rw [if_neg h, if_neg h,
+      · rw [ite_eq_right h, ite_eq_right h,
           show yu.toNat * (2 * (q + 0)) = 2 * (yu.toNat * q) from by ring]
         omega
     · rw [hr']
       by_cases h : yu.toNat ≤ r
-      · rw [if_pos h]; omega
-      · rw [if_neg h]; omega
+      · rw [ite_eq_left h]; omega
+      · rw [ite_eq_right h]; omega
     · rw [hq']
       have hp : (2 : ℕ) ^ (k + 1 + 1) = 2 * 2 ^ (k + 1) := by ring
       by_cases h : yu.toNat ≤ r
-      · rw [if_pos h, hp]; omega
-      · rw [if_neg h, hp]; omega
+      · rw [ite_eq_left h, hp]; omega
+      · rw [ite_eq_right h, hp]; omega
     · rw [hq']; omega
 
 /-- The invariant, read off `FPR.div`'s pipeline. -/
@@ -5400,11 +5403,11 @@ private theorem or_neg_shiftRight_63 (r : UInt64) :
     ((r ||| (0 - r)) >>> 63).toNat = if r.toNat = 0 then 0 else 1 := by
   rw [toNat_shiftRight_63_uint64, UInt64.toNat_or]
   by_cases h : r.toNat = 0
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     have hr : r = 0 := by rw [← UInt64.toNat_inj, h]; rfl
     rw [hr]
     simp
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     have hneg : ((0 : UInt64) - r).toNat = 2 ^ 64 - r.toNat := by
       rw [UInt64.toNat_sub]
       have := r.toNat_lt_size
@@ -5454,11 +5457,11 @@ private theorem divPipeline_q0_bracket (x y : FPR) :
   have hypos : 0 < (divPipeline x y).yu.toNat := by omega
   rw [hq0]
   by_cases h : (divPipeline x y).loopRes.2.toNat = 0
-  · rw [if_pos h, add_zero,
+  · rw [ite_eq_left h, add_zero,
       show (divPipeline x y).loopRes.1.toNat * (divPipeline x y).yu.toNat
         = (divPipeline x y).yu.toNat * (divPipeline x y).loopRes.1.toNat from by ring]
     omega
-  · rw [if_neg h,
+  · rw [ite_eq_right h,
       show ((divPipeline x y).loopRes.1.toNat + 1) * (divPipeline x y).yu.toNat
         = (divPipeline x y).yu.toNat * (divPipeline x y).loopRes.1.toNat
           + (divPipeline x y).yu.toNat from by ring]
@@ -5474,10 +5477,10 @@ private theorem stickyShift_one_bracket (v : ℕ) :
   have hd : v = 4 * (v / 2 ^ (1 + 1)) + v % 4 := by
     rw [show (2 : ℕ) ^ (1 + 1) = 4 from by norm_num]; omega
   by_cases h : v % 2 ^ (1 + 1) = 0
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     rw [show (2 : ℕ) ^ (1 + 1) = 4 from by norm_num] at h
     omega
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     rw [show (2 : ℕ) ^ (1 + 1) = 4 from by norm_num] at h
     omega
 
@@ -5658,7 +5661,7 @@ private theorem divPipeline_abs_toReal_x (x y : FPR) (ha : FPR.IsNormal x) :
   change |(FPR.decode x).toReal| = _
   rw [abs_toReal_eq_significand_mul_two_zpow ha.1 ha.2]
   unfold FPR.Bits.significand
-  rw [if_neg ha.1]
+  rw [ite_eq_right ha.1]
 
 private theorem divPipeline_abs_toReal_y (x y : FPR) (hb : FPR.IsNormal y) :
     |toReal y| = ((divPipeline x y).yu.toNat : ℝ)
@@ -5667,7 +5670,7 @@ private theorem divPipeline_abs_toReal_y (x y : FPR) (hb : FPR.IsNormal y) :
   change |(FPR.decode y).toReal| = _
   rw [abs_toReal_eq_significand_mul_two_zpow hb.1 hb.2]
   unfold FPR.Bits.significand
-  rw [if_neg hb.1]
+  rw [ite_eq_right hb.1]
 
 /-- The exact quotient's magnitude, in the scale `FPR.div`'s exponent field uses. -/
 private theorem divPipeline_abs_quotient (x y : FPR) (ha : FPR.IsNormal x) (hb : FPR.IsNormal y) :
@@ -5931,7 +5934,7 @@ private theorem sqrtStep_toNat (v : UInt64 × UInt64 × UInt64 × UInt64)
     rw [sub_mask_of_lt v.1 (v.2.2.1 + v.2.2.2) (by omega) (by rw [htr]; omega), htr]
   rw [hb]
   by_cases hbit : v.2.2.1.toNat + v.2.2.2.toNat ≤ v.1.toNat
-  · simp only [if_pos hbit]
+  · simp only [ite_eq_left hbit]
     have e2 : v.2.2.2 &&& ((0 : UInt64) - 1) = v.2.2.2 := by rw [UInt64.and_comm, allOnes_and]
     have e3 : ((0 : UInt64) - 1) &&& (v.2.2.2 <<< (1 : UInt64)) = v.2.2.2 <<< (1 : UInt64) :=
       allOnes_and _
@@ -5950,7 +5953,7 @@ private theorem sqrtStep_toNat (v : UInt64 × UInt64 × UInt64 × UInt64)
         rw [toNat_sub_of_le_uint64 _ _ (by rw [htr]; omega), htr]
       rw [toNat_shiftLeft_one, hsub2]
       omega
-  · simp only [if_neg hbit]
+  · simp only [ite_eq_right hbit]
     have e2 : v.2.2.2 &&& (0 : UInt64) = 0 := by rw [UInt64.and_comm]; exact uint64_zero_and _
     have e3 : (0 : UInt64) &&& (v.2.2.2 <<< (1 : UInt64)) = 0 := uint64_zero_and _
     have e4 : (v.2.2.1 + v.2.2.2) &&& (0 : UInt64) = 0 := by
@@ -6022,7 +6025,7 @@ private theorem sqrtLoop_invariant (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
       rw [hexp, pow_succ]
       omega
     by_cases hbit : state.2.2.1.toNat + state.2.2.2.toNat ≤ state.1.toNat
-    · simp only [if_pos hbit] at hstep_q hstep_s hstep_xp
+    · simp only [ite_eq_left hbit] at hstep_q hstep_s hstep_xp
       refine ⟨hnewr, by rw [hstep_s, hstep_q, hs_k]; ring, ?_, ?_⟩
       · obtain ⟨d, hd⟩ := Nat.le.dest hbit
         have hxpd : state.1.toNat - (state.2.2.1.toNat + state.2.2.2.toNat) = d := by omega
@@ -6057,7 +6060,7 @@ private theorem sqrtLoop_invariant (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
         have h55 : (2 : ℕ) ^ (55 - k) = 4 * 2 ^ (53 - k) := by
           rw [show (55 - k : ℕ) = (53 - k) + 2 from by omega, pow_add]; ring
         omega
-    · simp only [if_neg hbit] at hstep_q hstep_s hstep_xp
+    · simp only [ite_eq_right hbit] at hstep_q hstep_s hstep_xp
       refine ⟨hnewr, by rw [hstep_s, hstep_q]; omega, ?_, ?_⟩
       · rw [hstep_q, hstep_xp]
         rw [show (54 + (k + 1) : ℕ) = 55 + k from by omega]
@@ -6121,7 +6124,7 @@ private theorem sqrtLoop_at_54 (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
   have hsplit : (2 : ℕ) ^ 108 * xu.toNat = 2 * (2 ^ 107 * xu.toNat) := by ring
   rw [show (53 : ℕ) + 1 = 54 from rfl]
   by_cases hbit : st.2.2.1.toNat < st.1.toNat
-  · rw [if_pos hbit] at hstep_q hstep_xp
+  · rw [ite_eq_left hbit] at hstep_q hstep_xp
     rw [hs] at hbit hstep_xp
     obtain ⟨d, hd⟩ := Nat.le.dest hbit
     have hxpd : st.1.toNat - (2 * st.2.1.toNat + 1) = d := by omega
@@ -6129,7 +6132,7 @@ private theorem sqrtLoop_at_54 (xu : UInt64) (hxu : xu.toNat < 2 ^ 54) :
     refine ⟨?_, by omega⟩
     rw [hsplit, ← hinv', show st.1.toNat = 2 * st.2.1.toNat + 1 + d from by omega]
     ring
-  · rw [if_neg hbit] at hstep_q hstep_xp
+  · rw [ite_eq_right hbit] at hstep_q hstep_xp
     rw [hstep_q, hstep_xp, Nat.sub_zero, add_zero]
     refine ⟨?_, by omega⟩
     rw [hsplit, ← hinv']
@@ -6219,11 +6222,12 @@ private theorem toNat_fpr_arsh32_one (v : UInt32) :
   by_cases h : v.toNat < 2 ^ 31
   · have hz : (v >>> 31) = 0 := by
       rw [← UInt32.toNat_inj, hsh31, show (0 : UInt32).toNat = 0 from rfl]; omega
-    rw [hz, if_pos h, show (((0 : UInt32) - 0) <<< 31) = 0 from by decide, UInt32.toNat_or, hsh1,
+    rw [hz, ite_eq_left h, show (((0 : UInt32) - 0) <<< 31) = 0 from by decide,
+      UInt32.toNat_or, hsh1,
       show (0 : UInt32).toNat = 0 from rfl, Nat.or_zero, Nat.add_zero]
   · have hz : (v >>> 31) = 1 := by
       rw [← UInt32.toNat_inj, hsh31, show (1 : UInt32).toNat = 1 from rfl]; omega
-    rw [hz, if_neg h, show (((0 : UInt32) - 1) <<< 31) = 0x80000000 from by decide,
+    rw [hz, ite_eq_right h, show (((0 : UInt32) - 1) <<< 31) = 0x80000000 from by decide,
       UInt32.toNat_or, hsh1, show (0x80000000 : UInt32).toNat = 2 ^ 31 from by decide]
     exact or_two_pow_add_of_lt _ 31 (by omega)
 
@@ -6263,12 +6267,12 @@ private theorem sqrtPipeline_e_spec (x : FPR)
   · rw [sqrtPipeline_e_eq]
     have hr := toNat_fpr_arsh32_one (sqrtPipeline x).e_.toUInt32
     by_cases hc : 1023 ≤ (FPR.decode x).exponent
-    · rw [if_pos hc] at hu
-      rw [hu, if_pos (by omega)] at hr
+    · rw [ite_eq_left hc] at hu
+      rw [hu, ite_eq_left (by omega)] at hr
       rw [toInt_toInt32_of_lt (by omega), hr]
       split_ifs <;> omega
-    · rw [if_neg hc] at hu
-      rw [hu, if_neg (by omega)] at hr
+    · rw [ite_eq_right hc] at hu
+      rw [hu, ite_eq_right (by omega)] at hr
       rw [toInt_toInt32_of_ge (by omega), hr]
       split_ifs <;> omega
 
@@ -6322,9 +6326,9 @@ private theorem sqrtPipeline_xu_mem (x : FPR)
   have hxu := sqrtPipeline_xuRaw_toNat x
   have hm := FPR.decode_mantissa_lt x
   by_cases hc : (FPR.decode x).exponent % 2 = 0
-  · rw [if_pos hc] at hbit
+  · rw [ite_eq_left hc] at hbit
     rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit]; omega
-  · rw [if_neg hc] at hbit
+  · rw [ite_eq_right hc] at hbit
     rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit]; omega
 
 /-! ### The root word -/
@@ -6421,16 +6425,16 @@ private theorem sqrtPipeline_toReal_eq (x : FPR) (ha' : FPR.IsNormal x) (ha : 0 
     change |(FPR.decode x).toReal| = _
     rw [abs_toReal_eq_significand_mul_two_zpow ha'.1 ha'.2]
     unfold FPR.Bits.significand
-    rw [if_neg ha'.1]
+    rw [ite_eq_right ha'.1]
   rw [← abs_of_nonneg ha, habs]
   by_cases hc : (FPR.decode x).exponent % 2 = 0
-  · rw [if_pos hc] at hbit he
+  · rw [ite_eq_left hc] at hbit he
     rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit,
       show ((FPR.decode x).exponent : ℤ) - 1075 = (2 * (sqrtPipeline x).e.toInt - 52) + 1 by omega,
       zpow_add₀ (by norm_num : (2 : ℝ) ≠ 0), zpow_one]
     push_cast
     ring
-  · rw [if_neg hc] at hbit he
+  · rw [ite_eq_right hc] at hbit he
     rw [sqrtPipeline_xu_toNat_of_bit x (by norm_num) hbit,
       show ((FPR.decode x).exponent : ℤ) - 1075 = 2 * (sqrtPipeline x).e.toInt - 52 by omega]
     push_cast
@@ -6481,7 +6485,7 @@ private theorem sqrtPipeline_real_bracket (x : FPR)
   have hq1 := sqrtPipeline_q1_toNat x hq
   have hrem := sqrtPipeline_remainder x hhi
   by_cases hz : (sqrtPipeline x).loopRes.1.toNat = 0
-  · rw [if_pos hz] at hq1
+  · rw [ite_eq_left hz] at hq1
     have hexact : (sqrtPipeline x).loopRes.2.1.toNat ^ 2 * 2 ^ 54
         = (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 := by
       rw [show (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 = 2 ^ 108 * (sqrtPipeline x).xu.toNat
@@ -6497,7 +6501,7 @@ private theorem sqrtPipeline_real_bracket (x : FPR)
     rw [hq1, hR]
     push_cast
     constructor <;> linarith
-  · rw [if_neg hz] at hq1
+  · rw [ite_eq_right hz] at hq1
     have hstrict : (sqrtPipeline x).loopRes.2.1.toNat ^ 2 * 2 ^ 54
         < (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 := by
       rw [show (2 ^ 54 * (sqrtPipeline x).xu.toNat) * 2 ^ 54 = 2 ^ 108 * (sqrtPipeline x).xu.toNat
@@ -6566,7 +6570,7 @@ private theorem sqrt_error_of_isNormal (a : FPR) (ha' : FPR.IsNormal a) (ha : 0 
         * (((sqrtPipeline a).q2.toNat : ℝ)) * (2 : ℝ) ^ ((sqrtPipeline a).e'.toInt)
         = 1 * (((sqrtPipeline a).q1.toNat : ℝ) * 1
             * (2 : ℝ) ^ ((sqrtPipeline a).e.toInt - 54)) := by
-      rw [if_neg (by decide : ¬ ((0 : UInt64)).toNat = 1), hq2, he']
+      rw [ite_eq_right (by decide : ¬ ((0 : UInt64)).toNat = 1), hq2, he']
       ring
     rw [hsq, hform] at h
     exact h
@@ -6714,7 +6718,7 @@ private theorem addPipeline_zu''_eq (a b : FPR)
   rw [addPipeline_zu'', toNat_or_fold_shiftRight_nine, stickyShift_eq, hzu', hzu, hxu]
   have hmod : 8 * (FPR.decode (addPipeline a b).x').significand * 2 ^ 8 % 2 ^ (9 + 1) = 0 := by
     omega
-  rw [hmod, if_pos rfl]
+  rw [hmod, ite_eq_left rfl]
   omega
 
 /-- The packed exponent handed to `FPR.make_z`, as a plain integer. -/
@@ -6762,7 +6766,7 @@ private theorem add_decode_eq_of_significand_eq_zero (a b : FPR)
   have hmant : (FPR.decode (addPipeline a b).x').significand - 2 ^ 52
       = (FPR.decode (addPipeline a b).x').mantissa := by
     unfold FPR.Bits.significand
-    rw [if_neg hx.1]
+    rw [ite_eq_right hx.1]
     omega
   have hsg : decide ((addPipeline a b).sx.toUInt64.toNat = 1)
       = (FPR.decode (addPipeline a b).x').sign := by
@@ -6837,7 +6841,7 @@ private theorem addPipeline_zu_eq_zero_of_isZero (a b : FPR)
 private theorem toReal_eq_zero_of_isZero {x : FPR} (h : FPR.IsZero x) : toReal x = 0 := by
   change (FPR.decode x).toReal = 0
   unfold FPR.Bits.toReal
-  rw [if_pos h.1, h.2]
+  rw [ite_eq_left h.1, h.2]
   simp
 
 /-- Equal decoded fields denote equal reals. -/
@@ -7173,7 +7177,7 @@ subnormal/normal/non-finite case split of `FPR.Bits.toReal`. -/
 theorem FPR.Bits.toReal_nonneg_of_sign_false {b : FPR.Bits} (h : b.sign = false) :
     0 ≤ b.toReal := by
   unfold FPR.Bits.toReal
-  simp only [h, Bool.false_eq_true, if_false]
+  simp only [h, Bool.false_eq_true, ite_false]
   split_ifs <;> positivity
 
 private theorem decode_two : FPR.decode FPR.two = ⟨false, 1024, 0⟩ := by

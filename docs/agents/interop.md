@@ -98,9 +98,7 @@ isolation check runs regardless of whether the requires are active, so
 the contract holds even mid-experiment.
 
 **Require-order rule.** `require Hax` (and any future backend require) must
-appear *before* `require "leanprover-community" / "mathlib"`. The current
-`loom2` require also sits before Mathlib because it is part of the same
-toolchain-sensitive dependency block. Hax transitively pins `Qq` at
+appear *before* `require "leanprover-community" / "mathlib"`. Hax transitively pins `Qq` at
 `v4.29.0-rc1`, Mathlib pins it at the final release. Lake's conflict resolver
 takes the *last* `require` of each package, so Mathlib must be last. Wrong
 order produces `mathlib: failed to fetch cache` on `lake update`, with a clear

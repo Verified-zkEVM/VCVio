@@ -6,7 +6,7 @@ one, cite the row in docs/reading/upstream-alignment.md. -->
 ## Verification
 
 <!-- The commands run locally, e.g. `lake build <libs> VCVioTest`, `lake exe axiomsweep --check`,
-`./scripts/update-lib.sh`, `bash scripts/check-pmf-boundary.sh`, `lake exe lint-style <libs>`,
+`./scripts/update-lib.sh`, `lake lint -- --env-only`, `lake exe lint-style <libs>`,
 `python3 scripts/check-agent-docs.py`. -->
 
 ## Checklist

@@ -159,8 +159,9 @@ example : (1 : ℝ≥0∞) ≤
     MeasureProgramLogic.eRelWP (pure true : FreeM coinSpec Bool)
       (pure false : FreeM coinSpec Bool)
       (fun a b => if a && !b then 1 else 0) := by
-  apply MeasureProgramLogic.le_eRelWP_pure_pure
-  fun_prop
+  exact MeasureProgramLogic.le_eRelWP_pure_pure
+    (m₁ := FreeM coinSpec) (m₂ := FreeM coinSpec) true false
+    (fun a b => if a && !b then 1 else 0) (by fun_prop)
 
 /-- On a discrete interface the two denotations agree, so a `Pr[…]` result proved against the
 `PMF` semantics can be read off the measure semantics. -/
@@ -309,8 +310,12 @@ example : Resumption.returnedMeasure delayedTrue Set.univ = 1 := by
 applies. Any probability already proved about a `ProbComp` is then a fact about its measure
 denotation, with no reproof. -/
 
-noncomputable instance : unifSpec.toPFunctor.IsMeasureSpec :=
+/-- The uniform oracle interpretation induced by its finite-distribution semantics. -/
+@[instance_reducible]
+noncomputable def unifMeasureSpec : unifSpec.toPFunctor.IsMeasureSpec :=
   PFunctor.IsProbabilitySpec.toMeasureSpec _
+
+attribute [local instance] unifMeasureSpec
 
 theorem denote_probComp_apply_singleton {α : Type} [MeasurableSpace α]
     [MeasurableSingletonClass α] (program : ProbComp α) (x : α) :

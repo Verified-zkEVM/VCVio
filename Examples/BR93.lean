@@ -14,6 +14,8 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.EvalDist.Monad.Measure
+import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
 # Bellare-Rogaway 1993 Encryption
@@ -76,8 +78,7 @@ theorem correct (hcorrect : tdp.Correct) :
     let c ← (do let r ← $ᵗ Rand; pure (tdp.forward x.1 r, hash r + msg))
     let msg' ← pure (some (c.2 - hash (tdp.inverse x.2 c.1)))
     pure (decide (msg' = some msg))
-  change Pr[= true | ProbCompRuntime.probComp.evalSPMF mx] = 1
-  simp only [mx]
+  rw [ProbCompRuntime.probComp_evalDist]
   have huniq : ∀ y ∈ support mx, y = true := by
     intro y hy
     rw [mem_support_bind_iff] at hy
@@ -93,7 +94,7 @@ theorem correct (hcorrect : tdp.Correct) :
     obtain rfl := hmsg'
     obtain rfl := hy
     simp [hcorrect pk sk hpksk r]
-  change Pr[= true | mx] = 1
+  rw [evalDist_apply_singleton]
   exact probOutput_eq_one_of_support_subset_singleton
     (NeverFail.probFailure_eq_zero (mx := mx)) huniq
 
@@ -318,14 +319,6 @@ private lemma find?_rightLog (log : QueryLog (RO_Spec Rand M)) (p : Rand → Boo
   funext ⟨t, u⟩
   cases t <;> simp
 
-omit [Fintype Rand] [Fintype M] [DecidableEq M] [SampleableType Rand] [Inhabited Rand]
-  [Inhabited M] in
-/-- Right-translating a uniform challenge mask by a constant preserves the output distribution. -/
-private lemma evalSPMF_bind_add_right_uniform {γ : Type} (m : M) (f : M → ProbComp γ) :
-    𝒮[(do let h ← $ᵗ M; f (h + m))] = 𝒮[(do let h ← $ᵗ M; f h)] := by
-  refine evalSPMF_ext fun z => ?_
-  exact probOutput_bind_add_right_uniform (α := M) m f z
-
 /-- Real one-time CPA game in the random-oracle model. -/
 def cpaGame (tdp : TrapdoorPermutation PK SK Rand)
     (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ProbComp Bool :=
@@ -393,7 +386,7 @@ def badEventExp (tdp : TrapdoorPermutation PK SK Rand)
 /-- Probability of the bad event. -/
 noncomputable def badEventProb (tdp : TrapdoorPermutation PK SK Rand)
     (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ℝ :=
-  (Pr[= true | badEventExp tdp adv]).toReal
+  (𝒟[badEventExp tdp adv] {true}).toReal
 
 /-- Inversion reduction: run the BR93 adversary in the idealized challenge game, log its
 random-oracle queries, and return the first query whose image under the trapdoor permutation
@@ -431,10 +424,14 @@ theorem cpaGame_gap_le_badEvent (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M
   sorry
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] in
-/-- Uniform masking step: once the challenge hash output is replaced by a fresh uniform mask,
-adding either challenge message yields the same ciphertext distribution. -/
-theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
+/-- Uniform masking step for any lawful measure semantics that interprets the challenge mask
+uniformly. -/
+theorem evalDist_game1_eq_game2 [MeasurableSpace M] [DiscreteMeasurableSpace M]
+    [MeasurableSingletonClass M] [EvalDistSemantics ProbComp]
+    [LawfulEvalDistSemantics ProbComp]
+    (hM : 𝒟[($ᵗ M : ProbComp M)] = ProbabilityTheory.uniformOn Set.univ)
+    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    𝒟[game1 tdp adv] = 𝒟[game2 tdp adv] := by
   rw [game1, game2]
   -- Push the random-oracle simulation through both games: lifted samples become plain
   -- `ProbComp` binds, the adversary's `choose`/`guess` thread the cache, and the trailing
@@ -442,20 +439,33 @@ theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
   simp only [run'_simulateQ_bind, run_liftM, simulateQ_pure, bind_assoc, pure_bind]
   simp only [StateT.run'_eq, StateT.run_pure, map_eq_bind_pure_comp, Function.comp,
     bind_assoc, pure_bind]
-  refine evalSPMF_bind_congr' _ fun b => ?_
-  refine evalSPMF_bind_congr' _ fun ks => ?_
-  refine evalSPMF_bind_congr' _ fun mmst => ?_
-  refine evalSPMF_bind_congr' _ fun r => ?_
-  exact evalSPMF_bind_add_right_uniform (if b = true then mmst.1.1 else mmst.1.2.1)
+  refine evalDist_bind_congr _ _ _ fun b => ?_
+  refine evalDist_bind_congr _ _ _ fun ks => ?_
+  refine evalDist_bind_congr _ _ _ fun mmst => ?_
+  refine evalDist_bind_congr _ _ _ fun r => ?_
+  exact evalDist_bind_bijective_of_uniform ($ᵗ M : ProbComp M) hM
+    (fun x => x + if b = true then mmst.1.1 else mmst.1.2.1)
+    (AddGroup.addRight_bijective (if b = true then mmst.1.1 else mmst.1.2.1))
     (fun x => (simulateQ roQueryImpl (adv.guess mmst.1.2.2 (tdp.forward ks.1 r, x))).run mmst.2 >>=
       fun p => pure (b == p.1))
+
+omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] in
+/-- Finite-distribution form of the uniform masking step. -/
+theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
+  let : MeasurableSpace M := ⊤
+  let : EvalDistSemantics ProbComp := instEvalDistSemanticsOfMonadLiftTSPMF
+  have hM : 𝒟[($ᵗ M : ProbComp M)] = ProbabilityTheory.uniformOn Set.univ :=
+    evalDist_uniformSample
+  exact evalSPMF_eq_of_evalDist_eq _ _
+    (evalDist_game1_eq_game2 hM adv)
 
 omit [Inhabited Rand] [Fintype Rand] [Inhabited M] [Fintype M] [DecidableEq M]
   [AddCommGroup M] in
 /-- In the all-random game, the challenge ciphertext is independent of the hidden bit, so the
 adversary succeeds with probability exactly `1/2`. -/
-theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    Pr[= true | game2 tdp adv] = 1 / 2 := by
+theorem evalDist_game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    𝒟[game2 tdp adv] {true} = 1 / 2 := by
   let f : Bool → ProbComp Bool := fun _ =>
     (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
       let (pk, _sk) ← liftM tdp.keygen
@@ -464,9 +474,15 @@ theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
       let h ← liftM ($ᵗ M)
       let c : Rand × M := (tdp.forward pk r, h)
       adv.guess st c)).run' ∅
-  change Pr[= true | do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] = 1 / 2
-  simpa [game2, f] using
-    (probOutput_decide_eq_uniformBool_half f (by rfl))
+  change 𝒟[do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] {true} = 1 / 2
+  exact ProbComp.evalDist_decide_eq_uniformBool_half f (by rfl)
+
+omit [Inhabited Rand] [Fintype Rand] [Inhabited M] [Fintype M] [DecidableEq M]
+  [AddCommGroup M] in
+/-- The finite-frontend form of `evalDist_game2_eq_half`. -/
+theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    Pr[= true | game2 tdp adv] = 1 / 2 := by
+  simpa only [evalDist_apply_singleton] using evalDist_game2_eq_half (tdp := tdp) adv
 
 omit [Inhabited Rand] [Fintype Rand] [DecidableEq Rand] [SampleableType Rand] [Inhabited M]
   [Fintype M] [DecidableEq M] [SampleableType M] [AddCommGroup M] in
@@ -638,8 +654,8 @@ private lemma tdpExp_eq_observation (adv : CPA_Adv (PK := PK) (Rand := Rand) (M 
       decide (tdp.forward x.1 (transcriptPreimage (tdp := tdp) x.1
         (tdp.forward x.1 x.2.1) x.2.2) = tdp.forward x.1 x.2.1)) <$>
       challengeTranscriptExp (tdp := tdp) adv := by
-  simp only [tdpExp, inverter_eq, challengeTranscriptExp, map_bind, map_pure,
-    bind_map_left]
+  simp only [tdpExp, tdpRun, inverter_eq, challengeTranscriptExp, map_bind, map_pure,
+    bind_map_left, bind_assoc, pure_bind]
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] [Inhabited Rand] in
 /-- The bad-event experiment observes the shared challenge transcript under any lawful
@@ -696,9 +712,9 @@ omit [Fintype Rand] [Fintype M] [DecidableEq M] [Inhabited M] in
 constructed from the adversary's random-oracle transcript. -/
 theorem badEventProb_le_tdpAdvantage (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
     badEventProb tdp adv ≤ (tdpAdvantage tdp (inverter tdp adv)).toReal := by
-  rw [badEventProb, tdpAdvantage]
-  apply ENNReal.toReal_mono (ne_top_of_le_ne_top ENNReal.one_ne_top probOutput_le_one)
-  simpa only [evalDist_apply_singleton] using measure_badEventExp_le_tdpExp (tdp := tdp) adv
+  rw [badEventProb, tdpAdvantage_eq_evalDist_tdpExp]
+  exact ENNReal.toReal_mono (MeasureTheory.measure_ne_top _ _)
+    (measure_badEventExp_le_tdpExp (tdp := tdp) adv)
 
 omit [Fintype Rand] [Fintype M] [DecidableEq M] in
 /-- Main BR93 bound for this file's custom one-time ROM CPA game: the distinguishing

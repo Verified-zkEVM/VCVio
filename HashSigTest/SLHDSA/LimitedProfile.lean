@@ -596,13 +596,15 @@ end Pins
 
 /-! ## The vacuity canary, at this bundle
 
-`HashSigTest.SLHDSA.Composition`'s canary, restated at the concrete profile.  A closed
-`SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an arbitrary
-bundle carrying the instances the structure asks for and an arbitrary adversary, from an address key
-and a public seed and no security assumption at all, and the bound it names is at least one.
-Applied here, that says the corollaries of `HashSig.SLHDSA.Security.LimitedProfile` are no stronger
-than what they instantiate: `limitedAdvantage_le_bound` at the certificate below reads
-`adv.advantage ≤ (something ≥ 1)`, which `probOutput_le_one` gives with extra steps, and the two
+The two previous pull requests' measurement, re-run at the concrete profile.  A closed
+`SLHDSA.Security.Certificate` is constructible at an arbitrary validated parameter set, an
+arbitrary bundle carrying the instances the structure asks for and an arbitrary adversary, from an
+address key and a public seed and no security assumption at all, and the bound it names is at
+least one.  Applied here, that says the corollaries of
+`HashSig.SLHDSA.Security.LimitedProfile` are no stronger than what they instantiate:
+`limitedAdvantage_le_bound` at the certificate below reads
+`adv.advantage ≤ (something ≥ 1)`, which `MeasureTheory.measure_le_one` gives with extra steps, and
+the two
 strong-unforgeability corollaries read the same with a residual added on the right.
 
 **Why it is restated at the bundle rather than cited.**  The construction is generic in the
@@ -800,7 +802,7 @@ noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
   split := by simp
   forsBranch_le := by simp
   hypertreeBranch_le := by
-    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := probOutput_le_one
+    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := MeasureTheory.measure_le_one _ _
       _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
           (freePreAdv_advantage prims t).symm
       _ ≤ _ := le_add_right (le_add_right le_add_self)
@@ -818,7 +820,8 @@ end Closed
 
 /-- **The headline at that certificate.**  Both conjuncts together are the canary: the bound holds,
 and what it bounds the strong advantage by is at least one — so the strong-unforgeability statement
-of this module is, at this certificate, `probOutput_le_one` with extra steps, exactly as the
+of this module is, at this certificate, `MeasureTheory.measure_le_one` with extra steps, exactly as
+the
 existential one is at the same certificate.
 
 The residual is on the right-hand side of both conjuncts and changes neither. -/

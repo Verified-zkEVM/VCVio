@@ -9,6 +9,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.ProgramLogic.Tactics.Relational
 public import VCVioWidgets.GameHop.Panel
+import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # One Time Pad
@@ -16,12 +17,13 @@ public import VCVioWidgets.GameHop.Panel
 This file defines the one-time pad scheme, proves correctness, and proves perfect secrecy
 in the canonical independence form used by `SymmEncAlg.perfectSecrecyAt`.
 
-The file includes two proof styles:
-1. **Direct probability calculations** (`perfectSecrecyAt`): computes joint/marginal
-   probabilities directly using `probOutput_pair_xor_uniform`.
-2. **Relational / game-hopping** (`cipherGivenMsg_equiv`, `ciphertextRowsEqual`):
-   proves that any two messages yield the same ciphertext distribution via a bijection
-   coupling, using the `by_equiv` / `rvcstep` tactic workflow.
+The native measure laws give the Dirac correctness distribution and a product distribution
+for message and ciphertext. Their singleton consequences supply the discrete `SymmEncAlg`
+predicates during migration.
+
+The relational proof (`cipherGivenMsg_equiv`, `ciphertextRowsEqual`) also shows that any two
+messages yield the same ciphertext distribution via a bijection coupling, using the
+`by_equiv` / `rvcstep` tactic workflow.
 -/
 
 @[expose] public section
@@ -47,25 +49,45 @@ def oneTimePad (sp : ℕ) :
 
 namespace oneTimePad
 
-/-- Encryption and decryption are inverses for any OTP key. -/
-lemma complete (sp : ℕ) : (oneTimePad sp).Complete := by
-  intro msg
+/-- The one-time-pad experiment has independent message and ciphertext measures under
+the native uniform-oracle interpretation. -/
+theorem evalDist_perfectSecrecyExp (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
+    𝒟[(oneTimePad sp).PerfectSecrecyExp mgen] =
+      𝒟[mgen].prod (ProbabilityTheory.uniformOn Set.univ :
+        MeasureTheory.Measure (BitVec sp)) := by
+  simpa [SymmEncAlg.PerfectSecrecyExp, oneTimePad, monad_norm] using
+    evalDist_pair_xor_uniformSample sp mgen
+
+/-- A one-time-pad round trip denotes the Dirac measure at the original message. -/
+theorem evalDist_completeExp (sp : ℕ) (msg : BitVec sp) :
+    𝒟[(oneTimePad sp).CompleteExp msg] = MeasureTheory.Measure.dirac (some msg) := by
   have hsimp : (oneTimePad sp).CompleteExp msg =
       (fun _ : BitVec sp => (some msg : Option (BitVec sp))) <$>
         ($ᵗ BitVec sp : ProbComp (BitVec sp)) := by
     simp [SymmEncAlg.CompleteExp, oneTimePad, monad_norm]
-  rw [hsimp, probOutput_eq_one_iff]
-  exact ⟨probFailure_of_liftM_PMF _,
-    support_map_const (mx := ($ᵗ BitVec sp : ProbComp (BitVec sp))) (y := some msg)
-      (by simp [support_uniformSample])⟩
+  rw [hsimp, evalDist_map_of_discrete, MeasureTheory.Measure.map_const,
+    OracleComp.evalDist_apply_univ_eq_one]
+  simp
+
+/-- Encryption and decryption are inverses for any OTP key. -/
+lemma complete (sp : ℕ) : (oneTimePad sp).Complete := by
+  intro msg
+  rw [← evalDist_apply_singleton, evalDist_completeExp]
+  simp
+
+/-- The one-time-pad ciphertext has a uniform measure for every message sampler. -/
+theorem evalDist_perfectSecrecyCipherExp (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
+    𝒟[(oneTimePad sp).PerfectSecrecyCipherExp mgen] =
+      (ProbabilityTheory.uniformOn Set.univ : MeasureTheory.Measure (BitVec sp)) := by
+  simpa [SymmEncAlg.PerfectSecrecyCipherExp, SymmEncAlg.PerfectSecrecyExp, oneTimePad,
+    monad_norm] using evalDist_cipher_from_pair_uniformSample sp mgen
 
 lemma probOutput_cipher_uniform (sp : ℕ)
     (mgen : ProbComp (BitVec sp)) (σ : BitVec sp) :
     Pr[= σ | (oneTimePad sp).PerfectSecrecyCipherExp mgen] =
       (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  simpa [SymmEncAlg.PerfectSecrecyCipherExp, SymmEncAlg.PerfectSecrecyExp, oneTimePad,
-    monad_norm] using
-    probOutput_cipher_from_pair_uniform sp (mx := mgen) σ
+  rw [← evalDist_apply_singleton, evalDist_perfectSecrecyCipherExp,
+    ProbabilityTheory.uniformOn_univ_apply_singleton]
 
 /-- The one-time pad is perfectly secret in the canonical independence form. -/
 lemma perfectSecrecyAt (sp : ℕ) : (oneTimePad sp).perfectSecrecyAt := by

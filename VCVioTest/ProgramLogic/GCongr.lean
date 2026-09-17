@@ -18,6 +18,8 @@ postcondition, also under a finite sum, and `wp_eq_expectedValue` is the bridge 
 
 public section
 
+open scoped OracleComp.Quantitative Std.Internal.Do
+
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic
@@ -56,10 +58,10 @@ example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞)
   gcongr with i _ x hx
   exact h i x hx
 
-/-- Raw Loom syntax needs an explicit façade change before congruence descent. -/
+/-- Raw core WP syntax needs an explicit façade change before congruence descent. -/
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
     (h : ∀ x ∈ support oa, f x ≤ g x) :
-    Std.Do'.wp oa f Lean.Order.bot ≤ Std.Do'.wp oa g Lean.Order.bot := by
+    Std.Internal.Do.wp oa f Lean.Order.bot ≤ Std.Internal.Do.wp oa g Lean.Order.bot := by
   change wp oa f ≤ wp oa g
   gcongr with x hx
   exact h x hx

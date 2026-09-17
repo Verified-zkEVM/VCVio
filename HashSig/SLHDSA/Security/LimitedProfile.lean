@@ -48,7 +48,8 @@ with nothing tying any of them to the adversary being bounded, so — as
 key and a public seed at *every* validated parameter set and *every* bundle carrying those nine
 instances, and the bound it names is then at least one.  This profile and this bundle are one such
 pair: `HashSigTest.SLHDSA.LimitedProfile` builds that certificate here and proves that the bound
-it names is at least one, so at it `limitedAdvantage_le_bound` is `probOutput_le_one` with extra
+it names is at least one, so at it `limitedAdvantage_le_bound` is `MeasureTheory.measure_le_one`
+with extra
 steps.  Every deferral of the two general modules is inherited
 unchanged: no reduction adversary is constructed, no challenge is recorded, no game's final
 validity is established, neither PRF hop is taken, the undetectability hybrid is not performed,

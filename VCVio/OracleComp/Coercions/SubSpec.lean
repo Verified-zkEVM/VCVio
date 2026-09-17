@@ -269,14 +269,12 @@ since an arbitrary embedding need not reach all responses of the original oracle
 lemma mem_support_of_mem_support_liftComp (oa : OracleComp spec α) (x : α) :
     x ∈ support (oa.liftComp superSpec) → x ∈ support oa := by
   intro hx
-  induction oa using OracleComp.inductionOn generalizing x with
-  | pure y =>
-      simpa using hx
-  | query_bind q oa ih =>
-      rw [OracleComp.liftComp_bind, mem_support_bind_iff] at hx
-      rw [mem_support_bind_iff]
-      obtain ⟨u, _hu, hx⟩ := hx
-      exact ⟨u, OracleComp.mem_support_query q u, ih u x hx⟩
+  rw [← PFunctor.FreeM.reachable_eq_support] at hx ⊢
+  change x ∈ (PFunctor.FreeM.liftM
+    (fun t => (liftM (spec.query t) : OracleComp superSpec (spec.Range t))) oa).reachable at hx
+  exact (PFunctor.FreeM.reachable_liftM_subset
+    (handler := fun t => (liftM (spec.query t) : OracleComp superSpec (spec.Range t)))
+    oa) hx
 
 @[simp]
 lemma liftComp_seq (og : OracleComp spec (α → β)) (mx : OracleComp spec α) :

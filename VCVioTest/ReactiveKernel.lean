@@ -88,7 +88,7 @@ theorem noisy_joint_laws :
     JointHandlerLawEq (network := network) noisyImplementation (implementation false) := by
   intro node operation state
   change 𝒟[(($ᵗ Bool) >>= fun _ => (implementation false node operation).run state)] = _
-  rw [evalDist_bind_const, measure_univ, one_smul]
+  rw [_root_.evalDist_bind_const, measure_univ, one_smul]
 
 /-- The generic theorem preserves every actual finite observation after local kernel replacement. -/
 example (fuel : ℕ) :

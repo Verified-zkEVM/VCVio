@@ -68,6 +68,7 @@ theorem returnedNone_is_not_runtimeFailure :
 theorem runtimeFailure_has_no_returnedValue :
     evalDistWithFailure (failure : SPMF (Option Bool)) {some none} = 0 ∧
       evalDistWithFailure (failure : SPMF (Option Bool)) {none} = 1 := by
-  simp [evalDistWithFailure_some, evalDistWithFailure_none, evalDist_failure]
+  simp [evalDistWithFailure_some, evalDistWithFailure_none,
+    probOutput_def, probFailure_def]
 
 end VCVioTest.Runtime

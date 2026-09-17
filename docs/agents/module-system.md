@@ -272,26 +272,16 @@ application, composition, or extensionality law, or add that law at the owning
 module boundary. Constructor equations and definitions whose reduction is an
 intentional documented API may still use `rfl` directly.
 
-## The Loom import boundary
+## The program-logic import boundary
 
-The pinned `loom2` fork supplies the Loom-style `WP`/`Triple` abstractions
-and the `ℝ≥0∞`/`Prob` lattice instances the program logic runs on. Its import
-boundary keeps a future migration to core's WP layer limited to a known set
-of files. `Std.Do.WP` is already public at the Lean v4.33.1 pin and is used by
-VCVio's `StdDoBridge`; migrating Loom's quantitative and relational clients
-from its three-parameter `PredTrans` and `EPost` APIs to core's `PostShape`
-API is separate work. `Loom.*` may be imported only by:
+Unary carrier interpretations live in `VCVio/ProgramLogic/Unary/WP/` and consume core's
+`Std.Internal.Do` API through PolyFun's algebra bridge. Relational carrier interpretations
+live in `VCVio/ProgramLogic/Relational/WP/` and use VCVio's coupling interface. Carrier
+instances are scoped, so importing either layer does not choose a global semantics.
 
-- `ToMathlib/Control/Monad/RelWP.lean`;
-- `VCVio/ProgramLogic/Unary/Loom/Qualitative.lean`,
-  `VCVio/ProgramLogic/Unary/Loom/Quantitative.lean`, and
-  `VCVio/ProgramLogic/Unary/Loom/Probabilistic.lean`; and
-- `VCVio/ProgramLogic/Tactics/Unary/Internals.lean`.
-
-Everything else reaches Loom through those modules' public surface. A new
-`import Loom.…` elsewhere is a review blocker unless it comes with an entry
-here and a reason the existing bridges cannot carry it. This is a convention
-enforced at review, not a script.
+The legacy `Std.Do` handler bridge and the lattice-generic core WP API coexist.
+See [program-logic.md](program-logic.md#core-wp-and-the-symbolic-rewriter-boundary) for
+selection, tactic boundaries, and the v4.35 tracking links.
 
 ## Restoring `private` correctly
 

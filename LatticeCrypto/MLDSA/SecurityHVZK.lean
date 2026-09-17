@@ -254,7 +254,7 @@ theorem recoverT0_eq (h_laws : Primitives.Laws prims nttOps)
   have ht0 := h_laws.keyVector_t0_determined (Classical.choose hex) seed hrho ht1
   have hchoose : recoverT0 p prims pk =
       (keyGenFromSeed p prims (Classical.choose hex)).2.t0 := by
-    simp only [recoverT0, dif_pos hex]
+    simp only [recoverT0, dite_eq_left hex]
   rw [hchoose, keyGenFromSeed_t0 p prims, ht0, ← keyGenFromSeed_t0 p prims, hkeygen]
 
 /-! ### The exact-on-accept simulator -/
@@ -510,7 +510,8 @@ lemma hvzkHonestOut_eq_gated_of_not_bad (h_laws : Primitives.Laws prims nttOps)
     rw [Prod.mk.injEq] at hmatch
     obtain ⟨hm1, hm2⟩ := hmatch
     simp only [hvzkHonestOut, hvzkSimOut]
-    rw [if_pos (⟨hz, hr0⟩ : _ ∧ _), if_pos (⟨hct0, hw⟩ : _ ∧ _), if_pos hz, ← hm1, ← hm2]
+    rw [ite_eq_left (⟨hz, hr0⟩ : _ ∧ _), ite_eq_left (⟨hct0, hw⟩ : _ ∧ _),
+      ite_eq_left hz, ← hm1, ← hm2]
   · simp [hvzkHonestOut, hz]
 
 /-! ### The quantitative bound and the headline statement -/

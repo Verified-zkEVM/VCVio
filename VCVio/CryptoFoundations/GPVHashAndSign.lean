@@ -153,11 +153,12 @@ variable {PK SK Domain Range : Type}
 /-- Runtime bundle for the GPV hash-and-sign random-oracle world. -/
 noncomputable def runtime :
     ProbCompRuntime (OracleComp (unifSpec + (Salt × M →ₒ Range))) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
     (hashImpl := (randomOracle :
       QueryImpl (Salt × M →ₒ Range) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)))
     ∅
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 /-- Structural bound that counts only random-oracle queries in a GPV EUF-CMA adversary.
 

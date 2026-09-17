@@ -9,6 +9,9 @@ module
 public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
+import VCVio.EvalDist.IndepProductMeasure
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import Mathlib.Probability.UniformOn
 
 /-!
 # Fischlin small-sum counting and potential invariants
@@ -97,42 +100,20 @@ private lemma smallSumCount_le :
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
-/-- Each output tuple of `n` IID uniform draws is equally likely, with probability
-`(Fintype.card α)⁻¹ ^ n`. -/
-private lemma probOutput_mOfFn_uniformSample {α : Type} [SampleableType α] [Fintype α]
-    (n : ℕ) (w : Fin n → α) :
-    Pr[= w | Fin.mOfFn n (fun _ => ($ᵗ α : ProbComp α))]
-      = (Fintype.card α : ℝ≥0∞)⁻¹ ^ n := by
-  let : DecidableEq α := Classical.decEq α
-  induction n with
-  | zero =>
-    have hw : w = Fin.elim0 := funext fun i => i.elim0
-    simp [Fin.mOfFn, hw]
-  | succ n ih =>
-    have hcond : ∀ (a : α) (r : Fin n → α),
-        w = Fin.cons a r ↔ r = Fin.tail w ∧ a = w 0 := by
-      intro a r
-      constructor
-      · rintro rfl
-        simp
-      · rintro ⟨rfl, rfl⟩
-        exact (Fin.cons_self_tail w).symm
-    rw [Fin.mOfFn]
-    simp only [probOutput_bind_eq_tsum, probOutput_pure, ih, probOutput_uniformSample,
-      hcond, ite_and, mul_ite, mul_one, mul_zero, tsum_ite_eq]
-    rw [pow_succ']
-
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- The probability that `n` IID uniform draws land in a (decidable) target set is exactly the
 size of the target set over `(Fintype.card α) ^ n`. -/
 private lemma probEvent_mOfFn_uniformSample {α : Type} [SampleableType α] [Fintype α]
     (n : ℕ) (p : (Fin n → α) → Prop) [DecidablePred p] :
     Pr[p | Fin.mOfFn n (fun _ => ($ᵗ α : ProbComp α))]
       = ((Finset.univ.filter p).card : ℝ≥0∞) / (Fintype.card α : ℝ≥0∞) ^ n := by
-  rw [probEvent_eq_sum_filter_univ]
-  simp only [probOutput_mOfFn_uniformSample, Finset.sum_const, nsmul_eq_mul]
-  rw [div_eq_mul_inv, ENNReal.inv_pow]
+  let : MeasurableSpace α := ⊤
+  rw [← evalDist_apply_setOf,
+    evalDist_mOfFn_const_uniform n ($ᵗ α : ProbComp α) evalDist_uniformSample,
+    ProbabilityTheory.uniformOn_univ]
+  rw [show {x : Fin n → α | p x} = ((Finset.univ.filter p : Finset (Fin n → α)) : Set _) by
+    ext x; simp]
+  rw [MeasureTheory.Measure.count_apply_finset]
+  simp [Nat.cast_pow]
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
@@ -347,7 +328,7 @@ private lemma prob_extend_hits (hits : Fin ρ → Option (Fin (2 ^ b))) (u : Fin
           else 0 := by
   rw [probOutput_mOfFn]
   by_cases hcomp : ∀ i h, hits i = some h → u i = h
-  · rw [if_pos hcomp]
+  · rw [ite_eq_left hcomp]
     have hfactor : ∀ i : Fin ρ,
         Pr[= u i | (match hits i with
           | some h => (pure h : ProbComp (Fin (2 ^ b)))
@@ -356,19 +337,19 @@ private lemma prob_extend_hits (hits : Fin ρ → Option (Fin (2 ^ b))) (u : Fin
       intro i
       cases hh : hits i with
       | none =>
-          simp only [if_true]
+          simp only [ite_true]
           rw [probOutput_uniformSample, Fintype.card_fin]
       | some h =>
           have hu : u i = h := hcomp i h hh
-          rw [probOutput_pure, if_pos hu, if_neg (Option.some_ne_none h)]
+          rw [probOutput_pure, ite_eq_left hu, ite_eq_right (Option.some_ne_none h)]
     rw [Finset.prod_congr rfl fun i _ => hfactor i, Finset.prod_ite, Finset.prod_const,
       Finset.prod_const_one, mul_one]
-  · rw [if_neg hcomp]
+  · rw [ite_eq_right hcomp]
     push Not at hcomp
     obtain ⟨i, h, hh, hne⟩ := hcomp
     refine Finset.prod_eq_zero (Finset.mem_univ i) ?_
     simp only [hh]
-    rw [probOutput_pure, if_neg hne]
+    rw [probOutput_pure, ite_eq_right hne]
 
 omit [SampleableType Chal] in
 /-- **The ψ leaf (exact).** The probability that the Fischlin verifier accepts on a cache
@@ -414,7 +395,7 @@ private lemma verify_probOutput_true_mixed (pk : Stmt) (msg : M)
         by_cases h2 : (∑ i, (u i).val) ≤ S <;>
         simp [h3, h2]
     rw [Finset.sum_congr rfl fun u _ => hterm u, ← Finset.sum_filter, Finset.sum_const,
-      nsmul_eq_mul, if_pos haV, one_mul, div_eq_mul_inv, ← ENNReal.inv_pow]
+      nsmul_eq_mul, ite_eq_left haV, one_mul, div_eq_mul_inv, ← ENNReal.inv_pow]
     rfl
   · -- σ-verification rejected: the verdict is constantly `false`.
     have haV' :
@@ -433,7 +414,7 @@ private lemma verify_probOutput_true_mixed (pk : Stmt) (msg : M)
       intro u
       rw [haV', probOutput_pure]
       simp
-    rw [Finset.sum_congr rfl fun u _ => hterm0 u, Finset.sum_const_zero, if_neg haV, zero_mul,
+    rw [Finset.sum_congr rfl fun u _ => hterm0 u, Finset.sum_const_zero, ite_eq_right haV, zero_mul,
       ENNReal.zero_div]
 
 omit [SampleableType Chal] in
@@ -461,7 +442,7 @@ private lemma ksVerify_true_support_allVerified (x : Stmt) (msg : M)
   rw [verify_probOutput_true_mixed σ hr ρ b S M x msg π cache
     (fun j => cache (⟨x, msg, List.ofFn (fun k => (π k).1), j, (π j).2.1, (π j).2.2⟩ :
       FischlinROInput Stmt Commit Chal Resp ρ M)) (fun j => rfl),
-    if_neg hall, zero_mul, ENNReal.zero_div] at hpos
+    ite_eq_right hall, zero_mul, ENNReal.zero_div] at hpos
   exact lt_irrefl 0 hpos
 
 omit [SampleableType Chal] in
@@ -661,7 +642,7 @@ private lemma Phi_extend {K : Type} [DecidableEq K] (keys : Finset K)
         = slotPsi ρ b S (Function.update (st k₀) i₀ (some u))
           + ∑ k ∈ keys.erase k₀, if dead k then 0 else slotPsi ρ b S (st k) := by
     intro u
-    rw [Phi, ← Finset.add_sum_erase _ _ hk, if_neg hdead, updateSlot_apply_self]
+    rw [Phi, ← Finset.add_sum_erase _ _ hk, ite_eq_right hdead, updateSlot_apply_self]
     congr 1
     refine Finset.sum_congr rfl fun k hk' => ?_
     rw [updateSlot_apply_ne st k₀ i₀ u (Finset.ne_of_mem_erase hk')]
@@ -670,7 +651,7 @@ private lemma Phi_extend {K : Type} [DecidableEq K] (keys : Finset K)
     Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul, mul_comm,
     ENNReal.mul_div_cancel_right (by positivity) (by finiteness), Phi,
     ← Finset.add_sum_erase _ _ hk,
-    if_neg hdead]
+    ite_eq_right hdead]
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
@@ -689,7 +670,7 @@ private lemma Phi_open_eq {K : Type} [DecidableEq K] (keys : Finset K)
       Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) dead
         = slotPsi ρ b S (Function.update (st k₀) i₀ (some u)) + Phi ρ b S keys st dead := by
     intro u
-    rw [Phi, Finset.sum_insert hk, if_neg hdead, updateSlot_apply_self]
+    rw [Phi, Finset.sum_insert hk, ite_eq_right hdead, updateSlot_apply_self]
     congr 1
     refine Finset.sum_congr rfl fun k hk' => ?_
     rw [updateSlot_apply_ne st k₀ i₀ u (fun h => hk (h ▸ hk'))]
@@ -716,7 +697,7 @@ private lemma Phi_open_le {K : Type} [DecidableEq K] (keys : Finset K)
         Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) dead
           = Phi ρ b S keys st dead := by
       intro u
-      rw [Phi, Finset.sum_insert hk, if_pos hdead, zero_add]
+      rw [Phi, Finset.sum_insert hk, ite_eq_left hdead, zero_add]
       refine Finset.sum_congr rfl fun k hk' => ?_
       rw [updateSlot_apply_ne st k₀ i₀ u (fun h => hk (h ▸ hk'))]
     simp only [hsplit]
@@ -737,7 +718,7 @@ private lemma Phi_mono_dead {K : Type} (keys : Finset K)
   refine Finset.sum_le_sum fun k _ => ?_
   by_cases hk : dead' k
   · simp [hk]
-  · rw [if_neg hk, if_neg fun hd => hk (h k hd)]
+  · rw [ite_eq_right hk, ite_eq_right fun hd => hk (h k hd)]
 
 omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in

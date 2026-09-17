@@ -291,7 +291,7 @@ Validation completed successfully:
 - The new test modules also passed an explicit `lint-style` invocation, since the style driver's
   `git ls-files` expansion does not include untracked additions before staging.
 - Documentation path/coverage checks and generated-fragment checks passed after the guide edits.
-- `scripts/check-pmf-boundary.sh --ratchet HEAD` passed for the complete working diff.
+- The then-current PMF source-count guard passed for the complete working diff.
 - Eight public signature checks across the writer and Fischlin assumption-scope edits matched the
   base revision, including the affected tail lemmas and expected-cost theorems.
 

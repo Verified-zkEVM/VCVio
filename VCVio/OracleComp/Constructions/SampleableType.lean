@@ -11,6 +11,10 @@ public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.Bool
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.Fintype
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.EvalDist.Monad.UniformTable
+public import ToMathlib.Probability.UniformOn
 public import ToMathlib.Data.FinEnum
 public import Init.Data.UInt.Lemmas
 public import Mathlib.Data.FinEnum
@@ -24,33 +28,82 @@ public import Mathlib.Data.Fintype.Vector
 This file defines a typeclass `SampleableType β` for types `β` with a canonical uniform selection
 operation, using the `ProbComp` monad.
 
-As compared to `HasUniformSelect` this provides much more structure on the behavior,
-enforcing that every possible output has the same output probability never fails.
+Unlike `HasUniformSelect`, the class certifies full support and the uniform output measure.
 -/
 
 @[expose] public section
 
 universe u v w
 
-open ENNReal
+open ENNReal MeasureTheory ProbabilityTheory
 
-/-- A `SampleableType β` instance means that `β` is a finite inhabited type,
-with a computation `selectElem` that selects uniformly at random from the type.
-This generally requires choosing some "canonical" ordering for the type,
-so we include this to get a computable version of selection.
-We also require that each element has the same probability of being chosen from by `selectElem`,
-see `SampleableType.probOutput_uniformSample` for the reduction when `α` has a fintype instance
-involving the explicit cardinality of the type. -/
+/-- A finite inhabited type with a canonical, executable uniform sampler. Its semantic
+certificate states uniformity of the output measure for every measurable structure with
+measurable singletons. -/
 class SampleableType (β : Type) where
   selectElem : ProbComp β
   mem_support_selectElem (x : β) : x ∈ support selectElem
-  probOutput_selectElem_eq (x y : β) : Pr[= x | selectElem] = Pr[= y | selectElem]
+  evalDist_selectElem_eq_uniform :
+    ∀ [MeasurableSpace β] [MeasurableSingletonClass β],
+      𝒟[selectElem] = uniformOn Set.univ
 
-/-- Select uniformly from the type `β` using a type-class provided definition.
-NOTE: naming is somewhat strange now that `Fintype` isn't explicitly required. -/
+/-- A canonical uniform sampler witnesses that its type is inhabited. -/
+instance SampleableType.instNonempty (β : Type) [h : SampleableType β] : Nonempty β :=
+  ⟨OracleComp.defaultResult h.selectElem⟩
+
+/-- The support of a canonical uniform sampler covers its finite type. -/
+instance SampleableType.instFinite (β : Type) [h : SampleableType β] : Finite β :=
+  Finite.of_finite_univ <|
+    (Set.eq_univ_of_forall h.mem_support_selectElem) ▸ OracleComp.support_finite h.selectElem
+
+/-- Equal point masses on a finite type certify a uniform output measure. This is the
+compatibility step for executable samplers whose correctness is proved by counting. -/
+private theorem evalDist_eq_uniformOn_of_equal_probOutput {β : Type} (mx : ProbComp β)
+    (hfull : ∀ x : β, x ∈ support mx)
+    [MeasurableSpace β] [MeasurableSingletonClass β]
+    (heq : ∀ x y : β, 𝒟[mx] {x} = 𝒟[mx] {y}) :
+    𝒟[mx] = uniformOn Set.univ := by
+  let : Nonempty β := ⟨OracleComp.defaultResult mx⟩
+  let : Finite β := Finite.of_finite_univ <|
+    (Set.eq_univ_of_forall hfull) ▸ OracleComp.support_finite mx
+  let : Fintype β := Fintype.ofFinite β
+  have hmass (x : β) : 𝒟[mx] {x} = (Fintype.card β : ℝ≥0∞)⁻¹ := by
+    have hcard : (Fintype.card β : ℝ≥0∞) = ∑ _ : β, 1 := by simp
+    refine ENNReal.eq_inv_of_mul_eq_one_left ?_
+    simp_rw [hcard, Finset.mul_sum, mul_one]
+    rw [← sum_probOutput_eq_one (mx := mx) (by aesop)]
+    simp_rw [← evalDist_apply_singleton]
+    exact Finset.sum_congr rfl fun y _ => heq x y
+  apply Measure.ext_of_singleton
+  intro x
+  rw [hmass x, uniformOn_univ_apply_singleton]
+
+/-- Select uniformly from the type `β` using a type-class provided definition. -/
 def uniformSample (β : Type) [h : SampleableType β] : ProbComp β := h.selectElem
 
 notation:90 "$ᵗ " α:91 => uniformSample α
+
+/-- The canonical sample has uniform output measure under native oracle semantics. -/
+theorem SampleableType.evalDist_uniformSample {β : Type} [SampleableType β]
+    [MeasurableSpace β] [MeasurableSingletonClass β] :
+    𝒟[$ᵗ β] = uniformOn Set.univ :=
+  SampleableType.evalDist_selectElem_eq_uniform
+
+/-- All points have the same mass under a canonical uniform sampler. -/
+theorem SampleableType.probOutput_selectElem_eq {β : Type} [SampleableType β]
+    (x y : β) :
+    Pr[= x | (SampleableType.selectElem : ProbComp β)] =
+      Pr[= y | (SampleableType.selectElem : ProbComp β)] := by
+  let : Nonempty β := ⟨OracleComp.defaultResult (SampleableType.selectElem : ProbComp β)⟩
+  let : Finite β := Finite.of_finite_univ <|
+    (Set.eq_univ_of_forall (fun x : β => SampleableType.mem_support_selectElem x)) ▸
+      OracleComp.support_finite (SampleableType.selectElem : ProbComp β)
+  let : Fintype β := Fintype.ofFinite β
+  let : MeasurableSpace β := ⊤
+  rw [← evalDist_apply_singleton, ← evalDist_apply_singleton]
+  change 𝒟[$ᵗ β] {x} = 𝒟[$ᵗ β] {y}
+  rw [SampleableType.evalDist_uniformSample,
+    uniformOn_univ_apply_singleton, uniformOn_univ_apply_singleton]
 
 variable (α : Type) [hα : SampleableType α]
 
@@ -58,12 +111,10 @@ variable (α : Type) [hα : SampleableType α]
 @[simp, grind =]
 lemma probOutput_uniformSample [Fintype α] (x : α) :
     Pr[= x | $ᵗ α] = (Fintype.card α : ℝ≥0∞)⁻¹ := by
-  have : (Fintype.card α : ℝ≥0∞) = ∑ y : α, 1 :=
-    by simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one]
-  refine ENNReal.eq_inv_of_mul_eq_one_left ?_
-  simp_rw [this, Finset.mul_sum, mul_one]
-  rw [← sum_probOutput_eq_one (mx := $ᵗ α) (by aesop)]
-  exact Finset.sum_congr rfl fun y _ ↦ SampleableType.probOutput_selectElem_eq x y
+  let : Nonempty α := ⟨OracleComp.defaultResult ($ᵗ α)⟩
+  let : MeasurableSpace α := ⊤
+  rw [← evalDist_apply_singleton, SampleableType.evalDist_uniformSample,
+    uniformOn_univ_apply_singleton]
 
 @[grind .]
 lemma probOutput_uniformSample_inj (x y : α) : Pr[= x | $ᵗ α] = Pr[= y | $ᵗ α] :=
@@ -230,7 +281,10 @@ section instances
 @[reducible] def SampleableType.Fin (n : ℕ) : SampleableType (Fin (n + 1)) where
   selectElem := $[0..n]
   mem_support_selectElem := by simp
-  probOutput_selectElem_eq := by simp
+  evalDist_selectElem_eq_uniform := by
+    intro _ _
+    cases MeasurableSpace.eq_top_of_finite (α := _root_.Fin (n + 1))
+    exact ProbComp.evalDist_uniformFin n
 
 instance (n : ℕ) [hn : NeZero n] : SampleableType (Fin n) :=
   match n, hn with
@@ -239,7 +293,12 @@ instance (n : ℕ) [hn : NeZero n] : SampleableType (Fin n) :=
 instance (α : Type) [Unique α] : SampleableType α where
   selectElem := return default
   mem_support_selectElem x := Unique.eq_default x ▸ (by simp)
-  probOutput_selectElem_eq x y := by rw [Unique.eq_default x, Unique.eq_default y]
+  evalDist_selectElem_eq_uniform := by
+    intro _ _
+    apply Measure.ext_of_singleton
+    intro x
+    rw [evalDist_pure, Unique.eq_default x, uniformOn_univ_apply_singleton]
+    simp
 
 /-- A sum of oracle specs with sampleable ranges again has sampleable ranges. -/
 instance {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
@@ -252,17 +311,29 @@ instance {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
 instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType (α × β) where
   selectElem := (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)
   mem_support_selectElem x := by simp
-  probOutput_selectElem_eq x y := by
-    simp only [probOutput_seq_map_prod_mk_eq_mul]; grind
+  evalDist_selectElem_eq_uniform := by
+    intro _ _
+    apply evalDist_eq_uniformOn_of_equal_probOutput
+    · intro x; simp
+    · intro x y
+      simp only [evalDist_apply_singleton, probOutput_seq_map_prod_mk_eq_mul]
+      exact congrArg₂ (· * ·)
+        (SampleableType.probOutput_selectElem_eq x.1 y.1)
+        (SampleableType.probOutput_selectElem_eq x.2 y.2)
 
 /-- A type equivalent to a `SampleableType` is also `SampleableType`. -/
 @[reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :
     SampleableType β where
   selectElem := e <$> ($ᵗ α)
   mem_support_selectElem x := by simp
-  probOutput_selectElem_eq x y := by
-    rw [probOutput_map_equiv, probOutput_map_equiv]
-    exact probOutput_uniformSample_inj α (e.symm x) (e.symm y)
+  evalDist_selectElem_eq_uniform := by
+    intro _ _
+    let : Finite β := Finite.of_injective e.symm e.symm.injective
+    let : Nonempty β := Nonempty.map e inferInstance
+    let : MeasurableSpace α := ⊤
+    change 𝒟[e <$> ($ᵗ α)] = uniformOn Set.univ
+    rw [evalDist_map_of_discrete, SampleableType.evalDist_uniformSample]
+    exact map_uniformOn_univ_of_bijective Measurable.of_discrete e.bijective
 
 /-- Any finitely enumerable type can be sampled uniformly using the underlying equivalence. -/
 instance FinEnum.SampleableType (α : Type)
@@ -277,15 +348,8 @@ than an `instance` to avoid overlap with `FinEnum.SampleableType`. -/
 @[reducible] noncomputable def SampleableType.ofFintype (α : Type)
     [Fintype α] [Nonempty α] : SampleableType α :=
   haveI : NeZero (Fintype.card α) := ⟨Fintype.card_ne_zero⟩
-  SampleableType.ofEquiv (Fintype.equivFin α).symm
-
-/-- This typeclass shouldn't cause diamonds since `Nonempty` is propositional. -/
-instance SampleableType.Nonempty (α : Type) [h : SampleableType α] : Nonempty α :=
-  ⟨OracleComp.defaultResult h.selectElem⟩
-
-/-- This typeclass shouldn't cause diamonds since `Finite` is propositional. -/
-instance SampleableType.Finite (α : Type) [SampleableType α] : Finite α :=
-  Finite.of_finite_univ <| support_uniformSample α ▸ OracleComp.support_finite _
+  letI : SampleableType (_root_.Fin (Fintype.card α)) := inferInstance
+  SampleableType.ofEquiv (α := _root_.Fin (Fintype.card α)) (Fintype.equivFin α).symm
 
 /-- We avoid making this an instance globally as many types already have a `Fintype` instance
 that would not be definitionally equal to this one. -/
@@ -318,17 +382,28 @@ instance (α : Type) (n : ℕ) [SampleableType α] : SampleableType (Vector α n
   | succ m ih =>
       have : ∃ ys y, Vector.push ys y = x := ⟨x.pop, x.back, Vector.push_pop_back x⟩
       simpa [ih] using this
-  probOutput_selectElem_eq x y := by induction n with
-  | zero => rw [show x = y by grind]
-  | succ m ih =>
-      have hpush : Function.Injective2 (Vector.push (α := α) (n := m)) := by
-        intro xs ys x y hxy; simp [Vector.push_eq_push.mp hxy]
-      simp only [Nat.recAux]
-      erw [← Vector.push_pop_back x, ← Vector.push_pop_back y,
-        probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush x.pop x.back,
-        probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush y.pop y.back]
-      exact congrArg₂ (· * ·) (ih x.pop y.pop)
-        (SampleableType.probOutput_selectElem_eq x.back y.back)
+  evalDist_selectElem_eq_uniform := by
+    intro _ _
+    apply evalDist_eq_uniformOn_of_equal_probOutput
+    · intro x
+      induction n with
+      | zero => simp
+      | succ m ih =>
+          have : ∃ ys y, Vector.push ys y = x := ⟨x.pop, x.back, Vector.push_pop_back x⟩
+          simpa [ih] using this
+    · intro x y
+      rw [evalDist_apply_singleton, evalDist_apply_singleton]
+      induction n with
+      | zero => rw [show x = y by grind]
+      | succ m ih =>
+          have hpush : Function.Injective2 (Vector.push (α := α) (n := m)) := by
+            intro xs ys x y hxy; simp [Vector.push_eq_push.mp hxy]
+          simp only [Nat.recAux]
+          erw [← Vector.push_pop_back x, ← Vector.push_pop_back y,
+            probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush x.pop x.back,
+            probOutput_seq_map_eq_mul_of_injective2 _ _ _ hpush y.pop y.back]
+          exact congrArg₂ (· * ·) (ih x.pop y.pop)
+            (SampleableType.probOutput_selectElem_eq x.back y.back)
 
 /-- The array-backed `Vector α n` is equivalent to an `n`-indexed function. -/
 def arrayVectorEquivFin (α : Type u) (n : ℕ) : Vector α n ≃ (Fin n → α) where
@@ -452,45 +527,14 @@ lemma evalSPMF_uniformSample_bind_update
     [SampleableType R] [SampleableType (D → R)] (t : D) :
     𝒮[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (Function.update g t u)] =
       𝒮[$ᵗ (D → R)] := by
-  classical
-  let := Fintype.ofFinite D
-  let := Fintype.ofFinite R
-  have : Nonempty (D → R) := ⟨fun _ => Classical.arbitrary R⟩
-  refine evalSPMF_ext fun h => ?_
-  rw [probOutput_uniformSample (D → R) h, probOutput_bind_eq_sum_fintype]
-  -- For each fixed `u`, count the tables `g` whose `t`-update equals `h`.
-  have hinner : ∀ u : R,
-      Pr[= h | (do let g ← $ᵗ (D → R); pure (Function.update g t u))]
-        = (if u = h t then
-            (Fintype.card R : ℝ≥0∞) * (Fintype.card (D → R) : ℝ≥0∞)⁻¹ else 0) := by
-    intro u
-    rw [bind_pure_comp, probOutput_map_eq_sum_fintype_ite]
-    simp only [probOutput_uniformSample (D → R)]
-    rw [← Finset.sum_filter, Finset.sum_const, nsmul_eq_mul]
-    -- The matching tables are exactly `Function.update h t r` for `r : R`.
-    have hcard :
-        ((Finset.univ.filter fun g : D → R => h = Function.update g t u).card : ℝ≥0∞)
-          = if u = h t then (Fintype.card R : ℝ≥0∞) else 0 := by
-      by_cases hu : u = h t
-      · have hset : (Finset.univ.filter fun g : D → R => h = Function.update g t u)
-            = Finset.univ.image (fun r : R => Function.update h t r) := by
-          ext g
-          simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
-          constructor
-          · intro hg
-            exact ⟨g t, by subst hg; simp⟩
-          · rintro ⟨r, rfl⟩
-            subst hu; simp
-        rw [hset, Finset.card_image_of_injective _
-          (fun r₁ r₂ hr => by simpa using congrFun hr t), Finset.card_univ, if_pos hu]
-      · rw [if_neg hu, Nat.cast_eq_zero, Finset.card_eq_zero, Finset.filter_eq_empty_iff]
-        rintro g - rfl
-        simp at hu
-    rw [hcard, ite_mul, zero_mul]
-  simp_rw [hinner, mul_ite, mul_zero]
-  rw [Finset.sum_ite_eq' Finset.univ (h t), if_pos (Finset.mem_univ _), probOutput_uniformSample R,
-      ← mul_assoc, ENNReal.inv_mul_cancel (by simp [Fintype.card_ne_zero])
-        (ENNReal.natCast_ne_top _), one_mul]
+  let : MeasurableSpace R := ⊤
+  let : MeasurableSpace (D → R) := MeasurableSpace.pi
+  apply evalSPMF_ext
+  intro h
+  have hmeasure := evalDist_bind_bind_update ($ᵗ R) ($ᵗ (D → R))
+    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample t pure
+  simpa only [evalDist_apply_singleton, bind_pure] using
+    congrArg (fun μ : Measure (D → R) => μ {h}) hmeasure
 
 /-- **The first coordinate of a uniform pair is uniform.**
 
@@ -499,24 +543,17 @@ Mapping the uniform distribution on `α × β` through `Prod.fst` yields the uni
 lemma evalSPMF_map_fst_uniformSample_prod {α β : Type} [Finite α]
     [Finite β] [Nonempty β] [SampleableType α] [SampleableType β] [SampleableType (α × β)] :
     𝒮[Prod.fst <$> ($ᵗ (α × β))] = 𝒮[$ᵗ α] := by
-  classical
-  let := Fintype.ofFinite α
-  let := Fintype.ofFinite β
-  have : DecidableEq α := Classical.decEq α
-  refine evalSPMF_ext fun x => ?_
-  rw [probOutput_uniformSample α x, probOutput_map_eq_sum_fintype_ite]
-  simp only [probOutput_uniformSample (α × β)]
-  rw [← Finset.sum_filter, Finset.sum_const, nsmul_eq_mul]
-  have hset : (Finset.univ.filter fun p : α × β => x = p.1)
-      = ({x} : Finset α) ×ˢ (Finset.univ : Finset β) := by
-    ext p
-    simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_product,
-      Finset.mem_singleton, and_true, eq_comm]
-  rw [hset, Finset.card_product, Finset.card_singleton, one_mul, Finset.card_univ,
-    Fintype.card_prod, Nat.cast_mul,
-    ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _)),
-    mul_comm, mul_assoc, ENNReal.inv_mul_cancel (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
-      (ENNReal.natCast_ne_top _), mul_one]
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  let : MeasurableSpace (α × β) := MeasurableSpace.prod ‹MeasurableSpace α› ‹MeasurableSpace β›
+  apply evalSPMF_ext
+  intro x
+  have hmeasure : 𝒟[Prod.fst <$> ($ᵗ (α × β))] = 𝒟[$ᵗ α] := by
+    rw [evalDist_map_of_discrete, SampleableType.evalDist_uniformSample,
+      SampleableType.evalDist_uniformSample, uniformOn_univ_prod,
+      Measure.map_fst_prod, measure_univ, one_smul]
+  simpa only [evalDist_apply_singleton] using
+    congrArg (fun μ : Measure α => μ {x}) hmeasure
 
 /-- **Restricting a uniform function table to a subdomain along an injection is uniform.**
 
@@ -529,31 +566,20 @@ the rest, and `e` reindexes the block by `A`. It underlies eager-sampling reform
 project a fine-grained random-oracle table onto a coarser one. -/
 lemma evalSPMF_uniformSample_map_comp_injective
     {A B R : Type} [Finite A] [Finite B] [Finite R]
-    [Nonempty R] [SampleableType R] [SampleableType (A → R)] [SampleableType (B → R)]
+    [Nonempty R] [SampleableType (A → R)] [SampleableType (B → R)]
     {e : A → B} (he : Function.Injective e) :
     𝒮[do let g ← $ᵗ (B → R); pure (g ∘ e)] = 𝒮[$ᵗ (A → R)] := by
-  classical
-  let := Fintype.ofFinite A
-  let := Fintype.ofFinite B
-  let := Fintype.ofFinite R
-  let : Inhabited R := Classical.inhabited_of_nonempty inferInstance
-  set C := {b : B // b ∉ Set.range e}
-  -- A table `g : B → R` is determined by its restriction `g ∘ e` along `e` and its values off
-  -- `range e`, splitting `B → R` as the product `(A → R) × (C → R)` via the reindexing of `B` by
-  -- `A ⊕ C` along `e` and the complement inclusion.
-  set φ : (B → R) ≃ (A → R) × (C → R) :=
-    (Equiv.arrowCongr ((Equiv.Set.sumCompl (Set.range e)).symm.trans
-      ((Equiv.ofInjective e he).symm.sumCongr (Equiv.refl C))) (Equiv.refl R)).trans
-      (Equiv.sumArrowEquivProdArrow _ _ _)
-  have hφ1 : ∀ g : B → R, (φ g).1 = g ∘ e := fun g => funext fun a => by
-    simp [φ, Equiv.sumArrowEquivProdArrow, Equiv.ofInjective]
-  calc 𝒮[do let g ← $ᵗ (B → R); pure (g ∘ e)]
-      = 𝒮[Prod.fst <$> (φ <$> ($ᵗ (B → R)))] := by
-        simp only [bind_pure_comp, Functor.map_map, Function.comp_def, hφ1]
-    _ = 𝒮[Prod.fst <$> ($ᵗ ((A → R) × (C → R)))] := by
-        rw [evalSPMF_map, evalSPMF_ext fun p =>
-          probOutput_map_bijective_uniform_cross (α := B → R) φ φ.bijective p, ← evalSPMF_map]
-    _ = 𝒮[$ᵗ (A → R)] := evalSPMF_map_fst_uniformSample_prod
+  let : MeasurableSpace R := ⊤
+  let : MeasurableSpace (A → R) := MeasurableSpace.pi
+  let : MeasurableSpace (B → R) := MeasurableSpace.pi
+  apply evalSPMF_ext
+  intro h
+  have hmeasure : 𝒟[do let g ← $ᵗ (B → R); pure (g ∘ e)] = 𝒟[$ᵗ (A → R)] := by
+    simpa only [bind_pure_comp] using
+      (evalDist_map_table_comp_injective ($ᵗ (A → R)) ($ᵗ (B → R))
+        SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample he)
+  simpa only [evalDist_apply_singleton] using
+    congrArg (fun μ : Measure (A → R) => μ {h}) hmeasure
 
 /-- Patch a uniform function table at every point of a list `l`, drawing one fresh uniform value
 per list entry. With `l = []` the table is returned unchanged; with `l = d :: ds` the tail is
@@ -577,6 +603,29 @@ lemma patchTable_cons {D R : Type} [DecidableEq D] [SampleableType R]
     patchTable (d :: ds) g =
       (do let g' ← patchTable ds g; let u ← $ᵗ R; pure (Function.update g' d u)) := rfl
 
+/-- Patching a uniform table at a finite list of coordinates with independent uniform
+draws preserves its output measure. Repeated coordinates are allowed. -/
+theorem evalDist_uniformSample_patchList
+    {D R : Type} [Finite D] [DecidableEq D] [Finite R] [Nonempty R]
+    [MeasurableSpace R] [MeasurableSingletonClass R]
+    [SampleableType R] [SampleableType (D → R)] (l : List D) :
+    𝒟[do let g ← $ᵗ (D → R); patchTable l g] = 𝒟[$ᵗ (D → R)] := by
+  induction l with
+  | nil => simp [patchTable]
+  | cons d ds ih =>
+      let table : ProbComp (D → R) := do let g ← $ᵗ (D → R); patchTable ds g
+      have hstep :
+          𝒟[do let g ← $ᵗ (D → R); patchTable (d :: ds) g] =
+            𝒟[do let g ← table; let u ← $ᵗ R; pure (Function.update g d u)] := by
+        simp [table, patchTable_cons, bind_assoc]
+      rw [hstep, evalDist_bind_of_discrete table, ih]
+      rw [← evalDist_bind_of_discrete]
+      have hswap := evalDist_bind_bind_swap ($ᵗ (D → R)) ($ᵗ R)
+        (fun g u => pure (Function.update g d u)) Measurable.of_discrete
+      rw [hswap]
+      simpa using evalDist_bind_bind_update ($ᵗ R) ($ᵗ (D → R))
+        SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample d pure
+
 /-- **Patching a uniform function table at finitely many points preserves uniformity.**
 
 Drawing a uniform table `g : D → R` and then `patchTable l g` — overwriting `g` at every point of
@@ -589,21 +638,11 @@ lemma evalSPMF_uniformSample_patchList
     {D R : Type} [Finite D] [DecidableEq D] [Finite R] [Nonempty R]
     [SampleableType R] [SampleableType (D → R)] (l : List D) :
     𝒮[do let g ← $ᵗ (D → R); patchTable l g] = 𝒮[$ᵗ (D → R)] := by
-  classical
-  induction l with
-  | nil => simp
-  | cons d ds ih =>
-    refine evalSPMF_ext fun h => ?_
-    set blk : ProbComp (D → R) := (do let g ← $ᵗ (D → R); patchTable ds g) with hblk
-    have hlhs :
-        Pr[= h | do let g ← $ᵗ (D → R); patchTable (d :: ds) g]
-          = Pr[= h | blk >>= fun g' => $ᵗ R >>= fun u => pure (Function.update g' d u)] :=
-      OracleComp.probOutput_congr rfl (by simp only [patchTable_cons, bind_assoc, hblk])
-    rw [hlhs, probOutput_bind_eq_tsum]
-    simp_rw [fun g' : D → R => OracleComp.probOutput_congr rfl ih (x := g')]
-    rw [← probOutput_bind_eq_tsum, probOutput_bind_bind_swap ($ᵗ (D → R)) ($ᵗ R)
-      (fun g' u => pure (Function.update g' d u))]
-    exact OracleComp.probOutput_congr rfl (evalSPMF_uniformSample_bind_update d)
+  let : MeasurableSpace R := ⊤
+  apply evalSPMF_ext
+  intro h
+  simpa only [evalDist_apply_singleton] using
+    congrArg (fun μ : Measure (D → R) => μ {h}) (evalDist_uniformSample_patchList l)
 
 end Marginalization
 

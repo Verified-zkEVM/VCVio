@@ -24,7 +24,7 @@ open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork ReactiveRuntime
   OneTimePad.Reactive OracleComp
 
 attribute [local implicit_reducible] signature Response network effects ports
-  serviceAnswer envAnswer DynSystem.DynComputation.ofFreeM PFunctor.Obj
+  serviceAnswer envAnswer DynSystem.DynComputation.ofFreeM
 
 @[expose] def env : Environment Bool Bool Unit where
   choose := pure (true, ())
@@ -88,8 +88,10 @@ example (memory : Bool) : tokenExperiment (network Bool Bool Bool)
 theorem queued_reachable :
     runFIFO impl [.node false, .node false] (initial (network Bool Bool Unit) ()) =
       pure queued := by
-  simp [runFIFO, fifoStep, activate, impl, implementation, env, initial, network,
-    environmentProgram, serviceProgram, StateT.run, Function.update, queued]
+  apply congrArg (pure (f := ProbComp))
+  congr 1
+  funext id
+  cases id <;> rfl
 
 /-- FIFO consumes the outstanding packet, while token execution leaves it pending. -/
 theorem serialRound_without_empty_queue :

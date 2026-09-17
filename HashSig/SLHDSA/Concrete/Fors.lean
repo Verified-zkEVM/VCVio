@@ -96,7 +96,7 @@ theorem sha2_digestForsAdrs_isOk (set : FipsParameterSet)
     simp [Adrs.Fits]
   have htree : Adrs.Fits 8 parts.forsAdrs.tree = true := by
     simpa using fips_digestTree_fits set parts
-  rw [Sha2Address.ofAdrs, dif_pos hcanonical, dif_pos hlayer, dif_pos htree]
+  rw [Sha2Address.ofAdrs, dite_eq_left hcanonical, dite_eq_left hlayer, dite_eq_left htree]
   rfl
 
 /-- The checked SHA2 boundary accepts every approved FORS secret-derivation address. -/
@@ -109,7 +109,7 @@ theorem sha2_forsSkAdrs_isOk (set : FipsParameterSet) (base : Sha2Address)
     simpa using base.layerFits
   have htree : Adrs.Fits 8 (forsSkAdrs base.value idx.val).tree = true := by
     simpa using base.treeFits
-  rw [Sha2Address.ofAdrs, dif_pos hcanonical, dif_pos hlayer, dif_pos htree]
+  rw [Sha2Address.ofAdrs, dite_eq_left hcanonical, dite_eq_left hlayer, dite_eq_left htree]
   rfl
 
 /-- The checked SHA2 boundary accepts every approved typed FORS node address. -/
@@ -126,7 +126,7 @@ theorem sha2_forsNodeAdrs_isOk (set : FipsParameterSet) (base : Sha2Address)
   have htree :
       Adrs.Fits 8 (forsNodeAdrs base.value pos.height.val pos.globalIndex.val).tree = true := by
     simpa using base.treeFits
-  rw [Sha2Address.ofAdrs, dif_pos hcanonical, dif_pos hlayer, dif_pos htree]
+  rw [Sha2Address.ofAdrs, dite_eq_left hcanonical, dite_eq_left hlayer, dite_eq_left htree]
   rfl
 
 /-- The checked SHA2 boundary accepts FORS root compression from any checked base address. -/
@@ -137,7 +137,7 @@ theorem sha2_forsPkAdrs_isOk (base : Sha2Address) :
     simpa using base.layerFits
   have htree : Adrs.Fits 8 (forsPkAdrs base.value).tree = true := by
     simpa using base.treeFits
-  rw [Sha2Address.ofAdrs, dif_pos hcanonical, dif_pos hlayer, dif_pos htree]
+  rw [Sha2Address.ofAdrs, dite_eq_left hcanonical, dite_eq_left hlayer, dite_eq_left htree]
   rfl
 
 /-- SHAKE's full address serialization is exact for every approved typed FORS secret address. -/

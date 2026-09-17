@@ -8,6 +8,7 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTPRE
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # Source-final-validity SM-DT-PRE
@@ -120,7 +121,7 @@ noncomputable def Experiment [DecidableEq Tweak] [DecidableEq Y] [SampleableType
 /-- The source-final-validity SM-DT-PRE advantage. -/
 noncomputable def Advantage [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | Experiment adv]
+  𝒟[Experiment adv] {true}
 
 variable [DecidableEq Tweak] [SampleableType M']
   {prob : Problem ι PkSeed Tweak M M' Y} {pk : PkSeed} {t : Tweak} {st : State Tweak M'}

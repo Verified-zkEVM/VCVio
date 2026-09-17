@@ -76,11 +76,11 @@ def centeredRepr (x : ZMod q) : ℤ := x.valMinAbs
 
 theorem centeredRepr_of_le {x : ZMod q} (h : (x.val : ℤ) ≤ (q : ℤ) / 2) :
     centeredRepr x = x.val := by
-  rw [centeredRepr, ZMod.valMinAbs_def_pos, if_pos (by omega)]
+  rw [centeredRepr, ZMod.valMinAbs_def_pos, ite_eq_left (by omega)]
 
 theorem centeredRepr_of_gt {x : ZMod q} (h : (q : ℤ) / 2 < (x.val : ℤ)) :
     centeredRepr x = (x.val : ℤ) - q := by
-  rw [centeredRepr, ZMod.valMinAbs_def_pos, if_neg (by omega)]
+  rw [centeredRepr, ZMod.valMinAbs_def_pos, ite_eq_right (by omega)]
 
 /-- The centered representative is always at most `q / 2`. -/
 theorem centeredRepr_upper_bound (x : ZMod q) : centeredRepr x ≤ (q : ℤ) / 2 := by
@@ -267,9 +267,9 @@ private theorem negacyclicConvCoeff_eq_intCast (f g : Fin n → ZMod q) (k : Fin
   intro ij _
   by_cases h1 : (ij.1.val + ij.2.val) % n = k.val
   · by_cases h2 : ij.1.val + ij.2.val < n
-    · simp only [h1, h2, if_true, Int.cast_mul]
+    · simp only [h1, h2, ite_true, Int.cast_mul]
       rw [← centeredRepr_intCast (f ij.1), ← centeredRepr_intCast (g ij.2)]
-    · simp only [h1, h2, if_true, if_false, Int.cast_neg, Int.cast_mul]
+    · simp only [h1, h2, ite_true, ite_false, Int.cast_neg, Int.cast_mul]
       rw [← centeredRepr_intCast (f ij.1), ← centeredRepr_intCast (g ij.2)]
   · simp [h1]
 

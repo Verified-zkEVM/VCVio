@@ -31,7 +31,7 @@ sub-table of the single-session one.
 
 * `slotZeroEmbed_injective` — the embedding is injective, the prerequisite for marginalization
   of a uniform single-session table onto a uniform multiple-session sub-table.
-* `evalSPMF_slotZeroSubTable_uniformSample` — drawing `gS` uniformly and projecting through
+* `evalDist_slotZeroSubTable_uniformSample` — drawing `gS` uniformly and projecting through
   `slotZeroSubTable` yields the uniform distribution on multiple-session tables. This is the
   eager-form coupling lifting the single-session sampler to a multiple-session sub-sampler.
 * `mReaderCellsFinset_image_subset_sReaderCellsFinset` — at any fixed transcript, the
@@ -132,18 +132,6 @@ lemma evalDist_slotZeroSubTable_uniformSample
   exact evalDist_map_table_comp_injective _ _ hSmall hLarge
     (slotZeroEmbed_injective (TagId := TagId) (Nonce := Nonce)
       (sessionsPerTag := sessionsPerTag))
-
-/-- Discrete frontend form of uniform slot-zero restriction. -/
-lemma evalSPMF_slotZeroSubTable_uniformSample
-    [Fintype TagId] [DecidableEq TagId]
-    [Fintype Nonce] [DecidableEq Nonce]
-    [Finite Digest] [Nonempty Digest] [SampleableType Digest] :
-    𝒮[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
-        fun gS => pure (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)] =
-      𝒮[$ᵗ (TagId × Nonce → Digest)] := by
-  let : MeasurableSpace Digest := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_slotZeroSubTable_uniformSample evalDist_uniformSample evalDist_uniformSample
 
 /-! ### Reader-side cell inclusion under the embedding -/
 
@@ -292,27 +280,6 @@ lemma multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed
     rw [slotZeroSubTable_apply, hsid]
   rw [hcell]
 
-omit [DecidableEq Nonce] in
-/-- **Tag-step first-session pointwise equality, distribution form.** The distribution-level
-restatement of the pointwise equality: under `s.sessionsUsed tag = 0`, the two eager-table tag
-handlers — run on the sub-table `slotZeroSubTable gS` (multiple side) and on the full table `gS`
-(single side) — produce the same output distribution at every fixed `gS`.
-
-This is the per-sample identical-until-bad bind primitive: in a bind chain
-`($ᵗ gS) >>= fun gS => multipleTableHandler ... tag s >>= continuation`, the multiple-side bind
-is interchangeable with the single-side bind whenever the queried tag has no prior sessions. -/
-lemma evalSPMF_multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
-    (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest)
-    (tag : TagId) (s : UnlinkState TagId)
-    (hzero : s.sessionsUsed tag = 0) :
-    𝒮[multipleTableHandler (sessionsPerTag := sessionsPerTag)
-        (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inl tag) s] =
-      𝒮[singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
-          (Sum.inl tag) s] :=
-  congrArg evalSPMF
-    (multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
-      gS tag s hzero)
-
 end TagCoupling
 
 /-! ### Reader-step eager-table coupling primitives
@@ -379,7 +346,7 @@ end ReaderStepCoupling
 
 /-! ### Composition
 
-The pieces above — the eager-table sub-sampler `evalSPMF_slotZeroSubTable_uniformSample`, the
+The pieces above — the eager-table sub-sampler `evalDist_slotZeroSubTable_uniformSample`, the
 deterministic reader lift `mReader_accepts_imp_sReader_accepts`, and the tag-step first-session
 equality `multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero` — are
 composed in `DirectCoupling/Compose.lean` by the eager-form induction

@@ -452,7 +452,7 @@ theorem findXmssWitness_eq_wots_of_leaf (prims : Primitives p) [DecidableEq prim
     findXmssWitness prims idx sig msg msg' sk pk adrs =
       (findWotsWitness prims sig.wots msg (wotsSign prims msg' sk pk (wotsLeafAdrs adrs idx)) msg'
         pk (wotsLeafAdrs adrs idx)).map .wots := by
-  rw [findXmssWitness]; simp only [hleaf, if_pos]
+  rw [findXmssWitness]; simp only [hleaf, ite_eq_left]
 
 /-- The extractor takes its Merkle branch exactly when the recovered leaf differs from the honest
 one. -/
@@ -465,7 +465,7 @@ theorem findXmssWitness_eq_node_of_leaf_ne (prims : Primitives p) [DecidableEq p
       (PerfectMerkleTree.findCollision (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs)
         idx (wotsPkFromSig prims sig.wots msg pk (wotsLeafAdrs adrs idx))
         sig.auth.toList).map fun w => .hCollision w.1 w.2.2 := by
-  rw [findXmssWitness]; simp only [hleaf, if_false]
+  rw [findXmssWitness]; simp only [hleaf, ite_false]
 
 /-- **Extractor soundness on the WOTS+ branch, without the root.**  When the recovered leaf is the
 honest one — the test `findXmssWitness` performs itself — whatever the extractor returns satisfies

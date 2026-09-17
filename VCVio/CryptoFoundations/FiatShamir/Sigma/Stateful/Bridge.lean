@@ -177,25 +177,18 @@ def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
 
 /-- The Fiat-Shamir runtime-with-cache semantics is the explicit cache-state
 implementation `fsBaseImpl`, observed from the chosen initial cache. -/
-lemma runtimeWithCache_evalSPMF_eq_fsBaseImpl
+lemma runtimeWithCache_evalDist_eq_fsBaseImpl
     (cache : (M × Commit →ₒ Chal).QueryCache)
-    {α : Type}
+    {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
-    (_root_.FiatShamir.runtimeWithCache M cache).evalSPMF oa =
-      𝒮[(simulateQ
+    (_root_.FiatShamir.runtimeWithCache M cache).evalDist oa =
+      𝒟[(simulateQ
         (fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal)) oa).run'
         cache] := by
-  unfold _root_.FiatShamir.runtimeWithCache ProbCompRuntime.evalSPMF
-    SPMFSemantics.evalSPMF SemanticsVia.denote fsBaseImpl
-    SPMFSemantics.withStateOracle unifFwdImpl simulateQ' evalSPMF
-  have hbase :
-      (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)
-        = (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := by
-    simp [HasQuery.toQueryImpl, funext_iff]
-  rw [hbase]
-  grind
+  rw [_root_.FiatShamir.runtimeWithCache_evalDist]
+  unfold fsBaseImpl
+  congr
+  exact Subsingleton.elim _ _
 
 /-! ## Fixed-key post-keygen probability normal form -/
 

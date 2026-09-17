@@ -131,7 +131,7 @@ theorem authPath_succ (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y →
   simp only [SkeletonLeafIndex.ofNat]
   rw [tree_succ]
   by_cases h : idx / 2 ^ z % 2 = 0
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     have hdm := Nat.div_add_mod (idx / 2 ^ z) 2
     have hdiv : idx / 2 ^ (z + 1) = idx / 2 ^ z / 2 := by
       rw [Nat.pow_succ, Nat.div_div_eq_div_mul]
@@ -139,9 +139,9 @@ theorem authPath_succ (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y →
     simp only [generateProof, List.Vector.toList_cons, List.reverse_cons,
       FullData.leftSubtree, FullData.rightSubtree, FullData.getRootValue]
     rw [heven]
-    rw [if_pos h]
+    rw [ite_eq_left h]
     rfl
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     have hdm := Nat.div_add_mod (idx / 2 ^ z) 2
     have hmod : idx / 2 ^ z % 2 = 1 := by omega
     have hdiv : idx / 2 ^ (z + 1) = idx / 2 ^ z / 2 := by
@@ -153,7 +153,7 @@ theorem authPath_succ (leaf : ℕ → Y) (nodeHash : ℕ → ℕ → Y → Y →
     simp only [generateProof, List.Vector.toList_cons, List.reverse_cons,
       FullData.leftSubtree, FullData.rightSubtree, FullData.getRootValue]
     rw [hodd]
-    rw [if_neg h]
+    rw [ite_eq_right h]
     unfold merkleRoot
     unfold FullData.getRootValue
     rw [hleft]

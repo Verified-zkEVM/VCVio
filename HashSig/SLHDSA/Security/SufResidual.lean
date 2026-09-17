@@ -262,7 +262,7 @@ theorem mem_loggedSignatures
   constructor
   · rintro ⟨⟨t, s⟩, hmem, he⟩
     rcases eq_or_ne t msg with rfl | h
-    · simp only [if_pos, Option.some.injEq] at he
+    · simp only [ite_eq_left, Option.some.injEq] at he
       exact he ▸ hmem
     · simp [h] at he
   · exact fun h => ⟨⟨msg, sig⟩, h, by simp⟩

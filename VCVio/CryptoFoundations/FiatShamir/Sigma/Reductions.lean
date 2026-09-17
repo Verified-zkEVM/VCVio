@@ -292,9 +292,9 @@ private theorem perPk_extraction_bound
         forkSupportInvariant σ M qH pk x₁ log₁ ∧
         forkSupportInvariant σ M qH pk x₂ log₂
   swap
-  · rw [if_neg hE]
+  · rw [ite_eq_right hE]
     exact zero_le
-  rw [if_pos hE]
+  rw [ite_eq_left hE]
   by_cases hsupp : r ∈ support (contextFork wrappedMain qb (Sum.inr ()) cf)
   swap
   · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]
@@ -311,7 +311,8 @@ private theorem perPk_extraction_bound
   have hbranch : branchFn r = liftComp (σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2)
       (unifSpec + chalSpec) := by
     rw [hbranchFn_def, hreq]
-    simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂, dif_pos hc_eq, dif_pos hω_ne]
+    simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂, dite_eq_left hc_eq,
+      dite_eq_left hω_ne]
   rw [hbranch, probEvent_liftComp]
   -- The extractor returns a valid witness with probability one (special soundness).
   rw [show Pr[fun w : Wit => rel pk w = true |
@@ -381,7 +382,9 @@ theorem nma_to_hard_relation_bound
           (σ := σ) (hr := hr) (M := M) nmaAdv qH pk)).trans
       (perPk_extraction_bound σ hr M nmaAdv qH hss hss_nf pk)
   rw [hAdv_eq_tsum, hRHS_eq_tsum]
-  exact OracleComp.EvalDist.marginalized_jensen_forking_bound (mx := hr.gen)
+  simpa only [DiscreteEvalDistCompatible.lintegral_evalDist _ (g := fun a ↦ a) measurable_id,
+    ← OracleComp.EvalDist.expectedValue_def, OracleComp.EvalDist.expectedValue_map] using
+    OracleComp.EvalDist.marginalized_jensen_forking_bound_map (mx := hr.gen)
     (acc := fun pkw => acc pkw.1)
     (B := fun pkw => Pr[ fun w : Wit => rel pkw.1 w = true |
       nmaReduction σ hr M nmaAdv qH pkw.1])

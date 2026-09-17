@@ -5,97 +5,32 @@ Authors: Quang Dao
 -/
 module
 
-public import Loom.WP.Basic
+public import PolyFun.Control.Monad.Algebra.WP
+
+/-!
+# Relational weakest preconditions
+
+`VCVio.ProgramLogic.RelWP` interprets pairs of monadic programs in an assertion lattice,
+with independent exception postconditions for each side. It uses core's assertion and
+exception interfaces. Coupling semantics needs an asymmetric bind inequality, so it is
+specified separately from the unary `Std.Internal.Do.WPMonad` class.
+
+The interface provides consequence, pure, and bind rules and coherence with unary WP
+when one side is pure. Oracle-specific interpretations live in
+`VCVio/ProgramLogic/Relational/WP/`.
+
+The design follows Maillard et al., *The Next 700 Relational Program Logics* (POPL 2020),
+and Avanzini, Barthe, Grégoire, Davoli, *eRHL* (POPL 2025). Its unary predecessor was
+Loom2 (`verse-lab/loom2`).
+-/
 
 @[expose] public section
 
-/-!
-# Relational Weakest Precondition Interpretation (Loom2-style)
-
-This module defines the relational analogue of Loom2's `Std.Do'.WP`: a
-typeclass `Std.Do'.RelWP m₁ m₂ Pred EPred₁ EPred₂` that interprets a
-*pair* of monadic programs `(x : m₁ α, y : m₂ β)` as a predicate
-transformer
-
-```
-rwp x y : (α → β → Pred) → EPred₁ → EPred₂ → Pred
-```
-
-against an assertion language `Pred` and *two* per-side exception
-postcondition lattices `EPred₁`, `EPred₂` (asymmetric on purpose, see
-"Asymmetric `EPred`" below).
-
-This is the underlying class for the new relational program logic in
-`VCVio/ProgramLogic/Relational/Loom/`. Its three carrier instances on
-`OracleComp` (Quantitative `ℝ≥0∞` / Probabilistic `Prob` / Qualitative
-`Prop`) are registered there. They wrap, respectively, the existing
-`eRelWP` (`VCVio/ProgramLogic/Relational/QuantitativeDefs.lean`),
-clamped-to-`Prob`, and `CouplingPost`
-(`VCVio/ProgramLogic/Relational/Basic.lean`) developments unchanged.
-
-## Why an inline function shape (no `RelPredTrans` wrapper)?
-
-Loom2's unary `WP m Pred EPred` is stated against a `PredTrans Pred
-EPred α := (α → Pred) → EPred → Pred` wrapper that carries its own
-`Monad` / `MonadStateOf` / `MonadExceptOf` instances, threading
-postconditions through monadic combinators. The relational analogue
-would be `RelPredTrans Pred EPred₁ EPred₂ α β := (α → β → Pred) →
-EPred₁ → EPred₂ → Pred`, but the natural `Monad` shape on
-`RelPredTrans` is *not* the obvious one: relational `bind` is
-asymmetric, and the monad laws of `PredTrans` already encode the
-sequential structure that the relational logic deliberately avoids
-fixing (it wants room for the `bind_le` direction to be a *strict*
-inequality, as it is for the coupling-based `OracleComp` instance).
-
-We therefore inline the function shape directly. If a `Monad`
-structure on `RelPredTrans` ever earns its keep (e.g. for a SymM-style
-tactic interpretation), it can be promoted in a follow-up without
-breaking any client code.
-
-## Asymmetric `EPred`
-
-The class takes two per-side exception assertion types `EPred₁` and
-`EPred₂`, not a single joint `EPred`. This is intentional:
-
-* **Honest for asymmetric monad transformers.** A relational instance
-  for `(StateT σ m₁) ↔ (ExceptT ε m₂)` only typechecks if the two
-  exception slots are independent.
-* **Aligns with `Anchored` coherence.** When one side is `pure`, the
-  relational `rwp` collapses to the *unary* `wp` of the other side,
-  which carries its own `EPred`. A joint slot would force spurious
-  fusion of the two per-side `EPred`s.
-* **No-exception specialisation is no harder.** All three
-  `OracleComp`-relational carriers in
-  `VCVio/ProgramLogic/Relational/Loom/` specialise both `EPred` slots
-  to `EPost.nil`; the asymmetric machinery never gets in the way for
-  the no-exception case but is there when needed.
-
-## Layout
-
-* `RelWP m₁ m₂ Pred EPred₁ EPred₂` — the class itself.
-* `rwp x y post epost₁ epost₂` — the user-facing wrapper around
-  `RelWP.rwpTrans`.
-* `RelTriple pre x y post epost₁ epost₂ : Prop` — the relational
-  Hoare-style triple, defined as `pre ⊑ rwp x y post epost₁ epost₂`.
-* Derived consequence / monotonicity / bind lemmas mirroring loom2's
-  `WP.{wp_pure, wp_bind, wp_consequence, wp_econs, …}`.
-
-## Attribution
-
-* Loom2 (`verse-lab/loom2`): the unary `Std.Do'.WP` class this mirrors.
-  Pinned at `quangvdao/loom2#v4.29.0` @ `589fbd5`.
-* Maillard et al., *The Next 700 Relational Program Logics*, POPL 2020:
-  the asynchronous bind shape and the `Anchored` coherence pattern.
-* Avanzini, Barthe, Grégoire, Davoli, *eRHL*, POPL 2025: the
-  quantitative relational logic that the default `ℝ≥0∞` carrier
-  realises.
--/
-
 universe u v₁ v₂ w w₁ w₂
 
-open Lean.Order Std.Do'
+open Lean.Order Std.Internal.Do
 
-namespace Std.Do'
+namespace VCVio.ProgramLogic
 
 /-!
 ## RelWP Typeclass
@@ -200,9 +135,9 @@ variable {α β γ δ : Type u}
 ## Derived Lemmas
 
 One-directional consequences of the `RelWP` axioms for `pure`, `bind`,
-monotonicity, and weakening, mirroring `Std.Do'.WP.{wp_pure, wp_bind,
+monotonicity, and weakening, mirroring `Std.Internal.Do.WP.{wp_pure, wp_bind,
 wp_consequence, wp_econs, …}` in
-`Loom.WP.Basic`.
+`Std.Internal.Do.WP`.
 -/
 
 /-- Pure rule: the joint postcondition at `(a, b)` is below the
@@ -370,4 +305,4 @@ theorem relTriple_bind_right {pre : Pred} {x : m₁ α} {y : m₂ β} {g : β �
     PartialOrder.rel_trans hxy (RelWP.rwp_consequence x y _ _ epost₁ epost₂ hg)
   exact PartialOrder.rel_trans hcut (RelWP.rwp_bind_right_le x y g post epost₁ epost₂)
 
-end Std.Do'
+end VCVio.ProgramLogic

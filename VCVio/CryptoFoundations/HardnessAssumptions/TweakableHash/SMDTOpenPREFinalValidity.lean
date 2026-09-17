@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 
@@ -159,7 +160,7 @@ noncomputable def Experiment [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
 noncomputable def Advantage [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
     {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | Experiment adv]
+  𝒟[Experiment adv] {true}
 
 /-! ## Run-level final-validity correspondence -/
 
