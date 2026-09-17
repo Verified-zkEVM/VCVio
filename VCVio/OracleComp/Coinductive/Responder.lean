@@ -18,7 +18,7 @@ coalgebra: a measurable state space together with, for each query, a *joint*
 subprobability kernel over the answer and the next state. It is a Mealy machine in the
 Kleisli category of subprobability kernels. An optional coherent executable
 presentation as a stateful handler `QueryImpl spec (StateT State SPMF)` remains
-available through `ProbResponder.IsExecutable`, `ProbResponder.answer`, and
+available through `ProbResponder.IsExecutable`, `ProbResponder.IsExecutable.answerSPMF`, and
 `ProbResponder.toQueryImpl`.
 
 Wiring a responder against an adversary `OracleStrategy` is not a hand-rolled
@@ -145,14 +145,6 @@ theorem IsExecutable.answerSPMF_unique (R : ProbResponder spec)
   apply SPMF.toMeasure_injective
   rw [← E₁.answerKernel_eq_toMeasure s t, ← E₂.answerKernel_eq_toMeasure s t]
 
-/-- Read a kernel responder through its coherent executable `SPMF` realization.
-Kernel-valued consumers should use `answerKernel` directly. -/
-@[deprecated "Use `answerKernel` for kernel semantics; this is the executable SPMF bridge."
-  (since := "2026-08-26")]
-noncomputable def answer (R : ProbResponder spec) [R.IsExecutable]
-    (s : R.State) (t : spec.Domain) : SPMF (spec.Range t × R.State) :=
-  IsExecutable.answerSPMF s t
-
 /-- Build a kernel responder from an executable SPMF-valued stateful handler. The
 constructor equips the state and answers with local discrete measurable structures;
 it does not install blanket measurable-space instances on the underlying types. -/
@@ -278,15 +270,6 @@ noncomputable instance pullback.instIsExecutable {ι' : Type u}
     rw [Kernel.map_apply _ (measurable_pullback_answerMap w R t) s]
     rw [IsExecutable.answerKernel_eq_toMeasure]
     exact (SPMF.toMeasure_map _ _ (measurable_pullback_answerMap w R t)).symm
-
-/-- Compatibility alias for the former executable-only pullback constructor. -/
-@[deprecated pullback (since := "2026-08-27"), reducible]
-noncomputable def pullbackSPMF {ι' : Type u}
-    {spec' : OracleSpec.{u, u} ι'}
-    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
-    [R.IsExecutable] :
-    ProbResponder spec :=
-  pullback w R
 
 /-- The executable pulled-back responder's handler translates each query forward and
 maps the target responder's answer back through the lens. -/
@@ -593,7 +576,7 @@ responder/challenger state first. -/
 
 /-- Wiring against a deterministic responder is the (Dirac lift of the) upstream closed
 game `PFunctor.DynSystem.closedGame`. -/
-@[simp] theorem stepAgainst_ofDet (A : OracleStrategy S spec) {σ : Type u}
+theorem stepAgainst_ofDet (A : OracleStrategy S spec) {σ : Type u}
     (C : PFunctor.Responder σ spec.toPFunctor) (p : σ × S) :
     stepAgainst A (.ofDet C) p = pure ((PFunctor.DynSystem.closedGame C A).step p) := by
   obtain ⟨r, s⟩ := p
@@ -607,7 +590,7 @@ setup-indexed family form of the upstream `PFunctor.DynSystem.stepWith_lift` /
 `iterWith_lift` collapses (the family handler is state-dependent, so it is not literally
 a `StateT.lift`; the same induction applies). -/
 
-@[simp] theorem stepAgainst_ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec)
+theorem stepAgainst_ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec)
     (A : OracleStrategy S spec) (p : Γ × S) :
     stepAgainst A (ProbResponder.ofHandlerFamily h) p =
       (fun s' => (p.1, s')) <$> kleisliStep (h p.1) A p.2 := by
@@ -640,14 +623,14 @@ a `StateT.lift`; the same induction applies). -/
           simp only [map_eq_bind_pure_comp, bind_assoc]
 
 /-- Against a memoryless oracle the wired step is the memoryless Kleisli step. -/
-@[simp] theorem stepAgainst_ofHandler (H : ProbHandler spec) (A : OracleStrategy S spec)
+theorem stepAgainst_ofHandler (H : ProbHandler spec) (A : OracleStrategy S spec)
     (p : PUnit × S) :
     stepAgainst A (ProbResponder.ofHandler H) p =
       (fun s' => (p.1, s')) <$> kleisliStep H A p.2 :=
   stepAgainst_ofHandlerFamily (fun _ => H) A p
 
 /-- Against a memoryless oracle the wired run is the memoryless Kleisli run. -/
-@[simp] theorem iterateAgainst_ofHandler (H : ProbHandler spec) (A : OracleStrategy S spec)
+theorem iterateAgainst_ofHandler (H : ProbHandler spec) (A : OracleStrategy S spec)
     (n : ℕ) (p : PUnit × S) :
     iterateAgainst A (ProbResponder.ofHandler H) n p =
       (fun s' => (p.1, s')) <$> kleisliIterate H A n p.2 :=

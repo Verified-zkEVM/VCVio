@@ -43,7 +43,7 @@ the abstract one (`Falcon.Concrete.FPRBridge.concrete_verify_eq_verify`) needs f
 - Falcon specification v1.2, Section 3.12 (Algorithms 17–18)
 -/
 
-@[expose] public section
+public section
 
 
 namespace Falcon.Concrete

@@ -9,25 +9,59 @@ Mathlib measures for closed denotations, kernels for environment/state-indexed c
 effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
 surface. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
-The primary notation is now measure-valued: `𝒟[mx] : Measure α`. The former finite distribution
-API is explicit as `evalSPMF mx` / `𝒮[mx]`. `Pr[...]` remains the discrete compatibility façade;
-theorems `probOutput_eq_evalSPMF_toMeasure`, `probEvent_eq_evalSPMF_toMeasure`, and
-`probFailure_eq_evalSPMF_toMeasure` state its meaning through the explicit compatibility measure.
-Direct `FreeM` measure semantics has corresponding `FreeM.evalDist_apply_singleton` and
-`FreeM.evalDist_apply_setOf` coherence lemmas. This split is intentional. An unconditional
-`Eq.rec` law for `Pr[...]` only needs equality of result types in the discrete façade, whereas a
-measure denotation also depends on the selected `MeasurableSpace`; type equality does not identify
-those structures. We therefore do not install a blanket finite-type measurable-space instance.
+The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
+live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
+`VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
+`VCVio.EvalDist.Monad.Measure` provides `evalDist_bind_bind_swap` for jointly measurable
+continuations and `evalDist_bind_bind_bind_rotate` for discrete intermediate results. Their
+measure-level proofs use Tonelli's theorem and preserve subprobability mass.
 
-`evalDist_eq_evalSPMF_toMeasure` is the sole deprecated whole-denotation bridge. It applies to the
-canonical compatibility adapter; measure-native semantics should remain on `𝒟[…]` instead of
-round-tripping through the finite backend.
+`VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
+and injective restriction laws with explicit uniform-measure hypotheses. Its native counting
+proofs live in `ToMathlib.MeasureTheory.Measure.UniformTable`. The continuation may lose mass.
+`VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
+induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
+composed-handler, and shared-observation proofs. `SampleableType.MeasureCompatibility`
+calibrates the existing sampler at the compatibility boundary; native proofs take that
+calibration as an explicit hypothesis.
+
+The finite distribution API is
+explicit as `evalSPMF mx` / `𝒮[mx]`, and `Pr[...]` remains the discrete compatibility façade. One
+class connects the two: `DiscreteEvalDistCompatible m` says that integrating a measurable
+functional against `𝒟[mx]` is the façade expectation `∑' x, Pr[= x | mx] * g x`. Everything else
+is derived from it, in the simp direction, so measure-side goals reduce *into* the façade:
+`evalDist_apply_singleton` (`𝒟[mx] {x} = Pr[= x | mx]`), `evalDist_apply_setOf`
+(`𝒟[mx] {x | p x} = Pr[p | mx]` on a discrete space), `evalDist_apply_univ`
+(`𝒟[mx] univ = 1 - Pr[⊥ | mx]`), and `lintegral_evalDist` (`∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g`).
+The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
+whenever its measure specification agrees with its probability specification
+(`PFunctor.IsMeasureSpec.Compatible`, which `IsProbabilitySpec.toMeasureSpec` satisfies by `rfl`).
+The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
+only needs equality of result types, whereas a measure denotation also depends on the selected
+`MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
+
+The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so
+the Giry laws `evalDist_pure`, `evalDist_bind`, `evalDist_map` and the const laws hold with no
+measure specification in scope; `evalDist_eq_evalSPMF_toMeasure` is its definitional unfolding.
+`evalDist_bind`/`evalDist_map` are deliberately not `@[simp]` on either side: a bind is expanded
+only on request (`gotchas.md` §10), and the measure side has no separate family of sum lemmas.
+Independent products denote product measures: `evalDist_mOfFn` and `evalDist_mPi`
+(`VCVio/EvalDist/IndepProductMeasure.lean`) identify `𝒟[Fintype.mPi f]` with
+`Measure.pi fun i => 𝒟[f i]`, through `Measure.pi_eq` and the coordinatewise event product;
+`evalDist_map_eval_mPi` reads one coordinate back off the product through Mathlib's
+`Measure.pi_map_eval` when the other factors never fail.
+
+Failure on the measure side is missing mass, recorded in `VCVio/EvalDist/FailureMeasure.lean`:
+`Pr[⊥ | mx] = 1 - 𝒟[mx] univ`, `IsProbabilityMeasure 𝒟[mx] ↔ Pr[⊥ | mx] = 0` (an instance under
+`NeverFail mx`), `𝒟[failure] = 0`, the failure-completed `(𝒟[mx]).withFailure : Measure (Option α)`
+with `{none}` mass `Pr[⊥ | mx]`, the success mass of `bind`/`map` in `expectedValue` form, and
+`OptionT.evalDist_eq_dropNone` (an `OptionT` computation denotes the `dropNone` of its run).
 
 ## Core Definitions
 
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
-| `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure.lean` |
+| `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure/Core.lean` |
 | `evalSPMF mx` | `SPMF α` | `𝒮[mx]` | `EvalDist/Defs/Basic.lean` |
 | `probOutput mx x` | `ℝ≥0∞` | `Pr[= x \| mx]` | `EvalDist/Defs/Basic.lean` |
 | `probEvent mx p` | `ℝ≥0∞` | `Pr[p \| mx]` | `EvalDist/Defs/Basic.lean` |
@@ -57,12 +91,11 @@ available without restating a finiteness bound. A lossless family should additio
 `IsMarkovKernel` instance or theorem.
 
 `ProbabilitySemantics` is the total/lossless semantics bundle used by transformer adapters.
-`MeasureSemantics` is a deprecated compatibility alias. The lower-level `MeasureSemanticsVia`
-continues to describe potentially lossy surface semantics.
+The lower-level `MeasureSemanticsVia` continues to describe potentially lossy surface semantics.
 
 For `ProbResponder`, the kernel is authoritative. `ProbResponder.IsExecutable` optionally carries
-a coherent SPMF realization for machine execution; the deprecated `ProbResponder.answer` is just
-that bridge. Executable state and answer spaces must have measurable singletons, so equality with
+a coherent realization `ProbResponder.IsExecutable.answerSPMF` for machine execution.
+Executable state and answer spaces must have measurable singletons, so equality with
 the authoritative kernel determines every executable point mass and therefore the entire SPMF.
 Pullback along an interface lens preserves executability only when the transported answer space
 also has measurable singletons. This separate capability is important: abstract cryptographic
@@ -324,9 +357,12 @@ the `withBadFlag`/`withBadUpdate`/`flattenStateT` run-shapes, `simulateQ_option_
 `VCVioTest/ProbabilityTactics.lean` is the living benchmark and **gate** for all of this: a broad
 corpus of probability / event / failure / support / distribution facts organised by category, each
 closed by a single *terminal* tactic. Where a fact closes by **both** `simp` and `grind`, both are
-kept (the mirror), so each tactic stays exercised on that shape; where only one closes, the gap is a
-`target(simp)` / `target(grind)` note. A regression in either tactic surfaces there in isolation.
-When adding probability automation, add the corresponding battery rows.
+kept (the mirror), so each tactic stays exercised on that shape; where only one closes, the entry
+is a *gap pair* (`fail_if_success (tac; done)` then the working closer, with a dated
+`gap(tac, …)` reason), so the gap is machine-checked and expires the moment the set improves. A
+regression in either tactic surfaces there in isolation. When adding probability automation, add
+the corresponding battery rows and retire the guards it makes obsolete. The rules are in
+*Normal forms and the tactic contract* below.
 
 `VCVioTest/MonadProbability.lean` is the **generic-`m`** companion: the same gate over an abstract
 monad `m` with the EvalDist instance stack (`[LawfulMonadLiftT m SPMF]`, …) and over the concrete
@@ -345,6 +381,117 @@ disable a rule per call (`grind [-bind_pure]`), ignore the default set entirely
 (`grind only [the, lemmas, you, want]`), or unset a tag for a whole file
 (`attribute [-grind] bind_pure`). `grind?` reports a minimal `grind only [...]` call for a goal it
 closes, which is the easiest way to make a fragile call site independent of the default set.
+
+## Normal forms and the tactic contract
+
+### Registered interfaces
+
+Use the tactic that matches the mathematical obligation:
+
+| Obligation | Interface |
+|---|---|
+| Ordered expectations or postconditions | `gcongr with x hx` on `expectedValue` or `OracleComp.ProgramLogic.wp` exposes support membership. |
+| An expectation of a mapped computation | `simp` precomposes the payoff using `expectedValue_map`, retaining the expectation head. |
+| Directed replacement inside a probability bound | Import `Mathlib.Tactic.GRewrite`; use `grw [h]` for inequalities and `apply_rw [h]` for event implications. A support-restricted rewrite theorem can leave membership as a side goal. |
+| Measure bind ordered in its continuation | `Measure.bind_mono_right_of_forall` supports `gcongr` and `grw`, with explicit `AEMeasurable` side conditions. Use `Measure.bind_mono_right` directly for an almost-everywhere bound. |
+| A finite expectation on a finite result type | `finiteness` uses `expectedValue_ne_top_of_finite` / `wp_ne_top_of_finite` and asks for finite functional values. |
+| A supplied finite bound on an arbitrary result type | Apply `expectedValue_ne_top_of_le mx hc h`; the bound remains explicit. |
+| Nonnegative total variation arithmetic | Import `VCVio.EvalDist.TVDist.Positivity` and use `positivity`; this also arrives through `VCVio.ProgramLogic.Tactics`. |
+| Measurability through optional or exception-valued maps | `fun_prop` uses `Option.measurable_map`, `Except.measurable_map`, and `Option.measurable_elim'` on arbitrary measurable spaces. |
+
+For a local abbreviation hiding a probability, use a targeted `change` or `dsimp only` before
+`finiteness`. For named definitions, `finiteness (add unfold [name])` is also available.
+`finiteness [proof]` supplies an explicit finiteness fact. The tactic does not infer finiteness
+of an expectation over an infinite result type merely from pointwise finiteness of its functional.
+
+The registrations and their failure boundaries are exercised in `VCVioTest/Tactic/` and
+`VCVioTest/ProgramLogic/GCongr.lean`. The expression-specific `fun_prop` rules avoid globally
+registering eliminator theorems whose conclusion is the unrestricted `Measurable f`.
+
+For a sum of `wp` bounds, rewrite with `wp_eq_expectedValue` and
+`← expectedValue_finsetSum`, then apply `expectedValue_le_of_support`. This avoids expanding
+probability sums and proving the zero-mass cases separately. To keep a whole sum as the next
+congruence obligation, use `gcongr (OracleComp.ProgramLogic.wp _ (fun _ => ?_)) with x`.
+
+See the [generalized-relation investigation](../reading/generalized-relation-automation.md) for
+tested rewrite directions, theorem-shape requirements, and the distinction between `gcongr`
+and `grw` registrations. Measure-bind rewriting requires importing
+`ToMathlib.MeasureTheory.Measure.Monotone`; pointwise order does not discharge measurability.
+
+### Normalization discipline
+
+The simp, grind and `gcongr` sets of the probability layer are designed around one *normal-form
+ladder*: one canonical spelling per rung, mass-left throughout, each rung reached from the one
+above it by an existing pathway rather than by a per-rung twin lemma.
+
+| rung | form | reached by |
+|---|---|---|
+| 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`probOutput_pure/query/uniformSample/guard/ite`, `probOutput_bind_const`, `probOutput_map_equiv`) |
+| 1 finite sum | `∑ x, Pr[= x \| mx] * g x` | `simp` from rung 2 through Mathlib's `@[simp] tsum_fintype`; `Finset.sum_boole`/`sum_ite_eq` finish |
+| 2 tsum | `∑' x, Pr[= x \| mx] * g x`, which is `expectedValue mx g` | `grind` (bind expansion, `probOutput_bind_eq_tsum` is `@[grind =]`); `rw [probOutput_bind_eq_tsum, ← expectedValue_def]` exposes the expectation head |
+| 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | countable discrete compatibility measures admit the expectation bridge below; measure-native proofs can keep this form for Mathlib's integration API |
+
+Mass-left is canonical: it is the orientation of Mathlib's `PMF.bind_apply`,
+`PMF.toMeasure_bind_apply` and Bochner `integral_fintype`, of `expectedValue`, and of every
+bind lemma in this library. Mathlib's `lintegral_countable'`/`lintegral_fintype` are mass-right;
+they meet this library exactly once, inside the proof of the measure-to-façade bridge, never as a
+normal form.
+
+**What each tactic promises.**
+
+- `simp` is the *structural* normalizer: it reaches a closed form when one exists, applies the
+  monad laws, and collapses `∑'` to `∑` on a `Fintype`. It never expands a bind into a `tsum`
+  (`gotchas.md` §10); `simp [probOutput_bind_eq_tsum]` is the documented one-step to the sum,
+  and on a `Fintype` that call lands on rung 1 with no library lemma involved.
+- `grind` is the *symbolic* closer after bind expansion: equiprobability, membership, directed
+  iffs, `bind`/`pure`-normalised structure. It is not an `ℝ≥0∞`/`Fintype.card` arithmetic engine
+  and must keep failing fast on the `Pr[…] = 0/1 ↔ …` characterization family
+  (`VCVioTest/GrindFailFast.lean`).
+- `gcongr` and `finiteness` are the *bound* closers, with `expectedValue` as the head symbol for
+  rung 2. Rewrite a bind with `probOutput_bind_eq_tsum` and fold the sum with
+  `← expectedValue_def` to expose that head. `expectedValue` is a `def` that `simp` does not
+  unfold; its untagged `expectedValue_def` equation can be supplied explicitly to `rw` or `grind`.
+- The measure side uses `𝒟[…]`, with `evalDist_pure` and `evalDist_bind` under
+  `LawfulEvalDistSemantics`; bind also requires a measurable continuation. For `FreeM`,
+  `PFunctor.IsMeasureSpec.Compatible` records agreement between the measure and probability
+  query specifications. Under `DiscreteEvalDistCompatible`, the generic `evalDist_apply` connects
+  measurable events to `Pr[...]`; `evalDist_apply_singleton` and `evalDist_apply_setOf` are its
+  singleton-measurable and discrete-space specializations. On a discrete result space,
+  `OracleComp.EvalDist.lintegral_evalDist` rewrites an integral against `𝒟[mx]` to
+  `expectedValue mx g`, with no separate countability hypothesis. These are explicit coherence
+  boundaries; measure-native proofs without discrete compatibility keep their measure denotation.
+
+**What the gates enforce.** The gate files (`VCVioTest/ProbabilityTactics.lean`,
+`MonadProbability.lean`, `GrindFailFast.lean`, `Tactic/*.lean`, `EvalDist/*.lean`) state
+"goal family → one terminal tactic" and are the gate for every change to these sets:
+
+1. *One terminal call.* A positive entry is `by <one tactic>` or a term: `simp`, `grind`,
+   `gcongr`, `finiteness`, `simp [S]`, or `simp only [S]`.
+2. *Known gaps are machine-checked and self-expiring.* A gap is a pair: `fail_if_success
+   (tac; done)` on its own line, then the working closer, with a dated `gap(tac, date): reason`
+   comment. The guard errors as soon as the set improves, so the PR that closes a gap retires
+   the guard in the same diff. One guard covers a family of same-shaped entries when the family
+   is named in the section note. (`fail_if_success` takes a tactic sequence, so the closer must be
+   on its own line; bare `fail_if_success simp` passes only when `simp` makes *no progress*,
+   hence the `(tac; done)` form for partial-progress gaps. Explicit no-progress checks keep
+   bare `fail_if_success simp` to avoid an unreachable `done`. Bare `fail_if_success grind`
+   already tests closure.)
+3. *No multi-call scripts.* A `;`/multi-line script is allowed only as the closer of a gap pair.
+   A one-call entry that stops closing is fixed in the set or filed as a dated gap pair, never by
+   adding a second call.
+4. *Normalizers pin their normal form.* For a normalizer such as `simp only [monad_norm]` or
+   `handler_step`, follow the normalizing call with `guard_target =ₛ <expected form>` and then
+   a closer.
+5. *Negatives for every deliberate exclusion*: whatever these docs say is "deliberately not in
+   the default set" has a `fail_if_success` entry.
+6. *Fail fast stays fail fast*: a saturating `grind` is a deterministic timeout under the default
+   heartbeat limit, which escapes `fail_if_success` and fails the build; gate files never raise
+   the limit.
+
+Warnings in `VCVioTest` fail CI, so a stale entry (an unused tactic, a redundant `grind`
+parameter, a deprecated name) cannot linger. A PR that touches a simp/grind/`gcongr` set says
+which rung its lemmas target, which gate entries it adds and which guards it retires, and which
+library proofs got shorter; a set with no library caller is itself a finding.
 
 ## Common Mistakes
 

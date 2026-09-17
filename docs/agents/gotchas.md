@@ -21,6 +21,8 @@ and do not add `set_option autoImplicit false` in individual files.
 
 `evalSPMF` is `simulateQ` with `m = PMF` and the `IsProbabilitySpec.toPMF` query implementation. Under `[IsUniformSpec spec]`, those query distributions are propositionally the uniform distributions. The `evalSPMF_eq_simulateQ` identity is definitional (`rfl`). The primary `evalDist` is the successful-output measure façade; on discrete free programs it agrees with the direct `FreeM.denote` fold.
 
+Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`evalSPMF`/`simulateQ`/`support`/`probOutput`; everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests) cross the boundary through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`, `PFunctor.FreeM.evalDist_eq_denote`), so the semantics can be re-implemented without touching downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public definitions and definitional equality* in [`module-system.md`](module-system.md).
+
 ### 4. `++ₒ` is dead — use `+`
 
 The README and large amounts of commented-out code use `++ₒ` for combining oracle specs. The current API uses standard `+` (`HAdd`).
@@ -160,6 +162,13 @@ Downstream escape hatches, since these tags are inherited by importing projects:
 (disable per call), `grind only [...]` (ignore the default set), `attribute [-grind] lemma`
 (unset for a file), and `grind?` (print a minimal `grind only` call).
 
+Tagging discipline, so the split stays deliberate: an unconditional equation tagged `@[simp]` in
+`VCVio/EvalDist/**` or `VCVio/OracleComp/SimSemantics/**` also carries `grind =`, unless it is one
+of the characterization lemmas above (the ratio in those directories is about one to one and the
+gates check both closers). `@[simp, grind]` without `=` is for definitions, where `grind` uses the
+equation lemmas to unfold, not for stated equations. `grind_pattern` and `[grind hom]` are not used
+yet; adopt them per lemma with a gate entry, not as a sweep.
+
 ### 11. Plain `vcstep` may solve a probability equality when you only wanted a rewrite
 
 On `Pr[...] = Pr[...]` goals, plain `vcstep` heuristically tries swap, congruence, and
@@ -211,6 +220,11 @@ For example, prove `∃ hr, hr.gen = …` with an explicit witness rather than m
 hypothesis type is separately inhabited. A toy witness establishes logical consistency only;
 label it accordingly and do not present it as evidence that the assumptions are
 cryptographically strong or achievable at real parameters.
+
+The conclusion can be vacuous too. `∃ reduction, bound ≤ advantage reduction` holds for every
+scheme, because adversary types carry no resource bound and `Classical.choice` can pick a
+witness. State such bounds for a named reduction; see
+[Name the reduction in the theorem statement](crypto.md#name-the-reduction-in-the-theorem-statement).
 
 ## Module Structure
 
@@ -312,26 +326,42 @@ off via `weak.linter.unicodeLinter, false` in `lakefile.lean`. This is a policy 
 dodge: VCVio docstrings legitimately use FIPS-204 math notation (a combining tilde on `c`) and
 diacritics in cited author names, which the Mathlib allowlist would otherwise reject.
 
+The active libraries fit within the 1500-line limit without file-local overrides. Split files
+by responsibility before crossing the limit, preserving established import paths with public
+import façades. `scripts/nolints.json` grandfathers the
+environment-linter findings (`lake lint`) that predate the gate; entries leave it when the finding
+is fixed, and nothing is added to it to silence a new one. The shared driver checks an exact
+baseline and reports stale entries as errors. Run `lake lint -- --prune-baseline` after fixing
+findings: it uses Batteries' update mode in separate temporary directories, collects all seven
+libraries, refuses additions, and atomically writes the reduced file. Never invoke upstream
+`runLinter --update` against the repository baseline directly: it overwrites the file once per
+root module. `-- --style-only` checks source files without building proof libraries;
+`-- --env-only --no-build` uses already-built oleans, one library per process, as CI does.
+The [linter cleanup ledger](../design/linter-cleanup.md) records the audit, completed groups,
+and remaining migrations by their effect on callers.
+
 ### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
 `HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
 It also updates the legacy `Interop.lean` umbrella without enabling module mode.
-CI checks the active module roots; `Interop` remains dormant and is migrated separately.
+CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
+from the committed file; `Interop` remains dormant and is migrated separately.
 
 ### 25. Active Lean sources use explicit module scopes
 
 Start active source files with `module`, use public imports deliberately, and put declarations in
 `public section` or `public meta section`. Existing ordinary files use `@[expose] public section`
-for downstream compatibility; executable and runtime implementation modules should use opaque
-`public section` when downstream code does not need definitional unfolding. Never reach for
+for downstream compatibility; new files use plain `public section` with per-declaration `@[expose]`
+where unfolding is part of the API, and `scripts/check-expose-boundary.sh` keeps the per-library
+count of broadly exposed files from growing. Executable and runtime implementation modules should
+use opaque `public section` when downstream code does not need definitional unfolding. Never reach for
 `backward.privateInPublic` or
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
 The dormant `Interop` library is intentionally excluded until its separate migration.
-`LibSodium/SHA2.lean` is also excluded because it is a dormant source outside every Lake library.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 

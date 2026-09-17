@@ -5,7 +5,6 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import ToMathlib.General
 public import VCVio.EvalDist.Defs.NeverFails
 
 /-!
@@ -232,7 +231,6 @@ section ListVector
 variable {n : ℕ} (mx : m α) (my : m (List.Vector α n))
 
 omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [EvalDistCompatible m] in
-@[simp]
 lemma support_seq_map_vector_cons [LawfulMonad m] :
     support ((· ::ᵥ ·) <$> mx <*> my) =
     {xs | xs.head ∈ support mx ∧ xs.tail ∈ support my} := by

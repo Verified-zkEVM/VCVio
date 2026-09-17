@@ -132,7 +132,6 @@ lemma probOutput_bind_add_right_uniform [AddGroup α] {β : Type}
     probOutput_bind_eq_tsum, probOutput_add_right_uniform (α := α) m]
 
 /-- Translating a uniform additive sample preserves the full evaluation distribution. -/
-@[simp]
 lemma evalSPMF_add_left_uniform [AddGroup α] (m : α) :
     𝒮[((m + ·) : α → α) <$> ($ᵗ α)] = 𝒮[$ᵗ α] :=
   evalSPMF_ext (probOutput_add_left_uniform (α := α) m)
@@ -145,7 +144,6 @@ lemma evalSPMF_add_left_uniform_eq [AddGroup α] (m₁ m₂ : α) :
 
 /-- Right-translation analogue of `evalSPMF_add_left_uniform`: right-adding a constant to a
 uniform sample in `AddGroup α` preserves the full evaluation distribution. -/
-@[simp]
 lemma evalSPMF_add_right_uniform [AddGroup α] (m : α) :
     𝒮[((· + m) : α → α) <$> ($ᵗ α)] = 𝒮[$ᵗ α] :=
   evalSPMF_ext (probOutput_add_right_uniform (α := α) m)
@@ -363,11 +361,7 @@ instance instSampleableTypeFunc {β α : Type} [FinEnum β] [SampleableType α] 
 index. The construction goes through the equivalence with `Fin n → α`. -/
 instance instSampleableTypeListVector {α : Type} {n : ℕ} [SampleableType α] :
     SampleableType (List.Vector α n) :=
-  SampleableType.ofEquiv
-    { toFun := List.Vector.ofFn
-      invFun := fun xs i => xs.get i
-      left_inv := fun f => funext fun i => by simp
-      right_inv := fun xs => List.Vector.ext fun i => by simp }
+  SampleableType.ofEquiv (Equiv.vectorEquivFin α n).symm
 
 /-- Select a uniform element from `Matrix ι κ α` by independently selecting an entry for each
 `(i, j)`. Both index types only need to be `FinEnum`; the previous `Fin n × Fin m`-indexed

@@ -19,7 +19,7 @@ This file defines the `MonadLiftT`-based probability and support semantics for `
 
 @[expose] public section
 
-open OracleSpec Option ENNReal BigOperators
+open OracleSpec Option ENNReal
 
 universe u v w
 
@@ -39,12 +39,6 @@ namespace IsProbabilitySpec
 /-- The distribution of responses to query `t`. -/
 abbrev toPMF [IsProbabilitySpec spec] (t : spec.Domain) : PMF (spec.Range t) :=
   PFunctor.IsProbabilitySpec.toPMF (P := spec.toPFunctor) t
-
-/-- Construct oracle probability semantics from a per-query distribution handler. -/
-@[deprecated PFunctor.IsProbabilitySpec.mk (since := "2026-08-20")]
-abbrev mk (toPMF : (t : spec.Domain) → PMF (spec.Range t)) :
-    IsProbabilitySpec spec :=
-  PFunctor.IsProbabilitySpec.mk toPMF
 
 end IsProbabilitySpec
 
@@ -98,12 +92,6 @@ noncomputable def IsUniformSpec.toPFunctor [h : IsUniformSpec spec] :
   inhabited := h.inhabited.toInhabited
   toPMF_eq_uniform := h.toPMF_eq_uniform
 
-/-- Successor to the legacy empty marker `OracleSpec.IsProbSpec`. The replacement
-`IsUniformSpec` bundles `Fintype`, `Inhabited`, `IsProbabilitySpec`, and a uniformity
-witness. -/
-@[deprecated IsUniformSpec (since := "2026-05-20")]
-alias _root_.OracleSpec.IsProbSpec := IsUniformSpec
-
 end OracleSpec
 
 export OracleSpec (IsProbabilitySpec IsUniformSpec)
@@ -112,34 +100,7 @@ namespace OracleComp
 
 variable {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'} {α β γ : Type w}
 
-/-! ## Oracle-facing compatibility names -/
-
-/-- The polynomial-free-monad probability interpreter at the `OracleComp` façade. -/
-@[deprecated PFunctor.FreeM.instMonadLiftTPMF (since := "2026-08-20")]
-noncomputable abbrev instMonadLiftTPMF [IsProbabilitySpec spec] :
-    MonadLiftT (OracleComp spec) PMF :=
-  PFunctor.FreeM.instMonadLiftTPMF
-
-/-- The lawful polynomial-free-monad probability interpreter at the `OracleComp` façade. -/
-@[deprecated PFunctor.FreeM.instLawfulMonadLiftTPMF (since := "2026-08-20")]
-noncomputable abbrev instLawfulMonadLiftTPMF [IsProbabilitySpec spec] :
-    LawfulMonadLiftT (OracleComp spec) PMF :=
-  PFunctor.FreeM.instLawfulMonadLiftTPMF
-
-/-- The polynomial-free-monad support interpreter at the `OracleComp` façade. -/
-@[deprecated PFunctor.FreeM.instMonadLiftTSetM (since := "2026-08-20")]
-abbrev instMonadLiftTSetM : MonadLiftT (OracleComp spec) SetM :=
-  PFunctor.FreeM.instMonadLiftTSetM
-
-/-- The lawful polynomial-free-monad support interpreter at the `OracleComp` façade. -/
-@[deprecated PFunctor.FreeM.instLawfulMonadLiftTSetM (since := "2026-08-20")]
-abbrev instLawfulMonadLiftTSetM : LawfulMonadLiftT (OracleComp spec) SetM :=
-  PFunctor.FreeM.instLawfulMonadLiftTSetM
-
-/- `supportWhen` presents Mathlib's `SetM` interpreter as ordinary sets in
-its public API. Lean 4.33 requires that wrapper at implicit transparency when
-specializing the generic simulation laws. -/
-attribute [local implicit_reducible] SetM
+/-! ## Oracle-facing semantics -/
 
 section evalSPMF_main
 
@@ -318,16 +279,14 @@ lemma support_eq_evalSPMF_support :
   EvalDistCompatible.support_eq_SPMF_support oa
 
 /-- An output has non-zero probability in `evalSPMF` iff it is in computation support. -/
-@[simp]
 lemma mem_support_evalSPMF_iff :
     some x ∈ (𝒮[oa]).run.support ↔ x ∈ support oa := by
-  rw [support_eq_evalSPMF_support, PMF.mem_support_iff, SPMF.mem_support_iff,
-    SPMF.apply_eq_toPMF_some, SPMF.run_eq_toPMF]
+  rw [support_eq_evalSPMF_support, SPMF.support_eq_preimage_some]
+  rfl
 
 alias ⟨mem_support_of_mem_support_evalSPMF, mem_support_evalSPMF⟩ := mem_support_evalSPMF_iff
 
 /-- Finite-support variant of `mem_support_evalSPMF_iff`. -/
-@[simp]
 lemma mem_support_evalSPMF_iff' [DecidableEq α] :
     some x ∈ (𝒮[oa]).run.support ↔ x ∈ finSupport oa := by
   rw [mem_support_evalSPMF_iff (oa := oa) (x := x), mem_finSupport_iff_mem_support]
@@ -340,11 +299,9 @@ section NeverFail
 
 variable [IsProbabilitySpec spec]
 
-@[simp]
 lemma probFailure_eq_zero_iff (oa : OracleComp spec α) : probFailure oa = 0 ↔ NeverFail oa := by
   simp [neverFail_iff]
 
-@[simp]
 lemma probFailure_pos_iff (oa : OracleComp spec α) : 0 < probFailure oa ↔ ¬ NeverFail oa := by
   simp [neverFail_iff]
 
@@ -402,7 +359,7 @@ section guard
 
 variable [IsProbabilitySpec spec]
 
-@[simp] lemma probOutput_guard {p : Prop} [Decidable p] :
+lemma probOutput_guard {p : Prop} [Decidable p] :
     Pr[= () | (guard p : OptionT (OracleComp spec) Unit)] = if p then 1 else 0 := by
   rw [OracleComp.guard_eq]
   split_ifs with h
@@ -412,7 +369,7 @@ variable [IsProbabilitySpec spec]
     -- post-refactor diamond. Compute directly.
     simp [OptionT.probOutput_eq, OptionT.run_failure, probOutput_pure]
 
-@[simp] lemma probFailure_guard {p : Prop} [Decidable p] :
+lemma probFailure_guard {p : Prop} [Decidable p] :
     Pr[⊥ | (guard p : OptionT (OracleComp spec) Unit)] = if p then 0 else 1 := by
   rw [OracleComp.guard_eq]
   split_ifs with h
@@ -420,7 +377,7 @@ variable [IsProbabilitySpec spec]
   · -- See note above.
     simp [OptionT.probFailure_eq, OptionT.run_failure]
 
-@[simp] lemma support_guard {p : Prop} [Decidable p] :
+lemma support_guard {p : Prop} [Decidable p] :
     support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
   rw [OracleComp.guard_eq]; split_ifs <;> simp
 
@@ -537,7 +494,6 @@ lemma supportWhen_pure (o : QueryImpl spec Set) (x : α) :
   unfold supportWhen
   rw [simulateQ_pure, SetM.run_pure]
 
-@[simp]
 lemma supportWhen_query_bind (o : QueryImpl spec Set) (q : spec.Domain)
     (oa : spec.Range q → OracleComp spec α) :
     supportWhen o ((query q : OracleComp spec _) >>= oa) =
@@ -562,6 +518,7 @@ lemma mem_supportWhen_bind_iff (o : QueryImpl spec Set) (oa : OracleComp spec α
   simp [supportWhen_bind]
 
 /-- Enlarging the set of possible oracle outputs only enlarges the reachable output set. -/
+@[gcongr]
 lemma supportWhen_mono {o₁ o₂ : QueryImpl spec Set}
     (h : ∀ q, o₁ q ⊆ o₂ q) (oa : OracleComp spec α) :
     supportWhen o₁ oa ⊆ supportWhen o₂ oa := by

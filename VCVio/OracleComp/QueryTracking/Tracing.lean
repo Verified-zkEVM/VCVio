@@ -84,7 +84,7 @@ abbrev withTraceBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceBefore (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTraceBefore_apply (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (t : spec.Domain) :
     so.withTraceBefore traceFn t = (do tell (traceFn t); so t) := by
   exact PFunctor.Handler.withTraceBefore_apply (P := spec.toPFunctor) so traceFn t
@@ -115,9 +115,6 @@ lemma neverFail_run_simulateQ_withTraceBefore_iff [LawfulMonad m]
     (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (mx : OracleComp spec α) :
     NeverFail (simulateQ (so.withTraceBefore traceFn) mx).run ↔ NeverFail (simulateQ so mx) := by
   simp only [neverFail_iff, probFailure_run_simulateQ_withTraceBefore]
-
-@[deprecated (since := "2026-06-25")]
-alias NeverFail_run_simulateQ_withTraceBefore_iff := neverFail_run_simulateQ_withTraceBefore_iff
 
 /-- When every query traces to the monoid identity `1`, `withTraceBefore` is a
 no-op up to pairing with `1`. -/
@@ -165,7 +162,7 @@ abbrev withTrace (so : QueryImpl spec m)
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTrace (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTrace_apply (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (t : spec.Domain) :
     so.withTrace traceFn t = (do let u ← so t; tell (traceFn t u); return u) := by
@@ -202,9 +199,6 @@ lemma neverFail_run_simulateQ_withTrace_iff [LawfulMonad m] [MonadLiftT m SPMF]
     (mx : OracleComp spec α) :
     NeverFail (simulateQ (so.withTrace traceFn) mx).run ↔ NeverFail (simulateQ so mx) := by
   simp only [neverFail_iff, probFailure_run_simulateQ_withTrace]
-
-@[deprecated (since := "2026-06-25")]
-alias NeverFail_run_simulateQ_withTrace_iff := neverFail_run_simulateQ_withTrace_iff
 
 /-- When every query/response pair traces to the monoid identity `1`,
 `withTrace` is a no-op up to pairing with `1`. -/
@@ -256,7 +250,7 @@ abbrev withTraceAppendBefore (so : QueryImpl spec m) (traceFn : spec.Domain → 
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceAppendBefore (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTraceAppendBefore_apply (so : QueryImpl spec m) (traceFn : spec.Domain → ω)
     (t : spec.Domain) :
     so.withTraceAppendBefore traceFn t = (do tell (traceFn t); so t) := by
@@ -287,10 +281,6 @@ lemma neverFail_run_simulateQ_withTraceAppendBefore_iff [LawfulMonad m]
     NeverFail (simulateQ (so.withTraceAppendBefore traceFn) mx).run ↔
       NeverFail (simulateQ so mx) := by
   simp only [neverFail_iff, probFailure_run_simulateQ_withTraceAppendBefore]
-
-@[deprecated (since := "2026-06-25")]
-alias NeverFail_run_simulateQ_withTraceAppendBefore_iff :=
-  neverFail_run_simulateQ_withTraceAppendBefore_iff
 
 /-! #### `evalSPMF` / `probOutput` / `support` bridges for `withTraceAppendBefore` -/
 
@@ -332,7 +322,7 @@ abbrev withTraceAppend (so : QueryImpl spec m)
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceAppend (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTraceAppend_apply (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (t : spec.Domain) :
     so.withTraceAppend traceFn t = (do let u ← so t; tell (traceFn t u); return u) := by
@@ -365,9 +355,6 @@ lemma neverFail_run_simulateQ_withTraceAppend_iff [LawfulMonad m]
     NeverFail (simulateQ (so.withTraceAppend traceFn) mx).run ↔
       NeverFail (simulateQ so mx) := by
   simp only [neverFail_iff, probFailure_run_simulateQ_withTraceAppend]
-
-@[deprecated (since := "2026-06-25")]
-alias NeverFail_run_simulateQ_withTraceAppend_iff := neverFail_run_simulateQ_withTraceAppend_iff
 
 /-! #### `evalSPMF` / `probOutput` / `support` bridges for `withTraceAppend` -/
 

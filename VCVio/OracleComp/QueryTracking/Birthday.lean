@@ -6,7 +6,6 @@ Authors: James Waters
 
 module
 public import VCVio.OracleComp.QueryTracking.Collision
-public import ToMathlib.Combinatorics.FinPairs
 public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
@@ -41,9 +40,7 @@ private lemma tsum_query_mul_probEvent_le_aux {α : Type}
     (h : ∀ u, Pr[ p u | (simulateQ loggingOracle (mx u)).run] ≤ c) :
     (∑' u, Pr[= u | (query t : OracleComp spec _)] *
       Pr[ p u | (simulateQ loggingOracle (mx u)).run]) ≤ c :=
-  le_trans (ENNReal.tsum_le_tsum fun u => mul_le_mul' le_rfl (h u))
-    (le_trans ENNReal.tsum_mul_right.le
-      (le_trans (mul_le_mul' tsum_probOutput_le_one le_rfl) (one_mul c).le))
+  tsum_probOutput_mul_le_of_le _ h
 
 omit [DecidableEq ι] in
 /-- **ROM uniformity at a log position**: For any `loggingOracle` trace, the
@@ -260,7 +257,8 @@ theorem probEvent_logCollision_le_birthday_total_tight {α : Type}
           · exact key i j hi_lt hj_lt hlt hdist heq
           · exact key j i hj_lt hi_lt hgt hdist.symm heq.symm
     _ = (Nat.choose n 2 : ℝ≥0∞) / (Fintype.card (spec.Range default)) := by
-        rw [Finset.sum_const, nsmul_eq_mul, div_eq_mul_inv, Finset.card_filter_fst_lt_snd]
+        rw [Finset.sum_const, nsmul_eq_mul, div_eq_mul_inv, Fintype.card_product_filter_lt,
+          Fintype.card_fin]
 
 omit [DecidableEq ι] in
 /-- **Birthday bound for `loggingOracle`** (total query bound):
@@ -288,14 +286,15 @@ theorem probEvent_logCollision_le_birthday_total {α : Type}
           exact (Nat.mul_div_le (n * (n - 1)) 2).trans (by gcongr; lia))
 
 open Classical in
-omit [spec.DecidableEq] in
+omit [spec.DecidableEq] [IsUniformSpec spec] in
 /-- At a fresh query, the number of responses that would create a cache collision is at most
 the number of keys known to be populated in the current collision-free cache.
 
 The finite set `S` need only cover the populated keys; it may be a convenient external bound
 rather than the cache's exact support. This form is intended for adaptive birthday arguments,
 where `S` grows by one after each cache miss. -/
-theorem card_responses_creating_cacheCollision_le {cache₀ : QueryCache spec} {t : spec.Domain}
+theorem card_responses_creating_cacheCollision_le [spec.Fintype]
+    {cache₀ : QueryCache spec} {t : spec.Domain}
     {S : Finset spec.Domain} (hnocoll : ¬CacheHasCollision cache₀)
     (hSmem : ∀ t', cache₀ t' ≠ none → t' ∈ S) :
     (Finset.univ.filter (fun u => CacheHasCollision (cache₀.cacheQuery t u))).card ≤ S.card := by
