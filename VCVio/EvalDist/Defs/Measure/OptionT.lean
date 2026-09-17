@@ -15,6 +15,10 @@ An `OptionT` computation denotes the pullback of its underlying `Option`-valued 
 measurable embedding `some`. The low priority preserves the compatibility semantics when a
 finite-distribution lift is already part of an existing downstream instance graph; bundled
 semantics can select this effect-native construction directly.
+
+Native map and monad laws use the base monad's measure laws. The full bind law only requires
+measurability of the successful-output family: an auxiliary discrete source space discharges
+full-run measurability, and the map law transports its source measure to the selected space.
 -/
 
 public section
@@ -64,13 +68,18 @@ theorem OptionT.evalDist_apply_univ
     cases value <;> simp
 
 /-- Pure optional computations have Dirac successful-output semantics. -/
-@[simp]
 theorem OptionT.evalDist_pure
     {m : Type u → Type v} [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (x : α) :
     𝒟[(pure x : OptionT m α)] = Measure.dirac x := by
   rw [OptionT.evalDist_eq_comap_some, OptionT.run_pure, _root_.evalDist_pure,
     ← Measure.dropNone_eq_comap_some, Measure.dropNone_dirac_some]
+
+/-- Native optional semantics preserves pure whenever the base semantics does. -/
+instance (priority := 20) instLawfulPureEvalDistSemanticsOptionT
+    {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
+    [LawfulPureEvalDistSemantics m] : LawfulPureEvalDistSemantics (OptionT m) where
+  denote_pure := OptionT.evalDist_pure
 
 /-- Optional failure has no successful-output mass. -/
 @[simp]
@@ -92,9 +101,17 @@ theorem OptionT.evalDist_lift
     LawfulMonad.bind_pure_comp, _root_.evalDist_map mx Option.measurable_some,
     Option.measurableEmbedding_some.comap_map]
 
-/-- Native optional bind composes successful-output measures when the full run measures of the
-continuations form a measurable family. This stronger premise is necessary: measurability after
-discarding `none` does not determine measurability of the hidden failure branch. -/
+/-- A measurable map of successful optional results is the measure pushforward. -/
+theorem OptionT.evalDist_map
+    {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
+    (mx : OptionT m α) (f : α → β) (hf : Measurable f) :
+    𝒟[f <$> mx] = 𝒟[mx].map f := by
+  simp only [OptionT.evalDist_eq_comap_some, ← Measure.dropNone_eq_comap_some]
+  rw [OptionT.run_map, _root_.evalDist_map mx.run (by fun_prop), Measure.dropNone_map _ f hf]
+
+/-- A measurable family of full run measures suffices to compose native optional denotations. -/
 theorem OptionT.evalDist_bind
     {m : Type u → Type v} [Monad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
@@ -129,6 +146,19 @@ theorem OptionT.evalDist_bind_of_discrete
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] fun x => 𝒟[f x] :=
   OptionT.evalDist_bind mx f Measurable.of_discrete
 
+/-- Native optional semantics satisfies the measurable-bind law for successful-output families.
+The base monad's map law relates the auxiliary discrete draw to the selected source space. -/
+instance (priority := 20) instLawfulEvalDistSemanticsOptionT
+    {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] :
+    LawfulEvalDistSemantics (OptionT m) where
+  denote_bind {α β} mα mβ mx f hf := by
+    have hId : @Measurable α α ⊤ mα id := fun _ _ ↦ trivial
+    have hmap := @OptionT.evalDist_map m _ _ _ _ α α ⊤ mα mx id hId
+    rw [id_map] at hmap
+    rw [hmap, @Measure.bind_map α α β ⊤ mα mβ _ _ _ hId hf]
+    exact @OptionT.evalDist_bind m _ _ _ α β ⊤ mβ mx f (fun _ _ ↦ trivial)
+
 /-- The effect-native successful-output measure of sampling and then guarding is the measure of
 the corresponding Boolean event. This statement is independent of which global `OptionT`
 semantics wins instance synthesis. -/
@@ -147,8 +177,8 @@ theorem OptionT.dropNone_evalDist_run_bind_guard_apply_univ
     by_cases hx : p x <;> simp [hx]
   rw [Measure.dropNone_apply_univ, hrun, LawfulMonad.bind_pure_comp,
     LawfulMonad.bind_pure_comp]
-  rw [evalDist_map mx (f := fun x => if p x then some () else none) Measurable.of_discrete,
-    evalDist_map mx (f := p) Measurable.of_discrete,
+  rw [_root_.evalDist_map mx (f := fun x => if p x then some () else none) Measurable.of_discrete,
+    _root_.evalDist_map mx (f := p) Measurable.of_discrete,
     Measure.map_apply Measurable.of_discrete Option.measurableSet_isSome,
     Measure.map_apply Measurable.of_discrete (measurableSet_singleton True)]
   congr 1

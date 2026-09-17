@@ -170,6 +170,7 @@ public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Discard
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Measure
+public import VCVio.EvalDist.Monad.Option
 public import VCVio.EvalDist.Monad.Seq
 public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.EvalDist.Option

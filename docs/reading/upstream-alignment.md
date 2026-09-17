@@ -331,6 +331,14 @@ pushforward and bind instances use upstream `Measure.map_apply_of_aemeasurable`,
 `Measure.map_of_not_aemeasurable`, and `Measure.bind_apply_le`; their upper mass bounds need no
 measurability hypothesis. Exact losslessness of an arbitrary continuous composition remains a
 separate measurable-continuation obligation.
+Native optional and exceptional map laws use upstream coproduct measurable embeddings and
+`Measure.map_apply`. Their full bind certificates need only measurable successful-output
+families: Giry pushforward transports an auxiliary discrete source measure to the selected space.
+The shared `Measure.map_bind` and `Measure.bind_map` equations are consequences of upstream
+`Measure.map_map` and `Measure.join_map_map`; they live below the coupling theory so native
+transformer laws reuse them without importing that higher layer. Sampled optional guards collapse
+to conjunctions of observed events using upstream `lintegral_indicator_one`, with the
+intermediate measurable-space choice internal to the event API.
 The optional coproduct makes `{none}` measurable without constraining the result space. Native
 `Measure.dropNone` and `Measure.withFailure` publish their mass-property instances, while lossless
 `evalDistKernel` families inherit `IsMarkovKernel`, including reader/state wrappers. Boolean branch

@@ -54,6 +54,7 @@ public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
 public import ToMathlib.MeasureTheory.Measure.Coupling.Discard
 public import ToMathlib.MeasureTheory.Measure.Coupling.Residual
 public import ToMathlib.MeasureTheory.Measure.Except
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import ToMathlib.MeasureTheory.Measure.Option

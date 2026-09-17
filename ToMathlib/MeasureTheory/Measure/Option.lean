@@ -7,7 +7,7 @@ module
 
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
 public import ToMathlib.MeasureTheory.Measure.Subprobability
-public import Mathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Comap
 import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 
@@ -86,6 +86,19 @@ theorem dropNone_eq_comap_some (μ : Measure (Option α)) :
     dropNone μ = μ.comap some := by
   ext s hs
   rw [dropNone_apply μ hs, Option.measurableEmbedding_some.comap_apply]
+
+/-- Mapping successful values commutes with discarding the absent outcomes. -/
+theorem dropNone_map {β : Type*} [MeasurableSpace β]
+    (μ : Measure (Option α)) (f : α → β) (hf : Measurable f) :
+    (μ.map (Option.map f)).dropNone = μ.dropNone.map f := by
+  have hOption : Measurable (Option.map f) := by fun_prop
+  ext s hs
+  rw [dropNone_apply _ hs,
+    Measure.map_apply hOption (Option.measurableSet_some_image.mpr hs),
+    Measure.map_apply hf hs, dropNone_apply _ (hf hs)]
+  congr 1
+  ext value
+  cases value <;> simp
 
 /-- Discarding failure after an optional bind is the bind of the successful input mass with the
 discarded successful mass of each continuation. -/

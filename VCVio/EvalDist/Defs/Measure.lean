@@ -105,25 +105,10 @@ theorem toMeasure_injective [MeasurableSingletonClass α] :
 theorem toMeasure_map {β : Type u} [MeasurableSpace β] (f : α → β) (hf : Measurable f) :
     (f <$> p).toMeasure = p.toMeasure.map f := by
   have hOptionMap : Measurable (Option.map f) := by fun_prop
-  ext s hs
-  rw [toMeasure, SPMF.toPMF_map]
-  change (p.toPMF.map (Option.map f)).toMeasure.dropNone s = _
+  rw [toMeasure, toPMF_map]
+  change (p.toPMF.map (Option.map f)).toMeasure.dropNone = _
   rw [← p.toPMF.toMeasure_map (Option.map f) hOptionMap, toMeasure,
-    Measure.map_apply hf hs]
-  simp only [Measure.dropNone]
-  rw [
-    Measure.bind_apply hs Measure.measurable_dropNoneKernel.aemeasurable,
-    Measure.bind_apply (hf hs) Measure.measurable_dropNoneKernel.aemeasurable]
-  · rw [MeasureTheory.lintegral_map]
-    · apply lintegral_congr
-      intro value
-      cases value with
-      | none => simp
-      | some x =>
-          by_cases hx : f x ∈ s <;>
-            simp [Option.map, hs, hf hs, hx]
-    · exact (Measure.measurable_coe hs).comp Measure.measurable_dropNoneKernel
-    · exact hOptionMap
+    Measure.dropNone_map _ f hf]
 
 /-- Successful-output measures commute with `SPMF` bind whenever the measure-valued
 continuation is measurable. -/

@@ -25,6 +25,15 @@ a measurable space on the intermediate result. Factor the common sampling run
 once when both forms of a security game are public. For an optional computation,
 successful outputs are measured through `Measure.comap some`, so failure contributes no mass.
 The `OptionT` measure instance also works when the base monad has no finite lift.
+Native `OptionT` and `ExceptT` inherit the base pure certificate and, for lawful base monads,
+the full measurable-bind certificate. Generic bind laws require measurability only of the
+successful-output family, rather than the whole run measure. An auxiliary discrete source space
+and the base map law transport the source measure back to its selected space.
+`VCVio.EvalDist.Monad.Option` collapses a lifted draw followed by a guard into one `prEvent`
+condition: `simp` and `grind` turn the guard and final event into their conjunction. Callers need
+no measurable space on that intermediate type. The legacy lifting adapter still takes priority
+when a finite-distribution lift is present; the native certificates describe the native
+interpretation and do not assert laws about an independently chosen interpretation.
 `VCVio.EvalDist.Defs.Measure.FinRatPMF` gives the executable rational sampler native measure
 semantics without importing a PMF/SPMF backend. `Raw.toMeasure` is a finite sum of weighted Dirac
 measures; pure and measurable bind have the generic laws on arbitrary measurable spaces.
@@ -52,10 +61,16 @@ assert losslessness for arbitrary continuous-answer programs with unmeasurable c
 A named opaque measure publishes its own measure-property instances once at its definition.
 An opaque computation inside `𝒟[...]` still uses the generic denotation instances; computation
 opacity alone does not require a separate witness. Callers should infer these properties rather
-than recreate local witnesses. For an abstract
+than recreate local witnesses. An ordinary mass or measurability hypothesis does not itself
+register a typeclass instance: use a local `haveI` when a theorem establishes the required
+property under that hypothesis. Such a local certificate is appropriate for a particular
+measurable pushforward; repeated certificates for the same named measure indicate a missing
+exported instance. For an abstract
 intermediate type, a local `MeasurableSpace α := ⊤` chooses the discrete structure; Mathlib uses
 this idiom in `MeasureTheory.Function.Piecewise` and `MeasureTheory.Function.SimpleFunc`.
 Keep that choice inside structural APIs when callers do not need to observe intermediate values.
+Mathlib already supplies discrete measurable spaces for `Bool`, `ℕ`, `Fin n`, and other standard
+countable types; do not redeclare them locally when the canonical instance suffices.
 Choose the space on the underlying data type once; `Option`, products, and subtypes normally use
 their inherited measurable-space instances rather than separate local top spaces.
 Genuinely measure-indexed results retain their selected measurable spaces as explicit parameters.

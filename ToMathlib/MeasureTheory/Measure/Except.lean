@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
-public import Mathlib.MeasureTheory.Measure.GiryMonad
+public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Comap
 import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 
@@ -74,6 +74,18 @@ theorem comap_ok_dirac_error (error : ε) :
 theorem comap_ok_dirac_ok (x : α) :
     (Measure.dirac (Except.ok x : Except ε α)).comap Except.ok = Measure.dirac x := by
   rw [comap_ok_eq_bind, Measure.dirac_bind measurable_comap_ok_kernel]
+
+/-- Mapping successful exception values commutes with pulling back along `Except.ok`. -/
+theorem comap_ok_map {β : Type*} [MeasurableSpace β]
+    (μ : Measure (Except ε α)) (f : α → β) (hf : Measurable f) :
+    (μ.map (Except.map f)).comap Except.ok = (μ.comap Except.ok).map f := by
+  ext s hs
+  rw [Except.measurableEmbedding_ok.comap_apply,
+    Measure.map_apply (Except.measurable_map hf) (Except.measurableSet_ok_image.mpr hs),
+    Measure.map_apply hf hs, Except.measurableEmbedding_ok.comap_apply]
+  congr 1
+  ext value
+  cases value <;> simp [Except.map]
 
 /-- Pulling back after exception bind is the bind of the successful input mass with the
 successful mass of each continuation. -/
