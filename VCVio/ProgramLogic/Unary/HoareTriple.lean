@@ -105,18 +105,18 @@ theorem triple_toLE
 
 /-! ## `wp` lemmas (against `wp _ _`) -/
 
-@[simp, game_rule] theorem wp_pure (x : α) (post : α → ℝ≥0∞) :
+@[game_rule] theorem wp_pure (x : α) (post : α → ℝ≥0∞) :
     wp (pure x : OracleComp spec α) post = post x := by
   rw [wp_eq_mAlgOrdered_wp, MAlgOrdered.wp_pure]
 
-@[simp, game_rule] theorem wp_ite (c : Prop) [Decidable c]
+@[game_rule] theorem wp_ite (c : Prop) [Decidable c]
     (oa ob : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp (if c then oa else ob) post =
       if c then wp oa post
       else wp ob post := by
   split_ifs <;> rfl
 
-@[simp, game_rule] theorem wp_dite (c : Prop) [Decidable c]
+@[game_rule] theorem wp_dite (c : Prop) [Decidable c]
     (oa : c → OracleComp spec α) (ob : ¬c → OracleComp spec α) (post : α → ℝ≥0∞) :
     wp (dite c oa ob) post =
       dite c (fun h => wp (oa h) post)
@@ -210,7 +210,8 @@ theorem wp_eq_tsum (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
   rw [wp_eq_expectedValue, OracleComp.EvalDist.expectedValue_def]
 
 @[simp] theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :
-    wp oa (fun _ => c) = c := by
+    MAlgOrdered.wp oa (fun _ => c) = c := by
+  change wp oa (fun _ => c) = c
   rw [wp_eq_expectedValue]
   exact OracleComp.EvalDist.expectedValue_const (probFailure_of_liftM_PMF _) c
 
