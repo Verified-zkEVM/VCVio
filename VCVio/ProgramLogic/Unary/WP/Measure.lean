@@ -46,7 +46,7 @@ noncomputable def toMAlgOrdered : MAlgOrdered m ENNReal where
 namespace Quantitative
 
 /-- Select the native ordered expectation algebra. -/
-noncomputable scoped instance instMAlgOrdered : MAlgOrdered m ENNReal :=
+noncomputable scoped instance (priority := 1100) instMAlgOrdered : MAlgOrdered m ENNReal :=
   toMAlgOrdered m
 
 /-- Core WP with nonnegative expectations and an empty exception postcondition.

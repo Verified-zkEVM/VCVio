@@ -172,8 +172,10 @@ public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.Instances.ReaderT
 public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.List
+public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist
+public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Discard
@@ -183,6 +185,7 @@ public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Option
 public import VCVio.EvalDist.Monad.Seq
 public import VCVio.EvalDist.Monad.Seq.Measure
+public import VCVio.EvalDist.Monad.Seq.Uniform
 public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.EvalDist.Option
 public import VCVio.EvalDist.PFunctor
@@ -216,6 +219,7 @@ public import VCVio.Interaction.UC.ReactiveWorld
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.Interaction.UC.Standard
 public import VCVio.Interaction.UC.StdDoBridge
+public import VCVio.Native
 public import VCVio.OracleComp.CanReturn
 public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.Coercions.SubSpec
@@ -232,6 +236,7 @@ public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
@@ -249,6 +254,7 @@ public import VCVio.OracleComp.OracleContext
 public import VCVio.OracleComp.OracleQuery
 public import VCVio.OracleComp.OracleSpec
 public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.QueryTracking
 public import VCVio.OracleComp.QueryTracking.AdaptivePrefix
@@ -283,6 +289,7 @@ public import VCVio.OracleComp.QueryTracking.SubSpec
 public import VCVio.OracleComp.QueryTracking.Tracing
 public import VCVio.OracleComp.QueryTracking.Unpredictability
 public import VCVio.OracleComp.QueryTracking.WriterCost
+public import VCVio.OracleComp.ReachableWhen
 public import VCVio.OracleComp.RunIO
 public import VCVio.OracleComp.Runtime
 public import VCVio.OracleComp.SimSemantics.Append
@@ -303,8 +310,10 @@ public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.Traversal
 public import VCVio.Prelude
+public import VCVio.Prelude.Core
 public import VCVio.ProgramLogic.Notation
 public import VCVio.ProgramLogic.NotationCore
+public import VCVio.ProgramLogic.Prob
 public import VCVio.ProgramLogic.Relational.Basic
 public import VCVio.ProgramLogic.Relational.Examples
 public import VCVio.ProgramLogic.Relational.FromUnary
@@ -358,6 +367,7 @@ public import VCVio.ProgramLogic.Unary.WP.Coherence
 public import VCVio.ProgramLogic.Unary.WP.Measure
 public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
+public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.ProgramLogic.Unary.WP.Quantitative
 public import VCVio.ProgramLogic.Unary.WriterTBridge

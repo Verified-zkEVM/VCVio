@@ -11,6 +11,33 @@ surface. The [notation and computability account](../design/probability-notation
 records which finite events can be evaluated exactly and which semantics require measurable
 proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
 
+`import VCVio.Native` is the public entry point for native oracle, sampling, measure, kernel,
+operational-support, and unary-WP foundations. Its ordinary import closure contains neither
+`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. Existing module paths remain
+compatibility facades for their discrete corollaries.
+
+`VCVio.OracleComp.ProbComp.Basic` owns executable container sampling, and
+`VCVio.OracleComp.Constructions.SampleableType.Basic` owns uniform sampler certificates.
+Product and vector uniformity follow from product measures and bijective pushforwards.
+`SampleableType` derives `Nonempty` and `Finite`; enumeration is a separate computational choice.
+An abstract result's `𝒟` still needs its chosen `MeasurableSpace`. Event notation hides intermediate
+spaces, and uniformity certificates apply to any result space with measurable singletons.
+
+`VCVio.EvalDist.Lossless` uses Mathlib's `IsProbabilityMeasure` directly. For a lossless prefix,
+`evalDist.isProbabilityMeasure_bind_iff` characterizes a lossless bind by almost everywhere
+lossless continuations. `isProbabilityMeasure_bind_of_ae` supplies the forward construction;
+no structural positivity assumption or bind instance search is needed. `NeverFail`,
+`EvalDistCompatible`, and `DiscreteEvalDistCompatible` are deprecated compatibility classes.
+Their hypotheses remain meaningful only for the discrete adapters that actually satisfy them.
+
+`open scoped MeasureProgramLogic.Probabilistic` selects bounded `Prob` expectations for any
+lawful measure semantics. Public value laws connect them to quantitative WP and Lebesgue
+integration; constants retain success mass. Plain `simp`, `gcongr`, and `grw` work on optional
+computations and weighted oracles. Qualitative oracle WP delegates to PolyFun's direct demonic
+core WP, which needs only lawful attachment. The exact ordered assertion algebra remains
+available for free oracle trees. State and reader reasoning uses PolyFun's indexed operational
+judgments and kernels; flattened support does not acquire an exact bind law.
+
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
@@ -43,7 +70,9 @@ type. `ExceptT` instead interprets its base run and uses the inherited coproduct
 and outputs. Deterministic final events simplify to their propositional indicators with `simp`
 and `grind`, using `Measure.dirac_apply_singleton_true`.
 `VCVio.OracleComp.Support` exposes the oracle facade over native attachment, while
-`VCVio.EvalDist.PFunctorSupport` owns its universe-polymorphic map/object equations.
+`PolyFun.PFunctor.Free.Support` owns the universe-polymorphic map/object equations and
+finite/nonempty bounds. VCVio's `PFunctorSupport` module reexports that API. Support-aware bind
+congruence needs only weakly lawful attachment, through PolyFun's public generic rule.
 `VCVio.OracleComp.EvalDist.Measure` connects structural bounds to almost-everywhere bounds
 under any discrete-answer response measures; neither uniformity nor positive singleton masses
 is required for that direction. `VCVio.ProgramLogic.Unary.WP.OracleMeasure` exposes these

@@ -36,7 +36,7 @@ open scoped OracleComp.Qualitative
 example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
     (post : α → Prop) :
     wp oa post EPost.Nil.mk ↔ ∀ a ∈ support oa, post a :=
-  OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support oa post
+  OracleComp.Qualitative.wp_iff_forall_support oa post
 
 end Qualitative
 

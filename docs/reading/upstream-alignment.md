@@ -958,3 +958,33 @@ The native WP and sequencing canaries check ordinary imports without PMF/SPMF, m
 for failed draws, automatic probability instances, and `simp`, `grind`, `gcongr`, and `grw`.
 Deprecated discrete definitions remain at the compatibility boundary; their environment-linter
 allowlist in `scripts/nolints.json` tracks migration debt.
+
+## Native foundation follow-up (2026-09-17)
+
+The follow-up pins public PolyFun main `91e9c02e`, including merged
+[#230](https://github.com/Verified-zkEVM/PolyFun/pull/230). PolyFun now owns free-tree support
+map/object normalization and finite/nonempty bounds. Its generic support-aware bind congruence
+uses only core `WeaklyLawfulMonadAttach`. VCVio delegates these rules instead of maintaining
+local inductions. A primitive lift-bind equation keeps the public support normal form usable by
+`simp`; the object equation takes precedence over generic map expansion.
+
+Mathlib's existing `MeasureTheory.isProbabilityMeasure_bind` constructs lossless binds from
+almost everywhere lossless branches. `lintegral_eq_iff_ae_eq_of_ae_le` supplies the converse
+for subprobability branch masses and a probability input. These are the foundations of
+`VCVio.EvalDist.Lossless`; no new losslessness class or structural positivity assumption is used.
+
+Uniform product measures and bijective pushforwards certify product/vector samplers directly.
+The search covered pinned `Mathlib.Probability.UniformOn`, measure products and pushforwards;
+VCVio composes the existing local uniform-product and bijection lemmas, rather than defining a
+new measure construction. The sampler's `Finite` and `Nonempty` witnesses are derived, and its
+noncomputable `Fintype` adapter needs no decidable equality argument.
+
+PolyFun's `MonadAttach.toWPMonadDemonic` supplies qualitative core WP with lawful attachment,
+including state monads. The exact ordered assertion algebra is installed only where the free
+tree's exactness is available. Indexed state/reader judgments and kernel semantics retain their
+initial index. The probability-bounded measure WP restricts the native expectation algebra using
+PolyFun's `MAlgOrdered.restrictIic`; its scopes take precedence over generic transformer algebras.
+
+`VCVio.Native` has an ordinary import canary excluding PMF/SPMF and the retiring compatibility
+classes. Existing imports remain facades for discrete corollaries. The environment-linter
+baseline shrinks; no syntactic probability ratchet is introduced.
