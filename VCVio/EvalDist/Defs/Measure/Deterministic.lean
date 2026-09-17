@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Defs.Measure.Failure
 public import ToMathlib.Control.Except
 
 /-!
@@ -53,6 +53,11 @@ noncomputable instance (priority := 20) instEvalDistSemanticsOption :
 @[simp, grind =]
 theorem Option.evalDist_none {α : Type u} [MeasurableSpace α] :
     𝒟[(none : Option α)] = 0 := rfl
+
+/-- Deterministic optional failure has zero successful-output measure. -/
+instance (priority := 20) instLawfulFailureEvalDistSemanticsOption :
+    LawfulFailureEvalDistSemantics Option where
+  denote_failure := Option.evalDist_none
 
 /-- A present optional result has its Dirac output measure. -/
 @[simp, grind =]

@@ -42,8 +42,16 @@ subprobability bound. Bare `Except` observes no errors and needs no measurable s
 type. `ExceptT` instead interprets its base run and uses the inherited coproduct space on errors
 and outputs. Deterministic final events simplify to their propositional indicators with `simp`
 and `grind`, using `Measure.dirac_apply_singleton_true`.
-Operational optional failure has empty support under exact attachment, independently of any
-probability semantics or lift.
+`VCVio.EvalDist.Defs.Support` and its `Support.Failure` module expose operational support without
+importing a probability backend. Optional failure has empty support under Lean's
+`LawfulMonadAttach`, independently of any probability interpretation or lift. Its pure-output
+elimination law suffices: no `ExactMonadAttach` is needed, including over state and reader bases.
+`HasEvalSet.LawfulFailure` only requires an `Alternative` and attachment.
+The independent `LawfulFailureEvalDistSemantics` mixin certifies zero measure for failure.
+Native `Option` and `OptionT` export that certificate; `OptionT` needs only the base pure law.
+`VCVio.EvalDist.Monad.Failure` makes failure before a continuation, a constantly failing
+continuation, and a final event after failure normalize to zero with `simp` and `grind`.
+These composition laws need no attachment or measurable-space instance on intermediate results.
 Native transformer semantics takes priority over the generic finite lifting adapter. Opening
 `ProbComp.DiscreteCompatibility` explicitly selects that adapter for retiring discrete calibration
 proofs. Native certificates describe the native interpretation and do not assert laws about an
@@ -104,8 +112,8 @@ supplies a single native query's probability proof. It is a theorem: the depende
 `P.B a` gives a projection key that instance search cannot match against a concrete reduced type
 such as `ℝ`. A general continuous program still requires a continuation measurability proof.
 `FreeM.denote` over discrete answers, `FreeM.pathMeasure`, and `FreeM.queryCountMeasure` export
-probability instances; proofs should not install them locally. `OptionT.evalDist_failure`
-simplifies native optional failure to zero using only the base pure law.
+probability instances; proofs should not install them locally. `evalDist_failure_eq_zero`
+simplifies failure to zero under its native certificate.
 `Measure.dropNone` preserves the subprobability instance of an optional measure, and
 `Measure.withFailure` automatically completes any subprobability measure to a probability measure.
 The backend-free `evalDistWithFailure` wrapper exports the same probability-measure instance.

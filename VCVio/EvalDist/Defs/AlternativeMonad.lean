@@ -6,14 +6,13 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Basic
+public import VCVio.EvalDist.Defs.Support.Failure
 
 /-!
-# Denotational Semantics Over `AlternativeMonad`.
+# Discrete probability semantics of failure
 
-This file defines `HasEvalSet.LawfulFailure`, a type-class refining `MonadLiftT m SetM` when
-given an `AlternativeMonad` instance on the base monad, enforcing that `failure` maps to the
-empty sub-distribution. Compatibility conditions then force the correct semantics for `evalSPMF`,
-recorded in the `*_failure` simp lemmas below.
+The operational failure law and discrete support/probability compatibility identify failure
+with zero successful-output probability and an absent result in the discrete distribution.
 -/
 
 @[expose] public section
@@ -24,23 +23,7 @@ universe u v w
 
 variable {m : Type u → Type v} [AlternativeMonad m] {α β γ : Type u}
 
-/-- Refinement of `MonadLiftT m SetM` when given an `AlternativeMonad` instance on the
-base monad, enforcing that `failure` maps to the empty sub-distribution. Compatibility
-conditions then force the correct semantics for `evalSPMF`, see below. -/
-protected class HasEvalSet.LawfulFailure (m : Type u → Type v)
-    [AlternativeMonad m] [MonadAttach m] : Prop where
-  support_failure' {α : Type u} : support (failure : m α) = ∅
-
 open HasEvalSet (LawfulFailure)
-
-@[simp, grind =]
-lemma support_failure [MonadAttach m] [LawfulFailure m] :
-    support (failure : m α) = ∅ :=
-  HasEvalSet.LawfulFailure.support_failure'
-
-@[simp, grind =]
-lemma finSupport_failure [MonadAttach m] [LawfulFailure m] [HasEvalFinset m]
-    [DecidableEq α] : finSupport (failure : m α) = ∅ := by grind
 
 @[simp, grind =]
 lemma probOutput_failure [MonadLiftT m SPMF]
@@ -64,4 +47,5 @@ lemma probFailure_failure [MonadLiftT m SPMF]
 @[simp, grind =]
 lemma evalSPMF_failure [MonadLiftT m SPMF]
     [MonadAttach m] [EvalDistCompatible m]
-    [LawfulFailure m] : 𝒮[(failure : m α)] = SPMF.mk (PMF.pure none) := by simp
+    [LawfulFailure m] : 𝒮[(failure : m α)] = (failure : SPMF α) := by
+  simp [SPMF.failure_eq_mk]

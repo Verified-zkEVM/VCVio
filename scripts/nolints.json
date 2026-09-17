@@ -2486,8 +2486,6 @@
  ["usesRetiredProbability", "instEvalDistSemanticsOfMonadLiftTSPMF"],
  ["usesRetiredProbability", "instIsProbabilityMeasureEvalDistOfNeverFail"],
  ["usesRetiredProbability", "instLawfulEvalDistSemanticsOfMonadLiftTSPMF"],
- ["usesRetiredProbability", "instLawfulMonadLiftTSPMFSetM"],
- ["usesRetiredProbability", "instMonadLiftTSPMFSetM"],
  ["usesRetiredProbability", "instMonadSemPMF"],
  ["usesRetiredProbability", "instMonadSemSPMF"],
  ["usesRetiredProbability", "instNeverFailOfLawfulMonadLiftTPMF"],

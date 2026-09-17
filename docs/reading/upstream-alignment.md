@@ -345,7 +345,16 @@ Native `Id`, `Option`, and `Except` interpretations use upstream `Measure.dirac`
 finite backend; bare exceptional semantics observes successful outputs without a measurable
 space on errors. A propositional Dirac observation normalizes with upstream `Pi.single_apply`,
 packaged as `Measure.dirac_apply_singleton_true` for `simp` and `grind`. Optional failure's empty
-operational support depends only on exact attachment, with no numeric lift assumptions.
+operational support uses Lean's `LawfulMonadAttach.eq_of_canReturn_pure`; its elimination law
+needs no `ExactMonadAttach` or numeric lift. Registering this upstream rule for forward `grind`
+lets the short proof work over state and reader bases. The operational support/failure modules
+contain no PMF/SPMF backend, and raw SPMF support uses native attachment without a SetM lift.
+`LawfulFailureEvalDistSemantics` separately certifies zero successful-output measure for an
+`Alternative`. The pinned Lean, Batteries, Mathlib, cslib, and PolyFun trees provide no corresponding
+measure-valued failure certificate. Native optional semantics supplies it from the base pure law;
+composition proofs use upstream `Measure.bind_zero_left` and `Measure.bind_const`, with discrete
+intermediate spaces internal to the API. Failure, its compositions, and final events normalize to
+zero with `simp` and `grind`, without an operational/probability compatibility class.
 The pinned tree supplies `IsZeroApply` and its generic `zero_apply` rule, but no measure instance;
 `Measure.instIsZeroApply` connects zero measures to that upstream automation. Bare exceptional
 constructor equations live in `ToMathlib.Control.Except` and register their operational facts for

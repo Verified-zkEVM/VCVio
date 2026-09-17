@@ -26,27 +26,11 @@ universe u v w
 
 variable {m : Type u → Type v} {α β γ : Type u}
 
-/-! ## `MonadLiftT m SetM` and `MonadLiftT m SPMF`
+/-! ## Discrete probability lifts
 
-The `SetM` / `SPMF` lifts exposed by this layer are declared as `MonadLiftT`,
-not `MonadLift`. Total semantic sources may still expose a plain `MonadLift`
-into `PMF`; the important point here is that support is never obtained by a
-transitive `m → SPMF → SetM` path, and parameterized/typeclass-gated
-probability lifts avoid `MonadLift` instance search. There are two independent
-reasons.
-
-**No transitive `SPMF → SetM` lift.** The `MonadLiftT SPMF SetM` instance below
-exists so `support` and friends work on raw `SPMF α`. Crucially it is declared
-as `MonadLiftT` rather than `MonadLift`, which means Lean's `monadLiftTrans`
-(which requires `MonadLift n o` for the outer hop) cannot chain it: a monad
-`m` with `MonadLiftT m SPMF` does **not** automatically gain `MonadLiftT m SetM`
-via transitivity. Each monad declares its `MonadLiftT m SetM` directly — e.g.
-`OracleComp` uses the syntactic `simulateQ` into `SetM` (which doesn't require
-`[spec.Fintype]`), and `EvalDistCompatible` records the propositional coherence
-between that syntactic support and `SPMF.support ∘ evalSPMF`.
-
-**Resolution fragility for parameterized + typeclass-gated lifts.** Lifts whose
-source is parameterized (`OracleComp spec`, `OptionT m`, `StateT σ m`, …) and
+Support comes from `MonadAttach`. Discrete probability uses direct `MonadLiftT` declarations
+to keep instance resolution stable for parameterized carriers. Lifts whose source is
+parameterized (`OracleComp spec`, `OptionT m`, `StateT σ m`, …) and
 which are gated by a typeclass on the parameter (`[IsProbabilitySpec spec]`,
 `[MonadLiftT m SPMF]`, …) must also be `MonadLiftT`, not `MonadLift`. Demoting
 to `MonadLift` forces Lean to find the instance through its transitive
@@ -57,20 +41,11 @@ the typeclass premise on `?spec`, and pin down `?spec` from the inner reflexive
 premise — a combination Lean's instance search refuses to chase. The direct
 `MonadLiftT` declaration sidesteps this with a single-step head match. -/
 
-/-- Direct `MonadLiftT SPMF SetM` (only on `SPMF` itself — not the transitive
-`MonadLift` that would create a diamond). -/
-instance instMonadLiftTSPMFSetM : MonadLiftT SPMF SetM where
-  monadLift := SPMF.support
-
-instance instLawfulMonadLiftTSPMFSetM : LawfulMonadLiftT SPMF SetM where
-  monadLift_pure := SPMF.support_pure
-  monadLift_bind := SPMF.support_bind
-
-/-- Coherence between `support` (via `MonadLiftT m SetM`) and `evalSPMF`
+/-- Coherence between `support` (via `MonadAttach`) and `evalSPMF`
 (via `MonadLiftT m SPMF`): `x ∈ support mx` iff `Pr[= x | mx] ≠ 0`.
 
-This typeclass is exported by every monad that admits both lifts and they
-agree on outputs — i.e. `support mx = SPMF.support (evalSPMF mx)`. -/
+This typeclass records agreement of attachment support with discrete probability outputs,
+i.e. `support mx = SPMF.support (evalSPMF mx)`. -/
 class EvalDistCompatible (m : Type u → Type v) [MonadAttach m]
     [MonadLiftT m SPMF] : Prop where
   /-- The reachable outputs of `mx` (via `support`) are exactly the outputs with
@@ -973,14 +948,14 @@ lemma function_support_probOutput :
 
 lemma mem_support_iff_of_evalSPMF_eq {m n} [Monad m] [MonadLiftT m SPMF]
     [MonadAttach m] [EvalDistCompatible m]
-    [Monad n] [MonadLiftT n SPMF] [MonadLiftT n SetM] [MonadAttach n] [EvalDistCompatible n]
+    [Monad n] [MonadLiftT n SPMF] [MonadAttach n] [EvalDistCompatible n]
     {mx : m α} {mx' : n α} (h : 𝒮[mx] = 𝒮[mx']) (x : α) :
     x ∈ support mx ↔ x ∈ support mx' := by
   simp only [mem_support_iff, probOutput_def, h]
 
 lemma mem_finSupport_iff_of_evalSPMF_eq {m n} [Monad m] [MonadLiftT m SPMF]
     [MonadAttach m] [EvalDistCompatible m]
-    [Monad n] [MonadLiftT n SPMF] [MonadLiftT n SetM] [MonadAttach n] [EvalDistCompatible n]
+    [Monad n] [MonadLiftT n SPMF] [MonadAttach n] [EvalDistCompatible n]
     [HasEvalFinset m] [HasEvalFinset n] [DecidableEq α]
     {mx : m α} {mx' : n α} (h : 𝒮[mx] = 𝒮[mx']) (x : α) :
     x ∈ finSupport mx ↔ x ∈ finSupport mx' := by

@@ -38,12 +38,6 @@ lemma mem_support_iff (mx : OptionT m α) (x : α) :
 
 variable [LawfulMonad m] [ExactMonadAttach m]
 
-/-- Optional failure has empty attachment support when the base attachment is exact. -/
-instance instLawfulFailure (m : Type u → Type v) [Monad m]
-    [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m] :
-    HasEvalSet.LawfulFailure (OptionT m) where
-  support_failure' := by aesop
-
 @[simp]
 lemma support_liftM (mx : m α) :
     support (liftM mx : OptionT m α) = support mx := by grind
@@ -99,15 +93,16 @@ end HasEvalFinset
 
 section EvalSPMF
 
+variable (m)
+variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+
 /-- Lift a `MonadLiftT m SPMF` instance to `MonadLiftT (OptionT m) SPMF`. Failure in `OptionT`
 contributes to the failure mass of the resulting `SPMF`. -/
-noncomputable instance instMonadLiftTSPMF (m : Type u → Type v) [Monad m]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] :
+noncomputable instance instMonadLiftTSPMF :
     MonadLiftT (OptionT m) SPMF where
   monadLift x := OptionT.mapM' (MonadHom.ofLift m SPMF) x
 
-noncomputable instance instLawfulMonadLiftTSPMF (m : Type u → Type v) [Monad m]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] :
+noncomputable instance instLawfulMonadLiftTSPMF :
     LawfulMonadLiftT (OptionT m) SPMF where
   monadLift_pure x := by
     change OptionT.mapM' (MonadHom.ofLift m SPMF) (pure x : OptionT m _) = pure x
@@ -120,9 +115,8 @@ noncomputable instance instLawfulMonadLiftTSPMF (m : Type u → Type v) [Monad m
 
 /-- The native support of `OptionT m` (preimage of `support mx.run` under `some`) agrees with the
 SPMF-lift (the `OptionT.mapM'` bind into `SPMF`) on outputs, given `EvalDistCompatible m`. -/
-instance instEvalDistCompatible (m : Type u → Type v) [Monad m]
+instance instEvalDistCompatible
     [MonadAttach m]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [EvalDistCompatible m] :
     EvalDistCompatible (OptionT m) where
   support_eq_SPMF_support {α} mx := by
@@ -139,7 +133,7 @@ instance instEvalDistCompatible (m : Type u → Type v) [Monad m]
     refine ⟨fun h => ⟨some a, h, by simp⟩, ?_⟩
     rintro ⟨(_ | y), hy, ha⟩ <;> simp_all
 
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+variable {m}
 
 lemma evalSPMF_eq (mx : OptionT m α) :
     𝒮[mx] = OptionT.mapM' (MonadHom.ofLift m SPMF) mx := rfl

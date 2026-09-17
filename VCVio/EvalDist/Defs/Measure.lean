@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
+public import VCVio.Prelude
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Measure.Core
 public import VCVio.EvalDist.Defs.Measure.Deterministic
@@ -56,7 +57,7 @@ theorem toMeasure_pure (x : α) : (pure x : SPMF α).toMeasure = Measure.dirac x
 /-- Failure carries no successful-output mass. -/
 @[simp]
 theorem toMeasure_failure : (failure : SPMF α).toMeasure = 0 := by
-  rw [toMeasure, SPMF.toPMF_failure, PMF.toMeasure_pure, Measure.dropNone_dirac_none]
+  rw [toMeasure, toPMF_failure, PMF.toMeasure_pure, Measure.dropNone_dirac_none]
 
 @[simp]
 theorem toMeasure_apply_singleton [MeasurableSingletonClass α] (x : α) :

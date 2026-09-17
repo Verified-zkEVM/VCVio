@@ -145,11 +145,13 @@ public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.Defs.Measure.Core
 public import VCVio.EvalDist.Defs.Measure.Deterministic
 public import VCVio.EvalDist.Defs.Measure.ExceptT
+public import VCVio.EvalDist.Defs.Measure.Failure
 public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Defs.Semantics
 public import VCVio.EvalDist.Defs.Support
+public import VCVio.EvalDist.Defs.Support.Failure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.Expectation
 public import VCVio.EvalDist.ExpectationMeasure
@@ -169,6 +171,7 @@ public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Discard
+public import VCVio.EvalDist.Monad.Failure
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Option
