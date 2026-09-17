@@ -6,8 +6,8 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.OracleComp.OracleComp
-public import VCVio.EvalDist.PFunctorSupport
-public import Mathlib.Data.Set.Finite.Lattice
+public import VCVio.EvalDist.Defs.Support
+public import PolyFun.PFunctor.Free.Support
 
 /-!
 # Possible outputs of oracle programs

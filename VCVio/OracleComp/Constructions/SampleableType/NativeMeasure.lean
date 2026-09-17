@@ -24,6 +24,13 @@ open MeasureTheory ProbabilityTheory
 
 namespace SampleableType
 
+/-- Every singleton of a uniform finite sample has the reciprocal cardinality mass. -/
+@[simp↓ high, grind norm↓]
+theorem evalDist_uniformSample_singleton {α : Type} [SampleableType α] [_root_.Fintype α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] (x : α) :
+    𝒟[($ᵗ α : ProbComp α)] {x} = (Fintype.card α : ENNReal)⁻¹ := by
+  rw [evalDist_uniformSample, uniformOn_univ_apply_singleton]
+
 /-- A uniform finite sample satisfies a decidable event with its accepted fraction of outputs. -/
 @[simp↓ high, grind norm↓]
 theorem prEvent_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]

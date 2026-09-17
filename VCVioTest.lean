@@ -53,6 +53,7 @@ public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
 public import VCVioTest.ProgramLogic.CoreWP
 public import VCVioTest.ProgramLogic.GCongr
+public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.QueryBounds
@@ -75,6 +76,7 @@ public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.Smoke
+public import VCVioTest.StateSeparating.NativeMeasure
 public import VCVioTest.StateTLift
 public import VCVioTest.Tactic.Expectation
 public import VCVioTest.Tactic.Finiteness

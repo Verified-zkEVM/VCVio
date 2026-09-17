@@ -8,6 +8,7 @@ module
 public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.GiryMonad
 public import ToMathlib.MeasureTheory.Measure.Monotone
+public import ToMathlib.MeasureTheory.Function.AEMeasurable
 
 /-!
 # Sequential composition of measure couplings
@@ -80,21 +81,43 @@ theorem IsCoupling.bind {c : Measure (α × β)} {μ : Measure α} {ν : Measure
     rw [← bind_map c measurable_snd hl]
     exact congrArg (fun ν => ν.bind l) hc.snd_eq
 
+/-- Conditional joint families need only be measurable under the initial joint law. -/
+theorem IsCoupling.bind_of_aemeasurable {c : Measure (α × β)} {μ : Measure α} {ν : Measure β}
+    (hc : IsCoupling c μ ν) {k : α → Measure γ} {l : β → Measure δ}
+    {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
+    (hj : AEMeasurable j c) (h : ∀ᵐ z ∂c, IsCoupling (j z) (k z.1) (l z.2)) :
+    IsCoupling (c.bind j) (μ.bind k) (ν.bind l) := by
+  rw [bind_congr_right hj.ae_eq_mk]
+  apply hc.bind hk hl hj.measurable_mk
+  filter_upwards [h, hj.ae_eq_mk] with z hz heq
+  rw [← heq]
+  exact hz
+
+/-- Almost everywhere measurable bind preserves measurable almost everywhere postconditions. -/
+theorem ae_bind_of_ae_of_aemeasurable {μ : Measure α} {k : α → Measure β} {p : β → Prop}
+    (hk : AEMeasurable k μ) (hp : MeasurableSet {b | p b})
+    (h : ∀ᵐ a ∂μ, ∀ᵐ b ∂k a, p b) : ∀ᵐ b ∂μ.bind k, p b := by
+  rw [bind_congr_right hk.ae_eq_mk]
+  apply ae_bind_of_ae hk.measurable_mk hp
+  filter_upwards [h, hk.ae_eq_mk] with a ha heq
+  rw [← heq]
+  exact ha
+
 /-- Bind a coupling with a measurable conditional coupling family. -/
 noncomputable def Coupling.bind {μ : Measure α} {ν : Measure β}
     (c : Coupling μ ν) {k : α → Measure γ} {l : β → Measure δ}
     {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : Measurable j) (h : ∀ᵐ z ∂c.1, IsCoupling (j z) (k z.1) (l z.2)) :
+    (hj : Measurable j) (h : ∀ᵐ z ∂c.joint, IsCoupling (j z) (k z.1) (l z.2)) :
     Coupling (μ.bind k) (ν.bind l) :=
-  ⟨c.1.bind j, c.2.bind hk hl hj h⟩
+  ⟨c.joint.bind j, c.isCoupling.bind hk hl hj h⟩
 
 /-- The joint measure of sequentially composed couplings is their Giry bind. -/
 @[simp]
 theorem Coupling.bind_joint {μ : Measure α} {ν : Measure β}
     (c : Coupling μ ν) {k : α → Measure γ} {l : β → Measure δ}
     {j : α × β → Measure (γ × δ)} (hk : Measurable k) (hl : Measurable l)
-    (hj : Measurable j) (h : ∀ᵐ z ∂c.1, IsCoupling (j z) (k z.1) (l z.2)) :
+    (hj : Measurable j) (h : ∀ᵐ z ∂c.joint, IsCoupling (j z) (k z.1) (l z.2)) :
     (c.bind hk hl hj h).joint = c.joint.bind j := by
-  simp only [Coupling.bind, Coupling.joint]
+  rfl
 
 end MeasureTheory.Measure

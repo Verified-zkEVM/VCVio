@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.ProgramLogic.Relational.Measure.Bind
-public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import VCVio.ProgramLogic.Relational.Measure.Deterministic
 public import Mathlib.Tactic.GRewrite
 
 /-!
@@ -49,5 +49,38 @@ example {mx : m α} {my : n β} {R S : α → β → Prop}
   relWP_mono h hRS
 
 example (a : Nat) : RelWP (some a) (some a) (· = ·) := relWP_refl _
+
+example (a b : Nat) (g : Nat → Nat → ENNReal) :
+    eRelWP (pure a : Option Nat) (pure b : Option Nat) g = g a b := by simp
+
+example (a b : Nat) (R : Nat → Nat → Prop) :
+    RelWP (pure a : Option Nat) (pure b : Option Nat) R ↔ R a b := by simp
+
+example (g : Nat → Nat → ENNReal) : eRelWP (some 0) (none : Option Nat) g = 0 :=
+  eRelWP_eq_zero_of_mass_ne _ _ (by simp) g
+
+example (R : Nat → Nat → Prop) : ¬RelWP (some 0) (none : Option Nat) R :=
+  not_relWP_of_mass_ne _ _ (by simp) R
+
+example (g : Nat → Nat → ENNReal) (h : ∀ a b, g a b ≤ 1) :
+    eRelWP (some 0) (some 1) g ≤ 1 := eRelWP_le _ _ g 1 h
+
+example (mx my : Option Nat) (c : Measure.Coupling 𝒟[mx] 𝒟[my]) :
+    c.joint Set.univ ≤ 1 := measure_univ_le c.joint
+
+example [MeasurableSpace ℝ] [MeasurableSingletonClass ℝ]
+    (j : ℝ × ℝ → Measure (Nat × Nat)) : AEMeasurable j (Measure.dirac (0, 0)) :=
+  aemeasurable_of_ae_mem_countable (Set.countable_singleton ((0, 0) : ℝ × ℝ))
+    (by simp) j
+
+example {μ ν : Measure Nat} {R S : Nat → Nat → Prop}
+    (hinit : CouplingPost μ ν R) {k l : Nat → Measure Nat}
+    (hk : Measurable k) (hl : Measurable l)
+    (hstep : ∀ a b, R a b → CouplingPost (k a) (l b) S) :
+    CouplingPost (μ.bind k) (ν.bind l) S :=
+  hinit.bind_of_countable (Set.to_countable Set.univ) (Set.to_countable Set.univ)
+    (by simp) (by simp) hk hl MeasurableSet.of_discrete (by
+      intro a _ b _ h
+      exact hstep a b h)
 
 end VCVioTest.ProgramLogic.MeasureRelWP

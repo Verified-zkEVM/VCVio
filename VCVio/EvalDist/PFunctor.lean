@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.EvalDist.Defs.NeverFails
-public import VCVio.EvalDist.PFunctorSupport
+public import PolyFun.PFunctor.Free.Support
 public import PolyFun.PFunctor.Handler
 
 /-!

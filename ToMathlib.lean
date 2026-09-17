@@ -47,6 +47,7 @@ public import ToMathlib.Data.Vector.ListVector
 public import ToMathlib.Lint.LegacyProbability
 public import ToMathlib.Logic.Basic
 public import ToMathlib.MeasureTheory.DiscreteInstances
+public import ToMathlib.MeasureTheory.Function.AEMeasurable
 public import ToMathlib.MeasureTheory.Integral.Quadratic
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
