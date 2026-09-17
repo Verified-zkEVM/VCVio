@@ -336,9 +336,17 @@ Native optional and exceptional map laws use upstream coproduct measurable embed
 families: Giry pushforward transports an auxiliary discrete source measure to the selected space.
 The shared `Measure.map_bind` and `Measure.bind_map` equations are consequences of upstream
 `Measure.map_map` and `Measure.join_map_map`; they live below the coupling theory so native
-transformer laws reuse them without importing that higher layer. Sampled optional guards collapse
-to conjunctions of observed events using upstream `lintegral_indicator_one`, with the
-intermediate measurable-space choice internal to the event API.
+transformer laws reuse them without importing that higher layer. Native transformer semantics is
+primary even when a finite-distribution lift exists; the explicit `ProbComp.DiscreteCompatibility`
+scope selects the adapter at a retiring calibration boundary. Lossless lifts publish
+probability-measure instances, so consumers infer their mass properties from the base computation.
+The upstream measurable embeddings' `comap_apply` equations hold on all sets and need no event
+measurability hypothesis. Sampled optional guards collapse to conjunctions of observed events using
+upstream `lintegral_indicator_one`, including after constant-map normalization. Their unit-output
+measure is the accepted event probability times `Measure.dirac ()`, with the intermediate
+measurable-space choice internal to the event API. Finite sampling events count accepted outputs
+through upstream `uniformOn_univ` and `Measure.count_apply_finset`. The OTP UC observation proof
+uses this guard law and the native XOR uniformity equation.
 The optional coproduct makes `{none}` measurable without constraining the result space. Native
 `Measure.dropNone` and `Measure.withFailure` publish their mass-property instances, while lossless
 `evalDistKernel` families inherit `IsMarkovKernel`, including reader/state wrappers. Boolean branch

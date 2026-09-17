@@ -24,6 +24,17 @@ open MeasureTheory ProbabilityTheory
 
 namespace SampleableType
 
+/-- A uniform finite sample satisfies a decidable event with its accepted fraction of outputs. -/
+@[simp↓ high, grind norm↓]
+theorem prEvent_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]
+    (p : α → Prop) [DecidablePred p] :
+    Pr{let x ← $ᵗ α}[p x] = (Finset.univ.filter p).card / (Fintype.card α : ENNReal) := by
+  classical
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, SampleableType.evalDist_uniformSample, uniformOn_univ]
+  have hset : {x | p x} = (Finset.univ.filter p : Finset α) := by ext x; simp
+  rw [hset, Measure.count_apply_finset]
+
 /-- The finite sampler directly denotes a uniform measure. -/
 theorem evalDist_fin (n : ℕ) :
     𝒟[(SampleableType.Fin n).selectElem] = uniformOn Set.univ :=

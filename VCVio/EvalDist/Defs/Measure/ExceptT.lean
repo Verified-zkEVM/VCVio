@@ -27,7 +27,7 @@ open MeasureTheory
 universe u v
 
 /-- Interpret successful `ExceptT` results by pulling the run measure back along `Except.ok`. -/
-noncomputable instance (priority := 5) instEvalDistSemanticsExceptT
+noncomputable instance (priority := 20) instEvalDistSemanticsExceptT
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v} [EvalDistSemantics m] :
     EvalDistSemantics (ExceptT ε m) where
   denote mx := (𝒟[mx.run]).comap Except.ok
@@ -46,12 +46,11 @@ theorem ExceptT.evalDist_eq_comap_ok
     𝒟[mx] = (𝒟[mx.run]).comap Except.ok := by
   rfl
 
-/-- The successful-output measure of an exceptional computation on a measurable event is the
+/-- The successful-output measure of an exceptional computation on an event is the
 run measure of the corresponding `Except.ok` outcomes. -/
 theorem ExceptT.evalDist_apply
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v} [EvalDistSemantics m]
-    {α : Type u} [MeasurableSpace α] (mx : ExceptT ε m α)
-    {event : Set α} (_hevent : MeasurableSet event) :
+    {α : Type u} [MeasurableSpace α] (mx : ExceptT ε m α) {event : Set α} :
     𝒟[mx] event = 𝒟[mx.run] (Except.ok '' event) :=
   Except.measurableEmbedding_ok.comap_apply _ _
 
@@ -61,7 +60,7 @@ theorem ExceptT.evalDist_apply_univ
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v} [EvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (mx : ExceptT ε m α) :
     𝒟[mx] Set.univ = 𝒟[mx.run] (Set.range Except.ok) := by
-  rw [ExceptT.evalDist_apply mx MeasurableSet.univ, Set.image_univ]
+  rw [ExceptT.evalDist_apply, Set.image_univ]
 
 /-- Pure exceptional computations have Dirac successful-output semantics. -/
 theorem ExceptT.evalDist_pure
@@ -99,6 +98,15 @@ theorem ExceptT.evalDist_liftM
   rw [ExceptT.evalDist_eq_comap_ok, ExceptT.run_liftM,
     _root_.evalDist_map mx Except.measurable_ok,
     Except.measurableEmbedding_ok.comap_map]
+
+/-- Lifting a lossless computation into the exceptional monad preserves its probability measure. -/
+instance ExceptT.isProbabilityMeasure_evalDist_liftM
+    {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v}
+    [Monad m] [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (mx : m α) [IsProbabilityMeasure 𝒟[mx]] :
+    IsProbabilityMeasure 𝒟[(liftM mx : ExceptT ε m α)] := by
+  rw [ExceptT.evalDist_liftM]
+  infer_instance
 
 /-- A measurable map of successful exceptional results is the measure pushforward. -/
 theorem ExceptT.evalDist_map

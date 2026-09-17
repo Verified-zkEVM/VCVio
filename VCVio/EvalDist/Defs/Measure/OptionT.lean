@@ -12,9 +12,8 @@ public import ToMathlib.MeasureTheory.Measure.Option
 # Successful-output measure semantics for optional computations
 
 An `OptionT` computation denotes the pullback of its underlying `Option`-valued measure along the
-measurable embedding `some`. The low priority preserves the compatibility semantics when a
-finite-distribution lift is already part of an existing downstream instance graph; bundled
-semantics can select this effect-native construction directly.
+measurable embedding `some`. This effect-native construction supplies the primary semantics;
+finite-distribution lifts remain available for explicit compatibility observations.
 
 Native map and monad laws use the base monad's measure laws. The full bind law only requires
 measurability of the successful-output family: an auxiliary discrete source space discharges
@@ -28,7 +27,7 @@ open MeasureTheory
 universe u v
 
 /-- Interpret successful `OptionT` results by pulling the run measure back along `some`. -/
-noncomputable instance (priority := 5) instEvalDistSemanticsOptionT
+noncomputable instance (priority := 20) instEvalDistSemanticsOptionT
     {m : Type u → Type v} [EvalDistSemantics m] :
     EvalDistSemantics (OptionT m) where
   denote mx := (𝒟[mx.run]).comap some
@@ -46,12 +45,11 @@ theorem OptionT.evalDist_eq_comap_some
     𝒟[mx] = (𝒟[mx.run]).comap some := by
   rfl
 
-/-- The successful-output measure of an optional computation on a measurable event is the run
+/-- The successful-output measure of an optional computation on an event is the run
 measure of the corresponding `some` outcomes. -/
 theorem OptionT.evalDist_apply
     {m : Type u → Type v} [EvalDistSemantics m]
-    {α : Type u} [MeasurableSpace α] (mx : OptionT m α)
-    {event : Set α} (_hevent : MeasurableSet event) :
+    {α : Type u} [MeasurableSpace α] (mx : OptionT m α) {event : Set α} :
     𝒟[mx] event = 𝒟[mx.run] (some '' event) :=
   Option.measurableEmbedding_some.comap_apply _ _
 
@@ -62,7 +60,7 @@ theorem OptionT.evalDist_apply_univ
     {α : Type u} [MeasurableSpace α] (mx : OptionT m α) :
     𝒟[mx] Set.univ = 𝒟[mx.run] {value | value.isSome} :=
   by
-    rw [OptionT.evalDist_apply mx MeasurableSet.univ]
+    rw [OptionT.evalDist_apply]
     congr 1
     ext value
     cases value <;> simp
@@ -100,6 +98,23 @@ theorem OptionT.evalDist_lift
   rw [OptionT.evalDist_eq_comap_some, OptionT.run_lift,
     LawfulMonad.bind_pure_comp, _root_.evalDist_map mx Option.measurable_some,
     Option.measurableEmbedding_some.comap_map]
+
+/-- Lifting a lossless computation into the optional monad preserves its probability measure. -/
+instance OptionT.isProbabilityMeasure_evalDist_lift
+    {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (mx : m α) [IsProbabilityMeasure 𝒟[mx]] :
+    IsProbabilityMeasure 𝒟[OptionT.lift mx] := by
+  rw [OptionT.evalDist_lift]
+  infer_instance
+
+/-- A monadic lift into the optional monad preserves a known probability measure. -/
+instance OptionT.isProbabilityMeasure_evalDist_liftM
+    {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (mx : m α) [IsProbabilityMeasure 𝒟[mx]] :
+    IsProbabilityMeasure 𝒟[(liftM mx : OptionT m α)] :=
+  OptionT.isProbabilityMeasure_evalDist_lift mx
 
 /-- A measurable map of successful optional results is the measure pushforward. -/
 theorem OptionT.evalDist_map

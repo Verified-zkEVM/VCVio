@@ -170,13 +170,11 @@ def familyWithFailure : Bool → OptionT ProbComp Bool
 
 example : 𝒟[Fintype.mPi familyWithFailure] Set.univ = 0 := by
   have hfail : 𝒟[familyWithFailure true] Set.univ = 0 := by
-    rw [evalDist_apply_univ]
     simp [familyWithFailure]
   rw [evalDist_mPi, Measure.pi_univ, Fintype.prod_bool, hfail, zero_mul]
 
 example : (𝒟[Fintype.mPi familyWithFailure]).map (Function.eval false) = 0 := by
   have hfail : 𝒟[familyWithFailure true] Set.univ = 0 := by
-    rw [evalDist_apply_univ]
     simp [familyWithFailure]
   have hmem : true ∈ (Finset.univ.erase false : Finset Bool) := by simp
   have hprod : ∏ j ∈ Finset.univ.erase false, 𝒟[familyWithFailure j] Set.univ = 0 :=

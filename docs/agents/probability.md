@@ -31,9 +31,18 @@ successful-output family, rather than the whole run measure. An auxiliary discre
 and the base map law transport the source measure back to its selected space.
 `VCVio.EvalDist.Monad.Option` collapses a lifted draw followed by a guard into one `prEvent`
 condition: `simp` and `grind` turn the guard and final event into their conjunction. Callers need
-no measurable space on that intermediate type. The legacy lifting adapter still takes priority
-when a finite-distribution lift is present; the native certificates describe the native
-interpretation and do not assert laws about an independently chosen interpretation.
+no measurable space on that intermediate type. A constant output map after the guard has the same
+normalization rule, so monad normalization preserves this automation. The guarded unit-output
+measure is its event probability times `Measure.dirac ()`. `OptionT.prEvent_eq_run` observes present
+values in the underlying run, and `OptionT.prEvent_lift` preserves an event through a lift.
+Native transformer semantics takes priority over the generic finite lifting adapter. Opening
+`ProbComp.DiscreteCompatibility` explicitly selects that adapter for retiring discrete calibration
+proofs. Native certificates describe the native interpretation and do not assert laws about an
+independently chosen interpretation. The successful-output pullback equations
+`OptionT.evalDist_apply` and `ExceptT.evalDist_apply` hold on arbitrary sets, without a
+measurability argument.
+`SampleableType.prEvent_uniformSample` counts a decidable event as its accepted fraction of finite
+outputs, using Mathlib's native `uniformOn` and counting measure.
 `VCVio.EvalDist.Defs.Measure.FinRatPMF` gives the executable rational sampler native measure
 semantics without importing a PMF/SPMF backend. `Raw.toMeasure` is a finite sum of weighted Dirac
 measures; pure and measurable bind have the generic laws on arbitrary measurable spaces.
@@ -78,7 +87,10 @@ Every `𝒟[mx]` automatically satisfies `IsSubprobabilityMeasure`. The upper ma
 propagates automatically through raw `Measure.map` and `Measure.bind`, without measurability
 hypotheses; this uses upstream's zero pushforward for a nonmeasurable map and its one-sided bind
 bound. Exact mass preservation requires measurability. `pure` infers a probability-measure
-instance even for continuous-answer specifications. `FreeM.isProbabilityMeasure_evalDist_lift`
+instance even for continuous-answer specifications. Lifting a computation whose measure already
+has an `IsProbabilityMeasure` instance into `OptionT` or `ExceptT` also infers that instance,
+including through `liftM`. These lifts introduce no failure mass; arbitrary optional or exceptional
+computations still need a losslessness certificate. `FreeM.isProbabilityMeasure_evalDist_lift`
 supplies a single native query's probability proof. It is a theorem: the dependent output type
 `P.B a` gives a projection key that instance search cannot match against a concrete reduced type
 such as `ℝ`. A general continuous program still requires a continuation measurability proof.

@@ -12,6 +12,8 @@ public import VCVioTest.MeasureSemantics
 public import VCVio.EvalDist.Inequalities
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.EvalDist.PFunctorPath
+public import VCVio.EvalDist.Defs.Measure.ExceptT
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
 # Computation probability notation canaries
@@ -26,6 +28,37 @@ open MeasureTheory ProbabilityTheory OracleComp PFunctor ProbComp
 open scoped ENNReal
 
 namespace VCVioTest.ProbabilityNotation
+
+/-- A closed draw whose implementation is opaque to consumers. -/
+opaque opaqueDraw : ProbComp ℝ := pure 0
+
+example : IsProbabilityMeasure 𝒟[opaqueDraw] := inferInstance
+
+example : IsSubprobabilityMeasure 𝒟[opaqueDraw] := inferInstance
+
+example (mx : ProbComp ℝ) : IsProbabilityMeasure 𝒟[OptionT.lift mx] := inferInstance
+
+example (mx : ProbComp ℝ) : IsProbabilityMeasure 𝒟[(liftM mx : OptionT ProbComp ℝ)] :=
+  inferInstance
+
+example (mx : ProbComp ℝ) : IsProbabilityMeasure 𝒟[(liftM mx : ExceptT Bool ProbComp ℝ)] :=
+  inferInstance
+
+example {α : Type} [MeasurableSpace α] (mx : OptionT ProbComp α) :
+    𝒟[mx] = (𝒟[mx.run]).comap some := OptionT.evalDist_eq_comap_some mx
+
+example {α : Type} [MeasurableSpace α] (mx : ExceptT Bool ProbComp α) :
+    𝒟[mx] = (𝒟[mx.run]).comap Except.ok := ExceptT.evalDist_eq_comap_ok mx
+
+example {α : Type} [SampleableType α] [Fintype α]
+    (p : α → Prop) [DecidablePred p] :
+    Pr{let x ← $ᵗ α}[p x] = (Finset.univ.filter p).card / (Fintype.card α : ENNReal) := by
+  simp
+
+example {α : Type} [SampleableType α] [Fintype α]
+    (p : α → Prop) [DecidablePred p] {bound : ENNReal}
+    (h : (Finset.univ.filter p).card / (Fintype.card α : ENNReal) ≤ bound) :
+    Pr{let x ← $ᵗ α}[p x] ≤ bound := by grind
 
 example (mx : ProbComp ℝ) : IsProbabilityMeasure 𝒟[mx] := inferInstance
 

@@ -312,8 +312,12 @@ example : Resumption.returnedMeasure delayedTrue Set.univ = 1 := by
 applies. Any probability already proved about a `ProbComp` is then a fact about its measure
 denotation, with no reproof. -/
 
-noncomputable instance : unifSpec.toPFunctor.IsMeasureSpec :=
+/-- The uniform oracle interpretation induced by its finite-distribution semantics. -/
+@[instance_reducible]
+noncomputable def unifMeasureSpec : unifSpec.toPFunctor.IsMeasureSpec :=
   PFunctor.IsProbabilitySpec.toMeasureSpec _
+
+attribute [local instance] unifMeasureSpec
 
 theorem denote_probComp_apply_singleton {α : Type} [MeasurableSpace α]
     [MeasurableSingletonClass α] (program : ProbComp α) (x : α) :

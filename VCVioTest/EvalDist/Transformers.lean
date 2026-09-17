@@ -72,12 +72,34 @@ example (mx : OptionT m α) (f : α → β) (hf : Measurable f) :
 example (mx : ExceptT ε m α) (f : α → β) (hf : Measurable f) :
     𝒟[f <$> mx] = 𝒟[mx].map f := evalDist_map mx hf
 
+example (mx : m α) [IsProbabilityMeasure 𝒟[mx]] :
+    IsProbabilityMeasure 𝒟[OptionT.lift mx] := inferInstance
+
+example (mx : m α) [IsProbabilityMeasure 𝒟[mx]] :
+    IsProbabilityMeasure 𝒟[(liftM mx : OptionT m α)] := inferInstance
+
+example (mx : m α) [IsProbabilityMeasure 𝒟[mx]] :
+    IsProbabilityMeasure 𝒟[(liftM mx : ExceptT ε m α)] := inferInstance
+
+example (mx : OptionT m α) (event : Set α) :
+    𝒟[mx] event = 𝒟[mx.run] (some '' event) := OptionT.evalDist_apply mx
+
+example (mx : ExceptT ε m α) (event : Set α) :
+    𝒟[mx] event = 𝒟[mx.run] (Except.ok '' event) := ExceptT.evalDist_apply mx
+
 end bind
 
 section events
 
 variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m] {ε α β : Type} [MeasurableSpace ε]
+
+example (mx : m α) (p : α → Prop) :
+    Pr{let x ← OptionT.lift mx}[p x] = Pr{let x ← mx}[p x] := by simp
+
+example (mx : m α) (p : α → Prop) {bound : ENNReal}
+    (h : Pr{ let x ← mx}[p x] ≤ bound) :
+    Pr{let x ← OptionT.lift mx}[p x] ≤ bound := by grind
 
 example (mx : OptionT m α) (my : OptionT m β) (p : α → Prop) (q : β → Prop) :
     Pr{let x ← mx; let y ← my}[p x ∧ q y] =
@@ -89,6 +111,23 @@ example (mx : m α) (p q : α → Prop) [DecidablePred p] :
 
 example (mx : m α) (p : α → Prop) [DecidablePred p] :
     Pr{let x ← OptionT.lift mx; guard (p x)}[True] = Pr{let x ← mx}[p x] := by simp
+
+example (mx : m α) (p q : α → Prop) [DecidablePred p] :
+    𝒟[do let x ← OptionT.lift mx; (fun _ : Unit ↦ q x) <$> guard (p x)] {True} =
+      Pr{let x ← mx}[p x ∧ q x] := by simp
+
+example (mx : m α) (p q : α → Prop) [DecidablePred p] {bound : ENNReal}
+    (h : Pr{ let x ← mx}[p x ∧ q x] ≤ bound) :
+    𝒟[do let x ← OptionT.lift mx; (fun _ : Unit ↦ q x) <$> guard (p x)] {True} ≤
+      bound := by grind
+
+example (mx : m α) (p : α → Prop) [DecidablePred p] :
+    𝒟[do let x ← OptionT.lift mx; guard (p x)] =
+      Pr{let x ← mx}[p x] • Measure.dirac () := by simp
+
+example (mx : m α) (p : α → Prop) [DecidablePred p] :
+    𝒟[do let x ← (liftM mx : OptionT m α); guard (p x)] =
+      Pr{let x ← mx}[p x] • Measure.dirac () := by simp
 
 example (mx : m α) (p q : α → Prop) [DecidablePred p] {bound : ENNReal}
     (h : Pr{ let x ← mx}[p x ∧ q x] ≤ bound) :
