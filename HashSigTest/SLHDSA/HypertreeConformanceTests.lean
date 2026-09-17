@@ -59,7 +59,6 @@ theorem oneLayerPartsLeaf : oneLayerParts.idxLeaf.val = 14 := by
     Params.treeIdxBytes,
     Params.leafIdxBytes, Params.m, toInt, Vector.toList_ofFn, List.ofFn,
     Fin.foldr, Fin.foldr.loop]
-  all_goals decide
 
 example :
     (trace oneLayerValidated oneLayerParts).get
@@ -87,7 +86,6 @@ theorem twoLayerPartsTree : twoLayerParts.idxTree.val = 11 := by
     Params.treeIdxBytes,
     Params.leafIdxBytes, Params.m, toInt, Vector.toList_ofFn, List.ofFn,
     Fin.foldr, Fin.foldr.loop]
-  all_goals decide
 
 theorem twoLayerPartsLeaf : twoLayerParts.idxLeaf.val = 14 := by
   simp only [twoLayerParts, splitDigest_idxLeaf_val]
@@ -95,7 +93,6 @@ theorem twoLayerPartsLeaf : twoLayerParts.idxLeaf.val = 14 := by
     Params.treeIdxBytes,
     Params.leafIdxBytes, Params.m, toInt, Vector.toList_ofFn, List.ofFn,
     Fin.foldr, Fin.foldr.loop]
-  all_goals decide
 
 example :
     (trace twoLayerValidated twoLayerParts).get
@@ -134,7 +131,6 @@ theorem threeLayerPartsTree : threeLayerParts.idxTree.val = 171 := by
     Params.treeIdxBytes,
     Params.leafIdxBytes, Params.m, toInt, Vector.toList_ofFn, List.ofFn,
     Fin.foldr, Fin.foldr.loop]
-  all_goals decide
 
 theorem threeLayerPartsLeaf : threeLayerParts.idxLeaf.val = 14 := by
   simp only [threeLayerParts, splitDigest_idxLeaf_val]
@@ -142,7 +138,6 @@ theorem threeLayerPartsLeaf : threeLayerParts.idxLeaf.val = 14 := by
     Params.treeIdxBytes,
     Params.leafIdxBytes, Params.m, toInt, Vector.toList_ofFn, List.ofFn,
     Fin.foldr, Fin.foldr.loop]
-  all_goals decide
 
 /-- The three-layer canary pins both quotient/remainder transitions and every propagated base
 address. -/
