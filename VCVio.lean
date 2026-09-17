@@ -191,7 +191,6 @@ public import VCVio.EvalDist.PFunctorKernelTransport
 public import VCVio.EvalDist.PFunctorMeasure
 public import VCVio.EvalDist.PFunctorMeasure.Core
 public import VCVio.EvalDist.PFunctorPath
-public import VCVio.EvalDist.PFunctorSupport
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Prod

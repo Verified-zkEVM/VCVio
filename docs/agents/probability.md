@@ -43,7 +43,8 @@ type. `ExceptT` instead interprets its base run and uses the inherited coproduct
 and outputs. Deterministic final events simplify to their propositional indicators with `simp`
 and `grind`, using `Measure.dirac_apply_singleton_true`.
 `VCVio.OracleComp.Support` exposes the oracle facade over native attachment, while
-`VCVio.EvalDist.PFunctorSupport` owns its universe-polymorphic map/object equations.
+`PolyFun.PFunctor.Free.Support` owns its universe-polymorphic map/object equations,
+nonempty and finite support laws. Consume those structural facts directly from PolyFun.
 `VCVio.OracleComp.EvalDist.Measure` connects structural bounds to almost-everywhere bounds
 under any discrete-answer response measures; neither uniformity nor positive singleton masses
 is required for that direction. `VCVio.ProgramLogic.Unary.WP.OracleMeasure` exposes these
