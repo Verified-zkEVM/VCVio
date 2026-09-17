@@ -290,20 +290,6 @@ theorem authExp_le_prfAdvantage_add_authRF
   have : a - b ≤ |a - b| := le_abs_self _
   linarith
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
-/-- Existential form of the authentication reduction: there is a PRF adversary whose
-distinguishing advantage, added to the random-function world's success probability
-`authRFExp`, bounds the authentication adversary's success probability. The witness is
-`authToPRFReduction adversary`. -/
-theorem exists_prfAdv_authExp_le_prfAdvantage_add_authRF
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : AuthAdversary TagId Nonce Digest) :
-    ∃ prfAdv : PRFScheme.PRFAdversary (TagId × Nonce) Digest,
-      (Pr[= true | authExp prfs adversary]).toReal ≤
-        PRFScheme.prfAdvantage prfs.multiplePRFScheme prfAdv +
-        (Pr[= true | authRFExp adversary]).toReal :=
-  ⟨authToPRFReduction adversary, authExp_le_prfAdvantage_add_authRF prfs adversary⟩
-
 omit [Nonempty TagId] in
 /-- In the ideal authentication world, a forged reader acceptance never occurs. -/
 theorem authIdealExp_eq_zero
@@ -395,13 +381,10 @@ theorem authIdealExp_eq_zero
     exact hst
   have himpl :
       QueryImpl.PreservesInv (authIdealQueryImpl (TagId := TagId))
-        (fun st => ForgedInv st ∧ CacheInv st) := by
-    intro t st hst z hz
-    cases t with
-    | inl tag =>
-        exact (QueryImpl.PreservesInv.and htagForged htagCached) tag st hst z hz
-    | inr transcript =>
-        exact ⟨hreaderForged transcript st hst z hz, hreaderCached transcript st hst.2 z hz⟩
+        (fun st => ForgedInv st ∧ CacheInv st) :=
+    (htagForged.and htagCached).add (by
+      intro transcript st hst z hz
+      exact ⟨hreaderForged transcript st hst z hz, hreaderCached transcript st hst.2 z hz⟩)
   have hfinal :
       ∀ z ∈ support ((simulateQ (authIdealQueryImpl (TagId := TagId))
             adversary).run AuthIdealState.init),

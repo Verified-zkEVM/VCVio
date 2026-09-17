@@ -65,7 +65,7 @@ literature here; it is not established in this file.
 - Falcon specification v1.2, Section 2.5.2 (sampler quality)
 -/
 
-@[expose] public section
+public section
 
 
 namespace Falcon.Concrete.FPRBridge

@@ -123,14 +123,12 @@ lemma enncard_empty : enncard (∅ : QueryCache spec) = 0 := by
 
 variable [DecidableEq ι] (cache : QueryCache spec)
 
-/- `simp` does not currently specialize Mathlib's dependent `Function.update` equations through
-the `QueryCache` abbreviation. Keep that representation detail behind cache-specific equations. -/
-@[simp]
+/- Named wrappers keep the dependent `Function.update` representation detail available for
+explicit rewriting at the `QueryCache` API boundary; generic `simp` also handles these forms. -/
 lemma functionUpdate_self (t : spec.Domain) (u : spec.Range t) :
     Function.update cache t (some u) t = some u :=
   Function.update_self t (some u) cache
 
-@[simp]
 lemma functionUpdate_of_ne {t' t : spec.Domain} (u : spec.Range t) (h : t' ≠ t) :
     Function.update cache t (some u) t' = cache t' :=
   Function.update_of_ne h (some u) cache
@@ -318,12 +316,13 @@ instance : Monoid (QueryCount ι) where
 @[simp] lemma monoid_one_def :
     (@OfNat.ofNat (QueryCount ι) 1 (@One.toOfNat1 _ (Monoid.toOne))) = (0 : ι → ℕ) := rfl
 
-def single [DecidableEq ι] (i : ι) : QueryCount ι := Function.update 0 i 1
+/-- The query count recording one query at index `i` and none elsewhere. -/
+def single [DecidableEq ι] (i : ι) : QueryCount ι := Pi.single i 1
 
 @[simp]
 lemma single_le_iff_pos [DecidableEq ι] (i : ι) (qc : QueryCount ι) :
     single i ≤ qc ↔ 0 < qc i := by
-  simp [single, update_le_iff, Nat.lt_iff_add_one_le]
+  simp [single, Pi.single, update_le_iff, Nat.lt_iff_add_one_le]
 
 end QueryCount
 
@@ -619,22 +618,18 @@ variable [DecidableEq ι]
 /- These equations are the public reduction surface for dependent updates of a `QuerySeed`.
 Using specialized lemmas avoids coupling all seed proofs to simplifier support for the generic
 dependent `Function.update`. -/
-@[simp]
 lemma functionUpdate_self (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i)) :
     Function.update seed i xs i = xs :=
   Function.update_self i xs seed
 
-@[simp]
 lemma functionUpdate_of_ne (seed : QuerySeed spec) (i : ι) (xs : List (spec.Range i))
     (j : ι) (hj : j ≠ i) : Function.update seed i xs j = seed j :=
   Function.update_of_ne hj xs seed
 
-@[simp]
 lemma functionUpdate_eq_self (seed : QuerySeed spec) (i : ι) :
     Function.update seed i (seed i) = seed :=
   Function.update_eq_self i seed
 
-@[simp]
 lemma functionUpdate_idem (seed : QuerySeed spec) (i : ι)
     (xs ys : List (spec.Range i)) :
     Function.update (Function.update seed i xs) i ys = Function.update seed i ys :=
@@ -721,7 +716,6 @@ lemma prependValues_self (seed : QuerySeed spec) {i : ι} (us : List (spec.Range
     seed.prependValues us i = us ++ seed i := by
   simp [prependValues]
 
-@[simp]
 lemma prependValues_singleton (seed : QuerySeed spec) {i : ι} (u : spec.Range i) :
     seed.prependValues [u] i = u :: seed i := by
   simp [prependValues]
@@ -793,7 +787,6 @@ lemma pop_eq_none_iff (seed : QuerySeed spec) (i : ι) :
   unfold pop
   cases hsi : seed i <;> simp
 
-@[simp]
 lemma pop_eq_some_of_cons (seed : QuerySeed spec) (i : ι)
     (u : spec.Range i) (us : List (spec.Range i))
     (h : seed i = u :: us) :

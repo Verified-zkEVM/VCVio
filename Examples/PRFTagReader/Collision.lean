@@ -583,27 +583,6 @@ theorem authExp_le_prfAdvantage_add_collisionBound
     maxDigestProb hmax
 
 omit [Nonempty TagId] [NeZero sessionsPerTag] in
-/-- Existential form of `authExp_le_prfAdvantage_add_collisionBound`: there is a PRF adversary
-whose distinguishing advantage, added to the distinct-reader-nonce collision term, bounds the
-authentication adversary's forgery probability. The witness is `authToPRFReduction adversary`. -/
-theorem exists_prfAdv_authExp_le_prfAdvantage_add_collisionBound
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : AuthAdversary TagId Nonce Digest)
-    (q : ℕ)
-    (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
-    (hdistinct : HasDistinctReaderNonces adversary)
-    (maxDigestProb : ℝ)
-    (hmax : ∀ d : Digest,
-      (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ maxDigestProb) :
-    ∃ prfAdv : PRFScheme.PRFAdversary (TagId × Nonce) Digest,
-      (Pr[= true | authExp (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) prfs adversary]).toReal ≤
-        PRFScheme.prfAdvantage prfs.multiplePRFScheme prfAdv +
-        ((q * Fintype.card TagId : ℕ) : ℝ) * maxDigestProb :=
-  ⟨authToPRFReduction adversary,
-    authExp_le_prfAdvantage_add_collisionBound prfs adversary q hq hdistinct maxDigestProb hmax⟩
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Uniform-`Digest` specialization of `authExp_le_prfAdvantage_add_collisionBound`: when `Digest`
 is finite and sampled uniformly, the collision term reads `q * |TagId| / |Digest|`, so the
 authentication adversary's forgery probability is bounded by the PRF advantage plus

@@ -56,7 +56,7 @@ This factoring separates two concerns:
 - IEEE 754-2019, Section 4 (rounding).
 -/
 
-@[expose] public section
+public section
 
 
 noncomputable section

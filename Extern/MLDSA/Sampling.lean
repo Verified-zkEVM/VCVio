@@ -247,19 +247,10 @@ The following lemmas extract the structural value ranges of the rejection sample
 recursion. They are the facts the abstract `Primitives.Laws` sampler-bound fields require, and are
 consumed by the `concrete_*` theorems in `Extern/MLDSA/Laws.lean`. -/
 
-set_option maxRecDepth 4000
-
-/-- The ML-DSA centered infinity norm `polyNorm` agrees with the backend-generic
-`LatticeCrypto.cInfNorm`. -/
-private theorem polyNorm_eq_cInfNorm' (f : Rq) : polyNorm f = LatticeCrypto.cInfNorm f := by
-  unfold polyNorm normOps LatticeCrypto.cInfNorm LatticeCrypto.zmodPolyNormOps
-    LatticeCrypto.normOpsOfCenteredView
-  rfl
-
 open LatticeCrypto in
 /-- After a `set!`, the defaulted lookup at any index is either the freshly written value or the
 prior defaulted lookup. -/
-private theorem getD_set!_or {α : Type*} [Inhabited α] (a : Array α) (i : ℕ) (v d : α) (j : ℕ) :
+private theorem getD_set!_or {α : Type*} (a : Array α) (i : ℕ) (v d : α) (j : ℕ) :
     (a.set! i v).getD j d = v ∨ (a.set! i v).getD j d = a.getD j d := by
   simp only [Array.set!, Array.getD_eq_getD_getElem?, Array.getElem?_setIfInBounds]
   by_cases heq : i = j <;> by_cases hj : j < a.size <;> simp [heq, hj]
@@ -321,7 +312,7 @@ theorem sampleInBall_coeff_mem (p : Params) (seed : CommitHashBytes p) (i : Fin 
 /-- `sampleInBall` has centered infinity norm at most `1` (coefficients in `{-1, 0, +1}`). -/
 theorem sampleInBall_norm (p : Params) (seed : CommitHashBytes p) :
     polyNorm (sampleInBall p seed) ≤ 1 := by
-  rw [polyNorm_eq_cInfNorm', LatticeCrypto.cInfNorm_le_iff]
+  rw [polyNorm_eq_cInfNorm, LatticeCrypto.cInfNorm_le_iff]
   intro i
   rcases sampleInBall_coeff_mem p seed i with h | h | h <;> rw [h] <;> decide
 
@@ -397,7 +388,6 @@ private theorem step_fresh (stream : ByteArray) (signs i : ℕ) (out : Array Coe
   rw [getD_set!_ne _ chosen _ j (by omega), getD_set!_ne _ i _ j (by omega)]
   exact hfresh j (by omega)
 
-set_option maxRecDepth 4000 in
 /-- One challenge step increases the nonzero count by at most one (in fact exactly one), given the
 freshness of slot `i`. -/
 private theorem step_countNZ_le (stream : ByteArray) (signs i : ℕ) (out : Array Coeff)
@@ -430,7 +420,6 @@ private theorem step_countNZ_le (stream : ByteArray) (signs i : ℕ) (out : Arra
   · have hgc : out1.getD chosen 0 = w := by rw [ho1]; exact getD_set!_ne out i w chosen hic
     rw [hgc] at e2; rw [e1, hsignAbs] at e2; omega
 
-set_option maxRecDepth 4000 in
 /-- The challenge loop increases the nonzero count by at most the number of indices it processes. -/
 private theorem loop_countNZ_le (stream : ByteArray) (signs hi : ℕ) (hhi : hi ≤ ringDegree) :
     ∀ (fuel i : ℕ) (out : Array Coeff) (pos signIdx : ℕ),
@@ -482,7 +471,6 @@ private theorem l1Norm_ofPi_eq_countNZ (coeffs : Array Coeff) :
   intro i _
   rw [LatticeCrypto.Poly.get_ofPi]
 
-set_option maxRecDepth 4000 in
 /-- The challenge loop, run from the all-zero accumulator over `[ringDegree - τ, ringDegree)`,
 produces an array with nonzero count at most `τ`. -/
 private theorem countNZ_sampleInBallLoop_le (stream : ByteArray) (signs : ℕ) (p : Params) :
@@ -510,7 +498,7 @@ theorem sampleInBall_l1Norm (p : Params) (seed : CommitHashBytes p) :
 
 /-- After a `push`, the defaulted lookup at any index is either the pushed value or the prior
 defaulted lookup. -/
-private theorem getD_push_or {α : Type*} [Inhabited α] (a : Array α) (v d : α) (j : ℕ) :
+private theorem getD_push_or {α : Type*} (a : Array α) (v d : α) (j : ℕ) :
     (a.push v).getD j d = v ∨ (a.push v).getD j d = a.getD j d := by
   simp only [Array.getD_eq_getD_getElem?, Array.getElem?_push]
   by_cases h : j < a.size <;> by_cases h2 : j = a.size <;> simp [h, h2]
@@ -536,7 +524,6 @@ private theorem EtaInv_condPush (eta : ℕ) (c : Array ℤ) (v : ℤ) (cond : Pr
     · rw [h]; exact hc j
   · exact hc j
 
-set_option maxRecDepth 4000 in
 /-- One `rejEtaStep` only pushes values whose `Coeff` cast is centered-bounded by `eta` (in the
 `eta = 2` and `eta = 4` branches; in any other case it pushes nothing). So `EtaInv eta` is preserved
 by a step. -/
@@ -607,7 +594,7 @@ private theorem requireFullEtaSample_mem (eta : ℕ) (coeffs : Array ℤ) (hInv 
 /-- Every coefficient of `sampleEtaPoly eta seed nonce` has centered infinity norm at most `eta`. -/
 theorem sampleEtaPoly_norm (eta : ℕ) (seed : Bytes 64) (nonce : ℕ) :
     polyNorm (sampleEtaPoly eta seed nonce) ≤ eta := by
-  rw [polyNorm_eq_cInfNorm', LatticeCrypto.cInfNorm_le_iff]
+  rw [polyNorm_eq_cInfNorm, LatticeCrypto.cInfNorm_le_iff]
   intro i
   unfold sampleEtaPoly
   simp only [Vector.get_ofFn]
