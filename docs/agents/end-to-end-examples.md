@@ -131,3 +131,24 @@ The framework machinery exercised: `cachingOracle`, `loggingOracle`,
 `IsTotalQueryBound`, the birthday bound
 `probEvent_cacheCollision_le_birthday_total_tight`, and the identical-until-bad
 TVD bound `tvDist_simulateQ_le_probEvent_bad_dist`.
+
+## Merkle Checkpoint Observation
+
+[`Examples/MerkleCheckpoints.lean`](../../Examples/MerkleCheckpoints.lean) contains two
+concrete executions using the library's Merkle tree constructor, multi-extractability
+game, and batch verifier.
+
+A commitment made before querying has frozen-checkpoint failure probability `1/2`.
+Reconstructing that checkpoint from the terminal adversarial log instead reports zero
+failure. The generic laws in
+[`MultiExtractability/DelayedObservation.lean`](../../VCVio/CryptoFoundations/MerkleTree/MultiExtractability/DelayedObservation.lean)
+retain the required extraction-drift charge. The charge is exactly `1/2` in this example,
+so it cannot simply be dropped. Recorded-checkpoint membership and honest acceptance
+stay fixed when comparing the observers.
+
+The second execution compares honest construction and verification with shared versus
+fresh random-oracle responses. A shared live cache accepts with probability one;
+resampling between phases accepts with probability `1/2`. Clearing memoization while
+keeping the same underlying fixed hash function still accepts, as
+`reset_same_table_accepts` proves. This distinguishes a representation change from a
+change to the oracle's stateful behavior.

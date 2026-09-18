@@ -32,6 +32,7 @@ public import VCVioTest.KernelSemantics
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
+public import VCVioTest.MerkleCheckpoints
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeHashForest
