@@ -5,7 +5,7 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ReachableWhen
 public import PolyFun.PFunctor.Free.Cursor
 
 /-!
@@ -22,7 +22,7 @@ cursors) and every reachable final output (via terminal cursors). The generic Po
 `PFunctor.TraceList.DirectionsWithin` and `PFunctor.FreeM.RootSatisfies` express the trace filter
 and the demand made by the selected residual root.
 
-It also connects those structural predicates to the denotational set `supportWhen`, so proofs can
+It also connects those structural predicates to the operational set `reachableWhen`, so proofs can
 move cleanly between the syntax-level traversal view and the reachable-output view.
 -/
 
@@ -155,29 +155,29 @@ lemma somePathSatisfies_query_bind (q : spec.Domain)
       exact ⟨hu, hw⟩
 
 /-- Every output of `oa` reachable under `possibleOutputs` satisfies `outputPred` exactly when
-`outputPred` holds throughout `oa.supportWhen possibleOutputs`. -/
-lemma allOutputsSatisfyWhen_iff_supportWhen (outputPred : α → Prop)
+`outputPred` holds throughout `oa.reachableWhen possibleOutputs`. -/
+lemma allOutputsSatisfyWhen_iff_reachableWhen (outputPred : α → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x)) (oa : OracleComp spec α) :
     allOutputsSatisfyWhen outputPred possibleOutputs oa ↔
-      ∀ x ∈ oa.supportWhen possibleOutputs, outputPred x := by
+      ∀ x ∈ oa.reachableWhen possibleOutputs, outputPred x := by
   induction oa using OracleComp.inductionOn with
-  | pure x => simp [OracleComp.allOutputsSatisfyWhen, OracleComp.supportWhen_pure]
+  | pure x => simp [OracleComp.allOutputsSatisfyWhen]
   | query_bind q oa ih =>
       simp only [OracleComp.allOutputsSatisfyWhen, OracleComp.allPathsSatisfy_query_bind,
-        true_and, OracleComp.supportWhen_query_bind, Set.mem_iUnion, exists_prop] at ih ⊢
+        true_and, OracleComp.reachableWhen_query_bind, Set.mem_iUnion, exists_prop] at ih ⊢
       grind
 
 /-- Some output of `oa` reachable under `possibleOutputs` satisfies `outputPred` exactly when
-`outputPred` holds at some point of `oa.supportWhen possibleOutputs`. -/
-lemma someOutputSatisfiesWhen_iff_supportWhen (outputPred : α → Prop)
+`outputPred` holds at some point of `oa.reachableWhen possibleOutputs`. -/
+lemma someOutputSatisfiesWhen_iff_reachableWhen (outputPred : α → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x)) (oa : OracleComp spec α) :
     someOutputSatisfiesWhen outputPred possibleOutputs oa ↔
-      ∃ x ∈ oa.supportWhen possibleOutputs, outputPred x := by
+      ∃ x ∈ oa.reachableWhen possibleOutputs, outputPred x := by
   induction oa using OracleComp.inductionOn with
-  | pure x => simp [OracleComp.someOutputSatisfiesWhen, OracleComp.supportWhen_pure]
+  | pure x => simp [OracleComp.someOutputSatisfiesWhen]
   | query_bind q oa ih =>
       simp only [OracleComp.someOutputSatisfiesWhen, OracleComp.somePathSatisfies_query_bind,
-        false_or, OracleComp.supportWhen_query_bind, Set.mem_iUnion, exists_prop] at ih ⊢
+        false_or, OracleComp.reachableWhen_query_bind, Set.mem_iUnion, exists_prop] at ih ⊢
       grind
 
 /-- A bind satisfies a universal path property exactly when every path of the first computation
@@ -233,23 +233,63 @@ lemma someOutputSatisfiesWhen_bind_iff (outputPred : β → Prop)
   simp only [someOutputSatisfiesWhen, somePathSatisfies_bind_iff]
 
 /-- Output-only bind rule phrased directly in terms of reachable intermediate outputs. -/
-lemma allOutputsSatisfyWhen_bind_iff_supportWhen (outputPred : β → Prop)
+lemma allOutputsSatisfyWhen_bind_iff_reachableWhen (outputPred : β → Prop)
+    (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
+    (oa : OracleComp spec α) (ob : α → OracleComp spec β) :
+    (oa >>= ob).allOutputsSatisfyWhen outputPred possibleOutputs ↔
+      ∀ x ∈ oa.reachableWhen possibleOutputs,
+        (ob x).allOutputsSatisfyWhen outputPred possibleOutputs := by
+  rw [OracleComp.allOutputsSatisfyWhen_bind_iff]
+  simp [OracleComp.allOutputsSatisfyWhen_iff_reachableWhen]
+
+/-- Existential output bind rule phrased directly in terms of reachable intermediate outputs. -/
+lemma someOutputSatisfiesWhen_bind_iff_reachableWhen (outputPred : β → Prop)
+    (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
+    (oa : OracleComp spec α) (ob : α → OracleComp spec β) :
+    (oa >>= ob).someOutputSatisfiesWhen outputPred possibleOutputs ↔
+      ∃ x ∈ oa.reachableWhen possibleOutputs,
+        (ob x).someOutputSatisfiesWhen outputPred possibleOutputs := by
+  rw [OracleComp.someOutputSatisfiesWhen_bind_iff]
+  simp [OracleComp.someOutputSatisfiesWhen_iff_reachableWhen]
+
+@[deprecated "VCVio retiring support API: use allOutputsSatisfyWhen_iff_reachableWhen"
+  (since := "2026-09-14")]
+theorem allOutputsSatisfyWhen_iff_supportWhen (outputPred : α → Prop)
+    (possibleOutputs : (x : spec.Domain) → Set (spec.Range x)) (oa : OracleComp spec α) :
+    allOutputsSatisfyWhen outputPred possibleOutputs oa ↔
+      ∀ x ∈ oa.supportWhen possibleOutputs, outputPred x := by
+  rw [supportWhen_eq_reachableWhen]
+  exact allOutputsSatisfyWhen_iff_reachableWhen outputPred possibleOutputs oa
+
+@[deprecated "VCVio retiring support API: use someOutputSatisfiesWhen_iff_reachableWhen"
+  (since := "2026-09-14")]
+theorem someOutputSatisfiesWhen_iff_supportWhen (outputPred : α → Prop)
+    (possibleOutputs : (x : spec.Domain) → Set (spec.Range x)) (oa : OracleComp spec α) :
+    someOutputSatisfiesWhen outputPred possibleOutputs oa ↔
+      ∃ x ∈ oa.supportWhen possibleOutputs, outputPred x := by
+  rw [supportWhen_eq_reachableWhen]
+  exact someOutputSatisfiesWhen_iff_reachableWhen outputPred possibleOutputs oa
+
+@[deprecated "VCVio retiring support API: use allOutputsSatisfyWhen_bind_iff_reachableWhen"
+  (since := "2026-09-14")]
+theorem allOutputsSatisfyWhen_bind_iff_supportWhen (outputPred : β → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
     (oa : OracleComp spec α) (ob : α → OracleComp spec β) :
     (oa >>= ob).allOutputsSatisfyWhen outputPred possibleOutputs ↔
       ∀ x ∈ oa.supportWhen possibleOutputs,
         (ob x).allOutputsSatisfyWhen outputPred possibleOutputs := by
-  rw [OracleComp.allOutputsSatisfyWhen_bind_iff]
-  simp [OracleComp.allOutputsSatisfyWhen_iff_supportWhen]
+  rw [supportWhen_eq_reachableWhen]
+  exact allOutputsSatisfyWhen_bind_iff_reachableWhen outputPred possibleOutputs oa ob
 
-/-- Existential output bind rule phrased directly in terms of reachable intermediate outputs. -/
-lemma someOutputSatisfiesWhen_bind_iff_supportWhen (outputPred : β → Prop)
+@[deprecated "VCVio retiring support API: use someOutputSatisfiesWhen_bind_iff_reachableWhen"
+  (since := "2026-09-14")]
+theorem someOutputSatisfiesWhen_bind_iff_supportWhen (outputPred : β → Prop)
     (possibleOutputs : (x : spec.Domain) → Set (spec.Range x))
     (oa : OracleComp spec α) (ob : α → OracleComp spec β) :
     (oa >>= ob).someOutputSatisfiesWhen outputPred possibleOutputs ↔
       ∃ x ∈ oa.supportWhen possibleOutputs,
         (ob x).someOutputSatisfiesWhen outputPred possibleOutputs := by
-  rw [OracleComp.someOutputSatisfiesWhen_bind_iff]
-  simp [OracleComp.someOutputSatisfiesWhen_iff_supportWhen]
+  rw [supportWhen_eq_reachableWhen]
+  exact someOutputSatisfiesWhen_bind_iff_reachableWhen outputPred possibleOutputs oa ob
 
 end OracleComp

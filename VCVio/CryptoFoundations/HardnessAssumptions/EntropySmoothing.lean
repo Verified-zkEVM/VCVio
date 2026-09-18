@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import VCVio.CryptoFoundations.SecExp
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.Constructions.SampleableType
@@ -46,7 +47,6 @@ def idealExp (adversary : HK × M → ProbComp Bool) : ProbComp Bool := do
 /-- Entropy-smoothing distinguishing advantage. -/
 noncomputable def advantage (g : G) (hash : HK → G → M)
     (adversary : HK × M → ProbComp Bool) : ℝ :=
-  |(Pr[= true | realExp F g hash adversary]).toReal -
-    (Pr[= true | idealExp adversary]).toReal|
+  (realExp F g hash adversary).boolDistAdvantage (idealExp adversary)
 
 end EntropySmoothing

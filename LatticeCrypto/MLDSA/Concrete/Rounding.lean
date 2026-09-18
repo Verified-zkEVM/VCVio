@@ -520,7 +520,7 @@ private theorem useHintCoeff_shift_sub_le
       by_cases hr0pos : 0 < r0
       · by_cases hwrap : r1 + 1 < m
         · use r0 - alpha; constructor
-          · simp only [useHintCoeff, if_true, hdec, hr0pos, ctx.h2α, ctx.hmdef]
+          · simp only [useHintCoeff, ite_true, hdec, hr0pos, ctx.h2α, ctx.hmdef]
             rw [Nat.mod_eq_of_lt hwrap, ←hdecomp]
             push_cast; ring
           · omega

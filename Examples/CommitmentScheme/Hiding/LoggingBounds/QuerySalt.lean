@@ -175,9 +175,9 @@ lemma log_length_le_of_mem_support_counting_simulate_run_logging [Fintype M] [Fi
         simpa using Nat.succ_le_of_lt hlt
       simpa [hzlog] using hcons
 
-omit [Finite C] in
+omit [Finite C] [Inhabited C] in
 lemma log_length_le_of_mem_support_run_cached_logging
-    [Finite M] [Finite S] [Finite C]
+    [Finite M] [Finite S]
     {α : Type} {oa : OracleComp (CMOracle M S C) α} {n : ℕ}
     (hbound : IsTotalQueryBound oa n)
     (cache₀ : QueryCache (CMOracle M S C))
@@ -230,9 +230,8 @@ lemma sum_wp_querySaltIndicators_le_queryBound_of_run_cached_logging
           OracleComp.ProgramLogic.propInd
             (0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))) ≤ n := by
   let := Fintype.ofFinite M
-  simp only [OracleComp.ProgramLogic.wp_eq_expectedValue]
-  rw [← OracleComp.EvalDist.expectedValue_finsetSum]
-  apply OracleComp.EvalDist.expectedValue_le_of_support
+  rw [← OracleComp.ProgramLogic.wp_finsetSum]
+  apply OracleComp.ProgramLogic.wp_le_const_of_support
   intro z hz
   refine (sum_querySaltIndicators_le_logLength (M := M) (S := S) (C := C) z.1.2).trans ?_
   exact_mod_cast log_length_le_of_mem_support_run_cached_logging
@@ -303,9 +302,8 @@ lemma sum_wp_querySaltIndicators_le_queryBound_of_run_logging [Fintype S]
           OracleComp.ProgramLogic.propInd
             (0 < QueryLog.countQ z.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))) ≤ n := by
   classical
-  simp only [OracleComp.ProgramLogic.wp_eq_expectedValue]
-  rw [← OracleComp.EvalDist.expectedValue_finsetSum]
-  apply OracleComp.EvalDist.expectedValue_le_of_support
+  rw [← OracleComp.ProgramLogic.wp_finsetSum]
+  apply OracleComp.ProgramLogic.wp_le_const_of_support
   intro z hz
   refine (sum_querySaltIndicators_le_logLength (M := M) (S := S) (C := C) z.2).trans ?_
   exact_mod_cast log_length_le_of_mem_support_run_simulateQ hbound hz
@@ -524,10 +522,11 @@ lemma wp_querySaltIndicator_prepend_eq_one
           QueryLog.countQ
             ((⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: z.1.2)
             (fun t' : (CMOracle M S C).Domain => t'.2 = s) := by
-      rw [QueryLog.countQ_cons, if_pos hsalt]
+      rw [QueryLog.countQ_cons, ite_eq_left hsalt]
       omega
     exact OracleComp.ProgramLogic.propInd_eq_one_iff.mpr hpos
-  rw [hpost, OracleComp.ProgramLogic.wp_const]
+  rw [hpost]
+  exact OracleComp.ProgramLogic.wp_const _ _
 
 lemma wp_querySaltIndicator_prepend_eq_of_ne
     {α : Type}
@@ -577,7 +576,7 @@ lemma wp_querySaltIndicator_prepend_eq_of_ne
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) := by
     funext z
     simp only [Function.comp_apply]
-    rw [QueryLog.countQ_cons, if_neg hsalt]
+    rw [QueryLog.countQ_cons, ite_eq_right hsalt]
   rw [hpost]
 
 lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entries
@@ -626,7 +625,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
             (oa := mx ((query t).cont qu.1)) (cache := qu.2)
             (t := t) (u := (query t).cont qu.1) (s := s) hsalt
         rw [hpost]
-        simp [OracleComp.ProgramLogic.wp_const]
+        simp
       · have hpost :
             (fun qu : C × QueryCache (CMOracle M S C) =>
               OracleComp.ProgramLogic.wp
@@ -1042,4 +1041,5 @@ theorem sum_probEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : T
                 · rw [probOutput_eq_zero_of_not_mem_support hqchoose]
                   simp
     _ = t := by
-        rw [ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
+        rw [ENNReal.tsum_mul_right, tsum_probOutput_eq_sub, probFailure_eq_zero,
+          tsub_zero, one_mul]

@@ -61,7 +61,7 @@ def piKernel (Coeff : Type*) [Zero Coeff] (n : Nat) :
     intro p
     funext i
     rw [Array.getD_eq_getD_getElem?, Array.getElem?_ofFn]
-    rw [dif_pos i.isLt, Option.getD_some]
+    rw [dite_eq_left i.isLt, Option.getD_some]
 
 /-- Bundled negacyclic ring over the function-backed backend. -/
 abbrev piRing (Coeff : Type*) [CommRing Coeff] (n : Nat) :

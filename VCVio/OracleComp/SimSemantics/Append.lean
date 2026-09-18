@@ -205,8 +205,8 @@ end simulateQ_add_liftComp
 identity (the composite of `HasQuery.toQueryImpl_eq_id'` and `simulateQ_id'`).
 
 Like `toQueryImpl_eq_id'`, this is deliberately **not** `@[simp]`: globally it lets `simulateQ`
-of a `unifFwdImpl`-style `toQueryImpl.liftTarget` handler fully reduce, which can re-enable a
-backward induction-hypothesis rewrite and diverge. Pass it explicitly to `simp` (alongside the
+of a `toQueryImpl.liftTarget` handler fully reduce, which can re-enable a backward
+induction-hypothesis rewrite and diverge. Pass it explicitly to `simp` (alongside the
 opaque handler definition) to discharge a lifted-in computation, e.g.
 `simp [myHandler, simulateQ_toQueryImpl]`; the `simulateQ_add_liftM_left`/`_right` and
 `simulateQ_liftTarget` rungs are `@[simp]` and fire on their own. -/

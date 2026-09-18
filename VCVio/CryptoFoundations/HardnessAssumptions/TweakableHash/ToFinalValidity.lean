@@ -11,6 +11,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCRF
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUD
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTUDFinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalValidity.Core
+import Batteries.Tactic.Lint
 
 /-!
 # Converting rejection-on-arrival adversaries to source-final-validity adversaries
@@ -567,5 +568,11 @@ theorem SM_DT_DSPR_advantage_le_toSourceFinalValidity [Fintype M] [DecidableEq T
     SM_DT_DSPR_Advantage adv ≤
       SM_DT_DSPR_SourceFinalValidity.Advantage adv.toSourceFinalValidity :=
   le_of_eq (SM_DT_DSPR_advantage_toSourceFinalValidity adv)
+
+-- Keep each conversion beside its game's established SM_DT namespace.
+attribute [nolint defsWithUnderscore]
+  SM_DT_UD_World.toSourceFinalValidity SM_DT_UD_Problem.toSourceFinalValidity
+  SM_DT_UD_Adversary.toSourceFinalValidity SM_DT_DSPR_Problem.toSourceFinalValidity
+  SM_DT_DSPR_Adversary.toSourceFinalValidity
 
 end TweakableHash

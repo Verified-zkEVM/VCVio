@@ -239,8 +239,8 @@ lemma toQueryImpl_apply [HasQuery spec m] (t : spec.Domain) :
 
 /-- On `OracleComp spec`, `HasQuery.toQueryImpl` is the identity handler `QueryImpl.id'`.
 
-Not `@[simp]`: in `unifFwdImpl`-style definitions where `toQueryImpl.liftTarget` appears
-inside a `simp [unifFwdImpl]` call, the rewrite `toQueryImpl → id' = liftTarget _ (id _)`
+Not `@[simp]`: in definitions where `toQueryImpl.liftTarget` appears inside a simplifying
+unfold, the rewrite `toQueryImpl → id' = liftTarget _ (id _)`
 nests `liftTarget`s and triggers unbounded depth. Use via explicit `rw` instead. -/
 lemma toQueryImpl_eq_id' :
     (toQueryImpl : QueryImpl spec (OracleComp spec)) = QueryImpl.id' spec := by

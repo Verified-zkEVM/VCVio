@@ -123,7 +123,7 @@ lemma probOutput_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMon
       Pr[= x | simulateQ so mx] :=
   probOutput_fst_run_withTraceBefore so costFn mx x
 
-lemma support_fst_run_withCost [LawfulMonad m] [MonadLiftT m SetM]
+lemma support_fst_run_withCost [LawfulMonad m] [MonadAttach m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     support (Prod.fst <$> (simulateQ (so.withCost costFn) mx).run) =
       support (simulateQ so mx) :=
@@ -284,7 +284,7 @@ and add the initial count back at the end. -/
 lemma support_simulate (oa : OracleComp spec α) (qc : QueryCount ι) :
     support (simulate oa qc) = Prod.map id (qc + ·) '' support (simulate oa 0) := by
   rw [simulate_eq_map_simulate_zero]
-  simp [support_map]
+  simp
 
 /-- Reduce membership in support of simulation with counting to simulation starting from `0`. -/
 lemma mem_support_simulate_iff (oa : OracleComp spec α) (qc : QueryCount ι)
@@ -370,14 +370,12 @@ lemma add_mem_support_simulate {oa : OracleComp spec α} {qc : QueryCount ι}
   simp only [Pi.add_apply]
   omega
 
-@[simp]
 lemma add_right_mem_support_simulate_iff (oa : OracleComp spec α)
     (qc qc' : QueryCount ι) (x : α) :
     (x, qc + qc') ∈ support (simulate oa qc) ↔ (x, qc') ∈ support (simulate oa 0) := by
   rw [mem_support_simulate_iff]
   aesop
 
-@[simp]
 lemma add_left_mem_support_simulate_iff (oa : OracleComp spec α)
     (qc qc' : QueryCount ι) (x : α) :
     (x, qc' + qc) ∈ support (simulate oa qc) ↔ (x, qc') ∈ support (simulate oa 0) := by

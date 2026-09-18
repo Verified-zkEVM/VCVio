@@ -33,10 +33,9 @@ namespace SMDTUDTest
 inductive Seed
   | only
 
-instance : SampleableType Seed where
-  selectElem := pure .only
-  mem_support_selectElem := by simp
-  probOutput_selectElem_eq x y := by cases x; cases y; rfl
+instance : Unique Seed where
+  default := .only
+  uniq x := by cases x; rfl
 
 @[simp] lemma uniformSample_seed : ($ᵗ Seed : ProbComp Seed) = pure .only := rfl
 
@@ -465,10 +464,9 @@ below run the same game at a strict subspace `M' ⊊ M`.
 inductive Input
   | only
 
-instance : SampleableType Input where
-  selectElem := pure .only
-  mem_support_selectElem := by simp
-  probOutput_selectElem_eq x y := by cases x; cases y; rfl
+instance : Unique Input where
+  default := .only
+  uniq x := by cases x; rfl
 
 @[simp] lemma uniformSample_input : ($ᵗ Input : ProbComp Input) = pure .only := rfl
 

@@ -58,12 +58,12 @@ def requireContext (context : List Byte) : Except Error Unit :=
 
 /-- A context within the FIPS 205 255-byte bound passes the boundary check. -/
 theorem requireContext_eq_ok (context : List Byte) (h : context.length ≤ 255) :
-    requireContext context = .ok () := if_pos h
+    requireContext context = .ok () := ite_eq_left h
 
 /-- A context beyond the FIPS 205 255-byte bound is rejected with its observed length. -/
 theorem requireContext_eq_error (context : List Byte) (h : 255 < context.length) :
     requireContext context = .error (.contextTooLong context.length) :=
-  if_neg (Nat.not_le.mpr h)
+  ite_eq_right (Nat.not_le.mpr h)
 
 /-- Common FIPS external-message encoder. Domain `0` denotes pure signing and domain `1`
 denotes pre-hash signing. -/

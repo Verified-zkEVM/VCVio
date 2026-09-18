@@ -523,8 +523,7 @@ lemma wp_finset_sum {α : Type}
     (oa : OracleComp (CMOracle M S C) α) (ss : Finset S) (f : S → α → ℝ≥0∞) :
     (ss.sum fun s => OracleComp.ProgramLogic.wp oa (f s)) =
       OracleComp.ProgramLogic.wp oa (fun z => ss.sum fun s => f s z) := by
-  simp only [OracleComp.ProgramLogic.wp_eq_expectedValue,
-    OracleComp.EvalDist.expectedValue_finsetSum]
+  exact (OracleComp.ProgramLogic.wp_finsetSum oa ss f).symm
 
 lemma sum_wp_hidingOa_eq_wp_choose [Fintype S]
     {AUX : Type} {t : ℕ}
@@ -563,7 +562,7 @@ lemma sum_wp_hidingOa_eq_wp_choose [Fintype S]
                 (post s))) := by
         refine Finset.sum_congr rfl ?_
         intro s hs
-        simp [hidingOa, simulateQ_bind, StateT.run_bind, OracleComp.ProgramLogic.wp_bind]
+        simp [hidingOa, simulateQ_bind, StateT.run_bind]
     _ =
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
@@ -614,8 +613,7 @@ lemma wp_challenge_countPred_le_initialCount
     OracleComp.ProgramLogic.wp
       ((hidingImplCountAll (M := M) (S := S) (C := C) (m, s)).run st)
       (fun qch : C × HidingCountState M S C => (qch.2.2 s - 1 : ℝ≥0∞)) ≤ st.2 s := by
-  rw [OracleComp.ProgramLogic.wp_eq_expectedValue]
-  apply OracleComp.EvalDist.expectedValue_le_of_support
+  apply OracleComp.ProgramLogic.wp_le_const_of_support
   intro qch hqch
   exact_mod_cast challenge_countPred_le_initialCount_of_mem_support_step_hidingImplCountAll
     (M := M) (S := S) (C := C) m s st hqch
@@ -806,7 +804,7 @@ lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_su
             (fun z : Bool × HidingCountState M S C => (z.2.2 s - qchoose.2.2 s : ℝ≥0∞))) := by
     gcongr with s hs z
     by_cases hslt : qchoose.2.2 s < z.2.2 s
-    · simp only [OracleComp.ProgramLogic.propInd, if_pos hslt]
+    · simp only [OracleComp.ProgramLogic.propInd, ite_eq_left hslt]
       exact_mod_cast (Nat.succ_le_of_lt (Nat.sub_pos_of_lt hslt))
     · simp [OracleComp.ProgramLogic.propInd, hslt]
   exact le_trans hmono hres
@@ -1092,7 +1090,7 @@ lemma sum_chooseHitIndicators_le_sumCounts [Fintype S]
   refine Finset.sum_le_sum ?_
   intro s hs
   by_cases hpos : 0 < counts s
-  · simp only [OracleComp.ProgramLogic.propInd, if_pos hpos]
+  · simp only [OracleComp.ProgramLogic.propInd, ite_eq_left hpos]
     exact_mod_cast hpos
   · simp [OracleComp.ProgramLogic.propInd, hpos]
 

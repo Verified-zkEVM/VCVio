@@ -621,9 +621,9 @@ theorem transcript_countQ_le_of_isQueryBoundP (h : OracleHandler spec) (p : ι �
       rw [transcript_countQ_queryBind]
       by_cases hpt : p t
       · have hn : 0 < n := hp.resolve_left (not_not_intro hpt)
-        simp only [hpt, if_true] at hle ⊢
+        simp only [hpt, ite_true] at hle ⊢
         omega
-      · simp only [hpt, if_false] at hle ⊢
+      · simp only [hpt, ite_false] at hle ⊢
         omega
 
 /-- **Per-index query bound.** If `oa` respects a per-index budget `qb`, then for every oracle index
@@ -645,7 +645,7 @@ theorem transcript_countQ_le_of_isPerIndexQueryBound (h : OracleHandler spec) [D
       · rw [Function.update_self] at hle
         split_ifs <;> omega
       · rw [Function.update_of_ne htt.symm] at hle
-        simp only [if_neg htt]; omega
+        simp only [ite_eq_right htt]; omega
 
 end QueryBound
 

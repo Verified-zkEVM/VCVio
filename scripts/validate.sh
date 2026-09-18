@@ -21,9 +21,15 @@ Usage: ./scripts/validate.sh [--lint] [--test] [--ffi] [--axioms]
 Default fast checks (shared with per-PR CI):
   - lake build of the seven proof libraries, with the non-sorry warning budget
   - ./scripts/check-imports.sh (generated umbrella modules are current)
-  - the boundary ratchets: PolyFun, PMF/SPMF, broad expose, complexity backend,
+  - the boundary checks: PolyFun, broad expose, complexity backend,
     Extern and Interop isolation
-  - lake exe lint-style on every library and test module
+  - the comment-fence rule over every Lean source the repository tracks or would
+    track, `third_party/` excluded and both lakefiles included
+
+  - the eager-initialisation ratchet (needs the oleans the build above produced)
+  - with --test, the same ratchet over the two test libraries that have umbrella
+    modules, once lake test has built them
+  - lake lint -- --style-only on every library and test module
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
 
 Optional checks:
@@ -67,20 +73,21 @@ for lib in "${PROOF_LIBS[@]}"; do
 done
 python3 ./scripts/check-warning-log.py "$BUILD_LOG" "${warning_args[@]}" \
   --exclude-substring 'declaration uses `sorry`' \
+  --exclude-substring 'VCVio retiring probability API' \
+  --exclude-substring 'VCVio retiring support API' \
   --label 'repository non-sorry warnings'
 
 echo ""
 echo "# Checking generated umbrella modules"
 python3 ./scripts/test-check-imports.py
 python3 ./scripts/test-validation.py
+python3 ./scripts/test-lint.py
 ./scripts/check-imports.sh
 
 echo ""
 echo "# Checking boundaries"
 bash scripts/test-polyfun-boundary.sh
 bash scripts/check-polyfun-boundary.sh
-bash scripts/test-pmf-boundary.sh
-bash scripts/check-pmf-boundary.sh
 if [[ -f scripts/check-expose-boundary.sh ]]; then
   bash scripts/test-expose-boundary.sh
   bash scripts/check-expose-boundary.sh
@@ -89,19 +96,17 @@ bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
 bash scripts/check-interop-isolation.sh
+bash scripts/test-comment-fences.sh
+python3 ./scripts/check-comment-fences.py
+
+echo ""
+echo "# Checking eagerly-initialised constants"
+./scripts/test-initsweep.sh
+lake exe initsweep --check
 
 echo ""
 echo "# Running the text-based style linters"
-# `lake exe lint-style` resolves to Mathlib's linter (the project defines no `lint-style` exe, so
-# no FFI backend is linked). Libraries are passed by name; the test modules are expanded from git
-# because `HashSigTest` has no umbrella and `LatticeCryptoTest.lean` is curated.
-test_modules=()
-while IFS= read -r module; do
-  test_modules+=("$module")
-done < <(git ls-files 'VCVioTest/*.lean' 'LatticeCryptoTest/*.lean' \
-  'HashSigTest/*.lean' | sed -e 's/\.lean$//' -e 's#/#.#g')
-# Bash 3.2 treats an empty array as unset under nounset.
-lake exe lint-style "${PROOF_LIBS[@]}" Interop ${test_modules[@]+"${test_modules[@]}"}
+lake lint -- --style-only
 
 echo ""
 echo "# Checking the agent documentation"
@@ -111,11 +116,7 @@ python3 ./scripts/extract-doc-fragments.py --check
 if (( run_lint )); then
   echo ""
   echo "# Running the environment linters"
-  # One process per library bounds peak memory. A single `lake lint` process retains each imported
-  # environment and has exceeded the hosted runner's memory after a full build.
-  for lib in "${PROOF_LIBS[@]}"; do
-    lake exe runLinter --no-build "$lib"
-  done
+  lake lint -- --env-only --no-build
 fi
 
 if (( run_test )); then
@@ -130,7 +131,19 @@ if (( run_test )); then
   python3 ./scripts/check-warning-log.py "$TEST_LOG" \
     --path-prefix VCVioTest/ --path-prefix VCVioTest.lean \
     --path-prefix LatticeCryptoTest/ --path-prefix LatticeCryptoTest.lean \
-    --path-prefix HashSigTest/ --label 'test-library warnings'
+    --path-prefix HashSigTest/ \
+    --exclude-substring 'VCVio retiring probability API' \
+    --exclude-substring 'VCVio retiring support API' \
+    --label 'test-library warnings'
+
+
+  # The eager-initialisation ratchet over the test libraries that can be swept: it needs
+  # the oleans `lake test` has just built, which is why it is here and not in the default
+  # pass. `HashSigTest` has no umbrella module and thirteen `main`s, so it is not covered;
+  # `scripts/InitSweep.lean` records exactly what that leaves open.
+  echo ""
+  echo "# Checking eagerly-initialised constants in the test libraries"
+  lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
 fi
 
 if (( run_axioms )); then

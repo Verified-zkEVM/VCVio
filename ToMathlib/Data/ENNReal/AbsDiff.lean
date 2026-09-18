@@ -57,10 +57,10 @@ to `edist` and its `WeakPseudoEMetricSpace` lemmas. -/
 lemma absDiff_eq_edist (a b : ℝ≥0∞) : ENNReal.absDiff a b = edist a b := by
   induction a with
   | top => induction b with
-    | top => simp [ENNReal.absDiff]; rfl
-    | coe b => simp [ENNReal.absDiff]; rfl
+    | top => simp [ENNReal.absDiff]
+    | coe b => simp [ENNReal.absDiff]
   | coe a => induction b with
-    | top => simp [ENNReal.absDiff]; rfl
+    | top => simp [ENNReal.absDiff]
     | coe b =>
       change _ = ((edist a b : ℝ≥0∞))
       rw [edist_nndist, ENNReal.absDiff, ← ENNReal.coe_sub, ← ENNReal.coe_sub, ← ENNReal.coe_add,

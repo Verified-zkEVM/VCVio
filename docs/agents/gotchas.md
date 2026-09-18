@@ -221,6 +221,11 @@ hypothesis type is separately inhabited. A toy witness establishes logical consi
 label it accordingly and do not present it as evidence that the assumptions are
 cryptographically strong or achievable at real parameters.
 
+The conclusion can be vacuous too. `∃ reduction, bound ≤ advantage reduction` holds for every
+scheme, because adversary types carry no resource bound and `Classical.choice` can pick a
+witness. State such bounds for a named reduction; see
+[Name the reduction in the theorem statement](crypto.md#name-the-reduction-in-the-theorem-statement).
+
 ## Module Structure
 
 ### 15. `EvalDist/` must never import from `OracleComp/`
@@ -321,16 +326,19 @@ off via `weak.linter.unicodeLinter, false` in `lakefile.lean`. This is a policy 
 dodge: VCVio docstrings legitimately use FIPS-204 math notation (a combining tilde on `c`) and
 diacritics in cited author names, which the Mathlib allowlist would otherwise reject.
 
-A trailing `set_option linter.style.longFile <ceiling>` in a file above 1500 lines is not a
-dodge either: it is how that linter is meant to be used (Mathlib does the same), the linter
-accepts only its narrow rounded candidate range above the current line count, and the number
-only moves down as the file is split. Likewise `scripts/nolints.json` grandfathers the
+The active libraries fit within the 1500-line limit without file-local overrides. Split files
+by responsibility before crossing the limit, preserving established import paths with public
+import façades. `scripts/nolints.json` grandfathers the
 environment-linter findings (`lake lint`) that predate the gate; entries leave it when the finding
-is fixed, and nothing is added to it to silence a new one. Batteries rejects unlisted findings but
-does not report stale baseline entries, so removing fixed entries is a review requirement. Do not
-use `lake lint -- --update` to replace this multi-library file: Batteries overwrites it once per
-root module, leaving only the last library. Generate each proof library's current findings
-separately, then merge, deduplicate, sort, and audit the delta before replacing the baseline.
+is fixed, and nothing is added to it to silence a new one. The shared driver checks an exact
+baseline and reports stale entries as errors. Run `lake lint -- --prune-baseline` after fixing
+findings: it uses Batteries' update mode in separate temporary directories, collects all seven
+libraries, refuses additions, and atomically writes the reduced file. Never invoke upstream
+`runLinter --update` against the repository baseline directly: it overwrites the file once per
+root module. `-- --style-only` checks source files without building proof libraries;
+`-- --env-only --no-build` uses already-built oleans, one library per process, as CI does.
+The [linter cleanup ledger](../design/linter-cleanup.md) records the audit, completed groups,
+and remaining migrations by their effect on callers.
 
 ### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
@@ -359,8 +367,8 @@ their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.33.1`: `lean-toolchain` pins `leanprover/lean4:v4.33.1` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.33.1"`.
+Both currently `v4.34.0`: `lean-toolchain` pins `leanprover/lean4:v4.34.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.34.0"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs

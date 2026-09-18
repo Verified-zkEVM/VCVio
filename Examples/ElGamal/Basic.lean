@@ -8,6 +8,9 @@ module
 public import Examples.ElGamal.Common
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+import VCVio.OracleComp.EvalDist.UniformCompatibility
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import ToMathlib.Probability.UniformOn
 
 /-!
 # ElGamal Encryption: IND-CPA via the generic one-time lift
@@ -95,8 +98,11 @@ theorem correct [DecidableEq G] :
     have : r • (sk • gen) = sk • (r • gen) := by
       rw [← mul_smul, ← mul_smul, mul_comm]
     rw [this, add_sub_cancel_right]
-  simp [AsymmEncAlg.PerfectlyCorrect, ProbCompRuntime.probComp, ProbCompRuntime.evalSPMF,
-    AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel, probFailure_of_liftM_PMF]
+  simp only [AsymmEncAlg.PerfectlyCorrect]
+  intro msg
+  rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
+  simp [AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel,
+    probOutput_bind_const, probOutput_map_const]
 
 section IND_CPA
 
@@ -288,13 +294,10 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
       probOutput_bind_congr' ($ᵗ G) true (fun pk => by
         simpa [probOutput_uniformSample] using hhalf pk)
     _ = 1 / 2 := by
-      rw [probOutput_bind_eq_tsum]
-      have hbool : Pr[= true | ($ᵗ Bool)] = (1 / 2 : ℝ≥0∞) := by
-        simp [probOutput_uniformSample]
-      simp_rw [hbool]
-      have hsum : ∑' x : G, Pr[= x | ($ᵗ G)] = 1 :=
-        tsum_probOutput_of_liftM_PMF ($ᵗ G)
-      rw [ENNReal.tsum_mul_right, hsum, one_mul]
+      let : MeasurableSpace G := ⊤
+      rw [← evalDist_apply_singleton, OracleComp.evalDist_bind_const, evalDist_uniformSample,
+        ProbabilityTheory.uniformOn_univ_apply_singleton]
+      norm_num
 
 omit [DecidableEq G] in
 /-- The absolute one-time signed IND-CPA advantage of ElGamal is exactly twice the DDH guess
@@ -326,9 +329,10 @@ theorem elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage
       (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)]).toReal := by
     rw [IND_CPA_OneTime_DDHReduction_rand_half hg adv]
     simp [ENNReal.toReal_ofNat]
-  rw [h_real, h_rand]
-  exact DiffieHellman.ddhDistAdvantage_eq_two_mul_ddhGuessAdvantage gen
-    (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
+  simpa only [h_real, h_rand, DiffieHellman.ddhDistAdvantage,
+    ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
+    DiffieHellman.ddhDistAdvantage_eq_two_mul_ddhGuessAdvantage gen
+      (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
 
 /-- **Main theorem.** If an adversary makes at most `q` LR queries and every extracted one-time
 ElGamal DDH reduction has guess advantage at most `ε`, then ElGamal has IND-CPA advantage at most

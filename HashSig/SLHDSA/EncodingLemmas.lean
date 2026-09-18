@@ -100,7 +100,7 @@ theorem toByte_toInt (x : List Byte) : toByte (toInt x) x.length = x := by
         show (toInt xs * 256 + b.toNat) % 256 = b.toNat by omega, ih, UInt8.ofNat_toNat]
 
 /-- Algorithm 2 is injective on byte strings of a common width. -/
-theorem toInt_inj_of_length_eq {x y : List Byte} (hlen : x.length = y.length)
+theorem eq_of_length_eq_of_toInt_eq {x y : List Byte} (hlen : x.length = y.length)
     (h : toInt x = toInt y) : x = y := by
   rw [← toByte_toInt x, ← toByte_toInt y, hlen, h]
 
@@ -132,7 +132,7 @@ private theorem base2bFill_consume (b : ℕ) (x : List Byte) :
         | nil => rfl
         | cons y ys =>
             simp only [base2bFill]
-            rw [if_pos hble]
+            rw [ite_eq_left hble]
       · have hclt : c < x.length := by
           rcases Nat.lt_or_ge c x.length with h | h
           · exact h
@@ -144,7 +144,7 @@ private theorem base2bFill_consume (b : ℕ) (x : List Byte) :
         refine ⟨c', by omega, h2, h3, ?_⟩
         rw [List.drop_eq_getElem_cons hclt]
         simp only [base2bFill]
-        rw [if_neg hble, ← htake,
+        rw [ite_eq_right hble, ← htake,
           show 8 * c - b * j + 8 = 8 * (c + 1) - b * j by omega]
         exact h4
 

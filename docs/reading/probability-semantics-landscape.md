@@ -4,6 +4,11 @@
 > use [`denotational-probability-semantics.md`](denotational-probability-semantics.md) and
 > [`docs/agents/probability.md`](../agents/probability.md).
 >
+> Current v4.34 implementation: Loom2 has been removed; unary carriers use core WP,
+> shared algebra/transformer constructions come from PolyFun, and coupling remains local.
+> See [upstream alignment](upstream-alignment.md) and the
+> [program-logic guide](../agents/program-logic.md) for the implemented boundary.
+>
 > Original snapshot: 2026-08-21. Section 19 preserves that audit in its original time context.
 > Section 20 records the focused 2026-08-30 recheck against current VCVio `main`, VCVio's pinned
 > PolyFun checkout, and PolyFun's canonical `main`. Unless §20 explicitly supersedes a volatile
@@ -241,7 +246,7 @@ VCVio now has three related relational carriers:
 - an `ℝ≥0∞` quantitative expectation layer.
 
 The coherence results in
-[`ProgramLogic/Relational/Loom`](../../VCVio/ProgramLogic/Relational/Loom) show that this
+[`ProgramLogic/Relational/WP`](../../VCVio/ProgramLogic/Relational/WP) show that this
 is not merely duplication: indicator postconditions connect qualitative couplings to
 quantitative mass, and probability is a bounded presentation of the quantitative value.
 
@@ -654,7 +659,7 @@ VCVio-visible rename.
 
 VCVio depends on [`loom2`](https://github.com/quangvdao/loom2) for `Std.Do'`,
 `PredTrans`, `EPost`, `RelTriple`, and `rwp` — the substrate under
-`VCVio/ProgramLogic/{Unary,Relational}/Loom/`. It is omitted from the layering picture
+`VCVio/ProgramLogic/{Unary,Relational}/WP/`. It is omitted from the layering picture
 above, and it should not be: it is the least stable link in the chain.
 
 - It is pinned to a single commit and targets a Lean **v4.32.0** toolchain, while VCVio
@@ -674,7 +679,7 @@ review than either alone.
 The surface is narrower than the dependency's prominence suggests. VCVio imports exactly
 four loom2 modules — `Loom.WP.Basic`, `Loom.ExceptPost`, `Loom.Triple.Basic`, and
 `Loom.Triple.SpecLemmas` — and does so from only five files
-([`Unary/Loom/{Qualitative,Probabilistic,Quantitative}.lean`](../../VCVio/ProgramLogic/Unary/Loom),
+([`Unary/WP/{Qualitative,Probabilistic,Quantitative}.lean`](../../VCVio/ProgramLogic/Unary/WP),
 [`Tactics/Unary/Internals.lean`](../../VCVio/ProgramLogic/Tactics/Unary/Internals.lean),
 and [`ToMathlib/Control/Monad/RelWP.lean`](../../ToMathlib/Control/Monad/RelWP.lean)).
 Everything else reaches Loom through the `Std.Do'` namespace, which is mentioned in 22
@@ -688,7 +693,7 @@ dependency graph, that would have to be swept.
 | `Triple`, `Triple.iff`, `Triple.bind` | 54 | `structure Triple` | `Std/WP/Triple/` | **Rename.** |
 | `Spec.get_StateT`, `set_StateT`, `read_ReaderT`, `modifyGet_StateT`, `monadLift_*` | 12 | `StateT.instWPMonad`, `ReaderT.instWPMonad` | `Std/WP/Monad/Instances.lean` | **Rename**, but re-derive against upstream's instance shape rather than porting the lemmas. |
 | `EPost.nil`, `EPost.nil.mk`, `EPost.cons`, `EPost.cons.mk`, `EPost.cons.pushOption` | 74 | `EPost.Nil`, `EPost.Cons` (capitalised) | **Restructured to `EStack`** | **Reshape — the one substantial item.** |
-| `WriterT.apply_wp`, `wp_tell`, `wp_pure` | 6 | absent | absent | **VCVio-owned already** — declared inside `namespace Std.Do'` in [`Unary/Loom/Quantitative.lean`](../../VCVio/ProgramLogic/Unary/Loom/Quantitative.lean). Moves with VCVio; only the enclosing namespace changes. |
+| `WriterT.apply_wp`, `wp_tell`, `wp_pure` | 6 | absent | absent | **VCVio-owned already** — declared inside `namespace Std.Do'` in [`Unary/WP/Quantitative.lean`](../../VCVio/ProgramLogic/Unary/WP/Quantitative.lean). Moves with VCVio; only the enclosing namespace changes. |
 | `RelTriple`, `rwp`, `RelWP` and their rules | 99 | absent | absent | **Stays downstream.** No relational layer upstream in either tree. |
 
 **The `EPost` → `EStack` reshape is the only part that is not a rename.** Upstream has
@@ -1345,8 +1350,8 @@ users retain ordinary discrete probability notation.
 - [`ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean)
 - [`ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean)
 - [`VCVio/ProgramLogic`](../../VCVio/ProgramLogic)
-- [`VCVio/ProgramLogic/Unary/Loom`](../../VCVio/ProgramLogic/Unary/Loom)
-- [`VCVio/ProgramLogic/Relational/Loom`](../../VCVio/ProgramLogic/Relational/Loom)
+- [`VCVio/ProgramLogic/Unary/WP`](../../VCVio/ProgramLogic/Unary/WP)
+- [`VCVio/ProgramLogic/Relational/WP`](../../VCVio/ProgramLogic/Relational/WP)
 - [`VCVio/OracleComp/Coinductive`](../../VCVio/OracleComp/Coinductive)
 - [`Examples/OneTimePad/Basic.lean`](../../Examples/OneTimePad/Basic.lean)
 - [`Examples/EvalDistCompatible/Basic.lean`](../../Examples/EvalDistCompatible/Basic.lean)
@@ -1500,12 +1505,11 @@ them are distance/coupling files whose content §4.5 already identifies as havin
 counterpart. That is a different problem from the evaluator migration and should be scheduled
 separately.
 
-These are historical bare-`PMF` measurements, not the current CI allowance. The later
-[`scripts/check-pmf-boundary.sh`](../../scripts/check-pmf-boundary.sh) guard deliberately counts
-both standalone `PMF` and `SPMF`, because every explicit `SPMF` use retains a transitive `PMF`
-dependency. At the 2026-08-30 VCVio base, its committed
-[`scripts/pmf_boundary_baseline.tsv`](../../scripts/pmf_boundary_baseline.tsv) contains 1,923
-occurrences across 109 files. The earlier bare-`PMF` breakdown above superseded an even older
+These are historical bare-`PMF` measurements, not the current migration ledger. A later
+source-count guard counted both standalone `PMF` and `SPMF`, because every explicit `SPMF` use
+retains a transitive `PMF` dependency. At the 2026-08-30 VCVio base, that guard recorded 1,923
+occurrences across 109 files. The current declaration-level ledger is `scripts/nolints.json`.
+The earlier bare-`PMF` breakdown above superseded an even older
 revision produced with `grep -c`, which counted matching *lines* rather than occurrences; its
 aggregate totals were unaffected, but its per-file breakdown was not.
 
@@ -1560,8 +1564,8 @@ has already happened.
 
 ### 20.3 Documentation and implementation disposition
 
-The measure-semantics spike, accepted baseline, PMF boundary guard, and measure-primary probability
-surface are all present on VCVio `main`. Readers should therefore follow this order:
+The measure-semantics spike, accepted baseline, and measure-primary probability surface
+are present. Readers should therefore follow this order:
 
 1. use [`docs/agents/probability.md`](../agents/probability.md) for current proof and API guidance;
 2. use [`denotational-probability-semantics.md`](denotational-probability-semantics.md) for the

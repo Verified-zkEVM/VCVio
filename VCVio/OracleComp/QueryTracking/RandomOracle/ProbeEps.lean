@@ -120,16 +120,16 @@ theorem probEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
     intro w
     by_cases hfire : readMany w q σ = true
     · rw [probEvent_pure]
-      simp only [hfire, if_true, mul_one]
+      simp only [hfire, ite_true, mul_one]
       obtain ⟨j, hj, hwj⟩ := (readMany_true_iff w q σ).1 hfire
       calc Pr[= w | oa]
-          = (if w = σ (List.replicate j false) then Pr[= w | oa] else 0) := by rw [if_pos hwj]
+          = (if w = σ (List.replicate j false) then Pr[= w | oa] else 0) := by rw [ite_eq_left hwj]
         _ ≤ ∑ j ∈ Finset.range q,
               if w = σ (List.replicate j false) then Pr[= w | oa] else 0 :=
             Finset.single_le_sum
               (f := fun j => if w = σ (List.replicate j false) then Pr[= w | oa] else 0)
               (fun i _ => by positivity) (Finset.mem_range.2 hj)
-    · rw [probEvent_pure, if_neg hfire, mul_zero]
+    · rw [probEvent_pure, ite_eq_right hfire, mul_zero]
       exact zero_le
   refine le_trans (ENNReal.tsum_le_tsum hstep) ?_
   rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
@@ -138,8 +138,8 @@ theorem probEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
       ≤ ∑ j ∈ Finset.range q, ε := by
         refine Finset.sum_le_sum fun j _ => ?_
         rw [tsum_eq_single (σ (List.replicate j false))
-          (by intro b hb; rw [if_neg hb])]
-        rw [if_pos rfl]
+          (by intro b hb; rw [ite_eq_right hb])]
+        rw [ite_eq_left rfl]
         exact hε _
     _ = (q : ℝ≥0∞) * ε := by rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
 

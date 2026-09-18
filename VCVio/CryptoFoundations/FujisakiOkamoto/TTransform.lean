@@ -127,7 +127,7 @@ theorem encrypt_usesExactQueryCost {ω : Type} [AddMonoid ω]
 `msg`. -/
 theorem encrypt_expectedQueryCost_eq {ω : Type} [AddMonoid ω] [Preorder ω]
     [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (msg : M) (costFn : M → ω) (val : ω → ENNReal) (hval : Monotone val) :
@@ -161,7 +161,7 @@ theorem decrypt_usesZeroQueryCost_of_decrypt_eq_none {ω : Type} [AddMonoid ω]
 cost `0`. -/
 theorem decrypt_expectedQueryCost_eq_zero_of_decrypt_eq_none {ω : Type}
     [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) (costFn : M → ω)
@@ -188,7 +188,7 @@ theorem decrypt_usesExactQueryCost_of_decrypt_eq_some {ω : Type} [AddMonoid ω]
 cost equal to the weight of querying that message. -/
 theorem decrypt_expectedQueryCost_eq_of_decrypt_eq_some {ω : Type}
     [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) (costFn : M → ω)
@@ -223,7 +223,7 @@ theorem decrypt_usesExactlyOneQuery_of_decrypt_eq_some
     decrypt_usesExactQueryCost_of_decrypt_eq_some (ω := ℕ) runtime pke pk sk c (fun _ => 1) hdec
 
 /-- T-transform decryption makes at most one hash-oracle query under unit-cost instrumentation. -/
-theorem decrypt_usesAtMostOneQuery [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+theorem decrypt_usesAtMostOneQuery [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) :
@@ -244,8 +244,9 @@ namespace TTransform
 noncomputable def runtime
     [DecidableEq M] [SampleableType R] :
     ProbCompRuntime (OracleComp (TTransform.oracleSpec M R)) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle TTransform.queryImpl ∅
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle TTransform.queryImpl ∅
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 /-- Structural query bound for T-transform OW-PCVA adversaries: uniform-sampling queries are
 unrestricted, while `qH`, `qP`, and `qV` bound the hash, plaintext-checking, and validity

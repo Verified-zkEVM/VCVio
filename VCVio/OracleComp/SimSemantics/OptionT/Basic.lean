@@ -240,7 +240,7 @@ lemma simulateQ_optionT_forIn_yield_pure_none (xs : List α) (init : β)
         rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
             OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
             = (pure (ForInStep.yield init) : OptionT n (ForInStep β)) by
-          rw [hbody x, if_pos hx]
+          rw [hbody x, ite_eq_left hx]
           rfl, pure_bind]
         exact ih (fun hall ↦ hfail (List.forall_mem_cons.mpr ⟨hx, hall⟩))
       · change ((simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
@@ -249,6 +249,6 @@ lemma simulateQ_optionT_forIn_yield_pure_none (xs : List α) (init : β)
         rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
             OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
             = (failure : OptionT n (ForInStep β)) by
-          rw [hbody x, if_neg hx]
+          rw [hbody x, ite_eq_right hx]
           rfl, failure_bind]
         rfl

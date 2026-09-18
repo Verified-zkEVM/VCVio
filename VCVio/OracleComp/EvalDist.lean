@@ -5,9 +5,12 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.Support
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Instances.OptionT
 public import VCVio.EvalDist.PFunctor
+public import PolyFun.PFunctor.Free.WP
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import ToMathlib.Data.Set.Functor
 
@@ -122,43 +125,6 @@ lemma evalSPMF_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
       (IsProbabilitySpec.toPMF t : SPMF (spec.Range t)) := by
   rw [evalSPMF_liftM_toPMF]; simp [PMF.map_id]
 
-@[simp, grind =] lemma support_liftM (q : OracleQuery spec α) :
-    support (liftM q : OracleComp spec α) = Set.range q.cont := by
-  rw [OracleComp.liftM_def]
-  exact PFunctor.FreeM.support_liftObj q
-
-@[grind =] lemma support_query (t : spec.Domain) :
-    support (query t : OracleComp spec _) = Set.univ := by
-  rw [support_liftM]; exact Set.range_id
-
-lemma mem_support_liftM_iff (q : OracleQuery spec α) (u : α) :
-    u ∈ support (liftM q : OracleComp spec α) ↔ ∃ t, q.cont t = u := by
-  rw [support_liftM]; exact Set.mem_range
-
-lemma mem_support_query (t : spec.Domain) (u : spec.Range t) :
-    u ∈ support (query t : OracleComp spec _) := by
-  rw [support_query]; trivial
-
-alias support_liftM_query := support_query
-
-/-- Support-aware bind congruence: if two continuations agree on all elements in the support
-    of `mx`, the resulting bind computations are equal. -/
-theorem bind_congr_of_forall_mem_support (mx : OracleComp spec α) {f g : α → OracleComp spec β}
-    (h : ∀ x ∈ support mx, f x = g x) : mx >>= f = mx >>= g := by
-  induction mx using OracleComp.inductionOn with
-  | pure a =>
-    simpa only [monad_norm] using h a (by simp)
-  | query_bind q k ih =>
-    change (query q : OracleComp spec _) >>= (fun u => k u >>= f) =
-      (query q : OracleComp spec _) >>= (fun u => k u >>= g)
-    exact bind_congr fun u => ih u fun x hx =>
-      h x ((mem_support_bind_iff _ _ _).mpr ⟨u, by simp, hx⟩)
-
-@[simp, grind .]
-lemma support_finite [spec.Fintype] (mx : OracleComp spec α) : (support mx).Finite := by
-  induction mx using OracleComp.inductionOn with
-  | pure x => simp
-  | query_bind t f h => simpa using Set.finite_iUnion h
 
 end evalSPMF_main
 
@@ -281,8 +247,8 @@ lemma support_eq_evalSPMF_support :
 /-- An output has non-zero probability in `evalSPMF` iff it is in computation support. -/
 lemma mem_support_evalSPMF_iff :
     some x ∈ (𝒮[oa]).run.support ↔ x ∈ support oa := by
-  rw [support_eq_evalSPMF_support, PMF.mem_support_iff, SPMF.mem_support_iff,
-    SPMF.apply_eq_toPMF_some, SPMF.run_eq_toPMF]
+  rw [support_eq_evalSPMF_support, SPMF.support_eq_preimage_some]
+  rfl
 
 alias ⟨mem_support_of_mem_support_evalSPMF, mem_support_evalSPMF⟩ := mem_support_evalSPMF_iff
 
@@ -369,7 +335,6 @@ lemma probOutput_guard {p : Prop} [Decidable p] :
     -- post-refactor diamond. Compute directly.
     simp [OptionT.probOutput_eq, OptionT.run_failure, probOutput_pure]
 
-@[simp]
 lemma probFailure_guard {p : Prop} [Decidable p] :
     Pr[⊥ | (guard p : OptionT (OracleComp spec) Unit)] = if p then 0 else 1 := by
   rw [OracleComp.guard_eq]
@@ -378,9 +343,14 @@ lemma probFailure_guard {p : Prop} [Decidable p] :
   · -- See note above.
     simp [OptionT.probFailure_eq, OptionT.run_failure]
 
+omit [spec.IsProbabilitySpec] in
 lemma support_guard {p : Prop} [Decidable p] :
     support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
-  rw [OracleComp.guard_eq]; split_ifs <;> simp
+  by_cases hp : p
+  · simp [OracleComp.guard_eq, hp]
+  · simp only [OracleComp.guard_eq, hp, ↓reduceIte, OptionT.support_def]
+    ext x
+    simp
 
 /-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
 probability of returning `()` is the complementary mass of its failure probability. -/
@@ -482,57 +452,7 @@ lemma evalSPMF_simulateQ_eq_evalSPMF
 
 end simulateQ_evalSPMF
 
-section supportWhen
 
-/-- The possible outputs of `mx` when queries can output values in the specified sets.
-NOTE: currently proofs using this should reduce to `simulateQ`. A full API would be better -/
-def supportWhen (o : QueryImpl spec Set) (mx : OracleComp spec α) : Set α :=
-  SetM.run (simulateQ (r := SetM) (fun t => SetM.ofSet (o t)) mx)
-
-@[simp]
-lemma supportWhen_pure (o : QueryImpl spec Set) (x : α) :
-    supportWhen o (pure x : OracleComp spec α) = {x} := by
-  unfold supportWhen
-  rw [simulateQ_pure, SetM.run_pure]
-
-lemma supportWhen_query_bind (o : QueryImpl spec Set) (q : spec.Domain)
-    (oa : spec.Range q → OracleComp spec α) :
-    supportWhen o ((query q : OracleComp spec _) >>= oa) =
-      ⋃ x ∈ o q, supportWhen o (oa x) := by
-  unfold supportWhen
-  rw [simulateQ_bind, simulateQ_spec_query, SetM.run_bind, SetM.run_ofSet]
-
-/-- Reachable outputs of a bind are the reachable outputs of the continuation over reachable
-outputs of the first computation. -/
-@[simp]
-lemma supportWhen_bind (o : QueryImpl spec Set) (oa : OracleComp spec α)
-    (ob : α → OracleComp spec β) :
-    supportWhen o (oa >>= ob) = ⋃ x ∈ supportWhen o oa, supportWhen o (ob x) := by
-  unfold supportWhen
-  rw [simulateQ_bind, SetM.run_bind]
-
-/-- Membership form of [`OracleComp.supportWhen_bind`]. -/
-lemma mem_supportWhen_bind_iff (o : QueryImpl spec Set) (oa : OracleComp spec α)
-    (ob : α → OracleComp spec β) (y : β) :
-    y ∈ supportWhen o (oa >>= ob) ↔
-      ∃ x ∈ supportWhen o oa, y ∈ supportWhen o (ob x) := by
-  simp [supportWhen_bind]
-
-/-- Enlarging the set of possible oracle outputs only enlarges the reachable output set. -/
-@[gcongr]
-lemma supportWhen_mono {o₁ o₂ : QueryImpl spec Set}
-    (h : ∀ q, o₁ q ⊆ o₂ q) (oa : OracleComp spec α) :
-    supportWhen o₁ oa ⊆ supportWhen o₂ oa := by
-  intro y hy
-  induction oa using OracleComp.inductionOn generalizing y with
-  | pure x =>
-      simpa [supportWhen_pure] using hy
-  | query_bind q oa ih =>
-      simp only [supportWhen_query_bind, Set.mem_iUnion, exists_prop] at hy ⊢
-      rcases hy with ⟨u, hu, hy⟩
-      exact ⟨u, h q hu, ih u hy⟩
-
-end supportWhen
 
 section evalSPMFWhen
 

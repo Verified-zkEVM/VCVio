@@ -23,9 +23,9 @@ checksum to decrease, and equal checksums together with pointwise `≤` force eq
 This module is a standard-model statement over `List ℕ` / `ℕ`, independent of the oracle/hash
 layer; a WOTS+ one-wayness reduction consumes
 `wots_fullDigits_incomparable` as its purely combinatorial ingredient. It says nothing about
-how message digits arise from messages; `HashSig.SLHDSA.WotsInjectivity` combines it with the
-injectivity of the FIPS 205 message digits in the message (`wotsMsgDigitsCore_injective`) to
-restate incomparability for distinct *messages* (`chainLengthsCore_incomparable`,
+how message digits arise from the node being signed; `HashSig.SLHDSA.WotsInjectivity` combines
+it with the injectivity of the FIPS 205 message-digit map (`wotsMsgDigitsCore_injective`) to
+restate incomparability for distinct *nodes* (`chainLengthsCore_incomparable`,
 `chainStepsCore_two_encodings`).
 
 See FIPS 205 §5 for the WOTS+ specification this validates.
@@ -178,7 +178,7 @@ private theorem checksum_each_le (w : ℕ) (digits : List ℕ)
 
 private theorem sum_le_length_mul (xs : List ℕ) (M : ℕ)
     (h : ∀ x ∈ xs, x ≤ M) : xs.sum ≤ xs.length * M :=
-  List.sum_le_card_nsmul xs M h
+  List.sum_le_length_nsmul xs M h
 
 theorem wotsChecksumValue_le {digits : List ℕ} {w l1 : ℕ}
     (hLen : digits.length = l1) (hBound : ∀ d ∈ digits, d < w) :
@@ -225,7 +225,7 @@ theorem wotsChecksumValue_add_sum_eq (w : ℕ) (digits : List ℕ)
     simp [List.length_cons, Nat.succ_mul, Nat.add_comm]
 
 /-- `Forall₂ (≤) (map f dig2) (map f dig1)` helper for the antitone lemma. -/
-private theorem Forall₂_map_checksum_rev {dig1 dig2 : List ℕ} {w : ℕ}
+private theorem forall₂_map_checksum_rev {dig1 dig2 : List ℕ} {w : ℕ}
     (hLE : Forall₂ (· ≤ ·) dig1 dig2)
     (hBound1 : ∀ d ∈ dig1, d < w) (hBound2 : ∀ d ∈ dig2, d < w) :
     Forall₂ (· ≤ ·) (dig2.map (fun d => w - 1 - d)) (dig1.map (fun d => w - 1 - d)) := by
@@ -235,7 +235,7 @@ private theorem Forall₂_map_checksum_rev {dig1 dig2 : List ℕ} {w : ℕ}
     have ha_lt_w : a < w := hBound1 a (by simp)
     have hb_lt_w : b < w := hBound2 b (by simp)
     have h_rev : (w - 1 - b) ≤ (w - 1 - a) := by omega
-    have h_tail := Forall₂_map_checksum_rev htl
+    have h_tail := forall₂_map_checksum_rev htl
       (fun d hd' => hBound1 d (by simp [hd']))
       (fun d hd' => hBound2 d (by simp [hd']))
     simpa using Forall₂.cons h_rev h_tail
@@ -245,7 +245,7 @@ theorem wotsChecksumValue_antitone {dig1 dig2 : List ℕ} {w : ℕ}
     (hBound1 : ∀ d ∈ dig1, d < w) (hBound2 : ∀ d ∈ dig2, d < w) :
     wotsChecksumValue w dig2 ≤ wotsChecksumValue w dig1 := by
   rw [wotsChecksumValue, wotsChecksumValue]
-  exact (Forall₂_map_checksum_rev hLE hBound1 hBound2).sum_le_sum
+  exact (forall₂_map_checksum_rev hLE hBound1 hBound2).sum_le_sum
 
 theorem wotsChecksum_eq_imp_sum_eq {dig1 dig2 : List ℕ} {w : ℕ}
     (hLE : Forall₂ (· ≤ ·) dig1 dig2)

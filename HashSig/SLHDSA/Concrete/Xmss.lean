@@ -65,9 +65,9 @@ theorem sha2_wotsLeafAdrs_isOk (set : FipsParameterSet) (base : Sha2Address)
     (Sha2Address.ofAdrs (wotsLeafAdrs base.value idx.val)).isOk = true := by
   have hcanonical := wotsLeafAdrs_isCanonical base.value idx.val base.canonical
     (fips_leafIndex_fits set idx)
-  rw [Sha2Address.ofAdrs, dif_pos hcanonical]
-  rw [dif_pos (by simpa using base.layerFits)]
-  rw [dif_pos (by simpa using base.treeFits)]
+  rw [Sha2Address.ofAdrs, dite_eq_left hcanonical]
+  rw [dite_eq_left (by simpa using base.layerFits)]
+  rw [dite_eq_left (by simpa using base.treeFits)]
   rfl
 
 /-- The checked SHA2 boundary accepts every approved typed XMSS node address. -/
@@ -83,7 +83,7 @@ theorem sha2_xmssNodeAdrs_isOk (set : FipsParameterSet) (base : Sha2Address)
   have htree :
       Adrs.Fits 8 (xmssNodeAdrs base.value pos.level pos.index.val).tree = true := by
     simpa using base.treeFits
-  rw [Sha2Address.ofAdrs, dif_pos hcanonical, dif_pos hlayer, dif_pos htree]
+  rw [Sha2Address.ofAdrs, dite_eq_left hcanonical, dite_eq_left hlayer, dite_eq_left htree]
   rfl
 
 /-- Reuse the S05 WOTS boundary theorem for secret derivation at a typed XMSS leaf. -/

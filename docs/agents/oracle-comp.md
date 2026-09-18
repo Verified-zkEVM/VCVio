@@ -60,6 +60,28 @@ def OracleComp {ι : Type u} (spec : OracleSpec.{u,v} ι) : Type w → Type _ :=
 | `isPure` | Check if computation is `pure` (no queries) |
 | `totalQueries` | Count total oracle queries |
 
+### Possible outputs and `MonadAttach`
+
+Use `OracleComp.reachableWhen possibleOutputs oa` when possible query responses
+depend on the oracle interface. It is the `Set` view of PolyFun's
+`FreeM.reachableUnder`, obtained by folding the angelic per-operation predicate
+transformer over the free tree. The pure, query, bind, and monotonicity laws are
+available as `reachableWhen_pure`, `reachableWhen_query`,
+`reachableWhen_bind`, and `reachableWhen_mono`. `supportWhen` remains a deprecated
+compatibility spelling with an equality bridge to `reachableWhen`.
+
+`support oa` admits every typed response; `reachableWhen_univ_eq_support`
+connects it to the operation-indexed construction. The generic `support` name
+is re-exported from PolyFun's `MonadAttach.support` for existing value-level
+proofs. `MonadAttach.CanReturn` certifies what a computation can return; the
+additional `ExactMonadAttach` laws justify the familiar pure and bind support
+equations. They do not supply an oracle policy or an initial state. In
+particular, use a state-indexed execution or handler semantics for state
+monads, where a flattened value-level support loses the relation between the
+initial and final states. The operation-indexed API lives in PolyFun because
+it is a property of free programs, independently of VCVio's probability
+interpretation.
+
 ### Key lemmas
 
 | Lemma | Use |

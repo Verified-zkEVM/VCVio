@@ -51,10 +51,10 @@ variable {m : Type → Type v} [Monad m] {M K T : Type}
 
 /-- Perfect completeness for a MAC: honestly generated tags always verify. -/
 def PerfectlyComplete (macAlg : MacAlg m M K T) (runtime : ProbCompRuntime m) : Prop :=
-  ∀ msg : M, Pr[= true | runtime.evalSPMF do
+  ∀ msg : M, runtime.evalDist (do
     let k ← macAlg.keygen
     let τ ← macAlg.tag k msg
-    macAlg.verify k msg τ] = 1
+    macAlg.verify k msg τ) {true} = 1
 
 end sound
 
@@ -70,10 +70,10 @@ structure UF_CMA_Adversary (_macAlg : MacAlg (OracleComp spec) M K T) where
 
 /-- UF-CMA experiment for a MAC: the adversary succeeds iff it outputs a valid tag for a fresh
 message under the challenge key. -/
-def UF_CMA_Exp {macAlg : MacAlg (OracleComp spec) M K T}
+noncomputable def UF_CMA_Exp {macAlg : MacAlg (OracleComp spec) M K T}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : macAlg.UF_CMA_Adversary) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : macAlg.UF_CMA_Adversary) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let k ← macAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ T))
         (WriterT (QueryLog (M →ₒ T)) (OracleComp spec)) :=
@@ -92,7 +92,7 @@ noncomputable def UF_CMA_Advantage
     {macAlg : MacAlg (OracleComp spec) M K T}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : macAlg.UF_CMA_Adversary) : ℝ≥0∞ :=
-  Pr[= true | UF_CMA_Exp runtime adversary]
+  UF_CMA_Exp runtime adversary {true}
 
 end UF_CMA
 
