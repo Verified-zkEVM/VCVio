@@ -31,6 +31,19 @@ The structural `QueryCache.log_consistent_append`, `log_consistent_cacheQuery_ap
 in `CachingLoggingOracle.lean` transport cache/log hypotheses without probability assumptions
 or decidable equality on responses.
 
+## Per-index counting
+
+`QueryCount ι` is an ordinary function `ι → ℕ`, with the standard pointwise instances.
+`QueryImpl.withCounting` and `countingOracle` use `AddWriterT (QueryCount ι)`.
+Use `.runAdd : m (α × QueryCount ι)` to observe counts; raw `.run` exposes the writer's
+`Multiplicative` tag. `countingOracle.simulate` retains its ordinary-count result and initial offset.
+Writer WP predicates inspect `Multiplicative.toAdd` when using the generic monoid bridge.
+
+A count is emitted before the handler, but failure in the base monad can discard the complete
+writer result. `WriterT ω Option` loses the log on `none`; `OptionT (WriterT ω Id)` can retain
+a log together with `none`. `VCVioTest/ModuleAPI/Counting.lean` checks both orders, repeated
+labels, unchanged answers, and the ordinary function monoid.
+
 ## Main Files
 
 | File | Role |

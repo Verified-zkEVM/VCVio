@@ -158,12 +158,11 @@ whose fields only unify through the reducible wrapper. `warn.redundantExpose` is
 (`Lean/Elab/MutualDef.lean:1190`); `linter.redundantVisibility` is off by default
 (`Lean/Elab/DeclModifiers.lean:17`) and is switched on by the Track A lakefile PR.
 
-**`QueryCount ι := ι → ℕ`** (`VCVio/OracleComp/QueryTracking/Structures.lean:299`, `@[reducible]`,
-with `instance : Monoid (QueryCount ι)` at `:304` using `mul := +`): because the definition is
-reducible, `#synth Monoid (ℕ → ℕ)` in the VCVio closure returns `QueryCount.instMonoid` — a
-multiplicative monoid leaks onto every `ι → ℕ`. The repo already uses `κ →₀ ℕ` in
-`QueryTracking/ResourceProfile.lean`. 161 references across 16 files; design issue, not a
-sweep PR.
+**`QueryCount ι := ι → ℕ`** retains ordinary function instances. Counting instrumentation
+uses `AddWriterT (QueryCount ι)` and its standard `Multiplicative` tag; `runAdd` exposes
+ordinary additive counts. The API-boundary campaign removes the former custom monoid
+instance that leaked additive multiplication onto unrelated functions. Its ordinary-import
+consumer checks the canonical function identity and multiplication as well as counting behavior.
 
 **NTT multiplication laws are assumed, not proved.** `multiplyNTTs` is defined as
 `ntt (negacyclicMul (invNTT f) (invNTT g))` (`LatticeCrypto/MLDSA/Concrete/NTT.lean:262–264`, likewise
@@ -905,7 +904,7 @@ audit before deletion (see Method).
 | 4 duplicates | this PR (#632) | |
 | 5 lattice | #634 | reviewed and queued; includes the explicit modulus-zero behavior change |
 | 9 hygiene | #647 (C1), #648 (C2) | merged; #648 retains the necessary ML-DSA/ML-KEM equality instances and adds an `Option.elim` measurability lemma |
-| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; the `QueryCount` monoid leak, cost-layer unification, NTT laws, Poisson summation, and matrix conventions remain open |
+| 10 design track | #650 (transparency policy + expose ratchet), #651 (selective-expose pilot), #653 (program-logic) | all merged; cost-layer unification, NTT laws, Poisson summation, and matrix conventions remain open |
 | tooling | #649 (SHA pins, dependabot, templates), Track A PR (drivers, `check-imports.sh`, dead scripts, options) | `CODEOWNERS` was dropped on review: routing files are boilerplate for a small team |
 | gates | #641 | merged; tactic contract and test warnings are checked, with detailed policy in `docs/agents/probability.md` |
 

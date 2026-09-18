@@ -93,7 +93,7 @@ theorem probEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}
         simp only [zero_add]
         rw [show (Prod.map id fun x : QueryCount ι => x) = id from rfl, id_map,
           show (fun z : α × QueryCount ι => p z.1) = p ∘ Prod.fst from rfl, ← probEvent_map,
-          countingOracle.fst_map_run_simulateQ]
+          AddWriterT.fst_map_runAdd, countingOracle.fst_map_run_simulateQ]
 
 /-- Penalty characterization under a structural query bound: the probability of an
 event together with staying within budget under counting equals the event probability

@@ -285,36 +285,12 @@ end sum
 
 end QueryCache
 
-/-- Simple wrapper in order to introduce the `Monoid` structure for `countingOracle`.
-Marked as reducible and can generally be treated as just a function.
-`idx` gives the "index" for a given input.
-
-A `QueryCount ι` is a commutative monoid under pointwise addition; it is
-exactly the trace-monoid value type used by `QueryImpl.withCost`, which
-attaches a `WriterT (QueryCount ι) m` writer effect via the generic
-`QueryImpl.withTraceBefore` primitive in
-`VCVio/OracleComp/QueryTracking/Tracing.lean`. -/
+/-- Per-index natural counts with the ordinary pointwise additive algebra.
+Additive writer instrumentation uses `Multiplicative (QueryCount ι)` as its
+monoidal payload; query counts themselves retain the standard function instances. -/
 @[reducible] def QueryCount (ι : Type*) := ι → ℕ
 
 namespace QueryCount
-
-/-- Pointwise addition as the `Monoid` operation used for `WriterT`. -/
-instance : Monoid (QueryCount ι) where
-  mul qc qc' := qc + qc'
-  mul_assoc := add_assoc
-  one := 0
-  one_mul := zero_add
-  mul_one := add_zero
-  npow n qc := n • qc
-  npow_zero qc := AddMonoid.nsmul_zero qc
-  npow_succ n qc := AddMonoid.nsmul_succ n qc
-
-@[simp] lemma monoid_mul_def (qc qc' : QueryCount ι) :
-  (@HMul.hMul _ _ _ (@instHMul _ (Monoid.toMulOneClass.toMul)) qc qc')
-     = (qc : ι → ℕ) + (qc' : ι → ℕ) := rfl
-
-@[simp] lemma monoid_one_def :
-    (@OfNat.ofNat (QueryCount ι) 1 (@One.toOfNat1 _ (Monoid.toOne))) = (0 : ι → ℕ) := rfl
 
 /-- The query count recording one query at index `i` and none elsewhere. -/
 def single [DecidableEq ι] (i : ι) : QueryCount ι := Pi.single i 1
