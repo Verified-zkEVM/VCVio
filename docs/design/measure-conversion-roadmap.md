@@ -84,7 +84,9 @@ and abort-analysis conversion PRs.
 
 The campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
 Integration/event laws are published in #758; quantitative WP and counting bounds are published
-in #761. Independent products (#756), Fischlin expected signing costs (#752), and the reader cache
+in #761. Native TV composition is published in
+[#762](https://github.com/Verified-zkEVM/VCVio/pull/762), independently based on `main`.
+Independent products (#756), Fischlin expected signing costs (#752), and the reader cache
 representation (#760) have landed and are preserved by subsequent conversions.
 
 `Measure.etvDist` contracts under measurable subprobability transitions on chosen spaces. Its
