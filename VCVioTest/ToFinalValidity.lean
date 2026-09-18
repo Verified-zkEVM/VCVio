@@ -5,6 +5,7 @@ Authors: Matthias Meijers
 -/
 
 module
+
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.ToFinalValidity
 
 /-!
@@ -17,13 +18,18 @@ answers that query and poisons final validity, so the same transcript run naivel
 sibling test modules for the two families pin both outcomes, and both are correct for their own
 game.
 
-This file pins that the conversion resolves the disagreement in the winning direction for
-SM-DT-TCR and SM-DT-PRE. The wrapper declines to forward the poisoning query and synthesises
-the `none` its counterpart received, so the converted adversary wins where the naive one would not.
-A conversion that merely renamed the phases would inherit the losing outcome.
+This file pins that the conversion resolves the disagreement in the winning direction, for each of
+the four games that have both presentations. The wrapper declines to forward the poisoning query and
+synthesises the `none` its counterpart received, so the converted adversary wins where the naive one
+would not. A conversion that merely renamed the phases would inherit the losing outcome.
 
-Every fixture is chosen so the experiments reduce to a closed `pure`: the seed type and the
-SM-PRE message subspace are one-element. The SM-TCR challenge oracle draws nothing.
+Every fixture is chosen so the experiments reduce to a closed `pure`: the seed type and the SM-PRE
+message subspace are one-element, and the SM-UD input and output distributions are `pure`. The
+SM-TCR and SM-DSPR challenge oracles draw nothing to begin with.
+
+The SM-UD adversary additionally reads the challenge answer, so its canary separates the two worlds
+as well as pinning the refusal: it is the one game here whose advantage is a gap between two
+experiments rather than a single success probability.
 -/
 
 public section
@@ -164,5 +170,156 @@ theorem pre_toSourceFinalValidity_suppresses_poison_canary :
     SM_DT_PRE_SourceFinalValidity.Experiment
         preChallengeThenCollection.toSourceFinalValidity = pure true := by
   rw [SM_DT_PRE_experiment_toSourceFinalValidity, pre_experiment_challengeThenCollection]
+
+/-! ## SM-DT-UD
+
+The adversary keeps the challenge answer as well as the refusal, so one transcript pins both facts
+at once: the collection clash is refused in either world, and the answer still separates them,
+`hash` being constantly `false` while `outputGen` is `pure true`. -/
+
+@[expose] def udProblem : SM_DT_UD_Problem Unit Seed Bool Bool Input Bool where
+  th := hash
+  emb := fun _ => false
+  emb_injective a b _ := by cases a; cases b; rfl
+  inputGen := pure .only
+  outputGen := pure true
+  thColl := collection
+  numTargets := 1
+
+@[simp] lemma udProblem_seedGen : udProblem.th.seedGen = pure .only := rfl
+
+abbrev UdSpecs := unifSpec + (SM_DT_UD_challengeSpec Bool Bool +
+  collectionSpec udProblem.thColl)
+
+@[expose] def udChallenge (t : Bool) : OracleComp UdSpecs (Option Bool) :=
+  liftM (UdSpecs.query (.inr (.inl t)))
+
+@[expose] def udCollectionQuery (t : Bool) (m : udProblem.thColl.Msg ()) :
+    OracleComp UdSpecs (Option Bool) :=
+  liftM (UdSpecs.query (.inr (.inr ⟨(), t, m⟩)))
+
+/-- Take a target, clash with it on the collection oracle, and report the challenge answer together
+with the refusal. -/
+@[expose] def udChallengeThenCollection : SM_DT_UD_Adversary udProblem where
+  State := Option Bool × Option Bool
+  pick := do
+    let y ← udChallenge false
+    let c ← udCollectionQuery false false
+    return (y, c)
+  distinguish state _ := pure (state.2 == none && state.1 == some false)
+
+/-- The real world answers with a hash image, which is `false`; the clash is refused. -/
+theorem ud_experiment_real :
+    SM_DT_UD_Experiment .real udChallengeThenCollection = pure true := by
+  simp only [SM_DT_UD_Experiment, udProblem_seedGen, pure_bind]
+  rw [show (simulateQ (SM_DT_UD_oracles .real udProblem .only)
+      udChallengeThenCollection.pick).run ([], []) =
+        pure ((some false, none), ([false], [])) from rfl]
+  rfl
+
+/-- The ideal world answers from `outputGen`, which is `true`, so the same adversary loses. -/
+theorem ud_experiment_ideal :
+    SM_DT_UD_Experiment .ideal udChallengeThenCollection = pure false := by
+  simp only [SM_DT_UD_Experiment, udProblem_seedGen, pure_bind]
+  rw [show (simulateQ (SM_DT_UD_oracles .ideal udProblem .only)
+      udChallengeThenCollection.pick).run ([], []) =
+        pure ((some true, none), ([false], [])) from rfl]
+  rfl
+
+/-- The SM-UD conversion carries both worlds across: the wrapper suppresses the poisoning query in
+each, so neither outcome moves. -/
+theorem ud_toSourceFinalValidity_suppresses_poison_canary :
+    SM_DT_UD_SourceFinalValidity.Experiment .real
+        udChallengeThenCollection.toSourceFinalValidity = pure true ∧
+      SM_DT_UD_SourceFinalValidity.Experiment .ideal
+        udChallengeThenCollection.toSourceFinalValidity = pure false := by
+  refine ⟨?_, ?_⟩
+  · rw [← SM_DT_UD_World.toSourceFinalValidity_real,
+      SM_DT_UD_experiment_toSourceFinalValidity, ud_experiment_real]
+  · rw [← SM_DT_UD_World.toSourceFinalValidity_ideal,
+      SM_DT_UD_experiment_toSourceFinalValidity, ud_experiment_ideal]
+
+/-- The signed gap survives the conversion with its orientation: real minus ideal is `1`, not
+`-1`. -/
+theorem ud_directedAdvantage_canary :
+    SM_DT_UD_DirectedAdvantage udChallengeThenCollection = 1 ∧
+      SM_DT_UD_SourceFinalValidity.DirectedAdvantage
+        udChallengeThenCollection.toSourceFinalValidity = 1 := by
+  refine ⟨?_, ?_⟩
+  · simp [SM_DT_UD_DirectedAdvantage, SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess,
+      ud_experiment_real, ud_experiment_ideal]
+  · rw [← SM_DT_UD_directedAdvantage_toSourceFinalValidity]
+    simp [SM_DT_UD_DirectedAdvantage, SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess,
+      ud_experiment_real, ud_experiment_ideal]
+
+/-! ## SM-DT-DSPR
+
+The same transcript at the game whose winning condition is a prediction against a baseline. `hash`
+is constant, so every target has a second preimage and the correct prediction is `true`; both the
+prediction experiment and the `SPprob` baseline accept, and the advantage is the truncated
+difference of two ones. -/
+
+@[expose] def dsprProblem : SM_DT_DSPR_Problem Unit Seed Bool Bool Bool where
+  th := hash
+  thColl := collection
+  numTargets := 1
+
+@[simp] lemma dsprProblem_seedGen : dsprProblem.th.seedGen = pure .only := rfl
+
+abbrev DsprSpecs := unifSpec + (SM_DT_DSPR_challengeSpec Bool Bool Bool +
+  collectionSpec dsprProblem.thColl)
+
+@[expose] def dsprChallenge (tm : Bool × Bool) : OracleComp DsprSpecs (Option Bool) :=
+  liftM (DsprSpecs.query (.inr (.inl tm)))
+
+@[expose] def dsprCollectionQuery (t : Bool) (m : dsprProblem.thColl.Msg ()) :
+    OracleComp DsprSpecs (Option Bool) :=
+  liftM (DsprSpecs.query (.inr (.inr ⟨(), t, m⟩)))
+
+/-- Take a target, clash with it on the collection oracle, and predict on the refusal. -/
+@[expose] def dsprChallengeThenCollection : SM_DT_DSPR_Adversary dsprProblem where
+  State := Option Bool
+  choose := do
+    let _ ← dsprChallenge (false, false)
+    dsprCollectionQuery false false
+  guess answer _ := match answer with
+    | none => pure (0, true)
+    | some _ => pure (0, false)
+
+/-- The rejection-on-arrival prediction game: the clash is refused and the prediction is right. -/
+theorem dspr_experiment_challengeThenCollection :
+    SM_DT_DSPR_Experiment dsprChallengeThenCollection = pure true := by
+  simp only [SM_DT_DSPR_Experiment, dsprProblem_seedGen, pure_bind]
+  rw [show (simulateQ (SM_DT_DSPR_oracles dsprProblem .only)
+      dsprChallengeThenCollection.choose).run ([], []) =
+        pure (none, ([(false, false)], [])) from rfl]
+  rfl
+
+/-- The SM-DSPR conversion carries the prediction across to the monitor game. -/
+theorem dspr_toSourceFinalValidity_suppresses_poison_canary :
+    SM_DT_DSPR_SourceFinalValidity.Experiment
+        dsprChallengeThenCollection.toSourceFinalValidity = pure true := by
+  rw [SM_DT_DSPR_experiment_toSourceFinalValidity, dspr_experiment_challengeThenCollection]
+
+/-- The same target already has a second preimage, independently of the prediction bit. -/
+theorem dspr_baseline_challengeThenCollection :
+    SM_DT_DSPR_SPExperiment dsprChallengeThenCollection = pure true := by
+  simp only [SM_DT_DSPR_SPExperiment, dsprProblem_seedGen, pure_bind]
+  rw [show (simulateQ (SM_DT_DSPR_oracles dsprProblem .only)
+      dsprChallengeThenCollection.choose).run ([], []) =
+        pure (none, ([(false, false)], [])) from rfl]
+  rfl
+
+/-- Certain prediction success gives zero advantage when the baseline is also one, on both
+presentations. This distinguishes the DSPR score from its raw prediction success. -/
+theorem dspr_baseline_cancels_prediction :
+    SM_DT_DSPR_Success dsprChallengeThenCollection = 1 ∧
+      SM_DT_DSPR_SPProbability dsprChallengeThenCollection = 1 ∧
+      SM_DT_DSPR_Advantage dsprChallengeThenCollection = 0 ∧
+      SM_DT_DSPR_SourceFinalValidity.Advantage
+        dsprChallengeThenCollection.toSourceFinalValidity = 0 := by
+  rw [← SM_DT_DSPR_advantage_toSourceFinalValidity]
+  simp [SM_DT_DSPR_Advantage, SM_DT_DSPR_Success, SM_DT_DSPR_SPProbability,
+    dspr_experiment_challengeThenCollection, dspr_baseline_challengeThenCollection]
 
 end ToFinalValidityTest
