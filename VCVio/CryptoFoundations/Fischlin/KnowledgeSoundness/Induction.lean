@@ -764,8 +764,9 @@ theorem knowledgeSoundness
     (Q : ℕ) (hρ : 0 < ρ)
     (hQ : ∀ x msg, ROQueryBound ρ b M (adv.run x msg) Q)
     (x : Stmt) (msg : M) :
-    Pr[= true | knowledgeSoundnessExp σ hr ρ b S M adv.run x msg]
+    𝒟[knowledgeSoundnessExp σ hr ρ b S M adv.run x msg] {true}
       ≤ knowledgeSoundnessError Q ρ b S := by
+  rw [evalDist_apply_singleton]
   refine le_trans (knowledgeSoundness_badEvent_le σ hr ρ b S M hss hur adv Q hρ hQ x msg) ?_
   rw [knowledgeSoundnessError]
   -- Monotonicity: replace the small-sum count by its stars-and-bars upper bound.

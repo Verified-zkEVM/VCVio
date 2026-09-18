@@ -61,6 +61,27 @@ result, the bound is *unconditional* in `pk`: there is no remaining "verifier
 accepts a uniform challenge" term that would have to be discharged separately
 for keys on which verification is independent of the challenge.
 
+## Fixed-Statement Fiat–Shamir Extraction
+
+[`FiatShamir/Sigma/KnowledgeExtraction.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/KnowledgeExtraction.lean)
+starts with an ordinary prover given its statement and message before execution. Its named
+adapter appends the final verification query to an initially empty cached oracle and proves
+that forkable acceptance equals acceptance of the actual verifier. `knowledgeExtractor_success`
+then gives the existing replay reduction's valid-witness bound at that fixed statement.
+Failed forks retain the reduction's uniform-witness fallback.
+
+[`FiatShamir/Sigma/ExtractionCost.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/ExtractionCost.lean)
+proves an all-branch bound of `2 * (Q + 1)` fresh challenge requests for the replay program
+used by that same extractor, from a bound of `Q` source hash calls. The appended verifier slot
+is counted once. Internal uniform randomness, cache hits, and pure cursor traversal are separate
+from this resource; the bound is not a machine-time or PPT certificate.
+The reusable replay bound is in
+[`ReplayForkCost.lean`](../../VCVio/CryptoFoundations/ReplayForkCost.lean).
+
+[`VCVioTest/FiatShamirKnowledgeExtraction.lean`](../../VCVioTest/FiatShamirKnowledgeExtraction.lean)
+checks zero-query acceptance with a challenge-independent verifier, adaptive final-query
+cache hits and misses, and the corresponding extraction budgets.
+
 ## Restricted Schnorr Challenges
 
 [`VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean`](../../VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean)
@@ -159,6 +180,20 @@ The PRF-real faithfulness lemmas in `PRFReductions/Reductions.lean` expose equal
 whole programs. `multipleBad_bad_le_sessionCollisionBound` takes a native event bound on
 the nonce sampler and bounds the measure of the final Boolean collision observation.
 The underlying legacy collision induction remains at its existing compatibility boundary.
+
+## Fischlin extraction and log inspections
+
+`VCVio/CryptoFoundations/Fischlin/ExtractionGuarantee.lean` retains the actual verifier verdict
+and the optional witness from `onlineExtract` in one run. The verifier continues the prover's
+random-oracle cache, while extraction uses only the log captured before verification. The
+single-proof soundness bound therefore gives an acceptance-minus-error lower bound for that
+named extractor at a fixed statement and message.
+
+`ExtractionCost.lean` instruments the same nested log search. Erasing the counter recovers the
+actual extractor as a program equality; each execution inspects at most `ρ * log.length` records.
+Empty logs and zero repetitions cost zero, and a first-record match in a single repetition stops
+after one inspection. Record comparisons and sigma verification have separate computational cost.
+`VCVioTest/FischlinExtraction.lean` exercises these laws through ordinary imports.
 
 ## Merkle Checkpoint Observation
 
