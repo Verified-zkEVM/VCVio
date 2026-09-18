@@ -21,6 +21,13 @@ universe u v w
 
 namespace OptionT
 
+/-- A direct core monad lift returns a successful optional result. -/
+@[simp]
+theorem run_core_monadLift {m : Type u → Type v} [Monad m] {α : Type u} (x : m α) :
+    (MonadLift.monadLift x : OptionT m α).run = x >>= fun a ↦ pure (some a) := rfl
+
+
+
 variable {m : Type u → Type v} {n : Type u → Type w}
   (f : {α : Type u} → m α → n α) {α β γ : Type u}
 

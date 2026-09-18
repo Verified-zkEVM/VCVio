@@ -161,6 +161,22 @@ theorem prEvent_congr_of_support
     (evalDist_bind_congr_of_support mx (pure ∘ p) (pure ∘ q)
       fun a ha ↦ by simp [propext (h a ha)])
 
+/-- Implication on structurally reachable outputs bounds native event probability. -/
+theorem prEvent_mono_of_support
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) {p q : α → Prop}
+    (h : ∀ a ∈ support mx, p a → q a) :
+    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] := by
+  classical
+  apply evalDist_bind_apply_mono_of_support mx (fun a ↦ pure (p a)) (fun a ↦ pure (q a))
+    (measurableSet_singleton True)
+  intro a ha
+  by_cases hp : p a
+  · simp [hp, h a ha hp]
+  · simp [hp]
+
 /-- Structural support is positive singleton mass when every oracle response has positive
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
 finiteness alone does not determine it. -/
@@ -274,5 +290,19 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
     OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t
   rw [heq, ProbabilityTheory.uniformOn_univ_apply_singleton]
   exact ENNReal.inv_pos.mpr (by simp)
+
+/-- Uniform answer measures identify probability-one observations with structural correctness.
+No measurable structure is required on the unobserved output labels. -/
+theorem prEvent_eq_one_iff_forall_mem_support
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+    (mx : OracleComp spec α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 1 ↔ ∀ x ∈ support mx, p x := by
+  rw [prEvent_eq_evalDist_map]
+  have h := evalDist_apply_setOf_eq_one_iff_forall_mem_support (p <$> mx) (· = True)
+  have hset : {b : Prop | b = True} = {True} := by ext b; simp
+  rw [hset, MonadAttach.support_map] at h
+  simpa only [Set.forall_mem_image, eq_iff_iff, iff_true] using h
 
 end OracleComp

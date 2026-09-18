@@ -96,6 +96,13 @@ lemma pure_ne_liftM (x : α) (q : OracleQuery spec α) :
 protected lemma liftM_map (q : OracleQuery spec α) (f : α → β) :
     liftM (n := OracleComp spec) (f <$> q) = f <$> liftM q := rfl
 
+/-- Lifting an oracle query maps its response continuation over the primitive input query. -/
+lemma liftM_eq_map_query (q : OracleQuery spec α) :
+    (liftM q : OracleComp spec α) =
+      q.cont <$> (liftM (spec.query q.input) : OracleComp spec (spec.Range q.input)) := by
+  rw [← OracleComp.liftM_map]
+  congr 1
+
 /-- `coin` is the computation representing a coin flip, given a coin flipping oracle. -/
 @[inline]
 def coin : OracleComp coinSpec Bool := coinSpec.query ()

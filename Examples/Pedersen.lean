@@ -188,7 +188,7 @@ theorem binding_le_dlog (hg : Function.Bijective (· • g : F → G))
       simp [DiffieHellman.dlogExp, dlogReduction, base, dlogWin]]
     grind
   rw [hbinding, hdlog]
-  exact OracleComp.ProgramLogic.probEvent_mono base (fun z hwin => by
+  exact _root_.probEvent_mono (mx := base) (fun z _ hwin => by
     rcases z with ⟨x, ⟨c, m₁, d₁, m₂, d₂⟩⟩
     simpa [bindingWin, dlogWin] using bindingWin_implies_dlogWin (g := g) hg hwin)
 

@@ -500,14 +500,6 @@ end eqRec
 
 section sums
 
-/-- Connection between the two different probability notations. -/
-lemma probOutput_true_eq_probEvent {α} {m : Type → Type u} [Monad m]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] = Pr[ p | mx] := by
-  rw [evalDist_eq_evalSPMF_toMeasure, SPMF.toMeasure_apply_singleton]
-  simp [probEvent_eq_tsum_indicator, probOutput_def, evalSPMF, map_eq_bind_pure_comp]
-  congr 1; aesop
-
 lemma tsum_probOutput_add_probFailure [MonadLiftT m SPMF] (mx : m α) :
     (∑' x, Pr[= x | mx]) + Pr[⊥ | mx] = 1 := by
   aesop (rule_sets := [UnfoldEvalDist])
@@ -1104,6 +1096,15 @@ theorem evalDist_apply_singleton [MeasurableSingletonClass α] (mx : m α) (x : 
   rw [evalDist_apply mx (measurableSet_singleton x)]
   simp only [Set.mem_singleton_iff]
   exact probEvent_eq_eq_probOutput mx x
+
+/-- Native observed events agree with the scalar compatibility surface under explicit coherence. -/
+lemma probOutput_true_eq_probEvent {α : Type} {m : Type → Type u} [Monad m]
+    [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+    [EvalDistSemantics m] [DiscreteEvalDistCompatible m]
+    (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] = Pr[ p | mx] := by
+  rw [prEvent_eq_evalDist_map, evalDist_apply_singleton]
+  simp [probEvent_eq_tsum_indicator, probOutput_def, evalSPMF, map_eq_bind_pure_comp]
+  congr 1; aesop
 
 /-- On a discrete space the measure of a predicate's event is its façade probability. -/
 @[simp]

@@ -72,44 +72,39 @@ section Equality
 
 variable {α : Type} (mx : ProbComp α) (f g : α → ℝ≥0∞)
 
-example (h : ∀ x ∈ support mx, f x = g x) : expectedValue mx f = expectedValue mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
   -- gap(gcongr, 2026-09-08): support-aware equality congruence is not registered globally.
   fail_if_success gcongr
-  exact expectedValue_congr_of_support h
+  exact wp_congr_of_support mx h
 
-attribute [local gcongr] expectedValue_congr_of_support
+attribute [local gcongr] wp_congr_of_support
 
-/--
-error: Invalid `congr` theorem: Argument #2 of parameter #9 contains unresolved parameter
-  x ∈ support ?mx
--/
-#guard_msgs in
-attribute [local congr] expectedValue_congr_of_support
+attribute [local congr] wp_congr_of_support
 
-example (h : ∀ x ∈ support mx, f x = g x) : expectedValue mx f = expectedValue mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
   gcongr with x hx
   guard_hyp hx : x ∈ support mx
   guard_target = f x = g x
   exact h x hx
 
-example (h : ∀ x ∈ support mx, f x = g x) : expectedValue mx f = expectedValue mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
   -- gap(grw, 2026-09-08): equality rules use ordinary rewriting without support context.
   fail_if_success grw [h]
-  exact expectedValue_congr_of_support h
+  exact wp_congr_of_support mx h
 
-example (h : ∀ x, f x = g x) : expectedValue mx f = expectedValue mx g := by
-  congrm expectedValue mx ?_
+example (h : ∀ x, f x = g x) : wp mx f = wp mx g := by
+  congrm wp mx ?_
   guard_target = f = g
   exact funext h
 
-example (h : ∀ x, f x = g x) : expectedValue mx f = expectedValue mx g := by
+example (h : ∀ x, f x = g x) : wp mx f = wp mx g := by
   congr! 1
-  guard_target = f = g
-  exact funext h
+  guard_target = f _ = g _
+  exact h _
 
-example (h : ∀ x ∈ support mx, f x = g x) : expectedValue mx f = expectedValue mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
   conv_lhs =>
-    apply_congr (expectedValue_congr_of_support (mx := mx) (g := f) (h := g))
+    apply_congr (wp_congr_of_support (oa := mx) (f := f) (g := g))
     tactic => exact h _ (by assumption)
 
 end Equality
