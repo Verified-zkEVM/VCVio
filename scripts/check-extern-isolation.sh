@@ -42,7 +42,7 @@ else
 fi
 
 # Libraries that must not depend on the native FFI surface.
-PROOF_LIBS=(VCVio LatticeCrypto ToMathlib HashSig Examples VCVioWidgets Interop)
+PROOF_LIBS=(VCVio VCVioCslib LatticeCrypto ToMathlib HashSig Examples VCVioWidgets Interop)
 
 violations=0
 

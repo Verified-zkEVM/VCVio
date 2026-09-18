@@ -54,6 +54,8 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 ## Repo Map
 
 - `VCVio/`: generic oracle-computation framework, program logic, crypto abstractions, and generic reductions.
+- `VCVioCslib/`: optional cslib-backed non-uniform P/poly adapters; it is a separate Lake library
+  so core `VCVio` remains backend-neutral.
 - `ToMathlib/`: local Mathlib-facing utilities and lemmas intended to remain below the framework layer.
 - `Extern/`: native FFI surface — the `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA, Falcon) and the FFI-backed concrete instances that reach them. No proof library may import it; the backing `extern_lib`s become empty stubs when `third_party/` submodules are absent.
 - `LatticeCrypto/`: lattice-specific algebra, hardness assumptions, scheme definitions, security theorems, and concrete implementations.
@@ -64,6 +66,8 @@ The repo also includes a first-class lattice cryptography library under `Lattice
 - `LatticeCryptoTest/`: ACVP vectors, executable regression tests, and cross-checks against native backends.
 - `VCVioTest/`: framework smoke tests and test support modules.
 - `VCVioWidgets/`: optional widget experiments and visualizations.
+- `VCVioCslib/`: optional cslib-backed non-uniform P/poly certificates and security-game adapters.
+  It stays outside the default library graph but participates in repository validation.
 - `VCVioComplexity/`: optional isolated Lake package for the complexitylib-backed exact-machine
   substrate; it is not part of VCVio's default dependency graph.
 - `Examples/`: compact framework examples such as OneTimePad, ElGamal, Schnorr, and program-logic tactic walkthroughs.
@@ -235,13 +239,13 @@ lake exe cache get && lake build
 
 `lake build` builds the seven proof libraries (the default targets); `lake build VCVio` is
 the fast path for framework-only work. `./scripts/validate.sh` runs the fast per-PR CI checks
-locally in CI's order (build and warning budget, umbrella check, remaining boundary checks, style
+locally in CI's order (including the optional `VCVioCslib` facade; build and warning budget, umbrella check, remaining boundary checks, style
 linters, agent-docs checks); `--lint` adds Batteries' environment linters, one process per
 proof library as in CI. `lake lint` runs both source-style and environment checks;
 `-- --style-only` and `-- --env-only` select either pass, and `-- --no-build` requires existing
 proof oleans. Findings must exactly match `scripts/nolints.json`: obsolete entries and unlisted
 findings fail. After fixing findings, `lake lint -- --prune-baseline` safely removes obsolete
-entries across all seven libraries and refuses additions. PR CI also checks that the baseline
+entries across all eight checked libraries and refuses additions. PR CI also checks that the baseline
 only shrinks against the merge base.
 `--test` adds `lake test` (the three test libraries, the smoke test,
 and the SLH-DSA test executables), `--ffi` adds the native ML-KEM / ML-DSA / Falcon
@@ -251,7 +255,7 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 `LatticeCryptoTest`, whose oleans `lake test` has just built.
 
 CI runs the timed build on the non-test Lean libraries:
-`ToMathlib`, `VCVio`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
+`ToMathlib`, `VCVio`, `VCVioCslib`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
 and `VCVioWidgets`. The dormant `Interop` target remains excluded.
 The timing report parses per-file build times only for that same set.
 Test libraries and test executables are not part of the timed build; CI only

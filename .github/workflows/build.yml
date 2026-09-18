@@ -207,8 +207,8 @@ jobs:
           echo "BUILD_TIMING_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_BRANCH=${{ github.head_ref || github.ref_name }}" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_BASE_REF=" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_CLEAN_COMMAND=rm -rf .lake/build && lake build ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_WARM_COMMAND=lake build ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_CLEAN_COMMAND=rm -rf .lake/build && lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_WARM_COMMAND=lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_NAME=Smoke test" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_COMMAND=lake env lean VCVioTest/Smoke.lean" >> "$GITHUB_ENV"
           {
@@ -248,6 +248,7 @@ jobs:
           python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/clean_build.log" \
             --path-prefix ToMathlib/ \
             --path-prefix VCVio/ \
+            --path-prefix VCVioCslib/ \
             --path-prefix Extern/ \
             --path-prefix LatticeCrypto/ \
             --path-prefix HashSig/ \
@@ -255,6 +256,7 @@ jobs:
             --path-prefix VCVioWidgets/ \
             --path-prefix ToMathlib.lean \
             --path-prefix VCVio.lean \
+            --path-prefix VCVioCslib.lean \
             --path-prefix Extern.lean \
             --path-prefix LatticeCrypto.lean \
             --path-prefix HashSig.lean \

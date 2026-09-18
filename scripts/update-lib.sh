@@ -16,7 +16,7 @@ regenerate() {
 }
 
 # Active root umbrellas are generated as module files with public imports.
-for library in ToMathlib VCVio LatticeCrypto Extern HashSig Examples VCVioWidgets VCVioTest; do
+for library in ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets VCVioTest; do
   regenerate --lib "$library" --module
 done
 
