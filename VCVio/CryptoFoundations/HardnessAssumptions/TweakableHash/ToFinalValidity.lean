@@ -81,17 +81,42 @@ variable {ι PkSeed Tweak M M' Y : Type}
 The challenge oracle draws nothing, so the drawn-value type is `Unit`; a query is recorded verbatim
 and answered with its own image. -/
 
-/-- The source-final-validity problem attacked by the converted adversary.
-
-Reducible: the collection it carries indexes the oracle specs on both sides of the conversion, so
-`prob.toSourceFinalValidity.thColl` and `prob.thColl` have to agree at instance transparency for the
-wrapper and the monitor's oracles to compose. -/
-@[reducible] def SM_DT_TCR_Problem.toSourceFinalValidity
+/-- The source-final-validity problem attacked by the converted adversary. -/
+def SM_DT_TCR_Problem.toSourceFinalValidity
     (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
     SM_DT_TCR_SourceFinalValidity.Problem ι PkSeed Tweak M Y where
   th := prob.th
   thColl := prob.thColl
   numTargets := prob.numTargets
+
+/-- The converted problem has the same hash data and final target cap. -/
+theorem SM_DT_TCR_Problem.toSourceFinalValidity_eq (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity = ⟨prob.th, prob.thColl, prob.numTargets⟩ := by
+  unfold SM_DT_TCR_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `th` field. -/
+@[simp]
+theorem SM_DT_TCR_Problem.toSourceFinalValidity_th (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity.th = prob.th := by
+  unfold SM_DT_TCR_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `thColl` field. -/
+@[simp]
+theorem SM_DT_TCR_Problem.toSourceFinalValidity_thColl
+    (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity.thColl = prob.thColl := by
+  unfold SM_DT_TCR_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `numTargets` field. -/
+@[simp]
+theorem SM_DT_TCR_Problem.toSourceFinalValidity_numTargets
+    (prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity.numTargets = prob.numTargets := by
+  unfold SM_DT_TCR_Problem.toSourceFinalValidity
+  rfl
 
 section TCR
 
@@ -183,9 +208,8 @@ The wrapper never learns the drawn message — it only ever sees the digest — 
 records tweaks alone; the projection reads the drawn messages back out of the monitor's own
 history. -/
 
-/-- The source-final-validity problem attacked by the converted adversary. Reducible for the same
-reason as its SM-TCR counterpart. -/
-@[reducible] def SM_DT_PRE_Problem.toSourceFinalValidity
+/-- The source-final-validity problem attacked by the converted adversary. -/
+def SM_DT_PRE_Problem.toSourceFinalValidity
     (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
     SM_DT_PRE_SourceFinalValidity.Problem ι PkSeed Tweak M M' Y where
   th := prob.th
@@ -193,6 +217,46 @@ reason as its SM-TCR counterpart. -/
   emb_injective := prob.emb_injective
   thColl := prob.thColl
   numTargets := prob.numTargets
+
+/-- The converted problem has the same hash data and final target cap. -/
+theorem SM_DT_PRE_Problem.toSourceFinalValidity_eq
+    (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity =
+      ⟨prob.th, prob.emb, prob.emb_injective, prob.thColl, prob.numTargets⟩ := by
+  unfold SM_DT_PRE_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `th` field. -/
+@[simp]
+theorem SM_DT_PRE_Problem.toSourceFinalValidity_th
+    (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.th = prob.th := by
+  unfold SM_DT_PRE_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `emb` field. -/
+@[simp]
+theorem SM_DT_PRE_Problem.toSourceFinalValidity_emb
+    (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.emb = prob.emb := by
+  unfold SM_DT_PRE_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `thColl` field. -/
+@[simp]
+theorem SM_DT_PRE_Problem.toSourceFinalValidity_thColl
+    (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.thColl = prob.thColl := by
+  unfold SM_DT_PRE_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `numTargets` field. -/
+@[simp]
+theorem SM_DT_PRE_Problem.toSourceFinalValidity_numTargets
+    (prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.numTargets = prob.numTargets := by
+  unfold SM_DT_PRE_Problem.toSourceFinalValidity
+  rfl
 
 section PRE
 
@@ -305,9 +369,8 @@ consumer naming a world can see which one it converts to. -/
     SM_DT_UD_World.ideal.toSourceFinalValidity = .ideal :=
   rfl
 
-/-- The source-final-validity problem attacked by the converted adversary. Reducible for the same
-reason as its SM-TCR counterpart. -/
-@[reducible] def SM_DT_UD_Problem.toSourceFinalValidity
+/-- The source-final-validity problem attacked by the converted adversary. -/
+def SM_DT_UD_Problem.toSourceFinalValidity
     (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
     SM_DT_UD_SourceFinalValidity.Problem ι PkSeed Tweak M M' Y where
   th := prob.th
@@ -317,6 +380,60 @@ reason as its SM-TCR counterpart. -/
   outputGen := prob.outputGen
   thColl := prob.thColl
   numTargets := prob.numTargets
+
+/-- The converted problem has the same hash data and final target cap. -/
+theorem SM_DT_UD_Problem.toSourceFinalValidity_eq (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity =
+      ⟨prob.th, prob.emb, prob.emb_injective, prob.inputGen, prob.outputGen,
+        prob.thColl, prob.numTargets⟩ := by
+  unfold SM_DT_UD_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `th` field. -/
+@[simp]
+theorem SM_DT_UD_Problem.toSourceFinalValidity_th (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.th = prob.th := by
+  unfold SM_DT_UD_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `emb` field. -/
+@[simp]
+theorem SM_DT_UD_Problem.toSourceFinalValidity_emb (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.emb = prob.emb := by
+  unfold SM_DT_UD_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `inputGen` field. -/
+@[simp]
+theorem SM_DT_UD_Problem.toSourceFinalValidity_inputGen
+    (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.inputGen = prob.inputGen := by
+  unfold SM_DT_UD_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `outputGen` field. -/
+@[simp]
+theorem SM_DT_UD_Problem.toSourceFinalValidity_outputGen
+    (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.outputGen = prob.outputGen := by
+  unfold SM_DT_UD_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `thColl` field. -/
+@[simp]
+theorem SM_DT_UD_Problem.toSourceFinalValidity_thColl
+    (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.thColl = prob.thColl := by
+  unfold SM_DT_UD_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `numTargets` field. -/
+@[simp]
+theorem SM_DT_UD_Problem.toSourceFinalValidity_numTargets
+    (prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y) :
+    prob.toSourceFinalValidity.numTargets = prob.numTargets := by
+  unfold SM_DT_UD_Problem.toSourceFinalValidity
+  rfl
 
 section UD
 
@@ -435,14 +552,42 @@ rather than a second instantiation: the advantage is a truncated difference agai
 baseline, and both experiments run the same adversary against the same oracles, so each needs its
 own equality before the advantage follows. -/
 
-/-- The source-final-validity problem attacked by the converted adversary. Reducible for the same
-reason as its SM-TCR counterpart. -/
-@[reducible] def SM_DT_DSPR_Problem.toSourceFinalValidity
+/-- The source-final-validity problem attacked by the converted adversary. -/
+def SM_DT_DSPR_Problem.toSourceFinalValidity
     (prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y) :
     SM_DT_DSPR_SourceFinalValidity.Problem ι PkSeed Tweak M Y where
   th := prob.th
   thColl := prob.thColl
   numTargets := prob.numTargets
+
+/-- The converted problem has the same hash data and final target cap. -/
+theorem SM_DT_DSPR_Problem.toSourceFinalValidity_eq (prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity = ⟨prob.th, prob.thColl, prob.numTargets⟩ := by
+  unfold SM_DT_DSPR_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `th` field. -/
+@[simp]
+theorem SM_DT_DSPR_Problem.toSourceFinalValidity_th (prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity.th = prob.th := by
+  unfold SM_DT_DSPR_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `thColl` field. -/
+@[simp]
+theorem SM_DT_DSPR_Problem.toSourceFinalValidity_thColl
+    (prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity.thColl = prob.thColl := by
+  unfold SM_DT_DSPR_Problem.toSourceFinalValidity
+  rfl
+
+/-- Conversion preserves the `numTargets` field. -/
+@[simp]
+theorem SM_DT_DSPR_Problem.toSourceFinalValidity_numTargets
+    (prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y) :
+    prob.toSourceFinalValidity.numTargets = prob.numTargets := by
+  unfold SM_DT_DSPR_Problem.toSourceFinalValidity
+  rfl
 
 section DSPR
 

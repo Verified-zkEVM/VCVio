@@ -237,89 +237,129 @@ private theorem forkSupportInvariant_of_mem_replayFirstRun
   refine ⟨ω, hlog, hcache_idx, ?_⟩
   rwa [Option.some.inj (hcache'.symm.trans hcache_idx)] at hverify
 
+/-- Discrete response spaces for the uniform replay experiment. -/
+local instance replayResponseMeasurable :
+    ∀ t, MeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => ⊤
+
+local instance replayResponseDiscrete :
+    ∀ t, DiscreteMeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => inferInstance
+
+/-- The replay experiment uses native uniform response measures. -/
+noncomputable local instance replayUniformMeasure : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
+  IsUniformMeasureSpec.ofFintypeInhabited _
+
 omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
   [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in
-/-- Given the structural forking event on `pk`, the NMA reduction recovers a valid witness
-with probability at least that of the fork event under `contextFork`. -/
+/-- At a fixed statement, combine replay forking with the supported special-soundness
+extractor. The measure statement uses the native uniform-oracle interpretation; the
+existing discrete replay theorem is consumed at this compatibility boundary. -/
 private theorem perPk_extraction_bound
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
-    (qH : ℕ)
-    (hss : σ.SpeciallySound)
-    (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
-    (pk : Stmt) :
-    Pr[ fun r : Option
-        (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
-          Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) =>
-        ∃ (x₁ x₂ :
-            Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+    (qH : ℕ) (hss : σ.SpeciallySound) (pk : Stmt) :
+    let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint M qH t).isSome]
+    acc * (acc / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
+      Pr{let w ← nmaReduction σ hr M nmaAdv qH pk}[rel pk w = true] := by
+  classical
+  have hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0 :=
+    fun _ _ _ _ => probFailure_eq_zero' inferInstance
+  have hExtract :
+      Pr[ fun r : Option
+          (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
+            Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) =>
+          ∃ (x₁ x₂ :
+              Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+            (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
+            r = some (x₁, x₂) ∧
+            Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
+              (Chal := Chal) qH x₁ = some s ∧
+            Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
+              (Chal := Chal) qH x₂ = some s ∧
+            QueryLog.getQueryValue? log₁ (Sum.inr ()) ↑s ≠
+              QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
+            forkSupportInvariant σ M qH pk x₁ log₁ ∧
+            forkSupportInvariant σ M qH pk x₂ log₂
+          | contextFork (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
+            (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
+              (Chal := Chal) qH)] ≤
+        Pr[ fun w : Wit => rel pk w = true | nmaReduction σ hr M nmaAdv qH pk] := by
+    classical
+    let chalSpec : OracleSpec Unit := Unit →ₒ Chal
+    let wrappedMain := Fork.runTrace σ hr M nmaAdv pk
+    let cf := Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH
+    let qb : ℕ ⊕ Unit → ℕ := nmaForkBudget qH
+    rw [show Pr[fun w : Wit => rel pk w = true | nmaReduction σ hr M nmaAdv qH pk] =
+          Pr[fun w : Wit => rel pk w = true | nmaForkExtract σ hr M nmaAdv qH pk] by
+        unfold nmaReduction
+        exact probEvent_simulateQ_unifChalImpl _ _]
+    set branchFn := nmaForkExtractBranch (M := M) (Chal := Chal) σ with hbranchFn_def
+    have hforkExtract_eq : nmaForkExtract σ hr M nmaAdv qH pk =
+        contextFork wrappedMain qb (Sum.inr ()) cf >>= branchFn := rfl
+    rw [hforkExtract_eq, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
+    refine ENNReal.tsum_le_tsum fun r => ?_
+    by_cases hE :
+        ∃ (x₁ x₂ : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
           (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
           r = some (x₁, x₂) ∧
-          Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-            (Chal := Chal) qH x₁ = some s ∧
-          Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-            (Chal := Chal) qH x₂ = some s ∧
+          cf x₁ = some s ∧
+          cf x₂ = some s ∧
           QueryLog.getQueryValue? log₁ (Sum.inr ()) ↑s ≠
             QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
           forkSupportInvariant σ M qH pk x₁ log₁ ∧
           forkSupportInvariant σ M qH pk x₂ log₂
-        | contextFork (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
-          (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-            (Chal := Chal) qH)] ≤
-      Pr[ fun w : Wit => rel pk w = true | nmaReduction σ hr M nmaAdv qH pk] := by
-  classical
-  let chalSpec : OracleSpec Unit := Unit →ₒ Chal
-  let wrappedMain := Fork.runTrace σ hr M nmaAdv pk
-  let cf := Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH
-  let qb : ℕ ⊕ Unit → ℕ := nmaForkBudget qH
-  rw [show Pr[fun w : Wit => rel pk w = true | nmaReduction σ hr M nmaAdv qH pk] =
-        Pr[fun w : Wit => rel pk w = true | nmaForkExtract σ hr M nmaAdv qH pk] by
-      unfold nmaReduction
-      exact probEvent_simulateQ_unifChalImpl _ _]
-  set branchFn := nmaForkExtractBranch (M := M) (Chal := Chal) σ with hbranchFn_def
-  have hforkExtract_eq : nmaForkExtract σ hr M nmaAdv qH pk =
-      contextFork wrappedMain qb (Sum.inr ()) cf >>= branchFn := rfl
-  rw [hforkExtract_eq, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
-  refine ENNReal.tsum_le_tsum fun r => ?_
-  by_cases hE :
-      ∃ (x₁ x₂ : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
-        (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
-        r = some (x₁, x₂) ∧
-        cf x₁ = some s ∧
-        cf x₂ = some s ∧
-        QueryLog.getQueryValue? log₁ (Sum.inr ()) ↑s ≠
-          QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
-        forkSupportInvariant σ M qH pk x₁ log₁ ∧
-        forkSupportInvariant σ M qH pk x₂ log₂
-  swap
-  · rw [ite_eq_right hE]
-    exact zero_le
-  rw [ite_eq_left hE]
-  by_cases hsupp : r ∈ support (contextFork wrappedMain qb (Sum.inr ()) cf)
-  swap
-  · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]
-  obtain ⟨x₁, x₂, s, log₁, log₂, hreq, hcf₁, hcf₂, hneq, hP₁, hP₂⟩ := hE
-  obtain ⟨ω₁, hlog₁, hcache₁, hverify₁⟩ := hP₁ s hcf₁
-  obtain ⟨ω₂, hlog₂, hcache₂, hverify₂⟩ := hP₂ s hcf₂
-  simp only [Fork.Trace.target] at hcache₁ hcache₂ hverify₁ hverify₂
-  have hω_ne : ω₁ ≠ ω₂ := fun heq => hneq (by rw [hlog₁, hlog₂, heq])
-  -- The two forgeries share a target hash point, so they share a commitment.
-  have hc_eq : x₁.forgery.2.1 = x₂.forgery.2.1 :=
-    congrArg Prod.snd <| Fork.runTrace_target_eq_of_mem_contextFork σ hr M nmaAdv qH pk
-      x₁ x₂ s (hreq ▸ hsupp) hcf₁ hcf₂
-  -- On the live fork event, `branchFn` reduces to the witness extractor `σ.extract`.
-  have hbranch : branchFn r = liftComp (σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2)
-      (unifSpec + chalSpec) := by
-    rw [hbranchFn_def, hreq]
-    simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂, dite_eq_left hc_eq,
-      dite_eq_left hω_ne]
-  rw [hbranch, probEvent_liftComp]
-  -- The extractor returns a valid witness with probability one (special soundness).
-  rw [show Pr[fun w : Wit => rel pk w = true |
-        σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2] = 1 from
-    probEvent_eq_one_iff.2 ⟨hss_nf _ _ _ _, fun w hw =>
-      SigmaProtocol.extract_sound_of_speciallySoundAt σ (hss pk) hω_ne hverify₁
-        (hc_eq.symm ▸ hverify₂) hw⟩, mul_one]
+    swap
+    · rw [ite_eq_right hE]
+      exact zero_le
+    rw [ite_eq_left hE]
+    by_cases hsupp : r ∈ support (contextFork wrappedMain qb (Sum.inr ()) cf)
+    swap
+    · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]
+    obtain ⟨x₁, x₂, s, log₁, log₂, hreq, hcf₁, hcf₂, hneq, hP₁, hP₂⟩ := hE
+    obtain ⟨ω₁, hlog₁, hcache₁, hverify₁⟩ := hP₁ s hcf₁
+    obtain ⟨ω₂, hlog₂, hcache₂, hverify₂⟩ := hP₂ s hcf₂
+    simp only [Fork.Trace.target] at hcache₁ hcache₂ hverify₁ hverify₂
+    have hω_ne : ω₁ ≠ ω₂ := fun heq => hneq (by rw [hlog₁, hlog₂, heq])
+    -- The two forgeries share a target hash point, so they share a commitment.
+    have hc_eq : x₁.forgery.2.1 = x₂.forgery.2.1 :=
+      congrArg Prod.snd <| Fork.runTrace_target_eq_of_mem_contextFork σ hr M nmaAdv qH pk
+        x₁ x₂ s (hreq ▸ hsupp) hcf₁ hcf₂
+    -- On the live fork event, `branchFn` reduces to the witness extractor `σ.extract`.
+    have hbranch : branchFn r = liftComp (σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2)
+        (unifSpec + chalSpec) := by
+      rw [hbranchFn_def, hreq]
+      simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂,
+        dite_eq_left hc_eq, dite_eq_left hω_ne]
+    rw [hbranch, probEvent_liftComp]
+    -- The extractor returns a valid witness with probability one (special soundness).
+    rw [show Pr[fun w : Wit => rel pk w = true |
+          σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2] = 1 from
+      probEvent_eq_one_iff.2 ⟨hss_nf _ _ _ _, fun w hw =>
+        SigmaProtocol.extract_sound_of_speciallySoundAt σ (hss pk) hω_ne hverify₁
+          (hc_eq.symm ▸ hverify₂) hw⟩, mul_one]
+  have hFork := (Fork.replayForkingBound (σ := σ) (hr := hr) (M := M) nmaAdv qH pk
+    (P_out := forkSupportInvariant σ M qH pk)
+    (hP := fun h => forkSupportInvariant_of_mem_replayFirstRun σ hr M nmaAdv qH pk h)
+    (hreach := Fork.runTrace_forkPoint_CfReachable
+      (σ := σ) (hr := hr) (M := M) nmaAdv qH pk)).trans hExtract
+  dsimp only
+  simpa only [evalDist_apply_singleton, probOutput_bind_eq_tsum, probOutput_pure,
+    probEvent_eq_tsum_ite, Bool.coe_iff_coe, eq_iff_iff, true_iff,
+      mul_ite, mul_one, mul_zero] using hFork
+
+omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
+  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in
+/-- The named replay extractor's valid-witness probability at a fixed statement.
+`acc` is forkable acceptance, whose identification with actual verification requires a
+final verifier query and a query bound on the wrapped prover. Failed forks use the
+reduction's explicit uniform-witness fallback. -/
+theorem pointwise_extraction_bound
+    (nmaAdv : SignatureAlg.managedRoNmaAdv
+      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+    (qH : ℕ) (hss : σ.SpeciallySound) (pk : Stmt) :
+    let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint M qH t).isSome]
+    acc * (acc / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
+      Pr{let w ← nmaReduction σ hr M nmaAdv qH pk}[rel pk w = true] :=
+  perPk_extraction_bound σ hr M nmaAdv qH hss pk
 
 end nmaToExtraction
 
@@ -354,6 +394,8 @@ theorem nma_to_hard_relation_bound
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
       Pr[= true | hardRelationExp hr (nmaReduction σ hr M nmaAdv qH)] := by
   classical
+  -- Retain the public losslessness premise for callers of the compatibility theorem.
+  have _ := hss_nf
   set acc : Stmt → ENNReal := fun pk =>
     Pr[ fun x => (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
       (Chal := Chal) qH x).isSome | Fork.runTrace σ hr M nmaAdv pk] with hacc_def
@@ -374,13 +416,13 @@ theorem nma_to_hard_relation_bound
   have hPerPkFinal : ∀ pk : Stmt,
       acc pk * (acc pk / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
         Pr[ fun w : Wit => rel pk w = true |
-          nmaReduction σ hr M nmaAdv qH pk] := fun pk =>
-    (Fork.replayForkingBound (σ := σ) (hr := hr) (M := M) nmaAdv qH pk
-        (P_out := forkSupportInvariant σ M qH pk)
-        (hP := fun h => forkSupportInvariant_of_mem_replayFirstRun σ hr M nmaAdv qH pk h)
-        (hreach := Fork.runTrace_forkPoint_CfReachable
-          (σ := σ) (hr := hr) (M := M) nmaAdv qH pk)).trans
-      (perPk_extraction_bound σ hr M nmaAdv qH hss hss_nf pk)
+          nmaReduction σ hr M nmaAdv qH pk] := by
+    intro pk
+    simpa only [acc, evalDist_apply_singleton, probOutput_bind_eq_tsum, probOutput_pure,
+      probEvent_eq_tsum_ite, Bool.coe_iff_coe, eq_iff_iff, true_iff,
+      mul_ite, mul_one, mul_zero] using
+      pointwise_extraction_bound σ hr M nmaAdv qH hss pk
+
   rw [hAdv_eq_tsum, hRHS_eq_tsum]
   simpa only [DiscreteEvalDistCompatible.lintegral_evalDist _ (g := fun a ↦ a) measurable_id,
     ← OracleComp.EvalDist.expectedValue_def, OracleComp.EvalDist.expectedValue_map] using

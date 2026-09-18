@@ -212,4 +212,38 @@ example (μ : Measure ℝ) (f : ℝ → ℕ) (hf : Measurable f) :
 
 end Costs
 
+section Branches
+
+variable {m : Type → Type*} [Monad m] [LawfulMonad m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type}
+
+-- Events and selector certificates do not measure discarded source or branch outputs.
+example (mx : m α) : Pr{let _ ← mx}[False] = 0 := by simp
+
+example (mx : m α) (p : α → Prop) [DecidablePred p] (yes no : m β) (q : β → Prop) :
+    Pr{let y ← mx >>= fun x ↦ if p x then yes else no}[q y] =
+      Pr{let x ← mx}[p x] * Pr{let y ← yes}[q y] +
+        Pr{let x ← mx}[¬p x] * Pr{let y ← no}[q y] :=
+  prEvent_bind_ite mx p yes no q
+
+example (mx : m α) (p : α → Prop) [DecidablePred p]
+    [IsProbabilityMeasure 𝒟[p <$> mx]] (yes no : m ℝ)
+    [IsProbabilityMeasure 𝒟[yes]] [IsProbabilityMeasure 𝒟[no]] :
+    IsProbabilityMeasure 𝒟[mx >>= fun x ↦ if p x then yes else no] :=
+  evalDist.isProbabilityMeasure_bind_ite mx p yes no
+
+-- Parameterized branches use the existing Mathlib kernel, on usual real spaces.
+example (mx : ℝ → m α) (p : ℝ → α → Prop) [∀ r, DecidablePred (p r)]
+    (yes no : ℝ → m ℝ) (hobs : Measurable fun r ↦ 𝒟[p r <$> mx r])
+    (hyes : Measurable fun r ↦ 𝒟[yes r]) (hno : Measurable fun r ↦ 𝒟[no r])
+    [∀ r, IsProbabilityMeasure 𝒟[p r <$> mx r]]
+    [∀ r, IsProbabilityMeasure 𝒟[yes r]] [∀ r, IsProbabilityMeasure 𝒟[no r]] :
+    IsMarkovKernel (evalDistKernel
+      (fun r ↦ mx r >>= fun x ↦ if p r x then yes r else no r)
+      (measurable_evalDist_bind_ite mx p yes no hobs hyes hno)) :=
+  isMarkovKernel_evalDistKernel _ _ fun r ↦
+    evalDist.isProbabilityMeasure_bind_ite (mx r) (p r) (yes r) (no r)
+
+end Branches
+
 end VCVioTest.Native

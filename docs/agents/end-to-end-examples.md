@@ -61,6 +61,27 @@ result, the bound is *unconditional* in `pk`: there is no remaining "verifier
 accepts a uniform challenge" term that would have to be discharged separately
 for keys on which verification is independent of the challenge.
 
+## Fixed-Statement Fiat–Shamir Extraction
+
+[`FiatShamir/Sigma/KnowledgeExtraction.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/KnowledgeExtraction.lean)
+starts with an ordinary prover given its statement and message before execution. Its named
+adapter appends the final verification query to an initially empty cached oracle and proves
+that forkable acceptance equals acceptance of the actual verifier. `knowledgeExtractor_success`
+then gives the existing replay reduction's valid-witness bound at that fixed statement.
+Failed forks retain the reduction's uniform-witness fallback.
+
+[`FiatShamir/Sigma/ExtractionCost.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/ExtractionCost.lean)
+proves an all-branch bound of `2 * (Q + 1)` fresh challenge requests for the replay program
+used by that same extractor, from a bound of `Q` source hash calls. The appended verifier slot
+is counted once. Internal uniform randomness, cache hits, and pure cursor traversal are separate
+from this resource; the bound is not a machine-time or PPT certificate.
+The reusable replay bound is in
+[`ReplayForkCost.lean`](../../VCVio/CryptoFoundations/ReplayForkCost.lean).
+
+[`VCVioTest/FiatShamirKnowledgeExtraction.lean`](../../VCVioTest/FiatShamirKnowledgeExtraction.lean)
+checks zero-query acceptance with a challenge-independent verifier, adaptive final-query
+cache hits and misses, and the corresponding extraction budgets.
+
 ## Restricted Schnorr Challenges
 
 [`VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean`](../../VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean)
@@ -160,6 +181,20 @@ whole programs. `multipleBad_bad_le_sessionCollisionBound` takes a native event 
 the nonce sampler and bounds the measure of the final Boolean collision observation.
 The underlying legacy collision induction remains at its existing compatibility boundary.
 
+## Fischlin extraction and log inspections
+
+`VCVio/CryptoFoundations/Fischlin/ExtractionGuarantee.lean` retains the actual verifier verdict
+and the optional witness from `onlineExtract` in one run. The verifier continues the prover's
+random-oracle cache, while extraction uses only the log captured before verification. The
+single-proof soundness bound therefore gives an acceptance-minus-error lower bound for that
+named extractor at a fixed statement and message.
+
+`ExtractionCost.lean` instruments the same nested log search. Erasing the counter recovers the
+actual extractor as a program equality; each execution inspects at most `ρ * log.length` records.
+Empty logs and zero repetitions cost zero, and a first-record match in a single repetition stops
+after one inspection. Record comparisons and sigma verification have separate computational cost.
+`VCVioTest/FischlinExtraction.lean` exercises these laws through ordinary imports.
+
 ## Merkle Checkpoint Observation
 
 [`Examples/MerkleCheckpoints.lean`](../../Examples/MerkleCheckpoints.lean) contains two
@@ -180,3 +215,17 @@ resampling between phases accepts with probability `1/2`. Clearing memoization w
 keeping the same underlying fixed hash function still accepts, as
 `reset_same_table_accepts` proves. This distinguishes a representation change from a
 change to the oracle's stateful behavior.
+
+## Bounded Schnorr transform guarantees
+
+`Examples/Schnorr/Transforms.lean` instantiates the Fiat–Shamir and Fischlin extraction bounds
+with one challenge-restricted Schnorr protocol. An injective scalar encoding gives special
+soundness; an injective scalar action by the generator also supplies Fischlin's unique-response
+hypothesis. The theorems name their actual extractors and preserve the generic error terms.
+
+Fiat–Shamir uses a finite, sampleable challenge type and has a pathwise replay budget of
+`2 * (Q + 1)` fresh challenge requests. Fischlin additionally enumerates challenges for its
+honest signing search and inherits the exact finite-geometric expected hash-call formula.
+Completeness uses the existing bundled Fischlin runtime over actual keygen/sign/verify code.
+`VCVioTest/SchnorrTransforms.lean` checks these interfaces with three challenges in `ZMod 7`,
+including a concrete accepting transcript pair that recovers scalar `3` after one log inspection.

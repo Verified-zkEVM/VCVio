@@ -17,6 +17,7 @@ public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
+public import VCVioTest.EvalDist.IndepProductMeasure
 public import VCVioTest.EvalDist.IndependentDraws
 public import VCVioTest.EvalDist.MeasureBridge
 public import VCVioTest.EvalDist.ProbabilityBounds
@@ -24,6 +25,10 @@ public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.SeqMeasure
 public import VCVioTest.EvalDist.Transformers
 public import VCVioTest.EvalDist.UniformTable
+public import VCVioTest.FiatShamirAbort
+public import VCVioTest.FiatShamirKnowledgeExtraction
+public import VCVioTest.FischlinExpectedCost
+public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkMeasure
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
@@ -40,7 +45,9 @@ public import VCVioTest.MerkleTreeHashForest
 public import VCVioTest.MerkleTreeHashing
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
+public import VCVioTest.ModuleAPI.Cache
 public import VCVioTest.ModuleAPI.Counting
+public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.MonadProbability
 public import VCVioTest.Native
 public import VCVioTest.OracleComp.AdaptiveMeasure
@@ -72,6 +79,7 @@ public import VCVioTest.ReactiveNetwork
 public import VCVioTest.ReactiveNetworkAdversarial
 public import VCVioTest.ReactiveSecurity
 public import VCVioTest.ReactiveWorld
+public import VCVioTest.ReplayCheckpoint
 public import VCVioTest.ResumptionCompatibility
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
@@ -86,6 +94,7 @@ public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
+public import VCVioTest.SchnorrTransforms
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.SigmaChallengeRestriction
 public import VCVioTest.Smoke
