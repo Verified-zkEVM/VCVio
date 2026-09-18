@@ -201,6 +201,22 @@ theorem prEvent_congr_of_support
     (evalDist_bind_congr_of_support mx (pure ∘ p) (pure ∘ q)
       fun a ha ↦ by simp [propext (h a ha)])
 
+/-- Implication on structurally reachable outputs bounds native event probability. -/
+theorem prEvent_mono_of_support
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) {p q : α → Prop}
+    (h : ∀ a ∈ support mx, p a → q a) :
+    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] := by
+  classical
+  apply evalDist_bind_apply_mono_of_support mx (fun a ↦ pure (p a)) (fun a ↦ pure (q a))
+    (measurableSet_singleton True)
+  intro a ha
+  by_cases hp : p a
+  · simp [hp, h a ha hp]
+  · simp [hp]
+
 /-- Structural support is positive singleton mass when every oracle response has positive
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
 finiteness alone does not determine it. -/

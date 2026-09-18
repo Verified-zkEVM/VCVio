@@ -28,6 +28,24 @@ namespace OracleSpec
 
 variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
 
+/-- Combined signatures retain each summand's chosen answer measurable space. -/
+instance addRangeMeasurableSpace {ι' : Type*} (spec' : OracleSpec.{_, v} ι')
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, MeasurableSpace (spec'.Range t)]
+    (t : (spec + spec').Domain) : MeasurableSpace ((spec + spec').Range t) :=
+  match t with
+  | .inl _ => inferInstance
+  | .inr _ => inferInstance
+
+/-- Discrete answer spaces are preserved by combining signatures. -/
+instance addRangeDiscreteMeasurableSpace {ι' : Type*} (spec' : OracleSpec.{_, v} ι')
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, MeasurableSpace (spec'.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
+    (t : (spec + spec').Domain) : DiscreteMeasurableSpace ((spec + spec').Range t) :=
+  match t with
+  | .inl _ => inferInstance
+  | .inr _ => inferInstance
+
 /-- A measure-valued response distribution for each query in an oracle specification. -/
 abbrev IsMeasureSpec (spec : OracleSpec.{u, v} ι)
     [∀ t, MeasurableSpace (spec.Range t)] :=
@@ -63,7 +81,7 @@ theorem IsMeasureSpec.toMeasure_eq_uniformOn [∀ t, MeasurableSpace (spec.Range
   IsUniformMeasureSpec.toMeasure_eq_uniform t
 
 /-- Select uniform measure semantics for a finite, inhabited oracle specification. -/
-@[reducible]
+@[expose, reducible]
 noncomputable def IsUniformMeasureSpec.ofFintypeInhabited
     (spec : OracleSpec.{u, v} ι)
     [hF : spec.Fintype] [hI : spec.Inhabited]
@@ -86,6 +104,27 @@ noncomputable def IsUniformMeasureSpec.coinSpec : IsUniformMeasureSpec _root_.co
   ofFintypeInhabited _
 
 attribute [instance] IsUniformMeasureSpec.unifSpec IsUniformMeasureSpec.coinSpec
+
+/-- Combining uniform specifications preserves each configured answer measure. -/
+@[reducible]
+noncomputable instance IsUniformMeasureSpec.add {ι' : Type*}
+    (spec' : OracleSpec.{_, v} ι')
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, MeasurableSpace (spec'.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
+    [IsUniformMeasureSpec spec] [IsUniformMeasureSpec spec'] :
+    IsUniformMeasureSpec (spec + spec') where
+  toMeasure
+    | .inl t => IsMeasureSpec.toMeasure t
+    | .inr t => IsMeasureSpec.toMeasure t
+  isProbabilityMeasure
+    | .inl t => PFunctor.IsMeasureSpec.isProbabilityMeasure (P := spec.toPFunctor) t
+    | .inr t => PFunctor.IsMeasureSpec.isProbabilityMeasure (P := spec'.toPFunctor) t
+  fintype := inferInstance
+  inhabited := inferInstance
+  toMeasure_eq_uniform
+    | .inl t => IsMeasureSpec.toMeasure_eq_uniformOn t
+    | .inr t => IsMeasureSpec.toMeasure_eq_uniformOn t
 
 end OracleSpec
 

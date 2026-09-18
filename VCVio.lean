@@ -243,6 +243,7 @@ public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
 public import VCVio.OracleComp.Coinductive.Bridge
 public import VCVio.OracleComp.Coinductive.DynSystem
 public import VCVio.OracleComp.Coinductive.Machine
@@ -254,6 +255,7 @@ public import VCVio.OracleComp.Constructions.Fork
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic

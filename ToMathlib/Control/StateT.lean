@@ -22,6 +22,13 @@ namespace StateT
 variable {m : Type u → Type v} {m' : Type u → Type w}
   {σ α β : Type u}
 
+
+
+/-- Running a computation lifted through the direct core monad-lift interface retains state. -/
+@[simp]
+theorem run_core_monadLift [Monad m] (x : m α) (s : σ) :
+    (MonadLift.monadLift x : StateT σ m α).run s = x >>= fun a ↦ pure (a, s) := rfl
+
 instance (priority := low) [MonadLift m m'] : MonadLift (StateT σ m) (StateT σ m') where
   monadLift x := StateT.mk fun s => liftM ((x.run) s)
 
