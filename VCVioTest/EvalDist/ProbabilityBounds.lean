@@ -28,6 +28,25 @@ run_cmd do
     if env.contains name then
       throwError "native probability bounds unexpectedly import {name}"
 
+run_cmd do
+  let one ← `(Pr{let x ← (pure 1 : Option Nat)}[x = 1])
+  let many ← `(Pr{let x ← (pure 1 : Option Nat); let y ← pure (x + 1)}[y = 2])
+  let spaced ← `(Pr{ let x ← (pure 1 : Option Nat)}[x = 1])
+  for stx in #[one, many, spaced] do
+    let fmt ← Lean.Elab.Command.liftCoreM (Lean.PrettyPrinter.ppTerm stx)
+    unless fmt.pretty.startsWith "Pr{let " do
+      throwError "unexpected event delimiter formatting: {fmt}"
+  let .ok multiline := Lean.Parser.runParserCategory (← Lean.getEnv) `term
+      "Pr{\n  let x ← (pure 1 : Option Nat)}[x = 1]"
+    | throwError "multiline probability notation did not parse"
+  let fmt ← Lean.Elab.Command.liftCoreM (Lean.PrettyPrinter.ppTerm ⟨multiline⟩)
+  unless fmt.pretty.startsWith "Pr{\n" do
+    throwError "unexpected multiline event formatting: {fmt}"
+  let braced ← `(Pr{{let x ← (pure 1 : Option Nat)}}[x = 1])
+  let fmt ← Lean.Elab.Command.liftCoreM (Lean.PrettyPrinter.ppTerm braced)
+  unless fmt.pretty.startsWith "Pr{{" do
+    throwError "unexpected braced event formatting: {fmt}"
+
 namespace VCVioTest.ProbabilityBounds
 
 universe v
@@ -45,7 +64,7 @@ example (mx : m α) (my : m β) (p : α → Prop) (q : β → Prop) :
       Pr{let x ← mx}[p x] * Pr{let y ← my}[q y] := by simp
 
 example (mx : m α) (my : m β) (p : α → Prop) (q : β → Prop) {bound : ENNReal}
-    (h : Pr{ let x ← mx}[p x] * Pr{ let y ← my}[q y] ≤ bound) :
+    (h : Pr{let x ← mx}[p x] * Pr{let y ← my}[q y] ≤ bound) :
     Pr{let x ← mx; let y ← my}[p x ∧ q y] ≤ bound := by grind
 
 example (source : m α) (f : α → m β) (p : β → Prop) :
@@ -59,7 +78,7 @@ example (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
   exact prEvent_mono mx p q hpq
 
 example (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) {bound : ENNReal}
-    (h : Pr{ let x ← mx}[q x] ≤ bound) : Pr{let x ← mx}[p x] ≤ bound := by
+    (h : Pr{let x ← mx}[q x] ≤ bound) : Pr{let x ← mx}[p x] ≤ bound := by
   grw [prEvent_mono mx p q hpq, h]
 
 example [Fintype γ] (mx : m (Option α)) (select : α → Option γ) :
@@ -112,7 +131,7 @@ example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range
 
 example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range i → Prop)
     {bound : ENNReal}
-    (h : Pr{ let answer ← (query i : OracleComp spec (spec.Range i))}[p answer] ≤ bound) :
+    (h : Pr{let answer ← (query i : OracleComp spec (spec.Range i))}[p answer] ≤ bound) :
     Pr{let completion ← OracleComp.Cursor.completeOccurrence occurrence}[p completion.answer] ≤
       bound := by grind
 
