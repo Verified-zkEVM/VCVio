@@ -229,7 +229,8 @@ Twenty-one declarations.
 
 *Game transport* — a statement that moves a bound between two of `CanonicalGames`' named games:
 
-* `dspr_bound_transfer`, `tcr_bound_transfer`, `summands_forsF_le`, `openPre_le_summands_forsF`.
+* `dspr_bound_transfer`, `tcr_bound_transfer`, `summands_forsF_le`,
+  `openPre_le_summands_forsF`, `openPre_le_dspr_add_three_tcr`.
 
 None is `private` and none carries `@[expose]`; `Summands.bound_eq` and `Certificate.bound_eq` are
 what a consumer that needs the expression's shape rewrites with, exactly as
@@ -905,6 +906,21 @@ theorem openPre_le_summands_forsF {adv : unforgeableAdv (generalAlg prims)}
       c.summands.forsFDspr + 3 * c.summands.forsFTcr := by
   have h := SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound c.openPreAdv c.counting
   rwa [SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound] at h
+
+/-- The certificate's open-preimage advantage below the `DSPR + 3 · TCR` pair, with both sides
+written at the induced adversaries rather than through `Certificate.summands`.  This is
+`openPre_le_summands_forsF` in the form a consumer outside this module can use, the summand
+projections not being exposed.
+
+*Game transport.* -/
+theorem openPre_le_dspr_add_three_tcr {adv : unforgeableAdv (generalAlg prims)}
+    (c : Certificate prims adv) :
+    SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv ≤
+      SM_DT_DSPR_SourceFinalValidity.Advantage
+          (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
+        + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+          (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv) :=
+  openPre_le_summands_forsF c
 
 end Transfer
 

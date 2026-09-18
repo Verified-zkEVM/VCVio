@@ -55,6 +55,8 @@ reconciles them.  The hop then follows from `a ≤ ENNReal.absDiff a b + b`.
   honest carrier of everything not yet reduced; it is *not* claimed small.
 * It does not touch the secret-value `PRF` hop, whose reduction needs a signer parameterised by
   a secret-value provider.  `HashSig.SLHDSA.Security.Composition`'s `skgAdv` field is unaffected.
+* It builds no certificate.  `HashSig.SLHDSA.Security.OpenPreBound` is where the hop is consumed,
+  and where the fields it removes are actually removed.
 * The ideal experiment's random function is keyed at `(addrnd, internal message)` pairs and is
   memoised by `PRFScheme.prfIdealExp`'s lazy oracle, so a repeated signing query on the same
   message answers with the same `R` only when `addrnd` repeats.  That is the behaviour of
@@ -63,7 +65,7 @@ reconciles them.  The hop then follows from `a ≤ ENNReal.absDiff a b + b`.
 
 ## Labels
 
-Twelve declarations.
+Eleven declarations.
 
 *Message-`PRF` reduction* — the construction and what it satisfies:
 
@@ -71,8 +73,7 @@ Twelve declarations.
   `msgPrfIdealAdvantage`;
 * `cmaImpl`, `simulateQ_prfReal_msgPrfQueryImpl_run`;
 * `prfRealExp_msgPrfReduction`, `unforgeableExp_generalAlg`,
-  `prfRealExp_msgPrfReduction_apply`, `advantage_le_msgPrf_add_ideal`;
-* `certificateOfMsgPrfHop`.
+  `prfRealExp_msgPrfReduction_apply`, `advantage_le_msgPrf_add_ideal`.
 
 `advantage_le_msgPrf_add_ideal` is the result; `prfRealExp_msgPrfReduction_apply` is the equality
 it rests on, and the two experiment-shape theorems above it are what a reader checks to see that
@@ -301,78 +302,5 @@ theorem advantage_le_msgPrf_add_ideal (adv : unforgeableAdv (generalAlg prims)) 
         + msgPrfIdealAdvantage prims adv := by
   rw [← prfRealExp_msgPrfReduction_apply, msgPrfIdealAdvantage]
   exact prfRealExp_le_prfAbsAdvantage_add_prfIdealExp _ _
-
-/-! ## The certificate with the `MKG_PRF` field deleted -/
-
-section Certificate
-
-variable [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey] [Fintype prims.Y]
-  [Inhabited prims.Y]
-
-/-- **A composition certificate whose `MKG_PRF` adversary is not a choice.**  It sets
-`mkgAdv := msgPrfReduction prims adv` and `idealAdvantage := msgPrfIdealAdvantage prims adv` and
-discharges `prfHops` from `advantage_le_msgPrf_add_ideal`, so two of `Certificate`'s twenty
-fields and one of its four inequalities are gone.
-
-What it asks for instead of `split` is the same inequality at the *idealized* advantage:
-`msgPrfIdealAdvantage prims adv ≤ forsBranch + hypertreeBranch`.  That is not the same request as
-`Certificate.ofBranchBounds`', which splits `adv.advantage` itself and is discharged there by
-`advantage_le_forsHalf_add_hypertreeHalf`; the halves of `HashSig.SLHDSA.Security.SchemeGames`
-are defined at the real experiment, and no dispatch split of the key-idealized experiment exists
-in this repository.  So this constructor moves the `MKG_PRF` obligation off the caller and moves
-the split onto it.
-
-The remaining nine adversary fields, `counting`, and the two branch bounds are unchanged and
-still free.  This is one summand of twelve, not the headline.
-
-*Message-`PRF` reduction.* -/
-noncomputable def certificateOfMsgPrfHop {adv : unforgeableAdv (generalAlg prims)}
-    (skgAdv : PRFScheme.PRFAdversary Adrs prims.Y)
-    (pkSeed : prims.PkSeed)
-    (itsrAdv : KeyedHash.ITSRAdversary (hmsgItsrProblem prims))
-    (openPreAdv : SM_DT_OpenPRE_SourceFinalValidity.Adversary (forsFOpenPreProblem prims))
-    (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface openPreAdv)
-    (forsHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (forsHTcrCProblem prims))
-    (forsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (forsTlTcrCProblem prims))
-    (wotsFUdAdv : SM_DT_UD_SourceFinalValidity.Adversary (wotsFUdCProblem prims))
-    (wotsFTcrAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsFTcrCProblem prims))
-    (wotsFPreAdv : SM_DT_PRE_SourceFinalValidity.Adversary (wotsFPreCProblem prims))
-    (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
-    (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims))
-    (forsBranch hypertreeBranch : ℝ≥0∞)
-    (hsplit : msgPrfIdealAdvantage prims adv ≤ forsBranch + hypertreeBranch)
-    (hfors : forsBranch ≤ KeyedHash.ITSRAdvantage itsrAdv
-      + SM_DT_OpenPRE_SourceFinalValidity.Advantage openPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv)
-    (hhyper : hypertreeBranch ≤
-      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv) :
-    Certificate prims adv where
-  skgAdv := skgAdv
-  mkgAdv := msgPrfReduction prims adv
-  pkSeed := pkSeed
-  itsrAdv := itsrAdv
-  openPreAdv := openPreAdv
-  counting := counting
-  forsHAdv := forsHAdv
-  forsTlAdv := forsTlAdv
-  wotsFUdAdv := wotsFUdAdv
-  wotsFTcrAdv := wotsFTcrAdv
-  wotsFPreAdv := wotsFPreAdv
-  wotsTlAdv := wotsTlAdv
-  xmssHAdv := xmssHAdv
-  idealAdvantage := msgPrfIdealAdvantage prims adv
-  forsBranch := forsBranch
-  hypertreeBranch := hypertreeBranch
-  prfHops := le_trans (advantage_le_msgPrf_add_ideal prims adv) (by gcongr; exact le_add_self)
-  split := hsplit
-  forsBranch_le := hfors
-  hypertreeBranch_le := hhyper
-
-end Certificate
 
 end SLHDSA.Security
