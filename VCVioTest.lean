@@ -29,6 +29,7 @@ public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.InnerProduct.Checks
 public import VCVioTest.InnerProduct.Comparison
+public import VCVioTest.InnerProduct.Execution
 public import VCVioTest.InnerProduct.PlainProtocol
 public import VCVioTest.InnerProduct.PlainReplay
 public import VCVioTest.KernelSemantics
