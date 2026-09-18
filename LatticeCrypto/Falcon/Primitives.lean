@@ -19,7 +19,8 @@ parameters use `ℝ` (Mathlib Real), matching the exact-arithmetic specification
 ## Design Decisions
 
 - **`SamplerZ : ℝ → ℝ → ProbComp ℤ`** takes a real center `μ` and real standard deviation
-  `σ'`, producing an integer sample from the discrete Gaussian `D_{ℤ,σ',μ}`.
+  `σ'`, producing a finite-support integer sample intended to approximate the discrete
+  Gaussian `D_{ℤ,σ',μ}`. Accuracy or point-mass bounds are separate hypotheses.
 - **`FalconTree`** is a binary tree with `ℝ`-valued leaves (the `σ` values from the
   normalized Gram-Schmidt basis) and `ℝ`-polynomial internal nodes.
 - **`ffSampling`** operates on packed FFT representations over `ℝ`, returning sampled
@@ -124,8 +125,9 @@ structure Primitives (p : Params) where
   salt-message pair together with the external verification-key bytes to a polynomial in `R_q`
   with coefficients uniform in `[0, q-1]`. -/
   hashToPoint : Bytes 40 → ByteArray → List Byte → Rq p.n
-  /-- `SamplerZ(μ, σ')` (Algorithm 12): sample an integer `z` from the discrete Gaussian
-  distribution `D_{ℤ,σ',μ}` centered at `μ ∈ ℝ` with standard deviation `σ' ∈ ℝ`. -/
+  /-- `SamplerZ(μ, σ')` (Algorithm 12): a finite-support integer sampler intended to
+  approximate the discrete Gaussian centered at `μ ∈ ℝ` with standard deviation `σ' ∈ ℝ`.
+  The interface alone supplies no accuracy or point-mass guarantee. -/
   samplerZ : ℝ → ℝ → ProbComp ℤ
   /-- Convert a target polynomial in `R_q` to Falcon's packed FFT representation.
 
