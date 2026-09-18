@@ -65,6 +65,20 @@ labels, unchanged answers, and the ordinary function monoid.
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/TailSums.lean` | Tail-sum integration for measurable Nat observables under arbitrary measures |
 
+## Association-list cache representation
+
+`ListCache.lean` supplies `QueryImpl.ListCache.handler` for an executable association-list
+cache. It uses `List.lookup`, so the first occurrence of a key wins even when the initial
+list contains duplicates. Hits do not run the underlying draw; misses prepend one binding.
+`local_projection` preserves the reply and decoded cache after each query, and
+`adaptive_projection` lifts that equality through every adaptive client in any lawful monad.
+
+`Examples/PRFTagReader/CacheRepresentation.lean` closes the named PRF reductions with this
+handler and retains their bad-event state through `QueryImpl.extendState`. Its
+`PRFTagReader.CachedPRF.preserved_bound` proves the same three-loss bound for the bounded FIFO
+experiment, from empty list caches. The equality concerns replies and retained state; it makes
+no running-time claim about association-list lookup or the network schedule.
+
 ## Input Routing and Domain Separation
 
 [`RandomOracle/Routing.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/Routing.lean)

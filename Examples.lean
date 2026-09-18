@@ -39,6 +39,7 @@ public import Examples.PRFTagReader
 public import Examples.PRFTagReader.Asymptotic
 public import Examples.PRFTagReader.Auth
 public import Examples.PRFTagReader.BadEvent
+public import Examples.PRFTagReader.CacheRepresentation
 public import Examples.PRFTagReader.Collision
 public import Examples.PRFTagReader.Collision.ForgeStep
 public import Examples.PRFTagReader.Defs
@@ -54,6 +55,7 @@ public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 public import Examples.PRFTagReader.MultipleToHybrid.Setup
 public import Examples.PRFTagReader.Network
 public import Examples.PRFTagReader.Network.Kernel
+public import Examples.PRFTagReader.NetworkUnlinkability
 public import Examples.PRFTagReader.PRFReductions
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
 public import Examples.PRFTagReader.PRFReductions.Reductions
