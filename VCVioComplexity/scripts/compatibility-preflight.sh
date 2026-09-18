@@ -22,7 +22,7 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 package_root="$(cd -- "$script_dir/.." && pwd)"
 dependency_root="$package_root/.lake/packages/complexitylib"
 expected_revision='b6738219a3a3c50967d6bd16cba9487887ca6b66'
-expected_toolchain='leanprover/lean4:v4.33.1'
+expected_toolchain='leanprover/lean4:v4.34.0'
 
 if command -v rg >/dev/null 2>&1; then
   contains_fixed() {
@@ -122,7 +122,7 @@ else
   fi
 
   composition_available=false
-  printf '%s\n' 'composition preflight: blocked at the four recorded Lean 4.33 tactic ports'
+  printf '%s\n' 'composition preflight: blocked at the four recorded upstream tactic ports'
   printf '%s\n' \
     'unavailable upstream APIs: copyInputToOutputTM, compositionTM, Hoare, TM.OutputBounds'
 fi
@@ -133,12 +133,12 @@ if lake build Complexitylib.Asymptotics >"$asymptotics_log" 2>&1; then
   asymptotics_available=true
 else
   expected_asymptotics_failures=(
-    'Complexitylib/Asymptotics.lean:106:2: No applicable extensionality theorem found'
-    'Complexitylib/Asymptotics.lean:110:56: unsolved goals'
-    'Complexitylib/Asymptotics.lean:114:4: No applicable extensionality theorem found'
-    'Complexitylib/Asymptotics.lean:115:4: No applicable extensionality theorem found'
-    'Complexitylib/Asymptotics.lean:162:2: No applicable extensionality theorem found'
-    'Complexitylib/Asymptotics.lean:217:2: No applicable extensionality theorem found'
+    'Complexitylib/Asymptotics.lean:303:6: Unknown constant `Polynomial.eval_eq_sum_range`'
+    'Complexitylib/Asymptotics.lean:300:73: unsolved goals'
+    'Complexitylib/Asymptotics.lean:358:44: Invalid field `natDegree`'
+    'Complexitylib/Asymptotics.lean:359:37: Invalid field `natDegree`'
+    'Complexitylib/Asymptotics.lean:363:33: Invalid field `natDegree`'
+    'Complexitylib/Asymptotics.lean:364:8: Unknown constant `Polynomial.eval_eq_sum_range`'
   )
 
   for expected_failure in "${expected_asymptotics_failures[@]}"; do
@@ -160,7 +160,7 @@ else
 
   asymptotics_available=false
   printf '%s\n' \
-    'asymptotics preflight: blocked at the recorded Norm.ext and coercion proof ports'
+    'asymptotics preflight: blocked at the recorded polynomial import boundary'
   printf '%s\n' \
     'unavailable upstream APIs: PolyBound.bigO, Classes.P.Defs, full Cobham equivalence'
 fi

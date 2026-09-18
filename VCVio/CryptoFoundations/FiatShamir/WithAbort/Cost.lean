@@ -24,7 +24,6 @@ invocation; the expected-value versions live in
 universe u v
 
 open OracleComp OracleSpec
-open scoped BigOperators
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
@@ -125,9 +124,6 @@ lemma signAttempt_run_withUnitCost_eq
       (ids := ids) (M := M) (runtime := runtime) (pk := pk) (sk := sk) (msg := msg)
       (costFn := fun _ ↦ (1 : ℕ))
 
-@[deprecated (since := "2026-06-25")]
-alias signAttempt_run_formula_withUnitCost := signAttempt_run_withUnitCost_eq
-
 /-- A single signing attempt has query cost determined by its output: the returned commitment
 `w'` is exactly the random-oracle query point. -/
 theorem signAttempt_usesCostAsQueryCost {ω : Type} [AddMonoid ω]
@@ -143,41 +139,26 @@ theorem signAttempt_usesCostAsQueryCost {ω : Type} [AddMonoid ω]
 /-- The expected weighted query cost of one signing attempt is the expectation of the queried
 commitment cost over the attempt output distribution. -/
 theorem signAttempt_expectedQueryCost_eq_outputExpectation
-    {ω : Type} [AddMonoid ω] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    {ω : Type} [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     (costFn : M × Commit → ω) (val : ω → ENNReal) :
     ExpectedQueryCost[
       fsAbortSignAttempt ids M pk sk msg in runtime by costFn via val
     ] =
-      ∑' attempt : Commit × Option Resp,
-        Pr[= attempt | HasQuery.Program.eval
+      letI : MeasurableSpace (Commit × Option Resp) := ⊤
+      ∫⁻ attempt, val (costFn (msg, attempt.1)) ∂𝒟[HasQuery.Program.eval
           (fun [HasQuery (M × Commit →ₒ Chal) m] =>
             fsAbortSignAttempt (m := m) ids M pk sk msg)
-          runtime] * val (costFn (msg, attempt.1)) := by
-  calc
-    ExpectedQueryCost[
-      fsAbortSignAttempt ids M pk sk msg in runtime by costFn via val
-    ] =
-      ∑' attempt : Commit × Option Resp,
-        Pr[= attempt | AddWriterT.outputs
-          (HasQuery.Program.withAddCost
-            (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ω m)] =>
-              fsAbortSignAttempt (m := AddWriterT ω m) ids M pk sk msg)
-            runtime costFn)] * val (costFn (msg, attempt.1)) :=
-          HasQuery.expectedQueryCost_eq_tsum_outputs_of_usesCostAs
-            (signAttempt_usesCostAsQueryCost ids M runtime pk sk msg costFn)
-    _ = ∑' attempt : Commit × Option Resp,
-          Pr[= attempt | HasQuery.Program.eval
-            (fun [HasQuery (M × Commit →ₒ Chal) m] =>
-              fsAbortSignAttempt (m := m) ids M pk sk msg)
-            runtime] * val (costFn (msg, attempt.1)) := by
-          rw [signAttempt_outputs_withAddCost_eq_eval]
+          runtime] := by
+  rw [HasQuery.expectedQueryCost_eq_lintegral_outputs_of_usesCostAs
+    (signAttempt_usesCostAsQueryCost ids M runtime pk sk msg costFn),
+    signAttempt_outputs_withAddCost_eq_eval]
 
 section queryBounds
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 private lemma signAttempt_usesWeightedQueryCostAtMost
     {κ : Type} [AddCommMonoid κ] [PartialOrder κ] [IsOrderedAddMonoid κ]
     [CanonicallyOrderedAdd κ]
@@ -221,6 +202,7 @@ private lemma signAttempt_usesWeightedQueryCostAtMost
                   (fun oz ↦ AddWriterT.pathwiseCostAtMost_pure
                     (m := m) (ω := κ) (x := (a.1, oz))))))))
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- The retry loop makes weighted query cost at most `n • w` when each query costs at most `w`.
 -/
 theorem fsAbortSignLoop_usesWeightedQueryCostAtMost
@@ -271,6 +253,7 @@ section schemeCost
 
 variable (hr : GenerableRelation Stmt Wit rel)
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Signing makes weighted query cost at most `maxAttempts • w` when each query costs at most
 `w`. -/
 theorem sign_usesWeightedQueryCostAtMost
@@ -283,6 +266,7 @@ theorem sign_usesWeightedQueryCostAtMost
     ] ≤ maxAttempts • w :=
   fsAbortSignLoop_usesWeightedQueryCostAtMost ids M runtime pk sk msg costFn w hcost maxAttempts
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Unit-cost specialization: signing makes at most `maxAttempts` random-oracle queries. -/
 theorem sign_usesAtMostMaxAttemptsQueries
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
@@ -302,13 +286,16 @@ end queryBounds
 
 section expectedCost
 
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadLiftT m SPMF] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+  [DiscreteEvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m]
 
 section schemeCost
 
 variable (hr : GenerableRelation Stmt Wit rel)
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Tail-sum formula for the expected number of signing queries in Fiat-Shamir with aborts.
 
 The random variable on the right is the unit-cost query count of the signer. The event `i < q`
@@ -322,17 +309,17 @@ theorem sign_expectedQueries_eq_sum_reachedAttemptProbabilities
       (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg in runtime
     ] =
       ∑ i ∈ Finset.range maxAttempts,
-        Pr[ fun q ↦ i < q |
+        Pr{let q ←
           HasQuery.queryCountDist
             (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
               (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-            runtime] :=
+            runtime}[i < q] :=
   HasQuery.expectedQueries_eq_sum_tail_probs_of_usesAtMostQueries
     (oa := fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
       (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
     (sign_usesAtMostMaxAttemptsQueries ids M hr runtime pk sk msg maxAttempts)
 
-omit [LawfulMonadLiftT m SPMF] in
+omit [LawfulEvalDistSemantics m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Expected weighted query cost of signing is bounded by the worst-case `maxAttempts • w`
 budget whenever every query costs at most `w`. -/
 theorem sign_expectedQueryCost_le
@@ -347,7 +334,7 @@ theorem sign_expectedQueryCost_le
   HasQuery.expectedQueryCost_le_of_usesCostAtMost
     (sign_usesWeightedQueryCostAtMost ids M hr runtime pk sk msg costFn w hcost maxAttempts) hval
 
-omit [LawfulMonadLiftT m SPMF] in
+omit [LawfulEvalDistSemantics m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Unit-cost specialization: the expected number of signing queries is at most `maxAttempts`. -/
 theorem sign_expectedQueries_le
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)

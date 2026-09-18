@@ -59,7 +59,7 @@ theorem advantage_le_expectedQuerySlack_plus_probEvent_bad
   have h_adv_le_tv :
       h₀.advantage (s_init, false) h₁ (s_init, false) A ≤ tvDist sim₀ sim₁ := by
     rw [QueryImpl.Stateful.advantage, ProbComp.boolDistAdvantage, hrun₀, hrun₁]
-    exact abs_probOutput_toReal_sub_le_tvDist sim₀ sim₁
+    simpa only [evalDist_apply_singleton] using abs_probOutput_toReal_sub_le_tvDist sim₀ sim₁
   have h_bridge :
       ENNReal.ofReal (tvDist sim₀ sim₁)
         ≤ expectedQuerySlack h₀ chargedQuery querySlack A queryBudget (s_init, false)

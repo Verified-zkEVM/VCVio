@@ -330,10 +330,10 @@ theorem contextForkWitness_success
   obtain ⟨second, hsecond, hresult⟩ := mem_support_map_peel _ _ h
   by_cases haccept : (classifyForkView main qb i cf s
       { occurrence := located.occurrence, first := located.completion, second := second }).isSome
-  · rw [acceptContextForkWitness, if_pos haccept, Option.some.injEq] at hresult
+  · rw [acceptContextForkWitness, ite_eq_left haccept, Option.some.injEq] at hresult
     subst hresult
     exact ⟨hsecond, (classifyForkView_isSome main qb i cf s _).mp haccept⟩
-  · rw [acceptContextForkWitness, if_neg haccept] at hresult
+  · rw [acceptContextForkWitness, ite_eq_right haccept] at hresult
     cases hresult
 
 /-- Successful contextual forks expose the selected path, its certified
@@ -353,7 +353,14 @@ theorem contextFork_success
       x₁ = PFunctor.FreeM.output main path ∧
       x₂ = PFunctor.FreeM.output main second.path := by
   rw [contextFork] at h
-  obtain ⟨result, hresult, houtputs⟩ := mem_support_map_peel _ _ h
+  have hmap : some (x₁, x₂) ∈
+      (Option.map PFunctor.FreeM.Cursor.SelectedForkView.outputs) ''
+        support (contextForkWitness main qb i cf) := by
+    exact (congrArg (some (x₁, x₂) ∈ ·)
+      (PFunctor.FreeM.support_map
+        (Option.map PFunctor.FreeM.Cursor.SelectedForkView.outputs)
+        (contextForkWitness main qb i cf))).mp h
+  obtain ⟨result, hresult, houtputs⟩ := hmap
   rcases result with _ | witness
   · simp at houtputs
   · simp only [Option.map, Option.some.injEq] at houtputs
@@ -362,7 +369,7 @@ theorem contextFork_success
     exact ⟨witness.view.firstPath, witness.label,
       .ofCompletion witness.view.first, witness.view.second,
       mem_support_replayFirstPath main witness.view.firstPath, hcf₁, hsecond, hne,
-      hcf₂, congrArg Prod.fst houtputs, congrArg Prod.snd houtputs⟩
+      hcf₂, (congrArg Prod.fst houtputs).symm, (congrArg Prod.snd houtputs).symm⟩
 
 /-- Transfer first-run log invariants through a successful contextual fork.
 The differing selected entries follow directly from the two completions of

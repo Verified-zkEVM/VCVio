@@ -27,6 +27,27 @@ compatibility layer while measure-native tactic support is developed.
 
 ## Tactic Quick Reference
 
+### Postcondition bounds
+
+For `wp oa f ≤ wp oa g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
+pointwise obligation `f x ≤ g x`. The unrestricted `wp_mono` theorem remains available as a
+lower-priority fallback. On raw `Std.Internal.Do.wp` expressions, first write
+`change OracleComp.ProgramLogic.wp oa f ≤ OracleComp.ProgramLogic.wp oa g` to expose the
+head that `gcongr` indexes. `wp_eq_expectedValue` is an explicit bridge, not a global simp rule.
+
+Use `finiteness` for `wp oa post ≠ ⊤` when the result type is finite and the postcondition is
+pointwise finite. An arbitrary quantitative postcondition may still take the value `⊤`.
+The regression module `VCVioTest/ProgramLogic/GCongr.lean` checks the support binders and the
+explicit raw-WP script, so these examples can be pasted into ordinary-import proofs.
+
+For directional rewriting, explicitly import `Mathlib.Tactic.GRewrite`. With
+`h : ∀ x, f x ≤ g x`, `grw [h]` rewrites through `wp` and `expectedValue`. If `h` is restricted
+to `support oa`, the rewrite leaves that support premise as a side goal; `grw [h]; assumption`
+closes the direct comparison. `gcongr with x hx` remains useful when the pointwise proof needs
+the support fact explicitly. The [generalized-relation investigation](../reading/generalized-relation-automation.md)
+compares these tactics with `mono`, equality congruence, and relational VCGen, and records which
+candidate registrations are experimental.
+
 ### Proof Mode Entry
 
 | Tactic | Goal shape | What it does |
@@ -50,7 +71,7 @@ before generating the remaining subgoals.
 | `rvcstep` | `g₁ ≡ₚ g₂`, `evalSPMF g₁ = evalSPMF g₂`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
 | `rvcstep using t` | same | Supplies the explicit witness needed by the current shape (bind cut relation, bijection, traversal input relation, or simulation state relation) |
 | `rvcstep with thm` | same | Force one explicit relational theorem/assumption step |
-| `rvcstep left` / `rvcstep right` | raw `Std.Do'.rwp` or folded `Std.Do'.RelTriple` goals | Exposes a controlled one-sided bind step |
+| `rvcstep left` / `rvcstep right` | raw `VCVio.ProgramLogic.rwp` or folded `VCVio.ProgramLogic.RelTriple` goals | Exposes a controlled one-sided bind step |
 | `rvcstep sym` | qualitative `RelTriple` goals | Swaps the two sides and the relational postcondition |
 | `rvcstep upto R` | qualitative `RelTriple` goals | Changes the current postcondition to an explicit intermediate relation |
 | `rvcstep trans mid` | qualitative `RelTriple` goals | Splits through an explicit intermediate computation using an `EqRel` transport side |
@@ -111,12 +132,12 @@ probability goals, automatically lowering `Pr[...]` into the quantitative engine
 classes of probability goals:
 
 1. **`Pr[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
-   - `Pr[p | oa] = 1` → `Triple 1 oa (fun x => ⌜p x⌝)`
+   - `Pr[p | oa] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`
    - `Pr[= x | oa] = 1` → `Triple 1 oa (fun y => if y = x then 1 else 0)`
 
 2. **Lower-bound event/output goals** → stay inside unary VCGen by reusing the same `Triple`
    shell:
-   - `r ≤ Pr[p | oa]` / `Pr[p | oa] ≥ r` → `Triple r oa (fun x => ⌜p x⌝)`
+   - `r ≤ Pr[p | oa]` / `Pr[p | oa] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
    - `r ≤ Pr[= x | oa]` / `Pr[= x | oa] ≥ r` → `Triple r oa (fun y => if y = x then 1 else 0)`
 
 3. **`Pr[...] = Pr[...]` equality**:
@@ -152,7 +173,7 @@ computation head matches the current goal. Use `vcstep with myLemma` when you wa
 one specific theorem/assumption step manually.
 
 **Opt-in relational lookup**: mark a relational `RelTriple`, `RelWP`, or quantitative
-`Std.Do'.RelTriple` theorem with `@[vcspec]` to register it for the analogous bounded
+`VCVio.ProgramLogic.RelTriple` theorem with `@[vcspec]` to register it for the analogous bounded
 head-pair lookup on the relational side.
 This is especially useful for automation-oriented `simulateQ` transport lemmas whose outer
 computation heads are stable but whose inner invariants or projection arguments still come from
@@ -211,7 +232,7 @@ cheap leaf finish at the end of `rvcgen`) tries, in order:
 3. `relTriple_post_const ?_; intros; trivial` (the postcondition reduces to a trivially provable
    proposition such as `() = ()` after introduction);
 4. `relTriple_refl` / `relTriple_eqRel_of_eq rfl` / `relTriple_pure_pure` /
-   quantitative `Std.Do'.RelTriple` pure (canonical reflexive and pure-pure leaves);
+   quantitative `VCVio.ProgramLogic.RelTriple` pure (canonical reflexive and pure-pure leaves);
 5. a `subst_vars`-driven retry of the same closers (resolves syntactically-distinct pure
    values unified by local equality hypotheses);
 6. a symmetric `relTriple_pure_pure ∘ symm` step for postconditions written in the swapped
@@ -429,7 +450,7 @@ Worked examples in `HandlerSpecs.lean`:
 |---------|---------------|
 | `simulateQ_cachingOracle_preserves_cache_le` | Whole-simulation cache monotonicity for `cachingOracle` (`StateT`) |
 | `simulateQ_cachingLoggingOracle_preserves_cache_le` / `..._log_prefix` | Stacked `StateT` handler preserves each component's invariant |
-| `simulateQ_countingOracle_preserves_ge` | Whole-simulation count monotonicity for `countingOracle` via the `WriterT` lift with `I qc := qc₀ ≤ qc` |
+| `simulateQ_countingOracle_preserves_le` | Whole-simulation count monotonicity for `countingOracle` via the `WriterT` lift with `I qc := qc₀ ≤ qc` |
 | `simulateQ_costOracle_preserves_submonoid` | Submonoid closure: if `costFn t ∈ S` for every `t`, the accumulated cost stays in `S` |
 
 ### Unary-to-relational handler lift (`Relational/HandlerFromUnary.lean`)
@@ -490,7 +511,7 @@ tvDist_simulateQ_le_probEvent_bad :
 
 ```lean
 -- ⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄
-Std.Do'.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot
+VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot
 -- definitionally unfolds to:
 pre ≤ eRelWP oa ob post
 
@@ -565,11 +586,12 @@ abbreviations, beta/zeta/eta-reduces, and elaborates universes); `Sym.DiscrTree`
 is a thin wrapper over `Lean.Meta.DiscrTree` whose insertion keys come from
 those preprocessed patterns and whose lookup is the pure structural
 `getMatch`. Core also ships a `Sym.Simp.Theorems` bundle (discrimination-tree
-+ `Sym.Simp.Theorem` records) used by the upcoming `mvcgen'` frontend; we do
-not consume it today (see *Future `mvcgen` bridge (deferred)* below) but
++ `Sym.Simp.Theorem` records) that core's own Sym-based `vcgen` consumes
+(`Lean.Elab.Tactic.Do.Internal`); we do not consume it today (see *Future
+`vcgen` bridge (deferred)* below) but
 `Sym.Simp.mkTheoremFromDecl` lets us reconstruct it on demand from the
-`@[wpStep]` registry once the `SymM → TacticM` proof-application bridge
-stabilises in core.
+`@[wpStep]` registry when VCVio's symbolic proof-application bridge is
+implemented and validated.
 
 Building on `Sym.Pattern` + `Sym.DiscrTree` means our registries share the
 same pattern preprocessing and lookup cost profile as future core tactics,
@@ -593,7 +615,7 @@ rewrite works).
 
 | File | Attribute | Role |
 |------|-----------|------|
-| `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `Std.Do'.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
+| `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
 | `VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` | `@[wpStep]` | Equational `wp comp post = …` rewrites, indexed by a `Sym.Pattern` on `oa` and consulted by `runWpStepRules` via `TacticM` rewriting (`rw` then `simp only`). The `Sym.Simp.Theorem` bundle for an eventual `SymM`-side rewriter is *not* eagerly built; `Sym.Simp.mkTheoremFromDecl` can rebuild it on demand from `getAllWpStepEntries` |
 
 Each entry carries a `SpecProof` (reusing the core-Lean type from
@@ -605,7 +627,7 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 
 1. **Unary / relational VC-gen** (`VCVio/ProgramLogic/Tactics/Unary/Internals.lean`,
    `VCVio/ProgramLogic/Tactics/Relational/Internals.lean`): on a `Triple`/`wp`/`RelTriple`/`RelWP`/quantitative
-   `Std.Do'.RelTriple`
+   `VCVio.ProgramLogic.RelTriple`
    goal, the planner extracts the computation slot(s), `whnfReducible`s them,
    asks the registry for candidate `VCSpecEntry`s via
    `getRegisteredUnaryVCSpecEntries` / `getRegisteredRelationalVCSpecEntries`,
@@ -627,7 +649,7 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 | Want to add… | Tag it with | Expected shape |
 |--------------|-------------|----------------|
 | A unary Triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp oa post ≥ pre` |
-| A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `Std.Do'.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
+| A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
 | A `wp`-driven equational rewrite | `@[wpStep]` | `wp comp post = …` (exact head `wp`) |
 
 Priorities (`@[vcspec (prio := 200)]`, `@[wpStep (prio := 200)]`) follow the
@@ -639,7 +661,7 @@ same candidate pool.
 `Lean.Meta.Sym.*` is still under active development in core Lean. The APIs
 we depend on today (`Sym.Pattern`, `Sym.DiscrTree`, `Sym.insertPattern`,
 `Sym.getMatch`, `Sym.mkPatternFromDeclWithKey`, and `SpecProof` in
-`Lean.Elab.Tactic.Do.SpecAttr`) are all used by `mvcgen`/`mvcgen'` in core
+`Lean.Elab.Tactic.Do.SpecAttr`) are all used by core's `mvcgen` and `vcgen`
 too, so their direction is broadly stable, but none of them carry a
 compat-preservation promise yet. Expect the following classes of churn each
 time we bump the toolchain:
@@ -656,7 +678,7 @@ time we bump the toolchain:
   clearly-marked `Preprocessed-body head matchers` section.
 - **`Sym.Simp.Theorem` field renames / `mkTheoremFromDecl` moves**. We do
   *not* call `mkTheoremFromDecl` today (the dispatcher works off the
-  `Sym.DiscrTree` alone). When the deferred `mvcgen'`/`SymM` bridge lands,
+  `Sym.DiscrTree` alone). When the deferred `vcgen`/`SymM` bridge lands,
   this is where we'll need to pick the bundle back up; until then this
   churn class is no-op for us.
 - **`SpecProof` variants**. We only use `.global` today. If core splits or
@@ -674,32 +696,43 @@ structural `getMatch` over `isDefEq`, and keep an explicit `TacticM`
 fallback path (`rw` / `simp only`) so failures in any single `Sym` lookup
 stage degrade gracefully.
 
-### Future `mvcgen` bridge (deferred)
+### Core WP and the symbolic rewriter boundary
 
-Lean v4.29.0 ships `mvcgen` with the classical `Std.Do` handler catalogue
-but does *not* expose a `SymM`-level rewriter we can hand a goal to (the
-`mvcgen'` pilot lives on a newer toolchain). The planned shape of that
-bridge, for when the API lands:
+Lean v4.34 provides lattice-generic `Std.Internal.Do.WPMonad`, `Triple`, transformer
+instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
-1. Build a `Sym.Simp.Theorems` bundle from the union of `@[wpStep]` and
-   `@[vcspec]` registries by mapping `Sym.Simp.mkTheoremFromDecl` over
-   `getAllWpStepEntries` (and the analogous `@[vcspec]` accessor). We do
-   not eagerly maintain the bundle in the env extension because it only
-   feeds the deferred SymM rewriter and pulls in `Lean.Meta.Sym.Simp.*`.
-2. Translate the current `wp`-bearing goal into `Sym.Simp.SimpM` and run
-   `Sym.Simp.Theorems.rewrite thms goal` (or whichever `simpImpl` variant
-   core exposes). Results come back as a `Sym.Simp.Step`.
-3. Reify the resulting rewritten goal and proof term back into `TacticM`
-   via the standard `SymM → MetaM` reifier that accompanies `mvcgen'` in
-   core. Until that reifier is public, we cannot close the loop; the
-   current `TacticM`-side dispatch covers the same rules without it.
+- `open scoped OracleComp.Quantitative` selects the compatibility oracle facade
+  for expectation in `ℝ≥0∞`.
+- `open scoped MeasureProgramLogic.Quantitative` selects native measure-backed expectation
+  for any lawful monad with `LawfulEvalDistSemantics`. It also selects this carrier over
+  core `Prop` interpretations for monads such as `Option`. The native module is
+  `VCVio.ProgramLogic.Unary.WP.Measure`; its ordinary imports do not load PMF/SPMF.
+- `open scoped OracleComp.Qualitative` selects universal structural reachability.
+- `open scoped OracleComp.Probabilistic` selects the restricted algebra on `Set.Iic 1`.
 
-Treat any `Sym.*` bump to Lean core as a signal to re-read the two
-registry files and the `runWpStepRules` docstring. If a bump breaks us,
-the fastest recovery path is: (1) open the failing file, (2) check that
-`Sym.mkPatternFromDeclWithKey`, `Sym.insertPattern`, `Sym.getMatch`, and
-`Sym.Simp.mkTheoremFromDecl` still have matching signatures, (3) rebuild
-the single `VCVio/ProgramLogic/Tactics/Common/Registry.lean` or
-`VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` target, and
-(4) regenerate the full library. No user-visible tactic
-surface changes.
+Use `open scoped Std.Internal.Do` for core triple notation. Carrier choice is local;
+importing the library does not install a global unary WP interpretation. Quantitative
+expectation does not provide a general structural reachability certificate. The
+probability-one coherence theorems state their additional uniformity assumptions.
+
+The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares core's
+assertion lattices. Its three carriers in `Relational/WP/` also use explicit scopes
+(`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`).
+
+VCVio's probability/coupling tactics continue to consume `@[vcspec]` and `@[wpStep]`.
+Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
+core and PolyFun's WriterT interpretation; VCVio retains its probability rules and
+existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretation
+uses multiplication; append-based logs use `WriterT.toWPMonad` with explicit operations.
+
+The `Std.Do` handler bridge remains a separate legacy consumer of core's older SPred API.
+Its migration to lattice-generic triples is a focused follow-up; it does not require Loom.
+Likewise, replacing the probability tactic's `rw` dispatcher with `Sym.Simp` needs a
+separate proof-application adapter and evidence from the existing automation tests.
+
+For v4.35, track the [Std.WP namespace work](https://github.com/leanprover/lean4/pull/14783),
+[LawfulWPMonadAttach](https://github.com/leanprover/lean4/pull/14801),
+[exception-stack tuples](https://github.com/leanprover/lean4/pull/14836), and
+[mvcgen deprecation](https://github.com/leanprover/lean4/pull/14874), alongside the
+[upstream roadmap](https://lean-lang.org/fro/roadmap/y4-1/).
+These inform the next stable upgrade; they do not change this package's v4.34 pin.

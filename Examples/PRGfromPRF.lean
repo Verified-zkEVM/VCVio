@@ -309,10 +309,10 @@ private lemma evalSPMF_uniformSample_vector_succ (N : ℕ) :
     · rw [probOutput_bind_eq_tsum, tsum_eq_single rest]
       · simp
       · intro b hb
-        rw [probOutput_pure, if_neg (by simp [List.Vector.eq_cons_iff, Ne.symm hb]), mul_zero]
+        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]), mul_zero]
     · intro b hb
       rw [probOutput_bind_eq_tsum, ENNReal.tsum_eq_zero.2 (fun r => by
-        rw [probOutput_pure, if_neg (by simp [List.Vector.eq_cons_iff, Ne.symm hb]),
+        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]),
           mul_zero]), mul_zero]
   have hL :
       Pr[= (out ::ᵥ rest) | ($ᵗ (List.Vector O (N + 1)))]
@@ -424,7 +424,7 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
     rw [tvDist_eq_zero_iff]
     simp only [oracleOutputs, simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
     refine evalSPMF_ext fun y => ?_
-    simp
+    simp [List.Vector.eq_nil y]
   | succ N ih =>
     cases hc : c.isCached s with
     | false =>
@@ -576,19 +576,24 @@ theorem security
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
       collisionProb (S := S) (O := O) n := by
-  unfold PRGScheme.prgAdvantage PRFScheme.prfAdvantage
-  have hreal : (Pr[= true | PRGScheme.prgRealExp (streamPRG prf n) adv]).toReal =
-      (Pr[= true | PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)]).toReal :=
-    congrArg ENNReal.toReal (probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv))
-  rw [hreal]
-  set a := (Pr[= true | PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)]).toReal
-  set b := (Pr[= true | PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)]).toReal
-  set c := (Pr[= true | PRGScheme.prgIdealExp adv]).toReal
-  have hgap : |b - c| ≤ collisionProb (S := S) (O := O) n :=
-    prfIdealGap_le_collisionProb adv
-  calc |a - c| = |(a - b) + (b - c)| := by ring_nf
-    _ ≤ |a - b| + |b - c| := abs_add_le _ _
-    _ ≤ |a - b| + collisionProb (S := S) (O := O) n := by linarith
+  let prgReal := PRGScheme.prgRealExp (streamPRG prf n) adv
+  let prfReal := PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)
+  let prfIdeal := PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)
+  let prgIdeal := PRGScheme.prgIdealExp adv
+  have hreal : 𝒟[prgReal] {true} = 𝒟[prfReal] {true} := by
+    simpa only [prgReal, prfReal, evalDist_apply_singleton] using
+      probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv)
+  have hgap : prfIdeal.boolDistAdvantage prgIdeal ≤ collisionProb (S := S) (O := O) n := by
+    simpa only [prfIdeal, prgIdeal, ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
+      prfIdealGap_le_collisionProb adv
+  change prgReal.boolDistAdvantage prgIdeal ≤
+    prfReal.boolDistAdvantage prfIdeal + collisionProb (S := S) (O := O) n
+  have heq : prgReal.boolDistAdvantage prgIdeal = prfReal.boolDistAdvantage prgIdeal := by
+    unfold ProbComp.boolDistAdvantage
+    rw [hreal]
+  rw [heq]
+  exact (ProbComp.boolDistAdvantage_triangle prfReal prfIdeal prgIdeal).trans
+    (add_le_add_right hgap _)
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [SampleableType S]
   [Inhabited O] [Fintype O] [DecidableEq O] [SampleableType O] in
@@ -722,10 +727,10 @@ private lemma probOutput_genCollisionExp_bind_le (N : ℕ) (c : (S →ₒ S × O
       intro s
       cases hcs : c.isCached s with
       | true =>
-        rw [probOutput_genCollisionExp_succ_of_isCached N s c hcs, if_pos rfl]
+        rw [probOutput_genCollisionExp_succ_of_isCached N s c hcs, ite_eq_left rfl]
         exact le_self_add
       | false =>
-        rw [if_neg (by simp), zero_add]
+        rw [ite_eq_right (by simp), zero_add]
         have hcnone : c s = none := by simpa [QueryCache.isCached] using hcs
         rw [genCollisionExp_succ_of_none N s c hcnone]
         -- Replace each fresh cache value by a fixed one (domain invariance), then drop the

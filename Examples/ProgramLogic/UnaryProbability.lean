@@ -20,7 +20,7 @@ and `by_hoare` support in the unary tactic layer.
 open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic
+open scoped OracleComp.ProgramLogic Std.Internal.Do OracleComp.Quantitative
 
 universe u
 
@@ -76,7 +76,7 @@ info: Try this:
 
   [apply] vcstep rw congr as ⟨x, hx⟩
 -/
-#guard_msgs in
+#guard_msgs (info) in
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr[ q | f x] = Pr[ q | g x]) :
     Pr[ q | mx >>= f] = Pr[ q | mx >>= g] := by

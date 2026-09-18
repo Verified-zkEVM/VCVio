@@ -53,7 +53,7 @@ def CorrectExp : m Bool :=
 
 /-- Perfect correctness of a KEM. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  Pr[= true | runtime.evalSPMF kem.CorrectExp] = 1
+  runtime.evalDist kem.CorrectExp {true} = 1
 
 end Correct
 
@@ -70,10 +70,10 @@ structure IND_CPA_Adversary (_kem : KEMScheme (OracleComp spec) K PK SK C) where
 
 /-- Fixed-branch IND-CPA experiment for a KEM, matching the source proof-ladders formulation
 `Exp.run(b)`. -/
-def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
+noncomputable def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CPA_Adversary) (b : Bool) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : kem.IND_CPA_Adversary) (b : Bool) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, _sk) ← kem.keygen
     let st ← adversary.preChallenge pk
     let (cStar, kReal) ← kem.encaps pk
@@ -82,10 +82,10 @@ def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
 
 /-- Single-game IND-CPA experiment obtained by sampling the challenge bit uniformly and checking
 whether the adversary guessed it correctly. -/
-def IND_CPA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
+noncomputable def IND_CPA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CPA_Adversary) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : kem.IND_CPA_Adversary) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, _sk) ← kem.keygen
     let st ← adversary.preChallenge pk
     let b ← runtime.liftProbComp ($ᵗ Bool)
@@ -99,14 +99,14 @@ game. -/
 noncomputable def IND_CPA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) : ℝ :=
-  (IND_CPA_Game runtime adversary).boolBiasAdvantage
+  (IND_CPA_Game runtime adversary).boolBias
 
 /-- The canonical IND-CPA advantage is definitionally the bias of the single game. -/
 theorem IND_CPA_Advantage_eq_game_bias {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) :
     kem.IND_CPA_Advantage runtime adversary =
-      (kem.IND_CPA_Game runtime adversary).boolBiasAdvantage := rfl
+      (kem.IND_CPA_Game runtime adversary).boolBias := rfl
 
 end IND_CPA
 
@@ -137,10 +137,10 @@ def IND_CCA_postChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
     if c = cStar then return none else kem.decaps sk c
 
 /-- IND-CCA real-or-random experiment for a KEM. -/
-def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
+noncomputable def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CCA_Adversary) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : kem.IND_CCA_Adversary) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, sk) ← kem.keygen
     let st ← simulateQ (kem.IND_CCA_preChallengeImpl sk) (adversary.preChallenge pk)
     let b ← runtime.liftProbComp ($ᵗ Bool)
@@ -154,7 +154,7 @@ def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
 noncomputable def IND_CCA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CCA_Adversary) : ℝ :=
-  (IND_CCA_Game runtime adversary).boolBiasAdvantage
+  (IND_CCA_Game runtime adversary).boolBias
 
 /-- Any IND-CPA adversary can be viewed as an IND-CCA adversary that simply ignores the
 decapsulation oracle while preserving its ordinary pre-challenge interaction with the base

@@ -185,7 +185,7 @@ lemma simulateQ_prfReal_unlinkToMultiplePRFTagImpl_run
   unfold unlinkToMultiplePRFTagImpl unlinkTagQueryImpl
   by_cases hs : s.sessionsUsed tag < sessionsPerTag
   · simp only [StateT.run_bind, StateT.run_get, StateT.run_monadLift,
-      bind_pure_comp, pure_bind, dif_pos hs]
+      bind_pure_comp, pure_bind, dite_eq_left hs]
     change simulateQ impl _ = _
     simp only [simulateQ_bind, simulateQ_map, monadLift_eq_self, hleft]
     refine bind_congr fun nonce => ?_
@@ -337,7 +337,7 @@ lemma simulateQ_prfReal_unlinkToSinglePRFTagImpl_run
   unfold unlinkToSinglePRFTagImpl unlinkTagQueryImpl
   by_cases hs : s.sessionsUsed tag < sessionsPerTag
   · simp only [StateT.run_bind, StateT.run_get, StateT.run_monadLift,
-      bind_pure_comp, pure_bind, dif_pos hs]
+      bind_pure_comp, pure_bind, dite_eq_left hs]
     change simulateQ impl _ = _
     simp only [simulateQ_bind, simulateQ_map, monadLift_eq_self, hleft]
     refine bind_congr fun nonce => ?_

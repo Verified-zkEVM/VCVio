@@ -58,18 +58,16 @@ theorem relTriple_prod {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := ob)
   refine ⟨_root_.SPMF.Coupling.prod hp hq, ?_⟩
   intro z hz
-  rcases (mem_support_bind_iff (𝒮[oa])
+  rcases (mem_spmf_support_bind_iff (𝒮[oa])
     (fun a => 𝒮[ob] >>= fun b => (pure (a, b) : SPMF (α × β))) z).1 hz with
     ⟨a, ha, hz'⟩
   have ha_supp : a ∈ support oa :=
-    (mem_support_iff (mx := oa) (x := a)).2
-      (by simpa [probOutput_def] using (mem_support_iff (mx := 𝒮[oa]) (x := a)).1 ha)
-  rcases (mem_support_bind_iff (𝒮[ob])
+    (mem_support_iff_evalSPMF_apply_ne_zero oa a).2 ((SPMF.mem_support_iff _ _).1 ha)
+  rcases (mem_spmf_support_bind_iff (𝒮[ob])
     (fun b => (pure (a, b) : SPMF (α × β))) z).1 hz' with ⟨b, hb, hz''⟩
   have hb_supp : b ∈ support ob :=
-    (mem_support_iff (mx := ob) (x := b)).2
-      (by simpa [probOutput_def] using (mem_support_iff (mx := 𝒮[ob]) (x := b)).1 hb)
-  obtain rfl : z = (a, b) := by simpa [support_pure, Set.mem_singleton_iff] using hz''
+    (mem_support_iff_evalSPMF_apply_ne_zero ob b).2 ((SPMF.mem_support_iff _ _).1 hb)
+  obtain rfl : z = (a, b) := by simpa using hz''
   exact ⟨hP a ha_supp, hQ b hb_supp⟩
 
 /-- `wpProp`-phrased version of the product lift. -/
@@ -106,9 +104,6 @@ theorem relTriple_of_triple_of_implies {oa : OracleComp spec₁ α} {ob : Oracle
     (hImp : ∀ a b, P a → Q b → R a b) :
     RelTriple oa ob R :=
   relTriple_post_mono (relTriple_prod_of_triple hP hQ) (fun _ _ ⟨hp, hq⟩ => hImp _ _ hp hq)
-
-@[deprecated (since := "2026-06-25")]
-alias relTriple_of_triple_of_imp := relTriple_of_triple_of_implies
 
 /-! ## Smoke tests -/
 

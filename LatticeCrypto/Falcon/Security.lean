@@ -109,12 +109,12 @@ primitives at the honest key:
 2. `hpreimage`: every output of the trapdoor sampler is a preimage of its target,
    `s₁ + s₂ · h = c`.
 
-Hypothesis 2 is the lattice-point obligation of the floating-point pipeline. `fromFFTPreimage`
-rounds an inverse FFT to obtain `v = z · B` and returns `(c − v₀, −v₁)`, and `s₁ + s₂ · h = c`
-holds exactly when the rounded `v` is the lattice point `z · B`, i.e. when the inverse FFT's
-rounding error stays below `1/2` in every coordinate. It is stated here rather than built into
-the model, so that it is discharged where the arithmetic is exact and stays visible where it is
-not. Neither the NTRU equation nor `validKeyPair` is needed: the signer emits only attempts that
+Hypothesis 2 is the coset obligation of the FFT pipeline. `fromFFTPreimage` rounds an inverse
+FFT and returns `(c − v₀, −v₁)`. For a valid basis, a sufficient condition is that the rounded
+`v` equals the integer lattice point `z · B`; coordinatewise error strictly below `1/2` before
+rounding establishes that condition. The coset identity itself is the hypothesis here, so exact
+FFT arithmetic and a certified numerical implementation can discharge it separately. Neither the
+NTRU equation nor `validKeyPair` is needed in this theorem: the signer emits only attempts that
 passed the norm check, and that check is `verify`'s own. -/
 theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p) (msg : List Byte)
     (maxAttempts : ℕ) (sig : Signature)
@@ -154,10 +154,10 @@ theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p) (msg : List By
             (s₁, s₂) ∈ support ((falconPSF p prims).trapdoorSample pk sk c) ∧
               (falconPSF p prims).isShort (s₁, s₂) = true := by
           by_cases hshort : (falconPSF p prims).isShort x = true
-          · rw [if_pos hshort, support_pure, Set.mem_singleton_iff, Option.some.injEq] at hr
+          · rw [ite_eq_left hshort, support_pure, Set.mem_singleton_iff, Option.some.injEq] at hr
             subst hr
             exact ⟨hx, hshort⟩
-          · rw [if_neg hshort, support_pure, Set.mem_singleton_iff] at hr
+          · rw [ite_eq_right hshort, support_pure, Set.mem_singleton_iff] at hr
             exact absurd hr (by simp)
         obtain ⟨hmem, hshort⟩ := hshort_eval
         have heval : (falconPSF p prims).eval pk (s₁, s₂) = c := hpreimage c (s₁, s₂) hmem
@@ -305,12 +305,14 @@ generic in the salt type `Salt`.
 For any EUF-CMA adversary `A` making at most `qSign` signing queries and `qHash`
 random-oracle queries against the Falcon+ signature scheme with salt type `Salt`, and
 any externally supplied bound `ε_sampler` that upper-bounds `SamplerQuality.bound` for
-every valid Falcon key pair, there exist:
+every valid Falcon key pair, the GPV reductions
 
-- a collision reduction `B_coll` for the distinct-preimage branch,
-- a programmed-preimage replay reduction `B_exact` for the exact-match branch,
+- `B_coll = GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) Salt A` for the
+  distinct-preimage branch, read as an adversary for `ntruPSFCollisionProblem`,
+- `B_exact = GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte) Salt A`
+  for the exact-match branch,
 
-such that:
+satisfy:
 
   `Adv^{EUF-CMA}_{Falcon+}(A)`
   `  ≤ Adv^{collision}_{Falcon-PSF}(B_coll)`
@@ -367,16 +369,15 @@ theorem euf_cma_security
       (S' := Salt × (Rq p.n × Rq p.n))
       (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    adv.advantage
+        (GPVHashAndSign.runtime
+          (Range := Rq p.n) (List Byte) Salt) ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) Salt adv) +
         ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            (falconPSF p prims) hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage (falconPSF p prims) hr
+            (GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte) Salt
+              adv) +
         GPVHashAndSign.collisionBound Salt qSign +
         samplerLoss := by
   let _ := qSign
@@ -404,16 +405,15 @@ theorem euf_cma_security_bytes40
       (S' := Bytes 40 × (Rq p.n × Rq p.n))
       (α := List Byte × (Bytes 40 × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) (Bytes 40)) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    adv.advantage
+        (GPVHashAndSign.runtime
+          (Range := Rq p.n) (List Byte) (Bytes 40)) ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) (Bytes 40) adv) +
         ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            (falconPSF p prims) hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage (falconPSF p prims) hr
+            (GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte)
+              (Bytes 40) adv) +
         GPVHashAndSign.collisionBound (Bytes 40) qSign +
         samplerLoss :=
   euf_cma_security p prims (Bytes 40) hr qSign qHash samplerLoss hSamplerLoss adv hQ

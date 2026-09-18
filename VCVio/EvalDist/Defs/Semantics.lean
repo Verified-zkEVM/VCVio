@@ -5,159 +5,21 @@ Authors: Quang Dao
 -/
 
 module
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.Defs.Basic
 
 /-!
-# Bundled Probability Semantics
+# Bundled discrete probability compatibility
 
-This file defines bundled semantics for monads that factor through an internal semantic monad
-before being externally observed.
-
-A `MonadLiftT m SPMF` / `MonadLiftT m PMF` instance says that a monad already *has* an
-`SPMF` or `PMF` denotation. That is convenient when the monad itself is the semantic object,
-but it is too rigid for constructions whose natural semantics has hidden internal structure.
-
-The main new idea here is to split semantics into two stages:
-
-1. `interpret`: map computations in the user-facing monad into an internal semantic monad
-2. `observe`: forget the internal bookkeeping and expose only the probabilistic behavior
-
-This is useful when the internal semantics carries extra state or other information that should
-not be visible at the final security-game interface. Typical examples include:
-
-- oracle caches modeled by hidden state
-- auxiliary logs or bookkeeping used only for the semantics
-- semantic monads that are more structured than the surface monad being specified
-
-The generic factoring pattern is captured by `SemanticsVia`. The primary probability-specific
-notion is `MeasureSemanticsVia`, whose observation target is a Mathlib `Measure` with mass at most
-one. The older `SPMFSemantics` and `PMFSemantics` bundles remain compatibility surfaces while
-downstream developments migrate; keeping them available avoids deprecation noise in the portions
-of the library deliberately retained as the finite executable layer.
-
-These semantics are deliberately *bundled* rather than typeclasses so that a construction can
-carry its intended semantics locally without forcing a single global instance on the ambient
-monad.
+`SPMFSemantics` and `PMFSemantics` observe an internal monad through discrete distributions.
+The module also exports the generic observation bundles and their native measure semantics.
 -/
 
 @[expose] public section
 
 open MeasureTheory
 
-/-!
-## Design Note
-
-The fields are intentionally minimal:
-
-- `Sem` is the internal semantic monad
-- `interpret` embeds the surface computation into that internal semantics
-- `observe` discards the internal structure and returns the external semantic object
-
-Notably, observation is not required to be a monad morphism. That is important: running a
-stateful semantics from a fixed initial state is a perfectly reasonable observation, but it is
-not itself a monad homomorphism. The bundling here leaves room for that style of semantics.
--/
-
 universe u v w x
-
-/-- Bundled semantics for `m` obtained by factoring through an internal semantic monad.
-
-`SemanticsVia m Obs` packages the very general pattern:
-
-1. interpret a computation in the surface monad `m` into some internal semantic monad `Sem`
-2. observe the resulting internal computation as an external semantic object `Obs α`
-
-The observation target `Obs` is intentionally generic. In this file we mainly care about the
-cases `Obs = SPMF` and `Obs = PMF`, but the same factoring pattern could later be reused for
-other kinds of denotational semantics such as sets of outcomes, traces, or quantum objects.
-
-The important asymmetry is that `interpret` is required to be a monad morphism, while `observe`
-is not. This lets us model semantics where running the internal computation requires fixing hidden
-state or discarding auxiliary structure before exposing the final denotation. -/
-structure SemanticsVia (m : Type u → Type v) [Monad m] (Obs : Type u → Type x) where
-  /-- Internal monad used to give denotational meaning to computations in `m`. -/
-  Sem : Type u → Type w
-  /-- Monad structure on the internal semantic monad. -/
-  [instMonadSem : Monad Sem]
-  /-- Interpret a surface computation into the internal semantic monad. -/
-  interpret : m →ᵐ Sem
-  /-- Observe the internal semantic computation as an external semantic object, forgetting any
-  hidden internal structure. -/
-  observe : {α : Type u} → Sem α → Obs α
-
-namespace SemanticsVia
-
-variable {m : Type u → Type v} [Monad m] {Obs : Type u → Type x} {α : Type u}
-
-/-- The external denotation of `mx` under a bundled semantics factorization. -/
-def denote (sem : SemanticsVia m Obs) (mx : m α) : Obs α :=
-  sem.observe (sem.interpret mx)
-
-end SemanticsVia
-
-/-! ## Measure-valued semantics -/
-
-/-- Bundled subprobability semantics factoring a surface monad through an internal monad.
-
-Unlike `SemanticsVia m Measure`, which cannot be formed because observing a `Measure α` requires
-a selected measurable space, the measurable-space argument is explicit in `observe`. Failure or
-nontermination is represented by missing mass. -/
-structure MeasureSemanticsVia (m : Type u → Type v) [Monad m] where
-  /-- Internal semantic monad. -/
-  Sem : Type u → Type w
-  /-- Monad structure carried by the internal semantics. -/
-  [instMonadSem : Monad Sem]
-  /-- Interpret a surface computation in the internal semantic monad. -/
-  interpret : m →ᵐ Sem
-  /-- Observe successful outputs as a Mathlib measure. -/
-  observe : {α : Type u} → [MeasurableSpace α] → Sem α → Measure α
-  /-- Every observation has total mass at most one. -/
-  observe_apply_univ_le_one : ∀ {α : Type u} [MeasurableSpace α] (mx : Sem α),
-    observe mx Set.univ ≤ 1
-
-instance {m : Type u → Type v} [Monad m] (sem : MeasureSemanticsVia m) : Monad sem.Sem :=
-  sem.instMonadSem
-
-namespace MeasureSemanticsVia
-
-variable {m : Type u → Type v} [Monad m] {α : Type u}
-
-/-- The visible measure denoted by a computation under a bundled semantics. -/
-noncomputable def evalDist (sem : MeasureSemanticsVia m) [MeasurableSpace α]
-    (mx : m α) : Measure α :=
-  sem.observe (sem.interpret mx)
-
-@[simp]
-theorem evalDist_apply_univ_le_one (sem : MeasureSemanticsVia m) [MeasurableSpace α]
-    (mx : m α) : sem.evalDist mx Set.univ ≤ 1 :=
-  sem.observe_apply_univ_le_one (sem.interpret mx)
-
-/-- Failure probability is the mass missing from the successful-output measure. -/
-noncomputable def probFailure (sem : MeasureSemanticsVia m) [MeasurableSpace α]
-    (mx : m α) : ENNReal :=
-  1 - sem.evalDist mx Set.univ
-
-@[simp]
-theorem probFailure_le_one (sem : MeasureSemanticsVia m) [MeasurableSpace α]
-    (mx : m α) : sem.probFailure mx ≤ 1 :=
-  tsub_le_self
-
-/-- Package a global `EvalDistSemantics` instance as a local bundled semantics. -/
-protected noncomputable def ofEvalDistSemantics (m : Type u → Type v) [Monad m]
-    [EvalDistSemantics m] : MeasureSemanticsVia m where
-  Sem := m
-  instMonadSem := inferInstance
-  interpret := MonadHom.id m
-  observe := fun mx => EvalDistSemantics.denote mx
-  observe_apply_univ_le_one := fun mx => EvalDistSemantics.apply_univ_le_one mx
-
-@[simp]
-theorem ofEvalDistSemantics_evalDist (mx : m α) [EvalDistSemantics m]
-    [MeasurableSpace α] :
-    (MeasureSemanticsVia.ofEvalDistSemantics m).evalDist mx = 𝒟[mx] := by
-  rfl
-
-end MeasureSemanticsVia
 
 /-- Bundled subprobabilistic semantics for a monad `m`.
 
@@ -195,7 +57,7 @@ def probFailure (sem : SPMFSemantics m) (mx : m α) : ENNReal :=
 /-- Failure probability under an `SPMFSemantics` is always at most `1`. -/
 @[simp]
 lemma probFailure_le_one (sem : SPMFSemantics m) (mx : m α) : sem.probFailure mx ≤ 1 :=
-  PMF.coe_le_one (sem.evalSPMF mx) none
+  (sem.evalSPMF mx).coe_le_one none
 
 /-- Package an ordinary `MonadLiftT m SPMF` instance as a bundled `SPMFSemantics`.
 
