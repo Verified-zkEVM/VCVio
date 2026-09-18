@@ -36,6 +36,11 @@ open scoped ENNReal
 
 namespace VCVioTest.MeasureBridge
 
+/-! ## Successful-output measure normalization -/
+
+example {α : Type} [MeasurableSpace α] (μ : Measure α) :
+    (μ.map some).dropNone = μ := by simp
+
 /-! ## Operational optional failure -/
 
 example {r : Type → Type} [Monad r] [LawfulMonad r] [MonadAttach r]

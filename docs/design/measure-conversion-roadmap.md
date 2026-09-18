@@ -41,11 +41,28 @@ zero, and constant reachable valuations retain successful mass. Markov bounds ob
 marginal without measuring discarded outputs. Algebraic writer tags carry their underlying measurable space.
 
 Fiat–Shamir, aborting Fiat–Shamir, Fischlin, and the FO transforms use these cost rules. Their
-other security, retry, and probability theorem families remain separate conversions.
+other security and probability theorem families remain separate conversions.
 A generic Measure tail-sum theorem applies to Nat observables on arbitrary spaces; query counts
 specialize it. Measurably parameterized cost measures use `evalDistKernel`, and their expected
 valuations are measurable. Native regressions cover continuous cost/output spaces, discarded
 outputs without measurable spaces, and vacuous exact cost on a failed computation.
+
+## Conditional branching and aborting Fiat–Shamir checkpoint
+
+Conditional event and measure laws factor through the actual finite observation, retaining
+missing mass and leaving discarded intermediate values unmeasured. Measurable selector and
+branch families integrate with the existing kernel API on chosen environment/output spaces.
+Program instrumentation exposes bind and pure equations, so retry cost proofs normalize
+without unfolding handler implementations or inserting `change` steps.
+
+Aborting Fiat–Shamir retry powers, tail recurrences, and geometric bounds use native event
+semantics throughout. Exact finite expectations require only a probability certificate on the
+abort observation; upper bounds permit failure. No arbitrary commitment, response, or private
+state measurable space is imposed. Correctness compares events over the joint signature/cache
+execution using reachable continuation bounds, then uses the native Boolean mass partition.
+The stateful random-oracle abort premise stays explicit; separately reset stateless attempts do
+not establish it. Regressions cover generic monads without attachment, continuous kernel
+families, and a failing handler whose zero query-tail mass differs from the zeroth abort power.
 
 ## Independent-product checkpoint
 
@@ -78,7 +95,13 @@ and abort-analysis conversion PRs.
 | Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
-each family before expanding to another subsystem. Each published checkpoint must build all
+each family before expanding to another subsystem. Prioritize landing the current core PRs before
+opening further conversion slices. After each merge, reconcile dependent branches with current
+`main`, retarget their PRs as needed, and validate the resulting integration. Follow every check
+on the current head and the merge queue through to the actual merge result.
+Since `main` uses squash merges, bring its landed commit into each dependent branch before
+retargeting the PR to `main`, so the diff contains only the next conversion family.
+Each published checkpoint must build all
 proof libraries, pass native import guards, tests, boundary/style/environment checks, and the
 axiom/initialization ratchets. Prune obsolete lint entries; do not add exceptions for conversions.
 
@@ -92,6 +115,7 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Common-prefix lower bound | `le_evalDist_bind_apply` under AE premises and losslessness, or `OracleComp.le_evalDist_bind_apply_of_support` for reachable continuation bounds. |
 | Unchanged instrumented output | Structural projection equality, followed by measure observation; final writer/state marginals use measurable projections. |
 | Expected cost | Cost-marginal Lebesgue integral on the chosen cost space; measurable valuations and cost functions, native AE/pathwise bridges, and Mathlib probability certificates for lower/exact bounds. |
+| Conditional continuation | `evalDist_bind_ite`, `prEvent_bind_ite`, and `prEvent_bind_eq_mul_of_ite`; finite observation measures retain missing mass. |
 | Natural-valued expectation | `MeasureTheory.lintegral_coe_nat_eq_tsum`; countability applies to the observable range. |
 | Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
 | Every possible execution satisfies an invariant | Operational support or indexed reachability; probability interpretation is unnecessary. |

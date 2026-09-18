@@ -63,6 +63,16 @@ def OracleComp {ι : Type u} (spec : OracleSpec.{u,v} ι) : Type w → Type _ :=
 | `isPure` | Check if computation is `pure` (no queries) |
 | `totalQueries` | Count total oracle queries |
 
+### Checkpoint Placement and Replay
+
+Ordinary program equality does not specify which random choices are shared across resumptions.
+[`Examples/ReplayCheckpoint.lean`](../../Examples/ReplayCheckpoint.lean) gives a concrete
+counterexample: moving a checkpoint across a fair Boolean draw preserves the program after
+erasing the checkpoint, but changes the probability that two resumed outputs agree from `1`
+to `1/2`. A replay-preservation argument must retain the checkpoint boundary and its shared state.
+[`VCVioTest/ReplayCheckpoint.lean`](../../VCVioTest/ReplayCheckpoint.lean) checks the public
+ordinary-execution equality and the distinguishing replay observation together.
+
 ### Possible outputs and `MonadAttach`
 
 Use `OracleComp.reachableWhen possibleOutputs oa` when possible query responses

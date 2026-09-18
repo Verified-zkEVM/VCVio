@@ -49,6 +49,20 @@ def withAddCost {ω : Type} [AddMonoid ω]
   letI := (impl.withAddCost costFn).toHasQuery
   exact oa
 
+/-- Additive instrumentation preserves the sequencing of direct-style programs. -/
+@[simp]
+lemma withAddCost_bind {ω β : Type} [AddMonoid ω]
+    (oa : Program spec (AddWriterT ω m) α) (f : α → Program spec (AddWriterT ω m) β)
+    (impl : QueryImpl spec m) (costFn : spec.Domain → ω) :
+    withAddCost (fun [HasQuery spec (AddWriterT ω m)] ↦ oa >>= fun a ↦ f a) impl costFn =
+      withAddCost oa impl costFn >>= fun a ↦ withAddCost (f a) impl costFn := rfl
+
+/-- Additive instrumentation preserves pure direct-style programs. -/
+@[simp]
+lemma withAddCost_pure {ω : Type} [AddMonoid ω] (a : α)
+    (impl : QueryImpl spec m) (costFn : spec.Domain → ω) :
+    withAddCost (fun [HasQuery spec (AddWriterT ω m)] ↦ pure a) impl costFn = pure a := rfl
+
 /-- Additive instrumentation interprets a query by recording its cost and delegating to the
 underlying implementation. -/
 @[simp]

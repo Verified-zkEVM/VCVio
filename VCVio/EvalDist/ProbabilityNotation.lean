@@ -31,14 +31,20 @@ macro_rules (kind := prEvent)
   -- `doSeqIndent`
   | `(Pr{$items*}[$t]) => `(𝒟[do $items:doSeqItem* return $t:term] {True})
 
+/-- An event is the true mass of its propositional selector. -/
+theorem prEvent_eq_evalDist_map
+    {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True} := by
+  simp only [map_eq_bind_pure_comp, Function.comp_def]
+
 /-- A measurable predicate returned by a computation has the probability of its event. -/
 theorem prEvent_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} [MeasurableSpace α] (mx : m α) (p : α → Prop)
     (hp : Measurable p) :
     Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} := by
-  change 𝒟[mx >>= (pure ∘ p)] {True} = _
-  rw [← map_eq_bind_pure_comp, evalDist_map mx hp,
+  rw [prEvent_eq_evalDist_map, evalDist_map mx hp,
     Measure.map_apply hp (measurableSet_singleton True)]
   simp
 
@@ -60,25 +66,6 @@ theorem prEvent_eq_evalDist_singleton
   simpa only [Set.ofPred_eq_eq_singleton] using
     prEvent_eq_evalDist mx (fun x ↦ x = a) (measurableSet_singleton a).mem
 
-/-- Checking a decidable event at the end of a computation gives the same success mass as
-returning its decision as a Boolean. -/
-theorem prEvent_eq_evalDist_decide_of_discrete
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    (mx : m α) (p : α → Prop) [DecidablePred p] :
-    Pr{let x ← mx}[p x] = 𝒟[do let x ← mx; return decide (p x)] {true} := by
-  rw [prEvent_eq_evalDist_of_discrete]
-  change 𝒟[mx] {x | p x} =
-    𝒟[mx >>= (pure ∘ fun x => decide (p x))] {true}
-  rw [← map_eq_bind_pure_comp,
-    evalDist_map mx (Measurable.of_discrete : Measurable fun x => decide (p x)),
-    Measure.map_apply (Measurable.of_discrete : Measurable fun x => decide (p x))
-      (measurableSet_singleton true)]
-  congr 1
-  ext x
-  simp
-
 /-- A final decidable event has the same success mass whether it is returned as a proposition
 or decided to a Boolean; no measurable structure on intermediate values is needed. -/
 theorem prEvent_eq_evalDist_decide
@@ -86,20 +73,31 @@ theorem prEvent_eq_evalDist_decide
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (p : α → Prop) [DecidablePred p] :
     Pr{let x ← mx}[p x] = 𝒟[do let x ← mx; return decide (p x)] {true} := by
-  let : MeasurableSpace α := ⊤
-  exact prEvent_eq_evalDist_decide_of_discrete mx p
+  classical
+  calc
+    _ = 𝒟[p <$> mx] {True} := prEvent_eq_evalDist_map mx p
+    _ = 𝒟[(fun b : Prop ↦ decide b) <$> (p <$> mx)] {true} := by
+      rw [evalDist_map (p <$> mx)
+        (Measurable.of_discrete : Measurable fun b : Prop ↦ decide b),
+        Measure.map_apply Measurable.of_discrete (measurableSet_singleton true)]
+      congr 1
+      ext b
+      simp
+    _ = _ := by
+      congr 1
+      congr 1
+      simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc, pure_bind]
+      apply bind_congr
+      intro x
+      by_cases hx : p x <;> simp [hx]
 
 /-- Pointwise equivalent predicates have the same probability after a common computation. -/
 theorem prEvent_congr
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {m : Type → Type v} [Monad m] [EvalDistSemantics m]
     {α : Type} (mx : m α) (p q : α → Prop) (h : ∀ x, p x ↔ q x) :
     Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete]
-  congr 1
-  ext x
-  simp only [Set.mem_ofPred_eq, h x]
+  have hpq : p = q := funext fun x ↦ propext (h x)
+  rw [hpq]
 
 /-- An event that never occurs has probability zero. -/
 theorem prEvent_eq_zero_of_forall_not
@@ -107,12 +105,14 @@ theorem prEvent_eq_zero_of_forall_not
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (p : α → Prop) (h : ∀ x, ¬p x) :
     Pr{let x ← mx}[p x] = 0 := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete]
-  have hp : {x : α | p x} = ∅ := by
-    ext x
-    simp [h x]
-  rw [hp, measure_empty]
+  have hp : p = fun _ ↦ False := funext fun x ↦ propext (iff_false_intro (h x))
+  calc
+    _ = Pr{let _ ← p <$> mx}[False] := by
+      rw [hp]
+      simp only [bind_map_left]
+    _ = 0 := by
+      rw [prEvent_eq_evalDist_of_discrete]
+      simp
 
 /-- Implication between events bounds their probabilities on a discrete output space. -/
 theorem prEvent_mono_of_discrete
