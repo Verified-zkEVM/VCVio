@@ -129,7 +129,7 @@ is moved or wrapped for the new API.
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
 Shared integration is published in #758; quantitative WP in #761; native TV composition in #762.
 Compact native event formatting is published in #763. The observed continuation comparison API
-is a separate prerequisite for the next complete reader conversion.
+is published in #764 as a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
 1. Convert the complete PRFTagReader direct-coupling reader/slot/composition families and their
