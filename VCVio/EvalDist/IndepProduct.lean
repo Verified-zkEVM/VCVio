@@ -58,7 +58,7 @@ lemma prEvent_forall_coord_mOfFn {α : Type} {m : Type → Type v}
           (p 0) (fun rest ↦ ∀ i, p i.succ (rest i))
 
 private lemma prEvent_coord_eq_mul_of_forall {α ι : Type} {m : Type → Type v}
-    [Monad m] [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [Monad m] [EvalDistSemantics m]
     [Fintype ι] [DecidableEq ι] (joint : m (ι → α)) (g : ι → m α)
     (hjoint : ∀ p : ι → α → Prop,
       Pr{let v ← joint}[∀ j, p j (v j)] = ∏ j, Pr{let x ← g j}[p j x])
