@@ -439,7 +439,7 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     exact ⟨m, v, hmne, hcache⟩
   have hcache_to_log :
       Pr{let z ← cacheRun}[cacheEvent z] ≤
-        Pr{ let z ← cachedLogRun}[
+        Pr{let z ← cachedLogRun}[
           0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)] := by
     dsimp [cacheRun, cachedLogRun]
     rw [← run_cached_logging_proj_eq_cachingOracle
@@ -907,7 +907,7 @@ lemma sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support [Finty
 
 theorem sum_probEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
-    (∑ s : S, Pr{ let z ← (
+    (∑ s : S, Pr{let z ← (
       (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0))}[hidingBad z.2]) ≤ t := by
   have : Fintype M := Fintype.ofFinite M
   classical

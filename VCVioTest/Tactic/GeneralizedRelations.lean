@@ -77,14 +77,14 @@ example (h : ∀ x ∈ support mx, f x ≤ g x) :
   exact h x hx
 
 example (p q : α → Prop) (h : ∀ x, p x → q x) :
-    Pr{ let x ← mx}[p x] ≤ Pr{ let x ← mx}[q x] := by
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
   -- gap(apply_rw, 2026-09-18): event notation needs its assertion-valued WP normal form.
   fail_if_success apply_rw [h]
   simp only [probEvent_eq_wp_propInd]
   apply_rw [h]
 
 example (p q : α → Prop) (h : ∀ x, p x → q x) (c : ℝ≥0∞)
-    (hq : Pr{ let x ← mx}[q x] ≤ c) : Pr{ let x ← mx}[p x] ≤ c := by
+    (hq : Pr{let x ← mx}[q x] ≤ c) : Pr{let x ← mx}[p x] ≤ c := by
   -- The assertion-valued event normal form shares the gap above.
   simp only [probEvent_eq_wp_propInd] at hq ⊢
   apply_rw [h]
@@ -101,8 +101,8 @@ example (h : ∀ x, f x ≤ g x) (c : ℝ≥0∞) (hf : c ≤ wp mx f) :
   exact hf
 
 example (f' g' : α → ProbComp β) (p : β → Prop)
-    (h : ∀ x ∈ support mx, Pr{ let y ← f' x}[p y] ≤ Pr{ let y ← g' x}[p y]) :
-    Pr{ let y ← mx >>= f'}[p y] ≤ Pr{ let y ← mx >>= g'}[p y] := by
+    (h : ∀ x ∈ support mx, Pr{let y ← f' x}[p y] ≤ Pr{let y ← g' x}[p y]) :
+    Pr{let y ← mx >>= f'}[p y] ≤ Pr{let y ← mx >>= g'}[p y] := by
   -- gap(gcongr, 2026-09-08): bind probability needs the expectation normal form.
   fail_if_success (gcongr; done)
   simp only [probEvent_eq_wp_propInd, wp_bind] at h ⊢

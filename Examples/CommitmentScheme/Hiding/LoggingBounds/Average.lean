@@ -142,10 +142,10 @@ simulation is reused for the rest of the game. -/
 theorem sum_probEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
-    (∑ s : S, Pr{ let z ← (
+    (∑ s : S, Pr{let z ← (
       (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0))}[hidingBad z.2]) =
     (Fintype.card S : ℝ≥0∞) *
-      Pr{ let z ← (
+      Pr{let z ← (
         (simulateQ hidingAvgQueryImpl (hidingAvgComp A)).run
           (∅, fun _ => 0))}[2 ≤ z.2.2 z.1.1] := by
   classical
@@ -165,7 +165,7 @@ theorem sum_probEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhab
 lemma probEvent_hidingAvg_bad_le_wp_selectedCountPred [Fintype S] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
-    Pr{ let z ← (
+    Pr{let z ← (
         (simulateQ hidingAvgQueryImpl (hidingAvgComp A)).run (∅, fun _ => 0))}[2 ≤ z.2.2 z.1.1] ≤
     OracleComp.ProgramLogic.wp
       ((simulateQ hidingAvgQueryImpl (hidingAvgComp A)).run (∅, fun _ => 0))
@@ -250,7 +250,7 @@ count-pred expectations from the shared counted implementation. -/
 theorem sum_probEvent_hidingBad_le_sum_wp_countPred [Fintype S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
-    (∑ s : S, Pr{ let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2]) ≤
+    (∑ s : S, Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2]) ≤
     ∑ s : S,
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0))
@@ -768,7 +768,7 @@ lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_su
 lemma sum_wp_badIndicator_eq_wp_choose [Fintype S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
-    (∑ s : S, Pr{ let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2]) =
+    (∑ s : S, Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2]) =
     OracleComp.ProgramLogic.wp
       ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
       (fun qchoose : (M × AUX) × HidingCountState M S C =>
@@ -782,7 +782,7 @@ lemma sum_wp_badIndicator_eq_wp_choose [Fintype S]
                   OracleComp.ProgramLogic.propInd (2 ≤ z.2.2 s)))) := by
   classical
   calc
-    (∑ s : S, Pr{ let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2])
+    (∑ s : S, Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2])
       =
     ∑ s : S,
       OracleComp.ProgramLogic.wp

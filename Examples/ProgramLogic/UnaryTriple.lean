@@ -48,7 +48,7 @@ example {oa : OracleComp spec α} {f : α → OracleComp spec β}
   exact hob x
 
 example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
-    (h : ∀ x ∈ support oa, Pr{ let y ← f x}[y = true] = 1) :
+    (h : ∀ x ∈ support oa, Pr{let y ← f x}[y = true] = 1) :
     ⦃ 1 ⦄ (do
       let x ← oa
       f x) ⦃ fun y => if y = true then 1 else 0 ⦄ := by

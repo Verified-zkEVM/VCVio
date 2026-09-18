@@ -197,7 +197,8 @@ theorem probEvent_cache_has_value_le_of_unique_preimage {α : Type u}
                 have hzu : z.2 t₀ = some u := hle hcu
                 rw [hzu] at hcache_f; cases hcache_f
                 exact heq_v₀ hheq
-              · exact ⟨t₀, v, hcache_f, QueryCache.cacheQuery_of_ne _ _ heq_t ▸ hnone₀, hheq⟩
+              · exact ⟨t₀, v, hcache_f,
+                  (QueryCache.cacheQuery_of_ne cache₀ u heq_t).trans hnone₀, hheq⟩
           _ ≤ ((n - 1 : ℕ) : ℝ≥0∞) * C⁻¹ := ih u (n - 1) (hrest u) _ hunique_v₀'
       calc ∑' u, Pr[= u | (spec.query t : OracleComp spec _)] *
             Pr[fun z => ∃ t₀ v, z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀ |

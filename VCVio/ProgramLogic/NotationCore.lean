@@ -145,7 +145,7 @@ lemma triple_propInd_iff_probEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Triple (𝟙⟦True⟧ : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) ↔
-      Pr{ let x ← oa}[p x] = 1 := by
+      Pr{let x ← oa}[p x] = 1 := by
   rw [triple_iff_le_wp, propInd_true, ← probEvent_eq_wp_propInd]
   exact ⟨fun h ↦ le_antisymm
     ((MeasureTheory.measure_mono (Set.subset_univ _)).trans
@@ -156,7 +156,7 @@ lemma triple_propInd_iff_le_probEvent {ι : Type u} {spec : OracleSpec ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
-    Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{ let x ← oa}[p x] := by
+    Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{let x ← oa}[p x] := by
   rw [triple_iff_le_wp, ← probEvent_eq_wp_propInd]
 
 /-! ## Expectation-level bridge lemmas -/
@@ -178,15 +178,15 @@ theorem probEvent_mono {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSp
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) {p q : α → Prop}
     (h : ∀ x, p x → q x) :
-    Pr{ let x ← oa}[p x] ≤ Pr{ let x ← oa}[q x] :=
+    Pr{let x ← oa}[p x] ≤ Pr{let x ← oa}[q x] :=
   _root_.prEvent_mono oa _ _ h
 
-/-- Markov inequality: if `a ≤ f x` whenever `p x`, then `a * Pr{ let x ← oa}[p x] ≤ E[f | oa]`. -/
+/-- Markov inequality: if `a ≤ f x` whenever `p x`, then `a * Pr{let x ← oa}[p x] ≤ E[f | oa]`. -/
 theorem markov_bound {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
-    a * Pr{ let x ← oa}[p x] ≤ wp oa f := by
+    a * Pr{let x ← oa}[p x] ≤ wp oa f := by
   rw [probEvent_eq_wp_propInd, ← wp_mul_const]
   refine wp_mono oa fun x => ?_
   unfold propInd

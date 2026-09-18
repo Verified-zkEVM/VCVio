@@ -51,8 +51,8 @@ shared counted run, projected at `s`. -/
 theorem probEvent_hidingBad_eq_countAll
     [MeasurableSpace C] [MeasurableSingletonClass C] {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
-    Pr{ let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2] =
-    Pr{ let z ← (
+    Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2] =
+    Pr{let z ← (
       (simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0))}[2 ≤ z.2.2 s] := by
   have hrun :
       Prod.map id (fun st : QueryCache (CMOracle M S C) × (S → ℕ) => (st.1, st.2 s)) <$>
@@ -1038,7 +1038,7 @@ lemma bad_indicator_le_queryBound_of_mem_support_run_hidingImplCountAll
 lemma probEvent_countAll_bad_le_wp_countPred
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
-    Pr{ let z ← (simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0)}[2 ≤ z.2.2 s] ≤
+    Pr{let z ← (simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0)}[2 ≤ z.2.2 s] ≤
     OracleComp.ProgramLogic.wp
       ((simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0))
       (fun z : Bool × (QueryCache (CMOracle M S C) × (S → ℕ)) => (z.2.2 s - 1 : ℝ≥0∞)) := by

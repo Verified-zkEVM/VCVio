@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.Core
+public meta import Lean.PrettyPrinter.Formatter
 
 /-!
 # Measure events for computation notation
@@ -24,6 +25,42 @@ universe v
 /-- Probability of a successful event after an ordinary Lean `do` sequence.
 The event is interpreted by the primary measure semantics. -/
 syntax (name := prEvent) "Pr{" doSeq "}[" term "]" : term
+
+public meta section Formatting
+
+open Lean PrettyPrinter Formatter Syntax.MonadTraverser
+
+/-- Format an event sequence directly after its opening delimiter, keeping the ordinary Lean
+formatter for subsequent statements and explicitly braced sequences. Explicit line breaks
+after the opening delimiter are preserved. -/
+@[formatter prEvent]
+def prEventFormatter : Formatter := do
+  let stx ← getCur
+  let multiline := match stx[0].getTailInfo with
+    | .original _ _ trailing _ => trailing.contains '\n'
+    | _ => false
+  visitArgs do
+    symbolNoAntiquot.formatter "]"
+    categoryParser.formatter `term
+    symbolNoAntiquot.formatter "}["
+    let seq ← getCur
+    if seq.isOfKind ``Lean.Parser.Term.doSeqIndent then
+      let n := seq[0].getArgs.size
+      visitArgs <| visitArgs do
+        for i in [:n] do
+          if i + 1 == n then
+            visitArgs do
+              optionalNoAntiquot.formatter (symbolNoAntiquot.formatter "; ")
+              categoryParser.formatter `doElem
+          else
+            formatterForKind ``Lean.Parser.Term.doSeqItem
+    else
+      formatterForKind seq.getKind
+    if multiline then
+      pushWhitespace "\n"
+    symbolNoAntiquot.formatter "Pr{"
+
+end Formatting
 
 macro_rules (kind := prEvent)
   -- `doSeqBracketed`
@@ -187,7 +224,7 @@ theorem prEvent_bind_congr_ae
     (p : β → Prop) (q : γ → Prop)
     (hf : Measurable fun x ↦ 𝒟[do let y ← f x; return p y])
     (hg : Measurable fun x ↦ 𝒟[do let z ← g x; return q z])
-    (h : ∀ᵐ x ∂𝒟[mx], Pr{ let y ← f x}[p y] = Pr{ let z ← g x}[q z]) :
+    (h : ∀ᵐ x ∂𝒟[mx], Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
     Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
   rw [prEvent_bind_eq_lintegral mx f p hf, prEvent_bind_eq_lintegral mx g q hg]
   exact lintegral_congr_ae h
@@ -200,7 +237,7 @@ theorem prEvent_bind_congr
     {α β γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
     (p : β → Prop) (q : γ → Prop)
     (h : ∀ x,
-      Pr{ let y ← f x}[p y] = Pr{ let z ← g x}[q z]) :
+      Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
     Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
   let obs : α → Measure Prop × Measure Prop := fun x ↦
     (𝒟[do let y ← f x; return p y], 𝒟[do let z ← g x; return q z])
