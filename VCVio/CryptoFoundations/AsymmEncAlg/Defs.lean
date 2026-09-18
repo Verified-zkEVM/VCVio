@@ -5,8 +5,8 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.Defs.Instances
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.ProbCompLift
 public import PolyFun.Control.Monad.Hom
 

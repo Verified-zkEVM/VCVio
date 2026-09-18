@@ -34,10 +34,13 @@ application lemmas.
 
 Required typeclass instances for probability reasoning:
 
-- `[spec.Fintype]` — all response types are `Fintype`
-- `[spec.Inhabited]` — all response types are `Inhabited`
+- `[OracleSpec.IsMeasureSpec spec]` selects the query measures.
+- Query-answer and result types carry their chosen measurable spaces.
+- Discrete answer spaces discharge measurability of arbitrary free-program continuations.
 
-Without both, `evalSPMF`, `probOutput`, and `Pr[...]` will fail with confusing typeclass errors.
+Structural support, handler composition, instrumentation, and query bounds need no probability
+interpretation. Finite uniform queries are a sampling specialization, not a requirement of the
+native measure API. Retired scalar notation requires its explicit compatibility interpretation.
 
 ## OracleComp
 
@@ -253,7 +256,13 @@ def postInsert (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t 
 | Sees the response? | No | Yes (the response is passed to `nx`) |
 | If the handler fails | Side effect still happens | Side effect skipped |
 
-Both come with a complete generic theory: induction principles (`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection / strip lemmas (`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and bridge lemmas for `probFailure`, `NeverFail`, `evalSPMF`, `probOutput`, `support`, `finSupport`, plus `IsTotalQueryBound` / `IsQueryBoundP` transfer in `QueryBound.lean`. Defining a wrapper via `preInsert` / `postInsert` makes all of this theory available immediately and avoids re-proving instance-specific lemmas.
+`QueryImpl.Constructions.Core` owns the induction principles
+(`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection equations
+(`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and support/finite-support laws.
+The projection equations transport chosen-space measures directly by equality. Query-bound
+transfer lives in `QueryBound.lean`. The older `Constructions` path additionally exports scalar
+compatibility corollaries. Define instrumentation through these combinators so the generic
+structural and observation theory applies without duplicating wrapper-specific proofs.
 
 #### Already in the repo (use these directly when applicable)
 
