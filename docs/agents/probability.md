@@ -52,6 +52,26 @@ family of cost measures, which can be bundled using the existing `evalDistKernel
 `MeasureTheory.lintegral_coe_nat_eq_tsum` is the tail-sum identity for a measurable Nat observable
 under an arbitrary measure, including nonatomic measures. Natural query counts specialize it.
 
+Handler instrumentation uses native owners in `QueryImpl.Constructions.Core`, `Append.Core`,
+`WriterT.Core`, `Tracing.Core`, `CountingOracle.Core`, and `LoggingOracle.Core`. Their public
+projection equations transport any observation of the computation, including its chosen-space
+measure; no separate scalar evaluation theory is necessary. Query bounds, cache/programming
+handlers, state projections, and invariant reasoning use these owners directly. Structural
+results need no uniform probability interpretation. `StateT.OutputIndependent` compares output
+measures, and `StateT.NeverFailsUnder` requires `IsProbabilityMeasure` on each invariant run.
+
+`OracleComp.evalDist_bind_apply_mono_of_support` compares continuation events only on reachable
+outputs. `le_evalDist_bind_apply_of_support` supplies the corresponding constant lower bound.
+Neither theorem needs a measurable space on the intermediate result: induction on actual query
+answers proves the bound. The final event must be measurable. `prEvent_congr_of_support`
+transports predicates agreeing on reachable outputs. Signature completeness uses this same
+event API rather than a scheme-specific scalar helper.
+
+`measurable_evalDist_bind` combines measurable measure families. `evalDistKernel_bind` identifies
+their bind with Mathlib kernel composition. `StateT.evalDistKernel_bind` composes through the
+joint result/final-state space; the continuation receives both components. These rules use the
+chosen measurable spaces and require no discrete structure on environments or states.
+
 `VCVio.ProgramLogic.Relational.Measure` uses successful-output measure couplings. Pure and
 successful optional values simplify to their exact postcondition with plain `simp`.
 `eRelWP_mono` supports `gcongr` and `grw`. Unequal success masses admit no coupling, so the
