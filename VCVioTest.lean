@@ -28,6 +28,7 @@ public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
+public import VCVioTest.ListCache
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
@@ -47,6 +48,7 @@ public import VCVioTest.OracleComp.SupportMeasure
 public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
+public import VCVioTest.PRFCacheRepresentation
 public import VCVioTest.PRFNetworkKernel
 public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree

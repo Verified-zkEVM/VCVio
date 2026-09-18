@@ -38,6 +38,7 @@ public import Examples.PRFTagReader
 public import Examples.PRFTagReader.Asymptotic
 public import Examples.PRFTagReader.Auth
 public import Examples.PRFTagReader.BadEvent
+public import Examples.PRFTagReader.CacheRepresentation
 public import Examples.PRFTagReader.Collision
 public import Examples.PRFTagReader.Collision.ForgeStep
 public import Examples.PRFTagReader.Defs
