@@ -1397,7 +1397,12 @@ private lemma model_reject_le (_hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (_msg 
           ≤ ((↑(2 ^ b - (S / ρ + 1)) : ℝ≥0∞) / ↑(2 ^ b)) ^ FinEnum.card Chal := by
       intro i
       -- Marginalize coordinate `i` of the independent product.
-      refine le_trans (probEvent_coord_mOfFn_le ρ _ i (fun o => S / ρ < minH (fun _ => o) i)) ?_
+      refine le_trans (by
+        simpa only [evalDist_apply_singleton, bind_pure_comp, probOutput_map,
+          eq_iff_iff, iff_true] using
+          prEvent_coord_mOfFn_le ρ
+            (fun j => fischlinUnifSearch σ pk sk (commits j).2 (FinEnum.toList Chal) none)
+            i (fun o => S / ρ < minH (fun _ => o) i)) ?_
       -- Reading the projected hash dominates the search-result hash event.
       refine le_trans (probEvent_mono'' (q := fun o => minGt (S / ρ) (o.map (fun t => t.2.2)))
         (fun o ho => ?_)) ?_

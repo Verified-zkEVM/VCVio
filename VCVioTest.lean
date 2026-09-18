@@ -17,6 +17,7 @@ public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
+public import VCVioTest.EvalDist.IndepProductMeasure
 public import VCVioTest.EvalDist.IndependentDraws
 public import VCVioTest.EvalDist.MeasureBridge
 public import VCVioTest.EvalDist.ProbabilityBounds
