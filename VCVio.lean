@@ -193,6 +193,7 @@ public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.Disagreement
+public import VCVio.EvalDist.Monad.Disagreement.Measure
 public import VCVio.EvalDist.Monad.Discard
 public import VCVio.EvalDist.Monad.Failure
 public import VCVio.EvalDist.Monad.Map

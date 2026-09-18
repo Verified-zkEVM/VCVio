@@ -15,6 +15,7 @@ public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
+public import VCVioTest.EvalDist.DisagreementMeasure
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
 public import VCVioTest.EvalDist.IndepProductMeasure

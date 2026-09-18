@@ -103,24 +103,44 @@ operations instead use `FreeM.lintegral_evalDist_liftBind` with explicit AE cont
 valuation hypotheses. The regression module checks all these native boundaries, including a
 Gaussian operation, arbitrary AE valuations, lossy real results, and hidden outputs.
 
+## Observed continuation comparison API checkpoint
+
+`Measure.bind_apply_le_sum_add_lintegral_ae` and
+`Kernel.comp_apply_le_sum_add_lintegral_ae` accept arbitrary prefix measures, different reference
+output spaces, and AE continuation hypotheses without probability or finiteness certificates.
+`lintegral_le_sum_add_lintegral_of_le_ae` owns their common integral comparison argument.
+`EvalDist/Monad/Disagreement/Measure` provides the computational comparison facade.
+The chosen-space rule integrates an AE conditional bound and a varying allowance without
+requiring that allowance to be measurable. Reachable bounds use core attachment and the actual
+continuation-measure observation; arbitrary hidden source and continuation payloads need no
+measurable space. Constant allowances retain the prefix's success mass. The two-world and
+bad-world disagreement rules share this finite-sum argument.
+
+The API is exported by `VCVio.Native` and has an independent native import guard, chosen real
+source examples, a Gaussian common measure with real/Boolean kernels, arbitrary AE continuations
+under a Dirac measure, unmeasured source/result types, and mixed observed output types.
+It is a prerequisite checkpoint for the full PRFTagReader direct-coupling conversion. Existing
+scalar disagreement declarations remain with their current consumers until that complete
+reader/slot/composition family and its table/cache dependencies migrate. No retiring declaration
+is moved or wrapped for the new API.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
 Shared integration is published in #758; quantitative WP in #761; native TV composition in #762.
+Compact native event formatting is published in #763. The observed continuation comparison API
+is a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
-1. Finish quantitative Hoare/WP, simulation/lifting, and affected finite-counting proofs through
-   upstream operation specifications and core `Std.Internal.Do`.
-2. Extend native measure/kernel TV composition with contraction, explicit measurable conditional
-   majorants, and exceptional-event bounds.
-3. Convert disagreement and the complete PRFTagReader direct-coupling reader/slot/composition
-   families with their table/cache dependencies.
-4. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
+1. Convert the complete PRFTagReader direct-coupling reader/slot/composition families and their
+   table/cache dependencies through the native disagreement API, then delete unused scalar
+   disagreement declarations.
+2. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
    security clients, preserving observable `none` outcomes.
-5. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
+3. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
    and affected Fiat–Shamir simulation/stateful-hop/security families.
-6. Convert Fischlin search/runtime/model/completeness using native products and projections.
-7. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
+4. Convert Fischlin search/runtime/model/completeness using native products and projections.
+5. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
    declarations.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
@@ -156,6 +176,7 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Equality of output distributions | Equality of `Measure`; public handler projection equations or `evalDist_bind_congr_of_support`. |
 | Event probability | `Pr{...}[...]`, or measure application to a measurable event; singleton results require measurable singletons. |
 | Common-prefix upper bound | `evalDist_bind_apply_mono` under measurable continuation kernels, or `OracleComp.evalDist_bind_apply_mono_of_support` for oracle reachability premises. |
+| Conditional additive comparisons | `prEvent_bind_le_sum_add_lintegral_ae` on a chosen source, or `prEvent_bind_le_sum_add_mul_mass_of_support` using attachment and successful mass. |
 | Common-prefix lower bound | `le_evalDist_bind_apply` under AE premises and losslessness, or `OracleComp.le_evalDist_bind_apply_of_support` for reachable continuation bounds. |
 | Unchanged instrumented output | Structural projection equality, followed by measure observation; final writer/state marginals use measurable projections. |
 | Expected cost | Cost-marginal Lebesgue integral on the chosen cost space; measurable valuations and cost functions, native AE/pathwise bridges, and Mathlib probability certificates for lower/exact bounds. |
