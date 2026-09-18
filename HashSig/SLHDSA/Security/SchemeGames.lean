@@ -386,12 +386,11 @@ routing a scheme game through the compatibility programs would put the depth-one
 point is that the two signers agree on outputs and differ in oracle traces — inside a probability
 argument.  This packaging avoids that and needs no `d = 1` hypothesis.
 
-Exposed because the three component equations below are exported and prove themselves by unfolding
-it: an exported theorem may unfold only exposed definitions.  The per-declaration form of the
-attribute is what the expose-boundary ratchet does not count.
+The component equations `generalAlg_keygen`, `generalAlg_sign` and `generalAlg_verify`
+describe the bundle through its public operations.
 
 *Deterministic inclusion.* -/
-@[expose] def generalAlg (prims : Primitives vp.params) [SampleableType prims.SkSeed]
+def generalAlg (prims : Primitives vp.params) [SampleableType prims.SkSeed]
     [SampleableType prims.SkPrf] [SampleableType prims.PkSeed] [SampleableType prims.Y]
     [DecidableEq prims.Y] :
     SignatureAlg ProbComp (List Byte) (PublicKeyCore prims.core) (SecretKeyCore prims.core)
@@ -420,7 +419,9 @@ variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableT
       let skSeed ← $ᵗ prims.SkSeed
       let skPrf ← $ᵗ prims.SkPrf
       let pkSeed ← $ᵗ prims.PkSeed
-      pure (GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed)) := rfl
+      pure (GeneralScheme.keygenInternal vp prims skSeed skPrf pkSeed)) := by
+  unfold generalAlg
+  rfl
 
 /-- Signing samples `addrnd` and signs the *internal* message.  The public key argument is ignored,
 as FIPS 205 Algorithm 19 ignores it: everything the signer needs is in the secret key.
@@ -430,7 +431,9 @@ as FIPS 205 Algorithm 19 ignores it: everything the signer needs is in the secre
     (sk : SecretKeyCore prims.core) (msg : List Byte) :
     (generalAlg prims).sign pk sk msg = (do
       let addrnd ← $ᵗ prims.Y
-      pure (GeneralScheme.signInternal vp prims (emptyContextMessage msg) sk addrnd)) := rfl
+      pure (GeneralScheme.signInternal vp prims (emptyContextMessage msg) sk addrnd)) := by
+  unfold generalAlg
+  rfl
 
 /-- Verification is deterministic and reads the *internal* message.  This is the equation that says
 what the experiment's `verified` bit is; every statement below about a forgery that verifies is
@@ -440,7 +443,9 @@ about the right-hand side.
 @[simp] theorem generalAlg_verify (pk : PublicKeyCore prims.core) (msg : List Byte)
     (sig : GeneralScheme.SignatureCore vp prims.core) :
     (generalAlg prims).verify pk msg sig =
-      pure (GeneralScheme.verifyInternal vp prims (emptyContextMessage msg) sig pk) := rfl
+      pure (GeneralScheme.verifyInternal vp prims (emptyContextMessage msg) sig pk) := by
+  unfold generalAlg
+  rfl
 
 /-- **Key generation, with both components named.**  The published root and the root the secret key
 retains are one `GeneralHypertree.root` application, not two computations that agree.

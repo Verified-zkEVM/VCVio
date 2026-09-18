@@ -83,6 +83,8 @@ each family before expanding to another subsystem. Prioritize landing the curren
 opening further conversion slices. After each merge, reconcile dependent branches with current
 `main`, retarget their PRs as needed, and validate the resulting integration. Follow every check
 on the current head and the merge queue through to the actual merge result.
+Since `main` uses squash merges, bring its landed commit into each dependent branch before
+retargeting the PR to `main`, so the diff contains only the next conversion family.
 Each published checkpoint must build all
 proof libraries, pass native import guards, tests, boundary/style/environment checks, and the
 axiom/initialization ratchets. Prune obsolete lint entries; do not add exceptions for conversions.
