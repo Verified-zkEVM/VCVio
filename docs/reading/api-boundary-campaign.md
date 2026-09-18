@@ -134,3 +134,13 @@ All eleven copied API fixtures compile in the separate consumer package, and its
 The existing `CellRef` and OTP heap-composition clients compile without changes. `Heap.ofFn` and
 `.toFn` provide the explicit function boundary. Cell defaults remain those specified by `CellSpec`.
 No native implementation changes require differential FFI tests in this slice.
+
+### Counting validation
+
+The counting repair at `e26cbd04` passes `./scripts/validate.sh --lint --test --axioms`.
+The separate ordinary-import consumer also builds and runs. All existing structural bound
+proofs and handler specifications compile. The old additive `Monoid (QueryCount ι)` cannot be
+retained as compatibility: its instance also changed unrelated function multiplication.
+Clients of raw writer state use `Multiplicative.toAdd`; clients of results use `runAdd`.
+The deprecated probability bridges remain; their shared compatibility constraints reduce the
+syntactic source count without claiming removal of the discrete semantic dependency.

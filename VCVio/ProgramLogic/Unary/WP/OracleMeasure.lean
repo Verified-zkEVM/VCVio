@@ -33,17 +33,18 @@ variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
 @[gcongr]
 theorem wp_mono_of_support (mx : OracleComp spec α) {f g : α → ENNReal}
     (hfg : ∀ x ∈ support mx, f x ≤ g x) : MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g :=
-  wp_mono_ae mx (OracleComp.ae_of_forall_mem_support mx _ hfg)
+  wp_mono_ae mx (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hfg)
 
 /-- A pathwise bound controls native quantitative correctness. -/
 theorem wp_le_const_of_support (mx : OracleComp spec α) {f : α → ENNReal} {c : ENNReal}
     (hf : ∀ x ∈ support mx, f x ≤ c) : MAlgOrdered.wp mx f ≤ c :=
-  wp_le_const mx (OracleComp.ae_of_forall_mem_support mx _ hf)
+  wp_le_const mx (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hf)
 
 /-- A pathwise additive allowance controls native quantitative correctness. -/
 theorem wp_le_const_add_of_support (mx : OracleComp spec α) {f g : α → ENNReal} {c : ENNReal}
     (hfg : ∀ x ∈ support mx, f x ≤ c + g x) :
     MAlgOrdered.wp mx f ≤ c + MAlgOrdered.wp mx g := by
-  simpa using wp_le_const_mul_mass_add mx (OracleComp.ae_of_forall_mem_support mx _ hfg)
+  simpa using wp_le_const_mul_mass_add mx
+    (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hfg)
 
 end MeasureProgramLogic.Quantitative

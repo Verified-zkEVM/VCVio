@@ -21,6 +21,7 @@ public import Examples.ElGamal.Hash
 public import Examples.ElGamal.ReductionCost
 public import Examples.ElGamal.SSP
 public import Examples.EvalDistCompatible.Basic
+public import Examples.MerkleCheckpoints
 public import Examples.OneTimePad.Basic
 public import Examples.OneTimePad.ComputationalComplexity
 public import Examples.OneTimePad.HeapBasic
@@ -57,6 +58,7 @@ public import Examples.PRFTagReader.PRFReductions
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
 public import Examples.PRFTagReader.PRFReductions.Reductions
 public import Examples.PRFTagReader.PRFReductions.Structural
+public import Examples.PRFTagReader.ReductionBudgets
 public import Examples.PRFTagReader.Table
 public import Examples.PRFTagReader.UnlinkReduction
 public import Examples.PRGfromPRF
@@ -65,6 +67,7 @@ public import Examples.ProgramLogic.GaussianWiring
 public import Examples.ProgramLogic.MeasureCoupling
 public import Examples.ProgramLogic.Probability
 public import Examples.ProgramLogic.ProofMode
+public import Examples.ProgramLogic.RandomOracleRouting
 public import Examples.ProgramLogic.RandomOracleWiring
 public import Examples.ProgramLogic.Relational
 public import Examples.ProgramLogic.RelationalAnchored
@@ -74,6 +77,8 @@ public import Examples.ProgramLogic.Unary
 public import Examples.ProgramLogic.UnaryProbability
 public import Examples.ProgramLogic.UnaryStep
 public import Examples.ProgramLogic.UnaryTriple
+public import Examples.Schnorr.BoundedChallenges
+public import Examples.Schnorr.ChallengeRestriction
 public import Examples.Schnorr.SigmaProtocol
 public import Examples.Schnorr.Signature
 public import Examples.SealedSender.AspectObservation

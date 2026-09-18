@@ -357,9 +357,11 @@ theorem correct
       𝒟[do
         let (pk, sk) ← hr.gen
         signVerify pk sk] by
-    rw [hRewrite, evalDist_apply_singleton]
-    apply SignatureAlg.le_probOutput_bind_of_forall_support
+    rw [hRewrite]
+    apply OracleComp.le_evalDist_bind_apply_of_support hr.gen
+      (fun key ↦ signVerify key.1 key.2) (measurableSet_singleton true)
     intro ⟨pk, sk⟩ hmem
+    rw [evalDist_apply_singleton]
     have hrel : rel pk sk = true := hr.gen_sound pk sk hmem
     let : MeasurableSpace (Option (Commit × Resp)) := ⊤
     have habort := h_abort pk sk hrel msg
