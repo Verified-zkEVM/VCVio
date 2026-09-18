@@ -45,4 +45,11 @@ example : Resumption.truncateMeasure 1 sample {none} = (4 : ℝ≥0∞)⁻¹ := 
 
 example : Resumption.returnedMeasure sample Set.univ = 1 := almost_sure_return
 
+-- The ordinary-import bridge also accepts a nonzero operation/answer universe.
+example {P : PFunctor.{1, 1}} [∀ a, MeasurableSpace (P.B a)]
+    [∀ a, DiscreteMeasurableSpace (P.B a)] [P.IsMeasureSpec]
+    (c : FreeM P (ULift.{1} Bool)) {k : ℕ} (h : c.IsTotalRollBound k) :
+    Resumption.returnedMeasure (FreeM.toResumption c) = FreeM.denote c :=
+  Resumption.returnedMeasure_toResumption c h
+
 end VCVioTest.ResumptionCompatibility
