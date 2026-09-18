@@ -181,6 +181,7 @@ jobs:
             echo ''
             echo 'public def main : IO Unit := IO.println "consumer ok"'
           } > "$consumer/Main.lean"
+          python3 scripts/add-api-consumer-fixtures.py "$consumer"
           cd "$consumer"
           lake update
           lake exe cache get
