@@ -48,6 +48,7 @@ public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PRFNetworkKernel
+public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
