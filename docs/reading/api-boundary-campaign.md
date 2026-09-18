@@ -40,16 +40,18 @@ The API policy is:
 | Boundary | Evidence and intended interface | Disposition |
 | --- | --- | --- |
 | SLH-DSA `Security.generalAlg` | Three public projection equations now have ordinary proofs with the bundle opaque. `HashSigTest/ModuleAPI/SchemeGames.lean` verifies that reduction alone fails, uses the verification equation in direct and composed consumers, and retains perfect completeness. | repaired |
-| `QueryCount` and counting writers | Removed the custom function monoid. `withCounting` uses `AddWriterT`, and `runAdd` publishes ordinary counts. `VCVioTest/ModuleAPI/Counting.lean` tests ordinary function multiplication, repeated labels, output preservation, and both failure transformer orders. Unary and relational handler clients use the tagged writer state explicitly. | repaired |
-| `QueryCache` | `#synth PartialOrder (Bool → Option Nat)` selects the cache extension order. Lookup, updates, extension and component projections need a carrier with its own instance head. | pending |
+| `QueryCount` and counting writers | The function monoid leak is repaired in [#743](https://github.com/Verified-zkEVM/VCVio/pull/743) using an additive writer and explicit count observations. The repair has repeated-query, output, and failure-order consumers. | repaired |
+| `QueryCache` | The extension-order leak is repaired in [#745](https://github.com/Verified-zkEVM/VCVio/pull/745) with a distinct carrier, public lookup/update laws, function equivalence, and countability transport. | repaired |
 | `QueryLog`, traversal and replay | Trace observations should use public occurrence, lookup, filtering and path laws, retaining ordered dependent answers. PolyFun #239 is open at the initial snapshot. | upstream-blocked |
-| Oracle specifications, coercions and handlers | The transparent `OracleComp`/`FreeM` and dependent signature façades are intentional. Audit compound signatures, handler application, transport and recursive wiring through ordinary imports. | pending |
-| Probability and transformers | Native Measure/Kernel equations, successful-output mass and structural support are distinct contracts. Retain measurability and probability assumptions explicitly. | pending |
-| Program logic and complexity | Predicate elimination, WP coherence, tactic computation forms and data-indexed certificate instances require consumer checks. Preserve named reductions and resource certificates. | pending |
-| Interaction and runtime | Test shared state, scheduler/handler data, trace observations, fuel and failure through execution equations. | pending |
-| Cryptographic games and conversions | Published constructor/projection equations for TCR, PRE, UD, and DSPR final-validity conversions. Removed unneeded global reducibility so downstream simp indexing agrees with the opaque API. HashSig proves both compression-game identifications through public laws; ordinary-import fixtures retain the named whole-experiment equality. | repaired |
-| Lattice and executable interfaces | Audit coefficient/conversion/transform laws and the instance paths of vector-backed polynomials. Executable changes require differential tests. | pending |
-| HashSig primitive and game packaging | Separate carrier projections required by dependent queries from value-level operations and proof-only exposure. | pending |
+| Oracle specifications, coercions and handlers | Retain the transparent `OracleComp`/`FreeM` type façade, signature carriers, and `liftTarget`. The external `PFunctorFacade` fixture covers unequal universes, nested sums, instance lookup, and public handler laws. Recursive sigma wiring has the separate blocker below. | intentional |
+| Indexed wiring | A raw Sigma constructor in `(PFunctor.sigma F).A` triggers the implicit-transparency checker even when `rfl` closes the goal. The exact reproducer and removal condition are recorded below. | upstream-blocked |
+| Probability and transformers | External `SupportMeasure` distinguishes possible answers from positive measure; `MeasureWP` checks failure mass and retains measurability premises. `Runtime` distinguishes returned `none` from failure. Keep those separate contracts and the chosen semantic class instances. | intentional |
+| Program logic and complexity | External `CoreWP` checks scoped carrier selection and state/writer behavior; `ComputationalComplexitySoundness` charges and resolves allowed zero-probability replies. `ComplexityAdapters` checks data-dependent rank and certificate adapters. No global WP interpretation is selected. | intentional |
+| Interaction and runtime | External `ReactiveKernel` rejects response-only replacement and validates joint response/state replacement. `ReactiveNetworkAdversarial` checks scheduling, delivery, and fuel counterexamples. Retain the model's dependent signature reducers. | intentional |
+| Cryptographic games and conversions | [#746](https://github.com/Verified-zkEVM/VCVio/pull/746) published constructor/projection equations for TCR, PRE, UD, and DSPR final-validity conversions. Removed unneeded global reducibility so downstream simp indexing agrees with the opaque API. HashSig proves both compression-game identifications through public laws; ordinary-import fixtures retain the named whole-experiment equality. | repaired |
+| Lattice and executable interfaces | `Poly` is a semireducible carrier with explicit arithmetic instances. New `VectorAPI` consumers use coefficient/extensionality laws and prove `X² = -1` at degree two, distinguishing negacyclic from pointwise multiplication. Native executable bodies and FFI interfaces are unchanged. | intentional |
+| HashSig primitive and game packaging | Keep exposed `thColl.Msg` projections needed to construct dependent collection queries. Opaque value bundles and final-validity conversions are handled by the focused repairs, with verification and game-identification consumers. | intentional |
+| Typed heaps | The reducible function carrier allowed `Heap.instInhabited` to replace ordinary function defaults. A distinct carrier preserves typed initialization, lookup, updates, and sum decomposition. The ordinary-import `Heap` fixture checks that a cell default of seven does not replace the function default of zero. | repaired |
 
 ## Validation and rollout
 
@@ -69,9 +71,49 @@ order. The full per-PR gate is `./scripts/validate.sh --lint --test --axioms`; a
 interfaces additionally run the FFI/vector checks, and affected optional adapters build separately.
 Exposure and PMF baselines only decrease. No new sorry or nonstandard axiom debt is admitted.
 
+`scripts/add-api-consumer-fixtures.py` copies eleven source fixtures into the scratch consumer
+and registers them as separate Lake library targets. Separate targets preserve import-isolation
+checks in the native measure fixtures. CI compiles these alongside its linked consumer executable.
+The fixture list identifies the reviewed interfaces; these results are not a claim that every
+declaration in the census has been semantically audited. Broad module exposure remains staged
+compatibility debt, and the isolated complexitylib package was inspected but not rebuilt because
+its sources and dependency pins are unchanged.
+
 Migrate one API family per reviewable change. Preserve source attribution and existing contributor
 PRs. Adopt upstream API only at a merged, validated dependency revision; independent repairs can
 proceed while an upstream change is pending. Record the precise validated revision with each PR.
+
+## Indexed-wiring blocker
+
+At the pinned PolyFun revision, this ordinary-import reproducer produces the warning that its
+initial goal is not type-correct at `.implicit` transparency, naming `sigma`:
+
+```lean
+import VCVio.OracleComp.SimSemantics.Wiring
+set_option linter.tacticCheckInstances true
+open PFunctor
+example (P : PFunctor) (f : (PFunctor.sigma (fun _ : Unit => P)).A → Nat) (a : P.A) :
+    f ⟨(), a⟩ = f ⟨(), a⟩ := by rfl
+```
+
+The actual position is a dependent Sigma; converting it to a product would erase the family.
+Keep the existing local reducer in `SimSemantics/Wiring.lean` and its wiring examples until
+PolyFun publishes an appropriate constructor/projection interface or an intentional reducer.
+The removal condition is that this probe and both `RandomOracleWiring` and `GaussianWiring`
+compile with the checker enabled and without consumer-side attribute changes. This is separate
+from adopting #239's trace observations; #239 remains open at
+`13d184642c2c497b023ae8597341ed369d126773` at the last check.
+
+## Reviewable repairs
+
+- [#740](https://github.com/Verified-zkEVM/VCVio/pull/740): opaque SLH-DSA scheme bundle.
+- [#743](https://github.com/Verified-zkEVM/VCVio/pull/743): additive counting without function-instance leakage.
+- [#745](https://github.com/Verified-zkEVM/VCVio/pull/745): cache carrier and extension order.
+- [#746](https://github.com/Verified-zkEVM/VCVio/pull/746): final-validity equations and HashSig game identities.
+
+The counting/cache repairs form one stack; the final-validity repair is independent of them.
+All four pass the full local validation gate. Their individual branches record the exact
+validated code revisions and downstream package checks.
 
 ## Context
 
@@ -83,6 +125,15 @@ proceed while an upstream change is pending. Record the precise validated revisi
 - [PolyFun #231](https://github.com/Verified-zkEVM/PolyFun/pull/231) and
   [#232: upstream reuse and semantic audit](https://github.com/Verified-zkEVM/PolyFun/pull/232)
 - [PolyFun #239: dependent paths and trace observations](https://github.com/Verified-zkEVM/PolyFun/pull/239)
+
+### Typed-heap and wider consumer validation
+
+The heap repair and two new consumer fixtures pass `./scripts/validate.sh --lint --test --axioms`:
+21,495 declarations, 720 modules, 33 existing sorry-tainted declarations, zero nonstandard axioms.
+All eleven copied API fixtures compile in the separate consumer package, and its executable runs.
+The existing `CellRef` and OTP heap-composition clients compile without changes. `Heap.ofFn` and
+`.toFn` provide the explicit function boundary. Cell defaults remain those specified by `CellSpec`.
+No native implementation changes require differential FFI tests in this slice.
 
 ### Counting validation
 
