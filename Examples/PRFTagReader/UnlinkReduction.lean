@@ -7,6 +7,7 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.MultipleBadCollision
+public import Examples.PRFTagReader.ReductionBudgets
 
 /-!
 # Unlinkability PRF Reduction
@@ -81,12 +82,9 @@ hypothesis costs zero extra slack compared with the conditional bound.
 The efficiency measure for the two reductions is their PRF-oracle query count. Each reduction
 issues one PRF query per tag query and one PRF query per slot at every reader query, so the
 PRF-oracle query count is bounded by `qTag + qReader · |TagId|` (multiple-session) and
-`qTag + qReader · |TagId| · sessionsPerTag` (single-session). This count is not stated here as an
-`IsQueryBoundP` lemma: the per-reader-query fan-out of `|TagId|` (resp. `|TagId| · sessionsPerTag`)
-PRF queries falls outside the framework's `simulateQ`-transfer lemmas, which are specialised to
-handlers issuing at most one target query per source step (`IsQueryBoundP.simulateQ_run_add_of_step`
-and friends). Formalising the fan-out count would require non-uniform per-step transfer
-infrastructure that the unlink oracle machinery does not yet provide. -/
+`qTag + qReader · |TagId| · sessionsPerTag` (single-session). The pathwise bounds are proved by
+`QueryBudgets.multiple_reduction_bound` and `QueryBudgets.single_reduction_bound`.
+The reader fan-out is transported through the handler using a combined reader/tag budget. -/
 theorem unlinkabilityAdvantage_le_two_prf_plus_collision [Fintype Nonce] [Fintype Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest)
