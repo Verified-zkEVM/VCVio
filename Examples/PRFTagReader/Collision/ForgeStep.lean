@@ -324,7 +324,7 @@ private lemma authRFLookup_mapM_miss_bound
         · obtain ⟨d, hqd⟩ := hpin q hsupp
           by_cases hdv : d = v₀
           · subst hdv
-            rw [if_pos hqd]
+            rw [ite_eq_left hqd]
             exact le_trans (mul_le_mul' le_rfl probEvent_le_one) (le_of_eq (mul_one _))
           · have hz : Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2] = 0 := by
               rw [probEvent_eq_zero_iff]
@@ -487,7 +487,7 @@ private lemma probEvent_authRFQueryImpl_step_core
       rw [probEvent_bind_eq_tsum]
       refine ENNReal.tsum_le_tsum fun nonce => mul_le_mul' le_rfl ?_
       by_cases hk : (tag, nonce) = t₀
-      · rw [if_pos hk]
+      · rw [ite_eq_left hk]
         rw [show st.responses (tag, nonce) = none from hk ▸ hnone]
         rw [probEvent_bind_eq_tsum]
         calc ∑' out : Digest, Pr[= out | ($ᵗ Digest : ProbComp Digest)] *
@@ -511,11 +511,11 @@ private lemma probEvent_authRFQueryImpl_step_core
               · subst hov
                 simp [hco]
               · simp only [hco]
-                rw [if_neg (by simp [hov]), if_neg hov, mul_zero]
+                rw [ite_eq_right (by simp [hov]), ite_eq_right hov, mul_zero]
           _ = Pr[= v₀ | ($ᵗ Digest : ProbComp Digest)] := by
               rw [tsum_ite_eq]
           _ ≤ maxDigestProb := hmax v₀
-      · rw [if_neg hk]
+      · rw [ite_eq_right hk]
         have hne : t₀ ≠ (tag, nonce) := fun h => hk h.symm
         cases hresp : st.responses (tag, nonce) with
         | some out =>
@@ -556,7 +556,7 @@ private lemma probEvent_authRFQueryImpl_step_core
       rw [probEvent_bind_eq_tsum]
       refine ENNReal.tsum_le_tsum fun nonce => mul_le_mul' le_rfl ?_
       by_cases hk : (tag, nonce) = t₀
-      · rw [if_pos hk]
+      · rw [ite_eq_left hk]
         rw [show st.responses (tag, nonce) = none from hk ▸ hnone]
         rw [probEvent_bind_eq_tsum]
         refine le_of_le_of_eq (le_refl _) ?_
@@ -565,7 +565,7 @@ private lemma probEvent_authRFQueryImpl_step_core
         have hcache : (st.responses.cacheQuery (tag, nonce) out) t₀ = some out := by
           rw [← hk, QueryCache.cacheQuery_self]
         simp [hcache]
-      · rw [if_neg hk]
+      · rw [ite_eq_right hk]
         exact probEvent_le_one
     -- Combine: total `≤ maxDigestProb * ∑' nonce, Pr[= nonce] ≤ maxDigestProb`.
     refine le_trans (add_le_add hsome (mul_le_mul' le_rfl hnoneEv)) ?_
@@ -699,9 +699,9 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le
       intro s
       simp only [simulateQ_pure, StateT.run_pure, probEvent_pure]
       by_cases hv : s.responses t₀ = some v₀
-      · simp only [hv, if_true, hstbound]
+      · simp only [hv, ite_true, hstbound]
         simp
-      · simp only [hv, if_false]
+      · simp only [hv, ite_false]
         simp only [hstbound]
         positivity
     | query_bind t oa ih =>
@@ -730,7 +730,7 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le
             ((authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s),
             stbound p.2 = 1 := by
           intro p hp
-          simp only [hstbound, hpres p hp, if_true]
+          simp only [hstbound, hpres p hp, ite_true]
         calc ∑' p, Pr[= p |
                 (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s] *
               stbound p.2
@@ -744,7 +744,7 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le
               · rw [hbound p hp]
               · rw [probOutput_eq_zero_of_not_mem_support hp]; simp
           _ ≤ 1 := by simp only [mul_one]; exact tsum_probOutput_le_one
-          _ = stbound s := by simp only [hstbound, hsv, if_true]
+          _ = stbound s := by simp only [hstbound, hsv, ite_true]
       · by_cases hsn : s.responses t₀ = none
         · -- `t₀` is unfilled: `stbound s = maxDigestProb`; this is the core per-step bound.
           have hsplit : ∀ p : (AuthOracleSpec TagId Nonce Digest).Range t ×

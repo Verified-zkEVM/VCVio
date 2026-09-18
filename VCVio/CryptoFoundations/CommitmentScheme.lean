@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
 
 /-!
@@ -85,7 +86,7 @@ def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdv PP M C) : 
 deviates from the `1 / 2` of a random guess. -/
 noncomputable def hidingAdvantage (cs : CommitmentScheme PP M C D) (adversary : HidingAdv PP M C) :
     ℝ :=
-  |(Pr[= true | cs.hidingExp adversary]).toReal - 1 / 2|
+  |(𝒟[cs.hidingExp adversary] {true}).toReal - 1 / 2|
 
 /-! ### Computational binding -/
 
@@ -104,7 +105,7 @@ def bindingExp [DecidableEq M] (cs : CommitmentScheme PP M C D) (adversary : Bin
 opening a single commitment to two distinct messages. -/
 noncomputable def bindingAdvantage [DecidableEq M] (cs : CommitmentScheme PP M C D)
     (adversary : BindingAdv PP M C D) : ℝ≥0∞ :=
-  Pr[= true | cs.bindingExp adversary]
+  𝒟[cs.bindingExp adversary] {true}
 
 /-! ### Trapdoor extractability -/
 

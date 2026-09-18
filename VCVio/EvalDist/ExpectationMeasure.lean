@@ -15,11 +15,10 @@ module identifies that discrete spelling with the `lintegral` against the primar
 measure `𝒟[mx]`, for every semantics that satisfies the façade bridge
 `DiscreteEvalDistCompatible`.
 
-`lintegral_evalDist` is stated in the simp direction: on a discrete space an integral against
-`𝒟[mx]` *is* the façade expectation, so a measure-side goal reduces into the discrete normal
-form, where the existing `simp`/`grind` contract applies. Monotone convergence
-(`expectedValue_iSup`) is the first payoff: `lintegral_iSup` becomes available for VCVio
-expectations by rewriting once, and there is no `∑'`-shaped lemma for it in the library.
+`lintegral_evalDist` is an explicit compatibility equation. Native integrals retain their
+measure-theoretic normal form under `simp`; compatibility proofs can rewrite to the discrete
+expectation when needed. Opening `ProbComp.DiscreteCompatibility` selects that simp direction
+locally. `expectedValue_iSup` transports monotone convergence across this equation.
 -/
 
 @[expose] public section
@@ -34,10 +33,7 @@ namespace OracleComp.EvalDist
 variable {α : Type u} {m : Type u → Type v} [MonadLiftT m SPMF] [EvalDistSemantics m]
   [DiscreteEvalDistCompatible m] [MeasurableSpace α] [DiscreteMeasurableSpace α]
 
-/-- An integral against the denoted measure is the façade expectation. The priority puts this
-rewrite ahead of the generic `lintegral_*` simp lemmas, so an `∫⁻ … ∂𝒟[mx]` leaves the measure
-world before they fire. -/
-@[simp high]
+/-- An integral against a discrete denoted measure agrees with the scalar expectation. -/
 theorem lintegral_evalDist (mx : m α) (g : α → ℝ≥0∞) :
     ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g :=
   DiscreteEvalDistCompatible.lintegral_evalDist mx Measurable.of_discrete
@@ -49,3 +45,6 @@ theorem expectedValue_iSup (mx : m α) (g : ℕ → α → ℝ≥0∞) (hg : Mon
   exact lintegral_iSup (fun _ => Measurable.of_discrete) hg
 
 end OracleComp.EvalDist
+
+scoped[ProbComp.DiscreteCompatibility] attribute [simp high]
+  OracleComp.EvalDist.lintegral_evalDist

@@ -26,10 +26,9 @@ namespace SMDTDSPRTest
 inductive Seed
   | only
 
-instance : SampleableType Seed where
-  selectElem := pure .only
-  mem_support_selectElem := by simp
-  probOutput_selectElem_eq x y := by cases x; cases y; rfl
+instance : Unique Seed where
+  default := .only
+  uniq x := by cases x; rfl
 
 @[simp] lemma uniformSample_seed : ($ᵗ Seed : ProbComp Seed) = pure .only := rfl
 

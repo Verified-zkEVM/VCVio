@@ -6,9 +6,11 @@ Authors: Matthias Meijers
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.SimSemantics.Append
 public import ToMathlib.Data.ENNReal.AbsDiff
+
+import Batteries.Tactic.Lint
 
 /-!
 # Single-function, distinct-tweak, multi-target undetectability (SM-DT-UD)
@@ -30,8 +32,8 @@ The tweak discipline is enforced on arrival. The challenge oracle answers `Optio
 `none` — the source's `⊥` — when the target cap is reached, when the queried tweak already occurs
 in the challenge history, or when it has been spent on the collection oracle; a refused query
 leaves the state untouched and **draws nothing**, so refusal consumes no randomness in either
-world. That last point is what makes the two worlds' refusal behaviour literally the same term, and
-it is pinned by `SM_DT_UD_challengeOracle_run_of_refused`. See `TweakableHash.collectionOracle` for
+world. The two worlds' refusal behaviour is literally the same term, including its sampling cost,
+as pinned by `SM_DT_UD_challengeOracle_run_of_refused`. See `TweakableHash.collectionOracle` for
 why the restrictions live in the oracles rather than in the winning condition, and
 `TweakableHash.SM_DT_UD_SourceFinalValidity` for the sticky-monitor presentation of the same
 notion, which answers every query and checks the discipline once at the end.
@@ -176,11 +178,10 @@ distribution and recording the queried tweak in the challenge history. A query i
 when its tweak has been spent on the collection oracle.
 
 The refusal test is read off the state *before* anything is drawn, and the refusing branch is a
-`pure`: a refused query leaves the state untouched and consumes no randomness. That asymmetry
-between the two branches is deliberate and load-bearing. If refusal drew from the response
-distribution, it would draw a different amount in the two worlds whenever `inputGen` and
-`outputGen` differ in length, and the advantage would then charge the adversary for randomness it
-never observed.
+`pure`: a refused query leaves the state untouched and consumes no randomness. This also makes
+its sampling cost independent of the world, even when `inputGen` and `outputGen` draw different
+numbers of samples. Output-distribution equality alone would not establish this stronger
+operational property: discarding a total sample can leave the advantage unchanged.
 
 Accepted queries are appended, so the history is in issue order and its `j`-th entry is the `j`-th
 target. -/
@@ -221,12 +222,12 @@ adversary's bit and nothing else. -/
 /-- Success probability when challenges are sampled hash images. -/
 @[expose] noncomputable def SM_DT_UD_RealSuccess [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_UD_Experiment .real adv]
+  𝒟[SM_DT_UD_Experiment .real adv] {true}
 
 /-- Success probability when challenges are sampled directly from `outputGen`. -/
 @[expose] noncomputable def SM_DT_UD_IdealSuccess [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_UD_Experiment .ideal adv]
+  𝒟[SM_DT_UD_Experiment .ideal adv] {true}
 
 /-- SM-UD advantage: the directed signed gap from the real world to the ideal world. -/
 @[expose] noncomputable def SM_DT_UD_DirectedAdvantage [DecidableEq Tweak]
@@ -243,7 +244,7 @@ separate from the game's signed `SM_DT_UD_DirectedAdvantage`. -/
 theorem SM_DT_UD_absoluteAdvantage_toReal_eq_abs_directedAdvantage [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
     (SM_DT_UD_AbsoluteAdvantage adv).toReal = |SM_DT_UD_DirectedAdvantage adv| := by
-  exact ENNReal.absDiff_toReal probOutput_ne_top probOutput_ne_top
+  exact ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _) (MeasureTheory.measure_ne_top _ _)
 
 /-- Forgetting orientation gives a sound upper bound on the directed advantage. -/
 theorem SM_DT_UD_directedAdvantage_le_absoluteAdvantage_toReal [DecidableEq Tweak]
@@ -301,9 +302,8 @@ world, from the same term.
 
 This is the game's central convention and no build gate can see it. Both worlds are covered by one
 statement because `world` is universally quantified, and the right-hand side is a `pure`, so no
-sample of `SM_DT_UD_response` is taken. Were the draw hoisted above the refusal test, the two
-worlds would consume different amounts of randomness on a refused query while returning the same
-`none`, and `SM_DT_UD_DirectedAdvantage` would no longer measure what the adversary can observe. -/
+sample of `SM_DT_UD_response` is taken. Hoisting a draw above refusal could change the sampling
+cost even when discarding that total sample preserves the output distribution and advantage. -/
 theorem SM_DT_UD_challengeOracle_run_of_refused
     (hrefused : prob.numTargets ≤ qsChal.length ∨ ¬ TweakFresh id qsChal twsColl t) :
     (SM_DT_UD_challengeOracle world prob pk t).run (qsChal, twsColl) =
@@ -386,5 +386,16 @@ theorem SM_DT_UD_oracles_run_collection_repeated (q : (i : ι) × Tweak × prob.
   simp [SM_DT_UD_oracles, collectionOracle, hnew]
 
 end CollectionHalf
+
+-- Preserve the established game names with declaration-specific naming exceptions.
+attribute [nolint defsWithUnderscore]
+  SM_DT_UD_AbsoluteAdvantage SM_DT_UD_Adversary.State SM_DT_UD_Adversary.distinguish
+  SM_DT_UD_Adversary.pick SM_DT_UD_DirectedAdvantage SM_DT_UD_Experiment SM_DT_UD_IdealSuccess
+  SM_DT_UD_Problem.HasUniformInputs SM_DT_UD_Problem.HasUniformOutputs SM_DT_UD_Problem.emb
+  SM_DT_UD_Problem.inputGen SM_DT_UD_Problem.numTargets SM_DT_UD_Problem.outputGen
+  SM_DT_UD_Problem.standalone SM_DT_UD_Problem.th SM_DT_UD_Problem.thColl SM_DT_UD_RealSuccess
+  SM_DT_UD_State SM_DT_UD_challengeOracle SM_DT_UD_challengeSpec SM_DT_UD_oracles
+  SM_DT_UD_response instDecidableEqSM_DT_UD_World instReprSM_DT_UD_World
+  instReprSM_DT_UD_World.repr
 
 end TweakableHash

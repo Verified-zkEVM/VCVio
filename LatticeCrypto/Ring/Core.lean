@@ -211,7 +211,7 @@ theorem PolyBackend.toPolynomial_injective {R : Type u} [CommRing R]
   have extract : ∀ x : backend.Poly,
       (backend.toPolynomial x).coeff i.val = backend.coeff x i := fun x => by
     simp only [PolyBackend.toPolynomial, Polynomial.finsetSum_coeff, Polynomial.coeff_monomial,
-      Fin.val_inj, Finset.sum_ite_eq', Finset.mem_univ, if_true]
+      Fin.val_inj, Finset.sum_ite_eq', Finset.mem_univ, ite_true]
   rw [← extract p, ← extract q, h]
 
 /-- Coefficients of `toPolynomial x` at indices `≥ backend.degree` are zero. -/
@@ -223,7 +223,7 @@ private theorem PolyBackend.toPolynomial_coeff_high {R : Type u} [CommRing R]
   apply Finset.sum_eq_zero
   intro i _
   simp only [Polynomial.coeff_monomial]
-  exact if_neg (Nat.ne_of_lt (i.isLt.trans_le hj))
+  exact ite_eq_right (Nat.ne_of_lt (i.isLt.trans_le hj))
 
 /-- `ofBackend` is injective: distinct backend carriers map to distinct
 elements of the negacyclic quotient. Holds for any `CommRing` coefficient type. -/

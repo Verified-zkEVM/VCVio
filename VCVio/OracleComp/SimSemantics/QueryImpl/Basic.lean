@@ -104,12 +104,12 @@ abbrev liftTarget (n : Type u → Type*) [MonadLiftT m n]
     (impl : QueryImpl spec m) : QueryImpl spec n :=
   PFunctor.Handler.liftTarget (P := spec.toPFunctor) n impl
 
-@[simp] lemma liftTarget_apply (n : Type u → Type*) [MonadLiftT m n]
+lemma liftTarget_apply (n : Type u → Type*) [MonadLiftT m n]
     (impl : QueryImpl spec m) (t : spec.Domain) : impl.liftTarget n t = liftM (impl t) := by
   exact PFunctor.Handler.liftTarget_apply (P := spec.toPFunctor) n impl t
 
 /-- Lifting an implementation to the original monad has no effect. -/
-@[simp] lemma liftTarget_self (impl : QueryImpl spec m) :
+lemma liftTarget_self (impl : QueryImpl spec m) :
     impl.liftTarget m = impl :=
   PFunctor.Handler.liftTarget_self (P := spec.toPFunctor) impl
 
@@ -239,8 +239,8 @@ lemma toQueryImpl_apply [HasQuery spec m] (t : spec.Domain) :
 
 /-- On `OracleComp spec`, `HasQuery.toQueryImpl` is the identity handler `QueryImpl.id'`.
 
-Not `@[simp]`: in `unifFwdImpl`-style definitions where `toQueryImpl.liftTarget` appears
-inside a `simp [unifFwdImpl]` call, the rewrite `toQueryImpl → id' = liftTarget _ (id _)`
+Not `@[simp]`: in definitions where `toQueryImpl.liftTarget` appears inside a simplifying
+unfold, the rewrite `toQueryImpl → id' = liftTarget _ (id _)`
 nests `liftTarget`s and triggers unbounded depth. Use via explicit `rw` instead. -/
 lemma toQueryImpl_eq_id' :
     (toQueryImpl : QueryImpl spec (OracleComp spec)) = QueryImpl.id' spec := by

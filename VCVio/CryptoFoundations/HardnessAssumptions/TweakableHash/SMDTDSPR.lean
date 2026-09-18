@@ -9,13 +9,15 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collecti
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTDSPRFinalValidity
 public import VCVio.OracleComp.SimSemantics.Append
 
+import Batteries.Tactic.Lint
+
 /-!
 # Single-function, distinct-tweak, multi-target decisional second-preimage resistance (SM-DT-DSPR)
 
 The adversary first selects up to `numTargets` targets through an oracle evaluating the tweakable
 hash at a public seed it does not know, then learns the seed, names one of its targets, and
-predicts whether that target has a second preimage. It may evaluate the other members of the
-collection throughout, through `collectionOracle`. This is the same two-phase shape as SM-DT-TCR,
+predicts whether that target has a second preimage. During target selection it may evaluate other
+members of the collection through `collectionOracle`. This is the same two-phase shape as SM-DT-TCR,
 with the forging phase replaced by a decisional guess:
 `SM_DT_DSPR_Adversary.guess : State → PkSeed → ProbComp (ℕ × Bool)` returns a target index and a
 predicted bit rather than a colliding message.
@@ -167,13 +169,13 @@ baseline subtraction cannot be accidentally omitted at a call site. -/
 @[expose] noncomputable def SM_DT_DSPR_Success [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_DSPR_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_DSPR_Experiment adv]
+  𝒟[SM_DT_DSPR_Experiment adv] {true}
 
 /-- The `SPprob` baseline success probability. -/
 @[expose] noncomputable def SM_DT_DSPR_SPProbability [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_DSPR_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_DSPR_SPExperiment adv]
+  𝒟[SM_DT_DSPR_SPExperiment adv] {true}
 
 /-- SM-DT-DSPR advantage: the `ℝ≥0∞` truncated difference `Pr[DSPR] - Pr[SPprob]`. -/
 @[expose] noncomputable def SM_DT_DSPR_Advantage [Fintype M] [DecidableEq Tweak] [DecidableEq M]
@@ -215,5 +217,13 @@ theorem SM_DT_DSPR_challengeOracle_run_of_collection_clash (hmem : t ∈ twsColl
     (SM_DT_DSPR_challengeOracle prob pk (t, m)).run (qsChal, twsColl) =
       pure (none, (qsChal, twsColl)) := by
   simp [SM_DT_DSPR_challengeOracle, TweakFresh, hmem]
+
+-- Preserve the established game names with declaration-specific naming exceptions.
+attribute [nolint defsWithUnderscore]
+  SM_DT_DSPR_Advantage SM_DT_DSPR_Adversary.State SM_DT_DSPR_Adversary.choose
+  SM_DT_DSPR_Adversary.guess SM_DT_DSPR_Experiment SM_DT_DSPR_Problem.numTargets
+  SM_DT_DSPR_Problem.standalone SM_DT_DSPR_Problem.th SM_DT_DSPR_Problem.thColl
+  SM_DT_DSPR_SPExperiment SM_DT_DSPR_SPProbability SM_DT_DSPR_State SM_DT_DSPR_Success
+  SM_DT_DSPR_challengeOracle SM_DT_DSPR_challengeSpec SM_DT_DSPR_oracles
 
 end TweakableHash

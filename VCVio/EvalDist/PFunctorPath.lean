@@ -51,6 +51,14 @@ need a measurable-space instance on `Path program`. -/
 noncomputable def queryCountMeasure (program : FreeM P α) : Measure ℕ :=
   denote (withPathLength program)
 
+instance pathMeasure.instIsProbabilityMeasure (program : FreeM P α)
+    [MeasurableSpace (Path program)] : IsProbabilityMeasure (pathMeasure program) :=
+  inferInstanceAs (IsProbabilityMeasure (denote (withPath program)))
+
+instance queryCountMeasure.instIsProbabilityMeasure (program : FreeM P α) :
+    IsProbabilityMeasure (queryCountMeasure program) :=
+  inferInstanceAs (IsProbabilityMeasure (denote (withPathLength program)))
+
 /-- The expected number of interactions on a completed typed path. -/
 noncomputable def expectedQueryCount (program : FreeM P α) : ℝ≥0∞ :=
   ∫⁻ count, (count : ℝ≥0∞) ∂queryCountMeasure program
@@ -82,9 +90,6 @@ theorem queryCountMeasure_eq_dirac_of_length_eq (program : FreeM P α) (count : 
     (hlength : ∀ path : Path program, Path.length program path = count) :
     queryCountMeasure program = Measure.dirac count := by
   let _ : MeasurableSpace (Path program) := ⊤
-  let _ : IsProbabilityMeasure (pathMeasure program) := by
-    unfold pathMeasure
-    exact isProbabilityMeasure_denote _
   rw [← map_length_pathMeasure]
   have hfun : Path.length program = fun _ ↦ count := funext hlength
   rw [hfun, Measure.map_const]
@@ -105,9 +110,6 @@ theorem expectedQueryCount_le_of_isTotalRollBound (program : FreeM P α) {bound 
     (hbound : program.IsTotalRollBound bound) :
     expectedQueryCount program ≤ (bound : ℝ≥0∞) := by
   let _ : MeasurableSpace (Path program) := ⊤
-  let _ : IsProbabilityMeasure (pathMeasure program) := by
-    unfold pathMeasure
-    exact isProbabilityMeasure_denote _
   rw [expectedQueryCount, ← map_length_pathMeasure,
     MeasureTheory.lintegral_map Measurable.of_discrete Measurable.of_discrete]
   refine (lintegral_mono (g := fun _ => (bound : ℝ≥0∞)) fun path => ?_).trans_eq (by simp)

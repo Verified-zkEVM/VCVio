@@ -112,7 +112,7 @@ lemma multipleBadStep_bad_le
       intro x
       rw [probEvent_bind_eq_tsum]
       by_cases hcached : (sB.responses (tag, x)).isSome = true
-      · simp only [hcached, if_true]
+      · simp only [hcached, ite_true]
         have hkey : ∀ r : Digest × ((TagId × Nonce) →ₒ Digest).QueryCache,
             probEvent
               (pure (some (⟨x, r.1⟩ : TagTranscript Nonce Digest), advU, r.2) : ProbComp _)
@@ -122,7 +122,7 @@ lemma multipleBadStep_bad_le
         simp_rw [hkey, mul_one]
         exact tsum_probOutput_eq_one' (by simp)
       · have hcached' : (sB.responses (tag, x)).isSome = false := Bool.eq_false_iff.mpr hcached
-        rw [if_neg (by simp [hcached'])]
+        rw [ite_eq_right (by simp [hcached'])]
         have hkey : ∀ r : Digest × ((TagId × Nonce) →ₒ Digest).QueryCache,
             probEvent
               (pure (some (⟨x, r.1⟩ : TagTranscript Nonce Digest), advU, r.2) : ProbComp _)

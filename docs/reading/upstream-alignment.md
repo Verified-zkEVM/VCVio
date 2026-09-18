@@ -40,7 +40,7 @@ not a proof that no equivalent API exists.
 | Batteries | `4488d40d0` | checkout under `.lake/packages` |
 | cslib | `v4.33.1` (`98e395a7`) on `main`, read from the `v4.33.0` (`3951377e`) checkout | inherited through PolyFun; `gh api repos/leanprover/cslib/compare/3951377e...98e395a7` lists only `lake-manifest.json`, `lakefile.toml`, `lean-toolchain`, so every `.lean` file cited is identical at both pins |
 | PolyFun | `c0c92369` (commit pin) | checkout `9442600` plus the GitHub API for the pin |
-| loom2 | `2f65f311` (2026-07-15) | checkout; upstream last commit 2026-04-19 |
+| loom2 (survey snapshot) | `2f65f311` (2026-07-15) | no longer a dependency; core WP migration is recorded below |
 
 Traps recorded by PolyFun and confirmed here: the newest local toolchain directory is not
 necessarily newer than the pin (check `bin/lean --version`); an API found on `master` but
@@ -122,19 +122,21 @@ needs an instance-synthesis check, not a grep.
 
 ### Track — heading into core, or blocked on a design decision
 
-**Program logic: migrate against the pinned APIs.** Lean v4.33.1 already publicly exposes
-`Std.Do.WP`; `VCVio/ProgramLogic/Unary/StdDoBridge.lean` uses it. Core's `mvcgen` and Sym-based
-`vcgen` coexist at this pin, and neither is deprecated. Loom's quantitative and relational
-clients use a different carrier-indexed interface, so replacing them requires a `PostShape`
-adapter and suitable order instances, not merely a future toolchain version.
+**Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
+`Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`. Quantitative,
+qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's
+`Set.Iic 1` with `MAlgOrdered.restrictIic`; no local lattice bridge is needed. The
+relational coupling interface belongs to VCVio and uses core assertion lattices.
+Loom2 is no longer a dependency. The generic native expectation algebra lives in
+`VCVio.ProgramLogic.Unary.WP.Measure`; its scoped core interpretation needs only
+lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra,
+while explicit compatibility equations retain the old discrete theorem surface.
 
-Core's `vcgen` and VCVio's `vcgen` are both in scope through the root `VCVio` import.
-`VCVioTest/VCGenAmbiguity.lean` checks that a framework `wp` goal still closes in that setting.
-The pinned `Sym.Simp.Theorems.rewrite`, `Sym.Simp.SimpM.run`, and `SymM.run` are public; the
-remaining work is adapting VCVio's registries and goals to their interfaces. See the
-[program-logic guide](../agents/program-logic.md#future-vcgen-bridge-deferred) and the
-[module-system guide](../agents/module-system.md) for the verified boundary from #653.
-Do not infer a release schedule or an API's absence from the original survey's searches.
+Core `vcgen` and VCVio's probability/coupling frontend coexist. The latter still owns
+its `@[vcspec]`/`@[wpStep]` dispatch; the older `Std.Do` handler bridge also remains a
+separate consumer. See the [program-logic guide](../agents/program-logic.md#core-wp-and-the-symbolic-rewriter-boundary)
+for these boundaries and the v4.35 tracking links. The source-count survey below
+records the earlier snapshot; its control/WP recommendations are superseded here.
 
 **Transparency.** `attribute [implicit_reducible] OracleSpec` (`VCVio/OracleComp/OracleSpec.lean:44`)
 was documented in the survey snapshot as helping instance synthesis, but at the pin
@@ -248,15 +250,19 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
   `grind` saturation cycle `docs/agents/probability.md` documents. `∀ᵐ` has 2 uses in `V:VCVio/`.
 
 **Integration candidates (ranked).**
-1. `evalDist_mPi : 𝒟[Fintype.mPi f] = Measure.pi fun i => 𝒟[f i]` (induction as in
-   `V:VCVio/EvalDist/PFunctorMeasure/Core.lean:170`, transport by `Measure.pi_map_piCongrLeft`
-   `M:…/Pi.lean:746`), after which `probOutput_mOfFn`/`probOutput_mPi`
-   (`V:VCVio/EvalDist/IndepProduct.lean:69,287`) are `Measure.pi_singleton` (`:298`),
-   `probEvent_coord_mPi` (`:314`) is `Measure.pi_pi` (`:290`), and "independent"/"same
+1. **Done:** `evalDist_mOfFn` and `evalDist_mPi` now use `evalDist_pair`,
+   `measurePreserving_piFinSuccAbove`, and `Measure.pi_map_piCongrLeft` directly, without a
+   discrete-probability bridge. The monadic `Fintype.mPi` traversal lives in
+   `ToMathlib.Control.Monad.Fold`. The scalar `probOutput_mOfFn`/`probOutput_mPi`
+   (`V:VCVio/EvalDist/IndepProduct.lean:69,287`) can be derived from `Measure.pi_singleton`
+   (`:298`), `probEvent_coord_mPi` (`:314`) from `Measure.pi_pi` (`:290`), and "independent"/"same
    distribution" can be phrased with `IndepFun` (`M:Probability/Independence/Basic.lean:144`;
    `indepFun_iff_map_prod_eq_prod_map_map` `:703` is `probOutput_seq_map_prod_mk_eq_mul`
    `V:VCVio/EvalDist/Prod.lean:91` in measure form), `HasLaw` (`M:Probability/HasLaw.lean:39`) and
    `IdentDistrib` (`M:Probability/IdentDistrib.lean:71`) — all three have 0 uses in VCVio.
+   The uniform-on-product laws also use Mathlib's `ProbabilityTheory.uniformOn_pi`
+   (`M:Probability/UniformOn.lean:226`); Fischlin's small-sum proof now counts its target set
+   directly against that product measure.
 2. Measure-side twins of the expectation algebra: `expectedValue_bind/map/mono/add/const`
    (`V:VCVio/EvalDist/Expectation.lean:49–85`) via `lintegral_bind` (`M:…/GiryMonad.lean:285`),
    `lintegral_map` (`M:…/Lebesgue/Map.lean:27`), `lintegral_mono` (`M:…/Lebesgue/Basic.lean:84`),
@@ -277,11 +283,11 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    `V:VCVio/EvalDist/Monad/Basic.lean:302`, `probOutput_bind_mono_div_const` `:658`,
    `probEvent_bind_congr_div_const` `:692`) and the Σ-protocol comment
    (`V:VCVio/CryptoFoundations/SigmaProtocol.lean:220–227`, "avoids conditional probability").
-6. `MeasurableEmbedding (@some α)` for the coproduct σ-algebra
-   (`V:ToMathlib/MeasureTheory/MeasurableSpace/Option.lean:28`; 0 uses of `MeasurableEmbedding` in
-   VCVio): makes `Measure.dropNone μ = μ.comap some` on the nose (the ambiguity the design doc
-   records) and unlocks `MeasurableEmbedding.lintegral_map`, `Measure.map_injective`,
-   `Kernel.comapRight`, `isProbabilityMeasure_comap`.
+6. Upstream the local `Option` and `Except` coproduct measurable embeddings
+   (`V:ToMathlib/MeasureTheory/MeasurableSpace/{Option,Except}.lean`). They now prove
+   `Measure.dropNone μ = μ.comap some`, support native `OptionT` and `ExceptT` successful-output
+   semantics, and unlock the standard `MeasurableEmbedding` API. The remaining work here is to move
+   these generally useful constructions upstream and then delete the local copies.
 7. Hypothesis hygiene: bind laws (`V:VCVio/EvalDist/Defs/Measure.lean:85`,
    `V:VCVio/EvalDist/PFunctorMeasure/Core.lean:133`) ask `Measurable`, Mathlib's
    `bind_apply`/`bind_bind`/`lintegral_bind` ask `AEMeasurable`; `Measure.toSPMF`
@@ -305,6 +311,104 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
     `ENNReal.sq_tsum_le_tsum_sq`; Mathlib's `ENNReal.lintegral_mul_le_Lp_mul_Lq`
     (`M:MeasureTheory/Integral/MeanInequalities.lean:24`) at `p = q = 2` against `𝒟[mx]` is the
     upstream form and drops the `∑' w ≤ 1` hypothesis.
+
+Executable rational sampling uses upstream `Measure.dirac`, measure addition/scaling, and Giry
+bind in `ToMathlib.ProbabilityTheory.FinRatPMF.Measure`. Finite uniform sampling is identified
+with upstream `ProbabilityTheory.uniformOn`. `Raw.lintegral_toMeasure` is a finite weighted sum
+on arbitrary measurable spaces, and `Raw.toMeasure_bind` needs only measurable continuation
+measures. Executable data and quotient monad laws live in a probability-backend-free `Basic`
+module; PMF bridges remain in a separate interoperability module behind the original import
+façade. `OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn` exposes the uniform response equation
+under the public oracle API head for rewriting; the inherited equation already handles `simp`.
+
+Boolean selector partitions use upstream `Measure.fst_apply`, `measure_union`, and
+`Set.disjoint_prod`. The local `Measure.fst_apply_eq_add` packages those facts for a Boolean
+second coordinate; no new measure construction is needed. The SLH-DSA instrumented experiments
+are native measures, and their projection equations use the runtime's bundled measurable-map
+law. Exact event splits require neither an infinite sum nor a separate evaluator hypothesis.
+Lossless discrete-answer free programs expose an `IsProbabilityMeasure` instance under native
+`evalDist`, so upstream constant-integral and total-mass simp rules apply directly.
+The native fold and named path/count measures also export this property. Subprobability
+pushforward and bind instances use upstream `Measure.map_apply_of_aemeasurable`,
+`Measure.map_of_not_aemeasurable`, and `Measure.bind_apply_le`; their upper mass bounds need no
+measurability hypothesis. Exact losslessness of an arbitrary continuous composition remains a
+separate measurable-continuation obligation.
+Native optional and exceptional map laws use upstream coproduct measurable embeddings and
+`Measure.map_apply`. Their full bind certificates need only measurable successful-output
+families: Giry pushforward transports an auxiliary discrete source measure to the selected space.
+The shared `Measure.map_bind` and `Measure.bind_map` equations are consequences of upstream
+`Measure.map_map` and `Measure.join_map_map`; they live below the coupling theory so native
+transformer laws reuse them without importing that higher layer. Native transformer semantics is
+primary even when a finite-distribution lift exists; the explicit `ProbComp.DiscreteCompatibility`
+scope selects the adapter at a retiring calibration boundary. Lossless lifts publish
+probability-measure instances, so consumers infer their mass properties from the base computation.
+Generic observation bundles and their native measure observers live in
+`VCVio.EvalDist.Defs.Semantics.Core`; the original import facade also exports the discrete adapters.
+Their bundled measures expose subprobability and finiteness automatically, and known probability
+certificates propagate through optional, exceptional, and global semantics bundling. The lossless
+`ProbabilitySemantics` bundle registers the guaranteed probability properties of bare denotations
+and effect-preserving transformer observations. These are certificates for existing measures;
+no new measure construction or global measurable-space choice is needed. Bundled computation
+families likewise infer Markov kernels from their probability-measure certificates.
+Mathlib's scoped kernel/measure notation `κ ∘ₘ μ` denotes `Measure.bind μ κ`.
+PolyFun currently registers the same glyph globally for `MonadHom.comp`; native kernel composition
+equations use the explicit upstream `Measure.bind` to avoid depending on import order. Scoping
+PolyFun's morphism notation remains an upstream notation issue.
+Native `Id`, `Option`, and `Except` interpretations use upstream `Measure.dirac`, zero,
+`Measure.dirac_bind`, and `Measure.bind_zero_left`. Their pure and bind certificates need no
+finite backend; bare exceptional semantics observes successful outputs without a measurable
+space on errors. A propositional Dirac observation normalizes with upstream `Pi.single_apply`,
+packaged as `Measure.dirac_apply_singleton_true` for `simp` and `grind`. Optional failure's empty
+operational support uses Lean's `LawfulMonadAttach.eq_of_canReturn_pure`; its elimination law
+needs no `ExactMonadAttach` or numeric lift. Registering this upstream rule for forward `grind`
+lets the short proof work over state and reader bases. The operational support/failure modules
+contain no PMF/SPMF backend, and raw SPMF support uses native attachment without a SetM lift.
+`LawfulFailureEvalDistSemantics` separately certifies zero successful-output measure for an
+`Alternative`. The pinned Lean, Batteries, Mathlib, cslib, and PolyFun trees provide no corresponding
+measure-valued failure certificate. Native optional semantics supplies it from the base pure law;
+composition proofs use upstream `Measure.bind_zero_left` and `Measure.bind_const`, with discrete
+intermediate spaces internal to the API. Failure, its compositions, and final events normalize to
+zero with `simp` and `grind`, without an operational/probability compatibility class.
+The pinned tree supplies `IsZeroApply` and its generic `zero_apply` rule, but no measure instance;
+`Measure.instIsZeroApply` connects zero measures to that upstream automation. Bare exceptional
+constructor equations live in `ToMathlib.Control.Except` and register their operational facts for
+`simp` and `grind`, so deterministic event proofs need no additional tactic arguments.
+The upstream measurable embeddings' `comap_apply` equations hold on all sets and need no event
+measurability hypothesis. Sampled optional guards collapse to conjunctions of observed events using
+upstream `lintegral_indicator_one`, including after constant-map normalization. Their unit-output
+measure is the accepted event probability times `Measure.dirac ()`, with the intermediate
+measurable-space choice internal to the event API. Finite sampling events count accepted outputs
+through upstream `uniformOn_univ` and `Measure.count_apply_finset`. The OTP UC observation proof
+uses this guard law and the native XOR uniformity equation.
+The optional coproduct makes `{none}` measurable without constraining the result space. Native
+`Measure.dropNone` and `Measure.withFailure` publish their mass-property instances, while lossless
+`evalDistKernel` families inherit `IsMarkovKernel`, including reader/state wrappers. Boolean branch
+totality already implies finite mass, so the hidden-bit identity needs no additional finite-measure
+assumptions. The state observation simp rule runs before upstream `StateT.run'_eq` unfolds the
+computation, preserving the measure-level projection API.
+
+Finite-uniform expectations use upstream `lintegral_fintype`, `uniformOn_univ`, and
+`Measure.count_singleton`; `lintegral_uniformOn_univ` packages their finite average without a
+nonempty assumption. Natural observation increments use Giry pushforward and upstream
+`lintegral_add_right`, keeping successful mass visible and intermediate measurable spaces internal.
+Quadratic expectation bounds specialize upstream `ENNReal.lintegral_mul_le_Lp_mul_Lq` at
+`Real.HolderConjugate.two_two` and use `lintegral_sub_le'` for truncated subtraction. The native
+forking inequality uses those measure facts with almost-everywhere hypotheses and no discrete lift.
+Finite and weighted sum-of-squares lemmas integrate finite sums or arbitrary sums of weighted
+Dirac measures using upstream `lintegral_finsetSum_measure` and `lintegral_sum_measure`.
+Conditional independent events use `Measure.bind_apply` and `Kernel.prod_apply_prod`; no new
+measure construction is needed. The native typed occurrence-fork bound uses this conditional
+square argument for arbitrary discrete answer measures, without uniformity or weighted sums.
+Occurrence-answer and located-fork marginals discard lossless suffixes with `Measure.bind_const`
+through the native oracle laws. The exact collision event is the configured answer measure's
+singleton mass; the uniform bound uses the existing `uniformOn_univ_apply_singleton` lemma.
+Operational completion and fork-map equations remain owned by PolyFun. These observations need
+no measurable spaces on completion records or main outputs, and no oracle-name decidable equality.
+Finite optional selector partitions use upstream `measure_iUnion` for disjoint measurable fibers.
+Event-map and independent-conjunction equations normalize computation observations before their
+monad structure unfolds. `prEvent_mono` works with `grw`; upstream's `@[gcongr]` registration
+requires varying arguments to be free variables, so the expanded event macro cannot itself carry
+that attribute. Surrounding arithmetic uses `gcongr` followed by the explicit event comparison.
 
 **Gaps confirmed** (search that came back empty in `M:`): subprobability measures and kernels;
 `tvDist`/`totalVariation` for measures and PMFs (only `SignedMeasure.totalVariation`);
@@ -335,13 +439,10 @@ Mathlib `Preorder`) is the twin of core's `MonoBind` (`C:Init/Internal/Order/Bas
 230× vs 9×) and the `liftM`/`run_liftM` lemma pattern; `seq_eq_bind` (28 hits) is deprecated since
 2025-10-26 for `seq_eq_bind_map` (`C:Init/Control/Lawful/Basic.lean:188`). Mathlib's `@[monad_norm]`
 set is used 166×; `functor_norm` 0×; the local `handler_simp` set has effectively one use and can fold
-into `game_rule`. The carrier-indexed `WP m Pred EPred` with `outParam`s forces the
-`scoped instance (priority := 1100)` pattern (`V:VCVio/ProgramLogic/Unary/Loom/Qualitative.lean:49–56`);
-core's `WP m (ps : outParam PostShape)` avoids it because the shape is determined by the monad stack —
-a genuine design divergence. Three definitionally different qualitative WPs coexist
-(`MAlgOrdered.wp` over Mathlib lattices, 252 uses; loom2's `Std.Do'.wp`, 427; core `Std.Do.wp` bridged
-at `.pure` shape only, `V:VCVio/ProgramLogic/Unary/StdDoBridge.lean:70–76`); the missing lemma is
-`Std.Do.wp x Q = ⌜MAlgOrdered.wp x Q.1⌝` (both are `∀ a ∈ support x, …`).
+into `game_rule`. Carrier choice is explicit through scoped `WPMonad` instances. Structural
+qualitative support and quantitative expectation are separate interpretations. Their
+coherence theorems state the needed probability assumptions. PolyFun supplies the shared
+Mathlib-to-core lattice bridge and the restricted-carrier construction.
 
 **Integration candidates (ranked).**
 1. `V:ToMathlib/Control/Monad/Indexed.lean` is a verbatim copy of `PolyFun/Control/Monad/Indexed.lean`
@@ -350,12 +451,9 @@ at `.pure` shape only, `V:VCVio/ProgramLogic/Unary/StdDoBridge.lean:70–76`); t
 2. `SetM.pure_def/bind_def/run_eq` (`V:VCVio/EvalDist/Defs/Support.lean:31–41`) duplicate
    `SetM.run_pure/run_bind/run_map` (`V:ToMathlib/Data/Set/Functor.lean:36–45`) with a competing simp
    normal form; keep the `run_*` family (core's `StateT.run_*` idiom).
-3. One generic `[CompleteLattice α] → Lean.Order.{PartialOrder,CompleteLattice} α`
-   (`ToMathlib/Order/LeanOrder.lean`, `rel := (· ≤ ·)`, `has_sup c := ⟨sSup {x | c x}, …⟩`, low
-   priority so core's `Prop` instance stays first) replaces the four hand instances
-   (`V:VCVio/ProgramLogic/Unary/Loom/Quantitative.lean:121,132`, `Probabilistic.lean:106,134`); `Prob`'s
-   lattice comes free from `Set.Iic 1` (`M:Order/CompleteLatticeIntervals.lean:227`). This is also the
-   an order-adapter step for a possible Loom migration.
+3. **Adopted:** use PolyFun's Mathlib-to-core lattice bridge and `MAlgOrdered.restrictIic`.
+   `Prob` is Mathlib's `Set.Iic (1 : ℝ≥0∞)`; the four local order/lattice implementations
+   and the duplicate generic WriterT WP have been removed.
 4. `LawfulAppend` (`V:ToMathlib/Control/WriterT.lean:30`) is `Std.Associative (·++·)` +
    `Std.LawfulIdentity (·++·) ∅` (`C:Init/Core.lean:2478,2542`; `List` instances
    `C:Init/Data/List/Basic.lean:627,647`, re-proved locally at `WriterT.lean:51`). 49 uses.
@@ -837,3 +935,120 @@ Re-run this survey when the toolchain pin moves. Check, in order: `Init/Control/
 and any WP modules present in the actual target release, `Mathlib/Probability/`, `Mathlib/MeasureTheory/Measure/`,
 `Mathlib/Control/`, `Mathlib/Data/FinEnum.lean`, `Cslib/Foundations/`, PolyFun's own ledger.
 Re-verify every row; do not diff against this file.
+
+## v4.34 native semantics integration (2026-09-17)
+
+The release work uses Lean/Mathlib v4.34.0, cslib `990e65a6`, and merged PolyFun
+`efe111a4`. Mathlib's `PFunctor.Obj.mk`, `fst`, `snd`, and `rec` form the
+oracle-query facade's construction and elimination interface. The oracle wrapper retains its
+named `input` and `cont` equations; callers do not need to unfold the underlying sigma type.
+
+`simulateQ_isMonadHom` obtains cslib's unbundled predicate from the bundled simulation
+morphism. List traversal and early-exit loop transport use its existing laws instead of
+local inductions. This predicate is a proof structure, not an instance class.
+
+The expectation algebra uses Mathlib's `lintegral_mono`, addition/scaling, finite-sum, and
+monotone-supremum laws. The shared constant-plus-postcondition bounds replace manual
+point-probability sums in the commitment counting examples. Native sequencing and finite
+products use Mathlib's product measures and export probability instances from their factors.
+Subprobability products use `Measure.prod_prod` and multiplication of the mass bounds.
+The raw bind bound still requires an almost-everywhere measurable measure family.
+
+The native WP and sequencing canaries check ordinary imports without PMF/SPMF, mass factors
+for failed draws, automatic probability instances, and `simp`, `grind`, `gcongr`, and `grw`.
+Deprecated discrete definitions remain at the compatibility boundary; their environment-linter
+allowlist in `scripts/nolints.json` tracks migration debt.
+
+## Native foundation follow-up (2026-09-17)
+
+The follow-up pins public PolyFun main `91e9c02e`, including merged
+[#230](https://github.com/Verified-zkEVM/PolyFun/pull/230). PolyFun now owns free-tree support
+map/object normalization and finite/nonempty bounds. Its generic support-aware bind congruence
+uses only core `WeaklyLawfulMonadAttach`. VCVio delegates these rules instead of maintaining
+local inductions. A primitive lift-bind equation keeps the public support normal form usable by
+`simp`; the object equation takes precedence over generic map expansion.
+
+Mathlib's existing `MeasureTheory.isProbabilityMeasure_bind` constructs lossless binds from
+almost everywhere lossless branches. `lintegral_eq_iff_ae_eq_of_ae_le` supplies the converse
+for subprobability branch masses and a probability input. These are the foundations of
+`VCVio.EvalDist.Lossless`; no new losslessness class or structural positivity assumption is used.
+
+Uniform product measures and bijective pushforwards certify product/vector samplers directly.
+The search covered pinned `Mathlib.Probability.UniformOn`, measure products and pushforwards;
+VCVio composes the existing local uniform-product and bijection lemmas, rather than defining a
+new measure construction. The sampler's `Finite` and `Nonempty` witnesses are derived, and its
+noncomputable `Fintype` adapter needs no decidable equality argument.
+
+PolyFun's `MonadAttach.toWPMonadDemonic` supplies qualitative core WP with lawful attachment,
+including state monads. The exact ordered assertion algebra is installed only where the free
+tree's exactness is available. Indexed state/reader judgments and kernel semantics retain their
+initial index. The probability-bounded measure WP restricts the native expectation algebra using
+PolyFun's `MAlgOrdered.restrictIic`; its scopes take precedence over generic transformer algebras.
+
+`VCVio.Native` has an ordinary import canary excluding PMF/SPMF and the retiring compatibility
+classes. Existing imports remain facades for discrete corollaries. The environment-linter
+baseline shrinks; no syntactic probability ratchet is introduced.
+
+## Native relational and security follow-up (2026-09-17)
+
+Native coercion and state-handler modules separate operational constructions from discrete
+corollaries. The measure interpretation transports equal joint response/state laws through
+adaptive clients using its generic lawful bind/map laws. It requires neither oracle uniformity
+nor positive singleton masses. Stateful measure equivalence exports observation equations,
+event congruence, linking congruence, and advantage replacement across different state types.
+
+The coupling search covered pinned Mathlib's `ae_map_iff`, `ae_dirac_iff`,
+`AEMeasurable.mk`, `measurable_mk`, `ae_eq_mk`, `Measurable.measurable_of_countable_ne`,
+and `Measure.lintegral_bind`. Those APIs supply almost everywhere bind composition and
+measurable modifications. The local `aemeasurable_of_ae_mem_countable` lemma packages a
+countable concentration argument; the domain needs measurable singletons, while its arbitrary
+codomain only needs a measurable space and a default point.
+
+Pointwise qualitative coupling witnesses compose on countable marginal concentration sets,
+without a globally measurable choice assumption. Quantitative composition accepts an explicit
+almost everywhere measurable conditional witness family and supplies a lower bound. A universal
+quantitative relational-algebra instance would additionally need a justified supremum/integration
+argument and measurability obligations. In particular, product spaces of uncountable discrete
+factors cannot be treated as automatically discrete. The witness rules state the actual
+obligations rather than installing such an instance.
+
+The scoped qualitative oracle adapter does use PolyFun's existing `MAlgRelOrdered` interface.
+It requires finite response types, giving finite source and final concentration sets from
+PolyFun's operational support theorem. Arbitrary final relations are restricted to their
+countable measurable part before bind composition. It works on uncountable output types and
+weighted oracles without selecting an enumeration, assuming uniformity, or identifying almost
+sure postconditions with structural demonic WP. The native relational API also permits different
+universe levels for its two monads.
+
+Countable-concentration reflexivity restricts the diagonal predicate to its countable measurable
+part, avoiding a global `MeasurableEq` requirement for uncountable discrete outputs. Finite-tree
+reflexivity therefore simplifies directly. Bundled couplings use a structure with named joint
+and marginal-certificate fields; their constructor equations replace hidden subtype-coercion
+reductions in public proofs. Anonymous construction, numeric projections, joint coercion, and
+`val`/`property` access remain available. Probability, subprobability, and finite-measure instances
+are inherited from the first marginal. The pinned Mathlib has `IsProbabilityMeasure` and
+`IsFiniteMeasure`; the subprobability bound uses the existing local shim, as Mathlib does not
+yet provide that class.
+
+`PolyFun.Control.Monad.Algebra.Relational` already owns the generic relational class and rules.
+The dependency pin also includes the merged object-equality and independent comonad/pairing
+interfaces, together with simulation and trace transport through cslib. Resumption measure
+proofs use the public `Obj.fst`/`Obj.snd` projections and
+`Obj.eta`, avoiding Sigma elimination without lengthening the proofs. Structural consumers
+import PolyFun's support module directly; the existing VCVio support-module path remains a
+thin public import facade.
+
+The local duplicate prevented importing the upstream algebra alongside VCVio's umbrella.
+`ToMathlib.Control.Monad.RelationalAlgebra` is now a reexport plus delegates installing the
+upstream named transformer constructions under the existing instance names. PolyFun's
+`rwpExc` takes a single outcome postcondition; the four-corner convenience frontend is called
+`rwpExcCases`, keeping its distinct signature explicit. Existing one-sided and optional helpers
+continue to use the shared class. Oracle implementation composition also uses PolyFun's
+`FreeM.liftM_natural`, removing a local fold induction and its probability-heavy import path.
+
+Dirac marginal concentration gives exact pure relational laws without measurability of the
+postcondition. Constructor-specific optional/exceptional lemmas preserve their `simp` heads.
+Native security observations reuse measure-valued Boolean bias/distance, including the generic
+fair-coin identity. One-time-pad privacy uses `Measure.prod_prod` and singleton products instead
+of a point-mass calculation. ElGamal's computational handler identities induce native measure
+equivalence, while existing discrete theorem names remain compatibility corollaries.

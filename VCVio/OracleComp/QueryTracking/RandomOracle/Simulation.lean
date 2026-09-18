@@ -9,6 +9,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Random-Oracle Simulation Helpers
@@ -49,18 +50,26 @@ variable {ι : Type} {hashSpec : OracleSpec ι}
 `ProbComp` without touching the cache state. -/
 def unifFwdImpl (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (StateT hashSpec.QueryCache ProbComp) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT hashSpec.QueryCache ProbComp)
+  (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT hashSpec.QueryCache ProbComp)
 
 namespace unifFwdImpl
+
+/-- The explicit lift-based forwarding handler agrees with the canonical `HasQuery` handler. -/
+lemma eq_toQueryImpl :
+    unifFwdImpl hashSpec =
+      (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
+        (StateT hashSpec.QueryCache ProbComp) := by
+  unfold unifFwdImpl
+  congr 1
 
 /-- Simulating a plain `ProbComp` through `unifFwdImpl` and running it on cache `s` leaves
 the cache untouched, pairing each sampled output with the unchanged `s`. -/
 lemma simulateQ_run {α : Type} (oa : ProbComp α) (s : hashSpec.QueryCache) :
     (simulateQ (unifFwdImpl hashSpec) oa).run s = (fun x => (x, s)) <$> oa := by
+  rw [eq_toQueryImpl]
   induction oa using OracleComp.inductionOn with
   | pure x => simp
-  | query_bind t oa ih => simp [unifFwdImpl, ← ih]
+  | query_bind t oa ih => simp [← ih]
 
 end unifFwdImpl
 
@@ -150,7 +159,7 @@ theorem neverFail_simulateQ_randomOracle_run
 /-- Running the lazy random oracle on an uncached query `t` and binding the result samples the
 fresh answer uniformly, so the support of the bound computation is the union over all answers of
 the support obtained after caching that answer. -/
-private lemma support_randomOracle_run_bind_of_uncached [DecidableEq ι] [spec.Inhabited]
+private lemma support_randomOracle_run_bind_of_uncached [DecidableEq ι]
     [(t : spec.Domain) → SampleableType (spec.Range t)] {β : Type} (t : spec.Domain)
     {cache : spec.QueryCache} (hcache : cache t = none)
     (g : spec.Range t × spec.QueryCache → ProbComp β) :
@@ -278,6 +287,38 @@ theorem probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff
       (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
         oa preexisting_cache a).mpr ⟨cache', ha⟩
     exact ((probEvent_eq_one_iff.mp (h f hf)).2 a has)
+
+/-- Measure-native probability-one form of the combined uniform-query/random-oracle
+characterization. The visible state is discarded before the output event is measured. -/
+theorem evalDist_apply_setOf_simulateQ_unifFwdImpl_add_randomOracle_run'_eq_one_iff
+    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
+    [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (oa : OracleComp (unifSpec + spec) α) (preexisting_cache : spec.QueryCache) (p : α → Prop) :
+    𝒟[(simulateQ (unifFwdImpl spec +
+      (spec.randomOracle : QueryImpl spec (StateT spec.QueryCache ProbComp))) oa).run'
+        preexisting_cache] {x | p x} = 1
+    ↔
+    ∀ f : QueryImpl spec Id, preexisting_cache.AgreesWithFn f →
+      𝒟[simulateQ (unifFwdAnswerImpl f) oa] {x | p x} = 1 := by
+  rw [OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support]
+  constructor
+  · intro h f hf
+    rw [OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support]
+    intro a ha
+    obtain ⟨cache', hcache'⟩ :=
+      (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
+        oa preexisting_cache a).mp ⟨f, hf, ha⟩
+    apply h a
+    rw [StateT.run'_eq, support_map]
+    exact Set.mem_image_of_mem Prod.fst hcache'
+  · intro h a ha
+    rw [StateT.run'_eq, support_map, Set.mem_image] at ha
+    obtain ⟨⟨a', cache'⟩, ha', rfl⟩ := ha
+    obtain ⟨f, hf, haf⟩ :=
+      (exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
+        oa preexisting_cache a').mpr ⟨cache', ha'⟩
+    exact (OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support
+      (simulateQ (unifFwdAnswerImpl f) oa) p).mp (h f hf) a' haf
 
 /-- Support characterization for lazy random-oracle simulation.
 

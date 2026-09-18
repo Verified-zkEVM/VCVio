@@ -26,8 +26,9 @@ namespace VCVioTest.GCongr
 
 universe u v
 
-variable {α β : Type u} {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
-  [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [EvalDistCompatible m]
+variable {α β : Type u} {m : Type u → Type v} [Monad m] [LawfulMonad m]
+  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM]
+  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
 variable {m' : Type u → Type v} [Monad m'] [MonadLiftT m' SPMF]
 

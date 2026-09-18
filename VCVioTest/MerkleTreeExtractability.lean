@@ -42,7 +42,7 @@ example : ∀ result ∈ support
     (Prod.fst <$> (simulateQ (InductiveMerkleTree.spec Bool).cachingOracle repeatedQuery).run ∅),
     result.1 = result.2 := by
   intro result hresult
-  have hcases : (false, false) = result ∨ (true, true) = result := by
+  have hcases : result = (false, false) ∨ result = (true, true) := by
     simpa [repeatedQuery] using hresult
   rcases hcases with rfl | rfl <;> rfl
 

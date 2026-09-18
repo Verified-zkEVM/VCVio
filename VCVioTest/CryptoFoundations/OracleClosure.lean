@@ -84,7 +84,7 @@ theorem dependentProgram_returnsSmall :
   cases answer with
   | false => simp
   | true =>
-      simp only [if_true]
+      simp only [ite_true]
       intro digit hdigit
       simpa [dependentAllows] using hdigit
 

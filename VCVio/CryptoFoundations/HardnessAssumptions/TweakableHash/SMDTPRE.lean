@@ -7,6 +7,7 @@ Authors: Nicolas Consigny, Matthias Meijers
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.SimSemantics.Append
 
 /-!
@@ -155,7 +156,7 @@ noncomputable def SM_DT_PRE_Experiment [DecidableEq Tweak] [DecidableEq Y] [Samp
 /-- The SM-PRE advantage of an adversary. -/
 noncomputable def SM_DT_PRE_Advantage [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
     {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_PRE_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_PRE_Experiment adv]
+  𝒟[SM_DT_PRE_Experiment adv] {true}
 
 /-! ## Basic properties and conventions -/
 

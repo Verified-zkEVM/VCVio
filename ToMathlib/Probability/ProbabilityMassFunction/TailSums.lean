@@ -54,7 +54,7 @@ theorem tsum_mul_nat_eq_tsum_tail (f : ℕ → ℝ≥0∞) :
         rw [hsum, Finset.sum_const, Finset.card_range, nsmul_eq_mul, mul_comm]
       · intro i hi
         simp only [Finset.mem_range] at hi
-        simp [if_neg hi]
+        simp [ite_eq_right hi]
     _ = ∑' i : ℕ, ∑' n : ℕ, if i < n then f n else 0 := ENNReal.tsum_comm
 
 end ENNReal

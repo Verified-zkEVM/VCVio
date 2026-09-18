@@ -25,10 +25,9 @@ namespace SMDTDSPRFinalValidityTest
 inductive Seed
   | only
 
-instance : SampleableType Seed where
-  selectElem := pure .only
-  mem_support_selectElem := by simp
-  probOutput_selectElem_eq x y := by cases x; cases y; rfl
+instance : Unique Seed where
+  default := .only
+  uniq x := by cases x; rfl
 
 @[simp] lemma uniformSample_seed : ($ᵗ Seed : ProbComp Seed) = pure .only := rfl
 
@@ -196,6 +195,60 @@ theorem poison_not_rejection_canary :
       SM_DT_DSPR_SourceFinalValidity.SPExperiment clashCollection = pure false := by
   exact ⟨experiment_exceedCap, baseline_exceedCap, experiment_clashCollection,
     baseline_clashCollection⟩
+
+section RunLevelInvariant
+
+open SM_DT_DSPR_SourceFinalValidity
+
+/-- Transfer of the run-level monitor invariant along a transcript pinned to one outcome, in the
+direction that concludes the final predicate holds. -/
+private lemma valid_of_run {prob : Problem Unit Seed Bool Bool Bool} {adv : Adversary prob}
+    {ps : adv.State} {gs : State Bool Bool}
+    (hrun : (simulateQ (oracles prob .only) adv.choose).run .initial = pure (ps, gs))
+    (hvalid : gs.valid = true) :
+    ∀ z ∈ support ((simulateQ (oracles prob .only) adv.choose).run .initial),
+      SourceFinalValidity.Valid prob.numTargets Prod.fst z.2 := by
+  intro z hz
+  have hdecide := valid_eq_decide_valid_of_reachable adv .only hz
+  rw [hrun, support_pure, Set.mem_singleton_iff] at hz
+  subst hz
+  simpa [hvalid] using hdecide.symm
+
+/-- Transfer of the run-level monitor invariant along a transcript pinned to one outcome, in the
+direction that concludes the final predicate fails. -/
+private lemma not_valid_of_run {prob : Problem Unit Seed Bool Bool Bool} {adv : Adversary prob}
+    {ps : adv.State} {gs : State Bool Bool}
+    (hrun : (simulateQ (oracles prob .only) adv.choose).run .initial = pure (ps, gs))
+    (hvalid : gs.valid = false) :
+    ∀ z ∈ support ((simulateQ (oracles prob .only) adv.choose).run .initial),
+      ¬ SourceFinalValidity.Valid prob.numTargets Prod.fst z.2 := by
+  intro z hz
+  have hdecide := valid_eq_decide_valid_of_reachable adv .only hz
+  rw [hrun, support_pure, Set.mem_singleton_iff] at hz
+  subst hz
+  simpa [hvalid] using hdecide.symm
+
+/-- The lifted monitor invariant decides the final predicate correctly on every canary transcript.
+`exceedCap` isolates the target-cap conjunct: `collidingProblem` allows one target and the two
+committed tweaks are distinct and unused by the collection oracle, so the cap is the only conjunct
+that fails. `clashCollection` isolates target/collection disjointness. -/
+theorem reachable_valid_decides_canary :
+    (∀ z ∈ support
+          ((simulateQ (oracles collidingProblem .only) predictCollision.choose).run .initial),
+        SourceFinalValidity.Valid collidingProblem.numTargets Prod.fst z.2) ∧
+      (∀ z ∈ support
+          ((simulateQ (oracles injectiveProblem .only) predictNoCollision.choose).run .initial),
+        SourceFinalValidity.Valid injectiveProblem.numTargets Prod.fst z.2) ∧
+      (∀ z ∈ support
+          ((simulateQ (oracles collidingProblem .only) exceedCap.choose).run .initial),
+        ¬ SourceFinalValidity.Valid collidingProblem.numTargets Prod.fst z.2) ∧
+      (∀ z ∈ support
+          ((simulateQ (oracles collidingProblem .only) clashCollection.choose).run .initial),
+        ¬ SourceFinalValidity.Valid collidingProblem.numTargets Prod.fst z.2) :=
+  ⟨valid_of_run run_predictCollision rfl, valid_of_run run_predictNoCollision rfl,
+    not_valid_of_run run_exceedCap rfl, not_valid_of_run run_clashCollection rfl⟩
+
+end RunLevelInvariant
 
 /-- The phase types themselves pin seed/oracle access: `choose` gets the oracle bundle but no seed,
 whereas `guess` gets the seed but has type `ProbComp` and therefore no challenge oracle. -/

@@ -114,7 +114,8 @@ loses the structural view, so the deep concrete normalization is `simp`'s. -/
 section abstractHead
 variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+  [EvalDistCompatible m]
 
 example (mx : m α) : 𝒮[do let a ← mx; pure a] = 𝒮[mx] := by simp
 example (mx : m α) : 𝒮[do let a ← mx; pure a] = 𝒮[mx] := by grind
