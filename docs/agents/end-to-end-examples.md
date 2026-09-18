@@ -61,6 +61,25 @@ result, the bound is *unconditional* in `pk`: there is no remaining "verifier
 accepts a uniform challenge" term that would have to be discharged separately
 for keys on which verification is independent of the challenge.
 
+## Restricted Schnorr Challenges
+
+[`VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean`](../../VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean)
+transports perfect completeness and unique responses along any challenge map, and special
+soundness along an injective map. The retained commitment simulator does not by itself certify
+the distribution of full transcripts after changing the challenge policy.
+
+[`Examples/Schnorr/ChallengeRestriction.lean`](../../Examples/Schnorr/ChallengeRestriction.lean)
+proves equality of the honest and simulated transcript measures for the actual restricted
+challenge distribution. That simulation theorem allows noninjective encodings.
+[`Examples/Schnorr/BoundedChallenges.lean`](../../Examples/Schnorr/BoundedChallenges.lean)
+embeds `Fin c` into `ZMod p` injectively when `c ≤ p`; primality of `p` is a separate
+requirement for instantiating Schnorr over a field.
+
+[`VCVioTest/SigmaChallengeRestriction.lean`](../../VCVioTest/SigmaChallengeRestriction.lean)
+checks the field-of-order-seven instance, the empty and full-size embedding boundaries,
+aliasing above the modulus, and a noninjective restriction that destroys special soundness.
+These are algebraic fixtures, not concrete security parameters.
+
 ## ROM Commitment Scheme
 
 A second end-to-end example, exercising a different axis of the framework

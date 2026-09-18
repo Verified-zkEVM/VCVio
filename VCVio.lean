@@ -138,6 +138,7 @@ public import VCVio.CryptoFoundations.SecExp
 public import VCVio.CryptoFoundations.SecExp.Measure
 public import VCVio.CryptoFoundations.SeededFork
 public import VCVio.CryptoFoundations.SigmaProtocol
+public import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs

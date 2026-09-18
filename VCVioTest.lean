@@ -79,6 +79,7 @@ public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
 public import VCVioTest.SeparatedOTP
+public import VCVioTest.SigmaChallengeRestriction
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.NativeMeasure
 public import VCVioTest.StateTLift

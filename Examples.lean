@@ -74,6 +74,8 @@ public import Examples.ProgramLogic.Unary
 public import Examples.ProgramLogic.UnaryProbability
 public import Examples.ProgramLogic.UnaryStep
 public import Examples.ProgramLogic.UnaryTriple
+public import Examples.Schnorr.BoundedChallenges
+public import Examples.Schnorr.ChallengeRestriction
 public import Examples.Schnorr.SigmaProtocol
 public import Examples.Schnorr.Signature
 public import Examples.SealedSender.AspectObservation
