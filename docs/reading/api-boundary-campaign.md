@@ -41,7 +41,7 @@ The API policy is:
 | --- | --- | --- |
 | SLH-DSA `Security.generalAlg` | Three public projection equations now have ordinary proofs with the bundle opaque. `HashSigTest/ModuleAPI/SchemeGames.lean` verifies that reduction alone fails, uses the verification equation in direct and composed consumers, and retains perfect completeness. | repaired |
 | `QueryCount` and counting writers | Removed the custom function monoid. `withCounting` uses `AddWriterT`, and `runAdd` publishes ordinary counts. `VCVioTest/ModuleAPI/Counting.lean` tests ordinary function multiplication, repeated labels, output preservation, and both failure transformer orders. Unary and relational handler clients use the tagged writer state explicitly. | repaired |
-| `QueryCache` | `#synth PartialOrder (Bool → Option Nat)` selects the cache extension order. Lookup, updates, extension and component projections need a carrier with its own instance head. | pending |
+| `QueryCache` | A distinct carrier confines extension order to caches. Lookup syntax, explicit function equivalence, updates, sum projections, and finite/countable transports remain available. `VCVioTest/ModuleAPI/Cache.lean` tests unrelated function order, dependent fibers, overwrites, repeated cache hits, and round trips. Existing PRF network measure tests exercise countability. | repaired |
 | `QueryLog`, traversal and replay | Trace observations should use public occurrence, lookup, filtering and path laws, retaining ordered dependent answers. PolyFun #239 is open at the initial snapshot. | upstream-blocked |
 | Oracle specifications, coercions and handlers | The transparent `OracleComp`/`FreeM` and dependent signature façades are intentional. Audit compound signatures, handler application, transport and recursive wiring through ordinary imports. | pending |
 | Probability and transformers | Native Measure/Kernel equations, successful-output mass and structural support are distinct contracts. Retain measurability and probability assumptions explicitly. | pending |
@@ -93,3 +93,12 @@ retained as compatibility: its instance also changed unrelated function multipli
 Clients of raw writer state use `Multiplicative.toAdd`; clients of results use `runAdd`.
 The deprecated probability bridges remain; their shared compatibility constraints reduce the
 syntactic source count without claiming removal of the discrete semantic dependency.
+
+### Cache validation
+
+The cache repair at `02de09d9` passes `./scripts/validate.sh --lint --test --axioms`:
+21,507 declarations, 720 modules, 33 existing sorry-tainted declarations, zero nonstandard axioms.
+The external cache consumer builds and runs. Two downstream proofs now identify cache updates
+and product projections explicitly. Construct caches with `QueryCache.ofFn`; use `.toFn` when a
+plain function is required. The cache order still requires identical stored values and does not
+inherit the value order of response types.
