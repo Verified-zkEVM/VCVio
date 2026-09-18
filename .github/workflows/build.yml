@@ -134,6 +134,7 @@ jobs:
           consumer="$RUNNER_TEMP/vcvio-consumer"
           mkdir -p "$consumer"
           cp lean-toolchain "$consumer/"
+          cp HashSigTest/ModuleAPI/SchemeGames.lean "$consumer/SchemeAPI.lean"
           {
             echo 'name = "consumer"'
             echo 'defaultTargets = ["consumer"]'
@@ -153,6 +154,7 @@ jobs:
             echo '-- the names in its type must be publicly imported, not just privately visible.'
             echo 'public import VCVio'
             echo 'public import VCVio.EvalDist.PFunctor'
+            echo 'public import SchemeAPI'
             echo ''
             echo '#check OracleComp'
             echo '#check PFunctor.IsProbabilitySpec'
