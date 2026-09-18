@@ -14,6 +14,16 @@ The stack is also intentionally split into:
 - a thin `OracleComp` facade
 - a small `ToMathlib` probability layer for reusable tail-sum facts
 
+The structural instrumentation owners are `Tracing.Core`, `CountingOracle.Core`, and
+`LoggingOracle.Core`. Query bounds, cache/programming handlers, and enforcement import native
+handler machinery; their structural laws need no probability specification. The older tracing,
+counting, and logging module paths additionally export their remaining scalar compatibility
+corollaries. Prefer the native owners or `VCVio.Native` for new proofs.
+
+Enforcement event laws use `Pr{...}[...]` and a chosen `IsMeasureSpec`, with discrete query-answer
+spaces to interpret arbitrary oracle continuations. They do not require uniform sampling or
+discrete result, budget, or state spaces.
+
 `AdaptivePrefix.lean` is separate from the cost semantics above. It owns the probabilistic
 stopping-time argument used when an adaptive prefix and a transcript-dependent suffix share one
 lazy random function. Protocol-specific files should instantiate this theorem rather than copy its

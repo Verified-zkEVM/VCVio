@@ -128,33 +128,6 @@ lemma evalSPMF_query_toPMF [IsProbabilitySpec spec] (t : spec.Domain) :
 
 end evalSPMF_main
 
-section finSupport
-
-variable [spec.Fintype]
-
-/-- Finite version of support for when oracles have a finite set of possible outputs.
-NOTE: we can't use `simulateQ` because `Finset` lacks a `Monad` instance. -/
-instance : HasEvalFinset (OracleComp spec) where
-  finSupport {α} _ mx := OracleComp.construct
-    (fun x => {x}) (fun _ _ r => Finset.univ.biUnion r) mx
-  coe_finSupport {α} _ mx := by
-    induction mx using OracleComp.inductionOn with
-    | pure x => simp
-    | query_bind t mx h => simp [h]
-
-@[simp, grind =] lemma finSupport_liftM [DecidableEq α] (q : OracleQuery spec α) :
-    finSupport (liftM q : OracleComp spec α) = Finset.univ.image q.cont := by grind
-
-lemma finSupport_query [spec.DecidableEq] (t : spec.Domain) :
-    finSupport (query t : OracleComp spec _) = Finset.univ := by grind
-
-lemma mem_finSupport_liftM_iff [DecidableEq α] (q : OracleQuery spec α) (x : α) :
-    x ∈ finSupport (liftM q : OracleComp spec α) ↔ ∃ t, q.cont t = x := by simp
-
-lemma mem_finSupport_query [spec.DecidableEq] (t : spec.Domain) (u : spec.Range t) :
-    u ∈ finSupport (query t : OracleComp spec _) := by grind
-
-end finSupport
 
 section evalSPMF
 

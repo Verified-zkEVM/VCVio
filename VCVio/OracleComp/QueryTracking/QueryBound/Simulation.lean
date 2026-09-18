@@ -8,10 +8,10 @@ module
 
 public import Mathlib.Algebra.Polynomial.Eval.Defs
 public import PolyFun.PFunctor.Bound
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.QueryTracking.CountingOracle
-public import VCVio.OracleComp.SimSemantics.Append
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
+public import VCVio.OracleComp.SimSemantics.Append.Core
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 import all VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
@@ -128,7 +128,7 @@ theorem isQueryBoundP_simulateQ_postInsert
 
 /-- Sanity check: instrumenting an oracle with a side-querying "monitor" computation
 fired before each query gives a clean multiplicative bound. -/
-example {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α β : Type u}
+example {ι : Type u} {spec : OracleSpec ι} {α β : Type u}
     {impl : QueryImpl spec (OracleComp spec)} {monitor : OracleComp spec β}
     {oa : OracleComp spec α} {n b_so b_mon : ℕ}
     (hoa : IsTotalQueryBound oa n)
@@ -162,9 +162,8 @@ lemma add_single_mem_support_simulate_queryBind [DecidableEq ι]
 
 section CostSupport
 
-variable [DecidableEq ι] [IsUniformSpec spec] [Fintype ι]
+variable [DecidableEq ι] [Fintype ι]
 
-omit [IsUniformSpec spec] in
 lemma exists_mem_support_simulate_of_mem_support_run_simulateQ_le_cost
     {σ : Type u} {impl : QueryImpl spec (StateT σ (OracleComp spec))}
     (cost : σ → ℕ)
@@ -588,7 +587,7 @@ its `.inl` and `.inr` branches, with separate step hypotheses for each impl on i
 sub-predicate. -/
 theorem IsQueryBoundP.simulateQ_run_add_of_step
     {ι₁ ι₂ ι' : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {spec' : OracleSpec ι'} [IsUniformSpec spec']
+    {spec' : OracleSpec ι'}
       {σ : Type u}
     {p : ι₁ ⊕ ι₂ → Prop} [DecidablePred p]
     {q : ι' → Prop} [DecidablePred q]
@@ -615,7 +614,7 @@ is vacuously false on `.inr _` queries: only `impl₁` interacts with the predic
 `impl₂` only needs a uniform 0-bound step. -/
 theorem IsQueryBoundP.simulateQ_run_add_inl_of_step
     {ι₁ ι₂ ι' : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {spec' : OracleSpec ι'} [IsUniformSpec spec']
+    {spec' : OracleSpec ι'}
       {σ : Type u}
     {p : ι₁ ⊕ ι₂ → Prop} [DecidablePred p]
     {q : ι' → Prop} [DecidablePred q]
@@ -638,7 +637,7 @@ is vacuously false on `.inl _` queries: only `impl₂` interacts with the predic
 `impl₁` only needs a uniform 0-bound step. -/
 theorem IsQueryBoundP.simulateQ_run_add_inr_of_step
     {ι₁ ι₂ ι' : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {spec' : OracleSpec ι'} [IsUniformSpec spec']
+    {spec' : OracleSpec ι'}
       {σ : Type u}
     {p : ι₁ ⊕ ι₂ → Prop} [DecidablePred p]
     {q : ι' → Prop} [DecidablePred q]
@@ -666,7 +665,7 @@ either side counts toward the same uniform budget. -/
 
 theorem IsTotalQueryBound.simulateQ_run_add_of_step
     {ι₁ ι₂ ι' : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {spec' : OracleSpec ι'} [IsUniformSpec spec']
+    {spec' : OracleSpec ι'}
       {σ : Type u}
     {impl₁ : QueryImpl spec₁ (StateT σ (OracleComp spec'))}
     {impl₂ : QueryImpl spec₂ (StateT σ (OracleComp spec'))}
@@ -685,7 +684,7 @@ theorem IsTotalQueryBound.simulateQ_run_add_of_step
 interaction: `impl₂` only needs a uniform 0-bound step. -/
 theorem IsTotalQueryBound.simulateQ_run_add_inl_of_step
     {ι₁ ι₂ ι' : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {spec' : OracleSpec ι'} [IsUniformSpec spec']
+    {spec' : OracleSpec ι'}
       {σ : Type u}
     {impl₁ : QueryImpl spec₁ (StateT σ (OracleComp spec'))}
     {impl₂ : QueryImpl spec₂ (StateT σ (OracleComp spec'))}
@@ -702,7 +701,7 @@ theorem IsTotalQueryBound.simulateQ_run_add_inl_of_step
 interaction: `impl₁` only needs a uniform 0-bound step. -/
 theorem IsTotalQueryBound.simulateQ_run_add_inr_of_step
     {ι₁ ι₂ ι' : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-    {spec' : OracleSpec ι'} [IsUniformSpec spec']
+    {spec' : OracleSpec ι'}
       {σ : Type u}
     {impl₁ : QueryImpl spec₁ (StateT σ (OracleComp spec'))}
     {impl₂ : QueryImpl spec₂ (StateT σ (OracleComp spec'))}

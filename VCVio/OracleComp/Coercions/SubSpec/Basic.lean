@@ -165,6 +165,13 @@ end OracleSpec
 
 namespace OracleComp
 
+/-- Lifting a primitive query through a signature inclusion first translates the query and
+then inserts it into the target free program. -/
+lemma liftM_eq_liftM_liftM [MonadLiftT (OracleQuery spec) (OracleQuery superSpec)]
+    (q : OracleQuery spec α) :
+    (liftM q : OracleComp superSpec α) =
+      liftM (liftM q : OracleQuery superSpec α) := rfl
+
 section liftComp
 
 /-- Lift a computation from `spec` to `superSpec` using a `SubSpec` instance on queries.

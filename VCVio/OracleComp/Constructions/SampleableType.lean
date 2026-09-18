@@ -433,17 +433,6 @@ lemma probEvent_uniformSample_eq_query [∀ i, SampleableType (spec.Range i)]
       Pr[p | (spec.query t : OracleComp spec (spec.Range t))] := by
   rw [probEvent_def, probEvent_def, evalSPMF_uniformSample_eq_query]
 
-/-- Given that the output type of all oracles has a `SampleableType` instance, replace all queries
-with uniformly random responses by calling the corresponding `uniformSample` at each query. -/
-def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
-    QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
-
-/-- A uniformly sampled implementation answers each query with the uniform sampler for
-that query's response type. -/
-@[simp]
-lemma uniformSampleImpl_apply [∀ i, SampleableType (spec.Range i)] (t : spec.Domain) :
-    uniformSampleImpl (spec := spec) t = $ᵗ spec.Range t := rfl
-
 namespace uniformSampleImpl
 
 variable [∀ i, SampleableType (spec.Range i)]
@@ -467,18 +456,6 @@ lemma probEvent_simulateQ [IsUniformSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Pr[ p | simulateQ uniformSampleImpl oa] = Pr[ p | oa] := by
   simp only [probEvent_eq_tsum_indicator, probOutput_simulateQ]
-
-@[simp]
-lemma support_simulateQ [IsUniformSpec spec] {α : Type}
-    (oa : OracleComp spec α) :
-    support (simulateQ uniformSampleImpl oa) = support oa :=
-  Set.ext fun x => mem_support_iff_of_evalSPMF_eq (evalSPMF_simulateQ oa) x
-
-@[simp]
-lemma finSupport_simulateQ [IsUniformSpec spec] {α : Type}
-    [DecidableEq α] (oa : OracleComp spec α) :
-    finSupport (simulateQ uniformSampleImpl oa) = finSupport oa := by
-  simp [finSupport_eq_iff_support_eq_coe]
 
 end uniformSampleImpl
 

@@ -6,6 +6,8 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Enforcement Oracle
@@ -47,7 +49,7 @@ def OracleSpec.enforceOracle [DecidableEq ι] [spec.Inhabited] :
 
 namespace enforceOracle
 
-variable [DecidableEq ι] [IsUniformSpec spec]
+variable [DecidableEq ι] [spec.Inhabited]
 
 @[simp]
 lemma run_apply (t : ι) (budget : ι → ℕ) :
@@ -67,51 +69,48 @@ theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
   | query_bind t mx ih =>
     rw [isPerIndexQueryBound_query_bind_iff] at h
     obtain ⟨hpos, hcont⟩ := h
-    simp only [simulateQ_query_bind]
-    change Prod.fst <$> ((spec.enforceOracle t).run qb >>=
-      fun p => (simulateQ enforceOracle (mx p.1)).run p.2) = liftM (query t) >>= mx
-    rw [run_apply, ite_eq_left hpos]
+    rw [run_simulateQ_query_bind (so := spec.enforceOracle) t mx qb,
+      run_apply, ite_eq_left hpos]
     simp only [monad_norm, Function.comp]
     exact bind_congr fun u => by
       simpa only [map_eq_bind_pure_comp] using ih u (hcont u)
 
 section Probability
 
-/-- For a computation that is structurally within budget, the budget check in the
-counting semantics is redundant on the support. -/
-theorem probEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}
-    (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :
-    Pr[ fun z => p z.1 ∧ z.2 ≤ qb | countingOracle.simulate oa 0] = Pr[ p | oa] := by
-  calc
-    Pr[ fun z => p z.1 ∧ z.2 ≤ qb | countingOracle.simulate oa 0]
-      = Pr[ fun z => p z.1 | countingOracle.simulate oa 0] := by
-          refine probEvent_congr' (oa := countingOracle.simulate oa 0)
-            (oa' := countingOracle.simulate oa 0) ?_ rfl
-          exact fun z hz => and_iff_left (h.counting_bounded hz)
-    _ = Pr[ p | oa] := by
-        rw [countingOracle.simulate]
-        simp only [zero_add]
-        rw [show (Prod.map id fun x : QueryCount ι => x) = id from rfl, id_map,
-          show (fun z : α × QueryCount ι => p z.1) = p ∘ Prod.fst from rfl, ← probEvent_map,
-          AddWriterT.fst_map_runAdd, countingOracle.fst_map_run_simulateQ]
+variable {ι : Type} {spec : OracleSpec ι} {α : Type}
+  [DecidableEq ι] [spec.Inhabited]
+  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [IsMeasureSpec spec]
 
-/-- Penalty characterization under a structural query bound: the probability of an
-event together with staying within budget under counting equals the event probability
-under enforcement. -/
-theorem probEvent_counting_budget_eq_enforce {oa : OracleComp spec α} {qb : ι → ℕ}
+omit [spec.Inhabited] in
+/-- A structural query bound makes its budget check redundant in the counting event. -/
+theorem prEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :
-    Pr[ fun z => p z.1 ∧ z.2 ≤ qb | countingOracle.simulate oa 0] =
-      Pr[ p | Prod.fst <$> (simulateQ enforceOracle oa).run qb] := by
+    Pr{let z ← countingOracle.simulate oa 0}[p z.1 ∧ z.2 ≤ qb] =
+      Pr{let x ← oa}[p x] := by
+  rw [OracleComp.prEvent_congr_of_support (countingOracle.simulate oa 0)
+    (fun z => p z.1 ∧ z.2 ≤ qb) (fun z => p z.1)
+    (fun z hz => and_iff_left (h.counting_bounded hz))]
+  have hproj : Prod.fst <$> countingOracle.simulate oa 0 = oa := by
+    simp [countingOracle.simulate]
+  exact (prEvent_map (m := OracleComp spec) (countingOracle.simulate oa 0)
+    Prod.fst p).symm.trans
+      (congrArg (fun comp : OracleComp spec α => Pr{let x ← comp}[p x]) hproj)
+
+/-- Under a structural query bound, the counting event agrees with the enforcement event. -/
+theorem prEvent_counting_budget_eq_enforce {oa : OracleComp spec α} {qb : ι → ℕ}
+    (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :
+    Pr{let z ← countingOracle.simulate oa 0}[p z.1 ∧ z.2 ≤ qb] =
+      Pr{let x ← Prod.fst <$> (simulateQ enforceOracle oa).run qb}[p x] := by
   rw [fst_map_run_simulateQ h]
-  exact probEvent_counting_budget_eq h p
+  exact prEvent_counting_budget_eq h p
 
-/-- EasyCrypt-style penalty inequality, obtained here as an equality under the
-structural boundedness hypothesis. -/
-theorem probEvent_counting_budget_le_enforce {oa : OracleComp spec α} {qb : ι → ℕ}
+/-- Structural boundedness implies the counting-to-enforcement event inequality. -/
+theorem prEvent_counting_budget_le_enforce {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :
-    Pr[ fun z => p z.1 ∧ z.2 ≤ qb | countingOracle.simulate oa 0] ≤
-      Pr[ p | Prod.fst <$> (simulateQ enforceOracle oa).run qb] := by
-  rw [probEvent_counting_budget_eq_enforce h p]
+    Pr{let z ← countingOracle.simulate oa 0}[p z.1 ∧ z.2 ≤ qb] ≤
+      Pr{let x ← Prod.fst <$> (simulateQ enforceOracle oa).run qb}[p x] := by
+  rw [prEvent_counting_budget_eq_enforce h p]
 
 end Probability
 
