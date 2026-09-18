@@ -152,3 +152,17 @@ The framework machinery exercised: `cachingOracle`, `loggingOracle`,
 `IsTotalQueryBound`, the birthday bound
 `probEvent_cacheCollision_le_birthday_total_tight`, and the identical-until-bad
 TVD bound `tvDist_simulateQ_le_probEvent_bad_dist`.
+
+## Fischlin extraction and log inspections
+
+`VCVio/CryptoFoundations/Fischlin/ExtractionGuarantee.lean` retains the actual verifier verdict
+and the optional witness from `onlineExtract` in one run. The verifier continues the prover's
+random-oracle cache, while extraction uses only the log captured before verification. The
+single-proof soundness bound therefore gives an acceptance-minus-error lower bound for that
+named extractor at a fixed statement and message.
+
+`ExtractionCost.lean` instruments the same nested log search. Erasing the counter recovers the
+actual extractor as a program equality; each execution inspects at most `ρ * log.length` records.
+Empty logs and zero repetitions cost zero, and a first-record match in a single repetition stops
+after one inspection. Record comparisons and sigma verification have separate computational cost.
+`VCVioTest/FischlinExtraction.lean` exercises these laws through ordinary imports.
