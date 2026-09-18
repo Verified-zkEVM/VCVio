@@ -99,6 +99,16 @@ theorem prEvent_congr
   have hpq : p = q := funext fun x ↦ propext (h x)
   rw [hpq]
 
+/-- Measurable predicates agreeing almost everywhere have equal event probabilities. -/
+theorem prEvent_congr_ae
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] (mx : m α) (p q : α → Prop)
+    (hp : Measurable p) (hq : Measurable q) (h : ∀ᵐ x ∂𝒟[mx], p x ↔ q x) :
+    Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
+  rw [prEvent_eq_evalDist mx p hp, prEvent_eq_evalDist mx q hq]
+  exact measure_congr (h.mono fun _ hx ↦ propext hx)
+
 /-- An event that never occurs has probability zero. -/
 theorem prEvent_eq_zero_of_forall_not
     {m : Type → Type v} [Monad m] [LawfulMonad m]
@@ -113,6 +123,16 @@ theorem prEvent_eq_zero_of_forall_not
     _ = 0 := by
       rw [prEvent_eq_evalDist_of_discrete]
       simp
+
+/-- Almost-everywhere implication bounds probabilities of measurable events. -/
+theorem prEvent_mono_ae
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} [MeasurableSpace α] (mx : m α) (p q : α → Prop)
+    (hp : Measurable p) (hq : Measurable q) (hpq : ∀ᵐ x ∂𝒟[mx], p x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
+  rw [prEvent_eq_evalDist mx p hp, prEvent_eq_evalDist mx q hq]
+  exact measure_mono_ae hpq
 
 /-- Implication between events bounds their probabilities on a discrete output space. -/
 theorem prEvent_mono_of_discrete
@@ -132,8 +152,11 @@ theorem prEvent_mono
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
     Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
-  let : MeasurableSpace α := ⊤
-  exact prEvent_mono_of_discrete mx p q hpq
+  let obs : α → Prop × Prop := fun x ↦ (p x, q x)
+  let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
+  have hobs : Measurable obs := comap_measurable obs
+  exact prEvent_mono_ae mx p q (measurable_fst.comp hobs) (measurable_snd.comp hobs)
+    (Filter.Eventually.of_forall hpq)
 
 /-- An observed bind integrates the event probability of each measurable continuation.
 Only the common draw needs a selected measurable space; the continuation is observed in `Prop`.
@@ -156,6 +179,19 @@ theorem prEvent_bind_eq_lintegral_of_discrete
     Pr{let y ← mx >>= f}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx] :=
   prEvent_bind_eq_lintegral mx f p Measurable.of_discrete
 
+/-- AE equality of measurable observed continuation probabilities gives equality after a draw. -/
+theorem prEvent_bind_congr_ae
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β γ : Type} [MeasurableSpace α] (mx : m α) (f : α → m β) (g : α → m γ)
+    (p : β → Prop) (q : γ → Prop)
+    (hf : Measurable fun x ↦ 𝒟[do let y ← f x; return p y])
+    (hg : Measurable fun x ↦ 𝒟[do let z ← g x; return q z])
+    (h : ∀ᵐ x ∂𝒟[mx], Pr{ let y ← f x}[p y] = Pr{ let z ← g x}[q z]) :
+    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
+  rw [prEvent_bind_eq_lintegral mx f p hf, prEvent_bind_eq_lintegral mx g q hg]
+  exact lintegral_congr_ae h
+
 /-- Pointwise equality of observed continuation probabilities gives equality after a common
 draw. Neither the draw nor the continuation outputs need a measurable-space argument. -/
 theorem prEvent_bind_congr
@@ -166,9 +202,12 @@ theorem prEvent_bind_congr
     (h : ∀ x,
       Pr{ let y ← f x}[p y] = Pr{ let z ← g x}[q z]) :
     Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
-  exact lintegral_congr h
+  let obs : α → Measure Prop × Measure Prop := fun x ↦
+    (𝒟[do let y ← f x; return p y], 𝒟[do let z ← g x; return q z])
+  let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
+  have hobs : Measurable obs := comap_measurable obs
+  exact prEvent_bind_congr_ae mx f g p q (measurable_fst.comp hobs)
+    (measurable_snd.comp hobs) (Filter.Eventually.of_forall h)
 
 /-- An output map composes the final event with that map. -/
 @[grind norm]

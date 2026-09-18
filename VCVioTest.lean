@@ -19,6 +19,7 @@ public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
 public import VCVioTest.EvalDist.IndependentDraws
 public import VCVioTest.EvalDist.MeasureBridge
+public import VCVioTest.EvalDist.MeasureIntegration
 public import VCVioTest.EvalDist.ProbabilityBounds
 public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.SeqMeasure
