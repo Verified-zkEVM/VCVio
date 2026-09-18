@@ -19,7 +19,9 @@ public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.CmaToNma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.ExtractionCost
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.KnowledgeExtraction
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Reductions
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
@@ -39,6 +41,10 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
 public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.CostAccounting
 public import VCVio.CryptoFoundations.Fischlin.Defs
+public import VCVio.CryptoFoundations.Fischlin.ExpectedCost
+public import VCVio.CryptoFoundations.Fischlin.ExpectedSigningCost
+public import VCVio.CryptoFoundations.Fischlin.ExtractionCost
+public import VCVio.CryptoFoundations.Fischlin.ExtractionGuarantee
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Induction
@@ -134,6 +140,7 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
+public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.RoundByRound
 public import VCVio.CryptoFoundations.SecExp
 public import VCVio.CryptoFoundations.SecExp.Measure

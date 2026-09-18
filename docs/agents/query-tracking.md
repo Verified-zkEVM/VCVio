@@ -41,6 +41,14 @@ The structural `QueryCache.log_consistent_append`, `log_consistent_cacheQuery_ap
 in `CachingLoggingOracle.lean` transport cache/log hypotheses without probability assumptions
 or decidable equality on responses.
 
+## Cache carrier
+
+`QueryCache spec` has its own carrier and extension order: every recorded answer must
+remain identical when moving upward in that order. Applying a cache still performs lookup.
+Use `QueryCache.ofFn` to construct one from a dependent optional function and `.toFn` to
+extract that function. The round-trip, extensionality, lookup, update, and sum-projection
+laws form the public API. Ordinary functions into `Option` retain their pointwise order.
+
 ## Per-index counting
 
 `QueryCount ι` is an ordinary function `ι → ℕ`, with the standard pointwise instances.
@@ -95,6 +103,20 @@ The ordinary-import tests in
 also cover adaptive and repeated queries, disjoint domains, and structural routing in `Type 1`.
 The measure laws use the existing table-sampling API in `Type 0`; arbitrary preloaded caches
 require their own consistency condition.
+
+## Association-list cache representation
+
+`ListCache.lean` supplies `QueryImpl.ListCache.handler` for an executable association-list
+cache. It uses `List.lookup`, so the first occurrence of a key wins even when the initial
+list contains duplicates. Hits do not run the underlying draw; misses prepend one binding.
+`local_projection` preserves the reply and decoded cache after each query, and
+`adaptive_projection` lifts that equality through every adaptive client in any lawful monad.
+
+`Examples/PRFTagReader/CacheRepresentation.lean` closes the named PRF reductions with this
+handler and retains their bad-event state through `QueryImpl.extendState`. Its
+`PRFTagReader.CachedPRF.preserved_bound` proves the same three-loss bound for the bounded FIFO
+experiment, from empty list caches. The equality concerns replies and retained state; it makes
+no running-time claim about association-list lookup or the network schedule.
 
 ## Instrumentation Pattern: `preInsert` / `postInsert`
 
@@ -479,3 +501,18 @@ When adding a new example or construction:
    rather than forcing a coarse worst-case expectation bound.
 
 This keeps the theorem layer mathematically honest and makes the public API easier to read.
+
+## Exact Fischlin signing costs
+
+`VCVio/CryptoFoundations/Fischlin/ExpectedCost.lean` instruments the actual zero-stopping
+search with `HasQuery.Program.withUnitCost`, retaining its output, additive counter, and final
+random-oracle cache. A duplicate-free list of `n` challenges, initially fresh for every response,
+has expected hash calls `∑ j < n, (1 - 2⁻ᵇ)^j`. Public execution equations distinguish fresh
+sampling from cache hits: both count a call, while a hit preserves its cached answer.
+
+`ExpectedSigningCost.lean` composes the actual searches at distinct repetition tags and proves
+the honest signer's exact expectation `ρ * 2ᵇ * (1 - (1 - 2⁻ᵇ)^|Chal|)`. This includes zero
+repetitions and a one-point hash range. The count measures hash calls; prover-local randomness,
+response arithmetic, and cache lookup work have separate costs. Ordinary-import consumers in
+`VCVioTest/FischlinExpectedCost.lean` also check the joint output/count/cache law for repeated
+cached queries with a nonzero answer, where the fresh-search formula's hypotheses do not hold.

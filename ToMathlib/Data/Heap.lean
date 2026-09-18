@@ -10,8 +10,9 @@ public import Mathlib.Logic.Equiv.Sum
 /-!
 # Typed heaps over identifier sets
 
-`Heap Ident` (with `[CellSpec Ident]`) is a dependent function
-`(i : Ident) → CellSpec.type i`. It models package state as a collection of
+`Heap Ident` (with `[CellSpec Ident]`) packages a dependent function
+`(i : Ident) → CellSpec.type i` in a distinct carrier, so cell defaults do not change
+the default instance of an unrelated function type. It models package state as a collection of
 named, typed cells indexed by an identifier set `Ident`.
 
 Composition uses disjoint sums of identifier sets. A heap over `α ⊕ β` splits
@@ -72,15 +73,38 @@ attribute [reducible] CellSpec.type CellSpec.default
 
 `Heap Ident` is the type of states: one cell-value per identifier. Lives in
 `Type max u v`. -/
-abbrev Heap (Ident : Type u) [CellSpec.{u, v} Ident] : Type max u v :=
-  (i : Ident) → CellSpec.type i
+structure Heap (Ident : Type u) [CellSpec.{u, v} Ident] : Type max u v where
+  /-- The value stored at each typed cell identifier. -/
+  toFn : (i : Ident) → CellSpec.type i
 
 namespace Heap
 
 variable {Ident : Type u} [CellSpec.{u, v} Ident]
 
+instance : CoeFun (Heap Ident) (fun _ => (i : Ident) → CellSpec.type i) := ⟨Heap.toFn⟩
+
+/-- Construct a heap from its dependent cell values. -/
+def ofFn (f : (i : Ident) → CellSpec.type i) : Heap Ident := ⟨f⟩
+
+@[simp]
+theorem ofFn_apply (f : (i : Ident) → CellSpec.type i) (i : Ident) : ofFn f i = f i := rfl
+
+@[simp]
+theorem toFn_ofFn (f : (i : Ident) → CellSpec.type i) : (ofFn f).toFn = f := rfl
+
+@[simp]
+theorem ofFn_toFn (h : Heap Ident) : ofFn h.toFn = h := rfl
+
+/-- Heaps with identical values in every cell are equal. -/
+@[ext]
+protected theorem ext {h₁ h₂ : Heap Ident} (h : ∀ i, h₁ i = h₂ i) : h₁ = h₂ := by
+  cases h₁
+  cases h₂
+  congr 1
+  exact funext h
+
 /-- The default heap: every cell holds its `CellSpec`-prescribed default. -/
-def empty : Heap Ident := fun i => CellSpec.default i
+def empty : Heap Ident := ofFn (fun i => CellSpec.default i)
 
 instance : Inhabited (Heap Ident) where
   default := empty
@@ -92,7 +116,7 @@ def get (h : Heap Ident) (i : Ident) : CellSpec.type i := h i
 /-- Write `v : CellSpec.type i` to cell `i`, leaving all other cells
 unchanged. -/
 def update [DecidableEq Ident] (h : Heap Ident) (i : Ident) (v : CellSpec.type i) :
-    Heap Ident := Function.update h i v
+    Heap Ident := ofFn (Function.update h i v)
 
 @[simp]
 theorem get_empty (i : Ident) : (empty : Heap Ident).get i = CellSpec.default i :=
@@ -110,13 +134,17 @@ theorem get_update_of_ne [DecidableEq Ident] {h : Heap Ident} {i j : Ident}
 
 @[simp]
 theorem update_eq_self [DecidableEq Ident] (h : Heap Ident) (i : Ident) :
-    h.update i (h.get i) = h :=
-  Function.update_eq_self ..
+    h.update i (h.get i) = h := by
+  apply Heap.ext
+  intro j
+  exact congrFun (Function.update_eq_self i h.toFn) j
 
 @[simp]
 theorem update_idem [DecidableEq Ident] (h : Heap Ident) (i : Ident)
-    (v w : CellSpec.type i) : (h.update i v).update i w = h.update i w :=
-  Function.update_idem ..
+    (v w : CellSpec.type i) : (h.update i v).update i w = h.update i w := by
+  apply Heap.ext
+  intro j
+  exact congrFun (Function.update_idem v w h.toFn) j
 
 end Heap
 
@@ -154,11 +182,11 @@ case-analysis on the identifier and are `rfl`-definitional after `cases`.
 -/
 def split (α β : Type u) [CellSpec.{u, v} α] [CellSpec.{u, v} β] :
     Heap (α ⊕ β) ≃ Heap α × Heap β where
-  toFun h := (fun a => h (.inl a), fun b => h (.inr b))
-  invFun p := fun i => match i with
+  toFun h := (ofFn (fun a => h (.inl a)), ofFn (fun b => h (.inr b)))
+  invFun p := ofFn fun i => match i with
     | .inl a => p.1 a
     | .inr b => p.2 b
-  left_inv h := funext fun i => by cases i <;> rfl
+  left_inv h := Heap.ext fun i => by cases i <;> rfl
   right_inv := fun ⟨_, _⟩ => rfl
 
 @[simp]
@@ -191,12 +219,14 @@ theorem split_update_inl {α β : Type u}
     split α β (h.update (.inl a) v) =
       ((split α β h).1.update a v, (split α β h).2) := by
   apply Prod.ext
-  · funext i
+  · apply Heap.ext
+    intro i
     by_cases hi : i = a
     · subst hi
       simp [split, Heap.update]
     · simp [split, Heap.update, hi]
-  · funext i
+  · apply Heap.ext
+    intro i
     simp [split, Heap.update]
 
 /-- Splitting after an update on the right identifier set updates only the
@@ -208,9 +238,11 @@ theorem split_update_inr {α β : Type u}
     split α β (h.update (.inr b) v) =
       ((split α β h).1, (split α β h).2.update b v) := by
   apply Prod.ext
-  · funext i
+  · apply Heap.ext
+    intro i
     simp [split, Heap.update]
-  · funext i
+  · apply Heap.ext
+    intro i
     by_cases hi : i = b
     · subst hi
       simp [split, Heap.update]
@@ -224,7 +256,8 @@ theorem split_symm_update_inl {α β : Type u}
     (p : Heap α × Heap β) (a : α) (v : CellSpec.type a) :
     (split α β).symm (p.1.update a v, p.2) =
       ((split α β).symm p).update (.inl a) v := by
-  funext i
+  apply Heap.ext
+  intro i
   cases i with
   | inl a' =>
       by_cases ha' : a' = a
@@ -242,7 +275,8 @@ theorem split_symm_update_inr {α β : Type u}
     (p : Heap α × Heap β) (b : β) (v : CellSpec.type b) :
     (split α β).symm (p.1, p.2.update b v) =
       ((split α β).symm p).update (.inr b) v := by
-  funext i
+  apply Heap.ext
+  intro i
   cases i with
   | inl a =>
       simp [split, Heap.update]

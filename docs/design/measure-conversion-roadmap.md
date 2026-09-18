@@ -64,6 +64,22 @@ The stateful random-oracle abort premise stays explicit; separately reset statel
 not establish it. Regressions cover generic monads without attachment, continuous kernel
 families, and a failing handler whose zero query-tail mass differs from the zeroth abort power.
 
+## Independent-product checkpoint
+
+`EvalDist/IndepProduct` is a native event/reachability owner exported by `VCVio.Native`.
+Finite product measures, observable products, lossy coordinate marginals and integrals, and
+measurable product families use Mathlib's `Measure.pi` and kernel products. Coordinate event
+equality needs full success mass only in the other factors. Reachability elimination uses
+core `LawfulMonadAttach` without an exactness mixin. Event factorization and coordinate
+observations require no measurable space on the original payloads.
+
+The two Fischlin product callers use these public laws at their existing scalar observation
+boundaries. Their surrounding scalar theorem families remain a separate conversion slice.
+The independent-product owner imports no retired probability backend or compatibility class;
+its regression module checks that boundary along with real parameter/output spaces and loss
+from an unobserved factor. This checkpoint targets `main` independently of the expected-cost
+and abort-analysis conversion PRs.
+
 ## Chosen-space integration checkpoint
 
 Native tower and map integration admit AE-measurable valuations under the resulting measure.
@@ -90,7 +106,8 @@ Gaussian operation, arbitrary AE valuations, lossy real results, and hidden outp
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
-Shared integration is the first checkpoint above. Continue with independently validated PRs:
+Shared integration is published in #758; quantitative WP in #761; native TV composition in #762.
+Continue with independently validated PRs:
 
 1. Finish quantitative Hoare/WP, simulation/lifting, and affected finite-counting proofs through
    upstream operation specifications and core `Std.Internal.Do`.
@@ -106,8 +123,8 @@ Shared integration is the first checkpoint above. Continue with independently va
 7. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
    declarations.
 
-Reuse independent products in #756 and preserve exact expected signing costs in #752 and Schnorr
-transform guarantees in #755. These feature algorithms are not duplicated by conversions.
+Independent products (#756), exact expected signing costs (#752), and reader cache representation
+(#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.
 Record each published checkpoint and its remaining compatibility consumers here and in #532.
 
 ## Subsequent campaign work
@@ -152,6 +169,10 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Continuous free-operation tower | `FreeM.lintegral_evalDist_liftBind`, with explicit AE continuation and valuation hypotheses. |
 | Every possible execution satisfies an invariant | Operational support or indexed reachability; probability interpretation is unnecessary. |
 | Stateful composition | Joint result/state kernels; `StateT.evalDistKernel_bind` threads the resulting state. |
+| Independent joint events or tuple equality | `prEvent_forall_coord_mOfFn`/`mPi` and `prEvent_eq_mOfFn`/`mPi`, with no payload measurable-space premise. |
+| Coordinate observation or expectation | `evalDist_map_eval_mOfFn_eq_smul`/`mPi_eq_smul` and `lintegral_evalDist_mPi_coord_eq_mul`; retain other factors' success masses. |
+| Independent observable family | `Fin.mOfFn_map`/`Fintype.mPi_map`, then `evalDist_map_coord_mOfFn`/`mPi` on the chosen observation space. |
+| Parameterized independent family | `measurable_evalDist_mOfFn`/`mPi`, then `evalDistKernel` on the chosen parameter space. |
 | Relational sequencing | Explicit measurable coupling families, or justified countable/AE selection rules already in the native coupling API. |
 | Finite or countable probability calculation | Mathlib sum/integral identities under the actual concentration and measurability assumptions. |
 
