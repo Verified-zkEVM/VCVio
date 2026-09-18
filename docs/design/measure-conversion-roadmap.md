@@ -29,6 +29,24 @@ The scalar tracing/counting/logging corollaries remain in their existing compati
 until their clients migrate. Native owners do not import those modules. This is an import
 boundary, not a conversion through the scalar backend.
 
+## Expected cost checkpoint
+
+WriterCost, QueryCost, and CostModel now use the chosen cost space throughout, with native
+Measure integrals, measurable output-indexed cost functions, and actual cost-marginal
+probability certificates. The structural instrumentation API remains monad-parametric.
+Pathwise bounds use lawful attachment to imply AE bounds for measurable observations; no
+probability compatibility class is involved. Exact cost needs neither an order on costs nor a
+monotone valuation. Structural constant-cost laws also need no attachment. Failure contributes
+zero, and constant reachable valuations retain successful mass. Markov bounds observe the cost
+marginal without measuring discarded outputs. Algebraic writer tags carry their underlying measurable space.
+
+Fiat–Shamir, aborting Fiat–Shamir, Fischlin, and the FO transforms use these cost rules. Their
+other security, retry, and probability theorem families remain separate conversions.
+A generic Measure tail-sum theorem applies to Nat observables on arbitrary spaces; query counts
+specialize it. Measurably parameterized cost measures use `evalDistKernel`, and their expected
+valuations are measurable. Native regressions cover continuous cost/output spaces, discarded
+outputs without measurable spaces, and vacuous exact cost on a failed computation.
+
 ## Subsequent PRs
 
 | Slice | Scope and API checkpoint |
@@ -57,6 +75,8 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Common-prefix upper bound | `evalDist_bind_apply_mono` under measurable continuation kernels, or `OracleComp.evalDist_bind_apply_mono_of_support` for oracle reachability premises. |
 | Common-prefix lower bound | `le_evalDist_bind_apply` under AE premises and losslessness, or `OracleComp.le_evalDist_bind_apply_of_support` for reachable continuation bounds. |
 | Unchanged instrumented output | Structural projection equality, followed by measure observation; final writer/state marginals use measurable projections. |
+| Expected cost | Cost-marginal Lebesgue integral on the chosen cost space; measurable valuations and cost functions, native AE/pathwise bridges, and Mathlib probability certificates for lower/exact bounds. |
+| Natural-valued expectation | `MeasureTheory.lintegral_coe_nat_eq_tsum`; countability applies to the observable range. |
 | Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
 | Every possible execution satisfies an invariant | Operational support or indexed reachability; probability interpretation is unnecessary. |
 | Stateful composition | Joint result/state kernels; `StateT.evalDistKernel_bind` threads the resulting state. |
