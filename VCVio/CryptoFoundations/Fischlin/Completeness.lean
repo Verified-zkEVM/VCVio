@@ -1135,6 +1135,7 @@ private lemma sign_verify_run_eq (pk : Stmt) (sk : Wit) (msg : M)
     refine congrArg (fun n => decide (n ≤ S))
       (congrArg (fun g => List.foldl g 0 (List.finRange ρ)) (funext fun acc => funext fun i => ?_))
     refine congrArg (acc + ·) ?_
+    dsimp only [Prod.snd]
     rw [hreads i, hhashDef]
     cases h : bests i with
     | none => exact absurd (h ▸ hbest_some i) (by simp)
