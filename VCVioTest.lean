@@ -50,6 +50,7 @@ public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PRFCacheRepresentation
 public import VCVioTest.PRFNetworkKernel
+public import VCVioTest.PRFNetworkUnlinkability
 public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics

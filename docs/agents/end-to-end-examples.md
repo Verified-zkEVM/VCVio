@@ -112,3 +112,31 @@ The framework machinery exercised: `cachingOracle`, `loggingOracle`,
 `IsTotalQueryBound`, the birthday bound
 `probEvent_cacheCollision_le_birthday_total_tight`, and the identical-until-bad
 TVD bound `tvDist_simulateQ_le_probEvent_bad_dist`.
+
+## PRF Tag/Reader Network Unlinkability
+
+[`Examples/PRFTagReader/NetworkUnlinkability.lean`](../../Examples/PRFTagReader/NetworkUnlinkability.lean)
+connects the actual bounded FIFO packet run to the named multiple- and single-session PRF
+reductions. Its ideal services use the association-list cache from
+[`CacheRepresentation.lean`](../../Examples/PRFTagReader/CacheRepresentation.lean), including
+the instrumented service's retained collision flag.
+
+`NetworkUnlinkability.full_unlinkability` bounds the absolute real-network verdict gap by the
+two named PRF advantages, for each output polarity, and four explicit losses:
+
+- session collisions: `sessionsPerTag² · |TagId| / |Nonce|`;
+- multiple-session reader cells: `qReader · |TagId| / |Digest|`;
+- reader/tag nonce aliasing: `qReader · qTag / |Nonce|`;
+- single-session reader cells: `qReader · |TagId| · sessionsPerTag / |Digest|`.
+
+`named_reduction_budgets` gives the actual distinguishers' PRF-query bounds:
+`qTag + qReader · |TagId|` and `qTag + qReader · |TagId| · sessionsPerTag`, for both
+polarities. These are pathwise oracle-query counts, not machine-time or PPT certificates.
+The FIFO service model and its derived schedule remain those of `Network.lean`.
+The free-program uniform-sampling model supplies probability measures for the real runs;
+there is no additional losslessness assumption.
+
+The PRF-real faithfulness lemmas in `PRFReductions/Reductions.lean` expose equality of the
+whole programs. `multipleBad_bad_le_sessionCollisionBound` takes a native event bound on
+the nonce sampler and bounds the measure of the final Boolean collision observation.
+The underlying legacy collision induction remains at its existing compatibility boundary.

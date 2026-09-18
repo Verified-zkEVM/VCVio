@@ -54,6 +54,7 @@ public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 public import Examples.PRFTagReader.MultipleToHybrid.Setup
 public import Examples.PRFTagReader.Network
 public import Examples.PRFTagReader.Network.Kernel
+public import Examples.PRFTagReader.NetworkUnlinkability
 public import Examples.PRFTagReader.PRFReductions
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
 public import Examples.PRFTagReader.PRFReductions.Reductions

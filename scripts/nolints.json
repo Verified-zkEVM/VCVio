@@ -1840,8 +1840,6 @@
  ["usesRetiredProbability", "PRFTagReader.neverFail_unlinkMultipleQueryImpl_run"],
  ["usesRetiredProbability", "PRFTagReader.neverFail_unlinkSingleQueryImpl_run"],
  ["usesRetiredProbability", "PRFTagReader.prfRealExp_authToPRFReduction_eq_authExp"],
- ["usesRetiredProbability", "PRFTagReader.prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp"],
- ["usesRetiredProbability", "PRFTagReader.prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp"],
  ["usesRetiredProbability", "PRFTagReader.probEvent_cacheBadReader_uniformSample_le"],
  ["usesRetiredProbability", "PRFTagReader.probEvent_unlinkBad_bad_eq_one_of_bad"],
  ["usesRetiredProbability", "PRFTagReader.probFailure_unlinkMultipleExp_eq_zero"],
