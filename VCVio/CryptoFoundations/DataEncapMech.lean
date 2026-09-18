@@ -5,8 +5,9 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
-public import VCVio.OracleComp.ProbComp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbCompLift
 
 /-!

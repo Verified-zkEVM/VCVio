@@ -29,18 +29,6 @@ variable {α β γ : Type u} {m : Type u → Type v} [Monad m]
 open ENNReal
 
 @[grind =]
-lemma support_map [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
-    (f : α → β) (mx : m α) :
-    support (f <$> mx) = f '' support mx := by
-  exact MonadAttach.support_map f mx
-
-@[simp, grind =]
-lemma finSupport_map [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m] [HasEvalFinset m]
-    [DecidableEq α] [DecidableEq β]
-    (f : α → β) (mx : m α) : finSupport (f <$> mx) = (finSupport mx).image f := by
-  grind [map_eq_bind_pure_comp]
-
-@[grind =]
 lemma evalSPMF_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
     (mx : m α) (f : α → β) :
     𝒮[f <$> mx] = f <$> (𝒮[mx]) := by simp [monad_norm]

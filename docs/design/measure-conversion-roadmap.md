@@ -1,0 +1,70 @@
+# Measure and kernel conversion checkpoints
+
+Mathlib measures are the probability semantics. Closed successful computations denote
+subprobability measures; measurably parameterized computations denote kernels. Executable finite
+samplers retain their algorithms and carry measure certificates. Operational reachability is a
+separate structural notion.
+
+Current upstream already supplies the native sampling, unary/relational WP, measure-coupling,
+stateful security, and `Std.Internal.Do` foundations. Continue from those owners rather than
+introducing competing assertion carriers, coupling structures, or handler representations.
+
+## First integrated conversion
+
+The initial slice moves structural handler composition, instrumentation, tracing, counting,
+logging, finite support, and uniform query implementation into native owners. Cache/programming
+handlers, query bounds, enforcement, state invariants/projections, and the signature/MAC/KEM/DEM
+definition layer use them directly. `VCVio.Native` exports this surface, and `VCVioTest.Native`
+rejects imports of PMF/SPMF and retired compatibility classes.
+
+Core `MonadAttach` and the native measure map law turn pathwise predicates into AE predicates
+on the chosen result space, provided the observed event is measurable. This needs neither a
+discrete result space nor a probability compatibility class. Shared event bounds after a common
+oracle computation need no measurable structure on the unobserved intermediate result. Their proofs induct over actual query answers, using Mathlib
+bind and Lebesgue integration. Stateful kernel bind retains the joint result and final state.
+Regression proofs use real-valued states with their usual measurable structure and arbitrary
+intermediate result types without measurable-space instances.
+
+The scalar tracing/counting/logging corollaries remain in their existing compatibility modules
+until their clients migrate. Native owners do not import those modules. This is an import
+boundary, not a conversion through the scalar backend.
+
+## Subsequent PRs
+
+| Slice | Scope and API checkpoint |
+|---|---|
+| General measure reasoning | Chosen-space expectation, measurable and AE-measurable composition, native finite/countable sum bridges, concentration and full-support certificates; compiled recipes and representative client proofs. |
+| Tracking and constructions | Writer/query expected costs, tails and stopping rules, remaining simulation and traversal probability families; pathwise bounds imply AE bounds for measurable events. |
+| Program logic | Finish direct core predicate-transformer integration and measurable fixed-program WP; quantitative and relational rules use native measures and explicit measurable joint kernels. |
+| Security and games | Convert reductions, games, advantages, asymptotic packaging, and necessary lattice/hash/example clients by theorem family. |
+| Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
+| Forking | Seeded and replay forking after their tracking and relational prerequisites pass validation. |
+| Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
+| Fischlin | Convert cost, completeness, and soundness together with all affected clients. |
+| Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
+
+PRs may cover broad independent theorem families once their shared APIs are established. Validate
+each family before expanding to another subsystem. Each published checkpoint must build all
+proof libraries, pass native import guards, tests, boundary/style/environment checks, and the
+axiom/initialization ratchets. Prune obsolete lint entries; do not add exceptions for conversions.
+
+## Standard proof conversion
+
+| What the proof establishes | Native representation and rule |
+|---|---|
+| Equality of output distributions | Equality of `Measure`; public handler projection equations or `evalDist_bind_congr_of_support`. |
+| Event probability | `Pr{...}[...]`, or measure application to a measurable event; singleton results require measurable singletons. |
+| Common-prefix upper bound | `evalDist_bind_apply_mono` under measurable continuation kernels, or `OracleComp.evalDist_bind_apply_mono_of_support` for oracle reachability premises. |
+| Common-prefix lower bound | `le_evalDist_bind_apply` under AE premises and losslessness, or `OracleComp.le_evalDist_bind_apply_of_support` for reachable continuation bounds. |
+| Unchanged instrumented output | Structural projection equality, followed by measure observation; final writer/state marginals use measurable projections. |
+| Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
+| Every possible execution satisfies an invariant | Operational support or indexed reachability; probability interpretation is unnecessary. |
+| Stateful composition | Joint result/state kernels; `StateT.evalDistKernel_bind` threads the resulting state. |
+| Relational sequencing | Explicit measurable coupling families, or justified countable/AE selection rules already in the native coupling API. |
+| Finite or countable probability calculation | Mathlib sum/integral identities under the actual concentration and measurability assumptions. |
+
+Do not manufacture a discrete measurable space on a general intermediate type to make bind or
+WP elaborate. If a proof repeatedly needs `change`, add a public normalization equation or reuse
+an upstream equation. A hard conversion can reveal a missing measurable-family premise, an
+unjustified support/positive-mass equivalence, discarded state, or an invalid measurable-selection
+argument; repair that mathematical contract before introducing adapters.

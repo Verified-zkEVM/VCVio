@@ -14,6 +14,16 @@ The stack is also intentionally split into:
 - a thin `OracleComp` facade
 - a small `ToMathlib` probability layer for reusable tail-sum facts
 
+The structural instrumentation owners are `Tracing.Core`, `CountingOracle.Core`, and
+`LoggingOracle.Core`. Query bounds, cache/programming handlers, and enforcement import native
+handler machinery; their structural laws need no probability specification. The older tracing,
+counting, and logging module paths additionally export their remaining scalar compatibility
+corollaries. Prefer the native owners or `VCVio.Native` for new proofs.
+
+Enforcement event laws use `Pr{...}[...]` and a chosen `IsMeasureSpec`, with discrete query-answer
+spaces to interpret arbitrary oracle continuations. They do not require uniform sampling or
+discrete result, budget, or state spaces.
+
 `AdaptivePrefix.lean` is separate from the cost semantics above. It owns the probabilistic
 stopping-time argument used when an adaptive prefix and a transcript-dependent suffix share one
 lazy random function. Protocol-specific files should instantiate this theorem rather than copy its
@@ -41,6 +51,23 @@ or decidable equality on responses.
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean` | Generic PMF tail-sum identities used for expected runtime |
+
+## Input Routing and Domain Separation
+
+[`RandomOracle/Routing.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/Routing.lean)
+proves that injective input encodings preserve the full output measure of every adaptive
+client of an initially empty finite random oracle. The eager-table and lazy-cache forms
+share the same structural routing operation. Disjoint injective encodings of two domains
+use Mathlib's `Function.Injective.sumElim` to discharge the routing condition.
+
+[`Examples/ProgramLogic/RandomOracleRouting.lean`](../../Examples/ProgramLogic/RandomOracleRouting.lean)
+shows why the condition matters: comparing distinct Boolean cells accepts with probability
+`1/2`, whereas routing both inputs to one target cell accepts with probability `1`.
+The ordinary-import tests in
+[`VCVioTest/RandomOracleRouting.lean`](../../VCVioTest/RandomOracleRouting.lean)
+also cover adaptive and repeated queries, disjoint domains, and structural routing in `Type 1`.
+The measure laws use the existing table-sampling API in `Type 0`; arbitrary preloaded caches
+require their own consistency condition.
 
 ## Instrumentation Pattern: `preInsert` / `postInsert`
 
