@@ -47,7 +47,7 @@ The API policy is:
 | Probability and transformers | Native Measure/Kernel equations, successful-output mass and structural support are distinct contracts. Retain measurability and probability assumptions explicitly. | pending |
 | Program logic and complexity | Predicate elimination, WP coherence, tactic computation forms and data-indexed certificate instances require consumer checks. Preserve named reductions and resource certificates. | pending |
 | Interaction and runtime | Test shared state, scheduler/handler data, trace observations, fuel and failure through execution equations. | pending |
-| Cryptographic games and conversions | Final-validity problem projections need public laws for HashSig consumers. Preserve whole experiments, reduction names and quantitative losses. | pending |
+| Cryptographic games and conversions | Published constructor/projection equations for TCR, PRE, UD, and DSPR final-validity conversions. Removed unneeded global reducibility so downstream simp indexing agrees with the opaque API. HashSig proves both compression-game identifications through public laws; ordinary-import fixtures retain the named whole-experiment equality. | repaired |
 | Lattice and executable interfaces | Audit coefficient/conversion/transform laws and the instance paths of vector-backed polynomials. Executable changes require differential tests. | pending |
 | HashSig primitive and game packaging | Separate carrier projections required by dependent queries from value-level operations and proof-only exposure. | pending |
 
@@ -93,3 +93,12 @@ retained as compatibility: its instance also changed unrelated function multipli
 Clients of raw writer state use `Multiplicative.toAdd`; clients of results use `runAdd`.
 The deprecated probability bridges remain; their shared compatibility constraints reduce the
 syntactic source count without claiming removal of the discrete semantic dependency.
+
+### Final-validity conversion validation
+
+The conversion repair at `cea45480` passes `./scripts/validate.sh --lint --test --axioms`:
+21,500 declarations, 720 modules, 33 existing sorry-tainted declarations, zero nonstandard axioms.
+The separate package consumer builds and runs. The definitions, adversary conversions, samplers,
+experiments, and bounds are unchanged. Global `@[reducible]` was unnecessary for the existing
+proofs and caused the new simp projection laws to be indexed under unfolded implementations;
+ordinary-import simplification works after removing it. No unsafe reducibility override is used.

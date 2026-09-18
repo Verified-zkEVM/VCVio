@@ -73,10 +73,10 @@ theorem searchCostRun_cons (pk : Stmt) (sk : Wit) (sc : PrvState) (msg : M)
                 if h.val < h'.val then some (c, r, h) else some (c', r', h')
           let z ← searchCostRun σ ρ b M pk sk sc msg comList i cs best' cache'
           return ((z.1.1, Multiplicative.ofAdd (1 + z.1.2.toAdd)), z.2)) := by
-  simp only [searchCostRun, HasQuery.Program.withUnitCost,
-    fischlinSearchAux_eq_withUnitCost]
-  simp only [fischlinSearchAuxWithUnitCost]
-  simp only [monadLift, MonadLift.monadLift, map_eq_bind_pure_comp, AddWriterT.addTell,
+  simp only [searchCostRun, HasQuery.Program.withUnitCost, fischlinSearchAux,
+    HasQuery.Program.withAddCost_bind, HasQuery.Program.withAddCost_query]
+  simp only [HasQuery.Program.withAddCost,
+    monadLift, MonadLift.monadLift, map_eq_bind_pure_comp, AddWriterT.addTell,
     QueryImpl.withCaching_apply, liftM, uniformSampleImpl, Fin.val_eq_zero_iff,
     Fin.val_fin_lt, WriterT.run_bind, WriterT.run_mk, WriterT.run_tell, bind_assoc,
     Function.comp_apply, pure_bind, one_mul, Prod.mk.eta, bind_pure_comp,
@@ -110,9 +110,10 @@ theorem searchCostRun_cons_cached (pk : Stmt) (sk : Wit) (sc : PrvState) (msg : 
                 if h.val < h'.val then some (c, r, h) else some (c', r', h')
           let z ← searchCostRun σ ρ b M pk sk sc msg comList i cs best' cache
           return ((z.1.1, Multiplicative.ofAdd (1 + z.1.2.toAdd)), z.2)) := by
-  simp only [searchCostRun, HasQuery.Program.withUnitCost,
-    fischlinSearchAux_eq_withUnitCost, fischlinSearchAuxWithUnitCost]
-  simp only [monadLift, MonadLift.monadLift, map_eq_bind_pure_comp, AddWriterT.addTell,
+  simp only [searchCostRun, HasQuery.Program.withUnitCost, fischlinSearchAux,
+    HasQuery.Program.withAddCost_bind, HasQuery.Program.withAddCost_query]
+  simp only [HasQuery.Program.withAddCost,
+    monadLift, MonadLift.monadLift, map_eq_bind_pure_comp, AddWriterT.addTell,
     QueryImpl.withCaching_apply, liftM, Fin.val_eq_zero_iff,
     Fin.val_fin_lt, WriterT.run_bind, WriterT.run_mk, WriterT.run_tell, bind_assoc,
     Function.comp_apply, pure_bind, one_mul, Prod.mk.eta, bind_pure_comp,
