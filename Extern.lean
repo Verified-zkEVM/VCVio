@@ -11,6 +11,7 @@ public import Extern.Falcon.KeyGen
 public import Extern.Falcon.SamplerZ
 public import Extern.Falcon.Sampling
 public import Extern.Falcon.Sign
+public import Extern.Falcon.SignCorrectness
 public import Extern.Falcon.VerifyBridge
 public import Extern.Hashing
 public import Extern.MLDSA.FFI
