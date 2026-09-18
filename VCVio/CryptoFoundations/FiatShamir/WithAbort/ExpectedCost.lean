@@ -102,7 +102,6 @@ private lemma signLoop_queryCountDist_succ
   | none =>
       simp [HasQuery.queryCountDist, HasQuery.queryCostDist, HasQuery.Program.withUnitCost,
         HasQuery.Program.withAddCost, AddWriterT.costs, add_comm]
-      rfl
 
 end
 
@@ -475,35 +474,34 @@ theorem sign_expectedQueries_le_geometric
   sign_expectedQueries_le_geometric_of_signAttemptAbortProbability_le
     ids M hr runtime pk sk msg maxAttempts le_rfl
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
-/-- Verification has expected weighted query cost equal to the cost of the single verification
-query when a signature is present, and `0` when the signature is `none`. -/
+omit [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadAttach m] [ExactMonadAttach m] in
+/-- Verification's expected weighted query cost is the queried commitment's valuation when a
+signature is present, and the valuation of zero otherwise. -/
 theorem verify_expectedQueryCost_eq
-    {ω : Type} [AddMonoid ω] [Preorder ω]
+    {ω : Type} [MeasurableSpace ω] [AddMonoid ω]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (msg : M)
     (sig : Option (Commit × Resp))
-    (costFn : M × Commit → ω) (val : ω → ENNReal) (hval : Monotone val) (maxAttempts : ℕ) :
+    (costFn : M × Commit → ω) (val : ω → ENNReal) (hval : Measurable val) (maxAttempts : ℕ)
+    [MeasureTheory.IsProbabilityMeasure 𝒟[HasQuery.queryCostDist
+      (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ω m)] ↦
+        (FiatShamirWithAbort ids hr M maxAttempts).verify pk msg sig) runtime costFn]] :
     ExpectedQueryCost[
       (FiatShamirWithAbort ids hr M maxAttempts).verify pk msg sig in runtime by costFn via val
-    ] =
-      match sig with
+    ] = match sig with
       | none => val 0
       | some (w', _) => val (costFn (msg, w')) := by
-  rcases sig with _ | ⟨w', z⟩
-  · let : DecidableEq ω := Classical.decEq ω
-    simp [FiatShamirWithAbort, HasQuery.expectedQueryCost, AddWriterT.expectedCost,
-      HasQuery.Program.withAddCost]
-  · refine HasQuery.expectedQueryCost_eq_of_usesCostExactly ?_ hval
-    change Cost[
-      HasQuery.Program.withAddCost
-        (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ω m)] =>
-          (FiatShamirWithAbort (m := AddWriterT ω m) ids hr M maxAttempts).verify pk msg
-            (some (w', z)))
-        runtime costFn
-    ] = costFn (msg, w')
-    rw [AddWriterT.hasCost_iff]
-    simp [FiatShamirWithAbort, HasQuery.Program.withAddCost, QueryImpl.withAddCost_apply,
-      AddWriterT.outputs, AddWriterT.costs, AddWriterT.addTell]
+  cases sig with
+  | none =>
+      simpa only [HasQuery.expectedQueryCost, HasQuery.Program.withAddCost,
+        FiatShamirWithAbort] using (AddWriterT.expectedCost_pure false val hval)
+  | some sig =>
+      apply HasQuery.expectedQueryCost_eq_of_usesCostExactly (hval := hval)
+      simp [HasQuery.UsesCostExactly, AddWriterT.hasCost_iff, FiatShamirWithAbort,
+        HasQuery.Program.withAddCost, QueryImpl.withAddCost_apply, AddWriterT.outputs,
+        AddWriterT.costs, AddWriterT.addTell]
 
 end schemeCost
 

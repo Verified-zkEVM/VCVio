@@ -7,6 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import ToMathlib.Data.ENNReal.SumSquares
 public import VCVio.OracleComp.QueryTracking.CostModel
+public import VCVio.ProgramLogic.Unary.HoareTriple
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 
 /-!
@@ -211,7 +212,7 @@ private lemma expectedQueryCount_seededForkWithSeedValue_le_aux [spec.DecidableE
   simpa [ExpectedCostBound, Finset.sum_update_of_mem (Finset.mem_univ i)] using
     (WorstCaseCostBound.toExpectedCostBound
       (IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum hbound)
-      fun a b hle => by simpa using (Nat.cast_le.mpr hle : (a : ENNReal) ≤ (b : ENNReal)))
+      (val := fun n : ℕ ↦ (n : ENNReal)) Nat.mono_cast Measurable.of_discrete)
 
 omit [IsUniformSpec spec] in
 /-- The expected unit-cost query count of `seededForkWithSeedValue`, averaged over the randomly
@@ -267,9 +268,10 @@ theorem seededForkExpectedQueryWork_le
       ((js.map fun j => qb j * sampleCost j).sum + sampleCost i + qb i : ENNReal) :=
   add_le_add
     (add_le_add
-      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _ Measurable.of_discrete
         (generateSeed_queryCostExactly (spec := spec) qb js sampleCost hSample)).le
-      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _ (hSample i)).le)
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _
+        Measurable.of_discrete (hSample i)).le)
     (expectedQueryCount_seededForkWithSeedValue_le
       (main := main) (qb := qb) (js := js) (i := i) (cf := cf) hmain hjs)
 
