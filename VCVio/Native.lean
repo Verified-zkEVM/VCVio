@@ -39,6 +39,9 @@ public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
+public import VCVio.OracleComp.QueryTracking.WriterCost
+public import VCVio.OracleComp.QueryTracking.QueryCost
+public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.CryptoFoundations.SignatureAlg

@@ -135,6 +135,7 @@ jobs:
           mkdir -p "$consumer"
           cp lean-toolchain "$consumer/"
           cp HashSigTest/ModuleAPI/SchemeGames.lean "$consumer/SchemeAPI.lean"
+          cp VCVioTest/ModuleAPI/Counting.lean "$consumer/CountingAPI.lean"
           {
             echo 'name = "consumer"'
             echo 'defaultTargets = ["consumer"]'
@@ -145,6 +146,9 @@ jobs:
             echo ''
             echo '[[lean_lib]]'
             echo 'name = "SchemeAPI"'
+            echo ''
+            echo '[[lean_lib]]'
+            echo 'name = "CountingAPI"'
             echo ''
             echo '[[lean_exe]]'
             echo 'name = "consumer"'
@@ -158,6 +162,7 @@ jobs:
             echo 'public import VCVio'
             echo 'public import VCVio.EvalDist.PFunctor'
             echo 'public import SchemeAPI'
+            echo 'public import CountingAPI'
             echo ''
             echo '#check OracleComp'
             echo '#check PFunctor.IsProbabilitySpec'

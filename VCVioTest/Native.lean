@@ -156,4 +156,60 @@ noncomputable example : IsProbabilityMeasure 𝒟[guardedDraw] := by
     (inferInstance : IsProbabilityMeasure 𝒟[(pure false : OptionT (OracleComp WeightedSpec) Bool)])
 
 end Weighted
+section Costs
+
+variable {α : Type}
+
+-- Observing the cost marginal does not require a measurable space on discarded outputs.
+example (oa : AddWriterT ℝ≥0∞ ProbComp α) {w : ℝ≥0∞}
+    (h : oa.PathwiseCostAtMost w) : oa.expectedCost id ≤ w :=
+  AddWriterT.expectedCost_le_of_pathwiseCostAtMost h monotone_id measurable_id
+
+example (oa : AddWriterT ℝ≥0∞ ProbComp α) {w : ℝ≥0∞}
+    (h : oa.PathwiseCostAtLeast w) : w ≤ oa.expectedCost id :=
+  AddWriterT.le_expectedCost_of_pathwiseCostAtLeast h monotone_id measurable_id
+
+example (oa : AddWriterT ℝ≥0∞ ProbComp α) {w : ℝ≥0∞} (h : oa.HasCost w) :
+    oa.expectedCost id = w :=
+  AddWriterT.expectedCost_eq_of_hasCost oa id measurable_id h
+
+example (oa : AddWriterT ℝ≥0∞ ProbComp ℝ)
+    (h : oa.CostsAs (fun x ↦ ENNReal.ofReal x)) :
+    oa.expectedCost id = ∫⁻ x, ENNReal.ofReal x ∂𝒟[oa.outputs] :=
+  AddWriterT.expectedCost_eq_lintegral_outputs_of_costsAs h
+    (by fun_prop) measurable_id
+
+example (oa : ℝ → AddWriterT ℝ≥0∞ ProbComp α)
+    (h : Measurable fun r ↦ 𝒟[(oa r).costs]) :
+    Measurable fun r ↦ (oa r).expectedCost id :=
+  AddWriterT.measurable_expectedCost oa h measurable_id
+
+example (oa : AddWriterT ℝ≥0∞ ProbComp α) (t : ℝ≥0∞) :
+    Pr{let c ← oa.costs}[t < c] * t ≤ oa.expectedCost id :=
+  AddWriterT.prEvent_cost_gt_mul_le_expectedCost oa measurable_id t
+
+example {ω : Type} [MeasurableSpace ω] {m : Type → Type*}
+    [Monad m] [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    (oa : AddWriterT ω m α) {w : ω} (val : ω → ℝ≥0∞) (hval : Measurable val)
+    (h : oa.HasCost w) : oa.expectedCost val = val w * oa.costMass :=
+  AddWriterT.expectedCost_eq_mul_costMass_of_hasCost oa val hval h
+
+-- A vacuous pathwise exact cost cannot imply a positive expectation on a failed run.
+def failedCost : AddWriterT ℝ≥0∞ Option Unit := WriterT.mk none
+
+example : AddWriterT.PathwiseCostEqOnSupport failedCost 37 := by
+  constructor <;> simp [AddWriterT.PathwiseCostAtMost, AddWriterT.PathwiseCostAtLeast,
+    failedCost]
+
+example : failedCost.expectedCost id = 0 := by
+  simp [AddWriterT.expectedCost, AddWriterT.costs, failedCost]
+
+-- Tail sums apply to a measurable observable on an arbitrary real measure, including
+-- nonatomic measures; countability belongs to the observable's Nat range.
+example (μ : Measure ℝ) (f : ℝ → ℕ) (hf : Measurable f) :
+    ∫⁻ x, (f x : ℝ≥0∞) ∂μ = ∑' i : ℕ, μ {x | i < f x} :=
+  lintegral_coe_nat_eq_tsum hf μ
+
+end Costs
+
 end VCVioTest.Native

@@ -147,7 +147,11 @@ theorem negligible_abs_unlinkabilityAdvantage
             ((Fintype.card (Nonce lam) : ℝ)⁻¹) := by
         intro nonce; simp [probOutput_uniformSample, ENNReal.toReal_inv]
       have hbad := multipleBad_bad_le_sessionCollisionBound (sessionsPerTag := sessionsPerTag lam)
-        (adversary lam) ((Fintype.card (Nonce lam) : ℝ)⁻¹) hmax
+        (adversary lam) ((Fintype.card (Nonce lam) : ℝ)⁻¹) (fun nonce => by
+          let : MeasurableSpace (Nonce lam) := ⊤
+          rw [prEvent_eq_evalDist_singleton]
+          simpa only [evalDist_apply_singleton] using hmax nonce)
+      simp only [evalDist_apply_singleton, probOutput_map] at hbad
       rwa [← div_eq_mul_inv] at hbad
     · rw [Polynomial.eval_mul, Polynomial.eval_pow]
       exact Nat.mul_le_mul (Nat.pow_le_pow_left (hpSessions lam) 2) (hpTagId lam)

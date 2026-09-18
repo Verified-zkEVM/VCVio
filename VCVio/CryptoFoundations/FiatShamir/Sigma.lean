@@ -284,37 +284,21 @@ theorem sign_usesCostAsQueryCost {ω : Type} [AddMonoid ω]
 omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Fiat-Shamir signing has expected weighted query cost equal to the expectation of the queried
 commitment cost over the output signature distribution. -/
-theorem sign_expectedQueryCost_eq_outputExpectation {ω : Type} [AddMonoid ω] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+theorem sign_expectedQueryCost_eq_outputExpectation {ω : Type}
+    [MeasurableSpace ω] [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MonadAttach m] [ExactMonadAttach m] [MeasurableSpace (Commit × Resp)]
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
-    (costFn : M × Commit → ω) (val : ω → ENNReal) :
+    (costFn : M × Commit → ω) (val : ω → ENNReal)
+    (hcostMeas : Measurable fun sig : Commit × Resp ↦ costFn (msg, sig.1))
+    (hval : Measurable val) :
     ExpectedQueryCost[
       (FiatShamir σ hr M).sign pk sk msg in runtime by costFn via val
-    ] =
-      ∑' sig : Commit × Resp,
-        Pr[= sig | HasQuery.Program.eval
-          (fun [HasQuery (M × Commit →ₒ Chal) m] =>
-            (FiatShamir (m := m) σ hr M).sign pk sk msg)
-          runtime] * val (costFn (msg, sig.1)) := by
-  calc
-    ExpectedQueryCost[
-      (FiatShamir σ hr M).sign pk sk msg in runtime by costFn via val
-    ] =
-      ∑' sig : Commit × Resp,
-        Pr[= sig | AddWriterT.outputs
-          (HasQuery.Program.withAddCost
-            (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ω m)] =>
-              (FiatShamir (m := AddWriterT ω m) σ hr M).sign pk sk msg)
-            runtime costFn)] * val (costFn (msg, sig.1)) :=
-          HasQuery.expectedQueryCost_eq_tsum_outputs_of_usesCostAs
-            (sign_usesCostAsQueryCost σ hr M runtime pk sk msg costFn)
-    _ = ∑' sig : Commit × Resp,
-          Pr[= sig | HasQuery.Program.eval
-            (fun [HasQuery (M × Commit →ₒ Chal) m] =>
-              (FiatShamir (m := m) σ hr M).sign pk sk msg)
-            runtime] * val (costFn (msg, sig.1)) := by
-          rw [sign_outputs_withAddCost_eq_eval]
+    ] = ∫⁻ sig, val (costFn (msg, sig.1)) ∂𝒟[HasQuery.Program.eval
+      (fun [HasQuery (M × Commit →ₒ Chal) m] ↦
+        (FiatShamir (m := m) σ hr M).sign pk sk msg) runtime] := by
+  rw [HasQuery.expectedQueryCost_eq_lintegral_outputs_of_usesCostAs
+    (sign_usesCostAsQueryCost σ hr M runtime pk sk msg costFn) hcostMeas hval,
+    sign_outputs_withAddCost_eq_eval]
 
 omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Fiat-Shamir signing makes exactly one random-oracle query under unit-cost instrumentation. -/
@@ -343,11 +327,14 @@ theorem verify_usesExactQueryCost {ω : Type} [AddMonoid ω]
 omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Fiat-Shamir verification has expected weighted query cost equal to the weight of its single
 random-oracle query. -/
-theorem verify_expectedQueryCost_eq {ω : Type} [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF]
-    [LawfulMonadLiftT m PMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+theorem verify_expectedQueryCost_eq {ω : Type}
+    [MeasurableSpace ω] [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (msg : M)
-    (sig : Commit × Resp) (costFn : M × Commit → ω) (val : ω → ENNReal) (hval : Monotone val) :
+    (sig : Commit × Resp) (costFn : M × Commit → ω) (val : ω → ENNReal)
+    (hval : Measurable val)
+    [IsProbabilityMeasure 𝒟[HasQuery.queryCostDist
+      (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ω m)] ↦
+        (FiatShamir σ hr M).verify pk msg sig) runtime costFn]] :
     ExpectedQueryCost[
       (FiatShamir σ hr M).verify pk msg sig in runtime by costFn via val
     ] = val (costFn (msg, sig.1)) :=
@@ -468,7 +455,7 @@ theorem perfectlyCorrect [SampleableType Chal]
             let r ← $ᵗ Chal
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
-          (x := true) (h := by simpa using hc pk sk hrel))
+          (x := true) (h := by simpa only [evalDist_apply_singleton] using hc pk sk hrel))
     · simpa [OracleComp.ProgramLogic.propInd, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do
