@@ -23,6 +23,7 @@ public import VCVioTest.EvalDist.MeasureBridge
 public import VCVioTest.EvalDist.ProbabilityBounds
 public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.SeqMeasure
+public import VCVioTest.EvalDist.TotalVariationMeasure
 public import VCVioTest.EvalDist.Transformers
 public import VCVioTest.EvalDist.UniformTable
 public import VCVioTest.FiatShamirAbort
