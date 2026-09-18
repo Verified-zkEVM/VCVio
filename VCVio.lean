@@ -184,6 +184,7 @@ public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
+public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Discard
 public import VCVio.EvalDist.Monad.Failure
@@ -278,6 +279,7 @@ public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
 public import VCVio.OracleComp.QueryTracking.Iter
+public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.ObservationOracle

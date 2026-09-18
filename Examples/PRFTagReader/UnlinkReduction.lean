@@ -161,7 +161,11 @@ theorem unlinkabilityAdvantage_le_two_prf_plus_sessionCollisionBound
   have hSum :=
     unlinkabilityAdvantage_le_two_prf_plus_collision prfs adversary qReader qTag hqReader hqTag
   have hbad := multipleBad_bad_le_sessionCollisionBound (sessionsPerTag := sessionsPerTag)
-    adversary maxNonceProb hmax
+    adversary maxNonceProb (fun nonce => by
+      let : MeasurableSpace Nonce := ⊤
+      rw [prEvent_eq_evalDist_singleton]
+      simpa only [evalDist_apply_singleton] using hmax nonce)
+  simp only [evalDist_apply_singleton, probOutput_map] at hbad
   refine hSum.trans ?_
   linarith
 

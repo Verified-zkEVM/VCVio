@@ -24,11 +24,13 @@ public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.SeqMeasure
 public import VCVioTest.EvalDist.Transformers
 public import VCVioTest.EvalDist.UniformTable
+public import VCVioTest.FiatShamirAbort
 public import VCVioTest.ForkMeasure
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
+public import VCVioTest.ListCache
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
@@ -51,7 +53,9 @@ public import VCVioTest.OracleComp.SupportMeasure
 public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
+public import VCVioTest.PRFCacheRepresentation
 public import VCVioTest.PRFNetworkKernel
+public import VCVioTest.PRFNetworkUnlinkability
 public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
@@ -70,6 +74,8 @@ public import VCVioTest.ReactiveNetwork
 public import VCVioTest.ReactiveNetworkAdversarial
 public import VCVioTest.ReactiveSecurity
 public import VCVioTest.ReactiveWorld
+public import VCVioTest.ReplayCheckpoint
+public import VCVioTest.ResumptionCompatibility
 public import VCVioTest.RoundByRound.OneRound
 public import VCVioTest.Runtime
 public import VCVioTest.SMDTDSPR

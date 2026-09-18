@@ -48,7 +48,7 @@ The API policy is:
 | Probability and transformers | External `SupportMeasure` distinguishes possible answers from positive measure; `MeasureWP` checks failure mass and retains measurability premises. `Runtime` distinguishes returned `none` from failure. Keep those separate contracts and the chosen semantic class instances. | intentional |
 | Program logic and complexity | External `CoreWP` checks scoped carrier selection and state/writer behavior; `ComputationalComplexitySoundness` charges and resolves allowed zero-probability replies. `ComplexityAdapters` checks data-dependent rank and certificate adapters. No global WP interpretation is selected. | intentional |
 | Interaction and runtime | External `ReactiveKernel` rejects response-only replacement and validates joint response/state replacement. `ReactiveNetworkAdversarial` checks scheduling, delivery, and fuel counterexamples. Retain the model's dependent signature reducers. | intentional |
-| Cryptographic games and conversions | [#746](https://github.com/Verified-zkEVM/VCVio/pull/746) publishes final-validity conversion equations, removes unneeded reducibility, and proves the HashSig compression-game identities while retaining whole named experiments. | repaired |
+| Cryptographic games and conversions | [#746](https://github.com/Verified-zkEVM/VCVio/pull/746) published constructor/projection equations for TCR, PRE, UD, and DSPR final-validity conversions. Removed unneeded global reducibility so downstream simp indexing agrees with the opaque API. HashSig proves both compression-game identifications through public laws; ordinary-import fixtures retain the named whole-experiment equality. | repaired |
 | Lattice and executable interfaces | `Poly` is a semireducible carrier with explicit arithmetic instances. New `VectorAPI` consumers use coefficient/extensionality laws and prove `X² = -1` at degree two, distinguishing negacyclic from pointwise multiplication. Native executable bodies and FFI interfaces are unchanged. | intentional |
 | HashSig primitive and game packaging | Keep exposed `thColl.Msg` projections needed to construct dependent collection queries. Opaque value bundles and final-validity conversions are handled by the focused repairs, with verification and game-identification consumers. | intentional |
 | Typed heaps | The reducible function carrier allowed `Heap.instInhabited` to replace ordinary function defaults. A distinct carrier preserves typed initialization, lookup, updates, and sum decomposition. The ordinary-import `Heap` fixture checks that a cell default of seven does not replace the function default of zero. | repaired |
@@ -144,3 +144,12 @@ retained as compatibility: its instance also changed unrelated function multipli
 Clients of raw writer state use `Multiplicative.toAdd`; clients of results use `runAdd`.
 The deprecated probability bridges remain; their shared compatibility constraints reduce the
 syntactic source count without claiming removal of the discrete semantic dependency.
+
+### Final-validity conversion validation
+
+The conversion repair at `cea45480` passes `./scripts/validate.sh --lint --test --axioms`:
+21,500 declarations, 720 modules, 33 existing sorry-tainted declarations, zero nonstandard axioms.
+The separate package consumer builds and runs. The definitions, adversary conversions, samplers,
+experiments, and bounds are unchanged. Global `@[reducible]` was unnecessary for the existing
+proofs and caused the new simp projection laws to be indexed under unfolded implementations;
+ordinary-import simplification works after removing it. No unsafe reducibility override is used.
