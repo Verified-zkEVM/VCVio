@@ -219,6 +219,7 @@ lemma outputs_def (oa : AddWriterT ω M α) :
 lemma costs_def (oa : AddWriterT ω M α) :
     oa.costs = (fun z => Multiplicative.toAdd z.2) <$> oa.run := rfl
 
+/-- A pure additive-writer computation has zero cost. -/
 @[simp high]
 lemma costs_pure [AddMonoid ω] [LawfulMonad M] (x : α) :
     (pure x : AddWriterT ω M α).costs = pure 0 := by
