@@ -45,8 +45,4 @@ example : Resumption.truncateMeasure 1 sample {none} = (4 : ℝ≥0∞)⁻¹ := 
 
 example : Resumption.returnedMeasure sample Set.univ = 1 := almost_sure_return
 
-#print axioms PFunctor.Resumption.truncateMeasure_toResumption
-#print axioms PFunctor.Resumption.outputMeasure_toResumption
-#print axioms PFunctor.Resumption.returnedMeasure_toResumption
-
 end VCVioTest.ResumptionCompatibility

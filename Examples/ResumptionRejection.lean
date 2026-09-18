@@ -133,10 +133,4 @@ theorem almost_sure_return : Resumption.returnedMeasure sample Set.univ = 1 := b
   rw [returned_uniform]
   exact measure_univ
 
-#print axioms sample_unfold
-#print axioms cutoff_mass
-#print axioms returned_singleton_finite
-#print axioms returned_uniform
-#print axioms almost_sure_return
-
 end ResumptionRejection
