@@ -184,6 +184,7 @@ public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
+public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Discard
 public import VCVio.EvalDist.Monad.Failure

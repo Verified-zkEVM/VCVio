@@ -53,6 +53,16 @@ family of cost measures, which can be bundled using the existing `evalDistKernel
 `MeasureTheory.lintegral_coe_nat_eq_tsum` is the tail-sum identity for a measurable Nat observable
 under an arbitrary measure, including nonatomic measures. Natural query counts specialize it.
 
+`VCVio.EvalDist.Monad.Branch` factors a conditional continuation through its actual finite
+proposition-valued observation. `evalDist_bind_ite` gives the weighted mixture;
+`prEvent_bind_ite` gives event probabilities, and `prEvent_bind_eq_mul_of_ite` handles
+continuation events constant on one condition and zero elsewhere. No measurable space is needed
+on discarded source values. `prEvent_add_prEvent_not` retains successful mass rather than
+assuming the two weights sum to one. `evalDist.isProbabilityMeasure_bind_ite` requires a
+probability certificate on that observation and on both branches. Measurable observation and
+branch families give `measurable_evalDist_bind_ite`, which uses the existing `evalDistKernel`
+with chosen environment/output spaces, including continuous spaces.
+
 `VCVio.ProgramLogic.Relational.Measure` uses successful-output measure couplings. Pure and
 successful optional values simplify to their exact postcondition with plain `simp`.
 `eRelWP_mono` supports `gcongr` and `grw`. Unequal success masses admit no coupling, so the

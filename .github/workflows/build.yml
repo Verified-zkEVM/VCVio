@@ -137,6 +137,7 @@ jobs:
           cp HashSigTest/ModuleAPI/SchemeGames.lean "$consumer/SchemeAPI.lean"
           cp VCVioTest/ModuleAPI/Counting.lean "$consumer/CountingAPI.lean"
           cp VCVioTest/ModuleAPI/Cache.lean "$consumer/CacheAPI.lean"
+          cp HashSigTest/ModuleAPI/FinalValidity.lean "$consumer/FinalValidityAPI.lean"
           {
             echo 'name = "consumer"'
             echo 'defaultTargets = ["consumer"]'
@@ -154,6 +155,9 @@ jobs:
             echo '[[lean_lib]]'
             echo 'name = "CacheAPI"'
             echo ''
+            echo '[[lean_lib]]'
+            echo 'name = "FinalValidityAPI"'
+            echo ''
             echo '[[lean_exe]]'
             echo 'name = "consumer"'
             echo 'root = "Main"'
@@ -168,6 +172,7 @@ jobs:
             echo 'public import SchemeAPI'
             echo 'public import CountingAPI'
             echo 'public import CacheAPI'
+            echo 'public import FinalValidityAPI'
             echo ''
             echo '#check OracleComp'
             echo '#check PFunctor.IsProbabilitySpec'

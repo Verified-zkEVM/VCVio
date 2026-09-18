@@ -442,6 +442,17 @@ The key progression is:
 4. the tail sum is rewritten semantically in terms of abort-prefix probabilities
 5. geometric upper bounds follow from bounds on the one-step abort probability
 
+The native retry API measures the proposition-valued `signAttemptAborts` observation and the
+Nat query-count marginal. Commitments, private prover states, and responses need no measurable
+spaces or attachment instances. Abort-prefix powers and geometric upper bounds permit missing
+mass. Exact tail probabilities and finite geometric expectations require
+`IsProbabilityMeasure 𝒟[signAttemptAborts ...]`: failure is not a successful abort marker.
+The shared conditional-branch API supplies the recurrence and losslessness rules.
+
+These identities describe repeated use of the supplied handler in its monad. A persistent
+random-oracle cache is state, not independent resampling; establish its abort bound in the
+stateful execution rather than applying a stateless power formula to separately reset attempts.
+
 This is the main reference for:
 
 - tail-sum expectation theorems
