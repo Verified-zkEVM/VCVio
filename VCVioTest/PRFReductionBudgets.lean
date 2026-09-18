@@ -76,7 +76,4 @@ example (state : UnlinkState Bool) (h : ¬ state.sessionsUsed false < 2) :
   unfold unlinkToMultiplePRFTagImpl
   simp only [StateT.run_bind, StateT.run_get, pure_bind, dite_eq_right h, StateT.run_pure]
 
-#print axioms PRFTagReader.QueryBudgets.multiple_reduction_bound
-#print axioms PRFTagReader.QueryBudgets.single_reduction_bound
-
 end PRFTagReader.QueryBudgets.Tests
