@@ -245,7 +245,7 @@ end QueryImpl
 
 namespace OracleComp.ProgramLogic.Relational
 
-variable {α : Type} [IsUniformSpec spec]
+variable {α : Type}
 
 /-- Cache-side projection: running `withProgramming so empty` and projecting away the bad flag
 gives the same distribution as running `so.withCaching` directly.
@@ -273,13 +273,9 @@ theorem withProgramming_empty_run'_eq
     (oa : OracleComp spec α) (cache : spec.QueryCache) (bad : Bool) :
     (simulateQ (so.withProgramming ProgrammingPolicy.empty) oa).run' (cache, bad) =
       (simulateQ so.withCaching oa).run' cache := by
-  rw [StateT.run', StateT.run']
   have hmap := congrArg (fun p => Prod.fst <$> p)
     (withProgramming_empty_run_proj_eq so oa cache bad)
-  change (fun a => id a.1) <$>
-      (simulateQ (so.withProgramming ProgrammingPolicy.empty) oa).run (cache, bad) =
-    Prod.fst <$> (simulateQ so.withCaching oa).run cache
-  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
+  simpa only [StateT.run'_eq, Functor.map_map, Function.comp_def, Prod.map, id_eq] using hmap
 
 /-! ## `withCachingTrackingPolicy` ≡ `withCaching` (cache-side projection) -/
 
@@ -309,13 +305,9 @@ theorem withCachingTrackingPolicy_run'_eq'
     (oa : OracleComp spec α) (cache : spec.QueryCache) (bad : Bool) :
     (simulateQ (so.withCachingTrackingPolicy policy) oa).run' (cache, bad) =
       (simulateQ so.withCaching oa).run' cache := by
-  rw [StateT.run', StateT.run']
   have hmap := congrArg (fun p => Prod.fst <$> p)
     (withCachingTrackingPolicy_run_proj_eq' so policy oa cache bad)
-  change (fun a => id a.1) <$>
-      (simulateQ (so.withCachingTrackingPolicy policy) oa).run (cache, bad) =
-    Prod.fst <$> (simulateQ so.withCaching oa).run cache
-  simpa only [Functor.map_map, Function.comp_def, Prod.map] using hmap
+  simpa only [StateT.run'_eq, Functor.map_map, Function.comp_def, Prod.map, id_eq] using hmap
 
 /-- `ProbComp` specialization of `withCachingTrackingPolicy_run_proj_eq'`. -/
 theorem withCachingTrackingPolicy_run_proj_eq
@@ -371,7 +363,7 @@ theorem isQueryBoundP_run_simulateQ_withCachingTrackingPolicy
     (OracleComp.IsQueryBoundP.simulateQ_run_withCaching so h hstep_p hstep_np cache)
 
 theorem isPerIndexQueryBound_run_simulateQ_withCachingTrackingPolicy
-    {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} [IsUniformSpec spec]
+    {ι : Type} [DecidableEq ι] {spec : OracleSpec ι}
     (so : QueryImpl spec (OracleComp spec)) (policy : ProgrammingPolicy spec)
     {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : OracleComp.IsPerIndexQueryBound oa qb)
@@ -393,9 +385,7 @@ projection. -/
 section WithProgrammingBounds
 
 variable {ι ι' : Type} [DecidableEq ι] {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-  [IsUniformSpec spec']
 
-omit [IsUniformSpec spec'] in
 private lemma isTotalQueryBound_run_withProgramming
     (so : QueryImpl spec (OracleComp spec')) (policy : ProgrammingPolicy spec)
     (t : spec.Domain) {n : ℕ} (h : OracleComp.IsTotalQueryBound (so t) n)
@@ -412,7 +402,6 @@ private lemma isTotalQueryBound_run_withProgramming
       exact (OracleComp.isQueryBound_map_iff _ _ _ _ _).mpr
         ((OracleComp.isQueryBound_map_iff _ _ _ _ _).mpr h)
 
-omit [IsUniformSpec spec'] in
 private lemma isQueryBoundP_run_withProgramming
     (so : QueryImpl spec (OracleComp spec')) (policy : ProgrammingPolicy spec)
     (t : spec.Domain) {q : ι' → Prop} [DecidablePred q] {n : ℕ}
@@ -444,7 +433,6 @@ private lemma isPerIndexQueryBound_run_withProgramming
       exact (OracleComp.isPerIndexQueryBound_map_iff _ _ _).mpr
         ((OracleComp.isPerIndexQueryBound_map_iff _ _ _).mpr h)
 
-omit [IsUniformSpec spec'] in
 theorem isTotalQueryBound_run_simulateQ_withProgramming
     (so : QueryImpl spec (OracleComp spec')) (policy : ProgrammingPolicy spec)
     {oa : OracleComp spec α} {n : ℕ}
@@ -456,7 +444,6 @@ theorem isTotalQueryBound_run_simulateQ_withProgramming
   OracleComp.IsTotalQueryBound.simulateQ_run_of_step h
     (fun t s => isTotalQueryBound_run_withProgramming so policy t (hstep t) s) (cache, bad)
 
-omit [IsUniformSpec spec'] in
 theorem isQueryBoundP_run_simulateQ_withProgramming
     (so : QueryImpl spec (OracleComp spec')) (policy : ProgrammingPolicy spec)
     {oa : OracleComp spec α}

@@ -468,7 +468,7 @@ theorem perfectlyCorrect [SampleableType Chal]
             let r ← $ᵗ Chal
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
-          (x := true) (h := by simpa using hc pk sk hrel))
+          (x := true) (h := by simpa only [evalDist_apply_singleton] using hc pk sk hrel))
     · simpa [OracleComp.ProgramLogic.propInd, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do
