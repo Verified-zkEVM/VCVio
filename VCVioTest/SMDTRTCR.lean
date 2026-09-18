@@ -28,10 +28,9 @@ namespace SMDTRTCRTest
 inductive Seed
   | only
 
-instance : SampleableType Seed where
-  selectElem := pure .only
-  mem_support_selectElem := by simp
-  probOutput_selectElem_eq x y := by cases x; cases y; rfl
+instance : Unique Seed where
+  default := .only
+  uniq x := by cases x; rfl
 
 @[simp] lemma uniformSample_seed : ($ᵗ Seed : ProbComp Seed) = pure .only := rfl
 
@@ -104,9 +103,13 @@ def exhaustedThenSecond : OracleComp Specs (Option (Bool × Bool)) := do
 condition, which requires the message to differ, would make this adversary lose. -/
 theorem same_message_fresh_randomness_wins :
     SM_DT_RTCR_Advantage sameMessageFreshRandomness = 1 := by
+  have hbool : ({false, true} : Set Bool) = Set.univ := by ext b; cases b <;> simp
+  have hmass : 𝒟[($ᵗ Bool : ProbComp Bool)] {false, true} = 1 := by
+    rw [hbool]
+    exact MeasureTheory.measure_univ
   simp [SM_DT_RTCR_Advantage, SM_DT_RTCR_Experiment, SM_DT_RTCR_oracles,
     SM_DT_RTCR_challengeOracle, SM_DT_RTCR_resample, SM_DT_RTCR_IsCollision,
-    sameMessageFreshRandomness, challenge, acceptingProblem, hash, TweakReserved]
+    sameMessageFreshRandomness, challenge, acceptingProblem, hash, TweakReserved, hmass]
 
 /-- Replaying the recorded pair loses, so the pair inequality in the winning condition is live. -/
 theorem replay_loses : SM_DT_RTCR_Advantage replayRecordedPair = 0 := by

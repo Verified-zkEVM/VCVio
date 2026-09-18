@@ -6,8 +6,9 @@ Authors: Matthias Meijers
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.SimSemantics.Append
+import Batteries.Tactic.Lint
 
 /-!
 # Single-function, distinct-tweak, multi-target target-collision resistance with random sampling
@@ -237,7 +238,15 @@ against the challenge oracle throughout and wins under `SM_DT_RTCR_IsCollision`.
     [DecidableEq Tweak] [DecidableEq M] [DecidableEq R]
     [DecidableEq Y] [SampleableType R] {prob : SM_DT_RTCR_Problem PkSeed Tweak M R Y}
     (adv : SM_DT_RTCR_Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | SM_DT_RTCR_Experiment adv]
+  𝒟[SM_DT_RTCR_Experiment adv] {true}
+
+-- Keep the established SM_DT names shared with the neighboring games and the paper.
+-- Only these naming exceptions are allowed; semantic and trust linters remain active.
+attribute [nolint defsWithUnderscore]
+  SM_DT_RTCR_Advantage SM_DT_RTCR_Adversary.main SM_DT_RTCR_Experiment SM_DT_RTCR_IsCollision
+  SM_DT_RTCR_Problem.numRetries SM_DT_RTCR_Problem.numTargets SM_DT_RTCR_Problem.prop
+  SM_DT_RTCR_Problem.th SM_DT_RTCR_State SM_DT_RTCR_challengeOracle SM_DT_RTCR_challengeSpec
+  SM_DT_RTCR_oracles SM_DT_RTCR_resample
 
 /-! ## The resampling loop -/
 
