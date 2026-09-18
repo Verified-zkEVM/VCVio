@@ -69,7 +69,7 @@ theorem exact_experiment_canary :
     ITSRExperiment coveredFresh = pure true ∧
       ITSRExperiment repeatedPair = pure false ∧
       ITSRExperiment uncoveredIndex = pure false := by
-  simp [ITSRExperiment, coveredFresh, repeatedPair, uncoveredIndex, targetUnit,
+  simp [ITSRExperiment, ITSRAdversary.run, coveredFresh, repeatedPair, uncoveredIndex, targetUnit,
     ITSROracles, ITSRTargetOracle, ITSRProblem.Wins, ITSRProblem.indexSet,
     ITSRProblem.targetIndexSet, deterministicCoveredProblem, deterministicIndexedProblem]
 

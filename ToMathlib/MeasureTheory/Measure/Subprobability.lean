@@ -5,8 +5,10 @@ Authors: Devon Tuma
 -/
 module
 
+public import Mathlib.MeasureTheory.Measure.Prod
 public import Mathlib.MeasureTheory.Measure.GiryMonad
 public import Mathlib.MeasureTheory.Measure.Typeclasses.Probability
+public import Mathlib.Data.FunLike.IsApply
 
 /-!
 # Subprobability measures
@@ -19,10 +21,10 @@ Mathlib has no such class. `IsZeroOrProbabilityMeasure` is a different condition
 total mass `0` or `1`, and so cannot describe a computation that fails with probability strictly
 between the two.
 
-The class is closed under the Giry operations that build denotations: `dirac`, `map` along a
-measurable function, and `bind` against a subprobability family. The `bind` statement carries its
-almost-everywhere measurability hypothesis explicitly rather than being an instance, matching the
-Giry monad's own API.
+The class has automatic instances for `dirac`, products, and `map`. A nonmeasurable pushforward of a
+nonzero measure is a Dirac mass, which still has mass at most one. Bind preserves the bound
+for an almost-everywhere measurable subprobability family. Exact mass preservation also
+requires the relevant measurability proofs.
 -/
 
 @[expose] public section
@@ -32,6 +34,10 @@ open scoped ENNReal
 namespace MeasureTheory
 
 variable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+
+/-- The zero measure evaluates pointwise to zero. -/
+instance Measure.instIsZeroApply : IsZeroApply (Measure α) (Set α) ℝ≥0∞ where
+  zero_apply _ := rfl
 
 /-- A measure with total mass at most one. -/
 class IsSubprobabilityMeasure (μ : Measure α) : Prop where
@@ -55,6 +61,12 @@ instance (priority := 100) IsSubprobabilityMeasure.toIsFiniteMeasure : IsFiniteM
 /-- The mass a subprobability measure does not assign to any value. -/
 noncomputable def Measure.defect : ℝ≥0∞ := 1 - μ Set.univ
 
+/-- The real-valued defect is one minus the real-valued total mass. -/
+@[simp]
+theorem Measure.defect_toReal : μ.defect.toReal = 1 - (μ Set.univ).toReal := by
+  rw [Measure.defect, ENNReal.toReal_sub_of_le (measure_univ_le μ) ENNReal.one_ne_top,
+    ENNReal.toReal_one]
+
 @[simp]
 theorem Measure.defect_add_measure_univ : μ.defect + μ Set.univ = 1 :=
   tsub_add_cancel_of_le (measure_univ_le μ)
@@ -69,11 +81,32 @@ instance : IsSubprobabilityMeasure (0 : Measure α) := ⟨by simp⟩
 
 instance (a : α) : IsSubprobabilityMeasure (Measure.dirac a) := inferInstance
 
+/-- Independent products preserve the subprobability bound. -/
+instance Measure.isSubprobabilityMeasure_prod (μ : Measure α) [IsSubprobabilityMeasure μ]
+    (ν : Measure β) [IsSubprobabilityMeasure ν] : IsSubprobabilityMeasure (μ.prod ν) := by
+  refine ⟨?_⟩
+  rw [← Set.univ_prod_univ, Measure.prod_prod]
+  simpa only [one_mul] using mul_le_mul' (measure_univ_le μ) (measure_univ_le ν)
+
 /-- Pushing a subprobability measure forward along a measurable function preserves its mass
 bound. Stated as a theorem because the measurability hypothesis cannot be synthesised. -/
 theorem isSubprobabilityMeasure_map (μ : Measure α) [IsSubprobabilityMeasure μ] {f : α → β}
     (hf : Measurable f) : IsSubprobabilityMeasure (μ.map f) :=
   ⟨by rw [Measure.map_apply hf MeasurableSet.univ, Set.preimage_univ]; exact measure_univ_le μ⟩
+
+/-- Pushforward preserves the subprobability bound, including the Dirac fallback for a
+nonmeasurable map from a nonzero measure. -/
+instance Measure.isSubprobabilityMeasure_map (μ : Measure α) [IsSubprobabilityMeasure μ]
+    (f : α → β) : IsSubprobabilityMeasure (μ.map f) := by
+  by_cases hf : AEMeasurable f μ
+  · refine ⟨?_⟩
+    rw [Measure.map_apply_of_aemeasurable hf MeasurableSet.univ, Set.preimage_univ]
+    exact measure_univ_le μ
+  · by_cases hμ : μ = 0
+    · subst μ
+      simpa only [Measure.map_zero] using (inferInstance : IsSubprobabilityMeasure (0 : Measure β))
+    · rw [Measure.map_of_not_aemeasurable_of_ne_zero hf hμ]
+      infer_instance
 
 /-- Giry bind of a subprobability family against a subprobability measure stays a
 subprobability measure. The measurability hypothesis is the one `Measure.bind_apply` needs. -/

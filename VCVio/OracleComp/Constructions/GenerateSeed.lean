@@ -414,7 +414,7 @@ theorem generateSeed_expectedQueryCount_eq
         (sampleCost j)) :
     AddWriterT.expectedCostNat (probCompUnitQueryRun (generateSeed spec qc js)) =
       ((js.map fun j => qc j * sampleCost j).sum : ENNReal) :=
-  AddWriterT.expectedCostNat_eq_of_queryCostExactly
+  AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _
     (generateSeed_queryCostExactly (spec := spec) qc js sampleCost hSample)
 
 end unitCost

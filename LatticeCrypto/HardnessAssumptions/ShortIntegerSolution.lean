@@ -79,7 +79,7 @@ def experiment (problem : Problem Sample Solution)
 /-- Search advantage for the SIS experiment. -/
 noncomputable def advantage (problem : Problem Sample Solution)
     (adv : Adversary problem) : ℝ≥0∞ :=
-  Pr[= true | experiment problem adv]
+  𝒟[experiment problem adv] {true}
 
 end Generic
 
@@ -164,7 +164,7 @@ noncomputable def advantage
     {problem : Problem Challenge Response Target HashInput HashOutput}
     (adv : Adversary problem) :
     ℝ≥0∞ :=
-  Pr[= true | experiment adv]
+  𝒟[experiment adv] {true}
 
 end Experiment
 

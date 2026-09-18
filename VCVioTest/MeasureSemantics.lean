@@ -37,6 +37,17 @@ open MeasureTheory ProbabilityTheory PFunctor OracleSpec OracleComp ENNReal
 
 namespace VCVioTest.MeasureSemantics
 
+/-! ## Optional measure kernels -/
+
+example {α : Type*} [MeasurableSpace α] :
+    Measurable (fun value : Option α => value.elim (0 : Measure α) Measure.dirac) := by
+  fun_prop
+
+example {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+    (f : β → Option α) (hf : Measurable f) :
+    Measurable (fun b => (f b).elim (0 : Measure α) Measure.dirac) := by
+  fun_prop
+
 /-! ## A continuous oracle -/
 
 /-- An interface with a single operation, answered by a real number. -/
@@ -55,10 +66,8 @@ noncomputable instance : gaussSpec.IsMeasureSpec where
 This is the statement the conversion buys: it does not typecheck against a `PMF`-valued
 semantics, because its subject is not a `PMF`. -/
 theorem denote_gauss_lift :
-    FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit) = gaussianReal 0 1 := by
-  change Measure.bind (gaussianReal 0 1)
-      (fun b => FreeM.denote (P := gaussSpec) (Pure.pure b)) = _
-  simp
+    FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit) = gaussianReal 0 1 :=
+  FreeM.denote_lift (P := gaussSpec) PUnit.unit
 
 /-- Primary notation selects the direct measure fold when no discrete backend exists. -/
 example : 𝒟[(FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)] = gaussianReal 0 1 :=
@@ -78,8 +87,10 @@ made explicit. -/
 
 theorem denote_shiftedGaussian :
     FreeM.denote shiftedGaussian =
-      Measure.bind (gaussianReal 0 1) fun sample => Measure.dirac (sample + 1) :=
-  rfl
+      Measure.bind (gaussianReal 0 1) fun sample => Measure.dirac (sample + 1) := by
+  apply FreeM.denote_liftBind (P := gaussSpec)
+  change AEMeasurable (fun sample : ℝ => Measure.dirac (sample + 1)) (gaussianReal 0 1)
+  fun_prop
 
 /-- The continuous composition remains a probability measure. This proof is the canary for the
 measurable-continuation boundary that a `PMF` semantics cannot state. -/
@@ -138,30 +149,32 @@ example : MeasureProgramLogic.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
 noncomputable instance : coinSpec.IsProbabilitySpec where
   toPMF _ := PMF.uniformOfFintype Bool
 
-noncomputable instance : coinSpec.IsMeasureSpec where
-  toMeasure _ := (PMF.uniformOfFintype Bool).toMeasure
-  isProbabilityMeasure _ := PMF.toMeasure.isProbabilityMeasure _
+noncomputable instance : coinSpec.IsMeasureSpec := IsProbabilitySpec.toMeasureSpec _
+
+/-- The coin's measure specification is its probability specification read as a measure. -/
+instance : PFunctor.IsMeasureSpec.Compatible coinSpec := ⟨fun _ => rfl⟩
 
 /-- A nonzero, branch-sensitive lower bound rules out a vacuous quantitative semantics. -/
 example : (1 : ℝ≥0∞) ≤
     MeasureProgramLogic.eRelWP (pure true : FreeM coinSpec Bool)
       (pure false : FreeM coinSpec Bool)
       (fun a b => if a && !b then 1 else 0) := by
-  apply MeasureProgramLogic.le_eRelWP_pure_pure
-  fun_prop
+  exact MeasureProgramLogic.le_eRelWP_pure_pure
+    (m₁ := FreeM coinSpec) (m₂ := FreeM coinSpec) true false
+    (fun a b => if a && !b then 1 else 0) (by fun_prop)
 
 /-- On a discrete interface the two denotations agree, so a `Pr[…]` result proved against the
 `PMF` semantics can be read off the measure semantics. -/
 theorem denote_eq_toMeasure_coin {α : Type} [MeasurableSpace α]
     (program : FreeM coinSpec α) :
     FreeM.denote program = (program.liftM IsProbabilitySpec.toPMF).toMeasure :=
-  FreeM.denote_eq_toMeasure (fun _ => rfl) program
+  FreeM.denote_eq_toMeasure program
 
 /-- Predicate notation transports to arbitrary measurable events, not just singletons. -/
 theorem denote_event_coin {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (program : FreeM coinSpec α) (event : α → Prop) :
     FreeM.denote program {x | event x} = Pr[event | program] :=
-  FreeM.denote_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete
+  evalDist_apply_setOf program event
 
 /-- The reverse discrete adapter preserves both successful branches and missing mass. -/
 example (p : SPMF Bool) :
@@ -181,12 +194,12 @@ example (program : FreeM coinSpec Bool) : 𝒟[program] = FreeM.denote program :
 /-- Point notation is an explicit adapter to singleton mass in the primary measure. -/
 example (program : FreeM coinSpec Bool) (x : Bool) :
     Pr[= x | program] = 𝒟[program] {x} :=
-  (FreeM.evalDist_apply_singleton (fun _ => rfl) program x).symm
+  (evalDist_apply_singleton program x).symm
 
 /-- Predicate notation is likewise an adapter to a measurable event. -/
 example (program : FreeM coinSpec Bool) (event : Bool → Prop) :
     Pr[event | program] = 𝒟[program] {x | event x} :=
-  (FreeM.evalDist_apply_setOf (fun _ => rfl) program event MeasurableSet.of_discrete).symm
+  (evalDist_apply_setOf program event).symm
 
 /-- Crossing the compatibility boundary preserves perfect indistinguishability exactly. -/
 example (p q : SPMF Bool) :
@@ -276,11 +289,10 @@ example : Resumption.outputMeasure 0 delayedTrue = 0 := by
 failure result. -/
 theorem outputMeasure_one_delayedTrue :
     Resumption.outputMeasure 1 delayedTrue = Measure.dirac true := by
-  change (Measure.bind (IsMeasureSpec.toMeasure (P := coinSpec) PUnit.unit)
-    (fun _ => Measure.dirac (some true))).dropNone = Measure.dirac true
+  rw [delayedTrue, Resumption.outputMeasure_query_succ (P := coinSpec)]
   rw [Measure.bind_const,
     (IsMeasureSpec.isProbabilityMeasure (P := coinSpec) PUnit.unit).measure_univ, one_smul]
-  simp
+  exact Resumption.outputMeasure_pure (P := coinSpec) 0 true
 
 /-- The fuel-free returned-output semantics sees the delayed return with total mass one. -/
 example : Resumption.returnedMeasure delayedTrue Set.univ = 1 := by
@@ -298,13 +310,17 @@ example : Resumption.returnedMeasure delayedTrue Set.univ = 1 := by
 applies. Any probability already proved about a `ProbComp` is then a fact about its measure
 denotation, with no reproof. -/
 
-noncomputable instance : unifSpec.toPFunctor.IsMeasureSpec :=
+/-- The uniform oracle interpretation induced by its finite-distribution semantics. -/
+@[instance_reducible]
+noncomputable def unifMeasureSpec : unifSpec.toPFunctor.IsMeasureSpec :=
   PFunctor.IsProbabilitySpec.toMeasureSpec _
+
+attribute [local instance] unifMeasureSpec
 
 theorem denote_probComp_apply_singleton {α : Type} [MeasurableSpace α]
     [MeasurableSingletonClass α] (program : ProbComp α) (x : α) :
     FreeM.denote program {x} = Pr[= x | program] :=
-  FreeM.denote_apply_singleton (fun _ => rfl) program x
+  evalDist_apply_singleton program x
 
 /-- The one-time-pad ciphertext is uniform, read off the measure denotation.
 
@@ -364,7 +380,7 @@ example (n : ℕ) (mx : ProbComp (BitVec n)) (g : BitVec n → ℝ≥0∞) :
 open OracleComp.EvalDist in
 /-- ...and is an integral against the denoted measure. -/
 example (n : ℕ) (mx : ProbComp (BitVec n)) (g : BitVec n → ℝ≥0∞) :
-    expectedValue mx g = ∫⁻ x, g x ∂(toMeasure mx) := expectedValue_eq_lintegral mx g
+    ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := lintegral_evalDist mx g
 
 open OracleComp.EvalDist in
 /-- **Monotone convergence** for a VCVio expectation, from `lintegral_iSup`. -/

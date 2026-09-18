@@ -59,7 +59,7 @@ theorem verify_sign_correct_concretePrimitives
     (fun s slen bytes h => decompress_compress p.n s slen bytes h) hpreimage hsig
 
 /-- Verification correctness at the concrete primitives bundle from key validity, invertibility
-of `f` modulo `q`, and the lattice-point condition on the fixed-point FFT pipeline. -/
+of `f` modulo `q`, and the lattice-point condition on the FFT conversion fields. -/
 theorem verify_sign_correct_concretePrimitives_of_landsOnLattice
     (p : Params) (hn : p.n = 2 ^ p.logn) (pk : PublicKey p) (sk : SecretKey p)
     (hvalid : validKeyPair p pk sk = true)

@@ -8,7 +8,8 @@ module
 public import Mathlib.Probability.ProbabilityMassFunction.Monad
 public import Batteries.Control.AlternativeMonad
 public import PolyFun.Control.Monad.Hom
-public import ToMathlib.General
+public import ToMathlib.Probability.ProbabilityMassFunction.Lemmas
+public import ToMathlib.Topology.Algebra.InfiniteSum.Option
 
 /-!
 # Sub-Probability Distributions
@@ -33,7 +34,7 @@ namespace PMF
 lemma eq_pure_of_forall_ne_eq_zero {γ : Type*} (p : PMF γ) (a : γ)
     (h : ∀ x, x ≠ a → p x = 0) : p = PMF.pure a := by
   ext x; by_cases hx : x = a
-  · subst hx; simp only [PMF.pure_apply, if_true]
+  · subst hx; simp only [PMF.pure_apply, ite_true]
     rw [← p.tsum_coe]; exact (tsum_eq_single x (fun b hb => h b hb)).symm
   · simp [PMF.pure_apply, hx, h x hx]
 
@@ -305,3 +306,6 @@ protected lemma fmap_eq_map (f : α → β) (c : SPMF α) :
   by rw [← SPMF.toPMF_inj, SPMF.toPMF_map, SPMF.toPMF_mk, PMF.monad_map_eq_map]
 
 end SPMF
+
+attribute [deprecated "VCVio retiring probability API: use Measure or Kernel"
+  (since := "2026-09-13")] SPMF

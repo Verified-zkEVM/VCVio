@@ -164,9 +164,6 @@ theorem neverFail_runObs_iff [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLif
     NeverFail (runObs base encode oa) ↔ NeverFail (eraseObs base oa) := by
   simp only [neverFail_iff, probFailure_runObs]
 
-@[deprecated (since := "2026-06-25")]
-alias NeverFail_runObs_iff := neverFail_runObs_iff
-
 /-! ### EvalDist Bridge for `runObs`
 
 These lemmas connect the result-marginal distribution of `runObs` to the distribution
@@ -183,7 +180,7 @@ lemma probOutput_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLift
     Pr[= x | (fun z : α × ω => z.1) <$> runObs base encode oa] = Pr[= x | eraseObs base oa] := by
   rw [fst_map_runObs]
 
-lemma support_fst_runObs [LawfulMonad m] [MonadLiftT m SetM]
+lemma support_fst_runObs [LawfulMonad m] [MonadAttach m]
     (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
     support ((fun z : α × ω => z.1) <$> runObs base encode oa) = support (eraseObs base oa) := by
   rw [fst_map_runObs]

@@ -11,10 +11,10 @@ public import LatticeCrypto.MLDSA.Security
 # ML-DSA Honest-Verifier Zero-Knowledge: simulators and the quantitative bound
 
 This file develops the honest-verifier zero-knowledge (HVZK) simulators for the ML-DSA
-identification scheme, towards refining the vacuous placeholder `MLDSA.idsWithAbort_hvzk`
-(`LatticeCrypto/MLDSA/Security.lean`). The placeholder asserts only that *some* simulator with
-*some* nonnegative total-variation error exists; that is trivially dischargeable with
-`ζ_zk := 1` (because `tvDist ≤ 1` always, `SPMF.tvDist_le_one`) and carries no content.
+identification scheme and proves `MLDSA.idsWithAbort_hvzk` for a named simulator and a named
+error bound. An existential statement asserting only that *some* simulator with *some*
+nonnegative total-variation error exists would be trivially dischargeable with `ζ_zk := 1`
+(because `tvDist ≤ 1` always, `SPMF.tvDist_le_one`) and would carry no content.
 
 ## The marginal simulator `hvzkSimulator`
 
@@ -52,7 +52,7 @@ key-generation collision-freeness law `Primitives.Laws.keyVector_t0_determined`,
 literature's treatment of the full `t = t₁·2^d + t₀` as public (the `t₁` compression is a
 bandwidth optimization, not a hiding mechanism).
 
-The resulting quantitative statement `idsWithAbort_hvzk_real` bounds the total-variation
+The resulting quantitative statement `idsWithAbort_hvzk` bounds the total-variation
 distance by `hvzkBoundReal`, the honest prover's *extra-rejection mass*: the probability that
 the `z`-gate passes but one of the three secret-dependent gates fails. On the accept event the
 two transcripts coincide, so this bound is exact rather than a slack inequality.
@@ -254,7 +254,7 @@ theorem recoverT0_eq (h_laws : Primitives.Laws prims nttOps)
   have ht0 := h_laws.keyVector_t0_determined (Classical.choose hex) seed hrho ht1
   have hchoose : recoverT0 p prims pk =
       (keyGenFromSeed p prims (Classical.choose hex)).2.t0 := by
-    simp only [recoverT0, dif_pos hex]
+    simp only [recoverT0, dite_eq_left hex]
   rw [hchoose, keyGenFromSeed_t0 p prims, ht0, ← keyGenFromSeed_t0 p prims, hkeygen]
 
 /-! ### The exact-on-accept simulator -/
@@ -510,7 +510,8 @@ lemma hvzkHonestOut_eq_gated_of_not_bad (h_laws : Primitives.Laws prims nttOps)
     rw [Prod.mk.injEq] at hmatch
     obtain ⟨hm1, hm2⟩ := hmatch
     simp only [hvzkHonestOut, hvzkSimOut]
-    rw [if_pos (⟨hz, hr0⟩ : _ ∧ _), if_pos (⟨hct0, hw⟩ : _ ∧ _), if_pos hz, ← hm1, ← hm2]
+    rw [ite_eq_left (⟨hz, hr0⟩ : _ ∧ _), ite_eq_left (⟨hct0, hw⟩ : _ ∧ _),
+      ite_eq_left hz, ← hm1, ← hm2]
   · simp [hvzkHonestOut, hz]
 
 /-! ### The quantitative bound and the headline statement -/
@@ -598,7 +599,7 @@ Unlike a `ζ_zk = 0` claim for a single-gate simulator (see the module docstring
 statement is sound: the simulator reproduces the honest transcript pointwise on the accept
 event, so the only discrepancy between the two distributions is the honest prover's
 extra-rejection mass, which is what `hvzkBoundReal` measures. -/
-theorem idsWithAbort_hvzk_real (h_laws : Primitives.Laws prims nttOps) :
+theorem idsWithAbort_hvzk (h_laws : Primitives.Laws prims nttOps) :
     (identificationScheme p prims).HVZK (hvzkSimulatorReal p prims)
       (hvzkBoundReal p prims) := by
   intro pk sk hrel
@@ -685,16 +686,6 @@ theorem idsWithAbort_hvzk_real (h_laws : Primitives.Laws prims nttOps) :
   · have h := le_iSup (fun s : Bytes 32 => hvzkBadMass p prims
       (keyGenFromSeed p prims s).1 (keyGenFromSeed p prims s).2) seed
     rwa [hkeygen] at h
-
-/-- Honest-verifier zero-knowledge for the ML-DSA identification scheme, existential form:
-some simulator achieves some nonnegative total-variation bound. Witnessed by the concrete
-simulator `hvzkSimulatorReal` with the extra-rejection-mass bound `hvzkBoundReal`
-(`idsWithAbort_hvzk_real`); the bound is nonnegative as the real projection of a probability
-mass. -/
-theorem idsWithAbort_hvzk (h_laws : Primitives.Laws prims nttOps) :
-    ∃ sim ζ_zk, 0 ≤ ζ_zk ∧ (identificationScheme p prims).HVZK sim ζ_zk :=
-  ⟨hvzkSimulatorReal p prims, hvzkBoundReal p prims, ENNReal.toReal_nonneg,
-    idsWithAbort_hvzk_real p prims h_laws⟩
 
 end RealHVZK
 

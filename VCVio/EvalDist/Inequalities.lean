@@ -1,112 +1,62 @@
 /-
 Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Defs.Basic
-public import ToMathlib.Data.ENNReal.SumSquares
+public import VCVio.EvalDist.Defs.Measure.Core
+public import ToMathlib.MeasureTheory.Integral.Quadratic
 
 /-!
-# Probability-weighted Cauchy-Schwarz / Jensen inequalities
+# Marginalized quadratic probability bounds
 
-Inequalities relating per-element bounds and their probabilistic averages, for use in
-forking-lemma-style game-hopping arguments where the outermost step marginalizes over a
-random key (or, more generally, an arbitrary `MonadLiftT m SPMF` monad output).
-
-The headline lemma is `marginalized_jensen_forking_bound`: given a per-element bound
-`acc x · (acc x / q − hinv) ≤ B x` and weights `Pr[= x | mx]` for some monadic computation
-`mx`, the marginalized expectation `μ := 𝔼[acc]` satisfies the same shape:
-
-  `μ · (μ / q − hinv) ≤ 𝔼[B]`.
-
-The forking-lemma instantiation is `q := qH + 1`, `hinv := 1/|Chal|`, with `acc x` the
-per-pk fork-success probability, `B x` the per-pk extraction-success probability, and
-`mx := keygen`. The integration step is genuinely lossy (Cauchy-Schwarz on
-`Pr[= · | mx]`), so this lemma sits at the heart of any keygen-marginalized fork-based
-extraction bound.
+A per-output acceptance and extraction bound transports through a computation's successful-output
+measure by Cauchy–Schwarz. The common draw may lose mass and its result space may be continuous.
+Only the acceptance function needs almost-everywhere measurability; both bounds need hold only
+almost everywhere. Discrete outputs provide a pointwise specialization.
 -/
 
-@[expose] public section
+public section
 
-open ENNReal
+open MeasureTheory
+open scoped ENNReal
 
 universe u v
 
 namespace OracleComp.EvalDist
 
-variable {m : Type → Type v} [Monad m] [MonadLiftT m SPMF]
+variable {m : Type u → Type v} [EvalDistSemantics m]
 
-private lemma tsum_sub_tsum_le_tsum_sub {ι : Type*} (f g : ι → ℝ≥0∞)
-    (_hg : ∑' i, g i ≠ ⊤) : (∑' i, f i) - ∑' i, g i ≤ ∑' i, (f i - g i) := by
-  rw [tsub_le_iff_right, ← ENNReal.tsum_add]
-  exact ENNReal.tsum_le_tsum fun i => le_tsub_add
+/-- A per-output forking bound transports through the successful-output measure of a common draw. -/
+lemma marginalized_jensen_forking_bound {X : Type u} [MeasurableSpace X] (mx : m X)
+    (acc B : X → ENNReal) (q hinv : ENNReal) (hacc : AEMeasurable acc 𝒟[mx])
+    (hacc_le : ∀ᵐ x ∂𝒟[mx], acc x ≤ 1)
+    (hper : ∀ᵐ x ∂𝒟[mx], acc x * (acc x / q - hinv) ≤ B x) :
+    (∫⁻ x, acc x ∂𝒟[mx]) * ((∫⁻ x, acc x ∂𝒟[mx]) / q - hinv) ≤ ∫⁻ x, B x ∂𝒟[mx] :=
+  ENNReal.lintegral_mul_div_sub_le hacc q hinv hacc_le hper
 
-omit [Monad m] in
-/-- **Marginalized Jensen / Cauchy-Schwarz step for the forking lemma.**
+/-- A discrete common draw needs only pointwise acceptance and extraction bounds. -/
+lemma marginalized_jensen_forking_bound_of_discrete {X : Type u} [MeasurableSpace X]
+    [DiscreteMeasurableSpace X] (mx : m X) (acc B : X → ENNReal) (q hinv : ENNReal)
+    (hacc_le : ∀ x, acc x ≤ 1) (hper : ∀ x, acc x * (acc x / q - hinv) ≤ B x) :
+    (∫⁻ x, acc x ∂𝒟[mx]) * ((∫⁻ x, acc x ∂𝒟[mx]) / q - hinv) ≤ ∫⁻ x, B x ∂𝒟[mx] :=
+  marginalized_jensen_forking_bound mx acc B q hinv Measurable.of_discrete.aemeasurable
+    (Filter.Eventually.of_forall hacc_le) (Filter.Eventually.of_forall hper)
 
-If a per-element bound `acc x · (acc x / q − hinv) ≤ B x` holds for every `x` (with
-`acc x ≤ 1`), and we marginalize over the output distribution of any `mx : m X` with
-`[MonadLiftT m SPMF]`, then the marginalized expectation `μ := ∑' x, Pr[= x | mx] · acc x`
-satisfies the same forking-bound shape:
-
-  `μ · (μ / q − hinv) ≤ ∑' x, Pr[= x | mx] · B x`.
-
-**Intended use.** In Pointcheval-Stern / Bellare-Neven style EUF-CMA-to-relation
-reductions, instantiate as follows:
-
-* `mx := hr.gen` (key generator),
-* `acc (pk, sk) := Pr[fork point exists | run nmaAdv on pk]`,
-* `B (pk, sk) := Pr[extraction succeeds | reduction pk]`,
-* `q := qH + 1`, `hinv := 1 / |Chal|`.
-
-The per-element hypothesis `hper` is then exactly the conclusion of `replayForkingBound`
-(or `seededForkingBound`) at a fixed `pk`, composed with the special-soundness extractor.
-
-This generalizes the obvious `[Fintype X]` Cauchy-Schwarz: the `tsum` form handles the
-typical case where `X = Stmt × Wit` (uncountable in general, supported on whatever
-keygen reaches). -/
-lemma marginalized_jensen_forking_bound
-    {X : Type} (mx : m X)
-    (acc B : X → ℝ≥0∞) (q hinv : ℝ≥0∞)
-    (hinv_ne_top : hinv ≠ ⊤)
-    (hacc_le : ∀ x, acc x ≤ 1)
-    (hper : ∀ x, acc x * (acc x / q - hinv) ≤ B x) :
-    (∑' x, Pr[= x | mx] * acc x) *
-        ((∑' x, Pr[= x | mx] * acc x) / q - hinv) ≤
-      ∑' x, Pr[= x | mx] * B x := by
-  classical
-  set w : X → ℝ≥0∞ := fun x => Pr[= x | mx]
-  set μ : ℝ≥0∞ := ∑' x, w x * acc x with hμ_def
-  have hw_tsum_le_one : ∑' x, w x ≤ 1 := tsum_probOutput_le_one
-  have hμ_le_one : μ ≤ 1 := by
-    calc μ = ∑' x, w x * acc x := rfl
-      _ ≤ ∑' x, w x * 1 := by gcongr with x; exact hacc_le x
-      _ = ∑' x, w x := by simp
-      _ ≤ 1 := hw_tsum_le_one
-  have hμ_ne_top : μ ≠ ⊤ := ne_top_of_le_ne_top ENNReal.one_ne_top hμ_le_one
-  have hμ_hinv_ne_top : ∑' x, w x * acc x * hinv ≠ ⊤ := by
-    rw [ENNReal.tsum_mul_right]; exact ENNReal.mul_ne_top hμ_ne_top hinv_ne_top
-  have hCS : μ ^ 2 ≤ ∑' x, w x * acc x ^ 2 :=
-    ENNReal.sq_tsum_le_tsum_sq w acc hw_tsum_le_one
-  calc μ * (μ / q - hinv)
-      = μ ^ 2 / q - μ * hinv := by
-        rw [ENNReal.mul_sub (fun _ _ => hμ_ne_top), sq, mul_div_assoc]
-    _ ≤ (∑' x, w x * acc x ^ 2) / q - μ * hinv := by gcongr
-    _ = (∑' x, w x * acc x ^ 2 / q) - ∑' x, w x * acc x * hinv := by
-        rw [hμ_def]
-        simp_rw [div_eq_mul_inv, ENNReal.tsum_mul_right]
-    _ ≤ ∑' x, (w x * acc x ^ 2 / q - w x * acc x * hinv) :=
-        tsum_sub_tsum_le_tsum_sub _ _ hμ_hinv_ne_top
-    _ = ∑' x, w x * (acc x * (acc x / q - hinv)) := by
-        refine tsum_congr fun x => ?_
-        have hwx_ne_top : w x ≠ ⊤ :=
-          ne_top_of_le_ne_top ENNReal.one_ne_top probOutput_le_one
-        have hax_ne_top : acc x ≠ ⊤ :=
-          ne_top_of_le_ne_top ENNReal.one_ne_top (hacc_le x)
-        rw [ENNReal.mul_sub (fun _ _ => hax_ne_top), sq, mul_div_assoc,
-          ENNReal.mul_sub (fun _ _ => hwx_ne_top), mul_div_assoc, mul_assoc]
-    _ ≤ ∑' x, w x * B x := by gcongr with x; exact hper x
+/-- Acceptance and extraction observations satisfy the marginalized bound without choosing a
+measurable space on the common draw's intermediate result. -/
+lemma marginalized_jensen_forking_bound_map {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {X : Type}
+    (mx : m X) (acc B : X → ENNReal) (q hinv : ENNReal)
+    (hacc_le : ∀ x, acc x ≤ 1) (hper : ∀ x, acc x * (acc x / q - hinv) ≤ B x) :
+    (∫⁻ a, a ∂𝒟[acc <$> mx]) * ((∫⁻ a, a ∂𝒟[acc <$> mx]) / q - hinv) ≤
+      ∫⁻ b, b ∂𝒟[B <$> mx] := by
+  let : MeasurableSpace X := ⊤
+  rw [lintegral_evalDist_map mx (f := acc) Measurable.of_discrete
+    (g := fun a ↦ a) measurable_id,
+    lintegral_evalDist_map mx (f := B) Measurable.of_discrete
+      (g := fun b ↦ b) measurable_id]
+  exact marginalized_jensen_forking_bound_of_discrete mx acc B q hinv hacc_le hper
 
 end OracleComp.EvalDist

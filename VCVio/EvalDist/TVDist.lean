@@ -233,7 +233,7 @@ lemma tvDist_bind_left_le
 bound, with `ℝ≥0∞` companion `ofReal_tvDist_bind_left_le_const`. -/
 theorem tvDist_bind_left_le_const
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u} (mx : m α) (f g : α → m β) (c : ℝ)
     (hfg : ∀ a, a ∈ support mx → tvDist (f a) (g a) ≤ c) :
     tvDist (mx >>= f) (mx >>= g) ≤ c := by
@@ -273,7 +273,7 @@ theorem tvDist_bind_left_le_const
 `tvDist (f a) (g a) ≤ c` lifts through the shared `mx` bind. -/
 theorem tvDist_bind_left_le_const'
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u} (mx : m α) (f g : α → m β) (c : ℝ)
     (hfg : ∀ a, tvDist (f a) (g a) ≤ c) :
     tvDist (mx >>= f) (mx >>= g) ≤ c :=
@@ -283,7 +283,7 @@ theorem tvDist_bind_left_le_const'
 `ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε` on the support of `mx` lifts through the shared bind. -/
 theorem ofReal_tvDist_bind_left_le_const
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u}
     (mx : m α) (f g : α → m β) (ε : ℝ≥0∞)
     (hfg : ∀ a, a ∈ support mx → ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε) :
@@ -300,7 +300,7 @@ theorem ofReal_tvDist_bind_left_le_const
 /-- Unrestricted companion of `ofReal_tvDist_bind_left_le_const`. -/
 theorem ofReal_tvDist_bind_left_le_const'
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u}
     (mx : m α) (f g : α → m β) (ε : ℝ≥0∞)
     (hfg : ∀ a, ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε) :

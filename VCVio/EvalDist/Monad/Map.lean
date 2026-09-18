@@ -28,19 +28,19 @@ variable {α β γ : Type u} {m : Type u → Type v} [Monad m]
 
 open ENNReal
 
-@[simp, grind =]
-lemma support_map [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [LawfulMonad m]
+@[grind =]
+lemma support_map [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
     (f : α → β) (mx : m α) :
     support (f <$> mx) = f '' support mx := by
-  aesop (add simp monad_norm)
+  exact MonadAttach.support_map f mx
 
 @[simp, grind =]
-lemma finSupport_map [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [HasEvalFinset m] [LawfulMonad m]
+lemma finSupport_map [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m] [HasEvalFinset m]
     [DecidableEq α] [DecidableEq β]
     (f : α → β) (mx : m α) : finSupport (f <$> mx) = (finSupport mx).image f := by
   grind [map_eq_bind_pure_comp]
 
-@[simp, grind =]
+@[grind =]
 lemma evalSPMF_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m]
     (mx : m α) (f : α → β) :
     𝒮[f <$> mx] = f <$> (𝒮[mx]) := by simp [monad_norm]
@@ -74,7 +74,7 @@ variable [LawfulMonad m]
 over all outputs such that they map to the correct final output, using subtypes.
 This lemma notably doesn't require decidable equality on the final type, unlike most
 lemmas about probability when mapping a computation. -/
-lemma probOutput_map_eq_tsum_subtype [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma probOutput_map_eq_tsum_subtype [MonadAttach m] [ExactMonadAttach m]
     [EvalDistCompatible m] (y : β) :
     Pr[= y | f <$> mx] = ∑' x : {x ∈ support mx | y = f x}, Pr[= x | mx] := by
   simp only [map_eq_bind_pure_comp, tsum_subtype _, probOutput_bind_eq_tsum, Function.comp_apply,
@@ -87,7 +87,7 @@ lemma probOutput_map_eq_tsum (y : β) :
     Pr[= y | f <$> mx] = ∑' x, Pr[= x | mx] * Pr[= y | (pure (f x) : m β)] := by
   simp [monad_norm, probOutput_bind_eq_tsum]
 
-lemma probOutput_map_eq_tsum_subtype_ite [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma probOutput_map_eq_tsum_subtype_ite [MonadAttach m] [ExactMonadAttach m]
     [EvalDistCompatible m] [DecidableEq β] (y : β) :
     Pr[= y | f <$> mx] = ∑' x : support mx, if y = f x then Pr[= x | mx] else 0 := by
   simp only [map_eq_bind_pure_comp, probOutput_bind_eq_tsum_subtype, Function.comp_apply,
@@ -106,7 +106,7 @@ lemma probOutput_map_eq_sum_fintype_ite [Fintype α] [DecidableEq β] (y : β) :
     by simp only [Finset.coe_univ, Set.subset_univ])
 
 @[grind =]
-lemma probOutput_map_eq_sum_finSupport_ite [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma probOutput_map_eq_sum_finSupport_ite [MonadAttach m] [ExactMonadAttach m]
     [EvalDistCompatible m] [HasEvalFinset m] [DecidableEq α] [DecidableEq β]
     (y : β) : Pr[= y | f <$> mx] = ∑ x ∈ finSupport mx, if y = f x then Pr[= x | mx] else 0 :=
   (probOutput_map_eq_tsum_ite mx f y).trans (tsum_eq_sum' <|
@@ -115,7 +115,7 @@ lemma probOutput_map_eq_sum_finSupport_ite [MonadLiftT m SetM] [LawfulMonadLiftT
       imp_self, implies_true])
 
 @[grind =]
-lemma probOutput_map_eq_sum_filter_finSupport [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma probOutput_map_eq_sum_filter_finSupport [MonadAttach m] [ExactMonadAttach m]
     [EvalDistCompatible m] [HasEvalFinset m] [DecidableEq α] [DecidableEq β]
     (y : β) : Pr[= y | f <$> mx] = ∑ x ∈ (finSupport mx).filter (y = f ·), Pr[= x | mx] := by
   rw [Finset.sum_filter, probOutput_map_eq_sum_finSupport_ite]
@@ -146,7 +146,7 @@ lemma probFailure_eq_sub_sum_probOutput_map [Fintype β] (mx : m α) (f : α →
   rw [← probFailure_map (f := f), probFailure_eq_sub_tsum, tsum_fintype]
 
 @[aesop unsafe apply]
-lemma probOutput_map_eq_single [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+lemma probOutput_map_eq_single [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     {mx : m α} {f : α → β} {y : β}
     (x : α) (h : ∀ x' ∈ support mx, y = f x' → x = x') (h' : f x = y) :
     Pr[= y | f <$> mx] = Pr[= x | mx] := by
@@ -164,33 +164,33 @@ variable (mx : m α) (y : β)
 
 omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
 @[aesop safe norm, grind .]
-lemma support_map_const [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma support_map_const [MonadAttach m] [ExactMonadAttach m]
     (hx : (support mx).Nonempty) :
     support ((fun _ => y) <$> mx) = {y} := by
   aesop
 
 omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
-@[simp, grind .]
-lemma finSupport_map_const [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+@[grind .]
+lemma finSupport_map_const [MonadAttach m] [ExactMonadAttach m]
     [DecidableEq α] [DecidableEq β] [HasEvalFinset m]
     (hx : (finSupport mx).Nonempty) : finSupport ((fun _ => y) <$> mx) =
       if (finSupport mx).Nonempty then {y} else ∅ := by
   grind
 
 @[simp, aesop safe norm, grind =_]
-lemma probOutput_map_const [MonadLiftT m SetM] [EvalDistCompatible m] (y' : β) :
+lemma probOutput_map_const [MonadAttach m] [EvalDistCompatible m] (y' : β) :
     Pr[= y' | (fun _ => y) <$> mx] =
       (1 - Pr[⊥ | mx]) * Pr[= y' | (pure y : m β)] := by
   simp only [monad_norm, Function.comp_def, probOutput_bind_const]
 
-@[simp, aesop safe norm, grind =_]
-lemma probEvent_map_const [MonadLiftT m SetM] [EvalDistCompatible m] (p : β → Prop) :
+@[aesop safe norm, grind =_]
+lemma probEvent_map_const [MonadAttach m] [EvalDistCompatible m] (p : β → Prop) :
     Pr[ p | (fun _ => y) <$> mx] =
       (1 - Pr[⊥ | mx]) * Pr[ p | (pure y : m β)] := by
   simp only [monad_norm, Function.comp_def, probEvent_bind_const]
 
-@[simp, aesop safe norm]
-lemma probEvent_map_const' [MonadLiftT m SetM] [EvalDistCompatible m] (p : β → Prop)
+@[aesop safe norm]
+lemma probEvent_map_const' [MonadAttach m] [EvalDistCompatible m] (p : β → Prop)
     [DecidablePred p] :
     Pr[ p | (fun _ => y) <$> mx] =
       if p y then (1 - Pr[⊥ | mx]) else 0 := by
@@ -200,7 +200,7 @@ end const
 
 section inverse
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
   {f : α → β} {g : β → α} {y : β}
 
 @[aesop unsafe norm]
@@ -238,7 +238,7 @@ lemma probOutput_map_injective (mx : m α) {f : α → β} (hf : f.Injective) (x
   refine (tsum_eq_single x fun y hy => ?_).trans (by
     simp only [Function.comp_apply, probOutput_pure_self, mul_one])
   simp only [Function.comp_apply, probOutput_pure, mul_ite, mul_one, mul_zero]
-  exact if_neg fun h => hy (hf h.symm)
+  exact ite_eq_right fun h => hy (hf h.symm)
 
 lemma probOutput_map_eq_probOutput (mx : m α)
     {f : α → β} (hf : ∀ x x', f x = f x' → x = x') (x : α) :
@@ -247,7 +247,7 @@ lemma probOutput_map_eq_probOutput (mx : m α)
 
 section support
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+variable [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
 @[aesop unsafe norm]
 lemma probOutput_map_eq_probOutput_invFunOn [Nonempty α]
@@ -255,12 +255,8 @@ lemma probOutput_map_eq_probOutput_invFunOn [Nonempty α]
     (y : β) (hy : ∃ x ∈ support mx, f x = y) :
     Pr[= y | f <$> mx] = Pr[= Function.invFunOn f (support mx) y | mx] := by
   rw [probOutput_map_eq_probOutput_of_leftInvOn]
-  · intro x hx
-    have h : ∃ y ∈ support mx, f y = f x := ⟨x, hx, rfl⟩
-    specialize hf (Classical.choose_spec h).1 hx (Classical.choose_spec h).2
-    rw [Function.invFunOn]
-    aesop
-  rw [Function.invFunOn, dif_pos hy, (Classical.choose_spec hy).2]
+  · exact hf.leftInvOn_invFunOn
+  · exact Function.invFunOn_eq hy
 
 end support
 

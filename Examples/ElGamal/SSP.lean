@@ -6,6 +6,8 @@ Authors: Quang Dao
 
 module
 public import VCVio.StateSeparating.Hybrid
+public import VCVio.StateSeparating.MeasureDistEquiv
+public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 
 /-!
@@ -242,34 +244,56 @@ They are the state-separating-level analogues of the rewrites in
 
 section ReductionEquivalences
 
-/-- Per-(query, state) handler equivalence (under `evalSPMF`) between the composed
+/-- Per-query execution equality between the composed
 "reduction ∘ dhTripleReal" and the ElGamal LR-left game.
 
 The `Sum.inl` (GETPK) cases are immediate: both sides return `(sk • gen, some sk)` after
 sampling `sk` from `$ᵗ F`. The `Sum.inr` (LR) cases reduce to the same `do let sk; let r; pure
 ((r • gen, (sk * r) • gen + m₀), some sk)` form on both sides after pushing the reduction's
 final `pure (B, T + m₀)` map through the bind. -/
-private theorem composed_real_left_handler_evalSPMF (gen : G)
+private theorem composed_real_left_handler_run_eq (gen : G)
     (q : Unit ⊕ (G × G)) (s : Option F) :
-    𝒮[(simulateQ (dhTripleReal (F := F) gen)
-          ((dhToLR_leftHandler (G := G)) q)).run s] =
-      𝒮[((elgamalLR_left (F := F) gen) q).run s] := by
+    (simulateQ (dhTripleReal (F := F) gen)
+          ((dhToLR_leftHandler (G := G)) q)).run s =
+      ((elgamalLR_left (F := F) gen) q).run s := by
   rcases q with val | ⟨m₀, _⟩
   · rcases val with ⟨⟩
-    simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left]
-  · simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left]
+    simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left, monad_norm]
+  · simp [dhToLR_leftHandler, dhTripleReal, elgamalLR_left, monad_norm]
 
-/-- Per-(query, state) handler equivalence (under `evalSPMF`) between the composed
+/-- Per-query execution equality between the composed
 "reduction ∘ dhTripleReal" and the ElGamal LR-right game. -/
-private theorem composed_real_right_handler_evalSPMF (gen : G)
+private theorem composed_real_right_handler_run_eq (gen : G)
     (q : Unit ⊕ (G × G)) (s : Option F) :
-    𝒮[(simulateQ (dhTripleReal (F := F) gen)
-          ((dhToLR_rightHandler (G := G)) q)).run s] =
-      𝒮[((elgamalLR_right (F := F) gen) q).run s] := by
+    (simulateQ (dhTripleReal (F := F) gen)
+          ((dhToLR_rightHandler (G := G)) q)).run s =
+      ((elgamalLR_right (F := F) gen) q).run s := by
   rcases q with val | ⟨_, m₁⟩
   · rcases val with ⟨⟩
-    simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right]
-  · simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right]
+    simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right, monad_norm]
+  · simp [dhToLR_rightHandler, dhTripleReal, elgamalLR_right, monad_norm]
+
+/-- The real DDH reduction and LR-left handler have equal adaptive output measures. -/
+theorem measureDistEquiv_dhToLR_left_link_real_eq_elgamalLR_left (gen : G) :
+    QueryImpl.Stateful.MeasureDistEquiv
+      (dhToLR_left.link (dhTripleReal (F := F) gen)) (PUnit.unit, none)
+      (elgamalLR_left (F := F) gen) none := by
+  apply QueryImpl.Stateful.MeasureDistEquiv.of_run_eq
+  intro α A
+  apply QueryImpl.Stateful.run_link_left_ofStateless_eq_of_compose_eq
+  funext q state
+  exact composed_real_left_handler_run_eq gen q state
+
+/-- The real DDH reduction and LR-right handler have equal adaptive output measures. -/
+theorem measureDistEquiv_dhToLR_right_link_real_eq_elgamalLR_right (gen : G) :
+    QueryImpl.Stateful.MeasureDistEquiv
+      (dhToLR_right.link (dhTripleReal (F := F) gen)) (PUnit.unit, none)
+      (elgamalLR_right (F := F) gen) none := by
+  apply QueryImpl.Stateful.MeasureDistEquiv.of_run_eq
+  intro α A
+  apply QueryImpl.Stateful.run_link_left_ofStateless_eq_of_compose_eq
+  funext q state
+  exact composed_real_right_handler_run_eq gen q state
 
 /-- Hop #1: linking the DDH-real handler under the *left*-message reduction
 produces the same output distribution as the LR-left game itself. -/
@@ -278,15 +302,9 @@ theorem evalSPMF_runProb_dhToLR_left_link_real_eq_elgamalLR_left
     𝒮[(dhToLR_left.link (dhTripleReal (F := F) gen)).runProb
         (PUnit.unit, none) A] =
       𝒮[(elgamalLR_left (F := F) gen).runProb none A] := by
-  unfold QueryImpl.Stateful.runProb
-  rw [show dhToLR_left = QueryImpl.Stateful.ofStateless (dhToLR_leftHandler (G := G)) from rfl,
-    QueryImpl.Stateful.run_link_left_ofStateless]
-  unfold QueryImpl.Stateful.run
-  rw [StateT.run'_eq, StateT.run'_eq, evalSPMF_map, evalSPMF_map]
-  congr 1
-  rw [← QueryImpl.simulateQ_compose]
-  exact QueryImpl.Stateful.simulateQ_StateT_evalSPMF_congr
-    (composed_real_left_handler_evalSPMF (F := F) gen) A none
+  let : MeasurableSpace α := ⊤
+  exact evalSPMF_eq_of_evalDist_eq _ _
+    ((measureDistEquiv_dhToLR_left_link_real_eq_elgamalLR_left gen).run_evalDist_eq A)
 
 /-- Hop #5: the right-message analogue of
 `evalSPMF_runProb_dhToLR_left_link_real_eq_elgamalLR_left`. -/
@@ -295,16 +313,9 @@ theorem evalSPMF_runProb_dhToLR_right_link_real_eq_elgamalLR_right
     𝒮[(dhToLR_right.link (dhTripleReal (F := F) gen)).runProb
         (PUnit.unit, none) A] =
       𝒮[(elgamalLR_right (F := F) gen).runProb none A] := by
-  unfold QueryImpl.Stateful.runProb
-  rw [show dhToLR_right = QueryImpl.Stateful.ofStateless (dhToLR_rightHandler (G := G)) from rfl,
-    QueryImpl.Stateful.run_link_left_ofStateless]
-  unfold QueryImpl.Stateful.run
-  rw [StateT.run'_eq, StateT.run'_eq, evalSPMF_map, evalSPMF_map]
-  congr 1
-  rw [← QueryImpl.simulateQ_compose]
-  exact QueryImpl.Stateful.simulateQ_StateT_evalSPMF_congr
-    (composed_real_right_handler_evalSPMF (F := F) gen) A none
-
+  let : MeasurableSpace α := ⊤
+  exact evalSPMF_eq_of_evalDist_eq _ _
+    ((measureDistEquiv_dhToLR_right_link_real_eq_elgamalLR_right gen).run_evalDist_eq A)
 end ReductionEquivalences
 
 /-! ### Rand-swap symmetry (Hop #3)
@@ -323,7 +334,7 @@ section RandSwapSymmetry
 
 variable [Finite F] [SampleableType G]
 
-/-- Per-(query, state) handler equivalence (under `evalSPMF`) between the composed
+/-- Per-query distribution equality between the composed
 "left reduction ∘ dhTripleRand" and "right reduction ∘ dhTripleRand". `GETPK` cases are
 identical on both sides; the `LR` case reduces to the uniform-masking argument (`c • gen + m₀`
 and `c • gen + m₁` have the same distribution over `c ← $ᵗ F` when `(· • gen)` is bijective)

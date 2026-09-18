@@ -123,7 +123,7 @@ lemma probOutput_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMon
       Pr[= x | simulateQ so mx] :=
   probOutput_fst_run_withTraceBefore so costFn mx x
 
-lemma support_fst_run_withCost [LawfulMonad m] [MonadLiftT m SetM]
+lemma support_fst_run_withCost [LawfulMonad m] [MonadAttach m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     support (Prod.fst <$> (simulateQ (so.withCost costFn) mx).run) =
       support (simulateQ so mx) :=
@@ -192,19 +192,16 @@ lemma fst_map_run_simulateQ (costFn : spec.Domain → ω) (oa : OracleComp spec 
     Prod.fst <$> (simulateQ (costOracle costFn) oa).run = oa := by
   rw [costOracle, QueryImpl.fst_map_run_withCost, simulateQ_ofLift_eq_self]
 
-@[simp]
 lemma evalSPMF_fst_run_simulateQ [IsUniformSpec spec]
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
     𝒮[Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
-@[simp]
 lemma probOutput_fst_run_simulateQ [IsUniformSpec spec]
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) (x : α) :
     Pr[= x | Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = Pr[= x | oa] := by
   rw [fst_map_run_simulateQ]
 
-@[simp]
 lemma support_run_simulateQ [IsUniformSpec spec]
     (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
     support (Prod.fst <$> (simulateQ (costOracle costFn) oa).run) = support oa := by
@@ -227,7 +224,6 @@ lemma run_simulateQ_bind_fst (oa : OracleComp spec α) (ob : α → OracleComp s
   rw [← bind_map_left Prod.fst, fst_map_run_simulateQ]
 
 /-- Specialization of `QueryImpl.probFailure_run_simulateQ_withCost` to `countingOracle`. -/
-@[simp]
 lemma probFailure_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
     [DecidableEq ι₀] [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
     Pr[⊥ | (simulateQ (spec₀.countingOracle) oa).run] = Pr[⊥ | oa] := by
@@ -251,7 +247,6 @@ lemma probEvent_fst_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι
   rw [show (fun z : α × QueryCount ι₀ => p z.1) = p ∘ Prod.fst from rfl,
     ← probEvent_map, fst_map_run_simulateQ]
 
-@[simp]
 lemma probOutput_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
     [DecidableEq ι₀] [IsUniformSpec spec₀] {α : Type}
     (oa : OracleComp spec₀ α) (x : α) :
@@ -259,13 +254,11 @@ lemma probOutput_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 
       Pr[= x | oa] := by
   rw [fst_map_run_simulateQ]
 
-@[simp]
 lemma evalSPMF_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
     [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
     𝒮[Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
 
-@[simp]
 lemma support_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀} [DecidableEq ι₀]
     [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
     support (Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run) = support oa := by
@@ -286,15 +279,12 @@ lemma simulate_eq_map_simulate_zero (oa : OracleComp spec α) (qc : QueryCount �
   funext ⟨x, q⟩
   simp
 
-@[deprecated (since := "2026-06-25")]
-alias run_simulateT_eq_run_simulateT_zero := simulate_eq_map_simulate_zero
-
 /-- We can always reduce simulation with counting to start with `0`,
 and add the initial count back at the end. -/
 lemma support_simulate (oa : OracleComp spec α) (qc : QueryCount ι) :
     support (simulate oa qc) = Prod.map id (qc + ·) '' support (simulate oa 0) := by
   rw [simulate_eq_map_simulate_zero]
-  simp [support_map]
+  simp
 
 /-- Reduce membership in support of simulation with counting to simulation starting from `0`. -/
 lemma mem_support_simulate_iff (oa : OracleComp spec α) (qc : QueryCount ι)
@@ -380,14 +370,12 @@ lemma add_mem_support_simulate {oa : OracleComp spec α} {qc : QueryCount ι}
   simp only [Pi.add_apply]
   omega
 
-@[simp]
 lemma add_right_mem_support_simulate_iff (oa : OracleComp spec α)
     (qc qc' : QueryCount ι) (x : α) :
     (x, qc + qc') ∈ support (simulate oa qc) ↔ (x, qc') ∈ support (simulate oa 0) := by
   rw [mem_support_simulate_iff]
   aesop
 
-@[simp]
 lemma add_left_mem_support_simulate_iff (oa : OracleComp spec α)
     (qc qc' : QueryCount ι) (x : α) :
     (x, qc' + qc) ∈ support (simulate oa qc) ↔ (x, qc') ∈ support (simulate oa 0) := by
@@ -410,7 +398,7 @@ lemma apply_ne_zero_of_mem_support_simulate_queryBind {t : spec.Domain}
   have hqt : qc t + q0 t = z.2 t := congrFun hqsum t
   have hq0t : q0 t = QueryCount.single t t + b t := by
     simpa [Pi.add_apply] using (congrFun hq0 t).symm
-  simp only [QueryCount.single, Function.update_self] at hq0t
+  simp only [QueryCount.single, Pi.single_eq_same] at hq0t
   omega
 
 lemma exists_mem_support_of_mem_support_simulate_queryBind {t : spec.Domain}
@@ -430,10 +418,11 @@ lemma exists_mem_support_of_mem_support_simulate_queryBind {t : spec.Domain}
   have hq0j : q0 j = QueryCount.single t j + b j := by
     simpa [Pi.add_apply] using (congrFun hq0 j).symm
   rcases eq_or_ne j t with rfl | hj
-  · simp only [Pi.add_apply, QueryCount.single, Function.update_self] at hq0j ⊢
-    omega
-  · simp only [Pi.add_apply, QueryCount.single, Function.update_of_ne hj, Pi.zero_apply]
+  · simp only [Pi.add_apply, QueryCount.single, Pi.single_eq_same, Function.update_self]
       at hq0j ⊢
+    omega
+  · simp only [Pi.add_apply, QueryCount.single, Pi.single_eq_of_ne hj,
+          Function.update_of_ne hj] at hq0j ⊢
     omega
 
 lemma mem_support_simulate_queryBind_iff (t : spec.Domain)
@@ -467,10 +456,11 @@ lemma mem_support_simulate_queryBind_iff (t : spec.Domain)
         simpa [Pi.add_apply] using congrFun hbEq j
       rcases eq_or_ne j t with rfl | hj
       · have hzpos : 0 < z.2 j := Nat.pos_of_ne_zero hz0
-        simp only [q0, Pi.add_apply, QueryCount.single, Function.update_self] at hbEqj ⊢
+        simp only [q0, Pi.add_apply, QueryCount.single, Pi.single_eq_same, Function.update_self]
+          at hbEqj ⊢
         omega
-      · simp only [q0, Pi.add_apply, QueryCount.single, Function.update_of_ne hj,
-          Pi.zero_apply] at hbEqj ⊢
+      · simp only [q0, Pi.add_apply, QueryCount.single, Pi.single_eq_of_ne hj,
+          Function.update_of_ne hj] at hbEqj ⊢
         omega
     exact (mem_support_simulate_iff (oa := ((query t : OracleComp spec _) >>= oa))
       qc z).2 ⟨q0, hq0mem, hqsum⟩

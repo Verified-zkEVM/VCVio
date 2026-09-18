@@ -6,6 +6,7 @@ Authors: Devon Tuma
 module
 
 public import Mathlib.MeasureTheory.MeasurableSpace.Constructions
+public import Mathlib.MeasureTheory.MeasurableSpace.Embedding
 
 /-!
 # The measurable coproduct structure on `Option`
@@ -34,6 +35,35 @@ theorem measurable_some [MeasurableSpace α] : Measurable (@some α) :=
 
 theorem measurable_none [MeasurableSpace α] : Measurable (fun _ : Unit => (none : Option α)) :=
   Measurable.of_le_map inf_le_right
+
+/-- A set of optional values is measurable exactly when its preimage under `some` is measurable.
+The `none` branch imposes no condition because it is indexed by the discrete one-point space. -/
+theorem measurableSet_option_iff [MeasurableSpace α] {s : Set (Option α)} :
+    MeasurableSet s ↔ MeasurableSet (some ⁻¹' s) := by
+  change MeasurableSet (some ⁻¹' s) ∧
+    MeasurableSet ((fun _ : Unit => (none : Option α)) ⁻¹' s) ↔ _
+  simp
+
+/-- The image of a measurable set under `some` is measurable. -/
+@[simp]
+theorem measurableSet_some_image [MeasurableSpace α] {s : Set α} :
+    MeasurableSet (some '' s : Set (Option α)) ↔ MeasurableSet s := by
+  rw [measurableSet_option_iff,
+    Set.preimage_image_eq s (fun _ _ h => Option.some.inj h)]
+
+/-- `some` embeds a measurable space as the successful branch of its optional extension. -/
+theorem measurableEmbedding_some [MeasurableSpace α] : MeasurableEmbedding (@some α) where
+  injective := fun _ _ h => Option.some.inj h
+  measurable := measurable_some
+  measurableSet_image' _ hs := measurableSet_some_image.mpr hs
+
+/-- The absent optional value is a measurable singleton in every optional measurable space. -/
+@[simp]
+theorem measurableSet_none [MeasurableSpace α] :
+    MeasurableSet ({none} : Set (Option α)) := by
+  rw [measurableSet_option_iff]
+  simp only [Set.preimage, Set.mem_singleton_iff, reduceCtorEq, Set.ofPred_false,
+    MeasurableSet.empty]
 
 /-- Optional values have measurable singletons whenever the underlying values do. -/
 instance instMeasurableSingletonClass [MeasurableSpace α] [MeasurableSingletonClass α] :
@@ -68,6 +98,19 @@ theorem measurable_elim [MeasurableSpace α] [MeasurableSpace β] {f : Option α
   Measurable.of_comap_le <| le_inf
     (MeasurableSpace.comap_le_iff_le_map.2 hSome)
     (MeasurableSpace.comap_le_iff_le_map.2 hNone)
+
+/-- Eliminating an optional value with a measurable success branch is measurable. -/
+@[fun_prop]
+theorem measurable_elim' [MeasurableSpace α] [MeasurableSpace β] (b : β)
+    {f : α → β} (hf : Measurable f) :
+    Measurable (fun x : Option α => x.elim b f) :=
+  measurable_elim measurable_const hf
+
+/-- Mapping a measurable function over an optional value is measurable. -/
+@[fun_prop]
+theorem measurable_map [MeasurableSpace α] [MeasurableSpace β]
+    {f : α → β} (hf : Measurable f) : Measurable (Option.map f) :=
+  measurable_elim measurable_const (measurable_some.comp hf)
 
 instance instDiscreteMeasurableSpace [MeasurableSpace α] [DiscreteMeasurableSpace α] :
     DiscreteMeasurableSpace (Option α) where

@@ -50,7 +50,7 @@ noncomputable def coord (f : RealFFTPoly k) (j : Fin (2 ^ k)) : ℂ := ⟨f.re j
 
 @[simp] theorem im_pack (a b : Vector ℝ (2 ^ k)) (i : Fin (2 ^ k)) : (pack a b).im i = b.get i := by
   simp only [pack, im, LatticeCrypto.Poly.get_vectorOfFn]
-  rw [dif_neg (by omega)]
+  rw [dite_eq_right (by omega)]
   congr 1
   ext
   simp
@@ -252,11 +252,11 @@ theorem evalAngle_negacyclicConvCoeff {n : ℕ} (a b : Fin n → ℝ) (θ : ℝ)
       simp [ht]
     · have : (i.1 + j.1) % n ≠ m.1 := fun h => hm (Fin.ext h.symm)
       simp [this, hm]
-  simp only [hterm, Finset.sum_ite_eq', Finset.mem_univ, if_true]
+  simp only [hterm, Finset.sum_ite_eq', Finset.mem_univ, ite_true]
   by_cases hlt : i.1 + j.1 < n
   · have ht' : t.1 = i.1 + j.1 := Nat.mod_eq_of_lt hlt
     rw [ht', hEmul]
-    simp only [hs, if_pos hlt]
+    simp only [hs, ite_eq_left hlt]
     push_cast
     ring
   · rw [not_lt] at hlt
@@ -269,7 +269,7 @@ theorem evalAngle_negacyclicConvCoeff {n : ℕ} (a b : Fin n → ℝ) (θ : ℝ)
       push_cast
       ring
     rw [ht', hsplit, hEn]
-    simp only [hs, if_neg (not_lt.mpr hlt)]
+    simp only [hs, ite_eq_right (not_lt.mpr hlt)]
     push_cast
     ring
 

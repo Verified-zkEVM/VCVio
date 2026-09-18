@@ -81,7 +81,8 @@ theorem outputMeasure_query_succ [∀ a, DiscreteMeasurableSpace (P.B a)]
     outputMeasure (k + 1) (query position next) =
       Measure.bind (IsMeasureSpec.toMeasure position) fun direction =>
         outputMeasure k (next direction) := by
-  rw [outputMeasure, truncateMeasure, truncate_query_succ, FreeM.denote_liftBind]
+  rw [outputMeasure, truncateMeasure, truncate_query_succ,
+    FreeM.denote_liftBind _ _ Measurable.of_discrete.aemeasurable]
   unfold Measure.dropNone
   rw [Measure.bind_bind Measurable.of_discrete.aemeasurable
     Measure.measurable_dropNoneKernel.aemeasurable]
@@ -110,30 +111,30 @@ theorem outputMeasure_le_succ [∀ a, DiscreteMeasurableSpace (P.B a)]
     outputMeasure k computation ≤ outputMeasure (k + 1) computation := by
   induction k generalizing computation with
   | zero =>
-      rcases hdest : dest computation with result | ⟨position, next⟩
+      rcases hdest : dest computation with result | node
       · have hcomputation : computation = pure (p := P) result :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         simp
-      · have hcomputation : computation = query position next :=
+      · have hcomputation : computation = query node.fst node.snd :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         rw [outputMeasure_query_zero]
         exact bot_le
   | succ k ih =>
-      rcases hdest : dest computation with result | ⟨position, next⟩
+      rcases hdest : dest computation with result | node
       · have hcomputation : computation = pure (p := P) result :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         simp
-      · have hcomputation : computation = query position next :=
+      · have hcomputation : computation = query node.fst node.snd :=
           eq_of_dest_eq (by simpa using hdest)
         subst computation
         rw [outputMeasure_query_succ, outputMeasure_query_succ]
-        exact Measure.bind_mono_right
-          Measurable.of_discrete.aemeasurable
-          Measurable.of_discrete.aemeasurable
-          (Filter.Eventually.of_forall fun direction => ih (next direction))
+        gcongr with direction
+        · exact Measurable.of_discrete.aemeasurable
+        · exact Measurable.of_discrete.aemeasurable
+        · exact ih (node.snd direction)
 
 /-- The finite returned-output observations form an increasing sequence of measures. -/
 theorem monotone_outputMeasure [∀ a, DiscreteMeasurableSpace (P.B a)]
