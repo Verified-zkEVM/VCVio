@@ -13,7 +13,7 @@ public import VCVio.ProgramLogic.Unary.WP.Qualitative
 # Coherence of unary assertion carriers
 
 These lemmas relate structural predicates, probability-valued assertions, and quantitative
-expectations. The probability-one equivalence uses `IsUniformSpec`; it is not a generic
+expectations. The probability-one equivalence uses `IsUniformMeasureSpec`; it is not a generic
 identification of measure-theoretic almost-sure behavior with structural reachability.
 
 The statements expose the underlying algebras, so several carrier instances need not be
@@ -29,7 +29,8 @@ open ENNReal OracleComp.ProgramLogic OracleComp.ProgramLogic.PropLogic
 namespace OracleComp.WP.Coherence
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
 variable {α : Type}
 
 /-! ## Probabilistic ↔ Quantitative
@@ -43,8 +44,8 @@ which then occludes the qualitative tier discussed below. -/
 
 /-! ## Qualitative ↔ Probabilistic (support-vs-expectation bridge)
 
-For an `OracleComp` (which has a canonical `MonadLiftT … PMF`, so total
-probability is exactly `1`), the support-based `Prop`-valued `wp` agrees
+For an `OracleComp` with uniform configured answer measures, the support-based `Prop`-valued
+`wp` agrees
 with "the probabilistic `wp` on the indicator post equals `1`". -/
 
 /-- Qualitative ↔ Probabilistic coherence: a `Prop`-valued post is
@@ -60,11 +61,8 @@ theorem wp_qual_iff_wp_prob_indicator_eq_one
     MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post ↔
       MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa
           (fun a => if post a then 1 else 0) = 1 := by
-  rw [wp_iff_forall_support]
-  change (∀ x ∈ support oa, post x) ↔
-        wp oa (fun a => if post a then 1 else 0) = 1
-  rw [← probEvent_eq_wp_indicator, probEvent_eq_one_iff]
-  exact (and_iff_right probFailure_eq_zero).symm
+  rw [wp_iff_forall_support, ← wp_eq_mAlgOrdered_wp, ← probEvent_eq_wp_indicator,
+    OracleComp.prEvent_eq_one_iff_forall_mem_support]
 
 /-- Convenience: the `Prob`-valued indicator-as-`wp` form of the
 coherence lemma, for users who have already lifted their post to `Prob`

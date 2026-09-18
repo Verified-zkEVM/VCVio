@@ -27,18 +27,19 @@ universe v
 
 namespace MeasureProgramLogic.Probabilistic
 
-variable (m : Type → Type v) [Monad m]
+variable (m : Type → Type v) [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 attribute [local instance] MeasureProgramLogic.Quantitative.instMAlgOrdered
 
+omit [LawfulMonad m] in
 /-- Subprobability expectations preserve the upper bound one. -/
 theorem wp_one_le {α : Type} (mx : m α) :
     MAlgOrdered.wp mx (fun _ ↦ (1 : ENNReal)) ≤ 1 := by
-  let : MeasurableSpace α := ⊤
-  exact Quantitative.wp_le_const mx (Filter.Eventually.of_forall fun _ ↦ le_rfl)
+  let : MeasurableSpace α := MeasurableSpace.comap (fun _ : α ↦ (1 : ENNReal)) inferInstance
+  exact Quantitative.wp_le_const mx measurable_const
+    (Filter.Eventually.of_forall fun _ ↦ le_rfl)
 
-variable [LawfulMonad m]
 
 /-- The native expectation algebra restricted to bounded probability assertions. -/
 @[expose, instance_reducible]
@@ -88,16 +89,17 @@ theorem wp_mono (mx : m α) {f g : α → Prob} (hfg : ∀ a, f a ≤ g a) :
   simpa only [MAlgOrdered.toWPMonad_wp] using
     MAlgOrdered.wp_mono (m := m) (l := Prob) mx hfg
 
-variable [MeasurableSpace α] [DiscreteMeasurableSpace α]
+variable [MeasurableSpace α]
 
 /-- A bounded expectation is the integral of the assertion's underlying value. -/
-theorem wp_val_eq_lintegral (mx : m α) (post : α → Prob) :
+theorem wp_val_eq_lintegral (mx : m α) (post : α → Prob)
+    (hpost : Measurable fun a ↦ (post a).val) :
     (wp mx post (Lean.Order.bot : EPost.Nil)).val = ∫⁻ a, (post a).val ∂𝒟[mx] := by
-  rw [wp_val_eq_mAlgOrdered_wp, Quantitative.wp_eq_lintegral]
+  rw [wp_val_eq_mAlgOrdered_wp, Quantitative.wp_eq_lintegral mx _ hpost]
 
 /-- Constant assertions retain the successful-output mass. -/
 theorem wp_const (mx : m α) (p : Prob) :
     (wp mx (fun _ ↦ p) (Lean.Order.bot : EPost.Nil)).val = p.val * 𝒟[mx] Set.univ := by
-  rw [wp_val_eq_lintegral, lintegral_const]
+  rw [wp_val_eq_lintegral mx _ measurable_const, lintegral_const]
 
 end MeasureProgramLogic.Probabilistic

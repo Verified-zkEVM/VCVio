@@ -90,7 +90,8 @@ Gaussian operation, arbitrary AE valuations, lossy real results, and hidden outp
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
-Shared integration is the first checkpoint above. Continue with independently validated PRs:
+Shared integration and event laws are published in
+[PR #758](https://github.com/Verified-zkEVM/VCVio/pull/758). Continue with independently validated PRs:
 
 1. Finish quantitative Hoare/WP, simulation/lifting, and affected finite-counting proofs through
    upstream operation specifications and core `Std.Internal.Do`.
@@ -109,6 +110,32 @@ Shared integration is the first checkpoint above. Continue with independently va
 Reuse independent products in #756 and preserve exact expected signing costs in #752 and Schnorr
 transform guarantees in #755. These feature algorithms are not duplicated by conversions.
 Record each published checkpoint and its remaining compatibility consumers here and in #532.
+
+## Quantitative WP checkpoint
+
+Quantitative Hoare triples, simulation and oracle-signature lifting now interpret configured
+answer measures directly. The expectation carrier and transformer laws use core
+`Std.Internal.Do`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
+The qualitative oracle WP remains structural and requires no probability interpretation.
+
+Chosen-space assertion integrals require measurable postconditions. Mapped assertion integrals,
+pathwise bounds, finite answer partitions, and state-discarding simulation leave hidden outputs
+and handler states unmeasured. Uniform finite averages are separate laws with native uniform
+measure premises on the actual answer space. Composed signatures preserve those chosen spaces.
+Public transformer equations and conditional measure equations normalize the tactic rules
+without new `change` steps. Cached triples retain their core assertion and WP instances.
+Proposition indicators and their monotonicity rule belong to the native Hoare owner;
+generalized rewriting works on the assertion-valued event normal form.
+
+The finite query-count bounds in the random-oracle commitment example use native event
+observations and pathwise WP comparisons. Fiat–Shamir correctness and quantitative tactic
+walkthroughs use those laws. Native import guards check both the Hoare surface and a nonuniform
+oracle regression; regression proofs also use real observations and hidden function states.
+
+Retiring relational coupling, scalar probability-equality automation, seeded forking, and the
+commitment example's TV theorem remain distinct theorem families. Their required connections
+use the existing explicit coherence theorem in their compatibility owners. The native Hoare
+and simulation modules do not import PMF/SPMF or probability compatibility classes.
 
 ## Subsequent campaign work
 

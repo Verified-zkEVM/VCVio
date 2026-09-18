@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Tactics.Unary
-public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
 
 /-!
 # Unary Triple / VCGen Examples
@@ -25,7 +25,8 @@ open scoped OracleComp.ProgramLogic Std.Internal.Do OracleComp.Quantitative
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## `vcstep` on `Triple` goals -/
@@ -47,7 +48,7 @@ example {oa : OracleComp spec α} {f : α → OracleComp spec β}
   exact hob x
 
 example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
-    (h : ∀ x ∈ support oa, Pr[= true | f x] = 1) :
+    (h : ∀ x ∈ support oa, Pr{ let y ← f x}[y = true] = 1) :
     ⦃ 1 ⦄ (do
       let x ← oa
       f x) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
