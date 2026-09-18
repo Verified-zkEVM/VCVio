@@ -12,7 +12,7 @@ public import VCVio.OracleComp.SimSemantics.WriterT.Core
 
 Support-based invariant reasoning for query-implementations that accumulate a writer
 log in a monoid `ω` (as opposed to threading state through `StateT`). Typical
-use-cases include `countingOracle` (with `ω = QueryCount ι`) and `costOracle`
+use-cases include `countingOracle` (with `ω = Multiplicative (QueryCount ι)`) and `costOracle`
 (with an arbitrary `Monoid ω`).
 
 These statements mirror `QueryImpl.PreservesInv` /

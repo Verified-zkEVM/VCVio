@@ -436,12 +436,16 @@ session-collision bound. The headline analogue of `unlinkBadExp_le_sessionCollis
 theorem multipleBad_bad_le_sessionCollisionBound
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (maxNonceProb : ℝ)
-    (hmax : ∀ nonce : Nonce, (Pr[= nonce | ($ᵗ Nonce)]).toReal ≤ maxNonceProb) :
-    (Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
+    (hmax : ∀ nonce : Nonce, (Pr{let n ← $ᵗ Nonce}[n = nonce]).toReal ≤ maxNonceProb) :
+    (𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad) <$>
         (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
-          ((UnlinkState.init, ∅), UnlinkBadState.init)]).toReal ≤
+          ((UnlinkState.init, ∅), UnlinkBadState.init)] {true}).toReal ≤
       ((sessionsPerTag ^ 2 * Fintype.card TagId : ℕ) : ℝ) * maxNonceProb := by
+  let : MeasurableSpace Nonce := ⊤
+  simp_rw [prEvent_eq_evalDist_singleton] at hmax
+  simp only [evalDist_apply_singleton] at hmax
+  simp only [evalDist_apply_singleton, probOutput_map]
   have hmax_ENNReal : ∀ n : Nonce,
       Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ ENNReal.ofReal maxNonceProb := fun n => by
     rw [← ENNReal.ofReal_toReal (ne_top_of_le_ne_top one_ne_top probOutput_le_one)]

@@ -144,8 +144,8 @@ of `mx.run` satisfies `Q.1 a (s * w)` for every starting log `s` satisfying
 `P`. As in the `Append`-based variant, the starting log `s` threads through
 the WP interpretation (`s * _`), not through `mx`. This is the dual of the
 `Append`-based characterization and is what `countingOracle` / `costOracle`
-proofs use (where `QueryCount ι = ι → ℕ` has a `Monoid` instance but no
-`Append`). -/
+proofs use. Counting selects the monoid on `Multiplicative (QueryCount ι)`
+through `AddWriterT`, so accumulation is pointwise addition. -/
 theorem triple_writerT_iff_forall_support_monoid {ω α : Type} [Monoid ω]
     (mx : WriterT ω (OracleComp spec) α)
     (P : Std.Do.Assertion (.arg ω .pure)) (Q : Std.Do.PostCond α (.arg ω .pure)) :
