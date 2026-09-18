@@ -113,6 +113,8 @@ Record each published checkpoint and its remaining compatibility consumers here 
 
 ## Quantitative WP checkpoint
 
+[PR #761](https://github.com/Verified-zkEVM/VCVio/pull/761) publishes this checkpoint, stacked on #758.
+
 Quantitative Hoare triples, simulation and oracle-signature lifting now interpret configured
 answer measures directly. The expectation carrier and transformer laws use core
 `Std.Internal.Do`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
