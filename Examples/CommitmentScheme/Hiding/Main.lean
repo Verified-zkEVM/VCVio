@@ -46,7 +46,7 @@ private lemma tvDist_liftComp_hidingAvgSpec {α : Type}
         (OracleComp.liftComp oa (HidingAvgSpec M S C))
         (OracleComp.liftComp ob (HidingAvgSpec M S C)) =
       tvDist oa ob := by
-  rw [tvDist, tvDist, evalDist_liftComp, evalDist_liftComp]
+  rw [tvDist, tvDist, evalSPMF_liftComp, evalSPMF_liftComp]
 
 omit [Fintype M] [DecidableEq C] in
 /-- **Hiding bound (averaged technical form, Lemma cm-hiding).**

@@ -194,6 +194,8 @@ theorem isPerIndexQueryBound_seededForkWithSeedValue
 section generateSeedCoverage
 
 variable [∀ i, SampleableType (spec.Range i)]
+variable [∀ i, MeasurableSpace (spec.Range i)]
+  [∀ i, DiscreteMeasurableSpace (spec.Range i)]
 
 private lemma expectedQueryCount_seededForkWithSeedValue_le_aux [spec.DecidableEq] [Finite ι]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
@@ -221,15 +223,13 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
     wp (generateSeed spec qb js) (fun seed => wp ($ᵗ spec.Range i)
       (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u) CostModel.unit
         (fun n : ℕ => (n : ENNReal)))) ≤ qb i := by
-  let : Fintype ι := Fintype.ofFinite ι
-  rw [wp_eq_tsum]
-  conv_rhs => rw [← wp_const (generateSeed spec qb js) (qb i : ENNReal), wp_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun seed => ?_
-  by_cases hseed : seed ∈ support (generateSeed spec qb js)
-  · gcongr
-    exact expectedQueryCount_seededForkWithSeedValue_le_aux main qb i cf hmain
-      (generateSeed_covers_queryBound (spec := spec) qb js hjs hseed)
-  · simp [probOutput_eq_zero_of_not_mem_support hseed]
+  calc
+    _ ≤ wp (generateSeed spec qb js) (fun _ => (qb i : ENNReal)) := by
+      apply wp_mono_of_support
+      intro seed hseed
+      exact expectedQueryCount_seededForkWithSeedValue_le_aux main qb i cf hmain
+        (generateSeed_covers_queryBound (spec := spec) qb js hjs hseed)
+    _ = _ := wp_const _ _
 
 section forkRuntime
 
@@ -267,9 +267,9 @@ theorem seededForkExpectedQueryWork_le
       ((js.map fun j => qb j * sampleCost j).sum + sampleCost i + qb i : ENNReal) :=
   add_le_add
     (add_le_add
-      (AddWriterT.expectedCostNat_le_of_queryBoundedAboveBy
-        (generateSeed_queryCostExactly (spec := spec) qb js sampleCost hSample).toAbove)
-      (AddWriterT.expectedCostNat_le_of_queryBoundedAboveBy (hSample i).toAbove))
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _
+        (generateSeed_queryCostExactly (spec := spec) qb js sampleCost hSample)).le
+      (AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _ (hSample i)).le)
     (expectedQueryCount_seededForkWithSeedValue_le
       (main := main) (qb := qb) (js := js) (i := i) (cf := cf) hmain hjs)
 
@@ -287,7 +287,8 @@ omit [IsUniformSpec spec] [unifSpec ˡ⊂ₒ spec] in
 theorem cf_eq_of_mem_support_seededFork (x₁ x₂ : α)
     (h : some (x₁, x₂) ∈ support (seededFork main qb js i cf)) :
     ∃ s, cf x₁ = some s ∧ cf x₂ = some s := by
-  grind (gen := 16) [seededFork]
+  simp only [seededFork, mem_support_bind_iff] at h
+  grind
 
 omit [unifSpec ˡ⊂ₒ spec] in
 /-- On `seededFork` support, first-projection success equals pair-style success event. -/
@@ -429,11 +430,12 @@ private lemma probOutput_noGuardComp_eq_tsum_factored (s : Fin (qb i + 1)) :
     simp [monad_norm]
   rw [hcomp, probOutput_some_map_some, probOutput_bind_bind_prod_mk_eq_mul']
   congr 1
-  exact probOutput_map_eq_of_evalDist_eq
-    (seededOracle.evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
+  exact probOutput_map_eq_of_evalSPMF_eq
+    (seededOracle.evalSPMF_liftComp_uniformSample_bind_simulateQ_run'_addValue
       (σ.takeAtIndex i ↑s) i main) cf (some s)
 
 omit [spec.DecidableEq] in
+omit [unifSpec ˡ⊂ₒ spec] in
 private lemma sq_tsum_seed_weighted_le_tsum_factored (s : Fin (qb i + 1)) :
     (∑' σ, Pr[= σ | generateSeed spec qb js] *
       Pr[= (some s : Option (Fin (qb i + 1))) |
@@ -491,7 +493,7 @@ private lemma probOutput_noGuardComp_value_step_le_add_aux (s : Fin (qb i + 1))
               (if cf x.1 = some s then pure (some (x₁, x.1)) else pure none))] := by
       refine probOutput_bind_mono fun x hx => ?_
       by_cases hxs : cf x.1 = some s <;> simp [hxs, hx₁, z, eq_comm]
-    rw [if_neg (by simpa using hu')]
+    rw [ite_eq_right (by simpa using hu')]
     simpa [monad_norm] using hmono
 
 omit [unifSpec ˡ⊂ₒ spec] in
@@ -521,7 +523,7 @@ private lemma probOutput_noGuardComp_step_le_add_aux (s : Fin (qb i + 1)) (seed 
   | none =>
       refine le_trans (le_of_eq ?_) zero_le
       rw [probOutput_eq_zero_iff]
-      simp [support_bind, support_map, z]
+      simp [z]
   | some t =>
       by_cases hts : t = s
       · subst hts
@@ -533,7 +535,7 @@ private lemma probOutput_noGuardComp_step_le_add_aux (s : Fin (qb i + 1)) (seed 
           (main := main) (qb := qb) (i := i) (cf := cf) t seed x₁ hca u
       · refine le_trans (le_of_eq ?_) zero_le
         rw [probOutput_eq_zero_iff]
-        simp [support_bind, support_map, z, hts]
+        simp [z, hts]
 
 omit [unifSpec ˡ⊂ₒ spec] in
 private lemma probEvent_seededFork_pair_eq_probOutput_map_aux (s : Fin (qb i + 1)) :
@@ -616,7 +618,7 @@ theorem probOutput_none_seededFork_le :
   set acc := ∑ s, ps s
   set h : ℝ≥0∞ := ↑(Fintype.card (spec.Range i))
   have htotal := probOutput_none_add_tsum_some (mx := seededFork main qb js i cf)
-  rw [probFailure_of_liftM_PMF, tsub_zero] at htotal
+  rw [probFailure_eq_zero, tsub_zero] at htotal
   calc Pr[= none | seededFork main qb js i cf]
     _ = 1 - ∑' p, Pr[= some p | seededFork main qb js i cf] :=
         ENNReal.eq_sub_of_add_eq

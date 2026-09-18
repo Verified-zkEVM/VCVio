@@ -30,7 +30,8 @@ This module fixes the parameters and the **C13-specific** byte sizes (the FIPS s
 path). The remaining C13 build-out — a `WotsC` module (counter-mixed digits + fixed-sum gate),
 a `ForsC` module (forced-zero last tree), the `d = 2` hypertree fold, the keccak/32-byte-ADRS
 `Primitives` instantiation, and verification against `SPHINCs-C13Asm.sol` / the `signer-wasm`
-KAT — reuses the shared `SLHDSA.Merkle` core and the `SLHDSA.WotsChecksum` incomparability lemma.
+KAT — reuses the shared `PerfectMerkleTree` core and the `SLHDSA.WotsChecksum` incomparability
+lemma.
 
 ## References
 

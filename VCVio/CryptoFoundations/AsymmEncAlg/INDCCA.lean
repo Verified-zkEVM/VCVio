@@ -70,9 +70,9 @@ def IND_CCA_postChallengeImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
 The adversary chooses challenge messages with access to the decryption oracle, then receives
 the challenge ciphertext and continues interacting with a decryption oracle that returns `none`
 on the challenge ciphertext. -/
-def IND_CCA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
+noncomputable def IND_CCA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : encAlg.IND_CCA_Adversary) : SPMF Bool :=
+    (adversary : encAlg.IND_CCA_Adversary) : MeasureTheory.Measure Bool :=
   runtime.evalDist do
     let (pk, sk) ← encAlg.keygen
     let (m₀, m₁, st) ← simulateQ (encAlg.IND_CCA_preChallengeImpl sk)
@@ -87,7 +87,7 @@ def IND_CCA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
 noncomputable def IND_CCA_Advantage {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : encAlg.IND_CCA_Adversary) : ℝ :=
-  (IND_CCA_Game runtime adversary).boolBiasAdvantage
+  (IND_CCA_Game runtime adversary).boolBias
 
 end IND_CCA
 

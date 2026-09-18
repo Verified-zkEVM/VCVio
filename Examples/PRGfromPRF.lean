@@ -150,16 +150,16 @@ omit [Inhabited K] [Fintype K] [Inhabited S] [Fintype S] [DecidableEq S] [Inhabi
 the real PRF experiment for the reduction adversary, provided the PRF key
 distribution is uniform. -/
 theorem prgRealExp_eq_prfRealExp
-    (hkey : 𝒟[prf.keygen] = 𝒟[$ᵗ K])
+    (hkey : 𝒮[prf.keygen] = 𝒮[$ᵗ K])
     (adv : PRGAdversary (List.Vector O n)) :
-    𝒟[PRGScheme.prgRealExp (streamPRG prf n) adv] =
-      𝒟[PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)] := by
+    𝒮[PRGScheme.prgRealExp (streamPRG prf n) adv] =
+      𝒮[PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)] := by
   simp only [PRGScheme.prgRealExp, PRFScheme.prfRealExp, prfReduction, streamPRG]
   simp_rw [simulateQ_prfReal_reduction]
-  change 𝒟[(·, ·) <$> ($ᵗ K) <*> ($ᵗ S) >>=
+  change 𝒮[(·, ·) <$> ($ᵗ K) <*> ($ᵗ S) >>=
     fun ks => adv (streamOutputs (prf.eval ks.1) n ks.2)] = _
   simp only [monad_norm, Function.comp_def]
-  rw [evalDist_bind, evalDist_bind, hkey]
+  rw [evalSPMF_bind, evalSPMF_bind, hkey]
 
 /-- The output distribution that the ideal PRF reduction feeds to the PRG adversary:
 sample an initial seed, then read `n` output blocks off the lazy random oracle chain. -/
@@ -294,12 +294,12 @@ omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [Dec
   [SampleableType S] [Inhabited O] [Fintype O] [DecidableEq O] in
 /-- A uniform output vector of length `N + 1` decomposes as a uniform head block prepended to a
 uniform vector of length `N`. -/
-private lemma evalDist_uniformSample_vector_succ (N : ℕ) :
-    𝒟[($ᵗ (List.Vector O (N + 1)))] =
-      𝒟[(do let out ← $ᵗ O; let rest ← $ᵗ (List.Vector O N); pure (out ::ᵥ rest))] := by
+private lemma evalSPMF_uniformSample_vector_succ (N : ℕ) :
+    𝒮[($ᵗ (List.Vector O (N + 1)))] =
+      𝒮[(do let out ← $ᵗ O; let rest ← $ᵗ (List.Vector O N); pure (out ::ᵥ rest))] := by
   classical
   have : Fintype O := Fintype.ofFinite O
-  refine evalDist_ext fun v => ?_
+  refine evalSPMF_ext fun v => ?_
   obtain ⟨out, rest, rfl⟩ : ∃ out rest, v = out ::ᵥ rest :=
     ⟨v.head, v.tail, (List.Vector.cons_head_tail v).symm⟩
   have hR :
@@ -309,10 +309,10 @@ private lemma evalDist_uniformSample_vector_succ (N : ℕ) :
     · rw [probOutput_bind_eq_tsum, tsum_eq_single rest]
       · simp
       · intro b hb
-        rw [probOutput_pure, if_neg (by simp [List.Vector.eq_cons_iff, Ne.symm hb]), mul_zero]
+        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]), mul_zero]
     · intro b hb
       rw [probOutput_bind_eq_tsum, ENNReal.tsum_eq_zero.2 (fun r => by
-        rw [probOutput_pure, if_neg (by simp [List.Vector.eq_cons_iff, Ne.symm hb]),
+        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]),
           mul_zero]), mul_zero]
   have hL :
       Pr[= (out ::ᵥ rest) | ($ᵗ (List.Vector O (N + 1)))]
@@ -330,12 +330,12 @@ omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [Dec
 /-- The reference uniform output vector of length `N + 1`, written as a bind over a uniformly
 sampled pair `p : S × O` whose first coordinate is discarded and whose second coordinate is the
 prepended head block. This is the shared-base form used for the identical-until-bad coupling. -/
-private lemma evalDist_uniformSample_vector_succ_pair (N : ℕ) :
-    𝒟[($ᵗ (List.Vector O (N + 1)))] =
-      𝒟[(do let p ← $ᵗ (S × O); let rest ← $ᵗ (List.Vector O N); pure (p.2 ::ᵥ rest))] := by
-  rw [evalDist_uniformSample_vector_succ, uniformSample_prod_eq_bind]
+private lemma evalSPMF_uniformSample_vector_succ_pair (N : ℕ) :
+    𝒮[($ᵗ (List.Vector O (N + 1)))] =
+      𝒮[(do let p ← $ᵗ (S × O); let rest ← $ᵗ (List.Vector O N); pure (p.2 ::ᵥ rest))] := by
+  rw [evalSPMF_uniformSample_vector_succ, uniformSample_prod_eq_bind]
   simp only [bind_assoc, pure_bind]
-  refine (evalDist_ext fun v => ?_).symm
+  refine (evalSPMF_ext fun v => ?_).symm
   rw [probOutput_bind_const, probFailure_uniformSample, tsub_zero, one_mul]
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [Inhabited O]
@@ -423,8 +423,8 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
     refine le_trans (le_of_eq ?_) ENNReal.toReal_nonneg
     rw [tvDist_eq_zero_iff]
     simp only [oracleOutputs, simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-    refine evalDist_ext fun y => ?_
-    simp
+    refine evalSPMF_ext fun y => ?_
+    simp [List.Vector.eq_nil y]
   | succ N ih =>
     cases hc : c.isCached s with
     | false =>
@@ -442,9 +442,9 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
         rw [simulateQ_oracleOutputs_succ_run', randomOracle_run_of_none s c hcnone, bind_map_left]
         simp only [map_eq_bind_pure_comp, bind_pure_comp]
       have hRHS :
-          𝒟[($ᵗ (List.Vector O (N + 1)))] =
-            𝒟[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))] := by
-        rw [evalDist_uniformSample_vector_succ_pair (S := S) N]
+          𝒮[($ᵗ (List.Vector O (N + 1)))] =
+            𝒮[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))] := by
+        rw [evalSPMF_uniformSample_vector_succ_pair (S := S) N]
         congr 1
         refine bind_congr fun p => ?_
         rw [map_eq_bind_pure_comp]
@@ -516,7 +516,7 @@ lemma tvDist_idealOutputs_le_collisionProb :
       tvDist (($ᵗ S) >>= seedOutputs n) (($ᵗ S) >>= fun _ => $ᵗ (List.Vector O n)) := by
     simp only [tvDist]
     congr 1
-    refine evalDist_ext fun y => ?_
+    refine evalSPMF_ext fun y => ?_
     rw [probOutput_bind_const]
     simp
   rw [h_const]
@@ -571,24 +571,29 @@ omit [Inhabited K] [Fintype K] [Inhabited S] [Fintype S] [Inhabited O] [Fintype 
 bounded by the PRF advantage of the reduction plus the collision probability in the
 ideal random-function world. -/
 theorem security
-    (hkey : 𝒟[prf.keygen] = 𝒟[$ᵗ K])
+    (hkey : 𝒮[prf.keygen] = 𝒮[$ᵗ K])
     (adv : PRGAdversary (List.Vector O n)) :
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
       collisionProb (S := S) (O := O) n := by
-  unfold PRGScheme.prgAdvantage PRFScheme.prfAdvantage
-  have hreal : (Pr[= true | PRGScheme.prgRealExp (streamPRG prf n) adv]).toReal =
-      (Pr[= true | PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)]).toReal :=
-    congrArg ENNReal.toReal (probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv))
-  rw [hreal]
-  set a := (Pr[= true | PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)]).toReal
-  set b := (Pr[= true | PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)]).toReal
-  set c := (Pr[= true | PRGScheme.prgIdealExp adv]).toReal
-  have hgap : |b - c| ≤ collisionProb (S := S) (O := O) n :=
-    prfIdealGap_le_collisionProb adv
-  calc |a - c| = |(a - b) + (b - c)| := by ring_nf
-    _ ≤ |a - b| + |b - c| := abs_add_le _ _
-    _ ≤ |a - b| + collisionProb (S := S) (O := O) n := by linarith
+  let prgReal := PRGScheme.prgRealExp (streamPRG prf n) adv
+  let prfReal := PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)
+  let prfIdeal := PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)
+  let prgIdeal := PRGScheme.prgIdealExp adv
+  have hreal : 𝒟[prgReal] {true} = 𝒟[prfReal] {true} := by
+    simpa only [prgReal, prfReal, evalDist_apply_singleton] using
+      probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv)
+  have hgap : prfIdeal.boolDistAdvantage prgIdeal ≤ collisionProb (S := S) (O := O) n := by
+    simpa only [prfIdeal, prgIdeal, ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
+      prfIdealGap_le_collisionProb adv
+  change prgReal.boolDistAdvantage prgIdeal ≤
+    prfReal.boolDistAdvantage prfIdeal + collisionProb (S := S) (O := O) n
+  have heq : prgReal.boolDistAdvantage prgIdeal = prfReal.boolDistAdvantage prgIdeal := by
+    unfold ProbComp.boolDistAdvantage
+    rw [hreal]
+  rw [heq]
+  exact (ProbComp.boolDistAdvantage_triangle prfReal prfIdeal prgIdeal).trans
+    (add_le_add_right hgap _)
 
 omit [Inhabited K] [Fintype K] [SampleableType K] [Inhabited S] [Fintype S] [SampleableType S]
   [Inhabited O] [Fintype O] [DecidableEq O] [SampleableType O] in
@@ -722,10 +727,10 @@ private lemma probOutput_genCollisionExp_bind_le (N : ℕ) (c : (S →ₒ S × O
       intro s
       cases hcs : c.isCached s with
       | true =>
-        rw [probOutput_genCollisionExp_succ_of_isCached N s c hcs, if_pos rfl]
+        rw [probOutput_genCollisionExp_succ_of_isCached N s c hcs, ite_eq_left rfl]
         exact le_self_add
       | false =>
-        rw [if_neg (by simp), zero_add]
+        rw [ite_eq_right (by simp), zero_add]
         have hcnone : c s = none := by simpa [QueryCache.isCached] using hcs
         rw [genCollisionExp_succ_of_none N s c hcnone]
         -- Replace each fresh cache value by a fixed one (domain invariance), then drop the
@@ -810,7 +815,7 @@ omit [Inhabited K] [Fintype K] [Fintype O] [DecidableEq O] in
 PRF advantage of the reduction plus the birthday term `n·(n-1) / (2·|S|)`, obtained by combining
 `security` with `collisionProb_le_birthday`. -/
 theorem security_birthday
-    (hkey : 𝒟[prf.keygen] = 𝒟[$ᵗ K])
+    (hkey : 𝒮[prf.keygen] = 𝒮[$ᵗ K])
     (adv : PRGAdversary (List.Vector O n)) :
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +

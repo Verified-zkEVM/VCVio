@@ -53,10 +53,10 @@ def evalAt (ρ0 : ρ) : ReaderT ρ m →ᵐ m where
 @[simp] lemma evalAt_apply (ρ0 : ρ) (mx : ReaderT ρ m α) :
     evalAt ρ0 mx = mx ρ0 := rfl
 
-@[simp] lemma evalAt_pure (ρ0 : ρ) (x : α) :
+lemma evalAt_pure (ρ0 : ρ) (x : α) :
     evalAt (m := m) ρ0 (pure x : ReaderT ρ m α) = pure x := rfl
 
-@[simp] lemma evalAt_bind (ρ0 : ρ) (mx : ReaderT ρ m α) (f : α → ReaderT ρ m β) :
+lemma evalAt_bind (ρ0 : ρ) (mx : ReaderT ρ m α) (f : α → ReaderT ρ m β) :
     evalAt ρ0 (mx >>= f) = evalAt ρ0 mx >>= fun x => evalAt ρ0 (f x) := rfl
 
 /-- Lift `m → SPMF` to a homomorphism `ReaderT ρ m →ᵐ SPMF` by fixing `ρ0`.
@@ -72,7 +72,7 @@ noncomputable def toPMF (ρ0 : ρ) [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] :
     ReaderT ρ m →ᵐ PMF :=
   MonadHom.ofLift m PMF ∘ₘ evalAt ρ0
 
-section evalDist_lemmas
+section evalSPMF_lemmas
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (ρ0 : ρ)
 
@@ -81,11 +81,11 @@ variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (ρ0 : ρ)
     toSPMF ρ0 (pure x : ReaderT ρ m α) = (liftM (pure x : m α) : SPMF α) := rfl
 
 /-- Evaluating a bind distributes through the monad homomorphism. -/
-@[simp] lemma toSPMF_bind (mx : ReaderT ρ m α) (f : α → ReaderT ρ m β) :
+lemma toSPMF_bind (mx : ReaderT ρ m α) (f : α → ReaderT ρ m β) :
     toSPMF ρ0 (mx >>= f) = toSPMF ρ0 mx >>= fun x => toSPMF ρ0 (f x) :=
   (toSPMF ρ0).toFun_bind' mx f
 
-end evalDist_lemmas
+end evalSPMF_lemmas
 
 section evalPMF_lemmas
 
@@ -94,7 +94,7 @@ variable [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] (ρ0 : ρ)
 @[simp] lemma toPMF_pure (x : α) :
     toPMF ρ0 (pure x : ReaderT ρ m α) = (liftM (pure x : m α) : PMF α) := rfl
 
-@[simp] lemma toPMF_bind (mx : ReaderT ρ m α) (f : α → ReaderT ρ m β) :
+lemma toPMF_bind (mx : ReaderT ρ m α) (f : α → ReaderT ρ m β) :
     toPMF ρ0 (mx >>= f) = toPMF ρ0 mx >>= fun x => toPMF ρ0 (f x) :=
   (toPMF ρ0).toFun_bind' mx f
 

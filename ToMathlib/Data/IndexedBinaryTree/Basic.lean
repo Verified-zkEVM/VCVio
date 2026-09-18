@@ -349,7 +349,7 @@ theorem LeafData.get_ofRight {s_left s_right : Skeleton} {α : Type _}
   | LeafData.internal _ right =>
     rfl
 
-@[simp, grind =]
+@[grind =]
 theorem LeafData.get_internal_ofLeft {α} {s_left s_right : Skeleton}
     (left : LeafData α s_left) (right : LeafData α s_right)
     (idxLeft : SkeletonLeafIndex s_left) :
@@ -357,7 +357,7 @@ theorem LeafData.get_internal_ofLeft {α} {s_left s_right : Skeleton}
       left.get idxLeft := by
   rfl
 
-@[simp, grind =]
+@[grind =]
 theorem LeafData.get_internal_ofRight {α} {s_left s_right : Skeleton}
     (left : LeafData α s_left) (right : LeafData α s_right)
     (idxRight : SkeletonLeafIndex s_right) :
@@ -396,7 +396,7 @@ theorem InternalData.get_ofRight {s_left s_right : Skeleton} {α}
   | InternalData.internal _ _ right =>
     rfl
 
-@[simp, grind =]
+@[grind =]
 theorem InternalData.get_internal_ofLeft {α} {s_left s_right : Skeleton}
     (value : α) (left : InternalData α s_left) (right : InternalData α s_right)
     (idxLeft : SkeletonInternalIndex s_left) :
@@ -404,7 +404,7 @@ theorem InternalData.get_internal_ofLeft {α} {s_left s_right : Skeleton}
       left.get idxLeft := by
   rfl
 
-@[simp, grind =]
+@[grind =]
 theorem InternalData.get_internal_ofRight {α} {s_left s_right : Skeleton}
     (value : α) (left : InternalData α s_left) (right : InternalData α s_right)
     (idxRight : SkeletonInternalIndex s_right) :
@@ -438,7 +438,7 @@ theorem FullData.get_ofRight {s_left s_right : Skeleton} {α}
   | FullData.internal _ _ right =>
     rfl
 
-@[simp, grind =]
+@[grind =]
 theorem FullData.get_internal_ofLeft {α} {s_left s_right : Skeleton}
     (value : α) (left : FullData α s_left) (right : FullData α s_right)
     (idxLeft : SkeletonNodeIndex s_left) :
@@ -446,7 +446,7 @@ theorem FullData.get_internal_ofLeft {α} {s_left s_right : Skeleton}
       left.get idxLeft := by
   rfl
 
-@[simp, grind =]
+@[grind =]
 theorem FullData.get_internal_ofRight {α} {s_left s_right : Skeleton}
     (value : α) (left : FullData α s_left) (right : FullData α s_right)
     (idxRight : SkeletonNodeIndex s_right) :
@@ -691,6 +691,46 @@ def SkeletonNodeIndex.path {s : Skeleton} (idx : SkeletonNodeIndex s) :
   | SkeletonNodeIndex.ofRight idxRight =>
     SkeletonNodeIndex.ofInternal :: idxRight.path.map SkeletonNodeIndex.ofRight
 
+/-- `a.IsAncestorOf l` holds when the internal node `a` lies on the root-to-leaf path of the
+leaf `l`: the root is an ancestor of every leaf, and a node inside the left (right) subtree is
+an ancestor of `l` exactly when `l` also lies in that subtree and the node is an ancestor of `l`
+there. -/
+def SkeletonInternalIndex.IsAncestorOf :
+    {s : Skeleton} → SkeletonInternalIndex s → SkeletonLeafIndex s → Prop
+  | _, .ofInternal, _ => True
+  | _, .ofLeft a, .ofLeft l => a.IsAncestorOf l
+  | _, .ofRight a, .ofRight l => a.IsAncestorOf l
+  | _, .ofLeft _, .ofRight _ => False
+  | _, .ofRight _, .ofLeft _ => False
+
+@[simp]
+theorem SkeletonInternalIndex.isAncestorOf_ofInternal {left right : Skeleton}
+    (l : SkeletonLeafIndex (Skeleton.internal left right)) :
+    SkeletonInternalIndex.ofInternal.IsAncestorOf l := by
+  cases l <;> trivial
+
+@[simp]
+theorem SkeletonInternalIndex.isAncestorOf_ofLeft_ofLeft {left right : Skeleton}
+    (a : SkeletonInternalIndex left) (l : SkeletonLeafIndex left) :
+    (SkeletonInternalIndex.ofLeft (right := right) a).IsAncestorOf (.ofLeft l)
+      ↔ a.IsAncestorOf l := Iff.rfl
+
+@[simp]
+theorem SkeletonInternalIndex.isAncestorOf_ofRight_ofRight {left right : Skeleton}
+    (a : SkeletonInternalIndex right) (l : SkeletonLeafIndex right) :
+    (SkeletonInternalIndex.ofRight (left := left) a).IsAncestorOf (.ofRight l)
+      ↔ a.IsAncestorOf l := Iff.rfl
+
+@[simp]
+theorem SkeletonInternalIndex.not_isAncestorOf_ofLeft_ofRight {left right : Skeleton}
+    (a : SkeletonInternalIndex left) (l : SkeletonLeafIndex right) :
+    ¬ (SkeletonInternalIndex.ofLeft a).IsAncestorOf (.ofRight l) := id
+
+@[simp]
+theorem SkeletonInternalIndex.not_isAncestorOf_ofRight_ofLeft {left right : Skeleton}
+    (a : SkeletonInternalIndex right) (l : SkeletonLeafIndex left) :
+    ¬ (SkeletonInternalIndex.ofRight a).IsAncestorOf (.ofLeft l) := id
+
 /-- Find the siblings of a node and its ancestors, starting with the child of the root -/
 def FullData.copath {α} {s} (cache_tree : FullData α s) :
     BinaryTree.SkeletonLeafIndex s → List α
@@ -811,7 +851,7 @@ theorem populateUp_internal {α} {s_left s_right : Skeleton}
         (populateUp right compose) := by
   rfl
 
-@[simp, grind =]
+@[grind =]
 theorem populateUp_getRootValue {α} {s_left s_right : Skeleton}
     (left : LeafData α s_left) (right : LeafData α s_right)
     (compose : α → α → α) :

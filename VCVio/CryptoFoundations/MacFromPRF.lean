@@ -41,7 +41,7 @@ The standard construction of a message authentication code from a pseudorandom f
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open MeasureTheory OracleComp OracleSpec ENNReal
 
 namespace PRFScheme
 
@@ -60,9 +60,15 @@ def toMacAlg [DecidableEq R] (prf : PRFScheme K D R) : MacAlg ProbComp D K R whe
 theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
     prf.toMacAlg.PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
-  simp only [toMacAlg, pure_bind, decide_true]
-  change Pr[= true | do let _ ← prf.keygen; pure true] = 1
-  simp
+  let : MeasurableSpace K := ⊤
+  rw [ProbCompRuntime.probComp_evalDist]
+  simp only [toMacAlg, monad_norm, decide_true]
+  rw [show (do let k ← prf.keygen; pure true) = (fun _ => true) <$> prf.keygen by
+    simp only [map_eq_bind_pure_comp, Function.comp_def]]
+  rw [evalDist_map prf.keygen measurable_const,
+    Measure.map_apply measurable_const (measurableSet_singleton true)]
+  rw [show (fun _ : K => true) ⁻¹' {true} = Set.univ by ext; simp,
+    OracleComp.evalDist_apply_univ_eq_one]
 
 /-! ## Security Reduction (Boneh-Shoup Theorem 6.2)
 
@@ -147,9 +153,8 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run
       rw [simulateQ_prfRealQueryImpl_liftComp]
   | inr d =>
       ext
-      simpa [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
-        toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp] using
-        simulateQ_prfRealQueryImpl_inr prf k d
+      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
+        toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp]
 
 /-- The prfRealExp with the reduction equals the UF-CMA body as a `ProbComp` computation. -/
 private theorem prfRealExp_macToPRFReduction_eq_body (prf : PRFScheme K D R)
@@ -171,6 +176,9 @@ theorem prfRealExp_macToPRFReduction_eq_UF_CMA_Exp (prf : PRFScheme K D R)
     Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)] =
       MacAlg.UF_CMA_Advantage ProbCompRuntime.probComp adversary := by
   rw [prfRealExp_macToPRFReduction_eq_body]
+  rw [← evalDist_apply_singleton]
+  unfold MacAlg.UF_CMA_Advantage MacAlg.UF_CMA_Exp
+  rw [ProbCompRuntime.probComp_evalDist]
   rfl
 
 /-- The ideal experiment decomposes as: run the forger (under the random-oracle simulation
@@ -342,49 +350,33 @@ private theorem prfIdealExp_macToPRFReduction_probOutput_le [SampleableType R] [
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UF_CMA_Adversary) :
     Pr[= true | prfIdealExp (macToPRFReduction prf adversary)] ≤
       (Fintype.card R : ℝ≥0∞)⁻¹ := by
-  rw [prfIdealExp_macToPRFReduction_eq_ideal_body, probOutput_bind_eq_tsum]
-  calc ∑' x : (((D × R) × QueryLog (D →ₒ R)) × (D →ₒ R).QueryCache),
-        Pr[= x | (simulateQ prfIdealQueryImpl
-          ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) adversary.main).run)).run ∅] *
-        Pr[= true | ((D →ₒ R).randomOracle x.1.1.1).run x.2 >>= fun (t, _) =>
-          (pure (!QueryLog.wasQueried x.1.2 x.1.1.1 && decide (x.1.1.2 = t)) : ProbComp Bool)]
-      ≤ ∑' x, Pr[= x | (simulateQ prfIdealQueryImpl
-          ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) adversary.main).run)).run ∅] *
-        (Fintype.card R : ℝ≥0∞)⁻¹ := by
-        refine ENNReal.tsum_le_tsum fun ⟨((msg, τ), log), cache⟩ => ?_
-        by_cases hmem : (((msg, τ), log), cache) ∈ support
-            ((simulateQ prfIdealQueryImpl
-              ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) adversary.main).run)).run ∅)
-        · refine mul_le_mul' le_rfl ?_
-          cases hcache : cache msg with
-          | some v =>
-            simp only [randomOracle.apply_eq, StateT.run_bind, StateT.run_get, pure_bind, hcache,
-              StateT.run_pure, log_cache_invariant adversary.main (((msg, τ), log), cache) hmem msg
-                (by change cache msg ≠ none; rw [hcache]; exact Option.some_ne_none _),
-              probOutput_pure]
-            exact zero_le
-          | none =>
-            rw [show ((D →ₒ R).randomOracle msg).run cache =
-                (fun u => (u, cache.cacheQuery msg u)) <$> ($ᵗ R) from
-              QueryImpl.withCaching_run_none _ hcache]
-            simp only [map_eq_bind_pure_comp, bind_assoc, Function.comp, pure_bind]
-            rw [probOutput_bind_eq_tsum]
-            simp only [probOutput_uniformSample, probOutput_pure, mul_ite, mul_one, mul_zero]
-            set c := (Fintype.card R : ℝ≥0∞)⁻¹
-            calc ∑' t, (if (true : Bool) = (!log.wasQueried msg && decide (τ = t))
-                    then c else 0)
-                ≤ ∑' t, (if t = τ then c else 0) :=
-                  ENNReal.tsum_le_tsum fun t => by
-                    split_ifs with h1 h2
-                    · exact le_rfl
-                    · simp only [Bool.true_eq, Bool.and_eq_true, decide_eq_true_eq] at h1
-                      exact absurd h1.2.symm h2
-                    all_goals exact zero_le
-              _ = c := tsum_ite_eq τ (fun _ => c)
-        · simp [probOutput_eq_zero_of_not_mem_support hmem]
-    _ ≤ (Fintype.card R : ℝ≥0∞)⁻¹ := by
-        rw [ENNReal.tsum_mul_right]
-        exact mul_le_of_le_one_left zero_le tsum_probOutput_le_one
+  rw [prfIdealExp_macToPRFReduction_eq_ideal_body, probOutput_bind_eq_expectedValue]
+  refine OracleComp.EvalDist.expectedValue_le_of_support fun ⟨((msg, τ), log), cache⟩ hmem => ?_
+  dsimp only
+  cases hcache : cache msg with
+  | some v =>
+    simp only [randomOracle.apply_eq, StateT.run_bind, StateT.run_get, pure_bind, hcache,
+      StateT.run_pure, log_cache_invariant adversary.main (((msg, τ), log), cache) hmem msg
+        (by change cache msg ≠ none; rw [hcache]; exact Option.some_ne_none _),
+      probOutput_pure]
+    exact zero_le
+  | none =>
+    rw [show ((D →ₒ R).randomOracle msg).run cache =
+        (fun u => (u, cache.cacheQuery msg u)) <$> ($ᵗ R) from
+      QueryImpl.withCaching_run_none _ hcache]
+    simp only [map_eq_bind_pure_comp, bind_assoc, Function.comp, pure_bind]
+    rw [probOutput_bind_eq_tsum]
+    simp only [probOutput_uniformSample, probOutput_pure, mul_ite, mul_one, mul_zero]
+    set c := (Fintype.card R : ℝ≥0∞)⁻¹
+    calc ∑' t, (if (true : Bool) = (!log.wasQueried msg && decide (τ = t)) then c else 0)
+        ≤ ∑' t, (if t = τ then c else 0) :=
+          ENNReal.tsum_le_tsum fun t => by
+            split_ifs with h1 h2
+            · exact le_rfl
+            · simp only [Bool.true_eq, Bool.and_eq_true, decide_eq_true_eq] at h1
+              exact absurd h1.2.symm h2
+            all_goals exact zero_le
+      _ = c := tsum_ite_eq τ (fun _ => c)
 
 /-- In the ideal PRF experiment (random oracle), the reduction succeeds with probability
 at most `1/|R|` — a fresh random oracle query is independent of the forger's output. -/
@@ -407,7 +399,7 @@ theorem prf_implies_uf_cma [Nonempty R] [SampleableType R] [Fintype R]
       prf.prfAdvantage (macToPRFReduction prf adversary) +
         (Fintype.card R : ℝ)⁻¹ := by
   rw [← prfRealExp_macToPRFReduction_eq_UF_CMA_Exp prf adversary]
-  unfold prfAdvantage
+  simp only [prfAdvantage, ProbComp.boolDistAdvantage, evalDist_apply_singleton]
   set a := (Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)]).toReal
   set b := (Pr[= true | prfIdealExp (macToPRFReduction prf adversary)]).toReal
   linarith [le_abs_self (a - b), prfIdealExp_macToPRFReduction_le prf adversary]

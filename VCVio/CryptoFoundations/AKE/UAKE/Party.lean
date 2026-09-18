@@ -5,7 +5,7 @@ Authors: Ben Hamlin
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 
@@ -20,7 +20,7 @@ is the key). It is up to the protocol realization to ensure that the output
 function produces output only at the end.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp
 
@@ -35,11 +35,13 @@ inductive InitResult (State W : Type)
 
 namespace InitResult
 
-@[simp] def state {State W : Type} : InitResult State W → State
+/-- Initial private state, irrespective of whether the party sends first. -/
+@[expose, simp] def state {State W : Type} : InitResult State W → State
   | .speakFirst st _ => st
   | .waitForMsg st => st
 
-@[simp] def opening {State W : Type} : InitResult State W → Option W
+/-- The initial protocol message, if this party sends first. -/
+@[expose, simp] def opening {State W : Type} : InitResult State W → Option W
   | .speakFirst _ msg => some msg
   | .waitForMsg _ => none
 
@@ -55,9 +57,13 @@ end Party
 
 /-- A party, structured as a Mealy machine with a final output function. -/
 structure Party (m : Type → Type) (In W Out : Type) where
+  /-- Private state retained between protocol messages. -/
   State : Type
+  /-- Initialize a session from its long-term input. -/
   init : In → m (Party.InitResult State W)
+  /-- Process an incoming message, possibly replying or completing the session. -/
   step : State → W → m (Party.StepResult State W)
+  /-- Read the final output; `none` means the session has not completed. -/
   output : State → m (Option Out)
 
 namespace Party
@@ -67,7 +73,7 @@ variable {m : Type → Type} {In W Out : Type}
 /-- True if a party is well-formed, i.e., if it outputs iff the state is
   the result of an execution of the step function that returns `done = true`
   or `.complete` (assuming the state is reachable). -/
-def OutputsOnlyAtCompletion [Monad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+@[expose] def OutputsOnlyAtCompletion [Monad m] [MonadAttach m] [LawfulMonadAttach m]
     (P : Party m In W Out) : Prop :=
   let init_output := ∀ i r, r ∈ support (P.init i) →
     ∀ out ∈ support (P.output r.state), out = none;
@@ -87,7 +93,7 @@ def OutputsOnlyAtCompletion [Monad m] [MonadLiftT m SetM] [LawfulMonadLiftT m Se
   * The `sent` list contains the messages sent in the protocol so far. Note
     that the `sent` list must be passed to this function in *reverse*
     chronological order. This is to support easy cons-ing of new messages. -/
-def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
+@[expose] def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) :
     ℕ → P.State → Q.State → W → Bool → List W → m (P.State × Q.State × List W)
   | 0, pState, qState, _, _, sent => pure (pState, qState, sent.reverse)
@@ -106,7 +112,7 @@ def runHonestLoop [Monad m] {InP OutP InQ OutQ : Type}
 
 /-- Start an honest run of the protocol, initiating the loop function based on
   which party opens. -/
-def runHonestStart [Monad m] {InP OutP InQ OutQ : Type}
+@[expose] def runHonestStart [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (fuel : ℕ)
     (pInit : InitResult P.State W) (qInit : InitResult Q.State W) :
     m (P.State × Q.State × List W) :=
@@ -119,7 +125,7 @@ def runHonestStart [Monad m] {InP OutP InQ OutQ : Type}
   output, Q's output, and the message list. The `fuel` argument is an upper
   bound on how many party step functions may be run in the execution of the
   protocol. -/
-def runHonest [Monad m] {InP OutP InQ OutQ : Type}
+@[expose] def runHonest [Monad m] {InP OutP InQ OutQ : Type}
     (P : Party m InP W OutP) (Q : Party m InQ W OutQ) (inP : InP) (inQ : InQ) (fuel : ℕ) :
     m (Option OutP × Option OutQ × List W) := do
   let pInit ← P.init inP

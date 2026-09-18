@@ -10,12 +10,11 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Cost
 public import Mathlib.Analysis.SpecificLimits.Basic
 
 /-!
-# Expected-cost PMF theorems for Fiat-Shamir with aborts
+# Expected-cost theorems for Fiat-Shamir with aborts
 
 Expected random-oracle query costs of `fsAbortSignLoop` and
-`FiatShamirWithAbort.sign`/`verify`, stated as `tsum` identities over the
-induced output distributions. These drive the aggregate runtime bounds used
-in the security proof.
+`FiatShamirWithAbort.sign`/`verify`, stated as tail-probability identities over the
+induced output measures. These drive the aggregate runtime bounds used in the security proof.
 -/
 
 @[expose] public section
@@ -23,7 +22,6 @@ in the security proof.
 universe u v
 
 open OracleComp OracleSpec
-open scoped BigOperators
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
@@ -109,7 +107,8 @@ private lemma signLoop_queryCountDist_succ
 end
 
 variable [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
 /-- The probability that a single Fiat-Shamir-with-aborts signing attempt aborts. -/
 noncomputable abbrev signAttemptAbortProbability
@@ -120,6 +119,8 @@ noncomputable abbrev signAttemptAbortProbability
         fsAbortSignAttempt (m := m) ids M pk sk msg)
       runtime]
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m] in
 private lemma signLoop_probNone_succ
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ) :
     Pr[= none |
@@ -156,13 +157,13 @@ private lemma signLoop_probNone_succ
     Pr[ fun attempt ↦ attempt.2 = none | attemptComp] * Pr[= none | recLoop]
   rw [probOutput_bind_eq_tsum, probEvent_eq_tsum_indicator, ← ENNReal.tsum_mul_right]
   refine tsum_congr fun attempt => ?_
-  cases hAttempt : attempt.2 <;> simp [hAttempt]
+  cases hAttempt : attempt.2 <;> simp [hAttempt, probOutput_pure_eq_indicator]
 
 section
 
 variable [LawfulMonad m]
 
-omit [LawfulMonadLiftT m SetM] in
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [ExactMonadAttach m] in
 private lemma signLoop_queryTailProbability_zero
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ) :
     Pr[ fun q ↦ 0 < q |
@@ -191,7 +192,8 @@ private lemma signLoop_queryTailProbability_zero
   · intro attempt _
     cases attempt.2 <;> simp [probEvent_map]
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m] in
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m] in
 private lemma signLoop_queryTailProbability_succ
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (i n : ℕ) :
     Pr[ fun q ↦ i + 1 < q |
@@ -232,6 +234,7 @@ private lemma signLoop_queryTailProbability_succ
   refine tsum_congr fun attempt => ?_
   cases hAttempt : attempt.2 <;> simp [cont, hAttempt, probEvent_map, Function.comp_def]
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [ExactMonadAttach m] in
 private theorem signLoop_queryTailProbability_eq_probNonePrefix
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) :
     ∀ i extra,
@@ -256,6 +259,8 @@ private theorem signLoop_queryTailProbability_eq_probNonePrefix
 
 end
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m] in
 private theorem signLoop_probNone_eq_signAttemptAbortProbability_pow
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) :
     ∀ i,
@@ -276,6 +281,8 @@ private theorem signLoop_probNone_eq_signAttemptAbortProbability_pow
 
 section
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+  [ExactMonadAttach m] [EvalDistCompatible m] in
 /-- The probability that the first `i` signing attempts all abort is the `i`-th power of the
 single-attempt abort probability. -/
 theorem sign_abortPrefixProbability_eq_signAttemptAbortProbability_pow
@@ -297,6 +304,7 @@ section schemeCost
 
 variable (hr : GenerableRelation Stmt Wit rel)
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [ExactMonadAttach m] in
 /-- The probability that signing makes more than `i` random-oracle queries is exactly the
 probability that the first `i` signing attempts all abort.
 
@@ -305,36 +313,37 @@ length `i` returns `none`, meaning that the `(i + 1)`-st attempt is reached. -/
 theorem sign_queryTailProbability_eq_probAllFirstAttemptsAbort
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     {i maxAttempts : ℕ} (hi : i < maxAttempts) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] =
+        runtime}[i < q] =
       Pr[= none |
         HasQuery.Program.eval
           (fun [HasQuery (M × Commit →ₒ Chal) m] =>
             fsAbortSignLoop (m := m) ids M pk sk msg i)
           runtime] := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_apply_setOf]
   obtain ⟨extra, rfl⟩ := Nat.exists_eq_add_of_lt hi
   exact signLoop_queryTailProbability_eq_probNonePrefix
     (ids := ids) (M := M) (runtime := runtime) (pk := pk) (sk := sk) (msg := msg)
     (i := i) (extra := extra)
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [ExactMonadAttach m] in
 /-- The probability that signing makes more than `i` oracle queries is the `i`-th power of the
 single-attempt abort probability, as long as `i < maxAttempts`. -/
 theorem sign_queryTailProbability_eq_signAttemptAbortProbability_pow
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     {i maxAttempts : ℕ} (hi : i < maxAttempts) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] =
+        runtime}[i < q] =
       (signAttemptAbortProbability (ids := ids) (M := M) runtime pk sk msg) ^ i := by
   rw [sign_queryTailProbability_eq_probAllFirstAttemptsAbort (hr := hr) (hi := hi)]
   exact sign_abortPrefixProbability_eq_signAttemptAbortProbability_pow
     (ids := ids) (M := M) runtime pk sk msg i
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- The expected number of signing queries is the sum, over prefixes of the retry loop, of the
 probability that every attempt in the prefix aborts. -/
 theorem sign_expectedQueries_eq_sum_abortPrefixProbabilities
@@ -357,6 +366,7 @@ theorem sign_expectedQueries_eq_sum_abortPrefixProbabilities
       (ids := ids) (hr := hr) (M := M) (runtime := runtime) (pk := pk) (sk := sk)
       (msg := msg) (hi := Finset.mem_range.mp hi)
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- The expected number of signing queries is the finite geometric sum of the one-step abort
 probability. -/
 theorem sign_expectedQueries_eq_sum_signAttemptAbortProbability_powers
@@ -372,17 +382,17 @@ theorem sign_expectedQueries_eq_sum_signAttemptAbortProbability_powers
   exact Finset.sum_congr rfl fun i _ =>
     sign_abortPrefixProbability_eq_signAttemptAbortProbability_pow ids M runtime pk sk msg i
 
-omit [LawfulMonadLiftT m PMF] in
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Once `i` reaches `maxAttempts`, the signer never makes more than `i` queries, so the tail
 event has probability zero. -/
 private theorem sign_queryTailProbability_eq_zero_of_le
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     {i maxAttempts : ℕ} (hi : maxAttempts ≤ i) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] = 0 := by
+        runtime}[i < q] = 0 := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_apply_setOf]
   refine probEvent_eq_zero fun c hc => ?_
   have hc' : c ∈ support
       (AddWriterT.costs
@@ -398,16 +408,16 @@ private theorem sign_queryTailProbability_eq_zero_of_le
     (ids := ids) (hr := hr) (M := M) (runtime := runtime) (pk := pk) (sk := sk)
     (msg := msg) (maxAttempts := maxAttempts) z hz) hi
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Tail probabilities for the signer query count are bounded by the corresponding power of the
 single-attempt abort probability. -/
 theorem sign_queryTailProbability_le_signAttemptAbortProbability_pow
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
     (i maxAttempts : ℕ) :
-    Pr[ fun q ↦ i < q |
-      HasQuery.queryCountDist
+    Pr{let q ← HasQuery.queryCountDist
         (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] =>
           (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
-        runtime] ≤
+        runtime}[i < q] ≤
       (signAttemptAbortProbability (ids := ids) (M := M) runtime pk sk msg) ^ i := by
   by_cases hi : i < maxAttempts
   · rw [sign_queryTailProbability_eq_signAttemptAbortProbability_pow
@@ -416,6 +426,7 @@ theorem sign_queryTailProbability_le_signAttemptAbortProbability_pow
   · exact (sign_queryTailProbability_eq_zero_of_le ids M (hr := hr) runtime pk sk msg
       (Nat.le_of_not_lt hi)).trans_le zero_le
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- The expected number of signing queries is bounded by the infinite geometric series generated by
 the single-attempt abort probability. -/
 theorem sign_expectedQueries_le_tsum_signAttemptAbortProbability_powers
@@ -430,6 +441,7 @@ theorem sign_expectedQueries_le_tsum_signAttemptAbortProbability_powers
       (ids := ids) (hr := hr) (M := M) (runtime := runtime) (pk := pk) (sk := sk)
       (msg := msg) (i := i) (maxAttempts := maxAttempts)
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- If the single-attempt abort probability is bounded by `q`, then the expected number of signing
 queries is bounded by the corresponding geometric series. -/
 theorem sign_expectedQueries_le_geometric_of_signAttemptAbortProbability_le
@@ -450,6 +462,7 @@ theorem sign_expectedQueries_le_geometric_of_signAttemptAbortProbability_le
     _ ≤ ∑' i : ℕ, q ^ i := by gcongr
     _ = (1 - q)⁻¹ := ENNReal.tsum_geometric q
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Specializing the geometric upper bound to the actual one-step abort probability yields the
 canonical infinite geometric upper bound on expected query count. -/
 theorem sign_expectedQueries_le_geometric
@@ -462,6 +475,7 @@ theorem sign_expectedQueries_le_geometric
   sign_expectedQueries_le_geometric_of_signAttemptAbortProbability_le
     ids M hr runtime pk sk msg maxAttempts le_rfl
 
+omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Verification has expected weighted query cost equal to the cost of the single verification
 query when a signature is present, and `0` when the signature is `none`. -/
 theorem verify_expectedQueryCost_eq

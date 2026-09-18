@@ -42,7 +42,7 @@ then `wp` of the simulated computation equals `wp` of the original. -/
 @[game_rule] theorem wp_simulateQ_eq
     (impl : QueryImpl spec (OracleComp spec))
     (hImpl : ∀ (t : spec.Domain),
-      𝒟[impl t] = 𝒟[(liftM (query t) : OracleComp spec (spec.Range t))])
+      𝒮[impl t] = 𝒮[(liftM (query t) : OracleComp spec (spec.Range t))])
     (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp (simulateQ impl oa) post =
       wp oa post := by
@@ -53,7 +53,7 @@ then `wp` of the simulated computation equals `wp` of the original. -/
       OracleQuery.input_query]
     rw [wp_bind, wp_bind]
     simp_rw [ih]
-    exact wp_congr_evalDist (hImpl t) _
+    exact wp_congr_evalSPMF (hImpl t) _
 
 /-- Lifting a computation to a larger oracle spec via `liftComp` preserves `wp`. -/
 @[game_rule] theorem wp_liftComp {ι' : Type*} {superSpec : OracleSpec ι'}
@@ -64,8 +64,8 @@ then `wp` of the simulated computation equals `wp` of the original. -/
       wp mx post := by
   change @μ _ superSpec _ (liftComp mx superSpec >>= fun a => pure (post a)) =
        μ (mx >>= fun a => pure (post a))
-  exact μ_cross_congr_evalDist
-    (by simp only [evalDist_bind, evalDist_liftComp, evalDist_pure])
+  exact μ_cross_congr_evalSPMF
+    (by simp only [evalSPMF_bind, evalSPMF_liftComp, evalSPMF_pure])
 
 /-- If a stateful oracle implementation preserves distributions (each query produces a uniform
 distribution after discarding state), then `wp` of `simulateQ ... run'` equals `wp` of the
@@ -73,11 +73,11 @@ original computation. -/
 @[game_rule] theorem wp_simulateQ_run'_eq {σ : Type}
     (impl : QueryImpl spec (StateT σ (OracleComp spec)))
     (hImpl : ∀ (t : spec.Domain) (s : σ),
-      𝒟[(impl t).run' s] =
+      𝒮[(impl t).run' s] =
         OptionT.lift (PMF.uniformOfFintype (spec.Range t)))
     (oa : OracleComp spec α) (s : σ) (post : α → ℝ≥0∞) :
     wp ((simulateQ impl oa).run' s) post =
       wp oa post :=
-  wp_congr_evalDist (evalDist_simulateQ_run'_eq_evalDist impl hImpl s oa) post
+  wp_congr_evalSPMF (evalSPMF_simulateQ_run'_eq_evalSPMF impl hImpl s oa) post
 
 end OracleComp.ProgramLogic

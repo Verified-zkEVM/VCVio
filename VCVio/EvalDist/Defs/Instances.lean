@@ -29,31 +29,29 @@ end SetM
 namespace SPMF
 
 @[simp, grind =]
-protected lemma evalDist_def (p : SPMF α) : evalDist p = p := rfl
+protected lemma evalSPMF_def (p : SPMF α) : evalSPMF p = p := rfl
 
 @[grind =]
-protected lemma support_eq_support (p : SPMF α) : support p = SPMF.support p := rfl
+lemma probOutput_eq_apply (p : SPMF α) (x : α) : Pr[= x | p] = p x :=
+  probOutput_def p x
 
-@[grind =]
-lemma probOutput_eq_apply (p : SPMF α) (x : α) : Pr[= x | p] = p x := rfl
-
-lemma evalDist_eq_iff {m} [Monad m] [MonadLiftT m SPMF] (mx : m α) (p : SPMF α) :
-    𝒟[mx] = p ↔ ∀ x, Pr[= x | mx] = p x := by
+lemma evalSPMF_eq_iff {m} [Monad m] [MonadLiftT m SPMF] (mx : m α) (p : SPMF α) :
+    𝒮[mx] = p ↔ ∀ x, Pr[= x | mx] = p x := by
   simp only [probOutput_def, DFunLike.ext_iff]
 
 end SPMF
 
 namespace PMF
 
-@[simp] lemma evalDist_eq (p : PMF α) : evalDist p = liftM p := rfl
+@[simp] lemma evalSPMF_eq (p : PMF α) : evalSPMF p = liftM p := rfl
 
 @[simp] lemma probOutput_eq_apply (p : PMF α) (x : α) : Pr[= x | p] = p x := by
   simp [probOutput_def]
 
 end PMF
 
-@[simp] lemma SPMF.evalDist_liftM (p : PMF α) :
-    evalDist (m := SPMF) (liftM p) = 𝒟[p] := rfl
+@[simp] lemma SPMF.evalSPMF_liftM (p : PMF α) :
+    evalSPMF (m := SPMF) (liftM p) = 𝒮[p] := rfl
 
 @[simp] lemma SPMF.probOutput_liftM (p : PMF α) (x : α) :
     Pr[= x | (liftM p : SPMF α)] = Pr[= x | p] := rfl
@@ -79,13 +77,14 @@ noncomputable instance : LawfulMonadLift Id PMF where
 instance : HasEvalFinset Id where
   finSupport x := {x}
   coe_finSupport x := by
-    ext y
-    change y ∈ (↑({x.run} : Finset _) : Set _) ↔ y ∈ SetM.run (pure x.run : SetM _)
+    change (↑({x.run} : Finset _) : Set _) = support (pure x.run : Id _)
     rw [Finset.coe_singleton]
-    rfl
+    exact (MonadAttach.support_pure x.run).symm
 
-@[simp, grind =]
-lemma support_eq_singleton (x : Id α) : support x = {x.run} := rfl
+@[grind =]
+lemma support_eq_singleton (x : Id α) : support x = {x.run} := by
+  change support (pure x.run : Id _) = {x.run}
+  exact MonadAttach.support_pure _
 
 @[simp, grind =]
 lemma finSupport_eq_singleton [DecidableEq α] (x : Id α) : finSupport x = {x.run} := rfl

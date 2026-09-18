@@ -10,6 +10,7 @@ public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.EvalDist.Bool
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # Hashed ElGamal Encryption
@@ -89,13 +90,9 @@ theorem correct :
   have hcomm : ∀ (a b : F), a • (b • g) = b • (a • g) := by
     intro a b; rw [← mul_smul, mul_comm, mul_smul]
   intro msg
-  simp only [ProbCompRuntime.evalDist, ProbCompRuntime.probComp, AsymmEncAlg.CorrectExp,
-    hashedElGamal, bind_pure_comp, map_pure, Option.some.injEq, Functor.map_map, hcomm, bind_assoc,
-    bind_map_left, add_sub_cancel_left, decide_true, SPMFSemantics.ofMonadLift_evalDist, liftM_bind,
-    evalDist_uniformSample, liftM_map, probOutput_bind_const, SPMF.probFailure_liftM,
-    probFailure_of_liftM_PMF, tsub_zero, probOutput_map_const, probOutput_pure, ↓reduceIte, mul_one]
-  change 1 - Pr[⊥ | ($ᵗ HK : ProbComp HK)] = 1
-  simp
+  rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
+  simp [AsymmEncAlg.CorrectExp, hashedElGamal, hcomm,
+    probOutput_bind_const, probOutput_map_const]
 
 /-! ## DDH Reduction -/
 
@@ -353,17 +350,17 @@ theorem esIdeal_eq_half
     let y ← ($ᵗ F)
     let h ← ($ᵗ M)
     adv.distinguish st (y • g, h + if b then m₁ else m₂)
-  have hf : ∀ hk, 𝒟[f hk true] = 𝒟[f hk false] := by
+  have hf : ∀ hk, 𝒮[f hk true] = 𝒮[f hk false] := by
     intro hk
     unfold f
-    rw [evalDist_bind, evalDist_bind]
+    rw [evalSPMF_bind, evalSPMF_bind]
     congr 1
     funext sk
-    rw [evalDist_bind, evalDist_bind]
+    rw [evalSPMF_bind, evalSPMF_bind]
     congr 1
     funext x
     rcases x with ⟨m₁, m₂, st⟩
-    rw [evalDist_bind, evalDist_bind]
+    rw [evalSPMF_bind, evalSPMF_bind]
     congr 1
     funext y
     simpa [add_comm, add_left_comm, add_assoc] using
@@ -458,40 +455,26 @@ theorem hashedElGamal_IND_CPA_bound
       ddhDistAdvantage g (ddhReduction (F := F) (hash := hash) adv) +
       EntropySmoothing.advantage F g hash (esReduction (F := F) (g := g) adv) := by
   rw [cpaGame_eq_ddhReal (F := F) (g := g) (hash := hash)]
-  rw [ddhDistAdvantage, EntropySmoothing.advantage]
-  have hesHalf :=
-    esIdeal_eq_half (F := F) (g := g) (hash := hash) adv
-  have hddhEs :
-      |(Pr[= true | ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)]).toReal - 1 / 2| =
-        |(Pr[= true | ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)]).toReal -
-          (Pr[= true | EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)]).toReal| := by
-    rw [hesHalf, ENNReal.toReal_div]
-    simp
-  rw [hddhEs]
-  have hreal :
-      (Pr[= true | ddhExpRand g (ddhReduction (F := F) (hash := hash) adv)]).toReal =
-        (Pr[= true |
-          EntropySmoothing.realExp F g hash (esReduction (F := F) (g := g) adv)]).toReal := by
-    congr 1
-    exact ddhRand_eq_esReal (F := F) (g := g) (hash := hash) adv
+  let real := ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)
+  let rand := ddhExpRand g (ddhReduction (F := F) (hash := hash) adv)
+  let esReal := EntropySmoothing.realExp F g hash (esReduction (F := F) (g := g) adv)
+  let ideal := EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)
+  change |(Pr[= true | real]).toReal - 1 / 2| ≤
+    real.boolDistAdvantage rand + esReal.boolDistAdvantage ideal
+  have hideal : (𝒟[ideal] {true}).toReal = 1 / 2 := by
+    rw [evalDist_apply_singleton, esIdeal_eq_half (F := F) (g := g) (hash := hash) adv]
+    norm_num
+  have hrand : 𝒟[rand] {true} = 𝒟[esReal] {true} := by
+    simpa only [rand, esReal, evalDist_apply_singleton] using
+      ddhRand_eq_esReal (F := F) (g := g) (hash := hash) adv
   calc
-    |(Pr[= true | ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)]).toReal -
-        (Pr[= true | EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)]).toReal| ≤
-      |(Pr[= true | ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)]).toReal -
-          (Pr[= true | ddhExpRand g (ddhReduction (F := F) (hash := hash) adv)]).toReal| +
-        |(Pr[= true | ddhExpRand g (ddhReduction (F := F) (hash := hash) adv)]).toReal -
-          (Pr[= true | EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)]).toReal| :=
-      abs_sub_le _ _ _
-    _ = ddhDistAdvantage g (ddhReduction (F := F) (hash := hash) adv) +
-        |(Pr[= true |
-          EntropySmoothing.realExp F g hash (esReduction (F := F) (g := g) adv)]).toReal -
-          (Pr[= true | EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)]).toReal| := by
-      rw [ddhDistAdvantage]
-      congr 1
-      rw [hreal]
-    _ = ddhDistAdvantage g (ddhReduction (F := F) (hash := hash) adv) +
-        EntropySmoothing.advantage F g hash (esReduction (F := F) (g := g) adv) := by
-      rw [EntropySmoothing.advantage]
+    |(Pr[= true | real]).toReal - 1 / 2| = real.boolDistAdvantage ideal := by
+      unfold ProbComp.boolDistAdvantage
+      rw [hideal, evalDist_apply_singleton]
+    _ ≤ real.boolDistAdvantage rand + rand.boolDistAdvantage ideal :=
+      ProbComp.boolDistAdvantage_triangle _ _ _
+    _ = real.boolDistAdvantage rand + esReal.boolDistAdvantage ideal := by
+      simp only [ProbComp.boolDistAdvantage, hrand]
 
 end Security
 

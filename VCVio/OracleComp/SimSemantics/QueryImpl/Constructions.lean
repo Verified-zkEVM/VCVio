@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 
 /-!
 # Basic Constructions of Simulation Oracles
@@ -28,7 +28,7 @@ a new `QueryImpl spec n` that wraps the base with that side effect:
 Both come with a complete generic theory, parametric in a projection
 `proj : ∀ {γ}, n γ → m γ` that strips the instrumentation: `proj_simulateQ_preInsert`,
 `probFailure_proj_simulateQ_preInsert`, `NeverFail_proj_simulateQ_preInsert_iff`,
-`evalDist_proj_simulateQ_preInsert`, `probOutput_proj_simulateQ_preInsert`,
+`evalSPMF_proj_simulateQ_preInsert`, `probOutput_proj_simulateQ_preInsert`,
 `support_proj_simulateQ_preInsert`, `finSupport_proj_simulateQ_preInsert`, and the
 induction principle `simulateQ_preInsert.induct` (with `postInsert` analogues). Query-bound
 transfer through these wrappers lives in `QueryTracking/QueryBound.lean`.
@@ -50,35 +50,6 @@ universe u v w
 
 namespace QueryImpl
 
-section compose
-
-variable {m : Type u → Type v} [Monad m]
-    {ι ι' : Type*} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-    {α β γ : Type u}
-
-/-- Given an implementation of `spec` in terms of a new set of oracles `spec'`,
-and an implementation of `spec'` in terms of arbitrary `m`, implement `spec` in terms of `m`. -/
-def compose (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec')) :
-    QueryImpl spec m :=
-  fun t => simulateQ so' (so t)
-
-infixl : 65 " ∘ₛ " => QueryImpl.compose
-
-@[simp]
-lemma apply_compose (so' : QueryImpl spec' m) (so : QueryImpl spec (OracleComp spec'))
-    (t : spec.Domain) : (so' ∘ₛ so) t = simulateQ so' (so t) := rfl
-
-@[simp]
-lemma simulateQ_compose [LawfulMonad m] (so' : QueryImpl spec' m)
-    (so : QueryImpl spec (OracleComp spec'))
-    (oa : OracleComp spec α) : simulateQ (so' ∘ₛ so) oa = simulateQ so' (simulateQ so oa) := by
-  induction oa using OracleComp.inductionOn <;> simp_all
-
-@[simp]
-lemma compose_id' [LawfulMonad m] (so : QueryImpl spec m) :
-    so ∘ₛ QueryImpl.id' spec = so := by ext x; simp
-
-end compose
 
 section insertPre
 
@@ -91,7 +62,7 @@ abbrev preInsert (so : QueryImpl spec m) (nx : spec.Domain → n α) :
     QueryImpl spec n :=
   PFunctor.Handler.preInsert (P := spec.toPFunctor) so nx
 
-@[simp, grind =]
+@[grind =]
 lemma preInsert_apply [LawfulMonad n] (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (t : spec.Domain) :
     so.preInsert nx t = (do let _ ← nx t; liftM (so t)) := by
@@ -194,9 +165,9 @@ lemma simulateQ_preInsert_const_pure [Monad m]
     funext t; simp
   rw [h, simulateQ_liftTarget]
 
-/-! #### `evalDist` / `probOutput` / `support` bridges for `preInsert` -/
+/-! #### `evalSPMF` / `probOutput` / `support` bridges for `preInsert` -/
 
-lemma evalDist_proj_simulateQ_preInsert [Monad m]
+lemma evalSPMF_proj_simulateQ_preInsert [Monad m]
     [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
@@ -205,7 +176,7 @@ lemma evalDist_proj_simulateQ_preInsert [Monad m]
         proj (b >>= f) = proj b >>= fun x => proj (f x))
     (hproj_apply : ∀ t, proj ((so.preInsert nx) t) = so t)
     (oa : OracleComp spec β) :
-    𝒟[proj (simulateQ (so.preInsert nx) oa)] = 𝒟[simulateQ so oa] := by
+    𝒮[proj (simulateQ (so.preInsert nx) oa)] = 𝒮[simulateQ so oa] := by
   rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma probOutput_proj_simulateQ_preInsert [Monad m]
@@ -221,7 +192,7 @@ lemma probOutput_proj_simulateQ_preInsert [Monad m]
   rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma support_proj_simulateQ_preInsert [Monad m]
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
@@ -233,7 +204,7 @@ lemma support_proj_simulateQ_preInsert [Monad m]
   rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma finSupport_proj_simulateQ_preInsert [Monad m]
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM] [HasEvalFinset m] [DecidableEq β]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m] [HasEvalFinset m] [DecidableEq β]
     (so : QueryImpl spec m) (nx : spec.Domain → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
@@ -261,7 +232,7 @@ abbrev postInsert (so : QueryImpl spec m) {α}
 variable {α β : Type u}
 
 omit [Monad m] in
-@[simp, grind =]
+@[grind =]
 lemma postInsert_apply (so : QueryImpl spec m)
     (nx : (t : spec.Domain) → spec.Range t → n α) (t : spec.Domain) :
     so.postInsert nx t = (do let u ← liftM (so t); let _ ← nx t u; return u) := by
@@ -363,9 +334,9 @@ lemma simulateQ_postInsert_const_pure
   have h : so.postInsert (fun _ _ => (pure x : n α)) = so.liftTarget n := by funext t; simp
   rw [h, simulateQ_liftTarget]
 
-/-! #### `evalDist` / `probOutput` / `support` bridges for `postInsert` -/
+/-! #### `evalSPMF` / `probOutput` / `support` bridges for `postInsert` -/
 
-lemma evalDist_proj_simulateQ_postInsert
+lemma evalSPMF_proj_simulateQ_postInsert
     [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
@@ -374,7 +345,7 @@ lemma evalDist_proj_simulateQ_postInsert
         proj (b >>= f) = proj b >>= fun x => proj (f x))
     (hproj_apply : ∀ t, proj ((so.postInsert nx) t) = so t)
     (oa : OracleComp spec β) :
-    𝒟[proj (simulateQ (so.postInsert nx) oa)] = 𝒟[simulateQ so oa] := by
+    𝒮[proj (simulateQ (so.postInsert nx) oa)] = 𝒮[simulateQ so oa] := by
   rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma probOutput_proj_simulateQ_postInsert
@@ -390,7 +361,7 @@ lemma probOutput_proj_simulateQ_postInsert
   rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma support_proj_simulateQ_postInsert
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m]
     (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
@@ -402,7 +373,7 @@ lemma support_proj_simulateQ_postInsert
   rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 lemma finSupport_proj_simulateQ_postInsert
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SetM] [HasEvalFinset m] [DecidableEq β]
+    [LawfulMonad m] [LawfulMonad n] [MonadAttach m] [HasEvalFinset m] [DecidableEq β]
     (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
     (proj : ∀ {γ : Type u}, n γ → m γ)
     (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)

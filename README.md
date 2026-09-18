@@ -4,7 +4,9 @@ VCVio is a Lean library for machine-checked proofs about cryptographic games, pr
 protocols, and implementations. The core framework provides:
 
 * A monadic syntax for representing computations with oracle access (`OracleComp`), with probabilistic computations (`ProbComp`) as a special case of having uniform selection oracles.
-* A denotational semantics (`evalDist`) for assigning probability distributions to probabilistic computations, and tools for reasoning about the probabilities of particular outputs or events (`probOutput`/`probEvent`/`probFailure`).
+* A measure-valued denotational semantics (`evalDist` / `𝒟[…]`) for probabilistic computations,
+  with an explicit finite adapter (`evalSPMF` / `𝒮[…]`) and scalar tools for output, event, and
+  failure probabilities (`probOutput`/`probEvent`/`probFailure`).
 * An operational semantics (`simulateQ`) for implementing/simulating the behavior of a computation's oracles, including implementations of random oracles, query logging, reductions, etc.
 * A program logic with relational (pRHL-style) and unary (Hoare-style) proof modes, with interactive tactics for stepping through game-based proofs.
 
@@ -22,6 +24,11 @@ Assuming Lean and Lake are already installed, the project can be built by just r
 lake exe cache get && lake build
 ```
 
+`lake build` covers the seven proof libraries. `./scripts/validate.sh` runs the fast per-PR
+checks locally; add `--lint`, `--test`, or `--axioms` for those CI passes. `lake test` builds the
+test libraries and runs the test executables, and `lake lint` runs source-style and environment checks
+(see `AGENTS.md`, *Building*).
+
 CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`,
 `LatticeCrypto`, `Extern`, `HashSig`, `Examples`, and `VCVioWidgets`.
 The build timing report parses per-file timings for that same set.
@@ -35,8 +42,8 @@ for dependencies, so the corresponding `extern_lib` targets fall back to empty
 stub archives when those sources are absent. Downstream executables still link
 unless they call VCVio's native FFI symbols; to enable the real backends, run
 `git submodule update --init --recursive` inside `.lake/packages/VCVio` and
-rebuild. (In this repository itself the same command at the repo root — or
-`scripts/build-project.sh --ffi` — enables the native test executables.)
+rebuild. (In this repository itself the same command at the repo root enables the
+native test executables, which `lake test -- --ffi` then builds and runs.)
 
 Mathematical foundations such as probability theory, computational complexity, and algebraic structures are based on or written to the Mathlib project (see [MATHLIB4](REFERENCES.md#mathlib4)), making all of that library usable in constructions and proofs.
 
@@ -52,7 +59,10 @@ infrastructure and some tooling and automation remain under active development.
 - `VCVio/` contains the oracle-computation framework, probability semantics, program logic, and generic crypto abstractions.
 - `LatticeCrypto/` contains lattice algebra, hardness assumptions, ML-DSA, ML-KEM, Falcon, and their concrete implementations.
 - `Extern/` contains the native FFI surface: the `@[extern]` bindings and the FFI-backed concrete instances. Its `extern_lib`s build as empty stubs when the `third_party/` submodules are absent.
-- `HashSig/` contains hash-based signatures, including proof-level specifications and security for SLH-DSA.
+- `HashSig/` contains hash-based signatures: proof-level specifications, component-level FIPS 205
+  conformance results, and security-facing interfaces for SLH-DSA. Neither an unforgeability
+  theorem nor a complete FIPS conformance result is proved yet; see
+  `docs/design/slh-dsa-status-and-roadmap.md`.
 - `LatticeCryptoTest/` contains ACVP vectors, regression tests, and differential checks against native backends.
 - `HashSigTest/` contains hash-signature test and validation modules.
 - `Examples/` contains compact framework proofs including OneTimePad, ElGamal, and Schnorr.
@@ -121,8 +131,10 @@ This provides a mechanism to implement oracle behaviors, but can also be used to
 Semantics for probability calculations come from using `simulateQ` to interpret the computation in another monad.
 `support` can be used to embed in the `Set` monad to get the possible outputs of a computation.
 
-`evalDist` embeds a computation into the `SPMF` monad (`OptionT PMF`) by using uniform distributions for each oracle's range.
-For `ProbComp` (i.e. `OracleComp unifSpec`), `evalDist` is definitionally equal to `simulateQ` with uniform implementations.
+`evalDist` exposes the successful-output law as a Mathlib `Measure`; missing mass represents
+failure or nontermination. `evalSPMF` is the explicit `OptionT PMF` compatibility and executable
+backend. For `ProbComp` (i.e. `OracleComp unifSpec`), `evalSPMF` is definitionally equal to
+`simulateQ` with uniform implementations.
 We introduce notation:
 
 * `Pr[= x | comp]` - probability of output `x`

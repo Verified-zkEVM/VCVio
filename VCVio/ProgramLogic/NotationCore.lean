@@ -26,12 +26,14 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 ### Prop indicator
 - `𝟙⟦P⟧` — inject `Prop` into `ℝ≥0∞` (1 if true, 0 if false)
 
-### Unary (Std.Do-inspired)
+### Unary (core WP)
+
+Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Quantitative`.
 - `wp⟦c⟧` — quantitative WP (partial application, use as `wp⟦c⟧ post`)
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 
 ### Game-level
-- `g₁ ≡ₚ g₂` — game equivalence (`evalDist g₁ = evalDist g₂`)
+- `g₁ ≡ₚ g₂` — game equivalence (`evalSPMF g₁ = evalSPMF g₂`)
 
 ### Relational (EasyCrypt-inspired)
 - `⟪c₁ ~ c₂ | R⟫` — pRHL coupling triple
@@ -61,7 +63,7 @@ variable {α β : Type}
 
 /-- Two games have the same output distribution. -/
 def GameEquiv (g₁ g₂ : OracleComp spec₁ α) : Prop :=
-  𝒟[g₁] = 𝒟[g₂]
+  𝒮[g₁] = 𝒮[g₂]
 
 /-- Advantage of a Boolean game is at most `ε` (measured as deviation from 1/2). -/
 def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ) : Prop :=
@@ -78,18 +80,17 @@ def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ) : Prop :=
 
 theorem GameEquiv.probOutput_eq {g₁ g₂ : OracleComp spec₁ α}
     (h : GameEquiv g₁ g₂) (x : α) : Pr[= x | g₁] = Pr[= x | g₂] :=
-  probOutput_congr_evalDist h x
+  probOutput_congr_evalSPMF h x
 
 /-! ## Prop-to-ℝ≥0∞ indicator -/
 
 open scoped Classical in
 /-- Indicator embedding: lifts `P : Prop` into `ℝ≥0∞` as `1` (true) or `0` (false).
-This is the quantitative analogue of Loom's pure proposition assertion, but
-targets the expectation carrier rather than the current assertion lattice. -/
+It takes values in the expectation carrier `ℝ≥0∞`. -/
 noncomputable def propInd (P : Prop) : ℝ≥0∞ := if P then 1 else 0
 
-@[simp] lemma propInd_true : propInd True = 1 := if_pos trivial
-@[simp] lemma propInd_false : propInd False = 0 := if_neg id
+@[simp] lemma propInd_true : propInd True = 1 := ite_eq_left trivial
+@[simp] lemma propInd_false : propInd False = 0 := ite_eq_right id
 
 lemma propInd_eq_ite {P : Prop} [Decidable P] : propInd P = if P then 1 else 0 := by simp [propInd]
 
@@ -121,8 +122,7 @@ lemma propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
 /-! ## Notation -/
 
 /-- Numeric proposition indicator: `𝟙⟦P⟧ = 1` if `P` holds, `0` otherwise.
-This is deliberately distinct from Loom's `⌜P⌝`, which embeds propositions as
-top/bottom in the active assertion lattice. -/
+The true branch is the numeric value `1`, including for the unbounded expectation carrier. -/
 scoped notation "𝟙⟦" P "⟧" => propInd P
 
 /-- Quantitative WP notation. `wp⟦c⟧ post` directly elaborates to
@@ -137,7 +137,7 @@ scoped macro_rules
   | `(wp⟦ $c ⟧)            => `(fun post => wp $c post)
 
 /-- Raw relational WP notation.
-`rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `Std.Do'.rwp`.
+`rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `VCVio.ProgramLogic.rwp`.
 The normal assertion carrier and both exception-post carriers are inferred from
 `post`, `epost₁`, and `epost₂`, so this notation also works for stateful and
 exception-aware `RelWP` instances. -/
@@ -146,9 +146,9 @@ scoped syntax:max (name := relWpBracket)
 
 scoped macro_rules (kind := relWpBracket)
   | `(rwp⟦ $c₁ ~ $c₂ | $post; $epost₁, $epost₂ ⟧) =>
-      `(Std.Do'.rwp $c₁ $c₂ $post $epost₁ $epost₂)
+      `(VCVio.ProgramLogic.rwp $c₁ $c₂ $post $epost₁ $epost₂)
 
-/-- Game equivalence: `g₁ ≡ₚ g₂` means `evalDist g₁ = evalDist g₂`.
+/-- Game equivalence: `g₁ ≡ₚ g₂` means `evalSPMF g₁ = evalSPMF g₂`.
 Uses `syntax` + `macro_rules` because `≡` conflicts with Mathlib's
 modular equivalence notation (`a ≡ b [MOD n]`). -/
 scoped syntax:50 term:50 " ≡ₚ " term:51 : term
@@ -162,11 +162,11 @@ scoped notation "⟪" c₁ " ≈[" ε "] " c₂ " | " R "⟫" =>
   Relational.ApproxRelTriple ε c₁ c₂ R
 
 /-- eRHL quantitative relational triple:
-`⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` means the quantitative `Std.Do'.RelTriple` form. -/
+`⦃f⦄ c₁ ≈ₑ c₂ ⦃g⦄` means the quantitative `VCVio.ProgramLogic.RelTriple` form. -/
 scoped syntax:lead "⦃" term "⦄ " term:lead " ≈ₑ " term:lead " ⦃" term "⦄" : term
 macro_rules
   | `(⦃$f⦄ $c₁ ≈ₑ $c₂ ⦃$g⦄) =>
-      `(Std.Do'.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
+      `(VCVio.ProgramLogic.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
 
 /-! ## Bridge lemmas: numeric indicators and existing API -/
 
@@ -244,7 +244,7 @@ theorem GameEquiv.of_relTriple {g₁ g₂ : OracleComp spec₁ α}
     (h : Relational.RelTriple (spec₁ := spec₁) (spec₂ := spec₁) g₁ g₂
       (Relational.EqRel α)) :
     GameEquiv g₁ g₂ :=
-  Relational.evalDist_eq_of_relTriple_eqRel h
+  Relational.evalSPMF_eq_of_relTriple_eqRel h
 
 /-- A bijection on a uniform sample is still uniform.
 This is the key lemma behind OTP-style perfect secrecy proofs. -/
@@ -261,13 +261,13 @@ theorem GameEquiv.bind_congr {g₁ g₂ : OracleComp spec₁ α}
     {f₁ f₂ : α → OracleComp spec₁ β}
     (hg : GameEquiv g₁ g₂) (hf : ∀ a, GameEquiv (f₁ a) (f₂ a)) :
     GameEquiv (g₁ >>= f₁) (g₂ >>= f₂) := by
-  rw [GameEquiv, evalDist_bind, evalDist_bind, hg, funext hf]
+  rw [GameEquiv, evalSPMF_bind, evalSPMF_bind, hg, funext hf]
 
 /-- Game equivalence is a congruence for map. -/
 theorem GameEquiv.map_congr {g₁ g₂ : OracleComp spec₁ α} (f : α → β)
     (hg : GameEquiv g₁ g₂) :
     GameEquiv (f <$> g₁) (f <$> g₂) := by
-  rw [GameEquiv, evalDist_map, evalDist_map, hg]
+  rw [GameEquiv, evalSPMF_map, evalSPMF_map, hg]
 
 /-- Advantage bound via TV distance. -/
 theorem AdvBound.of_tvDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ}

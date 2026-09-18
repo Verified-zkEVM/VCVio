@@ -11,7 +11,7 @@ public import ToMathlib.Data.ENNReal.SumSquares
 /-!
 # Evaluation Distributions of Computations with `Prod`
 
-Lemmas about `evalDist` and `support` involving `Prod`, ported to generic `[MonadLiftT m SPMF]`.
+Lemmas about `evalSPMF` and `support` involving `Prod`, ported to generic `[MonadLiftT m SPMF]`.
 -/
 
 @[expose] public section
@@ -94,12 +94,12 @@ lemma probOutput_seq_map_prod_mk_eq_mul (z : α × β) :
 
 omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
 @[simp high]
-lemma support_seq_map_prod_mk [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] :
+lemma support_seq_map_prod_mk [MonadAttach m] [ExactMonadAttach m] :
     support (Prod.mk <$> mx <*> my) = support mx ×ˢ support my := by
   simp [Set.ext_iff]
 
 omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
-lemma finSupport_seq_map_prod_mk [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma finSupport_seq_map_prod_mk [MonadAttach m] [ExactMonadAttach m]
     [HasEvalFinset m] [DecidableEq α] [DecidableEq β] :
     finSupport (Prod.mk <$> mx <*> my) = Finset.product (finSupport mx) (finSupport my) := by
   simp
@@ -131,12 +131,12 @@ lemma probOutput_bind_map_prod_mk_eq_mul'
 
 omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
 @[simp high]
-lemma support_seq_map_prod_mk_eq_sprod [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] :
+lemma support_seq_map_prod_mk_eq_sprod [MonadAttach m] [ExactMonadAttach m] :
     support ((f ·, g ·) <$> mx <*> my) = (f '' support mx) ×ˢ (g '' support my) := by
   simp [Set.ext_iff]; grind
 
 omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
-lemma finSupport_seq_map_prod_mk_eq_product [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+lemma finSupport_seq_map_prod_mk_eq_product [MonadAttach m] [ExactMonadAttach m]
     [HasEvalFinset m] [DecidableEq α] [DecidableEq β]
     [DecidableEq γ] [DecidableEq δ] : finSupport ((f ·, g ·) <$> mx <*> my) =
       ((finSupport mx).image f).product ((finSupport my).image g) := by

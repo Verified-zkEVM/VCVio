@@ -89,7 +89,7 @@ noncomputable def reductionTransform {ω κ : Type} [AddCommMonoid ω]
         + profile distinguish := by
   simp [reductionTransform, reductionProfile, add_assoc]
 
-@[simp] lemma instantiate_reductionTransform {ω κ κ' : Type} [AddCommMonoid ω]
+lemma instantiate_reductionTransform {ω κ κ' : Type} [AddCommMonoid ω]
     (intrinsic : ω)
     (profile : OneTimeINDCPACapability → ResourceProfile ω κ)
     (impl : κ → ResourceProfile ω κ') :
@@ -103,7 +103,7 @@ noncomputable def reductionTransform {ω κ : Type} [AddCommMonoid ω]
       intrinsic + weights chooseMessages + weights distinguish := by
   simp [reductionProfile, add_assoc, add_left_comm, add_comm]
 
-@[simp] lemma eval_reductionTransform {ω κ : Type} [AddCommMonoid ω]
+lemma eval_reductionTransform {ω κ : Type} [AddCommMonoid ω]
     (intrinsic : ω)
     (profile : OneTimeINDCPACapability → ResourceProfile ω κ)
     (weights : κ → ω) :
@@ -113,7 +113,7 @@ noncomputable def reductionTransform {ω κ : Type} [AddCommMonoid ω]
         + (profile distinguish).eval weights := by
   simp [reductionTransform_eq, add_assoc, add_left_comm, add_comm]
 
-@[simp] lemma reductionTransform_ofIntrinsic {ω κ : Type} [AddCommMonoid ω]
+lemma reductionTransform_ofIntrinsic {ω κ : Type} [AddCommMonoid ω]
   (intrinsic chooseCost distinguishCost : ω) :
     reductionTransform (κ := κ) intrinsic
       (fun
@@ -243,14 +243,13 @@ resulting pathwise cost is proved exact on support. The canonical cost theorem i
 def IND_CPA_OneTime_DDHReduction_open
     {State : Type} (_gen A B T : G)
     [HasQuery (oneTimeINDCPASpec G G State (G × G)) ProbComp] :
-    ProbComp Bool := do
-  let (m₁, m₂, st) ← HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G))
-    (.chooseMessages A)
-  let bit ← ($ᵗ Bool)
-  let c : G × G := (B, T + if bit then m₁ else m₂)
-  let bit' ← HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G))
-    (.distinguish st c)
-  pure (bit == bit')
+    ProbComp Bool :=
+  oneTimeDDHReductionBody
+    (HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (.chooseMessages A))
+    ($ᵗ Bool)
+    (fun state ciphertext ↦
+      HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G))
+        (.distinguish state ciphertext)) B T
 
 /-- Resource-profile-instrumented form of [`IND_CPA_OneTime_DDHReduction_open`] with a concrete
 profile assigned to each reified adversary capability. -/
@@ -263,15 +262,14 @@ noncomputable def IND_CPA_OneTime_DDHReduction_openProfiled
     AddWriterT (ResourceProfile ω κ) ProbComp Bool := do
   AddWriterT.addTell (ResourceProfile.ofIntrinsic (κ := κ) intrinsic)
   AddWriterT.addTell (profile OneTimeINDCPACapability.chooseMessages)
-  let (m₁, m₂, st) ←
-    HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
+  let (m₁, m₂, state) ←
+    liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
       (.chooseMessages A)
-  let bit ← ($ᵗ Bool : ProbComp Bool)
-  let c : G × G := (B, T + if bit then m₁ else m₂)
+  let bit ← liftM ($ᵗ Bool : ProbComp Bool)
   AddWriterT.addTell (profile OneTimeINDCPACapability.distinguish)
   let bit' ←
-    HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
-      (.distinguish st c)
+    liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
+      (.distinguish state (B, T + if bit then m₁ else m₂))
   pure (bit == bit')
 
 /-- Resource-profile-instrumented form of [`IND_CPA_OneTime_DDHReduction_open`].

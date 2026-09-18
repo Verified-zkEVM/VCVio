@@ -4,7 +4,7 @@
 
 ### 1. Probability semantics require the right spec class
 
-Any file using `evalDist`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleComp spec` needs `[IsProbabilitySpec spec]`. Lemmas that use uniform cardinalities, `PMF.uniformOfFintype`, or connect `support` to nonzero probability need `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
+Any file using `evalSPMF`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleComp spec` needs `[IsProbabilitySpec spec]`. `evalDist` / `𝒟[…]` also needs a `MeasurableSpace` on the result type. Lemmas that use uniform cardinalities, `PMF.uniformOfFintype`, or connect `support` to nonzero probability need `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
 
 **Symptom**: "failed to synthesize instance" mentioning `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
 
@@ -17,9 +17,11 @@ and do not add `set_option autoImplicit false` in individual files.
 
 **Symptom**: "unknown identifier" for variables you expected Lean to infer.
 
-### 3. `evalDist` IS `simulateQ`
+### 3. `evalSPMF` is `simulateQ`; `evalDist` is measure-valued
 
-They share the exact same code path: `evalDist` is `simulateQ` with `m = PMF` and the `IsProbabilitySpec.toPMF` query implementation. Under `[IsUniformSpec spec]`, those query distributions are propositionally the uniform distributions. The `evalDist_eq_simulateQ` identity is definitional (`rfl`).
+`evalSPMF` is `simulateQ` with `m = PMF` and the `IsProbabilitySpec.toPMF` query implementation. Under `[IsUniformSpec spec]`, those query distributions are propositionally the uniform distributions. The `evalSPMF_eq_simulateQ` identity is definitional (`rfl`). The primary `evalDist` is the successful-output measure façade; on discrete free programs it agrees with the direct `FreeM.denote` fold.
+
+Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`evalSPMF`/`simulateQ`/`support`/`probOutput`; everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests) cross the boundary through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`, `PFunctor.FreeM.evalDist_eq_denote`), so the semantics can be re-implemented without touching downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public definitions and definitional equality* in [`module-system.md`](module-system.md).
 
 ### 4. `++ₒ` is dead — use `+`
 
@@ -37,18 +39,38 @@ Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current styl
 
 ### 6. `query` resolves to `HasQuery.query`; use `spec.query` for the primitive
 
-The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `query t : OracleComp spec _` produces a monadic value directly and works with `evalDist`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked `protected`); reach it via dot notation `spec.query t` (or the fully qualified `OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or pattern-match on the query structure.
+The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `query t : OracleComp spec _` produces a monadic value directly and works with `evalSPMF`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked `protected`); reach it via dot notation `spec.query t` (or the fully qualified `OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or pattern-match on the query structure.
 
-### 7. Core types are `@[reducible]` thin wrappers
+### 7. Core types are thin wrappers with deliberate reducibility
 
-`OracleSpec`, `QueryImpl`, `OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor` are all `def`/`abbrev`/`@[reducible]` over `PFunctor` machinery, and the `Monad`/`Functor` instances come directly from `PFunctor.FreeM`/`PFunctor.Obj`. Lean may unfold them aggressively. Use `OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
+`OracleSpec`, `QueryImpl`, `OracleComp`, `OracleQuery`, and
+`OracleSpec.toPFunctor` are thin `def`/`abbrev` façades over `PFunctor`
+machinery. Their reducibility statuses differ according to where elaboration
+needs them, and the `Monad`/`Functor` instances come directly from
+`PFunctor.FreeM`/`PFunctor.Obj`. Lean may unfold them aggressively. Use
+`OracleComp.inductionOn` / `OracleComp.construct` as canonical eliminators
+rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
 
 Two failure modes to recognize under this regime:
 
 - **Dot notation on monadic results fails.** The inferred type of `oa >>= ob` or `liftM (query t)` has head `PFunctor.FreeM`, not `OracleComp`, so `(query t >>= oa).myOracleCompLemma` reports `Invalid field … PFunctor.FreeM.myOracleCompLemma`. State such lemmas in prefix form (`myOracleCompLemma … (query t >>= oa)`); dot notation on plain variables of ascribed type `OracleComp spec α` still works.
-- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalDist`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
+- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalSPMF`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
 
 Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor` under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family can no longer match (typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
+
+Nested sums are a dedicated implicit-transparency boundary. `PFunctor.sum`
+uses the primitive dependent `Sum.rec`, and the OracleSpec `HAdd` instance
+calls that construction directly. Keep the latter at the ordinary
+`instance_reducible` status supplied by the `instance` command: making it
+implicit-reducible obstructs instance-mode normalization, while making it
+fully reducible changes ordinary simp normal forms. Do not replace the direct
+construction with a `Sum.elim` wrapper or use overloaded `+` inside the
+`HAdd` implementation: both add a semireducible/projection layer to response types such as
+`((spec₁ + spec₂) + spec₃).Range (.inr t)`. If a similar failure appears,
+enable `linter.tacticCheckInstances` on a minimal canary and fix the owning
+combinator rather than adding global reducibility attributes or a transparency
+compatibility option. Use `#guard_msgs` only when the canary documents an
+expected diagnostic, not when it guards successful elaboration.
 
 ### 8. Concrete subtype samplers built with `Fintype.ofFinite` can be whnf-hostile
 
@@ -105,7 +127,7 @@ The composition surface already spells the shape to copy: `QueryImpl.parallelSta
 (`.../ReaderT/Basic.lean`), `QueryImpl.parallelWriterT` (`.../WriterT/Basic.lean`), and
 `VCVio/OracleComp/SimSemantics/Append.lean`. The constraint is always the same: **arbitrary
 index universes, one shared response universe, and `α` in that response universe** —
-`spec₁ + spec₂` goes through `Sum.elim`, which forces the response universes to agree but
+`spec₁ + spec₂` goes through a dependent `Sum.rec`, which forces the response universes to agree but
 leaves the index universes free, and `simulateQ` forces `α` into the target monad's source
 universe.
 
@@ -139,6 +161,13 @@ still works).
 Downstream escape hatches, since these tags are inherited by importing projects: `grind [-lemma]`
 (disable per call), `grind only [...]` (ignore the default set), `attribute [-grind] lemma`
 (unset for a file), and `grind?` (print a minimal `grind only` call).
+
+Tagging discipline, so the split stays deliberate: an unconditional equation tagged `@[simp]` in
+`VCVio/EvalDist/**` or `VCVio/OracleComp/SimSemantics/**` also carries `grind =`, unless it is one
+of the characterization lemmas above (the ratio in those directories is about one to one and the
+gates check both closers). `@[simp, grind]` without `=` is for definitions, where `grind` uses the
+equation lemmas to unfold, not for stated equations. `grind_pattern` and `[grind hom]` are not used
+yet; adopt them per lemma with a gate entry, not as a sweep.
 
 ### 11. Plain `vcstep` may solve a probability equality when you only wanted a rewrite
 
@@ -191,6 +220,11 @@ For example, prove `∃ hr, hr.gen = …` with an explicit witness rather than m
 hypothesis type is separately inhabited. A toy witness establishes logical consistency only;
 label it accordingly and do not present it as evidence that the assumptions are
 cryptographically strong or achievable at real parameters.
+
+The conclusion can be vacuous too. `∃ reduction, bound ≤ advantage reduction` holds for every
+scheme, because adversary types carry no resource bound and `Classical.choice` can pick a
+witness. State such bounds for a named reduction; see
+[Name the reduction in the theorem statement](crypto.md#name-the-reduction-in-the-theorem-statement).
 
 ## Module Structure
 
@@ -292,33 +326,49 @@ off via `weak.linter.unicodeLinter, false` in `lakefile.lean`. This is a policy 
 dodge: VCVio docstrings legitimately use FIPS-204 math notation (a combining tilde on `c`) and
 diacritics in cited author names, which the Mathlib allowlist would otherwise reject.
 
+The active libraries fit within the 1500-line limit without file-local overrides. Split files
+by responsibility before crossing the limit, preserving established import paths with public
+import façades. `scripts/nolints.json` grandfathers the
+environment-linter findings (`lake lint`) that predate the gate; entries leave it when the finding
+is fixed, and nothing is added to it to silence a new one. The shared driver checks an exact
+baseline and reports stale entries as errors. Run `lake lint -- --prune-baseline` after fixing
+findings: it uses Batteries' update mode in separate temporary directories, collects all seven
+libraries, refuses additions, and atomically writes the reduced file. Never invoke upstream
+`runLinter --update` against the repository baseline directly: it overwrites the file once per
+root module. `-- --style-only` checks source files without building proof libraries;
+`-- --env-only --no-build` uses already-built oleans, one library per process, as CI does.
+The [linter cleanup ledger](../design/linter-cleanup.md) records the audit, completed groups,
+and remaining migrations by their effect on callers.
+
 ### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
 `HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
 It also updates the legacy `Interop.lean` umbrella without enabling module mode.
-CI checks the active module roots; `Interop` remains dormant and is migrated separately.
+CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
+from the committed file; `Interop` remains dormant and is migrated separately.
 
 ### 25. Active Lean sources use explicit module scopes
 
 Start active source files with `module`, use public imports deliberately, and put declarations in
 `public section` or `public meta section`. Existing ordinary files use `@[expose] public section`
-for downstream compatibility; executable and runtime implementation modules should use opaque
-`public section` when downstream code does not need definitional unfolding. Never reach for
+for downstream compatibility; new files use plain `public section` with per-declaration `@[expose]`
+where unfolding is part of the API, and `scripts/check-expose-boundary.sh` keeps the per-library
+count of broadly exposed files from growing. Executable and runtime implementation modules should
+use opaque `public section` when downstream code does not need definitional unfolding. Never reach for
 `backward.privateInPublic` or
 `backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
 information to avoid public metavariables.
 
 The dormant `Interop` library is intentionally excluded until its separate migration.
-`LibSodium/SHA2.lean` is also excluded because it is a dormant source outside every Lake library.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.33.0`: `lean-toolchain` pins `leanprover/lean4:v4.33.0` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.33.0"`.
+Both currently `v4.34.0`: `lean-toolchain` pins `leanprover/lean4:v4.34.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.34.0"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs

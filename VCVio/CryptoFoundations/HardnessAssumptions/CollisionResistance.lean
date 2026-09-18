@@ -7,6 +7,7 @@ Authors: XC0R
 module
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.QueryTracking.Birthday
 
 /-!
@@ -84,7 +85,7 @@ def crExp [DecidableEq X] [DecidableEq Y]
 produces a valid collision for `f`. -/
 noncomputable def crAdvantage [DecidableEq X] [DecidableEq Y]
     (f : X → Y) (adversary : CRAdversary X) : ℝ≥0∞ :=
-  Pr[= true | crExp f adversary]
+  𝒟[crExp f adversary] {true}
 
 /-! ## Keyed Hash Function Families -/
 
@@ -115,7 +116,7 @@ def keyedCRExp [DecidableEq X] [DecidableEq Y]
 valid collision under the sampled key. -/
 noncomputable def keyedCRAdvantage [DecidableEq X] [DecidableEq Y]
     (H : KeyedHashFamily K X Y) (adversary : KeyedCRAdversary K X) : ℝ≥0∞ :=
-  Pr[= true | keyedCRExp H adversary]
+  𝒟[keyedCRExp H adversary] {true}
 
 /-! ## ROM-Level Collision Resistance
 
@@ -185,7 +186,6 @@ pre-spec query through `ROMHashSpec.cachingOracle` is the generic
 `cachingOracle` action at the post-cache spec. The two specs are
 definitionally equal as `OracleSpec X`, so this is `cachingOracle.simulateQ_query`
 at the post-cache spec. -/
-@[simp]
 lemma ROMHashSpec.simulateQ_cachingOracle_query {X Y : Type} [DecidableEq X] (x : X) :
     simulateQ ROMHashSpec.cachingOracle (liftM ((ROMHashSpec X Y).query x)) =
       OracleSpec.cachingOracle (spec := ROMHashSpec.cached X Y) x :=
@@ -254,7 +254,7 @@ private lemma romCRInner_totalBound [DecidableEq X] [DecidableEq Y]
 /-- A win in the ROM-CR experiment implies a collision in the final cache:
 the verification queries cache `x ↦ y` and `x' ↦ y'` with `x ≠ x'` and
 `y = y'`, which is exactly `CacheHasCollision`. -/
-private lemma romCRWin_implies_collision [DecidableEq X] [DecidableEq Y] [Finite Y] [Inhabited Y]
+private lemma romCRWin_implies_collision [DecidableEq X] [DecidableEq Y]
     {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
   ∀ z ∈ support ((simulateQ ROMHashSpec.cachingOracle (romCRInner A)).run ∅),
       z.1 = true → CacheHasCollision z.2 := by

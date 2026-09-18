@@ -50,7 +50,7 @@ underlying facts in the explicit shape used by the direct coupling argument.
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
 
 namespace PRFTagReader
 
@@ -120,11 +120,16 @@ cells, so the multiple-session sub-table is uniform whenever the single-session 
 lemma evalDist_slotZeroSubTable_uniformSample
     [Fintype TagId] [DecidableEq TagId]
     [Fintype Nonce] [DecidableEq Nonce]
-    [Finite Digest] [Nonempty Digest] [SampleableType Digest] :
+    [Finite Digest] [Nonempty Digest] [SampleableType Digest]
+    [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
+    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    (hSmall : 𝒟[$ᵗ (TagId × Nonce → Digest)] = uniformOn Set.univ)
+    (hLarge : 𝒟[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] = uniformOn Set.univ) :
     𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
         fun gS => pure (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)] =
-      𝒟[$ᵗ (TagId × Nonce → Digest)] :=
-  evalDist_uniformSample_map_comp_injective (R := Digest)
+      𝒟[$ᵗ (TagId × Nonce → Digest)] := by
+  rw [bind_pure_comp]
+  exact evalDist_map_table_comp_injective _ _ hSmall hLarge
     (slotZeroEmbed_injective (TagId := TagId) (Nonce := Nonce)
       (sessionsPerTag := sessionsPerTag))
 
@@ -227,7 +232,7 @@ end ReaderCoupling
 
 /-- `slotZeroSubTable` agrees with `projectTable` pointwise. Useful for rewriting this module's
 direct-coupling statements into the established sibling phrasing in `Table.lean`. -/
-@[simp] lemma slotZeroSubTable_eq_projectTable_apply
+lemma slotZeroSubTable_eq_projectTable_apply
     (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest) (p : TagId × Nonce) :
     slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS p =
       projectTable (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
@@ -274,27 +279,6 @@ lemma multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed
       slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS (tag, nonce) := by
     rw [slotZeroSubTable_apply, hsid]
   rw [hcell]
-
-omit [DecidableEq Nonce] in
-/-- **Tag-step first-session pointwise equality, distribution form.** The distribution-level
-restatement of the pointwise equality: under `s.sessionsUsed tag = 0`, the two eager-table tag
-handlers — run on the sub-table `slotZeroSubTable gS` (multiple side) and on the full table `gS`
-(single side) — produce the same output distribution at every fixed `gS`.
-
-This is the per-sample identical-until-bad bind primitive: in a bind chain
-`($ᵗ gS) >>= fun gS => multipleTableHandler ... tag s >>= continuation`, the multiple-side bind
-is interchangeable with the single-side bind whenever the queried tag has no prior sessions. -/
-lemma evalDist_multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
-    (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest)
-    (tag : TagId) (s : UnlinkState TagId)
-    (hzero : s.sessionsUsed tag = 0) :
-    𝒟[multipleTableHandler (sessionsPerTag := sessionsPerTag)
-        (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inl tag) s] =
-      𝒟[singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
-          (Sum.inl tag) s] :=
-  congrArg evalDist
-    (multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
-      gS tag s hzero)
 
 end TagCoupling
 

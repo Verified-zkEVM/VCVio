@@ -179,23 +179,16 @@ def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
 implementation `fsBaseImpl`, observed from the chosen initial cache. -/
 lemma runtimeWithCache_evalDist_eq_fsBaseImpl
     (cache : (M × Commit →ₒ Chal).QueryCache)
-    {α : Type}
+    {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
     (_root_.FiatShamir.runtimeWithCache M cache).evalDist oa =
       𝒟[(simulateQ
         (fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal)) oa).run'
         cache] := by
-  unfold _root_.FiatShamir.runtimeWithCache ProbCompRuntime.evalDist
-    SPMFSemantics.evalDist SemanticsVia.denote fsBaseImpl
-    SPMFSemantics.withStateOracle unifFwdImpl simulateQ' evalDist
-  have hbase :
-      (QueryImpl.ofLift unifSpec ProbComp).liftTarget
-          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)
-        = (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := by
-    simp [HasQuery.toQueryImpl, funext_iff]
-  rw [hbase]
-  grind
+  rw [_root_.FiatShamir.runtimeWithCache_evalDist]
+  unfold fsBaseImpl
+  congr
+  exact Subsingleton.elim _ _
 
 /-! ## Fixed-key post-keygen probability normal form -/
 
@@ -304,7 +297,12 @@ private lemma cmaSignHashQueryBound_query_bind_iff {α : Type}
             (Resp := Resp) (Stmt := Stmt) t then qS - 1 else qS)
           (if IsHashQuery (M := M) (Commit := Commit) (Chal := Chal)
             (Resp := Resp) (Stmt := Stmt) t then qH - 1 else qH) := by
-  grind [cmaSignHashQueryBound]
+  simp only [cmaSignHashQueryBound, isQueryBoundP_query_bind_iff]
+  constructor
+  · rintro ⟨⟨hCostly, hCostBound⟩, hHash, hHashBound⟩
+    exact ⟨⟨hCostly, hHash⟩, fun u => ⟨hCostBound u, hHashBound u⟩⟩
+  · rintro ⟨⟨hCostly, hHash⟩, hBound⟩
+    exact ⟨⟨hCostly, fun u => (hBound u).1⟩, hHash, fun u => (hBound u).2⟩
 
 omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 /-- A bind is joint-bounded by the sum of the budgets for its prefix and

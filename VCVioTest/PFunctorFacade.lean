@@ -8,6 +8,7 @@ module
 public import VCVio.EvalDist.PFunctor
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.Tracing
+import VCVio.OracleComp.QueryTracking.LoggingOracle
 
 /-!
 # PFunctor and OracleSpec Semantics Canaries
@@ -38,16 +39,16 @@ noncomputable instance : triPFunctor.IsUniformSpec :=
 def directSample : PFunctor.FreeM triPFunctor (Fin 3) :=
   PFunctor.FreeM.lift ()
 
-example : 𝒟[directSample] =
+example : 𝒮[directSample] =
     (PFunctor.IsProbabilitySpec.toPMF (P := triPFunctor) () : SPMF (Fin 3)) := by
   simpa only [directSample] using
-    (PFunctor.FreeM.evalDist_lift (P := triPFunctor) ())
+    (PFunctor.FreeM.evalSPMF_lift (P := triPFunctor) ())
 
-example := PFunctor.FreeM.evalDist_lift_eq_uniform (P := triPFunctor) ()
+example := PFunctor.FreeM.evalSPMF_lift_eq_uniform (P := triPFunctor) ()
 
 example : support directSample = Set.univ := by
   simpa only [directSample] using
-    (PFunctor.FreeM.support_lift (P := triPFunctor) ())
+    (PFunctor.FreeM.support_lift_eq_univ (P := triPFunctor) ())
 
 example : EvalDistCompatible (PFunctor.FreeM triPFunctor) := inferInstance
 
@@ -70,42 +71,79 @@ example : zeroHandler.postInsert (fun _ _ => some ()) () = some 0 := by
 noncomputable instance : IsUniformSpec boolOracleSpec :=
   OracleSpec.IsUniformSpec.ofFintypeInhabited _
 
-#guard_msgs(drop warning) in
-/-- A custom probability interpretation constructed through the oracle compatibility name. -/
-noncomputable abbrev boolOracleProbability : IsProbabilitySpec boolOracleSpec :=
-  OracleSpec.IsProbabilitySpec.mk fun _ => PMF.uniformOfFintype Bool
-
-#guard_msgs(drop warning) in
-noncomputable example : MonadLiftT (OracleComp boolOracleSpec) PMF :=
-  OracleComp.instMonadLiftTPMF
-
-#guard_msgs(drop warning) in
-noncomputable example : LawfulMonadLiftT (OracleComp boolOracleSpec) PMF :=
-  OracleComp.instLawfulMonadLiftTPMF
-
-#guard_msgs(drop warning) in
-example : MonadLiftT (OracleComp boolOracleSpec) SetM :=
-  OracleComp.instMonadLiftTSetM
-
-#guard_msgs(drop warning) in
-example : LawfulMonadLiftT (OracleComp boolOracleSpec) SetM :=
-  OracleComp.instLawfulMonadLiftTSetM
+noncomputable example : IsProbabilitySpec boolOracleSpec :=
+  PFunctor.IsProbabilitySpec.mk fun _ => PMF.uniformOfFintype Bool
 
 noncomputable example : MonadLiftT (OracleComp boolOracleSpec) PMF := inferInstance
 
+noncomputable example : LawfulMonadLiftT (OracleComp boolOracleSpec) PMF := inferInstance
+
 example : MonadLiftT (OracleComp boolOracleSpec) SetM := inferInstance
+
+example : LawfulMonadLiftT (OracleComp boolOracleSpec) SetM := inferInstance
 
 noncomputable example : PFunctor.IsProbabilitySpec boolOracleSpec.toPFunctor := inferInstance
 
 noncomputable example : PFunctor.IsUniformSpec boolOracleSpec.toPFunctor :=
   OracleSpec.IsUniformSpec.toPFunctor
 
-example (program : OracleComp boolOracleSpec Bool) :
-    𝒟[program] = program.liftM PFunctor.IsProbabilitySpec.toPMF :=
-  PFunctor.FreeM.evalDist_eq_liftM program
+-- Instance synthesis at the erased literal. Tactics that unfold the reducible layers above
+-- `OracleSpec` leave a bare `PFunctor.mk` in the goal; the semantics instances are still found
+-- there with no transparency help from `OracleSpec` itself (see the comment on its
+-- `implicit_reducible` attribute, which serves dependent-type checks, not synthesis).
+noncomputable example : PFunctor.IsProbabilitySpec (PFunctor.mk (Fin 1) fun _ => Bool) :=
+  inferInstance
+
+noncomputable example : MonadLiftT (PFunctor.FreeM (PFunctor.mk (Fin 1) fun _ => Bool)) PMF :=
+  inferInstance
+
+example : MonadLiftT (PFunctor.FreeM (PFunctor.mk (Fin 1) fun _ => Bool)) SetM := inferInstance
 
 example (program : OracleComp boolOracleSpec Bool) :
-    𝒟[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
-  OracleComp.evalDist_eq_simulateQ program
+    𝒮[program] = program.liftM PFunctor.IsProbabilitySpec.toPMF :=
+  PFunctor.FreeM.evalSPMF_eq_liftM program
+
+example (program : OracleComp boolOracleSpec Bool) :
+    𝒮[program] = simulateQ OracleSpec.IsProbabilitySpec.toPMF program :=
+  OracleComp.evalSPMF_eq_simulateQ program
+
+/-! ## Nested coproduct transparency -/
+
+section NestedCoproductTransparency
+
+variable {ι₁ ι₂ ι₃ : Type}
+variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂} {spec₃ : OracleSpec ι₃}
+
+set_option linter.tacticCheckInstances true
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₂.Domain)
+    (consume : spec₂.Range t → Nat) :
+    consume (impl (.inl (.inr t))) = consume (impl (.inl (.inr t))) := by
+  rfl
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) (t : spec₃.Domain)
+    (consume : spec₃.Range t → Nat) :
+    consume (impl (.inr t)) = consume (impl (.inr t)) := by
+  rfl
+
+example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) :
+    QueryImpl spec₃ (StateT (List spec₃.Domain) Id) :=
+  QueryImpl.appendInputLog (fun t => impl (.inr t))
+
+example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
+    (program : OracleComp ((spec₁ + spec₂) + spec₃)
+      ((((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))) × Bool)) :
+    Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] =
+      Pr[fun z : spec₂.Range t × Bool => z.2 = true | program] := by
+  rfl
+
+example [IsProbabilitySpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
+    (program : OracleComp ((spec₁ + spec₂) + spec₃)
+      ((((spec₁ + spec₂) + spec₃).Range (.inr t)) × Bool)) :
+    Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] =
+      Pr[fun z : spec₃.Range t × Bool => z.2 = true | program] := by
+  rfl
+
+end NestedCoproductTransparency
 
 end VCVioTest.PFunctorFacade

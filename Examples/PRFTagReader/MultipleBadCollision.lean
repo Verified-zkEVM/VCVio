@@ -8,6 +8,7 @@ module
 
 public import Examples.PRFTagReader.DirectCoupling.Compose
 public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
+import Mathlib.Tactic.Positivity.Finset
 
 /-!
 # PRF Tag/Reader Protocol — Multiple-Bad Collision Bound
@@ -111,7 +112,7 @@ lemma multipleBadStep_bad_le
       intro x
       rw [probEvent_bind_eq_tsum]
       by_cases hcached : (sB.responses (tag, x)).isSome = true
-      · simp only [hcached, if_true]
+      · simp only [hcached, ite_true]
         have hkey : ∀ r : Digest × ((TagId × Nonce) →ₒ Digest).QueryCache,
             probEvent
               (pure (some (⟨x, r.1⟩ : TagTranscript Nonce Digest), advU, r.2) : ProbComp _)
@@ -121,7 +122,7 @@ lemma multipleBadStep_bad_le
         simp_rw [hkey, mul_one]
         exact tsum_probOutput_eq_one' (by simp)
       · have hcached' : (sB.responses (tag, x)).isSome = false := Bool.eq_false_iff.mpr hcached
-        rw [if_neg (by simp [hcached'])]
+        rw [ite_eq_right (by simp [hcached'])]
         have hkey : ∀ r : Digest × ((TagId × Nonce) →ₒ Digest).QueryCache,
             probEvent
               (pure (some (⟨x, r.1⟩ : TagTranscript Nonce Digest), advU, r.2) : ProbComp _)
@@ -528,15 +529,13 @@ theorem unlinkPRFIdeal_gap_le_unlinkBad [Fintype Nonce] [Fintype Digest]
   set slackN := ((qReader * qTag : ℕ) : ℝ≥0∞) / (Fintype.card Nonce : ℝ≥0∞)
   set slackS := ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
     (Fintype.card Digest : ℝ≥0∞)
-  have hSt : S ≠ ⊤ := ne_top_of_le_ne_top one_ne_top probOutput_le_one
-  have hBt : B ≠ ⊤ := ne_top_of_le_ne_top one_ne_top probEvent_le_one
+  have hSt : S ≠ ⊤ := probOutput_ne_top
+  have hBt : B ≠ ⊤ := probEvent_ne_top
   have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   have : Nonempty Nonce := ⟨(SampleableType.selectElem (β := Nonce)).defaultResult⟩
-  have hslack_ne : ∀ (a b : ℕ), 0 < b → ((a : ℝ≥0∞) / (b : ℝ≥0∞)) ≠ ⊤ := fun a b hb =>
-    ENNReal.div_ne_top (ENNReal.natCast_ne_top _) (by simp only [ne_eq, Nat.cast_eq_zero]; omega)
-  have hslackRt : slackR ≠ ⊤ := hslack_ne _ _ Fintype.card_pos
-  have hslackNt : slackN ≠ ⊤ := hslack_ne _ _ Fintype.card_pos
-  have hslackSt : slackS ≠ ⊤ := hslack_ne _ _ Fintype.card_pos
+  have hslackRt : slackR ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
+  have hslackNt : slackN ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
+  have hslackSt : slackS ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
   have hslackReq : slackR.toReal =
       ((qReader * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
     simp [slackR, ENNReal.toReal_div]

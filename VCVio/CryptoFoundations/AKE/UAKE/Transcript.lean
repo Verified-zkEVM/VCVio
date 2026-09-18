@@ -14,7 +14,7 @@ The transcripts in DF'17 bundle messages with timestamps from a global clock
 incremented whenever a party sends a message.
 -/
 
-@[expose] public section
+public section
 
 namespace AKE.UAKE
 
@@ -22,13 +22,18 @@ variable {W : Type}
 
 /-- A transcript is a list of messages and timestamps. -/
 structure Transcript (W : Type) where
+  /-- Messages paired with their global timestamps, in chronological order. -/
   entries : List (W × ℕ)
 
+/-- A private protocol state together with its public transcript. -/
 structure Session (σ W : Type) where
+  /-- Current private state. -/
   state : σ
+  /-- Messages recorded for this session. -/
   transcript : Transcript W
 
-def interleave : Bool → List (ℕ × ℕ) → List ℕ
+/-- Alternate which timestamp in each pair comes first, starting with the left when true. -/
+@[expose] def interleave : Bool → List (ℕ × ℕ) → List ℕ
   | _, [] => []
   | ab, (a, b) :: rest => (if ab then [a, b] else [b, a]) ++ interleave (!ab) rest
 
@@ -36,7 +41,7 @@ def interleave : Bool → List (ℕ × ℕ) → List ℕ
    are elementwise identical and their timestamps are "interleaved" as t₁ < t₁*
    < t₂* < t₂ < ... or t₁* < t₁ < t₂ < t₂* < ..., depending on which party
    speaks first. -/
-def Matching (oracleLeadsFirst : Bool) (T Tstar : Transcript W) : Prop :=
+@[expose] def Matching (oracleLeadsFirst : Bool) (T Tstar : Transcript W) : Prop :=
   T.entries.map Prod.fst = Tstar.entries.map Prod.fst ∧
     List.IsChain (· < ·)
       (interleave oracleLeadsFirst ((T.entries.map Prod.snd).zip (Tstar.entries.map Prod.snd)))
@@ -46,14 +51,17 @@ instance [DecidableEq W] (b : Bool) (T Tstar : Transcript W) :
   unfold Matching
   infer_instance
 
-def pingPong [DecidableEq W] (oracleLeadsFirst : Bool)
+/-- Whether any oracle transcript matches the challenge transcript. -/
+@[expose] def pingPong [DecidableEq W] (oracleLeadsFirst : Bool)
     (oracleTrs : List (Transcript W)) (challengeTr : Transcript W) : Bool :=
   oracleTrs.any fun T => decide (Matching oracleLeadsFirst T challengeTr)
 
-def recordOne (tr : Transcript W) (w : W) (clock : ℕ) : Transcript W × ℕ :=
+/-- Append one timestamped message and advance the global clock. -/
+@[expose] def recordOne (tr : Transcript W) (w : W) (clock : ℕ) : Transcript W × ℕ :=
   (⟨tr.entries ++ [(w, clock)]⟩, clock + 1)
 
-def recordOpt (tr : Transcript W) : Option W → ℕ → Transcript W × ℕ
+/-- Record an optional message, leaving the transcript and clock unchanged when absent. -/
+@[expose] def recordOpt (tr : Transcript W) : Option W → ℕ → Transcript W × ℕ
   | none, clock => (tr, clock)
   | some w, clock => recordOne tr w clock
 

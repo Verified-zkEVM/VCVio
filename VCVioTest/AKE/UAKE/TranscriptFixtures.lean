@@ -21,7 +21,7 @@ adversary relaying a message to the other session records it there at a later
 tick.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp
 
@@ -38,24 +38,24 @@ convention that T speaks last in the UAKE security game (since the oracle
 corresponds to T in the UAKE game).
 -/
 
-def oracle2 : Transcript ℕ := ⟨[(1, 1), (2, 2)]⟩
-def challenge2 : Transcript ℕ := ⟨[(1, 0), (2, 3)]⟩
+@[expose] def oracle2 : Transcript ℕ := ⟨[(1, 1), (2, 2)]⟩
+@[expose] def challenge2 : Transcript ℕ := ⟨[(1, 0), (2, 3)]⟩
 
-def oracle3 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4)]⟩
-def challenge3 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5)]⟩
+@[expose] def oracle3 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4)]⟩
+@[expose] def challenge3 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5)]⟩
 
-def oracle4 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5), (4, 6)]⟩
-def challenge4 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4), (4, 7)]⟩
+@[expose] def oracle4 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5), (4, 6)]⟩
+@[expose] def challenge4 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4), (4, 7)]⟩
 
-def oracle5 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4), (4, 7), (5, 8)]⟩
-def challenge5 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5), (4, 6), (5, 9)]⟩
+@[expose] def oracle5 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4), (4, 7), (5, 8)]⟩
+@[expose] def challenge5 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5), (4, 6), (5, 9)]⟩
 
-def oracle6 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5), (4, 6), (5, 9), (6, 10)]⟩
-def challenge6 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4), (4, 7), (5, 8), (6, 11)]⟩
+@[expose] def oracle6 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 5), (4, 6), (5, 9), (6, 10)]⟩
+@[expose] def challenge6 : Transcript ℕ := ⟨[(1, 0), (2, 3), (3, 4), (4, 7), (5, 8), (6, 11)]⟩
 
-def oracle7 : Transcript ℕ :=
+@[expose] def oracle7 : Transcript ℕ :=
   ⟨[(1, 0), (2, 3), (3, 4), (4, 7), (5, 8), (6, 11), (7, 12)]⟩
-def challenge7 : Transcript ℕ :=
+@[expose] def challenge7 : Transcript ℕ :=
   ⟨[(1, 1), (2, 2), (3, 5), (4, 6), (5, 9), (6, 10), (7, 13)]⟩
 
 theorem matching_oracle2_challenge2 : Matching false oracle2 challenge2 := by decide
@@ -87,8 +87,8 @@ theorem not_matching_challenge3_oracle3 : ¬ Matching true challenge3 oracle3 :=
 A transcript fails to satisfy `Matching` when its message content is wrong.
 -/
 
-def substituted2 : Transcript ℕ := ⟨[(1, 1), (99, 2)]⟩
-def substituted3 : Transcript ℕ := ⟨[(1, 0), (99, 3), (3, 4)]⟩
+@[expose] def substituted2 : Transcript ℕ := ⟨[(1, 1), (99, 2)]⟩
+@[expose] def substituted3 : Transcript ℕ := ⟨[(1, 0), (99, 3), (3, 4)]⟩
 
 theorem not_matching_substituted2_challenge2 :
     ¬ Matching false substituted2 challenge2 := by decide
@@ -99,8 +99,8 @@ theorem not_matching_substituted3_challenge3 :
 A transcript fails to satisfy `Matching` when its length doesn't match.
 -/
 
-def truncated2 : Transcript ℕ := ⟨[(1, 1)]⟩
-def extended2 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 4)]⟩
+@[expose] def truncated2 : Transcript ℕ := ⟨[(1, 1)]⟩
+@[expose] def extended2 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 4)]⟩
 
 theorem not_matching_truncated2_challenge2 : ¬ Matching false truncated2 challenge2 := by decide
 theorem not_matching_extended2_challenge2 : ¬ Matching false extended2 challenge2 := by decide
@@ -110,7 +110,7 @@ Reordering oracle messages in a `Matching` transcript pair renders it
 non-matching.
 -/
 
-def reordered2 : Transcript ℕ := ⟨[(1, 2), (2, 1)]⟩
+@[expose] def reordered2 : Transcript ℕ := ⟨[(1, 2), (2, 1)]⟩
 
 theorem not_matching_reordered2_challenge2 : ¬ Matching false reordered2 challenge2 := by decide
 
@@ -119,8 +119,8 @@ Transcripts opened or extended after challenge completes cannot satisfy
 `Matching`, even if the message sequence itself matches.
 -/
 
-def afterChallenge2 : Transcript ℕ := ⟨[(1, 4), (2, 5)]⟩
-def afterChallenge3 : Transcript ℕ := ⟨[(1, 6), (2, 7), (3, 8)]⟩
+@[expose] def afterChallenge2 : Transcript ℕ := ⟨[(1, 4), (2, 5)]⟩
+@[expose] def afterChallenge3 : Transcript ℕ := ⟨[(1, 6), (2, 7), (3, 8)]⟩
 
 theorem not_matching_afterChallenge2_challenge2 :
     ¬ Matching false afterChallenge2 challenge2 := by decide
@@ -132,9 +132,9 @@ theorem afterChallenge2_messages_eq_challenge2 :
 theorem afterChallenge3_messages_eq_challenge3 :
     afterChallenge3.entries.map (·.1) = challenge3.entries.map (·.1) := by decide
 
-def lateChallenge3 : Transcript ℕ := ⟨[(1, 2), (2, 3), (3, 6)]⟩
-def lateRelayed3 : Transcript ℕ := ⟨[(1, 0), (2, 4), (3, 5)]⟩
-def finishedLate3 : Transcript ℕ := ⟨[(1, 1), (2, 7), (3, 8)]⟩
+@[expose] def lateChallenge3 : Transcript ℕ := ⟨[(1, 2), (2, 3), (3, 6)]⟩
+@[expose] def lateRelayed3 : Transcript ℕ := ⟨[(1, 0), (2, 4), (3, 5)]⟩
+@[expose] def finishedLate3 : Transcript ℕ := ⟨[(1, 1), (2, 7), (3, 8)]⟩
 
 theorem matching_lateRelayed3_lateChallenge3 :
     Matching true lateRelayed3 lateChallenge3 := by decide
@@ -148,13 +148,13 @@ theorem finishedLate3_messages_eq_lateChallenge3 :
 and `fullPingPong`.
 -/
 
-def twoSessionChallenge2 : Transcript ℕ := ⟨[(1, 0), (2, 5)]⟩
-def relayed2 : Transcript ℕ := ⟨[(1, 3), (2, 4)]⟩
-def bogus2 : Transcript ℕ := ⟨[(99, 1), (100, 2)]⟩
+@[expose] def twoSessionChallenge2 : Transcript ℕ := ⟨[(1, 0), (2, 5)]⟩
+@[expose] def relayed2 : Transcript ℕ := ⟨[(1, 3), (2, 4)]⟩
+@[expose] def bogus2 : Transcript ℕ := ⟨[(99, 1), (100, 2)]⟩
 
-def twoSessionChallenge3 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 8)]⟩
-def relayed3 : Transcript ℕ := ⟨[(1, 0), (2, 6), (3, 7)]⟩
-def bogus3 : Transcript ℕ := ⟨[(1, 3), (99, 4), (100, 5)]⟩
+@[expose] def twoSessionChallenge3 : Transcript ℕ := ⟨[(1, 1), (2, 2), (3, 8)]⟩
+@[expose] def relayed3 : Transcript ℕ := ⟨[(1, 0), (2, 6), (3, 7)]⟩
+@[expose] def bogus3 : Transcript ℕ := ⟨[(1, 3), (99, 4), (100, 5)]⟩
 
 theorem matching_relayed2_twoSession :
     Matching false relayed2 twoSessionChallenge2 := by decide
@@ -203,23 +203,23 @@ Dummy `Party` and `Scheme` (and helper functions) for testing `isPingPong` and
 `fullPingPong`.
 -/
 
-def inertParty : Party Id Unit ℕ (Option ℕ) where
+@[expose] def inertParty : Party Id Unit ℕ (Option ℕ) where
   State := Unit
   init := fun _ => pure (.waitForMsg ())
   step := fun _ _ => pure .reject
   output := fun _ => pure none
 
-def roundsOnly (n : ℕ) : Scheme Id ℕ Unit Unit ℕ where
+@[expose] def roundsOnly (n : ℕ) : Scheme Id ℕ Unit Unit ℕ where
   rounds := n
   setup := pure ((), ())
   U := inertParty
   T := inertParty
 
-def result (n : ℕ) (oracleTrs : List (Transcript ℕ)) (challengeTr : Transcript ℕ) :
+@[expose] def result (n : ℕ) (oracleTrs : List (Transcript ℕ)) (challengeTr : Transcript ℕ) :
     ChallengeResult (roundsOnly n) :=
   ⟨none, challengeTr, oracleTrs⟩
 
-def sessions (n : ℕ) (trs : List (Transcript ℕ × Bool)) :
+@[expose] def sessions (n : ℕ) (trs : List (Transcript ℕ × Bool)) :
     List (TSession (roundsOnly n)) :=
   trs.map fun s => ⟨(), s.1, none, s.2⟩
 

@@ -14,10 +14,22 @@ public import VCVio.EvalDist.Inequalities
 /-!
 # Fiat-Shamir reductions for Sigma protocols
 
-This file exposes the CMA-to-NMA reduction used by the public Sigma security
-theorem. The proof is discharged by the direct stateful game chain; callers
-depend only on the reduction statement here.
--/
+This file defines the two reductions behind the EUF-CMA security of the Fiat-Shamir
+transform of a Sigma protocol and proves their quantitative bounds.
+
+- `cmaToNmaAdv` turns an EUF-CMA adversary into a managed random-oracle NMA adversary
+  (`Stateful.nmaAdvFromCmaWithFinalQuery`), and `cma_to_nma_advantage_bound` bounds the
+  CMA advantage by the fork advantage of that adversary plus the simulation loss. The proof
+  is discharged by the direct stateful game chain.
+- `nmaReduction` turns a managed random-oracle NMA adversary into a witness-finding algorithm
+  by replaying the forking lemma and applying special-soundness extraction, and
+  `nma_to_hard_relation_bound` bounds its success probability in `hardRelationExp`.
+- `cmaReduction` is the composite witness-finding algorithm.
+
+Every bound names the reduction it is about. A statement of the form
+`∃ reduction, bound ≤ Pr[= true | hardRelationExp hr reduction]` would be satisfied by a
+reduction that returns a valid witness chosen classically, so it would carry no security
+content. -/
 
 @[expose] public section
 
@@ -42,17 +54,33 @@ noncomputable local instance instIsUniformSpecChalFn (M Commit : Type) :
   IsUniformSpec.ofFintypeInhabited _
 
 omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
-  [Inhabited Stmt] [Inhabited Chal] in
-/-- CMA-to-NMA reduction for Fiat-Shamir signatures built from a Sigma protocol.
+  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal] in
+/-- CMA-to-NMA reduction for Fiat-Shamir signatures built from a Sigma protocol: run the
+EUF-CMA adversary against simulated signing transcripts and a managed random oracle, then issue
+one live random-oracle query at the forgery's hash point. -/
+abbrev cmaToNmaAdv
+    [DecidableEq M] [DecidableEq Commit]
+    [Finite Chal] [SampleableType Chal]
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
+    (adv : SignatureAlg.unforgeableAdv
+      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)) :
+    SignatureAlg.managedRoNmaAdv
+      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M) :=
+  Stateful.nmaAdvFromCmaWithFinalQuery σ hr M adv simTranscript
 
-The reduction runs the CMA adversary with simulated signing transcripts and a
+omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
+  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal] in
+/-- CMA-to-NMA bound for Fiat-Shamir signatures built from a Sigma protocol.
+
+The reduction `cmaToNmaAdv` runs the CMA adversary with simulated signing transcripts and a
 managed random oracle, then appends a single explicit live random-oracle query
 for the forgery's hash point so that the verification challenge is part of the
-forkable transcript (the `nmaAdvFromCmaWithFinalQuery` wrapper). The quantitative
+forkable transcript. The quantitative
 loss is the HVZK simulation cost plus the programming-collision term from
 simulator commit predictability; no separate verifier-guessing slack is needed.
 
-The bound is stated against `Fork.advantage σ hr M nmaAdv qH`: the wrapped
+The bound is stated against `Fork.advantage σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH`:
+the wrapped
 adversary issues `qH + 1` random-oracle queries, and `Fork.forkPoint qH`
 indexes `Fin (qH + 1)`, which is exactly the right number of forkable slots
 (the framework's structural `+1` in `Fin (qH + 1)` is precisely the wrapper's
@@ -71,47 +99,44 @@ theorem cma_to_nma_advantage_bound
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    ∃ nmaAdv : SignatureAlg.managedRoNmaAdv
-        (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M),
-      adv.advantage (runtime M) ≤
-        Fork.advantage σ hr M nmaAdv qH +
-          ENNReal.ofReal ((qS : ℝ) * ζ_zk) + (qS : ENNReal) * (qS + qH) * β :=
-  ⟨Stateful.nmaAdvFromCmaWithFinalQuery σ hr M adv simTranscript,
-    Stateful.cma_advantage_le_fork_bound_of_h1h2 σ hr M
+    adv.advantage (runtime M) ≤
+      Fork.advantage σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH +
+        ENNReal.ofReal ((qS : ℝ) * ζ_zk) + (qS : ENNReal) * (qS + qH) * β :=
+  Stateful.cma_advantage_le_fork_bound_of_h1h2 σ hr M
       simTranscript ζ_zk hζ_zk hHVZK β hPredSim adv qS qH hQ
       (le_of_eq <| (Stateful.publicUnforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
           (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv).trans
         (Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
-          (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv))⟩
+          (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv))
 
-section evalDistBridge
+section probabilityPreservation
 
 variable [SampleableType Chal]
 
-/-- The `ofLift + uniformSampleImpl` simulation on `unifSpec + (Unit →ₒ Chal)` preserves
-`evalDist`. Both oracle components sample uniformly from their range. -/
-private lemma evalDist_simulateQ_unifChalImpl {α : Type}
-    (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) :
-    evalDist (simulateQ (QueryImpl.ofLift unifSpec ProbComp +
-      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa) = evalDist oa := by
-  apply OracleComp.evalDist_simulateQ_eq_evalDist
-  rintro (n | u)
-  · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
-    rw [evalDist_query (spec := unifSpec + (Unit →ₒ Chal))]
-    exact evalDist_query (spec := unifSpec) n
-  · simp only [QueryImpl.add_apply_inr, uniformSampleImpl]
-    exact show (evalDist ($ᵗ ((ofFn fun _ : Unit => Chal).Range u)) :
-        SPMF ((ofFn fun _ : Unit => Chal).Range u)) = _ by
-      rw [evalDist_uniformSample, evalDist_query]; rfl
-
-/-- Corollary: `probEvent` is preserved by the `ofLift + uniformSampleImpl` simulation. -/
+/-- Forwarding uniform queries and sampling challenge responses preserves event probabilities. -/
 private lemma probEvent_simulateQ_unifChalImpl {α : Type}
     (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) (p : α → Prop) :
     Pr[ p | simulateQ (QueryImpl.ofLift unifSpec ProbComp +
-      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa] = Pr[ p | oa] :=
-  probEvent_congr' (fun _ _ => Iff.rfl) (evalDist_simulateQ_unifChalImpl oa)
+      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa] = Pr[ p | oa] := by
+  classical
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp only [simulateQ_pure, probEvent_pure]
+  | query_bind t cont ih =>
+      simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
+        OracleQuery.input_query, probEvent_bind_eq_tsum, ih]
+      refine tsum_congr fun u => ?_
+      congr 1
+      cases t with
+      | inl n =>
+          simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply,
+            probOutput_query, ← Nat.card_eq_fintype_card]
+          rfl
+      | inr t =>
+          simp only [QueryImpl.add_apply_inr, uniformSampleImpl]
+          exact probOutput_uniformSample_eq_query (spec := unifSpec + (Unit →ₒ Chal))
+            (.inr t) u
 
-end evalDistBridge
+end probabilityPreservation
 
 section nmaToExtraction
 
@@ -119,7 +144,7 @@ variable [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
 
 /-- Replay-fork query budget for the NMA reduction: forward the `.inl unifSpec` component
 live and rewind only the counted challenge oracle on the `.inr` side. -/
-private def nmaForkBudget (qH : ℕ) : ℕ ⊕ Unit → ℕ
+def nmaForkBudget (qH : ℕ) : ℕ ⊕ Unit → ℕ
   | .inl _ => 0
   | .inr () => qH
 
@@ -143,7 +168,7 @@ variable [SampleableType Wit] [SampleableType Chal]
 /-- The branch the NMA extractor takes on a forking-lemma result: from two traces sharing a
 commitment whose distinct cached challenges accept, run `σ.extract`; otherwise resample. This is
 the post-`contextFork` continuation of `nmaForkExtract`. -/
-private def nmaForkExtractBranch :
+def nmaForkExtractBranch :
     Option (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
       Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) →
       OracleComp (unifSpec + (Unit →ₒ Chal)) Wit
@@ -163,7 +188,7 @@ private def nmaForkExtractBranch :
 
 /-- Witness-extraction computation used by the NMA reduction: replay the forking lemma, then
 take the `nmaForkExtractBranch` continuation on the resulting trace pair. -/
-private def nmaForkExtract
+def nmaForkExtract
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt) :
@@ -172,9 +197,10 @@ private def nmaForkExtract
     (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH) >>=
     nmaForkExtractBranch (M := M) (Chal := Chal) σ
 
-/-- NMA reduction for `nma_to_hard_relation_bound`: simulate the challenge oracle of
-`nmaForkExtract` down to `ProbComp`. -/
-private def nmaReduction
+/-- NMA-to-witness reduction: run `nmaForkExtract`, answering its unit-indexed challenge oracle
+with fresh uniform samples, so that the result is a `ProbComp` witness finder for
+`hardRelationExp`. -/
+def nmaReduction
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) : Stmt → ProbComp Wit := fun pk =>
@@ -266,9 +292,9 @@ private theorem perPk_extraction_bound
         forkSupportInvariant σ M qH pk x₁ log₁ ∧
         forkSupportInvariant σ M qH pk x₂ log₂
   swap
-  · rw [if_neg hE]
+  · rw [ite_eq_right hE]
     exact zero_le
-  rw [if_pos hE]
+  rw [ite_eq_left hE]
   by_cases hsupp : r ∈ support (contextFork wrappedMain qb (Sum.inr ()) cf)
   swap
   · rw [probOutput_eq_zero_of_not_mem_support hsupp, zero_mul]
@@ -285,7 +311,8 @@ private theorem perPk_extraction_bound
   have hbranch : branchFn r = liftComp (σ.extract ω₁ x₁.forgery.2.2 ω₂ x₂.forgery.2.2)
       (unifSpec + chalSpec) := by
     rw [hbranchFn_def, hreq]
-    simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂, dif_pos hc_eq, dif_pos hω_ne]
+    simp only [chalSpec, nmaForkExtractBranch, hcache₁, hcache₂, dite_eq_left hc_eq,
+      dite_eq_left hω_ne]
   rw [hbranch, probEvent_liftComp]
   -- The extractor returns a valid witness with probability one (special soundness).
   rw [show Pr[fun w : Wit => rel pk w = true |
@@ -297,13 +324,16 @@ private theorem perPk_extraction_bound
 end nmaToExtraction
 
 /-- The challenge-space reciprocal `(Fintype.card Chal)⁻¹` is finite. -/
-private lemma challengeSpaceInv_ne_top : challengeSpaceInv Chal ≠ ⊤ :=
+@[aesop (rule_sets := [finiteness]) safe apply]
+lemma challengeSpaceInv_ne_top : challengeSpaceInv Chal ≠ ⊤ :=
   ne_top_of_le_ne_top ENNReal.one_ne_top <|
     ENNReal.inv_le_one.2 (by exact_mod_cast Fintype.card_pos)
 
 omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
   [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal] in
-/-- NMA-to-extraction via the forking lemma and special soundness.
+/-- NMA-to-extraction via the forking lemma and special soundness: the witness-finding
+algorithm `nmaReduction σ hr M nmaAdv qH` succeeds in `hardRelationExp` with probability at least
+`acc · (acc / (qH + 1) - 1/|Chal|)`, where `acc` is the fork advantage of `nmaAdv`.
 
 The parameter `qH` is the *fork slot parameter* passed to `Fork.forkPoint qH`,
 i.e., the number of `Fin (qH + 1)` candidate target positions over which the
@@ -312,7 +342,7 @@ the adversary: callers may supply a wrapped adversary with up to `qH + 1`
 queries (the framework's structural `+1` in `Fin (qH + 1)` accommodates the
 extra slot). -/
 theorem nma_to_hard_relation_bound
-    [DecidableEq M] [DecidableEq Commit]
+    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
     [SampleableType Wit] [SampleableType Chal]
     (hss : σ.SpeciallySound)
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
@@ -320,13 +350,10 @@ theorem nma_to_hard_relation_bound
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) :
-    ∃ reduction : Stmt → ProbComp Wit,
-      (Fork.advantage σ hr M nmaAdv qH *
-          (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) -
-            challengeSpaceInv Chal)) ≤
-        Pr[= true | hardRelationExp hr reduction] := by
+    Fork.advantage σ hr M nmaAdv qH *
+        (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
+      Pr[= true | hardRelationExp hr (nmaReduction σ hr M nmaAdv qH)] := by
   classical
-  refine ⟨nmaReduction σ hr M nmaAdv qH, ?_⟩
   set acc : Stmt → ENNReal := fun pk =>
     Pr[ fun x => (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
       (Chal := Chal) qH x).isSome | Fork.runTrace σ hr M nmaAdv pk] with hacc_def
@@ -355,11 +382,27 @@ theorem nma_to_hard_relation_bound
           (σ := σ) (hr := hr) (M := M) nmaAdv qH pk)).trans
       (perPk_extraction_bound σ hr M nmaAdv qH hss hss_nf pk)
   rw [hAdv_eq_tsum, hRHS_eq_tsum]
-  exact OracleComp.EvalDist.marginalized_jensen_forking_bound (mx := hr.gen)
+  simpa only [DiscreteEvalDistCompatible.lintegral_evalDist _ (g := fun a ↦ a) measurable_id,
+    ← OracleComp.EvalDist.expectedValue_def, OracleComp.EvalDist.expectedValue_map] using
+    OracleComp.EvalDist.marginalized_jensen_forking_bound_map (mx := hr.gen)
     (acc := fun pkw => acc pkw.1)
     (B := fun pkw => Pr[ fun w : Wit => rel pkw.1 w = true |
       nmaReduction σ hr M nmaAdv qH pkw.1])
     (q := (qH : ENNReal) + 1) (hinv := challengeSpaceInv Chal)
-    challengeSpaceInv_ne_top (fun _ => probEvent_le_one) (fun pkw => hPerPkFinal pkw.1)
+    (fun _ => probEvent_le_one) (fun pkw => hPerPkFinal pkw.1)
+
+omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
+  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in
+/-- CMA-to-witness reduction for Fiat-Shamir signatures built from a Sigma protocol: the
+NMA-to-witness reduction `nmaReduction` applied to the CMA-to-NMA adversary `cmaToNmaAdv`,
+with fork slot parameter `qH`. -/
+abbrev cmaReduction
+    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
+    [SampleableType Wit] [SampleableType Chal]
+    (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
+    (adv : SignatureAlg.unforgeableAdv
+      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+    (qH : ℕ) : Stmt → ProbComp Wit :=
+  nmaReduction σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH
 
 end FiatShamir

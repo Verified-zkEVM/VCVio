@@ -36,7 +36,7 @@ variable {α β γ : Type u} {m : Type u → Type v} [Monad m]
 
 /--
 `NeverFail mx` states that the computation `mx : m α` has zero probability of failure,
-equivalently the mass of `(evalDist mx)` at `none` is `0`.
+equivalently the mass of `(evalSPMF mx)` at `none` is `0`.
 
 Formally: `NeverFail mx` iff `Pr[⊥ | mx] = 0`.
 
@@ -46,6 +46,8 @@ Remarks:
   monadic structure. We intentionally avoid a `bind` instance, as the natural condition depends
   on the support of the left-hand side.
 -/
+@[deprecated "VCVio retiring probability API: use IsProbabilityMeasure on 𝒟[mx]"
+  (since := "2026-09-17")]
 class NeverFail {α : Type u} {m : Type u → Type v} [Monad m]
     [MonadLiftT m SPMF] (mx : m α) : Prop where
   mk :: probFailure_eq_zero : Pr[⊥ | mx] = 0
@@ -61,7 +63,8 @@ lemma probFailure_eq_zero' [MonadLiftT m SPMF]
   NeverFail.probFailure_eq_zero
 
 /-- A computation in a monad with a total `PMF` lift can't fail. -/
-instance [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] (mx : m α) : NeverFail mx where
+instance instNeverFailOfLawfulMonadLiftTPMF [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
+    (mx : m α) : NeverFail mx where
   probFailure_eq_zero := probFailure_of_liftM_PMF mx
 
 section neverFail_lemmas
@@ -74,7 +77,7 @@ lemma neverFail_iff (mx : m α) : NeverFail mx ↔ Pr[⊥ | mx] = 0 :=
   ⟨by aesop, NeverFail.mk⟩
 
 @[simp, grind =]
-lemma neverFail_bind_iff [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma neverFail_bind_iff [MonadAttach m] [EvalDistCompatible m]
     (mx : m α) (my : α → m β) :
     NeverFail (mx >>= my) ↔ NeverFail mx ∧ ∀ x ∈ support mx, NeverFail (my x) := by
   simp [neverFail_iff, probFailure_bind_eq_add_tsum_support, add_eq_zero]
@@ -86,7 +89,7 @@ lemma neverFail_map_iff [LawfulMonad m] (mx : m α) (f : α → β) :
 
 @[simp]
 lemma neverFail_seq_iff [LawfulMonad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     (mf : m (α → β)) (mx : m α) :
     NeverFail (mf <*> mx) ↔ NeverFail mf ∧ NeverFail mx := by
   simp only [seq_eq_bind_map, neverFail_bind_iff, neverFail_map_iff]
@@ -97,8 +100,8 @@ lemma neverFail_seq_iff [LawfulMonad m]
 
 @[simp]
 lemma not_neverFail_failure {m : Type u → Type v} [AlternativeMonad m]
-    [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m] [HasEvalSet.LawfulFailure m] :
+    [MonadLiftT m SPMF]
+    [MonadAttach m] [EvalDistCompatible m] [HasEvalSet.LawfulFailure m] :
     ¬ NeverFail (failure : m α) := by
   simp [neverFail_iff]
 
@@ -114,17 +117,17 @@ lemma of_probFailure_eq_zero (mx : m α) (h : Pr[⊥ | mx] = 0) : NeverFail mx :
 
 /--
 If `mx` is a pure return, it never fails.
-This follows since `evalDist pure x` is the Dirac distribution on `some x`.
+This follows since `evalSPMF pure x` is the Dirac distribution on `some x`.
 -/
 @[simp, grind .]
 instance instPure {x} : NeverFail (pure x : m α) where
-  probFailure_eq_zero := by simp [probFailure]
+  probFailure_eq_zero := probFailure_pure _
 
 /--
 Precise bind lemma: if `mx` never fails and for all `x` in the support of `mx` the continuation
 `my x` never fails, then the whole bind never fails.
 
-Sketch: using `evalDist_bind` and the identity
+Sketch: using `evalSPMF_bind` and the identity
 
   `Pr[⊥ | mx >>= my] = Pr[⊥ | mx] + ∑ x, Pr[= x | mx] * Pr[⊥ | my x]`,
 
@@ -132,7 +135,7 @@ the first term vanishes by `NeverFail mx`, while for `x ∉ support mx` the coef
 `Pr[= x | mx]` is `0`, and for `x ∈ support mx` the second factor vanishes by hypothesis.
 Hence the sum is `0`.
 -/
-lemma bind_of_mem_support [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma bind_of_mem_support [MonadAttach m] [EvalDistCompatible m]
     {mx : m α} {my : α → m β}
     [hx : NeverFail mx] (hy : ∀ x ∈ support mx, NeverFail (my x)) :
     NeverFail (mx >>= my) where
@@ -145,7 +148,7 @@ then the bind never fails.
 This is a convenience corollary of `bind_of_mem_support`; it is often easy to apply when
 `my` is uniform in its input (e.g. ignores it) or is known to be never-failing globally.
 -/
-lemma bind_of_forall [MonadLiftT m SetM] [EvalDistCompatible m]
+lemma bind_of_forall [MonadAttach m] [EvalDistCompatible m]
     {mx : m α} {my : α → m β}
     [hx : NeverFail mx] [hy : ∀ x, NeverFail (my x)] :
     NeverFail (mx >>= my) := bind_of_mem_support (hx := hx) (fun x _ => hy x)
@@ -153,16 +156,16 @@ lemma bind_of_forall [MonadLiftT m SetM] [EvalDistCompatible m]
 /--
 Mapping a value through a total function preserves `NeverFail`.
 -/
-@[simp, grind .]
-instance instMap [LawfulMonad m] [MonadLiftT m SetM] [EvalDistCompatible m]
+@[grind .]
+instance instMap [LawfulMonad m] [MonadAttach m] [EvalDistCompatible m]
     {mx : m α} [h : NeverFail mx] (f : α → β) :
     NeverFail (f <$> mx) := by
   simp only [monad_norm, bind_of_forall, Function.comp_def]
 
 /-- If both the function computation and the argument computation never fail,
 then their applicative sequencing also never fails. -/
-@[simp, grind .]
-instance instSeq [LawfulMonad m] [MonadLiftT m SetM] [EvalDistCompatible m]
+@[grind .]
+instance instSeq [LawfulMonad m] [MonadAttach m] [EvalDistCompatible m]
     {mf : m (α → β)} {mx : m α}
     [hf : NeverFail mf] [hx : NeverFail mx] :
     NeverFail (mf <*> mx) := by aesop
@@ -170,18 +173,22 @@ instance instSeq [LawfulMonad m] [MonadLiftT m SetM] [EvalDistCompatible m]
 /-- If `mx` and `my` never fail, then `mx <* my` never fails. -/
 @[simp, grind .]
 instance instSeqLeft [LawfulMonad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {mx : m α} {my : m β}
-    [hx : NeverFail mx] [hy : NeverFail my] : NeverFail (mx <* my) := by aesop
+    [hx : NeverFail mx] [hy : NeverFail my] : NeverFail (mx <* my) := by
+  rw [seqLeft_eq_bind]
+  exact bind_of_forall (hy := fun _ => bind_of_forall (hy := fun _ => instPure))
 
 /-- If `mx` and `my` never fail, then `mx *> my` never fails. -/
 @[simp, grind .]
 instance instSeqRight [LawfulMonad m]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {mx : m α} {my : m β}
-    [hx : NeverFail mx] [hy : NeverFail my] : NeverFail (mx *> my) := by aesop
+    [hx : NeverFail mx] [hy : NeverFail my] : NeverFail (mx *> my) := by
+  rw [seqRight_eq_bind]
+  exact bind_of_forall
 
-example [LawfulMonad m] [MonadLiftT m SetM] [EvalDistCompatible m]
+example [LawfulMonad m] [MonadAttach m] [EvalDistCompatible m]
     (mx : m α) [h : NeverFail mx] : NeverFail (do
     let x ← mx
     let y ← mx

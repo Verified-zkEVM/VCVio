@@ -29,18 +29,18 @@ Defined as a map from each input to the type of the oracle's output. -/
 def OracleSpec (ι : Type u) : Type (max u (v + 1)) :=
   ι → Type v
 
-/- `OracleSpec` is a one-field wrapper around `ι → Type v`, and every layer above it —
-`toPFunctor`, `ofFn`, `unifSpec`, `OracleComp`, `ProbComp` — is `@[reducible]`. Tactics that
-normalize a goal by unfolding reducible declarations therefore dissolve an oracle computation
-all the way down to a bare `PFunctor` literal, and then have to re-synthesize the semantics
-instances (`IsProbabilitySpec`, `MonadLiftT _ PMF`, …) at that erased type. Those instances are
-indexed by `spec.toPFunctor`, so recovering `spec` from the literal needs `OracleSpec` itself to
-unfold, which instance transparency otherwise forbids — synthesis fails and the tactic reports
-that it cannot canonicalize the instance rather than simply not firing.
-
-Making the wrapper transparent at instance transparency closes that gap for every such tactic at
-once. It is not a reducibility loophole: the wrapper carries no content to hide, and the abstract
-API above it (`Domain`, `Range`, `query`, and the spec combinators) is unaffected. -/
+/- `OracleSpec ι` is a one-field wrapper around `ι → Type v`. Lean checks the types of implicit
+and instance-implicit arguments, and of metavariable assignments, at `.implicit` transparency,
+where an ordinary `def` does not unfold. Proofs that unfold the reducible layers above the wrapper
+(`toPFunctor`, `ofFn`, `unifSpec`, `OracleComp`, `ProbComp`) then hold terms of type `ι → Type v`
+where an `OracleSpec ι` is expected, and instance searches whose argument types need the wrapper
+to unfold. Without this attribute the former fail with "the target expression is not type-correct
+under the `implicit` transparency level" (the eager random-oracle table lemmas in
+`QueryTracking/RandomOracle/EagerTable.lean`) and the latter time out (the `Decidable` searches in
+`MerkleTree/Inductive/Batch/Disagreement.lean`). Making the wrapper implicit-reducible closes that
+gap once, for every such site. Instance synthesis at the erased `PFunctor` literal does not need
+it (`VCVioTest/PFunctorFacade.lean` checks that), and the abstract API above the wrapper
+(`Domain`, `Range`, `query`, and the spec combinators) is unaffected. -/
 attribute [implicit_reducible] OracleSpec
 
 namespace OracleSpec
@@ -103,10 +103,16 @@ section add
 
 /-- `spec₁ + spec₂` specifies access to oracles in both `spec₁` and `spec₂`.
 The input is split as a sum type of the two original input sets.
-This corresponds exactly to addition of the corresponding `PFunctor`. -/
-@[implicit_reducible] instance {ι ι'} :
+This corresponds exactly to addition of the corresponding `PFunctor`.
+
+The ordinary instance reducibility assigned by the `instance` command lets its `HAdd.hAdd`
+projection reduce while checking dependent implicit types such as
+`(spec₁ + spec₂).Range (.inl t)`, without unfolding combined specifications during ordinary
+reducible-transparency tactic matching. -/
+instance {ι ι'} :
     HAdd (OracleSpec ι) (OracleSpec ι') (OracleSpec (ι ⊕ ι')) where
-  hAdd spec spec' := Sum.elim spec spec'
+  hAdd spec spec' :=
+    OracleSpec.ofPFunctor (PFunctor.sum spec.toPFunctor spec'.toPFunctor)
 
 lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     spec + spec' = Sum.elim spec spec' := rfl

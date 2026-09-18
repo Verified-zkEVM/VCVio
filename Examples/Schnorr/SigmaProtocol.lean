@@ -115,7 +115,7 @@ theorem sigma_speciallySound (g : G) :
     SpeciallySound (sigma F G g) := by
   intro pk R c₁ c₂ z₁ z₂ h_ne h_v1 h_v2 w h_w
   dsimp [sigma] at *
-  simp only [support_pure, Set.mem_singleton_iff] at h_w
+  simp only [Set.mem_singleton_iff] at h_w
   subst h_w
   simp only [decide_eq_true_eq] at h_v1 h_v2 ⊢
   have h_sub : (z₁ - z₂) • g = (c₁ - c₂) • pk := by
@@ -144,7 +144,7 @@ theorem sigma_hvzk (g : G) [Finite F] :
   let _ : Fintype F := Fintype.ofFinite F
   intro pk sk h_sk
   have h_eq : sk • g = pk := of_decide_eq_true h_sk
-  apply evalDist_ext
+  apply evalSPMF_ext
   intro t
   trans Pr[= t | do
     let c ← ($ᵗ F)
@@ -208,8 +208,8 @@ theorem sigma_simCommitPredictability (g : G)
   have hbij_c : ∀ c : F, Function.Bijective (fun z : F => z • g - c • pk) := fun c =>
     (Equiv.subRight (c • pk)).bijective.comp hg
   have h_commit_uniform :
-      𝒟[Prod.fst <$> simTranscript F G g pk] = 𝒟[$ᵗ G] := by
-    apply evalDist_ext
+      𝒮[Prod.fst <$> simTranscript F G g pk] = 𝒮[$ᵗ G] := by
+    apply evalSPMF_ext
     intro x
     have h_rewrite : (Prod.fst <$> simTranscript F G g pk) =
         (do let c ← ($ᵗ F); let z ← ($ᵗ F); pure (z • g - c • pk) : ProbComp G) := by
@@ -255,7 +255,7 @@ theorem sigma_simChalUniformGivenCommit (g : G) :
     let r ← $ᵗ F
     let c ← $ᵗ F
     pure (r • g, c, r + c * sk) with hind_def
-  have hSimEqIndep : 𝒟[simTranscript F G g pk] = 𝒟[ind] := by
+  have hSimEqIndep : 𝒮[simTranscript F G g pk] = 𝒮[ind] := by
     rw [← hHVZK, hReal]
   rw [probEvent_congr' (fun _ _ => Iff.rfl) hSimEqIndep,
       probEvent_congr' (fun _ _ => Iff.rfl) hSimEqIndep]
@@ -302,7 +302,7 @@ theorem sigma_simChalUniformGivenCommit (g : G) :
             (if r • g = c₀ then (1 : ℝ≥0∞) else 0) by
       simp_rw [probOutput_uniformSample, probEvent_pure]
       by_cases hr : r • g = c₀
-      · simp only [hr, if_true]
+      · simp only [hr, ite_true]
         rw [ENNReal.tsum_mul_left, ENNReal.tsum_const,
           ENat.card_eq_coe_fintype_card, mul_one, ENat.toENNReal_coe,
           ENNReal.inv_mul_cancel hcard_ne_zero hcard_ne_top]

@@ -136,7 +136,7 @@ distribution produced by the simulator. -/
 def PerfectHVZK (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp))) : Prop :=
   ∀ s w, rel s w = true →
-    𝒟[ids.honestExecution s w] = 𝒟[sim s]
+    𝒮[ids.honestExecution s w] = 𝒮[sim s]
 
 /-- The perfect HVZK property is equivalent to the approximate HVZK property with `ζ_zk = 0`. -/
 @[grind =]

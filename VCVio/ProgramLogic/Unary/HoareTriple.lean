@@ -6,40 +6,29 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.ProgramLogic.Unary.Loom.Quantitative
+public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
+public import VCVio.ProgramLogic.Unary.WP.Quantitative
+public import VCVio.EvalDist.ExpectationMeasure
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.SampleableType
 
 /-!
-# Quantitative Hoare triples for `OracleComp`
+# Quantitative Hoare triples
 
-The user-facing `wp_*` and `triple_*` lemma library for the quantitative
-(`ℝ≥0∞`) program logic on `OracleComp spec`. After the Loom2 cutover the
-canonical heads are `Std.Do'.wp` and `Std.Do'.Triple`, both with the
-exception postcondition fixed to `Lean.Order.bot` on the empty
-`Std.Do'.EPost.nil` carrier (which we equip with a `Lean.Order.CCPO`
-instance in `Loom/Quantitative.lean`). All lemmas are stated against
-those canonical heads, exactly the shape that:
+`wp` and `Triple` expose the expectation interpretation of core's lattice-generic
+weakest-precondition API for `OracleComp`. Their equations follow from the ordered
+expectation algebra in `Unary/WP/Quantitative.lean`.
 
-* the user-facing notation `wp⟦c⟧ post` (in `NotationCore.lean`)
-  elaborates to,
-* Loom2's `⦃ pre ⦄ c ⦃ post ⦄` notation (in `Loom.Triple.Basic`)
-  elaborates to,
-* the `vcgen` / `vcstep` tactic infrastructure recognises after the
-  cutover.
-
-The keystone definitional alignment lives in `Loom/Quantitative.lean`:
-`wp _ _ = MAlgOrdered.wp _ _` is `rfl` for
-`OracleComp`, so existing `MAlgOrdered.wp_*` machinery transports
-directly into the `Std.Do'` shape. The `Std.Do'.Triple` analogue is
-inductive (not definitional) and bridged via `Std.Do'.Triple.iff`
-(`pre ⊑ wp …`) and `triple_ofLE`.
+Core's `⦃ pre ⦄ program ⦃ post ⦄` notation is available through
+`open scoped Std.Internal.Do OracleComp.Quantitative`. VCVio's quantitative facade
+keeps the carrier explicit in its definitions.
 -/
 
 @[expose] public section
 
-open ENNReal
-open Std.Do'
+open ENNReal MeasureTheory
+open Std.Internal.Do
+open scoped OracleComp.Quantitative
 
 universe u
 
@@ -53,37 +42,29 @@ variable {α β σ : Type}
 
 /-! ## API contract
 
-- This unary quantitative interface is instantiated for `OracleComp spec`.
-- Probability/evaluation assumptions are `[spec.Fintype]` and `[spec.Inhabited]`.
-- The quantitative codomain is fixed to `ℝ≥0∞`.
-- Every `wp_*` lemma is stated as
-  `wp oa post = …`, every `triple_*` lemma as
-  `Triple pre oa post`.
-- For ergonomic call-site syntax, the abbreviations `wp` and `Triple`
-  reduce to the canonical heads with `epost :=`. They
-  are pure notation: every theorem is stated against the canonical
-  forms, and tactics (`vcgen`, `vcstep`, `@[wpStep]`, …) match on the
-  canonical heads after abbrev unfolding.
+This interface uses the uniform probability interpretation `[IsUniformSpec spec]`,
+with assertions in `ℝ≥0∞`. The abbreviations fix the empty exception postcondition
+while retaining core's WP and triple representations.
 -/
 
 /-- Quantitative weakest-precondition for `OracleComp spec`, fixing the
 exception postcondition to `Lean.Order.bot`. Definitionally equal to
-`Std.Do'.wp oa post Lean.Order.bot`; see the API contract for details. -/
+`Std.Internal.Do.wp oa post Lean.Order.bot`; see the API contract for details. -/
 noncomputable abbrev wp (oa : OracleComp spec α) (post : α → ℝ≥0∞) : ℝ≥0∞ :=
-  Std.Do'.wp oa post Lean.Order.bot
+  Std.Internal.Do.wp oa post Lean.Order.bot
 
 /-- Quantitative Hoare triple for `OracleComp spec`, fixing the exception
 postcondition to `Lean.Order.bot`. Definitionally equal to
-`Std.Do'.Triple pre oa post Lean.Order.bot`; see the API contract for
+`Std.Internal.Do.Triple oa pre post Lean.Order.bot`; see the API contract for
 details. -/
 noncomputable abbrev Triple (pre : ℝ≥0∞) (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) : Prop :=
-  Std.Do'.Triple pre oa post Lean.Order.bot
+  Std.Internal.Do.Triple oa pre post Lean.Order.bot
 
 /-! ## Internal alias
 
 `MAlgOrdered.wp` is `rfl`-equal to `wp _ _` on
-`OracleComp` via the `Loom.instWP` instance. The bridge `wp_eq_mAlgOrdered_wp`
+`OracleComp` via the `OracleComp.Quantitative.instWP` instance. The bridge `wp_eq_mAlgOrdered_wp`
 re-exposes this so existing `MAlgOrdered.wp_*` lemmas can be applied with
 a single rewrite. -/
 
@@ -91,24 +72,24 @@ theorem wp_eq_mAlgOrdered_wp (oa : OracleComp spec α) (post : α → ℝ≥0∞
     wp oa post =
       MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa post := rfl
 
-/-- Bridge between Loom2's inductive `Std.Do'.Triple` and Mathlib's `≤` on
-`ℝ≥0∞`. Loom2 defines `Std.Do'.Triple.iff` against
-`Lean.Order.PartialOrder.rel`; on `ℝ≥0∞` our `Lean.Order.PartialOrder`
-instance defines `rel` as Mathlib's `≤`, so the two coincide. The
-explicit `Iff.rfl` re-exposes the equivalence in `≤`-form, which is what
-all the downstream `triple_*` proofs are stated against. -/
+/-- `wp` is the expectation of the postcondition under the output distribution. This is the
+bridge to the `expectedValue` laws; it is a `rw` target, not a simp lemma, because `wp` stays the
+head the program-logic tactics match on. -/
+theorem wp_eq_expectedValue (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
+    wp oa post = OracleComp.EvalDist.expectedValue oa post := by
+  let : ∀ t, MeasurableSpace (spec.Range t) := fun _ ↦ ⊤
+  let : MeasurableSpace α := ⊤
+  rw [wp_eq_mAlgOrdered_wp, MeasureProgramLogic.Quantitative.wp_eq_lintegral,
+    OracleComp.EvalDist.lintegral_evalDist]
+
+/-- A quantitative core triple is the corresponding inequality of expectations. -/
 theorem triple_iff_le_wp
     (pre : ℝ≥0∞) (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     Triple pre oa post ↔
       pre ≤ wp oa post :=
-  Std.Do'.Triple.iff (epost := Lean.Order.bot)
+  Std.Internal.Do.Triple.iff (epost := Lean.Order.bot)
 
-/-- Construct a `Triple …` from a `≤`-form proof
-`pre ≤ wp oa post`. Companion to
-`triple_iff_le_wp.mpr`; preferred as the constructor in concrete proofs
-because it avoids Lean's typeclass-projection unification failures
-that arise when calling `Std.Do'.Triple.intro` directly with a `≤`
-proof. -/
+/-- Construct a quantitative triple from an expectation inequality. -/
 theorem triple_ofLE
     {pre : ℝ≥0∞} {oa : OracleComp spec α} {post : α → ℝ≥0∞}
     (h : pre ≤ wp oa post) :
@@ -125,18 +106,18 @@ theorem triple_toLE
 
 /-! ## `wp` lemmas (against `wp _ _`) -/
 
-@[simp, game_rule] theorem wp_pure (x : α) (post : α → ℝ≥0∞) :
+@[game_rule] theorem wp_pure (x : α) (post : α → ℝ≥0∞) :
     wp (pure x : OracleComp spec α) post = post x := by
   rw [wp_eq_mAlgOrdered_wp, MAlgOrdered.wp_pure]
 
-@[simp, game_rule] theorem wp_ite (c : Prop) [Decidable c]
+@[game_rule] theorem wp_ite (c : Prop) [Decidable c]
     (oa ob : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp (if c then oa else ob) post =
       if c then wp oa post
       else wp ob post := by
   split_ifs <;> rfl
 
-@[simp, game_rule] theorem wp_dite (c : Prop) [Decidable c]
+@[game_rule] theorem wp_dite (c : Prop) [Decidable c]
     (oa : c → OracleComp spec α) (ob : ¬c → OracleComp spec α) (post : α → ℝ≥0∞) :
     wp (dite c oa ob) post =
       dite c (fun h => wp (oa h) post)
@@ -196,52 +177,92 @@ theorem triple_toLE
         (fun s => wp (xs.foldlM f s) post) := by
   rw [List.foldlM_cons, wp_bind]
 
+/-- `wp` is monotone in the postcondition; `gcongr` descends through it. -/
+@[gcongr low]
 theorem wp_mono (oa : OracleComp spec α) {post post' : α → ℝ≥0∞}
     (hpost : ∀ x, post x ≤ post' x) :
     wp oa post ≤ wp oa post' := by
-  simp only [wp_eq_mAlgOrdered_wp]
-  exact MAlgOrdered.wp_mono (m := OracleComp spec) (l := ℝ≥0∞) oa hpost
+  exact MAlgOrdered.wp_mono oa hpost
+
+/-- `wp` is monotone when the postconditions are ordered on the computation's support. -/
+@[gcongr]
+theorem wp_mono_of_support (oa : OracleComp spec α) {post post' : α → ℝ≥0∞}
+    (hpost : ∀ x ∈ support oa, post x ≤ post' x) : wp oa post ≤ wp oa post' := by
+  let : ∀ t, MeasurableSpace (spec.Range t) := fun _ ↦ ⊤
+  let : MeasurableSpace α := ⊤
+  exact MeasureProgramLogic.Quantitative.wp_mono_of_support oa hpost
+
+/-- Support-aware comparison on PolyFun's canonical quantitative WP head. -/
+@[gcongr]
+theorem mAlgOrdered_wp_mono_of_support (oa : OracleComp spec α) {post post' : α → ℝ≥0∞}
+    (hpost : ∀ x ∈ support oa, post x ≤ post' x) :
+    MAlgOrdered.wp oa post ≤ MAlgOrdered.wp oa post' :=
+  wp_mono_of_support oa hpost
+
+/-- Finite postconditions over a finite result type have finite weakest precondition. -/
+@[aesop (rule_sets := [finiteness]) safe apply]
+theorem wp_ne_top_of_finite [Finite α] (oa : OracleComp spec α) {post : α → ℝ≥0∞}
+    (hpost : ∀ x, post x ≠ ⊤) : wp oa post ≠ ⊤ := by
+  rw [wp_eq_expectedValue]
+  exact OracleComp.EvalDist.expectedValue_ne_top_of_finite oa hpost
 
 @[game_rule] theorem wp_map (f : α → β) (oa : OracleComp spec α) (post : β → ℝ≥0∞) :
     wp (f <$> oa) post =
       wp oa (post ∘ f) := by
-  rw [map_eq_bind_pure_comp]
-  rw [wp_bind]
   simp [Function.comp_def]
 
 /-- General unfolding: `wp` as weighted sum over output probabilities. -/
 theorem wp_eq_tsum (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp oa post = ∑' x, Pr[= x | oa] * post x := by
-  rw [wp_eq_mAlgOrdered_wp, MAlgOrdered.wp]
-  change μ (oa >>= fun a => pure (post a)) = _
-  rw [μ_bind_eq_tsum]
-  refine tsum_congr fun x => congrArg (Pr[= x | oa] * ·) ?_
-  have : DecidableEq ℝ≥0∞ := Classical.decEq _
-  simp [μ, probOutput_pure]
+  rw [wp_eq_expectedValue, OracleComp.EvalDist.expectedValue_def]
 
 @[simp] theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :
-    wp oa (fun _ => c) = c := by
-  rw [wp_eq_tsum, ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
+    MAlgOrdered.wp oa (fun _ => c) = c := by
+  let : ∀ t, MeasurableSpace (spec.Range t) := fun _ ↦ ⊤
+  let : MeasurableSpace α := ⊤
+  simp [MeasureProgramLogic.Quantitative.wp_const]
 
 @[game_rule] theorem wp_add (oa : OracleComp spec α) (f g : α → ℝ≥0∞) :
     wp oa (fun x => f x + g x) =
       wp oa f + wp oa g := by
-  simp only [wp_eq_tsum, mul_add, ENNReal.tsum_add]
-
-@[game_rule] theorem wp_mul_const (oa : OracleComp spec α) (c : ℝ≥0∞) (f : α → ℝ≥0∞) :
-    wp oa (fun x => c * f x) =
-      c * wp oa f := by
-  simp only [wp_eq_tsum]; simp_rw [mul_left_comm]; exact ENNReal.tsum_mul_left
+  simp only [wp_eq_expectedValue, OracleComp.EvalDist.expectedValue_add]
 
 theorem wp_const_mul (oa : OracleComp spec α) (f : α → ℝ≥0∞) (c : ℝ≥0∞) :
     wp oa (fun x => f x * c) =
       wp oa f * c := by
-  simp_rw [mul_comm _ c]; rw [wp_mul_const, mul_comm]
+  simp only [wp_eq_expectedValue, OracleComp.EvalDist.expectedValue_mul_const]
+
+@[game_rule] theorem wp_mul_const (oa : OracleComp spec α) (c : ℝ≥0∞) (f : α → ℝ≥0∞) :
+    wp oa (fun x => c * f x) =
+      c * wp oa f := by
+  simp_rw [mul_comm c]; exact wp_const_mul oa f c
+
+/-- A support-wise postcondition bound controls the quantitative WP. -/
+theorem wp_le_const_of_support (oa : OracleComp spec α) {post : α → ℝ≥0∞} {c : ℝ≥0∞}
+    (hpost : ∀ x ∈ support oa, post x ≤ c) : wp oa post ≤ c :=
+  (wp_mono_of_support oa hpost).trans_eq (by simp)
+
+/-- Additive support-wise comparison of quantitative postconditions. -/
+theorem wp_le_const_add_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
+    {c : ℝ≥0∞} (hfg : ∀ x ∈ support oa, f x ≤ c + g x) :
+    wp oa f ≤ c + wp oa g := by
+  refine (wp_mono_of_support oa hfg).trans_eq ?_
+  rw [wp_add]
+  simp
+
+/-- Finite sums of quantitative postconditions commute with expectation. -/
+theorem wp_finsetSum {κ : Type*} (oa : OracleComp spec α) (s : Finset κ)
+    (f : κ → α → ℝ≥0∞) :
+    wp oa (fun x ↦ ∑ i ∈ s, f i x) = ∑ i ∈ s, wp oa (f i) := by
+  let : ∀ t, MeasurableSpace (spec.Range t) := fun _ ↦ ⊤
+  let : MeasurableSpace α := ⊤
+  simpa only [wp_eq_mAlgOrdered_wp] using
+    MeasureProgramLogic.Quantitative.wp_finsetSum oa s f
 
 /-! ## `Triple` lemmas (against `Triple _ _ _`)
 
-`Std.Do'.Triple` is an inductive wrapper around `pre ⊑ wp …`. The
-accessor `Std.Do'.Triple.iff` exchanges between the inductive form and
+`Std.Internal.Do.Triple` is an inductive wrapper around `pre ⊑ wp …`. The
+accessor `Std.Internal.Do.Triple.iff` exchanges between the inductive form and
 the `≤`-form; `triple_ofLE` packages a `≤`-proof into the
 constructor; pattern matching `match h with | .intro h => h` extracts
 the underlying inequality. -/
@@ -366,7 +387,7 @@ theorem le_probOutput_iff_triple_indicator (oa : OracleComp spec α) [DecidableE
   rw [triple_iff_le_wp, ← probOutput_eq_wp_indicator]
 
 /-- The support event of an `OracleComp` occurs almost surely. -/
-@[simp] theorem probEvent_mem_support (oa : OracleComp spec α) :
+theorem probEvent_mem_support (oa : OracleComp spec α) :
     Pr[ fun x => x ∈ support oa | oa] = 1 := by
   rw [probEvent_eq_one_iff]
   refine ⟨by simp, fun x hx => hx⟩
@@ -493,34 +514,35 @@ theorem triple_list_mapM {I : ℝ≥0∞}
     Triple pre (l.mapM f) post :=
   triple_conseq hpre hpost (triple_list_mapM_inv hstep)
 
-/-! ## Congruence under `evalDist` equality -/
+/-! ## Congruence under `evalSPMF` equality -/
 
-lemma probOutput_congr_evalDist {oa ob : OracleComp spec α}
-    (h : 𝒟[oa] = 𝒟[ob]) (x : α) :
+lemma probOutput_congr_evalSPMF {oa ob : OracleComp spec α}
+    (h : 𝒮[oa] = 𝒮[ob]) (x : α) :
     Pr[= x | oa] = Pr[= x | ob] := by
-  change 𝒟[oa] x = 𝒟[ob] x
-  rw [h]
+  rw [probOutput_def, probOutput_def, h]
 
-lemma μ_congr_evalDist {oa ob : OracleComp spec ℝ≥0∞}
-    (h : 𝒟[oa] = 𝒟[ob]) :
-    μ oa = μ ob := by
-  unfold μ
-  exact tsum_congr fun x => by rw [probOutput_congr_evalDist h]
+/-- The expectation algebra evaluates the identity postcondition. -/
+lemma μ_eq_wp (oa : OracleComp spec ℝ≥0∞) : μ oa = wp oa (fun x ↦ x) := by
+  simp [MAlgOrdered.wp, μ]
 
-lemma wp_congr_evalDist {oa ob : OracleComp spec α}
-    (h : 𝒟[oa] = 𝒟[ob]) (post : α → ℝ≥0∞) :
+lemma μ_congr_evalSPMF {oa ob : OracleComp spec ℝ≥0∞}
+    (h : 𝒮[oa] = 𝒮[ob]) : μ oa = μ ob := by
+  simp only [μ_eq_wp, wp_eq_expectedValue, OracleComp.EvalDist.expectedValue_def]
+  exact tsum_congr fun x ↦ by rw [probOutput_congr_evalSPMF h]
+
+lemma wp_congr_evalSPMF {oa ob : OracleComp spec α}
+    (h : 𝒮[oa] = 𝒮[ob]) (post : α → ℝ≥0∞) :
     wp oa post = wp ob post := by
   change μ (oa >>= fun a => pure (post a)) = μ (ob >>= fun a => pure (post a))
-  exact μ_congr_evalDist (by simp [h])
+  exact μ_congr_evalSPMF (by simp [h])
 
-lemma μ_cross_congr_evalDist {ι' : Type*} {spec' : OracleSpec ι'}
+lemma μ_cross_congr_evalSPMF {ι' : Type*} {spec' : OracleSpec ι'}
     [IsUniformSpec spec']
     {oa : OracleComp spec' ℝ≥0∞} {ob : OracleComp spec ℝ≥0∞}
-    (h : 𝒟[oa] = 𝒟[ob]) :
+    (h : 𝒮[oa] = 𝒮[ob]) :
     @μ _ spec' _ oa = μ ob := by
-  simp only [μ]
+  simp only [μ_eq_wp, wp_eq_expectedValue, OracleComp.EvalDist.expectedValue_def]
   exact tsum_congr fun x => by
-    change 𝒟[oa] x * x = 𝒟[ob] x * x
-    rw [h]
+    rw [probOutput_def, probOutput_def, h]
 
 end OracleComp.ProgramLogic

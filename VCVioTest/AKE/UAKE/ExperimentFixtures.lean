@@ -27,9 +27,10 @@ The transcripts these runs produce are exactly the literal fixtures in
 there to the output of `recordOne` / `recordOpt` under `opImpl`.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp
+open MeasureTheory
 
 open scoped ENNReal
 
@@ -39,7 +40,7 @@ open _root_.AKE.UAKE
 
 /-! ## A two-message scheme: U speaks first, T speaks last -/
 
-def toyU2 (m : Type → Type) [Monad m] : Party m Unit ℕ (Option Bool) where
+@[expose] def toyU2 (m : Type → Type) [Monad m] : Party m Unit ℕ (Option Bool) where
   State := Bool
   init := fun _ => pure (.speakFirst false 1)
   step := fun st w =>
@@ -47,7 +48,7 @@ def toyU2 (m : Type → Type) [Monad m] : Party m Unit ℕ (Option Bool) where
     else if w = 2 then pure (.complete true) else pure .reject
   output := fun st => if st then pure (some (some true)) else pure none
 
-def toyT2 (m : Type → Type) [Monad m] : Party m ℕ ℕ (Option Bool) where
+@[expose] def toyT2 (m : Type → Type) [Monad m] : Party m ℕ ℕ (Option Bool) where
   State := Bool
   init := fun _ => pure (.waitForMsg false)
   step := fun st w =>
@@ -55,7 +56,7 @@ def toyT2 (m : Type → Type) [Monad m] : Party m ℕ ℕ (Option Bool) where
     else if w = 1 then pure (.acceptAndSend true 2 true) else pure .reject
   output := fun st => if st then pure (some (some true)) else pure none
 
-def toy2 (m : Type → Type) [Monad m] : Scheme m Bool Unit ℕ ℕ where
+@[expose] def toy2 (m : Type → Type) [Monad m] : Scheme m Bool Unit ℕ ℕ where
   rounds := 2
   setup := pure ((), 0)
   U := toyU2 m
@@ -63,7 +64,7 @@ def toy2 (m : Type → Type) [Monad m] : Scheme m Bool Unit ℕ ℕ where
 
 /-! ## A three-message scheme: T speaks first and last -/
 
-def toyU3 (m : Type → Type) [Monad m] : Party m Unit ℕ (Option Bool) where
+@[expose] def toyU3 (m : Type → Type) [Monad m] : Party m Unit ℕ (Option Bool) where
   State := ℕ
   init := fun _ => pure (.waitForMsg 0)
   step := fun st w =>
@@ -72,7 +73,7 @@ def toyU3 (m : Type → Type) [Monad m] : Party m Unit ℕ (Option Bool) where
     else pure .reject
   output := fun st => if st = 2 then pure (some (some true)) else pure none
 
-def toyT3 (m : Type → Type) [Monad m] : Party m ℕ ℕ (Option Bool) where
+@[expose] def toyT3 (m : Type → Type) [Monad m] : Party m ℕ ℕ (Option Bool) where
   State := Bool
   init := fun _ => pure (.speakFirst false 1)
   step := fun st w =>
@@ -80,7 +81,7 @@ def toyT3 (m : Type → Type) [Monad m] : Party m ℕ ℕ (Option Bool) where
     else if w = 2 then pure (.acceptAndSend true 3 true) else pure .reject
   output := fun st => if st then pure (some (some true)) else pure none
 
-def toy3 (m : Type → Type) [Monad m] : Scheme m Bool Unit ℕ ℕ where
+@[expose] def toy3 (m : Type → Type) [Monad m] : Scheme m Bool Unit ℕ ℕ where
   rounds := 3
   setup := pure ((), 0)
   U := toyU3 m
@@ -105,16 +106,14 @@ theorem toy3_correctExp : (CorrectExp (toy3 Id) : Id Bool) = true := rfl
 theorem toy2_perfectlyCorrect :
     PerfectlyCorrect (toy2 ProbComp) ProbCompRuntime.probComp := by
   unfold PerfectlyCorrect
-  rw [show ProbCompRuntime.probComp.evalDist (CorrectExp (toy2 ProbComp)) =
-    liftM (CorrectExp (toy2 ProbComp)) from rfl,
+  rw [ProbCompRuntime.probComp_evalDist,
     show CorrectExp (toy2 ProbComp) = pure true from rfl]
   simp
 
 theorem toy3_perfectlyCorrect :
     PerfectlyCorrect (toy3 ProbComp) ProbCompRuntime.probComp := by
   unfold PerfectlyCorrect
-  rw [show ProbCompRuntime.probComp.evalDist (CorrectExp (toy3 ProbComp)) =
-    liftM (CorrectExp (toy3 ProbComp)) from rfl,
+  rw [ProbCompRuntime.probComp_evalDist,
     show CorrectExp (toy3 ProbComp) = pure true from rfl]
   simp
 
@@ -232,14 +231,90 @@ theorem toy3_wellFormed : (toy3 ProbComp).WellFormed := by
   subst h
   rfl
 
+/-- The two-message execution returns accepted keys at both endpoints. -/
+theorem toy2_honestlyCompletes : (toy2 ProbComp).HonestlyCompletes
+    ProbCompRuntime.probComp := by
+  unfold Scheme.HonestlyCompletes
+  rw [ProbCompRuntime.probComp_evalDist,
+    show HonestCompletionExp (toy2 ProbComp) = pure true from rfl]
+  simp
+
+/-- The three-message execution returns accepted keys at both endpoints. -/
+theorem toy3_honestlyCompletes : (toy3 ProbComp).HonestlyCompletes
+    ProbCompRuntime.probComp := by
+  unfold Scheme.HonestlyCompletes
+  rw [ProbCompRuntime.probComp_evalDist,
+    show HonestCompletionExp (toy3 ProbComp) = pure true from rfl]
+  simp
+
+/-- Admission is consistent with an executable two-message model. -/
+theorem toy2_admissible : (toy2 ProbComp).Admissible ProbCompRuntime.probComp :=
+  ⟨runtimeCoherent_probComp, toy2_wellFormed, toy2_perfectlyCorrect,
+    toy2_honestlyCompletes⟩
+
+/-- Admission is consistent with an executable three-message model. -/
+theorem toy3_admissible : (toy3 ProbComp).Admissible ProbCompRuntime.probComp :=
+  ⟨runtimeCoherent_probComp, toy3_wellFormed, toy3_perfectlyCorrect,
+    toy3_honestlyCompletes⟩
+
+/-- Both parties finish the message exchange but reject its key. -/
+@[expose] def alwaysRejectScheme : Scheme ProbComp Bool Unit ℕ ℕ :=
+  { toy2 ProbComp with
+    U := {
+      State := Bool
+      init := (toyU2 ProbComp).init
+      step := (toyU2 ProbComp).step
+      output := fun st => if st then pure (some none) else pure none }
+    T := {
+      State := Bool
+      init := (toyT2 ProbComp).init
+      step := (toyT2 ProbComp).step
+      output := fun st => if st then pure (some none) else pure none } }
+
+/-- The conditional correctness experiment accepts universal rejection. -/
+theorem alwaysReject_perfectlyCorrect :
+    PerfectlyCorrect alwaysRejectScheme ProbCompRuntime.probComp := by
+  unfold PerfectlyCorrect
+  rw [ProbCompRuntime.probComp_evalDist,
+    show CorrectExp alwaysRejectScheme = pure true from rfl]
+  simp
+
+/-- Universal rejection fails the separate honest-completion requirement. -/
+theorem alwaysReject_not_admissible :
+    ¬ alwaysRejectScheme.Admissible ProbCompRuntime.probComp := by
+  intro h
+  have hcompletion := h.2.2.2
+  unfold Scheme.HonestlyCompletes at hcompletion
+  rw [ProbCompRuntime.probComp_evalDist,
+    show HonestCompletionExp alwaysRejectScheme = pure false from rfl] at hcompletion
+  simp at hcompletion
+
+/-- A bundled observer may report zero mass while respecting only its map law. -/
+@[expose] noncomputable def zeroRuntime : ProbCompRuntime ProbComp where
+  toMeasureSemanticsVia :=
+    { Sem := ProbComp
+      interpret := MonadHom.id ProbComp
+      observe := fun _ => 0
+      observe_apply_univ_le_one := fun _ => by simp }
+  toProbCompLift := ProbCompLift.id
+  evalDist_map_eq _ _ _ := by simp [MeasureSemanticsVia.evalDist]
+
+/-- The coherence certificate rejects the zero observer on a pure return. -/
+theorem zeroRuntime_not_coherent : ¬ RuntimeCoherent zeroRuntime := by
+  intro h
+  have heq := congrArg (fun μ : Measure Bool => μ {true}) (h.evalDist_eq (pure true))
+  have hzero : zeroRuntime.evalDist (pure true) = (0 : Measure Bool) := rfl
+  rw [hzero] at heq
+  simp at heq
+
 /-- A malformed U role: it hands out a key straight from its initial state. -/
-def outputAtInitParty : Party ProbComp Unit ℕ (Option Bool) where
+@[expose] def outputAtInitParty : Party ProbComp Unit ℕ (Option Bool) where
   State := Bool
   init := fun _ => pure (.speakFirst false 1)
   step := fun _ _ => pure .reject
   output := fun _ => pure (some (some true))
 
-def outputAtInitScheme : Scheme ProbComp Bool Unit ℕ ℕ where
+@[expose] def outputAtInitScheme : Scheme ProbComp Bool Unit ℕ ℕ where
   rounds := 2
   setup := pure ((), 0)
   U := outputAtInitParty
@@ -258,20 +333,21 @@ theorem not_wellFormed_outputAtInitScheme : ¬ outputAtInitScheme.WellFormed := 
 abbrev toySpec : OracleSpec (Op ℕ) := oracleSpec Bool ℕ
 
 /-- The environment `challengeSession` builds for `toy2`: U's opening is recorded at tick 0. -/
-def toy2Env (m : Type → Type) [Monad m] : Env (toy2 m) := ⟨1, ⟨false, ⟨[(1, 0)]⟩⟩, false, []⟩
+@[expose] def toy2Env (m : Type → Type) [Monad m] : Env (toy2 m) :=
+  ⟨1, ⟨false, ⟨[(1, 0)]⟩⟩, false, []⟩
 
 /-- The environment `challengeSession` builds for `toy3`: U waits, so nothing is recorded. -/
-def toy3Env (m : Type → Type) [Monad m] : Env (toy3 m) := ⟨0, ⟨(0 : ℕ), ⟨[]⟩⟩, false, []⟩
+@[expose] def toy3Env (m : Type → Type) [Monad m] : Env (toy3 m) := ⟨0, ⟨(0 : ℕ), ⟨[]⟩⟩, false, []⟩
 
-def runToy2 {α : Type} (prog : OracleComp toySpec α) (env : Env (toy2 Id)) :
+@[expose] def runToy2 {α : Type} (prog : OracleComp toySpec α) (env : Env (toy2 Id)) :
     α × Env (toy2 Id) :=
   (simulateQ (opImpl (toy2 Id) 0) prog).run env
 
-def runToy3 {α : Type} (prog : OracleComp toySpec α) (env : Env (toy3 Id)) :
+@[expose] def runToy3 {α : Type} (prog : OracleComp toySpec α) (env : Env (toy3 Id)) :
     α × Env (toy3 Id) :=
   (simulateQ (opImpl (toy3 Id) 0) prog).run env
 
-def missingSessionProbe : OracleComp toySpec ((ℕ ⊕ Unit) × Option Bool) := do
+@[expose] def missingSessionProbe : OracleComp toySpec ((ℕ ⊕ Unit) × Option Bool) := do
   let stepped ← query (spec := toySpec) (.stepT 7 1)
   let revealed ← query (spec := toySpec) (.revealT 7)
   pure (stepped, revealed)
@@ -279,7 +355,7 @@ def missingSessionProbe : OracleComp toySpec ((ℕ ⊕ Unit) × Option Bool) := 
 theorem missingSession_run :
     runToy2 missingSessionProbe (toy2Env Id) = ((.inr (), none), toy2Env Id) := rfl
 
-def earlyRevealProbe : OracleComp toySpec (ℕ × Option Bool) := do
+@[expose] def earlyRevealProbe : OracleComp toySpec (ℕ × Option Bool) := do
   let (sid, _) ← query (spec := toySpec) .openT
   let revealed ← query (spec := toySpec) (.revealT sid)
   pure (sid, revealed)
@@ -288,7 +364,7 @@ theorem earlyReveal_run :
     runToy2 earlyRevealProbe (toy2Env Id) =
       ((0, none), ⟨1, ⟨false, ⟨[(1, 0)]⟩⟩, false, [⟨false, ⟨[]⟩, none, false⟩]⟩) := rfl
 
-def completedSessionProbe : OracleComp toySpec (ℕ ⊕ Unit) := do
+@[expose] def completedSessionProbe : OracleComp toySpec (ℕ ⊕ Unit) := do
   let (sid, _) ← query (spec := toySpec) .openT
   query (spec := toySpec) (.stepT sid 1)
 
@@ -296,7 +372,7 @@ theorem completedSession_run :
     runToy2 completedSessionProbe (toy2Env Id) =
       (.inl 2, ⟨3, ⟨false, ⟨[(1, 0)]⟩⟩, false, [⟨true, oracle2, some (some true), false⟩]⟩) := rfl
 
-def postCompletionProbe : OracleComp toySpec (ℕ ⊕ Unit) := do
+@[expose] def postCompletionProbe : OracleComp toySpec (ℕ ⊕ Unit) := do
   let (sid, _) ← query (spec := toySpec) .openT
   let _ ← query (spec := toySpec) (.stepT sid 1)
   query (spec := toySpec) (.stepT sid 1)
@@ -305,7 +381,7 @@ theorem postCompletion_run :
     runToy2 postCompletionProbe (toy2Env Id) =
       (.inr (), (runToy2 completedSessionProbe (toy2Env Id)).2) := rfl
 
-def revealAfterCompletionProbe : OracleComp toySpec (Option Bool) := do
+@[expose] def revealAfterCompletionProbe : OracleComp toySpec (Option Bool) := do
   let (sid, _) ← query (spec := toySpec) .openT
   let _ ← query (spec := toySpec) (.stepT sid 1)
   query (spec := toySpec) (.revealT sid)
@@ -314,13 +390,13 @@ theorem revealAfterCompletion_run :
     runToy2 revealAfterCompletionProbe (toy2Env Id) =
       (some true, ⟨3, ⟨false, ⟨[(1, 0)]⟩⟩, false, [⟨true, oracle2, some (some true), true⟩]⟩) := rfl
 
-def rejectedChallengeProbe : OracleComp toySpec (ℕ ⊕ Unit) :=
+@[expose] def rejectedChallengeProbe : OracleComp toySpec (ℕ ⊕ Unit) :=
   query (spec := toySpec) (.stepChallenge 99)
 
 theorem rejectedChallenge_run :
     runToy2 rejectedChallengeProbe (toy2Env Id) = (.inr (), toy2Env Id) := rfl
 
-def relayProbe : OracleComp toySpec ((ℕ ⊕ Unit) × (ℕ ⊕ Unit)) := do
+@[expose] def relayProbe : OracleComp toySpec ((ℕ ⊕ Unit) × (ℕ ⊕ Unit)) := do
   let (sid, _) ← query (spec := toySpec) .openT
   let reply ← query (spec := toySpec) (.stepT sid 1)
   let closed ← query (spec := toySpec) (.stepChallenge 2)
@@ -331,7 +407,8 @@ theorem relay_run :
       ((.inl 2, .inr ()),
         ⟨4, ⟨true, challenge2⟩, true, [⟨true, oracle2, some (some true), false⟩]⟩) := rfl
 
-def relay3Probe : OracleComp toySpec (Option ℕ × (ℕ ⊕ Unit) × (ℕ ⊕ Unit) × (ℕ ⊕ Unit)) := do
+@[expose] def relay3Probe :
+    OracleComp toySpec (Option ℕ × (ℕ ⊕ Unit) × (ℕ ⊕ Unit) × (ℕ ⊕ Unit)) := do
   let (sid, opening) ← query (spec := toySpec) .openT
   let first ← query (spec := toySpec) (.stepChallenge 1)
   let reply ← query (spec := toySpec) (.stepT sid 2)
@@ -343,7 +420,7 @@ theorem relay3_run :
       ((some 1, .inl 2, .inl 3, .inr ()),
         ⟨6, ⟨(2 : ℕ), challenge3⟩, true, [⟨true, oracle3, some (some true), false⟩]⟩) := rfl
 
-def challengeStepProbe : OracleComp toySpec (ℕ ⊕ Unit) :=
+@[expose] def challengeStepProbe : OracleComp toySpec (ℕ ⊕ Unit) :=
   query (spec := toySpec) (.stepChallenge 1)
 
 theorem challengeStep_live_run :
@@ -357,7 +434,7 @@ theorem challengeStep_frozen_run :
 /-! ## Adversaries -/
 
 /-- Forges T's reply to the challenge session without opening any T session. -/
-def forgeAdv : Adversary (toy2 ProbComp) where
+@[expose] def forgeAdv : Adversary (toy2 ProbComp) where
   State := Unit
   challenge := fun _uk _opening => do
     let _ ← query (spec := toySpec) (.stepChallenge 2)
@@ -366,7 +443,7 @@ def forgeAdv : Adversary (toy2 ProbComp) where
 
 /-- Relays the challenge session through a T session, without revealing it. The guess reads the
 key it can recompute from the relayed transcript. -/
-def relayAdv : Adversary (toy2 ProbComp) where
+@[expose] def relayAdv : Adversary (toy2 ProbComp) where
   State := Unit
   challenge := fun _uk _opening => do
     let (sid, _) ← query (spec := toySpec) .openT
@@ -376,7 +453,7 @@ def relayAdv : Adversary (toy2 ProbComp) where
   post := fun _ Kb => pure (decide (Kb ≠ some true))
 
 /-- Relays the challenge session and reveals the relayed T session. -/
-def relayRevealAdv : Adversary (toy2 ProbComp) where
+@[expose] def relayRevealAdv : Adversary (toy2 ProbComp) where
   State := Unit
   challenge := fun _uk _opening => do
     let (sid, _) ← query (spec := toySpec) .openT
@@ -389,7 +466,7 @@ def relayRevealAdv : Adversary (toy2 ProbComp) where
   post := fun _ Kb => pure (decide (Kb ≠ some true))
 
 /-- Sends a message the challenge session rejects, so the challenge key stays ⊥. -/
-def rejectAdv : Adversary (toy2 ProbComp) where
+@[expose] def rejectAdv : Adversary (toy2 ProbComp) where
   State := Unit
   challenge := fun _uk _opening => do
     let _ ← query (spec := toySpec) (.stepChallenge 99)
@@ -397,7 +474,7 @@ def rejectAdv : Adversary (toy2 ProbComp) where
   post := fun _ _ => pure true
 
 /-- Relays the three-message scheme. -/
-def relay3Adv : Adversary (toy3 ProbComp) where
+@[expose] def relay3Adv : Adversary (toy3 ProbComp) where
   State := Unit
   challenge := fun _uk _opening => do
     let (sid, _) ← query (spec := toySpec) .openT
@@ -409,7 +486,7 @@ def relay3Adv : Adversary (toy3 ProbComp) where
 
 /-- Leaves the challenge session untouched during the challenge phase, then probes it once
 `finalize` has frozen it. Its guess is the probe's observation. -/
-def frozenProbeAdv : Adversary (toy3 ProbComp) where
+@[expose] def frozenProbeAdv : Adversary (toy3 ProbComp) where
   State := Unit
   challenge := fun _uk _opening => pure ()
   post := fun _ _ => do
@@ -418,23 +495,23 @@ def frozenProbeAdv : Adversary (toy3 ProbComp) where
 
 /-! ## Challenge sessions -/
 
-def forgeResult : ChallengeResult (toy2 ProbComp) := ⟨some true, ⟨[(1, 0), (2, 1)]⟩, []⟩
+@[expose] def forgeResult : ChallengeResult (toy2 ProbComp) := ⟨some true, ⟨[(1, 0), (2, 1)]⟩, []⟩
 
-def relayResult : ChallengeResult (toy2 ProbComp) := ⟨some true, challenge2, [oracle2]⟩
+@[expose] def relayResult : ChallengeResult (toy2 ProbComp) := ⟨some true, challenge2, [oracle2]⟩
 
-def rejectResult : ChallengeResult (toy2 ProbComp) := ⟨none, ⟨[(1, 0)]⟩, []⟩
+@[expose] def rejectResult : ChallengeResult (toy2 ProbComp) := ⟨none, ⟨[(1, 0)]⟩, []⟩
 
-def relay3Result : ChallengeResult (toy3 ProbComp) := ⟨some true, challenge3, [oracle3]⟩
+@[expose] def relay3Result : ChallengeResult (toy3 ProbComp) := ⟨some true, challenge3, [oracle3]⟩
 
-def frozenProbeResult : ChallengeResult (toy3 ProbComp) := ⟨none, ⟨[]⟩, []⟩
+@[expose] def frozenProbeResult : ChallengeResult (toy3 ProbComp) := ⟨none, ⟨[]⟩, []⟩
 
-def relayState : Unit × Env (toy2 ProbComp) × ℕ :=
+@[expose] def relayState : Unit × Env (toy2 ProbComp) × ℕ :=
   ((), ⟨4, ⟨true, challenge2⟩, true, [⟨true, oracle2, some (some true), false⟩]⟩, 0)
 
-def relayRevealState : Unit × Env (toy2 ProbComp) × ℕ :=
+@[expose] def relayRevealState : Unit × Env (toy2 ProbComp) × ℕ :=
   ((), ⟨4, ⟨true, challenge2⟩, true, [⟨true, oracle2, some (some true), true⟩]⟩, 0)
 
-def relay3State : Unit × Env (toy3 ProbComp) × ℕ :=
+@[expose] def relay3State : Unit × Env (toy3 ProbComp) × ℕ :=
   ((), ⟨6, ⟨(2 : ℕ), challenge3⟩, true, [⟨true, oracle3, some (some true), false⟩]⟩, 0)
 
 theorem challengeSession_forge :
@@ -478,9 +555,6 @@ theorem fullPingPong_relayReveal :
 
 /-! ## The experiment and its advantage branches -/
 
-theorem probOutput_probComp_evalDist {α : Type} (oa : ProbComp α) (x : α) :
-    Pr[= x | ProbCompRuntime.probComp.evalDist oa] = Pr[= x | oa] := rfl
-
 theorem Exp_forge : Exp ProbCompLift.id forgeAdv = (do let _ ← ($ᵗ Bool); pure true) := rfl
 
 theorem Exp_relay :
@@ -514,55 +588,70 @@ theorem finalize_frozenProbe (b : Bool) :
     finalize ProbCompLift.id frozenProbeAdv ((), toy3Env ProbComp, 0) frozenProbeResult b none =
       pure (true == b) := rfl
 
-theorem probOutput_Exp_forge : Pr[= true | Exp ProbCompLift.id forgeAdv] = 1 := by
+theorem evalDist_Exp_forge : 𝒟[Exp ProbCompLift.id forgeAdv] {true} = 1 := by
   rw [Exp_forge]
-  simp
+  have hbool : ({false, true} : Set Bool) = Set.univ := by ext b; cases b <;> simp
+  have hmass : 𝒟[($ᵗ Bool : ProbComp Bool)] {false, true} = 1 := by
+    rw [hbool]
+    exact measure_univ
+  simp [hmass]
 
-theorem probOutput_Exp_relay : Pr[= true | Exp ProbCompLift.id relayAdv] = 3 / 4 := by
+theorem evalDist_Exp_relay : 𝒟[Exp ProbCompLift.id relayAdv] {true} = 3 / 4 := by
   have harith : (2 : ℝ≥0∞)⁻¹ * 2⁻¹ + 2⁻¹ = 3 / 4 := by
     have hc : (2 : ℝ≥0∞) * 2⁻¹ = 1 := ENNReal.mul_inv_cancel (by norm_num) (by norm_num)
     rw [ENNReal.eq_div_iff (by norm_num) (by norm_num), mul_add,
       show (4 : ℝ≥0∞) = 2 * 2 by norm_num, mul_mul_mul_comm, hc, one_mul, mul_assoc, hc, mul_one]
     norm_num
   rw [Exp_relay]
-  simpa [probOutput_bind_eq_sum_fintype] using harith
+  rw [evalDist_bind_of_discrete,
+    Measure.bind_apply (measurableSet_singleton true) Measurable.of_discrete.aemeasurable,
+    lintegral_fintype, Fintype.sum_bool]
+  have hbool : ({false, true} : Set Bool) = Set.univ := by ext b; cases b <;> simp
+  have hmass : 𝒟[($ᵗ Bool : ProbComp Bool)] {false, true} = 1 := by
+    rw [hbool]
+    exact measure_univ
+  simpa [hmass] using harith
 
-theorem probOutput_Exp_relayReveal :
-    Pr[= true | Exp ProbCompLift.id relayRevealAdv] = 1 / 2 := by
+theorem evalDist_Exp_relayReveal :
+    𝒟[Exp ProbCompLift.id relayRevealAdv] {true} = 1 / 2 := by
   rw [Exp_relayReveal]
-  simp
+  have hbool : ({false, true} : Set Bool) = Set.univ := by ext b; cases b <;> simp
+  have hmass : 𝒟[($ᵗ Bool : ProbComp Bool)] {false, true} = 1 := by
+    rw [hbool]
+    exact measure_univ
+  simp [hmass]
 
-theorem probOutput_Exp_reject : Pr[= true | Exp ProbCompLift.id rejectAdv] = 1 / 2 := by
+theorem evalDist_Exp_reject : 𝒟[Exp ProbCompLift.id rejectAdv] {true} = 1 / 2 := by
   rw [Exp_reject]
   simp
 
-theorem probOutput_Exp_frozenProbe :
-    Pr[= true | Exp ProbCompLift.id frozenProbeAdv] = 1 / 2 := by
+theorem evalDist_Exp_frozenProbe :
+    𝒟[Exp ProbCompLift.id frozenProbeAdv] {true} = 1 / 2 := by
   rw [Exp_frozenProbe]
   simp
 
 theorem advantage_forge : advantage ProbCompRuntime.probComp forgeAdv = 1 / 2 := by
   unfold advantage
   rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
-    probOutput_probComp_evalDist, probOutput_Exp_forge]
+    ProbCompRuntime.probComp_evalDist, evalDist_Exp_forge]
   norm_num
 
 theorem advantage_relay : advantage ProbCompRuntime.probComp relayAdv = 1 / 4 := by
   unfold advantage
   rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
-    probOutput_probComp_evalDist, probOutput_Exp_relay]
+    ProbCompRuntime.probComp_evalDist, evalDist_Exp_relay]
   norm_num
 
 theorem advantage_relayReveal : advantage ProbCompRuntime.probComp relayRevealAdv = 0 := by
   unfold advantage
   rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
-    probOutput_probComp_evalDist, probOutput_Exp_relayReveal]
+    ProbCompRuntime.probComp_evalDist, evalDist_Exp_relayReveal]
   norm_num
 
 theorem advantage_reject : advantage ProbCompRuntime.probComp rejectAdv = 0 := by
   unfold advantage
   rw [show ProbCompRuntime.probComp.toProbCompLift = ProbCompLift.id from rfl,
-    probOutput_probComp_evalDist, probOutput_Exp_reject]
+    ProbCompRuntime.probComp_evalDist, evalDist_Exp_reject]
   norm_num
 
 theorem boolBiasAdvantage_relayReveal :

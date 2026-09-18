@@ -61,9 +61,6 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 
 namespace Fork
 
-/- The fork proof repeatedly compares source and wrapped sum-spec response families. -/
-attribute [local implicit_reducible] PFunctor.Obj
-
 /-- Trace used by the Fiat-Shamir forking reduction for managed-RO NMA adversaries. Records
 one run's forgery, the adversary's programmed cache, the live random-oracle cache, the live
 query log, and whether the forgery verifies. -/
@@ -109,9 +106,6 @@ lemma verified_of_forkPoint_eq_some [DecidableEq M] [DecidableEq Commit] {qH : �
     trace.verified = true := by
   simp_all [forkPoint]
 
-@[deprecated (since := "2026-06-25")]
-alias forkPoint_some_imp_verified := verified_of_forkPoint_eq_some
-
 /-- If `forkPoint` selects a rewinding index, the recorded forgery's hash point appears in
 the live query log. -/
 lemma target_mem_queryLog_of_forkPoint_eq_some [DecidableEq M] [DecidableEq Commit] {qH : ℕ}
@@ -119,9 +113,6 @@ lemma target_mem_queryLog_of_forkPoint_eq_some [DecidableEq M] [DecidableEq Comm
     (hs : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH trace = some s) :
     trace.target ∈ trace.queryLog := by
   simp_all [forkPoint]
-
-@[deprecated (since := "2026-06-25")]
-alias forkPoint_some_imp_mem := target_mem_queryLog_of_forkPoint_eq_some
 
 /-- The index selected by `forkPoint` looks up the forgery's hash point in the live query
 log: `trace.queryLog[s]?` equals `some trace.target`. -/
@@ -176,16 +167,14 @@ lemma getQueryValue?_wrappedUniformEntry [DecidableEq Chal]
 lemma getQueryValue?_wrappedChallengeEntry_zero [DecidableEq Chal]
     (v : Chal) (log : QueryLog (wrappedSpec Chal)) :
     QueryLog.getQueryValue? (wrappedChallengeEntry Chal v :: log) (Sum.inr ()) 0 = some v := by
-  simpa [wrappedChallengeEntry] using
-    QueryLog.getQueryValue?_cons_self_zero (spec := wrappedSpec Chal) (Sum.inr ()) v log
+  simp [wrappedChallengeEntry]
 
 @[simp]
 lemma getQueryValue?_wrappedChallengeEntry_succ [DecidableEq Chal]
     (v : Chal) (log : QueryLog (wrappedSpec Chal)) (k : ℕ) :
     QueryLog.getQueryValue? (wrappedChallengeEntry Chal v :: log) (Sum.inr ()) (k + 1) =
       QueryLog.getQueryValue? log (Sum.inr ()) k := by
-  simpa [wrappedChallengeEntry] using
-    QueryLog.getQueryValue?_cons_self_succ (spec := wrappedSpec Chal) (Sum.inr ()) v log k
+  simp [wrappedChallengeEntry]
 
 /-- Forwards a uniform-spec query through to the wrapped spec's `Sum.inl` summand without
 touching the simulator state. -/
@@ -243,7 +232,6 @@ lemma roImpl_run_none [DecidableEq M] [DecidableEq Commit]
   simp [roImpl, StateT.run_bind, StateT.run_get, StateT.run_set, hcache]
 
 /-- A forwarded uniform query preserves the simulator state throughout its support. -/
-@[simp]
 lemma mem_support_unifForward_run_iff
     (n : unifSpec.Domain) (st : SimState M Commit Chal)
     (z : unifSpec.Range n × SimState M Commit Chal) :
@@ -258,7 +246,6 @@ lemma mem_support_unifForward_run_iff
     exact Prod.ext (Eq.refl _) hz
 
 /-- A forwarded uniform query runs in the wrapped target without changing simulator state. -/
-@[simp]
 lemma simulateQ_unifForward_add_roImpl_query_inl_run
     [DecidableEq M] [DecidableEq Commit]
     (n : unifSpec.Domain) (st : SimState M Commit Chal) :
@@ -270,7 +257,6 @@ lemma simulateQ_unifForward_add_roImpl_query_inl_run
   exact unifForward_run (M := M) (Commit := Commit) (Chal := Chal) n st
 
 /-- A cached random-oracle query returns its stored answer without changing simulator state. -/
-@[simp]
 lemma simulateQ_unifForward_add_roImpl_query_inr_run_some
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
@@ -284,7 +270,6 @@ lemma simulateQ_unifForward_add_roImpl_query_inr_run_some
 
 /-- An uncached random-oracle query samples a wrapped challenge, caches it, and records its
 input in the simulator log. -/
-@[simp]
 lemma simulateQ_unifForward_add_roImpl_query_inr_run_none
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
@@ -298,7 +283,6 @@ lemma simulateQ_unifForward_add_roImpl_query_inr_run_none
   exact roImpl_run_none (M := M) (Commit := Commit) (Chal := Chal) mc cache log hcache
 
 /-- A routed cached random-oracle query has the unique cached outcome in its support. -/
-@[simp]
 lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_some_iff
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
@@ -316,7 +300,6 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_some_iff
 
 /-- A routed uncached random-oracle query has exactly the freshly sampled cache-and-log
 updates in its support. -/
-@[simp]
 lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (cache : (M × Commit →ₒ Chal).QueryCache)
@@ -1152,9 +1135,6 @@ lemma exists_cached_verify_of_runTrace_verified
   subst hxeq
   simp only [Trace.target] at hv ⊢
   split at hv <;> simp_all
-
-@[deprecated (since := "2026-06-25")]
-alias runTrace_verified_imp_verify := exists_cached_verify_of_runTrace_verified
 
 /-- The `forkPoint`-based reachability invariant for `runTrace`: whenever
 `forkPoint qH x = some s`, the outer `QueryLog` of `replayFirstRun (runTrace ...)` has a

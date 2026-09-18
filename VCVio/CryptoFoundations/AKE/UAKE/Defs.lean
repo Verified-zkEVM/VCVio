@@ -8,6 +8,7 @@ module
 public import VCVio.CryptoFoundations.AKE.UAKE.Party
 public import VCVio.CryptoFoundations.AKE.UAKE.Transcript
 public import VCVio.OracleComp.ProbCompLift
+public import VCVio.CryptoFoundations.AKE.UAKE.Runtime
 
 /-!
 # UAKE Core Definitions
@@ -15,15 +16,19 @@ public import VCVio.OracleComp.ProbCompLift
 This file defines a Unilaterally Authenticated Key Exchange (UAKE) scheme from
 Dodis and Fiore 2017 (https://eprint.iacr.org/2017/109.pdf). A UAKE scheme is a
 possibly interactive scheme between two parties: A keyed party T, and an
-unkeyed party U. At the end of the protocol, both parties output a key, which
-is guaranteed to be indistinguishable from random, and T is authenticated to U
-(but not vice-versa).
+unkeyed party U. The security game measures key indistinguishability and authentication
+of T to U (but not vice-versa). Defining a scheme does not establish either property.
 
 NOTE: The UAKE security game assumes that a scheme is well-formed: namely that
 when run honestly, it transfers exactly `Scheme.rounds` messages, that both
 parties produce outputs only once the protocol is complete, and that party T
 speaks last. We capture the round-count and output constraints via the
 `Scheme.WellFormed` predicate, but not the T-speaks-last convention.
+
+`Scheme.Admissible` additionally requires coherent runtime semantics, correctness, and
+honest completion with accepted keys. The raw experiments and scores are also defined for
+inadmissible schemes so that malformed or insecure examples can be analyzed. Conditional
+correctness alone permits both parties always to reject.
 
 Model simplifications
 * **Rejected protocol messages:** DF'17 does not talk about what happens when a
@@ -45,7 +50,7 @@ Model simplifications
   fewer than 2 rounds.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp
 
@@ -77,28 +82,46 @@ structure Scheme (m : Type → Type) (K UK TK W : Type) where
   using the setup routine, then both parties are run honestly to completion.
   The protocol is correct if both (honest) parties output the same key (or
   either party outputs ⊥). -/
-def CorrectExp [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W) : m Bool := do
+@[expose] def CorrectExp [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W) : m Bool := do
   let (uk, tk) ← proto.setup
   let (uOut, tOut, _) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
   return decide (uOut.join = none ∨ tOut.join = none ∨ uOut.join = tOut.join)
 
 /-- True if the correctness experiment always returns true. -/
-def PerfectlyCorrect [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W)
+@[expose] def PerfectlyCorrect [DecidableEq K] [Monad m] (proto : Scheme m K UK TK W)
     (runtime : ProbCompRuntime m) : Prop :=
-  Pr[= true | runtime.evalDist (CorrectExp proto)] = 1
+  runtime.evalDist (CorrectExp proto) {true} = 1
+
+/-- Test whether an honest run returns an accepted key at both parties. -/
+@[expose] def HonestCompletionExp [Monad m] (proto : Scheme m K UK TK W) : m Bool := do
+  let (uk, tk) ← proto.setup
+  let (uOut, tOut, _) ← proto.U.runHonest proto.T uk tk (proto.rounds + 1)
+  return uOut.join.isSome && tOut.join.isSome
+
+/-- Honest execution completes with two accepted keys and no missing runtime mass. -/
+@[expose] def Scheme.HonestlyCompletes [Monad m] (proto : Scheme m K UK TK W)
+    (runtime : ProbCompRuntime m) : Prop :=
+  runtime.evalDist (HonestCompletionExp proto) {true} = 1
 
 /-- True if
   1. both parties output iff the protocol run is complete, and
   2. an honest run of the protocol transfers exactly `rounds` messages.
 
   This does *not* enforce the WLOG T-speaks-last convention from DF'17. -/
-def Scheme.WellFormed [Monad m] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+@[expose] def Scheme.WellFormed [Monad m] [MonadAttach m] [LawfulMonadAttach m]
     (proto : Scheme m K UK TK W) : Prop :=
   proto.U.OutputsOnlyAtCompletion ∧ proto.T.OutputsOnlyAtCompletion ∧
     ∀ uk tk, (uk, tk) ∈ support proto.setup →
       ∀ uOut tOut ms, (uOut, tOut, ms) ∈
           support (proto.U.runHonest proto.T uk tk (proto.rounds + 1)) →
         ms.length = proto.rounds
+
+/-- The structural protocol, honest execution, and probabilistic runtime satisfy the
+admission conditions for interpreting the UAKE security game. -/
+@[expose] def Scheme.Admissible [DecidableEq K] [Monad m] [MonadAttach m] [LawfulMonadAttach m]
+    [EvalDistSemantics m] (proto : Scheme m K UK TK W) (runtime : ProbCompRuntime m) : Prop :=
+  RuntimeCoherent runtime ∧ proto.WellFormed ∧ PerfectlyCorrect proto runtime ∧
+    proto.HonestlyCompletes runtime
 
 /-- The state of a single copy of the T oracle state in the UAKE security
   experiment. -/
@@ -142,7 +165,8 @@ inductive Op (W : Type) where
   /-- Increment the challenge session (created up front) -/
   | stepChallenge : W → Op W
 
-def oracleSpec (K W : Type) : OracleSpec (Op W)
+/-- Response types for the session, message, and key-reveal operations. -/
+@[expose] def oracleSpec (K W : Type) : OracleSpec (Op W)
   | .openT => ℕ × Option W
   | .stepT _ _ => W ⊕ Unit
   | .revealT _ => Option K
@@ -150,7 +174,7 @@ def oracleSpec (K W : Type) : OracleSpec (Op W)
 
 /-- Logic for the UAKE experiment's `Op` queries: the T-session and
   challenge-session oracles. -/
-def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
+@[expose] def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
     QueryImpl (oracleSpec K W) (StateT (Env proto) m) := fun op =>
   match op with
   | .openT => do
@@ -213,7 +237,7 @@ def opImpl [Monad m] (proto : Scheme m K UK TK W) (tk : TK) :
 /-- Full oracle for the UAKE experiment. `unifSpec` queries (the adversary's
   coin flips) are forwarded to the ambient monad; the remaining queries are
   handled by `opImpl`. -/
-def oracleImpl [Monad m] (lift : ProbCompLift m) (proto : Scheme m K UK TK W) (tk : TK) :
+@[expose] def oracleImpl [Monad m] (lift : ProbCompLift m) (proto : Scheme m K UK TK W) (tk : TK) :
     QueryImpl (unifSpec + oracleSpec K W) (StateT (Env proto) m) :=
   let unifImpl : QueryImpl unifSpec (StateT (Env proto) m) := fun q =>
     liftM (lift.liftProbComp ((HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) q))
@@ -221,16 +245,24 @@ def oracleImpl [Monad m] (lift : ProbCompLift m) (proto : Scheme m K UK TK W) (t
 
 /-- An adversary in the UAKE security game -/
 structure Adversary (proto : Scheme m K UK TK W) where
+  /-- Private state retained across the challenge-key delivery. -/
   State : Type
+  /-- Interact with the challenge party and any number of keyed-party sessions. -/
   challenge : UK → Option W → OracleComp (unifSpec + oracleSpec K W) State
+  /-- Guess the hidden bit after receiving the candidate session key. -/
   post : State → Option K → OracleComp (unifSpec + oracleSpec K W) Bool
 
+/-- Challenge output and the transcript snapshot taken before key delivery. -/
 structure ChallengeResult (proto : Scheme m K UK TK W) where
+  /-- Accepted challenge key, or `none` for rejection or incompletion. -/
   K0 : Option K
+  /-- Challenge-session transcript. -/
   challengeTr : Transcript W
+  /-- Keyed-party transcripts at the end of the challenge phase. -/
   oracleTrs : List (Transcript W)
 
-def challengeSession [Monad m] (lift : ProbCompLift m)
+/-- Run the adversary's challenge phase and retain its state and all keyed-party sessions. -/
+@[expose] def challengeSession [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) (uk : UK) (tk : TK) :
     m (ChallengeResult proto × (A.State × Env proto × TK)) := do
   let u0 ← proto.U.init uk
@@ -243,13 +275,13 @@ def challengeSession [Monad m] (lift : ProbCompLift m)
 
 /-- True if an oracle session matches challenge transcript, meaning that the
   adversary is trivial: It simply relayed the oracle session in the challenge. -/
-def isPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
+@[expose] def isPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
     (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1) cr.oracleTrs cr.challengeTr
 
 /-- True if the challenge transcript is ping-pong and a session whose transcript
   matches has been revealed to the adversary through a reveal query. -/
-def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
+@[expose] def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
     (tSessions : List (TSession proto)) (cr : ChallengeResult proto) : Bool :=
   pingPong (proto.rounds % 2 == 1)
     ((tSessions.filter (·.revealed)).map (·.transcript)) cr.challengeTr
@@ -262,7 +294,7 @@ def fullPingPong [DecidableEq W] {proto : Scheme m K UK TK W}
      it make a guess b'
   4. Declare the adversary a winner if b' = b and the challenge session is not
      full ping-pong (in which case it wins w.p. 1/2) -/
-def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
+@[expose] def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto)
     (st : A.State × Env proto × TK) (cr : ChallengeResult proto) (b : Bool) (K1 : Option K) :
     m Bool := do
@@ -280,7 +312,7 @@ def finalize [DecidableEq W] [Monad m] (lift : ProbCompLift m)
      and the challenge key is not ⊥
   5. Run finalize, either with `K0 = K1 = ⊥` if the challenge key was ⊥, or on
      the challenge key K0 and a uniformly chosen K1 -/
-def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
+@[expose] def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
     {proto : Scheme m K UK TK W} (A : Adversary proto) : m Bool := do
   let (uk, tk) ← proto.setup
   let b ← lift.liftProbComp ($ᵗ Bool)
@@ -302,37 +334,36 @@ def Exp [SampleableType K] [DecidableEq W] [Monad m] (lift : ProbCompLift m)
   could abort if the `m` monad allows for this, inflating the adversary's
   advantage with no substantive attack. For a more meaningful security notion
   in the presence of aborts, we define `UAKE.boolBiasAdvantage`, below. -/
-noncomputable def advantage [SampleableType K] [DecidableEq W] [Monad m]
+@[expose] noncomputable def advantage [SampleableType K] [DecidableEq W] [Monad m]
     {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
     (A : Adversary proto) : ℝ :=
-  |(Pr[= true | runtime.evalDist (Exp runtime.toProbCompLift A)]).toReal - 1 / 2|
+  |(runtime.evalDist (Exp runtime.toProbCompLift A) {true}).toReal - 1 / 2|
 
 /-- An adversary's advantage in the UAKE game, expressed using the standard
   `boolBiasAdvantage` idiom. This does not correspond to the advantage defined
   in Def. 8 of DF'17 (unless the monad and runtime underlying `UAKE.Scheme` is
   total), but it allows expressing UAKE security in cases where the security
   experiment could abort. -/
-noncomputable def boolBiasAdvantage [SampleableType K] [DecidableEq W] [Monad m]
+@[expose] noncomputable def boolBiasAdvantage [SampleableType K] [DecidableEq W] [Monad m]
     {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m)
     (A : Adversary proto) : ℝ :=
-  (runtime.evalDist (Exp runtime.toProbCompLift A)).boolBiasAdvantage
+  (runtime.evalDist (Exp runtime.toProbCompLift A)).boolBias
 
-/-- In the `ProbCompRuntime.probComp` runtime, the UAKE security experiment
-  never fails. -/
-instance instNeverFailEvalDistExp [SampleableType K] [DecidableEq W]
+/-- The canonical UAKE experiment has full successful-output mass. -/
+instance instIsProbabilityMeasureExp [SampleableType K] [DecidableEq W]
     {proto : Scheme ProbComp K UK TK W}
     (A : Adversary proto) :
-    NeverFail (ProbCompRuntime.probComp.evalDist
+    MeasureTheory.IsProbabilityMeasure (ProbCompRuntime.probComp.evalDist
       (Exp ProbCompRuntime.probComp.toProbCompLift A)) := by
-  have h : Pr[⊥ | Exp ProbCompRuntime.probComp.toProbCompLift A] = 0 := probFailure_eq_zero
-  exact NeverFail.mk h
+  rw [ProbCompRuntime.probComp_evalDist]
+  infer_instance
 
-/-- When the UAKE security experiment is `NeverFail`, `UAKE.boolBiasAdvantage` is
+/-- When the UAKE experiment has full successful-output mass, `UAKE.boolBiasAdvantage` is
   exactly twice `UAKE.advantage`. -/
 lemma boolBiasAdvantage_eq_two_mul_advantage [SampleableType K] [DecidableEq W] [Monad m]
     {proto : Scheme m K UK TK W} (runtime : ProbCompRuntime m) (A : Adversary proto)
-    [NeverFail (runtime.evalDist (Exp runtime.toProbCompLift A))] :
+    [MeasureTheory.IsProbabilityMeasure (runtime.evalDist (Exp runtime.toProbCompLift A))] :
     boolBiasAdvantage runtime A = 2 * advantage runtime A :=
-  SPMF.boolBiasAdvantage_eq_two_mul_abs_sub_half _ probOutput_true_add_false_of_neverFail
+  MeasureTheory.Measure.boolBias_eq_two_mul_abs_sub_half_of_isProbabilityMeasure _
 
 end AKE.UAKE

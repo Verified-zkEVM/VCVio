@@ -11,7 +11,7 @@ public import VCVio.EvalDist.Monad.Map
 /-!
 # Probability Distributions on `Option` return types
 
-Lemmas about `evalDist` and the associated probabilities for computations
+Lemmas about `evalSPMF` and the associated probabilities for computations
 returning an `Option`.
 -/
 
@@ -19,8 +19,11 @@ returning an `Option`.
 
 universe u v w
 
-variable {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m SPMF]
-  [LawfulMonadLiftT m SPMF] {α β γ : Type u}
+variable {m : Type u → Type v} {α β γ : Type u}
+
+section map_some
+
+variable [Monad m] [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
 @[simp, grind =]
 lemma probOutput_some_map_some (mx : m α) (x : α) :
@@ -34,17 +37,16 @@ lemma probOutput_some_map_none (mx : m α) :
   rw [probOutput_map_eq_tsum_ite]
   simp
 
+end map_some
+
 section double_option
 
-variable (mx : m (Option α))
+variable [MonadLiftT m SPMF] (mx : m (Option α))
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
-omit [LawfulMonad m] in
 lemma probOutput_none_add_tsum_some :
     Pr[= none | mx] + ∑' x, Pr[= some x | mx] = 1 - Pr[⊥ | mx] := by
   rw [← tsum_probOutput_eq_sub mx, ← tsum_option _ ENNReal.summable]
 
-omit [Monad m] [LawfulMonad m] [LawfulMonadLiftT m SPMF] in
 /-- The probability of returning `some` is the total mass of all `some`
 outputs, without requiring the computation to be failure-free. -/
 lemma probEvent_isSome_eq_tsum_probOutput_some :
@@ -54,41 +56,18 @@ lemma probEvent_isSome_eq_tsum_probOutput_some :
     (tsum_option (fun r : Option α =>
       if r.isSome = true then Pr[= r | mx] else 0) ENNReal.summable)
 
-omit [Monad m] [LawfulMonad m] [LawfulMonadLiftT m SPMF] in
 /-- Selector fibers inside an optional output are disjoint, so their finite
 sum is bounded by the probability of returning any `some` value. -/
 lemma sum_probEvent_option_map_eq_some_le_isSome
     [Fintype γ] (select : α → Option γ) :
     ∑ k : γ, Pr[fun r => r.map select = some (some k) | mx] ≤
       Pr[fun r => r.isSome | mx] := by
-  classical
-  calc
-    ∑ k : γ, Pr[fun r => r.map select = some (some k) | mx]
-        ≤ ∑' x : α, Pr[= some x | mx] := by
-      simp_rw [probEvent_eq_tsum_ite]
-      have hsplit : ∀ k : γ,
-          (∑' r : Option α,
-            if r.map select = some (some k) then Pr[= r | mx] else 0) =
-            ∑' x : α, if select x = some k then Pr[= some x | mx] else 0 := by
-        intro k
-        simpa only [Option.map, reduceCtorEq, ite_false, zero_add, Option.some.injEq] using
-          tsum_option (fun r : Option α =>
-            if r.map select = some (some k) then Pr[= r | mx] else 0) ENNReal.summable
-      simp_rw [hsplit]
-      rw [← tsum_fintype (L := .unconditional _), ENNReal.tsum_comm]
-      refine ENNReal.tsum_le_tsum fun x => ?_
-      rw [tsum_fintype (L := .unconditional _)]
-      rcases hselect : select x with _ | k₀
-      · simp
-      · rw [Finset.sum_eq_single k₀
-          (by intro k _ hne; simp [Ne.symm hne]) (by simp)]
-        simp
-    _ = Pr[fun r => r.isSome | mx] :=
-      (probEvent_isSome_eq_tsum_probOutput_some mx).symm
+  let : MeasurableSpace α := ⊤
+  simpa only [evalDist_apply_setOf] using
+    (MeasureTheory.Measure.sum_apply_option_map_eq_some_le_isSome 𝒟[mx] select
+      fun _ ↦ MeasurableSet.of_discrete)
 
-omit [LawfulMonadLiftT m SPMF] in
-omit [LawfulMonad m] in
-lemma probEvent_isSome_eq_one_sub_probOutput_none [NeverFail mx] :
+lemma probEvent_isSome_eq_one_sub_probOutput_none [Monad m] [NeverFail mx] :
     Pr[ fun r => r.isSome | mx] = 1 - Pr[= none | mx] := by
   rw [probEvent_eq_tsum_ite,
     tsum_option (fun r : Option α => if r.isSome then Pr[= r | mx] else 0) ENNReal.summable]
@@ -100,8 +79,6 @@ lemma probEvent_isSome_eq_one_sub_probOutput_none [NeverFail mx] :
       using probOutput_none_add_tsum_some (mx := mx)
   exact ENNReal.eq_sub_of_add_eq hnone_ne_top htotal
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
-omit [LawfulMonad m] in
 lemma sum_probOutput_some_le_one [Fintype α] :
     ∑ x : α, Pr[= (some x : Option α) | mx] ≤ 1 := by
   classical
@@ -112,6 +89,8 @@ lemma sum_probOutput_some_le_one [Fintype α] :
             tsum_option (fun y : Option α => Pr[= y | mx]) ENNReal.summable]
           exact le_add_self
     _ ≤ 1 := tsum_probOutput_le_one
+
+variable [Monad m] [LawfulMonad m] [LawfulMonadLiftT m SPMF]
 
 @[simp]
 lemma probOutput_some_map_option_map {f : α → β} (hf : f.Injective) (x : α) :

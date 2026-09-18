@@ -12,7 +12,7 @@ public import ToMathlib.Control.Monad.RelationalAlgebraAnchored
 /-!
 # Honest Exception Relational WP Examples
 
-Demonstrates the derived combinators `rwpExc`, `rwpExcLeft`, `rwpExcRight`, `rwpOpt`,
+Demonstrates the derived combinators `rwpExcCases`, `rwpExcLeft`, `rwpExcRight`, `rwpOpt`,
 `rwpOptLeft`, and `rwpOptRight` from `ToMathlib.Control.Monad.RelationalAlgebraAnchored`.
 These honest variants distinguish exception/`none` outcomes per side, in contrast to the
 default `instExceptTLeft` / `instOptionTLeft` couplings, which collapse all failure mass
@@ -40,7 +40,7 @@ variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
 example {α β ε₁ ε₂ : Type} (a : α) (b : β)
     (postOO : α → β → ℝ≥0∞) (postEO : ε₁ → β → ℝ≥0∞)
     (postOE : α → ε₂ → ℝ≥0∞) (postEE : ε₁ → ε₂ → ℝ≥0∞) :
-    rwpExc (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
+    rwpExcCases (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (pure a : ExceptT ε₁ (OracleComp spec₁) α)
         (pure b : ExceptT ε₂ (OracleComp spec₂) β)
         postOO postEO postOE postEE = postOO a b := by
@@ -50,7 +50,7 @@ example {α β ε₁ ε₂ : Type} (a : α) (b : β)
 example {α β ε₁ ε₂ : Type} (e : ε₁) (b : β)
     (postOO : α → β → ℝ≥0∞) (postEO : ε₁ → β → ℝ≥0∞)
     (postOE : α → ε₂ → ℝ≥0∞) (postEE : ε₁ → ε₂ → ℝ≥0∞) :
-    rwpExc (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
+    rwpExcCases (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (throw e : ExceptT ε₁ (OracleComp spec₁) α)
         (pure b : ExceptT ε₂ (OracleComp spec₂) β)
         postOO postEO postOE postEE = postEO e b := by
@@ -60,7 +60,7 @@ example {α β ε₁ ε₂ : Type} (e : ε₁) (b : β)
 example {α β ε₁ ε₂ : Type} (e₁ : ε₁) (e₂ : ε₂)
     (postOO : α → β → ℝ≥0∞) (postEO : ε₁ → β → ℝ≥0∞)
     (postOE : α → ε₂ → ℝ≥0∞) (postEE : ε₁ → ε₂ → ℝ≥0∞) :
-    rwpExc (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
+    rwpExcCases (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (throw e₁ : ExceptT ε₁ (OracleComp spec₁) α)
         (throw e₂ : ExceptT ε₂ (OracleComp spec₂) β)
         postOO postEO postOE postEE = postEE e₁ e₂ := by
@@ -73,20 +73,20 @@ honest exception WP on the right side. -/
 example {α β ε₁ ε₂ : Type} (a : α) (y : ExceptT ε₂ (OracleComp spec₂) β)
     (postOO : α → β → ℝ≥0∞) (postEO : ε₁ → β → ℝ≥0∞)
     (postOE : α → ε₂ → ℝ≥0∞) (postEE : ε₁ → ε₂ → ℝ≥0∞) :
-    rwpExc (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
+    rwpExcCases (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (pure a : ExceptT ε₁ (OracleComp spec₁) α) y postOO postEO postOE postEE =
       MAlgOrdered.wpExc y (postOO a) (postOE a) :=
-  rwpExc_pure_left a y postOO postEO postOE postEE
+  rwpExcCases_pure_left a y postOO postEO postOE postEE
 
 /-- A `throw` on the left collapses the relational WP to a unary WP that ignores the
 left's `α` outcome and only sees the (left error, right outcome) postconditions. -/
 example {α β ε₁ ε₂ : Type} (e : ε₁) (y : ExceptT ε₂ (OracleComp spec₂) β)
     (postOO : α → β → ℝ≥0∞) (postEO : ε₁ → β → ℝ≥0∞)
     (postOE : α → ε₂ → ℝ≥0∞) (postEE : ε₁ → ε₂ → ℝ≥0∞) :
-    rwpExc (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
+    rwpExcCases (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (throw e : ExceptT ε₁ (OracleComp spec₁) α) y postOO postEO postOE postEE =
       MAlgOrdered.wpExc y (postEO e) (postEE e) :=
-  rwpExc_throw_left e y postOO postEO postOE postEE
+  rwpExcCases_throw_left e y postOO postEO postOE postEE
 
 /-! ## One-sided combinators -/
 

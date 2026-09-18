@@ -21,22 +21,15 @@ level-separated tree (`nodeHash` through the depth of the addressed subtree), an
 XMSS/SLH-DSA-style fully-addressed trees (`nodeHash` through an arbitrary
 address-to-tweak map) — inherits all of it by specialization.
 
-**Scope note (staged, deliberately).** The pre-existing unaddressed API in
-`MerkleTree.Inductive` is *not* re-expressed as a wrapper around this engine: its
+The unaddressed API in `MerkleTree.Inductive` is not defined as a wrapper around this engine: its
 definitions (`getPutativeRootWithHash`, `populateUp`, `findCollision`) stand
-unchanged, and this module is added alongside them. What the `Instances` section
-below establishes instead is that the unaddressed API is **propositionally
-subsumed** at the constant instance — its build and putative-root computations are
+independently. The `Instances` section establishes that the unaddressed API is
+**propositionally subsumed** at the constant instance: its build and putative-root computations are
 recovered (`populateUpAddressed_const`, `getPutativeRootAddressed_const`), its
 completeness theorem is *re-derived* from this engine's rather than reproved
 (`functional_completeness_of_addressed`), and its constructive collision walk is
 literally this engine's walk with the address tag erased
-(`findCollisionAddressed_const`). Turning that propositional subsumption into a
-definitional one — redefining the unaddressed entry points as constant
-specializations — would change a load-bearing upstream API consumed by
-`Inductive.Extractability`, `Inductive.Batch`, `Uniqueness` and `QueryBound`, so it
-is left as a follow-up for the maintainers rather than performed inside this
-contribution.
+(`findCollisionAddressed_const`).
 
 Design: at each recursion step into a child, the engine passes the *reindexed* hash
 `fun a => nodeHash (.ofLeft a)` (resp. `.ofRight`) — the address is threaded by
@@ -56,14 +49,18 @@ Contents:
   the constructive collision kernel, returning the collision **as data, tagged with
   the address** at which it occurs: two distinct pairs with equal hash *under that
   address's hash function*.
+* `findCollisionAddressed_oriented` — the same walk oriented from an honest tree and
+  opening toward an adversarial opening.
 * `getPutativeRootAddressedWithHash_binding_collision` — the user-facing binding
   statement: distinct leaf values verifying to the same root at the same index yield
   an address-tagged collision.
+* `addressed_oriented_binding` — the oriented binding statement used by
+  target-collision-resistance reductions.
 
 The symmetric collision statement here is deliberately **not** phrased as a
 target-collision-resistance win: TCR is directional (one endpoint fixed at
-target-registration time). The oriented reduction against a sampled-target game is
-the follow-up consumer of the address tag.
+target-registration time). The oriented results retain which collision endpoint came from the
+honest tree so downstream reductions can preserve that direction.
 -/
 
 @[expose] public section
@@ -205,28 +202,67 @@ theorem findCollisionAddressed_sound {s : Skeleton}
         exact ⟨hneq, heq⟩
       · simp at hw
 
-/-- If two openings at the same index recompute the same root but the branches differ
-somewhere (in leaf value or path), `findCollisionAddressed` finds a collision: the
-walk only returns `none` when the two branches agree at every compared level, which
-forces the leaf values to agree. -/
-theorem findCollisionAddressed_isSome {s : Skeleton}
+/-- **Locality of the kernel**: the collision address returned by `findCollisionAddressed` is
+an ancestor of the opened leaf — the walk only ever descends along `idx`'s own path. -/
+theorem findCollisionAddressed_isAncestorOf {s : Skeleton}
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
+    (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
+    (w : SkeletonInternalIndex s × α × α × α × α)
+    (hw : findCollisionAddressed nodeHash idx proof₁ proof₂ x y = some w) :
+    w.1.IsAncestorOf idx := by
+  induction idx with
+  | ofLeaf => simp [findCollisionAddressed] at hw
+  | ofLeft idxLeft ih =>
+    rw [findCollisionAddressed] at hw
+    split at hw
+    · simp only [Option.map_eq_some_iff] at hw
+      obtain ⟨w', hw', rfl⟩ := hw
+      exact ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail w' hw'
+    · split at hw
+      · simp only [Option.some.injEq] at hw
+        subst hw
+        trivial
+      · simp at hw
+  | ofRight idxRight ih =>
+    rw [findCollisionAddressed] at hw
+    split at hw
+    · simp only [Option.map_eq_some_iff] at hw
+      obtain ⟨w', hw', rfl⟩ := hw
+      exact ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail w' hw'
+    · split at hw
+      · simp only [Option.some.injEq] at hw
+        subst hw
+        trivial
+      · simp at hw
+
+/-- If two distinct openings at the same index recompute the same root,
+`findCollisionAddressed` finds a collision.  Distinctness covers disagreement in either the leaf
+value or the authentication path. -/
+theorem findCollisionAddressed_isSome_of_opening_ne {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
       = getPutativeRootAddressedWithHash nodeHash idx y proof₂)
-    (hne : x ≠ y) :
+    (hne : (x, proof₁) ≠ (y, proof₂)) :
     (findCollisionAddressed nodeHash idx proof₁ proof₂ x y).isSome := by
   induction idx with
   | ofLeaf =>
-    simp only [vector_eq_nil] at hroot
-    exact absurd hroot hne
+    simp only [List.Vector.eq_nil] at hroot
+    exact (hne (Prod.ext hroot (List.Vector.ext fun i => i.elim0))).elim
   | ofLeft idxLeft ih =>
     rw [findCollisionAddressed]
     split
     · rename_i hagree
       simp only [Prod.mk.injEq] at hagree
       simp only [Option.isSome_map]
-      exact ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail hagree.1
+      apply ih (fun a => nodeHash (.ofLeft a)) proof₁.tail proof₂.tail hagree.1
+      intro hbranch
+      have hvalue : x = y := congrArg Prod.fst hbranch
+      have htail : proof₁.tail = proof₂.tail := congrArg Prod.snd hbranch
+      apply hne
+      apply Prod.ext hvalue
+      exact proof₁.cons_head_tail.symm.trans
+        (hagree.2 ▸ htail ▸ proof₂.cons_head_tail)
     · split
       · simp
       · rename_i hne'
@@ -237,11 +273,29 @@ theorem findCollisionAddressed_isSome {s : Skeleton}
     · rename_i hagree
       simp only [Prod.mk.injEq] at hagree
       simp only [Option.isSome_map]
-      exact ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail hagree.2
+      apply ih (fun a => nodeHash (.ofRight a)) proof₁.tail proof₂.tail hagree.2
+      intro hbranch
+      have hvalue : x = y := congrArg Prod.fst hbranch
+      have htail : proof₁.tail = proof₂.tail := congrArg Prod.snd hbranch
+      apply hne
+      apply Prod.ext hvalue
+      exact proof₁.cons_head_tail.symm.trans
+        (hagree.1 ▸ htail ▸ proof₂.cons_head_tail)
     · split
       · simp
       · rename_i hne'
         exact absurd (by simpa [getPutativeRootAddressedWithHash] using hroot) hne'
+
+/-- Leaf-disagreement specialization of `findCollisionAddressed_isSome_of_opening_ne`. -/
+theorem findCollisionAddressed_isSome {s : Skeleton}
+    (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
+    (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
+    (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
+      = getPutativeRootAddressedWithHash nodeHash idx y proof₂)
+    (hne : x ≠ y) :
+    (findCollisionAddressed nodeHash idx proof₁ proof₂ x y).isSome :=
+  findCollisionAddressed_isSome_of_opening_ne nodeHash idx proof₁ proof₂ x y hroot
+    (fun h => hne (congrArg Prod.fst h))
 
 /-- **Binding, user-facing**: two openings of the same index recomputing the same
 root with distinct leaf values yield an address-tagged collision, as data. -/
@@ -405,15 +459,16 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
 omit [DecidableEq α] in
 /-- **Oriented binding, user-facing**: an adversarial opening that verifies against an
 honestly built root with a different leaf value yields a collision whose first
-endpoint is the honestly-precommitted child pair at the tagged address — the
-directional configuration a target-collision reduction consumes. -/
+endpoint is the honestly-precommitted child pair at the tagged address, which lies on the
+opened leaf's own root path — the directional configuration a target-collision reduction
+consumes. -/
 theorem addressed_oriented_binding {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (ld : LeafData α s)
     (idx : SkeletonLeafIndex s) (y : α) (proof₂ : List.Vector α idx.depth)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx y proof₂
       = (buildMerkleTreeAddressedWithHash ld nodeHash).getRootValue)
     (hne : ld.get idx ≠ y) :
-    ∃ (a : SkeletonInternalIndex s) (c : α × α),
+    ∃ (a : SkeletonInternalIndex s) (c : α × α), a.IsAncestorOf idx ∧
       (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a) ≠ c ∧
       nodeHash a (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).1
           (childPairAt (buildMerkleTreeAddressedWithHash ld nodeHash) a).2
@@ -422,7 +477,8 @@ theorem addressed_oriented_binding {s : Skeleton}
   obtain ⟨a, c, hwalk⟩ :=
     findCollisionAddressed_oriented nodeHash ld idx y proof₂ hroot hne
   have hcol := findCollisionAddressed_sound nodeHash idx _ proof₂ (ld.get idx) y _ hwalk
-  exact ⟨a, c, by simpa [AddressedCollision, Prod.ext_iff] using hcol.1,
+  have hanc := findCollisionAddressed_isAncestorOf nodeHash idx _ proof₂ (ld.get idx) y _ hwalk
+  exact ⟨a, c, hanc, by simpa [AddressedCollision, Prod.ext_iff] using hcol.1,
     by simpa [AddressedCollision] using hcol.2⟩
 
 /-! ## Instances: three hash disciplines, one engine

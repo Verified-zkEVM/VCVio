@@ -127,7 +127,7 @@ theorem encrypt_usesExactQueryCost {ω : Type} [AddMonoid ω]
 `msg`. -/
 theorem encrypt_expectedQueryCost_eq {ω : Type} [AddMonoid ω] [Preorder ω]
     [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (msg : M) (costFn : M → ω) (val : ω → ENNReal) (hval : Monotone val) :
@@ -161,7 +161,7 @@ theorem decrypt_usesZeroQueryCost_of_decrypt_eq_none {ω : Type} [AddMonoid ω]
 cost `0`. -/
 theorem decrypt_expectedQueryCost_eq_zero_of_decrypt_eq_none {ω : Type}
     [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) (costFn : M → ω)
@@ -188,7 +188,7 @@ theorem decrypt_usesExactQueryCost_of_decrypt_eq_some {ω : Type} [AddMonoid ω]
 cost equal to the weight of querying that message. -/
 theorem decrypt_expectedQueryCost_eq_of_decrypt_eq_some {ω : Type}
     [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) (costFn : M → ω)
@@ -223,7 +223,7 @@ theorem decrypt_usesExactlyOneQuery_of_decrypt_eq_some
     decrypt_usesExactQueryCost_of_decrypt_eq_some (ω := ℕ) runtime pke pk sk c (fun _ => 1) hdec
 
 /-- T-transform decryption makes at most one hash-oracle query under unit-cost instrumentation. -/
-theorem decrypt_usesAtMostOneQuery [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+theorem decrypt_usesAtMostOneQuery [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) :
@@ -244,8 +244,9 @@ namespace TTransform
 noncomputable def runtime
     [DecidableEq M] [SampleableType R] :
     ProbCompRuntime (OracleComp (TTransform.oracleSpec M R)) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle TTransform.queryImpl ∅
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle TTransform.queryImpl ∅
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 /-- Structural query bound for T-transform OW-PCVA adversaries: uniform-sampling queries are
 unrestricted, while `qH`, `qP`, and `qV` bound the hash, plaintext-checking, and validity
@@ -263,39 +264,5 @@ def OW_PCVA_Adversary.MakesAtMostQueries
     (adversary pk cStar).IsQueryBoundP (· matches .inl (.inr _)) qH ∧
     (adversary pk cStar).IsQueryBoundP (· matches .inr (.inl _)) qP ∧
     (adversary pk cStar).IsQueryBoundP (· matches .inr (.inr _)) qV
-
-/-- The T-transform OW-PCVA security statement.
-
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `correctnessBound`, `gamma`, and `epsMsg` are unconstrained `ℝ`
-parameters, so the right-hand side can be driven arbitrarily negative while the left-hand
-side is a probability and hence nonnegative. In the final HHK-style statement these slack
-terms must be constrained (typically `correctnessBound` is the underlying PKE's
-`δ`-correctness error, `gamma` is the `γ`-spreadness bound on ciphertexts, and `epsMsg` is
-the message-distribution collision/min-entropy term, all of which are provably nonnegative
-quantities derived from `pke`).
-
-The proof is intentionally deferred. The oracle surface and query-budget parameters
-(`qH`, `qP`, `qV`) now match the HHK OW-PCVA game, but the bound itself still needs to be
-tightened before this can be a meaningful security claim. -/
-theorem OW_PCVA_bound
-    {M PK SK R C : Type}
-    [DecidableEq M] [DecidableEq C] [SampleableType M] [SampleableType R]
-    (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
-    (adversary : OW_PCVA_Adversary
-      (TTransform (m := OracleComp (TTransform.oracleSpec M R)) pke))
-    (correctnessBound gamma epsMsg : ℝ)
-    (qH qP qV : ℕ) :
-    adversary.MakesAtMostQueries qH qP qV →
-    ∃ cpaAdv₁ cpaAdv₂ : (pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_adversary,
-      (OW_PCVA_Advantage
-        (encAlg := TTransform (m := OracleComp (TTransform.oracleSpec M R)) pke)
-        (runtime (M := M) (R := R)) adversary).toReal ≤
-        2 * ((pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_advantage cpaAdv₁).toReal +
-        2 * ((pke.toAsymmEncAlg ProbCompRuntime.probComp).IND_CPA_advantage cpaAdv₂).toReal +
-        correctnessBound +
-        (qV : ℝ) * gamma +
-        2 * ((qH + qP + 1 : ℕ) : ℝ) * epsMsg := by
-  sorry
 
 end TTransform
