@@ -287,6 +287,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Eager
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Wiring
 public import VCVio.OracleComp.QueryTracking.ResourceProfile

@@ -59,6 +59,7 @@ public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
+public import VCVioTest.RandomOracleRouting
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
 public import VCVioTest.ReactiveNetwork

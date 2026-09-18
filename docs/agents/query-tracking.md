@@ -42,6 +42,23 @@ or decidable equality on responses.
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean` | Generic PMF tail-sum identities used for expected runtime |
 
+## Input Routing and Domain Separation
+
+[`RandomOracle/Routing.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/Routing.lean)
+proves that injective input encodings preserve the full output measure of every adaptive
+client of an initially empty finite random oracle. The eager-table and lazy-cache forms
+share the same structural routing operation. Disjoint injective encodings of two domains
+use Mathlib's `Function.Injective.sumElim` to discharge the routing condition.
+
+[`Examples/ProgramLogic/RandomOracleRouting.lean`](../../Examples/ProgramLogic/RandomOracleRouting.lean)
+shows why the condition matters: comparing distinct Boolean cells accepts with probability
+`1/2`, whereas routing both inputs to one target cell accepts with probability `1`.
+The ordinary-import tests in
+[`VCVioTest/RandomOracleRouting.lean`](../../VCVioTest/RandomOracleRouting.lean)
+also cover adaptive and repeated queries, disjoint domains, and structural routing in `Type 1`.
+The measure laws use the existing table-sampling API in `Type 0`; arbitrary preloaded caches
+require their own consistency condition.
+
 ## Instrumentation Pattern: `preInsert` / `postInsert`
 
 Almost every `QueryImpl` wrapper in this directory ultimately bottoms out at the

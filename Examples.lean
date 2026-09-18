@@ -65,6 +65,7 @@ public import Examples.ProgramLogic.GaussianWiring
 public import Examples.ProgramLogic.MeasureCoupling
 public import Examples.ProgramLogic.Probability
 public import Examples.ProgramLogic.ProofMode
+public import Examples.ProgramLogic.RandomOracleRouting
 public import Examples.ProgramLogic.RandomOracleWiring
 public import Examples.ProgramLogic.Relational
 public import Examples.ProgramLogic.RelationalAnchored
