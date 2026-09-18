@@ -301,4 +301,25 @@ theorem dspr_toSourceFinalValidity_suppresses_poison_canary :
         dsprChallengeThenCollection.toSourceFinalValidity = pure true := by
   rw [SM_DT_DSPR_experiment_toSourceFinalValidity, dspr_experiment_challengeThenCollection]
 
+/-- The same target already has a second preimage, independently of the prediction bit. -/
+theorem dspr_baseline_challengeThenCollection :
+    SM_DT_DSPR_SPExperiment dsprChallengeThenCollection = pure true := by
+  simp only [SM_DT_DSPR_SPExperiment, dsprProblem_seedGen, pure_bind]
+  rw [show (simulateQ (SM_DT_DSPR_oracles dsprProblem .only)
+      dsprChallengeThenCollection.choose).run ([], []) =
+        pure (none, ([(false, false)], [])) from rfl]
+  rfl
+
+/-- Certain prediction success gives zero advantage when the baseline is also one, on both
+presentations. This distinguishes the DSPR score from its raw prediction success. -/
+theorem dspr_baseline_cancels_prediction :
+    SM_DT_DSPR_Success dsprChallengeThenCollection = 1 ∧
+      SM_DT_DSPR_SPProbability dsprChallengeThenCollection = 1 ∧
+      SM_DT_DSPR_Advantage dsprChallengeThenCollection = 0 ∧
+      SM_DT_DSPR_SourceFinalValidity.Advantage
+        dsprChallengeThenCollection.toSourceFinalValidity = 0 := by
+  rw [← SM_DT_DSPR_advantage_toSourceFinalValidity]
+  simp [SM_DT_DSPR_Advantage, SM_DT_DSPR_Success, SM_DT_DSPR_SPProbability,
+    dspr_experiment_challengeThenCollection, dspr_baseline_challengeThenCollection]
+
 end ToFinalValidityTest
