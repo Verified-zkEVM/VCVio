@@ -34,10 +34,13 @@ application lemmas.
 
 Required typeclass instances for probability reasoning:
 
-- `[spec.Fintype]` — all response types are `Fintype`
-- `[spec.Inhabited]` — all response types are `Inhabited`
+- `[OracleSpec.IsMeasureSpec spec]` selects the query measures.
+- Query-answer and result types carry their chosen measurable spaces.
+- Discrete answer spaces discharge measurability of arbitrary free-program continuations.
 
-Without both, `evalSPMF`, `probOutput`, and `Pr[...]` will fail with confusing typeclass errors.
+Structural support, handler composition, instrumentation, and query bounds need no probability
+interpretation. Finite uniform queries are a sampling specialization, not a requirement of the
+native measure API. Retired scalar notation requires its explicit compatibility interpretation.
 
 ## OracleComp
 
@@ -59,6 +62,16 @@ def OracleComp {ι : Type u} (spec : OracleSpec.{u,v} ι) : Type w → Type _ :=
 | `OracleComp.construct` | Same but result is `Type*` (not `Prop`) |
 | `isPure` | Check if computation is `pure` (no queries) |
 | `totalQueries` | Count total oracle queries |
+
+### Checkpoint Placement and Replay
+
+Ordinary program equality does not specify which random choices are shared across resumptions.
+[`Examples/ReplayCheckpoint.lean`](../../Examples/ReplayCheckpoint.lean) gives a concrete
+counterexample: moving a checkpoint across a fair Boolean draw preserves the program after
+erasing the checkpoint, but changes the probability that two resumed outputs agree from `1`
+to `1/2`. A replay-preservation argument must retain the checkpoint boundary and its shared state.
+[`VCVioTest/ReplayCheckpoint.lean`](../../VCVioTest/ReplayCheckpoint.lean) checks the public
+ordinary-execution equality and the distinguishing replay observation together.
 
 ### Possible outputs and `MonadAttach`
 
@@ -253,7 +266,13 @@ def postInsert (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t 
 | Sees the response? | No | Yes (the response is passed to `nx`) |
 | If the handler fails | Side effect still happens | Side effect skipped |
 
-Both come with a complete generic theory: induction principles (`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection / strip lemmas (`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and bridge lemmas for `probFailure`, `NeverFail`, `evalSPMF`, `probOutput`, `support`, `finSupport`, plus `IsTotalQueryBound` / `IsQueryBoundP` transfer in `QueryBound.lean`. Defining a wrapper via `preInsert` / `postInsert` makes all of this theory available immediately and avoids re-proving instance-specific lemmas.
+`QueryImpl.Constructions.Core` owns the induction principles
+(`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection equations
+(`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and support/finite-support laws.
+The projection equations transport chosen-space measures directly by equality. Query-bound
+transfer lives in `QueryBound.lean`. The older `Constructions` path additionally exports scalar
+compatibility corollaries. Define instrumentation through these combinators so the generic
+structural and observation theory applies without duplicating wrapper-specific proofs.
 
 #### Already in the repo (use these directly when applicable)
 

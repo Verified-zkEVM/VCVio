@@ -326,7 +326,8 @@ private lemma prob_extend_hits (hits : Fin ρ → Option (Fin (2 ^ b))) (u : Fin
       = if ∀ i h, hits i = some h → u i = h
           then (((2 ^ b : ℕ) : ℝ≥0∞))⁻¹ ^ (Finset.univ.filter fun i : Fin ρ => hits i = none).card
           else 0 := by
-  rw [probOutput_mOfFn]
+  rw [← evalDist_apply_singleton, evalDist_mOfFn, MeasureTheory.Measure.pi_singleton]
+  simp only [evalDist_apply_singleton]
   by_cases hcomp : ∀ i h, hits i = some h → u i = h
   · rw [ite_eq_left hcomp]
     have hfactor : ∀ i : Fin ρ,

@@ -157,8 +157,9 @@ theorem searches_expectedQueries {T : Type} (n : ℕ) (e : Fin n → Fin ρ)
     rw [searchesQueryCount_succ]
     simp only [bind_pure_comp]
     rw [lintegral_evalDist_bind _ _ Measurable.of_discrete Measurable.of_discrete]
-    have hae := OracleComp.ae_of_forall_mem_support
-      (searchCostRun σ ρ b M pk sk (sc 0) msg comList (e 0) cs none cache) _ htail
+    have hae := evalDist.ae_of_forall_mem_support
+      (searchCostRun σ ρ b M pk sk (sc 0) msg comList (e 0) cs none cache) _
+      MeasurableSet.of_discrete htail
     calc
       _ = ∫⁻ z, (z.1.2.toAdd : ℝ≥0∞) +
           n * ∑ j ∈ Finset.range cs.length, (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j

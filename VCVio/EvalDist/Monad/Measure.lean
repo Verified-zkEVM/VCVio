@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Bounds
 import ToMathlib.Probability.UniformOn
@@ -158,3 +159,29 @@ theorem evalDist_bind_apply_le_add_of_disagree (mx : m α) (f g : α → m β)
     𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event + 𝒟[mx] bad + ε := by
   rw [evalDist_bind mx f hf, evalDist_bind mx g hg]
   exact Measure.bind_apply_le_add_of_disagree _ _ _ hf hg hbad hevent hgood
+
+/-! ## Reachability and measurable observations -/
+
+namespace evalDist
+
+variable [LawfulMonad m] [MonadAttach m] [WeaklyLawfulMonadAttach m]
+
+/-- A measurable predicate holding on every possible output holds almost everywhere under the
+successful-output measure. Core attachment supplies a subtype of possible outputs, and its
+measurable projection recovers the original computation. -/
+theorem ae_of_forall_mem_support (mx : m α) (p : α → Prop)
+    (hp : MeasurableSet {x | p x}) (h : ∀ x ∈ support mx, p x) :
+    ∀ᵐ x ∂𝒟[mx], p x := by
+  rw [← WeaklyLawfulMonadAttach.map_attach (x := mx),
+    evalDist_map (MonadAttach.attach mx) measurable_subtype_coe,
+    ae_map_iff measurable_subtype_coe.aemeasurable hp]
+  exact Filter.Eventually.of_forall fun x ↦ h x.1 x.2
+
+/-- A measurable event containing no possible output has zero successful mass. -/
+theorem apply_eq_zero_of_disjoint_support (mx : m α) {event : Set α}
+    (hevent : MeasurableSet event) (h : ∀ x ∈ support mx, x ∉ event) :
+    𝒟[mx] event = 0 := by
+  simpa only [ae_iff, not_not, Set.ofPred_mem_eq] using
+    ae_of_forall_mem_support mx (fun x ↦ x ∉ event) hevent.compl h
+
+end evalDist

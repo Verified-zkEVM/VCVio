@@ -14,8 +14,54 @@ proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
 `import VCVio.Native` is the public entry point for native oracle, sampling, measure, kernel,
 operational-support, unary/relational WP, and stateful security foundations. Its ordinary import
 closure contains neither
-`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. Existing module paths remain
-compatibility facades for their discrete corollaries.
+`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. Some older module paths additionally
+export discrete compatibility corollaries. WriterCost, QueryCost, and CostModel are native owners.
+
+Handler instrumentation uses native owners in `QueryImpl.Constructions.Core`, `Append.Core`,
+`WriterT.Core`, `Tracing.Core`, `CountingOracle.Core`, and `LoggingOracle.Core`. Their public
+projection equations transport any observation of the computation, including its chosen-space
+measure; no separate scalar evaluation theory is necessary. Query bounds, cache/programming
+handlers, state projections, and invariant reasoning use these owners directly. Structural
+results need no uniform probability interpretation. `StateT.OutputIndependent` compares output
+measures, and `StateT.NeverFailsUnder` requires `IsProbabilityMeasure` on each invariant run.
+Invariant-preserving prefixes may discard their output and state without choosing measurable
+spaces on those discarded types.
+
+`OracleComp.evalDist_bind_apply_mono_of_support` compares continuation events only on reachable
+outputs. `le_evalDist_bind_apply_of_support` supplies the corresponding constant lower bound.
+Neither theorem needs a measurable space on the intermediate result: induction on actual query
+answers proves the bound. The final event must be measurable. `prEvent_congr_of_support`
+transports predicates agreeing on reachable outputs. Signature completeness uses this same
+event API rather than a scheme-specific scalar helper.
+
+`measurable_evalDist_bind` combines measurable measure families. `evalDistKernel_bind` identifies
+their bind with Mathlib kernel composition. `StateT.evalDistKernel_bind` composes through the
+joint result/final-state space; the continuation receives both components. These rules use the
+chosen measurable spaces and require no discrete structure on environments or states.
+
+`AddWriterT.expectedCost` integrates the cost marginal on the chosen cost space. Weighted
+query-cost and CostModel expectations use this same definition. Pathwise expectation bounds
+need a measurable valuation; upper bounds permit failure, while lower and exact bounds require
+`IsProbabilityMeasure` on the actual cost marginal. A valuation constant on reachable costs
+integrates to its value times successful mass. Structural constant-cost laws need no attachment;
+exact cost needs no order or monotone valuation. Markov bounds observe only the cost marginal.
+`CostsAs` yields a chosen-space output integral when the cost function and valuation are
+measurable. Countable sum formulas additionally require a countable output space and measurable
+singletons. No measurable space is needed on outputs discarded by the cost marginal.
+`AddWriterT.measurable_expectedCost` makes expected valuations measurable for a measurable
+family of cost measures, which can be bundled using the existing `evalDistKernel`.
+`MeasureTheory.lintegral_coe_nat_eq_tsum` is the tail-sum identity for a measurable Nat observable
+under an arbitrary measure, including nonatomic measures. Natural query counts specialize it.
+
+`VCVio.EvalDist.Monad.Branch` factors a conditional continuation through its actual finite
+proposition-valued observation. `evalDist_bind_ite` gives the weighted mixture;
+`prEvent_bind_ite` gives event probabilities, and `prEvent_bind_eq_mul_of_ite` handles
+continuation events constant on one condition and zero elsewhere. No measurable space is needed
+on discarded source values. `prEvent_add_prEvent_not` retains successful mass rather than
+assuming the two weights sum to one. `evalDist.isProbabilityMeasure_bind_ite` requires a
+probability certificate on that observation and on both branches. Measurable observation and
+branch families give `measurable_evalDist_bind_ite`, which uses the existing `evalDistKernel`
+with chosen environment/output spaces, including continuous spaces.
 
 `VCVio.ProgramLogic.Relational.Measure` uses successful-output measure couplings. Pure and
 successful optional values simplify to their exact postcondition with plain `simp`.
@@ -75,6 +121,9 @@ lossless continuations. `isProbabilityMeasure_bind_of_ae` supplies the forward c
 no structural positivity assumption or bind instance search is needed. `NeverFail`,
 `EvalDistCompatible`, and `DiscreteEvalDistCompatible` are deprecated compatibility classes.
 Their hypotheses remain meaningful only for the discrete adapters that actually satisfy them.
+
+The [conversion checkpoint roadmap](../design/measure-conversion-roadmap.md) records the native
+owners, standard proof conversions, subsequent theorem families, and validation gates.
 
 `open scoped MeasureProgramLogic.Probabilistic` selects bounded `Prob` expectations for any
 lawful measure semantics. Public value laws connect them to quantitative WP and Lebesgue
@@ -403,8 +452,27 @@ Independent products denote product measures: `evalDist_mOfFn` and `evalDist_mPi
 `Measure.pi fun i => 𝒟[f i]` directly from `LawfulEvalDistSemantics` and Mathlib's
 `measurePreserving_piFinSuccAbove`/`pi_map_piCongrLeft`. The index traversal itself lives in
 `ToMathlib.Control.Monad.Fold`, so these measure laws do not import the scalar product proofs.
-`evalDist_map_eval_mPi` reads one coordinate back through `Measure.pi_map_eval` when the factors
-have full mass; `lintegral_evalDist_mPi_coord` then integrates a coordinate functional directly.
+`evalDist_map_eval_mOfFn_eq_smul` and `evalDist_map_eval_mPi_eq_smul` use
+`Measure.pi_map_eval`: a coordinate marginal is its factor's measure scaled by every other
+factor's success mass. The full-mass corollaries recover the factor itself.
+`lintegral_evalDist_mPi_coord_eq_mul` gives the corresponding integral formula for lossy
+families; `lintegral_evalDist_mPi_coord` handles full-mass factors.
+`Fin.mOfFn_map` and `Fintype.mPi_map` move coordinate observations through sequencing.
+`evalDist_map_coord_mOfFn` and `evalDist_map_coord_mPi` then give product measures on the
+chosen observation space without requiring a measurable space on the original payloads.
+`measurable_evalDist_mOfFn` and `measurable_evalDist_mPi` assemble measurable factor families
+into measurable product families, so `evalDistKernel` packages them as Mathlib kernels on
+the chosen parameter space. The proof uses kernel products and measurable reindexing.
+
+`VCVio.EvalDist.IndepProduct` exports native event and reachability rules, also available through
+`VCVio.Native`. Joint coordinate events factor by `prEvent_forall_coord_mOfFn` and
+`prEvent_forall_coord_mPi`; tuple equality uses `prEvent_eq_mOfFn` and `prEvent_eq_mPi`.
+These event rules require neither a measurable payload space nor attachment. The coordinate
+`_eq_mul` rules retain the other factors' success masses, `_le` gives an unconditional bound,
+and `prEvent_coord_mOfFn`/`prEvent_coord_mPi` need only the *other* factors to be lossless.
+`mem_support_mOfFn` and `mem_support_mPi` eliminate reachable coordinates using core
+`LawfulMonadAttach`; they require no exact-attachment or probability compatibility mixin.
+
 For finite uniform-output computations, `evalDist_mOfFn_uniformOn_pi` and
 `evalDist_mPi_uniformOn_pi` combine those laws with Mathlib's `uniformOn_pi`, allowing each
 factor its own uniform set. Their constant-full-space corollaries take the single-draw
@@ -894,3 +962,8 @@ library proofs got shorter; a set with no library caller is itself a finding.
 4. **Forgetting `probOutput_eq_zero_of_not_mem_support`**: useful when restricting sums.
 
 5. **`evalSPMF` on bare `query t`**: works directly when the expected type pins `query t` to a monadic form, since `query` resolves to `HasQuery.query`. Write `evalSPMF (query t : OracleComp spec _)` (or hand the result to a context that provides the same ascription). If you need the primitive `OracleQuery spec _` (e.g. for `OracleQuery.cont`), use `spec.query t` instead.
+
+`evalDist.ae_of_forall_mem_support` converts a pathwise predicate into an almost-everywhere
+predicate under its `MeasurableSet` premise. It uses core `MonadAttach` and native measure laws,
+works for arbitrary chosen result spaces and failing computations, and needs no compatibility
+class. `evalDist.apply_eq_zero_of_disjoint_support` gives the corresponding zero-mass event rule.

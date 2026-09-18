@@ -21,6 +21,7 @@ public import Examples.ElGamal.Hash
 public import Examples.ElGamal.ReductionCost
 public import Examples.ElGamal.SSP
 public import Examples.EvalDistCompatible.Basic
+public import Examples.MerkleCheckpoints
 public import Examples.OneTimePad.Basic
 public import Examples.OneTimePad.ComputationalComplexity
 public import Examples.OneTimePad.HeapBasic
@@ -38,6 +39,7 @@ public import Examples.PRFTagReader
 public import Examples.PRFTagReader.Asymptotic
 public import Examples.PRFTagReader.Auth
 public import Examples.PRFTagReader.BadEvent
+public import Examples.PRFTagReader.CacheRepresentation
 public import Examples.PRFTagReader.Collision
 public import Examples.PRFTagReader.Collision.ForgeStep
 public import Examples.PRFTagReader.Defs
@@ -53,10 +55,12 @@ public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 public import Examples.PRFTagReader.MultipleToHybrid.Setup
 public import Examples.PRFTagReader.Network
 public import Examples.PRFTagReader.Network.Kernel
+public import Examples.PRFTagReader.NetworkUnlinkability
 public import Examples.PRFTagReader.PRFReductions
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
 public import Examples.PRFTagReader.PRFReductions.Reductions
 public import Examples.PRFTagReader.PRFReductions.Structural
+public import Examples.PRFTagReader.ReductionBudgets
 public import Examples.PRFTagReader.Table
 public import Examples.PRFTagReader.UnlinkReduction
 public import Examples.PRGfromPRF
@@ -65,6 +69,7 @@ public import Examples.ProgramLogic.GaussianWiring
 public import Examples.ProgramLogic.MeasureCoupling
 public import Examples.ProgramLogic.Probability
 public import Examples.ProgramLogic.ProofMode
+public import Examples.ProgramLogic.RandomOracleRouting
 public import Examples.ProgramLogic.RandomOracleWiring
 public import Examples.ProgramLogic.Relational
 public import Examples.ProgramLogic.RelationalAnchored
@@ -74,6 +79,8 @@ public import Examples.ProgramLogic.Unary
 public import Examples.ProgramLogic.UnaryProbability
 public import Examples.ProgramLogic.UnaryStep
 public import Examples.ProgramLogic.UnaryTriple
+public import Examples.ReplayCheckpoint
+public import Examples.ResumptionRejection
 public import Examples.Schnorr.BoundedChallenges
 public import Examples.Schnorr.ChallengeRestriction
 public import Examples.Schnorr.SigmaProtocol

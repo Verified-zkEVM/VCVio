@@ -207,7 +207,8 @@ end Costs
 
 section ExpectedCosts
 
-variable {α ω : Type} {m : Type → Type*} [Monad m] [EvalDistSemantics m]
+variable {α ω : Type} [MeasurableSpace ω]
+  {m : Type → Type*} [Monad m] [EvalDistSemantics m]
 variable (oa : AddWriterT ω m α) (f g : ω → ℝ≥0∞)
 
 example (h : ∀ w, f w ≤ g w) :
@@ -226,8 +227,9 @@ example (c : ℝ≥0∞) :
   simp
 
 example [AddMonoid ω] [LawfulMonad m] [LawfulEvalDistSemantics m]
-    (x : α) : AddWriterT.expectedCost (pure x : AddWriterT ω m α) f = f 0 := by
-  simp
+    (x : α) (hf : Measurable f) :
+    AddWriterT.expectedCost (pure x : AddWriterT ω m α) f = f 0 :=
+  AddWriterT.expectedCost_pure x f hf
 
 end ExpectedCosts
 

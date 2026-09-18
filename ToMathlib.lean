@@ -51,6 +51,7 @@ public import ToMathlib.MeasureTheory.Function.AEMeasurable
 public import ToMathlib.MeasureTheory.Integral.Quadratic
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
+public import ToMathlib.MeasureTheory.MeasurableSpace.TypeTags
 public import ToMathlib.MeasureTheory.Measure.Bool
 public import ToMathlib.MeasureTheory.Measure.Bounds
 public import ToMathlib.MeasureTheory.Measure.Coupling
@@ -77,8 +78,8 @@ public import ToMathlib.Probability.ProbabilityMassFunction.Lemmas
 public import ToMathlib.Probability.ProbabilityMassFunction.Measure
 public import ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym
 public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
-public import ToMathlib.Probability.ProbabilityMassFunction.TailSums
 public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
+public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.ProbabilityTheory.Coupling
 public import ToMathlib.ProbabilityTheory.FinRatPMF

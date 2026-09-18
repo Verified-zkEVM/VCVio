@@ -36,6 +36,11 @@ open scoped ENNReal
 
 namespace VCVioTest.MeasureBridge
 
+/-! ## Successful-output measure normalization -/
+
+example {α : Type} [MeasurableSpace α] (μ : Measure α) :
+    (μ.map some).dropNone = μ := by simp
+
 /-! ## Operational optional failure -/
 
 example {r : Type → Type} [Monad r] [LawfulMonad r] [MonadAttach r]
@@ -159,7 +164,7 @@ example (f : Bool → ProbComp (Fin 3)) (v : Bool → Fin 3) :
     𝒟[Fintype.mPi f] {v} = ∏ i, Pr[= v i | f i] := by
   simp [evalDist_mPi]
 
-/-- The coordinate marginal of a product: the measure-side twin of `probEvent_coord_mPi`. -/
+/-- A coordinate marginal of a lossless independent family recovers its factor. -/
 example (f : Bool → ProbComp (Fin 3)) (i : Bool) :
     (𝒟[Fintype.mPi f]).map (Function.eval i) = 𝒟[f i] :=
   evalDist_map_eval_mPi f (fun _ => by simp) i

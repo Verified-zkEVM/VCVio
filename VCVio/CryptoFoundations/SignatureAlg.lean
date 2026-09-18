@@ -7,13 +7,13 @@ Authors: Devon Tuma, Quang Dao
 module
 
 public import PolyFun.Control.Monad.Hom
-public import VCVio.EvalDist.Defs.Instances
-public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.QueryTracking.CachingOracle
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
-public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!
@@ -147,19 +147,6 @@ lemma perfectlyComplete_iff_complete_zero (sigAlg : SignatureAlg m M PK SK S)
 lemma Complete.mono {sigAlg : SignatureAlg m M PK SK S} {runtime : ProbCompRuntime m} {δ₁ δ₂ : ℝ≥0∞}
     (h : sigAlg.Complete runtime δ₁) (hle : δ₁ ≤ δ₂) : sigAlg.Complete runtime δ₂ :=
   fun msg => (tsub_le_tsub_left hle _).trans (h msg)
-
-/-- If every value `x` in the support of `gen` satisfies `Pr[= a | f x] ≥ 1 - δ`, then the
-overall probability satisfies `Pr[= a | gen >>= f] ≥ 1 - δ`. This reduces a "for all keys"
-completeness statement to per-key bounds. -/
-lemma le_probOutput_bind_of_forall_support {α β : Type} {a : β} {δ : ℝ≥0∞} (gen : ProbComp α)
-    (f : α → ProbComp β) (h : ∀ x, x ∈ support gen → 1 - δ ≤ Pr[= a | f x]) :
-    1 - δ ≤ Pr[= a | gen >>= f] := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  rw [← evalDist_apply_singleton]
-  apply le_evalDist_bind_apply gen f .of_discrete (measurableSet_singleton a)
-  exact ae_of_forall_mem_support gen _ fun x hx ↦ by
-    simpa only [evalDist_apply_singleton] using h x hx
 
 end correctness
 

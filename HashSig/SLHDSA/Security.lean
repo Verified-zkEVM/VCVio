@@ -91,6 +91,13 @@ def Primitives.thashTcrProblem [SampleableType prims.PkSeed] (arity numTargets :
   thColl := prims.thashCollection
   numTargets := numTargets
 
+/-- The collection TCR problem uses the chosen arity and target cap. -/
+theorem Primitives.thashTcrProblem_eq [SampleableType prims.PkSeed] (arity numTargets : ℕ) :
+    prims.thashTcrProblem arity numTargets =
+      ⟨prims.thashMember arity, prims.thashCollection, numTargets⟩ := by
+  unfold Primitives.thashTcrProblem
+  rfl
+
 /-- The unrestricted-subspace SM-DT-PRE problem for the `arity`-input member of `Thash`, with the
 whole `Thash` collection available during target selection. -/
 def Primitives.thashPreProblem [SampleableType prims.PkSeed] (arity numTargets : ℕ) :
@@ -101,6 +108,13 @@ def Primitives.thashPreProblem [SampleableType prims.PkSeed] (arity numTargets :
   emb_injective := Function.injective_id
   thColl := prims.thashCollection
   numTargets := numTargets
+
+/-- The collection preimage problem samples the full fixed-arity message space. -/
+theorem Primitives.thashPreProblem_eq [SampleableType prims.PkSeed] (arity numTargets : ℕ) :
+    prims.thashPreProblem arity numTargets =
+      ⟨prims.thashMember arity, id, Function.injective_id, prims.thashCollection, numTargets⟩ := by
+  unfold Primitives.thashPreProblem
+  rfl
 
 /-- The message randomizer `PRF_msg` as a `PRFScheme` keyed by `SK.prf`; `eval` is
 `prims.PRFmsg`. -/

@@ -135,8 +135,12 @@ theorem evalDist_bind_const [∀ t, MeasurableSpace (spec.Range t)]
     [OracleSpec.IsMeasureSpec spec] {α β : Type v} [MeasurableSpace β]
     (mx : OracleComp spec α) (my : OracleComp spec β) :
     𝒟[mx >>= fun _ => my] = 𝒟[my] := by
-  let : MeasurableSpace α := ⊤
-  rw [_root_.evalDist_bind_const, evalDist_apply_univ_eq_one, one_smul]
+  induction mx using OracleComp.inductionOn with
+  | pure a => simp
+  | query_bind t next ih =>
+    rw [bind_assoc, evalDist_bind_of_discrete]
+    simp_rw [ih]
+    rw [Measure.bind_const, evalDist_apply_univ_eq_one, one_smul]
 
 /-- A constant output map on a lossless oracle program is a Dirac measure.
 No measurable-space instance on the discarded result type is needed. -/

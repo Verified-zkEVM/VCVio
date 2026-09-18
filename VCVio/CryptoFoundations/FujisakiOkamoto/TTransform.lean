@@ -125,12 +125,14 @@ theorem encrypt_usesExactQueryCost {ω : Type} [AddMonoid ω]
 
 /-- T-transform encryption has expected weighted query cost equal to the weight of querying
 `msg`. -/
-theorem encrypt_expectedQueryCost_eq {ω : Type} [AddMonoid ω] [Preorder ω]
-    [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+theorem encrypt_expectedQueryCost_eq {ω : Type} [MeasurableSpace ω] [AddMonoid ω]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
-    (pk : PK) (msg : M) (costFn : M → ω) (val : ω → ENNReal) (hval : Monotone val) :
+    (pk : PK) (msg : M) (costFn : M → ω) (val : ω → ENNReal) (hval : Measurable val)
+    [MeasureTheory.IsProbabilityMeasure 𝒟[HasQuery.queryCostDist
+      (fun [HasQuery (M →ₒ R) (AddWriterT ω m)] ↦
+        (TTransform pke).encrypt pk msg) runtime costFn]] :
     ExpectedQueryCost[
       (TTransform pke).encrypt pk msg in runtime by costFn via val
     ] = val (costFn msg) :=
@@ -158,20 +160,19 @@ theorem decrypt_usesZeroQueryCost_of_decrypt_eq_none {ω : Type} [AddMonoid ω]
     TTransform.decrypt, hdec]
 
 /-- If deterministic decryption fails immediately, the T-transform has expected weighted query
-cost `0`. -/
+cost equal to the valuation of zero. -/
 theorem decrypt_expectedQueryCost_eq_zero_of_decrypt_eq_none {ω : Type}
-    [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+    [MeasurableSpace ω] [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) (costFn : M → ω)
-    (val : ω → ENNReal) (hval : Monotone val)
+    (val : ω → ENNReal) (hval : Measurable val)
     (hdec : pke.decrypt sk c = none) :
     ExpectedQueryCost[
       (TTransform pke).decrypt (pk, sk) c in runtime by costFn via val
-    ] = val 0 :=
-  HasQuery.expectedQueryCost_eq_of_usesCostExactly
-    (decrypt_usesZeroQueryCost_of_decrypt_eq_none runtime pke pk sk c costFn hdec) hval
+    ] = val 0 := by
+  simpa only [HasQuery.expectedQueryCost, HasQuery.Program.withAddCost, TTransform,
+    TTransform.decrypt, hdec] using AddWriterT.expectedCost_pure (none : Option M) val hval
 
 /-- If deterministic decryption returns a message, the T-transform incurs exactly the weighted
 cost of querying that message to re-derive the coins. -/
@@ -186,14 +187,16 @@ theorem decrypt_usesExactQueryCost_of_decrypt_eq_some {ω : Type} [AddMonoid ω]
 
 /-- If deterministic decryption returns a message, the T-transform has expected weighted query
 cost equal to the weight of querying that message. -/
-theorem decrypt_expectedQueryCost_eq_of_decrypt_eq_some {ω : Type}
-    [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+theorem decrypt_expectedQueryCost_eq_of_decrypt_eq_some {ω : Type} [MeasurableSpace ω]
+    [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (M →ₒ R) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (pk : PK) (sk : SK) (c : C) (costFn : M → ω)
-    (val : ω → ENNReal) (hval : Monotone val) {msg : M}
-    (hdec : pke.decrypt sk c = some msg) :
+    (val : ω → ENNReal) (hval : Measurable val) {msg : M}
+    (hdec : pke.decrypt sk c = some msg)
+    [MeasureTheory.IsProbabilityMeasure 𝒟[HasQuery.queryCostDist
+      (fun [HasQuery (M →ₒ R) (AddWriterT ω m)] ↦
+        (TTransform pke).decrypt (pk, sk) c) runtime costFn]] :
     ExpectedQueryCost[
       (TTransform pke).decrypt (pk, sk) c in runtime by costFn via val
     ] = val (costFn msg) :=
