@@ -79,7 +79,11 @@ families, and a failing handler whose zero query-tail mass differs from the zero
 | Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
-each family before expanding to another subsystem. Each published checkpoint must build all
+each family before expanding to another subsystem. Prioritize landing the current core PRs before
+opening further conversion slices. After each merge, reconcile dependent branches with current
+`main`, retarget their PRs as needed, and validate the resulting integration. Follow every check
+on the current head and the merge queue through to the actual merge result.
+Each published checkpoint must build all
 proof libraries, pass native import guards, tests, boundary/style/environment checks, and the
 axiom/initialization ratchets. Prune obsolete lint entries; do not add exceptions for conversions.
 
