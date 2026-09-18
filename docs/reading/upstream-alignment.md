@@ -285,7 +285,10 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
 6. Upstream the local `Option` and `Except` coproduct measurable embeddings
    (`V:ToMathlib/MeasureTheory/MeasurableSpace/{Option,Except}.lean`). They now prove
    `Measure.dropNone μ = μ.comap some`, support native `OptionT` and `ExceptT` successful-output
-   semantics, and unlock the standard `MeasurableEmbedding` API. The remaining work here is to move
+   semantics, and unlock the standard `MeasurableEmbedding` API. The successful-value normalization
+   `Measure.dropNone_map_some` delegates to Mathlib’s `MeasurableEmbedding.comap_map`
+   (`Mathlib/MeasureTheory/Measure/Restrict.lean`), via `Option.measurableEmbedding_some`.
+   The remaining work here is to move
    these generally useful constructions upstream and then delete the local copies.
 7. Hypothesis hygiene: bind laws (`V:VCVio/EvalDist/Defs/Measure.lean:85`,
    `V:VCVio/EvalDist/PFunctorMeasure/Core.lean:133`) ask `Measurable`, Mathlib's
