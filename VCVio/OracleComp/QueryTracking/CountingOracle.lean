@@ -171,7 +171,6 @@ lemma fst_map_run_withCounting [DecidableEq ι] [LawfulMonad m]
   fst_map_run_withCost so _ mx
 
 /-- Forgetting the additive query count preserves the underlying computation. -/
-@[simp]
 lemma fst_map_runAdd_withCounting [DecidableEq ι] [LawfulMonad m]
     (so : QueryImpl spec m) (mx : OracleComp spec α) :
     Prod.fst <$> (simulateQ so.withCounting mx).runAdd = simulateQ so mx := by
