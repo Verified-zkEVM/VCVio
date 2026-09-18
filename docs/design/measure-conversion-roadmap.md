@@ -80,6 +80,29 @@ its regression module checks that boundary along with real parameter/output spac
 from an unobserved factor. This checkpoint targets `main` independently of the expected-cost
 and abort-analysis conversion PRs.
 
+## Native TV composition checkpoint
+
+The campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
+Integration/event laws are published in #758; quantitative WP and counting bounds are published
+in #761. Independent products (#756), Fischlin expected signing costs (#752), and the reader cache
+representation (#760) have landed and are preserved by subsequent conversions.
+
+`Measure.etvDist` contracts under measurable subprobability transitions on chosen spaces. Its
+bounded-observation law uses Mathlib's layer cake formula, without singleton probabilities,
+countability, discrete spaces, or probability-prefix assumptions. Conditional composition accepts
+an AE majorant under the actual prefix law; the distance function need not be measurable.
+AE-measurable measure families suffice. Kernel composition uses the same measure rules.
+
+Exceptional events cost their prefix mass, and constant good-branch allowances retain the
+complement's successful mass. Native computation laws expose these rules under measurable
+denoted continuation families. Real-valued bounds require finite majorant integrals, since
+`ENNReal.toReal` cannot interpret an infinite bound. Measurability of a parameterized expected
+majorant uses Mathlib's existing s-finite kernel integral theorem.
+
+Native regressions use usual real spaces, deterministic continuous transitions, null-set changes,
+a half-mass Gaussian prefix, measurable expected majorants, and explicit optional aborts.
+The public native facade exports the composition API and checks its retired-import boundary.
+
 ## Subsequent PRs
 
 | Slice | Scope and API checkpoint |
@@ -95,12 +118,10 @@ and abort-analysis conversion PRs.
 | Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
-each family before expanding to another subsystem. Prioritize landing the current core PRs before
-opening further conversion slices. After each merge, reconcile dependent branches with current
-`main`, retarget their PRs as needed, and validate the resulting integration. Follow every check
-on the current head and the merge queue through to the actual merge result.
-Since `main` uses squash merges, bring its landed commit into each dependent branch before
-retargeting the PR to `main`, so the diff contains only the next conversion family.
+and publish each checkpoint before expanding to another subsystem. Start independent APIs from
+current `main`, keep necessary stacked dependencies explicit, and record published checkpoints
+here and in #532. Reconcile landed dependencies before retargeting, so each diff contains only its
+conversion family. Merge-queue management is outside this batch.
 Each published checkpoint must build all
 proof libraries, pass native import guards, tests, boundary/style/environment checks, and the
 axiom/initialization ratchets. Prune obsolete lint entries; do not add exceptions for conversions.
@@ -118,6 +139,10 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Conditional continuation | `evalDist_bind_ite`, `prEvent_bind_ite`, and `prEvent_bind_eq_mul_of_ite`; finite observation measures retain missing mass. |
 | Natural-valued expectation | `MeasureTheory.lintegral_coe_nat_eq_tsum`; countability applies to the observable range. |
 | Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
+| Common-transition TV contraction | `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le`; measurable subprobability transitions on the chosen spaces. |
+| Conditional TV composition | `Measure.etvDist_bind_bind_le_lintegral` / `measureETVDist_bind_bind_le_lintegral`; AE majorants, without assuming measurable conditional TV or selecting couplings. |
+| Different prefix and transition laws | `Measure.etvDist_bind_bind_le_add_lintegral` / `Kernel.etvDist_comp_comp_le_add_lintegral`; charge prefix TV and the conditional majorant under the second prefix law. |
+| Exceptional conditional TV | `Measure.etvDist_bind_bind_le_of_bad`; retain exceptional prefix mass and the good complement's mass. |
 | Every possible execution satisfies an invariant | Operational support or indexed reachability; probability interpretation is unnecessary. |
 | Stateful composition | Joint result/state kernels; `StateT.evalDistKernel_bind` threads the resulting state. |
 | Independent joint events or tuple equality | `prEvent_forall_coord_mOfFn`/`mPi` and `prEvent_eq_mOfFn`/`mPi`, with no payload measurable-space premise. |

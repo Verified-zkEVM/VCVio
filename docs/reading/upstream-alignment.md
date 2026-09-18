@@ -122,6 +122,15 @@ needs an instance-synthesis check, not a grep.
 
 ### Track — heading into core, or blocked on a design decision
 
+**Native TV composition.** Bounded-observation contraction uses Mathlib's
+`lintegral_eq_lintegral_meas_lt` layer cake formula and `ENNReal.edist_le_iff_le_add_right`.
+Conditional discrepancy uses `lintegral_sub_le'` and AE-measurable measure families; there is no
+measurable selection of coupling witnesses or assumption that conditional TV is measurable.
+Mathlib kernel composition delegates to the measure rules. Parameterized expected majorants use
+`Measurable.lintegral_kernel_prod_right'` with its s-finite kernel premise. The local owners are
+`ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` and
+`ToMathlib/Probability/Kernel/TotalVariation.lean`.
+
 **Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
 `Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`. Quantitative,
 qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's

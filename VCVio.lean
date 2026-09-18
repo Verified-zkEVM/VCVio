@@ -189,6 +189,7 @@ public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.MeasureTVDist.Bind
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Branch
