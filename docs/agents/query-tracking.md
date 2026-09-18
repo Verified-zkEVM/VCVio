@@ -50,7 +50,7 @@ or decidable equality on responses.
 | `VCVio/OracleComp/QueryTracking/CostModel.lean` | `OracleComp`-specific facade over the generic semantics |
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
-| `ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean` | Generic PMF tail-sum identities used for expected runtime |
+| `ToMathlib/Probability/TailSums.lean` | Tail-sum integration for measurable Nat observables under arbitrary measures |
 
 ## Input Routing and Domain Separation
 
@@ -92,7 +92,10 @@ Read this top-down before adding a new instrumentation wrapper. The rule of thum
 - **If it's "delegate, then record query+response"**, route it through `withTrace` / `withTraceAppend` / `withLogging` (i.e. through `postInsert`).
 - **If the wrapper genuinely needs to inspect external state to decide whether or not to query** (cache-on-hit, seed fallback, budget gate, bad-event gating), write a custom `QueryImpl` — `preInsert` / `postInsert` cannot express this. Existing examples: `withCaching` (`CachingOracle.lean`), `withPregen` (`SeededOracle.lean`), `enforceOracle` (`Enforcement.lean`).
 
-Defining the wrapper through this chain gets you the full generic theory for free: `proj_simulateQ_*`, `probFailure_proj_simulateQ_*`, `NeverFail_proj_simulateQ_*_iff`, `evalSPMF_proj_simulateQ_*`, `probOutput_proj_simulateQ_*`, `support_proj_simulateQ_*`, plus `IsTotalQueryBound` / `IsQueryBoundP` transfer in `QueryBound.lean`. Hand-rolled wrappers have to re-prove all of these one by one.
+Defining the wrapper through this chain provides structural projection and support equations,
+including `proj_simulateQ_*` and `support_proj_simulateQ_*`, plus query-bound transfer. These
+equations preserve any observation of the projected program, including its chosen-space measure.
+Older facade modules also export their remaining scalar compatibility corollaries.
 
 See `docs/agents/oracle-comp.md` for the full table of combinators and the underlying theory.
 
@@ -179,14 +182,25 @@ Use `QueryCost` when you want:
 Expected-cost proofs should avoid hard-coding query semantics when the real theorem is purely
 probabilistic.
 
-`ToMathlib/Probability/ProbabilityMassFunction/TailSums.lean` contains the generic discrete
-tail-sum identities used by the query-cost layer:
+`ToMathlib/Probability/TailSums.lean` contains the measure-theoretic tail-sum identity for
+measurable Nat observables under arbitrary measures. The query-cost layer specializes it:
 
 - `E[T] = ∑ Pr[i < T]`
 - tail domination implies expectation domination
 
-This keeps the query-runtime layer small and makes the stopping-time machinery more plausibly
-upstreamable.
+WriterCost, QueryCost, and CostModel respect the chosen cost measurable space and share the
+same cost-marginal integral. `CostsAs` gives an output integral under a measurable cost function
+and valuation; countable output sums need actual countability and measurable singletons.
+Pathwise expectation bounds need a measurable valuation. Upper bounds permit failure; lower
+and exact bounds use Mathlib `IsProbabilityMeasure` on the cost marginal. Exact cost needs no
+order or monotone valuation. `expectedCost_eq_mul_costMass_of_hasCost` also needs no attachment
+and retains successful mass for computations that can fail; the support-based variant handles
+valuations constant on reachable costs. Markov bounds observe only the cost marginal. Discarded outputs need no measurable space.
+
+Measurably parameterized cost measures are families accepted by `evalDistKernel`.
+`AddWriterT.measurable_expectedCost` certifies their measurable expected valuations. Algebraic
+writer tags carry their underlying measurable space through
+`ToMathlib/MeasureTheory/MeasurableSpace/TypeTags.lean`.
 
 ## Three Cost Notions
 
@@ -405,9 +419,9 @@ The query-tracking files now try to keep theorem signatures narrow.
 Preferred pattern:
 
 - put only genuinely shared assumptions in section variable blocks
-- localize `MonadLiftT _ SetM`, `MonadLiftT _ SPMF`, `MonadLiftT _ PMF`,
-  `EvalDistCompatible`, `IsProbabilitySpec`, `IsUniformSpec`, and `LawfulMonad` to the smallest section or
-  theorem that needs them
+- localize lawful attachment, `LawfulMonad`, measure semantics, chosen measurable spaces,
+  measurability proofs, and cost-marginal probability certificates to the declarations that
+  need them; structural cost proofs require no probability interpretation
 - if a proof needs extra decidability or classical choice, install it locally with `classical` or
   a local instance
 
