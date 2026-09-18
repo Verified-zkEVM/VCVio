@@ -39,7 +39,7 @@ variable {ω : Type u} [Monoid ω]
 
 /-- Wrap an oracle implementation so that each query records `traceFn t` in
 the writer `ω` *before* running the handler. The trace value depends only on
-the query, so a failure inside the handler still leaves the trace recorded. -/
+the query. Failure in the base monad can discard the entire writer result. -/
 abbrev withTraceBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceBefore (P := spec.toPFunctor) so traceFn
@@ -140,7 +140,7 @@ variable {ω : Type u} [EmptyCollection ω] [Append ω]
 `traceFn t` in the writer `ω` *before* running the handler, and `WriterT`
 uses the `[EmptyCollection ω] [Append ω]` `Monad` instance (`tell` is a single
 push, `bind` concatenates with `++`). The trace value depends only on the
-query, so a failure inside the handler still leaves the trace recorded. -/
+query. Failure in the base monad can discard the entire writer result. -/
 abbrev withTraceAppendBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceAppendBefore (P := spec.toPFunctor) so traceFn

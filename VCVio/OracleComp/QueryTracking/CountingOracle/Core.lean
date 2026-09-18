@@ -13,6 +13,8 @@ public import VCVio.OracleComp.QueryTracking.Tracing.Core
 
 Response-independent writer traces accumulate per-query costs and per-index query counts.
 Their output projections and operational support equations preserve the original program.
+Counting uses an additive writer backed by `Multiplicative (QueryCount ι)`; an abort in the
+underlying monad can discard the whole writer result.
 -/
 
 public section
@@ -94,25 +96,32 @@ lemma support_fst_run_withCost [LawfulMonad m] [MonadAttach m]
 
 end withCost
 
-/-- Wrap an oracle implementation to count queries in a `WriterT (QueryCount ι)` layer.
-Counting happens before the implementation runs, so failed queries are still counted.
-This is a special case of `withCost` where the cost function is `QueryCount.single`. -/
+/-- Wrap an oracle implementation to count queries in an additive writer.
+Counting happens before the implementation runs; failure in the base monad can discard
+the writer result. Use `AddWriterT.runAdd` to observe ordinary pointwise counts.
+The underlying `withCost` uses `Multiplicative.ofAdd ∘ QueryCount.single`. -/
 @[expose] def withCounting [DecidableEq ι] (so : QueryImpl spec m) :
-    QueryImpl spec (WriterT (QueryCount ι) m) :=
-  so.withCost (QueryCount.single ·)
+    QueryImpl spec (AddWriterT (QueryCount ι) m) :=
+  so.withCost (fun t => Multiplicative.ofAdd (QueryCount.single t))
 
 @[simp, grind =]
 lemma withCounting_apply [DecidableEq ι] (so : QueryImpl spec m) (t : spec.Domain) :
-    so.withCounting t = (do tell (QueryCount.single t); so t) := by
-  exact withCost_apply so (QueryCount.single ·) t
+    so.withCounting t = (do AddWriterT.addTell (QueryCount.single t); so t) := by
+  exact withCost_apply so (fun t => Multiplicative.ofAdd (QueryCount.single t)) t
 
 lemma withCounting_eq_withCost [DecidableEq ι] (so : QueryImpl spec m) :
-    so.withCounting = so.withCost (QueryCount.single ·) := rfl
+    so.withCounting = so.withCost (fun t => Multiplicative.ofAdd (QueryCount.single t)) := rfl
 
 lemma fst_map_run_withCounting [DecidableEq ι] [LawfulMonad m]
     (so : QueryImpl spec m) (mx : OracleComp spec α) :
     Prod.fst <$> (simulateQ (so.withCounting) mx).run = simulateQ so mx :=
   fst_map_run_withCost so _ mx
+
+/-- Forgetting the additive query count preserves the underlying computation. -/
+lemma fst_map_runAdd_withCounting [DecidableEq ι] [LawfulMonad m]
+    (so : QueryImpl spec m) (mx : OracleComp spec α) :
+    Prod.fst <$> (simulateQ so.withCounting mx).runAdd = simulateQ so mx := by
+  rw [AddWriterT.fst_map_runAdd, fst_map_run_withCounting]
 
 end QueryImpl
 
@@ -125,7 +134,7 @@ while preserving the original oracle behavior. -/
 /-- Oracle for counting the number of queries made by a computation. The count is stored as a
 function from oracle indices to counts, to give finer grained information about the count. -/
 @[expose] def OracleSpec.countingOracle [DecidableEq ι] :
-    QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec)) :=
+    QueryImpl spec (AddWriterT (QueryCount ι) (OracleComp spec)) :=
   (QueryImpl.ofLift spec (OracleComp spec)).withCounting
 
 /-- Pointwise behavior of the generic cost oracle. -/
@@ -140,11 +149,13 @@ lemma costOracle_apply {ω : Type u} [Monoid ω] (costFn : spec.Domain → ω)
 @[simp]
 lemma OracleSpec.countingOracle_apply [DecidableEq ι] (t : spec.Domain) :
     spec.countingOracle t =
-      (do tell (QueryCount.single t); liftM (liftM (spec.query t) : OracleComp spec _)) := by
+      (do
+        AddWriterT.addTell (QueryCount.single t)
+        liftM (liftM (spec.query t) : OracleComp spec _)) := by
   rw [OracleSpec.countingOracle, QueryImpl.withCounting_apply, QueryImpl.ofLift_apply]
 
 lemma countingOracle_eq_costOracle [DecidableEq ι] :
-    spec.countingOracle = costOracle (QueryCount.single ·) := rfl
+    spec.countingOracle = costOracle (fun t => Multiplicative.ofAdd (QueryCount.single t)) := rfl
 
 namespace costOracle
 
@@ -185,7 +196,7 @@ section support
 /-- Run the counting interpretation with initial accumulated count `qc`. -/
 @[expose] def simulate (oa : OracleComp spec α) (qc : QueryCount ι) :
     OracleComp spec (α × QueryCount ι) :=
-  Prod.map id (qc + ·) <$> (simulateQ countingOracle oa).run
+  Prod.map id (qc + ·) <$> (simulateQ countingOracle oa).runAdd
 
 lemma simulate_eq_map_simulate_zero (oa : OracleComp spec α) (qc : QueryCount ι) :
     simulate oa qc = Prod.map id (qc + ·) <$> simulate oa 0 := by
@@ -353,15 +364,15 @@ lemma mem_support_simulate_queryBind_iff (t : spec.Domain)
     rcases hu with ⟨u, hu⟩
     rcases (mem_support_simulate_iff (oa := oa u) qc
       (z := (z.1, Function.update z.2 t (z.2 t - 1)))).1 hu with ⟨b, hb0, hbEq⟩
-    have hbRun : (z.1, b) ∈ support ((simulateQ countingOracle (oa u)).run) := by
+    have hbRun : (z.1, b) ∈ support ((simulateQ countingOracle (oa u)).runAdd) := by
       simpa [simulate] using hb0
     have hbRun' : (z.1, b) ∈
-        support ((simulateQ (QueryImpl.id' spec).withCounting (oa u)).run) := by
+        support ((simulateQ (QueryImpl.id' spec).withCounting (oa u)).runAdd) := by
       simpa [countingOracle] using hbRun
     let q0 : QueryCount ι := QueryCount.single t + b
     have hq0mem : (z.1, q0) ∈ support (simulate ((query t : OracleComp spec _) >>= oa) 0) := by
       have hex :
-          ∃ i a b', (a, b') ∈ support (simulateQ (QueryImpl.id' spec).withCounting (oa i)).run ∧
+          ∃ i a b', (a, b') ∈ support (simulateQ (QueryImpl.id' spec).withCounting (oa i)).runAdd ∧
             (a, QueryCount.single t + b') = (z.1, q0) :=
         ⟨u, z.1, b, hbRun', by simp [q0]⟩
       simpa [simulate, countingOracle, QueryImpl.withCounting_apply] using hex
@@ -382,7 +393,7 @@ lemma mem_support_simulate_queryBind_iff (t : spec.Domain)
 
 lemma exists_mem_support_of_mem_support {oa : OracleComp spec α} {x : α} (hx : x ∈ support oa)
     (qc : QueryCount ι) : ∃ qc', (x, qc') ∈ support (simulate oa qc) := by
-  have hx' : x ∈ support (Prod.fst <$> (simulateQ countingOracle oa).run) := by
+  have hx' : x ∈ support (Prod.fst <$> (simulateQ countingOracle oa).runAdd) := by
     simpa [fst_map_run_simulateQ] using hx
   rw [support_map] at hx'
   obtain ⟨z, hz, rfl⟩ := hx'

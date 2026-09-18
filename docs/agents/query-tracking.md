@@ -41,6 +41,19 @@ The structural `QueryCache.log_consistent_append`, `log_consistent_cacheQuery_ap
 in `CachingLoggingOracle.lean` transport cache/log hypotheses without probability assumptions
 or decidable equality on responses.
 
+## Per-index counting
+
+`QueryCount ι` is an ordinary function `ι → ℕ`, with the standard pointwise instances.
+`QueryImpl.withCounting` and `countingOracle` use `AddWriterT (QueryCount ι)`.
+Use `.runAdd : m (α × QueryCount ι)` to observe counts; raw `.run` exposes the writer's
+`Multiplicative` tag. `countingOracle.simulate` retains its ordinary-count result and initial offset.
+Writer WP predicates inspect `Multiplicative.toAdd` when using the generic monoid bridge.
+
+A count is emitted before the handler, but failure in the base monad can discard the complete
+writer result. `WriterT ω Option` loses the log on `none`; `OptionT (WriterT ω Id)` can retain
+a log together with `none`. `VCVioTest/ModuleAPI/Counting.lean` checks both orders, repeated
+labels, unchanged answers, and the ordinary function monoid.
+
 ## Main Files
 
 | File | Role |
@@ -51,6 +64,37 @@ or decidable equality on responses.
 | `VCVio/OracleComp/QueryTracking/AdaptivePrefix.lean` | Shared-ROM stopping-time bounds for an adaptive prefix followed by a transcript-dependent suffix |
 | `ToMathlib/Control/WriterT.lean` | Pathwise and output-indexed cost predicates for `AddWriterT` |
 | `ToMathlib/Probability/TailSums.lean` | Tail-sum integration for measurable Nat observables under arbitrary measures |
+
+## Association-list cache representation
+
+`ListCache.lean` supplies `QueryImpl.ListCache.handler` for an executable association-list
+cache. It uses `List.lookup`, so the first occurrence of a key wins even when the initial
+list contains duplicates. Hits do not run the underlying draw; misses prepend one binding.
+`local_projection` preserves the reply and decoded cache after each query, and
+`adaptive_projection` lifts that equality through every adaptive client in any lawful monad.
+
+`Examples/PRFTagReader/CacheRepresentation.lean` closes the named PRF reductions with this
+handler and retains their bad-event state through `QueryImpl.extendState`. Its
+`PRFTagReader.CachedPRF.preserved_bound` proves the same three-loss bound for the bounded FIFO
+experiment, from empty list caches. The equality concerns replies and retained state; it makes
+no running-time claim about association-list lookup or the network schedule.
+
+## Input Routing and Domain Separation
+
+[`RandomOracle/Routing.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/Routing.lean)
+proves that injective input encodings preserve the full output measure of every adaptive
+client of an initially empty finite random oracle. The eager-table and lazy-cache forms
+share the same structural routing operation. Disjoint injective encodings of two domains
+use Mathlib's `Function.Injective.sumElim` to discharge the routing condition.
+
+[`Examples/ProgramLogic/RandomOracleRouting.lean`](../../Examples/ProgramLogic/RandomOracleRouting.lean)
+shows why the condition matters: comparing distinct Boolean cells accepts with probability
+`1/2`, whereas routing both inputs to one target cell accepts with probability `1`.
+The ordinary-import tests in
+[`VCVioTest/RandomOracleRouting.lean`](../../VCVioTest/RandomOracleRouting.lean)
+also cover adaptive and repeated queries, disjoint domains, and structural routing in `Type 1`.
+The measure laws use the existing table-sampling API in `Type 0`; arbitrary preloaded caches
+require their own consistency condition.
 
 ## Instrumentation Pattern: `preInsert` / `postInsert`
 

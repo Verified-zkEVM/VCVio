@@ -21,8 +21,9 @@ It also allows for generating things like seed values for a computation more tig
 
 `QueryImpl.withCost` and `QueryImpl.withCounting` are response-independent traces, defined as
 specialisations of `QueryImpl.withTraceBefore` (see `Tracing.lean`): the cost is accumulated
-*before* the underlying handler runs, so failed queries still incur their cost. The counting
-case picks `QueryCount.single` as the trace function.
+*before* the underlying handler runs. An abort in the underlying monad can still discard
+the whole writer result; retaining a count on failure requires an optional result inside
+the writer. The counting case uses `Multiplicative.ofAdd ∘ QueryCount.single`.
 -/
 
 @[expose] public section
@@ -43,19 +44,23 @@ section withCost
 
 variable {ω : Type u} [Monoid ω]
 
+section discreteCompatibility
+
+variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+
 /-- Cost-tracking preserves failure probability: for any base monad `m` with `MonadLiftT m SPMF`,
 wrapping an oracle implementation with `withCost` does not change the probability of failure. -/
-lemma probFailure_run_simulateQ_withCost [LawfulMonad m] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF]
+lemma probFailure_run_simulateQ_withCost [LawfulMonad m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     Pr[⊥ | (simulateQ (so.withCost costFn) mx).run] = Pr[⊥ | simulateQ so mx] :=
   probFailure_run_simulateQ_withTraceBefore so costFn mx
 
-lemma NeverFail_run_simulateQ_withCost_iff [LawfulMonad m] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF]
+lemma NeverFail_run_simulateQ_withCost_iff [LawfulMonad m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     NeverFail (simulateQ (so.withCost costFn) mx).run ↔ NeverFail (simulateQ so mx) :=
   neverFail_run_simulateQ_withTraceBefore_iff so costFn mx
+
+end discreteCompatibility
 
 /-! ### EvalDist Bridge for `withCost`
 
@@ -63,18 +68,38 @@ These lemmas connect the result-marginal distribution of a `withCost`-instrument
 computation to the distribution of the uninstrumented computation, enabling direct
 probability-level reasoning about traced computations. -/
 
-lemma evalSPMF_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+/-- Cost instrumentation preserves the successful-output measure after forgetting cost. -/
+lemma evalDist_fst_run_withCost [LawfulMonad m] [EvalDistSemantics m] [MeasurableSpace α]
+    (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
+    𝒟[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] = 𝒟[simulateQ so mx] := by
+  rw [fst_map_run_withCost]
+
+section discreteCompatibility
+
+variable [MonadLiftT m SPMF]
+
+lemma evalSPMF_fst_run_withCost [LawfulMonad m] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     𝒮[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
       𝒮[simulateQ so mx] :=
   evalSPMF_fst_run_withTraceBefore so costFn mx
 
-lemma probOutput_fst_run_withCost [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+lemma probOutput_fst_run_withCost [LawfulMonad m] [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) (x : α) :
     Pr[= x | Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
       Pr[= x | simulateQ so mx] :=
   probOutput_fst_run_withTraceBefore so costFn mx x
+
+end discreteCompatibility
+
 end withCost
+
+/-- Additive counting preserves the successful-output measure after forgetting counts. -/
+lemma evalDist_fst_runAdd_withCounting [DecidableEq ι] [LawfulMonad m]
+    [EvalDistSemantics m] [MeasurableSpace α]
+    (so : QueryImpl spec m) (mx : OracleComp spec α) :
+    𝒟[Prod.fst <$> (simulateQ so.withCounting mx).runAdd] = 𝒟[simulateQ so mx] := by
+  rw [fst_map_runAdd_withCounting]
 
 end QueryImpl
 
@@ -116,7 +141,7 @@ lemma probEvent_fst_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι
     [DecidableEq ι₀] [IsUniformSpec spec₀] {α : Type}
     (oa : OracleComp spec₀ α) (p : α → Prop) :
     Pr[ fun z => p z.1 | (simulateQ (spec₀.countingOracle) oa).run] = Pr[ p | oa] := by
-  rw [show (fun z : α × QueryCount ι₀ => p z.1) = p ∘ Prod.fst from rfl,
+  rw [show (fun z : α × Multiplicative (QueryCount ι₀) => p z.1) = p ∘ Prod.fst from rfl,
     ← probEvent_map, fst_map_run_simulateQ]
 
 lemma probOutput_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}

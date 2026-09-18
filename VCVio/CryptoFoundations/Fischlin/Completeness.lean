@@ -9,6 +9,8 @@ module
 public import VCVio.CryptoFoundations.Fischlin.Defs
 public import VCVio.EvalDist.IndepProduct
 
+import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
+
 /-!
 # Fischlin Transform: Completeness
 
@@ -1250,8 +1252,7 @@ private lemma fischlinUnifSearch_mem_support {Stmt Wit Commit PrvState Chal Resp
 
 /-- Pointwise corollary of perfect completeness: on a valid `(pk, sk)` pair, for any commitment
 `(pc, sc)` in the support of `σ.commit`, any challenge `ω`, and any response `resp` in the support
-of `σ.respond _ _ sc ω`, the verifier accepts. Extracted from the `Pr[= true | …] = 1` statement
-via `probEvent_eq_one_iff` (the uniform challenge ranges over all of `Chal`). -/
+of `σ.respond _ _ sc ω`, the verifier accepts. The uniform challenge ranges over all of `Chal`. -/
 private lemma verify_of_perfectlyComplete
     {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
     [SampleableType Chal]
@@ -1259,20 +1260,8 @@ private lemma verify_of_perfectlyComplete
     (hc : σ.PerfectlyComplete) (pk : Stmt) (sk : Wit) (hrel : rel pk sk = true)
     (pc : Commit) (sc : PrvState) (hpc : (pc, sc) ∈ support (σ.commit pk sk))
     (ω : Chal) (resp : Resp) (hresp : resp ∈ support (σ.respond pk sk sc ω)) :
-    σ.verify pk pc ω resp = true := by
-  have h1 := (probOutput_eq_one_iff_forall _ true |>.mp (hc pk sk hrel)).2
-  have hmem : (σ.verify pk pc ω resp) ∈ support (do
-      let (pc, sc) ← σ.commit pk sk
-      let ω ← $ᵗ Chal
-      let π ← σ.respond pk sk sc ω
-      return σ.verify pk pc ω π) := by
-    rw [mem_support_bind_iff]
-    refine ⟨(pc, sc), hpc, ?_⟩
-    rw [mem_support_bind_iff]
-    refine ⟨ω, mem_support_uniformSample Chal, ?_⟩
-    rw [mem_support_bind_iff]
-    exact ⟨resp, hresp, by simp⟩
-  exact h1 _ hmem
+    σ.verify pk pc ω resp = true :=
+  hc.verify pk sk hrel pc sc hpc ω resp hresp
 
 /-- The accumulating `foldl` used for the hash-sum in `modelGame` is the `Finset.univ` sum of the
 per-repetition contributions. -/

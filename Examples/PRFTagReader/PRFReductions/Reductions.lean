@@ -289,12 +289,11 @@ multiple-session unlinkability game. -/
 theorem prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) :
-    Pr[= true | PRFScheme.prfRealExp prfs.multiplePRFScheme
+    PRFScheme.prfRealExp prfs.multiplePRFScheme
         (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary)] =
-      Pr[= true | unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary] := by
-  congr 1
+          (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary) =
+      unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary := by
   unfold PRFScheme.prfRealExp unlinkMultipleExp unlinkToMultiplePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
@@ -447,12 +446,11 @@ single-session unlinkability game. -/
 theorem prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) :
-    Pr[= true | PRFScheme.prfRealExp prfs.singlePRFScheme
+    PRFScheme.prfRealExp prfs.singlePRFScheme
         (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary)] =
-      Pr[= true | unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary] := by
-  congr 1
+          (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary) =
+      unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary := by
   unfold PRFScheme.prfRealExp unlinkSingleExp unlinkToSinglePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
