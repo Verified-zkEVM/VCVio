@@ -274,6 +274,7 @@ public import VCVio.OracleComp.QueryTracking.CountingOracle
 public import VCVio.OracleComp.QueryTracking.Enforcement
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
 public import VCVio.OracleComp.QueryTracking.Iter
+public import VCVio.OracleComp.QueryTracking.ListCache
 public import VCVio.OracleComp.QueryTracking.LoggingOracle
 public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
