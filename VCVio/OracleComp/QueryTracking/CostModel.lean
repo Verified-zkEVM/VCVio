@@ -160,7 +160,7 @@ theorem expectedCost_le_of_support_bound (oa : OracleComp spec α) (cm : CostMod
     expectedCost oa cm val ≤ c := by
   let : MeasurableSpace ω := ⊤
   apply AddWriterT.expectedCost_le_of_ae_le
-  apply OracleComp.ae_of_forall_mem_support
+  apply evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
   intro w hw
   rw [AddWriterT.costs_def, support_map] at hw
   obtain ⟨z, hz, rfl⟩ := hw

@@ -6,11 +6,11 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.EvalDist.Defs.Instances
-public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
-public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 
 /-!

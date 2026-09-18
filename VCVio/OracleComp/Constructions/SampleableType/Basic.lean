@@ -7,6 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.EvalDist.Monad.Seq.Uniform
 public import ToMathlib.Data.FinEnum
@@ -304,3 +305,43 @@ noncomputable instance (priority := 100) instSampleableTypePiFintype {D : Type}
     (Equiv.arrowCongr (Fintype.equivFin D).symm (Equiv.refl α))
 
 end instances
+
+section UniformSampleImpl
+
+open OracleSpec OracleComp
+
+variable {ι : Type*} {spec : OracleSpec ι}
+
+/-- Given that the output type of all oracles has a `SampleableType` instance, replace all queries
+with uniformly random responses by calling the corresponding `uniformSample` at each query. -/
+@[expose] def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
+    QueryImpl spec ProbComp := fun t => $ᵗ spec.Range t
+
+/-- A uniformly sampled implementation answers each query with the uniform sampler for
+that query's response type. -/
+@[simp]
+lemma uniformSampleImpl_apply [∀ i, SampleableType (spec.Range i)] (t : spec.Domain) :
+    uniformSampleImpl (spec := spec) t = $ᵗ spec.Range t := rfl
+
+namespace uniformSampleImpl
+
+variable [∀ i, SampleableType (spec.Range i)]
+
+/-- Interpreting queries by full-support samplers preserves operational reachability. -/
+@[simp]
+lemma support_simulateQ {α : Type} (oa : OracleComp spec α) :
+    support (simulateQ uniformSampleImpl oa) = support oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t next ih => simp [ih]
+
+/-- Full-support query sampling also preserves the finite support when answers are enumerable. -/
+@[simp]
+lemma finSupport_simulateQ [spec.Fintype] {α : Type} [DecidableEq α]
+    (oa : OracleComp spec α) :
+    finSupport (simulateQ uniformSampleImpl oa) = finSupport oa := by
+  simp [finSupport_eq_iff_support_eq_coe]
+
+end uniformSampleImpl
+
+end UniformSampleImpl

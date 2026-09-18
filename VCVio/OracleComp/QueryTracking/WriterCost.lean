@@ -476,7 +476,7 @@ lemma aeCostAtMost_of_pathwiseCostAtMost
     {oa : AddWriterT ω (OracleComp spec) α} {w : ω}
     (h : PathwiseCostAtMost oa w) : AECostAtMost oa w := by
   let : MeasurableSpace ω := ⊤
-  apply OracleComp.ae_of_forall_mem_support oa.costs
+  apply evalDist.ae_of_forall_mem_support oa.costs _ MeasurableSet.of_discrete
   intro c hc
   rw [AddWriterT.costs_def, support_map] at hc
   obtain ⟨z, hz, rfl⟩ := hc
@@ -492,7 +492,7 @@ lemma aeCostAtLeast_of_pathwiseCostAtLeast
     {oa : AddWriterT ω (OracleComp spec) α} {w : ω}
     (h : PathwiseCostAtLeast oa w) : AECostAtLeast oa w := by
   let : MeasurableSpace ω := ⊤
-  apply OracleComp.ae_of_forall_mem_support oa.costs
+  apply evalDist.ae_of_forall_mem_support oa.costs _ MeasurableSet.of_discrete
   intro c hc
   rw [AddWriterT.costs_def, support_map] at hc
   obtain ⟨z, hz, rfl⟩ := hc
