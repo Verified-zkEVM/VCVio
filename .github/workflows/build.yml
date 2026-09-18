@@ -143,6 +143,9 @@ jobs:
             echo 'name = "VCVio"'
             echo "path = \"$GITHUB_WORKSPACE\""
             echo ''
+            echo '[[lean_lib]]'
+            echo 'name = "SchemeAPI"'
+            echo ''
             echo '[[lean_exe]]'
             echo 'name = "consumer"'
             echo 'root = "Main"'

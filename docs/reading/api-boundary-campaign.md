@@ -39,7 +39,7 @@ The API policy is:
 
 | Boundary | Evidence and intended interface | Disposition |
 | --- | --- | --- |
-| SLH-DSA `Security.SchemeGames.generalAlg` | Three projection equations were syntactic `:= rfl`; removing exposure alone fails the exported-defeq check. An ordinary proof of each equation compiles with the bundle opaque. Ordinary-import consumers must also retain perfect completeness. | pending |
+| SLH-DSA `Security.generalAlg` | Three public projection equations now have ordinary proofs with the bundle opaque. `HashSigTest/ModuleAPI/SchemeGames.lean` verifies that reduction alone fails, uses the verification equation in direct and composed consumers, and retains perfect completeness. | repaired |
 | `QueryCount` and counting writers | `#synth Monoid (Bool → Nat)` selects `QueryCount.instMonoid`, whose identity is zero and product is addition. Counts use pointwise additive algebra; writer multiplication needs the standard additive-to-multiplicative tag. | pending |
 | `QueryCache` | `#synth PartialOrder (Bool → Option Nat)` selects the cache extension order. Lookup, updates, extension and component projections need a carrier with its own instance head. | pending |
 | `QueryLog`, traversal and replay | Trace observations should use public occurrence, lookup, filtering and path laws, retaining ordered dependent answers. PolyFun #239 is open at the initial snapshot. | upstream-blocked |
@@ -52,6 +52,11 @@ The API policy is:
 | HashSig primitive and game packaging | Separate carrier projections required by dependent queries from value-level operations and proof-only exposure. | pending |
 
 ## Validation and rollout
+
+The SLH-DSA pilot at `b148e9ff` passes `./scripts/validate.sh --lint --test --axioms`:
+21,476 declarations in 720 modules, the existing 33 sorry-tainted declarations, and no
+nonstandard axioms. A separate Lake package builds and runs with an ordinary import of
+the same consumer fixture. The workflow registers that fixture as its own consumer library.
 
 Every repair includes ordinary-import consumers, including an external Lake package when a
 package boundary is involved. Cases include independent universes, genuinely different answer
