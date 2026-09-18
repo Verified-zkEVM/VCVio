@@ -73,7 +73,7 @@ variable {m : Type → Type} {In W Out : Type}
 /-- True if a party is well-formed, i.e., if it outputs iff the state is
   the result of an execution of the step function that returns `done = true`
   or `.complete` (assuming the state is reachable). -/
-@[expose] def OutputsOnlyAtCompletion [Monad m] [MonadAttach m] [LawfulMonadAttach m]
+@[expose] def OutputsOnlyAtCompletion [MonadAttach m]
     (P : Party m In W Out) : Prop :=
   let init_output := ∀ i r, r ∈ support (P.init i) →
     ∀ out ∈ support (P.output r.state), out = none;

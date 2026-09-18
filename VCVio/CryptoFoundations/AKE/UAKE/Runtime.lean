@@ -33,6 +33,8 @@ variable {m : Type → Type} [Monad m] [MonadAttach m]
 /-- The runtime observes the chosen lawful semantics, preserves public sampling, and respects
 the computation's structural output set. -/
 structure RuntimeCoherent (runtime : ProbCompRuntime m) : Prop where
+  /-- Structural support satisfies the native attachment laws. -/
+  lawfulAttach : LawfulMonadAttach m
   /-- The chosen native interpretation satisfies its pure and measurable bind laws. -/
   lawful : LawfulEvalDistSemantics m
   /-- Runtime observation agrees with the native interpretation in every output space. -/
@@ -46,6 +48,7 @@ structure RuntimeCoherent (runtime : ProbCompRuntime m) : Prop where
 
 /-- The canonical native probability runtime is coherent. -/
 theorem runtimeCoherent_probComp : RuntimeCoherent ProbCompRuntime.probComp where
+  lawfulAttach := inferInstance
   lawful := inferInstance
   evalDist_eq _ := rfl
   lift_evalDist_eq _ := rfl

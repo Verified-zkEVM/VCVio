@@ -108,7 +108,7 @@ structure Scheme (m : Type → Type) (K UK TK W : Type) where
   2. an honest run of the protocol transfers exactly `rounds` messages.
 
   This does *not* enforce the WLOG T-speaks-last convention from DF'17. -/
-@[expose] def Scheme.WellFormed [Monad m] [MonadAttach m] [LawfulMonadAttach m]
+@[expose] def Scheme.WellFormed [Monad m] [MonadAttach m]
     (proto : Scheme m K UK TK W) : Prop :=
   proto.U.OutputsOnlyAtCompletion ∧ proto.T.OutputsOnlyAtCompletion ∧
     ∀ uk tk, (uk, tk) ∈ support proto.setup →
@@ -118,7 +118,7 @@ structure Scheme (m : Type → Type) (K UK TK W : Type) where
 
 /-- The structural protocol, honest execution, and probabilistic runtime satisfy the
 admission conditions for interpreting the UAKE security game. -/
-@[expose] def Scheme.Admissible [DecidableEq K] [Monad m] [MonadAttach m] [LawfulMonadAttach m]
+@[expose] def Scheme.Admissible [DecidableEq K] [Monad m] [MonadAttach m]
     [EvalDistSemantics m] (proto : Scheme m K UK TK W) (runtime : ProbCompRuntime m) : Prop :=
   RuntimeCoherent runtime ∧ proto.WellFormed ∧ PerfectlyCorrect proto runtime ∧
     proto.HonestlyCompletes runtime
