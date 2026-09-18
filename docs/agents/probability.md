@@ -136,7 +136,9 @@ judgments and kernels; flattened support does not acquire an exact bind law.
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
-`Pr{let x ← mx; ...}[event]` is the computation-style event notation. It elaborates
+`Pr{let x ← mx; ...}[event]` is the computation-style event notation. Write the first
+statement directly after `Pr{`; no space is required. An explicit line break after `Pr{` is
+also supported for multiline sequences. It elaborates
 an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
 the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The

@@ -30,7 +30,7 @@ def coinInt : ProbComp ℤ :=
   (fun bit : Bool => if bit then (1 : ℤ) else 0) <$> ($ᵗ Bool)
 
 theorem coinInt_pointMass_le (v : ℤ) :
-    Pr{ let outcome ← coinInt}[outcome = v] ≤ (2 : ℝ≥0∞)⁻¹ := by
+    Pr{let outcome ← coinInt}[outcome = v] ≤ (2 : ℝ≥0∞)⁻¹ := by
   rw [coinInt, prEvent_map, prEvent_eq_evalDist_of_discrete,
     SampleableType.evalDist_uniformSample, uniformOn_univ_apply_setOf]
   by_cases h0 : v = 0
@@ -56,7 +56,7 @@ noncomputable def coinPrimitives : Primitives falcon512 where
 /-- A concrete finite model satisfies the nontrivial product-bound hypotheses. -/
 example (κ : ℕ) (target : FFTPair κ) (tree : FalconTree κ)
     (hleaves : tree.LeavesGE 0) (output : FFTPair κ) :
-    Pr{ let outcome ← coinPrimitives.ffSampling κ target tree}[outcome = output] ≤
+    Pr{let outcome ← coinPrimitives.ffSampling κ target tree}[outcome = output] ≤
       (2 : ℝ≥0∞)⁻¹ ^ (4 * 2 ^ κ) :=
   coinPrimitives.ffSampling_pointMass_le
     (fun _ _ _ v => coinInt_pointMass_le v) κ target tree hleaves output
@@ -65,13 +65,13 @@ example (κ : ℕ) (target : FFTPair κ) (tree : FalconTree κ)
 def modularRepresentatives : ProbComp ℤ :=
   (fun bit : Bool => if bit then (12289 : ℤ) else 0) <$> ($ᵗ Bool)
 
-example : Pr{ let x ← modularRepresentatives}[x = 0] = (2 : ℝ≥0∞)⁻¹ := by
+example : Pr{let x ← modularRepresentatives}[x = 0] = (2 : ℝ≥0∞)⁻¹ := by
   rw [modularRepresentatives, prEvent_map, prEvent_eq_evalDist_of_discrete,
     SampleableType.evalDist_uniformSample, uniformOn_univ_apply_setOf]
   norm_num [Finset.filter_insert, Finset.filter_singleton]
 
 /-- Modular reduction can increase point mass even when the output is the zero residue. -/
-example : Pr{ let x ← modularRepresentatives}[(x : ZMod 12289) = 0] = 1 := by
+example : Pr{let x ← modularRepresentatives}[(x : ZMod 12289) = 0] = 1 := by
   rw [modularRepresentatives, prEvent_map, prEvent_eq_evalDist_of_discrete,
     SampleableType.evalDist_uniformSample]
   have hset : {bit : Bool | (((if bit then 12289 else 0) : ℤ) : ZMod 12289) = 0} =
