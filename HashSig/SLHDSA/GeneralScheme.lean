@@ -57,6 +57,36 @@ def signInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
   let htSig ← GeneralHypertree.signM vp core forsPk sk.skSeed sk.pkSeed parts
   return ⟨R, forsSig, htSig⟩
 
+/-- FIPS Algorithm 19 with the message randomizer supplied rather than derived.  `SK.prf` is
+absent from the signature: the randomizer `R` is the only value `PRF_msg` contributes, so a
+caller holding `R` signs from the secret seed and the public material alone.
+
+*Scheme program.* -/
+def signInternalWithRandomizerM (vp : ValidatedParams) (core : CorePrimitives vp.params)
+    {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
+    (msg : List Byte) (skSeed : core.SkSeed) (pkSeed : core.PkSeed) (pkRoot : core.Y)
+    (R : core.Y) : m (SignatureCore vp core) := do
+  let digest ← PublicHash.hmsg core R pkSeed pkRoot msg
+  let parts := splitDigest vp.params digest
+  let forsSig ← forsSignM core parts.md.toList skSeed pkSeed parts.forsAdrs
+  let forsPk ← forsPkFromSigM core forsSig parts.md.toList pkSeed parts.forsAdrs
+  let htSig ← GeneralHypertree.signM vp core forsPk skSeed pkSeed parts
+  return ⟨R, forsSig, htSig⟩
+
+/-- Algorithm 19 signs at the randomizer `PRF_msg` derives from `SK.prf` and `addrnd`.  Read in
+the other direction: `SK.prf` reaches a signature only through `R`, which is what lets a
+`PRF_msg` oracle be substituted for the keyed function without disturbing the rest of the
+algorithm.
+
+*Scheme program.* -/
+theorem signInternalM_eq_signInternalWithRandomizerM (vp : ValidatedParams)
+    (core : CorePrimitives vp.params) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m]
+    (msg : List Byte) (sk : SecretKeyCore core) (addrnd : core.Y) :
+    (signInternalM vp core msg sk addrnd : m (SignatureCore vp core)) =
+      signInternalWithRandomizerM vp core msg sk.skSeed sk.pkSeed sk.pkRoot
+        (core.PRFmsg sk.skPrf addrnd msg) := rfl
+
 /-- FIPS Algorithm 20: recover the FORS and hypertree roots along the same typed position
 trajectory used by signing. -/
 def verifyInternalM (vp : ValidatedParams) (core : CorePrimitives vp.params)
@@ -163,6 +193,35 @@ theorem simulateQ_signInternalM (vp : ValidatedParams) (prims : Primitives vp.pa
         (signInternalM vp prims.core msg sk addrnd :
           OracleComp (publicHashSpec prims.core) (SignatureCore vp prims.core)) =
       signInternal vp prims msg sk addrnd := rfl
+
+/-- The deterministic interpretation of `signInternalWithRandomizerM`.
+
+*Scheme program.* -/
+def signInternalWithRandomizer (vp : ValidatedParams) (prims : Primitives vp.params)
+    (msg : List Byte) (skSeed : prims.SkSeed) (pkSeed : prims.PkSeed) (pkRoot : prims.Y)
+    (R : prims.Y) : SignatureCore vp prims.core :=
+  simulateQ (PublicHash.impl prims)
+    (signInternalWithRandomizerM vp prims.core msg skSeed pkSeed pkRoot R :
+      OracleComp (publicHashSpec prims.core) (SignatureCore vp prims.core))
+
+/-- The deterministic signer at the randomizer `PRF_msg` derives from `SK.prf` and `addrnd`.
+
+*Scheme program.* -/
+theorem signInternal_eq_signInternalWithRandomizer (vp : ValidatedParams)
+    (prims : Primitives vp.params) (msg : List Byte) (sk : SecretKeyCore prims.core)
+    (addrnd : prims.Y) :
+    signInternal vp prims msg sk addrnd =
+      signInternalWithRandomizer vp prims msg sk.skSeed sk.pkSeed sk.pkRoot
+        (prims.PRFmsg sk.skPrf addrnd msg) := rfl
+
+@[simp]
+theorem simulateQ_signInternalWithRandomizerM (vp : ValidatedParams)
+    (prims : Primitives vp.params) (msg : List Byte) (skSeed : prims.SkSeed)
+    (pkSeed : prims.PkSeed) (pkRoot : prims.Y) (R : prims.Y) :
+    simulateQ (PublicHash.impl prims)
+        (signInternalWithRandomizerM vp prims.core msg skSeed pkSeed pkRoot R :
+          OracleComp (publicHashSpec prims.core) (SignatureCore vp prims.core)) =
+      signInternalWithRandomizer vp prims msg skSeed pkSeed pkRoot R := rfl
 
 @[simp]
 theorem simulateQ_verifyInternalM (vp : ValidatedParams) (prims : Primitives vp.params)

@@ -288,6 +288,21 @@ theorem prfAbsAdvantage_toReal {K D R : Type} [DecidableEq D] [SampleableType R]
   exact ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _)
     (MeasureTheory.measure_ne_top _ _)
 
+/-- **A `PRF` hop, as an inequality.**  The real experiment's success probability is at most the
+distinguishing advantage plus the ideal experiment's.  This is what a summand named after a `PRF`
+hop does in a bound, stated once so that a reduction taking the hop does not restate it.
+
+*Composition arithmetic.* -/
+theorem prfRealExp_le_prfAbsAdvantage_add_prfIdealExp {K D R : Type} [DecidableEq D]
+    [SampleableType R] (prf : PRFScheme K D R) (adv : PRFScheme.PRFAdversary D R) :
+    𝒟[prf.prfRealExp adv] {true} ≤
+      prfAbsAdvantage prf adv + 𝒟[PRFScheme.prfIdealExp adv] {true} := by
+  rw [prfAbsAdvantage, ENNReal.absDiff]
+  set a := 𝒟[prf.prfRealExp adv] {true}
+  set b := 𝒟[PRFScheme.prfIdealExp adv] {true}
+  calc a ≤ a - b + b := le_tsub_add
+    _ ≤ a - b + (b - a) + b := by gcongr; exact le_self_add
+
 /-! ## The twelve summands -/
 
 /-- At a validated parameter set the Winternitz width is at least two, so the `ℕ`-subtraction in
