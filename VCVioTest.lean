@@ -45,6 +45,7 @@ public import VCVioTest.MerkleTreeHashForest
 public import VCVioTest.MerkleTreeHashing
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
+public import VCVioTest.ModuleAPI.Cache
 public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.MonadProbability

@@ -153,3 +153,12 @@ The separate package consumer builds and runs. The definitions, adversary conver
 experiments, and bounds are unchanged. Global `@[reducible]` was unnecessary for the existing
 proofs and caused the new simp projection laws to be indexed under unfolded implementations;
 ordinary-import simplification works after removing it. No unsafe reducibility override is used.
+
+### Cache validation
+
+The cache repair at `02de09d9` passes `./scripts/validate.sh --lint --test --axioms`:
+21,507 declarations, 720 modules, 33 existing sorry-tainted declarations, zero nonstandard axioms.
+The external cache consumer builds and runs. Two downstream proofs now identify cache updates
+and product projections explicitly. Construct caches with `QueryCache.ofFn`; use `.toFn` when a
+plain function is required. The cache order still requires identical stored values and does not
+inherit the value order of response types.

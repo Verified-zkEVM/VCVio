@@ -31,21 +31,66 @@ namespace OracleSpec
 
 variable {ι : Type u} {spec : OracleSpec ι}
 
-/-- Type to represent a cache of queries to oracles in `spec`.
-Defined to be a function from (indexed) inputs to an optional output. -/
-@[reducible] def QueryCache (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
-  (t : spec.Domain) → Option (spec.Range t)
+/-- A partial dependent answer table, ordered by extension of cached responses. -/
+structure QueryCache (spec : OracleSpec.{u, v} ι) : Type (max u v) where
+  /-- Look up the response stored at an oracle index. -/
+  toFn : (t : spec.Domain) → Option (spec.Range t)
 
 namespace QueryCache
 
-instance : EmptyCollection (QueryCache spec) := ⟨fun _ => none⟩
+instance : CoeFun (QueryCache spec) (fun _ => (t : spec.Domain) → Option (spec.Range t)) :=
+  ⟨QueryCache.toFn⟩
+
+/-- Package a partial dependent answer function as a cache. -/
+def ofFn (f : (t : spec.Domain) → Option (spec.Range t)) : QueryCache spec := ⟨f⟩
+
+@[simp]
+lemma ofFn_apply (f : (t : spec.Domain) → Option (spec.Range t)) (t : spec.Domain) :
+    ofFn f t = f t := rfl
+
+@[simp]
+lemma toFn_ofFn (f : (t : spec.Domain) → Option (spec.Range t)) : (ofFn f).toFn = f := rfl
+
+@[simp]
+lemma ofFn_toFn (cache : QueryCache spec) : ofFn cache.toFn = cache := rfl
+
+instance : EmptyCollection (QueryCache spec) := ⟨ofFn (fun _ => none)⟩
 
 @[simp]
 lemma empty_apply (t : spec.Domain) : (∅ : QueryCache spec) t = none := rfl
 
 @[ext]
-protected lemma ext {c₁ c₂ : QueryCache spec} (h : ∀ t, c₁ t = c₂ t) : c₁ = c₂ :=
-  funext h
+protected lemma ext {c₁ c₂ : QueryCache spec} (h : ∀ t, c₁ t = c₂ t) : c₁ = c₂ := by
+  cases c₁
+  cases c₂
+  congr 1
+  exact funext h
+
+/-- Cache lookup is injective. -/
+theorem toFn_injective : Function.Injective (@toFn ι spec) :=
+  fun _ _ h => QueryCache.ext (congrFun h)
+
+/-- A cache and its dependent optional lookup table contain the same data. -/
+def equivFn : QueryCache spec ≃ ((t : spec.Domain) → Option (spec.Range t)) where
+  toFun := toFn
+  invFun := ofFn
+  left_inv := ofFn_toFn
+  right_inv := toFn_ofFn
+
+instance : Inhabited (QueryCache spec) := ⟨∅⟩
+
+instance [DecidableEq ((t : spec.Domain) → Option (spec.Range t))] :
+    DecidableEq (QueryCache spec) := fun c₁ c₂ =>
+  decidable_of_iff (c₁.toFn = c₂.toFn) toFn_injective.eq_iff
+
+instance [Countable ((t : spec.Domain) → Option (spec.Range t))] :
+    Countable (QueryCache spec) := toFn_injective.countable
+
+instance [Finite ((t : spec.Domain) → Option (spec.Range t))] :
+    Finite (QueryCache spec) := Finite.of_injective toFn toFn_injective
+
+instance [Fintype ((t : spec.Domain) → Option (spec.Range t))] :
+    Fintype (QueryCache spec) := Fintype.ofEquiv _ equivFn.symm
 
 /-! ### Agreement with answer functions -/
 
@@ -70,7 +115,7 @@ instance : PartialOrder (QueryCache spec) where
   le c₁ c₂ := ∀ ⦃t⦄ ⦃u : spec.Range t⦄, c₁ t = some u → c₂ t = some u
   le_refl _ _ _ h := h
   le_trans _ _ _ h₁₂ h₂₃ _ _ h := h₂₃ (h₁₂ h)
-  le_antisymm a b hab hba := by funext t; aesop
+  le_antisymm a b hab hba := by apply QueryCache.ext; intro t; aesop
 
 instance : OrderBot (QueryCache spec) where
   bot := ∅
@@ -136,7 +181,7 @@ lemma functionUpdate_of_ne {t' t : spec.Domain} (u : spec.Range t) (h : t' ≠ t
 /-- Add an index + input pair to the cache by updating the function
 (wrapper around `Function.update`). -/
 def cacheQuery (t : spec.Domain) (u : spec.Range t) : QueryCache spec :=
-  Function.update cache t u
+  ofFn (Function.update cache t (some u))
 
 @[simp, grind =]
 lemma cacheQuery_self (t : spec.Domain) (u : spec.Range t) :
@@ -208,19 +253,19 @@ variable {ι₁ ι₂ : Type*} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpe
 
 /-- Project a cache for `spec₁ + spec₂` onto `spec₁`. -/
 protected def fst (cache : QueryCache (spec₁ + spec₂)) : QueryCache spec₁ :=
-  fun t => cache (.inl t)
+  ofFn (fun t => cache (.inl t))
 
 /-- Project a cache for `spec₁ + spec₂` onto `spec₂`. -/
 protected def snd (cache : QueryCache (spec₁ + spec₂)) : QueryCache spec₂ :=
-  fun t => cache (.inr t)
+  ofFn (fun t => cache (.inr t))
 
 /-- Embed a cache for `spec₁` into one for `spec₁ + spec₂`. -/
 protected def inl (cache : QueryCache spec₁) : QueryCache (spec₁ + spec₂) :=
-  Sum.rec cache (fun _ => none)
+  ofFn (Sum.rec cache (fun _ => none))
 
 /-- Embed a cache for `spec₂` into one for `spec₁ + spec₂`. -/
 protected def inr (cache : QueryCache spec₂) : QueryCache (spec₁ + spec₂) :=
-  Sum.rec (fun _ => none) cache
+  ofFn (Sum.rec (fun _ => none) cache)
 
 @[simp] lemma fst_apply (cache : QueryCache (spec₁ + spec₂)) (t : ι₁) :
     cache.fst t = cache (.inl t) := rfl
@@ -258,9 +303,10 @@ lemma inl_cacheQuery [DecidableEq ι₁] [DecidableEq ι₂]
     (cache : QueryCache spec₁) (t : spec₁.Domain) (u : spec₁.Range t) :
     (cache.cacheQuery t u).inl =
       (cache.inl : QueryCache (spec₁ + spec₂)).cacheQuery (.inl t) u := by
-  unfold QueryCache.cacheQuery QueryCache.inl
-  exact Sum.rec_update_left (γ := fun t => Option ((spec₁ + spec₂).Range t))
-    cache (fun _ => none) t (some u)
+  apply QueryCache.ext
+  intro q
+  exact congrFun (Sum.rec_update_left (γ := fun t => Option ((spec₁ + spec₂).Range t))
+    cache (fun _ => none) t (some u)) q
 
 /-- Embedding a right-component cache commutes with caching a right-component query. -/
 @[simp]
@@ -268,9 +314,10 @@ lemma inr_cacheQuery [DecidableEq ι₁] [DecidableEq ι₂]
     (cache : QueryCache spec₂) (t : spec₂.Domain) (u : spec₂.Range t) :
     (cache.cacheQuery t u).inr =
       (cache.inr : QueryCache (spec₁ + spec₂)).cacheQuery (.inr t) u := by
-  unfold QueryCache.cacheQuery QueryCache.inr
-  exact Sum.rec_update_right (γ := fun t => Option ((spec₁ + spec₂).Range t))
-    (fun _ => none) cache t (some u)
+  apply QueryCache.ext
+  intro q
+  exact congrFun (Sum.rec_update_right (γ := fun t => Option ((spec₁ + spec₂).Range t))
+    (fun _ => none) cache t (some u)) q
 
 @[simp] lemma fst_empty :
     (∅ : QueryCache (spec₁ + spec₂)).fst = (∅ : QueryCache spec₁) := rfl
