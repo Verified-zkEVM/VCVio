@@ -29,6 +29,22 @@ The scalar tracing/counting/logging corollaries remain in their existing compati
 until their clients migrate. Native owners do not import those modules. This is an import
 boundary, not a conversion through the scalar backend.
 
+## Independent-product checkpoint
+
+`EvalDist/IndepProduct` is a native event/reachability owner exported by `VCVio.Native`.
+Finite product measures, observable products, lossy coordinate marginals and integrals, and
+measurable product families use Mathlib's `Measure.pi` and kernel products. Coordinate event
+equality needs full success mass only in the other factors. Reachability elimination uses
+core `LawfulMonadAttach` without an exactness mixin. Event factorization and coordinate
+observations require no measurable space on the original payloads.
+
+The two Fischlin product callers use these public laws at their existing scalar observation
+boundaries. Their surrounding scalar theorem families remain a separate conversion slice.
+The independent-product owner imports no retired probability backend or compatibility class;
+its regression module checks that boundary along with real parameter/output spaces and loss
+from an unobserved factor. This checkpoint targets `main` independently of the expected-cost
+and abort-analysis conversion PRs.
+
 ## Subsequent PRs
 
 | Slice | Scope and API checkpoint |
@@ -60,6 +76,10 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
 | Every possible execution satisfies an invariant | Operational support or indexed reachability; probability interpretation is unnecessary. |
 | Stateful composition | Joint result/state kernels; `StateT.evalDistKernel_bind` threads the resulting state. |
+| Independent joint events or tuple equality | `prEvent_forall_coord_mOfFn`/`mPi` and `prEvent_eq_mOfFn`/`mPi`, with no payload measurable-space premise. |
+| Coordinate observation or expectation | `evalDist_map_eval_mOfFn_eq_smul`/`mPi_eq_smul` and `lintegral_evalDist_mPi_coord_eq_mul`; retain other factors' success masses. |
+| Independent observable family | `Fin.mOfFn_map`/`Fintype.mPi_map`, then `evalDist_map_coord_mOfFn`/`mPi` on the chosen observation space. |
+| Parameterized independent family | `measurable_evalDist_mOfFn`/`mPi`, then `evalDistKernel` on the chosen parameter space. |
 | Relational sequencing | Explicit measurable coupling families, or justified countable/AE selection rules already in the native coupling API. |
 | Finite or countable probability calculation | Mathlib sum/integral identities under the actual concentration and measurability assumptions. |
 

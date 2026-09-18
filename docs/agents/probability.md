@@ -426,8 +426,27 @@ Independent products denote product measures: `evalDist_mOfFn` and `evalDist_mPi
 `Measure.pi fun i => 𝒟[f i]` directly from `LawfulEvalDistSemantics` and Mathlib's
 `measurePreserving_piFinSuccAbove`/`pi_map_piCongrLeft`. The index traversal itself lives in
 `ToMathlib.Control.Monad.Fold`, so these measure laws do not import the scalar product proofs.
-`evalDist_map_eval_mPi` reads one coordinate back through `Measure.pi_map_eval` when the factors
-have full mass; `lintegral_evalDist_mPi_coord` then integrates a coordinate functional directly.
+`evalDist_map_eval_mOfFn_eq_smul` and `evalDist_map_eval_mPi_eq_smul` use
+`Measure.pi_map_eval`: a coordinate marginal is its factor's measure scaled by every other
+factor's success mass. The full-mass corollaries recover the factor itself.
+`lintegral_evalDist_mPi_coord_eq_mul` gives the corresponding integral formula for lossy
+families; `lintegral_evalDist_mPi_coord` handles full-mass factors.
+`Fin.mOfFn_map` and `Fintype.mPi_map` move coordinate observations through sequencing.
+`evalDist_map_coord_mOfFn` and `evalDist_map_coord_mPi` then give product measures on the
+chosen observation space without requiring a measurable space on the original payloads.
+`measurable_evalDist_mOfFn` and `measurable_evalDist_mPi` assemble measurable factor families
+into measurable product families, so `evalDistKernel` packages them as Mathlib kernels on
+the chosen parameter space. The proof uses kernel products and measurable reindexing.
+
+`VCVio.EvalDist.IndepProduct` exports native event and reachability rules, also available through
+`VCVio.Native`. Joint coordinate events factor by `prEvent_forall_coord_mOfFn` and
+`prEvent_forall_coord_mPi`; tuple equality uses `prEvent_eq_mOfFn` and `prEvent_eq_mPi`.
+These event rules require neither a measurable payload space nor attachment. The coordinate
+`_eq_mul` rules retain the other factors' success masses, `_le` gives an unconditional bound,
+and `prEvent_coord_mOfFn`/`prEvent_coord_mPi` need only the *other* factors to be lossless.
+`mem_support_mOfFn` and `mem_support_mPi` eliminate reachable coordinates using core
+`LawfulMonadAttach`; they require no exact-attachment or probability compatibility mixin.
+
 For finite uniform-output computations, `evalDist_mOfFn_uniformOn_pi` and
 `evalDist_mPi_uniformOn_pi` combine those laws with Mathlib's `uniformOn_pi`, allowing each
 factor its own uniform set. Their constant-full-space corollaries take the single-draw

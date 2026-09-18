@@ -11,6 +11,7 @@ public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Potential
 import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Potential
+import VCVio.EvalDist.Expectation
 
 /-!
 # Fischlin supermartingale induction and knowledge soundness
