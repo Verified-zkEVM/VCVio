@@ -57,6 +57,7 @@ public import Examples.PRFTagReader.PRFReductions
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
 public import Examples.PRFTagReader.PRFReductions.Reductions
 public import Examples.PRFTagReader.PRFReductions.Structural
+public import Examples.PRFTagReader.ReductionBudgets
 public import Examples.PRFTagReader.Table
 public import Examples.PRFTagReader.UnlinkReduction
 public import Examples.PRGfromPRF
