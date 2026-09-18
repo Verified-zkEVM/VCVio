@@ -19,7 +19,9 @@ public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.CmaToNma
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.ExtractionCost
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Fork
+public import VCVio.CryptoFoundations.FiatShamir.Sigma.KnowledgeExtraction
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Reductions
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Security
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
@@ -133,6 +135,7 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Targets
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.CryptoFoundations.ReplayFork
+public import VCVio.CryptoFoundations.ReplayForkCost
 public import VCVio.CryptoFoundations.RoundByRound
 public import VCVio.CryptoFoundations.SecExp
 public import VCVio.CryptoFoundations.SecExp.Measure

@@ -61,6 +61,27 @@ result, the bound is *unconditional* in `pk`: there is no remaining "verifier
 accepts a uniform challenge" term that would have to be discharged separately
 for keys on which verification is independent of the challenge.
 
+## Fixed-Statement Fiat–Shamir Extraction
+
+[`FiatShamir/Sigma/KnowledgeExtraction.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/KnowledgeExtraction.lean)
+starts with an ordinary prover given its statement and message before execution. Its named
+adapter appends the final verification query to an initially empty cached oracle and proves
+that forkable acceptance equals acceptance of the actual verifier. `knowledgeExtractor_success`
+then gives the existing replay reduction's valid-witness bound at that fixed statement.
+Failed forks retain the reduction's uniform-witness fallback.
+
+[`FiatShamir/Sigma/ExtractionCost.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/ExtractionCost.lean)
+proves an all-branch bound of `2 * (Q + 1)` fresh challenge requests for the replay program
+used by that same extractor, from a bound of `Q` source hash calls. The appended verifier slot
+is counted once. Internal uniform randomness, cache hits, and pure cursor traversal are separate
+from this resource; the bound is not a machine-time or PPT certificate.
+The reusable replay bound is in
+[`ReplayForkCost.lean`](../../VCVio/CryptoFoundations/ReplayForkCost.lean).
+
+[`VCVioTest/FiatShamirKnowledgeExtraction.lean`](../../VCVioTest/FiatShamirKnowledgeExtraction.lean)
+checks zero-query acceptance with a challenge-independent verifier, adaptive final-query
+cache hits and misses, and the corresponding extraction budgets.
+
 ## Restricted Schnorr Challenges
 
 [`VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean`](../../VCVio/CryptoFoundations/SigmaProtocol/ChallengeRestriction.lean)
