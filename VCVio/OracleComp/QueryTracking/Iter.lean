@@ -88,20 +88,20 @@ private lemma countingOracle.mem_support_simulate_bind_iff [DecidableEq ι]
       ∃ x qc1 qc2, (x, qc1) ∈ support (countingOracle.simulate oa 0) ∧
         (z.1, qc2) ∈ support (countingOracle.simulate (ob x) 0) ∧
         z.2 = qc1 + qc2 := by
-  -- Rewrite each side to the underlying `WriterT.run`, then unfold the `WriterT` bind.
+  -- Rewrite each side to the underlying `AddWriterT.runAdd`, then unfold the `WriterT` bind.
   have hsim : ∀ {γ : Type u} (oc : OracleComp spec γ),
       support (countingOracle.simulate oc 0) =
-      support (((simulateQ countingOracle oc).run) : OracleComp spec (γ × QueryCount ι)) := by
+      support (((simulateQ countingOracle oc).runAdd) : OracleComp spec (γ × QueryCount ι)) := by
     intro γ oc
     simp [countingOracle.simulate, Prod.map_def]
-  rw [hsim, hsim, simulateQ_bind, WriterT.run_bind]
+  rw [hsim, hsim, simulateQ_bind, AddWriterT.runAdd_bind]
   simp only [support_bind, Set.mem_iUnion, support_map, Set.mem_image]
   refine ⟨?_, ?_⟩
   · rintro ⟨⟨a, qc1⟩, ha, ⟨b, qc2⟩, hb, rfl⟩
-    exact ⟨a, qc1, qc2, ha, hsim _ ▸ hb, by simp [QueryCount.monoid_mul_def]⟩
+    exact ⟨a, qc1, qc2, ha, hsim _ ▸ hb, by simp⟩
   · rintro ⟨a, qc1, qc2, ha, hb, hsum⟩
     exact ⟨(a, qc1), ha, (z.1, qc2), hsim _ ▸ hb,
-      Prod.ext rfl (by simp [QueryCount.monoid_mul_def, hsum])⟩
+      Prod.ext rfl (by simp [hsum])⟩
 
 /-- Every counting-oracle support point of the body `oa` lifts to a counting-oracle
 support point of `replicate n oa` whose query count is `n` times the body's. -/

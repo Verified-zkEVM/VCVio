@@ -199,6 +199,39 @@ namespace AddWriterT
 
 variable {ω : Type u} {M : Type u → Type v} [Monad M] {α : Type u}
 
+/-- Observe the output and additive cost, removing the writer's multiplicative type tag. -/
+def runAdd (oa : AddWriterT ω M α) : M (α × ω) :=
+  Prod.map id Multiplicative.toAdd <$> oa.run
+
+/-- Removing the cost tag preserves the output projection. -/
+@[simp]
+lemma fst_map_runAdd [LawfulMonad M] (oa : AddWriterT ω M α) :
+    Prod.fst <$> oa.runAdd = Prod.fst <$> oa.run := by
+  simp [runAdd, Functor.map_map]
+
+@[simp]
+lemma runAdd_pure [AddMonoid ω] [LawfulMonad M] (x : α) :
+    (pure x : AddWriterT ω M α).runAdd = pure (x, 0) := by
+  simp [runAdd]
+
+@[simp]
+lemma runAdd_bind [AddMonoid ω] [LawfulMonad M] {β : Type u}
+    (oa : AddWriterT ω M α) (ob : α → AddWriterT ω M β) :
+    (oa >>= ob).runAdd = oa.runAdd >>= fun (x, cost) =>
+      Prod.map id (cost + ·) <$> (ob x).runAdd := by
+  simp [runAdd, WriterT.run_bind, map_bind, bind_map_left, Functor.map_map, Prod.map]
+
+@[simp]
+lemma runAdd_map [AddMonoid ω] [LawfulMonad M] {β : Type u}
+    (f : α → β) (oa : AddWriterT ω M α) :
+    (f <$> oa).runAdd = Prod.map f id <$> oa.runAdd := by
+  simp [runAdd, Functor.map_map, Prod.map]
+
+@[simp]
+lemma runAdd_liftM [AddMonoid ω] [LawfulMonad M] (oa : M α) :
+    (liftM oa : AddWriterT ω M α).runAdd = (fun x => (x, 0)) <$> oa := by
+  simp [runAdd, Functor.map_map]
+
 /-- Forget the additive cost log and keep only the outputs of an `AddWriterT` computation. -/
 def outputs (oa : AddWriterT ω M α) : M α :=
   Prod.fst <$> oa.run
@@ -228,6 +261,11 @@ lemma costs_pure [AddMonoid ω] [LawfulMonad M] (x : α) :
 @[simp]
 lemma run_addTell [AddMonoid ω] (w : ω) :
     (addTell (M := M) w).run = pure (⟨⟩, Multiplicative.ofAdd w) := rfl
+
+@[simp]
+lemma runAdd_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
+    (addTell (M := M) w).runAdd = pure (⟨⟩, w) := by
+  simp [runAdd]
 
 lemma outputs_addTell [AddMonoid ω] [LawfulMonad M] (w : ω) :
     (addTell (M := M) w).outputs = pure ⟨⟩ := by

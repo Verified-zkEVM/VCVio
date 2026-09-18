@@ -410,7 +410,7 @@ compose them automatically through multi-query handler programs:
 | `cachingOracle` | `cachingOracle_triple` | `cache₀ ≤ cache' ∧ cache' t = some v` (shared live-query + cache-monotonicity) |
 | `seededOracle` | `seededOracle_triple` | branch on `seed t`: `nil → no-op`, `cons u us → pop head` |
 | `loggingOracle` | `loggingOracle_triple` | `log' = log₀ ++ [⟨t, v⟩]` (always extend the log) |
-| `countingOracle` | `countingOracle_triple` | `qc' = qc₀ + QueryCount.single t` (monoid variant of `WriterT` bridge) |
+| `countingOracle` | `countingOracle_triple` | `toAdd qc' = qc₀ + QueryCount.single t` (additive writer via the monoid bridge) |
 | `costOracle` | `costOracle_triple` | `s' = s₀ * costFn t` for arbitrary `[Monoid ω]` |
 
 The `WriterT`-based handlers come in both `Append`-parameterized
@@ -450,7 +450,7 @@ Worked examples in `HandlerSpecs.lean`:
 |---------|---------------|
 | `simulateQ_cachingOracle_preserves_cache_le` | Whole-simulation cache monotonicity for `cachingOracle` (`StateT`) |
 | `simulateQ_cachingLoggingOracle_preserves_cache_le` / `..._log_prefix` | Stacked `StateT` handler preserves each component's invariant |
-| `simulateQ_countingOracle_preserves_le` | Whole-simulation count monotonicity for `countingOracle` via the `WriterT` lift with `I qc := qc₀ ≤ qc` |
+| `simulateQ_countingOracle_preserves_le` | Whole-simulation count monotonicity for `countingOracle` via the `WriterT` lift with `I qc := qc₀ ≤ Multiplicative.toAdd qc` |
 | `simulateQ_costOracle_preserves_submonoid` | Submonoid closure: if `costFn t ∈ S` for every `t`, the accumulated cost stays in `S` |
 
 ### Unary-to-relational handler lift (`Relational/HandlerFromUnary.lean`)
