@@ -112,3 +112,14 @@ The framework machinery exercised: `cachingOracle`, `loggingOracle`,
 `IsTotalQueryBound`, the birthday bound
 `probEvent_cacheCollision_le_birthday_total_tight`, and the identical-until-bad
 TVD bound `tvDist_simulateQ_le_probEvent_bad_dist`.
+
+## Complete inner-product executions
+
+`Examples/InnerProduct/Execution.lean` connects the recursive protocol's two-party run to
+its oracle source program at arbitrary folding depth. The equality retains the complete
+public path and both party outputs and holds after every observation of that result.
+It is monad-parametric: a stateful challenge handler also retains its final private state.
+
+`VCVioTest/InnerProduct/Execution.lean` composes the bridge with the independent plain-effect
+evaluator and checks zero-round and one-round executions with a counter-dependent challenge.
+These consumers use ordinary imports and compare the full transcript, verdict, and counter.
