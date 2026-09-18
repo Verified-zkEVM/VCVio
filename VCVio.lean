@@ -41,6 +41,8 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
 public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.CostAccounting
 public import VCVio.CryptoFoundations.Fischlin.Defs
+public import VCVio.CryptoFoundations.Fischlin.ExpectedCost
+public import VCVio.CryptoFoundations.Fischlin.ExpectedSigningCost
 public import VCVio.CryptoFoundations.Fischlin.ExtractionCost
 public import VCVio.CryptoFoundations.Fischlin.ExtractionGuarantee
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness

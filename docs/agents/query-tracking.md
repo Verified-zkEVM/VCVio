@@ -400,3 +400,18 @@ When adding a new example or construction:
    rather than forcing a coarse worst-case expectation bound.
 
 This keeps the theorem layer mathematically honest and makes the public API easier to read.
+
+## Exact Fischlin signing costs
+
+`VCVio/CryptoFoundations/Fischlin/ExpectedCost.lean` instruments the actual zero-stopping
+search with `HasQuery.Program.withUnitCost`, retaining its output, additive counter, and final
+random-oracle cache. A duplicate-free list of `n` challenges, initially fresh for every response,
+has expected hash calls `∑ j < n, (1 - 2⁻ᵇ)^j`. Public execution equations distinguish fresh
+sampling from cache hits: both count a call, while a hit preserves its cached answer.
+
+`ExpectedSigningCost.lean` composes the actual searches at distinct repetition tags and proves
+the honest signer's exact expectation `ρ * 2ᵇ * (1 - (1 - 2⁻ᵇ)^|Chal|)`. This includes zero
+repetitions and a one-point hash range. The count measures hash calls; prover-local randomness,
+response arithmetic, and cache lookup work have separate costs. Ordinary-import consumers in
+`VCVioTest/FischlinExpectedCost.lean` also check the joint output/count/cache law for repeated
+cached queries with a nonzero answer, where the fresh-search formula's hypotheses do not hold.
