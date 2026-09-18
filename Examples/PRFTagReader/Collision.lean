@@ -388,7 +388,7 @@ private lemma simulateQ_authRF_forge_le
           by_cases hnn : n = nm
           · subst hnn
             have := hdsplit.2 p.1
-            rw [if_pos hpNm] at this
+            rw [ite_eq_left hpNm] at this
             exact this.mono (Nat.zero_le 1)
           · have hsplitn := (isQueryBoundP_query_bind_iff (p := pNonce n)
               (Sum.inr transcript) oa 1).mp (hdistinct n)
@@ -398,7 +398,7 @@ private lemma simulateQ_authRF_forge_le
               rw [← hnm]
               exact fun h => hnn h.symm
             have := hsplitn.2 p.1
-            rwa [if_neg hfalse] at this
+            rwa [ite_eq_right hfalse] at this
         -- `forgeInv` for the continuation.
         have hinvcont : forgeInv (oa p.1) p.2 := by
           refine ⟨hpforged, ?_⟩
@@ -410,7 +410,7 @@ private lemma simulateQ_authRF_forge_le
             refine Or.inr ?_
             subst hnn
             have := hdsplit.2 p.1
-            rwa [if_pos hpNm] at this
+            rwa [ite_eq_left hpNm] at this
           · -- Cell outside column `nm`: carried over from `st`.
             have hcellst : st.responses (t', n) = some d :=
               hreaderState.2 t' n d hnn hcell
@@ -427,7 +427,7 @@ private lemma simulateQ_authRF_forge_le
               have := (isQueryBoundP_query_bind_iff (p := pNonce n)
                 (Sum.inr transcript) oa 0).mp hb
               have := this.2 p.1
-              rwa [if_neg hfalse] at this
+              rwa [ite_eq_right hfalse] at this
         exact ih p.1 (q - 1) p.2 hqcont hdcont hinvcont
       -- Combine the step bound and the continuation bound.
       have hcombine := probEvent_bind_le_add
@@ -581,27 +581,6 @@ theorem authExp_le_prfAdvantage_add_collisionBound
   gcongr
   exact authRFExp_le_collisionBound_of_distinctReaderNonces adversary q hq hdistinct
     maxDigestProb hmax
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
-/-- Existential form of `authExp_le_prfAdvantage_add_collisionBound`: there is a PRF adversary
-whose distinguishing advantage, added to the distinct-reader-nonce collision term, bounds the
-authentication adversary's forgery probability. The witness is `authToPRFReduction adversary`. -/
-theorem exists_prfAdv_authExp_le_prfAdvantage_add_collisionBound
-    (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : AuthAdversary TagId Nonce Digest)
-    (q : ℕ)
-    (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
-    (hdistinct : HasDistinctReaderNonces adversary)
-    (maxDigestProb : ℝ)
-    (hmax : ∀ d : Digest,
-      (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ maxDigestProb) :
-    ∃ prfAdv : PRFScheme.PRFAdversary (TagId × Nonce) Digest,
-      (Pr[= true | authExp (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) prfs adversary]).toReal ≤
-        PRFScheme.prfAdvantage prfs.multiplePRFScheme prfAdv +
-        ((q * Fintype.card TagId : ℕ) : ℝ) * maxDigestProb :=
-  ⟨authToPRFReduction adversary,
-    authExp_le_prfAdvantage_add_collisionBound prfs adversary q hq hdistinct maxDigestProb hmax⟩
 
 omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Uniform-`Digest` specialization of `authExp_le_prfAdvantage_add_collisionBound`: when `Digest`

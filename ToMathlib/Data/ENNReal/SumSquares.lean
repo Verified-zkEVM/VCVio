@@ -5,7 +5,8 @@ Authors: Quang Dao
 -/
 module
 
-public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
+public import ToMathlib.MeasureTheory.Integral.Quadratic
+public import Mathlib.MeasureTheory.Integral.Lebesgue.Countable
 
 /-!
 # Sum-of-squares inequalities for `ℝ≥0∞`
@@ -16,13 +17,12 @@ These are used in the forking lemma and other game-hopping arguments.
 
 @[expose] public section
 
-open Finset ENNReal
+open Finset ENNReal MeasureTheory
 
 namespace ENNReal
 
-/-- The `ℝ≥0∞` form of Mathlib's root `two_mul_le_add_sq` (which needs an ordered ring with
-`ExistsAddOfLE` and `MulPosStrictMono`, so it does not apply to `ℝ≥0∞`); inside `open ENNReal` the
-unqualified name resolves to this lemma. -/
+/-- The `ℝ≥0∞` form of Mathlib's root `two_mul_le_add_sq`. The root lemma requires strict
+multiplication and additive order reflection, which fail in the presence of `⊤`. -/
 lemma two_mul_le_add_sq (a b : ℝ≥0∞) :
     2 * a * b ≤ a ^ 2 + b ^ 2 := by
   rcases eq_or_ne a ⊤ with rfl | ha
@@ -33,35 +33,15 @@ lemma two_mul_le_add_sq (a b : ℝ≥0∞) :
   exact_mod_cast _root_.two_mul_le_add_sq a.toNNReal b.toNNReal
 
 /-- The `ℝ≥0∞` form of Mathlib's root `sq_sum_le_card_mul_sum_sq`
-(`Mathlib/Algebra/Order/Chebyshev`, stated for linearly ordered rings); inside `open ENNReal` the
-unqualified name resolves to this lemma. -/
+(`Mathlib/Algebra/Order/Chebyshev`), whose strict ordered-semiring assumptions exclude `ℝ≥0∞`. -/
 lemma sq_sum_le_card_mul_sum_sq {ι' : Type*}
     (s : Finset ι') (f : ι' → ℝ≥0∞) :
     (∑ i ∈ s, f i) ^ 2 ≤ s.card * ∑ i ∈ s, f i ^ 2 := by
-  rw [sq, Finset.sum_mul_sum]
-  suffices h : 2 * ∑ i ∈ s, ∑ j ∈ s, f i * f j ≤ 2 * (↑s.card * ∑ i ∈ s, f i ^ 2) by
-    have h2 : (2 : ℝ≥0∞) ≠ 0 := by norm_num
-    have h2' : (2 : ℝ≥0∞) ≠ ⊤ := by norm_num
-    calc ∑ i ∈ s, ∑ j ∈ s, f i * f j
-      _ = 2⁻¹ * (2 * ∑ i ∈ s, ∑ j ∈ s, f i * f j) := by
-          rw [← mul_assoc, ENNReal.inv_mul_cancel h2 h2', one_mul]
-      _ ≤ 2⁻¹ * (2 * (↑s.card * ∑ i ∈ s, f i ^ 2)) := by gcongr
-      _ = ↑s.card * ∑ i ∈ s, f i ^ 2 := by
-          rw [← mul_assoc, ENNReal.inv_mul_cancel h2 h2', one_mul]
-  calc 2 * ∑ i ∈ s, ∑ j ∈ s, f i * f j
-    _ = ∑ i ∈ s, ∑ j ∈ s, 2 * (f i * f j) := by
-        rw [Finset.mul_sum]; congr 1; ext i; rw [Finset.mul_sum]
-    _ ≤ ∑ i ∈ s, ∑ j ∈ s, (f i ^ 2 + f j ^ 2) := by
-        gcongr with i _ j _
-        calc 2 * (f i * f j) = 2 * f i * f j := (mul_assoc ..).symm
-          _ ≤ f i ^ 2 + f j ^ 2 := ENNReal.two_mul_le_add_sq (f i) (f j)
-    _ = ∑ i ∈ s, (↑s.card * f i ^ 2 + ∑ j ∈ s, f j ^ 2) := by
-        congr 1; ext i
-        rw [Finset.sum_add_distrib, Finset.sum_const, nsmul_eq_mul]
-    _ = ↑s.card * ∑ i ∈ s, f i ^ 2 + ↑s.card * ∑ i ∈ s, f i ^ 2 := by
-        rw [Finset.sum_add_distrib, Finset.mul_sum, Finset.sum_const, nsmul_eq_mul,
-          Finset.mul_sum]
-    _ = 2 * (↑s.card * ∑ i ∈ s, f i ^ 2) := by rw [← two_mul]
+  let : MeasurableSpace ι' := ⊤
+  simpa [lintegral_finsetSum_measure, lintegral_dirac, Measure.finsetSum_apply,
+    mul_comm] using
+    (sq_lintegral_le_lintegral_sq_mul (μ := ∑ i ∈ s, Measure.dirac i)
+      (f := f) Measurable.of_discrete.aemeasurable)
 
 /-- Divided Cauchy-Schwarz: `(∑ i, f i)² / card ≤ ∑ i, (f i)²`. Derived from
 `sq_sum_le_card_mul_sum_sq` by dividing both sides by `s.card`. Holds unconditionally in
@@ -117,42 +97,13 @@ lemma mul_tsub_inv_le_sum_sq_sub_div {ι' : Type*}
             _ = (∑ i ∈ s, (f i ^ 2 - f i / h)) + ∑ i ∈ s, f i / h := by
               rw [Finset.sum_add_distrib]
 
-private lemma tsum_mul_tsum_eq {α : Type*} (g h : α → ℝ≥0∞) :
-    (∑' a, g a) * (∑' b, h b) = ∑' a, ∑' b, g a * h b := by
-  rw [← ENNReal.tsum_mul_right]; congr 1; ext a
-  exact ENNReal.tsum_mul_left.symm
-
 lemma sq_tsum_le_tsum_mul_tsum {α : Type*} (w f : α → ℝ≥0∞) :
     (∑' a, w a * f a) ^ 2 ≤ (∑' a, w a) * ∑' a, w a * f a ^ 2 := by
-  rw [sq, tsum_mul_tsum_eq, tsum_mul_tsum_eq]
-  have h2 : (2 : ℝ≥0∞) ≠ 0 := two_ne_zero
-  have h2' : (2 : ℝ≥0∞) ≠ ⊤ := by norm_num
-  suffices h : 2 * ∑' a, ∑' b, (w a * f a) * (w b * f b) ≤
-      2 * ∑' a, ∑' b, w a * (w b * f b ^ 2) by
-    calc ∑' a, ∑' b, (w a * f a) * (w b * f b)
-      _ = 2⁻¹ * (2 * ∑' a, ∑' b, (w a * f a) * (w b * f b)) := by
-          rw [← mul_assoc, ENNReal.inv_mul_cancel h2 h2', one_mul]
-      _ ≤ 2⁻¹ * (2 * ∑' a, ∑' b, w a * (w b * f b ^ 2)) := by gcongr
-      _ = ∑' a, ∑' b, w a * (w b * f b ^ 2) := by
-          rw [← mul_assoc, ENNReal.inv_mul_cancel h2 h2', one_mul]
-  calc 2 * ∑' a, ∑' b, (w a * f a) * (w b * f b)
-    _ = ∑' a, ∑' b, 2 * ((w a * f a) * (w b * f b)) := by
-        rw [← ENNReal.tsum_mul_left]; congr 1; ext
-        rw [← ENNReal.tsum_mul_left]
-    _ ≤ ∑' a, ∑' b, (w a * (w b * f b ^ 2) + w b * (w a * f a ^ 2)) := by
-        gcongr with a b
-        calc 2 * ((w a * f a) * (w b * f b))
-          _ = w a * w b * (2 * f a * f b) := by ring
-          _ ≤ w a * w b * (f a ^ 2 + f b ^ 2) := by
-              gcongr; exact two_mul_le_add_sq (f a) (f b)
-          _ = w a * (w b * f b ^ 2) + w b * (w a * f a ^ 2) := by ring
-    _ = (∑' a, ∑' b, w a * (w b * f b ^ 2)) +
-          ∑' a, ∑' b, w b * (w a * f a ^ 2) := by
-        simp_rw [← ENNReal.tsum_add]
-    _ = (∑' a, ∑' b, w a * (w b * f b ^ 2)) +
-          ∑' b, ∑' a, w b * (w a * f a ^ 2) := by
-        congr 1; exact ENNReal.tsum_comm
-    _ = 2 * ∑' a, ∑' b, w a * (w b * f b ^ 2) := by rw [two_mul]
+  let : MeasurableSpace α := ⊤
+  simpa [lintegral_sum_measure, lintegral_smul_measure, lintegral_dirac,
+    Measure.sum_apply, mul_comm] using
+    (sq_lintegral_le_lintegral_sq_mul (μ := Measure.sum fun a ↦ w a • Measure.dirac a)
+      (f := f) Measurable.of_discrete.aemeasurable)
 
 lemma sq_tsum_le_tsum_sq {α : Type*} (w f : α → ℝ≥0∞) (hw : ∑' a, w a ≤ 1) :
     (∑' a, w a * f a) ^ 2 ≤ ∑' a, w a * f a ^ 2 :=

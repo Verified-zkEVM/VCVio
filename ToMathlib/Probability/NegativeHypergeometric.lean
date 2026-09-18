@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
-public import Mathlib.Data.ENNReal.Inv
+public import Mathlib.Basic.ENNReal.Inv
 
 /-!
 # Expected draws of a negative hypergeometric experiment

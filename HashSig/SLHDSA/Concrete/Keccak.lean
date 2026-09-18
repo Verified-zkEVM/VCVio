@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Vitalik Buterin, Nicolas Consigny. All rights reserved.
+Copyright (c) 2026 Vitalik Buterin, Nicolas Consigny, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Vitalik Buterin, Nicolas Consigny
+Authors: Vitalik Buterin, Nicolas Consigny, Alexander Hicks
 -/
 
 module
@@ -117,7 +117,7 @@ def squeezeXof (initial : Array UInt64) (rate outLen : ℕ) : ByteArray :=
 @[simp] theorem squeezeXof_size (initial : Array UInt64) (rate outLen : ℕ)
     (hrate : 0 < rate) :
     (squeezeXof initial rate outLen).size = outLen := by
-  simp only [squeezeXof, if_neg (Nat.ne_of_gt hrate), ByteArray.size_append,
+  simp only [squeezeXof, ite_eq_right (Nat.ne_of_gt hrate), ByteArray.size_append,
     squeezeFullBlocks_size, squeeze_size]
   simpa [Nat.mul_comm] using Nat.div_add_mod outLen rate
 

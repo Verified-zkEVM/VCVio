@@ -236,8 +236,9 @@ theorem renyiDiv_apply_bound (a : ℝ) (ha : 1 < a) (p q : PMF α) (x : α) :
       simp [hqx, hR]
     · have ham1 : (0 : ℝ) < a - 1 := sub_pos.mpr ha
       have hqt := PMF.apply_ne_top q x
-      have hle_mgf : (p x) ^ a * (q x) ^ (1 - a) ≤ p.renyiMGF a q :=
-        ENNReal.le_tsum x
+      have hle_mgf : (p x) ^ a * (q x) ^ (1 - a) ≤ p.renyiMGF a q := by
+        unfold PMF.renyiMGF
+        exact ENNReal.le_tsum (f := fun y => (p y) ^ a * (q y) ^ (1 - a)) x
       have hle_rpow : ((p x) ^ a * (q x) ^ (1 - a)) ^ ((a - 1)⁻¹ : ℝ) ≤
           (p.renyiMGF a q) ^ ((a - 1)⁻¹ : ℝ) :=
         ENNReal.rpow_le_rpow hle_mgf (inv_nonneg.mpr ham1.le)

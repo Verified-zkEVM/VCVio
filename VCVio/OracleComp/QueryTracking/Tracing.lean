@@ -84,7 +84,7 @@ abbrev withTraceBefore (so : QueryImpl spec m) (traceFn : spec.Domain → ω) :
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceBefore (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTraceBefore_apply (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (t : spec.Domain) :
     so.withTraceBefore traceFn t = (do tell (traceFn t); so t) := by
   exact PFunctor.Handler.withTraceBefore_apply (P := spec.toPFunctor) so traceFn t
@@ -140,7 +140,7 @@ lemma probOutput_fst_run_withTraceBefore [LawfulMonad m] [MonadLiftT m SPMF]
       Pr[= x | simulateQ so mx] := by
   rw [fst_map_run_withTraceBefore]
 
-lemma support_fst_run_withTraceBefore [LawfulMonad m] [MonadLiftT m SetM]
+lemma support_fst_run_withTraceBefore [LawfulMonad m] [MonadAttach m]
     (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (mx : OracleComp spec α) :
     support (Prod.fst <$> (simulateQ (so.withTraceBefore traceFn) mx).run) =
       support (simulateQ so mx) := by
@@ -162,7 +162,7 @@ abbrev withTrace (so : QueryImpl spec m)
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTrace (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTrace_apply (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (t : spec.Domain) :
     so.withTrace traceFn t = (do let u ← so t; tell (traceFn t u); return u) := by
@@ -225,7 +225,7 @@ lemma probOutput_fst_run_withTrace [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMo
       Pr[= x | simulateQ so mx] := by
   rw [fst_map_run_withTrace]
 
-lemma support_fst_run_withTrace [LawfulMonad m] [MonadLiftT m SetM]
+lemma support_fst_run_withTrace [LawfulMonad m] [MonadAttach m]
     (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (mx : OracleComp spec α) :
     support (Prod.fst <$> (simulateQ (so.withTrace traceFn) mx).run) =
@@ -250,7 +250,7 @@ abbrev withTraceAppendBefore (so : QueryImpl spec m) (traceFn : spec.Domain → 
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceAppendBefore (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTraceAppendBefore_apply (so : QueryImpl spec m) (traceFn : spec.Domain → ω)
     (t : spec.Domain) :
     so.withTraceAppendBefore traceFn t = (do tell (traceFn t); so t) := by
@@ -298,7 +298,7 @@ lemma probOutput_fst_run_withTraceAppendBefore [LawfulMonad m] [LawfulAppend ω]
       Pr[= x | simulateQ so mx] := by
   rw [fst_map_run_withTraceAppendBefore]
 
-lemma support_fst_run_withTraceAppendBefore [LawfulMonad m] [LawfulAppend ω] [MonadLiftT m SetM]
+lemma support_fst_run_withTraceAppendBefore [LawfulMonad m] [LawfulAppend ω] [MonadAttach m]
     (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (mx : OracleComp spec α) :
     support (Prod.fst <$> (simulateQ (so.withTraceAppendBefore traceFn) mx).run) =
       support (simulateQ so mx) := by
@@ -322,7 +322,7 @@ abbrev withTraceAppend (so : QueryImpl spec m)
     QueryImpl spec (WriterT ω m) :=
   PFunctor.Handler.withTraceAppend (P := spec.toPFunctor) so traceFn
 
-@[simp, grind =]
+@[grind =]
 lemma withTraceAppend_apply (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (t : spec.Domain) :
     so.withTraceAppend traceFn t = (do let u ← so t; tell (traceFn t u); return u) := by
@@ -374,7 +374,7 @@ lemma probOutput_fst_run_withTraceAppend [LawfulMonad m] [LawfulAppend ω] [Mona
       Pr[= x | simulateQ so mx] := by
   rw [fst_map_run_withTraceAppend]
 
-lemma support_fst_run_withTraceAppend [LawfulMonad m] [LawfulAppend ω] [MonadLiftT m SetM]
+lemma support_fst_run_withTraceAppend [LawfulMonad m] [LawfulAppend ω] [MonadAttach m]
     (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
     (mx : OracleComp spec α) :
     support (Prod.fst <$> (simulateQ (so.withTraceAppend traceFn) mx).run) =

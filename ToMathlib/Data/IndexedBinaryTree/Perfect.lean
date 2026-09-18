@@ -84,8 +84,8 @@ theorem SkeletonLeafIndex.depth_ofNat (z i : ℕ) : (SkeletonLeafIndex.ofNat z i
   | succ z ih =>
     unfold SkeletonLeafIndex.ofNat
     by_cases h : i / 2 ^ z % 2 = 0
-    · rw [if_pos h]; simp [SkeletonLeafIndex.depth, ih]
-    · rw [if_neg h]; simp [SkeletonLeafIndex.depth, ih]
+    · rw [ite_eq_left h]; simp [SkeletonLeafIndex.depth, ih]
+    · rw [ite_eq_right h]; simp [SkeletonLeafIndex.depth, ih]
 
 /-- `natIndex` inverts `ofNat`: reading the low `z` bits of `i` into a leaf of the subtree whose
 root has horizontal index `i / 2 ^ z` lands back at horizontal index `i`. -/
@@ -100,10 +100,10 @@ theorem SkeletonLeafIndex.natIndex_ofNat (z i : ℕ) :
     have hdm := Nat.div_add_mod (i / 2 ^ z) 2
     unfold SkeletonLeafIndex.ofNat
     by_cases h : i / 2 ^ z % 2 = 0
-    · rw [if_pos h]
+    · rw [ite_eq_left h]
       have : 2 * (i / 2 ^ (z + 1)) = i / 2 ^ z := by omega
       simp only [SkeletonLeafIndex.natIndex, this, ih]
-    · rw [if_neg h]
+    · rw [ite_eq_right h]
       have : 2 * (i / 2 ^ (z + 1)) + 1 = i / 2 ^ z := by omega
       simp only [SkeletonLeafIndex.natIndex, this, ih]
 

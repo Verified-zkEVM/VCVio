@@ -633,7 +633,7 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
     · have hidx : idx.val = 2 * pair := by
         dsimp [pair]
         omega
-      rw [if_pos hEven]
+      rw [ite_eq_left hEven]
       calc
         (((getByteD (byteEncode12Poly f) (3 * pair)).toNat +
             256 * ((getByteD (byteEncode12Poly f) (3 * pair + 1)).toNat % 16) : Nat) : Coeff)
@@ -651,7 +651,7 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
       have hidx : idx.val = 2 * pair + 1 := by
         dsimp [pair]
         omega
-      rw [if_neg hEven]
+      rw [ite_eq_right hEven]
       calc
         (((getByteD (byteEncode12Poly f) (3 * pair + 1)).toNat / 16 +
             16 * (getByteD (byteEncode12Poly f) (3 * pair + 2)).toNat : Nat) : Coeff)

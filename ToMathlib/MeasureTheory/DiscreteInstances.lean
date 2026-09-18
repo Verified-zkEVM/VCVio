@@ -21,9 +21,10 @@ to remove if Mathlib gains the same instances; nothing in this file is specific 
 ## Why `⊤` rather than a blanket instance
 
 There is deliberately no `[Finite α] → MeasurableSpace α := ⊤` instance. It would overlap the
-concrete instances above and, more seriously, would compete with the Borel σ-algebras that
-lattice-based cryptography needs on `ℝ`. Discrete measurable structure is opted into per type,
-exactly as upstream does it.
+concrete instances above and other selected σ-algebras on finite types: finiteness alone does not
+choose a measurable space. Once a space is selected, Mathlib derives `DiscreteMeasurableSpace α`
+from `Countable α` and `MeasurableSingletonClass α`. Discrete measurable structure is opted into
+per type, exactly as upstream does it. Continuous types retain their canonical Borel structures.
 -/
 
 public section

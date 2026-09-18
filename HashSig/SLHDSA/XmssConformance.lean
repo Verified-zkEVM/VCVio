@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Nicolas Consigny. All rights reserved.
+Copyright (c) 2026 Nicolas Consigny, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Nicolas Consigny, Bolton Bailey
+Authors: Nicolas Consigny, Bolton Bailey, Alexander Hicks
 -/
 
 module
@@ -43,9 +43,9 @@ theorem TreePosition.index_lt_leafCount {treeHeight : ℕ} (pos : TreePosition t
 theorem sibling_eq_xor_one (i : ℕ) : PerfectMerkleTree.sibling i = i ^^^ 1 := by
   unfold PerfectMerkleTree.sibling
   by_cases h : i % 2 = 0
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     exact (Nat.xor_one_of_even (by simpa [Nat.even_iff] using h)).symm
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     exact (Nat.xor_one_of_odd (by simpa [Nat.odd_iff] using h)).symm
 
 /-- Authentication-path entry `j` is the root of the height-`j` sibling subtree. -/
@@ -132,14 +132,14 @@ theorem honestClimbFips_eq_merkleRoot (leaf : ℕ → Y)
   | succ z ih =>
       rw [honestClimbFips_succ, ih, PerfectMerkleTree.merkleRoot_succ]
       by_cases h : idx / 2 ^ z % 2 = 0
-      · rw [if_pos h]
+      · rw [ite_eq_left h]
         have hdm := Nat.div_add_mod (idx / 2 ^ z) 2
         have hdiv : idx / 2 ^ (z + 1) = idx / 2 ^ z / 2 := by
           rw [Nat.pow_succ, Nat.div_div_eq_div_mul]
         have heven : 2 * (idx / 2 ^ (z + 1)) = idx / 2 ^ z := by omega
         rw [heven]
-        simp only [PerfectMerkleTree.sibling, if_pos h]
-      · rw [if_neg h]
+        simp only [PerfectMerkleTree.sibling, ite_eq_left h]
+      · rw [ite_eq_right h]
         have hdm := Nat.div_add_mod (idx / 2 ^ z) 2
         have hmod : idx / 2 ^ z % 2 = 1 := by omega
         have hdiv : idx / 2 ^ (z + 1) = idx / 2 ^ z / 2 := by
@@ -149,7 +149,7 @@ theorem honestClimbFips_eq_merkleRoot (leaf : ℕ → Y)
           omega
         have hleft : 2 * (idx / 2 ^ (z + 1)) = idx / 2 ^ z - 1 := by omega
         rw [hodd]
-        simp only [PerfectMerkleTree.sibling, if_neg h]
+        simp only [PerfectMerkleTree.sibling, ite_eq_right h]
         rw [hleft]
 
 /-- The explicit FIPS loop is exactly the canonical `authPath`/`climb` semantics on an honest

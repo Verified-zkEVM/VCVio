@@ -298,7 +298,7 @@ theorem IsCoupling.apply_pure_left_eq {α β : Type u} {a : α} {q : SPMF β}
         simp [Option.map, hzero]
       | inr hb =>
         have hne_some : (some b : Option β) ≠ some b' := fun h => hb (Option.some.inj h).symm
-        simp [Option.map, if_neg hne_some]
+        simp [Option.map, ite_eq_right hne_some]
   · simp
 
 /-- For a coupling whose right marginal is `pure b`, the value at `(a, b)` matches
@@ -325,7 +325,7 @@ theorem IsCoupling.apply_pure_right_eq {α β : Type u} {p : SPMF α} {b : β}
       cases hne with
       | inl ha =>
         have hne_some : (some a : Option α) ≠ some a' := fun h => ha (Option.some.inj h).symm
-        simp [Option.map, if_neg hne_some]
+        simp [Option.map, ite_eq_right hne_some]
       | inr hyb =>
         have hzero : c.toPMF (some (a', y)) = 0 :=
           hc.apply_eq_zero_of_pure_right a' hyb

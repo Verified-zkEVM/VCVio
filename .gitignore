@@ -22,3 +22,7 @@ third_party/**/Cargo.lock
 *.fdb_latexmk
 *.bbl
 *.blg
+
+# Python bytecode caches, produced by the repository's own validation scripts.
+__pycache__/
+*.pyc
