@@ -21,6 +21,7 @@ public import Examples.ElGamal.Hash
 public import Examples.ElGamal.ReductionCost
 public import Examples.ElGamal.SSP
 public import Examples.EvalDistCompatible.Basic
+public import Examples.InnerProduct.Execution
 public import Examples.InnerProduct.Interaction
 public import Examples.InnerProduct.Protocol
 public import Examples.InnerProduct.Replay
