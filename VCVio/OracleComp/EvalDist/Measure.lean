@@ -48,6 +48,63 @@ theorem evalDist_bind_congr_of_support {ι : Type u} {α β : Type} {spec : Orac
     intro u
     exact ih u fun a ha => h a ((MonadAttach.mem_support_bind).mpr ⟨u, by simp, ha⟩)
 
+private theorem evalDist_query_bind_bind_swap
+    {ι : Type u} {β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [∀ t, Countable (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec] [MeasurableSpace γ]
+    (t : spec.Domain) (my : OracleComp spec β) (f : spec.Range t → β → OracleComp spec γ) :
+    𝒟[query t >>= fun a ↦ my >>= fun b ↦ f a b] =
+      𝒟[my >>= fun b ↦ query t >>= fun a ↦ f a b] := by
+  induction my using OracleComp.inductionOn with
+  | pure b => simp only [pure_bind]
+  | query_bind s l ih =>
+    simp only [bind_assoc]
+    calc
+      _ = 𝒟[query s >>= fun v ↦ query t >>= fun a ↦ l v >>= fun b ↦ f a b] :=
+        _root_.evalDist_bind_bind_swap (query t) (query s)
+          (fun a v ↦ l v >>= fun b ↦ f a b) Measurable.of_discrete
+      _ = _ := evalDist_bind_congr_of_support (query s) _ _ fun v _ ↦ ih v
+
+/-- Independent oracle computations commute before any measurably observed continuation.
+Only the actual query answers must be countable; the two unobserved output types require
+neither countability nor measurable-space instances. -/
+theorem evalDist_bind_bind_swap
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [∀ t, Countable (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec] [MeasurableSpace γ]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec γ) :
+    𝒟[mx >>= fun a ↦ my >>= fun b ↦ f a b] =
+      𝒟[my >>= fun b ↦ mx >>= fun a ↦ f a b] := by
+  induction mx using OracleComp.inductionOn with
+  | pure a => simp only [pure_bind]
+  | query_bind t k ih =>
+    simp only [bind_assoc]
+    calc
+      _ = 𝒟[query t >>= fun v ↦ my >>= fun b ↦ k v >>= fun a ↦ f a b] :=
+        evalDist_bind_congr_of_support (query t) _ _ fun v _ ↦ ih v
+      _ = _ := evalDist_query_bind_bind_swap t my (fun v b ↦ k v >>= fun a ↦ f a b)
+
+/-- Compare measurable valuations of continuation outputs on structural support. The common
+computation's unobserved intermediate result needs no measurable-space instance. -/
+theorem lintegral_evalDist_bind_mono_of_support
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace β] [MeasurableSpace γ]
+    (mx : OracleComp spec α) (f : α → OracleComp spec β) (g : α → OracleComp spec γ)
+    {v : β → ENNReal} {w : γ → ENNReal} (hv : Measurable v) (hw : Measurable w)
+    (hfg : ∀ a ∈ support mx, (∫⁻ y, v y ∂𝒟[f a]) ≤ ∫⁻ z, w z ∂𝒟[g a]) :
+    (∫⁻ y, v y ∂𝒟[mx >>= f]) ≤ ∫⁻ z, w z ∂𝒟[mx >>= g] := by
+  induction mx using OracleComp.inductionOn with
+  | pure a => simpa only [pure_bind] using hfg a (by simp)
+  | query_bind t k ih =>
+    rw [bind_assoc, bind_assoc, lintegral_evalDist_bind_of_discrete _ _ hv,
+      lintegral_evalDist_bind_of_discrete _ _ hw]
+    exact lintegral_mono fun u ↦ ih u fun a ha ↦
+      hfg a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
+
 /-- Compare event masses after a common oracle computation when the continuation bound only
 needs to hold on structurally reachable outputs. This is the operational specialization of
 `evalDist_bind_apply_mono`: structural reachability supplies its almost-everywhere premise. -/

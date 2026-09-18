@@ -83,18 +83,13 @@ theorem evalDist_bind_bind_swap (mx : m α) (my : m β) (f : α → β → m γ)
   simp_rw [evalDist_bind my _ (hfa _), evalDist_bind mx _ (hfb _)]
   exact Measure.bind_bind_swap _ _ hf
 
-omit [MeasurableSpace α] [MeasurableSpace β] in
-/-- Independent draws of countable intermediate types commute before a measurably observed
-result. The intermediate spaces are used only internally, so callers do not need to select or
-thread measurable-space instances for them. -/
+/-- Independent countable draws with measurable singletons commute before any continuation.
+The selected source spaces make joint measurability automatic. -/
 theorem evalDist_bind_bind_swap_of_countable [Countable α] [Countable β]
+    [MeasurableSingletonClass α] [MeasurableSingletonClass β]
     (mx : m α) (my : m β) (f : α → β → m γ) :
     𝒟[mx >>= fun a => my >>= fun b => f a b] =
       𝒟[my >>= fun b => mx >>= fun a => f a b] := by
-  let : MeasurableSpace α := ⊤
-  let : MeasurableSpace β := ⊤
-  let : DiscreteMeasurableSpace α := ⟨fun _ => by simp⟩
-  let : DiscreteMeasurableSpace β := ⟨fun _ => by simp⟩
   exact evalDist_bind_bind_swap mx my f Measurable.of_discrete
 
 /-- Move the third independent discrete draw to the front of a computation. -/

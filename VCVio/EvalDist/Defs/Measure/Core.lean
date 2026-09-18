@@ -94,16 +94,27 @@ theorem evalDist_bind_of_discrete {m : Type u → Type v} [Monad m] [EvalDistSem
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] fun x => 𝒟[f x] :=
   evalDist_bind mx f Measurable.of_discrete
 
-/-- Pointwise equality of continuation measures gives equality after a common bind. The
-intermediate type uses a local discrete measurable space, so callers need no measurable-space
-instance for it. -/
+/-- Almost-everywhere equal measurable continuation measures give equal composed measures. -/
+theorem evalDist_bind_congr_ae {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
+    (mx : m α) (f g : α → m β)
+    (hf : Measurable fun x ↦ 𝒟[f x]) (hg : Measurable fun x ↦ 𝒟[g x])
+    (h : (fun x ↦ 𝒟[f x]) =ᵐ[𝒟[mx]] fun x ↦ 𝒟[g x]) :
+    𝒟[mx >>= f] = 𝒟[mx >>= g] := by
+  rw [evalDist_bind mx f hf, evalDist_bind mx g hg]
+  exact Measure.bind_congr_right h
+
+/-- Pointwise equality of continuation measures gives equality after a common bind. No
+measurable structure is required on the unobserved intermediate type: the common continuation
+measure supplies its observation's pullback measurable space. -/
 theorem evalDist_bind_congr {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace β]
     (mx : m α) (f g : α → m β) (h : ∀ x, 𝒟[f x] = 𝒟[g x]) :
     𝒟[mx >>= f] = 𝒟[mx >>= g] := by
-  let : MeasurableSpace α := ⊤
-  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
-  exact Measure.bind_congr_right (Filter.Eventually.of_forall h)
+  let : MeasurableSpace α := MeasurableSpace.comap (fun x ↦ 𝒟[f x]) inferInstance
+  have hf : Measurable fun x ↦ 𝒟[f x] := comap_measurable _
+  have hg : Measurable fun x ↦ 𝒟[g x] := by simpa only [← h] using hf
+  exact evalDist_bind_congr_ae mx f g hf hg (Filter.Eventually.of_forall h)
 
 /-- `Functor.map` along a measurable function denotes the pushforward measure. -/
 theorem evalDist_map {m : Type u → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
@@ -153,13 +164,23 @@ theorem evalDist_map_const {m : Type u → Type v} [Monad m] [LawfulMonad m] [Ev
     (mx : m α) (c : β) : 𝒟[(fun _ => c) <$> mx] = 𝒟[mx] Set.univ • Measure.dirac c := by
   rw [evalDist_map mx measurable_const, Measure.map_const]
 
+/-- An AE-measurable valuation of composed outputs satisfies the integral tower law. -/
+theorem lintegral_evalDist_bind_of_aemeasurable {m : Type u → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type u} [MeasurableSpace α] [MeasurableSpace β] (mx : m α) (f : α → m β)
+    (hf : Measurable fun x ↦ 𝒟[f x]) {g : β → ENNReal}
+    (hg : AEMeasurable g 𝒟[mx >>= f]) :
+    ∫⁻ y, g y ∂𝒟[mx >>= f] = ∫⁻ x, ∫⁻ y, g y ∂𝒟[f x] ∂𝒟[mx] := by
+  rw [evalDist_bind mx f hf] at hg ⊢
+  exact Measure.lintegral_bind hf.aemeasurable hg
+
 /-- Integrating a bind first integrates each measurable continuation, then its common draw. -/
 theorem lintegral_evalDist_bind {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
     [MeasurableSpace β] (mx : m α) (f : α → m β)
     (hf : Measurable fun x ↦ 𝒟[f x]) {g : β → ENNReal} (hg : Measurable g) :
     ∫⁻ y, g y ∂𝒟[mx >>= f] = ∫⁻ x, ∫⁻ y, g y ∂𝒟[f x] ∂𝒟[mx] := by
-  rw [evalDist_bind mx f hf, Measure.lintegral_bind hf.aemeasurable hg.aemeasurable]
+  exact lintegral_evalDist_bind_of_aemeasurable mx f hf hg.aemeasurable
 
 /-- For a discrete common draw, the tower law needs no continuation measurability proof. -/
 theorem lintegral_evalDist_bind_of_discrete {m : Type u → Type v} [Monad m]
@@ -169,12 +190,22 @@ theorem lintegral_evalDist_bind_of_discrete {m : Type u → Type v} [Monad m]
     ∫⁻ y, g y ∂𝒟[mx >>= f] = ∫⁻ x, ∫⁻ y, g y ∂𝒟[f x] ∂𝒟[mx] :=
   lintegral_evalDist_bind mx f .of_discrete hg
 
+/-- An AE-measurable valuation of a measurable output map integrates the composed functional. -/
+theorem lintegral_evalDist_map_of_aemeasurable {m : Type u → Type v} [Monad m]
+    [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type u} [MeasurableSpace α] [MeasurableSpace β] (mx : m α)
+    {f : α → β} (hf : Measurable f) {g : β → ENNReal}
+    (hg : AEMeasurable g 𝒟[f <$> mx]) :
+    ∫⁻ y, g y ∂𝒟[f <$> mx] = ∫⁻ x, g (f x) ∂𝒟[mx] := by
+  rw [evalDist_map mx hf] at hg ⊢
+  exact lintegral_map' hg hf.aemeasurable
+
 /-- Integrating a measurable output map integrates the composed functional. -/
 theorem lintegral_evalDist_map {m : Type u → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
     [MeasurableSpace β] (mx : m α) {f : α → β} (hf : Measurable f) {g : β → ENNReal}
     (hg : Measurable g) : ∫⁻ y, g y ∂𝒟[f <$> mx] = ∫⁻ x, g (f x) ∂𝒟[mx] := by
-  rw [evalDist_map mx hf, lintegral_map hg hf]
+  exact lintegral_evalDist_map_of_aemeasurable mx hf hg.aemeasurable
 
 /-- On discrete source and target spaces, output-map integration needs no measurability
 proofs. -/
@@ -213,11 +244,10 @@ theorem lintegral_evalDist_map_const_add_nat {m : Type → Type v} [Monad m] [La
 /-- The success mass of a bind is the integral of its continuation's success mass. -/
 theorem evalDist_bind_apply_univ {m : Type u → Type v} [Monad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α β : Type u} [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    [MeasurableSpace β] (mx : m α) (f : α → m β) :
+    {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
+    (mx : m α) (f : α → m β) (hf : Measurable fun x ↦ 𝒟[f x]) :
     𝒟[mx >>= f] Set.univ = ∫⁻ x, 𝒟[f x] Set.univ ∂𝒟[mx] := by
-  rw [evalDist_bind_of_discrete mx f,
-    Measure.bind_apply MeasurableSet.univ Measurable.of_discrete.aemeasurable]
+  rw [evalDist_bind mx f hf, Measure.bind_apply MeasurableSet.univ hf.aemeasurable]
 
 /-- A measurable map preserves the successful-output mass. -/
 theorem evalDist_map_apply_univ {m : Type u → Type v} [Monad m] [LawfulMonad m]
