@@ -222,7 +222,8 @@ theorem slhdsaConcreteAlg_perfectlyComplete (prims : Primitives p)
       skSeed skPrf pkSeed addrnd
   rw [ProbCompRuntime.probComp_evalDist]
   exact (MeasureTheory.ae_iff_prob_eq_one (p := fun y ↦ y = true)
-    Measurable.of_discrete).mp (ae_of_forall_mem_support mx _ huniq)
+    Measurable.of_discrete).mp
+      (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete huniq)
 
 /-! ### One shared lazy-random-oracle runtime -/
 

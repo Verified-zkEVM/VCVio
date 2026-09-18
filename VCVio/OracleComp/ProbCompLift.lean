@@ -5,11 +5,11 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import PolyFun.Control.Monad.Hom
-import VCVio.EvalDist.Monad.Map
+import VCVio.EvalDist.Monad.Measure
 
 /-!
 # Bundled Lifts from `ProbComp`

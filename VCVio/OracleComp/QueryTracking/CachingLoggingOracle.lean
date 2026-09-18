@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.QueryTracking.CachingOracle
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 
 /-!
 # Combined Caching + Logging Handlers
@@ -240,7 +240,7 @@ theorem isQueryBoundP_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]
     (cachingOracle.isQueryBoundP_run_simulateQ h s.1)
 
 theorem isPerIndexQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀]
-    {spec₀ : OracleSpec.{0, 0} ι₀} [spec₀.DecidableEq] [IsUniformSpec spec₀]
+    {spec₀ : OracleSpec.{0, 0} ι₀} [spec₀.DecidableEq]
     {α : Type} {oa : OracleComp spec₀ α} {qb : ι₀ → ℕ}
     (h : OracleComp.IsPerIndexQueryBound oa qb)
     (s : QueryCache spec₀ × QueryLog spec₀) :

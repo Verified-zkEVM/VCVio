@@ -25,6 +25,7 @@ support with positive output mass. Native uniform oracle specifications satisfy 
 public section
 
 open OracleComp OracleSpec MeasureTheory ProbabilityTheory
+open scoped ENNReal
 
 universe u
 
@@ -47,26 +48,6 @@ theorem evalDist_bind_congr_of_support {ι : Type u} {α β : Type} {spec : Orac
     intro u
     exact ih u fun a ha => h a ((MonadAttach.mem_support_bind).mpr ⟨u, by simp, ha⟩)
 
-/-- A predicate that holds on every structurally reachable output holds almost everywhere under
-the lossless measure semantics. This is the general bridge for converting pathwise invariants to
-measure-theoretic bounds. -/
-theorem ae_of_forall_mem_support
-    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-    [OracleSpec.IsMeasureSpec spec]
-    [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    (mx : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support mx, p x) :
-    ∀ᵐ x ∂𝒟[mx], p x := by
-  rw [MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
-  rw [← prEvent_eq_evalDist_of_discrete]
-  change 𝒟[mx >>= (pure ∘ p)] {True} = 1
-  rw [OracleComp.evalDist_bind_congr_of_support mx (pure ∘ p) (fun _ => pure True)]
-  · rw [OracleComp.evalDist_bind_const, evalDist_pure]
-    simp
-  · intro x hx
-    simp [h x hx]
-
 /-- Compare event masses after a common oracle computation when the continuation bound only
 needs to hold on structurally reachable outputs. This is the operational specialization of
 `evalDist_bind_apply_mono`: structural reachability supplies its almost-everywhere premise. -/
@@ -80,9 +61,48 @@ theorem evalDist_bind_apply_mono_of_support
     {event : Set β} (hevent : MeasurableSet event)
     (hfg : ∀ a ∈ support mx, 𝒟[f a] event ≤ 𝒟[g a] event) :
     𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event := by
-  let : MeasurableSpace α := ⊤
-  exact evalDist_bind_apply_mono mx f g .of_discrete .of_discrete hevent
-    (ae_of_forall_mem_support mx _ hfg)
+  induction mx using OracleComp.inductionOn with
+  | pure a => simpa only [pure_bind] using hfg a (by simp)
+  | query_bind t k ih =>
+    rw [bind_assoc, bind_assoc, evalDist_bind_of_discrete, evalDist_bind_of_discrete,
+      Measure.bind_apply hevent Measurable.of_discrete.aemeasurable,
+      Measure.bind_apply hevent Measurable.of_discrete.aemeasurable]
+    exact lintegral_mono fun u ↦ ih u fun a ha ↦
+      hfg a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
+
+/-- A uniform lower bound on reachable continuation events bounds their composed event.
+The common computation need not carry a measurable-space instance on its output type. -/
+theorem le_evalDist_bind_apply_of_support
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace β]
+    (mx : OracleComp spec α) (f : α → OracleComp spec β)
+    {event : Set β} (hevent : MeasurableSet event) {r : ℝ≥0∞}
+    (h : ∀ a ∈ support mx, r ≤ 𝒟[f a] event) :
+    r ≤ 𝒟[mx >>= f] event := by
+  induction mx using OracleComp.inductionOn with
+  | pure a => simpa only [pure_bind] using h a (by simp)
+  | query_bind t k ih =>
+    rw [bind_assoc, evalDist_bind_of_discrete,
+      Measure.bind_apply hevent Measurable.of_discrete.aemeasurable]
+    calc
+      r = ∫⁻ _u, r ∂𝒟[(query t : OracleComp spec (spec.Range t))] := by
+        rw [lintegral_const, evalDist_apply_univ_eq_one, mul_one]
+      _ ≤ _ := lintegral_mono fun u ↦ ih u fun a ha ↦
+        h a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
+
+/-- Events agreeing on every possible output have equal successful probability. -/
+theorem prEvent_congr_of_support
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a ↔ q a) :
+    Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] := by
+  exact congrArg (fun μ : Measure Prop ↦ μ {True})
+    (evalDist_bind_congr_of_support mx (pure ∘ p) (pure ∘ q)
+      fun a ha ↦ by simp [propext (h a ha)])
 
 /-- Structural support is positive singleton mass when every oracle response has positive
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
@@ -160,7 +180,7 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
         (MeasureTheory.ae_iff.mp hp)
     exact (ne_of_gt
       ((mem_support_iff_evalDist_singleton_pos_of_fullSupport hfull mx x).mp hx)) hxzero
-  · exact ae_of_forall_mem_support mx p
+  · exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete
 
 /-- Under native uniform oracle semantics, structural reachability is positive singleton mass. -/
 theorem mem_support_iff_evalDist_singleton_pos

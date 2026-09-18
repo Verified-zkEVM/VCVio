@@ -6,13 +6,14 @@ Authors: Devon Tuma, Quang Dao
 
 module
 
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.Coercions.SubSpec
-public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Coercions.Add.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.SimSemantics.Append.Core
 
 /-!
 # Key Encapsulation Mechanisms
