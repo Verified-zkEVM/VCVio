@@ -39,6 +39,33 @@ Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 The Schnorr-specific σ-protocol facts that feed in live in
 [`Examples/Schnorr/SigmaProtocol.lean`](../../Examples/Schnorr/SigmaProtocol.lean).
 
+### Synchronized signatures and multi-signatures
+
+`SyncSignatureAlg` and `SyncMultiSignatureAlg` capture configuration in the scheme constructor,
+use parameterless key generation and accept an explicit abstract epoch. Signing returns `Option`;
+verification and aggregation are deterministic. See
+[`SyncSignatureAlg.lean`](../../VCVio/CryptoFoundations/SyncSignatureAlg.lean) and
+[`SyncMultiSignatureAlg.lean`](../../VCVio/CryptoFoundations/SyncMultiSignatureAlg.lean).
+Their correctness predicates range over every runtime-producible key or finite ordered key tuple.
+Returned failure and missing runtime mass count against correctness; moving the observation into
+the surface computation requires the explicit runtime laws. Empty and repeated tuples are retained.
+
+The unforgeability modules expose `SyncSignatureUnforgeability.unforgeableExp`,
+`SyncSignatureUnforgeability.strongUnforgeableExp` and `SyncMultiSignatureUnforgeability.unforgeableExp`.
+These Boolean output measures apply the winning observation after runtime evaluation. The single
+strong notion tests exact returned message/signature-pair freshness; the regular notions test
+message freshness. An eligible failed request consumes its epoch, and duplicate requests preserve
+the first history entry. Multi-signature validity checks the adversary's ordered key tuple and
+requires challenger-key membership without registration or honest generation of the other keys.
+
+These definitions follow the synchronized interfaces and security notions in
+[DKKW25](../../REFERENCES.md#dkkw25), Definitions 7–10. The paper's Definition 8 is the strong single
+notion; regular single security is supplied separately. The modules provide definitions and
+supporting laws, with explicit adversary/model assumptions at use sites. They do not establish a
+security reduction or an efficiency bound. Public-import tests are in
+[`VCVioTest/SyncSignatureAlg.lean`](../../VCVioTest/SyncSignatureAlg.lean) and
+[`VCVioTest/SyncMultiSignatureAlg.lean`](../../VCVioTest/SyncMultiSignatureAlg.lean).
+
 ### Commitment schemes (`CommitmentScheme`)
 
 ```lean
