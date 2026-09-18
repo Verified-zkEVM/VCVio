@@ -39,6 +39,13 @@ SPHINCS+ framework paper — `sm-tcr` has a proof in the quantum random-oracle m
 that names `sm-dspr` therefore terminates at a conjecture for exactly the parameter sets the
 standard approves.  This one does not name it.
 
+**Neither of those two results is established here, and neither is inherited by this bound.**
+They are cited to say which assumption has a proof in the literature and which does not.  This
+module proves an inequality between advantages and nothing about the size of any of them; every
+summand it names is an assumption.  In particular the quantum bound of Theorem 11 is a statement
+about a quantum-accessible random oracle, and nothing in this repository has quantum query
+semantics, so no post-quantum security level follows from anything here.
+
 What it names instead is `SM-DT-OpenPRE` of the FORS leaf hash, which is discharged at the same
 layer and in the same model as `sm-tcr` is.  The `DSPR + 3 · TCR` shape remains available:
 `Certificate.ofOpenPre` converts a certificate of this module into one of `Composition`'s given a
@@ -49,6 +56,21 @@ modelling `H` as a random oracle outright, so no property of an underlying compr
 being traded away.  The DSPR route exists to obtain preimage-level security from
 *second*-preimage assumptions on a concrete compression function, which is what the robust
 Construction 6 needs and Construction 7 does not.
+
+## What kind of statement this is
+
+It is an **assumption-parametric reduction**, not a quantitative security result.  It bounds one
+advantage by a sum of others; it says nothing about the size of any of them, and a reader who
+substitutes small numbers for the summands is supplying those numbers, not reading them off.
+
+That distinction has teeth here, because several of the games named on the right-hand side are
+*unconditionally winnable* as they are posed.  `OracleComp` carries no resource bound and the
+tweakable hash is a function the adversary may evaluate freely once the seed is revealed, so
+brute-force inversion is an adversary like any other: `HashSigTest.SLHDSA.Composition` proves
+`winningOpenPre_advantage` and `freePreAdv_advantage`, each exhibiting an adversary of advantage
+exactly one, against the open-preimage and preimage games respectively.  Bounding those summands
+requires a model in which hash evaluation is a counted oracle query; nothing of the sort is in
+scope for this module, and until it exists no security level follows from this inequality.
 
 ## What this module does not establish
 
