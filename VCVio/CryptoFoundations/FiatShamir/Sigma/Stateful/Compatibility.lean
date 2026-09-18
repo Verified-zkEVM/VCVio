@@ -26,7 +26,7 @@ bridge.
 
 universe u v
 
-open OracleSpec OracleComp ProbComp
+open MeasureTheory OracleSpec OracleComp ProbComp
 
 namespace FiatShamir.Stateful
 
@@ -54,9 +54,9 @@ This is the key-generation wrapper around `postKeygenFreshProb`; the fixed-key
 body runs through `cmaRealSourceFullSum` on `CmaState`. -/
 noncomputable def statefulPostKeygenFreshAdvantage
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) : ENNReal :=
-  Pr[= true | ((hr.gen : ProbComp (Stmt × Wit)) >>= fun ps =>
+  𝒟[((hr.gen : ProbComp (Stmt × Wit)) >>= fun ps =>
     postKeygenFreshProb (σ := σ) (hr := hr) (M := M)
-      (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2)]
+      (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2)] {true}
 
 /-- The full-state CMA run as a Boolean freshness experiment.
 
@@ -77,7 +77,7 @@ the public-key query in `signedAdv`; the equality is a stateful-game normal-form
 fact and does not mention `SignatureAlg.unforgeableExp`. -/
 noncomputable def statefulCmaFreshAdvantage
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) : ENNReal :=
-  Pr[= true | statefulCmaFreshExperiment σ hr M adv]
+  𝒟[statefulCmaFreshExperiment σ hr M adv] {true}
 
 /-! ## Compatibility boundary -/
 
@@ -155,7 +155,7 @@ theorem statefulCmaFreshAdvantage_eq_statefulPostKeygenFreshAdvantage
   rw [cmaRealRun_eq_keygen_bind (σ := σ) (hr := hr) (M := M)
     (Commit := Commit) (Chal := Chal) (Resp := Resp) adv]
   simp only [monad_norm]
-  refine congrArg (fun p => Pr[= true | p]) (bind_congr fun ps => ?_)
+  refine congrArg (fun p : ProbComp Bool => 𝒟[p] {true}) (bind_congr fun ps => ?_)
   unfold postKeygenFreshProb
   rw [postKeygenAdv_runState_eq_postKeygenAdvBase_run (σ := σ) (hr := hr)
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
@@ -662,8 +662,8 @@ end SignedFreshStep
 theorem statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     statefulPostKeygenFreshAdvantage σ hr M adv =
-      Pr[= true | (cmaReal M Commit Chal σ hr).runProb
-        (cmaInit M Commit Chal Stmt Wit) (signedFreshAdv σ hr M adv)] := by
+      𝒟[(cmaReal M Commit Chal σ hr).runProb
+        (cmaInit M Commit Chal Stmt Wit) (signedFreshAdv σ hr M adv)] {true} := by
   unfold statefulPostKeygenFreshAdvantage
   have hpost :
       ((hr.gen : ProbComp (Stmt × Wit)) >>= fun ps =>
@@ -677,7 +677,7 @@ theorem statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
       (hr := hr) (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) adv ps.1 ps.2).symm
   rw [hpost]
-  apply congrArg (fun p => Pr[= true | p])
+  apply congrArg (fun p : ProbComp Bool => 𝒟[p] {true})
   unfold QueryImpl.Stateful.runProb QueryImpl.Stateful.run signedFreshAdv
     signedCandidateAdv candidateAdv postKeygenFreshAppendProb postKeygenCandidateAdv
   simp only [StateT.run'_eq, simulateQ_bind, simulateQ_query,
@@ -959,22 +959,34 @@ private theorem simulateQ_fsBaseImpl_postKeygenFreshWriterComp_run'_eq
     (outer := fsBaseImpl (M := M) (Commit := Commit) (Chal := Chal))
     (inner := implW) (oa := adv.main pk), hmap]
   let : DecidableEq (Commit × Resp) := Classical.decEq _
-  conv_lhs =>
-    simp [implS, baseS, fsBaseImpl, cmaRealFixedSign, SourceSigAlg, FiatShamir,
-      randomOracle, QueryLog.wasQueried_eq_decide_mem_map_fst, StateT.run_bind]
-  conv_rhs =>
-    simp [implS, baseS, fsBaseImpl, cmaRealFixedSign, SourceSigAlg, FiatShamir,
-      randomOracle, QueryLog.wasQueried_eq_decide_mem_map_fst, StateT.run_bind]
+  simp only [implS, StateT.run_map, map_bind]
+  rw [bind_map_left]
+  simp only [baseS]
+  refine bind_congr (m := ProbComp) fun a => ?_
+  rcases a with ⟨⟨⟨msg, ⟨c, resp⟩⟩, log⟩, cache⟩
+  simp only [SourceSigAlg, FiatShamir, HasQuery.instOfMonadLift_query,
+    bind_pure_comp, simulateQ_map, StateT.run_map]
+  simp only [fsBaseImpl, QueryImpl.simulateQ_add_liftM_query_right]
+  simp only [simulateQ_pure, StateT.run_pure]
+  simp only [map_pure, QueryLog.wasQueried_eq_decide_mem_map_fst]
+  change _ = do
+    let result ← (fun p : Chal × RoCache M Commit Chal =>
+      (σ.verify pk c p.1 resp, p.2)) <$>
+      ((randomOracle : QueryImpl (roSpec M Commit Chal) _) (msg, c)).run cache
+    pure (!decide (msg ∈ log.map (fun e :
+      (t : (signSpec M Commit Resp).Domain) × (signSpec M Commit Resp).Range t => e.fst)) &&
+      result.1)
+  rfl
 
-private theorem runtime_evalSPMF_postKeygenFreshWriterComp_eq
+private theorem runtime_evalDist_postKeygenFreshWriterComp_eq
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) (pk : Stmt) (sk : Wit) :
-    (_root_.FiatShamir.runtime M).evalSPMF
+    (_root_.FiatShamir.runtime M).evalDist
         (postKeygenFreshWriterComp (σ := σ) (hr := hr) (M := M)
           (Commit := Commit) (Chal := Chal) (Resp := Resp) adv pk sk) =
-      𝒮[postKeygenFreshProb (σ := σ) (hr := hr) (M := M)
+      𝒟[postKeygenFreshProb (σ := σ) (hr := hr) (M := M)
         (Commit := Commit) (Chal := Chal) (Resp := Resp) adv pk sk] := by
   rw [_root_.FiatShamir.runtime_eq_runtimeWithCache_empty (M := M),
-    runtimeWithCache_evalSPMF_eq_fsBaseImpl (M := M) (Commit := Commit)
+    runtimeWithCache_evalDist_eq_fsBaseImpl (M := M) (Commit := Commit)
       (Chal := Chal) (cache := (∅ : RoCache M Commit Chal)),
     simulateQ_fsBaseImpl_postKeygenFreshWriterComp_run'_eq (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv pk sk,
@@ -987,7 +999,7 @@ WriterT post-keygen computation. -/
 private theorem unforgeableExp_eq_runtime_bind_postKeygenFreshWriterComp
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     SignatureAlg.unforgeableExp (_root_.FiatShamir.runtime M) adv =
-      (_root_.FiatShamir.runtime M).evalSPMF
+      (_root_.FiatShamir.runtime M).evalDist
         ((liftM (hr.gen : ProbComp (Stmt × Wit))) >>= fun ps =>
           postKeygenFreshWriterComp (σ := σ) (hr := hr) (M := M)
             (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2) := by
@@ -1007,21 +1019,22 @@ theorem publicUnforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     publicUnforgeableAdvantage σ hr M adv =
       statefulPostKeygenFreshAdvantage σ hr M adv := by
+  let : MeasurableSpace (Stmt × Wit) := ⊤
   unfold publicUnforgeableAdvantage SignatureAlg.unforgeableAdv.advantage
     statefulPostKeygenFreshAdvantage
   rw [unforgeableExp_eq_runtime_bind_postKeygenFreshWriterComp (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv,
-    _root_.FiatShamir.runtime_evalSPMF_bind_liftComp (M := M)
+    _root_.FiatShamir.runtime_evalDist_bind_liftComp (M := M)
       (oa := (hr.gen : ProbComp (Stmt × Wit)))
       (rest := fun ps =>
         postKeygenFreshWriterComp (σ := σ) (hr := hr) (M := M)
           (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2)]
-  conv_rhs => rw [← probOutput_evalSPMF]
-  rw [evalSPMF_bind]
-  apply congrArg (fun p => Pr[= true | p])
-  refine bind_congr fun ps => ?_
-  rw [runtime_evalSPMF_postKeygenFreshWriterComp_eq (σ := σ) (hr := hr)
-    (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2]
+  rw [evalDist_bind_of_discrete]
+  apply congrArg (fun μ : MeasureTheory.Measure Bool => μ {true})
+  apply Measure.bind_congr_right
+  filter_upwards [] with ps
+  exact runtime_evalDist_postKeygenFreshWriterComp_eq (σ := σ) (hr := hr)
+    (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2
 
 /-- Public compatibility for the legacy `SignatureAlg` endpoint. -/
 theorem publicCompatible

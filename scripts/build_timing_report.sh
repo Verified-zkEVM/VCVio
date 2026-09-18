@@ -135,6 +135,7 @@ repo_prefixes = (
     "VCVioCslib",
     "Extern",
     "LatticeCrypto",
+    "HashSig",
     "Examples",
     "VCVioWidgets",
     "Interop",

@@ -277,14 +277,14 @@ private lemma IND_CPA_stepPrefix_resume_eq_hybridLR (pk : PK) (k : ℕ) (branch 
                 ↓reduceIte, pure_bind, bind_assoc, StateT.run_liftM]
               rw [IND_CPA_queryImpl_hybridLR_counted_run'_inr_none (encAlg' := encAlg') pk
                   (if branch then k + 1 else k) mm oa st hcache,
-                if_pos (show st.2 < if branch then k + 1 else k by cases branch <;> simp_all)]
+                ite_eq_left (show st.2 < if branch then k + 1 else k by cases branch <;> simp_all)]
               exact probOutput_bind_congr' (encAlg'.encrypt pk mm.1) x
                 fun c => (evalSPMF_ext_iff.mp (ih c (st.1.cacheQuery mm c, st.2 + 1) (by omega))) x
             · have hEq : st.2 = k := by omega
               refine evalSPMF_ext fun x => ?_
               rw [IND_CPA_stepPrefix_query_inr]
               simp only [hcache, hlt, StateT.run_bind, StateT.run_get, StateT.run_pure,
-                if_false, pure_bind]
+                ite_false, pure_bind]
               rw [IND_CPA_queryImpl_hybridLR_counted_run'_inr_none (encAlg' := encAlg') pk
                   (if branch then k + 1 else k) mm oa st hcache,
                 show (if st.2 < if branch then k + 1 else k then mm.1 else mm.2) =

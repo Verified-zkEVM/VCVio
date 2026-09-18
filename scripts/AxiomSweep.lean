@@ -10,8 +10,8 @@ import Lean
 
 Walks the compiled environment (the same data the kernel checked) and computes, for every
 declaration in the non-test libraries (`VCVio`, `VCVioCslib`, `ToMathlib`, `Extern`,
-`LatticeCrypto`, `HashSig`, `Examples`, `VCVioWidgets`), the set of axioms its statement and proof ultimately
-depend on — the same information as `#print axioms`, for the whole library at once.
+`LatticeCrypto`, `HashSig`, `Examples`, `VCVioWidgets`), the set of axioms its statement and proof
+ultimately depend on — the same information as `#print axioms`, for the whole library at once.
 
 Because this reads elaborated `.olean` data rather than source text, it sees exactly what
 the kernel accepted: private declarations and instances are reported, compiler-generated
@@ -82,16 +82,13 @@ def isNativeTrust (a : String) : Bool :=
   a == "Lean.ofReduceBool" || a == "Lean.trustCompiler" || (a.splitOn "._native.").length > 1
 
 /-- The native trust this repository has already accepted, listed by full axiom name so
-the acceptance is auditable in source rather than hidden in a JSON allowlist. Both come
-from the ML-DSA / ML-KEM NTT inversion certificates, whose loop kernels the kernel cannot
-unfold in principle (`while` → `Loop.forIn` → `partial`); see the burndown note in
-`LatticeCrypto/{MLDSA,MLKEM}/Concrete/NTT.lean`.
+the acceptance is auditable in source rather than hidden in a JSON allowlist. The list is
+currently empty: both concrete NTT inversion certificates now use structural butterfly-stage
+proofs checked by the kernel.
 
 Fails closed: if a private-name index or module path shifts, the entry stops matching and
 `--check` goes red until someone consciously re-accepts it. -/
-def grandfatheredNativeTrust : List String :=
-  ["_private.LatticeCrypto.MLDSA.Concrete.NTT.0.MLDSA.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide",
-   "_private.LatticeCrypto.MLKEM.Concrete.NTT.0.MLKEM.Concrete.invNTTMatrix_nttMatrix_entry._native.native_decide"]
+def grandfatheredNativeTrust : List String := []
 
 /-- Axioms that may never be baselined: native-compiler trust beyond what
 `grandfatheredNativeTrust` already accepts. Unlike `sorryAx` debt — honest work in

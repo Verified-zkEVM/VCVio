@@ -35,10 +35,6 @@ universe u v
 
 open OracleComp OracleSpec
 
-/- Handler sums expose their dependent response family as `PFunctor.Obj` while
-the simulator normalizes routed query branches. -/
-attribute [local implicit_reducible] PFunctor.Obj
-
 namespace FiatShamir
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type}
@@ -220,6 +216,7 @@ private theorem simulatedNmaSigSim_run_hashQueryBound
 
 omit [Finite Commit] [Finite Resp] [Fintype Chal] [Inhabited Chal] in
 omit [SampleableType Stmt] [SampleableType Wit] in
+omit [Inhabited Commit] [Inhabited Resp] in
 /-- Hash-query bound for `simulatedNmaAdv`: if the CMA adversary makes at most
 `qS` signing-oracle queries and `qH` random-oracle queries, the NMA reduction
 makes at most `qH` live hash queries. The `qS` signing queries are absorbed

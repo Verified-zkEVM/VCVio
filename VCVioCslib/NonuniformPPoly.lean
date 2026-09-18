@@ -5,7 +5,6 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.OracleComp.Coinductive.SecurityFamily
 public import PolyFunCslib.Nontriviality
@@ -22,7 +21,7 @@ The name intentionally says `NonuniformPPT`/`PPoly`. It is distinct from
 `IsOraclePPTBy`, VCVio's uniform, backend-relative, pathwise oracle-PPT notion.
 -/
 
-@[expose] public section
+public section
 
 universe u
 
@@ -54,6 +53,7 @@ abbrev withOutput (boundary : NonuniformBoundary spec input output)
 
 end NonuniformBoundary
 
+/-- The Boolean answer, tagged by the sole coin query, encoded in one bit. -/
 noncomputable def coinIndexEncoding :
     BitEncFam fun _ ↦ (coinSpec.toPFunctor).Idx where
   wid _ := 1
@@ -69,7 +69,7 @@ noncomputable def coinIndexEncoding :
 
 /-- The standard fair-coin P/poly boundary: the sole query position has width
 zero and a tagged Boolean answer has width one. -/
-noncomputable def NonuniformBoundary.coin
+@[expose] noncomputable def NonuniformBoundary.coin
     {coinInput coinOutput : ℕ → Type}
     (inputEncoding : BitEncFam coinInput) (outputEncoding : BitEncFam coinOutput) :
     NonuniformBoundary (fun _ ↦ coinSpec) coinInput coinOutput where
@@ -111,6 +111,16 @@ theorem queryBound (witness : NonuniformPPTWitness boundary program)
 end NonuniformPPTWitness
 
 namespace IsNonuniformPPTBy
+
+/-- A concrete machine witness supplies the non-uniform polynomial certificate. -/
+theorem intro (witness : NonuniformPPTWitness boundary program) :
+    IsNonuniformPPTBy boundary program :=
+  PFunctor.CslibPPoly.IsPPolyBy.intro witness
+
+/-- Recover an actual machine witness from the propositional certificate. -/
+theorem toNonempty (certificate : IsNonuniformPPTBy boundary program) :
+    Nonempty (NonuniformPPTWitness boundary program) :=
+  PFunctor.CslibPPoly.IsPPolyBy.toNonempty certificate
 
 /-- Transport a non-uniform certificate along pointwise equality. -/
 theorem congr {program' : (n : ℕ) → input n → OracleComp (spec n) (output n)}
@@ -175,7 +185,8 @@ theorem secureAgainstNonuniformPPT_of_advantage_le_mul_totalQueries
         (∀ n value, OracleComp.IsTotalQueryBound (adversary n value) (queries n)) →
         ∀ n, game.advantage adversary n ≤ (queries n : ℝ≥0∞) * error n) :
     game.secureAgainstNonuniformPPT boundary := by
-  rintro adversary ⟨witness⟩
+  intro adversary certificate
+  obtain ⟨witness⟩ := IsNonuniformPPTBy.toNonempty certificate
   exact negligible_of_le
     (advantageBound adversary
       (fun n ↦ witness.realization.rounds.eval n)

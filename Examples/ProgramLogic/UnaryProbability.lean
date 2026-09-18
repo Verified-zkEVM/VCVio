@@ -20,7 +20,7 @@ and `by_hoare` support in the unary tactic layer.
 open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic
+open scoped OracleComp.ProgramLogic Std.Internal.Do OracleComp.Quantitative
 
 universe u
 
@@ -76,7 +76,7 @@ info: Try this:
 
   [apply] vcstep rw congr as ⟨x, hx⟩
 -/
-#guard_msgs in
+#guard_msgs (info) in
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr[ q | f x] = Pr[ q | g x]) :
     Pr[ q | mx >>= f] = Pr[ q | mx >>= g] := by
@@ -140,8 +140,6 @@ example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
 
 /-! ### Support-cut synthesis -/
 
-set_option maxHeartbeats 400000 in
--- `vcstep` needs a bit more fuel here under Lean 4.29.
 example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
     (h : ∀ x ∈ support oa, Pr[= true | f x] = 1) :
     ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ fun y => if y = true then 1 else 0 ⦄ := by

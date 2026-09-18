@@ -5,8 +5,9 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.Coercions.Add.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 public import PolyFun.PFunctor.Handler.Stateful
 public import PolyFun.PFunctor.Lens.State
 
@@ -324,6 +325,16 @@ theorem run_link_left_ofStateless {α : Type v}
     (s₂ : σ₂) (A : OracleComp E α) :
     ((ofStateless h).link inner).run (PUnit.unit, s₂) A = inner.run s₂ (simulateQ h A) := by
   simp [run_link_eq_run_shiftLeft, shiftLeft]
+
+/-- A stateless reduction followed by a stateful handler runs the composite implementation. -/
+theorem run_link_left_ofStateless_eq_of_compose_eq {α : Type v}
+    (h : QueryImpl E (OracleComp M)) (inner : QueryImpl.Stateful I M σ₂)
+    (target : QueryImpl.Stateful I E σ₂) (hcomp : inner ∘ₛ h = target)
+    (s₂ : σ₂) (A : OracleComp E α) :
+    ((ofStateless h).link inner).run (PUnit.unit, s₂) A = target.run s₂ A := by
+  rw [run_link_left_ofStateless]
+  simp only [run, StateT.run'_eq]
+  rw [← QueryImpl.simulateQ_compose, hcomp]
 
 @[simp]
 theorem run_link_ofStateless {α : Type v}

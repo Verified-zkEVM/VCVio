@@ -3,42 +3,10 @@ name: Lint Style
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-    paths:
-      - "ToMathlib/**/*.lean"
-      - "VCVio/**/*.lean"
-      - "VCVioCslib.lean"
-      - "VCVioCslib/**/*.lean"
-      - "Extern/**/*.lean"
-      - "LatticeCrypto/**/*.lean"
-      - "HashSig.lean"
-      - "HashSig/**/*.lean"
-      - "HashSigTest/**/*.lean"
-      - "Examples/**/*.lean"
-      - "VCVioWidgets/**/*.lean"
-      - "Interop.lean"
-      - "Interop/**/*.lean"
-      - "lakefile.lean"
-      - "scripts/nolints-style.txt"
-      - ".github/workflows/linting.yml"
+  merge_group:
+    types: [checks_requested]
   push:
     branches: [main]
-    paths:
-      - "ToMathlib/**/*.lean"
-      - "VCVio/**/*.lean"
-      - "VCVioCslib.lean"
-      - "VCVioCslib/**/*.lean"
-      - "Extern/**/*.lean"
-      - "LatticeCrypto/**/*.lean"
-      - "HashSig.lean"
-      - "HashSig/**/*.lean"
-      - "HashSigTest/**/*.lean"
-      - "Examples/**/*.lean"
-      - "VCVioWidgets/**/*.lean"
-      - "Interop.lean"
-      - "Interop/**/*.lean"
-      - "lakefile.lean"
-      - "scripts/nolints-style.txt"
-      - ".github/workflows/linting.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -50,29 +18,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
-      # Repo-wide hygiene checks that the old `scripts/lint-style.sh` enforced.
-      - name: Check for executable Lean files
-        run: |
-          execs="$(git ls-files -s '*.lean' | grep -E '^100755 ' | cut -f2-)"
-          if [ -n "$execs" ]; then
-            echo "ERROR: the following Lean files have the executable bit set:"
-            echo "$execs"
-            exit 1
-          fi
-
-      - name: Check for case-insensitive filename clashes
-        run: |
-          clashes="$(git ls-files | sort --ignore-case | uniq -D --ignore-case)"
-          if [ -n "$clashes" ]; then
-            echo "ERROR: the following files have the same lower-case form:"
-            echo "$clashes"
-            exit 1
-          fi
-
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Lean environment
-        uses: leanprover/lean-action@v1
+        uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
         with:
           auto-config: false
           build: false
@@ -84,8 +32,8 @@ jobs:
       - name: Fetch Mathlib cache
         run: lake exe cache get
 
-      # `lake exe lint-style` resolves to Mathlib's text-based style linter (the
-      # project deliberately defines no `lint-style` exe, so it does not link the
-      # FFI backends). Pass the libraries explicitly for full coverage.
+      - name: Test lint orchestration
+        run: python3 scripts/test-lint.py
+
       - name: Run text-based style linters
-        run: lake exe lint-style ToMathlib VCVio VCVioCslib Extern LatticeCrypto HashSig Examples VCVioWidgets Interop HashSigTest.SLHDSA.Oracle HashSigTest.SLHDSA.Wots HashSigTest.SLHDSA.Xmss HashSigTest.SLHDSA.Fors HashSigTest.SLHDSA.Hypertree HashSigTest.SLHDSA.Scheme HashSigTest.SLHDSA.Sha2KAT HashSigTest.SLHDSA.C13KAT
+        run: lake lint -- --style-only

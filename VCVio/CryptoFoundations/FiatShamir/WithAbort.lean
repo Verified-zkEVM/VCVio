@@ -41,8 +41,7 @@ lemmas, expected-cost PMFs, and the EUF-CMA security statement live in the
 
 universe u v
 
-open OracleComp OracleSpec
-open scoped BigOperators
+open MeasureTheory OracleComp OracleSpec
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type}
   {rel : Stmt → Wit → Bool}
@@ -116,11 +115,47 @@ variable (M : Type) [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 /-- Runtime bundle for the Fiat-Shamir-with-aborts random-oracle world. -/
 noncomputable def runtime : ProbCompRuntime (OracleComp (unifSpec + (M × Commit →ₒ Chal))) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
     (hashImpl := (randomOracle :
       QueryImpl (M × Commit →ₒ Chal) (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
     ∅
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+
+/-- The Fiat-Shamir-with-aborts runtime is the visible measure of the explicit lazy
+random-oracle simulation from the empty cache. -/
+lemma runtime_evalDist_eq_simulateQ_run'
+    {α : Type} [MeasurableSpace α]
+    (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
+    (runtime M).evalDist oa =
+      𝒟[(simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
+        (randomOracle : QueryImpl (M × Commit →ₒ Chal)
+          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))) oa).run' ∅] := by
+  simp only [ProbCompRuntime.evalDist, runtime,
+    MeasureSemanticsVia.withStateOracle_evalDist, unifFwdImpl]
+
+/-- The runtime commutes with a lifted plain-probability prefix. -/
+lemma runtime_evalDist_bind_liftComp
+    {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+    (oa : ProbComp α)
+    (rest : α → OracleComp (unifSpec + (M × Commit →ₒ Chal)) β) :
+    (runtime M).evalDist (liftM oa >>= rest) =
+      MeasureTheory.Measure.bind 𝒟[oa] fun x => (runtime M).evalDist (rest x) := by
+  let ro : QueryImpl (M × Commit →ₒ Chal)
+      (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := randomOracle
+  let impl := unifFwdImpl (M × Commit →ₒ Chal) + ro
+  calc
+    _ = 𝒟[(simulateQ impl (liftM oa >>= rest)).run' ∅] :=
+      runtime_evalDist_eq_simulateQ_run' M _
+    _ = 𝒟[oa >>= fun x => (simulateQ impl (rest x)).run' ∅] := by
+      rw [simulateQ_bind, roSim.run'_liftM_bind]
+    _ = MeasureTheory.Measure.bind 𝒟[oa]
+        (fun x => 𝒟[(simulateQ impl (rest x)).run' ∅]) :=
+      evalDist_bind_of_discrete _ _
+    _ = _ := by
+      apply MeasureTheory.Measure.bind_congr_right
+      filter_upwards [] with x
+      exact (runtime_evalDist_eq_simulateQ_run' M (rest x)).symm
 
 end runtime
 
@@ -157,7 +192,7 @@ lemma fsAbortSignLoop_cache_invariant
     roSim.simulateQ_HasQuery_query _
   induction n generalizing s₀ with
   | zero =>
-    simp [fsAbortSignLoop, simulateQ_pure, StateT.run_pure, support_pure] at hsup
+    simp [fsAbortSignLoop, simulateQ_pure, StateT.run_pure] at hsup
   | succ n ih =>
     simp only [fsAbortSignLoop, simulateQ_bind] at hsup
     rw [StateT.run_bind] at hsup
@@ -292,10 +327,11 @@ theorem correct
     (hc : ids.Complete) (maxAttempts : ℕ) (δ : ENNReal)
     (h_abort : ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
       ∀ msg : M,
-        Pr[= none | (runtime M).evalSPMF
-          ((FiatShamirWithAbort
+        (runtime M).evalDist (do
+          let sig ← (FiatShamirWithAbort
             (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-            ids hr M maxAttempts).sign pk sk msg)] ≤ δ) :
+            ids hr M maxAttempts).sign pk sk msg
+          pure sig.isNone) {true} ≤ δ) :
     SignatureAlg.Complete
       (FiatShamirWithAbort
         (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
@@ -314,20 +350,28 @@ theorem correct
   set signOnly : Stmt → Wit → ProbComp (Option (Commit × Resp)) := fun pk sk =>
     StateT.run' (simulateQ impl (sigAlg.sign pk sk msg)) ∅
   suffices hRewrite :
-      (runtime M).evalSPMF (do
+      (runtime M).evalDist (do
         let (pk, sk) ← sigAlg.keygen
         let sig ← sigAlg.sign pk sk msg
         sigAlg.verify pk msg sig) =
-      𝒮[do
+      𝒟[do
         let (pk, sk) ← hr.gen
         signVerify pk sk] by
-    rw [hRewrite]
-    rw [probOutput_evalSPMF]
+    rw [hRewrite, evalDist_apply_singleton]
     apply SignatureAlg.le_probOutput_bind_of_forall_support
     intro ⟨pk, sk⟩ hmem
     have hrel : rel pk sk = true := hr.gen_sound pk sk hmem
-    have habort : Pr[= none | 𝒮[signOnly pk sk]] ≤ δ := h_abort pk sk hrel msg
-    rw [probOutput_evalSPMF] at habort
+    let : MeasurableSpace (Option (Commit × Resp)) := ⊤
+    have habort := h_abort pk sk hrel msg
+    rw [(runtime M).evalDist_bind_pure (sigAlg.sign pk sk msg) Option.isNone
+      Measurable.of_discrete] at habort
+    have hsign : (runtime M).evalDist (sigAlg.sign pk sk msg) = 𝒟[signOnly pk sk] := by
+      rfl
+    rw [hsign, Measure.map_apply Measurable.of_discrete (measurableSet_singleton true)] at habort
+    have habort' : Pr[= none | signOnly pk sk] ≤ δ := by
+      rw [← evalDist_apply_singleton]
+      simpa only [Set.preimage, Set.mem_singleton_iff, Option.isNone_iff_eq_none,
+        Set.ofPred_eq_eq_singleton] using habort
     have hnoFail : Pr[⊥ | signVerify pk sk] = 0 := probFailure_of_liftM_PMF _
     calc
       Pr[= true | signVerify pk sk]
@@ -337,14 +381,8 @@ theorem correct
           tsub_le_tsub_left
             (probOutput_false_signVerify_le_probOutput_none_sign ids hr M ro rfl hc hrel
               msg maxAttempts) 1
-      _ ≥ 1 - δ := tsub_le_tsub_left habort 1
-  change 𝒮[(simulateQ impl (do
-      let (pk, sk) ← sigAlg.keygen
-      let sig ← sigAlg.sign pk sk msg
-      sigAlg.verify pk msg sig)).run' ∅] =
-    𝒮[do
-      let (pk, sk) ← hr.gen
-      signVerify pk sk]
+      _ ≥ 1 - δ := tsub_le_tsub_left habort' 1
+  rw [runtime_evalDist_eq_simulateQ_run']
   simp only [sigAlg, signVerify, FiatShamirWithAbort, simulateQ_bind]
   congr 1
   rw [roSim.run'_liftM_bind]

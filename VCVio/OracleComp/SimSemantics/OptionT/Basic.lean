@@ -54,18 +54,12 @@ lemma simulateQ_optionT_bind_run
   refine bind_congr fun x => ?_
   induction x <;> simp
 
-@[deprecated (since := "2026-06-25")]
-alias simulateQ_optionT_bind' := simulateQ_optionT_bind_run
-
 /-- `simulateQ` distributes through `OptionT.bind`, stated via `Option.elimM`. -/
 lemma simulateQ_optionT_bind_elimM
     (mx : OptionT (OracleComp spec) α) (f : α → OptionT (OracleComp spec) β) :
     simulateQ impl (mx >>= f).run =
     Option.elimM (simulateQ impl mx.run) (pure none) (fun a => simulateQ impl (f a).run) := by
   simp
-
-@[deprecated (since := "2026-06-25")]
-alias simulateQ_optionT_bind'' := simulateQ_optionT_bind_elimM
 
 /-- `simulateQ` distributes through `OptionT.bind`: the simulated OptionT-bind is the
     OptionT-bind of the simulated pieces. -/
@@ -246,7 +240,7 @@ lemma simulateQ_optionT_forIn_yield_pure_none (xs : List α) (init : β)
         rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
             OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
             = (pure (ForInStep.yield init) : OptionT n (ForInStep β)) by
-          rw [hbody x, if_pos hx]
+          rw [hbody x, ite_eq_left hx]
           rfl, pure_bind]
         exact ih (fun hall ↦ hfail (List.forall_mem_cons.mpr ⟨hx, hall⟩))
       · change ((simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
@@ -255,9 +249,6 @@ lemma simulateQ_optionT_forIn_yield_pure_none (xs : List α) (init : β)
         rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
             OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
             = (failure : OptionT n (ForInStep β)) by
-          rw [hbody x, if_neg hx]
+          rw [hbody x, ite_eq_right hx]
           rfl, failure_bind]
         rfl
-
-@[deprecated (since := "2026-06-25")]
-alias simulateQ_optionT_mapM_pure := simulateQ_optionT_vector_mapM_pure

@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2026 Quang Dao. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Quang Dao
+Authors: Quang Dao, Alexander Hicks
 -/
 
 module
@@ -14,10 +14,11 @@ public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 /-!
 # SLH-DSA in the public-hash random-oracle model
 
-This file lifts the canonical internal SLH-DSA programs for the repository's current `d = 1`
-formalization into one external signature algorithm.
+This file lifts the explicit-evidence `d = 1` compatibility programs of `HashSig.SLHDSA.Scheme`
+into one external signature algorithm; the canonical scheme path for every validated depth is
+`HashSig.SLHDSA.GeneralScheme`.
 Fresh seeds and the signing randomizer are lifted from `ProbComp`; `H_msg` and every tweakable
-hash remain explicit `HasQuery (publicHashSpec core)` calls. The canonical random-oracle
+hash remain explicit `HasQuery (publicHashSpec core)` calls. The random-oracle
 specialization uses one lazy cache for the complete experiment. Consequently key generation,
 the adversary, every signing-oracle call, and final verification all see the same public-hash
 table.
@@ -34,11 +35,12 @@ open OracleComp OracleSpec
 namespace SLHDSA
 
 variable {p : Params}
+variable (hd : p.d = 1)
 
-/-! ### Canonical external algorithms -/
+/-! ### External algorithms over the depth-one compatibility surface -/
 
-/-- External key generation: sample the three FIPS 205 seeds, then run the canonical internal
-explicit-query program. -/
+/-- External key generation: sample the three FIPS 205 seeds, then run the `d = 1`
+compatibility internal explicit-query program. -/
 def slhKeygenM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]
@@ -46,40 +48,41 @@ def slhKeygenM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
   let skSeed ← (monadLift ($ᵗ core.SkSeed) : m core.SkSeed)
   let skPrf ← (monadLift ($ᵗ core.SkPrf) : m core.SkPrf)
   let pkSeed ← (monadLift ($ᵗ core.PkSeed) : m core.PkSeed)
-  slhKeygenInternalM core skSeed skPrf pkSeed
+  slhKeygenInternalM hd core skSeed skPrf pkSeed
 
 /-- External hedged signing for the empty-context API: sample `addrnd`, encode the external
-message, then run the canonical internal explicit-query signer. -/
+message, then run the `d = 1` compatibility internal explicit-query signer. -/
 def slhSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.Y] (sk : SecretKeyCore core) (msg : List Byte) :
     m (SignatureCore p core) := do
   let addrnd ← (monadLift ($ᵗ core.Y) : m core.Y)
-  slhSignInternalM core (emptyContextMessage msg) sk addrnd
+  slhSignInternalM hd core (emptyContextMessage msg) sk addrnd
 
-/-- External empty-context verification via the canonical internal explicit-query verifier. -/
+/-- External empty-context verification via the `d = 1` compatibility internal explicit-query
+verifier. -/
 def slhVerifyM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m] [DecidableEq core.Y]
     (pk : PublicKeyCore core) (msg : List Byte) (sig : SignatureCore p core) : m Bool :=
-  slhVerifyInternalM core (emptyContextMessage msg) sig pk
+  slhVerifyInternalM hd core (emptyContextMessage msg) sig pk
 
-/-- The single canonical oracle-parametric signature scheme for the current `d = 1` SLH-DSA
-formalization. Its algorithms are generic over the public-randomness lift and the public-hash
+/-- The oracle-parametric signature scheme over the explicit-evidence `d = 1` compatibility
+surface. Its algorithms are generic over the public-randomness lift and the public-hash
 query capability. The unrestricted `Params` carrier does not yet encode `d = 1` as a type-level
-invariant. -/
+invariant; the canonical arbitrary-depth internal scheme is `HashSig.SLHDSA.GeneralScheme`. -/
 def slhdsaAlg (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]
     [SampleableType core.PkSeed] [SampleableType core.Y] [DecidableEq core.Y] :
     SignatureAlg m (List Byte) (PublicKeyCore core) (SecretKeyCore core)
       (SignatureCore p core) where
-  keygen := slhKeygenM core
-  sign _pk sk msg := slhSignM core sk msg
-  verify pk msg sig := slhVerifyM core pk msg sig
+  keygen := slhKeygenM hd core
+  sign _pk sk msg := slhSignM hd core sk msg
+  verify pk msg sig := slhVerifyM hd core pk msg sig
 
 /-! ### Deterministic public-hash specialization -/
 
-/-- The concrete-function scheme is definitionally the canonical oracle-parametric scheme
+/-- The concrete-function scheme is definitionally the oracle-parametric scheme above
 interpreted by preserving uniform sampling and answering every public-hash query with `prims`.
 There is no second implementation and therefore no scheme-equivalence theorem to maintain. -/
 def slhdsaConcreteAlg (prims : Primitives p)
@@ -88,22 +91,22 @@ def slhdsaConcreteAlg (prims : Primitives p)
     SignatureAlg ProbComp (List Byte) (PublicKeyCore prims.core) (SecretKeyCore prims.core)
       (SignatureCore p prims.core) :=
   SignatureAlg.map (simulateQ' (unifFwdAnswerImpl (PublicHash.impl prims)))
-    (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) prims.core)
+    (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) hd prims.core)
 
 private theorem slhdsaConcreteAlg_components (prims : Primitives p)
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y] :
-    slhdsaConcreteAlg prims =
+    slhdsaConcreteAlg hd prims =
       ({ keygen := do
             let skSeed ← $ᵗ prims.SkSeed
             let skPrf ← $ᵗ prims.SkPrf
             let pkSeed ← $ᵗ prims.PkSeed
-            pure (slhKeygenInternal prims skSeed skPrf pkSeed)
+            pure (slhKeygenInternal hd prims skSeed skPrf pkSeed)
          sign := fun _pk sk msg => do
             let addrnd ← $ᵗ prims.Y
-            pure (slhSignInternal prims (emptyContextMessage msg) sk addrnd)
+            pure (slhSignInternal hd prims (emptyContextMessage msg) sk addrnd)
          verify := fun pk msg sig =>
-            pure (slhVerifyInternal prims (emptyContextMessage msg) sig pk) } :
+            pure (slhVerifyInternal hd prims (emptyContextMessage msg) sig pk) } :
         SignatureAlg ProbComp (List Byte) (PublicKeyCore prims.core)
           (SecretKeyCore prims.core) (SignatureCore p prims.core)) := by
   let _ : HasQuery (publicHashSpec prims.core) ProbComp :=
@@ -124,18 +127,18 @@ private theorem slhdsaConcreteAlg_components (prims : Primitives p)
       HasQuery.toQueryImpl_eq_id', simulateQ_id']
   have hMap :
       SignatureAlg.map F.toMonadHom
-          (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) prims.core) =
-        slhdsaAlg (m := ProbComp) prims.core := by
+          (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) hd prims.core) =
+        slhdsaAlg (m := ProbComp) hd prims.core := by
     apply SignatureAlg.ext
     · simp [slhdsaAlg, slhKeygenM, hLift ($ᵗ prims.SkSeed), hLift ($ᵗ prims.SkPrf),
-        hLift ($ᵗ prims.PkSeed), slhKeygenInternalM_natural prims.core F]
+        hLift ($ᵗ prims.PkSeed), slhKeygenInternalM_natural hd prims.core F]
     · funext pk sk msg
       simp [slhdsaAlg, slhSignM, hLift ($ᵗ prims.Y),
-        slhSignInternalM_natural prims.core F]
+        slhSignInternalM_natural hd prims.core F]
     · funext pk msg sig
-      exact slhVerifyInternalM_natural prims.core F (emptyContextMessage msg) sig pk
+      exact slhVerifyInternalM_natural hd prims.core F (emptyContextMessage msg) sig pk
   change SignatureAlg.map F.toMonadHom
-      (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) prims.core) = _
+      (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) hd prims.core) = _
   rw [hMap]
   have hImpl :
       (HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp)) =
@@ -144,55 +147,55 @@ private theorem slhdsaConcreteAlg_components (prims : Primitives p)
     rfl
   have hKeygen : ∀ skSeed skPrf pkSeed,
       simulateQ (HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp))
-          (slhKeygenInternalM prims.core skSeed skPrf pkSeed :
+          (slhKeygenInternalM hd prims.core skSeed skPrf pkSeed :
             OracleComp (publicHashSpec prims.core) _) =
-        pure (slhKeygenInternal prims skSeed skPrf pkSeed) := by
+        pure (slhKeygenInternal hd prims skSeed skPrf pkSeed) := by
     intro skSeed skPrf pkSeed
     rw [hImpl, simulateQ_liftTarget]
     rfl
   have hSign : ∀ msg sk addrnd,
       simulateQ (HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp))
-          (slhSignInternalM prims.core msg sk addrnd :
+          (slhSignInternalM hd prims.core msg sk addrnd :
             OracleComp (publicHashSpec prims.core) _) =
-        pure (slhSignInternal prims msg sk addrnd) := by
+        pure (slhSignInternal hd prims msg sk addrnd) := by
     intro msg sk addrnd
     rw [hImpl, simulateQ_liftTarget]
     rfl
   have hVerify : ∀ msg sig pk,
       simulateQ (HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp))
-          (slhVerifyInternalM prims.core msg sig pk :
+          (slhVerifyInternalM hd prims.core msg sig pk :
             OracleComp (publicHashSpec prims.core) _) =
-        pure (slhVerifyInternal prims msg sig pk) := by
+        pure (slhVerifyInternal hd prims msg sig pk) := by
     intro msg sig pk
     rw [hImpl, simulateQ_liftTarget]
     rfl
   apply SignatureAlg.ext
   · simp [slhdsaAlg, slhKeygenM, hKeygen,
-      ← slhKeygenInternalM_natural prims.core
+      ← slhKeygenInternalM_natural hd prims.core
         (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec prims.core) (m := ProbComp))]
   · funext pk sk msg
     simp [slhdsaAlg, slhSignM, hSign,
-      ← slhSignInternalM_natural prims.core
+      ← slhSignInternalM_natural hd prims.core
         (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec prims.core) (m := ProbComp))]
   · funext pk msg sig
     simp [slhdsaAlg, slhVerifyM, hVerify,
-      ← slhVerifyInternalM_natural prims.core
+      ← slhVerifyInternalM_natural hd prims.core
         (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec prims.core) (m := ProbComp))]
 
 /-- Perfect completeness of the definitional concrete-function specialization. -/
 theorem slhdsaConcreteAlg_perfectlyComplete (prims : Primitives p)
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf]
     [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y] :
-    (slhdsaConcreteAlg prims).PerfectlyComplete ProbCompRuntime.probComp := by
+    (slhdsaConcreteAlg hd prims).PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
   set mx : ProbComp Bool := do
-    let (pk, sk) ← (slhdsaConcreteAlg prims).keygen
-    let sig ← (slhdsaConcreteAlg prims).sign pk sk msg
-    (slhdsaConcreteAlg prims).verify pk msg sig with hmx
+    let (pk, sk) ← (slhdsaConcreteAlg hd prims).keygen
+    let sig ← (slhdsaConcreteAlg hd prims).sign pk sk msg
+    (slhdsaConcreteAlg hd prims).verify pk msg sig with hmx
   have huniq : ∀ y ∈ support mx, y = true := by
     intro y hy
     rw [hmx] at hy
-    rw [slhdsaConcreteAlg_components prims] at hy
+    rw [slhdsaConcreteAlg_components hd prims] at hy
     rw [mem_support_bind_iff] at hy
     obtain ⟨⟨pk, sk⟩, hpksk, hy⟩ := hy
     rw [mem_support_bind_iff] at hy
@@ -210,16 +213,16 @@ theorem slhdsaConcreteAlg_perfectlyComplete (prims : Primitives p)
     obtain ⟨addrnd, -, hsig⟩ := hsig
     simp only [support_pure, Set.mem_singleton_iff] at hsig
     subst hsig
-    have hpk : pk = (slhKeygenInternal prims skSeed skPrf pkSeed).1 :=
+    have hpk : pk = (slhKeygenInternal hd prims skSeed skPrf pkSeed).1 :=
       congrArg Prod.fst hpksk
-    have hsk : sk = (slhKeygenInternal prims skSeed skPrf pkSeed).2 :=
+    have hsk : sk = (slhKeygenInternal hd prims skSeed skPrf pkSeed).2 :=
       congrArg Prod.snd hpksk
     subst hpk; subst hsk
-    exact slhVerifyInternal_slhSignInternal prims (emptyContextMessage msg)
+    exact slhVerifyInternal_slhSignInternal hd prims (emptyContextMessage msg)
       skSeed skPrf pkSeed addrnd
-  change Pr[= true | mx] = 1
-  exact probOutput_eq_one_of_support_subset_singleton
-    (NeverFail.probFailure_eq_zero (mx := mx)) huniq
+  rw [ProbCompRuntime.probComp_evalDist]
+  exact (MeasureTheory.ae_iff_prob_eq_one (p := fun y ↦ y = true)
+    Measurable.of_discrete).mp (ae_of_forall_mem_support mx _ huniq)
 
 /-! ### One shared lazy-random-oracle runtime -/
 
@@ -234,9 +237,10 @@ noncomputable def runtimeWithCache (core : CorePrimitives p)
     [SampleableType core.Y] [SampleableType (Bytes p.m)]
     (cache : PublicHash.Cache core) :
     ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
     (hashImpl := PublicHash.randomOracle core) cache
   toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 open scoped Classical in
 /-- Standard SLH-DSA public-hash ROM runtime, starting from the empty cache. -/
@@ -246,12 +250,38 @@ noncomputable def runtime (core : CorePrimitives p)
     ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) :=
   runtimeWithCache core ∅
 
+open scoped Classical in
+/-- The public-hash runtime with an initial cache is the visible measure of its explicit lazy
+random-oracle simulation. -/
+lemma runtimeWithCache_evalDist (core : CorePrimitives p)
+    [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
+    [SampleableType core.Y] [SampleableType (Bytes p.m)]
+    (cache : PublicHash.Cache core) {α : Type} [MeasurableSpace α]
+    (oa : OracleComp (unifSpec + publicHashSpec core) α) :
+    (runtimeWithCache core cache).evalDist oa =
+      𝒟[(simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core) oa).run'
+        cache] := by
+  simp only [ProbCompRuntime.evalDist, runtimeWithCache,
+    MeasureSemanticsVia.withStateOracle_evalDist, unifFwdImpl]
+
+open scoped Classical in
+/-- The standard public-hash runtime starts the explicit lazy random-oracle simulation from the
+empty cache. -/
+lemma runtime_evalDist (core : CorePrimitives p)
+    [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
+    [SampleableType core.Y] [SampleableType (Bytes p.m)]
+    {α : Type} [MeasurableSpace α]
+    (oa : OracleComp (unifSpec + publicHashSpec core) α) :
+    (runtime core).evalDist oa =
+      𝒟[(simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core) oa).run' ∅] :=
+  runtimeWithCache_evalDist core ∅ oa
+
 end PublicHash
 
 /-! ### End-to-end shared-ROM completeness -/
 
 open scoped Classical in
-/-- The canonical oracle-parametric SLH-DSA scheme is perfectly complete under the runtime that
+/-- The depth-one oracle-parametric SLH-DSA scheme is perfectly complete under the runtime that
 threads one lazy public-hash random-oracle cache through the entire experiment.
 
 The proof uses the generic mixed-uniform/random-oracle probability-one bridge. It reduces the
@@ -261,41 +291,42 @@ theorem slhdsaAlg_perfectlyComplete (core : CorePrimitives p)
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]
     [SampleableType core.PkSeed] [SampleableType core.Y]
     [SampleableType (Bytes p.m)] :
-    (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec core)) core).PerfectlyComplete
+    (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec core)) hd core).PerfectlyComplete
       (PublicHash.runtime core) := by
-  let _ : ∀ q : (publicHashSpec core).Domain,
-      SampleableType ((publicHashSpec core).Range q) := fun q => by
-    cases q <;> infer_instance
   intro msg
-  let alg := slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec core)) core
+  let alg := slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec core)) hd core
   let oa : OracleComp (unifSpec + publicHashSpec core) Bool := do
     let (pk, sk) ← alg.keygen
     let sig ← alg.sign pk sk msg
     alg.verify pk msg sig
-  change Pr[= true | (PublicHash.runtime core).evalSPMF oa] = 1
-  unfold PublicHash.runtime PublicHash.runtimeWithCache ProbCompRuntime.evalSPMF
-    SPMFSemantics.evalSPMF SemanticsVia.denote SPMFSemantics.withStateOracle
-  rw [probOutput_evalSPMF]
-  change Pr[= true |
-    (simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core) oa).run' ∅] = 1
-  rw [← probEvent_eq_eq_probOutput, StateT.run', probEvent_map]
-  apply (OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff
+  rw [PublicHash.runtime_evalDist]
+  have hmeasure :=
+    OracleComp.evalDist_apply_setOf_simulateQ_unifFwdImpl_add_randomOracle_run'_eq_one_iff
     (oa := oa) (preexisting_cache := (∅ : PublicHash.Cache core))
-    (fun b => b = true)).2
+    (fun b => b = true)
+  suffices hfixed : ∀ f : QueryImpl (publicHashSpec core) Id,
+      QueryCache.AgreesWithFn f ∅ →
+        𝒟[simulateQ (unifFwdAnswerImpl f) oa] {b | b = true} = 1 by
+    simpa only [PublicHash.Cache, Set.ofPred_eq_eq_singleton] using hmeasure.2 hfixed
   intro f _hf
   let prims := PublicHash.withPublicHash core f
   have hAlg' : SignatureAlg.map (simulateQ' (unifFwdAnswerImpl f)) alg =
-      slhdsaConcreteAlg prims := by
+      slhdsaConcreteAlg hd prims := by
     simp [alg, prims, slhdsaConcreteAlg, PublicHash.impl_withPublicHash]
-  rw [probEvent_eq_eq_probOutput]
-  simp only [oa, simulateQ_bind]
-  change Pr[= true | do
-    let (pk, sk) ←
-      (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl f)) alg).keygen
-    let sig ←
-      (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl f)) alg).sign pk sk msg
-    (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl f)) alg).verify pk msg sig] = 1
+  simp only [oa]
+  have hgame : (do
+      let (pk, sk) ← (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl f)) alg).keygen
+      let σ ← (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl f)) alg).sign pk sk msg
+      (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl f)) alg).verify pk msg σ) =
+    simulateQ (unifFwdAnswerImpl f) (do
+      let (pk, sk) ← alg.keygen
+      let σ ← alg.sign pk sk msg
+      alg.verify pk msg σ) :=
+    SignatureAlg.map_correctnessGame (simulateQ' (unifFwdAnswerImpl f)) alg msg
+  rw [← hgame]
   rw [hAlg']
-  exact slhdsaConcreteAlg_perfectlyComplete prims msg
+  have hcomplete := slhdsaConcreteAlg_perfectlyComplete hd prims msg
+  rw [ProbCompRuntime.probComp_evalDist] at hcomplete
+  simpa only [Set.ofPred_eq_eq_singleton] using hcomplete
 
 end SLHDSA

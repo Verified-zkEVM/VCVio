@@ -115,7 +115,7 @@ theorem sigma_speciallySound (g : G) :
     SpeciallySound (sigma F G g) := by
   intro pk R c₁ c₂ z₁ z₂ h_ne h_v1 h_v2 w h_w
   dsimp [sigma] at *
-  simp only [support_pure, Set.mem_singleton_iff] at h_w
+  simp only [Set.mem_singleton_iff] at h_w
   subst h_w
   simp only [decide_eq_true_eq] at h_v1 h_v2 ⊢
   have h_sub : (z₁ - z₂) • g = (c₁ - c₂) • pk := by
@@ -302,7 +302,7 @@ theorem sigma_simChalUniformGivenCommit (g : G) :
             (if r • g = c₀ then (1 : ℝ≥0∞) else 0) by
       simp_rw [probOutput_uniformSample, probEvent_pure]
       by_cases hr : r • g = c₀
-      · simp only [hr, if_true]
+      · simp only [hr, ite_true]
         rw [ENNReal.tsum_mul_left, ENNReal.tsum_const,
           ENat.card_eq_coe_fintype_card, mul_one, ENat.toENNReal_coe,
           ENNReal.inv_mul_cancel hcard_ne_zero hcard_ne_top]

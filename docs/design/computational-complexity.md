@@ -46,6 +46,12 @@ claim that a pull request has been opened or merged.
   `ResponseResourceModel`, `ResponseResourceContract`, `PolynomialRunBound`,
   `PolynomialProgramWitness`, `PureResourceCertificate`, `RankedResource.PotentialCertificate`,
   `RankedResourceCertificate`, and the polynomial sequencing certificates.
+- `FreeM.HandlerMachine.runPrefix` executes dependent handler substitution with separate
+  caller and handler phases. Entry and return cost one administrative transition each;
+  inner queries remain visible. Component bounds derive `calls * (inner + 2)` completion,
+  and result erasure preserves the full inner interaction. `Examples/ElGamal/HandlerExecution.lean`
+  consumes this theorem for the three-query reduction. These transition counters do not provide
+  encoded backend operations or their quantitative realization.
 - VCVio has `SecurityFamily.packProgram` and thin crypto-facing aliases
   `ResourcePolynomial`, `OracleResourceModel`, `OracleContract`, `StrictPPTWitness`,
   `PureCertificate`, `ResourcePotentialCertificate`, and `RankedPPTCertificate`. VCVio retains the
@@ -75,12 +81,15 @@ claim that a pull request has been opened or merged.
   `oneCoin_isPPTBy`. Exact-run output-length lemmas justify
   `PolynomialCode.toPolyRealizerFromTime`. The package records that its pair codec is incompatible
   with complexitylib's canonical pairing and tests second-order quantification over two
-  fixed-answer envelopes. It does not yet export an inhabitant of the general machine-level
+  fixed-answer envelopes. `Backend/Copy.lean` proves exact linear copying and tag insertion on
+  every binary word. `HandlerCanary` realizes completed echo-handler execution on arbitrary-length
+  input, with derived `2n + 7` work and linear state/readout sizes. This is a specialized exact
+  realization, not the general handler compiler. It does not yet export an inhabitant of the general machine-level
   closure gates or compile arbitrary PolyFun machines to complexitylib machines.
-- The optional `PolyFunCslib` package now owns a separate cslib-backed,
+- The optional `PolyFunCslib` library now owns a separate cslib-backed,
   parameter-indexed P/poly model: pinned encodings, polynomial description
   bounds, nonvacuous progress, generic execution traces, closure operations,
-  and a counting nontriviality theorem. The optional `VCVioCslib` package is a
+  and a counting nontriviality theorem. The optional `VCVioCslib` library is a
   thin crypto-facing facade over that model, adding oracle specialization, a
   fair-coin boundary, and a security-game bridge. This backend is explicitly
   nonuniform and backend-relative; core PolyFun and core VCVio remain neutral.
@@ -126,7 +135,7 @@ VCVioComplexity ----> VCVio ----> PolyFun ----> Mathlib
        `----> complexitylib ------------> Mathlib
 ```
 
-The separately packaged cslib integration is:
+The separate cslib library integration is:
 
 ```text
 VCVioCslib ----> VCVio
@@ -260,7 +269,7 @@ VCVio now provides a `SecurityFamily` packing layer with the following behavior:
 
 The packing declarations only express a family. Uniformity comes from the one
 realizer theorem, never from the packing function itself. The optional
-`VCVioCslib.IsNonuniformPPTBy` admits a family of separate codes only relative
+`OracleComp.Complexity.IsNonuniformPPTBy` admits a family of separate codes only relative
 to its pinned cslib P/poly backend, where code description length is part of the
 bound. The unqualified, model-independent `IsNonuniformPPT` remains reserved.
 
@@ -547,7 +556,7 @@ young complexity library and avoids a dependency cycle.
 
 The audited source is complexitylib commit
 [`b6738219a3a3c50967d6bd16cba9487887ca6b66`](https://github.com/SamuelSchlesinger/complexitylib/tree/b6738219a3a3c50967d6bd16cba9487887ca6b66).
-At Lean/Mathlib 4.33, direct imports of
+At Lean/Mathlib 4.34, direct imports of
 `Complexitylib.Models.TuringMachine` and
 `Complexitylib.Classes.P.Cobham.Defs` compile unchanged. The package builds an
 exact certificate layer on that machine model and inhabited PolyFun
@@ -563,12 +572,14 @@ This import direction is conceptually sound: VCVio-specific interaction is an
 instantiation over a general concrete machine library. Compatibility of the
 higher machine-combinator stack is a blocker for general closure, not a layering
 problem. The cited complexitylib revision pins Lean and Mathlib 4.30, while
-VCVio pins 4.33. The completed preflight used VCVio's toolchain and made the
-direct Mathlib 4.33 pin authoritative. No file in the checked-out complexitylib
+VCVio pins 4.34. The completed preflight used VCVio's toolchain and made the
+direct Mathlib 4.34 pin authoritative. No file in the checked-out complexitylib
 dependency was edited.
 
 The preflight found two separate incompatibilities. The upstream asymptotics
-module fails, so the package contains one attributed adaptation,
+module fails at its polynomial import boundary (`Polynomial.natDegree` and
+`Polynomial.eval_eq_sum_range` are unavailable from its imports). Its earlier
+`Norm.ext` failures no longer occur on v4.34. The package contains one attributed adaptation,
 `VCVioComplexity.Asymptotics.PolyBound`, omitting only the `BigO` bridge. The
 higher Turing-machine combinator stack also fails, so the package exposes
 PolyFun's category, exact-category, product, sum, option, and distributivity mixins as explicit

@@ -6,7 +6,6 @@ Authors: James Waters
 
 module
 public import VCVio.OracleComp.QueryTracking.Collision
-public import ToMathlib.Combinatorics.FinPairs
 public import ToMathlib.Data.ENNReal.Gauss
 
 /-!
@@ -41,9 +40,7 @@ private lemma tsum_query_mul_probEvent_le_aux {α : Type}
     (h : ∀ u, Pr[ p u | (simulateQ loggingOracle (mx u)).run] ≤ c) :
     (∑' u, Pr[= u | (query t : OracleComp spec _)] *
       Pr[ p u | (simulateQ loggingOracle (mx u)).run]) ≤ c :=
-  le_trans (ENNReal.tsum_le_tsum fun u => mul_le_mul' le_rfl (h u))
-    (le_trans ENNReal.tsum_mul_right.le
-      (le_trans (mul_le_mul' tsum_probOutput_le_one le_rfl) (one_mul c).le))
+  tsum_probOutput_mul_le_of_le _ h
 
 omit [DecidableEq ι] in
 /-- **ROM uniformity at a log position**: For any `loggingOracle` trace, the
@@ -69,10 +66,15 @@ theorem probEvent_log_entry_eq_le {α : Type}
         calc _ ≤ ∑' x : spec.Range entry.1,
                 (Fintype.card (spec.Range entry.1) : ℝ≥0∞)⁻¹ * if x = entry.2 then 1 else 0 :=
               ENNReal.tsum_le_tsum fun x => mul_le_mul' le_rfl <| by
-                split <;> simp_all [Sigma.ext_iff]
+                by_cases hx : x = entry.2
+                · subst hx; simp
+                · have hentry : (⟨entry.1, x⟩ : (t : spec.Domain) × spec.Range t) ≠ entry := by
+                    intro h
+                    exact hx (eq_of_heq (Sigma.ext_iff.mp h).2)
+                  simp [hx, hentry]
           _ = _ := by simp
       · refine le_of_eq_of_le (ENNReal.tsum_eq_zero.mpr fun x => ?_) zero_le
-        rw [if_neg fun h => ht (by cases h; rfl), mul_zero]
+        rw [ite_eq_right fun h => ht (by cases h; rfl), mul_zero]
     | succ k' =>
       rw [probEvent_bind_eq_tsum]
       simp_rw [probEvent_map, Function.comp_def, List.getElem?_cons_succ]
@@ -172,7 +174,10 @@ theorem probEvent_pair_collision_le {α : Type}
     h α oa i.val j.val (Fin.val_ne_of_ne hij)
   intro β ob
   induction ob using OracleComp.inductionOn with
-  | pure x => intro i j _; simp [simulateQ_pure]
+  | pure x =>
+    classical
+    intro i j _
+    simp [simulateQ_pure]
   | query_bind t mx ih =>
     intro i j hij
     rw [run_simulateQ_loggingOracle_query_bind, probEvent_bind_eq_tsum]
@@ -191,13 +196,21 @@ theorem probEvent_pair_collision_le {α : Type}
       refine tsum_query_mul_probEvent_le_aux t mx _ _ fun u => key u j' _ fun z hev => ?_
       match hz : z.2[j']? with
       | none => simp [hz] at hev
-      | some ⟨s, v⟩ => exact ⟨s, v, rfl, by simp_all⟩
+      | some ⟨s, v⟩ =>
+        simp only [hz, Option.map_some] at hev
+        change some (t ≠ s ∧ HEq u v) = some (true = true) at hev
+        have hp : t ≠ s ∧ HEq u v := (Option.some.inj hev).symm ▸ rfl
+        exact ⟨s, v, rfl, hp.2⟩
     | i' + 1, 0, _ =>
       simp only [List.getElem?_cons_zero, List.getElem?_cons_succ]
       refine tsum_query_mul_probEvent_le_aux t mx _ _ fun u => key u i' _ fun z hev => ?_
       match hz : z.2[i']? with
       | none => simp [hz] at hev
-      | some ⟨s, v⟩ => exact ⟨s, v, rfl, (by simp_all : v ≍ u).symm⟩
+      | some ⟨s, v⟩ =>
+        simp only [hz, Option.bind_some, Option.map_some] at hev
+        change some (s ≠ t ∧ HEq v u) = some (true = true) at hev
+        have hp : s ≠ t ∧ HEq v u := (Option.some.inj hev).symm ▸ rfl
+        exact ⟨s, v, rfl, hp.2.symm⟩
     | i' + 1, j' + 1, hij =>
       simp only [List.getElem?_cons_succ]
       exact tsum_query_mul_probEvent_le_aux t mx _ _ fun u => ih u i' j' (by lia)
@@ -247,7 +260,8 @@ theorem probEvent_logCollision_le_birthday_total_tight {α : Type}
           · exact key i j hi_lt hj_lt hlt hdist heq
           · exact key j i hj_lt hi_lt hgt hdist.symm heq.symm
     _ = (Nat.choose n 2 : ℝ≥0∞) / (Fintype.card (spec.Range default)) := by
-        rw [Finset.sum_const, nsmul_eq_mul, div_eq_mul_inv, Finset.card_filter_fst_lt_snd]
+        rw [Finset.sum_const, nsmul_eq_mul, div_eq_mul_inv, Fintype.card_product_filter_lt,
+          Fintype.card_fin]
 
 omit [DecidableEq ι] in
 /-- **Birthday bound for `loggingOracle`** (total query bound):
@@ -275,14 +289,15 @@ theorem probEvent_logCollision_le_birthday_total {α : Type}
           exact (Nat.mul_div_le (n * (n - 1)) 2).trans (by gcongr; lia))
 
 open Classical in
-omit [spec.DecidableEq] in
+omit [spec.DecidableEq] [IsUniformSpec spec] in
 /-- At a fresh query, the number of responses that would create a cache collision is at most
 the number of keys known to be populated in the current collision-free cache.
 
 The finite set `S` need only cover the populated keys; it may be a convenient external bound
 rather than the cache's exact support. This form is intended for adaptive birthday arguments,
 where `S` grows by one after each cache miss. -/
-theorem card_responses_creating_cacheCollision_le {cache₀ : QueryCache spec} {t : spec.Domain}
+theorem card_responses_creating_cacheCollision_le [spec.Fintype]
+    {cache₀ : QueryCache spec} {t : spec.Domain}
     {S : Finset spec.Domain} (hnocoll : ¬CacheHasCollision cache₀)
     (hSmem : ∀ t', cache₀ t' ≠ none → t' ∈ S) :
     (Finset.univ.filter (fun u => CacheHasCollision (cache₀.cacheQuery t u))).card ≤ S.card := by
@@ -306,11 +321,11 @@ theorem card_responses_creating_cacheCollision_le {cache₀ : QueryCache spec} {
   refine Finset.card_le_card_of_injOn f (fun u hu => ?_) (fun u₁ hu₁ u₂ hu₂ hfeq => ?_)
   · have hu' := (Finset.mem_filter.mp hu).2
     obtain ⟨_, v, hcache, _⟩ := (hmust u hu').choose_spec
-    rw [show f u = _ from dif_pos hu']
+    rw [show f u = _ from dite_eq_left hu']
     exact hSmem _ (hcache ▸ Option.some_ne_none v)
   · have hu₁' := (Finset.mem_filter.mp hu₁).2
     have hu₂' := (Finset.mem_filter.mp hu₂).2
-    rw [show f u₁ = _ from dif_pos hu₁', show f u₂ = _ from dif_pos hu₂'] at hfeq
+    rw [show f u₁ = _ from dite_eq_left hu₁', show f u₂ = _ from dite_eq_left hu₂'] at hfeq
     obtain ⟨_, v₁, hcache₁, heq₁⟩ := (hmust u₁ hu₁').choose_spec
     obtain ⟨_, v₂, hcache₂, heq₂⟩ := (hmust u₂ hu₂').choose_spec
     suffices aux : ∀ (a b : spec.Domain) (va : spec.Range a) (vb : spec.Range b),

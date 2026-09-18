@@ -18,11 +18,18 @@ of each node as the node hash. The canonical `xmss*M` programs depend only on `C
 and issue every public hash through `HasQuery`; they therefore cannot inspect a concrete `Thash`
 implementation. The pure `Primitives` API is literally the deterministic interpretation of those
 programs by `simulateQ (PublicHash.impl prims)`. The lower-level `*With` combinators expose the
-same callback-parametric control flow for naturality and composition proofs.
+same callback-parametric control flow for naturality and composition proofs; the
+`xmss*With_publicHash_eq_xmss*M` equations fold the canonical public-hash callbacks back into
+the `xmss*M` programs, and `xmssNodeM_eq_merkleRootM`, `xmssSignM_eq_bind`, and
+`xmssPkFromSigM_eq_bind` state the exact shape of each program so that consumers never restate
+it.
 The Merkle layer is itself the generic `AddressedMerkleTree` engine specialised to heap-style
 `(height, index)` addressing, so its completeness, naturality, and oriented binding theorems are
 available here:
 
+* `xmssNode_zero` / `xmssNode_succ` (and `xmssNodeM_zero` / `xmssNodeM_succ`) — the FIPS 205
+  Algorithm 9 recursion: a height-`0` node is the WOTS+ public key of its leaf, and a
+  height-`z + 1` node is `H` at its own `TREE` address of its two height-`z` children;
 * `xmssPkFromSig_xmssSign` — XMSS correctness, from `PerfectMerkleTree.climb_authPath` together
   with WOTS+ correctness (`wotsPkFromSig_wotsSign`);
 * `xmssPkFromSig_binding` — an XMSS signature whose recovered leaf differs from the honest WOTS+
@@ -55,9 +62,16 @@ def wotsLeafAdrs (adrs : Adrs) (t : ℕ) : Adrs :=
 def xmssNodeAdrs (adrs : Adrs) (z t : ℕ) : Adrs :=
   ((adrs.setTypeAndClear .tree).setTreeHeight z).setTreeIndex t
 
-/-- An XMSS signature: a WOTS+ signature of the leaf message paired with the authentication
-path (`h'` sibling nodes). -/
-abbrev XmssSig (p : Params) (core : CorePrimitives p) := WotsSig p core × List core.Y
+/-- An XMSS signature whose WOTS+ component and authentication path have their FIPS-prescribed
+lengths in the type, so no caller-supplied length invariant is needed downstream. -/
+structure XmssSigCore (p : Params) (core : CorePrimitives p) where
+  /-- The `len` WOTS+ chain values. -/
+  wots : WotsSig p core
+  /-- The `h'` sibling nodes, from the leaf level upward. -/
+  auth : Vector core.Y p.hp
+
+/-- Alias for the canonical intrinsically shaped XMSS signature. -/
+abbrev XmssSig := XmssSigCore
 
 /-! ### Low-level callback-parametric helpers -/
 
@@ -99,10 +113,11 @@ def xmssSignWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed)
     (adrs : Adrs) (idx : ℕ) : m (XmssSig p core) := do
-  let path ← PerfectMerkleTree.authPathM (xmssLeafWith core hash compress sk pk adrs)
+  let path ← PerfectMerkleTree.intrinsicAuthPathM
+    (xmssLeafWith core hash compress sk pk adrs)
     (xmssNodeHashWith nodeHash adrs) idx p.hp
   let sig ← wotsSignWith core hash msg sk pk (wotsLeafAdrs adrs idx)
-  return (sig, path)
+  return ⟨sig, path⟩
 
 /-- Low-level callback-parametric XMSS root recovery. The WOTS+ public key is
 recovered before the authentication path is climbed. -/
@@ -111,8 +126,8 @@ def xmssPkFromSigWith (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (compress : Adrs → List core.Y → m core.Y)
     (nodeHash : Adrs → core.Y → core.Y → m core.Y)
     (idx : ℕ) (sig : XmssSig p core) (msg : core.Y) (adrs : Adrs) : m core.Y := do
-  let leaf ← wotsPkFromSigWith core hash compress sig.1 msg (wotsLeafAdrs adrs idx)
-  PerfectMerkleTree.climbM (xmssNodeHashWith nodeHash adrs) idx leaf sig.2
+  let leaf ← wotsPkFromSigWith core hash compress sig.wots msg (wotsLeafAdrs adrs idx)
+  PerfectMerkleTree.climbM (xmssNodeHashWith nodeHash adrs) idx leaf sig.auth.toList
 
 /-! ### Canonical explicit-public-hash programs -/
 
@@ -157,6 +172,104 @@ def xmssPkFromSigM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     (pk : core.PkSeed) (adrs : Adrs) : m core.Y :=
   xmssPkFromSigWith core (PublicHash.f core pk) (PublicHash.tl core pk)
     (PublicHash.h core pk) idx sig msg adrs
+
+/-! ### Program shape
+
+The `*With` combinators applied to the canonical public-hash callbacks are definitionally the
+`xmss*M` programs, and each `xmss*M` program is definitionally its generic Merkle or WOTS+
+building block. Consumers that unfold a `*With` control flow use these equations to return to the
+canonical programs instead of restating them. -/
+
+/-- The canonical callbacks fold `xmssLeafWith` back into `xmssLeafM`. -/
+theorem xmssLeafWith_publicHash_eq_xmssLeafM (core : CorePrimitives p) {m : Type → Type*}
+    [Monad m] [HasQuery (publicHashSpec core) m]
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
+    xmssLeafWith core (PublicHash.f core pk) (PublicHash.tl core pk) sk pk adrs t =
+      (xmssLeafM core sk pk adrs t : m core.Y) := rfl
+
+/-- The canonical callback folds `xmssNodeHashWith` back into `xmssNodeHashM`. -/
+theorem xmssNodeHashWith_publicHash_eq_xmssNodeHashM (core : CorePrimitives p)
+    {m : Type → Type*} [HasQuery (publicHashSpec core) m]
+    (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) (l r : core.Y) :
+    xmssNodeHashWith (PublicHash.h core pk) adrs z t l r =
+      (xmssNodeHashM core pk adrs z t l r : m core.Y) := rfl
+
+/-- The canonical callbacks fold `xmssNodeWith` back into `xmssNodeM`. -/
+theorem xmssNodeWith_publicHash_eq_xmssNodeM (core : CorePrimitives p) {m : Type → Type*}
+    [Monad m] [HasQuery (publicHashSpec core) m]
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    xmssNodeWith core (PublicHash.f core pk) (PublicHash.tl core pk) (PublicHash.h core pk)
+        sk pk adrs z t =
+      (xmssNodeM core sk pk adrs z t : m core.Y) := rfl
+
+/-- The canonical callbacks fold `xmssRootWith` back into `xmssRootM`. -/
+theorem xmssRootWith_publicHash_eq_xmssRootM (core : CorePrimitives p) {m : Type → Type*}
+    [Monad m] [HasQuery (publicHashSpec core) m]
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
+    xmssRootWith core (PublicHash.f core pk) (PublicHash.tl core pk) (PublicHash.h core pk)
+        sk pk adrs =
+      (xmssRootM core sk pk adrs : m core.Y) := rfl
+
+/-- The canonical callbacks fold `xmssSignWith` back into `xmssSignM`. -/
+theorem xmssSignWith_publicHash_eq_xmssSignM (core : CorePrimitives p) {m : Type → Type*}
+    [Monad m] [HasQuery (publicHashSpec core) m]
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (idx : ℕ) :
+    xmssSignWith core (PublicHash.f core pk) (PublicHash.tl core pk) (PublicHash.h core pk)
+        msg sk pk adrs idx =
+      (xmssSignM core msg sk pk adrs idx : m (XmssSig p core)) := rfl
+
+/-- The canonical callbacks fold `xmssPkFromSigWith` back into `xmssPkFromSigM`. -/
+theorem xmssPkFromSigWith_publicHash_eq_xmssPkFromSigM (core : CorePrimitives p)
+    {m : Type → Type*} [Monad m] [HasQuery (publicHashSpec core) m]
+    (idx : ℕ) (sig : XmssSig p core) (msg : core.Y) (pk : core.PkSeed) (adrs : Adrs) :
+    xmssPkFromSigWith core (PublicHash.f core pk) (PublicHash.tl core pk)
+        (PublicHash.h core pk) idx sig msg adrs =
+      (xmssPkFromSigM core idx sig msg pk adrs : m core.Y) := rfl
+
+/-- `xmssNodeM` is the effectful perfect-subtree root over the canonical leaf and node programs. -/
+theorem xmssNodeM_eq_merkleRootM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m]
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    (xmssNodeM core sk pk adrs z t : m core.Y) =
+      PerfectMerkleTree.merkleRootM (xmssLeafM core sk pk adrs) (xmssNodeHashM core pk adrs)
+        z t := rfl
+
+/-- FIPS 205 Algorithm 9, base case: a height-`0` node is the WOTS+ public key of its leaf. -/
+@[simp]
+theorem xmssNodeM_zero (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m]
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
+    (xmssNodeM core sk pk adrs 0 t : m core.Y) = xmssLeafM core sk pk adrs t := rfl
+
+/-- FIPS 205 Algorithm 9, recursive case: evaluate the left child, then the right child, then
+issue one `H` query at the parent's `TREE` address. -/
+theorem xmssNodeM_succ (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m]
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) :
+    (xmssNodeM core sk pk adrs (z + 1) t : m core.Y) = (do
+      let left ← xmssNodeM core sk pk adrs z (2 * t)
+      let right ← xmssNodeM core sk pk adrs z (2 * t + 1)
+      xmssNodeHashM core pk adrs (z + 1) t left right) := rfl
+
+/-- FIPS 205 Algorithm 10 as a program: the sibling-only authentication path is computed before
+the WOTS+ signature. -/
+theorem xmssSignM_eq_bind (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m]
+    (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (idx : ℕ) :
+    (xmssSignM core msg sk pk adrs idx : m (XmssSig p core)) = (do
+      let path ← PerfectMerkleTree.intrinsicAuthPathM (xmssLeafM core sk pk adrs)
+        (xmssNodeHashM core pk adrs) idx p.hp
+      let sig ← wotsSignM core msg sk pk (wotsLeafAdrs adrs idx)
+      return ⟨sig, path⟩) := rfl
+
+/-- FIPS 205 Algorithm 11 as a program: the WOTS+ public key is recovered before the
+authentication path is climbed. -/
+theorem xmssPkFromSigM_eq_bind (core : CorePrimitives p) {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m]
+    (idx : ℕ) (sig : XmssSig p core) (msg : core.Y) (pk : core.PkSeed) (adrs : Adrs) :
+    (xmssPkFromSigM core idx sig msg pk adrs : m core.Y) = (do
+      let leaf ← wotsPkFromSigM core sig.wots msg pk (wotsLeafAdrs adrs idx)
+      PerfectMerkleTree.climbM (xmssNodeHashM core pk adrs) idx leaf sig.auth.toList) := rfl
 
 /-! ### Pure deterministic interpretations -/
 
@@ -223,9 +336,25 @@ theorem xmssNode_eq_merkleRoot (prims : Primitives p) (sk : prims.SkSeed)
     xmssNode prims sk pk adrs z t =
       PerfectMerkleTree.merkleRoot (xmssLeaf prims sk pk adrs)
         (xmssNodeHash prims pk adrs) z t := by
-  unfold xmssNode xmssNodeM xmssNodeWith
-  rw [PerfectMerkleTree.simulateQ_merkleRootM]
+  unfold xmssNode
+  rw [xmssNodeM_eq_merkleRootM, PerfectMerkleTree.simulateQ_merkleRootM]
   rfl
+
+/-- FIPS 205 Algorithm 9, base case, on the pure API: a height-`0` node is the WOTS+ public key of
+its leaf. -/
+theorem xmssNode_zero (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (t : ℕ) :
+    xmssNode prims sk pk adrs 0 t = xmssLeaf prims sk pk adrs t := by
+  rw [xmssNode_eq_merkleRoot, PerfectMerkleTree.merkleRoot_zero]
+
+/-- FIPS 205 Algorithm 9, recursive case, on the pure API: a height-`z + 1` node is `H` at its
+own `TREE` address of its two height-`z` children. -/
+theorem xmssNode_succ (prims : Primitives p) (sk : prims.SkSeed) (pk : prims.PkSeed)
+    (adrs : Adrs) (z t : ℕ) :
+    xmssNode prims sk pk adrs (z + 1) t =
+      prims.H pk (xmssNodeAdrs adrs (z + 1) t)
+        (xmssNode prims sk pk adrs z (2 * t)) (xmssNode prims sk pk adrs z (2 * t + 1)) := by
+  simp only [xmssNode_eq_merkleRoot, PerfectMerkleTree.merkleRoot_succ, xmssNodeHash_eq_h]
 
 /-- The deterministic interpretation preserves the established height-`h'` root equation. -/
 @[simp]
@@ -234,22 +363,19 @@ theorem xmssRoot_eq_node (prims : Primitives p) (sk : prims.SkSeed)
     xmssRoot prims sk pk adrs = xmssNode prims sk pk adrs p.hp 0 := by
   rfl
 
-/-- The pure signing API is the FIPS authentication path paired with the WOTS+ signature. -/
+/-- The pure signing API contains the WOTS+ signature and the intrinsically shaped FIPS
+authentication path. -/
 @[simp]
 theorem xmssSign_eq_pair (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (idx : ℕ) :
     xmssSign prims msg sk pk adrs idx =
-      (wotsSign prims msg sk pk (wotsLeafAdrs adrs idx),
-        PerfectMerkleTree.authPath (xmssLeaf prims sk pk adrs)
-          (xmssNodeHash prims pk adrs) idx p.hp) := by
+      ⟨wotsSign prims msg sk pk (wotsLeafAdrs adrs idx),
+        PerfectMerkleTree.intrinsicAuthPath (xmssLeaf prims sk pk adrs)
+          (xmssNodeHash prims pk adrs) idx p.hp⟩ := by
   unfold xmssSign
-  change simulateQ (PublicHash.impl prims) (do
-    let path ← PerfectMerkleTree.authPathM (xmssLeafM prims.core sk pk adrs)
-      (xmssNodeHashM prims.core pk adrs) idx p.hp
-    let sig ← wotsSignM prims.core msg sk pk (wotsLeafAdrs adrs idx)
-    return (sig, path)) = _
+  rw [xmssSignM_eq_bind]
   simp only [simulateQ_bind, simulateQ_pure]
-  rw [PerfectMerkleTree.simulateQ_authPathM, simulateQ_wotsSignM]
+  rw [PerfectMerkleTree.simulateQ_intrinsicAuthPathM, simulateQ_wotsSignM]
   rfl
 
 /-- The pure recovery API first recovers the WOTS+ leaf and then climbs the authentication path. -/
@@ -258,11 +384,9 @@ theorem xmssPkFromSig_eq_climb (prims : Primitives p) (idx : ℕ)
     (sig : XmssSig p prims) (msg : prims.Y) (pk : prims.PkSeed) (adrs : Adrs) :
     xmssPkFromSig prims idx sig msg pk adrs =
       PerfectMerkleTree.climb (xmssNodeHash prims pk adrs) idx
-        (wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) sig.2 := by
+        (wotsPkFromSig prims sig.wots msg pk (wotsLeafAdrs adrs idx)) sig.auth.toList := by
   unfold xmssPkFromSig
-  change simulateQ (PublicHash.impl prims) (do
-    let leaf ← wotsPkFromSigM prims.core sig.1 msg pk (wotsLeafAdrs adrs idx)
-    PerfectMerkleTree.climbM (xmssNodeHashM prims.core pk adrs) idx leaf sig.2) = _
+  rw [xmssPkFromSigM_eq_bind]
   simp only [simulateQ_bind, simulateQ_wotsPkFromSigM]
   simp_rw [PerfectMerkleTree.simulateQ_climbM]
   rfl
@@ -349,7 +473,7 @@ theorem xmssSignWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
       xmssSignWith core hashn compressn nodeHashn msg sk pk adrs idx := by
   simp only [xmssSignWith, F.mmap_bind]
   simp_rw [wotsSignWith_natural F core hashm hashn hhash]
-  simp_rw [PerfectMerkleTree.authPathM_natural F
+  simp_rw [PerfectMerkleTree.intrinsicAuthPathM_natural F
     (xmssLeafWith core hashm compressm sk pk adrs)
     (xmssNodeHashWith nodeHashm adrs)
     (xmssLeafWith core hashn compressn sk pk adrs)
@@ -378,42 +502,6 @@ theorem xmssPkFromSigWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
   simp_rw [PerfectMerkleTree.climbM_natural F _ _
     (fun h i l r => xmssNodeHashWith_natural F nodeHashm nodeHashn hnode adrs h i l r)]
 
-private theorem queryHom_publicHash (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [Monad n] [HasQuery (publicHashSpec core) m]
-    [HasQuery (publicHashSpec core) n]
-    (F : HasQuery.QueryHom (publicHashSpec core) m n)
-    (q : PublicHashQuery core.PkSeed core.AdrsKey core.Y) :
-    F.toMonadHom (query (spec := publicHashSpec core) q) =
-      query (spec := publicHashSpec core) q :=
-  HasQuery.map_query F q
-
-private theorem queryHom_f (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [Monad n] [HasQuery (publicHashSpec core) m]
-    [HasQuery (publicHashSpec core) n]
-    (F : HasQuery.QueryHom (publicHashSpec core) m n) (pk : core.PkSeed) :
-    ∀ a y, F.toMonadHom (PublicHash.f core pk a y) = PublicHash.f core pk a y := by
-  intro a y
-  unfold PublicHash.f
-  exact queryHom_publicHash core F (.thash pk (core.adrsToKey a) [y])
-
-private theorem queryHom_tl (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [Monad n] [HasQuery (publicHashSpec core) m]
-    [HasQuery (publicHashSpec core) n]
-    (F : HasQuery.QueryHom (publicHashSpec core) m n) (pk : core.PkSeed) :
-    ∀ a ys, F.toMonadHom (PublicHash.tl core pk a ys) = PublicHash.tl core pk a ys := by
-  intro a ys
-  unfold PublicHash.tl
-  exact queryHom_publicHash core F (.thash pk (core.adrsToKey a) ys)
-
-private theorem queryHom_h (core : CorePrimitives p) {m n : Type → Type*}
-    [Monad m] [Monad n] [HasQuery (publicHashSpec core) m]
-    [HasQuery (publicHashSpec core) n]
-    (F : HasQuery.QueryHom (publicHashSpec core) m n) (pk : core.PkSeed) :
-    ∀ a l r, F.toMonadHom (PublicHash.h core pk a l r) = PublicHash.h core pk a l r := by
-  intro a l r
-  unfold PublicHash.h
-  exact queryHom_publicHash core F (.thash pk (core.adrsToKey a) [l, r])
-
 /-- Query-preserving monad morphisms commute with explicit XMSS leaf generation. -/
 theorem xmssLeafM_natural (core : CorePrimitives p)
     {m n : Type → Type*} [Monad m] [LawfulMonad m]
@@ -423,8 +511,8 @@ theorem xmssLeafM_natural (core : CorePrimitives p)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
     F.toMonadHom (xmssLeafM core sk pk adrs t) = xmssLeafM core sk pk adrs t := by
   apply xmssLeafWith_natural F.toMonadHom core
-  · exact queryHom_f core F pk
-  · exact queryHom_tl core F pk
+  · exact PublicHash.f_natural core F pk
+  · exact PublicHash.tl_natural core F pk
 
 /-- Query-preserving monad morphisms commute with one explicit XMSS node-hash query. -/
 theorem xmssNodeHashM_natural (core : CorePrimitives p)
@@ -434,7 +522,7 @@ theorem xmssNodeHashM_natural (core : CorePrimitives p)
     (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) (l r : core.Y) :
     F.toMonadHom (xmssNodeHashM core pk adrs z t l r) =
       xmssNodeHashM core pk adrs z t l r :=
-  xmssNodeHashWith_natural F.toMonadHom _ _ (queryHom_h core F pk) adrs z t l r
+  xmssNodeHashWith_natural F.toMonadHom _ _ (PublicHash.h_natural core F pk) adrs z t l r
 
 /-- Query-preserving monad morphisms commute with explicit XMSS subtree-root computation. -/
 theorem xmssNodeM_natural (core : CorePrimitives p)
@@ -445,9 +533,9 @@ theorem xmssNodeM_natural (core : CorePrimitives p)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) :
     F.toMonadHom (xmssNodeM core sk pk adrs z t) = xmssNodeM core sk pk adrs z t := by
   apply xmssNodeWith_natural F.toMonadHom core
-  · exact queryHom_f core F pk
-  · exact queryHom_tl core F pk
-  · exact queryHom_h core F pk
+  · exact PublicHash.f_natural core F pk
+  · exact PublicHash.tl_natural core F pk
+  · exact PublicHash.h_natural core F pk
 
 /-- Query-preserving monad morphisms commute with explicit XMSS root computation. -/
 theorem xmssRootM_natural (core : CorePrimitives p)
@@ -458,9 +546,9 @@ theorem xmssRootM_natural (core : CorePrimitives p)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F.toMonadHom (xmssRootM core sk pk adrs) = xmssRootM core sk pk adrs := by
   apply xmssRootWith_natural F.toMonadHom core
-  · exact queryHom_f core F pk
-  · exact queryHom_tl core F pk
-  · exact queryHom_h core F pk
+  · exact PublicHash.f_natural core F pk
+  · exact PublicHash.tl_natural core F pk
+  · exact PublicHash.h_natural core F pk
 
 /-- Query-preserving monad morphisms commute with explicit XMSS signing. -/
 theorem xmssSignM_natural (core : CorePrimitives p)
@@ -473,9 +561,9 @@ theorem xmssSignM_natural (core : CorePrimitives p)
     F.toMonadHom (xmssSignM core msg sk pk adrs idx) =
       xmssSignM core msg sk pk adrs idx := by
   apply xmssSignWith_natural F.toMonadHom core
-  · exact queryHom_f core F pk
-  · exact queryHom_tl core F pk
-  · exact queryHom_h core F pk
+  · exact PublicHash.f_natural core F pk
+  · exact PublicHash.tl_natural core F pk
+  · exact PublicHash.h_natural core F pk
 
 /-- Query-preserving monad morphisms commute with explicit XMSS root recovery. -/
 theorem xmssPkFromSigM_natural (core : CorePrimitives p)
@@ -488,29 +576,37 @@ theorem xmssPkFromSigM_natural (core : CorePrimitives p)
     F.toMonadHom (xmssPkFromSigM core idx sig msg pk adrs) =
       xmssPkFromSigM core idx sig msg pk adrs := by
   apply xmssPkFromSigWith_natural F.toMonadHom core
-  · exact queryHom_f core F pk
-  · exact queryHom_tl core F pk
-  · exact queryHom_h core F pk
+  · exact PublicHash.f_natural core F pk
+  · exact PublicHash.tl_natural core F pk
+  · exact PublicHash.h_natural core F pk
 
 /-! ### Structural query bounds -/
 
 /-- Closed-form public-hash budget for one height-`z` XMSS subtree: `2 ^ z` WOTS+ leaves at
 `p.len * (p.w - 1) + 1` queries each and `2 ^ z - 1` internal nodes at one query each. -/
 def xmssNodeQueryBound (p : Params) (z : ℕ) : ℕ :=
-  2 ^ z * (p.len * (p.w - 1) + 1) + (2 ^ z - 1) * 1
+  2 ^ z * (p.len * (p.w - 1) + 1) + (2 ^ z - 1)
 
-/-- Closed-form public-hash budget for a sibling-only height-`z` authentication path, specialized
-from the generic Merkle bound with WOTS+ leaf budget `p.len * (p.w - 1) + 1` and internal-node
-budget `1`. -/
+/-- Closed-form public-hash budget for a sibling-only height-`z` authentication path:
+`2 ^ z - 1` WOTS+ leaves at `p.len * (p.w - 1) + 1` queries each and `2 ^ z - z - 1` internal
+nodes at one query each, specialised from the generic sibling-subtree Merkle bound. -/
 def xmssAuthPathQueryBound (p : Params) (z : ℕ) : ℕ :=
-  (2 ^ z - 1) * (p.len * (p.w - 1) + 1) + (2 ^ z - z - 1) * 1
+  (2 ^ z - 1) * (p.len * (p.w - 1) + 1) + (2 ^ z - z - 1)
 
-private theorem xmssNodeHashM_isTotalQueryBound_one (core : CorePrimitives p)
+/-- An XMSS leaf has the WOTS+ public-key generation budget. -/
+theorem xmssLeafM_isTotalQueryBound (core : CorePrimitives p)
+    (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (t : ℕ) :
+    IsTotalQueryBound
+      (xmssLeafM core sk pk adrs t : OracleComp (publicHashSpec core) core.Y)
+      (p.len * (p.w - 1) + 1) :=
+  wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs t)
+
+/-- An XMSS internal node is one explicit `H` query. -/
+theorem xmssNodeHashM_isTotalQueryBound (core : CorePrimitives p)
     (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) (l r : core.Y) :
     IsTotalQueryBound
-      (xmssNodeHashM core pk adrs z t l r :
-        OracleComp (publicHashSpec core) core.Y) 1 := by
-  simp [xmssNodeHashM, xmssNodeHashWith, PublicHash.h, IsTotalQueryBound]
+      (xmssNodeHashM core pk adrs z t l r : OracleComp (publicHashSpec core) core.Y) 1 :=
+  PublicHash.h_isTotalQueryBound core pk _ l r
 
 /-- An XMSS subtree root stays within its structural leaf-and-parent query budget. -/
 theorem xmssNodeM_isTotalQueryBound (core : CorePrimitives p)
@@ -518,17 +614,13 @@ theorem xmssNodeM_isTotalQueryBound (core : CorePrimitives p)
     IsTotalQueryBound
       (xmssNodeM core sk pk adrs z t : OracleComp (publicHashSpec core) core.Y)
       (xmssNodeQueryBound p z) := by
-  change IsTotalQueryBound
-    (PerfectMerkleTree.merkleRootM (xmssLeafM core sk pk adrs)
-      (xmssNodeHashM core pk adrs) z t) _
+  rw [xmssNodeM_eq_merkleRootM]
   simpa [xmssNodeQueryBound] using
-    (PerfectMerkleTree.isTotalQueryBound_merkleRootM
+    PerfectMerkleTree.isTotalQueryBound_merkleRootM
       (xmssLeafM core sk pk adrs) (xmssNodeHashM core pk adrs)
       (p.len * (p.w - 1) + 1) 1 z t
-      (fun i => by
-        simpa [xmssLeafM, xmssLeafWith, wotsPkGenM] using
-          wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs i))
-      (fun h i l r => xmssNodeHashM_isTotalQueryBound_one core pk adrs h i l r))
+      (fun i => xmssLeafM_isTotalQueryBound core sk pk adrs i)
+      (fun h i l r => xmssNodeHashM_isTotalQueryBound core pk adrs h i l r)
 
 /-- XMSS root generation has the subtree budget at the parameter-set height. -/
 theorem xmssRootM_isTotalQueryBound (core : CorePrimitives p)
@@ -543,18 +635,16 @@ at every level. -/
 theorem xmssAuthPathM_isTotalQueryBound (core : CorePrimitives p)
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (idx z : ℕ) :
     IsTotalQueryBound
-      (PerfectMerkleTree.authPathM (xmssLeafM core sk pk adrs)
+      (PerfectMerkleTree.intrinsicAuthPathM (xmssLeafM core sk pk adrs)
         (xmssNodeHashM core pk adrs) idx z :
-          OracleComp (publicHashSpec core) (List core.Y))
+          OracleComp (publicHashSpec core) (Vector core.Y z))
       (xmssAuthPathQueryBound p z) := by
   simpa [xmssAuthPathQueryBound] using
-    (PerfectMerkleTree.isTotalQueryBound_authPathM
+    PerfectMerkleTree.isTotalQueryBound_intrinsicAuthPathM
       (xmssLeafM core sk pk adrs) (xmssNodeHashM core pk adrs)
       (p.len * (p.w - 1) + 1) 1 idx z
-      (fun i => by
-        simpa [xmssLeafM, xmssLeafWith, wotsPkGenM] using
-          wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs i))
-      (fun h i l r => xmssNodeHashM_isTotalQueryBound_one core pk adrs h i l r))
+      (fun i => xmssLeafM_isTotalQueryBound core sk pk adrs i)
+      (fun h i l r => xmssNodeHashM_isTotalQueryBound core pk adrs h i l r)
 
 /-- Climbing an XMSS authentication path makes at most one public node-hash query per entry. -/
 theorem xmssClimbM_isTotalQueryBound (core : CorePrimitives p)
@@ -566,7 +656,7 @@ theorem xmssClimbM_isTotalQueryBound (core : CorePrimitives p)
       auth.length := by
   simpa using
     PerfectMerkleTree.isTotalQueryBound_climbM (xmssNodeHashM core pk adrs) 1 idx node auth
-      (fun h i l r => xmssNodeHashM_isTotalQueryBound_one core pk adrs h i l r)
+      (fun h i l r => xmssNodeHashM_isTotalQueryBound core pk adrs h i l r)
 
 /-- XMSS recovery is bounded by the complementary WOTS+ chains, one `T_l` compression, and one
 node hash per supplied authentication-path entry. -/
@@ -576,13 +666,11 @@ theorem xmssPkFromSigM_isTotalQueryBound (core : CorePrimitives p)
     IsTotalQueryBound
       (xmssPkFromSigM core idx sig msg pk adrs :
         OracleComp (publicHashSpec core) core.Y)
-      ((∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) + 1 + sig.2.length) := by
-  change IsTotalQueryBound (do
-    let leaf ← wotsPkFromSigM core sig.1 msg pk (wotsLeafAdrs adrs idx)
-    PerfectMerkleTree.climbM (xmssNodeHashM core pk adrs) idx leaf sig.2) _
+      ((∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) + 1 + p.hp) := by
+  rw [xmssPkFromSigM_eq_bind]
   exact isTotalQueryBound_bind
-    (wotsPkFromSigM_isTotalQueryBound core sig.1 msg pk (wotsLeafAdrs adrs idx)) fun leaf =>
-      xmssClimbM_isTotalQueryBound core pk adrs idx leaf sig.2
+    (wotsPkFromSigM_isTotalQueryBound core sig.wots msg pk (wotsLeafAdrs adrs idx)) fun leaf =>
+      by simpa using xmssClimbM_isTotalQueryBound core pk adrs idx leaf sig.auth.toList
 
 /-- XMSS signing composes the message-selected WOTS+ chain budget with the sibling-subtree
 authentication-path budget. -/
@@ -594,17 +682,14 @@ theorem xmssSignM_isTotalQueryBound (core : CorePrimitives p)
         OracleComp (publicHashSpec core) (XmssSig p core))
       ((∑ i : Fin p.len, chainStepsCore core msg i.val) +
         xmssAuthPathQueryBound p p.hp) := by
-  change IsTotalQueryBound (do
-    let path ← PerfectMerkleTree.authPathM (xmssLeafM core sk pk adrs)
-      (xmssNodeHashM core pk adrs) idx p.hp
-    let sig ← wotsSignM core msg sk pk (wotsLeafAdrs adrs idx)
-    return (sig, path)) _
+  rw [xmssSignM_eq_bind]
   have hbound := isTotalQueryBound_bind
     (xmssAuthPathM_isTotalQueryBound core sk pk adrs idx p.hp) fun path =>
       isTotalQueryBound_bind
         (wotsSignM_isTotalQueryBound core msg sk pk (wotsLeafAdrs adrs idx)) fun sig =>
           show IsTotalQueryBound
-            (pure (sig, path) : OracleComp (publicHashSpec core) (XmssSig p core)) 0 from trivial
+            (pure ⟨sig, path⟩ : OracleComp (publicHashSpec core) (XmssSig p core)) 0 from
+              trivial
   simpa [Nat.add_comm] using hbound
 
 /-- Signing followed by recovery stays within one complete pass over every WOTS+ chain, one
@@ -619,44 +704,11 @@ theorem xmssSignM_then_xmssPkFromSigM_isTotalQueryBound (core : CorePrimitives p
       xmssPkFromSigM core idx sig msg pk adrs) :
         OracleComp (publicHashSpec core) core.Y)
       ((p.len * (p.w - 1) + 1) + xmssAuthPathQueryBound p p.hp + p.hp) := by
-  simp only [xmssSignM, xmssSignWith, xmssPkFromSigM, xmssPkFromSigWith,
-    bind_assoc, pure_bind]
-  have hbody : ∀ path : List core.Y, path.length = p.hp →
-      IsTotalQueryBound ((do
-        let sig ← wotsSignM core msg sk pk (wotsLeafAdrs adrs idx)
-        let leaf ← wotsPkFromSigM core sig msg pk (wotsLeafAdrs adrs idx)
-        PerfectMerkleTree.climbM (xmssNodeHashM core pk adrs) idx leaf path) :
-          OracleComp (publicHashSpec core) core.Y)
-        ((p.len * (p.w - 1) + 1) + p.hp) := by
-    intro path hlen
-    have hbound := isTotalQueryBound_bind
-      (wotsSignM_isTotalQueryBound core msg sk pk (wotsLeafAdrs adrs idx)) fun sig =>
-        isTotalQueryBound_bind
-          (wotsPkFromSigM_isTotalQueryBound core sig msg pk (wotsLeafAdrs adrs idx)) fun leaf =>
-            xmssClimbM_isTotalQueryBound core pk adrs idx leaf path
-    have hsum :
-        (∑ i : Fin p.len, chainStepsCore core msg i.val) +
-            (∑ i : Fin p.len, (p.w - 1 - chainStepsCore core msg i.val)) =
-          p.len * (p.w - 1) := by
-      rw [← Finset.sum_add_distrib]
-      simp_rw [Nat.add_sub_of_le (chainStepsCore_le core msg _)]
-      simp
-    simpa [hlen, ← Nat.add_assoc, hsum] using hbound
-  have hbound := PerfectMerkleTree.isTotalQueryBound_authPathM_bind
-    (xmssLeafM core sk pk adrs) (xmssNodeHashM core pk adrs)
-    (p.len * (p.w - 1) + 1) 1 idx p.hp
-    ((p.len * (p.w - 1) + 1) + p.hp)
-    (fun i => by
-      simpa [xmssLeafM, xmssLeafWith, wotsPkGenM] using
-        wotsPkGenM_isTotalQueryBound core sk pk (wotsLeafAdrs adrs i))
-    (fun h i l r => xmssNodeHashM_isTotalQueryBound_one core pk adrs h i l r)
-    (fun path => do
-      let sig ← wotsSignM core msg sk pk (wotsLeafAdrs adrs idx)
-      let leaf ← wotsPkFromSigM core sig msg pk (wotsLeafAdrs adrs idx)
-      PerfectMerkleTree.climbM (xmssNodeHashM core pk adrs) idx leaf path) hbody
-  unfold xmssLeafM xmssNodeHashM at hbound
-  simpa only [xmssAuthPathQueryBound, Nat.mul_one, wotsSignM, wotsPkFromSigM,
-    Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hbound
+  have hbound := isTotalQueryBound_bind
+    (xmssSignM_isTotalQueryBound core msg sk pk adrs idx) fun sig =>
+      xmssPkFromSigM_isTotalQueryBound core idx sig msg pk adrs
+  simpa [Nat.add_assoc, Nat.add_comm, Nat.add_left_comm,
+    sum_chainStepsCore_add_sum_complement core msg] using hbound
 
 /-! ### Deterministic interpretations -/
 
@@ -801,7 +853,7 @@ theorem xmssPkFromSig_xmssSign (prims : Primitives p) (msg : prims.Y) (sk : prim
   have key := PerfectMerkleTree.climb_authPath (xmssLeaf prims sk pk adrs)
     (xmssNodeHash prims pk adrs) idx p.hp
   rw [Nat.div_eq_of_lt hidx] at key
-  exact key
+  simpa using key
 
 /-- Functional XMSS completeness for one fixed total public-hash answer function shared by
 signing, recovery, and root computation. This is a deterministic interpretation theorem; it does
@@ -827,10 +879,10 @@ a distinct pair hash to the same value. The first endpoint is fixed by the hones
 determined by `(idx, h)` (a valid target for a multi-target target-collision reduction). -/
 theorem xmssPkFromSig_binding (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (idx : ℕ) (hidx : idx < 2 ^ p.hp)
-    (sig : XmssSig p prims) (hlen : sig.2.length = p.hp)
+    (sig : XmssSig p prims)
     (hroot : xmssPkFromSig prims idx sig msg pk adrs = xmssRoot prims sk pk adrs)
     (hne : xmssLeaf prims sk pk adrs idx
-      ≠ wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) :
+      ≠ wotsPkFromSig prims sig.wots msg pk (wotsLeafAdrs adrs idx)) :
     ∃ (h : ℕ) (c : prims.Y × prims.Y), 0 < h ∧ h ≤ p.hp ∧
       (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h)),
           xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1))
@@ -840,13 +892,13 @@ theorem xmssPkFromSig_binding (prims : Primitives p) (msg : prims.Y) (sk : prims
           (xmssNode prims sk pk adrs (h - 1) (2 * (idx / 2 ^ h) + 1))
         = prims.H pk (xmssNodeAdrs adrs h (idx / 2 ^ h)) c.1 c.2 := by
   have hroot' : PerfectMerkleTree.climb (xmssNodeHash prims pk adrs) idx
-      (wotsPkFromSig prims sig.1 msg pk (wotsLeafAdrs adrs idx)) sig.2
+      (wotsPkFromSig prims sig.wots msg pk (wotsLeafAdrs adrs idx)) sig.auth.toList
       = PerfectMerkleTree.merkleRoot (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs)
           p.hp (idx / 2 ^ p.hp) := by
     rw [Nat.div_eq_of_lt hidx]
     simpa only [xmssPkFromSig_eq_climb, xmssRoot_eq_node, xmssNode_eq_merkleRoot] using hroot
   simpa only [xmssNode_eq_merkleRoot, xmssNodeHash_eq_h] using
     (PerfectMerkleTree.climb_binding (xmssLeaf prims sk pk adrs)
-      (xmssNodeHash prims pk adrs) p.hp idx _ sig.2 hlen hroot' hne)
+      (xmssNodeHash prims pk adrs) p.hp idx _ sig.auth.toList (by simp) hroot' hne)
 
 end SLHDSA

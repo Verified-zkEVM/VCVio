@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import Mathlib.Data.Real.ENatENNReal
+public import Mathlib.Basic.Real.ENatENNReal
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.StateSeparating.IdenticalUntilBad
@@ -223,12 +223,12 @@ private theorem cmaReal_step_normal_form
             (Resp := Resp) (Stmt := Stmt) t then (1 : ℝ≥0∞) else 0) := by
   rcases p with ⟨⟨log, cache, keypair⟩, bad⟩
   rcases t with n | mc | m | ⟨⟩
-  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, if_false,
+  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, ite_false,
       StateT.run_mk, support_bind, Set.mem_iUnion, support_pure, Set.mem_singleton_iff,
       exists_prop] at hz ⊢
     obtain ⟨r, _, rfl⟩ := hz
     exact ⟨rfl, fun h => by simpa [CmaData.Valid] using h, by simp⟩
-  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, if_true,
+  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or, ite_true,
       StateT.run_mk] at hz ⊢
     cases hcache : cache mc with
     | none =>
@@ -241,7 +241,7 @@ private theorem cmaReal_step_normal_form
         simp only [hcache, support_pure, Set.mem_singleton_iff] at hz
         subst z
         exact ⟨rfl, fun h => by simpa [CmaData.Valid] using h, le_self_add⟩
-  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, true_or, if_true,
+  · simp only [fs_simp, cmaH3Costly, IsCostlyQuery, IsHashQuery, true_or, ite_true,
       StateT.run_mk] at hz ⊢
     rcases keypair with keypair | ⟨pk, sk⟩
     · simp only [support_bind, Set.mem_iUnion, exists_prop] at hz
@@ -273,7 +273,7 @@ private theorem cmaReal_step_normal_form
           obtain ⟨π, _, rfl⟩ := hrest
           exact ⟨rfl, fun h => by simpa [CmaData.Valid] using h, le_self_add⟩
   · simp only [fs_simp, cmaReal, cmaH3Costly, IsCostlyQuery, IsHashQuery, false_or,
-      if_false, StateT.run_mk] at hz ⊢
+      ite_false, StateT.run_mk] at hz ⊢
     rcases keypair with keypair | ⟨pk, sk⟩
     · simp only [support_bind, Set.mem_iUnion, support_pure, Set.mem_singleton_iff,
         exists_prop] at hz
@@ -779,7 +779,7 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
         _ = (∑' key : Stmt × Wit, Pr[= key | hr.gen]) * (QueryCache.enncard cache * β) := by
               rw [ENNReal.tsum_mul_right]
         _ = QueryCache.enncard cache * β := by
-              rw [tsum_probOutput_of_liftM_PMF, one_mul]
+              rw [tsum_probOutput_eq_one' probFailure_eq_zero, one_mul]
 
 private lemma cmaRealSignStep_evalSPMF_eq_ghost
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
@@ -791,7 +791,9 @@ private lemma cmaRealSignStep_evalSPMF_eq_ghost
         cmaRealSignGhostDist M Commit Chal σ hr m s] := by
   rcases s with ⟨log, cache, keypair⟩
   obtain _ | key := keypair <;>
-    (conv_lhs => simp [fs_simp, _root_.FiatShamir, StateT.run_mk]) <;>
+    (conv_lhs =>
+      simp only [cmaReal, cmaRealSourceFull, bind_pure_comp, Prod.mk.eta,
+        StateT.run_mk, liftM_bind]) <;>
     (conv_rhs => simp [cmaRealSignGhostDist, cmaSignKeySource])
   on_goal 1 => refine bind_congr fun key => ?_
   all_goals
@@ -844,8 +846,13 @@ private lemma cmaSimSignStep_evalSPMF_eq_public
   unfold cmaSim
   obtain _ | key := keypair <;>
     (conv_lhs =>
-      simp [QueryImpl.Stateful.linkWith_apply_run, QueryImpl.Stateful.Frame.linkReshape,
-        cmaToNma, cmaSignSim, nma, nmaPublic, nmaProgram, cmaFrame, cmaOuterLens, cmaNmaLens]) <;>
+      simp only [cmaFrame, cmaOuterLens, Prod.mk.eta, cmaNmaLens,
+        QueryImpl.Stateful.linkWith_apply_run, cmaToNma, cmaSignSim, liftComp_eq_liftM,
+        bind_pure_comp, PFunctor.Lens.State.mk_get, StateT.run_mk, simulateQ_bind,
+        simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, nma, nmaPublic,
+        id_map, simulateQ_map, nmaProgram, StateT.run_bind, StateT.run_map, pure_bind,
+        bind_map_left, map_bind, Functor.map_map, QueryImpl.Stateful.Frame.linkReshape,
+        PFunctor.Lens.State.mk_put, liftM_bind, liftM_map]) <;>
     (conv_rhs => simp [cmaSimSignPublicDist, cmaSignKeySource])
   on_goal 1 => refine bind_congr fun key => ?_
   all_goals

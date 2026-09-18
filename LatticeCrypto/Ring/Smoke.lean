@@ -61,7 +61,7 @@ def piKernel (Coeff : Type*) [Zero Coeff] (n : Nat) :
     intro p
     funext i
     rw [Array.getD_eq_getD_getElem?, Array.getElem?_ofFn]
-    rw [dif_pos i.isLt, Option.getD_some]
+    rw [dite_eq_left i.isLt, Option.getD_some]
 
 /-- Bundled negacyclic ring over the function-backed backend. -/
 abbrev piRing (Coeff : Type*) [CommRing Coeff] (n : Nat) :
@@ -158,6 +158,23 @@ def falconNegacyclicRoundtrip {n : ℕ} (f g : Falcon.Rq n) : Falcon.Rq n :=
 
 def falconIntegralLiftRoundtrip {n : ℕ} (f : Falcon.IntPoly n) : Falcon.Rq n :=
   Falcon.integralLift n |>.toRq f
+
+/-! ### Uniform sampling on scheme carriers
+
+The generic `LatticeCrypto.Ring.Sampling` instances must be found through the scheme
+aliases without unfolding the bundled ring. -/
+
+example : Fintype MLKEM.Rq := inferInstance
+example : SampleableType MLKEM.Rq := inferInstance
+example : SampleableType MLKEM.Tq := inferInstance
+example : SampleableType (MLKEM.RqVec 3) := inferInstance
+example : SampleableType (MLKEM.TqVec 3) := inferInstance
+example : SampleableType (MLKEM.TqMatrix 3 3) := inferInstance
+example : SampleableType MLDSA.Rq := inferInstance
+example : SampleableType (MLDSA.RqVec 4) := inferInstance
+example : SampleableType (MLDSA.TqMatrix 4 4) := inferInstance
+example {n : ℕ} : SampleableType (Falcon.Rq n) := inferInstance
+example {n : ℕ} : SampleableType (Falcon.Tq n) := inferInstance
 
 end Smoke
 end LatticeCrypto

@@ -60,8 +60,7 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 
 section Properties
 
-variable [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]
-  [IsUniformSpec unifSpec]
+variable [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
 
 -- The algebraic core of completeness: whenever `respond` produces `some (z, h)`, the
 -- `verify` function accepts. This follows from the key generation relationship
@@ -109,14 +108,14 @@ theorem idsWithAbort_complete' :
 
 omit hRespondVerify
 
-omit nttOps [DecidableEq prims.High] [SampleableType (RqVec p.l)]
-  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
+omit nttOps [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
+  [IsUniformSpec unifSpec] in
 private lemma neg_rq_get (f : Rq) (i : Fin ringDegree) : (-f).get i = -(f.get i) := by
   change (coeffRing.neg f).get i = _
   simp
 
-omit nttOps [DecidableEq prims.High] [SampleableType (RqVec p.l)]
-  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
+omit nttOps [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
+  [IsUniformSpec unifSpec] in
 private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   unfold polyNorm normOps
   simp only [LatticeCrypto.zmodPolyNormOps, LatticeCrypto.normOpsOfCenteredView]
@@ -126,8 +125,7 @@ private lemma polyNorm_neg (f : Rq) : polyNorm (-f) = polyNorm f := by
   simp only [LatticeCrypto.zmodCenteredCoeffView, coeffRing.coeff_neg]
   exact LatticeCrypto.centeredRepr_natAbs_neg _
 
-omit [DecidableEq prims.High] [SampleableType (RqVec p.l)]
-  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
+omit [DecidableEq prims.High] [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
 /-- Vector form of `useHint_makeHint`: `UseHint(MakeHint(z, r), r) = HighBits(r + z)`
 componentwise, when each component of `z` is bounded by `γ₂`. -/
 theorem useHintVec_makeHintVec (h_laws : Primitives.Laws prims nttOps) {k : ℕ}
@@ -140,8 +138,7 @@ theorem useHintVec_makeHintVec (h_laws : Primitives.Laws prims nttOps) {k : ℕ}
   rw [Vector.get_eq_getElem] at hzi
   exact h_laws.useHint_makeHint z[i] r[i] hzi
 
-omit [DecidableEq prims.High] [SampleableType (RqVec p.l)]
-  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
+omit [DecidableEq prims.High] [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
 /-- Vector form of `hide_low`: a small additive perturbation does not change the high bits. -/
 theorem hide_lowVec (h_laws : Primitives.Laws prims nttOps) {k : ℕ}
     (r s : RqVec k) (b : ℕ)
@@ -231,8 +228,7 @@ The HVZK theorem `MLDSA.idsWithAbort_hvzk` is proven downstream in
 `LatticeCrypto.MLDSA.SecurityHVZK`, where the concrete simulator `hvzkSimulatorReal` and the
 extra-rejection-mass bound `hvzkBoundReal` are defined. The simulator reproduces the honest
 transcript pointwise on the accept event, so the total-variation distance is bounded by the
-honest prover's extra-rejection mass; see that file for the quantitative statement
-`idsWithAbort_hvzk_real` and the existential form `idsWithAbort_hvzk`. -/
+honest prover's extra-rejection mass; see that file for the quantitative statement. -/
 
 omit [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
 /-- Commitment recoverability for ML-DSA: the public commitment `w₁` can be reconstructed
@@ -292,24 +288,28 @@ end CMAtoNMA
 
 section MainTheorem
 
-variable {M : Type}
-  [SampleableType (RqVec p.l)] [SampleableType (CommitHashBytes p)]
-  [IsUniformSpec unifSpec]
+variable {M : Type} [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
 
 open scoped Classical in
 /-- **Main Security Theorem (EUF-CMA, Theorem 4, CRYPTO 2023).**
 
-**WARNING: this is a placeholder statement, not the final theorem.** The current shape is
-unsound as written: `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only
-`hp : p_abort < 1` is assumed). Inherited from
-`FiatShamirWithAbort.cmaToNmaLoss`, the loss term
-`2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
-by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`, collapsing the
-bound to `adv.advantage ≤ Adv^MLWE + Adv^SelfTargetMSIS` with no statistical slack, which
-is generally false. In the final statement `ε`, `p_abort`, `δ` should be nonnegative
-(e.g. `ℝ≥0` or constrained by `0 ≤ ε`, `0 ≤ p_abort`, `0 ≤ δ` hypotheses) and identified
-with the concrete commitment guessing probability, abort probability, and regularity
-failure probability of the ML-DSA identification scheme.
+**WARNING: this is a placeholder statement with no security content.** Two defects must be
+fixed before it is proved:
+
+1. The MLWE distinguisher and the SelfTargetMSIS adversary are existentially quantified. Nothing
+   bounds their running time, so for cryptographic parameters there are adversaries of
+   advantage close to `1` (a brute-force secret search distinguishes MLWE), and the existential
+   form does not express a reduction. The final
+   statement must name the reductions: the distinguisher and extractor of
+   `LatticeCrypto.MLDSA.SecurityNMA` (`distinguisherBShort`, `extractorC`) applied to an explicit
+   with-aborts CMA-to-NMA simulator, which does not exist yet.
+2. `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only `hp : p_abort < 1` is
+   assumed). Inherited from `FiatShamirWithAbort.cmaToNmaLoss`, the loss term
+   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
+   by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`. In the final
+   statement `ε`, `p_abort`, `δ` should be nonnegative and identified with the concrete
+   commitment guessing probability, abort probability, and regularity failure probability of
+   the ML-DSA identification scheme.
 
 The proof is intentionally deferred. The statement also needs to be specialized to the
 actual ML-DSA parameters (eliminating the explicit quantitative HVZK simulator hypothesis)

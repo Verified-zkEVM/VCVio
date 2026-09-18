@@ -8,7 +8,7 @@ module
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.Measure.Option
 public import VCVio.EvalDist.Kernel
-public import VCVio.EvalDist.PFunctorMeasure
+public import VCVio.EvalDist.PFunctorMeasure.Core
 public import Mathlib.Control.Monad.Writer
 
 /-!
@@ -60,6 +60,11 @@ noncomputable def freeM {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)]
 
 variable (semantics : ProbabilitySemantics m)
 
+/-- A lossless semantics bundle exposes the probability certificate for each denotation. -/
+instance isProbabilityMeasure_denote [MeasurableSpace α] (computation : m α) :
+    IsProbabilityMeasure (semantics.denote computation) :=
+  semantics.isProbabilityMeasure computation
+
 /-! ## Effect-preserving transformer denotations -/
 
 /-- Denote an `OptionT` computation without erasing whether it returned `none`. -/
@@ -67,7 +72,7 @@ noncomputable def optionT [MeasurableSpace α] (computation : OptionT m α) :
     Measure (Option α) :=
   semantics.denote computation.run
 
-theorem isProbabilityMeasure_optionT [MeasurableSpace α] (computation : OptionT m α) :
+instance isProbabilityMeasure_optionT [MeasurableSpace α] (computation : OptionT m α) :
     IsProbabilityMeasure (semantics.optionT computation) :=
   semantics.isProbabilityMeasure computation.run
 
@@ -76,7 +81,7 @@ noncomputable def exceptT [MeasurableSpace ε] [MeasurableSpace α]
     (computation : ExceptT ε m α) : Measure (Except ε α) :=
   semantics.denote computation.run
 
-theorem isProbabilityMeasure_exceptT [MeasurableSpace ε] [MeasurableSpace α]
+instance isProbabilityMeasure_exceptT [MeasurableSpace ε] [MeasurableSpace α]
     (computation : ExceptT ε m α) :
     IsProbabilityMeasure (semantics.exceptT computation) :=
   semantics.isProbabilityMeasure computation.run
@@ -86,7 +91,7 @@ noncomputable def writerT [MeasurableSpace ω] [MeasurableSpace α]
     (computation : WriterT ω m α) : Measure (α × ω) :=
   semantics.denote computation.run
 
-theorem isProbabilityMeasure_writerT [MeasurableSpace ω] [MeasurableSpace α]
+instance isProbabilityMeasure_writerT [MeasurableSpace ω] [MeasurableSpace α]
     (computation : WriterT ω m α) :
     IsProbabilityMeasure (semantics.writerT computation) :=
   semantics.isProbabilityMeasure computation.run
@@ -145,18 +150,3 @@ instance isMarkovKernel_stateTKernel [MeasurableSpace σ] [MeasurableSpace α]
     semantics.isProbabilityMeasure (computation state)
 
 end ProbabilitySemantics
-
-/-- Deprecated name for the total refinement of `EvalDistSemantics`. -/
-@[deprecated ProbabilitySemantics (since := "2026-08-26")]
-abbrev MeasureSemantics := ProbabilitySemantics
-
-namespace MeasureSemantics
-
-/-- Deprecated constructor for the total free-monad semantics. -/
-@[deprecated ProbabilitySemantics.freeM (since := "2026-08-26")]
-noncomputable abbrev freeM {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)]
-    [P.IsMeasureSpec] [∀ a, DiscreteMeasurableSpace (P.B a)] :
-    MeasureSemantics (PFunctor.FreeM P) :=
-  ProbabilitySemantics.freeM
-
-end MeasureSemantics

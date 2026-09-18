@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.StateSeparating.Advantage
+public import VCVio.StateSeparating.MeasureDistEquiv
 
 /-!
 # State-separating handlers: distributional equivalence
@@ -28,6 +29,7 @@ variable {ιₑ : Type uₑ} {E : OracleSpec.{uₑ, 0} ιₑ}
 
 /-- Perfect distributional equivalence of two stateful handlers from explicit
 initial states. -/
+@[deprecated "VCVio retiring probability API: use MeasureDistEquiv" (since := "2026-09-17")]
 def DistEquiv [IsUniformSpec I] {σ₀ σ₁ : Type}
     (h₀ : QueryImpl.Stateful I E σ₀) (s₀ : σ₀)
     (h₁ : QueryImpl.Stateful I E σ₁) (s₁ : σ₁) : Prop :=
@@ -39,6 +41,8 @@ scoped notation:50 "(" h₀ ", " s₀ ")" " ≡ᵈ " "(" h₁ ", " s₁ ")" =>
   QueryImpl.Stateful.DistEquiv h₀ s₀ h₁ s₁
 
 /-- Perfect distributional equivalence from default initial states. -/
+@[deprecated "VCVio retiring probability API: use MeasureDistEquiv with default states"
+  (since := "2026-09-17")]
 def DistEquiv₀ [IsUniformSpec I] {σ₀ σ₁ : Type}
     [Inhabited σ₀] [Inhabited σ₁]
     (h₀ : QueryImpl.Stateful I E σ₀) (h₁ : QueryImpl.Stateful I E σ₁) : Prop :=

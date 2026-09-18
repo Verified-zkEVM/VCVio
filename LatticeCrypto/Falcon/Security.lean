@@ -131,7 +131,7 @@ theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p)
 This is the lattice problem underlying Falcon's security. It is an instance of
 the generic SIS problem where the matrix is the single-row matrix `[I | h]`
 over the cyclotomic ring `R_q = ℤ_q[x]/(x^n + 1)`. -/
-noncomputable def ntruSISProblem [SampleableType (Rq p.n)] :
+noncomputable def ntruSISProblem :
     SIS.Problem (Rq p.n) (Rq p.n × Rq p.n) where
   sampleChallenge := $ᵗ (Rq p.n)
   isValid h x :=
@@ -244,12 +244,14 @@ generic in the salt type `Salt`.
 For any EUF-CMA adversary `A` making at most `qSign` signing queries and `qHash`
 random-oracle queries against the Falcon+ signature scheme with salt type `Salt`, and
 any externally supplied bound `ε_sampler` that upper-bounds `SamplerQuality.bound` for
-every valid Falcon key pair, there exist:
+every valid Falcon key pair, the GPV reductions
 
-- a collision reduction `B_coll` for the distinct-preimage branch,
-- a programmed-preimage replay reduction `B_exact` for the exact-match branch,
+- `B_coll = GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) Salt A` for the
+  distinct-preimage branch, read as an adversary for `ntruPSFCollisionProblem`,
+- `B_exact = GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte) Salt A`
+  for the exact-match branch,
 
-such that:
+satisfy:
 
   `Adv^{EUF-CMA}_{Falcon+}(A)`
   `  ≤ Adv^{collision}_{Falcon-PSF}(B_coll)`
@@ -293,7 +295,7 @@ With exact arithmetic (infinite precision), `r_p = 1` and the sampler loss vanis
 4. Account for finite-precision via the sampler quality hypothesis. -/
 theorem euf_cma_security
     (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt]
-    [SampleableType (Rq p.n)] [DecidableEq (Rq p.n)]
+    [DecidableEq (Rq p.n)]
     (hr : GenerableRelation (PublicKey p) (SecretKey p)
       (validKeyPair p))
     (qSign qHash : ℕ)
@@ -306,16 +308,15 @@ theorem euf_cma_security
       (S' := Salt × (Rq p.n × Rq p.n))
       (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    adv.advantage
+        (GPVHashAndSign.runtime
+          (Range := Rq p.n) (List Byte) Salt) ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) Salt adv) +
         ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            (falconPSF p prims) hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage (falconPSF p prims) hr
+            (GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte) Salt
+              adv) +
         GPVHashAndSign.collisionBound Salt qSign +
         samplerLoss := by
   let _ := qSign
@@ -330,7 +331,7 @@ theorem euf_cma_security
 The collision term specializes to `qSign² / (2 · 2^320)`. For the Falcon-specified
 maximum of `qSign = 2^64` signing queries, this is `≤ 2^{-193}`. -/
 theorem euf_cma_security_bytes40
-    [SampleableType (Rq p.n)] [DecidableEq (Rq p.n)]
+    [DecidableEq (Rq p.n)]
     (hr : GenerableRelation (PublicKey p) (SecretKey p)
       (validKeyPair p))
     (qSign qHash : ℕ)
@@ -343,16 +344,15 @@ theorem euf_cma_security_bytes40
       (S' := Bytes 40 × (Rq p.n × Rq p.n))
       (α := List Byte × (Bytes 40 × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) (Bytes 40)) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    adv.advantage
+        (GPVHashAndSign.runtime
+          (Range := Rq p.n) (List Byte) (Bytes 40)) ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) (Bytes 40) adv) +
         ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            (falconPSF p prims) hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage (falconPSF p prims) hr
+            (GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte)
+              (Bytes 40) adv) +
         GPVHashAndSign.collisionBound (Bytes 40) qSign +
         samplerLoss :=
   euf_cma_security p prims (Bytes 40) hr qSign qHash samplerLoss hSamplerLoss adv hQ
