@@ -32,12 +32,14 @@ public import VCVioTest.KernelSemantics
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics
+public import VCVioTest.MerkleCheckpoints
 public import VCVioTest.MerkleTreeBatch
 public import VCVioTest.MerkleTreeExtractability
 public import VCVioTest.MerkleTreeHashForest
 public import VCVioTest.MerkleTreeHashing
 public import VCVioTest.MerkleTreeMonadic
 public import VCVioTest.MerkleTreeMultiExtractability
+public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.MonadProbability
 public import VCVioTest.Native
 public import VCVioTest.OracleComp.AdaptiveMeasure
@@ -49,6 +51,7 @@ public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.OracleNetwork
 public import VCVioTest.PFunctorFacade
 public import VCVioTest.PRFNetworkKernel
+public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
@@ -59,6 +62,7 @@ public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
+public import VCVioTest.RandomOracleRouting
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel
 public import VCVioTest.ReactiveNetwork
@@ -79,6 +83,7 @@ public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
 public import VCVioTest.SeparatedOTP
+public import VCVioTest.SigmaChallengeRestriction
 public import VCVioTest.Smoke
 public import VCVioTest.StateSeparating.NativeMeasure
 public import VCVioTest.StateTLift

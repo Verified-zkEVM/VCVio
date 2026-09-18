@@ -40,7 +40,7 @@ The API policy is:
 | Boundary | Evidence and intended interface | Disposition |
 | --- | --- | --- |
 | SLH-DSA `Security.generalAlg` | Three public projection equations now have ordinary proofs with the bundle opaque. `HashSigTest/ModuleAPI/SchemeGames.lean` verifies that reduction alone fails, uses the verification equation in direct and composed consumers, and retains perfect completeness. | repaired |
-| `QueryCount` and counting writers | `#synth Monoid (Bool → Nat)` selects `QueryCount.instMonoid`, whose identity is zero and product is addition. Counts use pointwise additive algebra; writer multiplication needs the standard additive-to-multiplicative tag. | pending |
+| `QueryCount` and counting writers | Removed the custom function monoid. `withCounting` uses `AddWriterT`, and `runAdd` publishes ordinary counts. `VCVioTest/ModuleAPI/Counting.lean` tests ordinary function multiplication, repeated labels, output preservation, and both failure transformer orders. Unary and relational handler clients use the tagged writer state explicitly. | repaired |
 | `QueryCache` | `#synth PartialOrder (Bool → Option Nat)` selects the cache extension order. Lookup, updates, extension and component projections need a carrier with its own instance head. | pending |
 | `QueryLog`, traversal and replay | Trace observations should use public occurrence, lookup, filtering and path laws, retaining ordered dependent answers. PolyFun #239 is open at the initial snapshot. | upstream-blocked |
 | Oracle specifications, coercions and handlers | The transparent `OracleComp`/`FreeM` and dependent signature façades are intentional. Audit compound signatures, handler application, transport and recursive wiring through ordinary imports. | pending |
@@ -83,6 +83,16 @@ proceed while an upstream change is pending. Record the precise validated revisi
 - [PolyFun #231](https://github.com/Verified-zkEVM/PolyFun/pull/231) and
   [#232: upstream reuse and semantic audit](https://github.com/Verified-zkEVM/PolyFun/pull/232)
 - [PolyFun #239: dependent paths and trace observations](https://github.com/Verified-zkEVM/PolyFun/pull/239)
+
+### Counting validation
+
+The counting repair at `e26cbd04` passes `./scripts/validate.sh --lint --test --axioms`.
+The separate ordinary-import consumer also builds and runs. All existing structural bound
+proofs and handler specifications compile. The old additive `Monoid (QueryCount ι)` cannot be
+retained as compatibility: its instance also changed unrelated function multiplication.
+Clients of raw writer state use `Multiplicative.toAdd`; clients of results use `runAdd`.
+The deprecated probability bridges remain; their shared compatibility constraints reduce the
+syntactic source count without claiming removal of the discrete semantic dependency.
 
 ### Final-validity conversion validation
 
