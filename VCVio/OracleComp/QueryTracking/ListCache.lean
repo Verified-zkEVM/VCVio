@@ -29,15 +29,16 @@ variable {D R : Type u} [DecidableEq D]
 
 /-- Interpret the first bindings of an association list as a query cache. -/
 @[expose]
-def decode (cache : List (D × R)) : (D →ₒ R).QueryCache := fun q => cache.lookup q
+def decode (cache : List (D × R)) : (D →ₒ R).QueryCache :=
+  QueryCache.ofFn fun q => cache.lookup q
 
 @[simp] theorem decode_nil : decode ([] : List (D × R)) = ∅ := by
-  funext q
-  simp only [decode, List.lookup_nil, QueryCache.empty_apply]
+  ext q
+  simp only [decode, QueryCache.ofFn_apply, List.lookup_nil, QueryCache.empty_apply]
 
 @[simp] theorem decode_cons (cache : List (D × R)) (d : D) (r : R) :
     decode ((d, r) :: cache) = (decode cache).cacheQuery d r := by
-  funext q
+  ext q
   by_cases h : q = d
   · subst q; simp [decode]
   · simp [decode, List.lookup_cons, beq_eq_false_iff_ne.mpr h, h, QueryCache.cacheQuery_of_ne]
@@ -58,10 +59,10 @@ theorem local_projection {m : Type u → Type v} [Monad m] [LawfulMonad m]
   change _ = (draw.withCaching d).run (decode cache)
   cases h : cache.lookup d with
   | none =>
-      erw [QueryImpl.withCaching_run_none draw h]
+      erw [QueryImpl.withCaching_run_none draw (show decode cache d = none from h)]
       simp only [handler, h, Functor.map_map, Prod.map_apply, id_eq, decode_cons]
   | some r =>
-      erw [QueryImpl.withCaching_run_some draw h]
+      erw [QueryImpl.withCaching_run_some draw (show decode cache d = some r from h)]
       simp only [handler, h, map_pure]
       rfl
 

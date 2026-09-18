@@ -41,6 +41,14 @@ The structural `QueryCache.log_consistent_append`, `log_consistent_cacheQuery_ap
 in `CachingLoggingOracle.lean` transport cache/log hypotheses without probability assumptions
 or decidable equality on responses.
 
+## Cache carrier
+
+`QueryCache spec` has its own carrier and extension order: every recorded answer must
+remain identical when moving upward in that order. Applying a cache still performs lookup.
+Use `QueryCache.ofFn` to construct one from a dependent optional function and `.toFn` to
+extract that function. The round-trip, extensionality, lookup, update, and sum-projection
+laws form the public API. Ordinary functions into `Option` retain their pointwise order.
+
 ## Per-index counting
 
 `QueryCount ι` is an ordinary function `ι → ℕ`, with the standard pointwise instances.
