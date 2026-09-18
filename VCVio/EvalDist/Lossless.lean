@@ -26,6 +26,13 @@ universe u v
 variable {m : Type u → Type v} [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
   {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
 
+/-- A measurable output map preserves losslessness on the chosen output spaces. -/
+theorem evalDist.isProbabilityMeasure_map [LawfulMonad m]
+    (mx : m α) [IsProbabilityMeasure 𝒟[mx]] {f : α → β} (hf : Measurable f) :
+    IsProbabilityMeasure 𝒟[f <$> mx] := by
+  constructor
+  rw [evalDist_map_apply_univ mx hf, measure_univ]
+
 /-- A lossless computation followed by almost everywhere lossless continuations is lossless. -/
 theorem evalDist.isProbabilityMeasure_bind_of_ae (mx : m α) (f : α → m β)
     [IsProbabilityMeasure 𝒟[mx]] (hf : Measurable fun a ↦ 𝒟[f a])
