@@ -19,12 +19,14 @@ reachable only by querying one shared lazy random oracle, and where every such q
 
 `HashSig.SLHDSA.Security.SchemeGames`' `generalAlg` evaluates the public hash as a function, and
 the games of `HashSig.SLHDSA.Security.CanonicalGames` hand their second-phase adversary the
-public seed and the same function.  `OracleComp` carries no resource bound, so in that model the
-hash-property advantages are not small: `HashSigTest.SLHDSA.Composition` proves
+public seed and the same function.  `OracleComp` carries no resource bound, so in that model two
+of the hash-property advantages are provably one: `HashSigTest.SLHDSA.Composition` proves
 `winningOpenPre_advantage` and `freePreAdv_advantage`, each exhibiting an adversary of advantage
-exactly one.  No bound on any of them can therefore be established there, in this or any other
-hash model, and the bound of `HashSig.SLHDSA.Security.OpenPreBound` is an inequality between
-advantages rather than a security level.
+exactly one against the open-preimage and the preimage game.  No bound on those two can be
+established there.  The target-collision, undetectability, decisional second-preimage and
+interleaved-target games are not shown winnable, and nothing bounds them either.  The bound of
+`HashSig.SLHDSA.Security.OpenPreBound` is therefore an inequality between advantages rather than
+a security level.
 
 The repair is to count queries rather than to bound computation.  An adversary here is still
 computationally unbounded, may use private randomness adaptively, and is restricted only by how
@@ -52,8 +54,13 @@ asserted, and private sampling is free.
   into adversarial and honest parts is a refinement this module does not make; `IsQueryBoundP`
   and a predicate on `publicHashSpec` queries are what such a split would use.
 * The secret-key operations `PRF` and `PRF_msg` remain functions of the key and are not part of
-  `publicHashSpec`; they are not modelled as random oracles and not counted.  The two `PRF` hops
-  of `HashSig.SLHDSA.Security.PrfHops` are where they are accounted for.
+  `publicHashSpec`; they are not modelled as random oracles and not counted.
+  `HashSig.SLHDSA.Security.PrfHops` takes the `MKG_PRF` hop for `PRF_msg`; the `SKG_PRF` hop for
+  `PRF` is not taken anywhere in this repository.
+* `HashSig.SLHDSA.Security.PrfHops` and `HashSig.SLHDSA.Security.OpenPreBound` are stated for
+  `SchemeGames.generalAlg`, whose public hash is a function.  Nothing relates `generalAlgM` to
+  `generalAlg`, or `romGameCore` and `countedRomExperiment` to `unforgeableExp` under
+  `PublicHash.runtime`.  The experiment here and the bound there are not connected.
 * Nothing here is quantum.  `PublicHash.randomOracle` is a classical lazily-sampled oracle and
   the count is a classical query count, so any bound proved against this experiment is a
   classical random-oracle statement.
@@ -62,12 +69,13 @@ asserted, and private sampling is free.
 
 ## Labels
 
-Six declarations.
+Eight declarations.
 
 *Counted random-oracle experiment*:
 
 * `generalAlgM`;
-* `romGameCore`, `countedRomImpl`, `countedRomExperiment`;
+* `romGameCore`, `countedRomImpl`, `countedRomImpl_inl`, `countedRomImpl_inr`,
+  `countedRomExperiment`;
 * `romForgeAdvantage`, `HasHashQueryBound`.
 
 ## References
@@ -156,6 +164,29 @@ noncomputable def countedRomImpl :
     QueryImpl romSpec (AddWriterT ℕ (StateT (PublicHash.Cache core) ProbComp)) :=
   (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core).withAddCost
     (fun q => match q with | .inl _ => 0 | .inr _ => 1)
+
+omit [SampleableType core.SkSeed] [SampleableType core.SkPrf] [SampleableType core.PkSeed] in
+open scoped Classical in
+/-- A private-sampling query is charged `0` and forwarded to `unifFwdImpl`.  The body of
+`countedRomImpl` is not exposed, so this is what a consumer reading its charge rewrites with.
+
+*Counted random-oracle experiment.* -/
+theorem countedRomImpl_inl (i : unifSpec.Domain) :
+    countedRomImpl core (Sum.inl i) = (do
+      AddWriterT.addTell (M := StateT (PublicHash.Cache core) ProbComp) (0 : ℕ)
+      liftM (unifFwdImpl (publicHashSpec core) i)) := by
+  rw [countedRomImpl, QueryImpl.withAddCost_apply_inl]; rfl
+
+omit [SampleableType core.SkSeed] [SampleableType core.SkPrf] [SampleableType core.PkSeed] in
+open scoped Classical in
+/-- A public-hash query is charged `1` and forwarded to the shared lazy random oracle.
+
+*Counted random-oracle experiment.* -/
+theorem countedRomImpl_inr (q : (publicHashSpec core).Domain) :
+    countedRomImpl core (Sum.inr q) = (do
+      AddWriterT.addTell (M := StateT (PublicHash.Cache core) ProbComp) (1 : ℕ)
+      liftM (PublicHash.randomOracle core q)) := by
+  rw [countedRomImpl, QueryImpl.withAddCost_apply_inr]; rfl
 
 open scoped Classical in
 /-- **The experiment**, from the empty cache: the success bit together with the number of

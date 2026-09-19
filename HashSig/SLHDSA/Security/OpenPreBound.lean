@@ -19,17 +19,22 @@ This module states the SLH-DSA bound with the FORS leaf hash's contribution carr
 `Composition.openPre_le_summands_forsF` is `OpenPRE ≤ DSPR + 3 · TCR`, conditional on VCVio's
 `CountingInterface`.  It is an upper bound, applied at the last step of `advantage_le_bound` to
 reach the shape of the EasyCrypt development's `EUFCMA_SPHINCS_PLUS`.  Not applying it therefore
-gives a bound that is never larger and is generally smaller, and it has three further
-consequences.
+gives a bound that is never larger, and it has three further consequences.
 
 * **The `counting` field disappears.**  `OpenPreCertificate` has no counterpart of
-  `Certificate.counting`, so the fiber-counting coupling — the interface whose three fields are,
-  in VCVio's own words, "the substantive probabilistic coupling still to be constructed" — is not
-  required for the bound to hold.
+  `Certificate.counting`, so the fiber-counting coupling — the interface whose two equations and
+  one inequality VCVio itself calls "the substantive probabilistic coupling still to be
+  constructed" — is not required for the bound to hold.
 * **The coefficient three disappears.**  It is the coefficient the conversion introduces; the
   FORS-`F` term here has coefficient one.
 * **`sm-dspr` leaves the assumption set.**  The decisional second-preimage resistance of the
   FORS leaf hash is not named by this bound, so nothing here depends on it.
+
+Against `Composition`'s two records: `OpenPreSummands` differs from `Summands` only at the FORS-`F`
+block, one `forsFOpenPre` term where that record has the pair `forsFDspr`, `forsFTcr`; and
+`OpenPreCertificate` has sixteen fields to `Certificate`'s twenty — `mkgAdv` and `idealAdvantage`
+are fixed at the constructions of `HashSig.SLHDSA.Security.PrfHops`, `prfHops` is discharged by
+`advantage_le_msgPrf_add_ideal`, and `counting` is not needed.
 
 ## What that means for the assumptions
 
@@ -46,10 +51,10 @@ summand it names is an assumption.  In particular the quantum bound of Theorem 1
 about a quantum-accessible random oracle, and nothing in this repository has quantum query
 semantics, so no post-quantum security level follows from anything here.
 
-What it names instead is `SM-DT-OpenPRE` of the FORS leaf hash, which is discharged at the same
-layer and in the same model as `sm-tcr` is.  The `DSPR + 3 · TCR` shape remains available:
-`Certificate.ofOpenPre` converts a certificate of this module into one of `Composition`'s given a
-`CountingInterface`, and `bound_le_certificate_bound` records that the conversion only loses.
+What it names instead is `SM-DT-OpenPRE` of the FORS leaf hash.  The `DSPR + 3 · TCR` shape
+remains available: `OpenPreCertificate.toCertificate` converts a certificate of this module into
+one of `Composition`'s given a `CountingInterface`, and `openPreBound_le_bound` records that the
+conversion only loses.
 
 The interchange is sound for Construction 7 specifically because that construction is analysed by
 modelling `H` as a random oracle outright, so no property of an underlying compression function is
@@ -71,6 +76,15 @@ brute-force inversion is an adversary like any other: `HashSigTest.SLHDSA.Compos
 exactly one, against the open-preimage and preimage games respectively.  Bounding those summands
 requires a model in which hash evaluation is a counted oracle query; nothing of the sort is in
 scope for this module, and until it exists no security level follows from this inequality.
+
+The certificate itself is free, and more cheaply than `Certificate`: from an address key and a
+public seed alone — no `Fintype` on the node type, no `CountingInterface`, no assumption —
+`HashSigTest.SLHDSA.OpenPreBound` builds a closed `OpenPreCertificate` at every validated
+parameter set and every adversary, with `freePreAdv` in the preimage field, the idle adversaries
+of `HashSigTest.SLHDSA.Composition` elsewhere, and the whole of `msgPrfIdealAdvantage` on the
+hypertree branch, and proves `1 ≤ c.summands.bound`.  A second one puts the load on the FORS
+branch through `winningOpenPre` instead; `Certificate.counting` was the only obstruction to that,
+and this certificate has no such field.
 
 ## What this module does not establish
 
@@ -115,11 +129,8 @@ variable {vp : ValidatedParams} (prims : Primitives vp.params)
 /-! ## The eleven summands -/
 
 /-- **The eleven named summands of the open-preimage bound.**  A bare record of eleven extended
-non-negative reals, carrying no claim about where they come from.
-
-It differs from `HashSig.SLHDSA.Security.Composition`'s `Summands` in one place: the FORS leaf
-hash contributes a single `forsFOpenPre` term where that record has the pair `forsFDspr`,
-`forsFTcr`.
+non-negative reals, carrying no claim about where they come from; the FORS leaf hash contributes
+the single term `forsFOpenPre`.
 
 *Open-preimage bound.* -/
 structure OpenPreSummands where
@@ -167,17 +178,15 @@ theorem OpenPreSummands.bound_eq (s : OpenPreSummands) (p : Params) :
 
 /-! ## The certificate -/
 
-/-- **A certificate for the open-preimage bound.**
+/-- **A certificate for the open-preimage bound.**  Ten adversaries against the named games of
+`HashSig.SLHDSA.Security.CanonicalGames`, the public seed the secret-value `PRF` hop is taken at,
+and two branch quantities with the three inequalities routing them.  The `MKG_PRF` summand is
+fixed at `msgPrfReduction adv` and the advantage surviving that hop at `msgPrfIdealAdvantage adv`,
+so neither is a field.
 
-Sixteen fields against `Certificate`'s twenty.  Four are gone: `mkgAdv` and `idealAdvantage` are
-fixed at the constructions of `HashSig.SLHDSA.Security.PrfHops`, `prfHops` is discharged from
-`advantage_le_msgPrf_add_ideal`, and `counting` is not needed because the `DSPR + 3 · TCR`
-conversion is not applied.
-
-The ten remaining adversary fields and the two branch bounds are hypotheses, exactly as in
-`Composition`.  `split` is asked at the advantage that survives the `MKG_PRF` hop, not at
-`adv.advantage`: the halves of `HashSig.SLHDSA.Security.SchemeGames` are defined at the real
-experiment, and no dispatch split of the key-idealized experiment exists in this repository.
+`split` is asked at the advantage that survives the `MKG_PRF` hop, not at `adv.advantage`: the
+halves of `HashSig.SLHDSA.Security.SchemeGames` are defined at the real experiment, and no
+dispatch split of the key-idealized experiment exists in this repository.
 
 *Open-preimage bound.* -/
 structure OpenPreCertificate (adv : unforgeableAdv (generalAlg prims)) where
@@ -277,31 +286,10 @@ theorem advantage_le_openPreBound {adv : unforgeableAdv (generalAlg prims)}
     (c : OpenPreCertificate prims adv) :
     adv.advantage ProbCompRuntime.probComp ≤ c.summands.bound vp.params := by
   rw [c.bound_eq]
-  calc adv.advantage ProbCompRuntime.probComp
-      ≤ prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
-          + msgPrfIdealAdvantage prims adv := advantage_le_msgPrf_add_ideal prims adv
-    _ ≤ prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
-          + prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
-          + (c.forsBranch + c.hypertreeBranch) := by
-        gcongr
-        · exact le_add_self
-        · exact c.split
-    _ ≤ prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
-          + prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
-          + ((KeyedHash.ITSRAdvantage c.itsrAdv
-              + SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv)
-            + ((vp.params.w - 2 : ℕ) *
-                SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-              + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv)) := by
-        gcongr
-        · exact c.forsBranch_le
-        · exact c.hypertreeBranch_le
-    _ = _ := by ring
+  refine ((advantage_le_msgPrf_add_ideal prims adv).trans
+    (add_le_add_right (c.split.trans (add_le_add c.forsBranch_le c.hypertreeBranch_le)) _)).trans
+    (le_of_le_of_eq (le_add_self (b := prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv)) ?_)
+  ring
 
 /-! ## Recovering the twelve-summand shape -/
 
@@ -355,42 +343,11 @@ theorem openPreBound_le_bound {adv : unforgeableAdv (generalAlg prims)}
     (c : OpenPreCertificate prims adv)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface c.openPreAdv) :
     c.summands.bound vp.params ≤ (c.toCertificate counting).summands.bound vp.params := by
-  have h : SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv ≤
-      SM_DT_DSPR_SourceFinalValidity.Advantage
-          (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-        + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
-          (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv) :=
-    openPre_le_dspr_add_three_tcr (c.toCertificate counting)
+  have h := openPre_le_dspr_add_three_tcr (c.toCertificate counting)
   rw [c.bound_eq, Certificate.bound_eq]
-  simp only [OpenPreCertificate.toCertificate]
-  calc prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
-          + prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
-          + KeyedHash.ITSRAdvantage c.itsrAdv
-          + SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv
-          + (vp.params.w - 2 : ℕ) *
-              SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-          + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv
-      ≤ prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
-          + prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
-          + KeyedHash.ITSRAdvantage c.itsrAdv
-          + (SM_DT_DSPR_SourceFinalValidity.Advantage
-                (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-              + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
-                (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv))
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv
-          + (vp.params.w - 2 : ℕ) *
-              SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-          + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-          + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv := by gcongr
-    _ = _ := by ring
+  simp only [OpenPreCertificate.toCertificate] at h ⊢
+  rw [add_assoc _ (SM_DT_DSPR_SourceFinalValidity.Advantage _) (3 * _)]
+  gcongr
 
 end Recover
 

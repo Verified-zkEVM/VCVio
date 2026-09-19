@@ -10,8 +10,8 @@ public import HashSig.SLHDSA.Security.Composition
 /-!
 # The message-randomizer PRF hop, taken by a constructed reduction
 
-This module replaces the first of the SLH-DSA bound's two `PRF` summands by the advantage of a
-distinguisher *built from the forger*, and proves the hop that summand stands for.
+This module states the SLH-DSA bound's `MKG_PRF` summand at the advantage of a distinguisher
+*built from the forger*, and proves the hop that summand stands for.
 
 ## The statement
 
@@ -25,7 +25,10 @@ Both terms on the right are functions of `adv` alone.  `msgPrfReduction adv` is 
 of `PRFScheme.PRFAdversary`, and `msgPrfIdealAdvantage adv` is the success probability of that
 same reduction in the ideal `PRF` experiment — the SLH-DSA CMA game with `PRF_msg` replaced by a
 lazily sampled random function, which is what "the advantage that survives the `MKG_PRF` hop"
-means.  Nothing is quantified: no certificate, and no field to supply.
+means.  Nothing is quantified: no certificate, and no field to supply.  In
+`HashSig.SLHDSA.Security.Composition`'s `Certificate` the same two quantities are the fields
+`mkgAdv` and `idealAdvantage`, supplied by a caller, and `prfHops` is the hypothesis this theorem
+discharges.
 
 ## How the reduction is built
 
@@ -34,9 +37,12 @@ means.  Nothing is quantified: no certificate, and no field to supply.
 key, and answers each signing query by sampling `addrnd`, asking its own oracle for
 `R` at `(addrnd, internal message)`, and signing with
 `GeneralScheme.signInternalWithRandomizer`.  It then re-runs verification and the freshness test
-and returns their conjunction.  The construction is exactly `R_MKGPRF_EUFCMA`
-(`SPHINCS_PLUS.ec:1214-1359`): the challenge lives at one line inside the signing oracle, and
-the number of oracle queries is one per signing query.
+and returns their conjunction.  The construction is the analogue of `R_MKGPRF_EUFCMA`
+(`SPHINCS_PLUS.ec:1214-1360`): the challenge lives at one line inside the signing oracle, and
+the number of oracle queries is one per signing query.  It is not that reduction verbatim:
+EasyCrypt's runs after the `SKG_PRF` hop, so it samples every secret value directly and keys its
+oracle on the message alone, whereas this one takes the `MKG_PRF` hop first, derives the secret
+values through the real `PRF` from `SK.seed`, and keys its oracle at `(addrnd, internal message)`.
 
 `GeneralScheme.signInternalM_eq_signInternalWithRandomizerM` is what makes this possible:
 `SK.prf` enters a signature only through `R`, so replacing `PRF_msg` by an oracle changes one
@@ -45,8 +51,9 @@ value and leaves the rest of Algorithm 19 untouched.
 ## What the real experiment is
 
 `prfRealExp_msgPrfReduction` is the content: in the real `PRF` experiment the reduction *is* the
-CMA game, so `Pr[real] = adv.advantage`.  The seed sampling order differs — `prfRealExp` samples
-the key first, `generalAlg.keygen` samples `SK.seed` first — and `evalDist_bind_bind_swap`
+CMA game, so `𝒟[prfRealExp (msgPrfScheme prims) (msgPrfReduction prims adv)] {true}` is
+`adv.advantage`.  The seed sampling order differs — `prfRealExp` samples the key first,
+`generalAlg.keygen` samples `SK.seed` first — and `evalDist_bind_bind_swap_of_countable`
 reconciles them.  The hop then follows from `a ≤ ENNReal.absDiff a b + b`.
 
 ## What this does not do
@@ -65,19 +72,19 @@ reconciles them.  The hop then follows from `a ≤ ENNReal.absDiff a b + b`.
 
 ## Labels
 
-Eleven declarations.
+Twelve declarations.
 
 *Message-`PRF` reduction* — the construction and what it satisfies:
 
 * `msgPrfSpec`, `msgPrfSigningOracle`, `msgPrfQueryImpl`, `msgPrfReduction`,
-  `msgPrfIdealAdvantage`;
+  `msgPrfIdealAdvantage`, `msgPrfIdealAdvantage_le_one`;
 * `cmaImpl`, `simulateQ_prfReal_msgPrfQueryImpl_run`;
-* `prfRealExp_msgPrfReduction`, `unforgeableExp_generalAlg`,
-  `prfRealExp_msgPrfReduction_apply`, `advantage_le_msgPrf_add_ideal`.
+* `prfRealExp_msgPrfReduction`, `unforgeableExp_generalAlg_eq`,
+  `evalDist_prfRealExp_msgPrfReduction`, `advantage_le_msgPrf_add_ideal`.
 
-`advantage_le_msgPrf_add_ideal` is the result; `prfRealExp_msgPrfReduction_apply` is the equality
-it rests on, and the two experiment-shape theorems above it are what a reader checks to see that
-neither side was bent to fit.
+`advantage_le_msgPrf_add_ideal` is the result; `evalDist_prfRealExp_msgPrfReduction` is the
+equality it rests on, and the two experiment-shape theorems above it are what a reader checks to
+see that neither side was bent to fit.
 
 ## References
 
@@ -154,11 +161,17 @@ noncomputable def msgPrfReduction (adv : unforgeableAdv (generalAlg prims)) :
 the reduction's success probability in the ideal `PRF` experiment, which is the SLH-DSA CMA game
 with `PRF_msg` replaced by a lazily sampled random function.
 
-Unlike `Certificate.idealAdvantage`, which is a field, this is a function of `adv`.
-
 *Message-`PRF` reduction.* -/
 noncomputable def msgPrfIdealAdvantage (adv : unforgeableAdv (generalAlg prims)) : ℝ≥0∞ :=
   𝒟[PRFScheme.prfIdealExp (msgPrfReduction prims adv)] {true}
+
+/-- The advantage surviving the `MKG_PRF` hop is a probability, so it is at most one.  The body of
+`msgPrfIdealAdvantage` is not exposed, so this is what a consumer bounding it from above uses.
+
+*Message-`PRF` reduction.* -/
+theorem msgPrfIdealAdvantage_le_one (adv : unforgeableAdv (generalAlg prims)) :
+    msgPrfIdealAdvantage prims adv ≤ 1 :=
+  MeasureTheory.measure_le_one _ _
 
 /-! ## The real experiment is the CMA game -/
 
@@ -248,7 +261,7 @@ deterministic verifier inlined.  This is `prfRealExp_msgPrfReduction`'s right-ha
 `SK.seed` sampled before `SK.prf`.
 
 *Message-`PRF` reduction.* -/
-theorem unforgeableExp_generalAlg (adv : unforgeableAdv (generalAlg prims)) :
+theorem unforgeableExp_generalAlg_eq (adv : unforgeableAdv (generalAlg prims)) :
     unforgeableExp ProbCompRuntime.probComp adv =
       letI : DecidableEq (List Byte) := Classical.decEq _
       letI : DecidableEq (GeneralScheme.SignatureCore vp prims.core) := Classical.decEq _
@@ -278,10 +291,10 @@ theorem unforgeableExp_generalAlg (adv : unforgeableAdv (generalAlg prims)) :
 the forger's EUF-CMA advantage exactly, not up to a bound.
 
 *Message-`PRF` reduction.* -/
-theorem prfRealExp_msgPrfReduction_apply (adv : unforgeableAdv (generalAlg prims)) :
+theorem evalDist_prfRealExp_msgPrfReduction (adv : unforgeableAdv (generalAlg prims)) :
     𝒟[PRFScheme.prfRealExp (msgPrfScheme prims) (msgPrfReduction prims adv)] {true}
       = adv.advantage ProbCompRuntime.probComp := by
-  rw [unforgeableAdv.advantage, unforgeableExp_generalAlg, prfRealExp_msgPrfReduction]
+  rw [unforgeableAdv.advantage, unforgeableExp_generalAlg_eq, prfRealExp_msgPrfReduction]
   congr 1
   exact evalDist_bind_bind_swap_of_countable _ _ _
 
@@ -289,18 +302,15 @@ theorem prfRealExp_msgPrfReduction_apply (adv : unforgeableAdv (generalAlg prims
 distinguishing advantage of a distinguisher *constructed from that forger*, plus the advantage
 that survives the hop.
 
-Both right-hand terms are functions of `adv`.  This is the field-free replacement for the
-`mkgAdv`, `idealAdvantage` and `prfHops` parts of
-`HashSig.SLHDSA.Security.Composition`'s `Certificate`: there the `MKG_PRF` summand is an
-advantage at an adversary a caller supplies, and here it is an advantage at a named
-construction, which no caller can re-choose.
+Both right-hand terms are functions of `adv`: the `MKG_PRF` summand is an advantage at a named
+construction, and no caller supplies or re-chooses it.
 
 *Message-`PRF` reduction.* -/
 theorem advantage_le_msgPrf_add_ideal (adv : unforgeableAdv (generalAlg prims)) :
     adv.advantage ProbCompRuntime.probComp ≤
       prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
         + msgPrfIdealAdvantage prims adv := by
-  rw [← prfRealExp_msgPrfReduction_apply, msgPrfIdealAdvantage]
+  rw [← evalDist_prfRealExp_msgPrfReduction, msgPrfIdealAdvantage]
   exact prfRealExp_le_prfAbsAdvantage_add_prfIdealExp _ _
 
 end SLHDSA.Security

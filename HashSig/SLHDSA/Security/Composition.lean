@@ -214,11 +214,11 @@ this lane's own dispatch split rather than at the source's.
 
 ## Labels
 
-Twenty-one declarations.
+Twenty-three declarations.
 
 *Composition arithmetic* — a statement about the bound expression or about a certificate:
 
-* `prfAbsAdvantage`, `prfAbsAdvantage_toReal`;
+* `prfAbsAdvantage`, `prfAbsAdvantage_toReal`, `prfRealExp_le_prfAbsAdvantage_add_prfIdealExp`;
 * `two_le_w`;
 * `Summands`, `Summands.bound`, `Summands.bound_eq`, `bound_eq_zero_of_summands_zero`,
   `bound_wotsFUd_coefficient`, `bound_wotsFUd_coefficient_add_two`,
@@ -299,10 +299,7 @@ theorem prfRealExp_le_prfAbsAdvantage_add_prfIdealExp {K D R : Type} [DecidableE
     𝒟[prf.prfRealExp adv] {true} ≤
       prfAbsAdvantage prf adv + 𝒟[PRFScheme.prfIdealExp adv] {true} := by
   rw [prfAbsAdvantage, ENNReal.absDiff]
-  set a := 𝒟[prf.prfRealExp adv] {true}
-  set b := 𝒟[PRFScheme.prfIdealExp adv] {true}
-  calc a ≤ a - b + b := le_tsub_add
-    _ ≤ a - b + (b - a) + b := by gcongr; exact le_self_add
+  exact le_tsub_add.trans (add_le_add_left le_self_add _)
 
 /-! ## The twelve summands -/
 
