@@ -214,11 +214,11 @@ this lane's own dispatch split rather than at the source's.
 
 ## Labels
 
-Twenty-one declarations.
+Twenty-three declarations.
 
 *Composition arithmetic* — a statement about the bound expression or about a certificate:
 
-* `prfAbsAdvantage`, `prfAbsAdvantage_toReal`;
+* `prfAbsAdvantage`, `prfAbsAdvantage_toReal`, `prfRealExp_le_prfAbsAdvantage_add_prfIdealExp`;
 * `two_le_w`;
 * `Summands`, `Summands.bound`, `Summands.bound_eq`, `bound_eq_zero_of_summands_zero`,
   `bound_wotsFUd_coefficient`, `bound_wotsFUd_coefficient_add_two`,
@@ -229,7 +229,8 @@ Twenty-one declarations.
 
 *Game transport* — a statement that moves a bound between two of `CanonicalGames`' named games:
 
-* `dspr_bound_transfer`, `tcr_bound_transfer`, `summands_forsF_le`, `openPre_le_summands_forsF`.
+* `dspr_bound_transfer`, `tcr_bound_transfer`, `summands_forsF_le`,
+  `openPre_le_summands_forsF`, `openPre_le_dspr_add_three_tcr`.
 
 None is `private` and none carries `@[expose]`; `Summands.bound_eq` and `Certificate.bound_eq` are
 what a consumer that needs the expression's shape rewrites with, exactly as
@@ -287,6 +288,18 @@ theorem prfAbsAdvantage_toReal {K D R : Type} [DecidableEq D] [SampleableType R]
     (prfAbsAdvantage prf adv).toReal = PRFScheme.prfAdvantage prf adv := by
   exact ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _)
     (MeasureTheory.measure_ne_top _ _)
+
+/-- **A `PRF` hop, as an inequality.**  The real experiment's success probability is at most the
+distinguishing advantage plus the ideal experiment's.  This is what a summand named after a `PRF`
+hop does in a bound, stated once so that a reduction taking the hop does not restate it.
+
+*Composition arithmetic.* -/
+theorem prfRealExp_le_prfAbsAdvantage_add_prfIdealExp {K D R : Type} [DecidableEq D]
+    [SampleableType R] (prf : PRFScheme K D R) (adv : PRFScheme.PRFAdversary D R) :
+    𝒟[prf.prfRealExp adv] {true} ≤
+      prfAbsAdvantage prf adv + 𝒟[PRFScheme.prfIdealExp adv] {true} := by
+  rw [prfAbsAdvantage, ENNReal.absDiff]
+  exact le_tsub_add.trans (add_le_add_left le_self_add _)
 
 /-! ## The twelve summands -/
 
@@ -890,6 +903,21 @@ theorem openPre_le_summands_forsF {adv : unforgeableAdv (generalAlg prims)}
       c.summands.forsFDspr + 3 * c.summands.forsFTcr := by
   have h := SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound c.openPreAdv c.counting
   rwa [SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound] at h
+
+/-- The certificate's open-preimage advantage below the `DSPR + 3 · TCR` pair, with both sides
+written at the induced adversaries rather than through `Certificate.summands`.  This is
+`openPre_le_summands_forsF` in the form a consumer outside this module can use, the summand
+projections not being exposed.
+
+*Game transport.* -/
+theorem openPre_le_dspr_add_three_tcr {adv : unforgeableAdv (generalAlg prims)}
+    (c : Certificate prims adv) :
+    SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv ≤
+      SM_DT_DSPR_SourceFinalValidity.Advantage
+          (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
+        + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+          (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv) :=
+  openPre_le_summands_forsF c
 
 end Transfer
 

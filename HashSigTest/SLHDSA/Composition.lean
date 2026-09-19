@@ -22,7 +22,7 @@ headline `advantage_le_bound`, the certificate, the two transports and every sta
 probability have **no runtime coverage at all** and cannot be given any.  The runtime checks below
 are about `Params`-level data only: `p.w - 2`, `SLHDSA.Security.targetCount`, and a routing table
 this file writes down.  What pins the bound's own shape is the `Pins` section, which restates each
-of the twenty-one exported declarations; what pins the *strength* of the hypotheses is the vacuity
+of the twenty-three exported declarations; what pins the *strength* of the hypotheses is the vacuity
 canary at the end, which is elaboration-only for the same reason.
 
 A reader of the lane's other fixtures will look for the headline among the runtime checks; it is
@@ -88,16 +88,16 @@ exercised there.
 
 Sixty-seven runtime checks in four groups — the two coefficients (18), the eight caps at both
 profiles (16), the `T_ℓ` separation and the valid profile where it fails (20), and the routing
-table (13).  Eighty `example`s in `Pins`: at least one for each of the twenty-one declarations the
-library module exports, the two `T_ℓ` attacked-member equations, the ten games' declared caps, the
-three general cap separations and the game identity they explain, the `ITSRProblem` shape, and
-twenty-two profile pins.  Then the vacuity canary — twenty-five declarations and ten `example`s.
-They build a closed `Certificate` from an address key and a public seed and prove that the bound it
-names is at least one; then a second one, from those two and a `CountingInterface` at an
-open-preimage adversary of advantage one, whose three `ℝ≥0∞` fields are the experiment's own
-quantities, so that anchoring those fields refuses the first and not the second; and then the
-equivalence that turns the existence of that interface into an inequality between two named
-advantages, restated at this file's own bundle.
+table (13).  Eighty-two `example`s in `Pins`: at least one for each of the twenty-three
+declarations the library module exports, the two `T_ℓ` attacked-member equations, the ten games'
+declared caps, the three general cap separations and the game identity they explain, the
+`ITSRProblem` shape, and twenty-two profile pins.  Then the vacuity canary — twenty-five
+declarations and ten `example`s.  They build a closed `Certificate` from an address key and a
+public seed and prove that the bound it names is at least one; then a second one, from those two
+and a `CountingInterface` at an open-preimage adversary of advantage one, whose three `ℝ≥0∞` fields
+are the experiment's own quantities, so that anchoring those fields refuses the first and not the
+second; and then the equivalence that turns the existence of that interface into an inequality
+between two named advantages, restated at this file's own bundle.
 
 ## References
 
@@ -419,11 +419,11 @@ def checkRouting : IO Unit := do
 
 /-! ## The pins
 
-Every one of the twenty-one declarations `HashSig.SLHDSA.Security.Composition` exports, restated at
-this bundle's types, with generic arguments where the statement has them.  These are the only check
-on the bound's own shape: a library-side edit of a coefficient, of a summand's routing, or of a
-certificate field's type moves the library statement and fails the pin here, which no library-side
-edit can reach. -/
+Every one of the twenty-three declarations `HashSig.SLHDSA.Security.Composition` exports, restated
+at this bundle's types, with generic arguments where the statement has them.  These are the only
+check on the bound's own shape: a library-side edit of a coefficient, of a summand's routing, or of
+a certificate field's type moves the library statement and fails the pin here, which no
+library-side edit can reach. -/
 
 section Pins
 
@@ -440,6 +440,11 @@ noncomputable example {K D R : Type} [DecidableEq D] [SampleableType R]
 example {K D R : Type} [DecidableEq D] [SampleableType R]
     (prf : PRFScheme K D R) (a : PRFScheme.PRFAdversary D R) :
     (prfAbsAdvantage prf a).toReal = PRFScheme.prfAdvantage prf a := prfAbsAdvantage_toReal prf a
+
+example {K D R : Type} [DecidableEq D] [SampleableType R]
+    (prf : PRFScheme K D R) (a : PRFScheme.PRFAdversary D R) :
+    𝒟[prf.prfRealExp a] {true} ≤ prfAbsAdvantage prf a + 𝒟[PRFScheme.prfIdealExp a] {true} :=
+  prfRealExp_le_prfAbsAdvantage_add_prfIdealExp prf a
 
 /-! ### The bound expression, with both coefficients written out -/
 
@@ -619,7 +624,7 @@ example : adv.advantage ProbCompRuntime.probComp ≤
 
 end OfBranch
 
-/-! ### The two transports, and the two theorems that consume them -/
+/-! ### The two transports, and the three theorems that consume them -/
 
 example (εD : ℝ≥0∞)
     (h : ∀ a : SM_DT_DSPR_SourceFinalValidity.Adversary (forsFDsprProblem toyPrimitives),
@@ -648,6 +653,13 @@ example (εD εT : ℝ≥0∞)
 example : SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv ≤
     c.summands.forsFDspr + 3 * c.summands.forsFTcr :=
   openPre_le_summands_forsF c
+
+example : SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv ≤
+    SM_DT_DSPR_SourceFinalValidity.Advantage
+        (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
+      + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+        (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv) :=
+  openPre_le_dspr_add_three_tcr c
 
 /-! ### The games the two `T_ℓ` summands are routed to, pinned by arity
 
