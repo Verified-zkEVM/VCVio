@@ -6,7 +6,6 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Security.RomRun
-import all HashSig.SLHDSA.Security.CountedRom
 
 /-!
 # The settled transcript of the counted random-oracle run
@@ -99,10 +98,7 @@ theorem exists_mem_support_run_romImpl_of_liftM_bind {α β : Type} (oa : ProbCo
     (hz : z ∈ support ((simulateQ romImpl (liftM oa >>= k)).run c)) :
     ∃ x, z ∈ support ((simulateQ romImpl (k x)).run c) := by
   rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
-  obtain ⟨⟨x, c'⟩, h₁, hz⟩ := hz
-  rw [roSim.run_liftM, support_map] at h₁
-  obtain ⟨_, _, h₁⟩ := h₁
-  obtain ⟨-, rfl⟩ := Prod.mk.inj h₁
+  obtain ⟨_, ⟨x, -, rfl⟩, hz⟩ := roSim.run_liftM_support _ _ _ ▸ hz
   exact ⟨x, hz⟩
 
 /-- The final cache of a run of a hash-only program, embedded in the shared world through its
@@ -172,7 +168,7 @@ theorem exists_mem_support_run_keygenInternalM_of_mem_support_run_keygen
     ∃ (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed), z ∈ support
       ((simulateQ romImpl (GeneralScheme.keygenInternalM (m := OracleComp romSpec)
         vp core skSeed skPrf pkSeed)).run c) := by
-  simp only [generalAlgM] at hz
+  rw [generalAlgM_keygen] at hz
   obtain ⟨skSeed, hz⟩ := exists_mem_support_run_romImpl_of_liftM_bind core _ _ hz
   obtain ⟨skPrf, hz⟩ := exists_mem_support_run_romImpl_of_liftM_bind core _ _ hz
   obtain ⟨pkSeed, hz⟩ := exists_mem_support_run_romImpl_of_liftM_bind core _ _ hz
@@ -186,7 +182,7 @@ theorem exists_mem_support_run_signInternalM_of_mem_support_run_sign
     (hz : z ∈ support ((simulateQ romImpl ((romAlg).sign pk sk msg)).run c)) :
     ∃ addrnd : core.Y, z ∈ support ((simulateQ romImpl (GeneralScheme.signInternalM
       (m := OracleComp romSpec) vp core (emptyContextMessage msg) sk addrnd)).run c) := by
-  simp only [generalAlgM] at hz
+  rw [generalAlgM_sign] at hz
   exact exists_mem_support_run_romImpl_of_liftM_bind core _ _ hz
 
 /-- A transcript of the instrumented run arises from its three stages in sequence: key
@@ -205,10 +201,9 @@ theorem exists_mem_support_run_romImpl_of_mem_support_romRunFull
       (z.1.verified, z.2) ∈
         support ((simulateQ romImpl ((romAlg).verify z.1.pk z.1.msg z.1.sig)).run c_f) := by
   unfold romRunFull romGameCoreFull at hz
-  simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
-  obtain ⟨⟨⟨pk, sk⟩, cₖ⟩, hk, ⟨⟨⟨msg, sig⟩, log⟩, c_f⟩, hf, ⟨verified, c_v⟩, hv, hz⟩ := hz
-  simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-  subst hz
+  simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff, simulateQ_pure,
+    StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+  obtain ⟨⟨⟨pk, sk⟩, cₖ⟩, hk, ⟨⟨⟨msg, sig⟩, log⟩, c_f⟩, hf, ⟨verified, c_v⟩, hv, rfl⟩ := hz
   exact ⟨cₖ, c_f, hk, hf, hv⟩
 
 /-- Every logged signature of the instrumented run was produced by a run of Algorithm 19 between
@@ -262,7 +257,7 @@ theorem simulateQ_toPartialImpl_eq_some_of_mem_support_romRunFull
       exists_mem_support_run_signInternalM_of_mem_log_romRunFull core adv hz he
     exact ⟨addrnd, QueryCache.simulateQ_toPartialImpl_mono hc₂ _
       (simulateQ_toPartialImpl_snd_signInternalM_of_mem_support_run_romImpl core _ _ _ hmem)⟩
-  · simp only [generalAlgM] at hv
+  · rw [generalAlgM_verify] at hv
     exact simulateQ_toPartialImpl_snd_verifyInternalM_of_mem_support_run_romImpl core _ _ _ hv
 
 end SLHDSA.Security

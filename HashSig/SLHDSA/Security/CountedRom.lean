@@ -70,11 +70,11 @@ asserted, and private sampling is free.
 
 ## Labels
 
-Eight declarations.
+Eleven declarations.
 
 *Counted random-oracle experiment*:
 
-* `generalAlgM`;
+* `generalAlgM`, `generalAlgM_keygen`, `generalAlgM_sign`, `generalAlgM_verify`;
 * `romGameCore`, `countedRomImpl`, `countedRomImpl_inl`, `countedRomImpl_inr`,
   `countedRomExperiment`;
 * `romForgeAdvantage`, `HasHashQueryBound`.
@@ -118,6 +118,48 @@ def generalAlgM (vp : ValidatedParams) (core : CorePrimitives vp.params)
     GeneralScheme.signInternalM vp core (emptyContextMessage msg) sk addrnd
   verify pk msg sig :=
     GeneralScheme.verifyInternalM vp core (emptyContextMessage msg) sig pk
+
+section Equations
+
+variable {m : Type → Type*} [Monad m] [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
+  [SampleableType core.SkSeed] [SampleableType core.SkPrf] [SampleableType core.PkSeed]
+  [SampleableType core.Y] [DecidableEq core.Y]
+
+/-- Key generation samples the three seeds privately and runs Algorithm 18 as a query program.
+The body of `generalAlgM` is not exposed, so this is what a consumer rewrites with.
+
+*Counted random-oracle experiment.* -/
+@[simp] theorem generalAlgM_keygen :
+    (generalAlgM (m := m) vp core).keygen = (do
+      let skSeed ← (monadLift ($ᵗ core.SkSeed) : m core.SkSeed)
+      let skPrf ← (monadLift ($ᵗ core.SkPrf) : m core.SkPrf)
+      let pkSeed ← (monadLift ($ᵗ core.PkSeed) : m core.PkSeed)
+      GeneralScheme.keygenInternalM vp core skSeed skPrf pkSeed) := by
+  rfl
+
+/-- Signing samples `addrnd` privately and runs Algorithm 19 on the *internal* message as a query
+program.  The public key argument is ignored, as FIPS 205 Algorithm 19 ignores it.  The body of
+`generalAlgM` is not exposed, so this is what a consumer rewrites with.
+
+*Counted random-oracle experiment.* -/
+@[simp] theorem generalAlgM_sign (pk : PublicKeyCore core) (sk : SecretKeyCore core)
+    (msg : List Byte) :
+    (generalAlgM (m := m) vp core).sign pk sk msg = (do
+      let addrnd ← (monadLift ($ᵗ core.Y) : m core.Y)
+      GeneralScheme.signInternalM vp core (emptyContextMessage msg) sk addrnd) := by
+  rfl
+
+/-- Verification runs Algorithm 20 on the *internal* message as a query program, with no private
+sampling.  The body of `generalAlgM` is not exposed, so this is what a consumer rewrites with.
+
+*Counted random-oracle experiment.* -/
+@[simp] theorem generalAlgM_verify (pk : PublicKeyCore core) (msg : List Byte)
+    (sig : GeneralScheme.SignatureCore vp core) :
+    (generalAlgM (m := m) vp core).verify pk msg sig =
+      GeneralScheme.verifyInternalM vp core (emptyContextMessage msg) sig pk := by
+  rfl
+
+end Equations
 
 /-! ## The counted experiment -/
 

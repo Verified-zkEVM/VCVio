@@ -6,7 +6,6 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Security.CountedRom
-import all HashSig.SLHDSA.Security.CountedRom
 
 /-!
 # The deterministic interpretation of `generalAlgM` is `generalAlg`
@@ -133,13 +132,13 @@ theorem generalAlgM_map_eq :
   change SignatureAlg.map F.toMonadHom
       (generalAlgM (m := OracleComp (unifSpec + publicHashSpec prims.core)) vp prims.core) = _
   apply SignatureAlg.ext
-  · simp [generalAlgM, hLift ($ᵗ prims.SkSeed), hLift ($ᵗ prims.SkPrf),
+  · simp [generalAlgM_keygen, hLift ($ᵗ prims.SkSeed), hLift ($ᵗ prims.SkPrf),
       hLift ($ᵗ prims.PkSeed), GeneralScheme.keygenInternalM_natural vp prims.core F, hKeygen]
   · funext pk sk msg
-    simp [generalAlgM, hLift ($ᵗ prims.Y), GeneralScheme.signInternalM_natural vp prims.core F,
+    simp [generalAlgM_sign, hLift ($ᵗ prims.Y), GeneralScheme.signInternalM_natural vp prims.core F,
       hSign]
   · funext pk msg sig
-    simp [generalAlgM, GeneralScheme.verifyInternalM_natural vp prims.core F, hVerify]
+    simp [generalAlgM_verify, GeneralScheme.verifyInternalM_natural vp prims.core F, hVerify]
 
 end Scheme
 
