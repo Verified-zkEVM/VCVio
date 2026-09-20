@@ -297,6 +297,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Eager
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
