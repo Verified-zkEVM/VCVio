@@ -233,6 +233,60 @@ theorem map_run_withLogging_inputs_eq_run_appendInputLog
 
 end inputLog
 
+section logEntries
+
+variable {ι κ : Type} {spec : OracleSpec.{0, 0} ι} {sigSpec : OracleSpec.{0, 0} κ} {σ : Type}
+  [Preorder σ]
+
+/-- Every entry of the log left by a `withLogging` handler for the right summand records the
+output of a run of that handler's program between two intermediate states of an outer
+state-monotone simulation, and the state only grows afterwards. -/
+theorem exists_le_mem_support_run_of_mem_log_add_withLogging
+    (outer : QueryImpl spec (StateT σ ProbComp))
+    (hmono : ∀ {β : Type} (ob : OracleComp spec β) (s : σ) (z : β × σ),
+      z ∈ support ((simulateQ outer ob).run s) → s ≤ z.2)
+    (sign : QueryImpl sigSpec (OracleComp spec)) {α : Type}
+    (oa : OracleComp (spec + sigSpec) α) {s₀ : σ} {z : (α × QueryLog sigSpec) × σ}
+    (hz : z ∈ support ((simulateQ outer ((simulateQ
+      ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀))
+    {e : (t : sigSpec.Domain) × sigSpec.Range t} (he : e ∈ z.1.2) :
+    ∃ s₁ s₂, s₀ ≤ s₁ ∧ s₂ ≤ z.2 ∧ (e.2, s₂) ∈ support ((simulateQ outer (sign e.1)).run s₁) := by
+  induction oa using OracleComp.inductionOn generalizing s₀ z with
+  | pure x => simp_all [simulateQ_pure]
+  | query_bind t k ih =>
+    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind', simulateQ_bind, StateT.run_bind,
+      mem_support_bind_iff] at hz
+    obtain ⟨⟨⟨u, w₁⟩, s'⟩, h₁, h₂⟩ := hz
+    simp only [simulateQ_map, StateT.run_map, support_map, Set.mem_image] at h₂
+    obtain ⟨⟨⟨a, w₂⟩, s''⟩, h₂, rfl⟩ := h₂
+    simp only [Prod.map_snd, List.mem_append] at he
+    dsimp only
+    cases t with
+    | inl t =>
+      simp only [QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+        HasQuery.instOfMonadLift_query, WriterT.run_monadLift', simulateQ_map, StateT.run_map,
+        support_map, Set.mem_image, Prod.mk.injEq] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, ⟨⟨rfl, rfl⟩, rfl⟩⟩ := h₁
+      simp only [List.empty_eq, List.not_mem_nil, false_or] at he
+      obtain ⟨s₁, s₂, hs₁, hs₂, hmem⟩ := ih _ h₂ he
+      exact ⟨s₁, s₂, (hmono _ _ _ hv).trans hs₁, hs₂, hmem⟩
+    | inr t =>
+      rw [QueryImpl.add_apply_inr, QueryImpl.run_withLogging_apply, simulateQ_bind, StateT.run_bind,
+        mem_support_bind_iff] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, h₁⟩ := h₁
+      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff,
+        Prod.mk.injEq] at h₁
+      obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h₁
+      rcases he with he | he
+      · rw [List.mem_singleton] at he
+        subst he
+        exact ⟨s₀, _, le_rfl, hmono _ _ _ h₂, hv⟩
+      · obtain ⟨s₁, s₂, hs₁, hs₂, hmem⟩ := ih _ h₂ he
+        exact ⟨s₁, s₂, (hmono _ _ _ hv).trans hs₁, hs₂, hmem⟩
+
+end logEntries
+
 end QueryImpl
 
 /-- Simulation oracle for tracking the queries in a `QueryLog`, without modifying the actual

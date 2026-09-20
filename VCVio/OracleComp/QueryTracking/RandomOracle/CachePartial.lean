@@ -17,9 +17,9 @@ query the computation makes is settled in the cache, and then `a` is the answer 
 force.  This is the interface between a probabilistic run and a deterministic re-reading of it:
 the final cache of a cached run extends the initial one
 (`QueryImpl.le_snd_of_mem_support_run_simulateQ_withCaching`) and replays the run's own output
-(`QueryImpl.simulateQ_toPartialImpl_snd_of_mem_support_run_withCaching`), a successful reading
-survives cache extension (`QueryCache.simulateQ_toPartialImpl_mono`), and it fixes the value of
-every total answer function agreeing with the cache
+(`QueryImpl.simulateQ_toPartialImpl_snd_of_mem_support_run_simulateQ_withCaching`), a successful
+reading survives cache extension (`QueryCache.simulateQ_toPartialImpl_mono`), and it fixes the
+value of every total answer function agreeing with the cache
 (`QueryCache.evalWithAnswerFn_eq_of_agreesWithFn`).  The cache of a run that also answers
 uniform queries through `unifFwdImpl` only grows
 (`OracleComp.le_snd_of_mem_support_run_unifFwdImpl_add_withCaching`).
@@ -103,7 +103,7 @@ theorem le_snd_of_mem_support_run_simulateQ_withCaching (so : QueryImpl spec m)
     exact (withCaching_cache_le so t cache _ h₁).trans (ih u h₂)
 
 /-- The final cache of a cached run, read as a partial oracle, replays the run's output. -/
-theorem simulateQ_toPartialImpl_snd_of_mem_support_run_withCaching (so : QueryImpl spec m)
+theorem simulateQ_toPartialImpl_snd_of_mem_support_run_simulateQ_withCaching (so : QueryImpl spec m)
     (oa : OracleComp spec α) {cache : spec.QueryCache} {z : α × spec.QueryCache}
     (hz : z ∈ support ((simulateQ so.withCaching oa).run cache)) :
     simulateQ z.2.toPartialImpl oa = some z.1 := by
