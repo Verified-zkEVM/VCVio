@@ -159,6 +159,31 @@ theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] =
   calc ε = ∫⁻ _, ε ∂𝒟[mx] := by rw [lintegral_const, hmx, mul_one]
     _ ≤ _ := lintegral_mono h
 
+/-- Multiplying a lower bound for a prefix event by a uniform conditional lower bound gives a
+lower bound for the event after the bind. -/
+theorem mul_le_prEvent_bind_of_forall (mx : m α) (f : α → m β)
+    (p : α → Prop) (q : β → Prop) {r r' : ℝ≥0∞}
+    (h : r ≤ Pr{let x ← mx}[p x])
+    (h' : ∀ x, p x → r' ≤ Pr{let y ← f x}[q y]) :
+    r * r' ≤ Pr{let y ← mx >>= f}[q y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete] at h
+  calc
+    r * r' ≤ 𝒟[mx] {x | p x} * r' := by gcongr
+    _ = ∫⁻ x, ({x | p x} : Set α).indicator (fun _ ↦ r') x ∂𝒟[mx] := by
+      rw [lintegral_indicator MeasurableSet.of_discrete, setLIntegral_const]
+      exact mul_comm _ _
+    _ ≤ ∫⁻ x, Pr{let y ← f x}[q y] ∂𝒟[mx] := by
+      apply lintegral_mono
+      intro x
+      by_cases hx : p x
+      · rw [Set.indicator_of_mem (show x ∈ {x | p x} from hx)]
+        simpa only [map_eq_bind_pure_comp, Function.comp_def] using h' x hx
+      · rw [Set.indicator_of_notMem (show x ∉ {x | p x} from hx)]
+        exact zero_le
+    _ = Pr{let y ← mx >>= f}[q y] := (prEvent_bind_eq_lintegral_of_discrete mx f q).symm
+    _ ≤ _ := by rfl
+
 /-- Conditioning on a predicate of the common draw: the continuation event is bounded by the
 predicate's probability plus the conditional bound weighted by the predicate's complement.
 The weighting is the honest subprobability form; for a lossless draw the complement's probability
