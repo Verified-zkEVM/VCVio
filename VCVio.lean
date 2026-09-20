@@ -93,7 +93,9 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.OptionCoverage
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Sibling
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness

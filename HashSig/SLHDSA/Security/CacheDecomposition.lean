@@ -23,7 +23,8 @@ Each `simulateQ_toPartialImpl_*_eq_some_iff` lemma is an equivalence between a s
 one program and settled readings of its immediate sub-programs.  The scheme layer decomposes
 Algorithms 18--20; the hypertree layer peels one XMSS layer off Algorithms 12 and 13; the FORS
 layer reduces Algorithms 14--16 to per-tree Merkle roots, authentication paths and climbs; the
-WOTS+ layer reduces chain tops to chains and a chain to its `F` queries.  The `chain?` lemmas
+WOTS+ layer reduces chain tops to chains and a chain to its `F` queries; the XMSS layer splits
+Algorithms 10 and 11 into authentication path, WOTS+ signature and climb.  The `chain?` lemmas
 compose and split chains (`chain?_add_eq_some_iff`), settle every prefix of a settled chain
 (`exists_chain?_eq_some_of_le`) and locate every intermediate `F` entry
 (`chain?_query_settled`); `simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_of_wotsSignM` is the
@@ -39,7 +40,7 @@ composition of a signer's chain prefixes with a verifier's chain suffixes.
 
 ## Labels
 
-Twenty-four declarations.
+Twenty-five declarations.
 
 *Algorithms 18--20*: `simulateQ_toPartialImpl_keygenInternalM_eq_some_iff`,
 `simulateQ_toPartialImpl_signInternalM_eq_some_iff`,
@@ -61,7 +62,9 @@ Twenty-four declarations.
 `simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_iff`,
 `simulateQ_toPartialImpl_wotsSignM_eq_some_iff`,
 `simulateQ_toPartialImpl_wotsPkFromSigTopsM_eq_some_iff`,
-`simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_of_wotsSignM`,
+`simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_of_wotsSignM`.
+
+*XMSS trees*: `simulateQ_toPartialImpl_xmssSignM_eq_some_iff`,
 `simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff`.
 
 *Chain reader*: `chain?_zero`, `chain?_succ_eq_some_iff`, `chain?_add_eq_some_iff`,
@@ -155,6 +158,21 @@ theorem simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_of_wotsSignM (msg : core.
     simulateQ_toPartialImpl_chainM_add_eq_some_iff]
   exact ⟨sig[i], hsign i, by rw [Nat.zero_add]; exact hrec i⟩
 
+/-! ## XMSS trees -/
+
+/-- An XMSS signature is settled exactly when the authentication path of its leaf is settled, at
+the path it carries, and the WOTS+ signature at its leaf is settled, at the one it carries. -/
+theorem simulateQ_toPartialImpl_xmssSignM_eq_some_iff (msg : core.Y) (sk : core.SkSeed)
+    (pk : core.PkSeed) (adrs : Adrs) (idx : ℕ) {sig : XmssSig p core} :
+    simulateQ c.toPartialImpl (xmssSignM core msg sk pk adrs idx) = some sig ↔
+      simulateQ c.toPartialImpl (PerfectMerkleTree.intrinsicAuthPathM (xmssLeafM core sk pk adrs)
+        (xmssNodeHashM core pk adrs) idx p.hp) = some sig.auth ∧
+      simulateQ c.toPartialImpl (wotsSignM core msg sk pk (wotsLeafAdrs adrs idx)) =
+        some sig.wots := by
+  rw [xmssSignM_eq_bind]
+  simp only [simulateQ_bind_eq_some_iff, simulateQ_pure_eq_some_iff]
+  exact ⟨fun ⟨_, hpath, _, hs, rfl⟩ => ⟨hpath, hs⟩, fun ⟨hpath, hs⟩ => ⟨_, hpath, _, hs, rfl⟩⟩
+
 /-- XMSS recovery is settled exactly when the recovered chain tops are settled, their `T_len`
 compression is cached, and the climb from that leaf along the authentication path is
 settled. -/
@@ -168,9 +186,10 @@ theorem simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff (idx : ℕ) (sig : Xm
           c (.thash pk (core.adrsToKey (wotsPkAdrs (wotsLeafAdrs adrs idx))) tops.toList) =
             some leaf) ∧
         simulateQ c.toPartialImpl (PerfectMerkleTree.climbM
-          (xmssNodeHashWith (PublicHash.h core pk) adrs) idx leaf sig.auth.toList) = some root := by
-  simp only [xmssPkFromSigM, xmssPkFromSigWith, wotsPkFromSigWith, wotsPkFromSigTopsM,
-    simulateQ_bind_eq_some_iff, simulateQ_toPartialImpl_tl]
+          (xmssNodeHashM core pk adrs) idx leaf sig.auth.toList) = some root := by
+  rw [xmssPkFromSigM_eq_bind]
+  simp only [wotsPkFromSigM, wotsPkFromSigWith, wotsPkFromSigTopsM, simulateQ_bind_eq_some_iff,
+    simulateQ_toPartialImpl_tl]
 
 /-! ## Chain reader -/
 
