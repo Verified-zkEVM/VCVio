@@ -236,6 +236,16 @@ theorem prEvent_true_attach (mx : m α) :
   conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [prEvent_map]
 
+/-- Implication between events only on the structurally reachable outputs bounds their
+probabilities. -/
+theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a → q a) :
+    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] := by
+  conv_lhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
+  conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
+  rw [prEvent_map, prEvent_map]
+  exact prEvent_mono _ _ _ fun a ha ↦ h a.1 a.2 ha
+
 /-- A bound on the event of every reachable continuation bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)
     {ε : ℝ≥0∞} (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :

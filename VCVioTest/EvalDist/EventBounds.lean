@@ -106,6 +106,22 @@ example (init : ProbComp Nat) :
   obtain ⟨a, b, rfl⟩ := ho
   exact ⟨(a, a + b), rfl, Nat.le_add_right a b⟩
 
+/-- A failing game still admits support-indexed event comparison, without a losslessness
+assumption or a measurable space on the payload. -/
+example {α : Type} (mx : OptionT ProbComp α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a → q a) :
+    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] :=
+  prEvent_mono_of_support mx p q h
+
+/-- Two reductions share the adversary's draw; the draw's payload needs no measurable space. -/
+example {α : Type} (mx : ProbComp α) (win left right : α → Bool)
+    (h : ∀ a ∈ support mx, win a = true → left a = true ∨ right a = true) :
+    𝒟[mx >>= fun a ↦ pure (win a)] {true} ≤
+      𝒟[mx >>= fun a ↦ pure (left a)] {true} +
+        𝒟[mx >>= fun a ↦ pure (right a)] {true} := by
+  refine evalDist_bind_apply_le_add_of_support mx _ _ _ (measurableSet_singleton true) ?_
+  exact fun a ha ↦ evalDist_pure_apply_le_add_of_imp _ _ _ (h a ha)
+
 end game
 
 /-! ## Uniform counting -/
