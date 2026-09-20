@@ -261,3 +261,18 @@ theorem evalDist_map_apply_univ {m : Type u → Type v} [Monad m] [LawfulMonad m
     (mx : m α) {f : α → β} (hf : Measurable f) :
     𝒟[f <$> mx] Set.univ = 𝒟[mx] Set.univ := by
   rw [evalDist_map mx hf, Measure.map_apply hf MeasurableSet.univ, Set.preimage_univ]
+
+/-- Implication between Boolean results bounds their pure successful masses. -/
+theorem evalDist_pure_apply_le_of_imp {m : Type → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
+    (a b : Bool) (h : a = true → b = true) :
+    𝒟[(pure a : m Bool)] {true} ≤ 𝒟[(pure b : m Bool)] {true} := by
+  cases a <;> cases b <;> simp_all
+
+/-- A pure Boolean result covered by either of two results has mass bounded by their sum. -/
+theorem evalDist_pure_apply_le_add_of_imp {m : Type → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
+    (a b c : Bool) (h : a = true → b = true ∨ c = true) :
+    𝒟[(pure a : m Bool)] {true} ≤
+      𝒟[(pure b : m Bool)] {true} + 𝒟[(pure c : m Bool)] {true} := by
+  cases a <;> cases b <;> cases c <;> simp_all

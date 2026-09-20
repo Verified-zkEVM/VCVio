@@ -130,6 +130,28 @@ theorem evalDist_bind_apply_mono_of_support
     exact lintegral_mono fun u ↦ ih u fun a ha ↦
       hfg a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
 
+/-- Additive continuation bounds on reachable outputs lift through a common oracle computation.
+No measurable space is required on the hidden common result type. -/
+theorem evalDist_bind_apply_le_add_of_support
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace β]
+    (mx : OracleComp spec α) (f g h : α → OracleComp spec β)
+    {event : Set β} (hevent : MeasurableSet event)
+    (hfg : ∀ a ∈ support mx, 𝒟[f a] event ≤ 𝒟[g a] event + 𝒟[h a] event) :
+    𝒟[mx >>= f] event ≤ 𝒟[mx >>= g] event + 𝒟[mx >>= h] event := by
+  induction mx using OracleComp.inductionOn with
+  | pure a => simpa only [pure_bind] using hfg a (by simp)
+  | query_bind t k ih =>
+    simp only [bind_assoc, evalDist_bind_of_discrete,
+      Measure.bind_apply hevent Measurable.of_discrete.aemeasurable]
+    calc
+      _ ≤ ∫⁻ x, (𝒟[k x >>= g] event + 𝒟[k x >>= h] event) ∂𝒟[query t] :=
+        lintegral_mono fun x ↦ ih x fun a ha ↦
+          hfg a (MonadAttach.mem_support_bind.mpr ⟨x, by simp, ha⟩)
+      _ = _ := lintegral_add_left Measurable.of_discrete _
+
 /-- A uniform lower bound on reachable continuation events bounds their composed event.
 The common computation need not carry a measurable-space instance on its output type. -/
 theorem le_evalDist_bind_apply_of_support

@@ -106,6 +106,32 @@ example (init : ProbComp Nat) :
   obtain ⟨a, b, rfl⟩ := ho
   exact ⟨(a, a + b), rfl, Nat.le_add_right a b⟩
 
+/-- A failing game still admits support-indexed event comparison, without a losslessness
+assumption or a measurable space on the payload. -/
+example {α : Type} (mx : OptionT ProbComp α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a → q a) :
+    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] :=
+  prEvent_mono_of_support mx p q h
+
+/-- A potentially failing optional prefix preserves the honest product lower bound: only the
+mass of the prefix event contributes, and every continuation reached under that event satisfies
+the conditional lower bound. -/
+example {α β : Type} (mx : OptionT ProbComp α) (f : α → OptionT ProbComp β)
+    (p : α → Prop) (q : β → Prop) {r r' : ℝ≥0∞}
+    (h : r ≤ Pr{let a ← mx}[p a])
+    (h' : ∀ a, p a → r' ≤ Pr{let b ← f a}[q b]) :
+    r * r' ≤ Pr{let b ← mx >>= f}[q b] :=
+  mul_le_prEvent_bind_of_forall mx f p q h h'
+
+/-- Two reductions share the adversary's draw; the draw's payload needs no measurable space. -/
+example {α : Type} (mx : ProbComp α) (win left right : α → Bool)
+    (h : ∀ a ∈ support mx, win a = true → left a = true ∨ right a = true) :
+    𝒟[mx >>= fun a ↦ pure (win a)] {true} ≤
+      𝒟[mx >>= fun a ↦ pure (left a)] {true} +
+        𝒟[mx >>= fun a ↦ pure (right a)] {true} := by
+  refine evalDist_bind_apply_le_add_of_support mx _ _ _ (measurableSet_singleton true) ?_
+  exact fun a ha ↦ evalDist_pure_apply_le_add_of_imp _ _ _ (h a ha)
+
 end game
 
 /-! ## Uniform counting -/
