@@ -8,8 +8,8 @@ module
 public import VCVio.OracleComp.Support
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.EvalDist.Monad.Option
 import ToMathlib.Probability.UniformOn
-import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Measure reasoning from structural support
@@ -19,7 +19,10 @@ be interchanged. The proof inducts on the free program, so no probability/suppor
 or positivity assumption on query answers is necessary.
 
 If every query answer has positive singleton mass, a second induction identifies structural
-support with positive output mass. Native uniform oracle specifications satisfy that condition.
+support with positive output mass. Native uniform oracle specifications satisfy that condition,
+so their events of probability one, zero, or positive probability are exactly the events holding
+on all, none, or some structurally reachable outputs; wrapped optional computations are observed
+through their present values.
 -/
 
 public section
@@ -274,5 +277,116 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
     OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t
   rw [heq, ProbabilityTheory.uniformOn_univ_apply_singleton]
   exact ENNReal.inv_pos.mpr (by simp)
+
+/-! ## Events in `Pr{}` form -/
+
+section measureSpec
+
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
+  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec] {α : Type}
+
+/-- Oracle computations with a measure interpretation are lossless. -/
+theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] = 1 := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  simp
+
+/-- An event containing every structurally reachable output has probability one. -/
+theorem prEvent_eq_one_of_forall_mem_support (mx : OracleComp spec α) (p : α → Prop)
+    (h : ∀ x ∈ support mx, p x) : Pr{let x ← mx}[p x] = 1 := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, ← MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
+  exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete h
+
+/-- An event avoiding every structurally reachable output has probability zero. -/
+theorem prEvent_eq_zero_of_forall_mem_support (mx : OracleComp spec α) (p : α → Prop)
+    (h : ∀ x ∈ support mx, ¬ p x) : Pr{let x ← mx}[p x] = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  exact evalDist.apply_eq_zero_of_disjoint_support mx MeasurableSet.of_discrete h
+
+end measureSpec
+
+section uniformMeasureSpec
+
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
+  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsUniformMeasureSpec spec] {α : Type}
+
+/-- Under native uniform oracle semantics, an event has probability one exactly when it holds on
+every structurally reachable output. -/
+theorem prEvent_eq_one_iff (mx : OracleComp spec α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 1 ↔ ∀ x ∈ support mx, p x := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  exact evalDist_apply_setOf_eq_one_iff_forall_mem_support mx p
+
+/-- Under native uniform oracle semantics, an event has probability zero exactly when it fails on
+every structurally reachable output. -/
+theorem prEvent_eq_zero_iff (mx : OracleComp spec α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 0 ↔ ∀ x ∈ support mx, ¬ p x := by
+  let : MeasurableSpace α := ⊤
+  refine ⟨fun h x hx hp ↦ ?_, prEvent_eq_zero_of_forall_mem_support mx p⟩
+  rw [prEvent_eq_evalDist_of_discrete] at h
+  have hpos : 0 < 𝒟[mx] {x} := (mem_support_iff_evalDist_singleton_pos mx x).mp hx
+  have hle : 𝒟[mx] {x} ≤ 𝒟[mx] {y | p y} :=
+    measure_mono (by rintro _ rfl; exact hp)
+  rw [h] at hle
+  exact absurd (le_antisymm hle bot_le) (ne_of_gt hpos)
+
+/-- Under native uniform oracle semantics, an event has positive probability exactly when some
+structurally reachable output satisfies it. -/
+theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
+    0 < Pr{let x ← mx}[p x] ↔ ∃ x ∈ support mx, p x := by
+  rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
+  push Not
+  rfl
+
+/-- A wrapped optional oracle computation has a probability-one event exactly when every
+structurally reachable output is a present value satisfying the event. -/
+theorem OptionT.prEvent_mk_eq_one_iff (mx : OracleComp spec (Option α)) (p : α → Prop) :
+    Pr{let x ← OptionT.mk mx}[p x] = 1 ↔ ∀ o ∈ support mx, ∃ x, o = some x ∧ p x := by
+  rw [OptionT.prEvent_mk, prEvent_eq_one_iff]
+  refine forall₂_congr fun o _ ↦ ?_
+  cases o <;> simp
+
+/-- A wrapped optional oracle computation has a probability-zero event exactly when no
+structurally reachable present value satisfies the event. -/
+theorem OptionT.prEvent_mk_eq_zero_iff (mx : OracleComp spec (Option α)) (p : α → Prop) :
+    Pr{let x ← OptionT.mk mx}[p x] = 0 ↔ ∀ x, some x ∈ support mx → ¬ p x := by
+  rw [OptionT.prEvent_mk, prEvent_eq_zero_iff]
+  constructor
+  · intro h x hx
+    simpa using h (some x) hx
+  · intro h o ho
+    cases o with
+    | none => simp
+    | some x => simpa using h x ho
+
+/-- A wrapped optional oracle computation has a positive-probability event exactly when some
+structurally reachable present value satisfies the event. -/
+theorem OptionT.prEvent_mk_pos_iff (mx : OracleComp spec (Option α)) (p : α → Prop) :
+    0 < Pr{let x ← OptionT.mk mx}[p x] ↔ ∃ x, some x ∈ support mx ∧ p x := by
+  rw [pos_iff_ne_zero, ne_eq, OptionT.prEvent_mk_eq_zero_iff]
+  push Not
+  rfl
+
+/-- A wrapped optional oracle computation is lossless exactly when `none` is unreachable. -/
+theorem OptionT.isProbabilityMeasure_mk_iff (mx : OracleComp spec (Option α))
+    [MeasurableSpace α] [DiscreteMeasurableSpace α] :
+    IsProbabilityMeasure 𝒟[OptionT.mk mx] ↔ none ∉ support mx := by
+  rw [isProbabilityMeasure_iff, OptionT.evalDist_apply_univ, OptionT.run_mk]
+  rw [show ({value | value.isSome} : Set (Option α)) = {value | value ≠ none} by
+    ext o; cases o <;> simp]
+  rw [evalDist_apply_setOf_eq_one_iff_forall_mem_support]
+  constructor
+  · intro h hnone
+    exact h none hnone rfl
+  · intro h o ho
+    rintro rfl
+    exact h ho
+
+end uniformMeasureSpec
 
 end OracleComp

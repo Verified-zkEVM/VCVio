@@ -42,7 +42,6 @@ noncomputable def evalDist {m : Type u → Type v} [EvalDistSemantics m]
 /-- Evaluation-measure notation. -/
 notation "𝒟[" mx "]" => evalDist mx
 
-@[simp]
 theorem evalDist_apply_univ_le_one {m : Type u → Type v} [EvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (mx : m α) : 𝒟[mx] Set.univ ≤ 1 :=
   EvalDistSemantics.apply_univ_le_one mx
@@ -51,6 +50,12 @@ theorem evalDist_apply_univ_le_one {m : Type u → Type v} [EvalDistSemantics m]
 instance evalDist.instIsSubprobabilityMeasure {m : Type u → Type v} [EvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (mx : m α) : IsSubprobabilityMeasure 𝒟[mx] :=
   ⟨evalDist_apply_univ_le_one mx⟩
+
+/-- No event of a computation has mass above one. -/
+@[simp]
+theorem evalDist_apply_le_one {m : Type u → Type v} [EvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (mx : m α) (s : Set α) : 𝒟[mx] s ≤ 1 :=
+  MeasureTheory.measure_le_one 𝒟[mx] s
 
 /-- A measure-valued semantics sends `pure` to a Dirac measure. This law is separate from the
 bind law because a semantics can preserve pure even when continuous effects prevent a global

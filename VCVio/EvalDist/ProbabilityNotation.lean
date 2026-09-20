@@ -276,3 +276,42 @@ theorem prEvent_bind_bind_and
     _ = _ := by
       rw [Measure.prod_prod]
       simp only [map_eq_bind_pure_comp, Function.comp_def]
+
+/-- Every event probability is at most one. -/
+theorem prEvent_le_one {m : Type → Type v} [Monad m] [EvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] ≤ 1 :=
+  evalDist_apply_le_one _ _
+
+/-- The trivially true event is the successful mass of the computation, observed in the discrete
+structure on its outputs. -/
+theorem prEvent_true_eq_evalDist_apply_univ
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
+    Pr{let _ ← mx}[True] = (letI : MeasurableSpace α := ⊤; 𝒟[mx] Set.univ) := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  simp
+
+/-- Computations with the same output measure in the discrete structure have the same events. -/
+theorem prEvent_congr_of_evalDist_eq
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx my : m α)
+    (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete, h]
+
+/-- A true constant event after a lossless draw has probability one. -/
+theorem prEvent_const_of_lossless
+    {m : Type → Type v} [Monad m] [EvalDistSemantics m] {α : Type}
+    (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1) {c : Prop} (hc : c) :
+    Pr{let _ ← mx}[c] = 1 := by
+  rw [← hmx]
+  exact prEvent_congr mx _ _ fun _ ↦ by simp [hc]
+
+/-- A false constant event has probability zero. -/
+theorem prEvent_const_of_not
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
+    (mx : m α) {c : Prop} (hc : ¬ c) : Pr{let _ ← mx}[c] = 0 :=
+  prEvent_eq_zero_of_forall_not mx _ fun _ ↦ hc

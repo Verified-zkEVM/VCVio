@@ -8,6 +8,7 @@ module
 
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.EvalDist.Monad.Measure
+public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Joint measure laws for stateful oracle interpretation
@@ -16,6 +17,10 @@ Local equality of the joint response and retained-state measures preserves the c
 result/state measure of every adaptive oracle computation. The response/state products
 carry explicit discrete measurable structures. This interface retains service state in its
 premise because later adaptive calls may reveal changes hidden from the immediate response.
+
+Stateful simulation from a sampled initial state satisfies an event with probability one
+whenever every structurally possible output of the original computation does: simulation only
+shrinks operational support, so no property of the handler is needed.
 -/
 
 public section
@@ -72,3 +77,25 @@ theorem evalDist_simulateQ_run_congr
     exact ih output.1 output.2
 
 end OracleComp
+
+section simulateQ
+
+open OracleComp
+
+variable {ι σ α : Type} {spec : OracleSpec ι}
+
+/-- Simulating with a stateful implementation from a sampled initial state satisfies an event
+with probability one whenever every possible output of the original computation is a present
+value satisfying it. The hypothesis is on the original computation, whose queries may return
+any value, so nothing about the implementation is needed. -/
+theorem OptionT.prEvent_mk_simulateQ_run'_eq_one_of_support
+    (init : ProbComp σ) (impl : QueryImpl spec (StateT σ ProbComp))
+    (oa : OracleComp spec (Option α)) (p : α → Prop)
+    (h : ∀ o ∈ support oa, ∃ a, o = some a ∧ p a) :
+    Pr{let a ← OptionT.mk (do let s ← init; (simulateQ impl oa).run' s)}[p a] = 1 := by
+  refine OptionT.prEvent_mk_bind_eq_one_of_support init (prEvent_true_eq_one init) _ p
+    fun s _ ↦ ?_
+  rw [OracleComp.OptionT.prEvent_mk_eq_one_iff]
+  exact fun o ho ↦ h o (support_simulateQ_run'_subset impl oa s ho)
+
+end simulateQ
