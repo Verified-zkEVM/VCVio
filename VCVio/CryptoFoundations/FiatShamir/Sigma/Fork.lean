@@ -156,7 +156,7 @@ def wrappedChallengeEntry (Chal : Type) (v : Chal) :
     (wrappedChallengeEntry Chal v).1 = Sum.inr () := rfl
 
 @[simp]
-lemma getQueryValue?_wrappedUniformEntry [DecidableEq Chal]
+lemma getQueryValue?_wrappedUniformEntry
     (n : unifSpec.Domain) (u : unifSpec.Range n) (log : QueryLog (wrappedSpec Chal)) (k : ℕ) :
     QueryLog.getQueryValue? (wrappedUniformEntry Chal n u :: log) (Sum.inr ()) k =
       QueryLog.getQueryValue? log (Sum.inr ()) k := by
@@ -164,13 +164,13 @@ lemma getQueryValue?_wrappedUniformEntry [DecidableEq Chal]
   exact Sum.inl_ne_inr
 
 @[simp]
-lemma getQueryValue?_wrappedChallengeEntry_zero [DecidableEq Chal]
+lemma getQueryValue?_wrappedChallengeEntry_zero
     (v : Chal) (log : QueryLog (wrappedSpec Chal)) :
     QueryLog.getQueryValue? (wrappedChallengeEntry Chal v :: log) (Sum.inr ()) 0 = some v := by
   simp [wrappedChallengeEntry]
 
 @[simp]
-lemma getQueryValue?_wrappedChallengeEntry_succ [DecidableEq Chal]
+lemma getQueryValue?_wrappedChallengeEntry_succ
     (v : Chal) (log : QueryLog (wrappedSpec Chal)) (k : ℕ) :
     QueryLog.getQueryValue? (wrappedChallengeEntry Chal v :: log) (Sum.inr ()) (k + 1) =
       QueryLog.getQueryValue? log (Sum.inr ()) k := by
@@ -598,7 +598,7 @@ travel together along the simulation:
 This is the value-level strengthening of `queryLog_length_eq_outer_inr_count`: the latter
 only counts entries, while this lemma threads the recorded values through the cache and the
 outer log together. -/
-private theorem queryLog_cache_outer_lockstep [DecidableEq Chal] {γ : Type}
+private theorem queryLog_cache_outer_lockstep {γ : Type}
     (Y : OracleComp (unifSpec + (M × Commit →ₒ Chal)) γ) (c₀ : (M × Commit →ₒ Chal).QueryCache)
     (l₀ : List (M × Commit)) {z : γ × SimState M Commit Chal}
     {outerLog : QueryLog (wrappedSpec Chal)}
@@ -1072,7 +1072,7 @@ lemma runTrace_queryLog_length_eq
 `(∅, [])`: the trace's `queryLog[i]` is cached in `x.roCache`, and the cached value matches
 the outer log's `i`-th `Sum.inr ()` response. -/
 lemma runTrace_cache_outer_lockstep
-    [SampleableType Chal] [DecidableEq Chal]
+    [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (pk : Stmt)
@@ -1141,7 +1141,7 @@ lemma exists_cached_verify_of_runTrace_verified
 `Sum.inr ()` query at position `↑s`. This discharges `ReplayFork`'s `CfReachable` side
 condition. -/
 theorem runTrace_forkPoint_CfReachable
-    [DecidableEq Chal] [SampleableType Chal]
+    [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt) :

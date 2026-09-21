@@ -209,7 +209,7 @@ def nmaReduction
 
 omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
   [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal]
-  [SampleableType Wit] in
+  [SampleableType Wit] [DecidableEq Chal] in
 /-- Every `(x, log)` in the support of `replayFirstRun (Fork.runTrace σ hr M nmaAdv pk)`
 satisfies the per-run invariant `forkSupportInvariant`. -/
 private theorem forkSupportInvariant_of_mem_replayFirstRun

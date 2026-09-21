@@ -203,6 +203,7 @@ private theorem prfIdealExp_macToPRFReduction_eq_ideal_body [SampleableType R]
   erw [simulateQ_prfIdealQueryImpl_inr]
   simp
 
+omit [DecidableEq R] in
 /-- Inductive step of `log_cache_invariant_aux` for a `unifSpec` query: the uniform
 query never touches the `(D →ₒ R)` cache, so the invariant is inherited from the
 continuation via the inductive hypothesis `ih`. -/
@@ -248,6 +249,7 @@ private theorem log_cache_invariant_step_unif [SampleableType R]
     rwa [hcache_eq]
   · exact Or.inr hlog'
 
+omit [DecidableEq R] in
 /-- Inductive step of `log_cache_invariant_aux` for a `(D →ₒ R)` query: forwarding the
 query through `macToPRFQueryImpl` logs `msg'`. If the tracked point `msg` equals `msg'`
 it is now in the log; otherwise the query leaves `cache_mid msg` unchanged and the
@@ -305,6 +307,7 @@ private theorem log_cache_invariant_step_query [SampleableType R]
       rw [QueryLog.wasQueried_cons_of_ne (Ne.symm heq)]
       exact hinv
 
+omit [DecidableEq R] in
 /-- Generalized log-cache invariant for arbitrary initial cache. Every domain point
 cached in the final state was either already cached initially, or was logged. -/
 private theorem log_cache_invariant_aux [SampleableType R]
@@ -326,6 +329,7 @@ private theorem log_cache_invariant_aux [SampleableType R]
     | inl n => exact log_cache_invariant_step_unif msg cache₀ z hcache n f ih hmem
     | inr msg' => exact log_cache_invariant_step_query msg cache₀ z hcache msg' f ih hmem
 
+omit [DecidableEq R] in
 /-- **Log-cache invariant**: every domain point cached by the random oracle was
 also logged by `macToPRFQueryImpl`. This holds because `macToPRFQueryImpl` logs
 every `(D →ₒ R)` query as part of forwarding it, and forwarding is the only path

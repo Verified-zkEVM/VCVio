@@ -631,7 +631,7 @@ typically a conjunction of one cache property and one log property. -/
 
 section stackedHandlers
 
-variable [spec.DecidableEq]
+variable [DecidableEq ι] [spec.DecidableEq]
 
 /-- Per-call spec for `cachingLoggingOracle t`: the log is extended by exactly
 one entry `⟨t, v⟩`, the cache only grows, and the returned value is now
