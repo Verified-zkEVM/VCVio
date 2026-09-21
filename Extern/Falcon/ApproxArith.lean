@@ -7,7 +7,10 @@ Authors: Quang Dao
 module
 import all LatticeCrypto.Falcon.Concrete.FloatLike
 public import LatticeCrypto.Falcon.Concrete.FloatLike
-public import Extern.Falcon.FPRBridge
+public import Extern.Falcon.FPR.Add
+public import Extern.Falcon.FPR.Mul
+public import Extern.Falcon.FPR.Div
+public import Extern.Falcon.FPR.Sqrt
 public import Mathlib.Analysis.SpecialFunctions.Pow.Real
 
 /-!

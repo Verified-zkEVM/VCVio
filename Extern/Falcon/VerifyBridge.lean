@@ -5,7 +5,7 @@ Authors: Oleksandr Vovkotrub
 -/
 
 module
-public import Extern.Falcon.FPRBridge
+public import Extern.Falcon.FPR.Verify
 
 /-!
 # The concrete Falcon verifier agrees with the abstract one
