@@ -379,7 +379,7 @@ Note that this requires decidable equality on the indexing set. -/
 def logQuery (log : QueryLog spec) (t : spec.Domain) (u : spec.Range t) : QueryLog spec :=
   log ++ singleton t u
 
-instance [spec.DecidableEq] : DecidableEq (QueryLog spec) :=
+instance [DecidableEq ι] [spec.DecidableEq] : DecidableEq (QueryLog spec) :=
   inferInstanceAs (DecidableEq (List _))
 
 section getQ
@@ -441,7 +441,7 @@ end countQ
 /-! ### Lookup by oracle occurrence -/
 
 /-- The `n`-th answer in the log for queries to oracle `t`, if it exists. -/
-def getQueryValue? [spec.DecidableEq] (log : QueryLog spec) (t : ι) (n : Nat) :
+def getQueryValue? [DecidableEq ι] (log : QueryLog spec) (t : ι) (n : Nat) :
     Option (spec.Range t) :=
   match (log.getQ (· = t))[n]? with
   | none => none
@@ -455,7 +455,7 @@ lemma getQ_logQuery (log : QueryLog spec) (t : ι) (u : spec.Range t)
 
 /-- If `getQueryValue? log t n = some u`, then the `n`-th `t`-filtered entry of
 `log` is `⟨t, u⟩`. -/
-lemma getQ_getElem?_eq_of_getQueryValue?_eq_some [spec.DecidableEq]
+lemma getQ_getElem?_eq_of_getQueryValue?_eq_some [DecidableEq ι]
     (log : QueryLog spec) (t : ι) (n : Nat) (u : spec.Range t)
     (h : getQueryValue? log t n = some u) :
     (log.getQ (· = t))[n]? = some ⟨t, u⟩ := by
@@ -466,20 +466,20 @@ lemma getQ_getElem?_eq_of_getQueryValue?_eq_some [spec.DecidableEq]
 
 /-- Converse: if the `n`-th `t`-filtered entry is `⟨t, u⟩`, then
 `getQueryValue? log t n = some u`. -/
-lemma getQueryValue?_eq_some_of_getQ_getElem? [spec.DecidableEq]
+lemma getQueryValue?_eq_some_of_getQ_getElem? [DecidableEq ι]
     (log : QueryLog spec) (t : ι) (n : Nat) (u : spec.Range t)
     (h : (log.getQ (· = t))[n]? = some ⟨t, u⟩) :
     getQueryValue? log t n = some u := by simp [getQueryValue?, h]
 
 /-- Every entry of `log.getQ (· = t)` has its first component equal to `t`. -/
-lemma getQ_eq_mem [spec.DecidableEq] (log : QueryLog spec) (t : ι)
+lemma getQ_eq_mem [DecidableEq ι] (log : QueryLog spec) (t : ι)
     {entry : (t' : ι) × spec.Range t'} (h : entry ∈ log.getQ (· = t)) :
     entry.1 = t := by
   induction log <;> grind [QueryLog.getQ_cons, QueryLog.getQ_nil]
 
 /-- If the `t`-filtered log has at least `n + 1` entries, then the indexed
 lookup succeeds. -/
-lemma getQueryValue?_isSome_of_lt [spec.DecidableEq]
+lemma getQueryValue?_isSome_of_lt [DecidableEq ι]
     (log : QueryLog spec) (t : ι) (n : Nat)
     (h : n < (log.getQ (· = t)).length) :
     (getQueryValue? log t n).isSome := by
@@ -488,34 +488,34 @@ lemma getQueryValue?_isSome_of_lt [spec.DecidableEq]
 
 /-- Prepending an entry whose oracle index does not match `t` leaves the
 `t`-indexed view of the log unchanged. -/
-lemma getQueryValue?_cons_of_ne [spec.DecidableEq]
+lemma getQueryValue?_cons_of_ne [DecidableEq ι]
     (entry : (t' : ι) × spec.Range t') (log : QueryLog spec) (t : ι) (n : Nat)
     (h : entry.1 ≠ t) :
     getQueryValue? (entry :: log) t n = getQueryValue? log t n := by
   simp [getQueryValue?, QueryLog.getQ_cons, h]
 
 /-- The first matching entry is the zeroth indexed query value. -/
-@[simp] lemma getQueryValue?_cons_self_zero [spec.DecidableEq]
+@[simp] lemma getQueryValue?_cons_self_zero [DecidableEq ι]
     (t : ι) (u : spec.Range t) (log : QueryLog spec) :
     getQueryValue? (⟨t, u⟩ :: log) t 0 = some u :=
   getQueryValue?_eq_some_of_getQ_getElem? _ _ _ _ (by simp [QueryLog.getQ_cons])
 
 /-- Prepending a matching entry shifts later indexed lookups by one. -/
-@[simp] lemma getQueryValue?_cons_self_succ [spec.DecidableEq]
+@[simp] lemma getQueryValue?_cons_self_succ [DecidableEq ι]
     (t : ι) (u : spec.Range t) (log : QueryLog spec) (n : Nat) :
     getQueryValue? (⟨t, u⟩ :: log) t (n + 1) = getQueryValue? log t n := by
   simp [getQueryValue?, QueryLog.getQ_cons]
 
 /-- The entry immediately following a prefix is found at the prefix's count
 of matching oracle queries. -/
-lemma getQueryValue?_append_self_at_countQ [spec.DecidableEq]
+lemma getQueryValue?_append_self_at_countQ [DecidableEq ι]
     (before after : QueryLog spec) (t : ι) (u : spec.Range t) :
     getQueryValue? (before ++ ⟨t, u⟩ :: after) t (before.countQ (· = t)) = some u :=
   getQueryValue?_eq_some_of_getQ_getElem? _ _ _ _ (by simp [QueryLog.countQ])
 
 /-- Query-log counting is the `OracleSpec` specialization of PolyFun's
 generic occurrence count on erased polynomial traces. -/
-lemma countQ_eq_occurrences [spec.DecidableEq] (log : QueryLog spec) (t : ι) :
+lemma countQ_eq_occurrences [DecidableEq ι] (log : QueryLog spec) (t : ι) :
     log.countQ (· = t) = PFunctor.TraceList.occurrences (P := spec.toPFunctor) t
       (show PFunctor.TraceList spec.toPFunctor from log) := by
   induction log with
@@ -538,7 +538,7 @@ lemma countQ_eq_occurrences [spec.DecidableEq] (log : QueryLog spec) (t : ι) :
 
 /-- Query-log lookup is the `OracleSpec` specialization of dependent lookup
 on PolyFun traces. -/
-lemma getQueryValue?_eq_getAt? [spec.DecidableEq]
+lemma getQueryValue?_eq_getAt? [DecidableEq ι]
     (log : QueryLog spec) (t : ι) (n : Nat) :
     getQueryValue? log t n =
       PFunctor.TraceList.getAt?
@@ -563,29 +563,29 @@ lemma getQueryValue?_eq_getAt? [spec.DecidableEq]
 
 /-- Check if an element was ever queried in a log of queries.
 Relies on decidable equality of the domain types of oracles. -/
-def wasQueried [spec.DecidableEq] (log : QueryLog spec) (t : spec.Domain) : Bool :=
+def wasQueried [DecidableEq ι] (log : QueryLog spec) (t : spec.Domain) : Bool :=
   log.getQ (· = t) ≠ []
 
-lemma getQ_ne_nil_iff_mem_map_fst [spec.DecidableEq]
+lemma getQ_ne_nil_iff_mem_map_fst [DecidableEq ι]
     (log : QueryLog spec) (t : spec.Domain) :
     log.getQ (· = t) ≠ [] ↔ t ∈ log.map (fun e => e.1) := by
   induction log with
   | nil => simp
   | cons hd tl ih => rcases eq_or_ne hd.1 t with h | h <;> simp [List.mem_map, ih, h, Ne.symm]
 
-lemma wasQueried_eq_decide_mem_map_fst [spec.DecidableEq]
+lemma wasQueried_eq_decide_mem_map_fst [DecidableEq ι]
     (log : QueryLog spec) (t : spec.Domain) :
     log.wasQueried t = decide (t ∈ log.map (fun e => e.1)) :=
   decide_eq_decide.mpr (getQ_ne_nil_iff_mem_map_fst log t)
 
 @[simp]
-lemma wasQueried_cons_self [spec.DecidableEq] {t : spec.Domain} {u : spec.Range t}
+lemma wasQueried_cons_self [DecidableEq ι] {t : spec.Domain} {u : spec.Range t}
     {log : QueryLog spec} :
     wasQueried (⟨t, u⟩ :: log) t = true := by
   simp [wasQueried_eq_decide_mem_map_fst]
 
 @[simp]
-lemma wasQueried_cons_of_ne [spec.DecidableEq] {t t' : spec.Domain}
+lemma wasQueried_cons_of_ne [DecidableEq ι] {t t' : spec.Domain}
     {u : spec.Range t'} {log : QueryLog spec} (hne : t' ≠ t) :
     wasQueried (⟨t', u⟩ :: log) t = wasQueried log t := by
   simp [wasQueried_eq_decide_mem_map_fst, List.mem_cons, hne.symm, eq_comm]

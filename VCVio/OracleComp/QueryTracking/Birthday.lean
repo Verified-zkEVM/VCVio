@@ -52,6 +52,7 @@ theorem probEvent_log_entry_eq_le {α : Type}
     Pr[fun z => z.2[k]? = some entry |
       (simulateQ loggingOracle oa).run] ≤
       (Fintype.card (spec.Range entry.1) : ℝ≥0∞)⁻¹ := by
+  classical
   induction oa using OracleComp.inductionOn generalizing k with
   | pure _ => simp [loggingOracle, simulateQ_pure]
   | query_bind t mx ih =>

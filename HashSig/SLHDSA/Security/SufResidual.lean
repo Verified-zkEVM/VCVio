@@ -199,12 +199,13 @@ about a pair of signatures rather than about a transcript:
 
 Those twenty-five are the module's whole interface; none is `private` and none carries `@[expose]`.
 
-Nine of them carry `[DecidableEq (GeneralScheme.SignatureCore vp prims.core)]`.  That instance is
-not derivable here: neither `SLHDSA.SignatureCore` nor `ForsTreeSigCore` nor `XmssSigCore` declares
-or derives one, and `HashSig` contains no instance for any of the three.  It is required by the
-library predicates being bridged, `SignatureAlg.signingLogContains` and `QueryLog.wasQueried`, and
-it is carried as a hypothesis rather than supplied, because the instance belongs to the modules that
-declare those signature types.
+Four of them carry `[DecidableEq (GeneralScheme.SignatureCore vp prims.core)]`: the ones whose
+statement mentions `SignatureAlg.signingLogContains`, the library predicate that compares logged
+signatures.  `QueryLog.wasQueried` compares only messages, so the statements about it need no
+equality on signatures.  The instance is not derivable here: neither `SLHDSA.SignatureCore` nor
+`ForsTreeSigCore` nor `XmssSigCore` declares or derives one, and `HashSig` contains no instance for
+any of the three.  It is carried as a hypothesis rather than supplied, because the instance belongs
+to the modules that declare those signature types.
 
 ## References
 
@@ -287,7 +288,7 @@ theorem signingLogContains_eq_true_iff [DecidableEq (GeneralScheme.SignatureCore
 one the same-message experiment asserts, so this is the second bridge.
 
 *Transcript transport.* -/
-theorem wasQueried_eq_true_iff [DecidableEq (GeneralScheme.SignatureCore vp prims.core)]
+theorem wasQueried_eq_true_iff
     (log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core))
     (msg : List Byte) :
     log.wasQueried msg = true ↔ loggedSignatures log msg ≠ [] := by
@@ -310,7 +311,6 @@ log, is unreachable.  Through `wasQueried_eq_true_iff` the proof is `List.ne_nil
 
 *Transcript transport.* -/
 theorem wasQueried_eq_true_of_mem_loggedSignatures
-    [DecidableEq (GeneralScheme.SignatureCore vp prims.core)]
     {log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core)}
     {msg : List Byte} {sig : GeneralScheme.SignatureCore vp prims.core}
     (h : sig ∈ loggedSignatures log msg) : log.wasQueried msg = true :=
@@ -349,7 +349,6 @@ theorem exists_ne_of_sameMessage [DecidableEq (GeneralScheme.SignatureCore vp pr
 
 *Transcript transport.* -/
 theorem loggedSignatures_eq_nil_of_not_wasQueried
-    [DecidableEq (GeneralScheme.SignatureCore vp prims.core)]
     {log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core)} {msg : List Byte}
     (h : log.wasQueried msg = false) : loggedSignatures log msg = [] := by
   by_contra hc
@@ -433,7 +432,6 @@ pair carries.
 
 *Transcript transport.* -/
 theorem notMem_logQueries_of_not_wasQueried
-    [DecidableEq (GeneralScheme.SignatureCore vp prims.core)]
     {log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core)} {msg : List Byte}
     (h : log.wasQueried msg = false) (r : prims.Y) : (r, msg) ∉ logQueries log := by
   rw [mem_logQueries_iff, loggedRandomizers_eq, loggedSignatures_eq_nil_of_not_wasQueried h]
@@ -451,8 +449,7 @@ leaves the candidate fresh at the embedded transcript for *every* randomizer, so
 applies with nothing further to prove.
 
 *Transcript transport.* -/
-theorem notMem_embedTargets_of_not_wasQueried
-    [DecidableEq (GeneralScheme.SignatureCore vp prims.core)] (pk : PublicKeyCore prims.core)
+theorem notMem_embedTargets_of_not_wasQueried (pk : PublicKeyCore prims.core)
     {log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core)} {msg : List Byte}
     (h : log.wasQueried msg = false) (r : prims.Y) :
     (r, (⟨pk.pkSeed, pk.pkRoot, msg⟩ : HmsgITSRInput prims.PkSeed prims.Y)) ∉

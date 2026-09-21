@@ -72,9 +72,15 @@ protected class Inhabited (spec : OracleSpec ι) extends PFunctor.Inhabited spec
 instance {spec : OracleSpec ι} [h : spec.Inhabited] (t : spec.Domain) :
   Inhabited (spec.Range t) := h.inhabitedB t
 
+/-- Decidable equality of a specification's indices and of each answer type.
+
+Only the range equality is an instance. `Domain` is reducible, so an instance concluding
+`DecidableEq spec.Domain` would be indexed as `DecidableEq ι` for every type, with `spec`
+undetermined: ordinary equality search would invent a specification, recurse through the `ofFn`
+instance below, and time out (VCVio#772). Generic code that compares indices assumes
+`[DecidableEq ι]`. -/
 protected class DecidableEq (spec : OracleSpec ι) extends PFunctor.DecidableEq spec.toPFunctor
 
-instance {spec : OracleSpec ι} [h : spec.DecidableEq] : DecidableEq spec.Domain := h.decidableEqA
 instance {spec : OracleSpec ι} [h : spec.DecidableEq] (t : spec.Domain) :
   DecidableEq (spec.Range t) := h.decidableEqB t
 
@@ -139,7 +145,7 @@ instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
 
 instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
     [h : spec.DecidableEq] [h' : spec'.DecidableEq] : (spec + spec').DecidableEq where
-  decidableEqA := inferInstanceAs (DecidableEq (ι ⊕ ι'))
+  decidableEqA := @instDecidableEqSum _ _ h.decidableEqA h'.decidableEqA
   decidableEqB | .inl i => h.decidableEqB i | .inr i => h'.decidableEqB i
 
 instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
