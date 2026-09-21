@@ -544,7 +544,7 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
       mldsaMatrixMLWE, hBm, matrixLift, bind_assoc, pure_bind]
     -- Strip the unused leading matrix draw on the right, then commute the two uniform draws.
     rw [OracleComp.evalDist_bind_const,
-      evalDist_bind_bind_swap_of_countable
+      OracleComp.evalDist_bind_bind_swap
         ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
   have h0 : |(𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true}).toReal -
       (𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] {true}).toReal| ≤ εA := by
@@ -564,12 +564,12 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
       congr 1
       refine Eq.trans (evalDist_bind_congr _ _ _ (fun A =>
         evalDist_bind_congr _ _ _ (fun s1 =>
-          evalDist_bind_bind_swap_of_countable (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
+          OracleComp.evalDist_bind_bind_swap (sampleShortVec p.k p.eta) ($ᵗ (Bytes 32))
             (fun s2 rho => B (rho, A * s1 + s2))))) ?_
       refine Eq.trans (evalDist_bind_congr _ _ _ (fun A =>
-        evalDist_bind_bind_swap_of_countable (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
+        OracleComp.evalDist_bind_bind_swap (sampleShortVec p.l p.eta) ($ᵗ (Bytes 32))
           (fun s1 rho => sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2)))) ?_
-      exact evalDist_bind_bind_swap_of_countable
+      exact OracleComp.evalDist_bind_bind_swap
         ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
         (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
           sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))

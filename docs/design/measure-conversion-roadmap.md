@@ -80,7 +80,74 @@ its regression module checks that boundary along with real parameter/output spac
 from an unobserved factor. This checkpoint targets `main` independently of the expected-cost
 and abort-analysis conversion PRs.
 
-## Subsequent PRs
+## Chosen-space integration checkpoint
+
+Native tower and map integration admit AE-measurable valuations under the resulting measure.
+Continuation families keep their explicit measurable-bind boundary. `evalDist_bind_congr_ae`,
+`prEvent_congr_ae`, `prEvent_mono_ae`, and `prEvent_bind_congr_ae` use the chosen source space.
+Pointwise observational rules need no source space: their actual measure or predicate observer
+supplies a Mathlib pullback space, without inventing discreteness on the hidden payload.
+
+Optional and exceptional successful-output bind uses the full-run observation's pullback to
+refine the chosen source space, then transports its measure through the measurable identity.
+Neither proof requires an auxiliary discrete space. The same observation principle proves the
+native ordered expectation algebra's bind monotonicity.
+
+`OracleComp.evalDist_bind_bind_swap` commutes independent computations whose actual answer types
+are countable; arbitrary hidden result types need neither countability nor measurable spaces.
+The ML-DSA seed/matrix bridge uses this structural rule. The generic countable swap theorem
+retains chosen source spaces with measurable singletons.
+`OracleComp.lintegral_evalDist_bind_mono_of_support` compares measurable valuations of different
+continuation output types using reachability only on the hidden common draw. Continuous free
+operations instead use `FreeM.lintegral_evalDist_liftBind` with explicit AE continuation and
+valuation hypotheses. The regression module checks all these native boundaries, including a
+Gaussian operation, arbitrary AE valuations, lossy real results, and hidden outputs.
+
+## Observed continuation comparison API checkpoint
+
+`Measure.bind_apply_le_sum_add_lintegral_ae` and
+`Kernel.comp_apply_le_sum_add_lintegral_ae` accept arbitrary prefix measures, different reference
+output spaces, and AE continuation hypotheses without probability or finiteness certificates.
+`lintegral_le_sum_add_lintegral_of_le_ae` owns their common integral comparison argument.
+`EvalDist/Monad/Disagreement/Measure` provides the computational comparison facade.
+The chosen-space rule integrates an AE conditional bound and a varying allowance without
+requiring that allowance to be measurable. Reachable bounds use core attachment and the actual
+continuation-measure observation; arbitrary hidden source and continuation payloads need no
+measurable space. Constant allowances retain the prefix's success mass. The two-world and
+bad-world disagreement rules share this finite-sum argument.
+
+The API is exported by `VCVio.Native` and has an independent native import guard, chosen real
+source examples, a Gaussian common measure with real/Boolean kernels, arbitrary AE continuations
+under a Dirac measure, unmeasured source/result types, and mixed observed output types.
+It is a prerequisite checkpoint for the full PRFTagReader direct-coupling conversion. Existing
+scalar disagreement declarations remain with their current consumers until that complete
+reader/slot/composition family and its table/cache dependencies migrate. No retiring declaration
+is moved or wrapped for the new API.
+
+## Next conversion batch
+
+The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
+Shared integration is published in #758; quantitative WP in #761; native TV composition in #762.
+Compact native event formatting is published in #763. The observed continuation comparison API
+is published in #764 as a separate prerequisite for the next complete reader conversion.
+Continue with independently validated PRs:
+
+1. Convert the complete PRFTagReader direct-coupling reader/slot/composition families and their
+   table/cache dependencies through the native disagreement API, then delete unused scalar
+   disagreement declarations.
+2. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
+   security clients, preserving observable `none` outcomes.
+3. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
+   and affected Fiat–Shamir simulation/stateful-hop/security families.
+4. Convert Fischlin search/runtime/model/completeness using native products and projections.
+5. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
+   declarations.
+
+Independent products (#756), exact expected signing costs (#752), and reader cache representation
+(#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.
+Record each published checkpoint and its remaining compatibility consumers here and in #532.
+
+## Subsequent campaign work
 
 | Slice | Scope and API checkpoint |
 |---|---|
@@ -95,13 +162,10 @@ and abort-analysis conversion PRs.
 | Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
-each family before expanding to another subsystem. Prioritize landing the current core PRs before
-opening further conversion slices. After each merge, reconcile dependent branches with current
-`main`, retarget their PRs as needed, and validate the resulting integration. Follow every check
-on the current head and the merge queue through to the actual merge result.
-Since `main` uses squash merges, bring its landed commit into each dependent branch before
-retargeting the PR to `main`, so the diff contains only the next conversion family.
-Each published checkpoint must build all
+each family before expanding to another subsystem. Publish a complete checkpoint before opening
+the next family. Start from current `main` and keep necessary stacked dependencies explicit;
+merge-queue management is outside this batch. Reconcile landed dependencies before retargeting
+so the diff contains only the next family. Each published checkpoint must build all
 proof libraries, pass native import guards, tests, boundary/style/environment checks, and the
 axiom/initialization ratchets. Prune obsolete lint entries; do not add exceptions for conversions.
 
@@ -112,12 +176,18 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Equality of output distributions | Equality of `Measure`; public handler projection equations or `evalDist_bind_congr_of_support`. |
 | Event probability | `Pr{...}[...]`, or measure application to a measurable event; singleton results require measurable singletons. |
 | Common-prefix upper bound | `evalDist_bind_apply_mono` under measurable continuation kernels, or `OracleComp.evalDist_bind_apply_mono_of_support` for oracle reachability premises. |
+| Conditional additive comparisons | `prEvent_bind_le_sum_add_lintegral_ae` on a chosen source, or `prEvent_bind_le_sum_add_mul_mass_of_support` using attachment and successful mass. |
 | Common-prefix lower bound | `le_evalDist_bind_apply` under AE premises and losslessness, or `OracleComp.le_evalDist_bind_apply_of_support` for reachable continuation bounds. |
 | Unchanged instrumented output | Structural projection equality, followed by measure observation; final writer/state marginals use measurable projections. |
 | Expected cost | Cost-marginal Lebesgue integral on the chosen cost space; measurable valuations and cost functions, native AE/pathwise bridges, and Mathlib probability certificates for lower/exact bounds. |
 | Conditional continuation | `evalDist_bind_ite`, `prEvent_bind_ite`, and `prEvent_bind_eq_mul_of_ite`; finite observation measures retain missing mass. |
 | Natural-valued expectation | `MeasureTheory.lintegral_coe_nat_eq_tsum`; countability applies to the observable range. |
 | Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
+| Conditional measure/event equality | `evalDist_bind_congr_ae` / `prEvent_bind_congr_ae`, with measurable families on the chosen source space. |
+| AE output valuation | `lintegral_evalDist_bind_of_aemeasurable` / `lintegral_evalDist_map_of_aemeasurable`, relative to the resulting output measure. |
+| Hidden-output expectation comparison | `OracleComp.lintegral_evalDist_bind_mono_of_support`, observing the actual continuation results. |
+| Independent hidden-output interchange | `OracleComp.evalDist_bind_bind_swap`, requiring countable actual query answers only. |
+| Continuous free-operation tower | `FreeM.lintegral_evalDist_liftBind`, with explicit AE continuation and valuation hypotheses. |
 | Every possible execution satisfies an invariant | Operational support or indexed reachability; probability interpretation is unnecessary. |
 | Stateful composition | Joint result/state kernels; `StateT.evalDistKernel_bind` threads the resulting state. |
 | Independent joint events or tuple equality | `prEvent_forall_coord_mOfFn`/`mPi` and `prEvent_eq_mOfFn`/`mPi`, with no payload measurable-space premise. |

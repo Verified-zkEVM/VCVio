@@ -48,6 +48,7 @@ public import ToMathlib.Lint.LegacyProbability
 public import ToMathlib.Logic.Basic
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import ToMathlib.MeasureTheory.Function.AEMeasurable
+public import ToMathlib.MeasureTheory.Integral.Bounds
 public import ToMathlib.MeasureTheory.Integral.Quadratic
 public import ToMathlib.MeasureTheory.MeasurableSpace.Except
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
@@ -71,6 +72,7 @@ public import ToMathlib.OrderEnrichedCategory
 public import ToMathlib.Probability.Divergence.Renyi
 public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import ToMathlib.Probability.Divergence.TotalVariation
+public import ToMathlib.Probability.Kernel.Bounds
 public import ToMathlib.Probability.Kernel.Quadratic
 public import ToMathlib.Probability.Kernel.Subprobability
 public import ToMathlib.Probability.NegativeHypergeometric

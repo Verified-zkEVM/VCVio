@@ -257,6 +257,19 @@ theorem evalDist_liftBind [MeasurableSpace α] (a : P.A) (cont : P.B a → FreeM
     𝒟[FreeM.liftBind a cont] = Measure.bind (IsMeasureSpec.toMeasure a) fun b => 𝒟[cont b] :=
   denote_liftBind a cont h
 
+/-- Integrating a single operation uses the tower law under AE-measurable continuation and
+valuation hypotheses, including for continuous query answers. -/
+theorem lintegral_evalDist_liftBind [MeasurableSpace α] (a : P.A)
+    (cont : P.B a → FreeM P α)
+    (hcont : AEMeasurable (fun b ↦ 𝒟[cont b]) (IsMeasureSpec.toMeasure a))
+    {g : α → ENNReal} (hg : AEMeasurable g 𝒟[FreeM.liftBind a cont]) :
+    ∫⁻ y, g y ∂𝒟[FreeM.liftBind a cont] =
+      ∫⁻ b, ∫⁻ y, g y ∂𝒟[cont b] ∂IsMeasureSpec.toMeasure a := by
+  have hdenote : AEMeasurable (fun b ↦ denote (cont b)) (IsMeasureSpec.toMeasure a) := by
+    simpa only [evalDist_eq_denote] using hcont
+  rw [evalDist_liftBind a cont hdenote] at hg ⊢
+  exact Measure.lintegral_bind hcont hg
+
 /-- A measurable pure function after one operation pushes forward its answer measure.
 No discreteness assumption on the answer space is needed. -/
 theorem evalDist_lift_bind_pure [MeasurableSpace α] (a : P.A) (f : P.B a → α)

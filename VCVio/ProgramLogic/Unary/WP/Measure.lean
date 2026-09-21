@@ -38,9 +38,13 @@ noncomputable def toMAlgOrdered : MAlgOrdered m ENNReal where
   μ mx := ∫⁻ x, x ∂𝒟[mx]
   μ_pure x := by simp
   μ_bind_mono {α} f g hfg mx := by
-    let : MeasurableSpace α := ⊤
-    rw [lintegral_evalDist_bind_of_discrete mx f (g := fun x ↦ x) measurable_id,
-      lintegral_evalDist_bind_of_discrete mx g (g := fun x ↦ x) measurable_id]
+    let obs : α → Measure ENNReal × Measure ENNReal := fun a ↦ (𝒟[f a], 𝒟[g a])
+    let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
+    have hobs : Measurable obs := comap_measurable obs
+    rw [lintegral_evalDist_bind mx f (measurable_fst.comp hobs)
+      (g := fun x ↦ x) measurable_id,
+      lintegral_evalDist_bind mx g (measurable_snd.comp hobs)
+        (g := fun x ↦ x) measurable_id]
     exact lintegral_mono hfg
 
 namespace Quantitative
@@ -58,6 +62,11 @@ noncomputable scoped instance (priority := 1100) instWP [LawfulMonad m] :
   MAlgOrdered.toWPMonad
 
 variable {m} {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+
+/-- The quantitative algebra integrates its actual nonnegative output. -/
+@[simp]
+theorem μ_eq_lintegral (mx : m ENNReal) :
+    MAlgOrdered.μ mx = ∫⁻ x, x ∂𝒟[mx] := rfl
 
 /-- An ordered expectation WP is the integral of its postcondition. -/
 theorem wp_eq_lintegral (mx : m α) (post : α → ENNReal) :

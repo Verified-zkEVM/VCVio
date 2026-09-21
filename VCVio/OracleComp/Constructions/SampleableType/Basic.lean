@@ -149,6 +149,27 @@ than an `instance` to avoid overlap with `FinEnum.SampleableType`. -/
   letI : SampleableType (_root_.Fin (Fintype.card α)) := inferInstance
   SampleableType.ofEquiv (α := _root_.Fin (Fintype.card α)) (Fintype.equivFin α).symm
 
+/-- Explicit noncomputable uniform sampler for a dependent finite product. This constructor is a
+definition rather than an instance so it cannot compete with executable samplers for particular
+dependent function types. -/
+@[reducible] noncomputable def SampleableType.piOfFintype
+    {ι : Type} [Fintype ι] (α : ι → Type)
+    [∀ i, Fintype (α i)] [∀ i, Nonempty (α i)] : SampleableType (∀ i, α i) := by
+  classical
+  exact SampleableType.ofFintype _
+
+/-- Uniform sampling of a nonempty subtype of a finite type, by enumeration. Provided as a
+definition so that it never competes with executable enumeration-based instances. -/
+@[reducible] noncomputable def SampleableType.subtype (α : Type) [Fintype α] (p : α → Prop)
+    [DecidablePred p] [Nonempty {x // p x}] : SampleableType {x // p x} :=
+  SampleableType.ofFintype _
+
+/-- Uniform sampling from a nonempty finite set, by enumeration. -/
+@[reducible] noncomputable def SampleableType.finsetCoe {α : Type} (U : Finset α)
+    (hU : U.Nonempty) : SampleableType ↥U :=
+  haveI : Nonempty ↥U := hU.to_subtype
+  SampleableType.ofFintype _
+
 /-- We avoid making this an instance globally as many types already have a `Fintype` instance
 that would not be definitionally equal to this one. -/
 @[expose, reducible]
