@@ -9,6 +9,7 @@ public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.WotsEncoding
 public import VCVio.OracleComp.HasQuery.Morphism
 public import VCVio.OracleComp.QueryTracking.QueryBound
+import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 
 /-!
 # WOTS+ (FIPS 205 §5)
@@ -611,16 +612,6 @@ theorem wotsSignM_then_wotsPkFromSigM_isTotalQueryBound (core : CorePrimitives p
 
 /-! ### Pure interpretations -/
 
-/-- Interpreting an `ofFnM` traversal pointwise commutes with the free-monad handler. -/
-private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
-    (answer : QueryImpl spec Id) (g : Fin k → OracleComp spec α) :
-    simulateQ answer (Vector.ofFnM g) = Vector.ofFn fun i => simulateQ answer (g i) := by
-  calc
-    simulateQ answer (Vector.ofFnM g) =
-        Vector.ofFnM (fun i => simulateQ answer (g i)) :=
-      monadHom_ofFnM (simulateQ' answer) g _ (fun _ => rfl)
-    _ = Vector.ofFn fun i => simulateQ answer (g i) := Vector.idRun_ofFnM
-
 @[simp]
 theorem wotsPkGenTops_eq_ofFn (prims : Primitives p) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) :
@@ -629,7 +620,7 @@ theorem wotsPkGenTops_eq_ofFn (prims : Primitives p) (sk : prims.SkSeed)
         (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (p.w - 1) := by
   unfold wotsPkGenTops wotsPkGenTopsM wotsPkGenTopsWith
   rw [simulateQ_ofFnM]
-  rfl
+  exact Vector.idRun_ofFnM
 
 @[simp]
 theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
@@ -640,7 +631,7 @@ theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSe
           (chainStepsCore prims.core msg i.val) := by
   unfold wotsSign wotsSignM wotsSignWith
   rw [simulateQ_ofFnM]
-  rfl
+  exact Vector.idRun_ofFnM
 
 @[simp]
 theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims.core)
@@ -651,7 +642,7 @@ theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims.
         (p.w - 1 - chainStepsCore prims.core msg i.val) := by
   unfold wotsPkFromSigTops wotsPkFromSigTopsM wotsPkFromSigTopsWith
   rw [simulateQ_ofFnM]
-  rfl
+  exact Vector.idRun_ofFnM
 
 @[simp]
 theorem wotsPkGen_eq_tl (prims : Primitives p) (sk : prims.SkSeed)
