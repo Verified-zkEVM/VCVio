@@ -104,20 +104,6 @@ also cover adaptive and repeated queries, disjoint domains, and structural routi
 The measure laws use the existing table-sampling API in `Type 0`; arbitrary preloaded caches
 require their own consistency condition.
 
-## Association-list cache representation
-
-`ListCache.lean` supplies `QueryImpl.ListCache.handler` for an executable association-list
-cache. It uses `List.lookup`, so the first occurrence of a key wins even when the initial
-list contains duplicates. Hits do not run the underlying draw; misses prepend one binding.
-`local_projection` preserves the reply and decoded cache after each query, and
-`adaptive_projection` lifts that equality through every adaptive client in any lawful monad.
-
-`Examples/PRFTagReader/CacheRepresentation.lean` closes the named PRF reductions with this
-handler and retains their bad-event state through `QueryImpl.extendState`. Its
-`PRFTagReader.CachedPRF.preserved_bound` proves the same three-loss bound for the bounded FIFO
-experiment, from empty list caches. The equality concerns replies and retained state; it makes
-no running-time claim about association-list lookup or the network schedule.
-
 ## Instrumentation Pattern: `preInsert` / `postInsert`
 
 Almost every `QueryImpl` wrapper in this directory ultimately bottoms out at the
