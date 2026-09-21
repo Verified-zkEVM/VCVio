@@ -28,7 +28,10 @@ computes, with the honest values that input rests on settled in the cache.  The 
 what makes this a target collision on at most one honest entry per address rather than a free
 collision search over the whole cache.  Honesty is monotone in the cache (`HonestEntry.mono`):
 every constructor's premises are successful partial readings, and
-`QueryCache.simulateQ_toPartialImpl_mono` transports those along a cache extension.
+`QueryCache.simulateQ_toPartialImpl_mono` transports those along a cache extension.  It also
+reads the transcript only through the secret seed and the public seed (`honestEntry_congr`), so
+`HonestSeeded`, which pins those two fields and closes the transcript existentially, coincides
+with it at a transcript's own seeds (`honestSeeded_iff`).
 
 **Hidden-value hit** (`HiddenHit`).  The forgery's verification replay under the cache produces a
 value the signing oracle never revealed: a WOTS+ chain value at a step below the one the honest
@@ -73,10 +76,13 @@ honest secret.
 
 ## Labels
 
-Twenty-eight declarations.
+Thirty-two declarations.
 
 *Honest entries and the target collision*: `HonestEntry`, `HonestEntry.mono`,
 `TargetCollision`.
+
+*The seed-pinned honest relation*: `HonestSeeded`, `honestEntry_congr`, `honestSeeded_iff`,
+`honestSeeded_mono`.
 
 *Digests, used leaves and honest messages*: `LoggedDigest`, `ForgerDigest`, `UsedLeaf`,
 `childTreeAdrs`, `childTreeAdrs_next`, `forsInstanceAdrs`, `forsInstanceAdrs_initial`,
@@ -164,6 +170,44 @@ answers and different inputs, one of which is an honest entry. -/
   ∃ (pkSeed : core.PkSeed) (key : core.AdrsKey) (xs ys : List core.Y) (v : core.Y),
     HonestEntry o c (.thash pkSeed key xs) ∧ xs ≠ ys ∧
     c (.thash pkSeed key xs) = some v ∧ c (.thash pkSeed key ys) = some v
+
+/-- `HonestEntry` with the two transcript fields it reads pinned and the transcript itself closed
+existentially: a query honest for *some* transcript with the given secret and public seeds. -/
+@[expose] def HonestSeeded (skSeed : core.SkSeed) (pkSeed : core.PkSeed)
+    (c : PublicHash.Cache core) (t : (publicHashSpec core).Domain) : Prop :=
+  ∃ o : RomOutcome vp core, o.sk.skSeed = skSeed ∧ o.pk.pkSeed = pkSeed ∧ HonestEntry o c t
+
+/-- **`HonestEntry` reads the transcript only through `o.sk.skSeed` and `o.pk.pkSeed`.**  Two
+transcripts agreeing on those two fields have the same honest-entry relation. -/
+theorem honestEntry_congr {o o' : RomOutcome vp core}
+    (hs : o.sk.skSeed = o'.sk.skSeed) (hp : o.pk.pkSeed = o'.pk.pkSeed)
+    {c : PublicHash.Cache core} {t : (publicHashSpec core).Domain}
+    (h : HonestEntry o c t) : HonestEntry o' c t := by
+  obtain ⟨⟨p1, r1⟩, ⟨s1, f1, q1, u1⟩, log, msg, sig, ver⟩ := o
+  obtain ⟨⟨p2, r2⟩, ⟨s2, f2, q2, u2⟩, log', msg', sig', ver'⟩ := o'
+  simp only at hs hp
+  subst hs
+  subst hp
+  induction h with
+  | xmssNode adrs hgt i l r hh hl hr => exact .xmssNode adrs hgt i l r hh hl hr
+  | wotsPk adrs tops hw => exact .wotsPk adrs tops hw
+  | wotsChain adrs i steps v hv => exact .wotsChain adrs i steps v hv
+  | forsLeaf adrs leaf => exact .forsLeaf adrs leaf
+  | forsNode adrs hgt i l r hh hl hr => exact .forsNode adrs hgt i l r hh hl hr
+  | forsRoots adrs roots hr => exact .forsRoots adrs roots hr
+
+/-- The seed-pinned relation at a transcript's own seeds is that transcript's own honest-entry
+relation: pinning the seeds loses nothing. -/
+theorem honestSeeded_iff (o : RomOutcome vp core) (c : PublicHash.Cache core)
+    (t : (publicHashSpec core).Domain) :
+    HonestSeeded o.sk.skSeed o.pk.pkSeed c t ↔ HonestEntry o c t :=
+  ⟨fun ⟨_, hs, hp, h⟩ => honestEntry_congr hs hp h, fun h => ⟨o, rfl, rfl, h⟩⟩
+
+/-- The seed-pinned relation is monotone in the cache. -/
+theorem honestSeeded_mono (skSeed : core.SkSeed) (pkSeed : core.PkSeed)
+    {c c' : PublicHash.Cache core} (h : c ≤ c') (t) :
+    HonestSeeded skSeed pkSeed c t → HonestSeeded skSeed pkSeed c' t :=
+  fun ⟨o, hs, hp, ho⟩ => ⟨o, hs, hp, ho.mono h⟩
 
 /-! ## Digests, used leaves and honest messages -/
 

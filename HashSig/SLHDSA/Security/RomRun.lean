@@ -23,6 +23,17 @@ say the counted experiment's success bit is a function of this run.  `romForgeAd
 restates the advantage as the mass of the winning event of `romRunFull`, so a bound on that mass
 is a bound on `romForgeAdvantage`.
 
+The second half of the module splits the run after the three seeds are sampled and *before* key
+generation.  `romResidual` is the forger and the verification against a given key pair,
+`romPostSeed` prefixes key generation from three given seeds, and `romRunFull_eq_bind_seeds` is an
+*equality* of `ProbComp` computations: the
+instrumented run is the sampling of the three seeds followed by the post-seed run from the empty
+cache.  The seeds are drawn by private uniform queries, which the forwarding implementation
+answers without touching the public-hash cache, so the post-seed run still starts from `∅`.  The
+three support lemmas say that the transcript a post-seed path returns carries the key pair, and
+hence the seeds, it was given.  A bad-event analysis whose honest side reads the secret seed can
+therefore be run at a fixed seed triple and integrated back.
+
 ## Scope
 
 * No bad event is defined here.  The three-disjunct bad event of the random-oracle bridge
@@ -37,6 +48,25 @@ is a bound on `romForgeAdvantage`.
   `import all`.  `RomOutcome.wins` is not exposed; `RomOutcome.wins_eq_true_iff` characterises
   it without reference to the decidability instances it fixes.
 * Nothing here is quantum: the oracle is a classical lazily-sampled table.
+* The split is stated, not used: no event and no bound is attached to `romPostSeed` here.
+* `romResidual` and `romPostSeed` are exposed so that a proof module can unfold them; the split
+  is an equation *about* `romGameCoreFull` and `romRunFull`, which are unchanged.
+
+## Labels
+
+Fifteen declarations.
+
+*The transcript and its success bit*: `RomOutcome`, `RomOutcome.wins`,
+`RomOutcome.wins_eq_true_iff`.
+
+*The instrumented game and run*: `romGameCoreFull`, `romGameCore_eq_map`, `romRunFull`,
+`fst_map_countedRomExperiment`, `romForgeAdvantage_eq`.
+
+*The seed-sampling split*: `romResidual`, `romPostSeed`, `romGameCoreFull_eq_bind_seeds`,
+`romRunFull_eq_bind_seeds`.
+
+*What a post-seed path pins*: `keys_of_mem_support_romResidual`,
+`seeds_of_mem_support_romPostSeed`, `mem_support_romRunFull_of_mem_support_romPostSeed`.
 -/
 
 public section
@@ -113,6 +143,47 @@ theorem romGameCore_eq_map
   exact bind_congr fun ⟨pk, sk⟩ => bind_congr fun ⟨⟨msg, sig⟩, log⟩ => by
     simp only [pure_bind, Function.comp_def, RomOutcome.wins]
 
+/-! ## The seed-sampling split -/
+
+/-- The part of the EUF-CMA game that follows key generation: the forger against the given key
+pair under the signing oracle, and the verification of its forgery. -/
+@[expose] noncomputable def romResidual
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (ks : PublicKeyCore core × SecretKeyCore core) :
+    OracleComp romSpec (RomOutcome vp core) := do
+  let alg := generalAlgM (m := OracleComp romSpec) vp core
+  let impl : QueryImpl (romSpec + (List Byte →ₒ GeneralScheme.SignatureCore vp core))
+      (WriterT (QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp core))
+        (OracleComp romSpec)) :=
+    (HasQuery.toQueryImpl (spec := romSpec) (m := OracleComp romSpec)).liftTarget
+        (WriterT (QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp core))
+          (OracleComp romSpec)) +
+      alg.signingOracle ks.1 ks.2
+  let ((msg, sig), log) ← (simulateQ impl (adv.main ks.1)).run
+  let verified ← alg.verify ks.1 msg sig
+  return ⟨ks.1, ks.2, log, msg, sig, verified⟩
+
+/-- The whole game with the three seeds already sampled: key generation from those seeds
+followed by the residual run. -/
+@[expose] noncomputable def romPostSeed
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
+    OracleComp romSpec (RomOutcome vp core) :=
+  GeneralScheme.keygenInternalM vp core skSeed skPrf pkSeed >>= romResidual core adv
+
+/-- The game is the sampling of its three seeds followed by the post-seed game. -/
+theorem romGameCoreFull_eq_bind_seeds
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    romGameCoreFull core adv = (do
+      let skSeed ← (monadLift ($ᵗ core.SkSeed) : OracleComp romSpec core.SkSeed)
+      let skPrf ← (monadLift ($ᵗ core.SkPrf) : OracleComp romSpec core.SkPrf)
+      let pkSeed ← (monadLift ($ᵗ core.PkSeed) : OracleComp romSpec core.PkSeed)
+      romPostSeed core adv skSeed skPrf pkSeed) := by
+  rw [romGameCoreFull, generalAlgM_keygen]
+  simp only [romPostSeed, bind_assoc]
+  exact bind_congr fun _ => bind_congr fun _ => bind_congr fun _ =>
+    bind_congr fun ⟨pk, sk⟩ => rfl
+
 variable [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [SampleableType (Bytes vp.params.m)]
 
 /-- The transcript of the game under the shared lazy public-hash oracle, run from the empty
@@ -142,6 +213,65 @@ theorem romForgeAdvantage_eq [MeasurableSpace (RomOutcome vp core × PublicHash.
   rw [romForgeAdvantage, fst_map_countedRomExperiment, evalDist_map_of_discrete,
     MeasureTheory.Measure.map_apply Measurable.of_discrete (measurableSet_singleton true)]
   rfl
+
+/-- **The seed-sampling split.**  The three seeds are drawn by private uniform queries, which the
+forwarding implementation answers without touching the public-hash cache, so the instrumented run
+is a `ProbComp` bind over the seeds of the post-seed run started from the empty cache. -/
+theorem romRunFull_eq_bind_seeds
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    romRunFull core adv = (do
+      let skSeed ← ($ᵗ core.SkSeed : ProbComp core.SkSeed)
+      let skPrf ← ($ᵗ core.SkPrf : ProbComp core.SkPrf)
+      let pkSeed ← ($ᵗ core.PkSeed : ProbComp core.PkSeed)
+      (simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core)
+        (romPostSeed core adv skSeed skPrf pkSeed)).run ∅) := by
+  rw [romRunFull, romGameCoreFull_eq_bind_seeds]
+  simp only [simulateQ_bind, StateT.run_bind, roSim.run_liftM, map_eq_bind_pure_comp,
+    bind_assoc, pure_bind, Function.comp_def]
+
+/-- The residual run copies its key pair into the transcript. -/
+theorem keys_of_mem_support_romResidual
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (ks : PublicKeyCore core × SecretKeyCore core) (c₀ : PublicHash.Cache core)
+    {z : RomOutcome vp core × PublicHash.Cache core}
+    (hz : z ∈ support ((simulateQ (unifFwdImpl (publicHashSpec core) +
+      PublicHash.randomOracle core) (romResidual core adv ks)).run c₀)) :
+    z.1.pk = ks.1 ∧ z.1.sk = ks.2 := by
+  rw [romResidual] at hz
+  simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff, simulateQ_pure,
+    StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+  obtain ⟨⟨⟨⟨msg, sig⟩, log⟩, c₁⟩, -, ⟨v, c₂⟩, -, hz⟩ := hz
+  subst hz
+  exact ⟨rfl, rfl⟩
+
+/-- The post-seed run's transcript carries the seeds it was given. -/
+theorem seeds_of_mem_support_romPostSeed
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
+    (c₀ : PublicHash.Cache core) {z : RomOutcome vp core × PublicHash.Cache core}
+    (hz : z ∈ support ((simulateQ (unifFwdImpl (publicHashSpec core) +
+      PublicHash.randomOracle core) (romPostSeed core adv skSeed skPrf pkSeed)).run c₀)) :
+    z.1.sk.skSeed = skSeed ∧ z.1.pk.pkSeed = pkSeed := by
+  rw [romPostSeed, GeneralScheme.keygenInternalM] at hz
+  simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff, simulateQ_pure,
+    StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+  obtain ⟨x, ⟨⟨r, c₁⟩, -, rfl⟩, hz⟩ := hz
+  obtain ⟨hpk, hsk⟩ := keys_of_mem_support_romResidual core adv _ c₁ hz
+  rw [hpk, hsk]
+  exact ⟨rfl, rfl⟩
+
+/-- Every path of the post-seed run from the empty cache is a path of the whole run. -/
+theorem mem_support_romRunFull_of_mem_support_romPostSeed
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
+    {z : RomOutcome vp core × PublicHash.Cache core}
+    (hz : z ∈ support ((simulateQ (unifFwdImpl (publicHashSpec core) +
+      PublicHash.randomOracle core) (romPostSeed core adv skSeed skPrf pkSeed)).run ∅)) :
+    z ∈ support (romRunFull core adv) := by
+  rw [romRunFull_eq_bind_seeds]
+  simp only [mem_support_bind_iff]
+  exact ⟨skSeed, mem_support_uniformSample _, skPrf, mem_support_uniformSample _,
+    pkSeed, mem_support_uniformSample _, hz⟩
 
 end Counted
 

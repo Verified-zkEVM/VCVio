@@ -116,6 +116,15 @@ theorem evalDist_bind_apply_mono (mx : m α) (f g : α → m β)
   rw [evalDist_bind mx f hf, evalDist_bind mx g hg]
   exact Measure.bind_apply_mono _ _ _ hf hg hevent hfg
 
+/-- A continuation bound uniform in a discrete common draw bounds the bind. -/
+theorem evalDist_bind_apply_le_of_forall [DiscreteMeasurableSpace α] (mx : m α) (f : α → m β)
+    {event : Set β} (hevent : MeasurableSet event) {bound : ENNReal}
+    (hbound : ∀ a, 𝒟[f a] event ≤ bound) : 𝒟[mx >>= f] event ≤ bound := by
+  rw [evalDist_bind_of_discrete mx f,
+    Measure.bind_apply hevent Measurable.of_discrete.aemeasurable]
+  exact (lintegral_mono hbound).trans <| by
+    simpa using mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
+
 /-- A lower bound on continuation event masses holds after a lossless common draw. -/
 theorem le_evalDist_bind_apply (mx : m α) [IsProbabilityMeasure 𝒟[mx]] (f : α → m β)
     (hf : Measurable fun a ↦ 𝒟[f a]) {event : Set β} (hevent : MeasurableSet event)

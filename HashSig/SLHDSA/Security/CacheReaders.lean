@@ -28,6 +28,12 @@ them: an XMSS signature whose recovered root is settled at the honest root of th
 tree yields, under every agreeing `f`, either the honest WOTS+ public key or an `H`-collision on
 the leaf's root path.
 
+The congruences record which fields of a base address a role address and a reader actually
+consume: every role builder overwrites `type` and the type-dependent words, so `xmssNode?` sees
+the base address only through `layer` and `tree`, and `wotsPkGenTops?` and `forsNode?` only
+through `layer`, `tree` and `word1`.  They are what lets an honest reading be re-taken at the
+role address itself.
+
 ## Scope
 
 * No property of any particular cache is proved here.  Which entries a run of the counted
@@ -40,13 +46,18 @@ the leaf's root path.
 
 ## Labels
 
-Eighteen declarations.
+Twenty-seven declarations.
 
 *One-query readings*: `simulateQ_toPartialImpl_hmsg`, `simulateQ_toPartialImpl_tl`,
 `simulateQ_toPartialImpl_f`, `simulateQ_toPartialImpl_h`.
 
 *Readers*: `xmssRoot?`, `xmssNode?`, `forsPkGen?`, `forsNode?`, `wotsPkGenTops?`, `chain?`,
 `xmssPkFromSig?`, `forsPkFromSig?`.
+
+*Address congruences*: `wotsLeafAdrs_congr`, `xmssNodeAdrs_congr`, `wotsChainAdrs_congr`,
+`wotsSkAdrs_congr`, `forsNodeAdrs_congr`, `forsSkAdrs_congr`.
+
+*Reader congruences*: `xmssNode?_congr`, `wotsPkGenTops?_congr`, `forsNode?_congr`.
 
 *Transport to the pure API*: `xmssRoot_withPublicHash_eq_of_xmssRoot?_eq_some`,
 `xmssPkFromSig_withPublicHash_eq_of_xmssPkFromSig?_eq_some`,
@@ -153,6 +164,84 @@ def xmssPkFromSig? (c : PublicHash.Cache core) (idx : ℕ) (sig : XmssSig p core
 def forsPkFromSig? (c : PublicHash.Cache core) (sig : ForsSigCore p core) (md : List Byte)
     (pk : core.PkSeed) (adrs : Adrs) : Option core.Y :=
   simulateQ c.toPartialImpl (forsPkFromSigM core sig md pk adrs)
+
+/-! ## Address and reader congruences -/
+
+/-- The WOTS+ leaf address depends on the base address only through `layer` and `tree`. -/
+theorem wotsLeafAdrs_congr {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree)
+    (t : ℕ) : wotsLeafAdrs a t = wotsLeafAdrs b t := by
+  ext <;> simp [wotsLeafAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress, hl, ht]
+
+/-- The XMSS node address depends on the base address only through `layer` and `tree`. -/
+theorem xmssNodeAdrs_congr {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree)
+    (z t : ℕ) : xmssNodeAdrs a z t = xmssNodeAdrs b z t := by
+  ext <;> simp [xmssNodeAdrs, Adrs.setTypeAndClear, Adrs.setTreeHeight, Adrs.setTreeIndex,
+    hl, ht]
+
+/-- The WOTS+ chain address depends on the base address only through `layer`, `tree` and
+`word1`. -/
+theorem wotsChainAdrs_congr {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree)
+    (hw : a.word1 = b.word1) (i : ℕ) : wotsChainAdrs a i = wotsChainAdrs b i := by
+  ext <;> simp [wotsChainAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress,
+    Adrs.setChainAddress, Adrs.getKeyPairAddress, hl, ht, hw]
+
+/-- The WOTS+ secret-key address depends on the base address only through `layer`, `tree` and
+`word1`. -/
+theorem wotsSkAdrs_congr {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree)
+    (hw : a.word1 = b.word1) (i : ℕ) : wotsSkAdrs a i = wotsSkAdrs b i := by
+  ext <;> simp [wotsSkAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress,
+    Adrs.setChainAddress, Adrs.getKeyPairAddress, hl, ht, hw]
+
+/-- The FORS node address depends on the base address only through `layer`, `tree` and
+`word1`. -/
+theorem forsNodeAdrs_congr {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree)
+    (hw : a.word1 = b.word1) (z t : ℕ) : forsNodeAdrs a z t = forsNodeAdrs b z t := by
+  ext <;> simp [forsNodeAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress,
+    Adrs.setTreeHeight, Adrs.setTreeIndex, Adrs.getKeyPairAddress, hl, ht, hw]
+
+/-- The FORS secret-key address depends on the base address only through `layer`, `tree` and
+`word1`. -/
+theorem forsSkAdrs_congr {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree)
+    (hw : a.word1 = b.word1) (t : ℕ) : forsSkAdrs a t = forsSkAdrs b t := by
+  ext <;> simp [forsSkAdrs, Adrs.setTypeAndClear, Adrs.setKeyPairAddress,
+    Adrs.setTreeIndex, Adrs.getKeyPairAddress, hl, ht, hw]
+
+/-- The honest XMSS subtree root reads the base address only through `layer` and `tree`. -/
+theorem xmssNode?_congr (c : PublicHash.Cache core) (sk : core.SkSeed) (pk : core.PkSeed)
+    {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree) (z t : ℕ) :
+    xmssNode? core c sk pk a z t = xmssNode? core c sk pk b z t := by
+  unfold xmssNode? xmssNodeM xmssNodeWith
+  rw [show xmssLeafWith core (PublicHash.f core pk) (PublicHash.tl core pk) sk pk a =
+      xmssLeafWith core (PublicHash.f core pk) (PublicHash.tl core pk) sk pk b from
+    funext fun t' => by rw [xmssLeafWith, xmssLeafWith, wotsLeafAdrs_congr hl ht],
+    show xmssNodeHashWith (PublicHash.h core pk) a = xmssNodeHashWith (PublicHash.h core pk) b
+      from funext fun z' => funext fun t' => funext fun l => funext fun r => by
+        rw [xmssNodeHashWith, xmssNodeHashWith, xmssNodeAdrs_congr hl ht]]
+
+/-- The honest WOTS+ chain tops read the base address only through `layer`, `tree` and
+`word1`. -/
+theorem wotsPkGenTops?_congr (c : PublicHash.Cache core) (sk : core.SkSeed) (pk : core.PkSeed)
+    {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree) (hw : a.word1 = b.word1) :
+    wotsPkGenTops? core c sk pk a = wotsPkGenTops? core c sk pk b :=
+  congrArg (simulateQ c.toPartialImpl) (by
+    unfold wotsPkGenTopsM wotsPkGenTopsWith
+    exact congrArg Vector.ofFnM (funext fun i => by
+      rw [wotsChainAdrs_congr hl ht hw, wotsSkAdrs_congr hl ht hw]))
+
+/-- The honest FORS subtree root reads the base address only through `layer`, `tree` and
+`word1`. -/
+theorem forsNode?_congr (c : PublicHash.Cache core) (sk : core.SkSeed) (pk : core.PkSeed)
+    {a b : Adrs} (hl : a.layer = b.layer) (ht : a.tree = b.tree) (hw : a.word1 = b.word1)
+    (z t : ℕ) : forsNode? core c sk pk a z t = forsNode? core c sk pk b z t := by
+  unfold forsNode?
+  rw [show forsLeafWith core (PublicHash.f core pk) sk pk a =
+      forsLeafWith core (PublicHash.f core pk) sk pk b from
+    funext fun t' => by
+      rw [forsLeafWith, forsLeafWith, forsNodeAdrs_congr hl ht hw, forsSkGenCore,
+        forsSkGenCore, forsSkAdrs_congr hl ht hw],
+    show forsNodeHashWith (PublicHash.h core pk) a = forsNodeHashWith (PublicHash.h core pk) b
+      from funext fun z' => funext fun t' => funext fun l => funext fun r => by
+        rw [forsNodeHashWith, forsNodeHashWith, forsNodeAdrs_congr hl ht hw]]
 
 /-! ## Transport to the pure API -/
 

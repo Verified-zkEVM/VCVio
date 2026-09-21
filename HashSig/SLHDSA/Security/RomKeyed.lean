@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.Security.RomDescent
 public import HashSig.SLHDSA.Security.RomFresh
+import HashSig.SLHDSA.Security.HonestKeys
 
 /-!
 # The linear same-key collision bound for the SLH-DSA random-oracle run
@@ -23,9 +24,10 @@ The two constants are supplied, not derived.
 * `r` is a *separator bound*: the caller exhibits a map `ρ` from public-hash queries to `Fin r`
   which, at each `thash` key, separates the settled honest inputs — two settled honest inputs at
   one key with the same `ρ`-value are equal.  At `r = 1` this says a key carries at most one
-  settled honest input.  It is not injectivity of the address encoding: the encoding is not
-  assumed injective anywhere here, and `ρ` is free to be constant on keys the honest parties
-  never use.  The separator hypothesis gives the counting lemma `encard_honestPairs_le`, whose
+  settled honest input.  It is weaker than injectivity of the address encoding — `ρ` is free to
+  be constant on keys the honest parties never use — but the only proof of it offered here, at
+  `r = 1` for the SLH-DSA relation, does go through injectivity of the encoding, which no shipped
+  core satisfies (see `## Scope`).  The separator hypothesis gives `encard_honestPairs_le`, whose
   content is `Σ_K n_K · h_K ≤ r · Σ_K n_K`, and it is the whole source of the linearity: the
   charge a fresh answer pays is the *increment* of the key-weighted potential
   `keyedPotential`, not a flat per-step `ε`.
@@ -47,47 +49,74 @@ the step condition rather than express it.
 
 The engine is `OracleComp.evalDist_apply_setOf_and_le_of_potential`; the per-step uniform charge
 is `SampleableType.evalDist_uniformSample_le_encard_div`; the budget side condition is discharged
-by `enncard_le_of_hasHashQueryBound` of `HashSig.SLHDSA.Security.RomFresh`.  The SLH-DSA
-instantiation takes `Honest` to be `HonestSome`, the honest-entry relation of
-`HashSig.SLHDSA.Security.RomDescent` closed over the transcript, and
-`evalDist_romRunFull_targetCollision_le` is the consumable statement.
+by `enncard_le_of_hasHashQueryBound` of `HashSig.SLHDSA.Security.RomFresh`.
+
+The SLH-DSA instantiation takes `Honest` to be `HonestSeeded` of
+`HashSig.SLHDSA.Security.RomDescent`, the honest-entry relation with the two transcript fields it
+reads — the secret seed and the public seed — pinned.  The experiment is split after the three
+seeds are sampled (`romRunFull_eq_bind_seeds` of `HashSig.SLHDSA.Security.RomRun`): the engine is
+applied to the post-seed run at a fixed seed triple, where `HonestSeeded` *coincides* with the
+run's own `HonestEntry` (`honestSeeded_iff`), and the resulting bound is integrated back over the
+seeds by `evalDist_bind_apply_le_of_forall`.  Pinning the seeds instead of closing over the whole
+transcript is lossless, and it is what lets the separator be stated at the run's own honest
+relation.  `evalDist_romRunFull_targetCollision_le'` is the consumable statement, and
+`evalDist_romRunFull_targetCollision_le_one` is its specialisation at `r = 1`.
 
 ## Scope
 
-* **For the SLH-DSA honest-entry relation `HonestSome` there is no constant `r` independent of
-  the cache, so the two theorems stated at that relation carry no information.**  `HonestSome`
-  closes `HonestEntry` over the transcript; `RomOutcome` is a plain structure carrying no
-  invariant, so the existential ranges over every key pair rather than over the run's own; and
-  `HonestEntry.forsLeaf` has no premises, so every secret seed contributes a settled honest
-  entry at its own FORS leaf key.  The separator hypothesis `hρ` then forces `r` to be at least
-  the number of seeds the FORS leaf secret separates, which exceeds `Nat.card core.Y` at the
-  FIPS 205 parameter sets, so `r * q / Nat.card core.Y` is at least `1` already at `q = 1`.
-  `HashSigTest.SLHDSA.RomKeyed` carries the witnesses.
-* **The hypothesis of the trivial-auxiliary corollary is false for that same relation.**
-  `hstable` asks that no fresh answer create an honest entry, and caching a WOTS+ chain entry
-  makes the chain value one step further an honest entry, with the reading that certifies it
-  absent before that entry.  So `evalDist_run_setOf_keyCollision_le` and
-  `evalDist_romRunFull_keyCollision_le` are sound but not instantiable at `HonestSome`.
-* **The event the SLH-DSA theorems bound is a lossy over-approximation of the event the bridge
-  produces.**  `TargetCollision` of `HashSig.SLHDSA.Security.RomDescent` is diagonal in the
-  transcript: the honest side and the run are one and the same `o`.
-  `keyCollision_of_targetCollision` closes that transcript existentially, which is the same loss
-  as the one above, so the weakness of the bound and the coarseness of the event have one cause.
-* The fix lies in the honest relation, not in the arithmetic: the relation has to pin the run's
-  own secret key rather than quantify a transcript.  Key generation precedes the adversary, so
-  the engine can instead be applied to the residual run after key generation with the sampled
-  secret key fixed, which the engine permits because it tolerates a non-empty starting state and
-  a non-zero potential there.
+* **The hypothesis of the `r = 1` specialisation is false at every shipped instantiation, but
+  the obstruction it leaves is narrower than that.**
+  `evalDist_romRunFull_targetCollision_le_one` gives the separator constant the value `1` under
+  the hypothesis `Function.Injective core.adrsToKey`, and that hypothesis is *false* for every
+  shipped tweak map.  The six fields of `Adrs` are naturals while every encoding writes each of
+  them into four bytes, so the two FORS leaf addresses `⟨0, 0, 3, 0, 0, 0⟩` and
+  `⟨0, 0, 3, 0, 0, 2 ^ 32⟩` have the same key under `Adrs.toBytes`/`Adrs.toVector` (the SHAKE
+  map) and under `Adrs.compressSha2` (the compatibility bundle's map); the FIPS SHA-2 map routes
+  through the *checked* compression instead and collapses every address it rejects onto one zero
+  key.  `HashSigTest.SLHDSA.RomKeyed` computes all three collisions at the field each bundle
+  installs.  Non-injectivity by itself does **not** make the separator constant exceed `1`: at
+  every one of the three bundles the secret-key function factors through the very encoding that
+  caused the key collision, so the two secrets at the exhibited colliding pair are provably
+  *equal* — the two byte-oriented bundles hash the same truncated encoding, and at the principal
+  FIPS SHA-2 bundle both addresses of the pair are rejected by the checked compression and
+  collapse to the same zero value (`forsSkGenCore_shake_eq`, `forsSkGenCore_sha_eq`,
+  `forsSkGenCore_sha2_eq` of `HashSigTest.SLHDSA.RomKeyed`).  What remains genuinely open is only
+  whether some *other* key collision separates the secret-key function; the exhibited
+  word3-truncation family at the FORS secret-key role does not.  The repository never claimed
+  injectivity: `Adrs.compressSha2_injective_of_fits` carries twelve range hypotheses.
+* **The repair, and what of it is in hand.**  The root cause is that `core.PRF` takes the raw
+  `Adrs` while the hash oracle is keyed by `core.adrsToKey`, so encoding-equal addresses are one
+  oracle key but may be distinct `PRF` inputs.  Three pieces are needed and none is a hypothesis
+  of a theorem here.  (i) That the secret-key function factors through the address key
+  (`adrsToKey a = adrsToKey b → core.PRF pk sk a = core.PRF pk sk b`).  This is close to free at
+  each concrete core: the three computations of `HashSigTest.SLHDSA.RomKeyed` exhibit the
+  factorization bundle by bundle, so discharging it is a rewrite along a definitional unfolding
+  rather than a fresh assumption.  (ii) That the key's kernel is preserved by the role builders.
+  (iii) For two role addresses differing only in height, that a settled `xmssNode?` or
+  `forsNode?` at height `h` forces `2 ^ h ≤ QueryCache.enncard c`, which bounds the height by the
+  query budget.  The *in-range* half of the injectivity that (ii) rests on is already in the
+  repository: `forsLeafAdrsKey_injective`, `forsTreeAdrsKey_injective` and
+  `forsRootAdrsKey_injective` of `HashSig.SLHDSA.Security.ForsWitnesses` prove per-role
+  injectivity of the encoded address on coordinates *in range* under
+  `EncodedTargetLedgerConditions`, discharged per profile by
+  `approvedEncodedTargetLedgerConditions`.  Every collision witness above uses out-of-range
+  indices, which those lemmas exclude, so it is the *unrestricted* form that is undischarged.
+* The loss the seed split removes is gone: `evalDist_romRunFull_targetCollision_le'` bounds
+  `TargetCollision z.1 z.2`, diagonal in the transcript, and not its closure over every
+  transcript.  The honest side is the run's own `HonestEntry`, so the separator hypothesis is a
+  statement about the run's own key rather than about every key pair.
+* The recombination is uniform only in `r`, `q` and `B`: the auxiliary event, its potential and
+  the separator may each depend on the secret and public seeds, but the three constants may not.
+  The message-PRF key is sampled too and is *not* among the parameters, so nothing recombined
+  here may depend on it.
 * The bound is stated with the denominator `Nat.card core.Y`.  Identifying that cardinality with
   a concrete power of two for a FIPS 205 parameter set is a separate step and is not done here.
-* The separator hypothesis `hρ` is not discharged from the repository's per-role encoded
-  distinctness lemmas.  Supplying `r` and `ρ` for the SLH-DSA honest-entry relation, and proving
-  `hρ` from the address bookkeeping, is left to the caller.
 * Nothing is proved about the auxiliary event `Aux`, its potential `Ψ`, or its budget `B`.  A
-  caller that instantiates `Aux := fun _ => False` gets `B = 0` and the bound
-  `r * q / Nat.card core.Y`, at the price of the hypothesis `hstable`: no fresh answer ever
-  creates an honest entry.  That is the shape of `evalDist_run_setOf_keyCollision_le` and
-  `evalDist_romRunFull_keyCollision_le`.
+  caller that instantiates `Aux := fun _ _ _ => False` gets `B = 0`, at the price of the
+  hypothesis that no fresh answer ever creates an honest entry; that is the shape of
+  `evalDist_run_setOf_keyCollision_le`.  It is not instantiated at the SLH-DSA relation here: the
+  `wotsChain` constructor reads a chain prefix off the cache, so the entry at hash address `t` is
+  part of what certifies the chain value at `t + 1`.
 * `honestPairs` sees only `thash` entries, so an `H_msg` answer pays no charge; the step bound
   at such a query is that the collision half of its bad set is empty (`encard_badSetAt_le`).
 * The event bounded is a predicate of the final cache.  Relating it to the winning event of the
@@ -99,7 +128,7 @@ instantiation takes `Honest` to be `HonestSome`, the honest-entry relation of
 
 ## Labels
 
-Twenty-nine declarations.
+Twenty-eight declarations.
 
 *Settled honest entries, the key-weighted potential and the collision*: `SettledHonest`,
 `keyDom`, `cachedAt`, `honestAt`, `honestPairs`, `keyedPotential`, `KeyCollision`.
@@ -111,15 +140,16 @@ Twenty-nine declarations.
 
 *The budget clause*: `encard_honestPairs_le`.
 
-*The SLH-DSA honest-entry relation*: `HonestSome`, `honestSome_mono`,
-`keyCollision_of_targetCollision`.
+*The seed-pinned SLH-DSA separator*: `separator_honestSeeded`.
 
 *The charged step*: `newPairs`, `encard_newPairs_add_le`, `encard_badSet_le`, `newPairsAt`,
 `encard_newPairsAt_add_le`, `keyedPotential_add_le`, `encard_badSetAt_le`.
 
 *The bound along a run*: `evalDist_run_setOf_keyCollision_aux_le`,
-`evalDist_run_setOf_keyCollision_le`, `evalDist_romRunFull_keyCollision_le`,
-`evalDist_romRunFull_targetCollision_le`.
+`evalDist_run_setOf_keyCollision_le`.
+
+*The bound on the counted SLH-DSA run*: `evalDist_romPostSeed_keyCollision_le`,
+`evalDist_romRunFull_targetCollision_le'`, `evalDist_romRunFull_targetCollision_le_one`.
 
 ## References
 
@@ -280,22 +310,21 @@ theorem encard_honestPairs_le
         · simp [Set.encard_univ]
     _ = (r : ℕ∞) * c.toSet.encard := mul_comm _ _
 
-/-! ## The SLH-DSA honest-entry relation -/
+/-! ## The seed-pinned SLH-DSA separator -/
 
-/-- The honest-entry relation of `HashSig.SLHDSA.Security.RomDescent`, closed over the transcript
-so that it is a relation between a cache and a query. -/
-@[expose] def HonestSome (c : PublicHash.Cache core) (t : (publicHashSpec core).Domain) : Prop :=
-  ∃ o : RomOutcome vp core, HonestEntry o c t
-
-/-- `HonestSome` is monotone in the cache. -/
-theorem honestSome_mono {c c' : PublicHash.Cache core} (h : c ≤ c') (t) :
-    HonestSome c t → HonestSome c' t := fun ⟨o, ho⟩ => ⟨o, ho.mono h⟩
-
-/-- `TargetCollision`, closed over the transcript, is a `KeyCollision` for `HonestSome`. -/
-theorem keyCollision_of_targetCollision {o : RomOutcome vp core} {c : PublicHash.Cache core}
-    (h : TargetCollision o c) : KeyCollision HonestSome c := by
-  obtain ⟨pkSeed, key, xs, ys, v, hhon, hne, h1, h2⟩ := h
-  exact ⟨pkSeed, key, xs, ys, v, ⟨o, hhon⟩, hne, h1, h2⟩
+/-- **The separator hypothesis holds at `r = 1` for the seed-pinned honest relation**, under an
+injective address encoding.  The hypothesis is false for every shipped tweak map, so this theorem
+is not instantiable at any of them; `HashSigTest.SLHDSA.RomKeyed` carries the computations that
+refute it. -/
+theorem separator_honestSeeded (hinj : Function.Injective core.adrsToKey)
+    (skSeed : core.SkSeed) (pkSeed : core.PkSeed) (c : PublicHash.Cache core)
+    (p : core.PkSeed) (k : core.AdrsKey) (xs ys : List core.Y)
+    (hx : SettledHonest (HonestSeeded skSeed pkSeed) c (.thash p k xs))
+    (hy : SettledHonest (HonestSeeded skSeed pkSeed) c (.thash p k ys)) : xs = ys := by
+  obtain ⟨o₁, hs₁, hp₁, he₁⟩ := hx.2
+  obtain ⟨o₂, hs₂, hp₂, he₂⟩ := hy.2
+  exact honestEntry_unique hinj he₁
+    (honestEntry_congr (hs₂.trans hs₁.symm) (hp₂.trans hp₁.symm) he₂)
 
 /-! ## The charged step -/
 
@@ -708,82 +737,154 @@ variable [SampleableType core.SkSeed] [SampleableType core.SkPrf] [SampleableTyp
 
 local notation "romSpec" => unifSpec + publicHashSpec core
 
-open scoped Classical in
-/-- **The linear same-key collision bound for the counted SLH-DSA run.**  Under a public-hash
-query budget `q` and at most `r` separated settled honest entries per `thash` key, with no
-retroactive honesty, a same-key collision on a settled honest input holds of the final cache
-with mass at most `r * q / |core.Y|`. -/
-theorem evalDist_romRunFull_keyCollision_le
-    {Honest : PublicHash.Cache core → (publicHashSpec core).Domain → Prop}
-    (hmonoH : ∀ {c c' : PublicHash.Cache core}, c ≤ c' → ∀ t, Honest c t → Honest c' t)
-    (hstable : ∀ (c : PublicHash.Cache core) (t : (publicHashSpec core).Domain)
-      (u : (publicHashSpec core).Range t) (g : (publicHashSpec core).Domain), c t = none →
-      Honest (c.cacheQuery t u) g → Honest c g)
-    (r : ℕ) (ρ : (publicHashSpec core).Domain → Fin r)
-    (hρ : ∀ (c : PublicHash.Cache core) p k (xs ys : List core.Y),
-      SettledHonest Honest c (.thash p k xs) → SettledHonest Honest c (.thash p k ys) →
-      ρ (.thash p k xs) = ρ (.thash p k ys) → xs = ys)
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
-    (hq : HasHashQueryBound core adv q) :
-    (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
-      𝒟[romRunFull core adv] {z | KeyCollision Honest z.2} ≤
-        (r * q : ℝ≥0∞) / Nat.card core.Y) := by
-  let _ : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤
-  have hae : ∀ᵐ z ∂𝒟[romRunFull core adv],
-      z ∈ {z : RomOutcome vp core × PublicHash.Cache core | KeyCollision Honest z.2} →
-        z ∈ {z : RomOutcome vp core × PublicHash.Cache core |
-          KeyCollision Honest z.2 ∧ QueryCache.enncard z.2 ≤ (q : ℝ≥0∞)} :=
-    evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete
-      fun z hz hp => ⟨hp, enncard_le_of_hasHashQueryBound core adv q hq hz⟩
-  refine (measure_mono_ae hae).trans ?_
-  rw [romRunFull]
-  exact evalDist_run_setOf_keyCollision_le hmonoH hstable r ρ hρ q (romGameCoreFull core adv)
+local notation "romImpl" =>
+  unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core
 
 open scoped Classical in
-/-- **The linear target-collision bound for SLH-DSA.**  Under a public-hash query budget `q`, a
-separator `ρ` bounding by `r` the settled honest entries per `thash` key, and a monotone
-potential `Ψ` with budget `B` for the auxiliary event `Aux`, the same-address target collision of
-`HashSig.SLHDSA.Security.RomDescent` — closed over the transcript — holds of the final cache of
-`romRunFull` with mass at most `r * q / |core.Y| + B`. -/
-theorem evalDist_romRunFull_targetCollision_le
-    (r : ℕ) (ρ : (publicHashSpec core).Domain → Fin r)
-    (hρ : ∀ (c : PublicHash.Cache core) p k (xs ys : List core.Y),
-      SettledHonest HonestSome c (.thash p k xs) → SettledHonest HonestSome c (.thash p k ys) →
-      ρ (.thash p k xs) = ρ (.thash p k ys) → xs = ys)
+/-- **The fixed-seed target-collision bound.**  For a fixed sampled seed triple, the honest side
+is the run's *own* `HonestEntry` — `HonestSeeded` at those seeds coincides with it — so the
+separator hypothesis is stated at the run's own honest relation rather than at one closed over
+every transcript. -/
+theorem evalDist_romPostSeed_keyCollision_le
+    (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
     (Aux : PublicHash.Cache core → Prop) (Ψ : PublicHash.Cache core → ℝ≥0∞)
     (hΨmono : ∀ {c c' : PublicHash.Cache core}, c ≤ c' → Ψ c ≤ Ψ c') (hΨempty : Ψ ∅ = 0)
     (hAuxEmpty : ¬ Aux ∅)
     (hhonest : ∀ (c : PublicHash.Cache core) (t : (publicHashSpec core).Domain)
       (u : (publicHashSpec core).Range t) (g : (publicHashSpec core).Domain), c t = none →
-      ¬ Aux (c.cacheQuery t u) → HonestSome (c.cacheQuery t u) g → HonestSome c g)
+      ¬ Aux (c.cacheQuery t u) → HonestSeeded skSeed pkSeed (c.cacheQuery t u) g →
+      HonestSeeded skSeed pkSeed c g)
     (haux : ∀ (c : PublicHash.Cache core) (t : (publicHashSpec core).Domain), c t = none →
-      ¬ (KeyCollision HonestSome c ∨ Aux c) →
+      ¬ (KeyCollision (HonestSeeded skSeed pkSeed) c ∨ Aux c) →
       ∃ w' : ℝ≥0∞, (letI : MeasurableSpace ((publicHashSpec core).Range t) := ⊤;
         𝒟[($ᵗ (publicHashSpec core).Range t : ProbComp _)]
           {u | Aux (c.cacheQuery t u)} ≤ w') ∧
         ∀ u, w' + Ψ c ≤ Ψ (c.cacheQuery t u))
-    (B : ℝ≥0∞) (hB : B ≠ ⊤)
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
-    (hq : HasHashQueryBound core adv q)
-    (hBudget : ∀ c : PublicHash.Cache core, QueryCache.enncard c ≤ (q : ℝ≥0∞) → Ψ c ≤ B) :
+    (r : ℕ) (ρ : (publicHashSpec core).Domain → Fin r)
+    (hρ : ∀ (c : PublicHash.Cache core) p k (xs ys : List core.Y),
+      SettledHonest (HonestSeeded skSeed pkSeed) c (.thash p k xs) →
+      SettledHonest (HonestSeeded skSeed pkSeed) c (.thash p k ys) →
+      ρ (.thash p k xs) = ρ (.thash p k ys) → xs = ys)
+    (q : ℕ) (B : ℝ≥0∞) (hB : B ≠ ⊤)
+    (hBudget : ∀ c : PublicHash.Cache core, QueryCache.enncard c ≤ (q : ℝ≥0∞) → Ψ c ≤ B)
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (hq : HasHashQueryBound core adv q) :
     (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
-      𝒟[romRunFull core adv] {z | ∃ o, TargetCollision o z.2} ≤
-        (r * q : ℝ≥0∞) / Nat.card core.Y + B) := by
+      𝒟[(simulateQ romImpl (romPostSeed core adv skSeed skPrf pkSeed)).run ∅]
+        {z | TargetCollision z.1 z.2} ≤ (r * q : ℝ≥0∞) / Nat.card core.Y + B) := by
   let _ : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤
-  have hae : ∀ᵐ z ∂𝒟[romRunFull core adv],
-      z ∈ {z : RomOutcome vp core × PublicHash.Cache core | ∃ o, TargetCollision o z.2} →
+  have hae : ∀ᵐ z ∂𝒟[(simulateQ romImpl
+        (romPostSeed core adv skSeed skPrf pkSeed)).run ∅],
+      z ∈ {z : RomOutcome vp core × PublicHash.Cache core | TargetCollision z.1 z.2} →
         z ∈ {z : RomOutcome vp core × PublicHash.Cache core |
-          (KeyCollision HonestSome z.2 ∨ Aux z.2) ∧
+          (KeyCollision (HonestSeeded skSeed pkSeed) z.2 ∨ Aux z.2) ∧
             QueryCache.enncard z.2 ≤ (q : ℝ≥0∞)} := by
     refine evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete ?_
-    rintro z hz ⟨o, ho⟩
-    exact ⟨Or.inl (keyCollision_of_targetCollision ho),
-      enncard_le_of_hasHashQueryBound core adv q hq hz⟩
+    rintro z hz ⟨p, k, xs, ys, v, hhon, hne, h1, h2⟩
+    obtain ⟨hs, hp⟩ := seeds_of_mem_support_romPostSeed core adv skSeed skPrf pkSeed ∅ hz
+    refine ⟨Or.inl ⟨p, k, xs, ys, v, ?_, hne, h1, h2⟩,
+      enncard_le_of_hasHashQueryBound core adv q hq
+        (mem_support_romRunFull_of_mem_support_romPostSeed core adv skSeed skPrf pkSeed hz)⟩
+    rw [← hs, ← hp]
+    exact (honestSeeded_iff z.1 z.2 _).mpr hhon
   refine (measure_mono_ae hae).trans ?_
-  rw [romRunFull]
-  exact evalDist_run_setOf_keyCollision_aux_le (fun h t => honestSome_mono h t)
+  exact evalDist_run_setOf_keyCollision_aux_le (honestSeeded_mono skSeed pkSeed)
     Aux Ψ hΨmono hΨempty hAuxEmpty hhonest haux r ρ hρ q B hB hBudget
-    (romGameCoreFull core adv)
+    (romPostSeed core adv skSeed skPrf pkSeed)
+
+open scoped Classical in
+/-- **The recombined target-collision bound.**  The fixed-seed bound integrated over the seed
+sampling: the auxiliary event, its potential and the separator may each depend on the secret and
+public seeds, while `r`, `q` and `B` must be uniform in them. -/
+theorem evalDist_romRunFull_targetCollision_le'
+    (Aux : core.SkSeed → core.PkSeed → PublicHash.Cache core → Prop)
+    (Ψ : core.SkSeed → core.PkSeed → PublicHash.Cache core → ℝ≥0∞)
+    (hΨmono : ∀ (sk : core.SkSeed) (pk : core.PkSeed) {c c' : PublicHash.Cache core},
+      c ≤ c' → Ψ sk pk c ≤ Ψ sk pk c')
+    (hΨempty : ∀ sk pk, Ψ sk pk ∅ = 0) (hAuxEmpty : ∀ sk pk, ¬ Aux sk pk ∅)
+    (hhonest : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core)
+      (t : (publicHashSpec core).Domain) (u : (publicHashSpec core).Range t)
+      (g : (publicHashSpec core).Domain), c t = none →
+      ¬ Aux sk pk (c.cacheQuery t u) → HonestSeeded sk pk (c.cacheQuery t u) g →
+      HonestSeeded sk pk c g)
+    (haux : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core)
+      (t : (publicHashSpec core).Domain), c t = none →
+      ¬ (KeyCollision (HonestSeeded sk pk) c ∨ Aux sk pk c) →
+      ∃ w' : ℝ≥0∞, (letI : MeasurableSpace ((publicHashSpec core).Range t) := ⊤;
+        𝒟[($ᵗ (publicHashSpec core).Range t : ProbComp _)]
+          {u | Aux sk pk (c.cacheQuery t u)} ≤ w') ∧
+        ∀ u, w' + Ψ sk pk c ≤ Ψ sk pk (c.cacheQuery t u))
+    (r : ℕ) (ρ : core.SkSeed → core.PkSeed → (publicHashSpec core).Domain → Fin r)
+    (hρ : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core) p k
+      (xs ys : List core.Y),
+      SettledHonest (HonestSeeded sk pk) c (.thash p k xs) →
+      SettledHonest (HonestSeeded sk pk) c (.thash p k ys) →
+      ρ sk pk (.thash p k xs) = ρ sk pk (.thash p k ys) → xs = ys)
+    (q : ℕ) (B : ℝ≥0∞) (hB : B ≠ ⊤)
+    (hBudget : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core),
+      QueryCache.enncard c ≤ (q : ℝ≥0∞) → Ψ sk pk c ≤ B)
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (hq : HasHashQueryBound core adv q) :
+    (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
+      𝒟[romRunFull core adv] {z | TargetCollision z.1 z.2} ≤
+        (r * q : ℝ≥0∞) / Nat.card core.Y + B) := by
+  let _ : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤
+  let _ : MeasurableSpace core.SkSeed := ⊤
+  let _ : MeasurableSpace core.SkPrf := ⊤
+  let _ : MeasurableSpace core.PkSeed := ⊤
+  rw [romRunFull_eq_bind_seeds]
+  refine evalDist_bind_apply_le_of_forall _ _ MeasurableSet.of_discrete fun skSeed => ?_
+  refine evalDist_bind_apply_le_of_forall _ _ MeasurableSet.of_discrete fun skPrf => ?_
+  refine evalDist_bind_apply_le_of_forall _ _ MeasurableSet.of_discrete fun pkSeed => ?_
+  exact evalDist_romPostSeed_keyCollision_le skSeed skPrf pkSeed (Aux skSeed pkSeed)
+    (Ψ skSeed pkSeed) (hΨmono skSeed pkSeed) (hΨempty skSeed pkSeed)
+    (hAuxEmpty skSeed pkSeed) (hhonest skSeed pkSeed) (haux skSeed pkSeed) r
+    (ρ skSeed pkSeed) (hρ skSeed pkSeed) q B hB (hBudget skSeed pkSeed) adv hq
+
+open scoped Classical in
+/-- **The target-collision bound for SLH-DSA at `r = 1`.**  Under an injective address encoding,
+the same-address target collision at the run's own transcript holds of the final cache of
+`romRunFull` with mass at most `q / |core.Y| + B`.
+
+The injectivity hypothesis is **false for every shipped tweak map**: `Adrs`' fields are naturals
+while every encoding writes each into four bytes, so the FORS leaf addresses `⟨0, 0, 3, 0, 0, 0⟩`
+and `⟨0, 0, 3, 0, 0, 2 ^ 32⟩` share a key under `Adrs.toBytes` and under `Adrs.compressSha2`, and
+the FIPS SHA-2 map collapses every address its checked compression rejects onto one zero key, so
+this theorem is not instantiable at any of them.  `HashSigTest.SLHDSA.RomKeyed` carries the
+computations. -/
+theorem evalDist_romRunFull_targetCollision_le_one
+    (hinj : Function.Injective core.adrsToKey)
+    (Aux : core.SkSeed → core.PkSeed → PublicHash.Cache core → Prop)
+    (Ψ : core.SkSeed → core.PkSeed → PublicHash.Cache core → ℝ≥0∞)
+    (hΨmono : ∀ (sk : core.SkSeed) (pk : core.PkSeed) {c c' : PublicHash.Cache core},
+      c ≤ c' → Ψ sk pk c ≤ Ψ sk pk c')
+    (hΨempty : ∀ sk pk, Ψ sk pk ∅ = 0) (hAuxEmpty : ∀ sk pk, ¬ Aux sk pk ∅)
+    (hhonest : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core)
+      (t : (publicHashSpec core).Domain) (u : (publicHashSpec core).Range t)
+      (g : (publicHashSpec core).Domain), c t = none →
+      ¬ Aux sk pk (c.cacheQuery t u) → HonestSeeded sk pk (c.cacheQuery t u) g →
+      HonestSeeded sk pk c g)
+    (haux : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core)
+      (t : (publicHashSpec core).Domain), c t = none →
+      ¬ (KeyCollision (HonestSeeded sk pk) c ∨ Aux sk pk c) →
+      ∃ w' : ℝ≥0∞, (letI : MeasurableSpace ((publicHashSpec core).Range t) := ⊤;
+        𝒟[($ᵗ (publicHashSpec core).Range t : ProbComp _)]
+          {u | Aux sk pk (c.cacheQuery t u)} ≤ w') ∧
+        ∀ u, w' + Ψ sk pk c ≤ Ψ sk pk (c.cacheQuery t u))
+    (q : ℕ) (B : ℝ≥0∞) (hB : B ≠ ⊤)
+    (hBudget : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core),
+      QueryCache.enncard c ≤ (q : ℝ≥0∞) → Ψ sk pk c ≤ B)
+    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (hq : HasHashQueryBound core adv q) :
+    (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
+      𝒟[romRunFull core adv] {z | TargetCollision z.1 z.2} ≤
+        (q : ℝ≥0∞) / Nat.card core.Y + B) := by
+  let _ : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤
+  have key := evalDist_romRunFull_targetCollision_le' Aux Ψ hΨmono hΨempty hAuxEmpty
+    hhonest haux 1 (fun _ _ _ => 0)
+    (fun sk pk c p k xs ys hx hy _ => separator_honestSeeded hinj sk pk c p k xs ys hx hy)
+    q B hB hBudget adv hq
+  rwa [Nat.cast_one, one_mul] at key
 
 end RomRun
 
