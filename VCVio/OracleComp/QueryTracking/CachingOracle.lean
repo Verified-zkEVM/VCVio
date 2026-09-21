@@ -61,6 +61,21 @@ lemma withCaching_run_none [LawfulMonad m] (so : QueryImpl spec m) {t : spec.Dom
       (fun u => (u, cache.cacheQuery t u)) <$> so t := by
   simp [hcache]
 
+/-- Interpreting the base monad of a cached handler is the same as caching the interpreted
+handler: `withCaching` reads and writes only its own cache, so an outer interpretation of the
+base oracle commutes with it. -/
+theorem mapStateTBase_withCaching {ι₀ ι₁ : Type} {spec₀ : OracleSpec ι₀}
+    {spec₁ : OracleSpec ι₁} [DecidableEq ι₀] {m' : Type → Type} [Monad m']
+    [LawfulMonad m']
+    (outer : QueryImpl spec₁ m') (so : QueryImpl spec₀ (OracleComp spec₁)) :
+    outer.mapStateTBase so.withCaching =
+      withCaching ((fun t => simulateQ outer (so t)) : QueryImpl spec₀ m') := by
+  funext t
+  ext s
+  simp only [mapStateTBase, StateT.run_mk, withCaching_apply, StateT.run_bind, StateT.run_get,
+    pure_bind]
+  cases s.toFn t <;> simp
+
 /-! ## Caching with auxiliary state -/
 
 section CachingAux

@@ -7,6 +7,7 @@ Authors: Nicolas Consigny, Alexander Hicks
 module
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.WotsEncoding
+public import ToMathlib.Data.Vector
 public import VCVio.OracleComp.HasQuery.Morphism
 public import VCVio.OracleComp.QueryTracking.QueryBound
 import VCVio.OracleComp.SimSemantics.SimulateQ.Option
@@ -367,20 +368,6 @@ def wotsPkFromSig (prims : Primitives p) (sig : WotsSig p prims.core) (msg : pri
 
 /-! ### Naturality -/
 
-private theorem monadHom_ofFnM {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n) {α : Type} {k : ℕ}
-    (fm : Fin k → m α) (fn : Fin k → n α) (h : ∀ i, F (fm i) = fn i) :
-    F (Vector.ofFnM fm) = Vector.ofFnM fn := by
-  induction k with
-  | zero => simp [F.mmap_pure]
-  | succ k ih =>
-      rw [Vector.ofFnM_succ, Vector.ofFnM_succ, F.mmap_bind]
-      rw [ih (fun i => fm i.castSucc) (fun i => fn i.castSucc) (fun i => h i.castSucc)]
-      congr 1
-      funext xs
-      rw [F.mmap_bind, h (Fin.last k)]
-      simp [F.mmap_pure]
-
 /-- A monad morphism commutes with WOTS+ public-key chain generation when it commutes with the
 hash callback. -/
 theorem wotsPkGenTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
@@ -390,7 +377,7 @@ theorem wotsPkGenTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (wotsPkGenTopsWith core hashm sk pk adrs) =
       wotsPkGenTopsWith core hashn sk pk adrs := by
-  apply monadHom_ofFnM F
+  apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
 
@@ -417,7 +404,7 @@ theorem wotsSignWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (wotsSignWith core hashm msg sk pk adrs) =
       wotsSignWith core hashn msg sk pk adrs := by
-  apply monadHom_ofFnM F
+  apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
 
@@ -430,7 +417,7 @@ theorem wotsPkFromSigTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMo
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) :
     F (wotsPkFromSigTopsWith core hashm sig msg adrs) =
       wotsPkFromSigTopsWith core hashn sig msg adrs := by
-  apply monadHom_ofFnM F
+  apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
 

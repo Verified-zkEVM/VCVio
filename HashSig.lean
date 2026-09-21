@@ -66,6 +66,7 @@ public import HashSig.SLHDSA.Security.RomRun
 public import HashSig.SLHDSA.Security.RomTranscript
 public import HashSig.SLHDSA.Security.SchemeGames
 public import HashSig.SLHDSA.Security.SchemeWitnesses
+public import HashSig.SLHDSA.Security.SkgPrfHop
 public import HashSig.SLHDSA.Security.SufBound
 public import HashSig.SLHDSA.Security.SufResidual
 public import HashSig.SLHDSA.Security.TargetCounts

@@ -25,6 +25,14 @@ The `*_eq_*` theorems are the faithfulness half of the abstraction: at the hones
 twins, as an equation in `m`. Every twin is reached this way, from `wotsPkGenTopsWithSecret` up to
 `signInternalWithSecretM`, so a reduction may descend to whatever layer it needs and rewrite back.
 
+The `*_natural` theorems carry a twin across a monad morphism: a morphism that commutes with the
+hash callbacks and with the provider commutes with each program built from them. A reduction that
+interprets the provider — answering the secret draws from a challenge oracle, and then reading
+that interpretation back as the honest provider — moves the whole program along the
+interpretation with these, exactly as the `*With_natural` theorems of `HashSig.SLHDSA.Wots`,
+`Xmss` and `Fors` move the landed programs. At the `*M` layer the morphism is a
+`HasQuery.QueryHom (publicHashSpec core)`, so only the provider needs a hypothesis of its own.
+
 ## Scope
 
 Nothing here is probabilistic: `m` is an arbitrary (lawful, for the equations) monad, no
@@ -47,8 +55,10 @@ modules carry for their own programs (`wotsPkGenM_isTotalQueryBound` in `HashSig
 
 ## Labels
 
-Thirty-eight declarations: nineteen provider-parametric programs and nineteen specialisation
-equations.
+Fifty-seven declarations: nineteen provider-parametric programs, nineteen specialisation
+equations and nineteen naturality theorems.  There is no private declaration: the monadic-vector
+naturality step the WOTS+ and FORS twins need is `Vector.ofFnM_natural` of
+`ToMathlib.Data.Vector`.
 
 *Provider-parametric programs*:
 
@@ -72,6 +82,16 @@ equations.
 * `signFromPositionWithSecret_eq_signFromPositionWith`, `signWithSecret_eq_signWith`,
   `rootWithSecret_eq_rootWith`, `signWithSecretM_eq_signM`, `rootWithSecretM_eq_rootM`;
 * `keygenInternalWithSecretM_eq_keygenInternalM`, `signInternalWithSecretM_eq_signInternalM`.
+
+*Naturality* — each states that a monad morphism commuting with the callbacks and the provider
+commutes with the twin, named after it: `wotsPkGenTopsWithSecret_natural`,
+`wotsSignWithSecret_natural`, `wotsPkGenWithSecret_natural`, `xmssLeafWithSecret_natural`,
+`xmssNodeWithSecret_natural`, `xmssRootWithSecret_natural`, `xmssSignWithSecret_natural`,
+`forsLeafWithSecret_natural`, `forsRootWithSecret_natural`, `forsPkGenWithSecret_natural`,
+`forsSignWithSecret_natural`, `forsSignWithSecretM_natural`,
+`signFromPositionWithSecret_natural`, `signWithSecret_natural`, `rootWithSecret_natural`,
+`signWithSecretM_natural`, `rootWithSecretM_natural`, `keygenInternalWithSecretM_natural`,
+`signInternalWithSecretM_natural`.
 
 ## References
 
@@ -313,6 +333,220 @@ theorem forsSignWithSecretM_eq_forsSignM {m : Type → Type*} [Monad m] [LawfulM
       (forsSignM core md skSeed pkSeed adrs : m (ForsSigCore p core)) := by
   rw [forsSignWithSecretM, forsSignM, forsSignWithSecret_eq_forsSignWith]
 
+/-! ## Naturality of the WOTS+, XMSS and FORS twins -/
+
+/-- A monad morphism commutes with the provider-parametric WOTS+ chain ends when it commutes with
+the hash callback and with the provider. -/
+theorem wotsPkGenTopsWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y) (hsecret : ∀ a, F (secretm a) = secretn a)
+    (adrs : Adrs) :
+    F (wotsPkGenTopsWithSecret core hashm secretm adrs) =
+      wotsPkGenTopsWithSecret core hashn secretn adrs := by
+  apply Vector.ofFnM_natural F
+  intro i
+  rw [F.mmap_bind, hsecret]
+  exact bind_congr fun x => chainWith_natural F hashm hashn hhash _ _ _ _
+
+/-- A monad morphism commutes with provider-parametric WOTS+ signing when it commutes with the
+hash callback and with the provider. -/
+theorem wotsSignWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y) (hsecret : ∀ a, F (secretm a) = secretn a)
+    (msg : core.Y) (adrs : Adrs) :
+    F (wotsSignWithSecret core hashm secretm msg adrs) =
+      wotsSignWithSecret core hashn secretn msg adrs := by
+  apply Vector.ofFnM_natural F
+  intro i
+  rw [F.mmap_bind, hsecret]
+  exact bind_congr fun x => chainWith_natural F hashm hashn hhash _ _ _ _
+
+/-- A monad morphism commutes with provider-parametric WOTS+ public-key generation when it
+commutes with the hash and compression callbacks and with the provider. -/
+theorem wotsPkGenWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (adrs : Adrs) :
+    F (wotsPkGenWithSecret core hashm compressm secretm adrs) =
+      wotsPkGenWithSecret core hashn compressn secretn adrs := by
+  rw [wotsPkGenWithSecret, wotsPkGenWithSecret, F.mmap_bind,
+    wotsPkGenTopsWithSecret_natural core F hashm hashn secretm secretn hhash hsecret]
+  exact bind_congr fun tops => hcompress _ _
+
+/-- A monad morphism commutes with a provider-parametric XMSS leaf when it commutes with the
+hash and compression callbacks and with the provider. -/
+theorem xmssLeafWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (adrs : Adrs) (t : ℕ) :
+    F (xmssLeafWithSecret core hashm compressm secretm adrs t) =
+      xmssLeafWithSecret core hashn compressn secretn adrs t :=
+  wotsPkGenWithSecret_natural core F hashm hashn compressm compressn secretm secretn
+    hhash hcompress hsecret (wotsLeafAdrs adrs t)
+
+/-- A monad morphism commutes with a provider-parametric XMSS subtree root when it commutes with
+every callback and with the provider. -/
+theorem xmssNodeWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (adrs : Adrs) (z t : ℕ) :
+    F (xmssNodeWithSecret core hashm compressm nodeHashm secretm adrs z t) =
+      xmssNodeWithSecret core hashn compressn nodeHashn secretn adrs z t := by
+  apply PerfectMerkleTree.merkleRootM_natural F
+  · intro i
+    exact xmssLeafWithSecret_natural core F hashm hashn compressm compressn secretm secretn
+      hhash hcompress hsecret adrs i
+  · intro h i l r
+    exact xmssNodeHashWith_natural F nodeHashm nodeHashn hnode adrs h i l r
+
+/-- A monad morphism commutes with the provider-parametric XMSS root when it commutes with every
+callback and with the provider. -/
+theorem xmssRootWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (adrs : Adrs) :
+    F (xmssRootWithSecret core hashm compressm nodeHashm secretm adrs) =
+      xmssRootWithSecret core hashn compressn nodeHashn secretn adrs :=
+  xmssNodeWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
+    secretm secretn hhash hcompress hnode hsecret adrs p.hp 0
+
+/-- A monad morphism commutes with provider-parametric XMSS signing when it commutes with every
+callback and with the provider. -/
+theorem xmssSignWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (msg : core.Y) (adrs : Adrs) (idx : ℕ) :
+    F (xmssSignWithSecret core hashm compressm nodeHashm secretm msg adrs idx) =
+      xmssSignWithSecret core hashn compressn nodeHashn secretn msg adrs idx := by
+  rw [xmssSignWithSecret, xmssSignWithSecret, F.mmap_bind,
+    PerfectMerkleTree.intrinsicAuthPathM_natural F _ _
+      (xmssLeafWithSecret core hashn compressn secretn adrs)
+      (xmssNodeHashWith nodeHashn adrs)
+      (fun i => xmssLeafWithSecret_natural core F hashm hashn compressm compressn secretm secretn
+        hhash hcompress hsecret adrs i)
+      (fun h i l r => xmssNodeHashWith_natural F nodeHashm nodeHashn hnode adrs h i l r)]
+  refine bind_congr fun path => ?_
+  rw [F.mmap_bind, wotsSignWithSecret_natural core F hashm hashn secretm secretn hhash hsecret]
+  exact bind_congr fun sig => F.mmap_pure _
+
+/-- A monad morphism commutes with a provider-parametric FORS leaf when it commutes with the
+leaf-hash callback and with the provider. -/
+theorem forsLeafWithSecret_natural {m n : Type → Type*} [Monad m] [Monad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y) (hsecret : ∀ a, F (secretm a) = secretn a)
+    (adrs : Adrs) (t : ℕ) :
+    F (forsLeafWithSecret core hashm secretm adrs t) =
+      forsLeafWithSecret core hashn secretn adrs t := by
+  rw [forsLeafWithSecret, forsLeafWithSecret, F.mmap_bind, hsecret]
+  exact bind_congr fun x => hhash _ _
+
+/-- A monad morphism commutes with a provider-parametric FORS tree root when it commutes with the
+leaf and node callbacks and with the provider. -/
+theorem forsRootWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (adrs : Adrs) (i : ℕ) :
+    F (forsRootWithSecret core hashm nodeHashm secretm adrs i) =
+      forsRootWithSecret core hashn nodeHashn secretn adrs i :=
+  PerfectMerkleTree.merkleRootM_natural F _ _ _ _
+    (fun t => forsLeafWithSecret_natural core F hashm hashn secretm secretn hhash hsecret adrs t)
+    (fun z t l r => forsNodeHashWith_natural F nodeHashm nodeHashn hnode adrs z t l r) _ _
+
+/-- A monad morphism commutes with provider-parametric FORS public-key generation when it
+commutes with every callback and with the provider. -/
+theorem forsPkGenWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (adrs : Adrs) :
+    F (forsPkGenWithSecret core hashm nodeHashm compressm secretm adrs) =
+      forsPkGenWithSecret core hashn nodeHashn compressn secretn adrs := by
+  rw [forsPkGenWithSecret, forsPkGenWithSecret, F.mmap_bind,
+    Vector.ofFnM_natural F _ _ (fun i : Fin p.k => forsRootWithSecret_natural core F hashm hashn
+      nodeHashm nodeHashn secretm secretn hhash hnode hsecret adrs i.val)]
+  exact bind_congr fun roots => hcompress _ _
+
+/-- A monad morphism commutes with provider-parametric FORS signing when it commutes with the
+leaf and node callbacks and with the provider. -/
+theorem forsSignWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (md : List Byte) (adrs : Adrs) :
+    F (forsSignWithSecret core hashm nodeHashm secretm md adrs) =
+      forsSignWithSecret core hashn nodeHashn secretn md adrs := by
+  apply Vector.ofFnM_natural F
+  intro i
+  rw [F.mmap_bind, PerfectMerkleTree.intrinsicAuthPathM_natural F _ _
+    (forsLeafWithSecret core hashn secretn adrs) (forsNodeHashWith nodeHashn adrs)
+    (fun t => forsLeafWithSecret_natural core F hashm hashn secretm secretn hhash hsecret adrs t)
+    (fun z t l r => forsNodeHashWith_natural F nodeHashm nodeHashn hnode adrs z t l r)]
+  refine bind_congr fun path => ?_
+  rw [F.mmap_bind, hsecret]
+  exact bind_congr fun sk => F.mmap_pure _
+
+/-- A query-preserving monad morphism commutes with provider-parametric FORS signing when it
+commutes with the provider. -/
+theorem forsSignWithSecretM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
+    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hsecret : ∀ a, F.toMonadHom (secretm a) = secretn a)
+    (md : List Byte) (pkSeed : core.PkSeed) (adrs : Adrs) :
+    F.toMonadHom (forsSignWithSecretM core secretm md pkSeed adrs) =
+      forsSignWithSecretM core secretn md pkSeed adrs :=
+  forsSignWithSecret_natural core F.toMonadHom _ _ _ _ secretm secretn
+    (PublicHash.f_natural core F pkSeed) (PublicHash.h_natural core F pkSeed) hsecret md adrs
+
 end SLHDSA
 
 namespace SLHDSA.GeneralHypertree
@@ -435,6 +669,115 @@ theorem rootWithSecretM_eq_rootM {m : Type → Type*} [Monad m] [LawfulMonad m]
       (rootM vp core skSeed pkSeed : m core.Y) := by
   rw [rootWithSecretM, rootM, rootWithSecret_eq_rootWith]
 
+/-! ## Naturality of the hypertree twins -/
+
+/-- A monad morphism commutes with provider-parametric hypertree signing from a position when it
+commutes with every callback and with the provider. -/
+theorem signFromPositionWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (recoverFinal : Bool) (pos : LayerPosition vp) :
+    ∀ (layers : ℕ) (h : pos.layer.val + layers = vp.params.d) (msg : core.Y),
+      F (signFromPositionWithSecret core hashm compressm nodeHashm secretm recoverFinal pos
+          layers h msg) =
+        signFromPositionWithSecret core hashn compressn nodeHashn secretn recoverFinal pos
+          layers h msg
+  | 0, _, _ => by
+      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_pure]
+  | 1, _, msg => by
+      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_bind,
+        xmssSignWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
+          secretm secretn hhash hcompress hnode hsecret]
+      refine bind_congr fun sig => ?_
+      cases recoverFinal with
+      | false => simp only [Bool.false_eq_true, reduceIte, F.mmap_pure]
+      | true =>
+          simp only [reduceIte, F.mmap_bind,
+            xmssPkFromSigWith_natural F core hashm hashn compressm compressn nodeHashm nodeHashn
+              hhash hcompress hnode]
+          exact bind_congr fun _ => F.mmap_pure _
+  | layers + 2, hremaining, msg => by
+      rw [signFromPositionWithSecret, signFromPositionWithSecret, F.mmap_bind,
+        xmssSignWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
+          secretm secretn hhash hcompress hnode hsecret]
+      refine bind_congr fun sig => ?_
+      rw [F.mmap_bind, xmssPkFromSigWith_natural F core hashm hashn compressm compressn
+        nodeHashm nodeHashn hhash hcompress hnode]
+      refine bind_congr fun root => ?_
+      refine (F.mmap_bind _ _).trans ?_
+      rw [signFromPositionWithSecret_natural F hashm hashn compressm compressn
+        nodeHashm nodeHashn secretm secretn hhash hcompress hnode hsecret false _ (layers + 1)]
+      exact bind_congr fun rest => F.mmap_pure _
+
+/-- A monad morphism commutes with provider-parametric hypertree signing when it commutes with
+every callback and with the provider. -/
+theorem signWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) (msg : core.Y) (parts : DigestParts vp.params) :
+    F (signWithSecret core hashm compressm nodeHashm secretm msg parts) =
+      signWithSecret core hashn compressn nodeHashn secretn msg parts :=
+  signFromPositionWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
+    secretm secretn hhash hcompress hnode hsecret _ _ _ _ _
+
+/-- A monad morphism commutes with the provider-parametric hypertree root when it commutes with
+every callback and with the provider. -/
+theorem rootWithSecret_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] (F : m →ᵐ n)
+    (hashm : Adrs → core.Y → m core.Y) (hashn : Adrs → core.Y → n core.Y)
+    (compressm : Adrs → List core.Y → m core.Y) (compressn : Adrs → List core.Y → n core.Y)
+    (nodeHashm : Adrs → core.Y → core.Y → m core.Y)
+    (nodeHashn : Adrs → core.Y → core.Y → n core.Y)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hhash : ∀ a y, F (hashm a y) = hashn a y)
+    (hcompress : ∀ a ys, F (compressm a ys) = compressn a ys)
+    (hnode : ∀ a l r, F (nodeHashm a l r) = nodeHashn a l r)
+    (hsecret : ∀ a, F (secretm a) = secretn a) :
+    F (rootWithSecret core hashm compressm nodeHashm secretm) =
+      rootWithSecret core hashn compressn nodeHashn secretn :=
+  xmssRootWithSecret_natural core F hashm hashn compressm compressn nodeHashm nodeHashn
+    secretm secretn hhash hcompress hnode hsecret _
+
+/-- A query-preserving monad morphism commutes with provider-parametric hypertree signing when it
+commutes with the provider. -/
+theorem signWithSecretM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
+    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hsecret : ∀ a, F.toMonadHom (secretm a) = secretn a)
+    (msg : core.Y) (pkSeed : core.PkSeed) (parts : DigestParts vp.params) :
+    F.toMonadHom (signWithSecretM core secretm msg pkSeed parts) =
+      signWithSecretM core secretn msg pkSeed parts :=
+  signWithSecret_natural core F.toMonadHom _ _ _ _ _ _ secretm secretn
+    (PublicHash.f_natural core F pkSeed) (PublicHash.tl_natural core F pkSeed)
+    (PublicHash.h_natural core F pkSeed) hsecret msg parts
+
+/-- A query-preserving monad morphism commutes with the provider-parametric hypertree root when
+it commutes with the provider. -/
+theorem rootWithSecretM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
+    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hsecret : ∀ a, F.toMonadHom (secretm a) = secretn a) (pkSeed : core.PkSeed) :
+    F.toMonadHom (rootWithSecretM core secretm pkSeed) = rootWithSecretM core secretn pkSeed :=
+  rootWithSecret_natural core F.toMonadHom _ _ _ _ _ _ secretm secretn
+    (PublicHash.f_natural core F pkSeed) (PublicHash.tl_natural core F pkSeed)
+    (PublicHash.h_natural core F pkSeed) hsecret
+
 end SLHDSA.GeneralHypertree
 
 namespace SLHDSA
@@ -488,6 +831,40 @@ theorem signInternalWithSecretM_eq_signInternalM {m : Type → Type*} [Monad m] 
       (signInternalM vp core msg sk addrnd : m (SignatureCore vp core)) := by
   rw [signInternalWithSecretM, signInternalM]
   simp only [forsSignWithSecretM_eq_forsSignM, GeneralHypertree.signWithSecretM_eq_signM]
+
+/-! ## Naturality of the scheme twins -/
+
+/-- A query-preserving monad morphism commutes with provider-parametric key generation when it
+commutes with the provider. -/
+theorem keygenInternalWithSecretM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
+    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hsecret : ∀ a, F.toMonadHom (secretm a) = secretn a) (pkSeed : core.PkSeed) :
+    F.toMonadHom (keygenInternalWithSecretM core secretm pkSeed) =
+      keygenInternalWithSecretM core secretn pkSeed :=
+  GeneralHypertree.rootWithSecretM_natural core F secretm secretn hsecret pkSeed
+
+/-- A query-preserving monad morphism commutes with provider-parametric signing when it commutes
+with the provider. -/
+theorem signInternalWithSecretM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
+    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hsecret : ∀ a, F.toMonadHom (secretm a) = secretn a)
+    (msg : List Byte) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) (pkRoot addrnd : core.Y) :
+    F.toMonadHom (signInternalWithSecretM core secretm msg skPrf pkSeed pkRoot addrnd) =
+      signInternalWithSecretM core secretn msg skPrf pkSeed pkRoot addrnd := by
+  rw [signInternalWithSecretM, signInternalWithSecretM, F.toMonadHom.mmap_bind,
+    PublicHash.hmsg_natural core F]
+  refine bind_congr fun digest => ?_
+  rw [F.toMonadHom.mmap_bind, forsSignWithSecretM_natural core F secretm secretn hsecret]
+  refine bind_congr fun forsSig => ?_
+  rw [F.toMonadHom.mmap_bind, forsPkFromSigM_natural core F]
+  refine bind_congr fun forsPk => ?_
+  rw [F.toMonadHom.mmap_bind,
+    GeneralHypertree.signWithSecretM_natural core F secretm secretn hsecret]
+  exact bind_congr fun htSig => F.toMonadHom.mmap_pure _
 
 end GeneralScheme
 
