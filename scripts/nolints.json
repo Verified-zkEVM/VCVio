@@ -762,7 +762,6 @@
  ["docBlame", "OracleContext.impl"],
  ["docBlame", "OracleContext.spec"],
  ["docBlame", "OracleQuery.mk"],
- ["docBlame", "OracleSpec.DecidableEq"],
  ["docBlame", "OracleSpec.Domain"],
  ["docBlame", "OracleSpec.Fintype"],
  ["docBlame", "OracleSpec.Inhabited"],
