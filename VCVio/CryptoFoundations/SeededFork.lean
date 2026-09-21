@@ -59,7 +59,8 @@ variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} [IsUniformSpec spec
 
 section forkDef
 
-variable [∀ i, SampleableType (spec.Range i)] [spec.DecidableEq] [unifSpec ⊂ₒ spec]
+variable [∀ i, SampleableType (spec.Range i)] [∀ i, DecidableEq (spec.Range i)]
+  [unifSpec ⊂ₒ spec]
 
 /-- The forking operation: run `main` with a random seed, then re-run it with the seed modified
 at the `s`-th query to oracle `i` (where `s = cf x₁`), checking that both runs agree on `cf`.
@@ -144,7 +145,8 @@ private lemma isPerIndexQueryBound_if_pure {p : Prop} [Decidable p] {oa : Oracle
   split <;> simp [h]
 
 omit [IsUniformSpec spec] in
-private lemma isPerIndexQueryBound_seededForkWithSeedValue_replayGuard [spec.DecidableEq]
+private lemma isPerIndexQueryBound_seededForkWithSeedValue_replayGuard
+    [∀ i, DecidableEq (spec.Range i)]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     {seed : QuerySeed spec} {u : spec.Range i} (hmain : IsPerIndexQueryBound main qb)
     (hseed : ∀ t, qb t ≤ (seed t).length) (x₁ : α) (s : Fin (qb i + 1)) :
@@ -176,7 +178,7 @@ omit [IsUniformSpec spec] in
 The first seeded run is query-free (covered by the seed); the replay after the fork point uses
 at most the remaining `i`-budget. The bound holds regardless of which fork index `cf` returns. -/
 theorem isPerIndexQueryBound_seededForkWithSeedValue
-    [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+    [∀ i, DecidableEq (spec.Range i)] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) {seed : QuerySeed spec} {u : spec.Range i}
     (hmain : IsPerIndexQueryBound main qb) (hseed : ∀ t, qb t ≤ (seed t).length) :
     IsPerIndexQueryBound (seededForkWithSeedValue main qb i cf seed u)
@@ -198,7 +200,8 @@ variable [∀ i, SampleableType (spec.Range i)]
 variable [∀ i, MeasurableSpace (spec.Range i)]
   [∀ i, DiscreteMeasurableSpace (spec.Range i)]
 
-private lemma expectedQueryCount_seededForkWithSeedValue_le_aux [spec.DecidableEq] [Finite ι]
+private lemma expectedQueryCount_seededForkWithSeedValue_le_aux
+    [∀ i, DecidableEq (spec.Range i)] [Finite ι]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) {seed : QuerySeed spec}
     (hmain : IsPerIndexQueryBound main qb) (hseed : ∀ t, qb t ≤ (seed t).length) :
@@ -218,8 +221,9 @@ omit [IsUniformSpec spec] in
 /-- The expected unit-cost query count of `seededForkWithSeedValue`, averaged over the randomly
 sampled seed and replacement value, is at most `qb i`. -/
 theorem expectedQueryCount_seededForkWithSeedValue_le
-    [spec.DecidableEq] [Finite ι] [IsUniformSpec spec] (main : OracleComp spec α) (qb : ι → ℕ)
-    (js : List ι) (i : ι) (cf : α → Option (Fin (qb i + 1)))
+    [∀ i, DecidableEq (spec.Range i)] [Finite ι] [IsUniformSpec spec]
+    (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
+    (cf : α → Option (Fin (qb i + 1)))
     (hmain : IsPerIndexQueryBound main qb) (hjs : SeedListCovers qb js) :
     wp (generateSeed spec qb js) (fun seed => wp ($ᵗ spec.Range i)
       (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u) CostModel.unit
@@ -234,7 +238,7 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
 
 section forkRuntime
 
-variable [spec.DecidableEq]
+variable [∀ i, DecidableEq (spec.Range i)]
 variable [Finite ι]
 
 /-- Total expected query work of one fork attempt. The LHS decomposes as three terms:
@@ -281,8 +285,8 @@ end generateSeedCoverage
 
 variable (main : OracleComp spec α) (qb : ι → ℕ)
     (js : List ι) (i : ι) (cf : α → Option (Fin (qb i + 1)))
-    [∀ i, SampleableType (spec.Range i)] [spec.DecidableEq] [unifSpec ⊂ₒ spec]
-    [unifSpec ˡ⊂ₒ spec]
+    [∀ i, SampleableType (spec.Range i)] [∀ i, DecidableEq (spec.Range i)]
+    [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec]
 
 omit [IsUniformSpec spec] [unifSpec ˡ⊂ₒ spec] in
 /-- If `seededFork` succeeds (returns `some`), both runs agree on the fork index. -/
@@ -301,7 +305,7 @@ theorem probEvent_seededFork_fst_eq_probEvent_pair (s : Fin (qb i + 1)) :
   refine probEvent_ext fun r hr => ?_
   cases r <;> grind [cf_eq_of_mem_support_seededFork]
 
-omit [spec.DecidableEq] [DecidableEq ι] in
+omit [∀ i, DecidableEq (spec.Range i)] [DecidableEq ι] in
 private lemma probEvent_uniform_eq_seedSlot_le_inv (s : Fin (qb i + 1)) (seed : QuerySeed spec) :
     let h : ℝ≥0∞ := ↑(Fintype.card (spec.Range i))
     Pr[ fun u : spec.Range i => (seed i)[↑s]? = some u
@@ -383,7 +387,7 @@ private lemma probOutput_collision_le_main_div (s : Fin (qb i + 1)) :
           (qc := qb) (js := js) (oa := main) (f := cf)
           (y := (some s : Option (Fin (qb i + 1))))
 
-omit [spec.DecidableEq] in
+omit [∀ i, DecidableEq (spec.Range i)] in
 private lemma probOutput_main_eq_tsum_seed_weighted (s : Fin (qb i + 1)) :
     (Pr[= s | cf <$> main] : ℝ≥0∞) =
       ∑' σ, Pr[= σ | generateSeed spec qb js] *
@@ -400,7 +404,7 @@ private lemma probOutput_main_eq_tsum_seed_weighted (s : Fin (qb i + 1)) :
   rw [hseeded, probOutput_bind_eq_tsum]
   simp_rw [probOutput_liftComp]
 
-omit [spec.DecidableEq] in
+omit [∀ i, DecidableEq (spec.Range i)] in
 private lemma probOutput_noGuardComp_eq_tsum_factored (s : Fin (qb i + 1)) :
     Pr[= (some (some s, some s) :
         Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) | do
@@ -436,7 +440,7 @@ private lemma probOutput_noGuardComp_eq_tsum_factored (s : Fin (qb i + 1)) :
     (seededOracle.evalSPMF_liftComp_uniformSample_bind_simulateQ_run'_addValue
       (σ.takeAtIndex i ↑s) i main) cf (some s)
 
-omit [spec.DecidableEq] in
+omit [∀ i, DecidableEq (spec.Range i)] in
 omit [unifSpec ˡ⊂ₒ spec] in
 private lemma sq_tsum_seed_weighted_le_tsum_factored (s : Fin (qb i + 1)) :
     (∑' σ, Pr[= σ | generateSeed spec qb js] *
@@ -451,7 +455,7 @@ private lemma sq_tsum_seed_weighted_le_tsum_factored (s : Fin (qb i + 1)) :
     seededOracle.sq_tsum_probOutput_generateSeed_le_tsum_mul_takeAtIndex qb js i (↑s) (cf <$> main)
       (some s)
 
-omit [spec.DecidableEq] in
+omit [∀ i, DecidableEq (spec.Range i)] in
 private lemma sq_probOutput_main_le_noGuardComp (s : Fin (qb i + 1)) :
     let z : Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1))) := some (some s, some s)
     let noGuardComp :
@@ -599,7 +603,7 @@ private lemma sum_probEvent_fork_le_tsum_some :
     (mx := seededFork main qb js i cf) (cf ∘ Prod.fst)
   rwa [probEvent_isSome_eq_tsum_probOutput_some] at h
 
-omit [DecidableEq ι] [∀ i, SampleableType (spec.Range i)] [spec.DecidableEq]
+omit [DecidableEq ι] [∀ i, SampleableType (spec.Range i)] [∀ i, DecidableEq (spec.Range i)]
   [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec] in
 /-- The standard forking-lemma precondition is itself a valid probability bound. -/
 theorem seededFork_precondition_le_one :

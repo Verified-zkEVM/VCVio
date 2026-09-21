@@ -188,7 +188,7 @@ theorem proverWithFinalQuery_forkable [SampleableType Chal]
 
 section probability
 
-variable [Fintype Chal] [Inhabited Chal] [SampleableType Chal]
+variable [SampleableType Chal]
 
 /-- Replay's finite response spaces carry their discrete measurable structure. -/
 local instance : ∀ t, MeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => ⊤
@@ -198,7 +198,7 @@ local instance : ∀ t, DiscreteMeasurableSpace ((Fork.wrappedSpec Chal).Range t
 
 /-- The singleton replay challenge oracle uses uniform challenges. -/
 noncomputable local instance : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
-  IsUniformMeasureSpec.ofFintypeInhabited _
+  IsUniformMeasureSpec.ofFiniteNonempty _
 
 /-- Forkable acceptance equals acceptance of the actual verifier for a bounded ordinary prover. -/
 theorem forkable_acceptance_eq_verification
@@ -232,7 +232,8 @@ noncomputable def knowledgeAcceptance
 
 /-- An ordinary prover's actual acceptance yields the replay extractor's valid-witness bound.
 All subtraction is truncated in `ENNReal`; small challenge spaces can make this bound vacuous. -/
-theorem knowledgeExtractor_success [DecidableEq Chal] [SampleableType Wit]
+theorem knowledgeExtractor_success [Fintype Chal] [Inhabited Chal] [DecidableEq Chal]
+    [SampleableType Wit]
     (hss : σ.SpeciallySound)
     (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
     (pk : Stmt) (msg : M) (Q : ℕ) (hQ : nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :

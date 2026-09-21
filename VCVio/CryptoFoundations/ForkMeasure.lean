@@ -52,7 +52,7 @@ measure of the successful-result event. -/
 theorem le_evalDist_isSome_seededFork_sq
     (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
-    [∀ j, SampleableType (spec.Range j)] [spec.DecidableEq]
+    [∀ j, SampleableType (spec.Range j)] [∀ j, DecidableEq (spec.Range j)]
     [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec] :
     ((∑ s, Pr[= some s | cf <$> main]) ^ 2 / ((qb i + 1 : ℕ) : ℝ≥0∞)
         - (∑ s, Pr[= some s | cf <$> main]) /
@@ -73,8 +73,8 @@ variable {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
 /-- The replay/context forking bound, stated as the Mathlib measure of the
 successful-result event. -/
 theorem le_evalDist_isSome_contextFork
-    [DecidableEq ι] [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1)))
+    [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
+    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     (hreach : PathCfReachable main qb i cf) :
     (let acc : ℝ≥0∞ := ∑ s, Pr[= some s | cf <$> main]
      let h : ℝ≥0∞ := Fintype.card (spec.Range i)

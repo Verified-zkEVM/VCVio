@@ -29,13 +29,13 @@ namespace FinRatPMF
 variable {ι : Type u} {spec : OracleSpec ι}
 
 /-- Computable query implementation using the executable `FinRatPMF.Raw` monad. -/
-def finRatImpl [spec.Inhabited] [∀ t : spec.Domain, FinEnum (spec.Range t)] :
+def finRatImpl [∀ t, Inhabited (spec.Range t)] [∀ t : spec.Domain, FinEnum (spec.Range t)] :
     QueryImpl spec Raw :=
   fun t => Raw.uniform (α := spec.Range t)
 
 namespace finRatImpl
 
-variable [spec.Inhabited] [∀ t : spec.Domain, FinEnum (spec.Range t)]
+variable [∀ t, Inhabited (spec.Range t)] [∀ t : spec.Domain, FinEnum (spec.Range t)]
 
 section Measure
 
@@ -63,9 +63,6 @@ lemma evalDist_simulateQ {α : Type v} [MeasurableSpace α] (oa : OracleComp spe
         IsMeasureSpec.toMeasure_eq_uniformOn]
 
 end Measure
-
-local instance instSpecFintypeOfFinEnum : spec.Fintype where
-  fintypeB _ := inferInstance
 
 noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
   IsUniformSpec.ofFintypeInhabited _
@@ -124,7 +121,8 @@ namespace finRatImpl
 /-- Final event checks have the same probability under executable and oracle evaluation. -/
 lemma prEvent_simulateQ {ι : Type u} {spec : OracleSpec.{u, 0} ι}
     [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-    [IsUniformMeasureSpec spec] [∀ t : spec.Domain, FinEnum (spec.Range t)]
+    [IsUniformMeasureSpec spec] [∀ t, Inhabited (spec.Range t)]
+    [∀ t : spec.Domain, FinEnum (spec.Range t)]
     {α : Type} (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← simulateQ (finRatImpl (spec := spec)) oa}[p x] = Pr{let x ← oa}[p x] := by
   simpa only [simulateQ_bind, simulateQ_pure] using

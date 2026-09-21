@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio
 public import VCVio.Native
+import VCVioTest.OracleComp.SpecInstanceSearch
 
 /-!
 # Instance search under the full library
@@ -32,6 +33,29 @@ set_option synthInstance.maxHeartbeats 2000 in
 noncomputable example {α : Type u} : DecidableEq α := by
   classical
   infer_instance
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A reintroduced search loop must fail here rather than eventually succeed (VCVio#772).
+/-- Equality on a dependent family under `classical` comes from `Classical.propDecidable`, not
+from a specification invented around the family, even with every compatibility instance of the
+library in scope. -/
+noncomputable def classicalDepDecEq {α : Type u} {β : α → Type u} (a : α) :
+    DecidableEq (β a) := by
+  classical
+  infer_instance
+
+run_cmd Lean.Elab.Command.liftCoreM <|
+  VCVioTest.OracleComp.SpecInstanceSearch.assertNoSpecEquality ``classicalDepDecEq
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A reintroduced search loop must fail here rather than eventually succeed (VCVio#772).
+/-- Under uniform measure semantics, the cardinality of one answer type is an ordinary
+per-query hypothesis; the semantics class carries no finiteness data. -/
+example {ι : Type} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+    (t : spec.Domain) [Fintype (spec.Range t)] (u : spec.Range t) :
+    OracleSpec.IsMeasureSpec.toMeasure t {u} = (Fintype.card (spec.Range t) : ENNReal)⁻¹ :=
+  OracleSpec.IsUniformMeasureSpec.toMeasure_singleton t u
 
 set_option synthInstance.maxHeartbeats 2000 in
 -- A reintroduced search loop must fail here rather than eventually succeed (VCVio#772).

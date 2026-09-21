@@ -60,14 +60,8 @@ example (ν : Measure ℝ) :
 /-- A finite-answer interface whose semantics is a native uniform measure. -/
 @[expose, reducible] def coinSpec : PFunctor.{0, 0} := ⟨Unit, fun _ => Bool⟩
 
-instance : coinSpec.Fintype where
-  fintypeB _ := inferInstance
-
-instance : coinSpec.Inhabited where
-  inhabitedB _ := inferInstance
-
 noncomputable instance : coinSpec.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFintypeInhabited _
+  IsMeasureSpec.uniformOfFiniteNonempty _
 
 example (mx : FreeM coinSpec Bool) (my : FreeM coinSpec (Fin 3))
     (mz : FreeM coinSpec Unit) (f : Bool → Fin 3 → Unit → FreeM coinSpec ℝ) :

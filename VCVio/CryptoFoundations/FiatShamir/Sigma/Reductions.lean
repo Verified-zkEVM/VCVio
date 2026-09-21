@@ -246,7 +246,7 @@ local instance replayResponseDiscrete :
 
 /-- The replay experiment uses native uniform response measures. -/
 noncomputable local instance replayUniformMeasure : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
-  IsUniformMeasureSpec.ofFintypeInhabited _
+  IsUniformMeasureSpec.ofFiniteNonempty _
 
 omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
   [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in

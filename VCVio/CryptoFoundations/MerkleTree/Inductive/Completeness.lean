@@ -58,7 +58,7 @@ The proof proceeds by reducing to the functional completeness theorem by a theor
 the OracleComp monad,
 and then applying the functional version of the completeness theorem.
 -/
-theorem completeness [DecidableEq α] [Inhabited α] [SampleableType α] {s}
+theorem completeness [DecidableEq α] [SampleableType α] {s}
     (leaf_data_tree : LeafData α s) (idx : BinaryTree.SkeletonLeafIndex s)
     (preexisting_cache : (spec α).QueryCache) :
     Pr[fun v => v.1 = true | (simulateQ (spec α).randomOracle (do

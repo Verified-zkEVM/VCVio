@@ -347,8 +347,7 @@ theorem isPerIndexQueryBound_run_simulateQ_withLogging_iff
 if `oa` makes at most `n` queries, then every support point of
 `(simulateQ loggingOracle oa).run` has log length at most `n`. -/
 theorem log_length_le_of_mem_support_run_simulateQ
-    {ι : Type} {spec : OracleSpec.{0, 0} ι}
-    [spec.DecidableEq] {α : Type}
+    {ι : Type} {spec : OracleSpec.{0, 0} ι} {α : Type}
     {oa : OracleComp spec α} {n : ℕ}
     (hbound : IsTotalQueryBound oa n)
     {z : α × QueryLog spec}

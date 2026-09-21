@@ -8,7 +8,7 @@ Any file using `evalSPMF`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleCom
 
 **Symptom**: "failed to synthesize instance" mentioning `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
 
-**Fix**: Add `[IsProbabilitySpec spec]` for arbitrary per-query probability semantics, or `[IsUniformSpec spec]` for uniform oracle semantics. If you already have `[spec.Fintype] [spec.Inhabited]` and want uniform sampling, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
+**Fix**: Add `[IsProbabilitySpec spec]` for arbitrary per-query probability semantics, or `[IsUniformSpec spec]` for uniform oracle semantics. If you already have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and want uniform sampling, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`; for the measure-native surface, `IsUniformMeasureSpec.ofFiniteNonempty spec` needs only `[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]`.
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 
@@ -105,6 +105,33 @@ position, even though the same fields elaborate separately.
   computational `Decidable`, pass `Classical.propDecidable` explicitly. For example, use
   `@decide_eq_true_iff _ (Classical.propDecidable _)` when rewriting an accompanying `iff`
   lemma instead of asking Lean to reduce the decision procedure.
+
+### 8b. No global instance may conclude `C spec.Domain` or `C (spec.Range t)` for a generic `spec`
+
+`OracleSpec.Domain` and `OracleSpec.Range` are reducible, and `DiscrTree.mkPath` unfolds
+reducible definitions and keys a metavariable-headed application as a wildcard. An instance
+whose conclusion is `DecidableEq spec.Domain` is therefore indexed as `DecidableEq ι`, and one
+whose conclusion is `Fintype (spec.Range t)` as `Fintype (?spec ?t)`: each is a candidate for
+every goal of its class, with `spec` undetermined. Search then invents a specification through
+the reducible `ofFn` layer. In the `Domain` form that looped until the heartbeat limit for any
+unconstrained `DecidableEq α` (VCVio#772). In the `Range` form the unifier's first-order
+approximation assigns `?spec := β` at a goal `DecidableEq (β a)`, so whenever the exact
+instances fail and only a `classical` fallback remains, the elaborated term silently routed
+through oracle-specification data; `UniformCompatibility.instCompatible` once depended on
+that detour for a `Finset.filter_eq'` rewrite to fire.
+
+VCVio has no such instances. Write `[DecidableEq ι]` for index equality, and
+`[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` — or
+their `Finite`/`Nonempty` forms when only a proposition is needed — for answer types,
+quantified over `t` only when the statement ranges over arbitrary queries. Specifications
+built with `ofFn` (`unifSpec`, `coinSpec`, `A →ₒ B`) reduce to their answer types, and `+`
+combines per-branch instances; a specification defined by a `match` on the query keeps a
+per-query instance proved by `cases` (see `cmaSpec`). The spellings `spec.Range t`, `spec t`, and
+`spec.toPFunctor.B t` are one type at reducible transparency, so a hypothesis in any of them
+serves goals in the others. `IsUniformMeasureSpec` is a proposition
+and derives `finite_range`/`nonempty_range` as theorems, never instances.
+`VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchNative.lean` guard all of
+this with heartbeat-bounded canaries and an elaborated-term dependency check.
 
 ### 9. Universe polymorphism
 

@@ -152,7 +152,7 @@ lemma getQueryValue?_completion_path_eq_answer [DecidableEq ι] {main : OracleCo
 
 section quantitative
 
-variable [DecidableEq ι] [spec.DecidableEq]
+variable [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
 
 /-- Reachability hypothesis on the fork-index selector `cf`: whenever the first run
 of `main` outputs `x` and the recorded log is `log`, every selected fork index
@@ -174,7 +174,7 @@ def PathCfReachable (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     cf (PFunctor.FreeM.output main path) = some s →
       (PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s).isSome
 
-omit [spec.DecidableEq] in
+omit [∀ t, DecidableEq (spec.Range t)] in
 /-- Transcript reachability implies the canonical path-level condition. -/
 theorem CfReachable.toPathCfReachable {main : OracleComp spec α} {qb : ι → ℕ} {i : ι}
     {cf : α → Option (Fin (qb i + 1))} (hreach : CfReachable main qb i cf) :
@@ -253,7 +253,7 @@ def contextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     i main cf Fin.val fun selected =>
       acceptContextForkWitness main qb i cf selected.label selected.view
 
-omit [DecidableEq ι] [spec.DecidableEq] in
+omit [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)] in
 /-- The `outputs` pair of a contextual-fork witness is the pair of oracle outputs read at its
 first and second fork paths. -/
 @[simp] theorem contextForkWitness_outputs (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
@@ -499,7 +499,7 @@ def contextForkPair (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     OracleComp spec (Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) :=
   observedForkPair main i s cf
 
-omit [spec.DecidableEq] in
+omit [∀ t, DecidableEq (spec.Range t)] in
 /-- Fixed-index success squares under two independent completions of the
 PolyFun occurrence context. This is the analytic core of replay forking and
 does not use query logs, replay cursors, or a bespoke oracle interpreter. -/
@@ -663,8 +663,6 @@ theorem probOutput_contextForkViewCollision_le_collision [IsUniformSpec spec]
         else pure none
   have hsource : contextForkViewCollision main qb i cf s =
       paths >>= viewCollision := by
-    let : spec.toPFunctor.DecidableEq :=
-      (inferInstance : spec.DecidableEq).toDecidableEq
     unfold contextForkViewCollision contextForkView
     rw [PFunctor.FreeM.Cursor.map_locateAndForkAt]
     apply congrArg (fun k => paths >>= k)
@@ -773,8 +771,6 @@ theorem probEvent_guardedContextFork_eq_contextFork_component
       Pr[fun result : Option (α × α) =>
           result.map (cf ∘ Prod.fst) = some (some s) |
         contextFork main qb i cf] := by
-  let : spec.toPFunctor.DecidableEq :=
-    (inferInstance : spec.DecidableEq).toDecidableEq
   rw [contextFork_eq_contextForkByClassify]
   unfold guardedContextFork contextForkByClassify
   rw [PFunctor.FreeM.Cursor.filterMapLocateAndForkAt_eq_bind_complete,

@@ -216,7 +216,7 @@ protected theorem inductionOptional {α} {C : OptionT (OracleComp spec) α → P
 section construct
 
 /-- Version of `construct` with automatic induction on the `query` in when defining the
-`query_bind` case. Can be useful with `spec.DecidableEq` and `spec.FiniteRange`.
+`query_bind` case. Can be useful with decidable equality or finiteness of the answer types.
 `mapM`/`simulateQ` is usually preferable to this if the object being constructed is a monad. -/
 @[elab_as_elim]
 protected def construct {α}
@@ -284,12 +284,12 @@ end noConfusion
 
 /-- Given a computation `oa : OracleComp spec α`, construct a value `x : α`,
 by assuming each query returns the `default` value given by the `Inhabited` instance. -/
-def defaultResult [spec.Inhabited] (oa : OracleComp spec α) : α :=
+def defaultResult [∀ t, Inhabited (spec.Range t)] (oa : OracleComp spec α) : α :=
   PFunctor.FreeM.liftM (m := Id) (fun _ => default) oa
 
 /-- Total number of queries in a computation across all possible execution paths.
 Can be a helpful alternative to `sizeOf` when proving recursive calls terminate. -/
-def totalQueries [spec.Fintype] {α : Type v} (oa : OracleComp spec α) : ℕ := by
+def totalQueries [∀ t, Fintype (spec.Range t)] {α : Type v} (oa : OracleComp spec α) : ℕ := by
   induction oa using OracleComp.construct with
   | pure x => exact 0
   | query_bind t oa rec_n => exact 1 + ∑ x, rec_n x

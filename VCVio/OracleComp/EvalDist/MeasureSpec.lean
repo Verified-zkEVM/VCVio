@@ -8,19 +8,22 @@ module
 
 public import VCVio.EvalDist.PFunctorMeasure.Core
 public import VCVio.OracleComp.OracleComp
+import ToMathlib.Probability.UniformOn
 
 /-!
 # Measure-valued oracle specifications
 
 An oracle specification assigns a probability measure to each query's response type.
-Uniform specifications additionally carry finite, inhabited response types and identify
-the chosen response measures with the uniform measures. These certificates are explicit:
-finiteness alone does not select a probabilistic interpretation.
+A uniform specification identifies each chosen response measure with the uniform measure on
+its response type; this is a proposition about the chosen measures, and finiteness and
+inhabitedness of the response types follow from it rather than being carried as data. These
+certificates are explicit: finiteness alone does not select a probabilistic interpretation.
 -/
 
 public section
 
 open MeasureTheory ProbabilityTheory
+open scoped ENNReal
 
 universe u v
 
@@ -40,20 +43,29 @@ abbrev toMeasure [∀ t, MeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
     (t : spec.Domain) : Measure (spec.Range t) :=
   PFunctor.IsMeasureSpec.toMeasure (P := spec.toPFunctor) t
 
+/-- Each response measure is a probability measure. This restates the polynomial-functor
+instance at the oracle API, whose response types are `spec.Range t` rather than
+`spec.toPFunctor.B t`, so that instance search finds it for oracle goals. -/
+instance isProbabilityMeasure_toMeasure [∀ t, MeasurableSpace (spec.Range t)]
+    [IsMeasureSpec spec] (t : spec.Domain) : IsProbabilityMeasure (toMeasure t) :=
+  PFunctor.IsMeasureSpec.isProbabilityMeasure (P := spec.toPFunctor) t
+
 end IsMeasureSpec
 
-/-- A chosen measure interpretation that samples uniformly from each finite response type. -/
+/-- A chosen measure interpretation that samples uniformly from each response type.
+
+This is a proposition about the chosen response measures: each one is the uniform measure on
+its response type. It carries no finiteness or inhabitedness data. `uniformOn Set.univ` is a
+probability measure exactly on a finite, nonempty type, which
+`IsMeasureSpec.isProbabilityMeasure` records, so `IsUniformMeasureSpec.finite_range` and
+`IsUniformMeasureSpec.nonempty_range` recover both facts. Statements about cardinalities take
+`[Fintype (spec.Range t)]` for the queries they mention. -/
 class IsUniformMeasureSpec (spec : OracleSpec.{u, v} ι)
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] extends IsMeasureSpec spec where
-  /-- Every response type is finite. -/
-  fintype : spec.Fintype
-  /-- Every response type is inhabited. -/
-  inhabited : spec.Inhabited
   /-- Each query uses the uniform probability measure on its response type. -/
   toMeasure_eq_uniform : ∀ t, toMeasure t = uniformOn Set.univ
 
-attribute [reducible, instance 100] IsUniformMeasureSpec.fintype IsUniformMeasureSpec.inhabited
 attribute [simp] IsUniformMeasureSpec.toMeasure_eq_uniform
 
 /-- The response measure exposed by the oracle API is uniform for a uniform specification. -/
@@ -62,30 +74,68 @@ theorem IsMeasureSpec.toMeasure_eq_uniformOn [∀ t, MeasurableSpace (spec.Range
     (t : spec.Domain) : toMeasure t = uniformOn Set.univ :=
   IsUniformMeasureSpec.toMeasure_eq_uniform t
 
-/-- Select uniform measure semantics for a finite, inhabited oracle specification. -/
+/-- Select uniform measure semantics for an oracle specification whose response types are
+finite and nonempty. -/
 @[reducible]
-noncomputable def IsUniformMeasureSpec.ofFintypeInhabited
+noncomputable def IsUniformMeasureSpec.ofFiniteNonempty
     (spec : OracleSpec.{u, v} ι)
-    [hF : spec.Fintype] [hI : spec.Inhabited]
+    [∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] : IsUniformMeasureSpec spec where
   toMeasure _ := uniformOn Set.univ
   isProbabilityMeasure _ := inferInstance
-  fintype := hF
-  inhabited := hI
   toMeasure_eq_uniform _ := rfl
 
 /-- Native uniform measure semantics for the finite-range selection oracle. -/
 @[reducible]
 noncomputable def IsUniformMeasureSpec.unifSpec : IsUniformMeasureSpec _root_.unifSpec :=
-  ofFintypeInhabited _
+  ofFiniteNonempty _
 
 /-- Native uniform measure semantics for the fair-coin oracle. -/
 @[reducible]
 noncomputable def IsUniformMeasureSpec.coinSpec : IsUniformMeasureSpec _root_.coinSpec :=
-  ofFintypeInhabited _
+  ofFiniteNonempty _
 
 attribute [instance] IsUniformMeasureSpec.unifSpec IsUniformMeasureSpec.coinSpec
+
+namespace IsUniformMeasureSpec
+
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [IsUniformMeasureSpec spec]
+
+/-- A uniform response measure is a probability measure only on a finite response type.
+
+Not an instance: for a generic `spec` its conclusion `Finite (spec.Range t)` would be a
+candidate for every `Finite _` goal. -/
+theorem finite_range (t : spec.Domain) : Finite (spec.Range t) := by
+  have h : IsMeasureSpec.toMeasure (spec := spec) t Set.univ ≠ 0 := by
+    rw [measure_univ]
+    exact one_ne_zero
+  rw [IsMeasureSpec.toMeasure_eq_uniformOn t] at h
+  exact Set.finite_univ_iff.mp (finite_of_uniformOn_ne_zero h)
+
+/-- A uniform response measure is a probability measure only on a nonempty response type.
+
+Not an instance, for the reason given at `finite_range`. -/
+theorem nonempty_range (t : spec.Domain) : Nonempty (spec.Range t) :=
+  (IsMeasureSpec.toMeasure (spec := spec) t).nonempty_of_neZero
+
+/-- Every response has positive probability under a uniform response measure. -/
+theorem toMeasure_singleton_pos (t : spec.Domain) (u : spec.Range t) :
+    0 < IsMeasureSpec.toMeasure (spec := spec) t {u} := by
+  have := finite_range t
+  rw [IsMeasureSpec.toMeasure_eq_uniformOn t]
+  refine pos_iff_ne_zero.mpr fun h => ?_
+  rw [uniformOn_eq_zero_iff Set.finite_univ] at h
+  simp at h
+
+/-- On a finite response type, each response has probability the inverse cardinality. -/
+theorem toMeasure_singleton (t : spec.Domain) [Fintype (spec.Range t)] (u : spec.Range t) :
+    IsMeasureSpec.toMeasure (spec := spec) t {u} = (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ := by
+  have := nonempty_range t
+  rw [IsMeasureSpec.toMeasure_eq_uniformOn t, uniformOn_univ_apply_singleton]
+
+end IsUniformMeasureSpec
 
 end OracleSpec
 

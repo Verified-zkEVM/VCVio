@@ -100,9 +100,9 @@ def AgreesWithFn (f : QueryImpl spec Id) (cache : QueryCache spec) : Prop :=
   ∀ ⦃t : spec.Domain⦄ ⦃r : spec.Range t⦄, cache t = some r → f t = r
 
 /-- Every cache is extended by some total answer function. -/
-lemma exists_agreesWithFn [spec.Inhabited] (cache : QueryCache spec) :
+lemma exists_agreesWithFn [∀ t, Nonempty (spec.Range t)] (cache : QueryCache spec) :
     ∃ f : QueryImpl spec Id, cache.AgreesWithFn f := by
-  refine ⟨fun t => (cache t).getD default, ?_⟩
+  refine ⟨fun t => (cache t).getD (Classical.arbitrary _), ?_⟩
   intro t r h
   simp [h]
 
@@ -379,7 +379,7 @@ Note that this requires decidable equality on the indexing set. -/
 def logQuery (log : QueryLog spec) (t : spec.Domain) (u : spec.Range t) : QueryLog spec :=
   log ++ singleton t u
 
-instance [DecidableEq ι] [spec.DecidableEq] : DecidableEq (QueryLog spec) :=
+instance [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)] : DecidableEq (QueryLog spec) :=
   inferInstanceAs (DecidableEq (List _))
 
 section getQ

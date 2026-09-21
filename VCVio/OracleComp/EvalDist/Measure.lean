@@ -287,14 +287,9 @@ theorem mem_support_iff_evalDist_singleton_pos
     [OracleSpec.IsUniformMeasureSpec spec]
     {α : Type v} [MeasurableSpace α] [MeasurableSingletonClass α]
     (mx : OracleComp spec α) (x : α) :
-    x ∈ support mx ↔ 0 < 𝒟[mx] {x} := by
-  apply mem_support_iff_evalDist_singleton_pos_of_fullSupport
-    (fun t u => ?_) mx x
-  have heq : OracleSpec.IsMeasureSpec.toMeasure (spec := spec) t =
-      uniformOn (Set.univ : Set (spec.Range t)) :=
-    OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t
-  rw [heq, ProbabilityTheory.uniformOn_univ_apply_singleton]
-  exact ENNReal.inv_pos.mpr (by simp)
+    x ∈ support mx ↔ 0 < 𝒟[mx] {x} :=
+  mem_support_iff_evalDist_singleton_pos_of_fullSupport
+    (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) mx x
 
 /-- Under native uniform oracle semantics, an event has probability one exactly when it contains
 every structurally reachable output. -/
@@ -306,14 +301,9 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
     [OracleSpec.IsUniformMeasureSpec spec]
     [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (mx : OracleComp spec α) (p : α → Prop) :
-    𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x := by
-  apply evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
-  intro t u
-  have heq : OracleSpec.IsMeasureSpec.toMeasure (spec := spec) t =
-      uniformOn (Set.univ : Set (spec.Range t)) :=
-    OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t
-  rw [heq, ProbabilityTheory.uniformOn_univ_apply_singleton]
-  exact ENNReal.inv_pos.mpr (by simp)
+    𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x :=
+  evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
+    (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) mx p
 
 /-! ## Events in `Pr{}` form -/
 

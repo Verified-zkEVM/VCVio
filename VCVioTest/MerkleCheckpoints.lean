@@ -17,7 +17,7 @@ open MerkleTreeMultiExtractability MerkleTreeMultiExtractability.DelayedObservat
 open MerkleCheckpoints
 
 noncomputable local instance : IsUniformMeasureSpec (Query →ₒ Bool) :=
-  IsUniformMeasureSpec.ofFintypeInhabited (Query →ₒ Bool)
+  IsUniformMeasureSpec.ofFiniteNonempty (Query →ₒ Bool)
 
 example : (atTerminal (outcome false) checkpoint).root = checkpoint.root := rfl
 

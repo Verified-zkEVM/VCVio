@@ -31,8 +31,9 @@ variable {ι : Type u} {τ : Type v} {spec : OracleSpec ι} {superSpec : OracleS
 /-- Pushing the uniform distribution on `superSpec.Range` through the lens's
 backward fiber recovers the uniform distribution on `spec.Range`. Load-bearing
 for `evalSPMF_liftComp` below. -/
-lemma evalSPMF_liftM_query [superSpec.Fintype] [superSpec.Inhabited]
-    [spec.Fintype] [spec.Inhabited] (t : spec.Domain) :
+lemma evalSPMF_liftM_query [∀ t, Fintype (superSpec.Range t)]
+    [∀ t, Nonempty (superSpec.Range t)] (t : spec.Domain) [Fintype (spec.Range t)]
+    [Nonempty (spec.Range t)] :
     (PMF.uniformOfFintype (superSpec.Range
       ((liftM (n := OracleQuery superSpec) (spec.query t)).input))).map
       ((liftM (n := OracleQuery superSpec) (spec.query t)).cont) =

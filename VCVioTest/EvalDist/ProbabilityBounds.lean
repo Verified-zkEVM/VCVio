@@ -165,8 +165,8 @@ end fork
 
 example {ι : Type} {spec : OracleSpec ι} {α : Type}
     [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} {n : Nat}
-    {path : PFunctor.FreeM.Path main}
+    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
+    {n : Nat} {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
     Pr{let view ← OracleComp.ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
       accept (PFunctor.FreeM.output main view.firstPath)] ≤

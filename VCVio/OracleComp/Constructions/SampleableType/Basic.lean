@@ -358,7 +358,7 @@ lemma support_simulateQ {α : Type} (oa : OracleComp spec α) :
 
 /-- Full-support query sampling also preserves the finite support when answers are enumerable. -/
 @[simp]
-lemma finSupport_simulateQ [spec.Fintype] {α : Type} [DecidableEq α]
+lemma finSupport_simulateQ [∀ t, Fintype (spec.Range t)] {α : Type} [DecidableEq α]
     (oa : OracleComp spec α) :
     finSupport (simulateQ uniformSampleImpl oa) = finSupport oa := by
   simp [finSupport_eq_iff_support_eq_coe]

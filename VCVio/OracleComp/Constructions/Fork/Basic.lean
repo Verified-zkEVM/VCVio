@@ -140,14 +140,13 @@ end answer
 /-- Under uniform answer measures, a guarded collision is bounded by inverse cardinality. -/
 theorem prEvent_focusCollision_fork_le_of_uniform
     [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} {n : Nat}
-    {path : PFunctor.FreeM.Path main}
+    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
+    {n : Nat} {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
     Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
       accept (PFunctor.FreeM.output main view.firstPath)] ≤
       (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
-  simpa only [IsMeasureSpec.toMeasure_eq_uniformOn,
-    ProbabilityTheory.uniformOn_univ_apply_singleton] using
+  simpa only [IsUniformMeasureSpec.toMeasure_singleton] using
     prEvent_focusCollision_fork_le located accept
 
 /-- Observe the outputs of both completions of a fixed typed occurrence. -/
