@@ -174,6 +174,7 @@ def PathCfReachable (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     cf (PFunctor.FreeM.output main path) = some s →
       (PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s).isSome
 
+omit [spec.DecidableEq] in
 /-- Transcript reachability implies the canonical path-level condition. -/
 theorem CfReachable.toPathCfReachable {main : OracleComp spec α} {qb : ι → ℕ} {i : ι}
     {cf : α → Option (Fin (qb i + 1))} (hreach : CfReachable main qb i cf) :
@@ -202,6 +203,7 @@ def classifyForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
   else if cf x₁ = some s ∧ cf x₂ = some s then some (x₁, x₂)
   else none
 
+omit [DecidableEq ι] in
 @[simp] private theorem classifyForkView_isSome
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
@@ -211,6 +213,7 @@ def classifyForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
         cf (PFunctor.FreeM.output main view.secondPath) = some s := by
   grind [classifyForkView]
 
+omit [DecidableEq ι] in
 private theorem classifyForkView_component_iff
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
@@ -230,6 +233,7 @@ def acceptContextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : 
     Option (ContextForkWitness main qb i) :=
   if (classifyForkView main qb i cf s view).isSome then some ⟨s, view⟩ else none
 
+omit [DecidableEq ι] in
 @[simp] private theorem acceptContextForkWitness_eq_some
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
@@ -249,7 +253,7 @@ def contextForkWitness (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     i main cf Fin.val fun selected =>
       acceptContextForkWitness main qb i cf selected.label selected.view
 
-omit [spec.DecidableEq] in
+omit [DecidableEq ι] [spec.DecidableEq] in
 /-- The `outputs` pair of a contextual-fork witness is the pair of oracle outputs read at its
 first and second fork paths. -/
 @[simp] theorem contextForkWitness_outputs (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
@@ -418,6 +422,7 @@ def collideForkView (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
       cf (PFunctor.FreeM.output main view.secondPath) = some s
       then some s else none
 
+omit [DecidableEq ι] in
 @[simp] private theorem collideForkView_eq_some
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     (s : Fin (qb i + 1)) (view : PFunctor.FreeM.Cursor.ForkView i main s) :
@@ -452,6 +457,7 @@ def contextForkCollision (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     OracleComp spec (Option (Fin (qb i + 1))) :=
   PFunctor.FreeM.withPath main >>= contextForkCollisionCont main qb i cf s
 
+omit [DecidableEq ι] in
 private theorem probEvent_classifyForkView_isSome_eq_zero_of_first_ne [IsProbabilitySpec spec]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (s : Fin (qb i + 1))
@@ -468,6 +474,7 @@ private theorem probEvent_classifyForkView_isSome_eq_zero_of_first_ne [IsProbabi
   convert probEvent_False (ofFreeM located.occurrence.complete)
   simp [PFunctor.FreeM.Cursor.ForkView.firstPath, hfirst]
 
+omit [DecidableEq ι] in
 private theorem probEvent_classifyForkView_component_eq_zero_of_ne [IsProbabilitySpec spec]
     (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1))) (t s : Fin (qb i + 1))
@@ -492,6 +499,7 @@ def contextForkPair (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     OracleComp spec (Option (Option (Fin (qb i + 1)) × Option (Fin (qb i + 1)))) :=
   observedForkPair main i s cf
 
+omit [spec.DecidableEq] in
 /-- Fixed-index success squares under two independent completions of the
 PolyFun occurrence context. This is the analytic core of replay forking and
 does not use query logs, replay cursors, or a bespoke oracle interpreter. -/
