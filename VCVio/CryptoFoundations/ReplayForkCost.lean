@@ -67,7 +67,7 @@ theorem isQueryBoundP_occurrence_complete {main : OracleComp spec α} {target : 
 
 /-- The actual selected replay fork uses at most twice the source program's query budget.
 The bound holds on every branch, including an absent selector or a rejected fork. -/
-theorem isQueryBoundP_contextFork [spec.DecidableEq]
+theorem isQueryBoundP_contextFork [DecidableEq ι] [spec.DecidableEq]
     (main : OracleComp spec α) (qb : ι → ℕ) (target : ι)
     (select : α → Option (Fin (qb target + 1))) (N : ℕ)
     (h : IsQueryBoundP main p N) :

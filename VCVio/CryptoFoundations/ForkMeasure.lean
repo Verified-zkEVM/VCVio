@@ -73,7 +73,7 @@ variable {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
 /-- The replay/context forking bound, stated as the Mathlib measure of the
 successful-result event. -/
 theorem le_evalDist_isSome_contextFork
-    [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+    [DecidableEq ι] [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
     (hreach : PathCfReachable main qb i cf) :
     (let acc : ℝ≥0∞ := ∑ s, Pr[= some s | cf <$> main]

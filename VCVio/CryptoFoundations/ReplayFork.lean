@@ -142,7 +142,7 @@ original oracle computation. -/
 
 /-- The selected entry of an occurrence completion's erased trace is exactly
 its focused answer. -/
-lemma getQueryValue?_completion_path_eq_answer [spec.DecidableEq] {main : OracleComp spec α} {i : ι}
+lemma getQueryValue?_completion_path_eq_answer [DecidableEq ι] {main : OracleComp spec α} {i : ι}
     {n : Nat} (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
     (completion : occurrence.Completion) :
     QueryLog.getQueryValue? (PFunctor.FreeM.Path.trace main completion.path) i n =
@@ -152,7 +152,7 @@ lemma getQueryValue?_completion_path_eq_answer [spec.DecidableEq] {main : Oracle
 
 section quantitative
 
-variable [spec.DecidableEq]
+variable [DecidableEq ι] [spec.DecidableEq]
 
 /-- Reachability hypothesis on the fork-index selector `cf`: whenever the first run
 of `main` outputs `x` and the recorded log is `log`, every selected fork index

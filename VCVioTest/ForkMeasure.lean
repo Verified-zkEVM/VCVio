@@ -57,7 +57,7 @@ variable {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
   [MeasurableSpace α]
 
 /-- The replay-fork measure wrapper retains its reachability premise and success-event bound. -/
-example [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+example [DecidableEq ι] [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
     (hreach : OracleComp.PathCfReachable main qb i cf) :
     (let acc : ℝ≥0∞ := ∑ s, Pr[= some s | cf <$> main]

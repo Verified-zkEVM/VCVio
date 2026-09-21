@@ -42,7 +42,7 @@ def withPath (main : OracleComp spec α) : OracleComp spec (PFunctor.FreeM.Path 
 
 /-- Split at an occurrence through the `OracleComp` abstraction boundary. -/
 @[expose, reducible]
-def splitAtValid [spec.DecidableEq] (main : OracleComp spec α) (i : ι) (n : Nat) :
+def splitAtValid [DecidableEq ι] (main : OracleComp spec α) (i : ι) (n : Nat) :
     OracleComp spec {split : PFunctor.FreeM.Cursor.Split i main n // split.Valid} :=
   ofFreeM (PFunctor.FreeM.Cursor.splitAtValid i (toFreeM main) n)
 
@@ -151,7 +151,7 @@ theorem prEvent_focusCollision_fork_le_of_uniform
     prEvent_focusCollision_fork_le located accept
 
 /-- Observe the outputs of both completions of a fixed typed occurrence. -/
-@[expose] def observedForkPair [spec.DecidableEq]
+@[expose] def observedForkPair [DecidableEq ι]
     (main : OracleComp spec α) (i : ι) (n : Nat)
     (observe : α → β) : OracleComp spec (Option (β × β)) :=
   Option.map (fun view =>
@@ -161,20 +161,20 @@ theorem prEvent_focusCollision_fork_le_of_uniform
 
 /-- An observed output selects an occurrence only if that occurrence exists on
 the corresponding intrinsic execution path. -/
-@[expose] def OutputSelectsOccurrence [spec.DecidableEq]
+@[expose] def OutputSelectsOccurrence [DecidableEq ι]
     (main : OracleComp spec α) (i : ι) (n : Nat)
     (observe : α → Option β) (value : β) : Prop :=
   ∀ path : PFunctor.FreeM.Path main,
     observe (PFunctor.FreeM.output main path) = some value →
       (PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path n).isSome
 
-private theorem splitAtValid_bind_complete_oracleComp [spec.DecidableEq]
+private theorem splitAtValid_bind_complete_oracleComp [DecidableEq ι]
     (main : OracleComp spec α) (i : ι) (n : Nat) :
     (Cursor.splitAtValid main i n >>= fun certified => Cursor.complete certified.1) =
       Cursor.withPath main :=
   PFunctor.FreeM.Cursor.splitAtValid_bind_complete i main n
 
-private theorem splitAtValid_bind_completeFork_oracleComp [spec.DecidableEq]
+private theorem splitAtValid_bind_completeFork_oracleComp [DecidableEq ι]
     (main : OracleComp spec α) (i : ι) (n : Nat) :
     (Cursor.splitAtValid main i n >>= fun certified => Cursor.completeFork certified.1) =
       PFunctor.FreeM.Cursor.locateAndForkAt (P := spec.toPFunctor) i main n :=
@@ -191,7 +191,7 @@ private theorem map_completeFork_found_oracleComp {main : OracleComp spec α} {i
   PFunctor.FreeM.Cursor.Split.map_completeFork_found occurrence observe
 
 /-- A certified missing split cannot produce an output selecting its nominal occurrence. -/
-lemma ne_some_of_valid_missing [spec.DecidableEq]
+lemma ne_some_of_valid_missing [DecidableEq ι]
     {main : OracleComp spec α} {i : ι} {n : Nat}
     {observe : α → Option β} {value : β}
     (hselect : OutputSelectsOccurrence main i n observe value)
@@ -205,7 +205,7 @@ lemma ne_some_of_valid_missing [spec.DecidableEq]
 
 /-- Fixed-index observed success squares under two independent completions of the selected
 occurrence context. Answer measures need not be uniform. -/
-theorem prEvent_sq_le_observedForkPair [spec.DecidableEq]
+theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
     [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [IsMeasureSpec spec]
     (main : OracleComp spec α) (i : ι) (n : Nat) (observe : α → Option β) (value : β)

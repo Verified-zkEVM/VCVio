@@ -29,7 +29,7 @@ variable {ι : Type} {spec : OracleSpec ι} {α β : Type}
 the selected occurrence context. -/
 @[deprecated "VCVio retiring probability API: use `prEvent_sq_le_observedForkPair`"
   (since := "2026-09-16")]
-theorem sq_probOutput_map_le_observedForkPair [spec.DecidableEq] [IsUniformSpec spec]
+theorem sq_probOutput_map_le_observedForkPair [DecidableEq ι] [IsUniformSpec spec]
     (main : OracleComp spec α) (i : ι) (n : Nat) (observe : α → Option β) (value : β)
     (hselect : OutputSelectsOccurrence main i n observe value) :
     Pr[= value | observe <$> main] ^ 2 ≤
