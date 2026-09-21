@@ -60,6 +60,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
+public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.ITSR
 public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay

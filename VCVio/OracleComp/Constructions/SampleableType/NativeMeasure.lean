@@ -22,7 +22,11 @@ from.  `evalDist_uniformSample_le_of_encard_le` takes a bound `k` fixed in advan
 `evalDist_uniformSample_le_encard_div` takes the set's own cardinality; a potential argument that
 charges a different set at every step has no single `k` to supply, so it needs the latter.  The
 latter's denominator is `Nat.card` rather than `Fintype.card` because `SampleableType` carries
-only `Finite`.
+only `Finite`.  `evalDist_uniformSample_eq_encard_div` is the exact form, which a tightness
+argument needs because an inequality in the wrong direction is useless there; it is stated at a
+`Fintype`, with a `Fintype.card` denominator, to match its consumer and not because exactness
+needs the extra hypothesis — the same equality holds at `Nat.card` under `SampleableType`'s
+`Finite` alone.
 -/
 
 public section
@@ -48,6 +52,13 @@ theorem evalDist_uniformSample_le_of_encard_le {α : Type} [SampleableType α] [
     MeasureTheory.Measure.count_apply MeasurableSet.of_discrete]
   gcongr
   exact (ENat.toENNReal_le.mpr hS).trans_eq (by simp)
+
+/-- A uniform finite sample lands in a set with exactly its cardinality's share of the mass. -/
+theorem evalDist_uniformSample_eq_encard_div {α : Type} [SampleableType α] [_root_.Fintype α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] (S : Set α) :
+    𝒟[($ᵗ α : ProbComp α)] S = (S.encard : ENNReal) / Fintype.card α := by
+  rw [evalDist_uniformSample, ProbabilityTheory.uniformOn_univ,
+    MeasureTheory.Measure.count_apply MeasurableSet.of_discrete]
 
 /-- A uniform finite sample lands in a set with at most its own cardinality's share of the mass:
 `S.encard / Nat.card α`. -/

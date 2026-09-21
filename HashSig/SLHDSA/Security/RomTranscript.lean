@@ -32,20 +32,24 @@ the signing program between two intermediate caches
 reading that succeeds from an intermediate cache succeeds from the final one
 (`QueryCache.simulateQ_toPartialImpl_mono`).
 
+`HasSignQueryBound` is the signing counterpart of
+`HashSig.SLHDSA.Security.CountedRom`'s `HasHashQueryBound`, stated here because the signing log
+is a field of the transcript and the transcript is what this module is about.
+
 ## Scope
 
 * No bad event is defined here.  Which cache entries witness a collision, a hidden-value hit or
   an interleaved-target coverage, and the descent from the cached root that finds them, belong to
   a separate module.
 * Nothing here is probabilistic.  Every statement is about the support of `romRunFull`; no mass
-  of any event is bounded.
+  of any event is bounded.  `HasSignQueryBound` included: it is a condition on that support.
 * The forger's own queries are not described.  The final cache also holds them, and nothing here
   distinguishes an honest entry from an adversarial one.
 * Nothing here is quantum: the oracle is a classical lazily-sampled table.
 
 ## Labels
 
-Eleven declarations.
+Thirteen declarations.
 
 *Settled transcript*:
 
@@ -59,6 +63,8 @@ Eleven declarations.
 * `exists_mem_support_run_romImpl_of_mem_support_romRunFull`,
   `exists_mem_support_run_signInternalM_of_mem_log_romRunFull`;
 * `simulateQ_toPartialImpl_eq_some_of_mem_support_romRunFull`.
+
+*The signing budget*: `HasSignQueryBound`, `length_map_fst_le_of_hasSignQueryBound`.
 
 ## References
 
@@ -259,5 +265,28 @@ theorem simulateQ_toPartialImpl_eq_some_of_mem_support_romRunFull
       (simulateQ_toPartialImpl_snd_signInternalM_of_mem_support_run_romImpl core _ _ _ hmem)⟩
   · rw [generalAlgM_verify] at hv
     exact simulateQ_toPartialImpl_snd_verifyInternalM_of_mem_support_run_romImpl core _ _ _ hv
+
+/-! ## The signing budget -/
+
+/-- **The signing budget.**  Every execution of the instrumented run makes at most `qs` signing
+queries.
+
+Like `HasHashQueryBound` this is a condition on the support and not a complexity assumption: it
+constrains only how many signatures the forger asks for.  Unlike `HasHashQueryBound` it is not
+read off any instrumentation, and it is a support condition of a different kind: the cost
+instrumentation of `countedRomImpl` cannot charge a signing query at all, because the signing
+oracle is interpreted in the inner simulation over
+`romSpec + (List Byte →ₒ GeneralScheme.SignatureCore vp core)` and its result is a program over
+`romSpec`, so a signing query never reaches the counted handler.  It need not: the signing log
+is a field of the transcript, and its length is exactly the number of signing queries. -/
+def HasSignQueryBound (adv : unforgeableAdv romAlg) (qs : ℕ) : Prop :=
+  ∀ z ∈ support (romRunFull core adv), z.1.log.length ≤ qs
+
+/-- The signing budget bounds the number of logged messages. -/
+theorem length_map_fst_le_of_hasSignQueryBound (adv : unforgeableAdv romAlg) (qs : ℕ)
+    (hqs : HasSignQueryBound core adv qs)
+    {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv)) :
+    (z.1.log.map (fun e => e.1)).length ≤ qs := by
+  simpa using hqs z hz
 
 end SLHDSA.Security
