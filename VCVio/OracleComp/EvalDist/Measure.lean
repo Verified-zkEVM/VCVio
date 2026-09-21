@@ -30,7 +30,7 @@ public section
 open OracleComp OracleSpec MeasureTheory ProbabilityTheory
 open scoped ENNReal
 
-universe u
+universe u v
 
 namespace OracleComp
 
@@ -174,6 +174,21 @@ theorem le_evalDist_bind_apply_of_support
       _ ≤ _ := lintegral_mono fun u ↦ ih u fun a ha ↦
         h a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
 
+/-- Almost-sure probability-one continuation events remain probability one after sequencing a
+lossless oracle computation. -/
+theorem evalDist_bind_apply_eq_one_of_ae
+    {ι : Type u} {α β : Type v} {spec : OracleSpec.{u, v} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+    (mx : OracleComp spec α) (f : α → OracleComp spec β)
+    {event : Set β} (hevent : MeasurableSet event)
+    (h : ∀ᵐ a ∂𝒟[mx], 𝒟[f a] event = 1) :
+    𝒟[mx >>= f] event = 1 := by
+  rw [evalDist_bind_of_discrete,
+    Measure.bind_apply hevent Measurable.of_discrete.aemeasurable,
+    lintegral_congr_ae h, lintegral_const, evalDist_apply_univ_eq_one, one_mul]
+
 /-- Events agreeing on every possible output have equal successful probability. -/
 theorem prEvent_congr_of_support
     {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
@@ -190,13 +205,13 @@ theorem prEvent_congr_of_support
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
 finiteness alone does not determine it. -/
 theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
-    {ι : Type u} {spec : OracleSpec.{u, 0} ι}
+    {ι : Type u} {spec : OracleSpec.{u, v} ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [OracleSpec.IsMeasureSpec spec]
     (hfull : ∀ t (u : spec.Range t),
       0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
-    {α : Type} [MeasurableSpace α] [MeasurableSingletonClass α]
+    {α : Type v} [MeasurableSpace α] [MeasurableSingletonClass α]
     (mx : OracleComp spec α) (x : α) :
     x ∈ support mx ↔ 0 < 𝒟[mx] {x} := by
   induction mx using OracleComp.inductionOn with
@@ -242,7 +257,7 @@ theorem mem_support_iff_evalDist_singleton_pos_of_fullSupport
 /-- An event has probability one exactly when it contains every structurally reachable output,
 provided every oracle response has positive singleton mass. -/
 theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
-    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [OracleSpec.IsMeasureSpec spec]
@@ -266,11 +281,11 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
 
 /-- Under native uniform oracle semantics, structural reachability is positive singleton mass. -/
 theorem mem_support_iff_evalDist_singleton_pos
-    {ι : Type u} {spec : OracleSpec.{u, 0} ι}
+    {ι : Type u} {spec : OracleSpec.{u, v} ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [OracleSpec.IsUniformMeasureSpec spec]
-    {α : Type} [MeasurableSpace α] [MeasurableSingletonClass α]
+    {α : Type v} [MeasurableSpace α] [MeasurableSingletonClass α]
     (mx : OracleComp spec α) (x : α) :
     x ∈ support mx ↔ 0 < 𝒟[mx] {x} := by
   apply mem_support_iff_evalDist_singleton_pos_of_fullSupport
@@ -285,7 +300,7 @@ theorem mem_support_iff_evalDist_singleton_pos
 every structurally reachable output. -/
 @[grind =]
 theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
-    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [OracleSpec.IsUniformMeasureSpec spec]

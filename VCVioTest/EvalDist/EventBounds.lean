@@ -134,6 +134,33 @@ example {α : Type} (mx : ProbComp α) (win left right : α → Bool)
 
 end game
 
+/-! ## Universe-polymorphic oracle measures -/
+
+section oracleUniverse
+
+universe u w
+
+variable {ι : Type u} {spec : OracleSpec.{u, w + 1} ι}
+  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+
+/-- The AE sequencing API accepts oracle answers and results strictly above `Type 0`. -/
+example [OracleSpec.IsMeasureSpec spec]
+    {α β : Type (w + 1)} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+    (mx : OracleComp spec α) (f : α → OracleComp spec β)
+    {event : Set β} (hevent : MeasurableSet event)
+    (h : ∀ᵐ a ∂𝒟[mx], 𝒟[f a] event = 1) :
+    𝒟[mx >>= f] event = 1 :=
+  evalDist_bind_apply_eq_one_of_ae mx f hevent h
+
+/-- The support characterization also accepts oracle answers and results above `Type 0`. -/
+example [OracleSpec.IsUniformMeasureSpec spec]
+    {α : Type (w + 1)} [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : OracleComp spec α) (p : α → Prop) :
+    𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x :=
+  evalDist_apply_setOf_eq_one_iff_forall_mem_support mx p
+
+end oracleUniverse
+
 /-! ## Uniform counting -/
 
 section uniform
