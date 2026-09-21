@@ -48,6 +48,8 @@ Model simplifications
   since a party's init function has no variant to indicate that it is done at
   that stage. However, note that DF'17 also do not consider UAKE protocols with
   fewer than 2 rounds.
+* Like DF'17, the UAKE definition here does *not* model corruption of long-term
+  secrets, so neither KCI nor forward secrecy is modeled.
 -/
 
 public section
