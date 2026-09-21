@@ -275,7 +275,8 @@ def secretKey : SecretKeyCore toyPrimitives.core := ⟨skSeed, skPrf, pkSeed, pk
 `SignatureAlg.signingLogContains` is `Bool`-valued and compares logged signatures, so the
 library statements about it run on a `DecidableEq` for the signature type, which they carry as a
 hypothesis because none exists: neither `SLHDSA.SignatureCore` nor `ForsTreeSigCore` nor
-`XmssSigCore` derives one, and `HashSig` declares none.  These three build it at this bundle, field by field, and nowhere else. -/
+`XmssSigCore` derives one, and `HashSig` declares none.  These three build it at this bundle, field
+by field, and nowhere else. -/
 
 instance : DecidableEq (ForsTreeSigCore toy.params toyPrimitives.core) := fun a b =>
   decidable_of_iff (a.sk = b.sk ∧ a.auth = b.auth)
