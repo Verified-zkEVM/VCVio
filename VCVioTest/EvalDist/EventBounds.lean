@@ -154,10 +154,33 @@ example (p : Fin 3 × Fin 5 → Prop) :
     Pr{let z ← $ᵗ (Fin 3 × Fin 5)}[p z] = Pr{let x ← $ᵗ Fin 3; let y ← $ᵗ Fin 5}[p (x, y)] :=
   SampleableType.prEvent_uniformSample_prod p
 
+example (p : Fin 3 × Fin 5 → Prop) {ε : ℝ≥0∞}
+    (h : ∀ x, Pr{let y ← $ᵗ Fin 5}[p (x, y)] ≤ ε) :
+    Pr{let z ← $ᵗ (Fin 3 × Fin 5)}[p z] ≤ ε :=
+  SampleableType.prEvent_uniformSample_prod_le_of_forall_fst p h
+
+example (p : Fin 3 × Fin 5 → Prop) {ε : ℝ≥0∞}
+    (h : ∀ y, Pr{let x ← $ᵗ Fin 3}[p (x, y)] ≤ ε) :
+    Pr{let z ← $ᵗ (Fin 3 × Fin 5)}[p z] ≤ ε :=
+  SampleableType.prEvent_uniformSample_prod_le_of_forall_snd p h
+
 example (p : (Fin 4 → Fin 3) → Prop) :
     Pr{let v ← $ᵗ (Fin 4 → Fin 3)}[p v] =
       Pr{let w ← $ᵗ (Fin 3 → Fin 3); let x ← $ᵗ Fin 3}[p (Fin.snoc w x)] :=
   SampleableType.prEvent_uniformSample_finSnoc p
+
+example (event : (Fin 4 → Fin 3) → Prop) (bad : (Fin 3 → Fin 3) → Prop) {ε : ℝ≥0∞}
+    (h : ∀ y, ¬ bad y → Pr{let x ← $ᵗ Fin 3}[event (Fin.snoc y x)] ≤ ε) :
+    Pr{let z ← $ᵗ (Fin 4 → Fin 3)}[event z] ≤
+      Pr{let y ← $ᵗ (Fin 3 → Fin 3)}[bad y] + ε :=
+  SampleableType.prEvent_uniformSample_finSnoc_le_add event bad h
+
+/-- The conditional snoc bound includes the empty-prefix boundary. -/
+example (event : (Fin 1 → Fin 3) → Prop) (bad : (Fin 0 → Fin 3) → Prop) {ε : ℝ≥0∞}
+    (h : ∀ y, ¬ bad y → Pr{let x ← $ᵗ Fin 3}[event (Fin.snoc y x)] ≤ ε) :
+    Pr{let z ← $ᵗ (Fin 1 → Fin 3)}[event z] ≤
+      Pr{let y ← $ᵗ (Fin 0 → Fin 3)}[bad y] + ε :=
+  SampleableType.prEvent_uniformSample_finSnoc_le_add event bad h
 
 /-- Any two samplers of the same type agree on every event. -/
 example (i₁ i₂ : SampleableType (Fin 5)) (p : Fin 5 → Prop) :
@@ -168,6 +191,16 @@ example (i₁ i₂ : SampleableType (Fin 5)) (p : Fin 5 → Prop) :
 noncomputable example : SampleableType {n : Fin 10 // n.val % 2 = 0} :=
   haveI : Nonempty {n : Fin 10 // n.val % 2 = 0} := ⟨⟨0, rfl⟩⟩
   SampleableType.subtype (Fin 10) _
+
+/-- Dependent finite products have an explicit enumeration sampler without a global fallback. -/
+noncomputable example : SampleableType (∀ i : Fin 3, Fin (i + 1)) :=
+  SampleableType.piOfFintype _
+
+/-- The dependent-product constructor includes an empty product even when its unreachable fibers
+are empty. -/
+noncomputable example : SampleableType (∀ _i : Fin 0, Empty) := by
+  letI : ∀ _i : Fin 0, Nonempty Empty := fun i => Fin.elim0 i
+  exact SampleableType.piOfFintype _
 
 end uniform
 
