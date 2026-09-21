@@ -16,6 +16,13 @@ import Mathlib.Logic.Equiv.Bool
 
 Finite-range sampling and transport through an equivalence preserve the native
 uniform output measure certified by `SampleableType`.
+
+There are two set-mass bounds for a uniform sample, and they differ in where the numerator comes
+from.  `evalDist_uniformSample_le_of_encard_le` takes a bound `k` fixed in advance, and
+`evalDist_uniformSample_le_encard_div` takes the set's own cardinality; a potential argument that
+charges a different set at every step has no single `k` to supply, so it needs the latter.  The
+latter's denominator is `Nat.card` rather than `Fintype.card` because `SampleableType` carries
+only `Finite`.
 -/
 
 public section
@@ -41,6 +48,18 @@ theorem evalDist_uniformSample_le_of_encard_le {α : Type} [SampleableType α] [
     MeasureTheory.Measure.count_apply MeasurableSet.of_discrete]
   gcongr
   exact (ENat.toENNReal_le.mpr hS).trans_eq (by simp)
+
+/-- A uniform finite sample lands in a set with at most its own cardinality's share of the mass:
+`S.encard / Nat.card α`. -/
+theorem evalDist_uniformSample_le_encard_div {α : Type} [SampleableType α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] (S : Set α) :
+    𝒟[($ᵗ α : ProbComp α)] S ≤ (S.encard : ENNReal) / Nat.card α := by
+  let _ : _root_.Fintype α := Fintype.ofFinite α
+  have hfin := Set.toFinite S
+  refine le_trans (evalDist_uniformSample_le_of_encard_le S hfin.toFinset.card
+    (le_of_eq hfin.encard_eq_coe_toFinset_card)) ?_
+  rw [Nat.card_eq_fintype_card, hfin.encard_eq_coe_toFinset_card]
+  simp
 
 /-- A uniform finite sample satisfies a decidable event with its accepted fraction of outputs. -/
 @[simp↓ high, grind norm↓]

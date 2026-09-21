@@ -138,6 +138,11 @@ def isCached (cache : QueryCache spec) (t : spec.Domain) : Bool :=
 @[simp]
 lemma isCached_empty (t : spec.Domain) : isCached (∅ : QueryCache spec) t = false := rfl
 
+/-- A query answered in a cache is answered in every larger cache. -/
+lemma isSome_mono {c₁ c₂ : QueryCache spec} (h : c₁ ≤ c₂) {t : spec.Domain}
+    (ht : (c₁ t).isSome) : (c₂ t).isSome :=
+  Option.isSome_iff_exists.mpr ((Option.isSome_iff_exists.mp ht).imp fun _ hu => h hu)
+
 /-! ### Conversion to a set of query-response pairs -/
 
 /-- The set of all `(query, response)` pairs stored in the cache. -/

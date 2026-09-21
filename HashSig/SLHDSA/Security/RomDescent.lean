@@ -26,7 +26,9 @@ key (same public seed, same encoded address) with equal answers and different in
 which is an *honest entry* (`HonestEntry`): a `thash` query whose input is a value the key holder
 computes, with the honest values that input rests on settled in the cache.  The honest side is
 what makes this a target collision on at most one honest entry per address rather than a free
-collision search over the whole cache.
+collision search over the whole cache.  Honesty is monotone in the cache (`HonestEntry.mono`):
+every constructor's premises are successful partial readings, and
+`QueryCache.simulateQ_toPartialImpl_mono` transports those along a cache extension.
 
 **Hidden-value hit** (`HiddenHit`).  The forgery's verification replay under the cache produces a
 value the signing oracle never revealed: a WOTS+ chain value at a step below the one the honest
@@ -71,9 +73,10 @@ honest secret.
 
 ## Labels
 
-Twenty-seven declarations.
+Twenty-eight declarations.
 
-*Honest entries and the target collision*: `HonestEntry`, `TargetCollision`.
+*Honest entries and the target collision*: `HonestEntry`, `HonestEntry.mono`,
+`TargetCollision`.
 
 *Digests, used leaves and honest messages*: `LoggedDigest`, `ForgerDigest`, `UsedLeaf`,
 `childTreeAdrs`, `childTreeAdrs_next`, `forsInstanceAdrs`, `forsInstanceAdrs_initial`,
@@ -137,6 +140,23 @@ inductive HonestEntry (o : RomOutcome vp core) (c : PublicHash.Cache core) :
       (h : ∀ i : Fin vp.params.k,
         forsNode? core c o.sk.skSeed o.pk.pkSeed adrs vp.params.a i.val = some roots[i]) :
       HonestEntry o c (.thash o.pk.pkSeed (core.adrsToKey (forsPkAdrs adrs)) roots.toList)
+
+/-- An honest entry stays honest in a larger cache. -/
+theorem HonestEntry.mono {o : RomOutcome vp core} {c c' : PublicHash.Cache core} (h : c ≤ c')
+    {t : (publicHashSpec core).Domain} (ht : HonestEntry o c t) : HonestEntry o c' t := by
+  induction ht with
+  | xmssNode adrs height i l r hheight hl hr =>
+    exact .xmssNode adrs height i l r hheight (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
+      (QueryCache.simulateQ_toPartialImpl_mono h _ hr)
+  | wotsPk adrs tops hw => exact .wotsPk adrs tops (QueryCache.simulateQ_toPartialImpl_mono h _ hw)
+  | wotsChain adrs i steps v hv =>
+    exact .wotsChain adrs i steps v (QueryCache.simulateQ_toPartialImpl_mono h _ hv)
+  | forsLeaf adrs leaf => exact .forsLeaf adrs leaf
+  | forsNode adrs height i l r hheight hl hr =>
+    exact .forsNode adrs height i l r hheight (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
+      (QueryCache.simulateQ_toPartialImpl_mono h _ hr)
+  | forsRoots adrs roots hr =>
+    exact .forsRoots adrs roots fun i => QueryCache.simulateQ_toPartialImpl_mono h _ (hr i)
 
 /-- Two cache entries at one `thash` key (same public seed, same encoded address) with equal
 answers and different inputs, one of which is an honest entry. -/
