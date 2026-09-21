@@ -40,6 +40,7 @@ public import HashSig.SLHDSA.Position
 public import HashSig.SLHDSA.Primitives
 public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Scheme
+public import HashSig.SLHDSA.SecretProvider
 public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Security.CacheCoverage
 public import HashSig.SLHDSA.Security.CacheDecomposition
