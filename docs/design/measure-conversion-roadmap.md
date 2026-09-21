@@ -145,6 +145,34 @@ Native regressions use usual real spaces, deterministic continuous transitions, 
 a half-mass Gaussian prefix, measurable expected majorants, and explicit optional aborts.
 The public native facade exports the composition API and checks its retired-import boundary.
 
+## Quantitative WP checkpoint
+
+[PR #761](https://github.com/Verified-zkEVM/VCVio/pull/761) publishes this checkpoint, stacked on #758.
+
+Quantitative Hoare triples, simulation and oracle-signature lifting now interpret configured
+answer measures directly. The expectation carrier and transformer laws use core
+`Std.Internal.Do`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
+The qualitative oracle WP remains structural and requires no probability interpretation.
+
+Chosen-space assertion integrals require measurable postconditions. Mapped assertion integrals,
+pathwise bounds, finite answer partitions, and state-discarding simulation leave hidden outputs
+and handler states unmeasured. Uniform finite averages are separate laws with native uniform
+measure premises on the actual answer space. Composed signatures preserve those chosen spaces.
+Public transformer equations and conditional measure equations normalize the tactic rules
+without new `change` steps. Cached triples retain their core assertion and WP instances.
+Proposition indicators and their monotonicity rule belong to the native Hoare owner;
+generalized rewriting works on the assertion-valued event normal form.
+
+The finite query-count bounds in the random-oracle commitment example use native event
+observations and pathwise WP comparisons. Fiat–Shamir correctness and quantitative tactic
+walkthroughs use those laws. Native import guards check both the Hoare surface and a nonuniform
+oracle regression; regression proofs also use real observations and hidden function states.
+
+Retiring relational coupling, scalar probability-equality automation, seeded forking, and the
+commitment example's TV theorem remain distinct theorem families. Their required connections
+use the existing explicit coherence theorem in their compatibility owners. The native Hoare
+and simulation modules do not import PMF/SPMF or probability compatibility classes.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

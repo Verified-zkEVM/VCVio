@@ -124,7 +124,8 @@ private def mkVCGenPlannedStep (label replayText : String) (run : TacticM Bool) 
   { label, replayText, run }
 
 private def hasProbGoal (target : Expr) : Bool :=
-  (findAppWithHead? ``probEvent target).isSome || (findAppWithHead? ``probOutput target).isSome
+  (findAppWithHead? ``evalDist target).isSome ||
+    (findAppWithHead? ``probEvent target).isSome || (findAppWithHead? ``probOutput target).isSome
 
 /-- Report why the current weakest-precondition goal admits no selected structural step. -/
 def throwWpStepError : TacticM Unit := withMainContext do
@@ -1136,7 +1137,8 @@ def throwVCGenStepRwNormalizeError : TacticM Unit := withMainContext do
 /-- Try to lower a probability goal into a `Triple`, `wp`, or probability-equality goal. -/
 def tryLowerProbGoal : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
-  let isProbEventGoal := (findAppWithHead? ``probEvent target).isSome
+  let isProbEventGoal := (findAppWithHead? ``evalDist target).isSome ||
+    (findAppWithHead? ``probEvent target).isSome
   let isProbOutputGoal := (findAppWithHead? ``probOutput target).isSome
   unless isProbEventGoal || isProbOutputGoal do return false
   if isProbEqGoal target then
@@ -1161,7 +1163,8 @@ def tryLowerProbGoal : TacticM Bool := do
         rw [OracleComp.ProgramLogic.probEvent_eq_wp_propInd])) then
       return true
     if ← tryEvalTacticSyntax (← `(tactic|
-        simp only [OracleComp.ProgramLogic.probEvent_eq_wp_propInd])) then
+        simp only [evalDist_ite_apply, evalDist_dite_apply,
+          OracleComp.ProgramLogic.probEvent_eq_wp_propInd])) then
       return true
   if isProbOutputGoal then
     if ← tryEvalTacticSyntax (← `(tactic|
