@@ -38,6 +38,17 @@ theorem evalDist_uniformSample_singleton {α : Type} [SampleableType α] [_root_
     𝒟[($ᵗ α : ProbComp α)] {x} = (Fintype.card α : ENNReal)⁻¹ := by
   rw [evalDist_uniformSample, uniformOn_univ_apply_singleton]
 
+/-- A uniform finite sample lands in a set of at most `k` elements with probability at most
+`k / |α|`. -/
+theorem evalDist_uniformSample_le_of_encard_le {α : Type} [SampleableType α] [_root_.Fintype α]
+    [MeasurableSpace α] [MeasurableSingletonClass α] (S : Set α) (k : ℕ)
+    (hS : S.encard ≤ (k : ℕ∞)) :
+    𝒟[($ᵗ α : ProbComp α)] S ≤ (k : ENNReal) / Fintype.card α := by
+  rw [evalDist_uniformSample, ProbabilityTheory.uniformOn_univ,
+    MeasureTheory.Measure.count_apply MeasurableSet.of_discrete]
+  gcongr
+  exact (ENat.toENNReal_le.mpr hS).trans_eq (by simp)
+
 /-- A uniform finite sample satisfies a decidable event with its accepted fraction of outputs. -/
 @[simp↓ high, grind norm↓]
 theorem prEvent_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]

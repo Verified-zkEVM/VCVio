@@ -91,8 +91,12 @@ public import VCVio.CryptoFoundations.MerkleTree.Addressed.Extractor
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Level
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Monadic
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Collision
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Option
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.OptionCoverage
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Sibling
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Query
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.QueryBound
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.Uniqueness
@@ -298,9 +302,12 @@ public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Eager
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
+public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Joint
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
@@ -325,6 +332,7 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics

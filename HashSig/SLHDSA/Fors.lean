@@ -8,6 +8,7 @@ module
 public import HashSig.SLHDSA.Xmss
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Monadic
 import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.QueryBound
+import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 
 /-!
 # FORS (FIPS 205 §8)
@@ -572,15 +573,6 @@ theorem forsSignM_then_forsPkFromSigM_isTotalQueryBound (core : CorePrimitives p
 
 /-! ### Pure API equations -/
 
-private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
-    (answer : QueryImpl spec Id) (g : Fin k → OracleComp spec α) :
-    simulateQ answer (Vector.ofFnM g) = Vector.ofFn fun i => simulateQ answer (g i) := by
-  calc
-    simulateQ answer (Vector.ofFnM g) =
-        Vector.ofFnM (fun i => simulateQ answer (g i)) :=
-      monadHom_ofFnM (simulateQ' answer) g _ (fun _ => rfl)
-    _ = Vector.ofFn fun i => simulateQ answer (g i) := Vector.idRun_ofFnM
-
 @[simp] theorem forsLeaf_eq_f (prims : Primitives p) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) (t : ℕ) :
     forsLeaf prims sk pk adrs t =
@@ -609,7 +601,9 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
       (Vector.ofFn (fun i : Fin p.k => forsRoot prims sk pk adrs i.val)).toList := by
   simp only [forsPkGen, forsPkGenM, forsPkGenWith, simulateQ_bind, simulateQ_ofFnM,
     PublicHash.tl, simulateQ_HasQuery_query, PublicHash.impl]
-  rfl
+  apply congrArg (prims.Thash pk (prims.adrsToKey (forsPkAdrs adrs)))
+  congr 1
+  exact Vector.idRun_ofFnM
 
 @[simp] theorem forsSign_eq_ofFn (prims : Primitives p) (md : List Byte)
     (sk : prims.SkSeed) (pk : prims.PkSeed) (adrs : Adrs) :
@@ -620,6 +614,7 @@ private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
           (forsNodeHash prims pk adrs) idx p.a) := by
   unfold forsSign forsSignM forsSignWith
   rw [simulateQ_ofFnM]
+  refine Vector.idRun_ofFnM.trans ?_
   apply Vector.ext
   intro i hi
   simp only [Vector.getElem_ofFn, simulateQ_bind, simulateQ_pure,
@@ -646,6 +641,7 @@ theorem forsSign_authPath_length (prims : Primitives p) (md : List Byte)
     PublicHash.impl]
   apply congrArg (prims.Thash pk (prims.adrsToKey (forsPkAdrs adrs)))
   congr 1
+  refine Vector.idRun_ofFnM.trans ?_
   apply Vector.ext
   intro i hi
   simp only [Vector.getElem_ofFn, PerfectMerkleTree.simulateQ_climbM]

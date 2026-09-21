@@ -69,6 +69,13 @@ lemma withAddCost_apply_inr {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {s
       liftM (impl.restrictRight t)) := by
   rw [withAddCost_apply, restrictRight_apply]
 
+/-- Forgetting the charge of a cost-instrumented simulation recovers the plain simulation. -/
+theorem fst_map_runAdd_withAddCost [LawfulMonad m] {ω : Type} [AddMonoid ω]
+    (impl : QueryImpl spec m) (costFn : spec.Domain → ω) {α : Type} (oa : OracleComp spec α) :
+    Prod.fst <$> (simulateQ (impl.withAddCost costFn) oa).runAdd = simulateQ impl oa := by
+  rw [AddWriterT.fst_map_runAdd]
+  exact fst_map_run_withCost impl _ oa
+
 /-- Instrument an implementation with unit additive cost for every query. -/
 def withUnitCost (impl : QueryImpl spec m) :
     QueryImpl spec (AddWriterT ℕ m) :=
