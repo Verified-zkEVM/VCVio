@@ -15,11 +15,14 @@ public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
+public import VCVioTest.EvalDist.DisagreementMeasure
+public import VCVioTest.EvalDist.EventBounds
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
 public import VCVioTest.EvalDist.IndepProductMeasure
 public import VCVioTest.EvalDist.IndependentDraws
 public import VCVioTest.EvalDist.MeasureBridge
+public import VCVioTest.EvalDist.MeasureIntegration
 public import VCVioTest.EvalDist.ProbabilityBounds
 public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.SeqMeasure
@@ -95,6 +98,7 @@ public import VCVioTest.SMDTTCRFinalValidity
 public import VCVioTest.SMDTUD
 public import VCVioTest.SMDTUDFinalValidity
 public import VCVioTest.SampleableType
+public import VCVioTest.SchnorrTransforms
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.SigmaChallengeRestriction
 public import VCVioTest.Smoke

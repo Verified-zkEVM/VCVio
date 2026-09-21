@@ -6,14 +6,16 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.OptionT
-public import VCVio.EvalDist.ProbabilityNotation
+public import VCVio.EvalDist.ProbabilityBounds
 public import ToMathlib.Control.OptionT
 
 /-!
 # Events of optional computations
 
 Native successful-output semantics turns a sampled guard into a condition on the sampled value.
-The intermediate measurable space is internal to the observation law.
+The intermediate measurable space is internal to the observation law. Wrapped computations are
+observed through their present values, and sequencing a lossless prefix with continuations that
+succeed on its reachable outputs preserves probability-one events.
 -/
 
 public section
@@ -95,5 +97,57 @@ theorem evalDist_liftM_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m
     𝒟[do let x ← (liftM mx : OptionT m α); guard (p x)] =
       Pr{let x ← mx}[p x] • Measure.dirac () :=
   evalDist_lift_bind_guard mx p
+
+/-- A successful event of a wrapped computation is the event of present values that satisfy it
+in the underlying computation. -/
+theorem prEvent_mk {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m (Option α)) (p : α → Prop) :
+    Pr{let x ← OptionT.mk mx}[p x] = Pr{let o ← mx}[o.elim False p] := by
+  rw [prEvent_eq_run, OptionT.run_mk]
+
+section sequencing
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+  [MonadAttach m] [ExactMonadAttach m] {α β : Type}
+
+omit [EvalDistSemantics m] [LawfulEvalDistSemantics m] in
+/-- Reachable outputs of a lifted computation are reachable in the computation. -/
+theorem mem_support_of_mem_support_lift {mx : m α} {a : α}
+    (ha : a ∈ support (OptionT.lift mx)) : a ∈ support mx := by
+  rw [MonadAttach.mem_support, MonadAttach.OptionT.canReturn_iff, OptionT.run_lift,
+    MonadAttach.mem_support_bind] at ha
+  obtain ⟨a', ha', h⟩ := ha
+  rw [MonadAttach.mem_support_pure] at h
+  exact Option.some_injective _ h ▸ ha'
+
+omit [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadAttach m] [ExactMonadAttach m] in
+/-- A wrapped bind is a lifted prefix followed by the wrapped continuations. -/
+theorem mk_bind_eq_lift_bind (mx : m α) (f : α → m (Option β)) :
+    OptionT.mk (mx >>= f) = (OptionT.lift mx >>= fun a ↦ OptionT.mk (f a) : OptionT m β) := by
+  simp [OptionT.ext_iff]
+
+/-- A lossless prefix followed by continuations that each satisfy an event with probability one
+on the prefix's reachable outputs satisfies the event with probability one. -/
+theorem prEvent_mk_bind_eq_one_of_support (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
+    (f : α → m (Option β)) (p : β → Prop)
+    (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[p y] = 1) :
+    Pr{let y ← OptionT.mk (mx >>= f)}[p y] = 1 := by
+  rw [mk_bind_eq_lift_bind]
+  refine le_antisymm (prEvent_le_one _ _) ?_
+  refine le_prEvent_bind_of_forall_le_of_support (OptionT.lift mx) ?_ _ p ?_
+  · rwa [prEvent_lift]
+  · exact fun a ha ↦ (h a (mem_support_of_mem_support_lift ha)).ge
+
+/-- An upper bound on the wrapped continuation event over reachable prefixes. -/
+theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (q : β → Prop)
+    {ε : ENNReal} (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[q y] ≤ ε) :
+    Pr{let y ← OptionT.mk (mx >>= f)}[q y] ≤ ε := by
+  rw [mk_bind_eq_lift_bind]
+  exact prEvent_bind_le_of_forall_le_of_support (OptionT.lift mx) _ q fun a ha ↦
+    h a (mem_support_of_mem_support_lift ha)
+
+end sequencing
 
 end OptionT

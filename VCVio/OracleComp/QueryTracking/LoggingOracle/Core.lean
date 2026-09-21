@@ -261,6 +261,24 @@ lemma support_fst_map_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α : Type}
     support (Prod.fst <$> (simulateQ spec.loggingOracle oa).run) = support oa := by
   rw [fst_map_run_simulateQ]
 
+/-- Mapping a function of the run result alone over a logged run is mapping it over the bare
+computation: the log is discarded. -/
+@[simp]
+lemma map_fst_run_simulateQ {spec : OracleSpec.{0, 0} ι} {α β : Type}
+    (oa : OracleComp spec α) (h : α → β) :
+    (fun x ↦ h x.1) <$> (simulateQ spec.loggingOracle oa).run = h <$> oa := by
+  conv_rhs => rw [← fst_map_run_simulateQ oa]
+  rw [Functor.map_map]
+
+/-- Logging a pure optional computation returns its value with an empty log. -/
+lemma run_simulateQ_optionT_pure {spec : OracleSpec.{0, 0} ι} {α : Type} (a : α) :
+    (simulateQ spec.loggingOracle
+        ((pure a : OptionT (OracleComp spec) α) : OracleComp spec (Option α))).run =
+      pure (some a, ∅) := by
+  rw [show ((pure a : OptionT (OracleComp spec) α) : OracleComp spec (Option α)) =
+      (pure (some a) : OracleComp spec (Option α)) from rfl, simulateQ_pure]
+  rfl
+
 end loggingOracle
 
 namespace OracleComp

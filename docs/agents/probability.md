@@ -39,6 +39,21 @@ their bind with Mathlib kernel composition. `StateT.evalDistKernel_bind` compose
 joint result/final-state space; the continuation receives both components. These rules use the
 chosen measurable spaces and require no discrete structure on environments or states.
 
+`Measure.bind_apply_le_sum_add_lintegral_ae` compares a continuation against a finite family
+of reference measures, with possibly different output spaces and only AE measurability under
+the chosen prefix measure. It requires no probability or finiteness certificates.
+`Kernel.comp_apply_le_sum_add_lintegral_ae` uses the same law for existing Mathlib kernels.
+Both share `lintegral_le_sum_add_lintegral_of_le_ae`, which also accepts a finite index set.
+
+`VCVio.EvalDist.Monad.Disagreement.Measure` compares observed continuations after a common
+prefix. `prEvent_bind_le_sum_add_lintegral_ae` integrates an AE comparison with finitely many
+reference events and a varying allowance on the chosen source space. Continuation observation
+families must be measurable; the allowance need not be. The reachable version uses core
+attachment and the actual continuation-measure observer, leaving hidden source and result types
+unmeasured. `prEvent_bind_le_sum_add_mul_mass_of_support` retains the allowance times the prefix's
+successful mass. The weaker constant-allowance and disagreement/bad-world rules specialize the
+same argument. The native owner imports no retired probability backend or compatibility class.
+
 `AddWriterT.expectedCost` integrates the cost marginal on the chosen cost space. Weighted
 query-cost and CostModel expectations use this same definition. Pathwise expectation bounds
 need a measurable valuation; upper bounds permit failure, while lower and exact bounds require
@@ -136,7 +151,9 @@ judgments and kernels; flattened support does not acquire an exact bind law.
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
-`Pr{let x ← mx; ...}[event]` is the computation-style event notation. It elaborates
+`Pr{let x ← mx; ...}[event]` is the computation-style event notation. Write the first
+statement directly after `Pr{`; no space is required. An explicit line break after `Pr{` is
+also supported for multiline sequences. It elaborates
 an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
 the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The

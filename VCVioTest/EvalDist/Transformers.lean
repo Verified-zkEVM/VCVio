@@ -98,7 +98,7 @@ example (mx : m α) (p : α → Prop) :
     Pr{let x ← OptionT.lift mx}[p x] = Pr{let x ← mx}[p x] := by simp
 
 example (mx : m α) (p : α → Prop) {bound : ENNReal}
-    (h : Pr{ let x ← mx}[p x] ≤ bound) :
+    (h : Pr{let x ← mx}[p x] ≤ bound) :
     Pr{let x ← OptionT.lift mx}[p x] ≤ bound := by grind
 
 example (mx : OptionT m α) (my : OptionT m β) (p : α → Prop) (q : β → Prop) :
@@ -117,7 +117,7 @@ example (mx : m α) (p q : α → Prop) [DecidablePred p] :
       Pr{let x ← mx}[p x ∧ q x] := by simp
 
 example (mx : m α) (p q : α → Prop) [DecidablePred p] {bound : ENNReal}
-    (h : Pr{ let x ← mx}[p x ∧ q x] ≤ bound) :
+    (h : Pr{let x ← mx}[p x ∧ q x] ≤ bound) :
     𝒟[do let x ← OptionT.lift mx; (fun _ : Unit ↦ q x) <$> guard (p x)] {True} ≤
       bound := by grind
 
@@ -130,12 +130,12 @@ example (mx : m α) (p : α → Prop) [DecidablePred p] :
       Pr{let x ← mx}[p x] • Measure.dirac () := by simp
 
 example (mx : m α) (p q : α → Prop) [DecidablePred p] {bound : ENNReal}
-    (h : Pr{ let x ← mx}[p x ∧ q x] ≤ bound) :
+    (h : Pr{let x ← mx}[p x ∧ q x] ≤ bound) :
     Pr{let x ← OptionT.lift mx; guard (p x)}[q x] ≤ bound := by grind
 
 example (mx : OptionT m α) (my : OptionT m β) (p : α → Prop) (q : β → Prop)
     {bound : ENNReal}
-    (h : Pr{ let x ← mx}[p x] * Pr{ let y ← my}[q y] ≤ bound) :
+    (h : Pr{let x ← mx}[p x] * Pr{let y ← my}[q y] ≤ bound) :
     Pr{let x ← mx; let y ← my}[p x ∧ q y] ≤ bound := by grind
 
 example (mx : ExceptT ε m α) (my : ExceptT ε m β) (p : α → Prop) (q : β → Prop) :
@@ -144,11 +144,11 @@ example (mx : ExceptT ε m α) (my : ExceptT ε m β) (p : α → Prop) (q : β 
 
 example (mx : ExceptT ε m α) (my : ExceptT ε m β) (p : α → Prop) (q : β → Prop)
     {bound : ENNReal}
-    (h : Pr{ let x ← mx}[p x] * Pr{ let y ← my}[q y] ≤ bound) :
+    (h : Pr{let x ← mx}[p x] * Pr{let y ← my}[q y] ≤ bound) :
     Pr{let x ← mx; let y ← my}[p x ∧ q y] ≤ bound := by grind
 
 example (mx : OptionT m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) {bound : ENNReal}
-    (h : Pr{ let x ← mx}[q x] ≤ bound) : Pr{let x ← mx}[p x] ≤ bound := by
+    (h : Pr{let x ← mx}[q x] ≤ bound) : Pr{let x ← mx}[p x] ≤ bound := by
   grw [prEvent_mono mx p q hpq, h]
 
 example (mx : ExceptT ε m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :

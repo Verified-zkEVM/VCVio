@@ -168,14 +168,20 @@ theorem ExceptT.evalDist_bind_of_discrete
   ExceptT.evalDist_bind mx f Measurable.of_discrete
 
 /-- Native exceptional semantics satisfies the measurable-bind law for successful-output families.
-The base monad's map law relates the auxiliary discrete draw to the selected source space. -/
+The full-run observer refines the source space, whose identity map transports the source measure.
+-/
 instance (priority := 20) instLawfulEvalDistSemanticsExceptT
     {ε : Type u} [MeasurableSpace ε] {m : Type u → Type v}
     [Monad m] [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m] :
     LawfulEvalDistSemantics (ExceptT ε m) where
   denote_bind {α β} mα mβ mx f hf := by
-    have hId : @Measurable α α ⊤ mα id := fun _ _ ↦ trivial
-    have hmap := @ExceptT.evalDist_map ε _ m _ _ _ _ α α ⊤ mα mx id hId
+    let mObs := mα ⊔ MeasurableSpace.comap (fun x ↦ 𝒟[(f x).run]) inferInstance
+    have hId : @Measurable α α mObs mα id :=
+      Measurable.of_comap_le (by simpa only [MeasurableSpace.comap_id] using
+        (le_sup_left : mα ≤ mObs))
+    have hRun : @Measurable α (Measure (Except ε β)) mObs _
+        (fun x ↦ 𝒟[(f x).run]) := Measurable.of_comap_le le_sup_right
+    have hmap := @ExceptT.evalDist_map ε _ m _ _ _ _ α α mObs mα mx id hId
     rw [id_map] at hmap
-    rw [hmap, @Measure.bind_map α α β ⊤ mα mβ _ _ _ hId hf]
-    exact @ExceptT.evalDist_bind ε _ m _ _ _ α β ⊤ mβ mx f (fun _ _ ↦ trivial)
+    rw [hmap, @Measure.bind_map α α β mObs mα mβ _ _ _ hId hf]
+    exact @ExceptT.evalDist_bind ε _ m _ _ _ α β mObs mβ mx f hRun

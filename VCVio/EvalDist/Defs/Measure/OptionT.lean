@@ -16,8 +16,8 @@ measurable embedding `some`. This effect-native construction supplies the primar
 finite-distribution lifts remain available for explicit compatibility observations.
 
 Native map and monad laws use the base monad's measure laws. The full bind law only requires
-measurability of the successful-output family: an auxiliary discrete source space discharges
-full-run measurability, and the map law transports its source measure to the selected space.
+measurability of the successful-output family. A pullback space recording the full continuation
+outcomes refines the selected source space, and the map law transports its measure back.
 -/
 
 public section
@@ -167,17 +167,23 @@ theorem OptionT.evalDist_bind_of_discrete
   OptionT.evalDist_bind mx f Measurable.of_discrete
 
 /-- Native optional semantics satisfies the measurable-bind law for successful-output families.
-The base monad's map law relates the auxiliary discrete draw to the selected source space. -/
+The full-run observer refines the source space, whose identity map transports the source measure.
+-/
 instance (priority := 20) instLawfulEvalDistSemanticsOptionT
     {m : Type u → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] :
     LawfulEvalDistSemantics (OptionT m) where
   denote_bind {α β} mα mβ mx f hf := by
-    have hId : @Measurable α α ⊤ mα id := fun _ _ ↦ trivial
-    have hmap := @OptionT.evalDist_map m _ _ _ _ α α ⊤ mα mx id hId
+    let mObs := mα ⊔ MeasurableSpace.comap (fun x ↦ 𝒟[(f x).run]) inferInstance
+    have hId : @Measurable α α mObs mα id :=
+      Measurable.of_comap_le (by simpa only [MeasurableSpace.comap_id] using
+        (le_sup_left : mα ≤ mObs))
+    have hRun : @Measurable α (Measure (Option β)) mObs _
+        (fun x ↦ 𝒟[(f x).run]) := Measurable.of_comap_le le_sup_right
+    have hmap := @OptionT.evalDist_map m _ _ _ _ α α mObs mα mx id hId
     rw [id_map] at hmap
-    rw [hmap, @Measure.bind_map α α β ⊤ mα mβ _ _ _ hId hf]
-    exact @OptionT.evalDist_bind m _ _ _ α β ⊤ mβ mx f (fun _ _ ↦ trivial)
+    rw [hmap, @Measure.bind_map α α β mObs mα mβ _ _ _ hId hf]
+    exact @OptionT.evalDist_bind m _ _ _ α β mObs mβ mx f hRun
 
 /-- The effect-native successful-output measure of sampling and then guarding is the measure of
 the corresponding Boolean event. This statement is independent of which global `OptionT`
@@ -189,7 +195,13 @@ theorem OptionT.dropNone_evalDist_run_bind_guard_apply_univ
     {α : Type} (mx : m α) (p : α → Prop) [DecidablePred p] :
     (𝒟[do let x ← mx; (guard (p x) : OptionT m Unit).run]).dropNone Set.univ =
       𝒟[do let x ← mx; pure (p x)] {True} := by
-  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace α := MeasurableSpace.comap p inferInstance
+  have hp : Measurable p := comap_measurable p
+  have hpSet : MeasurableSet {x | p x} := by
+    simpa only [Set.preimage, Set.mem_singleton_iff, eq_iff_iff, iff_true] using
+      hp (measurableSet_singleton True)
+  have hselect : Measurable fun x ↦ if p x then some () else none :=
+    Measurable.ite hpSet measurable_const measurable_const
   have hrun : (do let x ← mx; (guard (p x) : OptionT m Unit).run) =
       (do let x ← mx; pure (if p x then some () else none)) := by
     apply bind_congr
@@ -197,10 +209,10 @@ theorem OptionT.dropNone_evalDist_run_bind_guard_apply_univ
     by_cases hx : p x <;> simp [hx]
   rw [Measure.dropNone_apply_univ, hrun, LawfulMonad.bind_pure_comp,
     LawfulMonad.bind_pure_comp]
-  rw [_root_.evalDist_map mx (f := fun x => if p x then some () else none) Measurable.of_discrete,
-    _root_.evalDist_map mx (f := p) Measurable.of_discrete,
-    Measure.map_apply Measurable.of_discrete Option.measurableSet_isSome,
-    Measure.map_apply Measurable.of_discrete (measurableSet_singleton True)]
+  rw [_root_.evalDist_map mx (f := fun x ↦ if p x then some () else none) hselect,
+    _root_.evalDist_map mx (f := p) hp,
+    Measure.map_apply hselect Option.measurableSet_isSome,
+    Measure.map_apply hp (measurableSet_singleton True)]
   congr 1
   ext x
   simp

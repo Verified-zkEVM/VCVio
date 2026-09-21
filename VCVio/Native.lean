@@ -19,6 +19,7 @@ public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.Monad.Branch
+public import VCVio.EvalDist.Monad.Disagreement.Measure
 public import VCVio.EvalDist.Monad.Seq.Uniform
 public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.MeasureTVDist.Bind

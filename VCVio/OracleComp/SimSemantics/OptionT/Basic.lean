@@ -69,6 +69,14 @@ lemma simulateQ_optionT_bind
     (simulateQ impl mx >>= fun a => simulateQ impl (f a) : OptionT n β) :=
   simulateQ_optionT_bind_run impl mx f
 
+omit [LawfulMonad n] in
+/-- `simulateQ` preserves a pure `OptionT` computation. -/
+@[simp] lemma simulateQ_optionT_pure (x : α) :
+    simulateQ impl (pure x : OptionT (OracleComp spec) α) = (pure x : OptionT n α) := by
+  apply OptionT.ext
+  change simulateQ impl (pure (some x)) = pure (some x)
+  exact simulateQ_pure impl (some x)
+
 /-- `simulateQ` commutes with `OptionT.lift`. -/
 @[simp] lemma simulateQ_optionT_lift
     (comp : OracleComp spec α) :
