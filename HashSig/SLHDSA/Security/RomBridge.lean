@@ -15,11 +15,12 @@ public import HashSig.SLHDSA.Security.SufResidual
 On the support of the instrumented counted random-oracle run (`romRunFull`), a winning forgery
 exhibits one of the three events of `HashSig.SLHDSA.Security.RomDescent`, two read off the final
 cache and one a property of the forgery's replay under it: a same-address target collision, a
-hidden-value hit, or interleaved-target coverage of a message fresh for the signing log
-(`rom_bad_event_of_wins`).  The descent runs top-down from the cached public root: key generation
-settles the honest root of the top tree at the value the forgery's verification replay recovers
-there, `xmssLayer_cases` moves the descent one layer down for as long as the used leaf's honest
-message is the one the replay presents, and `fors_cases` closes it at layer `0`.
+hidden-value hit, or interleaved-target coverage — each conjoined with freshness of the forged
+message for the signing log (`rom_bad_event_of_wins`), so that every term of a union bound over
+the conclusion carries the conditioning.  The descent runs top-down from the cached public root:
+key generation settles the honest root of the top tree at the value the forgery's verification
+replay recovers there, `xmssLayer_cases` moves the descent one layer down for as long as the used
+leaf's honest message is the one the replay presents, and `fors_cases` closes it at layer `0`.
 
 Two facts feed the descent.  `exists_xmssSignM_eq_some_of_signFromPositionM` reads the honest
 per-layer signing walk (FIPS 205 Algorithm 12) off the cache: a settled hypertree signing run has,
@@ -46,8 +47,8 @@ the cache.
 * No relation between the three events and a probability bound is proved here, and no
   tweakable-hash or ITSR advantage is bounded.
 * The descent uses of a winning forgery only that its verification accepted; freshness of the
-  forger's message for the signing log enters no step of it, and appears solely as the second
-  conjunct of the third disjunct.
+  forger's message for the signing log enters no step of it, and is conjoined to each of the three
+  disjuncts once the descent has finished.
 * `itsr_wins_of_itsrCovered` is not consumed by the bridge: it is stated against an arbitrary
   total answer function agreeing with the cache, and `rom_bad_event_of_wins` does not apply it.
 
@@ -188,22 +189,25 @@ variable [SampleableType core.Y] [DecidableEq core.Y] [DecidableEq core.PkSeed]
 
 /-- **The random-oracle bad-event bridge.**  On the support of the instrumented run, a winning
 forgery exhibits a same-address target collision, or a hidden-value hit, or interleaved-target
-coverage of a message fresh for the signing log — the first and the last read off the final cache,
-the hidden-value hit a property of the forgery's replay under it.  The descent runs top-down: key
-generation settles the top tree at the forger's recovered value, `xmssLayer_cases` moves one layer
-down as long as the used leaf's honest message is the forger's, and `fors_cases` closes at layer
-`0`.  The freshness conjunct is what makes the third disjunct a bad event: without it the event
-holds over the whole support, since an adversary that replays a logged signature on the message it
-was issued for covers every coordinate of its own digest while not winning, so an unconditional
-union bound over the three would be vacuous.  It is also exactly the hypothesis
-`itsr_wins_of_itsrCovered` takes. -/
+coverage — the first and the last read off the final cache, the hidden-value hit a property of the
+forgery's replay under it — and in each case the forged message is fresh for the signing log.  The
+descent runs top-down: key generation settles the top tree at the forger's recovered value,
+`xmssLayer_cases` moves one layer down as long as the used leaf's honest message is the forger's,
+and `fors_cases` closes at layer `0`.  Freshness is carried by all three disjuncts so that a union
+bound over the conclusion is conditioned term by term.  It is indispensable for the coverage
+disjunct, which without it holds over the whole support: an adversary that replays a logged
+signature on the message it was issued for covers every coordinate of its own digest while not
+winning.  For that disjunct it is also exactly the hypothesis `itsr_wins_of_itsrCovered` takes. -/
 theorem rom_bad_event_of_wins (laws : core.ByteLaws)
     (adv : unforgeableAdv (generalAlgM (m := OracleComp (unifSpec + publicHashSpec core)) vp core))
     {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv))
     (hw : z.1.wins = true) :
-    TargetCollision z.1 z.2 ∨ HiddenHit z.1 z.2 ∨
+    (TargetCollision z.1 z.2 ∧ z.1.msg ∉ z.1.log.map (fun e => e.1)) ∨
+      (HiddenHit z.1 z.2 ∧ z.1.msg ∉ z.1.log.map (fun e => e.1)) ∨
       (ItsrCovered z.1 z.2 ∧ z.1.msg ∉ z.1.log.map (fun e => e.1)) := by
   obtain ⟨hfresh, hv⟩ := (RomOutcome.wins_eq_true_iff z.1).mp hw
+  suffices h : TargetCollision z.1 z.2 ∨ HiddenHit z.1 z.2 ∨ ItsrCovered z.1 z.2 by
+    exact h.imp (⟨·, hfresh⟩) (Or.imp (⟨·, hfresh⟩) (⟨·, hfresh⟩))
   obtain ⟨⟨skSeed, skPrf, pkSeed, hk⟩, -, hver⟩ :=
     simulateQ_toPartialImpl_eq_some_of_mem_support_romRunFull core adv hz
   rw [hv, simulateQ_toPartialImpl_verifyInternalM_eq_some_true_iff] at hver
@@ -273,7 +277,7 @@ theorem rom_bad_event_of_wins (laws : core.ByteLaws)
   obtain rfl : forsPk = m := Option.some.inj hm
   simp only [honestMessage?, LayerPosition.atLayer_zero_eq_initial,
     LayerPosition.initial_layer_val, forsInstanceAdrs_initial, ↓reduceIte] at h
-  exact (fors_cases z.1 z.2 digest hd forsPk hfors h).imp id (Or.imp id (⟨·, hfresh⟩))
+  exact fors_cases z.1 z.2 digest hd forsPk hfors h
 
 end Bridge
 
