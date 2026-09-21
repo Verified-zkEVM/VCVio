@@ -71,7 +71,7 @@ honest secret.
 
 ## Labels
 
-Twenty-six declarations.
+Twenty-seven declarations.
 
 *Honest entries and the target collision*: `HonestEntry`, `TargetCollision`.
 
@@ -86,7 +86,8 @@ Twenty-six declarations.
 
 *WOTS+ chains and one XMSS layer*: `wotsChain_cases`, `wotsLeaf_cases`, `xmssLayer_cases`.
 
-*The forger's layers*: `recoverFromPositionM_pos_congr`, `forgerLayers_of_recoverFromPositionM`.
+*Position congruence and the forger's layers*: `signFromPositionM_pos_congr`,
+`recoverFromPositionM_pos_congr`, `forgerLayers_of_recoverFromPositionM`.
 
 *The FORS stop*: `unopenedCoord_of_notMem`, `fors_cases`.
 
@@ -450,7 +451,17 @@ theorem xmssLayer_cases (laws : core.ByteLaws) (o : RomOutcome vp core)
   · exact Or.inr (Or.inl (Or.inl ⟨j, pos, m', ⟨0, Params.len_pos _⟩, chainStepsCore core m' 0, _,
       hlayer, fun h => absurd h hused, hall ⟨0, Params.len_pos _⟩, le_rfl, by simp⟩))
 
-/-! ## The forger's layers -/
+/-! ## Position congruence and the forger's layers -/
+
+/-- Algorithm 12 at two equal positions, with the layer-count proof transported along the
+equality: the proof depends on the position, so the position cannot be rewritten in place. -/
+theorem signFromPositionM_pos_congr (c : PublicHash.Cache core) (sk : core.SkSeed)
+    (pk : core.PkSeed) (recoverFinal : Bool) {pos pos' : LayerPosition vp} (hpos : pos = pos')
+    (layers : ℕ) (h : pos.layer.val + layers = vp.params.d) (msg : core.Y) :
+    simulateQ c.toPartialImpl (signFromPositionM vp core sk pk recoverFinal pos layers h msg) =
+      simulateQ c.toPartialImpl
+        (signFromPositionM vp core sk pk recoverFinal pos' layers (hpos ▸ h) msg) := by
+  subst hpos; rfl
 
 /-- Algorithm 13 at two equal positions, with the layer-count proof transported along the
 equality: the proof depends on the position, so the position cannot be rewritten in place. -/

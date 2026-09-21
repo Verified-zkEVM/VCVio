@@ -28,7 +28,10 @@ along the settled authentication path settles every ancestor
 node lies under a sibling subtree whose root is an entry of the settled authentication path
 (`exists_simulateQ_toPartialImpl_xmssNodeM_eq_some_of_sibling`).  The classification
 `PerfectMerkleTree.eq_div_pow_or_exists_sibling` joins the halves.  For the top tree, key
-generation alone (`GeneralHypertree.rootM`) settles every node and every full WOTS+ chain.
+generation alone (`GeneralHypertree.rootM`) settles every node and every full WOTS+ chain.  The
+same climb argument applies to a FORS instance: a settled FORS signature whose recovered public
+key is settled settles the honest FORS public key, at the recovered value
+(`simulateQ_toPartialImpl_forsPkGenM_eq_some_of_forsSignM`).
 
 ## Scope
 
@@ -41,7 +44,7 @@ generation alone (`GeneralHypertree.rootM`) settles every node and every full WO
 
 ## Labels
 
-Eight declarations.
+Nine declarations.
 
 *Signed-through tree*: `simulateQ_toPartialImpl_xmssLeafM_eq_some_of_xmssSignM`,
 `simulateQ_toPartialImpl_xmssNodeM_div_pow_eq_some_of_xmssSignM`,
@@ -53,9 +56,11 @@ Eight declarations.
 *Top tree from key generation*: `exists_simulateQ_toPartialImpl_xmssNodeM_eq_some_of_rootM`,
 `exists_simulateQ_toPartialImpl_chainM_eq_some_of_rootM`.
 
+*FORS instance*: `simulateQ_toPartialImpl_forsPkGenM_eq_some_of_forsSignM`.
+
 ## References
 
-- NIST FIPS 205, §6.2--§6.3, Algorithms 9--11
+- NIST FIPS 205, §6.2--§6.3 and §8.2--§8.4, Algorithms 9--11 and 14--17
 -/
 
 public section
@@ -196,5 +201,40 @@ theorem exists_simulateQ_toPartialImpl_chainM_eq_some_of_rootM (t : ℕ)
   exact ⟨tops[i], (simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_iff core c sk pk _).mp htops i⟩
 
 end TopTree
+
+/-! ## FORS coverage -/
+
+section Fors
+
+variable {p : Params} (core : CorePrimitives p) (c : PublicHash.Cache core) (md : List Byte)
+  (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs)
+
+/-- A settled FORS signature whose recovered public key is settled settles the honest FORS public
+key, at the recovered value: per tree, the recovery's `F` entry on the revealed secret is the
+honest leaf, and the settled climb along the signed authentication path settles the honest
+root. -/
+theorem simulateQ_toPartialImpl_forsPkGenM_eq_some_of_forsSignM {sig : ForsSigCore p core}
+    {fpk : core.Y}
+    (hsign : simulateQ c.toPartialImpl (forsSignM core md sk pk adrs) = some sig)
+    (hrec : simulateQ c.toPartialImpl (forsPkFromSigM core sig md pk adrs) = some fpk) :
+    simulateQ c.toPartialImpl (forsPkGenM core sk pk adrs) = some fpk := by
+  rw [simulateQ_toPartialImpl_forsSignM_eq_some_iff] at hsign
+  rw [simulateQ_toPartialImpl_forsPkFromSigM_eq_some_iff] at hrec
+  rw [simulateQ_toPartialImpl_forsPkGenM_eq_some_iff]
+  obtain ⟨roots, hper, hTk⟩ := hrec
+  refine ⟨roots, fun i => ?_, hTk⟩
+  obtain ⟨path, hpath, hsig⟩ := hsign i
+  obtain ⟨leaf, hF, hclimb⟩ := hper i
+  rw [Fin.getElem_fin] at hsig
+  rw [← hsig] at hF hclimb
+  have hleaf : simulateQ c.toPartialImpl (forsLeafWith core (PublicHash.f core pk) sk pk adrs
+      (i.val * 2 ^ p.a + forsIdx p md i.val)) = some leaf := by
+    simpa only [forsLeafWith, simulateQ_toPartialImpl_f] using hF
+  have h := PerfectMerkleTree.simulateQ_merkleRootM_div_pow_eq_some_of_climbM c.toPartialImpl _ _
+    _ hleaf hpath hclimb
+  rwa [Nat.add_comm, Nat.add_mul_div_right _ _ (Nat.two_pow_pos p.a),
+    Nat.div_eq_of_lt (forsIdx_lt p md i.val), Nat.zero_add] at h
+
+end Fors
 
 end SLHDSA.Security
