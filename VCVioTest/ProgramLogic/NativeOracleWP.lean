@@ -64,7 +64,7 @@ example (mx : OracleComp fixedSpec ℝ) (post : ℝ → ENNReal) (hpost : Measur
 
 /-- Finite answer partitions leave arbitrary hidden output types unmeasured. -/
 example (mx : OracleComp fixedSpec (ℕ → ℕ)) (post : (ℕ → ℕ) → ENNReal) :
-    wp mx post = ∑' x, Pr{ let y ← mx}[y = x] * post x :=
+    wp mx post = ∑' x, Pr{let y ← mx}[y = x] * post x :=
   wp_eq_tsum mx post
 
 /-- A handler that increments an unobserved function state at each query. -/

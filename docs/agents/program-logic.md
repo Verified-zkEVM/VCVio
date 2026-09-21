@@ -58,7 +58,7 @@ candidate registrations are experimental.
 | `game_trans g₂` | `g₁ ≡ₚ g₃` | Splits into `g₁ ≡ₚ g₂` and `g₂ ≡ₚ g₃` |
 | `by_dist` | `AdvBound game ε` | Enters TV distance reasoning |
 | `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
-| `by_hoare` | `Pr{ let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
+| `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
 
 `by_equiv` enters the coupling-based `RelTriple` shell, not `RelTriple'`, so that
 `rvcstep` / `rvcgen` can keep decomposing the relational goal.

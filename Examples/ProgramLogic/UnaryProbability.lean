@@ -36,17 +36,17 @@ variable [∀ t, MeasurableSpace (spec.Range t)]
 
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
-    Pr{ let x ← oa}[p x] = 1 := by
+    Pr{let x ← oa}[p x] = 1 := by
   vcgen
 
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
-    1 = Pr{ let x ← oa}[p x] := by
+    1 = Pr{let x ← oa}[p x] := by
   vcgen
 
 example {oa : OracleComp spec Bool}
     (h : ⦃ 1 ⦄ oa ⦃ fun y => if y = true then 1 else 0 ⦄) :
-    Pr{ let y ← oa}[y = true] = 1 := by
+    Pr{let y ← oa}[y = true] = 1 := by
   vcgen
 
 end NativeLowering
@@ -115,25 +115,25 @@ variable [∀ t, MeasurableSpace (spec.Range t)]
 
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p] {r : ℝ≥0∞}
     (h : ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
-    r ≤ Pr{ let x ← oa}[p x] := by
+    r ≤ Pr{let x ← oa}[p x] := by
   vcstep
   exact h
 
 example {oa : OracleComp spec α} [DecidableEq α] {x : α} {r : ℝ≥0∞}
     (h : ⦃ r ⦄ oa ⦃ fun y => if y = x then 1 else 0 ⦄) :
-    Pr{ let y ← oa}[y = x] ≥ r := by
+    Pr{let y ← oa}[y = x] ≥ r := by
   vcstep
   simpa only [← propInd_eq_ite] using h
 
 example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
     (p : α → Prop) [DecidablePred p] :
-    Pr{ let x ← if c then oa else ob}[p x] =
+    Pr{let x ← if c then oa else ob}[p x] =
       if c then wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) else wp⟦ob⟧ (fun x => 𝟙⟦p x⟧) := by
   vcstep
 
 example (c : Prop) [Decidable c] (oa : c → OracleComp spec α)
     (ob : ¬c → OracleComp spec α) (p : α → Prop) [DecidablePred p] :
-    Pr{ let x ← if h : c then oa h else ob h}[p x] =
+    Pr{let x ← if h : c then oa h else ob h}[p x] =
       if h : c then wp⟦oa h⟧ (fun x ↦ propInd (p x))
       else wp⟦ob h⟧ (fun x ↦ propInd (p x)) := by
   by_hoare
@@ -141,11 +141,11 @@ example (c : Prop) [Decidable c] (oa : c → OracleComp spec α)
 /-! ### `by_hoare` -/
 
 example (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
-    Pr{ let x ← oa}[p x] = wp⟦oa⟧ (fun x => if p x then 1 else 0) := by
+    Pr{let x ← oa}[p x] = wp⟦oa⟧ (fun x => if p x then 1 else 0) := by
   by_hoare
 
 example (oa : OracleComp spec α) [DecidableEq α] (x : α) :
-    Pr{ let y ← oa}[y = x] = wp⟦oa⟧ (fun y => if y = x then 1 else 0) := by
+    Pr{let y ← oa}[y = x] = wp⟦oa⟧ (fun y => if y = x then 1 else 0) := by
   by_hoare
 
 /--
@@ -165,7 +165,7 @@ example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
 /-! ### Support-cut synthesis -/
 
 example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
-    (h : ∀ x ∈ support oa, Pr{ let y ← f x}[y = true] = 1) :
+    (h : ∀ x ∈ support oa, Pr{let y ← f x}[y = true] = 1) :
     ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
   vcstep
   intro x

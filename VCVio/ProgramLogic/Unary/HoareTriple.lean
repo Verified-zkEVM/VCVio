@@ -356,7 +356,7 @@ open scoped Classical in
 /-- An observed event probability is WP of its indicator assertion. -/
 lemma probEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] :
-    Pr{ let x ← oa}[p x] = wp oa (fun x ↦ if p x then 1 else 0) := by
+    Pr{let x ← oa}[p x] = wp oa (fun x ↦ if p x then 1 else 0) := by
   rw [prEvent_eq_evalDist_map]
   have h := wp_eq_lintegral (p <$> oa) (fun b ↦ if b then 1 else 0) Measurable.of_discrete
   rw [wp_map] at h
@@ -377,13 +377,13 @@ lemma probEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
-    Pr{ let x ← oa}[p x] = wp oa (fun x => propInd (p x)) := by
+    Pr{let x ← oa}[p x] = wp oa (fun x => propInd (p x)) := by
   classical
   simpa only [propInd_eq_ite] using probEvent_eq_wp_indicator oa p
 
 /-- An observed singleton probability is WP of its indicator assertion. -/
 lemma probOutput_eq_wp_indicator (oa : OracleComp spec α) [DecidableEq α] (x : α) :
-    Pr{ let y ← oa}[y = x] = wp oa (fun y ↦ if y = x then 1 else 0) :=
+    Pr{let y ← oa}[y = x] = wp oa (fun y ↦ if y = x then 1 else 0) :=
   probEvent_eq_wp_indicator oa (fun y ↦ y = x)
 
 /-- Assertions agreeing on structural support have equal quantitative WP. -/
@@ -397,7 +397,7 @@ open scoped Classical in
 The output labels need no measurable-space instance. -/
 theorem wp_eq_sum_finSupport [spec.Fintype] [DecidableEq α] (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) :
-    wp oa post = ∑ x ∈ finSupport oa, Pr{ let y ← oa}[y = x] * post x := by
+    wp oa post = ∑ x ∈ finSupport oa, Pr{let y ← oa}[y = x] * post x := by
   classical
   calc
     _ = wp oa (fun y ↦ ∑ x ∈ finSupport oa, if y = x then post x else 0) := by
@@ -417,14 +417,14 @@ theorem wp_eq_sum_finSupport [spec.Fintype] [DecidableEq α] (oa : OracleComp sp
 open scoped Classical in
 /-- The finite reachable-output partition extends to a native event-weighted sum. -/
 theorem wp_eq_tsum [spec.Fintype] (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp oa post = ∑' x, Pr{ let y ← oa}[y = x] * post x := by
+    wp oa post = ∑' x, Pr{let y ← oa}[y = x] * post x := by
   let : DecidableEq α := Classical.decEq α
   rw [wp_eq_sum_finSupport]
   symm
   apply tsum_eq_sum
   intro x hx
   have hn : x ∉ support oa := by simpa only [mem_finSupport_iff_mem_support] using hx
-  have hz : Pr{ let y ← oa}[y = x] = 0 := by
+  have hz : Pr{let y ← oa}[y = x] = 0 := by
     rw [prEvent_congr_of_support oa _ (fun _ ↦ False)]
     · exact prEvent_eq_zero_of_forall_not oa _ (fun _ h ↦ h)
     · intro y hy
@@ -480,45 +480,45 @@ variable [OracleSpec.IsMeasureSpec spec]
 
 /-- Indicator-event probability as an exact quantitative triple. -/
 theorem triple_probEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
-    Triple (Pr{ let x ← oa}[p x]) oa (fun x => if p x then 1 else 0) :=
+    Triple (Pr{let x ← oa}[p x]) oa (fun x => if p x then 1 else 0) :=
   triple_ofLE (by rw [probEvent_eq_wp_indicator])
 
 /-- Singleton-output probability as an exact quantitative triple. -/
 theorem triple_probOutput_indicator (oa : OracleComp spec α) [DecidableEq α] (x : α) :
-    Triple (Pr{ let y ← oa}[y = x]) oa (fun y => if y = x then 1 else 0) :=
+    Triple (Pr{let y ← oa}[y = x]) oa (fun y => if y = x then 1 else 0) :=
   triple_ofLE (by rw [probOutput_eq_wp_indicator])
 
 /-- Lower bounds on `probEvent` are exactly indicator-postcondition triples. -/
 theorem le_probEvent_iff_triple_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (r : ℝ≥0∞) :
-    r ≤ Pr{ let x ← oa}[p x] ↔
+    r ≤ Pr{let x ← oa}[p x] ↔
       Triple r oa (fun x => if p x then 1 else 0) := by
   rw [triple_iff_le_wp, ← probEvent_eq_wp_indicator]
 
 /-- Lower bounds on `probOutput` are exactly singleton-indicator triples. -/
 theorem le_probOutput_iff_triple_indicator (oa : OracleComp spec α) [DecidableEq α]
     (x : α) (r : ℝ≥0∞) :
-    r ≤ Pr{ let y ← oa}[y = x] ↔
+    r ≤ Pr{let y ← oa}[y = x] ↔
       Triple r oa (fun y => if y = x then 1 else 0) := by
   rw [triple_iff_le_wp, ← probOutput_eq_wp_indicator]
 
 /-- The support event of an `OracleComp` occurs almost surely. -/
 theorem probEvent_mem_support (oa : OracleComp spec α) :
-    Pr{ let x ← oa}[x ∈ support oa] = 1 := by
+    Pr{let x ← oa}[x ∈ support oa] = 1 := by
   rw [prEvent_congr_of_support oa _ (fun _ ↦ True) (fun _ hx ↦ by simp only [hx]),
     prEvent_eq_evalDist_map]
   simp
 
 /-- Exact probability-1 events are exact quantitative triples. -/
 theorem triple_probEvent_eq_one (oa : OracleComp spec α) (p : α → Prop)
-    [DecidablePred p] (h : Pr{ let x ← oa}[p x] = 1) :
+    [DecidablePred p] (h : Pr{let x ← oa}[p x] = 1) :
     Triple (1 : ℝ≥0∞) oa (fun x => if p x then 1 else 0) := by
   have := triple_probEvent_indicator (oa := oa) p
   rwa [h] at this
 
 /-- Exact probability-1 singleton outputs are exact quantitative triples. -/
 theorem triple_probOutput_eq_one (oa : OracleComp spec α) [DecidableEq α]
-    (x : α) (h : Pr{ let y ← oa}[y = x] = 1) :
+    (x : α) (h : Pr{let y ← oa}[y = x] = 1) :
     Triple (1 : ℝ≥0∞) oa (fun y => if y = x then 1 else 0) := by
   have := triple_probOutput_indicator (oa := oa) x
   rwa [h] at this
@@ -526,12 +526,12 @@ theorem triple_probOutput_eq_one (oa : OracleComp spec α) [DecidableEq α]
 /-- Probability-one singleton events are exactly probability-one indicator triples. -/
 theorem probOutput_eq_one_iff_triple (oa : OracleComp spec α) [DecidableEq α]
     (x : α) :
-    Pr{ let y ← oa}[y = x] = 1 ↔
+    Pr{let y ← oa}[y = x] = 1 ↔
       Triple (1 : ℝ≥0∞) oa (fun y => if y = x then 1 else 0) := by
   constructor
   · exact triple_probOutput_eq_one oa x
   · intro h
-    have hle : (1 : ℝ≥0∞) ≤ Pr{ let y ← oa}[y = x] := by
+    have hle : (1 : ℝ≥0∞) ≤ Pr{let y ← oa}[y = x] := by
       rw [probOutput_eq_wp_indicator]; exact triple_toLE h
     exact le_antisymm ((measure_mono (Set.subset_univ _)).trans
       (evalDist_apply_univ_le_one (do let y ← oa; pure (y = x)))) hle
