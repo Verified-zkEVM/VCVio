@@ -20,9 +20,10 @@ This module names that reading for the honest SLH-DSA component programs.
 
 The four one-query lemmas `simulateQ_toPartialImpl_hmsg`, `_tl`, `_f`, `_h` reduce a
 single `H_msg`, `T_l`, `F` or `H` query to a cache lookup.  The readers `xmssRoot?`, `xmssNode?`,
-`forsPkGen?`, `wotsPkGenTops?`, `chain?` and `xmssPkFromSig?` are the honest programs under the
-cache, and the `*_withPublicHash_eq_of_*_eq_some` lemmas transport a successful reading to the
-pure API at `PublicHash.withPublicHash core f` for every agreeing `f`.  `xmss_stop_case` applies
+`forsPkGen?`, `forsNode?`, `wotsPkGenTops?`, `chain?`, `xmssPkFromSig?` and `forsPkFromSig?` are
+the honest and the verifier's programs under the cache, and the `*_withPublicHash_eq_of_*_eq_some`
+lemmas transport a successful reading to the pure API at `PublicHash.withPublicHash core f` for
+every agreeing `f`.  `xmss_stop_case` applies
 them: an XMSS signature whose recovered root is settled at the honest root of the same
 tree yields, under every agreeing `f`, either the honest WOTS+ public key or an `H`-collision on
 the leaf's root path.
@@ -39,13 +40,13 @@ the leaf's root path.
 
 ## Labels
 
-Sixteen declarations.
+Eighteen declarations.
 
 *One-query readings*: `simulateQ_toPartialImpl_hmsg`, `simulateQ_toPartialImpl_tl`,
 `simulateQ_toPartialImpl_f`, `simulateQ_toPartialImpl_h`.
 
-*Readers*: `xmssRoot?`, `xmssNode?`, `forsPkGen?`, `wotsPkGenTops?`, `chain?`,
-`xmssPkFromSig?`.
+*Readers*: `xmssRoot?`, `xmssNode?`, `forsPkGen?`, `forsNode?`, `wotsPkGenTops?`, `chain?`,
+`xmssPkFromSig?`, `forsPkFromSig?`.
 
 *Transport to the pure API*: `xmssRoot_withPublicHash_eq_of_xmssRoot?_eq_some`,
 `xmssPkFromSig_withPublicHash_eq_of_xmssPkFromSig?_eq_some`,
@@ -120,6 +121,15 @@ def forsPkGen? (c : PublicHash.Cache core) (sk : core.SkSeed) (pk : core.PkSeed)
     Option core.Y :=
   simulateQ c.toPartialImpl (forsPkGenM core sk pk adrs)
 
+/-- The honest FORS subtree root at height `z`, global leaf-numbered index `t`, read off a
+cache. -/
+@[expose]
+def forsNode? (c : PublicHash.Cache core) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs)
+    (z t : ℕ) : Option core.Y :=
+  simulateQ c.toPartialImpl (PerfectMerkleTree.merkleRootM
+    (forsLeafWith core (PublicHash.f core pk) sk pk adrs)
+    (forsNodeHashWith (PublicHash.h core pk) adrs) z t)
+
 /-- The honest WOTS+ chain tops read off a cache. -/
 @[expose]
 def wotsPkGenTops? (c : PublicHash.Cache core) (sk : core.SkSeed) (pk : core.PkSeed)
@@ -137,6 +147,12 @@ def chain? (c : PublicHash.Cache core) (pk : core.PkSeed) (adrs : Adrs) (x : cor
 def xmssPkFromSig? (c : PublicHash.Cache core) (idx : ℕ) (sig : XmssSig p core) (msg : core.Y)
     (pk : core.PkSeed) (adrs : Adrs) : Option core.Y :=
   simulateQ c.toPartialImpl (xmssPkFromSigM core idx sig msg pk adrs)
+
+/-- The FORS public key a signature recovers on message digest `md`, read off a cache. -/
+@[expose]
+def forsPkFromSig? (c : PublicHash.Cache core) (sig : ForsSigCore p core) (md : List Byte)
+    (pk : core.PkSeed) (adrs : Adrs) : Option core.Y :=
+  simulateQ c.toPartialImpl (forsPkFromSigM core sig md pk adrs)
 
 /-! ## Transport to the pure API -/
 

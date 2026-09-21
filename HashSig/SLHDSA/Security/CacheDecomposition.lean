@@ -26,9 +26,11 @@ layer reduces Algorithms 14--16 to per-tree Merkle roots, authentication paths a
 WOTS+ layer reduces chain tops to chains and a chain to its `F` queries; the XMSS layer splits
 Algorithms 10 and 11 into authentication path, WOTS+ signature and climb.  The `chain?` lemmas
 compose and split chains (`chain?_add_eq_some_iff`), settle every prefix of a settled chain
-(`exists_chain?_eq_some_of_le`) and locate every intermediate `F` entry
-(`chain?_query_settled`); `simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_of_wotsSignM` is the
-composition of a signer's chain prefixes with a verifier's chain suffixes.
+(`exists_chain?_eq_some_of_le`), locate every intermediate `F` entry (`chain?_query_settled`)
+and, for two settled chains of equal length that end at the same value, find the first step at
+which they split into two cached `F` entries with one answer (`chain?_diverge`);
+`simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_of_wotsSignM` is the composition of a signer's
+chain prefixes with a verifier's chain suffixes.
 
 ## Scope
 
@@ -40,7 +42,7 @@ composition of a signer's chain prefixes with a verifier's chain suffixes.
 
 ## Labels
 
-Twenty-five declarations.
+Twenty-six declarations.
 
 *Algorithms 18--20*: `simulateQ_toPartialImpl_keygenInternalM_eq_some_iff`,
 `simulateQ_toPartialImpl_signInternalM_eq_some_iff`,
@@ -68,7 +70,7 @@ Twenty-five declarations.
 `simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff`.
 
 *Chain reader*: `chain?_zero`, `chain?_succ_eq_some_iff`, `chain?_add_eq_some_iff`,
-`exists_chain?_eq_some_of_le`, `chain?_query_settled`.
+`exists_chain?_eq_some_of_le`, `chain?_query_settled`, `chain?_diverge`.
 
 ## References
 
@@ -231,6 +233,28 @@ theorem chain?_query_settled (pk : core.PkSeed) (adrs : Adrs) (x : core.Y) (i : 
       c (.thash pk (core.adrsToKey (adrs.setHashAddress (i + t))) [z]) = some w := by
   obtain ⟨w, hw⟩ := exists_chain?_eq_some_of_le core c pk adrs x i hts h
   exact ((chain?_succ_eq_some_iff core c pk adrs x i t).mp hw).imp fun z hz => ⟨w, hz⟩
+
+/-- Two settled `n`-step chains from `u` and from `v` at hash address `i` that end at the same
+value either start at the same value, or first split at a step `j < n`: their `j`-step values
+differ while the two `F` entries at hash address `i + j` are both cached with the same
+answer. -/
+theorem chain?_diverge (pk : core.PkSeed) (adrs : Adrs) (u v : core.Y) (i n : ℕ) {y : core.Y}
+    (hu : chain? core c pk adrs u i n = some y) (hv : chain? core c pk adrs v i n = some y) :
+    u = v ∨ ∃ j, j < n ∧ ∃ u' v' w, u' ≠ v' ∧
+      chain? core c pk adrs u i j = some u' ∧ chain? core c pk adrs v i j = some v' ∧
+      c (.thash pk (core.adrsToKey (adrs.setHashAddress (i + j))) [u']) = some w ∧
+      c (.thash pk (core.adrsToKey (adrs.setHashAddress (i + j))) [v']) = some w := by
+  induction n generalizing y with
+  | zero =>
+    rw [chain?_zero] at hu hv
+    exact Or.inl ((Option.some.inj hu).trans (Option.some.inj hv).symm)
+  | succ n ih =>
+    obtain ⟨u₁, hu₁, hqu⟩ := (chain?_succ_eq_some_iff core c pk adrs u i n).mp hu
+    obtain ⟨v₁, hv₁, hqv⟩ := (chain?_succ_eq_some_iff core c pk adrs v i n).mp hv
+    by_cases h : u₁ = v₁
+    · subst h
+      exact (ih hu₁ hv₁).imp id fun ⟨j, hj, rest⟩ => ⟨j, Nat.lt_succ_of_lt hj, rest⟩
+    · exact Or.inr ⟨n, Nat.lt_succ_self n, u₁, v₁, y, h, hu₁, hv₁, hqu, hqv⟩
 
 /-! ## FORS trees -/
 
