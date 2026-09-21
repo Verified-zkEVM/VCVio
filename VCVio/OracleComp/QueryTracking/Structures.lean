@@ -164,6 +164,10 @@ noncomputable def enncard (cache : QueryCache spec) : ℝ≥0∞ :=
 lemma enncard_empty : enncard (∅ : QueryCache spec) = 0 := by
   simp [enncard]
 
+/-- Cache cardinality is monotone in the extension order. -/
+lemma enncard_mono {c₁ c₂ : QueryCache spec} (h : c₁ ≤ c₂) : enncard c₁ ≤ enncard c₂ := by
+  simpa [enncard] using Set.encard_mono (toSet_mono h)
+
 /-! ### Cache update -/
 
 variable [DecidableEq ι] (cache : QueryCache spec)
@@ -224,6 +228,21 @@ lemma enncard_cacheQuery_le (t : spec.Domain) (u : spec.Range t) :
     enncard (cache.cacheQuery t u) ≤ enncard cache + 1 := by
   simp only [enncard]
   exact_mod_cast toSet_encard_cacheQuery_le cache t u
+
+/-- Caching a query that was not already cached inserts exactly its own pair. -/
+lemma toSet_cacheQuery (t : spec.Domain) (u : spec.Range t) (h : cache t = none) :
+    (cache.cacheQuery t u).toSet = insert ⟨t, u⟩ cache.toSet := by
+  ext ⟨t', r⟩
+  by_cases ht : t' = t
+  · subst ht; simp [h, eq_comm]
+  · simp [ht]
+
+/-- Caching a query that was not already cached raises the cardinality by exactly one. -/
+lemma enncard_cacheQuery (t : spec.Domain) (u : spec.Range t) (h : cache t = none) :
+    enncard (cache.cacheQuery t u) = enncard cache + 1 := by
+  rw [enncard, enncard, toSet_cacheQuery cache t u h,
+    Set.encard_insert_of_notMem (by simp [h])]
+  simp
 
 lemma le_cacheQuery {t : spec.Domain} {u : spec.Range t} (h : cache t = none) :
     cache ≤ cache.cacheQuery t u := by grind
