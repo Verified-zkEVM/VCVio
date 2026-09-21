@@ -215,3 +215,17 @@ resampling between phases accepts with probability `1/2`. Clearing memoization w
 keeping the same underlying fixed hash function still accepts, as
 `reset_same_table_accepts` proves. This distinguishes a representation change from a
 change to the oracle's stateful behavior.
+
+## Bounded Schnorr transform guarantees
+
+`Examples/Schnorr/Transforms.lean` instantiates the Fiat–Shamir and Fischlin extraction bounds
+with one challenge-restricted Schnorr protocol. An injective scalar encoding gives special
+soundness; an injective scalar action by the generator also supplies Fischlin's unique-response
+hypothesis. The theorems name their actual extractors and preserve the generic error terms.
+
+Fiat–Shamir uses a finite, sampleable challenge type and has a pathwise replay budget of
+`2 * (Q + 1)` fresh challenge requests. Fischlin additionally enumerates challenges for its
+honest signing search and inherits the exact finite-geometric expected hash-call formula.
+Completeness uses the existing bundled Fischlin runtime over actual keygen/sign/verify code.
+`VCVioTest/SchnorrTransforms.lean` checks these interfaces with three challenges in `ZMod 7`,
+including a concrete accepting transcript pair that recovers scalar `3` after one log inspection.
