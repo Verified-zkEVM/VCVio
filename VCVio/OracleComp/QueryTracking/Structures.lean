@@ -347,6 +347,118 @@ lemma inr_cacheQuery [DecidableEq ι₁] [DecidableEq ι₂]
 instance : Coe (QueryCache spec₁) (QueryCache (spec₁ + spec₂)) := ⟨QueryCache.inl⟩
 instance : Coe (QueryCache spec₂) (QueryCache (spec₁ + spec₂)) := ⟨QueryCache.inr⟩
 
+/-! ### Pairing two component caches -/
+
+/-- A cache for `spec₁ + spec₂` is exactly a pair of a cache for `spec₁` and one for `spec₂`. -/
+def addEquiv (spec₁ : OracleSpec ι₁) (spec₂ : OracleSpec ι₂) :
+    QueryCache spec₁ × QueryCache spec₂ ≃ QueryCache (spec₁ + spec₂) where
+  toFun p := ofFn (Sum.rec p.1 p.2)
+  invFun c := (c.fst, c.snd)
+  left_inv _ := rfl
+  right_inv c := by ext t; cases t <;> rfl
+
+/-- The pairing answers a left-hand query from the left-hand component cache. -/
+@[simp] lemma addEquiv_apply_inl (c₁ : QueryCache spec₁) (c₂ : QueryCache spec₂)
+    (t : spec₁.Domain) : addEquiv spec₁ spec₂ (c₁, c₂) (.inl t) = c₁ t := rfl
+
+/-- The pairing answers a right-hand query from the right-hand component cache. -/
+@[simp] lemma addEquiv_apply_inr (c₁ : QueryCache spec₁) (c₂ : QueryCache spec₂)
+    (t : spec₂.Domain) : addEquiv spec₁ spec₂ (c₁, c₂) (.inr t) = c₂ t := rfl
+
+/-- Pairing two empty caches gives the empty cache. -/
+@[simp] lemma addEquiv_empty :
+    addEquiv spec₁ spec₂ (∅, ∅) = (∅ : QueryCache (spec₁ + spec₂)) := by
+  ext t; cases t <;> rfl
+
+/-- Caching a left-hand query in the left-hand component is caching it in the pairing. -/
+lemma addEquiv_cacheQuery_inl [DecidableEq ι₁] [DecidableEq ι₂]
+    (c₁ : QueryCache spec₁) (c₂ : QueryCache spec₂) (t : spec₁.Domain) (u : spec₁.Range t) :
+    addEquiv spec₁ spec₂ (c₁.cacheQuery t u, c₂) =
+      (addEquiv spec₁ spec₂ (c₁, c₂)).cacheQuery (.inl t) u := by
+  ext t'
+  cases t' with
+  | inl t' =>
+      rcases eq_or_ne t' t with rfl | h
+      · simp
+      · simp [h, Sum.inl_injective.ne h]
+  | inr t' => simp
+
+/-- Caching a right-hand query in the right-hand component is caching it in the pairing. -/
+lemma addEquiv_cacheQuery_inr [DecidableEq ι₁] [DecidableEq ι₂]
+    (c₁ : QueryCache spec₁) (c₂ : QueryCache spec₂) (t : spec₂.Domain) (u : spec₂.Range t) :
+    addEquiv spec₁ spec₂ (c₁, c₂.cacheQuery t u) =
+      (addEquiv spec₁ spec₂ (c₁, c₂)).cacheQuery (.inr t) u := by
+  ext t'
+  cases t' with
+  | inl t' => simp
+  | inr t' =>
+      rcases eq_or_ne t' t with rfl | h
+      · simp
+      · simp [h, Sum.inr_injective.ne h]
+
+/-- The entries of the pairing are the entries of the two component caches, tagged by the side
+they came from. -/
+lemma toSet_addEquiv (c₁ : QueryCache spec₁) (c₂ : QueryCache spec₂) :
+    (addEquiv spec₁ spec₂ (c₁, c₂)).toSet =
+      (fun x : (t : spec₁.Domain) × spec₁.Range t =>
+          (⟨Sum.inl x.1, x.2⟩ :
+            (t : (spec₁ + spec₂).Domain) × (spec₁ + spec₂).Range t)) '' c₁.toSet ∪
+      (fun x : (t : spec₂.Domain) × spec₂.Range t =>
+          (⟨Sum.inr x.1, x.2⟩ :
+            (t : (spec₁ + spec₂).Domain) × (spec₁ + spec₂).Range t)) '' c₂.toSet := by
+  ext ⟨t, r⟩
+  cases t with
+  | inl t =>
+      simp only [mem_toSet, Set.mem_union, Set.mem_image]
+      refine ⟨fun h => Or.inl ⟨⟨t, r⟩, h, rfl⟩, ?_⟩
+      rintro (⟨⟨t', r'⟩, h, heq⟩ | ⟨⟨t', r'⟩, -, heq⟩)
+      · obtain ⟨h1, h2⟩ := Sigma.mk.inj heq
+        obtain rfl := Sum.inl_injective h1
+        obtain rfl := eq_of_heq h2
+        exact h
+      · exact absurd heq (by simp)
+  | inr t =>
+      simp only [mem_toSet, Set.mem_union, Set.mem_image]
+      refine ⟨fun h => Or.inr ⟨⟨t, r⟩, h, rfl⟩, ?_⟩
+      rintro (⟨⟨t', r'⟩, -, heq⟩ | ⟨⟨t', r'⟩, h, heq⟩)
+      · exact absurd heq (by simp)
+      · obtain ⟨h1, h2⟩ := Sigma.mk.inj heq
+        obtain rfl := Sum.inr_injective h1
+        obtain rfl := eq_of_heq h2
+        exact h
+
+/-- The pairing holds exactly as many entries as its two components together. -/
+lemma enncard_addEquiv (c₁ : QueryCache spec₁) (c₂ : QueryCache spec₂) :
+    enncard (addEquiv spec₁ spec₂ (c₁, c₂)) = enncard c₁ + enncard c₂ := by
+  have hinj₁ : Function.Injective
+      (fun x : (t : spec₁.Domain) × spec₁.Range t =>
+        (⟨Sum.inl x.1, x.2⟩ : (t : (spec₁ + spec₂).Domain) × (spec₁ + spec₂).Range t)) := by
+    rintro ⟨t, r⟩ ⟨t', r'⟩ h
+    obtain ⟨h1, h2⟩ := Sigma.mk.inj h
+    obtain rfl : t = t' := Sum.inl_injective h1
+    simpa using h2
+  have hinj₂ : Function.Injective
+      (fun x : (t : spec₂.Domain) × spec₂.Range t =>
+        (⟨Sum.inr x.1, x.2⟩ : (t : (spec₁ + spec₂).Domain) × (spec₁ + spec₂).Range t)) := by
+    rintro ⟨t, r⟩ ⟨t', r'⟩ h
+    obtain ⟨h1, h2⟩ := Sigma.mk.inj h
+    obtain rfl : t = t' := Sum.inr_injective h1
+    simpa using h2
+  have hdisj : Disjoint
+      ((fun x : (t : spec₁.Domain) × spec₁.Range t =>
+        (⟨Sum.inl x.1, x.2⟩ : (t : (spec₁ + spec₂).Domain) × (spec₁ + spec₂).Range t)) ''
+          c₁.toSet)
+      ((fun x : (t : spec₂.Domain) × spec₂.Range t =>
+        (⟨Sum.inr x.1, x.2⟩ : (t : (spec₁ + spec₂).Domain) × (spec₁ + spec₂).Range t)) ''
+          c₂.toSet) := by
+    rw [Set.disjoint_left]
+    rintro ⟨t, r⟩ ⟨⟨t₁, r₁⟩, -, h₁⟩ ⟨⟨t₂, r₂⟩, -, h₂⟩
+    rw [← h₁] at h₂
+    exact absurd (Sigma.mk.inj h₂).1 (by simp)
+  rw [enncard, enncard, enncard, toSet_addEquiv, Set.encard_union_eq hdisj,
+    hinj₁.injOn.encard_image, hinj₂.injOn.encard_image]
+  simp
+
 end sum
 
 end QueryCache
