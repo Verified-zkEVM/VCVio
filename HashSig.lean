@@ -56,6 +56,7 @@ public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.Security.HonestKeys
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
 public import HashSig.SLHDSA.Security.ItsrCover
+public import HashSig.SLHDSA.Security.JointRom
 public import HashSig.SLHDSA.Security.LimitedProfile
 public import HashSig.SLHDSA.Security.OpenPreBound
 public import HashSig.SLHDSA.Security.PrfHops

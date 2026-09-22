@@ -17,6 +17,9 @@ public import ToMathlib.Control.WriterT
 A writer records each query and its successful response. The output projection recovers the
 original computation, while reachability and structural query bounds describe its trace.
 An input-only state handler records the same sequence of query inputs.
+For a logged handler running inside a state-monotone outer simulation, each log entry is located
+between two intermediate outer states, and an outer counter charged at least one per logged
+query bounds the length of the log.
 -/
 
 public section
@@ -284,6 +287,58 @@ theorem exists_le_mem_support_run_of_mem_log_add_withLogging
         exact ⟨s₀, _, le_rfl, hmono _ _ _ h₂, hv⟩
       · obtain ⟨s₁, s₂, hs₁, hs₂, hmem⟩ := ih _ h₂ he
         exact ⟨s₁, s₂, (hmono _ _ _ hv).trans hs₁, hs₂, hmem⟩
+
+omit [Preorder σ] in
+/-- **Logged queries are counted.**  For an outer state-monotone simulation carrying a counter
+`cnt` that increases by at least one across every run of the logged inner handler's program, the
+length of the log is at most the counter's increase.
+
+This is not a corollary of `exists_le_mem_support_run_of_mem_log_add_withLogging`: that lemma
+places each log entry in an interval of outer states but says nothing about the intervals of
+distinct entries being disjoint, so its per-entry increments cannot be summed to a count. -/
+theorem length_log_le_cnt_of_mem_support_run_add_withLogging
+    (outer : QueryImpl spec (StateT σ ProbComp)) (cnt : σ → ℕ)
+    (hmono : ∀ {β : Type} (ob : OracleComp spec β) (s : σ) (z : β × σ),
+      z ∈ support ((simulateQ outer ob).run s) → cnt s ≤ cnt z.2)
+    (sign : QueryImpl sigSpec (OracleComp spec))
+    (hsign : ∀ (t : sigSpec.Domain) (s : σ) (z : sigSpec.Range t × σ),
+      z ∈ support ((simulateQ outer (sign t)).run s) → cnt s + 1 ≤ cnt z.2)
+    {α : Type} (oa : OracleComp (spec + sigSpec) α) {s₀ : σ}
+    {z : (α × QueryLog sigSpec) × σ}
+    (hz : z ∈ support ((simulateQ outer ((simulateQ
+      ((HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
+        (WriterT (QueryLog sigSpec) (OracleComp spec)) + sign.withLogging) oa).run)).run s₀)) :
+    cnt s₀ + z.1.2.length ≤ cnt z.2 := by
+  induction oa using OracleComp.inductionOn generalizing s₀ z with
+  | pure x => simp_all [simulateQ_pure]
+  | query_bind t k ih =>
+    rw [simulateQ_bind, simulateQ_spec_query, WriterT.run_bind', simulateQ_bind, StateT.run_bind,
+      mem_support_bind_iff] at hz
+    obtain ⟨⟨⟨u, w₁⟩, s'⟩, h₁, h₂⟩ := hz
+    simp only [simulateQ_map, StateT.run_map, support_map, Set.mem_image] at h₂
+    obtain ⟨⟨⟨a, w₂⟩, s''⟩, h₂, rfl⟩ := h₂
+    dsimp only
+    cases t with
+    | inl t =>
+      simp only [QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+        HasQuery.instOfMonadLift_query, WriterT.run_monadLift', simulateQ_map, StateT.run_map,
+        support_map, Set.mem_image, Prod.mk.injEq] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, ⟨⟨rfl, rfl⟩, rfl⟩⟩ := h₁
+      have hm : cnt s₀ ≤ cnt s₁' := hmono _ _ _ hv
+      have hih := ih _ h₂
+      simp only [Prod.map_snd, List.empty_eq, List.nil_append] at hih ⊢
+      omega
+    | inr t =>
+      rw [QueryImpl.add_apply_inr, QueryImpl.run_withLogging_apply, simulateQ_bind, StateT.run_bind,
+        mem_support_bind_iff] at h₁
+      obtain ⟨⟨v, s₁'⟩, hv, h₁⟩ := h₁
+      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff,
+        Prod.mk.injEq] at h₁
+      obtain ⟨⟨rfl, rfl⟩, rfl⟩ := h₁
+      have hs : cnt s₀ + 1 ≤ cnt s' := hsign t _ _ hv
+      have hih := ih _ h₂
+      simp only [Prod.map_snd, List.length_append, List.length_singleton] at hih ⊢
+      omega
 
 end logEntries
 

@@ -60,12 +60,12 @@ where it stops:
   the logged digests really are uniform, so covering all `k` coordinates is a product of `k`
   events, but expressing that needs the answers of several queries at once, which a single-step
   bound cannot express.  Nothing of that shape exists in this repository.
-* `HasSignQueryBound` is not related to `HasHashQueryBound` here.  That every signing query costs
-  at least one public-hash query, hence `qs ≤ q`, is true of `signInternalM` and not proved, and
-  it is not one induction away: no single distribution currently carries both a charge and a log,
-  since the counted experiment returns only the win bit and `romRunFull` is uninstrumented, so a
-  joint counted-and-logged run has to be built first, with projection lemmas to each of the two
-  existing runs.
+* The two budgets are assumed separately here, and nothing in this module relates them.
+  `HashSig.SLHDSA.Security.JointRom` relates them, on the joint counted-and-logged run, as the
+  implication `hasSignQueryBound_of_hasHashQueryBound`: a hash-query budget is also a
+  signing-query budget, because every signing query spends at least one public-hash query on its
+  own `H_msg` call.  That is an implication, not an inequality between `qs` and `q`, and no
+  declaration in this repository produces a signature budget below a given hash budget.
 * Nothing here is quantum: the oracle is a classical lazily-sampled table.
 
 ## Labels

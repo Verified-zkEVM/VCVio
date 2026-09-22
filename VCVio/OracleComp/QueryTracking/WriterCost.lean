@@ -9,6 +9,7 @@ module
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.MeasureTheory.MeasurableSpace.TypeTags
 public import ToMathlib.Control.WriterT
@@ -23,6 +24,8 @@ import Mathlib.MeasureTheory.Integral.Lebesgue.Markov
 
 This file collects reusable `AddWriterT` facts for pathwise and expected cost reasoning.
 It also equips `QueryImpl` with additive writer-cost instrumentation.
+A final section identifies the writer layer with an additive charge carried as an auxiliary
+`QueryImpl.extendState` component, and reads pathwise lower bounds off that counter.
 -/
 
 @[expose] public section
@@ -984,3 +987,78 @@ lemma expectedCostNat_eq_of_queryCostExactly
 end expectedUnitCost
 
 end AddWriterT
+
+/-! ## An additive charge carried in the state
+
+The counter lemmas below are proved through the identification of the auxiliary state component
+with the writer layer, and are kept beside it for that reason; `QueryImpl.extendState` itself is
+defined lower down, in `VCVio.OracleComp.SimSemantics.StateT.StateProjection`.
+-/
+
+namespace OracleComp
+
+section extendStateCost
+
+variable {ι : Type} {spec : OracleSpec ι} {σ : Type}
+  (impl : QueryImpl spec (StateT σ ProbComp)) (costFn : spec.Domain → ℕ)
+
+/-- Accumulating an additive charge in an auxiliary state component is the same computation as
+accumulating it in an `AddWriterT` layer: the joint run is the writer run with the initial value
+added to the accumulated charge. -/
+theorem run_extendState_eq_map_runAdd_withAddCost {α : Type} (oa : OracleComp spec α) (s : σ)
+    (n : ℕ) :
+    (simulateQ (QueryImpl.extendState impl (fun t _ _ _ k => k + costFn t)) oa).run (s, n)
+      = (fun p => (p.1.1, (p.2, n + p.1.2))) <$>
+          ((simulateQ (impl.withAddCost costFn) oa).runAdd.run s) := by
+  induction oa using OracleComp.inductionOn generalizing s n with
+  | pure x => simp
+  | query_bind t k ih =>
+      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
+        StateT.run_bind, QueryImpl.extendState_apply, QueryImpl.withAddCost_apply,
+        AddWriterT.runAdd_bind, AddWriterT.runAdd_liftM, AddWriterT.runAdd_addTell,
+        StateT.run_map, bind_assoc, map_bind, bind_map_left,
+        pure_bind, Functor.map_map, id_eq, Prod.map_fst, Prod.map_snd, zero_add]
+      refine bind_congr fun u => ?_
+      rw [ih u.1 u.2 (n + costFn t)]
+      simp only [add_assoc]
+
+/-- The counter of a run accumulating an additive charge in its auxiliary state only grows. -/
+theorem le_cnt_of_mem_support_run_extendState {α : Type} (oa : OracleComp spec α) (s : σ) (n : ℕ)
+    {z : α × (σ × ℕ)}
+    (hz : z ∈ support ((simulateQ (QueryImpl.extendState impl
+      (fun t _ _ _ k => k + costFn t)) oa).run (s, n))) : n ≤ z.2.2 := by
+  rw [run_extendState_eq_map_runAdd_withAddCost, support_map] at hz
+  obtain ⟨p, -, rfl⟩ := hz
+  exact Nat.le_add_right _ _
+
+/-- A head query of charge at least one raises the counter by at least one. -/
+theorem succ_le_cnt_of_mem_support_run_extendState_query_bind {α : Type} (t : spec.Domain)
+    (ht : 1 ≤ costFn t) (k : spec.Range t → OracleComp spec α) (s : σ) (n : ℕ)
+    {z : α × (σ × ℕ)}
+    (hz : z ∈ support ((simulateQ (QueryImpl.extendState impl
+      (fun t _ _ _ k => k + costFn t)) (liftM (spec.query t) >>= k)).run (s, n))) :
+    n + 1 ≤ z.2.2 := by
+  rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, QueryImpl.extendState_apply,
+    bind_assoc, mem_support_bind_iff] at hz
+  obtain ⟨p, -, hz⟩ := hz
+  rw [pure_bind] at hz
+  exact le_trans (by omega) (le_cnt_of_mem_support_run_extendState impl costFn _ _ _ hz)
+
+/-- If every continuation of a bind raises the counter by at least one, so does the bind. -/
+theorem succ_le_cnt_of_mem_support_run_extendState_bind {α β : Type} (oa : OracleComp spec α)
+    (k : α → OracleComp spec β)
+    (hk : ∀ (x : α) (s' : σ) (n' : ℕ) (z' : β × (σ × ℕ)),
+      z' ∈ support ((simulateQ (QueryImpl.extendState impl
+        (fun t _ _ _ j => j + costFn t)) (k x)).run (s', n')) → n' + 1 ≤ z'.2.2)
+    (s : σ) (n : ℕ) {z : β × (σ × ℕ)}
+    (hz : z ∈ support ((simulateQ (QueryImpl.extendState impl
+      (fun t _ _ _ j => j + costFn t)) (oa >>= k)).run (s, n))) : n + 1 ≤ z.2.2 := by
+  rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
+  obtain ⟨p, hp, hz⟩ := hz
+  have h₁ := le_cnt_of_mem_support_run_extendState impl costFn oa s n hp
+  have h₂ := hk p.1 p.2.1 p.2.2 z hz
+  omega
+
+end extendStateCost
+
+end OracleComp

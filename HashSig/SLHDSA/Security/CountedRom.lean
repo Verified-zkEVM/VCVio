@@ -256,8 +256,11 @@ queries, counting key generation, signing and the final verification as well as 
 This is a condition on the support, not a complexity assumption: the adversary's running time and
 memory are unconstrained and its private sampling is free.
 
+The body is exposed, so a consumer can both establish and eliminate the bound directly; the
+named elimination lemmas are preferable wherever one applies.
+
 *Counted random-oracle experiment.* -/
-def HasHashQueryBound
+@[expose] def HasHashQueryBound
     (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ) : Prop :=
   ∀ result ∈ support (countedRomExperiment core adv), result.2 ≤ q
 

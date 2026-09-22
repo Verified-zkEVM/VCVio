@@ -278,8 +278,12 @@ instrumentation of `countedRomImpl` cannot charge a signing query at all, becaus
 oracle is interpreted in the inner simulation over
 `romSpec + (List Byte →ₒ GeneralScheme.SignatureCore vp core)` and its result is a program over
 `romSpec`, so a signing query never reaches the counted handler.  It need not: the signing log
-is a field of the transcript, and its length is exactly the number of signing queries. -/
-def HasSignQueryBound (adv : unforgeableAdv romAlg) (qs : ℕ) : Prop :=
+is a field of the transcript, and its length is exactly the number of signing queries.
+
+The body is exposed, so a consumer can both establish and eliminate the bound directly; the
+named elimination lemmas, `length_map_fst_le_of_hasSignQueryBound` among them, are preferable
+wherever one applies. -/
+@[expose] def HasSignQueryBound (adv : unforgeableAdv romAlg) (qs : ℕ) : Prop :=
   ∀ z ∈ support (romRunFull core adv), z.1.log.length ≤ qs
 
 /-- The signing budget bounds the number of logged messages. -/
