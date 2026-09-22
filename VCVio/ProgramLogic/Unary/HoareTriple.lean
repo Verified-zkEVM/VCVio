@@ -395,7 +395,7 @@ lemma wp_congr_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
 open scoped Classical in
 /-- Finite-response computations integrate assertions by a finite partition of reachable outputs.
 The output labels need no measurable-space instance. -/
-theorem wp_eq_sum_finSupport [spec.Fintype] [DecidableEq α] (oa : OracleComp spec α)
+theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) :
     wp oa post = ∑ x ∈ finSupport oa, Pr{let y ← oa}[y = x] * post x := by
   classical
@@ -416,9 +416,10 @@ theorem wp_eq_sum_finSupport [spec.Fintype] [DecidableEq α] (oa : OracleComp sp
 
 open scoped Classical in
 /-- The finite reachable-output partition extends to a native event-weighted sum. -/
-theorem wp_eq_tsum [spec.Fintype] (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
+theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp oa post = ∑' x, Pr{let y ← oa}[y = x] * post x := by
   let : DecidableEq α := Classical.decEq α
+  let : ∀ t, Fintype (spec.Range t) := fun _ ↦ Fintype.ofFinite _
   rw [wp_eq_sum_finSupport]
   symm
   apply tsum_eq_sum
@@ -456,7 +457,7 @@ section Uniform
 
 /-- A uniform query's expectation is its finite average. -/
 theorem wp_query_uniform [OracleSpec.IsUniformMeasureSpec spec]
-    (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
+    (t : spec.Domain) [Fintype (spec.Range t)] (post : spec.Range t → ℝ≥0∞) :
     wp (query t : OracleComp spec (spec.Range t)) post =
       ∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * post u := by
   rw [wp_query, OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
