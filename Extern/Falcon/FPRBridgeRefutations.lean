@@ -7,9 +7,11 @@ Authors: Oleksandr Vovkotrub
 module
 import all LatticeCrypto.Falcon.Concrete.FPR
 public import LatticeCrypto.Falcon.Concrete.FPR
-import all Extern.Falcon.FPRBridge
+import all Extern.Falcon.FPR.Decode
+import all Extern.Falcon.FPR.Div
+import all Extern.Falcon.FPR.Sqrt
+import all Extern.Falcon.Expm.FixedPoint
 public import Extern.Falcon.FPRBridge
-import all Extern.Falcon.ExpmBridge
 public import Extern.Falcon.ExpmBridge
 
 /-!

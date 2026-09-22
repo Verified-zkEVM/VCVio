@@ -4,6 +4,25 @@ How the FACCT sampler kernel's error bound was proved, and the measurements behi
 `expm_p63_error` lives in `Extern/Falcon/ExpmBridge.lean`; everything here is measured, not
 estimated.
 
+## Module layout
+
+```
+Expm.CertificateCore ──► Expm.Polynomial ──► Expm.Certificates ──┐
+                               │                                 ├──► ExpmBridge
+FPR.Decode ────────────────────┴───────────► Expm.FixedPoint ────┘
+```
+
+- `Expm/FixedPoint.lean`: the fixed-point pipeline (`mulHi64`, `mtwop63`, the Horner floors) and
+  `expm_p63_sub_trueArg_le`. It needs only `FPR.Decode`, not the add, mul, div or sqrt proofs.
+- `Expm/CertificateCore.lean`: Mathlib only. It holds integer polynomials (`IntPoly`), the Chebyshev
+  certificate record `ChebCert`, the Boolean checker `ChebCert.checkCover`, and its soundness
+  theorem `ChebCert.abs_le_of_checkCover`.
+- `Expm/Polynomial.lean`: the approximation error `certQ`, its integer coefficient list `certP` with
+  `certQ_eval`, and the Taylor truncation bound `abs_taylorExpNeg_sub_exp_le`.
+- `Expm/Certificates.lean`: the 15 certificates as data (`cert0` … `cert14`), one kernel check
+  `certs_checkCover` by `decide +kernel`, and `abs_certQ_le`.
+- `ExpmBridge.lean`: the assembly into `expm_p63_error`.
+
 ## The obligation
 
 ```
@@ -74,10 +93,11 @@ locality, applied to `Q` itself.
 | **Chebyshev** | **32** | **3585** | **12%** |
 
 Chebyshev at 32 pieces matches Taylor form at 128 — a 4x reduction in certificate count for the
-price of needing `|T_j t| ≤ 1` on `[-1, 1]` (`abs_le_of_chebCert`). The landed proof gets to 15 by
+price of needing `|T_j t| ≤ 1` on `[-1, 1]` (`ChebCert.abs_le_of_check`). The landed proof gets to 15 by
 making the covering non-uniform instead of uniform: `[0, 1/16]` in one piece, `[1/16, 1/8]` in
 four of width `1/64`, `[1/8, 11/16]` in nine of width `1/16`, and `[11/16, 89/128]` in one of
-width `1/128`. `abs_certQ_le` chains them and is where the covering is checked.
+width `1/128`. `ChebCert.checkCover` checks the covering, that consecutive pieces meet, together
+with every certificate, and `abs_certQ_le` applies it.
 
 The Taylor degree is irrelevant to the bound: `n = 18`, `22` and `26` all give the same figure,
 because the remainder is already negligible at 18 (0.07 units). The proof uses 18, via
@@ -95,11 +115,19 @@ tracks the coefficient arithmetic rather than the degree:
 | `ℚ`, 326 digits | 18 | 18.3 s |
 
 **Clearing denominators fixes it.** The digit counts are denominator-dominated (`2 ^ 63`, `m ^ n`,
-`n!`); one common scaling makes every coefficient an integer — this is why `certQ_expand` and the
-`certN*` tables are stated over `ℤ`. Measured over `ℤ` at degree 18 with 326-digit coefficients,
-several certificates to a file so the import is amortised: **2.54 s marginal per certificate** on
-a 6.8 s import, against roughly 11.5 s marginal over `ℚ`. The whole certification layer costs
-about 25 s of build time.
+`n!`); one common scaling makes every coefficient an integer — this is why `certP` and the
+certificate numerators are stated over `ℤ`. Measured over `ℤ` at degree 18 with 326-digit
+coefficients, several certificates to a file so the import is amortised: **2.54 s marginal per
+certificate** on a 6.8 s import, against roughly 11.5 s marginal over `ℚ`.
+
+Once the certificates were over `ℤ`, the remaining cost was the per-certificate proofs: each was a
+`simp`/`ring` identity. The file's profile showed 30 `simp` calls of 3.1 to 3.4 s each,
+108 s in total, which is two per certificate. The certificates are now
+data checked by a single generic checker. `ChebCert.check` compares the shifted, scaled polynomial
+`homog p q s P` with a stored Chebyshev combination by integer list arithmetic.
+`certs_checkCover` runs that check for all 15 pieces in the kernel (`decide +kernel`, about
+4 s). The real-valued work is done once, in `ChebCert.abs_le_of_check`, rather than per
+certificate. Nothing uses `native_decide`, so the trusted base is unchanged.
 
 Breakpoints are **dyadic** for the same reason: anchoring the split at a decimal bound for `log 2`
 produces 337-digit numerals, and the line-length linter cannot wrap a numeral.
