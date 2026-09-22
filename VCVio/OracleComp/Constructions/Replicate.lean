@@ -82,7 +82,7 @@ lemma support_replicate :
     | cons x xs => rw [cons_mem_support_seq_map_cons_iff, ih]; aesop
 
 @[simp]
-lemma mem_finSupport_replicate [spec.DecidableEq] [DecidableEq α]
+lemma mem_finSupport_replicate [DecidableEq α]
     (xs : List α) : xs ∈ finSupport (oa.replicate n) ↔
       xs.length = n ∧ ∀ x ∈ xs, x ∈ finSupport oa := by
   simp [mem_finSupport_iff_mem_support]

@@ -50,7 +50,7 @@ This is an explicit semantic choice rather than an instance inferred from finite
 replace it with another `IsMeasureSpec` when studying a biased or otherwise concrete source. -/
 @[instance_reducible]
 noncomputable def fairCoinMeasureSpec : coinSpec.toPFunctor.IsMeasureSpec :=
-  PFunctor.IsMeasureSpec.uniformOfFintypeInhabited _
+  PFunctor.IsMeasureSpec.uniformOfFiniteNonempty _
 
 attribute [local instance] fairCoinMeasureSpec
 

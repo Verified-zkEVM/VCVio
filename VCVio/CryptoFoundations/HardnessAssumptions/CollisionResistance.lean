@@ -144,28 +144,12 @@ is a syntactic object, and probability semantics only attach to the
 post-simulation spec `ROMHashSpec.cached` (defeq, distinct head symbol). -/
 @[reducible] def ROMHashSpec (X Y : Type) : OracleSpec X := fun _ => Y
 
-instance {X Y : Type} [DecidableEq X] [DecidableEq Y] :
-    (ROMHashSpec X Y).DecidableEq where
-  decidableEqA := (inferInstanceAs (DecidableEq X))
-  decidableEqB := fun _ => (inferInstanceAs (DecidableEq Y))
-
 /-- The post-simulation companion to `ROMHashSpec`: definitionally the same
 `OracleSpec X`, but with a distinct head symbol so the `IsUniformSpec`
 instance below is opted into only where probability reasoning is intended.
 The adversary's pre-cache computation is converted into a post-cache
 computation only via `simulateQ ROMHashSpec.cachingOracle`. -/
 @[reducible] def ROMHashSpec.cached (X Y : Type) : OracleSpec X := fun _ => Y
-
-instance {X Y : Type} [Fintype Y] : (ROMHashSpec.cached X Y).Fintype where
-  fintypeB := fun _ => (inferInstanceAs (Fintype Y))
-
-instance {X Y : Type} [Inhabited Y] : (ROMHashSpec.cached X Y).Inhabited where
-  inhabitedB := fun _ => (inferInstanceAs (Inhabited Y))
-
-instance {X Y : Type} [DecidableEq X] [DecidableEq Y] :
-    (ROMHashSpec.cached X Y).DecidableEq where
-  decidableEqA := (inferInstanceAs (DecidableEq X))
-  decidableEqB := fun _ => (inferInstanceAs (DecidableEq Y))
 
 noncomputable instance {X Y : Type} [Fintype Y] [Inhabited Y] :
     IsUniformSpec (ROMHashSpec.cached X Y) := IsUniformSpec.ofFintypeInhabited _

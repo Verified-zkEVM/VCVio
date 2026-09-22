@@ -57,7 +57,7 @@ abbrev CMOracle (M : Type) (S : Type) (C : Type) : OracleSpec (M × S) := fun _ 
 noncomputable instance {M S C : Type} [Fintype C] [Inhabited C]
     [MeasurableSpace C] [MeasurableSingletonClass C] :
     OracleSpec.IsUniformMeasureSpec (CMOracle M S C) :=
-  OracleSpec.IsUniformMeasureSpec.ofFintypeInhabited _
+  OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty _
 
 variable {M S C : Type}
   [DecidableEq M] [DecidableEq S] [DecidableEq C]

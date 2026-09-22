@@ -250,7 +250,7 @@ private lemma mem_support_costDist_unit_query_bind_of_mem_support
     exact ⟨z, hz, by simp [Nat.add_comm]⟩
 
 private theorem isPerIndexQueryBound_of_unit_support_bound
-    [DecidableEq ι] [spec.Inhabited]
+    [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
     (hSupport : ∀ z ∈ support (costDist oa CostModel.unit),
       Multiplicative.toAdd z.2 ≤ bound) :
@@ -261,12 +261,13 @@ private theorem isPerIndexQueryBound_of_unit_support_bound
   | query_bind t mx ih =>
       rw [isPerIndexQueryBound_query_bind_iff]
       refine ⟨?_, fun u => ?_⟩
-      · rcases OracleComp.support_nonempty (mx default) with ⟨x, hx⟩
-        rcases exists_mem_support_costDist_of_mem_support (mx default) CostModel.unit hx with
+      · obtain ⟨u₀⟩ : Nonempty (spec.Range t) := inferInstance
+        rcases OracleComp.support_nonempty (mx u₀) with ⟨x, hx⟩
+        rcases exists_mem_support_costDist_of_mem_support (mx u₀) CostModel.unit hx with
           ⟨c, hc⟩
         have hle : Multiplicative.toAdd c + 1 ≤ bound := by
           simpa using
-            hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx default hc)
+            hSupport _ (mem_support_costDist_unit_query_bind_of_mem_support t mx u₀ hc)
         omega
       · have hcontSupport :
             ∀ z ∈ support (costDist (mx u) CostModel.unit), z.2 ≤ bound - 1 := by
@@ -283,7 +284,7 @@ private theorem isPerIndexQueryBound_of_unit_support_bound
 if every execution uses at most `bound` total unit-cost steps, then each oracle index
 is queried at most `bound` times. -/
 theorem WorstCaseCostBound.toIsPerIndexQueryBound_unit
-    [DecidableEq ι] [spec.Inhabited]
+    [DecidableEq ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {bound : ℕ}
     (h : WorstCaseCostBound oa CostModel.unit bound) :
     IsPerIndexQueryBound oa (fun _ => bound) :=

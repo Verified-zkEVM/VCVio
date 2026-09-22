@@ -177,9 +177,6 @@ theorem PreservesInv.withCachingAux_aux
 
 section CacheMonotonicity
 
-variable [spec.DecidableEq]
-
-omit [spec.DecidableEq] in
 /-- Running `withCaching` at state `cache` produces a result whose cache is `≥ cache`.
 On a cache hit the state is unchanged; on a miss a single entry is added. -/
 lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
@@ -197,7 +194,7 @@ lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
 
 /-- `withCaching` preserves the invariant `(cache₀ ≤ ·)` (the cache only grows). -/
 lemma PreservesInv.withCaching_le {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
-    [DecidableEq ι₀] [spec₀.DecidableEq]
+    [DecidableEq ι₀]
     (so : QueryImpl spec₀ ProbComp) (cache₀ : QueryCache spec₀) :
     QueryImpl.PreservesInv (so.withCaching) (cache₀ ≤ ·) :=
   fun t cache hle z hz => hle.trans (withCaching_cache_le so t cache z hz)
@@ -446,9 +443,6 @@ end withCacheOverlay
 
 namespace OracleComp
 
-variable [spec.DecidableEq]
-
-omit [spec.DecidableEq] in
 /-- `simulateQ cachingOracle` only grows the cache: for any `oa`, if
 `z ∈ support ((simulateQ cachingOracle oa).run cache₀)` then `cache₀ ≤ z.2`. -/
 theorem simulateQ_cachingOracle_cache_le {α : Type u}
@@ -468,7 +462,6 @@ theorem simulateQ_cachingOracle_cache_le {α : Type u}
       have hle_mid : cache₀ ≤ cache_mid := QueryImpl.withCaching_cache_le _ _ cache₀ _ hmid
       exact hle_mid.trans (ih _ cache_mid z hrest)
 
-omit [spec.DecidableEq] in
 /-- After running `cachingOracle` on a single query at `t`, the resulting cache
 maps `t` to the returned value. -/
 theorem cachingOracle_query_caches (t : spec.Domain)

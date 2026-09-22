@@ -112,7 +112,7 @@ theorem oneCoinOracleProgram_toFreeM (input : Unit) :
 /-- The native fair-coin interpretation is selected explicitly for this canary. -/
 @[instance_reducible]
 noncomputable def oneCoinMeasureSpec : coinSpec.toPFunctor.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFintypeInhabited _
+  IsMeasureSpec.uniformOfFiniteNonempty _
 
 attribute [local instance] oneCoinMeasureSpec
 

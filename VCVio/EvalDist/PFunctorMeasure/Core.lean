@@ -28,8 +28,8 @@ measurability obligations while leaving the result space arbitrary.
 ## Main definitions
 
 * `PFunctor.IsMeasureSpec` assigns a probability measure to each operation.
-* `PFunctor.IsMeasureSpec.uniformOfFintypeInhabited` assigns the native uniform measure to every
-  finite, inhabited answer type.
+* `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty` assigns the native uniform measure to every
+  finite, nonempty answer type.
 * `PFunctor.FreeM.denote` is the measure denoted by a free program.
 
 ## Main statements
@@ -62,13 +62,14 @@ class IsMeasureSpec (P : PFunctor.{uA, u}) [∀ a, MeasurableSpace (P.B a)] wher
 
 attribute [instance] IsMeasureSpec.isProbabilityMeasure
 
-/-- Construct native uniform measure semantics from finite, inhabited answer types.
+/-- Construct native uniform measure semantics from finite, nonempty answer types.
 
 This is deliberately not an instance: measure semantics remain an explicit choice at each use
 site, and are never inferred merely from finiteness. -/
 @[reducible]
-noncomputable def IsMeasureSpec.uniformOfFintypeInhabited (P : PFunctor.{uA, u})
-    [P.Fintype] [P.Inhabited] [∀ a, MeasurableSpace (P.B a)] : P.IsMeasureSpec where
+noncomputable def IsMeasureSpec.uniformOfFiniteNonempty (P : PFunctor.{uA, u})
+    [∀ a, Finite (P.B a)] [∀ a, Nonempty (P.B a)] [∀ a, MeasurableSpace (P.B a)] :
+    P.IsMeasureSpec where
   toMeasure _ := uniformOn Set.univ
   isProbabilityMeasure _ := inferInstance
 

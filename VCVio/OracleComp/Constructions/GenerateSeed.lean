@@ -207,7 +207,7 @@ private lemma probOutput_generateSeed_cons_eq_mul (seed rest : QuerySeed spec)
     (support_replicate .. ▸ hxs').1 ((mem_support_pure_iff' (m := ProbComp) _ _).mp hpure)).1.trans
     hxs_eq.symm
 
-lemma probOutput_generateSeed [spec.Fintype] (seed : QuerySeed spec)
+lemma probOutput_generateSeed [∀ t, Fintype (spec.Range t)] (seed : QuerySeed spec)
     (h : seed ∈ support (generateSeed spec qc js)) :
     Pr[= seed | generateSeed spec qc js] =
       (↑(js.map (fun j => (Fintype.card (spec.Range j)) ^ qc j)).prod)⁻¹ := by
@@ -227,15 +227,16 @@ lemma probOutput_generateSeed [spec.Fintype] (seed : QuerySeed spec)
       probOutput_replicate_uniformSample hxs_len, ih rest hrest_mem,
       inv_natCast_pow_mul_inv_list_prod qc j js fun j => Fintype.card (spec.Range j)]
 
-lemma probOutput_generateSeed' [spec.Fintype] [DecidableEq (QuerySeed spec)]
+lemma probOutput_generateSeed' [∀ t, Finite (spec.Range t)] [DecidableEq (QuerySeed spec)]
     (seed : QuerySeed spec) (h : seed ∈ support (generateSeed spec qc js)) :
     Pr[= seed | generateSeed spec qc js] =
       1 / (finSupport (generateSeed spec qc js)).card := by
+  have := fun t => Fintype.ofFinite (spec.Range t)
   rw [probOutput_generateSeed spec qc js seed h]
   exact probOutput_eq_inv_finSupport_card_of_liftM_PMF fun s hs =>
     probOutput_generateSeed spec qc js s hs
 
-lemma evalSPMF_generateSeed_eq_of_countEq [IsUniformSpec spec]
+lemma evalSPMF_generateSeed_eq_of_countEq
     (qc' : ι → ℕ) (js' : List ι)
     (hcount : ∀ i, qc i * js.count i = qc' i * js'.count i) :
     𝒮[generateSeed spec qc js] = 𝒮[generateSeed spec qc' js'] := by

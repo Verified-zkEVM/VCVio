@@ -39,7 +39,7 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type u}
 /-- Enforcement oracle: wraps the original oracle with a per-index budget tracked via `StateT`.
 When the remaining budget for the queried oracle is positive, the query is forwarded and
 the budget decremented. When the budget is exhausted, `default` is returned silently. -/
-def OracleSpec.enforceOracle [DecidableEq ι] [spec.Inhabited] :
+def OracleSpec.enforceOracle [DecidableEq ι] [∀ t, Inhabited (spec.Range t)] :
     QueryImpl spec (StateT (ι → ℕ) (OracleComp spec)) :=
   fun t => StateT.mk fun budget =>
     if 0 < budget t then
@@ -49,7 +49,7 @@ def OracleSpec.enforceOracle [DecidableEq ι] [spec.Inhabited] :
 
 namespace enforceOracle
 
-variable [DecidableEq ι] [spec.Inhabited]
+variable [DecidableEq ι] [∀ t, Inhabited (spec.Range t)]
 
 @[simp]
 lemma run_apply (t : ι) (budget : ι → ℕ) :
@@ -78,11 +78,11 @@ theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
 section Probability
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
-  [DecidableEq ι] [spec.Inhabited]
+  [DecidableEq ι] [∀ t, Inhabited (spec.Range t)]
   [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [IsMeasureSpec spec]
 
-omit [spec.Inhabited] in
+omit [∀ t, Inhabited (spec.Range t)] in
 /-- A structural query bound makes its budget check redundant in the counting event. -/
 theorem prEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :

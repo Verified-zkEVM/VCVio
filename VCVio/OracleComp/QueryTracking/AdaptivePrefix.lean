@@ -123,7 +123,7 @@ private lemma adaptivePrefixPotential_miss_le
 /-- Execute a still-running adaptive prefix with a combined cache/log state, then run the
 caller-supplied suffix from the resulting state. -/
 def adaptivePrefixRunFrom
-    [DecidableEq ι] [DecidableEq Y]
+    [DecidableEq ι]
     (suffix : X → (ι →ₒ Y).QueryLog → OracleComp (ι →ₒ Y) R)
     (prefixComp : OracleComp (ι →ₒ Y) X)
     (cache : (ι →ₒ Y).QueryCache)
@@ -139,7 +139,7 @@ hypothesis supplies the caller-specific bound once the prefix stops, under the e
 invariants maintained by `cachingLoggingOracle`. The conclusion is valid even when the prefix
 adaptively decides when to stop and repeats cached queries. -/
 theorem measure_adaptivePrefixRunFrom_le
-    [DecidableEq ι] [DecidableEq Y] [Finite Y]
+    [DecidableEq ι] [Finite Y]
     [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
     [MeasurableSpace (R × (ι →ₒ Y).QueryCache)]
     [EvalDistSemantics (OracleComp (ι →ₒ Y))]
@@ -288,7 +288,7 @@ theorem measure_adaptivePrefixRunFrom_le
 
 /-- The adaptive-prefix measure bound read through the discrete probability notation. -/
 theorem probEvent_adaptivePrefixRunFrom_le
-    [DecidableEq ι] [DecidableEq Y] [Finite Y] [Inhabited Y]
+    [DecidableEq ι] [Finite Y] [Inhabited Y]
     [IsUniformSpec (ι →ₒ Y)]
     (suffix : X → (ι →ₒ Y).QueryLog → OracleComp (ι →ₒ Y) R)
     (continuation : X → OracleComp (ι →ₒ Y) C)

@@ -62,46 +62,26 @@ def ofPFunctor (P : PFunctor) : OracleSpec P.A := P.B
 abbrev Domain (_spec : OracleSpec ι) : Type _ := ι
 abbrev Range (spec : OracleSpec ι) (t : ι) : Type _ := spec t
 
-protected class Fintype (spec : OracleSpec ι) extends PFunctor.Fintype spec.toPFunctor
+/-! ## Typeclass data on indices and answer types
 
-instance {spec : OracleSpec ι} [h : spec.Fintype] (t : spec.Domain) :
-  Fintype (spec.Range t) := h.fintypeB t
-
-protected class Inhabited (spec : OracleSpec ι) extends PFunctor.Inhabited spec.toPFunctor
-
-instance {spec : OracleSpec ι} [h : spec.Inhabited] (t : spec.Domain) :
-  Inhabited (spec.Range t) := h.inhabitedB t
-
-/-- Decidable equality of a specification's indices and of each answer type.
-
-Only the range equality is an instance. `Domain` is reducible, so an instance concluding
-`DecidableEq spec.Domain` would be indexed as `DecidableEq ι` for every type, with `spec`
-undetermined: ordinary equality search would invent a specification, recurse through the `ofFn`
-instance below, and time out (VCVio#772). Generic code that compares indices assumes
-`[DecidableEq ι]`. -/
-protected class DecidableEq (spec : OracleSpec ι) extends PFunctor.DecidableEq spec.toPFunctor
-
-instance {spec : OracleSpec ι} [h : spec.DecidableEq] (t : spec.Domain) :
-  DecidableEq (spec.Range t) := h.decidableEqB t
+`Domain` and `Range` are reducible, so a global instance concluding `C spec.Domain` or
+`C (spec.Range t)` for a generic `spec` is indexed as `C ι`, respectively `C (?spec ?t)`: a
+candidate for every `C _` goal, with `spec` undetermined. Instance search then invents a
+specification through `ofFn`, and either times out (VCVio#772) or answers an ordinary
+`DecidableEq`, `Fintype`, or `Inhabited` goal through oracle-specification data. The only such
+instances left are the `fintype` and `inhabited` projections of the retiring `IsUniformSpec`.
+Index equality is an ordinary `[DecidableEq ι]` hypothesis, and data on answer
+types are ordinary `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, or
+`[Inhabited (spec.Range t)]` hypotheses, quantified over `t` when a statement ranges over
+arbitrary queries. Specifications built with `ofFn` reduce to their answer types, so
+`unifSpec`, `coinSpec`, and `A →ₒ B` need no instances of their own; `+` combines the
+per-branch instances of its summands. -/
 
 section ofFn
 
 @[reducible, always_inline] def ofFn {ι : Type u} (F : ι → Type v) : OracleSpec ι := F
 notation:25 (name := singletonSpec) A:25 " →ₒ " B:26 =>
   OracleSpec.ofFn (ι := A) (fun _ => B)
-
-instance {ι : Type u} (F : ι → Type v) [h : (i : ι) → Fintype (F i)] :
-    (OracleSpec.ofFn F).Fintype where
-  fintypeB := h
-
-instance {ι : Type u} (F : ι → Type v) [h : DecidableEq ι] [h' : (i : ι) → DecidableEq (F i)] :
-    (OracleSpec.ofFn F).DecidableEq where
-  decidableEqA := h
-  decidableEqB := h'
-
-instance {ι : Type u} (F : ι → Type v) [h : (i : ι) → Inhabited (F i)] :
-    (OracleSpec.ofFn F).Inhabited where
-  inhabitedB := h
 
 end ofFn
 
@@ -139,18 +119,27 @@ lemma toPFunctor_add {ι : Type u} {ι' : Type u'}
 @[simp] lemma ofPFunctor_add (P P' : PFunctor) :
     OracleSpec.ofPFunctor (P + P') = OracleSpec.ofPFunctor P + OracleSpec.ofPFunctor P' := rfl
 
-instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
-    [h : spec.Fintype] [h' : spec'.Fintype] : (spec + spec').Fintype where
-  fintypeB | .inl i => h.fintypeB i | .inr i => h'.fintypeB i
+/-! The answer types of a sum specification inherit the per-branch instances of its summands.
+These are indexed on the `HAdd.hAdd` head of the combined specification, so they apply only to
+goals about a sum. -/
 
 instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
-    [h : spec.DecidableEq] [h' : spec'.DecidableEq] : (spec + spec').DecidableEq where
-  decidableEqA := @instDecidableEqSum _ _ h.decidableEqA h'.decidableEqA
-  decidableEqB | .inl i => h.decidableEqB i | .inr i => h'.decidableEqB i
+    [h : ∀ t, Fintype (spec.Range t)] [h' : ∀ t, Fintype (spec'.Range t)] :
+    ∀ t, Fintype ((spec + spec').Range t)
+  | .inl i => h i
+  | .inr i => h' i
 
 instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
-    [h : spec.Inhabited] [h' : spec'.Inhabited] : (spec + spec').Inhabited where
-  inhabitedB | .inl i => h.inhabitedB i | .inr i => h'.inhabitedB i
+    [h : ∀ t, DecidableEq (spec.Range t)] [h' : ∀ t, DecidableEq (spec'.Range t)] :
+    ∀ t, DecidableEq ((spec + spec').Range t)
+  | .inl i => h i
+  | .inr i => h' i
+
+instance {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι')
+    [h : ∀ t, Inhabited (spec.Range t)] [h' : ∀ t, Inhabited (spec'.Range t)] :
+    ∀ t, Inhabited ((spec + spec').Range t)
+  | .inl i => h i
+  | .inr i => h' i
 
 end add
 

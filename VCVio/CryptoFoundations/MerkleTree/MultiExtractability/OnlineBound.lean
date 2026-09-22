@@ -88,7 +88,7 @@ pre-query cache/log invariants. The proof treats a target hit as an unrestricted
 the conclusion applies to any terminal event whose good branches satisfy the recursive/terminal
 hypotheses, without requiring the execution to expose an explicit monitoring flag. -/
 theorem measure_onlineAdaptivePrefixRunFrom_logged_le
-    [DecidableEq Query] [DecidableEq Y] [Finite Y]
+    [DecidableEq Query] [Finite Y]
     [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
     [MeasurableSpace (R × (Query →ₒ Y).QueryCache)]
     [EvalDistSemantics (OracleComp (Query →ₒ Y))]
@@ -305,7 +305,7 @@ theorem measure_onlineAdaptivePrefixRunFrom_logged_le
 
 /-- The predictable-target measure bound read through discrete probability notation. -/
 theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
-    [DecidableEq Query] [DecidableEq Y] [Finite Y] [Inhabited Y]
+    [DecidableEq Query] [Finite Y] [Inhabited Y]
     [IsUniformSpec (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C)
@@ -392,7 +392,7 @@ theorem probEvent_onlineAdaptivePrefixRunFrom_logged_le
 
 /-- Specialization where structural accounting does not depend on the accumulated log. -/
 theorem probEvent_onlineAdaptivePrefixRunFrom_le
-    [DecidableEq Query] [DecidableEq Y] [Finite Y] [Inhabited Y]
+    [DecidableEq Query] [Finite Y] [Inhabited Y]
     [IsUniformSpec (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → OracleComp (Query →ₒ Y) C)

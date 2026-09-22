@@ -1172,7 +1172,7 @@ noncomputable instance unitArrowSpecIsUniformSpec (S : Type) [Fintype S] [Inhabi
 noncomputable instance unitArrowSpecIsUniformMeasureSpec (S : Type) [Fintype S] [Inhabited S]
     [MeasurableSpace S] [MeasurableSingletonClass S] :
     OracleSpec.IsUniformMeasureSpec (Unit →ₒ S) :=
-  OracleSpec.IsUniformMeasureSpec.ofFintypeInhabited _
+  OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty _
 
 abbrev hidingAvgLeftImpl :
     QueryImpl (Unit →ₒ S)

@@ -46,29 +46,30 @@ abbrev toPMF [IsProbabilitySpec spec] (t : spec.Domain) : PMF (spec.Range t) :=
 end IsProbabilitySpec
 
 /-- An `OracleSpec` whose responses are uniformly sampled from finite, inhabited
-ranges. Bundles `spec.Fintype`, `spec.Inhabited`, and `IsProbabilitySpec spec`
-together with a `Prop` witness that the per-query distribution agrees with
-`PMF.uniformOfFintype`. Use this as the canonical input to lemmas that
-mention `Fintype.card (spec.Range _)` or `PMF.uniformOfFintype` in their
+ranges. Bundles finiteness and inhabitedness of every response type with
+`IsProbabilitySpec spec` and a `Prop` witness that the per-query distribution
+agrees with `PMF.uniformOfFintype`. Use this as the canonical input to lemmas
+that mention `Fintype.card (spec.Range _)` or `PMF.uniformOfFintype` in their
 statements. -/
 class IsUniformSpec (spec : OracleSpec ι) extends IsProbabilitySpec spec where
   /-- Every response set is finite. -/
-  fintype : spec.Fintype
+  fintype : ∀ t, Fintype (spec.Range t)
   /-- Every response set is inhabited. -/
-  inhabited : spec.Inhabited
+  inhabited : ∀ t, Inhabited (spec.Range t)
   /-- The per-query distribution is the uniform distribution on the response set. -/
   toPMF_eq_uniform : ∀ t, toPMF t = PMF.uniformOfFintype (spec.Range t)
 
 attribute [reducible, instance] IsUniformSpec.fintype IsUniformSpec.inhabited
 
-/-- Bridge from `[spec.Fintype] [spec.Inhabited]` to `IsUniformSpec spec`.
+/-- Bridge from finite, inhabited response types to `IsUniformSpec spec`.
 Deliberately **not** an instance — `IsUniformSpec` must be opted into per
 spec so that uniform-sampling semantics never attach silently to a spec
 whose author didn't intend a probabilistic interpretation. Use this
 helper when declaring `IsUniformSpec` for a concrete spec. -/
 @[reducible] noncomputable def IsUniformSpec.ofFintypeInhabited
     {ι : Type u} (spec : OracleSpec ι)
-    [hF : spec.Fintype] [hI : spec.Inhabited] : IsUniformSpec spec where
+    [hF : ∀ t, Fintype (spec.Range t)] [hI : ∀ t, Inhabited (spec.Range t)] :
+    IsUniformSpec spec where
   toPMF t := PMF.uniformOfFintype (spec.Range t)
   fintype := hF
   inhabited := hI
@@ -91,8 +92,8 @@ instance so it cannot participate in overly broad `toPFunctor` unification. -/
 noncomputable def IsUniformSpec.toPFunctor [h : IsUniformSpec spec] :
     PFunctor.IsUniformSpec spec.toPFunctor where
   toPMF := h.toPMF
-  fintype := h.fintype.toFintype
-  inhabited := h.inhabited.toInhabited
+  fintype := h.fintype
+  inhabited := h.inhabited
   toPMF_eq_uniform := h.toPMF_eq_uniform
 
 end OracleSpec

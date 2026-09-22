@@ -151,9 +151,6 @@ theorem neverFail_simulateQ_randomOracle_run
     [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     (oa : OracleComp spec α) (cache : spec.QueryCache) :
     NeverFail ((simulateQ randomOracle oa).run cache) := by
-  let : spec.Inhabited :=
-    { inhabitedB := fun t =>
-        Classical.inhabited_of_nonempty (α := spec.Range t) inferInstance }
   infer_instance
 
 /-- Running the lazy random oracle on an uncached query `t` and binding the result samples the
@@ -188,9 +185,6 @@ theorem exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
           (spec.randomOracle : QueryImpl spec (StateT spec.QueryCache ProbComp))) oa).run
             cache)) := by
   classical
-  let : spec.Inhabited :=
-    { inhabitedB := fun t =>
-        Classical.inhabited_of_nonempty (α := spec.Range t) inferInstance }
   induction oa using OracleComp.inductionOn generalizing cache a with
   | pure x =>
     simp only [simulateQ_pure, support_pure, Set.mem_singleton_iff,
@@ -326,7 +320,7 @@ A value `a` can appear as the output of the random-oracle simulation from `cache
 answer function agreeing with `cache` evaluates the computation to `a`. The final cache produced
 by the simulation is existentially quantified away. -/
 theorem exists_agreesWithFn_evalWithAnswerFn_eq_iff_mem_support
-    [DecidableEq ι] [spec.Inhabited] [(t : spec.Domain) → SampleableType (spec.Range t)]
+    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     (oa : OracleComp spec α) (cache : spec.QueryCache) (a : α) :
     (∃ f : QueryImpl spec Id, cache.AgreesWithFn f ∧ evalWithAnswerFn f oa = a)
     ↔
@@ -366,7 +360,7 @@ theorem exists_agreesWithFn_evalWithAnswerFn_eq_iff_mem_support
 A predicate on the result value holds with probability one under lazy random-oracle simulation
 from `preexisting_cache` iff it holds for every total answer function agreeing with that cache. -/
 theorem probEvent_eq_one_simulateQ_randomOracle_run_iff
-    [DecidableEq ι] [spec.Inhabited] [(t : spec.Domain) → SampleableType (spec.Range t)]
+    [DecidableEq ι] [(t : spec.Domain) → SampleableType (spec.Range t)]
     (oa : OracleComp spec α) (preexisting_cache : spec.QueryCache) (p : α → Prop) :
     Pr[fun v => p v.1 | (simulateQ randomOracle oa).run preexisting_cache] = 1
     ↔

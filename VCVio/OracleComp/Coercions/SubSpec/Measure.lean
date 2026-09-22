@@ -58,6 +58,8 @@ theorem evalDist_liftM_query_uniform [spec ˡ⊂ₒ superSpec]
     liftM_eq_map_query, evalDist_map _ Measurable.of_discrete, evalDist_liftM_query,
     OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn,
     OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
+  have := OracleSpec.IsUniformMeasureSpec.finite_range t
+  have := OracleSpec.IsUniformMeasureSpec.finite_range (h.onQuery t)
   exact uniformOn_univ_map_equiv (Equiv.ofBijective _ (LawfulSubSpec.onResponse_bijective t))
 
 /-- Cartesian inclusions between uniform specifications preserve native denotations. -/

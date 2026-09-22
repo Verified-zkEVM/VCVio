@@ -106,16 +106,10 @@ theorem isProbabilityMeasure_denote_shiftedGaussian :
 /-- A finite, inhabited interface used without a discrete probability interpretation. -/
 @[expose, reducible] def nativeCoinSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => Bool⟩
 
-instance : nativeCoinSpec.Fintype where
-  fintypeB _ := inferInstance
-
-instance : nativeCoinSpec.Inhabited where
-  inhabitedB _ := inferInstance
-
 /-- The native uniform measure interpretation is an explicit value, not a global instance. -/
 @[instance_reducible]
 noncomputable def nativeCoinMeasureSpec : nativeCoinSpec.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFintypeInhabited _
+  IsMeasureSpec.uniformOfFiniteNonempty _
 
 attribute [local instance] nativeCoinMeasureSpec
 

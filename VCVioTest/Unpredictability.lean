@@ -28,7 +28,7 @@ universe u
 section UniversePolymorphism
 
 variable {ι : Type (u + 1)} [DecidableEq ι] [Inhabited ι]
-  {spec : OracleSpec.{u + 1, u + 1} ι} [spec.DecidableEq] [IsUniformSpec spec]
+  {spec : OracleSpec.{u + 1, u + 1} ι} [IsUniformSpec spec]
 
 /-- The finite-target bound applies to a genuine fresh query when the oracle's indices,
 responses, and computation result live in an arbitrary nonzero universe. The singleton target

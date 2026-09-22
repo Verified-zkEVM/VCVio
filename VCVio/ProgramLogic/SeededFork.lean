@@ -23,7 +23,7 @@ open OracleSpec OracleComp ENNReal
 namespace OracleComp.ProgramLogic
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι}
-  [∀ i, SampleableType (spec.Range i)] [spec.DecidableEq] [unifSpec ⊂ₒ spec]
+  [∀ i, SampleableType (spec.Range i)] [∀ i, DecidableEq (spec.Range i)] [unifSpec ⊂ₒ spec]
   {α : Type}
 
 variable (main : OracleComp spec α) (qb : ι → ℕ)

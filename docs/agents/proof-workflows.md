@@ -411,7 +411,7 @@ before changing definitions or tactics for eRHL, pRHL, or apRHL.
 After the `HasQuery` cutover, the bare `query t` is `HasQuery.query t` and needs an expected type so Lean can pick the ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form `spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting `OracleQuery.cont`).
 
 ### "failed to synthesize ... MonadLiftT (OracleComp spec) SPMF"
-For `OracleComp spec`, add `[IsProbabilitySpec spec]` when you need `evalSPMF` or `Pr[...]`. Add `[IsUniformSpec spec]` when you need uniform/cardinality facts or lemmas relating `support` to nonzero probability. If you have `[spec.Fintype] [spec.Inhabited]` and intend uniform semantics, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
+For `OracleComp spec`, add `[IsProbabilitySpec spec]` when you need `evalSPMF` or `Pr[...]`. Add `[IsUniformSpec spec]` when you need uniform/cardinality facts or lemmas relating `support` to nonzero probability. If you have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and intend uniform semantics, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
 
 ### Universe mismatch around `SubSpec`
 `OracleComp` has 3 universe parameters, `SubSpec` has 6. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.

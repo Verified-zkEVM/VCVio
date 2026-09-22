@@ -431,9 +431,13 @@ Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability
 continuation after complementing a fair bit.
 
 The type classes separate a choice of response measures (`IsMeasureSpec`) from the
-additional uniformity and finite-range laws (`IsUniformMeasureSpec`). A blanket instance
-from `[spec.Fintype] [spec.Inhabited]` would silently choose a distribution for an arbitrary
-oracle, so only the concrete `unifSpec` and `coinSpec` instances are global. Structural
+uniformity law (`IsUniformMeasureSpec`), which is a proposition about the chosen measures and
+carries no finiteness data: `IsUniformMeasureSpec.finite_range` and `nonempty_range` recover
+both facts, and a cardinality statement takes `[Fintype (spec.Range t)]` for the query it
+mentions (`IsUniformMeasureSpec.toMeasure_singleton`). A blanket instance from
+`[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]` would silently choose a
+distribution for an arbitrary oracle, so `IsUniformMeasureSpec.ofFiniteNonempty` is an explicit
+opt-in and only the concrete `unifSpec` and `coinSpec` instances are global. Structural
 `OracleComp.support` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
 For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
@@ -451,7 +455,7 @@ full-support condition on each answer measure, without adding a class for that o
 `IsUniformMeasureSpec`; use this native bridge when relating structural reachability to
 singleton mass. Neither theorem requires the PMF-based `IsUniformSpec` class.
 Structural support itself needs no probability interpretation. In particular,
-`OracleComp.support_nonempty` needs only `[spec.Inhabited]`; counting-oracle support
+`OracleComp.support_nonempty` needs only `[∀ t, Nonempty (spec.Range t)]`; counting-oracle support
 and worst-case query bounds use that weaker assumption rather than `IsUniformSpec`.
 Keep the class hierarchy for chosen answer measures, and state one-off properties such as
 positive singleton mass as explicit hypotheses instead of adding a mixin for each bridge.
@@ -973,7 +977,7 @@ library proofs got shorter; a set with no library caller is itself a finding.
 
 ## Common Mistakes
 
-1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just `[spec.Fintype] [spec.Inhabited]`. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
+1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just finite, inhabited answer types. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
 
 2. **Carrying duplicate probability instances**: do not add a separate `[IsProbabilitySpec spec]` when `[IsUniformSpec spec]` is already in scope. `IsUniformSpec` extends `IsProbabilitySpec`; a second instance can make instance search ambiguous and may not describe the same distributions.
 
