@@ -77,12 +77,10 @@ theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
 
 section Probability
 
-variable {ι : Type} {spec : OracleSpec ι} {α : Type}
-  [DecidableEq ι] [∀ t, Inhabited (spec.Range t)]
+variable {ι : Type} {spec : OracleSpec ι} {α : Type} [DecidableEq ι]
   [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [IsMeasureSpec spec]
 
-omit [∀ t, Inhabited (spec.Range t)] in
 /-- A structural query bound makes its budget check redundant in the counting event. -/
 theorem prEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :
@@ -96,6 +94,8 @@ theorem prEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}
   exact (prEvent_map (m := OracleComp spec) (countingOracle.simulate oa 0)
     Prod.fst p).symm.trans
       (congrArg (fun comp : OracleComp spec α => Pr{let x ← comp}[p x]) hproj)
+
+variable [∀ t, Inhabited (spec.Range t)]
 
 /-- Under a structural query bound, the counting event agrees with the enforcement event. -/
 theorem prEvent_counting_budget_eq_enforce {oa : OracleComp spec α} {qb : ι → ℕ}

@@ -1029,7 +1029,6 @@
  ["unusedArguments", "probOutput_fst_runObs"],
  ["unusedArguments", "probOutput_map_eq_sum_finSupport_ite"],
  ["unusedArguments", "probOutput_map_eq_tsum_subtype_ite"],
- ["unusedArguments", "renyiDiv_bind_right_le"],
  ["unusedArguments", "run_simulateQ_hidingAvgComp_eq_bind"],
  ["unusedArguments", "seededOracle.isPerIndexQueryBound_run_simulateQ"],
  ["unusedArguments", "seededOracle.isPerIndexQueryBound_run_simulateQ_of_seedCoverage"],

@@ -970,14 +970,12 @@ section Preimage
 
 variable {vp : ValidatedParams} (prims : Primitives vp.params)
   [SampleableType prims.PkSeed] [SampleableType prims.Y]
-  [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
 
 /-- Classical inversion of the WOTS+-`F` preimage game's attacked map. -/
 noncomputable def wotsFPreInverse (pk : prims.PkSeed) (t : prims.AdrsKey) : prims.Y → prims.Y :=
   Function.invFun fun m =>
     (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)
 
-omit [DecidableEq prims.AdrsKey] [DecidableEq prims.Y] in
 theorem wotsFPreInverse_eval (pk : prims.PkSeed) (t : prims.AdrsKey) (a : prims.Y) :
     (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb
         (wotsFPreInverse prims pk t ((wotsFPreCProblem prims).th.eval pk t
@@ -985,6 +983,8 @@ theorem wotsFPreInverse_eval (pk : prims.PkSeed) (t : prims.AdrsKey) (a : prims.
       (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb a) :=
   Function.invFun_eq (f := fun m =>
     (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)) ⟨a, rfl⟩
+
+variable [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
 
 /-- One challenge query, then classical inversion of the image it was answered with. -/
 noncomputable def freePreAdv (t : prims.AdrsKey) :
@@ -1121,10 +1121,30 @@ section Anchored
 
 variable {vp : ValidatedParams} {prims : Primitives vp.params}
   [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
-  [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
-  [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
+  [SampleableType prims.Y] [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
 
-omit [Fintype prims.Y] in
+/-- **The hypertree branch bound holds at the free preimage adversary**, with the branch stated at
+`hypertreeHalf adv` itself.  This is the same chain as the FORS one, landing on the preimage
+summand instead. -/
+theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : prims.AdrsKey)
+    (wotsFUdAdv : SM_DT_UD_SourceFinalValidity.Adversary (wotsFUdCProblem prims))
+    (wotsFTcrAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsFTcrCProblem prims))
+    (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
+    (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims)) :
+    hypertreeHalf adv ≤
+      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t)
+        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv := by
+  calc hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp := hypertreeHalf_le_advantage adv
+    _ ≤ 1 := MeasureTheory.measure_le_one _ _
+    _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+        (freePreAdv_advantage prims t).symm
+    _ ≤ _ := le_add_right (le_add_right le_add_self)
+
+variable [DecidableEq prims.PkSeed] [Inhabited prims.Y]
+
 /-- **The FORS branch bound holds at the winning open-preimage adversary**, for every adversary and
 with the branch stated at `forsHalf adv` itself.  The right-hand side's second summand is the
 OpenPRE advantage, which `winningOpenPre_advantage` makes one, so the chain lands. -/
@@ -1145,26 +1165,7 @@ theorem forsHalf_le_winningOpenPre {adv : unforgeableAdv (generalAlg prims)} (t 
           exact targetCount_pos vp.params vp.valid TargetRole.forsF)).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
-omit [DecidableEq prims.PkSeed] [Fintype prims.Y] [Inhabited prims.Y] in
-/-- **The hypertree branch bound holds at the free preimage adversary**, with the branch stated at
-`hypertreeHalf adv` itself.  This is the same chain as the FORS one, landing on the preimage
-summand instead. -/
-theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : prims.AdrsKey)
-    (wotsFUdAdv : SM_DT_UD_SourceFinalValidity.Adversary (wotsFUdCProblem prims))
-    (wotsFTcrAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsFTcrCProblem prims))
-    (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
-    (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims)) :
-    hypertreeHalf adv ≤
-      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t)
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv := by
-  calc hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp := hypertreeHalf_le_advantage adv
-    _ ≤ 1 := MeasureTheory.measure_le_one _ _
-    _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
-        (freePreAdv_advantage prims t).symm
-    _ ≤ _ := le_add_right (le_add_right le_add_self)
+variable [Fintype prims.Y]
 
 -- This one needs no `@[expose]`: the three anchoring inequalities below elaborate as `le_refl`
 -- without it.  Unlike `idleOpenPre`, what the later declarations need of it is a value and not a

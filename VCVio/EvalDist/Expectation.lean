@@ -33,11 +33,11 @@ universe u v w
 
 namespace OracleComp.EvalDist
 
-variable {α β : Type u} {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+variable {α β : Type u} {m : Type u → Type v} [MonadLiftT m SPMF]
 
 section lawful
 
-variable [LawfulMonadLiftT m SPMF]
+variable [Monad m] [LawfulMonadLiftT m SPMF]
 
 @[simp] theorem expectedValue_pure (x : α) (g : α → ℝ≥0∞) :
     expectedValue (pure x : m α) g = g x := by
@@ -63,7 +63,6 @@ theorem expectedValue_bind_le_of_le {mx : m α} {my : α → m β}
 
 end lawful
 
-omit [Monad m] in
 /-- A finite-valued functional on a finite result type has finite expectation. -/
 @[aesop (rule_sets := [finiteness]) safe apply]
 theorem expectedValue_ne_top_of_finite [Finite α] (mx : m α) {g : α → ℝ≥0∞}
@@ -73,25 +72,21 @@ theorem expectedValue_ne_top_of_finite [Finite α] (mx : m α) {g : α → ℝ�
   rw [expectedValue_def, tsum_fintype]
   exact ENNReal.sum_ne_top.mpr fun x _ => ENNReal.mul_ne_top probOutput_ne_top (hg x)
 
-omit [Monad m] in
 /-- A supplied finite uniform bound on a functional gives a finite expectation. -/
 theorem expectedValue_ne_top_of_le (mx : m α) {g : α → ℝ≥0∞} {c : ℝ≥0∞}
     (hc : c ≠ ⊤) (hg : ∀ x, g x ≤ c) : expectedValue mx g ≠ ⊤ :=
   ne_top_of_le_ne_top hc (expectedValue_le_of_le mx hg)
 
-omit [Monad m] in
 /-- A constant functional averages to itself, provided no mass is lost to failure. -/
 theorem expectedValue_const {mx : m α} (hmass : Pr[⊥ | mx] = 0) (c : ℝ≥0∞) :
     expectedValue mx (fun _ => c) = c := by
   rw [expectedValue, ENNReal.tsum_mul_right, tsum_probOutput_eq_one' hmass, one_mul]
 
-omit [Monad m] in
 /-- Linearity over a finite sum of functionals. -/
 theorem expectedValue_finsetSum {ι' : Type w} (mx : m α) (s : Finset ι') (g : ι' → α → ℝ≥0∞) :
     expectedValue mx (fun x => ∑ i ∈ s, g i x) = ∑ i ∈ s, expectedValue mx (g i) :=
   tsum_probOutput_mul_finsetSum mx s g
 
-omit [Monad m] in
 /-- Two computations with the same output distribution have the same expectations. -/
 theorem expectedValue_congr {mx my : m α} (h : ∀ x, Pr[= x | mx] = Pr[= x | my]) (g : α → ℝ≥0∞) :
     expectedValue mx g = expectedValue my g :=

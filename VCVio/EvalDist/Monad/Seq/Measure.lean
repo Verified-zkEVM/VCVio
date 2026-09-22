@@ -23,7 +23,9 @@ universe u v
 
 variable {m : Type u → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β γ : Type u}
-  [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
+
+section
+variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
 
 /-- Independently sampled applicative pairs have the product of their output measures. -/
 @[simp high, grind norm]
@@ -56,7 +58,11 @@ theorem evalDist_seqRight (mx : m α) (my : m β) :
     𝒟[mx *> my] = 𝒟[mx] Set.univ • 𝒟[my] := by
   rw [seqRight_eq_bind, evalDist_bind_const]
 
-omit [MeasurableSpace α] in
+end
+
+section
+variable [MeasurableSpace β] [MeasurableSpace γ]
+
 /-- Mapping the retained first output commutes with discarding the second output.
 No measurable space or measurability obligation is needed for the intermediate first output. -/
 @[simp high, grind norm]
@@ -67,7 +73,11 @@ theorem evalDist_map_seqLeft (mx : m α) (my : m β) (f : α → γ) :
       bind_assoc, pure_bind]
   rw [h, evalDist_seqLeft]
 
-omit [MeasurableSpace β] in
+end
+
+section
+variable [MeasurableSpace α] [MeasurableSpace γ]
+
 /-- Mapping the retained second output commutes with discarding the first output.
 No measurable space or measurability obligation is needed for the intermediate second output. -/
 @[simp high, grind norm]
@@ -76,6 +86,11 @@ theorem evalDist_map_seqRight (mx : m α) (my : m β) (f : β → γ) :
   have h : f <$> (mx *> my) = mx *> (f <$> my) := by
     simp only [seqRight_eq_bind, map_eq_bind_pure_comp, Function.comp_def, bind_assoc]
   rw [h, evalDist_seqRight]
+
+end
+
+section
+variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ]
 
 /-- An independent applicative pair inherits losslessness from its factors. -/
 instance evalDist.instIsProbabilityMeasureSeqMapProdMk (mx : m α) (my : m β)
@@ -97,6 +112,8 @@ instance evalDist.instIsProbabilityMeasureSeqRight (mx : m α) (my : m β)
     IsProbabilityMeasure 𝒟[mx *> my] := by
   rw [evalDist_seqRight, measure_univ, one_smul]
   infer_instance
+
+end
 
 section events
 

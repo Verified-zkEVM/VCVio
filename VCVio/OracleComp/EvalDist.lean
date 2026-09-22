@@ -297,6 +297,14 @@ end evalSPMFConvenience
 
 section guard
 
+lemma support_guard {p : Prop} [Decidable p] :
+    support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
+  by_cases hp : p
+  · simp [OracleComp.guard_eq, hp]
+  · simp only [OracleComp.guard_eq, hp, ↓reduceIte, OptionT.support_def]
+    ext x
+    simp
+
 variable [IsProbabilitySpec spec]
 
 lemma probOutput_guard {p : Prop} [Decidable p] :
@@ -316,15 +324,6 @@ lemma probFailure_guard {p : Prop} [Decidable p] :
   · exact probFailure_pure ()
   · -- See note above.
     simp [OptionT.probFailure_eq, OptionT.run_failure]
-
-omit [spec.IsProbabilitySpec] in
-lemma support_guard {p : Prop} [Decidable p] :
-    support (guard p : OptionT (OracleComp spec) Unit) = if p then {()} else ∅ := by
-  by_cases hp : p
-  · simp [OracleComp.guard_eq, hp]
-  · simp only [OracleComp.guard_eq, hp, ↓reduceIte, OptionT.support_def]
-    ext x
-    simp
 
 /-- For any `PUnit`-valued computation in an arbitrary monad with an `SPMF` denotation, the
 probability of returning `()` is the complementary mass of its failure probability. -/

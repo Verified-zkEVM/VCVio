@@ -60,7 +60,6 @@ This is a consequence of the marginalization lemma
 post-composition of a fresh uniform value at `x` with a uniform function at the remaining cells. -/
 lemma probOutput_uniformSample_fun_eval [SampleableType Digest]
     [Finite TagId] [Finite Nonce] [Fintype Digest]
-    [Nonempty Digest]
     [SampleableType (((TagId × Fin sessionsPerTag) × Nonce) → Digest)]
     (x : (TagId × Fin sessionsPerTag) × Nonce) (v : Digest) :
     Pr[= v | do let gFine ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest));

@@ -839,6 +839,23 @@ lemma probEvent_le_tsum_probOutput_mul_cost (mx : m α) (p : α → Prop) (c : �
       _ ≤ Pr[= x | mx] * c x := by gcongr; exact hc x hp
   · exact zero_le
 
+/-- If `p` implies `q` everywhere then `p` is less likely than `q`. Convenience
+specialisation of `probEvent_mono` that drops the support hypothesis. -/
+@[gcongr low]
+lemma probEvent_mono'' (h : ∀ x, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] := by
+  have := Classical.decPred p
+  have := Classical.decPred q
+  simp only [probEvent_eq_tsum_ite]
+  refine ENNReal.tsum_le_tsum fun x => ?_
+  by_cases hp : p x <;> by_cases hq : q x <;> simp_all
+
+open Classical in
+lemma indicator_objective_eq_probEvent (mx : m (α × β)) (R : α → β → Prop) :
+    (∑' z, Pr[= z | mx] * (if R z.1 z.2 then 1 else 0)) = Pr[ fun z => R z.1 z.2 | mx] := by
+  rw [probEvent_eq_tsum_ite]
+  refine tsum_congr fun z => ?_
+  by_cases hR : R z.1 z.2 <;> simp [hR]
+
 variable [MonadAttach m] [EvalDistCompatible m]
 
 /-- **First-moment / Markov bound** (`support`-restricted cost). Variant of
@@ -877,17 +894,6 @@ lemma probEvent_mono (h : ∀ x ∈ support mx, p x → q x) : Pr[ p | mx] ≤ P
 lemma probEvent_mono' [HasEvalFinset m] [DecidableEq α]
     (h : ∀ x ∈ finSupport mx, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] :=
   probEvent_mono (fun x hx hpx => h x (mem_finSupport_of_mem_support hx) hpx)
-
-omit [MonadAttach m] [EvalDistCompatible m] in
-/-- If `p` implies `q` everywhere then `p` is less likely than `q`. Convenience
-specialisation of `probEvent_mono` that drops the support hypothesis. -/
-@[gcongr low]
-lemma probEvent_mono'' (h : ∀ x, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] := by
-  have := Classical.decPred p
-  have := Classical.decPred q
-  simp only [probEvent_eq_tsum_ite]
-  refine ENNReal.tsum_le_tsum fun x => ?_
-  by_cases hp : p x <;> by_cases hq : q x <;> simp_all
 
 -- `simp`-only: `grind` saturates on this support-quantifier characterization.
 @[simp low]
@@ -954,14 +960,6 @@ lemma mem_finSupport_iff_of_evalSPMF_eq {m n} [Monad m] [MonadLiftT m SPMF]
     {mx : m α} {mx' : n α} (h : 𝒮[mx] = 𝒮[mx']) (x : α) :
     x ∈ finSupport mx ↔ x ∈ finSupport mx' := by
   simp only [mem_finSupport_iff_mem_support, mem_support_iff_of_evalSPMF_eq h]
-
-open Classical in
-omit [MonadAttach m] [EvalDistCompatible m] in
-lemma indicator_objective_eq_probEvent (mx : m (α × β)) (R : α → β → Prop) :
-    (∑' z, Pr[= z | mx] * (if R z.1 z.2 then 1 else 0)) = Pr[ fun z => R z.1 z.2 | mx] := by
-  rw [probEvent_eq_tsum_ite]
-  refine tsum_congr fun z => ?_
-  by_cases hR : R z.1 z.2 <;> simp [hR]
 
 end probEvent_mono_compl
 

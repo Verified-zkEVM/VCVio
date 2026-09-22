@@ -272,10 +272,9 @@ end CDHToDDH
 
 section DLogToCDH
 
-variable [DecidableEq F] [SampleableType F] [DecidableEq G]
+variable [SampleableType F]
 
-omit [DecidableEq G] in
-private lemma dlogExp_probOutput_eq_tsum (g : G) (adversary : DLogAdversary F G) :
+private lemma dlogExp_probOutput_eq_tsum [DecidableEq F] (g : G) (adversary : DLogAdversary F G) :
     Pr[= true | dlogExp g adversary] =
       ∑' x : F, Pr[= x | $ᵗ F] * Pr[= x | adversary g (x • g)] := by
   unfold dlogExp
@@ -286,8 +285,8 @@ private lemma dlogExp_probOutput_eq_tsum (g : G) (adversary : DLogAdversary F G)
   refine (tsum_eq_single x fun x' hx' => ?_).trans (by simp)
   simp [show (decide (x' = x) : Bool) = false by simp [hx']]
 
-omit [DecidableEq F] in
-private lemma cdhExp_dlogToCDHReduction_probOutput_eq_tsum (g : G) (adversary : DLogAdversary F G) :
+private lemma cdhExp_dlogToCDHReduction_probOutput_eq_tsum [DecidableEq G] (g : G)
+    (adversary : DLogAdversary F G) :
     Pr[= true | cdhExp g (dlogToCDHReduction (F := F) adversary)] =
       ∑' (a : F) (b : F) (a' : F) (b' : F),
         Pr[= a | $ᵗ F] * (Pr[= b | $ᵗ F] * (Pr[= a' | adversary g (a • g)] *
@@ -297,6 +296,8 @@ private lemma cdhExp_dlogToCDHReduction_probOutput_eq_tsum (g : G) (adversary : 
   simp only [monad_norm, probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_left]
   refine tsum_congr fun a => tsum_congr fun b => tsum_congr fun a' => tsum_congr fun b' => ?_
   simp [probOutput_pure]
+
+variable [DecidableEq F] [DecidableEq G]
 
 /-- Concrete form of the hardness implication `CDH ⇒ DLog`: if a DLog adversary succeeds with
 probability `p`, the induced CDH adversary succeeds with probability at least `p^2`. -/

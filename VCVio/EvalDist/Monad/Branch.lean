@@ -25,16 +25,9 @@ open MeasureTheory
 
 universe v
 
-variable {m : Type → Type v} [Monad m] [LawfulMonad m]
-  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-
-/-- An impossible final observation has zero mass, including after a failed computation. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_false {α : Type} (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
-  prEvent_eq_zero_of_forall_not mx (fun _ ↦ False) (fun _ ↦ id)
+variable {m : Type → Type v} [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 open scoped Classical in
-omit [LawfulMonad m] in
 /-- Binding a propositional selector gives the two branch measures with their actual masses. -/
 theorem evalDist_bind_prop {β : Type} [MeasurableSpace β]
     (selector : m Prop) (yes no : m β) :
@@ -45,6 +38,13 @@ theorem evalDist_bind_prop {β : Type} [MeasurableSpace β]
   ext s hs
   rw [Measure.bind_apply hs Measurable.of_discrete.aemeasurable, lintegral_fintype]
   simp [Fintype.univ_Prop, mul_comm]
+
+variable [LawfulMonad m]
+
+/-- An impossible final observation has zero mass, including after a failed computation. -/
+@[simp↓ high, grind norm↓]
+theorem prEvent_false {α : Type} (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
+  prEvent_eq_zero_of_forall_not mx (fun _ ↦ False) (fun _ ↦ id)
 
 /-- An observation's negation is the false mass of the same propositional selector. -/
 theorem prEvent_not_eq_apply_false {α : Type} (mx : m α) (p : α → Prop) :

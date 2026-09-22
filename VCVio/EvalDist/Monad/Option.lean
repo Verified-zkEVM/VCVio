@@ -108,11 +108,15 @@ theorem prEvent_mk {m : Type → Type v} [Monad m] [LawfulMonad m]
 
 section sequencing
 
-variable {m : Type → Type v} [Monad m] [LawfulMonad m]
-  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-  [MonadAttach m] [ExactMonadAttach m] {α β : Type}
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] {α β : Type}
 
-omit [EvalDistSemantics m] [LawfulEvalDistSemantics m] in
+/-- A wrapped bind is a lifted prefix followed by the wrapped continuations. -/
+theorem mk_bind_eq_lift_bind (mx : m α) (f : α → m (Option β)) :
+    OptionT.mk (mx >>= f) = (OptionT.lift mx >>= fun a ↦ OptionT.mk (f a) : OptionT m β) := by
+  simp [OptionT.ext_iff]
+
+variable [MonadAttach m] [ExactMonadAttach m]
+
 /-- Reachable outputs of a lifted computation are reachable in the computation. -/
 theorem mem_support_of_mem_support_lift {mx : m α} {a : α}
     (ha : a ∈ support (OptionT.lift mx)) : a ∈ support mx := by
@@ -122,11 +126,7 @@ theorem mem_support_of_mem_support_lift {mx : m α} {a : α}
   rw [MonadAttach.mem_support_pure] at h
   exact Option.some_injective _ h ▸ ha'
 
-omit [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadAttach m] [ExactMonadAttach m] in
-/-- A wrapped bind is a lifted prefix followed by the wrapped continuations. -/
-theorem mk_bind_eq_lift_bind (mx : m α) (f : α → m (Option β)) :
-    OptionT.mk (mx >>= f) = (OptionT.lift mx >>= fun a ↦ OptionT.mk (f a) : OptionT m β) := by
-  simp [OptionT.ext_iff]
+variable [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-- A lossless prefix followed by continuations that each satisfy an event with probability one
 on the prefix's reachable outputs satisfies the event with probability one. -/

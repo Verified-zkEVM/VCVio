@@ -818,7 +818,24 @@ blocks unification.  Lean says so explicitly, naming `forsFOpenPreProblem` and `
 section Transfer
 
 variable [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.AdrsKey]
-  [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
+  [DecidableEq prims.Y] [Inhabited prims.Y]
+
+/-- A TCR bound quantified over adversaries against `CanonicalGames`' `forsFTcrProblem` applies to
+the adversary VCVio's OpenPRE-to-TCR reduction produces.
+
+*Game transport.* -/
+theorem tcr_bound_transfer (εT : ℝ≥0∞)
+    (h : ∀ a : SM_DT_TCR_SourceFinalValidity.Adversary (forsFTcrProblem prims),
+      SM_DT_TCR_SourceFinalValidity.Advantage a ≤ εT)
+    (a : SM_DT_OpenPRE_SourceFinalValidity.Adversary (forsFOpenPreProblem prims)) :
+    SM_DT_TCR_SourceFinalValidity.Advantage
+      (SM_DT_OpenPRE_SourceFinalValidity.toTCR a) ≤ εT :=
+  (by rw [← forsFTcrProblem_eq_toTCR]; exact h :
+    ∀ b : SM_DT_TCR_SourceFinalValidity.Adversary ((forsFOpenPreProblem prims).toTCR),
+      SM_DT_TCR_SourceFinalValidity.Advantage b ≤ εT)
+    (SM_DT_OpenPRE_SourceFinalValidity.toTCR a)
+
+variable [Fintype prims.Y]
 
 /-- A DSPR bound quantified over adversaries against `CanonicalGames`' `forsFDsprProblem` applies
 to the adversary VCVio's OpenPRE-to-DSPR reduction produces.
@@ -834,24 +851,6 @@ theorem dspr_bound_transfer (εD : ℝ≥0∞)
     ∀ b : SM_DT_DSPR_SourceFinalValidity.Adversary ((forsFOpenPreProblem prims).toDSPR),
       SM_DT_DSPR_SourceFinalValidity.Advantage b ≤ εD)
     (SM_DT_OpenPRE_SourceFinalValidity.toDSPR a)
-
--- `Fintype prims.Y` is in scope for the DSPR twin above, which needs it, and is unused here:
--- `SM_DT_TCR_SourceFinalValidity.Advantage` asks only for the three `DecidableEq` instances.
-omit [Fintype prims.Y] in
-/-- A TCR bound quantified over adversaries against `CanonicalGames`' `forsFTcrProblem` applies to
-the adversary VCVio's OpenPRE-to-TCR reduction produces.
-
-*Game transport.* -/
-theorem tcr_bound_transfer (εT : ℝ≥0∞)
-    (h : ∀ a : SM_DT_TCR_SourceFinalValidity.Adversary (forsFTcrProblem prims),
-      SM_DT_TCR_SourceFinalValidity.Advantage a ≤ εT)
-    (a : SM_DT_OpenPRE_SourceFinalValidity.Adversary (forsFOpenPreProblem prims)) :
-    SM_DT_TCR_SourceFinalValidity.Advantage
-      (SM_DT_OpenPRE_SourceFinalValidity.toTCR a) ≤ εT :=
-  (by rw [← forsFTcrProblem_eq_toTCR]; exact h :
-    ∀ b : SM_DT_TCR_SourceFinalValidity.Adversary ((forsFOpenPreProblem prims).toTCR),
-      SM_DT_TCR_SourceFinalValidity.Advantage b ≤ εT)
-    (SM_DT_OpenPRE_SourceFinalValidity.toTCR a)
 
 variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [DecidableEq prims.PkSeed]
 

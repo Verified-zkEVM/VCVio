@@ -55,7 +55,7 @@ universe u v
 
 open OracleComp OracleSpec
 
-variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec ι}
+variable {ι : Type u} {spec : OracleSpec ι}
 
 namespace OracleSpec
 
@@ -74,7 +74,6 @@ instance : Inhabited (ProgrammingPolicy spec) := ⟨fun _ => none⟩
 this policy recovers `withCaching` (modulo the auxiliary `Bool` flag). -/
 @[reducible] def empty : ProgrammingPolicy spec := fun _ => none
 
-omit [DecidableEq ι] in
 @[simp] lemma empty_apply (t : spec.Domain) :
     (empty : ProgrammingPolicy spec) t = none := rfl
 
@@ -84,7 +83,7 @@ end OracleSpec
 
 namespace QueryImpl
 
-variable {m : Type u → Type v} [Monad m]
+variable {m : Type u → Type v}
 
 /-! ## Redirect -/
 
@@ -99,10 +98,11 @@ def withRedirect (_so : QueryImpl spec m)
     QueryImpl spec m :=
   redirect
 
-omit [DecidableEq ι] [Monad m] in
 @[simp] lemma withRedirect_apply (so : QueryImpl spec m)
     (redirect : (t : spec.Domain) → m (spec.Range t)) (t : spec.Domain) :
     so.withRedirect redirect t = redirect t := rfl
+
+variable [DecidableEq ι] [Monad m]
 
 /-! ## Programming -/
 
@@ -138,6 +138,37 @@ def withProgramming
             (match policy t with
             | some v => pure (v, true)
             | none => (fun u => (u, s.2)) <$> so t) := rfl
+
+/-! ## Tracker partner of `withProgramming` -/
+
+/-- `withCaching` lifted to `StateT (QueryCache × Bool) m` with the bad flag set on
+exactly the same cache-miss-and-policy-fire condition as `withProgramming`, but **without
+actually programming**: the underlying oracle is queried normally and the fresh value `u` is
+cached.
+
+This is the "identical-until-bad" partner of `withProgramming`: at every step they either
+* produce the same `(value, cache, bad)` distribution (cache hit, or cache miss with no policy
+  hit), or
+* both produce a step whose output flags `bad := true`, with possibly different `value`/`cache`
+  components on the bad branch.
+
+That is the exact shape needed to apply the output-bad version of "identical until bad". -/
+def withCachingTrackingPolicy
+    (so : QueryImpl spec m) (policy : ProgrammingPolicy spec) :
+    QueryImpl spec (StateT (spec.QueryCache × Bool) m) :=
+  withCachingAux
+    (fun _ _ _ bad => bad)
+    (fun (t : spec.Domain) (_ : spec.QueryCache) (bad : Bool) =>
+      (fun u => (u, if (policy t).isSome then true else bad)) <$> so t)
+
+@[simp] lemma withCachingTrackingPolicy_apply
+    (so : QueryImpl spec m) (policy : ProgrammingPolicy spec) (t : spec.Domain) :
+    so.withCachingTrackingPolicy policy t =
+      StateT.mk fun s => match s.1 t with
+      | some v => pure (v, s)
+      | none =>
+          (fun p : spec.Range t × Bool => (p.1, (s.1.cacheQuery t p.1, p.2))) <$>
+            ((fun u => (u, if (policy t).isSome then true else s.2)) <$> so t) := rfl
 
 /-! ## Bad-flag monotonicity -/
 
@@ -177,38 +208,6 @@ lemma PreservesInv.withProgramming_bad
   rintro t ⟨cache, _⟩ rfl
   exact withProgramming_bad_monotone so policy t cache
 
-/-! ## Tracker partner of `withProgramming` -/
-
-/-- `withCaching` lifted to `StateT (QueryCache × Bool) m` with the bad flag set on
-exactly the same cache-miss-and-policy-fire condition as `withProgramming`, but **without
-actually programming**: the underlying oracle is queried normally and the fresh value `u` is
-cached.
-
-This is the "identical-until-bad" partner of `withProgramming`: at every step they either
-* produce the same `(value, cache, bad)` distribution (cache hit, or cache miss with no policy
-  hit), or
-* both produce a step whose output flags `bad := true`, with possibly different `value`/`cache`
-  components on the bad branch.
-
-That is the exact shape needed to apply the output-bad version of "identical until bad". -/
-def withCachingTrackingPolicy
-    (so : QueryImpl spec m) (policy : ProgrammingPolicy spec) :
-    QueryImpl spec (StateT (spec.QueryCache × Bool) m) :=
-  withCachingAux
-    (fun _ _ _ bad => bad)
-    (fun (t : spec.Domain) (_ : spec.QueryCache) (bad : Bool) =>
-      (fun u => (u, if (policy t).isSome then true else bad)) <$> so t)
-
-omit [LawfulMonad m] [MonadAttach m] in
-@[simp] lemma withCachingTrackingPolicy_apply
-    (so : QueryImpl spec m) (policy : ProgrammingPolicy spec) (t : spec.Domain) :
-    so.withCachingTrackingPolicy policy t =
-      StateT.mk fun s => match s.1 t with
-      | some v => pure (v, s)
-      | none =>
-          (fun p : spec.Range t × Bool => (p.1, (s.1.cacheQuery t p.1, p.2))) <$>
-            ((fun u => (u, if (policy t).isSome then true else s.2)) <$> so t) := rfl
-
 /-- The bad flag of `withCachingTrackingPolicy` is monotone: once set, every query keeps it
 set. -/
 lemma withCachingTrackingPolicy_bad_monotone
@@ -240,6 +239,8 @@ lemma PreservesInv.withCachingTrackingPolicy_bad
   exact withCachingTrackingPolicy_bad_monotone so policy t cache
 
 end QueryImpl
+
+variable [DecidableEq ι]
 
 /-! ## `withProgramming empty` ≡ `withCaching` (cache-side projection) -/
 

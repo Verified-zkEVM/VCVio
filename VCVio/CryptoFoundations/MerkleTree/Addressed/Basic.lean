@@ -69,7 +69,7 @@ namespace AddressedMerkleTree
 
 open List OracleSpec OracleComp BinaryTree InductiveMerkleTree
 
-variable {α : Type _} [DecidableEq α]
+variable {α : Type _}
 
 
 /-- Build the full cache of a Merkle tree under an address-dependent hash: each
@@ -106,7 +106,6 @@ def getPutativeRootAddressedWithHash :
     nh .ofInternal proof.head (getPutativeRootAddressedWithHash (fun a => nh (.ofRight a)) idxRight
       leafValue proof.tail)
 
-omit [DecidableEq α] in
 /-- **Completeness of the engine**: an honestly generated authentication path
 recomputes the honest root, for every address-dependent hash. -/
 theorem addressed_functional_completeness {s : Skeleton}
@@ -141,7 +140,8 @@ def AddressedCollision {s : Skeleton} (nodeHash : SkeletonInternalIndex s → α
 
 /-- Walk two verifying branches at the same leaf index looking for the level at
 which they merge; return the collision **as data, tagged with its address**. -/
-def findCollisionAddressed : {s : Skeleton} → (nodeHash : SkeletonInternalIndex s → α → α → α) →
+def findCollisionAddressed [DecidableEq α] :
+    {s : Skeleton} → (nodeHash : SkeletonInternalIndex s → α → α → α) →
     (idx : SkeletonLeafIndex s) → (proof₁ proof₂ : List.Vector α idx.depth) →
     (x y : α) → Option (SkeletonInternalIndex s × α × α × α × α)
   | _, _, .ofLeaf, _, _, _, _ => none
@@ -167,7 +167,7 @@ def findCollisionAddressed : {s : Skeleton} → (nodeHash : SkeletonInternalInde
       none
 
 /-- **Soundness of the kernel**: anything returned is an address-tagged collision. -/
-theorem findCollisionAddressed_sound {s : Skeleton}
+theorem findCollisionAddressed_sound [DecidableEq α] {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (w : SkeletonInternalIndex s × α × α × α × α)
@@ -204,7 +204,7 @@ theorem findCollisionAddressed_sound {s : Skeleton}
 
 /-- **Locality of the kernel**: the collision address returned by `findCollisionAddressed` is
 an ancestor of the opened leaf — the walk only ever descends along `idx`'s own path. -/
-theorem findCollisionAddressed_isAncestorOf {s : Skeleton}
+theorem findCollisionAddressed_isAncestorOf [DecidableEq α] {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (w : SkeletonInternalIndex s × α × α × α × α)
@@ -238,7 +238,7 @@ theorem findCollisionAddressed_isAncestorOf {s : Skeleton}
 /-- If two distinct openings at the same index recompute the same root,
 `findCollisionAddressed` finds a collision.  Distinctness covers disagreement in either the leaf
 value or the authentication path. -/
-theorem findCollisionAddressed_isSome_of_opening_ne {s : Skeleton}
+theorem findCollisionAddressed_isSome_of_opening_ne [DecidableEq α] {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
@@ -287,7 +287,7 @@ theorem findCollisionAddressed_isSome_of_opening_ne {s : Skeleton}
         exact absurd (by simpa [getPutativeRootAddressedWithHash] using hroot) hne'
 
 /-- Leaf-disagreement specialization of `findCollisionAddressed_isSome_of_opening_ne`. -/
-theorem findCollisionAddressed_isSome {s : Skeleton}
+theorem findCollisionAddressed_isSome [DecidableEq α] {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
@@ -299,7 +299,7 @@ theorem findCollisionAddressed_isSome {s : Skeleton}
 
 /-- **Binding, user-facing**: two openings of the same index recomputing the same
 root with distinct leaf values yield an address-tagged collision, as data. -/
-theorem getPutativeRootAddressedWithHash_binding_collision {s : Skeleton}
+theorem getPutativeRootAddressedWithHash_binding_collision [DecidableEq α] {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (idx : SkeletonLeafIndex s)
     (proof₁ proof₂ : List.Vector α idx.depth) (x y : α)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx x proof₁
@@ -332,7 +332,7 @@ def childPairAt : {s : Skeleton} → FullData α s → SkeletonInternalIndex s �
 
 /-- **Orientation**: against an honest first opening, the collision's first endpoint
 is the precommitted child pair at the returned address. -/
-theorem findCollisionAddressed_oriented {s : Skeleton}
+theorem findCollisionAddressed_oriented [DecidableEq α] {s : Skeleton}
     (nodeHash : SkeletonInternalIndex s → α → α → α) (ld : LeafData α s)
     (idx : SkeletonLeafIndex s) (y : α) (proof₂ : List.Vector α idx.depth)
     (hroot : getPutativeRootAddressedWithHash nodeHash idx y proof₂
@@ -456,7 +456,6 @@ theorem findCollisionAddressed_oriented {s : Skeleton}
             BinaryTree.LeafData.get, hsub]
           exact hroot'.symm
 
-omit [DecidableEq α] in
 /-- **Oriented binding, user-facing**: an adversarial opening that verifies against an
 honestly built root with a different leaf value yields a collision whose first
 endpoint is the honestly-precommitted child pair at the tagged address, which lies on the
@@ -498,7 +497,6 @@ factors through `SkeletonInternalIndex.subtreeDepth` and is *definitionally* an 
 
 section Instances
 
-omit [DecidableEq α] in
 /-- **Ordinary instance**: a constant `nodeHash` recovers the unaddressed
 putative-root computation. -/
 theorem getPutativeRootAddressed_const (h : α → α → α) {s : Skeleton}
@@ -510,7 +508,6 @@ theorem getPutativeRootAddressed_const (h : α → α → α) {s : Skeleton}
   | ofLeft idxLeft ih => simp [getPutativeRootAddressedWithHash, ih]
   | ofRight idxRight ih => simp [getPutativeRootAddressedWithHash, ih]
 
-omit [DecidableEq α] in
 /-- **Ordinary instance**: a constant `nodeHash` recovers the unaddressed cache
 construction. -/
 theorem populateUpAddressed_const (h : α → α → α) {s : Skeleton}
@@ -520,7 +517,6 @@ theorem populateUpAddressed_const (h : α → α → α) {s : Skeleton}
   | leaf v => rfl
   | internal dl dr ihl ihr => simp [populateUpAddressed, BinaryTree.populateUp, ihl, ihr]
 
-omit [DecidableEq α] in
 /-- **Ordinary instance**: a constant `nodeHash` recovers the unaddressed build. -/
 theorem buildMerkleTreeAddressed_const (h : α → α → α) {s : Skeleton}
     (ld : LeafData α s) :
@@ -528,7 +524,6 @@ theorem buildMerkleTreeAddressed_const (h : α → α → α) {s : Skeleton}
       = InductiveMerkleTree.buildMerkleTreeWithHash ld h :=
   populateUpAddressed_const h ld
 
-omit [DecidableEq α] in
 /-- **Subsumption certificate (completeness)**: the unaddressed completeness theorem
 is a consequence of the engine's, at the constant instance. This is not a second
 proof of completeness — it is the first one, specialized. -/
@@ -545,7 +540,7 @@ theorem functional_completeness_of_addressed (h : α → α → α) {s : Skeleto
 engine's constructive collision walk yields *exactly* the unaddressed `findCollision`.
 So the two collision kernels are not parallel implementations that happen to agree on
 their statements — they are one function, up to the address decoration. -/
-theorem findCollisionAddressed_const (h : α → α → α) {s : Skeleton}
+theorem findCollisionAddressed_const [DecidableEq α] (h : α → α → α) {s : Skeleton}
     (idx : SkeletonLeafIndex s) (proof₁ proof₂ : List.Vector α idx.depth) (x y : α) :
     (findCollisionAddressed (fun _ => h) idx proof₁ proof₂ x y).map (fun w => w.2)
       = InductiveMerkleTree.findCollision h idx proof₁ proof₂ x y := by

@@ -200,19 +200,25 @@ projections occur in dependent client types, so they remain available to implici
 
 section VectorRingSimp
 
-variable {Coeff : Type u} [CommRing Coeff] {n : Nat}
+variable {Coeff : Type u} {n : Nat}
 
-abbrev vRing (Coeff : Type u) [CommRing Coeff] (n : Nat) :=
-  vectorNegacyclicRing Coeff n
-
-omit [CommRing Coeff] in
 @[simp] theorem vectorBackend_coeff (p : Poly Coeff n) (i : Fin n) :
     (vectorBackend Coeff n).coeff p i = p.get i := rfl
 
-omit [CommRing Coeff] in
 @[simp] theorem Poly.get_zero [Zero Coeff] (i : Fin n) : (0 : Poly Coeff n).get i = 0 := by
   change (0 : Vector Coeff n)[i.val] = 0
   exact Vector.getElem_zero i.val i.isLt
+
+/-- Coefficient-wise negation lemma for abstract `Poly` (not tied to a specific ring). -/
+@[simp] theorem Poly.get_neg [Neg Coeff] (f : Poly Coeff n) (i : Fin n) :
+    (-f).get i = -f.get i := by
+  change (-(f : Vector Coeff n))[i.val] = -((f : Vector Coeff n))[i.val]
+  exact Vector.getElem_neg f i.val i.isLt
+
+variable [CommRing Coeff]
+
+abbrev vRing (Coeff : Type u) [CommRing Coeff] (n : Nat) :=
+  vectorNegacyclicRing Coeff n
 
 @[simp] theorem vectorRing_zero :
     (vectorNegacyclicRing Coeff n).zero = (0 : Poly Coeff n) := rfl
@@ -317,13 +323,6 @@ theorem vectorRing_mul_comm (f g : Poly Coeff n) :
 @[simp] theorem vectorRing_neg_get (f : Poly Coeff n) (i : Fin n) :
     ((vectorNegacyclicRing Coeff n).neg f).get i = -f.get i := by
   exact Poly.get_map Neg.neg f i
-
-omit [CommRing Coeff] in
-/-- Coefficient-wise negation lemma for abstract `Poly` (not tied to a specific ring). -/
-@[simp] theorem Poly.get_neg [Neg Coeff] (f : Poly Coeff n) (i : Fin n) :
-    (-f).get i = -f.get i := by
-  change (-(f : Vector Coeff n))[i.val] = -((f : Vector Coeff n))[i.val]
-  exact Vector.getElem_neg f i.val i.isLt
 
 end VectorRingSimp
 
