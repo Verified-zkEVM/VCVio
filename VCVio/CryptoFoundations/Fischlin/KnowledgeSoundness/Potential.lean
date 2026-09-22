@@ -29,14 +29,9 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 open ENNReal OracleComp.EvalDist
 
-section security
-
-variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
-  (ρ b S : ℕ) (M : Type) [DecidableEq M]
+  (ρ b S : ℕ) (M : Type)
 
 /-- The number of hash-value tuples `v : Fin ρ → Fin (2^b)` whose entries sum to at most `S`.
 
@@ -47,8 +42,6 @@ answers must hit. It is bounded by `(S+1)·C(S+ρ-1, ρ-1)` (stars-and-bars). -/
 def smallSumCount (ρ b S : ℕ) : ℕ :=
   (Finset.univ.filter (fun v : Fin ρ → Fin (2 ^ b) => ∑ i, (v i).val ≤ S)).card
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Stars-and-bars bound.** The number of hash-value tuples summing to at most `S` is at most
 `(S+1)·C(S+ρ-1, ρ-1)`.
 
@@ -98,8 +91,6 @@ private lemma smallSumCount_le :
       rw [h1]; exact Nat.choose_le_choose _ (by omega)
   · rw [Finset.card_range, smul_eq_mul]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- The probability that `n` IID uniform draws land in a (decidable) target set is exactly the
 size of the target set over `(Fintype.card α) ^ n`. -/
 private lemma probEvent_mOfFn_uniformSample {α : Type} [SampleableType α] [Fintype α]
@@ -115,8 +106,6 @@ private lemma probEvent_mOfFn_uniformSample {α : Type} [SampleableType α] [Fin
   rw [MeasureTheory.Measure.count_apply_finset]
   simp [Nat.cast_pow]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Untouched slot completes with probability exactly `μ`.** The probability that `ρ` fresh
 uniform `Fin (2^b)` draws sum to at most `S` is exactly `smallSumCount ρ b S / (2^b)^ρ`. -/
 private lemma probEvent_sum_le_mOfFn_uniform :
@@ -124,8 +113,6 @@ private lemma probEvent_sum_le_mOfFn_uniform :
       = (smallSumCount ρ b S : ℝ≥0∞) / ((2 ^ b : ℕ) : ℝ≥0∞) ^ ρ := by
   rw [probEvent_mOfFn_uniformSample, Fintype.card_fin, smallSumCount]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Conditional tail.** Given a revealed partial sum `T ≤ S`, the probability that `k` fresh
 uniform draws bring the total to at most `S` is exactly `smallSumCount k b (S - T) / (2^b)^k`.
 This is the per-slot completion probability with some coordinates already revealed, used by the
@@ -141,14 +128,15 @@ private lemma probEvent_add_sum_le_mOfFn_uniform (k T : ℕ) (hT : T ≤ S) :
       (fun v : Fin k → Fin (2 ^ b) => T + ∑ i, (v i).val ≤ S),
     Fintype.card_fin, smallSumCount, hfilter]
 
-omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- **Mixed-cache query vector.** Simulating a `Fin.mOfFn` of random-oracle re-queries at
 pairwise distinct records on a cache that stores exactly the `hits`-marked records: each hit
 reads its cached value deterministically; each miss draws a fresh uniform `Fin (2^b)` (and
 caches it, which never collides with the remaining records by injectivity). The output
 distribution is the independent per-index product `pure (hit value) / $ᵗ Fin (2^b)`. The
 all-hit special case is `run_mOfFn_query_hit`. -/
-private lemma run'_mOfFn_query_mixed {β : Type} (n : ℕ)
+private lemma run'_mOfFn_query_mixed [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
+    [DecidableEq Resp] [DecidableEq M]
+    {β : Type} (n : ℕ)
     (records : Fin n → (fischlinROSpec Stmt Commit Chal Resp ρ b M).Domain)
     (hinj : Function.Injective records)
     (hits : Fin n → Option (Fin (2 ^ b)))
@@ -228,10 +216,11 @@ private lemma run'_mOfFn_query_mixed {β : Type} (n : ℕ)
           rw [hstep x (cache.cacheQuery (records 0) x) (hcache' x)]
           simp only [map_pure, bind_pure_comp]
 
-omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- Same as `run'_mOfFn_query_mixed`, packaged with a pure verdict post-processing `V` of the
 per-repetition results, matching the shape of `Fischlin`'s verifier. -/
-private lemma run'_mOfFn_query_mixed_bind {β γ : Type} (n : ℕ)
+private lemma run'_mOfFn_query_mixed_bind
+    [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp] [DecidableEq M]
+    {β γ : Type} (n : ℕ)
     (records : Fin n → (fischlinROSpec Stmt Commit Chal Resp ρ b M).Domain)
     (hinj : Function.Injective records)
     (hits : Fin n → Option (Fin (2 ^ b)))
@@ -251,12 +240,13 @@ private lemma run'_mOfFn_query_mixed_bind {β γ : Type} (n : ℕ)
     (run'_mOfFn_query_mixed ρ b M n records hinj hits f cache hcache) V).trans ?_
   rw [Functor.map_map, bind_pure_comp]
 
-omit [SampleableType Chal] in
 /-- **Mixed-cache verify run.** The Fischlin verifier's `run'` on a cache storing exactly the
 `hits`-marked records: re-queries at hit records read the cached hash; misses sample fresh
 uniforms. The `ρ` records are pairwise distinct (their `rep` field is the repetition index),
 so within one verify run each record is queried exactly once. -/
-private lemma verify_run'_mixed (pk : Stmt) (msg : M)
+private lemma verify_run'_mixed [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
+    [DecidableEq Resp] [DecidableEq M] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
+    (pk : Stmt) (msg : M)
     (sig : Fin ρ → Commit × Chal × Resp)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hits : Fin ρ → Option (Fin (2 ^ b)))
@@ -291,8 +281,6 @@ private def partialSmallSumCount (ρ b : ℕ) (hits : Fin ρ → Option (Fin (2 
   (Finset.univ.filter fun v : Fin ρ → Fin (2 ^ b) =>
     (∀ i h, hits i = some h → v i = h) ∧ ∑ i, (v i).val ≤ S).card
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- With no cached hits, the partial small-sum count is the full small-sum count. -/
 private lemma partialSmallSumCount_none :
     partialSmallSumCount ρ b (fun _ => none) S = smallSumCount ρ b S := by
@@ -301,8 +289,6 @@ private lemma partialSmallSumCount_none :
   refine Finset.filter_congr fun v _ => ?_
   simp
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Sum the per-repetition fold into a `Finset.sum`. -/
 private lemma foldl_add_eq_sum (u : Fin ρ → Fin (2 ^ b)) :
     (List.finRange ρ).foldl (fun acc i => acc + (u i).val) 0 = ∑ i, (u i).val := by
@@ -314,8 +300,6 @@ private lemma foldl_add_eq_sum (u : Fin ρ → Fin (2 ^ b)) :
     | cons a l ihl => intro init; simp [ihl, Nat.add_assoc]
   rw [hgen, Nat.zero_add, ← List.ofFn_eq_map, List.sum_ofFn]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- The product of per-coordinate hit/miss probabilities: zero unless `u` extends the hits,
 in which case it is `(2^b)⁻¹` per miss. -/
 private lemma prob_extend_hits (hits : Fin ρ → Option (Fin (2 ^ b))) (u : Fin ρ → Fin (2 ^ b)) :
@@ -352,14 +336,16 @@ private lemma prob_extend_hits (hits : Fin ρ → Option (Fin (2 ^ b))) (u : Fin
     simp only [hh]
     rw [probOutput_pure, ite_eq_right hne]
 
-omit [SampleableType Chal] in
 /-- **The ψ leaf (exact).** The probability that the Fischlin verifier accepts on a cache
 storing exactly the `hits`-marked records is EXACTLY the σ-verification indicator times the
 number of hit-compatible small-sum hash tuples over the miss-space volume `(2^b)^#misses`.
 
 For `hits = fun _ => none` (the all-fresh case) the bound specializes to
 `smallSumCount ρ b S / (2^b)^ρ` via `partialSmallSumCount_none`. -/
-private lemma verify_probOutput_true_mixed (pk : Stmt) (msg : M)
+private lemma verify_probOutput_true_mixed
+    [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp] [DecidableEq M]
+    [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
+    (pk : Stmt) (msg : M)
     (sig : Fin ρ → Commit × Chal × Resp)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (hits : Fin ρ → Option (Fin (2 ^ b)))
@@ -418,13 +404,15 @@ private lemma verify_probOutput_true_mixed (pk : Stmt) (msg : M)
     rw [Finset.sum_congr rfl fun u _ => hterm0 u, Finset.sum_const_zero, ite_eq_right haV, zero_mul,
       ENNReal.zero_div]
 
-omit [SampleableType Chal] in
 /-- **Accepting verify runs Σ-verify every repetition.** Any `(true, _)` outcome in the support
 of the simulated Fischlin verifier implies the per-repetition Σ-protocol checks of the proof:
 the Σ-verification bits inside `verify` are deterministic and independent of the oracle
 answers, so a `false` bit forces acceptance probability zero. Discharges the `hverSupp`
 hypothesis of `knowledgeSoundnessExp_bad_le_misses`. -/
-private lemma ksVerify_true_support_allVerified (x : Stmt) (msg : M)
+private lemma ksVerify_true_support_allVerified
+    [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp] [DecidableEq M]
+    [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
+    (x : Stmt) (msg : M)
     (π : FischlinProof Commit Chal Resp ρ)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (c' : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
@@ -446,11 +434,13 @@ private lemma ksVerify_true_support_allVerified (x : Stmt) (msg : M)
     ite_eq_right hall, zero_mul, ENNReal.zero_div] at hpos
   exact lt_irrefl 0 hpos
 
-omit [SampleableType Chal] in
 /-- `knowledgeSoundnessExp_bad_le_misses` with the verifier-determinism hypothesis discharged:
 the knowledge-soundness bad event is bounded by the probability that the verifier accepts
 while the extractor's scan misses. -/
-private lemma knowledgeSoundnessExp_bad_le_misses' (hss : σ.SpeciallySound)
+private lemma knowledgeSoundnessExp_bad_le_misses'
+    [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp] [DecidableEq M]
+    [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
+    (hss : σ.SpeciallySound)
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
@@ -472,8 +462,6 @@ coordinate is a martingale step (`slotPsi_tower`). -/
 private noncomputable def slotPsi (ρ b S : ℕ) (g : Fin ρ → Option (Fin (2 ^ b))) : ℝ≥0∞ :=
   (partialSmallSumCount ρ b g S : ℝ≥0∞) / ((2 ^ b : ℕ) : ℝ≥0∞) ^ (missCard g)
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Fiberwise decomposition: summing the extension counts over the possible values of a fresh
 coordinate recovers the count for the unextended assignment (tower property at the level of
 counting). -/
@@ -506,8 +494,6 @@ private lemma sum_partialSmallSumCount_update (g : Fin ρ → Option (Fin (2 ^ b
     · subst hji; rw [hi] at hj; cases hj
     · exact hext j h (by rw [Function.update_of_ne hji]; exact hj)
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Revealing a fresh coordinate decreases the miss count by exactly one. -/
 private lemma missCard_update {ρ' b' : ℕ} (g : Fin ρ' → Option (Fin (2 ^ b'))) (i : Fin ρ')
     (u : Fin (2 ^ b')) (hi : g i = none) :
@@ -528,8 +514,6 @@ private lemma missCard_update {ρ' b' : ℕ} (g : Fin ρ' → Option (Fin (2 ^ b
     Finset.card_pos.mpr ⟨i, hmem⟩
   omega
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Fresh slot = μ.** The potential of an untouched slot is exactly
 `smallSumCount ρ b S / (2^b)^ρ`. -/
 private lemma slotPsi_none :
@@ -540,8 +524,6 @@ private lemma slotPsi_none :
   congr 1
   simp [missCard]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Tower identity.** Averaging the slot potential over a uniformly revealed fresh
 coordinate recovers the current slot potential: the per-slot potential is a martingale under
 revealing one coordinate. With `g = fun _ => none` this is the open-step identity. -/
@@ -566,8 +548,6 @@ private lemma slotPsi_tower (g : Fin ρ → Option (Fin (2 ^ b))) (i : Fin ρ) (
     ← ENNReal.mul_inv (Or.inl (by positivity)) (Or.inl (by finiteness)),
     ← pow_succ, hm]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Each extending tuple is determined by its values on the unrevealed coordinates, so the
 partial count is at most `(2^b)^missCard g`. -/
 private lemma partialSmallSumCount_le_pow (g : Fin ρ → Option (Fin (2 ^ b))) :
@@ -589,8 +569,6 @@ private lemma partialSmallSumCount_le_pow (g : Fin ρ → Option (Fin (2 ^ b))) 
   refine hle.trans (le_of_eq ?_)
   rw [Fintype.card_fun, Fintype.card_fin, Fintype.card_coe, missCard]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- The slot potential is a probability: `slotPsi ρ b S g ≤ 1`. -/
 private lemma slotPsi_le_one (g : Fin ρ → Option (Fin (2 ^ b))) : slotPsi ρ b S g ≤ 1 := by
   unfold slotPsi
@@ -612,22 +590,16 @@ private noncomputable def Phi (ρ b S : ℕ) {K : Type} (keys : Finset K)
     (st : K → Fin ρ → Option (Fin (2 ^ b))) (dead : K → Prop) [DecidablePred dead] : ℝ≥0∞ :=
   ∑ k ∈ keys, if dead k then 0 else slotPsi ρ b S (st k)
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 private lemma updateSlot_apply_ne {ρ' b' : ℕ} {K : Type} [DecidableEq K]
     (st : K → Fin ρ' → Option (Fin (2 ^ b'))) (k₀ : K) (i₀ : Fin ρ')
     (u : Fin (2 ^ b')) {k : K} (hk : k ≠ k₀) : updateSlot st k₀ i₀ u k = st k :=
   Function.update_of_ne hk _ _
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 private lemma updateSlot_apply_self {ρ' b' : ℕ} {K : Type} [DecidableEq K]
     (st : K → Fin ρ' → Option (Fin (2 ^ b'))) (k₀ : K) (i₀ : Fin ρ')
     (u : Fin (2 ^ b')) : updateSlot st k₀ i₀ u k₀ = Function.update (st k₀) i₀ (some u) :=
   Function.update_self _ _ _
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Extend = martingale.** Querying a fresh coordinate of a live, already-open slot leaves
 the expected potential unchanged. -/
 private lemma Phi_extend {K : Type} [DecidableEq K] (keys : Finset K)
@@ -654,8 +626,6 @@ private lemma Phi_extend {K : Type} [DecidableEq K] (keys : Finset K)
     ← Finset.add_sum_erase _ _ hk,
     ite_eq_right hdead]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Open, live case (equality).** Opening a fresh slot at a live key adds exactly
 `μ = slotPsi ρ b S (fun _ => none)` to the expected potential. Requires the slot's state to be
 untouched (`hfresh`) — exactly the invariant that untouched keys carry all-`none` states. -/
@@ -681,8 +651,6 @@ private lemma Phi_open_eq {K : Type} [DecidableEq K] (keys : Finset K)
     Finset.sum_const, Finset.card_univ, Fintype.card_fin, nsmul_eq_mul, mul_comm,
     ENNReal.mul_div_cancel_right (by positivity) (by finiteness), add_comm]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Open, general case (inequality).** Opening a fresh slot adds at most `μ` to the
 expected potential (a dead key contributes nothing). -/
 private lemma Phi_open_le {K : Type} [DecidableEq K] (keys : Finset K)
@@ -707,8 +675,6 @@ private lemma Phi_open_le {K : Type} [DecidableEq K] (keys : Finset K)
     exact le_self_add
   · exact le_of_eq (Phi_open_eq ρ b S keys st dead k₀ i₀ hk hdead hfresh)
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Kill.** Any step that only grows the dead set (state and keys unchanged) can only
 decrease the potential. -/
 private lemma Phi_mono_dead {K : Type} (keys : Finset K)
@@ -721,8 +687,6 @@ private lemma Phi_mono_dead {K : Type} (keys : Finset K)
   · simp [hk]
   · rw [ite_eq_right hk, ite_eq_right fun hd => hk (h k hd)]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Extend, deadness-agnostic (inequality).** Querying a fresh coordinate of an already-open
 slot cannot increase the expected potential, whether or not the key is dead. -/
 private lemma Phi_extend_le {K : Type} [DecidableEq K] (keys : Finset K)
@@ -769,8 +733,6 @@ private structure INV' (ρ' b' : ℕ) {T K : Type} (relevant : T → Prop) (key 
 
 namespace INV'
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Inert step.** Caching a record that is irrelevant, or whose slot is (or becomes)
 dead, preserves `INV'` with the ghost state unchanged. Covers the irrelevant, already-dead,
 and kill cases of the generalized induction. -/
@@ -798,8 +760,6 @@ private lemma cacheQuery_inert {ρ' b' : ℕ} {T K : Type} [DecidableEq T]
       rw [QueryCache.cacheQuery_of_ne _ _ hts]; exact htc⟩
   · exact hINV.untouched
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Reveal step.** Caching a relevant record at a fresh cell updates the ghost state by
 writing the sampled value into the cell and marking the key as touched, preserving `INV'`. -/
 private lemma cacheQuery_reveal {ρ' b' : ℕ} {T K : Type} [DecidableEq T] [DecidableEq K]
@@ -858,7 +818,5 @@ private lemma cacheQuery_reveal {ρ' b' : ℕ} {T K : Type} [DecidableEq T] [Dec
     exact hINV.untouched k hk2
 
 end INV'
-
-end security
 
 end Fischlin
