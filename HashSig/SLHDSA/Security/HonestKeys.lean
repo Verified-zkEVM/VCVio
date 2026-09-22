@@ -43,30 +43,70 @@ hypothesis on the address encoding that no shipped tweak map satisfies**.
   `approvedEncodedTargetLedgerConditions`, and every collision witness uses out-of-range indices,
   which those lemmas exclude.  The repository never claims the unrestricted form:
   `Adrs.compressSha2_injective_of_fits` carries twelve range hypotheses.
-* **The non-injectivity does not by itself refute the conclusion.**  The two honest entries the
-  encoding identifies carry *different* inputs only if the two FORS leaf secrets differ, and at
-  every shipped bundle they are provably **equal**: the secret-key function factors through the
-  very encoding that caused the key collision — the two byte-oriented bundles hash the same
-  truncated encoding, and at the principal FIPS SHA-2 bundle both addresses of the exhibited pair
-  are rejected by the checked compression and collapse to the same zero value
-  (`forsSkGenCore_shake_eq`, `forsSkGenCore_sha_eq`, `forsSkGenCore_sha2_eq` of
-  `HashSigTest.SLHDSA.RomKeyed`).  What remains genuinely open is only whether some *other* key
-  collision separates the secret-key function.
-* The repair replaces injectivity by two weaker hypotheses — that `core.PRF` factors through
-  `core.adrsToKey`, and that the encoding's kernel is preserved by the role builders — plus a
-  height-bound lemma for the differing-height case.  None of that is done here, but the first is
-  close to free at each concrete core, the factorization being exactly what the three
-  computations above exhibit.
+* **The non-injectivity does not by itself refute the conclusion.**  Two honest entries the
+  encoding identifies carry *different* inputs only if the secret values at the two addresses
+  differ, and whether they can is a question about the secret-key function, stated here as
+  `ForsLeafSecretsAgreeOn` and `WotsChainSecretsAgreeOn` — two properties, because `HonestInput`
+  reads a secret *at the role address itself* in exactly two of its six branches, the `forsLeaf`
+  branch through `forsSkAdrs` and the `wotsChain` branch through `wotsSkAdrs`.  Each property is
+  relative to a set of addresses, so a bundle answers it once per set.
+  `HashSigTest.SLHDSA.RomKeyed` carries the answers: at the two byte-oriented bundles both hold
+  with **no restriction at all** — the secret-key function reads the address through exactly the
+  map the key uses, and `toBytes_blocks` / `compressSha2_blocks` turn equal serializations into
+  equal per-field byte blocks, which is what the role builders keep and hence what the
+  derived-address congruences need.  At the principal FIPS SHA-2 bundle both hold **on the
+  addresses the checked compression accepts**, where the encoding is injective, and the FORS-leaf
+  one holds unrestrictedly as well: key and secret are rejected by the same three conditions, and
+  in the mixed case the accepted address's key is `zeroBytes 22`, which forces that address to be
+  `Adrs.zero`, whose `type` is `0`.  Unrestrictedly, the **WOTS+-chain one is false** at that
+  bundle, because the rejection fallback aliases `Adrs.zero`, whose type code is exactly that
+  role's.
+* **What the one false cell does and does not show.**  It is a permissiveness of this *model*,
+  not a property of SHA-2: the colliding partner `⟨0, 0, 0, 0, 2 ^ 32, 0⟩` is non-canonical and
+  its chain index is far outside `len`, so no conformant run reaches it, and
+  `HashSig.SLHDSA.Security.EncodedTargets` already excludes it — `AddressFacts` and
+  `sha2Domain_of_addressFacts` put every reachable target address inside the accepting domain.
+  What admits it is `HonestEntry`, whose addresses are unconstrained by construction.  So the
+  conclusion is that `honestEntry_unique` needs canonicality *somewhere*, not that the bundle
+  breaks the separator.  The witnesses give two honest entries of one transcript at one encoded
+  key with different inputs, conditional on the run's own secret at the all-zero WOTS+
+  secret-key address being nonzero; they say nothing about the constant `r` of
+  `HashSig.SLHDSA.Security.RomKeyed`, whose theorems quantify the separator over
+  `SettledHonest (HonestSeeded …)` and which no lemma here lifts to.
+* There are two ways to repair `honestEntry_unique`, and they address different causes.  Carrying
+  canonicality into `HonestEntry` addresses the actual cause; whether that restriction breaks
+  existing proofs is the decisive question and is not examined here.  Changing `sha2AdrsKey`'s
+  rejection fallback to a value outside the compressed image would also remove the false cell,
+  and changes no behaviour on the specified domain, but it treats the encoding for a gap that the
+  model opened.
+* Either repair still needs the rest: that `core.PRF` factors through `core.adrsToKey`, which is
+  what the cells above settle bundle by bundle, and that the encoding's kernel is preserved by
+  the role builders, plus a height bound for the differing-height case
+  (`pow_le_enncard_of_forsNode?` and `pow_le_enncard_of_xmssNode?` of
+  `HashSig.SLHDSA.Security.CacheCoverage`).  None of that is done here, and the two properties
+  above cover less than the repair needs: they compare secrets only at the role address itself,
+  while the other four branches read secrets too, at *nested* addresses — `wotsPkGenTopsWith`
+  reads `core.PRF pk sk (wotsSkAdrs adrs i)` for every `i : Fin len`, `xmssLeafWith` descends to
+  the same builder, and the two FORS-node branches descend to `forsSkGenCore`.  The four-byte
+  truncation applies to every role address, and that is not formalised either.
 * `HonestInput` is a predicate of a cache and an address, not of a run.  Nothing here is
   probabilistic and no query budget appears.
 * Nothing here is quantum: the cache is a classical table.
 
 ## Labels
 
-Ten declarations.
+Twenty-one declarations.
 
-*The six role addresses, field by field*: `xmssNodeAdrs_eq`, `wotsPkAdrs_eq`,
-`wotsChainAdrs_setHashAddress_eq`, `wotsSkAdrs_eq`, `forsNodeAdrs_eq`, `forsPkAdrs_eq`.
+*The role addresses, field by field*: `xmssNodeAdrs_eq`, `wotsPkAdrs_eq`,
+`wotsChainAdrs_setHashAddress_eq`, `wotsSkAdrs_eq`, `forsNodeAdrs_eq`, `forsSkAdrs_eq`,
+`forsPkAdrs_eq`.
+
+*Block extraction from the two byte-oriented encodings*: `toBytes_blocks`,
+`compressSha2_blocks`, `toBytes_forsSkAdrs_congr`, `toBytes_wotsSkAdrs_congr`,
+`compressSha2_forsSkAdrs_congr`, `compressSha2_wotsSkAdrs_congr`.
+
+*Equal keys force equal secrets*: `ForsLeafRole`, `WotsChainRole`, `ForsLeafSecretsAgreeOn`,
+`WotsChainSecretsAgreeOn`.
 
 *One honest input per role address*: `HonestInput`, `HonestInput.unique`,
 `honestInput_of_honestEntry`, `honestEntry_unique`.
@@ -84,7 +124,7 @@ open OracleComp OracleSpec
 
 variable {vp : ValidatedParams} {core : CorePrimitives vp.params}
 
-/-! ## The six role addresses, field by field -/
+/-! ## The role addresses, field by field -/
 
 /-- The XMSS node address in full. -/
 theorem xmssNodeAdrs_eq (a : Adrs) (z t : ℕ) :
@@ -105,8 +145,101 @@ theorem wotsSkAdrs_eq (a : Adrs) (i : ℕ) :
 theorem forsNodeAdrs_eq (a : Adrs) (z t : ℕ) :
     forsNodeAdrs a z t = ⟨a.layer, a.tree, 3, a.word1, z, t⟩ := rfl
 
+/-- The FORS secret-key address in full. -/
+theorem forsSkAdrs_eq (a : Adrs) (t : ℕ) :
+    forsSkAdrs a t = ⟨a.layer, a.tree, 6, a.word1, 0, t⟩ := rfl
+
 /-- The FORS roots address in full. -/
 theorem forsPkAdrs_eq (a : Adrs) : forsPkAdrs a = ⟨a.layer, a.tree, 4, a.word1, 0, 0⟩ := rfl
+
+/-! ## Block extraction from the two byte-oriented encodings -/
+
+/-- Equal 32-byte address serializations have equal per-field byte blocks. -/
+theorem toBytes_blocks {a b : Adrs} (h : a.toBytes = b.toBytes) :
+    Adrs.toBytesBE a.layer 4 = Adrs.toBytesBE b.layer 4 ∧
+      Adrs.toBytesBE a.tree 12 = Adrs.toBytesBE b.tree 12 ∧
+      Adrs.toBytesBE a.type 4 = Adrs.toBytesBE b.type 4 ∧
+      Adrs.toBytesBE a.word1 4 = Adrs.toBytesBE b.word1 4 ∧
+      Adrs.toBytesBE a.word2 4 = Adrs.toBytesBE b.word2 4 ∧
+      Adrs.toBytesBE a.word3 4 = Adrs.toBytesBE b.word3 4 := by
+  simp only [Adrs.toBytes] at h
+  obtain ⟨h, h3⟩ := List.append_inj h (by simp)
+  obtain ⟨h, h2⟩ := List.append_inj h (by simp)
+  obtain ⟨h, h1⟩ := List.append_inj h (by simp)
+  obtain ⟨h, hty⟩ := List.append_inj h (by simp)
+  obtain ⟨hl, ht⟩ := List.append_inj h (by simp)
+  exact ⟨hl, ht, hty, h1, h2, h3⟩
+
+/-- Equal 22-byte `ADRSc` compressions have equal per-field byte blocks. -/
+theorem compressSha2_blocks {a b : Adrs} (h : a.compressSha2 = b.compressSha2) :
+    Adrs.toBytesBE a.layer 1 = Adrs.toBytesBE b.layer 1 ∧
+      Adrs.toBytesBE a.tree 8 = Adrs.toBytesBE b.tree 8 ∧
+      Adrs.toBytesBE a.type 1 = Adrs.toBytesBE b.type 1 ∧
+      Adrs.toBytesBE a.word1 4 = Adrs.toBytesBE b.word1 4 ∧
+      Adrs.toBytesBE a.word2 4 = Adrs.toBytesBE b.word2 4 ∧
+      Adrs.toBytesBE a.word3 4 = Adrs.toBytesBE b.word3 4 := by
+  simp only [Adrs.compressSha2] at h
+  obtain ⟨h, h3⟩ := List.append_inj h (by simp)
+  obtain ⟨h, h2⟩ := List.append_inj h (by simp)
+  obtain ⟨h, h1⟩ := List.append_inj h (by simp)
+  obtain ⟨h, hty⟩ := List.append_inj h (by simp)
+  obtain ⟨hl, ht⟩ := List.append_inj h (by simp)
+  exact ⟨hl, ht, hty, h1, h2, h3⟩
+
+/-- Two addresses with the same 32-byte serialization have FORS secret-key addresses with the
+same 32-byte serialization. -/
+theorem toBytes_forsSkAdrs_congr {a b : Adrs} (h : a.toBytes = b.toBytes) :
+    (forsSkAdrs a a.word3).toBytes = (forsSkAdrs b b.word3).toBytes := by
+  obtain ⟨hl, ht, -, h1, -, h3⟩ := toBytes_blocks h
+  simp only [forsSkAdrs_eq, Adrs.toBytes, hl, ht, h1, h3]
+
+/-- Two addresses with the same 32-byte serialization have WOTS+ secret-key addresses with the
+same 32-byte serialization. -/
+theorem toBytes_wotsSkAdrs_congr {a b : Adrs} (h : a.toBytes = b.toBytes) :
+    (wotsSkAdrs a a.word2).toBytes = (wotsSkAdrs b b.word2).toBytes := by
+  obtain ⟨hl, ht, -, h1, h2, -⟩ := toBytes_blocks h
+  simp only [wotsSkAdrs_eq, Adrs.toBytes, hl, ht, h1, h2]
+
+/-- Two addresses with the same `ADRSc` compression have FORS secret-key addresses with the same
+`ADRSc` compression. -/
+theorem compressSha2_forsSkAdrs_congr {a b : Adrs} (h : a.compressSha2 = b.compressSha2) :
+    (forsSkAdrs a a.word3).compressSha2 = (forsSkAdrs b b.word3).compressSha2 := by
+  obtain ⟨hl, ht, -, h1, -, h3⟩ := compressSha2_blocks h
+  simp only [forsSkAdrs_eq, Adrs.compressSha2, hl, ht, h1, h3]
+
+/-- Two addresses with the same `ADRSc` compression have WOTS+ secret-key addresses with the same
+`ADRSc` compression. -/
+theorem compressSha2_wotsSkAdrs_congr {a b : Adrs} (h : a.compressSha2 = b.compressSha2) :
+    (wotsSkAdrs a a.word2).compressSha2 = (wotsSkAdrs b b.word2).compressSha2 := by
+  obtain ⟨hl, ht, -, h1, h2, -⟩ := compressSha2_blocks h
+  simp only [wotsSkAdrs_eq, Adrs.compressSha2, hl, ht, h1, h2]
+
+/-! ## Equal keys force equal secrets -/
+
+/-- The role restriction of the `forsLeaf` branch of `HonestInput`: a `FORS_TREE` address at
+height zero. -/
+@[expose] def ForsLeafRole (a : Adrs) : Prop := a.type = 3 ∧ a.word2 = 0
+
+/-- The role restriction of the `wotsChain` branch of `HonestInput`: a `WOTS_HASH` address. -/
+@[expose] def WotsChainRole (a : Adrs) : Prop := a.type = 0
+
+/-- **The FORS-leaf secret value factors through the address key** on the addresses satisfying
+`D`: two addresses in `D` with one address key carry the same FORS secret value at their own
+leaf index.  `D = fun _ => True` is the unrestricted form. -/
+@[expose] def ForsLeafSecretsAgreeOn {p : Params} (core : CorePrimitives p)
+    (D : Adrs → Prop) : Prop :=
+  ∀ (pk : core.PkSeed) (sk : core.SkSeed) (a b : Adrs), D a → D b →
+    core.adrsToKey a = core.adrsToKey b →
+      forsSkGenCore core sk pk a a.word3 = forsSkGenCore core sk pk b b.word3
+
+/-- **The WOTS+ chain secret value factors through the address key** on the addresses satisfying
+`D`: two addresses in `D` with one address key carry the same WOTS+ secret value at their own
+chain index.  `D = fun _ => True` is the unrestricted form. -/
+@[expose] def WotsChainSecretsAgreeOn {p : Params} (core : CorePrimitives p)
+    (D : Adrs → Prop) : Prop :=
+  ∀ (pk : core.PkSeed) (sk : core.SkSeed) (a b : Adrs), D a → D b →
+    core.adrsToKey a = core.adrsToKey b →
+      core.PRF pk sk (wotsSkAdrs a a.word2) = core.PRF pk sk (wotsSkAdrs b b.word2)
 
 /-! ## One honest input per role address -/
 

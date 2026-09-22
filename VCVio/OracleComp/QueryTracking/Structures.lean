@@ -173,6 +173,31 @@ lemma enncard_empty : enncard (∅ : QueryCache spec) = 0 := by
 lemma enncard_mono {c₁ c₂ : QueryCache spec} (h : c₁ ≤ c₂) : enncard c₁ ≤ enncard c₂ := by
   simpa [enncard] using Set.encard_mono (toSet_mono h)
 
+/-- A set of answered queries is no larger than the set of entries: the entries at those
+queries are distinct pairs, one per query. -/
+lemma encard_le_toSet_encard {cache : QueryCache spec} (S : Set spec.Domain)
+    (hS : ∀ t ∈ S, (cache t).isSome) : S.encard ≤ cache.toSet.encard := by
+  set T : Set ((t : spec.Domain) × spec.Range t) := {x | x ∈ cache.toSet ∧ x.1 ∈ S}
+  have hinj : Set.InjOn Sigma.fst T := by
+    rintro ⟨t, r⟩ ⟨hr, -⟩ ⟨t', r'⟩ ⟨hr', -⟩ h
+    obtain rfl : t = t' := h
+    simp only [mem_toSet] at hr hr'
+    exact Sigma.ext rfl (heq_of_eq (Option.some_inj.mp (hr.symm.trans hr')))
+  have himg : Sigma.fst '' T = S := by
+    refine Set.eq_of_subset_of_subset ?_ fun t ht => ?_
+    · rintro t ⟨⟨t', r'⟩, ⟨-, hmem⟩, rfl⟩
+      exact hmem
+    · obtain ⟨r, hr⟩ := Option.isSome_iff_exists.mp (hS t ht)
+      exact ⟨⟨t, r⟩, ⟨hr, ht⟩, rfl⟩
+  calc S.encard = T.encard := by rw [← himg, hinj.encard_image]
+    _ ≤ cache.toSet.encard := Set.encard_mono fun x hx => hx.1
+
+/-- **A set of answered queries is a lower bound on the cache's cardinality.** -/
+lemma encard_le_enncard {cache : QueryCache spec} (S : Set spec.Domain)
+    (hS : ∀ t ∈ S, (cache t).isSome) : (S.encard : ℝ≥0∞) ≤ enncard cache := by
+  rw [enncard]
+  exact_mod_cast encard_le_toSet_encard S hS
+
 /-! ### Cache update -/
 
 variable [DecidableEq ι] (cache : QueryCache spec)

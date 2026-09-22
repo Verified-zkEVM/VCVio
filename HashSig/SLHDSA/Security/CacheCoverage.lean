@@ -33,6 +33,18 @@ same climb argument applies to a FORS instance: a settled FORS signature whose r
 key is settled settles the honest FORS public key, at the recovered value
 (`simulateQ_toPartialImpl_forsPkGenM_eq_some_of_forsSignM`).
 
+Coverage read the other way round bounds the cache from below: a settled honest subtree at height
+`z` forces `2 ^ z` cache entries, once the leaves' certifying entries are pairwise distinct
+(`pow_le_enncard_of_forsNode?`, `pow_le_enncard_of_xmssNode?`, over the generic
+`PerfectMerkleTree.pow_le_enncard_of_simulateQ_merkleRootM`).  The distinctness hypothesis is
+**necessary for an arbitrary core** — the unconditional form is false, refuted generically by
+`PerfectMerkleTree.not_forall_pow_le_enncard_of_simulateQ_merkleRootM` and at `forsNode?` itself
+by the degenerate core of `HashSigTest.SLHDSA.RomKeyed` — but it is not an extra assumption at a
+shipped bundle: `injOn_forsLeafKey_of_injOn_adrsToKey` and `injOn_xmssLeafKey_of_injOn_adrsToKey`
+reduce it to injectivity of the address encoding on a set containing the leaf addresses, which at
+the FIPS SHA-2 bundle is an address-range fact with no hash assumption
+(`HashSigTest.SLHDSA.RomKeyed`).
+
 ## Scope
 
 * No property of any particular cache is proved here; which entries a run of the counted
@@ -44,7 +56,7 @@ key is settled settles the honest FORS public key, at the recovered value
 
 ## Labels
 
-Nine declarations.
+Fifteen declarations.
 
 *Signed-through tree*: `simulateQ_toPartialImpl_xmssLeafM_eq_some_of_xmssSignM`,
 `simulateQ_toPartialImpl_xmssNodeM_div_pow_eq_some_of_xmssSignM`,
@@ -57,6 +69,11 @@ Nine declarations.
 `exists_simulateQ_toPartialImpl_chainM_eq_some_of_rootM`.
 
 *FORS instance*: `simulateQ_toPartialImpl_forsPkGenM_eq_some_of_forsSignM`.
+
+*Leaf-key functions*: `forsLeafKey`, `xmssLeafKey`.
+
+*Cache-size lower bounds*: `pow_le_enncard_of_forsNode?`, `pow_le_enncard_of_xmssNode?`,
+`injOn_forsLeafKey_of_injOn_adrsToKey`, `injOn_xmssLeafKey_of_injOn_adrsToKey`.
 
 ## References
 
@@ -236,5 +253,92 @@ theorem simulateQ_toPartialImpl_forsPkGenM_eq_some_of_forsSignM {sig : ForsSigCo
     Nat.div_eq_of_lt (forsIdx_lt p md i.val), Nat.zero_add] at h
 
 end Fors
+
+/-! ## Cache-size lower bounds -/
+
+section CacheSize
+
+variable {p : Params} (core : CorePrimitives p) (c : PublicHash.Cache core) (sk : core.SkSeed)
+  (pk : core.PkSeed) (adrs : Adrs)
+
+/-- The FORS `F` query of leaf `i`: the leaf role address on the leaf's own secret value.  A
+query determined by the seeds, the base address and `i` alone. -/
+@[expose] def forsLeafKey (i : ℕ) : (publicHashSpec core).Domain :=
+  .thash pk (core.adrsToKey (forsNodeAdrs adrs 0 i)) [forsSkGenCore core sk pk adrs i]
+
+/-- **A settled honest FORS subtree at height `z` forces `2 ^ z` cache entries.**  Each of the
+`2 ^ z` leaves of the subtree forces its own `F` query; the hypothesis is that those `2 ^ z`
+queries are distinct, and it is **necessary for an arbitrary core** rather than convenient, since
+the unconditional form is false.  At a concrete bundle it is discharged from address-range facts
+through `injOn_forsLeafKey_of_injOn_adrsToKey`. -/
+theorem pow_le_enncard_of_forsNode? {z t : ℕ}
+    (hinj : Set.InjOn (forsLeafKey core sk pk adrs) {i | i / 2 ^ z = t})
+    {v : core.Y} (h : forsNode? core c sk pk adrs z t = some v) :
+    ((2 ^ z : ℕ) : ENNReal) ≤ QueryCache.enncard c :=
+  PerfectMerkleTree.pow_le_enncard_of_simulateQ_merkleRootM _ _ c _
+    (fun i w hw => by
+      rw [show forsLeafWith core (PublicHash.f core pk) sk pk adrs i
+            = PublicHash.f core pk (forsNodeAdrs adrs 0 i)
+                (forsSkGenCore core sk pk adrs i) from rfl,
+        simulateQ_toPartialImpl_f] at hw
+      exact hw ▸ rfl)
+    hinj h
+
+/-- The chain-step-zero `F` query of the first WOTS+ chain of XMSS leaf `i`: a query determined
+by the seeds, the base address and `i` alone.  The leaf's own final compression query is not,
+its input being the settled chain tops. -/
+@[expose] def xmssLeafKey (i : ℕ) : (publicHashSpec core).Domain :=
+  .thash pk (core.adrsToKey ((wotsChainAdrs (wotsLeafAdrs adrs i) 0).setHashAddress 0))
+    [core.PRF pk sk (wotsSkAdrs (wotsLeafAdrs adrs i) 0)]
+
+/-- **A settled honest XMSS subtree at height `z` forces `2 ^ z` cache entries.**  Each of the
+`2 ^ z` leaves of the subtree forces its own chain-step-zero `F` query; the hypothesis is that
+those `2 ^ z` queries are distinct, and it is **necessary for an arbitrary core** rather than
+convenient, since the unconditional form is false.  At a concrete bundle it is discharged from
+address-range facts through `injOn_xmssLeafKey_of_injOn_adrsToKey`. -/
+theorem pow_le_enncard_of_xmssNode? (hlen : 0 < p.len) (hw : 1 < p.w) {z t : ℕ}
+    (hinj : Set.InjOn (xmssLeafKey core sk pk adrs) {i | i / 2 ^ z = t})
+    {v : core.Y} (h : xmssNode? core c sk pk adrs z t = some v) :
+    ((2 ^ z : ℕ) : ENNReal) ≤ QueryCache.enncard c := by
+  refine PerfectMerkleTree.pow_le_enncard_of_simulateQ_merkleRootM _ _ c _
+    (fun i w hleaf => ?_) hinj (by rwa [xmssNode?, xmssNodeM_eq_merkleRootM] at h)
+  simp only [xmssLeafM, xmssLeafWith, wotsPkGenWith, simulateQ_bind_eq_some_iff,
+    simulateQ_toPartialImpl_tl] at hleaf
+  obtain ⟨tops, htops, -⟩ := hleaf
+  obtain ⟨z', w', hz', hq⟩ := chain?_query_settled core c pk
+    (wotsChainAdrs (wotsLeafAdrs adrs i) 0)
+    (core.PRF pk sk (wotsSkAdrs (wotsLeafAdrs adrs i) 0)) 0 (t := 0) (by omega)
+    ((simulateQ_toPartialImpl_wotsPkGenTopsM_eq_some_iff core c sk pk
+      (wotsLeafAdrs adrs i)).mp htops ⟨0, hlen⟩)
+  obtain rfl : z' = core.PRF pk sk (wotsSkAdrs (wotsLeafAdrs adrs i) 0) :=
+    Option.some_inj.mp (hz'.symm.trans (chain?_zero core c pk
+      (wotsChainAdrs (wotsLeafAdrs adrs i) 0)
+      (core.PRF pk sk (wotsSkAdrs (wotsLeafAdrs adrs i) 0)) 0))
+  exact hq ▸ rfl
+
+/-- **The FORS leaf keys are distinct as soon as the address encoding is injective on a set of
+addresses containing the leaf addresses.**  No property of the hash or of the secret values is
+used: the leaf index is a field of the leaf address. -/
+theorem injOn_forsLeafKey_of_injOn_adrsToKey {D : Set Adrs}
+    (hinj : Set.InjOn core.adrsToKey D) {z t : ℕ}
+    (hmem : ∀ i ∈ {i : ℕ | i / 2 ^ z = t}, forsNodeAdrs adrs 0 i ∈ D) :
+    Set.InjOn (forsLeafKey core sk pk adrs) {i | i / 2 ^ z = t} := by
+  intro i hi j hj hq
+  simp only [forsLeafKey, PublicHashQuery.thash.injEq] at hq
+  exact congrArg Adrs.word3 (hinj (hmem i hi) (hmem j hj) hq.2.1)
+
+/-- **The XMSS leaf keys are distinct as soon as the address encoding is injective on a set of
+addresses containing the chain-step-zero addresses.**  No property of the hash or of the secret
+values is used: the leaf index is the key-pair field of that address. -/
+theorem injOn_xmssLeafKey_of_injOn_adrsToKey {D : Set Adrs}
+    (hinj : Set.InjOn core.adrsToKey D) {z t : ℕ}
+    (hmem : ∀ i ∈ {i : ℕ | i / 2 ^ z = t},
+      (wotsChainAdrs (wotsLeafAdrs adrs i) 0).setHashAddress 0 ∈ D) :
+    Set.InjOn (xmssLeafKey core sk pk adrs) {i | i / 2 ^ z = t} := by
+  intro i hi j hj hq
+  simp only [xmssLeafKey, PublicHashQuery.thash.injEq] at hq
+  exact congrArg Adrs.word1 (hinj (hmem i hi) (hmem j hj) hq.2.1)
+
+end CacheSize
 
 end SLHDSA.Security
