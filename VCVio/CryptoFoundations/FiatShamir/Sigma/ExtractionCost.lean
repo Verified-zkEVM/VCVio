@@ -28,9 +28,8 @@ namespace FiatShamir
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
-variable [DecidableEq M] [DecidableEq Commit]
 
-private theorem simulated_hash_bound {A : Type}
+private theorem simulated_hash_bound [DecidableEq M] [DecidableEq Commit] {A : Type}
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) A) (Q : ℕ)
     (hQ : nmaHashQueryBound (M := M) (oa := oa) Q) (st : Fork.SimState M Commit Chal) :
     IsQueryBoundP
@@ -50,7 +49,6 @@ private theorem simulated_hash_bound {A : Type}
       simp [Fork.roImpl_run_none M mc cache log hc, Fork.wrappedChallengeQuery]
     | some v => simp [Fork.roImpl_run_some M mc cache log v hc]
 
-omit [DecidableEq M] [DecidableEq Commit] in
 /-- The final-query adapter costs at most one extra source hash call. -/
 theorem proverWithFinalQuery_hash_bound
     (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
@@ -64,6 +62,8 @@ theorem proverWithFinalQuery_hash_bound
   change IsQueryBoundP
     (liftM ((unifSpec + (M × Commit →ₒ Chal)).query (.inr (msg, proof.1)))) _ 1
   simp
+
+variable [DecidableEq M] [DecidableEq Commit]
 
 /-- Cache misses in the actual wrapped verifier trace obey the source query budget. -/
 theorem proverWithFinalQuery_trace_bound [SampleableType Chal]

@@ -448,3 +448,29 @@ git diff <pre-rebase-tip> <rebased-tip> --quiet
 is an additional strong gate only when the new base differs from the old stack solely by
 folding the same content. Do not require tree identity when the new base also contains unrelated
 changes; those changes should appear in the rebased tree.
+
+### 31. Section-wide instance variables become `omit` choreography
+
+Lean includes an instance-implicit section variable in a *theorem* whenever the variables its
+type mentions are included (`Lean/Elab/MutualDef.lean`: instance-implicit variables that only
+reference included section variables are included unless listed in `omit`). Definitions prune
+their unused variables after elaboration, so a `variable` line that bundles every instance any
+definition in the file might want costs nothing on the definitions and an `omit [...] in` line on
+every theorem that mentions the type but not the instance. Two consequences are worse than the
+noise:
+
+1. **Refactor cascades.** Removing a hypothesis from a definition makes the corresponding section
+   variables unused in every theorem that only reached them through that definition, in every
+   file that mentions those types; each of those theorems then needs its omit list edited.
+2. **Search-order dependencies.** An omitted variable is still in the local context while the
+   statement elaborates. `simulatedNmaSigSim_run_hashQueryBound` (`FiatShamir/Sigma/CmaToNma.lean`)
+   omitted `[Fintype Chal]` while its statement needed `Finite Chal`; that resolved through the
+   sampler-derived instance until that instance's priority was lowered, at which point
+   `Finite.of_fintype` reached the omitted variable and elaboration failed with
+   `cannot omit referenced section variable`. An omit list therefore encodes which global instance
+   happens to win, invisibly.
+
+The fix is source organisation, not an option (`deprecated.oldSectionVars` is deprecated): a
+`variable` line states only what the theorems in its scope share, per-declaration binders or a
+narrower `section` carry the rest, derivable assumptions are derived in proofs, and `omit` marks
+the genuine exception. See *Section Variables* in `CONTRIBUTING.md`.

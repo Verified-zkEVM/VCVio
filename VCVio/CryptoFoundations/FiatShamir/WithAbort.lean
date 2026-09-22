@@ -166,7 +166,6 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
   [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
-omit hr in
 /-- When the simulated signing loop produces `some (w, z)`, the random-oracle cache
 contains a challenge `c` at `(msg, w)` satisfying `ids.verify pk w c z = true`.
 

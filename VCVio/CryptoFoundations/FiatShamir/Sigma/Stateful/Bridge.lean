@@ -34,9 +34,6 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type}
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
-variable [DecidableEq M] [DecidableEq Commit]
-variable [SampleableType Chal]
-
 /-! ## Local type abbreviations -/
 
 /-- Fiat-Shamir signature scheme over the public random-oracle interface used by
@@ -126,7 +123,7 @@ abbrev SourceCmaComp (α : Type) :=
     (Resp := Resp) (Stmt := Stmt)) (candidateAdv σ hr M adv)).run []
 
 /-- Freshness and verification check attached after candidate production. -/
-@[reducible, fs_simp] def verifyFreshComp
+@[reducible, fs_simp] def verifyFreshComp [DecidableEq M]
     (p : (Stmt × (M × (Commit × Resp))) × List M) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool := do
   let pk := p.1.1
@@ -139,7 +136,7 @@ abbrev SourceCmaComp (α : Type) :=
   pure (!decide (out.1 ∈ signed) && verified)
 
 /-- Freshness-preserving Boolean adversary for the direct stateful CMA chain. -/
-@[reducible, fs_simp] def signedFreshAdv
+@[reducible, fs_simp] def signedFreshAdv [DecidableEq M]
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool :=
   signedCandidateAdv σ hr M adv >>= verifyFreshComp (σ := σ) (hr := hr)
@@ -174,6 +171,10 @@ def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
     (Commit := Commit) (Chal := Chal) (Resp := Resp) adv pk) >>=
     postVerifyComp (σ := σ) (hr := hr) (M := M)
       (Commit := Commit) (Chal := Chal) (Resp := Resp) pk
+
+section FixedKeyRuns
+
+variable [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 /-- The Fiat-Shamir runtime-with-cache semantics is the explicit cache-state
 implementation `fsBaseImpl`, observed from the chosen initial cache. -/
@@ -236,6 +237,8 @@ lemma cmaRealRun_eq_keygen_bind
     OracleQuery.input_query, OracleQuery.cont_query, StateT.run_bind, bind_assoc]
   simp [cmaReal, cmaInit, StateT.run, StateT.mk]
 
+end FixedKeyRuns
+
 /-! ## Joint signing/hash query bounds -/
 
 /-- A named CMA query is costly for H3 exactly when it targets the signing
@@ -275,7 +278,6 @@ def cmaSignHashQueryBound {α : Type}
     oa.IsQueryBoundP (IsHashQuery (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
       (Stmt := Stmt)) qH
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 /-- Query-bind form of the joint signing/hash query bound. -/
 @[simp]
 private lemma cmaSignHashQueryBound_query_bind_iff {α : Type}
@@ -304,7 +306,6 @@ private lemma cmaSignHashQueryBound_query_bind_iff {α : Type}
   · rintro ⟨⟨hCostly, hHash⟩, hBound⟩
     exact ⟨⟨hCostly, fun u => (hBound u).1⟩, hHash, fun u => (hBound u).2⟩
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 /-- A bind is joint-bounded by the sum of the budgets for its prefix and
 continuations. -/
 private lemma cmaSignHashQueryBound_bind {α β : Type}
@@ -320,8 +321,6 @@ private lemma cmaSignHashQueryBound_bind {α β : Type}
   ⟨isQueryBoundP_bind h₁.1 fun x _ => (h₂ x).1,
     isQueryBoundP_bind h₁.2 fun x _ => (h₂ x).2⟩
 
-omit [DecidableEq M]
-  [DecidableEq Commit] [SampleableType Chal] in
 /-- Fiat-Shamir verification consumes exactly one random-oracle query and no
 signing queries in the named CMA interface. -/
 private lemma fiatShamir_verify_cmaSignHashQueryBound
@@ -342,8 +341,6 @@ private lemma fiatShamir_verify_cmaSignHashQueryBound
     ⟨⟨by simp [IsCostlyQuery], by simpa [IsHashQuery] using hQ⟩,
       by simp [cmaSignHashQueryBound]⟩
 
-omit [DecidableEq M]
-  [DecidableEq Commit] [SampleableType Chal] in
 /-- Lifting a source post-keygen CMA computation into the named CMA interface
 preserves its joint signing/hash query bound. -/
 private theorem liftAdv_cmaSignHashQueryBound
@@ -368,8 +365,6 @@ private theorem liftAdv_cmaSignHashQueryBound
         (Resp := Resp) (Stmt := Stmt))
       (hpq := by rintro ((n | mc) | m) <;> simp [IsHashQuery, SubSpec.onQuery]) hQ.2
 
-omit [DecidableEq M]
-  [DecidableEq Commit] [SampleableType Chal] in
 /-- Logging signing inputs while forwarding all queries preserves the joint
 signing/hash query bound. -/
 theorem cmaSignLogImpl_cmaSignHashQueryBound
@@ -388,8 +383,6 @@ theorem cmaSignLogImpl_cmaSignHashQueryBound
   · exact OracleComp.IsQueryBoundP.simulateQ_run_StateT_of_step hA.2
       (fun t s => by cases t <;> simp [cmaSignLogImpl, IsHashQuery]) signed
 
-omit [DecidableEq M] [SampleableType Chal]
-  [DecidableEq Commit] in
 /-- Candidate production, with signing queries logged before final verification,
 preserves the source adversary signing/hash query budget. -/
 theorem signedCandidateAdv_cmaSignHashQueryBound
@@ -411,10 +404,9 @@ theorem signedCandidateAdv_cmaSignHashQueryBound
           (Chal := Chal) (Resp := Resp) (Stmt := Stmt)
           (oa := adv.main pk) qS qH (hQ pk))
 
-omit [DecidableEq Commit] [SampleableType Chal] in
 /-- The final freshness-preserving Boolean adversary is bounded by the source
 adversary budget plus one verifier hash query. -/
-theorem signedFreshAdv_cmaSignHashQueryBound
+theorem signedFreshAdv_cmaSignHashQueryBound [DecidableEq M]
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
@@ -442,10 +434,9 @@ theorem signedFreshAdv_cmaSignHashQueryBound
         exact ⟨(isQueryBoundP_map_iff _ _ _).mpr hv.1,
           (isQueryBoundP_map_iff _ _ _).mpr hv.2⟩)
 
-omit [DecidableEq Commit] [SampleableType Chal] in
 /-- Predicate-targeted signing-query bound for the final freshness-preserving
 CMA adversary. -/
-theorem signedFreshAdv_isQueryBoundP_costly
+theorem signedFreshAdv_isQueryBoundP_costly [DecidableEq M]
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
@@ -455,8 +446,6 @@ theorem signedFreshAdv_isQueryBoundP_costly
         (Resp := Resp) (Stmt := Stmt)) qS :=
   (signedFreshAdv_cmaSignHashQueryBound σ hr M adv qS qH hQ).1
 
-omit [DecidableEq M] [SampleableType Chal]
-  [DecidableEq Commit] in
 /-- Predicate-targeted signing-query bound for candidate production before the
 final verification suffix. -/
 theorem signedCandidateAdv_isQueryBoundP_costly
@@ -469,8 +458,6 @@ theorem signedCandidateAdv_isQueryBoundP_costly
         (Resp := Resp) (Stmt := Stmt)) qS :=
   (signedCandidateAdv_cmaSignHashQueryBound σ hr M adv qS qH hQ).1
 
-omit [DecidableEq M] [SampleableType Chal]
-  [DecidableEq Commit] in
 /-- Predicate-targeted hash-query bound for candidate production before the
 final verification suffix. -/
 theorem signedCandidateAdv_isQueryBoundP_hash
@@ -483,10 +470,9 @@ theorem signedCandidateAdv_isQueryBoundP_hash
         (Resp := Resp) (Stmt := Stmt)) qH :=
   (signedCandidateAdv_cmaSignHashQueryBound σ hr M adv qS qH hQ).2
 
-omit [DecidableEq Commit] [SampleableType Chal] in
 /-- Predicate-targeted hash-query bound for the final freshness-preserving CMA
 adversary. The extra query is the final Fiat-Shamir verification. -/
-theorem signedFreshAdv_isQueryBoundP_hash
+theorem signedFreshAdv_isQueryBoundP_hash [DecidableEq M]
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)

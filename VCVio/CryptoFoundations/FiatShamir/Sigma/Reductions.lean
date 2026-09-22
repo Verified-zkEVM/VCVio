@@ -38,23 +38,18 @@ namespace FiatShamir
 open OracleComp OracleSpec
 open scoped OracleSpec.PrimitiveQuery
 
-variable {Stmt Wit Commit PrvState Chal Resp : Type}
-    [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
-    [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal]
-    {rel : Stmt → Wit → Bool}
+variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
-noncomputable local instance instIsUniformSpecChalSingleton :
+noncomputable local instance instIsUniformSpecChalSingleton [Fintype Chal] [Inhabited Chal] :
     IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
   IsUniformSpec.ofFintypeInhabited _
 
-noncomputable local instance instIsUniformSpecChalFn (M Commit : Type) :
-    IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
+noncomputable local instance instIsUniformSpecChalFn [Fintype Chal] [Inhabited Chal]
+    (M Commit : Type) : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
   IsUniformSpec.ofFintypeInhabited _
 
-omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
-  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal] in
 /-- CMA-to-NMA reduction for Fiat-Shamir signatures built from a Sigma protocol: run the
 EUF-CMA adversary against simulated signing transcripts and a managed random oracle, then issue
 one live random-oracle query at the forgery's hash point. -/
@@ -67,8 +62,6 @@ abbrev cmaToNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M) :=
   Stateful.nmaAdvFromCmaWithFinalQuery σ hr M adv simTranscript
 
-omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
-  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal] in
 /-- CMA-to-NMA bound for Fiat-Shamir signatures built from a Sigma protocol.
 
 The reduction `cmaToNmaAdv` runs the CMA adversary with simulated signing transcripts and a
@@ -112,7 +105,7 @@ section probabilityPreservation
 variable [SampleableType Chal]
 
 /-- Forwarding uniform queries and sampling challenge responses preserves event probabilities. -/
-private lemma probEvent_simulateQ_unifChalImpl {α : Type}
+private lemma probEvent_simulateQ_unifChalImpl [Fintype Chal] [Inhabited Chal] {α : Type}
     (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) (p : α → Prop) :
     Pr[ p | simulateQ (QueryImpl.ofLift unifSpec ProbComp +
       (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa] = Pr[ p | oa] := by
@@ -138,7 +131,7 @@ end probabilityPreservation
 
 section nmaToExtraction
 
-variable [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
+variable [DecidableEq M] [DecidableEq Commit]
 
 /-- Replay-fork query budget for the NMA reduction: forward the `.inl unifSpec` component
 live and rewind only the counted challenge oracle on the `.inr` side. -/
@@ -161,7 +154,34 @@ private def forkSupportInvariant
       x.roCache x.target = some ω ∧
       σ.verify pk x.target.2 ω x.forgery.2.2 = true
 
-variable [SampleableType Wit] [SampleableType Chal]
+/-- Every `(x, log)` in the support of `replayFirstRun (Fork.runTrace σ hr M nmaAdv pk)`
+satisfies the per-run invariant `forkSupportInvariant`. -/
+private theorem forkSupportInvariant_of_mem_replayFirstRun [SampleableType Chal]
+    (nmaAdv : SignatureAlg.managedRoNmaAdv
+      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+    (qH : ℕ) (pk : Stmt)
+    {x : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)}
+    {log : QueryLog (unifSpec + (Unit →ₒ Chal))}
+    (h : (x, log) ∈ support (replayFirstRun (Fork.runTrace σ hr M nmaAdv pk))) :
+    forkSupportInvariant σ M qH pk x log := by
+  classical
+  intro s hs
+  have htarget : x.queryLog[(↑s : ℕ)]? = some x.target :=
+    Fork.forkPoint_getElem?_eq_some_target (M := M) (Commit := Commit) (Resp := Resp)
+      (Chal := Chal) hs
+  have hverified : x.verified = true :=
+    Fork.verified_of_forkPoint_eq_some (M := M) (Commit := Commit) (Resp := Resp)
+      (Chal := Chal) hs
+  obtain ⟨hslt, htgt_eq⟩ := List.getElem?_eq_some_iff.1 htarget
+  obtain ⟨ω, hcache_idx, hlog⟩ :=
+    Fork.runTrace_cache_outer_lockstep σ hr M nmaAdv pk h (↑s : ℕ) hslt
+  rw [htgt_eq] at hcache_idx
+  obtain ⟨ω', hcache', hverify⟩ :=
+    Fork.exists_cached_verify_of_runTrace_verified σ hr M nmaAdv pk h hverified
+  refine ⟨ω, hlog, hcache_idx, ?_⟩
+  rwa [Option.some.inj (hcache'.symm.trans hcache_idx)] at hverify
+
+variable [DecidableEq Chal] [SampleableType Wit] [SampleableType Chal]
 
 /-- The branch the NMA extractor takes on a forking-lemma result: from two traces sharing a
 commitment whose distinct cached challenges accept, run `σ.extract`; otherwise resample. This is
@@ -205,35 +225,7 @@ def nmaReduction
   simulateQ (QueryImpl.ofLift unifSpec ProbComp +
     (uniformSampleImpl (spec := (Unit →ₒ Chal)))) (nmaForkExtract σ hr M nmaAdv qH pk)
 
-omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
-  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal]
-  [SampleableType Wit] [DecidableEq Chal] in
-/-- Every `(x, log)` in the support of `replayFirstRun (Fork.runTrace σ hr M nmaAdv pk)`
-satisfies the per-run invariant `forkSupportInvariant`. -/
-private theorem forkSupportInvariant_of_mem_replayFirstRun
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
-    (qH : ℕ) (pk : Stmt)
-    {x : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)}
-    {log : QueryLog (unifSpec + (Unit →ₒ Chal))}
-    (h : (x, log) ∈ support (replayFirstRun (Fork.runTrace σ hr M nmaAdv pk))) :
-    forkSupportInvariant σ M qH pk x log := by
-  classical
-  intro s hs
-  have htarget : x.queryLog[(↑s : ℕ)]? = some x.target :=
-    Fork.forkPoint_getElem?_eq_some_target (M := M) (Commit := Commit) (Resp := Resp)
-      (Chal := Chal) hs
-  have hverified : x.verified = true :=
-    Fork.verified_of_forkPoint_eq_some (M := M) (Commit := Commit) (Resp := Resp)
-      (Chal := Chal) hs
-  obtain ⟨hslt, htgt_eq⟩ := List.getElem?_eq_some_iff.1 htarget
-  obtain ⟨ω, hcache_idx, hlog⟩ :=
-    Fork.runTrace_cache_outer_lockstep σ hr M nmaAdv pk h (↑s : ℕ) hslt
-  rw [htgt_eq] at hcache_idx
-  obtain ⟨ω', hcache', hverify⟩ :=
-    Fork.exists_cached_verify_of_runTrace_verified σ hr M nmaAdv pk h hverified
-  refine ⟨ω, hlog, hcache_idx, ?_⟩
-  rwa [Option.some.inj (hcache'.symm.trans hcache_idx)] at hverify
+variable [Fintype Chal] [Inhabited Chal]
 
 /-- Discrete response spaces for the uniform replay experiment. -/
 local instance replayResponseMeasurable :
@@ -246,8 +238,6 @@ local instance replayResponseDiscrete :
 noncomputable local instance replayUniformMeasure : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
   IsUniformMeasureSpec.ofFiniteNonempty _
 
-omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
-  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in
 /-- At a fixed statement, combine replay forking with the supported special-soundness
 extractor. The measure statement uses the native uniform-oracle interpretation; the
 existing discrete replay theorem is consumed at this compatibility boundary. -/
@@ -344,8 +334,6 @@ private theorem perPk_extraction_bound
     probEvent_eq_tsum_ite, Bool.coe_iff_coe, eq_iff_iff, true_iff,
       mul_ite, mul_one, mul_zero] using hFork
 
-omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
-  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in
 /-- The named replay extractor's valid-witness probability at a fixed statement.
 `acc` is forkable acceptance, whose identification with actual verification requires a
 final verifier query and a query bound on the wrapped prover. Failed forks use the
@@ -363,12 +351,10 @@ end nmaToExtraction
 
 /-- The challenge-space reciprocal `(Fintype.card Chal)⁻¹` is finite. -/
 @[aesop (rule_sets := [finiteness]) safe apply]
-lemma challengeSpaceInv_ne_top : challengeSpaceInv Chal ≠ ⊤ :=
+lemma challengeSpaceInv_ne_top [Fintype Chal] [Nonempty Chal] : challengeSpaceInv Chal ≠ ⊤ :=
   ne_top_of_le_ne_top ENNReal.one_ne_top <|
     ENNReal.inv_le_one.2 (by exact_mod_cast Fintype.card_pos)
 
-omit [Fintype Stmt] [Fintype Commit] [Fintype Resp] [Fintype Chal]
-  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] [Inhabited Chal] in
 /-- NMA-to-extraction via the forking lemma and special soundness: the witness-finding
 algorithm `nmaReduction σ hr M nmaAdv qH` succeeds in `hardRelationExp` with probability at least
 `acc · (acc / (qH + 1) - 1/|Chal|)`, where `acc` is the fork advantage of `nmaAdv`.
@@ -431,8 +417,6 @@ theorem nma_to_hard_relation_bound
     (q := (qH : ENNReal) + 1) (hinv := challengeSpaceInv Chal)
     (fun _ => probEvent_le_one) (fun pkw => hPerPkFinal pkw.1)
 
-omit [Fintype Stmt] [Fintype Commit] [Fintype Resp]
-  [Inhabited Stmt] [Inhabited Commit] [Inhabited Resp] in
 /-- CMA-to-witness reduction for Fiat-Shamir signatures built from a Sigma protocol: the
 NMA-to-witness reduction `nmaReduction` applied to the CMA-to-NMA adversary `cmaToNmaAdv`,
 with fork slot parameter `qH`. -/
