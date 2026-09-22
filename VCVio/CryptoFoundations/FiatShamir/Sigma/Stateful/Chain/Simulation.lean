@@ -44,14 +44,10 @@ attribute [fs_simp]
   simulatedNmaImpl
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable [SampleableType Stmt] [SampleableType Wit]
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
-variable [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
-  [Finite Chal] [Inhabited Chal]
-
-noncomputable local instance instIsUniformSpecChalSingleton [Fintype Chal] :
+noncomputable local instance instIsUniformSpecChalSingleton [Inhabited Chal] [Fintype Chal] :
     IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
   IsUniformSpec.ofFintypeInhabited _
 
@@ -75,6 +71,46 @@ private lemma simulateQ_id_add_uniform_query_inr
   change uniformSampleImpl (spec := spec) t = _
   exact uniformSampleImpl_apply t
 
+/-! ## Shifted CMA-to-NMA normal forms -/
+
+/-- The stateful shifted form of `signedFreshAdv` splits at the
+candidate/verifier boundary, preserving the `cmaToNma` signing log between the
+two pieces. -/
+theorem cmaToNma_shiftLeft_signedFreshAdv_eq_bind [DecidableEq M]
+    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
+    (cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
+        (signedFreshAdv σ hr M adv) =
+      (simulateQ (cmaToNma M Commit Chal simT)
+        (signedCandidateAdv σ hr M adv)).run ([] : List M) >>= fun (p, log') =>
+          Prod.fst <$> (simulateQ (cmaToNma M Commit Chal simT)
+            (verifyFreshComp (σ := σ) (hr := hr) (M := M)
+              (Commit := Commit) (Chal := Chal) (Resp := Resp) p)).run log' := by
+  simp [QueryImpl.Stateful.shiftLeft, QueryImpl.Stateful.run, signedFreshAdv,
+    StateT.run'_eq, simulateQ_bind, StateT.run_bind, monad_norm]
+
+private lemma cmaToNma_lift_ro_query_run
+    (simT : Stmt → ProbComp (Commit × Chal × Resp))
+    (mc : M × Commit) (log : OuterState M) :
+    (simulateQ (cmaToNma M Commit Chal simT)
+      (liftM (liftM (((M × Commit →ₒ Chal).query mc) :
+          OracleQuery (M × Commit →ₒ Chal) Chal) :
+        OracleComp (unifSpec + (M × Commit →ₒ Chal)) Chal) :
+        OracleComp (cmaSpec M Commit Chal Resp Stmt) Chal)).run log =
+      (fun ch => (ch, log)) <$>
+        (((nmaSpec M Commit Chal Stmt).query (.ro mc)) :
+          OracleComp (nmaSpec M Commit Chal Stmt) Chal) := by
+  change (simulateQ (cmaToNma M Commit Chal simT)
+      (((cmaSpec M Commit Chal Resp Stmt).query (.ro mc)) :
+        OracleComp (cmaSpec M Commit Chal Resp Stmt) Chal)).run log =
+      (fun ch => (ch, log)) <$>
+        (((nmaSpec M Commit Chal Stmt).query (.ro mc)) :
+          OracleComp (nmaSpec M Commit Chal Stmt) Chal)
+  simp [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, cmaToNma,
+    StateT.run_mk, map_eq_bind_pure_comp]
+
+variable [DecidableEq M] [DecidableEq Commit]
+
 /-! ## CMA-to-NMA adversary -/
 
 /-- The CMA-to-NMA reduction at the managed random-oracle interface. -/
@@ -86,8 +122,6 @@ def nmaAdvFromCma
       (SourceSigAlg (σ := σ) (hr := hr) (M := M)) :=
   FiatShamir.simulatedNmaAdv σ hr M simT adv
 
-omit [SampleableType Stmt] [SampleableType Wit] [SampleableType Chal] [Finite Chal]
-  [Inhabited Chal] in
 /-- Hash-query bound for `nmaAdvFromCma`. -/
 theorem nmaAdvFromCma_nmaHashQueryBound
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
@@ -126,33 +160,12 @@ def nmaAdvFromCmaWithFinalQuery
       OracleComp (unifSpec + (M × Commit →ₒ Chal)) Chal)
     pure result
 
-/-! ## Shifted CMA-to-NMA normal forms -/
-
-omit [SampleableType Stmt] [SampleableType Wit] [DecidableEq Commit]
-  [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
-/-- The stateful shifted form of `signedFreshAdv` splits at the
-candidate/verifier boundary, preserving the `cmaToNma` signing log between the
-two pieces. -/
-theorem cmaToNma_shiftLeft_signedFreshAdv_eq_bind
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
-    (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
-    (cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
-        (signedFreshAdv σ hr M adv) =
-      (simulateQ (cmaToNma M Commit Chal simT)
-        (signedCandidateAdv σ hr M adv)).run ([] : List M) >>= fun (p, log') =>
-          Prod.fst <$> (simulateQ (cmaToNma M Commit Chal simT)
-            (verifyFreshComp (σ := σ) (hr := hr) (M := M)
-              (Commit := Commit) (Chal := Chal) (Resp := Resp) p)).run log' := by
-  simp [QueryImpl.Stateful.shiftLeft, QueryImpl.Stateful.run, signedFreshAdv,
-    StateT.run'_eq, simulateQ_bind, StateT.run_bind, monad_norm]
-
 /-! ## H5 fork-side infrastructure -/
 
 private abbrev ForkBaseState (M Commit Chal : Type)
       :=
   (fsRoSpec M Commit Chal).QueryCache × Fork.SimState M Commit Chal
 
-omit [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
 private lemma mem_support_forkSim_pure_nested_iff
     {α : Type} (x : α) (cache : (fsRoSpec M Commit Chal).QueryCache)
     (liveSt : Fork.SimState M Commit Chal)
@@ -194,6 +207,10 @@ private lemma mem_support_forkSim_pure_nested_iff
       (Resp := Resp) simT pk)
     (cmaOracleSignLogAux (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp))
+
+section SimulatedCma
+
+variable [SampleableType Chal]
 
 private abbrev SimLoggedState (M Commit Chal : Type)
       :=
@@ -266,7 +283,6 @@ private def cmaSimFixedKeyInitialState
     (ps : Stmt × Wit) : List M × CmaState M Commit Chal Stmt Wit :=
   (([] : List M), ((([] : List M), (∅ : RoCache M Commit Chal), some ps), false))
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma cmaSimLoggedImpl_liftAdv_run
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -293,7 +309,6 @@ private lemma cmaSimLoggedImpl_liftAdv_run
             simp [cmaSimLoggedLeftImpl])
       (oa := oa))
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma cmaSimLoggedImpl_liftAdv_run_expanded
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -320,7 +335,6 @@ private lemma cmaSimLoggedImpl_liftAdv_run_expanded
       (oa := (liftM oa : OracleComp (cmaSpec M Commit Chal Resp Stmt) α))
       (s := ([] : List M)) (q := st)
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma nma_lift_unif_run
     (hr : GenerableRelation Stmt Wit rel)
     {α : Type} (oa : ProbComp α)
@@ -351,7 +365,6 @@ private lemma nma_lift_unif_run
       simp [impl₁, nma, nmaPublic])
     (oa := oa) ▸ himpl₁
 
-omit [Finite Chal] [Inhabited Chal] in
 private lemma simulatedNmaUnifSim_fsUniform_run
     {α : Type} (oa : ProbComp α)
     (cache : (fsRoSpec M Commit Chal).QueryCache) :
@@ -371,7 +384,6 @@ private lemma simulatedNmaUnifSim_fsUniform_run
         monadLift_self, bind_pure_comp, simulateQ_map, bind_map_left, map_bind]
       exact bind_congr (m := ProbComp) fun u ↦ ih u cache
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma cmaSimLoggedLeft_preserves_inv
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -458,7 +470,6 @@ private lemma cmaSimLoggedLeft_preserves_inv
             simp only [htarget, support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
               Bool.false_eq_true, and_false, and_true, true_and] at hu
           all_goals exact hu.2.trans hxkey
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma cmaSimLoggedLeft_project_step
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -547,7 +558,6 @@ private lemma cmaSimLoggedLeft_project_step
       | none =>
           simp [advCache, htarget]
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private def cmaSimLoggedLeftOrnament
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -567,29 +577,6 @@ private def cmaSimLoggedLeftOrnament
   project_step := cmaSimLoggedLeft_project_step (M := M) (Commit := Commit)
     (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit) hr simT pk sk
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Stmt] [SampleableType Wit]
-  [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
-private lemma cmaToNma_lift_ro_query_run
-    (simT : Stmt → ProbComp (Commit × Chal × Resp))
-    (mc : M × Commit) (log : OuterState M) :
-    (simulateQ (cmaToNma M Commit Chal simT)
-      (liftM (liftM (((M × Commit →ₒ Chal).query mc) :
-          OracleQuery (M × Commit →ₒ Chal) Chal) :
-        OracleComp (unifSpec + (M × Commit →ₒ Chal)) Chal) :
-        OracleComp (cmaSpec M Commit Chal Resp Stmt) Chal)).run log =
-      (fun ch => (ch, log)) <$>
-        (((nmaSpec M Commit Chal Stmt).query (.ro mc)) :
-          OracleComp (nmaSpec M Commit Chal Stmt) Chal) := by
-  change (simulateQ (cmaToNma M Commit Chal simT)
-      (((cmaSpec M Commit Chal Resp Stmt).query (.ro mc)) :
-        OracleComp (cmaSpec M Commit Chal Resp Stmt) Chal)).run log =
-      (fun ch => (ch, log)) <$>
-        (((nmaSpec M Commit Chal Stmt).query (.ro mc)) :
-          OracleComp (nmaSpec M Commit Chal Stmt) Chal)
-  simp [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, cmaToNma,
-    StateT.run_mk, map_eq_bind_pure_comp]
-
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma cmaSim_lift_ro_query_run
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -627,9 +614,7 @@ private lemma cmaSim_lift_ro_query_run
         cmaOuterLens, cmaNmaLens, QueryImpl.Stateful.Frame.linkReshape,
         hcache, QueryCache.cacheQuery, monad_norm]
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma cmaSimVerifyFreshComp_project
-    [Finite Chal]
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (pk : Stmt) (x : M × (Commit × Resp))
@@ -660,6 +645,8 @@ private lemma cmaSimVerifyFreshComp_project
           (Chal := Chal) (Resp := Resp) (Stmt := Stmt) (Wit := Wit)
           hr simT (msg, c) ((log, cache, keypair), bad)]
       congr 1
+
+end SimulatedCma
 
 private def forkFreshCacheInv (s : ForkBaseState M Commit Chal × List M) : Prop :=
   ∀ (mc : M × Commit) (ch : Chal),
@@ -692,15 +679,13 @@ private def forkInitialBaseState (M Commit Chal : Type)
   ((∅ : (fsRoSpec M Commit Chal).QueryCache),
     ((∅ : (M × Commit →ₒ Chal).QueryCache), ([] : List (M × Commit))))
 
-omit [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
 omit [DecidableEq M] [DecidableEq Commit] in
 private lemma forkInitialState_inv :
     forkAwareInv (M := M) (Commit := Commit) (Chal := Chal)
       (forkInitialState M Commit Chal) := by
   constructor <;> intro mc ch hcache <;> simp [forkInitialState] at hcache
 
-omit [SampleableType Chal] [Inhabited Chal] in
-private lemma simulatedNmaUnifFork_flatten_preserves_state
+private lemma simulatedNmaUnifFork_flatten_preserves_state [Finite Chal]
     {α : Type} (A : ProbComp α)
     (advCache : (fsRoSpec M Commit Chal).QueryCache)
     (liveSt : Fork.SimState M Commit Chal)
@@ -726,8 +711,7 @@ private lemma simulatedNmaUnifFork_flatten_preserves_state
       rfl)
     A (advCache, liveSt) rfl z hz
 
-omit [SampleableType Chal] [Inhabited Chal] in
-private lemma simulatedNmaUnifFork_nested_preserves_state
+private lemma simulatedNmaUnifFork_nested_preserves_state [Finite Chal]
     {α : Type} (A : ProbComp α)
     (advCache : (fsRoSpec M Commit Chal).QueryCache)
     (liveSt : Fork.SimState M Commit Chal)
@@ -750,7 +734,6 @@ private lemma simulatedNmaUnifFork_nested_preserves_state
   subst st
   simp
 
-omit [SampleableType Stmt] [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
 private lemma forkLoggedImpl_sign_support
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) (m : M)
     (advCache : (fsRoSpec M Commit Chal).QueryCache)
@@ -802,9 +785,8 @@ private inductive ForkStateStep (s : ForkBaseState M Commit Chal × List M) :
   | signedFresh (mc : M × Commit) (ch : Chal) (h : s.1.1 (.inr mc) = none) :
       ForkStateStep s ((s.1.1.cacheQuery (.inr mc) ch, s.1.2), s.2 ++ [mc.1])
 
-omit [SampleableType Stmt] [SampleableType Chal] [Inhabited Chal] in
 /-- Normalize one handler outcome to its cache/log state transition. -/
-private lemma forkLoggedImpl_state_step
+private lemma forkLoggedImpl_state_step [Finite Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     (t : (cmaOracleSpec M Commit Chal Resp).Domain)
     (s : ForkBaseState M Commit Chal × List M)
@@ -872,7 +854,6 @@ private lemma forkLoggedImpl_state_step
     | some ch =>
         exact .signed m
 
-omit [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
 /-- Fresh-cache coherence and live-log coverage are preserved by every structural transition. -/
 private lemma ForkStateStep.preserves_aware
     {s s' : ForkBaseState M Commit Chal × List M} (step : ForkStateStep (M := M) s s')
@@ -917,7 +898,6 @@ private lemma ForkStateStep.preserves_aware
       apply hfresh mc' ch' _ (fun hm => hnew (List.mem_append_left [mc.1] hm))
       simpa [QueryCache.cacheQuery_of_ne, heq] using hcache
 
-omit [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
 /-- Agreement of live and adversary caches is preserved by every structural transition. -/
 private lemma ForkStateStep.preserves_live_adv
     {s s' : ForkBaseState M Commit Chal × List M} (step : ForkStateStep (M := M) s s')
@@ -951,8 +931,7 @@ private lemma ForkStateStep.preserves_live_adv
         cases h
       simpa [QueryCache.cacheQuery_of_ne, heq] using hs mc' ch' hcache
 
-omit [SampleableType Stmt] [SampleableType Chal] [Inhabited Chal] in
-private lemma forkLoggedImpl_preserves_inv_step
+private lemma forkLoggedImpl_preserves_inv_step [Finite Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     ∀ (t : (cmaOracleSpec M Commit Chal Resp).Domain)
       (s : ForkBaseState M Commit Chal × List M),
@@ -964,8 +943,7 @@ private lemma forkLoggedImpl_preserves_inv_step
   exact ForkStateStep.preserves_aware (M := M)
     (forkLoggedImpl_state_step (M := M) simT pk t s z hz) hs
 
-omit [SampleableType Stmt] [SampleableType Chal] [Inhabited Chal] in
-private lemma forkLoggedImpl_preserves_inv
+private lemma forkLoggedImpl_preserves_inv [Finite Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     {α : Type} (A : OracleComp (cmaOracleSpec M Commit Chal Resp) α)
     {z : α × (ForkBaseState M Commit Chal × List M)}
@@ -983,8 +961,7 @@ private lemma forkLoggedImpl_preserves_inv
     A (forkInitialState M Commit Chal)
     (forkInitialState_inv (M := M) (Commit := Commit) (Chal := Chal)) z hz
 
-omit [SampleableType Stmt] [SampleableType Chal] [Inhabited Chal] in
-private lemma forkLoggedImpl_preserves_live_adv_inv_step
+private lemma forkLoggedImpl_preserves_live_adv_inv_step [Finite Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     ∀ (t : (cmaOracleSpec M Commit Chal Resp).Domain)
       (s : ForkBaseState M Commit Chal × List M),
@@ -996,8 +973,7 @@ private lemma forkLoggedImpl_preserves_live_adv_inv_step
   exact ForkStateStep.preserves_live_adv (M := M)
     (forkLoggedImpl_state_step (M := M) simT pk t s z hz) hs
 
-omit [SampleableType Stmt] [SampleableType Chal] [Inhabited Chal] in
-private lemma forkLoggedImpl_preserves_live_adv_inv
+private lemma forkLoggedImpl_preserves_live_adv_inv [Finite Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     {α : Type} (A : OracleComp (cmaOracleSpec M Commit Chal Resp) α)
     {z : α × (ForkBaseState M Commit Chal × List M)}
@@ -1018,7 +994,6 @@ private lemma forkLoggedImpl_preserves_live_adv_inv
       simp [forkInitialState] at hcache)
     z hz
 
-omit [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
 private lemma forkPoint_isSome_of_mem_verified_findIdx_le {qH : ℕ}
     (trace : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
     (hverified : trace.verified = true) (hmem : trace.target ∈ trace.queryLog)
@@ -1027,7 +1002,6 @@ private lemma forkPoint_isSome_of_mem_verified_findIdx_le {qH : ℕ}
       (Chal := Chal) qH trace).isSome = true := by
   simp [Fork.forkPoint, hverified, hmem, hidx]
 
-omit [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
 /-- Convenience corollary: if the queryLog itself fits within `qH`, then the
 target's `findIdx` is automatically `≤ qH` and `forkPoint qH trace` is some. -/
 private lemma forkPoint_isSome_of_mem_verified_length {qH : ℕ}

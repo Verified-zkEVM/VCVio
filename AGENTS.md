@@ -45,6 +45,14 @@ unfold their definitions.
   proof-metavariable issues directly.
 - Keep the dormant `Interop` library outside this policy until it is migrated separately.
 
+Section `variable` lines carry an instance assumption only when the theorems in scope share it:
+Lean auto-includes an instance-implicit section variable in every theorem mentioning its types,
+so a section-wide `[Fintype Chal] [Inhabited Chal] [SampleableType Chal]` that most theorems
+ignore turns into an `omit [...] in` line before each of them. Put such assumptions on the
+declarations that use them, or open a `section` around the block that shares them; never declare
+one that another in scope implies (`[Finite X]` beside `[SampleableType X]`). `omit` is for a
+genuine one-off. See *Section Variables* in [`CONTRIBUTING.md`](CONTRIBUTING.md) and gotcha 31.
+
 ## What This Project Is
 
 VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is definitionally `simulateQ` into `SetM` with queries interpreted by `Set.univ`; the primary `evalDist` / `𝒟[…]` semantics is a successful-output Mathlib `Measure`, while `evalSPMF` / `𝒮[…]`, `probOutput`, and `Pr[…]` form the discrete compatibility surface backed by `simulateQ` into `PMF` using `[IsProbabilitySpec spec]`. Uniform cardinality lemmas and the `support`/probability bridge use `[IsUniformSpec spec]`, which bundles `∀ t, Fintype (spec.Range t)`, `∀ t, Inhabited (spec.Range t)`, and uniform sampling. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.

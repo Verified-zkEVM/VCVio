@@ -38,9 +38,8 @@ open scoped OracleSpec.PrimitiveQuery
 
 namespace FiatShamir
 
-variable {Stmt Wit Commit PrvState Chal Resp : Type} [Finite Stmt] {rel : Stmt → Wit → Bool}
-
-variable [SampleableType Stmt] [SampleableType Wit]
+variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
+variable [SampleableType Wit]
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
@@ -60,7 +59,7 @@ plus an appended verifier-point query); the framework's `Fin (qH + 1)`
 indexing in `Fork.forkPoint qH` provides the matching `qH + 1` forkable slots.
 This step is independent of special soundness and the forking lemma. -/
 theorem euf_cma_to_nma
-    [DecidableEq M] [DecidableEq Commit]
+    [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit]
     [Finite Chal] [Inhabited Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
@@ -78,7 +77,6 @@ theorem euf_cma_to_nma
         (qS : ENNReal) * (qS + qH) * β :=
   cma_to_nma_advantage_bound σ hr M simTranscript ζ_zk hζ_zk hHVZK β hPredSim adv qS qH hQ
 
-omit [Finite Stmt] [SampleableType Stmt] in
 /-- **NMA-to-extraction via the forking lemma and special soundness.**
 
 For any managed-RO NMA adversary `B` and any fork slot parameter `qH`, the
@@ -128,7 +126,7 @@ The combined bound is:
 where `ε = Adv^{EUF-CMA}(A)`. The ENNReal subtraction truncates at zero, so the
 bound is trivially satisfied when the simulation loss exceeds the advantage. -/
 theorem euf_cma_bound
-    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
+    [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
     [SampleableType Chal]
     (hss : σ.SpeciallySound)
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)

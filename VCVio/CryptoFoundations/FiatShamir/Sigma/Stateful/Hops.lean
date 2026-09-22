@@ -26,9 +26,7 @@ open OracleComp.ProgramLogic.Relational
 
 namespace FiatShamir.Stateful
 
-variable (M : Type) [DecidableEq M]
-variable (Commit : Type) [DecidableEq Commit]
-variable (Chal : Type) [SampleableType Chal]
+variable (M Commit Chal : Type)
 variable {Stmt Wit : Type} {rel : Stmt → Wit → Bool}
 variable {Resp PrvState : Type}
 
@@ -39,7 +37,6 @@ variable {Resp PrvState : Type}
     CmaData M Commit Chal Stmt Wit :=
   ([], ∅, none)
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 /-- The direct CMA initial state is the initial data with bad unset. -/
 @[simp]
 lemma cmaInit_eq_cmaDataInit :
@@ -65,7 +62,6 @@ instance
   unfold CmaData.Valid
   rcases s.2.2 with _ | ⟨pk, sk⟩ <;> infer_instance
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 /-- The initial direct CMA data has no cached keypair, hence satisfies the
 valid-keypair invariant. -/
 lemma cmaDataInit_valid :
@@ -88,6 +84,10 @@ noncomputable def cmaSignEps
     cmaSignEpsCore M Commit Chal ζ_zk β s
   else
     1
+
+section H3Obligations
+
+variable [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 /-! ## H3 proof obligations -/
 
@@ -447,6 +447,8 @@ theorem cmaReal_eq_cmaSim_of_not_costly
       simp [fs_simp, QueryImpl.Stateful.linkWith_apply_run,
         QueryImpl.Stateful.Frame.linkReshape]
 
+end H3Obligations
+
 /-! ## Native signing-step TV ingredients -/
 
 private structure CmaRealSignGhost
@@ -503,7 +505,7 @@ private def cmaSignKeyedData
   | some _ => s
   | none => (s.1, s.2.1, some (pk, sk))
 
-private def cmaRealSignGhostDist
+private def cmaRealSignGhostDist [SampleableType Chal]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (m : M)
@@ -524,7 +526,7 @@ private def cmaRealSignGhostDist
         pk := pk, sk := sk, commit := c, privateState := prv,
         challenge := ch, ghostResponse := ghostResp, actualResponse := ghostResp }
 
-private def cmaRealSignPublicDist
+private def cmaRealSignPublicDist [SampleableType Chal]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (s : CmaData M Commit Chal Stmt Wit) :
@@ -541,8 +543,7 @@ private def cmaSimSignPublicDist
   let (c, ch, π) ← simT pk
   pure (cmaSignPublicOfTranscript pk sk (c, ch, π))
 
-omit [DecidableEq M] [DecidableEq Commit] in
-private lemma cmaRealSignPublicDist_some
+private lemma cmaRealSignPublicDist_some [SampleableType Chal]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (log : OuterState M) (cache : RoCache M Commit Chal) (key : Stmt × Wit) :
@@ -550,7 +551,6 @@ private lemma cmaRealSignPublicDist_some
       cmaSignPublicOfTranscript key.1 key.2 <$> σ.realTranscript key.1 key.2 := by
   simp [cmaRealSignPublicDist, cmaSignKeySource]
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma cmaSimSignPublicDist_some
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -559,8 +559,7 @@ private lemma cmaSimSignPublicDist_some
       cmaSignPublicOfTranscript key.1 key.2 <$> simT key.1 := by
   simp [cmaSimSignPublicDist, cmaSignKeySource, map_eq_bind_pure_comp]
 
-omit [DecidableEq M] [DecidableEq Commit] in
-private lemma cmaRealSignPublicDist_none
+private lemma cmaRealSignPublicDist_none [SampleableType Chal]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (log : OuterState M) (cache : RoCache M Commit Chal) :
@@ -569,7 +568,6 @@ private lemma cmaRealSignPublicDist_none
         cmaSignPublicOfTranscript key.1 key.2 <$> σ.realTranscript key.1 key.2) := by
   simp [cmaRealSignPublicDist, cmaSignKeySource]
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma cmaSimSignPublicDist_none
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -578,7 +576,7 @@ private lemma cmaSimSignPublicDist_none
       (hr.gen >>= fun key => cmaSignPublicOfTranscript key.1 key.2 <$> simT key.1) := by
   simp [cmaSimSignPublicDist, cmaSignKeySource, map_eq_bind_pure_comp]
 
-private def cmaRealSignGhostOut
+private def cmaRealSignGhostOut [DecidableEq M] [DecidableEq Commit]
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit)
     (x : CmaRealSignGhost Stmt Wit Commit PrvState Chal Resp) :
@@ -591,7 +589,7 @@ private def cmaRealSignGhostOut
       let cache₂ := s₁.2.1.cacheQuery (m, x.commit) x.challenge
       ((x.commit, x.ghostResponse), ((s₁.1 ++ [m], cache₂, s₁.2.2), false))
 
-private def cmaSimSignPublicOut
+private def cmaSimSignPublicOut [DecidableEq M] [DecidableEq Commit]
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit)
     (x : CmaSignPublic Stmt Wit Commit Chal Resp) :
@@ -610,8 +608,8 @@ private def cmaSimSignPublicBad
     (x : CmaSignPublic Stmt Wit Commit Chal Resp) : Prop :=
   ∃ ch, s.2.1 (m, x.commit) = some ch
 
-omit [SampleableType Chal] in
 private lemma cmaRealSignGhostOut_eq_cmaSimSignPublicOut_of_not_bad
+    [DecidableEq M] [DecidableEq Commit]
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit)
     (x : CmaRealSignGhost Stmt Wit Commit PrvState Chal Resp)
@@ -632,7 +630,6 @@ private lemma cmaRealSignGhostOut_eq_cmaSimSignPublicOut_of_not_bad
     cases keypair <;> simpa [cmaSignKeyedData] using hmiss
   simp [cmaRealSignGhostOut, cmaSimSignPublicOut, hmiss_keyed]
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma cmaSignKeySource_sound
     (hr : GenerableRelation Stmt Wit rel)
     (s : CmaData M Commit Chal Stmt Wit)
@@ -648,8 +645,7 @@ private lemma cmaSignKeySource_sound
       obtain rfl : key = keypair := by simpa [cmaSignKeySource] using hkey
       simpa [CmaData.Valid] using hvalid
 
-omit [DecidableEq M] [DecidableEq Commit] in
-private lemma cmaRealSignGhost_public_evalSPMF_eq_publicDist
+private lemma cmaRealSignGhost_public_evalSPMF_eq_publicDist [SampleableType Chal]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (m : M)
@@ -674,8 +670,7 @@ private lemma cmaRealSignGhost_public_evalSPMF_eq_publicDist
       exact spmf_map_const_of_no_failure
         (probFailure_evalSPMF_eq_zero (σ.respond key.1 key.2 cp.2 cachedCh)) _
 
-omit [DecidableEq M] [DecidableEq Commit] in
-private lemma cmaSignPublicDist_tv_le_hvzk
+private lemma cmaSignPublicDist_tv_le_hvzk [SampleableType Chal]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -709,7 +704,6 @@ private lemma cmaSignPublicDist_tv_le_hvzk
         (tvDist_map_le (cmaSignPublicOfTranscript key.1 key.2) (σ.realTranscript key.1 key.2)
           (simT key.1)).trans (hHVZK key.1 key.2 (hr.gen_sound key.1 key.2 hkey))
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -740,7 +734,6 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     _ = (S.card : ℝ≥0∞) * β := by simp [Finset.sum_const, nsmul_eq_mul]
     _ ≤ QueryCache.enncard cache * β := mul_le_mul' h_card_le le_rfl
 
-omit [DecidableEq M] [DecidableEq Commit] [SampleableType Chal] in
 private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
@@ -780,6 +773,10 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
               rw [ENNReal.tsum_mul_right]
         _ = QueryCache.enncard cache * β := by
               rw [tsum_probOutput_eq_one' probFailure_eq_zero, one_mul]
+
+section H3Factoring
+
+variable [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 private lemma cmaRealSignStep_evalSPMF_eq_ghost
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
@@ -1056,5 +1053,7 @@ theorem cmaReal_cmaSim_advantage_le_H3_bound
       ((qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + qH) * β)
       h_qS
       (cmaH3ExpectedLoss_le_queryBounds M Commit Chal σ hr ζ_zk β A h_qS h_qH))
+
+end H3Factoring
 
 end FiatShamir.Stateful
