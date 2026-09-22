@@ -25,7 +25,7 @@ universe u
 
 namespace FinRatPMF.Raw
 
-variable {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
+variable {α β : Type u} [MeasurableSpace α]
 
 /-- The finite sum of weighted Dirac measures specified by the raw array. -/
 @[expose]
@@ -95,8 +95,8 @@ theorem lintegral_toMeasure (p : Raw α) {g : α → ℝ≥0∞} (hg : Measurabl
       (p.toList.map fun a ↦ ((a.2 : ℝ≥0) : ℝ≥0∞) * g a.1).sum :=
   lintegral_sum_smul_dirac p.toList hg
 
-omit [MeasurableSpace α] in
-private lemma sum_smul_dirac_bind (l : List (α × ℚ≥0)) (f : α → Raw β) :
+private lemma sum_smul_dirac_bind {γ : Type u} [MeasurableSpace β] (l : List (γ × ℚ≥0))
+    (f : γ → Raw β) :
     ((l.flatMap fun a ↦ (f a.1).toList.map fun b ↦ (b.1, (a.2 * b.2 : ℚ≥0))).map
       fun b ↦ ((b.2 : ℝ≥0) : ℝ≥0∞) • Measure.dirac b.1).sum =
         (l.map fun a ↦ ((a.2 : ℝ≥0) : ℝ≥0∞) • (f a.1).toMeasure).sum := by
@@ -109,6 +109,8 @@ private lemma sum_smul_dirac_bind (l : List (α × ℚ≥0)) (f : α → Raw β)
     simp only [toMeasure, NNRat.cast_mul, ENNReal.coe_mul, mul_smul]
     rw [List.smul_sum]
     simp [List.map_map, Function.comp_def]
+
+variable [MeasurableSpace β]
 
 /-- The measure interpretation of bind agrees with Giry bind for measurable continuations. -/
 theorem toMeasure_bind (p : Raw α) (f : α → Raw β)

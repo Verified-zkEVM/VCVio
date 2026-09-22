@@ -39,15 +39,15 @@ variable [∀ t, Inhabited (spec.Range t)] [∀ t : spec.Domain, FinEnum (spec.R
 
 section Measure
 
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsUniformMeasureSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
 
-omit [IsUniformMeasureSpec spec] in
 /-- Executable query sampling has the native uniform response measure. -/
 @[simp]
 lemma evalDist_apply (t : spec.Domain) :
     𝒟[finRatImpl (spec := spec) t] = ProbabilityTheory.uniformOn Set.univ :=
   Raw.evalDist_uniform
+
+variable [IsUniformMeasureSpec spec]
 
 /-- The executable evaluator preserves the native uniform oracle measure. -/
 @[simp]

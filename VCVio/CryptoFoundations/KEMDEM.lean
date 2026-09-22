@@ -46,10 +46,9 @@ def composeWithDEM [Monad m]
 
 section Correct
 
-variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF]
   [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
-omit [LawfulMonadLiftT m SPMF] in
 /-- From KEM correctness at the monadic probability level, every reachable decapsulation of an
 honest ciphertext returns the encapsulated key. -/
 private lemma kem_decaps_mem_support
@@ -65,6 +64,8 @@ private lemma kem_decaps_mem_support
       Set.mem_singleton_iff, decide_eq_decide, Prod.exists]
     exact ⟨pk, sk, hks, c, k, hck, kOpt, hkOpt, Iff.rfl⟩
   simpa [((probOutput_eq_one_iff (mx := kem.CorrectExp) (x := true)).mp hkem).2] using hmem
+
+variable [LawfulMonadLiftT m SPMF]
 
 /-- If a KEM and externally keyed DEM are both perfectly correct in the concrete probabilistic
 semantics of `m`, then their composition is also perfectly correct. -/

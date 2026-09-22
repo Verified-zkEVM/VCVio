@@ -44,6 +44,27 @@ structure QueryView (Query : Type u) (Address : Type v) (Y : Type w) where
 /-- A homogeneous query/response log. -/
 abbrev QueryLog (Query : Type u) (Y : Type w) := List ((_query : Query) × Y)
 
+/-- The leaf and authentication path exposed by an extracted partial tree at `idx`. -/
+structure ExtractedOpening (Y : Type w) {s : Skeleton} (idx : SkeletonLeafIndex s) where
+  /-- Extracted leaf, or `none` when the transcript does not reach it. -/
+  leaf : Option Y
+  /-- Extracted sibling path; unknown siblings are represented by `none`. -/
+  proof : List.Vector (Option Y) idx.depth
+
+/-- Inspect the leaf and authentication path extracted at `idx`. -/
+def opening {s : Skeleton} (tree : FullData (Option Y) s)
+    (idx : SkeletonLeafIndex s) : ExtractedOpening Y idx where
+  leaf := tree.get idx.toNodeIndex
+  proof := generateProof tree idx
+
+@[simp] theorem opening_leaf {s : Skeleton} (tree : FullData (Option Y) s)
+    (idx : SkeletonLeafIndex s) :
+    (opening tree idx).leaf = tree.get idx.toNodeIndex := rfl
+
+@[simp] theorem opening_proof {s : Skeleton} (tree : FullData (Option Y) s)
+    (idx : SkeletonLeafIndex s) :
+    (opening tree idx).proof = generateProof tree idx := rfl
+
 variable [DecidableEq Address] [DecidableEq Y]
 
 /-- Recover the ordered children of `root` at `address` from the first matching logged query. -/
@@ -85,19 +106,6 @@ def targets (view : QueryView Query Address Y) : (subtree : Skeleton) →
         | some (leftRoot, rightRoot) =>
             targets view left (fun address => addressKey (.ofLeft address)) log leftRoot ++
               targets view right (fun address => addressKey (.ofRight address)) log rightRoot
-
-/-- The leaf and authentication path exposed by an extracted partial tree at `idx`. -/
-structure ExtractedOpening (Y : Type w) {s : Skeleton} (idx : SkeletonLeafIndex s) where
-  /-- Extracted leaf, or `none` when the transcript does not reach it. -/
-  leaf : Option Y
-  /-- Extracted sibling path; unknown siblings are represented by `none`. -/
-  proof : List.Vector (Option Y) idx.depth
-
-/-- Inspect the leaf and authentication path extracted at `idx`. -/
-def opening {s : Skeleton} (tree : FullData (Option Y) s)
-    (idx : SkeletonLeafIndex s) : ExtractedOpening Y idx where
-  leaf := tree.get idx.toNodeIndex
-  proof := generateProof tree idx
 
 /-- Collision-freedom on the finite transcript, in the orientation used by extraction. -/
 def ResponseInjectiveOn (log : QueryLog Query Y) : Prop :=
@@ -359,15 +367,5 @@ theorem opening_eq_of_chainInLogAt
             rw [← List.map_cons]
             exact congrArg (List.map some)
               (congrArg List.Vector.toList proof.cons_head_tail)
-
-omit [DecidableEq Address] [DecidableEq Y] in
-@[simp] theorem opening_leaf {s : Skeleton} (tree : FullData (Option Y) s)
-    (idx : SkeletonLeafIndex s) :
-    (opening tree idx).leaf = tree.get idx.toNodeIndex := rfl
-
-omit [DecidableEq Address] [DecidableEq Y] in
-@[simp] theorem opening_proof {s : Skeleton} (tree : FullData (Option Y) s)
-    (idx : SkeletonLeafIndex s) :
-    (opening tree idx).proof = generateProof tree idx := rfl
 
 end MerkleTreeExtractor

@@ -37,7 +37,7 @@ section writerTMapBase
 
 variable {ι₀ ι₁ : Type u} {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
 variable {m₁ : Type u → Type v} [Monad m₁]
-variable {ω : Type u} [EmptyCollection ω] [Append ω]
+variable {ω : Type u}
 
 /-- Push an outer oracle interpretation through the base monad of a
 `WriterT`-valued query implementation. -/
@@ -47,13 +47,14 @@ variable {ω : Type u} [EmptyCollection ω] [Append ω]
     QueryImpl spec₀ (WriterT ω m₁) := fun t =>
   WriterT.mk (simulateQ outer ((inner t).run))
 
-omit [EmptyCollection ω] [Append ω] in
 @[simp]
 theorem writerTMapBase_apply
     (outer : QueryImpl spec₁ m₁)
     (inner : QueryImpl spec₀ (WriterT ω (OracleComp spec₁)))
     (t : spec₀.Domain) :
     (outer.writerTMapBase inner t).run = simulateQ outer ((inner t).run) := rfl
+
+variable [EmptyCollection ω] [Append ω]
 
 /-- Running a `WriterT` handler and then interpreting its base oracle
 computations is the same as first mapping the handler's base through the

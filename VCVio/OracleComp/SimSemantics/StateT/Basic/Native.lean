@@ -168,8 +168,15 @@ end QueryImpl
 
 namespace OracleComp
 
-variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] [LawfulMonad m]
-  {σ : Type u} (so : QueryImpl spec (StateT σ m))
+variable {ι : Type*} {spec : OracleSpec ι} {m : Type u → Type v} [Monad m] {σ : Type u}
+
+/-- Running a base-monad action lifted into `StateT σ m` threads the state `s` through
+unchanged, pairing it with the produced value. -/
+lemma liftM_run_StateT {α : Type u} (x : m α) (s : σ) :
+    (liftM x : StateT σ m α).run s = x >>= fun a => pure (a, s) :=
+  StateT.run_lift x s
+
+variable [LawfulMonad m] (so : QueryImpl spec (StateT σ m))
 
 /-- Simulating a query followed by a continuation, under a stateful handler, runs the handler
 at that query and threads its output state into the simulation of the continuation.
@@ -203,13 +210,6 @@ lemma StateT_run'_simulateQ_eq_self {α} (so : QueryImpl spec (StateT σ (Oracle
   | query_bind t oa ih =>
     simp only [StateT.run'_eq] at ih
     simpa [ih] using congr_arg (· >>= oa) (h t s)
-
-omit [LawfulMonad m] in
-/-- Running a base-monad action lifted into `StateT σ m` threads the state `s` through
-unchanged, pairing it with the produced value. -/
-lemma liftM_run_StateT {α : Type u} (x : m α) (s : σ) :
-    (liftM x : StateT σ m α).run s = x >>= fun a => pure (a, s) :=
-  StateT.run_lift x s
 
 variable {τ : Type u}
 

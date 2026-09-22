@@ -180,7 +180,6 @@ selector is any decidable function of what one run of the experiment already com
 section Generic
 
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
-  [DecidableEq M] [DecidableEq S]
 
 /-- The unforgeability experiment records success paired with a Boolean selector.
 
@@ -213,7 +212,6 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
   unfold instrumentedEufExp
   infer_instance
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- **The projection equation.**  Forgetting the selector bit recovers the experiment.
 
 The runtime's `ProbCompRuntime.evalDist_bind_pure` law factors the final projection out of the
@@ -234,7 +232,6 @@ theorem instrumentedEufExp_fst {sigAlg : SignatureAlg (OracleComp spec) M PK SK 
   congr 1
   simp
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- A constant selector records that constant alongside the unforgeability result.
 
 *Experiment split.* -/
@@ -248,7 +245,6 @@ theorem instrumentedEufExp_const {sigAlg : SignatureAlg (OracleComp spec) M PK S
   congr 1
   simp
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- The unforgeability advantage is the sum of the two selector branches of success. -/
 theorem advantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
@@ -259,7 +255,6 @@ theorem advantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
   rw [unforgeableAdv.advantage, instrumentedEufExp_fst runtime adv sel]
   exact Measure.fst_apply_eq_add _ (measurableSet_singleton true)
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- **The dispatch split, generically.**  The advantage is at most the sum of the two selector
 branches of the success event.
 
@@ -309,7 +304,6 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
   unfold instrumentedSameMessageExp
   infer_instance
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- The projection equation for the same-message experiment.
 
 *Experiment split.* -/
@@ -324,7 +318,6 @@ theorem instrumentedSameMessageExp_fst {sigAlg : SignatureAlg (OracleComp spec) 
   rw [sameMessageStrongUnforgeableGame]
   simp
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- A constant selector records that constant alongside the same-message result.
 
 *Experiment split.* -/
@@ -340,7 +333,6 @@ theorem instrumentedSameMessageExp_const
   rw [sameMessageStrongUnforgeableGame]
   simp
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- The same-message advantage is the sum of the false and true selector branches of success. -/
 theorem sameMessageAdvantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
@@ -352,7 +344,6 @@ theorem sameMessageAdvantage_eq_arms {sigAlg : SignatureAlg (OracleComp spec) M 
     instrumentedSameMessageExp_fst runtime adv sel]
   exact (Measure.fst_apply_eq_add _ (measurableSet_singleton true)).trans (add_comm _ _)
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- **The same-message split, generically.**  The same-message advantage is at most the sum of the
 two selector branches of its own success event.
 

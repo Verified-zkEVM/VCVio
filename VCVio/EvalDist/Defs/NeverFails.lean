@@ -69,12 +69,13 @@ instance instNeverFailOfLawfulMonadLiftTPMF [MonadLiftT m PMF] [LawfulMonadLiftT
 
 section neverFail_lemmas
 
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+variable [MonadLiftT m SPMF]
 
-omit [LawfulMonadLiftT m SPMF] in
 @[grind =]
 lemma neverFail_iff (mx : m α) : NeverFail mx ↔ Pr[⊥ | mx] = 0 :=
   ⟨by aesop, NeverFail.mk⟩
+
+variable [LawfulMonadLiftT m SPMF]
 
 @[simp, grind =]
 lemma neverFail_bind_iff [MonadAttach m] [EvalDistCompatible m]
@@ -109,11 +110,12 @@ end neverFail_lemmas
 
 namespace NeverFail
 
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
+variable [MonadLiftT m SPMF]
 
-omit [LawfulMonadLiftT m SPMF] in
 lemma of_probFailure_eq_zero (mx : m α) (h : Pr[⊥ | mx] = 0) : NeverFail mx :=
   { probFailure_eq_zero := h }
+
+variable [LawfulMonadLiftT m SPMF]
 
 /--
 If `mx` is a pure return, it never fails.

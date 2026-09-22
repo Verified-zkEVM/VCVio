@@ -32,6 +32,22 @@ namespace OracleComp
 variable {ι} {spec : OracleSpec ι} {α β : Type v}
   (oa : OracleComp spec α) (n : ℕ)
 
+/-- Possible outputs of `replicate n oa` are lists of length `n` where
+each element in the list is a possible output of `oa`. -/
+@[simp]
+lemma support_replicate :
+    support (oa.replicate n) = {xs | xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa} := by
+  induction n with
+  | zero => ext xs; aesop
+  | succ n ih =>
+    rw [replicate_succ]
+    ext xs
+    cases xs with
+    | nil => simp
+    | cons x xs => rw [cons_mem_support_seq_map_cons_iff, ih]; aesop
+
+section probability
+
 variable [IsUniformSpec spec]
 
 lemma probFailure_replicate :
@@ -66,21 +82,6 @@ lemma probEvent_replicate_of_probEvent_cons
         (fun x _ xs _ => hq x xs),
       ih, pow_succ, mul_comm]
 
-omit [IsUniformSpec spec] in
-/-- Possible outputs of `replicate n oa` are lists of length `n` where
-each element in the list is a possible output of `oa`. -/
-@[simp]
-lemma support_replicate :
-    support (oa.replicate n) = {xs | xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa} := by
-  induction n with
-  | zero => ext xs; aesop
-  | succ n ih =>
-    rw [replicate_succ]
-    ext xs
-    cases xs with
-    | nil => simp
-    | cons x xs => rw [cons_mem_support_seq_map_cons_iff, ih]; aesop
-
 @[simp]
 lemma mem_finSupport_replicate [DecidableEq α]
     (xs : List α) : xs ∈ finSupport (oa.replicate n) ↔
@@ -95,6 +96,8 @@ lemma probOutput_replicate_uniformSample {α : Type} [Fintype α] [SampleableTyp
   simpa [Nat.cast_pow] using
     (ENNReal.inv_pow (a := (Fintype.card α : ENNReal)) (n := n)).symm
 
+end probability
+
 /-! ## SimulateQ distributivity -/
 
 section SimulateQ
@@ -102,7 +105,6 @@ section SimulateQ
 variable {ι'} {spec' : OracleSpec ι'} {r : Type v → Type*}
   [Monad r] [LawfulMonad r] (impl : QueryImpl spec r)
 
-omit [IsUniformSpec spec] in
 /-- `simulateQ` distributes over `replicate`: simulating a replicated computation
 equals running the simulated body `n` times via monadic recursion. -/
 lemma simulateQ_replicate :

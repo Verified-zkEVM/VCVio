@@ -81,8 +81,85 @@ namespace MLDSA
 
 namespace NMA
 
+/-! ## Short-vector sampling and a generic advantage identity -/
+
+/-- `polyVecBounded` is a decidable predicate: it is a `≤` test on the computed
+centered infinity norm. -/
+instance {k b : ℕ} : DecidablePred (fun v : RqVec k => polyVecBounded v b) := fun _ => by
+  unfold polyVecBounded
+  exact Nat.decLe _ _
+
+/-- The zero vector lies in every `η`-bounded box. -/
+lemma polyVecBounded_zero (k b : ℕ) : polyVecBounded (0 : RqVec k) b := by
+  unfold polyVecBounded polyVecNorm
+  rw [LatticeCrypto.PolyVec.cInfNorm_le_iff]
+  intro j
+  have hz : (0 : RqVec k).get j = (0 : Rq) := by
+    change (0 : Vector Rq k).get j = 0
+    simp [Vector.get]
+  rw [hz]
+  have h0 : polyNorm (0 : Rq) = 0 := by
+    simp only [polyNorm, normOps, LatticeCrypto.zmodPolyNormOps,
+      LatticeCrypto.normOpsOfCenteredView, LatticeCrypto.cInfNormOf]
+    simp only [vectorNegacyclicRing_backend, vectorBackend_coeff, Finset.sup_eq_zero,
+      Finset.mem_univ, Int.natAbs_eq_zero, forall_const]
+    intro i
+    have hci : Vector.get (0 : Rq) i = (0 : Coeff) :=
+      LatticeCrypto.NegacyclicRing.coeff_zero coeffRing i
+    rw [hci]
+    simp [LatticeCrypto.zmodCenteredCoeffView, LatticeCrypto.centeredRepr]
+  calc normOps.cInfNorm (0 : Rq) = polyNorm (0 : Rq) := rfl
+    _ = 0 := h0
+    _ ≤ b := Nat.zero_le b
+
+/-- **Uniform sampling from the `η`-bounded box.** The uniform distribution on
+`S_b^k = { v : RqVec k | ‖v‖∞ ≤ b }`, i.e. every coefficient of every component
+uniform on the centered interval `[-b, b]`. This is the secret/error
+distribution of the Module-LWE assumption used by ML-DSA (`η ∈ {2, 4}` for the
+approved parameter sets). -/
+noncomputable def sampleShortVec (k b : ℕ) : ProbComp (RqVec k) :=
+  letI : Fintype {v : RqVec k // polyVecBounded v b} := .ofFinite _
+  letI : Nonempty {v : RqVec k // polyVecBounded v b} := ⟨0, polyVecBounded_zero k b⟩
+  letI : SampleableType {v : RqVec k // polyVecBounded v b} := .ofFintype _
+  Subtype.val <$> ($ᵗ {v : RqVec k // polyVecBounded v b})
+
+/-- Every output of `sampleShortVec k b` lies in the `b`-bounded box: the sampler draws from
+the subtype `{v // polyVecBounded v b}` and projects out the value, so support membership
+carries the bound. -/
+lemma mem_support_sampleShortVec {k b : ℕ} {v : RqVec k}
+    (hv : v ∈ support (sampleShortVec k b)) : polyVecBounded v b := by
+  simp only [sampleShortVec, support_map] at hv
+  obtain ⟨u, -, rfl⟩ := hv
+  exact u.property
+
+/-- **(Hadv) bias domination, in equality form.** For *any* LWE-style problem and decisional
+adversary, the MLWE distinguishing advantage is exactly the Boolean distinguishing advantage between
+the two single-branch games `game0` (real distribution) and `game1` (uniform distribution).
+
+This unfolds `LearningWithErrors.experiment` — `b ← coin; sample ← if b then distr else uniform;
+b' ← adv sample; return (b == b')` — into the hidden-bit guessing form
+`z ← if b then (distr >>= adv) else (uniform >>= adv); pure (b == z)` and applies
+`ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch`. It is fully generic and
+discharges the (Hadv) obligation once the NMA games are identified with `game0`/`game1`. -/
+theorem advantage_eq_game_boolDistAdvantage
+    {Sample Secret Output : Type} [Add Output]
+    (problem : LearningWithErrors.Problem Sample Secret Output)
+    (adv : LearningWithErrors.Adversary problem) :
+    LearningWithErrors.advantage problem adv =
+      (LearningWithErrors.game0 problem adv).boolDistAdvantage
+        (LearningWithErrors.game1 problem adv) := by
+  rw [LearningWithErrors.advantage]
+  rw [show (LearningWithErrors.experiment problem adv) =
+      (do
+        let b ← ($ᵗ Bool)
+        let z ← if b then LearningWithErrors.game0 problem adv
+                      else LearningWithErrors.game1 problem adv
+        pure (b == z)) by
+    simp only [LearningWithErrors.experiment, LearningWithErrors.game0,
+      LearningWithErrors.game1, bind_assoc]]
+  exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
+
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
-  [DecidableEq prims.High]
 
 section KeyGen
 
@@ -120,7 +197,6 @@ def keygen1 : ProbComp (PublicKey p prims × SecretKey p) := do
   let t ← $ᵗ (RqVec p.k)
   return keyFromMaterial p prims rho key s1 s2 t
 
-omit [DecidableEq prims.High] in
 /-- `keyFromMaterial` reproduces `keyGenFromSeed` on the honest material derived from a seed. -/
 theorem keyFromMaterial_eq (seed : Bytes 32) :
     let (rho, rhoPrime, key) := prims.expandSeed seed
@@ -139,47 +215,6 @@ distribution the Module-LWE assumption for ML-DSA is stated over. The key-swap
 hop is then an exact monad identity against `mldsaMLWEShort` (no statistical
 slack); the deterministic-XOF derivation is not part of this hop and is handled
 separately by a named XOF-replacement assumption. -/
-
-/-- `polyVecBounded` is a decidable predicate: it is a `≤` test on the computed
-centered infinity norm. -/
-instance {k b : ℕ} : DecidablePred (fun v : RqVec k => polyVecBounded v b) := fun _ => by
-  unfold polyVecBounded
-  exact Nat.decLe _ _
-
-omit nttOps in
-/-- The zero vector lies in every `η`-bounded box. -/
-lemma polyVecBounded_zero (k b : ℕ) : polyVecBounded (0 : RqVec k) b := by
-  unfold polyVecBounded polyVecNorm
-  rw [LatticeCrypto.PolyVec.cInfNorm_le_iff]
-  intro j
-  have hz : (0 : RqVec k).get j = (0 : Rq) := by
-    change (0 : Vector Rq k).get j = 0
-    simp [Vector.get]
-  rw [hz]
-  have h0 : polyNorm (0 : Rq) = 0 := by
-    simp only [polyNorm, normOps, LatticeCrypto.zmodPolyNormOps,
-      LatticeCrypto.normOpsOfCenteredView, LatticeCrypto.cInfNormOf]
-    simp only [vectorNegacyclicRing_backend, vectorBackend_coeff, Finset.sup_eq_zero,
-      Finset.mem_univ, Int.natAbs_eq_zero, forall_const]
-    intro i
-    have hci : Vector.get (0 : Rq) i = (0 : Coeff) :=
-      LatticeCrypto.NegacyclicRing.coeff_zero coeffRing i
-    rw [hci]
-    simp [LatticeCrypto.zmodCenteredCoeffView, LatticeCrypto.centeredRepr]
-  calc normOps.cInfNorm (0 : Rq) = polyNorm (0 : Rq) := rfl
-    _ = 0 := h0
-    _ ≤ b := Nat.zero_le b
-
-/-- **Uniform sampling from the `η`-bounded box.** The uniform distribution on
-`S_b^k = { v : RqVec k | ‖v‖∞ ≤ b }`, i.e. every coefficient of every component
-uniform on the centered interval `[-b, b]`. This is the secret/error
-distribution of the Module-LWE assumption used by ML-DSA (`η ∈ {2, 4}` for the
-approved parameter sets). -/
-noncomputable def sampleShortVec (k b : ℕ) : ProbComp (RqVec k) :=
-  letI : Fintype {v : RqVec k // polyVecBounded v b} := .ofFinite _
-  letI : Nonempty {v : RqVec k // polyVecBounded v b} := ⟨0, polyVecBounded_zero k b⟩
-  letI : SampleableType {v : RqVec k // polyVecBounded v b} := .ofFintype _
-  Subtype.val <$> ($ᵗ {v : RqVec k // polyVecBounded v b})
 
 /-- **Idealized key generation (real `t`).** Sample the matrix seed `ρ`, the
 signing key `K`, and the short secrets `(s₁, s₂)` independently — `(s₁, s₂)`
@@ -207,16 +242,6 @@ noncomputable def keygenShort1 : ProbComp (PublicKey p prims × SecretKey p) := 
   let t ← $ᵗ (RqVec p.k)
   return keyFromMaterial p prims rho key s1 s2 t
 
-omit nttOps in
-/-- Every output of `sampleShortVec k b` lies in the `b`-bounded box: the sampler draws from
-the subtype `{v // polyVecBounded v b}` and projects out the value, so support membership
-carries the bound. -/
-lemma mem_support_sampleShortVec {k b : ℕ} {v : RqVec k}
-    (hv : v ∈ support (sampleShortVec k b)) : polyVecBounded v b := by
-  simp only [sampleShortVec, support_map] at hv
-  obtain ⟨u, -, rfl⟩ := hv
-  exact u.property
-
 /-- The generable relation carried by the idealized short-key model: the generator is
 `keygenShort`, and every generated pair is material-valid. Each pair drawn by `keygenShort`
 is literally `keyFromMaterial ρ K s₁ s₂ (ExpandA(ρ)·s₁ + s₂)` for uniform `ρ`, `K` and
@@ -234,7 +259,6 @@ noncomputable def hrShort :
       mem_support_sampleShortVec hs2, ?_⟩
     simpa only [keyFromMaterial] using (eq_of_mem_support_pure _ hpure).symm⟩
 
-omit [DecidableEq prims.High] in
 /-- **Satisfiability certificate for the short-model `hGen` hypothesis.** Some generable
 relation over `validKeyPairShort` has `keygenShort` as its generator — witnessed by
 `hrShort`. The short-model security statements hypothesize such a relation via
@@ -249,8 +273,7 @@ end KeyGen
 
 section Game
 
-variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
+variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
 
 /-- The EUF-NMA game over an arbitrary forging strategy `main` and an arbitrary key generator
 `keygen`, observed through the Fiat-Shamir-with-aborts runtime. `main` receives the public key
@@ -325,8 +348,7 @@ end Game
 
 section Distinguisher
 
-variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec]
+variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
 
 /-- The random-oracle simulation implementation used by `FiatShamirWithAbort.runtime`: forward
 `unifSpec` queries to fresh sampling and answer hash queries through a cached random oracle, all
@@ -492,8 +514,8 @@ def matrixLift
     let rho ← $ᵗ (Bytes 32)
     B (rho, c.2)
 
-omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
-  [SampleableType (CommitHashBytes p)] [IsUniformSpec unifSpec] in
+end Distinguisher
+
 /-- **Seed-to-matrix bridge.** Under `expandAIdealization`, any adversary against the
 seed-based short problem yields one against the standard uniform-matrix problem: the
 matrix adversary runs the seed adversary on a freshly sampled seed and the challenged
@@ -581,40 +603,9 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
   rw [add_comm]
   exact add_le_add le_rfl h0
 
-end Distinguisher
-
 section Hop
 
-omit nttOps [DecidableEq prims.High] in
-/-- **(Hadv) bias domination, in equality form.** For *any* LWE-style problem and decisional
-adversary, the MLWE distinguishing advantage is exactly the Boolean distinguishing advantage between
-the two single-branch games `game0` (real distribution) and `game1` (uniform distribution).
-
-This unfolds `LearningWithErrors.experiment` — `b ← coin; sample ← if b then distr else uniform;
-b' ← adv sample; return (b == b')` — into the hidden-bit guessing form
-`z ← if b then (distr >>= adv) else (uniform >>= adv); pure (b == z)` and applies
-`ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch`. It is fully generic and
-discharges the (Hadv) obligation once the NMA games are identified with `game0`/`game1`. -/
-theorem advantage_eq_game_boolDistAdvantage
-    {Sample Secret Output : Type} [Add Output]
-    (problem : LearningWithErrors.Problem Sample Secret Output)
-    (adv : LearningWithErrors.Adversary problem) :
-    LearningWithErrors.advantage problem adv =
-      (LearningWithErrors.game0 problem adv).boolDistAdvantage
-        (LearningWithErrors.game1 problem adv) := by
-  rw [LearningWithErrors.advantage]
-  rw [show (LearningWithErrors.experiment problem adv) =
-      (do
-        let b ← ($ᵗ Bool)
-        let z ← if b then LearningWithErrors.game0 problem adv
-                      else LearningWithErrors.game1 problem adv
-        pure (b == z)) by
-    simp only [LearningWithErrors.experiment, LearningWithErrors.game0,
-      LearningWithErrors.game1, bind_assoc]]
-  exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
-
-variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (CommitHashBytes p)]
+variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
 
 /-- **NMA-game / distinguisher plumbing.** Pushing the `keygen` sampling out of the
 Fiat-Shamir-with-aborts runtime: the `Pr[= true]` of `nmaGame … keygen` equals the `Pr[= true]` of
@@ -736,10 +727,26 @@ theorem nma_keyswap_hop_short
 
 end Hop
 
+/-! ## The verifier's recomputation in coefficient form -/
+
+/-- Under the transform laws, the verifier's recomputation `computeWApprox` is the plain
+coefficient-domain matrix expression `Â·z − c·(t₁·2^d)`: the transform round trip
+disappears, `*`/`•` are the transform-backed matrix-vector and scalar-vector products on
+`R_q`, and `t₁·2^d = power2RoundShiftVec t₁`. Only the transform-isomorphism laws are
+consumed (`unhatVec_sub`); both summands are definitionally the coefficient-domain
+products. -/
+theorem computeWApprox_eq_mul_sub_smul (h_transform : NTTRingLaws nttOps)
+    (aHat : TqMatrix p.k p.l) (c : ChallengePoly) (z : RqVec p.l)
+    (t1 : Vector prims.Power2High p.k) :
+    computeWApprox p prims aHat c z t1 =
+      aHat * z - c • prims.power2RoundShiftVec t1 := by
+  have := h_transform
+  simp only [computeWApprox]
+  exact nttOps.unhatVec_sub _ _
+
 section Extractor
 
-variable {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
-  [SampleableType (CommitHashBytes p)]
+variable {M : Type} [DecidableEq prims.High]
 
 /-- The concrete SelfTargetMSIS problem embedded by ML-DSA verification (Lemma 7, Step 3).
 
@@ -765,7 +772,6 @@ def mldsaSTMSIS (M : Type) :
     let w' := prims.useHintVec h (computeWApprox p prims aHat (prims.sampleInBall cTilde) z pk.t1)
     decide (hashInput.2 = w') && (identificationScheme p prims).verify pk w' cTilde (z, h)
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- **Self-target binding, made explicit.** An accepted `mldsaSTMSIS` solution is exactly the
 identification-verifier acceptance *and* the binding of the recovered commitment `w'` to the
 commitment component of the hashed preimage. Exposing the binding as its own conjunct keeps the
@@ -828,6 +834,7 @@ the STMSIS experiment then reads `c̃` back and `mldsaSTMSIS.isValid` recovers `
 `useHintVec …` value that `verify` checks against, so an accepted NMA forgery is a valid STMSIS
 solution. -/
 private theorem stmsis_tail_le
+    [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (maxAttempts : ℕ)
@@ -923,6 +930,7 @@ runs the identical verifier. The reduction to the per-key comparison `stmsis_tai
 bundled-semantics rewrite (`nmaGame_eq_keygen_bind`) plus monotonicity over the shared `keygen1`
 prefix; the per-key step then handles the cache read-back and commitment recoverability. -/
 theorem nmaAdvantage_keygen1_le_stmsis
+    [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (maxAttempts : ℕ)
@@ -1012,24 +1020,6 @@ endpoint reached here: it is the tailored verifier relation, and reducing it to 
 SelfTargetMSIS normal form `[I_m | A] · y` (challenge in the final coefficient block of the
 short preimage `y`) is follow-up work. -/
 
-omit [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
-  [SampleableType (CommitHashBytes p)] in
-/-- Under the transform laws, the verifier's recomputation `computeWApprox` is the plain
-coefficient-domain matrix expression `Â·z − c·(t₁·2^d)`: the transform round trip
-disappears, `*`/`•` are the transform-backed matrix-vector and scalar-vector products on
-`R_q`, and `t₁·2^d = power2RoundShiftVec t₁`. Only the transform-isomorphism laws are
-consumed (`unhatVec_sub`); both summands are definitionally the coefficient-domain
-products. -/
-theorem computeWApprox_eq_mul_sub_smul (h_transform : NTTRingLaws nttOps)
-    (aHat : TqMatrix p.k p.l) (c : ChallengePoly) (z : RqVec p.l)
-    (t1 : Vector prims.Power2High p.k) :
-    computeWApprox p prims aHat c z t1 =
-      aHat * z - c • prims.power2RoundShiftVec t1 := by
-  have := h_transform
-  simp only [computeWApprox]
-  exact nttOps.unhatVec_sub _ _
-
-omit [DecidableEq (Commitment p prims)] [SampleableType (CommitHashBytes p)] in
 /-- **What the identification verifier's accept means algebraically.** With
 `c = SampleInBall(c̃)`, the verifier accepts `(w₁, c̃, (z, h))` exactly when the norm gates
 `‖z‖∞ < γ₁ − β` and `weight(h) ≤ ω` hold and the published commitment `w₁` satisfies the
@@ -1089,7 +1079,6 @@ def stmsisAlgebraicSolution (aHat : TqMatrix p.k p.l) (pk : PublicKey p prims)
         prims.sampleInBall cTilde • prims.power2RoundShiftVec pk.t1) = w' ∧
       hashInput.2 = w'
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- **The algebraic bridge for the tailored SelfTargetMSIS problem.** An accepted
 `mldsaSTMSISShort` solution is exactly an `stmsisAlgebraicSolution`: the verifier's norm
 gates, the hint-recovered matrix equation over `R_q` with the recovered commitment `w'`
@@ -1112,7 +1101,6 @@ theorem mldsaSTMSISShort_isValid_iff (h_transform : NTTRingLaws nttOps)
   · rintro ⟨hz, hweight, w', rfl, hw, hbind⟩
     exact ⟨hbind, ⟨hz, hw⟩, hweight⟩
 
-omit [DecidableEq M] [SampleableType (CommitHashBytes p)] in
 /-- **Characterization at the matched parameters.** `mldsaSTMSISShort.sampleParams` always
 publishes the matrix as `Â = ExpandA(pk.ρ)`, and at such matched parameters the verifier's
 own recomputation from the published seed coincides with the recovered commitment, so
@@ -1158,6 +1146,7 @@ issue the same `H(msg, w')` query, whose cached answer the STMSIS experiment rea
 `mldsaSTMSISShort.isValid` recovers the commitment, binds it to the preimage component `w'`,
 and runs the identical verifier. -/
 private theorem stmsis_tail_le_short
+    [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
@@ -1256,6 +1245,7 @@ followed by publishing `(ExpandA(ρ), pk)` — so monotonicity reduces to the pe
 `stmsis_tail_le_short`, which never inspects the key distribution and packages the cache
 read-back and commitment recoverability. -/
 theorem nmaAdvantage_keygenShort1_le_stmsis
+    [DecidableEq M] [SampleableType (CommitHashBytes p)]
     [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)

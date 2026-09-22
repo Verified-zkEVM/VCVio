@@ -31,11 +31,11 @@ open scoped ENNReal
 universe v
 variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-  {α β ι : Type} [Fintype ι]
+  {α β ι : Type}
 
 /-- AE comparison with a finite family of reference events integrates the conditional allowance.
 No measurability of the allowance is required. -/
-theorem prEvent_bind_le_sum_add_lintegral_ae [MeasurableSpace α]
+theorem prEvent_bind_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α]
     (mx : m α) (f : α → m β) (p : β → Prop)
     (g : ι → α → m Prop)
     (hf : Measurable fun a ↦ 𝒟[do let b ← f a; return p b])
@@ -58,7 +58,8 @@ theorem prEvent_bind_le_sum_add_lintegral_ae [MeasurableSpace α]
 
 /-- Reachable conditional event comparisons hold after a common prefix, retaining the
 allowance's successful-mass factor. Only actual observation measures are made measurable. -/
-theorem prEvent_bind_le_sum_add_mul_mass_of_support [MonadAttach m] [WeaklyLawfulMonadAttach m]
+theorem prEvent_bind_le_sum_add_mul_mass_of_support [Fintype ι] [MonadAttach m]
+    [WeaklyLawfulMonadAttach m]
     (mx : m α) (f : α → m β) (p : β → Prop) (g : ι → α → m Prop) (ε : ENNReal)
     (h : ∀ a ∈ support mx, Pr{let b ← f a}[p b] ≤
       (∑ i, Pr{let q ← g i a}[q]) + ε) :
@@ -83,7 +84,8 @@ theorem prEvent_bind_le_sum_add_mul_mass_of_support [MonadAttach m] [WeaklyLawfu
     Set.ofPred_true] using hb
 
 /-- A uniform reachable allowance gives an additive comparison with finitely many references. -/
-theorem prEvent_bind_le_sum_add_of_support [MonadAttach m] [WeaklyLawfulMonadAttach m]
+theorem prEvent_bind_le_sum_add_of_support [Fintype ι] [MonadAttach m]
+    [WeaklyLawfulMonadAttach m]
     (mx : m α) (f : α → m β) (p : β → Prop) (g : ι → α → m Prop) (ε : ENNReal)
     (h : ∀ a ∈ support mx, Pr{let b ← f a}[p b] ≤
       (∑ i, Pr{let q ← g i a}[q]) + ε) :
@@ -94,7 +96,6 @@ theorem prEvent_bind_le_sum_add_of_support [MonadAttach m] [WeaklyLawfulMonadAtt
 
 variable {γ : Type} [MonadAttach m] [WeaklyLawfulMonadAttach m]
 
-omit [Fintype ι] in
 /-- A reachable conditional comparison outside a disagreement event charges its probability
 and a uniform allowance. -/
 theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
@@ -122,7 +123,6 @@ theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
       bind_assoc, pure_bind] using hb
   exact hb'.trans (add_le_add (add_le_add le_rfl hD) le_rfl)
 
-omit [Fintype ι] in
 /-- A bad world that certainly fires on disagreement absorbs that event's charge. The
 good-branch comparison may already contain the conditional bad-world probability. -/
 theorem prEvent_bind_le_add_bad_of_disagree' {mx : m α}
@@ -148,7 +148,6 @@ theorem prEvent_bind_le_add_bad_of_disagree' {mx : m α}
       map_eq_bind_pure_comp, Function.comp_def,
     bind_assoc, pure_bind] using hb
 
-omit [Fintype ι] in
 /-- A bad world that certainly fires on disagreement pays for the exceptional branches. -/
 theorem prEvent_bind_le_add_bad_of_disagree {mx : m α}
     {my oc : α → m β} {ob : α → m γ}
@@ -161,7 +160,6 @@ theorem prEvent_bind_le_add_bad_of_disagree {mx : m α}
   prEvent_bind_le_add_bad_of_disagree' hbad fun x hx hDx ↦
     (h x hx hDx).trans (add_le_add (le_add_right le_rfl) le_rfl)
 
-omit [Fintype ι] in
 /-- Disagreement and a separate conditional bad world are both charged after a shared prefix. -/
 theorem prEvent_bind_le_add_bad_disagree {mx : m α}
     {my oc : α → m β} {ob : α → m γ}

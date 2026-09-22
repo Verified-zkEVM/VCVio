@@ -34,12 +34,74 @@ variable {M PK SK C : Type}
 
 section IND_CPA_Oracle
 
-variable [DecidableEq M]
-
 /-- Oracle-based multi-query IND-CPA game. The adversary gets oracle access to an encryption
 oracle that encrypts one of two challenge messages depending on a hidden bit. -/
 abbrev IND_CPA_oracleSpec (_encAlg : AsymmEncAlg ProbComp M PK SK C) :=
   unifSpec + (M × M →ₒ C)
+
+/-- The interface lens that swaps the two messages in a challenge query. Responses are
+unchanged. -/
+def IND_CPA_swapChallengeLens :
+    PFunctor.Lens (M × M →ₒ C).toPFunctor (M × M →ₒ C).toPFunctor where
+  toFunA mm := (mm.2, mm.1)
+  toFunB _ := id
+
+/-- The IND-CPA interface reduction that leaves randomness queries alone and swaps the two
+messages at every challenge query. -/
+def IND_CPA_swapLens (encAlg : AsymmEncAlg ProbComp M PK SK C) :
+    PFunctor.Lens encAlg.IND_CPA_oracleSpec.toPFunctor
+      encAlg.IND_CPA_oracleSpec.toPFunctor :=
+  PFunctor.Lens.sumMap (PFunctor.Lens.id unifSpec.toPFunctor) IND_CPA_swapChallengeLens
+
+@[simp] theorem IND_CPA_swapLens_query_left (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (t : unifSpec.Domain) : encAlg.IND_CPA_swapLens.toFunA (.inl t) = .inl t := rfl
+
+@[simp] theorem IND_CPA_swapLens_query_right (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
+
+/-- Message swapping leaves response values unchanged, so pullback preserves the
+point-separating answer spaces required for executable responder coherence. -/
+instance IND_CPA_swapLens_pullback.instMeasurableSingletonClassRange
+    (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable] : ∀ t,
+    letI := (R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange t
+    MeasurableSingletonClass (encAlg.IND_CPA_oracleSpec.Range t)
+  | .inl t => by
+      let hSingleton : @MeasurableSingletonClass (unifSpec.Range t)
+          (R.instMeasurableSpaceRange (.inl t)) :=
+        ProbResponder.IsExecutable.instMeasurableSingletonClassRange (R := R) (.inl t)
+      exact @MeasurableSingletonClass.mk _
+        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inl t))
+        (fun x => by
+          change @MeasurableSet (unifSpec.Range t) (R.instMeasurableSpaceRange (.inl t))
+            (id ⁻¹' {x})
+          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
+  | .inr mm => by
+      let hSingleton : @MeasurableSingletonClass C
+          (R.instMeasurableSpaceRange (.inr (mm.2, mm.1))) :=
+        ProbResponder.IsExecutable.instMeasurableSingletonClassRange
+          (R := R) (.inr (mm.2, mm.1))
+      exact @MeasurableSingletonClass.mk _
+        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inr mm))
+        (fun x => by
+          change @MeasurableSet C (R.instMeasurableSpaceRange (.inr (mm.2, mm.1)))
+            (id ⁻¹' {x})
+          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
+
+/-- Wrapping an IND-CPA machine with message swapping is exactly executable responder
+pullback along the same PolyFun lens: a one-line specialization of the generic
+wrap/pullback adjunction
+`OracleMachine.runAgainst_wrap`, with no protocol-specific run induction. -/
+theorem runAgainst_IND_CPA_swap (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (machine : OracleMachine encAlg.IND_CPA_oracleSpec PK Bool)
+    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable]
+    (k : ℕ) (r : R.State)
+    (s : machine.State) :
+    OracleMachine.runAgainst (machine.wrap encAlg.IND_CPA_swapLens) R k (r, s) =
+      machine.runAgainst (R.pullback encAlg.IND_CPA_swapLens) k (r, s) :=
+  OracleMachine.runAgainst_wrap encAlg.IND_CPA_swapLens machine R k r s
+
+variable [DecidableEq M]
 
 /-- An oracle IND-CPA adversary chooses challenge messages by querying the LR oracle and returns
 a final Boolean guess. -/
@@ -127,71 +189,6 @@ theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C
         rw [StateT.run_map, run_IND_CPA_responder_eq]
 
 /-! ## Left/right message swapping as a PolyFun reduction -/
-
-/-- The interface lens that swaps the two messages in a challenge query. Responses are
-unchanged. -/
-def IND_CPA_swapChallengeLens :
-    PFunctor.Lens (M × M →ₒ C).toPFunctor (M × M →ₒ C).toPFunctor where
-  toFunA mm := (mm.2, mm.1)
-  toFunB _ := id
-
-/-- The IND-CPA interface reduction that leaves randomness queries alone and swaps the two
-messages at every challenge query. -/
-def IND_CPA_swapLens (encAlg : AsymmEncAlg ProbComp M PK SK C) :
-    PFunctor.Lens encAlg.IND_CPA_oracleSpec.toPFunctor
-      encAlg.IND_CPA_oracleSpec.toPFunctor :=
-  PFunctor.Lens.sumMap (PFunctor.Lens.id unifSpec.toPFunctor) IND_CPA_swapChallengeLens
-
-omit [DecidableEq M] in
-@[simp] theorem IND_CPA_swapLens_query_left (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (t : unifSpec.Domain) : encAlg.IND_CPA_swapLens.toFunA (.inl t) = .inl t := rfl
-
-omit [DecidableEq M] in
-@[simp] theorem IND_CPA_swapLens_query_right (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
-
-/-- Message swapping leaves response values unchanged, so pullback preserves the
-point-separating answer spaces required for executable responder coherence. -/
-instance IND_CPA_swapLens_pullback.instMeasurableSingletonClassRange
-    (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable] : ∀ t,
-    letI := (R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange t
-    MeasurableSingletonClass (encAlg.IND_CPA_oracleSpec.Range t)
-  | .inl t => by
-      let hSingleton : @MeasurableSingletonClass (unifSpec.Range t)
-          (R.instMeasurableSpaceRange (.inl t)) :=
-        ProbResponder.IsExecutable.instMeasurableSingletonClassRange (R := R) (.inl t)
-      exact @MeasurableSingletonClass.mk _
-        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inl t))
-        (fun x => by
-          change @MeasurableSet (unifSpec.Range t) (R.instMeasurableSpaceRange (.inl t))
-            (id ⁻¹' {x})
-          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
-  | .inr mm => by
-      let hSingleton : @MeasurableSingletonClass C
-          (R.instMeasurableSpaceRange (.inr (mm.2, mm.1))) :=
-        ProbResponder.IsExecutable.instMeasurableSingletonClassRange
-          (R := R) (.inr (mm.2, mm.1))
-      exact @MeasurableSingletonClass.mk _
-        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inr mm))
-        (fun x => by
-          change @MeasurableSet C (R.instMeasurableSpaceRange (.inr (mm.2, mm.1)))
-            (id ⁻¹' {x})
-          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
-
-omit [DecidableEq M] in
-/-- Wrapping an IND-CPA machine with message swapping is exactly executable responder
-pullback along the same PolyFun lens: a one-line specialization of the generic
-wrap/pullback adjunction
-`OracleMachine.runAgainst_wrap`, with no protocol-specific run induction. -/
-theorem runAgainst_IND_CPA_swap (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (machine : OracleMachine encAlg.IND_CPA_oracleSpec PK Bool)
-    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable]
-    (k : ℕ) (r : R.State)
-    (s : machine.State) :
-    OracleMachine.runAgainst (machine.wrap encAlg.IND_CPA_swapLens) R k (r, s) =
-      machine.runAgainst (R.pullback encAlg.IND_CPA_swapLens) k (r, s) :=
-  OracleMachine.runAgainst_wrap encAlg.IND_CPA_swapLens machine R k r s
 
 /-- Oracle IND-CPA experiment with caching on the LR oracle. -/
 def IND_CPA_experiment {encAlg : AsymmEncAlg ProbComp M PK SK C}

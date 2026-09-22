@@ -204,7 +204,17 @@ end countingOracle
 
 section CountingResidual
 
-variable [DecidableEq ι] [Fintype ι]
+variable [DecidableEq ι]
+
+/-- The counting-oracle simulation of any `OracleComp` has non-empty support whenever every
+oracle range is inhabited. Used by the converse direction of
+`isTotalQueryBound_iff_counting_total_le`. -/
+lemma countingOracle.support_simulate_nonempty [∀ t, Nonempty (spec.Range t)]
+    (oa : OracleComp spec α) :
+    (support (countingOracle.simulate oa 0)).Nonempty :=
+  OracleComp.support_nonempty _
+
+variable [Fintype ι]
 
 /-- If `oa >>= ob` is totally query-bounded by `n`, then after any support point of the
 counting run of `oa`, the continuation `ob` is bounded by the residual budget. -/
@@ -255,15 +265,6 @@ theorem IsTotalQueryBound.counting_total_le
         (Finset.single_le_sum (fun _ _ => Nat.zero_le _) (Finset.mem_univ t))
       omega
 
-omit [Fintype ι] in
-/-- The counting-oracle simulation of any `OracleComp` has non-empty support whenever every
-oracle range is inhabited. Used by the converse direction of
-`isTotalQueryBound_iff_counting_total_le`. -/
-lemma countingOracle.support_simulate_nonempty [∀ t, Nonempty (spec.Range t)]
-    (oa : OracleComp spec α) :
-    (support (countingOracle.simulate oa 0)).Nonempty :=
-  OracleComp.support_nonempty _
-
 /-- Converse of `IsTotalQueryBound.counting_total_le`: a counting-oracle bound on every
 support path implies the structural total query bound. Together they characterize
 `IsTotalQueryBound` purely in terms of the counting-oracle support. -/
@@ -294,13 +295,13 @@ theorem isTotalQueryBound_iff_counting_total_le [∀ t, Nonempty (spec.Range t)]
       have hb : 1 + (∑ i, z.2 i) ≤ n := (hsplit z.2) ▸ h _ hbig'
       omega
 
-omit [Fintype ι] [DecidableEq ι] in
+end CountingResidual
+
 /-- If a stateful simulation has support cost at most one per query step, then any support
 point of the simulated prefix leaves the continuation bounded by the residual budget measured
 by that cost. The cost may under-approximate the true query count, so the resulting residual
 budget is correspondingly weaker but still sound. -/
-theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost
-     [Finite ι]
+theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost [Finite ι]
     {σ : Type u} {impl : QueryImpl spec (StateT σ (OracleComp spec))}
     (cost : σ → ℕ)
     (hstep : ∀ t : spec.Domain, ∀ st : σ,
@@ -320,8 +321,6 @@ theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost
     IsTotalQueryBound.residual_of_mem_support_counting
       (spec := spec) (ι := ι) (oa := oa) (ob := ob) (n := n) (z := (z.1, qc)) h hqc
   exact hres.mono (by omega)
-
-end CountingResidual
 
 /-- Per-index bound implies total bound (sum over indices). -/
 theorem IsTotalQueryBound.of_perIndex [DecidableEq ι] [Fintype ι]

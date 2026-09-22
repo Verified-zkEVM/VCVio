@@ -22,9 +22,7 @@ open BitVec
 
 variable {α β γ : Type _} {m : Type _ → Type _} [Monad m] [LawfulMonad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
-omit [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m] in
 @[simp, grind =]
 lemma probOutput_ofFin_map {n : ℕ} (mx : m (Fin (2 ^ n))) (x : BitVec n) :
     Pr[= x | ofFin <$> mx] = Pr[= toFin x | mx] := by
@@ -32,7 +30,6 @@ lemma probOutput_ofFin_map {n : ℕ} (mx : m (Fin (2 ^ n))) (x : BitVec n) :
     simpa only [toFin_ofFin] using congrArg BitVec.toFin h
   simpa only [ofFin_toFin] using probOutput_map_injective mx hinj (toFin x)
 
-omit [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m] in
 @[simp, grind =]
 lemma probOutput_bitVec_toFin_map {n : ℕ} (mx : m (BitVec n)) (x : Fin (2 ^ n)) :
     Pr[= x | toFin <$> mx] = Pr[= ofFin x | mx] := by
@@ -40,7 +37,6 @@ lemma probOutput_bitVec_toFin_map {n : ℕ} (mx : m (BitVec n)) (x : Fin (2 ^ n)
     probOutput_map_injective mx (fun a b h => by
       simpa only [ofFin_toFin] using congrArg BitVec.ofFin h) (ofFin x)
 
-omit [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m] in
 @[simp]
 lemma probOutput_xor_map {n : ℕ} (mx : m (BitVec n)) (x y : BitVec n) :
     Pr[= y | (x ^^^ ·) <$> mx] = Pr[= x ^^^ y | mx] := by

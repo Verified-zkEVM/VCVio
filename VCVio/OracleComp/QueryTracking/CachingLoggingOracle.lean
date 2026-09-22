@@ -33,8 +33,11 @@ variable {ι : Type u} {spec : OracleSpec.{u, u} ι}
 
 namespace QueryImpl
 
-variable {m : Type u → Type v} [Monad m] [DecidableEq ι]
-variable {ω : Type u} [EmptyCollection ω] [Append ω]
+variable {m : Type u → Type v} [DecidableEq ι] {ω : Type u} [Append ω]
+
+section handlers
+
+variable [Monad m]
 
 /-- Cache responses in the first state component and append a response-dependent
 trace to the second state component after every query.
@@ -50,7 +53,6 @@ def withCachingTraceAppend (so : QueryImpl spec m)
     (fun t u _ trace => trace ++ traceFn t u)
     (fun t _ trace => (fun u => (u, trace ++ traceFn t u)) <$> so t)
 
-omit [EmptyCollection ω] in
 @[simp, grind =]
 lemma withCachingTraceAppend_apply (so : QueryImpl spec m)
     (traceFn : (t : spec.Domain) → spec.Range t → ω) (t : spec.Domain) :
@@ -75,6 +77,8 @@ lemma withCachingLogging_apply (so : QueryImpl spec m) (t : spec.Domain) :
           (p.1, (s.1.cacheQuery t p.1, p.2))) <$>
           ((fun u => (u, s.2 ++ [⟨t, u⟩])) <$> so t) := rfl
 
+end handlers
+
 /-! ### Forward-direction query bounds for `withCachingTraceAppend`
 
 The trace overlay does not change the underlying query count, so the `withCaching` bounds
@@ -82,7 +86,6 @@ transfer through `withCachingAux_run_proj_eq` via `isQueryBound_iff_of_map_eq`. 
 
 variable {α : Type u} {ι' : Type u} {spec' : OracleSpec ι'}
 
-omit [Monad m] [EmptyCollection ω] in
 private lemma _root_.QueryImpl.withCachingTraceAppend_run_proj_eq
     {ι₂ : Type u} {spec₂ : OracleSpec ι₂}
     (so : QueryImpl spec (OracleComp spec₂))
@@ -93,8 +96,6 @@ private lemma _root_.QueryImpl.withCachingTraceAppend_run_proj_eq
   QueryImpl.withCachingAux_run_proj_eq so _ _
     (fun _ _ _ => by simp [Functor.map_map]) oa s.1 s.2
 
-omit [Monad m] in
-omit [EmptyCollection ω] in
 theorem isTotalQueryBound_run_simulateQ_withCachingTraceAppend
     (so : QueryImpl spec (OracleComp spec))
     (traceFn : (t : spec.Domain) → spec.Range t → ω)
@@ -108,8 +109,6 @@ theorem isTotalQueryBound_run_simulateQ_withCachingTraceAppend
       (QueryImpl.withCachingTraceAppend_run_proj_eq so traceFn oa s) _ _).mpr
     (OracleComp.IsTotalQueryBound.simulateQ_run_withCaching so h hstep s.1)
 
-omit [Monad m] in
-omit [EmptyCollection ω] in
 theorem isQueryBoundP_run_simulateQ_withCachingTraceAppend
     (so : QueryImpl spec (OracleComp spec'))
     (traceFn : (t : spec.Domain) → spec.Range t → ω)

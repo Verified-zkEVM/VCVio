@@ -727,14 +727,12 @@ section Preimage
 
 variable {vp : ValidatedParams} (prims : Primitives vp.params)
   [SampleableType prims.PkSeed] [SampleableType prims.Y]
-  [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
 
 /-- Classical inversion of the WOTS+-`F` preimage game's attacked map. -/
 noncomputable def wotsFPreInverse (pk : prims.PkSeed) (t : prims.AdrsKey) : prims.Y → prims.Y :=
   Function.invFun fun m =>
     (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)
 
-omit [DecidableEq prims.AdrsKey] [DecidableEq prims.Y] in
 theorem wotsFPreInverse_eval (pk : prims.PkSeed) (t : prims.AdrsKey) (a : prims.Y) :
     (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb
         (wotsFPreInverse prims pk t ((wotsFPreCProblem prims).th.eval pk t
@@ -742,6 +740,8 @@ theorem wotsFPreInverse_eval (pk : prims.PkSeed) (t : prims.AdrsKey) (a : prims.
       (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb a) :=
   Function.invFun_eq (f := fun m =>
     (wotsFPreCProblem prims).th.eval pk t ((wotsFPreCProblem prims).emb m)) ⟨a, rfl⟩
+
+variable [DecidableEq prims.AdrsKey] [DecidableEq prims.Y]
 
 /-- One challenge query, then classical inversion of the image it was answered with. -/
 noncomputable def freePreAdv (t : prims.AdrsKey) :

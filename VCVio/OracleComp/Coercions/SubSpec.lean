@@ -51,8 +51,13 @@ section liftComp_evalSPMF
 
 variable {ι : Type u} {τ : Type v}
   {spec : OracleSpec ι} {superSpec : OracleSpec τ} {α : Type w}
-variable [spec.IsUniformSpec] [superSpec.IsUniformSpec]
-    [h : spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+variable [spec.IsUniformSpec] [superSpec.IsUniformSpec] [h : spec ⊂ₒ superSpec]
+
+lemma probFailure_liftComp (mx : OracleComp spec α) :
+    Pr[⊥ | liftComp mx superSpec] = Pr[⊥ | mx] := by
+  rw [probFailure_eq_zero, probFailure_eq_zero]
+
+variable [spec ˡ⊂ₒ superSpec]
 
 @[grind =] lemma evalSPMF_liftComp (mx : OracleComp spec α) :
     𝒮[liftComp mx superSpec] = 𝒮[mx] := by
@@ -74,11 +79,6 @@ variable [spec.IsUniformSpec] [superSpec.IsUniformSpec]
 @[grind =] lemma probEvent_liftComp (mx : OracleComp spec α) (p : α → Prop) :
     Pr[ p | liftComp mx superSpec] = Pr[ p | mx] := by
   simp only [probEvent_eq_tsum_indicator, probOutput_liftComp]
-
-omit [spec ˡ⊂ₒ superSpec] in
-lemma probFailure_liftComp (mx : OracleComp spec α) :
-    Pr[⊥ | liftComp mx superSpec] = Pr[⊥ | mx] := by
-  rw [probFailure_eq_zero, probFailure_eq_zero]
 
 end liftComp_evalSPMF
 

@@ -153,7 +153,6 @@ end correctness
 section unforgeable
 
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
-  [DecidableEq M] [DecidableEq S]
 
 /-- An EUF-CMA (existential unforgeability under chosen-message attack) adversary for
 `sigAlg`. Given the public key, it runs in the oracle family `spec + (M →ₒ S)` — the
@@ -226,7 +225,6 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
   unfold unforgeableExpNoFresh
   infer_instance
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- **Phase B (freshness-drop) bound.** The CMA advantage is bounded above by the success
 probability of the same experiment with the freshness check dropped.
 
@@ -301,7 +299,10 @@ end unforgeable
 section strongUnforgeable
 
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
-  [DecidableEq M] [DecidableEq S]
+
+section signingLogContains
+
+variable [DecidableEq M] [DecidableEq S]
 
 /-- Whether the signing-oracle trace contains the exact returned pair `(msg, σ)`. Unlike
 `QueryLog.wasQueried`, this predicate distinguishes two signatures returned for the same message. -/
@@ -325,6 +326,8 @@ lemma wasQueried_eq_true_of_signingLogContains_eq_true
   rw [QueryLog.wasQueried_eq_decide_mem_map_fst, decide_eq_true_eq]
   rw [signingLogContains, decide_eq_true_eq] at h
   exact List.mem_map.mpr ⟨⟨msg, σ⟩, h, rfl⟩
+
+end signingLogContains
 
 /-- A SUF-CMA (strong unforgeability under chosen-message attack) adversary. As in EUF-CMA it
 receives the public key and has access to the scheme's ambient oracles plus the signing oracle,
@@ -366,7 +369,6 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
   unfold strongUnforgeableExp
   infer_instance
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- The SUF experiment exposes the runtime's measure semantics directly. -/
 lemma strongUnforgeableExp_apply_singleton
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -424,7 +426,6 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
   unfold sameMessageStrongUnforgeableExp
   infer_instance
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- The same-message experiment exposes the runtime's measure semantics directly. -/
 lemma sameMessageStrongUnforgeableExp_apply_singleton
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -455,7 +456,6 @@ def SameMessageBinding (sigAlg : SignatureAlg (OracleComp spec) M PK SK S)
     (runtime : ProbCompRuntime (OracleComp spec)) (ε : ℝ≥0∞) : Prop :=
   ∀ adv : strongUnforgeableAdv sigAlg, adv.sameMessageAdvantage runtime ≤ ε
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- **Exact generic SUF-to-EUF partition.** Every strong forgery either uses a message never queried
 to the signing oracle (an ordinary EUF-CMA forgery) or is a new valid signature for a previously
 queried message. These events are disjoint and exhaustive inside the exact-pair-fresh success
@@ -567,7 +567,6 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
     simp [hyes] at hnot
   rw [hpartition, measure_union hdisjoint MeasurableSet.of_discrete]
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- Convenient inequality corollary of the exact SUF-to-EUF partition. -/
 lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -577,7 +576,6 @@ lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
       adv.toUnforgeableAdv.advantage runtime + adv.sameMessageAdvantage runtime :=
   (adv.advantage_eq_euf_add_sameMessage runtime).le
 
-omit [DecidableEq M] [DecidableEq S] in
 /-- SUF-CMA from EUF-CMA plus a quantitative same-message binding property. -/
 lemma strongUnforgeableAdv.advantage_le_euf_add_of_sameMessageBinding
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}

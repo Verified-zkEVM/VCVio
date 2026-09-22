@@ -244,22 +244,23 @@ through `MonadAttach.attach`, whose outputs carry their reachability proof. -/
 section attach
 
 variable {m : Type → Type v} [Monad m] [LawfulMonad m]
-  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
   [MonadAttach m] [WeaklyLawfulMonadAttach m] {α β : Type}
 
-omit [EvalDistSemantics m] [LawfulEvalDistSemantics m] in
 /-- A bind factors through the attachment of its possible outputs. -/
 theorem bind_eq_attach_bind (mx : m α) (f : α → m β) :
     mx >>= f = MonadAttach.attach mx >>= fun a ↦ f a.1 := by
   conv_lhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [bind_map_left]
 
-omit [LawfulEvalDistSemantics m] in
+variable [EvalDistSemantics m]
+
 /-- The trivially true event is unchanged by attachment. -/
 theorem prEvent_true_attach (mx : m α) :
     Pr{let _ ← MonadAttach.attach mx}[True] = Pr{let _ ← mx}[True] := by
   conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [prEvent_map]
+
+variable [LawfulEvalDistSemantics m]
 
 /-- Implication between events only on the structurally reachable outputs bounds their
 probabilities. -/
