@@ -68,11 +68,9 @@ counterpart of what the fresh-answer engine's hypothesis in
 over different types — is at least `⌊qs / 2 ^ a⌋ / 2 ^ h`. -/
 theorem le_of_uniform_covering_bound (h a k qs : ℕ) (hqs : qs / 2 ^ a ≤ 2 ^ h) (ε : ℝ≥0∞)
     (hε : ∀ L : Finset (Digest h a k), L.card ≤ qs →
-      letI : MeasurableSpace (Digest h a k) := ⊤
       𝒟[($ᵗ (Digest h a k) : ProbComp (Digest h a k))] {z | Covered h a k L z} ≤ ε) :
     ((qs / 2 ^ a : ℕ) : ℝ≥0∞) / 2 ^ h ≤ ε := by
   classical
-  let _ : MeasurableSpace (Digest h a k) := ⊤
   obtain ⟨S, -, hScard⟩ := Finset.exists_subset_card_eq
     (show qs / 2 ^ a ≤ (Finset.univ : Finset (Fin (2 ^ h))).card by simpa using hqs)
   refine le_trans (le_of_eq ?_) ((evalDist_covered_satList_ge h a k S).trans
