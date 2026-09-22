@@ -240,8 +240,6 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
       probOutput_congr rfl (congrArg evalSPMF hRHS_eq),
       probEvent_congr' (fun _ _ => Iff.rfl) (congrArg evalSPMF hBAD_eq)]
   classical
-  have : Nonempty Digest :=
-    ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   -- **C1: slot-0 column lazification.** Cache every slot-0 cell of the queried column.
   set cells : List ((TagId × Fin sessionsPerTag) × Nonce) :=
     (Finset.univ.toList).map

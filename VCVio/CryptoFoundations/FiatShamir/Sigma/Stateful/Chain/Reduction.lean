@@ -264,7 +264,7 @@ terms of the verify-wrapped adversary `nmaAdvFromCmaWithFinalQuery` at fork
 slot parameter `qH` (the framework's `Fin (qH + 1)` indexing accommodates the
 wrapper's verifier-point query). -/
 theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork
-    [Finite Chal] [Finite Commit] [Finite Resp]
+    [Finite Chal]
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qS qH : ℕ)
@@ -410,7 +410,7 @@ theorem cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
     (Stmt := Stmt) (Wit := Wit) simT A
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
+omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 /-- Convert the shifted-NMA H5 boundary into the linked simulated-CMA form used
 by the top-level chain. -/
 theorem cmaSim_signedFreshAdv_le_fork_of_shifted_h5
@@ -439,7 +439,7 @@ omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] in
 /-- Native H5 boundary in the linked simulated-CMA form used by the top-level
 chain. -/
 theorem cmaSim_signedFreshAdv_le_fork
-    [Finite Chal] [Finite Commit] [Finite Resp]
+    [Finite Chal]
     (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qS qH : ℕ)
@@ -460,7 +460,7 @@ theorem cmaSim_signedFreshAdv_le_fork
 
 /-! ## Top-level chain factored over H5 -/
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
+omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 /-- Native stateful top-level chain, assuming the H5 replay-forking boundary.
 
 This theorem carries the H1/H2/H3/H4 arithmetic directly in the stateful chain.
@@ -548,7 +548,6 @@ omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Native stateful chain with H5 discharged by the replay-forking boundary,
 leaving only the public-to-stateful H1/H2 compatibility premise. -/
 theorem cma_advantage_le_fork_bound_of_h1h2
-    [Finite Commit] [Finite Resp]
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
     (hHVZK : σ.HVZK simT ζ_zk)

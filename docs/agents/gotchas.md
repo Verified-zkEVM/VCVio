@@ -133,6 +133,16 @@ and derives `finite_range`/`nonempty_range` as theorems, never instances.
 `VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchNative.lean` guard all of
 this with heartbeat-bounded canaries and an elaborated-term dependency check.
 
+A wildcard-keyed instance over a plain type variable is a different matter when its class is a
+proposition. `SampleableType.finite : [SampleableType β] → Finite β` is keyed `Finite *`, exactly
+like Mathlib's `Finite.of_fintype`, and since `Finite β` is a `Prop`, which instance answers is
+invisible to definitional equality; the only thing to control is search order. Such an
+instance takes `priority := 100`, below `Finite.of_fintype` (900) and `instNonemptyOfInhabited`,
+so that `Finite (Fin 3)` never elaborates through sampler code and the sampler instance only
+answers for types whose finiteness is known through nothing else (`spec.Range t` under
+`[∀ t, SampleableType (spec.Range t)]`). The same test file checks that routing. Data classes
+(`DecidableEq`, `Fintype`, `Inhabited`) get no such derived instance at any priority.
+
 ### 9. Universe polymorphism
 
 `OracleComp` has 3 universe parameters, `SubSpec` has 3 (`u, v, w`: indices `ι : Type u`, `τ : Type v`, shared response universe `w`). Universe unification errors are still common when composing specs or building reductions because the lens-style `MonadLift` parent can drag extra metavariables in.

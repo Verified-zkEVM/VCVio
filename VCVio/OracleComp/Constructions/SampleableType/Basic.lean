@@ -16,13 +16,28 @@ public import Mathlib.Data.FinEnum
 public import Mathlib.Data.Fintype.Perm
 public import Mathlib.Data.Fintype.Pi
 public import Mathlib.Data.Fintype.Vector
+import VCVio.OracleComp.EvalDist.Measure
 
 /-!
-# Executable samplers certified by uniform measures
+# Canonical uniform samplers: the `$ᵗ` notation class
 
-`SampleableType` pairs an executable oracle program with full operational support and a native
-uniform measure certificate. Nonemptiness and finiteness follow from the sampler. Products,
-vectors, and equivalences preserve the certificate through measure transport.
+`SampleableType β` gives the notation `$ᵗ β` its meaning: an executable `ProbComp β` together
+with the one law that makes it a *uniform* sampler, `𝒟[$ᵗ β] = uniformOn Set.univ` for every
+measurable structure with measurable singletons. The law is part of the contract because no
+consumer wants a canonical sampler that is not uniform; it is the only field besides the
+program, and every construction below discharges it once.
+
+Nonemptiness of `β` follows from having a sampler at all (`SampleableType.nonempty`), and
+finiteness and full operational support follow from the law (`SampleableType.finite`,
+`support_uniformSample`). The two `Prop`-valued facts are instances so that a hypothesis
+`[SampleableType β]` supplies them wherever Mathlib asks, but at low priority: ordinary
+instances such as `Finite.of_fintype` and `instNonemptyOfInhabited` are tried first, so a fact
+about `Fin 3` never routes through sampler code and the sampler instances only answer for types
+whose finiteness is known through nothing else (typically `spec.Range t` under
+`[∀ t, SampleableType (spec.Range t)]`). Since the classes are propositions, which instance
+answers is invisible to definitional equality (`docs/agents/gotchas.md` §8b).
+
+Products, vectors, and equivalences transport the sampler together with its law.
 -/
 
 public section
@@ -31,24 +46,15 @@ universe u v w
 
 open ENNReal MeasureTheory ProbabilityTheory
 
-/-- A finite inhabited type with a canonical, executable uniform sampler. Its semantic
-certificate states uniformity of the output measure for every measurable structure with
-measurable singletons. -/
+/-- A canonical uniform sampler for `β`, written `$ᵗ β`: an executable program whose output
+measure is uniform for every measurable structure with measurable singletons. -/
 class SampleableType (β : Type) where
+  /-- The canonical sampler of `β`, written `$ᵗ β`. -/
   selectElem : ProbComp β
-  mem_support_selectElem (x : β) : x ∈ support selectElem
+  /-- The canonical sampler denotes the uniform measure on `β`. -/
   evalDist_selectElem_eq_uniform :
     ∀ [MeasurableSpace β] [MeasurableSingletonClass β],
       𝒟[selectElem] = uniformOn Set.univ
-
-/-- A canonical uniform sampler witnesses that its type is inhabited. -/
-instance SampleableType.instNonempty (β : Type) [h : SampleableType β] : Nonempty β :=
-  ⟨OracleComp.defaultResult h.selectElem⟩
-
-/-- The support of a canonical uniform sampler covers its finite type. -/
-instance SampleableType.instFinite (β : Type) [h : SampleableType β] : Finite β :=
-  Finite.of_finite_univ <|
-    (Set.eq_univ_of_forall h.mem_support_selectElem) ▸ OracleComp.support_finite h.selectElem
 
 /-- Select uniformly from the type `β` using a type-class provided definition. -/
 @[expose]
@@ -62,11 +68,34 @@ theorem SampleableType.evalDist_uniformSample {β : Type} [SampleableType β]
     𝒟[$ᵗ β] = uniformOn Set.univ :=
   SampleableType.evalDist_selectElem_eq_uniform
 
+/-- A sampler yields an element of its type: run it on default oracle answers. Low priority so
+that ordinary nonemptiness instances answer first. -/
+instance (priority := 100) SampleableType.nonempty (β : Type) [SampleableType β] :
+    Nonempty β :=
+  ⟨OracleComp.defaultResult ($ᵗ β)⟩
+
+/-- A uniform sampler denotes a probability measure only on a finite type. Low priority so
+that ordinary finiteness instances answer first. -/
+instance (priority := 100) SampleableType.finite (β : Type) [SampleableType β] : Finite β := by
+  let : MeasurableSpace β := ⊤
+  have h : 𝒟[$ᵗ β] Set.univ ≠ 0 := by
+    rw [measure_univ]
+    exact one_ne_zero
+  rw [SampleableType.evalDist_uniformSample] at h
+  exact Set.finite_univ_iff.mp (finite_of_uniformOn_ne_zero h)
+
 variable (α : Type) [SampleableType α]
 
+/-- A uniform sampler can output every element: positive uniform mass on each singleton is
+operational reachability. -/
 @[simp, grind =]
-lemma support_uniformSample : support ($ᵗ α) = Set.univ :=
-  Set.eq_univ_of_forall SampleableType.mem_support_selectElem
+lemma support_uniformSample : support ($ᵗ α) = Set.univ := by
+  let : MeasurableSpace α := ⊤
+  refine Set.eq_univ_of_forall fun x => ?_
+  rw [OracleComp.mem_support_iff_evalDist_singleton_pos, SampleableType.evalDist_uniformSample]
+  refine pos_iff_ne_zero.mpr fun h => ?_
+  rw [uniformOn_eq_zero_iff Set.finite_univ] at h
+  simp at h
 
 lemma mem_support_uniformSample {x : α} : x ∈ support ($ᵗ α) := by grind
 
@@ -77,9 +106,9 @@ lemma support_uniformSample_nonempty : (support ($ᵗ α)).Nonempty :=
 
 section instances
 
+/-- The uniform sampler of `Fin (n + 1)`. -/
 @[expose, reducible] def SampleableType.Fin (n : ℕ) : SampleableType (Fin (n + 1)) where
   selectElem := $[0..n]
-  mem_support_selectElem := by simp
   evalDist_selectElem_eq_uniform := by
     intro _ _
     cases MeasurableSpace.eq_top_of_finite (α := _root_.Fin (n + 1))
@@ -91,7 +120,6 @@ instance (n : ℕ) [hn : NeZero n] : SampleableType (Fin n) :=
 
 instance (α : Type) [Unique α] : SampleableType α where
   selectElem := return default
-  mem_support_selectElem x := Unique.eq_default x ▸ (by simp)
   evalDist_selectElem_eq_uniform := by
     intro _ _
     apply Measure.ext_of_singleton
@@ -109,7 +137,6 @@ instance {ι ι'} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
 /-- Select a uniform element from `α × β` by independently selecting from `α` and `β`. -/
 instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType (α × β) where
   selectElem := (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)
-  mem_support_selectElem x := by simp
   evalDist_selectElem_eq_uniform := by
     intro outputSpace _
     let : MeasurableSpace α := ⊤
@@ -119,11 +146,10 @@ instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType
       (@Measurable.of_discrete (α × β) (α × β) Prod.instMeasurableSpace outputSpace
         inferInstance _) ⟨Function.injective_id, Function.surjective_id⟩
 
-/-- A type equivalent to a `SampleableType` is also `SampleableType`. -/
+/-- Transport a uniform sampler along an equivalence. -/
 @[expose, reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :
     SampleableType β where
   selectElem := e <$> ($ᵗ α)
-  mem_support_selectElem x := by simp
   evalDist_selectElem_eq_uniform := by
     intro _ _
     let : Finite β := Finite.of_injective e.symm e.symm.injective
@@ -134,10 +160,9 @@ instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType
     exact map_uniformOn_univ_of_bijective Measurable.of_discrete e.bijective
 
 /-- Any finitely enumerable type can be sampled uniformly using the underlying equivalence. -/
-instance FinEnum.SampleableType (α : Type)
-    [h : FinEnum α] [Nonempty α] : SampleableType α := by
-  have : NeZero (FinEnum.card α) := NeZero.mk FinEnum.card_ne_zero
-  exact SampleableType.ofEquiv h.equiv.symm
+instance FinEnum.SampleableType (α : Type) [h : FinEnum α] [Nonempty α] : SampleableType α :=
+  haveI : NeZero (FinEnum.card α) := NeZero.mk FinEnum.card_ne_zero
+  SampleableType.ofEquiv h.equiv.symm
 
 /-- Noncomputable bridge from a nonempty `Fintype` with decidable equality to `SampleableType`,
 via `Fintype.equivFin`. Used by downstream instances (e.g. `Sym α n`, `Equiv.Perm α`, `β ↪ α`)
@@ -169,12 +194,6 @@ definition so that it never competes with executable enumeration-based instances
     (hU : U.Nonempty) : SampleableType ↥U :=
   haveI : Nonempty ↥U := hU.to_subtype
   SampleableType.ofFintype _
-
-/-- We avoid making this an instance globally as many types already have a `Fintype` instance
-that would not be definitionally equal to this one. -/
-@[expose, reducible]
-noncomputable def SampleableType.Fintype (α : Type) [SampleableType α] :
-    Fintype α := Fintype.ofFinite α
 
 instance (n : ℕ) [NeZero n] : FinEnum (ZMod n) where
   card := n
@@ -208,33 +227,36 @@ instance instFintypeVector (α : Type u) (n : ℕ) [Fintype α] : Fintype (Vecto
 instance instFiniteVector (α : Type u) (n : ℕ) [Finite α] : Finite (Vector α n) :=
   Finite.of_equiv (Fin n → α) (arrayVectorEquivFin α n).symm
 
-/-- Select a uniform element from `Vector α n` by independently selecting `α` at each index. -/
-instance (α : Type) (n : ℕ) [SampleableType α] : SampleableType (Vector α n) where
-  selectElem := by induction n with
-  | zero => exact pure #v[]
-  | succ m ih => exact Vector.push <$> ih <*> ($ᵗ α)
-  mem_support_selectElem x := by induction n with
-  | zero => simp
+/-- Sample a `Vector α n` by independently sampling `α` at each index. -/
+def SampleableType.vector (α : Type) [SampleableType α] : (n : ℕ) → ProbComp (Vector α n)
+  | 0 => pure #v[]
+  | m + 1 => Vector.push <$> SampleableType.vector α m <*> ($ᵗ α)
+
+/-- Independent uniform samples at each index give the uniform measure on `Vector α n`. -/
+theorem SampleableType.evalDist_vector (α : Type) [SampleableType α] :
+    ∀ (n : ℕ) [MeasurableSpace (Vector α n)] [MeasurableSingletonClass (Vector α n)],
+      𝒟[SampleableType.vector α n] = uniformOn Set.univ := by
+  intro n
+  induction n with
+  | zero =>
+    intro _ _
+    let : Unique (Vector α 0) := ⟨⟨#v[]⟩, fun x ↦ by ext i; omega⟩
+    let : Fintype (Vector α 0) := Fintype.ofFinite _
+    apply Measure.ext_of_singleton
+    intro x
+    simp [SampleableType.vector, Subsingleton.elim x #v[], uniformOn_univ_apply_singleton]
   | succ m ih =>
-      have : ∃ ys y, Vector.push ys y = x := ⟨x.pop, x.back, Vector.push_pop_back x⟩
-      simpa [ih] using this
-  evalDist_selectElem_eq_uniform := by
-    induction n with
-    | zero =>
-        intro _ _
-        let : Unique (Vector α 0) := ⟨⟨#v[]⟩, fun x ↦ by ext i; omega⟩
-        let : Fintype (Vector α 0) := Fintype.ofFinite _
-        apply Measure.ext_of_singleton
-        intro x
-        simp [Subsingleton.elim x #v[], uniformOn_univ_apply_singleton]
-    | succ m ih =>
-        intro _ _
-        let : MeasurableSpace (Vector α m) := ⊤
-        let : MeasurableSpace α := ⊤
-        exact evalDist_seq_map_eq_uniformOn _ ($ᵗ α) Vector.push ih
-          SampleableType.evalDist_uniformSample Measurable.of_discrete
-          ⟨fun x y h ↦ Prod.ext (Vector.push_eq_push.mp h).2 (Vector.push_eq_push.mp h).1,
-            fun x ↦ ⟨(x.pop, x.back), Vector.push_pop_back x⟩⟩
+    intro _ _
+    let : MeasurableSpace (Vector α m) := ⊤
+    let : MeasurableSpace α := ⊤
+    exact evalDist_seq_map_eq_uniformOn _ ($ᵗ α) Vector.push ih
+      SampleableType.evalDist_uniformSample Measurable.of_discrete
+      ⟨fun x y h ↦ Prod.ext (Vector.push_eq_push.mp h).2 (Vector.push_eq_push.mp h).1,
+        fun x ↦ ⟨(x.pop, x.back), Vector.push_pop_back x⟩⟩
+
+instance (α : Type) (n : ℕ) [SampleableType α] : SampleableType (Vector α n) where
+  selectElem := SampleableType.vector α n
+  evalDist_selectElem_eq_uniform := SampleableType.evalDist_vector α n
 
 /-- A function from `Fin n` to a `SampleableType` is also `SampleableType`. This is the base
 case used by the general `FinEnum`-indexed `instSampleableTypeFunc` below. -/

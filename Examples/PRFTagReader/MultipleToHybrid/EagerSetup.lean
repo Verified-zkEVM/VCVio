@@ -421,7 +421,6 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       ((Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
         (Fintype.card Digest : ℝ≥0∞) := by
   classical
-  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   -- Step 1: expand the predicate. `cacheBadReader g t = true` is `∃ tag sid, sid ≠ 0 ∧
   -- g((tag,sid), t.nonce) = t.auth`; drop the `sid ≠ 0` filter by monotonicity.
   set P : (((TagId × Fin sessionsPerTag) × Nonce) → Digest) → Prop :=
@@ -529,7 +528,6 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
                 (OracleComp.tableExtending c g)) oa).run (s, sB)] := by
   classical
   let : MeasurableSpace Nonce := ⊤
-  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   induction oa using OracleComp.inductionOn generalizing s c sB with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
