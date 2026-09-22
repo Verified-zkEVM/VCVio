@@ -31,9 +31,7 @@ open OracleComp OracleSpec Interaction.UC.OracleNetwork
 namespace PRFTagReader.Network
 
 variable {TagId Nonce Digest S : Type}
-  [DecidableEq TagId] [DecidableEq Nonce] [DecidableEq Digest]
 
-omit [DecidableEq TagId] [DecidableEq Nonce] [DecidableEq Digest] in
 /-- The separate reader and tag budgets cover every operation of the protocol interface. -/
 theorem totalQueryBound (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : ℕ)
@@ -42,6 +40,8 @@ theorem totalQueryBound (adversary : UnlinkAdversary TagId Nonce Digest)
     IsTotalQueryBound adversary (qReader + qTag) :=
   isTotalQueryBound_of_partition adversary _ _
     (fun a => by cases a <;> simp) qReader qTag hReader hTag
+
+variable [DecidableEq TagId] [DecidableEq Nonce] [DecidableEq Digest]
 
 /-- Observe the verdict of the actual bounded packet run. An unfinished client rejects. -/
 @[expose] def verdict

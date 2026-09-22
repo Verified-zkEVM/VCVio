@@ -28,11 +28,7 @@ namespace PRFTagReader
 
 section Theorems
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
 
 /-- Per-nonce reader-query predicate on the authentication oracle interface. `pNonce n` holds of a
 reader query exactly when its transcript carries the nonce `n`, and never holds of a tag query.
@@ -43,7 +39,7 @@ def pNonce (n : Nonce) : (AuthOracleSpec TagId Nonce Digest).Domain → Prop :=
     | Sum.inr tr => tr.nonce = n
     | Sum.inl _ => False
 
-instance pNonceDecidable (n : Nonce) :
+instance pNonceDecidable [DecidableEq Nonce] (n : Nonce) :
     DecidablePred (pNonce (TagId := TagId) (Nonce := Nonce) (Digest := Digest) n) := by
   intro i
   cases i with
@@ -54,22 +50,20 @@ instance pNonceDecidable (n : Nonce) :
 most one reader query. This is the public hypothesis under which the random-function collision
 bound is fully proven (`authRFExp_le_collisionBound_of_distinctReaderNonces` and its uniform
 specialization). -/
-def HasDistinctReaderNonces (adversary : AuthAdversary TagId Nonce Digest) : Prop :=
+def HasDistinctReaderNonces [DecidableEq Nonce]
+    (adversary : AuthAdversary TagId Nonce Digest) : Prop :=
   ∀ n : Nonce, OracleComp.IsQueryBoundP adversary (pNonce n) 1
 
-omit [DecidableEq TagId] [Fintype TagId] [Nonempty TagId] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest] in
 /-- `HasDistinctReaderNonces` unfolds definitionally to a per-nonce reader-query bound: it holds
 exactly when, for every nonce `n`, at most one reader query carries `n`. Use this lemma to
 discharge the hypothesis from a per-nonce `IsQueryBoundP` family, or to peel it back when a proof
 needs the underlying bound directly. -/
-lemma hasDistinctReaderNonces_iff (adversary : AuthAdversary TagId Nonce Digest) :
+lemma hasDistinctReaderNonces_iff [DecidableEq Nonce]
+    (adversary : AuthAdversary TagId Nonce Digest) :
     HasDistinctReaderNonces adversary ↔
       ∀ n : Nonce, OracleComp.IsQueryBoundP adversary (pNonce n) 1 :=
   Iff.rfl
 
-omit [DecidableEq TagId] [Fintype TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- Every `pNonce n`-query is a reader query: `pNonce n` is false on tag (`Sum.inl`) queries and,
 on reader (`Sum.inr`) queries, refines `Sum.isRight`. -/
 lemma pNonce_imp_isRight (n : Nonce) (t : (AuthOracleSpec TagId Nonce Digest).Domain) :
@@ -78,17 +72,17 @@ lemma pNonce_imp_isRight (n : Nonce) (t : (AuthOracleSpec TagId Nonce Digest).Do
   | inl x => exact fun h => (h : (False : Prop)).elim
   | inr tr => exact fun _ => rfl
 
-omit [DecidableEq TagId] [Fintype TagId] [Nonempty TagId] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- Intro lemma: an adversary making at most one reader query has pairwise-distinct reader nonces.
 A single reader query cannot collide with itself, so the per-nonce bound holds for free; this is
 the common case where no bespoke distinctness argument is needed. Adversaries with no reader
 queries also qualify — feed `hq.mono (Nat.zero_le 1)`. -/
-theorem hasDistinctReaderNonces_of_readerBound
+theorem hasDistinctReaderNonces_of_readerBound [DecidableEq Nonce]
     (adversary : AuthAdversary TagId Nonce Digest)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) 1) :
     HasDistinctReaderNonces adversary := fun n =>
   OracleComp.IsQueryBoundP.of_imp (pNonce_imp_isRight n) hq
+
+variable [DecidableEq TagId] [DecidableEq Nonce] [SampleableType Digest]
 
 /-- Coupled invariant carried by the random-function collision induction. A state `st` satisfies
 `forgeInv adversary st` when no forgery has been recorded yet and every cached cell at column
@@ -103,12 +97,11 @@ private def forgeInv (adversary : AuthAdversary TagId Nonce Digest)
       ((tag, (⟨nonce, d⟩ : TagTranscript Nonce Digest)) ∈ st.honestOutputs ∨
         OracleComp.IsQueryBoundP adversary (pNonce nonce) 0)
 
-omit [Fintype TagId] [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Column-indexed cell invariant of the random-function tag oracle. With a fixed per-column
 predicate `Q`, a tag step preserves both an empty forgery log and the property that every cached
 cell is honest or sits in a `Q`-column: a freshly cached cell is the honest transcript just
 emitted, and every pre-existing cell keeps its disjunct under cache growth. -/
-private lemma authIdealTagStep_cell_inv
+private lemma authIdealTagStep_cell_inv [SampleableType Nonce] [DecidableEq Digest]
     (tag : TagId) (st : AuthIdealState TagId Nonce Digest)
     (Q : Nonce → Prop)
     (hread : st.readerForged = ∅)
@@ -156,8 +149,6 @@ private lemma authIdealTagStep_cell_inv
     · exact Or.inl (Finset.mem_insert_of_mem hh)
     · exact Or.inr hq
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- `authRFReaderLookups` at column `nm` never disturbs cells outside that column: any cached cell
 at a nonce `n ≠ nm` keeps its pre-step value in every reachable outcome. -/
 private lemma authRFLookup_mapM_responses_eq_of_ne_column
@@ -197,10 +188,9 @@ private lemma authRFLookup_mapM_responses_eq_of_ne_column
         rw [QueryCache.cacheQuery_of_ne _ _ (fun h => hne (congrArg Prod.snd h))]
     rw [ih lk.2 w hw, hhead]
 
-omit [Nonempty TagId] [SampleableType Nonce] [NeZero sessionsPerTag] in
 /-- A reader step at nonce `nm` only adds cells in column `nm`: every reachable outcome leaves the
 honest-tag log unchanged, and every cached cell outside column `nm` keeps its pre-step value. -/
-private lemma authRFReaderStep_state
+private lemma authRFReaderStep_state [Fintype TagId] [DecidableEq Digest]
     (transcript : TagTranscript Nonce Digest)
     (st : AuthIdealState TagId Nonce Digest) :
     ∀ z ∈ support ((authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
@@ -228,7 +218,8 @@ private lemma authRFReaderStep_state
   rw [← hcol]
   exact hcell
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
+variable [Fintype TagId] [SampleableType Nonce] [DecidableEq Digest]
+
 /-- Inductive collision bound for the random-function world under pairwise-distinct reader nonces.
 For an adversary making at most `q` reader queries, all on distinct nonces, the probability that a
 forgery is recorded while running it against `authRFQueryImpl` from a `forgeInv`-state is at most
@@ -457,7 +448,6 @@ private lemma simulateQ_authRF_forge_le
               rw [add_mul, one_mul, mul_assoc]
             rw [hc, hqcast, mul_assoc]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Collision bound for the random-function authentication world, restricted to adversaries whose
 reader queries use pairwise-distinct nonces. For such an adversary making at most `q` reader
 queries, the probability that the random-function reader records a forged acceptance is at most
@@ -517,7 +507,6 @@ theorem authRFExp_le_collisionBound_of_distinctReaderNonces
   rw [Nat.cast_mul]
   exact hconv
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Uniform-`Digest` specialization of `authRFExp_le_collisionBound_of_distinctReaderNonces`: when
 `Digest` is finite and sampled uniformly, the per-digest probability is `1 / |Digest|`, so the
 distinct-reader-nonce collision bound reads `q * |TagId| / |Digest|`. -/
@@ -537,7 +526,6 @@ theorem authRFExp_le_uniformCollisionBound_of_distinctReaderNonces [Fintype Dige
     adversary q hq hdistinct ((Fintype.card Digest : ℝ)⁻¹) hmax
   rwa [div_eq_mul_inv]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Worked specialization showing the proved bound in use: an adversary making at most one reader
 query satisfies the random-function collision bound with no separate distinctness hypothesis. A
 single reader query is vacuously distinct (`hasDistinctReaderNonces_of_readerBound`), so the
@@ -553,7 +541,6 @@ theorem authRFExp_le_uniformCollisionBound_of_singleReaderQuery [Fintype Digest]
     adversary 1 hq (hasDistinctReaderNonces_of_readerBound adversary hq)
   simpa using h
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- End-to-end authentication bound, distinct-reader-nonce regime. Composing the PRF reduction
 `authExp_le_prfAdvantage_add_authRF` with the proved collision bound
 `authRFExp_le_collisionBound_of_distinctReaderNonces`, the active-authentication adversary's
@@ -582,7 +569,6 @@ theorem authExp_le_prfAdvantage_add_collisionBound
   exact authRFExp_le_collisionBound_of_distinctReaderNonces adversary q hq hdistinct
     maxDigestProb hmax
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Uniform-`Digest` specialization of `authExp_le_prfAdvantage_add_collisionBound`: when `Digest`
 is finite and sampled uniformly, the collision term reads `q * |TagId| / |Digest|`, so the
 authentication adversary's forgery probability is bounded by the PRF advantage plus
@@ -601,7 +587,6 @@ theorem authExp_le_prfAdvantage_add_uniformCollisionBound [Fintype Digest]
   refine le_trans (authExp_le_prfAdvantage_add_authRF prfs adversary) ?_
   gcongr
   exact authRFExp_le_uniformCollisionBound_of_distinctReaderNonces adversary q hq hdistinct
-
 
 end Theorems
 

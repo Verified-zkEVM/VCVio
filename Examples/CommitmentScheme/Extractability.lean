@@ -340,10 +340,6 @@ private def extractabilityRestOa {t : ℕ}
       | some (m', s') => (c == cm) && decide ((m', s') ≠ (m, s))
       | none => (c == cm)
 
-variable [Inhabited C] [Finite C]
-
-attribute [local instance] Fintype.ofFinite
-
 /-! ## None-case branch: extractor returned nothing, fresh open/verify lands on `cm`
 
 If `CMExtract` returns `none`, every accepting opening corresponds to a
@@ -351,7 +347,6 @@ If `CMExtract` returns `none`, every accepting opening corresponds to a
 the probability of this by `(t₂ + 1) / |C|` via the per-query
 unpredictability of a fresh random-oracle answer. -/
 
-omit [Inhabited C] [Finite C] in
 /- Under a collision-free commit cache, any extractability win must create a fresh
 post-commit cache entry equal to the commitment value. -/
 private lemma extractability_rest_win_implies_fresh_cm {t : ℕ}
@@ -452,6 +447,10 @@ private lemma extractability_rest_win_implies_fresh_cm {t : ℕ}
       have hcache_final_eq : z.2 = cache₃ := congr_arg (·.2) hz
       rw [hcache_final_eq]
       exact ⟨(m, s), c, hcache₃, hcache₁_none, heq_of_eq hc_eq⟩
+
+variable [Inhabited C] [Finite C]
+
+attribute [local instance] Fintype.ofFinite
 
 /- Winning the extractability rest-game implies a fresh cache entry matching `cm`. -/
 private lemma extractability_rest_win_le_exists_fresh {t : ℕ}

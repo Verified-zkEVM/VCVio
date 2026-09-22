@@ -106,8 +106,6 @@ theorem correct [DecidableEq G] :
 
 section IND_CPA
 
-variable [DecidableEq G]
-
 local instance : Inhabited G := ⟨0⟩
 
 /-- One-time DDH reduction for ElGamal. On input `(gen, A, B, T)`, use `A` as the ElGamal public
@@ -118,7 +116,6 @@ def IND_CPA_OneTime_DDHReduction
     DiffieHellman.DDHAdversary F G := fun _ A B T =>
   oneTimeDDHReductionBody (adv.chooseMessages A) ($ᵗ Bool) adv.distinguish B T
 
-omit [DecidableEq G] in
 /-- Real-branch identification for the one-time ElGamal reduction. After unfolding
 `IND_CPA_OneTime_Game_ProbComp`, `elGamalAsymmEnc`, `DiffieHellman.ddhExpReal`, and
 `IND_CPA_OneTime_DDHReduction`, both sides normalize to the same sample space. -/
@@ -155,7 +152,6 @@ private lemma IND_CPA_OneTime_game_evalSPMF_eq_ddhExpReal
   congr 2
   rw [smul_smul, add_comm, mul_comm]
 
-omit [DecidableEq G] in
 /-- Random-branch half lemma for the one-time ElGamal reduction. Under bijectivity of `(· • gen)`,
 the DDH-random branch gives a uniform additive mask independent of the challenge bit, so the
 adversary can do no better than random guessing. -/
@@ -299,7 +295,6 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
         ProbabilityTheory.uniformOn_univ_apply_singleton]
       norm_num
 
-omit [DecidableEq G] in
 /-- The absolute one-time signed IND-CPA advantage of ElGamal is exactly twice the DDH guess
 advantage of the reduction above. The factor `2` is essential because the DDH guess advantage is
 defined from the mixed experiment, while the one-time IND-CPA game compares the real and random
@@ -337,7 +332,7 @@ theorem elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage
 /-- **Main theorem.** If an adversary makes at most `q` LR queries and every extracted one-time
 ElGamal DDH reduction has guess advantage at most `ε`, then ElGamal has IND-CPA advantage at most
 `q * (2 * ε)`. -/
-theorem elGamal_IND_CPA_le_q_mul_ddh
+theorem elGamal_IND_CPA_le_q_mul_ddh [DecidableEq G]
     (hg : Function.Bijective (· • gen : F → G))
     (adversary : (elGamalAsymmEnc F G gen).IND_CPA_adversary)
     (q : ℕ) (ε : ℝ)

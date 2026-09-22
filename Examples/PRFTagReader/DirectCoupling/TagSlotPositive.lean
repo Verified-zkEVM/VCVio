@@ -44,15 +44,12 @@ namespace PRFTagReader
 
 section DirectCouplingCompose
 
-variable {TagId Nonce Digest : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
+  [DecidableEq Digest] [SampleableType Digest] [NeZero sessionsPerTag]
 
 namespace UnlinkReduction
 
-omit [Nonempty TagId] in
 /-- The slot-positive tag (`Sum.inl tag`, `1 ≤ s.sessionsUsed tag < sessionsPerTag`) induction
 step of the direct M_ideal/S_ideal coupling aux. The induction hypothesis is supplied as the
 explicit premise `ih`; the conclusion is the aux bound specialized to the adversary

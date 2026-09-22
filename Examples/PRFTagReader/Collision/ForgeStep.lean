@@ -29,14 +29,9 @@ namespace PRFTagReader
 
 section Theorems
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [DecidableEq Nonce] [SampleableType Digest]
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- One `authRFLookup` step preserves the invariant `responses t₀ = some d`: a cache hit leaves the
 table unchanged, and a cache miss only writes a fresh entry at the looked-up point, which is
 necessarily distinct from `t₀` since `t₀` is already cached. -/
@@ -61,8 +56,6 @@ private lemma authRFLookup_responses_some_preservesInv
     rw [QueryCache.cacheQuery_of_ne _ _ hkey]
     exact hst
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- The reader's `mapM` of `authRFLookup` over a list of tags preserves the invariant
 `responses t₀ = some d`, by iterating `authRFLookup_responses_some_preservesInv`. -/
 private lemma authRFLookup_mapM_responses_some_preservesInv
@@ -76,10 +69,10 @@ private lemma authRFLookup_mapM_responses_some_preservesInv
     (authRFLookup_responses_some_preservesInv t₀ d tag nonce) fun _ =>
       StateT.preservesInv_pure _ _) tags
 
-omit [Fintype TagId] [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- One honest tag query preserves `responses t₀ = some d`: a cache hit rewrites nothing, and a
 miss writes only at the fresh point `(tag, nonce)`, which is not `t₀`. -/
-private lemma authIdealTagQueryImpl_responses_some_preservesInv
+private lemma authIdealTagQueryImpl_responses_some_preservesInv [SampleableType Nonce]
+    [DecidableEq Digest]
     (t₀ : TagId × Nonce) (d : Digest) :
     QueryImpl.PreservesInv
       (authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
@@ -109,10 +102,10 @@ private lemma authIdealTagQueryImpl_responses_some_preservesInv
     rw [QueryCache.cacheQuery_of_ne _ _ hkey]
     exact hst
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The lazy random-oracle cache threaded by `authRFQueryImpl` only grows: once a point `t₀`
 holds a digest `d`, every reachable later state still has `t₀ ↦ d`. -/
-private lemma authRFQueryImpl_responses_some_preservesInv
+private lemma authRFQueryImpl_responses_some_preservesInv [Fintype TagId] [SampleableType Nonce]
+    [DecidableEq Digest]
     (t₀ : TagId × Nonce) (d : Digest) :
     QueryImpl.PreservesInv
       (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
@@ -125,8 +118,6 @@ private lemma authRFQueryImpl_responses_some_preservesInv
   exact StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ hst) fun _ =>
     StateT.preservesInv_pure _ _
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- One `authRFLookup tag nonce` step at a point distinct from `t₀` preserves `responses t₀ = none`.
 The looked-up point `(tag, nonce)` differs from `t₀`, so a cache miss writes elsewhere. -/
 private lemma authRFLookup_responses_none_preservesInv
@@ -146,8 +137,6 @@ private lemma authRFLookup_responses_none_preservesInv
     rw [QueryCache.cacheQuery_of_ne _ _ (fun h => hne h.symm)]
     exact hst
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- The reader's `mapM` of `authRFLookup` at a nonce different from `t₀.2` preserves
 `responses t₀ = none`: every looked-up point `(tag, nonce)` differs from `t₀`. -/
 private lemma authRFLookup_mapM_responses_none_preservesInv
@@ -161,8 +150,6 @@ private lemma authRFLookup_mapM_responses_none_preservesInv
     (authRFLookup_responses_none_preservesInv t₀ tag nonce fun h => hne (congrArg Prod.snd h))
     fun _ => StateT.preservesInv_pure _ _) tags
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- One `authRFLookup tag nonce` step at the point `t₀` itself, starting from `responses t₀ = none`
 (so it is a genuine cache miss), draws a single fresh uniform digest into `t₀`: the probability that
 `t₀` ends holding any fixed `v₀` is at most `maxDigestProb`, and it never stays `none`. -/
@@ -207,8 +194,6 @@ private lemma authRFLookup_miss_bound
     rw [QueryCache.cacheQuery_self]
     exact Option.some_ne_none d
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- A `responses`-only event of the reader's lookup `mapM` over `hd :: tl` factors as the head
 lookup followed by the tail `mapM`: the accumulated tag list never affects the `responses` table,
 so the event depends only on the threaded state. -/
@@ -234,8 +219,6 @@ private lemma authRFLookup_mapM_cons_responses
   rw [probEvent_map]
   rfl
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- The reader's `mapM` of `authRFLookup` over a nodup list of tags that contains `t₀.1`, run at
 nonce `t₀.2`, fills the cache point `t₀` with exactly one fresh uniform draw: starting from
 `responses t₀ = none`, the probability the final state has `t₀ ↦ v₀` plus `maxDigestProb` times the
@@ -389,14 +372,14 @@ private lemma authRFLookup_mapM_miss_bound
         _ ≤ maxDigestProb :=
             le_trans (mul_le_mul' le_rfl tsum_probOutput_le_one) (le_of_eq (mul_one _))
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Single-step random-oracle bound for a cache point `t₀` that is not yet filled: after one
 `authRFQueryImpl` query step, the probability that `t₀` ends holding `v₀` plus `maxDigestProb`
 times the probability that `t₀` is still unfilled is at most `maxDigestProb`.
 
 A query step fills `t₀` (if at all) with a single fresh uniform `Digest` draw, so the event
 `t₀ ↦ v₀` is dominated by `maxDigestProb` times the probability that the step touched `t₀`. -/
-private lemma probEvent_authRFQueryImpl_step_core
+private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableType Nonce]
+    [DecidableEq Digest]
     (maxDigestProb : ℝ≥0∞)
     (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
     (t₀ : TagId × Nonce) (v₀ : Digest)
@@ -666,12 +649,11 @@ private lemma probEvent_authRFQueryImpl_step_core
       rw [hsome0, zero_add]
       exact le_trans (mul_le_mul' le_rfl hnone1) (le_of_eq (mul_one _))
 
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Single-point random-oracle bound: a fixed cache point `t₀` is filled by at most one uniform
 draw over the whole `authRFQueryImpl` simulation, so it ends holding any fixed digest `v₀` with
 probability at most `maxDigestProb`. -/
-private lemma probEvent_authRFQueryImpl_responses_eq_le
+private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [SampleableType Nonce]
+    [DecidableEq Digest]
     {α : Type}
     (maxDigestProb : ℝ≥0∞)
     (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
@@ -845,8 +827,6 @@ noncomputable def authRFReaderLookups
     let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
     pure (tag, dg))
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- Every looked-up pair produced by `authRFReaderLookups` lands in the final cache: if `(tag, d)`
 occurs in the result list, the final `responses` table holds `(tag, nonce) ↦ d`. Each lookup pins
 its own point, and the tail `mapM` preserves it. -/
@@ -893,8 +873,6 @@ private lemma authRFLookup_mapM_pairs_responses
     · -- `p` is in the tail pairs: apply the induction hypothesis.
       exact ih lk.2 w hw p hp'
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [NeZero sessionsPerTag] in
 /-- `authRFReaderLookups` only writes the `responses` table: the observable logs `honestOutputs`
 and `readerForged` are untouched by every reachable outcome. -/
 lemma authRFLookup_mapM_logs_eq
@@ -933,7 +911,6 @@ lemma authRFLookup_mapM_logs_eq
     obtain ⟨htail₁, htail₂⟩ := ih lk.2 w hw
     exact ⟨htail₁.trans hhead.1, htail₂.trans hhead.2⟩
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Per-reader-step collision bound. When the pre-state has no recorded forgeries and every cached
 cell in the queried nonce's column belongs to `honestOutputs`, one `authRFReaderQueryImpl` step
 records a forgery with probability at most `|TagId| * maxDigestProb`.
@@ -942,7 +919,7 @@ A reader step makes one fresh random-oracle draw per tag at the transcript's non
 in that column cannot become a forgery: a match against `transcript.auth` would place
 `(tag, transcript)` inside `honestOutputs`, which forgeries exclude. An uncached cell can match the
 adversary-chosen authenticator with probability at most `maxDigestProb`. -/
-lemma authRFReaderStep_forge_le
+lemma authRFReaderStep_forge_le [Fintype TagId] [SampleableType Nonce] [DecidableEq Digest]
     (transcript : TagTranscript Nonce Digest)
     (st : AuthIdealState TagId Nonce Digest)
     (maxDigestProb : ℝ≥0∞)

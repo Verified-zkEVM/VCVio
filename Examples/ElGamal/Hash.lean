@@ -42,7 +42,6 @@ Port of EasyCrypt's `hashed_elgamal_std.ec`.
 
 @[expose] public section
 
-
 open OracleComp OracleSpec ENNReal DiffieHellman
 
 /-! ## Hashed ElGamal Scheme -/
@@ -77,15 +76,14 @@ Following `elGamalAsymmEnc`, `F` and `G` are explicit type parameters. -/
 namespace hashedElGamal
 
 variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
-variable {G : Type} [AddCommGroup G] [Module F G] [DecidableEq G]
+variable {G : Type} [AddCommGroup G] [Module F G]
 variable {HK : Type} [SampleableType HK]
-variable {M : Type} [AddCommGroup M] [SampleableType M] [DecidableEq M]
+variable {M : Type} [AddCommGroup M] [SampleableType M]
 variable {g : G} {hash : HK → G → M}
 
 /-! ## Correctness -/
 
-omit [DecidableEq G] in
-theorem correct :
+theorem correct [DecidableEq M] :
     (hashedElGamal F g hash).PerfectlyCorrect ProbCompRuntime.probComp := by
   have hcomm : ∀ (a b : F), a • (b • g) = b • (a • g) := by
     intro a b; rw [← mul_smul, mul_comm, mul_smul]
@@ -135,7 +133,6 @@ def esReduction (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
 
 /-! ## Game-hop lemmas -/
 
-omit [DecidableEq G] [DecidableEq M] in
 /-- Game 0 = CPA game equals DDH real branch (by construction). -/
 theorem cpaGame_eq_ddhReal
     (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
@@ -225,7 +222,6 @@ theorem cpaGame_eq_ddhReal
           true)
   exact hleft.trans (hswap.trans hright.symm)
 
-omit [DecidableEq G] [DecidableEq M] in
 /-- DDH random branch equals ES real experiment (by construction). -/
 theorem ddhRand_eq_esReal
     (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
@@ -329,7 +325,6 @@ theorem ddhRand_eq_esReal
           pure (b == b'))
         true)
   exact hleft.trans hright.symm
-omit [DecidableEq G] [DecidableEq M] in
 /-- ES ideal experiment: the ciphertext `v + m_b` with uniform `v` is uniform
 regardless of `b`, so the game reduces to random guessing.
 Uses the same uniform-masking principle as the one-time pad. -/
@@ -440,7 +435,6 @@ theorem esIdeal_eq_half
 
 /-! ## Main theorem -/
 
-omit [DecidableEq G] [DecidableEq M] in
 /-- **Main theorem.** The one-time IND-CPA bias of hashed ElGamal is bounded by
 the DDH distinguishing advantage plus the entropy smoothing advantage:
 

@@ -29,9 +29,9 @@ open scoped ENNReal
 
 namespace Schnorr
 
-variable (F : Type) [Field F] [DecidableEq F] [SampleableType F]
+variable (F : Type) [Field F] [SampleableType F]
 variable (G : Type) [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
-variable {C : Type} [Inhabited C] [DecidableEq C]
+variable {C : Type} [DecidableEq C]
 variable (g : G) (encode : C → F) (M : Type) [DecidableEq M]
 
 /-- Zero supplies the explicit default scalar for proof formatting. -/
@@ -39,7 +39,7 @@ local instance inhabitedScalar : Inhabited F := ⟨0⟩
 
 section fiatShamir
 
-variable [Fintype C] [SampleableType C]
+variable [SampleableType C]
 
 /-- Schnorr's named Fiat–Shamir witness finder with the selected challenge policy. -/
 @[expose]
@@ -49,10 +49,9 @@ def fsExtractor
   FiatShamir.knowledgeExtractor (restrictedSigma F G g encode)
     (dlogGenerable (F := F) g) M prover msg Q
 
-omit [DecidableEq F] in
 /-- Acceptance of a bounded Fiat–Shamir prover gives a quantitative discrete-log recovery bound
 for the named replay extractor, using the cardinality of the actual challenge type `C`. -/
-theorem fs_extraction (hinj : Function.Injective encode)
+theorem fs_extraction [Inhabited C] [Fintype C] (hinj : Function.Injective encode)
     (prover : FiatShamir.KnowledgeProver (Stmt := G) (Commit := G) (Chal := C) (Resp := F) M)
     (pk : G) (msg : M) (Q : ℕ)
     (hQ : FiatShamir.nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
@@ -65,7 +64,6 @@ theorem fs_extraction (hinj : Function.Injective encode)
       (dlogGenerable (F := F) g) M
       (restrictedSigma_speciallySound F G g encode hinj) prover pk msg Q hQ
 
-omit [DecidableEq F] [Inhabited C] [Fintype C] in
 /-- The replay program of the same Schnorr witness finder has a pathwise challenge budget. -/
 theorem fs_extractor_challenge_queries
     (prover : FiatShamir.KnowledgeProver (Stmt := G) (Commit := G) (Chal := C) (Resp := F) M)
@@ -81,7 +79,7 @@ theorem fs_extractor_challenge_queries
 
 end fiatShamir
 
-variable [FinEnum C]
+variable [DecidableEq F] [Inhabited C] [FinEnum C]
 
 /-- Fischlin's actual online extractor recovers a discrete log except for the single-proof
 knowledge error, with Schnorr special soundness and unique responses discharged. -/
@@ -127,6 +125,5 @@ theorem fischlin_expected_sign_queries (ρ b S : ℕ) (pk : G) (sk : F) (msg : M
       ρ * (2 ^ b : ℝ≥0∞) * (1 - (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ FinEnum.card C) :=
   Fischlin.sign_expectedQueries_eq_geometric (restrictedSigma F G g encode) ρ b M
     (dlogGenerable (F := F) g) S pk sk msg
-
 
 end Schnorr
