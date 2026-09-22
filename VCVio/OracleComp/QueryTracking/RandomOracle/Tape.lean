@@ -48,7 +48,7 @@ variable {D R : Type} [DecidableEq D] [SampleableType R]
 /-! ## The tape draw, as a list -/
 
 /-- `m` independent uniform draws from `R`, collected as a list. -/
-noncomputable def tapeList (R : Type) [SampleableType R] (m : ℕ) : ProbComp (List R) :=
+@[expose] noncomputable def tapeList (R : Type) [SampleableType R] (m : ℕ) : ProbComp (List R) :=
   List.ofFn <$> answerTape R m
 
 @[simp] theorem tapeList_zero : tapeList R 0 = pure [] := by
@@ -198,6 +198,57 @@ theorem empty (L : List R) :
   eq_nil_of_none t h := absurd (QueryCache.empty_apply t) h
   enncard_of_none t h := absurd (QueryCache.empty_apply t) h
 
+omit [DecidableEq D] [SampleableType R] in
+/-- **Every cache entry sits at its own tape position.** From the invariant for a length-`q`
+tape, a cache with at most `q` entries assigns each of its entries a position of the tape whose
+value is that entry, injectively.
+
+The cache bound excludes the entries the invariant leaves without a position: such an entry was
+answered after the tape ran out, which puts the cache one entry beyond the full tape. -/
+theorem exists_pos {q : ℕ} {v : Fin q → R} {c : (D →ₒ R).QueryCache} {l : List R}
+    {pm : D → Option ℕ} {next : ℕ} (hinv : PositionInv (List.ofFn v) c l pm next)
+    (hq : c.enncard ≤ (q : ℝ≥0∞)) :
+    ∃ pos : D → Option (Fin q),
+      (∀ t u, c t = some u → ∃ i, pos t = some i ∧ u = v i) ∧
+      (∀ t t' i, pos t = some i → pos t' = some i → t = t') := by
+  classical
+  have hlen : (List.ofFn v).length = q := List.length_ofFn
+  have hsome : ∀ t, c t ≠ none → ∃ n, pm t = some n := by
+    intro t ht
+    rcases hpm : pm t with _ | n
+    · have hnext : next = q := by
+        have h := hinv.length_add
+        rw [hinv.eq_nil_of_none t ht hpm, hlen] at h
+        simpa using h
+      have h₁ : (next : ℝ≥0∞) + 1 ≤ (q : ℝ≥0∞) := (hinv.enncard_of_none t ht hpm).trans hq
+      rw [hnext] at h₁
+      exact absurd h₁
+        (not_le.mpr (ENNReal.lt_add_right (ENNReal.natCast_ne_top q) one_ne_zero))
+    · exact ⟨n, rfl⟩
+  set pos : D → Option (Fin q) :=
+    fun t => (pm t).bind fun n => if h : n < q then some ⟨n, h⟩ else none with hpos
+  have hposval : ∀ t (i : Fin q), pos t = some i → pm t = some (i : ℕ) := by
+    intro t i hi
+    simp only [hpos] at hi
+    obtain ⟨n, hn⟩ : ∃ n, pm t = some n :=
+      Option.ne_none_iff_exists'.mp fun hnone => by
+        rw [hnone] at hi; exact absurd hi (by simp)
+    rw [hn] at hi ⊢
+    replace hi : (if h : n < q then some (⟨n, h⟩ : Fin q) else none) = some i := hi
+    by_cases hnq : n < q
+    · rw [dite_eq_left hnq, Option.some_inj] at hi
+      rw [← hi]
+    · rw [dite_eq_right hnq] at hi
+      exact absurd hi (by simp)
+  refine ⟨pos, fun t u hu => ?_, fun t t' i h h' =>
+    hinv.pos_inj t t' (i : ℕ) (hposval t i h) (hposval t' i h')⟩
+  obtain ⟨n, hn⟩ := hsome t (by simp [hu])
+  obtain ⟨hlt, hval⟩ := hinv.pos_spec t n hn
+  have hnq : n < q := by have h := hinv.length_add; omega
+  refine ⟨⟨n, hnq⟩, by simp [hpos, hn, hnq], ?_⟩
+  rw [hu, List.getElem?_eq_getElem (by simpa using hnq)] at hval
+  simpa using hval
+
 end PositionInv
 
 omit [SampleableType R] in
@@ -217,7 +268,7 @@ private theorem positionAux_of_cons {t : D} {c : (D →ₒ R).QueryCache} {u : R
       (Function.update p.1 t (some p.2), p.2 + 1) := by simp [positionAux, h]
 
 /-- Every step of the instrumented tape oracle preserves `PositionInv`. -/
-private theorem positionInv_step (L : List R) (t : D)
+theorem positionInv_step (L : List R) (t : D)
     (s : ((D →ₒ R).QueryCache × List R) × (D → Option ℕ) × ℕ)
     (hs : PositionInv L s.1.1 s.1.2 s.2.1 s.2.2)
     (y : R × ((D →ₒ R).QueryCache × List R) × (D → Option ℕ) × ℕ)
@@ -317,8 +368,6 @@ theorem exists_pos_of_mem_support_run_tapeCachingImpl {α : Type} {q : ℕ} (v :
     ∃ pos : D → Option (Fin q),
       (∀ t u, z.2.1 t = some u → ∃ i, pos t = some i ∧ u = v i) ∧
       (∀ t t' i, pos t = some i → pos t' = some i → t = t') := by
-  classical
-  have hlen : (List.ofFn v).length = q := List.length_ofFn
   rw [← extendState_run_proj_eq (tapeCachingImpl D R) (positionAux D R) oa
     (∅, List.ofFn v) ((fun _ => none), 0), support_map] at hz
   obtain ⟨y, hy, hyz⟩ := hz
@@ -328,43 +377,7 @@ theorem exists_pos_of_mem_support_run_tapeCachingImpl {α : Type} {q : ℕ} (v :
     (fun t s hs => positionInv_step (List.ofFn v) t s hs) oa _
     (PositionInv.empty (List.ofFn v)) y hy
   have hc : y.2.1.1 = z.2.1 := by rw [← hyz]; rfl
-  rw [hc] at hinv
-  have hsome : ∀ t, z.2.1 t ≠ none → ∃ n, y.2.2.1 t = some n := by
-    intro t ht
-    rcases hpm : y.2.2.1 t with _ | n
-    · have hnx : y.2.2.2 = q := by
-        have h := hinv.length_add
-        rw [hinv.eq_nil_of_none t ht hpm, hlen] at h
-        simpa using h
-      have h₁ : ((y.2.2.2 : ℕ) : ℝ≥0∞) + 1 ≤ (q : ℝ≥0∞) :=
-        (hinv.enncard_of_none t ht hpm).trans hq
-      rw [hnx] at h₁
-      exact absurd h₁
-        (not_le.mpr (ENNReal.lt_add_right (ENNReal.natCast_ne_top q) one_ne_zero))
-    · exact ⟨n, rfl⟩
-  set pos : D → Option (Fin q) :=
-    fun t => (y.2.2.1 t).bind fun n => if h : n < q then some ⟨n, h⟩ else none with hpos
-  have hposval : ∀ t (i : Fin q), pos t = some i → y.2.2.1 t = some (i : ℕ) := by
-    intro t i hi
-    simp only [hpos] at hi
-    obtain ⟨n, hn⟩ : ∃ n, y.2.2.1 t = some n :=
-      Option.ne_none_iff_exists'.mp fun hnone => by
-        rw [hnone] at hi; exact absurd hi (by simp)
-    rw [hn] at hi ⊢
-    replace hi : (if h : n < q then some (⟨n, h⟩ : Fin q) else none) = some i := hi
-    by_cases hnq : n < q
-    · rw [dite_eq_left hnq, Option.some_inj] at hi
-      rw [← hi]
-    · rw [dite_eq_right hnq] at hi
-      exact absurd hi (by simp)
-  refine ⟨pos, fun t u hu => ?_, fun t t' i h h' =>
-    hinv.pos_inj t t' (i : ℕ) (hposval t i h) (hposval t' i h')⟩
-  obtain ⟨n, hn⟩ := hsome t (by simp [hu])
-  obtain ⟨hlt, hval⟩ := hinv.pos_spec t n hn
-  have hnq : n < q := by have h := hinv.length_add; omega
-  refine ⟨⟨n, hnq⟩, by simp [hpos, hn, hnq], ?_⟩
-  rw [hu, List.getElem?_eq_getElem (by simpa using hnq)] at hval
-  simpa using hval
+  exact PositionInv.exists_pos (hc ▸ hinv) hq
 
 /-! ## Transporting a tape bound -/
 
