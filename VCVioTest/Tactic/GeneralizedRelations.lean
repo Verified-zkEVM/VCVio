@@ -8,6 +8,7 @@ module
 
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.OracleComp.ReachableWhen
 public import ToMathlib.MeasureTheory.Measure.Monotone
 public import Mathlib.Probability.Kernel.Defs
 public import Mathlib.Tactic.GRewrite
@@ -23,8 +24,14 @@ The companion `GeneralizedRelationsExperiments` module isolates proposed registr
 
 public section
 
-open OracleComp OracleComp.EvalDist OracleComp.ProgramLogic OracleSpec MeasureTheory
+open OracleComp OracleComp.ProgramLogic OracleSpec MeasureTheory
 open scoped ENNReal Std.Internal.Do OracleComp.Quantitative
+
+run_cmd do
+  let env ← Lean.getEnv
+  for name in [`PMF, `SPMF, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
+    if env.contains name then
+      throwError "native generalized rewriting unexpectedly imports {name}"
 
 namespace VCVioTest.GeneralizedRelations
 
@@ -34,10 +41,10 @@ section Probability
 
 variable {α β : Type} (mx : ProbComp α) (f g : α → ℝ≥0∞)
 
-example (h : ∀ x, f x ≤ g x) : expectedValue mx f ≤ expectedValue mx g := by grw [h]
+example (h : ∀ x, f x ≤ g x) : wp mx f ≤ wp mx g := by grw [h]
 
 example (h : ∀ x ∈ support mx, f x ≤ g x) :
-    expectedValue mx f ≤ expectedValue mx g := by
+    wp mx f ≤ wp mx g := by
   -- gap(gcongr, 2026-09-08): the support-restricted hypothesis needs an explicit application.
   fail_if_success (gcongr; done)
   gcongr with x hx
@@ -47,7 +54,7 @@ example (h : ∀ x ∈ support mx, f x ≤ g x) :
 
 /-- A rewrite theorem's own support premise remains a side goal. -/
 example (h : ∀ x ∈ support mx, f x ≤ g x) :
-    expectedValue mx f ≤ expectedValue mx g := by
+    wp mx f ≤ wp mx g := by
   -- gap(grw, 2026-09-08): the rewrite's support premise needs an explicit closer.
   fail_if_success (grw [h]; done)
   grw [h]
@@ -62,51 +69,57 @@ example (h : ∀ x ∈ support mx, f x ≤ g x) :
     Std.Internal.Do.wp mx f Lean.Order.bot ≤ Std.Internal.Do.wp mx g Lean.Order.bot := by
   -- gap(gcongr, 2026-09-08): the raw WP head needs explicit facade normalization.
   fail_if_success gcongr
-  change wp mx f ≤ wp mx g
-  guard_target = wp mx f ≤ wp mx g
+  simp only [OracleComp.Quantitative.wp_eq_mAlgOrdered_wp]
+  guard_target = MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g
   gcongr with x hx
   guard_hyp hx : x ∈ support mx
   guard_target = f x ≤ g x
   exact h x hx
 
-example (p q : α → Prop) (h : ∀ x, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] := by
+example (p q : α → Prop) (h : ∀ x, p x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
+  -- gap(apply_rw, 2026-09-18): event notation needs its assertion-valued WP normal form.
+  fail_if_success apply_rw [h]
+  simp only [probEvent_eq_wp_propInd]
   apply_rw [h]
 
 example (p q : α → Prop) (h : ∀ x, p x → q x) (c : ℝ≥0∞)
-    (hq : Pr[ q | mx] ≤ c) : Pr[ p | mx] ≤ c := by
+    (hq : Pr{let x ← mx}[q x] ≤ c) : Pr{let x ← mx}[p x] ≤ c := by
+  -- The assertion-valued event normal form shares the gap above.
+  simp only [probEvent_eq_wp_propInd] at hq ⊢
   apply_rw [h]
-  guard_target = Pr[ q | mx] ≤ c
+  guard_target = wp mx (fun x ↦ propInd (q x)) ≤ c
   exact hq
 
-example (h : ∀ x, g x ≤ f x) : 1 - expectedValue mx f ≤ 1 - expectedValue mx g := by
+example (h : ∀ x, g x ≤ f x) : 1 - wp mx f ≤ 1 - wp mx g := by
   grw [h]
 
-example (h : ∀ x, f x ≤ g x) (c : ℝ≥0∞) (hf : c ≤ expectedValue mx f) :
-    c ≤ expectedValue mx g := by
+example (h : ∀ x, f x ≤ g x) (c : ℝ≥0∞) (hf : c ≤ wp mx f) :
+    c ≤ wp mx g := by
   grw [h] at hf
-  guard_hyp hf : c ≤ expectedValue mx g
+  guard_hyp hf : c ≤ wp mx g
   exact hf
 
 example (f' g' : α → ProbComp β) (p : β → Prop)
-    (h : ∀ x ∈ support mx, Pr[ p | f' x] ≤ Pr[ p | g' x]) :
-    Pr[ p | mx >>= f'] ≤ Pr[ p | mx >>= g'] := by
+    (h : ∀ x ∈ support mx, Pr{let y ← f' x}[p y] ≤ Pr{let y ← g' x}[p y]) :
+    Pr{let y ← mx >>= f'}[p y] ≤ Pr{let y ← mx >>= g'}[p y] := by
   -- gap(gcongr, 2026-09-08): bind probability needs the expectation normal form.
-  fail_if_success gcongr
-  rw [probEvent_bind_eq_expectedValue, probEvent_bind_eq_expectedValue]
+  fail_if_success (gcongr; done)
+  simp only [probEvent_eq_wp_propInd, wp_bind] at h ⊢
   grw [h]
   assumption
 
 example (my : α → ProbComp β) (u v : α → β → ℝ≥0∞)
     (h : ∀ x ∈ support mx, ∀ y ∈ support (my x), u x y ≤ v x y) :
-    expectedValue mx (fun x => expectedValue (my x) (u x)) ≤
-      expectedValue mx (fun x => expectedValue (my x) (v x)) := by
+    wp mx (fun x => wp (my x) (u x)) ≤
+      wp mx (fun x => wp (my x) (v x)) := by
   grw [h] <;> assumption
 
 example (h : ∀ x, f x ≤ g x) :
-    expectedValue mx f + expectedValue mx f ≤ expectedValue mx g + expectedValue mx f := by
+    wp mx f + wp mx f ≤ wp mx g + wp mx f := by
   -- gap(nth_grw, 2026-09-08): occurrence abstraction does not eta-expand the function argument.
   fail_if_success nth_grw 1 [h]
-  nth_grw 1 [expectedValue_mono mx h]
+  nth_grw 1 [wp_mono mx h]
 
 /-- `rel` is a finishing tactic with an explicit list of main-goal facts. -/
 example (a b c d : ℝ≥0∞) (hab : a ≤ b) (hcd : c ≤ d) : a + c ≤ b + d := by

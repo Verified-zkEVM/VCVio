@@ -68,8 +68,9 @@ abbrev Range (spec : OracleSpec ι) (t : ι) : Type _ := spec t
 `C (spec.Range t)` for a generic `spec` is indexed as `C ι`, respectively `C (?spec ?t)`: a
 candidate for every `C _` goal, with `spec` undetermined. Instance search then invents a
 specification through `ofFn`, and either times out (VCVio#772) or answers an ordinary
-`DecidableEq`, `Fintype`, or `Inhabited` goal through oracle-specification data. No such
-instance exists. Index equality is an ordinary `[DecidableEq ι]` hypothesis, and data on answer
+`DecidableEq`, `Fintype`, or `Inhabited` goal through oracle-specification data. The only such
+instances left are the `fintype` and `inhabited` projections of the retiring `IsUniformSpec`.
+Index equality is an ordinary `[DecidableEq ι]` hypothesis, and data on answer
 types are ordinary `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, or
 `[Inhabited (spec.Range t)]` hypotheses, quantified over `t` when a statement ranges over
 arbitrary queries. Specifications built with `ofFn` reduce to their answer types, so

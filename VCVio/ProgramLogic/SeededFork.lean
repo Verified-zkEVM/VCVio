@@ -29,6 +29,8 @@ variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι}
 variable (main : OracleComp spec α) (qb : ι → ℕ)
     (js : List ι) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     [IsUniformSpec spec] [unifSpec ˡ⊂ₒ spec]
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
 
 /-- Seeded forking lemma as a quantitative Hoare triple for the fork-success event. -/
 theorem triple_seededFork :
@@ -41,6 +43,8 @@ theorem triple_seededFork :
       (fun r => if r.isSome then 1 else 0) :=
   triple_ofLE <| le_trans
     (OracleComp.le_probEvent_isSome_seededFork main qb js i cf)
-    (triple_toLE (triple_probEvent_indicator (seededFork main qb js i cf) fun r => r.isSome))
+    (by
+      rw [← probOutput_true_eq_probEvent]
+      exact triple_toLE (triple_probEvent_indicator (seededFork main qb js i cf) fun r ↦ r.isSome))
 
 end OracleComp.ProgramLogic

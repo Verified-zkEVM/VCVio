@@ -124,6 +124,55 @@ scalar disagreement declarations remain with their current consumers until that 
 reader/slot/composition family and its table/cache dependencies migrate. No retiring declaration
 is moved or wrapped for the new API.
 
+## Native TV composition checkpoint
+
+Native TV composition is published in [#762](https://github.com/Verified-zkEVM/VCVio/pull/762),
+independently based on `main`.
+
+`Measure.etvDist` contracts under measurable subprobability transitions on chosen spaces. Its
+bounded-observation law uses Mathlib's layer cake formula, without singleton probabilities,
+countability, discrete spaces, or probability-prefix assumptions. Conditional composition accepts
+an AE majorant under the actual prefix law; the distance function need not be measurable.
+AE-measurable measure families suffice. Kernel composition uses the same measure rules.
+
+Exceptional events cost their prefix mass, and constant good-branch allowances retain the
+complement's successful mass. Native computation laws expose these rules under measurable
+denoted continuation families. Real-valued bounds require finite majorant integrals, since
+`ENNReal.toReal` cannot interpret an infinite bound. Measurability of a parameterized expected
+majorant uses Mathlib's existing s-finite kernel integral theorem.
+
+Native regressions use usual real spaces, deterministic continuous transitions, null-set changes,
+a half-mass Gaussian prefix, measurable expected majorants, and explicit optional aborts.
+The public native facade exports the composition API and checks its retired-import boundary.
+
+## Quantitative WP checkpoint
+
+[PR #761](https://github.com/Verified-zkEVM/VCVio/pull/761) publishes this checkpoint, stacked on #758.
+
+Quantitative Hoare triples, simulation and oracle-signature lifting now interpret configured
+answer measures directly. The expectation carrier and transformer laws use core
+`Std.Internal.Do`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
+The qualitative oracle WP remains structural and requires no probability interpretation.
+
+Chosen-space assertion integrals require measurable postconditions. Mapped assertion integrals,
+pathwise bounds, finite answer partitions, and state-discarding simulation leave hidden outputs
+and handler states unmeasured. Uniform finite averages are separate laws with native uniform
+measure premises on the actual answer space. Composed signatures preserve those chosen spaces.
+Public transformer equations and conditional measure equations normalize the tactic rules
+without new `change` steps. Cached triples retain their core assertion and WP instances.
+Proposition indicators and their monotonicity rule belong to the native Hoare owner;
+generalized rewriting works on the assertion-valued event normal form.
+
+The finite query-count bounds in the random-oracle commitment example use native event
+observations and pathwise WP comparisons. Fiat–Shamir correctness and quantitative tactic
+walkthroughs use those laws. Native import guards check both the Hoare surface and a nonuniform
+oracle regression; regression proofs also use real observations and hidden function states.
+
+Retiring relational coupling, scalar probability-equality automation, seeded forking, and the
+commitment example's TV theorem remain distinct theorem families. Their required connections
+use the existing explicit coherence theorem in their compatibility owners. The native Hoare
+and simulation modules do not import PMF/SPMF or probability compatibility classes.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
@@ -183,6 +232,10 @@ axiom/initialization ratchets. Prune obsolete lint entries; do not add exception
 | Conditional continuation | `evalDist_bind_ite`, `prEvent_bind_ite`, and `prEvent_bind_eq_mul_of_ite`; finite observation measures retain missing mass. |
 | Natural-valued expectation | `MeasureTheory.lintegral_coe_nat_eq_tsum`; countability applies to the observable range. |
 | Losslessness | Mathlib `IsProbabilityMeasure`; bind requires AE lossless continuations. |
+| Common-transition TV contraction | `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le`; measurable subprobability transitions on the chosen spaces. |
+| Conditional TV composition | `Measure.etvDist_bind_bind_le_lintegral` / `measureETVDist_bind_bind_le_lintegral`; AE majorants, without assuming measurable conditional TV or selecting couplings. |
+| Different prefix and transition laws | `Measure.etvDist_bind_bind_le_add_lintegral` / `Kernel.etvDist_comp_comp_le_add_lintegral`; charge prefix TV and the conditional majorant under the second prefix law. |
+| Exceptional conditional TV | `Measure.etvDist_bind_bind_le_of_bad`; retain exceptional prefix mass and the good complement's mass. |
 | Conditional measure/event equality | `evalDist_bind_congr_ae` / `prEvent_bind_congr_ae`, with measurable families on the chosen source space. |
 | AE output valuation | `lintegral_evalDist_bind_of_aemeasurable` / `lintegral_evalDist_map_of_aemeasurable`, relative to the resulting output measure. |
 | Hidden-output expectation comparison | `OracleComp.lintegral_evalDist_bind_mono_of_support`, observing the actual continuation results. |

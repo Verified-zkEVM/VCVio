@@ -57,6 +57,14 @@ end LawfulAppend
 
 namespace WriterT
 
+/-- A direct core monad lift writes the empty multiplicative log. -/
+@[simp]
+theorem run_core_monadLift {m : Type u → Type v} [Monad m] {ω α : Type u}
+    [Monoid ω] (x : m α) :
+    (MonadLift.monadLift x : WriterT ω m α).run = (fun a ↦ (a, 1)) <$> x := rfl
+
+
+
 section basic
 
 variable {m : Type u → Type v} [Monad m] {ω : Type u} {α β γ : Type u}

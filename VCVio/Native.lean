@@ -22,7 +22,7 @@ public import VCVio.EvalDist.Monad.Branch
 public import VCVio.EvalDist.Monad.Disagreement.Measure
 public import VCVio.EvalDist.Monad.Seq.Uniform
 public import VCVio.EvalDist.Lossless
-public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.MeasureTVDist.Bind
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.PFunctorKernel
 public import VCVio.OracleComp.Support

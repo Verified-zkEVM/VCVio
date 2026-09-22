@@ -80,44 +80,7 @@ def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ) : Prop :=
 
 theorem GameEquiv.probOutput_eq {g₁ g₂ : OracleComp spec₁ α}
     (h : GameEquiv g₁ g₂) (x : α) : Pr[= x | g₁] = Pr[= x | g₂] :=
-  probOutput_congr_evalSPMF h x
-
-/-! ## Prop-to-ℝ≥0∞ indicator -/
-
-open scoped Classical in
-/-- Indicator embedding: lifts `P : Prop` into `ℝ≥0∞` as `1` (true) or `0` (false).
-It takes values in the expectation carrier `ℝ≥0∞`. -/
-noncomputable def propInd (P : Prop) : ℝ≥0∞ := if P then 1 else 0
-
-@[simp] lemma propInd_true : propInd True = 1 := ite_eq_left trivial
-@[simp] lemma propInd_false : propInd False = 0 := ite_eq_right id
-
-lemma propInd_eq_ite {P : Prop} [Decidable P] : propInd P = if P then 1 else 0 := by simp [propInd]
-
-open scoped Classical in
-@[simp] lemma propInd_and {P Q : Prop} : propInd (P ∧ Q) = propInd P * propInd Q := by
-  unfold propInd; split_ifs <;> simp_all
-
-open scoped Classical in
-lemma propInd_mono {P Q : Prop} (h : P → Q) : propInd P ≤ propInd Q := by
-  unfold propInd; split_ifs <;> simp_all
-
-lemma propInd_le_one (P : Prop) : propInd P ≤ 1 := by
-  unfold propInd; split_ifs <;> simp
-
-open scoped Classical in
-lemma propInd_eq_one_iff {P : Prop} : propInd P = 1 ↔ P := by simp [propInd]
-
-open scoped Classical in
-lemma propInd_eq_zero_iff {P : Prop} : propInd P = 0 ↔ ¬P := by simp [propInd]
-
-open scoped Classical in
-lemma propInd_or_le {P Q : Prop} : propInd (P ∨ Q) ≤ propInd P + propInd Q := by
-  unfold propInd; split_ifs <;> simp_all
-
-open scoped Classical in
-lemma propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
-  unfold propInd; split_ifs <;> simp_all
+  by rw [probOutput_def, probOutput_def, h]
 
 /-! ## Notation -/
 
@@ -170,13 +133,6 @@ macro_rules
 
 /-! ## Bridge lemmas: numeric indicators and existing API -/
 
-/-- `probEvent` equals WP of propInd postcondition. -/
-lemma probEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
-    (oa : OracleComp spec α) (p : α → Prop) :
-    Pr[ p | oa] = wp oa (fun x => 𝟙⟦p x⟧) := by
-  classical
-  simpa only [propInd_eq_ite] using probEvent_eq_wp_indicator oa p
-
 /-- `RelPost.indicator` is pointwise `𝟙⟦_⟧`. -/
 lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
     (R : Relational.RelPost α β) (a : α) (b : β) :
@@ -185,43 +141,52 @@ lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
 /-- Almost-sure correctness: `Triple 𝟙⟦True⟧ c (fun x => 𝟙⟦p x⟧)` iff
 `Pr[ p | c] = 1`. -/
 lemma triple_propInd_iff_probEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
-    [IsUniformSpec spec] {α : Type}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Triple (𝟙⟦True⟧ : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) ↔
-      Pr[ p | oa] = 1 := by
+      Pr{let x ← oa}[p x] = 1 := by
   rw [triple_iff_le_wp, propInd_true, ← probEvent_eq_wp_propInd]
-  exact one_le_probEvent_iff
+  exact ⟨fun h ↦ le_antisymm
+    ((MeasureTheory.measure_mono (Set.subset_univ _)).trans
+      (evalDist_apply_univ_le_one (do let x ← oa; pure (p x)))) h, fun h ↦ h.ge⟩
 
 /-- Lower-bound event goals are exactly quantitative triples with indicator postconditions. -/
 lemma triple_propInd_iff_le_probEvent {ι : Type u} {spec : OracleSpec ι}
-    [IsUniformSpec spec] {α : Type}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
-    Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr[ p | oa] := by
+    Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{let x ← oa}[p x] := by
   rw [triple_iff_le_wp, ← probEvent_eq_wp_propInd]
 
 /-! ## Expectation-level bridge lemmas -/
 
 /-- WP of a disjunction indicator is bounded by the sum of individual WP indicators. -/
-theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
+theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p q : α → Prop) :
     wp oa (fun x => 𝟙⟦p x ∨ q x⟧) ≤
         wp oa (fun x => 𝟙⟦p x⟧) +
           wp oa (fun x => 𝟙⟦q x⟧) := by
-  rw [← probEvent_eq_wp_propInd, ← probEvent_eq_wp_propInd, ← probEvent_eq_wp_propInd]
-  exact probEvent_or_le _ _ _
+  rw [← wp_add]
+  apply wp_mono
+  intro x
+  by_cases hp : p x <;> by_cases hq : q x <;> simp [propInd, hp, hq]
 
 /-- Monotonicity for event probabilities, exposed through the program-logic namespace. -/
-theorem probEvent_mono {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
+theorem probEvent_mono {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) {p q : α → Prop}
     (h : ∀ x, p x → q x) :
-    Pr[ p | oa] ≤ Pr[ q | oa] :=
-  _root_.probEvent_mono (mx := oa) (fun x _ => h x)
+    Pr{let x ← oa}[p x] ≤ Pr{let x ← oa}[q x] :=
+  _root_.prEvent_mono oa _ _ h
 
-/-- Markov inequality: if `a ≤ f x` whenever `p x`, then `a * Pr[ p | oa] ≤ E[f | oa]`. -/
-theorem markov_bound {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
+/-- Markov inequality: if `a ≤ f x` whenever `p x`, then `a * Pr{let x ← oa}[p x] ≤ E[f | oa]`. -/
+theorem markov_bound {ι : Type u} {spec : OracleSpec ι} [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
-    a * Pr[ p | oa] ≤ wp oa f := by
+    a * Pr{let x ← oa}[p x] ≤ wp oa f := by
   rw [probEvent_eq_wp_propInd, ← wp_mul_const]
   refine wp_mono oa fun x => ?_
   unfold propInd
@@ -230,12 +195,16 @@ theorem markov_bound {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {
   · simp
 
 /-- `Triple` with precondition `1` and indicator postcondition when the event is almost sure. -/
-theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
+theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support oa, p x) :
     Triple (1 : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) := by
-  rw [show (1 : ℝ≥0∞) = 𝟙⟦True⟧ from propInd_true.symm]
-  exact (triple_propInd_iff_probEvent_eq_one oa p).mpr
-    (probEvent_eq_one ⟨probFailure_of_liftM_PMF oa, h⟩)
+  apply triple_ofLE
+  rw [← wp_const oa 1]
+  apply wp_mono_of_support
+  intro x hx
+  simp [propInd, h x hx]
 
 /-! ## Bridge lemmas: game equivalence and advantage -/
 

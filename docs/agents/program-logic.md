@@ -14,8 +14,9 @@
 For continuous or otherwise non-discrete denotations, import
 `VCVio.ProgramLogic.Relational.Measure`. Its `MeasureProgramLogic.RelWP` uses an almost-everywhere
 postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
-post-expectations with `lintegral`. The tactic proof mode below remains the finite, executable
-compatibility layer while measure-native tactic support is developed.
+post-expectations with `lintegral`. Unary quantitative tactics use the native measure
+interpretation; the remaining relational compatibility theorem families have separate conversion
+checkpoints.
 
 ## In-Tree Walkthroughs
 
@@ -31,9 +32,10 @@ compatibility layer while measure-native tactic support is developed.
 
 For `wp oa f ≤ wp oa g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
 pointwise obligation `f x ≤ g x`. The unrestricted `wp_mono` theorem remains available as a
-lower-priority fallback. On raw `Std.Internal.Do.wp` expressions, first write
-`change OracleComp.ProgramLogic.wp oa f ≤ OracleComp.ProgramLogic.wp oa g` to expose the
-head that `gcongr` indexes. `wp_eq_expectedValue` is an explicit bridge, not a global simp rule.
+lower-priority fallback. On raw `Std.Internal.Do.wp` expressions, normalize with
+`simp only [OracleComp.Quantitative.wp_eq_mAlgOrdered_wp]` before `gcongr`.
+`wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
+`wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
 
 Use `finiteness` for `wp oa post ≠ ⊤` when the result type is finite and the postcondition is
 pointwise finite. An arbitrary quantitative postcondition may still take the value `⊤`.
@@ -41,7 +43,7 @@ The regression module `VCVioTest/ProgramLogic/GCongr.lean` checks the support bi
 explicit raw-WP script, so these examples can be pasted into ordinary-import proofs.
 
 For directional rewriting, explicitly import `Mathlib.Tactic.GRewrite`. With
-`h : ∀ x, f x ≤ g x`, `grw [h]` rewrites through `wp` and `expectedValue`. If `h` is restricted
+`h : ∀ x, f x ≤ g x`, `grw [h]` rewrites through `wp` and native expectation integrals. If `h` is restricted
 to `support oa`, the rewrite leaves that support premise as a side goal; `grw [h]; assumption`
 closes the direct comparison. `gcongr with x hx` remains useful when the pointwise proof needs
 the support fact explicitly. The [generalized-relation investigation](../reading/generalized-relation-automation.md)
@@ -56,7 +58,7 @@ candidate registrations are experimental.
 | `game_trans g₂` | `g₁ ≡ₚ g₃` | Splits into `g₁ ≡ₚ g₂` and `g₂ ≡ₚ g₃` |
 | `by_dist` | `AdvBound game ε` | Enters TV distance reasoning |
 | `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
-| `by_hoare` | `Pr[p \| oa] = ...` | Enters quantitative WP reasoning (legacy; prefer `vcstep` which lowers probability goals automatically) |
+| `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
 
 `by_equiv` enters the coupling-based `RelTriple` shell, not `RelTriple'`, so that
 `rvcstep` / `rvcgen` can keep decomposing the relational goal.

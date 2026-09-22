@@ -31,7 +31,8 @@ open scoped OracleComp.ProgramLogic
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
 variable {α β : Type}
 
 /-! ## Notation examples -/
@@ -68,7 +69,7 @@ example (x : α) (xs : List α) (f : β → α → OracleComp spec β)
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp⟦(query t : OracleComp spec (spec.Range t))⟧ post =
-      ∑' u : spec.Range t, (1 / Fintype.card (spec.Range t) : ℝ≥0∞) * post u := by
+      ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
   vcstep
 
 example (c : Prop) [Decidable c]
@@ -78,7 +79,7 @@ example (c : Prop) [Decidable c]
 
 example [SampleableType α] (post : α → ℝ≥0∞) :
     wp⟦($ᵗ α : ProbComp α)⟧ post =
-      ∑' u : α, Pr[= u | ($ᵗ α : ProbComp α)] * post u := by
+      ∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)] := by
   vcstep
 
 example (f : α → β) (oa : OracleComp spec α) (post : β → ℝ≥0∞) :
@@ -339,18 +340,18 @@ example (f : β → α → OracleComp spec β) (init : β) (post : β → ℝ≥
   vcstep
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
-    (∑' u : spec.Range t, (1 / Fintype.card (spec.Range t) : ℝ≥0∞) * post u) ≤
+    (∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t) ≤
       wp⟦(query t : OracleComp spec (spec.Range t))⟧ post := by
   vcstep
 
 example [SampleableType α] (post : α → ℝ≥0∞) :
-    (∑' u : α, Pr[= u | ($ᵗ α : ProbComp α)] * post u) ≤
+    (∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)]) ≤
       wp⟦($ᵗ α : ProbComp α)⟧ post := by
   vcstep
 
 example (impl : QueryImpl spec (OracleComp spec))
     (hImpl : ∀ (t : spec.Domain),
-      𝒮[impl t] = 𝒮[(query t : OracleComp spec (spec.Range t))])
+      𝒟[impl t] = 𝒟[(query t : OracleComp spec (spec.Range t))])
     (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦simulateQ impl oa⟧ post = wp⟦oa⟧ post := by
   simpa using OracleComp.ProgramLogic.wp_simulateQ_eq impl hImpl oa post
@@ -441,7 +442,9 @@ example :
 section LiftComp
 
 variable {ι' : Type} {superSpec : OracleSpec ι'}
-variable [IsUniformSpec superSpec]
+variable [∀ t, MeasurableSpace (superSpec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (superSpec.Range t)]
+  [OracleSpec.IsUniformMeasureSpec superSpec]
 variable [h : spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) :

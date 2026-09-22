@@ -334,6 +334,7 @@ The lemmas below convert `Std.Do.Triple` invariant specs produced by
 recommended entry point from the `mvcgen` proof style into whole-program
 relational reasoning. -/
 
+omit [IsUniformSpec spec₁] in
 /-- Convert a unary `Std.Do.Triple` invariant-preservation spec into the
 `support`-based preservation hypothesis consumed by
 `relTriple_simulateQ_run_of_impl_eq_preservesInv` and friends.
@@ -343,7 +344,7 @@ The `mvcgen` proof style produces invariant-preservation specs as
 relational infrastructure is phrased in terms of `support`. This lemma
 is the direct translator, lifting over `triple_stateT_iff_forall_support`. -/
 theorem support_preservesInv_of_triple
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {σ : Type}
     (impl : QueryImpl spec (StateT σ (OracleComp spec₁)))
     (Inv : σ → Prop)
@@ -366,7 +367,7 @@ Use this whenever a writer-invariant-preservation proof is available as
 an `mvcgen`-style `Std.Do.Triple`, and the downstream consumer is a
 `support`-based whole-program lemma. -/
 theorem writerPreservesInv_of_triple
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {ω : Type} [Monoid ω]
     (impl : QueryImpl spec (WriterT ω (OracleComp spec)))
     (Inv : ω → Prop)
@@ -386,7 +387,7 @@ an invariant `Inv` and the target handler preserves `Inv`. This is the
 hypothesis is supplied via `mvcgen`-style `Std.Do.Triple`s rather than a
 `support`-based quantifier. -/
 theorem relTriple_simulateQ_run_of_impl_eq_triple
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {σ : Type}
     (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp))
     (Inv : σ → Prop)

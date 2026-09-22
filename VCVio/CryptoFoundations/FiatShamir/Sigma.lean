@@ -432,14 +432,7 @@ theorem perfectlyCorrect [SampleableType Chal]
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)
       (runtime M) := by
   intro msg
-  rw [perfectlyCorrect_evalDist_eq σ hr M msg, evalDist_apply_singleton]
-  change
-    Pr[= true | (do
-      let (pk, sk) ← hr.gen
-      let (c, e) ← σ.commit pk sk
-      let r ← $ᵗ Chal
-      let s ← σ.respond pk sk e r
-      pure (σ.verify pk c r s) : ProbComp Bool)] = 1
+  rw [perfectlyCorrect_evalDist_eq σ hr M msg, ← prEvent_eq_evalDist_singleton]
   vcstep
   vcstep using (fun x => OracleComp.ProgramLogic.propInd (x ∈ support hr.gen))
   · simpa [OracleComp.ProgramLogic.propInd] using
@@ -448,15 +441,15 @@ theorem perfectlyCorrect [SampleableType Chal]
     rcases x with ⟨pk, sk⟩
     by_cases hx : (pk, sk) ∈ support hr.gen
     · have hrel : rel pk sk = true := hr.gen_sound pk sk hx
-      simpa [OracleComp.ProgramLogic.propInd, hx] using
+      simpa [← OracleComp.ProgramLogic.propInd_eq_ite, hx] using
         (OracleComp.ProgramLogic.triple_probOutput_eq_one
           (oa := do
             let (c, e) ← σ.commit pk sk
             let r ← $ᵗ Chal
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
-          (x := true) (h := by simpa only [evalDist_apply_singleton] using hc pk sk hrel))
-    · simpa [OracleComp.ProgramLogic.propInd, hx] using
+          (x := true) (h := by rw [prEvent_eq_evalDist_singleton]; exact hc pk sk hrel))
+    · simpa [← OracleComp.ProgramLogic.propInd_eq_ite, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do
             let (c, e) ← σ.commit pk sk

@@ -123,6 +123,15 @@ needs an instance-synthesis check, not a grep.
 
 ### Track — heading into core, or blocked on a design decision
 
+**Native TV composition.** Bounded-observation contraction uses Mathlib's
+`lintegral_eq_lintegral_meas_lt` layer cake formula and `ENNReal.edist_le_iff_le_add_right`.
+Conditional discrepancy uses `lintegral_sub_le'` and AE-measurable measure families; there is no
+measurable selection of coupling witnesses or assumption that conditional TV is measurable.
+Mathlib kernel composition delegates to the measure rules. Parameterized expected majorants use
+`Measurable.lintegral_kernel_prod_right'` with its s-finite kernel premise. The local owners are
+`ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` and
+`ToMathlib/Probability/Kernel/TotalVariation.lean`.
+
 **Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
 `Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`. Quantitative,
 qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's
@@ -130,8 +139,12 @@ qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mat
 relational coupling interface belongs to VCVio and uses core assertion lattices.
 Loom2 is no longer a dependency. The generic native expectation algebra lives in
 `VCVio.ProgramLogic.Unary.WP.Measure`; its scoped core interpretation needs only
-lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra,
-while explicit compatibility equations retain the old discrete theorem surface.
+lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra
+under configured answer measures. Native Hoare and simulation owners require neither uniformity
+nor probability compatibility classes; public transformer equations normalize their core WP.
+Chosen-space assertions carry measurability premises, while mapped assertions and state-discarding
+simulation leave hidden outputs and states unmeasured. Explicit coherence equations connect the
+remaining discrete relational and forking consumers in their compatibility owners.
 
 Core `vcgen` and VCVio's probability/coupling frontend coexist. The latter still owns
 its `@[vcspec]`/`@[wpStep]` dispatch; the older `Std.Do` handler bridge also remains a

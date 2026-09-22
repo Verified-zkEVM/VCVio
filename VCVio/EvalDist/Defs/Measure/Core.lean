@@ -42,6 +42,37 @@ noncomputable def evalDist {m : Type u → Type v} [EvalDistSemantics m]
 /-- Evaluation-measure notation. -/
 notation "𝒟[" mx "]" => evalDist mx
 
+/-- Denotation commutes with conditional choice of a computation. -/
+theorem evalDist_ite {m : Type u → Type v} [EvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (p : Prop) [Decidable p] (mx my : m α) :
+    𝒟[if p then mx else my] = if p then 𝒟[mx] else 𝒟[my] := by
+  by_cases h : p <;> simp [h]
+
+/-- Denotation commutes with dependent conditional choice of a computation. -/
+theorem evalDist_dite {m : Type u → Type v} [EvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (p : Prop) [Decidable p]
+    (mx : p → m α) (my : ¬p → m α) :
+    𝒟[if h : p then mx h else my h] =
+      if h : p then 𝒟[mx h] else 𝒟[my h] := by
+  by_cases h : p <;> simp [h]
+
+/-- The mass of an event commutes with conditional choice of a computation. -/
+@[simp high]
+theorem evalDist_ite_apply {m : Type u → Type v} [EvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (p : Prop) [Decidable p]
+    (mx my : m α) (s : Set α) :
+    𝒟[if p then mx else my] s = if p then 𝒟[mx] s else 𝒟[my] s := by
+  by_cases h : p <;> simp [h]
+
+/-- Event mass commutes with dependent conditional choice of a computation. -/
+@[simp high]
+theorem evalDist_dite_apply {m : Type u → Type v} [EvalDistSemantics m]
+    {α : Type u} [MeasurableSpace α] (p : Prop) [Decidable p]
+    (mx : p → m α) (my : ¬p → m α) (s : Set α) :
+    𝒟[if h : p then mx h else my h] s =
+      if h : p then 𝒟[mx h] s else 𝒟[my h] s := by
+  by_cases h : p <;> simp [h]
+
 theorem evalDist_apply_univ_le_one {m : Type u → Type v} [EvalDistSemantics m]
     {α : Type u} [MeasurableSpace α] (mx : m α) : 𝒟[mx] Set.univ ≤ 1 :=
   EvalDistSemantics.apply_univ_le_one mx

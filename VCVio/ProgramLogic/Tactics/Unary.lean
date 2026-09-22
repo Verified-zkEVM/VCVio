@@ -428,8 +428,9 @@ macro (name := expNorm) "exp_norm" : tactic =>
 /-- `by_hoare` transforms a probability goal into a quantitative WP goal. -/
 macro (name := byHoare) "by_hoare" : tactic =>
   `(tactic|
-    first
-      | rw [OracleComp.ProgramLogic.probEvent_eq_wp_indicator]
-      | rw [OracleComp.ProgramLogic.probOutput_eq_wp_indicator])
+    simp only [evalDist_ite_apply, evalDist_dite_apply,
+      OracleComp.ProgramLogic.probEvent_eq_wp_propInd,
+      OracleComp.ProgramLogic.probOutput_eq_wp_indicator,
+      ← OracleComp.ProgramLogic.propInd_eq_ite])
 
 end OracleComp.ProgramLogic

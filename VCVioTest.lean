@@ -26,6 +26,7 @@ public import VCVioTest.EvalDist.MeasureIntegration
 public import VCVioTest.EvalDist.ProbabilityBounds
 public import VCVioTest.EvalDist.ProbabilityNotation
 public import VCVioTest.EvalDist.SeqMeasure
+public import VCVioTest.EvalDist.TotalVariationMeasure
 public import VCVioTest.EvalDist.Transformers
 public import VCVioTest.EvalDist.UniformTable
 public import VCVioTest.FiatShamirAbort
@@ -75,6 +76,7 @@ public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
+public import VCVioTest.ProgramLogic.NativeOracleWP
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
 public import VCVioTest.RandomOracleRouting

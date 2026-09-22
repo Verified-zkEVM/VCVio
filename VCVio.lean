@@ -189,6 +189,7 @@ public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.MeasureTVDist.Bind
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Branch
@@ -242,6 +243,7 @@ public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
 public import VCVio.OracleComp.Coinductive.Bridge
 public import VCVio.OracleComp.Coinductive.DynSystem
 public import VCVio.OracleComp.Coinductive.Machine
@@ -253,6 +255,7 @@ public import VCVio.OracleComp.Constructions.Fork
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
