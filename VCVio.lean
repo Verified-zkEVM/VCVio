@@ -290,6 +290,7 @@ public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.OracleComp.QueryTracking.CountingOracle
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Enforcement
+public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
 public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
