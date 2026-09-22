@@ -37,7 +37,10 @@ bundled family. That peel and its companion `evalDist_tapeFamily_bind_of_zero` a
 laws of the family a caller needs: `evalDist_tapeFamily_bind_eval` reads off one class,
 `evalDist_tapeFamily_bind_eval₂` reads off two distinct classes independently, and
 `evalDist_tapeFamily_setOf_eq` restates an event of one class's tape as an event of that
-class's `answerTape`, which is the shape `IndepProductEvents.lean` bounds.
+class's `answerTape`, which is the shape `IndepProductEvents.lean` bounds, and
+`evalDist_tapeFamily_setOf_eq₂` does the same for two distinct classes carrying the same answer
+type, landing on a single `answerTape` over the summed index by way of
+`evalDist_answerTape_append`.
 `length_of_mem_support_tapeFamily` says a drawn family has the lengths it was asked for.
 
 The identification is insensitive to `τ`: sending a class to draw from a different class's
@@ -65,11 +68,15 @@ type equality, and states the entry in cast form rather than as a bare `HEq`.
 * Nothing here bounds the mass of any tape event.
   `evalDist_run_dupRandomOracle_setOf_le_of_transport` takes that bound as a hypothesis on an
   event of the whole family.
-* The bridge to `IndepProductEvents.lean` is built for **one** class at a time
-  (`evalDist_tapeFamily_setOf_eq`). An event spanning two classes has its joint law only in
-  the bind form `evalDist_tapeFamily_bind_eval₂`; there is no set-level form for a pair, and
-  no identification of two `answerTape`s with the single `answerTape` over a summed index
-  that the product bounds would then apply to.
+* The set-level bridge to `IndepProductEvents.lean` covers one class
+  (`evalDist_tapeFamily_setOf_eq`) or two (`evalDist_tapeFamily_setOf_eq₂`). Both require the
+  answer types to carry a measurable space on which every set is measurable, and produce the
+  `answerTape` law at that space rather than at `⊤`, which is what makes their output the same
+  term as the one a bound on an `answerTape` event is stated at. The two-class form also
+  requires the two classes to carry the same answer type, since the single `answerTape` it
+  lands on has one entry type. An event spanning three or more classes has its joint law
+  nowhere here, not even in bind form: `evalDist_tapeFamily_bind_eval₂` reads off exactly
+  two.
 * No query bound relates the tape lengths to the number of queries a computation makes: the
   identification holds for every assignment `m`, with the tape oracle sampling freshly once a
   tape runs out. Only the position lemma needs the per-class bounds, and it takes them as
@@ -414,14 +421,12 @@ theorem evalDist_tapeFamily_bind_eval₂ {β : Type} [MeasurableSpace β] {j j' 
 omit [DecidableEq ι] in
 /-- **An event of one class's tape is an event of that class's `answerTape`.** This is the
 shape the product bounds of `IndepProductEvents.lean` are stated for. -/
-theorem evalDist_tapeFamily_setOf_eq (j : J) (m : J → ℕ) (S : Set (List (R j))) :
+theorem evalDist_tapeFamily_setOf_eq [∀ j, MeasurableSpace (R j)]
+    [∀ j, DiscreteMeasurableSpace (R j)] (j : J) (m : J → ℕ) (S : Set (List (R j))) :
     letI : MeasurableSpace ((k : J) → List (R k)) := ⊤
-    letI : MeasurableSpace (Fin (m j) → R j) := ⊤
     𝒟[tapeFamily R m] {L | L j ∈ S} = 𝒟[answerTape (R j) (m j)] {v | List.ofFn v ∈ S} := by
   let _ : MeasurableSpace ((k : J) → List (R k)) := ⊤
   let _ : DiscreteMeasurableSpace ((k : J) → List (R k)) := ⟨fun _ => trivial⟩
-  let _ : MeasurableSpace (Fin (m j) → R j) := ⊤
-  let _ : DiscreteMeasurableSpace (Fin (m j) → R j) := ⟨fun _ => trivial⟩
   let _ : MeasurableSpace (List (R j)) := ⊤
   let _ : DiscreteMeasurableSpace (List (R j)) := ⟨fun _ => trivial⟩
   have h1 : 𝒟[(fun L => L j) <$> tapeFamily R m] = 𝒟[List.ofFn <$> answerTape (R j) (m j)] := by
@@ -433,6 +438,104 @@ theorem evalDist_tapeFamily_setOf_eq (j : J) (m : J → ℕ) (S : Set (List (R j
       Measurable.of_discrete MeasurableSet.of_discrete,
     Measure.map_apply (f := fun v : Fin (m j) → R j => List.ofFn v)
       Measurable.of_discrete MeasurableSet.of_discrete, Set.preimage] using h2
+
+omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)] in
+/-- A tuple transported across an equality of its entry type, read as a list. -/
+private theorem cast_list_ofFn {A B : Type} (h : A = B) {n : ℕ} (v : Fin n → A) :
+    cast (congrArg List h) (List.ofFn v) = List.ofFn fun i => cast h (v i) := by
+  subst h; simp
+
+omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)] in
+/-- The law of a tape does not depend on which uniform sampler its entry type carries. -/
+private theorem evalDist_answerTape_congr_instance (A : Type) (h₁ h₂ : SampleableType A)
+    (n : ℕ) [MeasurableSpace A] [MeasurableSingletonClass A] :
+    𝒟[(@answerTape A h₁ n)] = 𝒟[(@answerTape A h₂ n)] := by
+  rw [@evalDist_answerTape A h₁ n _, @evalDist_answerTape A h₂ n _]
+  congr 1
+  funext _
+  rw [@SampleableType.evalDist_uniformSample A h₁ _ _,
+    @SampleableType.evalDist_uniformSample A h₂ _ _]
+
+omit [DecidableEq ι] [Fintype J] [DecidableEq J] [∀ j, SampleableType (R j)] in
+/-- A tape drawn at one entry type, transported across an equality of entry types, before a
+common continuation. -/
+private theorem evalDist_answerTape_bind_cast {A B γ : Type} [h₁ : SampleableType A]
+    [h₂ : SampleableType B] (hAB : A = B) [MeasurableSpace γ] (n : ℕ)
+    (g : (Fin n → B) → ProbComp γ) :
+    𝒟[answerTape A n >>= fun v => g fun i => cast hAB (v i)] = 𝒟[answerTape B n >>= g] := by
+  subst hAB
+  let _ : MeasurableSpace A := ⊤
+  let _ : MeasurableSingletonClass A := ⟨fun _ => trivial⟩
+  simp only [cast_eq]
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete,
+    evalDist_answerTape_congr_instance A h₁ h₂ n]
+
+omit [DecidableEq ι] in
+/-- **An event of two distinct classes' tapes is an event of a single `answerTape` over the
+summed index.** The tape of class `j` occupies the first `m j` coordinates and the tape of
+class `j'` the last `m j'`, so a caller reaches them through `Fin.castAdd` and `Fin.natAdd` —
+the shape the two-family bounds of `IndepProductEvents.lean` and of the covering files are
+stated for.
+
+The two classes must carry the *same* answer type, because a single `answerTape` has one entry
+type; `hR` is that identification, and the tape of class `j'` enters the left-hand event
+transported along it. -/
+theorem evalDist_tapeFamily_setOf_eq₂ [∀ j, MeasurableSpace (R j)]
+    [∀ j, DiscreteMeasurableSpace (R j)] {j j' : J} (hne : j ≠ j') (hR : R j' = R j)
+    (m : J → ℕ) (P : List (R j) → List (R j) → Prop) :
+    letI : MeasurableSpace ((k : J) → List (R k)) := ⊤
+    𝒟[tapeFamily R m] {L | P (L j) (cast (congrArg List hR) (L j'))} =
+      𝒟[answerTape (R j) (m j + m j')]
+        {w | P (List.ofFn fun i => w (Fin.castAdd (m j') i))
+            (List.ofFn fun i => w (Fin.natAdd (m j) i))} := by
+  let _ : MeasurableSpace ((k : J) → List (R k)) := ⊤
+  let _ : DiscreteMeasurableSpace ((k : J) → List (R k)) := ⟨fun _ => trivial⟩
+  let _ : MeasurableSpace (List (R j) × List (R j)) := ⊤
+  let _ : DiscreteMeasurableSpace (List (R j) × List (R j)) := ⟨fun _ => trivial⟩
+  set obs : (Fin (m j + m j') → R j) → List (R j) × List (R j) := fun w =>
+    (List.ofFn fun i => w (Fin.castAdd (m j') i), List.ofFn fun i => w (Fin.natAdd (m j) i))
+    with hobs
+  have key : 𝒟[tapeFamily R m >>= fun L =>
+        (pure (L j, cast (congrArg List hR) (L j')) : ProbComp (List (R j) × List (R j)))] =
+      𝒟[obs <$> answerTape (R j) (m j + m j')] :=
+    calc 𝒟[tapeFamily R m >>= fun L =>
+          (pure (L j, cast (congrArg List hR) (L j')) : ProbComp (List (R j) × List (R j)))]
+        = 𝒟[tapeList (R j) (m j) >>= fun l => tapeList (R j') (m j') >>= fun l' =>
+              (pure (l, cast (congrArg List hR) l') : ProbComp (List (R j) × List (R j)))] :=
+          evalDist_tapeFamily_bind_eval₂ (R := R) hne m
+            (fun l l' => pure (l, cast (congrArg List hR) l'))
+      _ = 𝒟[answerTape (R j) (m j) >>= fun u => answerTape (R j') (m j') >>= fun v =>
+              (pure (List.ofFn u, List.ofFn fun i => cast hR (v i)) :
+                ProbComp (List (R j) × List (R j)))] := by
+          simp only [tapeList_eq_map_answerTape, map_eq_bind_pure_comp, Function.comp_def,
+            bind_assoc, pure_bind]
+          simp only [cast_list_ofFn hR]
+      _ = 𝒟[answerTape (R j) (m j) >>= fun u => answerTape (R j) (m j') >>= fun v =>
+              (pure (List.ofFn u, List.ofFn v) : ProbComp (List (R j) × List (R j)))] := by
+          rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+          refine Measure.bind_congr_right ?_
+          filter_upwards [] with u
+          exact evalDist_answerTape_bind_cast hR (m j') fun v => pure (List.ofFn u, List.ofFn v)
+      _ = 𝒟[obs <$> (do let u ← answerTape (R j) (m j)
+                        let v ← answerTape (R j) (m j')
+                        (pure (Fin.append u v) : ProbComp (Fin (m j + m j') → R j)))] := by
+          simp only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc, pure_bind, hobs,
+            Fin.append_left, Fin.append_right]
+      _ = 𝒟[obs <$> answerTape (R j) (m j + m j')] := by
+          rw [evalDist_map_of_discrete, evalDist_map_of_discrete,
+            evalDist_answerTape_append (m j) (m j')]
+  have hmap1 : 𝒟[tapeFamily R m >>= fun L =>
+        (pure (L j, cast (congrArg List hR) (L j')) : ProbComp (List (R j) × List (R j)))] =
+      (𝒟[tapeFamily R m]).map (fun L => (L j, cast (congrArg List hR) (L j'))) := by
+    rw [← evalDist_map_of_discrete (tapeFamily R m)
+      (fun L => (L j, cast (congrArg List hR) (L j')))]
+    simp only [map_eq_bind_pure_comp, Function.comp_def]
+  rw [hmap1, evalDist_map_of_discrete] at key
+  have h2 : ((𝒟[tapeFamily R m]).map fun L => (L j, cast (congrArg List hR) (L j')))
+        {z | P z.1 z.2} = ((𝒟[answerTape (R j) (m j + m j')]).map obs) {z | P z.1 z.2} := by
+    rw [key]
+  rwa [Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete,
+    Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete] at h2
 
 /-! ## The duplicated interface on one shared cache -/
 
@@ -1093,8 +1196,8 @@ cache satisfying `P` with mass at most `b`.
 
 The mass of `E` is the caller's obligation. For an event of a single class's tape,
 `evalDist_tapeFamily_setOf_eq` restates it over that class's `answerTape`, where the product
-bounds of `IndepProductEvents.lean` apply; for an event spanning two classes only the bind-form
-joint law `evalDist_tapeFamily_bind_eval₂` is available.
+bounds of `IndepProductEvents.lean` apply; for an event of two classes carrying the same answer
+type, `evalDist_tapeFamily_setOf_eq₂` restates it over a single `answerTape` spanning both.
 
 `htransport` is given only the families the draw can actually produce, so
 `length_of_mem_support_tapeFamily` applies to the `Lfam` it is handed. That is what lets it

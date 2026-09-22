@@ -29,6 +29,11 @@ choices — the shape an adversary that picks where to place its conditions prod
 bounded by the sum of the per-choice bounds
 (`evalDist_answerTape_le_sum_of_subset_biUnion`).
 
+`evalDist_answerTape_append` identifies two independently drawn tapes, concatenated with
+`Fin.append`, with one tape over the summed index. An event constraining two separately drawn
+blocks of answers is therefore an event of a single tape, and the bounds above apply to it with
+the two blocks picked out by `Fin.castAdd` and `Fin.natAdd`.
+
 `evalDist_answerTape_setOf_forall_mem_le_prod_adapted` is the *adapted* form: the condition on
 coordinate `i` may depend on the coordinates strictly before `i`. That is what a retroactive
 event needs — one of the shape "the answer at position `i` lies in the list of inputs assembled
@@ -214,6 +219,54 @@ theorem evalDist_answerTape_le_sum_of_subset_biUnion {γ : Type} (C : Finset γ)
     (hsub : E ⊆ ⋃ c ∈ C, F c) (hb : ∀ c ∈ C, 𝒟[answerTape α q] (F c) ≤ b c) :
     𝒟[answerTape α q] E ≤ ∑ c ∈ C, b c :=
   (measure_mono hsub).trans <| (measure_biUnion_finset_le C F).trans <| Finset.sum_le_sum hb
+
+/-! ### Two tapes as one -/
+
+/-- **Two independent tapes are one tape over the summed index.** Drawing `p` answers, then `q`
+answers, and concatenating them with `Fin.append` has the law of a single tape of `p + q`
+answers. This is what lets an event that constrains two separately drawn blocks of answers be
+bounded by the single-tape product bounds above, with the two blocks picked out by
+`Fin.castAdd` and `Fin.natAdd`. -/
+theorem evalDist_answerTape_append (p q : ℕ) :
+    𝒟[do let u ← answerTape α p
+         let v ← answerTape α q
+         (pure (Fin.append u v) : ProbComp (Fin (p + q) → α))] = 𝒟[answerTape α (p + q)] := by
+  have hmeas : Measurable
+      (fun z : (Fin p → α) × (Fin q → α) => (Fin.append z.1 z.2 : Fin (p + q) → α)) := by
+    refine measurable_pi_iff.mpr fun i => ?_
+    refine Fin.addCases (fun i => ?_) (fun i => ?_) i
+    · simpa only [Fin.append_left, Function.comp_def] using
+        (measurable_pi_apply i).comp measurable_fst
+    · simpa only [Fin.append_right, Function.comp_def] using
+        (measurable_pi_apply i).comp measurable_snd
+  calc 𝒟[do let u ← answerTape α p
+            let v ← answerTape α q
+            (pure (Fin.append u v) : ProbComp (Fin (p + q) → α))]
+      = 𝒟[(fun z : (Fin p → α) × (Fin q → α) => (Fin.append z.1 z.2 : Fin (p + q) → α)) <$>
+            (do let u ← answerTape α p; let v ← answerTape α q; pure (u, v))] := by
+        simp [map_eq_bind_pure_comp, bind_assoc]
+    _ = (𝒟[answerTape α p].prod 𝒟[answerTape α q]).map
+          (fun z : (Fin p → α) × (Fin q → α) => (Fin.append z.1 z.2 : Fin (p + q) → α)) := by
+        rw [evalDist_map _ hmeas, evalDist_pair]
+    _ = Measure.pi fun _ : Fin (p + q) => 𝒟[($ᵗ α : ProbComp α)] := by
+        refine (Measure.pi_eq fun s hs => ?_).symm
+        rw [Measure.map_apply hmeas (MeasurableSet.univ_pi hs)]
+        have hpre : (fun z : (Fin p → α) × (Fin q → α) =>
+              (Fin.append z.1 z.2 : Fin (p + q) → α)) ⁻¹' Set.univ.pi s =
+            (Set.univ.pi fun i => s (Fin.castAdd q i)) ×ˢ
+              (Set.univ.pi fun i => s (Fin.natAdd p i)) := by
+          ext z
+          simp only [Set.mem_preimage, Set.mem_univ_pi, Set.mem_prod]
+          refine ⟨fun h => ⟨fun i => by simpa only [Fin.append_left] using h (Fin.castAdd q i),
+            fun i => by simpa only [Fin.append_right] using h (Fin.natAdd p i)⟩, ?_⟩
+          rintro ⟨h1, h2⟩ i
+          refine Fin.addCases (fun i => ?_) (fun i => ?_) i
+          · simpa only [Fin.append_left] using h1 i
+          · simpa only [Fin.append_right] using h2 i
+        rw [hpre, Measure.prod_prod, evalDist_answerTape, evalDist_answerTape,
+          Measure.pi_pi, Measure.pi_pi]
+        exact (Fin.prod_univ_add (M := ℝ≥0∞) fun i => 𝒟[($ᵗ α : ProbComp α)] (s i)).symm
+    _ = 𝒟[answerTape α (p + q)] := evalDist_answerTape.symm
 
 end Product
 
