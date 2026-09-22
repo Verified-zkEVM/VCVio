@@ -51,6 +51,12 @@ variable {D R : Type} [DecidableEq D] [SampleableType R]
 noncomputable def tapeList (R : Type) [SampleableType R] (m : ℕ) : ProbComp (List R) :=
   List.ofFn <$> answerTape R m
 
+/-- `tapeList` is `answerTape` read as a list. This is `tapeList`'s definition, published as
+an equation because the definition itself is not exposed. -/
+theorem tapeList_eq_map_answerTape (R : Type) [SampleableType R] (m : ℕ) :
+    tapeList R m = List.ofFn <$> answerTape R m := by
+  rw [tapeList]
+
 @[simp] theorem tapeList_zero : tapeList R 0 = pure [] := by
   simp [tapeList]
 

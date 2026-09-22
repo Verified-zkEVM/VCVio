@@ -9,6 +9,7 @@ module
 public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.ProbComp.Basic
+import VCVio.EvalDist.Monad.Measure
 
 /-!
 # Events on a tuple of independent uniform draws
@@ -35,9 +36,12 @@ at some position `j < i`", which constrains a fresh answer by data only the earl
 determine, and which no predicate on the answer cache alone expresses. The strict inequality is
 load-bearing: a condition allowed to read coordinate `i` itself is not bounded by its own
 uniform mass. The adapted form is proved by induction on the tuple length rather than through
-`Measure.pi`, using the two bind bounds `evalDist_bind_apply_le_mul_of_forall` and
-`evalDist_bind_apply_le_of_forall_notMem_eq_zero`, which localize the mass of a bind to a set of
-draws for its first stage.
+`Measure.pi`, using `evalDist_bind_apply_le_mul_of_forall` and
+`evalDist_bind_apply_le_of_forall_notMem_eq_zero`, two of the bind bounds that localize the
+mass of a bind to a set of draws for its first stage. A caller whose hypothesis holds only of
+the draws that actually occur wants the support-restricted
+`evalDist_bind_apply_le_of_forall_mem_support_notMem_eq_zero` instead, of which
+`evalDist_bind_apply_le_of_forall_notMem_eq_zero` is a corollary.
 
 Every statement here is `ProbComp`-valued, which is why this file sits at the `ProbComp` layer;
 the index-free product denotation it rests on is `VCVio.EvalDist.IndepProductMeasure`.
@@ -66,14 +70,31 @@ theorem evalDist_bind_apply_le_mul_of_forall {α β : Type} [MeasurableSpace α]
         · simp [Set.indicator_of_notMem hx, hout x hx]
     _ = 𝒟[mx] G * c := by rw [lintegral_indicator_const hG, mul_comm]
 
+/-- A continuation that can only reach `E` from a set `G` of *reachable* draws bounds the bind
+by `G`'s mass. Restricting the hypothesis to the support is what lets a caller use a fact about
+the draws that actually occur, such as the shape or size of a value the first stage produced. -/
+theorem evalDist_bind_apply_le_of_forall_mem_support_notMem_eq_zero {α β : Type}
+    [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β] (mx : ProbComp α)
+    (f : α → ProbComp β) {E : Set β} (hE : MeasurableSet E) {G : Set α} (hG : MeasurableSet G)
+    (h : ∀ x ∈ support mx, x ∉ G → 𝒟[f x] E = 0) : 𝒟[mx >>= f] E ≤ 𝒟[mx] G := by
+  rw [evalDist_bind_of_discrete, Measure.bind_apply hE Measurable.of_discrete.aemeasurable]
+  calc ∫⁻ x, 𝒟[f x] E ∂𝒟[mx]
+      ≤ ∫⁻ x, Set.indicator G (fun _ => 1) x ∂𝒟[mx] := by
+        refine lintegral_mono_ae ?_
+        filter_upwards [evalDist.ae_of_forall_mem_support mx
+          (fun x => x ∉ G → 𝒟[f x] E = 0) MeasurableSet.of_discrete h] with x hx
+        by_cases hxG : x ∈ G
+        · simpa [Set.indicator_of_mem hxG] using measure_le_one 𝒟[f x] E
+        · simp [Set.indicator_of_notMem hxG, hx hxG]
+    _ = 𝒟[mx] G := by rw [lintegral_indicator_const hG, mul_comm, mul_one]
+
 /-- A continuation that can only reach `E` from a set `G` of draws bounds the bind by `G`'s
 mass. -/
 theorem evalDist_bind_apply_le_of_forall_notMem_eq_zero {α β : Type} [MeasurableSpace α]
     [DiscreteMeasurableSpace α] [MeasurableSpace β] (mx : ProbComp α) (f : α → ProbComp β)
     {E : Set β} (hE : MeasurableSet E) {G : Set α} (hG : MeasurableSet G)
-    (h : ∀ x ∉ G, 𝒟[f x] E = 0) : 𝒟[mx >>= f] E ≤ 𝒟[mx] G := by
-  simpa using evalDist_bind_apply_le_mul_of_forall mx f hE hG 1
-    (fun x _ => measure_le_one 𝒟[f x] E) h
+    (h : ∀ x ∉ G, 𝒟[f x] E = 0) : 𝒟[mx >>= f] E ≤ 𝒟[mx] G :=
+  evalDist_bind_apply_le_of_forall_mem_support_notMem_eq_zero mx f hE hG fun x _ hx => h x hx
 
 namespace AnswerTape
 
