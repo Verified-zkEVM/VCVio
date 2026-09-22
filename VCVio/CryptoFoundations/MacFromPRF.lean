@@ -65,8 +65,7 @@ theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
   simp only [toMacAlg, monad_norm, decide_true]
   rw [show (do let k ← prf.keygen; pure true) = (fun _ => true) <$> prf.keygen by
     simp only [map_eq_bind_pure_comp, Function.comp_def]]
-  rw [evalDist_map prf.keygen measurable_const,
-    Measure.map_apply measurable_const (measurableSet_singleton true)]
+  rw [evalDist_map_apply prf.keygen measurable_const (measurableSet_singleton true)]
   rw [show (fun _ : K => true) ⁻¹' {true} = Set.univ by ext; simp,
     OracleComp.evalDist_apply_univ_eq_one]
 

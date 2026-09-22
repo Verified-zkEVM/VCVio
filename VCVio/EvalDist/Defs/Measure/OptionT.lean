@@ -209,10 +209,8 @@ theorem OptionT.dropNone_evalDist_run_bind_guard_apply_univ
     by_cases hx : p x <;> simp [hx]
   rw [Measure.dropNone_apply_univ, hrun, LawfulMonad.bind_pure_comp,
     LawfulMonad.bind_pure_comp]
-  rw [_root_.evalDist_map mx (f := fun x ↦ if p x then some () else none) hselect,
-    _root_.evalDist_map mx (f := p) hp,
-    Measure.map_apply hselect Option.measurableSet_isSome,
-    Measure.map_apply hp (measurableSet_singleton True)]
+  rw [_root_.evalDist_map_apply mx hselect Option.measurableSet_isSome,
+    _root_.evalDist_map_apply mx hp (measurableSet_singleton True)]
   congr 1
   ext x
   simp

@@ -114,6 +114,46 @@ lemma run'_liftM_bind {α β : Type} (oa : ProbComp α)
   rw [StateT.run_bind, run_liftM]
   simp [map_bind]
 
+/-- A computation with zero budget on a predicate that charges every `hashSpec` query queries
+only the uniform summand. -/
+private lemma allQueriesSatisfy_not_of_isQueryBoundP_zero {α : Type} {p : ℕ ⊕ ι → Prop}
+    [DecidablePred p] {oa : OracleComp (unifSpec + hashSpec) α} (h : oa.IsQueryBoundP p 0) :
+    oa.AllQueriesSatisfy (fun t => ¬ p t) :=
+  (isQueryBoundP_zero_iff oa _).1 ((isQueryBoundP_congr_pred fun _ => not_not.symm).1 h)
+
+/-- Every query outside a predicate that charges every `hashSpec` query is a uniform query, which
+`unifFwdImpl + ro` answers without touching the cache. -/
+private lemma run_eq_map_run'_of_not {p : ℕ ⊕ ι → Prop} (hp : ∀ t, p (.inr t))
+    (t : ℕ ⊕ ι) (ht : ¬ p t) (s : hashSpec.QueryCache) :
+    ((unifFwdImpl hashSpec + ro) t).run s = (·, s) <$> ((unifFwdImpl hashSpec + ro) t).run' s := by
+  rcases t with n | t
+  · simp [unifFwdImpl, StateT.run'_eq]
+  · exact absurd (hp t) ht
+
+/-- Simulating through `unifFwdImpl + ro` a computation that makes no `hashSpec` query leaves
+the cache untouched, whatever `ro` does on hash queries. The query bound is stated for any
+predicate `p` that charges every `hashSpec` query, such as `(· matches .inr _)`. This is the
+counterpart of `run_liftM` for a computation given with a query bound rather than as a lifted
+`ProbComp`. -/
+lemma run_eq_map_run'_of_isQueryBoundP_zero {α : Type} {p : ℕ ⊕ ι → Prop} [DecidablePred p]
+    (hp : ∀ t, p (.inr t)) {oa : OracleComp (unifSpec + hashSpec) α}
+    (h : oa.IsQueryBoundP p 0) (s : hashSpec.QueryCache) :
+    (simulateQ (unifFwdImpl hashSpec + ro) oa).run s =
+      (·, s) <$> (simulateQ (unifFwdImpl hashSpec + ro) oa).run' s :=
+  (allQueriesSatisfy_not_of_isQueryBoundP_zero h).simulateQ_run_eq_map_run'
+    (run_eq_map_run'_of_not ro hp) s
+
+/-- A prefix with no `hashSpec` query hands its initial cache to the continuation. -/
+lemma run'_bind_of_isQueryBoundP_zero {α β : Type} {p : ℕ ⊕ ι → Prop} [DecidablePred p]
+    (hp : ∀ t, p (.inr t)) {oa : OracleComp (unifSpec + hashSpec) α}
+    (h : oa.IsQueryBoundP p 0) (ob : α → OracleComp (unifSpec + hashSpec) β)
+    (s : hashSpec.QueryCache) :
+    (simulateQ (unifFwdImpl hashSpec + ro) (oa >>= ob)).run' s =
+      (simulateQ (unifFwdImpl hashSpec + ro) oa).run' s >>= fun x =>
+        (simulateQ (unifFwdImpl hashSpec + ro) (ob x)).run' s :=
+  (allQueriesSatisfy_not_of_isQueryBoundP_zero h).simulateQ_run'_bind
+    (run_eq_map_run'_of_not ro hp) ob s
+
 /-- Simulating a `hashSpec` query through `unifFwdImpl + ro` dispatches it to the hash-oracle
 handler `ro`, since uniform forwarding leaves hash queries to `ro`. -/
 @[simp]
