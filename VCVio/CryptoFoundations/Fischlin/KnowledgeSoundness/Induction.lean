@@ -29,17 +29,12 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 open ENNReal OracleComp.EvalDist
 
-section security
-
-variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
-  (ρ b S : ℕ) (M : Type) [DecidableEq M]
+  (ρ b S : ℕ) (M : Type)
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
+/-! ### Generic supermartingale induction and log elimination -/
+
 /-- **The generalized supermartingale induction (multi-record cells).** The induction tracks
 only *relevant* records, and within a cell relevant records are separated by an abstract
 challenge tag `chalOf` (`hcell`). Caching a second relevant record at an already-revealed cell
@@ -226,8 +221,6 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
           gcongr
           exact Nat.sub_le q 1
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Initial-state specialization of `main_induction_gen`: from the empty cache the
 expected leaf payoff is at most `(q + 1)·μ`. -/
 private theorem main_induction_gen_init {T K C : Type} [DecidableEq T]
@@ -260,8 +253,6 @@ private theorem main_induction_gen_init {T K C : Type} [DecidableEq T]
     hdead_kill leaf hleaf oa q hq ∅ ∅ (fun _ _ => none) hINV).trans (le_of_eq ?_)
   rw [Phi, Finset.sum_empty, add_zero, Nat.cast_add, Nat.cast_one, add_mul, one_mul]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Left query on the logged stack: forwarded, no log, cache unchanged. Stated with the
 mapped function's domain at the sum-spec `Range` type so keyed rewriting fires after
 `simulateQ_bind`. -/
@@ -274,8 +265,6 @@ private lemma loggedImpl_run_run_inl {ι : Type} {hashSpec : OracleSpec ι} [Dec
         (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) i) := by
   rfl
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Right query on the logged stack, cache hit: cached value, logged, cache unchanged. -/
 private lemma loggedImpl_run_run_inr_some {ι : Type} {hashSpec : OracleSpec ι}
     [DecidableEq ι]
@@ -292,8 +281,6 @@ private lemma loggedImpl_run_run_inr_some {ι : Type} {hashSpec : OracleSpec ι}
     QueryImpl.withCaching_run_some _ h, pure_bind]
   rfl
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Right query on the logged stack, cache miss: sample, log, cache the value. -/
 private lemma loggedImpl_run_run_inr_none {ι : Type} {hashSpec : OracleSpec ι}
     [DecidableEq ι]
@@ -314,8 +301,6 @@ private lemma loggedImpl_run_run_inr_none {ι : Type} {hashSpec : OracleSpec ι}
     (fun u : hashSpec.Range j => ((u, ([⟨j, u⟩] : QueryLog hashSpec)), c.cacheQuery j u))
     ($ᵗ hashSpec.Range j)).symm
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Left query on the unlogged stack: forwarded, cache unchanged. -/
 private lemma unloggedImpl_run_inl {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -326,8 +311,6 @@ private lemma unloggedImpl_run_inl {ι : Type} {hashSpec : OracleSpec ι} [Decid
   change (unifFwdImpl hashSpec i).run c = _
   simp [unifFwdImpl, StateT.run_monadLift, bind_pure_comp]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Right query on the unlogged stack, cache hit. -/
 private lemma unloggedImpl_run_inr_some {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -337,8 +320,6 @@ private lemma unloggedImpl_run_inr_some {ι : Type} {hashSpec : OracleSpec ι} [
       pure ((u, c) : (unifSpec + hashSpec).Range (Sum.inr j) × hashSpec.QueryCache) :=
   QueryImpl.withCaching_run_some (so := uniformSampleImpl) h
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Right query on the unlogged stack, cache miss. -/
 private lemma unloggedImpl_run_inr_none {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -348,8 +329,6 @@ private lemma unloggedImpl_run_inr_none {ι : Type} {hashSpec : OracleSpec ι} [
         (u, c.cacheQuery j u)) <$> ($ᵗ hashSpec.Range j) :=
   QueryImpl.withCaching_run_none (so := uniformSampleImpl) h
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Dropping the log.** Projecting away the query log from the logged run yields, as a
 plain `ProbComp` term equality, the unlogged run. -/
 private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
@@ -383,8 +362,6 @@ private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [Decidable
               erw [bind_map_left]
               exact bind_congr fun u => ih u (cache.cacheQuery j u)
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Expected payoffs that ignore the log coincide between the logged and unlogged runs. -/
 private theorem dropLog_expectedValue {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -396,8 +373,6 @@ private theorem dropLog_expectedValue {ι : Type} {hashSpec : OracleSpec ι} [De
         (fun w => f w.1 w.2) := by
   rw [← dropLog_run_eq oa cache, expectedValue_map]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Probabilities of events depending only on the value and the final cache agree between
 the logged and the unlogged run. -/
 private theorem dropLog_probEvent {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
@@ -420,8 +395,6 @@ index in its own commitment list; cells are indexed by `(comList, rep)`; and a
 commitment-list key dies (`ksDead`) once the cache holds two relevant records in the same
 cell with distinct challenges — exactly the event in which the online extractor succeeds. -/
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Relevance classifier for the supermartingale induction: the record carries the proof's
 statement and message tags, and its challenge–response pair σ-verifies against the
 commitment stored at its repetition index of its own commitment list. -/
@@ -430,8 +403,6 @@ private def ksRelevant (x : Stmt) (msg : M)
   t.stmt = x ∧ t.msg = msg ∧
     ∃ c, t.comList[(t.rep : ℕ)]? = some c ∧ σ.verify x c t.chal t.resp = true
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Deadness classifier: a commitment-list key is dead once the cache holds two relevant
 records at the same repetition with distinct challenges (the extractor's success event). -/
 private def ksDead (x : Stmt) (msg : M)
@@ -442,8 +413,6 @@ private def ksDead (x : Stmt) (msg : M)
       t.comList = k ∧ t'.comList = k ∧ t.rep = t'.rep ∧ t.chal ≠ t'.chal ∧
       cache t = some u ∧ cache t' = some u'
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Cell injectivity.** Under unique responses, two relevant records in the same cell
 (same commitment list and repetition) with the same challenge are equal: the commitment is
 determined by the cell, and the response by unique responses. -/
@@ -461,9 +430,9 @@ private lemma ksRelevant_cell_inj (hur : σ.UniqueResponses) (x : Stmt) (msg : M
   cases Option.some.inj (hc₁.symm.trans hc₂)
   exact congrArg (FischlinROInput.mk _ _ _ _ _) (hur _ c₁ _ rp₁ rp₂ hv₁ hv₂)
 
-omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- **Deadness is monotone** under caching: a cache update never erases an entry. -/
-private lemma ksDead_mono (x : Stmt) (msg : M)
+private lemma ksDead_mono [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
+    [DecidableEq Resp] [DecidableEq M] (x : Stmt) (msg : M)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (s : FischlinROInput Stmt Commit Chal Resp ρ M) (v : Fin (2 ^ b)) (k : List Commit)
     (h : ksDead σ ρ b M x msg cache k) :
@@ -480,10 +449,10 @@ private lemma ksDead_mono (x : Stmt) (msg : M)
   obtain ⟨w', hw'⟩ := hsome t' u' hct'
   exact ⟨t, t', w, w', h₁, h₂, h₃, h₄, h₅, h₆, hw, hw'⟩
 
-omit [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] in
 /-- **Kill step.** Caching a relevant record on top of a cached relevant record in the same
 cell with a different challenge makes the key dead. -/
-private lemma ksDead_kill (x : Stmt) (msg : M)
+private lemma ksDead_kill [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
+    [DecidableEq Resp] [DecidableEq M] (x : Stmt) (msg : M)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache)
     (t t' : FischlinROInput Stmt Commit Chal Resp ρ M) (u u' : Fin (2 ^ b))
     (hrel : ksRelevant σ ρ M x msg t) (hrel' : ksRelevant σ ρ M x msg t')
@@ -495,8 +464,6 @@ private lemma ksDead_kill (x : Stmt) (msg : M)
     QueryCache.cacheQuery_self cache t u,
     by rw [QueryCache.cacheQuery_of_ne _ _ hne]; exact hc'⟩
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Each per-repetition verification record of a σ-verifying proof is relevant. -/
 private lemma ksRelevant_record (x : Stmt) (msg : M) (π : FischlinProof Commit Chal Resp ρ)
     (i : Fin ρ) (hver : σ.verify x (π i).1 (π i).2.1 (π i).2.2 = true) :
@@ -505,8 +472,6 @@ private lemma ksRelevant_record (x : Stmt) (msg : M) (π : FischlinProof Commit 
   refine ⟨rfl, rfl, (π i).1, ?_, hver⟩
   rw [List.getElem?_ofFn, dite_eq_left i.isLt]
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- A relevant record at the proof's commitment list σ-verifies against the proof's
 commitment at the record's repetition. -/
 private lemma ksRelevant_verify_at (x : Stmt) (msg : M)
@@ -519,7 +484,11 @@ private lemma ksRelevant_verify_at (x : Stmt) (msg : M)
   cases Option.some.inj hc
   exact hv
 
-omit [SampleableType Chal] in
+section security
+
+variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
+  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
+
 /-- Leaf payoff of the knowledge-soundness induction: the acceptance probability of the
 Fischlin verifier on the final cache, gated by the cache-side pinning predicate
 `CachePinned` (the event that the extractor's log scan misses). -/
@@ -532,7 +501,6 @@ private noncomputable def ksLeaf (x : Stmt) (msg : M)
       ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
         σ hr ρ b S M).verify x msg π)).run' cache]
 
-omit [SampleableType Chal] in
 /-- **Per-leaf bound.** Under the generalized multi-record coupling invariant `INV'` for the
 Fischlin classifiers, the leaf payoff is at most the live multi-slot potential plus one fresh slot
 potential: when the scan misses (`CachePinned`), the verifier's acceptance probability is
@@ -622,7 +590,6 @@ private lemma fischlin_leaf_le (hur : σ.UniqueResponses) (x : Stmt) (msg : M)
     rw [hINV.untouched k₀ hk]
     exact le_add_self
 
-omit [SampleableType Chal] in
 /-- **Factoring the miss event through the logged run.** The probability that the verifier
 accepts while the extractor's scan misses equals the expected value, over the logged prover
 run, of the scan-miss indicator times the verifier's acceptance probability on the final
@@ -671,7 +638,6 @@ private lemma ksSample_probEvent_eq_expectedValue
     refine ENNReal.tsum_eq_zero.mpr fun vc => ?_
     rw [probEvent_pure, ite_eq_right (fun h => hfw h.2), mul_zero]
 
-omit [SampleableType Chal] in
 /-- **Support transfer.** On the support of the logged run, the extractor's scan-miss
 indicator coincides with the cache-side pinning predicate (`CachePinned`), turning the
 factored payoff into the log-free leaf `ksLeaf`. -/
@@ -702,7 +668,6 @@ private lemma EP_scanMiss_eq_EP_ksLeaf
   · rw [ite_eq_left hfw, ite_eq_left (hiff.mp hfw)]
   · rw [ite_eq_right hfw, ite_eq_right fun hp => hfw (hiff.mpr hp)]
 
-omit [SampleableType Chal] in
 /-- **Online-extraction reduction (Fischlin 2005, Theorem 2 core).** The Fischlin
 knowledge-soundness bad event — the verifier accepts the cheating prover's proof yet the online
 extractor recovers no
@@ -747,7 +712,6 @@ private lemma knowledgeSoundness_badEvent_le
   -- Step 6: evaluate the fresh slot potential `μ = smallSumCount / (2^b)^ρ`.
   rw [slotPsi_none, ← mul_div_assoc, Nat.cast_pow, Nat.cast_ofNat]
 
-omit [SampleableType Chal] in
 /-- Knowledge soundness of the Fischlin transform via online (straight-line) extraction
 (Fischlin 2005, Theorem 2).
 
