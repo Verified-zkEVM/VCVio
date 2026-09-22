@@ -56,8 +56,31 @@ namespace PRFTagReader
 
 section DirectCoupling
 
-variable {TagId Nonce Digest : Type}
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest : Type} {sessionsPerTag : ℕ}
+
+/-! ### Single-side reader cells -/
+
+/-- Single-side reader cells at a fixed transcript: the set of
+`((TagId × Fin sessionsPerTag) × Nonce)` cells the single-session reader inspects at
+`transcript`, namely `{((tag, sid), transcript.nonce) | tag, sid}`. -/
+def sReaderCellsFinset [Fintype TagId] [DecidableEq TagId] [DecidableEq Nonce]
+    (transcript : TagTranscript Nonce Digest) :
+    Finset ((TagId × Fin sessionsPerTag) × Nonce) :=
+  (Finset.univ : Finset (TagId × Fin sessionsPerTag)).image
+    (fun slot => (slot, transcript.nonce))
+
+/-- Single-side reader-cell cardinality: `|TagId| * sessionsPerTag`. -/
+lemma card_sReaderCellsFinset [Fintype TagId] [DecidableEq TagId] [DecidableEq Nonce]
+    (transcript : TagTranscript Nonce Digest) :
+    (sReaderCellsFinset (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) transcript).card =
+        Fintype.card TagId * sessionsPerTag := by
+  unfold sReaderCellsFinset
+  rw [Finset.card_image_of_injective _
+    (fun _ _ h => (Prod.mk.injEq _ _ _ _).mp h |>.1), Finset.card_univ,
+    Fintype.card_prod, Fintype.card_fin]
+
+variable [NeZero sessionsPerTag]
 
 /-! ### The cell-identification embedding -/
 
@@ -145,14 +168,6 @@ def mReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
     Finset (TagId × Nonce) :=
   (Finset.univ : Finset TagId).image (fun tag => (tag, transcript.nonce))
 
-/-- Single-side reader cells at a fixed transcript: the set of
-`((TagId × Fin sessionsPerTag) × Nonce)` cells the single-session reader inspects at
-`transcript`, namely `{((tag, sid), transcript.nonce) | tag, sid}`. -/
-def sReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
-    Finset ((TagId × Fin sessionsPerTag) × Nonce) :=
-  (Finset.univ : Finset (TagId × Fin sessionsPerTag)).image
-    (fun slot => (slot, transcript.nonce))
-
 /-- **Reader-cell inclusion under the embedding.** At any fixed transcript, the image of the
 multiple-side reader cells under `slotZeroEmbed` is contained in the single-side reader cells.
 
@@ -181,17 +196,6 @@ lemma card_mReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
   unfold mReaderCellsFinset
   rw [Finset.card_image_of_injective _
     (fun _ _ h => (Prod.mk.injEq _ _ _ _).mp h |>.1), Finset.card_univ]
-
-omit [NeZero sessionsPerTag] in
-/-- Single-side reader-cell cardinality: `|TagId| * sessionsPerTag`. -/
-lemma card_sReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
-    (sReaderCellsFinset (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) transcript).card =
-        Fintype.card TagId * sessionsPerTag := by
-  unfold sReaderCellsFinset
-  rw [Finset.card_image_of_injective _
-    (fun _ _ h => (Prod.mk.injEq _ _ _ _).mp h |>.1), Finset.card_univ,
-    Fintype.card_prod, Fintype.card_fin]
 
 end ReaderCells
 
@@ -242,10 +246,8 @@ lemma slotZeroSubTable_eq_projectTable_apply
 
 section TagCoupling
 
-variable [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest]
+variable [DecidableEq TagId] [Fintype TagId] [SampleableType Nonce] [DecidableEq Digest]
 
-omit [DecidableEq Nonce] in
 /-- **Tag-step first-session pointwise equality.** When the queried tag has no prior sessions
 (`s.sessionsUsed tag = 0`), the eager-table tag-handler outputs of the multiple-session world
 (running against the sub-table `slotZeroSubTable gS`) and the single-session world (running against

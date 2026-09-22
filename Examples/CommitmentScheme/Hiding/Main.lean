@@ -33,13 +33,9 @@ over the uniform salt is essential. -/
 
 open OracleSpec OracleComp ENNReal
 
-variable {M S C : Type}
-  [DecidableEq M] [DecidableEq S] [DecidableEq C]
-  [Fintype M] [Fintype S] [Finite C]
-  [Inhabited M] [Inhabited S] [Inhabited C]
+variable {M S C : Type} [Fintype S] [Finite C] [Inhabited S] [Inhabited C]
 
 attribute [local instance] Fintype.ofFinite
-omit [DecidableEq M] [DecidableEq S] [DecidableEq C] [Fintype M] [Inhabited M] in
 private lemma tvDist_liftComp_hidingAvgSpec {α : Type}
     (oa ob : OracleComp (CMOracle M S C) α) :
     tvDist
@@ -48,7 +44,8 @@ private lemma tvDist_liftComp_hidingAvgSpec {α : Type}
       tvDist oa ob := by
   rw [tvDist, tvDist, evalSPMF_liftComp, evalSPMF_liftComp]
 
-omit [Fintype M] [DecidableEq C] in
+variable [DecidableEq M] [DecidableEq S] [Inhabited M]
+
 /-- **Hiding bound (averaged technical form, Lemma cm-hiding).**
 
 For every `t`-query two-phase hiding adversary `A`, the average statistical
@@ -96,7 +93,6 @@ theorem hiding_bound_avg [Finite M] [MeasurableSpace C] [MeasurableSingletonClas
           (ne_top_of_le_ne_top ENNReal.coe_ne_top hsum)
           ENNReal.coe_ne_top).mpr hsum
 
-omit [Fintype M] [DecidableEq C] in
 /-- **Hiding bound (Lemma cm-hiding, packaged textbook form).**
 
 For every `t`-query two-phase hiding adversary `A`,

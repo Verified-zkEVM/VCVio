@@ -116,39 +116,36 @@ The Schnorr-specific inputs are exactly:
 
 @[expose] public section
 
-
 open OracleComp OracleSpec DiffieHellman
 open scoped ENNReal
 
 namespace Schnorr
 
-variable (F : Type) [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
-variable (G : Type) [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
+variable (F : Type) [Field F] [SampleableType F]
+variable (G : Type) [AddCommGroup G] [Module F G] [DecidableEq G]
 
 /-- Schnorr signature scheme: Fiat-Shamir applied to the Schnorr Σ-protocol
 with the discrete-log generable relation. The construction itself does not
 require a bijection between `F` and `G` via `· • g`; that hypothesis is only
 needed at the security theorem `signature_euf_cma`. -/
-def signature (g : G) (M : Type) [DecidableEq M] :
+def signature [SampleableType G] (g : G) (M : Type) [DecidableEq M] :
     SignatureAlg (OracleComp (unifSpec + (M × G →ₒ F)))
       (M := M) (PK := G) (SK := F) (S := G × F) :=
   FiatShamir (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
 
-omit [Fintype F] [DecidableEq F] in
 /-- Completeness of the Schnorr signature follows from completeness of the
 underlying Schnorr Σ-protocol via the generic Fiat-Shamir completeness theorem. -/
-theorem signature_complete (g : G) (M : Type) [DecidableEq M] :
+theorem signature_complete [SampleableType G] (g : G) (M : Type) [DecidableEq M] :
     SignatureAlg.PerfectlyComplete
       (signature F G g M)
       (FiatShamir.runtime (Commit := G) (Chal := F) M) :=
   FiatShamir.perfectlyCorrect _ _ M (Schnorr.sigma_complete F G g)
 
-omit [Fintype F] [SampleableType G] in
 /-- The DLog hard-relation experiment (`hardRelationExp` for `dlogGenerable`)
 and the textbook DLog experiment (`dlogExp`) are the same probability, given
 the bijection `· • g : F → G`. The factor of `g` ignored by the lifted
 `fun _ pk => red pk` reduction is harmless because `dlogExp` re-supplies it. -/
-private theorem hardRelationExp_dlogGenerable_eq_dlogExp
+private theorem hardRelationExp_dlogGenerable_eq_dlogExp [DecidableEq F]
     (g : G) (hg : Function.Bijective (· • g : F → G))
     (red : G → ProbComp F) :
     Pr[= true | hardRelationExp (dlogGenerable (F := F) g) red] =
@@ -161,6 +158,8 @@ private theorem hardRelationExp_dlogGenerable_eq_dlogExp
     simp [hardRelationExp, dlogGenerable]]
   exact probOutput_bind_congr' _ true fun x =>
     probOutput_bind_congr' _ true fun sk => by simp [hg.1.eq_iff]
+
+variable [DecidableEq F] [SampleableType G]
 
 /-- DLog adversary built from a Schnorr EUF-CMA adversary: the Fiat-Shamir witness finder
 `FiatShamir.cmaReduction` for the Schnorr Σ-protocol and the Schnorr HVZK simulator, run on the
@@ -201,7 +200,7 @@ Three Schnorr-specific facts feed in:
 
 The result is delivered in the textbook DLog form `dlogExp g (dlogReduction F G g M adv qH)`
 via the conversion `hardRelationExp_dlogGenerable_eq_dlogExp`. -/
-theorem signature_euf_cma (g : G)
+theorem signature_euf_cma [Fintype F] (g : G)
     (hg : Function.Bijective (· • g : F → G))
     (M : Type) [DecidableEq M]
     (adv : SignatureAlg.unforgeableAdv (signature F G g M))

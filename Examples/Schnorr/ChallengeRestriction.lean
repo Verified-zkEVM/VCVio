@@ -25,8 +25,21 @@ open OracleComp OracleSpec MeasureTheory ProbabilityTheory
 namespace Schnorr
 
 variable (F : Type) [Field F] [SampleableType F]
-variable (G : Type) [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
+variable (G : Type) [AddCommGroup G] [Module F G]
 variable {C : Type}
+
+/-- Simulate a transcript using a challenge in `C` and a uniform scalar response. -/
+@[expose]
+def restrictedSimTranscript [SampleableType C]
+    (g : G) (encode : C → F) (pk : G) : ProbComp (G × C × F) := do
+  let c ← $ᵗ C
+  let z ← $ᵗ F
+  return (z • g - encode c • pk, c, z)
+
+@[simp] theorem restrictedSimTranscript_id (g : G) (pk : G) :
+    restrictedSimTranscript F G g id pk = simTranscript F G g pk := rfl
+
+variable [SampleableType G] [DecidableEq G]
 
 /-- Schnorr's original algorithms, with challenges encoded in the scalar field. -/
 @[expose]
@@ -55,18 +68,6 @@ theorem restrictedSigma_uniqueResponses (g : G) (encode : C → F)
   intro pk pc c z₁ z₂ hv₁ hv₂
   apply hg
   exact (of_decide_eq_true hv₁).trans (of_decide_eq_true hv₂).symm
-
-/-- Simulate a transcript using a challenge in `C` and a uniform scalar response. -/
-@[expose]
-def restrictedSimTranscript [SampleableType C]
-    (g : G) (encode : C → F) (pk : G) : ProbComp (G × C × F) := do
-  let c ← $ᵗ C
-  let z ← $ᵗ F
-  return (z • g - encode c • pk, c, z)
-
-omit [SampleableType G] [DecidableEq G] in
-@[simp] theorem restrictedSimTranscript_id (g : G) (pk : G) :
-    restrictedSimTranscript F G g id pk = simTranscript F G g pk := rfl
 
 private theorem evalDist_uniformPair_map
     {A B T : Type} [SampleableType A] [SampleableType B]

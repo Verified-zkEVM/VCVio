@@ -24,11 +24,251 @@ namespace PRFTagReader
 
 section UnlinkReduction
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
+
+/-! ### Reduction handler normal forms
+
+Explicit forms of the pure reduction handlers on each oracle query; each lemma names only the
+structure its handler branch uses. -/
+
+/-- Reduced form of the multiple-session reduction tag handler when the slot budget is exhausted. -/
+lemma unlinkToMultiplePRFTagImpl_run_of_not_lt [DecidableEq TagId] [SampleableType Nonce]
+    (tag : TagId) (s : UnlinkState TagId)
+    (hslot : ¬ s.sessionsUsed tag < sessionsPerTag) :
+    (unlinkToMultiplePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) tag).run s = pure (none, s) := by
+  unfold unlinkToMultiplePRFTagImpl
+  simp [hslot]
+
+/-- Reduced form of the multiple-session reduction tag handler when a slot is available: sample a
+nonce, query the PRF oracle at `(tag, nonce)`, advance the session counter. -/
+lemma unlinkToMultiplePRFTagImpl_run_of_lt [DecidableEq TagId] [SampleableType Nonce]
+    (tag : TagId) (s : UnlinkState TagId)
+    (hslot : s.sessionsUsed tag < sessionsPerTag) :
+    (unlinkToMultiplePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) tag).run s =
+      (OracleComp.liftComp (spec := unifSpec)
+          (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce)) >>= fun nonce =>
+        PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) (tag, nonce) >>= fun auth =>
+          pure (some (⟨nonce, auth⟩ : TagTranscript Nonce Digest),
+            { s with sessionsUsed :=
+              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) := by
+  unfold unlinkToMultiplePRFTagImpl
+  simp [hslot]
+
+/-- Reduced form of the multiple-session reduction reader handler: query the PRF oracle at
+`(tag, transcript.nonce)` for every tag, then return acceptance; the state is untouched. -/
+lemma unlinkToMultiplePRFReaderImpl_run [Fintype TagId] [DecidableEq Digest]
+    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId) :
+    (unlinkToMultiplePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      transcript).run s =
+      ((Finset.univ : Finset TagId).toList.mapM
+        (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
+        (fun tag => PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
+          (tag, transcript.nonce))) >>= fun digests =>
+        pure (ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth)), s) := by
+  unfold unlinkToMultiplePRFReaderImpl
+  simp
+
+/-- Reduced form of the single-session reduction tag handler when the slot budget is exhausted. -/
+lemma unlinkToSinglePRFTagImpl_run_of_not_lt [DecidableEq TagId] [SampleableType Nonce]
+    (tag : TagId) (s : UnlinkState TagId)
+    (hslot : ¬ s.sessionsUsed tag < sessionsPerTag) :
+    (unlinkToSinglePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) tag).run s = pure (none, s) := by
+  unfold unlinkToSinglePRFTagImpl
+  simp [hslot]
+
+/-- Reduced form of the single-session reduction tag handler when a slot is available: sample a
+nonce, query the PRF oracle at `((tag, sid), nonce)`, advance the session counter. -/
+lemma unlinkToSinglePRFTagImpl_run_of_lt [DecidableEq TagId] [SampleableType Nonce]
+    (tag : TagId) (s : UnlinkState TagId)
+    (hslot : s.sessionsUsed tag < sessionsPerTag) :
+    (unlinkToSinglePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) tag).run s =
+      (OracleComp.liftComp (spec := unifSpec)
+          (superSpec := unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest))
+          ($ᵗ Nonce)) >>= fun nonce =>
+        PRFScheme.functionQuery (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+          ((tag, ⟨s.sessionsUsed tag, hslot⟩), nonce) >>= fun auth =>
+          pure (some (⟨nonce, auth⟩ : TagTranscript Nonce Digest),
+            { s with sessionsUsed :=
+              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) := by
+  unfold unlinkToSinglePRFTagImpl
+  simp [hslot]
+
+/-- Reduced form of the single-session reduction reader handler: query the PRF oracle at
+`(slot, transcript.nonce)` for every tag/session slot, then return acceptance; state untouched. -/
+lemma unlinkToSinglePRFReaderImpl_run [Fintype TagId] [DecidableEq Digest]
+    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId) :
+    (unlinkToSinglePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) transcript).run s =
+      ((Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.mapM
+        (m := OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))
+        (fun slot => PRFScheme.functionQuery
+          (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+          (slot, transcript.nonce))) >>= fun digests =>
+        pure (ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth)), s) := by
+  unfold unlinkToSinglePRFReaderImpl
+  simp
+
+/-! ### The lazy random oracle on reduction queries
+
+`idealCacheStep` is the lazy-random-oracle answer at one domain point and `idealCacheMapM` its
+fold over a list; the lemmas evaluate `prfIdealQueryImpl` on the reduction handlers. -/
+
+/-- The lazy-random-oracle answer to a PRF-oracle query on domain point `d` against cache `c`:
+return the cached digest, or sample a fresh one and insert it. -/
+noncomputable def idealCacheStep [SampleableType Digest] {D : Type} [DecidableEq D]
+    (c : (D →ₒ Digest).QueryCache) (d : D) :
+    ProbComp (Digest × (D →ₒ Digest).QueryCache) :=
+  match c d with
+  | some u => pure (u, c)
+  | none => ($ᵗ Digest) >>= fun u => pure (u, c.cacheQuery d u)
+
+/-- Simulating a left-injected (uniform-sampling) query through `prfIdealQueryImpl` discards the
+cache and reduces to the plain probabilistic computation. -/
+lemma simulateQ_prfIdeal_liftComp [SampleableType Digest]
+    {D : Type} [DecidableEq D] {α : Type}
+    (oa : ProbComp α) (c : (D →ₒ Digest).QueryCache) :
+    (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
+        (OracleComp.liftComp oa (unifSpec + (D →ₒ Digest)))).run c =
+      oa >>= fun a => pure (a, c) := by
+  simp [PRFScheme.prfIdealQueryImpl, QueryImpl.simulateQ_add_liftM_left,
+    QueryImpl.simulateQ_toQueryImpl, StateT.run_monadLift]
+
+/-- Simulating a right-injected (PRF-function) query through `prfIdealQueryImpl` consults the
+lazy random oracle: `idealCacheStep`. -/
+lemma simulateQ_prfIdeal_query_inr [SampleableType Digest]
+    {D : Type} [DecidableEq D]
+    (d : D) (c : (D →ₒ Digest).QueryCache) :
+    (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
+        (PRFScheme.functionQuery (D := D) (R := Digest) d)).run c =
+      idealCacheStep c d := by
+  rw [PRFScheme.simulateQ_prfIdealQueryImpl_functionQuery]
+  rw [randomOracle.run_eq]
+  unfold idealCacheStep
+  cases h : c d <;> simp only [OracleSpec.Range, OracleSpec.ofFn]
+
+/-- Folding the lazy-random-oracle lookup `idealCacheStep` over a list of domain points, threading
+the cache: this is the reader-oracle's behaviour under `prfIdealQueryImpl`. -/
+noncomputable def idealCacheMapM [SampleableType Digest] {D : Type} [DecidableEq D]
+    (l : List D) (c : (D →ₒ Digest).QueryCache) :
+    ProbComp (List Digest × (D →ₒ Digest).QueryCache) :=
+  match l with
+  | [] => pure ([], c)
+  | d :: ds => idealCacheStep c d >>= fun r =>
+      idealCacheMapM ds r.2 >>= fun rs => pure (r.1 :: rs.1, rs.2)
+
+/-- Simulating a `mapM` of right-injected PRF-oracle queries (with domain points `f a`) through
+`prfIdealQueryImpl` folds the lazy random oracle over `l.map f`: `idealCacheMapM`. -/
+lemma simulateQ_prfIdeal_run_mapM [SampleableType Digest]
+    {D α : Type} [DecidableEq D]
+    (f : α → D) (l : List α) (c : (D →ₒ Digest).QueryCache) :
+    (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
+        (l.mapM (m := OracleComp (PRFScheme.PRFOracleSpec D Digest))
+          (fun a => PRFScheme.functionQuery (D := D) (R := Digest) (f a)))).run c =
+      idealCacheMapM (l.map f) c := by
+  induction l generalizing c with
+  | nil => simp [idealCacheMapM]
+  | cons a as ih =>
+    rw [List.mapM_cons, List.map_cons]
+    erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_query_inr]
+    rw [idealCacheMapM]
+    refine bind_congr fun r => ?_
+    erw [simulateQ_bind, StateT.run_bind, ih]
+    refine bind_congr fun rs => ?_
+    erw [simulateQ_pure, StateT.run_pure]
+
+/-- Running the multiple-session reduction tag handler (slot available) through the lazy random
+oracle: sample a nonce, consult the cache at `(tag, nonce)` via `idealCacheStep`, and advance the
+session counter. The proof uses `erw` to bridge the reducible-defeq gap between the unfolded spec
+`unifSpec + ((TagId × Nonce) →ₒ Digest)` and `PRFScheme.PRFOracleSpec (TagId × Nonce) Digest`. -/
+lemma simulateQ_prfIdeal_unlinkToMultiplePRFTagImpl_run_of_lt [DecidableEq TagId]
+    [DecidableEq Nonce] [SampleableType Nonce] [SampleableType Digest]
+    (tag : TagId) (s : UnlinkState TagId)
+    (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
+    (hslot : s.sessionsUsed tag < sessionsPerTag) :
+    (simulateQ (PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest))
+        ((unlinkToMultiplePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+          (sessionsPerTag := sessionsPerTag) tag).run s)).run c =
+      ($ᵗ Nonce) >>= fun nonce =>
+        idealCacheStep c (tag, nonce) >>= fun r =>
+          pure ((some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest),
+            { s with sessionsUsed :=
+              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }), r.2) := by
+  rw [unlinkToMultiplePRFTagImpl_run_of_lt tag s hslot]
+  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_liftComp, bind_assoc]
+  refine bind_congr fun nonce => ?_
+  rw [pure_bind]
+  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_query_inr]
+  refine bind_congr fun r => ?_
+  erw [simulateQ_pure, StateT.run_pure]
+
+/-- Running the multiple-session reduction reader handler through the lazy random oracle: fold
+`idealCacheStep` over the `(tag, transcript.nonce)` domain points, then return acceptance. -/
+lemma simulateQ_prfIdeal_unlinkToMultiplePRFReaderImpl_run [DecidableEq TagId] [Fintype TagId]
+    [DecidableEq Nonce] [DecidableEq Digest] [SampleableType Digest]
+    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId)
+    (c : ((TagId × Nonce) →ₒ Digest).QueryCache) :
+    (simulateQ (PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest))
+        ((unlinkToMultiplePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+          transcript).run s)).run c =
+      idealCacheMapM ((Finset.univ : Finset TagId).toList.map
+          (fun tag => (tag, transcript.nonce))) c >>= fun rs =>
+        pure ((ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s), rs.2) := by
+  rw [unlinkToMultiplePRFReaderImpl_run transcript s]
+  erw [simulateQ_bind, StateT.run_bind,
+    simulateQ_prfIdeal_run_mapM (fun tag => (tag, transcript.nonce))]
+  refine bind_congr fun rs => ?_
+  erw [simulateQ_pure, StateT.run_pure]
+
+/-- Running the single-session reduction tag handler (slot available) through the lazy random
+oracle: sample a nonce, consult the cache at `((tag, sid), nonce)` via `idealCacheStep`, advance
+the session counter. -/
+lemma simulateQ_prfIdeal_unlinkToSinglePRFTagImpl_run_of_lt [DecidableEq TagId] [DecidableEq Nonce]
+    [SampleableType Nonce] [SampleableType Digest]
+    (tag : TagId) (s : UnlinkState TagId)
+    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
+    (hslot : s.sessionsUsed tag < sessionsPerTag) :
+    (simulateQ (PRFScheme.prfIdealQueryImpl (D := (TagId × Fin sessionsPerTag) × Nonce)
+        (R := Digest))
+        ((unlinkToSinglePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+          (sessionsPerTag := sessionsPerTag) tag).run s)).run c =
+      ($ᵗ Nonce) >>= fun nonce =>
+        idealCacheStep c ((tag, ⟨s.sessionsUsed tag, hslot⟩), nonce) >>= fun r =>
+          pure ((some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest),
+            { s with sessionsUsed :=
+              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }), r.2) := by
+  rw [unlinkToSinglePRFTagImpl_run_of_lt tag s hslot]
+  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_liftComp, bind_assoc]
+  refine bind_congr fun nonce => ?_
+  rw [pure_bind]
+  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_query_inr]
+  refine bind_congr fun r => ?_
+  erw [simulateQ_pure, StateT.run_pure]
+
+/-- Running the single-session reduction reader handler through the lazy random oracle: fold
+`idealCacheStep` over the `(slot, transcript.nonce)` domain points, then return acceptance. -/
+lemma simulateQ_prfIdeal_unlinkToSinglePRFReaderImpl_run [DecidableEq TagId] [Fintype TagId]
+    [DecidableEq Nonce] [DecidableEq Digest] [SampleableType Digest]
+    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId)
+    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache) :
+    (simulateQ (PRFScheme.prfIdealQueryImpl (D := (TagId × Fin sessionsPerTag) × Nonce)
+        (R := Digest))
+        ((unlinkToSinglePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+          (sessionsPerTag := sessionsPerTag) transcript).run s)).run c =
+      idealCacheMapM ((Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.map
+          (fun slot => (slot, transcript.nonce))) c >>= fun rs =>
+        pure ((ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s), rs.2) := by
+  rw [unlinkToSinglePRFReaderImpl_run transcript s]
+  erw [simulateQ_bind, StateT.run_bind,
+    simulateQ_prfIdeal_run_mapM (fun slot => (slot, transcript.nonce))]
+  refine bind_congr fun rs => ?_
+  erw [simulateQ_pure, StateT.run_pure]
+
+variable [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
   [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
 
 /-! ### Composed ideal-world handlers
 
@@ -50,7 +290,6 @@ noncomputable def multipleIdealQueryImpl :
         (sessionsPerTag := sessionsPerTag) q).run p.1)).run p.2
     return (r.1.1, (r.1.2, r.2))
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The nested simulation defining the multiple-session ideal experiment collapses to a single
 `simulateQ` of `multipleIdealQueryImpl`, up to reassociating the product state. -/
 lemma simulateQ_multipleIdeal_collapse
@@ -81,7 +320,6 @@ noncomputable def singleIdealQueryImpl :
         (sessionsPerTag := sessionsPerTag) q).run p.1)).run p.2
     return (r.1.1, (r.1.2, r.2))
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The nested simulation defining the single-session ideal experiment collapses to a single
 `simulateQ` of `singleIdealQueryImpl`, up to reassociating the product state. -/
 lemma simulateQ_singleIdeal_collapse
@@ -102,7 +340,6 @@ lemma simulateQ_singleIdeal_collapse
       simp [singleIdealQueryImpl])
     adv s c
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The multiple-session ideal-PRF experiment is the composed handler `multipleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
 lemma prfIdealExp_unlinkToMultiplePRFReduction_eq_run'
@@ -116,7 +353,6 @@ lemma prfIdealExp_unlinkToMultiplePRFReduction_eq_run'
   rw [simulateQ_multipleIdeal_collapse adv UnlinkState.init ∅]
   simp only [Functor.map_map]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The single-session ideal-PRF experiment is the composed handler `singleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
 lemma prfIdealExp_unlinkToSinglePRFReduction_eq_run'
@@ -136,116 +372,6 @@ The `*IdealQueryImpl` handlers are `simulateQ`-wrappers; the lemmas below give t
 reduced forms on each oracle query, so that a coupling induction can reason about them concretely.
 The lazy-random-oracle lookup at a domain point is exposed via `QueryCache` operations. -/
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Nonce] [DecidableEq Digest]
-  [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- Reduced form of the multiple-session reduction tag handler when the slot budget is exhausted. -/
-lemma unlinkToMultiplePRFTagImpl_run_of_not_lt (tag : TagId) (s : UnlinkState TagId)
-    (hslot : ¬ s.sessionsUsed tag < sessionsPerTag) :
-    (unlinkToMultiplePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) tag).run s = pure (none, s) := by
-  unfold unlinkToMultiplePRFTagImpl
-  simp [hslot]
-
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Nonce] [DecidableEq Digest]
-  [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- Reduced form of the multiple-session reduction tag handler when a slot is available: sample a
-nonce, query the PRF oracle at `(tag, nonce)`, advance the session counter. -/
-lemma unlinkToMultiplePRFTagImpl_run_of_lt (tag : TagId) (s : UnlinkState TagId)
-    (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    (unlinkToMultiplePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) tag).run s =
-      (OracleComp.liftComp (spec := unifSpec)
-          (superSpec := unifSpec + ((TagId × Nonce) →ₒ Digest)) ($ᵗ Nonce)) >>= fun nonce =>
-        PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest) (tag, nonce) >>= fun auth =>
-          pure (some (⟨nonce, auth⟩ : TagTranscript Nonce Digest),
-            { s with sessionsUsed :=
-              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) := by
-  unfold unlinkToMultiplePRFTagImpl
-  simp [hslot]
-
-/-- The lazy-random-oracle answer to a PRF-oracle query on domain point `d` against cache `c`:
-return the cached digest, or sample a fresh one and insert it. -/
-noncomputable def idealCacheStep {D : Type} [DecidableEq D]
-    (c : (D →ₒ Digest).QueryCache) (d : D) :
-    ProbComp (Digest × (D →ₒ Digest).QueryCache) :=
-  match c d with
-  | some u => pure (u, c)
-  | none => ($ᵗ Digest) >>= fun u => pure (u, c.cacheQuery d u)
-
-omit [DecidableEq TagId] [Fintype TagId] [Nonempty TagId] [SampleableType Nonce]
-  [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- Simulating a left-injected (uniform-sampling) query through `prfIdealQueryImpl` discards the
-cache and reduces to the plain probabilistic computation. -/
-lemma simulateQ_prfIdeal_liftComp {D : Type} [DecidableEq D] {α : Type}
-    (oa : ProbComp α) (c : (D →ₒ Digest).QueryCache) :
-    (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
-        (OracleComp.liftComp oa (unifSpec + (D →ₒ Digest)))).run c =
-      oa >>= fun a => pure (a, c) := by
-  simp [PRFScheme.prfIdealQueryImpl, QueryImpl.simulateQ_add_liftM_left,
-    QueryImpl.simulateQ_toQueryImpl, StateT.run_monadLift]
-
-omit [DecidableEq TagId] [Fintype TagId] [Nonempty TagId] [SampleableType Nonce]
-  [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- Simulating a right-injected (PRF-function) query through `prfIdealQueryImpl` consults the
-lazy random oracle: `idealCacheStep`. -/
-lemma simulateQ_prfIdeal_query_inr {D : Type} [DecidableEq D]
-    (d : D) (c : (D →ₒ Digest).QueryCache) :
-    (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
-        (PRFScheme.functionQuery (D := D) (R := Digest) d)).run c =
-      idealCacheStep c d := by
-  rw [PRFScheme.simulateQ_prfIdealQueryImpl_functionQuery]
-  rw [randomOracle.run_eq]
-  unfold idealCacheStep
-  cases h : c d <;> simp only [OracleSpec.Range, OracleSpec.ofFn]
-
-/-- Folding the lazy-random-oracle lookup `idealCacheStep` over a list of domain points, threading
-the cache: this is the reader-oracle's behaviour under `prfIdealQueryImpl`. -/
-noncomputable def idealCacheMapM {D : Type} [DecidableEq D]
-    (l : List D) (c : (D →ₒ Digest).QueryCache) :
-    ProbComp (List Digest × (D →ₒ Digest).QueryCache) :=
-  match l with
-  | [] => pure ([], c)
-  | d :: ds => idealCacheStep c d >>= fun r =>
-      idealCacheMapM ds r.2 >>= fun rs => pure (r.1 :: rs.1, rs.2)
-
-omit [DecidableEq TagId] [Fintype TagId] [Nonempty TagId] [SampleableType Nonce]
-  [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- Simulating a `mapM` of right-injected PRF-oracle queries (with domain points `f a`) through
-`prfIdealQueryImpl` folds the lazy random oracle over `l.map f`: `idealCacheMapM`. -/
-lemma simulateQ_prfIdeal_run_mapM {D α : Type} [DecidableEq D]
-    (f : α → D) (l : List α) (c : (D →ₒ Digest).QueryCache) :
-    (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
-        (l.mapM (m := OracleComp (PRFScheme.PRFOracleSpec D Digest))
-          (fun a => PRFScheme.functionQuery (D := D) (R := Digest) (f a)))).run c =
-      idealCacheMapM (l.map f) c := by
-  induction l generalizing c with
-  | nil => simp [idealCacheMapM]
-  | cons a as ih =>
-    rw [List.mapM_cons, List.map_cons]
-    erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_query_inr]
-    rw [idealCacheMapM]
-    refine bind_congr fun r => ?_
-    erw [simulateQ_bind, StateT.run_bind, ih]
-    refine bind_congr fun rs => ?_
-    erw [simulateQ_pure, StateT.run_pure]
-
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- Reduced form of the multiple-session reduction reader handler: query the PRF oracle at
-`(tag, transcript.nonce)` for every tag, then return acceptance; the state is untouched. -/
-lemma unlinkToMultiplePRFReaderImpl_run
-    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId) :
-    (unlinkToMultiplePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      transcript).run s =
-      ((Finset.univ : Finset TagId).toList.mapM
-        (m := OracleComp (unifSpec + ((TagId × Nonce) →ₒ Digest)))
-        (fun tag => PRFScheme.functionQuery (D := TagId × Nonce) (R := Digest)
-          (tag, transcript.nonce))) >>= fun digests =>
-        pure (ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth)), s) := by
-  unfold unlinkToMultiplePRFReaderImpl
-  simp
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Multiple-session ideal handler on a tag query whose slot budget is exhausted: returns `none`,
 state unchanged. -/
 lemma multipleIdealQueryImpl_tag_run_of_not_lt (tag : TagId) (s : UnlinkState TagId)
@@ -261,32 +387,6 @@ lemma multipleIdealQueryImpl_tag_run_of_not_lt (tag : TagId) (s : UnlinkState Ta
   rw [unlinkToMultiplePRFTagImpl_run_of_not_lt tag s hslot]
   rfl
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- Running the multiple-session reduction tag handler (slot available) through the lazy random
-oracle: sample a nonce, consult the cache at `(tag, nonce)` via `idealCacheStep`, and advance the
-session counter. The proof uses `erw` to bridge the reducible-defeq gap between the unfolded spec
-`unifSpec + ((TagId × Nonce) →ₒ Digest)` and `PRFScheme.PRFOracleSpec (TagId × Nonce) Digest`. -/
-lemma simulateQ_prfIdeal_unlinkToMultiplePRFTagImpl_run_of_lt
-    (tag : TagId) (s : UnlinkState TagId)
-    (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
-    (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    (simulateQ (PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest))
-        ((unlinkToMultiplePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) tag).run s)).run c =
-      ($ᵗ Nonce) >>= fun nonce =>
-        idealCacheStep c (tag, nonce) >>= fun r =>
-          pure ((some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest),
-            { s with sessionsUsed :=
-              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }), r.2) := by
-  rw [unlinkToMultiplePRFTagImpl_run_of_lt tag s hslot]
-  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_liftComp, bind_assoc]
-  refine bind_congr fun nonce => ?_
-  rw [pure_bind]
-  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_query_inr]
-  refine bind_congr fun r => ?_
-  erw [simulateQ_pure, StateT.run_pure]
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Multiple-session ideal handler on a tag query with a free slot: sample a nonce, consult the
 random-oracle cache at `(tag, nonce)` via `idealCacheStep`, advance the session counter. -/
 lemma multipleIdealQueryImpl_tag_run_of_lt (tag : TagId) (s : UnlinkState TagId)
@@ -307,25 +407,6 @@ lemma multipleIdealQueryImpl_tag_run_of_lt (tag : TagId) (s : UnlinkState TagId)
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
   simp [simulateQ_prfIdeal_unlinkToMultiplePRFTagImpl_run_of_lt tag s c hslot]
 
-omit [Nonempty TagId] [SampleableType Nonce] [NeZero sessionsPerTag] in
-/-- Running the multiple-session reduction reader handler through the lazy random oracle: fold
-`idealCacheStep` over the `(tag, transcript.nonce)` domain points, then return acceptance. -/
-lemma simulateQ_prfIdeal_unlinkToMultiplePRFReaderImpl_run
-    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId)
-    (c : ((TagId × Nonce) →ₒ Digest).QueryCache) :
-    (simulateQ (PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest))
-        ((unlinkToMultiplePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          transcript).run s)).run c =
-      idealCacheMapM ((Finset.univ : Finset TagId).toList.map
-          (fun tag => (tag, transcript.nonce))) c >>= fun rs =>
-        pure ((ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s), rs.2) := by
-  rw [unlinkToMultiplePRFReaderImpl_run transcript s]
-  erw [simulateQ_bind, StateT.run_bind,
-    simulateQ_prfIdeal_run_mapM (fun tag => (tag, transcript.nonce))]
-  refine bind_congr fun rs => ?_
-  erw [simulateQ_pure, StateT.run_pure]
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Multiple-session ideal handler on a reader query: fold `idealCacheStep` over the
 `(tag, transcript.nonce)` domain points and return reader acceptance. -/
 lemma multipleIdealQueryImpl_reader_run
@@ -345,61 +426,6 @@ lemma multipleIdealQueryImpl_reader_run
 
 /-! ### Per-query reduction lemmas, single-session ideal handler -/
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Nonce] [DecidableEq Digest]
-  [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- Reduced form of the single-session reduction tag handler when the slot budget is exhausted. -/
-lemma unlinkToSinglePRFTagImpl_run_of_not_lt (tag : TagId) (s : UnlinkState TagId)
-    (hslot : ¬ s.sessionsUsed tag < sessionsPerTag) :
-    (unlinkToSinglePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) tag).run s = pure (none, s) := by
-  unfold unlinkToSinglePRFTagImpl
-  simp [hslot]
-
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Nonce] [DecidableEq Digest]
-  [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- Reduced form of the single-session reduction tag handler when a slot is available: sample a
-nonce, query the PRF oracle at `((tag, sid), nonce)`, advance the session counter. -/
-lemma unlinkToSinglePRFTagImpl_run_of_lt (tag : TagId) (s : UnlinkState TagId)
-    (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    (unlinkToSinglePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) tag).run s =
-      (OracleComp.liftComp (spec := unifSpec)
-          (superSpec := unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest))
-          ($ᵗ Nonce)) >>= fun nonce =>
-        PRFScheme.functionQuery (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
-          ((tag, ⟨s.sessionsUsed tag, hslot⟩), nonce) >>= fun auth =>
-          pure (some (⟨nonce, auth⟩ : TagTranscript Nonce Digest),
-            { s with sessionsUsed :=
-              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) := by
-  unfold unlinkToSinglePRFTagImpl
-  simp [hslot]
-
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- Running the single-session reduction tag handler (slot available) through the lazy random
-oracle: sample a nonce, consult the cache at `((tag, sid), nonce)` via `idealCacheStep`, advance
-the session counter. -/
-lemma simulateQ_prfIdeal_unlinkToSinglePRFTagImpl_run_of_lt
-    (tag : TagId) (s : UnlinkState TagId)
-    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
-    (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    (simulateQ (PRFScheme.prfIdealQueryImpl (D := (TagId × Fin sessionsPerTag) × Nonce)
-        (R := Digest))
-        ((unlinkToSinglePRFTagImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) tag).run s)).run c =
-      ($ᵗ Nonce) >>= fun nonce =>
-        idealCacheStep c ((tag, ⟨s.sessionsUsed tag, hslot⟩), nonce) >>= fun r =>
-          pure ((some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest),
-            { s with sessionsUsed :=
-              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }), r.2) := by
-  rw [unlinkToSinglePRFTagImpl_run_of_lt tag s hslot]
-  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_liftComp, bind_assoc]
-  refine bind_congr fun nonce => ?_
-  rw [pure_bind]
-  erw [simulateQ_bind, StateT.run_bind, simulateQ_prfIdeal_query_inr]
-  refine bind_congr fun r => ?_
-  erw [simulateQ_pure, StateT.run_pure]
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Single-session ideal handler on a tag query whose slot budget is exhausted: returns `none`,
 state unchanged. -/
 lemma singleIdealQueryImpl_tag_run_of_not_lt (tag : TagId) (s : UnlinkState TagId)
@@ -415,7 +441,6 @@ lemma singleIdealQueryImpl_tag_run_of_not_lt (tag : TagId) (s : UnlinkState TagI
   rw [unlinkToSinglePRFTagImpl_run_of_not_lt tag s hslot]
   rfl
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Single-session ideal handler on a tag query with a free slot: sample a nonce, consult the
 random-oracle cache at `((tag, sid), nonce)` via `idealCacheStep`, advance the session counter. -/
 lemma singleIdealQueryImpl_tag_run_of_lt (tag : TagId) (s : UnlinkState TagId)
@@ -435,43 +460,6 @@ lemma singleIdealQueryImpl_tag_run_of_lt (tag : TagId) (s : UnlinkState TagId)
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
   simp [simulateQ_prfIdeal_unlinkToSinglePRFTagImpl_run_of_lt tag s c hslot]
 
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- Reduced form of the single-session reduction reader handler: query the PRF oracle at
-`(slot, transcript.nonce)` for every tag/session slot, then return acceptance; state untouched. -/
-lemma unlinkToSinglePRFReaderImpl_run
-    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId) :
-    (unlinkToSinglePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) transcript).run s =
-      ((Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.mapM
-        (m := OracleComp (unifSpec + (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest)))
-        (fun slot => PRFScheme.functionQuery
-          (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
-          (slot, transcript.nonce))) >>= fun digests =>
-        pure (ReaderReply.ofBool (decide (∃ d ∈ digests, d = transcript.auth)), s) := by
-  unfold unlinkToSinglePRFReaderImpl
-  simp
-
-omit [Nonempty TagId] [SampleableType Nonce] [NeZero sessionsPerTag] in
-/-- Running the single-session reduction reader handler through the lazy random oracle: fold
-`idealCacheStep` over the `(slot, transcript.nonce)` domain points, then return acceptance. -/
-lemma simulateQ_prfIdeal_unlinkToSinglePRFReaderImpl_run
-    (transcript : TagTranscript Nonce Digest) (s : UnlinkState TagId)
-    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache) :
-    (simulateQ (PRFScheme.prfIdealQueryImpl (D := (TagId × Fin sessionsPerTag) × Nonce)
-        (R := Digest))
-        ((unlinkToSinglePRFReaderImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) transcript).run s)).run c =
-      idealCacheMapM ((Finset.univ : Finset (TagId × Fin sessionsPerTag)).toList.map
-          (fun slot => (slot, transcript.nonce))) c >>= fun rs =>
-        pure ((ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s), rs.2) := by
-  rw [unlinkToSinglePRFReaderImpl_run transcript s]
-  erw [simulateQ_bind, StateT.run_bind,
-    simulateQ_prfIdeal_run_mapM (fun slot => (slot, transcript.nonce))]
-  refine bind_congr fun rs => ?_
-  erw [simulateQ_pure, StateT.run_pure]
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Single-session ideal handler on a reader query: fold `idealCacheStep` over the
 `(slot, transcript.nonce)` domain points and return reader acceptance. -/
 lemma singleIdealQueryImpl_reader_run
@@ -489,7 +477,6 @@ lemma singleIdealQueryImpl_reader_run
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
   simp [simulateQ_prfIdeal_unlinkToSinglePRFReaderImpl_run transcript s c]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Base case of the multiple-vs-single ideal-world coupling induction: on a `pure`
 adversary the multiple- and single-session ideal handlers return the same bit, so the
 multiple-world success probability is trivially bounded by the single-world one plus the

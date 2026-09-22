@@ -71,13 +71,12 @@ structure AsymptoticInstance
 namespace AsymptoticInstance
 
 variable {TagId Nonce Digest K : ℕ → Type}
-  [∀ lam, DecidableEq (TagId lam)] [∀ lam, Fintype (TagId lam)] [∀ lam, Nonempty (TagId lam)]
+  [∀ lam, DecidableEq (TagId lam)] [∀ lam, Fintype (TagId lam)]
   [∀ lam, DecidableEq (Nonce lam)] [∀ lam, SampleableType (Nonce lam)] [∀ lam, Fintype (Nonce lam)]
   [∀ lam, DecidableEq (Digest lam)] [∀ lam, SampleableType (Digest lam)]
   [∀ lam, Fintype (Digest lam)]
   {sessionsPerTag : ℕ → ℕ} [∀ lam, NeZero (sessionsPerTag lam)]
 
-omit [∀ lam, Nonempty (TagId lam)] in
 /-- **Asymptotic unlinkability.** For a security-parameter-indexed family of PRF tag/reader
 instances, suppose:
 

@@ -45,15 +45,26 @@ namespace PRFTagReader
 
 section UnlinkReduction
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
+
+/-- The output-negated adversary inherits every predicate-targeted query bound, since appending a
+pure continuation makes no additional oracle queries. -/
+theorem isQueryBoundP_not_bind
+    (adversary : UnlinkAdversary TagId Nonce Digest)
+    {p : (UnlinkOracleSpec TagId Nonce Digest).Domain → Prop} [DecidablePred p] {n : ℕ}
+    (h : OracleComp.IsQueryBoundP adversary p n) :
+    OracleComp.IsQueryBoundP (adversary >>= fun b => pure (!b) :
+      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) p n := by
+  have hmap : (fun b => !b) <$> adversary = (adversary >>= fun b => pure (!b) :
+      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) := by
+    rw [map_eq_bind_pure_comp]; rfl
+  rw [← hmap, OracleComp.isQueryBoundP_map_iff]
+  exact h
+
+variable [DecidableEq TagId] [Fintype TagId] [SampleableType Nonce] [DecidableEq Digest]
 
 /-! ## Main reduction theorem -/
 
-omit [Nonempty TagId] in
 /-- Unlinkability reduction: the multiple-vs-single advantage is bounded by one PRF advantage for
 the multiple-session world, one PRF advantage for the single-session world, the bad-event
 probability from the intermediate nonce-collision world, and three unconditional slack terms. The
@@ -85,7 +96,8 @@ PRF-oracle query count is bounded by `qTag + qReader · |TagId|` (multiple-sessi
 `qTag + qReader · |TagId| · sessionsPerTag` (single-session). The pathwise bounds are proved by
 `QueryBudgets.multiple_reduction_bound` and `QueryBudgets.single_reduction_bound`.
 The reader fan-out is transported through the handler using a combined reader/tag budget. -/
-theorem unlinkabilityAdvantage_le_two_prf_plus_collision [Fintype Nonce] [Fintype Digest]
+theorem unlinkabilityAdvantage_le_two_prf_plus_collision [DecidableEq Nonce] [SampleableType Digest]
+    [NeZero sessionsPerTag] [Fintype Nonce] [Fintype Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : ℕ)
@@ -129,7 +141,6 @@ theorem unlinkabilityAdvantage_le_two_prf_plus_collision [Fintype Nonce] [Fintyp
 
 /-! ## Explicit session-collision bounds -/
 
-omit [Nonempty TagId] in
 /-- Final unlinkability bound: two PRF advantages, an explicit closed-form bound for the
 `multipleBadQueryImpl` collision term, and the chained reader/tag slack terms.
 
@@ -138,7 +149,8 @@ which ports the union-bound induction `simulateQ_unlinkBad_prob_le` to the multi
 The bound is `(sessionsPerTag^2 * |TagId|) * maxNonceProb` (the same shape as
 `unlinkBadExp_le_sessionCollisionBound`), plus the three unconditional reader-cell and
 nonce-aliasing slack terms inherited from `unlinkabilityAdvantage_le_two_prf_plus_collision`. -/
-theorem unlinkabilityAdvantage_le_two_prf_plus_sessionCollisionBound
+theorem unlinkabilityAdvantage_le_two_prf_plus_sessionCollisionBound [DecidableEq Nonce]
+    [SampleableType Digest] [NeZero sessionsPerTag]
     [Fintype Nonce] [Fintype Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest)
@@ -169,11 +181,11 @@ theorem unlinkabilityAdvantage_le_two_prf_plus_sessionCollisionBound
   refine hSum.trans ?_
   linarith
 
-omit [Nonempty TagId] in
 /-- Tightest unlinkability bound: when nonces are sampled uniformly (as enforced by
 `SampleableType`), the session-collision term is exactly `sessionsPerTag² · |TagId| / |Nonce|`,
 plus the three unconditional reader-cell and nonce-aliasing slack terms. -/
-theorem unlinkabilityAdvantage_le_two_prf_plus_uniform_sessionCollisionBound
+theorem unlinkabilityAdvantage_le_two_prf_plus_uniform_sessionCollisionBound [DecidableEq Nonce]
+    [SampleableType Digest] [NeZero sessionsPerTag]
     [Fintype Nonce] [Fintype Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest)
@@ -211,7 +223,6 @@ query bounds and the same `multipleBadQueryImpl` bad-event mass — flips the si
 provided both experiments are failure-free. Combining the two directions through `abs_le` yields a
 symmetric bound on `|Pr[Multiple] − Pr[Single]|`. -/
 
-omit [DecidableEq Nonce] [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- Negating the adversary's output bit reflects the multiple-session experiment through `not`. -/
 theorem unlinkMultipleExp_not_map
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
@@ -231,7 +242,6 @@ theorem unlinkMultipleExp_not_map
   rw [simulateQ_map, StateT.run'_eq, StateT.run_map, StateT.run'_eq]
   simp only [Functor.map_map]
 
-omit [DecidableEq Nonce] [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- Negating the adversary's output bit reflects the single-session experiment through `not`. -/
 theorem unlinkSingleExp_not_map
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
@@ -251,26 +261,9 @@ theorem unlinkSingleExp_not_map
   rw [simulateQ_map, StateT.run'_eq, StateT.run_map, StateT.run'_eq]
   simp only [Functor.map_map]
 
-omit [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- The output-negated adversary inherits every predicate-targeted query bound, since appending a
-pure continuation makes no additional oracle queries. -/
-theorem isQueryBoundP_not_bind
-    (adversary : UnlinkAdversary TagId Nonce Digest)
-    {p : (UnlinkOracleSpec TagId Nonce Digest).Domain → Prop} [DecidablePred p] {n : ℕ}
-    (h : OracleComp.IsQueryBoundP adversary p n) :
-    OracleComp.IsQueryBoundP (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) p n := by
-  have hmap : (fun b => !b) <$> adversary = (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) := by
-    rw [map_eq_bind_pure_comp]; rfl
-  rw [← hmap, OracleComp.isQueryBoundP_map_iff]
-  exact h
-
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The `multipleBadQueryImpl` bad-event mass is unchanged by output negation: the bad flag is set
 purely by oracle queries, which the trailing `pure (!b)` does not touch. -/
-theorem multipleBad_bad_not_bind_eq
+theorem multipleBad_bad_not_bind_eq [DecidableEq Nonce] [SampleableType Digest]
     (adversary : UnlinkAdversary TagId Nonce Digest) :
     Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
       (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
@@ -289,7 +282,6 @@ theorem multipleBad_bad_not_bind_eq
   rw [simulateQ_pure, StateT.run_pure]
   simp
 
-omit [DecidableEq Nonce] [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- `unlinkabilityAdvantage` is odd under output negation when both experiments are failure-free:
 the negated adversary realizes exactly `−unlinkabilityAdvantage`. -/
 theorem unlinkabilityAdvantage_not_bind_eq_neg
@@ -315,7 +307,6 @@ theorem unlinkabilityAdvantage_not_bind_eq_neg
   simp only [ENNReal.toReal_one]
   ring
 
-omit [Nonempty TagId] in
 /-- Absolute unlinkability bound: `|Pr[Multiple] − Pr[Single]|` is bounded by four PRF advantages
 (two per sign), the `multipleBadQueryImpl` bad-event mass, and the three unconditional slack terms.
 The four PRF advantages are those of the explicit reductions `unlinkToMultiplePRFReduction` and
@@ -327,7 +318,8 @@ The two `NeverFail` hypotheses are necessary: an `UnlinkAdversary` may contain `
 case the experiments inherit that failure mass and `unlinkabilityAdvantage` is no longer odd under
 output negation. They are dischargeable via `unlinkMultipleExp_neverFail` and
 `unlinkSingleExp_neverFail` whenever the adversary does not force a failure in either world. -/
-theorem abs_unlinkabilityAdvantage_le_two_prf_plus_collision [Fintype Nonce] [Fintype Digest]
+theorem abs_unlinkabilityAdvantage_le_two_prf_plus_collision [DecidableEq Nonce]
+    [SampleableType Digest] [NeZero sessionsPerTag] [Fintype Nonce] [Fintype Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : ℕ)

@@ -36,11 +36,9 @@ namespace PRFTagReader
 
 section UnlinkReduction
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
   [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
 
 section EagerComposed
 
@@ -120,7 +118,6 @@ noncomputable def multipleBadQueryImpl :
         | Sum.inr _, _ => s) :
           StateT (MultipleBadState TagId Nonce Digest sessionsPerTag) ProbComp Unit))
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `multipleIdealLiftedQueryImpl` on a query: explicit form as an inner-state bind with the extra
 state component preserved. -/
 lemma multipleIdealLiftedQueryImpl_run
@@ -132,7 +129,6 @@ lemma multipleIdealLiftedQueryImpl_run
           (sessionsPerTag := sessionsPerTag) q) s.1 >>= fun r =>
         pure (r.1, (r.2, s.2)) := rfl
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `multipleBadQueryImpl` on a tag query: the multiple-ideal tag step with the bad-world component
 advanced by `multipleBadAdvance`. -/
 lemma multipleBadQueryImpl_tag_run (tag : TagId)
@@ -147,7 +143,6 @@ lemma multipleBadQueryImpl_tag_run (tag : TagId)
   rw [multipleIdealLiftedQueryImpl_run, bind_assoc]
   refine bind_congr fun r => ?_; rw [pure_bind]; rfl
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `multipleBadQueryImpl` on a reader query: the multiple-ideal reader step, bad-world component
 untouched. -/
 lemma multipleBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
@@ -163,7 +158,6 @@ lemma multipleBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
   refine bind_congr fun r => ?_; rw [pure_bind]; rfl
 
 open OracleComp.ProgramLogic.Relational in
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- **Multiple-to-hybrid, output equivalence.** The instrumented handler `multipleBadQueryImpl`
 produces the same output distribution as `multipleIdealQueryImpl`: the bad-world component it
 threads beside the multiple-ideal state never feeds back into the output bit. Hence `Pr[= true]` is
@@ -212,7 +206,6 @@ lemma probOutput_multipleBad_run'_eq_multipleIdeal
       exact relTriple_pure_pure ⟨rfl, rfl⟩
   exact probOutput_eq_of_relTriple_eqRel hrt true
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The bad flag threaded by `multipleBadQueryImpl` is monotone under a single per-query step:
 started from a `MultipleBadState` whose bad flag is set, every output state still has it set.
 `multipleBadAdvance` only ever OR-s into the flag, and reader queries leave the bad-world component
@@ -234,7 +227,6 @@ lemma multipleBadQueryImpl_step_preserves_bad
     obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
     rw [mem_support_pure_iff] at hz; subst hz; exact hbad
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Bad monotonicity for a full `simulateQ multipleBadQueryImpl` run: started from a state whose
 bad flag is set, every reachable output state keeps it set. This is the `hmono` hypothesis of the
 heterogeneous bad+slack `simulateQ` rule. -/
@@ -258,7 +250,6 @@ monadic `bind`: the per-query handler applied to the head, then the recursive `s
 continuation threaded through the resulting state. They are pure rewriting facts (`simulateQ` is
 a monad morphism). -/
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `simulateQ multipleBadQueryImpl` of a `query_bind`, run from a state and projected to its
 output bit: the per-query handler followed by the recursive simulation of the continuation. -/
 lemma multipleBad_run'_query_bind' {α : Type}
@@ -275,7 +266,6 @@ lemma multipleBad_run'_query_bind' {α : Type}
   rw [simulateQ_query_bind, StateT.run'_eq, StateT.run_bind, map_bind]
   rfl
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `simulateQ multipleBadQueryImpl` of a `query_bind`, run from a state and projected to its full
 output: the per-query handler followed by the recursive simulation of the continuation. -/
 lemma multipleBad_run_query_bind' {α : Type}
@@ -291,7 +281,6 @@ lemma multipleBad_run_query_bind' {α : Type}
           (sessionsPerTag := sessionsPerTag)) (f p.1)).run p.2 := by
   rw [simulateQ_query_bind, StateT.run_bind]
   rfl
-
 
 end UnlinkReduction
 

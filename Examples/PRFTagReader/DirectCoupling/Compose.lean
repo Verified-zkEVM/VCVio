@@ -86,11 +86,9 @@ namespace PRFTagReader
 
 section DirectCouplingCompose
 
-variable {TagId Nonce Digest : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
+  [DecidableEq Digest] [SampleableType Digest] [NeZero sessionsPerTag]
 
 namespace UnlinkReduction
 
@@ -105,7 +103,6 @@ The aux is deliberately formulated in terms of *eager* table handlers and a *sha
 the lazy headline `multipleIdeal_le_singleIdeal_add_bad_DC` below recovers it via the standard
 eagerization equivalences. -/
 
-omit [Nonempty TagId] in
 /-- **Direct M-S coupling aux (eager).** Under a shared `$ᵗ gS` sample, the eager-form fine handler
 `multipleBadTableHandlerFine (slotZeroSubTable (tableExtending c gS))` (with `UnlinkBadState`
 instrumentation) success probability is bounded by the eager-form `singleTableHandler
@@ -342,7 +339,6 @@ single-ideal handler (`probOutput_singleIdeal_run'_eq_tableSample`). -/
 
 namespace UnlinkReduction
 
-omit [Nonempty TagId] in
 /-- **Multi-to-single via direct M-S coupling.** Bounds the multiple-session ideal world by the
 single-session ideal world plus the multiple-bad collision probability and three unconditional
 slack terms, for every adversary and with no distinctness hypothesis on its reader nonces. None of

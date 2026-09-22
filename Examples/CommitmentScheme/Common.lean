@@ -59,10 +59,7 @@ noncomputable instance {M S C : Type} [Fintype C] [Inhabited C]
     OracleSpec.IsUniformMeasureSpec (CMOracle M S C) :=
   OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty _
 
-variable {M S C : Type}
-  [DecidableEq M] [DecidableEq S] [DecidableEq C]
-  [Fintype M] [Fintype S] [Fintype C]
-  [Inhabited M] [Inhabited S] [Inhabited C]
+variable {M S C : Type} [DecidableEq M] [DecidableEq S] [Fintype C] [Inhabited C]
 
 noncomputable instance : IsUniformSpec (CMOracle M S C) :=
   IsUniformSpec.ofFintypeInhabited _
@@ -74,14 +71,13 @@ def CMCommit (m : M) (s : S) : OracleComp (CMOracle M S C) C :=
 /-- Check commitment `c` against opening `(m, s)`: query the oracle at `(m, s)` and
 compare to `c`. Under a shared `cachingOracle` this returns the same value the
 honest commit phase wrote into the cache. -/
-def CMCheck (c : C) (m : M) (s : S) : OracleComp (CMOracle M S C) Bool := do
+def CMCheck [DecidableEq C] (c : C) (m : M) (s : S) : OracleComp (CMOracle M S C) Bool := do
   let c' ← (CMOracle M S C).query (m, s)
   return (c == c')
 
 /-! ## Single-fresh-query unpredictability -/
 
 open scoped Classical in
-omit [Fintype M] [Fintype S] [Inhabited M] [Inhabited S] [DecidableEq C] in
 /-- **Single fresh-query unpredictability bound (`1/|C|`).**
 
 If `t` is *fresh* in the cache `cache₀` and the only way for the
