@@ -168,8 +168,6 @@ theorem signed_bound (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
         (qReader + qTag) adversary] {true}).toReal +
       readerLoss (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         (sessionsPerTag := sessionsPerTag) qReader qTag := by
-  let : Nonempty Nonce := ⟨(SampleableType.selectElem (β := Nonce)).defaultResult⟩
-  let : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   have hNonce : (Fintype.card Nonce : ENNReal) ≠ 0 := by exact_mod_cast Fintype.card_ne_zero
   have hDigest : (Fintype.card Digest : ENNReal) ≠ 0 := by exact_mod_cast Fintype.card_ne_zero
   have hdivNonce (n : Nat) : (n : ENNReal) / Fintype.card Nonce ≠ ⊤ :=

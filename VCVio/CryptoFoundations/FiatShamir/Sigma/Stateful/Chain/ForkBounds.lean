@@ -256,7 +256,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace
               (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) σ
               hsigned hcache hlive hlenq
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
+omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma forkBase_finalQuery_runTrace_eq
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
@@ -293,7 +293,7 @@ private lemma forkBase_finalQuery_runTrace_eq
     (forkLoggedImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simT pk)
 
-omit [SampleableType Stmt] [Inhabited Chal] in
+omit [SampleableType Stmt] [Finite Chal] [Inhabited Chal] in
 private lemma forkLoggedProbImpl_run
     {α : Type}
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
@@ -547,7 +547,8 @@ private noncomputable def forkLoggedVerifyBody
   forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
     (Resp := Resp) σ pk z.1 z.2
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
+omit [SampleableType Stmt] [SampleableType Wit] [SampleableType Chal] [Finite Chal]
+  [Inhabited Chal] in
 private lemma forkLogged_base_support
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
@@ -583,9 +584,8 @@ private lemma forkLogged_base_support
   rw [hproj] at hmem
   simpa [forkLoggedImpl, forkInitialState, forkInitialBaseState] using hmem
 
-omit [SampleableType Stmt] [SampleableType Wit] in
+omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 private lemma forkLogged_queryLog_length_le
-    [Finite Commit] [Finite Resp]
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) {qS qH : ℕ}
@@ -658,7 +658,7 @@ event for the verify-wrapped adversary. The fork slot parameter is `qH`:
 `Fork.forkPoint qH` indexes `Fin (qH + 1)`, accommodating the wrapped
 adversary's source-`qH` plus verifier-point query. -/
 private lemma forkLogged_verify_prob_true_le_forkPoint_run
-    [Fintype Chal] [Finite Commit] [Finite Resp]
+    [Fintype Chal]
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) {qS qH : ℕ}
@@ -772,7 +772,7 @@ fork advantage at slot parameter `qH`. The framework's `Fin (qH + 1)` indexing
 provides exactly enough slots for the wrapped adversary's source-`qH` plus
 verifier-point query. -/
 private lemma forkH5Body_prob_true_le_fork_advantage
-    [Fintype Chal] [Finite Commit] [Finite Resp]
+    [Fintype Chal]
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) {qS qH : ℕ}

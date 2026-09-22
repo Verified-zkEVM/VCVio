@@ -165,7 +165,6 @@ lemma evalDist_idealCacheStep_bind_uniformTable_comp {D : Type} [DecidableEq D] 
           cont (OracleComp.tableExtending r.2 g)] =
       𝒟[do let g ← $ᵗ (D → Digest); cont (OracleComp.tableExtending c g)] := by
   classical
-  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   unfold idealCacheStep
   rcases hc : c d with _ | u
   · simp only [bind_assoc, pure_bind]
@@ -402,7 +401,6 @@ lemma evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending
               (OracleComp.tableExtending c g)) oa).run' s] := by
   classical
   let : MeasurableSpace Nonce := ⊤
-  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   induction oa using OracleComp.inductionOn generalizing s c with
   | pure b =>
     simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
@@ -672,7 +670,6 @@ lemma evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
             (simulateQ (singleTableHandler (OracleComp.tableExtending c g)) oa).run' s] := by
   classical
   let : MeasurableSpace Nonce := ⊤
-  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   induction oa using OracleComp.inductionOn generalizing s c with
   | pure b =>
     simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]

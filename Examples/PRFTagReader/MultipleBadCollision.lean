@@ -460,7 +460,6 @@ theorem multipleBad_bad_le_sessionCollisionBound
         (UnlinkBadState.init (TagId := TagId) (Nonce := Nonce) (Digest := Digest)) =
           sessionsPerTag * Fintype.card TagId := by
     simp [unlinkBadRemaining, UnlinkBadState.init, Finset.sum_const, Finset.card_univ, mul_comm]
-  have : Nonempty Nonce := ⟨(SampleableType.selectElem (β := Nonce)).defaultResult⟩
   have hmax_nonneg : 0 ≤ maxNonceProb :=
     ENNReal.toReal_nonneg.trans (hmax (Classical.arbitrary Nonce))
   have hconv := ENNReal.toReal_mono (by simp [ENNReal.mul_eq_top]) hcore
@@ -535,8 +534,6 @@ theorem unlinkPRFIdeal_gap_le_unlinkBad [Fintype Nonce] [Fintype Digest]
     (Fintype.card Digest : ℝ≥0∞)
   have hSt : S ≠ ⊤ := probOutput_ne_top
   have hBt : B ≠ ⊤ := probEvent_ne_top
-  have : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
-  have : Nonempty Nonce := ⟨(SampleableType.selectElem (β := Nonce)).defaultResult⟩
   have hslackRt : slackR ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
   have hslackNt : slackN ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
   have hslackSt : slackS ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)

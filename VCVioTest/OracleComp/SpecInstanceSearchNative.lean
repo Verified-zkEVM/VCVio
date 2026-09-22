@@ -13,7 +13,9 @@ import VCVioTest.OracleComp.SpecInstanceSearch
 # Instance search under the full library
 
 The clients of `VCVioTest.OracleComp.SpecInstanceSearch`, repeated with the native probability
-surface and the whole library (including its compatibility instances) in scope.
+surface and the whole library (including its compatibility instances) in scope, followed by the
+routing of `Nonempty`/`Finite` goals around the sampler-derived instances
+`SampleableType.nonempty`/`SampleableType.finite`.
 -/
 
 public section
@@ -76,5 +78,69 @@ Hint: Type class instance resolution failures can be inspected with the `set_opt
 set_option synthInstance.maxHeartbeats 2000 in
 -- A reintroduced search loop must fail here rather than eventually succeed (VCVio#772).
 example {α : Type} : DecidableEq α := inferInstance
+
+/-! ## Sampler-derived propositions
+
+`SampleableType.nonempty` and `SampleableType.finite` conclude `Nonempty β` and `Finite β` for
+a plain type variable, so they are wildcard-keyed like `Finite.of_fintype`, and they carry
+`priority := 100` so that they are tried after every ordinary instance. Ordinary finiteness and
+nonemptiness facts must therefore elaborate without sampler code, while a type whose finiteness
+is known through nothing but its sampler still gets one. -/
+
+open Lean Meta Elab Command Term in
+/-- Synthesize an instance of `type` and fail if the term found mentions the sampler class, one
+of its instances, or a declaration in its namespace. -/
+meta def assertNoSampler (type : TSyntax `term) : CommandElabM Unit := liftTermElabM do
+  let type ← elabType type
+  let inst ← instantiateMVars (← synthInstance type)
+  for used in inst.getUsedConstants do
+    if (`SampleableType).isPrefixOf used || used.toString.contains "SampleableType" then
+      throwError "{type} is answered by sampler declaration {used}"
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A wildcard-keyed sampler instance must not be reached before the ordinary instances.
+-- Nonemptiness of `Fin 3` comes from `Inhabited`, not from its sampler.
+run_cmd assertNoSampler (← `(Nonempty (Fin 3)))
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A wildcard-keyed sampler instance must not be reached before the ordinary instances.
+-- Finiteness of `Fin 3` comes from `Fintype`, not from its sampler.
+run_cmd assertNoSampler (← `(Finite (Fin 3)))
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A wildcard-keyed sampler instance must not be reached before the ordinary instances.
+-- Finiteness of a function type comes from `Pi.instFintype`, not from its sampler.
+run_cmd assertNoSampler (← `(Finite (Fin 4 → Bool)))
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A wildcard-keyed sampler instance must not be reached before the ordinary instances.
+-- Nonemptiness of a product comes from `Prod.instNonempty`, not from its sampler.
+run_cmd assertNoSampler (← `(Nonempty (Fin 2 × Bool)))
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A sampler-only answer type must be found by the fallback instance within a small budget.
+/-- An answer type whose only known structure is its sampler is finite through the sampler. -/
+example {ι : Type} {spec : OracleSpec ι} [∀ t, SampleableType (spec.Range t)]
+    (t : spec.Domain) : Finite (spec.Range t) :=
+  inferInstance
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A sampler-only answer type must be found by the fallback instance within a small budget.
+/-- An answer type whose only known structure is its sampler is nonempty through the sampler. -/
+example {ι : Type} {spec : OracleSpec ι} [∀ t, SampleableType (spec.Range t)]
+    (t : spec.Domain) : Nonempty (spec.Range t) :=
+  inferInstance
+
+set_option synthInstance.maxHeartbeats 2000 in
+-- A wildcard-keyed sampler instance must fail fast on a family with no sampler.
+/--
+error: failed to synthesize instance of type class
+  Nonempty (β a)
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+set_option synthInstance.maxHeartbeats 2000 in
+example {α : Type} {β : α → Type} (a : α) : Nonempty (β a) := inferInstance
 
 end VCVioTest.OracleComp.SpecInstanceSearchNative

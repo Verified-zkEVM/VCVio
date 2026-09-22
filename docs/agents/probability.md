@@ -124,9 +124,12 @@ lossless Boolean branches. The probability-only security facade supplies its fai
 without first unfolding the universal Boolean event into a finite set.
 
 `VCVio.OracleComp.ProbComp.Basic` owns executable container sampling, and
-`VCVio.OracleComp.Constructions.SampleableType.Basic` owns uniform sampler certificates.
+`VCVio.OracleComp.Constructions.SampleableType.Basic` owns the `$ᵗ` notation class: a
+canonical sampler `selectElem` with the single law `𝒟[$ᵗ β] = uniformOn Set.univ`.
 Product and vector uniformity follow from product measures and bijective pushforwards.
-`SampleableType` derives `Nonempty` and `Finite`; enumeration is a separate computational choice.
+`Nonempty`, `Finite` and full operational support are consequences of the law
+(`SampleableType.nonempty` and `SampleableType.finite` are priority-100 instances,
+`support_uniformSample` a `simp` lemma); enumeration is a separate computational choice.
 An abstract result's `𝒟` still needs its chosen `MeasurableSpace`. Event notation hides intermediate
 spaces, and uniformity certificates apply to any result space with measurable singletons.
 
@@ -420,8 +423,8 @@ transport. Its product sampler law uses `evalDist_pair` and the existing
 `uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
 one-time-pad independence theorem. `SampleableType` itself certifies
 `𝒟[$ᵗ α] = uniformOn Set.univ` for every finite discrete measurable structure.
-Its executable sampler and full-support certificate provide the operational
-side; the old `Pr[...]` lemmas are compatibility consequences. Uniform table
+Its executable sampler is the operational side, with full support a consequence
+of the law; the old `Pr[...]` lemmas are compatibility consequences. Uniform table
 resampling and injective restriction use the measure laws in
 `VCVio.EvalDist.Monad.UniformTable`.
 `ProbComp.evalDist_decide_eq_uniformBool_half` proves that an independent Boolean guess

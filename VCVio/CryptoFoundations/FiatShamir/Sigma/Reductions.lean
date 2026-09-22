@@ -60,7 +60,6 @@ EUF-CMA adversary against simulated signing transcripts and a managed random ora
 one live random-oracle query at the forgery's hash point. -/
 abbrev cmaToNmaAdv
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (adv : SignatureAlg.unforgeableAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)) :
@@ -87,8 +86,7 @@ indexes `Fin (qH + 1)`, which is exactly the right number of forkable slots
 verifier slot). The replay-forking denominator is therefore `qH + 1`. -/
 theorem cma_to_nma_advantage_bound
     [DecidableEq M] [DecidableEq Commit] [SampleableType Stmt] [SampleableType Wit]
-    [Finite Stmt] [Finite Commit] [Finite Resp]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
+    [Finite Stmt] [Finite Chal] [Inhabited Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
     (hHVZK : σ.HVZK simTranscript ζ_zk)
