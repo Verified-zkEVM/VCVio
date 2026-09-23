@@ -60,6 +60,8 @@ class SampleableType (β : Type) where
 @[expose]
 def uniformSample (β : Type) [h : SampleableType β] : ProbComp β := h.selectElem
 
+/-- `$ᵗ β` samples uniformly from the type `β` (the `ᵗ` is for *type*); compare `$ xs`, which
+samples from a collection. -/
 notation:90 "$ᵗ " α:91 => uniformSample α
 
 /-- The canonical sample has uniform output measure under native oracle semantics. -/
