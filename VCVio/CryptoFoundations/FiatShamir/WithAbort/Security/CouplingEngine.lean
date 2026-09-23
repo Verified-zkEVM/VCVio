@@ -43,9 +43,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ## Measure-level eager↔lazy coupling engine
 
@@ -279,7 +278,7 @@ lemma probEvent_ghostBlindImpl_read_bad (pk : Stmt) (sk : Wit) (mc : M × Commit
       rw [ghostHybridImpl_run_ro_ghost_some ids M maxAttempts false pk sk hgh]
       simp
   | none =>
-      rw [ghostHybridImpl_run_ro_ghost_none ids M maxAttempts false pk sk hgh, if_pos rfl]
+      rw [ghostHybridImpl_run_ro_ghost_none ids M maxAttempts false pk sk hgh, ite_eq_left rfl]
       simp [probEvent_eq_zero]
 
 /-! ### Stage 2: single-query deferral primitives
@@ -316,8 +315,8 @@ lemma ghostBlindImpl_read_singletonGhost_bad (pk : Stmt) (sk : Wit) (mc : M × C
     ((re, (∅ : (M × Commit →ₒ Chal).QueryCache).cacheQuery (msg, w) c), l)]
   by_cases h : mc = (msg, w)
   · subst h
-    rw [if_neg (by simp), if_pos rfl]
-  · rw [if_pos (by simp [QueryCache.cacheQuery_of_ne _ _ h]), if_neg h]
+    rw [ite_eq_right (by simp), ite_eq_left rfl]
+  · rw [ite_eq_left (by simp [QueryCache.cacheQuery_of_ne _ _ h]), ite_eq_right h]
 
 omit [SampleableType Stmt] [SampleableType Chal] in
 /-- **Stage 2 single-query deferral.** A run that draws one ghost commitment
@@ -703,10 +702,10 @@ lemma tsum_probOutput_run_ghostSignDrawBody_mul_length_le (pk : Stmt) (sk : Wit)
             intro oz
             cases oz with
             | some z =>
-                rw [if_neg (by simp), add_zero, tsum_probOutput_pure_mul]
+                rw [ite_eq_right (by simp), add_zero, tsum_probOutput_pure_mul]
                 simp
             | none =>
-                rw [if_pos rfl]
+                rw [ite_eq_left rfl]
                 -- length of `ws.1 :: rws.1.2` is `1 + rws.1.2.length`; rewrite map as bind+pure.
                 rw [map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
                 calc (∑' z : (Option (Commit × Resp) × List Commit) ×
@@ -833,10 +832,10 @@ lemma tsum_probOutput_run_ghostSignDrawBody_mul_length_le_tight (pk : Stmt) (sk 
             intro oz
             cases oz with
             | some z =>
-                rw [if_neg (by simp), tsum_probOutput_pure_mul]
+                rw [ite_eq_right (by simp), tsum_probOutput_pure_mul]
                 simp [List.length]
             | none =>
-                rw [if_pos rfl, map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
+                rw [ite_eq_left rfl, map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
                 calc (∑' z : (Option (Commit × Resp) × List Commit) ×
                       (M × Commit →ₒ Chal).QueryCache,
                     Pr[= z | (ghostSignDrawBody ids M pk sk msg n).run re] *
@@ -869,8 +868,8 @@ lemma tsum_probOutput_run_ghostSignDrawBody_mul_length_le_tight (pk : Stmt) (sk 
           refine le_trans (ENNReal.tsum_le_tsum fun oz =>
             mul_le_mul_right (h_oz oz) _) ?_
           rw [tsum_eq_single (none : Option Resp) fun oz hoz => by
-            rw [if_neg hoz, mul_zero]]
-          rw [if_pos rfl, mul_comm]
+            rw [ite_eq_right hoz, mul_zero]]
+          rw [ite_eq_left rfl, mul_comm]
         refine le_trans (ENNReal.tsum_le_tsum fun ch =>
           mul_le_mul_right (h_ch ch) _) ?_
         rw [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_right]
@@ -949,7 +948,7 @@ lemma ghostSignDrawBody_readManyList_le_drawList (pk : Stmt) (sk : Wit) (msg : M
           refine bind_congr fun rest => ?_
           rw [OracleComp.readManyList, List.any_cons, hhead, Bool.true_or]
         rw [hcongr, probEvent_bind_eq_tsum]
-        simp only [probEvent_pure, if_pos]
+        simp only [probEvent_pure, ite_eq_left]
         rw [ENNReal.tsum_mul_right, OracleComp.tsum_probOutput_drawList_eq_one, one_mul]
       · -- The head misses: the RHS reduces to the recursive fresh game `RHSinner`, and the LHS is
         -- dominated by the recursive body-`n` game, which is `≤ RHSinner` by `ih`.
@@ -1014,7 +1013,7 @@ lemma deferredDrawImpl_step_expected_length_le (pk : Stmt) (sk : Wit)
   classical
   rcases t with (n | mc) | msg
   · -- UNIFORM: state untouched, drawn list `s.1.2` preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ (by simp [deferredDrawImpl]))
     intro z hz
     have hzs : z ∈ support ((fun u => (u, s)) <$>
@@ -1022,7 +1021,7 @@ lemma deferredDrawImpl_step_expected_length_le (pk : Stmt) (sk : Wit)
     rw [support_map] at hzs
     obtain ⟨u, _, rfl⟩ := hzs; rfl
   · -- READ: writes only the base cache / bad flag; drawn list `s.1.2` preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ ?_)
     · intro z hz
       have hzs : z ∈ support ((fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
@@ -1033,7 +1032,7 @@ lemma deferredDrawImpl_step_expected_length_le (pk : Stmt) (sk : Wit)
     · simp only [deferredDrawImpl, StateT.run_mk]
       rcases hg : s.1.1.1 mc with _ | v <;> simp [roStep, hg]
   · -- SIGN: drawn list becomes `s.1.2 ++ alc.1.2`; expected new length ≤ 1/(1-p).
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
     have hrun : (deferredDrawImpl ids M maxAttempts pk sk (.inr msg)).run s =
         (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
           (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
@@ -1259,7 +1258,7 @@ theorem deferredCouple_step (pk : Stmt) (sk : Wit)
               (cu.1, (((cu.2, u₁.1.1.2), u₁.1.2), true))) <$> roStep M u₁.1.1.1 mc := by
           rw [ghostBlindImpl_eq_ghostHybridImpl_false,
             ghostHybridImpl_run_ro_ghost_some ids M maxAttempts false pk sk hgh,
-            if_neg Bool.false_ne_true]
+            ite_eq_right Bool.false_ne_true]
         rw [hrun₁, hrun₂, hre]
         refine OracleComp.ProgramLogic.Relational.relTriple_map (R := _)
           (OracleComp.ProgramLogic.Relational.relTriple_post_mono
@@ -1509,7 +1508,7 @@ theorem deferredDraw_run_expected_length_le {γ : Type} (pk : Stmt) (sk : Wit)
         refine hfold (qSrem - 1) c (fun x => ih x.1 (qSrem - 1) (by simpa using hQ2 x.1) x.2) ?_ ?_
         · have hstep := deferredDrawImpl_step_expected_length_le ids M maxAttempts pk sk
             hp₀ hp hAbort (.inr msg) s
-          rwa [if_pos (by rfl), ← hc] at hstep
+          rwa [ite_eq_left (by rfl), ← hc] at hstep
         · rw [add_comm, ← add_one_mul,
             show ((qSrem - 1 : ℕ) : ℝ≥0∞) + 1 = (qSrem : ℝ≥0∞) by
               have : qSrem - 1 + 1 = qSrem := by omega
@@ -1647,7 +1646,7 @@ lemma deferredDrawImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
   classical
   rcases t with (n | mc) | msg
   · -- UNIFORM: state untouched.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ (by simp [deferredDrawImpl]))
     intro z hz
     have hzs : z ∈ support ((fun u => (u, s)) <$>
@@ -1655,7 +1654,7 @@ lemma deferredDrawImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
     rw [support_map] at hzs
     obtain ⟨u, _, rfl⟩ := hzs; rfl
   · -- READ: writes only the base cache / bad flag; both lists preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ ?_)
     · intro z hz
       have hzs : z ∈ support ((fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
@@ -1666,7 +1665,7 @@ lemma deferredDrawImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
     · simp only [deferredDrawImpl, StateT.run_mk]
       rcases hg : s.1.1.1 mc with _ | v <;> simp [roStep, hg]
   · -- SIGN: drawn list `s.1.2 ++ alc.1.2`, signed list `msg :: s.1.1.2` (one longer).
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
     have hrun : (deferredDrawImpl ids M maxAttempts pk sk (.inr msg)).run s =
         (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
           (alc.1.1, (((alc.2, msg :: s.1.1.2), s.1.2 ++ alc.1.2), s.2))) <$>
@@ -1796,7 +1795,7 @@ theorem deferredDraw_run_expected_attemptCount_le {γ : Type} (pk : Stmt) (sk : 
         refine hfold (qSrem - 1) c (fun x => ih x.1 (qSrem - 1) (by simpa using hQ2 x.1) x.2) ?_ ?_
         · have hstep := deferredDrawImpl_step_expected_attemptCount_le ids M maxAttempts pk sk
             hp₀ hp hAbort (.inr msg) s
-          rwa [if_pos (by rfl), ← hc] at hstep
+          rwa [ite_eq_left (by rfl), ← hc] at hstep
         · rw [add_comm, ← add_one_mul,
             show ((qSrem - 1 : ℕ) : ℝ≥0∞) + 1 = (qSrem : ℝ≥0∞) by
               have : qSrem - 1 + 1 = qSrem := by omega

@@ -43,9 +43,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ## Direct route: averaged multi-key hidden-read fold to the target
 
@@ -452,7 +451,7 @@ lemma avgBadM_ghostHybridImpl_threaded_carry
     (ghostHybridImpl ids M maxAttempts true pk sk) ν t (fun s => if s.2 = true then 1 else 0)]
   rcases t with (n | mc) | msg
   · -- Uniform step: flag preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine ENNReal.tsum_le_tsum fun p => ?_
     gcongr
     refine ghostHybridImpl_flag_preserved_le M _ p ?_
@@ -460,7 +459,7 @@ lemma avgBadM_ghostHybridImpl_threaded_carry
     simp only [ghostHybridImpl, StateT.run_mk, support_map] at hz
     obtain ⟨_, -, rfl⟩ := hz; rfl
   · -- Read step: pays the per-target membership charge, bounded via the invariant by `K ν · ε`.
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
     calc (∑' p : GhostState M Commit Chal, ν p *
             ∑' z : Chal × GhostState M Commit Chal,
               Pr[= z | (ghostHybridImpl ids M maxAttempts true pk sk (.inl (.inr mc))).run p] *
@@ -478,7 +477,7 @@ lemma avgBadM_ghostHybridImpl_threaded_carry
           gcongr
           exact _hInv mc
   · -- Sign step: the signing handler leaves `s.2` untouched, so the flag is preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine ENNReal.tsum_le_tsum fun p => ?_
     gcongr
     refine ghostHybridImpl_flag_preserved_le M _ p ?_
@@ -528,17 +527,17 @@ lemma avgBadM_ghostHybridImpl_threaded_K
   -- Per-state inner charge bound, then `tsum`-monotone fold.
   rcases t with (n | mc) | msg
   · -- Uniform step: state untouched, ghost charge preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine ENNReal.tsum_le_tsum fun p => ?_
     exact le_of_eq (congrArg (ν p * ·)
       (ghostHybridImpl_unif_expected_enncard ids M maxAttempts pk sk n p))
   · -- Read step: writes only the base layer, ghost charge preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine ENNReal.tsum_le_tsum fun p => ?_
     exact le_of_eq (congrArg (ν p * ·)
       (ghostHybridImpl_read_expected_enncard ids M maxAttempts pk sk mc p))
   · -- Sign step: ghostSignBody grows the ghost size by `≤ ∑ attempts ≤ 1/(1-p)`.
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
     rw [mul_comm (ENNReal.ofReal (1 / (1 - p_abort))) _, ← ENNReal.tsum_mul_right,
       ← ENNReal.tsum_add]
     refine ENNReal.tsum_le_tsum fun p => ?_

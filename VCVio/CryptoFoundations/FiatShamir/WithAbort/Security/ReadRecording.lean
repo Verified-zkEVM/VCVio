@@ -42,9 +42,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ### Read-recording handler: bad as a final-state predicate
 

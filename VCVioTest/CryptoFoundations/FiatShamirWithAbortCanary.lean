@@ -148,7 +148,7 @@ abbrev toySig := FiatShamirWithAbort (m := OracleComp toySpec) toyIds toyHr Bool
 /-- The probe adversary: one uniform query, the same hash point twice, one signature on the
 message `false`, and a forgery on the message `true` whose bit records whether the two hash
 answers agreed. -/
-def probeAdv : SignatureAlg.unforgeableAdv toySig where
+def probeAdv : SignatureAlg.UnforgeableAdversary toySig where
   main _ := do
     let _ ← advSpec.query (.inl (.inl 1))
     let h₁ ← advSpec.query (.inl (.inr (true, false)))
@@ -209,7 +209,7 @@ theorem probeRun_pin_abort :
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]
   simp only [unifFwdImpl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
     OracleComp.liftM_run_StateT, randomOracle, bind_assoc, QueryCache.cacheQuery, simulateQ_bind]
-  simp [probeView, QueryImpl.simulateQ_toQueryImpl, probOutput_bind_eq_tsum, probOutput_query,
+  simp [probeView, probOutput_bind_eq_tsum, probOutput_query,
     QueryCache.cacheQuery]
   norm_num
 
@@ -226,7 +226,7 @@ theorem probeRun_pin_sign_true :
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]
   simp only [unifFwdImpl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
     OracleComp.liftM_run_StateT, randomOracle, bind_assoc, QueryCache.cacheQuery, simulateQ_bind]
-  simp (config := { decide := true }) [probeView, QueryImpl.simulateQ_toQueryImpl,
+  simp (config := { decide := true }) [probeView,
     probOutput_bind_eq_tsum, probOutput_query, QueryCache.cacheQuery, Fintype.sum_prod_type,
     Finset.filter_insert, Finset.filter_singleton]
   norm_num
@@ -244,20 +244,21 @@ theorem probeRun_pin_sign_false_erases :
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]
   simp only [unifFwdImpl, QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
     OracleComp.liftM_run_StateT, randomOracle, bind_assoc, QueryCache.cacheQuery, simulateQ_bind]
-  simp (config := { decide := true }) [probeView, QueryImpl.simulateQ_toQueryImpl,
+  simp (config := { decide := true }) [probeView,
     probOutput_bind_eq_tsum, probOutput_query, QueryCache.cacheQuery, Fintype.sum_prod_type,
     Finset.filter_insert, Finset.filter_singleton]
   norm_num
 
 /-- The toy runtime is the caching random oracle over the empty cache. -/
-lemma runtime_evalSPMF {α : Type} (oa : OracleComp toySpec α) :
-    (runtime (Commit := Bool) (Chal := Bool) Bool).evalSPMF oa =
-      𝒮[(simulateQ (unifFwdImpl (Bool × Bool →ₒ Bool) +
+lemma runtime_evalDist_apply_singleton (oa : OracleComp toySpec Bool) (b : Bool) :
+    (runtime (Commit := Bool) (Chal := Bool) Bool).evalDist oa {b} =
+      Pr[= b | (simulateQ (unifFwdImpl (Bool × Bool →ₒ Bool) +
           (randomOracle : QueryImpl (Bool × Bool →ₒ Bool)
-            (StateT (Bool × Bool →ₒ Bool).QueryCache ProbComp))) oa).run' ∅] := rfl
+            (StateT (Bool × Bool →ₒ Bool).QueryCache ProbComp))) oa).run' ∅] := by
+  rw [runtime_evalDist_eq_simulateQ_run', evalDist_apply_singleton]
 
 /-- The replay adversary: request one signature on `true` and return it as the forgery. -/
-def replayAdv : SignatureAlg.unforgeableAdv toySig where
+def replayAdv : SignatureAlg.UnforgeableAdversary toySig where
   main _ := do
     let σ ← advSpec.query (.inr true)
     pure (true, σ)
@@ -268,13 +269,14 @@ cache, verification re-hashes it live and accepts with probability `1/2`. Withou
 the programmed challenge would be replayed and the value would be `1/2`. The proof goes through
 the bridge `managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp`, whose own proof is what the erasure
 sustains; the direct cache-level witness of the erasure is `probeRun_pin_sign_false_erases`. -/
-theorem managedRoNmaExp_replay_pin :
-    Pr[= true | SignatureAlg.managedRoNmaExp (runtime (Commit := Bool) (Chal := Bool) Bool)
-      (simulatedNmaAdv toyIds toyHr Bool 1 toySim replayAdv)] = 1 / 4 := by
+theorem managedRoNmaAdvantage_replay_pin :
+    SignatureAlg.managedRoNmaAdvantage (runtime (Commit := Bool) (Chal := Bool) Bool)
+      (simulatedNmaAdv toyIds toyHr Bool 1 toySim replayAdv) = 1 / 4 := by
+  rw [SignatureAlg.managedRoNmaAdvantage, managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp,
+    SignatureAlg.eufNmaExp, runtime_evalDist_apply_singleton]
   refine (ENNReal.toReal_eq_toReal_iff' probOutput_ne_top (by finiteness)).mp ?_
-  rw [managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp]
-  simp only [SignatureAlg.eufNmaExp, simulatedEufNmaAdv, runtime_evalSPMF, probOutput_evalSPMF,
-    simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome, FiatShamirWithAbort,
+  simp only [simulatedEufNmaAdv, simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome,
+    FiatShamirWithAbort,
     simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
     StateT.run_bind, StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc, pure_bind,
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]
@@ -287,12 +289,13 @@ theorem managedRoNmaExp_replay_pin :
   norm_num
 
 /-- The same value on the plain EUF-NMA side of the bridge. -/
-theorem eufNmaExp_replay_pin :
-    Pr[= true | SignatureAlg.eufNmaExp (runtime (Commit := Bool) (Chal := Bool) Bool)
-      (simulatedEufNmaAdv toyIds toyHr Bool 1 toySim replayAdv)] = 1 / 4 := by
+theorem eufNmaAdvantage_replay_pin :
+    SignatureAlg.eufNmaAdvantage (runtime (Commit := Bool) (Chal := Bool) Bool)
+      (simulatedEufNmaAdv toyIds toyHr Bool 1 toySim replayAdv) = 1 / 4 := by
+  rw [SignatureAlg.eufNmaAdvantage, SignatureAlg.eufNmaExp, runtime_evalDist_apply_singleton]
   refine (ENNReal.toReal_eq_toReal_iff' probOutput_ne_top (by finiteness)).mp ?_
-  simp only [SignatureAlg.eufNmaExp, simulatedEufNmaAdv, runtime_evalSPMF, probOutput_evalSPMF,
-    simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome, FiatShamirWithAbort,
+  simp only [simulatedEufNmaAdv, simulatedNmaAdv, replayAdv, toySim, toyIds, toyHr, firstSome,
+    FiatShamirWithAbort,
     simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
     StateT.run_bind, StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc, pure_bind,
     QueryImpl.add_apply_inr, simulateQ_unifSim_run, roSim.simulateQ_liftComp]

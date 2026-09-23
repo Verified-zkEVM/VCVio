@@ -64,9 +64,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ## Bridge to the plain EUF-NMA interface
 
@@ -76,7 +75,7 @@ therefore always *misses* in the overlay and falls through to the live oracle, s
 overlay verification coincides — as an `OracleComp` — with the plain verification. This
 collapses the managed-RO NMA experiment onto the plain EUF-NMA experiment of the
 cache-forgetting adversary `simulatedEufNmaAdv`, making the bound
-`Pr[managedRoNmaExp simulatedNmaAdv] ≤ simulatedEufNmaAdv.advantage` sound. -/
+`managedRoNmaAdvantage simulatedNmaAdv ≤ eufNmaAdvantage simulatedEufNmaAdv` sound. -/
 
 /-- The plain EUF-NMA adversary underlying `simulatedNmaAdv`: run the same managed
 simulation of the CMA adversary, but forget the returned cache and verify in the plain
@@ -84,9 +83,8 @@ random-oracle model. By Option B (`withCacheOverlay_verify_eq_of_miss`) the mana
 experiment of `simulatedNmaAdv` coincides with the plain EUF-NMA experiment of this
 adversary. -/
 noncomputable def simulatedEufNmaAdv :
-    SignatureAlg.eufNmaAdv
-      (FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts) where
+    SignatureAlg.EufNmaAdversary
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts) where
   main pk := Prod.fst <$> (simulatedNmaAdv ids hr M maxAttempts sim adv).main pk
 
 omit [SampleableType Stmt] in
@@ -102,7 +100,7 @@ lemma managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp :
       SignatureAlg.eufNmaExp (runtime M)
         (simulatedEufNmaAdv ids hr M maxAttempts sim adv) := by
   unfold SignatureAlg.managedRoNmaExp SignatureAlg.eufNmaExp
-  refine congrArg (runtime M).evalSPMF ?_
+  refine congrArg (runtime M).evalDist ?_
   refine bind_congr fun pksk => ?_
   -- Reduce the eufNma side `Prod.fst <$> _` to a bind, so both sides bind over
   -- `simulatedNmaAdv.main`, then compare the verification wrappers pointwise.
@@ -121,7 +119,7 @@ lemma managedRoNmaExp_simulatedNmaAdv_eq_eufNmaExp :
   -- verification point, so the overlay verification agrees with the plain verification.
   refine withCacheOverlay_verify_eq_of_miss ids hr M maxAttempts _ pksk.1 r.1.1 r.1.2 ?_
   intro w' z hσ
-  simp only [hσ, Function.update_self]
+  simp only [hσ, QueryCache.toFn_ofFn, Function.update_self]
 
 /-! ## Assembly -/
 
@@ -151,14 +149,13 @@ theorem euf_cma_to_nma
       Pr[= none | sim pk] ≤ ENNReal.ofReal p_abort)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
-    adv.advantage (runtime M) ≤
-      Pr[= true | SignatureAlg.managedRoNmaExp (runtime M)
-        (simulatedNmaAdv ids hr M maxAttempts sim adv)] +
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      SignatureAlg.managedRoNmaAdvantage (runtime M)
+        (simulatedNmaAdv ids hr M maxAttempts sim adv) +
       ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   classical
   -- `advantage = Pr[G₀]` via the per-key bridge `G₀`.
-  rw [SignatureAlg.unforgeableAdv.advantage,
-    probOutput_unforgeableExp_eq_hybridExpAtKey_real ids hr M maxAttempts adv]
+  rw [unforgeableAdvantage_eq_hybridExpAtKey_real ids hr M maxAttempts adv]
   -- Nonnegativity of the three per-hop slack pieces.
   have h1p : (0 : ℝ) < 1 - p_abort := by linarith
   have hA : 0 ≤ qS * ε * (qS + 1) / (2 * (1 - p_abort) ^ 2) + qS * (qH + 1) * ε / (1 - p_abort) :=
@@ -252,7 +249,7 @@ theorem euf_cma_to_nma
           have : Pr[= x | hr.gen] * Pr[= true | hybridExpAtKey ids hr M maxAttempts adv
                   (realSignBody ids M maxAttempts x.1 x.2) x.1] ≤
               Pr[= x | hr.gen] * (if ¬ Good x.1 x.2 then 1 else 0) := by
-            simp only [hg, not_false_eq_true, if_true]
+            simp only [hg, not_false_eq_true, ite_true]
             exact mul_le_mul' le_rfl probOutput_le_one
           exact le_trans this le_add_self
       · simp [probOutput_eq_zero_of_not_mem_support hx]
@@ -283,7 +280,7 @@ theorem euf_cma_to_nma
   refine le_trans hbound ?_
   rw [cmaToNmaLoss_eq_perKeyLoss_add, ENNReal.ofReal_add hPK hδ, add_assoc]
   gcongr
-  exact probOutput_hybridExp_sim_le_managedRoNmaExp ids hr M maxAttempts sim adv
+  exact probOutput_hybridExp_sim_le_managedRoNmaAdvantage ids hr M maxAttempts sim adv
 
 omit [SampleableType Stmt] [SampleableType Chal] in
 /-- Cache-invariant companion to `simulatedNmaAdv`: the reduction issues at most `qH`
@@ -424,7 +421,8 @@ lemma simulatedNmaAdv_nmaHashQueryBound
       FiatShamir.nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
         (oa := (pure ((result.1.1, result.1.2),
           match result.1.2 with
-          | some (w', _) => Function.update result.2 (Sum.inr (result.1.1, w')) none
+          | some (w', _) =>
+              QueryCache.ofFn (Function.update result.2 (Sum.inr (result.1.1, w')) none)
           | none => result.2) :
           OracleComp spec ((M × Option (Commit × Resp)) × spec.QueryCache))) 0 := by
     intro result
@@ -435,7 +433,8 @@ lemma simulatedNmaAdv_nmaHashQueryBound
     (oa := (simulateQ ((unifSim + roSim) + sigSim) (adv.main pk)).run ∅ >>= fun result =>
       pure ((result.1.1, result.1.2),
         match result.1.2 with
-        | some (w', _) => Function.update result.2 (Sum.inr (result.1.1, w')) none
+        | some (w', _) =>
+            QueryCache.ofFn (Function.update result.2 (Sum.inr (result.1.1, w')) none)
         | none => result.2)) qH
   exact hbind
 

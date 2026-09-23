@@ -43,9 +43,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ### First-moment reduction scaffolding for the coincidence-count bound
 
@@ -83,10 +82,10 @@ private lemma countP_mem_le_sum_count {α : Type} [DecidableEq α] (l d : List �
   | cons a t ih =>
       rw [List.countP_cons, List.map_cons, List.sum_cons]
       by_cases h : a ∈ d
-      · simp only [decide_eq_true_eq, h, if_true]
+      · simp only [decide_eq_true_eq, h, ite_true]
         have : 1 ≤ d.count a := List.one_le_count_iff.mpr h
         omega
-      · simp only [decide_eq_true_eq, h, if_false]
+      · simp only [decide_eq_true_eq, h, ite_false]
         omega
 
 /-- Expressing a `List.count` as a sum of equality indicators over the list. -/
@@ -200,7 +199,7 @@ lemma deferredDrawReadImpl_step_expected_drawnlist_length_le (pk : Stmt) (sk : W
   classical
   rcases t with (n | mc) | msg
   · -- UNIFORM: state untouched, drawn list `s.1.1.2` preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ (by simp [deferredDrawReadImpl]))
     intro z hz
     have hzs : z ∈ support ((fun u => (u, s)) <$>
@@ -208,7 +207,7 @@ lemma deferredDrawReadImpl_step_expected_drawnlist_length_le (pk : Stmt) (sk : W
     rw [support_map] at hzs
     obtain ⟨u, _, rfl⟩ := hzs; rfl
   · -- READ: writes only the base cache / bad flag / readlist; drawn list `s.1.1.2` preserved.
-    rw [if_neg (by simp), add_zero]
+    rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ ?_)
     · intro z hz
       have hzs : z ∈ support ((fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
@@ -220,7 +219,7 @@ lemma deferredDrawReadImpl_step_expected_drawnlist_length_le (pk : Stmt) (sk : W
     · simp only [deferredDrawReadImpl, StateT.run_mk]
       rcases hg : s.1.1.1.1 mc with _ | v <;> simp [roStep, hg]
   · -- SIGN: drawn list becomes `s.1.1.2 ++ alc.1.2`; expected new length ≤ 1/(1-p).
-    rw [if_pos (by simp)]
+    rw [ite_eq_left (by simp)]
     have hrun : (deferredDrawReadImpl ids M maxAttempts pk sk (.inr msg)).run s =
         (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
           (alc.1.1, ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2))) <$>
@@ -339,7 +338,7 @@ theorem deferredDrawRead_run_expected_drawnlist_length_le {γ : Type} (pk : Stmt
         refine hfold (qSrem - 1) c (fun x => ih x.1 (qSrem - 1) (by simpa using hQ2 x.1) x.2) ?_ ?_
         · have hstep := deferredDrawReadImpl_step_expected_drawnlist_length_le ids M maxAttempts
             pk sk hp₀ hp hAbort (.inr msg) s
-          rwa [if_pos (by rfl), ← hc] at hstep
+          rwa [ite_eq_left (by rfl), ← hc] at hstep
         · rw [add_comm, ← add_one_mul,
             show ((qSrem - 1 : ℕ) : ℝ≥0∞) + 1 = (qSrem : ℝ≥0∞) by
               have : qSrem - 1 + 1 = qSrem := by omega
@@ -365,14 +364,14 @@ lemma deferredDrawReadImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
           (if (t matches Sum.inr _) then ENNReal.ofReal (1 / (1 - p_abort)) else 0) := by
   classical
   rcases t with (n | mc) | msg
-  · rw [if_neg (by simp), add_zero]
+  · rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ (by simp [deferredDrawReadImpl]))
     intro z hz
     have hzs : z ∈ support ((fun u => (u, s)) <$>
         (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) n) := hz
     rw [support_map] at hzs
     obtain ⟨u, _, rfl⟩ := hzs; rfl
-  · rw [if_neg (by simp), add_zero]
+  · rw [ite_eq_right (by simp), add_zero]
     refine le_of_eq (tsum_probOutput_mul_of_const_on_support _ ?_ ?_)
     · intro z hz
       have hzs : z ∈ support ((fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
@@ -383,7 +382,7 @@ lemma deferredDrawReadImpl_step_expected_attemptCount_le (pk : Stmt) (sk : Wit)
       obtain ⟨cu, _, rfl⟩ := hzs; rfl
     · simp only [deferredDrawReadImpl, StateT.run_mk]
       rcases hg : s.1.1.1.1 mc with _ | v <;> simp [roStep, hg]
-  · rw [if_pos (by simp)]
+  · rw [ite_eq_left (by simp)]
     have hrun : (deferredDrawReadImpl ids M maxAttempts pk sk (.inr msg)).run s =
         (fun alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache =>
           (alc.1.1, ((((alc.2, msg :: s.1.1.1.2), s.1.1.2 ++ alc.1.2), s.1.2), s.2))) <$>
@@ -514,7 +513,7 @@ theorem deferredDrawRead_run_expected_attemptCount_le {γ : Type} (pk : Stmt) (s
         refine hfold (qSrem - 1) c (fun x => ih x.1 (qSrem - 1) (by simpa using hQ2 x.1) x.2) ?_ ?_
         · have hstep := deferredDrawReadImpl_step_expected_attemptCount_le ids M maxAttempts
             pk sk hp₀ hp hAbort (.inr msg) s
-          rwa [if_pos (by rfl), ← hc] at hstep
+          rwa [ite_eq_left (by rfl), ← hc] at hstep
         · rw [add_comm, ← add_one_mul,
             show ((qSrem - 1 : ℕ) : ℝ≥0∞) + 1 = (qSrem : ℝ≥0∞) by
               have : qSrem - 1 + 1 = qSrem := by omega
@@ -1428,16 +1427,16 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
             = (if oz = none then Rr else 0) := by
         intro oz
         cases oz with
-        | some z => rw [if_neg (by simp), tsum_probOutput_pure_mul]; simp
+        | some z => rw [ite_eq_right (by simp), tsum_probOutput_pure_mul]; simp
         | none =>
-            rw [if_pos rfl, hRr, map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
+            rw [ite_eq_left rfl, hRr, map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
             refine tsum_congr fun rws => ?_
             simp only [Function.comp]
             rw [tsum_probOutput_pure_mul]
             simp [List.length_cons]
       rw [tsum_eq_single (none : Option Resp) fun oz hoz => by
-        rw [h_oz oz, if_neg hoz, mul_zero]]
-      rw [h_oz none, if_pos rfl]; ring
+        rw [h_oz oz, ite_eq_right hoz, mul_zero]]
+      rw [h_oz none, ite_eq_left rfl]; ring
     -- Peel the challenge `ch`. On *accept* the recorded list is empty (charge `0`); only the
     -- *reject* branch contributes, gated by `Pr[none | respond]`.
     rw [tsum_probOutput_bind_mul]
@@ -1473,10 +1472,10 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
         intro oz
         cases oz with
         | some z =>
-            rw [if_neg (by simp), tsum_probOutput_pure_mul]
+            rw [ite_eq_right (by simp), tsum_probOutput_pure_mul]
             simp
         | none =>
-            rw [if_pos rfl, map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
+            rw [ite_eq_left rfl, map_eq_bind_pure_comp, tsum_probOutput_bind_mul]
             -- The reject branch: split the recorded count list `ws.1 :: rws.1.2` into head + tail.
             have hsplit : ∀ rws : (Option (Commit × Resp) × List Commit) ×
                 (M × Commit →ₒ Chal).QueryCache,
@@ -1549,8 +1548,9 @@ theorem ghostSignDrawBody_succ_charge {γ : Type}
               (if oz = none then H ws + L₀ * Rr else 0) :=
             ENNReal.tsum_le_tsum fun oz => by gcongr; exact h_oz oz
         _ = Pr[= none | ids.respond pk sk ws.2 ch] * (H ws + L₀ * Rr) := by
-            rw [tsum_eq_single (none : Option Resp) fun oz hoz => by rw [if_neg hoz, mul_zero]]
-            rw [if_pos rfl]
+            rw [tsum_eq_single (none : Option Resp) fun oz hoz => by
+              rw [ite_eq_right hoz, mul_zero]]
+            rw [ite_eq_left rfl]
     -- Sum over `ch`: factor out the reject probability and fold via `hR_eq`.
     calc (∑' ch : Chal, Pr[= ch | uniformSample Chal] *
             ∑' alc : (Option (Commit × Resp) × List Commit) × (M × Commit →ₒ Chal).QueryCache,
