@@ -110,30 +110,30 @@ def FiatShamirWithAbort
 
 namespace FiatShamirWithAbort
 
+/-- The Fiat-Shamir-with-aborts signature scheme in the random oracle model: the transform
+instantiated in `OracleComp (unifSpec + (M × Commit →ₒ Chal))`, whose hash queries `runtime M`
+answers with a lazily sampled random oracle. -/
+abbrev inROM (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
+    (hr : GenerableRelation Stmt Wit rel) (M : Type) (maxAttempts : ℕ) :
+    SignatureAlg (OracleComp (unifSpec + (M × Commit →ₒ Chal)))
+      (M := M) (PK := Stmt) (SK := Wit) (S := Option (Commit × Resp)) :=
+  FiatShamirWithAbort (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts
+
 section runtime
 
 variable (M : Type) [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 /-- Runtime bundle for the Fiat-Shamir-with-aborts random-oracle world. -/
-noncomputable def runtime : ProbCompRuntime (OracleComp (unifSpec + (M × Commit →ₒ Chal))) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
-    (hashImpl := (randomOracle :
-      QueryImpl (M × Commit →ₒ Chal) (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
-    ∅
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+noncomputable def runtime : ProbCompRuntime (OracleComp (unifSpec + (M × Commit →ₒ Chal))) :=
+  ProbCompRuntime.rom (M × Commit →ₒ Chal)
 
 /-- The Fiat-Shamir-with-aborts runtime is the visible measure of the explicit lazy
 random-oracle simulation from the empty cache. -/
 lemma runtime_evalDist_eq_simulateQ_run'
     {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
-    (runtime M).evalDist oa =
-      𝒟[(simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
-        (randomOracle : QueryImpl (M × Commit →ₒ Chal)
-          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))) oa).run' ∅] := by
-  simp only [ProbCompRuntime.evalDist, runtime,
-    MeasureSemanticsVia.withStateOracle_evalDist, unifFwdImpl]
+    (runtime M).evalDist oa = 𝒟[(simulateQ (M × Commit →ₒ Chal).romImpl oa).run' ∅] :=
+  rfl
 
 /-- The runtime commutes with a lifted plain-probability prefix. -/
 lemma runtime_evalDist_bind_liftComp
@@ -141,22 +141,8 @@ lemma runtime_evalDist_bind_liftComp
     (oa : ProbComp α)
     (rest : α → OracleComp (unifSpec + (M × Commit →ₒ Chal)) β) :
     (runtime M).evalDist (liftM oa >>= rest) =
-      MeasureTheory.Measure.bind 𝒟[oa] fun x => (runtime M).evalDist (rest x) := by
-  let ro : QueryImpl (M × Commit →ₒ Chal)
-      (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := randomOracle
-  let impl := unifFwdImpl (M × Commit →ₒ Chal) + ro
-  calc
-    _ = 𝒟[(simulateQ impl (liftM oa >>= rest)).run' ∅] :=
-      runtime_evalDist_eq_simulateQ_run' M _
-    _ = 𝒟[oa >>= fun x => (simulateQ impl (rest x)).run' ∅] := by
-      rw [simulateQ_bind, roSim.run'_liftM_bind]
-    _ = MeasureTheory.Measure.bind 𝒟[oa]
-        (fun x => 𝒟[(simulateQ impl (rest x)).run' ∅]) :=
-      evalDist_bind_of_discrete _ _
-    _ = _ := by
-      apply MeasureTheory.Measure.bind_congr_right
-      filter_upwards [] with x
-      exact (runtime_evalDist_eq_simulateQ_run' M (rest x)).symm
+      MeasureTheory.Measure.bind 𝒟[oa] fun x => (runtime M).evalDist (rest x) :=
+  ProbCompRuntime.rom_evalDist_bind_liftM ∅ oa rest
 
 end runtime
 
@@ -173,19 +159,14 @@ This is proved by induction on the loop counter: each abort iteration preserves 
 invariant (the cache only grows), and a successful iteration writes exactly the challenge
 used in verification. -/
 lemma fsAbortSignLoop_cache_invariant
-    (ro : QueryImpl (M × Commit →ₒ Chal)
-      (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))
-    (hro : ro = randomOracle)
     (hc : ids.Complete) {pk : Stmt} {sk : Wit} (hrel : rel pk sk = true)
     (msg : M) (n : ℕ) (s₀ : (M × Commit →ₒ Chal).QueryCache)
     (w : Commit) (z : Resp) (s : (M × Commit →ₒ Chal).QueryCache)
     (hsup : (some (w, z), s) ∈ support
-      ((simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
+      ((simulateQ ((M × Commit →ₒ Chal).romImpl)
         (fsAbortSignLoop ids M pk sk msg n)).run s₀)) :
     ∃ c : Chal, s (msg, w) = some c ∧ ids.verify pk w c z = true := by
-  subst hro
-  set impl := unifFwdImpl (M × Commit →ₒ Chal) +
-    (randomOracle : QueryImpl (M × Commit →ₒ Chal) _)
+  set impl := (M × Commit →ₒ Chal).romImpl
   have hSimQuery : ∀ (q : M × Commit),
       simulateQ impl (HasQuery.query q) =
         (randomOracle : QueryImpl (M × Commit →ₒ Chal) _) q :=
@@ -241,44 +222,31 @@ lemma fsAbortSignLoop_cache_invariant
 /-- When the random-oracle cache already contains the challenge for `(msg, w)`,
 verification of signature `(w, z)` deterministically returns `true`. -/
 lemma verify_eq_true_of_cached
-    (ro : QueryImpl (M × Commit →ₒ Chal)
-      (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))
-    (hro : ro = randomOracle)
     (pk : Stmt) (msg : M) (maxAttempts : ℕ) (w : Commit) (z : Resp)
     (cache : (M × Commit →ₒ Chal).QueryCache)
     (c : Chal) (hcached : cache (msg, w) = some c)
     (hverify : ids.verify pk w c z = true) :
-    (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
-      ((FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-        ids hr M maxAttempts).verify pk msg (some (w, z)))).run' cache =
+    (simulateQ ((M × Commit →ₒ Chal).romImpl)
+      ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk msg (some (w, z)))).run' cache =
     (pure true : ProbComp Bool) := by
-  subst hro
   simp [FiatShamirWithAbort, hcached, hverify]
 
 /-- For a fixed valid key pair, verification fails only when signing aborts: the probability
 that simulated keygen-free signing-then-verification returns `false` is bounded by the
 probability that signing alone returns `none`. -/
 lemma prEvent_false_signVerify_le_prEvent_none_sign
-    (ro : QueryImpl (M × Commit →ₒ Chal)
-      (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))
-    (hro : ro = randomOracle)
     (hc : ids.Complete) {pk : Stmt} {sk : Wit} (hrel : rel pk sk = true)
     (msg : M) (maxAttempts : ℕ) :
-    letI sigAlg := FiatShamirWithAbort
-      (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts
+    letI sigAlg := FiatShamirWithAbort.inROM ids hr M maxAttempts
     Pr{
-      let b ← (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro) (do
+      let b ← (simulateQ ((M × Commit →ₒ Chal).romImpl) (do
         let sig ← sigAlg.sign pk sk msg
         sigAlg.verify pk msg sig)).run' ∅}[b = false] ≤
     Pr{
-      let sig ← (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
+      let sig ← (simulateQ ((M × Commit →ₒ Chal).romImpl)
         (sigAlg.sign pk sk msg)).run' ∅}[sig = none] := by
-  subst hro
-  set impl := unifFwdImpl (M × Commit →ₒ Chal) +
-    (randomOracle : QueryImpl (M × Commit →ₒ Chal) _)
-  set sigAlg := FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts
+  set impl := (M × Commit →ₒ Chal).romImpl
+  set sigAlg := FiatShamirWithAbort.inROM ids hr M maxAttempts
   set S := (simulateQ impl (sigAlg.sign pk sk msg)).run ∅
   have hSV : (simulateQ impl (do
         let sig ← sigAlg.sign pk sk msg
@@ -294,10 +262,10 @@ lemma prEvent_false_signVerify_le_prEvent_none_sign
   | none => simp [sigAlg, FiatShamirWithAbort]
   | some wz =>
       obtain ⟨w', z⟩ := wz
-      obtain ⟨c₀, hcached, hverify⟩ := fsAbortSignLoop_cache_invariant ids M
-        randomOracle rfl hc hrel msg maxAttempts ∅ w' z p.2
+      obtain ⟨c₀, hcached, hverify⟩ := fsAbortSignLoop_cache_invariant ids M hc hrel
+        msg maxAttempts ∅ w' z p.2
         (by rwa [show p = (p.1, p.2) from rfl, hp] at hmem)
-      rw [verify_eq_true_of_cached ids hr M randomOracle rfl pk msg maxAttempts
+      rw [verify_eq_true_of_cached ids hr M pk msg maxAttempts
         w' z p.2 c₀ hcached hverify]
       simp
 
@@ -321,21 +289,13 @@ theorem correct
     (h_abort : ∀ (pk : Stmt) (sk : Wit), rel pk sk = true →
       ∀ msg : M,
         (runtime M).evalDist (do
-          let sig ← (FiatShamirWithAbort
-            (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-            ids hr M maxAttempts).sign pk sk msg
+          let sig ← (FiatShamirWithAbort.inROM ids hr M maxAttempts).sign pk sk msg
           pure sig.isNone) {true} ≤ δ) :
     SignatureAlg.Complete
-      (FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-        ids hr M maxAttempts) (runtime M) δ := by
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts) (runtime M) δ := by
   intro msg
-  open scoped Classical in
-  let ro : QueryImpl (M × Commit →ₒ Chal)
-      (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp) := randomOracle
-  let impl := unifFwdImpl (M × Commit →ₒ Chal) + ro
-  set sigAlg := FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts
+  let impl := (M × Commit →ₒ Chal).romImpl
+  set sigAlg := FiatShamirWithAbort.inROM ids hr M maxAttempts
   set signVerify : Stmt → Wit → ProbComp Bool := fun pk sk =>
     StateT.run' (simulateQ impl (do
       let sig ← sigAlg.sign pk sk msg
@@ -363,7 +323,7 @@ theorem correct
           pure sig.isNone] := by
       rw [runtime_evalDist_eq_simulateQ_run']
       congr 1
-      simp [signOnly, impl, ro, StateT.run'_eq]
+      simp [signOnly, impl, StateT.run'_eq]
     rw [hAbortEval] at habort
     have habort' : Pr{let sig ← signOnly pk sk}[sig = none] ≤ δ := by
       rw [prEvent_eq_evalDist_decide]
@@ -374,7 +334,7 @@ theorem correct
     have hfalse : 𝒟[signVerify pk sk] {false} ≤
         Pr{let sig ← signOnly pk sk}[sig = none] := by
       rw [← prEvent_eq_evalDist_singleton]
-      exact prEvent_false_signVerify_le_prEvent_none_sign ids hr M ro rfl hc hrel
+      exact prEvent_false_signVerify_le_prEvent_none_sign ids hr M hc hrel
         msg maxAttempts
     calc
       1 - δ ≤ 1 - Pr{let sig ← signOnly pk sk}[sig = none] :=

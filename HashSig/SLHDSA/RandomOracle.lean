@@ -237,11 +237,8 @@ noncomputable def runtimeWithCache (core : CorePrimitives p)
     [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
     [SampleableType core.Y] [SampleableType (Bytes p.m)]
     (cache : PublicHash.Cache core) :
-    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
-    (hashImpl := PublicHash.randomOracle core) cache
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) :=
+  ProbCompRuntime.rom (publicHashSpec core) cache
 
 open scoped Classical in
 /-- Standard SLH-DSA public-hash ROM runtime, starting from the empty cache. -/
@@ -260,10 +257,8 @@ lemma runtimeWithCache_evalDist (core : CorePrimitives p)
     (cache : PublicHash.Cache core) {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + publicHashSpec core) α) :
     (runtimeWithCache core cache).evalDist oa =
-      𝒟[(simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core) oa).run'
-        cache] := by
-  simp only [ProbCompRuntime.evalDist, runtimeWithCache,
-    MeasureSemanticsVia.withStateOracle_evalDist, unifFwdImpl]
+      𝒟[(simulateQ (publicHashSpec core).romImpl oa).run' cache] :=
+  rfl
 
 open scoped Classical in
 /-- The standard public-hash runtime starts the explicit lazy random-oracle simulation from the
@@ -273,8 +268,7 @@ lemma runtime_evalDist (core : CorePrimitives p)
     [SampleableType core.Y] [SampleableType (Bytes p.m)]
     {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + publicHashSpec core) α) :
-    (runtime core).evalDist oa =
-      𝒟[(simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core) oa).run' ∅] :=
+    (runtime core).evalDist oa = 𝒟[(simulateQ (publicHashSpec core).romImpl oa).run' ∅] :=
   runtimeWithCache_evalDist core ∅ oa
 
 end PublicHash

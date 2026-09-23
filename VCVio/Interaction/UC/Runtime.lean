@@ -230,7 +230,7 @@ projecting onto the output to obtain the final visible measure.
 
 For a protocol in the random oracle model, a typical instantiation is:
 * `superSpec := unifSpec + (D →ₒ R)` (uniform sampling plus hash oracle)
-* `impl := HasQuery.toQueryImpl.liftTarget _ + randomOracle`
+* `impl := (D →ₒ R).romImpl`, the random oracle model handler `OracleSpec.romImpl`
   (identity on `unifSpec`, lazy-cached on the hash)
 * `initOracle := ∅` (empty random oracle cache)
 -/

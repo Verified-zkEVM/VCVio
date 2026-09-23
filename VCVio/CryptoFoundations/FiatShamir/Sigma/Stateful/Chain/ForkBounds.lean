@@ -258,7 +258,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace
 
 private lemma forkLogged_base_support
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     {z : (M × (Commit × Resp)) × (ForkBaseState M Commit Chal × List M)}
     (hz : z ∈ support
@@ -295,7 +295,7 @@ variable [SampleableType Chal]
 
 private lemma forkBase_finalQuery_runTrace_eq
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (pk : Stmt) :
     Fork.runTrace σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) pk =
@@ -545,7 +545,7 @@ private lemma probOutput_simulateQ_forkWrappedUniformImpl [Inhabited Chal] [Fint
 
 private noncomputable def forkH5Body
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     OracleComp (Fork.wrappedSpec Chal) Bool := do
   let (pk, _) ← OracleComp.liftComp hr.gen (Fork.wrappedSpec Chal)
@@ -557,7 +557,7 @@ private noncomputable def forkH5Body
 
 private noncomputable def forkLoggedVerifyBody
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     OracleComp (Fork.wrappedSpec Chal) Bool := do
   let z ← (simulateQ (forkLoggedImpl (M := M) (Commit := Commit)
@@ -568,7 +568,7 @@ private noncomputable def forkLoggedVerifyBody
 
 private lemma forkLogged_queryLog_length_le
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
       (Chal := Chal) (S' := Commit × Resp) (oa := adv.main pk) qS qH)
@@ -640,7 +640,7 @@ adversary's source-`qH` plus verifier-point query. -/
 private lemma forkLogged_verify_prob_true_le_forkPoint_run
     [Inhabited Chal] [Fintype Chal]
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
       (Chal := Chal) (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
@@ -753,7 +753,7 @@ verifier-point query. -/
 private lemma forkH5Body_prob_true_le_fork_advantage
     [Inhabited Chal] [Fintype Chal]
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
       (Chal := Chal) (S' := Commit × Resp) (oa := adv.main pk) qS qH) :

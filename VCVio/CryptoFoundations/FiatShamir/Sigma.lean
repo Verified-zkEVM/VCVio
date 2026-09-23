@@ -65,6 +65,15 @@ namespace FiatShamir
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
+/-- The Fiat-Shamir signature scheme in the random oracle model: the transform instantiated in
+`OracleComp (unifSpec + (M × Commit →ₒ Chal))`, whose hash queries `runtime M` answers with a
+lazily sampled random oracle. -/
+abbrev inROM (sigmaAlg : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
+    (hr : GenerableRelation Stmt Wit rel) (M : Type) :
+    SignatureAlg (OracleComp (unifSpec + (M × Commit →ₒ Chal)))
+      (M := M) (PK := Stmt) (SK := Wit) (S := Commit × Resp) :=
+  FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) sigmaAlg hr M
+
 section semantics
 
 variable (M : Type)
@@ -83,13 +92,8 @@ that wants to inject pre-decided answers at chosen points runs its experiment un
 `runtimeWithCache cache` instead of `runtime`. -/
 noncomputable def runtimeWithCache
     (cache : (M × Commit →ₒ Chal).QueryCache) :
-    ProbCompRuntime (OracleComp (unifSpec + (M × Commit →ₒ Chal))) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
-    (hashImpl := (randomOracle :
-      QueryImpl (M × Commit →ₒ Chal) (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
-    cache
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+    ProbCompRuntime (OracleComp (unifSpec + (M × Commit →ₒ Chal))) :=
+  ProbCompRuntime.rom (M × Commit →ₒ Chal) cache
 
 open scoped Classical in
 /-- Runtime bundle for the Fiat-Shamir random-oracle world.
@@ -112,12 +116,10 @@ lemma runtimeWithCache_evalDist
     {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α) :
     (runtimeWithCache M cache).evalDist oa =
-      𝒟[(simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
-        (randomOracle : QueryImpl (M × Commit →ₒ Chal)
-          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp))) oa).run' cache] := by
-  simp only [ProbCompRuntime.evalDist, runtimeWithCache,
-    MeasureSemanticsVia.withStateOracle_evalDist, unifFwdImpl]
+      𝒟[(simulateQ (M × Commit →ₒ Chal).romImpl oa).run' cache] :=
+  rfl
 
+open scoped Classical in
 /-- The Fiat-Shamir runtime commutes with binding a lifted `ProbComp` prefix:
 evaluating `liftM oa >>= rest` under the runtime is the same as first sampling
 `oa` and then integrating the runtime measures of `rest x`. -/
@@ -127,11 +129,8 @@ lemma runtimeWithCache_evalDist_bind_liftComp
     (oa : ProbComp α)
     (rest : α → OracleComp (unifSpec + (M × Commit →ₒ Chal)) β) :
     (runtimeWithCache M cache).evalDist (liftM oa >>= rest) =
-      Measure.bind 𝒟[oa] fun x => (runtimeWithCache M cache).evalDist (rest x) := by
-  classical
-  rw [runtimeWithCache_evalDist]
-  simp_rw [runtimeWithCache_evalDist]
-  rw [simulateQ_bind, roSim.run'_liftM_bind, evalDist_bind_of_discrete]
+      Measure.bind 𝒟[oa] fun x => (runtimeWithCache M cache).evalDist (rest x) :=
+  ProbCompRuntime.rom_evalDist_bind_liftM cache oa rest
 
 /-- Empty-cache instance of `runtimeWithCache_evalDist_bind_liftComp`. -/
 lemma runtime_evalDist_bind_liftComp
@@ -352,14 +351,9 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 open scoped Classical in
 private lemma perfectlyCorrect_evalDist_eq [SampleableType Chal] (msg : M) :
     (runtime M).evalDist (do
-      let (pk, sk) ←
-        (FiatShamir
-          (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).keygen
-      let sig ←
-        (FiatShamir
-          (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).sign pk sk msg
-      (FiatShamir
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).verify pk msg sig) =
+      let (pk, sk) ← (FiatShamir.inROM σ hr M).keygen
+      let sig ← (FiatShamir.inROM σ hr M).sign pk sk msg
+      (FiatShamir.inROM σ hr M).verify pk msg sig) =
       𝒟[do
         let (pk, sk) ← hr.gen
         let (c, e) ← σ.commit pk sk
@@ -367,24 +361,18 @@ private lemma perfectlyCorrect_evalDist_eq [SampleableType Chal] (msg : M) :
         let s ← σ.respond pk sk e r
         pure (σ.verify pk c r s)] := by
   rw [runtime_eq_runtimeWithCache_empty, runtimeWithCache_evalDist]
-  dsimp only [FiatShamir]
+  dsimp only [inROM, FiatShamir]
   simp only [simulateQ_bind, simulateQ_pure]
   have hpeel : ∀ {α β : Type} (oa : ProbComp α)
       (rest : α → StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp β)
       (s : (M × Commit →ₒ Chal).QueryCache),
-      (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
-          (randomOracle : QueryImpl (M × Commit →ₒ Chal)
-            (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
-          (monadLift oa) >>= rest).run' s =
+      (simulateQ (M × Commit →ₒ Chal).romImpl (monadLift oa) >>= rest).run' s =
         oa >>= fun x => (rest x).run' s :=
     fun oa rest s => roSim.run'_liftM_bind
       (randomOracle : QueryImpl (M × Commit →ₒ Chal)
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) oa rest s
   have hSimQuery : ∀ (q : M × Commit),
-      simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
-        (randomOracle : QueryImpl (M × Commit →ₒ Chal)
-          (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
-        (HasQuery.query q) = randomOracle q :=
+      simulateQ (M × Commit →ₒ Chal).romImpl (HasQuery.query q) = randomOracle q :=
     roSim.simulateQ_HasQuery_query randomOracle
   have hro_miss : ∀ {β : Type} (q : M × Commit)
       (rest : Chal → StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp β),
@@ -415,7 +403,7 @@ underlying Σ-protocol. -/
 theorem perfectlyCorrect [SampleableType Chal]
     (hc : σ.PerfectlyComplete) :
     SignatureAlg.PerfectlyComplete
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)
+      (FiatShamir.inROM σ hr M)
       (runtime M) := by
   intro msg
   rw [perfectlyCorrect_evalDist_eq σ hr M msg, ← prEvent_eq_evalDist_singleton]

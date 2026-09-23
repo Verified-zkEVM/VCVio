@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
@@ -22,6 +23,9 @@ throughout the crypto constructions in this repo:
 2. selected oracle families are implemented by a `StateT`-based simulator over `ProbComp`
 3. the final semantics is obtained by running the hidden state from a fixed initial cache and then
    observing the resulting `ProbComp` as a successful-output measure
+
+`ProbCompRuntime.withStateOracle` bundles these semantics with the lift of plain `ProbComp`
+sampling into the uniform summand, giving the runtime of such a world.
 
 The `SPMFSemantics` construction remains as the executable compatibility surface while runtime
 consumers migrate to `MeasureSemanticsVia.withStateOracle`.
@@ -85,6 +89,34 @@ lemma withStateOracle_evalDist_bind_pure
     withStateOracle_evalDist_map hashImpl s f hf mx
 
 end MeasureSemanticsVia
+
+namespace ProbCompRuntime
+
+/-- Runtime for an oracle world consisting of public randomness plus a hidden stateful oracle
+implementation `hashImpl` started from `s`. Experiments are observed through
+`MeasureSemanticsVia.withStateOracle`, and plain `ProbComp` sampling lifts into the uniform
+summand. -/
+noncomputable def withStateOracle
+    {ι : Type} {hashSpec : OracleSpec ι} {σ : Type}
+    (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ) :
+    ProbCompRuntime (OracleComp (unifSpec + hashSpec)) where
+  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle hashImpl s
+  toProbCompLift := ProbCompLift.ofMonadLift _
+  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+
+/-- The state-oracle runtime observes the measure of the simulated run from its initial
+state. -/
+lemma withStateOracle_evalDist
+    {ι : Type} {hashSpec : OracleSpec ι} {σ α : Type}
+    (hashImpl : QueryImpl hashSpec (StateT σ ProbComp)) (s : σ)
+    [MeasurableSpace α] (mx : OracleComp (unifSpec + hashSpec) α) :
+    (ProbCompRuntime.withStateOracle hashImpl s).evalDist mx =
+      𝒟[(simulateQ
+        ((QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT σ ProbComp) + hashImpl)
+          mx).run' s] :=
+  rfl
+
+end ProbCompRuntime
 
 namespace SPMFSemantics
 

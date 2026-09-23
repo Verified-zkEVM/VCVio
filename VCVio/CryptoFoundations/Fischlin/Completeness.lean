@@ -340,23 +340,20 @@ section simulation
 variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
   [DecidableEq M]
 
-/-- The full simulation implementation (`unifFwdImpl + randomOracle`) interpreting the Fischlin
-random-oracle world into `StateT QueryCache ProbComp`. This is definitionally the implementation
-used by the bundled `withStateOracle` runtime. -/
+/-- The random oracle model handler `OracleSpec.romImpl` at the Fischlin random-oracle spec,
+interpreting the Fischlin random-oracle world into `StateT QueryCache ProbComp`. This is the
+handler behind `ProbCompRuntime.rom`, hence behind `Fischlin.runtime`. -/
 @[reducible] def fischlinImpl :
     QueryImpl (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
       (StateT (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache ProbComp) :=
-  unifFwdImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M)
-    + randomOracle (spec := fischlinROSpec Stmt Commit Chal Resp ρ b M)
+  (fischlinROSpec Stmt Commit Chal Resp ρ b M).romImpl
 
 /-- The Fischlin runtime denotes a surface computation by simulating it with `fischlinImpl`
 starting from the empty cache and discarding the final cache. -/
 private lemma runtime_evalDist_eq
     {α : Type} [MeasurableSpace α]
     (mx : OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M) α) :
-    (runtime ρ b M).evalDist mx = 𝒟[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] := by
-  unfold runtime ProbCompRuntime.evalDist
-  simp only [MeasureSemanticsVia.withStateOracle_evalDist]
+    (runtime ρ b M).evalDist mx = 𝒟[(simulateQ (fischlinImpl ρ b M) mx).run' ∅] :=
   rfl
 
 /-- The pure-probability model game `G` for Fischlin completeness.

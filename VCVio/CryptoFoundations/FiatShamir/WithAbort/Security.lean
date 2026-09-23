@@ -115,8 +115,7 @@ theorem euf_cma_bound
     (recover : Stmt → Chal → Resp → Commit)
     (hcr : ids.CommitmentRecoverable recover)
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts))
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
@@ -144,8 +143,7 @@ theorem euf_cma_bound_perfectHVZK
     (recover : Stmt → Chal → Resp → Commit)
     (hcr : ids.CommitmentRecoverable recover)
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts))
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
