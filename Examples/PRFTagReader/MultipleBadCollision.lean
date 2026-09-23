@@ -71,8 +71,7 @@ lemma multipleBadStep_bad_le
         Option (TagTranscript Nonce Digest) ×
           ((UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache) ×
             UnlinkBadState TagId Nonce Digest) => z.2.2.bad |
-      (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) ((s, c), sB)] ≤
+      (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag)) ((s, c), sB)] ≤
       (sB.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
   by_cases hslot : s.sessionsUsed tag < sessionsPerTag
   · rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
@@ -177,8 +176,8 @@ lemma multipleBadStep_sessionsUsed_eq
     (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
     (sB : UnlinkBadState TagId Nonce Digest)
     (hsync : sB.sessionsUsed = s.sessionsUsed) :
-    ∀ z ∈ support ((multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) ((s, c), sB)),
+    ∀ z ∈ support
+        ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag)) ((s, c), sB)),
       z.2.2.sessionsUsed = z.2.1.1.sessionsUsed := by
   intro z hz
   rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)] at hz
@@ -207,8 +206,8 @@ lemma multipleBadStep_reader_state_eq
     (s : UnlinkState TagId)
     (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
     (sB : UnlinkBadState TagId Nonce Digest) :
-    ∀ z ∈ support ((multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) (Sum.inr transcript)) ((s, c), sB)),
+    ∀ z ∈ support ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inr transcript))
+        ((s, c), sB)),
       z.2.2 = sB := by
   intro z hz
   rw [multipleBadQueryImpl_reader_run transcript ((s, c), sB)] at hz
@@ -228,8 +227,7 @@ lemma multipleBadStep_preserves
     (hbounded : unlinkBadCacheBounded sB)
     (hused : ∀ tag : TagId, sB.sessionsUsed tag ≤ sessionsPerTag)
     (hsync : sB.sessionsUsed = s.sessionsUsed) :
-    ∀ z ∈ support ((multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) t) ((s, c), sB)),
+    ∀ z ∈ support ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag t) ((s, c), sB)),
       unlinkBadCacheBounded z.2.2 ∧
         (∀ tag : TagId, z.2.2.sessionsUsed tag ≤ sessionsPerTag) ∧
         z.2.2.sessionsUsed = z.2.1.1.sessionsUsed := by
@@ -286,8 +284,8 @@ lemma simulateQ_multipleBad_prob_le
     (hused : ∀ tag, sB.sessionsUsed tag ≤ sessionsPerTag)
     (hsync : sB.sessionsUsed = s.sessionsUsed) :
     Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-        (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag)) adversary).run ((s, c), sB)] ≤
+        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
+          ((s, c), sB)] ≤
       (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
         ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
   induction adversary using OracleComp.inductionOn generalizing s c sB with
@@ -303,12 +301,11 @@ lemma simulateQ_multipleBad_prob_le
       by_cases hslot : s.sessionsUsed tag < sessionsPerTag
       · -- Tag query, slot available: apply `multipleBadStep_bad_le`, then induct on the
         -- continuation with updated invariants.
-        set step := (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) ((s, c), sB)
+        set step :=
+          (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag)) ((s, c), sB)
         set cont := fun p : Option (TagTranscript Nonce Digest) ×
             MultipleBadState TagId Nonce Digest sessionsPerTag =>
-          (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag)) (oa p.1)).run p.2
+          (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) (oa p.1)).run p.2
         have hstepBound :
             Pr[fun z : Option (TagTranscript Nonce Digest) ×
                   MultipleBadState TagId Nonce Digest sessionsPerTag => ¬ z.2.2.bad = false |
@@ -326,8 +323,8 @@ lemma simulateQ_multipleBad_prob_le
                   ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
           intro p hp hpbad
           have hp_real : p ∈ support
-              (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                (sessionsPerTag := sessionsPerTag) (Sum.inl tag) ((s, c), sB)) := by
+              (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag)
+                ((s, c), sB)) := by
             simpa [step] using hp
           have hinvs := multipleBadStep_preserves (sessionsPerTag := sessionsPerTag)
             (Sum.inl tag) s c sB hbounded hused hsync p hp_real
@@ -382,21 +379,20 @@ lemma simulateQ_multipleBad_prob_le
       -- Reader branch: bad-world component untouched; induct on the continuation.
       rw [probEvent_bind_eq_tsum]
       calc ∑' z,
-              Pr[= z | (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                  (sessionsPerTag := sessionsPerTag) (Sum.inr transcript)) ((s, c), sB)] *
+              Pr[= z | (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inr transcript))
+                ((s, c), sB)] *
               Pr[fun y : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => y.2.2.bad |
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (oa z.1)).run z.2]
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) (oa z.1)).run
+                  z.2]
           ≤ ∑' z,
-              Pr[= z | (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                  (sessionsPerTag := sessionsPerTag) (Sum.inr transcript)) ((s, c), sB)] *
+              Pr[= z | (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inr transcript))
+                ((s, c), sB)] *
               ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
                 ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
             apply ENNReal.tsum_le_tsum
             intro z
             by_cases hmem :
-                z ∈ support ((multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+                z ∈ support ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag
                   (Sum.inr transcript)) ((s, c), sB))
             · have hzeq := multipleBadStep_reader_state_eq (sessionsPerTag := sessionsPerTag)
                 transcript s c sB z hmem
@@ -409,8 +405,8 @@ lemma simulateQ_multipleBad_prob_le
             · rw [probOutput_eq_zero_of_not_mem_support hmem]
               simp
         _ = (∑' z,
-              Pr[= z | (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                  (sessionsPerTag := sessionsPerTag) (Sum.inr transcript)) ((s, c), sB)]) *
+              Pr[= z | (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inr transcript))
+                ((s, c), sB)]) *
               ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
                 ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
             rw [ENNReal.tsum_mul_right]
@@ -430,8 +426,7 @@ theorem multipleBad_bad_le_sessionCollisionBound
     (maxNonceProb : ℝ)
     (hmax : ∀ nonce : Nonce, (Pr{let n ← $ᵗ Nonce}[n = nonce]).toReal ≤ maxNonceProb) :
     (𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad) <$>
-        (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
+        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
           ((UnlinkState.init, ∅), UnlinkBadState.init)] {true}).toReal ≤
       ((sessionsPerTag ^ 2 * Fintype.card TagId : ℕ) : ℝ) * maxNonceProb := by
   let : MeasurableSpace Nonce := ⊤
@@ -496,8 +491,7 @@ theorem unlinkPRFIdeal_gap_le_unlinkBad [NeZero sessionsPerTag] [Fintype Nonce] 
           (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
           (sessionsPerTag := sessionsPerTag) adversary)]).toReal ≤
       (Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-        (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
+        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
           ((UnlinkState.init, ∅), UnlinkBadState.init)]).toReal +
       ((qReader * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) +
       ((qReader * qTag : ℕ) : ℝ) / (Fintype.card Nonce : ℝ) +
@@ -514,8 +508,7 @@ theorem unlinkPRFIdeal_gap_le_unlinkBad [NeZero sessionsPerTag] [Fintype Nonce] 
     (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run'
     (UnlinkState.init, ∅)]
   set B := Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-    (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
+    (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
       ((UnlinkState.init, ∅), UnlinkBadState.init)]
   set slackR := ((qReader * Fintype.card TagId : ℕ) : ℝ≥0∞) /
     (Fintype.card Digest : ℝ≥0∞)

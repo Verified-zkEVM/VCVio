@@ -144,10 +144,10 @@ the cached RO value at `x.target`, the outer log's `s`-th counted-oracle respons
 challenge under which `x.forgery` verifies all coincide. -/
 private def forkSupportInvariant
     (qH : ℕ) (pk : Stmt)
-    (x : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+    (x : Fork.Trace Commit Chal Resp M)
     (log : QueryLog (unifSpec + (Unit →ₒ Chal))) : Prop :=
   ∀ s : Fin (qH + 1),
-    Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH x =
+    Fork.forkPoint Commit Chal Resp M qH x =
         some s →
     ∃ ω : Chal,
       QueryLog.getQueryValue? log (Sum.inr ()) (↑s : ℕ) = some ω ∧
@@ -160,7 +160,7 @@ private theorem forkSupportInvariant_of_mem_replayFirstRun [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt)
-    {x : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)}
+    {x : Fork.Trace Commit Chal Resp M}
     {log : QueryLog (unifSpec + (Unit →ₒ Chal))}
     (h : (x, log) ∈ support (replayFirstRun (Fork.runTrace σ hr M nmaAdv pk))) :
     forkSupportInvariant σ M qH pk x log := by
@@ -187,8 +187,7 @@ variable [DecidableEq Chal] [SampleableType Wit] [SampleableType Chal]
 commitment whose distinct cached challenges accept, run `σ.extract`; otherwise resample. This is
 the post-`contextFork` continuation of `nmaForkExtract`. -/
 def nmaForkExtractBranch :
-    Option (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
-      Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) →
+    Option (Fork.Trace Commit Chal Resp M × Fork.Trace Commit Chal Resp M) →
       OracleComp (unifSpec + (Unit →ₒ Chal)) Wit
   | none => liftComp ($ᵗ Wit) (unifSpec + (Unit →ₒ Chal))
   | some (x₁, x₂) =>
@@ -212,7 +211,7 @@ def nmaForkExtract
     (qH : ℕ) (pk : Stmt) :
     OracleComp (unifSpec + (Unit →ₒ Chal)) Wit :=
   contextFork (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
-    (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH) >>=
+    (Fork.forkPoint Commit Chal Resp M qH) >>=
     nmaForkExtractBranch (M := M) (Chal := Chal) σ
 
 /-- NMA-to-witness reduction: run `nmaForkExtract`, answering its unit-indexed challenge oracle
@@ -245,7 +244,7 @@ private theorem perPk_extraction_bound
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (hss : σ.SpeciallySound) (pk : Stmt) :
-    let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint M qH t).isSome]
+    let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint _ _ _ M qH t).isSome]
     acc * (acc / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
       Pr{let w ← nmaReduction σ hr M nmaAdv qH pk}[rel pk w = true] := by
   classical
@@ -253,28 +252,23 @@ private theorem perPk_extraction_bound
     fun _ _ _ _ => probFailure_eq_zero' inferInstance
   have hExtract :
       Pr[ fun r : Option
-          (Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
-            Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) =>
-          ∃ (x₁ x₂ :
-              Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+          (Fork.Trace Commit Chal Resp M × Fork.Trace Commit Chal Resp M) =>
+          ∃ (x₁ x₂ : Fork.Trace Commit Chal Resp M)
             (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
             r = some (x₁, x₂) ∧
-            Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-              (Chal := Chal) qH x₁ = some s ∧
-            Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-              (Chal := Chal) qH x₂ = some s ∧
+            Fork.forkPoint Commit Chal Resp M qH x₁ = some s ∧
+            Fork.forkPoint Commit Chal Resp M qH x₂ = some s ∧
             QueryLog.getQueryValue? log₁ (Sum.inr ()) ↑s ≠
               QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
             forkSupportInvariant σ M qH pk x₁ log₁ ∧
             forkSupportInvariant σ M qH pk x₂ log₂
           | contextFork (Fork.runTrace σ hr M nmaAdv pk) (nmaForkBudget qH) (Sum.inr ())
-            (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-              (Chal := Chal) qH)] ≤
+            (Fork.forkPoint Commit Chal Resp M qH)] ≤
         Pr[ fun w : Wit => rel pk w = true | nmaReduction σ hr M nmaAdv qH pk] := by
     classical
     let chalSpec : OracleSpec Unit := Unit →ₒ Chal
     let wrappedMain := Fork.runTrace σ hr M nmaAdv pk
-    let cf := Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH
+    let cf := Fork.forkPoint Commit Chal Resp M qH
     let qb : ℕ ⊕ Unit → ℕ := nmaForkBudget qH
     rw [show Pr[fun w : Wit => rel pk w = true | nmaReduction σ hr M nmaAdv qH pk] =
           Pr[fun w : Wit => rel pk w = true | nmaForkExtract σ hr M nmaAdv qH pk] by
@@ -286,7 +280,7 @@ private theorem perPk_extraction_bound
     rw [hforkExtract_eq, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
     refine ENNReal.tsum_le_tsum fun r => ?_
     by_cases hE :
-        ∃ (x₁ x₂ : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+        ∃ (x₁ x₂ : Fork.Trace Commit Chal Resp M)
           (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
           r = some (x₁, x₂) ∧
           cf x₁ = some s ∧
@@ -342,7 +336,7 @@ theorem pointwise_extraction_bound
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (hss : σ.SpeciallySound) (pk : Stmt) :
-    let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint M qH t).isSome]
+    let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint _ _ _ M qH t).isSome]
     acc * (acc / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
       Pr{let w ← nmaReduction σ hr M nmaAdv qH pk}[rel pk w = true] :=
   perPk_extraction_bound σ hr M nmaAdv qH hss pk
@@ -381,8 +375,8 @@ theorem nma_to_hard_relation_bound
   -- Retain the public losslessness premise for callers of the compatibility theorem.
   have _ := hss_nf
   set acc : Stmt → ENNReal := fun pk =>
-    Pr[ fun x => (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-      (Chal := Chal) qH x).isSome | Fork.runTrace σ hr M nmaAdv pk] with hacc_def
+    Pr[ fun x => (Fork.forkPoint Commit Chal Resp M qH x).isSome |
+      Fork.runTrace σ hr M nmaAdv pk] with hacc_def
   have hAdv_eq_tsum :
       Fork.advantage σ hr M nmaAdv qH =
         ∑' pkw : Stmt × Wit, Pr[= pkw | hr.gen] * acc pkw.1 := by

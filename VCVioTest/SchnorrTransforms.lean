@@ -36,7 +36,7 @@ local instance sampleField : SampleableType (ZMod 7) :=
 theorem identity_signature :
     FiatShamir (m := OracleComp (unifSpec + (Unit × ZMod 7 →ₒ ZMod 7)))
       (Schnorr.restrictedSigma (ZMod 7) (ZMod 7) 1 id)
-      (DiffieHellman.dlogGenerable (F := ZMod 7) 1) Unit =
+      (DiffieHellman.dlogGenerable (ZMod 7) 1) Unit =
         Schnorr.signature (ZMod 7) (ZMod 7) 1 Unit := rfl
 
 /-- Bounded integer challenges are distinct as scalars in this small test field. -/
@@ -83,12 +83,12 @@ theorem empty_log_no_witness :
 
 /-- A proof submitted without querying the Fiat–Shamir oracle. -/
 @[expose]
-def prover : FiatShamir.KnowledgeProver (Stmt := ZMod 7) (Commit := ZMod 7)
-    (Chal := Fin 3) (Resp := ZMod 7) Unit := fun _ _ => pure (0, 0)
+def prover : FiatShamir.KnowledgeProver (ZMod 7) (ZMod 7) (Fin 3) (ZMod 7) Unit :=
+  fun _ _ => pure (0, 0)
 
 example (Q : ℕ) :
     let a := FiatShamir.knowledgeAcceptance toySigma
-      (DiffieHellman.dlogGenerable (F := ZMod 7) 1) Unit prover 3 ()
+      (DiffieHellman.dlogGenerable (ZMod 7) 1) Unit prover 3 ()
     a * (a / (Q + 1 : ENNReal) - FiatShamir.challengeSpaceInv (Fin 3)) ≤
       Pr{
         let w ← Schnorr.fsExtractor (ZMod 7) (ZMod 7) 1 (Schnorr.boundedChallenge 7 3)
@@ -98,15 +98,15 @@ example (Q : ℕ) :
     (Schnorr.boundedChallenge 7 3) Unit toy_embedding prover 3 () Q (by trivial)
 
 example : IsQueryBoundP
-    (FiatShamir.nmaForkExtract toySigma (DiffieHellman.dlogGenerable (F := ZMod 7) 1) Unit
-      (FiatShamir.proverWithFinalQuery toySigma (DiffieHellman.dlogGenerable (F := ZMod 7) 1)
+    (FiatShamir.nmaForkExtract toySigma (DiffieHellman.dlogGenerable (ZMod 7) 1) Unit
+      (FiatShamir.proverWithFinalQuery toySigma (DiffieHellman.dlogGenerable (ZMod 7) 1)
         Unit prover ()) 0 3) (· = .inr ()) 2 :=
   Schnorr.fs_extractor_challenge_queries (ZMod 7) (ZMod 7) 1
     (Schnorr.boundedChallenge 7 3) Unit prover 3 () 0 (by trivial)
 
 example (ρ b S : ℕ) :
     ∫⁻ q, (q : ENNReal) ∂𝒟[Fischlin.signingQueryCount toySigma ρ b Unit
-      (DiffieHellman.dlogGenerable (F := ZMod 7) 1) S 3 3 ()] =
+      (DiffieHellman.dlogGenerable (ZMod 7) 1) S 3 3 ()] =
       ρ * (2 ^ b : ENNReal) * (1 - (1 - (2 ^ b : ENNReal)⁻¹) ^ 3) := by
   simpa only [toySigma, show FinEnum.card (Fin 3) = 3 from rfl] using
     Schnorr.fischlin_expected_sign_queries (ZMod 7) (ZMod 7) 1
@@ -118,12 +118,12 @@ example (ρ b S Q : ℕ) (hρ : 0 < ρ)
     (hQ : ∀ pk msg, Fischlin.ROQueryBound ρ b Unit (adv.run pk msg) Q) :
     Pr{
       let z ← Fischlin.knowledgeRun toySigma
-        (DiffieHellman.dlogGenerable (F := ZMod 7) 1) ρ b S Unit adv 3 ()
+        (DiffieHellman.dlogGenerable (ZMod 7) 1) ρ b S Unit adv 3 ()
     }[z.1 = true] -
         Fischlin.knowledgeSoundnessError Q ρ b S ≤
       Pr{
         let z ← Fischlin.knowledgeRun toySigma
-          (DiffieHellman.dlogGenerable (F := ZMod 7) 1) ρ b S Unit adv 3 ()
+          (DiffieHellman.dlogGenerable (ZMod 7) 1) ρ b S Unit adv 3 ()
       }[z.2.any (fun w => decide (w • (1 : ZMod 7) = 3)) = true] := by
   have hg : Function.Injective (fun z : ZMod 7 => z • (1 : ZMod 7)) := by
     intro x y h
@@ -134,7 +134,7 @@ example (ρ b S Q : ℕ) (hρ : 0 < ρ)
 example (ρ b S : ℕ) (hρ : 0 < ρ) :
     let scheme := Fischlin (m := OracleComp (unifSpec +
       fischlinROSpec (ZMod 7) (ZMod 7) (Fin 3) (ZMod 7) ρ b Unit)) toySigma
-      (DiffieHellman.dlogGenerable (F := ZMod 7) 1) ρ b S Unit
+      (DiffieHellman.dlogGenerable (ZMod 7) 1) ρ b S Unit
     (1 : ENNReal) - Fischlin.completenessError ρ b S 3 ≤
       (Fischlin.runtime ρ b Unit).evalDist (do
         let (pk, sk) ← scheme.keygen

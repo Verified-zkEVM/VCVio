@@ -86,7 +86,7 @@ example (adversary : UnlinkAdversary Bool Bool Bool) (qReader qTag : ℕ)
       (qReader + qTag) adversary (UnlinkState.init, ∅)] {true} ≤
     𝒟[verdict (noisy (singleIdealQueryImpl (sessionsPerTag := 2)))
       (qReader + qTag) adversary (UnlinkState.init, ∅)] {true} +
-    𝒟[stateEvent (noisy (multipleBadQueryImpl (sessionsPerTag := 2)))
+    𝒟[stateEvent (noisy (multipleBadQueryImpl _ _ _ 2))
       (qReader + qTag) adversary ((UnlinkState.init, ∅), UnlinkBadState.init)
       (fun state => state.2.bad)] {true} +
     ((qReader * Fintype.card Bool : ℕ) : ℝ≥0∞) / (Fintype.card Bool : ℝ≥0∞) +

@@ -91,7 +91,7 @@ private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux
     ((simulateQ (forkLoggedProbImpl (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) simT pk) oa).run
         (forkInitialState M Commit Chal) >>= fun x =>
-      simulateQ (forkWrappedUniformImpl (Chal := Chal))
+      simulateQ (forkWrappedUniformImpl Chal)
         (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk x.1 x.2)) =
     ((simulateQ (simulatedNmaLoggedProbImpl (M := M) (Commit := Commit)
@@ -106,7 +106,7 @@ private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux
     ((simulateQ (forkLoggedProbImpl (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) simT pk) oa).run
         (forkInitialState M Commit Chal) >>= fun x =>
-      simulateQ (forkWrappedUniformImpl (Chal := Chal))
+      simulateQ (forkWrappedUniformImpl Chal)
         (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk x.1 x.2))
         =
@@ -149,7 +149,7 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
         ((cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
           (signedFreshAdv σ hr M adv))
       =
-    simulateQ (forkWrappedUniformImpl (Chal := Chal))
+    simulateQ (forkWrappedUniformImpl Chal)
       (forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) σ hr adv simT) := by
   let : Fintype Chal := Fintype.ofFinite Chal
@@ -199,11 +199,11 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
   apply bind_congr
   intro ps
   change _ =
-    ((simulateQ (forkWrappedUniformImpl (Chal := Chal))
+    ((simulateQ (forkWrappedUniformImpl Chal)
         ((simulateQ (forkLoggedImpl (M := M) (Commit := Commit)
           (Chal := Chal) (Resp := Resp) simT ps.1) (adv.main ps.1)).run
           (forkInitialState M Commit Chal))) >>= fun x =>
-      simulateQ (forkWrappedUniformImpl (Chal := Chal))
+      simulateQ (forkWrappedUniformImpl Chal)
         (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ ps.1 x.1 x.2))
   rw [forkLoggedProbImpl_run (M := M) (Commit := Commit) (Chal := Chal)

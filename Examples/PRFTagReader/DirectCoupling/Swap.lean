@@ -201,10 +201,8 @@ private lemma singleTableHandler_simulateQ_swap_invariant
         g₁ x = g₂ x)
     (hswap_0 : g₁ ((tag, (0 : Fin sessionsPerTag)), n) = g₂ ((tag, slotK), n))
     (hswap_K : g₁ ((tag, slotK), n) = g₂ ((tag, (0 : Fin sessionsPerTag)), n)) :
-    (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g₁) oa).run' s
-    = (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g₂) oa).run' s := by
+    (simulateQ (singleTableHandler g₁) oa).run' s
+    = (simulateQ (singleTableHandler g₂) oa).run' s := by
   classical
   induction oa using OracleComp.inductionOn generalizing s with
   | pure b =>
@@ -413,14 +411,10 @@ lemma evalDist_singleTableHandler_cache_swap_eq [Fintype Nonce]
     (hAdv : slotK.val < s.sessionsUsed tag)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) :
     𝒟[do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-         (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag)
-            (OracleComp.tableExtending
+         (simulateQ (singleTableHandler (OracleComp.tableExtending
               (c.cacheQuery ((tag, (0 : Fin sessionsPerTag)), n) u) gS)) oa).run' s]
     = 𝒟[do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-           (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending
+           (simulateQ (singleTableHandler (OracleComp.tableExtending
                 (c.cacheQuery ((tag, slotK), n) u) gS)) oa).run' s] := by
   classical
   -- **Permutation argument**: let `φ := cellSwap ((tag, 0), n) ((tag, slotK), n)`. φ is
@@ -483,14 +477,10 @@ lemma singleTableHandler_cache_swap_eq [Fintype Nonce]
     (hAdv : slotK.val < s.sessionsUsed tag)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) :
     𝒮[do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-         (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag)
-            (OracleComp.tableExtending
+         (simulateQ (singleTableHandler (OracleComp.tableExtending
               (c.cacheQuery ((tag, (0 : Fin sessionsPerTag)), n) u) gS)) oa).run' s]
     = 𝒮[do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-           (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending
+           (simulateQ (singleTableHandler (OracleComp.tableExtending
                 (c.cacheQuery ((tag, slotK), n) u) gS)) oa).run' s] := by
   let : MeasurableSpace Digest := ⊤
   apply evalSPMF_eq_of_evalDist_eq

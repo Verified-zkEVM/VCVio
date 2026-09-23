@@ -219,7 +219,7 @@ noncomputable abbrev bad :=
 theorem reference_instrument :
     (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
       (sessionsPerTag := sessionsPerTag)).extendState (fun q _ r _ => advance q r) =
-      multipleBadQueryImpl (sessionsPerTag := sessionsPerTag) := by
+      multipleBadQueryImpl _ _ _ sessionsPerTag := by
   funext q state
   cases q with
   | inl tag => rw [multipleBadQueryImpl_tag_run]; rfl
@@ -230,7 +230,7 @@ theorem bad_local (q : (UnlinkOracleSpec TagId Nonce Digest).Domain)
     (state : (UnlinkState TagId × List ((TagId × Nonce) × Digest)) ×
       UnlinkBadState TagId Nonce Digest) :
     Prod.map id projectBad <$> bad (sessionsPerTag := sessionsPerTag) q state =
-      multipleBadQueryImpl (sessionsPerTag := sessionsPerTag) q (projectBad state) := by
+      multipleBadQueryImpl _ _ _ sessionsPerTag q (projectBad state) := by
   have h := instrument_projection (multiple (sessionsPerTag := sessionsPerTag))
     (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) projectMultiple
     multiple_local advance q state
@@ -292,7 +292,7 @@ theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
   rw [verdict_projection _ _ projectMultiple multiple_local _ _ hbound,
       verdict_projection _ _ projectSingle single_local _ _ hbound]
   have hbad := stateEvent_projection (bad (sessionsPerTag := sessionsPerTag))
-    (multipleBadQueryImpl (sessionsPerTag := sessionsPerTag)) projectBad bad_local
+    (multipleBadQueryImpl _ _ _ sessionsPerTag) projectBad bad_local
     (qReader + qTag) adversary hbound ((UnlinkState.init, []), UnlinkBadState.init)
     (fun state => state.2.bad)
   simp only [Function.comp_def, projectBad] at hbad
@@ -301,7 +301,7 @@ theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
     Network.multiple_le_single_add_bad_of_joint_law
       (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
-      (multipleBadQueryImpl (sessionsPerTag := sessionsPerTag))
+      (multipleBadQueryImpl _ _ _ sessionsPerTag)
       (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
       Measurable.of_discrete adversary qReader qTag hReader hTag
 

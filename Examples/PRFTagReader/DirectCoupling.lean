@@ -266,7 +266,7 @@ lemma multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed
     (hzero : s.sessionsUsed tag = 0) :
     (multipleTableHandler (sessionsPerTag := sessionsPerTag)
       (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inl tag) s) =
-      singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
+      singleTableHandler gS
         (Sum.inl tag) s := by
   have hslot : s.sessionsUsed tag < sessionsPerTag := by
     rw [hzero]; exact Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)
@@ -338,7 +338,7 @@ lemma multipleReader_reply_imp_singleReader_reply
       (multiplePattern (TagId := TagId) sessionsPerTag) transcript = true) :
     (multipleTableHandler (sessionsPerTag := sessionsPerTag)
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inr transcript) s) =
-      singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
+      singleTableHandler gS
         (Sum.inr transcript) s := by
   rw [multipleTableHandler_reader_run_slotZeroSubTable,
       singleTableHandler_reader_run gS transcript s, hM,

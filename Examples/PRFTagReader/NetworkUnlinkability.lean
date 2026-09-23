@@ -153,10 +153,10 @@ theorem badExperiment_eq (budget : Nat) (adversary : UnlinkAdversary TagId Nonce
     (hbound : IsTotalQueryBound adversary budget) :
     badExperiment (sessionsPerTag := sessionsPerTag) budget adversary =
       (fun out => out.2.2.bad) <$>
-        (simulateQ (multipleBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
+        (simulateQ (multipleBadQueryImpl _ _ _ sessionsPerTag) adversary).run
           ((UnlinkState.init, ∅), UnlinkBadState.init) := by
   have h := CachedPRF.stateEvent_projection (CachedPRF.bad (sessionsPerTag := sessionsPerTag))
-    (multipleBadQueryImpl (sessionsPerTag := sessionsPerTag))
+    (multipleBadQueryImpl _ _ _ sessionsPerTag)
     CachedPRF.projectBad CachedPRF.bad_local budget adversary hbound
     ((UnlinkState.init, []), UnlinkBadState.init) (fun state => state.2.bad)
   simp only [Function.comp_def, CachedPRF.projectBad] at h

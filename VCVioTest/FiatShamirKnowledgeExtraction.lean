@@ -39,12 +39,12 @@ def relation : GenerableRelation Unit Unit (fun _ _ => true) where
 
 /-- A proof emitted without consulting the random oracle. -/
 @[expose]
-def noQuery : KnowledgeProver (Stmt := Unit) (Commit := Bool) (Chal := Bool) (Resp := Unit) Unit :=
+def noQuery : KnowledgeProver Unit Bool Bool Unit Unit :=
   fun _ _ => pure (false, ())
 
 /-- The first hash answer chooses the final proof's commitment. -/
 @[expose]
-def adaptive : KnowledgeProver (Stmt := Unit) (Commit := Bool) (Chal := Bool) (Resp := Unit) Unit :=
+def adaptive : KnowledgeProver Unit Bool Bool Unit Unit :=
   fun _ _ => do
     let reply ← HasQuery.query (spec := Unit × Bool →ₒ Bool) ((), false)
     pure (reply, ())
@@ -93,7 +93,7 @@ example : evalWithAnswerFn (answers true)
         ()) = 2 := rfl
 
 example : evalWithAnswerFn (answers false)
-    ((fun t => (Fork.forkPoint Unit 0 t).isSome) <$>
+    ((fun t => (Fork.forkPoint _ _ _ Unit 0 t).isSome) <$>
       Fork.runTrace protocol relation Unit (proverWithFinalQuery protocol relation Unit noQuery ())
         ()) = true := rfl
 

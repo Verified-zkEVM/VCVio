@@ -44,38 +44,38 @@ variable [SampleableType C]
 /-- Schnorr's named Fiat–Shamir witness finder with the selected challenge policy. -/
 @[expose]
 def fsExtractor
-    (prover : FiatShamir.KnowledgeProver (Stmt := G) (Commit := G) (Chal := C) (Resp := F) M)
+    (prover : FiatShamir.KnowledgeProver G G C F M)
     (msg : M) (Q : ℕ) : G → ProbComp F :=
   FiatShamir.knowledgeExtractor (restrictedSigma F G g encode)
-    (dlogGenerable (F := F) g) M prover msg Q
+    (dlogGenerable F g) M prover msg Q
 
 /-- Acceptance of a bounded Fiat–Shamir prover gives a quantitative discrete-log recovery bound
 for the named replay extractor, using the cardinality of the actual challenge type `C`. -/
 theorem fs_extraction [Inhabited C] [Fintype C] (hinj : Function.Injective encode)
-    (prover : FiatShamir.KnowledgeProver (Stmt := G) (Commit := G) (Chal := C) (Resp := F) M)
+    (prover : FiatShamir.KnowledgeProver G G C F M)
     (pk : G) (msg : M) (Q : ℕ)
     (hQ : FiatShamir.nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
     let a := FiatShamir.knowledgeAcceptance (restrictedSigma F G g encode)
-      (dlogGenerable (F := F) g) M prover pk msg
+      (dlogGenerable F g) M prover pk msg
     a * (a / (Q + 1 : ℝ≥0∞) - FiatShamir.challengeSpaceInv C) ≤
       Pr{let w ← fsExtractor F G g encode M prover msg Q pk}[w • g = pk] := by
   simpa only [fsExtractor, decide_eq_true_eq] using
     FiatShamir.knowledgeExtractor_success (restrictedSigma F G g encode)
-      (dlogGenerable (F := F) g) M
+      (dlogGenerable F g) M
       (restrictedSigma_speciallySound F G g encode hinj) prover pk msg Q hQ
 
 /-- The replay program of the same Schnorr witness finder has a pathwise challenge budget. -/
 theorem fs_extractor_challenge_queries
-    (prover : FiatShamir.KnowledgeProver (Stmt := G) (Commit := G) (Chal := C) (Resp := F) M)
+    (prover : FiatShamir.KnowledgeProver G G C F M)
     (pk : G) (msg : M) (Q : ℕ)
     (hQ : FiatShamir.nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
     IsQueryBoundP
-      (FiatShamir.nmaForkExtract (restrictedSigma F G g encode) (dlogGenerable (F := F) g) M
+      (FiatShamir.nmaForkExtract (restrictedSigma F G g encode) (dlogGenerable F g) M
         (FiatShamir.proverWithFinalQuery (restrictedSigma F G g encode)
-          (dlogGenerable (F := F) g) M prover msg) Q pk)
+          (dlogGenerable F g) M prover msg) Q pk)
       (· = .inr ()) (2 * (Q + 1)) :=
   FiatShamir.knowledgeExtractor_challenge_bound (restrictedSigma F G g encode)
-    (dlogGenerable (F := F) g) M prover pk msg Q hQ
+    (dlogGenerable F g) M prover pk msg Q hQ
 
 end fiatShamir
 
@@ -93,15 +93,15 @@ theorem fischlin_extraction (hinj : Function.Injective encode)
     (pk : G) (msg : M) :
     Pr{
       let z ← Fischlin.knowledgeRun (restrictedSigma F G g encode)
-        (dlogGenerable (F := F) g) ρ b S M prover pk msg
+        (dlogGenerable F g) ρ b S M prover pk msg
     }[z.1 = true] -
         Fischlin.knowledgeSoundnessError Q ρ b S ≤
       Pr{
         let z ← Fischlin.knowledgeRun (restrictedSigma F G g encode)
-          (dlogGenerable (F := F) g) ρ b S M prover pk msg
+          (dlogGenerable F g) ρ b S M prover pk msg
       }[z.2.any (fun w => decide (w • g = pk)) = true] :=
   Fischlin.extraction_success_ge_acceptance_sub_error (restrictedSigma F G g encode)
-    (dlogGenerable (F := F) g) ρ b S M
+    (dlogGenerable F g) ρ b S M
     (restrictedSigma_speciallySound F G g encode hinj)
     (restrictedSigma_uniqueResponses F G g encode hg) prover Q hρ hQ pk msg
 
@@ -109,21 +109,21 @@ theorem fischlin_extraction (hinj : Function.Injective encode)
 theorem fischlin_complete (ρ b S : ℕ) (hρ : 0 < ρ) (msg : M) :
     let scheme := Fischlin
       (m := OracleComp (unifSpec + fischlinROSpec G G C F ρ b M))
-      (restrictedSigma F G g encode) (dlogGenerable (F := F) g) ρ b S M
+      (restrictedSigma F G g encode) (dlogGenerable F g) ρ b S M
     (1 : ℝ≥0∞) - Fischlin.completenessError ρ b S (FinEnum.card C) ≤
       (Fischlin.runtime ρ b M).evalDist (do
         let (pk, sk) ← scheme.keygen
         let sig ← scheme.sign pk sk msg
         scheme.verify pk msg sig) {true} :=
   Fischlin.almostComplete (restrictedSigma F G g encode)
-    (dlogGenerable (F := F) g) ρ b S M hρ (restrictedSigma_complete F G g encode) msg
+    (dlogGenerable F g) ρ b S M hρ (restrictedSigma_complete F G g encode) msg
 
 /-- Schnorr's actual Fischlin signer has the finite geometric expected hash cost. -/
 theorem fischlin_expected_sign_queries (ρ b S : ℕ) (pk : G) (sk : F) (msg : M) :
     ∫⁻ (q : ℕ), (q : ℝ≥0∞) ∂𝒟[Fischlin.signingQueryCount
-      (restrictedSigma F G g encode) ρ b M (dlogGenerable (F := F) g) S pk sk msg] =
+      (restrictedSigma F G g encode) ρ b M (dlogGenerable F g) S pk sk msg] =
       ρ * (2 ^ b : ℝ≥0∞) * (1 - (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ FinEnum.card C) :=
   Fischlin.sign_expectedQueries_eq_geometric (restrictedSigma F G g encode) ρ b M
-    (dlogGenerable (F := F) g) S pk sk msg
+    (dlogGenerable F g) S pk sk msg
 
 end Schnorr

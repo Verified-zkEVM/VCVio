@@ -324,6 +324,7 @@ variable {TagId Nonce Digest : Type}
   [DecidableEq Nonce] [SampleableType Nonce]
   [DecidableEq Digest] [SampleableType Digest]
 
+variable (Digest) in
 /-- Lazy random-function lookup at `(tag, nonce)`: return the cached digest if present, otherwise
 sample a fresh uniform digest and cache it. This is the `randomOracle` step expressed directly on
 the `responses` table of `AuthIdealState`. -/
@@ -346,8 +347,7 @@ noncomputable def authRFReaderQueryImpl :
     QueryImpl ((TagTranscript Nonce Digest) →ₒ ReaderReply)
       (StateT (AuthIdealState TagId Nonce Digest) ProbComp) := fun transcript => do
   let pairs ← (Finset.univ : Finset TagId).toList.mapM (fun tag => do
-    let d ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      tag transcript.nonce
+    let d ← authRFLookup Digest tag transcript.nonce
     return (tag, d))
   let st ← get
   let accepted : Bool := decide (∃ p ∈ pairs, p.2 = transcript.auth)
@@ -358,6 +358,7 @@ noncomputable def authRFReaderQueryImpl :
     AuthIdealState TagId Nonce Digest)
   return ReaderReply.ofBool accepted
 
+variable (TagId Nonce Digest) in
 /-- Combined oracle implementation for the random-function authentication world: the honest tag
 oracle of the ideal world together with the fresh-drawing random-function reader. -/
 noncomputable def authRFQueryImpl :
@@ -371,7 +372,7 @@ noncomputable def authRFQueryImpl :
 noncomputable def authRFDirectExp
     (adversary : AuthAdversary TagId Nonce Digest) : ProbComp Bool := do
   let (_, st) ← (simulateQ
-    (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
+    (authRFQueryImpl TagId Nonce Digest)
     adversary).run AuthIdealState.init
   return decide (st.readerForged ≠ ∅)
 

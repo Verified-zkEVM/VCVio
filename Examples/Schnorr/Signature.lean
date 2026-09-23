@@ -131,7 +131,7 @@ needed at the security theorem `signature_euf_cma`. -/
 def signature [SampleableType G] (g : G) (M : Type) [DecidableEq M] :
     SignatureAlg (OracleComp (unifSpec + (M × G →ₒ F)))
       (M := M) (PK := G) (SK := F) (S := G × F) :=
-  FiatShamir (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+  FiatShamir (Schnorr.sigma F G g) (dlogGenerable F g) M
 
 /-- Completeness of the Schnorr signature follows from completeness of the
 underlying Schnorr Σ-protocol via the generic Fiat-Shamir completeness theorem. -/
@@ -148,9 +148,9 @@ the bijection `· • g : F → G`. The factor of `g` ignored by the lifted
 private theorem hardRelationExp_dlogGenerable_eq_dlogExp [DecidableEq F]
     (g : G) (hg : Function.Bijective (· • g : F → G))
     (red : G → ProbComp F) :
-    Pr[= true | hardRelationExp (dlogGenerable (F := F) g) red] =
+    Pr[= true | hardRelationExp (dlogGenerable F g) red] =
     Pr[= true | dlogExp g (fun _ pk => red pk)] := by
-  rw [show Pr[= true | hardRelationExp (dlogGenerable (F := F) g) red] =
+  rw [show Pr[= true | hardRelationExp (dlogGenerable F g) red] =
       Pr[= true | do
         let x ← $ᵗ F
         let w ← red (x • g)
@@ -169,7 +169,7 @@ def dlogReduction (g : G) (M : Type) [DecidableEq M]
     (adv : SignatureAlg.unforgeableAdv (signature F G g M)) (qH : ℕ) :
     DLogAdversary F G :=
   letI : Inhabited F := ⟨0⟩
-  fun _ pk => FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+  fun _ pk => FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable F g) M
     (Schnorr.simTranscript F G g) adv qH pk
 
 /-- **EUF-CMA reduction for Schnorr signatures (Pointcheval-Stern).**
@@ -213,7 +213,7 @@ theorem signature_euf_cma [Fintype F] (g : G)
       Pr[= true | dlogExp g (dlogReduction F G g M adv qH)] := by
   let : Inhabited F := ⟨0⟩
   have hred := FiatShamir.euf_cma_bound
-    (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+    (Schnorr.sigma F G g) (dlogGenerable F g) M
     (Schnorr.sigma_speciallySound F G g)
     (by intro ω₁ p₁ ω₂ p₂; simp [Schnorr.sigma])
     (Schnorr.simTranscript F G g)
@@ -224,7 +224,7 @@ theorem signature_euf_cma [Fintype F] (g : G)
     adv qS qH hQ
   simp only [mul_zero, ENNReal.ofReal_zero, zero_add] at hred ⊢
   exact hred.trans (le_of_eq (hardRelationExp_dlogGenerable_eq_dlogExp F G g hg
-    (FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable (F := F) g) M
+    (FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable F g) M
       (Schnorr.simTranscript F G g) adv qH)))
 
 #guard_msgs (drop info) in
