@@ -387,15 +387,8 @@ theorem SM_DT_UD_oracles_run_collection_repeated (q : (i : ι) × Tweak × prob.
 
 end CollectionHalf
 
--- Preserve the established game names with declaration-specific naming exceptions.
+-- Derived instance names embed the game's underscore-separated structure name.
 attribute [nolint defsWithUnderscore]
-  SM_DT_UD_AbsoluteAdvantage SM_DT_UD_Adversary.State SM_DT_UD_Adversary.distinguish
-  SM_DT_UD_Adversary.pick SM_DT_UD_DirectedAdvantage SM_DT_UD_Experiment SM_DT_UD_IdealSuccess
-  SM_DT_UD_Problem.HasUniformInputs SM_DT_UD_Problem.HasUniformOutputs SM_DT_UD_Problem.emb
-  SM_DT_UD_Problem.inputGen SM_DT_UD_Problem.numTargets SM_DT_UD_Problem.outputGen
-  SM_DT_UD_Problem.standalone SM_DT_UD_Problem.th SM_DT_UD_Problem.thColl SM_DT_UD_RealSuccess
-  SM_DT_UD_State SM_DT_UD_challengeOracle SM_DT_UD_challengeSpec SM_DT_UD_oracles
-  SM_DT_UD_response instDecidableEqSM_DT_UD_World instReprSM_DT_UD_World
-  instReprSM_DT_UD_World.repr
+  instDecidableEqSM_DT_UD_World instReprSM_DT_UD_World instReprSM_DT_UD_World.repr
 
 end TweakableHash

@@ -283,10 +283,6 @@ theorem valid_eq_decide_valid_of_reachable (world : World)
 
 end Reachable
 
--- Declaration-specific naming exceptions for this game's underscore-separated names.
-attribute [nolint defsWithUnderscore]
-  experiment directedAdvantage absoluteAdvantage
-
 end SM_DT_UD_SourceFinalValidity
 
 end TweakableHash

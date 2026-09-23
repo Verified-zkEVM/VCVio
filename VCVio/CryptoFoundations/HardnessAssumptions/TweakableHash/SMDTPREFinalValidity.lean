@@ -171,8 +171,4 @@ theorem valid_eq_decide_valid_of_reachable {prob : Problem ι PkSeed Tweak M M' 
 
 end Reachable
 
--- Declaration-specific naming exceptions for this game's underscore-separated names.
-attribute [nolint defsWithUnderscore]
-  experiment advantage
-
 end TweakableHash.SM_DT_PRE_SourceFinalValidity
