@@ -51,7 +51,7 @@ private theorem simulated_hash_bound [DecidableEq M] [DecidableEq Commit] {A : T
 
 /-- The final-query adapter costs at most one extra source hash call. -/
 theorem proverWithFinalQuery_hash_bound
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) (Q : ℕ) (hQ : nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
     nmaHashQueryBound (M := M)
       (oa := (proverWithFinalQuery σ hr M prover msg).main pk) (Q + 1) := by
@@ -67,7 +67,7 @@ variable [DecidableEq M] [DecidableEq Commit]
 
 /-- Cache misses in the actual wrapped verifier trace obey the source query budget. -/
 theorem proverWithFinalQuery_trace_bound [SampleableType Chal]
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) (Q : ℕ) (hQ : nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
     IsQueryBoundP (Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk)
       (· = .inr ()) (Q + 1) := by
@@ -85,13 +85,13 @@ private theorem lifted_randomness_bound {A : Type} (oa : ProbComp A) :
 fresh challenges. Extraction and uniform-witness fallback add no challenge requests. -/
 theorem knowledgeExtractor_challenge_bound [DecidableEq Chal]
     [SampleableType Chal] [SampleableType Wit]
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) (Q : ℕ) (hQ : nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
     IsQueryBoundP
       (nmaForkExtract σ hr M (proverWithFinalQuery σ hr M prover msg) Q pk)
       (· = .inr ()) (2 * (Q + 1)) := by
   have hf := isQueryBoundP_contextFork (· = .inr ()) _ (nmaForkBudget Q) (.inr ())
-    (Fork.forkPoint M Q) (Q + 1) (proverWithFinalQuery_trace_bound σ hr M prover pk msg Q hQ)
+    (Fork.forkPoint _ _ _ M Q) (Q + 1) (proverWithFinalQuery_trace_bound σ hr M prover pk msg Q hQ)
   have hb (pair) : IsQueryBoundP (nmaForkExtractBranch (M := M) σ pair) (· = .inr ()) 0 := by
     unfold nmaForkExtractBranch
     repeat' first | exact lifted_randomness_bound _ | split

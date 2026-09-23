@@ -337,6 +337,7 @@ bad-world `UnlinkBadState` via `multipleBadAdvance` exactly as `multipleBadQuery
 eager equivalence `evalSPMF_simulateQ_multipleBadQueryImpl_run_eq_tableExtending` lifts the
 lazy-vs-eager equivalence to the instrumented handler, threading the bad state. -/
 
+variable (sessionsPerTag) in
 /-- Deterministic-table instrumented multiple-session handler: runs `multipleTableHandler g` on the
 multiple-ideal component (now just `UnlinkState`) and, on a tag query, advances the bad-world
 component via `multipleBadAdvance`. The eager-table analogue of `multipleBadQueryImpl`. -/
@@ -360,12 +361,10 @@ lemma multipleBadTable_run_query_bind' {α : Type} (g : TagId × Nonce → Diges
     (f : (UnlinkOracleSpec TagId Nonce Digest).Range t →
       OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
-    (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g) (liftM (OracleSpec.query t) >>= f)).run s =
-      (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g t s) >>= fun p =>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) (f p.1)).run p.2 := by
+    (simulateQ (multipleBadTableHandler sessionsPerTag g)
+        (liftM (OracleSpec.query t) >>= f)).run s =
+      (multipleBadTableHandler sessionsPerTag g t s) >>= fun p =>
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) (f p.1)).run p.2 := by
   rw [simulateQ_query_bind, StateT.run_bind]
   rfl
 
@@ -376,8 +375,7 @@ case-splits on tag vs. reader and unfolds `multipleBadAdvance`. -/
 lemma multipleBadTableHandler_step_preserves_bad (g : TagId × Nonce → Digest)
     (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g t p), z.2.2.bad = true := by
+    ∀ z ∈ support (multipleBadTableHandler sessionsPerTag g t p), z.2.2.bad = true := by
   cases t with
   | inl tag =>
     intro z hz
@@ -404,11 +402,10 @@ state whose bad flag is set, every reachable output keeps `bad = true`. The eage
 lemma multipleBadTableHandler_run_preserves_bad {α : Type} (g : TagId × Nonce → Digest)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support ((simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p), z.2.2.bad = true :=
+    ∀ z ∈ support ((simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p),
+      z.2.2.bad = true :=
   OracleComp.simulateQ_run_preservesInv
-    (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) g)
+    (multipleBadTableHandler sessionsPerTag g)
     (fun s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest => s.2.bad = true)
     (fun t s h z hz => multipleBadTableHandler_step_preserves_bad g t s h z hz) oa p hbad
 
@@ -419,8 +416,7 @@ value. Used to discharge the trailing projection in the Fine→original bridge h
 lemma multipleBadTableHandler_run_cacheBad_const {α : Type} (g : TagId × Nonce → Digest)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
-    ∀ z ∈ support ((simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p),
+    ∀ z ∈ support ((simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p),
         z.2.2.cacheBad = p.2.cacheBad := by
   induction oa using OracleComp.inductionOn generalizing p with
   | pure b =>
@@ -462,11 +458,9 @@ lemma simulateQ_multipleBadTableHandler_cacheBad_irrelevant
     (hSU : sB.sessionsUsed = sB'.sessionsUsed)
     (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
     ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) oa).run (s, sB))
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB))
       = ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) oa).run (s, sB')) := by
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB')) := by
   induction oa using OracleComp.inductionOn generalizing s sB sB' with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
@@ -481,14 +475,12 @@ lemma simulateQ_multipleBadTableHandler_cacheBad_irrelevant
               (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) s >>= fun r =>
                 pure (r.1, r.2, multipleBadAdvance tag sB r.1)) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2)
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
           = (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
               (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) s >>= fun r =>
                 pure (r.1, r.2, multipleBadAdvance tag sB' r.1)) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2)
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
       rw [bind_assoc, bind_assoc]
       refine bind_congr fun r => ?_
       rw [pure_bind, pure_bind]
@@ -520,14 +512,12 @@ lemma simulateQ_multipleBadTableHandler_cacheBad_irrelevant
               (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) s >>= fun r =>
                 pure (r.1, r.2, sB)) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2)
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
           = (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
               (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) s >>= fun r =>
                 pure (r.1, r.2, sB')) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2)
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
       rw [bind_assoc, bind_assoc]
       refine bind_congr fun r => ?_
       rw [pure_bind, pure_bind]
@@ -541,11 +531,9 @@ lemma evalSPMF_simulateQ_multipleBadTableHandler_cacheBad_irrelevant
     (hSU : sB.sessionsUsed = sB'.sessionsUsed)
     (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
     𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) oa).run (s, sB)]
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB)]
       = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) oa).run (s, sB')] := by
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB')] := by
   exact congrArg evalSPMF
     (simulateQ_multipleBadTableHandler_cacheBad_irrelevant g oa s sB sB' cb hSU hR hB)
 
@@ -591,12 +579,9 @@ lemma multipleBadTableFine_run_query_bind' {α : Type} (g : TagId × Nonce → D
     (f : (UnlinkOracleSpec TagId Nonce Digest).Range t →
       OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
-    (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g gFine) (liftM (OracleSpec.query t) >>= f)).run s =
-      (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g gFine t s) >>= fun p =>
-        (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g gFine) (f p.1)).run p.2 := by
+    (simulateQ (multipleBadTableHandlerFine g gFine) (liftM (OracleSpec.query t) >>= f)).run s =
+      (multipleBadTableHandlerFine g gFine t s) >>= fun p =>
+        (simulateQ (multipleBadTableHandlerFine g gFine) (f p.1)).run p.2 := by
   rw [simulateQ_query_bind, StateT.run_bind]
   rfl
 
@@ -607,8 +592,7 @@ lemma multipleBadTableHandlerFine_step_preserves_bad (g : TagId × Nonce → Dig
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g gFine t p), z.2.2.bad = true := by
+    ∀ z ∈ support (multipleBadTableHandlerFine g gFine t p), z.2.2.bad = true := by
   cases t with
   | inl tag =>
     intro z hz
@@ -642,12 +626,10 @@ lemma multipleBadTableHandlerFine_run_preserves_bad {α : Type} (g : TagId × No
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support ((simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p),
+    ∀ z ∈ support ((simulateQ (multipleBadTableHandlerFine g gFine) oa).run p),
         z.2.2.bad = true :=
   OracleComp.simulateQ_run_preservesInv
-    (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) g gFine)
+    (multipleBadTableHandlerFine g gFine)
     (fun s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest => s.2.bad = true)
     (fun t s h z hz => multipleBadTableHandlerFine_step_preserves_bad g gFine t s h z hz) oa p hbad
 
@@ -673,13 +655,11 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
     (s : UnlinkState TagId) (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
     (sB : UnlinkBadState TagId Nonce Digest) :
     𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => (z.1, z.2.2)) <$>
-        (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag)) oa).run ((s, c), sB)] =
+        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) oa).run ((s, c), sB)] =
       𝒟[do let g ← $ᵗ (TagId × Nonce → Digest);
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandler sessionsPerTag
                 (OracleComp.tableExtending c g)) oa).run (s, sB)] := by
   classical
   let : MeasurableSpace Nonce := ⊤
@@ -693,18 +673,14 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
     have hrhs : 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
               (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c g))
+            (simulateQ (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending c g))
               (liftM (OracleSpec.query t) >>= f)).run (s, sB)]
         = 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-            (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g) t (s, sB))
+            (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending c g) t (s, sB))
               >>= fun p =>
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                   (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+                (simulateQ (multipleBadTableHandler sessionsPerTag
                   (OracleComp.tableExtending c g)) (f p.1)).run p.2] := by
       refine congrArg _ (congrArg _ (funext fun g => ?_))
       rw [multipleBadTable_run_query_bind', map_bind]
@@ -726,13 +702,12 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
               fun r => pure (r.1, (r.2.1, r.2.2), multipleBadAdvance tag sB r.1)) >>=
               fun p => (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
                 (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (f p.1)).run p.2)
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                  (f p.1)).run p.2)
             = (($ᵗ Nonce) >>= fun nonce => idealCacheStep c (tag, nonce) >>= fun r =>
                 (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
                     (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag))
+                  (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
                   (f (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest)))).run
                     ((advU, r.2), multipleBadAdvance tag sB
                       (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest)))) := by
@@ -743,16 +718,14 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
             𝒟[idealCacheStep c (tag, n) >>= fun r =>
                 (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
                     (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag))
+                  (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
                   (f (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))).run
                     ((advU, r.2), multipleBadAdvance tag sB
                       (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))]
             = 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
                   (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                       (z.1, z.2.2)) <$>
-                    (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                      (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+                    (simulateQ (multipleBadTableHandler sessionsPerTag
                       (OracleComp.tableExtending c g))
                       (f (some (⟨n, OracleComp.tableExtending c g (tag, n)⟩ :
                         TagTranscript Nonce Digest)))).run
@@ -764,8 +737,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
             fun g' =>
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g')
+              (simulateQ (multipleBadTableHandler sessionsPerTag g')
                 (f (some (⟨n, g' (tag, n)⟩ : TagTranscript Nonce Digest)))).run
                 (advU, multipleBadAdvance tag sB
                   (some (⟨n, g' (tag, n)⟩ : TagTranscript Nonce Digest)))
@@ -784,19 +756,16 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
         -- RHS: collapse the table-handler tag query and swap the two samples.
         have hrhs_swap :
             (($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-              (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
+              (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending c g)
                 (Sum.inl tag) (s, sB)) >>= fun p =>
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                     (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+                  (simulateQ (multipleBadTableHandler sessionsPerTag
                     (OracleComp.tableExtending c g)) (f p.1)).run p.2)
             = (($ᵗ (TagId × Nonce → Digest)) >>= fun g => ($ᵗ Nonce) >>= fun n =>
                 (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                     (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+                  (simulateQ (multipleBadTableHandler sessionsPerTag
                     (OracleComp.tableExtending c g))
                     (f (some (⟨n, OracleComp.tableExtending c g (tag, n)⟩ :
                       TagTranscript Nonce Digest)))).run
@@ -820,8 +789,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
         rw [multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot]
         change 𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
             (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (f none)).run
+            (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) (f none)).run
               ((s, c), multipleBadAdvance tag sB none)] = _
         rw [ih none s c (multipleBadAdvance tag sB none)]
         refine congrArg _ (congrArg _ (funext fun g => ?_))
@@ -844,13 +812,12 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
               >>= fun r => pure (r.1, (r.2.1, r.2.2), sB)) >>= fun p =>
               (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
                   (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (f p.1)).run p.2)
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                  (f p.1)).run p.2)
           = (idealCacheMapM cells c >>= fun rs =>
               (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
                   (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag))
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
                   (f (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))))).run
                   ((s, rs.2), sB)) := by
         simp only [bind_assoc]; rfl
@@ -860,8 +827,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
         fun g' =>
         (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
             (z.1, z.2.2)) <$>
-          (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g')
+          (simulateQ (multipleBadTableHandler sessionsPerTag g')
             (f (ReaderReply.ofBool (decide (∃ d ∈ cells.map g', d = transcript.auth))))).run
             (s, sB)
         with hMψ
@@ -869,8 +835,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
           𝒟[idealCacheMapM cells c >>= fun rs =>
               (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
                   (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag))
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
                 (f (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))))).run
                 ((s, rs.2), sB)]
           = 𝒟[idealCacheMapM cells c >>= fun rs =>
@@ -884,8 +849,7 @@ lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
       rw [hstep1, evalDist_idealCacheMapM_bind_uniformTable_comp hDigest hTable cells c Mψ]
       -- RHS: collapse the table-handler reader query
       refine (OracleComp.evalDist_bind_congr_of_support _ _ _ fun g _ => ?_).symm
-      have hrhs_reader : (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+      have hrhs_reader : (multipleBadTableHandler sessionsPerTag
           (OracleComp.tableExtending c g) (Sum.inr transcript) (s, sB))
           = pure (ReaderReply.ofBool (unlinkReaderAccepts (TagId := TagId) (Slot := TagId)
               (Nonce := Nonce) (Digest := Digest)
@@ -924,13 +888,11 @@ lemma evalSPMF_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableT
     (s : UnlinkState TagId) (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
     (sB : UnlinkBadState TagId Nonce Digest) :
     𝒮[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => (z.1, z.2.2)) <$>
-        (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag)) oa).run ((s, c), sB)] =
+        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) oa).run ((s, c), sB)] =
       𝒮[do let g ← $ᵗ (TagId × Nonce → Digest);
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandler sessionsPerTag
                 (OracleComp.tableExtending c g)) oa).run (s, sB)] := by
   let : MeasurableSpace Digest := ⊤
   let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
@@ -960,11 +922,9 @@ lemma simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
     {α : Type} (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (cb : Bool) :
     ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-          (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p)
+          (simulateQ (multipleBadTableHandlerFine g gFine) oa).run p)
       = ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-          (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p) := by
+          (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p) := by
   induction oa using OracleComp.inductionOn generalizing p with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
@@ -984,15 +944,13 @@ lemma simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
                 multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                   gFine transcript p.2)) >>= fun a =>
                 (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-                  (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine)
+                  (simulateQ (multipleBadTableHandlerFine g gFine)
                     (f a.1)).run a.2)
             = (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1 >>= fun r =>
               pure (r.1, r.2, p.2)) >>= fun a =>
                 (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-                  (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag) g)
+                  (simulateQ (multipleBadTableHandler sessionsPerTag g)
                     (f a.1)).run a.2)
       rw [bind_assoc, bind_assoc]
       refine bind_congr fun r => ?_
@@ -1012,11 +970,9 @@ lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_e
     {α : Type} (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (cb : Bool) :
     𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-          (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p]
+          (simulateQ (multipleBadTableHandlerFine g gFine) oa).run p]
       = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-          (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
+          (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p] := by
   exact congrArg evalSPMF
     (simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq g gFine oa p cb)
 
@@ -1027,11 +983,11 @@ lemma simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
     {α : Type} (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
     (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
-        (simulateQ (multipleBadTableHandlerFine (sessionsPerTag := sessionsPerTag) g gFine)
+        (simulateQ (multipleBadTableHandlerFine g gFine)
           oa).run p =
-      (simulateQ (multipleBadTableHandler (sessionsPerTag := sessionsPerTag) g) oa).run p := by
+      (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p := by
   rw [simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq]
-  let run := (simulateQ (multipleBadTableHandler (sessionsPerTag := sessionsPerTag) g) oa).run p
+  let run := (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p
   change (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$> run = run
   calc
     _ = id <$> run := by
@@ -1057,10 +1013,10 @@ lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
     𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
       (do let gFine ← sampleFine
-          (simulateQ (multipleBadTableHandlerFine (sessionsPerTag := sessionsPerTag) g gFine)
+          (simulateQ (multipleBadTableHandlerFine g gFine)
             oa).run p)] =
       𝒟[sampleFine] Set.univ •
-        𝒟[(simulateQ (multipleBadTableHandler (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
+        𝒟[(simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p] := by
   simp_rw [map_bind, simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq]
   exact _root_.evalDist_bind_const _ _
 
@@ -1079,10 +1035,8 @@ lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
     𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
           (do let gFine ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest));
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p)]
-      = 𝒮[(simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
+              (simulateQ (multipleBadTableHandlerFine g gFine) oa).run p)]
+      = 𝒮[(simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p] := by
   let : MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest) := ⊤
   let : MeasurableSpace (α × UnlinkState TagId × UnlinkBadState TagId Nonce Digest) := ⊤
   apply evalSPMF_eq_of_evalDist_eq

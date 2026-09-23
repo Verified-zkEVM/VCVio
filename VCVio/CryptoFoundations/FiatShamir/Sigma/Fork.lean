@@ -61,6 +61,7 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 
 namespace Fork
 
+variable (Commit Chal Resp) in
 /-- Trace used by the Fiat-Shamir forking reduction for managed-RO NMA adversaries. Records
 one run's forgery, the adversary's programmed cache, the live random-oracle cache, the live
 query log, and whether the forgery verifies. -/
@@ -84,13 +85,14 @@ structure Trace where
   verified : Bool
 
 /-- The hash point corresponding to the final forgery recorded in a fork trace. -/
-def Trace.target (trace : @Trace Commit Chal Resp M) : M × Commit :=
+def Trace.target (trace : Trace Commit Chal Resp M) : M × Commit :=
   (trace.forgery.1, trace.forgery.2.1)
 
+variable (Commit Chal Resp) in
 /-- Rewinding point extracted from a managed-RO fork trace. The fork is usable exactly when
 the final forgery verifies and its hash point appears in the live query log. -/
 def forkPoint [DecidableEq M] [DecidableEq Commit] (qH : ℕ)
-    (trace : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) :
+    (trace : Trace Commit Chal Resp M) :
     Option (Fin (qH + 1)) :=
   if trace.verified then
     if trace.target ∈ trace.queryLog then
@@ -101,24 +103,24 @@ def forkPoint [DecidableEq M] [DecidableEq Commit] (qH : ℕ)
 
 /-- If `forkPoint` selects a rewinding index, the recorded forgery verifies. -/
 lemma verified_of_forkPoint_eq_some [DecidableEq M] [DecidableEq Commit] {qH : ℕ}
-    {trace : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)} {s : Fin (qH + 1)}
-    (hs : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH trace = some s) :
+    {trace : Trace Commit Chal Resp M} {s : Fin (qH + 1)}
+    (hs : forkPoint Commit Chal Resp M qH trace = some s) :
     trace.verified = true := by
   simp_all [forkPoint]
 
 /-- If `forkPoint` selects a rewinding index, the recorded forgery's hash point appears in
 the live query log. -/
 lemma target_mem_queryLog_of_forkPoint_eq_some [DecidableEq M] [DecidableEq Commit] {qH : ℕ}
-    {trace : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)} {s : Fin (qH + 1)}
-    (hs : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH trace = some s) :
+    {trace : Trace Commit Chal Resp M} {s : Fin (qH + 1)}
+    (hs : forkPoint Commit Chal Resp M qH trace = some s) :
     trace.target ∈ trace.queryLog := by
   simp_all [forkPoint]
 
 /-- The index selected by `forkPoint` looks up the forgery's hash point in the live query
 log: `trace.queryLog[s]?` equals `some trace.target`. -/
 lemma forkPoint_getElem?_eq_some_target [DecidableEq M] [DecidableEq Commit] {qH : ℕ}
-    {trace : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)} {s : Fin (qH + 1)}
-    (hs : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH trace = some s) :
+    {trace : Trace Commit Chal Resp M} {s : Fin (qH + 1)}
+    (hs : forkPoint Commit Chal Resp M qH trace = some s) :
     trace.queryLog[↑s]? = some trace.target := by
   grind [forkPoint]
 
@@ -403,8 +405,7 @@ def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (pk : Stmt) :
-    OracleComp (wrappedSpec Chal)
-      (Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) := do
+    OracleComp (wrappedSpec Chal) (Trace Commit Chal Resp M) := do
   let ((forgery, advCache), st) ←
     StateT.run (simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) (nmaAdv.main pk))
       (∅, [])
@@ -427,7 +428,7 @@ def exp [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
   simulateQ (QueryImpl.ofLift unifSpec ProbComp + uniformSampleImpl (spec := chalSpec)) do
     let (pk, _) ← liftComp hr.gen (unifSpec + chalSpec)
     let trace ← runTrace σ hr M nmaAdv pk
-    pure (forkPoint M qH trace).isSome
+    pure (forkPoint _ _ _ M qH trace).isSome
 
 /-- The forkable success probability of a managed-RO NMA adversary. -/
 noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
@@ -1051,7 +1052,7 @@ lemma runTrace_queryLog_length_eq
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (pk : Stmt)
-    {x : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)}
+    {x : Trace Commit Chal Resp M}
     {outerLog : QueryLog (wrappedSpec Chal)}
     (hx : (x, outerLog) ∈ support (replayFirstRun (runTrace σ hr M nmaAdv pk))) :
     x.queryLog.length = outerLog.countQ (· = Sum.inr ()) := by
@@ -1076,7 +1077,7 @@ lemma runTrace_cache_outer_lockstep
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (pk : Stmt)
-    {x : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)}
+    {x : Trace Commit Chal Resp M}
     {outerLog : QueryLog (wrappedSpec Chal)}
     (hx : (x, outerLog) ∈ support (replayFirstRun (runTrace σ hr M nmaAdv pk))) :
     ∀ i, ∀ (h_hi : i < x.queryLog.length),
@@ -1111,7 +1112,7 @@ lemma exists_cached_verify_of_runTrace_verified
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (pk : Stmt)
-    {x : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)}
+    {x : Trace Commit Chal Resp M}
     {outerLog : QueryLog (wrappedSpec Chal)}
     (hx : (x, outerLog) ∈ support (replayFirstRun (runTrace σ hr M nmaAdv pk)))
     (hv : x.verified = true) :
@@ -1130,7 +1131,7 @@ lemma exists_cached_verify_of_runTrace_verified
            match roCache (msg, c) with
            | some ω => σ.verify pk c ω s
            | none => false } :
-        Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) := by
+        Trace Commit Chal Resp M) := by
     simpa using (congrArg Prod.fst ha_eq).symm
   subst hxeq
   simp only [Trace.target] at hv ⊢
@@ -1147,7 +1148,7 @@ theorem runTrace_forkPoint_CfReachable
     (qH : ℕ) (pk : Stmt) :
     CfReachable (runTrace σ hr M nmaAdv pk)
       (fun j : ℕ ⊕ Unit => match j with | .inl _ => 0 | .inr () => qH) (Sum.inr ())
-      (forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH) := by
+      (forkPoint Commit Chal Resp M qH) := by
   intro x log hx s hs
   have hslt : (↑s : ℕ) < log.countQ (· = Sum.inr ()) :=
     runTrace_queryLog_length_eq σ hr M nmaAdv pk hx ▸
@@ -1165,7 +1166,7 @@ lemma runTrace_queryLog_take_eq
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (pk : Stmt)
-    {x₁ x₂ : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)}
+    {x₁ x₂ : Trace Commit Chal Resp M}
     {outerLog₁ outerLog₂ : QueryLog (wrappedSpec Chal)}
     (h₁ : (x₁, outerLog₁) ∈ support (replayFirstRun (runTrace σ hr M nmaAdv pk)))
     (h₂ : (x₂, outerLog₂) ∈ support (replayFirstRun (runTrace σ hr M nmaAdv pk)))
@@ -1209,21 +1210,19 @@ lemma runTrace_target_eq_of_mem_contextFork
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt)
-    (x₁ x₂ : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+    (x₁ x₂ : Trace Commit Chal Resp M)
     (s : Fin (qH + 1))
     (hsup : some (x₁, x₂) ∈ support (contextFork (runTrace σ hr M nmaAdv pk)
       (fun j : ℕ ⊕ Unit => match j with | .inl _ => 0 | .inr () => qH) (Sum.inr ())
-      (forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH)))
-    (h₁ : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)
-      qH x₁ = some s)
-    (h₂ : forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)
-      qH x₂ = some s) :
+      (forkPoint Commit Chal Resp M qH)))
+    (h₁ : forkPoint Commit Chal Resp M qH x₁ = some s)
+    (h₂ : forkPoint Commit Chal Resp M qH x₂ = some s) :
     x₁.target = x₂.target := by
   let : Fintype Chal := Fintype.ofFinite Chal
   let : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
   let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
-  let cf := forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH
+  let cf := forkPoint Commit Chal Resp M qH
   let main := runTrace σ hr M nmaAdv pk
   obtain ⟨path, s', located, second, hpath, hcf₁, _hsecond,
       _hne, _hcf₂, hx₁, hx₂⟩ :=
@@ -1354,27 +1353,25 @@ theorem replayForkingBound
     (nmaAdv : SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
     (qH : ℕ) (pk : Stmt)
-    (P_out : Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) →
+    (P_out : Trace Commit Chal Resp M →
       QueryLog (unifSpec + (Unit →ₒ Chal)) → Prop)
     (hP : ∀ {x log},
       (x, log) ∈ support (replayFirstRun (runTrace σ hr M nmaAdv pk)) →
       P_out x log)
     (hreach : CfReachable (runTrace σ hr M nmaAdv pk)
       (fun j : ℕ ⊕ Unit => match j with | .inl _ => 0 | .inr () => qH) (Sum.inr ())
-      (forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH)) :
+      (forkPoint Commit Chal Resp M qH)) :
     letI : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
       IsUniformSpec.ofFintypeInhabited _
     let wrappedMain := runTrace σ hr M nmaAdv pk
-    let cf := forkPoint (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) qH
+    let cf := forkPoint Commit Chal Resp M qH
     let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
     let acc := Pr[ fun x => (cf x).isSome | wrappedMain]
     acc * (acc / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
       Pr[
         fun r : Option
-            (Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal) ×
-              Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal)) =>
-          ∃ (x₁ x₂ :
-              Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+            (Trace Commit Chal Resp M × Trace Commit Chal Resp M) =>
+          ∃ (x₁ x₂ : Trace Commit Chal Resp M)
             (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
             r = some (x₁, x₂) ∧
             cf x₁ = some s ∧

@@ -70,8 +70,7 @@ lemma slotPositive_S_tag_step
     (gS : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (tag : TagId) (s : UnlinkState TagId)
     (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS) (Sum.inl tag) s
+    singleTableHandler (OracleComp.tableExtending c gS) (Sum.inl tag) s
     = ($ᵗ Nonce) >>= fun n =>
         pure (some (⟨n, OracleComp.tableExtending c gS
             ((tag, ⟨s.sessionsUsed tag, hslot⟩), n)⟩ : TagTranscript Nonce Digest),
@@ -92,9 +91,7 @@ lemma slotPositive_MFine_tag_step
     (gS gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (tag : TagId) (s : UnlinkState TagId) (sB : UnlinkBadState TagId Nonce Digest)
     (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag)
-      (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
+    multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
         (OracleComp.tableExtending c gS)) gFine (Sum.inl tag) (s, sB)
     = ($ᵗ Nonce) >>= fun n =>
         pure (some (⟨n, OracleComp.tableExtending c gS
@@ -142,11 +139,9 @@ lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
     (hSU : sB.sessionsUsed = sB'.sessionsUsed)
     (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
     𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g gFine) oa).run (s, sB)]
+        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB)]
       = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g gFine) oa).run (s, sB')] := by
+        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB')] := by
   rw [evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
         g gFine oa (s, sB),
       evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq

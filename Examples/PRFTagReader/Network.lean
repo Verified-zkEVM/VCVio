@@ -105,7 +105,7 @@ theorem multiple_le_single_add_bad (adversary : UnlinkAdversary TagId Nonce Dige
       (qReader + qTag) adversary (UnlinkState.init, ∅)] ≤
     Pr[= true | verdict (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (qReader + qTag) adversary (UnlinkState.init, ∅)] +
-    Pr[= true | stateEvent (multipleBadQueryImpl (sessionsPerTag := sessionsPerTag))
+    Pr[= true | stateEvent (multipleBadQueryImpl _ _ _ sessionsPerTag)
       (qReader + qTag) adversary ((UnlinkState.init, ∅), UnlinkBadState.init)
       (fun state => state.2.bad)] +
     ((qReader * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) +

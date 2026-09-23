@@ -110,8 +110,7 @@ theorem unlinkabilityAdvantage_le_two_prf_plus_collision [DecidableEq Nonce] [Sa
         PRFScheme.prfAdvantage prfs.singlePRFScheme
           (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary) +
         (Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-          (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
+          (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
             ((UnlinkState.init, ∅), UnlinkBadState.init)]).toReal +
         ((qReader * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) +
         ((qReader * qTag : ℕ) : ℝ) / (Fintype.card Nonce : ℝ) +
@@ -266,14 +265,12 @@ purely by oracle queries, which the trailing `pure (!b)` does not touch. -/
 theorem multipleBad_bad_not_bind_eq [DecidableEq Nonce] [SampleableType Digest]
     (adversary : UnlinkAdversary TagId Nonce Digest) :
     Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-      (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag))
+      (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
         (adversary >>= fun b => pure (!b) :
           OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool)).run
         ((UnlinkState.init, ∅), UnlinkBadState.init)] =
     Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-      (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag))
+      (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
         adversary).run ((UnlinkState.init, ∅), UnlinkBadState.init)] := by
   rw [simulateQ_bind, StateT.run_bind, probEvent_bind_eq_tsum]
   rw [probEvent_eq_tsum_ite (p := fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag
@@ -344,8 +341,7 @@ theorem abs_unlinkabilityAdvantage_le_two_prf_plus_collision [DecidableEq Nonce]
             (adversary >>= fun b => pure (!b) :
               OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool)) +
         (Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-          (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
+          (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
             ((UnlinkState.init, ∅), UnlinkBadState.init)]).toReal +
         ((qReader * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) +
         ((qReader * qTag : ℕ) : ℝ) / (Fintype.card Nonce : ℝ) +

@@ -995,21 +995,19 @@ private lemma forkLoggedImpl_preserves_live_adv_inv [Finite Chal]
     z hz
 
 private lemma forkPoint_isSome_of_mem_verified_findIdx_le {qH : ℕ}
-    (trace : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+    (trace : Fork.Trace Commit Chal Resp M)
     (hverified : trace.verified = true) (hmem : trace.target ∈ trace.queryLog)
     (hidx : trace.queryLog.findIdx (· == trace.target) ≤ qH) :
-    (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-      (Chal := Chal) qH trace).isSome = true := by
+    (Fork.forkPoint Commit Chal Resp M qH trace).isSome = true := by
   simp [Fork.forkPoint, hverified, hmem, hidx]
 
 /-- Convenience corollary: if the queryLog itself fits within `qH`, then the
 target's `findIdx` is automatically `≤ qH` and `forkPoint qH trace` is some. -/
 private lemma forkPoint_isSome_of_mem_verified_length {qH : ℕ}
-    (trace : Fork.Trace (M := M) (Commit := Commit) (Resp := Resp) (Chal := Chal))
+    (trace : Fork.Trace Commit Chal Resp M)
     (hverified : trace.verified = true) (hmem : trace.target ∈ trace.queryLog)
     (hlen : trace.queryLog.length ≤ qH) :
-    (Fork.forkPoint (M := M) (Commit := Commit) (Resp := Resp)
-      (Chal := Chal) qH trace).isSome = true := by
+    (Fork.forkPoint Commit Chal Resp M qH trace).isSome = true := by
   refine forkPoint_isSome_of_mem_verified_findIdx_le (M := M) (Commit := Commit)
     (Chal := Chal) (Resp := Resp) trace hverified hmem ?_
   exact (List.findIdx_lt_length_of_exists ⟨trace.target, hmem, by simp⟩).le.trans hlen

@@ -352,6 +352,7 @@ variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
 variable {G : Type} [AddCommGroup G] [Module F G] [Fintype G] [SampleableType G] [DecidableEq G]
 variable (g : G)
 
+variable (F) in
 /-- The discrete log relation is generable by sampling `sk ← $ᵗ F` and returning
 `(sk • g, sk)`. -/
 def dlogGenerable :

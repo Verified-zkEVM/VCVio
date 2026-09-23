@@ -28,14 +28,14 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 variable [DecidableEq M] [DecidableEq Commit]
 
+variable (Stmt Commit Chal Resp) in
 /-- An ordinary proof-producing program, with statement and context fixed before execution. -/
 abbrev KnowledgeProver :=
   Stmt → M → OracleComp (unifSpec + (M × Commit →ₒ Chal)) (Commit × Resp)
 
 /-- Append the verifier's random-oracle query and retain the same candidate proof. -/
 @[expose]
-def proverWithFinalQuery (prover : KnowledgeProver (Stmt := Stmt)
-    (Commit := Commit) (Chal := Chal) (Resp := Resp) M) (msg : M) :
+def proverWithFinalQuery (prover : KnowledgeProver Stmt Commit Chal Resp M) (msg : M) :
     SignatureAlg.managedRoNmaAdv
       (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M) where
   main pk := do
@@ -46,8 +46,7 @@ def proverWithFinalQuery (prover : KnowledgeProver (Stmt := Stmt)
 /-- Execute the real verifier after the ordinary prover using the same initially empty
 cached oracle. Uniform queries remain internal randomness; cache misses request fresh challenges. -/
 @[expose]
-def knowledgeVerifyRun (prover : KnowledgeProver (Stmt := Stmt)
-    (Commit := Commit) (Chal := Chal) (Resp := Resp) M) (pk : Stmt) (msg : M) :
+def knowledgeVerifyRun (prover : KnowledgeProver Stmt Commit Chal Resp M) (pk : Stmt) (msg : M) :
     OracleComp (Fork.wrappedSpec Chal) Bool :=
   ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal) do
       let proof ← prover pk msg
@@ -96,7 +95,7 @@ private theorem cache_mem_log {α : Type}
 
 private def finishTrace (pk : Stmt) (msg : M) (proof : Commit × Resp)
     (st : Fork.SimState M Commit Chal) : OracleComp (Fork.wrappedSpec Chal)
-      (Fork.Trace (Commit := Commit) (Chal := Chal) (Resp := Resp) M) := do
+      (Fork.Trace Commit Chal Resp M) := do
   let (c, st') ← (Fork.roImpl M Commit Chal (msg, proof.1)).run st
   return {
     forgery := (msg, proof)
@@ -106,7 +105,7 @@ private def finishTrace (pk : Stmt) (msg : M) (proof : Commit × Resp)
     verified := σ.verify pk proof.1 c proof.2 }
 
 private theorem runTrace_proverWithFinalQuery [SampleableType Chal]
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) :
     Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk =
       (do
@@ -123,9 +122,9 @@ private theorem runTrace_proverWithFinalQuery [SampleableType Chal]
       Fork.roImpl, hc, monad_norm]
 
 private theorem forkPoint_isSome_eq_verified (Q : ℕ)
-    (t : Fork.Trace (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (t : Fork.Trace Commit Chal Resp M)
     (hmem : t.target ∈ t.queryLog) (hlen : t.queryLog.length ≤ Q + 1) :
-    (Fork.forkPoint M Q t).isSome = t.verified := by
+    (Fork.forkPoint _ _ _ M Q t).isSome = t.verified := by
   have hidx : t.queryLog.findIdx (· == t.target) < Q + 1 :=
     (List.findIdx_lt_length_of_exists ⟨t.target, hmem, by simp⟩).trans_le hlen
   cases hv : t.verified <;> simp [Fork.forkPoint, hmem, hidx, hv]
@@ -133,9 +132,9 @@ private theorem forkPoint_isSome_eq_verified (Q : ℕ)
 private theorem finishTrace_forkable (pk : Stmt) (msg : M) (proof : Commit × Resp)
     (st : Fork.SimState M Commit Chal) (Q : ℕ)
     (hinv : ∀ t v, st.1 t = some v → t ∈ st.2) (hlen : st.2.length ≤ Q)
-    {t : Fork.Trace (Commit := Commit) (Chal := Chal) (Resp := Resp) M}
+    {t : Fork.Trace Commit Chal Resp M}
     (ht : t ∈ support (finishTrace σ M pk msg proof st)) :
-    (Fork.forkPoint M Q t).isSome = t.verified := by
+    (Fork.forkPoint _ _ _ M Q t).isSome = t.verified := by
   rcases st with ⟨cache, log⟩
   cases hc : cache (msg, proof.1) with
   | some c =>
@@ -161,7 +160,7 @@ private theorem finishTrace_forkable (pk : Stmt) (msg : M) (proof : Commit × Re
 
 /-- The wrapped trace's verifier flag is the verdict of the actual Fiat–Shamir verifier. -/
 theorem knowledgeVerifyRun_eq_trace [SampleableType Chal]
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) :
     knowledgeVerifyRun σ hr M prover pk msg =
       (fun t => t.verified) <$>
@@ -173,12 +172,12 @@ theorem knowledgeVerifyRun_eq_trace [SampleableType Chal]
 /-- Every supported wrapped trace has a usable fork point exactly when its verifier accepts.
 The bound includes the appended verifier slot, including a cache miss at that slot. -/
 theorem proverWithFinalQuery_forkable [SampleableType Chal]
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) (Q : ℕ) (hQ : nmaHashQueryBound (M := M) (oa := prover pk msg) Q)
-    {t : Fork.Trace (Commit := Commit) (Chal := Chal) (Resp := Resp) M}
+    {t : Fork.Trace Commit Chal Resp M}
     (ht : t ∈ support
       (Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk)) :
-    (Fork.forkPoint M Q t).isSome = t.verified := by
+    (Fork.forkPoint _ _ _ M Q t).isSome = t.verified := by
   rw [runTrace_proverWithFinalQuery, mem_support_bind_iff] at ht
   obtain ⟨⟨proof, st⟩, hst, ht⟩ := ht
   apply finishTrace_forkable σ M pk msg proof st Q _ _ ht
@@ -202,11 +201,11 @@ noncomputable local instance : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
 
 /-- Forkable acceptance equals acceptance of the actual verifier for a bounded ordinary prover. -/
 theorem forkable_acceptance_eq_verification
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) (Q : ℕ) (hQ : nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
     Pr{
       let t ← Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk
-    }[(Fork.forkPoint M Q t).isSome] =
+    }[(Fork.forkPoint _ _ _ M Q t).isSome] =
       Pr{let accepted ← knowledgeVerifyRun σ hr M prover pk msg}[accepted = true] := by
   rw [knowledgeVerifyRun_eq_trace]
   simp only [bind_map_left]
@@ -219,14 +218,14 @@ theorem forkable_acceptance_eq_verification
 with its appended verifier query. Its failed-fork branch samples a uniform witness. -/
 @[expose]
 def knowledgeExtractor [DecidableEq Chal] [SampleableType Wit]
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (msg : M) (Q : ℕ) : Stmt → ProbComp Wit :=
   nmaReduction σ hr M (proverWithFinalQuery σ hr M prover msg) Q
 
 /-- Acceptance of the actual verifier under the chosen native uniform replay-oracle semantics. -/
 @[expose]
 noncomputable def knowledgeAcceptance
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) : ENNReal :=
   Pr{let accepted ← knowledgeVerifyRun σ hr M prover pk msg}[accepted = true]
 
@@ -235,7 +234,7 @@ All subtraction is truncated in `ENNReal`; small challenge spaces can make this 
 theorem knowledgeExtractor_success [Fintype Chal] [Inhabited Chal] [DecidableEq Chal]
     [SampleableType Wit]
     (hss : σ.SpeciallySound)
-    (prover : KnowledgeProver (Stmt := Stmt) (Commit := Commit) (Chal := Chal) (Resp := Resp) M)
+    (prover : KnowledgeProver Stmt Commit Chal Resp M)
     (pk : Stmt) (msg : M) (Q : ℕ) (hQ : nmaHashQueryBound (M := M) (oa := prover pk msg) Q) :
     let acc := knowledgeAcceptance σ hr M prover pk msg
     acc * (acc / (Q + 1 : ENNReal) - challengeSpaceInv Chal) ≤

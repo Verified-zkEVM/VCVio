@@ -110,7 +110,7 @@ theorem multiple_le_single_add_bad_of_joint_law
     (hsingle : ∀ operation state, 𝒟[(single operation).run state] =
       𝒟[(singleIdealQueryImpl (sessionsPerTag := sessionsPerTag) operation).run state])
     (hbad : ∀ operation state, 𝒟[(bad operation).run state] =
-      𝒟[(multipleBadQueryImpl (sessionsPerTag := sessionsPerTag) operation).run state])
+      𝒟[(multipleBadQueryImpl _ _ _ sessionsPerTag operation).run state])
     (hmeas : Measurable (fun state : MultipleBadState TagId Nonce Digest sessionsPerTag =>
       state.2.bad))
     (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : ℕ)

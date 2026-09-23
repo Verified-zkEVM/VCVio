@@ -131,8 +131,8 @@ theorem negligible_abs_unlinkabilityAdvantage
   have hCollision : negligible (fun lam => ENNReal.ofReal
       (Pr[fun z : Bool × MultipleBadState (TagId lam) (Nonce lam) (Digest lam) (sessionsPerTag lam)
           => z.2.2.bad |
-        (simulateQ (multipleBadQueryImpl (TagId := TagId lam) (Nonce := Nonce lam)
-          (Digest := Digest lam) (sessionsPerTag := sessionsPerTag lam)) (adversary lam)).run
+        (simulateQ (multipleBadQueryImpl (TagId lam) (Nonce lam) (Digest lam) (sessionsPerTag lam))
+          (adversary lam)).run
           ((UnlinkState.init, ∅), UnlinkBadState.init)]).toReal) := by
     refine negligible_of_le (g := fun lam => ENNReal.ofReal
       (((sessionsPerTag lam ^ 2 * Fintype.card (TagId lam) : ℕ) : ℝ) /

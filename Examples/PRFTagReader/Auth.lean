@@ -125,7 +125,7 @@ private lemma simulateQ_prfIdeal_authToPRFReader_mapM [DecidableEq TagId] [Decid
             (fun tag => Prod.mk tag <$>
               authPRFQuery (TagId := TagId) tag nonce))).run c) =
         ((tags.mapM (fun tag => do
-            let d ← authRFLookup (TagId := TagId) tag nonce
+            let d ← authRFLookup _ tag nonce
             pure (tag, d))).run (authRFBundle (st, c))) := by
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest))
       (StateT ((TagId × Nonce) →ₒ Digest).QueryCache ProbComp) :=
@@ -150,7 +150,7 @@ private lemma simulateQ_prfIdeal_authToPRFReader_mapM [DecidableEq TagId] [Decid
   have hlookup : ∀ (tag : TagId) (st : AuthState TagId Nonce Digest)
       (c : ((TagId × Nonce) →ₒ Digest).QueryCache),
       ((do
-          let d ← authRFLookup (TagId := TagId) tag nonce
+          let d ← authRFLookup _ tag nonce
           pure (tag, d)).run (authRFBundle (st, c))) =
         (fun p => ((tag, p.1), authRFBundle (st, p.2))) <$>
           ((((TagId × Nonce) →ₒ Digest).randomOracle (tag, nonce) :
@@ -205,15 +205,15 @@ private lemma simulateQ_prfIdeal_authToPRFReader_mapM [DecidableEq TagId] [Decid
       Functor.map_map] at *
     -- Factor the RHS head bind through `((t, ·.1), ·.2) <$> authRFLookup.run`, then use `hhead`.
     rw [show (do
-          let p ← (authRFLookup (TagId := TagId) t nonce).run (authRFBundle (st, c))
+          let p ← (authRFLookup _ t nonce).run (authRFBundle (st, c))
           (fun p_1 => (((t, p.1) :: p_1.1 : List (TagId × Digest)), p_1.2)) <$>
             (List.mapM (fun tag => Prod.mk tag <$>
-              authRFLookup (TagId := TagId) tag nonce) ts).run p.2) =
+              authRFLookup _ tag nonce) ts).run p.2) =
         ((fun p => (((t, p.1) : TagId × Digest), p.2)) <$>
-            (authRFLookup (TagId := TagId) t nonce).run (authRFBundle (st, c))) >>= fun q =>
+            (authRFLookup _ t nonce).run (authRFBundle (st, c))) >>= fun q =>
           (fun p_1 => ((q.1 :: p_1.1 : List (TagId × Digest)), p_1.2)) <$>
             (List.mapM (fun tag => Prod.mk tag <$>
-              authRFLookup (TagId := TagId) tag nonce) ts).run q.2
+              authRFLookup _ tag nonce) ts).run q.2
       from by rw [bind_map_left]]
     rw [hhead, bind_map_left]
     refine bind_congr fun p => ?_
@@ -735,13 +735,13 @@ private theorem simulateQ_prfIdeal_authToPRFQueryImpl_run
     (fun p => (p.1.1, authRFBundle (p.1.2, p.2))) <$>
         ((simulateQ (PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest))
           ((simulateQ (authToPRFQueryImpl (TagId := TagId)) adversary).run s)).run c) =
-      (simulateQ (authRFQueryImpl (TagId := TagId)) adversary).run (authRFBundle (s, c)) := by
+      (simulateQ (authRFQueryImpl TagId _ _) adversary).run (authRFBundle (s, c)) := by
   induction adversary using OracleComp.inductionOn generalizing s c with
   | pure x =>
     change (fun p => (p.1.1, authRFBundle (p.1.2, p.2))) <$>
         ((simulateQ (PRFScheme.prfIdealQueryImpl (D := TagId × Nonce) (R := Digest))
           (pure (x, s))).run c) =
-      (simulateQ (authRFQueryImpl (TagId := TagId)) (pure x)).run (authRFBundle (s, c))
+      (simulateQ (authRFQueryImpl TagId _ _) (pure x)).run (authRFBundle (s, c))
     rw [simulateQ_pure, simulateQ_pure]
     simp only [StateT.run_pure, map_pure]
   | query_bind t f ih =>
@@ -753,7 +753,7 @@ private theorem simulateQ_prfIdeal_authToPRFQueryImpl_run
             (((authToPRFTagImpl tag).run s) >>= fun p =>
               (simulateQ authToPRFQueryImpl (f p.1)).run p.2)).run c) =
         ((authIdealTagQueryImpl tag).run (authRFBundle (s, c))) >>= fun p =>
-          (simulateQ (authRFQueryImpl (TagId := TagId)) (f p.1)).run p.2
+          (simulateQ (authRFQueryImpl TagId _ _) (f p.1)).run p.2
       rw [simulateQ_bind]
       simp only [StateT.run_bind, map_bind]
       rw [show (do
@@ -788,7 +788,7 @@ private theorem simulateQ_prfIdeal_authToPRFQueryImpl_run
             (((authToPRFReaderImpl transcript).run s) >>= fun p =>
               (simulateQ authToPRFQueryImpl (f p.1)).run p.2)).run c) =
         ((authRFReaderQueryImpl transcript).run (authRFBundle (s, c))) >>= fun p =>
-          (simulateQ (authRFQueryImpl (TagId := TagId)) (f p.1)).run p.2
+          (simulateQ (authRFQueryImpl TagId _ _) (f p.1)).run p.2
       rw [simulateQ_bind]
       simp only [StateT.run_bind, map_bind]
       rw [show (do
@@ -838,7 +838,7 @@ theorem authRFExp_eq_authRFDirectExp
       (((simulateQ authToPRFQueryImpl adversary).run AuthState.init) >>=
         fun p => pure (decide (p.2.readerForged ≠ ∅)))).run' ∅ =
     (do
-      let (_, st) ← (simulateQ (authRFQueryImpl (TagId := TagId)) adversary).run
+      let (_, st) ← (simulateQ (authRFQueryImpl TagId _ _) adversary).run
         AuthIdealState.init
       return decide (st.readerForged ≠ ∅))
   rw [simulateQ_bind]

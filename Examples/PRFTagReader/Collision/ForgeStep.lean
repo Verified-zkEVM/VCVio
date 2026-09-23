@@ -38,7 +38,7 @@ necessarily distinct from `t₀` since `t₀` is already cached. -/
 private lemma authRFLookup_responses_some_preservesInv
     (t₀ : TagId × Nonce) (d : Digest) (tag : TagId) (nonce : Nonce) :
     StateT.PreservesInv
-      (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce)
+      (authRFLookup Digest tag nonce)
       (fun st => st.responses t₀ = some d) := by
   unfold authRFLookup
   refine StateT.preservesInv_get_bind _ fun st hst => ?_
@@ -62,7 +62,7 @@ private lemma authRFLookup_mapM_responses_some_preservesInv
     (t₀ : TagId × Nonce) (d : Digest) (nonce : Nonce) (tags : List TagId) :
     StateT.PreservesInv
       (tags.mapM (fun tag => do
-        let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
+        let dg ← authRFLookup Digest tag nonce
         pure (tag, dg)))
       (fun st => st.responses t₀ = some d) :=
   StateT.preservesInv_mapM _ (fun tag => StateT.preservesInv_bind _ _ _
@@ -108,7 +108,7 @@ private lemma authRFQueryImpl_responses_some_preservesInv [Fintype TagId] [Sampl
     [DecidableEq Digest]
     (t₀ : TagId × Nonce) (d : Digest) :
     QueryImpl.PreservesInv
-      (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
+      (authRFQueryImpl TagId Nonce Digest)
       (fun st => st.responses t₀ = some d) := by
   refine (authIdealTagQueryImpl_responses_some_preservesInv t₀ d).add fun transcript => ?_
   unfold authRFReaderQueryImpl
@@ -123,7 +123,7 @@ The looked-up point `(tag, nonce)` differs from `t₀`, so a cache miss writes e
 private lemma authRFLookup_responses_none_preservesInv
     (t₀ : TagId × Nonce) (tag : TagId) (nonce : Nonce) (hne : (tag, nonce) ≠ t₀) :
     StateT.PreservesInv
-      (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce)
+      (authRFLookup Digest tag nonce)
       (fun st => st.responses t₀ = none) := by
   unfold authRFLookup
   refine StateT.preservesInv_get_bind _ fun st hst => ?_
@@ -143,7 +143,7 @@ private lemma authRFLookup_mapM_responses_none_preservesInv
     (t₀ : TagId × Nonce) (nonce : Nonce) (hne : nonce ≠ t₀.2) (tags : List TagId) :
     StateT.PreservesInv
       (tags.mapM (fun tag => do
-        let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
+        let dg ← authRFLookup Digest tag nonce
         pure (tag, dg)))
       (fun st => st.responses t₀ = none) :=
   StateT.preservesInv_mapM _ (fun tag => StateT.preservesInv_bind _ _ _
@@ -160,14 +160,12 @@ private lemma authRFLookup_miss_bound
     (st : AuthIdealState TagId Nonce Digest)
     (hnone : st.responses t₀ = none) :
     Pr[fun p => p.2.responses t₀ = some v₀ |
-        (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t₀.1 t₀.2).run st] ≤
+        (authRFLookup Digest t₀.1 t₀.2).run st] ≤
       maxDigestProb ∧
     Pr[fun p => p.2.responses t₀ = none |
-        (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          t₀.1 t₀.2).run st] = 0 := by
+        (authRFLookup Digest t₀.1 t₀.2).run st] = 0 := by
   classical
-  have hrun : (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      t₀.1 t₀.2).run st =
+  have hrun : (authRFLookup Digest t₀.1 t₀.2).run st =
       ((fun d => (d, ({ st with responses := st.responses.cacheQuery t₀ d } :
           AuthIdealState TagId Nonce Digest))) <$> ($ᵗ Digest : ProbComp Digest)) := by
     unfold authRFLookup
@@ -203,12 +201,12 @@ private lemma authRFLookup_mapM_cons_responses
     (P : ((TagId × Nonce) →ₒ Digest).QueryCache → Prop) :
     Pr[fun p => P p.2.responses |
         ((hd :: tl).mapM (fun tag => do
-          let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
+          let dg ← authRFLookup Digest tag nonce
           pure (tag, dg))).run st] =
       Pr[fun p => P p.2.responses |
-        (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) hd nonce).run st >>=
+        (authRFLookup Digest hd nonce).run st >>=
           fun q => (tl.mapM (fun tag => do
-            let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
+            let dg ← authRFLookup Digest tag nonce
             pure (tag, dg))).run q.2] := by
   classical
   rw [List.mapM_cons]
@@ -231,14 +229,12 @@ private lemma authRFLookup_mapM_miss_bound
       ∀ (st : AuthIdealState TagId Nonce Digest), st.responses t₀ = none →
         Pr[fun p => p.2.responses t₀ = some v₀ |
             (tags.mapM (fun tag => do
-              let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                tag t₀.2
+              let dg ← authRFLookup Digest tag t₀.2
               pure (tag, dg))).run st] +
           maxDigestProb *
             Pr[fun p => p.2.responses t₀ = none |
               (tags.mapM (fun tag => do
-                let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                  tag t₀.2
+                let dg ← authRFLookup Digest tag t₀.2
                 pure (tag, dg))).run st] ≤
         maxDigestProb := by
   classical
@@ -253,7 +249,7 @@ private lemma authRFLookup_mapM_miss_bound
         hd tl t₀.2 st (fun c => c t₀ = none)]
     rw [probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
     set f := fun tag => do
-      let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag t₀.2
+      let dg ← authRFLookup (TagId := TagId) Digest tag t₀.2
       pure (tag, dg) with hf
     by_cases hhd : hd = t₀.1
     · -- Head lookup is at `t₀` itself: a cache miss that draws the single fresh digest.
@@ -262,7 +258,7 @@ private lemma authRFLookup_mapM_miss_bound
         maxDigestProb hmax t₀ v₀ st hnone
       -- After the head lookup `t₀` is pinned, so the tail `mapM` keeps `t₀` filled.
       have hpin : ∀ q ∈ support
-          ((authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t₀.1 t₀.2).run st),
+          ((authRFLookup Digest t₀.1 t₀.2).run st),
           ∃ d, q.2.responses t₀ = some d := by
         intro q hq
         unfold authRFLookup at hq
@@ -275,13 +271,11 @@ private lemma authRFLookup_mapM_miss_bound
         exact ⟨i.1, QueryCache.cacheQuery_self _ _ _⟩
       have hnone0 :
           ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-            Pr[= q | (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              t₀.1 t₀.2).run st] *
+            Pr[= q | (authRFLookup Digest t₀.1 t₀.2).run st] *
               Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2] = 0 := by
         refine ENNReal.tsum_eq_zero.mpr fun q => ?_
         by_cases hsupp : q ∈ support
-            ((authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              t₀.1 t₀.2).run st)
+            ((authRFLookup Digest t₀.1 t₀.2).run st)
         · obtain ⟨d, hqd⟩ := hpin q hsupp
           have hz : Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2] = 0 := by
             rw [probEvent_eq_zero_iff]
@@ -293,17 +287,14 @@ private lemma authRFLookup_mapM_miss_bound
         · rw [probOutput_eq_zero _ q hsupp, zero_mul]
       have hsome_le :
           ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-            Pr[= q | (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              t₀.1 t₀.2).run st] *
+            Pr[= q | (authRFLookup Digest t₀.1 t₀.2).run st] *
               Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2] ≤
             Pr[fun p => p.2.responses t₀ = some v₀ |
-              (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                t₀.1 t₀.2).run st] := by
+              (authRFLookup Digest t₀.1 t₀.2).run st] := by
         rw [probEvent_eq_tsum_ite]
         refine ENNReal.tsum_le_tsum fun q => ?_
         by_cases hsupp : q ∈ support
-            ((authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              t₀.1 t₀.2).run st)
+            ((authRFLookup Digest t₀.1 t₀.2).run st)
         · obtain ⟨d, hqd⟩ := hpin q hsupp
           by_cases hdv : d = v₀
           · subst hdv
@@ -334,17 +325,14 @@ private lemma authRFLookup_mapM_miss_bound
       have hpres := authRFLookup_responses_none_preservesInv (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) t₀ hd t₀.2 hne
       calc (∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                hd t₀.2).run st] *
+              Pr[= q | (authRFLookup Digest hd t₀.2).run st] *
                 Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2]) +
             maxDigestProb *
               ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-                Pr[= q | (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                  hd t₀.2).run st] *
+                Pr[= q | (authRFLookup Digest hd t₀.2).run st] *
                   Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2]
           = ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                hd t₀.2).run st] *
+              Pr[= q | (authRFLookup Digest hd t₀.2).run st] *
                 (Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2] +
                   maxDigestProb *
                     Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2]) := by
@@ -354,18 +342,15 @@ private lemma authRFLookup_mapM_miss_bound
             congr 1
             rw [mul_left_comm]
         _ ≤ ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                hd t₀.2).run st] * maxDigestProb := by
+              Pr[= q | (authRFLookup Digest hd t₀.2).run st] * maxDigestProb := by
             refine ENNReal.tsum_le_tsum fun q => ?_
             by_cases hsupp : q ∈ support
-                ((authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                  hd t₀.2).run st)
+                ((authRFLookup Digest hd t₀.2).run st)
             · have hqn : q.2.responses t₀ = none := hpres st hnone q hsupp
               exact mul_le_mul' le_rfl (ih hnoduptl hmemtl q.2 hqn)
             · rw [probOutput_eq_zero _ q hsupp, zero_mul, zero_mul]
         _ = maxDigestProb * ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                hd t₀.2).run st] := by
+              Pr[= q | (authRFLookup Digest hd t₀.2).run st] := by
             rw [← ENNReal.tsum_mul_left]
             refine tsum_congr fun q => ?_
             rw [mul_comm]
@@ -387,16 +372,15 @@ private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableTyp
     (st : AuthIdealState TagId Nonce Digest)
     (hnone : st.responses t₀ = none) :
     Pr[fun p => p.2.responses t₀ = some v₀ |
-        (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run st] +
+        (authRFQueryImpl TagId Nonce Digest t).run st] +
       maxDigestProb *
         Pr[fun p => p.2.responses t₀ = none |
-          (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run st] ≤
+          (authRFQueryImpl TagId Nonce Digest t).run st] ≤
       maxDigestProb := by
   classical
   cases t with
   | inl tag =>
-    have htag : (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (Sum.inl tag)).run st =
+    have htag : (authRFQueryImpl TagId Nonce Digest (Sum.inl tag)).run st =
         (authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag).run st :=
       rfl
     rw [htag]
@@ -589,8 +573,7 @@ private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableTyp
     rw [hcollapse]
     exact le_trans (mul_le_mul' le_rfl tsum_probOutput_le_one) (le_of_eq (mul_one _))
   | inr transcript =>
-    have hrd : (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (Sum.inr transcript)).run st =
+    have hrd : (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st =
         (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
           transcript).run st :=
       rfl
@@ -603,8 +586,7 @@ private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableTyp
               transcript).run st] =
           Pr[fun p => P p.2.responses |
             ((Finset.univ : Finset TagId).toList.mapM (fun tag => do
-              let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                tag transcript.nonce
+              let dg ← authRFLookup Digest tag transcript.nonce
               pure (tag, dg))).run st] := by
       intro P
       unfold authRFReaderQueryImpl
@@ -632,8 +614,7 @@ private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableTyp
       have hsome0 :
           Pr[fun p => p.2.responses t₀ = some v₀ |
             ((Finset.univ : Finset TagId).toList.mapM (fun tag => do
-              let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                tag transcript.nonce
+              let dg ← authRFLookup Digest tag transcript.nonce
               pure (tag, dg))).run st] = 0 := by
         rw [probEvent_eq_zero_iff]
         intro p hp
@@ -643,8 +624,7 @@ private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableTyp
       have hnone1 :
           Pr[fun p => p.2.responses t₀ = none |
             ((Finset.univ : Finset TagId).toList.mapM (fun tag => do
-              let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                tag transcript.nonce
+              let dg ← authRFLookup Digest tag transcript.nonce
               pure (tag, dg))).run st] ≤ 1 := probEvent_le_one
       rw [hsome0, zero_add]
       exact le_trans (mul_le_mul' le_rfl hnone1) (le_of_eq (mul_one _))
@@ -662,7 +642,7 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
     (st : AuthIdealState TagId Nonce Digest)
     (hnone : st.responses t₀ = none) :
     Pr[fun z => z.2.responses t₀ = some v₀ |
-        (simulateQ (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
+        (simulateQ (authRFQueryImpl TagId Nonce Digest)
           adversary).run st] ≤ maxDigestProb := by
   classical
   -- State-indexed bound: `1` once `t₀ ↦ v₀`, `maxDigestProb` while `t₀` is unfilled, `0` otherwise.
@@ -673,7 +653,7 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
   have hgen : ∀ (adv : OracleComp (AuthOracleSpec TagId Nonce Digest) α)
       (s : AuthIdealState TagId Nonce Digest),
       Pr[fun z => z.2.responses t₀ = some v₀ |
-          (simulateQ (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
+          (simulateQ (authRFQueryImpl TagId Nonce Digest)
             adv).run s] ≤ stbound s := by
     intro adv
     induction adv using OracleComp.inductionOn with
@@ -693,12 +673,12 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
       -- Bound each continuation by the inductive hypothesis, then bound the step sum.
       have hstep_le :
           ∑' p, Pr[= p |
-              (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s] *
+              (authRFQueryImpl TagId Nonce Digest t).run s] *
             Pr[fun z => z.2.responses t₀ = some v₀ |
-              (simulateQ (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
+              (simulateQ (authRFQueryImpl TagId Nonce Digest)
                 (oa p.1)).run p.2] ≤
             ∑' p, Pr[= p |
-              (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s] *
+              (authRFQueryImpl TagId Nonce Digest t).run s] *
               stbound p.2 := by
         refine ENNReal.tsum_le_tsum fun p => mul_le_mul' le_rfl (ih p.1 p.2)
       refine le_trans hstep_le ?_
@@ -709,20 +689,19 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
           authRFQueryImpl_responses_some_preservesInv (TagId := TagId) (Nonce := Nonce)
             (Digest := Digest) t₀ v₀ t s hsv
         have hbound : ∀ p ∈ support
-            ((authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s),
+            ((authRFQueryImpl TagId Nonce Digest t).run s),
             stbound p.2 = 1 := by
           intro p hp
           simp only [hstbound, hpres p hp, ite_true]
         calc ∑' p, Pr[= p |
-                (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s] *
+                (authRFQueryImpl TagId Nonce Digest t).run s] *
               stbound p.2
             = ∑' p, Pr[= p |
-                (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s] *
+                (authRFQueryImpl TagId Nonce Digest t).run s] *
                 1 := by
               refine tsum_congr fun p => ?_
               by_cases hp : p ∈ support
-                  ((authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                    t).run s)
+                  ((authRFQueryImpl TagId Nonce Digest t).run s)
               · rw [hbound p hp]
               · rw [probOutput_eq_zero_of_not_mem_support hp]; simp
           _ ≤ 1 := by simp only [mul_one]; exact tsum_probOutput_le_one
@@ -742,11 +721,9 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
               · simp [h1, h2]
           have hsum_le :
               ∑' p, Pr[= p |
-                  (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                    t).run s] * stbound p.2 ≤
+                  (authRFQueryImpl TagId Nonce Digest t).run s] * stbound p.2 ≤
                 ∑' p, Pr[= p |
-                  (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                    t).run s] *
+                  (authRFQueryImpl TagId Nonce Digest t).run s] *
                   ((if p.2.responses t₀ = some v₀ then (1 : ℝ≥0∞) else 0) +
                     maxDigestProb * (if p.2.responses t₀ = none then (1 : ℝ≥0∞) else 0)) :=
             ENNReal.tsum_le_tsum fun p => mul_le_mul' le_rfl (hsplit p)
@@ -754,17 +731,14 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
           -- Distribute the sum into the two probability events.
           have hdist :
               ∑' p, Pr[= p |
-                  (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                    t).run s] *
+                  (authRFQueryImpl TagId Nonce Digest t).run s] *
                   ((if p.2.responses t₀ = some v₀ then (1 : ℝ≥0∞) else 0) +
                     maxDigestProb * (if p.2.responses t₀ = none then (1 : ℝ≥0∞) else 0)) =
                 Pr[fun p => p.2.responses t₀ = some v₀ |
-                    (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                      t).run s] +
+                    (authRFQueryImpl TagId Nonce Digest t).run s] +
                   maxDigestProb *
                     Pr[fun p => p.2.responses t₀ = none |
-                      (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                        t).run s] := by
+                      (authRFQueryImpl TagId Nonce Digest t).run s] := by
             rw [probEvent_eq_tsum_ite, probEvent_eq_tsum_ite,
               ← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
             refine tsum_congr fun p => ?_
@@ -789,8 +763,7 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
             authRFQueryImpl_responses_some_preservesInv (TagId := TagId) (Nonce := Nonce)
               (Digest := Digest) t₀ d t s hd
           have hzero : ∀ p ∈ support
-              ((authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                t).run s), stbound p.2 = 0 := by
+              ((authRFQueryImpl TagId Nonce Digest t).run s), stbound p.2 = 0 := by
             intro p hp
             have hpd := hpres p hp
             have hdv : d ≠ v₀ := by
@@ -803,11 +776,10 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
             simp [hdv]
           have hsum0 :
               ∑' p, Pr[= p |
-                  (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                    t).run s] * stbound p.2 = 0 := by
+                  (authRFQueryImpl TagId Nonce Digest t).run s] * stbound p.2 = 0 := by
             refine ENNReal.tsum_eq_zero.mpr fun p => ?_
             by_cases hp : p ∈ support
-                ((authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest) t).run s)
+                ((authRFQueryImpl TagId Nonce Digest t).run s)
             · rw [hzero p hp, mul_zero]
             · rw [probOutput_eq_zero_of_not_mem_support hp, zero_mul]
           rw [hsum0]
@@ -824,7 +796,7 @@ noncomputable def authRFReaderLookups
     (nonce : Nonce) (tags : List TagId) :
     StateT (AuthIdealState TagId Nonce Digest) ProbComp (List (TagId × Digest)) :=
   tags.mapM (fun tag => do
-    let dg ← authRFLookup (TagId := TagId) (Nonce := Nonce) (Digest := Digest) tag nonce
+    let dg ← authRFLookup Digest tag nonce
     pure (tag, dg))
 
 /-- Every looked-up pair produced by `authRFReaderLookups` lands in the final cache: if `(tag, d)`
@@ -1015,8 +987,7 @@ lemma authRFReaderStep_forge_le [Fintype TagId] [SampleableType Nonce] [Decidabl
           Pr[fun mp : List (TagId × Digest) × AuthIdealState TagId Nonce Digest =>
               mp.2.responses (tag, transcript.nonce) = some transcript.auth | lookups] ≤
             maxDigestProb := by
-        have hrun : (authRFQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (Sum.inr transcript)).run st =
+        have hrun : (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st =
             (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
               transcript).run st := rfl
         have hpush :
