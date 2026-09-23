@@ -9,7 +9,8 @@ module
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
-public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.CryptoFoundations.KEMDEM.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
 # KEM + DEM Composition
@@ -22,7 +23,7 @@ reduction skeleton against the repo's existing KEM and one-time IND-CPA interfac
 
 universe u v
 
-open OracleSpec OracleComp ENNReal
+open OracleSpec OracleComp ENNReal MeasureTheory
 
 namespace KEMScheme
 
@@ -45,13 +46,13 @@ def composeWithDEM [Monad m]
 
 section Correct
 
-variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF]
+  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
 
-omit [LawfulMonadLiftT m SPMF] in
 /-- From KEM correctness at the monadic probability level, every reachable decapsulation of an
 honest ciphertext returns the encapsulated key. -/
 private lemma kem_decaps_mem_support
+    [LawfulMonad m]
     {kem : KEMScheme m K PK SK CKEM}
     (hkem : Pr[= true | kem.CorrectExp] = 1)
     {pk : PK} {sk : SK} (hks : (pk, sk) ∈ support kem.keygen)
@@ -59,10 +60,12 @@ private lemma kem_decaps_mem_support
     {kOpt : Option K} (hkOpt : kOpt ∈ support (kem.decaps sk c)) :
     kOpt = some k := by
   have hmem : decide (kOpt = some k) ∈ support kem.CorrectExp := by
-    simp only [KEMScheme.CorrectExp, support_bind, support_pure, Set.mem_iUnion,
-      Set.mem_singleton_iff, decide_eq_decide, exists_prop, Prod.exists]
+    simp only [KEMScheme.CorrectExp, mem_support_bind_iff, support_pure,
+      Set.mem_singleton_iff, decide_eq_decide, Prod.exists]
     exact ⟨pk, sk, hks, c, k, hck, kOpt, hkOpt, Iff.rfl⟩
   simpa [((probOutput_eq_one_iff (mx := kem.CorrectExp) (x := true)).mp hkem).2] using hmem
+
+variable [LawfulMonadLiftT m SPMF]
 
 /-- If a KEM and externally keyed DEM are both perfectly correct in the concrete probabilistic
 semantics of `m`, then their composition is also perfectly correct. -/
@@ -92,7 +95,7 @@ variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
 def composeWithDEM_toKEMLeftReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     kem.IND_CPA_Adversary where
   State := M × adversary.State
   preChallenge pk := do
@@ -106,7 +109,7 @@ def composeWithDEM_toKEMLeftReduction
 def composeWithDEM_toKEMRightReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     kem.IND_CPA_Adversary where
   State := M × adversary.State
   preChallenge pk := do
@@ -122,7 +125,7 @@ the same `encaps`-then-`encrypt` effect order as the composed scheme. -/
 def composeWithDEM_toDEMReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     dem.IND_CPA_Adversary where
   State := CKEM × adversary.State
   chooseMessages := do
@@ -137,223 +140,78 @@ def composeWithDEM_toDEMReduction
 bounded by two KEM IND-CPA advantages plus one DEM IND-CPA advantage, using the canonical
 left/right and DEM reductions defined above.
 
-The runtime coherence hypotheses require `runtime.evalSPMF` to be a monad morphism (preserves
-`pure` and distributes `>>=`) and to produce total distributions on `Bool` (no failure mass).
-These hold for all standard runtime constructions, including `withStateOracle`. -/
+The probability-free games and shared hybrid argument live in
+`VCVio.CryptoFoundations.KEMDEM.Measure`. This theorem calibrates them to the bundled runtime.
+
+The runtime coherence hypotheses state directly that its measures preserve `pure` and measurable
+binds, agree with the canonical `ProbComp` measure on lifted public randomness, and are total on
+the Boolean games used below. -/
 theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem))
-    (heval_pure : ∀ {α : Type} (a : α),
-        runtime.evalSPMF (pure a : OracleComp spec α) = pure a)
-    (heval_bind : ∀ {α β : Type} (mx : OracleComp spec α)
-        (f : α → OracleComp spec β),
-        runtime.evalSPMF (mx >>= f) =
-        runtime.evalSPMF mx >>= fun a => runtime.evalSPMF (f a))
-    (heval_liftProbComp : ∀ {α : Type} (pc : ProbComp α),
-        runtime.evalSPMF (runtime.liftProbComp pc) = 𝒮[pc])
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem))
+    (heval_pure : ∀ {α : Type} [MeasurableSpace α] (a : α),
+        runtime.evalDist (pure a : OracleComp spec α) = Measure.dirac a)
+    (heval_bind : ∀ {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
+        (mx : OracleComp spec α) (f : α → OracleComp spec β),
+        Measurable (fun a => runtime.evalDist (f a)) →
+        runtime.evalDist (mx >>= f) =
+          Measure.bind (runtime.evalDist mx) fun a => runtime.evalDist (f a))
+    (heval_liftProbComp : ∀ {α : Type} [MeasurableSpace α] (pc : ProbComp α),
+        runtime.evalDist (runtime.liftProbComp pc) = 𝒟[pc])
     (hno_fail : ∀ (mx : OracleComp spec Bool),
-        Pr[= true | runtime.evalSPMF mx] +
-        Pr[= false | runtime.evalSPMF mx] = 1) :
+        runtime.evalDist mx {true} + runtime.evalDist mx {false} = 1) :
     AsymmEncAlg.IND_CPA_OneTime_biasAdvantage (kem.composeWithDEM dem) runtime adversary ≤
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMRightReduction dem adversary) +
       dem.IND_CPA_Advantage runtime
         (kem.composeWithDEM_toDEMReduction dem adversary) := by
-  let real_m₀ : SPMF Bool := runtime.evalSPMF do
+  let : MeasurableSpace K := ⊤
+  let : MeasurableSpace (CKEM × K) := ⊤
+  let : MeasurableSpace (PK × M × M × adversary.State) := ⊤
+  let : EvalDistSemantics (OracleComp spec) := {
+    denote mx := runtime.evalDist mx
+    apply_univ_le_one mx := runtime.evalDist_apply_univ_le_one mx }
+  let : LawfulEvalDistSemantics (OracleComp spec) := {
+    denote_pure a := heval_pure a
+    denote_bind mx f hf := heval_bind mx f hf }
+  have evalDist_eq_runtime {α : Type} [MeasurableSpace α] (mx : OracleComp spec α) :
+      𝒟[mx] = runtime.evalDist mx := rfl
+  let prepare : OracleComp spec (PK × M × M × adversary.State) := do
     let (pk, _) ← kem.keygen
-    let (m₀, _, st) ← adversary.chooseMessages pk
-    let (kc, k) ← kem.encaps pk
-    let dc ← dem.encrypt k m₀
-    adversary.distinguish st (kc, dc)
-  let rand_m₀ : SPMF Bool := runtime.evalSPMF do
-    let (pk, _) ← kem.keygen
-    let (m₀, _, st) ← adversary.chooseMessages pk
-    let (kc, _) ← kem.encaps pk
-    let kR ← runtime.liftProbComp ($ᵗ K)
-    let dc ← dem.encrypt kR m₀
-    adversary.distinguish st (kc, dc)
-  let rand_m₁ : SPMF Bool := runtime.evalSPMF do
-    let (pk, _) ← kem.keygen
-    let (_, m₁, st) ← adversary.chooseMessages pk
-    let (kc, _) ← kem.encaps pk
-    let kR ← runtime.liftProbComp ($ᵗ K)
-    let dc ← dem.encrypt kR m₁
-    adversary.distinguish st (kc, dc)
-  let real_m₁ : SPMF Bool := runtime.evalSPMF do
-    let (pk, _) ← kem.keygen
-    let (_, m₁, st) ← adversary.chooseMessages pk
-    let (kc, k) ← kem.encaps pk
-    let dc ← dem.encrypt k m₁
-    adversary.distinguish st (kc, dc)
-  have bind_swap : ∀ {α β γ : Type} (mx : SPMF α) (my : SPMF β) (f : α → β → SPMF γ),
-      (mx >>= fun a => my >>= fun b => f a b) =
-      (my >>= fun b => mx >>= fun a => f a b) := by
-    intro α β γ mx my f
-    ext x
-    simpa only [probOutput_def, evalSPMF_id] using
-      probOutput_bind_bind_swap mx my (fun a b => f a b) x
-  have hite_false : (false : Bool) = true ↔ False := ⟨Bool.noConfusion, False.elim⟩
-  have hite_true : (true : Bool) = true ↔ True := ⟨fun _ => trivial, fun _ => rfl⟩
-  have coin_branch : ∀ X Y : SPMF Bool, Pr[= true | X] + Pr[= false | X] = 1 →
-      Pr[= true | Y] + Pr[= false | Y] = 1 →
-      (𝒮[$ᵗ Bool] >>= fun b =>
-          (if b then X else Y) >>= fun z => pure (b == z)).boolBiasAdvantage =
-        SPMF.boolDistAdvantage X Y := fun X Y hX hY =>
-    SPMF.boolBiasAdvantage_eq_boolDistAdvantage_coin_branch (𝒮[$ᵗ Bool]) X Y
-      (by simp [Fintype.card_bool]) (by simp [Fintype.card_bool]) hX hY
-  have h_composed : AsymmEncAlg.IND_CPA_OneTime_biasAdvantage
-      (kem.composeWithDEM dem) runtime adversary =
-      SPMF.boolDistAdvantage real_m₀ real_m₁ := by
-    have hspmf : AsymmEncAlg.IND_CPA_OneTime_Game (encAlg := kem.composeWithDEM dem)
-        adversary runtime =
-        𝒮[$ᵗ Bool] >>= fun b =>
-          (if b then real_m₀ else real_m₁) >>= fun z => pure (b == z) := by
-      simp only [AsymmEncAlg.IND_CPA_OneTime_Game, KEMScheme.composeWithDEM,
-        heval_bind, heval_liftProbComp]
-      congr 1; funext b
-      simp only [heval_pure]
-      cases b
-      · simp only [hite_false, ite_false, bind_assoc, pure_bind]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (_, m₁, st) ← adversary.chooseMessages pk
-          let (kc, k) ← kem.encaps pk; let dc ← dem.encrypt k m₁
-          adversary.distinguish st (kc, dc)) >>= fun a => pure (false == a)
-        simp only [heval_bind, bind_assoc]
-      · simp only [ite_true, bind_assoc, pure_bind]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (m₀, _, st) ← adversary.chooseMessages pk
-          let (kc, k) ← kem.encaps pk; let dc ← dem.encrypt k m₀
-          adversary.distinguish st (kc, dc)) >>= fun a => pure (true == a)
-        simp only [heval_bind, bind_assoc]
-    change (AsymmEncAlg.IND_CPA_OneTime_Game (encAlg := kem.composeWithDEM dem) adversary
-        runtime).boolBiasAdvantage = _
-    rw [hspmf, coin_branch _ _ (hno_fail _) (hno_fail _)]
-  have h_kem_left : kem.IND_CPA_Advantage runtime
-      (kem.composeWithDEM_toKEMLeftReduction dem adversary) =
-      SPMF.boolDistAdvantage real_m₀ rand_m₀ := by
-    have hspmf : KEMScheme.IND_CPA_Game runtime
-        (kem.composeWithDEM_toKEMLeftReduction dem adversary) =
-        𝒮[$ᵗ Bool] >>= fun b =>
-          (if b then real_m₀ else rand_m₀) >>= fun z => pure (b == z) := by
-      simp only [KEMScheme.IND_CPA_Game, composeWithDEM_toKEMLeftReduction,
-        heval_bind, heval_pure, heval_liftProbComp]
-      simp_rw [bind_swap (my := 𝒮[$ᵗ Bool])]
-      congr 1; funext b
-      conv_lhs => simp only [bind_assoc, pure_bind]
-      cases b
-      · simp only [hite_false, ite_false]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (m₀, _, st) ← adversary.chooseMessages pk
-          let (kc, _) ← kem.encaps pk; let kR ← runtime.liftProbComp ($ᵗ K)
-          let dc ← dem.encrypt kR m₀; adversary.distinguish st (kc, dc)) >>= fun z =>
-          pure (false == z)
-        simp only [heval_bind, heval_liftProbComp, bind_assoc]
-      · simp only [ite_true]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (m₀, _, st) ← adversary.chooseMessages pk
-          let (kc, k) ← kem.encaps pk
-          let dc ← dem.encrypt k m₀; adversary.distinguish st (kc, dc)) >>= fun z =>
-          pure (true == z)
-        simp only [heval_bind, bind_assoc]
-        congr 1; funext pksk; congr 1; funext cms; congr 1; funext ckr
-        exact OracleComp.ProgramLogic.Relational.spmf_bind_const_of_no_failure
-          (OracleComp.ProgramLogic.Relational.probFailure_evalSPMF_eq_zero _) _
-    change (KEMScheme.IND_CPA_Game runtime _).boolBiasAdvantage = _
-    rw [hspmf, coin_branch _ _ (hno_fail _) (hno_fail _)]
-  have h_kem_right : kem.IND_CPA_Advantage runtime
-      (kem.composeWithDEM_toKEMRightReduction dem adversary) =
-      SPMF.boolDistAdvantage real_m₁ rand_m₁ := by
-    have hspmf : KEMScheme.IND_CPA_Game runtime
-        (kem.composeWithDEM_toKEMRightReduction dem adversary) =
-        𝒮[$ᵗ Bool] >>= fun b =>
-          (if b then real_m₁ else rand_m₁) >>= fun z => pure (b == z) := by
-      simp only [KEMScheme.IND_CPA_Game, composeWithDEM_toKEMRightReduction,
-        heval_bind, heval_pure, heval_liftProbComp]
-      simp_rw [bind_swap (my := 𝒮[$ᵗ Bool])]
-      congr 1; funext b
-      conv_lhs => simp only [bind_assoc, pure_bind]
-      cases b
-      · simp only [hite_false, ite_false]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (_, m₁, st) ← adversary.chooseMessages pk
-          let (kc, _) ← kem.encaps pk; let kR ← runtime.liftProbComp ($ᵗ K)
-          let dc ← dem.encrypt kR m₁; adversary.distinguish st (kc, dc)) >>= fun z =>
-          pure (false == z)
-        simp only [heval_bind, heval_liftProbComp, bind_assoc]
-      · simp only [ite_true]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (_, m₁, st) ← adversary.chooseMessages pk
-          let (kc, k) ← kem.encaps pk
-          let dc ← dem.encrypt k m₁; adversary.distinguish st (kc, dc)) >>= fun z =>
-          pure (true == z)
-        simp only [heval_bind, bind_assoc]
-        congr 1; funext pksk; congr 1; funext cms; congr 1; funext ckr
-        exact OracleComp.ProgramLogic.Relational.spmf_bind_const_of_no_failure
-          (OracleComp.ProgramLogic.Relational.probFailure_evalSPMF_eq_zero _) _
-    change (KEMScheme.IND_CPA_Game runtime _).boolBiasAdvantage = _
-    rw [hspmf, coin_branch _ _ (hno_fail _) (hno_fail _)]
-  have h_dem : dem.IND_CPA_Advantage runtime
-      (kem.composeWithDEM_toDEMReduction dem adversary) =
-      SPMF.boolDistAdvantage rand_m₀ rand_m₁ := by
-    have hspmf : DEMScheme.IND_CPA_Game runtime
-        (kem.composeWithDEM_toDEMReduction dem adversary) =
-        𝒮[$ᵗ Bool] >>= fun b =>
-          (if b then rand_m₁ else rand_m₀) >>= fun z => pure (b == z) := by
-      simp only [DEMScheme.IND_CPA_Game, KEMScheme.composeWithDEM_toDEMReduction,
-        heval_bind, heval_pure, heval_liftProbComp]
-      congr 1; funext b
-      conv_lhs => rw [bind_swap]
-      conv_lhs => simp only [bind_assoc, pure_bind]
-      cases b
-      · simp only [hite_false, ite_false]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (m₀, _, st) ← adversary.chooseMessages pk
-          let (kc, _) ← kem.encaps pk; let kR ← runtime.liftProbComp ($ᵗ K)
-          let dc ← dem.encrypt kR m₀; adversary.distinguish st (kc, dc)) >>= fun a =>
-          pure (false == a)
-        simp only [heval_bind, heval_liftProbComp, bind_assoc]
-      · simp only [ite_true]
-        change _ = (runtime.evalSPMF do
-          let (pk, _) ← kem.keygen; let (_, m₁, st) ← adversary.chooseMessages pk
-          let (kc, _) ← kem.encaps pk; let kR ← runtime.liftProbComp ($ᵗ K)
-          let dc ← dem.encrypt kR m₁; adversary.distinguish st (kc, dc)) >>= fun a =>
-          pure (true == a)
-        simp only [heval_bind, heval_liftProbComp, bind_assoc]
-    change (DEMScheme.IND_CPA_Game runtime _).boolBiasAdvantage = _
-    rw [hspmf, coin_branch _ _ (hno_fail _) (hno_fail _)]
-    unfold SPMF.boolDistAdvantage; rw [abs_sub_comm]
-  rw [h_composed]
-  calc SPMF.boolDistAdvantage real_m₀ real_m₁
-    _ ≤ SPMF.boolDistAdvantage real_m₀ rand_m₀ +
-        SPMF.boolDistAdvantage rand_m₀ rand_m₁ +
-        SPMF.boolDistAdvantage rand_m₁ real_m₁ := by
-      have := SPMF.boolDistAdvantage_triangle real_m₀ rand_m₀ real_m₁
-      have := SPMF.boolDistAdvantage_triangle rand_m₀ rand_m₁ real_m₁
-      linarith
-    _ = kem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
-        SPMF.boolDistAdvantage rand_m₀ rand_m₁ +
-        SPMF.boolDistAdvantage rand_m₁ real_m₁ := by rw [← h_kem_left]
-    _ = kem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
-        dem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toDEMReduction dem adversary) +
-        SPMF.boolDistAdvantage rand_m₁ real_m₁ := by rw [← h_dem]
-    _ = kem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
-        dem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toDEMReduction dem adversary) +
-        SPMF.boolDistAdvantage real_m₁ rand_m₁ := by
-      congr 1; unfold SPMF.boolDistAdvantage; rw [abs_sub_comm]
-    _ = kem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
-        kem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toKEMRightReduction dem adversary) +
-        dem.IND_CPA_Advantage runtime
-          (kem.composeWithDEM_toDEMReduction dem adversary) := by
-      rw [← h_kem_right]; ring
+    let (m₀, m₁, st) ← adversary.chooseMessages pk
+    pure (pk, m₀, m₁, st)
+  let encaps (p : PK × M × M × adversary.State) := kem.encaps p.1
+  let finish (p : PK × M × M × adversary.State) (kc : CKEM) (k : K) (side : Bool) := do
+    let dc ← dem.encrypt k (if side then p.2.1 else p.2.2.1)
+    adversary.distinguish p.2.2.2 (kc, dc)
+  have hcoin (b : Bool) : 𝒟[runtime.liftProbComp ($ᵗ Bool)] {b} = 1 / 2 := by
+    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample,
+      ProbabilityTheory.uniformOn_univ_apply_singleton]
+    simp [Fintype.card_bool]
+  have hkey : 𝒟[runtime.liftProbComp ($ᵗ K)] Set.univ = 1 := by
+    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample]
+    simp
+  have htotal (real side : Bool) :
+      𝒟[KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side] {true} +
+      𝒟[KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side] {false} =
+        1 := by
+    exact hno_fail
+      (KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side)
+  have h := KEMDEM.bias_compose_le prepare encaps finish
+    (runtime.liftProbComp ($ᵗ Bool)) (runtime.liftProbComp ($ᵗ K))
+    (hcoin true) (hcoin false) hkey htotal
+  have hnot (b : Bool) (x y : M) : (if !b then x else y) = (if b then y else x) := by
+    cases b <;> rfl
+  simpa only [evalDist_eq_runtime, Measure.boolBias,
+    AsymmEncAlg.IND_CPA_OneTime_biasAdvantage, KEMScheme.IND_CPA_Advantage,
+    DEMScheme.IND_CPA_Advantage,
+    AsymmEncAlg.IND_CPA_OneTime_Game, KEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Game,
+    KEMDEM.composedGame, KEMDEM.kemGame, KEMDEM.demGame, prepare, encaps, finish,
+    composeWithDEM, composeWithDEM_toKEMLeftReduction, composeWithDEM_toKEMRightReduction,
+    composeWithDEM_toDEMReduction, bind_assoc, pure_bind, ite_true, Bool.false_eq_true,
+    ite_false, hnot] using h
 
 end IND_CPA
 

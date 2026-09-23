@@ -168,9 +168,11 @@ section Impersonation
 /-- An adversary for the impersonation game against an identification scheme with aborts.
 The adversary sees the public key (statement), produces a commitment together with an
 internal state, and then responds to a challenge using that state. -/
-structure ImpAdv (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
+structure ImpAdversary (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
     (AdvSt : Type) where
+  /-- Given the statement, produce a commitment and the adversary's internal state. -/
   commit (s : Stmt) : ProbComp (Commit × AdvSt)
+  /-- Given the statement, the challenge and the internal state, produce a response. -/
   respond (s : Stmt) (c : Chal) (st : AdvSt) : ProbComp Resp
 
 variable [SampleableType Chal] [IsUniformSpec unifSpec]
@@ -178,7 +180,7 @@ variable [SampleableType Chal] [IsUniformSpec unifSpec]
 /-- The impersonation experiment: the adversary tries to produce a valid transcript
 without knowing the witness, against a fixed statement `s`. -/
 def impExp {ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel}
-    {AdvSt : Type} (adv : ImpAdv ids AdvSt) (s : Stmt) : ProbComp Bool := do
+    {AdvSt : Type} (adv : ImpAdversary ids AdvSt) (s : Stmt) : ProbComp Bool := do
   let (cm, st) ← adv.commit s
   let c ← $ᵗ Chal
   let z ← adv.respond s c st

@@ -6,13 +6,14 @@ Authors: Devon Tuma, Quang Dao
 
 module
 
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.ProbCompLift
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.Coercions.SubSpec
-public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Coercions.Add.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.SimSemantics.Append.Core
 
 /-!
 # Key Encapsulation Mechanisms
@@ -53,7 +54,7 @@ def CorrectExp : m Bool :=
 
 /-- Perfect correctness of a KEM. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  Pr[= true | runtime.evalSPMF kem.CorrectExp] = 1
+  runtime.evalDist kem.CorrectExp {true} = 1
 
 end Correct
 
@@ -70,10 +71,10 @@ structure IND_CPA_Adversary (_kem : KEMScheme (OracleComp spec) K PK SK C) where
 
 /-- Fixed-branch IND-CPA experiment for a KEM, matching the source proof-ladders formulation
 `Exp.run(b)`. -/
-def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
+noncomputable def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CPA_Adversary) (b : Bool) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : kem.IND_CPA_Adversary) (b : Bool) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, _sk) ← kem.keygen
     let st ← adversary.preChallenge pk
     let (cStar, kReal) ← kem.encaps pk
@@ -82,10 +83,10 @@ def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
 
 /-- Single-game IND-CPA experiment obtained by sampling the challenge bit uniformly and checking
 whether the adversary guessed it correctly. -/
-def IND_CPA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
+noncomputable def IND_CPA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CPA_Adversary) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : kem.IND_CPA_Adversary) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, _sk) ← kem.keygen
     let st ← adversary.preChallenge pk
     let b ← runtime.liftProbComp ($ᵗ Bool)
@@ -99,14 +100,14 @@ game. -/
 noncomputable def IND_CPA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) : ℝ :=
-  (IND_CPA_Game runtime adversary).boolBiasAdvantage
+  (IND_CPA_Game runtime adversary).boolBias
 
 /-- The canonical IND-CPA advantage is definitionally the bias of the single game. -/
 theorem IND_CPA_Advantage_eq_game_bias {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) :
     kem.IND_CPA_Advantage runtime adversary =
-      (kem.IND_CPA_Game runtime adversary).boolBiasAdvantage := rfl
+      (kem.IND_CPA_Game runtime adversary).boolBias := rfl
 
 end IND_CPA
 
@@ -127,20 +128,20 @@ structure IND_CCA_Adversary (kem : KEMScheme (OracleComp spec) K PK SK C) where
 /-- Pre-challenge decapsulation oracle. -/
 def IND_CCA_preChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
     (sk : SK) : QueryImpl (IND_CCA_oracleSpec kem) (OracleComp spec) :=
-  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec))
+  QueryImpl.add spec.passthrough
     fun c => kem.decaps sk c
 
 /-- Post-challenge decapsulation oracle: the challenge ciphertext itself maps to `none`. -/
 def IND_CCA_postChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
     (sk : SK) (cStar : C) : QueryImpl (IND_CCA_oracleSpec kem) (OracleComp spec) :=
-  QueryImpl.add (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) fun c =>
+  QueryImpl.add spec.passthrough fun c =>
     if c = cStar then return none else kem.decaps sk c
 
 /-- IND-CCA real-or-random experiment for a KEM. -/
-def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
+noncomputable def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CCA_Adversary) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : kem.IND_CCA_Adversary) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, sk) ← kem.keygen
     let st ← simulateQ (kem.IND_CCA_preChallengeImpl sk) (adversary.preChallenge pk)
     let b ← runtime.liftProbComp ($ᵗ Bool)
@@ -154,7 +155,7 @@ def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
 noncomputable def IND_CCA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CCA_Adversary) : ℝ :=
-  (IND_CCA_Game runtime adversary).boolBiasAdvantage
+  (IND_CCA_Game runtime adversary).boolBias
 
 /-- Any IND-CPA adversary can be viewed as an IND-CCA adversary that simply ignores the
 decapsulation oracle while preserving its ordinary pre-challenge interaction with the base
@@ -178,19 +179,17 @@ theorem IND_CPA_Game_eq_IND_CCA_Game_toIND_CCA
     kem.IND_CPA_Game runtime adversary = kem.IND_CCA_Game runtime adversary.toIND_CCA := by
   have h : ∀ (impl₂ : QueryImpl (C →ₒ Option K) (OracleComp spec))
       {α : Type} (oa : OracleComp spec α),
-      simulateQ (QueryImpl.add
-          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) impl₂)
+      simulateQ (QueryImpl.add spec.passthrough impl₂)
         (simulateQ (HasQuery.toQueryImpl (spec := spec)
           (m := OracleComp (spec + (C →ₒ Option K)))) oa) = oa := by
     intro impl₂ α oa
     rw [← QueryImpl.simulateQ_compose]
-    have : QueryImpl.add
-          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) impl₂ ∘ₛ
+    have : QueryImpl.add spec.passthrough impl₂ ∘ₛ
         HasQuery.toQueryImpl (spec := spec) (m := OracleComp (spec + (C →ₒ Option K))) =
           QueryImpl.id' spec := by
       rw [QueryImpl.add_eq_hAdd]
       ext t
-      simp [QueryImpl.compose, HasQuery.toQueryImpl_eq_id']
+      simp [QueryImpl.compose]
       simpa using
         (QueryImpl.simulateQ_add_liftM_query_left (QueryImpl.id' spec) impl₂ t)
     rw [this, simulateQ_id']

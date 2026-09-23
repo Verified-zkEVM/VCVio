@@ -52,12 +52,12 @@ noncomputable def renyiMGF (a : ℝ) (μ ν : Measure α) : ℝ≥0∞ :=
 
 open scoped Classical in
 theorem renyiMGF_of_ac {a : ℝ} {μ ν : Measure α} (h : μ ≪ ν) :
-    renyiMGF a μ ν = ∫⁻ x, (μ.rnDeriv ν x) ^ a ∂ν := if_pos h
+    renyiMGF a μ ν = ∫⁻ x, (μ.rnDeriv ν x) ^ a ∂ν := ite_eq_left h
 
 open scoped Classical in
 @[simp]
 theorem renyiMGF_of_not_ac {a : ℝ} {μ ν : Measure α} (h : ¬ μ ≪ ν) :
-    renyiMGF a μ ν = ⊤ := if_neg h
+    renyiMGF a μ ν = ⊤ := ite_eq_right h
 
 /-- A measure has Renyi MGF one against itself. -/
 @[simp]
@@ -83,7 +83,7 @@ noncomputable def renyiDiv (a : ℝ) (μ ν : Measure α) : ℝ≥0∞ :=
 
 open scoped Classical in
 theorem renyiDiv_eq_rpow {a : ℝ} (ha : 1 < a) (μ ν : Measure α) :
-    renyiDiv a μ ν = (renyiMGF a μ ν) ^ ((a - 1)⁻¹ : ℝ) := if_neg (not_le.mpr ha)
+    renyiDiv a μ ν = (renyiMGF a μ ν) ^ ((a - 1)⁻¹ : ℝ) := ite_eq_right (not_le.mpr ha)
 
 @[simp]
 theorem renyiDiv_self (a : ℝ) (μ : Measure α) [IsProbabilityMeasure μ] :

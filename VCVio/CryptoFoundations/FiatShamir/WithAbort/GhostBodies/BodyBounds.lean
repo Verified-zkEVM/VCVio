@@ -560,7 +560,7 @@ lemma probOutput_lazyGhostFire_true_le (pk : Stmt) (sk : Wit) {ε : ℝ}
           _ ≤ Pr[= w' | Prod.fst <$> ids.commit pk sk] +
                 Pr[= true | lazyGhostFire ids pk sk w' n] := by
               gcongr
-              · rw [tsum_eq_single w' (by intro b hb; simp [hb]), if_pos rfl, mul_one]
+              · rw [tsum_eq_single w' (by intro b hb; simp [hb]), ite_eq_left rfl, mul_one]
               · exact mul_le_of_le_one_left (zero_le) tsum_probOutput_le_one
       refine hbody.trans ?_
       push_cast
@@ -706,7 +706,7 @@ lemma tsum_ghostHybridImpl_read_hit_eq
   have hrun : (ghostHybridImpl ids M maxAttempts true pk sk (.inl (.inr mc))).run p =
       (pure (v, (p.1, true)) :
         ProbComp (Chal × GhostState M Commit Chal)) := by
-    simp only [ghostHybridImpl, StateT.run_mk, hgh, if_pos trivial]
+    simp only [ghostHybridImpl, StateT.run_mk, hgh, ite_eq_left trivial]
   rw [hrun]
   refine (tsum_probOutput_pure_mul (β := Chal × GhostState M Commit Chal) (v, (p.1, true))
     fun z => Pr[fun w : (M × Option (Commit × Resp)) × GhostState M Commit Chal => w.2.2 = true |
@@ -806,10 +806,10 @@ lemma ofReal_tvDist_run_fsAbortSignLoop_progSignBody_le (pk : Stmt) (sk : Wit) (
         intro ws
         cases hc : c (msg, ws.1) with
         | some v =>
-            rw [if_neg (by simp)]
+            rw [ite_eq_right (by simp)]
             exact le_add_right (ENNReal.ofReal_le_one.mpr (tvDist_le_one _ _))
         | none =>
-            rw [if_pos rfl, zero_add, roStep_of_none M hc]
+            rw [ite_eq_left rfl, zero_add, roStep_of_none M hc]
             simp only [bind_assoc, pure_bind]
             refine le_trans (ofReal_tvDist_bind_le_tsum _ _ _) ?_
             have hch : ∀ ch : Chal,
@@ -840,7 +840,7 @@ lemma ofReal_tvDist_run_fsAbortSignLoop_progSignBody_le (pk : Stmt) (sk : Wit) (
                     cases oz with
                     | some z => simp
                     | none =>
-                        rw [if_pos rfl]
+                        rw [ite_eq_left rfl]
                         exact le_trans (ih (c.cacheQuery (msg, ws.1) ch))
                           (signCollisionBound_mono ε p_abort n
                             (QueryCache.enncard_cacheQuery_le c (msg, ws.1) ch))
@@ -961,10 +961,10 @@ lemma tsum_probOutput_run_progSignBody_mul_enncard_le (pk : Stmt) (sk : Wit) (ms
             intro oz
             cases oz with
             | some z =>
-                rw [if_neg (by simp), add_zero, tsum_probOutput_pure_mul]
+                rw [ite_eq_right (by simp), add_zero, tsum_probOutput_pure_mul]
                 exact QueryCache.enncard_cacheQuery_le c (msg, ws.1) ch
             | none =>
-                rw [if_pos rfl]
+                rw [ite_eq_left rfl]
                 refine le_trans (ih (c.cacheQuery (msg, ws.1) ch)) ?_
                 exact add_le_add_left
                   (QueryCache.enncard_cacheQuery_le c (msg, ws.1) ch) S
@@ -1109,10 +1109,10 @@ lemma tsum_probOutput_run_ghostSignBody_mul_ghost_enncard_le (pk : Stmt) (sk : W
             intro oz
             cases oz with
             | some z =>
-                rw [if_neg (by simp), add_zero, tsum_probOutput_pure_mul]
+                rw [ite_eq_right (by simp), add_zero, tsum_probOutput_pure_mul]
                 exact le_trans (enncard_uncacheQuery_le M gh (msg, ws.1)) le_self_add
             | none =>
-                rw [if_pos rfl]
+                rw [ite_eq_left rfl]
                 refine le_trans (ih re (gh.cacheQuery (msg, ws.1) ch)) ?_
                 exact add_le_add_left
                   (QueryCache.enncard_cacheQuery_le gh (msg, ws.1) ch) S
@@ -1185,7 +1185,7 @@ lemma memCharge_uncacheQuery_le (gh : (M × Commit →ₒ Chal).QueryCache)
   unfold memCharge uncacheQuery
   by_cases hq : mc = q
   · subst hq; simp
-  · simp only [if_neg hq, le_refl]
+  · simp [hq]
 
 omit [SampleableType Chal] in
 /-- A `cacheQuery` write raises the membership charge at `mc` by at most the indicator of the
@@ -1197,10 +1197,10 @@ lemma memCharge_cacheQuery_le (gh : (M × Commit →ₒ Chal).QueryCache)
   unfold memCharge
   by_cases hq : mc = q
   · subst hq
-    rw [QueryCache.cacheQuery_self, if_neg (by simp : ¬ (some c = none)), if_pos rfl]
+    rw [QueryCache.cacheQuery_self, ite_eq_right (by simp : ¬ (some c = none)), ite_eq_left rfl]
     exact le_add_self
   · have hmcq : gh.cacheQuery q c mc = gh mc := by
-      simp only [QueryCache.cacheQuery, Function.update_of_ne hq]
+      exact QueryCache.cacheQuery_of_ne gh c hq
     rw [hmcq]
     exact le_self_add
 
@@ -1222,8 +1222,8 @@ lemma tsum_probOutput_commit_mul_writeHit_le (pk : Stmt) (sk : Wit) (msg : M)
   refine ENNReal.tsum_le_tsum fun ws => ?_
   obtain ⟨w, st⟩ := ws
   by_cases hhit : ((msg, w) : M × Commit) = mc
-  · rw [if_pos hhit, mul_one, if_pos (by rw [← hhit])]
-  · rw [if_neg hhit, mul_zero]; exact zero_le
+  · rw [ite_eq_left hhit, mul_one, ite_eq_left (by rw [← hhit])]
+  · rw [ite_eq_right hhit, mul_zero]; exact zero_le
 
 omit [SampleableType Stmt] in
 /-- **(a) Sign-step ghost-membership charge increment.** Running `ghostSignBody` for `n`
@@ -1316,10 +1316,10 @@ lemma tsum_probOutput_run_ghostSignBody_mul_memCharge_le (pk : Stmt) (sk : Wit) 
             intro oz
             cases oz with
             | some z =>
-                rw [if_neg (Option.some_ne_none z), add_zero, tsum_probOutput_pure_mul]
+                rw [ite_eq_right (Option.some_ne_none z), add_zero, tsum_probOutput_pure_mul]
                 exact le_trans (memCharge_uncacheQuery_le M gh (msg, ws.1) mc) le_self_add
             | none =>
-                rw [if_pos rfl]
+                rw [ite_eq_left rfl]
                 refine le_trans (ih re (gh.cacheQuery (msg, ws.1) ch)) ?_
                 exact add_le_add (memCharge_cacheQuery_le M gh (msg, ws.1) ch mc) le_rfl
           refine le_trans (tsum_probOutput_mul_le_add_of_le _ h_oz) ?_
@@ -1394,9 +1394,9 @@ lemma tsum_ghostHybridImpl_read_step_charge_le
   unfold memCharge
   cases h : p.1.1.2 mc with
   | some v =>
-      rw [if_neg (by simp), add_zero]
+      rw [ite_eq_right (by simp), add_zero]
       exact probEvent_le_one
   | none =>
-      rw [if_pos rfl, zero_add]
+      rw [ite_eq_left rfl, zero_add]
 
 end FiatShamirWithAbort

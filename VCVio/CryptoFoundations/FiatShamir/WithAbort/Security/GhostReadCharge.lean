@@ -42,9 +42,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ## The lazy-side ghost-read charge -/
 
@@ -235,7 +234,7 @@ lemma probEvent_lazyGhostHybridImpl_charged_step (pk : Stmt) (sk : Wit) {ε : �
           · exact le_rfl
           cases fired with
           | false =>
-              rw [if_neg (by decide)]
+              rw [ite_eq_right (by decide)]
               refine le_of_eq (ENNReal.tsum_eq_zero.mpr fun z => ?_)
               refine probOutput_eq_zero_of_not_mem_support ?_
               rw [support_map]
@@ -243,7 +242,7 @@ lemma probEvent_lazyGhostHybridImpl_charged_step (pk : Stmt) (sk : Wit) {ε : �
               simp only [Prod.mk.injEq] at heq
               exact absurd heq.2.2 (by decide)
           | true =>
-              rw [if_pos rfl]
+              rw [ite_eq_left rfl]
               -- The bad-output mass is a sub-sum of the total mass `≤ 1`, via the injection
               -- `z ↦ (z.1, z.2, true)`.
               refine le_trans (ENNReal.tsum_comp_le_tsum_of_injective ?_

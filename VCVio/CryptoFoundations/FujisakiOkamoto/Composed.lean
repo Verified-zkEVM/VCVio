@@ -107,10 +107,9 @@ noncomputable def twoRORuntime
 noncomputable def singleRORuntime
     {PKHash : Type}
     [DecidableEq PKHash] [DecidableEq M] [SampleableType R] [SampleableType K] :
-    ProbCompRuntime (OracleComp (singleROOracleSpec PKHash M R K)) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle
-    (hashImpl := singleROOracleImpl (PKHash := PKHash) (M := M) (R := R) (K := K))
+    ProbCompRuntime (OracleComp (singleROOracleSpec PKHash M R K)) :=
+  ProbCompRuntime.withStateOracle
+    (singleROOracleImpl (PKHash := PKHash) (M := M) (R := R) (K := K))
     (∅ : SingleROQueryCache PKHash M R K)
-  toProbCompLift := ProbCompLift.ofMonadLift _
 
 end FujisakiOkamoto

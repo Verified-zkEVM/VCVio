@@ -17,10 +17,13 @@ This file validates one-step relational tactic behavior.
 
 @[expose] public section
 
+open scoped OracleComp.Rel.Quantitative
+
 open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic
 open OracleComp.ProgramLogic.Relational
 open Lean.Order
+open Std.Internal.Do
 open scoped OracleComp.ProgramLogic
 
 universe u
@@ -256,7 +259,7 @@ example (t : spec.Domain) (post : spec.Range t → spec.Range t → ℝ≥0∞) 
       (query t : OracleComp spec (spec.Range t)) ≈ₑ
       (query t : OracleComp spec (spec.Range t))
     ⦃post⦄ := by
-  exact OracleComp.ProgramLogic.Relational.Loom.relTriple_query_refl t post
+  exact OracleComp.Rel.Quantitative.relTriple_query_refl t post
 
 /-! ## Iteration rules -/
 
@@ -391,7 +394,7 @@ example {oa : OracleComp spec α} {f g : α → OracleComp spec β}
     exact hf a₁
   · exact relTriple_refl (oa := ob)
 
-/-! ## Quantitative `Std.Do'.RelTriple` path -/
+/-! ## Quantitative `VCVio.ProgramLogic.RelTriple` path -/
 
 example (a : α) (b : β) (post : α → β → ℝ≥0∞) :
     ⦃post a b⦄
@@ -402,13 +405,13 @@ example (a : α) (b : β) (post : α → β → ℝ≥0∞) :
 example (a : α) (b : β) (post : α → β → ℝ≥0∞) :
     post a b ⊑
       rwp⟦(pure a : OracleComp spec α) ~ (pure b : OracleComp spec β) |
-        post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+        post; EPost.Nil.mk, EPost.Nil.mk⟧ := by
   rvcstep
 
 example (a : α) (b : β)
     (f : α → OracleComp spec γ) (g : β → OracleComp spec δ)
     (post : γ → δ → ℝ≥0∞) :
-    rwp⟦f a ~ g b | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ ⊑
+    rwp⟦f a ~ g b | post; EPost.Nil.mk, EPost.Nil.mk⟧ ⊑
       rwp⟦
         (do
           let x ← (pure a : OracleComp spec α)
@@ -417,7 +420,7 @@ example (a : α) (b : β)
         (do
           let y ← (pure b : OracleComp spec β)
           g y)
-      | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+      | post; EPost.Nil.mk, EPost.Nil.mk⟧ := by
   rvcgen
 
 example [DecidableEq γ] [DecidableEq δ] (a : α) (b : β)
@@ -432,41 +435,41 @@ example [DecidableEq γ] [DecidableEq δ] (a : α) (b : β)
         (do
           let y ← (pure b : OracleComp spec β)
           pure (g y))
-      | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+      | post; EPost.Nil.mk, EPost.Nil.mk⟧ := by
   rvcgen
 
 example (a : α) (b : β)
     (f : α → OracleComp spec γ)
     (post : γ → β → ℝ≥0∞) :
-    rwp⟦f a ~ (pure b : OracleComp spec β) | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ ⊑
+    rwp⟦f a ~ (pure b : OracleComp spec β) | post; EPost.Nil.mk, EPost.Nil.mk⟧ ⊑
       rwp⟦
         (do
           let x ← (pure a : OracleComp spec α)
           f x)
         ~
         (pure b : OracleComp spec β)
-      | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+      | post; EPost.Nil.mk, EPost.Nil.mk⟧ := by
   rvcstep left
   rvcgen
 
 example (a : α) (b : β)
     (g : β → OracleComp spec δ)
     (post : α → δ → ℝ≥0∞) :
-    rwp⟦(pure a : OracleComp spec α) ~ g b | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ ⊑
+    rwp⟦(pure a : OracleComp spec α) ~ g b | post; EPost.Nil.mk, EPost.Nil.mk⟧ ⊑
       rwp⟦
         (pure a : OracleComp spec α)
         ~
         (do
           let y ← (pure b : OracleComp spec β)
           g y)
-      | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+      | post; EPost.Nil.mk, EPost.Nil.mk⟧ := by
   rvcstep right
   rvcgen
 
 example (a : α) (b : β)
     (f : α → OracleComp spec γ)
     (post : γ → β → ℝ≥0∞) :
-    ⦃rwp⟦f a ~ (pure b : OracleComp spec β) | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧⦄
+    ⦃rwp⟦f a ~ (pure b : OracleComp spec β) | post; EPost.Nil.mk, EPost.Nil.mk⟧⦄
       (do
         let x ← (pure a : OracleComp spec α)
         f x) ≈ₑ (pure b : OracleComp spec β)
@@ -477,7 +480,7 @@ example (a : α) (b : β)
 example (a : α) (b : β)
     (g : β → OracleComp spec δ)
     (post : α → δ → ℝ≥0∞) :
-    ⦃rwp⟦(pure a : OracleComp spec α) ~ g b | post; Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧⦄
+    ⦃rwp⟦(pure a : OracleComp spec α) ~ g b | post; EPost.Nil.mk, EPost.Nil.mk⟧⦄
       (pure a : OracleComp spec α) ≈ₑ
       (do
         let y ← (pure b : OracleComp spec β)

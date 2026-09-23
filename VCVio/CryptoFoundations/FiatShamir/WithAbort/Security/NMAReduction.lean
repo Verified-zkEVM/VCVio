@@ -43,9 +43,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ## The NMA reduction
 
@@ -383,9 +382,7 @@ lemma hproj2_sign (pk : Stmt) (sk : Wit) (msg : M)
   -- Support-restricted `SPMF` bind congruence (`evalSPMF_bind_congr` with `m := SPMF`, where
   -- `evalSPMF` is the identity): case-split on the accepted transcript, using the no-collision
   -- hypothesis on the `some` branch.
-  refine evalSPMF_bind_congr (m := SPMF) (mx := 𝒮[firstSome (sim pk) maxAttempts])
-    fun a _ha => ?_
-  simp only [SPMF.evalSPMF_def]
+  refine bind_congr fun a => ?_
   -- Case-split on the accepted transcript; under the redesigned `proj2` the `some` branch aligns
   -- the ghost-layer write with the inner-cache write unconditionally (no collision hypothesis).
   cases a with
@@ -458,17 +455,11 @@ private lemma relTriple_graph_of_evalSPMF_map_eq
     (oa : OracleComp spec₁ α') (ob : OracleComp spec₂ σ')
     (h : 𝒮[F <$> oa] = 𝒮[ob]) :
     OracleComp.ProgramLogic.Relational.RelTriple oa ob (fun a b => F a = b) := by
-  apply (OracleComp.ProgramLogic.Relational.relTriple_iff_relWP
-    (oa := oa) (ob := ob) (R := fun a b => F a = b)).2
-  refine ⟨⟨𝒮[oa] >>= fun a => pure (a, F a), ?_, ?_⟩, ?_⟩
-  · rw [map_bind]; simp
-  · rw [← h, evalSPMF_map, map_bind]; simp
-  · intro z hz
-    rcases (mem_support_bind_iff
-      (𝒮[oa]) (fun a => (pure (a, F a) : SPMF (α' × σ'))) z).1 hz with ⟨a, _, hz'⟩
-    have hzEq : z = (a, F a) := by
-      simpa [support_pure, Set.mem_singleton_iff] using hz'
-    simp [hzEq]
+  open OracleComp.ProgramLogic.Relational in
+  have h0 : RelTriple oa (F <$> oa) (fun a b => F a = b) := by
+    simpa using relTriple_map (f := id) (g := F) (R := fun a b => F a = b)
+      (relTriple_refl_of_mem_support oa (R := fun a b => F a = F b) fun _ _ => rfl)
+  exact OracleComp.ProgramLogic.Relational.relTriple_of_evalSPMF_eq_right h h0
 
 omit [SampleableType Stmt] in
 /-- **Sub-lemma (b), whole-run state projection.** The full layered ghost-tagged NMA run
@@ -518,11 +509,10 @@ lemma evalSPMF_map_run_simulateQ_ghostNmaImpl_proj2 {β : Type} (pk : Stmt) (sk 
 forwarding uniform queries, answering live hash queries through a managed cache, and
 answering signing queries with the simulator loop of `simSignBody` (programming the
 accepted transcript's challenge into the managed cache). Returns the forgery together
-with the managed cache, in the interface of `SignatureAlg.managedRoNmaAdv`. -/
+with the managed cache, in the interface of `SignatureAlg.ManagedRoNmaAdversary`. -/
 @[expose] noncomputable def simulatedNmaAdv :
-    SignatureAlg.managedRoNmaAdv
-      (FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts) where
+    SignatureAlg.ManagedRoNmaAdversary
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts) where
   main pk :=
     let spec := unifSpec + (M × Commit →ₒ Chal)
     let fwd : QueryImpl spec (StateT spec.QueryCache (OracleComp spec)) :=
@@ -551,13 +541,13 @@ with the managed cache, in the interface of `SignatureAlg.managedRoNmaAdv`. -/
     -- there and fall through to the live oracle, so the managed-RO experiment agrees
     -- with the plain EUF-NMA verification on *every* forgery. In particular a replayed
     -- signed `(msg, w')` no longer wins through the programmed challenge, which is what
-    -- makes the bridge to `eufNmaAdv.advantage` sound. Other programmed entries sit at
+    -- makes the bridge to `SignatureAlg.eufNmaAdvantage` sound. Other programmed entries sit at
     -- different points and are never read by `verify`.
     (simulateQ ((unifSim + roSim) + sigSim) (adv.main pk)).run ∅ >>= fun result =>
       let ((msg, σ), cache) := result
       let advCache : spec.QueryCache :=
         match σ with
-        | some (w', _) => Function.update cache (Sum.inr (msg, w')) none
+        | some (w', _) => QueryCache.ofFn (Function.update cache (Sum.inr (msg, w')) none)
         | none => cache
       pure ((msg, σ), advCache)
 
@@ -592,10 +582,8 @@ lemma withCacheOverlay_verify_eq_of_miss
     (msg : M) (σ : Option (Commit × Resp))
     (hmiss : ∀ w' z, σ = some (w', z) → cache (Sum.inr (msg, w')) = none) :
     withCacheOverlay cache
-        ((FiatShamirWithAbort (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-          ids hr M maxAttempts).verify pk msg σ) =
-      (FiatShamirWithAbort (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-        ids hr M maxAttempts).verify pk msg σ := by
+        ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk msg σ) =
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk msg σ := by
   cases σ with
   | none => simp only [FiatShamirWithAbort, withCacheOverlay_pure]
   | some wz =>
@@ -636,8 +624,8 @@ lemma probOutput_hybridVerifyCont_le_managed_verify (pk : Stmt)
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
           (withCacheOverlay
             (match ms.2 with
-              | some (w', _) => Function.update (baseEmbed M (overlayCache M base ghost))
-                  (Sum.inr (ms.1, w')) none
+              | some (w', _) => QueryCache.ofFn (Function.update
+                  (baseEmbed M (overlayCache M base ghost)) (Sum.inr (ms.1, w')) none)
               | none => baseEmbed M (overlayCache M base ghost))
             ((FiatShamirWithAbort ids hr M maxAttempts).verify pk ms.1 ms.2))).run base] := by
   obtain ⟨msg, σ⟩ := ms
@@ -796,7 +784,7 @@ lemma hybridSimRun_le_managedRun_verify (pk : Stmt) (sk : Wit) :
             (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
         (withCacheOverlay
           (match p.1.2 with
-            | some (w', _) => Function.update p.2.1 (Sum.inr (p.1.1, w')) none
+            | some (w', _) => QueryCache.ofFn (Function.update p.2.1 (Sum.inr (p.1.1, w')) none)
             | none => p.2.1)
           ((FiatShamirWithAbort ids hr M maxAttempts).verify pk p.1.1 p.1.2))).run p.2.2
     with hRHSverify
@@ -867,7 +855,7 @@ simulated single-cache hybrid (with the freshness check) is bounded by the run-n
 of the managed-RO NMA experiment — the managed-cache run of `simulatedNmaAdv` followed by
 overlay verification, all under the runtime's `randomOracle` layer.
 
-This is the genuine distributional content of `probOutput_hybridExp_sim_le_managedRoNmaExp`:
+This is the genuine distributional content of `probOutput_hybridExp_sim_le_managedRoNmaAdvantage`:
 the inner managed cache threaded by `roSim`/`sigSim` together with the runtime's outer
 `randomOracle` layer reproduces the single-cache hybrid run of `hybridExpAtKey`, and on
 fresh forgeries the `withCacheOverlay` verification agrees with the live oracle at the
@@ -910,12 +898,12 @@ the live oracle at the verification point and the freshness conjunct can only de
 the left-hand side. The matching hash-query-bound transfer is
 `simulatedNmaAdv_nmaHashQueryBound` in `FiatShamir.WithAbort.Security`: the simulated signing
 loop issues no live hash queries, so the NMA adversary keeps the CMA adversary's hash budget. -/
-lemma probOutput_hybridExp_sim_le_managedRoNmaExp :
+lemma probOutput_hybridExp_sim_le_managedRoNmaAdvantage :
     Pr[= true | do
         let (pk, sk) ← hr.gen
         hybridExpAtKey ids hr M maxAttempts adv (simSignBody M maxAttempts sim pk sk) pk] ≤
-      Pr[= true | SignatureAlg.managedRoNmaExp (runtime M)
-        (simulatedNmaAdv ids hr M maxAttempts sim adv)] := by
+      SignatureAlg.managedRoNmaAdvantage (runtime M)
+        (simulatedNmaAdv ids hr M maxAttempts sim adv) := by
   classical
   -- Abbreviation for the runtime random-oracle simulator.
   set ro : QueryImpl (M × Commit →ₒ Chal)
@@ -923,28 +911,28 @@ lemma probOutput_hybridExp_sim_le_managedRoNmaExp :
   -- Normal form of the managed-RO NMA experiment: the runtime's `withStateOracle`
   -- semantics unfolds to a single `simulateQ … |>.run' ∅`, and the lifted key
   -- generation pulls out as an ordinary `ProbComp` bind via `roSim.run'_liftM_bind`.
-  have hRHS : Pr[= true | SignatureAlg.managedRoNmaExp (runtime M)
-        (simulatedNmaAdv ids hr M maxAttempts sim adv)] =
+  have hRHS : SignatureAlg.managedRoNmaAdvantage (runtime M)
+        (simulatedNmaAdv ids hr M maxAttempts sim adv) =
       Pr[= true | hr.gen >>= fun pksk =>
         (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
           ((simulatedNmaAdv ids hr M maxAttempts sim adv).main pksk.1 >>= fun result =>
             withCacheOverlay result.2
               ((FiatShamirWithAbort ids hr M maxAttempts).verify
                 pksk.1 result.1.1 result.1.2))).run' ∅] := by
-    unfold SignatureAlg.managedRoNmaExp
+    unfold SignatureAlg.managedRoNmaAdvantage SignatureAlg.managedRoNmaExp
     -- Expose the bundled `withStateOracle` semantics as a run-normal-form ProbComp.
-    change Pr[= true | 𝒮[(simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
+    rw [runtime_evalDist_eq_simulateQ_run', evalDist_apply_singleton]
+    change Pr[= true | (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) + ro)
         (do
           let (pk, _) ← (FiatShamirWithAbort ids hr M maxAttempts).keygen
           let result ← (simulatedNmaAdv ids hr M maxAttempts sim adv).main pk
           withCacheOverlay result.2
             ((FiatShamirWithAbort ids hr M maxAttempts).verify
-              pk result.1.1 result.1.2))).run' ∅]] = _
+              pk result.1.1 result.1.2))).run' ∅] = _
     -- `keygen = monadLift hr.gen`; pull it out of the simulation.
     rw [show (FiatShamirWithAbort ids hr M maxAttempts).keygen =
       (liftM hr.gen : OracleComp (unifSpec + (M × Commit →ₒ Chal)) (Stmt × Wit)) from rfl]
     rw [simulateQ_bind, roSim.run'_liftM_bind]
-    rfl
   rw [hRHS]
   -- Reduce to a per-key statement under the shared `hr.gen` prefix.
   refine probOutput_bind_mono fun pksk _ => ?_

@@ -32,9 +32,6 @@ namespace SPMF
 protected lemma evalSPMF_def (p : SPMF α) : evalSPMF p = p := rfl
 
 @[grind =]
-protected lemma support_eq_support (p : SPMF α) : support p = SPMF.support p := rfl
-
-@[grind =]
 lemma probOutput_eq_apply (p : SPMF α) (x : α) : Pr[= x | p] = p x :=
   probOutput_def p x
 
@@ -80,13 +77,14 @@ noncomputable instance : LawfulMonadLift Id PMF where
 instance : HasEvalFinset Id where
   finSupport x := {x}
   coe_finSupport x := by
-    ext y
-    change y ∈ (↑({x.run} : Finset _) : Set _) ↔ y ∈ SetM.run (pure x.run : SetM _)
+    change (↑({x.run} : Finset _) : Set _) = support (pure x.run : Id _)
     rw [Finset.coe_singleton]
-    rfl
+    exact (MonadAttach.support_pure x.run).symm
 
-@[simp, grind =]
-lemma support_eq_singleton (x : Id α) : support x = {x.run} := rfl
+@[grind =]
+lemma support_eq_singleton (x : Id α) : support x = {x.run} := by
+  change support (pure x.run : Id _) = {x.run}
+  exact MonadAttach.support_pure _
 
 @[simp, grind =]
 lemma finSupport_eq_singleton [DecidableEq α] (x : Id α) : finSupport x = {x.run} := rfl

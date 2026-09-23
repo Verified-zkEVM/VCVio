@@ -12,9 +12,12 @@ public import LatticeCrypto.Falcon.Concrete.NTRUSolver
 public import LatticeCrypto.Falcon.Concrete.NTT
 public import LatticeCrypto.Falcon.Concrete.PolyBigInt
 public import LatticeCrypto.Falcon.Concrete.SmallPrimeNTT
+public import LatticeCrypto.Falcon.Coset
 public import LatticeCrypto.Falcon.Encoding
+public import LatticeCrypto.Falcon.PackedFFT
 public import LatticeCrypto.Falcon.Params
 public import LatticeCrypto.Falcon.Primitives
+public import LatticeCrypto.Falcon.SamplerMinEntropy
 public import LatticeCrypto.Falcon.Scheme
 public import LatticeCrypto.Falcon.Security
 public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
@@ -31,6 +34,7 @@ public import LatticeCrypto.MLDSA.Scheme
 public import LatticeCrypto.MLDSA.Security
 public import LatticeCrypto.MLDSA.SecurityExpandARO
 public import LatticeCrypto.MLDSA.SecurityHVZK
+public import LatticeCrypto.MLDSA.SecurityHeadlines
 public import LatticeCrypto.MLDSA.SecurityNMA
 public import LatticeCrypto.MLDSA.Signature
 public import LatticeCrypto.MLKEM.Arithmetic

@@ -89,7 +89,7 @@ noncomputable def reductionTransform {ω κ : Type} [AddCommMonoid ω]
         + profile distinguish := by
   simp [reductionTransform, reductionProfile, add_assoc]
 
-@[simp] lemma instantiate_reductionTransform {ω κ κ' : Type} [AddCommMonoid ω]
+lemma instantiate_reductionTransform {ω κ κ' : Type} [AddCommMonoid ω]
     (intrinsic : ω)
     (profile : OneTimeINDCPACapability → ResourceProfile ω κ)
     (impl : κ → ResourceProfile ω κ') :
@@ -103,7 +103,7 @@ noncomputable def reductionTransform {ω κ : Type} [AddCommMonoid ω]
       intrinsic + weights chooseMessages + weights distinguish := by
   simp [reductionProfile, add_assoc, add_left_comm, add_comm]
 
-@[simp] lemma eval_reductionTransform {ω κ : Type} [AddCommMonoid ω]
+lemma eval_reductionTransform {ω κ : Type} [AddCommMonoid ω]
     (intrinsic : ω)
     (profile : OneTimeINDCPACapability → ResourceProfile ω κ)
     (weights : κ → ω) :
@@ -113,7 +113,7 @@ noncomputable def reductionTransform {ω κ : Type} [AddCommMonoid ω]
         + (profile distinguish).eval weights := by
   simp [reductionTransform_eq, add_assoc, add_left_comm, add_comm]
 
-@[simp] lemma reductionTransform_ofIntrinsic {ω κ : Type} [AddCommMonoid ω]
+lemma reductionTransform_ofIntrinsic {ω κ : Type} [AddCommMonoid ω]
   (intrinsic chooseCost distinguishCost : ω) :
     reductionTransform (κ := κ) intrinsic
       (fun
@@ -200,8 +200,9 @@ two-field cost object recording the `chooseMessages` and `distinguish` procedure
 def oneTimeINDCPAProcedureCostModel
     {gen : G} {ω κ : Type}
     (chooseCost distinguishCost :
-      AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → ResourceProfile ω κ) :
-    AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → OneTimeINDCPAProcedureCost ω κ :=
+      AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ → ResourceProfile ω κ) :
+    AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ →
+      OneTimeINDCPAProcedureCost ω κ :=
   fun adv n => ⟨chooseCost adv n, distinguishCost adv n⟩
 
 /-- Cost model for the DDH reduction obtained by instantiating the open reduction transform with
@@ -210,8 +211,9 @@ noncomputable def oneTimeDDHReductionCost
     {gen : G} {ω κ : Type} [AddCommMonoid ω]
     (intrinsic : ω)
     (advCost :
-      AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → OneTimeINDCPAProcedureCost ω κ) :
-    AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → ResourceProfile ω κ :=
+      AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ →
+        OneTimeINDCPAProcedureCost ω κ) :
+    AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ → ResourceProfile ω κ :=
   fun adv n =>
     OneTimeINDCPAProcedureCost.reductionTransform intrinsic (advCost adv n)
 
@@ -265,7 +267,7 @@ noncomputable def IND_CPA_OneTime_DDHReduction_openProfiled
   let (m₁, m₂, state) ←
     liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
       (.chooseMessages A)
-  let bit ← liftM ($ᵗ Bool : ProbComp Bool)
+  let bit ← $ᵗ Bool
   AddWriterT.addTell (profile OneTimeINDCPACapability.distinguish)
   let bit' ←
     liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
@@ -289,7 +291,7 @@ noncomputable def IND_CPA_OneTime_DDHReduction_openCost
 
 /-- Implementation of the reified one-time IND-CPA interface using a concrete adversary. -/
 def oneTimeINDCPAImpl {gen : G}
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     QueryImpl (oneTimeINDCPASpec G G adv.State (G × G)) ProbComp
   | .chooseMessages pk => adv.chooseMessages pk
   | .distinguish st c => adv.distinguish st c
@@ -430,7 +432,7 @@ noncomputable def IND_CPA_OneTime_DDHReduction_profiled
     {gen : G} {ω κ : Type} [AddMonoid ω]
     (intrinsic : ω)
     (profile : OneTimeINDCPACapability → ResourceProfile ω κ)
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     G → G → G → G → AddWriterT (ResourceProfile ω κ) ProbComp Bool :=
   fun g A B T => by
     letI := (oneTimeINDCPAImpl (gen := gen) adv).toHasQuery
@@ -441,7 +443,7 @@ noncomputable def IND_CPA_OneTime_DDHReduction_profiled
 noncomputable def IND_CPA_OneTime_DDHReduction_costed
     {gen : G} {ω : Type} [AddMonoid ω]
     (intrinsic : ω)
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     G → G → G → G →
       AddWriterT (ResourceProfile ω OneTimeINDCPACapability) ProbComp Bool :=
   IND_CPA_OneTime_DDHReduction_profiled
@@ -453,7 +455,7 @@ reduction `IND_CPA_OneTime_DDHReduction` from `Examples.ElGamal.Basic`. -/
 @[simp]
 lemma IND_CPA_OneTime_DDHReduction_open_eval
     {gen : G}
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (g A B T : G) :
     HasQuery.Program.eval
       (IND_CPA_OneTime_DDHReduction_open
@@ -470,7 +472,7 @@ lemma IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport
     {gen : G} {ω κ : Type} [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     (intrinsic : ω)
     (profile : OneTimeINDCPACapability → ResourceProfile ω κ)
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (g A B T : G) :
     AddWriterT.PathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_profiled
@@ -487,8 +489,9 @@ lemma IND_CPA_OneTime_DDHReduction_modeledCost_pathwiseCostEqOnSupport
     {gen : G} {ω κ : Type} [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     (intrinsic : ω)
     (advCost :
-      AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → OneTimeINDCPAProcedureCost ω κ)
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+      AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ →
+        OneTimeINDCPAProcedureCost ω κ)
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (n : ℕ) (g A B T : G) :
     AddWriterT.PathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_profiled
@@ -506,7 +509,7 @@ Immediate from `IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport`. 
 lemma IND_CPA_OneTime_DDHReduction_intrinsicProfile_pathwiseCostEqOnSupport
     {gen : G} {ω κ : Type} [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     (intrinsic chooseCost distinguishCost : ω)
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (g A B T : G) :
     AddWriterT.PathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_profiled
@@ -546,7 +549,8 @@ noncomputable def oneTimeDDHReductionWithCost
     {gen : G} {ω κ : Type} [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     (intrinsic : ω)
     (advCost :
-      AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → OneTimeINDCPAProcedureCost ω κ) :
+      AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ →
+        OneTimeINDCPAProcedureCost ω κ) :
     SecurityGame.ReductionWithCost advCost
       (oneTimeDDHReductionCost (F := F) (G := G) (gen := gen) intrinsic advCost) where
   reduce := id
@@ -574,10 +578,11 @@ theorem efficientFor_oneTimeDDHReduction
     {gen : G} {ω κ : Type} [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     (intrinsic : ω)
     (advCost :
-      AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → OneTimeINDCPAProcedureCost ω κ)
+      AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ →
+        OneTimeINDCPAProcedureCost ω κ)
     {isEff : (ℕ → OneTimeINDCPAProcedureCost ω κ) → Prop}
     {isEff' : (ℕ → ResourceProfile ω κ) → Prop}
-    {adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)}
+    {adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)}
     (hadv : SecurityGame.EfficientFor advCost isEff adv)
     (hmap : OneTimeDDHReductionClosedUnder intrinsic isEff isEff') :
     SecurityGame.EfficientFor
@@ -600,7 +605,7 @@ The security parameter is ignored because the underlying one-time game is parame
 retained only so the declaration fits the generic [`SecurityGame`] interface. -/
 noncomputable def oneTimeINDCPASecurityGame
     {gen : G} [DecidableEq G] :
-    SecurityGame (AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) where
+    SecurityGame (AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) where
   advantage adv _ :=
     ENNReal.ofReal <|
       |AsymmEncAlg.IND_CPA_OneTime_signedAdvantageReal
@@ -614,7 +619,7 @@ apply the one-time IND-CPA adversary to the concrete DDH reduction
 [`IND_CPA_OneTime_DDHReduction`] and measure the resulting DDH distinguishing advantage. -/
 noncomputable def oneTimeDDHReductionSecurityGame
     {gen : G} [DecidableEq G] :
-    SecurityGame (AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) where
+    SecurityGame (AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) where
   advantage adv _ :=
     ENNReal.ofReal <|
       DiffieHellman.ddhDistAdvantage gen
@@ -626,7 +631,7 @@ advantage function. This is the security-side analogue of the exact reduction th
 lemma oneTimeINDCPASecurityGame_advantage_eq_oneTimeDDHReductionSecurityGame_advantage
     {gen : G} [DecidableEq G]
     (hg : Function.Bijective (· • gen : F → G))
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (n : ℕ) :
     (oneTimeINDCPASecurityGame (F := F) (G := G) (gen := gen)).advantage adv n =
       (oneTimeDDHReductionSecurityGame (F := F) (G := G) (gen := gen)).advantage adv n := by
@@ -663,7 +668,8 @@ theorem oneTimeINDCPA_secureAgainst_of_ddh_secureAgainst_withCost
     (hg : Function.Bijective (· • gen : F → G))
     (intrinsic : ω)
     (advCost :
-      AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen) → ℕ → OneTimeINDCPAProcedureCost ω κ)
+      AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen) → ℕ →
+        OneTimeINDCPAProcedureCost ω κ)
     {isEff : (ℕ → OneTimeINDCPAProcedureCost ω κ) → Prop}
     {isEff' : (ℕ → ResourceProfile ω κ) → Prop}
     (hmap : OneTimeDDHReductionClosedUnder intrinsic isEff isEff')
@@ -687,7 +693,7 @@ Immediate from `IND_CPA_OneTime_DDHReduction_profiled_pathwiseCostEqOnSupport`. 
 lemma IND_CPA_OneTime_DDHReduction_costed_pathwiseCostEqOnSupport
     {gen : G} {ω : Type} [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
     (intrinsic : ω)
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (g A B T : G) :
     AddWriterT.PathwiseCostEqOnSupport
       (IND_CPA_OneTime_DDHReduction_costed

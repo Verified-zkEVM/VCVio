@@ -199,8 +199,8 @@ theorem realImpl_impl_evalSPMF_idealImpl (sp : ℕ) (q : (otpSpec sp).Domain)
          else do let c ← ($ᵗ BitVec sp : ProbComp (BitVec sp));
                  pure (c, h.update .used true)]
     by_cases hused : h .used
-    · rw [if_pos hused, if_pos hused]
-    · rw [if_neg hused, if_neg hused]
+    · rw [ite_eq_left hused, ite_eq_left hused]
+    · rw [ite_eq_right hused, ite_eq_right hused]
       -- `evalSPMF` of the two `do`-blocks coincide pointwise via the
       -- XOR-by-`m` bijection on the uniform sample.
       apply evalSPMF_ext

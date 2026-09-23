@@ -226,13 +226,13 @@ theorem openPRE_multipleMass_add_reciprocal_le_three_collision {α : Type} [Fint
 /-! ## Quantitative reduction target -/
 
 /-- The exact right-hand side of the source reduction, instantiated with the concrete adversaries
-above. `SM_DT_DSPR_SourceFinalValidity.Advantage` already contains the truncated
+above. `SM_DT_DSPR_SourceFinalValidity.advantage` already contains the truncated
 `DSPR success - SPprob` subtraction. -/
 noncomputable def TCRDSPRBound [Fintype M] [Inhabited M] [DecidableEq Tweak]
     [DecidableEq M] [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
-  SM_DT_DSPR_SourceFinalValidity.Advantage (toDSPR adv) +
-    3 * SM_DT_TCR_SourceFinalValidity.Advantage (toTCR adv)
+  SM_DT_DSPR_SourceFinalValidity.advantage (toDSPR adv) +
+    3 * SM_DT_TCR_SourceFinalValidity.advantage (toTCR adv)
 
 /-- Evidence interface for the program-level probability decomposition by the selected image's
 fiber cardinality. `singleMass` is the successful OpenPRE mass on fibers of size one.
@@ -254,16 +254,16 @@ structure CountingInterface [Fintype M] [Inhabited M] [SampleableType M]
   multipleMass : Fin (Fintype.card M - 1) → ℝ≥0∞
   /-- Decomposition of OpenPRE success by fiber cardinality. -/
   openPRE_decomposition :
-    Advantage adv = singleMass + ∑ k, multipleMass k
+    advantage adv = singleMass + ∑ k, multipleMass k
   /-- Exact DSPR/SPprob truncated gap: singleton mass minus the reciprocal mass of larger
   fibers. -/
   dspr_decomposition :
-    SM_DT_DSPR_SourceFinalValidity.Advantage (toDSPR adv) =
+    SM_DT_DSPR_SourceFinalValidity.advantage (toDSPR adv) =
       singleMass - reciprocalMass (fun k => k.val + 2) multipleMass
   /-- TCR success lower-bounds the collision-weighted mass of fibers of size at least two. -/
   tcr_strata_le :
     collisionMass (fun k => k.val + 2) multipleMass ≤
-      SM_DT_TCR_SourceFinalValidity.Advantage (toTCR adv)
+      SM_DT_TCR_SourceFinalValidity.advantage (toTCR adv)
 
 /-- Once the named fiber-counting/coupling lemma is supplied, the full quantitative reduction is
 pure ENNReal algebra. This is the exact `OpenPRE ≤ DSPR + 3·TCR` theorem interface. -/
@@ -271,31 +271,31 @@ theorem advantage_le_tcrDsprBound [Fintype M] [Inhabited M] [SampleableType M]
     [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) (hcount : CountingInterface adv) :
-    Advantage adv ≤ TCRDSPRBound adv := by
+    advantage adv ≤ TCRDSPRBound adv := by
   let reciprocal := reciprocalMass
     (fun k : Fin (Fintype.card M - 1) => k.val + 2) hcount.multipleMass
   let collision := collisionMass
     (fun k : Fin (Fintype.card M - 1) => k.val + 2) hcount.multipleMass
   have hsingle : hcount.singleMass ≤
-      SM_DT_DSPR_SourceFinalValidity.Advantage (toDSPR adv) + reciprocal := by
+      SM_DT_DSPR_SourceFinalValidity.advantage (toDSPR adv) + reciprocal := by
     rw [hcount.dspr_decomposition]
     exact le_tsub_add
   have hmultiple : (∑ k, hcount.multipleMass k) + reciprocal ≤ 3 * collision := by
     exact openPRE_multipleMass_add_reciprocal_le_three_collision _ _ (fun _ => by omega)
   have hcollision : 3 * collision ≤
-      3 * SM_DT_TCR_SourceFinalValidity.Advantage (toTCR adv) := by
+      3 * SM_DT_TCR_SourceFinalValidity.advantage (toTCR adv) := by
     gcongr
     exact hcount.tcr_strata_le
   rw [hcount.openPRE_decomposition]
   calc
     hcount.singleMass + ∑ k, hcount.multipleMass k ≤
-        (SM_DT_DSPR_SourceFinalValidity.Advantage (toDSPR adv) + reciprocal) +
+        (SM_DT_DSPR_SourceFinalValidity.advantage (toDSPR adv) + reciprocal) +
           ∑ k, hcount.multipleMass k := by gcongr
-    _ = SM_DT_DSPR_SourceFinalValidity.Advantage (toDSPR adv) +
+    _ = SM_DT_DSPR_SourceFinalValidity.advantage (toDSPR adv) +
         ((∑ k, hcount.multipleMass k) + reciprocal) := by ac_rfl
-    _ ≤ SM_DT_DSPR_SourceFinalValidity.Advantage (toDSPR adv) + 3 * collision := by gcongr
-    _ ≤ SM_DT_DSPR_SourceFinalValidity.Advantage (toDSPR adv) +
-        3 * SM_DT_TCR_SourceFinalValidity.Advantage (toTCR adv) := by gcongr
+    _ ≤ SM_DT_DSPR_SourceFinalValidity.advantage (toDSPR adv) + 3 * collision := by gcongr
+    _ ≤ SM_DT_DSPR_SourceFinalValidity.advantage (toDSPR adv) +
+        3 * SM_DT_TCR_SourceFinalValidity.advantage (toTCR adv) := by gcongr
 
 end SM_DT_OpenPRE_SourceFinalValidity
 
