@@ -32,6 +32,11 @@ structure SignatureAlg (m : Type → Type v) [Monad m] (M PK SK S : Type) where
   verify (pk : PK) (msg : M) (σ : S) : m Bool
 ```
 
+`sigAlg.runWithSigningOracle pk sk oa` runs `oa : OracleComp (spec + (M →ₒ S)) α` with signing
+queries answered under `sk` and `spec` queries passed through. It returns the output together
+with the log of signed `(message, signature)` pairs. `MacAlg.runWithTaggingOracle` is the MAC
+analogue.
+
 For an end-to-end EUF-CMA reduction worked through the framework (Σ-protocol →
 Fiat-Shamir transform → managed-RO NMA → replay forking → DLog), see
 [`Examples/Schnorr/Signature.lean`](../../Examples/Schnorr/Signature.lean) and the

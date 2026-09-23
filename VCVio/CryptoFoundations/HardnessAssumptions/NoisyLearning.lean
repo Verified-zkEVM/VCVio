@@ -135,10 +135,10 @@ def searchExperiment [Add Output] [DecidableEq Secret]
   let ((_, secret), secret') ← searchRun problem adv
   return decide (secret' = secret)
 
+open scoped Classical in
 /-- Search advantage for the noisy-learning experiment. -/
 noncomputable def searchAdvantage [Add Output]
     (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) : ℝ :=
-  letI : DecidableEq Secret := Classical.decEq Secret
   (𝒟[searchExperiment problem adv] {true}).toReal
 
 /-- The event-style search advantage agrees with the Boolean experiment's success mass. -/
@@ -146,9 +146,7 @@ theorem searchAdvantage_eq_evalDist_searchExperiment [Add Output] [DecidableEq S
     (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) :
     searchAdvantage problem adv = (𝒟[searchExperiment problem adv] {true}).toReal := by
   unfold searchAdvantage
-  have hdec : Classical.decEq Secret = (inferInstance : DecidableEq Secret) :=
-    Subsingleton.elim _ _
-  rw [hdec]
+  congr
 
 end Generic
 
