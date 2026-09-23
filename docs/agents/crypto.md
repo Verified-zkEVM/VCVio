@@ -368,6 +368,11 @@ structure SecurityGame (Adv : Type*) where
 | `secureAgainst_of_close` | Game hop: `adv_g₁(A) ≤ adv_g₂(A) + ε(n)` |
 | `secureAgainst_of_hybrid` | Chain of `k` games differing by `ε` each |
 
+The tight and polynomial-loss reductions have cost-aware forms,
+`secureAgainst_of_reduction_withCost` and `secureAgainst_of_poly_reduction_withCost`
+(`Asymptotics/ReductionCost.lean`). They take a `ReductionWithCost`, whose cost transform must
+map the source efficiency class into the target one (`CostClassMap`).
+
 ## Cost Model
 
 Defined in `VCVio/OracleComp/QueryTracking/CostModel.lean`. Uses `AddWriterT ω` for

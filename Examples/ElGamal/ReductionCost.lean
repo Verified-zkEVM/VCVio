@@ -662,10 +662,9 @@ theorem oneTimeINDCPA_secureAgainst_of_ddh_secureAgainst_withCost
           (oneTimeDDHReductionCost (F := F) (G := G) (gen := gen) intrinsic advCost) isEff')) :
     (oneTimeINDCPASecurityGame (F := F) (G := G) (gen := gen)).secureAgainst
       (SecurityGame.EfficientFor advCost isEff) := by
-  intro adv hadv
-  have hddh := hsecure _ (SecurityGame.ReductionWithCost.efficientFor_image
-    (oneTimeDDHReductionWithCost (F := F) (G := G) (gen := gen) intrinsic advCost) hadv hmap)
-  refine negligible_of_le (fun n => ?_) (negligible_const_mul hddh (c := 2) ENNReal.ofNat_ne_top)
+  refine SecurityGame.secureAgainst_of_poly_reduction_withCost
+    (oneTimeDDHReductionWithCost (F := F) (G := G) (gen := gen) intrinsic advCost) (loss := 2)
+    (fun adv n => ?_) hmap hsecure
   simpa [oneTimeDDHReductionWithCost] using le_of_eq
     (oneTimeINDCPASecurityGame_advantage_eq_two_mul (F := F) (G := G) (gen := gen) hg adv n)
 
