@@ -84,11 +84,11 @@ random oracle supplied by the `runtime` bundle) together with the real GPV signi
 the inner run of `SignatureAlg.unforgeableExpNoFresh` for the GPV scheme: it is the real-world side
 of the sign-then-hash hop, the coupling's `realRun`. -/
 noncomputable def realGameRun
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) (sk : SK) :
     SPMF (M × (Salt × Domain)) :=
-  (runtime M Salt).evalSPMF do
+  (runtimeSemantics M Salt).evalSPMF do
     let impl : QueryImpl ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain)))
         (WriterT (QueryLog (M →ₒ (Salt × Domain)))
           (OracleComp (unifSpec + (Salt × M →ₒ Range)))) :=
@@ -112,7 +112,7 @@ a signing query the simulator draws a fresh salt `r`, forward-samples `s`, progr
 programming is *randomized* (the randomness lives in `domainSample`), so this models the randomized
 sign-then-hash game; it is the coupling's `progRun`. -/
 noncomputable def progGameRun
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (pk : PK) :
     SPMF (M × (Salt × Domain)) :=
@@ -252,7 +252,7 @@ distributional coupling is
 performed; this is the WriterT-boundary half of the real-side normalization toward the single-impl
 `signRunF` shape. -/
 theorem realGameRun_writerLog_discard (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
     (Prod.fst <$> (simulateQ
         (((HasQuery.toQueryImpl (spec := (unifSpec + (Salt × M →ₒ Range)))
@@ -304,7 +304,7 @@ runtime layer is unfolded by `withStateOracle_evalSPMF_eq`. No salt front-loadin
 distributional coupling is performed; this is the runtime-indirection removal that the deep fold
 coupling builds on. -/
 theorem realGameRun_eq_simulateQ_run
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) (sk : SK) :
     realGameRun psf hr M Salt adv pk sk =
@@ -339,8 +339,7 @@ theorem realGameRun_eq_simulateQ_run
               (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
                 psf hr M Salt).signingOracle pk sk))
             (adv.main pk)).run >>= fun p => pure p.1) from rfl]
-  rw [GPVHashAndSign.runtime]
-  change (SPMFSemantics.withStateOracle _ ∅).evalSPMF _ = _
+  rw [GPVHashAndSign.runtimeSemantics]
   rw [SPMFSemantics.withStateOracle_evalSPMF_bind_pure]
 
 open Classical in
@@ -364,7 +363,7 @@ coupling consumes: `realGameRun`'s adversary computation is now interpreted by o
 random-oracle `withStateOracle` bundle — the same surface shape carried by `progGameRun`'s single
 `StateT`-state `simulateQ`. -/
 theorem realGameRun_eq_withStateOracle_implNoLog
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) (sk : SK) :
     realGameRun psf hr M Salt adv pk sk =
@@ -441,7 +440,7 @@ front-loading, no distributional coupling). Together with `realGameRun_eq_withSt
 this puts **both** game runs on the same `StateT QueryCache ProbComp` random-oracle surface — the
 prerequisite for the `OracleComp.inductionOn` fold coupling. -/
 theorem progGameRun_eq_run'_implNoRec
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (pk : PK) :
     progGameRun psf hr M Salt adv domainSample pk =
@@ -509,7 +508,7 @@ front-loading, no distributional coupling. Together with `progGameRun_eq_run'_im
 `StateT QueryCache ProbComp` random-oracle surface, the prerequisite for attempting the
 `OracleComp.inductionOn` fold coupling on a common vehicle. -/
 theorem realGameRun_eq_run'_implReal
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) (sk : SK) :
     realGameRun psf hr M Salt adv pk sk =
@@ -1072,16 +1071,16 @@ lemma probOutput_flagTag_false {α' σ' : Type}
   rw [probOutput_map_eq_tsum_ite]
   by_cases hF : F = false
   · subst hF
-    rw [if_pos rfl, ← tsum_ite_eq (u, s') (fun x => Pr[= x | m])]
+    rw [ite_eq_left rfl, ← tsum_ite_eq (u, s') (fun x => Pr[= x | m])]
     refine tsum_congr fun x => ?_
     congr 1
     rw [eq_iff_iff, Prod.ext_iff, Prod.ext_iff, Prod.ext_iff]
     constructor
     · rintro ⟨h1, h2, _⟩; exact ⟨h1.symm, h2.symm⟩
     · rintro ⟨h1, h2⟩; exact ⟨h1.symm, h2.symm, rfl⟩
-  · rw [if_neg hF, ENNReal.tsum_eq_zero]
+  · rw [ite_eq_right hF, ENNReal.tsum_eq_zero]
     intro x
-    rw [if_neg]
+    rw [ite_eq_right]
     rw [Prod.ext_iff, Prod.ext_iff]
     rintro ⟨_, _, h3⟩
     exact hF h3.symm
@@ -1255,6 +1254,6 @@ lemma progGameRunImplTape_run_read_eq_progGameRunImplNoRec (domainSample : PK �
       (fun p => (p.1, (p.2, tape))) <$>
         (progGameRunImplNoRec psf M Salt domainSample pk (.inl (.inr mc))).run cache := by
   rw [progGameRunImplTape_run_read, progGameRunImplNoRec_run_read]
-  cases h : cache mc <;> simp [h, Functor.map_map]
+  cases h : cache mc <;> simp [Functor.map_map]
 
 end GPVHashAndSign

@@ -92,9 +92,9 @@ no signing query), and returns the forgery unchanged.  The compiled adversary sa
 `ForgesQueriedPoint` convention unconditionally, makes one extra hash query, and has the same
 EUF-CMA advantage as `adv` (`advantage_appendForgeQuery`). -/
 @[expose] def appendForgeQuery
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
-    SignatureAlg.unforgeableAdv
+    SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt) where
   main := fun pk =>
     adv.main pk >>= fun out =>
@@ -105,7 +105,7 @@ EUF-CMA advantage as `adv` (`advantage_appendForgeQuery`). -/
 omit [Fintype Salt] in
 /-- Definitional unfolding of the compiled adversary's main computation. -/
 lemma appendForgeQuery_main
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) :
     (appendForgeQuery psf hr M Salt adv).main pk =
@@ -120,7 +120,7 @@ omit [Fintype Salt] in
 /-- **Query bound for the compiled adversary.** The appended random-oracle query is a single
 `.inl (.inr _)` index: the signing count is unchanged and the hash count grows by one. -/
 theorem signHashQueryBound_appendForgeQuery
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (qSign qHash : ℕ) (pk : PK)
     (hQ : signHashQueryBound
@@ -180,7 +180,7 @@ cache is defined there — either as a preserved hit or as the freshly programme
 discharges the `ForgesQueriedPoint` hypothesis of the headline bounds for every domain
 sampler. -/
 theorem forgesQueriedPoint_appendForgeQuery
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) :
     ForgesQueriedPoint psf hr M Salt (appendForgeQuery psf hr M Salt adv) domainSample := by
@@ -239,7 +239,7 @@ random-oracle query targets exactly the point the verification read re-queries, 
 lazy-caching real handler the two adjacent reads collapse to one
 (`gpvRealImplFlagFresh_run_read_bind_run_read`). -/
 theorem realGameVerifyFresh_appendForgeQuery (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
     realGameVerifyFresh psf hr M Salt (appendForgeQuery psf hr M Salt adv) pk sk
       = realGameVerifyFresh psf hr M Salt adv pk sk := by
@@ -271,14 +271,13 @@ prefix of the game-identification chain, exposed so that game-level identities (
 appended-query absorption `realGameVerifyFresh_appendForgeQuery`) transfer to the headline
 advantage. -/
 lemma advantage_eq_keygen_average_realGameVerifyFresh
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
-    adv.advantage (runtime M Salt)
+    SignatureAlg.unforgeableAdvantage (runtime M Salt) adv
       = Pr[= true | (𝒮[hr.gen] : SPMF (PK × SK)) >>= fun pksk =>
           realGameVerifyFresh psf hr M Salt adv pksk.1 pksk.2] := by
   classical
-  rw [SignatureAlg.unforgeableAdv.advantage,
-    probOutput_unforgeableExp_eq_keygen_average psf hr M Salt adv]
+  rw [probOutput_unforgeableExp_eq_keygen_average psf hr M Salt adv]
   rw [show (fun pksk : PK × SK =>
         (SPMFSemantics.withStateOracle
           (randomOracle : QueryImpl (Salt × M →ₒ Range)
@@ -308,10 +307,10 @@ exactly the EUF-CMA advantage of the original adversary: the appended random-ora
 re-issued by the verification read at the same point, so the lazy-caching semantics absorbs it
 without affecting the output distribution, the signing log, or the freshness mask. -/
 theorem advantage_appendForgeQuery
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
-    (appendForgeQuery psf hr M Salt adv).advantage (runtime M Salt)
-      = adv.advantage (runtime M Salt) := by
+    SignatureAlg.unforgeableAdvantage (runtime M Salt) (appendForgeQuery psf hr M Salt adv)
+      = SignatureAlg.unforgeableAdvantage (runtime M Salt) adv := by
   rw [advantage_eq_keygen_average_realGameVerifyFresh psf hr M Salt
       (appendForgeQuery psf hr M Salt adv),
     advantage_eq_keygen_average_realGameVerifyFresh psf hr M Salt adv]
@@ -327,45 +326,44 @@ at hash budget `qHash + 1`: the append-forgery-query compiler `appendForgeQuery`
 forger-queries-its-forgery-point convention at the cost of one extra hash query
 (`forgesQueriedPoint_appendForgeQuery`, `signHashQueryBound_appendForgeQuery`) while preserving
 the advantage exactly (`advantage_appendForgeQuery`).  This is the all-adversaries form of
-`euf_cma_split_bound`; the witnesses are the reductions built from the compiled adversary. -/
+`euf_cma_split_bound`, stated for the reductions built from the compiled adversary. -/
 theorem euf_cma_split_bound_of_queryBound [DecidableEq Domain]
     [Inhabited Range] [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
-    (hreg : ∃ domainSample : PK → ProbComp Domain, ∀ (pk : PK) (sk : SK),
-      (pk, sk) ∈ support hr.gen →
+    (domainSample : PK → ProbComp Domain)
+    (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
       𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (qSign qHash : ℕ)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (hNF : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
     (hQ : ∀ pk, signHashQueryBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionRed : CollisionAdversary (PK := PK) (Domain := Domain))
-      (exactMatchRed : ProgrammedPreimageAdversary
-        (PK := PK) (Domain := Domain) (Range := Range)),
-      adv.advantage (runtime M Salt) ≤
-        collisionFindingAdvantage (psf := psf) (hr := hr) collisionRed +
-          ((qSign + (qHash + 1) : ℕ) : ENNReal) *
-            programmedPreimageAdvantage (psf := psf) (hr := hr) exactMatchRed +
-          collisionBound Salt qSign (qHash + 1) := by
-  obtain ⟨collisionRed, exactMatchRed, hbound⟩ :=
-    euf_cma_split_bound psf hr M Salt hcorrect hreg qSign (qHash + 1)
-      (appendForgeQuery psf hr M Salt adv) hNF
-      (fun ds => forgesQueriedPoint_appendForgeQuery psf hr M Salt adv ds)
-      (fun pk => signHashQueryBound_appendForgeQuery psf hr M Salt adv qSign qHash pk (hQ pk))
-  refine ⟨collisionRed, exactMatchRed, ?_⟩
+    SignatureAlg.unforgeableAdvantage (runtime M Salt) adv ≤
+      collisionFindingAdvantage (psf := psf) (hr := hr)
+          (reduction psf hr M Salt (appendForgeQuery psf hr M Salt adv) domainSample) +
+        ((qSign + (qHash + 1) : ℕ) : ENNReal) *
+          programmedPreimageAdvantage (psf := psf) (hr := hr)
+            (programmedPreimageReduction psf hr M Salt (appendForgeQuery psf hr M Salt adv)
+              domainSample qSign (qHash + 1)) +
+        collisionBound Salt qSign (qHash + 1) := by
   rw [← advantage_appendForgeQuery psf hr M Salt adv]
-  exact hbound
+  exact euf_cma_split_bound psf hr M Salt hcorrect domainSample hreg qSign (qHash + 1)
+    (appendForgeQuery psf hr M Salt adv) hNF
+    (forgesQueriedPoint_appendForgeQuery psf hr M Salt adv domainSample)
+    (fun pk => signHashQueryBound_appendForgeQuery psf hr M Salt adv qSign qHash pk (hQ pk))
 
 /-- **Collision-style GPV PFDH bound for every query-bounded adversary, with the exact-match branch
 already priced by the trapdoor sampler's min-entropy.** For *any* adversary obeying the query bound
 `(qSign, qHash)`, the EUF-CMA advantage is at most
 
   `Adv^collision(B) + (qSign + qHash + 1) · trapdoorGuessingProbability + collisionBound`
+
+for the collision-finding reduction `B` built from the compiled adversary
 
 at hash budget `qHash + 1`.  Both structural side conditions of `euf_cma_collision_bound` are
 discharged here rather than assumed: the forger-queries-its-forgery-point convention by the
@@ -378,28 +376,27 @@ trapdoor sampler above the smoothing parameter this is negligible. -/
 theorem euf_cma_collision_bound_of_queryBound [DecidableEq Domain]
     [Inhabited Range] [Nonempty Salt]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk)
-    (hreg : ∃ domainSample : PK → ProbComp Domain, ∀ (pk : PK) (sk : SK),
-      (pk, sk) ∈ support hr.gen →
+    (domainSample : PK → ProbComp Domain)
+    (hreg : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       𝒮[(do let s ← domainSample pk; pure (psf.eval pk s, s) : ProbComp (Range × Domain))] =
       𝒮[(do let c ← ($ᵗ Range); let s ← psf.trapdoorSample pk sk c; pure (c, s)
             : ProbComp (Range × Domain))])
     (qSign qHash : ℕ)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (hNF : ∀ (pk : PK) (sk : SK), (pk, sk) ∈ support hr.gen →
       ∀ (c : Range), NeverFail (psf.trapdoorSample pk sk c))
     (hQ : ∀ pk, signHashQueryBound
       (S' := Salt × Domain) (α := M × (Salt × Domain))
       (oa := adv.main pk) (qSign := qSign) (qHash := qHash)) :
-    ∃ collisionRed : CollisionAdversary (PK := PK) (Domain := Domain),
-      adv.advantage (runtime M Salt) ≤
-        collisionFindingAdvantage (psf := psf) (hr := hr) collisionRed +
-          ((qSign + (qHash + 1) : ℕ) : ENNReal) * trapdoorGuessingProbability psf hr +
-          collisionBound Salt qSign (qHash + 1) := by
-  obtain ⟨collisionRed, exactMatchRed, hbound⟩ :=
-    euf_cma_split_bound_of_queryBound psf hr M Salt hcorrect hreg qSign qHash adv hNF hQ
-  refine ⟨collisionRed, hbound.trans ?_⟩
+    SignatureAlg.unforgeableAdvantage (runtime M Salt) adv ≤
+      collisionFindingAdvantage (psf := psf) (hr := hr)
+          (reduction psf hr M Salt (appendForgeQuery psf hr M Salt adv) domainSample) +
+        ((qSign + (qHash + 1) : ℕ) : ENNReal) * trapdoorGuessingProbability psf hr +
+        collisionBound Salt qSign (qHash + 1) := by
+  refine (euf_cma_split_bound_of_queryBound psf hr M Salt hcorrect domainSample hreg qSign qHash
+    adv hNF hQ).trans ?_
   gcongr
-  exact programmedPreimageAdvantage_le_trapdoorGuessingProbability psf hr exactMatchRed
+  exact programmedPreimageAdvantage_le_trapdoorGuessingProbability psf hr _
 
 end GPVHashAndSign

@@ -309,7 +309,7 @@ followed by the verification read, simulated on the *real* fresh flag handler fr
 empty signed-set, and unset flag; the winning Bool combines the verification result `z.1.2` with the
 EUF-CMA freshness mask `z.1.1.1 ∉ z.2.1.2` (the forged message is not among the signed messages). -/
 @[expose] noncomputable def realGameVerifyFresh
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) (sk : SK) : SPMF Bool :=
   𝒮[(fun z : ((M × (Salt × Domain)) × Bool) ×
@@ -325,7 +325,7 @@ open Classical in
 `realGameVerifyFresh`: the same adversary-plus-verification computation simulated on the
 *programmed* fresh flag handler. -/
 @[expose] noncomputable def progGameVerifyFresh
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (pk : PK) : SPMF Bool :=
   𝒮[(fun z : ((M × (Salt × Domain)) × Bool) ×
@@ -355,7 +355,7 @@ message is fresh iff it is not among the logged signing inputs. This is the poin
 lets the WriterT-log-keyed mask of the unforgeability experiment be read off the `Finset M`
 signed-set carried by `gpvRealImplFlagFresh`. -/
 lemma not_wasQueried_eq_decide_not_mem_toFinset {κ : Type} {spec : OracleSpec κ}
-    [spec.DecidableEq] (log : QueryLog spec) (t : spec.Domain) :
+    [DecidableEq κ] (log : QueryLog spec) (t : spec.Domain) :
     (!log.wasQueried t) = decide (t ∉ (log.map (fun e => e.1)).toFinset) := by
   rw [QueryLog.wasQueried_eq_decide_mem_map_fst]
   simp only [List.mem_toFinset, decide_not]
@@ -374,7 +374,7 @@ bounds by `(collisionBound …).toReal`.  Transporting through the bool-valued b
 theorem gpv_realGameVerifyFresh_le_progGameVerifyFresh_add_collisionBound
     [Finite Range] [Inhabited Range] [Nonempty Salt]
     (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (qSign qHash : ℕ)
     (hQ : signHashQueryBound
@@ -513,7 +513,7 @@ avoids the upfront-tape re-interleaving that a coupling over the front-loaded sa
 theorem gpv_tvDist_real_programmed_le_collisionBound
     [Finite Range] [Inhabited Range] [Nonempty Salt]
     (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (qSign qHash : ℕ)
     (hQ : signHashQueryBound
@@ -558,14 +558,13 @@ This is the reduction from the runtime's sum-spec `simulateQ'` interpreter down 
 proved by unfolding `withStateOracle` and applying `QueryImpl.simulateQ_add_liftComp_right`, which
 discards the (lifted-identity) uniform-sampling handler on a computation that never queries it. -/
 theorem runtime_evalSPMF_liftComp {α : Type} (ob : OracleComp (Salt × M →ₒ Range) α) :
-    (runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range)))
+    (runtimeSemantics M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range)))
       = (liftM (StateT.run'
           (simulateQ (randomOracle :
             QueryImpl (Salt × M →ₒ Range) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)) ob)
           ∅) : SPMF α) := by
   classical
-  unfold ProbCompRuntime.evalSPMF runtime
-  change (SPMFSemantics.withStateOracle _ ∅).evalSPMF _ = _
+  unfold runtimeSemantics
   unfold SPMFSemantics.evalSPMF SPMFSemantics.withStateOracle
   simp only [SemanticsVia.denote]
   rw [QueryImpl.simulateQ_add_liftComp_right]
@@ -604,7 +603,8 @@ theorem tvDist_runtime_real_programmed_le_bad [Finite Range] [Inhabited Range] {
     (policy : OracleSpec.ProgrammingPolicy (Salt × M →ₒ Range))
     (ob : OracleComp (Salt × M →ₒ Range) α) :
     SPMF.tvDist
-        ((runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
+        ((runtimeSemantics M Salt).evalSPMF
+          (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
         (liftM (StateT.run'
           (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob) (∅, false))
           : SPMF α)
@@ -671,13 +671,15 @@ theorem tvDist_runtime_real_programmed_le_collisionBound_saltInclusive
     (ob : OracleComp (Salt × M →ₒ Range) α)
     (c : ℕ → Finset Salt) (hcache : ∀ j, (c j).card ≤ j + qHash)
     (hcouple : (SPMF.tvDist
-        ((runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
+        ((runtimeSemantics M Salt).evalSPMF
+          (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
         (liftM (StateT.run'
           (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob) (∅, false))
           : SPMF α) : ℝ)
         ≤ (Pr[ (· = true) | saltSeq (Salt := Salt) c qSign]).toReal) :
     SPMF.tvDist
-        ((runtime M Salt).evalSPMF (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
+        ((runtimeSemantics M Salt).evalSPMF
+          (OracleComp.liftComp ob (unifSpec + (Salt × M →ₒ Range))))
         (liftM (StateT.run'
           (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) ob) (∅, false))
           : SPMF α)
@@ -705,7 +707,7 @@ headline over the tape is not established.
 **Wiring Step 1 to the headline bounds.** Two facts connect
 `gpv_tvDist_real_programmed_le_collisionBound` to the headline bounds:
 
-1. *Game identification.* The headline LHS `adv.advantage (runtime)` is
+1. *Game identification.* The headline LHS `SignatureAlg.unforgeableAdvantage (runtime) adv` is
    `Pr[= true | unforgeableExp (runtime) adv]`, whose body runs `simulateQ impl (adv.main pk)` — the
    signing oracle draws each fresh salt *internally* at an adversary-chosen point over the sum spec
    `unifSpec + (Salt × M →ₒ Range)`. Connecting this to the *pinned* hash-only run `ob` of

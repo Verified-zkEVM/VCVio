@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Nicolas Consigny. All rights reserved.
+Copyright (c) 2026 Nicolas Consigny, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Nicolas Consigny
+Authors: Nicolas Consigny, Alexander Hicks
 -/
 
 module
@@ -72,9 +72,9 @@ def sha2LayerPositionAddress (set : FipsParameterSet)
 theorem sha2_layerPosition_toAdrs_isOk (set : FipsParameterSet)
     (pos : LayerPosition set.validatedParams) :
     (Sha2Address.ofAdrs pos.toAdrs).isOk = true := by
-  rw [Sha2Address.ofAdrs, dif_pos (fips_layerPosition_toAdrs_isCanonical set pos)]
-  rw [dif_pos (by simpa using fips_layerPosition_layer_fits set pos)]
-  rw [dif_pos (by simpa using fips_layerPosition_tree_fits set pos)]
+  rw [Sha2Address.ofAdrs, dite_eq_left (fips_layerPosition_toAdrs_isCanonical set pos)]
+  rw [dite_eq_left (by simpa using fips_layerPosition_layer_fits set pos)]
+  rw [dite_eq_left (by simpa using fips_layerPosition_tree_fits set pos)]
   rfl
 
 /-- SHAKE full-address serialization round-trips every reachable approved hypertree base

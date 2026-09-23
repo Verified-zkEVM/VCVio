@@ -125,7 +125,7 @@ projection and the Bool total-variation bridge. -/
 theorem probOutput_realGameVerifyFresh_le_trapdoorSwap_add
     (hEval : ∀ pk x, psf.eval pk x = psf'.eval pk x)
     (hShort : ∀ x, psf.isShort x = psf'.isShort x)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (pk : PK) (sk : SK)
     {ε : ℝ} (hε : 0 ≤ ε)
@@ -204,13 +204,14 @@ theorem advantage_le_advantage_add_of_trapdoorSample_tvDist
     (hStep : ∀ pk sk, (pk, sk) ∈ support hr.gen → ∀ c,
       tvDist (psf.trapdoorSample pk sk c) (psf'.trapdoorSample pk sk c) ≤ ε)
     (qSign : ℕ)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (hQ : ∀ pk, (adv.main pk).IsQueryBoundP (· matches .inr _) qSign) :
-    adv.advantage (runtime M Salt) ≤
-      (⟨adv.main⟩ : SignatureAlg.unforgeableAdv
-          (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
-            psf' hr M Salt)).advantage (runtime M Salt)
+    SignatureAlg.unforgeableAdvantage (runtime M Salt) adv ≤
+      SignatureAlg.unforgeableAdvantage (runtime M Salt)
+          (⟨adv.main⟩ : SignatureAlg.UnforgeableAdversary
+            (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
+              psf' hr M Salt))
         + ENNReal.ofReal (qSign * ε) := by
   classical
   rw [advantage_eq_keygen_average_realGameVerifyFresh psf hr M Salt adv,
@@ -259,13 +260,14 @@ theorem abs_advantage_toReal_sub_le_of_trapdoorSample_tvDist
     (hStep : ∀ pk sk, (pk, sk) ∈ support hr.gen → ∀ c,
       tvDist (psf.trapdoorSample pk sk c) (psf'.trapdoorSample pk sk c) ≤ ε)
     (qSign : ℕ)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (hQ : ∀ pk, (adv.main pk).IsQueryBoundP (· matches .inr _) qSign) :
-    |(adv.advantage (runtime M Salt)).toReal
-      - ((⟨adv.main⟩ : SignatureAlg.unforgeableAdv
-          (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
-            psf' hr M Salt)).advantage (runtime M Salt)).toReal| ≤ qSign * ε := by
+    |(SignatureAlg.unforgeableAdvantage (runtime M Salt) adv).toReal
+      - (SignatureAlg.unforgeableAdvantage (runtime M Salt)
+          (⟨adv.main⟩ : SignatureAlg.UnforgeableAdversary
+            (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
+              psf' hr M Salt))).toReal| ≤ qSign * ε := by
   have h_loss_nonneg : (0 : ℝ) ≤ qSign * ε := mul_nonneg (Nat.cast_nonneg _) hε
   have h₁ := advantage_le_advantage_add_of_trapdoorSample_tvDist psf psf' hr M Salt
     hEval hShort hε hStep qSign adv hQ
@@ -275,16 +277,19 @@ theorem abs_advantage_toReal_sub_le_of_trapdoorSample_tvDist
       (psf.trapdoorSample pk sk c) ▸ hStep pk sk hx c)
     qSign ⟨adv.main⟩ hQ
   -- Repackaging the same `main` twice returns the original adversary (structure eta).
-  have hEta : (⟨(⟨adv.main⟩ : SignatureAlg.unforgeableAdv
+  have hEta : (⟨(⟨adv.main⟩ : SignatureAlg.UnforgeableAdversary
         (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
-          psf' hr M Salt)).main⟩ : SignatureAlg.unforgeableAdv
+          psf' hr M Salt)).main⟩ : SignatureAlg.UnforgeableAdversary
         (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
           psf hr M Salt)) = adv := rfl
   rw [hEta] at h₂
-  have hC_ne_top : adv.advantage (runtime M Salt) ≠ ⊤ := probOutput_ne_top
-  have hI_ne_top : ((⟨adv.main⟩ : SignatureAlg.unforgeableAdv
-      (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
-        psf' hr M Salt)).advantage (runtime M Salt)) ≠ ⊤ := probOutput_ne_top
+  have hC_ne_top : SignatureAlg.unforgeableAdvantage (runtime M Salt) adv ≠ ⊤ :=
+    MeasureTheory.measure_ne_top _ _
+  have hI_ne_top : SignatureAlg.unforgeableAdvantage (runtime M Salt)
+      (⟨adv.main⟩ : SignatureAlg.UnforgeableAdversary
+        (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range)))
+          psf' hr M Salt)) ≠ ⊤ :=
+    MeasureTheory.measure_ne_top _ _
   have h₁' := ENNReal.toReal_mono
     (by exact ENNReal.add_ne_top.mpr ⟨hI_ne_top, ENNReal.ofReal_ne_top⟩) h₁
   have h₂' := ENNReal.toReal_mono

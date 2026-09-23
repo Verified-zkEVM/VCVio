@@ -37,7 +37,7 @@ variable {α : Type _}
 A functional form of the completeness theorem for Merkle trees.
 This references the functional versions of `getPutativeRoot` and `buildMerkleTreeWithHash`
 -/
-@[simp, grind =]
+@[grind =]
 theorem functional_completeness {s : Skeleton}
     (idx : SkeletonLeafIndex s)
     (leaf_data_tree : LeafData α s)
@@ -58,8 +58,7 @@ The proof proceeds by reducing to the functional completeness theorem by a theor
 the OracleComp monad,
 and then applying the functional version of the completeness theorem.
 -/
-@[simp]
-theorem completeness [DecidableEq α] [Inhabited α] [SampleableType α] {s}
+theorem completeness [DecidableEq α] [SampleableType α] {s}
     (leaf_data_tree : LeafData α s) (idx : BinaryTree.SkeletonLeafIndex s)
     (preexisting_cache : (spec α).QueryCache) :
     Pr[fun v => v.1 = true | (simulateQ (spec α).randomOracle (do

@@ -230,7 +230,7 @@ lemma progGameRunImplCombinedTrapCount_idx_iff_table (pk : PK) (sk : SK) :
             rw [hpst]
             by_cases hk : k = mc
             · subst hk; simp
-            · simp only [if_neg hk]; exact hs k
+            · simp only [ite_eq_right hk]; exact hs k
       · -- signing query: writes both keys together
         rw [progGameRunImplCombinedTrapCount_run_inr] at hps
         simp only [support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff,
@@ -241,7 +241,7 @@ lemma progGameRunImplCombinedTrapCount_idx_iff_table (pk : PK) (sk : SK) :
         rw [hpst]
         by_cases hk : k = (r, msg)
         · subst hk; simp
-        · simp only [if_neg hk]; exact hs k
+        · simp only [ite_eq_right hk]; exact hs k
 
 /-- **Deterministic `Option ℕ`-index partition of an event.** For a computation `mx`, an event `P`,
 and an `Option ℕ`-valued index `idx` that is recorded (`≠ none`) on every positive-probability `P`
@@ -263,13 +263,13 @@ theorem probEvent_eq_tsum_probEvent_index_aux {ι : Type} {m : Type → Type} [M
   refine tsum_congr fun x => ?_
   by_cases hPx : P x
   · rcases eq_or_ne (Pr[= x | mx]) 0 with hp0 | hp0
-    · rw [Set.indicator_apply, if_pos (Set.mem_ofPred_eq ▸ hPx), hp0]
+    · rw [Set.indicator_apply, ite_eq_left (Set.mem_ofPred_eq ▸ hPx), hp0]
       symm
       simp only [Set.indicator_apply, Set.mem_ofPred_eq]
       refine ENNReal.tsum_eq_zero.mpr fun j => ?_
       by_cases hc : P x ∧ idx x = some j
-      · rw [if_pos hc, hp0]
-      · rw [if_neg hc]
+      · rw [ite_eq_left hc, hp0]
+      · rw [ite_eq_right hc]
     · obtain ⟨j₀, hj₀⟩ := Option.ne_none_iff_exists'.mp (hidx x hp0 hPx)
       rw [Set.indicator_of_mem (Set.mem_ofPred_eq ▸ hPx)]
       rw [tsum_eq_single j₀]
@@ -282,7 +282,7 @@ theorem probEvent_eq_tsum_probEvent_index_aux {ι : Type} {m : Type → Type} [M
     symm
     simp only [Set.indicator_apply, Set.mem_ofPred_eq]
     refine ENNReal.tsum_eq_zero.mpr fun j => ?_
-    rw [if_neg (fun h => hPx h.1)]
+    rw [ite_eq_right (fun h => hPx h.1)]
 
 omit [DecidableEq Range] [Fintype Salt] in
 /-- **N5 counter bound.** From any start state, every final state of the counter-augmented trap run
@@ -417,9 +417,9 @@ lemma progGameRunImplCombinedTrapCount_idx_lt_count (pk : PK) (sk : SK) :
             rw [hcnt]
             rw [hidx] at hki
             by_cases hk : k = mc
-            · subst hk; simp only [if_true] at hki
+            · subst hk; simp only [ite_true] at hki
               rw [Option.some.injEq] at hki; omega
-            · simp only [if_neg hk] at hki
+            · simp only [ite_eq_right hk] at hki
               exact Nat.lt_succ_of_lt (hs k i hki)
       · -- signing query: records `counter` and increments
         rw [progGameRunImplCombinedTrapCount_run_inr] at hps
@@ -434,9 +434,9 @@ lemma progGameRunImplCombinedTrapCount_idx_lt_count (pk : PK) (sk : SK) :
         rw [hcnt]
         rw [hidx] at hki
         by_cases hk : k = (r, msg)
-        · subst hk; simp only [if_true] at hki
+        · subst hk; simp only [ite_true] at hki
           rw [Option.some.injEq] at hki; omega
-        · simp only [if_neg hk] at hki
+        · simp only [ite_eq_right hk] at hki
           exact Nat.lt_succ_of_lt (hs k i hki)
 
 omit [DecidableEq Range] [Fintype Salt] in
@@ -491,7 +491,7 @@ lemma embedTrapImpl_run_step_indep_of_target (pk : PK) (sk : SK) (j : ℕ) (y₁
           rw [embedTrapImpl_run_inl_inr, embedTrapImpl_run_inl_inr]
           cases hq : s.1 q with
           | some v => rfl
-          | none => simp only [if_neg (hoff q rfl hq)]
+          | none => simp only [ite_eq_right (hoff q rfl hq)]
   | inr msg => rw [embedTrapImpl_run_inr, embedTrapImpl_run_inr]
 
 omit [DecidableEq Range] [Fintype Salt] in
@@ -625,7 +625,7 @@ lemma embedTrapImpl_run_step_eq_embedTrapFresh (pk : PK) (sk : SK) (j : ℕ) (y 
           rw [embedTrapImpl_run_inl_inr, embedTrapFreshImpl_run_inl_inr]
           cases hq : s.1 q with
           | some v => rfl
-          | none => simp only [if_neg (hoff q rfl hq)]
+          | none => simp only [ite_eq_right (hoff q rfl hq)]
   | inr msg => rw [embedTrapImpl_run_inr, embedTrapFreshImpl_run_inr]
 
 omit [DecidableEq Range] [Fintype Salt] in
@@ -1082,7 +1082,7 @@ lemma embedTrapIdxImpl_run_step_eq_embedTrapFreshIdx (pk : PK) (sk : SK) (j : �
           rw [embedTrapIdxImpl_run_inl_inr, embedTrapFreshIdxImpl_run_inl_inr]
           cases hq : s.1.1 q with
           | some v => rfl
-          | none => simp only [if_neg (hoff q rfl hq)]
+          | none => simp only [ite_eq_right (hoff q rfl hq)]
   | inr msg => rw [embedTrapIdxImpl_run_inr, embedTrapFreshIdxImpl_run_inr]
 
 omit [DecidableEq Range] [Fintype Salt] in
@@ -1237,7 +1237,7 @@ Averaged over the front target `y ← $ᵗ Range` this gives the winner-slot-res
 that the trap-count run's index-tagged trap mass couples to. -/
 lemma reservoir_embed_winnerIdx_le [DecidableEq Domain] [Inhabited Range] (pk : PK) (sk : SK)
     (j : ℕ)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :
     (∑' y : Range, Pr[= y | ($ᵗ Range : ProbComp Range)] *
         Pr[= true | (do
@@ -1326,7 +1326,7 @@ lemma embedTrapIdxImpl_idx_iff_cache (pk : PK) (sk : SK) (j : ℕ) (y : Range) :
                   else s.1.1.cacheQuery mc v, s.1.2 + 1),
                 fun t' => if t' = mc then some s.1.2 else s.2 t') := by
               have h2 := (Prod.ext_iff.mp hh).2
-              by_cases hb : s.1.2 = j <;> simp only [hb, if_true, if_false] at h2 ⊢ <;>
+              by_cases hb : s.1.2 = j <;> simp only [hb, ite_true, ite_false] at h2 ⊢ <;>
                 exact h2
             refine ih pv pst ?_ z hz2
             intro k
@@ -1335,7 +1335,7 @@ lemma embedTrapIdxImpl_idx_iff_cache (pk : PK) (sk : SK) (j : ℕ) (y : Range) :
             · subst hk
               by_cases hb : s.1.2 = j <;> simp [hb, QueryCache.cacheQuery_self]
             · by_cases hb : s.1.2 = j <;>
-                simp only [hb, if_true, if_false, if_neg hk,
+                simp only [hb, ite_true, ite_false, ite_eq_right hk,
                   QueryCache.cacheQuery_of_ne _ _ hk] <;> exact hs k
       · rw [embedTrapIdxImpl_run_inr] at hps
         obtain ⟨r, -, hps⟩ := (mem_support_bind_iff _ _ _).1 hps
@@ -1350,6 +1350,6 @@ lemma embedTrapIdxImpl_idx_iff_cache (pk : PK) (sk : SK) (j : ℕ) (y : Range) :
         rw [hps']
         by_cases hk : k = (r, msg)
         · subst hk; simp [QueryCache.cacheQuery_self]
-        · simp only [if_neg hk, QueryCache.cacheQuery_of_ne _ _ hk]; exact hs k
+        · simp only [ite_eq_right hk, QueryCache.cacheQuery_of_ne _ _ hk]; exact hs k
 
 end GPVHashAndSign

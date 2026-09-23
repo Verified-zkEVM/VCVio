@@ -372,7 +372,7 @@ theorem gpvImplFlag_h_agree_good (pk : PK) (sk : SK) (domainSample : PK → Prob
   | inl q =>
       -- Non-signing query: flag is passive (`F = false`), reduce to the underlying agreement.
       rw [gpvRealImplFlag_run_inl, progGameRunImplNoRecFlag_run_inl]
-      rw [probOutput_flagTag_false, probOutput_flagTag_false, if_pos rfl, if_pos rfl]
+      rw [probOutput_flagTag_false, probOutput_flagTag_false, ite_eq_left rfl, ite_eq_left rfl]
       cases q with
       | inl n =>
           -- Uniform query: the two underlying handlers are literally identical.
@@ -430,7 +430,7 @@ Unlike a reduction over a front-loaded salt tape (`TapeFactorization.lean`), the
 salt tape**: each signing salt is drawn inline at its step, so the run-level flag probability
 telescopes *directly* to the salt-averaged birthday term (no re-interleaving). -/
 theorem gpv_tvDist_orig_run_le_probEvent_flag (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain)
     (hNF : ∀ c, NeverFail (psf.trapdoorSample pk sk c))
@@ -585,7 +585,7 @@ theorem gpv_orig_flag_le_collisionBound_aux [Inhabited Range] [Nonempty Salt]
         simp only [Function.comp_apply, pure_bind]
         have hbS := hQS2 p.1
         have hbH := hQH2 p.1
-        simp only [Bool.false_eq_true, if_false, if_true] at hbS hbH
+        simp only [Bool.false_eq_true, ite_false, ite_true] at hbS hbH
         have hcard' : (keyedSalts M Salt p.2).card + (qH - 1) ≤ m := by
           have hgrow := keyedSalts_randomOracle_run_card_le M Salt mc cache p hp
           omega
@@ -644,7 +644,7 @@ theorem gpv_orig_flag_le_collisionBound_aux [Inhabited Range] [Nonempty Salt]
           simp only [hr, Bool.or_false]
           have hbS := hQS2 (r, sgn)
           have hbH := hQH2 (r, sgn)
-          simp only [if_true, Bool.false_eq_true, if_false] at hbS hbH
+          simp only [ite_true, Bool.false_eq_true, ite_false] at hbS hbH
           refine le_trans (ih (r, sgn) p.2 (m + 1) (qS - 1) qH hbS hbH ?_)
             (le_of_eq (Finset.sum_congr rfl fun j _ => by
               rw [show m + 1 + j = m + (j + 1) from by omega]))
@@ -685,7 +685,7 @@ content; the off-collision per-query agreement it pairs with is `gpvImplFlag_h_a
 `gpv_tvDist_orig_run_le_probEvent_flag`. -/
 theorem gpv_orig_flag_le_collisionBound [Inhabited Range] [Nonempty Salt]
     (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (qSign qHash : ℕ)
     (hQ : signHashQueryBound
@@ -755,7 +755,7 @@ theorem gpvRealImplFlag_run_no_sign_flag_eq [Inhabited Range] (pk : PK) (sk : SK
         obtain ⟨v, _, hv⟩ := hw
         have hwb : w.2.2 = b := by rw [← hv]
         have hbS := hQrec w.1
-        simp only [Bool.false_eq_true, if_false] at hbS
+        simp only [Bool.false_eq_true, ite_false] at hbS
         have := ih w.1 w.2.1 w.2.2 hbS z hz
         rw [this, hwb]
       · -- signing step is excluded: `0 < 0` is false.
@@ -790,8 +790,8 @@ theorem probEvent_flag_bind_no_sign_le [Inhabited Range] (pk : PK) (sk : SK)
           (simulateQ (gpvRealImplFlag psf hr M Salt pk sk) (kont w.1)).run w.2]
         ≤ (if w.2.2 = true then 1 else 0) := by
     by_cases hw : w.2.2 = true
-    · rw [if_pos hw]; exact probEvent_le_one
-    · rw [if_neg hw]
+    · rw [ite_eq_left hw]; exact probEvent_le_one
+    · rw [ite_eq_right hw]
       refine le_of_eq (probEvent_eq_zero_iff.2 (fun z hz => ?_))
       obtain ⟨a, c', b'⟩ := w
       have := gpvRealImplFlag_run_no_sign_flag_eq psf hr M Salt pk sk (kont a) c' b'
@@ -822,7 +822,7 @@ the *same* `collisionBound Salt qSign qHash` as for `adv.main pk` alone
 (`gpv_orig_flag_le_collisionBound`) — no `qHash` off-by-one from the verification read. -/
 theorem gpv_tvDist_orig_verify_le_collisionBound [Inhabited Range] [Nonempty Salt]
     (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) {γ : Type}
     (kont : M × (Salt × Domain) →
@@ -903,16 +903,16 @@ lemma probOutput_flagSignedTag_false {α' : Type}
   by_cases hF : F = false ∧ sgnSet' = sgnSet
   · obtain ⟨hF0, hFs⟩ := hF
     subst hF0; subst hFs
-    rw [if_pos ⟨rfl, rfl⟩, ← tsum_ite_eq (u, c') (fun x => Pr[= x | m])]
+    rw [ite_eq_left ⟨rfl, rfl⟩, ← tsum_ite_eq (u, c') (fun x => Pr[= x | m])]
     refine tsum_congr fun x => ?_
     congr 1
     rw [eq_iff_iff, Prod.ext_iff, Prod.ext_iff, Prod.ext_iff, Prod.ext_iff]
     constructor
     · rintro ⟨h1, ⟨h2, _⟩, _⟩; exact ⟨h1.symm, h2.symm⟩
     · rintro ⟨h1, h2⟩; exact ⟨h1.symm, ⟨h2.symm, rfl⟩, rfl⟩
-  · rw [if_neg hF, ENNReal.tsum_eq_zero]
+  · rw [ite_eq_right hF, ENNReal.tsum_eq_zero]
     intro x
-    rw [if_neg]
+    rw [ite_eq_right]
     rw [Prod.ext_iff, Prod.ext_iff, Prod.ext_iff]
     rintro ⟨_, ⟨_, h3⟩, h4⟩
     exact hF ⟨h4.symm, h3⟩
@@ -1180,7 +1180,7 @@ theorem gpvImplFlagFresh_h_agree_good (pk : PK) (sk : SK) (domainSample : PK →
       obtain ⟨c', sgnSet'⟩ := s'
       rw [probOutput_flagSignedTag_false, probOutput_flagSignedTag_false]
       by_cases hsig : sgnSet' = s.2
-      · simp only [hsig, and_self, if_pos]
+      · simp only [hsig, and_self, ite_eq_left]
         cases q with
         | inl n =>
             -- Uniform query: the two underlying handlers are literally identical.
@@ -1189,7 +1189,7 @@ theorem gpvImplFlagFresh_h_agree_good (pk : PK) (sk : SK) (domainSample : PK →
             -- Random-oracle read: agree by the underlying read agreement.
             exact probOutput_congr rfl
               (evalSPMF_gpvImpl_run_read_eq psf hr M Salt pk sk domainSample mc s.1 hNF hreg)
-      · simp only [hsig, and_false, if_false]
+      · simp only [hsig, and_false, ite_false]
   | inr msg =>
       -- Signing query: split over the inline salt `r`; keyed `r` ⇒ flag fires ⇒ both `0`;
       -- unkeyed `r` ⇒ flag stays `false`, signed-set inserts `msg`, bodies agree.
@@ -1265,7 +1265,7 @@ factor, so `kont` may compute the EUF-CMA freshness mask (the forged message not
 signed messages) while staying within the same collision bound. -/
 theorem gpv_tvDist_orig_verify_fresh_le_collisionBound [Inhabited Range] [Nonempty Salt]
     (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) {γ : Type}
     (kont : M × (Salt × Domain) →

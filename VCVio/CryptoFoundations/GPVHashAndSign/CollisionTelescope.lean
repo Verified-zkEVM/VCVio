@@ -73,7 +73,7 @@ land at the same image under `psf.eval`.
 The detailed construction simulates the adversary's oracle interactions by maintaining
 a programmable RO state, using PSF correctness to ensure consistency. -/
 @[expose] noncomputable def reduction
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) :
     CollisionAdversary (PK := PK) (Domain := Domain) :=
@@ -370,9 +370,9 @@ theorem probEvent_saltSeq_succ (c : ℕ → Finset Salt) (n : ℕ) :
         = (if r ∈ c n then 1 else q) := by
     intro r
     by_cases hr : r ∈ c n
-    · simp only [hr, if_true, decide_true, Bool.true_or]
+    · simp only [hr, ite_true, decide_true, Bool.true_or]
       simp
-    · simp only [hr, if_false, decide_false, Bool.false_or]
+    · simp only [hr, ite_false, decide_false, Bool.false_or]
       rw [hq]
       simp
   simp_rw [hinner]
@@ -614,8 +614,8 @@ theorem signRunF_tvDist_le_saltSeq_aux {St : Type} [Finite Salt]
             ≤ (if r ∈ c n then 1 else q.toReal) := by
         intro r
         by_cases hr : r ∈ c n
-        · rw [if_pos hr]; exact tvDist_le_one _ _
-        · rw [if_neg hr]
+        · rw [ite_eq_left hr]; exact tvDist_le_one _ _
+        · rw [ite_eq_right hr]
           -- Triangle through the real head with the programmed tail.
           refine le_trans (tvDist_triangle _
             (stepReal n st r >>= fun st' =>

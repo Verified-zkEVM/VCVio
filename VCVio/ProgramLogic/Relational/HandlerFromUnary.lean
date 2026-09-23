@@ -334,6 +334,7 @@ The lemmas below convert `Std.Do.Triple` invariant specs produced by
 recommended entry point from the `mvcgen` proof style into whole-program
 relational reasoning. -/
 
+omit [IsUniformSpec spec₁] in
 /-- Convert a unary `Std.Do.Triple` invariant-preservation spec into the
 `support`-based preservation hypothesis consumed by
 `relTriple_simulateQ_run_of_impl_eq_preservesInv` and friends.
@@ -343,7 +344,7 @@ The `mvcgen` proof style produces invariant-preservation specs as
 relational infrastructure is phrased in terms of `support`. This lemma
 is the direct translator, lifting over `triple_stateT_iff_forall_support`. -/
 theorem support_preservesInv_of_triple
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {σ : Type}
     (impl : QueryImpl spec (StateT σ (OracleComp spec₁)))
     (Inv : σ → Prop)
@@ -366,7 +367,7 @@ Use this whenever a writer-invariant-preservation proof is available as
 an `mvcgen`-style `Std.Do.Triple`, and the downstream consumer is a
 `support`-based whole-program lemma. -/
 theorem writerPreservesInv_of_triple
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {ω : Type} [Monoid ω]
     (impl : QueryImpl spec (WriterT ω (OracleComp spec)))
     (Inv : ω → Prop)
@@ -386,7 +387,7 @@ an invariant `Inv` and the target handler preserves `Inv`. This is the
 hypothesis is supplied via `mvcgen`-style `Std.Do.Triple`s rather than a
 `support`-based quantifier. -/
 theorem relTriple_simulateQ_run_of_impl_eq_triple
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {σ : Type}
     (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp))
     (Inv : σ → Prop)
@@ -497,24 +498,26 @@ private example
     (t : spec.Domain) (qc_a qc_b : QueryCount ι) :
     RelTriple
       (countingOracle t :
-        WriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run
+        AddWriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run
       (countingOracle t :
-        WriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run
+        AddWriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run
       (fun p₁ p₂ =>
-        (qc_a : QueryCount ι) + p₁.2 = qc_a + QueryCount.single t ∧
-        (qc_b : QueryCount ι) + p₂.2 = qc_b + QueryCount.single t) := by
+        (qc_a : QueryCount ι) + Multiplicative.toAdd p₁.2 = qc_a + QueryCount.single t ∧
+        (qc_b : QueryCount ι) + Multiplicative.toAdd p₂.2 = qc_b + QueryCount.single t) := by
   refine relTriple_post_mono
     (relTriple_run_writerT_of_triple_monoid
       (mx₁ := (countingOracle t : WriterT _ (OracleComp spec) _))
       (mx₂ := (countingOracle t : WriterT _ (OracleComp spec) _))
-      (s₁ := qc_a) (s₂ := qc_b)
-      (P₁ := fun qc => qc = qc_a) (P₂ := fun qc => qc = qc_b)
-      (Q₁ := fun _v qc' => qc' = qc_a + QueryCount.single t)
-      (Q₂ := fun _v qc' => qc' = qc_b + QueryCount.single t)
+      (s₁ := Multiplicative.ofAdd qc_a) (s₂ := Multiplicative.ofAdd qc_b)
+      (P₁ := fun qc => Multiplicative.toAdd qc = qc_a)
+      (P₂ := fun qc => Multiplicative.toAdd qc = qc_b)
+      (Q₁ := fun _v qc' => Multiplicative.toAdd qc' = qc_a + QueryCount.single t)
+      (Q₂ := fun _v qc' => Multiplicative.toAdd qc' = qc_b + QueryCount.single t)
       rfl rfl
       (OracleComp.ProgramLogic.StdDo.countingOracle_triple t qc_a)
       (OracleComp.ProgramLogic.StdDo.countingOracle_triple t qc_b))
-    (fun ⟨_, w₁⟩ ⟨_, w₂⟩ ⟨h₁, h₂⟩ => ⟨h₁, h₂⟩)
+    (fun ⟨_, w₁⟩ ⟨_, w₂⟩ ⟨h₁, h₂⟩ => by
+      simpa only [toAdd_mul, toAdd_ofAdd] using And.intro h₁ h₂)
 
 /-- Smoke test: independent product coupling for two `costOracle` runs
 with the same cost function `costFn`. Each side's accumulator multiplies
@@ -549,20 +552,20 @@ private example {α : Type} (oa : OracleComp spec α) :
     RelTriple
       (simulateQ
         (countingOracle :
-          QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec))) oa).run
+          QueryImpl spec (AddWriterT (QueryCount ι) (OracleComp spec))) oa).run
       (simulateQ
         (countingOracle :
-          QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec))) oa).run
+          QueryImpl spec (AddWriterT (QueryCount ι) (OracleComp spec))) oa).run
       (fun p₁ p₂ => p₁.1 = p₂.1 ∧ p₁.2 = p₂.2) := by
   refine relTriple_simulateQ_run_writerT
     (impl₁ := countingOracle) (impl₂ := countingOracle)
-    (R_writer := fun (w₁ w₂ : QueryCount ι) => w₁ = w₂)
+    (R_writer := fun (w₁ w₂ : Multiplicative (QueryCount ι)) => w₁ = w₂)
     rfl (by rintro _ _ _ _ rfl rfl; rfl) oa ?_
   intro t
   refine relTriple_post_mono
     (relTriple_refl (spec₁ := spec)
       (oa := (countingOracle t :
-        WriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run)) ?_
+        AddWriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run)) ?_
   rintro ⟨a, w⟩ ⟨b, w'⟩ heq
   simpa only [EqRel, Prod.mk.injEq] using heq
 
@@ -599,11 +602,11 @@ private example {α : Type} (oa : OracleComp spec α) :
     RelTriple
       (simulateQ
         (countingOracle :
-          QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec))) oa).run
+          QueryImpl spec (AddWriterT (QueryCount ι) (OracleComp spec))) oa).run
       (simulateQ
         (countingOracle :
-          QueryImpl spec (WriterT (QueryCount ι) (OracleComp spec))) oa).run
-      (EqRel (α × QueryCount ι)) :=
+          QueryImpl spec (AddWriterT (QueryCount ι) (OracleComp spec))) oa).run
+      (EqRel (α × Multiplicative (QueryCount ι))) :=
   relTriple_simulateQ_run_writerT_of_impl_eq (spec₁ := spec)
     countingOracle countingOracle (fun _ => rfl) oa
 

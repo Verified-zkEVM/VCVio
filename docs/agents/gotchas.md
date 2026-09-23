@@ -8,7 +8,7 @@ Any file using `evalSPMF`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleCom
 
 **Symptom**: "failed to synthesize instance" mentioning `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
 
-**Fix**: Add `[IsProbabilitySpec spec]` for arbitrary per-query probability semantics, or `[IsUniformSpec spec]` for uniform oracle semantics. If you already have `[spec.Fintype] [spec.Inhabited]` and want uniform sampling, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
+**Fix**: Add `[IsProbabilitySpec spec]` for arbitrary per-query probability semantics, or `[IsUniformSpec spec]` for uniform oracle semantics. If you already have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and want uniform sampling, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`; for the measure-native surface, `IsUniformMeasureSpec.ofFiniteNonempty spec` needs only `[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]`.
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 
@@ -105,6 +105,43 @@ position, even though the same fields elaborate separately.
   computational `Decidable`, pass `Classical.propDecidable` explicitly. For example, use
   `@decide_eq_true_iff _ (Classical.propDecidable _)` when rewriting an accompanying `iff`
   lemma instead of asking Lean to reduce the decision procedure.
+
+### 8b. No global instance may conclude `C spec.Domain` or `C (spec.Range t)` for a generic `spec`
+
+`OracleSpec.Domain` and `OracleSpec.Range` are reducible, and `DiscrTree.mkPath` unfolds
+reducible definitions and keys a metavariable-headed application as a wildcard. An instance
+whose conclusion is `DecidableEq spec.Domain` is therefore indexed as `DecidableEq ι`, and one
+whose conclusion is `Fintype (spec.Range t)` as `Fintype (?spec ?t)`: each is a candidate for
+every goal of its class, with `spec` undetermined. Search then invents a specification through
+the reducible `ofFn` layer. In the `Domain` form that looped until the heartbeat limit for any
+unconstrained `DecidableEq α` (VCVio#772). In the `Range` form the unifier's first-order
+approximation assigns `?spec := β` at a goal `DecidableEq (β a)`, so whenever the exact
+instances fail and only a `classical` fallback remains, the elaborated term silently routed
+through oracle-specification data; `UniformCompatibility.instCompatible` once depended on
+that detour for a `Finset.filter_eq'` rewrite to fire.
+
+VCVio has no such instances. Write `[DecidableEq ι]` for index equality, and
+`[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` — or
+their `Finite`/`Nonempty` forms when only a proposition is needed — for answer types,
+quantified over `t` only when the statement ranges over arbitrary queries. Specifications
+built with `ofFn` (`unifSpec`, `coinSpec`, `A →ₒ B`) reduce to their answer types, and `+`
+combines per-branch instances; a specification defined by a `match` on the query keeps a
+per-query instance proved by `cases` (see `cmaSpec`). The spellings `spec.Range t`, `spec t`, and
+`spec.toPFunctor.B t` are one type at reducible transparency, so a hypothesis in any of them
+serves goals in the others. `IsUniformMeasureSpec` is a proposition
+and derives `finite_range`/`nonempty_range` as theorems, never instances.
+`VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchNative.lean` guard all of
+this with heartbeat-bounded canaries and an elaborated-term dependency check.
+
+A wildcard-keyed instance over a plain type variable is a different matter when its class is a
+proposition. `SampleableType.finite : [SampleableType β] → Finite β` is keyed `Finite *`, exactly
+like Mathlib's `Finite.of_fintype`, and since `Finite β` is a `Prop`, which instance answers is
+invisible to definitional equality; the only thing to control is search order. Such an
+instance takes `priority := 100`, below `Finite.of_fintype` (900) and `instNonemptyOfInhabited`,
+so that `Finite (Fin 3)` never elaborates through sampler code and the sampler instance only
+answers for types whose finiteness is known through nothing else (`spec.Range t` under
+`[∀ t, SampleableType (spec.Range t)]`). The same test file checks that routing. Data classes
+(`DecidableEq`, `Fintype`, `Inhabited`) get no such derived instance at any priority.
 
 ### 9. Universe polymorphism
 
@@ -221,6 +258,11 @@ hypothesis type is separately inhabited. A toy witness establishes logical consi
 label it accordingly and do not present it as evidence that the assumptions are
 cryptographically strong or achievable at real parameters.
 
+The conclusion can be vacuous too. `∃ reduction, bound ≤ advantage reduction` holds for every
+scheme, because adversary types carry no resource bound and `Classical.choice` can pick a
+witness. State such bounds for a named reduction; see
+[Name the reduction in the theorem statement](crypto.md#name-the-reduction-in-the-theorem-statement).
+
 ## Module Structure
 
 ### 15. `EvalDist/` must never import from `OracleComp/`
@@ -321,13 +363,28 @@ off via `weak.linter.unicodeLinter, false` in `lakefile.lean`. This is a policy 
 dodge: VCVio docstrings legitimately use FIPS-204 math notation (a combining tilde on `c`) and
 diacritics in cited author names, which the Mathlib allowlist would otherwise reject.
 
+The active libraries fit within the 1500-line limit without file-local overrides. Split files
+by responsibility before crossing the limit, preserving established import paths with public
+import façades. `scripts/nolints.json` grandfathers the
+environment-linter findings (`lake lint`) that predate the gate; entries leave it when the finding
+is fixed, and nothing is added to it to silence a new one. The shared driver checks an exact
+baseline and reports stale entries as errors. Run `lake lint -- --prune-baseline` after fixing
+findings: it uses Batteries' update mode in separate temporary directories, collects all seven
+libraries, refuses additions, and atomically writes the reduced file. Never invoke upstream
+`runLinter --update` against the repository baseline directly: it overwrites the file once per
+root module. `-- --style-only` checks source files without building proof libraries;
+`-- --env-only --no-build` uses already-built oleans, one library per process, as CI does.
+The [linter cleanup ledger](../design/linter-cleanup.md) records the audit, completed groups,
+and remaining migrations by their effect on callers.
+
 ### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the active module root files covered by the build import check:
 `ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
 `HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
 It also updates the legacy `Interop.lean` umbrella without enabling module mode.
-CI checks the active module roots; `Interop` remains dormant and is migrated separately.
+CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
+from the committed file; `Interop` remains dormant and is migrated separately.
 
 ### 25. Active Lean sources use explicit module scopes
 
@@ -342,14 +399,13 @@ use opaque `public section` when downstream code does not need definitional unfo
 information to avoid public metavariables.
 
 The dormant `Interop` library is intentionally excluded until its separate migration.
-`LibSodium/SHA2.lean` is also excluded because it is a dormant source outside every Lake library.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
 their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.33.1`: `lean-toolchain` pins `leanprover/lean4:v4.33.1` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.33.1"`.
+Both currently `v4.34.0`: `lean-toolchain` pins `leanprover/lean4:v4.34.0` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.34.0"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs
@@ -392,3 +448,29 @@ git diff <pre-rebase-tip> <rebased-tip> --quiet
 is an additional strong gate only when the new base differs from the old stack solely by
 folding the same content. Do not require tree identity when the new base also contains unrelated
 changes; those changes should appear in the rebased tree.
+
+### 31. Section-wide instance variables become `omit` choreography
+
+Lean includes an instance-implicit section variable in a *theorem* whenever the variables its
+type mentions are included (`Lean/Elab/MutualDef.lean`: instance-implicit variables that only
+reference included section variables are included unless listed in `omit`). Definitions prune
+their unused variables after elaboration, so a `variable` line that bundles every instance any
+definition in the file might want costs nothing on the definitions and an `omit [...] in` line on
+every theorem that mentions the type but not the instance. Two consequences are worse than the
+noise:
+
+1. **Refactor cascades.** Removing a hypothesis from a definition makes the corresponding section
+   variables unused in every theorem that only reached them through that definition, in every
+   file that mentions those types; each of those theorems then needs its omit list edited.
+2. **Search-order dependencies.** An omitted variable is still in the local context while the
+   statement elaborates. `simulatedNmaSigSim_run_hashQueryBound` (`FiatShamir/Sigma/CmaToNma.lean`)
+   omitted `[Fintype Chal]` while its statement needed `Finite Chal`; that resolved through the
+   sampler-derived instance until that instance's priority was lowered, at which point
+   `Finite.of_fintype` reached the omitted variable and elaboration failed with
+   `cannot omit referenced section variable`. An omit list therefore encodes which global instance
+   happens to win, invisibly.
+
+The fix is source organisation, not an option (`deprecated.oldSectionVars` is deprecated): a
+`variable` line states only what the theorems in its scope share, per-declaration binders or a
+narrower `section` carry the rest, derivable assumptions are derived in proofs, and `omit` marks
+the genuine exception. See *Section Variables* in `CONTRIBUTING.md`.

@@ -74,7 +74,7 @@ theorem addOrPanicLifted_ok_of_lt (x y : Nat) (h : x + y < 2 ^ 32) :
     (addOrPanicLifted (spec := spec) x y) =
       Interop.Rust.RustOracleComp.ok (x + y) := by
   unfold addOrPanicLifted addOrPanic
-  rw [if_pos h]
+  rw [ite_eq_left h]
   rfl
 
 /-- When the sum overflows, the lifted computation reduces to
@@ -85,7 +85,7 @@ theorem addOrPanicLifted_fail_of_ge (x y : Nat) (h : ¬ x + y < 2 ^ 32) :
     (addOrPanicLifted (spec := spec) x y) =
       Interop.Rust.RustOracleComp.fail .integerOverflow := by
   unfold addOrPanicLifted addOrPanic
-  rw [if_neg h]
+  rw [ite_eq_right h]
   rfl
 
 /-! ### Triple-level spec via `mvcgen`
@@ -98,7 +98,7 @@ This exercises the composed `Std.Do` WP stack: `ExceptT.instWP`
 composes `OptionT.instWP` composes VCVio's `instWPOracleComp` in
 `StdDoBridge.lean` (all three layers). `mvcgen` peels the transformer
 stack and leaves a single arithmetic vc about the `if`; we introduce
-the precondition, rewrite the `if` via `if_pos`, and let `simp` (using
+the precondition, rewrite the `if` via `ite_eq_left`, and let `simp` (using
 our `@[simp]` `liftRustM_pure` lemma) close the resulting
 `wp⟦pure _⟧`-goal.
 
@@ -181,7 +181,7 @@ theorem oracleThenAdd_triple (x : Nat) (t : ι) (coe : spec.Range t → Nat)
   rw [OracleComp.ProgramLogic.StdDo.wpProp_iff_forall_support]
   intro y _
   have hy : x + coe y < 4294967296 := hbound y
-  rw [if_pos hy]
+  rw [ite_eq_left hy]
   simp only [liftRustM_pure, WPMonad.wp_pure, PostCond.noThrow]
   exact Nat.le_add_right x (coe y)
 

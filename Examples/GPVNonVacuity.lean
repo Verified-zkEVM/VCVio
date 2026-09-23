@@ -55,7 +55,7 @@ def hr : GenerableRelation Unit Unit (fun _ _ => true) where
 /-- A query-then-forge adversary: it queries the random oracle once at `((), ())` and then forges
 at that same `(salt, message) = ((), ())`, so its forgery key is the constant `((), ())`. -/
 noncomputable def adv :
-    SignatureAlg.unforgeableAdv
+    SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Unit × Unit →ₒ Bool)))
         bijPSF hr Unit Unit) where
   main := fun _pk => do
@@ -71,8 +71,8 @@ noncomputable def domainSample : Unit → ProbComp Bool := fun _ => ($ᵗ Bool)
 the cache at the (constant) forged key `((), ())` is non-`none`.  The single random-oracle query
 `adv` makes is at exactly that point, and a programmed read step always leaves its point cached
 (`GPVHashAndSign.progGameRunImplNoRecFlagFresh_read_caches`) — on a hit the entry is preserved, on
-a miss the handler programs it.  This is the `∀ ds` shape consumed by `euf_cma_split_bound` and
-`euf_cma_collision_bound`. -/
+a miss the handler programs it.  It holds for every domain sampler, so in particular for the one
+passed to `euf_cma_split_bound` and `euf_cma_collision_bound`. -/
 theorem bijPSF_hForge (ds : Unit → ProbComp Bool) :
     GPVHashAndSign.ForgesQueriedPoint bijPSF hr Unit Unit adv ds := by
   unfold GPVHashAndSign.ForgesQueriedPoint
@@ -136,8 +136,8 @@ domain sampler (`ForgesQueriedPoint`), the adversary makes `0` signing and `1` r
 (`signHashQueryBound`), the PSF is correct (`Correct`), the trapdoor sampler never fails
 (`NeverFail`), and the PSF is regular (`Regularity`).  Each conjunct is stated in the exact shape
 the headline bounds `GPVHashAndSign.euf_cma_split_bound` and
-`GPVHashAndSign.euf_cma_collision_bound` consume — in particular `ForgesQueriedPoint` universally
-quantified over the domain sampler — so their hypothesis conjunction is inhabitable.  This witness
+`GPVHashAndSign.euf_cma_collision_bound` consume, with `ForgesQueriedPoint` proved for every
+domain sampler, so their hypothesis conjunction is inhabitable.  This witness
 carries no quantitative security content. -/
 theorem gpv188_hyps_inhabited :
     (∀ ds : Unit → ProbComp Bool,
