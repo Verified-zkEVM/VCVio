@@ -430,7 +430,7 @@ section Pins
 open OracleComp ENNReal SignatureAlg
 
 variable (s : Summands) (p : Params) (x : ℝ≥0∞)
-  (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives))
+  (adv : UnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
 
 /-! ### The PRF seam -/
 
@@ -500,23 +500,23 @@ example : ℝ≥0∞ := c.idealAdvantage
 example : ℝ≥0∞ := c.forsBranch
 example : ℝ≥0∞ := c.hypertreeBranch
 
-example : adv.advantage ProbCompRuntime.probComp ≤
+example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
     prfAbsAdvantage (skPrfScheme toyPrimitives c.pkSeed) c.skgAdv
       + prfAbsAdvantage (msgPrfScheme toyPrimitives) c.mkgAdv + c.idealAdvantage := c.prfHops
 
 example : c.idealAdvantage ≤ c.forsBranch + c.hypertreeBranch := c.split
 
 example : c.forsBranch ≤ ITSRAdvantage c.itsrAdv
-    + SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv
-    + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-    + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv := c.forsBranch_le
+    + SM_DT_OpenPRE_SourceFinalValidity.advantage c.openPreAdv
+    + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+    + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv := c.forsBranch_le
 
 example : c.hypertreeBranch ≤
-    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-      + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv := c.hypertreeBranch_le
+    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+      + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv := c.hypertreeBranch_le
 
 /-! ### The twelve summands, and the headline -/
 
@@ -526,20 +526,20 @@ example : c.summands.bound toy.params =
     prfAbsAdvantage (skPrfScheme toyPrimitives c.pkSeed) c.skgAdv
       + prfAbsAdvantage (msgPrfScheme toyPrimitives) c.mkgAdv
       + ITSRAdvantage c.itsrAdv
-      + SM_DT_DSPR_SourceFinalValidity.Advantage
+      + SM_DT_DSPR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-      + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+      + 3 * SM_DT_TCR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
       + (toy.params.w - 2 : ℕ) *
-          SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-      + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv := c.bound_eq
+          SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+      + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv := c.bound_eq
 
-example : adv.advantage ProbCompRuntime.probComp ≤ c.summands.bound toy.params :=
+example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤ c.summands.bound toy.params :=
   advantage_le_bound c
 
 /-! ### The branch-bounds constructor -/
@@ -560,15 +560,15 @@ variable (skgAdv : PRFScheme.PRFAdversary Adrs toyPrimitives.Y)
   (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem toyPrimitives))
   (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem toyPrimitives))
   (hfors : forsHalf adv ≤ ITSRAdvantage itsrAdv
-    + SM_DT_OpenPRE_SourceFinalValidity.Advantage openPreAdv
-    + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-    + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv)
+    + SM_DT_OpenPRE_SourceFinalValidity.advantage openPreAdv
+    + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+    + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv)
   (hhyper : hypertreeHalf adv ≤
-    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-      + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv)
+    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+      + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv)
 
 noncomputable example : Certificate (vp := toy) toyPrimitives adv :=
   Certificate.ofBranchBounds (vp := toy) (prims := toyPrimitives) (adv := adv)
@@ -582,37 +582,37 @@ example :
       { skgPrf := prfAbsAdvantage (skPrfScheme toyPrimitives pkSeed) skgAdv
         mkgPrf := prfAbsAdvantage (msgPrfScheme toyPrimitives) mkgAdv
         hmsgItsr := ITSRAdvantage itsrAdv
-        forsFDspr := SM_DT_DSPR_SourceFinalValidity.Advantage
+        forsFDspr := SM_DT_DSPR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openPreAdv)
-        forsFTcr := SM_DT_TCR_SourceFinalValidity.Advantage
+        forsFTcr := SM_DT_TCR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toTCR openPreAdv)
-        forsHTcr := SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-        forsTlTcr := SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv
-        wotsFUd := SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        wotsFTcr := SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        wotsFPre := SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-        wotsTlTcr := SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        xmssHTcr := SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv } :=
+        forsHTcr := SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+        forsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv
+        wotsFUd := SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        wotsFTcr := SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+        wotsFPre := SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+        wotsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+        xmssHTcr := SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv } :=
   Certificate.ofBranchBounds_summands (vp := toy) (prims := toyPrimitives) (adv := adv)
     skgAdv mkgAdv pkSeed itsrAdv openPreAdv counting forsHAdv
     forsTlAdv wotsFUdAdv wotsFTcrAdv wotsFPreAdv wotsTlAdv xmssHAdv hfors hhyper
 
-example : adv.advantage ProbCompRuntime.probComp ≤
+example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
     prfAbsAdvantage (skPrfScheme toyPrimitives pkSeed) skgAdv
       + prfAbsAdvantage (msgPrfScheme toyPrimitives) mkgAdv
       + ITSRAdvantage itsrAdv
-      + SM_DT_DSPR_SourceFinalValidity.Advantage
+      + SM_DT_DSPR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openPreAdv)
-      + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+      + 3 * SM_DT_TCR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toTCR openPreAdv)
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv
       + (toy.params.w - 2 : ℕ) *
-          SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-      + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv :=
+          SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+      + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv :=
   advantage_le_bound_of_halves (vp := toy) (prims := toyPrimitives) (adv := adv)
     skgAdv mkgAdv pkSeed itsrAdv openPreAdv counting forsHAdv
     forsTlAdv wotsFUdAdv wotsFTcrAdv wotsFPreAdv wotsTlAdv xmssHAdv hfors hhyper
@@ -623,29 +623,29 @@ end OfBranch
 
 example (εD : ℝ≥0∞)
     (h : ∀ a : SM_DT_DSPR_SourceFinalValidity.Adversary (forsFDsprProblem toyPrimitives),
-      SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ εD)
+      SM_DT_DSPR_SourceFinalValidity.advantage a ≤ εD)
     (a : SM_DT_OpenPRE_SourceFinalValidity.Adversary (forsFOpenPreProblem toyPrimitives)) :
-    SM_DT_DSPR_SourceFinalValidity.Advantage
+    SM_DT_DSPR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toDSPR a) ≤ εD :=
   dspr_bound_transfer (vp := toy) toyPrimitives εD h a
 
 example (εT : ℝ≥0∞)
     (h : ∀ a : SM_DT_TCR_SourceFinalValidity.Adversary (forsFTcrProblem toyPrimitives),
-      SM_DT_TCR_SourceFinalValidity.Advantage a ≤ εT)
+      SM_DT_TCR_SourceFinalValidity.advantage a ≤ εT)
     (a : SM_DT_OpenPRE_SourceFinalValidity.Adversary (forsFOpenPreProblem toyPrimitives)) :
-    SM_DT_TCR_SourceFinalValidity.Advantage
+    SM_DT_TCR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toTCR a) ≤ εT :=
   tcr_bound_transfer (vp := toy) toyPrimitives εT h a
 
 example (εD εT : ℝ≥0∞)
     (hD : ∀ a : SM_DT_DSPR_SourceFinalValidity.Adversary (forsFDsprProblem toyPrimitives),
-      SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ εD)
+      SM_DT_DSPR_SourceFinalValidity.advantage a ≤ εD)
     (hT : ∀ a : SM_DT_TCR_SourceFinalValidity.Adversary (forsFTcrProblem toyPrimitives),
-      SM_DT_TCR_SourceFinalValidity.Advantage a ≤ εT) :
+      SM_DT_TCR_SourceFinalValidity.advantage a ≤ εT) :
     c.summands.forsFDspr + 3 * c.summands.forsFTcr ≤ εD + 3 * εT :=
   summands_forsF_le c εD εT hD hT
 
-example : SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv ≤
+example : SM_DT_OpenPRE_SourceFinalValidity.advantage c.openPreAdv ≤
     c.summands.forsFDspr + 3 * c.summands.forsFTcr :=
   openPre_le_summands_forsF c
 
@@ -792,8 +792,8 @@ twenty fields supplied, all four inequalities proved — at an **arbitrary** `Va
 arbitrary primitive bundle carrying the instances the structure asks for, and an arbitrary
 adversary, from an address key and a public seed and no security assumption whatever; and it
 proves that the bound that certificate names is at least one.  `advantage_le_bound` at it is
-`adv.advantage ≤ (something ≥ 1)`, which `MeasureTheory.measure_le_one` already gives. It then
-builds a
+`unforgeableAdvantage _ adv ≤ (something ≥ 1)`, which `MeasureTheory.measure_le_one` already gives.
+It then builds a
 second certificate, whose three `ℝ≥0∞` fields are the experiment's own quantities and whose one
 further input is a `CountingInterface` at an adversary of advantage one — which is what tying
 those fields to the experiment would leave.
@@ -802,8 +802,8 @@ What it is for.  A certificate costs nothing, and shipping that as a checked fac
 reader from taking the bound to rest on something hard.  This section is what refuses the two
 changes that would make the bound mean something:
 
-* **Anchoring.**  Add the three inequalities `idealAdvantage ≤ adv.advantage`, `forsHalf adv ≤
-  forsBranch` and `hypertreeHalf adv ≤ hypertreeBranch` to `Certificate` and repair
+* **Anchoring.**  Add the three inequalities `idealAdvantage ≤ unforgeableAdvantage _ adv`,
+  `forsHalf adv ≤ forsBranch` and `hypertreeHalf adv ≤ hypertreeBranch` to `Certificate` and repair
   `Certificate.ofBranchBounds` with three `le_refl`s: the library is still well-formed, and the two
   certificates below are the only things refused — no pin here sees the change, so without this
   section nothing would.  Only the first of the two is really refused.  `freeCertificate`'s
@@ -811,9 +811,9 @@ changes that would make the bound mean something:
   and an attempt to discharge it leaves `forsHalf adv = 0` at an arbitrary adversary.
   `anchoredCertificate` is repaired by three `le_refl`s and nothing else, its three quantities being
   the anchored ones already.
-* **A reduction field.**  Make `wotsFPreAdv` a function `unforgeableAdv (generalAlg prims) → _` at
-  its four declaration sites: the library is again well-formed, and what is refused is nine entries
-  in `Pins` and sixteen sites here.  The sixteen go away under a one-line repair at each
+* **A reduction field.**  Make `wotsFPreAdv` a function `UnforgeableAdversary (generalAlg prims) →
+  _` at its four declaration sites: the library is again well-formed, and what is refused is nine
+  entries in `Pins` and sixteen sites here.  The sixteen go away under a one-line repair at each
   certificate, `wotsFPreAdv := fun _ => freePreAdv prims t`, because a field of function type is
   still freely chosen.  So this canary *notifies* on that change; only fixing the function at the
   structure, which deletes the field, refuses it.
@@ -875,9 +875,9 @@ def idleUd {ix PkS Tw Msg Msg' Nd : Type}
 /-- It records no challenge, so the selected index misses and its advantage is zero. -/
 theorem idleOpenPre_advantage {ix PkS Tw Msg Nd : Type} [DecidableEq Tw] [DecidableEq Nd]
     [Inhabited Msg] (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_OpenPRE_SourceFinalValidity.Advantage (idleOpenPre prob) = 0 := by
-  unfold SM_DT_OpenPRE_SourceFinalValidity.Advantage
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment
+    SM_DT_OpenPRE_SourceFinalValidity.advantage (idleOpenPre prob) = 0 := by
+  unfold SM_DT_OpenPRE_SourceFinalValidity.advantage
+    SM_DT_OpenPRE_SourceFinalValidity.experiment
   simp [idleOpenPre, SM_DT_OpenPRE_SourceFinalValidity.initializeTargets,
     SourceFinalValidity.State.initial]
 
@@ -901,11 +901,11 @@ theorem idleOpenPre_toDSPR_choose {ix PkS Tw Msg Nd : Type} [DecidableEq Msg] [I
 theorem idleOpenPre_dspr {ix PkS Tw Msg Nd : Type} [Fintype Msg] [DecidableEq Tw]
     [DecidableEq Msg] [DecidableEq Nd] [Inhabited Msg]
     (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_DSPR_SourceFinalValidity.Advantage
+    SM_DT_DSPR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toDSPR (idleOpenPre prob)) = 0 := by
-  unfold SM_DT_DSPR_SourceFinalValidity.Advantage SM_DT_DSPR_SourceFinalValidity.Success
+  unfold SM_DT_DSPR_SourceFinalValidity.advantage SM_DT_DSPR_SourceFinalValidity.Success
     SM_DT_DSPR_SourceFinalValidity.SPProbability
-    SM_DT_DSPR_SourceFinalValidity.Experiment SM_DT_DSPR_SourceFinalValidity.SPExperiment
+    SM_DT_DSPR_SourceFinalValidity.experiment SM_DT_DSPR_SourceFinalValidity.spExperiment
   simp only [idleOpenPre_toDSPR_choose]
   simp [SM_DT_OpenPRE_SourceFinalValidity.toDSPR, idleOpenPre,
     SourceFinalValidity.State.initial]
@@ -956,11 +956,11 @@ theorem winningOpenPre_advantage {ix PkS Tw Msg Nd : Type} [DecidableEq Tw] [Dec
     [Inhabited Msg] [Inhabited Nd]
     (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) (t : Tw)
     (h : 0 < prob.numTargets) :
-    SM_DT_OpenPRE_SourceFinalValidity.Advantage (winningOpenPre prob t) = 1 := by
+    SM_DT_OpenPRE_SourceFinalValidity.advantage (winningOpenPre prob t) = 1 := by
   have htake : List.take prob.numTargets [t] = [t] :=
     List.take_of_length_le (by simpa using Nat.succ_le_of_lt h)
-  unfold SM_DT_OpenPRE_SourceFinalValidity.Advantage
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment
+  unfold SM_DT_OpenPRE_SourceFinalValidity.advantage
+    SM_DT_OpenPRE_SourceFinalValidity.experiment
   simp [winningOpenPre, htake, openPreInverse_eval, h,
     SM_DT_OpenPRE_SourceFinalValidity.initializeTargets,
     SourceFinalValidity.State.initial, SourceFinalValidity.State.recordTarget,
@@ -998,8 +998,8 @@ noncomputable def freePreAdv (t : prims.AdrsKey) :
 /-- **Preimage resistance is unconditionally false in this model**, at every validated parameter
 set and every primitive bundle: the tenth summand of `Summands.bound` is exactly one here. -/
 theorem freePreAdv_advantage (t : prims.AdrsKey) :
-    SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) = 1 := by
-  unfold SM_DT_PRE_SourceFinalValidity.Advantage SM_DT_PRE_SourceFinalValidity.Experiment
+    SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) = 1 := by
+  unfold SM_DT_PRE_SourceFinalValidity.advantage SM_DT_PRE_SourceFinalValidity.experiment
   simp [freePreAdv, wotsFPreInverse_eval, SM_DT_PRE_SourceFinalValidity.oracles,
     SM_DT_PRE_SourceFinalValidity.challengeOracle,
     SourceFinalValidity.State.recordTarget, SourceFinalValidity.State.initial,
@@ -1020,7 +1020,7 @@ variable {vp : ValidatedParams} {prims : Primitives vp.params}
 /-- **A `Certificate` from nothing.**  The two arguments are an address key and a public seed,
 which are data the scheme itself has and not assumptions.  `forsBranch := 0` puts the whole
 obligation on `hypertreeBranch_le`, and `freePreAdv_advantage` discharges it. -/
-noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
+noncomputable def freeCertificate {adv : UnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed) : Certificate prims adv where
   skgAdv := (pure true : OracleComp (PRFScheme.PRFOracleSpec Adrs prims.Y) Bool)
   mkgAdv := (pure true :
@@ -1038,32 +1038,32 @@ noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
   wotsFPreAdv := freePreAdv prims t
   wotsTlAdv := idleTcr _
   xmssHAdv := idleTcr _
-  idealAdvantage := adv.advantage ProbCompRuntime.probComp
+  idealAdvantage := unforgeableAdvantage ProbCompRuntime.probComp adv
   forsBranch := 0
-  hypertreeBranch := adv.advantage ProbCompRuntime.probComp
+  hypertreeBranch := unforgeableAdvantage ProbCompRuntime.probComp adv
   prfHops := le_add_self
   split := by simp
   forsBranch_le := by simp
   hypertreeBranch_le := by
-    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := MeasureTheory.measure_le_one _ _
-      _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+    calc unforgeableAdvantage ProbCompRuntime.probComp adv ≤ 1 := MeasureTheory.measure_le_one _ _
+      _ = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
           (freePreAdv_advantage prims t).symm
       _ ≤ _ := le_add_right (le_add_right le_add_self)
 
 /-- **The bound that certificate names is at least one**, so it is the trivial bound. -/
-theorem one_le_freeCertificate_bound {adv : unforgeableAdv (generalAlg prims)}
+theorem one_le_freeCertificate_bound {adv : UnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
     1 ≤ (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params := by
   rw [Certificate.bound_eq]
-  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
 /-- **The headline at that certificate.**  Both conjuncts together are the whole canary: the
 conditional bound holds, and what it bounds the advantage by is at least one. -/
-theorem freeCertificate_headline {adv : unforgeableAdv (generalAlg prims)}
+theorem freeCertificate_headline {adv : UnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
-    adv.advantage ProbCompRuntime.probComp ≤
+    unforgeableAdvantage ProbCompRuntime.probComp adv ≤
         (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params ∧
       1 ≤ (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params :=
   ⟨advantage_le_bound _, one_le_freeCertificate_bound t pkSeed⟩
@@ -1077,24 +1077,24 @@ at the profile the rest of this file uses, so a change that breaks only the conc
 caught too. -/
 
 example (t : Adrs) :
-    SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv (vp := toy) toyPrimitives t) = 1 :=
+    SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv (vp := toy) toyPrimitives t) = 1 :=
   freePreAdv_advantage (vp := toy) toyPrimitives t
 
 example (t : Adrs) :
-    SM_DT_OpenPRE_SourceFinalValidity.Advantage
+    SM_DT_OpenPRE_SourceFinalValidity.advantage
       (winningOpenPre (forsFOpenPreProblem toyPrimitives) t) = 1 :=
   winningOpenPre_advantage (forsFOpenPreProblem toyPrimitives) t (by
     rw [forsFOpenPreProblem_numTargets]
     exact targetCount_pos toyParams toyValid TargetRole.forsF)
 
 noncomputable example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
-    (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives)) :
+    (adv : UnforgeableAdversary (generalAlg (vp := toy) toyPrimitives)) :
     Certificate (vp := toy) toyPrimitives adv :=
   freeCertificate (vp := toy) (prims := toyPrimitives) (adv := adv) t pkSeed
 
 example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
-    (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives)) :
-    adv.advantage ProbCompRuntime.probComp ≤
+    (adv : UnforgeableAdversary (generalAlg (vp := toy) toyPrimitives)) :
+    unforgeableAdvantage ProbCompRuntime.probComp adv ≤
         (freeCertificate (vp := toy) (prims := toyPrimitives) (adv := adv) t pkSeed).summands.bound
           toy.params ∧
       1 ≤ (freeCertificate (vp := toy) (prims := toyPrimitives) (adv := adv) t
@@ -1105,7 +1105,7 @@ example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
 
 `freeCertificate` is refused by anchoring, because its `forsBranch` is `0`.  A certificate built
 from one further input is not.
-The one below sets the three `ℝ≥0∞` fields to `adv.advantage`, `forsHalf adv` and
+The one below sets the three `ℝ≥0∞` fields to `unforgeableAdvantage _ adv`, `forsHalf adv` and
 `hypertreeHalf adv`, which are the three values the anchoring inequalities ask for, so each of them
 holds at it by `le_refl`, which the three `example`s after it are.  Each branch bound is then the
 same chain — the half is at most the advantage, the advantage is at most one, and one is the
@@ -1126,20 +1126,21 @@ variable {vp : ValidatedParams} {prims : Primitives vp.params}
 /-- **The hypertree branch bound holds at the free preimage adversary**, with the branch stated at
 `hypertreeHalf adv` itself.  This is the same chain as the FORS one, landing on the preimage
 summand instead. -/
-theorem hypertreeHalf_le_freePre {adv : unforgeableAdv (generalAlg prims)} (t : prims.AdrsKey)
+theorem hypertreeHalf_le_freePre {adv : UnforgeableAdversary (generalAlg prims)} (t : prims.AdrsKey)
     (wotsFUdAdv : SM_DT_UD_SourceFinalValidity.Adversary (wotsFUdCProblem prims))
     (wotsFTcrAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsFTcrCProblem prims))
     (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
     (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims)) :
     hypertreeHalf adv ≤
-      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t)
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv := by
-  calc hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp := hypertreeHalf_le_advantage adv
+      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t)
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv := by
+  calc hypertreeHalf adv ≤ unforgeableAdvantage ProbCompRuntime.probComp adv :=
+        hypertreeHalf_le_advantage adv
     _ ≤ 1 := MeasureTheory.measure_le_one _ _
-    _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+    _ = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
@@ -1148,17 +1149,18 @@ variable [DecidableEq prims.PkSeed] [Inhabited prims.Y]
 /-- **The FORS branch bound holds at the winning open-preimage adversary**, for every adversary and
 with the branch stated at `forsHalf adv` itself.  The right-hand side's second summand is the
 OpenPRE advantage, which `winningOpenPre_advantage` makes one, so the chain lands. -/
-theorem forsHalf_le_winningOpenPre {adv : unforgeableAdv (generalAlg prims)} (t : prims.AdrsKey)
+theorem forsHalf_le_winningOpenPre {adv : UnforgeableAdversary (generalAlg prims)}
+    (t : prims.AdrsKey)
     (itsrAdv : ITSRAdversary (hmsgItsrProblem prims))
     (forsHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (forsHTcrCProblem prims))
     (forsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (forsTlTcrCProblem prims)) :
     forsHalf adv ≤ ITSRAdvantage itsrAdv
-      + SM_DT_OpenPRE_SourceFinalValidity.Advantage (winningOpenPre (forsFOpenPreProblem prims) t)
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv := by
-  calc forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := forsHalf_le_advantage adv
+      + SM_DT_OpenPRE_SourceFinalValidity.advantage (winningOpenPre (forsFOpenPreProblem prims) t)
+      + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv := by
+  calc forsHalf adv ≤ unforgeableAdvantage ProbCompRuntime.probComp adv := forsHalf_le_advantage adv
     _ ≤ 1 := MeasureTheory.measure_le_one _ _
-    _ = SM_DT_OpenPRE_SourceFinalValidity.Advantage
+    _ = SM_DT_OpenPRE_SourceFinalValidity.advantage
           (winningOpenPre (forsFOpenPreProblem prims) t) :=
         (winningOpenPre_advantage _ t (by
           rw [forsFOpenPreProblem_numTargets]
@@ -1175,7 +1177,7 @@ that are data are an address key and a public seed, as in `freeCertificate`; the
 `CountingInterface` at an adversary whose advantage is one, and it is the one input here that is
 not data.  Nothing constructs it, and `nonempty_counting_winningOpenPre_iff` below says exactly
 what constructing it would take. -/
-noncomputable def anchoredCertificate {adv : unforgeableAdv (generalAlg prims)}
+noncomputable def anchoredCertificate {adv : UnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
       (winningOpenPre (forsFOpenPreProblem prims) t)) :
@@ -1196,7 +1198,7 @@ noncomputable def anchoredCertificate {adv : unforgeableAdv (generalAlg prims)}
   wotsFPreAdv := freePreAdv prims t
   wotsTlAdv := idleTcr _
   xmssHAdv := idleTcr _
-  idealAdvantage := adv.advantage ProbCompRuntime.probComp
+  idealAdvantage := unforgeableAdvantage ProbCompRuntime.probComp adv
   forsBranch := forsHalf adv
   hypertreeBranch := hypertreeHalf adv
   prfHops := le_add_self
@@ -1206,30 +1208,30 @@ noncomputable def anchoredCertificate {adv : unforgeableAdv (generalAlg prims)}
 
 /-- **The bound that certificate names is at least one too**, for the same reason
 `freeCertificate`'s is: the preimage summand is one. -/
-theorem one_le_anchoredCertificate_bound {adv : unforgeableAdv (generalAlg prims)}
+theorem one_le_anchoredCertificate_bound {adv : UnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
       (winningOpenPre (forsFOpenPreProblem prims) t)) :
     1 ≤ (anchoredCertificate (adv := adv) t pkSeed counting).summands.bound vp.params := by
   rw [Certificate.bound_eq]
-  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
 /-! ### The three inequalities a full anchoring would add, at this certificate -/
 
-example (adv : unforgeableAdv (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+example (adv : UnforgeableAdversary (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
       (winningOpenPre (forsFOpenPreProblem prims) t)) :
     (anchoredCertificate (adv := adv) t pkSeed counting).idealAdvantage ≤
-      adv.advantage ProbCompRuntime.probComp := le_refl _
+      unforgeableAdvantage ProbCompRuntime.probComp adv := le_refl _
 
-example (adv : unforgeableAdv (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+example (adv : UnforgeableAdversary (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
       (winningOpenPre (forsFOpenPreProblem prims) t)) :
     forsHalf adv ≤ (anchoredCertificate (adv := adv) t pkSeed counting).forsBranch := le_refl _
 
-example (adv : unforgeableAdv (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
+example (adv : UnforgeableAdversary (generalAlg prims)) (t : prims.AdrsKey) (pkSeed : prims.PkSeed)
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
       (winningOpenPre (forsFOpenPreProblem prims) t)) :
     hypertreeHalf adv ≤
@@ -1240,7 +1242,7 @@ end Anchored
 /-- The same certificate at the toy bundle.  There is no unconditional form of this one: the
 counting interface is a hypothesis here because nothing constructs it. -/
 noncomputable example (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
-    (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives))
+    (adv : UnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
     (counting : SM_DT_OpenPRE_SourceFinalValidity.CountingInterface
       (winningOpenPre (forsFOpenPreProblem toyPrimitives) t)) :
     Certificate (vp := toy) toyPrimitives adv :=
@@ -1283,7 +1285,7 @@ theorem dspr_advantage_le_one {ix PkS Tw Msg Nd : Type} [Fintype Msg] [Decidable
     [DecidableEq Msg] [DecidableEq Nd]
     {prob : SM_DT_DSPR_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
     (a : SM_DT_DSPR_SourceFinalValidity.Adversary prob) :
-    SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ 1 :=
+    SM_DT_DSPR_SourceFinalValidity.advantage a ≤ 1 :=
   le_trans tsub_le_self (MeasureTheory.measure_le_one _ _)
 
 /-- **The counting interface exists at a winning adversary exactly when `DSPR + 3 · TCR` reaches
@@ -1294,7 +1296,7 @@ theorem nonempty_countingInterface_iff {ix PkS Tw Msg Nd : Type} [Fintype Msg] [
     {prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd}
     (adv : SM_DT_OpenPRE_SourceFinalValidity.Adversary prob)
     (hu : prob.HasUniformInputs) (hcard : 2 ≤ Fintype.card Msg)
-    (hone : SM_DT_OpenPRE_SourceFinalValidity.Advantage adv = 1) :
+    (hone : SM_DT_OpenPRE_SourceFinalValidity.advantage adv = 1) :
     Nonempty (SM_DT_OpenPRE_SourceFinalValidity.CountingInterface adv) ↔
       1 ≤ SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound adv := by
   constructor
@@ -1303,9 +1305,9 @@ theorem nonempty_countingInterface_iff {ix PkS Tw Msg Nd : Type} [Fintype Msg] [
     rwa [hone] at h
   · intro h
     have : NeZero (Fintype.card Msg - 1) := ⟨by omega⟩
-    set D := SM_DT_DSPR_SourceFinalValidity.Advantage
+    set D := SM_DT_DSPR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toDSPR adv) with hD
-    set T := SM_DT_TCR_SourceFinalValidity.Advantage
+    set T := SM_DT_TCR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toTCR adv) with hT
     have hD1 : D ≤ 1 := dspr_advantage_le_one _
     set e : ℝ≥0∞ := 1 - D with he

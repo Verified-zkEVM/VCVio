@@ -30,13 +30,16 @@ section IND_CPA_TwoPhase
 variable {ι : Type} {spec : OracleSpec ι}
 
 /-- Two-phase adversary for IND-CPA security. -/
-structure IND_CPA_Adv (encAlg : AsymmEncAlg m M PK SK C) where
+structure IND_CPA_OneTime_Adversary (encAlg : AsymmEncAlg m M PK SK C) where
+  /-- State carried from the message-choice phase to the distinguishing phase. -/
   State : Type
+  /-- Given the public key, choose the two challenge messages and a state. -/
   chooseMessages : PK → m (M × M × State)
+  /-- Given the state and the challenge ciphertext, guess which message was encrypted. -/
   distinguish : State → C → m Bool
 
 variable {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
-  (adv : IND_CPA_Adv encAlg)
+  (adv : IND_CPA_OneTime_Adversary encAlg)
 
 /-- One-time IND-CPA experiment for an asymmetric encryption algorithm:
 sample keys, let the adversary choose challenge messages, encrypt one branch, and return whether
@@ -56,7 +59,7 @@ noncomputable def IND_CPA_OneTime_Game
 noncomputable def IND_CPA_OneTime_biasAdvantage
     (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : IND_CPA_Adv encAlg) : ℝ :=
+    (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ :=
   (IND_CPA_OneTime_Game (encAlg := encAlg) adv runtime).boolBias
 
 end IND_CPA_TwoPhase
@@ -66,7 +69,7 @@ section ProbCompSpecialization
 variable {encAlg : AsymmEncAlg ProbComp M PK SK C}
 
 /-- `ProbComp` specialization of the one-time IND-CPA game. -/
-abbrev IND_CPA_OneTime_Game_ProbComp (adv : IND_CPA_Adv encAlg) : ProbComp Bool := do
+abbrev IND_CPA_OneTime_Game_ProbComp (adv : IND_CPA_OneTime_Adversary encAlg) : ProbComp Bool := do
   let b ← ($ᵗ Bool)
   let (pk, _sk) ← encAlg.keygen
   let (m₁, m₂, state) ← adv.chooseMessages pk
@@ -77,9 +80,14 @@ abbrev IND_CPA_OneTime_Game_ProbComp (adv : IND_CPA_Adv encAlg) : ProbComp Bool 
 /-- Real-valued signed one-time IND-CPA advantage. -/
 noncomputable def IND_CPA_OneTime_signedAdvantageReal
     (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (adv : IND_CPA_Adv encAlg) : ℝ :=
+    (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ :=
   (Pr[= true | IND_CPA_OneTime_Game_ProbComp (encAlg := encAlg) adv]).toReal - 1 / 2
 
 end ProbCompSpecialization
+
+-- Declaration-specific naming exceptions for this game's underscore-separated names.
+attribute [nolint defsWithUnderscore]
+  IND_CPA_OneTime_Adversary.State IND_CPA_OneTime_Adversary.chooseMessages
+  IND_CPA_OneTime_Adversary.distinguish
 
 end AsymmEncAlg

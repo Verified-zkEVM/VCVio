@@ -107,29 +107,29 @@ private lemma run_collectionClash :
   rfl
 
 private lemma experiment_valid :
-    TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment valid = pure true := by
-  simp only [TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment valid = pure true := by
+  simp only [TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_valid]
   rfl
 
 private lemma experiment_duplicateTarget :
-    TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment duplicateTarget = pure false := by
-  simp only [TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment duplicateTarget = pure false := by
+  simp only [TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_duplicateTarget]
   rfl
 
 private lemma experiment_collectionClash :
-    TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment collectionClash = pure false := by
-  simp only [TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment collectionClash = pure false := by
+  simp only [TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_collectionClash]
   rfl
 
 /-- Valid inversion wins, while answered-and-recorded duplicate and cross-oracle queries lose
 through final validity. -/
 theorem final_validity_branch_canary :
-    TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment valid = pure true ∧
-      TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment duplicateTarget = pure false ∧
-      TweakableHash.SM_DT_PRE_SourceFinalValidity.Experiment collectionClash = pure false :=
+    TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment valid = pure true ∧
+      TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment duplicateTarget = pure false ∧
+      TweakableHash.SM_DT_PRE_SourceFinalValidity.experiment collectionClash = pure false :=
   ⟨experiment_valid, experiment_duplicateTarget, experiment_collectionClash⟩
 
 section RunLevelInvariant

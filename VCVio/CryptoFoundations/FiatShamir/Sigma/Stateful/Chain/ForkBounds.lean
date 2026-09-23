@@ -253,7 +253,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace
               hsigned hcache hlive hlenq
 
 private lemma forkLogged_base_support
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     {z : (M × (Commit × Resp)) × (ForkBaseState M Commit Chal × List M)}
@@ -290,7 +290,7 @@ private lemma forkLogged_base_support
 variable [SampleableType Chal]
 
 private lemma forkBase_finalQuery_runTrace_eq
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (pk : Stmt) :
@@ -540,7 +540,7 @@ private lemma probOutput_simulateQ_forkWrappedUniformImpl [Inhabited Chal] [Fint
     congrFun (congrArg DFunLike.coe (evalSPMF_simulateQ_forkWrappedUniformImpl oa)) x
 
 private noncomputable def forkH5Body
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     OracleComp (Fork.wrappedSpec Chal) Bool := do
@@ -552,7 +552,7 @@ private noncomputable def forkH5Body
     (Resp := Resp) σ pk z.1 z.2
 
 private noncomputable def forkLoggedVerifyBody
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     OracleComp (Fork.wrappedSpec Chal) Bool := do
@@ -563,7 +563,7 @@ private noncomputable def forkLoggedVerifyBody
     (Resp := Resp) σ pk z.1 z.2
 
 private lemma forkLogged_queryLog_length_le
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
@@ -635,7 +635,7 @@ event for the verify-wrapped adversary. The fork slot parameter is `qH`:
 adversary's source-`qH` plus verifier-point query. -/
 private lemma forkLogged_verify_prob_true_le_forkPoint_run
     [Inhabited Chal] [Fintype Chal]
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
@@ -741,7 +741,7 @@ provides exactly enough slots for the wrapped adversary's source-`qH` plus
 verifier-point query. -/
 private lemma forkH5Body_prob_true_le_fork_advantage
     [Inhabited Chal] [Fintype Chal]
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)

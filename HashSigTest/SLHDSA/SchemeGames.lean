@@ -857,8 +857,8 @@ variable (pk : PublicKeyCore toyPrimitives.core) (sk : SecretKeyCore toyPrimitiv
   (msg : List Byte) (sig sig' : GeneralScheme.SignatureCore toy toyPrimitives.core)
   (target : Fin toyParams.k)
   (log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core))
-  (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives))
-  (sadv : strongUnforgeableAdv (generalAlg (vp := toy) toyPrimitives))
+  (adv : UnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
+  (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
   (sel : PublicKeyCore toyPrimitives.core → SecretKeyCore toyPrimitives.core → List Byte →
     GeneralScheme.SignatureCore toy toyPrimitives.core → Bool)
   (lsel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
@@ -884,7 +884,7 @@ example (b : Bool) : instrumentedEufExp ProbCompRuntime.probComp adv (fun _ _ _ 
   instrumentedEufExp_const ProbCompRuntime.probComp
     adv b
 
-example : adv.advantage ProbCompRuntime.probComp ≤
+example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
     (instrumentedEufExp ProbCompRuntime.probComp adv sel) {x | x.1 = true ∧ x.2 = true} +
     (instrumentedEufExp ProbCompRuntime.probComp adv sel) {x | x.1 = true ∧ x.2 = false} :=
   advantage_le_arms ProbCompRuntime.probComp
@@ -902,7 +902,7 @@ example (b : Bool) :
   instrumentedSameMessageExp_const ProbCompRuntime.probComp
     sadv b
 
-example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤
+example : sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
     (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel) {x | x.1 = true ∧ x.2 = true} +
     (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel)
       {x | x.1 = true ∧ x.2 = false} :=
@@ -1013,7 +1013,7 @@ noncomputable example : ℝ≥0∞ := forsHalf adv
 
 noncomputable example : ℝ≥0∞ := hypertreeHalf adv
 
-example : adv.advantage ProbCompRuntime.probComp ≤ forsHalf adv + hypertreeHalf adv :=
+example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤ forsHalf adv + hypertreeHalf adv :=
   advantage_le_forsHalf_add_hypertreeHalf adv
 
 example : Function.Injective emptyContextMessage := emptyContextMessage_injective
@@ -1088,29 +1088,33 @@ noncomputable example : ℝ≥0∞ := sameRandomizerHalf sadv
 
 noncomputable example : ℝ≥0∞ := freshRandomizerHalf sadv
 
-example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤
+example : sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
     freshRandomizerHalf sadv + sameRandomizerHalf sadv :=
   sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer sadv
 
-example : sadv.advantage ProbCompRuntime.probComp =
-    sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp +
-      sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
+    unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary +
+      sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   strongAdvantage_eq_advantage_add_sameMessage sadv
 
-example : sadv.advantage ProbCompRuntime.probComp ≤
-    (forsHalf sadv.toUnforgeableAdv + hypertreeHalf sadv.toUnforgeableAdv) +
+example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+    (forsHalf sadv.toUnforgeableAdversary + hypertreeHalf sadv.toUnforgeableAdversary) +
       (freshRandomizerHalf sadv + sameRandomizerHalf sadv) :=
   strongAdvantage_le_halves sadv
 
-example : forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := forsHalf_le_advantage adv
+example : forsHalf adv ≤ unforgeableAdvantage ProbCompRuntime.probComp adv :=
+  forsHalf_le_advantage adv
 
-example : hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp :=
+example : hypertreeHalf adv ≤ unforgeableAdvantage ProbCompRuntime.probComp adv :=
   hypertreeHalf_le_advantage adv
 
-example : sameRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+example :
+    sameRandomizerHalf sadv ≤ sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   sameRandomizerHalf_le_sameMessageAdvantage sadv
 
-example : freshRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+example :
+    freshRandomizerHalf sadv ≤
+      sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   freshRandomizerHalf_le_sameMessageAdvantage sadv
 
 example : forsHalf adv ≤

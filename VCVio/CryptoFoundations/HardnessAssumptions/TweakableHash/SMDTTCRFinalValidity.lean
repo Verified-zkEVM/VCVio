@@ -96,7 +96,7 @@ def oracles [DecidableEq Tweak] (prob : Problem ι PkSeed Tweak M Y) (pk : PkSee
 
 /-- The source-final-validity SM-DT-TCR experiment. An adversary wins exactly when final validity
 holds and it names a recorded target with a distinct colliding message. -/
-noncomputable def Experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
+noncomputable def experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
   let (privateState, gameState) ← (simulateQ (oracles prob pk) adv.choose).run .initial
@@ -107,9 +107,9 @@ noncomputable def Experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
       return gameState.valid && decide (m ≠ mj ∧ prob.th.eval pk t m = prob.th.eval pk t mj)
 
 /-- The source-final-validity SM-DT-TCR advantage. -/
-noncomputable def Advantage [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
+noncomputable def advantage [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  𝒟[Experiment adv] {true}
+  𝒟[experiment adv] {true}
 
 variable [DecidableEq Tweak] {prob : Problem ι PkSeed Tweak M Y} {pk : PkSeed}
   {t : Tweak} {m : M} {st : State Tweak M}
@@ -154,5 +154,9 @@ theorem valid_eq_decide_valid_of_reachable {prob : Problem ι PkSeed Tweak M Y}
     adv.choose .initial (SourceFinalValidity.invariant_initial _ _) z hz).eq_decide _ _ _
 
 end Reachable
+
+-- Declaration-specific naming exceptions for this game's underscore-separated names.
+attribute [nolint defsWithUnderscore]
+  experiment advantage
 
 end TweakableHash.SM_DT_TCR_SourceFinalValidity

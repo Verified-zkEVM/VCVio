@@ -49,7 +49,9 @@ without knowing the witness.
 The Σ-protocol `σ` is not referenced in the structure itself (only in the
 extraction and verification steps of the experiment), so it enters the
 theorem statements via hypotheses like `σ.SpeciallySound`. -/
-structure KnowledgeSoundnessAdv where
+structure KnowledgeSoundnessAdversary where
+  /-- Given a statement and a message, produce a Fischlin proof with access to uniform
+  sampling and the Fischlin random oracle. -/
   run : Stmt → M → OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
     (FischlinProof Commit Chal Resp ρ)
 
@@ -225,7 +227,7 @@ Runs a cheating prover with a logged random oracle, then checks:
 Returns `true` (the "bad event") when verification succeeds but the extracted
 output is either `none` or an invalid witness.
 
-The `prover` argument is the raw function rather than `KnowledgeSoundnessAdv`
+The `prover` argument is the raw function rather than `KnowledgeSoundnessAdversary`
 to keep type inference tractable. -/
 @[expose]
 def knowledgeSoundnessExp

@@ -77,7 +77,7 @@ private lemma simulateQ_id_add_uniform_query_inr
 candidate/verifier boundary, preserving the `cmaToNma` signing log between the
 two pieces. -/
 theorem cmaToNma_shiftLeft_signedFreshAdv_eq_bind [DecidableEq M]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     (cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
         (signedFreshAdv σ hr M adv) =
@@ -116,15 +116,15 @@ variable [DecidableEq M] [DecidableEq Commit]
 /-- The CMA-to-NMA reduction at the managed random-oracle interface. -/
 @[expose]
 def nmaAdvFromCma
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
-    SignatureAlg.managedRoNmaAdv
+    SignatureAlg.ManagedRoNmaAdversary
       (SourceSigAlg (σ := σ) (hr := hr) (M := M)) :=
   FiatShamir.simulatedNmaAdv σ hr M simT adv
 
 /-- Hash-query bound for `nmaAdvFromCma`. -/
 theorem nmaAdvFromCma_nmaHashQueryBound
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
@@ -149,9 +149,9 @@ queries (the framework's structural `+1` is precisely the wrapper's verifier
 slot). The replay-forking denominator is therefore `qH + 1`, not `qH + 2`. -/
 @[expose]
 def nmaAdvFromCmaWithFinalQuery
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
-    SignatureAlg.managedRoNmaAdv
+    SignatureAlg.ManagedRoNmaAdversary
       (SourceSigAlg (σ := σ) (hr := hr) (M := M)) where
   main pk := do
     let result ← (nmaAdvFromCma σ hr M adv simT).main pk

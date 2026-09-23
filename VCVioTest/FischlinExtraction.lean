@@ -35,7 +35,7 @@ def record : FischlinROInput Unit Bool Bool Unit 1 Unit :=
 
 /-- A prover that has made no queries when it submits its proof. -/
 @[expose]
-def prover : KnowledgeSoundnessAdv (Stmt := Unit) (Commit := Bool) (Chal := Bool)
+def prover : KnowledgeSoundnessAdversary (Stmt := Unit) (Commit := Bool) (Chal := Bool)
     (Resp := Unit) 1 1 Unit where
   run _ _ := pure proof
 

@@ -683,7 +683,7 @@ small-sum target set, and using independence of the `ρ` fresh answers, gives th
 `(2^b)^ρ`. -/
 private lemma knowledgeSoundness_badEvent_le
     (hss : σ.SpeciallySound) (hur : σ.UniqueResponses)
-    (adv : KnowledgeSoundnessAdv ρ b M) (Q : ℕ) (_hρ : 0 < ρ)
+    (adv : KnowledgeSoundnessAdversary ρ b M) (Q : ℕ) (_hρ : 0 < ρ)
     (hQ : ∀ x msg, ROQueryBound ρ b M (adv.run x msg) Q) (x : Stmt) (msg : M) :
     Pr[= true | knowledgeSoundnessExp σ hr ρ b S M adv.run x msg]
       ≤ (↑(Q + 1) : ℝ≥0∞) * ↑(smallSumCount ρ b S) / ((↑(2 ^ b) : ℝ≥0∞) ^ ρ) := by
@@ -724,7 +724,7 @@ Unlike the Fiat-Shamir transform, this extraction is **straight-line** (no rewin
 which enables a tight security reduction. -/
 theorem knowledgeSoundness
     (hss : σ.SpeciallySound) (hur : σ.UniqueResponses)
-    (adv : KnowledgeSoundnessAdv ρ b M)
+    (adv : KnowledgeSoundnessAdversary ρ b M)
     (Q : ℕ) (hρ : 0 < ρ)
     (hQ : ∀ x msg, ROQueryBound ρ b M (adv.run x msg) Q)
     (x : Stmt) (msg : M) :

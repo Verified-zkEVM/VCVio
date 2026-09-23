@@ -358,7 +358,7 @@ same `Certificate` hypothesis, which at this bundle costs an address key and a p
 
 section Corollary
 
-variable {adv : unforgeableAdv (generalAlg limitedPrimitives)}
+variable {adv : UnforgeableAdversary (generalAlg limitedPrimitives)}
 
 /-- **The conditional EUF-CMA bound at SLH-DSA-SHA2-128-24.**  For any adversary against the
 external SLH-DSA algebra at this bundle and any certificate for it, the EUF-CMA advantage is at
@@ -370,7 +370,7 @@ an address key and a public seed and proves the bound it names is at least one.
 
 *Profile corollary.* -/
 theorem limitedAdvantage_le_bound (c : Certificate limitedPrimitives adv) :
-    adv.advantage ProbCompRuntime.probComp ≤ c.summands.bound limitedVp.params :=
+    unforgeableAdvantage ProbCompRuntime.probComp adv ≤ c.summands.bound limitedVp.params :=
   advantage_le_bound c
 
 /-- **The bound written out at this profile**: `Certificate.bound_eq` with `(p.w - 2 : ℕ)`
@@ -384,17 +384,17 @@ theorem limitedBound_eq (c : Certificate limitedPrimitives adv) :
       prfAbsAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
         + prfAbsAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
         + KeyedHash.ITSRAdvantage c.itsrAdv
-        + SM_DT_DSPR_SourceFinalValidity.Advantage
+        + SM_DT_DSPR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-        + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+        + 3 * SM_DT_TCR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv
-        + 2 * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv := by
+        + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
+        + 2 * SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv := by
   rw [Certificate.bound_eq, limitedParams_wotsFUd_coefficient, Nat.cast_ofNat]
 
 /-- **The reduced profile's bound, as one inequality.**  This is the form the corollary is quoted
@@ -408,21 +408,21 @@ builds the right-hand side is at least one.
 
 *Profile corollary.* -/
 theorem limitedAdvantage_le_summands (c : Certificate limitedPrimitives adv) :
-    adv.advantage ProbCompRuntime.probComp ≤
+    unforgeableAdvantage ProbCompRuntime.probComp adv ≤
       prfAbsAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
         + prfAbsAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
         + KeyedHash.ITSRAdvantage c.itsrAdv
-        + SM_DT_DSPR_SourceFinalValidity.Advantage
+        + SM_DT_DSPR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-        + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+        + 3 * SM_DT_TCR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv
-        + 2 * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv := by
+        + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
+        + 2 * SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv := by
   rw [← limitedBound_eq c]
   exact limitedAdvantage_le_bound c
 
@@ -430,7 +430,7 @@ end Corollary
 
 section StrongCorollary
 
-variable {sadv : strongUnforgeableAdv (generalAlg limitedPrimitives)}
+variable {sadv : StrongUnforgeableAdversary (generalAlg limitedPrimitives)}
 
 /-- **The SUF-CMA bound at SLH-DSA-SHA2-128-24**, which is `SufBound`'s headline here: the
 twelve-summand expression plus the same-message residual.
@@ -444,10 +444,10 @@ public seed and proves the bound it names is at least one.
 
 *Profile corollary.* -/
 theorem limitedStrongAdvantage_le_bound_add_sameMessage
-    (c : Certificate limitedPrimitives sadv.toUnforgeableAdv) :
-    sadv.advantage ProbCompRuntime.probComp ≤
+    (c : Certificate limitedPrimitives sadv.toUnforgeableAdversary) :
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
       c.summands.bound limitedVp.params +
-        sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+        sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   strongAdvantage_le_bound_add_sameMessage c
 
 /-- **The SUF-CMA bound refined through the two named halves at this profile.**  The residual is
@@ -462,8 +462,8 @@ every headline in this module it carries the free `Certificate` hypothesis, one 
 
 *Profile corollary.* -/
 theorem limitedStrongAdvantage_le_sufBound
-    (c : Certificate limitedPrimitives sadv.toUnforgeableAdv) :
-    sadv.advantage ProbCompRuntime.probComp ≤
+    (c : Certificate limitedPrimitives sadv.toUnforgeableAdversary) :
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
       c.summands.sufBound limitedVp.params (freshRandomizerHalf sadv)
         (sameRandomizerHalf sadv) :=
   strongAdvantage_le_sufBound c

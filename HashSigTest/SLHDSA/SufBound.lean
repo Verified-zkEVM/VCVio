@@ -496,14 +496,15 @@ section Pins
 
 open OracleComp ENNReal
 
-variable (sadv : strongUnforgeableAdv (generalAlg (vp := toy) toyPrimitives))
-  (c : Certificate (vp := toy) toyPrimitives sadv.toUnforgeableAdv) (s : Summands) (x y : ℝ≥0∞)
+variable (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
+  (c : Certificate (vp := toy) toyPrimitives sadv.toUnforgeableAdversary) (s : Summands)
+  (x y : ℝ≥0∞)
 
 /-! ### The two arms -/
 
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
-    sadv.sameMessageAdvantage ProbCompRuntime.probComp =
+    sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
       (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
         {z | z.1 = true ∧ z.2 = false} +
       (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
@@ -511,33 +512,33 @@ example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPri
   sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
     sadv sel
 
-example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤ 1 :=
+example : sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ 1 :=
   sameMessageAdvantage_le_one ProbCompRuntime.probComp sadv
 
 /-! ### The two equivalences -/
 
 example :
-    sadv.advantage ProbCompRuntime.probComp ≤
-        x + sadv.sameMessageAdvantage ProbCompRuntime.probComp ↔
-      sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp ≤ x :=
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+        x + sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ↔
+      unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary ≤ x :=
   strongAdvantage_le_add_sameMessage_iff sadv x
 
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
-    sadv.advantage ProbCompRuntime.probComp ≤ x +
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ x +
         ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
           {z | z.1 = true ∧ z.2 = false} +
           (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
             {z | z.1 = true ∧ z.2 = true}) ↔
-      sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp ≤ x :=
+      unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary ≤ x :=
   strongAdvantage_le_add_arms_iff sadv x sel
 
 /-! ### The two halves under the strong advantage -/
 
-example : freshRandomizerHalf sadv ≤ sadv.advantage ProbCompRuntime.probComp :=
+example : freshRandomizerHalf sadv ≤ strongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   freshRandomizerHalf_le_strongAdvantage sadv
 
-example : sameRandomizerHalf sadv ≤ sadv.advantage ProbCompRuntime.probComp :=
+example : sameRandomizerHalf sadv ≤ strongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   sameRandomizerHalf_le_strongAdvantage sadv
 
 /-! ### The bound expression -/
@@ -575,36 +576,37 @@ example : s.sufBound toyParams x y =
 
 /-! ### The headline and its three companions -/
 
-example : sadv.advantage ProbCompRuntime.probComp ≤
-    c.summands.bound toy.params + sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+    c.summands.bound toy.params +
+      sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   strongAdvantage_le_bound_add_sameMessage c
 
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
-    sadv.advantage ProbCompRuntime.probComp ≤ c.summands.bound toy.params +
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ c.summands.bound toy.params +
       ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
         {z | z.1 = true ∧ z.2 = false} +
         (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
           {z | z.1 = true ∧ z.2 = true}) :=
   strongAdvantage_le_bound_add_arms c sel
 
-example : sadv.advantage ProbCompRuntime.probComp ≤
+example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
     c.summands.sufBound toy.params (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) :=
   strongAdvantage_le_sufBound c
 
 example (hfresh : freshRandomizerHalf sadv ≤ x) :
-    sadv.advantage ProbCompRuntime.probComp ≤
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
       c.summands.bound toy.params + x + sameRandomizerHalf sadv :=
   strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le c x hfresh
 
 /-! ### Exact randomizer partition -/
 
-example : sadv.sameMessageAdvantage ProbCompRuntime.probComp =
+example : sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
     freshRandomizerHalf sadv + sameRandomizerHalf sadv :=
   sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf sadv
 
 example : s.sufBound toyParams (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
-    s.bound toyParams + sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+    s.bound toyParams + sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   sufBound_eq_bound_add_sameMessage s toyParams sadv
 
 end Pins
@@ -616,8 +618,8 @@ The composition fixture's vacuity canary, at this module's headline.  A closed
 bundle carrying the instances the structure asks for and an arbitrary adversary, from an address key
 and a public seed and no security assumption at all, and the bound it names is at least one.  At
 that certificate `strongAdvantage_le_bound_add_sameMessage` reads
-`sadv.advantage ≤ (something ≥ 1) + residual`, which `MeasureTheory.measure_le_one` gives with extra
-steps.
+`strongUnforgeableAdvantage _ sadv ≤ (something ≥ 1) + residual`, which
+`MeasureTheory.measure_le_one` gives with extra steps.
 
 **The residual does not repair it and cannot.**  By `strongAdvantage_le_add_sameMessage_iff` the
 headline is equivalent to the previous module's `advantage_le_bound` at the same certificate, so its
@@ -676,9 +678,9 @@ def idleUd {ix PkS Tw Msg Msg' Nd : Type}
 /-- It records no challenge, so the selected index misses and its advantage is zero. -/
 theorem idleOpenPre_advantage {ix PkS Tw Msg Nd : Type} [DecidableEq Tw] [DecidableEq Nd]
     [Inhabited Msg] (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_OpenPRE_SourceFinalValidity.Advantage (idleOpenPre prob) = 0 := by
-  unfold SM_DT_OpenPRE_SourceFinalValidity.Advantage
-    SM_DT_OpenPRE_SourceFinalValidity.Experiment
+    SM_DT_OpenPRE_SourceFinalValidity.advantage (idleOpenPre prob) = 0 := by
+  unfold SM_DT_OpenPRE_SourceFinalValidity.advantage
+    SM_DT_OpenPRE_SourceFinalValidity.experiment
   simp [idleOpenPre, SM_DT_OpenPRE_SourceFinalValidity.initializeTargets,
     SourceFinalValidity.State.initial]
 
@@ -702,11 +704,11 @@ theorem idleOpenPre_toDSPR_choose {ix PkS Tw Msg Nd : Type} [DecidableEq Msg] [I
 theorem idleOpenPre_dspr {ix PkS Tw Msg Nd : Type} [Fintype Msg] [DecidableEq Tw]
     [DecidableEq Msg] [DecidableEq Nd] [Inhabited Msg]
     (prob : SM_DT_OpenPRE_SourceFinalValidity.Problem ix PkS Tw Msg Nd) :
-    SM_DT_DSPR_SourceFinalValidity.Advantage
+    SM_DT_DSPR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toDSPR (idleOpenPre prob)) = 0 := by
-  unfold SM_DT_DSPR_SourceFinalValidity.Advantage SM_DT_DSPR_SourceFinalValidity.Success
+  unfold SM_DT_DSPR_SourceFinalValidity.advantage SM_DT_DSPR_SourceFinalValidity.Success
     SM_DT_DSPR_SourceFinalValidity.SPProbability
-    SM_DT_DSPR_SourceFinalValidity.Experiment SM_DT_DSPR_SourceFinalValidity.SPExperiment
+    SM_DT_DSPR_SourceFinalValidity.experiment SM_DT_DSPR_SourceFinalValidity.spExperiment
   simp only [idleOpenPre_toDSPR_choose]
   simp [SM_DT_OpenPRE_SourceFinalValidity.toDSPR, idleOpenPre,
     SourceFinalValidity.State.initial]
@@ -761,8 +763,8 @@ noncomputable def freePreAdv (t : prims.AdrsKey) :
 /-- **Preimage resistance is unconditionally false in this model**, at every validated parameter
 set and every primitive bundle: the tenth summand of `Summands.bound` is exactly one here. -/
 theorem freePreAdv_advantage (t : prims.AdrsKey) :
-    SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) = 1 := by
-  unfold SM_DT_PRE_SourceFinalValidity.Advantage SM_DT_PRE_SourceFinalValidity.Experiment
+    SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) = 1 := by
+  unfold SM_DT_PRE_SourceFinalValidity.advantage SM_DT_PRE_SourceFinalValidity.experiment
   simp [freePreAdv, wotsFPreInverse_eval, SM_DT_PRE_SourceFinalValidity.oracles,
     SM_DT_PRE_SourceFinalValidity.challengeOracle,
     SourceFinalValidity.State.recordTarget, SourceFinalValidity.State.initial,
@@ -783,7 +785,7 @@ variable {vp : ValidatedParams} {prims : Primitives vp.params}
 /-- **A `Certificate` from nothing.**  The two arguments are an address key and a public seed,
 which are data the scheme itself has and not assumptions.  `forsBranch := 0` puts the whole
 obligation on `hypertreeBranch_le`, and `freePreAdv_advantage` discharges it. -/
-noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
+noncomputable def freeCertificate {adv : UnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed) : Certificate prims adv where
   skgAdv := (pure true : OracleComp (PRFScheme.PRFOracleSpec Adrs prims.Y) Bool)
   mkgAdv := (pure true :
@@ -801,24 +803,24 @@ noncomputable def freeCertificate {adv : unforgeableAdv (generalAlg prims)}
   wotsFPreAdv := freePreAdv prims t
   wotsTlAdv := idleTcr _
   xmssHAdv := idleTcr _
-  idealAdvantage := adv.advantage ProbCompRuntime.probComp
+  idealAdvantage := unforgeableAdvantage ProbCompRuntime.probComp adv
   forsBranch := 0
-  hypertreeBranch := adv.advantage ProbCompRuntime.probComp
+  hypertreeBranch := unforgeableAdvantage ProbCompRuntime.probComp adv
   prfHops := le_add_self
   split := by simp
   forsBranch_le := by simp
   hypertreeBranch_le := by
-    calc adv.advantage ProbCompRuntime.probComp ≤ 1 := MeasureTheory.measure_le_one _ _
-      _ = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+    calc unforgeableAdvantage ProbCompRuntime.probComp adv ≤ 1 := MeasureTheory.measure_le_one _ _
+      _ = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
           (freePreAdv_advantage prims t).symm
       _ ≤ _ := le_add_right (le_add_right le_add_self)
 
 /-- **The bound that certificate names is at least one**, so it is the trivial bound. -/
-theorem one_le_freeCertificate_bound {adv : unforgeableAdv (generalAlg prims)}
+theorem one_le_freeCertificate_bound {adv : UnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
     1 ≤ (freeCertificate (adv := adv) t pkSeed).summands.bound vp.params := by
   rw [Certificate.bound_eq]
-  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.Advantage (freePreAdv prims t) :=
+  calc (1 : ℝ≥0∞) = SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t) :=
         (freePreAdv_advantage prims t).symm
     _ ≤ _ := le_add_right (le_add_right le_add_self)
 
@@ -836,13 +838,13 @@ theorem freeCertificate_suf_headline
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
     [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
     [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
-    {sadv : strongUnforgeableAdv (generalAlg prims)}
+    {sadv : StrongUnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
-    sadv.advantage ProbCompRuntime.probComp ≤
-        (freeCertificate (adv := sadv.toUnforgeableAdv) t pkSeed).summands.bound vp.params +
-          sadv.sameMessageAdvantage ProbCompRuntime.probComp ∧
-      1 ≤ (freeCertificate (adv := sadv.toUnforgeableAdv) t pkSeed).summands.bound vp.params +
-          sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+        (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound vp.params +
+          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ∧
+      1 ≤ (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound vp.params +
+          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   ⟨strongAdvantage_le_bound_add_sameMessage _,
     le_trans (one_le_freeCertificate_bound t pkSeed) le_self_add⟩
 
@@ -853,13 +855,13 @@ theorem freeCertificate_sufBound_headline
     [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [SampleableType prims.PkSeed]
     [SampleableType prims.Y] [DecidableEq prims.PkSeed] [DecidableEq prims.AdrsKey]
     [DecidableEq prims.Y] [Fintype prims.Y] [Inhabited prims.Y]
-    {sadv : strongUnforgeableAdv (generalAlg prims)}
+    {sadv : StrongUnforgeableAdversary (generalAlg prims)}
     (t : prims.AdrsKey) (pkSeed : prims.PkSeed) :
-    sadv.advantage ProbCompRuntime.probComp ≤
-        (freeCertificate (adv := sadv.toUnforgeableAdv) t pkSeed).summands.sufBound vp.params
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+        (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound vp.params
           (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) ∧
-      1 ≤ (freeCertificate (adv := sadv.toUnforgeableAdv) t pkSeed).summands.sufBound vp.params
-          (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) := by
+      1 ≤ (freeCertificate (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound
+          vp.params (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) := by
   refine ⟨strongAdvantage_le_sufBound _, ?_⟩
   rw [Summands.sufBound_eq]
   exact le_trans (one_le_freeCertificate_bound t pkSeed) le_self_add
@@ -873,24 +875,24 @@ two new statements at the profile the rest of this file uses, so a change that b
 concrete case is caught too. -/
 
 theorem toyFreeCertificateBound (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
-    (sadv : strongUnforgeableAdv (generalAlg (vp := toy) toyPrimitives)) :
-    sadv.advantage ProbCompRuntime.probComp ≤
+    (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives)) :
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
         (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdv) t pkSeed).summands.bound toy.params +
-          sadv.sameMessageAdvantage ProbCompRuntime.probComp ∧
+          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound toy.params +
+          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ∧
       1 ≤ (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdv) t pkSeed).summands.bound toy.params +
-          sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.bound toy.params +
+          sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   freeCertificate_suf_headline (vp := toy) (prims := toyPrimitives) (sadv := sadv) t pkSeed
 
 theorem toyFreeCertificateSufBound (t : Adrs) (pkSeed : toyPrimitives.PkSeed)
-    (sadv : strongUnforgeableAdv (generalAlg (vp := toy) toyPrimitives)) :
-    sadv.advantage ProbCompRuntime.probComp ≤
+    (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives)) :
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
         (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdv) t pkSeed).summands.sufBound toy.params
+          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound toy.params
           (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) ∧
       1 ≤ (freeCertificate (vp := toy) (prims := toyPrimitives)
-          (adv := sadv.toUnforgeableAdv) t pkSeed).summands.sufBound toy.params
+          (adv := sadv.toUnforgeableAdversary) t pkSeed).summands.sufBound toy.params
           (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) :=
   freeCertificate_sufBound_headline (vp := toy) (prims := toyPrimitives) (sadv := sadv) t pkSeed
 

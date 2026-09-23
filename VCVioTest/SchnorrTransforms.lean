@@ -113,7 +113,7 @@ example (ρ b S : ℕ) :
       (Schnorr.boundedChallenge 7 3) Unit ρ b S 3 3 ()
 
 example (ρ b S Q : ℕ) (hρ : 0 < ρ)
-    (adv : Fischlin.KnowledgeSoundnessAdv (Stmt := ZMod 7) (Commit := ZMod 7)
+    (adv : Fischlin.KnowledgeSoundnessAdversary (Stmt := ZMod 7) (Commit := ZMod 7)
       (Chal := Fin 3) (Resp := ZMod 7) ρ b Unit)
     (hQ : ∀ pk msg, Fischlin.ROQueryBound ρ b Unit (adv.run pk msg) Q) :
     Pr{

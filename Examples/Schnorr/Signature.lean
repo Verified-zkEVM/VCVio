@@ -40,9 +40,9 @@ Given `Module F G`, a generator `g : G`, and a bijection
 
 ## Security: the bound
 
-Let `ε := A.advantage` be the EUF-CMA advantage of an adversary `A` making at
-most `qS` signing-oracle queries and `qH` random-oracle queries against the
-random-oracle runtime `FiatShamir.runtime`. Define
+Let `ε := unforgeableAdvantage (FiatShamir.runtime M) A` be the EUF-CMA advantage of an
+adversary `A` making at most `qS` signing-oracle queries and `qH` random-oracle queries
+against the random-oracle runtime `FiatShamir.runtime`. Define
 
 ```
 ε' := ε  -  qS · (qS + qH) / |F|
@@ -166,7 +166,7 @@ variable [DecidableEq F] [SampleableType G]
 challenge public key. The generator argument of `DLogAdversary` is ignored because the
 reduction is specialized to `g`. -/
 def dlogReduction (g : G) (M : Type) [DecidableEq M]
-    (adv : SignatureAlg.unforgeableAdv (signature F G g M)) (qH : ℕ) :
+    (adv : SignatureAlg.UnforgeableAdversary (signature F G g M)) (qH : ℕ) :
     DLogAdversary F G :=
   letI : Inhabited F := ⟨0⟩
   fun _ pk => FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable F g) M
@@ -181,8 +181,8 @@ The bound is
 ε' := ε  -  qS · (qS + qH) / |F|,
 ```
 
-where `ε := adv.advantage (FiatShamir.runtime M)` is the EUF-CMA advantage and
-`qS`, `qH` upper-bound the signing-oracle and random-oracle queries. This is
+where `ε := SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv` is the EUF-CMA
+advantage and `qS`, `qH` upper-bound the signing-oracle and random-oracle queries. This is
 the textbook Pointcheval-Stern denominator: the Fiat-Shamir reduction wraps
 the source adversary so the forgery's hash point is always among the forkable
 positions, and the framework's `Fork.forkPoint qH` indexing in `Fin (qH + 1)`
@@ -203,11 +203,12 @@ via the conversion `hardRelationExp_dlogGenerable_eq_dlogExp`. -/
 theorem signature_euf_cma [Fintype F] (g : G)
     (hg : Function.Bijective (· • g : F → G))
     (M : Type) [DecidableEq M]
-    (adv : SignatureAlg.unforgeableAdv (signature F G g M))
+    (adv : SignatureAlg.UnforgeableAdversary (signature F G g M))
     (qS qH : ℕ)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound (M := M) (Commit := G) (Chal := F)
       (S' := G × F) (oa := adv.main pk) qS qH) :
-    let eps := adv.advantage (FiatShamir.runtime (Commit := G) (Chal := F) M) -
+    let eps :=
+      SignatureAlg.unforgeableAdvantage (FiatShamir.runtime (Commit := G) (Chal := F) M) adv -
       ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
     eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
       Pr[= true | dlogExp g (dlogReduction F G g M adv qH)] := by

@@ -139,7 +139,7 @@ def findOracles [Inhabited M] (targets : List (Tweak × M)) :
 /-- The exact final-validity SM-DT-OpenPRE experiment. The committed tweak list is truncated before
 target sampling. The selected index must exist, must never have been opened, and must name a valid
 preimage of the corresponding recorded image. -/
-noncomputable def Experiment [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
+noncomputable def experiment [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
     {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
@@ -157,10 +157,10 @@ noncomputable def Experiment [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
         decide (prob.th.eval pk t m = prob.th.eval pk t x)
 
 /-- The SM-DT-OpenPRE success probability. -/
-noncomputable def Advantage [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
+noncomputable def advantage [DecidableEq Tweak] [DecidableEq Y] [Inhabited M]
     {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
-  𝒟[Experiment adv] {true}
+  𝒟[experiment adv] {true}
 
 /-! ## Run-level final-validity correspondence -/
 
@@ -196,7 +196,7 @@ theorem initializeTargets_preservesInv (prob : Problem ι PkSeed Tweak M Y) (pk 
 /-- The sticky bit decides the final predicate on every state reachable through both monitor
 phases: the commitment phase's collection queries followed by target sampling on the retained
 prefix. The inversion phase carries its own opening state and never reaches the monitor, so this is
-exactly the state whose `valid` field `Experiment` reads. -/
+exactly the state whose `valid` field `experiment` reads. -/
 theorem valid_eq_decide_valid_of_reachable {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) (pk : PkSeed)
     {w : (adv.State × List Tweak) × State Tweak M}
@@ -220,6 +220,10 @@ theorem openOracle_run :
     (openOracle targets j).run opened =
       pure ((targets[j]?.map Prod.snd).getD default, opened ++ [j]) := by
   simp [openOracle]
+
+-- Declaration-specific naming exceptions for this game's underscore-separated names.
+attribute [nolint defsWithUnderscore]
+  experiment advantage
 
 end SM_DT_OpenPRE_SourceFinalValidity
 

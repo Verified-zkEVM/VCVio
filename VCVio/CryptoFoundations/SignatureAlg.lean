@@ -182,7 +182,9 @@ scheme's ambient oracles together with a signing oracle — and outputs a candid
 `(message, signature)`.
 
 The `_sigAlg` parameter indexes the adversary by a specific scheme's types but is not stored. -/
-structure unforgeableAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+structure UnforgeableAdversary (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+  /-- Given the public key, output a candidate forgery using the ambient oracles and the
+  signing oracle. -/
   main (pk : PK) : OracleComp (spec + (M →ₒ S)) (M × S)
 
 open scoped Classical in
@@ -191,7 +193,7 @@ the adversary successfully forged a signature. The ambient oracle family is forw
 the signing oracle is logged, and the final check requires both signature validity and that the
 forged message was never submitted to the signing oracle. -/
 noncomputable def unforgeableExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : UnforgeableAdversary sigAlg) :=
   runtime.evalDist do
     let (pk, sk) ← sigAlg.keygen
     let ((msg, σ), log) ← sigAlg.runWithSigningOracle pk sk (adv.main pk)
@@ -199,33 +201,33 @@ noncomputable def unforgeableExp {sigAlg : SignatureAlg (OracleComp spec) M PK S
     return !log.wasQueried msg && verified
 
 instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : UnforgeableAdversary sigAlg) :
     MeasureTheory.IsSubprobabilityMeasure (unforgeableExp runtime adv) := by
   unfold unforgeableExp
   infer_instance
 
 /-- The success probability of a CMA adversary in the unforgeability experiment. -/
-noncomputable def unforgeableAdv.advantage {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+noncomputable def unforgeableAdvantage {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : unforgeableAdv sigAlg) : ℝ≥0∞ := unforgeableExp runtime adv {true}
+    (adv : UnforgeableAdversary sigAlg) : ℝ≥0∞ := unforgeableExp runtime adv {true}
 
 /-- The CMA experiment with the freshness check dropped: the same body as `unforgeableExp`
 but the final return is just the `verified` bit, ignoring whether the forged message was
 queried by the adversary to the signing oracle.
 
 Without the freshness check, an adversary trivially wins by replaying any received
-signature; the bound `adv.advantage ≤ Pr[unforgeableExpNoFresh ⇒ true]` (see
-`unforgeableAdv.advantage_le_unforgeableExpNoFresh`) is the first game-hop
-in standard CMA-to-NMA reductions. -/
+signature; the bound `unforgeableAdvantage runtime adv ≤ Pr[unforgeableExpNoFresh ⇒ true]`
+(see `unforgeableAdvantage_le_unforgeableExpNoFresh`) is the first game-hop in standard
+CMA-to-NMA reductions. -/
 noncomputable def unforgeableExpNoFresh {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : UnforgeableAdversary sigAlg) :=
   runtime.evalDist do
     let (pk, sk) ← sigAlg.keygen
     let ((msg, σ), _) ← sigAlg.runWithSigningOracle pk sk (adv.main pk)
     sigAlg.verify pk msg σ
 
 instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg) :
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : UnforgeableAdversary sigAlg) :
     MeasureTheory.IsSubprobabilityMeasure (unforgeableExpNoFresh runtime adv) := by
   unfold unforgeableExpNoFresh
   infer_instance
@@ -236,11 +238,11 @@ probability of the same experiment with the freshness check dropped.
 
 Both experiments factor through a shared prefix `joint`. The runtime map law pushes their final
 Boolean projections into ordinary measurable-image events. -/
-lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
+lemma unforgeableAdvantage_le_unforgeableExpNoFresh
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : unforgeableAdv sigAlg) :
-    adv.advantage runtime ≤ unforgeableExpNoFresh runtime adv {true} := by
+    (adv : UnforgeableAdversary sigAlg) :
+    unforgeableAdvantage runtime adv ≤ unforgeableExpNoFresh runtime adv {true} := by
   let : MeasurableSpace (M × QueryLog (M →ₒ S) × Bool) := ⊤
   let joint : OracleComp spec (M × QueryLog (M →ₒ S) × Bool) := do
     let (pk, sk) ← sigAlg.keygen
@@ -260,7 +262,7 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
     rw [unforgeableExpNoFresh, ← runtime.evalDist_bind_pure joint verified hverified]
     congr 1
     simp only [verified, joint, monad_norm]
-  rw [unforgeableAdv.advantage, hExp, hNoFresh,
+  rw [unforgeableAdvantage, hExp, hNoFresh,
     Measure.map_apply hsuccess (measurableSet_singleton true),
     Measure.map_apply hverified (measurableSet_singleton true)]
   apply measure_mono
@@ -306,7 +308,9 @@ end signingLogContains
 /-- A SUF-CMA (strong unforgeability under chosen-message attack) adversary. As in EUF-CMA it
 receives the public key and has access to the scheme's ambient oracles plus the signing oracle,
 but its final pair is fresh when that exact `(message, signature)` pair was never returned. -/
-structure strongUnforgeableAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+structure StrongUnforgeableAdversary (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+  /-- Given the public key, output a candidate forgery using the ambient oracles and the
+  signing oracle. -/
   main (pk : PK) : OracleComp (spec + (M →ₒ S)) (M × S)
 
 open scoped Classical in
@@ -315,7 +319,7 @@ oracle logs every successful returned `(message, signature)` pair. The adversary
 when its final pair verifies and that pair does not occur in the returned-pair log. -/
 noncomputable def strongUnforgeableGame
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (adv : strongUnforgeableAdv sigAlg) : OracleComp spec Bool := do
+    (adv : StrongUnforgeableAdversary sigAlg) : OracleComp spec Bool := do
   let (pk, sk) ← sigAlg.keygen
   let ((msg, σ), log) ← sigAlg.runWithSigningOracle pk sk (adv.main pk)
   let verified ← sigAlg.verify pk msg σ
@@ -325,11 +329,11 @@ noncomputable def strongUnforgeableGame
 noncomputable def strongUnforgeableExp
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) : MeasureTheory.Measure Bool :=
+    (adv : StrongUnforgeableAdversary sigAlg) : MeasureTheory.Measure Bool :=
   runtime.evalDist (strongUnforgeableGame adv)
 
 instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) :
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : StrongUnforgeableAdversary sigAlg) :
     MeasureTheory.IsSubprobabilityMeasure (strongUnforgeableExp runtime adv) := by
   unfold strongUnforgeableExp
   infer_instance
@@ -337,23 +341,24 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
 /-- The SUF experiment exposes the runtime's measure semantics directly. -/
 lemma strongUnforgeableExp_apply_singleton
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : StrongUnforgeableAdversary sigAlg)
+    (b : Bool) :
     strongUnforgeableExp runtime adv {b} =
       runtime.evalDist (strongUnforgeableGame adv) {b} := rfl
 
 /-- The SUF-CMA success probability: the probability of outputting a valid pair not previously
 returned by the signing oracle. -/
-noncomputable def strongUnforgeableAdv.advantage
+noncomputable def strongUnforgeableAdvantage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
+    (adv : StrongUnforgeableAdversary sigAlg) : ℝ≥0∞ :=
   strongUnforgeableExp runtime adv {true}
 
 /-- Forget pair freshness and regard a strong-unforgeability adversary as an ordinary
 EUF-CMA adversary.  The oracle interface and adversary program are unchanged. -/
-def strongUnforgeableAdv.toUnforgeableAdv
+def StrongUnforgeableAdversary.toUnforgeableAdversary
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (adv : strongUnforgeableAdv sigAlg) : unforgeableAdv sigAlg where
+    (adv : StrongUnforgeableAdversary sigAlg) : UnforgeableAdversary sigAlg where
   main := adv.main
 
 open scoped Classical in
@@ -363,7 +368,7 @@ intentionally defined without assigning it to a cryptographic assumption; doing 
 scheme-specific (for example, it may require signature binding or a rerandomization argument). -/
 noncomputable def sameMessageStrongUnforgeableGame
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (adv : strongUnforgeableAdv sigAlg) : OracleComp spec Bool := do
+    (adv : StrongUnforgeableAdversary sigAlg) : OracleComp spec Bool := do
   let (pk, sk) ← sigAlg.keygen
   let ((msg, σ), log) ← sigAlg.runWithSigningOracle pk sk (adv.main pk)
   let verified ← sigAlg.verify pk msg σ
@@ -373,11 +378,11 @@ noncomputable def sameMessageStrongUnforgeableGame
 noncomputable def sameMessageStrongUnforgeableExp
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) : MeasureTheory.Measure Bool :=
+    (adv : StrongUnforgeableAdversary sigAlg) : MeasureTheory.Measure Bool :=
   runtime.evalDist (sameMessageStrongUnforgeableGame adv)
 
 instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) :
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : StrongUnforgeableAdversary sigAlg) :
     MeasureTheory.IsSubprobabilityMeasure (sameMessageStrongUnforgeableExp runtime adv) := by
   unfold sameMessageStrongUnforgeableExp
   infer_instance
@@ -385,16 +390,17 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
 /-- The same-message experiment exposes the runtime's measure semantics directly. -/
 lemma sameMessageStrongUnforgeableExp_apply_singleton
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) (b : Bool) :
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : StrongUnforgeableAdversary sigAlg)
+    (b : Bool) :
     sameMessageStrongUnforgeableExp runtime adv {b} =
       runtime.evalDist (sameMessageStrongUnforgeableGame adv) {b} := rfl
 
 /-- Probability of the same-message, new-signature event in the strong-unforgeability
 experiment. -/
-noncomputable def strongUnforgeableAdv.sameMessageAdvantage
+noncomputable def sameMessageStrongUnforgeableAdvantage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) : ℝ≥0∞ :=
+    (adv : StrongUnforgeableAdversary sigAlg) : ℝ≥0∞ :=
   sameMessageStrongUnforgeableExp runtime adv {true}
 
 /-- Quantitative scheme property needed in addition to EUF-CMA for strong unforgeability: every
@@ -406,11 +412,12 @@ information-theoretic property. It is satisfiable with small `ε` only for schem
 signatures are (statistically close to) unique per message, such as unique-signature schemes.
 For schemes where an unbounded adversary can find a second valid signature — hash-based schemes
 like SLH-DSA included — no `ε < 1` can hold, and quantitative results should instead consume the
-per-adversary partition `strongUnforgeableAdv.advantage_eq_euf_add_sameMessage` directly,
+per-adversary partition `strongUnforgeableAdvantage_eq_euf_add_sameMessage` directly,
 bounding the same-message term for the specific reduction adversary at hand. -/
 def SameMessageBinding (sigAlg : SignatureAlg (OracleComp spec) M PK SK S)
     (runtime : ProbCompRuntime (OracleComp spec)) (ε : ℝ≥0∞) : Prop :=
-  ∀ adv : strongUnforgeableAdv sigAlg, adv.sameMessageAdvantage runtime ≤ ε
+  ∀ adv : StrongUnforgeableAdversary sigAlg,
+    sameMessageStrongUnforgeableAdvantage runtime adv ≤ ε
 
 open scoped Classical in
 /-- **Exact generic SUF-to-EUF partition.** Every strong forgery either uses a message never queried
@@ -420,12 +427,13 @@ event, so SUF-CMA equals EUF-CMA plus precisely the latter, scheme-specific same
 
 The proof uses the runtime's measure map law and partitions the shared execution measure into two
 disjoint measurable events. -/
-lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
+lemma strongUnforgeableAdvantage_eq_euf_add_sameMessage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) :
-    adv.advantage runtime =
-      adv.toUnforgeableAdv.advantage runtime + adv.sameMessageAdvantage runtime := by
+    (adv : StrongUnforgeableAdversary sigAlg) :
+    strongUnforgeableAdvantage runtime adv =
+      unforgeableAdvantage runtime adv.toUnforgeableAdversary +
+        sameMessageStrongUnforgeableAdvantage runtime adv := by
   let : MeasurableSpace (M × S × QueryLog (M →ₒ S) × Bool) := ⊤
   let joint : OracleComp spec (M × S × QueryLog (M →ₒ S) × Bool) := do
     let (pk, sk) ← sigAlg.keygen
@@ -445,17 +453,18 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
     rw [strongUnforgeableExp, ← runtime.evalDist_bind_pure joint suf hsuf]
     congr 1
     simp only [strongUnforgeableGame, suf, joint, monad_norm]
-  have hEuf : unforgeableExp runtime adv.toUnforgeableAdv = (runtime.evalDist joint).map euf := by
+  have hEuf :
+      unforgeableExp runtime adv.toUnforgeableAdversary = (runtime.evalDist joint).map euf := by
     rw [unforgeableExp, ← runtime.evalDist_bind_pure joint euf heuf]
     congr 1
-    simp only [euf, strongUnforgeableAdv.toUnforgeableAdv, joint, monad_norm]
+    simp only [euf, StrongUnforgeableAdversary.toUnforgeableAdversary, joint, monad_norm]
   have hSame :
       sameMessageStrongUnforgeableExp runtime adv = (runtime.evalDist joint).map same := by
     rw [sameMessageStrongUnforgeableExp, ← runtime.evalDist_bind_pure joint same hsame]
     congr 1
     simp only [sameMessageStrongUnforgeableGame, same, joint, monad_norm]
-  rw [strongUnforgeableAdv.advantage, unforgeableAdv.advantage,
-    strongUnforgeableAdv.sameMessageAdvantage, hSuf, hEuf, hSame,
+  rw [strongUnforgeableAdvantage, unforgeableAdvantage,
+    sameMessageStrongUnforgeableAdvantage, hSuf, hEuf, hSame,
     Measure.map_apply hsuf (measurableSet_singleton true),
     Measure.map_apply heuf (measurableSet_singleton true),
     Measure.map_apply hsame (measurableSet_singleton true)]
@@ -479,22 +488,24 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
   rw [hpartition, measure_union hdisjoint MeasurableSet.of_discrete]
 
 /-- Convenient inequality corollary of the exact SUF-to-EUF partition. -/
-lemma strongUnforgeableAdv.advantage_le_euf_add_sameMessage
+lemma strongUnforgeableAdvantage_le_euf_add_sameMessage
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : strongUnforgeableAdv sigAlg) :
-    adv.advantage runtime ≤
-      adv.toUnforgeableAdv.advantage runtime + adv.sameMessageAdvantage runtime :=
-  (adv.advantage_eq_euf_add_sameMessage runtime).le
+    (adv : StrongUnforgeableAdversary sigAlg) :
+    strongUnforgeableAdvantage runtime adv ≤
+      unforgeableAdvantage runtime adv.toUnforgeableAdversary +
+        sameMessageStrongUnforgeableAdvantage runtime adv :=
+  (strongUnforgeableAdvantage_eq_euf_add_sameMessage runtime adv).le
 
 /-- SUF-CMA from EUF-CMA plus a quantitative same-message binding property. -/
-lemma strongUnforgeableAdv.advantage_le_euf_add_of_sameMessageBinding
+lemma strongUnforgeableAdvantage_le_euf_add_of_sameMessageBinding
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
     {ε : ℝ≥0∞} (hbinding : sigAlg.SameMessageBinding runtime ε)
-    (adv : strongUnforgeableAdv sigAlg) :
-    adv.advantage runtime ≤ adv.toUnforgeableAdv.advantage runtime + ε := by
-  rw [adv.advantage_eq_euf_add_sameMessage runtime]
+    (adv : StrongUnforgeableAdversary sigAlg) :
+    strongUnforgeableAdvantage runtime adv ≤
+      unforgeableAdvantage runtime adv.toUnforgeableAdversary + ε := by
+  rw [strongUnforgeableAdvantage_eq_euf_add_sameMessage runtime adv]
   exact add_le_add le_rfl (hbinding adv)
 
 end strongUnforgeable
@@ -504,27 +515,28 @@ section eufNma
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
 
 /-- An EUF-NMA (existential unforgeability under no-message attack) adversary for a
-signature scheme. Unlike a CMA adversary (`unforgeableAdv`), the NMA adversary has NO
+signature scheme. Unlike a CMA adversary (`UnforgeableAdversary`), the NMA adversary has NO
 access to a signing oracle — it must forge a signature having only seen the public key.
 
 In the random oracle model, the adversary still has access to the scheme's oracle spec
 (e.g., the random oracle `H`), but never sees any legitimately generated signatures. -/
-structure eufNmaAdv (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+structure EufNmaAdversary (_sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+  /-- Given the public key, output a candidate forgery using only the ambient oracles. -/
   main (pk : PK) : OracleComp spec (M × S)
 
 /-- The EUF-NMA experiment: generate a key pair, give the public key to the adversary
 (with no signing oracle), and check whether the adversary produced a valid forgery. -/
 noncomputable def eufNmaExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : eufNmaAdv sigAlg) :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : EufNmaAdversary sigAlg) :=
   runtime.evalDist do
     let (pk, _) ← sigAlg.keygen
     let (msg, σ) ← adv.main pk
     sigAlg.verify pk msg σ
 
 /-- The success probability of an EUF-NMA adversary. -/
-noncomputable def eufNmaAdv.advantage {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+noncomputable def eufNmaAdvantage {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : eufNmaAdv sigAlg) : ℝ≥0∞ := eufNmaExp runtime adv {true}
+    (adv : EufNmaAdversary sigAlg) : ℝ≥0∞ := eufNmaExp runtime adv {true}
 
 end eufNma
 
@@ -541,29 +553,31 @@ hash entries for signing simulation into the cache, while forwarding the inner a
 hash queries to the external oracle. The forking lemma (`Fork.fork`) can then replay the
 external oracle queries via seeded simulation, while the programmed entries are preserved
 deterministically. -/
-structure managedRoNmaAdv (sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+structure ManagedRoNmaAdversary (sigAlg : SignatureAlg (OracleComp spec) M PK SK S) where
+  /-- Given the public key, output a candidate forgery together with the cache of programmed
+  random-oracle entries. -/
   main (pk : PK) : OracleComp spec ((M × S) × spec.QueryCache)
 
 /-- The managed-RO NMA experiment: generate a key pair, run the adversary to get a forgery
 and a `QueryCache`, then verify the forgery through `withCacheOverlay` so that programmed
 entries take priority over the real oracle. -/
 noncomputable def managedRoNmaExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : managedRoNmaAdv sigAlg) :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : ManagedRoNmaAdversary sigAlg) :=
   runtime.evalDist do
     let (pk, _) ← sigAlg.keygen
     let ((msg, σ), cache) ← adv.main pk
     withCacheOverlay cache (sigAlg.verify pk msg σ)
 
 /-- The success probability of a managed-RO NMA adversary. -/
-noncomputable def managedRoNmaAdv.advantage {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+noncomputable def managedRoNmaAdvantage {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : managedRoNmaAdv sigAlg) : ℝ≥0∞ := managedRoNmaExp runtime adv {true}
+    (adv : ManagedRoNmaAdversary sigAlg) : ℝ≥0∞ := managedRoNmaExp runtime adv {true}
 
 /-- Embed a standard NMA adversary as a managed-RO NMA adversary with an empty cache.
 The empty cache means all queries fall through to the real oracle, recovering the
 standard NMA experiment. -/
-def eufNmaAdv.toManagedRoNmaAdv {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (adv : eufNmaAdv sigAlg) : managedRoNmaAdv sigAlg where
+def EufNmaAdversary.toManagedRoNmaAdversary {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
+    (adv : EufNmaAdversary sigAlg) : ManagedRoNmaAdversary sigAlg where
   main pk := (·, ∅) <$> adv.main pk
 
 end managedRoNma

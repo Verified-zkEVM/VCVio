@@ -66,7 +66,7 @@ variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
 /-- Executing the adversary and fair-coin handlers yields the original ElGamal reduction,
 including its adaptive sampling behavior. -/
 theorem executeHandlers_reduction
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (inner : ℕ)
     (himpl : ∀ a, IsTotalQueryBound
       ((oneTimeINDCPAImpl (gen := gen) adv + oneTimeDDHFairCoinImpl) a) inner)

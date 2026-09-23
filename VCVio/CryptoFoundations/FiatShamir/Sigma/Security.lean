@@ -66,12 +66,12 @@ theorem euf_cma_to_nma
     (hHVZK : σ.HVZK simTranscript ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simTranscript β)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    adv.advantage (runtime M) ≤
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
       Fork.advantage σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH +
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
         (qS : ENNReal) * (qS + qH) * β :=
@@ -96,7 +96,7 @@ theorem euf_nma_bound
     (hss : σ.SpeciallySound)
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
     [Fintype Chal] [Inhabited Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
@@ -136,12 +136,12 @@ theorem euf_cma_bound
     (hhvzk : σ.HVZK simTranscript ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simTranscript β)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    let eps := adv.advantage (runtime M) -
+    let eps := SignatureAlg.unforgeableAdvantage (runtime M) adv -
       (ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
         (qS : ENNReal) * (qS + qH) * β)
     eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤

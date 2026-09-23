@@ -35,7 +35,7 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 /-- Run the prover, verify with the continuing oracle, then extract from the pre-verification
 log. The result retains the verdict and the actual optional witness. -/
 @[expose]
-def knowledgeRun (adv : KnowledgeSoundnessAdv (Stmt := Stmt)
+def knowledgeRun (adv : KnowledgeSoundnessAdversary (Stmt := Stmt)
     (Commit := Commit) (Chal := Chal) (Resp := Resp) ρ b M)
     (x : Stmt) (msg : M) : ProbComp (Bool × Option Wit) := do
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
@@ -48,7 +48,7 @@ def knowledgeRun (adv : KnowledgeSoundnessAdv (Stmt := Stmt)
   return (verified, extracted)
 
 /-- The bad projection of the joint run is exactly the existing soundness experiment. -/
-theorem knowledgeRun_bad (adv : KnowledgeSoundnessAdv ρ b M) (x : Stmt) (msg : M) :
+theorem knowledgeRun_bad (adv : KnowledgeSoundnessAdversary ρ b M) (x : Stmt) (msg : M) :
     (fun z : Bool × Option Wit => z.1 && !(z.2.any (rel x))) <$>
         knowledgeRun σ hr ρ b S M adv x msg =
       knowledgeSoundnessExp σ hr ρ b S M adv.run x msg := by
@@ -59,7 +59,7 @@ theorem knowledgeRun_bad (adv : KnowledgeSoundnessAdv ρ b M) (x : Stmt) (msg : 
 minus the single-proof knowledge error. -/
 theorem extraction_success_ge_acceptance_sub_error
     (hss : σ.SpeciallySound) (hur : σ.UniqueResponses)
-    (adv : KnowledgeSoundnessAdv ρ b M) (Q : ℕ) (hρ : 0 < ρ)
+    (adv : KnowledgeSoundnessAdversary ρ b M) (Q : ℕ) (hρ : 0 < ρ)
     (hQ : ∀ x msg, ROQueryBound ρ b M (adv.run x msg) Q) (x : Stmt) (msg : M) :
     Pr{let z ← knowledgeRun σ hr ρ b S M adv x msg}[z.1 = true] -
         knowledgeSoundnessError Q ρ b S ≤

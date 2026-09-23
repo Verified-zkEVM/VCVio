@@ -33,28 +33,28 @@ def twoSignatureAlg : SignatureAlg ProbComp Bool Unit Unit ToySignature where
   verify _ msg σ := pure (σ.1 == msg)
 
 /-- Query one signature and replay the exact pair. -/
-def replayAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
+def replayAdv : SignatureAlg.StrongUnforgeableAdversary twoSignatureAlg where
   main _ := do
     let σ ← (unifSpec + (Bool →ₒ ToySignature)).query (Sum.inr false)
     return (false, σ)
 
 /-- Query a signature, then flip its ignored rerandomization bit. -/
-def rerandomizeAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
+def rerandomizeAdv : SignatureAlg.StrongUnforgeableAdversary twoSignatureAlg where
   main _ := do
     let _ ← (unifSpec + (Bool →ₒ ToySignature)).query (Sum.inr false)
     return (false, (false, true))
 
 /-- Forge directly on a fresh message without calling the signing oracle. -/
-def freshMessageAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
+def freshMessageAdv : SignatureAlg.StrongUnforgeableAdversary twoSignatureAlg where
   main _ := pure (true, (true, true))
 
 /-- Return a fresh-message pair whose signature encodes the wrong message. -/
-def invalidFreshMessageAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
+def invalidFreshMessageAdv : SignatureAlg.StrongUnforgeableAdversary twoSignatureAlg where
   main _ := pure (true, (false, true))
 
 /-- Query one message, then return a fresh pair for that message whose signature encodes the
 other message. This reaches the same-message branch but must still fail verification. -/
-def invalidSameMessageAdv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg where
+def invalidSameMessageAdv : SignatureAlg.StrongUnforgeableAdversary twoSignatureAlg where
   main _ := do
     let _ ← (unifSpec + (Bool →ₒ ToySignature)).query (Sum.inr false)
     return (false, (true, true))
@@ -85,10 +85,10 @@ example :
 
 /-- The ENNReal advantage endpoint assigns zero to replay and one to the two valid fresh-pair
 forgeries in this deterministic scheme. -/
-example : replayAdv.advantage ProbCompRuntime.probComp = 0 ∧
-    rerandomizeAdv.advantage ProbCompRuntime.probComp = 1 ∧
-    freshMessageAdv.advantage ProbCompRuntime.probComp = 1 := by
-  simp [SignatureAlg.strongUnforgeableAdv.advantage,
+example : SignatureAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp replayAdv = 0 ∧
+    SignatureAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp rerandomizeAdv = 1 ∧
+    SignatureAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp freshMessageAdv = 1 := by
+  simp [SignatureAlg.strongUnforgeableAdvantage,
     SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
     replayAdv, rerandomizeAdv, freshMessageAdv,
     twoSignatureAlg, SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle,
@@ -108,8 +108,9 @@ example :
 pins exact-pair freshness independently in the residual experiment and its advantage endpoint. -/
 example :
     SignatureAlg.sameMessageStrongUnforgeableExp ProbCompRuntime.probComp replayAdv {true} = 0 ∧
-      replayAdv.sameMessageAdvantage ProbCompRuntime.probComp = 0 := by
-  simp [SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage,
+      SignatureAlg.sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp
+        replayAdv = 0 := by
+  simp [SignatureAlg.sameMessageStrongUnforgeableAdvantage,
     SignatureAlg.sameMessageStrongUnforgeableExp, replayAdv, twoSignatureAlg,
     SignatureAlg.sameMessageStrongUnforgeableGame,
     SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
@@ -130,40 +131,44 @@ example :
 an already signed message contributes only to the same-message term, while a fresh-message
 forgery contributes only to EUF. -/
 example :
-    rerandomizeAdv.toUnforgeableAdv.advantage ProbCompRuntime.probComp = 0 ∧
-      rerandomizeAdv.sameMessageAdvantage ProbCompRuntime.probComp = 1 ∧
-      freshMessageAdv.toUnforgeableAdv.advantage ProbCompRuntime.probComp = 1 ∧
-      freshMessageAdv.sameMessageAdvantage ProbCompRuntime.probComp = 0 := by
-  simp [SignatureAlg.unforgeableAdv.advantage, SignatureAlg.unforgeableExp,
-    SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage,
+    SignatureAlg.unforgeableAdvantage ProbCompRuntime.probComp
+        rerandomizeAdv.toUnforgeableAdversary = 0 ∧
+      SignatureAlg.sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp
+        rerandomizeAdv = 1 ∧
+      SignatureAlg.unforgeableAdvantage ProbCompRuntime.probComp
+        freshMessageAdv.toUnforgeableAdversary = 1 ∧
+      SignatureAlg.sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp
+        freshMessageAdv = 0 := by
+  simp [SignatureAlg.unforgeableAdvantage, SignatureAlg.unforgeableExp,
+    SignatureAlg.sameMessageStrongUnforgeableAdvantage,
     SignatureAlg.sameMessageStrongUnforgeableExp,
     SignatureAlg.sameMessageStrongUnforgeableGame,
-    SignatureAlg.strongUnforgeableAdv.toUnforgeableAdv,
+    SignatureAlg.StrongUnforgeableAdversary.toUnforgeableAdversary,
     rerandomizeAdv, freshMessageAdv, twoSignatureAlg, SignatureAlg.runWithSigningOracle,
     SignatureAlg.signingOracle,
     SignatureAlg.signingLogContains, QueryLog.wasQueried,
     ProbCompRuntime.probComp_evalDist]
 
 /-- Direct executable-runtime consumer of the public exact SUF partition. -/
-example (adv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg) :
-    adv.advantage ProbCompRuntime.probComp =
-      adv.toUnforgeableAdv.advantage ProbCompRuntime.probComp +
-        adv.sameMessageAdvantage ProbCompRuntime.probComp :=
-  adv.advantage_eq_euf_add_sameMessage ProbCompRuntime.probComp
+example (adv : SignatureAlg.StrongUnforgeableAdversary twoSignatureAlg) :
+    SignatureAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp adv =
+      SignatureAlg.unforgeableAdvantage ProbCompRuntime.probComp adv.toUnforgeableAdversary +
+        SignatureAlg.sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp adv :=
+  SignatureAlg.strongUnforgeableAdvantage_eq_euf_add_sameMessage ProbCompRuntime.probComp adv
 
 /-- The toy scheme satisfies the vacuous unit upper bound for the same-message residual. -/
 private lemma twoSignatureBinding :
     twoSignatureAlg.SameMessageBinding ProbCompRuntime.probComp 1 := by
   intro adv
-  unfold SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage
+  unfold SignatureAlg.sameMessageStrongUnforgeableAdvantage
     SignatureAlg.sameMessageStrongUnforgeableExp
   exact MeasureTheory.measure_le_one _ _
 
 /-- Direct consumer of the quantitative `SameMessageBinding` packaging. -/
-example (adv : SignatureAlg.strongUnforgeableAdv twoSignatureAlg) :
-    adv.advantage ProbCompRuntime.probComp ≤
-      adv.toUnforgeableAdv.advantage ProbCompRuntime.probComp + 1 :=
-  adv.advantage_le_euf_add_of_sameMessageBinding ProbCompRuntime.probComp
-    twoSignatureBinding
+example (adv : SignatureAlg.StrongUnforgeableAdversary twoSignatureAlg) :
+    SignatureAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp adv ≤
+      SignatureAlg.unforgeableAdvantage ProbCompRuntime.probComp adv.toUnforgeableAdversary + 1 :=
+  SignatureAlg.strongUnforgeableAdvantage_le_euf_add_of_sameMessageBinding
+    ProbCompRuntime.probComp twoSignatureBinding adv
 
 end SignatureAlgTest

@@ -26,7 +26,7 @@ namespace VCVioTest.BR93Measure
 variable {PK SK Rand M : Type} [Inhabited Rand] [DecidableEq Rand]
   [SampleableType Rand] [SampleableType M] [AddCommGroup M]
   (tdp : TrapdoorPermutation PK SK Rand)
-  (adv : CPA_Adv PK Rand M)
+  (adv : CPA_Adversary PK Rand M)
 
 example [unifSpec.toPFunctor.IsMeasureSpec] :
     PFunctor.FreeM.denote (badEventExp tdp adv) {true} ≤

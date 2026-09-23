@@ -125,50 +125,50 @@ private lemma run_clashCollection :
   rfl
 
 private lemma experiment_predictCollision :
-    SM_DT_DSPR_SourceFinalValidity.Experiment predictCollision = pure true := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.Experiment, collidingProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.experiment predictCollision = pure true := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.experiment, collidingProblem_seedGen, pure_bind]
   rw [run_predictCollision]
   rfl
 
 private lemma baseline_predictCollision :
-    SM_DT_DSPR_SourceFinalValidity.SPExperiment predictCollision = pure true := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.SPExperiment, collidingProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.spExperiment predictCollision = pure true := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.spExperiment, collidingProblem_seedGen, pure_bind]
   rw [run_predictCollision]
   rfl
 
 private lemma experiment_predictNoCollision :
-    SM_DT_DSPR_SourceFinalValidity.Experiment predictNoCollision = pure true := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.Experiment, injectiveProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.experiment predictNoCollision = pure true := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.experiment, injectiveProblem_seedGen, pure_bind]
   rw [run_predictNoCollision]
   rfl
 
 private lemma baseline_predictNoCollision :
-    SM_DT_DSPR_SourceFinalValidity.SPExperiment predictNoCollision = pure false := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.SPExperiment, injectiveProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.spExperiment predictNoCollision = pure false := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.spExperiment, injectiveProblem_seedGen, pure_bind]
   rw [run_predictNoCollision]
   rfl
 
 private lemma experiment_exceedCap :
-    SM_DT_DSPR_SourceFinalValidity.Experiment exceedCap = pure false := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.Experiment, collidingProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.experiment exceedCap = pure false := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.experiment, collidingProblem_seedGen, pure_bind]
   rw [run_exceedCap]
   rfl
 
 private lemma baseline_exceedCap :
-    SM_DT_DSPR_SourceFinalValidity.SPExperiment exceedCap = pure false := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.SPExperiment, collidingProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.spExperiment exceedCap = pure false := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.spExperiment, collidingProblem_seedGen, pure_bind]
   rw [run_exceedCap]
   rfl
 
 private lemma experiment_clashCollection :
-    SM_DT_DSPR_SourceFinalValidity.Experiment clashCollection = pure false := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.Experiment, collidingProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.experiment clashCollection = pure false := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.experiment, collidingProblem_seedGen, pure_bind]
   rw [run_clashCollection]
   rfl
 
 private lemma baseline_clashCollection :
-    SM_DT_DSPR_SourceFinalValidity.SPExperiment clashCollection = pure false := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.SPExperiment, collidingProblem_seedGen, pure_bind]
+    SM_DT_DSPR_SourceFinalValidity.spExperiment clashCollection = pure false := by
+  simp only [SM_DT_DSPR_SourceFinalValidity.spExperiment, collidingProblem_seedGen, pure_bind]
   rw [run_clashCollection]
   rfl
 
@@ -176,23 +176,23 @@ private lemma baseline_clashCollection :
 on the collision instance. This pins the baseline subtraction: the corresponding advantages are
 respectively one and zero. -/
 theorem baseline_subtraction_canary :
-    SM_DT_DSPR_SourceFinalValidity.Experiment predictCollision = pure true ∧
-      SM_DT_DSPR_SourceFinalValidity.SPExperiment predictCollision = pure true ∧
-      SM_DT_DSPR_SourceFinalValidity.Advantage predictCollision = 0 ∧
-      SM_DT_DSPR_SourceFinalValidity.Experiment predictNoCollision = pure true ∧
-      SM_DT_DSPR_SourceFinalValidity.SPExperiment predictNoCollision = pure false ∧
-      SM_DT_DSPR_SourceFinalValidity.Advantage predictNoCollision = 1 := by
+    SM_DT_DSPR_SourceFinalValidity.experiment predictCollision = pure true ∧
+      SM_DT_DSPR_SourceFinalValidity.spExperiment predictCollision = pure true ∧
+      SM_DT_DSPR_SourceFinalValidity.advantage predictCollision = 0 ∧
+      SM_DT_DSPR_SourceFinalValidity.experiment predictNoCollision = pure true ∧
+      SM_DT_DSPR_SourceFinalValidity.spExperiment predictNoCollision = pure false ∧
+      SM_DT_DSPR_SourceFinalValidity.advantage predictNoCollision = 1 := by
   simp [experiment_predictCollision, baseline_predictCollision, experiment_predictNoCollision,
-    baseline_predictNoCollision, SM_DT_DSPR_SourceFinalValidity.Advantage,
+    baseline_predictNoCollision, SM_DT_DSPR_SourceFinalValidity.advantage,
     SM_DT_DSPR_SourceFinalValidity.Success, SM_DT_DSPR_SourceFinalValidity.SPProbability]
 
 /-- Invalid queries are not rejected: their concrete answers are visible in the private state, all
 queries are recorded, and only the sticky final-validity bit makes both experiments lose. -/
 theorem poison_not_rejection_canary :
-    SM_DT_DSPR_SourceFinalValidity.Experiment exceedCap = pure false ∧
-      SM_DT_DSPR_SourceFinalValidity.SPExperiment exceedCap = pure false ∧
-      SM_DT_DSPR_SourceFinalValidity.Experiment clashCollection = pure false ∧
-      SM_DT_DSPR_SourceFinalValidity.SPExperiment clashCollection = pure false := by
+    SM_DT_DSPR_SourceFinalValidity.experiment exceedCap = pure false ∧
+      SM_DT_DSPR_SourceFinalValidity.spExperiment exceedCap = pure false ∧
+      SM_DT_DSPR_SourceFinalValidity.experiment clashCollection = pure false ∧
+      SM_DT_DSPR_SourceFinalValidity.spExperiment clashCollection = pure false := by
   exact ⟨experiment_exceedCap, baseline_exceedCap, experiment_clashCollection,
     baseline_clashCollection⟩
 
