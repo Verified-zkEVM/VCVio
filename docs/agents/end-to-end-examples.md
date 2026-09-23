@@ -162,7 +162,7 @@ reductions. Its ideal services use the association-list cache from
 the instrumented service's retained collision flag.
 
 `NetworkUnlinkability.full_unlinkability` bounds the absolute real-network verdict gap by the
-two named PRF advantages, for each output polarity, and four explicit losses:
+two named PRF advantages and four explicit losses:
 
 - session collisions: `sessionsPerTag² · |TagId| / |Nonce|`;
 - multiple-session reader cells: `qReader · |TagId| / |Digest|`;
@@ -170,8 +170,8 @@ two named PRF advantages, for each output polarity, and four explicit losses:
 - single-session reader cells: `qReader · |TagId| · sessionsPerTag / |Digest|`.
 
 `named_reduction_budgets` gives the actual distinguishers' PRF-query bounds:
-`qTag + qReader · |TagId|` and `qTag + qReader · |TagId| · sessionsPerTag`, for both
-polarities. These are pathwise oracle-query counts, not machine-time or PPT certificates.
+`qTag + qReader · |TagId|` and `qTag + qReader · |TagId| · sessionsPerTag`. These are
+pathwise oracle-query counts, not machine-time or PPT certificates.
 The FIFO service model and its derived schedule remain those of `Network.lean`.
 The free-program uniform-sampling model supplies probability measures for the real runs;
 there is no additional losslessness assumption.

@@ -95,15 +95,16 @@ open UnlinkReduction ENNReal
 variable [Fintype TagId] [SampleableType Nonce] [SampleableType Digest]
   [Fintype Nonce] [Fintype Digest] {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
 
-/-- The direct-coupling loss holds for actual FIFO network execution under the derived schedule.
-The bad-event term is also observed from a packet run, including its final private service state. -/
-theorem multiple_le_single_add_bad (adversary : UnlinkAdversary TagId Nonce Digest)
+/-- The direct-coupling loss holds for actual FIFO network execution under the derived schedule,
+for either verdict `out`. The bad-event term is also observed from a packet run, including its
+final private service state. -/
+theorem multiple_le_single_add_bad (out : Bool) (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : ℕ)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
-    Pr[= true | verdict (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
+    Pr[= out | verdict (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (qReader + qTag) adversary (UnlinkState.init, ∅)] ≤
-    Pr[= true | verdict (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
+    Pr[= out | verdict (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (qReader + qTag) adversary (UnlinkState.init, ∅)] +
     Pr[= true | stateEvent (multipleBadQueryImpl _ _ _ sessionsPerTag)
       (qReader + qTag) adversary ((UnlinkState.init, ∅), UnlinkBadState.init)
@@ -116,6 +117,6 @@ theorem multiple_le_single_add_bad (adversary : UnlinkAdversary TagId Nonce Dige
   rw [verdict_eq _ _ _ hbound, verdict_eq _ _ _ hbound, stateEvent_eq _ _ _ hbound]
   simpa only [probOutput_map] using
     multipleIdeal_le_singleIdeal_add_bad_DC (sessionsPerTag := sessionsPerTag)
-      adversary qReader qTag hReader hTag
+      out adversary qReader qTag hReader hTag
 
 end PRFTagReader.Network

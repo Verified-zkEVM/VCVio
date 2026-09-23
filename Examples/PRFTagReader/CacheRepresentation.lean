@@ -240,15 +240,16 @@ theorem bad_local (q : (UnlinkOracleSpec TagId Nonce Digest).Domain)
 
 variable [Fintype Nonce] [Fintype Digest] [NeZero sessionsPerTag]
 
-/-- The list-cached FIFO experiment satisfies the direct-coupling bound with all three losses. -/
-theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
+/-- The list-cached FIFO experiment satisfies the direct-coupling bound, for either verdict `out`,
+with all three losses. -/
+theorem preserved_bound (out : Bool) (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : Nat)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
     𝒟[Network.verdict (multiple (sessionsPerTag := sessionsPerTag))
-      (qReader + qTag) adversary (UnlinkState.init, [])] {true} ≤
+      (qReader + qTag) adversary (UnlinkState.init, [])] {out} ≤
     𝒟[Network.verdict (single (sessionsPerTag := sessionsPerTag))
-      (qReader + qTag) adversary (UnlinkState.init, [])] {true} +
+      (qReader + qTag) adversary (UnlinkState.init, [])] {out} +
     𝒟[Network.stateEvent (bad (sessionsPerTag := sessionsPerTag))
       (qReader + qTag) adversary ((UnlinkState.init, []), UnlinkBadState.init)
       (fun state => state.2.bad)] {true} +
@@ -303,6 +304,6 @@ theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
       (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (multipleBadQueryImpl _ _ _ sessionsPerTag)
       (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
-      Measurable.of_discrete adversary qReader qTag hReader hTag
+      Measurable.of_discrete out adversary qReader qTag hReader hTag
 
 end PRFTagReader.CachedPRF

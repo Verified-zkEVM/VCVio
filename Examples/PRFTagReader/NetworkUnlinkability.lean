@@ -14,8 +14,8 @@ import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 # Real-network unlinkability with association-list caches
 
 The bounded FIFO experiment implements the named PRF reductions. Local cache projections
-preserve their ideal worlds and the retained collision flag, and the two output polarities
-supply a symmetric security bound with explicit oracle-query budgets.
+preserve their ideal worlds and the retained collision flag, and the direct coupling, which bounds
+the mass of either verdict, gives a symmetric security bound with explicit oracle-query budgets.
 -/
 
 public section
@@ -26,47 +26,18 @@ namespace PRFTagReader.NetworkUnlinkability
 
 variable {TagId Nonce Digest K : Type} {sessionsPerTag : Nat}
 
-/-- Flip only the final bit, retaining every query and all retained service state. -/
-@[expose]
-def polarity (adversary : UnlinkAdversary TagId Nonce Digest) (flip : Bool) :
-    OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool :=
-  if flip then adversary >>= fun b => pure (!b) else adversary
-
-theorem polarity_bound (adversary : UnlinkAdversary TagId Nonce Digest)
-    (flip : Bool) (p : (UnlinkOracleSpec TagId Nonce Digest).Domain → Prop)
-    [DecidablePred p] (budget : Nat) (h : IsQueryBoundP adversary p budget) :
-    IsQueryBoundP (polarity adversary flip) p budget := by
-  cases flip
-  · exact h
-  · exact isQueryBoundP_not_bind adversary h
-
-private theorem true_mass_not (program : ProbComp Bool) :
-    (𝒟[Bool.not <$> program] {true}).toReal = 1 - (𝒟[program] {true}).toReal := by
-  let : IsProbabilityMeasure 𝒟[program] := PFunctor.FreeM.isProbabilityMeasure_denote program
-  have hpreimage : Bool.not ⁻¹' ({true} : Set Bool) = {false} := by
-    ext b
-    cases b <;> simp
-  rw [evalDist_map_apply_of_discrete _ _ (measurableSet_singleton true), hpreimage]
-  have h := congrArg ENNReal.toReal (Measure.apply_true_add_apply_false_eq_one 𝒟[program])
-  rw [ENNReal.toReal_add (measure_ne_top _ _) (measure_ne_top _ _),
-    ENNReal.toReal_one] at h
-  exact (eq_sub_iff_add_eq).2 (by simpa only [add_comm] using h)
-
-/-- All distinguishers used by the symmetric bound have the proved fan-out budgets. -/
+/-- Both named distinguishers have the proved fan-out budgets. -/
 theorem named_reduction_budgets [DecidableEq TagId] [Fintype TagId] [SampleableType Nonce]
     [DecidableEq Digest] (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : Nat)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
-    (hTag : IsQueryBoundP adversary (·.isLeft) qTag) (flip : Bool) :
-    IsQueryBoundP (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag)
-      (polarity adversary flip)) (·.isRight) (qTag + qReader * Fintype.card TagId) ∧
-    IsQueryBoundP (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag)
-      (polarity adversary flip)) (·.isRight)
-        (qTag + qReader * Fintype.card TagId * sessionsPerTag) :=
-  ⟨QueryBudgets.multiple_reduction_bound _ _ _
-      (polarity_bound _ flip _ _ hReader) (polarity_bound _ flip _ _ hTag),
-    QueryBudgets.single_reduction_bound _ _ _
-      (polarity_bound _ flip _ _ hReader) (polarity_bound _ flip _ _ hTag)⟩
+    (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
+    IsQueryBoundP (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary)
+      (·.isRight) (qTag + qReader * Fintype.card TagId) ∧
+    IsQueryBoundP (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary)
+      (·.isRight) (qTag + qReader * Fintype.card TagId * sessionsPerTag) :=
+  ⟨QueryBudgets.multiple_reduction_bound _ _ _ hReader hTag,
+    QueryBudgets.single_reduction_bound _ _ _ hReader hTag⟩
 
 variable [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
   [DecidableEq Digest]
@@ -99,7 +70,7 @@ theorem realSingle_eq (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
   unfold realSingle unlinkSingleExp
   exact bind_congr fun key => Network.verdict_eq _ _ _ hbound _
 
-/-- The two specific distinguishers from the original reduction, with no existential witness. -/
+/-- The PRF advantages of the two named distinguishers, with no existential witness. -/
 @[expose]
 noncomputable def prfTerms [SampleableType Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
@@ -123,22 +94,6 @@ noncomputable def gap (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest) : Real :=
   (𝒟[realMultiple prfs budget adversary] {true}).toReal -
   (𝒟[realSingle prfs budget adversary] {true}).toReal
-
-/-- Complementing the final verdict reverses the signed gap. Both real programs denote
-probability measures, so their missing mass is zero. -/
-theorem gap_not (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
-    (hbound : IsTotalQueryBound adversary budget) :
-    gap prfs budget (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) = -gap prfs budget adversary := by
-  have hnot : IsTotalQueryBound (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) budget := by
-    rw [bind_pure_comp]
-    simpa only [IsTotalQueryBound, isQueryBound_map_iff] using hbound
-  simp only [gap, realMultiple_eq _ _ _ hnot, realSingle_eq _ _ _ hnot,
-    realMultiple_eq _ _ _ hbound, realSingle_eq _ _ _ hbound,
-    unlinkMultipleExp_not_map, unlinkSingleExp_not_map, true_mass_not]
-  ring
 
 variable [SampleableType Digest]
 
@@ -196,20 +151,6 @@ theorem single_prf_hop (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag
   simp only [PRFScheme.prfAdvantage, MeasureTheory.Measure.toReal_boolDist,
     prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp]
 
-/-- Output negation preserves the final list-cache bad-state observation exactly. -/
-theorem badExperiment_not (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
-    (hbound : IsTotalQueryBound adversary budget) :
-    badExperiment (sessionsPerTag := sessionsPerTag) budget
-      (adversary >>= fun b => pure (!b) : OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) =
-    badExperiment (sessionsPerTag := sessionsPerTag) budget adversary := by
-  have hnot : IsTotalQueryBound (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) budget := by
-    rw [bind_pure_comp]
-    simpa only [IsTotalQueryBound, isQueryBound_map_iff] using hbound
-  rw [badExperiment_eq _ _ hnot, badExperiment_eq _ _ hbound,
-    simulateQ_bind, StateT.run_bind, map_bind]
-  simp only [simulateQ_pure, StateT.run_pure, map_pure, bind_pure_comp]
-
 /-- The actual multiple-world PRF hop ends in the association-list ideal packet experiment. -/
 theorem multiple_prf_hop [NeZero sessionsPerTag]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
@@ -244,11 +185,11 @@ variable [Fintype Nonce] [Fintype Digest] [NeZero sessionsPerTag]
 
 /-- Real-network advantage is bounded by the two named PRF hops, the retained collision
 flag, and all three reader-cell and nonce-aliasing losses. -/
-theorem signed_bound (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
+theorem absolute_bound (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : Nat)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
-    gap prfs (qReader + qTag) adversary ≤ prfTerms prfs adversary +
+    |gap prfs (qReader + qTag) adversary| ≤ prfTerms prfs adversary +
       (𝒟[badExperiment (sessionsPerTag := sessionsPerTag)
         (qReader + qTag) adversary] {true}).toReal +
       readerLoss (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
@@ -260,60 +201,41 @@ theorem signed_bound (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
   have hdivDigest (n : Nat) : (n : ENNReal) / Fintype.card Digest ≠ ⊤ :=
     ENNReal.div_ne_top (ENNReal.natCast_ne_top n) hDigest
   have hbound := Network.totalQueryBound adversary qReader qTag hReader hTag
-  have hideal := CachedPRF.preserved_bound (sessionsPerTag := sessionsPerTag)
-    adversary qReader qTag hReader hTag
+  have hideal := fun out => CachedPRF.preserved_bound (sessionsPerTag := sessionsPerTag)
+    out adversary qReader qTag hReader hTag
+  simp only [add_assoc] at hideal
+  let : IsProbabilityMeasure 𝒟[Network.verdict (CachedPRF.multiple
+      (sessionsPerTag := sessionsPerTag)) (qReader + qTag) adversary (UnlinkState.init, [])] :=
+    PFunctor.FreeM.isProbabilityMeasure_denote _
+  let : IsProbabilityMeasure 𝒟[Network.verdict (CachedPRF.single
+      (sessionsPerTag := sessionsPerTag)) (qReader + qTag) adversary (UnlinkState.init, [])] :=
+    PFunctor.FreeM.isProbabilityMeasure_denote _
   have h := ENNReal.toReal_mono (by
     simp only [ne_eq, not_false_eq_true, ENNReal.add_ne_top, measure_ne_top,
-      hdivNonce, hdivDigest, and_self]) hideal
+      hdivNonce, hdivDigest, and_self]) (Measure.boolDist_le_of_apply_le _ _ hideal)
   simp only [ne_eq, not_false_eq_true, ENNReal.toReal_add, ENNReal.add_ne_top,
-    measure_ne_top, hdivNonce, hdivDigest,
-    and_self, ENNReal.toReal_div, ENNReal.toReal_natCast] at h
+    measure_ne_top, hdivNonce, hdivDigest, and_self, ENNReal.toReal_div,
+    ENNReal.toReal_natCast, Measure.toReal_boolDist] at h
   unfold gap prfTerms readerLoss
   rw [multiple_prf_hop prfs _ _ hbound, single_prf_hop prfs _ _ hbound]
   change _ ≤ _ + (𝒟[Network.stateEvent _ _ _ _ _] {true}).toReal + _
-  linarith [le_abs_self ((𝒟[realMultiple prfs (qReader + qTag) adversary] {true}).toReal -
-      (𝒟[Network.verdict (CachedPRF.multiple (sessionsPerTag := sessionsPerTag))
-        (qReader + qTag) adversary (UnlinkState.init, [])] {true}).toReal),
-    neg_le_abs ((𝒟[realSingle prfs (qReader + qTag) adversary] {true}).toReal -
-      (𝒟[Network.verdict (CachedPRF.single (sessionsPerTag := sessionsPerTag))
-        (qReader + qTag) adversary (UnlinkState.init, [])] {true}).toReal)]
-
-/-- The symmetric network bound uses the larger of the two explicit reduction pairs,
-one for each output polarity, and preserves the observed bad-state term. -/
-theorem absolute_bound (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : Nat)
-    (hReader : IsQueryBoundP adversary (·.isRight) qReader)
-    (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
-    |gap prfs (qReader + qTag) adversary| ≤
-      max (prfTerms prfs adversary) (prfTerms prfs (adversary >>= fun b => pure (!b) :
-        OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool)) +
-      (𝒟[badExperiment (sessionsPerTag := sessionsPerTag)
-        (qReader + qTag) adversary] {true}).toReal +
-      readerLoss (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) qReader qTag := by
-  have hb := Network.totalQueryBound adversary qReader qTag hReader hTag
-  have hpos := signed_bound prfs adversary qReader qTag hReader hTag
-  have hneg := signed_bound prfs (adversary >>= fun b => pure (!b) :
-    OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) qReader qTag
-      (isQueryBoundP_not_bind adversary hReader) (isQueryBoundP_not_bind adversary hTag)
-  rw [badExperiment_not _ _ hb, gap_not _ _ _ hb] at hneg
-  have hp := le_max_left (prfTerms prfs adversary)
-    (prfTerms prfs (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool))
-  have hn := le_max_right (prfTerms prfs adversary)
-    (prfTerms prfs (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool))
-  rw [abs_le]
-  constructor <;> linarith
+  set realM := (𝒟[realMultiple prfs (qReader + qTag) adversary] {true}).toReal
+  set realS := (𝒟[realSingle prfs (qReader + qTag) adversary] {true}).toReal
+  set cachedMultiple := (𝒟[Network.verdict (CachedPRF.multiple (sessionsPerTag := sessionsPerTag))
+    (qReader + qTag) adversary (UnlinkState.init, [])] {true}).toReal
+  set cachedSingle := (𝒟[Network.verdict (CachedPRF.single (sessionsPerTag := sessionsPerTag))
+    (qReader + qTag) adversary (UnlinkState.init, [])] {true}).toReal
+  have t1 := abs_sub_le realM cachedMultiple realS
+  have t2 := abs_sub_le cachedMultiple cachedSingle realS
+  rw [abs_sub_comm cachedSingle] at t2
+  linarith
 
 /-- Real-network unlinkability with the collision term discharged and every loss explicit. -/
 theorem absolute_uniform_bound (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : Nat)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
-    |gap prfs (qReader + qTag) adversary| ≤
-      max (prfTerms prfs adversary) (prfTerms prfs (adversary >>= fun b => pure (!b) :
-        OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool)) +
+    |gap prfs (qReader + qTag) adversary| ≤ prfTerms prfs adversary +
       ((sessionsPerTag ^ 2 * Fintype.card TagId : Nat) : Real) / Fintype.card Nonce +
       ((qReader * Fintype.card TagId : Nat) : Real) / Fintype.card Digest +
       ((qReader * qTag : Nat) : Real) / Fintype.card Nonce +
@@ -324,21 +246,19 @@ theorem absolute_uniform_bound (prfs : TagReaderPRFs K TagId Nonce Digest sessio
   unfold readerLoss at h
   linarith
 
-/-- Final concrete bound under assumptions about the actual two reduction families, for both
-output polarities. Query budgets are proved in `named_reduction_budgets`; no machine-time/PPT
-certificate or independent-key derivation is being assumed proved by that resource result. -/
+/-- Final concrete bound under assumptions about the actual two reduction families. Query budgets
+are proved in `named_reduction_budgets`; no machine-time/PPT certificate or independent-key
+derivation is being assumed proved by that resource result. -/
 theorem full_unlinkability (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : Nat)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) (epsilonMultiple epsilonSingle : Real)
-    (hMultiple : ∀ flip : Bool,
-      (PRFScheme.prfAdvantage prfs.multiplePRFScheme
-        (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag)
-          (polarity adversary flip))).toReal ≤ epsilonMultiple)
-    (hSingle : ∀ flip : Bool,
-      (PRFScheme.prfAdvantage prfs.singlePRFScheme
-        (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag)
-          (polarity adversary flip))).toReal ≤ epsilonSingle) :
+    (hMultiple : (PRFScheme.prfAdvantage prfs.multiplePRFScheme
+      (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary)).toReal ≤
+        epsilonMultiple)
+    (hSingle : (PRFScheme.prfAdvantage prfs.singlePRFScheme
+      (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary)).toReal ≤
+        epsilonSingle) :
     |(𝒟[realMultiple prfs (qReader + qTag) adversary] {true}).toReal -
       (𝒟[realSingle prfs (qReader + qTag) adversary] {true}).toReal| ≤
       epsilonMultiple + epsilonSingle +
@@ -348,11 +268,7 @@ theorem full_unlinkability (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPe
       ((qReader * Fintype.card TagId * sessionsPerTag : Nat) : Real) / Fintype.card Digest := by
   have h := absolute_uniform_bound prfs adversary qReader qTag hReader hTag
   have hp : prfTerms prfs adversary ≤ epsilonMultiple + epsilonSingle :=
-    add_le_add (hMultiple false) (hSingle false)
-  have hm : prfTerms prfs (adversary >>= fun b => pure (!b) :
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) ≤
-      epsilonMultiple + epsilonSingle := add_le_add (hMultiple true) (hSingle true)
-  have hmax := max_le hp hm
+    add_le_add hMultiple hSingle
   unfold gap at h
   linarith
 

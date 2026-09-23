@@ -96,8 +96,9 @@ variable
     DiscreteMeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range operation ×
       MultipleBadState TagId Nonce Digest sessionsPerTag)]
 
-/-- Joint local contracts transport the direct-coupling bound with all three loss terms intact.
-The bad-world contract retains the final private state needed by the original reduction. -/
+/-- Joint local contracts transport the direct-coupling bound, for either verdict `out`, with all
+three loss terms intact. The bad-world contract retains the final private state needed by the
+original reduction. -/
 theorem multiple_le_single_add_bad_of_joint_law
     (multiple : QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
       (StateT (MultipleServiceState TagId Nonce Digest) ProbComp))
@@ -113,11 +114,11 @@ theorem multiple_le_single_add_bad_of_joint_law
       𝒟[(multipleBadQueryImpl _ _ _ sessionsPerTag operation).run state])
     (hmeas : Measurable (fun state : MultipleBadState TagId Nonce Digest sessionsPerTag =>
       state.2.bad))
-    (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : ℕ)
+    (out : Bool) (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : ℕ)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
-    𝒟[verdict multiple (qReader + qTag) adversary (UnlinkState.init, ∅)] {true} ≤
-    𝒟[verdict single (qReader + qTag) adversary (UnlinkState.init, ∅)] {true} +
+    𝒟[verdict multiple (qReader + qTag) adversary (UnlinkState.init, ∅)] {out} ≤
+    𝒟[verdict single (qReader + qTag) adversary (UnlinkState.init, ∅)] {out} +
     𝒟[stateEvent bad (qReader + qTag) adversary
       ((UnlinkState.init, ∅), UnlinkBadState.init) (fun state => state.2.bad)] {true} +
     ((qReader * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) +
@@ -130,6 +131,6 @@ theorem multiple_le_single_add_bad_of_joint_law
     stateEvent_law_congr _ _ hbad _ _ hbound _ _ hmeas]
   simpa only [evalDist_apply_singleton] using
     multiple_le_single_add_bad (sessionsPerTag := sessionsPerTag)
-      adversary qReader qTag hReader hTag
+      out adversary qReader qTag hReader hTag
 
 end PRFTagReader.Network
