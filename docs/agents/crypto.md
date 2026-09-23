@@ -113,15 +113,6 @@ Used by ML-DSA and the Fiat-Shamir with Aborts transform.
 
 ## Security Experiments
 
-### `SecExp`
-
-```lean
-structure SecExp (m : Type → Type w) [Monad m] extends SPMFSemantics m where
-  main : m Unit
-```
-
-Success = non-failure. Advantage: `1 - Pr[⊥ | exp.main]`.
-
 ### `BoundedAdversary`
 
 ```lean
@@ -138,9 +129,7 @@ structure BoundedAdversary {ι : Type u} [DecidableEq ι]
 
 | Function | Input | Type | Measures |
 |----------|-------|------|----------|
-| `ProbComp.guessAdvantage` | `ProbComp Unit` | `ℝ` | `\|1/2 - (Pr[= () \| p]).toReal\|` |
 | `ProbComp.boolBiasAdvantage` | `ProbComp Bool` | `ℝ` | `\|(Pr[= true \| p]).toReal - (Pr[= false \| p]).toReal\|` |
-| `ProbComp.distAdvantage` | Two `ProbComp Unit` | `ℝ` | `\|(Pr[= () \| p]).toReal - (Pr[= () \| q]).toReal\|` |
 | `ProbComp.boolDistAdvantage` | Two `ProbComp Bool` | `ℝ` | `\|(Pr[= true \| p]).toReal - (Pr[= true \| q]).toReal\|` |
 
 All return `ℝ` via `.toReal` conversion from `ℝ≥0∞`. This is essential since subtraction on `ℝ≥0∞` is truncated.
@@ -351,33 +340,20 @@ def negligible (f : ℕ → ℝ≥0∞) : Prop := SuperpolynomialDecay atTop (fu
 Closure properties: `negligible_add`, `negligible_const_mul`, `negligible_sum`,
 `negligible_of_le`, `negligible_pow_mul`, `negligible_polynomial_mul`.
 
-### `SecurityExp` and `SecurityGame` (`Security.lean`)
+### `SecurityGame` (`Security.lean`)
 
-Both are decoupled from `SecExp` — they store an abstract advantage function (`ℕ → ℝ≥0∞`)
-rather than a family of concrete experiments. This lets the same meta-theorems work for
-failure-based games, distinguishing games, and any other advantage metric.
+`SecurityGame Adv` stores an advantage function rather than an experiment, so the same
+meta-theorems apply to success, bias and distinguishing advantages. Build one by giving the
+notion's advantage at each security parameter, converting an `ℝ`-valued advantage with
+`ENNReal.ofReal`.
 
 ```lean
-structure SecurityExp where
-  advantage : ℕ → ℝ≥0∞
-
 structure SecurityGame (Adv : Type*) where
   advantage : Adv → ℕ → ℝ≥0∞
 ```
 
-- `SecurityExp.secure`: advantage is `negligible`.
 - `SecurityGame.secureAgainst isPPT`: every adversary satisfying `isPPT` has negligible advantage.
 - The predicate `isPPT` is abstract — specialize to `PolyQueries` or custom efficiency notions.
-
-### Smart constructors
-
-| Constructor | Game style | Advantage metric |
-|-------------|-----------|-----------------|
-| `SecurityGame.ofSecExp` | Failure-based (`SecExp`) | `1 - Pr[⊥]` |
-| `SecurityGame.ofDistGame` | Two-game distinguishing | `\|Pr[game₀] - Pr[game₁]\|` |
-| `SecurityGame.ofGuessGame` | Single-game guessing | `\|1/2 - Pr[success]\|` |
-
-Analogous constructors exist for `SecurityExp`: `ofSecExp`, `ofDistExp`, `ofGuessExp`.
 
 ### Key reduction/game-hopping lemmas
 
@@ -418,5 +394,3 @@ Key results: `fst_map_costDist` (instrumentation is transparent),
 2. **`SymmEncAlg` vs `AsymmEncAlg`**: both are monad-parametric, but symmetric schemes carry a single key type while asymmetric schemes split public and secret keys. Pick the monad at the experiment boundary.
 
 3. **DDH experiment uses `$ᵗ Bool`**: the experiment samples a bit `b`, returns real or random based on `b`, then checks `b == b'`.
-
-4. **`SecExp.advantage` measures `1 - Pr[⊥]`**: this is failure-based, not distinguishing-based. For `ProbComp` (which never fails), advantage is always 1. For distinguishing-style games, use `SecurityGame.ofDistGame` or `SecurityGame.ofGuessGame` instead of `SecurityGame.ofSecExp`.

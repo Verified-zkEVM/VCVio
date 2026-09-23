@@ -13,8 +13,9 @@ public import VCVio.OracleComp.Constructions.SampleableType
 # Round-indexed event games
 
 This module packages a family of probabilistic events indexed by rounds, with a potentially
-different type of execution context at each round. Each event is exposed as a failure-based
-`SecExp`, and `experiment_advantage` identifies its advantage with the probability of that event.
+different type of execution context at each round. Each event is exposed as a `ProbComp Bool`
+experiment, and `evalDist_experiment_apply_true` identifies its success probability with the
+probability of that event.
 `IsBounded` states a separate error bound for each round.
 
 `KnowledgeTransitionFamily` specializes this interface to the event that a fresh challenge changes
@@ -69,34 +70,31 @@ namespace GameFamily
 
 variable {Round : Type u} {Context : Round → Type v}
 
-/-- The failure-based experiment that succeeds exactly when the indexed event occurs. -/
+/-- The experiment that samples a result and reports whether the indexed event occurs. -/
 def experiment (games : GameFamily Round Context)
-    (round : Round) (context : Context round) : SecExp (OptionT ProbComp) :=
+    (round : Round) (context : Context round) : ProbComp Bool :=
   letI : DecidablePred (games.event round context) := fun _ => Classical.propDecidable _
-  { toMeasureSemanticsVia := MeasureSemanticsVia.optionT ProbComp
-    main := do
-      let result ← games.sample round context
-      guard (games.event round context result) }
+  (fun result => decide (games.event round context result)) <$> games.sample round context
 
-/-- The advantage of the indexed experiment is the probability of its event. -/
-@[simp]
-theorem experiment_advantage (games : GameFamily Round Context)
+/-- The success probability of the indexed experiment is the probability of its event. -/
+theorem evalDist_experiment_apply_true (games : GameFamily Round Context)
     (round : Round) (context : Context round) :
-    (games.experiment round context).advantage =
+    𝒟[games.experiment round context] {true} =
       Pr{let result ← games.sample round context}[games.event round context result] := by
-  classical
-  simpa only [SecExp.advantage, experiment, MeasureSemanticsVia.optionT_evalDist,
-    OptionT.run_bind, OptionT.run_monadLift, monadLift_self, Option.elimM_map,
-    Option.elim_some] using
-    OptionT.dropNone_evalDist_run_bind_guard_apply_univ
-      (games.sample round context) (games.event round context)
+  rw [prEvent_eq_evalDist_map, experiment,
+    ← Functor.map_map (games.event round context)
+      (fun event : Prop => @decide event (Classical.propDecidable event)),
+    evalDist_map_apply_of_discrete _ _ (measurableSet_singleton true)]
+  congr 1
+  ext event
+  simp
 
-/-- Every indexed experiment has advantage at most its round's error bound.
+/-- Every indexed experiment succeeds with probability at most its round's error bound.
 
 The quantifier ranges over every round and every context at that round; use a subtype when only an
 admissible class of contexts should be considered. -/
 def IsBounded (games : GameFamily Round Context) (error : Round → ℝ≥0∞) : Prop :=
-  ∀ round (context : Context round), (games.experiment round context).advantage ≤ error round
+  ∀ round (context : Context round), 𝒟[games.experiment round context] {true} ≤ error round
 
 /-- Event-probability characterization of a bounded game family. -/
 theorem isBounded_iff (games : GameFamily Round Context) (error : Round → ℝ≥0∞) :
@@ -104,7 +102,7 @@ theorem isBounded_iff (games : GameFamily Round Context) (error : Round → ℝ�
       ∀ round (context : Context round),
         Pr{let result ← games.sample round context}[games.event round context result] ≤
           error round := by
-  simp only [IsBounded, experiment_advantage]
+  simp only [IsBounded, evalDist_experiment_apply_true]
 
 end GameFamily
 
@@ -149,20 +147,20 @@ def toGameFamily (games : KnowledgeTransitionFamily Round Context) : GameFamily 
   sample := fun round _ ↦ games.sampleChallenge round
   event := games.badEvent
 
-/-- The failure-based experiment for a bad knowledge transition. -/
+/-- The experiment reporting a bad knowledge transition. -/
 def experiment (games : KnowledgeTransitionFamily Round Context)
-    (round : Round) (context : Context round) : SecExp (OptionT ProbComp) :=
+    (round : Round) (context : Context round) : ProbComp Bool :=
   games.toGameFamily.experiment round context
 
-/-- The advantage of the transition experiment is the probability of a bad transition. -/
-@[simp]
-theorem experiment_advantage (games : KnowledgeTransitionFamily Round Context)
+/-- The success probability of the transition experiment is the probability of a bad
+transition. -/
+theorem evalDist_experiment_apply_true (games : KnowledgeTransitionFamily Round Context)
     (round : Round) (context : Context round) :
-    (games.experiment round context).advantage =
-      Pr{let challenge ← games.sampleChallenge round}[games.badEvent round context challenge] := by
-  simp [experiment, toGameFamily]
+    𝒟[games.experiment round context] {true} =
+      Pr{let challenge ← games.sampleChallenge round}[games.badEvent round context challenge] :=
+  games.toGameFamily.evalDist_experiment_apply_true round context
 
-/-- Every bad-transition experiment has advantage at most its round's error bound. -/
+/-- Every bad-transition experiment succeeds with probability at most its round's error bound. -/
 def IsBounded (games : KnowledgeTransitionFamily Round Context)
     (error : Round → ℝ≥0∞) : Prop :=
   games.toGameFamily.IsBounded error
@@ -258,22 +256,22 @@ def toGameFamily (games : KnowledgeExtractionFamily rounds) :
   event := fun round contextAndMessage ↦
     games.escapeEvent round contextAndMessage.1 contextAndMessage.2
 
-/-- The failure-based experiment for escape from the doomed set after a fixed prover message. -/
+/-- The experiment reporting escape from the doomed set after a fixed prover message. -/
 def experiment (games : KnowledgeExtractionFamily rounds)
     (round : Fin rounds) (context : games.Context round.castSucc)
     (message : games.Message round) :
-    SecExp (OptionT ProbComp) :=
+    ProbComp Bool :=
   games.toGameFamily.experiment round (context, message)
 
-/-- The advantage of the extraction experiment is the probability of escaping the doomed set. -/
-@[simp]
-theorem experiment_advantage (games : KnowledgeExtractionFamily rounds)
+/-- The success probability of the extraction experiment is the probability of escaping the
+doomed set. -/
+theorem evalDist_experiment_apply_true (games : KnowledgeExtractionFamily rounds)
     (round : Fin rounds) (context : games.Context round.castSucc)
     (message : games.Message round) :
-    (games.experiment round context message).advantage =
+    𝒟[games.experiment round context message] {true} =
       Pr{let challenge ← games.sampleChallenge round}[
-        games.escapeEvent round context message challenge] := by
-  simp [experiment, toGameFamily]
+        games.escapeEvent round context message challenge] :=
+  games.toGameFamily.evalDist_experiment_apply_true round (context, message)
 
 /-- Every input's canonical initial context is doomed: for every possible input, the context that
 contains only that input lies in the doomed set. This is the all-inputs initial clause of

@@ -14,11 +14,10 @@ public import VCVio.EvalDist.Monad.Bool
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
-# Measure-valued security experiments
+# Measure-valued advantages of Boolean experiments
 
-Boolean and failure-based distinguishing advantages observe successful-output measures directly.
-Fair-coin decompositions and game-chain bounds use the native measure API. `SecExp` bundles the
-semantic interpretation of its experiment without requiring a discrete probability representation.
+The bias and distinguishing advantages of `ProbComp Bool` experiments observe their
+successful-output measures directly, and fair-coin decompositions use the native measure API.
 -/
 
 public section
@@ -137,124 +136,3 @@ lemma ProbComp.boolBiasAdvantage_bind_uniformBool_eq_boolDistAdvantage
     rw [hbranch]]
   simpa [branchGame, left, right] using
     ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch left right
-
-/-- The gap between a unit-valued computation's successful-output mass and one half. -/
-@[expose]
-noncomputable def ProbComp.guessAdvantage (p : ProbComp Unit) : ℝ :=
-  |1 / 2 - (𝒟[p] {()}).toReal|
-
-/-- The guess advantage of `p` is its distance from one half measured using the missing mass. -/
-lemma ProbComp.guessAdvantage_eq_abs_half_sub_defect (p : ProbComp Unit) :
-    p.guessAdvantage = |1 / 2 - (𝒟[p]).defect.toReal| := by
-  have hunit : ({()} : Set Unit) = Set.univ := by
-    ext x
-    simp
-  rw [ProbComp.guessAdvantage, Measure.defect_toReal, hunit]
-  rw [show (1 : ℝ) / 2 - (1 - (𝒟[p] Set.univ).toReal) =
-    -(1 / 2 - (𝒟[p] Set.univ).toReal) by ring, abs_neg]
-
-/-- The guess advantage is half the gap between the missing and successful masses. -/
-lemma ProbComp.guessAdvantage_eq_half_mul_abs_defect_sub_apply (p : ProbComp Unit) :
-    p.guessAdvantage = 2⁻¹ * |(𝒟[p]).defect.toReal - (𝒟[p] {()}).toReal| := by
-  have hunit : ({()} : Set Unit) = Set.univ := by
-    ext x
-    simp
-  rw [ProbComp.guessAdvantage, Measure.defect_toReal, hunit]
-  grind
-
-/-- The **advantage** between two games `p` and `q`, modeled as probabilistic computations returning
-  `Unit`, is the absolute difference between their probabilities of success. -/
-@[expose]
-noncomputable def ProbComp.distAdvantage (p q : ProbComp Unit) : ℝ :=
-  |(𝒟[p] {()}).toReal - (𝒟[q] {()}).toReal|
-
-/-- A game has zero distinguishing advantage against itself. -/
-@[simp]
-lemma ProbComp.distAdvantage_self (p : ProbComp Unit) : p.distAdvantage p = 0 := by
-  simp [ProbComp.distAdvantage]
-
-/-- Distinguishing advantage is symmetric in its two games. -/
-lemma ProbComp.distAdvantage_comm (p q : ProbComp Unit) :
-    p.distAdvantage q = q.distAdvantage p :=
-  abs_sub_comm _ _
-
-/-- Distinguishing advantage equals the gap between the two games' missing masses. -/
-lemma ProbComp.distAdvantage_eq_abs_sub_defect (p q : ProbComp Unit) :
-    p.distAdvantage q = |(𝒟[p]).defect.toReal - (𝒟[q]).defect.toReal| := by
-  have hunit : ({()} : Set Unit) = Set.univ := by
-    ext x
-    simp
-  rw [ProbComp.distAdvantage, Measure.defect_toReal, Measure.defect_toReal, hunit]
-  rw [show (1 - (𝒟[p] Set.univ).toReal) - (1 - (𝒟[q] Set.univ).toReal) =
-    -((𝒟[p] Set.univ).toReal - (𝒟[q] Set.univ).toReal) by ring, abs_neg]
-
-/-- Distinguishing advantage is nonnegative. -/
-lemma ProbComp.distAdvantage_nonneg (p q : ProbComp Unit) : 0 ≤ p.distAdvantage q :=
-  abs_nonneg _
-
-/-- Triangle inequality for distinguishing advantage. -/
-lemma ProbComp.distAdvantage_triangle (p q r : ProbComp Unit) :
-    p.distAdvantage r ≤ p.distAdvantage q + q.distAdvantage r :=
-  abs_sub_le _ _ _
-
-/-- The distinguishing advantage between the endpoints of a chain of games is bounded by the
-sum of the consecutive advantages along the chain. -/
-lemma ProbComp.distAdvantage_le_sum_range {n : ℕ} (games : ℕ → ProbComp Unit) :
-    (games 0).distAdvantage (games n) ≤
-      ∑ i ∈ Finset.range n, (games i).distAdvantage (games (i + 1)) := by
-  induction n with
-  | zero => simp
-  | succ n ih =>
-    rw [Finset.sum_range_succ]
-    exact (distAdvantage_triangle _ _ _).trans (by gcongr)
-
-/-- Distinguishing advantage is the measure total-variation distance of the two games. -/
-lemma ProbComp.distAdvantage_eq_measureTVDist (p q : ProbComp Unit) :
-    p.distAdvantage q = measureTVDist p q := by
-  unfold ProbComp.distAdvantage measureTVDist
-  exact (Measure.tvDist_punit _ _).symm
-
-/-- A failure-based security experiment with bundled successful-output measure semantics.
-
-The surface monad can be interpreted through an internal semantic monad before its successful
-outputs are observed. Failure or nontermination contributes missing mass. -/
-structure SecExp (m : Type → Type w) [Monad m]
-    extends MeasureSemanticsVia.{0, w, w} m where
-  /-- Main experiment body. Success is interpreted as terminating without failure. -/
-  main : m Unit
-
-namespace SecExp
-
-variable {m : Type → Type w} [Monad m]
-
-section advantage
-
-/-- Advantage of a failure-based security experiment: the total mass of successful executions. -/
-@[expose]
-noncomputable def advantage (exp : SecExp m) : ℝ≥0∞ :=
-  exp.toMeasureSemanticsVia.evalDist exp.main Set.univ
-
-/-- A failure-based experiment has zero advantage exactly when its successful-output measure has
-zero mass. -/
-@[simp]
-lemma advantage_eq_zero_iff (exp : SecExp m) :
-    exp.advantage = 0 ↔ exp.toMeasureSemanticsVia.evalDist exp.main Set.univ = 0 :=
-  Iff.rfl
-
-/-- A failure-based experiment has advantage `1` exactly when its successful-output measure has
-full mass. -/
-@[simp]
-lemma advantage_eq_one_iff (exp : SecExp m) :
-    exp.advantage = 1 ↔ exp.toMeasureSemanticsVia.evalDist exp.main Set.univ = 1 :=
-  Iff.rfl
-
-/-- Success advantage and failure mass sum to one. -/
-@[simp]
-lemma advantage_add_probFailure (exp : SecExp m) :
-    exp.advantage + exp.toMeasureSemanticsVia.probFailure exp.main = 1 := by
-  rw [advantage, MeasureSemanticsVia.probFailure, add_comm,
-    tsub_add_cancel_of_le (exp.toMeasureSemanticsVia.evalDist_apply_univ_le_one exp.main)]
-
-end advantage
-
-end SecExp
