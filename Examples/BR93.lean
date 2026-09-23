@@ -104,94 +104,61 @@ lazy random oracle `Rand → M`. -/
 abbrev RO_Spec (Rand M : Type) := unifSpec + (Rand →ₒ M)
 
 /-- A one-time CPA adversary for BR93. Both phases share access to the same random oracle. -/
-structure CPA_Adv where
+structure CPA_Adv (PK Rand M : Type) where
   State : Type
   choose : PK → OracleComp (RO_Spec Rand M) (M × M × State)
   guess : State → Rand × M → OracleComp (RO_Spec Rand M) Bool
 
 /-! ### Random-oracle transcript observations
 
-Pure facts about query logs over `RO_Spec`, needing no structure on `Rand` or `M` beyond
-what each statement names. -/
+Pure facts about query logs over `RO_Spec` and their hash-oracle part `QueryLog.snd`, needing no
+structure on `Rand` or `M` beyond what each statement names. -/
 
-private def rightLog (log : QueryLog (RO_Spec Rand M)) : QueryLog (RO_Spec Rand M) :=
-  log.filter fun entry => entry.1.isRight
+private lemma wasQueried_snd [DecidableEq Rand] (log : QueryLog (RO_Spec Rand M)) (r : Rand) :
+    log.snd.wasQueried r = log.wasQueried (Sum.inr r) := by
+  induction log with
+  | nil => rfl
+  | cons e log ih =>
+    rcases e with ⟨_ | r', u⟩
+    · simpa [QueryLog.snd] using ih
+    · obtain rfl | h := eq_or_ne r' r <;> simp_all [QueryLog.snd]
 
-private lemma wasQueried_rightLog [DecidableEq Rand] (log : QueryLog (RO_Spec Rand M))
-    (r : Rand) : (rightLog log).wasQueried (Sum.inr r) = log.wasQueried (Sum.inr r) := by
-  rw [QueryLog.wasQueried_eq_decide_mem_map_fst, QueryLog.wasQueried_eq_decide_mem_map_fst]
-  refine decide_eq_decide.2 ?_
-  simp only [rightLog, List.mem_map, List.mem_filter]
-  exact ⟨fun ⟨e, ⟨he, _⟩, hr⟩ => ⟨e, he, hr⟩,
-    fun ⟨e, he, hr⟩ => ⟨e, ⟨he, by simp [hr]⟩, hr⟩⟩
-
-private lemma find?_rightLog (log : QueryLog (RO_Spec Rand M)) (p : Rand → Bool) :
-    (rightLog log).find? (fun e => match e.1 with | .inl _ => false | .inr r => p r) =
-      log.find? (fun e => match e.1 with | .inl _ => false | .inr r => p r) := by
-  simp only [rightLog, List.find?_filter]
-  congr 1
-  funext ⟨t, u⟩
-  cases t <;> simp
-
-/-- If the transcript contains a right-oracle query at `r`, then searching it for a query whose
-forward image matches `tdp.forward pk r` succeeds with a right-oracle entry whose preimage has the
-matching forward image. This is the pointwise heart of the bad-event reduction: a bad transcript
-yields a valid trapdoor preimage. -/
-private lemma find?_inr_of_wasQueried [DecidableEq Rand] (pk : PK) (r : Rand)
-    (log : QueryLog (RO_Spec Rand M)) (hbad : log.wasQueried (Sum.inr r) = true) :
-    ∃ (r₀ : Rand) (m₀ : M),
-      (log.find? fun entry => match entry.1 with
-        | Sum.inl _ => false
-        | Sum.inr r' => tdp.forward pk r' = tdp.forward pk r) =
-        some ⟨Sum.inr r₀, m₀⟩ ∧
-      tdp.forward pk r₀ = tdp.forward pk r := by
-  simp only [QueryLog.wasQueried_eq_decide_mem_map_fst, decide_eq_true_eq, List.mem_map] at hbad
-  classical
-  set P : (Σ t : (RO_Spec Rand M).Domain, (RO_Spec Rand M).Range t) → Bool :=
-    fun entry => match entry.1 with
-      | Sum.inl _ => false
-      | Sum.inr r' => decide (tdp.forward pk r' = tdp.forward pk r) with hP
-  -- The bad-event witness satisfies the (weaker) forward predicate, so `find?` succeeds.
-  have hex : ∃ entry ∈ log, P entry = true := by
-    obtain ⟨entry, hmem, hentry⟩ := hbad
-    exact ⟨entry, hmem, by simp [hP, hentry]⟩
-  obtain ⟨entry, hmem, hentry⟩ := hex
-  obtain ⟨found, hfound⟩ :=
-    Option.isSome_iff_exists.mp (List.find?_isSome.mpr ⟨entry, hmem, hentry⟩)
-  have hfp : P found = true := List.find?_some hfound
-  rw [hfound]
-  -- The found entry satisfies `P`, which is false on left queries, hence it is a right query.
-  obtain ⟨t, u⟩ := found
-  revert hfp
-  simp only [hP]
-  cases t with
-  | inl a => simp
-  | inr r' =>
-    intro hr'
-    simp only [decide_eq_true_eq] at hr'
-    exact ⟨r', u, rfl, hr'⟩
-
-/-- The first logged preimage of the challenge, with the inverter's default on failure. -/
+/-- The first logged hash query whose forward image is `y`, with the inverter's default on
+failure. -/
 private def transcriptPreimage [DecidableEq Rand] [Inhabited Rand]
-    (pk : PK) (y : Rand) (log : QueryLog (RO_Spec Rand M)) : Rand :=
-  match log.find? (fun entry => match entry.1 with
-    | .inl _ => false
-    | .inr r => decide (tdp.forward pk r = y)) with
-  | some entry => match entry.1 with
-    | .inl _ => default
-    | .inr r => r
-  | none => default
+    (pk : PK) (y : Rand) (log : QueryLog (Rand →ₒ M)) : Rand :=
+  ((log.find? fun e => tdp.forward pk e.1 = y).map (·.1)).getD default
 
+/-- A bad transcript yields a valid trapdoor preimage: if the hash oracle was queried at `r`, the
+first logged query with the forward image of `r` is a preimage of it. -/
 private lemma forward_transcriptPreimage_of_wasQueried [DecidableEq Rand] [Inhabited Rand]
-    (pk : PK) (r : Rand)
-    (log : QueryLog (RO_Spec Rand M)) (hbad : log.wasQueried (Sum.inr r) = true) :
+    (pk : PK) (r : Rand) (log : QueryLog (Rand →ₒ M)) (hbad : log.wasQueried r = true) :
     tdp.forward pk (transcriptPreimage (tdp := tdp) pk (tdp.forward pk r) log) =
       tdp.forward pk r := by
-  obtain ⟨r₀, m₀, hfind, hforward⟩ :=
-    find?_inr_of_wasQueried (tdp := tdp) pk r log hbad
-  unfold transcriptPreimage
-  rw [hfind]
-  exact hforward
+  simp only [QueryLog.wasQueried_eq_decide_mem_map_fst, decide_eq_true_eq, List.mem_map] at hbad
+  obtain ⟨e, he, rfl⟩ := hbad
+  obtain ⟨found, hfound⟩ := Option.isSome_iff_exists.mp <|
+    (List.find?_isSome (p := fun e' => tdp.forward pk e'.1 = tdp.forward pk e.1)).mpr
+      ⟨e, he, by simp⟩
+  simpa [transcriptPreimage, hfound] using List.find?_some hfound
+
+/-- Searching a full log for a hash query, as `inverter` does, is `transcriptPreimage` on its
+hash-oracle part. -/
+private lemma match_find?_eq_pure_transcriptPreimage [DecidableEq Rand] [Inhabited Rand]
+    (pk : PK) (y : Rand) (log : QueryLog (RO_Spec Rand M)) :
+    (match log.find? (fun entry => match entry.1 with
+        | Sum.inl _ => false
+        | Sum.inr r => tdp.forward pk r = y) with
+      | some entry => match entry.1 with
+        | Sum.inl _ => (pure default : ProbComp Rand)
+        | Sum.inr r => pure r
+      | none => pure default) = pure (transcriptPreimage (tdp := tdp) pk y log.snd) := by
+  induction log with
+  | nil => rfl
+  | cons e log ih =>
+    rcases e with ⟨_ | r, u⟩
+    · simpa [QueryLog.snd] using ih
+    · by_cases h : tdp.forward pk r = y <;> simp_all [QueryLog.snd, transcriptPreimage]
 
 /-! ### The random-oracle world
 
@@ -209,8 +176,8 @@ abbrev roQueryImpl :
 
 private def runRightLog {α : Type} (mx : OracleComp (RO_Spec Rand M) α)
     (cache : (Rand →ₒ M).QueryCache) :
-    ProbComp ((α × QueryLog (RO_Spec Rand M)) × (Rand →ₒ M).QueryCache) :=
-  (fun x => ((x.1.1, rightLog x.1.2), x.2)) <$>
+    ProbComp ((α × QueryLog (Rand →ₒ M)) × (Rand →ₒ M).QueryCache) :=
+  (fun x => ((x.1.1, x.1.2.snd), x.2)) <$>
     (simulateQ roQueryImpl.withLogging mx).run.run cache
 
 private lemma runRightLog_bind {α β : Type} (mx : OracleComp (RO_Spec Rand M) α)
@@ -220,11 +187,11 @@ private lemma runRightLog_bind {α β : Type} (mx : OracleComp (RO_Spec Rand M) 
       let y ← runRightLog (f x.1.1) x.2
       pure ((y.1.1, x.1.2 ++ y.1.2), y.2)) := by
   simp only [runRightLog, QueryImpl.run_run_simulateQ_withLogging_bind, map_bind, map_pure,
-    bind_map_left, rightLog, List.filter_append]
+    bind_map_left, QueryLog.snd, List.filterMap_append]
 
 private lemma runRightLog_pure {α : Type} (a : α) (cache : (Rand →ₒ M).QueryCache) :
     runRightLog (pure a) cache = pure ((a, []), cache) := by
-  simp [runRightLog, rightLog, StateT.run_pure]
+  simp [runRightLog, QueryLog.snd, StateT.run_pure]
 
 private lemma runRightLog_lift {α : Type} (p : ProbComp α)
     (cache : (Rand →ₒ M).QueryCache) :
@@ -235,14 +202,16 @@ private lemma runRightLog_lift {α : Type} (p : ProbComp α)
     fun x => pure ((x.1.1, []), x.2)
   · apply bind_congr_of_forall_mem_support
     intro x hx
-    have hlog : rightLog x.1.2 = [] := by
-      apply List.filter_eq_nil_iff.mpr
+    have hlog : x.1.2.snd = [] := by
+      apply List.filterMap_eq_nil_iff.mpr
       intro e he
       rw [← OracleComp.liftComp_eq_liftM] at hx
       obtain ⟨a, ha⟩ :=
         QueryImpl.exists_inl_of_mem_support_run_simulateQ_withLogging_liftComp_stateT _ p cache x
           hx e he
-      simp [ha]
+      obtain ⟨t, u⟩ := e
+      obtain rfl : t = _ := ha
+      rfl
     rw [hlog]
   · rw [QueryImpl.bind_run_run_simulateQ_withLogging (f := fun a s => pure ((a, []), s)),
       roSim.run_liftM, bind_map_left]
@@ -251,15 +220,15 @@ private lemma runRightLog_lift {α : Type} (p : ProbComp α)
 random-oracle queries, and return the first query whose image under the trapdoor permutation
 matches the challenge `y`. -/
 def inverter [Inhabited Rand] [AddCommGroup M] (tdp : TrapdoorPermutation PK SK Rand)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : TDPAdversary PK Rand :=
+    (adv : CPA_Adv PK Rand M) : TDPAdversary PK Rand :=
   fun pk y => do
     let loggedRun :
         StateT ((Rand →ₒ M).QueryCache) ProbComp
           (Unit × QueryLog (RO_Spec Rand M)) :=
       (simulateQ roQueryImpl.withLogging <| (show OracleComp (RO_Spec Rand M) Unit from do
         let (m₁, m₂, st) ← adv.choose pk
-        let b ← liftM ($ᵗ Bool)
-        let h ← liftM ($ᵗ M)
+        let b ← $ᵗ Bool
+        let h ← $ᵗ M
         let c : Rand × M := (y, h + if b then m₁ else m₂)
         let _b' ← adv.guess st c
         return ())).run
@@ -274,8 +243,8 @@ def inverter [Inhabited Rand] [AddCommGroup M] (tdp : TrapdoorPermutation PK SK 
     | none => return default
 
 /-- The logged challenge interaction, including the cache threaded from selection to guessing. -/
-private def challengeTranscript [AddCommGroup M] (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M))
-    (pk : PK) (y : Rand) : ProbComp (QueryLog (RO_Spec Rand M)) := do
+private def challengeTranscript [AddCommGroup M] (adv : CPA_Adv PK Rand M)
+    (pk : PK) (y : Rand) : ProbComp (QueryLog (Rand →ₒ M)) := do
   let choice ← runRightLog (adv.choose pk) ∅
   let b ← $ᵗ Bool
   let h ← $ᵗ M
@@ -283,38 +252,22 @@ private def challengeTranscript [AddCommGroup M] (adv : CPA_Adv (PK := PK) (Rand
     (y, h + if b then choice.1.1.1 else choice.1.1.2.1)) choice.2
   return choice.1.2 ++ guess.1.2
 
-private lemma inverter_eq [Inhabited Rand] [AddCommGroup M]
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) (pk : PK)
-    (y : Rand) :
+private lemma inverter_eq [Inhabited Rand] [AddCommGroup M] (adv : CPA_Adv PK Rand M)
+    (pk : PK) (y : Rand) :
     inverter tdp adv pk y = transcriptPreimage (tdp := tdp) pk y <$>
       challengeTranscript adv pk y := by
   have projected : inverter tdp adv pk y = (do
       let x ← runRightLog (show OracleComp (RO_Spec Rand M) Unit from do
         let (m₁, m₂, st) ← adv.choose pk
-        let b ← liftM ($ᵗ Bool)
-        let h ← liftM ($ᵗ M)
+        let b ← $ᵗ Bool
+        let h ← $ᵗ M
         let _ ← adv.guess st (y, h + if b then m₁ else m₂)
         return ()) ∅
       return transcriptPreimage (tdp := tdp) pk y x.1.2) := by
     simp only [inverter, runRightLog, StateT.run'_eq, bind_map_left]
     apply bind_congr
     intro x
-    simp only [transcriptPreimage, find?_rightLog]
-    have hpure (found : Option ((t : (RO_Spec Rand M).Domain) ×
-        (RO_Spec Rand M).Range t)) :
-        (match found with
-        | some entry => match entry.1 with
-          | .inl _ => (pure default : ProbComp Rand)
-          | .inr r => pure r
-        | none => pure default) = pure (match found with
-        | some entry => match entry.1 with
-          | .inl _ => default
-          | .inr r => r
-        | none => default) := by
-      rcases found with _ | ⟨t, u⟩
-      · rfl
-      · cases t <;> rfl
-    exact hpure _
+    exact match_find?_eq_pure_transcriptPreimage pk y x.1.2
   rw [projected]
   simp only [challengeTranscript, runRightLog_bind, runRightLog_lift, runRightLog_pure,
     bind_assoc, pure_bind, List.nil_append, List.append_nil, map_bind, map_pure]
@@ -329,11 +282,11 @@ final cache or the transcript. -/
 private lemma isCached_of_mem_support_runRightLog {α : Type}
     (oa : OracleComp (RO_Spec Rand M) α) (r : Rand) (s : (Rand →ₒ M).QueryCache) :
     ∀ z ∈ support (runRightLog oa s),
-      z.2.isCached r = (s.isCached r || z.1.2.wasQueried (Sum.inr r)) := by
+      z.2.isCached r = (s.isCached r || z.1.2.wasQueried r) := by
   intro z hz
   rw [runRightLog, support_map] at hz
   obtain ⟨y, hy, rfl⟩ := hz
-  rw [roSim.isCached_of_mem_support_run_withLogging oa r s y hy, wasQueried_rightLog]
+  rw [roSim.isCached_of_mem_support_run_withLogging oa r s y hy, wasQueried_snd]
 
 /-- A logged BR93 run whose transcript is discarded is the plain run. -/
 private lemma bind_runRightLog_of_log_unused {α β : Type}
@@ -352,50 +305,48 @@ variable [SampleableType Rand]
 
 /-- Game 2: after replacing the challenge hash with a uniform mask, translation by the
 challenge message preserves uniformity, so the challenge ciphertext no longer depends on `b`. -/
-def game2 (tdp : TrapdoorPermutation PK SK Rand)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ProbComp Bool :=
+def game2 (tdp : TrapdoorPermutation PK SK Rand) (adv : CPA_Adv PK Rand M) : ProbComp Bool :=
   do
     let b ← ($ᵗ Bool)
     let b' ← (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
       let (pk, _sk) ← liftM tdp.keygen
       let (_m₁, _m₂, st) ← adv.choose pk
-      let r ← liftM ($ᵗ Rand)
-      let h ← liftM ($ᵗ M)
+      let r ← $ᵗ Rand
+      let h ← $ᵗ M
       let c : Rand × M := (tdp.forward pk r, h)
       adv.guess st c)).run' ∅
     return (b == b')
 
 /-- In the all-random game, the challenge ciphertext is independent of the hidden bit, so the
 adversary succeeds with probability exactly `1/2`. -/
-theorem evalDist_game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+theorem evalDist_game2_eq_half (adv : CPA_Adv PK Rand M) :
     𝒟[game2 tdp adv] {true} = 1 / 2 := by
   let f : Bool → ProbComp Bool := fun _ =>
     (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
       let (pk, _sk) ← liftM tdp.keygen
       let (_m₁, _m₂, st) ← adv.choose pk
-      let r ← liftM ($ᵗ Rand)
-      let h ← liftM ($ᵗ M)
+      let r ← $ᵗ Rand
+      let h ← $ᵗ M
       let c : Rand × M := (tdp.forward pk r, h)
       adv.guess st c)).run' ∅
   change 𝒟[do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] {true} = 1 / 2
   exact ProbComp.evalDist_decide_eq_uniformBool_half f (by rfl)
 
 /-- The finite-frontend form of `evalDist_game2_eq_half`. -/
-theorem game2_eq_half (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+theorem game2_eq_half (adv : CPA_Adv PK Rand M) :
     Pr[= true | game2 tdp adv] = 1 / 2 := by
   simpa only [evalDist_apply_singleton] using evalDist_game2_eq_half (tdp := tdp) adv
 
 variable [AddCommGroup M]
 
 /-- Real one-time CPA game in the random-oracle model. -/
-def cpaGame (tdp : TrapdoorPermutation PK SK Rand)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ProbComp Bool :=
+def cpaGame (tdp : TrapdoorPermutation PK SK Rand) (adv : CPA_Adv PK Rand M) : ProbComp Bool :=
   (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
-    let b ← liftM ($ᵗ Bool)
+    let b ← $ᵗ Bool
     let (pk, _sk) ← liftM tdp.keygen
     let (m₁, m₂, st) ← adv.choose pk
-    let r ← liftM ($ᵗ Rand)
-    let h : M ← (RO_Spec Rand M).query (Sum.inr r)
+    let r ← $ᵗ Rand
+    let h ← (Rand →ₒ M).query r
     let c : Rand × M := (tdp.forward pk r, h + if b then m₁ else m₂)
     let b' ← adv.guess st c
     return (b == b'))).run' ∅
@@ -403,14 +354,13 @@ def cpaGame (tdp : TrapdoorPermutation PK SK Rand)
 /-- Game 1: replace the challenge hash value with a fresh uniform mask. The adversary still
 interacts with the same lazy random oracle, so this only changes the game if it queries the
 hidden challenge randomness `r`. -/
-def game1 (tdp : TrapdoorPermutation PK SK Rand)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ProbComp Bool :=
+def game1 (tdp : TrapdoorPermutation PK SK Rand) (adv : CPA_Adv PK Rand M) : ProbComp Bool :=
   (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
-    let b ← liftM ($ᵗ Bool)
+    let b ← $ᵗ Bool
     let (pk, _sk) ← liftM tdp.keygen
     let (m₁, m₂, st) ← adv.choose pk
-    let r ← liftM ($ᵗ Rand)
-    let h ← liftM ($ᵗ M)
+    let r ← $ᵗ Rand
+    let h ← $ᵗ M
     let c : Rand × M := (tdp.forward pk r, h + if b then m₁ else m₂)
     let b' ← adv.guess st c
     return (b == b'))).run' ∅
@@ -418,16 +368,16 @@ def game1 (tdp : TrapdoorPermutation PK SK Rand)
 /-- Bad event for the Game 0 → Game 1 hop: the adversary queries the random oracle at the
 hidden challenge randomness `r`. -/
 def badEventExp (tdp : TrapdoorPermutation PK SK Rand)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ProbComp Bool := do
+    (adv : CPA_Adv PK Rand M) : ProbComp Bool := do
   let loggedRun :
       StateT ((Rand →ₒ M).QueryCache) ProbComp
         (Rand × QueryLog (RO_Spec Rand M)) :=
     (simulateQ roQueryImpl.withLogging <| (show OracleComp (RO_Spec Rand M) Rand from do
       let (pk, _sk) ← liftM tdp.keygen
       let (m₁, m₂, st) ← adv.choose pk
-      let b ← liftM ($ᵗ Bool)
-      let r ← liftM ($ᵗ Rand)
-      let h ← liftM ($ᵗ M)
+      let b ← $ᵗ Bool
+      let r ← $ᵗ Rand
+      let h ← $ᵗ M
       let c : Rand × M := (tdp.forward pk r, h + if b then m₁ else m₂)
       let _b' ← adv.guess st c
       return r)).run
@@ -436,10 +386,10 @@ def badEventExp (tdp : TrapdoorPermutation PK SK Rand)
 
 /-- Probability of the bad event. -/
 noncomputable def badEventProb (tdp : TrapdoorPermutation PK SK Rand)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ℝ :=
+    (adv : CPA_Adv PK Rand M) : ℝ :=
   (𝒟[badEventExp tdp adv] {true}).toReal
 
-private lemma badEventExp_eq (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+private lemma badEventExp_eq (adv : CPA_Adv PK Rand M) :
     badEventExp tdp adv = (do
       let (pk, _) ← tdp.keygen
       let choice ← runRightLog (adv.choose pk) ∅
@@ -448,18 +398,18 @@ private lemma badEventExp_eq (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) 
       let h ← $ᵗ M
       let guess ← runRightLog (adv.guess choice.1.1.2.2
         (tdp.forward pk r, h + if b then choice.1.1.1 else choice.1.1.2.1)) choice.2
-      return (choice.1.2 ++ guess.1.2).wasQueried (Sum.inr r)) := by
+      return (choice.1.2 ++ guess.1.2).wasQueried r) := by
   have projected : badEventExp tdp adv = (do
       let x ← runRightLog (show OracleComp (RO_Spec Rand M) Rand from do
         let (pk, _) ← liftM tdp.keygen
         let (m₁, m₂, st) ← adv.choose pk
-        let b ← liftM ($ᵗ Bool)
-        let r ← liftM ($ᵗ Rand)
-        let h ← liftM ($ᵗ M)
+        let b ← $ᵗ Bool
+        let r ← $ᵗ Rand
+        let h ← $ᵗ M
         let _ ← adv.guess st (tdp.forward pk r, h + if b then m₁ else m₂)
         return r) ∅
-      return x.1.2.wasQueried (Sum.inr x.1.1)) := by
-    simp only [badEventExp, runRightLog, StateT.run'_eq, bind_map_left, wasQueried_rightLog]
+      return x.1.2.wasQueried x.1.1) := by
+    simp only [badEventExp, runRightLog, StateT.run'_eq, bind_map_left, wasQueried_snd]
   rw [projected]
   simp only [runRightLog_bind, runRightLog_lift, runRightLog_pure, bind_assoc,
     pure_bind, List.nil_append, List.append_nil]
@@ -467,7 +417,7 @@ private lemma badEventExp_eq (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) 
 /-- The idealized challenge game with its bad flag: the challenge mask is fresh, and the flag
 records whether the final cache holds an answer at the hidden challenge input. -/
 private def idealFlagged (tdp : TrapdoorPermutation PK SK Rand)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) : ProbComp (Bool × Bool) := do
+    (adv : CPA_Adv PK Rand M) : ProbComp (Bool × Bool) := do
   let b ← $ᵗ Bool
   let ks ← tdp.keygen
   let choice ← (simulateQ roQueryImpl (adv.choose ks.1)).run ∅
@@ -478,7 +428,7 @@ private def idealFlagged (tdp : TrapdoorPermutation PK SK Rand)
   return (b == z.1, z.2.isCached r)
 
 /-- Game 1 is the success marginal of the flagged idealized game. -/
-private lemma game1_eq_idealFlagged (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+private lemma game1_eq_idealFlagged (adv : CPA_Adv PK Rand M) :
     game1 tdp adv = Prod.fst <$> idealFlagged tdp adv := by
   rw [game1, idealFlagged]
   simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, roSim.run_liftM, bind_map_left,
@@ -486,8 +436,7 @@ private lemma game1_eq_idealFlagged (adv : CPA_Adv (PK := PK) (Rand := Rand) (M 
   simp only [StateT.run_pure, map_eq_bind_pure_comp, Function.comp, bind_assoc, pure_bind]
 
 /-- The bad-event experiment is the flag marginal of the flagged idealized game. -/
-private lemma evalDist_badEventExp_eq_idealFlagged
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+private lemma evalDist_badEventExp_eq_idealFlagged (adv : CPA_Adv PK Rand M) :
     𝒟[badEventExp tdp adv] = 𝒟[Prod.snd <$> idealFlagged tdp adv] := by
   have hforget : badEventExp tdp adv = (do
       let ks ← tdp.keygen
@@ -524,8 +473,7 @@ private lemma evalDist_badEventExp_eq_idealFlagged
 
 /-- Off the bad flag, the flagged idealized game is dominated by the real game: when the
 idealized run never queries the hidden input, programming the revealed mask there is invisible. -/
-private lemma evalDist_idealFlagged_good_le_cpaGame
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) (E : Bool → Prop) :
+private lemma evalDist_idealFlagged_good_le_cpaGame (adv : CPA_Adv PK Rand M) (E : Bool → Prop) :
     𝒟[idealFlagged tdp adv >>= fun z => pure (E z.1 ∧ z.2 = false)] {True} ≤
       𝒟[cpaGame tdp adv >>= fun y => pure (E y)] {True} := by
   rw [cpaGame, idealFlagged]
@@ -537,8 +485,7 @@ private lemma evalDist_idealFlagged_good_le_cpaGame
     fun ks _ => OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton True)
     fun choice _ => OracleComp.evalDist_bind_apply_mono_of_support _ _ _
       (measurableSet_singleton True) fun r _ => ?_
-  simp only [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, id_map,
-    QueryImpl.add_apply_inr, randomOracle.run_eq]
+  simp only [roSim.simulateQ_liftM_spec_query, randomOracle.run_eq]
   cases hcr : choice.2 r with
   | some v =>
     -- The hidden input is already cached, so the idealized run is flagged bad.
@@ -561,8 +508,7 @@ private lemma evalDist_idealFlagged_good_le_cpaGame
     exact roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2 hcr
 
 /-- Both one-sided up-to-bad bounds between the real game and Game 1, as event masses. -/
-private lemma evalDist_cpaGame_game1_le_badEventExp
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+private lemma evalDist_cpaGame_game1_le_badEventExp (adv : CPA_Adv PK Rand M) :
     𝒟[game1 tdp adv] {true} ≤ 𝒟[badEventExp tdp adv] {true} + 𝒟[cpaGame tdp adv] {true} ∧
       𝒟[cpaGame tdp adv] {true} ≤
         𝒟[badEventExp tdp adv] {true} + 𝒟[game1 tdp adv] {true} := by
@@ -584,7 +530,7 @@ private lemma evalDist_cpaGame_game1_le_badEventExp
 
 /-- Up-to-bad step: replacing the challenge hash query with a fresh uniform mask changes the
 game by at most the bad-event probability. -/
-theorem cpaGame_gap_le_badEvent (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+theorem cpaGame_gap_le_badEvent (adv : CPA_Adv PK Rand M) :
     |(Pr[= true | cpaGame tdp adv]).toReal -
       (Pr[= true | game1 tdp adv]).toReal| ≤
       badEventProb tdp adv := by
@@ -603,7 +549,7 @@ theorem evalDist_game1_eq_game2 [MeasurableSpace M] [DiscreteMeasurableSpace M]
     [MeasurableSingletonClass M] [EvalDistSemantics ProbComp]
     [LawfulEvalDistSemantics ProbComp]
     (hM : 𝒟[($ᵗ M : ProbComp M)] = ProbabilityTheory.uniformOn Set.univ)
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    (adv : CPA_Adv PK Rand M) :
     𝒟[game1 tdp adv] = 𝒟[game2 tdp adv] := by
   rw [game1, game2]
   -- Push the random-oracle simulation through both games: lifted samples become plain
@@ -623,7 +569,7 @@ theorem evalDist_game1_eq_game2 [MeasurableSpace M] [DiscreteMeasurableSpace M]
       fun p => pure (b == p.1))
 
 /-- Finite-distribution form of the uniform masking step. -/
-theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+theorem game1_eq_game2 (adv : CPA_Adv PK Rand M) :
     𝒮[game1 tdp adv] = 𝒮[game2 tdp adv] := by
   let : MeasurableSpace M := ⊤
   let : EvalDistSemantics ProbComp := instEvalDistSemanticsOfMonadLiftTSPMF
@@ -633,16 +579,15 @@ theorem game1_eq_game2 (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
     (evalDist_game1_eq_game2 hM adv)
 
 /-- One shared challenge and transcript for the bad-event and inversion observations. -/
-private def challengeTranscriptExp (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    ProbComp (PK × Rand × QueryLog (RO_Spec Rand M)) := do
+private def challengeTranscriptExp (adv : CPA_Adv PK Rand M) :
+    ProbComp (PK × Rand × QueryLog (Rand →ₒ M)) := do
   let (pk, _) ← tdp.keygen
   let r ← $ᵗ Rand
   let log ← challengeTranscript adv pk (tdp.forward pk r)
   return (pk, r, log)
 
-private lemma tdpExp_eq_observation [Inhabited Rand]
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    tdpExp tdp (inverter tdp adv) = (fun x : PK × Rand × QueryLog (RO_Spec Rand M) =>
+private lemma tdpExp_eq_observation [Inhabited Rand] (adv : CPA_Adv PK Rand M) :
+    tdpExp tdp (inverter tdp adv) = (fun x : PK × Rand × QueryLog (Rand →ₒ M) =>
       decide (tdp.forward x.1 (transcriptPreimage (tdp := tdp) x.1
         (tdp.forward x.1 x.2.1) x.2.2) = tdp.forward x.1 x.2.1)) <$>
       challengeTranscriptExp (tdp := tdp) adv := by
@@ -653,13 +598,13 @@ private lemma tdpExp_eq_observation [Inhabited Rand]
 measure semantics. Only independent challenge draws are reordered. -/
 private theorem measure_badEventExp_eq_observation
     [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
-    𝒟[badEventExp tdp adv] = 𝒟[(fun x : PK × Rand × QueryLog (RO_Spec Rand M) =>
-      x.2.2.wasQueried (Sum.inr x.2.1)) <$> challengeTranscriptExp (tdp := tdp) adv] := by
+    (adv : CPA_Adv PK Rand M) :
+    𝒟[badEventExp tdp adv] = 𝒟[(fun x : PK × Rand × QueryLog (Rand →ₒ M) =>
+      x.2.2.wasQueried x.2.1) <$> challengeTranscriptExp (tdp := tdp) adv] := by
   let : MeasurableSpace (PK × SK) := ⊤
   let : MeasurableSpace Rand := ⊤
   let : MeasurableSpace
-      (((M × M × adv.State) × QueryLog (RO_Spec Rand M)) × (Rand →ₒ M).QueryCache) := ⊤
+      (((M × M × adv.State) × QueryLog (Rand →ₒ M)) × (Rand →ₒ M).QueryCache) := ⊤
   rw [badEventExp_eq]
   simp only [challengeTranscriptExp, challengeTranscript, map_bind, map_pure,
     bind_assoc, pure_bind, evalDist_bind_of_discrete tdp.keygen]
@@ -673,9 +618,9 @@ private theorem measure_badEventExp_eq_observation
 The proof uses the shared transcript's measure and pointwise event inclusion. -/
 theorem measure_badEventExp_le_tdpExp [Inhabited Rand]
     [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+    (adv : CPA_Adv PK Rand M) :
     𝒟[badEventExp tdp adv] {true} ≤ 𝒟[tdpExp tdp (inverter tdp adv)] {true} := by
-  let : MeasurableSpace (PK × Rand × QueryLog (RO_Spec Rand M)) := ⊤
+  let : MeasurableSpace (PK × Rand × QueryLog (Rand →ₒ M)) := ⊤
   rw [measure_badEventExp_eq_observation, tdpExp_eq_observation,
     evalDist_map_apply_of_discrete _ _ (by measurability),
     evalDist_map_apply_of_discrete _ _ (by measurability)]
@@ -686,8 +631,7 @@ theorem measure_badEventExp_le_tdpExp [Inhabited Rand]
 
 /-- The bad event is bounded by the trapdoor-preimage advantage of the inverter
 constructed from the adversary's random-oracle transcript. -/
-theorem badEventProb_le_tdpAdvantage [Inhabited Rand]
-    (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+theorem badEventProb_le_tdpAdvantage [Inhabited Rand] (adv : CPA_Adv PK Rand M) :
     badEventProb tdp adv ≤ (tdpAdvantage tdp (inverter tdp adv)).toReal := by
   rw [badEventProb, tdpAdvantage_eq_evalDist_tdpExp]
   exact ENNReal.toReal_mono (MeasureTheory.measure_ne_top _ _)
@@ -696,7 +640,7 @@ theorem badEventProb_le_tdpAdvantage [Inhabited Rand]
 /-- Main BR93 bound for this file's custom one-time ROM CPA game: the distinguishing
 bias is bounded by the trapdoor-preimage advantage via the standard up-to-bad
 reduction. -/
-theorem indcpa_bound [Inhabited Rand] (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
+theorem indcpa_bound [Inhabited Rand] (adv : CPA_Adv PK Rand M) :
     |(Pr[= true | cpaGame tdp adv]).toReal - 1 / 2| ≤
       (tdpAdvantage tdp (inverter tdp adv)).toReal := by
   have hg12 : Pr[= true | game1 tdp adv] = Pr[= true | game2 tdp adv] :=
