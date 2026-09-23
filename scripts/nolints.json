@@ -1079,8 +1079,6 @@
  ["usesRetiredProbability", "FiatShamir.euf_cma_bound"],
  ["usesRetiredProbability", "FiatShamir.euf_nma_bound"],
  ["usesRetiredProbability", "FiatShamir.nma_to_hard_relation_bound"],
- ["usesRetiredProbability", "FiatShamirWithAbort.euf_cma_bound"],
- ["usesRetiredProbability", "FiatShamirWithAbort.euf_cma_bound_perfectHVZK"],
  ["usesRetiredProbability", "FinRatPMF.Raw.instLawfulMonadLiftPMF_vCVio"],
  ["usesRetiredProbability", "FinRatPMF.Raw.instMonadLiftPMF_vCVio"],
  ["usesRetiredProbability", "FinRatPMF.Raw.toPMF"],

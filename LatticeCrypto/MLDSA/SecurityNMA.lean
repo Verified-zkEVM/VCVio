@@ -16,8 +16,10 @@ This file builds the reduction infrastructure for the ML-DSA EUF-NMA analysis:
 1. **Exact short-secret MLWE key swap.** `keygenShort` samples `(s₁, s₂)` on the `η`-bounded box
    used by the ML-DSA assumption, while `keygenShort1` replaces `t = Â · s₁ + s₂` by a uniform
    vector. `nma_keyswap_hop_short` identifies their NMA-game gap with the seed-based
-   `mldsaMLWEShort` advantage, and `advantage_mldsaMLWEShort_le_matrix` relates that problem to
-   uniform-matrix MLWE under an explicit `ExpandA` idealization.
+   `mldsaMLWEShort` advantage. `advantage_mldsaMLWEShort_le_matrix` relates that problem to
+   uniform-matrix MLWE under the `expandAIdealization` assumption, which has no instance below
+   the trivial budget; the quantitative route to the uniform-matrix problem is the random-oracle
+   model of `LatticeCrypto.MLDSA.SecurityExpandARO`.
 2. **Seed-derived scaffolding.** `keygen0` and `keygen1` describe the concrete seed-derived and
    uniform-`t` key distributions. The generic lemma `nmaGame_eq_keygen_bind` factors either
    key-generator prefix out of the NMA runtime. The older full-ring `mldsaMLWE` definitions remain
@@ -269,6 +271,63 @@ theorem keygenShort_generable :
       hr.gen = keygenShort p prims :=
   ⟨hrShort p prims, rfl⟩
 
+/-- The generable relation carried by the FIPS seed-derived key generation: the generator is
+`keygen0`, and every generated pair is seed-valid. Each pair drawn by `keygen0` is literally
+the key assembled by `keyFromMaterial` from the material expanded out of its seed, which
+`keyFromMaterial_eq` identifies with `keyGenFromSeed` — exactly the witness `validKeyPair`
+asks for. This inhabits the `hGen` hypothesis of the FIPS-keygen security corollary
+(`keygen0_generable`). -/
+def hrFips :
+    GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims) :=
+  ⟨keygen0 p prims, fun pk sk hmem => by
+    rw [validKeyPair_eq_true_iff]
+    simp only [keygen0, mem_support_bind_iff] at hmem
+    obtain ⟨seed, -, hpure⟩ := hmem
+    refine ⟨seed, ?_⟩
+    have h := (eq_of_mem_support_pure _ hpure).symm
+    simpa only [keyFromMaterial, keyGenFromSeed] using h⟩
+
+/-- **Satisfiability certificate for the FIPS-keygen `hGen` hypothesis.** Some generable
+relation over `validKeyPair` has the seed-derived FIPS key generator `keygen0` as its
+generator — witnessed by `hrFips`. The FIPS-keygen security corollary hypothesizes such a
+relation via `hGen : hr.gen = keygen0 p prims`; this theorem records that the hypothesis
+pair `(hr, hGen)` is inhabited, so that statement has non-vacuous instances. -/
+theorem keygen0_generable :
+    ∃ hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims),
+      hr.gen = keygen0 p prims :=
+  ⟨hrFips p prims, rfl⟩
+
+/-- **XOF replacement for the ML-DSA secret derivation (`ExpandSeed`/`ExpandS`), quantified
+form.** For a real bound `εPRG`, this asserts that no distinguisher receiving
+`(ρ, K, s₁, s₂)` can tell the FIPS derivation — expand a uniform 32-byte seed into
+`(ρ, ρ', K)` and derive `(s₁, s₂) = ExpandS(ρ')` — from independent sampling with the
+correct short marginals: `ρ`, `K` uniform and `(s₁, s₂)` uniform on the `η`-bounded box
+`S_η^ℓ × S_η^k`, i.e. exactly the draws of the idealized key generator `keygenShort`.
+
+This is the standard PRG/XOF-replacement reading of `ExpandSeed`/`ExpandS` against the
+short-secret marginal: the ideal branch is the box distribution the Module-LWE assumption
+for ML-DSA is stated over, so the assumption carries exactly the "SHAKE output is
+pseudorandom with the FIPS marginals" step and nothing else. For a fixed deterministic
+`prims` the unrestricted-quantifier form is only satisfiable at large `εPRG` — an unbounded
+distinguisher can test membership in the `2^256`-point image of the seed expansion — so,
+pending the cost-model infrastructure (#460), it should be read computationally, against
+bounded distinguishers, where it is the assumption that the SHAKE-derived `(ρ, K, s₁, s₂)`
+is pseudorandom with the FIPS marginals. It is consumed by the FIPS-keygen corollary
+`nma_security_fips` to transfer the short-model bound to `keygen0`. -/
+def expandSReplacement (εPRG : ℝ) : Prop :=
+  ∀ D : Bytes 32 → Bytes 32 → RqVec p.l → RqVec p.k → ProbComp Bool,
+    |(Pr[= true | do
+        let seed ← $ᵗ (Bytes 32)
+        let (rho, rhoPrime, key) := prims.expandSeed seed
+        let (s1, s2) := prims.expandS rhoPrime
+        D rho key s1 s2]).toReal -
+      (Pr[= true | do
+        let key ← $ᵗ (Bytes 32)
+        let rho ← $ᵗ (Bytes 32)
+        let s1 ← sampleShortVec p.l p.eta
+        let s2 ← sampleShortVec p.k p.eta
+        D rho key s1 s2]).toReal| ≤ εPRG
+
 end KeyGen
 
 section Game
@@ -463,13 +522,19 @@ distinguisher `D` receiving both the seed and the matrix, the pair
 `(ρ, ExpandA(ρ))` for uniform `ρ` is `εA`-indistinguishable from `(ρ, A)` with `A`
 uniform and independent of `ρ`.
 
-This is the standard random-oracle reading of `ExpandA` (Dilithium's `A = ExpandA(ρ)`
-with `ExpandA` modeled as a random function), stated once with inspectable content
-rather than supplied per-reduction. For a fixed deterministic `prims.expandA` the
-unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher may
-recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
-should be read computationally, against bounded distinguishers, where it is the
-assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
+**This predicate has no useful instance.** For the fixed deterministic function
+`prims.expandA` the distinguisher `D ρ Â := pure (decide (Â = ExpandA(ρ)))` accepts the real
+branch with probability `1` and the ideal branch with probability `1 / |TqMatrix|`, so the
+inequality forces `εA` to be essentially `1`. Restricting to bounded distinguishers would not
+change that: recomputing `ExpandA(ρ)` is the same efficient evaluation that key generation and
+verification themselves perform. Consequently `nma_security_short_matrix`, the only consumer,
+is non-quantitative scaffolding.
+
+Reaching the uniform-matrix problem requires *modelling* `ExpandA` as a random oracle rather
+than assuming a property of a fixed function. That model is
+`LatticeCrypto.MLDSA.SecurityExpandARO`, where `ExpandA` is an oracle shared by key generation,
+verification, and the reduction, and both reductions program it at a self-chosen seed; its
+headline `MLDSA.NMA.nma_security_rom` reaches `mldsaMatrixMLWE` with no idealization slack. -/
 def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ) : Prop :=
   ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
     |(𝒟[do
@@ -1281,9 +1346,12 @@ The live short-secret reduction and the extraction bound are fully proven:
 
 - **MLWE key swap (`nma_keyswap_hop_short`).** The exact NMA-game gap for
   `keygenShort` / `keygenShort1` is the advantage of `distinguisherBShort` against
-  `mldsaMLWEShort`. `advantage_mldsaMLWEShort_le_matrix` supplies the explicit seed-to-matrix
-  bridge. The older `mldsaMLWE` / `distinguisherB` declarations are scaffolding only: their
-  full-ring real branch is not the seed-derived `keygen0` distribution.
+  `mldsaMLWEShort`. `advantage_mldsaMLWEShort_le_matrix` supplies the seed-to-matrix bridge, but
+  only under `expandAIdealization`, which has no instance below the trivial budget; the
+  quantitative uniform-matrix statement is `MLDSA.NMA.nma_security_rom` in
+  `LatticeCrypto.MLDSA.SecurityExpandARO`. The older `mldsaMLWE` / `distinguisherB` declarations
+  are scaffolding only: their full-ring real branch is not the seed-derived `keygen0`
+  distribution.
 - **STMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** The uniform-`t` NMA advantage is bounded
   by the SelfTargetMSIS advantage of `extractorC`; after `nmaGame_eq_keygen_bind` both sides bind
   over the same `keygen1` prefix, so `probOutput_bind_mono` reduces to the per-key lemma
