@@ -672,8 +672,4 @@ lemma IND_CPA_hybridChallengeOracleLR_counted_run_some
 
 end MultiQueryHybrid
 
--- Declaration-specific naming exceptions for this game's underscore-separated names.
-attribute [nolint defsWithUnderscore]
-  IND_CPA_Adversary IND_CPA_Adversary.MakesAtMostQueries IND_CPA_Advantage
-
 end AsymmEncAlg

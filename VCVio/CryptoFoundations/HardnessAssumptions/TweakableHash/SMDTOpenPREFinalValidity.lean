@@ -221,10 +221,6 @@ theorem openOracle_run :
       pure ((targets[j]?.map Prod.snd).getD default, opened ++ [j]) := by
   simp [openOracle]
 
--- Declaration-specific naming exceptions for this game's underscore-separated names.
-attribute [nolint defsWithUnderscore]
-  experiment advantage
-
 end SM_DT_OpenPRE_SourceFinalValidity
 
 end TweakableHash

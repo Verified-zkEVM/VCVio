@@ -112,9 +112,6 @@ structure CPA_Adversary (PK Rand M : Type) where
   /-- Given the state and the challenge ciphertext, guess which message was encrypted. -/
   guess : State → Rand × M → OracleComp (RO_Spec Rand M) Bool
 
-attribute [nolint defsWithUnderscore]
-  CPA_Adversary.State CPA_Adversary.choose CPA_Adversary.guess
-
 /-! ### Random-oracle transcript observations
 
 Pure facts about query logs over `RO_Spec` and their hash-oracle part `QueryLog.snd`, needing no

@@ -85,9 +85,4 @@ noncomputable def IND_CPA_OneTime_signedAdvantageReal
 
 end ProbCompSpecialization
 
--- Declaration-specific naming exceptions for this game's underscore-separated names.
-attribute [nolint defsWithUnderscore]
-  IND_CPA_OneTime_Adversary.State IND_CPA_OneTime_Adversary.chooseMessages
-  IND_CPA_OneTime_Adversary.distinguish
-
 end AsymmEncAlg
