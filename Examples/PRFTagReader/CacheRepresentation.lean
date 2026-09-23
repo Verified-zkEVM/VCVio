@@ -32,8 +32,7 @@ variable {D R : Type} [DecidableEq D]
 @[expose]
 def prfHandler [SampleableType R] :
     QueryImpl (PRFOracleSpec D R) (StateT (List (D × R)) ProbComp) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT (List (D × R)) ProbComp) + handler (D := D) (fun _ => $ᵗ R)
+  unifSpec.passthrough + handler (D := D) (fun _ => $ᵗ R)
 
 /-- Private randomness and ideal PRF calls preserve the decoded cache. -/
 theorem prf_local_projection [SampleableType R]
@@ -49,7 +48,7 @@ theorem prf_local_projection [SampleableType R]
         pure (x, decode cache))
       simp only [map_bind, map_pure, Prod.map_apply, id_eq]
   | inr d =>
-      simp only [prfHandler, QueryImpl.add_apply_inr, PRFScheme.prfIdealQueryImpl_apply_inr]
+      simp only [prfHandler, PRFScheme.prfIdealQueryImpl_apply_inr]
       exact local_projection (fun _ => $ᵗ R) d cache
 
 section Closing

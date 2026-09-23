@@ -255,11 +255,11 @@ private lemma simulateQ_prfReal_authToPRFTagImpl_run [SampleableType Nonce]
   let so : QueryImpl ((TagId × Nonce) →ₒ Digest) ProbComp :=
     fun d => pure (prfs.multiplePRFScheme.eval k d)
   let impl : QueryImpl (unifSpec + ((TagId × Nonce) →ₒ Digest)) ProbComp :=
-    HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) + so
+    unifSpec.passthrough + so
   have hleft : ∀ {α : Type} (oa : ProbComp α),
       simulateQ impl (liftComp oa (unifSpec + ((TagId × Nonce) →ₒ Digest))) = oa := by
     intro α oa
-    simp [impl, QueryImpl.simulateQ_add_liftM_left, QueryImpl.simulateQ_toQueryImpl]
+    simp [impl, QueryImpl.simulateQ_add_liftM_left]
   unfold authToPRFTagImpl authTagQueryImpl authPRFQuery
   simp only [StateT.run_bind, StateT.run_get, StateT.run_monadLift,
     bind_pure_comp, pure_bind]

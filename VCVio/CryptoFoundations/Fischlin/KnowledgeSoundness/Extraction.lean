@@ -237,14 +237,11 @@ def knowledgeSoundnessExp
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
   let loggedRO := ro.withLogging
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog roSpec) (StateT roSpec.QueryCache ProbComp))
   do
-    let ((π, roLog), cache) ← (simulateQ (idImpl + loggedRO) (prover x msg)).run |>.run ∅
-    let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-      (StateT roSpec.QueryCache ProbComp)
+    let ((π, roLog), cache) ←
+      (simulateQ (unifSpec.passthrough + loggedRO) (prover x msg)).run.run ∅
     let (verified, _) ←
-      (simulateQ (idImpl' + ro)
+      (simulateQ (unifSpec.passthrough + ro)
         ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).verify x msg π)).run cache
     let extracted ← onlineExtract σ ρ b M x π roLog
@@ -259,9 +256,7 @@ private def ksVerify
     ProbComp (Bool × (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :=
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
-  let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT roSpec.QueryCache ProbComp)
-  (simulateQ (idImpl' + ro)
+  (simulateQ (unifSpec.passthrough + ro)
     ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
       σ hr ρ b S M).verify x msg π)).run cache
 
@@ -278,14 +273,11 @@ private def ksSample
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
   let loggedRO := ro.withLogging
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog roSpec) (StateT roSpec.QueryCache ProbComp))
   do
-    let ((π, roLog), cache) ← (simulateQ (idImpl + loggedRO) (prover x msg)).run |>.run ∅
-    let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-      (StateT roSpec.QueryCache ProbComp)
+    let ((π, roLog), cache) ←
+      (simulateQ (unifSpec.passthrough + loggedRO) (prover x msg)).run.run ∅
     let (verified, _) ←
-      (simulateQ (idImpl' + ro)
+      (simulateQ (unifSpec.passthrough + ro)
         ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).verify x msg π)).run cache
     return ((π, roLog), verified)
@@ -362,8 +354,7 @@ end extraction
 `knowledgeSoundnessExp`. -/
 private def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp))
+  unifSpec.passthrough
 
 /-- The logged random oracle, exactly as in `knowledgeSoundnessExp`. -/
 private def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
@@ -371,7 +362,7 @@ private def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
     QueryImpl hashSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (hashSpec.randomOracle).withLogging
 
-/-- The combined logging implementation, exactly the `idImpl + loggedRO` of
+/-- The combined logging implementation, exactly the `unifSpec.passthrough + loggedRO` of
 `knowledgeSoundnessExp` and `ksSample`. -/
 private def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :

@@ -77,8 +77,7 @@ abbrev OW_CPA_Adversary := PK → C → OracleComp pke.OW_CPA_oracleSpec M
 
 /-- Implementation of the OW-CPA encryption oracle. -/
 def OW_CPA_queryImpl (pk : PK) : QueryImpl pke.OW_CPA_oracleSpec ProbComp :=
-  QueryImpl.add
-    (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp))
+  QueryImpl.add unifSpec.passthrough
     (fun msg => do
       let r ← ($ᵗ R)
       pure (pke.encrypt pk msg r))
@@ -134,7 +133,7 @@ def OW_PCVA_queryImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) [Decida
   let validImpl : QueryImpl (C →ₒ Bool) (OracleComp spec) := fun c => do
     let msg' ← encAlg.decrypt sk c
     return msg'.isSome
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + (checkImpl + validImpl)
+  spec.passthrough + (checkImpl + validImpl)
 
 /-- Main one-way under plaintext-checking and validity attacks (OW-PCVA) experiment.
 

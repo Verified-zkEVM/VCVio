@@ -151,10 +151,8 @@ noncomputable def experiment
   let params ← problem.sampleParams
   let ro : QueryImpl (HashInput →ₒ HashOutput)
     (StateT ((HashInput →ₒ HashOutput).QueryCache) ProbComp) := randomOracle
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT ((HashInput →ₒ HashOutput).QueryCache) ProbComp)
   let ((hashInput, response), cache) ←
-    StateT.run (simulateQ (idImpl + ro) (adv.run params)) ∅
+    StateT.run (simulateQ (unifSpec.passthrough + ro) (adv.run params)) ∅
   match cache hashInput with
   | some hashOutput => return problem.isValid params.1 params.2 hashInput hashOutput response
   | none => return false

@@ -419,7 +419,7 @@ private lemma simulatedNmaUnifSim_forkWrapped_run
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
         OracleQuery.cont_query, id_map, StateT.run_bind]
       simp only [simulatedNmaUnifSim, simulatedNmaFwd, QueryImpl.liftTarget_apply,
-        add_apply_inl, HasQuery.toQueryImpl_apply, QueryImpl.toHasQuery_query,
+        add_apply_inl,
         StateT.run_monadLift, monadLift_self, bind_pure_comp, simulateQ_map,
         StateT.run_map, bind_map_left, map_bind]
       have hquery := forkWrappedUniform_forkSim_query_inl_run

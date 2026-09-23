@@ -60,6 +60,33 @@ lemma add_apply (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
     (impl₁.addLift impl₂ : QueryImpl (spec₁ + spec₂) r) =
       (impl₁.liftTarget r) + (impl₂.liftTarget r) := rfl
 
+/-! ## Passing queries through unchanged -/
+
+/-- The handler that answers each query in `spec` by making the same query to the ambient
+oracles, written `spec.passthrough`. It carries no data: in `spec.passthrough + impl` the target
+monad is read off `impl`, and on its own it coerces to `(QueryImpl.id' spec).liftTarget m` for
+whichever `m` the context expects. -/
+structure Passthrough {ι : Type*} (spec : OracleSpec.{_, u} ι) : Type where
+  mk ::
+
+/-- Extend `impl` to `spec₁ + spec₂` by passing the `spec₁` queries through unchanged. The
+target monad comes from `impl`, so it never has to be written out. -/
+instance {ι₁ ι₂ : Type*} {spec₁ : OracleSpec.{_, u} ι₁} {spec₂ : OracleSpec.{_, u} ι₂}
+    {m : Type u → Type v} [MonadLiftT (OracleComp spec₁) m] :
+    HAdd (Passthrough spec₁) (QueryImpl spec₂ m) (QueryImpl (spec₁ + spec₂) m) where
+  hAdd _ impl := (QueryImpl.id' spec₁).liftTarget m + impl
+
+instance {ι : Type*} {spec : OracleSpec.{_, u} ι} {m : Type u → Type v}
+    [MonadLiftT (OracleComp spec) m] : CoeTail (Passthrough spec) (QueryImpl spec m) where
+  coe _ := (QueryImpl.id' spec).liftTarget m
+
+/-- `spec.passthrough + impl` is the sum of `impl` with the identity handler lifted to the target
+monad, so the lemmas about `+`, `liftTarget` and `QueryImpl.id'` apply to it. -/
+@[simp] lemma passthrough_add {ι₁ ι₂ : Type*} {spec₁ : OracleSpec.{_, u} ι₁}
+    {spec₂ : OracleSpec.{_, u} ι₂} {m : Type u → Type v} [MonadLiftT (OracleComp spec₁) m]
+    (p : Passthrough spec₁) (impl : QueryImpl spec₂ m) :
+    p + impl = (QueryImpl.id' spec₁).liftTarget m + impl := rfl
+
 section simulateQ_add_liftComp
 
 variable {ι₁' ι₂'}
@@ -508,3 +535,12 @@ lemma simulateQ_optionT_liftM_run_eq_of_query
 end simulateQ_optionT_liftM_run
 
 end QueryImpl
+
+namespace OracleSpec
+
+/-- The oracles of `spec`, answered by passing each query through to the ambient oracles
+unchanged. Write `spec.passthrough + impl` to give a computation over `spec + spec'` its
+original `spec` oracles alongside the handler `impl` for `spec'`. -/
+abbrev passthrough {ι : Type*} (spec : OracleSpec.{_, u} ι) : QueryImpl.Passthrough spec := ⟨⟩
+
+end OracleSpec

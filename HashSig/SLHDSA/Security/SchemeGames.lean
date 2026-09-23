@@ -196,8 +196,7 @@ noncomputable def instrumentedEufExp {sigAlg : SignatureAlg (OracleComp spec) M 
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)
@@ -288,8 +287,7 @@ noncomputable def instrumentedSameMessageExp
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)

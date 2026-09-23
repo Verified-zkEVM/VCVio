@@ -184,7 +184,7 @@ deterministic table `f`. This is the fixed-table counterpart of
 `unifFwdImpl spec + randomOracle`. -/
 def unifFwdAnswerImpl (f : QueryImpl spec Id) :
     QueryImpl (unifSpec + spec) ProbComp :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) + f.liftTarget ProbComp
+  unifSpec.passthrough + f.liftTarget ProbComp
 
 /-- The random-oracle simulation of a plain `OracleComp` never fails on any starting cache. -/
 theorem neverFail_simulateQ_randomOracle_run
@@ -236,7 +236,7 @@ theorem exists_agreesWithFn_mem_support_simulateQ_unifFwdAnswerImpl_iff
     cases t with
     | inl t =>
       simp only [simulateQ_bind, simulateQ_spec_query, unifFwdAnswerImpl,
-        QueryImpl.add_apply_inl, HasQuery.toQueryImpl_apply, unifFwdImpl,
+        QueryImpl.add_apply_inl, unifFwdImpl,
         QueryImpl.liftTarget_apply, StateT.run_bind, StateT.run_liftM,
         support_bind, Set.mem_iUnion]
       constructor
