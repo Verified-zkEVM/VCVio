@@ -60,6 +60,9 @@ component starts with one positive scheduler slot, composition adds slot
 masses, and a binary scheduler node chooses a subtree in proportion to its
 mass. `ProportionalScheduler.isCoherent` proves that the resulting output
 distribution is unchanged by swapping or reassociating component frontiers.
+The relation `ProportionalScheduler.outputRel` is also a congruence for `bind`
+continuations, so `ProportionalScheduler.quotientTheory Party` (equal mass and
+sampler equivalence at `outputRel`) satisfies `OpenTheory.HasPlugFactorization`.
 
 Use the synchronous entry points in `VCVio/Interaction/UC/Runtime.lean`:
 

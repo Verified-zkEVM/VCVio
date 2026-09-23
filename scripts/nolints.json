@@ -1176,7 +1176,6 @@
  ["usesRetiredProbability", "InformationTheory.renyiMGF_toMeasure"],
  ["usesRetiredProbability", "InformationTheory.renyiMGF_toMeasure_of_ac"],
  ["usesRetiredProbability", "Interaction.UC.ProportionalScheduler.isFlat"],
- ["usesRetiredProbability", "Interaction.UC.ProportionalScheduler.outputRel"],
  ["usesRetiredProbability", "Interaction.UC.ProportionalScheduler.outputRel_rel"],
  ["usesRetiredProbability", "Interaction.UC.ProportionalScheduler.probEvent_drawSlot"],
  ["usesRetiredProbability", "Interaction.UC.ProportionalScheduler.probOutput_binary"],
