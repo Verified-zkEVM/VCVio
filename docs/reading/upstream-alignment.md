@@ -581,7 +581,7 @@ for `∀ n, f n ≠ ⊤` (≈6 lines from `ENNReal.tendsto_toReal_zero_iff`,
 (`superpolynomialDecay_iff_isBigO`, `…_isLittleO`, `…_zpow_tendsto_zero`, `param_zpow_mul`) with
 `hk := tendsto_natCast_atTop_atTop`. Today every consumer re-crosses `ℝ → ℝ≥0∞` by hand
 (`V:Examples/PRFTagReader/Asymptotic.lean:300–310` chains seven `ENNReal.ofReal_add_le`;
-`V:VCVio/Interaction/UC/Computational.lean:386–390`; `V:VCVio/CryptoFoundations/SecExp.lean:141–149`),
+`V:VCVio/CryptoFoundations/SecExp.lean:141–149`),
 and the generic `negligible_natMul_of_poly_bound` / `negligible_ofReal_natDiv_of_poly_bound` live in
 `Examples/PRFTagReader/Asymptotic.lean:66–84` instead of `Negligible.lean`.
 

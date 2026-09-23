@@ -97,9 +97,11 @@ Important definitions:
 - `Semantics T` bundles a result type and measurable space, a surface monad, its
   `MeasureSemanticsVia`, and a closed-system runner.
 - `Semantics.evalDist` evaluates a closed system to a `Measure sem.Result`.
-- `Semantics.distAdvantage` computes total variation distance between two closed systems.
-- `ObservedCompEmulates sem ε real ideal` states fixed-advantage computational emulation.
-- `AsympObservedCompEmulates` packages the negligible asymptotic variant.
+- `Semantics.distAdvantage` is the `ℝ≥0∞`-valued total variation `Measure.etvDist` between the
+  measure denotations of two closed systems.
+- `ObservedCompEmulates sem ε real ideal` states fixed-advantage computational emulation, with
+  `ε : ℝ≥0∞`.
+- `AsympObservedCompEmulates` requires the advantage sequence itself to be `negligible`.
 - `ObservedCompUCSecure` is the simulator-based security wrapper.
 - `Execution T` is the distributional experiment consumed by paper-level `Standard.UCSecure`.
 
@@ -135,7 +137,8 @@ The raw relay canary and untransported-schedule counterexample live in PolyFun's
 
 `HandledAssembly` also carries each local polynomial-operation interpreter. `ReactiveSecurity`
 specializes it to total `ProbComp` sampling and proves additive statistical composition from
-actual token execution. Its fixed observation retains returned Booleans, explicit aborts, and
+actual token execution. Its `advantage` is the `Measure.etvDist` of the two observation laws, so
+error bounds are `ℝ≥0∞`. The fixed observation retains returned Booleans, explicit aborts, and
 unfinished prefixes; `law_univ` proves unit observation mass. `ContextualWithin` requires
 explicit admission of each constructed residual context. `ReactiveWorld` wires separate honest,
 adversarial, and environment backchannel interfaces. Its named simulators are executable
