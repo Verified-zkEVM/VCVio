@@ -902,7 +902,6 @@
  ["docBlame", "wrappedTrueLeft"],
  ["docBlame", "wrappedTrueRight"],
  ["docBlame", "wrappedTrueStep"],
- ["docBlame", "«term$ᵗ_»"],
  ["docBlame", "«term_<$>ᵈ_»"],
  ["docBlame", "«term_>>=ᵈ_»"],
  ["unusedArguments", "AddWriterT.PathwiseCostAtLeast"],
