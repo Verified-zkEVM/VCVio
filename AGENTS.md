@@ -151,7 +151,7 @@ For the full list, see `docs/agents/gotchas.md`.
 
 Follow Mathlib convention: `{head_symbol}_{operation}_{rhs_form}`.
 Examples: `probOutput_bind_eq_tsum`, `support_pure`, `simulateQ_map`.
-Structures use UpperCamelCase: `SecExp`, `SymmEncAlg`, `RelTriple`.
+Structures use UpperCamelCase: `SecurityGame`, `SymmEncAlg`, `RelTriple`.
 Security-notion names may begin with an underscore-separated acronym:
 `IND_CPA_Advantage`, `SM_DT_UD_Adversary`, `IND_CPA_OneTime_Game`, `OW_CPA_oracleSpec`.
 `scripts/lint.py` accepts a `defsWithUnderscore` finding without a `nolints.json` entry when
