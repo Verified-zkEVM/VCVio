@@ -265,7 +265,7 @@ noncomputable def IND_CPA_OneTime_DDHReduction_openProfiled
   let (m₁, m₂, state) ←
     liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
       (.chooseMessages A)
-  let bit ← liftM ($ᵗ Bool : ProbComp Bool)
+  let bit ← $ᵗ Bool
   AddWriterT.addTell (profile OneTimeINDCPACapability.distinguish)
   let bit' ←
     liftM <| HasQuery.query (spec := oneTimeINDCPASpec G G State (G × G)) (m := ProbComp)
