@@ -668,9 +668,8 @@ theorem measure_badEventExp_le_tdpExp [Inhabited Rand]
     𝒟[badEventExp tdp adv] {true} ≤ 𝒟[tdpExp tdp (inverter tdp adv)] {true} := by
   let : MeasurableSpace (PK × Rand × QueryLog (RO_Spec Rand M)) := ⊤
   rw [measure_badEventExp_eq_observation, tdpExp_eq_observation,
-    evalDist_map_of_discrete, evalDist_map_of_discrete,
-    MeasureTheory.Measure.map_apply .of_discrete (by measurability),
-    MeasureTheory.Measure.map_apply .of_discrete (by measurability)]
+    evalDist_map_apply_of_discrete _ _ (by measurability),
+    evalDist_map_apply_of_discrete _ _ (by measurability)]
   apply MeasureTheory.measure_mono
   intro x hx
   change decide (_ = _) = true

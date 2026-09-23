@@ -70,6 +70,7 @@ public import VCVioTest.PRFNetworkUnlinkability
 public import VCVioTest.PRFReductionBudgets
 public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
+public import VCVioTest.ProductRelationControls
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
 public import VCVioTest.ProgramLogic.CoreWP
 public import VCVioTest.ProgramLogic.GCongr
@@ -79,6 +80,7 @@ public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.NativeOracleWP
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
+public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel

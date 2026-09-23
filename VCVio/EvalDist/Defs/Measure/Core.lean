@@ -170,6 +170,21 @@ theorem evalDist_map_of_discrete {m : Type u → Type v} [Monad m] [LawfulMonad 
     𝒟[f <$> mx] = 𝒟[mx].map f :=
   evalDist_map mx Measurable.of_discrete
 
+/-- A mapped computation assigns a measurable set the mass of its preimage. -/
+theorem evalDist_map_apply {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
+    [MeasurableSpace β] (mx : m α) {f : α → β} (hf : Measurable f) {s : Set β}
+    (hs : MeasurableSet s) : 𝒟[f <$> mx] s = 𝒟[mx] (f ⁻¹' s) := by
+  rw [evalDist_map mx hf, Measure.map_apply hf hs]
+
+/-- On a discrete source type, a mapped computation assigns a measurable set the mass of its
+preimage. -/
+theorem evalDist_map_apply_of_discrete {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type u} [MeasurableSpace α]
+    [DiscreteMeasurableSpace α] [MeasurableSpace β] (mx : m α) (f : α → β) {s : Set β}
+    (hs : MeasurableSet s) : 𝒟[f <$> mx] s = 𝒟[mx] (f ⁻¹' s) :=
+  evalDist_map_apply mx Measurable.of_discrete hs
+
 /-- Independent sequential draws denote Mathlib's product measure. -/
 theorem evalDist_pair {m : Type u → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
@@ -291,7 +306,7 @@ theorem evalDist_map_apply_univ {m : Type u → Type v} [Monad m] [LawfulMonad m
     {α β : Type u} [MeasurableSpace α] [MeasurableSpace β]
     (mx : m α) {f : α → β} (hf : Measurable f) :
     𝒟[f <$> mx] Set.univ = 𝒟[mx] Set.univ := by
-  rw [evalDist_map mx hf, Measure.map_apply hf MeasurableSet.univ, Set.preimage_univ]
+  rw [evalDist_map_apply mx hf MeasurableSet.univ, Set.preimage_univ]
 
 /-- Implication between Boolean results bounds their pure successful masses. -/
 theorem evalDist_pure_apply_le_of_imp {m : Type → Type v} [Monad m]

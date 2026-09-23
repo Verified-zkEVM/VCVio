@@ -81,8 +81,7 @@ theorem prEvent_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]
     {α : Type} [MeasurableSpace α] (mx : m α) (p : α → Prop)
     (hp : Measurable p) :
     Pr{let x ← mx}[p x] = 𝒟[mx] {x | p x} := by
-  rw [prEvent_eq_evalDist_map, evalDist_map mx hp,
-    Measure.map_apply hp (measurableSet_singleton True)]
+  rw [prEvent_eq_evalDist_map, evalDist_map_apply mx hp (measurableSet_singleton True)]
   simp
 
 /-- On a discrete output space every predicate is a measurable event. -/
@@ -114,9 +113,9 @@ theorem prEvent_eq_evalDist_decide
   calc
     _ = 𝒟[p <$> mx] {True} := prEvent_eq_evalDist_map mx p
     _ = 𝒟[(fun b : Prop ↦ decide b) <$> (p <$> mx)] {true} := by
-      rw [evalDist_map (p <$> mx)
-        (Measurable.of_discrete : Measurable fun b : Prop ↦ decide b),
-        Measure.map_apply Measurable.of_discrete (measurableSet_singleton true)]
+      rw [evalDist_map_apply (p <$> mx)
+        (Measurable.of_discrete : Measurable fun b : Prop ↦ decide b)
+        (measurableSet_singleton true)]
       congr 1
       ext b
       simp

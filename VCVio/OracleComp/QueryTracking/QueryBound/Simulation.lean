@@ -23,7 +23,7 @@ public section
 
 open OracleSpec
 
-universe u
+universe u v
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -777,6 +777,46 @@ theorem IsPerIndexQueryBound.simulateQ_run_add_inr_of_uniform_step
   IsPerIndexQueryBound.simulateQ_run_add_of_uniform_step h
     (fun t s' => (hstep₁ t s').mono (fun _ => Nat.zero_le _))
     hstep₂ s
+
+/-! ## Simulation restricted to reachable queries
+
+`AllQueriesSatisfy oa P` bounds which indices `oa` can query, so a stateful handler only needs
+to behave well on `P`-indices for the simulation of `oa` to inherit that behaviour. The handler
+may still update its state on the other indices, which `oa` never reaches. -/
+
+/-- If every query `oa` can make satisfies `P`, and `impl` answers each `P`-query without
+changing its state, then simulating `oa` leaves the state unchanged. -/
+theorem AllQueriesSatisfy.simulateQ_run_eq_map_run'
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ : Type u}
+    {impl : QueryImpl spec (StateT σ m)} {P : ι → Prop} {oa : OracleComp spec α}
+    (h : AllQueriesSatisfy oa P)
+    (himpl : ∀ t, P t → ∀ s, (impl t).run s = (·, s) <$> (impl t).run' s) (s : σ) :
+    (simulateQ impl oa).run s = (·, s) <$> (simulateQ impl oa).run' s := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t mx ih =>
+      rw [allQueriesSatisfy_query_bind_iff] at h
+      have hrun : (simulateQ impl (liftM (spec.query t) >>= mx)).run s =
+          (impl t).run' s >>= fun u => (·, s) <$> (simulateQ impl (mx u)).run' s := by
+        simp only [simulateQ_query_bind, OracleQuery.input_query, OracleQuery.cont_query,
+          monadLift_self, StateT.run_bind, himpl t h.1 s, bind_map_left]
+        exact bind_congr fun u => ih u (h.2 u)
+      rw [StateT.run'_eq, hrun]
+      simp only [map_bind, Functor.map_map, id_map']
+
+/-- Output-only sequencing under `AllQueriesSatisfy.simulateQ_run_eq_map_run'`: a prefix that
+leaves the state unchanged hands the initial state to the continuation. -/
+theorem AllQueriesSatisfy.simulateQ_run'_bind
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ : Type u}
+    {impl : QueryImpl spec (StateT σ m)} {P : ι → Prop} {oa : OracleComp spec α}
+    (h : AllQueriesSatisfy oa P)
+    (himpl : ∀ t, P t → ∀ s, (impl t).run s = (·, s) <$> (impl t).run' s)
+    (ob : α → OracleComp spec β) (s : σ) :
+    (simulateQ impl (oa >>= ob)).run' s =
+      (simulateQ impl oa).run' s >>= fun x => (simulateQ impl (ob x)).run' s := by
+  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind, h.simulateQ_run_eq_map_run' himpl s,
+    bind_map_left, map_bind]
+  rfl
 
 /-! ## Biconditional transfer under query-count-preserving simulators
 

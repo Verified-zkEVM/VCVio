@@ -96,8 +96,7 @@ theorem tokenLaw_apply_returned [MeasurableSpace (Option (Outcome Bool))]
       𝒟[setup >>= fun state => conversation env ops state] {verdict} := by
   rw [tokenLaw_eq_evalDist, tokenExperiment_eq]
   simp only [← map_bind]
-  rw [evalDist_map_of_discrete,
-    Measure.map_apply Measurable.of_discrete (MeasurableSet.singleton _)]
+  rw [evalDist_map_apply_of_discrete _ _ (MeasurableSet.singleton _)]
   congr 1
   ext result
   simp

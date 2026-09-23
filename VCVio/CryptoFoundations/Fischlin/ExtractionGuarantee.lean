@@ -74,8 +74,7 @@ theorem extraction_success_ge_acceptance_sub_error
       knowledgeSoundnessError Q ρ b S := by
     have heq : 𝒟[run] {z | z.1 = true ∧ z.2.any (rel x) ≠ true} =
         𝒟[knowledgeSoundnessExp σ hr ρ b S M adv.run x msg] {true} := by
-      rw [← knowledgeRun_bad, evalDist_map_of_discrete,
-        Measure.map_apply Measurable.of_discrete (measurableSet_singleton true)]
+      rw [← knowledgeRun_bad, evalDist_map_apply_of_discrete _ _ (measurableSet_singleton true)]
       congr 1
       ext z
       simp [Bool.not_eq_true]

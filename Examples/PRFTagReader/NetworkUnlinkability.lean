@@ -46,8 +46,7 @@ private theorem true_mass_not (program : ProbComp Bool) :
   have hpreimage : Bool.not ⁻¹' ({true} : Set Bool) = {false} := by
     ext b
     cases b <;> simp
-  rw [evalDist_map_of_discrete, Measure.map_apply Measurable.of_discrete
-    (measurableSet_singleton true), hpreimage]
+  rw [evalDist_map_apply_of_discrete _ _ (measurableSet_singleton true), hpreimage]
   have h := congrArg ENNReal.toReal (Measure.apply_true_add_apply_false_eq_one 𝒟[program])
   rw [ENNReal.toReal_add (measure_ne_top _ _) (measure_ne_top _ _),
     ENNReal.toReal_one] at h
