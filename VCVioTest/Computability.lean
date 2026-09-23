@@ -72,7 +72,7 @@ example (p : Bool → Prop) :
       (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache).AgreesWithFn f →
         Pr[p | roMixedFixed f] = 1 := by
   simpa only [roSimPipeline, roMixedFixed] using
-    (OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff
+    (OracleComp.probEvent_eq_one_simulateQ_romImpl_run_iff
       (oa := roMixedToy) (preexisting_cache :=
         (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)) p)
 

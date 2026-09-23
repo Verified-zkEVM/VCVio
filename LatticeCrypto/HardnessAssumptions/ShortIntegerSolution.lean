@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.SecExp
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.Coercions.Add
 public import Mathlib.LinearAlgebra.Matrix.DotProduct
@@ -149,10 +149,8 @@ noncomputable def experiment
     (adv : Adversary problem) :
     ProbComp Bool := do
   let params ← problem.sampleParams
-  let ro : QueryImpl (HashInput →ₒ HashOutput)
-    (StateT ((HashInput →ₒ HashOutput).QueryCache) ProbComp) := randomOracle
   let ((hashInput, response), cache) ←
-    StateT.run (simulateQ (unifSpec.passthrough + ro) (adv.run params)) ∅
+    StateT.run (simulateQ (HashInput →ₒ HashOutput).romImpl (adv.run params)) ∅
   match cache hashInput with
   | some hashOutput => return problem.isValid params.1 params.2 hashInput hashOutput response
   | none => return false

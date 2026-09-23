@@ -13,7 +13,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 /-!
 # Cache Growth and Programming for the Forwarded Random Oracle
 
-Facts about `unifFwdImpl hashSpec + randomOracle`, the handler that forwards uniform sampling
+Facts about the random oracle model handler `hashSpec.romImpl`, which forwards uniform sampling
 and answers `hashSpec` with a lazy random oracle:
 
 * `roSim.le_of_mem_support_run`: a run only extends its cache.
@@ -38,13 +38,13 @@ variable {ι : Type} [DecidableEq ι] {hashSpec : OracleSpec.{0, 0} ι}
 /-- A run of the forwarded lazy random oracle only extends its cache. -/
 theorem le_of_mem_support_run {α : Type} (oa : OracleComp (unifSpec + hashSpec) α)
     (s : hashSpec.QueryCache) :
-    ∀ z ∈ support ((simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle) oa).run s),
+    ∀ z ∈ support ((simulateQ hashSpec.romImpl oa).run s),
       s ≤ z.2 := by
   refine OracleComp.simulateQ_run_preservesInv _ (s ≤ ·) ?_ oa s le_rfl
   refine QueryImpl.PreservesInv.add ?_ (QueryImpl.PreservesInv.withCaching_le _ s)
   intro n s' hs z hz
   rw [show (unifFwdImpl hashSpec n).run s' =
-      ((unifFwdImpl hashSpec + hashSpec.randomOracle) (Sum.inl n)).run s' from rfl,
+      (hashSpec.romImpl (Sum.inl n)).run s' from rfl,
     run_apply_inl, support_map] at hz
   obtain ⟨u, _, rfl⟩ := hz
   exact hs
@@ -53,7 +53,7 @@ theorem le_of_mem_support_run {α : Type} (oa : OracleComp (unifSpec + hashSpec)
 queries `t`. -/
 theorem isCached_of_mem_support_run_apply {q : ℕ ⊕ ι} {s s' : hashSpec.QueryCache}
     {u : (unifSpec + hashSpec).Range q}
-    (h : (u, s') ∈ support (((unifFwdImpl hashSpec + hashSpec.randomOracle) q).run s)) (t : ι) :
+    (h : (u, s') ∈ support ((hashSpec.romImpl q).run s)) (t : ι) :
     s'.isCached t = (s.isCached t || decide (q = Sum.inr t)) := by
   cases q with
   | inl n =>
@@ -63,7 +63,7 @@ theorem isCached_of_mem_support_run_apply {q : ℕ ⊕ ι} {s s' : hashSpec.Quer
     rw [← h.2]
     simp
   | inr x =>
-    rw [QueryImpl.add_apply_inr, randomOracle.run_eq] at h
+    rw [OracleSpec.romImpl_apply_inr, randomOracle.run_eq] at h
     cases hsx : s x with
     | some v =>
       rw [hsx, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at h
@@ -87,8 +87,7 @@ exactly when the transcript queries `t`. -/
 theorem isCached_of_mem_support_run_withLogging {α : Type}
     (oa : OracleComp (unifSpec + hashSpec) α) (t : ι) :
     ∀ s : hashSpec.QueryCache,
-      ∀ z ∈ support (((simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle).withLogging
-          oa).run).run s),
+      ∀ z ∈ support (((simulateQ hashSpec.romImpl.withLogging oa).run).run s),
         z.2.isCached t = (s.isCached t || z.1.2.wasQueried (Sum.inr t)) := by
   induction oa using OracleComp.inductionOn with
   | pure a =>
@@ -121,10 +120,8 @@ uncached is at most as likely as the same event in the programmed run. -/
 theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
     (oa : OracleComp (unifSpec + hashSpec) α) (t : ι) (u : hashSpec.Range t) (E : α → Prop) :
     ∀ s : hashSpec.QueryCache, s t = none →
-      Pr{let z ← (simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle)
-          oa).run s}[E z.1 ∧ z.2 t = none] ≤
-        Pr{let z ← (simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle)
-          oa).run (s.cacheQuery t u)}[E z.1] := by
+      Pr{let z ← (simulateQ hashSpec.romImpl oa).run s}[E z.1 ∧ z.2 t = none] ≤
+        Pr{let z ← (simulateQ hashSpec.romImpl oa).run (s.cacheQuery t u)}[E z.1] := by
   induction oa using OracleComp.inductionOn with
   | pure a =>
     intro s hs

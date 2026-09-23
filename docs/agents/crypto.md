@@ -145,6 +145,17 @@ structure BoundedAdversary {ι : Type u} [DecidableEq ι]
 
 All return `ℝ` via `.toReal` conversion from `ℝ≥0∞`. This is essential since subtraction on `ℝ≥0∞` is truncated.
 
+### Random oracle model
+
+An experiment in the random oracle model is an `OracleComp (unifSpec + hashSpec)` computation.
+Its handler is `hashSpec.romImpl` in `StateT hashSpec.QueryCache ProbComp`: uniform queries pass
+through to `ProbComp`, and hash queries are answered by the lazily sampled random oracle
+`hashSpec.randomOracle`, whose cache is the state. Its runtime is `ProbCompRuntime.rom hashSpec`,
+which starts from the empty cache; `ProbCompRuntime.rom hashSpec cache` starts from `cache` and
+so programs the oracle at the cached points. `romImpl` is reducibly
+`unifFwdImpl hashSpec + hashSpec.randomOracle`, so the `roSim` lemmas, stated for
+`unifFwdImpl hashSpec + ro` with a general hash handler `ro`, apply to it.
+
 ### KEM–DEM hybrid composition
 
 `VCVio.CryptoFoundations.KEMDEM.Measure` defines the preparation, encapsulation, and final
