@@ -385,13 +385,14 @@ theorem IND_CPA_stepAdversary_signedAdvantageReal_eq_hybridDiff_half
     (encAlg'.IND_CPA_LR_hybridGame adversary (k + 1))
     (encAlg'.IND_CPA_LR_hybridGame adversary k)
 
-/-- Planned generic one-time-to-many-time lift: bounded multi-query IND-CPA advantage is at most
-the sum of the extracted one-time signed advantages over the first `q` fresh LR queries. -/
-theorem IND_CPA_advantage_toReal_le_sum_step_signedAdvantageReal_abs
+/-- Generic one-time-to-many-time lift for the signed advantage: for an oracle adversary making at
+most `q` fresh LR queries, the absolute signed IND-CPA advantage is at most the sum of the absolute
+signed advantages of the extracted one-time step adversaries. -/
+theorem IND_CPA_abs_signedAdvantageReal_le_sum_step_signedAdvantageReal_abs
     [Inhabited M] [Finite C] [Inhabited C]
     (adversary : encAlg'.IND_CPA_adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
-    (IND_CPA_advantage (encAlg := encAlg') adversary).toReal ≤
+    |IND_CPA_signedAdvantageReal (encAlg' := encAlg') adversary| ≤
       Finset.sum (Finset.range q) (fun k =>
         |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg')
           (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)|) := by
@@ -409,28 +410,42 @@ theorem IND_CPA_advantage_toReal_le_sum_step_signedAdvantageReal_abs
         (IND_CPA_stepAdversary (encAlg' := encAlg') adversary i)| := fun i _ ↦
     congrArg abs (IND_CPA_stepAdversary_signedAdvantageReal_eq_hybridDiff_half
       (encAlg' := encAlg') adversary i).symm
-  refine le_trans
-    (IND_CPA_advantage_toReal_le_abs_signedAdvantageReal (encAlg' := encAlg') adversary) ?_
   rw [IND_CPA_signedAdvantageReal_eq_lrDiff_half (encAlg' := encAlg') adversary, hleft, hright,
     ← Finset.sum_congr rfl hsteps]
   simp only [abs_div, ← Finset.sum_div]
   gcongr
 
-/-- Planned uniform corollary of the generic lift. If every extracted one-time adversary has
-signed real advantage at most `ε`, then any `q`-query oracle adversary has IND-CPA advantage at
-most `q * ε`. -/
-theorem IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound
+/-- Generic one-time-to-many-time lift: the bias advantage of an oracle adversary making at most
+`q` fresh LR queries is at most twice the sum of the absolute signed advantages of the extracted
+one-time step adversaries. -/
+theorem IND_CPA_advantage_le_two_mul_sum_step_signedAdvantageReal_abs
+    [Inhabited M] [Finite C] [Inhabited C]
+    (adversary : encAlg'.IND_CPA_adversary) (q : ℕ)
+    (hq : adversary.MakesAtMostQueries q) :
+    IND_CPA_advantage (encAlg := encAlg') adversary ≤
+      2 * Finset.sum (Finset.range q) (fun k =>
+        |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg')
+          (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)|) :=
+  (IND_CPA_advantage_eq_two_mul_abs_signedAdvantageReal (encAlg' := encAlg') adversary).trans_le
+    (mul_le_mul_of_nonneg_left
+      (IND_CPA_abs_signedAdvantageReal_le_sum_step_signedAdvantageReal_abs
+        (encAlg' := encAlg') adversary q hq) zero_le_two)
+
+/-- Uniform corollary of the generic lift. If every extracted one-time adversary has absolute
+signed real advantage at most `ε`, then any `q`-query oracle adversary has IND-CPA bias advantage
+at most `2 * (q * ε)`. -/
+theorem IND_CPA_advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound
     [Inhabited M] [Finite C] [Inhabited C]
     (adversary : encAlg'.IND_CPA_adversary) (q : ℕ) (ε : ℝ)
     (hq : adversary.MakesAtMostQueries q)
     (hstep : ∀ adv : IND_CPA_Adv encAlg',
       |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg') adv| ≤ ε) :
-    (IND_CPA_advantage (encAlg := encAlg') adversary).toReal ≤ q * ε := by
+    IND_CPA_advantage (encAlg := encAlg') adversary ≤ 2 * (q * ε) := by
   refine le_trans
-    (IND_CPA_advantage_toReal_le_sum_step_signedAdvantageReal_abs
+    (IND_CPA_advantage_le_two_mul_sum_step_signedAdvantageReal_abs
       (encAlg' := encAlg') adversary q hq)
-    ((Finset.sum_le_sum fun k _ =>
-      hstep (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)).trans ?_)
+    (mul_le_mul_of_nonneg_left ((Finset.sum_le_sum fun k _ =>
+      hstep (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)).trans ?_) zero_le_two)
   simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
 
 end MultiQueryHybridLift

@@ -155,24 +155,26 @@ end measureSemantics
     CipherSystem (BitVec width) (BitVec width) (BitVec width) :=
   ⟨fun key message => key ^^^ message, fun key ciphertext => key ^^^ ciphertext⟩
 
-/-- OTP has an executable simulator independent of the environment, for both disciplines. -/
+/-- OTP is simulated, for both disciplines, by the executable simulator
+`simulator ($ᵗ BitVec width) adversary`, which draws a uniform ciphertext and is independent of
+the environment. -/
 theorem oneTimePad_simulation (width : ℕ)
     [MeasurableSpace (BitVec width)] [MeasurableSingletonClass (BitVec width)]
     [MeasurableSpace (Option (Outcome Bool))]
-    (adversary : BitVec width → ProbComp Bool) :
-    ∃ sim : Simulator (BitVec width),
-      ∀ (Memory : Type) [MeasurableSpace Memory] [Countable Memory]
-        [MeasurableSingletonClass Memory] (env : Environment (BitVec width) (BitVec width) Memory),
+    (adversary : BitVec width → ProbComp Bool) (Memory : Type) [MeasurableSpace Memory]
+    [Countable Memory] [MeasurableSingletonClass Memory]
+    (env : Environment (BitVec width) (BitVec width) Memory) :
+    tokenLaw (network (BitVec width) (BitVec width) Memory)
+      (implementation env (realOperations (oneTimePad width) adversary)) ($ᵗ BitVec width) 9 =
       tokenLaw (network (BitVec width) (BitVec width) Memory)
-        (implementation env (realOperations (oneTimePad width) adversary)) ($ᵗ BitVec width) 9 =
-        tokenLaw (network (BitVec width) (BitVec width) Memory)
-          (implementation env (idealOperations sim)) (pure 0) 9 ∧
+        (implementation env (idealOperations (simulator ($ᵗ BitVec width) adversary)))
+          (pure 0) 9 ∧
+    fifoLaw (network (BitVec width) (BitVec width) Memory)
+      (implementation env (realOperations (oneTimePad width) adversary))
+        ($ᵗ BitVec width) fifoSchedule =
       fifoLaw (network (BitVec width) (BitVec width) Memory)
-        (implementation env (realOperations (oneTimePad width) adversary))
-          ($ᵗ BitVec width) fifoSchedule =
-        fifoLaw (network (BitVec width) (BitVec width) Memory)
-          (implementation env (idealOperations sim)) (pure 0) fifoSchedule := by
-  refine ⟨simulator ($ᵗ BitVec width) adversary, fun Memory _ _ _ env => ?_⟩
+        (implementation env (idealOperations (simulator ($ᵗ BitVec width) adversary)))
+          (pure 0) fifoSchedule := by
   have secret (message : BitVec width) :
       𝒟[(fun key => (oneTimePad width).encrypt key message) <$> ($ᵗ BitVec width)] =
         𝒟[$ᵗ BitVec width] := by

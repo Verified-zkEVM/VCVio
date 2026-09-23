@@ -134,8 +134,9 @@ From `Examples/ElGamal/Basic.lean` — multi-query security via the generic one-
 **Key patterns used**:
 - Define ElGamal correctness and the one-time DDH bridge.
 - Prove the one-time signed advantage identity against DDH.
-- Instantiate `AsymmEncAlg.IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound`.
-- Final bound: `IND_CPA_advantage ≤ q * 2ε`.
+- Instantiate `AsymmEncAlg.IND_CPA_advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound`.
+- Final bound: `IND_CPA_advantage ≤ 2 * (q * 2ε)`, where `IND_CPA_advantage` is the Boolean bias
+  `2 * |Pr[win] - 1/2|` of the oracle IND-CPA experiment.
 
 For tactic-heavy hybrid proofs, use the generic recipe above or the focused
 examples under `Examples/ProgramLogic/`.

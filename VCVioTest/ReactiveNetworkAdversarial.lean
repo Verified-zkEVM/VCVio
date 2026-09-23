@@ -142,15 +142,12 @@ local instance : MeasurableSpace (BitVec 1) := ⊤
 local instance : MeasurableSpace (Option (Outcome Bool)) := ⊤
 
 /-- Cofree behavior preserves OTP simulation with private Boolean auxiliary state. -/
-example (adversary : BitVec 1 → ProbComp Bool) :
-    ∃ sim : Simulator (BitVec 1), ∀ env : Environment (BitVec 1) (BitVec 1) Bool,
-      tokenLaw (network (BitVec 1) (BitVec 1) Bool).behavior
-        (implementation env (realOperations (oneTimePad 1) adversary)) ($ᵗ BitVec 1) 9 =
-      tokenLaw (network (BitVec 1) (BitVec 1) Bool).behavior
-        (implementation env (idealOperations sim)) (pure 0) 9 := by
-  obtain ⟨sim, hsim⟩ := oneTimePad_simulation 1 adversary
-  refine ⟨sim, fun env => ?_⟩
-  simpa only [tokenLaw_behavior] using (hsim Bool env).1
+example (adversary : BitVec 1 → ProbComp Bool) (env : Environment (BitVec 1) (BitVec 1) Bool) :
+    tokenLaw (network (BitVec 1) (BitVec 1) Bool).behavior
+      (implementation env (realOperations (oneTimePad 1) adversary)) ($ᵗ BitVec 1) 9 =
+    tokenLaw (network (BitVec 1) (BitVec 1) Bool).behavior
+      (implementation env (idealOperations (simulator ($ᵗ BitVec 1) adversary))) (pure 0) 9 := by
+  simpa only [tokenLaw_behavior] using (oneTimePad_simulation 1 adversary Bool env).1
 
 /-- The same fully distinguishing observation space rejects the leaking implementation. -/
 example (sim : Simulator Bool) :
