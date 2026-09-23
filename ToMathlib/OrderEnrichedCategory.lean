@@ -65,70 +65,8 @@ namespace CategoryTheory
 
 open MonoidalCategory
 
-namespace EnrichedCategory
-
-variable (V : Type v) [Category.{w} V] [MonoidalCategory V]
-
-variable {c : Type u → Type v} [Category.{w} (Bundled c)] [MonoidalCategory (Bundled c)]
-
-variable (C : Type u₁) (D : Type u₂) [𝒞 : EnrichedCategory V C] [𝒟 : EnrichedCategory V D]
-
-@[simps]
-instance instProduct : EnrichedCategory V (C × D) where
-  Hom X Y := (𝒞.Hom X.1 Y.1) ⊗ (𝒟.Hom X.2 Y.2)
-  id X := (λ_ _).inv ≫ ((𝒞.id X.1) ⊗ₘ (𝒟.id X.2))
-  comp X Y Z := by stop simpa using (𝒞.comp X.1 Y.1 Z.1) ⊗ (𝒟.comp X.2 Y.2 Z.2)
-  -- (α_ _ _ _).inv ≫ (
-  -- id_comp X Y := by
-  --   ext ⟨⟨x, y⟩, z⟩
-  --   simp [id_comp]
-
--- structure RelativeMonad (J : C ⥤ D) where
---   /-- The monadic mapping on objects. -/
---   T : C → D
---   /-- The unit for the relative monad. -/
---   η : ∀ {X}, J.obj X ⟶ T X
---   /-- The multiplication for the monad. -/
---   μ : ∀ {X Y}, ((J.obj X) ⟶ (T Y)) → ((T X) ⟶ (T Y))
---   /-- `μ` applied to `η` is identity. -/
---   left_unit : ∀ {X}, μ η = 𝟙 (T X) := by aesop_cat
---   /-- `η` composed with `μ` is identity. -/
---   right_unit : ∀ {X Y}, ∀ f : (J.obj X) ⟶ (T Y), η ≫ (μ f) = f := by aesop_cat
---   /-- `μ` is associative. -/
---   assoc : ∀ {X Y Z}, ∀ f : (J.obj X) ⟶ (T Y), ∀ g : (J.obj Y) ⟶ (T Z),
---     μ (f ≫ μ g) = (μ f) ≫ (μ g) := by aesop_cat
-
-variable (C : Type u₁) (D : Type u₂)
-  [𝒞 : EnrichedCategory (Bundled c) C] [𝒟 : EnrichedCategory (Bundled c) D]
-
-variable (J : EnrichedFunctor (Bundled c) C D)
-
-structure RelativeMonad where
-  T : C → D
-  η : {A : C} → (J.obj A ⟶[ Bundled c ] T A)
-  μ : {A B : C} → (J.obj A ⟶[ Bundled c ] T B) ⟶ (T A ⟶[ Bundled c ] T B)
-  -- assoc : (α_ _ _ _).inv ≫ J.map (μ ⊗ 𝟭 _) ≫ μ = J.map (𝟭 _ ⊗ μ) ≫ μ
-  -- left_unit : (λ_ _).inv ≫ J.map (𝟭 _ ⊗ η) ≫ μ = η
-  -- right_unit : (ρ_ _).inv ≫ J.map (η ⊗ 𝟭 _) ≫ μ = η
-
--- (lax) morphism between relative monads in enriched categories
-structure RelativeMonadHom (M N : RelativeMonad C D J) where
-  -- f : M.inducedFunctor J ⟶ N.inducedFunctor J
-
-class RelativeMonadHom.IsStrict (M N : RelativeMonad C D J) (F : RelativeMonadHom C D J M N) where
-
-
-end EnrichedCategory
-
 /-- Categories enriched over the monoidal category of preorders are preorder-enriched categories. -/
 abbrev PreordEnrichedCategory (C : Type u) := EnrichedCategory (Preord.{v}) C
-
-namespace PreordEnrichedCategory
-
-variable {C : Type u} [PreordEnrichedCategory C]
-
-
-end PreordEnrichedCategory
 
 -- TODO: simplify the enriched category definition to see the order-enriched category structure.
 

@@ -1,10 +1,6 @@
 {"sorry":
  ["BR93.br93AsymmEnc.cpaGame_gap_le_badEvent",
   "BR93.br93AsymmEnc.indcpa_bound",
-  "CategoryTheory.EnrichedCategory.Hom_def",
-  "CategoryTheory.EnrichedCategory.comp_def",
-  "CategoryTheory.EnrichedCategory.id_def",
-  "CategoryTheory.EnrichedCategory.instProduct",
   "Falcon.Concrete.KeyGen.keyGen",
   "Falcon.Concrete.NTRUSolver.FXR.sqr",
   "Falcon.Concrete.NTRUSolver.check_ortho_norm",
