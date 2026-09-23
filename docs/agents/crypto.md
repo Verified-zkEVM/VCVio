@@ -129,10 +129,12 @@ Used by ML-DSA and the Fiat-Shamir with Aborts transform.
   adversary guessed it, as in `CommitmentScheme.hidingGame`.
 - Hybrids and intermediate games of a proof are `game0`, `game1`, … or `hybrid…`, declared inside
   the proof's namespace, as in `KEMDEM.hybrid`.
-- The advantage is a top-level `<notion>Advantage` in the scheme namespace. It is `ℝ≥0∞`-valued
-  and takes the runtime as an argument, evaluating the experiment with `runtime.evalDist`:
-  `SignatureAlg.unforgeableAdvantage runtime adv` is
-  `runtime.evalDist (unforgeableExperiment adv) {true}`.
+- The advantage is `<notion>Advantage` in the scheme or problem namespace, or plain `advantage`
+  inside a namespace named after the notion (`NoisyLearning.advantage`). It is `ℝ≥0∞`-valued.
+  When the experiment runs in a generic monad, the advantage takes the runtime and evaluates the
+  experiment with `runtime.evalDist`: `SignatureAlg.unforgeableAdvantage runtime adv` is
+  `runtime.evalDist (unforgeableExperiment adv) {true}`. A `ProbComp` experiment is evaluated
+  with `𝒟[…]`, as in `DiffieHellman.ddhAdvantage`.
 - A correctness experiment is lowercase `correctnessExperiment`, as in
   `AsymmEncAlg.correctnessExperiment`.
 

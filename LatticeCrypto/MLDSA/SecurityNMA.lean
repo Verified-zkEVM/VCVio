@@ -256,7 +256,7 @@ Specializing `keygen` to `keygen0` / `keygen1` gives the seed-derived / uniform-
 experiments used by the extraction scaffolding. The signature scheme is the ML-DSA
 `FiatShamirWithAbort (identificationScheme …)`, so `verify` recomputes `Â = ExpandA(pk.ρ)` from the
 published seed. The exact MLWE key-swap theorem below instead uses the corresponding short-secret
-experiment `nmaExperimentShort`. -/
+experiment `nmaShortExperiment`. -/
 noncomputable def nmaExperiment
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (maxAttempts : ℕ)
@@ -288,7 +288,7 @@ noncomputable def nmaAdvantage
 the signature scheme is `FiatShamirWithAbort` over `identificationSchemeShort`, whose key relation
 `validKeyPairShort` is the material-based one that `keygenShort` generates (`hrShort`). The forging
 interface and the verify recomputation are unchanged. -/
-noncomputable def nmaExperimentShort
+noncomputable def nmaShortExperiment
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
     (keygen : ProbComp (PublicKey p prims × SecretKey p))
@@ -303,9 +303,9 @@ noncomputable def nmaExperimentShort
 
 /-- The advantage of the short-model NMA experiment with key generator `keygen` is its
 `true`-probability in the Fiat-Shamir-with-aborts runtime. The exact short hop identifies
-`|nmaAdvantageShort keygenShort − nmaAdvantageShort keygenShort1|` with the `mldsaMLWEShort`
+`|nmaShortAdvantage keygenShort − nmaShortAdvantage keygenShort1|` with the `mldsaMLWEShort`
 advantage of `distinguisherBShort`. -/
-noncomputable def nmaAdvantageShort
+noncomputable def nmaShortAdvantage
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
     (keygen : ProbComp (PublicKey p prims × SecretKey p))
@@ -313,7 +313,7 @@ noncomputable def nmaAdvantageShort
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) : ℝ≥0∞ :=
   (FiatShamirWithAbort.runtime (Commit := Commitment p prims) (Chal := CommitHashBytes p)
-    M).evalDist (nmaExperimentShort p prims hr maxAttempts keygen main) {true}
+    M).evalDist (nmaShortExperiment p prims hr maxAttempts keygen main) {true}
 
 end Game
 
@@ -456,8 +456,8 @@ def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ≥0∞) :
 `main` on `pk`, simulate the random oracle to verify the returned forgery, and output the
 validity bit — typed against the short-secret problem `mldsaMLWEShort` and the short-key
 scheme `identificationSchemeShort`. When `(ρ, t)` is real it reproduces
-`nmaExperimentShort … keygenShort`; when `t` is uniform it reproduces
-`nmaExperimentShort … keygenShort1` (`nma_keyswap_hop_short`). -/
+`nmaShortExperiment … keygenShort`; when `t` is uniform it reproduces
+`nmaShortExperiment … keygenShort1` (`nma_keyswap_hop_short`). -/
 noncomputable def distinguisherBShort
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
@@ -609,10 +609,10 @@ theorem nmaExperiment_eq_keygen_bind
 
 /-- Short-model NMA-game / distinguisher plumbing: the `nmaExperiment_eq_keygen_bind` rewrite at the
 short scheme. Pushing the `keygen` sampling out of the Fiat-Shamir-with-aborts runtime, the
-`Pr[= true]` of `nmaExperimentShort … keygen` equals that of first sampling `(pk, _) ← keygen` in
+`Pr[= true]` of `nmaShortExperiment … keygen` equals that of first sampling `(pk, _) ← keygen` in
 plain `ProbComp` and then running the forge-and-verify tail through `simulateToProbComp` —
 exactly the body of `distinguisherBShort` evaluated at `pk`. -/
-theorem nmaExperimentShort_eq_keygen_bind
+theorem nmaShortExperiment_eq_keygen_bind
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (maxAttempts : ℕ)
     (keygen : ProbComp (PublicKey p prims × SecretKey p))
@@ -620,7 +620,7 @@ theorem nmaExperimentShort_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
     (FiatShamirWithAbort.runtime (Commit := Commitment p prims) (Chal := CommitHashBytes p)
-        M).evalDist (nmaExperimentShort p prims hr maxAttempts keygen main) =
+        M).evalDist (nmaShortExperiment p prims hr maxAttempts keygen main) =
       𝒟[(do
         let (pk, _) ← keygen
         simulateToProbComp p prims (M := M) (do
@@ -632,7 +632,7 @@ theorem nmaExperimentShort_eq_keygen_bind
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)) Bool := fun pk => do
     let (msg, σ) ← main pk
     (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts).verify pk msg σ
-  unfold nmaExperimentShort
+  unfold nmaShortExperiment
   rw [FiatShamirWithAbort.runtime_evalDist_bind_liftComp
     (Commit := Commitment p prims) (Chal := CommitHashBytes p) (M := M),
     evalDist_bind_of_discrete]
@@ -649,7 +649,7 @@ monad-rewriting identities, with no statistical slack: the key generators sample
 `ρ`, `K`, `s₁`, `s₂` independently, exactly as the problem's `distr`/`uniformDistr`
 do (the unused `K` draw strips off, being the leading draw).
 
-Proof recipe: both branches follow the same shape: `rw [nmaExperimentShort_eq_keygen_bind]`,
+Proof recipe: both branches follow the same shape: `rw [nmaShortExperiment_eq_keygen_bind]`,
 `simp only [LearningWithErrors.game0/1, LearningWithErrors.distr/uniformDistr,
 distinguisherBShort, mldsaMLWEShort, keygenShort/1, keyFromMaterial, bind_assoc, pure_bind]`,
 strip unused lossless draws with `OracleComp.evalDist_bind_const`, and
@@ -660,16 +660,16 @@ theorem nma_keyswap_hop_short
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
-    ENNReal.absDiff (nmaAdvantageShort p prims hr maxAttempts (keygenShort p prims) main)
-        (nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main) =
+    ENNReal.absDiff (nmaShortAdvantage p prims hr maxAttempts (keygenShort p prims) main)
+        (nmaShortAdvantage p prims hr maxAttempts (keygenShort1 p prims) main) =
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
         (distinguisherBShort p prims hr maxAttempts main) := by
   set B := distinguisherBShort p prims hr maxAttempts main (M := M) with hB
   rw [NoisyLearning.advantage_eq_boolDist_game (mldsaMLWEShort p prims) B,
     MeasureTheory.Measure.boolDist]
-  have hH1 : nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main =
+  have hH1 : nmaShortAdvantage p prims hr maxAttempts (keygenShort1 p prims) main =
       𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] {true} := by
-    rw [nmaAdvantageShort, nmaExperimentShort_eq_keygen_bind]
+    rw [nmaShortAdvantage, nmaShortExperiment_eq_keygen_bind]
     simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, hB,
       distinguisherBShort, mldsaMLWEShort, keygenShort1, keyFromMaterial, bind_assoc, pure_bind]
     -- Strip the unused leading `key` draw, then the unused `s₁`, `s₂` draws under `ρ`.
@@ -677,9 +677,9 @@ theorem nma_keyswap_hop_short
     apply congrArg (fun μ : Measure Bool => μ {true})
     refine evalDist_bind_congr _ _ _ fun rho => ?_
     rw [OracleComp.evalDist_bind_const, OracleComp.evalDist_bind_const]
-  have hH0 : nmaAdvantageShort p prims hr maxAttempts (keygenShort p prims) main =
+  have hH0 : nmaShortAdvantage p prims hr maxAttempts (keygenShort p prims) main =
       𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true} := by
-    rw [nmaAdvantageShort, nmaExperimentShort_eq_keygen_bind]
+    rw [nmaShortAdvantage, nmaShortExperiment_eq_keygen_bind]
     simp only [LearningWithErrors.game0, LearningWithErrors.distr, hB, distinguisherBShort,
       mldsaMLWEShort, keygenShort, keyFromMaterial, bind_assoc, pure_bind]
     -- Only the leading `key` draw is unused here (`s₁`, `s₂` build `t`).
@@ -1201,7 +1201,7 @@ short-model EUF-NMA advantage (key generator `keygenShort1`) is bounded by the S
 advantage of the extractor against `mldsaSTMSISShort`.
 
 The argument is a shared-prefix read-back comparison: after the
-bundled-semantics rewrite (`nmaExperimentShort_eq_keygen_bind`) both sides bind over the same
+bundled-semantics rewrite (`nmaShortExperiment_eq_keygen_bind`) both sides bind over the same
 `keygenShort1` prefix — the short problem's `sampleParams` is definitionally `keygenShort1`
 followed by publishing `(ExpandA(ρ), pk)` — so monotonicity reduces to the per-key comparison
 `stmsis_tail_le_short`, which never inspects the key distribution and packages the cache
@@ -1214,10 +1214,10 @@ theorem nmaAdvantage_keygenShort1_le_stmsis
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
-    nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main ≤
+    nmaShortAdvantage p prims hr maxAttempts (keygenShort1 p prims) main ≤
       SelfTargetMSIS.advantage (extractorCShort p prims main) := by
   classical
-  rw [nmaAdvantageShort, nmaExperimentShort_eq_keygen_bind, SelfTargetMSIS.advantage,
+  rw [nmaShortAdvantage, nmaShortExperiment_eq_keygen_bind, SelfTargetMSIS.advantage,
     SelfTargetMSIS.experiment]
   -- The short STMSIS `sampleParams` is exactly `keygenShort1` followed by publishing
   -- `(ExpandA(ρ), pk)`, so both event measures bind over the same prefix; compare them per-key.
