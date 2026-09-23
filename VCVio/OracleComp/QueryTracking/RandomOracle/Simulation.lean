@@ -154,6 +154,13 @@ lemma run'_bind_of_isQueryBoundP_zero {α β : Type} {p : ℕ ⊕ ι → Prop} [
   (allQueriesSatisfy_not_of_isQueryBoundP_zero h).simulateQ_run'_bind
     (run_eq_map_run'_of_not ro hp) ob s
 
+/-- A uniform-sampling query of `unifFwdImpl + ro` samples and leaves the cache unchanged. -/
+lemma run_apply_inl (n : ℕ) (s : hashSpec.QueryCache) :
+    ((unifFwdImpl hashSpec + ro) (Sum.inl n)).run s =
+      (fun u => (u, s)) <$> (unifSpec.query n : ProbComp (Fin (n + 1))) := by
+  simpa using unifFwdImpl.simulateQ_run (hashSpec := hashSpec)
+    (unifSpec.query n : ProbComp (Fin (n + 1))) s
+
 /-- Simulating a `hashSpec` query through `unifFwdImpl + ro` dispatches it to the hash-oracle
 handler `ro`, since uniform forwarding leaves hash queries to `ro`. -/
 @[simp]

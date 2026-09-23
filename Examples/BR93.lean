@@ -11,10 +11,11 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.OneWay
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.QueryTracking.LoggingOracle
-public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.EvalDist.Monad.Measure
 import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
 import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
@@ -116,13 +117,13 @@ what each statement names. -/
 private def rightLog (log : QueryLog (RO_Spec Rand M)) : QueryLog (RO_Spec Rand M) :=
   log.filter fun entry => entry.1.isRight
 
-private lemma any_rightLog (log : QueryLog (RO_Spec Rand M)) (p : Rand → Bool) :
-    (rightLog log).any (fun e => match e.1 with | .inl _ => false | .inr r => p r) =
-      log.any (fun e => match e.1 with | .inl _ => false | .inr r => p r) := by
-  simp only [rightLog, List.any_filter]
-  congr 1
-  funext ⟨t, u⟩
-  cases t <;> simp
+private lemma wasQueried_rightLog [DecidableEq Rand] (log : QueryLog (RO_Spec Rand M))
+    (r : Rand) : (rightLog log).wasQueried (Sum.inr r) = log.wasQueried (Sum.inr r) := by
+  rw [QueryLog.wasQueried_eq_decide_mem_map_fst, QueryLog.wasQueried_eq_decide_mem_map_fst]
+  refine decide_eq_decide.2 ?_
+  simp only [rightLog, List.mem_map, List.mem_filter]
+  exact ⟨fun ⟨e, ⟨he, _⟩, hr⟩ => ⟨e, he, hr⟩,
+    fun ⟨e, he, hr⟩ => ⟨e, ⟨he, by simp [hr]⟩, hr⟩⟩
 
 private lemma find?_rightLog (log : QueryLog (RO_Spec Rand M)) (p : Rand → Bool) :
     (rightLog log).find? (fun e => match e.1 with | .inl _ => false | .inr r => p r) =
@@ -132,33 +133,19 @@ private lemma find?_rightLog (log : QueryLog (RO_Spec Rand M)) (p : Rand → Boo
   funext ⟨t, u⟩
   cases t <;> simp
 
-/-- A prefix on which the predicate is uniformly `false` is invisible to `List.any`. -/
-private lemma any_append_left_false {α : Type} (xs ys : List α) (pred : α → Bool)
-    (h : ∀ e ∈ xs, pred e = false) : (xs ++ ys).any pred = ys.any pred := by
-  rw [List.any_append, List.any_eq_false.2 fun x hx => by rw [h x hx]; exact Bool.false_ne_true,
-    Bool.false_or]
-
-/-- A prefix on which the predicate is uniformly `false` is invisible to `List.find?`. -/
-private lemma find?_append_left_false {α : Type} (xs ys : List α) (pred : α → Bool)
-    (h : ∀ e ∈ xs, pred e = false) : (xs ++ ys).find? pred = ys.find? pred := by
-  rw [List.find?_append,
-    List.find?_eq_none.2 fun x hx => by rw [h x hx]; exact Bool.false_ne_true, Option.none_or]
-
 /-- If the transcript contains a right-oracle query at `r`, then searching it for a query whose
 forward image matches `tdp.forward pk r` succeeds with a right-oracle entry whose preimage has the
 matching forward image. This is the pointwise heart of the bad-event reduction: a bad transcript
 yields a valid trapdoor preimage. -/
-private lemma find?_inr_of_anyInr [DecidableEq Rand] (pk : PK) (r : Rand)
-    (log : QueryLog (RO_Spec Rand M))
-    (hbad : (log.any fun entry => match entry.1 with
-      | Sum.inl _ => false
-      | Sum.inr r' => r' = r) = true) :
+private lemma find?_inr_of_wasQueried [DecidableEq Rand] (pk : PK) (r : Rand)
+    (log : QueryLog (RO_Spec Rand M)) (hbad : log.wasQueried (Sum.inr r) = true) :
     ∃ (r₀ : Rand) (m₀ : M),
       (log.find? fun entry => match entry.1 with
         | Sum.inl _ => false
         | Sum.inr r' => tdp.forward pk r' = tdp.forward pk r) =
         some ⟨Sum.inr r₀, m₀⟩ ∧
       tdp.forward pk r₀ = tdp.forward pk r := by
+  simp only [QueryLog.wasQueried_eq_decide_mem_map_fst, decide_eq_true_eq, List.mem_map] at hbad
   classical
   set P : (Σ t : (RO_Spec Rand M).Domain, (RO_Spec Rand M).Range t) → Bool :=
     fun entry => match entry.1 with
@@ -166,14 +153,8 @@ private lemma find?_inr_of_anyInr [DecidableEq Rand] (pk : PK) (r : Rand)
       | Sum.inr r' => decide (tdp.forward pk r' = tdp.forward pk r) with hP
   -- The bad-event witness satisfies the (weaker) forward predicate, so `find?` succeeds.
   have hex : ∃ entry ∈ log, P entry = true := by
-    rw [List.any_eq_true] at hbad
     obtain ⟨entry, hmem, hentry⟩ := hbad
-    refine ⟨entry, hmem, ?_⟩
-    revert hentry
-    simp only [hP]
-    cases h : entry.1 with
-    | inl a => simp
-    | inr r' => intro hr'; simp only [decide_eq_true_eq] at hr' ⊢; rw [hr']
+    exact ⟨entry, hmem, by simp [hP, hentry]⟩
   obtain ⟨entry, hmem, hentry⟩ := hex
   obtain ⟨found, hfound⟩ :=
     Option.isSome_iff_exists.mp (List.find?_isSome.mpr ⟨entry, hmem, hentry⟩)
@@ -190,18 +171,6 @@ private lemma find?_inr_of_anyInr [DecidableEq Rand] (pk : PK) (r : Rand)
     simp only [decide_eq_true_eq] at hr'
     exact ⟨r', u, rfl, hr'⟩
 
-/-- Whether a transcript contains a query at the hidden challenge input. -/
-private def transcriptBad [DecidableEq Rand] (r : Rand) (log : QueryLog (RO_Spec Rand M)) : Bool :=
-  log.any fun entry => match entry.1 with
-    | .inl _ => false
-    | .inr r' => decide (r' = r)
-
-/-- Transcript badness distributes over concatenation. -/
-private lemma transcriptBad_append [DecidableEq Rand] (r : Rand)
-    (log₁ log₂ : QueryLog (RO_Spec Rand M)) :
-    transcriptBad r (log₁ ++ log₂) = (transcriptBad r log₁ || transcriptBad r log₂) :=
-  List.any_append
-
 /-- The first logged preimage of the challenge, with the inverter's default on failure. -/
 private def transcriptPreimage [DecidableEq Rand] [Inhabited Rand]
     (pk : PK) (y : Rand) (log : QueryLog (RO_Spec Rand M)) : Rand :=
@@ -213,32 +182,16 @@ private def transcriptPreimage [DecidableEq Rand] [Inhabited Rand]
     | .inr r => r
   | none => default
 
-private lemma transcriptBad_implies_preimage [DecidableEq Rand] [Inhabited Rand]
+private lemma forward_transcriptPreimage_of_wasQueried [DecidableEq Rand] [Inhabited Rand]
     (pk : PK) (r : Rand)
-    (log : QueryLog (RO_Spec Rand M)) (hbad : transcriptBad r log = true) :
+    (log : QueryLog (RO_Spec Rand M)) (hbad : log.wasQueried (Sum.inr r) = true) :
     tdp.forward pk (transcriptPreimage (tdp := tdp) pk (tdp.forward pk r) log) =
       tdp.forward pk r := by
   obtain ⟨r₀, m₀, hfind, hforward⟩ :=
-    find?_inr_of_anyInr (tdp := tdp) pk r log hbad
+    find?_inr_of_wasQueried (tdp := tdp) pk r log hbad
   unfold transcriptPreimage
   rw [hfind]
   exact hforward
-
-/-- Caching two distinct inputs commutes. -/
-private lemma cacheQuery_comm [DecidableEq Rand] (c : (Rand →ₒ M).QueryCache) {x r : Rand}
-    (hxr : x ≠ r) (u h : M) :
-    (c.cacheQuery r h).cacheQuery x u = (c.cacheQuery x u).cacheQuery r h := by
-  ext t
-  by_cases htx : t = x
-  · subst htx
-    rw [QueryCache.cacheQuery_self, QueryCache.cacheQuery_of_ne _ _ hxr,
-      QueryCache.cacheQuery_self]
-  · by_cases htr : t = r
-    · subst htr
-      rw [QueryCache.cacheQuery_of_ne _ _ htx, QueryCache.cacheQuery_self,
-        QueryCache.cacheQuery_self]
-    · rw [QueryCache.cacheQuery_of_ne _ _ htx, QueryCache.cacheQuery_of_ne _ _ htr,
-        QueryCache.cacheQuery_of_ne _ _ htr, QueryCache.cacheQuery_of_ne _ _ htx]
 
 /-! ### The random-oracle world
 
@@ -247,127 +200,12 @@ and a canonical sampler for `M`. -/
 
 variable [DecidableEq Rand] [SampleableType M]
 
-/-- Shared implementation of the BR93 random-oracle world: the left component handles uniform
+/-- Shared implementation of the BR93 random-oracle world: the left component forwards uniform
 sampling, while the right component is a lazy random oracle on `Rand → M`. -/
-def roQueryImpl :
+abbrev roQueryImpl :
     QueryImpl (RO_Spec Rand M) (StateT ((Rand →ₒ M).QueryCache) ProbComp) :=
-  let ro : QueryImpl (Rand →ₒ M) (StateT ((Rand →ₒ M).QueryCache) ProbComp) := randomOracle
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT ((Rand →ₒ M).QueryCache) ProbComp)
-  idImpl + ro
-
-/-- The BR93 random-oracle handler is transparent on a computation lifted in from `unifSpec`,
-threading the cache unchanged: simulating such a computation just lifts it into the cache state
-monad. -/
-private lemma simulateQ_roQueryImpl_liftM {β : Type} (ob : ProbComp β) :
-    simulateQ (roQueryImpl (Rand := Rand) (M := M))
-        (liftM ob : OracleComp (RO_Spec Rand M) β)
-      = (liftM ob : StateT ((Rand →ₒ M).QueryCache) ProbComp β) := by
-  simp [roQueryImpl, QueryImpl.simulateQ_add_liftM_left, QueryImpl.simulateQ_toQueryImpl]
-
-/-- A lifted `ProbComp` sample never touches the cache, so it commutes to the front of a run. -/
-private lemma run'_liftM_bind {β γ : Type} (p : ProbComp β)
-    (k : β → OracleComp (RO_Spec Rand M) γ) (s : (Rand →ₒ M).QueryCache) :
-    (simulateQ roQueryImpl (liftM p >>= k)).run' s
-      = p >>= fun a => (simulateQ roQueryImpl (k a)).run' s := by
-  rw [simulateQ_bind, simulateQ_roQueryImpl_liftM]
-  simp [StateT.run'_eq, StateT.run_bind, StateT.run_monadLift]
-
-/-- Running a lifted `ProbComp` sample returns the sample paired with the unchanged cache. -/
-private lemma run_liftM {β : Type} (p : ProbComp β) (s : (Rand →ₒ M).QueryCache) :
-    (simulateQ roQueryImpl (liftM p)).run s = p >>= fun a => pure (a, s) := by
-  rw [simulateQ_roQueryImpl_liftM]
-  simp [StateT.run_monadLift]
-
-/-- Splitting the random-oracle run at a bind: the first computation threads the cache forward. -/
-private lemma run'_simulateQ_bind {β γ : Type} (mx : OracleComp (RO_Spec Rand M) β)
-    (k : β → OracleComp (RO_Spec Rand M) γ) (s : (Rand →ₒ M).QueryCache) :
-    (simulateQ roQueryImpl (mx >>= k)).run' s
-      = (simulateQ roQueryImpl mx).run s >>=
-          fun p => (simulateQ roQueryImpl (k p.1)).run' p.2 := by
-  rw [simulateQ_bind]
-  simp [StateT.run'_eq, StateT.run_bind]
-
-/-- Splitting a logged run at a bind: the first computation threads both the cache and the
-accumulated transcript forward, and the two transcripts are concatenated. -/
-private lemma run_run_withLogging_bind {β γ : Type} (mx : OracleComp (RO_Spec Rand M) β)
-    (k : β → OracleComp (RO_Spec Rand M) γ) (s : (Rand →ₒ M).QueryCache) :
-    ((simulateQ roQueryImpl.withLogging (mx >>= k)).run).run s
-      = ((simulateQ roQueryImpl.withLogging mx).run).run s >>= fun p =>
-          ((simulateQ roQueryImpl.withLogging (k p.1.1)).run).run p.2 >>= fun q =>
-            pure ((q.1.1, p.1.2 ++ q.1.2), q.2) := by
-  rw [simulateQ_bind]
-  simp only [WriterT.run_bind', StateT.run_bind, StateT.run_map, bind_pure_comp, Prod.map, id_eq]
-
-/-- A final `pure` of a state-free value can be pulled out of the run. -/
-private lemma run'_simulateQ_bind_pure {β γ : Type} (mx : OracleComp (RO_Spec Rand M) β)
-    (f : β → γ) (s : (Rand →ₒ M).QueryCache) :
-    (simulateQ roQueryImpl (mx >>= fun b => pure (f b))).run' s
-      = (simulateQ roQueryImpl mx).run' s >>= fun b => pure (f b) := by
-  rw [simulateQ_bind]
-  simp [StateT.run'_eq, Functor.map_map]
-
-/-- Simulating a lifted `ProbComp` under the logging handler produces a transcript whose every
-entry is a left-oracle (uniform-sampling) query: lifted computations never touch the right random
-oracle, so their transcript is invisible to any right-oracle (`Sum.inr`) predicate. -/
-private lemma forall_inl_of_mem_support_liftLog {β : Type} (p : ProbComp β)
-    (s : (Rand →ₒ M).QueryCache) :
-    ∀ x ∈ support (((simulateQ roQueryImpl.withLogging (liftM p)).run).run s),
-      ∀ e ∈ x.1.2, ∃ a, e.1 = Sum.inl a := by
-  rw [← OracleComp.liftComp_eq_liftM]
-  induction p using OracleComp.inductionOn generalizing s with
-  | pure x =>
-    intro y hy e he
-    simp only [liftComp_pure, simulateQ_pure, WriterT.run_pure', StateT.run_pure, support_pure,
-      Set.mem_singleton_iff] at hy
-    subst hy
-    exact absurd he (by simp)
-  | query_bind t k ih =>
-    intro y hy e he
-    rw [liftComp_bind, run_run_withLogging_bind] at hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨pp, hpp, hy⟩ := hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨qq, hqq, hy⟩ := hy
-    simp only [support_pure, Set.mem_singleton_iff] at hy
-    subst hy
-    simp only at he
-    rw [List.mem_append] at he
-    rcases he with he | he
-    · -- the single lifted query logs a left-oracle entry
-      rw [liftComp_query] at hpp
-      simp only [OracleQuery.input_query, OracleQuery.cont_query, Functor.map_id, id_eq] at hpp
-      have hinput :=
-        QueryImpl.fst_eq_input_of_mem_support_run_simulateQ_withLogging_liftM_stateT
-          (so := roQueryImpl (Rand := Rand) (M := M))
-          (q := (liftM (unifSpec.query t) : OracleQuery (RO_Spec Rand M) _))
-          (s := s) hpp he
-      exact ⟨t, by simpa [OracleQuery.liftM_add_left_def] using hinput⟩
-    · exact ih pp.1.1 pp.2 qq hqq e he
-
-/-- A logged run of a lifted `ProbComp` sample whose transcript is discarded collapses to the
-plain sample threading the cache unchanged: only the sampled value and resulting cache survive. -/
-private lemma bind_logged_lift_of_log_unused {β γ : Type} (p : ProbComp β)
-    (s : (Rand →ₒ M).QueryCache)
-    (cont : β → (Rand →ₒ M).QueryCache → ProbComp γ) :
-    ((simulateQ roQueryImpl.withLogging (liftM p)).run.run s >>=
-        fun x => cont x.1.1 x.2) = p >>= fun a => cont a s := by
-  have hfst : (fun x => (x.1.1, x.2)) <$>
-      (simulateQ roQueryImpl.withLogging (liftM p)).run.run s
-      = p >>= fun a => pure (a, s) := by
-    have h1 : Prod.fst <$> (simulateQ roQueryImpl.withLogging (liftM p)).run
-        = simulateQ roQueryImpl (liftM p) :=
-      QueryImpl.fst_map_run_withLogging (roQueryImpl (Rand := Rand) (M := M)) (liftM p)
-    have h2 := congrArg (fun (g : StateT _ ProbComp β) => g.run s) h1
-    simp only [StateT.run_map] at h2
-    rw [h2, run_liftM]
-  calc ((simulateQ roQueryImpl.withLogging (liftM p)).run.run s >>=
-          fun x => cont x.1.1 x.2)
-      = ((fun x => (x.1.1, x.2)) <$>
-          (simulateQ roQueryImpl.withLogging (liftM p)).run.run s) >>=
-            fun q => cont q.1 q.2 := by rw [bind_map_left]
-    _ = (p >>= fun a => pure (a, s)) >>= fun q => cont q.1 q.2 := by rw [hfst]
-    _ = p >>= fun a => cont a s := by rw [bind_assoc]; simp only [pure_bind]
+  unifFwdImpl (Rand →ₒ M) +
+    (randomOracle : QueryImpl (Rand →ₒ M) (StateT ((Rand →ₒ M).QueryCache) ProbComp))
 
 private def runRightLog {α : Type} (mx : OracleComp (RO_Spec Rand M) α)
     (cache : (Rand →ₒ M).QueryCache) :
@@ -381,8 +219,8 @@ private lemma runRightLog_bind {α β : Type} (mx : OracleComp (RO_Spec Rand M) 
       let x ← runRightLog mx cache
       let y ← runRightLog (f x.1.1) x.2
       pure ((y.1.1, x.1.2 ++ y.1.2), y.2)) := by
-  simp only [runRightLog, run_run_withLogging_bind, map_bind, map_pure, bind_map_left,
-    rightLog, List.filter_append]
+  simp only [runRightLog, QueryImpl.run_run_simulateQ_withLogging_bind, map_bind, map_pure,
+    bind_map_left, rightLog, List.filter_append]
 
 private lemma runRightLog_pure {α : Type} (a : α) (cache : (Rand →ₒ M).QueryCache) :
     runRightLog (pure a) cache = pure ((a, []), cache) := by
@@ -400,10 +238,14 @@ private lemma runRightLog_lift {α : Type} (p : ProbComp α)
     have hlog : rightLog x.1.2 = [] := by
       apply List.filter_eq_nil_iff.mpr
       intro e he
-      obtain ⟨a, ha⟩ := forall_inl_of_mem_support_liftLog p cache x hx e he
+      rw [← OracleComp.liftComp_eq_liftM] at hx
+      obtain ⟨a, ha⟩ :=
+        QueryImpl.exists_inl_of_mem_support_run_simulateQ_withLogging_liftComp_stateT _ p cache x
+          hx e he
       simp [ha]
     rw [hlog]
-  · exact bind_logged_lift_of_log_unused p cache (fun a s => pure ((a, []), s))
+  · rw [QueryImpl.bind_run_run_simulateQ_withLogging (f := fun a s => pure ((a, []), s)),
+      roSim.run_liftM, bind_map_left]
 
 /-- Inversion reduction: run the BR93 adversary in the idealized challenge game, log its
 random-oracle queries, and return the first query whose image under the trapdoor permutation
@@ -477,194 +319,21 @@ private lemma inverter_eq [Inhabited Rand] [AddCommGroup M]
   simp only [challengeTranscript, runRightLog_bind, runRightLog_lift, runRightLog_pure,
     bind_assoc, pure_bind, List.nil_append, List.append_nil, map_bind, map_pure]
 
-/-! ### Programming the challenge input
+/-! ### Cache and transcript
 
-The real challenge answers a query at the hidden input `r` with the mask it has already
-revealed, while the idealized challenge leaves `r` unprogrammed. The two lazy random oracles
-agree until the idealized run first queries `r`. -/
-
-/-- A uniform-sampling query of the BR93 handler samples and leaves the cache unchanged. -/
-private lemma run_roQueryImpl_inl (n : ℕ) (s : (Rand →ₒ M).QueryCache) :
-    (roQueryImpl (Rand := Rand) (M := M) (Sum.inl n)).run s =
-      (unifSpec.query n : ProbComp (Fin (n + 1))) >>= fun u => pure (u, s) := by
-  simp [roQueryImpl, StateT.run_monadLift]
-
-/-- A random-oracle query of the BR93 handler is the lazy random-oracle step. -/
-private lemma run_roQueryImpl_inr (x : Rand) (s : (Rand →ₒ M).QueryCache) :
-    (roQueryImpl (Rand := Rand) (M := M) (Sum.inr x)).run s =
-      match s x with
-      | some u => pure (u, s)
-      | none => ($ᵗ M) >>= fun u => pure (u, s.cacheQuery x u) := by
-  change (randomOracle x).run s = _
-  rw [randomOracle.run_eq (spec₀ := Rand →ₒ M) x s]
-  cases s x with
-  | some u => rfl
-  | none => rfl
-
-/-- One step of the BR93 handler at a primitive query. -/
-private lemma run_simulateQ_roQueryImpl_query (t : (RO_Spec Rand M).Domain)
-    (s : (Rand →ₒ M).QueryCache) :
-    (simulateQ roQueryImpl (liftM (OracleSpec.query t) :
-        OracleComp (RO_Spec Rand M) ((RO_Spec Rand M).Range t))).run s =
-      (roQueryImpl t).run s := by
-  simp only [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, id_map]
-
-/-- A random-oracle run never forgets a cached input. -/
-private lemma isSome_of_mem_support_run {α : Type} (oa : OracleComp (RO_Spec Rand M) α)
-    (r : Rand) (c : (Rand →ₒ M).QueryCache) (hc : (c r).isSome) :
-    ∀ z ∈ support ((simulateQ roQueryImpl oa).run c), (z.2 r).isSome := by
-  refine OracleComp.simulateQ_run_preservesInv roQueryImpl (fun s => (s r).isSome = true)
-    ?_ oa c hc
-  intro t s hs z hz
-  cases t with
-  | inl n =>
-    rw [run_roQueryImpl_inl, mem_support_bind_iff] at hz
-    obtain ⟨u, _, hz⟩ := hz
-    rw [support_pure, Set.mem_singleton_iff] at hz
-    subst hz
-    exact hs
-  | inr x =>
-    have hle := QueryImpl.withCaching_cache_le uniformSampleImpl x s z hz
-    obtain ⟨v, hv⟩ := Option.isSome_iff_exists.mp hs
-    rw [QueryCache.le_def] at hle
-    simp [hle hv]
-
-/-- Before the idealized run queries `r`, it agrees with the run whose cache already holds the
-programmed value `h` at `r`: on every event, the mass of the idealized run that never caches `r`
-is at most the mass of the programmed run. -/
-private lemma evalDist_run_uncached_le_run_cacheQuery {α : Type}
-    (oa : OracleComp (RO_Spec Rand M) α) (r : Rand) (h : M) (E : α → Prop) :
-    ∀ c : (Rand →ₒ M).QueryCache, c r = none →
-      𝒟[(simulateQ roQueryImpl oa).run c >>= fun z => pure (E z.1 ∧ z.2 r = none)] {True} ≤
-        𝒟[(simulateQ roQueryImpl oa).run (c.cacheQuery r h) >>= fun z => pure (E z.1)]
-          {True} := by
-  induction oa using OracleComp.inductionOn with
-  | pure a =>
-    intro c hc
-    simp only [simulateQ_pure, StateT.run_pure, pure_bind]
-    by_cases hE : E a <;> simp [hE, hc]
-  | query_bind t k ih =>
-    intro c hc
-    simp only [simulateQ_bind, StateT.run_bind, bind_assoc, run_simulateQ_roQueryImpl_query]
-    cases t with
-    | inl n =>
-      simp only [run_roQueryImpl_inl, bind_assoc, pure_bind]
-      exact OracleComp.evalDist_bind_apply_mono_of_support _ _ _
-        (measurableSet_singleton True) fun u _ => ih u c hc
-    | inr x =>
-      by_cases hxr : x = r
-      · subst hxr
-        refine le_of_eq_of_le ?_ bot_le
-        rw [run_roQueryImpl_inr, hc]
-        simp only [bind_assoc, pure_bind]
-        refine evalDist.apply_eq_zero_of_disjoint_support _ (measurableSet_singleton True) ?_
-        intro p hp
-        rw [mem_support_bind_iff] at hp
-        obtain ⟨u, _, hp⟩ := hp
-        rw [mem_support_bind_iff] at hp
-        obtain ⟨z, hz, hp⟩ := hp
-        rw [support_pure, Set.mem_singleton_iff] at hp
-        subst hp
-        have hcached := isSome_of_mem_support_run (k u) x (c.cacheQuery x u)
-          (by simp) z hz
-        simp [Option.isSome_iff_ne_none.mp hcached]
-      · rw [run_roQueryImpl_inr, run_roQueryImpl_inr,
-          QueryCache.cacheQuery_of_ne _ _ hxr]
-        cases hcx : c x with
-        | some v =>
-          simp only [pure_bind]
-          exact ih v c hc
-        | none =>
-          simp only [bind_assoc, pure_bind]
-          refine OracleComp.evalDist_bind_apply_mono_of_support _ _ _
-            (measurableSet_singleton True) fun u _ => ?_
-          rw [cacheQuery_comm c hxr]
-          exact ih u (c.cacheQuery x u)
-            (by rw [QueryCache.cacheQuery_of_ne _ _ (Ne.symm hxr)]; exact hc)
-
-/-- A logged primitive query of the BR93 handler records exactly that query and its answer. -/
-private lemma mem_support_run_withLogging_query {t : (RO_Spec Rand M).Domain}
-    {s : (Rand →ₒ M).QueryCache}
-    {z : ((RO_Spec Rand M).Range t × QueryLog (RO_Spec Rand M)) × (Rand →ₒ M).QueryCache}
-    (hz : z ∈ support ((simulateQ roQueryImpl.withLogging (liftM (OracleSpec.query t) :
-      OracleComp (RO_Spec Rand M) ((RO_Spec Rand M).Range t))).run.run s)) :
-    z.1.2 = [⟨t, z.1.1⟩] ∧ (z.1.1, z.2) ∈ support ((roQueryImpl t).run s) := by
-  rw [simulateQ_query, WriterT.run_map', StateT.run_map, support_map] at hz
-  obtain ⟨y, hy, rfl⟩ := hz
-  rw [QueryImpl.run_withLogging_apply, StateT.run_bind, mem_support_bind_iff] at hy
-  obtain ⟨us, hus, hy⟩ := hy
-  simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hy
-  subst hy
-  exact ⟨rfl, hus⟩
-
-/-- One step of the BR93 handler gains a cache entry at `r` exactly when it queries `r`. -/
-private lemma isSome_of_mem_support_run_roQueryImpl {t : (RO_Spec Rand M).Domain}
-    {s s' : (Rand →ₒ M).QueryCache} {u : (RO_Spec Rand M).Range t}
-    (h : (u, s') ∈ support ((roQueryImpl t).run s)) (r : Rand) :
-    (s' r).isSome = ((s r).isSome || transcriptBad r [⟨t, u⟩]) := by
-  cases t with
-  | inl n =>
-    rw [run_roQueryImpl_inl, mem_support_bind_iff] at h
-    obtain ⟨_, _, h⟩ := h
-    rw [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at h
-    rw [h.2]
-    simp [transcriptBad]
-  | inr x =>
-    rw [run_roQueryImpl_inr] at h
-    cases hsx : s x with
-    | some v =>
-      rw [hsx, support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at h
-      rw [h.2]
-      by_cases hxr : x = r
-      · subst hxr
-        simp [hsx]
-      · simp [transcriptBad, hxr]
-    | none =>
-      rw [hsx, mem_support_bind_iff] at h
-      obtain ⟨v, _, h⟩ := h
-      rw [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at h
-      rw [h.2]
-      by_cases hxr : x = r
-      · subst hxr
-        simp [transcriptBad, QueryCache.cacheQuery_self]
-      · simp [transcriptBad, hxr, QueryCache.cacheQuery_of_ne _ _ (Ne.symm hxr)]
-
-/-- A logged BR93 run gains a cache entry at `r` exactly when its transcript queries `r`. -/
-private lemma isSome_of_mem_support_run_withLogging {α : Type}
-    (oa : OracleComp (RO_Spec Rand M) α) (r : Rand) :
-    ∀ s : (Rand →ₒ M).QueryCache,
-      ∀ z ∈ support ((simulateQ roQueryImpl.withLogging oa).run.run s),
-        (z.2 r).isSome = ((s r).isSome || transcriptBad r z.1.2) := by
-  induction oa using OracleComp.inductionOn with
-  | pure a =>
-    intro s z hz
-    simp only [simulateQ_pure, WriterT.run_pure', StateT.run_pure, support_pure,
-      Set.mem_singleton_iff] at hz
-    subst hz
-    simp [transcriptBad]
-  | query_bind t k ih =>
-    intro s z hz
-    rw [run_run_withLogging_bind, mem_support_bind_iff] at hz
-    obtain ⟨p, hp, hz⟩ := hz
-    rw [mem_support_bind_iff] at hz
-    obtain ⟨q, hq, hz⟩ := hz
-    rw [support_pure, Set.mem_singleton_iff] at hz
-    subst hz
-    obtain ⟨hlog, hstep⟩ := mem_support_run_withLogging_query hp
-    rw [ih p.1.1 p.2 q hq, isSome_of_mem_support_run_roQueryImpl hstep r, transcriptBad_append,
-      hlog, Bool.or_assoc]
+A logged run caches the hidden input `r` exactly when its transcript queries `r`
+(`roSim.isCached_of_mem_support_run_withLogging`), so the bad event can be read off either the
+final cache or the transcript. -/
 
 /-- The right-oracle projection of a logged run keeps the cache/transcript correspondence. -/
-private lemma isSome_of_mem_support_runRightLog {α : Type}
+private lemma isCached_of_mem_support_runRightLog {α : Type}
     (oa : OracleComp (RO_Spec Rand M) α) (r : Rand) (s : (Rand →ₒ M).QueryCache) :
     ∀ z ∈ support (runRightLog oa s),
-      (z.2 r).isSome = ((s r).isSome || transcriptBad r z.1.2) := by
+      z.2.isCached r = (s.isCached r || z.1.2.wasQueried (Sum.inr r)) := by
   intro z hz
   rw [runRightLog, support_map] at hz
   obtain ⟨y, hy, rfl⟩ := hz
-  rw [isSome_of_mem_support_run_withLogging oa r s y hy]
-  unfold transcriptBad
-  rw [any_rightLog]
+  rw [roSim.isCached_of_mem_support_run_withLogging oa r s y hy, wasQueried_rightLog]
 
 /-- A logged BR93 run whose transcript is discarded is the plain run. -/
 private lemma bind_runRightLog_of_log_unused {α β : Type}
@@ -672,10 +341,8 @@ private lemma bind_runRightLog_of_log_unused {α β : Type}
     (f : α → (Rand →ₒ M).QueryCache → ProbComp β) :
     (runRightLog oa s >>= fun x => f x.1.1 x.2) =
       (simulateQ roQueryImpl oa).run s >>= fun x => f x.1 x.2 := by
-  have h1 := QueryImpl.fst_map_run_withLogging (roQueryImpl (Rand := Rand) (M := M)) oa
-  have h2 := congrArg (fun (g : StateT _ ProbComp α) => g.run s) h1
-  simp only [StateT.run_map] at h2
-  rw [← h2, runRightLog, bind_map_left, bind_map_left]
+  rw [runRightLog, bind_map_left]
+  exact QueryImpl.bind_run_run_simulateQ_withLogging _ oa s f
 
 /-! ### Games
 
@@ -765,9 +432,7 @@ def badEventExp (tdp : TrapdoorPermutation PK SK Rand)
       let _b' ← adv.guess st c
       return r)).run
   let (r, log) ← loggedRun.run' ∅
-  return decide (log.any fun entry => match entry.1 with
-    | Sum.inl _ => false
-    | Sum.inr r' => r' = r)
+  return log.wasQueried (Sum.inr r)
 
 /-- Probability of the bad event. -/
 noncomputable def badEventProb (tdp : TrapdoorPermutation PK SK Rand)
@@ -783,7 +448,7 @@ private lemma badEventExp_eq (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) 
       let h ← $ᵗ M
       let guess ← runRightLog (adv.guess choice.1.1.2.2
         (tdp.forward pk r, h + if b then choice.1.1.1 else choice.1.1.2.1)) choice.2
-      return transcriptBad r (choice.1.2 ++ guess.1.2)) := by
+      return (choice.1.2 ++ guess.1.2).wasQueried (Sum.inr r)) := by
   have projected : badEventExp tdp adv = (do
       let x ← runRightLog (show OracleComp (RO_Spec Rand M) Rand from do
         let (pk, _) ← liftM tdp.keygen
@@ -793,12 +458,8 @@ private lemma badEventExp_eq (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) 
         let h ← liftM ($ᵗ M)
         let _ ← adv.guess st (tdp.forward pk r, h + if b then m₁ else m₂)
         return r) ∅
-      return transcriptBad x.1.1 x.1.2) := by
-    simp only [badEventExp, runRightLog, StateT.run'_eq, bind_map_left]
-    apply bind_congr
-    intro x
-    simp only [transcriptBad, any_rightLog, Bool.decide_eq_true]
-    rfl
+      return x.1.2.wasQueried (Sum.inr x.1.1)) := by
+    simp only [badEventExp, runRightLog, StateT.run'_eq, bind_map_left, wasQueried_rightLog]
   rw [projected]
   simp only [runRightLog_bind, runRightLog_lift, runRightLog_pure, bind_assoc,
     pure_bind, List.nil_append, List.append_nil]
@@ -814,15 +475,15 @@ private def idealFlagged (tdp : TrapdoorPermutation PK SK Rand)
   let h ← $ᵗ M
   let z ← (simulateQ roQueryImpl (adv.guess choice.1.2.2
     (tdp.forward ks.1 r, h + if b then choice.1.1 else choice.1.2.1))).run choice.2
-  return (b == z.1, (z.2 r).isSome)
+  return (b == z.1, z.2.isCached r)
 
 /-- Game 1 is the success marginal of the flagged idealized game. -/
 private lemma game1_eq_idealFlagged (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
     game1 tdp adv = Prod.fst <$> idealFlagged tdp adv := by
   rw [game1, idealFlagged]
-  simp only [run'_simulateQ_bind, run_liftM, simulateQ_pure, bind_assoc, pure_bind]
-  simp only [StateT.run'_eq, StateT.run_pure, map_eq_bind_pure_comp, Function.comp,
-    bind_assoc, pure_bind]
+  simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, roSim.run_liftM, bind_map_left,
+    simulateQ_pure]
+  simp only [StateT.run_pure, map_eq_bind_pure_comp, Function.comp, bind_assoc, pure_bind]
 
 /-- The bad-event experiment is the flag marginal of the flagged idealized game. -/
 private lemma evalDist_badEventExp_eq_idealFlagged
@@ -836,7 +497,7 @@ private lemma evalDist_badEventExp_eq_idealFlagged
       let h ← $ᵗ M
       let z ← (simulateQ roQueryImpl (adv.guess choice.1.2.2
         (tdp.forward ks.1 r, h + if b then choice.1.1 else choice.1.2.1))).run choice.2
-      return (z.2 r).isSome) := by
+      return z.2.isCached r) := by
     rw [badEventExp_eq]
     refine bind_congr fun ks => ?_
     obtain ⟨pk, sk⟩ := ks
@@ -847,14 +508,14 @@ private lemma evalDist_badEventExp_eq_idealFlagged
       let h ← $ᵗ M
       let z ← (simulateQ roQueryImpl (adv.guess a.2.2
         (tdp.forward pk r, h + if b then a.1 else a.2.1))).run c
-      return (z.2 r).isSome)]
+      return z.2.isCached r)]
     refine bind_congr_of_forall_mem_support _ fun choice hchoice => ?_
     refine bind_congr fun b => bind_congr fun r => bind_congr fun h => ?_
-    rw [← bind_runRightLog_of_log_unused _ _ (fun _ c => pure (c r).isSome)]
+    rw [← bind_runRightLog_of_log_unused _ _ (fun _ c => pure (c.isCached r))]
     refine bind_congr_of_forall_mem_support _ fun guess hguess => ?_
-    rw [isSome_of_mem_support_runRightLog _ r _ guess hguess,
-      isSome_of_mem_support_runRightLog _ r _ choice hchoice, transcriptBad_append]
-    rfl
+    rw [isCached_of_mem_support_runRightLog _ r _ guess hguess,
+      isCached_of_mem_support_runRightLog _ r _ choice hchoice, QueryLog.wasQueried_append,
+      QueryCache.isCached_empty, Bool.false_or]
   rw [hforget, idealFlagged]
   simp only [map_bind, map_pure]
   rw [OracleComp.evalDist_bind_bind_swap ($ᵗ Bool) tdp.keygen]
@@ -868,14 +529,16 @@ private lemma evalDist_idealFlagged_good_le_cpaGame
     𝒟[idealFlagged tdp adv >>= fun z => pure (E z.1 ∧ z.2 = false)] {True} ≤
       𝒟[cpaGame tdp adv >>= fun y => pure (E y)] {True} := by
   rw [cpaGame, idealFlagged]
-  simp only [run'_simulateQ_bind, run_liftM, simulateQ_pure, bind_assoc, pure_bind]
-  simp only [StateT.run'_eq, StateT.run_pure, map_eq_bind_pure_comp, Function.comp, pure_bind]
+  simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, roSim.run_liftM, bind_map_left,
+    simulateQ_pure, bind_assoc, pure_bind]
+  simp only [StateT.run_pure, pure_bind]
   refine OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton True)
     fun b _ => OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton True)
     fun ks _ => OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton True)
     fun choice _ => OracleComp.evalDist_bind_apply_mono_of_support _ _ _
       (measurableSet_singleton True) fun r _ => ?_
-  rw [run_simulateQ_roQueryImpl_query, run_roQueryImpl_inr]
+  simp only [simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query, id_map,
+    QueryImpl.add_apply_inr, randomOracle.run_eq]
   cases hcr : choice.2 r with
   | some v =>
     -- The hidden input is already cached, so the idealized run is flagged bad.
@@ -888,44 +551,14 @@ private lemma evalDist_idealFlagged_good_le_cpaGame
     obtain ⟨z, hz, hp⟩ := hp
     rw [support_pure, Set.mem_singleton_iff] at hp
     subst hp
-    have hcached := isSome_of_mem_support_run _ r choice.2 (by simp [hcr]) z hz
-    simp [hcached]
+    have hcached := QueryCache.le_def.1 (roSim.le_of_mem_support_run _ choice.2 z hz) hcr
+    simp [QueryCache.isCached, hcached]
   | none =>
     simp only [bind_assoc, pure_bind]
     refine OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton True)
       fun h _ => ?_
-    simp only [Option.isSome_eq_false_iff, Option.isNone_iff_eq_none]
-    exact evalDist_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2 hcr
-
-/-- Two-sided up-to-bad arithmetic. If a flagged computation `μ`, off its flag, is dominated by
-`ν` on every event of its first component, then the success masses of `μ`'s first component and
-of `ν` differ by at most the flag mass. -/
-private lemma upToBad_of_good_le (μ : ProbComp (Bool × Bool)) (ν : ProbComp Bool)
-    (hgood : ∀ E : Bool → Prop, Pr{let z ← μ}[E z.1 ∧ z.2 = false] ≤ Pr{let y ← ν}[E y]) :
-    Pr{let z ← μ}[z.1 = true] ≤ Pr{let z ← μ}[z.2 = true] + Pr{let y ← ν}[y = true] ∧
-      Pr{let y ← ν}[y = true] ≤ Pr{let z ← μ}[z.2 = true] + Pr{let z ← μ}[z.1 = true] := by
-  have hgood' (E : Bool → Prop) :
-      Pr{let z ← μ}[E z.1 ∧ ¬z.2 = true] ≤ Pr{let y ← ν}[E y] := by
-    rw [prEvent_congr μ _ (fun z => E z.1 ∧ z.2 = false) fun z => by rw [Bool.not_eq_true]]
-    exact hgood E
-  have hsplit (E : Bool → Prop) :
-      Pr{let z ← μ}[E z.1] ≤ Pr{let z ← μ}[z.2 = true] + Pr{let y ← ν}[E y] :=
-    (prEvent_le_prEvent_add_prEvent_and_not μ _ (fun z => z.2 = true)).trans
-      (add_le_add le_rfl (hgood' E))
-  have htot {α : Type} (mx : ProbComp α) (p : α → Prop) :
-      Pr{let x ← mx}[p x] + Pr{let x ← mx}[¬p x] = 1 := by
-    rw [prEvent_congr mx p (fun x => True ∧ p x) fun _ => (iff_of_eq (true_and _)).symm,
-      prEvent_congr mx (fun x => ¬p x) (fun x => True ∧ ¬p x)
-        fun _ => (iff_of_eq (true_and _)).symm,
-      ← prEvent_eq_prEvent_and_add_prEvent_and_not, OracleComp.prEvent_true_eq_one]
-  refine ⟨hsplit (· = true), ?_⟩
-  -- Complement the success events, which have total mass one on both sides.
-  refine ENNReal.le_of_add_le_add_right (a := Pr{let y ← ν}[¬y = true])
-    (ne_top_of_le_ne_top ENNReal.one_ne_top ?_) ?_
-  · rw [← htot ν (· = true)]
-    exact le_add_self
-  · rw [htot ν (· = true), ← htot μ (fun z => z.1 = true), add_assoc]
-    exact (add_le_add le_rfl (hsplit (¬· = true))).trans_eq (add_left_comm _ _ _)
+    simp only [QueryCache.isCached, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none]
+    exact roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2 hcr
 
 /-- Both one-sided up-to-bad bounds between the real game and Game 1, as event masses. -/
 private lemma evalDist_cpaGame_game1_le_badEventExp
@@ -940,7 +573,14 @@ private lemma evalDist_cpaGame_game1_le_badEventExp
     rw [evalDist_badEventExp_eq_idealFlagged, ← prEvent_eq_evalDist_singleton]
     simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp]
   rw [h1, hb, ← prEvent_eq_evalDist_singleton (cpaGame tdp adv) true]
-  exact upToBad_of_good_le _ _ (evalDist_idealFlagged_good_le_cpaGame adv)
+  have hgood := evalDist_idealFlagged_good_le_cpaGame (tdp := tdp) adv
+  refine ⟨prEvent_le_prEvent_add_of_prEvent_and_not_le _ _ (fun z : Bool × Bool => z.2 = true)
+      (fun z => z.1 = true) (· = true) ?_,
+    prEvent_le_prEvent_add_of_prEvent_not_and_not_le _ _ (fun z : Bool × Bool => z.2 = true)
+      (fun z => z.1 = true) (· = true)
+      ((OracleComp.prEvent_true_eq_one _).trans_le (OracleComp.prEvent_true_eq_one _).ge) ?_⟩
+  · simpa only [Bool.not_eq_true] using hgood (· = true)
+  · simpa only [Bool.not_eq_true] using hgood (· = false)
 
 /-- Up-to-bad step: replacing the challenge hash query with a fresh uniform mask changes the
 game by at most the bad-event probability. -/
@@ -969,9 +609,9 @@ theorem evalDist_game1_eq_game2 [MeasurableSpace M] [DiscreteMeasurableSpace M]
   -- Push the random-oracle simulation through both games: lifted samples become plain
   -- `ProbComp` binds, the adversary's `choose`/`guess` thread the cache, and the trailing
   -- `pure` collapses, leaving identical computations save for the challenge mask.
-  simp only [run'_simulateQ_bind, run_liftM, simulateQ_pure, bind_assoc, pure_bind]
-  simp only [StateT.run'_eq, StateT.run_pure, map_eq_bind_pure_comp, Function.comp,
-    bind_assoc, pure_bind]
+  simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, roSim.run_liftM, bind_map_left,
+    simulateQ_pure, bind_assoc]
+  simp only [StateT.run_pure, map_eq_bind_pure_comp, Function.comp, bind_assoc, pure_bind]
   refine evalDist_bind_congr _ _ _ fun b => ?_
   refine evalDist_bind_congr _ _ _ fun ks => ?_
   refine evalDist_bind_congr _ _ _ fun mmst => ?_
@@ -1015,7 +655,7 @@ private theorem measure_badEventExp_eq_observation
     [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
     (adv : CPA_Adv (PK := PK) (Rand := Rand) (M := M)) :
     𝒟[badEventExp tdp adv] = 𝒟[(fun x : PK × Rand × QueryLog (RO_Spec Rand M) =>
-      transcriptBad x.2.1 x.2.2) <$> challengeTranscriptExp (tdp := tdp) adv] := by
+      x.2.2.wasQueried (Sum.inr x.2.1)) <$> challengeTranscriptExp (tdp := tdp) adv] := by
   let : MeasurableSpace (PK × SK) := ⊤
   let : MeasurableSpace Rand := ⊤
   let : MeasurableSpace
@@ -1042,7 +682,7 @@ theorem measure_badEventExp_le_tdpExp [Inhabited Rand]
   apply MeasureTheory.measure_mono
   intro x hx
   change decide (_ = _) = true
-  exact decide_eq_true (transcriptBad_implies_preimage (tdp := tdp) x.1 x.2.1 x.2.2 hx)
+  exact decide_eq_true (forward_transcriptPreimage_of_wasQueried (tdp := tdp) x.1 x.2.1 x.2.2 hx)
 
 /-- The bad event is bounded by the trapdoor-preimage advantage of the inverter
 constructed from the adversary's random-oracle transcript. -/
