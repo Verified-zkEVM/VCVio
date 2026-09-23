@@ -30,11 +30,16 @@ The standard construction of a message authentication code from a pseudorandom f
 ## Security (Boneh-Shoup Theorem 6.2)
 
 - `PRFScheme.macToPRFReduction` — the PRF distinguisher constructed from a UF-CMA forger.
-- `PRFScheme.prf_implies_uf_cma` — PRF security implies UF-CMA security:
-  `UF_CMA_Advantage(A) ≤ prfAdvantage(prf, B) + 1/|R|`.
+- `PRFScheme.strongUnforgeableAdvantage_toMacAlg_eq_UF_CMA_Advantage` — for this deterministic
+  MAC, strong (pair-fresh) and ordinary (message-fresh) unforgeability advantages coincide.
+- `PRFScheme.prf_implies_suf_cma` — PRF security implies SUF-CMA security:
+  `strongUnforgeableAdvantage(A) ≤ prfAdvantage(prf, B) + 1/|R|`.
+- `PRFScheme.prf_implies_uf_cma` — PRF security implies UF-CMA security, with the same bound.
 
 ## References
 
+- [Bellare, Namprempre, *Authenticated Encryption: Relations among Notions and Analysis of the
+  Generic Composition Paradigm*, ASIACRYPT 2000](https://eprint.iacr.org/2000/025)
 - [Boneh, Shoup, *A Graduate Course in Applied Cryptography*, v0.6, §6.3]
   (https://crypto.stanford.edu/~dabo/cryptobook/BonehShoup_0_6.pdf)
 -/
@@ -75,15 +80,18 @@ theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
 Given a UF-CMA forger `A` against `prf.toMacAlg`, we construct a PRF distinguisher `B`
 (`macToPRFReduction A`) and prove:
 
-    UF_CMA_Advantage(A) ≤ prfAdvantage(prf, B) + 1/|R|
+    strongUnforgeableAdvantage(A) ≤ prfAdvantage(prf, B) + 1/|R|
 
 The reduction forwards `A`'s tagging queries to its own PRF/random-function oracle while
 logging them, then checks the forgery condition.
 
-**Strong vs weak UF-CMA.** Boneh-Shoup's Attack Game 6.1 checks that the forgery *pair*
-`(m, t)` is fresh (strong UF-CMA). VCVio's `MacAlg.UF_CMA_Exp` checks only message
-freshness (`!log.wasQueried msg`). For the deterministic MAC `prf.toMacAlg`, each message
-has exactly one valid tag, so the two notions coincide.
+**Strong vs ordinary UF-CMA.** Boneh-Shoup's Attack Game 6.1 checks that the forgery *pair*
+`(m, t)` is fresh; this is `MacAlg.strongUnforgeableExp`. `MacAlg.UF_CMA_Exp` checks only
+message freshness (`!log.wasQueried msg`). For the deterministic MAC `prf.toMacAlg`, each
+message has exactly one valid tag, so the two advantages coincide
+(`strongUnforgeableAdvantage_toMacAlg_eq_UF_CMA_Advantage`). The reduction is analysed in the
+message-fresh game (`prf_implies_uf_cma`) and the bound transfers to the strong game
+(`prf_implies_suf_cma`).
 -/
 
 /-- Query the `(D →ₒ R)` component of the PRF oracle spec. -/
@@ -140,6 +148,43 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run [DecidableEq R]
       ext
       simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, ufCmaImpl, prfFuncQuery,
         toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp]
+
+/-- In the real tagging game for `prf.toMacAlg`, every entry of the tagging log records the PRF
+value at its message: the tagging oracle is deterministic. -/
+private theorem snd_eq_eval_of_mem_log_ufCmaImpl [DecidableEq R] (prf : PRFScheme K D R) (k : K)
+    {α : Type} (oa : OracleComp (unifSpec + (D →ₒ R)) α) {z : α × QueryLog (D →ₒ R)}
+    (hz : z ∈ support (simulateQ (ufCmaImpl prf k) oa).run) :
+    ∀ e ∈ z.2, e.2 = prf.eval k e.1 := by
+  induction oa using OracleComp.inductionOn generalizing z with
+  | pure x =>
+    simp only [simulateQ_pure, WriterT.run_pure', support_pure, Set.mem_singleton_iff] at hz
+    subst hz
+    simp
+  | query_bind t f ih =>
+    cases t with
+    | inl n =>
+      rw [ufCmaImpl, QueryImpl.simulateQ_add_query_bind_left] at hz
+      simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+        WriterT.run_bind', mem_support_bind_iff, support_map, Set.mem_image] at hz
+      obtain ⟨⟨u, w⟩, hu, z', hz', rfl⟩ := hz
+      simp only [WriterT.run_liftM, support_map, Set.mem_image, Prod.mk.injEq] at hu
+      obtain ⟨_, _, _, rfl⟩ := hu
+      intro e he
+      exact ih u hz' e (by simpa using he)
+    | inr d =>
+      rw [ufCmaImpl, QueryImpl.simulateQ_add_query_bind_right] at hz
+      simp only [WriterT.run_bind', mem_support_bind_iff, support_map, Set.mem_image] at hz
+      obtain ⟨⟨u, w⟩, hu, z', hz', rfl⟩ := hz
+      simp only [MacAlg.taggingOracle, toMacAlg, QueryImpl.withLogging_apply, bind_pure_comp,
+        WriterT.run_bind, WriterT.run_liftM, List.empty_eq, map_pure, WriterT.run_map,
+        WriterT.run_tell, List.nil_append, MonadAttach.support_pure, Set.mem_singleton_iff,
+        Prod.mk.injEq] at hu
+      obtain ⟨rfl, rfl⟩ := hu
+      intro e he
+      simp only [Prod.map_snd, List.singleton_append, List.mem_cons] at he
+      rcases he with rfl | he
+      · rfl
+      · exact ih _ hz' e he
 
 variable [DecidableEq D]
 
@@ -403,5 +448,64 @@ theorem prf_implies_uf_cma [DecidableEq R] [SampleableType R] [Fintype R]
   set a := (Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)]).toReal
   set b := (Pr[= true | prfIdealExp (macToPRFReduction prf adversary)]).toReal
   linarith [le_abs_self (a - b), prfIdealExp_macToPRFReduction_le prf adversary]
+
+/-! ## Strong Unforgeability
+
+For the deterministic MAC `prf.toMacAlg`, a verifying pair `(msg, τ)` has `τ = prf.eval k msg`,
+which is exactly the entry the tagging oracle logs when queried on `msg`. A verifying pair is
+therefore fresh iff its message is, so the SUF-CMA and UF-CMA advantages coincide and Boneh-Shoup
+Theorem 6.2 holds for strong unforgeability with the same reduction and bound.
+-/
+
+/-- In the real tagging game for `prf.toMacAlg`, the tagging log contains the pair
+`(msg, prf.eval k msg)` exactly when `msg` was queried. -/
+private theorem taggingLogContains_eval_eq_wasQueried [DecidableEq R] (prf : PRFScheme K D R)
+    (k : K) (msg : D) (log : QueryLog (D →ₒ R))
+    (hlog : ∀ e ∈ log, e.2 = prf.eval k e.1) :
+    MacAlg.taggingLogContains log msg (prf.eval k msg) = log.wasQueried msg := by
+  cases hw : log.wasQueried msg with
+  | false =>
+    cases hc : MacAlg.taggingLogContains log msg (prf.eval k msg)
+    · rfl
+    · rw [MacAlg.wasQueried_eq_true_of_taggingLogContains_eq_true _ _ _ hc] at hw
+      exact absurd hw Bool.noConfusion
+  | true =>
+    rw [QueryLog.wasQueried_eq_decide_mem_map_fst, decide_eq_true_eq, List.mem_map] at hw
+    obtain ⟨⟨m, t⟩, he, rfl⟩ := hw
+    have ht : t = prf.eval k m := hlog _ he
+    subst ht
+    simpa [MacAlg.taggingLogContains] using he
+
+/-- For the deterministic MAC `prf.toMacAlg`, strong and ordinary unforgeability coincide: the only
+valid tag on a message is its PRF value, which is the tag the oracle returns on that message, so a
+verifying pair is in the tagging log iff its message was queried. -/
+theorem strongUnforgeableAdvantage_toMacAlg_eq_UF_CMA_Advantage [DecidableEq R]
+    (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UF_CMA_Adversary) :
+    MacAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp adversary =
+      MacAlg.UF_CMA_Advantage ProbCompRuntime.probComp adversary := by
+  unfold MacAlg.strongUnforgeableAdvantage MacAlg.strongUnforgeableExp MacAlg.UF_CMA_Advantage
+    MacAlg.UF_CMA_Exp
+  rw [ProbCompRuntime.probComp_evalDist, ProbCompRuntime.probComp_evalDist]
+  congr 1
+  refine evalDist_bind_congr _ _ _ fun k => ?_
+  refine evalDist_bind_congr_of_support _ _ _ fun ⟨⟨msg, τ⟩, log⟩ hmem => ?_
+  have hlog := snd_eq_eval_of_mem_log_ufCmaImpl prf k adversary.main hmem
+  simp only [toMacAlg, pure_bind]
+  by_cases hτ : τ = prf.eval k msg
+  · subst hτ
+    rw [taggingLogContains_eval_eq_wasQueried prf k msg log hlog]
+  · simp [hτ]
+
+/-- **Boneh-Shoup Theorem 6.2**, strong form. PRF security implies SUF-CMA security for the
+derived MAC, with the pair-freshness forgery condition of Bellare-Namprempre (2000) and Boneh-Shoup
+Attack Game 6.1: for any forger `A`, the constructed distinguisher `macToPRFReduction prf A`
+satisfies `strongUnforgeableAdvantage(A) ≤ prfAdvantage(prf, B) + 1/|R|`. -/
+theorem prf_implies_suf_cma [DecidableEq R] [SampleableType R] [Fintype R]
+    (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UF_CMA_Adversary) :
+    (MacAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp adversary).toReal ≤
+      prf.prfAdvantage (macToPRFReduction prf adversary) +
+        (Fintype.card R : ℝ)⁻¹ := by
+  rw [strongUnforgeableAdvantage_toMacAlg_eq_UF_CMA_Advantage]
+  exact prf_implies_uf_cma prf adversary
 
 end PRFScheme
