@@ -37,6 +37,41 @@ variable {α : Type}
 
 namespace Extractor
 
+/-- The leaf and authentication path exposed by an extracted partial tree at `idx`.
+
+This remains a structure, rather than an alias of the generic extractor's wrapper, to preserve
+the existing qualified constructor and projection API. -/
+structure Opening (α : Type) {s : Skeleton} (idx : SkeletonLeafIndex s) where
+  /-- The extracted leaf, or `none` if the transcript does not reach it. -/
+  leaf : Option α
+  /-- The extracted sibling path; unknown siblings are represented by `none`. -/
+  proof : List.Vector (Option α) idx.depth
+
+/-- Inspect the leaf and authentication path extracted at `idx`. -/
+def opening {s : Skeleton} (tree : FullData (Option α) s)
+    (idx : SkeletonLeafIndex s) : Opening α idx where
+  leaf := tree.get idx.toNodeIndex
+  proof := generateProof tree idx
+
+@[simp]
+theorem opening_leaf {s : Skeleton} (tree : FullData (Option α) s)
+    (idx : SkeletonLeafIndex s) :
+    (opening tree idx).leaf = tree.get idx.toNodeIndex := rfl
+
+@[simp]
+theorem opening_proof {s : Skeleton} (tree : FullData (Option α) s)
+    (idx : SkeletonLeafIndex s) :
+    (opening tree idx).proof = generateProof tree idx := rfl
+
+private theorem populateDown_none_eq (s : Skeleton)
+    (f : Option α → Option α × Option α) (hf : f none = (none, none)) :
+    populateDown s f none =
+      populateDown s (fun _ : Option α => (none, none)) none := by
+  induction s with
+  | leaf => rfl
+  | internal left right ihLeft ihRight =>
+      simp [populateDown_internal_def, hf, ihLeft, ihRight]
+
 variable [DecidableEq α]
 
 /-- View an unaddressed `(left, right)` query as the unit-key specialization of the generic
@@ -59,22 +94,6 @@ def tree (s : Skeleton) (log : (spec α).QueryLog) (root : α) :
     FullData (Option α) s :=
   MerkleTreeExtractor.tree queryView s (fun _ => ()) log root
 
-/-- The leaf and authentication path exposed by an extracted partial tree at `idx`.
-
-This remains a structure, rather than an alias of the generic extractor's wrapper, to preserve
-the existing qualified constructor and projection API. -/
-structure Opening (α : Type) {s : Skeleton} (idx : SkeletonLeafIndex s) where
-  /-- The extracted leaf, or `none` if the transcript does not reach it. -/
-  leaf : Option α
-  /-- The extracted sibling path; unknown siblings are represented by `none`. -/
-  proof : List.Vector (Option α) idx.depth
-
-/-- Inspect the leaf and authentication path extracted at `idx`. -/
-def opening {s : Skeleton} (tree : FullData (Option α) s)
-    (idx : SkeletonLeafIndex s) : Opening α idx where
-  leaf := tree.get idx.toNodeIndex
-  proof := generateProof tree idx
-
 /-- The non-dummy labels reached by extraction from `root`. -/
 def targets (s : Skeleton) (log : (spec α).QueryLog) (root : α) : List α :=
   MerkleTreeExtractor.targets queryView s (fun _ => ()) log root
@@ -94,16 +113,6 @@ theorem children_eq_none_of_find?_eq_none (log : (spec α).QueryLog) (a : α)
     (hfind : log.find? (fun ⟨_, response⟩ => response == a) = none) :
     children log a = none := by
   simp [children, MerkleTreeExtractor.children, queryView, hfind]
-
-omit [DecidableEq α] in
-private theorem populateDown_none_eq (s : Skeleton)
-    (f : Option α → Option α × Option α) (hf : f none = (none, none)) :
-    populateDown s f none =
-      populateDown s (fun _ : Option α => (none, none)) none := by
-  induction s with
-  | leaf => rfl
-  | internal left right ihLeft ihRight =>
-      simp [populateDown_internal_def, hf, ihLeft, ihRight]
 
 /-- The internal-node equation when the log does not determine children for `root`. -/
 theorem tree_internal_of_children_eq_none (left right : Skeleton)
@@ -152,18 +161,6 @@ theorem targets_internal_of_children_eq_some (left right : Skeleton)
   simpa [targets] using
     (MerkleTreeExtractor.targets_internal_of_children_eq_some queryView left right
       (fun _ => ()) log root x y hchildren)
-
-omit [DecidableEq α] in
-@[simp]
-theorem opening_leaf {s : Skeleton} (tree : FullData (Option α) s)
-    (idx : SkeletonLeafIndex s) :
-    (opening tree idx).leaf = tree.get idx.toNodeIndex := rfl
-
-omit [DecidableEq α] in
-@[simp]
-theorem opening_proof {s : Skeleton} (tree : FullData (Option α) s)
-    (idx : SkeletonLeafIndex s) :
-    (opening tree idx).proof = generateProof tree idx := rfl
 
 /-- If the first logged preimage of `root` is `(x, y)`, extraction recurses from `x` and `y`. -/
 theorem tree_internal_eq_of_find?_eq (left right : Skeleton)

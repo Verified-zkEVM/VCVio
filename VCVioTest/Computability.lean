@@ -26,7 +26,7 @@ No `#eval` is used: outputs are random, so any runtime assertion would be flaky.
 is compilation itself.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec
 
@@ -34,15 +34,14 @@ namespace VCVioTest.Computability
 
 /-! ## Lazy random-oracle simulation pipeline
 
-Locks `unifFwdImpl`, `randomOracle`, and their sum: the standard interpretation of a
+Locks `OracleSpec.romImpl` (`unifFwdImpl` plus `randomOracle`): the standard interpretation of a
 `unifSpec + hashSpec` computation into `StateT QueryCache ProbComp`. -/
 
 /-- The lazy-RO simulation pipeline used throughout the Fiat-Shamir and Fischlin layers. -/
 def roSimPipeline :
     QueryImpl (unifSpec + (ℕ →ₒ Bool))
       (StateT ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache ProbComp) :=
-  unifFwdImpl (ℕ →ₒ Bool) +
-    (randomOracle : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) _)
+  (ℕ →ₒ Bool).romImpl
 
 /-- A toy random-oracle computation: query two hash points and combine the answers. -/
 def roToy : OracleComp (unifSpec + (ℕ →ₒ Bool)) Bool := do
@@ -73,7 +72,7 @@ example (p : Bool → Prop) :
       (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache).AgreesWithFn f →
         Pr[p | roMixedFixed f] = 1 := by
   simpa only [roSimPipeline, roMixedFixed] using
-    (OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff
+    (OracleComp.probEvent_eq_one_simulateQ_romImpl_run_iff
       (oa := roMixedToy) (preexisting_cache :=
         (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)) p)
 
@@ -118,7 +117,7 @@ outer interpreter through a stateful or logging handler. -/
 /-- A stateful handler over `ProbComp` that records each sampled answer. -/
 def toyTrackingInner : QueryImpl (Unit →ₒ Bool) (StateT (List Bool) ProbComp) :=
   fun (_ : Unit) => do
-    let b ← liftM ($ᵗ Bool)
+    let b ← $ᵗ Bool
     modifyGet fun log => (b, b :: log)
 
 /-- `toyTrackingInner` with its base `ProbComp` mapped through the identity forwarder. -/

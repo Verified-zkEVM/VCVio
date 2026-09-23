@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Nicolas Consigny. All rights reserved.
+Copyright (c) 2026 Nicolas Consigny, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Nicolas Consigny
+Authors: Nicolas Consigny, Alexander Hicks
 -/
 
 module
@@ -22,12 +22,12 @@ Two type-dependent words alias by name exactly as in FIPS 205:
 `setChainAddress = setTreeHeight` (word 2) and `setHashAddress = setTreeIndex` (word 3).
 
 `toBytes` / `compressSha2` give the 32-byte serialization and the 22-byte SHA-2 `ADRSc`
-compression (§11.2.1) as byte lists. `encodeChecked`, `compressSha2Checked`, and `decode` enforce
+compression (§11.2) as byte lists. `encodeChecked`, `compressSha2Checked`, and `decode` enforce
 representability, recognized types, and type-specific canonical padding at external boundaries.
 
 ## References
 
-- NIST FIPS 205, §4.2 (ADRS), Table 1 (member functions), §11.2.1 (ADRSc compression)
+- NIST FIPS 205, §4.2 (ADRS), Table 1 (member functions), §11.2 (ADRSc compression)
 -/
 
 @[expose] public section
@@ -93,6 +93,10 @@ namespace Adrs
 
 /-- Executable check that a natural number fits in an unsigned big-endian field. -/
 def Fits (widthBytes value : ℕ) : Bool := decide (value < 256 ^ widthBytes)
+
+/-- A field of the given byte width holds exactly the values below `256 ^ width`. -/
+theorem fits_iff {width value : ℕ} : Fits width value = true ↔ value < 256 ^ width := by
+  simp [Fits]
 
 /-- Shared rejecting range check for ADRS setters. -/
 def requireFits (widthBytes value : ℕ) : Except CodecError ℕ :=
@@ -210,7 +214,7 @@ def toBytes (a : Adrs) : List Byte :=
   toBytesBE a.layer 4 ++ toBytesBE a.tree 12 ++ toBytesBE a.type 4 ++
     toBytesBE a.word1 4 ++ toBytesBE a.word2 4 ++ toBytesBE a.word3 4
 
-/-- The 22-byte SHA-2 compressed address `ADRSc` (FIPS 205 §11.2.1): the low layer byte, low
+/-- The 22-byte SHA-2 compressed address `ADRSc` (FIPS 205 §11.2): the low layer byte, low
 eight tree bytes, low type byte, then the three four-byte type-dependent words. -/
 def compressSha2 (a : Adrs) : List Byte :=
   toBytesBE a.layer 1 ++ toBytesBE a.tree 8 ++ toBytesBE a.type 1 ++
@@ -333,6 +337,18 @@ theorem fits_of_isCanonical (a : Adrs) (h : a.isCanonical = true) :
       Fits 4 a.word1 = true ∧ Fits 4 a.word2 = true ∧ Fits 4 a.word3 = true := by
   simp only [isCanonical, Bool.and_eq_true] at h
   aesop
+
+/-- Only the seven FIPS type codes decode, so a canonical address has a type below seven. -/
+theorem type_le_six_of_isCanonical {a : Adrs} (h : a.isCanonical = true) : a.type ≤ 6 := by
+  simp only [isCanonical, Bool.and_eq_true] at h
+  have hsome : (AddrType.ofCode a.type).isSome = true := h.1.2
+  match hty : a.type with
+  | 0 | 1 | 2 | 3 | 4 | 5 | 6 => omega
+  | (k + 7) => rw [hty] at hsome; simp [AddrType.ofCode] at hsome
+
+/-- A canonical address therefore has a type that fits the one byte `ADRSc` reserves for it. -/
+theorem fits_one_type_of_isCanonical {a : Adrs} (h : a.isCanonical = true) :
+    Fits 1 a.type = true := fits_iff.2 (by have := type_le_six_of_isCanonical h; omega)
 
 /-- Full serialization/parsing is identity for every canonical structured address. -/
 theorem fromVector_toVector_of_isCanonical (a : Adrs) (h : a.isCanonical = true) :

@@ -27,7 +27,7 @@ closer; see *Normal forms and the tactic contract* in `docs/agents/probability.m
 with no probability API yet are recorded as prose gaps at the end.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp ProbComp ENNReal
 
@@ -39,7 +39,8 @@ section generic
 
 variable {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
   [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+  [EvalDistCompatible m]
 
 /-! ## `pure` — all heads close by both `simp` and `grind`. -/
 

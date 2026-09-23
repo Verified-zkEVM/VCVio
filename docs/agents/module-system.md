@@ -88,6 +88,18 @@ and characterization `…_iff` theorems. Mark a definition `@[expose]` only when
 downstream definitional equality is an intentional part of the API and a
 theorem would materially obstruct ordinary use.
 
+In Lean 4.34 a theorem written with syntactic `:= rfl` requests automatic
+definitional-equality registration. For an exported theorem, that registration
+requires the unfolded definitions to be exposed. An ordinary theorem proof
+such as `:= by unfold operation; rfl` can instead prove a public propositional
+equation while keeping `operation` opaque to importers. Choose which contract
+the consumer needs before adding exposure; exported theorem proofs alone do
+not require exposing their implementation dependencies. Exercise the equation
+through an ordinary import after narrowing the boundary.
+
+The [API-boundary campaign ledger](../reading/api-boundary-campaign.md) records
+consumer evidence, intentional reducers, instance leaks, and upstream blockers.
+
 The definitional identities among the semantic façades (`evalDist`,
 `evalSPMF`, `simulateQ`, `support`, `probOutput`) are an implementation
 detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. Proofs inside those
@@ -272,26 +284,16 @@ application, composition, or extensionality law, or add that law at the owning
 module boundary. Constructor equations and definitions whose reduction is an
 intentional documented API may still use `rfl` directly.
 
-## The Loom import boundary
+## The program-logic import boundary
 
-The pinned `loom2` fork supplies the Loom-style `WP`/`Triple` abstractions
-and the `ℝ≥0∞`/`Prob` lattice instances the program logic runs on. Its import
-boundary keeps a future migration to core's WP layer limited to a known set
-of files. `Std.Do.WP` is already public at the Lean v4.33.1 pin and is used by
-VCVio's `StdDoBridge`; migrating Loom's quantitative and relational clients
-from its three-parameter `PredTrans` and `EPost` APIs to core's `PostShape`
-API is separate work. `Loom.*` may be imported only by:
+Unary carrier interpretations live in `VCVio/ProgramLogic/Unary/WP/` and consume core's
+`Std.Internal.Do` API through PolyFun's algebra bridge. Relational carrier interpretations
+live in `VCVio/ProgramLogic/Relational/WP/` and use VCVio's coupling interface. Carrier
+instances are scoped, so importing either layer does not choose a global semantics.
 
-- `ToMathlib/Control/Monad/RelWP.lean`;
-- `VCVio/ProgramLogic/Unary/Loom/Qualitative.lean`,
-  `VCVio/ProgramLogic/Unary/Loom/Quantitative.lean`, and
-  `VCVio/ProgramLogic/Unary/Loom/Probabilistic.lean`; and
-- `VCVio/ProgramLogic/Tactics/Unary/Internals.lean`.
-
-Everything else reaches Loom through those modules' public surface. A new
-`import Loom.…` elsewhere is a review blocker unless it comes with an entry
-here and a reason the existing bridges cannot carry it. This is a convention
-enforced at review, not a script.
+The legacy `Std.Do` handler bridge and the lattice-generic core WP API coexist.
+See [program-logic.md](program-logic.md#core-wp-and-the-symbolic-rewriter-boundary) for
+selection, tactic boundaries, and the v4.35 tracking links.
 
 ## Restoring `private` correctly
 
@@ -336,6 +338,20 @@ The boundary has three canaries and one ratchet:
   elaborate macros. Run `scripts/check-expose-boundary.sh --update-baseline`
   in the PR that converts a file so the ceiling follows the decrease; raise
   it only with a stated reason in the PR description.
+
+Start a conversion by switching to plain `public section` and building. The
+compiler identifies definitions that existing public declarations need exposed
+under "may need to be `@[expose]`d". Then review the intended downstream API:
+repository callers may exercise only some parameter sets. In particular,
+bundles with concrete type fields must expose those projections when callers
+need to supply ordinary values of those types. Add public-import canaries for
+such interfaces, including every exported specialization.
+
+Proof modules often need only a few selectively exposed definitions. Fixtures
+whose public proofs intentionally unfold nearly every definition may retain
+`@[expose] public section`; explain that need in the module docstring when it
+is not apparent from the contents. Runtime execution alone (including `main`)
+does not require exposing definition bodies to proof reduction.
 
 Changes that add PolyFun API and consume it from VCVio require two coordinated
 repository changes:

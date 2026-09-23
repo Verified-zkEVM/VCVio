@@ -6,6 +6,9 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.Coinductive.Responder
+public import VCVio.EvalDist.FailureMeasure
+public import VCVio.EvalDist.WithFailure
+public import VCVioTest.MeasureSemantics
 public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 
 /-!
@@ -21,9 +24,60 @@ open MeasureTheory ProbabilityTheory OracleSpec
 
 namespace VCVioTest.KernelSemantics
 
+/-! ## Automatic mass properties -/
+
+example (f : Bool → ProbComp ℝ) : IsMarkovKernel (evalDistKernelOfDiscrete f) := inferInstance
+
+example (mx : ReaderT Bool ProbComp ℝ) :
+    IsMarkovKernel (ReaderT.evalDistKernelOfDiscrete mx) := inferInstance
+
+example (mx : StateT Bool ProbComp ℝ) :
+    IsMarkovKernel (StateT.evalDistKernelOfDiscrete mx) := inferInstance
+
+example (mx : ReaderT Bool (OptionT ProbComp) ℝ) :
+    IsSubprobabilityKernel (ReaderT.evalDistKernelOfDiscrete mx) := inferInstance
+
+example (mx : StateT Bool (OptionT ProbComp) ℝ) :
+    IsSubprobabilityKernel (StateT.evalDistKernelOfDiscrete mx) := inferInstance
+
+example (mx : StateT Bool ProbComp ℝ) (state : Bool) :
+    𝒟[mx.run' state] = (𝒟[mx state]).fst := by simp
+
+example (mx : StateT Bool ProbComp Bool) (state : Bool) {bound : ENNReal}
+    (h : (𝒟[mx state]).fst {true} ≤ bound) : 𝒟[mx.run' state] {true} ≤ bound := by grind
+
+example (mx : StateT Bool ProbComp ℝ) (state : Bool) :
+    (StateT.evalDistKernelOfDiscrete mx).fst state Set.univ = 1 := by simp
+
+open VCVioTest.MeasureSemantics in
+example (f : ℝ → ℝ) (hf : Measurable f) :
+    let family : ReaderT ℝ (PFunctor.FreeM gaussSpec) ℝ := fun x ↦ pure (f x)
+    IsMarkovKernel (ReaderT.evalDistKernel family (by
+      simpa only [family, evalDist_pure, Function.comp_def] using
+        Measure.measurable_dirac.comp hf)) := by
+  dsimp only
+  infer_instance
+
+open VCVioTest.MeasureSemantics in
+example : IsProbabilityMeasure (𝒟[(failure : OptionT (PFunctor.FreeM gaussSpec) ℝ)]).withFailure :=
+  inferInstance
+
+open VCVioTest.MeasureSemantics in
+example (mx : OptionT (PFunctor.FreeM gaussSpec) ℝ) :
+    IsProbabilityMeasure (evalDistWithFailure mx) := inferInstance
+
+open VCVioTest.MeasureSemantics in
+example : (𝒟[(failure : OptionT (PFunctor.FreeM gaussSpec) ℝ)]).withFailure {none} = 1 := by
+  rw [Measure.withFailure_apply_none]
+  simp
+
+example (μ : Measure (Option ℝ)) [IsProbabilityMeasure μ] :
+    IsSubprobabilityMeasure μ.dropNone := inferInstance
+
 /-! ## Subprobability computation families -/
 
-@[expose] noncomputable def lossyFamily (input : Bool) : SPMF Bool :=
+@[expose] noncomputable def lossyFamily (input : Bool) :
+    OptionT (PFunctor.FreeM VCVioTest.MeasureSemantics.gaussSpec) Bool :=
   if input then pure true else failure
 
 noncomputable def lossyKernel : Kernel Bool Bool :=
@@ -38,32 +92,16 @@ example (input : Bool) : lossyKernel input Set.univ ≤ 1 := by
   exact Kernel.measure_univ_le (evalDistKernelOfDiscrete lossyFamily) input
 
 example : lossyKernel true = Measure.dirac true := by
-  rw [lossyKernel, evalDistKernelOfDiscrete_apply]
-  change (lossyFamily true).toMeasure = Measure.dirac true
-  rw [lossyFamily, if_pos rfl]
-  simp [SPMF.toMeasure, PMF.toMeasure_pure]
+  simp [lossyKernel, lossyFamily]
 
 example : lossyKernel false = 0 := by
-  rw [lossyKernel, evalDistKernelOfDiscrete_apply]
-  change (lossyFamily false).toMeasure = 0
-  rw [lossyFamily, if_neg (by decide)]
-  simp [SPMF.toMeasure, PMF.toMeasure_pure]
+  simp [lossyKernel, lossyFamily]
 
 example : lossyKernel true Set.univ = 1 := by
-  rw [show lossyKernel true = Measure.dirac true by
-    rw [lossyKernel, evalDistKernelOfDiscrete_apply]
-    change (lossyFamily true).toMeasure = Measure.dirac true
-    rw [lossyFamily, if_pos rfl]
-    simp [SPMF.toMeasure, PMF.toMeasure_pure]]
-  simp
+  simp [lossyKernel, lossyFamily]
 
 example : lossyKernel false Set.univ = 0 := by
-  rw [show lossyKernel false = 0 by
-    rw [lossyKernel, evalDistKernelOfDiscrete_apply]
-    change (lossyFamily false).toMeasure = 0
-    rw [lossyFamily, if_neg (by decide)]
-    simp [SPMF.toMeasure, PMF.toMeasure_pure]]
-  simp
+  simp [lossyKernel, lossyFamily]
 
 /-! ## Executable responders -/
 
@@ -134,26 +172,19 @@ example (p : Bool × Bool) :
 
 example (p : Bool × Bool) : togglingIterKernel 0 p = Measure.dirac p := by
   rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_toMeasure]
-  change (pure p : SPMF (Bool × Bool)).toMeasure = Measure.dirac p
-  simp [SPMF.toMeasure, PMF.toMeasure_pure]
+  simp
 
 example (p : Bool × Bool) :
     togglingIterKernel 1 p = Measure.dirac (!p.1, p.1) := by
   rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_toMeasure]
-  rw [show OracleStrategy.iterateAgainst echoStrategy togglingResponder 1 p =
-    pure (!p.1, p.1) by
-      simp [OracleStrategy.iterateAgainst_succ, OracleStrategy.stepAgainst_apply,
-        togglingResponder, echoStrategy]]
-  simp [SPMF.toMeasure, PMF.toMeasure_pure]
+  simp [OracleStrategy.iterateAgainst_succ, OracleStrategy.stepAgainst_apply, togglingResponder,
+    echoStrategy]
 
 example (p : Bool × Bool) :
     togglingIterKernel 2 p = Measure.dirac (p.1, !p.1) := by
   rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_toMeasure]
-  rw [show OracleStrategy.iterateAgainst echoStrategy togglingResponder 2 p =
-    pure (p.1, !p.1) by
-      simp [OracleStrategy.iterateAgainst_succ, OracleStrategy.stepAgainst_apply,
-        togglingResponder, echoStrategy]]
-  simp [SPMF.toMeasure, PMF.toMeasure_pure]
+  simp [OracleStrategy.iterateAgainst_succ, OracleStrategy.stepAgainst_apply, togglingResponder,
+    echoStrategy]
 
 end DiscreteWiredCanaries
 

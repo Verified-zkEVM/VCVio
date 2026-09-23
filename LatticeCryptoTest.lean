@@ -6,8 +6,11 @@ module
 -- imported into the same environment.
 public import LatticeCryptoTest.ArithmeticInstances
 public import LatticeCryptoTest.Falcon.Helpers
+public import LatticeCryptoTest.Falcon.SamplerMinEntropy
 public import LatticeCryptoTest.Falcon.TestVectors
 public import LatticeCryptoTest.MLDSA.ACVPVectors
 public import LatticeCryptoTest.MLDSA.Helpers
 public import LatticeCryptoTest.MLKEM.ACVPVectors
 public import LatticeCryptoTest.MLKEM.Helpers
+public import LatticeCryptoTest.Ring.CenteredRepr
+public import LatticeCryptoTest.Ring.VectorAPI

@@ -63,7 +63,7 @@ def ofPi (f : Fin n → Coeff) : Poly Coeff n :=
 /-- `Vector.get` after `Vector.ofFn`, stated at the concrete carrier boundary.
 Lean's core `ofFn` API is phrased using `GetElem`; this bridge keeps proof casts
 out of users of the polynomial representation. -/
-@[simp] theorem get_vectorOfFn (f : Fin n → Coeff) (i : Fin n) :
+theorem get_vectorOfFn (f : Fin n → Coeff) (i : Fin n) :
     (Vector.ofFn f).get i = f i := by
   change (Vector.ofFn f)[i.val] = f i
   rw [Vector.getElem_ofFn]
@@ -200,24 +200,30 @@ projections occur in dependent client types, so they remain available to implici
 
 section VectorRingSimp
 
-variable {Coeff : Type u} [CommRing Coeff] {n : Nat}
+variable {Coeff : Type u} {n : Nat}
 
-abbrev vRing (Coeff : Type u) [CommRing Coeff] (n : Nat) :=
-  vectorNegacyclicRing Coeff n
-
-omit [CommRing Coeff] in
 @[simp] theorem vectorBackend_coeff (p : Poly Coeff n) (i : Fin n) :
     (vectorBackend Coeff n).coeff p i = p.get i := rfl
 
-omit [CommRing Coeff] in
 @[simp] theorem Poly.get_zero [Zero Coeff] (i : Fin n) : (0 : Poly Coeff n).get i = 0 := by
   change (0 : Vector Coeff n)[i.val] = 0
   exact Vector.getElem_zero i.val i.isLt
 
+/-- Coefficient-wise negation lemma for abstract `Poly` (not tied to a specific ring). -/
+@[simp] theorem Poly.get_neg [Neg Coeff] (f : Poly Coeff n) (i : Fin n) :
+    (-f).get i = -f.get i := by
+  change (-(f : Vector Coeff n))[i.val] = -((f : Vector Coeff n))[i.val]
+  exact Vector.getElem_neg f i.val i.isLt
+
+variable [CommRing Coeff]
+
+abbrev vRing (Coeff : Type u) [CommRing Coeff] (n : Nat) :=
+  vectorNegacyclicRing Coeff n
+
 @[simp] theorem vectorRing_zero :
     (vectorNegacyclicRing Coeff n).zero = (0 : Poly Coeff n) := rfl
 
-@[simp] theorem vectorRing_zero_get (i : Fin n) :
+theorem vectorRing_zero_get (i : Fin n) :
     ((vectorNegacyclicRing Coeff n).zero).get i = (0 : Coeff) := by
   exact Poly.get_zero i
 
@@ -243,7 +249,7 @@ omit [CommRing Coeff] in
 /-- Coefficient of a sum through the concrete vector backend (`Vector.instAdd`).
 Paired with `vectorNegacyclicRing_backend` so that both variants of `+` on
 `Poly Coeff n` are handled after the backend is normalised. -/
-@[simp] theorem vectorBackend_add_coeff (f g : Poly Coeff n) (i : Fin n) :
+theorem vectorBackend_add_coeff (f g : Poly Coeff n) (i : Fin n) :
     (vectorBackend Coeff n).coeff (f + g) i =
       (vectorBackend Coeff n).coeff f i + (vectorBackend Coeff n).coeff g i := by
   exact Poly.get_add f g i
@@ -268,7 +274,7 @@ theorem vectorRing_mul_add_right (f g h : Poly Coeff n) :
   rw [← Finset.sum_add_distrib]; congr 1; ext ij
   split_ifs <;> ring
 
-@[simp] theorem vectorBackend_sub_coeff (f g : Poly Coeff n) (i : Fin n) :
+theorem vectorBackend_sub_coeff (f g : Poly Coeff n) (i : Fin n) :
     (vectorBackend Coeff n).coeff (f - g) i =
       (vectorBackend Coeff n).coeff f i - (vectorBackend Coeff n).coeff g i := by
   exact Poly.get_sub f g i
@@ -317,13 +323,6 @@ theorem vectorRing_mul_comm (f g : Poly Coeff n) :
 @[simp] theorem vectorRing_neg_get (f : Poly Coeff n) (i : Fin n) :
     ((vectorNegacyclicRing Coeff n).neg f).get i = -f.get i := by
   exact Poly.get_map Neg.neg f i
-
-omit [CommRing Coeff] in
-/-- Coefficient-wise negation lemma for abstract `Poly` (not tied to a specific ring). -/
-@[simp] theorem Poly.get_neg [Neg Coeff] (f : Poly Coeff n) (i : Fin n) :
-    (-f).get i = -f.get i := by
-  change (-(f : Vector Coeff n))[i.val] = -((f : Vector Coeff n))[i.val]
-  exact Vector.getElem_neg f i.val i.isLt
 
 end VectorRingSimp
 

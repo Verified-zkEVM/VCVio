@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 
+public import VCVioComplexityTest.Backend.HandlerCanary
 public import VCVioComplexityTest.SecondOrderModulus
 
 /-!
@@ -37,6 +38,9 @@ theorem moduli : IsOraclePPTBy quantitativeStepClass coinBoundary
     VCVioComplexityTest.SecondOrderModulus.twoResponseModelContract oneCoinProgram :=
   VCVioComplexityTest.SecondOrderModulus.oneCoin_isOraclePPTBy_twoResponseModels
 
+theorem handler : IsOraclePPTBy quantitativeStepClass HandlerCanary.boundary noQueryContract
+    HandlerCanary.program := HandlerCanary.isOraclePPTBy
+
 end CT
 
 /--
@@ -56,3 +60,9 @@ info: 'CT.moduli' depends on axioms: [propext, Classical.choice, Quot.sound]
 -/
 #guard_msgs in
 #print axioms CT.moduli
+
+/--
+info: 'CT.handler' depends on axioms: [propext, Classical.choice, Quot.sound]
+-/
+#guard_msgs in
+#print axioms CT.handler

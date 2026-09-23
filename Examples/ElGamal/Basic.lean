@@ -8,6 +8,9 @@ module
 public import Examples.ElGamal.Common
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
+import VCVio.OracleComp.EvalDist.UniformCompatibility
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import ToMathlib.Probability.UniformOn
 
 /-!
 # ElGamal Encryption: IND-CPA via the generic one-time lift
@@ -39,7 +42,7 @@ payloads (for example elliptic-curve points), and `gen : G` is a fixed public ge
    `elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage`.
 3. Final theorem:
    `elGamal_IND_CPA_le_q_mul_ddh` is a direct instantiation of
-   `AsymmEncAlg.IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound`
+   `AsymmEncAlg.IND_CPA_Advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound`
    with one-time loss `2 * ε`.
 -/
 
@@ -95,12 +98,13 @@ theorem correct [DecidableEq G] :
     have : r • (sk • gen) = sk • (r • gen) := by
       rw [← mul_smul, ← mul_smul, mul_comm]
     rw [this, add_sub_cancel_right]
-  simp [AsymmEncAlg.PerfectlyCorrect, ProbCompRuntime.probComp, ProbCompRuntime.evalSPMF,
-    AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel, probFailure_of_liftM_PMF]
+  simp only [AsymmEncAlg.PerfectlyCorrect]
+  intro msg
+  rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
+  simp [AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel,
+    probOutput_bind_const, probOutput_map_const]
 
 section IND_CPA
-
-variable [DecidableEq G]
 
 local instance : Inhabited G := ⟨0⟩
 
@@ -108,16 +112,15 @@ local instance : Inhabited G := ⟨0⟩
 key, form the challenge ciphertext `(B, T + m_b)`, and return whether the one-time adversary
 guessed the hidden bit `b`. -/
 def IND_CPA_OneTime_DDHReduction
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     DiffieHellman.DDHAdversary F G := fun _ A B T =>
   oneTimeDDHReductionBody (adv.chooseMessages A) ($ᵗ Bool) adv.distinguish B T
 
-omit [DecidableEq G] in
 /-- Real-branch identification for the one-time ElGamal reduction. After unfolding
 `IND_CPA_OneTime_Game_ProbComp`, `elGamalAsymmEnc`, `DiffieHellman.ddhExpReal`, and
 `IND_CPA_OneTime_DDHReduction`, both sides normalize to the same sample space. -/
 private lemma IND_CPA_OneTime_game_evalSPMF_eq_ddhExpReal
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     𝒮[AsymmEncAlg.IND_CPA_OneTime_Game_ProbComp
         (encAlg := elGamalAsymmEnc F G gen) adv] =
       𝒮[DiffieHellman.ddhExpReal (F := F) gen
@@ -149,13 +152,12 @@ private lemma IND_CPA_OneTime_game_evalSPMF_eq_ddhExpReal
   congr 2
   rw [smul_smul, add_comm, mul_comm]
 
-omit [DecidableEq G] in
 /-- Random-branch half lemma for the one-time ElGamal reduction. Under bijectivity of `(· • gen)`,
 the DDH-random branch gives a uniform additive mask independent of the challenge bit, so the
 adversary can do no better than random guessing. -/
 private lemma IND_CPA_OneTime_DDHReduction_rand_half
     (hg : Function.Bijective (· • gen : F → G))
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     Pr[= true | DiffieHellman.ddhExpRand (F := F) gen
       (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)] = 1 / 2 := by
   let inner : G → ProbComp Bool := fun pk => do
@@ -288,22 +290,18 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
       probOutput_bind_congr' ($ᵗ G) true (fun pk => by
         simpa [probOutput_uniformSample] using hhalf pk)
     _ = 1 / 2 := by
-      rw [probOutput_bind_eq_tsum]
-      have hbool : Pr[= true | ($ᵗ Bool)] = (1 / 2 : ℝ≥0∞) := by
-        simp [probOutput_uniformSample]
-      simp_rw [hbool]
-      have hsum : ∑' x : G, Pr[= x | ($ᵗ G)] = 1 :=
-        tsum_probOutput_of_liftM_PMF ($ᵗ G)
-      rw [ENNReal.tsum_mul_right, hsum, one_mul]
+      let : MeasurableSpace G := ⊤
+      rw [← evalDist_apply_singleton, OracleComp.evalDist_bind_const, evalDist_uniformSample,
+        ProbabilityTheory.uniformOn_univ_apply_singleton]
+      norm_num
 
-omit [DecidableEq G] in
 /-- The absolute one-time signed IND-CPA advantage of ElGamal is exactly twice the DDH guess
 advantage of the reduction above. The factor `2` is essential because the DDH guess advantage is
 defined from the mixed experiment, while the one-time IND-CPA game compares the real and random
 branches directly. -/
 theorem elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage
     (hg : Function.Bijective (· • gen : F → G))
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen)) :
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     |AsymmEncAlg.IND_CPA_OneTime_signedAdvantageReal
         (encAlg := elGamalAsymmEnc F G gen) adv| =
       2 * DiffieHellman.ddhGuessAdvantage gen
@@ -326,23 +324,25 @@ theorem elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage
       (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)]).toReal := by
     rw [IND_CPA_OneTime_DDHReduction_rand_half hg adv]
     simp [ENNReal.toReal_ofNat]
-  rw [h_real, h_rand]
-  exact DiffieHellman.ddhDistAdvantage_eq_two_mul_ddhGuessAdvantage gen
-    (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
+  simpa only [h_real, h_rand, DiffieHellman.ddhDistAdvantage,
+    ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
+    DiffieHellman.ddhDistAdvantage_eq_two_mul_ddhGuessAdvantage gen
+      (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
 
 /-- **Main theorem.** If an adversary makes at most `q` LR queries and every extracted one-time
-ElGamal DDH reduction has guess advantage at most `ε`, then ElGamal has IND-CPA advantage at most
-`q * (2 * ε)`. -/
-theorem elGamal_IND_CPA_le_q_mul_ddh
+ElGamal DDH reduction has guess advantage at most `ε`, then ElGamal has IND-CPA bias advantage at
+most `2 * (q * (2 * ε))`. The outer factor `2` converts the signed advantage `Pr[win] - 1/2` into
+the bias `|Pr[win] - Pr[lose]|`. -/
+theorem elGamal_IND_CPA_le_q_mul_ddh [DecidableEq G]
     (hg : Function.Bijective (· • gen : F → G))
-    (adversary : (elGamalAsymmEnc F G gen).IND_CPA_adversary)
+    (adversary : (elGamalAsymmEnc F G gen).IND_CPA_Adversary)
     (q : ℕ) (ε : ℝ)
     (hq : adversary.MakesAtMostQueries q)
-    (hddh : ∀ adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen),
+    (hddh : ∀ adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen),
       DiffieHellman.ddhGuessAdvantage gen
         (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv) ≤ ε) :
-    ((elGamalAsymmEnc F G gen).IND_CPA_advantage adversary).toReal ≤ q * (2 * ε) := by
-  refine AsymmEncAlg.IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound
+    (elGamalAsymmEnc F G gen).IND_CPA_Advantage adversary ≤ 2 * (q * (2 * ε)) := by
+  refine AsymmEncAlg.IND_CPA_Advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound
     (encAlg' := elGamalAsymmEnc F G gen) adversary q (2 * ε) hq ?_
   intro adv
   calc

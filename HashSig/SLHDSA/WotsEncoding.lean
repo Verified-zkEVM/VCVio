@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Nicolas Consigny. All rights reserved.
+Copyright (c) 2026 Nicolas Consigny, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Nicolas Consigny
+Authors: Nicolas Consigny, Alexander Hicks
 -/
 
 module
@@ -182,10 +182,7 @@ private theorem base2b_toByte_shift_eq_digitsOfBaseW (x b len : ℕ)
 theorem wotsChecksumValue_lt_pow {p : Params} (valid : p.Valid) (digits : List ℕ)
     (hlen : digits.length = p.len1) (hbound : ∀ d ∈ digits, d < p.w) :
     wotsChecksumValue p.w digits < p.w ^ p.len2 := by
-  apply Nat.lt_of_le_of_lt (wotsChecksumValue_le hlen hbound)
-  simpa [Params.len2, Params.w, Nat.succ_eq_add_one] using
-    Nat.lt_pow_succ_log_self
-      (Nat.one_lt_two_pow (Nat.ne_of_gt valid.lgw_pos)) (p.len1 * (p.w - 1))
+  exact Nat.lt_of_le_of_lt (wotsChecksumValue_le hlen hbound) valid.len1_mul_pred_w_lt_pow_len2
 
 /-- The shifted checksum fits its prescribed byte width, so Algorithm 3 does not truncate it. -/
 theorem shiftedChecksumValue_lt_pow {p : Params} (valid : p.Valid) (digits : List ℕ)
@@ -213,5 +210,55 @@ theorem fullDigits_eq_wotsFullDigits {p : Params} (valid : p.Valid) (digits : Li
     fullDigits p digits = wotsFullDigits digits p.w p.len1 p.len2 := by
   simp only [fullDigits, wotsFullDigits]
   rw [checksumDigits_eq_digitsOfBaseW valid digits hlen hbound]
+
+/-- The full chain-length vector determines its message digits: the checksum suffix always has
+width `len2`, so equal full vectors have equal prefixes. -/
+theorem fullDigits_injective (p : Params) : Function.Injective (fullDigits p) := by
+  intro d1 d2 h
+  exact List.append_inj_left' h (by simp)
+
+/-! ## Message digits (FIPS 205 Algorithms 7 and 8, line 2)
+
+Under the alignment obligation `lgw ∣ 8n` of `Params.Valid`, `base_2b(M, lgw, len1)` reads
+every bit of the `n`-byte message `M` exactly once: the message digits are the fixed-width
+base-`w` expansion of the message's big-endian integer value, so they lose no information. -/
+
+/-- On an `n`-byte message, Algorithm 4 at width `lgw` produces the `len1` base-`w` digits of
+the message's Algorithm 2 integer value. -/
+theorem base2b_msg_eq_digitsOfBaseW {p : Params} (valid : p.Valid) (x : List Byte)
+    (hx : x.length = p.n) :
+    base2b x p.lgw p.len1 = digitsOfBaseW (toInt x) p.w p.len1 := by
+  have hbits : p.len1 * p.lgw ≤ 8 * x.length := by
+    rw [hx, valid.len1_mul_lgw]
+  rw [base2b_bigEndian x p.lgw p.len1 hbits, digitsOfBaseW_eq_range]
+  apply List.map_congr_left
+  intro i _
+  have hexp : 8 * x.length - p.lgw * (i + 1) = p.lgw * (p.len1 - 1 - i) := by
+    rw [hx, ← valid.len1_mul_lgw, Nat.mul_comm p.len1 p.lgw, ← Nat.mul_sub, Nat.sub_sub,
+      Nat.add_comm]
+  rw [hexp, Params.w, ← pow_mul]
+
+/-- The base-`w` value of the message digits is the message's integer value. -/
+theorem fromBaseW_base2b_msg {p : Params} (valid : p.Valid) (x : List Byte)
+    (hx : x.length = p.n) :
+    fromBaseW p.w (base2b x p.lgw p.len1) = toInt x := by
+  rw [base2b_msg_eq_digitsOfBaseW valid x hx]
+  apply fromBaseW_digitsOfBaseW_of_lt
+  rw [valid.w_pow_len1, ← hx]
+  exact toInt_lt_pow x
+
+/-- Full-width message-digit injectivity: two `n`-byte messages with the same `len1` base-`w`
+digits are equal. -/
+theorem eq_of_base2b_msg_eq {p : Params} (valid : p.Valid) {x y : List Byte}
+    (hx : x.length = p.n) (hy : y.length = p.n)
+    (h : base2b x p.lgw p.len1 = base2b y p.lgw p.len1) : x = y := by
+  apply eq_of_length_eq_of_toInt_eq (hx.trans hy.symm)
+  rw [← fromBaseW_base2b_msg valid x hx, ← fromBaseW_base2b_msg valid y hy, h]
+
+/-- Full-width message-digit injectivity on the fixed-width byte type. -/
+theorem base2b_msg_injective {p : Params} (valid : p.Valid) :
+    Function.Injective (fun bytes : Bytes p.n => base2b bytes.toList p.lgw p.len1) := by
+  intro x y h
+  exact Vector.toList_inj.mp (eq_of_base2b_msg_eq valid (by simp) (by simp) h)
 
 end SLHDSA.WotsEncoding

@@ -34,7 +34,7 @@ namespace EvalDistCompatibleExample
 
 /-- Sample a Boolean uniformly; commit only on heads. -/
 noncomputable def maybeHeads : OptionT ProbComp Unit := do
-  let b ← (liftM ($ᵗ Bool) : OptionT ProbComp Bool)
+  let b ← $ᵗ Bool
   guard (b = true)
 
 /-- The success branch has probability `1/2`. The proof routes
@@ -42,7 +42,7 @@ noncomputable def maybeHeads : OptionT ProbComp Unit := do
 generic `OracleComp` lemma `probOutput_uniformSample`. -/
 theorem probOutput_maybeHeads : Pr[= () | maybeHeads] = 1 / 2 := by
   change Pr[= () | (do
-      let b ← (liftM ($ᵗ Bool) : OptionT ProbComp Bool)
+      let b ← $ᵗ Bool
       guard (b = true) : OptionT ProbComp Unit)] = _
   rw [probOutput_bind_eq_tsum]
   simp only [OptionT.probOutput_liftM, probOutput_guard]
