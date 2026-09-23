@@ -150,7 +150,7 @@ The `OptionT ProbComp` target lets `guard` discard unsuccessful mass from the re
 -/
 noncomputable def realCipherObserve (sp : ℕ) (msg : BitVec sp)
     (P : BitVec sp → Bool) : OptionT ProbComp Unit := do
-  let k ← ($ᵗ BitVec sp : OptionT ProbComp (BitVec sp))
+  let k ← $ᵗ BitVec sp
   guard (P (k ^^^ msg) = true)
 
 /-- **Ideal-world observation** (environment's view under the canonical
@@ -162,7 +162,7 @@ No plaintext input is required: OTP privacy is what lets the
 simulator reproduce this distribution without reading `msg`. -/
 noncomputable def idealCipherObserve (sp : ℕ) (P : BitVec sp → Bool) :
     OptionT ProbComp Unit := do
-  let c ← ($ᵗ BitVec sp : OptionT ProbComp (BitVec sp))
+  let c ← $ᵗ BitVec sp
   guard (P c = true)
 
 /-- Local copy of the `OracleComp`-internal lemma relating `Pr[= ()]` on
@@ -188,7 +188,7 @@ theorem probOutput_realCipherObserve (sp : ℕ) (msg : BitVec sp)
       (Finset.univ.filter fun k : BitVec sp => P (k ^^^ msg) = true).card /
         (Fintype.card (BitVec sp) : ℝ≥0∞) := by
   change Pr[= () | (do
-      let k ← (liftM ($ᵗ BitVec sp) : OptionT ProbComp (BitVec sp))
+      let k ← $ᵗ BitVec sp
       guard (P (k ^^^ msg) = true) : OptionT ProbComp Unit)] = _
   rw [probOutput_liftM_bind_guard ($ᵗ BitVec sp) (fun k => P (k ^^^ msg) = true),
       probEvent_uniformSample]
@@ -200,7 +200,7 @@ theorem probOutput_idealCipherObserve (sp : ℕ) (P : BitVec sp → Bool) :
       (Finset.univ.filter fun c : BitVec sp => P c = true).card /
         (Fintype.card (BitVec sp) : ℝ≥0∞) := by
   change Pr[= () | (do
-      let c ← (liftM ($ᵗ BitVec sp) : OptionT ProbComp (BitVec sp))
+      let c ← $ᵗ BitVec sp
       guard (P c = true) : OptionT ProbComp Unit)] = _
   rw [probOutput_liftM_bind_guard ($ᵗ BitVec sp) (fun c => P c = true),
       probEvent_uniformSample]

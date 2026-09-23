@@ -118,7 +118,7 @@ outer interpreter through a stateful or logging handler. -/
 /-- A stateful handler over `ProbComp` that records each sampled answer. -/
 def toyTrackingInner : QueryImpl (Unit →ₒ Bool) (StateT (List Bool) ProbComp) :=
   fun (_ : Unit) => do
-    let b ← liftM ($ᵗ Bool)
+    let b ← $ᵗ Bool
     modifyGet fun log => (b, b :: log)
 
 /-- `toyTrackingInner` with its base `ProbComp` mapped through the identity forwarder. -/

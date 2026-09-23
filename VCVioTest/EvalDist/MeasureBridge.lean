@@ -214,7 +214,7 @@ example (mx : ProbComp (Fin 3)) (f : Fin 3 → ProbComp (Fin 2)) : 𝒟[mx >>= f
 
 /-- A lossy computation that succeeds exactly on the `true` outcome of a fair coin. -/
 def lossyCoin : OptionT ProbComp Bool := do
-  let b ← liftM ($ᵗ Bool)
+  let b ← $ᵗ Bool
   if b then pure true else failure
 
 example : 𝒟[lossyCoin] {true} = 2⁻¹ := by

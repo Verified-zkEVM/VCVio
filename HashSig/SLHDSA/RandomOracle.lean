@@ -45,9 +45,9 @@ def slhKeygenM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]
     [SampleableType core.PkSeed] : m (PublicKeyCore core × SecretKeyCore core) := do
-  let skSeed ← (monadLift ($ᵗ core.SkSeed) : m core.SkSeed)
-  let skPrf ← (monadLift ($ᵗ core.SkPrf) : m core.SkPrf)
-  let pkSeed ← (monadLift ($ᵗ core.PkSeed) : m core.PkSeed)
+  let skSeed ← $ᵗ core.SkSeed
+  let skPrf ← $ᵗ core.SkPrf
+  let pkSeed ← $ᵗ core.PkSeed
   slhKeygenInternalM hd core skSeed skPrf pkSeed
 
 /-- External hedged signing for the empty-context API: sample `addrnd`, encode the external
@@ -56,7 +56,7 @@ def slhSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.Y] (sk : SecretKeyCore core) (msg : List Byte) :
     m (SignatureCore p core) := do
-  let addrnd ← (monadLift ($ᵗ core.Y) : m core.Y)
+  let addrnd ← $ᵗ core.Y
   slhSignInternalM hd core (emptyContextMessage msg) sk addrnd
 
 /-- External empty-context verification via the `d = 1` compatibility internal explicit-query

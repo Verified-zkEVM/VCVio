@@ -86,7 +86,7 @@ def scheme
     let fb ← monadLift policy.keygen
     return (pk, ((pk, sk), fb))
   encaps := fun pk => do
-    let msg ← monadLift ($ᵗ M : ProbComp M)
+    let msg ← $ᵗ M
     let r ← variant.deriveCoins pk msg
     let c := pke.encrypt pk msg r
     let k ← variant.deriveKey pk msg c
