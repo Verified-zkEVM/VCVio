@@ -34,9 +34,10 @@ scheme (e.g. `MLDSA.nma_security_short`).
 The development is split along its proof phases, each module publicly
 importing its predecessor: `Loss` (the loss functions), `BodyHops` (the
 per-query Trans → Sim hop core and the verification tail), `GhostReadCharge`,
-`HiddenReadFold`, `CouplingEngine` (reusable measure-level coupling
-infrastructure, off the live path), `ReadRecording`, `TapeFactorization`,
-`HopLemmas`, and `NMAReduction`. This module closes the chain: the bridge from
+`HiddenReadFold`, `CouplingEngine`, `BodyResampling` and `DeferredCoupling`
+(reusable measure-level coupling infrastructure, off the live path),
+`ReadRecording`, `FirstMoment`, `TapeFactorization`, `SignStepCharge`,
+`ReadRecordBound`, `HopLemmas`, and `NMAReduction`. This module closes the chain: the bridge from
 the managed-RO NMA experiment to the plain EUF-NMA interface (Option B: the
 forgery's own verification point is discarded from the returned cache), and
 the assembled headline `euf_cma_to_nma`.

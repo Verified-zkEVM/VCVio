@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.TapeFactorization
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecordBound
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: HopLemmas

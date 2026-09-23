@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.CouplingEngine
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.DeferredCoupling
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: ReadRecording
