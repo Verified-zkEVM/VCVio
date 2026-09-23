@@ -58,7 +58,7 @@ section ShortCMAWitness
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [DecidableEq prims.High]
-  (M : Type) [DecidableEq M] [Inhabited M] [DecidableEq (Commitment p prims)]
+  (M : Type) [DecidableEq M] [Inhabited M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)]
   [SampleableType (PublicKey p prims)]
@@ -86,7 +86,7 @@ def honestNoAbortGood : PublicKey p prims → SecretKey p → Prop :=
 oracle queries and immediately return the aborted forgery `(default, none)`.  It witnesses the
 query-bound hypothesis at `qS = qH = 0` (`trivialForger_signHashQueryBound`). -/
 noncomputable def trivialForger (maxAttempts : ℕ) :
-    SignatureAlg.unforgeableAdv
+    SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort
         (m := OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)))
         (identificationSchemeShort p prims) (hrShort p prims) M maxAttempts) where
@@ -94,22 +94,21 @@ noncomputable def trivialForger (maxAttempts : ℕ) :
 
 /-! ## Per-hypothesis discharges -/
 
-omit [DecidableEq (Commitment p prims)]
-  [SampleableType (PublicKey p prims)] in
+omit [SampleableType (PublicKey p prims)] in
 /-- `hhvzk` at the trivial budget: any simulator is a `ζ_zk = 1` HVZK simulator, since total
 variation distance never exceeds one. -/
 lemma neverAbortSim_hvzk :
     (identificationSchemeShort p prims).HVZK (neverAbortSim p prims) 1 :=
   fun _ _ _ => tvDist_le_one _ _
 
-omit nttOps [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
+omit nttOps [DecidableEq prims.High]
   [SampleableType (CommitHashBytes p)] [SampleableType (PublicKey p prims)] in
 /-- The never-aborting simulator indeed never aborts: the probability of `none` is zero. -/
 lemma probOutput_none_neverAbortSim (pk : PublicKey p prims) :
     Pr[= none | neverAbortSim p prims pk] = 0 :=
-  probOutput_eq_zero_of_not_mem_support (by simp [neverAbortSim, support_pure])
+  probOutput_eq_zero_of_not_mem_support (by simp [neverAbortSim])
 
-omit [DecidableEq M] [DecidableEq (Commitment p prims)] [Inhabited (Commitment p prims)]
+omit [DecidableEq M] [Inhabited (Commitment p prims)]
   [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)] [SampleableType (PublicKey p prims)] in
 /-- The trivial forger makes no signing and no random-oracle queries. -/
@@ -119,7 +118,7 @@ lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p pri
       (oa := (trivialForger p prims M maxAttempts).main pk) 0 0 :=
   ⟨isQueryBoundP_pure _ _ _, isQueryBoundP_pure _ _ _⟩
 
-omit nttOps [DecidableEq prims.High] [DecidableEq (Commitment p prims)]
+omit nttOps [DecidableEq prims.High]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)]
   [SampleableType (PublicKey p prims)] in
@@ -141,6 +140,7 @@ lemma expandAIdealization_one : expandAIdealization p prims 1 := by
     have hy0 : (0 : ℝ) ≤ (Pr[= true | y]).toReal := ENNReal.toReal_nonneg
     rw [abs_sub_le_iff]
     exact ⟨by linarith, by linarith⟩
+  simp only [evalDist_apply_singleton]
   exact key _ _
 
 /-! ## The joint frontier certificate -/
@@ -215,9 +215,10 @@ and no quantitative claim about any real ML-DSA parameter set follows. -/
 theorem trivial_euf_cma_security_of_nma_short (maxAttempts : ℕ) :
     ∃ (mlweReduction : LearningWithErrors.Adversary (mldsaMatrixMLWE p))
       (stmsisReduction : SelfTargetMSIS.Adversary (mldsaSTMSISShort p prims M)),
-      (trivialForger p prims M maxAttempts).advantage
+      SignatureAlg.unforgeableAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
+          (trivialForger p prims M maxAttempts) ≤
         ENNReal.ofReal
           (LearningWithErrors.advantage (mldsaMatrixMLWE p) mlweReduction + 1) +
         SelfTargetMSIS.advantage stmsisReduction +

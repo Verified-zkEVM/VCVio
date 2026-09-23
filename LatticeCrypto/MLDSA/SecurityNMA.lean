@@ -290,7 +290,6 @@ def hrFips :
     have h := (eq_of_mem_support_pure _ hpure).symm
     simpa only [keyFromMaterial, keyGenFromSeed] using h⟩
 
-omit [DecidableEq prims.High] in
 /-- **Satisfiability certificate for the FIPS-keygen `hGen` hypothesis.** Some generable
 relation over `validKeyPair` has the seed-derived FIPS key generator `keygen0` as its
 generator — witnessed by `hrFips`. The FIPS-keygen security corollary hypothesizes such a
@@ -1350,7 +1349,7 @@ section Headline
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [DecidableEq prims.High]
-  {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
+  {M : Type} [DecidableEq M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)]
 
@@ -1409,13 +1408,13 @@ theorem nma_security_short
         LearningWithErrors.advantage (mldsaMLWEShort p prims)
           (distinguisherBShort p prims hr maxAttempts main) ≤
           LearningWithErrors.advantage mlwe B + εbridge) :
-    ∀ (adv : SignatureAlg.eufNmaAdv
+    ∀ (adv : SignatureAlg.EufNmaAdversary
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts)),
     ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
       (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
-      adv.advantage
+      SignatureAlg.eufNmaAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
         ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction + εbridge) +
         SelfTargetMSIS.advantage stmsisReduction := by
   classical
@@ -1424,13 +1423,12 @@ theorem nma_security_short
   subst hStmsis
   refine ⟨B, extractorCShort p prims adv.main, ?_⟩
   -- The EUF-NMA experiment is the real-`t` short-model NMA game with `main := adv.main`.
-  have hadv : adv.advantage (FiatShamirWithAbort.runtime
-      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) =
+  have hadv : SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime
+      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv =
       nmaAdvantageShort p prims hr maxAttempts (keygenShort p prims) adv.main := by
-    rw [SignatureAlg.eufNmaAdv.advantage, nmaAdvantageShort, nmaGameShort]
+    rw [SignatureAlg.eufNmaAdvantage, nmaAdvantageShort, nmaGameShort]
     rw [SignatureAlg.eufNmaExp]
     simp only [FiatShamirWithAbort, hGen]
-    rfl
   rw [hadv]
   -- Bound the two NMA games by the MLWE distinguisher and the STMSIS extractor.
   set pc0 := (do
@@ -1447,14 +1445,13 @@ theorem nma_security_short
           pk msg σ) : ProbComp Bool) with hpc1
   have hg0 : nmaAdvantageShort p prims hr maxAttempts (keygenShort p prims) adv.main =
       Pr[= true | pc0] := by
-    rw [nmaAdvantageShort, nmaGameShort_eq_keygen_bind, probOutput_def, probOutput_def,
-      evalSPMF_id]
+    rw [nmaAdvantageShort, nmaGameShort_eq_keygen_bind, evalDist_apply_singleton]
   have hg1 : nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) adv.main =
       Pr[= true | pc1] := by
-    rw [nmaAdvantageShort, nmaGameShort_eq_keygen_bind, probOutput_def, probOutput_def,
-      evalSPMF_id]
+    rw [nmaAdvantageShort, nmaGameShort_eq_keygen_bind, evalDist_apply_singleton]
   -- Triangle bound: real game ≤ uniform game + MLWE advantage.
-  have htri := ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage pc0 pc1
+  have htri := (by simpa only [evalDist_apply_singleton] using
+      ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage pc0 pc1)
   rw [hg0]
   refine le_trans htri ?_
   -- `pc0.boolDistAdvantage pc1 = |nmaAdv keygenShort - nmaAdv keygenShort1|`, which the exact
@@ -1463,7 +1460,8 @@ theorem nma_security_short
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
         (distinguisherBShort p prims hr maxAttempts adv.main) := by
     have hk := nma_keyswap_hop_short p prims hr maxAttempts (M := M) adv.main
-    rw [ProbComp.boolDistAdvantage, ← hg0, ← hg1]
+    rw [ProbComp.boolDistAdvantage, evalDist_apply_singleton, evalDist_apply_singleton,
+      ← hg0, ← hg1]
     exact hk
   -- STMSIS extraction bound on the uniform game.
   have hstm := nmaAdvantage_keygenShort1_le_stmsis p prims hr maxAttempts (M := M) adv.main
@@ -1521,13 +1519,13 @@ theorem nma_security_fips
         LearningWithErrors.advantage (mldsaMLWEShort p prims)
           (distinguisherBShort p prims hrS maxAttempts main) ≤
           LearningWithErrors.advantage mlwe B + εbridge) :
-    ∀ (adv : SignatureAlg.eufNmaAdv
+    ∀ (adv : SignatureAlg.EufNmaAdversary
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts)),
     ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
       (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
-      adv.advantage
+      SignatureAlg.eufNmaAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
         ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction + εbridge) +
         SelfTargetMSIS.advantage stmsisReduction +
         ENNReal.ofReal εPRG := by
@@ -1538,13 +1536,12 @@ theorem nma_security_fips
       ⟨adv.main⟩
   refine ⟨mlweRed, stmsisRed, ?_⟩
   -- The FIPS EUF-NMA experiment is the real-`t` NMA game at `keygen0` with `main := adv.main`.
-  have hadv : adv.advantage (FiatShamirWithAbort.runtime
-      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) =
+  have hadv : SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime
+      (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv =
       nmaAdvantage p prims hr maxAttempts (keygen0 p prims) adv.main := by
-    rw [SignatureAlg.eufNmaAdv.advantage, nmaAdvantage, nmaGame]
+    rw [SignatureAlg.eufNmaAdvantage, nmaAdvantage, nmaGame]
     rw [SignatureAlg.eufNmaExp]
     simp only [FiatShamirWithAbort, hGen]
-    rfl
   -- The two NMA games as plain `ProbComp`s over their key generators.
   set pcF := (do
       let (pk, _) ← keygen0 p prims
@@ -1560,23 +1557,21 @@ theorem nma_security_fips
           pk msg σ) : ProbComp Bool) with hpcS
   have hgF : nmaAdvantage p prims hr maxAttempts (keygen0 p prims) adv.main =
       Pr[= true | pcF] := by
-    rw [nmaAdvantage, nmaGame_eq_keygen_bind, probOutput_def, probOutput_def, evalSPMF_id]
-  have hgS : (⟨adv.main⟩ : SignatureAlg.eufNmaAdv
-      (FiatShamirWithAbort (identificationSchemeShort p prims) hrS M maxAttempts)).advantage
-        (FiatShamirWithAbort.runtime
-          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) =
+    rw [nmaAdvantage, nmaGame_eq_keygen_bind, evalDist_apply_singleton]
+  have hgS : SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime
+        (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
+      (⟨adv.main⟩ : SignatureAlg.EufNmaAdversary
+        (FiatShamirWithAbort (identificationSchemeShort p prims) hrS M maxAttempts)) =
       Pr[= true | pcS] := by
-    have h1 : (⟨adv.main⟩ : SignatureAlg.eufNmaAdv
-        (FiatShamirWithAbort (identificationSchemeShort p prims) hrS M maxAttempts)).advantage
-          (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) =
+    have h1 : SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime
+          (Commit := Commitment p prims) (Chal := CommitHashBytes p) M)
+        (⟨adv.main⟩ : SignatureAlg.EufNmaAdversary
+          (FiatShamirWithAbort (identificationSchemeShort p prims) hrS M maxAttempts)) =
         nmaAdvantageShort p prims hrS maxAttempts (keygenShort p prims) adv.main := by
-      rw [SignatureAlg.eufNmaAdv.advantage, nmaAdvantageShort, nmaGameShort]
+      rw [SignatureAlg.eufNmaAdvantage, nmaAdvantageShort, nmaGameShort]
       rw [SignatureAlg.eufNmaExp]
       simp only [FiatShamirWithAbort, hGenS]
-      rfl
-    rw [h1, nmaAdvantageShort, nmaGameShort_eq_keygen_bind, probOutput_def, probOutput_def,
-      evalSPMF_id]
+    rw [h1, nmaAdvantageShort, nmaGameShort_eq_keygen_bind, evalDist_apply_singleton]
   -- The PRG hop: the two games are the two branches of `hPRG` at the shared verify tail.
   have hF : Pr[= true | pcF] = Pr[= true | do
       let seed ← $ᵗ (Bytes 32)
@@ -1601,14 +1596,15 @@ theorem nma_security_fips
     simp only [keygenShort, keyFromMaterial, bind_assoc, pure_bind]
     rfl
   have hbias : pcF.boolDistAdvantage pcS ≤ εPRG := by
-    rw [ProbComp.boolDistAdvantage, hF, hS]
+    rw [ProbComp.boolDistAdvantage, evalDist_apply_singleton, evalDist_apply_singleton, hF, hS]
     exact hPRG (fun rho _key s1 s2 => simulateToProbComp p prims (M := M) (do
       let d ← adv.main ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts).verify
         ⟨rho, (prims.power2RoundVec (prims.expandA rho * s1 + s2)).1⟩ d.1 d.2))
   -- Assemble: FIPS game ≤ short game + εPRG ≤ (MLWE + εbridge) + STMSIS + εPRG.
   rw [hadv, hgF]
-  refine le_trans (ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage pcF pcS) ?_
+  refine le_trans ((by simpa only [evalDist_apply_singleton] using
+      ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage pcF pcS)) ?_
   have hshort' : Pr[= true | pcS] ≤
       ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweRed + εbridge) +
         SelfTargetMSIS.advantage stmsisRed := by
@@ -1686,7 +1682,7 @@ theorem euf_cma_security_of_nma_short [SampleableType (PublicKey p prims)]
         ENNReal.ofReal p_abort)
     (hAbortSim : ∀ pk sk, Good pk sk →
       Pr[= none | sim pk] ≤ ENNReal.ofReal p_abort)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts))
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commitment p prims × Response p prims)) (oa := adv.main pk) qS qH)
@@ -1700,9 +1696,9 @@ theorem euf_cma_security_of_nma_short [SampleableType (PublicKey p prims)]
           LearningWithErrors.advantage mlwe B + εbridge) :
     ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
       (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
-      adv.advantage
+      SignatureAlg.unforgeableAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
         ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction + εbridge) +
         SelfTargetMSIS.advantage stmsisReduction +
         ENNReal.ofReal
@@ -1724,13 +1720,13 @@ theorem euf_cma_security_of_nma_short [SampleableType (PublicKey p prims)]
   refine ⟨mlweRed, stmsisRed, ?_⟩
   -- Assemble: advantage ≤ (managed = eufNma advantage ≤ MLWE + STMSIS) + loss.
   refine le_trans hcma ?_
-  have hmanaged : Pr[= true | SignatureAlg.managedRoNmaExp
-        (FiatShamirWithAbort.runtime M)
+  have hmanaged : SignatureAlg.managedRoNmaAdvantage (FiatShamirWithAbort.runtime M)
         (FiatShamirWithAbort.simulatedNmaAdv (identificationSchemeShort p prims) hr M
-          maxAttempts sim adv)] =
-      (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeShort p prims) hr M
-        maxAttempts sim adv).advantage (FiatShamirWithAbort.runtime M) := by
-    rw [SignatureAlg.eufNmaAdv.advantage, hbridge]
+          maxAttempts sim adv) =
+      SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime M)
+        (FiatShamirWithAbort.simulatedEufNmaAdv (identificationSchemeShort p prims) hr M
+          maxAttempts sim adv) := by
+    rw [SignatureAlg.managedRoNmaAdvantage, SignatureAlg.eufNmaAdvantage, hbridge]
   rw [hmanaged]
   exact add_le_add hnma le_rfl
 
@@ -1778,7 +1774,7 @@ theorem euf_cma_security_of_nma_fips [SampleableType (PublicKey p prims)]
         ENNReal.ofReal p_abort)
     (hAbortSim : ∀ pk sk, Good pk sk →
       Pr[= none | sim pk] ≤ ENNReal.ofReal p_abort)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts))
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commitment p prims × Response p prims)) (oa := adv.main pk) qS qH)
@@ -1792,9 +1788,9 @@ theorem euf_cma_security_of_nma_fips [SampleableType (PublicKey p prims)]
           LearningWithErrors.advantage mlwe B + εbridge) :
     ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
       (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
-      adv.advantage
+      SignatureAlg.unforgeableAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
         ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction + εbridge) +
         SelfTargetMSIS.advantage stmsisReduction +
         ENNReal.ofReal εPRG +
@@ -1815,13 +1811,13 @@ theorem euf_cma_security_of_nma_fips [SampleableType (PublicKey p prims)]
       maxAttempts sim adv)
   refine ⟨mlweRed, stmsisRed, ?_⟩
   refine le_trans hcma ?_
-  have hmanaged : Pr[= true | SignatureAlg.managedRoNmaExp
-        (FiatShamirWithAbort.runtime M)
+  have hmanaged : SignatureAlg.managedRoNmaAdvantage (FiatShamirWithAbort.runtime M)
         (FiatShamirWithAbort.simulatedNmaAdv (identificationScheme p prims) hr M
-          maxAttempts sim adv)] =
-      (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
-        maxAttempts sim adv).advantage (FiatShamirWithAbort.runtime M) := by
-    rw [SignatureAlg.eufNmaAdv.advantage, hbridge]
+          maxAttempts sim adv) =
+      SignatureAlg.eufNmaAdvantage (FiatShamirWithAbort.runtime M)
+        (FiatShamirWithAbort.simulatedEufNmaAdv (identificationScheme p prims) hr M
+          maxAttempts sim adv) := by
+    rw [SignatureAlg.managedRoNmaAdvantage, SignatureAlg.eufNmaAdvantage, hbridge]
   rw [hmanaged]
   exact add_le_add hnma le_rfl
 
@@ -1857,7 +1853,7 @@ theorem euf_cma_security_of_nma_fips_hvzkReal [SampleableType (PublicKey p prims
         ENNReal.ofReal p_abort)
     (hAbortSim : ∀ pk sk, Good pk sk →
       Pr[= none | hvzkSimulatorReal p prims pk] ≤ ENNReal.ofReal p_abort)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims) hr M maxAttempts))
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commitment p prims × Response p prims)) (oa := adv.main pk) qS qH)
@@ -1871,9 +1867,9 @@ theorem euf_cma_security_of_nma_fips_hvzkReal [SampleableType (PublicKey p prims
           LearningWithErrors.advantage mlwe B + εbridge) :
     ∃ (mlweReduction : LearningWithErrors.Adversary mlwe)
       (stmsisReduction : SelfTargetMSIS.Adversary stmsis),
-      adv.advantage
+      SignatureAlg.unforgeableAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
         ENNReal.ofReal (LearningWithErrors.advantage mlwe mlweReduction + εbridge) +
         SelfTargetMSIS.advantage stmsisReduction +
         ENNReal.ofReal εPRG +
@@ -1882,7 +1878,7 @@ theorem euf_cma_security_of_nma_fips_hvzkReal [SampleableType (PublicKey p prims
   euf_cma_security_of_nma_fips p prims mlwe stmsis maxAttempts hr hGen hrS hGenS hStmsis
     εPRG hPRG (hvzkSimulatorReal p prims) (hvzkBoundReal p prims)
     (by unfold hvzkBoundReal; exact ENNReal.toReal_nonneg)
-    (idsWithAbort_hvzk_real p prims h_laws) qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
+    (idsWithAbort_hvzk p prims h_laws) qS qH ε p_abort δ hε hδ hp₀ hp Good hGood hGuess
     hAbort hAbortSim adv hQ εbridge hMlweBridge
 
 /-! ## Numerical EUF-CMA closure under uniform advantage bounds
@@ -2039,7 +2035,6 @@ theorem euf_cma_security_short_of_uniform_advantage_bounds
     (p' : ℕ → Params) (prims' : ∀ n, Primitives (p' n)) [nttOps' : NTTRingOps]
     (instHigh : ∀ n, DecidableEq (prims' n).High)
     {M' : Type} [DecidableEq M']
-    (instCommEq : ∀ n, DecidableEq (Commitment (p' n) (prims' n)))
     (instCommInh : ∀ n, Inhabited (Commitment (p' n) (prims' n)))
     (instRespInh : ∀ n, Inhabited (Response (p' n) (prims' n)))
     (instChal : ∀ n, SampleableType (CommitHashBytes (p' n)))
@@ -2074,7 +2069,7 @@ theorem euf_cma_security_short_of_uniform_advantage_bounds
         ENNReal.ofReal p_abort)
     (hAbortSim : ∀ n, ∀ pk sk, Good n pk sk →
       Pr[= none | sim n pk] ≤ ENNReal.ofReal p_abort)
-    (adv : ∀ n, SignatureAlg.unforgeableAdv
+    (adv : ∀ n, SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationSchemeShort (p' n) (prims' n)) (hr n) M'
         (maxAttempts n)))
     (hQ : ∀ n, ∀ pk, FiatShamir.signHashQueryBound M'
@@ -2100,19 +2095,19 @@ theorem euf_cma_security_short_of_uniform_advantage_bounds
     (hεneg : negligible (fun n => ENNReal.ofReal (ε n)))
     (hδneg : negligible (fun n => ENNReal.ofReal (δ n)))
     (hζneg : negligible (fun n => ENNReal.ofReal (ζ_zk n))) :
-    negligible (fun n => (adv n).advantage
+    negligible (fun n => SignatureAlg.unforgeableAdvantage
       (FiatShamirWithAbort.runtime
-        (Commit := Commitment (p' n) (prims' n)) (Chal := CommitHashBytes (p' n)) M')) := by
-  have hbound : ∀ n, (adv n).advantage
+        (Commit := Commitment (p' n) (prims' n)) (Chal := CommitHashBytes (p' n)) M') (adv n)) := by
+  have hbound : ∀ n, SignatureAlg.unforgeableAdvantage
       (FiatShamirWithAbort.runtime
-        (Commit := Commitment (p' n) (prims' n)) (Chal := CommitHashBytes (p' n)) M') ≤
+        (Commit := Commitment (p' n) (prims' n)) (Chal := CommitHashBytes (p' n)) M') (adv n) ≤
       mlweAdv n + ENNReal.ofReal (εbridge n) + stmsisAdv n +
       ENNReal.ofReal (FiatShamirWithAbort.cmaToNmaLoss (qS n) (qH n) (ε n) p_abort
         (ζ_zk n) (δ n) hp) := by
     intro n
     obtain ⟨mlweRed, stmsisRed, hb⟩ :=
       @euf_cma_security_of_nma_short (p' n) (prims' n) nttOps' (instHigh n) M' _
-        (instCommEq n) (instCommInh n) (instRespInh n)
+        (instCommInh n) (instRespInh n)
         (instChal n) (instPk n)
         (mlwe n) (stmsis n) (maxAttempts n) (hr n) (hGen n) (hStmsis n)
         (sim n) (ζ_zk n) (hζ n) (hhvzk n)
@@ -2213,7 +2208,7 @@ section MatrixHeadline
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   [DecidableEq prims.High]
-  {M : Type} [DecidableEq M] [DecidableEq (Commitment p prims)]
+  {M : Type} [DecidableEq M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)]
 
@@ -2236,13 +2231,13 @@ theorem nma_security_short_matrix (maxAttempts : ℕ) (εA : ℝ)
     (hA : NMA.expandAIdealization p prims εA)
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
     (hGen : hr.gen = NMA.keygenShort p prims) :
-    ∀ (adv : SignatureAlg.eufNmaAdv
+    ∀ (adv : SignatureAlg.EufNmaAdversary
       (FiatShamirWithAbort (identificationSchemeShort p prims) hr M maxAttempts)),
     ∃ (mlweReduction : LearningWithErrors.Adversary (NMA.mldsaMatrixMLWE p))
       (stmsisReduction : SelfTargetMSIS.Adversary (NMA.mldsaSTMSISShort p prims M)),
-      adv.advantage
+      SignatureAlg.eufNmaAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
         ENNReal.ofReal
           (LearningWithErrors.advantage (NMA.mldsaMatrixMLWE p) mlweReduction + εA) +
         SelfTargetMSIS.advantage stmsisReduction :=
