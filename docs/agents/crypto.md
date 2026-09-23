@@ -153,6 +153,17 @@ retain their order. The `ProbCompRuntime` theorem in `KEMDEM.lean` is a compatib
 `Measure.boolBias_bind_coin` requires total branches: missing mass is distinct from returning
 `false`, so the assumption cannot be dropped.
 
+### DEM real-or-random IND-CPA
+
+`VCVio.CryptoFoundations.DataEncapMech.RealOrRandom` defines the one-time real-or-random game
+`DEMScheme.realOrRandomGame`, which encrypts either the adversary's message or a uniform one.
+Both DEM advantages are `boolBias` of a fair hidden-bit game, that is, the distance between the
+two branches, so the constants carry no factor from the bias normalization.
+`realOrRandomAdvantage_eq_IND_CPA_Advantage` is an exact equality with no runtime hypotheses.
+`IND_CPA_Advantage_le_realOrRandomAdvantage_add` bounds the left-or-right advantage by the sum
+of two real-or-random advantages and takes the runtime coherence hypotheses of the KEM–DEM
+adapter.
+
 ### Forking bounds and measure semantics
 
 `VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
