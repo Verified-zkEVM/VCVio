@@ -116,6 +116,38 @@ theorem prEvent_le_prEvent_add_prEvent_and_not (mx : m α) (p q : α → Prop) :
   rw [prEvent_eq_prEvent_and_add_prEvent_and_not mx p q]
   exact add_le_add_left (prEvent_mono mx (fun x ↦ p x ∧ q x) q fun x hx ↦ hx.2) _
 
+/-- An event and its negation partition the successful mass. -/
+theorem prEvent_add_prEvent_not_eq_prEvent_true (mx : m α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] + Pr{let x ← mx}[¬p x] = Pr{let _ ← mx}[True] := by
+  rw [prEvent_eq_prEvent_and_add_prEvent_and_not mx (fun _ ↦ True) p]
+  simp only [true_and]
+
+/-- Up-to-bad bound, one direction. If the part of `mx` off the flag `bad` is dominated by `my`,
+then an event of `mx` exceeds the matching event of `my` by at most the flag probability. -/
+theorem prEvent_le_prEvent_add_of_prEvent_and_not_le {β : Type} (mx : m α) (my : m β)
+    (bad p : α → Prop) (q : β → Prop)
+    (h : Pr{let x ← mx}[p x ∧ ¬bad x] ≤ Pr{let y ← my}[q y]) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[bad x] + Pr{let y ← my}[q y] :=
+  (prEvent_le_prEvent_add_prEvent_and_not mx p bad).trans (add_le_add le_rfl h)
+
+/-- Up-to-bad bound, reverse direction. If `my` keeps no more mass than `mx`, and the part of `mx`
+off the flag `bad` is dominated by `my` on the complementary events, then an event of `my`
+exceeds the matching event of `mx` by at most the flag probability. -/
+theorem prEvent_le_prEvent_add_of_prEvent_not_and_not_le {β : Type} (mx : m α) (my : m β)
+    (bad p : α → Prop) (q : β → Prop)
+    (hmass : Pr{let _ ← my}[True] ≤ Pr{let _ ← mx}[True])
+    (h : Pr{let x ← mx}[¬p x ∧ ¬bad x] ≤ Pr{let y ← my}[¬q y]) :
+    Pr{let y ← my}[q y] ≤ Pr{let x ← mx}[bad x] + Pr{let x ← mx}[p x] := by
+  refine ENNReal.le_of_add_le_add_right (a := Pr{let y ← my}[¬q y])
+    (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one my _)) ?_
+  rw [prEvent_add_prEvent_not_eq_prEvent_true]
+  calc Pr{let _ ← my}[True] ≤ Pr{let _ ← mx}[True] := hmass
+    _ = Pr{let x ← mx}[p x] + Pr{let x ← mx}[¬p x] :=
+      (prEvent_add_prEvent_not_eq_prEvent_true mx p).symm
+    _ ≤ Pr{let x ← mx}[p x] + (Pr{let x ← mx}[bad x] + Pr{let y ← my}[¬q y]) :=
+      add_le_add le_rfl (prEvent_le_prEvent_add_of_prEvent_and_not_le mx my bad _ _ h)
+    _ = _ := by rw [← add_assoc]; congr 1; exact add_comm _ _
+
 /-- A conjunction is bounded by its first conjunct. -/
 theorem prEvent_and_le_left (mx : m α) (p q : α → Prop) :
     Pr{let x ← mx}[p x ∧ q x] ≤ Pr{let x ← mx}[p x] :=

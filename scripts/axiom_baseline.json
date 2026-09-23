@@ -1,7 +1,5 @@
 {"sorry":
- ["BR93.br93AsymmEnc.cpaGame_gap_le_badEvent",
-  "BR93.br93AsymmEnc.indcpa_bound",
-  "Falcon.Concrete.KeyGen.keyGen",
+ ["Falcon.Concrete.KeyGen.keyGen",
   "Falcon.Concrete.NTRUSolver.FXR.sqr",
   "Falcon.Concrete.NTRUSolver.check_ortho_norm",
   "Falcon.Concrete.NTRUSolver.solve_NTRU",

@@ -228,6 +228,19 @@ lemma enncard_cacheQuery_le (t : spec.Domain) (u : spec.Range t) :
 lemma le_cacheQuery {t : spec.Domain} {u : spec.Range t} (h : cache t = none) :
     cache ≤ cache.cacheQuery t u := by grind
 
+/-- Caching answers at two distinct inputs commutes. -/
+lemma cacheQuery_comm {t t' : spec.Domain} (h : t ≠ t') (u : spec.Range t) (u' : spec.Range t') :
+    (cache.cacheQuery t u).cacheQuery t' u' = (cache.cacheQuery t' u').cacheQuery t u := by
+  ext s
+  by_cases hs : s = t
+  · subst hs
+    rw [cacheQuery_of_ne _ _ h, cacheQuery_self, cacheQuery_self]
+  · by_cases hs' : s = t'
+    · subst hs'
+      rw [cacheQuery_self, cacheQuery_of_ne _ _ hs, cacheQuery_self]
+    · rw [cacheQuery_of_ne _ _ hs', cacheQuery_of_ne _ _ hs, cacheQuery_of_ne _ _ hs,
+        cacheQuery_of_ne _ _ hs']
+
 lemma cacheQuery_mono {c₁ c₂ : QueryCache spec} (h : c₁ ≤ c₂) (t : spec.Domain)
     (u : spec.Range t) : c₁.cacheQuery t u ≤ c₂.cacheQuery t u := by
   intro t' u' ht'
@@ -589,6 +602,16 @@ lemma wasQueried_cons_of_ne [DecidableEq ι] {t t' : spec.Domain}
     {u : spec.Range t'} {log : QueryLog spec} (hne : t' ≠ t) :
     wasQueried (⟨t', u⟩ :: log) t = wasQueried log t := by
   simp [wasQueried_eq_decide_mem_map_fst, List.mem_cons, hne.symm, eq_comm]
+
+@[simp]
+lemma wasQueried_nil [DecidableEq ι] (t : spec.Domain) :
+    wasQueried ([] : QueryLog spec) t = false := by
+  simp [wasQueried_eq_decide_mem_map_fst]
+
+@[simp]
+lemma wasQueried_append [DecidableEq ι] (log₁ log₂ : QueryLog spec) (t : spec.Domain) :
+    wasQueried (log₁ ++ log₂) t = (wasQueried log₁ t || wasQueried log₂ t) := by
+  simp only [wasQueried_eq_decide_mem_map_fst, List.map_append, List.mem_append, Bool.decide_or]
 
 section prod
 
