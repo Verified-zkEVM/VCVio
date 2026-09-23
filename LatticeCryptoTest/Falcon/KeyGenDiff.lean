@@ -12,13 +12,16 @@ public import Extern.Falcon.KeyGen
 /-!
 # Differential test: Lean Falcon key generation against c-fn-dsa
 
-Runs the pure-Lean seeded key generator `Falcon.Concrete.KeyGen.keyGen` (Gaussian sampling,
-NTRU equation solver, public-key computation) and encodes its output exactly as c-fn-dsa's
-`keygen_inner` does: the signing key is the header byte `0x50 + logn` followed by the
-trimmed encodings of `f`, `g` and `F`, and the verifying key is the header byte `logn`
-followed by the 14-bit packing of `h`. Both byte strings are compared with the output of
-`fndsa_keygen_seeded`, reached through the FFI bindings `falcon512KeygenSeeded` and
-`falcon1024KeygenSeeded`.
+Runs the seeded key generator `Falcon.Concrete.KeyGen.keyGen` (Lean Gaussian sampling, NTRU
+equation solver and public-key computation, over the native SHAKE-256 PRNG of
+`Extern.Hashing`) and encodes its output exactly as c-fn-dsa's `keygen_inner` does: the
+signing key is the header byte `0x50 + logn` followed by the trimmed encodings of `f`, `g` and
+`F`, and the verifying key is the header byte `logn` followed by the 14-bit packing of `h`.
+Both byte strings are compared with the output of `fndsa_keygen_seeded`, reached through the
+FFI bindings `falcon512KeygenSeeded` and `falcon1024KeygenSeeded`.
+
+The encoded keys do not contain `G`, so each key pair is also checked against the NTRU
+equation `f·G - g·F = q` in `ℤ[x]/(x^n + 1)`.
 -/
 
 public section
@@ -63,15 +66,34 @@ def mqpolyEncode (h : Array UInt16) : ByteArray := Id.run do
     out := out.push h3.toUInt8
   return out
 
-/-- Run the Lean key generator from `seed` and encode `(signing key, verifying key)` in the
-c-fn-dsa wire format. -/
-def leanKeygenSeeded (logn : Nat) (seed : ByteArray) : Option (ByteArray × ByteArray) := do
-  let kp ← KeyGen.keyGen logn seed
+/-- Product of two polynomials in `ℤ[x]/(x^n + 1)`, where `n = a.size = b.size`. -/
+def negacyclicMul (a b : Array Int) : Array Int := Id.run do
+  let n := a.size
+  let mut c : Array Int := Array.replicate n 0
+  for i in [:n] do
+    for j in [:n] do
+      let k := i + j
+      if k < n then
+        c := c.set! k (c[k]! + a[i]! * b[j]!)
+      else
+        c := c.set! (k - n) (c[k - n]! - a[i]! * b[j]!)
+  return c
+
+/-- Whether `f·G - g·F = q` holds exactly in `ℤ[x]/(x^n + 1)`. -/
+def ntruEquationHolds (kp : KeyGen.RawKeyPair) : Bool :=
+  let toInt (a : Array Int8) : Array Int := a.map (·.toInt)
+  let fG := negacyclicMul (toInt kp.f) (toInt kp.capG)
+  let gF := negacyclicMul (toInt kp.g) (toInt kp.capF)
+  fG.size == kp.f.size && gF.size == fG.size &&
+    (List.range fG.size).all fun i => fG[i]! - gF[i]! == if i == 0 then 12289 else 0
+
+/-- Encode a Lean key pair as `(signing key, verifying key)` in the c-fn-dsa wire format. -/
+def encodeKeyPair (logn : Nat) (kp : KeyGen.RawKeyPair) : ByteArray × ByteArray :=
   let nbits := fgBits logn
   let sk := ByteArray.mk #[(0x50 + logn).toUInt8] ++ trimI8Encode kp.f nbits ++
     trimI8Encode kp.g nbits ++ trimI8Encode kp.capF 8
   let pk := ByteArray.mk #[logn.toUInt8] ++ mqpolyEncode kp.h
-  pure (sk, pk)
+  (sk, pk)
 
 /-- Index of the first differing byte of two byte arrays (the shorter length if one is a
 prefix of the other), or `none` if they are equal. -/
@@ -90,9 +112,11 @@ def checkSeed (st : IO.Ref TestState) (logn : Nat) (label : UInt8)
     (ffi : ByteArray → ByteArray × ByteArray) : IO Unit := do
   let seed := testSeed label
   let (skC, pkC) := ffi seed
-  match leanKeygenSeeded logn seed with
+  match KeyGen.keyGen logn seed with
   | none => check st s!"logn={logn} seed#{label}: Lean keygen succeeds" false
-  | some (skL, pkL) =>
+  | some kp =>
+    let (skL, pkL) := encodeKeyPair logn kp
+    check st s!"logn={logn} seed#{label}: f·G - g·F = q" (ntruEquationHolds kp)
     check st s!"logn={logn} seed#{label}: signing key byte-identical ({skC.size} bytes)"
       (skL == skC) s!"first diff at byte {firstDiff skL skC}"
     check st s!"logn={logn} seed#{label}: verifying key byte-identical ({pkC.size} bytes)"
