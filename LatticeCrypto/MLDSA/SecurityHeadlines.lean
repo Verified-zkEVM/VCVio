@@ -348,7 +348,7 @@ by `qS` to `qH + qS` — the distinction recorded in `FiatShamirWithAbort.cmaToN
 that commitment-recovery bridge, and composing it with the FIPS seed-derived key generation, is
 follow-up work: `nma_security_fips` currently gives the seed-derived-key result at the NMA level
 only. -/
-theorem euf_cma_security_of_nma_short [SampleableType (PublicKey p prims)]
+theorem euf_cma_security_of_nma_short
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (stmsis : SelfTargetMSIS.Problem
       (TqMatrix p.k p.l) (Response p prims)
@@ -438,7 +438,7 @@ proved bound — see `euf_cma_security_of_nma_fips_hvzkReal`.
 **Scope: commitment-carrying, not yet the end-to-end FIPS CMA headline.** As in the short
 model, the signature carries the commitment; the commitment-recovery bridge to the FIPS-204
 signature format costs `qS` extra hash queries and is follow-up work. -/
-theorem euf_cma_security_of_nma_fips [SampleableType (PublicKey p prims)]
+theorem euf_cma_security_of_nma_fips
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (stmsis : SelfTargetMSIS.Problem
       (TqMatrix p.k p.l) (Response p prims)
@@ -520,7 +520,7 @@ seed-model simulator: under the primitive laws `h_laws`, `idsWithAbort_hvzk_real
 `hvzkSimulatorReal` at the bound `hvzkBoundReal`, so the HVZK term of the loss is a proved
 quantity rather than a hypothesis, and the only simulator-side hypothesis left is the abort
 rate `hAbortSim` of `hvzkSimulatorReal` on good keys. -/
-theorem euf_cma_security_of_nma_fips_hvzkReal [SampleableType (PublicKey p prims)]
+theorem euf_cma_security_of_nma_fips_hvzkReal
     (h_laws : Primitives.Laws prims nttOps)
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (stmsis : SelfTargetMSIS.Problem
@@ -731,7 +731,6 @@ theorem euf_cma_security_short_of_uniform_advantage_bounds
     (instCommInh : ∀ n, Inhabited (Commitment (p' n) (prims' n)))
     (instRespInh : ∀ n, Inhabited (Response (p' n) (prims' n)))
     (instChal : ∀ n, SampleableType (CommitHashBytes (p' n)))
-    (instPk : ∀ n, SampleableType (PublicKey (p' n) (prims' n)))
     (mlwe : ∀ n, LearningWithErrors.Problem (TqMatrix (p' n).k (p' n).l)
       (RqVec (p' n).l) (RqVec (p' n).k))
     (stmsis : ∀ n, SelfTargetMSIS.Problem
@@ -801,7 +800,7 @@ theorem euf_cma_security_short_of_uniform_advantage_bounds
     obtain ⟨mlweRed, stmsisRed, hb⟩ :=
       @euf_cma_security_of_nma_short (p' n) (prims' n) nttOps' (instHigh n) M' _
         (instCommInh n) (instRespInh n)
-        (instChal n) (instPk n)
+        (instChal n)
         (mlwe n) (stmsis n) (maxAttempts n) (hr n) (hGen n) (hStmsis n)
         (sim n) (ζ_zk n) (hζ n) (hhvzk n)
         (qS n) (qH n) (ε n) p_abort (δ n) (hε n) (hδ n) hp₀ hp (Good n) (hGood n) (hGuess n)

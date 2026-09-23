@@ -61,7 +61,6 @@ variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
   (M : Type) [DecidableEq M] [Inhabited M]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
   [SampleableType (CommitHashBytes p)]
-  [SampleableType (PublicKey p prims)]
 
 /-! ## The witness data: simulator, good event, and trivial adversary -/
 
@@ -94,7 +93,6 @@ noncomputable def trivialForger (maxAttempts : ℕ) :
 
 /-! ## Per-hypothesis discharges -/
 
-omit [SampleableType (PublicKey p prims)] in
 /-- `hhvzk` at the trivial budget: any simulator is a `ζ_zk = 1` HVZK simulator, since total
 variation distance never exceeds one. -/
 lemma neverAbortSim_hvzk :
@@ -102,7 +100,7 @@ lemma neverAbortSim_hvzk :
   fun _ _ _ => tvDist_le_one _ _
 
 omit nttOps [DecidableEq prims.High]
-  [SampleableType (CommitHashBytes p)] [SampleableType (PublicKey p prims)] in
+  [SampleableType (CommitHashBytes p)] in
 /-- The never-aborting simulator indeed never aborts: the probability of `none` is zero. -/
 lemma probOutput_none_neverAbortSim (pk : PublicKey p prims) :
     Pr[= none | neverAbortSim p prims pk] = 0 :=
@@ -110,7 +108,7 @@ lemma probOutput_none_neverAbortSim (pk : PublicKey p prims) :
 
 omit [DecidableEq M] [Inhabited (Commitment p prims)]
   [Inhabited (Response p prims)]
-  [SampleableType (CommitHashBytes p)] [SampleableType (PublicKey p prims)] in
+  [SampleableType (CommitHashBytes p)] in
 /-- The trivial forger makes no signing and no random-oracle queries. -/
 lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p prims) :
     FiatShamir.signHashQueryBound M
@@ -120,8 +118,7 @@ lemma trivialForger_signHashQueryBound (maxAttempts : ℕ) (pk : PublicKey p pri
 
 omit nttOps [DecidableEq prims.High]
   [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
-  [SampleableType (CommitHashBytes p)]
-  [SampleableType (PublicKey p prims)] in
+  [SampleableType (CommitHashBytes p)] in
 /-- `expandAIdealization` holds unconditionally at the trivial budget `εA = 1`: the two branch
 probabilities both lie in `[0, 1]`, so their difference is at most one in absolute value.  This
 carries no idealization content; it exists to discharge the MLWE bridge of the consistency
@@ -146,7 +143,6 @@ lemma expandAIdealization_one : expandAIdealization p prims 1 := by
 /-! ## The joint frontier certificate -/
 
 open scoped Classical in
-omit [SampleableType (PublicKey p prims)] in
 /-- **Joint consistency (inhabitance) witness for the `MLDSA.euf_cma_security_of_nma_short`
 hypotheses.**  At arbitrary parameters `(p, prims)` (under the headline's own carrier
 instances), any message type `M`, and any retry budget, every explicit hypothesis of the
