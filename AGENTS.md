@@ -157,6 +157,8 @@ Security-notion names may begin with an underscore-separated acronym:
 `scripts/lint.py` accepts a `defsWithUnderscore` finding without a `nolints.json` entry when
 each underscored name component starts with an acronym of two or more capitals or digits and
 every later segment except the last starts with a capital.
+Security notions, experiments, games, and advantages follow
+[`docs/agents/crypto.md`](docs/agents/crypto.md#naming).
 
 ## Canonical Examples
 

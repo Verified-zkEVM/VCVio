@@ -71,13 +71,13 @@ a one-line comment explaining what shape downstream needs.
 
 ```lean
 theorem myScheme_secure :
-    advantage (myExp adversary) ≤ q * ddhAdvantage (myReduction adversary) := by
+    myAdvantage adversary ≤ q * ddhAdvantage (myReduction adversary) := by
 ```
 
 ### Step 2: Define intermediate games (hybrids)
 
 ```lean
-def hybridGame (adversary : ...) (k : ℕ) : ProbComp Bool := do
+def hybrid (adversary : ...) (k : ℕ) : ProbComp Bool := do
   -- first k queries use real, rest use random
   ...
 ```
@@ -85,11 +85,11 @@ def hybridGame (adversary : ...) (k : ℕ) : ProbComp Bool := do
 ### Step 3: Telescope via `game_trans`
 
 ```lean
-  game_trans (hybridGame adversary 1)
-  · -- prove hybridGame 0 ≡ₚ hybridGame 1
+  game_trans (hybrid adversary 1)
+  · -- prove hybrid 0 ≡ₚ hybrid 1
     by_equiv
     ...
-  · game_trans (hybridGame adversary 2)
+  · game_trans (hybrid adversary 2)
     · ...
 ```
 
@@ -136,7 +136,7 @@ From `Examples/ElGamal/Basic.lean` — multi-query security via the generic one-
 - Prove that the one-time advantage is twice the DDH advantage of the reduction.
 - Instantiate `AsymmEncAlg.IND_CPA_Advantage_le_mul_of_oneTime_bound`.
 - Final bound: `IND_CPA_Advantage ≤ q * (2 * ε)`, where `IND_CPA_Advantage` is the Boolean bias
-  `Measure.boolBias` of the oracle IND-CPA experiment.
+  `Measure.boolBias` of the oracle IND-CPA game `AsymmEncAlg.IND_CPA_Game`.
 
 For tactic-heavy hybrid proofs, use the generic recipe above or the focused
 examples under `Examples/ProgramLogic/`.
