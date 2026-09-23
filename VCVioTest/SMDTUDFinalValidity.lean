@@ -164,100 +164,100 @@ private lemma run_repeatCollection_ideal :
   rfl
 
 private lemma experiment_separate_real :
-    SM_DT_UD_SourceFinalValidity.Experiment .real separate = pure true := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .real separate = pure true := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_separate_real]
   rfl
 
 private lemma experiment_separate_ideal :
-    SM_DT_UD_SourceFinalValidity.Experiment .ideal separate = pure false := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .ideal separate = pure false := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_separate_ideal]
   rfl
 
 private lemma experiment_separateReverse_real :
-    SM_DT_UD_SourceFinalValidity.Experiment .real separateReverse = pure false := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .real separateReverse = pure false := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_separateReverse_real]
   rfl
 
 private lemma experiment_separateReverse_ideal :
-    SM_DT_UD_SourceFinalValidity.Experiment .ideal separateReverse = pure true := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .ideal separateReverse = pure true := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_separateReverse_ideal]
   rfl
 
 private lemma experiment_exceedCap_real :
-    SM_DT_UD_SourceFinalValidity.Experiment .real exceedCap = pure false := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .real exceedCap = pure false := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_exceedCap_real]
   rfl
 
 private lemma experiment_duplicateTarget_real :
-    SM_DT_UD_SourceFinalValidity.Experiment .real duplicateTarget = pure false := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .real duplicateTarget = pure false := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_duplicateTarget_real]
   rfl
 
 private lemma experiment_crossClash_real :
-    SM_DT_UD_SourceFinalValidity.Experiment .real crossClash = pure false := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .real crossClash = pure false := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_crossClash_real]
   rfl
 
 private lemma experiment_repeatCollection_real :
-    SM_DT_UD_SourceFinalValidity.Experiment .real repeatCollection = pure true := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .real repeatCollection = pure true := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_repeatCollection_real]
   rfl
 
 private lemma experiment_repeatCollection_ideal :
-    SM_DT_UD_SourceFinalValidity.Experiment .ideal repeatCollection = pure true := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .ideal repeatCollection = pure true := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_repeatCollection_ideal]
   rfl
 
 /-- The explicit input/output generators separate the worlds in the source orientation: real minus
 ideal is positive one, and its absolute magnitude is one. -/
 theorem real_ideal_separation_canary :
-    SM_DT_UD_SourceFinalValidity.Experiment .real separate = pure true ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .ideal separate = pure false ∧
+    SM_DT_UD_SourceFinalValidity.experiment .real separate = pure true ∧
+      SM_DT_UD_SourceFinalValidity.experiment .ideal separate = pure false ∧
       SM_DT_UD_SourceFinalValidity.RealSuccess separate = 1 ∧
       SM_DT_UD_SourceFinalValidity.IdealSuccess separate = 0 ∧
-      SM_DT_UD_SourceFinalValidity.DirectedAdvantage separate = 1 ∧
-      SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage separate = 1 := by
+      SM_DT_UD_SourceFinalValidity.directedAdvantage separate = 1 ∧
+      SM_DT_UD_SourceFinalValidity.absoluteAdvantage separate = 1 := by
   simp [experiment_separate_real, experiment_separate_ideal,
     SM_DT_UD_SourceFinalValidity.RealSuccess, SM_DT_UD_SourceFinalValidity.IdealSuccess,
-    SM_DT_UD_SourceFinalValidity.DirectedAdvantage,
-    SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage, ENNReal.absDiff]
+    SM_DT_UD_SourceFinalValidity.directedAdvantage,
+    SM_DT_UD_SourceFinalValidity.absoluteAdvantage, ENNReal.absDiff]
 
 /-- Reversing the distinguisher makes the directed advantage negative one while its absolute
 magnitude remains one. A symmetric-only API would fail to pin this source-game orientation. -/
 theorem source_orientation_reverse_canary :
-    SM_DT_UD_SourceFinalValidity.Experiment .real separateReverse = pure false ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .ideal separateReverse = pure true ∧
+    SM_DT_UD_SourceFinalValidity.experiment .real separateReverse = pure false ∧
+      SM_DT_UD_SourceFinalValidity.experiment .ideal separateReverse = pure true ∧
       SM_DT_UD_SourceFinalValidity.RealSuccess separateReverse = 0 ∧
       SM_DT_UD_SourceFinalValidity.IdealSuccess separateReverse = 1 ∧
-      SM_DT_UD_SourceFinalValidity.DirectedAdvantage separateReverse = -1 ∧
-      SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage separateReverse = 1 := by
+      SM_DT_UD_SourceFinalValidity.directedAdvantage separateReverse = -1 ∧
+      SM_DT_UD_SourceFinalValidity.absoluteAdvantage separateReverse = 1 := by
   simp [experiment_separateReverse_real, experiment_separateReverse_ideal,
     SM_DT_UD_SourceFinalValidity.RealSuccess, SM_DT_UD_SourceFinalValidity.IdealSuccess,
-    SM_DT_UD_SourceFinalValidity.DirectedAdvantage,
-    SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage, ENNReal.absDiff]
+    SM_DT_UD_SourceFinalValidity.directedAdvantage,
+    SM_DT_UD_SourceFinalValidity.absoluteAdvantage, ENNReal.absDiff]
 
 /-- Cap, duplicate-target, and cross-oracle violations poison only the final conjunction: all
 queries returned their concrete real-world answers and were recorded in the run lemmas above. -/
 theorem final_validity_poison_canary :
-    SM_DT_UD_SourceFinalValidity.Experiment .real exceedCap = pure false ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .real duplicateTarget = pure false ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .real crossClash = pure false := by
+    SM_DT_UD_SourceFinalValidity.experiment .real exceedCap = pure false ∧
+      SM_DT_UD_SourceFinalValidity.experiment .real duplicateTarget = pure false ∧
+      SM_DT_UD_SourceFinalValidity.experiment .real crossClash = pure false := by
   exact ⟨experiment_exceedCap_real, experiment_duplicateTarget_real,
     experiment_crossClash_real⟩
 
 /-- Repeated collection-only tweaks remain valid in both worlds. -/
 theorem repeated_collection_allowed_canary :
-    SM_DT_UD_SourceFinalValidity.Experiment .real repeatCollection = pure true ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .ideal repeatCollection = pure true := by
+    SM_DT_UD_SourceFinalValidity.experiment .real repeatCollection = pure true ∧
+      SM_DT_UD_SourceFinalValidity.experiment .ideal repeatCollection = pure true := by
   exact ⟨experiment_repeatCollection_real, experiment_repeatCollection_ideal⟩
 
 /-! ## A proper subspace
@@ -309,14 +309,14 @@ private lemma run_subspaceProbe_ideal :
   rfl
 
 private lemma experiment_subspaceProbe_real :
-    SM_DT_UD_SourceFinalValidity.Experiment .real subspaceProbe = pure true := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, subspaceProblem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .real subspaceProbe = pure true := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, subspaceProblem_seedGen, pure_bind]
   rw [run_subspaceProbe_real]
   rfl
 
 private lemma experiment_subspaceProbe_ideal :
-    SM_DT_UD_SourceFinalValidity.Experiment .ideal subspaceProbe = pure false := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, subspaceProblem_seedGen, pure_bind]
+    SM_DT_UD_SourceFinalValidity.experiment .ideal subspaceProbe = pure false := by
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, subspaceProblem_seedGen, pure_bind]
   rw [run_subspaceProbe_ideal]
   rfl
 
@@ -325,11 +325,11 @@ on `M`, which is the hypothesis a bound in `|M'|` needs, and the real world hash
 transcript records the embedded element. -/
 theorem subspace_emb_applied_canary :
     subspaceProblem.HasUniformInputs ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .real subspaceProbe = pure true ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .ideal subspaceProbe = pure false ∧
-      SM_DT_UD_SourceFinalValidity.DirectedAdvantage subspaceProbe = 1 := by
+      SM_DT_UD_SourceFinalValidity.experiment .real subspaceProbe = pure true ∧
+      SM_DT_UD_SourceFinalValidity.experiment .ideal subspaceProbe = pure false ∧
+      SM_DT_UD_SourceFinalValidity.directedAdvantage subspaceProbe = 1 := by
   refine ⟨rfl, experiment_subspaceProbe_real, experiment_subspaceProbe_ideal, ?_⟩
-  simp [SM_DT_UD_SourceFinalValidity.DirectedAdvantage,
+  simp [SM_DT_UD_SourceFinalValidity.directedAdvantage,
     SM_DT_UD_SourceFinalValidity.RealSuccess, SM_DT_UD_SourceFinalValidity.IdealSuccess,
     experiment_subspaceProbe_real, experiment_subspaceProbe_ideal]
 

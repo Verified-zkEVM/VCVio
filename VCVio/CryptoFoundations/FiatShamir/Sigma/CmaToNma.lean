@@ -110,7 +110,7 @@ def simulatedNmaImpl
 
 /-- CMA-to-NMA reduction at the managed-RO interface.
 
-Builds a `managedRoNmaAdv` from a CMA adversary `adv` and an HVZK
+Builds a `ManagedRoNmaAdversary` from a CMA adversary `adv` and an HVZK
 simulator `simTranscript`: runs `adv.main pk` under a handler that
 forwards live RO queries (with cache side-effects), handles signing
 queries by sampling from `simTranscript` and programming the cache,
@@ -120,9 +120,9 @@ This is the concrete-interface reduction entering the replay-forking lemma. -/
 def simulatedNmaAdv
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M)) :
-    SignatureAlg.managedRoNmaAdv
+    SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M) :=
   ⟨fun pk => (simulateQ
     (simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)
@@ -202,7 +202,7 @@ into the managed cache rather than issued live. -/
 theorem simulatedNmaAdv_hashQueryBound
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)

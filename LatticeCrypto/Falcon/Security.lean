@@ -362,16 +362,16 @@ theorem euf_cma_security
     (qSign qHash : ℕ)
     (samplerLoss : ENNReal)
     (hSamplerLoss : HasUniformSamplerLoss p prims samplerLoss)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconSignatureAlg p prims Salt hr))
     (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
       (M := List Byte) (Salt := Salt) (Range := Rq p.n)
       (S' := Salt × (Rq p.n × Rq p.n))
       (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    adv.advantage
+    SignatureAlg.unforgeableAdvantage
         (GPVHashAndSign.runtime
-          (Range := Rq p.n) (List Byte) Salt) ≤
+          (Range := Rq p.n) (List Byte) Salt) adv ≤
       SIS.advantage (ntruPSFCollisionProblem p prims hr)
           (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) Salt adv) +
         ((qSign + qHash : ℕ) : ENNReal) *
@@ -398,16 +398,16 @@ theorem euf_cma_security_bytes40
     (qSign qHash : ℕ)
     (samplerLoss : ENNReal)
     (hSamplerLoss : HasUniformSamplerLoss p prims samplerLoss)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconSignatureAlg p prims (Bytes 40) hr))
     (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
       (M := List Byte) (Salt := Bytes 40) (Range := Rq p.n)
       (S' := Bytes 40 × (Rq p.n × Rq p.n))
       (α := List Byte × (Bytes 40 × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    adv.advantage
+    SignatureAlg.unforgeableAdvantage
         (GPVHashAndSign.runtime
-          (Range := Rq p.n) (List Byte) (Bytes 40)) ≤
+          (Range := Rq p.n) (List Byte) (Bytes 40)) adv ≤
       SIS.advantage (ntruPSFCollisionProblem p prims hr)
           (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) (Bytes 40) adv) +
         ((qSign + qHash : ℕ) : ENNReal) *

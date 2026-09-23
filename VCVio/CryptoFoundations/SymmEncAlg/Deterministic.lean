@@ -40,7 +40,7 @@ message are modelled by instantiating `C` per length.
 
 * `DetSymmEncAlg.measureComplete_toSymmEncAlg`: pointwise correctness gives measure-level
   completeness of the induced monadic scheme.
-* `DetSymmEncAlg.oneTimeINDCPAAdvantage_eq_two_mul_indDollarAdvantage`: the one-time
+* `DetSymmEncAlg.IND_CPA_OneTime_Advantage_eq_two_mul_indDollarAdvantage`: the one-time
   IND-CPA advantage of the induced scheme is exactly twice the IND$-CPA advantage of the
   one-query reduction `DetSymmEncAlg.oneTimeINDCPAReduction`.
 
@@ -206,7 +206,7 @@ the adversary choose two messages, submit the selected message as the single enc
 and report whether the adversary recovers the bit. -/
 @[expose]
 def oneTimeINDCPAReduction (scheme : DetSymmEncAlg M K C)
-    (adv : scheme.toSymmEncAlg.OneTimeINDCPAAdversary) : INDDollarAdversary M C :=
+    (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) : INDDollarAdversary M C :=
   (do
     let b ← liftComp ($ᵗ Bool) (INDDollarOracleSpec M C)
     let msgs ← liftComp adv.chooseMessages (INDDollarOracleSpec M C)
@@ -228,7 +228,7 @@ lemma isQueryBoundP_liftComp_isEncQuery {α : Type} (oa : ProbComp α) :
 
 /-- The reduction makes at most one encryption query. -/
 theorem isQueryBoundP_oneTimeINDCPAReduction (scheme : DetSymmEncAlg M K C)
-    (adv : scheme.toSymmEncAlg.OneTimeINDCPAAdversary) :
+    (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) :
     IsQueryBoundP (scheme.oneTimeINDCPAReduction adv) IsEncQuery 1 := by
   unfold oneTimeINDCPAReduction
   refine (isQueryBoundP_bind (n := 0) (m := 1) (isQueryBoundP_liftComp_isEncQuery _)
@@ -243,15 +243,15 @@ theorem isQueryBoundP_oneTimeINDCPAReduction (scheme : DetSymmEncAlg M K C)
 
 /-- Against the real oracle, the reduction runs the one-time IND-CPA game. -/
 lemma indDollarRealExp_oneTimeINDCPAReduction (scheme : DetSymmEncAlg M K C)
-    (adv : scheme.toSymmEncAlg.OneTimeINDCPAAdversary) :
+    (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) :
     scheme.indDollarRealExp (scheme.oneTimeINDCPAReduction adv) =
-      SymmEncAlg.oneTimeINDCPAGame adv := by
-  simp [indDollarRealExp, oneTimeINDCPAReduction, SymmEncAlg.oneTimeINDCPAGame]
+      SymmEncAlg.IND_CPA_OneTime_Game adv := by
+  simp [indDollarRealExp, oneTimeINDCPAReduction, SymmEncAlg.IND_CPA_OneTime_Game]
 
 /-- Against the ideal oracle, the challenge ciphertext is independent of the hidden bit, so the
 reduction outputs `true` with probability exactly one half. -/
 lemma evalDist_indDollarIdealExp_oneTimeINDCPAReduction_true [SampleableType C]
-    (scheme : DetSymmEncAlg M K C) (adv : scheme.toSymmEncAlg.OneTimeINDCPAAdversary) :
+    (scheme : DetSymmEncAlg M K C) (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) :
     (𝒟[indDollarIdealExp (scheme.oneTimeINDCPAReduction adv)] {true}).toReal = 1 / 2 := by
   let challenge : ProbComp Bool := do
     let msgs ← adv.chooseMessages
@@ -274,23 +274,23 @@ one-query adversaries: the one-time IND-CPA advantage is exactly twice the IND$-
 `oneTimeINDCPAReduction`. The factor `2` comes from measuring one-time IND-CPA by the bias
 `|Pr[b = b'] - Pr[b ≠ b']| = 2 * |Pr[b = b'] - 1/2|`, while the reduction's ideal world outputs
 `true` with probability exactly `1/2`. -/
-theorem oneTimeINDCPAAdvantage_eq_two_mul_indDollarAdvantage [SampleableType C]
-    (scheme : DetSymmEncAlg M K C) (adv : scheme.toSymmEncAlg.OneTimeINDCPAAdversary) :
-    SymmEncAlg.oneTimeINDCPAAdvantage adv =
+theorem IND_CPA_OneTime_Advantage_eq_two_mul_indDollarAdvantage [SampleableType C]
+    (scheme : DetSymmEncAlg M K C) (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) :
+    SymmEncAlg.IND_CPA_OneTime_Advantage adv =
       2 * scheme.indDollarAdvantage (scheme.oneTimeINDCPAReduction adv) := by
-  rw [SymmEncAlg.oneTimeINDCPAAdvantage, ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half,
+  rw [SymmEncAlg.IND_CPA_OneTime_Advantage, ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half,
     indDollarAdvantage, ProbComp.boolDistAdvantage, indDollarRealExp_oneTimeINDCPAReduction,
     evalDist_indDollarIdealExp_oneTimeINDCPAReduction_true]
 
 /-- If every IND$-CPA adversary making at most one encryption query has advantage at most `ε`,
 then every one-time IND-CPA adversary against the induced scheme has advantage at most `2 * ε`. -/
-theorem oneTimeINDCPAAdvantage_le_of_indDollarAdvantage_le [SampleableType C]
+theorem IND_CPA_OneTime_Advantage_le_of_indDollarAdvantage_le [SampleableType C]
     (scheme : DetSymmEncAlg M K C) {ε : ℝ}
     (hsecure : ∀ adversary : INDDollarAdversary M C,
       IsQueryBoundP adversary IsEncQuery 1 → scheme.indDollarAdvantage adversary ≤ ε)
-    (adv : scheme.toSymmEncAlg.OneTimeINDCPAAdversary) :
-    SymmEncAlg.oneTimeINDCPAAdvantage adv ≤ 2 * ε := by
-  rw [oneTimeINDCPAAdvantage_eq_two_mul_indDollarAdvantage]
+    (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) :
+    SymmEncAlg.IND_CPA_OneTime_Advantage adv ≤ 2 * ε := by
+  rw [IND_CPA_OneTime_Advantage_eq_two_mul_indDollarAdvantage]
   have := hsecure _ (scheme.isQueryBoundP_oneTimeINDCPAReduction adv)
   linarith
 

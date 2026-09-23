@@ -95,7 +95,7 @@ variable {ι : Type} {spec : OracleSpec ι} [SampleableType K]
 def composeWithDEM_toKEMLeftReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     kem.IND_CPA_Adversary where
   State := M × adversary.State
   preChallenge pk := do
@@ -109,7 +109,7 @@ def composeWithDEM_toKEMLeftReduction
 def composeWithDEM_toKEMRightReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     kem.IND_CPA_Adversary where
   State := M × adversary.State
   preChallenge pk := do
@@ -125,7 +125,7 @@ the same `encaps`-then-`encrypt` effect order as the composed scheme. -/
 def composeWithDEM_toDEMReduction
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem)) :
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem)) :
     dem.IND_CPA_Adversary where
   State := CKEM × adversary.State
   chooseMessages := do
@@ -150,7 +150,7 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     (kem : KEMScheme (OracleComp spec) K PK SK CKEM)
     (dem : DEMScheme (OracleComp spec) K M CDEM)
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : AsymmEncAlg.IND_CPA_Adv (kem.composeWithDEM dem))
+    (adversary : AsymmEncAlg.IND_CPA_OneTime_Adversary (kem.composeWithDEM dem))
     (heval_pure : ∀ {α : Type} [MeasurableSpace α] (a : α),
         runtime.evalDist (pure a : OracleComp spec α) = Measure.dirac a)
     (heval_bind : ∀ {α β : Type} [MeasurableSpace α] [MeasurableSpace β]

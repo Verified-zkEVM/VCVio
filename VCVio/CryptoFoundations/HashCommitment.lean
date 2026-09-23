@@ -23,7 +23,7 @@ returning `(H k (m, s), s)`. Verification recomputes the hash and compares.
 A binding adversary outputting two openings `(c, m₁, s₁, m₂, s₂)` with
 `m₁ ≠ m₂` and both verifications passing yields a keyed-CR collision at
 `(m₁, s₁) ≠ (m₂, s₂)` with `H k (m₁, s₁) = c = H k (m₂, s₂)`. Bound:
-`bindingAdvantage H.toCommitment A ≤ keyedCRAdvantage H (bindingAdv_toCRAdv A)`.
+`bindingAdvantage H.toCommitment A ≤ keyedCRAdvantage H (bindingAdversary_toKeyedCRAdversary A)`.
 
 This is the standard-model layer of the
 [#284](https://github.com/Verified-zkEVM/VCVio/issues/284) consolidation
@@ -32,7 +32,7 @@ chain `binding ≤ keyed-CR ≤ birthday`.
 ## Main Definitions
 
 - `KeyedHashFamily.toCommitment` — hash-based commitment scheme.
-- `bindingAdv_toCRAdv` — reduction adversary from binding to keyed-CR.
+- `bindingAdversary_toKeyedCRAdversary` — reduction adversary from binding to keyed-CR.
 - `bindingAdvantage_toCommitment_le_keyedCRAdvantage` — the binding bound.
 -/
 
@@ -59,7 +59,8 @@ def KeyedHashFamily.toCommitment
 /-- Reduction adversary: a binding adversary against `H.toCommitment` becomes
 a keyed-CR adversary against `H` by forgetting the commitment value and
 forwarding the two opening pairs `((m₁, s₁), (m₂, s₂))`. -/
-def bindingAdv_toCRAdv (A : BindingAdv K M C S) : KeyedCRAdversary K (M × S) :=
+def bindingAdversary_toKeyedCRAdversary (A : BindingAdversary K M C S) :
+    KeyedCRAdversary K (M × S) :=
   fun k => do
     let (_c, m₁, s₁, m₂, s₂) ← A k
     return ((m₁, s₁), (m₂, s₂))
@@ -67,7 +68,7 @@ def bindingAdv_toCRAdv (A : BindingAdv K M C S) : KeyedCRAdversary K (M × S) :=
 /-- **Binding ≤ keyed-CR (standard model)**: for any binding adversary `A`
 against the hash-based commitment scheme `H.toCommitment`, the binding
 advantage is bounded by the keyed-CR advantage of `H` against the natural
-reduction adversary `bindingAdv_toCRAdv A`.
+reduction adversary `bindingAdversary_toKeyedCRAdversary A`.
 
 A binding-game win has `m₁ ≠ m₂` together with both openings verifying:
 `H k (m₁, s₁) = c = H k (m₂, s₂)`. Since `m₁ ≠ m₂` implies
@@ -75,13 +76,13 @@ A binding-game win has `m₁ ≠ m₂` together with both openings verifying:
 adversary, by transitivity through the common commitment `c`. -/
 theorem bindingAdvantage_toCommitment_le_keyedCRAdvantage
     [SampleableType S] [DecidableEq M] [DecidableEq S] [DecidableEq C]
-    (H : KeyedHashFamily K (M × S) C) (A : BindingAdv K M C S) :
+    (H : KeyedHashFamily K (M × S) C) (A : BindingAdversary K M C S) :
     bindingAdvantage H.toCommitment A ≤
-      keyedCRAdvantage H (bindingAdv_toCRAdv A) := by
+      keyedCRAdvantage H (bindingAdversary_toKeyedCRAdversary A) := by
   let : MeasurableSpace K := ⊤
   let : MeasurableSpace (C × M × S × M × S) := ⊤
   unfold bindingAdvantage CommitmentScheme.bindingExp
-    keyedCRAdvantage keyedCRExp bindingAdv_toCRAdv KeyedHashFamily.toCommitment
+    keyedCRAdvantage keyedCRExp bindingAdversary_toKeyedCRAdversary KeyedHashFamily.toCommitment
   simp only [monad_norm]
   refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true) fun k => ?_
   refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true)
@@ -89,5 +90,9 @@ theorem bindingAdvantage_toCommitment_le_keyedCRAdvantage
   simp only [evalDist_pure, MeasureTheory.Measure.dirac_apply]
   simp [Set.indicator]
   split_ifs <;> simp_all
+
+-- Declaration-specific naming exception for the underscore-separated conversion name.
+attribute [nolint defsWithUnderscore]
+  bindingAdversary_toKeyedCRAdversary
 
 end CollisionResistance

@@ -17,7 +17,7 @@ public import VCVio.OracleComp.QueryTracking.SubSpec
 # Bridge helpers for the stateful Fiat-Shamir CMA games
 
 This file contains the adversary wrappers and query-bound bookkeeping that
-connect the public `SignatureAlg.unforgeableAdv` interface to the direct
+connect the public `SignatureAlg.UnforgeableAdversary` interface to the direct
 `QueryImpl.Stateful` CMA games.
 -/
 
@@ -41,7 +41,8 @@ the source CMA adversary. -/
 abbrev SourceSigAlg := _root_.FiatShamir.inROM σ hr M
 
 /-- Source EUF-CMA adversary type for the Fiat-Shamir signature scheme. -/
-abbrev SourceAdv := SignatureAlg.unforgeableAdv (SourceSigAlg (σ := σ) (hr := hr) (M := M))
+abbrev SourceAdversary :=
+  SignatureAlg.UnforgeableAdversary (SourceSigAlg (σ := σ) (hr := hr) (M := M))
 
 /-- Source post-keygen CMA oracle interface: public Fiat-Shamir queries plus
 signing queries. -/
@@ -56,7 +57,7 @@ abbrev SourceCmaComp (α : Type) :=
 
 /-- Candidate-producing part of the CMA adversary after the public key is fixed. -/
 @[reducible, fs_simp] def postKeygenCandidateAdv
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
       (M × (Commit × Resp)) :=
@@ -66,7 +67,7 @@ abbrev SourceCmaComp (α : Type) :=
 
 /-- Candidate-producing adversary with the public key fetched from the game. -/
 @[reducible, fs_simp] def candidateAdv
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
       (Stmt × (M × (Commit × Resp))) := do
   let pk ← (((cmaSpec M Commit Chal Resp Stmt).query .pk) :
@@ -77,7 +78,7 @@ abbrev SourceCmaComp (α : Type) :=
 
 /-- Lift a CMA-style Fiat-Shamir adversary into the named CMA game interface. -/
 @[reducible, fs_simp] def signedAdv
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
       ((M × (Commit × Resp)) × Bool) := do
   let pk ← (((cmaSpec M Commit Chal Resp Stmt).query .pk) :
@@ -116,7 +117,7 @@ abbrev SourceCmaComp (α : Type) :=
 
 /-- Log signing queries while producing the final candidate, before verification. -/
 @[reducible, fs_simp] def signedCandidateAdv
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt)
       ((Stmt × (M × (Commit × Resp))) × List M) := do
   (simulateQ (cmaSignLogImpl (M := M) (Commit := Commit) (Chal := Chal)
@@ -137,7 +138,7 @@ abbrev SourceCmaComp (α : Type) :=
 
 /-- Freshness-preserving Boolean adversary for the direct stateful CMA chain. -/
 @[reducible, fs_simp] def signedFreshAdv [DecidableEq M]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
     OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool :=
   signedCandidateAdv σ hr M adv >>= verifyFreshComp (σ := σ) (hr := hr)
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
@@ -146,7 +147,7 @@ abbrev SourceCmaComp (α : Type) :=
 
 /-- The public post-keygen adversary/verification computation before it is
 interpreted by the explicit random-oracle cache runtime. -/
-@[fs_simp] def postKeygenAdvBase (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+@[fs_simp] def postKeygenAdvBase (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) : SourceCmaComp (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
       ((M × (Commit × Resp)) × Bool) := do
   let (msg, sig) ← adv.main pk
@@ -165,7 +166,7 @@ def postVerifyComp (pk : Stmt) (x : M × (Commit × Resp)) :
   pure (x, verified)
 
 /-- Fixed-key adversary and verification computation over the named CMA interface. -/
-@[fs_simp] def postKeygenAdv (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+@[fs_simp] def postKeygenAdv (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) : OracleComp (cmaSpec M Commit Chal Resp Stmt) ((M × (Commit × Resp)) × Bool) :=
   (postKeygenCandidateAdv (σ := σ) (hr := hr) (M := M)
     (Commit := Commit) (Chal := Chal) (Resp := Resp) adv pk) >>=
@@ -198,7 +199,7 @@ lemma runtimeWithCache_evalDist_eq_fsBaseImpl
 The keypair is installed before the adversary runs, and the final freshness
 check reads the signed-message log from the resulting `CmaState`. This is the
 canonical normal form used by the stateful CMA chain. -/
-@[fs_simp] def postKeygenFreshProb (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+@[fs_simp] def postKeygenFreshProb (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (pk : Stmt) (sk : Wit) : ProbComp Bool :=
   (simulateQ (cmaRealSourceFullSum M Commit Chal σ hr)
       (postKeygenAdvBase (σ := σ) (hr := hr) (M := M)
@@ -215,7 +216,7 @@ canonical normal form used by the stateful CMA chain. -/
 /-- Run the direct stateful `cmaReal` game against `signedAdv` and pack the
 forgery, verification bit, and signed-message log into one probability
 computation. -/
-@[fs_simp] def cmaRealRun (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
+@[fs_simp] def cmaRealRun (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
     ProbComp ((M × (Commit × Resp)) × Bool × List M) := do
   let p ← (cmaReal M Commit Chal σ hr).runState
     (cmaInit M Commit Chal Stmt Wit) (signedAdv σ hr M adv)
@@ -224,7 +225,7 @@ computation. -/
 /-- The initial public-key query in `signedAdv` factors `cmaRealRun` through
 the key generator and a fixed-key post-keygen run. -/
 lemma cmaRealRun_eq_keygen_bind
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M)) :
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
     cmaRealRun σ hr M adv =
       (hr.gen : ProbComp (Stmt × Wit)) >>= fun ps =>
         (cmaReal M Commit Chal σ hr).runState
@@ -385,7 +386,7 @@ theorem cmaSignLogImpl_cmaSignHashQueryBound
 /-- Candidate production, with signing queries logged before final verification,
 preserves the source adversary signing/hash query budget. -/
 theorem signedCandidateAdv_cmaSignHashQueryBound
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
@@ -406,7 +407,7 @@ theorem signedCandidateAdv_cmaSignHashQueryBound
 /-- The final freshness-preserving Boolean adversary is bounded by the source
 adversary budget plus one verifier hash query. -/
 theorem signedFreshAdv_cmaSignHashQueryBound [DecidableEq M]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
@@ -436,7 +437,7 @@ theorem signedFreshAdv_cmaSignHashQueryBound [DecidableEq M]
 /-- Predicate-targeted signing-query bound for the final freshness-preserving
 CMA adversary. -/
 theorem signedFreshAdv_isQueryBoundP_costly [DecidableEq M]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
@@ -448,7 +449,7 @@ theorem signedFreshAdv_isQueryBoundP_costly [DecidableEq M]
 /-- Predicate-targeted signing-query bound for candidate production before the
 final verification suffix. -/
 theorem signedCandidateAdv_isQueryBoundP_costly
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
@@ -460,7 +461,7 @@ theorem signedCandidateAdv_isQueryBoundP_costly
 /-- Predicate-targeted hash-query bound for candidate production before the
 final verification suffix. -/
 theorem signedCandidateAdv_isQueryBoundP_hash
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
@@ -472,7 +473,7 @@ theorem signedCandidateAdv_isQueryBoundP_hash
 /-- Predicate-targeted hash-query bound for the final freshness-preserving CMA
 adversary. The extra query is the final Fiat-Shamir verification. -/
 theorem signedFreshAdv_isQueryBoundP_hash [DecidableEq M]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :

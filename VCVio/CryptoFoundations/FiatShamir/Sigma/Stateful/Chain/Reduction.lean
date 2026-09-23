@@ -142,7 +142,7 @@ private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux
           simpa [forkLoggedProj, forkInitialState, forkLoggedProbOrnament] using hrun]
 
 private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     (nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
         (nmaInit M Commit Chal Stmt Wit)
@@ -289,7 +289,7 @@ terms of the verify-wrapped adversary `nmaAdvFromCmaWithFinalQuery` at fork
 slot parameter `qH` (the framework's `Fin (qH + 1)` indexing accommodates the
 wrapper's verifier-point query). -/
 theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork [Inhabited Chal]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
@@ -329,7 +329,7 @@ theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork [Inhabited Chal]
 candidate/verifier split so the final verifier hash query is not charged to H3
 signing replacement. -/
 private theorem signedFreshAdv_H3_bound
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk β : ℝ≥0∞) (hζ_zk : ζ_zk < ∞)
     (hHVZK : σ.HVZK simT ζ_zk.toReal)
@@ -403,7 +403,7 @@ theorem cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma
 /-- Convert the shifted-NMA H5 boundary into the linked simulated-CMA form used
 by the top-level chain. -/
 theorem cmaSim_signedFreshAdv_le_fork_of_shifted_h5
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qH : ℕ)
     (hH5 :
@@ -427,7 +427,7 @@ theorem cmaSim_signedFreshAdv_le_fork_of_shifted_h5
 /-- Native H5 boundary in the linked simulated-CMA form used by the top-level
 chain. -/
 theorem cmaSim_signedFreshAdv_le_fork [Inhabited Chal]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
@@ -458,12 +458,12 @@ theorem cma_advantage_le_fork_bound_of_h5
     (hHVZK : σ.HVZK simT ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simT β)
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH)
     (hH1H2 :
-      adv.advantage (FiatShamir.runtime M) ≤
+      SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
         𝒟[(cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) (signedFreshAdv σ hr M adv)] {true})
     (hH5 :
@@ -473,7 +473,7 @@ theorem cma_advantage_le_fork_bound_of_h5
             (signedFreshAdv σ hr M adv)] ≤
         Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH) :
-    adv.advantage (FiatShamir.runtime M) ≤
+    SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
       Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH +
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
@@ -510,7 +510,7 @@ theorem cma_advantage_le_fork_bound_of_h5
           (cmaInit M Commit Chal Stmt Wit) A))
       (add_le_add le_rfl hH3_abs)
   calc
-    adv.advantage (FiatShamir.runtime M)
+    SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv
         ≤ 𝒟[(cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) A] {true} := by
             simpa only [A] using hH1H2
@@ -538,15 +538,15 @@ theorem cma_advantage_le_fork_bound_of_h1h2 [Inhabited Chal]
     (hHVZK : σ.HVZK simT ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simT β)
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH)
     (hH1H2 :
-      adv.advantage (FiatShamir.runtime M) ≤
+      SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
         𝒟[(cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) (signedFreshAdv σ hr M adv)] {true}) :
-    adv.advantage (FiatShamir.runtime M) ≤
+    SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
       Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH +
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) +

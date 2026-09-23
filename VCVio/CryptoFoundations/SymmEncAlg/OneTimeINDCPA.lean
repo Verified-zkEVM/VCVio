@@ -30,7 +30,7 @@ variable {M K C : Type}
 
 /-- Two-phase one-time IND-CPA adversary against a `ProbComp` symmetric encryption scheme. The
 key is secret, so the message-selection phase receives no input. -/
-structure OneTimeINDCPAAdversary (_encAlg : SymmEncAlg ProbComp M K C) where
+structure IND_CPA_OneTime_Adversary (_encAlg : SymmEncAlg ProbComp M K C) where
   /-- State passed from message selection to the guessing phase. -/
   State : Type
   /-- Choose the two challenge messages. -/
@@ -43,7 +43,7 @@ variable {encAlg : SymmEncAlg ProbComp M K C}
 /-- One-time left-or-right IND-CPA game: sample a key and a hidden bit, encrypt the message the bit
 selects, and return whether the adversary recovers the bit. -/
 @[expose]
-def oneTimeINDCPAGame (adv : OneTimeINDCPAAdversary encAlg) : ProbComp Bool := do
+def IND_CPA_OneTime_Game (adv : IND_CPA_OneTime_Adversary encAlg) : ProbComp Bool := do
   let k ← encAlg.keygen
   let b ← ($ᵗ Bool)
   let msgs ← adv.chooseMessages
@@ -52,9 +52,14 @@ def oneTimeINDCPAGame (adv : OneTimeINDCPAAdversary encAlg) : ProbComp Bool := d
   pure (b == b')
 
 /-- One-time IND-CPA advantage: the Boolean bias `|Pr[true] - Pr[false]|` of
-`oneTimeINDCPAGame`, equal to `2 * |Pr[b = b'] - 1/2|`. -/
+`IND_CPA_OneTime_Game`, equal to `2 * |Pr[b = b'] - 1/2|`. -/
 @[expose]
-noncomputable def oneTimeINDCPAAdvantage (adv : OneTimeINDCPAAdversary encAlg) : ℝ :=
-  (oneTimeINDCPAGame adv).boolBiasAdvantage
+noncomputable def IND_CPA_OneTime_Advantage (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ :=
+  (IND_CPA_OneTime_Game adv).boolBiasAdvantage
+
+-- Declaration-specific naming exceptions for this game's underscore-separated names.
+attribute [nolint defsWithUnderscore]
+  IND_CPA_OneTime_Adversary.State IND_CPA_OneTime_Adversary.chooseMessages
+  IND_CPA_OneTime_Adversary.distinguish IND_CPA_OneTime_Game IND_CPA_OneTime_Advantage
 
 end SymmEncAlg

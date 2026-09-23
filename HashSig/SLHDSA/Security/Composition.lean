@@ -18,7 +18,7 @@ This is the module that finally writes the SLH-DSA security result as an inequal
 `SLHDSA.Security.advantage_le_bound` says: for any adversary `adv` against the external SLH-DSA
 algebra `generalAlg`, and any `Certificate` for that adversary,
 
-`adv.advantage ProbCompRuntime.probComp ≤ c.summands.bound vp.params`
+`unforgeableAdvantage ProbCompRuntime.probComp adv ≤ c.summands.bound vp.params`
 
 where `Summands.bound` is the twelve-summand expression of `EUFCMA_SPHINCS_PLUS`, at the source's
 coefficients, and `Certificate.summands` routes each summand to the advantage of a named game of
@@ -45,9 +45,9 @@ attack it first.  Three things are true of it and worth stating separately.
   `split` is provably instantiable and is not a disguised assumption, and what remains unproven
   *along that route* is the two branch bounds, which is the bulk of the EasyCrypt development.  It
   is not the only route, and the other one costs nothing: see "A certificate costs nothing" below.
-* **`ofBranchBounds` takes no PRF hop.**  It sets `idealAdvantage := adv.advantage`, so in the
-  certificate it returns the two PRF summands are pure slack: they appear in the bound and do no
-  work.  A certificate that takes a real PRF hop has to choose a smaller `idealAdvantage`, and
+* **`ofBranchBounds` takes no PRF hop.**  It sets `idealAdvantage := unforgeableAdvantage _ adv`, so
+  in the certificate it returns the two PRF summands are pure slack: they appear in the bound and do
+  no work.  A certificate that takes a real PRF hop has to choose a smaller `idealAdvantage`, and
   nothing in this repository can.  `advantage_le_bound_of_halves` is that reading as one statement.
 
 And two things about it that nothing here refuses.
@@ -57,8 +57,8 @@ And two things about it that nothing here refuses.
   describe the intended reading — an advantage surviving two PRF hops, split into the two branches
   of `SchemeGames`' dispatch — and `ofBranchBounds` exhibits a certificate that honours it, but no
   certificate is obliged to.  One with `forsBranch := 0` and `hypertreeBranch := idealAdvantage :=
-  adv.advantage` satisfies `prfHops`, `split` and `forsBranch_le` for free and puts the whole
-  obligation on `hypertreeBranch_le`; nothing in this module sees the difference, and
+  unforgeableAdvantage _ adv` satisfies `prfHops`, `split` and `forsBranch_le` for free and puts the
+  whole obligation on `hypertreeBranch_le`; nothing in this module sees the difference, and
   `HashSigTest.SLHDSA.Composition` builds exactly that certificate and discharges the one goal it
   leaves.  Refusing *that* certificate needs the fields tied to the experiment, by the inequalities
   of "What would make it one" below or by fixing them to `forsHalf adv` and `hypertreeHalf adv`
@@ -77,8 +77,8 @@ fields supplied, all four inequalities proved — at an *arbitrary* `vp : Valida
 arbitrary bundle carrying the instance hypotheses this section asks for, and an arbitrary
 adversary, from an address key and a public seed and no security assumption at all; and it proves
 that the bound that certificate names is at least one.  `advantage_le_bound` at that certificate
-says `adv.advantage ≤ (something ≥ 1)`, which `MeasureTheory.measure_le_one` already gives.
-Three facts compose, each a theorem of that fixture.
+says `unforgeableAdvantage _ adv ≤ (something ≥ 1)`, which `MeasureTheory.measure_le_one` already
+gives. Three facts compose, each a theorem of that fixture.
 
 * **The preimage game is winnable outright.**  `SM_DT_PRE_SourceFinalValidity` accepts on
   `th.eval pk t (emb m) = th.eval pk t (emb x)` with no `m ≠ x` clause — correctly, because it is
@@ -94,8 +94,9 @@ Three facts compose, each a theorem of that fixture.
   input is `Problem.HasUniformInputs`, which `CanonicalGames.forsFOpenPreProblem_hasUniformInputs`
   proves.
 * **The three `ℝ≥0∞` fields absorb the rest.**  With `forsBranch := 0` and
-  `hypertreeBranch := idealAdvantage := adv.advantage`, `prfHops` is `le_add_self`, `split` and
-  `forsBranch_le` are `simp`, and `hypertreeBranch_le` is `adv.advantage ≤ 1 = wotsFPre ≤ …`.
+  `hypertreeBranch := idealAdvantage := unforgeableAdvantage _ adv`, `prfHops` is `le_add_self`,
+  `split` and `forsBranch_le` are `simp`, and `hypertreeBranch_le` is `unforgeableAdvantage _ adv ≤
+  1 = wotsFPre ≤ …`.
 
 The reason is the difference between a reduction and an existential.  `EUFCMA_SPHINCS_PLUS` is a
 reduction: every probability on its right-hand side is the advantage of a module *built from* the
@@ -109,7 +110,7 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
 
 ### What would make it one, and what that costs
 
-* **Reduction functions.**  Replace the eleven adversary fields by functions `unforgeableAdv
+* **Reduction functions.**  Replace the eleven adversary fields by functions `UnforgeableAdversary
   (generalAlg prims) → Adversary (game prims)`, fixed at the structure or at the theorem, so each
   summand is stated at `R adv` and cannot be re-chosen.  Those are the source's twelve `R_…(A)`
   modules, roughly twenty-four thousand lines of EasyCrypt, and none of them exists here, so none of
@@ -117,21 +118,22 @@ statement about SLH-DSA's security, and a `Certificate` is not evidence of anyth
   statement.  Turning a *field* into one of function type is not enough — it is still freely chosen,
   a certificate being able to supply a constant function; the function has to be fixed at the
   structure or at the theorem, which deletes the field.
-* **Anchoring the three `ℝ≥0∞` fields** to the experiment — `idealAdvantage ≤ adv.advantage`,
-  `forsHalf adv ≤ forsBranch`, `hypertreeHalf adv ≤ hypertreeBranch` — is much smaller, and it
+* **Anchoring the three `ℝ≥0∞` fields** to the experiment — `idealAdvantage ≤ unforgeableAdvantage _
+  adv`, `forsHalf adv ≤ forsBranch`, `hypertreeHalf adv ≤ hypertreeBranch` — is much smaller, and it
   removes one route rather than the hole.  It does refuse the certificate above, which sets
   `forsBranch := 0`: of the three inequalities it adds that one certificate fails exactly the
   second, which asks there for `forsHalf adv ≤ 0`, and what is left of an attempt to discharge that
   is `forsHalf adv = 0` at an arbitrary adversary.  What it does not do is make a certificate hard
   to come by.  Each half has a game whose winning condition carries no distinctness clause — the
   preimage game on the hypertree side, `SM_DT_OpenPRE_SourceFinalValidity` on the FORS side — so
-  each branch bound holds at the anchored value itself, by the chain `half ≤ adv.advantage ≤ 1 =
-  that game's advantage ≤ that branch's right-hand side`.  `HashSigTest.SLHDSA.Composition` builds
-  the certificate that takes them: `idealAdvantage := adv.advantage`, `forsBranch := forsHalf adv`,
-  `hypertreeBranch := hypertreeHalf adv`, from an address key, a public seed and one
-  `CountingInterface` at the winning open-preimage adversary, with all three anchoring
-  inequalities holding at it by `le_refl`.  So what anchoring buys is that one field, asked for at
-  an adversary of advantage one rather than at one of advantage zero, and nothing else.
+  each branch bound holds at the anchored value itself, by the chain `half ≤ unforgeableAdvantage _
+  adv ≤ 1 = that game's advantage ≤ that branch's right-hand side`.
+  `HashSigTest.SLHDSA.Composition` builds the certificate that takes them: `idealAdvantage :=
+  unforgeableAdvantage _ adv`, `forsBranch := forsHalf adv`, `hypertreeBranch := hypertreeHalf adv`,
+  from an address key, a public seed and one `CountingInterface` at the winning open-preimage
+  adversary, with all three anchoring inequalities holding at it by `le_refl`.  So what anchoring
+  buys is that one field, asked for at an adversary of advantage one rather than at one of advantage
+  zero, and nothing else.
 
   What it buys is settled down to an inequality.  At any open-preimage adversary of advantage one
   over a finite input type with at least two elements and with uniformly sampled inputs, a
@@ -263,7 +265,7 @@ open OracleComp OracleSpec ENNReal SignatureAlg TweakableHash Security.Canonical
 
 `PRFScheme.prfAdvantage` is `ℝ`-valued and every other summand of the bound is `ℝ≥0∞`-valued.  The
 precedent for carrying both is `SM_DT_UD_SourceFinalValidity`, which has a signed
-`DirectedAdvantage : ℝ` and an `AbsoluteAdvantage : ℝ≥0∞` with a `toReal` bridge between them.
+`directedAdvantage : ℝ` and an `absoluteAdvantage : ℝ≥0∞` with a `toReal` bridge between them.
 
 TODO: promote `prfAbsAdvantage` and its bridge to `VCVio/CryptoFoundations/PRF.lean`, beside
 `PRFScheme.prfAdvantage`.  They are kept here so as not to widen a shared module's public surface,
@@ -448,7 +450,7 @@ costs: `split` and `prfHops` are discharged there, the two branch bounds are not
 measure what a certificate costs, which is nothing.
 
 *Composition arithmetic.* -/
-structure Certificate (adv : unforgeableAdv (generalAlg prims)) where
+structure Certificate (adv : UnforgeableAdversary (generalAlg prims)) where
   /-- The `SKG_PRF` distinguisher against the secret-value `PRF` at `pkSeed`. -/
   skgAdv : PRFScheme.PRFAdversary Adrs prims.Y
   /-- The `MKG_PRF` distinguisher against the message randomizer `PRF_msg`. -/
@@ -487,7 +489,7 @@ structure Certificate (adv : unforgeableAdv (generalAlg prims)) where
   hypertreeBranch : ℝ≥0∞
   /-- **H1 — the two PRF hops.**  Assumed: discharging it needs a key-idealized signer, two
   distinguisher constructions and two program equivalences, none of which exists here. -/
-  prfHops : adv.advantage ProbCompRuntime.probComp ≤
+  prfHops : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
     prfAbsAdvantage (skPrfScheme prims pkSeed) skgAdv
       + prfAbsAdvantage (msgPrfScheme prims) mkgAdv + idealAdvantage
   /-- The dispatch split, at the idealized advantage.  `Certificate.ofBranchBounds` discharges this
@@ -498,17 +500,17 @@ structure Certificate (adv : unforgeableAdv (generalAlg prims)) where
   challenge recording plus final validity.  Note that it carries the *OpenPRE* advantage; the
   source's `DSPR + 3·TCR` pair is produced by `advantage_le_bound` from `counting`. -/
   forsBranch_le : forsBranch ≤ KeyedHash.ITSRAdvantage itsrAdv
-    + SM_DT_OpenPRE_SourceFinalValidity.Advantage openPreAdv
-    + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-    + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv
+    + SM_DT_OpenPRE_SourceFinalValidity.advantage openPreAdv
+    + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+    + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv
   /-- **H2, second half — the hypertree branch bound.**  Assumed, for the same reason, and
   carrying the `(w − 2)` coefficient that nothing in this repository derives. -/
   hypertreeBranch_le : hypertreeBranch ≤
-    (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-      + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv
+    (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+      + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv
 
 variable {prims}
 
@@ -518,22 +520,22 @@ The FORS-`F` pair is where a reader should look: both `forsFDspr` and `forsFTcr`
 *one* open-preimage adversary, through VCVio's two reductions, and neither is a separate field.
 
 *Composition arithmetic.* -/
-noncomputable def Certificate.summands {adv : unforgeableAdv (generalAlg prims)}
+noncomputable def Certificate.summands {adv : UnforgeableAdversary (generalAlg prims)}
     (c : Certificate prims adv) : Summands where
   skgPrf := prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
   mkgPrf := prfAbsAdvantage (msgPrfScheme prims) c.mkgAdv
   hmsgItsr := KeyedHash.ITSRAdvantage c.itsrAdv
-  forsFDspr := SM_DT_DSPR_SourceFinalValidity.Advantage
+  forsFDspr := SM_DT_DSPR_SourceFinalValidity.advantage
     (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-  forsFTcr := SM_DT_TCR_SourceFinalValidity.Advantage
+  forsFTcr := SM_DT_TCR_SourceFinalValidity.advantage
     (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
-  forsHTcr := SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-  forsTlTcr := SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv
-  wotsFUd := SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-  wotsFTcr := SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-  wotsFPre := SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-  wotsTlTcr := SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-  xmssHTcr := SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv
+  forsHTcr := SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+  forsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
+  wotsFUd := SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+  wotsFTcr := SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+  wotsFPre := SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+  wotsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+  xmssHTcr := SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv
 
 /-- **The bound a certificate names, written out.**  This is the twelve-summand expression of
 `EUFCMA_SPHINCS_PLUS` at the certificate's own adversaries, and it is what `advantage_le_bound`'s
@@ -541,24 +543,24 @@ right-hand side means.  The body of neither `Summands.bound` nor `Certificate.su
 so this equation is how a consumer reads the summand-to-game routing and the two coefficients.
 
 *Composition arithmetic.* -/
-theorem Certificate.bound_eq {adv : unforgeableAdv (generalAlg prims)}
+theorem Certificate.bound_eq {adv : UnforgeableAdversary (generalAlg prims)}
     (c : Certificate prims adv) :
     c.summands.bound vp.params =
       prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
         + prfAbsAdvantage (msgPrfScheme prims) c.mkgAdv
         + KeyedHash.ITSRAdvantage c.itsrAdv
-        + SM_DT_DSPR_SourceFinalValidity.Advantage
+        + SM_DT_DSPR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-        + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+        + 3 * SM_DT_TCR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
         + (vp.params.w - 2 : ℕ) *
-            SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv := by
+            SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv := by
   rw [Summands.bound_eq]
   rfl
 
@@ -577,13 +579,13 @@ establishes any game's final validity.  The module docstring's "A certificate co
 what would have to change.
 
 *Composition arithmetic.* -/
-theorem advantage_le_bound {adv : unforgeableAdv (generalAlg prims)}
+theorem advantage_le_bound {adv : UnforgeableAdversary (generalAlg prims)}
     (c : Certificate prims adv) :
-    adv.advantage ProbCompRuntime.probComp ≤ c.summands.bound vp.params := by
+    unforgeableAdvantage ProbCompRuntime.probComp adv ≤ c.summands.bound vp.params := by
   have hopen := SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound c.openPreAdv c.counting
   rw [SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound] at hopen
   rw [c.bound_eq]
-  calc adv.advantage ProbCompRuntime.probComp
+  calc unforgeableAdvantage ProbCompRuntime.probComp adv
       ≤ prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
           + prfAbsAdvantage (msgPrfScheme prims) c.mkgAdv + c.idealAdvantage := c.prfHops
     _ ≤ prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
@@ -592,33 +594,33 @@ theorem advantage_le_bound {adv : unforgeableAdv (generalAlg prims)}
     _ ≤ prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
           + prfAbsAdvantage (msgPrfScheme prims) c.mkgAdv
           + ((KeyedHash.ITSRAdvantage c.itsrAdv
-              + SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv)
+              + SM_DT_OpenPRE_SourceFinalValidity.advantage c.openPreAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv)
             + ((vp.params.w - 2 : ℕ) *
-                SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-              + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv)) := by
+                SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+              + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv)) := by
         gcongr
         · exact c.forsBranch_le
         · exact c.hypertreeBranch_le
     _ ≤ prfAbsAdvantage (skPrfScheme prims c.pkSeed) c.skgAdv
           + prfAbsAdvantage (msgPrfScheme prims) c.mkgAdv
           + ((KeyedHash.ITSRAdvantage c.itsrAdv
-              + (SM_DT_DSPR_SourceFinalValidity.Advantage
+              + (SM_DT_DSPR_SourceFinalValidity.advantage
                     (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
-                  + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+                  + 3 * SM_DT_TCR_SourceFinalValidity.advantage
                     (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv))
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.forsHAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.forsTlAdv)
+              + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv)
             + ((vp.params.w - 2 : ℕ) *
-                SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage c.wotsFUdAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsFTcrAdv
-              + SM_DT_PRE_SourceFinalValidity.Advantage c.wotsFPreAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.wotsTlAdv
-              + SM_DT_TCR_SourceFinalValidity.Advantage c.xmssHAdv)) := by
+                SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
+              + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
+              + SM_DT_TCR_SourceFinalValidity.advantage c.xmssHAdv)) := by
         gcongr
     _ = _ := by ring
 
@@ -647,13 +649,13 @@ What it measures is how much the intended route needs — not how much a certifi
 nothing.  `split` is discharged from `advantage_le_forsHalf_add_hypertreeHalf`, a theorem of the
 previous module, so that field is provably instantiable and cannot be the place where the conclusion
 is smuggled in.  `prfHops` is discharged from `le_add_self` by taking `idealAdvantage :=
-adv.advantage`, which is free in `ℝ≥0∞` — and that is the honest reading of it: **this constructor
-takes no PRF hop**, and in the certificate it returns the two PRF summands are slack that does no
-work.  What is left unproven is exactly the two arguments `hfors` and `hhyper`, the two branch
-bounds, which are the bulk of the EasyCrypt development.
+unforgeableAdvantage _ adv`, which is free in `ℝ≥0∞` — and that is the honest reading of it: **this
+constructor takes no PRF hop**, and in the certificate it returns the two PRF summands are slack
+that does no work.  What is left unproven is exactly the two arguments `hfors` and `hhyper`, the two
+branch bounds, which are the bulk of the EasyCrypt development.
 
 *Composition arithmetic.* -/
-noncomputable def Certificate.ofBranchBounds {adv : unforgeableAdv (generalAlg prims)}
+noncomputable def Certificate.ofBranchBounds {adv : UnforgeableAdversary (generalAlg prims)}
     (skgAdv : PRFScheme.PRFAdversary Adrs prims.Y)
     (mkgAdv : PRFScheme.PRFAdversary (prims.Y × List Byte) prims.Y)
     (pkSeed : prims.PkSeed)
@@ -668,15 +670,15 @@ noncomputable def Certificate.ofBranchBounds {adv : unforgeableAdv (generalAlg p
     (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
     (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims))
     (hfors : forsHalf adv ≤ KeyedHash.ITSRAdvantage itsrAdv
-      + SM_DT_OpenPRE_SourceFinalValidity.Advantage openPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv)
+      + SM_DT_OpenPRE_SourceFinalValidity.advantage openPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv)
     (hhyper : hypertreeHalf adv ≤
-      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv) :
+      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv) :
     Certificate prims adv where
   skgAdv := skgAdv
   mkgAdv := mkgAdv
@@ -691,7 +693,7 @@ noncomputable def Certificate.ofBranchBounds {adv : unforgeableAdv (generalAlg p
   wotsFPreAdv := wotsFPreAdv
   wotsTlAdv := wotsTlAdv
   xmssHAdv := xmssHAdv
-  idealAdvantage := adv.advantage ProbCompRuntime.probComp
+  idealAdvantage := unforgeableAdvantage ProbCompRuntime.probComp adv
   forsBranch := forsHalf adv
   hypertreeBranch := hypertreeHalf adv
   prfHops := le_add_self
@@ -703,7 +705,7 @@ noncomputable def Certificate.ofBranchBounds {adv : unforgeableAdv (generalAlg p
 twelve advantages of the same eleven adversaries it was handed.
 
 *Composition arithmetic.* -/
-theorem Certificate.ofBranchBounds_summands {adv : unforgeableAdv (generalAlg prims)}
+theorem Certificate.ofBranchBounds_summands {adv : UnforgeableAdversary (generalAlg prims)}
     (skgAdv : PRFScheme.PRFAdversary Adrs prims.Y)
     (mkgAdv : PRFScheme.PRFAdversary (prims.Y × List Byte) prims.Y)
     (pkSeed : prims.PkSeed)
@@ -718,31 +720,31 @@ theorem Certificate.ofBranchBounds_summands {adv : unforgeableAdv (generalAlg pr
     (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
     (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims))
     (hfors : forsHalf adv ≤ KeyedHash.ITSRAdvantage itsrAdv
-      + SM_DT_OpenPRE_SourceFinalValidity.Advantage openPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv)
+      + SM_DT_OpenPRE_SourceFinalValidity.advantage openPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv)
     (hhyper : hypertreeHalf adv ≤
-      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv) :
+      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv) :
     (Certificate.ofBranchBounds skgAdv mkgAdv pkSeed itsrAdv openPreAdv counting forsHAdv
         forsTlAdv wotsFUdAdv wotsFTcrAdv wotsFPreAdv wotsTlAdv xmssHAdv hfors hhyper).summands =
       { skgPrf := prfAbsAdvantage (skPrfScheme prims pkSeed) skgAdv
         mkgPrf := prfAbsAdvantage (msgPrfScheme prims) mkgAdv
         hmsgItsr := KeyedHash.ITSRAdvantage itsrAdv
-        forsFDspr := SM_DT_DSPR_SourceFinalValidity.Advantage
+        forsFDspr := SM_DT_DSPR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openPreAdv)
-        forsFTcr := SM_DT_TCR_SourceFinalValidity.Advantage
+        forsFTcr := SM_DT_TCR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toTCR openPreAdv)
-        forsHTcr := SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-        forsTlTcr := SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv
-        wotsFUd := SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        wotsFTcr := SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        wotsFPre := SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-        wotsTlTcr := SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        xmssHTcr := SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv } := by
+        forsHTcr := SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+        forsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv
+        wotsFUd := SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        wotsFTcr := SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+        wotsFPre := SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+        wotsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+        xmssHTcr := SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv } := by
   rfl
 
 /-- **What the intended route leaves to prove**, as one statement: bound the two dispatch halves
@@ -757,7 +759,7 @@ The two PRF summands on the right are slack — no PRF hop is taken — which is
 side is written out here rather than hidden behind `Summands.bound`.
 
 *Composition arithmetic.* -/
-theorem advantage_le_bound_of_halves {adv : unforgeableAdv (generalAlg prims)}
+theorem advantage_le_bound_of_halves {adv : UnforgeableAdversary (generalAlg prims)}
     (skgAdv : PRFScheme.PRFAdversary Adrs prims.Y)
     (mkgAdv : PRFScheme.PRFAdversary (prims.Y × List Byte) prims.Y)
     (pkSeed : prims.PkSeed)
@@ -772,31 +774,31 @@ theorem advantage_le_bound_of_halves {adv : unforgeableAdv (generalAlg prims)}
     (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
     (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims))
     (hfors : forsHalf adv ≤ KeyedHash.ITSRAdvantage itsrAdv
-      + SM_DT_OpenPRE_SourceFinalValidity.Advantage openPreAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-      + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv)
+      + SM_DT_OpenPRE_SourceFinalValidity.advantage openPreAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+      + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv)
     (hhyper : hypertreeHalf adv ≤
-      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv) :
-    adv.advantage ProbCompRuntime.probComp ≤
+      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv) :
+    unforgeableAdvantage ProbCompRuntime.probComp adv ≤
       prfAbsAdvantage (skPrfScheme prims pkSeed) skgAdv
         + prfAbsAdvantage (msgPrfScheme prims) mkgAdv
         + KeyedHash.ITSRAdvantage itsrAdv
-        + SM_DT_DSPR_SourceFinalValidity.Advantage
+        + SM_DT_DSPR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openPreAdv)
-        + 3 * SM_DT_TCR_SourceFinalValidity.Advantage
+        + 3 * SM_DT_TCR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toTCR openPreAdv)
-        + SM_DT_TCR_SourceFinalValidity.Advantage forsHAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage forsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv
         + (vp.params.w - 2 : ℕ) *
-            SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage wotsFUdAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsFTcrAdv
-        + SM_DT_PRE_SourceFinalValidity.Advantage wotsFPreAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage wotsTlAdv
-        + SM_DT_TCR_SourceFinalValidity.Advantage xmssHAdv := by
+            SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
+        + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
+        + SM_DT_TCR_SourceFinalValidity.advantage xmssHAdv := by
   have h := advantage_le_bound (Certificate.ofBranchBounds skgAdv mkgAdv pkSeed itsrAdv
     openPreAdv counting forsHAdv forsTlAdv wotsFUdAdv wotsFTcrAdv wotsFPreAdv wotsTlAdv
     xmssHAdv hfors hhyper)
@@ -826,13 +828,13 @@ the adversary VCVio's OpenPRE-to-TCR reduction produces.
 *Game transport.* -/
 theorem tcr_bound_transfer (εT : ℝ≥0∞)
     (h : ∀ a : SM_DT_TCR_SourceFinalValidity.Adversary (forsFTcrProblem prims),
-      SM_DT_TCR_SourceFinalValidity.Advantage a ≤ εT)
+      SM_DT_TCR_SourceFinalValidity.advantage a ≤ εT)
     (a : SM_DT_OpenPRE_SourceFinalValidity.Adversary (forsFOpenPreProblem prims)) :
-    SM_DT_TCR_SourceFinalValidity.Advantage
+    SM_DT_TCR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toTCR a) ≤ εT :=
   (by rw [← forsFTcrProblem_eq_toTCR]; exact h :
     ∀ b : SM_DT_TCR_SourceFinalValidity.Adversary ((forsFOpenPreProblem prims).toTCR),
-      SM_DT_TCR_SourceFinalValidity.Advantage b ≤ εT)
+      SM_DT_TCR_SourceFinalValidity.advantage b ≤ εT)
     (SM_DT_OpenPRE_SourceFinalValidity.toTCR a)
 
 variable [Fintype prims.Y]
@@ -843,13 +845,13 @@ to the adversary VCVio's OpenPRE-to-DSPR reduction produces.
 *Game transport.* -/
 theorem dspr_bound_transfer (εD : ℝ≥0∞)
     (h : ∀ a : SM_DT_DSPR_SourceFinalValidity.Adversary (forsFDsprProblem prims),
-      SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ εD)
+      SM_DT_DSPR_SourceFinalValidity.advantage a ≤ εD)
     (a : SM_DT_OpenPRE_SourceFinalValidity.Adversary (forsFOpenPreProblem prims)) :
-    SM_DT_DSPR_SourceFinalValidity.Advantage
+    SM_DT_DSPR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toDSPR a) ≤ εD :=
   (by rw [← forsFDsprProblem_eq_toDSPR]; exact h :
     ∀ b : SM_DT_DSPR_SourceFinalValidity.Adversary ((forsFOpenPreProblem prims).toDSPR),
-      SM_DT_DSPR_SourceFinalValidity.Advantage b ≤ εD)
+      SM_DT_DSPR_SourceFinalValidity.advantage b ≤ εD)
     (SM_DT_OpenPRE_SourceFinalValidity.toDSPR a)
 
 variable [SampleableType prims.SkSeed] [SampleableType prims.SkPrf] [DecidableEq prims.PkSeed]
@@ -862,16 +864,16 @@ hypotheses a reader would write are about `forsFDsprProblem` and `forsFTcrProble
 certificate's summands are about `Problem.toDSPR` and `Problem.toTCR`.
 
 *Game transport.* -/
-theorem summands_forsF_le {adv : unforgeableAdv (generalAlg prims)} (c : Certificate prims adv)
-    (εD εT : ℝ≥0∞)
+theorem summands_forsF_le {adv : UnforgeableAdversary (generalAlg prims)}
+    (c : Certificate prims adv) (εD εT : ℝ≥0∞)
     (hD : ∀ a : SM_DT_DSPR_SourceFinalValidity.Adversary (forsFDsprProblem prims),
-      SM_DT_DSPR_SourceFinalValidity.Advantage a ≤ εD)
+      SM_DT_DSPR_SourceFinalValidity.advantage a ≤ εD)
     (hT : ∀ a : SM_DT_TCR_SourceFinalValidity.Adversary (forsFTcrProblem prims),
-      SM_DT_TCR_SourceFinalValidity.Advantage a ≤ εT) :
+      SM_DT_TCR_SourceFinalValidity.advantage a ≤ εT) :
     c.summands.forsFDspr + 3 * c.summands.forsFTcr ≤ εD + 3 * εT := by
-  have hd : c.summands.forsFDspr = SM_DT_DSPR_SourceFinalValidity.Advantage
+  have hd : c.summands.forsFDspr = SM_DT_DSPR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv) := rfl
-  have ht : c.summands.forsFTcr = SM_DT_TCR_SourceFinalValidity.Advantage
+  have ht : c.summands.forsFTcr = SM_DT_TCR_SourceFinalValidity.advantage
       (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv) := rfl
   rw [hd, ht]
   gcongr
@@ -883,9 +885,9 @@ is the OpenPRE coupling read off the summands.  Without the `counting` field thi
 general: VCVio's inequality is conditional on it.
 
 *Game transport.* -/
-theorem openPre_le_summands_forsF {adv : unforgeableAdv (generalAlg prims)}
+theorem openPre_le_summands_forsF {adv : UnforgeableAdversary (generalAlg prims)}
     (c : Certificate prims adv) :
-    SM_DT_OpenPRE_SourceFinalValidity.Advantage c.openPreAdv ≤
+    SM_DT_OpenPRE_SourceFinalValidity.advantage c.openPreAdv ≤
       c.summands.forsFDspr + 3 * c.summands.forsFTcr := by
   have h := SM_DT_OpenPRE_SourceFinalValidity.advantage_le_tcrDsprBound c.openPreAdv c.counting
   rwa [SM_DT_OpenPRE_SourceFinalValidity.TCRDSPRBound] at h

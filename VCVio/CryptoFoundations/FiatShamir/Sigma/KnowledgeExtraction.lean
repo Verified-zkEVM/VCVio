@@ -36,7 +36,7 @@ abbrev KnowledgeProver :=
 /-- Append the verifier's random-oracle query and retain the same candidate proof. -/
 @[expose]
 def proverWithFinalQuery (prover : KnowledgeProver Stmt Commit Chal Resp M) (msg : M) :
-    SignatureAlg.managedRoNmaAdv
+    SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M) where
   main pk := do
     let proof ← prover pk msg

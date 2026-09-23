@@ -158,7 +158,7 @@ and its signer could not have populated it as widely if it had.
 
 ## What is deliberately not here
 
-No probability, and in particular no use of `strongUnforgeableAdv.advantage_eq_euf_add_sameMessage`,
+No probability, and in particular no use of `strongUnforgeableAdvantage_eq_euf_add_sameMessage`,
 whose statement carries a runtime-factoring hypothesis and whose two summands are advantages.
 Bounding the same-message summand for a specific reduction adversary is not done here, and it must
 go through that identity rather than the unbounded `SameMessageBinding` wrapper: no `ε < 1` holds of

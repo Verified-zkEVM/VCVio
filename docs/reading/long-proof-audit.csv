@@ -53,7 +53,7 @@ rank,file,name,declaration_line,proof_line,end_line,proof_lines,have,let,cases,n
 52,Examples/ElGamal/Hash.lean,ddhRand_eq_esReal,233,236,334,99,2,42,0,6,0,False
 53,VCVio/CryptoFoundations/Fischlin/Completeness.lean,searchVec_run_cache_eq_aux,782,803,908,97,4,0,5,17,0,False
 54,VCVio/CryptoFoundations/MerkleTree/BatchExtractability.lean,chainInCache_batchToSingleProofAddressed_cacheNodeHash,329,340,436,97,8,0,4,25,0,False
-55,VCVio/CryptoFoundations/SignatureAlg.lean,strongUnforgeableAdv.advantage_eq_euf_add_sameMessage,451,458,554,97,3,22,5,13,0,False
+55,VCVio/CryptoFoundations/SignatureAlg.lean,strongUnforgeableAdvantage_eq_euf_add_sameMessage,451,458,554,97,3,22,5,13,0,False
 56,VCVio/OracleComp/QueryTracking/SeededOracle.lean,evalSPMF_liftComp_generateSeed_bind_simulateQ_run',253,263,359,97,10,2,3,27,0,False
 57,Examples/PRFTagReader/Auth.lean,simulateQ_prfIdeal_authToPRFReader_mapM,519,530,631,95,7,3,1,19,0,False
 58,VCVio/CryptoFoundations/MerkleTree/BatchExtractability.lean,batchProofEvaluatesInCache_of_mem_support_getPutativeBatchRootM,198,208,301,94,7,0,0,7,0,False

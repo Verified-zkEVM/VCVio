@@ -19,8 +19,9 @@ VCVio's SUF-to-EUF partition and names what the crossing costs.
 `SLHDSA.Security.strongAdvantage_le_bound_add_sameMessage`: for any strong-unforgeability adversary
 `sadv` against `generalAlg`, and any `Certificate` for the existential adversary underneath it,
 
-`sadv.advantage ProbCompRuntime.probComp ≤ c.summands.bound vp.params +`
-`  sadv.sameMessageAdvantage ProbCompRuntime.probComp`
+`SignatureAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤`
+`  c.summands.bound vp.params +`
+`    SignatureAlg.sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv`
 
 and `strongAdvantage_le_sufBound` refines the residual into the two named halves of
 `HashSig.SLHDSA.Security.SchemeGames`, the fresh-randomizer one and the same-randomizer one.
@@ -33,7 +34,8 @@ expression with the headline's right-hand side.
 
 Read `strongAdvantage_le_add_sameMessage_iff` before anything else.  For every `ε : ℝ≥0∞`,
 
-`sadv.advantage ≤ ε + sadv.sameMessageAdvantage  ↔  sadv.toUnforgeableAdv.advantage ≤ ε`
+`strongUnforgeableAdvantage _ sadv ≤ ε + sameMessageStrongUnforgeableAdvantage _ sadv`
+`  ↔  unforgeableAdvantage _ sadv.toUnforgeableAdversary ≤ ε`
 
 — an equivalence, not an implication.  VCVio's partition is an *equality*,
 `advantage = euf + sameMessage`, and the same-message term is a probability and so never `⊤`, so
@@ -51,8 +53,9 @@ So the vacuity of this statement is the vacuity of the previous one, neither mor
 one is measured there and shipped as a canary: a closed `Certificate` is constructible at an
 arbitrary validated parameter set, an arbitrary bundle and an arbitrary adversary from an address
 key and a public seed, and the bound it names is at least one.  At that certificate this module's
-headline reads `sadv.advantage ≤ (something ≥ 1) + residual`, which `MeasureTheory.measure_le_one`
-gives with extra steps, and `HashSigTest.SLHDSA.SufBound` ships that reading too.
+headline reads `strongUnforgeableAdvantage _ sadv ≤ (something ≥ 1) + residual`, which
+`MeasureTheory.measure_le_one` gives with extra steps, and `HashSigTest.SLHDSA.SufBound` ships that
+reading too.
 
 **What is not free is the residual itself.**  Every summand of `Summands.bound` is the advantage of
 an adversary a certificate supplies, chosen with nothing tying it to `sadv`; the residual is a
@@ -223,8 +226,8 @@ of a `≤` and removed again only when it is not `⊤`.
 
 *Experiment split.* -/
 theorem sameMessageAdvantage_le_one {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg) :
-    adv.sameMessageAdvantage runtime ≤ 1 :=
+    (runtime : ProbCompRuntime (OracleComp spec)) (adv : StrongUnforgeableAdversary sigAlg) :
+    sameMessageStrongUnforgeableAdvantage runtime adv ≤ 1 :=
   MeasureTheory.measure_le_one _ _
 
 end Generic
@@ -251,11 +254,11 @@ mechanism is VCVio's partition, which is an equality, together with the residual
 term added on the right is the term already inside the left.
 
 *Experiment split.* -/
-theorem strongAdvantage_le_add_sameMessage_iff (sadv : strongUnforgeableAdv (generalAlg prims))
-    (ε : ℝ≥0∞) :
-    sadv.advantage ProbCompRuntime.probComp ≤
-        ε + sadv.sameMessageAdvantage ProbCompRuntime.probComp ↔
-      sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp ≤ ε := by
+theorem strongAdvantage_le_add_sameMessage_iff
+    (sadv : StrongUnforgeableAdversary (generalAlg prims)) (ε : ℝ≥0∞) :
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+        ε + sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ↔
+      unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary ≤ ε := by
   rw [strongAdvantage_eq_advantage_add_sameMessage sadv]
   exact ENNReal.add_le_add_iff_right
     (ne_top_of_le_ne_top one_ne_top (sameMessageAdvantage_le_one _ sadv))
@@ -269,15 +272,15 @@ more.  It does not rule out a *bound* on one half making it say more —
 its hypothesis is not discharged anywhere.
 
 *Experiment split.* -/
-theorem strongAdvantage_le_add_arms_iff (sadv : strongUnforgeableAdv (generalAlg prims))
+theorem strongAdvantage_le_add_arms_iff (sadv : StrongUnforgeableAdversary (generalAlg prims))
     (ε : ℝ≥0∞) (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core) →
       List Byte → GeneralScheme.SignatureCore vp prims.core → Bool) :
-    sadv.advantage ProbCompRuntime.probComp ≤ ε +
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ ε +
         ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
           {x | x.1 = true ∧ x.2 = false} +
           (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
             {x | x.1 = true ∧ x.2 = true}) ↔
-      sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp ≤ ε := by
+      unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary ≤ ε := by
   rw [← sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
     sadv sel]
   exact strongAdvantage_le_add_sameMessage_iff sadv ε
@@ -287,8 +290,9 @@ theorem strongAdvantage_le_add_arms_iff (sadv : strongUnforgeableAdv (generalAlg
 pins it from above at every level between it and the headline.
 
 *Experiment split.* -/
-theorem freshRandomizerHalf_le_strongAdvantage (sadv : strongUnforgeableAdv (generalAlg prims)) :
-    freshRandomizerHalf sadv ≤ sadv.advantage ProbCompRuntime.probComp := by
+theorem freshRandomizerHalf_le_strongAdvantage
+    (sadv : StrongUnforgeableAdversary (generalAlg prims)) :
+    freshRandomizerHalf sadv ≤ strongUnforgeableAdvantage ProbCompRuntime.probComp sadv := by
   rw [strongAdvantage_eq_advantage_add_sameMessage sadv]
   exact le_add_left (freshRandomizerHalf_le_sameMessageAdvantage sadv)
 
@@ -297,8 +301,9 @@ thing this module proves *about* the term it holds out of scope, and it is an up
 quantity nothing bounds either.
 
 *Experiment split.* -/
-theorem sameRandomizerHalf_le_strongAdvantage (sadv : strongUnforgeableAdv (generalAlg prims)) :
-    sameRandomizerHalf sadv ≤ sadv.advantage ProbCompRuntime.probComp := by
+theorem sameRandomizerHalf_le_strongAdvantage
+    (sadv : StrongUnforgeableAdversary (generalAlg prims)) :
+    sameRandomizerHalf sadv ≤ strongUnforgeableAdvantage ProbCompRuntime.probComp sadv := by
   rw [strongAdvantage_eq_advantage_add_sameMessage sadv]
   exact le_add_left (sameRandomizerHalf_le_sameMessageAdvantage sadv)
 
@@ -372,10 +377,11 @@ two.
 
 *Residual arithmetic.* -/
 theorem strongAdvantage_le_bound_add_sameMessage
-    {sadv : strongUnforgeableAdv (generalAlg prims)}
-    (c : Certificate prims sadv.toUnforgeableAdv) :
-    sadv.advantage ProbCompRuntime.probComp ≤
-      c.summands.bound vp.params + sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+    {sadv : StrongUnforgeableAdversary (generalAlg prims)}
+    (c : Certificate prims sadv.toUnforgeableAdversary) :
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+      c.summands.bound vp.params +
+        sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   (strongAdvantage_le_add_sameMessage_iff sadv _).mpr (advantage_le_bound c)
 
 /-- **The headline with the residual instrumented**, at an arbitrary selector.  Its right-hand side
@@ -385,11 +391,11 @@ is equal to the headline's, by `sameMessageAdvantage_eq_arms`, so this is the sa
 The named refinement specializes this partition to `SchemeGames.randomizerLogged`.
 
 *Residual arithmetic.* -/
-theorem strongAdvantage_le_bound_add_arms {sadv : strongUnforgeableAdv (generalAlg prims)}
-    (c : Certificate prims sadv.toUnforgeableAdv)
+theorem strongAdvantage_le_bound_add_arms {sadv : StrongUnforgeableAdversary (generalAlg prims)}
+    (c : Certificate prims sadv.toUnforgeableAdversary)
     (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core) →
       List Byte → GeneralScheme.SignatureCore vp prims.core → Bool) :
-    sadv.advantage ProbCompRuntime.probComp ≤ c.summands.bound vp.params +
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ c.summands.bound vp.params +
       ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
         {x | x.1 = true ∧ x.2 = false} +
         (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
@@ -408,9 +414,9 @@ Like the headline, it says nothing about the size of what it bounds by:
 this right-hand side is at least one.
 
 *Residual arithmetic.* -/
-theorem strongAdvantage_le_sufBound {sadv : strongUnforgeableAdv (generalAlg prims)}
-    (c : Certificate prims sadv.toUnforgeableAdv) :
-    sadv.advantage ProbCompRuntime.probComp ≤
+theorem strongAdvantage_le_sufBound {sadv : StrongUnforgeableAdversary (generalAlg prims)}
+    (c : Certificate prims sadv.toUnforgeableAdversary) :
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
       c.summands.sufBound vp.params (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) := by
   rw [Summands.sufBound_eq,
     ← sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf sadv]
@@ -429,10 +435,10 @@ module's two branch bounds carry.
 
 *Residual arithmetic.* -/
 theorem strongAdvantage_le_bound_add_sameRandomizer_of_fresh_le
-    {sadv : strongUnforgeableAdv (generalAlg prims)}
-    (c : Certificate prims sadv.toUnforgeableAdv) (εfresh : ℝ≥0∞)
+    {sadv : StrongUnforgeableAdversary (generalAlg prims)}
+    (c : Certificate prims sadv.toUnforgeableAdversary) (εfresh : ℝ≥0∞)
     (hfresh : freshRandomizerHalf sadv ≤ εfresh) :
-    sadv.advantage ProbCompRuntime.probComp ≤
+    strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
       c.summands.bound vp.params + εfresh + sameRandomizerHalf sadv := by
   refine le_trans (strongAdvantage_le_sufBound c) ?_
   rw [Summands.sufBound_eq, ← add_assoc]
@@ -453,14 +459,14 @@ variable {vp : ValidatedParams} {prims : Primitives vp.params}
 
 /-- Explicit defining equations of the two halves transport the Boolean partition to their sum. -/
 theorem sameMessageAdvantage_eq_halves_of_unfoldings
-    (sadv : strongUnforgeableAdv (generalAlg prims))
+    (sadv : StrongUnforgeableAdversary (generalAlg prims))
     (hfresh : freshRandomizerHalf sadv =
       (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
           (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = false})
     (hsame : sameRandomizerHalf sadv =
       (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
           (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = true}) :
-    sadv.sameMessageAdvantage ProbCompRuntime.probComp =
+    sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
       freshRandomizerHalf sadv + sameRandomizerHalf sadv := by
   rw [hfresh, hsame]
   exact sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
@@ -469,16 +475,16 @@ theorem sameMessageAdvantage_eq_halves_of_unfoldings
 
 /-- At the two randomizer halves, the bound expression equals the same-message bound. -/
 theorem sufBound_eq_bound_add_sameMessage (s : Summands) (p : Params)
-    (sadv : strongUnforgeableAdv (generalAlg prims)) :
+    (sadv : StrongUnforgeableAdversary (generalAlg prims)) :
     s.sufBound p (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
-      s.bound p + sadv.sameMessageAdvantage ProbCompRuntime.probComp := by
+      s.bound p + sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv := by
   rw [Summands.sufBound_eq,
     sameMessageAdvantage_eq_freshRandomizerHalf_add_sameRandomizerHalf sadv]
 
 /-- Explicit defining equations of the two halves identify the residual bound expression with
 its same-message form. -/
 theorem sufBound_eq_bound_add_sameMessage_of_unfoldings (s : Summands) (p : Params)
-    (sadv : strongUnforgeableAdv (generalAlg prims))
+    (sadv : StrongUnforgeableAdversary (generalAlg prims))
     (hfresh : freshRandomizerHalf sadv =
       (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
           (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = false})
@@ -486,7 +492,7 @@ theorem sufBound_eq_bound_add_sameMessage_of_unfoldings (s : Summands) (p : Para
       (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
           (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = true}) :
     s.sufBound p (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
-      s.bound p + sadv.sameMessageAdvantage ProbCompRuntime.probComp := by
+      s.bound p + sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv := by
   rw [Summands.sufBound_eq, sameMessageAdvantage_eq_halves_of_unfoldings sadv hfresh hsame]
 
 end Exactness

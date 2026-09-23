@@ -227,7 +227,7 @@ direct named CMA game. -/
               pure ((c, π), ((log ++ [m], cache.cacheQuery (m, c) ch, some (pk, sk)), bad))
 
 /-- Source-query part of the real CMA game over the concrete sum interface used
-by `SignatureAlg.unforgeableAdv`. -/
+by `SignatureAlg.UnforgeableAdversary`. -/
 @[fs_simp] def cmaRealSourceFullSum
     (sigma : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel) :

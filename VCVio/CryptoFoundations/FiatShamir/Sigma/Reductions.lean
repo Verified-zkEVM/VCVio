@@ -56,9 +56,9 @@ one live random-oracle query at the forgery's hash point. -/
 abbrev cmaToNmaAdv
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M)) :
-    SignatureAlg.managedRoNmaAdv
+    SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M) :=
   Stateful.nmaAdvFromCmaWithFinalQuery σ hr M adv simTranscript
 
@@ -85,12 +85,12 @@ theorem cma_to_nma_advantage_bound
     (hHVZK : σ.HVZK simTranscript ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simTranscript β)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    adv.advantage (runtime M) ≤
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
       Fork.advantage σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH +
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) + (qS : ENNReal) * (qS + qH) * β :=
   Stateful.cma_advantage_le_fork_bound_of_h1h2 σ hr M
@@ -157,7 +157,7 @@ private def forkSupportInvariant
 /-- Every `(x, log)` in the support of `replayFirstRun (Fork.runTrace σ hr M nmaAdv pk)`
 satisfies the per-run invariant `forkSupportInvariant`. -/
 private theorem forkSupportInvariant_of_mem_replayFirstRun [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
     {x : Fork.Trace Commit Chal Resp M}
@@ -206,7 +206,7 @@ def nmaForkExtractBranch :
 /-- Witness-extraction computation used by the NMA reduction: replay the forking lemma, then
 take the `nmaForkExtractBranch` continuation on the resulting trace pair. -/
 def nmaForkExtract
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt) :
     OracleComp (unifSpec + (Unit →ₒ Chal)) Wit :=
@@ -218,7 +218,7 @@ def nmaForkExtract
 with fresh uniform samples, so that the result is a `ProbComp` witness finder for
 `hardRelationExp`. -/
 def nmaReduction
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : Stmt → ProbComp Wit := fun pk =>
   simulateQ (QueryImpl.ofLift unifSpec ProbComp +
@@ -241,7 +241,7 @@ noncomputable local instance replayUniformMeasure : IsUniformMeasureSpec (Fork.w
 extractor. The measure statement uses the native uniform-oracle interpretation; the
 existing discrete replay theorem is consumed at this compatibility boundary. -/
 private theorem perPk_extraction_bound
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (hss : σ.SpeciallySound) (pk : Stmt) :
     let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint _ _ _ M qH t).isSome]
@@ -333,7 +333,7 @@ private theorem perPk_extraction_bound
 final verifier query and a query bound on the wrapped prover. Failed forks use the
 reduction's explicit uniform-witness fallback. -/
 theorem pointwise_extraction_bound
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (hss : σ.SpeciallySound) (pk : Stmt) :
     let acc := Pr{let t ← Fork.runTrace σ hr M nmaAdv pk}[(Fork.forkPoint _ _ _ M qH t).isSome]
@@ -365,7 +365,7 @@ theorem nma_to_hard_relation_bound
     (hss : σ.SpeciallySound)
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
     [Fintype Chal] [Inhabited Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
@@ -418,7 +418,7 @@ abbrev cmaReduction
     [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
     [SampleableType Wit] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : Stmt → ProbComp Wit :=
   nmaReduction σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH

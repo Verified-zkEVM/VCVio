@@ -40,7 +40,7 @@ example (prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y) :
 
 example [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y} (adv : SM_DT_TCR_Adversary prob) :
-    SM_DT_TCR_SourceFinalValidity.Experiment adv.toSourceFinalValidity =
+    SM_DT_TCR_SourceFinalValidity.experiment adv.toSourceFinalValidity =
       SM_DT_TCR_Experiment adv := SM_DT_TCR_experiment_toSourceFinalValidity adv
 
 variable {p : Params} (prims : Primitives p) [SampleableType prims.PkSeed]

@@ -146,47 +146,47 @@ theorem poison_then_collection_history_canary :
   rfl
 
 private lemma experiment_challengeOnly :
-    TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment challengeOnly = pure true := by
-  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment challengeOnly = pure true := by
+  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_challengeOnly]
   rfl
 
 private lemma experiment_challengeThenCollection :
-    TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment challengeThenCollection =
+    TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment challengeThenCollection =
       pure false := by
-  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_challengeThenCollection]
   rfl
 
 private lemma experiment_collectionThenChallenge :
-    TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment collectionThenChallenge =
+    TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment collectionThenChallenge =
       pure false := by
-  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_collectionThenChallenge]
   rfl
 
 private lemma experiment_repeatedCollection :
-    TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment repeatedCollection = pure true := by
-  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment repeatedCollection = pure true := by
+  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_repeatedCollection]
   rfl
 
 private lemma experiment_repeatedTarget :
-    TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment repeatedTarget = pure false := by
-  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment, problem_seedGen, pure_bind]
+    TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment repeatedTarget = pure false := by
+  simp only [TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment, problem_seedGen, pure_bind]
   rw [run_repeatedTarget]
   rfl
 
 /-- Both clash orders and a repeated target lose through final validity, while the legal control
 cases win. The run equalities also pin that invalid queries still return their real answers. -/
 theorem final_validity_branch_canary :
-    TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment challengeOnly = pure true ∧
-      TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment challengeThenCollection =
+    TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment challengeOnly = pure true ∧
+      TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment challengeThenCollection =
         pure false ∧
-      TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment collectionThenChallenge =
+      TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment collectionThenChallenge =
         pure false ∧
-      TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment repeatedCollection = pure true ∧
-      TweakableHash.SM_DT_TCR_SourceFinalValidity.Experiment repeatedTarget = pure false :=
+      TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment repeatedCollection = pure true ∧
+      TweakableHash.SM_DT_TCR_SourceFinalValidity.experiment repeatedTarget = pure false :=
   ⟨experiment_challengeOnly, experiment_challengeThenCollection,
     experiment_collectionThenChallenge, experiment_repeatedCollection, experiment_repeatedTarget⟩
 

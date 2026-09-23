@@ -402,7 +402,7 @@ discharged by the managed-RO CMA→NMA reduction. Downstream, this is the role o
 `euf_cma_to_nma` in `FiatShamir/Sigma/Security.lean`, whose sigma→NMA simulation ensures
 that every `advCache` programming step is mirrored by a live query into `roCache`. -/
 def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (pk : Stmt) :
     OracleComp (wrappedSpec Chal) (Trace Commit Chal Resp M) := do
@@ -421,7 +421,7 @@ def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 /-- Forkable managed-RO NMA experiment. Success means the final forged transcript verifies and
 the corresponding hash point appears in the live query log, so the forking lemma can rewind it. -/
 def exp [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ProbComp Bool :=
   let chalSpec : OracleSpec Unit := Unit →ₒ Chal
@@ -432,7 +432,7 @@ def exp [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 /-- The forkable success probability of a managed-RO NMA adversary. -/
 noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ENNReal :=
   Pr[= true | exp σ hr M nmaAdv qH]
@@ -1049,7 +1049,7 @@ private theorem inner_prefix_det_one_more_inr
 queries in the recorded log. -/
 lemma runTrace_queryLog_length_eq
     [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x : Trace Commit Chal Resp M}
@@ -1074,7 +1074,7 @@ lemma runTrace_queryLog_length_eq
 the outer log's `i`-th `Sum.inr ()` response. -/
 lemma runTrace_cache_outer_lockstep
     [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x : Trace Commit Chal Resp M}
@@ -1109,7 +1109,7 @@ lemma runTrace_cache_outer_lockstep
 corresponding `σ.verify` succeeds. Used by `forkSupportInvariant_of_mem_replayFirstRun`. -/
 lemma exists_cached_verify_of_runTrace_verified
     [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x : Trace Commit Chal Resp M}
@@ -1143,7 +1143,7 @@ lemma exists_cached_verify_of_runTrace_verified
 condition. -/
 theorem runTrace_forkPoint_CfReachable
     [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt) :
     CfReachable (runTrace σ hr M nmaAdv pk)
@@ -1163,7 +1163,7 @@ response may differ across runs), then the traces' internal `queryLog`s coincide
 `inner_prefix_det_one_more_inr`, rephrased at the `replayFirstRun`-visible level. -/
 lemma runTrace_queryLog_take_eq
     [SampleableType Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x₁ x₂ : Trace Commit Chal Resp M}
@@ -1207,7 +1207,7 @@ end Coupling
 forgery targets agree. -/
 lemma runTrace_target_eq_of_mem_contextFork
     [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal] [SampleableType Chal] [Inhabited Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
     (x₁ x₂ : Trace Commit Chal Resp M)
@@ -1350,7 +1350,7 @@ discharge `hreach` by establishing this correspondence at the level of `runTrace
 theorem replayForkingBound
     [DecidableEq M] [DecidableEq Commit]
     [DecidableEq Chal] [SampleableType Chal] [Fintype Chal] [Inhabited Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
     (P_out : Trace Commit Chal Resp M →

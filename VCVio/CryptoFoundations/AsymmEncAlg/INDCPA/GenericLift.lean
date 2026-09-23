@@ -76,8 +76,8 @@ inductive IND_CPA_StepState
       (cont : C → OracleComp encAlg'.IND_CPA_oracleSpec Bool) : IND_CPA_StepState
 
 /-- Generic extraction of the one-time adversary for the `k`-th fresh LR query. -/
-def IND_CPA_stepAdversary [Inhabited M] (adversary : encAlg'.IND_CPA_adversary) (k : ℕ) :
-    IND_CPA_Adv encAlg' where
+def IND_CPA_stepAdversary [Inhabited M] (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
+    IND_CPA_OneTime_Adversary encAlg' where
   State := IND_CPA_StepState (encAlg' := encAlg')
   chooseMessages pk := do
     let ⟨res, st⟩ ← (IND_CPA_stepPrefix (encAlg' := encAlg') pk k (adversary pk)).run (∅, 0)
@@ -304,7 +304,7 @@ private lemma IND_CPA_stepPrefix_resume_eq_hybridLR (pk : PK) (k : ℕ) (branch 
 uniform-bit branch between adjacent LR hybrids. This is the theorem that converts the local prefix
 decomposition above into a clean hybrid-gap statement. -/
 private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
-    (adversary : encAlg'.IND_CPA_adversary) (k : ℕ) :
+    (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
     𝒮[IND_CPA_OneTime_Game_ProbComp (encAlg := encAlg')
         (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)] =
       𝒮[do
@@ -365,7 +365,7 @@ variable {encAlg' : AsymmEncAlg ProbComp M PK SK C}
 `IND_CPA_signedAdvantageReal_eq_lrDiff_half`. -/
 theorem IND_CPA_stepAdversary_signedAdvantageReal_eq_hybridDiff_half
     [Inhabited M]
-    (adversary : encAlg'.IND_CPA_adversary) (k : ℕ) :
+    (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
     IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg')
       (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) =
       ((Pr[= true | encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)]).toReal -
@@ -390,7 +390,7 @@ most `q` fresh LR queries, the absolute signed IND-CPA advantage is at most the 
 signed advantages of the extracted one-time step adversaries. -/
 theorem IND_CPA_abs_signedAdvantageReal_le_sum_step_signedAdvantageReal_abs
     [Inhabited M] [Finite C] [Inhabited C]
-    (adversary : encAlg'.IND_CPA_adversary) (q : ℕ)
+    (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
     |IND_CPA_signedAdvantageReal (encAlg' := encAlg') adversary| ≤
       Finset.sum (Finset.range q) (fun k =>
@@ -418,15 +418,15 @@ theorem IND_CPA_abs_signedAdvantageReal_le_sum_step_signedAdvantageReal_abs
 /-- Generic one-time-to-many-time lift: the bias advantage of an oracle adversary making at most
 `q` fresh LR queries is at most twice the sum of the absolute signed advantages of the extracted
 one-time step adversaries. -/
-theorem IND_CPA_advantage_le_two_mul_sum_step_signedAdvantageReal_abs
+theorem IND_CPA_Advantage_le_two_mul_sum_step_signedAdvantageReal_abs
     [Inhabited M] [Finite C] [Inhabited C]
-    (adversary : encAlg'.IND_CPA_adversary) (q : ℕ)
+    (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
-    IND_CPA_advantage (encAlg := encAlg') adversary ≤
+    IND_CPA_Advantage (encAlg := encAlg') adversary ≤
       2 * Finset.sum (Finset.range q) (fun k =>
         |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg')
           (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)|) :=
-  (IND_CPA_advantage_eq_two_mul_abs_signedAdvantageReal (encAlg' := encAlg') adversary).trans_le
+  (IND_CPA_Advantage_eq_two_mul_abs_signedAdvantageReal (encAlg' := encAlg') adversary).trans_le
     (mul_le_mul_of_nonneg_left
       (IND_CPA_abs_signedAdvantageReal_le_sum_step_signedAdvantageReal_abs
         (encAlg' := encAlg') adversary q hq) zero_le_two)
@@ -434,15 +434,15 @@ theorem IND_CPA_advantage_le_two_mul_sum_step_signedAdvantageReal_abs
 /-- Uniform corollary of the generic lift. If every extracted one-time adversary has absolute
 signed real advantage at most `ε`, then any `q`-query oracle adversary has IND-CPA bias advantage
 at most `2 * (q * ε)`. -/
-theorem IND_CPA_advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound
+theorem IND_CPA_Advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound
     [Inhabited M] [Finite C] [Inhabited C]
-    (adversary : encAlg'.IND_CPA_adversary) (q : ℕ) (ε : ℝ)
+    (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ) (ε : ℝ)
     (hq : adversary.MakesAtMostQueries q)
-    (hstep : ∀ adv : IND_CPA_Adv encAlg',
+    (hstep : ∀ adv : IND_CPA_OneTime_Adversary encAlg',
       |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg') adv| ≤ ε) :
-    IND_CPA_advantage (encAlg := encAlg') adversary ≤ 2 * (q * ε) := by
+    IND_CPA_Advantage (encAlg := encAlg') adversary ≤ 2 * (q * ε) := by
   refine le_trans
-    (IND_CPA_advantage_le_two_mul_sum_step_signedAdvantageReal_abs
+    (IND_CPA_Advantage_le_two_mul_sum_step_signedAdvantageReal_abs
       (encAlg' := encAlg') adversary q hq)
     (mul_le_mul_of_nonneg_left ((Finset.sum_le_sum fun k _ =>
       hstep (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)).trans ?_) zero_le_two)

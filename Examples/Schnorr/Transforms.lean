@@ -86,7 +86,7 @@ knowledge error, with Schnorr special soundness and unique responses discharged.
 theorem fischlin_extraction (hinj : Function.Injective encode)
     (hg : Function.Injective (fun z : F => z • g))
     (ρ b S : ℕ)
-    (prover : Fischlin.KnowledgeSoundnessAdv (Stmt := G) (Commit := G)
+    (prover : Fischlin.KnowledgeSoundnessAdversary (Stmt := G) (Commit := G)
       (Chal := C) (Resp := F) ρ b M)
     (Q : ℕ) (hρ : 0 < ρ)
     (hQ : ∀ pk msg, Fischlin.ROQueryBound ρ b M (prover.run pk msg) Q)

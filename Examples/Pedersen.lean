@@ -109,7 +109,7 @@ theorem perfectlyHiding [SampleableType F] [SampleableType G] [DecidableEq G]
 If the binder produces two valid openings `(m₁, d₁)` and `(m₂, d₂)` to the same
 commitment `c` with `m₁ ≠ m₂`, extract the discrete log as `(d₁ - d₂) / (m₂ - m₁)`. -/
 def dlogReduction [DecidableEq F] [DecidableEq G]
-    (binder : BindingAdv G F G F) : DLogAdversary F G :=
+    (binder : BindingAdversary G F G F) : DLogAdversary F G :=
   fun gen h => do
     let (c, m₁, d₁, m₂, d₂) ← binder h
     return if decide (m₁ ≠ m₂ ∧ d₁ • gen + m₁ • h = c ∧ d₂ • gen + m₂ • h = c) then
@@ -156,7 +156,7 @@ private lemma bindingWin_implies_dlogWin [DecidableEq F] [DecidableEq G]
 successful DLog solver. Specifically, `Pr[binding wins] ≤ Pr[DLog wins]`. -/
 theorem binding_le_dlog [DecidableEq F] [SampleableType F] [DecidableEq G]
     (hg : Function.Bijective (· • g : F → G))
-    (binder : BindingAdv G F G F) :
+    (binder : BindingAdversary G F G F) :
     Pr[= true | (pedersenCommit g).bindingExp binder] ≤
     Pr[= true | dlogExp g (dlogReduction binder)] := by
   let base : ProbComp (F × (G × F × F × F × F)) := do

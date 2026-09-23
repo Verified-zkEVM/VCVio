@@ -114,13 +114,13 @@ theorem euf_cma_bound
     (hhvzk : ids.HVZK sim ζ_zk)
     (recover : Stmt → Chal → Resp → Commit)
     (hcr : ids.CommitmentRecoverable recover)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort.inROM ids hr M maxAttempts))
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     ∃ reduction : Stmt → ProbComp Wit,
-      adv.advantage (runtime M) ≤
+      SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
         Pr[= true | hardRelationExp hr reduction] +
           ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   let _ := hc
@@ -142,13 +142,13 @@ theorem euf_cma_bound_perfectHVZK
     (hhvzk : ids.PerfectHVZK sim)
     (recover : Stmt → Chal → Resp → Commit)
     (hcr : ids.CommitmentRecoverable recover)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort.inROM ids hr M maxAttempts))
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     ∃ reduction : Stmt → ProbComp Wit,
-      adv.advantage (runtime M) ≤
+      SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
         Pr[= true | hardRelationExp hr reduction] +
           ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
   euf_cma_bound (ids := ids) (M := M) (maxAttempts := maxAttempts)

@@ -309,7 +309,7 @@ noncomputable def eufCmaMLWEReduction
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (sim : PublicKey p prims →
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort
         (m := OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)))
         (identificationScheme p prims) hr M maxAttempts)) :
@@ -333,7 +333,7 @@ noncomputable def eufCmaSTMSISReduction
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPair p prims))
     (sim : PublicKey p prims →
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort
         (m := OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p)))
         (identificationScheme p prims) hr M maxAttempts)) :
@@ -405,12 +405,12 @@ theorem euf_cma_security
     (ζ_zk : ℝ) (_hζ : 0 ≤ ζ_zk)
     (_hhvzk : (identificationScheme p prims).HVZK sim ζ_zk)
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1) :
-    ∀ (adv : SignatureAlg.unforgeableAdv
+    ∀ (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims)
         hr M maxAttempts)),
-      adv.advantage
+      SignatureAlg.unforgeableAdvantage
           (FiatShamirWithAbort.runtime
-            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) ≤
+            (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
         ENNReal.ofReal (LearningWithErrors.advantage mlwe
           (eufCmaMLWEReduction p prims mlwe maxAttempts hr sim adv)) +
         SelfTargetMSIS.advantage (eufCmaSTMSISReduction p prims stmsis maxAttempts hr sim adv) +

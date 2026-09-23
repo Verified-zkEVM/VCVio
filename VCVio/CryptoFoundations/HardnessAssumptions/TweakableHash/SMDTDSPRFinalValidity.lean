@@ -23,10 +23,10 @@ final-validity semantics. The fully qualified declarations live in
 `TweakableHash.SM_DT_DSPR_SourceFinalValidity`, making their semantics explicit beside the
 rejection-on-arrival and source-final-validity games provided by the imported foundation.
 
-The security quantity is **not** raw prediction success. `SPExperiment` is the source
+The security quantity is **not** raw prediction success. `spExperiment` is the source
 proof's `SPprob` baseline: it runs the same adversary, including its prediction phase and target
 selection, but accepts exactly when the selected target has a second preimage, independently of
-the guessed bit. `Advantage` is the truncated difference
+the guessed bit. `advantage` is the truncated difference
 `Pr[DSPR] - Pr[SPprob]`, i.e. `max 0 (Pr[DSPR] - Pr[SPprob])` in `ℝ≥0∞`.
 
 The message space is finite because the winning predicate decides whether a second preimage exists.
@@ -124,7 +124,7 @@ def oracles [DecidableEq Tweak] (prob : Problem ι PkSeed Tweak M Y)
 
 /-- The decisional experiment. The selected target must exist and the guess must equal its actual
 second-preimage-existence bit. -/
-noncomputable def Experiment [Fintype M] [DecidableEq Tweak] [DecidableEq M]
+noncomputable def experiment [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
@@ -138,7 +138,7 @@ noncomputable def Experiment [Fintype M] [DecidableEq Tweak] [DecidableEq M]
 
 /-- The source proof's `SPprob` baseline. It runs exactly the same adversary and uses the same
 selected index, but ignores the guessed bit and accepts iff that target has a second preimage. -/
-noncomputable def SPExperiment [Fintype M] [DecidableEq Tweak] [DecidableEq M]
+noncomputable def spExperiment [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
@@ -155,16 +155,16 @@ baseline subtraction cannot be accidentally omitted at a call site. -/
 noncomputable def Success [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
-  𝒟[Experiment adv] {true}
+  𝒟[experiment adv] {true}
 
 /-- The `SPprob` baseline success probability. -/
 noncomputable def SPProbability [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
-  𝒟[SPExperiment adv] {true}
+  𝒟[spExperiment adv] {true}
 
 /-- SM-DT-DSPR advantage: the ENNReal truncated difference `Pr[DSPR] - Pr[SPprob]`. -/
-noncomputable def Advantage [Fintype M] [DecidableEq Tweak] [DecidableEq M]
+noncomputable def advantage [Fintype M] [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) : ℝ≥0∞ :=
   Success adv - SPProbability adv
@@ -205,8 +205,8 @@ theorem oracles_preservesInv (prob : Problem ι PkSeed Tweak M Y) (pk : PkSeed) 
       (SourceFinalValidity.preservesInv_collectionOracle _ _ _ _))
 
 /-- The sticky bit decides the final predicate on every reachable state: the run-level form of the
-monitor invariant, obtained from the initial state and the two recording steps. Both `Experiment`
-and `SPExperiment` read `gameState.valid`, so this is what makes their shared guard mean
+monitor invariant, obtained from the initial state and the two recording steps. Both `experiment`
+and `spExperiment` read `gameState.valid`, so this is what makes their shared guard mean
 `SourceFinalValidity.Valid`. -/
 theorem valid_eq_decide_valid_of_reachable {prob : Problem ι PkSeed Tweak M Y}
     (adv : Adversary prob) (pk : PkSeed) {z : adv.State × State Tweak M}
@@ -216,6 +216,10 @@ theorem valid_eq_decide_valid_of_reachable {prob : Problem ι PkSeed Tweak M Y}
     adv.choose .initial (SourceFinalValidity.invariant_initial _ _) z hz).eq_decide _ _ _
 
 end Reachable
+
+-- Declaration-specific naming exceptions for this game's underscore-separated names.
+attribute [nolint defsWithUnderscore]
+  experiment spExperiment advantage
 
 end SM_DT_DSPR_SourceFinalValidity
 
