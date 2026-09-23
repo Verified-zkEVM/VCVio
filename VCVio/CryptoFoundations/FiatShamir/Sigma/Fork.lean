@@ -403,7 +403,7 @@ discharged by the managed-RO CMA→NMA reduction. Downstream, this is the role o
 that every `advCache` programming step is mirrored by a live query into `roCache`. -/
 def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (pk : Stmt) :
     OracleComp (wrappedSpec Chal) (Trace Commit Chal Resp M) := do
   let ((forgery, advCache), st) ←
@@ -422,7 +422,7 @@ def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 the corresponding hash point appears in the live query log, so the forking lemma can rewind it. -/
 def exp [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ProbComp Bool :=
   let chalSpec : OracleSpec Unit := Unit →ₒ Chal
   simulateQ (QueryImpl.ofLift unifSpec ProbComp + uniformSampleImpl (spec := chalSpec)) do
@@ -433,7 +433,7 @@ def exp [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 /-- The forkable success probability of a managed-RO NMA adversary. -/
 noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ENNReal :=
   Pr[= true | exp σ hr M nmaAdv qH]
 
@@ -1050,7 +1050,7 @@ queries in the recorded log. -/
 lemma runTrace_queryLog_length_eq
     [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x : Trace Commit Chal Resp M}
     {outerLog : QueryLog (wrappedSpec Chal)}
@@ -1075,7 +1075,7 @@ the outer log's `i`-th `Sum.inr ()` response. -/
 lemma runTrace_cache_outer_lockstep
     [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x : Trace Commit Chal Resp M}
     {outerLog : QueryLog (wrappedSpec Chal)}
@@ -1110,7 +1110,7 @@ corresponding `σ.verify` succeeds. Used by `forkSupportInvariant_of_mem_replayF
 lemma exists_cached_verify_of_runTrace_verified
     [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x : Trace Commit Chal Resp M}
     {outerLog : QueryLog (wrappedSpec Chal)}
@@ -1144,7 +1144,7 @@ condition. -/
 theorem runTrace_forkPoint_CfReachable
     [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt) :
     CfReachable (runTrace σ hr M nmaAdv pk)
       (fun j : ℕ ⊕ Unit => match j with | .inl _ => 0 | .inr () => qH) (Sum.inr ())
@@ -1164,7 +1164,7 @@ response may differ across runs), then the traces' internal `queryLog`s coincide
 lemma runTrace_queryLog_take_eq
     [SampleableType Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (pk : Stmt)
     {x₁ x₂ : Trace Commit Chal Resp M}
     {outerLog₁ outerLog₂ : QueryLog (wrappedSpec Chal)}
@@ -1208,7 +1208,7 @@ forgery targets agree. -/
 lemma runTrace_target_eq_of_mem_contextFork
     [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal] [SampleableType Chal] [Inhabited Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
     (x₁ x₂ : Trace Commit Chal Resp M)
     (s : Fin (qH + 1))
@@ -1351,7 +1351,7 @@ theorem replayForkingBound
     [DecidableEq M] [DecidableEq Commit]
     [DecidableEq Chal] [SampleableType Chal] [Fintype Chal] [Inhabited Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
     (P_out : Trace Commit Chal Resp M →
       QueryLog (unifSpec + (Unit →ₒ Chal)) → Prop)

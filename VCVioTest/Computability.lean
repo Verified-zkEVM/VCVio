@@ -34,15 +34,14 @@ namespace VCVioTest.Computability
 
 /-! ## Lazy random-oracle simulation pipeline
 
-Locks `unifFwdImpl`, `randomOracle`, and their sum: the standard interpretation of a
+Locks `OracleSpec.romImpl` (`unifFwdImpl` plus `randomOracle`): the standard interpretation of a
 `unifSpec + hashSpec` computation into `StateT QueryCache ProbComp`. -/
 
 /-- The lazy-RO simulation pipeline used throughout the Fiat-Shamir and Fischlin layers. -/
 def roSimPipeline :
     QueryImpl (unifSpec + (ℕ →ₒ Bool))
       (StateT ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache ProbComp) :=
-  unifFwdImpl (ℕ →ₒ Bool) +
-    (randomOracle : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) _)
+  (ℕ →ₒ Bool).romImpl
 
 /-- A toy random-oracle computation: query two hash points and combine the answers. -/
 def roToy : OracleComp (unifSpec + (ℕ →ₒ Bool)) Bool := do

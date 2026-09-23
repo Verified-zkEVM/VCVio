@@ -38,7 +38,7 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 
 /-- Fiat-Shamir signature scheme over the public random-oracle interface used by
 the source CMA adversary. -/
-abbrev SourceSigAlg := _root_.FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M
+abbrev SourceSigAlg := _root_.FiatShamir.inROM σ hr M
 
 /-- Source EUF-CMA adversary type for the Fiat-Shamir signature scheme. -/
 abbrev SourceAdv := SignatureAlg.unforgeableAdv (SourceSigAlg (σ := σ) (hr := hr) (M := M))
@@ -329,8 +329,7 @@ private lemma fiatShamir_verify_cmaSignHashQueryBound
     cmaSignHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) (Stmt := Stmt)
       (liftM
-        ((_root_.FiatShamir
-          (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M).verify
+        ((_root_.FiatShamir.inROM σ hr M).verify
           pk msg sig) :
         OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool)
       qS qH :=

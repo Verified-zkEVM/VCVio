@@ -67,7 +67,7 @@ theorem euf_cma_to_nma
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simTranscript β)
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
@@ -97,7 +97,7 @@ theorem euf_nma_bound
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
     [Fintype Chal] [Inhabited Chal]
     (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
@@ -137,7 +137,7 @@ theorem euf_cma_bound
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simTranscript β)
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :

@@ -45,7 +45,7 @@ abbrev MainSpec : OracleSpec (Nat ⊕ Bool) := unifSpec + HashSpec
 
 /-- Run the standard lazy oracle from an empty experiment-owned cache. -/
 noncomputable def runROM {α : Type} (oa : OracleComp MainSpec α) : ProbComp α :=
-  (simulateQ (unifFwdImpl HashSpec + HashSpec.randomOracle) oa).run' ∅
+  (simulateQ HashSpec.romImpl oa).run' ∅
 
 /-- A structural bound on charged requests, with no bound on free local coins. -/
 abbrev IsHashQueryBound {α : Type} (oa : OracleComp MainSpec α) (q : ℕ) : Prop :=

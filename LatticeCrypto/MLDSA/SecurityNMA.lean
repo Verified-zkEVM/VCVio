@@ -350,17 +350,14 @@ section Distinguisher
 
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
 
-/-- The random-oracle simulation implementation used by `FiatShamirWithAbort.runtime`: forward
-`unifSpec` queries to fresh sampling and answer hash queries through a cached random oracle, all
-inside `StateT QueryCache ProbComp`. Running an oracle computation through this implementation and
-projecting away the final cache turns it into a plain `ProbComp`, which is what the MLWE
-distinguisher must return. -/
+/-- The random-oracle simulation implementation used by `FiatShamirWithAbort.runtime`: the
+random oracle model handler `OracleSpec.romImpl` at the ML-DSA commitment-hash oracle. Running
+an oracle computation through this implementation and projecting away the final cache turns it
+into a plain `ProbComp`, which is what the MLWE distinguisher must return. -/
 def roImpl :
     QueryImpl (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
       (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp) :=
-  unifFwdImpl (M × Commitment p prims →ₒ CommitHashBytes p) +
-    (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p)
-      (StateT ((M × Commitment p prims →ₒ CommitHashBytes p).QueryCache) ProbComp))
+  (M × Commitment p prims →ₒ CommitHashBytes p).romImpl
 
 /-- Observe an oracle computation as a plain `ProbComp` by simulating its random oracle from an
 empty cache and discarding the final cache state. This is exactly the `ProbComp` underlying
@@ -961,7 +958,7 @@ theorem nmaAdvantage_keygen1_le_stmsis
   rintro ⟨pk, sk⟩ _
   rw [pure_bind]
   convert stmsis_tail_le p prims hr maxAttempts main pk using 2
-  rw [roImpl, unifFwdImpl]
+  rw [roImpl, OracleSpec.romImpl, unifFwdImpl]
   apply congrArg (fun mx : ProbComp Bool => 𝒟[mx])
   refine bind_congr fun x => ?_
   obtain ⟨⟨hashInput, response⟩, cache⟩ := x
@@ -1267,7 +1264,7 @@ theorem nmaAdvantage_keygenShort1_le_stmsis
   rintro ⟨pk, sk⟩ _
   rw [pure_bind]
   convert stmsis_tail_le_short p prims hr maxAttempts main pk using 2
-  rw [roImpl, unifFwdImpl]
+  rw [roImpl, OracleSpec.romImpl, unifFwdImpl]
   apply congrArg (fun mx : ProbComp Bool => 𝒟[mx])
   refine bind_congr fun x => ?_
   obtain ⟨⟨hashInput, response⟩, cache⟩ := x

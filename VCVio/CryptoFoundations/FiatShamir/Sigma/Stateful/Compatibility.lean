@@ -895,16 +895,17 @@ private lemma fsBaseImpl_writerTMapBase_signingOracle_eq
       implS := by
   funext t
   rcases t with (n | mc) | m <;> ext cache
-  · simp only [add_apply_inl, QueryImpl.writerTMapBase, fsBaseImpl, unifFwdImpl,
-      QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply, ofPFunctor_toPFunctor,
-      HasQuery.toQueryImpl_apply, HasQuery.instOfMonadLift_query, WriterT.run_liftM,
+  · simp only [add_apply_inl, QueryImpl.writerTMapBase, fsBaseImpl, OracleSpec.romImpl,
+      unifFwdImpl, QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply,
+      ofPFunctor_toPFunctor, HasQuery.toQueryImpl_apply, HasQuery.instOfMonadLift_query,
+      WriterT.run_liftM,
       List.empty_eq, simulateQ_map, WriterT.run_mk, StateT.run_map,
       PFunctor.selfMonomial_B, StateT.run_monadLift, monadLift_self, bind_pure_comp,
       Functor.map_map]
     erw [QueryImpl.simulateQ_add_query_left]
     simp
   · simp only [add_apply_inl, add_apply_inr, QueryImpl.writerTMapBase, fsBaseImpl,
-      unifFwdImpl, randomOracle, QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply,
+      OracleSpec.romImpl, randomOracle, QueryImpl.add_apply_inl, PFunctor.Handler.liftTarget_apply,
       ofPFunctor_toPFunctor, HasQuery.toQueryImpl_apply, HasQuery.instOfMonadLift_query,
       WriterT.run_liftM, List.empty_eq, simulateQ_map, WriterT.run_mk, StateT.run_map,
       QueryImpl.add_apply_inr, QueryImpl.withCaching_apply, uniformSampleImpl_apply, map_bind,

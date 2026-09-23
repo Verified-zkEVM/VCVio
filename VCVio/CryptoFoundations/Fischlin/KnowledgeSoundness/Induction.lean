@@ -305,7 +305,7 @@ private lemma loggedImpl_run_run_inr_none {ι : Type} {hashSpec : OracleSpec ι}
 private lemma unloggedImpl_run_inl {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     (i : unifSpec.Domain) (c : hashSpec.QueryCache) :
-    ((unifFwdImpl hashSpec + hashSpec.randomOracle) (Sum.inl i)).run c =
+    (hashSpec.romImpl (Sum.inl i)).run c =
       (fun (u : (unifSpec + hashSpec).Range (Sum.inl i)) => (u, c)) <$>
         (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) i) := by
   change (unifFwdImpl hashSpec i).run c = _
@@ -316,7 +316,7 @@ private lemma unloggedImpl_run_inr_some {ι : Type} {hashSpec : OracleSpec ι} [
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     {j : hashSpec.Domain} {c : hashSpec.QueryCache}
     {u : hashSpec.Range j} (h : c j = some u) :
-    ((unifFwdImpl hashSpec + hashSpec.randomOracle) (Sum.inr j)).run c =
+    (hashSpec.romImpl (Sum.inr j)).run c =
       pure ((u, c) : (unifSpec + hashSpec).Range (Sum.inr j) × hashSpec.QueryCache) :=
   QueryImpl.withCaching_run_some (so := uniformSampleImpl) h
 
@@ -324,7 +324,7 @@ private lemma unloggedImpl_run_inr_some {ι : Type} {hashSpec : OracleSpec ι} [
 private lemma unloggedImpl_run_inr_none {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     {j : hashSpec.Domain} {c : hashSpec.QueryCache} (h : c j = none) :
-    ((unifFwdImpl hashSpec + hashSpec.randomOracle) (Sum.inr j)).run c =
+    (hashSpec.romImpl (Sum.inr j)).run c =
       (fun (u : (unifSpec + hashSpec).Range (Sum.inr j)) =>
         (u, c.cacheQuery j u)) <$> ($ᵗ hashSpec.Range j) :=
   QueryImpl.withCaching_run_none (so := uniformSampleImpl) h
@@ -336,7 +336,7 @@ private theorem dropLog_run_eq {ι : Type} {hashSpec : OracleSpec ι} [Decidable
     {α : Type} (oa : OracleComp (unifSpec + hashSpec) α) (cache : hashSpec.QueryCache) :
     (fun z => (z.1.1, z.2)) <$>
         ((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache
-      = (simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle) oa).run cache := by
+      = (simulateQ hashSpec.romImpl oa).run cache := by
   induction oa using OracleComp.inductionOn generalizing cache with
   | pure a =>
       simp only [simulateQ_pure, WriterT.run_pure', StateT.run_pure, map_pure]
@@ -369,7 +369,7 @@ private theorem dropLog_expectedValue {ι : Type} {hashSpec : OracleSpec ι} [De
     (f : α → hashSpec.QueryCache → ℝ≥0∞) :
     expectedValue (((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache)
         (fun z => f z.1.1 z.2)
-      = expectedValue ((simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle) oa).run cache)
+      = expectedValue ((simulateQ hashSpec.romImpl oa).run cache)
         (fun w => f w.1 w.2) := by
   rw [← dropLog_run_eq oa cache, expectedValue_map]
 
@@ -382,7 +382,7 @@ private theorem dropLog_probEvent {ι : Type} {hashSpec : OracleSpec ι} [Decida
     Pr[fun z => p z.1.1 z.2 |
         ((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache]
       = Pr[fun w => p w.1 w.2 |
-        (simulateQ (unifFwdImpl hashSpec + hashSpec.randomOracle) oa).run cache] := by
+        (simulateQ hashSpec.romImpl oa).run cache] := by
   rw [← dropLog_run_eq oa cache, probEvent_map]
   rfl
 

@@ -715,7 +715,7 @@ queries, lazily sample-and-cache hash queries. Abstract analogue of `fischlinImp
 @[reducible] private def roImpl (b' : ℕ) (T : Type) [DecidableEq T] :
     QueryImpl (unifSpec + (T →ₒ Fin (2 ^ b')))
       (StateT (T →ₒ Fin (2 ^ b')).QueryCache ProbComp) :=
-  unifFwdImpl (T →ₒ Fin (2 ^ b')) + randomOracle (spec := T →ₒ Fin (2 ^ b'))
+  (T →ₒ Fin (2 ^ b')).romImpl
 
 /-- Coupling invariant for the multi-record setting, relative to the deadness predicate `dd`
 of the current cache. The cache→state direction is restricted

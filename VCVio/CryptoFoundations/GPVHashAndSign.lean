@@ -9,6 +9,7 @@ module
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
@@ -152,13 +153,8 @@ variable {PK SK Domain Range : Type}
 
 /-- Runtime bundle for the GPV hash-and-sign random-oracle world. -/
 noncomputable def runtime :
-    ProbCompRuntime (OracleComp (unifSpec + (Salt × M →ₒ Range))) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
-    (hashImpl := (randomOracle :
-      QueryImpl (Salt × M →ₒ Range) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)))
-    ∅
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+    ProbCompRuntime (OracleComp (unifSpec + (Salt × M →ₒ Range))) :=
+  ProbCompRuntime.rom (Salt × M →ₒ Range)
 
 /-- Structural bound that counts only random-oracle queries in a GPV EUF-CMA adversary.
 

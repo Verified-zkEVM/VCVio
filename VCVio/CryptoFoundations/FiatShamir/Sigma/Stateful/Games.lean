@@ -164,8 +164,7 @@ direct named CMA game. -/
 @[reducible, fs_simp] def fsBaseImpl :
     QueryImpl (unifSpec + roSpec M Commit Chal)
       (StateT (RoCache M Commit Chal) ProbComp) :=
-  unifFwdImpl (roSpec M Commit Chal) +
-    (randomOracle : QueryImpl (roSpec M Commit Chal) _)
+  (roSpec M Commit Chal).romImpl
 
 /-- Fixed-key real Fiat-Shamir signing over the shared random-oracle cache. -/
 @[reducible, fs_simp] def cmaRealFixedSign

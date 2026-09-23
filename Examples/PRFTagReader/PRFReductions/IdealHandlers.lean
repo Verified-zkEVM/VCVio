@@ -134,8 +134,9 @@ lemma simulateQ_prfIdeal_liftComp [SampleableType Digest]
     (simulateQ (PRFScheme.prfIdealQueryImpl (D := D) (R := Digest))
         (OracleComp.liftComp oa (unifSpec + (D →ₒ Digest)))).run c =
       oa >>= fun a => pure (a, c) := by
-  simp [PRFScheme.prfIdealQueryImpl, QueryImpl.simulateQ_add_liftM_left,
-    StateT.run_monadLift]
+  rw [PRFScheme.prfIdealQueryImpl, OracleComp.liftComp_eq_liftM,
+    OracleSpec.simulateQ_romImpl_liftM_run, map_eq_bind_pure_comp]
+  rfl
 
 /-- Simulating a right-injected (PRF-function) query through `prfIdealQueryImpl` consults the
 lazy random oracle: `idealCacheStep`. -/

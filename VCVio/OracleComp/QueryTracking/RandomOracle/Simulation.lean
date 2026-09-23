@@ -9,6 +9,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 import VCVio.OracleComp.EvalDist.Measure
 
 /-!
@@ -30,9 +31,16 @@ let impl := unifFwdImpl hashSpec + ro
 
 Then the `roSim` namespace lemmas apply to `simulateQ impl`.
 
+The random oracle model handler is `OracleSpec.romImpl hashSpec`, the case `ro = randomOracle`;
+its bundled runtime is `ProbCompRuntime.rom hashSpec cache`.
+
 ## Main definitions
 
 * `unifFwdImpl`: the identity forwarding implementation for `unifSpec`, lifted to `StateT`
+* `OracleSpec.romImpl`: the random oracle model handler `unifFwdImpl hashSpec + randomOracle`,
+  equal to `unifSpec.passthrough + hashSpec.randomOracle`
+* `ProbCompRuntime.rom`: the random-oracle-model runtime, interpreting through `romImpl` from a
+  given initial cache
 * `OracleComp.unifFwdAnswerImpl`: forwards uniform queries while using a fixed deterministic
   answer table for the other summand
 * `OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff`: reduces a
@@ -41,7 +49,7 @@ Then the `roSim` namespace lemmas apply to `simulateQ impl`.
 
 @[expose] public section
 
-open OracleComp OracleSpec
+open MeasureTheory OracleComp OracleSpec
 
 variable {ι : Type} {hashSpec : OracleSpec ι}
 
@@ -181,6 +189,71 @@ lemma simulateQ_HasQuery_query (q : hashSpec.Domain) :
   simp
 
 end roSim
+
+/-! ## The random oracle model -/
+
+namespace OracleSpec
+
+variable (hashSpec) [DecidableEq ι] [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
+
+/-- The random oracle model for `unifSpec + hashSpec`: uniform-sampling queries reach the ambient
+`ProbComp` unchanged, and `hashSpec` queries are answered by the lazily sampled random oracle
+`hashSpec.randomOracle`, whose cache is the state. Simulating `oa` with `hashSpec.romImpl` from the
+empty cache is the execution of `oa` in the random oracle model.
+
+It is `unifSpec.passthrough + hashSpec.randomOracle` (`romImpl_eq_passthrough_add`). It unfolds
+reducibly to `unifFwdImpl hashSpec + hashSpec.randomOracle`, so the `roSim` lemmas apply to it. -/
+abbrev romImpl : QueryImpl (unifSpec + hashSpec) (StateT hashSpec.QueryCache ProbComp) :=
+  unifFwdImpl hashSpec + hashSpec.randomOracle
+
+variable {hashSpec}
+
+lemma romImpl_eq_passthrough_add :
+    hashSpec.romImpl = unifSpec.passthrough + hashSpec.randomOracle :=
+  rfl
+
+lemma romImpl_apply_inr (t : hashSpec.Domain) :
+    hashSpec.romImpl (.inr t) = hashSpec.randomOracle t :=
+  rfl
+
+/-- Simulating a lifted `ProbComp` in the random oracle model samples it and leaves the cache
+unchanged. -/
+lemma simulateQ_romImpl_liftM_run {α : Type} (oa : ProbComp α) (cache : hashSpec.QueryCache) :
+    (simulateQ hashSpec.romImpl (liftM oa)).run cache = (·, cache) <$> oa :=
+  roSim.run_liftM _ oa cache
+
+end OracleSpec
+
+namespace ProbCompRuntime
+
+/-- The runtime of the random oracle model for `unifSpec + hashSpec`: experiments are simulated
+with `hashSpec.romImpl` starting from the random-oracle cache `cache`, empty unless given, and
+plain `ProbComp` sampling lifts into the uniform summand. A nonempty `cache` programs the random
+oracle at the cached points. -/
+noncomputable def rom (hashSpec : OracleSpec ι) [DecidableEq ι]
+    [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
+    (cache : hashSpec.QueryCache := ∅) : ProbCompRuntime (OracleComp (unifSpec + hashSpec)) :=
+  withStateOracle hashSpec.randomOracle cache
+
+/-- The random-oracle-model runtime observes the simulation under `romImpl` from its cache. -/
+lemma rom_evalDist [DecidableEq ι] [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
+    (cache : hashSpec.QueryCache) {α : Type} [MeasurableSpace α]
+    (oa : OracleComp (unifSpec + hashSpec) α) :
+    (rom hashSpec cache).evalDist oa = 𝒟[(simulateQ hashSpec.romImpl oa).run' cache] :=
+  rfl
+
+/-- The random-oracle-model runtime commutes with a lifted `ProbComp` prefix: evaluating
+`liftM oa >>= rest` samples `oa` and then integrates the runtime measures of `rest x`. -/
+lemma rom_evalDist_bind_liftM [DecidableEq ι]
+    [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] (cache : hashSpec.QueryCache)
+    {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
+    (oa : ProbComp α) (rest : α → OracleComp (unifSpec + hashSpec) β) :
+    (rom hashSpec cache).evalDist (liftM oa >>= rest) =
+      Measure.bind 𝒟[oa] fun x => (rom hashSpec cache).evalDist (rest x) := by
+  simp_rw [rom_evalDist]
+  rw [simulateQ_bind, roSim.run'_liftM_bind, evalDist_bind_of_discrete]
+
+end ProbCompRuntime
 
 namespace OracleComp
 

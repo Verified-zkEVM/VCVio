@@ -121,9 +121,9 @@ def simulatedNmaAdv
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)) :
+      (FiatShamir.inROM σ hr M)) :
     SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M) :=
+      (FiatShamir.inROM σ hr M) :=
   ⟨fun pk => (simulateQ
     (simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simTranscript pk)
@@ -203,7 +203,7 @@ theorem simulatedNmaAdv_hashQueryBound
     [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+      (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :

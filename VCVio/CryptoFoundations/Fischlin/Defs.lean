@@ -193,14 +193,8 @@ variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq
 /-- Runtime bundle for the Fischlin random-oracle world. -/
 noncomputable def runtime
     (ρ b : ℕ) (M : Type) [DecidableEq M] :
-    ProbCompRuntime (OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
-    (hashImpl := (randomOracle :
-      QueryImpl (fischlinROSpec Stmt Commit Chal Resp ρ b M)
-        (StateT (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache ProbComp)))
-    ∅
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+    ProbCompRuntime (OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)) :=
+  ProbCompRuntime.rom (fischlinROSpec Stmt Commit Chal Resp ρ b M)
 
 end runtime
 
