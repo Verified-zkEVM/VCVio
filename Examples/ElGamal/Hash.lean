@@ -162,7 +162,7 @@ theorem cpaGame_eq_ddhReal
       AsymmEncAlg.IND_CPA_OneTime_Game (encAlg := hashedElGamal F g hash) adv
           ProbCompRuntime.probComp {true} =
         Pr[= true | cpaCanonical] := by
-    show 𝒟[($ᵗ Bool) >>= fun b => _] {true} = _
+    change 𝒟[($ᵗ Bool) >>= fun b => _] {true} = _
     rw [evalDist_apply_singleton]
     simp [hashedElGamal, cpaCanonical, map_eq_bind_pure_comp, smul_smul, mul_comm]
   have hswap :

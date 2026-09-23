@@ -427,9 +427,8 @@ theorem refusal_draws_nothing_canary :
       SM_DT_UD_Advantage refusedOnly = 0 := by
   refine ⟨run_refusedOnly_real, run_refusedOnly_ideal, experiment_refusedOnly_real,
     experiment_refusedOnly_ideal, ?_⟩
-  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, SM_DT_UD_Advantage,
-    MeasureTheory.Measure.boolDist, ENNReal.absDiff, experiment_refusedOnly_real,
-    experiment_refusedOnly_ideal]
+  simp [SM_DT_UD_Advantage, MeasureTheory.Measure.boolDist, ENNReal.absDiff,
+    experiment_refusedOnly_real, experiment_refusedOnly_ideal]
 
 /-- Repeating a collection-only tweak is accepted in both worlds, and both occurrences are
 recorded. This fails if collection tweaks are wrongly required to be distinct. -/

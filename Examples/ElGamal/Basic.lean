@@ -124,7 +124,7 @@ private lemma IND_CPA_OneTime_game_eq_ddhExpReal
         ProbCompRuntime.probComp =
       𝒟[DiffieHellman.ddhExpReal (F := F) gen
           (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)] := by
-  show 𝒟[($ᵗ Bool) >>= fun b => _] = _
+  change 𝒟[($ᵗ Bool) >>= fun b => _] = _
   refine evalDist_eq_of_evalSPMF_eq _ _ ?_
   simp only [DiffieHellman.ddhExpReal, IND_CPA_OneTime_DDHReduction, elGamalAsymmEnc]
   ext z

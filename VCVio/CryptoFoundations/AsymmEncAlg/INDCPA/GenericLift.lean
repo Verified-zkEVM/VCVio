@@ -312,7 +312,7 @@ private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
           let z ← if bit then encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)
                    else encAlg'.IND_CPA_LR_hybridGame adversary k
           pure (bit == z)] := by
-  show 𝒟[($ᵗ Bool) >>= fun bit => _] = _
+  change 𝒟[($ᵗ Bool) >>= fun bit => _] = _
   refine evalDist_eq_of_evalSPMF_eq _ _ (evalSPMF_ext fun x => ?_)
   refine probOutput_bind_congr' ($ᵗ Bool) x fun bit => ?_
   change Pr[= x | do
