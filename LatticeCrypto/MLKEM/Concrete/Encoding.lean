@@ -509,16 +509,11 @@ private def byteDecode12VecPoly {k : Nat} (bytes : ByteArray) (poly : Fin k) : T
 
 private theorem decode12Pair_fst {a b : Nat} (ha : a < 4096) :
     a % 256 + 256 * ((a / 256 + 16 * (b % 16)) % 16) = a := by
-  have hdiv : a / 256 < 16 := by omega
-  rw [Nat.add_mul_mod_self_left, Nat.mod_eq_of_lt hdiv]
-  exact Nat.mod_add_div a 256
+  omega
 
 private theorem decode12Pair_snd {a b : Nat} (ha : a < 4096) :
     (a / 256 + 16 * (b % 16)) / 16 + 16 * (b / 16) = b := by
-  have hdiv : a / 256 < 16 := by omega
-  rw [Nat.mul_comm 16, Nat.add_mul_div_right _ _ (by decide), Nat.div_eq_of_lt hdiv,
-    zero_add]
-  exact Nat.mod_add_div b 16
+  omega
 
 private theorem getByteD_eq_getElem {bytes : ByteArray} {i : Nat} (hi : i < bytes.size) :
     getByteD bytes i = bytes[i] := by
@@ -638,7 +633,7 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
     · have hidx : idx.val = 2 * pair := by
         dsimp [pair]
         omega
-      rw [if_pos hEven]
+      rw [ite_eq_left hEven]
       calc
         (((getByteD (byteEncode12Poly f) (3 * pair)).toNat +
             256 * ((getByteD (byteEncode12Poly f) (3 * pair + 1)).toNat % 16) : Nat) : Coeff)
@@ -656,7 +651,7 @@ private theorem byteDecode12Poly_byteEncode12Poly (f : Tq) :
       have hidx : idx.val = 2 * pair + 1 := by
         dsimp [pair]
         omega
-      rw [if_neg hEven]
+      rw [ite_eq_right hEven]
       calc
         (((getByteD (byteEncode12Poly f) (3 * pair + 1)).toNat / 16 +
             16 * (getByteD (byteEncode12Poly f) (3 * pair + 2)).toNat : Nat) : Coeff)

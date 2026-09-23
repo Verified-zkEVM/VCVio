@@ -29,7 +29,7 @@ ML-DSA ring layer and avoiding conversion overhead in the verifier equation
 `Az - c · (t₁ · 2^d)`.
 -/
 
-@[expose] public section
+public section
 
 
 namespace MLDSA.Concrete
@@ -104,6 +104,7 @@ def useHintCoeff (h : Bool) (r : Coeff) (gamma2 : ℕ) : ℕ :=
     r1
 
 /-- Coefficient-wise `Power2Round` high part. -/
+@[expose]
 def power2RoundHigh (r : Rq) : Power2High :=
   Vector.ofFn fun i => ((power2RoundCoeff (r.get i)).1 : Coeff)
 
@@ -112,10 +113,12 @@ def power2RoundLow (r : Rq) : Rq :=
   Vector.ofFn fun i => (power2RoundCoeff (r.get i)).2
 
 /-- Coefficient-wise `Power2Round`. -/
+@[expose]
 def power2Round (r : Rq) : Power2High × Rq :=
   (power2RoundHigh r, power2RoundLow r)
 
 /-- Reconstruct `t₁ · 2^d` from a power-2 rounded high representative. -/
+@[expose]
 def power2RoundShift (r1 : Power2High) : Rq :=
   Vector.map (fun x => (power2Scale : Coeff) * x) r1
 
@@ -143,7 +146,7 @@ def useHint (p : Params) (h : Hint) (r : Rq) : High :=
 def hintWeight (h : Hint) : ℕ :=
   h.toList.foldl (fun acc b => acc + cond b 1 0) 0
 
-@[simp] theorem Rq.get_zero (i : Fin ringDegree) : (0 : Rq).get i = 0 :=
+theorem Rq.get_zero (i : Fin ringDegree) : (0 : Rq).get i = 0 :=
   NegacyclicRing.coeff_zero coeffRing i
 
 @[simp] theorem Rq.get_add (a b : Rq) (i : Fin ringDegree) :
@@ -174,19 +177,19 @@ private theorem BalancedDecomp.ofApproved {p : Params} (hp : p.isApproved) :
 namespace BalancedDecomp
 variable {alpha m : ℕ}
 
-@[simp] private lemma h2α {ctx : BalancedDecomp alpha m} : 2 * (alpha / 2) = alpha :=
+private lemma h2α {ctx : BalancedDecomp alpha m} : 2 * (alpha / 2) = alpha :=
   Nat.two_mul_div_two_of_even ctx.heven
 
-@[simp] private lemma hγ {ctx : BalancedDecomp alpha m} : 0 < alpha / 2 := by
+private lemma hγ {ctx : BalancedDecomp alpha m} : 0 < alpha / 2 := by
   have := ctx.hα; rw[← ctx.h2α] at this; omega
 
-@[simp] private lemma hmdef {ctx : BalancedDecomp alpha m} : (modulus - 1) / alpha = m :=
+private lemma hmdef {ctx : BalancedDecomp alpha m} : (modulus - 1) / alpha = m :=
   Nat.div_eq_of_eq_mul_right ctx.hα ctx.hqm1.symm
 
-@[simp] private lemma hq {ctx : BalancedDecomp alpha m} : alpha < modulus := by
+private lemma hq {ctx : BalancedDecomp alpha m} : alpha < modulus := by
   have := ctx.hsmall; omega
 
-@[simp] private lemma hm {ctx : BalancedDecomp alpha m} : 0 < m := by
+private lemma hm {ctx : BalancedDecomp alpha m} : 0 < m := by
   have h : 0 < modulus - 1 := by decide
   rw [← ctx.hqm1, mul_comm] at h
   exact Nat.pos_of_mul_pos_right h
@@ -200,9 +203,8 @@ end BalancedDecomp
 
 private theorem natCast_div_add_mod (r : Coeff) (s : ℕ) :
     s * ((r.val / s):Coeff) + ((r.val % s): Coeff) = r := by
-  rw [← Nat.cast_mul, ← Nat.cast_add]
-  nth_rewrite 3 [← ZMod.natCast_zmod_val r]
-  congr 1; exact Nat.div_add_mod r.val s
+  simpa only [Nat.cast_add, Nat.cast_mul, ZMod.natCast_zmod_val] using
+    congrArg (Nat.cast : ℕ → Coeff) (Nat.div_add_mod r.val s)
 
 private theorem power2RoundCoeff_eq (r : Coeff) {r1 : ℕ} {r0 : ℤ}
   (hdecomp : power2RoundCoeff r = (r1, r0)) :
@@ -446,22 +448,14 @@ private theorem alpha_le_natAbs_centeredRepr_mul
     have hz : (z : Coeff) = ((z.toNat : ℕ) : Coeff) := by
       rw [← Int.cast_natCast (R := Coeff), Int.toNat_of_nonneg hznn]
     rw [hz, ← Nat.cast_mul]
-  rw [hcoeff_eq]
-  have hlt : alpha * z.toNat < modulus :=
-    calc alpha * z.toNat < alpha * m := Nat.mul_lt_mul_of_pos_left hzm ctx.hα
-      _ = modulus - 1 := ctx.hqm1
-      _ < modulus := Nat.sub_lt (by decide) one_pos
-  by_cases hle : (((alpha * z.toNat : ℕ) : Coeff).val : ℤ) ≤ (modulus : ℤ) / 2
-  · rw [centeredRepr_of_le hle, ZMod.val_natCast_of_lt hlt, Int.natAbs_natCast]
-    exact Nat.le_mul_of_pos_right alpha (by have := Int.toNat_of_nonneg hznn; omega)
-  · push Not at hle
-    have hq : modulus = alpha * m + 1 := by have := ctx.hsmall; have := ctx.hqm1; omega
-    rw [centeredRepr_of_gt hle, ZMod.val_natCast_of_lt hlt,
-      Int.natAbs_natCast_sub_natCast_of_le hlt.le, Nat.le_sub_iff_add_le hlt.le, hq]
-    calc alpha + alpha * z.toNat
-        = alpha * (z.toNat + 1) := by ring
-      _ ≤ alpha * m             := Nat.mul_le_mul_left alpha (Nat.succ_le_of_lt hzm)
-      _ ≤ alpha * m + 1         := Nat.le_succ _
+  have hq : modulus = alpha * m + 1 := by have := ctx.hsmall; have := ctx.hqm1; omega
+  have hle : alpha * z.toNat + alpha ≤ alpha * m := by
+    have := Nat.mul_le_mul_left alpha hzm; rwa [Nat.mul_succ] at this
+  have hpos : alpha ≤ alpha * z.toNat :=
+    Nat.le_mul_of_pos_right alpha (by have := Int.toNat_of_nonneg hznn; omega)
+  rw [hcoeff_eq, centeredRepr_eq_valMinAbs, ZMod.valMinAbs_natAbs_eq_min,
+    ZMod.val_natCast_of_lt (by omega)]
+  omega
 
 private theorem highBitsCoeff_add_eq_of_centeredRepr_lt
     {alpha m b : ℕ} (ctx : BalancedDecomp alpha m) (r s : Coeff)
@@ -526,7 +520,7 @@ private theorem useHintCoeff_shift_sub_le
       by_cases hr0pos : 0 < r0
       · by_cases hwrap : r1 + 1 < m
         · use r0 - alpha; constructor
-          · simp only [useHintCoeff, if_true, hdec, hr0pos, ctx.h2α, ctx.hmdef]
+          · simp only [useHintCoeff, ite_true, hdec, hr0pos, ctx.h2α, ctx.hmdef]
             rw [Nat.mod_eq_of_lt hwrap, ←hdecomp]
             push_cast; ring
           · omega

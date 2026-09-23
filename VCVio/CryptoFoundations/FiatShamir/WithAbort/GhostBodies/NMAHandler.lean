@@ -147,9 +147,10 @@ uniform-query slots are empty (the runtime forwards uniform queries through `uni
 without caching), and the random-oracle slots carry the base entries. This is the left
 component of the linked-run projection `proj₂` for sub-lemma (b). -/
 @[expose] def baseEmbed (base : (M × Commit →ₒ Chal).QueryCache) :
-    (unifSpec + (M × Commit →ₒ Chal)).QueryCache
-  | .inl _ => none
-  | .inr mc => base mc
+    (unifSpec + (M × Commit →ₒ Chal)).QueryCache :=
+  QueryCache.ofFn fun
+    | .inl _ => none
+    | .inr mc => base mc
 
 omit [SampleableType Stmt] [DecidableEq Commit] [DecidableEq M] [SampleableType Chal] in
 @[simp] lemma baseEmbed_inr (base : (M × Commit →ₒ Chal).QueryCache) (mc : M × Commit) :
@@ -164,7 +165,7 @@ omit [SampleableType Stmt] [DecidableEq Commit] [DecidableEq M] [SampleableType 
 @[simp] lemma baseEmbed_empty :
     baseEmbed M (∅ : (M × Commit →ₒ Chal).QueryCache) =
       (∅ : (unifSpec + (M × Commit →ₒ Chal)).QueryCache) := by
-  funext t
+  ext t
   cases t with
   | inl n => rfl
   | inr mc => rfl
@@ -176,7 +177,7 @@ lemma baseEmbed_cacheQuery (base : (M × Commit →ₒ Chal).QueryCache)
     (mc : M × Commit) (v : Chal) :
     baseEmbed M (base.cacheQuery mc v) =
       (baseEmbed M base).cacheQuery (.inr mc) v := by
-  funext t
+  ext t
   cases t with
   | inl n =>
       rw [QueryCache.cacheQuery_of_ne _ _ (show (Sum.inl n : (unifSpec +

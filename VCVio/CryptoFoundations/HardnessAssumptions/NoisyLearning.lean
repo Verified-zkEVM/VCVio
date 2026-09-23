@@ -9,6 +9,7 @@ public import VCVio.CryptoFoundations.SecExp
 public import VCVio.OracleComp.ProbComp
 public import VCVio.OracleComp.Constructions.SampleableType
 public import Mathlib.LinearAlgebra.Matrix.DotProduct
+import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Noisy learning problems
@@ -118,20 +119,34 @@ def game1 (problem : Problem Sample Secret Output)
 abbrev SearchAdversary (_problem : Problem Sample Secret Output) :=
   Sample × Output → ProbComp Secret
 
-/-- The search experiment: the adversary must recover the sampled secret. -/
-def searchExperiment [Add Output] [DecidableEq Secret]
-    (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) :
-    ProbComp Bool := do
+/-- Sample a noisy challenge and retain both the secret and the adversary's guess. -/
+def searchRun [Add Output] (problem : Problem Sample Secret Output)
+    (adv : SearchAdversary problem) : ProbComp ((Sample × Secret) × Secret) := do
   let challenge ← problem.sampleChallenge
   let secret ← problem.sampleSecret
   let error ← problem.sampleError
   let secret' ← adv (challenge, problem.noiseless secret challenge + error)
+  return ((challenge, secret), secret')
+
+/-- The search experiment: the adversary must recover the sampled secret. -/
+def searchExperiment [Add Output] [DecidableEq Secret]
+    (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) :
+    ProbComp Bool := do
+  let ((_, secret), secret') ← searchRun problem adv
   return decide (secret' = secret)
 
+open scoped Classical in
 /-- Search advantage for the noisy-learning experiment. -/
-noncomputable def searchAdvantage [Add Output] [DecidableEq Secret]
+noncomputable def searchAdvantage [Add Output]
     (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) : ℝ :=
-  (Pr[= true | searchExperiment problem adv]).toReal
+  (𝒟[searchExperiment problem adv] {true}).toReal
+
+/-- The event-style search advantage agrees with the Boolean experiment's success mass. -/
+theorem searchAdvantage_eq_evalDist_searchExperiment [Add Output] [DecidableEq Secret]
+    (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) :
+    searchAdvantage problem adv = (𝒟[searchExperiment problem adv] {true}).toReal := by
+  unfold searchAdvantage
+  congr
 
 end Generic
 

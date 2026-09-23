@@ -37,11 +37,8 @@ namespace PRFTagReader
 
 section DirectCouplingStepLemmas
 
-variable {TagId Nonce Digest : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [Fintype TagId] [SampleableType Nonce] [DecidableEq Digest]
 
 namespace UnlinkReduction
 
@@ -63,7 +60,26 @@ Both step lemmas are direct corollaries of `multipleTableHandler_tag_run_of_lt` 
 `singleTableHandler_tag_run_of_lt`, specialized to the slot-positive case where the
 zero-slot rewrite `Fin.ext hzero` of the slot-zero tag case no longer applies. -/
 
-omit [Nonempty TagId] [SampleableType Digest] in
+/-- **S tag step at slot-positive.** Under `hslot : s.sessionsUsed tag < sessionsPerTag`,
+the `singleTableHandler` `Sum.inl tag` branch on `tableExtending c gS` samples a fresh nonce and
+emits the S-transcript `⟨n, tableExtending c gS ((tag, slotK), n)⟩` where
+`slotK = ⟨s.sessionsUsed tag, hslot⟩`. Under `¬ s.sessionsUsed tag = 0`, this slot is non-zero, so
+M and S read different cells of `gS`. -/
+lemma slotPositive_S_tag_step
+    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
+    (gS : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (tag : TagId) (s : UnlinkState TagId)
+    (hslot : s.sessionsUsed tag < sessionsPerTag) :
+    singleTableHandler (OracleComp.tableExtending c gS) (Sum.inl tag) s
+    = ($ᵗ Nonce) >>= fun n =>
+        pure (some (⟨n, OracleComp.tableExtending c gS
+            ((tag, ⟨s.sessionsUsed tag, hslot⟩), n)⟩ : TagTranscript Nonce Digest),
+          { s with sessionsUsed :=
+              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) :=
+  singleTableHandler_tag_run_of_lt (OracleComp.tableExtending c gS) tag s hslot
+
+variable [DecidableEq Nonce] [NeZero sessionsPerTag]
+
 /-- **M-Fine tag step at slot-positive.** Under `hslot : s.sessionsUsed tag < sessionsPerTag`,
 the `multipleBadTableHandlerFine` `Sum.inl tag` branch on the sub-table
 `slotZeroSubTable (tableExtending c gS)` samples a fresh nonce and emits the M-transcript
@@ -75,9 +91,7 @@ lemma slotPositive_MFine_tag_step
     (gS gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     (tag : TagId) (s : UnlinkState TagId) (sB : UnlinkBadState TagId Nonce Digest)
     (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag)
-      (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
+    multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
         (OracleComp.tableExtending c gS)) gFine (Sum.inl tag) (s, sB)
     = ($ᵗ Nonce) >>= fun n =>
         pure (some (⟨n, OracleComp.tableExtending c gS
@@ -96,26 +110,6 @@ lemma slotPositive_MFine_tag_step
   rw [multipleTableHandler_tag_run_of_lt _ tag s hslot]
   exact bind_assoc ..
 
-omit [Nonempty TagId] [DecidableEq Nonce] [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- **S tag step at slot-positive.** Under `hslot : s.sessionsUsed tag < sessionsPerTag`,
-the `singleTableHandler` `Sum.inl tag` branch on `tableExtending c gS` samples a fresh nonce and
-emits the S-transcript `⟨n, tableExtending c gS ((tag, slotK), n)⟩` where
-`slotK = ⟨s.sessionsUsed tag, hslot⟩`. Under `¬ s.sessionsUsed tag = 0`, this slot is non-zero, so
-M and S read different cells of `gS`. -/
-lemma slotPositive_S_tag_step
-    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
-    (gS : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (tag : TagId) (s : UnlinkState TagId)
-    (hslot : s.sessionsUsed tag < sessionsPerTag) :
-    singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS) (Sum.inl tag) s
-    = ($ᵗ Nonce) >>= fun n =>
-        pure (some (⟨n, OracleComp.tableExtending c gS
-            ((tag, ⟨s.sessionsUsed tag, hslot⟩), n)⟩ : TagTranscript Nonce Digest),
-          { s with sessionsUsed :=
-              Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) }) :=
-  singleTableHandler_tag_run_of_lt (OracleComp.tableExtending c gS) tag s hslot
-
 /-- **Slot-positive slotK is non-zero.** At the slot-positive case
 `¬ s.sessionsUsed tag = 0`, the realized session index `⟨s.sessionsUsed tag, hslot⟩` is
 non-zero in `Fin sessionsPerTag`. -/
@@ -132,7 +126,6 @@ lemma slotPositive_slotK_ne_zero {TagId' : Type} {sessionsPerTag' : ℕ}
 
 /-! ### Fine `cacheBad`-irrelevance bridge -/
 
-omit [Nonempty TagId] [SampleableType Digest] in
 /-- **Fine handler is `cacheBad`-irrelevant.** Two initial bad states agreeing off `cacheBad`
 produce identical Fine-run distributions after the projection `with cacheBad := cb`. Composes the
 pointwise Fine→original bridge (`…_forget_cacheBad_pointwise_eq`) with the original-handler
@@ -146,11 +139,9 @@ lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
     (hSU : sB.sessionsUsed = sB'.sessionsUsed)
     (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
     𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g gFine) oa).run (s, sB)]
+        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB)]
       = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g gFine) oa).run (s, sB')] := by
+        (simulateQ (multipleBadTableHandlerFine g gFine) oa).run (s, sB')] := by
   rw [evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
         g gFine oa (s, sB),
       evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq

@@ -7,6 +7,8 @@ Authors: Nicolas Consigny, Matthias Meijers, Quang Dao
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.FinalValidity
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.SMDTTCR
+public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # Source-final-validity SM-DT-TCR
@@ -92,9 +94,9 @@ def oracles [DecidableEq Tweak] (prob : Problem ι PkSeed Tweak M Y) (pk : PkSee
     (challengeOracle prob pk +
       SourceFinalValidity.collectionOracle (Q := Tweak × M) Prod.fst prob.thColl pk)
 
-/-- The source-final-validity SM-DT-TCR experiment. A forgery wins exactly when final validity
+/-- The source-final-validity SM-DT-TCR experiment. An adversary wins exactly when final validity
 holds and it names a recorded target with a distinct colliding message. -/
-noncomputable def Experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
+noncomputable def experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
   let (privateState, gameState) ← (simulateQ (oracles prob pk) adv.choose).run .initial
@@ -105,9 +107,9 @@ noncomputable def Experiment [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
       return gameState.valid && decide (m ≠ mj ∧ prob.th.eval pk t m = prob.th.eval pk t mj)
 
 /-- The source-final-validity SM-DT-TCR advantage. -/
-noncomputable def Advantage [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
+noncomputable def advantage [DecidableEq Tweak] [DecidableEq M] [DecidableEq Y]
     {prob : Problem ι PkSeed Tweak M Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  Pr[= true | Experiment adv]
+  𝒟[experiment adv] {true}
 
 variable [DecidableEq Tweak] {prob : Problem ι PkSeed Tweak M Y} {pk : PkSeed}
   {t : Tweak} {m : M} {st : State Tweak M}
@@ -117,5 +119,44 @@ theorem challengeOracle_run :
     (challengeOracle prob pk (t, m)).run st =
       pure (prob.th.eval pk t m, st.recordTarget prob.numTargets Prod.fst (t, m)) := by
   simp [challengeOracle]
+
+/-! ## Run-level final-validity correspondence -/
+
+section Reachable
+
+/-- The target summand answers every query and records it, so it maintains the monitor invariant at
+the target-recording step. -/
+theorem challengeOracle_preservesInv (prob : Problem ι PkSeed Tweak M Y) (pk : PkSeed) :
+    QueryImpl.PreservesInv (challengeOracle prob pk)
+      (SourceFinalValidity.Invariant prob.numTargets Prod.fst) :=
+  fun (t, m) st hst z hz => by
+    rw [challengeOracle_run, support_pure, Set.mem_singleton_iff] at hz
+    exact hz ▸ hst.recordTarget prob.numTargets Prod.fst st (t, m)
+
+/-- Every summand of the first-phase oracle implementation maintains the monitor invariant: private
+randomness leaves the state untouched, and the target and collection oracles record through
+`SourceFinalValidity.State.recordTarget` and `SourceFinalValidity.State.recordCollection`. -/
+theorem oracles_preservesInv (prob : Problem ι PkSeed Tweak M Y) (pk : PkSeed) :
+    QueryImpl.PreservesInv (oracles prob pk)
+      (SourceFinalValidity.Invariant prob.numTargets Prod.fst) :=
+  (SourceFinalValidity.preservesInv_privateRandomness _).add
+    ((challengeOracle_preservesInv prob pk).add
+      (SourceFinalValidity.preservesInv_collectionOracle _ _ _ _))
+
+/-- The sticky bit decides the final predicate on every reachable state: the run-level form of the
+monitor invariant, obtained from the initial state and the two recording steps. This is what lets a
+winning condition read `gameState.valid` and mean `SourceFinalValidity.Valid`. -/
+theorem valid_eq_decide_valid_of_reachable {prob : Problem ι PkSeed Tweak M Y}
+    (adv : Adversary prob) (pk : PkSeed) {z : adv.State × State Tweak M}
+    (hz : z ∈ support ((simulateQ (oracles prob pk) adv.choose).run .initial)) :
+    z.2.valid = decide (SourceFinalValidity.Valid prob.numTargets Prod.fst z.2) :=
+  (OracleComp.simulateQ_run_preservesInv (oracles prob pk) _ (oracles_preservesInv prob pk)
+    adv.choose .initial (SourceFinalValidity.invariant_initial _ _) z hz).eq_decide _ _ _
+
+end Reachable
+
+-- Declaration-specific naming exceptions for this game's underscore-separated names.
+attribute [nolint defsWithUnderscore]
+  experiment advantage
 
 end TweakableHash.SM_DT_TCR_SourceFinalValidity

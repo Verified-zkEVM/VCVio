@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
+import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Interleaved target subset resilience
@@ -90,16 +91,31 @@ def ITSROracles (prob : ITSRProblem K X Y Index) :
   (QueryImpl.ofLift unifSpec ProbComp).liftTarget (StateT (ITSRTranscript K X) ProbComp) +
     ITSRTargetOracle prob
 
+/-- Execute an adversary and retain its candidate and ordered target transcript. -/
+def ITSRAdversary.run {prob : ITSRProblem K X Y Index} (adv : ITSRAdversary prob) :
+    ProbComp ((K × X) × ITSRTranscript K X) :=
+  (simulateQ (ITSROracles prob) adv.main).run []
+
 /-- ITSR experiment. -/
 noncomputable def ITSRExperiment [DecidableEq K] [DecidableEq X] [DecidableEq Index]
     {prob : ITSRProblem K X Y Index} (adv : ITSRAdversary prob) : ProbComp Bool := do
-  let (candidate, targets) ← (simulateQ (ITSROracles prob) adv.main).run []
+  let (candidate, targets) ← adv.run
   return decide (prob.Wins targets candidate)
 
 /-- ITSR success probability. -/
 noncomputable def ITSRAdvantage [DecidableEq K] [DecidableEq X] [DecidableEq Index]
     {prob : ITSRProblem K X Y Index} (adv : ITSRAdversary prob) : ℝ≥0∞ :=
-  Pr[= true | ITSRExperiment adv]
+  Pr{
+    let (candidate, targets) ← adv.run
+  }[prob.Wins targets candidate]
+
+/-- The event-style advantage agrees with the Boolean experiment's success mass. -/
+theorem ITSRAdvantage_eq_evalDist_experiment [DecidableEq K] [DecidableEq X]
+    [DecidableEq Index] {prob : ITSRProblem K X Y Index} (adv : ITSRAdversary prob) :
+    ITSRAdvantage adv = 𝒟[ITSRExperiment adv] {true} := by
+  simpa only [ITSRAdvantage, ITSRExperiment] using
+    (prEvent_eq_evalDist_decide (mx := adv.run)
+      (p := fun z => prob.Wins z.2 z.1))
 
 @[simp] theorem ITSRTargetOracle_run (prob : ITSRProblem K X Y Index)
     (x : X) (targets : ITSRTranscript K X) :

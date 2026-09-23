@@ -56,19 +56,18 @@ def implicitRejection {K C KPRF : Type} (prf : PRFScheme KPRF C K) : RejectionPo
   keygen := prf.keygen
   onReject := fun kPrf c => some (prf.eval kPrf c)
 
-/-- Bundled subprobabilistic semantics for an FO hash world, obtained by hiding the
+/-- Bundled measure semantics for an FO hash world, obtained by hiding the
 variant-specific cache after running the public-randomness-plus-hash simulation. -/
-noncomputable def spmfSemantics {ι : Type} {hashOracleSpec : OracleSpec ι}
+noncomputable def measureSemantics {ι : Type} {hashOracleSpec : OracleSpec ι}
     {M PK C R K : Type} (variant : Variant hashOracleSpec M PK C R K) :
-    SPMFSemantics (OracleComp (unifSpec + hashOracleSpec)) :=
-  SPMFSemantics.withStateOracle variant.queryImpl variant.initCache
+    MeasureSemanticsVia (OracleComp (unifSpec + hashOracleSpec)) :=
+  MeasureSemanticsVia.withStateOracle variant.queryImpl variant.initCache
 
 /-- Full public-randomness runtime for an FO hash world. -/
 noncomputable def runtime {ι : Type} {hashOracleSpec : OracleSpec ι}
     {M PK C R K : Type} (variant : Variant hashOracleSpec M PK C R K) :
-    ProbCompRuntime (OracleComp (unifSpec + hashOracleSpec)) where
-  toSPMFSemantics := spmfSemantics variant
-  toProbCompLift := ProbCompLift.ofMonadLift _
+    ProbCompRuntime (OracleComp (unifSpec + hashOracleSpec)) :=
+  ProbCompRuntime.withStateOracle variant.queryImpl variant.initCache
 
 /-- Generic FO construction parameterized by a hash world and a rejection policy. -/
 def scheme
@@ -85,7 +84,7 @@ def scheme
     let fb ← monadLift policy.keygen
     return (pk, ((pk, sk), fb))
   encaps := fun pk => do
-    let msg ← monadLift ($ᵗ M : ProbComp M)
+    let msg ← $ᵗ M
     let r ← variant.deriveCoins pk msg
     let c := pke.encrypt pk msg r
     let k ← variant.deriveKey pk msg c
@@ -220,8 +219,8 @@ theorem encaps_usesExactFamilyWeightedCost {ω : Type} [AddMonoid ω]
 /-- Under per-family upper bounds on the two U-transform oracle families, encapsulation incurs
 weighted query cost at most the sum of those bounds. -/
 theorem encaps_usesWeightedQueryCostAtMost {ω : Type}
-    [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω] [MonadLiftT m SetM]
-    [LawfulMonadLiftT m SetM]
+    [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
+    [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -270,17 +269,20 @@ theorem encaps_usesExactlyTwoQueries
       (hCoins := fun _ ↦ rfl) (hKeys := fun _ ↦ rfl))
 
 /-- Expected weighted query cost of U-transform encapsulation under constant per-family weights. -/
-theorem encaps_expectedQueryCost_eq_of_constantOracleWeights {ω : Type}
-    [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] [MonadLiftT m SetM]
-    [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+theorem encaps_expectedQueryCost_eq_of_constantOracleWeights {ω : Type} [MeasurableSpace ω]
+    [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadLiftT m SetM]
+    [LawfulMonadLiftT m SetM]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
     (policy : FujisakiOkamoto.RejectionPolicy K C)
     (pk : PK) (costFn : (UTransform.hashOracleSpec M R KD K).Domain → ω)
-    (wCoins wKey : ω) (val : ω → ENNReal) (hval : Monotone val)
+    (wCoins wKey : ω) (val : ω → ENNReal) (hval : Measurable val)
     (hCoins : ∀ msg, costFn (Sum.inl msg) = wCoins)
-    (hKeys : ∀ kd, costFn (Sum.inr kd) = wKey) :
+    (hKeys : ∀ kd, costFn (Sum.inr kd) = wKey)
+    [MeasureTheory.IsProbabilityMeasure 𝒟[HasQuery.queryCostDist
+      (fun [HasQuery (UTransform.hashOracleSpec M R KD K) (AddWriterT ω m)] ↦
+        (UTransform pke kdInput policy).encaps pk) runtime costFn]] :
     ExpectedQueryCost[
       (UTransform pke kdInput policy).encaps pk in runtime by costFn via val
     ] = val (wCoins + wKey) :=
@@ -292,15 +294,17 @@ theorem encaps_expectedQueryCost_eq_of_constantOracleWeights {ω : Type}
 
 /-- Expected weighted query cost of U-transform encapsulation is bounded by the sum of the
 per-family bounds. -/
-theorem encaps_expectedQueryCost_le {ω : Type}
-    [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω] [MonadLiftT m PMF]
-    [LawfulMonadLiftT m PMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+theorem encaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
+    [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
     (policy : FujisakiOkamoto.RejectionPolicy K C)
     (pk : PK) (costFn : (UTransform.hashOracleSpec M R KD K).Domain → ω)
-    (wCoins wKey : ω) (val : ω → ENNReal) (hval : Monotone val)
+    (wCoins wKey : ω) (val : ω → ENNReal) (hval : Monotone val) (hvalMeas : Measurable val)
     (hCoins : ∀ msg, costFn (Sum.inl msg) ≤ wCoins)
     (hKeys : ∀ kd, costFn (Sum.inr kd) ≤ wKey) :
     ExpectedQueryCost[
@@ -310,16 +314,20 @@ theorem encaps_expectedQueryCost_le {ω : Type}
     (encaps_usesWeightedQueryCostAtMost
       (runtime := runtime) (pke := pke) (kdInput := kdInput) (policy := policy) (pk := pk)
       (costFn := costFn) (wCoins := wCoins) (wKey := wKey) hCoins hKeys)
-    hval
+    hval hvalMeas
 
 /-- Expected query count of U-transform encapsulation is exactly `2`. -/
-theorem encaps_expectedQueries_eq_two [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+theorem encaps_expectedQueries_eq_two [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+    [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
     (policy : FujisakiOkamoto.RejectionPolicy K C)
-    (pk : PK) :
+    (pk : PK)
+    [MeasureTheory.IsProbabilityMeasure 𝒟[HasQuery.queryCountDist
+      (fun [HasQuery (UTransform.hashOracleSpec M R KD K) (AddWriterT ℕ m)] ↦
+        (UTransform pke kdInput policy).encaps pk) runtime]] :
     ExpectedQueries[ (UTransform pke kdInput policy).encaps pk in runtime ] = 2 :=
   HasQuery.expectedQueries_eq_of_usesExactlyQueries
     (encaps_usesExactlyTwoQueries
@@ -346,7 +354,7 @@ theorem decaps_usesZeroQueryCost_of_decrypt_eq_none {ω : Type} [AddMonoid ω]
 weighted query cost at most the sum of those bounds. -/
 theorem decaps_usesWeightedQueryCostAtMost {ω : Type}
     [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω] [CanonicallyOrderedAdd ω]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+    [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -384,40 +392,37 @@ theorem decaps_usesWeightedQueryCostAtMost {ω : Type}
           (AddWriterT.pathwiseCostAtMost_pure (m := m) (policy.onReject fb c : Option K)) zero_le
 
 /-- If deterministic decryption fails immediately, decapsulation has expected weighted query cost
-`0`. -/
-theorem decaps_expectedQueryCost_eq_zero_of_decrypt_eq_none {ω : Type}
-    [AddMonoid ω] [Preorder ω] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] [MonadLiftT m SetM]
-    [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+equal to the valuation of zero. -/
+theorem decaps_expectedQueryCost_eq_zero_of_decrypt_eq_none {ω : Type} [MeasurableSpace ω]
+    [AddMonoid ω] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
     (policy : FujisakiOkamoto.RejectionPolicy K C)
     (pk : PK) (sk : SK) (fb : policy.FallbackState) (c : C)
     (costFn : (UTransform.hashOracleSpec M R KD K).Domain → ω)
-    (val : ω → ENNReal) (hval : Monotone val)
+    (val : ω → ENNReal) (hval : Measurable val)
     (hdec : pke.decrypt sk c = none) :
     ExpectedQueryCost[
       (UTransform pke kdInput policy).decaps ((pk, sk), fb) c in runtime by costFn via val
-    ] = val 0 :=
-  HasQuery.expectedQueryCost_eq_of_usesCostExactly
-    (decaps_usesZeroQueryCost_of_decrypt_eq_none
-      (runtime := runtime) (pke := pke) (kdInput := kdInput) (policy := policy)
-      (pk := pk) (sk := sk) (fb := fb) (c := c) (costFn := costFn) hdec)
-    hval
+    ] = val 0 := by
+  simpa only [HasQuery.expectedQueryCost, HasQuery.Program.withAddCost, UTransform,
+    FujisakiOkamoto.scheme, hdec] using
+    AddWriterT.expectedCost_pure (policy.onReject fb c) val hval
 
 /-- Expected weighted query cost of U-transform decapsulation is bounded by the sum of the
 per-family bounds. -/
-theorem decaps_expectedQueryCost_le {ω : Type}
+theorem decaps_expectedQueryCost_le {ω : Type} [MeasurableSpace ω]
     [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω] [CanonicallyOrderedAdd ω]
-    [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
-    [EvalDistCompatible m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadLiftT m SetM]
+    [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
     (policy : FujisakiOkamoto.RejectionPolicy K C)
     (pk : PK) (sk : SK) (fb : policy.FallbackState) (c : C)
     (costFn : (UTransform.hashOracleSpec M R KD K).Domain → ω)
-    (wCoins wKey : ω) (val : ω → ENNReal) (hval : Monotone val)
+    (wCoins wKey : ω) (val : ω → ENNReal) (hval : Monotone val) (hvalMeas : Measurable val)
     (hCoins : ∀ msg, costFn (Sum.inl msg) ≤ wCoins)
     (hKeys : ∀ kd, costFn (Sum.inr kd) ≤ wKey) :
     ExpectedQueryCost[
@@ -428,10 +433,10 @@ theorem decaps_expectedQueryCost_le {ω : Type}
       (runtime := runtime) (pke := pke) (kdInput := kdInput) (policy := policy)
       (pk := pk) (sk := sk) (fb := fb) (c := c) (costFn := costFn)
       (wCoins := wCoins) (wKey := wKey) hCoins hKeys)
-    hval
+    hval hvalMeas
 
 /-- Unit-cost specialization: U-transform decapsulation makes at most two oracle queries. -/
-theorem decaps_usesAtMostTwoQueries [MonadLiftT m SetM] [LawfulMonadLiftT m SetM]
+theorem decaps_usesAtMostTwoQueries [MonadAttach m] [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -445,8 +450,9 @@ theorem decaps_usesAtMostTwoQueries [MonadLiftT m SetM] [LawfulMonadLiftT m SetM
       (hCoins := fun _ ↦ le_rfl) (hKeys := fun _ ↦ le_rfl)
 
 /-- Expected query count of U-transform decapsulation is at most `2`. -/
-theorem decaps_expectedQueries_le_two [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [EvalDistCompatible m]
+theorem decaps_expectedQueries_le_two [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+    [ExactMonadAttach m]
     (runtime : QueryImpl (UTransform.hashOracleSpec M R KD K) m)
     (pke : AsymmEncAlg.ExplicitCoins ProbComp M PK SK R C)
     (kdInput : M → C → KD)
@@ -464,10 +470,8 @@ end costAccounting
 noncomputable def runtime
     {M R KD K : Type}
     [DecidableEq M] [DecidableEq KD] [SampleableType R] [SampleableType K] :
-    ProbCompRuntime (OracleComp (oracleSpec M R KD K)) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle
-    (hashImpl := queryImpl (M := M) (R := R) (KD := KD) (K := K))
+    ProbCompRuntime (OracleComp (oracleSpec M R KD K)) :=
+  ProbCompRuntime.withStateOracle (queryImpl (M := M) (R := R) (KD := KD) (K := K))
     ((∅, ∅) : QueryCache M R KD K)
-  toProbCompLift := ProbCompLift.ofMonadLift _
 
 end UTransform

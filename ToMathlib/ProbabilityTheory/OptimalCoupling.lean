@@ -28,6 +28,17 @@ open Topology ENNReal NNReal Set
 
 universe u
 
+private lemma sum_option_eq_one_of_none_eq_sub {γ : Type u} [Fintype γ]
+    {c : Option γ → ℝ} (h_nonneg : ∀ z, 0 ≤ c z)
+    (h_none : c none = 1 - ∑ z, c (some z)) :
+    ∑ z : Option γ, c z = 1 := by
+  rw [Fintype.sum_option, h_none]
+  have h_some_le_one : ∑ z, c (some z) ≤ 1 := by
+    have hnone_nonneg : 0 ≤ c none := h_nonneg none
+    rw [h_none] at hnone_nonneg
+    linarith
+  linarith
+
 variable {α β : Type u} [Finite α] [Finite β]
 
 -- 1. Space of bounded non-negative real functions
@@ -106,9 +117,6 @@ private lemma pmf_none_eq {γ : Type u} [Finite γ] (p : PMF (Option γ)) :
     p none = 1 - ∑ x, p (some x) := by
   refine (SPMF.gap_eq_one_sub_tsum p).trans (congr_arg _ (tsum_eq_sum ?_))
   simp
-
-private lemma spmf_ext {γ : Type u} {p q : SPMF γ}
-    (h : ∀ x, p x = q x) : p = q := SPMF.ext h
 
 def couplings_set (p : SPMF α) (q : SPMF β) : Set (Option (α × β) → ℝ) :=
   letI := Fintype.ofFinite α
@@ -214,18 +222,6 @@ lemma mem_couplings_set_of_isCoupling {p : SPMF α} {q : SPMF β} (c : SPMF (α 
     exact h_toReal
   · exact SPMF.toReal_gap_eq_one_sub_sum_toReal c
 
-omit [Finite α] [Finite β] in
-private lemma sum_option_eq_one_of_none_eq_sub {γ : Type u} [Fintype γ]
-    {c : Option γ → ℝ} (h_nonneg : ∀ z, 0 ≤ c z)
-    (h_none : c none = 1 - ∑ z, c (some z)) :
-    ∑ z : Option γ, c z = 1 := by
-  rw [Fintype.sum_option, h_none]
-  have h_some_le_one : ∑ z, c (some z) ≤ 1 := by
-    have hnone_nonneg : 0 ≤ c none := h_nonneg none
-    rw [h_none] at hnone_nonneg
-    linarith
-  linarith
-
 private lemma exists_coupling_of_mem_couplings_set {p : SPMF α} {q : SPMF β}
     {c : Option (α × β) → ℝ} (hc : c ∈ couplings_set p q) :
     ∃ c' : SPMF.Coupling p q, ∀ z, (c'.1.1 z).toReal = c z := by
@@ -294,7 +290,7 @@ private lemma exists_coupling_of_mem_couplings_set {p : SPMF α} {q : SPMF β}
     intro b
     rw [map_snd_eval]
     exact h_col_ennreal b
-  have hcpl : SPMF.IsCoupling c_spmf p q := ⟨spmf_ext hfst_some, spmf_ext hsnd_some⟩
+  have hcpl : SPMF.IsCoupling c_spmf p q := ⟨SPMF.ext hfst_some, SPMF.ext hsnd_some⟩
   refine ⟨⟨c_spmf, hcpl⟩, ?_⟩
   intro z
   change (ENNReal.ofReal (c z)).toReal = c z

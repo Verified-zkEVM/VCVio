@@ -17,7 +17,7 @@ distinct target values rather than the number of positions from which those valu
 They also exercise the bound in a strictly nonzero universe.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleSpec ENNReal
 
@@ -28,7 +28,7 @@ universe u
 section UniversePolymorphism
 
 variable {ι : Type (u + 1)} [DecidableEq ι] [Inhabited ι]
-  {spec : OracleSpec.{u + 1, u + 1} ι} [spec.DecidableEq] [IsUniformSpec spec]
+  {spec : OracleSpec.{u + 1, u + 1} ι} [IsUniformSpec spec]
 
 /-- The finite-target bound applies to a genuine fresh query when the oracle's indices,
 responses, and computation result live in an arbitrary nonzero universe. The singleton target
@@ -170,7 +170,7 @@ example (answer : Bool) :
     ([⟨false, answer⟩, ⟨false, answer⟩], onceCached answer) ∈ support
       (adaptivePrefixRunFrom returnLog repeatedPrefix
         (∅ : PrefixSpec.QueryCache) ([] : PrefixSpec.QueryLog)) := by
-  simp [adaptivePrefixRunFrom, repeatedPrefix, returnLog, onceCached]
+  cases answer <;> simp [adaptivePrefixRunFrom, repeatedPrefix, returnLog, onceCached]
 
 /-- The miss/hit branches are distinguishable at another input: the populated cache contains
 exactly the queried key and leaves the other Boolean key fresh. -/

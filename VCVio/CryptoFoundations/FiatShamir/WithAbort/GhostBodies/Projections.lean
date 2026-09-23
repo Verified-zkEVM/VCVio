@@ -206,7 +206,7 @@ lemma blindStepProj_map_ghostBlindImpl_indep (pk : Stmt) (sk : Wit)
               (s := (((re, gh₁), l), bf)) hgh1,
             ghostHybridImpl_run_ro_ghost_some ids M maxAttempts false pk sk
               (s := (((re, gh₂), l), bf)) hgh2',
-            if_neg Bool.false_ne_true, if_neg Bool.false_ne_true]
+            ite_eq_right Bool.false_ne_true, ite_eq_right Bool.false_ne_true]
         simp [Functor.map_map]
   · -- Signing query: the ghost writes are forgotten by the projection, and the output plus real
     -- cache are value-free by `run_ghostSignBody_fst`.
@@ -262,7 +262,7 @@ lemma ghostHybridImpl_proj_prog (pk : Stmt) (sk : Wit)
     cases hgh : s.1.1.2 mc with
     | some v =>
         rw [ghostHybridImpl_run_ro_ghost_some ids M maxAttempts true pk sk hgh,
-          if_pos rfl,
+          ite_eq_left rfl,
           roStep_of_some M (overlayCache_apply_ghost_some (M := M) s.1.1.1 hgh)]
         simp
     | none =>
@@ -308,7 +308,7 @@ lemma ghostHybridImpl_proj_trans (pk : Stmt) (sk : Wit)
     cases hgh : s.1.1.2 mc with
     | some v =>
         rw [ghostHybridImpl_run_ro_ghost_some ids M maxAttempts false pk sk hgh,
-          if_neg Bool.false_ne_true]
+          ite_eq_right Bool.false_ne_true]
         exact (Functor.map_map _ _ _).trans rfl
     | none =>
         rw [ghostHybridImpl_run_ro_ghost_none ids M maxAttempts false pk sk hgh]
@@ -356,7 +356,7 @@ lemma ghostSignBody_support_ghost (pk : Stmt) (sk : Wit) (msg : M) :
     · simp only [StateT.run_bind, StateT.run_modify, pure_bind, StateT.run_pure,
         support_pure, Set.mem_singleton_iff] at hz
       subst hz
-      simp only [uncacheQuery, ne_eq, ite_eq_left_iff, not_forall] at hq
+      simp only [uncacheQuery, QueryCache.toFn_ofFn, ne_eq, ite_eq_left_iff, not_forall] at hq
       exact Or.inl hq.2
 
 omit [SampleableType Stmt] in
@@ -385,7 +385,7 @@ lemma ghostHybridImpl_preserves_signed_inv (progSide : Bool) (pk : Stmt) (sk : W
           subst hz
           exact hs
       | false =>
-          rw [if_neg Bool.false_ne_true, support_map] at hz
+          rw [ite_eq_right Bool.false_ne_true, support_map] at hz
           obtain ⟨cu, -, rfl⟩ := hz
           exact hs
   · simp only [ghostHybridImpl, StateT.run_mk, support_map] at hz

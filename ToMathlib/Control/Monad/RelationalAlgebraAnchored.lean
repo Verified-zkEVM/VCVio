@@ -23,7 +23,7 @@ success and a failure postcondition for the side that has the transformer.
 
 The combinators are:
 
-* `rwpExc x y postOO postEO postOE postEE` — both sides are `ExceptT`; postconditions
+* `rwpExcCases x y postOO postEO postOE postEE` — both sides are `ExceptT`; postconditions
   for each of the four ok/error case combinations.
 * `rwpExcLeft x y postOk postErr` — only the left side is `ExceptT`.
 * `rwpExcRight x y postOk postErr` — only the right side is `ExceptT`.
@@ -50,7 +50,7 @@ variable {α β γ δ : Type u} {ε ε₁ ε₂ : Type u}
 /-! ## Honest two-sided exception WP -/
 
 /-- Two-sided 2×2 exception postcondition: the relational postcondition that case-splits
-on whether each side returned `Except.ok` or `Except.error`. Used internally by `rwpExc`
+on whether each side returned `Except.ok` or `Except.error`. Used internally by `rwpExcCases`
 to package its four corner postconditions into a single relational postcondition over
 `Except ε₁ α × Except ε₂ β`. -/
 def excPostBoth
@@ -66,7 +66,7 @@ def excPostBoth
 /-- Honest two-sided exception relational weakest precondition: takes one postcondition
 per (left ok/error × right ok/error) corner and tracks them all separately, rather than
 collapsing failure cases to `⊥` as `instExceptTLeft` / `instExceptTRight` do. -/
-def rwpExc
+def rwpExcCases
     (x : ExceptT ε₁ m₁ α) (y : ExceptT ε₂ m₂ β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) : l :=
@@ -169,15 +169,15 @@ variable [Monad m₁] [Monad m₂] [Preorder l]
 variable [MAlgRelOrdered m₁ m₂ l]
 variable {α β γ δ : Type u} {ε ε₁ ε₂ : Type u}
 
-/-! ### `rwpExc` pure rules -/
+/-! ### `rwpExcCases` pure rules -/
 
 @[simp]
-theorem rwpExc_pure_pure (a : α) (b : β)
+theorem rwpExcCases_pure_pure (a : α) (b : β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc (pure a : ExceptT ε₁ m₁ α) (pure b : ExceptT ε₂ m₂ β)
+    rwpExcCases (pure a : ExceptT ε₁ m₁ α) (pure b : ExceptT ε₂ m₂ β)
         postOO postEO postOE postEE = postOO a b := by
-  unfold rwpExc
+  unfold rwpExcCases
   rw [show (pure a : ExceptT ε₁ m₁ α).run = pure (Except.ok a) from
       ExceptT.run_pure a, show (pure b : ExceptT ε₂ m₂ β).run = pure (Except.ok b) from
       ExceptT.run_pure b]
@@ -185,12 +185,12 @@ theorem rwpExc_pure_pure (a : α) (b : β)
   rfl
 
 @[simp]
-theorem rwpExc_throw_pure (e : ε₁) (b : β)
+theorem rwpExcCases_throw_pure (e : ε₁) (b : β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc (throw e : ExceptT ε₁ m₁ α) (pure b : ExceptT ε₂ m₂ β)
+    rwpExcCases (throw e : ExceptT ε₁ m₁ α) (pure b : ExceptT ε₂ m₂ β)
         postOO postEO postOE postEE = postEO e b := by
-  unfold rwpExc
+  unfold rwpExcCases
   rw [show (throw e : ExceptT ε₁ m₁ α).run = pure (Except.error e) from
       ExceptT.run_throw, show (pure b : ExceptT ε₂ m₂ β).run = pure (Except.ok b) from
       ExceptT.run_pure b]
@@ -198,12 +198,12 @@ theorem rwpExc_throw_pure (e : ε₁) (b : β)
   rfl
 
 @[simp]
-theorem rwpExc_pure_throw (a : α) (e : ε₂)
+theorem rwpExcCases_pure_throw (a : α) (e : ε₂)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc (pure a : ExceptT ε₁ m₁ α) (throw e : ExceptT ε₂ m₂ β)
+    rwpExcCases (pure a : ExceptT ε₁ m₁ α) (throw e : ExceptT ε₂ m₂ β)
         postOO postEO postOE postEE = postOE a e := by
-  unfold rwpExc
+  unfold rwpExcCases
   rw [show (pure a : ExceptT ε₁ m₁ α).run = pure (Except.ok a) from
       ExceptT.run_pure a, show (throw e : ExceptT ε₂ m₂ β).run = pure (Except.error e) from
       ExceptT.run_throw]
@@ -211,12 +211,12 @@ theorem rwpExc_pure_throw (a : α) (e : ε₂)
   rfl
 
 @[simp]
-theorem rwpExc_throw_throw (e₁ : ε₁) (e₂ : ε₂)
+theorem rwpExcCases_throw_throw (e₁ : ε₁) (e₂ : ε₂)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc (throw e₁ : ExceptT ε₁ m₁ α) (throw e₂ : ExceptT ε₂ m₂ β)
+    rwpExcCases (throw e₁ : ExceptT ε₁ m₁ α) (throw e₂ : ExceptT ε₂ m₂ β)
         postOO postEO postOE postEE = postEE e₁ e₂ := by
-  unfold rwpExc
+  unfold rwpExcCases
   rw [show (throw e₁ : ExceptT ε₁ m₁ α).run = pure (Except.error e₁) from
       ExceptT.run_throw, show (throw e₂ : ExceptT ε₂ m₂ β).run = pure (Except.error e₂) from
       ExceptT.run_throw]
@@ -313,15 +313,16 @@ theorem rwpOpt_fail_fail
 
 /-! ### Monotonicity -/
 
-theorem rwpExc_mono (x : ExceptT ε₁ m₁ α) (y : ExceptT ε₂ m₂ β)
+theorem rwpExcCases_mono (x : ExceptT ε₁ m₁ α) (y : ExceptT ε₂ m₂ β)
     {postOO postOO' : α → β → l} {postEO postEO' : ε₁ → β → l}
     {postOE postOE' : α → ε₂ → l} {postEE postEE' : ε₁ → ε₂ → l}
     (hOO : ∀ a b, postOO a b ≤ postOO' a b)
     (hEO : ∀ e b, postEO e b ≤ postEO' e b)
     (hOE : ∀ a e, postOE a e ≤ postOE' a e)
     (hEE : ∀ e₁ e₂, postEE e₁ e₂ ≤ postEE' e₁ e₂) :
-    rwpExc x y postOO postEO postOE postEE ≤ rwpExc x y postOO' postEO' postOE' postEE' := by
-  unfold rwpExc
+    rwpExcCases x y postOO postEO postOE postEE ≤
+      rwpExcCases x y postOO' postEO' postOE' postEE' := by
+  unfold rwpExcCases
   apply MAlgRelOrdered.rwp_mono
   intro ea eb
   cases ea with
@@ -422,16 +423,16 @@ variable [CompleteLattice l]
 variable [MAlgOrdered m₁ l] [MAlgOrdered m₂ l] [MAlgRelOrdered m₁ m₂ l] [Anchored m₁ m₂ l]
 variable {α β γ δ : Type u} {ε ε₁ ε₂ : Type u}
 
-/-! ### `rwpExc` pure-side reductions to unary `wpExc` -/
+/-! ### `rwpExcCases` pure-side reductions to unary `wpExc` -/
 
 /-- When the left side is a `pure ok`, the two-sided honest exception WP collapses to
 the unary honest exception WP of the right side, specialized at the left's value. -/
-theorem rwpExc_pure_left (a : α) (y : ExceptT ε₂ m₂ β)
+theorem rwpExcCases_pure_left (a : α) (y : ExceptT ε₂ m₂ β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc (pure a : ExceptT ε₁ m₁ α) y postOO postEO postOE postEE =
+    rwpExcCases (pure a : ExceptT ε₁ m₁ α) y postOO postEO postOE postEE =
       MAlgOrdered.wpExc y (postOO a) (postOE a) := by
-  unfold rwpExc MAlgOrdered.wpExc
+  unfold rwpExcCases MAlgOrdered.wpExc
   rw [show (pure a : ExceptT ε₁ m₁ α).run = pure (Except.ok a) from ExceptT.run_pure a]
   rw [Anchored.rwp_pure_left]
   congr 1
@@ -443,12 +444,12 @@ theorem rwpExc_pure_left (a : α) (y : ExceptT ε₂ m₂ β)
 /-- When the left side is a `throw e`, the two-sided honest exception WP collapses to
 the unary honest exception WP of the right side, with postconditions specialized at
 the left's error `e`. -/
-theorem rwpExc_throw_left (e : ε₁) (y : ExceptT ε₂ m₂ β)
+theorem rwpExcCases_throw_left (e : ε₁) (y : ExceptT ε₂ m₂ β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc (throw e : ExceptT ε₁ m₁ α) y postOO postEO postOE postEE =
+    rwpExcCases (throw e : ExceptT ε₁ m₁ α) y postOO postEO postOE postEE =
       MAlgOrdered.wpExc y (postEO e) (postEE e) := by
-  unfold rwpExc MAlgOrdered.wpExc
+  unfold rwpExcCases MAlgOrdered.wpExc
   rw [show (throw e : ExceptT ε₁ m₁ α).run = pure (Except.error e) from ExceptT.run_throw]
   rw [Anchored.rwp_pure_left]
   congr 1
@@ -457,13 +458,13 @@ theorem rwpExc_throw_left (e : ε₁) (y : ExceptT ε₂ m₂ β)
   | ok b => rfl
   | error e' => rfl
 
-/-- Symmetric to `rwpExc_pure_left` on the right side. -/
-theorem rwpExc_pure_right (x : ExceptT ε₁ m₁ α) (b : β)
+/-- Symmetric to `rwpExcCases_pure_left` on the right side. -/
+theorem rwpExcCases_pure_right (x : ExceptT ε₁ m₁ α) (b : β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc x (pure b : ExceptT ε₂ m₂ β) postOO postEO postOE postEE =
+    rwpExcCases x (pure b : ExceptT ε₂ m₂ β) postOO postEO postOE postEE =
       MAlgOrdered.wpExc x (fun a => postOO a b) (fun e => postEO e b) := by
-  unfold rwpExc MAlgOrdered.wpExc
+  unfold rwpExcCases MAlgOrdered.wpExc
   rw [show (pure b : ExceptT ε₂ m₂ β).run = pure (Except.ok b) from ExceptT.run_pure b]
   rw [Anchored.rwp_pure_right]
   congr 1
@@ -472,13 +473,13 @@ theorem rwpExc_pure_right (x : ExceptT ε₁ m₁ α) (b : β)
   | ok a => rfl
   | error e => rfl
 
-/-- Symmetric to `rwpExc_throw_left` on the right side. -/
-theorem rwpExc_throw_right (x : ExceptT ε₁ m₁ α) (e : ε₂)
+/-- Symmetric to `rwpExcCases_throw_left` on the right side. -/
+theorem rwpExcCases_throw_right (x : ExceptT ε₁ m₁ α) (e : ε₂)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc x (throw e : ExceptT ε₂ m₂ β) postOO postEO postOE postEE =
+    rwpExcCases x (throw e : ExceptT ε₂ m₂ β) postOO postEO postOE postEE =
       MAlgOrdered.wpExc x (fun a => postOE a e) (fun e₁ => postEE e₁ e) := by
-  unfold rwpExc MAlgOrdered.wpExc
+  unfold rwpExcCases MAlgOrdered.wpExc
   rw [show (throw e : ExceptT ε₂ m₂ β).run = pure (Except.error e) from ExceptT.run_throw]
   rw [Anchored.rwp_pure_right]
   congr 1
@@ -636,7 +637,7 @@ theorem rwpOptRight_fail_right (x : m₁ α)
 
 /-! ### Bind laws
 
-The two-sided `rwpExc` bind law is the key payoff of anchoring: each of the four cases
+The two-sided `rwpExcCases` bind law is the key payoff of anchoring: each of the four cases
 in the inner relational WP either chains relationally (when both sides succeed) or
 collapses to the unary `wpExc` of the still-running side (when one side fails). The
 one-sided `rwpExcLeft` / `rwpExcRight` bind laws are the simpler analogues. The same
@@ -721,23 +722,23 @@ theorem rwpExcRight_bind_le (x : m₁ α) (y : ExceptT ε m₂ β)
 
 /-- Bind law for the honest two-sided exception WP. The four cases are:
 
-* `(ok, ok)`: chain relationally via `rwpExc`.
+* `(ok, ok)`: chain relationally via `rwpExcCases`.
 * `(error, ok)`: collapse to the unary honest exception WP of the right's `g`.
 * `(ok, error)`: collapse to the unary honest exception WP of the left's `f`.
 * `(error, error)`: trivially `postEE e₁ e₂`.
 -/
-theorem rwpExc_bind_le
+theorem rwpExcCases_bind_le
     (x : ExceptT ε₁ m₁ α) (y : ExceptT ε₂ m₂ β)
     (f : α → ExceptT ε₁ m₁ γ) (g : β → ExceptT ε₂ m₂ δ)
     (postOO : γ → δ → l) (postEO : ε₁ → δ → l)
     (postOE : γ → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
-    rwpExc x y
-        (fun a b => rwpExc (f a) (g b) postOO postEO postOE postEE)
+    rwpExcCases x y
+        (fun a b => rwpExcCases (f a) (g b) postOO postEO postOE postEE)
         (fun e b => MAlgOrdered.wpExc (g b) (postEO e) (postEE e))
         (fun a e => MAlgOrdered.wpExc (f a) (fun c => postOE c e) (fun e₁ => postEE e₁ e))
         postEE ≤
-      rwpExc (x >>= f) (y >>= g) postOO postEO postOE postEE := by
-  simp only [rwpExc]
+      rwpExcCases (x >>= f) (y >>= g) postOO postEO postOE postEE := by
+  simp only [rwpExcCases]
   let MID : Except ε₁ α → Except ε₂ β → l := fun ea eb =>
     MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (ExceptT.bindCont f ea) (ExceptT.bindCont g eb)
       (excPostBoth postOO postEO postOE postEE)

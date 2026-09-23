@@ -25,7 +25,7 @@ if (( $# > 0 )); then
   TARGETS=("$@")
 else
   LIBS=(
-    VCVio ToMathlib LatticeCrypto HashSig Examples Extern VCVioWidgets
+    VCVio VCVioCslib ToMathlib LatticeCrypto HashSig Examples Extern VCVioWidgets
     VCVioTest LatticeCryptoTest HashSigTest Interop
   )
   TARGETS=(lakefile.lean)

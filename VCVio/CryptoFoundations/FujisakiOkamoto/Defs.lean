@@ -77,8 +77,7 @@ abbrev OW_CPA_Adversary := PK → C → OracleComp pke.OW_CPA_oracleSpec M
 
 /-- Implementation of the OW-CPA encryption oracle. -/
 def OW_CPA_queryImpl (pk : PK) : QueryImpl pke.OW_CPA_oracleSpec ProbComp :=
-  QueryImpl.add
-    (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp))
+  QueryImpl.add unifSpec.passthrough
     (fun msg => do
       let r ← ($ᵗ R)
       pure (pke.encrypt pk msg r))
@@ -134,7 +133,7 @@ def OW_PCVA_queryImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) [Decida
   let validImpl : QueryImpl (C →ₒ Bool) (OracleComp spec) := fun c => do
     let msg' ← encAlg.decrypt sk c
     return msg'.isSome
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)) + (checkImpl + validImpl)
+  spec.passthrough + (checkImpl + validImpl)
 
 /-- Main one-way under plaintext-checking and validity attacks (OW-PCVA) experiment.
 
@@ -142,11 +141,11 @@ The game generates a keypair, samples a uniform challenge message, encrypts it h
 then runs the adversary on the public key and challenge ciphertext. The adversary may query the
 ambient oracle interface `spec`, the plaintext-checking oracle, and the validity oracle, and the
 game returns `true` exactly when the final guess equals the hidden challenge message. -/
-def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
+noncomputable def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : OW_PCVA_Adversary encAlg) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : OW_PCVA_Adversary encAlg) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let (pk, sk) ← encAlg.keygen
     let msg ← runtime.liftProbComp ($ᵗ M)
     let cStar ← encAlg.encrypt pk msg
@@ -158,6 +157,6 @@ noncomputable def OW_PCVA_Advantage {encAlg : AsymmEncAlg (OracleComp spec) M PK
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : OW_PCVA_Adversary encAlg) : ℝ≥0∞ :=
-  Pr[= true | OW_PCVA_Game runtime adversary]
+  OW_PCVA_Game runtime adversary {true}
 
 end OW_PCVA

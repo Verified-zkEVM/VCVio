@@ -22,26 +22,14 @@ open OracleSpec OracleComp ENNReal
 open scoped OracleSpec.PrimitiveQuery
 
 variable {M S C : Type}
-  [DecidableEq M] [DecidableEq S]
-  [Finite C] [Inhabited C]
 
 attribute [local instance] Fintype.ofFinite
 
-lemma wp_choose_sumHitIndicators_le_queryBound [Fintype S] [Inhabited S]
-    {AUX : Type} {t : ℕ}
-    (A : HidingAdversary M S C AUX t) :
-    OracleComp.ProgramLogic.wp
-      ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
-      (fun qchoose : (M × AUX) × HidingCountState M S C =>
-        ∑ s : S, OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s)) ≤ t := by
-  refine le_trans
-    (OracleComp.ProgramLogic.wp_mono
-      ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
-      (fun qchoose =>
-        sum_chooseHitIndicators_le_sumCounts qchoose.2.2))
-    (wp_choose_sumCounts_le_queryBound (M := M) (S := S) (C := C) A)
+/-! ### Preliminaries
 
-omit [DecidableEq M] [DecidableEq S] [Finite C] [Inhabited C] in
+Counting facts about query logs and structural facts about the logging and caching handlers;
+each states only the structure it uses. -/
+
 lemma run_simulateQ_loggingOracle_query_bind {α : Type}
     (t : (CMOracle M S C).Domain) (mx : (CMOracle M S C).Range t → OracleComp (CMOracle M S C) α) :
     (simulateQ loggingOracle (liftM (query t) >>= mx)).run =
@@ -52,8 +40,25 @@ lemma run_simulateQ_loggingOracle_query_bind {α : Type}
   simp [loggingOracle, QueryImpl.withLogging, OracleQuery.cont_query,
     Function.id_def]
 
-omit [DecidableEq M] [Finite C] [Inhabited C] in
-lemma sum_querySaltCounts_eq_length [Fintype S]
+lemma queryLog_countQ_pos_of_mem
+    {entry : (t : (CMOracle M S C).Domain) × (CMOracle M S C).Range t}
+    {log : QueryLog (CMOracle M S C)}
+    {p : (CMOracle M S C).Domain → Prop} [DecidablePred p]
+    (hmem : entry ∈ log) (hp : p entry.1) :
+    0 < QueryLog.countQ log p := by
+  induction log with
+  | nil =>
+      cases hmem
+  | cons hd tl ih =>
+      simp only [List.mem_cons, QueryLog.countQ, QueryLog.getQ_cons] at hmem ⊢
+      rcases hmem with rfl | hmem
+      · simp [hp]
+      · by_cases hhd : p hd.1
+        · simp [hhd]
+        · simp only [hhd, ↓reduceIte]
+          exact ih hmem
+
+lemma sum_querySaltCounts_eq_length [DecidableEq S] [Fintype S]
     (log : QueryLog (CMOracle M S C)) :
     (∑ s : S,
       QueryLog.countQ log (fun t : (CMOracle M S C).Domain => t.2 = s)) = log.length := by
@@ -91,8 +96,7 @@ lemma sum_querySaltCounts_eq_length [Fintype S]
               rw [hsingle]
         _ = log.length + 1 := by rw [ih, Nat.add_comm]
 
-omit [DecidableEq M] [Finite C] [Inhabited C] in
-lemma sum_querySaltIndicators_le_logLength [Fintype S]
+lemma sum_querySaltIndicators_le_logLength [DecidableEq S] [Fintype S]
     (log : QueryLog (CMOracle M S C)) :
     (∑ s : S,
       OracleComp.ProgramLogic.propInd
@@ -106,7 +110,41 @@ lemma sum_querySaltIndicators_le_logLength [Fintype S]
       (counts := fun s => QueryLog.countQ log (fun t : (CMOracle M S C).Domain => t.2 = s))) ?_
   exact le_of_eq hcounts
 
-omit [Finite C] [Inhabited C] in
+lemma sum_wp_querySaltIndicators_le_queryBound_of_run_logging [DecidableEq S] [Finite C]
+    [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C] [Fintype S]
+    {α : Type} {oa : OracleComp (CMOracle M S C) α} {n : ℕ}
+    (hbound : IsTotalQueryBound oa n) :
+    (∑ s : S,
+      OracleComp.ProgramLogic.wp
+        ((simulateQ loggingOracle oa).run)
+        (fun z : α × QueryLog (CMOracle M S C) =>
+          OracleComp.ProgramLogic.propInd
+            (0 < QueryLog.countQ z.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))) ≤ n := by
+  classical
+  rw [← OracleComp.ProgramLogic.wp_finsetSum]
+  apply OracleComp.ProgramLogic.wp_le_const_of_support
+  intro z hz
+  refine (sum_querySaltIndicators_le_logLength (M := M) (S := S) (C := C) z.2).trans ?_
+  exact_mod_cast log_length_le_of_mem_support_run_simulateQ hbound hz
+
+variable [DecidableEq M] [DecidableEq S]
+
+lemma cacheQuery_swap_of_ne
+    (cache : QueryCache (CMOracle M S C))
+    {t₀ t₁ : (CMOracle M S C).Domain}
+    (u₀ u₁ : C)
+    (hne : t₀ ≠ t₁) :
+    (cache.cacheQuery t₀ u₀).cacheQuery t₁ u₁ =
+      (cache.cacheQuery t₁ u₁).cacheQuery t₀ u₀ := by
+  ext t
+  by_cases ht₀ : t = t₀
+  · subst ht₀
+    simp [QueryCache.cacheQuery_self, QueryCache.cacheQuery_of_ne, hne]
+  · by_cases ht₁ : t = t₁
+    · subst ht₁
+      simp [QueryCache.cacheQuery_self, QueryCache.cacheQuery_of_ne, hne.symm]
+    · simp [QueryCache.cacheQuery_of_ne, ht₀, ht₁]
+
 lemma log_length_le_of_mem_support_counting_simulate_run_logging [Fintype M] [Fintype S]
     {α : Type} (oa : OracleComp (CMOracle M S C) α)
     {z : (α × QueryLog (CMOracle M S C)) × QueryCount (M × S)}
@@ -178,9 +216,8 @@ lemma log_length_le_of_mem_support_counting_simulate_run_logging [Fintype M] [Fi
         simpa using Nat.succ_le_of_lt hlt
       simpa [hzlog] using hcons
 
-omit [Finite C] in
 lemma log_length_le_of_mem_support_run_cached_logging
-    [Finite M] [Finite S] [Finite C]
+    [Finite M] [Finite S]
     {α : Type} {oa : OracleComp (CMOracle M S C) α} {n : ℕ}
     (hbound : IsTotalQueryBound oa n)
     (cache₀ : QueryCache (CMOracle M S C))
@@ -221,6 +258,58 @@ lemma log_length_le_of_mem_support_run_cached_logging
       hboundLog hqc
   exact le_trans hlen hqc_le
 
+theorem run_cached_logging_proj_eq_cachingOracle
+    {α : Type}
+    (oa : OracleComp (CMOracle M S C) α)
+    (cache₀ : QueryCache (CMOracle M S C)) :
+    Prod.map Prod.fst id <$>
+        (simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run cache₀ =
+      (simulateQ cachingOracle oa).run cache₀ := by
+  induction oa using OracleComp.inductionOn generalizing cache₀ with
+  | pure x =>
+      simp [simulateQ_pure]
+  | query_bind t mx ih =>
+      rw [OracleComp.run_simulateQ_loggingOracle_query_bind]
+      rw [simulateQ_query_bind, StateT.run_bind, simulateQ_query_bind, StateT.run_bind]
+      cases ht : cache₀ t with
+      | some u =>
+          simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
+            QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind, StateT.run_get,
+            pure_bind, ht, id_eq, simulateQ_map, StateT.run_map,
+            map_bind, Functor.map_map, Prod.map_apply]
+          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
+            funext a
+            rcases a with ⟨⟨x, l⟩, c⟩
+            rfl]
+          exact ih u cache₀
+      | none =>
+          simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
+            QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind,
+            StateT.run_get, pure_bind, ht, StateT.run_monadLift,
+            bind_pure_comp, StateT.run_modifyGet, Functor.map_map,
+            id_eq, simulateQ_map, StateT.run_map,
+            bind_map_left, map_bind, Prod.map_apply]
+          refine bind_congr ?_
+          intro u
+          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
+            funext a
+            rcases a with ⟨⟨x, l⟩, c⟩
+            rfl]
+          exact ih u (cache₀.cacheQuery t u)
+
+variable [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+
+lemma wp_choose_sumHitIndicators_le_queryBound [Fintype S] [Inhabited S]
+    {AUX : Type} {t : ℕ}
+    (A : HidingAdversary M S C AUX t) :
+    OracleComp.ProgramLogic.wp
+      ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
+      (fun qchoose : (M × AUX) × HidingCountState M S C =>
+        ∑ s : S, OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s)) ≤ t := by
+  refine le_trans ?_ (wp_choose_sumCounts_le_queryBound (M := M) (S := S) (C := C) A)
+  gcongr (OracleComp.ProgramLogic.wp _ (fun _ => ?_)) with qchoose
+  exact sum_chooseHitIndicators_le_sumCounts qchoose.2.2
+
 lemma sum_wp_querySaltIndicators_le_queryBound_of_run_cached_logging
     [Fintype S] [Finite M]
     {α : Type} {oa : OracleComp (CMOracle M S C) α} {n : ℕ}
@@ -232,45 +321,13 @@ lemma sum_wp_querySaltIndicators_le_queryBound_of_run_cached_logging
         (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
           OracleComp.ProgramLogic.propInd
             (0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))) ≤ n := by
-  have : Fintype M := Fintype.ofFinite M
-  classical
-  have hsum :=
-    wp_finset_sum
-      (M := M) (S := S) (C := C)
-      ((simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run cache₀)
-      Finset.univ
-      (fun s z =>
-        OracleComp.ProgramLogic.propInd
-          (0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))
-  rw [hsum, OracleComp.ProgramLogic.wp_eq_tsum]
-  calc
-    ∑' z,
-        Pr[= z | (simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run cache₀] *
-          (∑ s : S,
-            OracleComp.ProgramLogic.propInd
-              (0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))
-      ≤
-        ∑' z,
-          Pr[= z | (simulateQ cachingOracle
-            ((simulateQ loggingOracle oa).run)).run cache₀] * n := by
-            refine ENNReal.tsum_le_tsum ?_
-            intro z
-            by_cases hz :
-                z ∈ support
-                  ((simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run cache₀)
-            · exact mul_le_mul'
-                le_rfl
-                (le_trans
-                  (sum_querySaltIndicators_le_logLength (M := M) (S := S) (C := C) z.1.2)
-                  (by
-                    exact_mod_cast
-                      (log_length_le_of_mem_support_run_cached_logging
-                        (M := M) (S := S) (C := C)
-                        (oa := oa) (n := n) hbound cache₀ hz)))
-            · rw [probOutput_eq_zero_of_not_mem_support hz]
-              simp
-    _ = (n : ℝ≥0∞) := by
-        rw [ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
+  let := Fintype.ofFinite M
+  rw [← OracleComp.ProgramLogic.wp_finsetSum]
+  apply OracleComp.ProgramLogic.wp_le_const_of_support
+  intro z hz
+  refine (sum_querySaltIndicators_le_logLength (M := M) (S := S) (C := C) z.1.2).trans ?_
+  exact_mod_cast log_length_le_of_mem_support_run_cached_logging
+    (M := M) (S := S) (C := C) hbound cache₀ hz
 
 lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_support_with_state
     [Fintype S] [Inhabited S]
@@ -315,11 +372,7 @@ lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_su
             ((simulateQ hidingImplCountAll (A.distinguish qchoose.1.2 cm)).run qch.2)
             (fun z : Bool × HidingCountState M S C =>
               (z.2.2 s - qch.2.2 s : ℝ≥0∞))) := by
-    refine Finset.sum_le_sum ?_
-    intro s hs
-    refine OracleComp.ProgramLogic.wp_mono
-      ((simulateQ hidingImplCountAll (A.distinguish qchoose.1.2 cm)).run qch.2) ?_
-    intro z
+    gcongr with s hs z
     by_cases hslt : qch.2.2 s < z.2.2 s
     · simp [OracleComp.ProgramLogic.propInd, hslt]
       have hsub : 1 ≤ (z.2.2 s - qch.2.2 s : ℕ) := by
@@ -329,110 +382,6 @@ lemma sum_wp_distinguish_incrementIndicators_le_queryResidual_of_choose_count_su
       simpa using hcast
     · simp [OracleComp.ProgramLogic.propInd, hslt]
   exact le_trans hmono hres
-
-omit [DecidableEq M] in
-lemma sum_wp_querySaltIndicators_le_queryBound_of_run_logging [Fintype S]
-    {α : Type} {oa : OracleComp (CMOracle M S C) α} {n : ℕ}
-    (hbound : IsTotalQueryBound oa n) :
-    (∑ s : S,
-      OracleComp.ProgramLogic.wp
-        ((simulateQ loggingOracle oa).run)
-        (fun z : α × QueryLog (CMOracle M S C) =>
-          OracleComp.ProgramLogic.propInd
-            (0 < QueryLog.countQ z.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))) ≤ n := by
-  classical
-  have hsum :=
-    wp_finset_sum
-      (M := M) (S := S) (C := C)
-      ((simulateQ loggingOracle oa).run)
-      Finset.univ
-      (fun s z =>
-        OracleComp.ProgramLogic.propInd
-          (0 < QueryLog.countQ z.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))
-  rw [hsum, OracleComp.ProgramLogic.wp_eq_tsum]
-  calc
-    ∑' z,
-        Pr[= z | (simulateQ loggingOracle oa).run] *
-          (∑ s : S,
-            OracleComp.ProgramLogic.propInd
-              (0 < QueryLog.countQ z.2 (fun t : (CMOracle M S C).Domain => t.2 = s)))
-      ≤
-        ∑' z, Pr[= z | (simulateQ loggingOracle oa).run] * n := by
-          refine ENNReal.tsum_le_tsum ?_
-          intro z
-          by_cases hz : z ∈ support ((simulateQ loggingOracle oa).run)
-          · exact mul_le_mul'
-              le_rfl
-              (le_trans
-                (sum_querySaltIndicators_le_logLength (M := M) (S := S) (C := C) z.2)
-                (by
-                  exact_mod_cast
-                    (log_length_le_of_mem_support_run_simulateQ
-                      (spec := CMOracle M S C)
-                      (oa := oa) (n := n) hbound hz)))
-          · rw [probOutput_eq_zero_of_not_mem_support hz]
-            simp
-    _ = (n : ℝ≥0∞) := by
-        rw [ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
-
-omit [Finite C] [Inhabited C] in
-theorem run_cached_logging_proj_eq_cachingOracle
-    {α : Type}
-    (oa : OracleComp (CMOracle M S C) α)
-    (cache₀ : QueryCache (CMOracle M S C)) :
-    Prod.map Prod.fst id <$>
-        (simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run cache₀ =
-      (simulateQ cachingOracle oa).run cache₀ := by
-  induction oa using OracleComp.inductionOn generalizing cache₀ with
-  | pure x =>
-      simp [simulateQ_pure]
-  | query_bind t mx ih =>
-      rw [OracleComp.run_simulateQ_loggingOracle_query_bind]
-      rw [simulateQ_query_bind, StateT.run_bind, simulateQ_query_bind, StateT.run_bind]
-      cases ht : cache₀ t with
-      | some u =>
-          simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
-            QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind, StateT.run_get,
-            pure_bind, ht, id_eq, simulateQ_map, StateT.run_map,
-            map_bind, Functor.map_map, Prod.map_apply]
-          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
-            funext a
-            rcases a with ⟨⟨x, l⟩, c⟩
-            rfl]
-          exact ih u cache₀
-      | none =>
-          simp only [OracleQuery.input_query, QueryImpl.withCaching_apply,
-            QueryImpl.ofLift_apply, monadLift_self, StateT.run_bind,
-            StateT.run_get, pure_bind, ht, StateT.run_monadLift,
-            bind_pure_comp, StateT.run_modifyGet, Functor.map_map,
-            id_eq, simulateQ_map, StateT.run_map,
-            bind_map_left, map_bind, Prod.map_apply]
-          refine bind_congr ?_
-          intro u
-          rw [show (fun a ↦ (a.1.1, a.2)) = Prod.map Prod.fst id by
-            funext a
-            rcases a with ⟨⟨x, l⟩, c⟩
-            rfl]
-          exact ih u (cache₀.cacheQuery t u)
-
-omit [DecidableEq M] [DecidableEq S] [Finite C] [Inhabited C] in
-lemma queryLog_countQ_pos_of_mem
-    {entry : (t : (CMOracle M S C).Domain) × (CMOracle M S C).Range t}
-    {log : QueryLog (CMOracle M S C)}
-    {p : (CMOracle M S C).Domain → Prop} [DecidablePred p]
-    (hmem : entry ∈ log) (hp : p entry.1) :
-    0 < QueryLog.countQ log p := by
-  induction log with
-  | nil =>
-      cases hmem
-  | cons hd tl ih =>
-      simp only [List.mem_cons, QueryLog.countQ, QueryLog.getQ_cons] at hmem ⊢
-      rcases hmem with rfl | hmem
-      · simp [hp]
-      · by_cases hhd : p hd.1
-        · simp [hhd]
-        · simp only [hhd, ↓reduceIte]
-          exact ih hmem
 
 lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     {AUX : Type} {t : ℕ}
@@ -469,13 +418,13 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
   rw [← OracleComp.ProgramLogic.probEvent_eq_wp_propInd,
     ← OracleComp.ProgramLogic.probEvent_eq_wp_propInd]
   have hcount_to_cache :
-      Pr[fun z : Bool × HidingCountState M S C => 1 < z.2.2 s | countRun] ≤
-        Pr[cacheEvent | cacheRun] := by
+      Pr{let z ← countRun}[1 < z.2.2 s] ≤
+        Pr{let z ← cacheRun}[cacheEvent z] := by
     dsimp [countRun, cacheRun]
     rw [← run_hidingImplCountAll_proj_eq_cachingOracle
       (M := M) (S := S) (C := C) oa freshState]
-    rw [probEvent_map]
-    refine probEvent_mono ?_
+    rw [prEvent_map]
+    refine prEvent_mono_of_support _ ?_
     intro z hz hgt
     have hcount1 : (Function.update qchoose.2.2 s 1) s = 1 := by
       simp [Function.update]
@@ -498,15 +447,14 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
         (z := z) hcount1 hself1 hunique1 hz hgt with ⟨m, v, hmne, hcache⟩
     exact ⟨m, v, hmne, hcache⟩
   have hcache_to_log :
-      Pr[cacheEvent | cacheRun] ≤
-        Pr[fun z : (Bool × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-          0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)
-          | cachedLogRun] := by
+      Pr{let z ← cacheRun}[cacheEvent z] ≤
+        Pr{let z ← cachedLogRun}[
+          0 < QueryLog.countQ z.1.2 (fun t : (CMOracle M S C).Domain => t.2 = s)] := by
     dsimp [cacheRun, cachedLogRun]
     rw [← run_cached_logging_proj_eq_cachingOracle
       (M := M) (S := S) (C := C) oa freshCache]
-    rw [probEvent_map]
-    refine probEvent_mono ?_
+    rw [prEvent_map]
+    refine prEvent_mono_of_support _ ?_
     intro z hz hcacheEv
     rcases hcacheEv with ⟨m, v, hmne, hcache⟩
     have hlog :=
@@ -531,23 +479,6 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
         exact queryLog_countQ_pos_of_mem
           (M := M) (S := S) (C := C) hmem (by simp [hsalt])
   exact le_trans hcount_to_cache hcache_to_log
-
-omit [Finite C] [Inhabited C] in
-lemma cacheQuery_swap_of_ne
-    (cache : QueryCache (CMOracle M S C))
-    {t₀ t₁ : (CMOracle M S C).Domain}
-    (u₀ u₁ : C)
-    (hne : t₀ ≠ t₁) :
-    (cache.cacheQuery t₀ u₀).cacheQuery t₁ u₁ =
-      (cache.cacheQuery t₁ u₁).cacheQuery t₀ u₀ := by
-  ext t
-  by_cases ht₀ : t = t₀
-  · subst ht₀
-    simp [QueryCache.cacheQuery_self, QueryCache.cacheQuery_of_ne, hne]
-  · by_cases ht₁ : t = t₁
-    · subst ht₁
-      simp [QueryCache.cacheQuery_self, QueryCache.cacheQuery_of_ne, hne.symm]
-    · simp [QueryCache.cacheQuery_of_ne, ht₀, ht₁]
 
 lemma wp_querySaltIndicator_prepend_eq_one
     {α : Type}
@@ -589,10 +520,11 @@ lemma wp_querySaltIndicator_prepend_eq_one
           QueryLog.countQ
             ((⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: z.1.2)
             (fun t' : (CMOracle M S C).Domain => t'.2 = s) := by
-      rw [QueryLog.countQ_cons, if_pos hsalt]
+      rw [QueryLog.countQ_cons, ite_eq_left hsalt]
       omega
     exact OracleComp.ProgramLogic.propInd_eq_one_iff.mpr hpos
-  rw [hpost, OracleComp.ProgramLogic.wp_const]
+  rw [hpost]
+  exact OracleComp.ProgramLogic.wp_const _ _
 
 lemma wp_querySaltIndicator_prepend_eq_of_ne
     {α : Type}
@@ -642,7 +574,7 @@ lemma wp_querySaltIndicator_prepend_eq_of_ne
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) := by
     funext z
     simp only [Function.comp_apply]
-    rw [QueryLog.countQ_cons, if_neg hsalt]
+    rw [QueryLog.countQ_cons, ite_eq_right hsalt]
   rw [hpost]
 
 lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entries
@@ -691,7 +623,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
             (oa := mx ((query t).cont qu.1)) (cache := qu.2)
             (t := t) (u := (query t).cont qu.1) (s := s) hsalt
         rw [hpost]
-        simp [OracleComp.ProgramLogic.wp_const]
+        simp
       · have hpost :
             (fun qu : C × QueryCache (CMOracle M S C) =>
               OracleComp.ProgramLogic.wp
@@ -787,10 +719,8 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
             rw [hmiss_fresh, hmiss_common, OracleComp.ProgramLogic.wp_bind,
               OracleComp.ProgramLogic.wp_bind]
             simp_rw [OracleComp.ProgramLogic.wp_pure]
-            rw [OracleComp.ProgramLogic.wp_eq_tsum, OracleComp.ProgramLogic.wp_eq_tsum]
-            refine tsum_congr ?_
-            intro u
-            congr 1
+            apply OracleComp.ProgramLogic.wp_congr_of_support
+            intro u _
             have hself' : (cache₀.cacheQuery t u) (m, s) = none := by
               simpa [QueryCache.cacheQuery_of_ne cache₀ u hmst_ne_t] using hself
             have hother' : ∀ m' : M, m' ≠ m → (cache₀.cacheQuery t u) (m', s) = none := by
@@ -938,10 +868,7 @@ lemma sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support [Finty
       = ∑ s : S, ∑ cm : C, (Fintype.card C : ℝ≥0∞)⁻¹ * G s cm := by
           refine Finset.sum_congr rfl ?_
           intro s hs
-          rw [OracleComp.ProgramLogic.wp_eq_tsum, tsum_fintype]
-          refine Finset.sum_congr rfl ?_
-          intro cm hcm
-          simp [G, probOutput_query]
+          exact OracleComp.ProgramLogic.wp_query_uniform _ _
     _ = ∑ cm : C, ∑ s : S, (Fintype.card C : ℝ≥0∞)⁻¹ * G s cm := by
           simpa using (Finset.sum_comm :
             (∑ s : S, ∑ cm : C, (Fintype.card C : ℝ≥0∞)⁻¹ * G s cm) =
@@ -971,140 +898,79 @@ lemma sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support [Finty
 
 theorem sum_probEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
-    (∑ s : S, Pr[hidingBad ∘ Prod.snd |
-      (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)]) ≤ t := by
+    (∑ s : S, Pr{let z ← (
+      (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0))}[hidingBad z.2]) ≤ t := by
   have : Fintype M := Fintype.ofFinite M
   classical
-  calc
-    (∑ s : S, Pr[hidingBad ∘ Prod.snd |
-      (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)])
-      =
+  rw [sum_wp_badIndicator_eq_wp_choose]
+  refine (OracleComp.ProgramLogic.wp_mono_of_support _
+    (fun qchoose hqchoose ↦
+      wp_badIndicator_le_chooseHit_add_freshDistinguishIncrement_of_choose_support
+        (M := M) (S := S) (C := C) A hqchoose)).trans ?_
+  apply OracleComp.ProgramLogic.wp_le_const_of_support
+  intro qchoose hqchoose
+  have hhit :
+      (∑ s : S, OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s)) ≤
+        (∑ s : S, qchoose.2.2 s : ℝ≥0∞) :=
+    sum_chooseHitIndicators_le_sumCounts qchoose.2.2
+  have hfresh :
+      (∑ s : S,
         OracleComp.ProgramLogic.wp
-          ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
-          (fun qchoose : (M × AUX) × HidingCountState M S C =>
-            ∑ s : S,
-              OracleComp.ProgramLogic.wp
-                ((hidingImplCountAll (M := M) (S := S) (C := C) (qchoose.1.1, s)).run qchoose.2)
-                (fun qch : C × HidingCountState M S C =>
-                  OracleComp.ProgramLogic.wp
-                    ((simulateQ hidingImplCountAll (A.distinguish qchoose.1.2 qch.1)).run qch.2)
-                    (fun z : Bool × HidingCountState M S C =>
-                      OracleComp.ProgramLogic.propInd (2 ≤ z.2.2 s)))) := by
-          simpa using sum_wp_badIndicator_eq_wp_choose (M := M) (S := S) (C := C) A
-    _ ≤
-      OracleComp.ProgramLogic.wp
-        ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
-        (fun qchoose : (M × AUX) × HidingCountState M S C =>
-          ∑ s : S,
-            (OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s) +
-              OracleComp.ProgramLogic.wp
-                ((hidingImplCountAll (M := M) (S := S) (C := C) (qchoose.1.1, s)).run qchoose.2)
-                (fun qch : C × HidingCountState M S C =>
-                  OracleComp.ProgramLogic.wp
-                    ((simulateQ hidingImplCountAll (A.distinguish qchoose.1.2 qch.1)).run qch.2)
-                    (fun z : Bool × HidingCountState M S C =>
-                      OracleComp.ProgramLogic.propInd
-                        (qchoose.2.2 s = 0 ∧ qch.2.2 s < z.2.2 s))))) := by
-          rw [OracleComp.ProgramLogic.wp_eq_tsum, OracleComp.ProgramLogic.wp_eq_tsum]
-          refine ENNReal.tsum_le_tsum ?_
-          intro qchoose
-          by_cases hqchoose : qchoose ∈ support
-              ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
-          · exact mul_le_mul'
-              le_rfl
-              (wp_badIndicator_le_chooseHit_add_freshDistinguishIncrement_of_choose_support
-                (M := M) (S := S) (C := C) A hqchoose)
-          · rw [probOutput_eq_zero_of_not_mem_support hqchoose]
-            simp
-    _ ≤ t := by
-      rw [OracleComp.ProgramLogic.wp_eq_tsum]
-      calc
-        ∑' qchoose,
-            Pr[= qchoose | (simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0)] *
-              (∑ s : S,
-                (OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s) +
-                  OracleComp.ProgramLogic.wp
-                    ((hidingImplCountAll (M := M) (S := S) (C := C) (qchoose.1.1, s)).run qchoose.2)
-                    (fun qch : C × HidingCountState M S C =>
-                      OracleComp.ProgramLogic.wp
-                        ((simulateQ hidingImplCountAll (A.distinguish qchoose.1.2 qch.1)).run qch.2)
-                        (fun z : Bool × HidingCountState M S C =>
-                          OracleComp.ProgramLogic.propInd
-                            (qchoose.2.2 s = 0 ∧ qch.2.2 s < z.2.2 s)))))
-          ≤
-            ∑' qchoose,
-              Pr[= qchoose | (simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0)] * t := by
-                refine ENNReal.tsum_le_tsum ?_
-                intro qchoose
-                by_cases hqchoose :
-                    qchoose ∈ support ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))
-                · refine mul_le_mul' le_rfl ?_
-                  have hhit :
-                      (∑ s : S, OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s)) ≤
-                        (∑ s : S, qchoose.2.2 s : ℝ≥0∞) :=
-                    sum_chooseHitIndicators_le_sumCounts qchoose.2.2
-                  have hfresh :
-                      (∑ s : S,
-                        OracleComp.ProgramLogic.wp
-                          ((hidingImplCountAll (M := M) (S := S) (C := C)
-                            (qchoose.1.1, s)).run qchoose.2)
-                          (fun qch : C × HidingCountState M S C =>
-                            OracleComp.ProgramLogic.wp
-                              ((simulateQ hidingImplCountAll
-                                (A.distinguish qchoose.1.2 qch.1)).run
-                                qch.2)
-                              (fun z : Bool × HidingCountState M S C =>
-                                OracleComp.ProgramLogic.propInd
-                                  (qchoose.2.2 s = 0 ∧
-                                    qch.2.2 s < z.2.2 s)))) ≤
-                        (t - ∑ s : S, qchoose.2.2 s) :=
-                    sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support
-                      (M := M) (S := S) (C := C) A hqchoose
-                  have hcounts :
-                      (∑ s : S, qchoose.2.2 s) ≤ t :=
-                    sum_counts_le_queryBound_of_mem_support_run_hidingChoose
-                      (M := M) (S := S) (C := C) A hqchoose
-                  calc
-                    (∑ s : S,
-                      (OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s) +
-                        OracleComp.ProgramLogic.wp
-                          ((hidingImplCountAll (M := M) (S := S) (C := C)
-                            (qchoose.1.1, s)).run qchoose.2)
-                          (fun qch : C × HidingCountState M S C =>
-                            OracleComp.ProgramLogic.wp
-                              ((simulateQ hidingImplCountAll
-                                (A.distinguish qchoose.1.2 qch.1)).run
-                                qch.2)
-                              (fun z : Bool × HidingCountState M S C =>
-                                OracleComp.ProgramLogic.propInd
-                                  (qchoose.2.2 s = 0 ∧
-                                    qch.2.2 s < z.2.2 s)))))
-                      = (∑ s : S,
-                          OracleComp.ProgramLogic.propInd
-                            (0 < qchoose.2.2 s)) +
-                          (∑ s : S,
-                            OracleComp.ProgramLogic.wp
-                              ((hidingImplCountAll (M := M) (S := S) (C := C)
-                                (qchoose.1.1, s)).run qchoose.2)
-                              (fun qch : C × HidingCountState M S C =>
-                                OracleComp.ProgramLogic.wp
-                                  ((simulateQ hidingImplCountAll
-                                    (A.distinguish qchoose.1.2 qch.1)).run
-                                    qch.2)
-                                  (fun z : Bool × HidingCountState M S C =>
-                                    OracleComp.ProgramLogic.propInd
-                                      (qchoose.2.2 s = 0 ∧
-                                        qch.2.2 s < z.2.2 s)))) := by
-                          rw [Finset.sum_add_distrib]
-                    _ ≤ (∑ s : S, qchoose.2.2 s : ℝ≥0∞) +
-                          (t - ∑ s : S, qchoose.2.2 s) := by
-                          exact add_le_add hhit hfresh
-                    _ = t := by
-                          have hcast : (∑ s : S, qchoose.2.2 s : ℝ≥0∞) ≤ t := by
-                            exact_mod_cast hcounts
-                          rw [add_comm, Nat.cast_sum]
-                          exact tsub_add_cancel_of_le hcast
-                · rw [probOutput_eq_zero_of_not_mem_support hqchoose]
-                  simp
+          ((hidingImplCountAll (M := M) (S := S) (C := C)
+            (qchoose.1.1, s)).run qchoose.2)
+          (fun qch : C × HidingCountState M S C =>
+            OracleComp.ProgramLogic.wp
+              ((simulateQ hidingImplCountAll
+                (A.distinguish qchoose.1.2 qch.1)).run
+                qch.2)
+              (fun z : Bool × HidingCountState M S C =>
+                OracleComp.ProgramLogic.propInd
+                  (qchoose.2.2 s = 0 ∧
+                    qch.2.2 s < z.2.2 s)))) ≤
+        (t - ∑ s : S, qchoose.2.2 s) :=
+    sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support
+      (M := M) (S := S) (C := C) A hqchoose
+  have hcounts :
+      (∑ s : S, qchoose.2.2 s) ≤ t :=
+    sum_counts_le_queryBound_of_mem_support_run_hidingChoose
+      (M := M) (S := S) (C := C) A hqchoose
+  calc
+    (∑ s : S,
+      (OracleComp.ProgramLogic.propInd (0 < qchoose.2.2 s) +
+        OracleComp.ProgramLogic.wp
+          ((hidingImplCountAll (M := M) (S := S) (C := C)
+            (qchoose.1.1, s)).run qchoose.2)
+          (fun qch : C × HidingCountState M S C =>
+            OracleComp.ProgramLogic.wp
+              ((simulateQ hidingImplCountAll
+                (A.distinguish qchoose.1.2 qch.1)).run
+                qch.2)
+              (fun z : Bool × HidingCountState M S C =>
+                OracleComp.ProgramLogic.propInd
+                  (qchoose.2.2 s = 0 ∧
+                    qch.2.2 s < z.2.2 s)))))
+      = (∑ s : S,
+          OracleComp.ProgramLogic.propInd
+            (0 < qchoose.2.2 s)) +
+          (∑ s : S,
+            OracleComp.ProgramLogic.wp
+              ((hidingImplCountAll (M := M) (S := S) (C := C)
+                (qchoose.1.1, s)).run qchoose.2)
+              (fun qch : C × HidingCountState M S C =>
+                OracleComp.ProgramLogic.wp
+                  ((simulateQ hidingImplCountAll
+                    (A.distinguish qchoose.1.2 qch.1)).run
+                    qch.2)
+                  (fun z : Bool × HidingCountState M S C =>
+                    OracleComp.ProgramLogic.propInd
+                      (qchoose.2.2 s = 0 ∧
+                        qch.2.2 s < z.2.2 s)))) := by
+          rw [Finset.sum_add_distrib]
+    _ ≤ (∑ s : S, qchoose.2.2 s : ℝ≥0∞) +
+          (t - ∑ s : S, qchoose.2.2 s) := by
+          exact add_le_add hhit hfresh
     _ = t := by
-        rw [ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul]
+          have hcast : (∑ s : S, qchoose.2.2 s : ℝ≥0∞) ≤ t := by
+            exact_mod_cast hcounts
+          rw [add_comm, Nat.cast_sum]
+          exact tsub_add_cancel_of_le hcast

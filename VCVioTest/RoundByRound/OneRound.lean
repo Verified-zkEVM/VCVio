@@ -55,7 +55,7 @@ so that `extract`'s output satisfies it, and then:
   each hypothesis separately inhabited is weaker than a witness for the whole bundle.
 -/
 
-@[expose] public section
+public section
 
 open scoped ENNReal
 
@@ -89,12 +89,6 @@ noncomputable def oneRound : KnowledgeExtractionFamily 1 where
   relation := fun _ w => w = true
   rejects := fun ctx _ => ctx = 0
 
-/-- The specialized `OracleComp.probOutput_eq_sub_probFailure_of_unit` accepts `spec` as a named
-argument. -/
-example {ι : Type} {spec : OracleSpec ι} [IsProbabilitySpec spec] (oa : OracleComp spec PUnit) :
-    Pr[= () | oa] = 1 - Pr[⊥ | oa] :=
-  probOutput_eq_sub_probFailure_of_unit (spec := spec)
-
 /-- The canonical initial context is doomed for every input. -/
 theorem oneRound_initialCondition : oneRound.InitialCondition := by
   intro _; exact Or.inl rfl
@@ -117,16 +111,13 @@ theorem oneRound_relation_fails (context : oneRound.Context (0 : Fin 1).castSucc
 concrete probability fact, proved directly rather than through the generic bridge. -/
 theorem oneRound_escape_prob (context : oneRound.Context (0 : Fin 1).castSucc)
     (message : oneRound.Message 0) :
-    Pr[oneRound.escapeEvent 0 context message | oneRound.sampleChallenge 0] = 1 / 2 := by
-  have hev : Pr[oneRound.escapeEvent 0 context message | $ᵗ (Fin 2)]
-      = Pr[(fun c : Fin 2 => c ≠ 0) | $ᵗ (Fin 2)] := by
-    refine probEvent_ext (fun c _ => ?_)
-    fin_cases c <;> simp only [KnowledgeExtractionFamily.escapeEvent, oneRound] <;> decide
-  -- Normalize the dependent challenge type `oneRound.Challenge 0` to the concrete sampler
-  -- `$ᵗ (Fin 2)` before rewriting through the probability lemmas.
-  change Pr[oneRound.escapeEvent 0 context message | $ᵗ (Fin 2)] = 1 / 2
-  rw [hev, probEvent_uniformSample]
-  have hc : (Finset.univ.filter (fun c : Fin 2 => c ≠ 0)).card = 1 := by decide
+    Pr{let challenge ← oneRound.sampleChallenge 0}[
+      oneRound.escapeEvent 0 context message challenge] = 1 / 2 := by
+  rw [show oneRound.sampleChallenge 0 = ($ᵗ (Fin 2)) by rfl]
+  simp only [oneRound, KnowledgeExtractionFamily.escapeEvent, Fin.succ_ne_zero, false_or]
+  rw [prEvent_eq_evalDist_of_discrete, SampleableType.evalDist_uniformSample,
+    ProbabilityTheory.uniformOn_univ_apply_setOf]
+  have hc : (Finset.univ.filter (fun challenge : Fin 2 => challenge ≠ 0)).card = 1 := by decide
   rw [hc, Fintype.card_fin]
   norm_num
 
@@ -148,7 +139,7 @@ theorem oneRound_isBounded_half :
   intro round cm
   obtain rfl : round = 0 := Subsingleton.elim _ _
   obtain ⟨⟨context, message⟩, hdoomed⟩ := cm
-  rw [oneRound.probEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation 0 context message
+  rw [oneRound.prEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation 0 context message
       hdoomed (oneRound_relation_fails context message), oneRound_escape_prob context message]
 
 /-- At `error = Pr[escape] = 1 / 2` the strict trigger does not fire, so the extraction condition
@@ -163,7 +154,7 @@ theorem oneRound_not_isBounded_zero :
   rw [KnowledgeTransitionFamily.isBounded_iff]
   push Not
   refine ⟨0, ⟨((0 : Fin 2), ()), Or.inl rfl⟩, ?_⟩
-  rw [oneRound.probEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation 0 (0 : Fin 2) ()
+  rw [oneRound.prEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation 0 (0 : Fin 2) ()
       (Or.inl rfl) (oneRound_relation_fails (0 : Fin 2) ()), oneRound_escape_prob (0 : Fin 2) ()]
   exact ENNReal.half_pos (by norm_num)
 
@@ -200,7 +191,8 @@ noncomputable def oneRoundValid : KnowledgeExtractionFamily 1 :=
 /-- The escape event and challenge sampler are literally those of `oneRound`. -/
 theorem oneRoundValid_escape_prob (context : oneRoundValid.Context (0 : Fin 1).castSucc)
     (message : oneRoundValid.Message 0) :
-    Pr[oneRoundValid.escapeEvent 0 context message | oneRoundValid.sampleChallenge 0] = 1 / 2 :=
+    Pr{let challenge ← oneRoundValid.sampleChallenge 0}[
+      oneRoundValid.escapeEvent 0 context message challenge] = 1 / 2 :=
   oneRound_escape_prob context message
 
 /-- The directly extracted witness genuinely **satisfies** the relation, the mirror image of
@@ -215,8 +207,8 @@ theorem oneRoundValid_relation_holds (context : oneRoundValid.Context (0 : Fin 1
 is the hypothesis `oneRound` can never discharge. -/
 theorem oneRoundValid_trigger_fires (context : oneRoundValid.Context (0 : Fin 1).castSucc)
     (message : oneRoundValid.Message 0) :
-    (0 : ℝ≥0∞) < Pr[oneRoundValid.escapeEvent 0 context message
-      | oneRoundValid.sampleChallenge 0] := by
+    (0 : ℝ≥0∞) < Pr{let challenge ← oneRoundValid.sampleChallenge 0}[
+      oneRoundValid.escapeEvent 0 context message challenge] := by
   rw [oneRoundValid_escape_prob context message]
   exact ENNReal.half_pos (by norm_num)
 
@@ -228,8 +220,8 @@ hypotheses no instance can meet — the vacuity that `#print axioms` cannot see.
 theorem oneRoundValid_hypotheses_satisfiable :
     ∃ (context : oneRoundValid.Context (0 : Fin 1).castSucc) (message : oneRoundValid.Message 0),
       oneRoundValid.doomed (0 : Fin 1).castSucc context ∧
-        (0 : ℝ≥0∞) < Pr[oneRoundValid.escapeEvent 0 context message
-          | oneRoundValid.sampleChallenge 0] :=
+        (0 : ℝ≥0∞) < Pr{let challenge ← oneRoundValid.sampleChallenge 0}[
+          oneRoundValid.escapeEvent 0 context message challenge] :=
   ⟨(0 : Fin 2), (), Or.inl rfl, oneRoundValid_trigger_fires (0 : Fin 2) ()⟩
 
 /-- The extraction condition holds at `error = 0` because extraction succeeds, not because the

@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.TapeFactorization
+public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security.ReadRecordBound
 
 /-!
 # EUF-CMA for Fiat-Shamir with aborts: HopLemmas
@@ -42,9 +42,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 /-! ## Hop lemmas
 
@@ -61,8 +60,8 @@ experiment (with its `WriterT` signing log) coincides with the single-cache-laye
 presentation, with the `WriterT` log projected to the signed-message list. The proof is
 a `simulateQ` commutation argument in the style of `roSim.run'_liftM_bind` and the
 correctness proof in `FiatShamirWithAbort.correct`. -/
-lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
-    Pr[= true | SignatureAlg.unforgeableExp (runtime M) adv] =
+lemma unforgeableAdvantage_eq_hybridExpAtKey_real :
+    SignatureAlg.unforgeableAdvantage (runtime M) adv =
       Pr[= true | do
         let (pk, sk) ← hr.gen
         hybridExpAtKey ids hr M maxAttempts adv (realSignBody ids M maxAttempts pk sk) pk] := by
@@ -74,11 +73,10 @@ lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
         (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) with hbase
   -- `base` matches the runtime's `withStateOracle` interpreter: both lift `unifSpec` by
   -- `liftTarget` (`unifFwdImpl` is exactly that) and use the caching `randomOracle`.
-  have hrt : ∀ {α : Type} (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α),
-      (runtime M).evalSPMF oa = 𝒮[(simulateQ base oa).run' ∅] := fun {α} oa => by
-    rw [hbase]
-    rfl
-  unfold SignatureAlg.unforgeableExp
+  have hrt : ∀ (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) Bool),
+      (runtime M).evalDist oa {true} = Pr[= true | (simulateQ base oa).run' ∅] := fun oa => by
+    rw [runtime_evalDist_eq_simulateQ_run', evalDist_apply_singleton, hbase]
+  unfold SignatureAlg.unforgeableAdvantage SignatureAlg.unforgeableExp
   rw [hrt]
   rw [show (FiatShamirWithAbort ids hr M maxAttempts).keygen =
     (liftM hr.gen : OracleComp (unifSpec + (M × Commit →ₒ Chal)) (Stmt × Wit)) from rfl]
@@ -91,8 +89,8 @@ lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
   -- Fuse the inner WriterT-logging `simulateQ` pass with the outer cache simulation
   -- `simulateQ base` via `writerTMapBase`, so the whole left-hand experiment becomes a
   -- single `simulateQ` over the run-normal-form cache base, still carrying the WriterT log.
-  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind,
-    QueryImpl.simulateQ_writerTMapBase_run]
+  rw [SignatureAlg.runWithSigningOracle_def, QueryImpl.passthrough_add, simulateQ_bind,
+    StateT.run'_eq, StateT.run_bind, QueryImpl.simulateQ_writerTMapBase_run]
   -- Remaining: reconcile the fused WriterT-log-over-`StateT cache` run with the hybrid's
   -- flat `StateT (cache × List M)` run. The bridge follows the Sigma-side recipe in
   -- `FiatShamir/Sigma/Stateful/Compatibility.lean`:
@@ -109,12 +107,10 @@ lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
   --   5. the verify tail matches `hybridVerifyCont` with `wasQueried msg ↔ msg ∈ signed`
   --      via `QueryLog.wasQueried_eq_decide_mem_map_fst`.
   have hHandler : base.writerTMapBase
-      ((HasQuery.toQueryImpl (spec := unifSpec + (M × Commit →ₒ Chal))
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))).liftTarget
+      ((QueryImpl.id' (unifSpec + (M × Commit →ₒ Chal))).liftTarget
           (WriterT (QueryLog (M →ₒ Option (Commit × Resp)))
             (OracleComp (unifSpec + (M × Commit →ₒ Chal)))) +
-        (FiatShamirWithAbort (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-          ids hr M maxAttempts).signingOracle pk sk) =
+        (FiatShamirWithAbort.inROM ids hr M maxAttempts).signingOracle pk sk) =
       base.liftTarget
           (WriterT (QueryLog (M →ₒ Option (Commit × Resp)))
             (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)) +
@@ -125,8 +121,7 @@ lemma probOutput_unforgeableExp_eq_hybridExpAtKey_real :
     funext t
     rcases t with bq | sq
     · ext s
-      simp [QueryImpl.writerTMapBase, QueryImpl.add_apply_inl,
-        HasQuery.toQueryImpl_apply, base, unifFwdImpl]
+      simp [QueryImpl.writerTMapBase, QueryImpl.add_apply_inl, base, unifFwdImpl]
     · ext s
       simp [QueryImpl.writerTMapBase, QueryImpl.add_apply_inr, SignatureAlg.signingOracle,
         QueryImpl.withLogging_apply, FiatShamirWithAbort, realSignBody, base]

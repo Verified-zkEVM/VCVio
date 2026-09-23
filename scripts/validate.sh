@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# scripts/validate.sh
+#
+# Routine local validation: the fast checks shared with CI, in CI order, from one command. Flags
+# add the slower test, environment-lint, axiom, and native-FFI passes. Nothing here builds the native
+# FFI test executables unless `--ffi` is given (that path compiles the vendored C backends).
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+
+run_lint=0
+run_test=0
+run_ffi=0
+run_axioms=0
+
+usage() {
+  cat <<'EOF'
+Usage: ./scripts/validate.sh [--lint] [--test] [--ffi] [--axioms]
+
+Default fast checks (shared with per-PR CI):
+  - lake build of the seven default proof libraries and the optional P/poly facade, with the non-sorry warning budget
+  - ./scripts/check-imports.sh (generated umbrella modules are current)
+  - the boundary checks: PolyFun, broad expose, complexity backend,
+    Extern and Interop isolation
+  - the comment-fence rule over every Lean source the repository tracks or would
+    track, `third_party/` excluded and both lakefiles included
+
+  - the eager-initialisation ratchet (needs the oleans the build above produced)
+  - with --test, the same ratchet over the two test libraries that have umbrella
+    modules, once lake test has built them
+  - lake lint -- --style-only on every library and test module
+  - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
+
+Optional checks:
+  --lint    Batteries environment linters, one process per proof library as in CI
+  --test    lake test (test libraries, the SLH-DSA test executables, the smoke test)
+  --ffi     with --test: also the native ML-KEM / ML-DSA / Falcon executables
+            (initialises the third_party/ submodules; slow)
+  --axioms  ./scripts/test-axiomsweep.sh, then lake exe axiomsweep --check
+EOF
+}
+
+for arg in "$@"; do
+  case "$arg" in
+    --lint) run_lint=1 ;;
+    --test) run_test=1 ;;
+    --ffi) run_ffi=1 ;;
+    --axioms) run_axioms=1 ;;
+    -h|--help) usage; exit 0 ;;
+    *) echo "ERROR: unknown flag: $arg" >&2; usage >&2; exit 1 ;;
+  esac
+done
+
+if (( run_ffi )) && ! (( run_test )); then
+  echo "ERROR: --ffi needs --test." >&2
+  exit 1
+fi
+
+PROOF_LIBS=(ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets)
+BUILD_LOG="$(mktemp "${TMPDIR:-/tmp}/vcvio-validate-build.XXXXXX")"
+TEST_LOG="$(mktemp "${TMPDIR:-/tmp}/vcvio-validate-test.XXXXXX")"
+trap 'rm -f "$BUILD_LOG" "$TEST_LOG"' EXIT
+
+echo "# Building the proof libraries"
+lake build "${PROOF_LIBS[@]}" 2>&1 | tee "$BUILD_LOG"
+
+echo ""
+echo "# Checking the warning budget"
+warning_args=()
+for lib in "${PROOF_LIBS[@]}"; do
+  warning_args+=(--path-prefix "$lib/" --path-prefix "$lib.lean")
+done
+python3 ./scripts/check-warning-log.py "$BUILD_LOG" "${warning_args[@]}" \
+  --exclude-substring 'declaration uses `sorry`' \
+  --exclude-substring 'VCVio retiring probability API' \
+  --exclude-substring 'VCVio retiring support API' \
+  --label 'repository non-sorry warnings'
+
+echo ""
+echo "# Checking generated umbrella modules"
+python3 ./scripts/test-check-imports.py
+python3 ./scripts/test-validation.py
+python3 ./scripts/test-lint.py
+./scripts/check-imports.sh
+
+echo ""
+echo "# Checking boundaries"
+bash scripts/test-polyfun-boundary.sh
+bash scripts/check-polyfun-boundary.sh
+if [[ -f scripts/check-expose-boundary.sh ]]; then
+  bash scripts/test-expose-boundary.sh
+  bash scripts/check-expose-boundary.sh
+fi
+bash scripts/test-complexity-backend-isolation.sh
+bash scripts/check-complexity-backend-isolation.sh
+bash scripts/check-extern-isolation.sh
+bash scripts/check-interop-isolation.sh
+bash scripts/test-comment-fences.sh
+python3 ./scripts/check-comment-fences.py
+
+echo ""
+echo "# Checking eagerly-initialised constants"
+./scripts/test-initsweep.sh
+lake exe initsweep --check
+
+echo ""
+echo "# Running the text-based style linters"
+lake lint -- --style-only
+
+echo ""
+echo "# Checking the agent documentation"
+python3 ./scripts/check-agent-docs.py
+python3 ./scripts/extract-doc-fragments.py --check
+
+if (( run_lint )); then
+  echo ""
+  echo "# Running the environment linters"
+  lake lint -- --env-only --no-build
+fi
+
+if (( run_test )); then
+  echo ""
+  echo "# Running lake test"
+  if (( run_ffi )); then
+    git submodule update --init --recursive
+    lake test -- --ffi 2>&1 | tee "$TEST_LOG"
+  else
+    lake test 2>&1 | tee "$TEST_LOG"
+  fi
+  python3 ./scripts/check-warning-log.py "$TEST_LOG" \
+    --path-prefix VCVioTest/ --path-prefix VCVioTest.lean \
+    --path-prefix LatticeCryptoTest/ --path-prefix LatticeCryptoTest.lean \
+    --path-prefix HashSigTest/ \
+    --exclude-substring 'VCVio retiring probability API' \
+    --exclude-substring 'VCVio retiring support API' \
+    --label 'test-library warnings'
+
+
+  # The eager-initialisation ratchet over the test libraries that can be swept: it needs
+  # the oleans `lake test` has just built, which is why it is here and not in the default
+  # pass. `HashSigTest` has no umbrella module and thirteen `main`s, so it is not covered;
+  # `scripts/InitSweep.lean` records exactly what that leaves open.
+  echo ""
+  echo "# Checking eagerly-initialised constants in the test libraries"
+  lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
+fi
+
+if (( run_axioms )); then
+  echo ""
+  echo "# Checking axiom and sorry debt"
+  ./scripts/test-axiomsweep.sh
+  lake exe axiomsweep --check
+fi
+
+echo ""
+echo "validate: OK."

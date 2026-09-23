@@ -57,19 +57,19 @@ Two projection lemmas make the deferred-sampling step of the hop precise:
 /-- Overlay a ghost cache onto a real cache; ghost entries shadow real ones. -/
 @[expose] def overlayCache (re gh : (M × Commit →ₒ Chal).QueryCache) :
     (M × Commit →ₒ Chal).QueryCache :=
-  fun q => (gh q).or (re q)
+  QueryCache.ofFn fun q => (gh q).or (re q)
 
 /-- Remove a single point from a query cache. -/
 @[expose] def uncacheQuery (cache : (M × Commit →ₒ Chal).QueryCache) (q : M × Commit) :
     (M × Commit →ₒ Chal).QueryCache :=
-  fun q' => if q' = q then none else cache q'
+  QueryCache.ofFn fun q' => if q' = q then none else cache q'
 
 omit [SampleableType Chal] in
 lemma overlayCache_cacheQuery_uncacheQuery
     (re gh : (M × Commit →ₒ Chal).QueryCache) (q : M × Commit) (c : Chal) :
     overlayCache M (re.cacheQuery q c) (uncacheQuery M gh q) =
       (overlayCache M re gh).cacheQuery q c := by
-  funext q'
+  ext q'
   by_cases hq : q' = q
   · subst hq
     simp [overlayCache, uncacheQuery]
@@ -83,8 +83,8 @@ lemma toSet_uncacheQuery_subset (cache : (M × Commit →ₒ Chal).QueryCache) (
   rintro ⟨t', u'⟩ hmem
   rw [QueryCache.mem_toSet] at hmem ⊢
   by_cases ht : t' = q
-  · subst ht; simp only [uncacheQuery, if_true] at hmem; exact absurd hmem (by simp)
-  · rwa [uncacheQuery, if_neg ht] at hmem
+  · subst ht; simp [uncacheQuery] at hmem
+  · simpa [uncacheQuery, ht] using hmem
 
 omit [SampleableType Chal] in
 /-- `uncacheQuery` does not increase the `enncard` resource. -/
@@ -96,7 +96,7 @@ omit [SampleableType Chal] in
 lemma overlayCache_cacheQuery_ghost
     (re gh : (M × Commit →ₒ Chal).QueryCache) (q : M × Commit) (c : Chal) :
     overlayCache M re (gh.cacheQuery q c) = (overlayCache M re gh).cacheQuery q c := by
-  funext q'
+  ext q'
   by_cases hq : q' = q
   · subst hq
     simp [overlayCache]
@@ -121,7 +121,7 @@ lemma overlayCache_cacheQuery_real_of_ghost_none
     (re : (M × Commit →ₒ Chal).QueryCache) {gh : (M × Commit →ₒ Chal).QueryCache}
     {q : M × Commit} (h : gh q = none) (c : Chal) :
     overlayCache M (re.cacheQuery q c) gh = (overlayCache M re gh).cacheQuery q c := by
-  funext q'
+  ext q'
   by_cases hq : q' = q
   · subst hq
     simp [overlayCache, h]
@@ -222,7 +222,7 @@ lemma run_ghostSignBody_fst_eq_transSignBody (pk : Stmt) (sk : Wit) (msg : M)
 omit [DecidableEq Commit] [SampleableType Chal] [DecidableEq M] in
 lemma overlayCache_empty (re : (M × Commit →ₒ Chal).QueryCache) :
     overlayCache M re ∅ = re := by
-  funext q
+  ext q
   simp [overlayCache]
 
 /-! ## Ghost-instrumented hybrid handlers
@@ -307,7 +307,7 @@ lemma ghostHybridImpl_agree_good (pk : Stmt) (sk : Wit)
             simpa using congrArg (fun z : _ × GhostState M Commit Chal => z.2.2) h),
           probOutput_eq_zero_of_not_mem_support (by
             intro h
-            rw [if_neg Bool.false_ne_true, support_map] at h
+            rw [ite_eq_right Bool.false_ne_true, support_map] at h
             obtain ⟨cu, -, hcu⟩ := h
             simpa using congrArg (fun z : _ × GhostState M Commit Chal => z.2.2) hcu)]
     | none => rfl
@@ -337,7 +337,7 @@ lemma ghostHybridImpl_bad_mono (progSide : Bool) (pk : Stmt) (sk : Wit)
           subst hz
           rfl
       | false =>
-          rw [if_neg Bool.false_ne_true, support_map] at hz
+          rw [ite_eq_right Bool.false_ne_true, support_map] at hz
           obtain ⟨_, _, rfl⟩ := hz
           rfl
   · simp only [ghostHybridImpl, StateT.run_mk, support_map] at hz

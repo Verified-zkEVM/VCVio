@@ -127,7 +127,7 @@ theorem forsCPkFromSig_forsCSign (prims : Primitives) (digest : ℕ) (sk : prims
   refine congrArg (prims.Tl pk (forsPkAdrs adrs)) (List.map_congr_left fun i _ => ?_)
   simp only [forsCSign, Vector.getElem_ofFn]
   by_cases h : i.val < params.k - 1
-  · simp only [if_pos h]
+  · simp only [ite_eq_left h]
     have ht : (i.val * 2 ^ params.a + forsIdx digest i.val) / 2 ^ params.a = i.val := by
       rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity : 0 < 2 ^ params.a),
         Nat.div_eq_of_lt (forsIdx_lt digest i.val), Nat.zero_add]
@@ -136,7 +136,7 @@ theorem forsCPkFromSig_forsCSign (prims : Primitives) (digest : ℕ) (sk : prims
     rw [ht] at key
     exact key
   · have hik : i.val = params.k - 1 := by omega
-    rw [if_neg h, if_neg h]
+    rw [ite_eq_right h, ite_eq_right h]
     simp only [hik, hfz, Nat.add_zero, forsLeaf]
 
 end SLHDSA.C13

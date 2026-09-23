@@ -43,9 +43,8 @@ variable (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
 section scaffold
 
 variable (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
-variable (adv : SignatureAlg.unforgeableAdv
-  (FiatShamirWithAbort
-    (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) ids hr M maxAttempts))
+variable (adv : SignatureAlg.UnforgeableAdversary
+  (FiatShamirWithAbort.inROM ids hr M maxAttempts))
 
 omit [SampleableType Stmt] in
 /-- **Per-signing-query core of the Trans → Sim hop.** From any shared starting cache,
@@ -95,9 +94,7 @@ CMA-to-NMA hybrid chain. -/
     (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
         (randomOracle : QueryImpl (M × Commit →ₒ Chal)
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
-      ((FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-        ids hr M maxAttempts).verify pk msg σ)) cache
+      ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk msg σ)) cache
   pure (decide (msg ∉ signed) && ok)
 
 /-! ## Verification tail -/
@@ -111,9 +108,7 @@ adversary's forgery and the final hybrid state. -/
     (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
         (randomOracle : QueryImpl (M × Commit →ₒ Chal)
           (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
-      ((FiatShamirWithAbort
-        (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-        ids hr M maxAttempts).verify pk z.1.1 z.1.2)) z.2.1
+      ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk z.1.1 z.1.2)) z.2.1
   pure (decide (z.1.1 ∉ z.2.2) && ok)
 
 omit [SampleableType Stmt] in
@@ -145,9 +140,7 @@ lemma hybridVerifyCont_cache_congr (pk : Stmt) (ms : M × Option (Commit × Resp
         (simulateQ (unifFwdImpl (M × Commit →ₒ Chal) +
             (randomOracle : QueryImpl (M × Commit →ₒ Chal)
               (StateT ((M × Commit →ₒ Chal).QueryCache) ProbComp)))
-          ((FiatShamirWithAbort
-            (m := OracleComp (unifSpec + (M × Commit →ₒ Chal)))
-            ids hr M maxAttempts).verify pk msg (some (w, zr)))).run' c =
+          ((FiatShamirWithAbort.inROM ids hr M maxAttempts).verify pk msg (some (w, zr)))).run' c =
           (fun cu : Chal × (M × Commit →ₒ Chal).QueryCache =>
             ids.verify pk w cu.1 zr) <$> roStep M c (msg, w) := by
       intro c
@@ -181,7 +174,7 @@ lemma probOutput_true_hybridVerifyCont_of_mem (pk : Stmt)
     Pr[= true | hybridVerifyCont ids hr M maxAttempts pk (ms, (c, l))] = 0 := by
   rw [hybridVerifyCont, probOutput_bind_eq_tsum]
   refine ENNReal.tsum_eq_zero.mpr fun ok => ?_
-  rw [probOutput_pure, if_neg (by simp [hmem]), mul_zero]
+  rw [probOutput_pure, ite_eq_right (by simp [hmem]), mul_zero]
 
 end scaffold
 

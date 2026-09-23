@@ -39,14 +39,13 @@ variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι}
 /-- The seeded-fork measure wrapper remains directly consumable from another module. -/
 example (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
-    [∀ j, SampleableType (spec.Range j)] [spec.DecidableEq]
+    [∀ j, SampleableType (spec.Range j)] [∀ j, DecidableEq (spec.Range j)]
     [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec] :
     ((∑ s, Pr[= some s | cf <$> main]) ^ 2 / ((qb i + 1 : ℕ) : ℝ≥0∞)
         - (∑ s, Pr[= some s | cf <$> main]) /
             ((Fintype.card (spec.Range i) : ℕ) : ℝ≥0∞)) ≤
-      PFunctor.FreeM.denote (OracleComp.seededFork main qb js i cf)
-        {result | result.isSome} :=
-  OracleComp.le_denote_isSome_seededFork_sq main qb js i cf
+      𝒟[OracleComp.seededFork main qb js i cf] {result | result.isSome} :=
+  OracleComp.le_evalDist_isSome_seededFork_sq main qb js i cf
 
 end seeded
 
@@ -58,16 +57,15 @@ variable {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
   [MeasurableSpace α]
 
 /-- The replay-fork measure wrapper retains its reachability premise and success-event bound. -/
-example [spec.DecidableEq] (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
-    (cf : α → Option (Fin (qb i + 1)))
+example [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
+    (main : OracleComp spec α) (qb : ι → ℕ) (i : ι) (cf : α → Option (Fin (qb i + 1)))
     (hreach : OracleComp.PathCfReachable main qb i cf) :
     (let acc : ℝ≥0∞ := ∑ s, Pr[= some s | cf <$> main]
      let h : ℝ≥0∞ := Fintype.card (spec.Range i)
      let q := qb i + 1
      acc * (acc / q - h⁻¹)) ≤
-      PFunctor.FreeM.denote (OracleComp.contextFork main qb i cf)
-        {result | result.isSome} :=
-  OracleComp.le_denote_isSome_contextFork main qb i cf hreach
+      𝒟[OracleComp.contextFork main qb i cf] {result | result.isSome} :=
+  OracleComp.le_evalDist_isSome_contextFork main qb i cf hreach
 
 end replay
 
