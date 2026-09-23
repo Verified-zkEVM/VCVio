@@ -14,7 +14,7 @@ public import Examples.PRFTagReader.Collision.ForgeStep
 The collision-bound theorems for the random-function authentication world: the
 nonce-distinctness machinery (`pNonce`, `HasDistinctReaderNonces`), the forge-event induction
 over the adversary, and the collision-bound theorems culminating in
-`authExp_le_prfAdvantage_add_collisionBound` and its uniform-digest variant.
+`authRealExperiment_le_prfAdvantage_add_collisionBound` and its uniform-digest variant.
 
 The per-step random-oracle cache and forge-bound infrastructure these proofs consume lives in
 `Examples.PRFTagReader.Collision.ForgeStep`.
@@ -48,7 +48,7 @@ instance pNonceDecidable [DecidableEq Nonce] (n : Nonce) :
 
 /-- The adversary's reader queries use pairwise-distinct nonces: every nonce `n` is carried by at
 most one reader query. This is the public hypothesis under which the random-function collision
-bound is fully proven (`authRFExp_le_collisionBound_of_distinctReaderNonces` and its uniform
+bound is fully proven (`authRFExperiment_le_collisionBound_of_distinctReaderNonces` and its uniform
 specialization). -/
 def HasDistinctReaderNonces [DecidableEq Nonce]
     (adversary : AuthAdversary TagId Nonce Digest) : Prop :=
@@ -445,7 +445,7 @@ The distinctness hypothesis `HasDistinctReaderNonces adversary` states that ever
 by at most one reader query: no two reader queries write the same cache column, so every cached
 cell in a reader query's column was produced by an honest tag output, and the per-reader-step
 forge probability is bounded by `|TagId| * maxDigestProb`. -/
-theorem authRFExp_le_collisionBound_of_distinctReaderNonces
+theorem authRFExperiment_le_collisionBound_of_distinctReaderNonces
     (adversary : AuthAdversary TagId Nonce Digest)
     (q : ℕ)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
@@ -453,7 +453,7 @@ theorem authRFExp_le_collisionBound_of_distinctReaderNonces
     (maxDigestProb : ℝ)
     (hmax : ∀ d : Digest,
       (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ maxDigestProb) :
-    (Pr[= true | authRFExp (TagId := TagId) (Nonce := Nonce)
+    (Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
       (Digest := Digest) adversary]).toReal ≤
       ((q * Fintype.card TagId : ℕ) : ℝ) * maxDigestProb := by
   -- Pass to the directly-defined random-function experiment.
@@ -462,13 +462,13 @@ theorem authRFExp_le_collisionBound_of_distinctReaderNonces
     intro d
     rw [← ENNReal.ofReal_toReal (ne_top_of_le_ne_top one_ne_top probOutput_le_one)]
     exact ENNReal.ofReal_le_ofReal (hmax d)
-  have hlhs : Pr[= true | authRFExp (TagId := TagId) (Nonce := Nonce)
+  have hlhs : Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) adversary] =
       Pr[fun z : Unit × AuthIdealState TagId Nonce Digest => z.2.readerForged ≠ ∅ |
         (simulateQ (authRFQueryImpl TagId Nonce Digest)
           adversary).run AuthIdealState.init] := by
-    rw [authRFExp_eq_authRFDirectExp, ← probEvent_eq_eq_probOutput, authRFDirectExp,
-      probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
+    rw [authRFExperiment_eq_authRFDirectExperiment, ← probEvent_eq_eq_probOutput,
+      authRFDirectExperiment, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
     simp
   rw [hlhs]
   -- Apply the inductive collision bound from the initial state.
@@ -495,21 +495,21 @@ theorem authRFExp_le_collisionBound_of_distinctReaderNonces
   rw [Nat.cast_mul]
   exact hconv
 
-/-- Uniform-`Digest` specialization of `authRFExp_le_collisionBound_of_distinctReaderNonces`: when
-`Digest` is finite and sampled uniformly, the per-digest probability is `1 / |Digest|`, so the
+/-- Uniform-`Digest` specialization of `authRFExperiment_le_collisionBound_of_distinctReaderNonces`:
+when `Digest` is finite and sampled uniformly, the per-digest probability is `1 / |Digest|`, so the
 distinct-reader-nonce collision bound reads `q * |TagId| / |Digest|`. -/
-theorem authRFExp_le_uniformCollisionBound_of_distinctReaderNonces [Fintype Digest]
+theorem authRFExperiment_le_uniformCollisionBound_of_distinctReaderNonces [Fintype Digest]
     (adversary : AuthAdversary TagId Nonce Digest)
     (q : ℕ)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
     (hdistinct : HasDistinctReaderNonces adversary) :
-    (Pr[= true | authRFExp (TagId := TagId) (Nonce := Nonce)
+    (Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
       (Digest := Digest) adversary]).toReal ≤
       ((q * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
   have hmax : ∀ d : Digest,
       (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ (Fintype.card Digest : ℝ)⁻¹ := fun d => by
     simp [probOutput_uniformSample, ENNReal.toReal_inv, ENNReal.toReal_natCast]
-  have h := authRFExp_le_collisionBound_of_distinctReaderNonces
+  have h := authRFExperiment_le_collisionBound_of_distinctReaderNonces
     (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
     adversary q hq hdistinct ((Fintype.card Digest : ℝ)⁻¹) hmax
   rwa [div_eq_mul_inv]
@@ -518,27 +518,27 @@ theorem authRFExp_le_uniformCollisionBound_of_distinctReaderNonces [Fintype Dige
 query satisfies the random-function collision bound with no separate distinctness hypothesis. A
 single reader query is vacuously distinct (`hasDistinctReaderNonces_of_readerBound`), so the
 forged-acceptance probability is at most `|TagId| / |Digest|`. -/
-theorem authRFExp_le_uniformCollisionBound_of_singleReaderQuery [Fintype Digest]
+theorem authRFExperiment_le_uniformCollisionBound_of_singleReaderQuery [Fintype Digest]
     (adversary : AuthAdversary TagId Nonce Digest)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) 1) :
-    (Pr[= true | authRFExp (TagId := TagId) (Nonce := Nonce)
+    (Pr[= true | authRFExperiment (TagId := TagId) (Nonce := Nonce)
       (Digest := Digest) adversary]).toReal ≤
       (Fintype.card TagId : ℝ) / (Fintype.card Digest : ℝ) := by
-  have h := authRFExp_le_uniformCollisionBound_of_distinctReaderNonces
+  have h := authRFExperiment_le_uniformCollisionBound_of_distinctReaderNonces
     (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
     adversary 1 hq (hasDistinctReaderNonces_of_readerBound adversary hq)
   simpa using h
 
 /-- End-to-end authentication bound, distinct-reader-nonce regime. Composing the PRF reduction
-`authExp_le_prfAdvantage_add_authRF` with the proved collision bound
-`authRFExp_le_collisionBound_of_distinctReaderNonces`, the active-authentication adversary's
+`authRealExperiment_le_prfAdvantage_add_authRF` with the proved collision bound
+`authRFExperiment_le_collisionBound_of_distinctReaderNonces`, the active-authentication adversary's
 forgery probability is bounded by a single quantity: the PRF distinguishing advantage of the
 canonical reduction plus the collision term `q * |TagId| * maxDigestProb`.
 
 This is the result downstream users should cite — it folds the two-step reduction (PRF hop, then
 collision analysis) into one inequality, so there is no need to stitch the intermediate
-`authRFExp` world in by hand. -/
-theorem authExp_le_prfAdvantage_add_collisionBound
+`authRFExperiment` world in by hand. -/
+theorem authRealExperiment_le_prfAdvantage_add_collisionBound
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : AuthAdversary TagId Nonce Digest)
     (q : ℕ)
@@ -547,34 +547,34 @@ theorem authExp_le_prfAdvantage_add_collisionBound
     (maxDigestProb : ℝ)
     (hmax : ∀ d : Digest,
       (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ maxDigestProb) :
-    (Pr[= true | authExp (TagId := TagId) (Nonce := Nonce)
+    (Pr[= true | authRealExperiment (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) prfs adversary]).toReal ≤
       (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
         (Nonce := Nonce) (Digest := Digest) adversary)).toReal +
       ((q * Fintype.card TagId : ℕ) : ℝ) * maxDigestProb := by
-  refine le_trans (authExp_le_prfAdvantage_add_authRF prfs adversary) ?_
+  refine le_trans (authRealExperiment_le_prfAdvantage_add_authRF prfs adversary) ?_
   gcongr
-  exact authRFExp_le_collisionBound_of_distinctReaderNonces adversary q hq hdistinct
+  exact authRFExperiment_le_collisionBound_of_distinctReaderNonces adversary q hq hdistinct
     maxDigestProb hmax
 
-/-- Uniform-`Digest` specialization of `authExp_le_prfAdvantage_add_collisionBound`: when `Digest`
-is finite and sampled uniformly, the collision term reads `q * |TagId| / |Digest|`, so the
+/-- Uniform-`Digest` specialization of `authRealExperiment_le_prfAdvantage_add_collisionBound`: when
+`Digest` is finite and sampled uniformly, the collision term reads `q * |TagId| / |Digest|`, so the
 authentication adversary's forgery probability is bounded by the PRF advantage plus
 `q * |TagId| / |Digest|`. -/
-theorem authExp_le_prfAdvantage_add_uniformCollisionBound [Fintype Digest]
+theorem authRealExperiment_le_prfAdvantage_add_uniformCollisionBound [Fintype Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : AuthAdversary TagId Nonce Digest)
     (q : ℕ)
     (hq : OracleComp.IsQueryBoundP adversary (fun i => i.isRight) q)
     (hdistinct : HasDistinctReaderNonces adversary) :
-    (Pr[= true | authExp (TagId := TagId) (Nonce := Nonce)
+    (Pr[= true | authRealExperiment (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) prfs adversary]).toReal ≤
       (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
         (Nonce := Nonce) (Digest := Digest) adversary)).toReal +
       ((q * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
-  refine le_trans (authExp_le_prfAdvantage_add_authRF prfs adversary) ?_
+  refine le_trans (authRealExperiment_le_prfAdvantage_add_authRF prfs adversary) ?_
   gcongr
-  exact authRFExp_le_uniformCollisionBound_of_distinctReaderNonces adversary q hq hdistinct
+  exact authRFExperiment_le_uniformCollisionBound_of_distinctReaderNonces adversary q hq hdistinct
 
 end Theorems
 

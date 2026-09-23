@@ -19,9 +19,9 @@ between the multiple- and single-session random-function worlds of the headline 
 * `multipleBadStep_*` lemmas track the per-step bad-flag bound and the session counter;
 * `simulateQ_multipleBad_prob_le` unrolls those step lemmas to a union bound, yielding
   `multipleBad_bad_le_sessionCollisionBound`;
-* the bad-event bridge `probOutput_unlinkBadExp_eq` connects `unlinkBadExp` to the bad flag of
-  the instrumented multiple-bad handler, and `unlinkPRFIdeal_boolDist_le_unlinkBad` packages the
-  middle hop of the headline reduction.
+* the bad-event bridge `probOutput_unlinkBadExperiment_eq` connects `unlinkBadExperiment` to the bad
+  flag of the instrumented multiple-bad handler, and `unlinkPRFIdeal_boolDist_le_unlinkBad` packages
+  the middle hop of the headline reduction.
 -/
 
 @[expose] public section
@@ -420,7 +420,7 @@ lemma simulateQ_multipleBad_prob_le
 /-- **Final session-collision bound** for the multiple-bad handler. Chains
 `simulateQ_multipleBad_prob_le` at the initial state, where the `unlinkBadRemaining` collapses to
 `sessionsPerTag * |TagId|`, giving the explicit `sessionsPerTag^2 * |TagId| * maxNonceProb`
-session-collision bound. The headline analogue of `unlinkBadExp_le_sessionCollisionBound`. -/
+session-collision bound. The headline analogue of `unlinkBadExperiment_le_sessionCollisionBound`. -/
 theorem multipleBad_bad_le_sessionCollisionBound
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (maxNonceProb : ℝ)
@@ -456,16 +456,17 @@ theorem multipleBad_bad_le_sessionCollisionBound
 
 /-! ### Multiple-vs-single bound: bad-event bridge -/
 
-/-- `unlinkBadExp` outputs `true` exactly with the probability that the bad flag fires. -/
-lemma probOutput_unlinkBadExp_eq
+/-- `unlinkBadExperiment` outputs `true` exactly with the probability that the bad flag fires. -/
+lemma probOutput_unlinkBadExperiment_eq
     (adversary : UnlinkAdversary TagId Nonce Digest) :
-    Pr[= true | unlinkBadExp (TagId := TagId) (Nonce := Nonce)
+    Pr[= true | unlinkBadExperiment (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary] =
       Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
         (simulateQ (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
           UnlinkBadState.init] := by
-  rw [← probEvent_eq_eq_probOutput, unlinkBadExp, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
+  rw [← probEvent_eq_eq_probOutput, unlinkBadExperiment, probEvent_bind_eq_tsum,
+    probEvent_eq_tsum_ite]
   refine tsum_congr fun z => ?_
   by_cases hz : z.2.bad <;> simp [hz]
 
@@ -500,8 +501,8 @@ theorem unlinkPRFIdeal_boolDist_le_unlinkBad [NeZero sessionsPerTag] [Fintype No
       ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
         (Fintype.card Digest : ℝ≥0∞) := by
   refine MeasureTheory.Measure.boolDist_le_of_apply_le _ _ fun out => ?_
-  rw [prfIdealExp_unlinkToMultiplePRFReduction_eq_run' adversary,
-    prfIdealExp_unlinkToSinglePRFReduction_eq_run' adversary]
+  rw [prfIdealExperiment_unlinkToMultiplePRFReduction_eq_run' adversary,
+    prfIdealExperiment_unlinkToSinglePRFReduction_eq_run' adversary]
   simp only [evalDist_apply_singleton, probOutput_map]
   simpa only [add_assoc] using UnlinkReduction.multipleIdeal_le_singleIdeal_add_bad_DC
     (sessionsPerTag := sessionsPerTag) out adversary qReader qTag hqReader hqTag

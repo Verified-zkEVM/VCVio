@@ -343,7 +343,7 @@ lemma simulateQ_singleIdeal_collapse
 
 /-- The multiple-session ideal-PRF experiment is the composed handler `multipleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
-lemma prfIdealExp_unlinkToMultiplePRFReduction_eq_run'
+lemma prfIdealExperiment_unlinkToMultiplePRFReduction_eq_run'
     (adv : UnlinkAdversary TagId Nonce Digest) :
     PRFScheme.prfIdealExperiment (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adv) =
@@ -356,7 +356,7 @@ lemma prfIdealExp_unlinkToMultiplePRFReduction_eq_run'
 
 /-- The single-session ideal-PRF experiment is the composed handler `singleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
-lemma prfIdealExp_unlinkToSinglePRFReduction_eq_run'
+lemma prfIdealExperiment_unlinkToSinglePRFReduction_eq_run'
     (adv : UnlinkAdversary TagId Nonce Digest) :
     PRFScheme.prfIdealExperiment (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adv) =

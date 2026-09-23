@@ -15,8 +15,8 @@ public import VCVio.ProgramLogic.Relational.SimulateQ
 
 PRF distinguishers derived from an unlinkability adversary, in both the multiple-session and
 single-session worlds, together with the PRF-real faithfulness lemmas
-(`prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp` and
-`prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp`).
+(`prfRealExperiment_unlinkToMultiplePRFReduction_eq_unlinkMultipleExperiment` and
+`prfRealExperiment_unlinkToSinglePRFReduction_eq_unlinkSingleExperiment`).
 -/
 
 @[expose] public section
@@ -157,7 +157,8 @@ end Definitions
 
 The three lemmas below are the analytic content of the reduction. The first two are PRF-real
 faithfulness lemmas (each provable by the same simulation-collapse argument as the auth-side
-`prfRealExp_authToPRFReduction_eq_authExp`); the third is the identical-until-bad coupling. -/
+`prfRealExperiment_authToPRFReduction_eq_authRealExperiment`); the third is the identical-until-bad
+coupling. -/
 
 /-- Per-tag-query equivalence, multiple-session world: running the reduction's tag-oracle
 implementation through the real PRF simulator produces the same distribution and final state as
@@ -391,15 +392,16 @@ theorem simulateQ_prfReal_unlinkToMultiplePRFQueryImpl_run [NeZero sessionsPerTa
 /-- PRF-real faithfulness, multiple-session world: under the real PRF, each oracle query at
 `(tag, nonce)` returns `prfs.evalMultiple k tag nonce`, so the reduction runs exactly the
 multiple-session unlinkability game. -/
-theorem prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp [NeZero sessionsPerTag]
+theorem prfRealExperiment_unlinkToMultiplePRFReduction_eq_unlinkMultipleExperiment
+    [NeZero sessionsPerTag]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) :
     PRFScheme.prfRealExperiment prfs.multiplePRFScheme
         (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary) =
-      unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
+      unlinkMultipleExperiment (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary := by
-  unfold PRFScheme.prfRealExperiment unlinkMultipleExp unlinkToMultiplePRFReduction
+  unfold PRFScheme.prfRealExperiment unlinkMultipleExperiment unlinkToMultiplePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k)
@@ -437,15 +439,15 @@ theorem simulateQ_prfReal_unlinkToSinglePRFQueryImpl_run
 /-- PRF-real faithfulness, single-session world: under the real PRF, each oracle query at
 `((tag, sid), nonce)` returns `prfs.evalSingle k tag sid nonce`, so the reduction runs exactly the
 single-session unlinkability game. -/
-theorem prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp
+theorem prfRealExperiment_unlinkToSinglePRFReduction_eq_unlinkSingleExperiment
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) :
     PRFScheme.prfRealExperiment prfs.singlePRFScheme
         (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary) =
-      unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
+      unlinkSingleExperiment (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary := by
-  unfold PRFScheme.prfRealExperiment unlinkSingleExp unlinkToSinglePRFReduction
+  unfold PRFScheme.prfRealExperiment unlinkSingleExperiment unlinkToSinglePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.singlePRFScheme k)

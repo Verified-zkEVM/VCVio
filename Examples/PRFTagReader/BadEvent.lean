@@ -13,7 +13,7 @@ public import Examples.PRFTagReader.Collision
 
 The bad-event world for the multiple-session unlinkability game, which records nonce collisions
 across repeated sessions of a tag. Proves the per-step bad-event bounds and the overall session
-collision bound `unlinkBadExp_le_sessionCollisionBound`.
+collision bound `unlinkBadExperiment_le_sessionCollisionBound`.
 -/
 
 @[expose] public section
@@ -359,23 +359,24 @@ private lemma simulateQ_unlinkBad_prob_le
 
 /-- A pointwise bound on the nonce sampler turns the bad-event probability into an explicit session
 collision bound. -/
-theorem unlinkBadExp_le_sessionCollisionBound
+theorem unlinkBadExperiment_le_sessionCollisionBound
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (maxNonceProb : ℝ)
     (hmax : ∀ nonce : Nonce,
       (Pr[= nonce | ($ᵗ Nonce)]).toReal ≤ maxNonceProb) :
-    (Pr[= true | unlinkBadExp (sessionsPerTag := sessionsPerTag) adversary]).toReal ≤
+    (Pr[= true | unlinkBadExperiment (sessionsPerTag := sessionsPerTag) adversary]).toReal ≤
       ((sessionsPerTag ^ 2 * Fintype.card TagId : ℕ) : ℝ) * maxNonceProb := by
   have hmax_ENNReal : ∀ n : Nonce,
       Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ ENNReal.ofReal maxNonceProb := by
     intro n
     rw [← ENNReal.ofReal_toReal (ne_top_of_le_ne_top one_ne_top probOutput_le_one)]
     exact ENNReal.ofReal_le_ofReal (hmax n)
-  have hlhs : Pr[= true | unlinkBadExp (sessionsPerTag := sessionsPerTag) adversary] =
+  have hlhs : Pr[= true | unlinkBadExperiment (sessionsPerTag := sessionsPerTag) adversary] =
       Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
         (simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
           UnlinkBadState.init] := by
-    rw [← probEvent_eq_eq_probOutput, unlinkBadExp, probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
+    rw [← probEvent_eq_eq_probOutput, unlinkBadExperiment, probEvent_bind_eq_tsum,
+      probEvent_eq_tsum_ite]
     simp
   rw [hlhs]
   have hcore := simulateQ_unlinkBad_prob_le (sessionsPerTag := sessionsPerTag)
