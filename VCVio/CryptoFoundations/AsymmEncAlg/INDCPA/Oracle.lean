@@ -6,6 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
+public import VCVio.CryptoFoundations.SecExp.Measure
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.ProbComp
@@ -449,10 +450,12 @@ theorem IND_CPA_countedGame_eq_game_of_MakesAtMostQueries [Finite C] [Inhabited 
   exact probOutput_congr rfl <| evalSPMF_bind_congr' _ fun b =>
     evalSPMF_bind_congr' _ fun pksk => by simp only [evalSPMF_bind, hinner pksk.1 b]
 
-/-- `ℝ≥0∞`-valued IND-CPA signed advantage, aligned with the oracle IND-CPA experiment. -/
+/-- IND-CPA advantage of an oracle adversary: the Boolean bias
+`|Pr[b = b'] - Pr[b ≠ b']| = 2 * |Pr[b = b'] - 1/2|` of the oracle IND-CPA experiment.
+An adversary that always guesses wrong has advantage `1`. -/
 noncomputable def IND_CPA_advantage {encAlg : AsymmEncAlg ProbComp M PK SK C}
-    (adversary : encAlg.IND_CPA_adversary) : ℝ≥0∞ :=
-  Pr[= true | IND_CPA_experiment adversary] - 1 / 2
+    (adversary : encAlg.IND_CPA_adversary) : ℝ :=
+  (IND_CPA_experiment adversary).boolBiasAdvantage
 
 end IND_CPA_Oracle
 
@@ -594,17 +597,13 @@ theorem IND_CPA_abs_signedAdvantageReal_le_sum_hybridDiff_abs
   rw [IND_CPA_signedAdvantageReal_eq_sum_hybridDiff (encAlg' := encAlg') adversary q games h0 hq]
   exact Finset.abs_sum_le_sum_abs _ _
 
-/-- Compatibility bridge to the existing `IND_CPA_advantage` API: the `toReal` of the `ℝ≥0∞`
-signed advantage is bounded by the absolute signed real advantage. -/
-theorem IND_CPA_advantage_toReal_le_abs_signedAdvantageReal
+/-- The IND-CPA bias advantage is twice the absolute signed real advantage. -/
+theorem IND_CPA_advantage_eq_two_mul_abs_signedAdvantageReal
     (adversary : encAlg'.IND_CPA_adversary) :
-    (IND_CPA_advantage (encAlg := encAlg') adversary).toReal ≤
-      |IND_CPA_signedAdvantageReal (encAlg' := encAlg') adversary| := by
-  unfold IND_CPA_advantage IND_CPA_signedAdvantageReal
-  simpa using
-    (ENNReal.toReal_sub_le_abs_toReal_sub
-      (a := Pr[= true | IND_CPA_experiment (encAlg := encAlg') adversary])
-      (b := (1 / 2 : ℝ≥0∞)))
+    IND_CPA_advantage (encAlg := encAlg') adversary =
+      2 * |IND_CPA_signedAdvantageReal (encAlg' := encAlg') adversary| := by
+  rw [IND_CPA_advantage, ProbComp.boolBiasAdvantage_eq_two_mul_abs_sub_half,
+    evalDist_apply_singleton, IND_CPA_signedAdvantageReal]
 
 /-- When the counter is above both thresholds, two hybrid LR counted oracles agree pointwise. -/
 lemma IND_CPA_hybridLR_counted_run_eq_of_le

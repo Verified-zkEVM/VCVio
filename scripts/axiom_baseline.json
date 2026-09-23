@@ -18,6 +18,8 @@
   "GPVHashAndSign.forgery_yields_collision_or_exact_match",
   "GPVHashAndSign.programmedPreimageReduction",
   "GPVHashAndSign.reduction",
+  "MLDSA.eufCmaMLWEReduction",
+  "MLDSA.eufCmaSTMSISReduction",
   "MLDSA.euf_cma_security",
   "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.liftIntermediateLevels",
   "_private.LatticeCrypto.Falcon.Concrete.NTRUSolver.0.Falcon.Concrete.NTRUSolver.poly_big_to_small",

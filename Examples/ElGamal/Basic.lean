@@ -42,7 +42,7 @@ payloads (for example elliptic-curve points), and `gen : G` is a fixed public ge
    `elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage`.
 3. Final theorem:
    `elGamal_IND_CPA_le_q_mul_ddh` is a direct instantiation of
-   `AsymmEncAlg.IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound`
+   `AsymmEncAlg.IND_CPA_advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound`
    with one-time loss `2 * ε`.
 -/
 
@@ -330,8 +330,9 @@ theorem elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage
       (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
 
 /-- **Main theorem.** If an adversary makes at most `q` LR queries and every extracted one-time
-ElGamal DDH reduction has guess advantage at most `ε`, then ElGamal has IND-CPA advantage at most
-`q * (2 * ε)`. -/
+ElGamal DDH reduction has guess advantage at most `ε`, then ElGamal has IND-CPA bias advantage at
+most `2 * (q * (2 * ε))`. The outer factor `2` converts the signed advantage `Pr[win] - 1/2` into
+the bias `|Pr[win] - Pr[lose]|`. -/
 theorem elGamal_IND_CPA_le_q_mul_ddh [DecidableEq G]
     (hg : Function.Bijective (· • gen : F → G))
     (adversary : (elGamalAsymmEnc F G gen).IND_CPA_adversary)
@@ -340,8 +341,8 @@ theorem elGamal_IND_CPA_le_q_mul_ddh [DecidableEq G]
     (hddh : ∀ adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen),
       DiffieHellman.ddhGuessAdvantage gen
         (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv) ≤ ε) :
-    ((elGamalAsymmEnc F G gen).IND_CPA_advantage adversary).toReal ≤ q * (2 * ε) := by
-  refine AsymmEncAlg.IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound
+    (elGamalAsymmEnc F G gen).IND_CPA_advantage adversary ≤ 2 * (q * (2 * ε)) := by
+  refine AsymmEncAlg.IND_CPA_advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound
     (encAlg' := elGamalAsymmEnc F G gen) adversary q (2 * ε) hq ?_
   intro adv
   calc
