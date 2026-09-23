@@ -6,11 +6,13 @@ Authors: Quang Dao
 
 module
 
+public import PolyFun.Interaction.UC.OpenProcessQuotient
 public import PolyFun.Interaction.UC.ScheduledSamplerFactorization
 public import PolyFun.Interaction.UC.ScheduledOpenProcessModel
 public import VCVio.EvalDist.Fintype
 public import VCVio.EvalDist.Monad.Map
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
 # Proportional UC scheduling
@@ -22,9 +24,14 @@ with probability `w` divided by the total mass, independently of how the
 composition tree is parenthesized.
 
 The coherence law is deliberately denotational: two scheduler computations
-are related when every output has the same probability. The underlying oracle
+are related when they have the same output distribution. The underlying oracle
 programs may issue differently shaped uniform queries after reassociation, but
 the induced observable distributions agree.
+
+The relation is also a congruence for the continuation of `bind`
+(`outputRel_isBindCongr`), so sampler equivalence at `outputRel` is a
+congruence on `theory Party`. The quotient `quotientTheory Party` satisfies
+plug factorization (`hasPlugFactorization_quotientTheory`).
 -/
 
 public section
@@ -40,27 +47,49 @@ namespace ProportionalScheduler
 
 /-! ## Denotational relation -/
 
-/-- Pointwise equality of output probabilities for `ProbComp` computations.
-This is the discrete denotational equality used for scheduler coherence. -/
+/-- Equality of output distributions of `ProbComp` computations, compared as measures on the
+discrete measurable structure of the output type. This is the denotational equality used for
+scheduler coherence; `outputRel_rel` reads it as pointwise equality of output probabilities. -/
 noncomputable def outputRel : MonadRelFamily ProbComp where
-  rel := fun left right => ∀ output, Pr[= output | left] = Pr[= output | right]
-  refl _ _ := rfl
-  symm h output := (h output).symm
-  trans h₁ h₂ output := (h₁ output).trans (h₂ output)
+  rel := fun {α} left right => letI : MeasurableSpace α := ⊤; 𝒟[left] = 𝒟[right]
+  refl _ := rfl
+  symm h := h.symm
+  trans h₁ h₂ := h₁.trans h₂
   map_congr := by
-    intro α β f left right h output
-    rw [probOutput_map_eq_tsum, probOutput_map_eq_tsum]
-    exact tsum_congr fun input => by rw [h input]
+    intro α β f left right h
+    let : MeasurableSpace α := ⊤
+    let : MeasurableSpace β := ⊤
+    change 𝒟[f <$> left] = 𝒟[f <$> right]
+    rw [evalDist_map left Measurable.of_discrete, evalDist_map right Measurable.of_discrete]
+    exact congrArg (MeasureTheory.Measure.map f) h
   bind_congr := by
-    intro α β left right f h output
-    rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-    exact tsum_congr fun input => by rw [h input]
+    intro α β left right f h
+    let : MeasurableSpace α := ⊤
+    let : MeasurableSpace β := ⊤
+    change 𝒟[left >>= f] = 𝒟[right >>= f]
+    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+    exact congrArg (MeasureTheory.Measure.bind · fun x => 𝒟[f x]) h
 
+/-- `outputRel` holds exactly when the output probabilities agree pointwise. -/
 @[simp]
 theorem outputRel_rel {α : Type} (left right : ProbComp α) :
     outputRel.rel left right ↔
-      ∀ output, Pr[= output | left] = Pr[= output | right] :=
-  Iff.rfl
+      ∀ output, Pr[= output | left] = Pr[= output | right] := by
+  let : MeasurableSpace α := ⊤
+  change 𝒟[left] = 𝒟[right] ↔ _
+  rw [← evalSPMF_ext_iff]
+  exact ⟨evalSPMF_eq_of_evalDist_eq left right, evalDist_eq_of_evalSPMF_eq left right⟩
+
+/-- `outputRel` is a congruence for the continuation of `bind`: the output distribution of
+`x >>= f` is the Giry bind of the output distribution of `x` against those of `f`. -/
+instance outputRel_isBindCongr : outputRel.IsBindCongr where
+  bind_congr_right := by
+    intro α β x f g h
+    let : MeasurableSpace α := ⊤
+    let : MeasurableSpace β := ⊤
+    change 𝒟[x >>= f] = 𝒟[x >>= g]
+    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+    exact congrArg (MeasureTheory.Measure.bind 𝒟[x]) (funext h)
 
 /-- A finite sum over lifted Booleans has exactly its two expected terms. -/
 theorem sum_ulift_bool (f : ULift Bool → ENNReal) :
@@ -329,6 +358,23 @@ theorem isCoherent : BinaryScheduler.IsCoherent outputRel binary :=
 `ProbComp` scheduling. -/
 noncomputable abbrev theory (Party : Type u) : OpenTheory :=
   scheduledOpenTheory Party ProbComp binary
+
+/-- Equal scheduler mass together with sampler equivalence at `outputRel`, as a
+congruence on `theory Party`. -/
+noncomputable abbrev samplerCongruence (Party : Type u) : (theory Party).Congruence :=
+  scheduledOpenTheory.samplerCongruence Party ProbComp binary outputRel
+
+/-- `theory Party` modulo `samplerCongruence Party`. -/
+noncomputable abbrev quotientTheory (Party : Type u) : OpenTheory :=
+  (theory Party).quotient (samplerCongruence Party)
+
+/-- The proportional theory modulo output-probability sampler equivalence
+satisfies plug factorization: coherence of `binary` supplies the scheduler
+transport facts, and `outputRel_isBindCongr` makes the relation a congruence. -/
+instance hasPlugFactorization_quotientTheory (Party : Type u) :
+    OpenTheory.HasPlugFactorization (quotientTheory Party) :=
+  scheduledOpenTheory.hasPlugFactorization_quotient_samplerCongruence
+    Party ProbComp binary outputRel isCoherent
 
 end ProportionalScheduler
 
