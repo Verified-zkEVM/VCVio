@@ -279,4 +279,162 @@ def poly_sub_scaled_ntt (logn : Nat) (F : Array UInt32) (Flen : Nat)
     arr := zint_sub_scaled_off arr Flen i fk tlen i n sch scl
   return arr
 
+/-! ## Depth-1 Babai subtraction
+
+At depth 1 of the NTRU solver the reduced `(F, G)` fit on at most two words per
+coefficient, so the subtraction of `k * (f', g')` (where `f' = N(f)` and `g' = N(g)` are the
+field norms of the top-level polynomials) is carried out entirely in RNS+NTT over the first
+`FGlen` small primes, recomputing `(f', g')` on the fly from the top-level `(f, g)`. -/
+
+/-- Signed one-word (31-bit limb) value to its sign-extended `Int32`. -/
+@[inline] private def signExt31 (x : UInt32) : Int32 :=
+  (x ||| ((x &&& 0x40000000) <<< (1 : UInt32))).toInt32
+
+/-- NTT of `N(h)` modulo one small prime at degree `2^logn`, where `h` is a top-level
+polynomial of degree `2^(logn + 1)` given by its small coefficients. Uses
+`N(h) = h_e² - X·h_o²` with the NTT of `X` read from the twiddle table `gm`. -/
+private def fieldNormNTT (logn : Nat) (h : Array Int8) (gm : Array UInt32)
+    (p p0i : UInt32) : Array UInt32 := Id.run do
+  let n := 1 <<< logn
+  let hn := n >>> 1
+  let mut t1 : Array UInt32 := Array.replicate n 0
+  let mut t2 : Array UInt32 := Array.replicate n 0
+  for j in [:n] do
+    t1 := t1.set! j (SmallPrimeNTT.mp_set (h.getD (2 * j) 0).toInt32 p)
+    t2 := t2.set! j (SmallPrimeNTT.mp_set (h.getD (2 * j + 1) 0).toInt32 p)
+  t1 := SmallPrimeNTT.mp_NTT logn t1 gm p p0i
+  t2 := SmallPrimeNTT.mp_NTT logn t2 gm p p0i
+  let mut d : Array UInt32 := Array.replicate n 0
+  for j in [:hn] do
+    let xe0 := t1.getD (2 * j) 0
+    let xe1 := t1.getD (2 * j + 1) 0
+    let xo0 := t2.getD (2 * j) 0
+    let xo1 := t2.getD (2 * j + 1) 0
+    let xv0 := gm.getD (hn + j) 0
+    let xv1 := p - xv0
+    let xe0 := SmallPrimeNTT.mp_montymul xe0 xe0 p p0i
+    let xe1 := SmallPrimeNTT.mp_montymul xe1 xe1 p p0i
+    let xo0 := SmallPrimeNTT.mp_montymul xo0 xo0 p p0i
+    let xo1 := SmallPrimeNTT.mp_montymul xo1 xo1 p p0i
+    d := d.set! (2 * j)
+      (SmallPrimeNTT.mp_sub xe0 (SmallPrimeNTT.mp_montymul xo0 xv0 p p0i) p)
+    d := d.set! (2 * j + 1)
+      (SmallPrimeNTT.mp_sub xe1 (SmallPrimeNTT.mp_montymul xo1 xv1 p p0i) p)
+  return d
+
+/-- Convert one polynomial of `(F, G)` (one or two words per coefficient, stride `n`) from
+plain signed representation to RNS over the first `FGlen ∈ {1, 2}` small primes. -/
+private def depth1ToRNS (n : Nat) (F : Array UInt32) (FGlen : Nat) :
+    Array UInt32 := Id.run do
+  let mut F := F
+  if FGlen == 1 then
+    let p := (SmallPrimeNTT.PRIMES.getD 0 default).p
+    for i in [:n] do
+      F := F.set! i (SmallPrimeNTT.mp_set (signExt31 (F.getD i 0)) p)
+  else
+    let pr0 := SmallPrimeNTT.PRIMES.getD 0 default
+    let pr1 := SmallPrimeNTT.PRIMES.getD 1 default
+    let p0 := pr0.p
+    let p1 := pr1.p
+    let z0 := SmallPrimeNTT.mp_half pr0.R2 p0
+    let z1 := SmallPrimeNTT.mp_half pr1.R2 p1
+    for i in [:n] do
+      let xl := F.getD i 0
+      let xh := signExt31 (F.getD (i + n) 0)
+      let yl0 := xl - (p0 &&& ~~~(tbmask (xl - p0)))
+      let yh0 := SmallPrimeNTT.mp_set xh p0
+      let r0 := SmallPrimeNTT.mp_add yl0 (SmallPrimeNTT.mp_montymul yh0 z0 p0 pr0.p0i) p0
+      let yl1 := xl - (p1 &&& ~~~(tbmask (xl - p1)))
+      let yh1 := SmallPrimeNTT.mp_set xh p1
+      let r1 := SmallPrimeNTT.mp_add yl1 (SmallPrimeNTT.mp_montymul yh1 z1 p1 pr1.p0i) p1
+      F := F.set! i r0
+      F := F.set! (i + n) r1
+  return F
+
+/-- Convert one polynomial of `(F, G)` from RNS over the first `FGlen ∈ {1, 2}` small primes
+back to plain signed representation (31-bit limbs, stride `n`). -/
+private def depth1FromRNS (n : Nat) (F : Array UInt32) (FGlen : Nat) :
+    Array UInt32 := Id.run do
+  let mut F := F
+  if FGlen == 1 then
+    let p := (SmallPrimeNTT.PRIMES.getD 0 default).p
+    for i in [:n] do
+      F := F.set! i ((SmallPrimeNTT.mp_norm (F.getD i 0) p).toUInt32 &&& LIMB_MASK)
+  else
+    let pr1 := SmallPrimeNTT.PRIMES.getD 1 default
+    let p0 := (SmallPrimeNTT.PRIMES.getD 0 default).p
+    let p1 := pr1.p
+    let pp : UInt64 := p0.toUInt64 * p1.toUInt64
+    let hpp := pp >>> 1
+    for i in [:n] do
+      let x0 := F.getD i 0
+      let x1 := F.getD (i + n) 0
+      let x0m1 := x0 - (p1 &&& ~~~(tbmask (x0 - p1)))
+      let y := SmallPrimeNTT.mp_montymul (SmallPrimeNTT.mp_sub x1 x0m1 p1) pr1.s p1 pr1.p0i
+      let z : UInt64 := x0.toUInt64 + p0.toUInt64 * y.toUInt64
+      let z := z - (pp &&& ((0 : UInt64) - ((hpp - z) >>> 63)))
+      F := F.set! i (z.toUInt32 &&& LIMB_MASK)
+      F := F.set! (i + n) ((z >>> 31).toUInt32 &&& LIMB_MASK)
+  return F
+
+/-- Subtract `k * (2^sc) * (f', g')` from `(F, G)` at depth 1 of the NTRU solver, where
+`f' = N(f)` and `g' = N(g)` are the field norms of the top-level polynomials `f, g` (degree
+`2^logn_top`), `F` and `G` hold `FGlen ∈ {1, 2}` words per coefficient at degree
+`2^(logn_top - 1)`, and `k` holds signed 32-bit coefficients. The subtraction is performed in
+RNS+NTT over the first `FGlen` small primes, so the result is exact as long as the output
+coefficients fit in the RNS range. -/
+def polySubKfgScaledDepth1 (logn_top : Nat) (F G : Array UInt32) (FGlen : Nat)
+    (k : Array Int32) (sc : UInt32) (f g : Array Int8) : Array UInt32 × Array UInt32 :=
+  Id.run do
+  let logn := logn_top - 1
+  let n := 1 <<< logn
+  let mut F := depth1ToRNS n F FGlen
+  let mut G := depth1ToRNS n G FGlen
+  let mut kk : Array UInt32 := (Array.range n).map fun j => (k.getD j 0).toUInt32
+  for i in [:FGlen] do
+    let pr := SmallPrimeNTT.PRIMES.getD i default
+    let p := pr.p
+    let p0i := pr.p0i
+    let R2 := pr.R2
+    let R3 := SmallPrimeNTT.mp_montymul R2 R2 p p0i
+    let gm := SmallPrimeNTT.mp_mkgm logn pr.g p p0i
+    -- k <- (2^sc) * k, into NTT
+    let mut scv := SmallPrimeNTT.mp_montymul ((1 : UInt32) <<< (sc &&& 31)) R2 p p0i
+    for _ in [:(sc >>> 5).toNat] do
+      scv := SmallPrimeNTT.mp_montymul scv R2 p p0i
+    for j in [:n] do
+      let x := SmallPrimeNTT.mp_set (kk.getD j 0).toInt32 p
+      kk := kk.set! j (SmallPrimeNTT.mp_montymul scv x p p0i)
+    kk := SmallPrimeNTT.mp_NTT logn kk gm p p0i
+    -- F and G lines for this prime, into NTT
+    let mut Fu := SmallPrimeNTT.mp_NTT logn (F.extract (i * n) (i * n + n)) gm p p0i
+    let mut Gu := SmallPrimeNTT.mp_NTT logn (G.extract (i * n) (i * n + n)) gm p p0i
+    let ft := fieldNormNTT logn f gm p p0i
+    let gt := fieldNormNTT logn g gm p p0i
+    for j in [:n] do
+      let kj := kk.getD j 0
+      let xkf := SmallPrimeNTT.mp_montymul
+        (SmallPrimeNTT.mp_montymul (ft.getD j 0) kj p p0i) R3 p p0i
+      Fu := Fu.set! j (SmallPrimeNTT.mp_sub (Fu.getD j 0) xkf p)
+      let xkg := SmallPrimeNTT.mp_montymul
+        (SmallPrimeNTT.mp_montymul (gt.getD j 0) kj p p0i) R3 p p0i
+      Gu := Gu.set! j (SmallPrimeNTT.mp_sub (Gu.getD j 0) xkg p)
+    -- back to RNS
+    let igm := (SmallPrimeNTT.mp_mkgmigm logn pr.g pr.ig p p0i).2
+    Fu := SmallPrimeNTT.mp_iNTT logn Fu igm p p0i
+    Gu := SmallPrimeNTT.mp_iNTT logn Gu igm p p0i
+    for j in [:n] do
+      F := F.set! (i * n + j) (Fu.getD j 0)
+      G := G.set! (i * n + j) (Gu.getD j 0)
+    -- restore k to its plain value if another prime follows
+    if i + 1 < FGlen then
+      kk := SmallPrimeNTT.mp_iNTT logn kk igm p p0i
+      let mut scv' : UInt32 := (1 : UInt32) <<< (((0 : UInt32) - sc) &&& 31)
+      for _ in [:(sc >>> 5).toNat] do
+        scv' := SmallPrimeNTT.mp_montymul scv' 1 p p0i
+      for j in [:n] do
+        kk := kk.set! j
+          (SmallPrimeNTT.mp_norm (SmallPrimeNTT.mp_montymul scv' (kk.getD j 0) p p0i) p).toUInt32
+  return (depth1FromRNS n F FGlen, depth1FromRNS n G FGlen)
+
 end Falcon.Concrete.PolyBigInt
