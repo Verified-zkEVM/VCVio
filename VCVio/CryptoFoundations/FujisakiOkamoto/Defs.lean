@@ -39,7 +39,7 @@ section Correct
 
 variable [DecidableEq M] [SampleableType R]
 
-/-- `delta`-correctness: failure in the canonical `AsymmEncAlg.CorrectExp` experiment occurs with
+/-- `delta`-correctness: failure in the canonical `AsymmEncAlg.correctnessExperiment` occurs with
 probability at most `delta`. -/
 def deltaCorrect (delta : ℝ≥0∞) : Prop :=
   ∀ msg : M, Pr[= false | do
@@ -88,7 +88,7 @@ The game samples a fresh keypair and a uniform challenge message, forms the hone
 ciphertext via the induced randomized `AsymmEncAlg`, runs the adversary with oracle access
 described by `OW_CPA_oracleSpec`, and returns `true` exactly when the adversary recovers the
 challenge message. -/
-def OW_CPA_Game (adversary : pke.OW_CPA_Adversary) : ProbComp Bool := do
+def OW_CPA_Experiment (adversary : pke.OW_CPA_Adversary) : ProbComp Bool := do
   let (pk, _sk) ← pke.keygen
   let msg ← $ᵗ M
   let r ← ($ᵗ R)
@@ -98,7 +98,7 @@ def OW_CPA_Game (adversary : pke.OW_CPA_Adversary) : ProbComp Bool := do
 
 /-- OW-CPA advantage is the probability of recovering the sampled challenge plaintext. -/
 noncomputable def OW_CPA_Advantage (adversary : pke.OW_CPA_Adversary) : ℝ≥0∞ :=
-  Pr[= true | pke.OW_CPA_Game adversary]
+  Pr[= true | pke.OW_CPA_Experiment adversary]
 
 end OW_CPA
 
@@ -141,22 +141,21 @@ The game generates a keypair, samples a uniform challenge message, encrypts it h
 then runs the adversary on the public key and challenge ciphertext. The adversary may query the
 ambient oracle interface `spec`, the plaintext-checking oracle, and the validity oracle, and the
 game returns `true` exactly when the final guess equals the hidden challenge message. -/
-noncomputable def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
+noncomputable def OW_PCVA_Experiment {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : OW_PCVA_Adversary encAlg) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let (pk, sk) ← encAlg.keygen
-    let msg ← runtime.liftProbComp ($ᵗ M)
-    let cStar ← encAlg.encrypt pk msg
-    let msg' ← simulateQ (OW_PCVA_queryImpl encAlg sk) (adversary pk cStar)
-    return decide (msg' = msg)
+    (adversary : OW_PCVA_Adversary encAlg) : OracleComp spec Bool := do
+  let (pk, sk) ← encAlg.keygen
+  let msg ← runtime.liftProbComp ($ᵗ M)
+  let cStar ← encAlg.encrypt pk msg
+  let msg' ← simulateQ (OW_PCVA_queryImpl encAlg sk) (adversary pk cStar)
+  return decide (msg' = msg)
 
 /-- OW-PCVA advantage is the message-recovery probability in the above game. -/
 noncomputable def OW_PCVA_Advantage {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : OW_PCVA_Adversary encAlg) : ℝ≥0∞ :=
-  OW_PCVA_Game runtime adversary {true}
+  runtime.evalDist (OW_PCVA_Experiment runtime adversary) {true}
 
 end OW_PCVA

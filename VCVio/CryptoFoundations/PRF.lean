@@ -26,8 +26,8 @@ distinguish the real function `PRF.eval k` (for a random key `k`) from a truly r
 
 - `PRFScheme K D R` — a PRF with key space `K`, domain `D`, and range `R`.
 - `PRFAdversary D R` — a distinguisher with oracle access to `D →ₒ R`.
-- `prfRealExp` — the real experiment (adversary queries `PRF.eval k`).
-- `prfIdealExp` — the ideal experiment (adversary queries a random oracle).
+- `prfRealExperiment` — the real experiment (adversary queries `PRF.eval k`).
+- `prfIdealExperiment` — the ideal experiment (adversary queries a random oracle).
 - `prfAdvantage` — distinguishing advantage.
 -/
 
@@ -89,7 +89,7 @@ lemma prfIdealQueryImpl_apply_inr [DecidableEq D] [SampleableType R] (d : D) :
   OracleSpec.romImpl_apply_inr d
 
 /-- Real PRF experiment: sample a key, let the adversary query `prf.eval k`. -/
-def prfRealExp (prf : PRFScheme K D R) (adversary : PRFAdversary D R) :
+def prfRealExperiment (prf : PRFScheme K D R) (adversary : PRFAdversary D R) :
     ProbComp Bool := do
   let k ← prf.keygen
   simulateQ (prfRealQueryImpl prf k) adversary
@@ -97,7 +97,7 @@ def prfRealExp (prf : PRFScheme K D R) (adversary : PRFAdversary D R) :
 /-- Ideal PRF experiment: let the adversary query a lazy random oracle
 (consistent random function). The oracle caches responses so that
 the same input always yields the same output. -/
-def prfIdealExp [DecidableEq D] [SampleableType R]
+def prfIdealExperiment [DecidableEq D] [SampleableType R]
     (adversary : PRFAdversary D R) : ProbComp Bool :=
   (simulateQ (prfIdealQueryImpl (D := D) (R := R)) adversary).run' ∅
 
@@ -105,7 +105,7 @@ def prfIdealExp [DecidableEq D] [SampleableType R]
 a random function. -/
 noncomputable def prfAdvantage [DecidableEq D] [SampleableType R]
     (prf : PRFScheme K D R) (adversary : PRFAdversary D R) : ℝ≥0∞ :=
-  𝒟[prf.prfRealExp adversary].boolDist 𝒟[prfIdealExp adversary]
+  𝒟[prf.prfRealExperiment adversary].boolDist 𝒟[prfIdealExperiment adversary]
 
 /-! ## Forwarding lemmas for the PRF query implementations
 

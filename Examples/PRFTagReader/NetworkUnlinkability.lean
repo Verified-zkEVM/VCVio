@@ -123,7 +123,7 @@ theorem idealMultiple_eq (budget : Nat) (adversary : UnlinkAdversary TagId Nonce
     (hbound : IsTotalQueryBound adversary budget) :
     Network.verdict (CachedPRF.multiple (sessionsPerTag := sessionsPerTag))
       budget adversary (UnlinkState.init, []) =
-    PRFScheme.prfIdealExp (unlinkToMultiplePRFReduction
+    PRFScheme.prfIdealExperiment (unlinkToMultiplePRFReduction
       (sessionsPerTag := sessionsPerTag) adversary) := by
   rw [CachedPRF.verdict_projection _ _ CachedPRF.projectMultiple CachedPRF.multiple_local
     _ _ hbound, Network.verdict_eq _ _ _ hbound,
@@ -133,7 +133,7 @@ theorem idealSingle_eq (budget : Nat) (adversary : UnlinkAdversary TagId Nonce D
     (hbound : IsTotalQueryBound adversary budget) :
     Network.verdict (CachedPRF.single (sessionsPerTag := sessionsPerTag))
       budget adversary (UnlinkState.init, []) =
-    PRFScheme.prfIdealExp (unlinkToSinglePRFReduction
+    PRFScheme.prfIdealExperiment (unlinkToSinglePRFReduction
       (sessionsPerTag := sessionsPerTag) adversary) := by
   rw [CachedPRF.verdict_projection _ _ CachedPRF.projectSingle CachedPRF.single_local
     _ _ hbound, Network.verdict_eq _ _ _ hbound,

@@ -394,12 +394,12 @@ multiple-session unlinkability game. -/
 theorem prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp [NeZero sessionsPerTag]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) :
-    PRFScheme.prfRealExp prfs.multiplePRFScheme
+    PRFScheme.prfRealExperiment prfs.multiplePRFScheme
         (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary) =
       unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary := by
-  unfold PRFScheme.prfRealExp unlinkMultipleExp unlinkToMultiplePRFReduction
+  unfold PRFScheme.prfRealExperiment unlinkMultipleExp unlinkToMultiplePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k)
@@ -440,12 +440,12 @@ single-session unlinkability game. -/
 theorem prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) :
-    PRFScheme.prfRealExp prfs.singlePRFScheme
+    PRFScheme.prfRealExperiment prfs.singlePRFScheme
         (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary) =
       unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary := by
-  unfold PRFScheme.prfRealExp unlinkSingleExp unlinkToSinglePRFReduction
+  unfold PRFScheme.prfRealExperiment unlinkSingleExp unlinkToSinglePRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   rw [StateT.run'_eq, StateT.run'_eq, map_eq_bind_pure_comp]
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.singlePRFScheme k)

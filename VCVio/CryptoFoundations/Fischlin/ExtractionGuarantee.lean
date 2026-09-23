@@ -51,8 +51,8 @@ def knowledgeRun (adv : KnowledgeSoundnessAdversary (Stmt := Stmt)
 theorem knowledgeRun_bad (adv : KnowledgeSoundnessAdversary ρ b M) (x : Stmt) (msg : M) :
     (fun z : Bool × Option Wit => z.1 && !(z.2.any (rel x))) <$>
         knowledgeRun σ hr ρ b S M adv x msg =
-      knowledgeSoundnessExp σ hr ρ b S M adv.run x msg := by
-  simp only [knowledgeRun, knowledgeSoundnessExp, map_bind, map_pure]
+      knowledgeSoundnessExperiment σ hr ρ b S M adv.run x msg := by
+  simp only [knowledgeRun, knowledgeSoundnessExperiment, map_bind, map_pure]
   rfl
 
 /-- The actual online extractor recovers a valid witness with probability at least acceptance
@@ -70,7 +70,7 @@ theorem extraction_success_ge_acceptance_sub_error
   have hbad : 𝒟[run] {z | z.1 = true ∧ z.2.any (rel x) ≠ true} ≤
       knowledgeSoundnessError Q ρ b S := by
     have heq : 𝒟[run] {z | z.1 = true ∧ z.2.any (rel x) ≠ true} =
-        𝒟[knowledgeSoundnessExp σ hr ρ b S M adv.run x msg] {true} := by
+        𝒟[knowledgeSoundnessExperiment σ hr ρ b S M adv.run x msg] {true} := by
       rw [← knowledgeRun_bad, evalDist_map_apply_of_discrete _ _ (measurableSet_singleton true)]
       congr 1
       ext z

@@ -525,7 +525,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount verifierOverhead
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   have hraw := adversary.committer.probEvent_runFromEmptyThen_logged_le model.view config
@@ -555,7 +555,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
       rw [adversary.runCommitmentsThenAccounting_opening_eq_prefixProgram rounds]
       exact hquery)
     hnodes hcheckpoints
-  rw [extractabilityGame, OracleSpec.withCacheOverlay, StateT.run'_eq,
+  rw [extractabilityExperiment, OracleSpec.withCacheOverlay, StateT.run'_eq,
     extractabilityInner_eq_runFromEmptyThen, probEvent_map]
   simpa [Function.comp_def] using hraw
 
@@ -576,7 +576,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCount
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount
         (openingCount * perClaim) queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config rounds adversary queryBound
@@ -598,7 +598,7 @@ theorem anyCheckpointDisagreement_rom_bound_uniformShape
     (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       (multiCheckpointROMErrorNumerator (rounds * perCheckpoint) rounds verifierOverhead
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config rounds adversary
@@ -625,7 +625,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount verifierOverhead
         (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ := by
@@ -658,7 +658,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds_and_openingCount
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount (openingCount * perClaim)
         (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ :=
@@ -684,7 +684,7 @@ theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
     Pr[ Transcript.HasOpeningOrEqualRootDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount verifierOverhead
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   openingOrEqualRootDisagreement_bound_of_anyCheckpointExtractionDisagreement_bound model config
@@ -707,7 +707,7 @@ theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       ((queryBound.choose 2 + nodeBudget * (queryBound + verifierOverhead) : ℕ) : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
   refine (anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config
@@ -730,7 +730,7 @@ theorem anyCheckpointDisagreement_quadratic_bound_of_prefixQueryBound
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
     Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
+      extractabilityExperiment model config rounds adversary] ≤
       ((queryBound * queryBound + nodeBudget * (queryBound + verifierOverhead) : ℕ) : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
   refine (anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config

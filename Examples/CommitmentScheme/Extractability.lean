@@ -103,7 +103,7 @@ Verification: Query `H(m, s)` and compare to `cm`.
 Extraction: Apply `E` to the commitment and commit-phase trace.
 
 Win: Check passes AND (extractor found nothing OR found a different opening). -/
-def extractabilityGame {AUX : Type} {t : ℕ}
+def extractabilityExperiment {AUX : Type} {t : ℕ}
     (E : C → QueryLog (CMOracle M S C) → Option (M × S))
     (A : ExtractAdversary M S C AUX t) :
     OracleComp (CMOracle M S C) (Bool × QueryCache (CMOracle M S C)) :=
@@ -135,8 +135,8 @@ private def extractabilityInner {AUX : Type} {t : ℕ}
     | none => (c == cm))
 
 /-- The extractability game equals `simulateQ cachingOracle` on `extractabilityInner`. -/
-private lemma extractabilityGame_eq {t : ℕ} (A : ExtractAdversary M S C AUX t) :
-    extractabilityGame CMExtract A =
+private lemma extractabilityExperiment_eq {t : ℕ} (A : ExtractAdversary M S C AUX t) :
+    extractabilityExperiment CMExtract A =
     (simulateQ cachingOracle (extractabilityInner A)).run ∅ := rfl
 
 /-- Tagged inner computation: returns `(win, isNoneCase)` where `isNoneCase = true`
@@ -509,7 +509,7 @@ For `t ≥ 3` this is `t(t-1)/2+1`, yielding `(t(t-1)+2)/(2|C|)`. -/
 private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
     {t : ℕ} (ht : 3 ≤ t)
     (A : ExtractAdversary M S C AUX t) :
-    Pr[fun z => z.1 = true | extractabilityGame CMExtract A] ≤
+    Pr[fun z => z.1 = true | extractabilityExperiment CMExtract A] ≤
     ((t * (t - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
     (Fintype.card C : ℝ≥0∞)⁻¹ := by
   let commitPart := (simulateQ loggingOracle A.commit).run
@@ -542,7 +542,7 @@ private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
           rintro ⟨⟨⟨cm, aux⟩, tr⟩, cache₁⟩ hx hno
           simpa [restPart, extractabilityRestOa] using
             extractability_rest_noCollision_le_inv A cm aux tr cache₁ hx hno))
-  rw [extractabilityGame_eq, hdecomp, simulateQ_bind, StateT.run_bind]
+  rw [extractabilityExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind]
   calc
     Pr[fun z => z.1 = true |
       (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
@@ -591,9 +591,9 @@ single fresh-query unpredictability. The `t ≥ 3` hypothesis is precisely
 where the case-split max collapses; the `t ≤ 2` regime is degenerate. -/
 theorem extractability_bound [Inhabited M] [Inhabited S] {t : ℕ} (ht : 3 ≤ t)
     (A : ExtractAdversary M S C AUX t) :
-    Pr[fun z => z.1 = true | extractabilityGame CMExtract A] ≤
+    Pr[fun z => z.1 = true | extractabilityExperiment CMExtract A] ≤
     ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by
-  calc Pr[fun z => z.1 = true | extractabilityGame CMExtract A]
+  calc Pr[fun z => z.1 = true | extractabilityExperiment CMExtract A]
       ≤ ((t * (t - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
         (Fintype.card C : ℝ≥0∞)⁻¹ := extractability_win_le_textbook_bound ht A
     _ = ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by

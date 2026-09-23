@@ -157,8 +157,8 @@ successful DLog solver. Specifically, `Pr[binding wins] ≤ Pr[DLog wins]`. -/
 theorem binding_le_dlog [DecidableEq F] [SampleableType F] [DecidableEq G]
     (hg : Function.Bijective (· • g : F → G))
     (binder : BindingAdversary G F G F) :
-    Pr[= true | (pedersenCommit g).bindingExp binder] ≤
-    Pr[= true | dlogExp g (dlogReduction binder)] := by
+    Pr[= true | (pedersenCommit g).bindingExperiment binder] ≤
+    Pr[= true | dlogExperiment g (dlogReduction binder)] := by
   let base : ProbComp (F × (G × F × F × F × F)) := do
     let x ← $ᵗ F
     let out ← binder (x • g)
@@ -172,14 +172,15 @@ theorem binding_le_dlog [DecidableEq F] [SampleableType F] [DecidableEq G]
           (d₁ - d₂) / (m₂ - m₁)
         else 0) = x
   have hbinding :
-      Pr[= true | (pedersenCommit g).bindingExp binder] = Pr[ bindingWin | base] := by
-    rw [show (pedersenCommit g).bindingExp binder = (fun z => decide (bindingWin z)) <$> base by
-      simp [CommitmentScheme.bindingExp, pedersenCommit, base, bindingWin, Bool.and_assoc]]
+      Pr[= true | (pedersenCommit g).bindingExperiment binder] = Pr[ bindingWin | base] := by
+    rw [show (pedersenCommit g).bindingExperiment binder =
+        (fun z => decide (bindingWin z)) <$> base by
+      simp [CommitmentScheme.bindingExperiment, pedersenCommit, base, bindingWin, Bool.and_assoc]]
     grind
   have hdlog :
-      Pr[= true | dlogExp g (dlogReduction binder)] = Pr[ dlogWin | base] := by
-    rw [show dlogExp g (dlogReduction binder) = (fun z => decide (dlogWin z)) <$> base by
-      simp [DiffieHellman.dlogExp, dlogReduction, base, dlogWin]]
+      Pr[= true | dlogExperiment g (dlogReduction binder)] = Pr[ dlogWin | base] := by
+    rw [show dlogExperiment g (dlogReduction binder) = (fun z => decide (dlogWin z)) <$> base by
+      simp [DiffieHellman.dlogExperiment, dlogReduction, base, dlogWin]]
     grind
   rw [hbinding, hdlog]
   exact _root_.probEvent_mono (mx := base) (fun z _ hwin => by

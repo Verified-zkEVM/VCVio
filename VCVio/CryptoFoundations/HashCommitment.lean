@@ -81,8 +81,9 @@ theorem bindingAdvantage_toCommitment_le_keyedCRAdvantage
       keyedCRAdvantage H (bindingAdversary_toKeyedCRAdversary A) := by
   let : MeasurableSpace K := ⊤
   let : MeasurableSpace (C × M × S × M × S) := ⊤
-  unfold bindingAdvantage CommitmentScheme.bindingExp
-    keyedCRAdvantage keyedCRExp bindingAdversary_toKeyedCRAdversary KeyedHashFamily.toCommitment
+  unfold bindingAdvantage CommitmentScheme.bindingExperiment
+    keyedCRAdvantage keyedCRExperiment bindingAdversary_toKeyedCRAdversary
+    KeyedHashFamily.toCommitment
   simp only [monad_norm]
   refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true) fun k => ?_
   refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true)

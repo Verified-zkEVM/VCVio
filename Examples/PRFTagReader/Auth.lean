@@ -241,7 +241,7 @@ matches against an adversary-submitted transcript contribute to `Pr[authRFExp]`,
 nonzero. -/
 noncomputable def authRFExp [Fintype TagId] [SampleableType Nonce] [SampleableType Digest]
     (adversary : AuthAdversary TagId Nonce Digest) : ProbComp Bool :=
-  PRFScheme.prfIdealExp (authToPRFReduction adversary)
+  PRFScheme.prfIdealExperiment (authToPRFReduction adversary)
 
 /-- Per-tag-query equivalence: running the reduction's tag-oracle implementation through the real
 PRF simulator produces the same distribution and final state as the real auth-game tag oracle
@@ -369,12 +369,12 @@ runs exactly the same game as `authExp`. -/
 theorem prfRealExp_authToPRFReduction_eq_authExp [Fintype TagId] [SampleableType Nonce]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : AuthAdversary TagId Nonce Digest) :
-    Pr[= true | PRFScheme.prfRealExp prfs.multiplePRFScheme
+    Pr[= true | PRFScheme.prfRealExperiment prfs.multiplePRFScheme
         (authToPRFReduction adversary)] =
       Pr[= true | authExp prfs adversary] := by
-  suffices h : PRFScheme.prfRealExp prfs.multiplePRFScheme (authToPRFReduction adversary) =
+  suffices h : PRFScheme.prfRealExperiment prfs.multiplePRFScheme (authToPRFReduction adversary) =
       authExp prfs adversary by rw [h]
-  unfold PRFScheme.prfRealExp authExp authToPRFReduction
+  unfold PRFScheme.prfRealExperiment authExp authToPRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k)
       ((simulateQ authToPRFQueryImpl adversary).run AuthState.init >>=
@@ -607,13 +607,14 @@ theorem authExp_le_prfAdvantage_add_authRF
       (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction adversary)).toReal +
       (Pr[= true | authRFExp adversary]).toReal := by
   have hreal := prfRealExp_authToPRFReduction_eq_authExp prfs adversary
-  have hRF : authRFExp adversary = PRFScheme.prfIdealExp (authToPRFReduction adversary) := rfl
+  have hRF :
+      authRFExp adversary = PRFScheme.prfIdealExperiment (authToPRFReduction adversary) := rfl
   rw [← hreal, hRF]
   rw [PRFScheme.prfAdvantage, MeasureTheory.Measure.toReal_boolDist]
   simp only [evalDist_apply_singleton]
-  set a := (Pr[= true | PRFScheme.prfRealExp prfs.multiplePRFScheme
+  set a := (Pr[= true | PRFScheme.prfRealExperiment prfs.multiplePRFScheme
     (authToPRFReduction adversary)]).toReal
-  set b := (Pr[= true | PRFScheme.prfIdealExp (authToPRFReduction adversary)]).toReal
+  set b := (Pr[= true | PRFScheme.prfIdealExperiment (authToPRFReduction adversary)]).toReal
   simpa only [add_comm] using le_add_of_sub_left_le (le_abs_self (a - b))
 
 /-- In the ideal authentication world, a forged reader acceptance never occurs. -/
@@ -827,7 +828,7 @@ The lazy random oracle answering the reduction's PRF queries at `(tag, nonce)` i
 theorem authRFExp_eq_authRFDirectExp
     (adversary : AuthAdversary TagId Nonce Digest) :
     authRFExp adversary = authRFDirectExp adversary := by
-  unfold authRFExp authRFDirectExp PRFScheme.prfIdealExp authToPRFReduction
+  unfold authRFExp authRFDirectExp PRFScheme.prfIdealExperiment authToPRFReduction
   have hquery :=
     simulateQ_prfIdeal_authToPRFQueryImpl_run (TagId := TagId) adversary AuthState.init ∅
   -- `authRFBundle (AuthState.init, ∅)` is `AuthIdealState.init`.

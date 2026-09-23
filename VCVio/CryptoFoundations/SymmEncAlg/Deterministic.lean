@@ -102,9 +102,9 @@ theorem measureComplete_toSymmEncAlg [MeasurableSpace M] (scheme : DetSymmEncAlg
     (hcorrect : scheme.PerfectlyCorrect) :
     scheme.toSymmEncAlg.measureComplete ProbabilitySemantics.freeM := by
   intro msg
-  have hprogram : scheme.toSymmEncAlg.CompleteExp msg =
+  have hprogram : scheme.toSymmEncAlg.completenessExperiment msg =
       (fun _ : K ↦ some msg) <$> scheme.keygen := by
-    simp [SymmEncAlg.CompleteExp, hcorrect _ msg, map_eq_bind_pure_comp]
+    simp [SymmEncAlg.completenessExperiment, hcorrect _ msg, map_eq_bind_pure_comp]
   rw [hprogram]
   change 𝒟[(fun _ : K ↦ some msg) <$> scheme.keygen] = _
   let : MeasurableSpace K := ⊤
@@ -149,14 +149,15 @@ def indDollarIdealQueryImpl [SampleableType C] :
 
 /-- Real IND$-CPA experiment: sample a key and run the adversary against the real oracle. -/
 @[expose]
-def indDollarRealExp (scheme : DetSymmEncAlg M K C) (adversary : INDDollarAdversary M C) :
+def indDollarRealExperiment (scheme : DetSymmEncAlg M K C) (adversary : INDDollarAdversary M C) :
     ProbComp Bool := do
   let k ← scheme.keygen
   simulateQ (scheme.indDollarRealQueryImpl k) adversary
 
 /-- Ideal IND$-CPA experiment: run the adversary against the random-ciphertext oracle. -/
 @[expose]
-def indDollarIdealExp [SampleableType C] (adversary : INDDollarAdversary M C) : ProbComp Bool :=
+def indDollarIdealExperiment [SampleableType C] (adversary : INDDollarAdversary M C) :
+    ProbComp Bool :=
   simulateQ (indDollarIdealQueryImpl (M := M) (C := C)) adversary
 
 /-- IND$-CPA advantage: the distinguishing advantage `Measure.boolDist` between the real and
@@ -164,7 +165,7 @@ ideal experiments. -/
 @[expose]
 noncomputable def indDollarAdvantage [SampleableType C] (scheme : DetSymmEncAlg M K C)
     (adversary : INDDollarAdversary M C) : ℝ≥0∞ :=
-  𝒟[scheme.indDollarRealExp adversary].boolDist 𝒟[indDollarIdealExp adversary]
+  𝒟[scheme.indDollarRealExperiment adversary].boolDist 𝒟[indDollarIdealExperiment adversary]
 
 /-! ## Forwarding lemmas for the IND$-CPA oracles
 
@@ -243,26 +244,26 @@ theorem isQueryBoundP_oneTimeINDCPAReduction (scheme : DetSymmEncAlg M K C)
     simp
 
 /-- Against the real oracle, the reduction runs the one-time IND-CPA game. -/
-lemma indDollarRealExp_oneTimeINDCPAReduction (scheme : DetSymmEncAlg M K C)
+lemma indDollarRealExperiment_oneTimeINDCPAReduction (scheme : DetSymmEncAlg M K C)
     (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) :
-    scheme.indDollarRealExp (scheme.oneTimeINDCPAReduction adv) =
+    scheme.indDollarRealExperiment (scheme.oneTimeINDCPAReduction adv) =
       SymmEncAlg.IND_CPA_OneTime_Game adv := by
-  simp [indDollarRealExp, oneTimeINDCPAReduction, SymmEncAlg.IND_CPA_OneTime_Game]
+  simp [indDollarRealExperiment, oneTimeINDCPAReduction, SymmEncAlg.IND_CPA_OneTime_Game]
 
 /-- Against the ideal oracle, the challenge ciphertext is independent of the hidden bit, so the
 reduction outputs `true` with probability exactly one half. -/
-lemma evalDist_indDollarIdealExp_oneTimeINDCPAReduction_true [SampleableType C]
+lemma evalDist_indDollarIdealExperiment_oneTimeINDCPAReduction_true [SampleableType C]
     (scheme : DetSymmEncAlg M K C) (adv : scheme.toSymmEncAlg.IND_CPA_OneTime_Adversary) :
-    𝒟[indDollarIdealExp (scheme.oneTimeINDCPAReduction adv)] {true} = 1 / 2 := by
+    𝒟[indDollarIdealExperiment (scheme.oneTimeINDCPAReduction adv)] {true} = 1 / 2 := by
   let challenge : ProbComp Bool := do
     let msgs ← adv.chooseMessages
     let c ← $ᵗ C
     adv.distinguish msgs.2.2 c
-  have hprogram : indDollarIdealExp (scheme.oneTimeINDCPAReduction adv) = (do
+  have hprogram : indDollarIdealExperiment (scheme.oneTimeINDCPAReduction adv) = (do
       let b ← ($ᵗ Bool)
       let z ← if b then challenge else challenge
       pure (b == z)) := by
-    simp [challenge, indDollarIdealExp, oneTimeINDCPAReduction]
+    simp [challenge, indDollarIdealExperiment, oneTimeINDCPAReduction]
   have hbias := evalDist_boolBias_bind_uniformBool challenge challenge
   rw [← hprogram, Measure.boolDist_self,
     Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure] at hbias
@@ -278,9 +279,9 @@ theorem IND_CPA_OneTime_Advantage_eq_two_mul_indDollarAdvantage [SampleableType 
     SymmEncAlg.IND_CPA_OneTime_Advantage adv =
       2 * scheme.indDollarAdvantage (scheme.oneTimeINDCPAReduction adv) := by
   rw [SymmEncAlg.IND_CPA_OneTime_Advantage, indDollarAdvantage,
-    indDollarRealExp_oneTimeINDCPAReduction,
+    indDollarRealExperiment_oneTimeINDCPAReduction,
     Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure, Measure.boolDist,
-    evalDist_indDollarIdealExp_oneTimeINDCPAReduction_true]
+    evalDist_indDollarIdealExperiment_oneTimeINDCPAReduction_true]
 
 /-- If every IND$-CPA adversary making at most one encryption query has advantage at most `ε`,
 then every one-time IND-CPA adversary against the induced scheme has advantage at most `2 * ε`. -/

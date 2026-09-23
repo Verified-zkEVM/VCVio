@@ -191,8 +191,8 @@ theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C
 
 /-! ## Left/right message swapping as a PolyFun reduction -/
 
-/-- Oracle IND-CPA experiment with caching on the LR oracle. -/
-def IND_CPA_experiment {encAlg : AsymmEncAlg ProbComp M PK SK C}
+/-- Oracle IND-CPA hidden-bit game with caching on the LR oracle. -/
+def IND_CPA_Game {encAlg : AsymmEncAlg ProbComp M PK SK C}
     (adversary : encAlg.IND_CPA_Adversary) : ProbComp Bool := do
   let b ← $ᵗ Bool
   let (pk, _sk) ← encAlg.keygen
@@ -201,7 +201,7 @@ def IND_CPA_experiment {encAlg : AsymmEncAlg ProbComp M PK SK C}
 
 /-- Deterministic left/right endpoint IND-CPA experiment: all fresh LR queries use the branch
 selected by `b`, and the adversary's final guess is returned directly. -/
-def IND_CPA_LR_experiment {encAlg : AsymmEncAlg ProbComp M PK SK C}
+def IND_CPA_LR_Experiment {encAlg : AsymmEncAlg ProbComp M PK SK C}
     (adversary : encAlg.IND_CPA_Adversary) (b : Bool) : ProbComp Bool := do
   let (pk, _sk) ← encAlg.keygen
   (simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run' ∅
@@ -268,7 +268,7 @@ def IND_CPA_queryImpl_hybridLR_counted
 
 /-- The generic left/right hybrid family: the first `leftUntil` fresh LR queries use the left
 branch, and all later fresh queries use the right branch. -/
-def IND_CPA_LR_hybridGame
+def IND_CPA_LR_hybrid
     (adversary : encAlg'.IND_CPA_Adversary) (leftUntil : ℕ) : ProbComp Bool := do
   let (pk, _sk) ← encAlg'.keygen
   (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil) (adversary pk)).run'
@@ -440,7 +440,7 @@ theorem IND_CPA_countedGame_eq_game_of_MakesAtMostQueries [Finite C] [Inhabited 
       let (pk, _sk) ← encAlg'.keygen
       let b' ← (simulateQ (implCounted pk b q) (adversary pk)).run' (∅, 0)
       pure (b == b')]).toReal =
-    (Pr[= true | IND_CPA_experiment (encAlg := encAlg') adversary]).toReal := by
+    (Pr[= true | IND_CPA_Game (encAlg := encAlg') adversary]).toReal := by
   congr 1
   have hinner : ∀ (pk : PK) (b : Bool),
       𝒮[(simulateQ (implCounted pk b q) (adversary pk)).run' (∅, 0)] =
@@ -451,11 +451,11 @@ theorem IND_CPA_countedGame_eq_game_of_MakesAtMostQueries [Finite C] [Inhabited 
     evalSPMF_bind_congr' _ fun pksk => by simp only [evalSPMF_bind, hinner pksk.1 b]
 
 /-- IND-CPA advantage of an oracle adversary: the Boolean bias `Measure.boolBias`
-`|Pr[b = b'] - Pr[b ≠ b']|` of the oracle IND-CPA experiment. An adversary that always guesses
+`|Pr[b = b'] - Pr[b ≠ b']|` of the oracle IND-CPA game. An adversary that always guesses
 wrong has advantage `1`. -/
 noncomputable def IND_CPA_Advantage {encAlg : AsymmEncAlg ProbComp M PK SK C}
     (adversary : encAlg.IND_CPA_Adversary) : ℝ≥0∞ :=
-  𝒟[IND_CPA_experiment adversary].boolBias
+  𝒟[IND_CPA_Game adversary].boolBias
 
 end IND_CPA_Oracle
 
@@ -465,11 +465,11 @@ variable [DecidableEq M]
 variable {encAlg' : AsymmEncAlg ProbComp M PK SK C}
 
 /-- The `leftUntil = 0` LR-hybrid is the all-right endpoint game. -/
-theorem IND_CPA_LR_hybridGame_zero_evalSPMF_eq_right
+theorem IND_CPA_LR_hybrid_zero_evalSPMF_eq_right
     (adversary : encAlg'.IND_CPA_Adversary) :
-    𝒮[encAlg'.IND_CPA_LR_hybridGame adversary 0] =
-      𝒮[encAlg'.IND_CPA_LR_experiment adversary false] := by
-  simp only [IND_CPA_LR_hybridGame, IND_CPA_LR_experiment, evalSPMF_bind]
+    𝒮[encAlg'.IND_CPA_LR_hybrid adversary 0] =
+      𝒮[encAlg'.IND_CPA_LR_Experiment adversary false] := by
+  simp only [IND_CPA_LR_hybrid, IND_CPA_LR_Experiment, evalSPMF_bind]
   congr 1
   funext ⟨pk, _sk⟩
   simpa using congrArg evalSPMF (OracleComp.run'_simulateQ_eq_of_query_map_eq
@@ -481,12 +481,12 @@ theorem IND_CPA_LR_hybridGame_zero_evalSPMF_eq_right
 
 /-- If an adversary makes at most `q` fresh LR queries, then the `leftUntil = q` LR-hybrid is the
 all-left endpoint game. -/
-theorem IND_CPA_LR_hybridGame_q_evalSPMF_eq_left_of_MakesAtMostQueries [Finite C] [Inhabited C]
+theorem IND_CPA_LR_hybrid_q_evalSPMF_eq_left_of_MakesAtMostQueries [Finite C] [Inhabited C]
     (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
-    𝒮[encAlg'.IND_CPA_LR_hybridGame adversary q] =
-      𝒮[encAlg'.IND_CPA_LR_experiment adversary true] := by
-  simp only [IND_CPA_LR_hybridGame, IND_CPA_LR_experiment, evalSPMF_bind]
+    𝒮[encAlg'.IND_CPA_LR_hybrid adversary q] =
+      𝒮[encAlg'.IND_CPA_LR_Experiment adversary true] := by
+  simp only [IND_CPA_LR_hybrid, IND_CPA_LR_Experiment, evalSPMF_bind]
   congr 1
   funext ⟨pk, _sk⟩
   exact IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq
@@ -513,36 +513,36 @@ theorem IND_CPA_LR_hybridGame_q_evalSPMF_eq_left_of_MakesAtMostQueries [Finite C
     pk true q (adversary pk) q (hq pk) ∅ 0 (by omega)
 
 /-- The `leftUntil = 0` LR-hybrid has the same success probability as the all-right endpoint. -/
-theorem IND_CPA_LR_hybridGame_zero_probOutput_eq_right
+theorem IND_CPA_LR_hybrid_zero_probOutput_eq_right
     (adversary : encAlg'.IND_CPA_Adversary) :
-    Pr[= true | encAlg'.IND_CPA_LR_hybridGame adversary 0] =
-      Pr[= true | encAlg'.IND_CPA_LR_experiment adversary false] :=
+    Pr[= true | encAlg'.IND_CPA_LR_hybrid adversary 0] =
+      Pr[= true | encAlg'.IND_CPA_LR_Experiment adversary false] :=
   (evalSPMF_ext_iff.mp
-    (IND_CPA_LR_hybridGame_zero_evalSPMF_eq_right (encAlg' := encAlg') adversary)) true
+    (IND_CPA_LR_hybrid_zero_evalSPMF_eq_right (encAlg' := encAlg') adversary)) true
 
 /-- If an adversary makes at most `q` fresh LR queries, then the `leftUntil = q` LR-hybrid has
 the same success probability as the all-left endpoint. -/
-theorem IND_CPA_LR_hybridGame_q_probOutput_eq_left_of_MakesAtMostQueries
+theorem IND_CPA_LR_hybrid_q_probOutput_eq_left_of_MakesAtMostQueries
     [Finite C] [Inhabited C]
     (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
-    Pr[= true | encAlg'.IND_CPA_LR_hybridGame adversary q] =
-      Pr[= true | encAlg'.IND_CPA_LR_experiment adversary true] :=
+    Pr[= true | encAlg'.IND_CPA_LR_hybrid adversary q] =
+      Pr[= true | encAlg'.IND_CPA_LR_Experiment adversary true] :=
   (evalSPMF_ext_iff.mp
-    (IND_CPA_LR_hybridGame_q_evalSPMF_eq_left_of_MakesAtMostQueries
+    (IND_CPA_LR_hybrid_q_evalSPMF_eq_left_of_MakesAtMostQueries
       (encAlg' := encAlg') adversary q hq)) true
 
 /-- The standard random-bit IND-CPA experiment is the uniform-bit branch over the all-left and
 all-right endpoint games. -/
-private lemma IND_CPA_experiment_probOutput_eq_branch
+private lemma IND_CPA_Game_probOutput_eq_branch
     (adversary : encAlg'.IND_CPA_Adversary) (x : Bool) :
-    Pr[= x | IND_CPA_experiment (encAlg := encAlg') adversary] =
+    Pr[= x | IND_CPA_Game (encAlg := encAlg') adversary] =
       Pr[= x | do
         let bit ← ($ᵗ Bool)
-        let z ← if bit then encAlg'.IND_CPA_LR_experiment adversary true
-                 else encAlg'.IND_CPA_LR_experiment adversary false
+        let z ← if bit then encAlg'.IND_CPA_LR_Experiment adversary true
+                 else encAlg'.IND_CPA_LR_Experiment adversary false
         pure (bit == z)] := by
-  unfold IND_CPA_experiment IND_CPA_LR_experiment
+  unfold IND_CPA_Game IND_CPA_LR_Experiment
   refine probOutput_bind_congr' ($ᵗ Bool) x ?_
   rintro (_ | _) <;> simp
 
@@ -550,11 +550,11 @@ private lemma IND_CPA_experiment_probOutput_eq_branch
 endpoint games. -/
 theorem IND_CPA_Advantage_eq_boolDist_LR (adversary : encAlg'.IND_CPA_Adversary) :
     IND_CPA_Advantage (encAlg := encAlg') adversary =
-      𝒟[encAlg'.IND_CPA_LR_experiment adversary true].boolDist
-        𝒟[encAlg'.IND_CPA_LR_experiment adversary false] := by
+      𝒟[encAlg'.IND_CPA_LR_Experiment adversary true].boolDist
+        𝒟[encAlg'.IND_CPA_LR_Experiment adversary false] := by
   rw [IND_CPA_Advantage, ← evalDist_boolBias_bind_uniformBool]
   simp only [MeasureTheory.Measure.boolBias, evalDist_apply_singleton,
-    IND_CPA_experiment_probOutput_eq_branch]
+    IND_CPA_Game_probOutput_eq_branch]
 
 /-- When the counter is above both thresholds, two hybrid LR counted oracles agree pointwise. -/
 lemma IND_CPA_hybridLR_counted_run_eq_of_le

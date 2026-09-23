@@ -85,9 +85,9 @@ The reduction forwards `A`'s tagging queries to its own PRF/random-function orac
 logging them, then checks the forgery condition.
 
 **Strong vs ordinary UF-CMA.** Boneh-Shoup's Attack Game 6.1 checks that the forgery *pair*
-`(m, t)` is fresh; this is `MacAlg.strongUnforgeableExp`. `MacAlg.unforgeableExp` checks only
-message freshness (`!log.wasQueried msg`). For the deterministic MAC `prf.toMacAlg`, each
-message has exactly one valid tag, so the two advantages coincide
+`(m, t)` is fresh; this is `MacAlg.strongUnforgeableExperiment`. `MacAlg.unforgeableExperiment`
+checks only message freshness (`!log.wasQueried msg`). For the deterministic MAC `prf.toMacAlg`,
+each message has exactly one valid tag, so the two advantages coincide
 (`strongUnforgeableAdvantage_toMacAlg_eq_unforgeableAdvantage`). The reduction is analysed in the
 message-fresh game (`prf_implies_uf_cma`) and the bound transfers to the strong game
 (`prf_implies_suf_cma`).
@@ -191,45 +191,45 @@ def macToPRFReduction [DecidableEq R] (prf : PRFScheme K D R)
       pure (!QueryLog.wasQueried log msg && decide (τ = t)) :
     OracleComp (unifSpec + (D →ₒ R)) Bool)
 
-/-- The prfRealExp with the reduction equals the UF-CMA body as a `ProbComp` computation. -/
-private theorem prfRealExp_macToPRFReduction_eq_body [DecidableEq R] (prf : PRFScheme K D R)
+/-- The prfRealExperiment with the reduction equals the UF-CMA body as a `ProbComp` computation. -/
+private theorem prfRealExperiment_macToPRFReduction_eq_body [DecidableEq R] (prf : PRFScheme K D R)
     (adversary : (prf.toMacAlg).UnforgeableAdversary) :
-    prf.prfRealExp (macToPRFReduction prf adversary) = (do
+    prf.prfRealExperiment (macToPRFReduction prf adversary) = (do
       let k ← prf.keygen
       let ((msg, τ), log) ← (prf.toMacAlg).runWithTaggingOracle k adversary.main
       pure (!QueryLog.wasQueried log msg && decide (τ = prf.eval k msg)) :
     ProbComp Bool) := by
-  unfold prfRealExp macToPRFReduction
+  unfold prfRealExperiment macToPRFReduction
   refine bind_congr fun k => ?_
   rw [simulateQ_bind, simulateQ_prfReal_macToPRFQueryImpl_run prf k]
   refine bind_congr fun x => ?_
   erw [simulateQ_bind, simulateQ_prfRealQueryImpl_inr, pure_bind, simulateQ_pure]
 
 /-- In the real PRF experiment, the reduction reproduces exactly the UF-CMA game. -/
-theorem prfRealExp_macToPRFReduction_eq_unforgeableAdvantage [DecidableEq R]
+theorem prfRealExperiment_macToPRFReduction_eq_unforgeableAdvantage [DecidableEq R]
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
-    Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)] =
+    Pr[= true | prf.prfRealExperiment (macToPRFReduction prf adversary)] =
       MacAlg.unforgeableAdvantage ProbCompRuntime.probComp adversary := by
-  rw [prfRealExp_macToPRFReduction_eq_body]
+  rw [prfRealExperiment_macToPRFReduction_eq_body]
   rw [← evalDist_apply_singleton]
-  unfold MacAlg.unforgeableAdvantage MacAlg.unforgeableExp
+  unfold MacAlg.unforgeableAdvantage MacAlg.unforgeableExperiment
   rw [ProbCompRuntime.probComp_evalDist]
   rfl
 
 /-- The ideal experiment decomposes as: run the forger (under the random-oracle simulation
 producing a log and cache), then perform one final random-oracle query and check the forgery.
 
-This is the ideal-world analogue of `prfRealExp_macToPRFReduction_eq_body`. -/
-private theorem prfIdealExp_macToPRFReduction_eq_ideal_body [DecidableEq R] [SampleableType R]
-    (prf : PRFScheme K D R)
+This is the ideal-world analogue of `prfRealExperiment_macToPRFReduction_eq_body`. -/
+private theorem prfIdealExperiment_macToPRFReduction_eq_ideal_body [DecidableEq R]
+    [SampleableType R] (prf : PRFScheme K D R)
     (adversary : (prf.toMacAlg).UnforgeableAdversary) :
-    prfIdealExp (macToPRFReduction prf adversary) =
+    prfIdealExperiment (macToPRFReduction prf adversary) =
       ((simulateQ prfIdealQueryImpl
         ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) adversary.main).run)).run ∅ >>=
       fun (((msg, τ), log), cache) =>
         ((D →ₒ R).randomOracle msg).run cache >>= fun (t, _) =>
           (pure (!QueryLog.wasQueried log msg && decide (τ = t)) : ProbComp Bool)) := by
-  unfold prfIdealExp macToPRFReduction
+  unfold prfIdealExperiment macToPRFReduction
   rw [simulateQ_bind]
   simp only [StateT.run'_bind']
   refine bind_congr fun ⟨⟨⟨msg, τ⟩, log⟩, cache⟩ => ?_
@@ -382,12 +382,12 @@ private theorem log_cache_invariant [SampleableType R]
 at most `1/|R|`. A fresh random-oracle query on `msg` returns a uniform `t ← $ᵗ R` independent of
 the forger's claimed tag `τ`, so `Pr[τ = t] = 1/|R|`; if `msg` was already queried the output is
 `false`. -/
-theorem prfIdealExp_macToPRFReduction_le [DecidableEq R] [SampleableType R]
+theorem prfIdealExperiment_macToPRFReduction_le [DecidableEq R] [SampleableType R]
     [Fintype R]
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
-    Pr[= true | prfIdealExp (macToPRFReduction prf adversary)] ≤
+    Pr[= true | prfIdealExperiment (macToPRFReduction prf adversary)] ≤
       (Fintype.card R : ℝ≥0∞)⁻¹ := by
-  rw [prfIdealExp_macToPRFReduction_eq_ideal_body, probOutput_bind_eq_expectedValue]
+  rw [prfIdealExperiment_macToPRFReduction_eq_ideal_body, probOutput_bind_eq_expectedValue]
   refine OracleComp.EvalDist.expectedValue_le_of_support fun ⟨((msg, τ), log), cache⟩ hmem => ?_
   dsimp only
   cases hcache : cache msg with
@@ -422,13 +422,13 @@ theorem prf_implies_uf_cma [DecidableEq R] [SampleableType R] [Fintype R]
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
     MacAlg.unforgeableAdvantage ProbCompRuntime.probComp adversary ≤
       prf.prfAdvantage (macToPRFReduction prf adversary) + (Fintype.card R : ℝ≥0∞)⁻¹ := by
-  rw [← prfRealExp_macToPRFReduction_eq_unforgeableAdvantage prf adversary,
+  rw [← prfRealExperiment_macToPRFReduction_eq_unforgeableAdvantage prf adversary,
     ← evalDist_apply_singleton, prfAdvantage, add_comm]
   refine (MeasureTheory.Measure.apply_true_le_add_boolDist _
-    𝒟[prfIdealExp (macToPRFReduction prf adversary)]).trans ?_
+    𝒟[prfIdealExperiment (macToPRFReduction prf adversary)]).trans ?_
   gcongr
   rw [evalDist_apply_singleton]
-  exact prfIdealExp_macToPRFReduction_le prf adversary
+  exact prfIdealExperiment_macToPRFReduction_le prf adversary
 
 /-! ## Strong Unforgeability
 
@@ -464,8 +464,8 @@ theorem strongUnforgeableAdvantage_toMacAlg_eq_unforgeableAdvantage [DecidableEq
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
     MacAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp adversary =
       MacAlg.unforgeableAdvantage ProbCompRuntime.probComp adversary := by
-  unfold MacAlg.strongUnforgeableAdvantage MacAlg.strongUnforgeableExp MacAlg.unforgeableAdvantage
-    MacAlg.unforgeableExp
+  unfold MacAlg.strongUnforgeableAdvantage MacAlg.strongUnforgeableExperiment
+    MacAlg.unforgeableAdvantage MacAlg.unforgeableExperiment
   rw [ProbCompRuntime.probComp_evalDist, ProbCompRuntime.probComp_evalDist]
   congr 1
   refine evalDist_bind_congr _ _ _ fun k => ?_

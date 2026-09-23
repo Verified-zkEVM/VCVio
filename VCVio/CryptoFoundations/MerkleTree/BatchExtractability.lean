@@ -548,7 +548,7 @@ def BatchOpeningExtractionFailure {s : Skeleton} {AuxState : Type} :
 /-- Shared-cache random-oracle batch extractability game. Commitment, opening, and honest
 verification use one lazy random function, while extraction remains pinned to the commitment
 checkpoint log. -/
-def extractabilityGame [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
+def extractabilityExperiment [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (adversary : Adversary Query Y s) :
     OracleComp (Query →ₒ Y)

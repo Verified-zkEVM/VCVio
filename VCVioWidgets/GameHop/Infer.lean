@@ -129,7 +129,7 @@ private def compTitleFromExpr (expr : Expr) : MetaM String := do
     | return "game"
   let base := declBasename head
   let args := expr.consumeMData.getAppArgs
-  if base = "PerfectSecrecyCipherGivenMsgExp" then
+  if base = "perfectSecrecyCipherGivenMsgExperiment" then
     match args.back? with
     | some msg => return s!"Cipher game for {← ppExprString msg}"
     | none => return "Cipher game"
@@ -149,7 +149,7 @@ private def compKindFromExpr (expr : Expr) : NodeKind :=
 
 private def shouldRejectCompHead (head : Name) : Bool :=
   let base := declBasename head
-  base = "ddhExp" || base = "ddhExpReal" || base = "ddhExpRand" ||
+  base = "ddhGame" || base = "ddhRealExperiment" || base = "ddhRandomExperiment" ||
     base.contains "Reduction" || base.contains "advantage"
 
 private def looksLikeComputationHead (head : Name) : Bool :=

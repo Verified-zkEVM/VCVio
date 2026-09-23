@@ -40,43 +40,43 @@ variable {m : Type → Type u} [Monad m] {M K C : Type}
 /-- An encryption scheme is complete if decryption recovers every message with
 probability `1`. -/
 def Complete [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] (encAlg : SymmEncAlg m M K C) : Prop :=
-  ∀ msg : M, Pr[= msg | encAlg.CompleteExp msg] = 1
+  ∀ msg : M, Pr[= msg | encAlg.completenessExperiment msg] = 1
 
 section perfectSecrecy
 
 variable [MonadLiftT m PMF]
 
-lemma probOutput_PerfectSecrecyExp_eq_mul_cipherGivenMsg [LawfulMonadLiftT m PMF] [LawfulMonad m]
-    (encAlg : SymmEncAlg m M K C) (mgen : m M) (msg : M) (σ : C) :
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
+lemma probOutput_perfectSecrecyExperiment_eq_mul_cipherGivenMsg [LawfulMonadLiftT m PMF]
+    [LawfulMonad m] (encAlg : SymmEncAlg m M K C) (mgen : m M) (msg : M) (σ : C) :
+    Pr[= (msg, σ) | encAlg.perfectSecrecyExperiment mgen] =
       Pr[= msg | mgen] *
-      Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg] := by
+      Pr[= σ | encAlg.perfectSecrecyCipherGivenMsgExperiment msg] := by
   have : DecidableEq M := Classical.decEq M
-  rw [encAlg.PerfectSecrecyExp_eq_bind mgen, probOutput_bind_eq_tsum,
+  rw [encAlg.perfectSecrecyExperiment_eq_bind mgen, probOutput_bind_eq_tsum,
     tsum_eq_single msg fun msg' hmsg' => by simp [Ne.symm hmsg']]
   simp
 
-lemma probOutput_PerfectSecrecyCipherExp_eq_tsum [LawfulMonadLiftT m PMF] [LawfulMonad m]
+lemma probOutput_perfectSecrecyCipherExperiment_eq_tsum [LawfulMonadLiftT m PMF] [LawfulMonad m]
     (encAlg : SymmEncAlg m M K C) (mgen : m M) (σ : C) :
-    Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen] =
+    Pr[= σ | encAlg.perfectSecrecyCipherExperiment mgen] =
       ∑' msg : M,
         Pr[= msg | mgen] *
-        Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg] := by
-  rw [encAlg.PerfectSecrecyCipherExp_eq_bind mgen, probOutput_bind_eq_tsum]
+        Pr[= σ | encAlg.perfectSecrecyCipherGivenMsgExperiment msg] := by
+  rw [encAlg.perfectSecrecyCipherExperiment_eq_bind mgen, probOutput_bind_eq_tsum]
 
 /-- Strong perfect secrecy: ciphertexts are independent of messages
 for every prior distribution on messages (PMF-level quantification). -/
 def perfectSecrecyAtAllPriors (encAlg : SymmEncAlg m M K C) : Prop :=
   ∀ (μ : PMF M) (msg : M) (σ : C),
-    let row := fun x : M => Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp x]
+    let row := fun x : M => Pr[= σ | encAlg.perfectSecrecyCipherGivenMsgExperiment x]
     μ msg * row msg = μ msg * (∑' x : M, μ x * row x)
 
 /-- Equivalent channel-style formulation: every message induces the same ciphertext
 distribution. -/
 def ciphertextRowsEqualAt (encAlg : SymmEncAlg m M K C) : Prop :=
   ∀ (msg₀ msg₁ : M) (σ : C),
-    Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg₀] =
-      Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg₁]
+    Pr[= σ | encAlg.perfectSecrecyCipherGivenMsgExperiment msg₀] =
+      Pr[= σ | encAlg.perfectSecrecyCipherGivenMsgExperiment msg₁]
 
 /-- Over a finite message space, strong perfect secrecy is equivalent to all ciphertext
 rows being equal. -/
@@ -88,7 +88,7 @@ theorem perfectSecrecyAtAllPriors_iff_ciphertextRowsEqualAt
   · intro hAll msg₀ msg₁ σ
     have : Nonempty M := ⟨msg₀⟩
     let μ : PMF M := PMF.uniformOfFintype M
-    let row := fun x : M => Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp x]
+    let row := fun x : M => Pr[= σ | encAlg.perfectSecrecyCipherGivenMsgExperiment x]
     have key : ∀ x : M, (Fintype.card M : ℝ≥0∞)⁻¹ * row x =
         (Fintype.card M : ℝ≥0∞)⁻¹ * ∑' y : M, μ y * row y := fun x => by
       simpa [perfectSecrecyAtAllPriors, μ, row, PMF.uniformOfFintype_apply] using hAll μ x σ
@@ -102,21 +102,21 @@ theorem perfectSecrecyAtAllPriors_iff_ciphertextRowsEqualAt
 `Pr[(M, C)] = Pr[M] * Pr[C]`. -/
 def perfectSecrecyAt (encAlg : SymmEncAlg m M K C) : Prop :=
   ∀ (mgen : m M) (msg : M) (σ : C),
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
-      Pr[= msg | mgen] * Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen]
+    Pr[= (msg, σ) | encAlg.perfectSecrecyExperiment mgen] =
+      Pr[= msg | mgen] * Pr[= σ | encAlg.perfectSecrecyCipherExperiment mgen]
 
 /-- Posterior-equals-prior form, written in cross-multiplied form to avoid division. -/
 def perfectSecrecyPosteriorEqPriorAt (encAlg : SymmEncAlg m M K C) : Prop :=
   ∀ (mgen : m M) (msg : M) (σ : C),
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
-      Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen] * Pr[= msg | mgen]
+    Pr[= (msg, σ) | encAlg.perfectSecrecyExperiment mgen] =
+      Pr[= σ | encAlg.perfectSecrecyCipherExperiment mgen] * Pr[= msg | mgen]
 
 /-- Joint-factorization form (same mathematical statement as independence, with explicit
 named priors/marginals). -/
 def perfectSecrecyJointFactorizationAt (encAlg : SymmEncAlg m M K C) : Prop :=
   ∀ (mgen : m M) (msg : M) (σ : C),
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
-      Pr[= msg | mgen] * Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen]
+    Pr[= (msg, σ) | encAlg.perfectSecrecyExperiment mgen] =
+      Pr[= msg | mgen] * Pr[= σ | encAlg.perfectSecrecyCipherExperiment mgen]
 
 lemma perfectSecrecyAt_iff_posteriorEqPriorAt (encAlg : SymmEncAlg m M K C) :
     encAlg.perfectSecrecyAt ↔ encAlg.perfectSecrecyPosteriorEqPriorAt := by
@@ -139,14 +139,14 @@ theorem cipherGivenMsg_uniform_of_uniformKey_of_uniqueKey [LawfulMonadLiftT m PM
         k ∈ support encAlg.keygen ∧
         c ∈ support (encAlg.encrypt k msg))
     (msg : M) (σ : C) :
-    Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg] =
+    Pr[= σ | encAlg.perfectSecrecyCipherGivenMsgExperiment msg] =
       (Fintype.card K : ℝ≥0∞)⁻¹ := by
   obtain ⟨k0, hk0, hk0uniq⟩ := hUniqueKey msg σ
   have henc_one : Pr[= σ | encAlg.encrypt k0 msg] = 1 := by
     obtain ⟨c0, hc0⟩ := deterministicEnc k0 msg
     obtain rfl : σ = c0 := by simpa [hc0] using hk0.2
     exact probOutput_eq_one_iff.2 ⟨probFailure_of_liftM_PMF _, by simpa using hc0⟩
-  simp only [PerfectSecrecyCipherGivenMsgExp, probOutput_bind_eq_tsum]
+  simp only [perfectSecrecyCipherGivenMsgExperiment, probOutput_bind_eq_tsum]
   rw [tsum_eq_single k0 fun k hkne => mul_eq_zero.2 <|
     (not_and_or.1 fun h => hkne (hk0uniq k h)).imp
       probOutput_eq_zero_of_not_mem_support probOutput_eq_zero_of_not_mem_support]
@@ -190,13 +190,13 @@ theorem perfectSecrecyAt_of_uniformKey_of_uniqueKey [LawfulMonadLiftT m PMF] [Mo
   have hCipherGiven_uniform := encAlg.cipherGivenMsg_uniform_of_uniformKey_of_uniqueKey
     deterministicEnc hKeyUniform hUniqueKey
   have hCipher_uniform : ∀ (mgen : m M) (σ : C),
-      Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen] = (Fintype.card K : ℝ≥0∞)⁻¹ := by
+      Pr[= σ | encAlg.perfectSecrecyCipherExperiment mgen] = (Fintype.card K : ℝ≥0∞)⁻¹ := by
     intro mgen σ
-    rw [encAlg.probOutput_PerfectSecrecyCipherExp_eq_tsum mgen σ]
+    rw [encAlg.probOutput_perfectSecrecyCipherExperiment_eq_tsum mgen σ]
     simp_rw [hCipherGiven_uniform _ σ, ENNReal.tsum_mul_right,
       tsum_probOutput_of_liftM_PMF mgen, one_mul]
   intro mgen msg σ
-  rw [encAlg.probOutput_PerfectSecrecyExp_eq_mul_cipherGivenMsg mgen msg σ,
+  rw [encAlg.probOutput_perfectSecrecyExperiment_eq_mul_cipherGivenMsg mgen msg σ,
     hCipherGiven_uniform msg σ, hCipher_uniform mgen σ]
 
 /-- Constructive Shannon direction for all priors: uniform keys plus uniqueness

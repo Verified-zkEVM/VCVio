@@ -51,7 +51,7 @@ def inner [DecidableEq Address] [DecidableEq Y] {s : Skeleton}
 def game [DecidableEq Address] [DecidableEq Y] {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) :=
-  MerkleTreeExtractability.extractabilityGame queryModel addressKey 𝒜
+  MerkleTreeExtractability.extractabilityExperiment queryModel addressKey 𝒜
 
 /-- Exact stopping-time ROM extractability bound for complete addressed queries. -/
 theorem rom_bound [DecidableEq Address] [DecidableEq Y] [Fintype Y] [Inhabited Y]

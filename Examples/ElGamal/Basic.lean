@@ -37,7 +37,7 @@ payloads (for example elliptic-curve points), and `gen : G` is a fixed public ge
 1. ElGamal definition and correctness.
 2. One-time DDH bridge:
    `IND_CPA_OneTime_DDHReduction`,
-   `IND_CPA_OneTime_game_eq_ddhExpReal`,
+   `IND_CPA_OneTime_game_eq_ddhRealExperiment`,
    `IND_CPA_OneTime_DDHReduction_rand_half`, and
    `elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage`.
 3. Final theorem:
@@ -100,7 +100,7 @@ theorem correct [DecidableEq G] :
   simp only [AsymmEncAlg.PerfectlyCorrect]
   intro msg
   rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
-  simp [AsymmEncAlg.CorrectExp, elGamalAsymmEnc, hcancel,
+  simp [AsymmEncAlg.correctnessExperiment, elGamalAsymmEnc, hcancel,
     probOutput_bind_const, probOutput_map_const]
 
 section IND_CPA
@@ -116,17 +116,17 @@ def IND_CPA_OneTime_DDHReduction
   oneTimeDDHReductionBody (adv.chooseMessages A) ($ᵗ Bool) adv.distinguish B T
 
 /-- Real-branch identification for the one-time ElGamal reduction. After unfolding
-`AsymmEncAlg.IND_CPA_OneTime_Game`, `elGamalAsymmEnc`, `DiffieHellman.ddhExpReal`, and
+`AsymmEncAlg.IND_CPA_OneTime_Game`, `elGamalAsymmEnc`, `DiffieHellman.ddhRealExperiment`, and
 `IND_CPA_OneTime_DDHReduction`, both sides normalize to the same sample space. -/
-private lemma IND_CPA_OneTime_game_eq_ddhExpReal
+private lemma IND_CPA_OneTime_game_eq_ddhRealExperiment
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
-    AsymmEncAlg.IND_CPA_OneTime_Game (encAlg := elGamalAsymmEnc F G gen) adv
-        ProbCompRuntime.probComp =
-      𝒟[DiffieHellman.ddhExpReal (F := F) gen
+    ProbCompRuntime.probComp.evalDist (AsymmEncAlg.IND_CPA_OneTime_Game
+        (encAlg := elGamalAsymmEnc F G gen) adv ProbCompRuntime.probComp) =
+      𝒟[DiffieHellman.ddhRealExperiment (F := F) gen
           (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)] := by
   change 𝒟[($ᵗ Bool) >>= fun b => _] = _
   refine evalDist_eq_of_evalSPMF_eq _ _ ?_
-  simp only [DiffieHellman.ddhExpReal, IND_CPA_OneTime_DDHReduction, elGamalAsymmEnc]
+  simp only [DiffieHellman.ddhRealExperiment, IND_CPA_OneTime_DDHReduction, elGamalAsymmEnc]
   ext z
   change Pr[= z | _] = Pr[= z | _]
   simp only [bind_pure_comp, bind_map_left]
@@ -158,7 +158,7 @@ adversary can do no better than random guessing. -/
 private lemma IND_CPA_OneTime_DDHReduction_rand_half
     (hg : Function.Bijective (· • gen : F → G))
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
-    Pr[= true | DiffieHellman.ddhExpRand (F := F) gen
+    Pr[= true | DiffieHellman.ddhRandomExperiment (F := F) gen
       (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)] = 1 / 2 := by
   let inner : G → ProbComp Bool := fun pk => do
     let head ← ($ᵗ G)
@@ -228,7 +228,7 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
     rw [hrepr pk]
     exact probOutput_decide_eq_uniformBool_half (f pk) (hf pk)
   calc
-    Pr[= true | DiffieHellman.ddhExpRand (F := F) gen
+    Pr[= true | DiffieHellman.ddhRandomExperiment (F := F) gen
       (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)] =
         Pr[= true | do
           let pk ← ($ᵗ G)
@@ -241,7 +241,7 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
         let bit ← ($ᵗ Bool)
         let bit' ← adv.distinguish st (b • gen, c • gen + if bit then m₁ else m₂)
         pure (decide (bit = bit'))]
-      · simpa [DiffieHellman.ddhExpRand, IND_CPA_OneTime_DDHReduction,
+      · simpa [DiffieHellman.ddhRandomExperiment, IND_CPA_OneTime_DDHReduction,
           oneTimeDDHReductionBody, monad_norm,
           show ∀ a b : Bool, (a == b) = decide (a = b) from by decide] using
           (probOutput_bind_bijective_uniform_cross
@@ -304,7 +304,7 @@ theorem elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage
     AsymmEncAlg.IND_CPA_OneTime_Advantage (elGamalAsymmEnc F G gen) ProbCompRuntime.probComp adv =
       2 * DiffieHellman.ddhAdvantage gen
         (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv) := by
-  rw [AsymmEncAlg.IND_CPA_OneTime_Advantage, IND_CPA_OneTime_game_eq_ddhExpReal,
+  rw [AsymmEncAlg.IND_CPA_OneTime_Advantage, IND_CPA_OneTime_game_eq_ddhRealExperiment,
     MeasureTheory.Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure,
     DiffieHellman.ddhAdvantage, MeasureTheory.Measure.boolDist]
   simp only [evalDist_apply_singleton]

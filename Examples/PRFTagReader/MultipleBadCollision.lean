@@ -488,9 +488,9 @@ theorem unlinkPRFIdeal_boolDist_le_unlinkBad [NeZero sessionsPerTag] [Fintype No
     [Fintype Digest] (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : ℕ)
     (hqReader : OracleComp.IsQueryBoundP adversary (·.isRight) qReader)
     (hqTag : OracleComp.IsQueryBoundP adversary (·.isLeft) qTag) :
-    𝒟[PRFScheme.prfIdealExp (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
+    𝒟[PRFScheme.prfIdealExperiment (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary)].boolDist
-      𝒟[PRFScheme.prfIdealExp (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
+      𝒟[PRFScheme.prfIdealExperiment (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary)] ≤
       𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad) <$>
         (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run

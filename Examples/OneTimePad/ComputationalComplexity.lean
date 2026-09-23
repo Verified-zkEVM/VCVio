@@ -285,9 +285,9 @@ def coinOneTimePad (sp : ℕ) :
 theorem coinOneTimePad_measureComplete (sp : ℕ) :
     (coinOneTimePad sp).measureComplete ProbabilitySemantics.freeM := by
   intro message
-  have hprogram : (coinOneTimePad sp).CompleteExp message =
+  have hprogram : (coinOneTimePad sp).completenessExperiment message =
       PFunctor.FreeM.map (fun _ : BitVec sp ↦ some message) (coinBitVec sp).toFreeM := by
-    simp [SymmEncAlg.CompleteExp, coinOneTimePad, monad_norm]
+    simp [SymmEncAlg.completenessExperiment, coinOneTimePad, monad_norm]
   rw [hprogram]
   change PFunctor.FreeM.denote
     (PFunctor.FreeM.map (fun _ : BitVec sp ↦ some message) (coinBitVec sp).toFreeM) = _
@@ -300,12 +300,12 @@ theorem coinOneTimePad_measureComplete (sp : ℕ) :
 theorem denote_coinOneTimePad_cipherGivenMsg_eq_uniform
     (sp : ℕ) (message : BitVec sp) :
     PFunctor.FreeM.denote
-        ((coinOneTimePad sp).PerfectSecrecyCipherGivenMsgExp message).toFreeM =
+        ((coinOneTimePad sp).perfectSecrecyCipherGivenMsgExperiment message).toFreeM =
       uniformOn (Set.univ : Set (BitVec sp)) := by
-  have hprogram : (coinOneTimePad sp).PerfectSecrecyCipherGivenMsgExp message =
+  have hprogram : (coinOneTimePad sp).perfectSecrecyCipherGivenMsgExperiment message =
       PFunctor.FreeM.map (fun key : BitVec sp ↦ key ^^^ message)
         (coinBitVec sp).toFreeM := by
-    simp [SymmEncAlg.PerfectSecrecyCipherGivenMsgExp, coinOneTimePad, monad_norm]
+    simp [SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment, coinOneTimePad, monad_norm]
   rw [hprogram]
   change PFunctor.FreeM.denote
     (PFunctor.FreeM.map (fun key : BitVec sp ↦ key ^^^ message)

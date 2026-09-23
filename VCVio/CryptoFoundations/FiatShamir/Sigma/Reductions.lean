@@ -23,11 +23,11 @@ transform of a Sigma protocol and proves their quantitative bounds.
   is discharged by the direct stateful game chain.
 - `nmaReduction` turns a managed random-oracle NMA adversary into a witness-finding algorithm
   by replaying the forking lemma and applying special-soundness extraction, and
-  `nma_to_hard_relation_bound` bounds its success probability in `hardRelationExp`.
+  `nma_to_hard_relation_bound` bounds its success probability in `hardRelationExperiment`.
 - `cmaReduction` is the composite witness-finding algorithm.
 
 Every bound names the reduction it is about. A statement of the form
-`∃ reduction, bound ≤ Pr[= true | hardRelationExp hr reduction]` would be satisfied by a
+`∃ reduction, bound ≤ Pr[= true | hardRelationExperiment hr reduction]` would be satisfied by a
 reduction that returns a valid witness chosen classically, so it would carry no security
 content. -/
 
@@ -216,7 +216,7 @@ def nmaForkExtract
 
 /-- NMA-to-witness reduction: run `nmaForkExtract`, answering its unit-indexed challenge oracle
 with fresh uniform samples, so that the result is a `ProbComp` witness finder for
-`hardRelationExp`. -/
+`hardRelationExperiment`. -/
 def nmaReduction
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
@@ -350,8 +350,8 @@ lemma challengeSpaceInv_ne_top [Fintype Chal] [Nonempty Chal] : challengeSpaceIn
     ENNReal.inv_le_one.2 (by exact_mod_cast Fintype.card_pos)
 
 /-- NMA-to-extraction via the forking lemma and special soundness: the witness-finding
-algorithm `nmaReduction σ hr M nmaAdv qH` succeeds in `hardRelationExp` with probability at least
-`acc · (acc / (qH + 1) - 1/|Chal|)`, where `acc` is the fork advantage of `nmaAdv`.
+algorithm `nmaReduction σ hr M nmaAdv qH` succeeds in `hardRelationExperiment` with probability at
+least `acc · (acc / (qH + 1) - 1/|Chal|)`, where `acc` is the fork advantage of `nmaAdv`.
 
 The parameter `qH` is the *fork slot parameter* passed to `Fork.forkPoint qH`,
 i.e., the number of `Fin (qH + 1)` candidate target positions over which the
@@ -370,7 +370,7 @@ theorem nma_to_hard_relation_bound
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExp hr (nmaReduction σ hr M nmaAdv qH)] := by
+      Pr[= true | hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)] := by
   classical
   -- Retain the public losslessness premise for callers of the compatibility theorem.
   have _ := hss_nf
@@ -384,11 +384,11 @@ theorem nma_to_hard_relation_bound
       probEvent_simulateQ_unifChalImpl, probEvent_bind_eq_tsum, bind_pure_comp,
       probEvent_map, Function.comp_def, probEvent_liftComp, acc]
   have hRHS_eq_tsum :
-      Pr[= true | hardRelationExp hr (nmaReduction σ hr M nmaAdv qH)] =
+      Pr[= true | hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)] =
         ∑' pkw : Stmt × Wit, Pr[= pkw | hr.gen] *
           Pr[ fun w : Wit => rel pkw.1 w = true |
             nmaReduction σ hr M nmaAdv qH pkw.1] := by
-    simp only [hardRelationExp, ← probEvent_eq_eq_probOutput, bind_pure_comp,
+    simp only [hardRelationExperiment, ← probEvent_eq_eq_probOutput, bind_pure_comp,
       probEvent_bind_eq_tsum, probEvent_map, Function.comp_def]
   -- The replay-forking bound feeds the per-`pk` witness-extraction bound.
   have hPerPkFinal : ∀ pk : Stmt,

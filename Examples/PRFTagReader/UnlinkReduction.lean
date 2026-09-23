@@ -98,9 +98,9 @@ theorem unlinkabilityAdvantage_le_two_prf_plus_collision [DecidableEq Nonce]
   rw [unlinkabilityAdvantage, PRFScheme.prfAdvantage, PRFScheme.prfAdvantage,
     prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp,
     prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp]
-  set multipleIdeal := 𝒟[PRFScheme.prfIdealExp
+  set multipleIdeal := 𝒟[PRFScheme.prfIdealExperiment
     (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary)]
-  set singleIdeal := 𝒟[PRFScheme.prfIdealExp
+  set singleIdeal := 𝒟[PRFScheme.prfIdealExperiment
     (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary)]
   calc _ ≤ _ + multipleIdeal.boolDist _ := Measure.boolDist_triangle _ multipleIdeal _
     _ ≤ _ + (multipleIdeal.boolDist singleIdeal + singleIdeal.boolDist _) := by

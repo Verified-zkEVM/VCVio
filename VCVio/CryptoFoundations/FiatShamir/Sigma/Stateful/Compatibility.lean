@@ -15,7 +15,7 @@ The main stateful proof path uses the full `CmaState` game definitions from
 `Stateful.Games` and the full-state post-keygen normal form in
 `Stateful.Bridge`.
 
-The generic `SignatureAlg.unforgeableExp` experiment interprets signing queries
+The generic `SignatureAlg.unforgeableExperiment` experiment interprets signing queries
 through a `WriterT` query log. A theorem equating it with the full-state CMA game
 relates two interpreters, so such theorems live here rather than in the main
 stateful bridge.
@@ -65,7 +65,7 @@ def statefulCmaFreshExperiment
 
 This endpoint is equivalent to `statefulPostKeygenFreshAdvantage` by unfolding
 the public-key query in `signedAdv`; the equality is a stateful-game normal-form
-fact and does not mention `SignatureAlg.unforgeableExp`. -/
+fact and does not mention `SignatureAlg.unforgeableExperiment`. -/
 noncomputable def statefulCmaFreshAdvantage
     (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) : ENNReal :=
   𝒟[statefulCmaFreshExperiment σ hr M adv] {true}
@@ -977,14 +977,14 @@ private theorem runtime_evalDist_postKeygenFreshWriterComp_eq
 omit [DecidableEq Commit] in
 /-- The public EUF-CMA experiment factors into keygen followed by the fixed-key
 WriterT post-keygen computation. -/
-private theorem unforgeableExp_eq_runtime_bind_postKeygenFreshWriterComp
+private theorem unforgeableExperiment_eq_runtime_bind_postKeygenFreshWriterComp
     (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
-    SignatureAlg.unforgeableExp (_root_.FiatShamir.runtime M) adv =
+    (_root_.FiatShamir.runtime M).evalDist (SignatureAlg.unforgeableExperiment adv) =
       (_root_.FiatShamir.runtime M).evalDist
         ((liftM (hr.gen : ProbComp (Stmt × Wit))) >>= fun ps =>
           postKeygenFreshWriterComp (σ := σ) (hr := hr) (M := M)
             (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2) := by
-  unfold SignatureAlg.unforgeableExp postKeygenFreshWriterComp
+  unfold SignatureAlg.unforgeableExperiment postKeygenFreshWriterComp
   simp only [runtime_eq_runtimeWithCache_empty, FiatShamir, HasQuery.instOfMonadLift_query,
     liftM, bind_pure_comp, Functor.map_map, roSpec, signSpec]
   congr 1
@@ -1003,7 +1003,7 @@ theorem unforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
   let : MeasurableSpace (Stmt × Wit) := ⊤
   unfold SignatureAlg.unforgeableAdvantage
     statefulPostKeygenFreshAdvantage
-  rw [unforgeableExp_eq_runtime_bind_postKeygenFreshWriterComp (σ := σ) (hr := hr)
+  rw [unforgeableExperiment_eq_runtime_bind_postKeygenFreshWriterComp (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv,
     _root_.FiatShamir.runtime_evalDist_bind_liftComp (M := M)
       (oa := (hr.gen : ProbComp (Stmt × Wit)))

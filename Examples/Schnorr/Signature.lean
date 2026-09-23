@@ -53,7 +53,7 @@ overhead exceeds `ε`, the bound is trivially satisfied). Then there is a DLog
 reduction `B : DLogAdversary F G` such that
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ B succeeds in dlogExp g ].
+ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ B succeeds in dlogExperiment g ].
 ```
 
 This is the Pointcheval-Stern bound with quantitative HVZK plugged in at
@@ -141,21 +141,21 @@ theorem signature_complete [SampleableType G] (g : G) (M : Type) [DecidableEq M]
       (FiatShamir.runtime (Commit := G) (Chal := F) M) :=
   FiatShamir.perfectlyCorrect _ _ M (Schnorr.sigma_complete F G g)
 
-/-- The DLog hard-relation experiment (`hardRelationExp` for `dlogGenerable`)
-and the textbook DLog experiment (`dlogExp`) are the same probability, given
+/-- The DLog hard-relation experiment (`hardRelationExperiment` for `dlogGenerable`)
+and the textbook DLog experiment (`dlogExperiment`) are the same probability, given
 the bijection `· • g : F → G`. The factor of `g` ignored by the lifted
-`fun _ pk => red pk` reduction is harmless because `dlogExp` re-supplies it. -/
-private theorem hardRelationExp_dlogGenerable_eq_dlogExp [DecidableEq F]
+`fun _ pk => red pk` reduction is harmless because `dlogExperiment` re-supplies it. -/
+private theorem hardRelationExperiment_dlogGenerable_eq_dlogExperiment [DecidableEq F]
     (g : G) (hg : Function.Bijective (· • g : F → G))
     (red : G → ProbComp F) :
-    Pr[= true | hardRelationExp (dlogGenerable F g) red] =
-    Pr[= true | dlogExp g (fun _ pk => red pk)] := by
-  rw [show Pr[= true | hardRelationExp (dlogGenerable F g) red] =
+    Pr[= true | hardRelationExperiment (dlogGenerable F g) red] =
+    Pr[= true | dlogExperiment g (fun _ pk => red pk)] := by
+  rw [show Pr[= true | hardRelationExperiment (dlogGenerable F g) red] =
       Pr[= true | do
         let x ← $ᵗ F
         let w ← red (x • g)
         pure (decide (w • g = x • g))] by
-    simp [hardRelationExp, dlogGenerable]]
+    simp [hardRelationExperiment, dlogGenerable]]
   exact probOutput_bind_congr' _ true fun x =>
     probOutput_bind_congr' _ true fun sk => by simp [hg.1.eq_iff]
 
@@ -177,7 +177,7 @@ def dlogReduction (g : G) (M : Type) [DecidableEq M]
 The bound is
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction g M adv qH succeeds in dlogExp g ],
+ε' · ( ε' / (qH + 1)  -  1 / |F| )  ≤  Pr[ dlogReduction g M adv qH succeeds in dlogExperiment g ],
 ε' := ε  -  qS · (qS + qH) / |F|,
 ```
 
@@ -198,8 +198,8 @@ Three Schnorr-specific facts feed in:
   is uniform on `G` whenever `F` acts simply transitively via `g`, giving
   the commit-collision bound `β = 1/|F|`.
 
-The result is delivered in the textbook DLog form `dlogExp g (dlogReduction F G g M adv qH)`
-via the conversion `hardRelationExp_dlogGenerable_eq_dlogExp`. -/
+The result is delivered in the textbook DLog form `dlogExperiment g (dlogReduction F G g M adv qH)`
+via the conversion `hardRelationExperiment_dlogGenerable_eq_dlogExperiment`. -/
 theorem signature_euf_cma [Fintype F] (g : G)
     (hg : Function.Bijective (· • g : F → G))
     (M : Type) [DecidableEq M]
@@ -211,7 +211,7 @@ theorem signature_euf_cma [Fintype F] (g : G)
       SignatureAlg.unforgeableAdvantage (FiatShamir.runtime (Commit := G) (Chal := F) M) adv -
       ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
     eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
-      Pr[= true | dlogExp g (dlogReduction F G g M adv qH)] := by
+      Pr[= true | dlogExperiment g (dlogReduction F G g M adv qH)] := by
   let : Inhabited F := ⟨0⟩
   have hred := FiatShamir.euf_cma_bound
     (Schnorr.sigma F G g) (dlogGenerable F g) M
@@ -224,7 +224,7 @@ theorem signature_euf_cma [Fintype F] (g : G)
     (Schnorr.sigma_simCommitPredictability F G g hg)
     adv qS qH hQ
   simp only [mul_zero, ENNReal.ofReal_zero, zero_add] at hred ⊢
-  exact hred.trans (le_of_eq (hardRelationExp_dlogGenerable_eq_dlogExp F G g hg
+  exact hred.trans (le_of_eq (hardRelationExperiment_dlogGenerable_eq_dlogExperiment F G g hg
     (FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable F g) M
       (Schnorr.simTranscript F G g) adv qH)))
 
