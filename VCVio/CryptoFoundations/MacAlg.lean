@@ -81,9 +81,7 @@ structure UnforgeableAdversary (_macAlg : MacAlg (OracleComp spec) M K T) where
 queries are answered by `macAlg.tag k` and logged. -/
 def taggingQueryImpl (macAlg : MacAlg (OracleComp spec) M K T) (k : K) :
     QueryImpl (spec + (M →ₒ T)) (WriterT (QueryLog (M →ₒ T)) (OracleComp spec)) :=
-  (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-      (WriterT (QueryLog (M →ₒ T)) (OracleComp spec)) +
-    macAlg.taggingOracle k
+  spec.passthrough + macAlg.taggingOracle k
 
 /-- UF-CMA experiment for a MAC: the adversary succeeds iff it outputs a valid tag on a message
 it never submitted to the tagging oracle. -/

@@ -379,8 +379,7 @@ private lemma simulatedNmaUnifSim_fsUniform_run
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
         OracleQuery.cont_query, id_map, StateT.run_bind]
       simp only [fsUniformImpl, QueryImpl.ofLift_eq_id', simulatedNmaUnifSim,
-        simulatedNmaFwd, QueryImpl.liftTarget_apply, add_apply_inl,
-        HasQuery.toQueryImpl_apply, QueryImpl.toHasQuery_query, StateT.run_monadLift,
+        simulatedNmaFwd, QueryImpl.liftTarget_apply, add_apply_inl, StateT.run_monadLift,
         monadLift_self, bind_pure_comp, simulateQ_map, bind_map_left, map_bind]
       exact bind_congr (m := ProbComp) fun u ↦ ih u cache
 

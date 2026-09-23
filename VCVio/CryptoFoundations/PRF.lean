@@ -67,27 +67,26 @@ by the ambient `unifSpec`; function queries are answered by `prf.eval k`. -/
 def prfRealQueryImpl (prf : PRFScheme K D R) (k : K) :
     QueryImpl (PRFOracleSpec D R) ProbComp :=
   let so : QueryImpl (D →ₒ R) ProbComp := fun d => pure (prf.eval k d)
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)) + so
+  unifSpec.passthrough + so
 
 /-- Query implementation for the ideal PRF experiment. Uniform-sampling queries are handled
 by the ambient `unifSpec`; function queries are answered by a lazy random oracle. -/
 def prfIdealQueryImpl [DecidableEq D] [SampleableType R] :
     QueryImpl (PRFOracleSpec D R) (StateT ((D →ₒ R).QueryCache) ProbComp) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT ((D →ₒ R).QueryCache) ProbComp) +
+  unifSpec.passthrough +
     (D →ₒ R).randomOracle
 
 /-- The real PRF handler answers a function query by evaluating the keyed function. -/
 @[simp]
 lemma prfRealQueryImpl_apply_inr (prf : PRFScheme K D R) (k : K) (d : D) :
     prf.prfRealQueryImpl k (Sum.inr d) = pure (prf.eval k d) := by
-  rw [prfRealQueryImpl, QueryImpl.add_apply_inr]
+  rw [prfRealQueryImpl, QueryImpl.passthrough_add, QueryImpl.add_apply_inr]
 
 /-- The ideal PRF handler routes a function query to the lazy random oracle. -/
 @[simp]
 lemma prfIdealQueryImpl_apply_inr [DecidableEq D] [SampleableType R] (d : D) :
     prfIdealQueryImpl (D := D) (R := R) (Sum.inr d) = (D →ₒ R).randomOracle d := by
-  rw [prfIdealQueryImpl, QueryImpl.add_apply_inr]
+  rw [prfIdealQueryImpl, QueryImpl.passthrough_add, QueryImpl.add_apply_inr]
 
 /-- Real PRF experiment: sample a key, let the adversary query `prf.eval k`. -/
 def prfRealExp (prf : PRFScheme K D R) (adversary : PRFAdversary D R) :
@@ -121,7 +120,7 @@ candidate function (real: `prf.eval k`; ideal: the lazy random oracle). -/
 lemma simulateQ_prfRealQueryImpl_liftComp (prf : PRFScheme K D R) (k : K)
     {β : Type} (ob : OracleComp unifSpec β) :
     simulateQ (prf.prfRealQueryImpl k) (OracleComp.liftComp ob (PRFOracleSpec D R)) = ob := by
-  simp [prfRealQueryImpl, QueryImpl.simulateQ_add_liftM_left, QueryImpl.simulateQ_toQueryImpl]
+  simp [prfRealQueryImpl, QueryImpl.simulateQ_add_liftM_left]
 
 /-- The ideal (lazy random oracle) PRF handler is transparent on a computation lifted in from
 `unifSpec`, threading the cache: the result is just `ob` lifted into the cache state monad. -/
@@ -129,7 +128,7 @@ lemma simulateQ_prfIdealQueryImpl_liftComp [DecidableEq D] [SampleableType R]
     {β : Type} (ob : OracleComp unifSpec β) :
     simulateQ (prfIdealQueryImpl (D := D) (R := R)) (OracleComp.liftComp ob (PRFOracleSpec D R))
       = (liftM ob : StateT ((D →ₒ R).QueryCache) ProbComp β) := by
-  simp [prfIdealQueryImpl, QueryImpl.simulateQ_add_liftM_left, QueryImpl.simulateQ_toQueryImpl]
+  simp [prfIdealQueryImpl, QueryImpl.simulateQ_add_liftM_left]
 
 /-- A function query (`Sum.inr`) under the real PRF handler evaluates the PRF. -/
 lemma simulateQ_prfRealQueryImpl_inr (prf : PRFScheme K D R) (k : K) (d : D) :

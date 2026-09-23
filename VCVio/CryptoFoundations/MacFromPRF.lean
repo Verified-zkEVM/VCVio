@@ -105,9 +105,7 @@ def macToPRFQueryImpl :
       (WriterT (QueryLog (D →ₒ R)) (OracleComp (unifSpec + (D →ₒ R)))) :=
   let fwdTag : QueryImpl (D →ₒ R) (OracleComp (unifSpec + (D →ₒ R))) :=
     fun msg => prfFuncQuery msg
-  (HasQuery.toQueryImpl (spec := unifSpec)
-    (m := OracleComp (unifSpec + (D →ₒ R)))).liftTarget
-      (WriterT (QueryLog (D →ₒ R)) (OracleComp (unifSpec + (D →ₒ R)))) +
+  unifSpec.passthrough +
   fwdTag.withLogging
 
 /-- Composing the outer `prfRealQueryImpl` with the inner `macToPRFQueryImpl` gives exactly
@@ -153,8 +151,9 @@ private theorem snd_eq_eval_of_mem_log_taggingQueryImpl [DecidableEq R] (prf : P
   | query_bind t f ih =>
     cases t with
     | inl n =>
-      rw [MacAlg.taggingQueryImpl, QueryImpl.simulateQ_add_query_bind_left] at hz
-      simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+      rw [MacAlg.taggingQueryImpl, QueryImpl.passthrough_add,
+        QueryImpl.simulateQ_add_query_bind_left] at hz
+      simp only [QueryImpl.liftTarget_apply, QueryImpl.id'_apply,
         WriterT.run_bind', mem_support_bind_iff, support_map, Set.mem_image] at hz
       obtain ⟨⟨u, w⟩, hu, z', hz', rfl⟩ := hz
       simp only [WriterT.run_liftM, support_map, Set.mem_image, Prod.mk.injEq] at hu
@@ -162,7 +161,8 @@ private theorem snd_eq_eval_of_mem_log_taggingQueryImpl [DecidableEq R] (prf : P
       intro e he
       exact ih u hz' e (by simpa using he)
     | inr d =>
-      rw [MacAlg.taggingQueryImpl, QueryImpl.simulateQ_add_query_bind_right] at hz
+      rw [MacAlg.taggingQueryImpl, QueryImpl.passthrough_add,
+        QueryImpl.simulateQ_add_query_bind_right] at hz
       simp only [WriterT.run_bind', mem_support_bind_iff, support_map, Set.mem_image] at hz
       obtain ⟨⟨u, w⟩, hu, z', hz', rfl⟩ := hz
       simp only [MacAlg.taggingOracle, toMacAlg, QueryImpl.withLogging_apply, bind_pure_comp,
@@ -251,8 +251,9 @@ private theorem log_cache_invariant_step_unif [SampleableType R]
     (hmem : z ∈ support ((simulateQ prfIdealQueryImpl
       (simulateQ macToPRFQueryImpl (liftM (OracleSpec.query (Sum.inl n)) >>= f)).run).run cache₀)) :
     cache₀ msg ≠ none ∨ QueryLog.wasQueried z.1.2 msg = true := by
-  rw [macToPRFQueryImpl, QueryImpl.simulateQ_add_query_bind_left] at hmem
-  simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply,
+  rw [macToPRFQueryImpl, QueryImpl.passthrough_add, QueryImpl.simulateQ_add_query_bind_left]
+    at hmem
+  simp only [QueryImpl.liftTarget_apply, QueryImpl.id'_apply,
     WriterT.run_bind', simulateQ_bind, StateT.run_bind] at hmem
   simp only [support_bind, Set.mem_iUnion, exists_prop] at hmem
   obtain ⟨⟨⟨val, log_q⟩, cache_mid⟩, hu, hmem⟩ := hmem
@@ -269,7 +270,7 @@ private theorem log_cache_invariant_step_unif [SampleableType R]
     (congrArg (fun x => x.1.2) hvalue).symm
   have hmem' : z ∈ support ((simulateQ prfIdealQueryImpl
       (simulateQ macToPRFQueryImpl (f val)).run).run cache_mid) := by
-    simpa only [hlog, List.nil_append, macToPRFQueryImpl, show
+    simpa only [hlog, List.nil_append, macToPRFQueryImpl, QueryImpl.passthrough_add, show
         (Prod.map (@id α) fun x : QueryLog (D →ₒ R) => x) = id from
           funext fun ⟨_, _⟩ => rfl, id_map] using hmem
   simp only [support_bind, Set.mem_iUnion, exists_prop,
@@ -297,7 +298,8 @@ private theorem log_cache_invariant_step_query [SampleableType R]
     (hmem : z ∈ support ((simulateQ prfIdealQueryImpl (simulateQ macToPRFQueryImpl
       (liftM (OracleSpec.query (Sum.inr msg')) >>= f)).run).run cache₀)) :
     cache₀ msg ≠ none ∨ QueryLog.wasQueried z.1.2 msg = true := by
-  rw [macToPRFQueryImpl, QueryImpl.simulateQ_add_query_bind_right] at hmem
+  rw [macToPRFQueryImpl, QueryImpl.passthrough_add, QueryImpl.simulateQ_add_query_bind_right]
+    at hmem
   simp only [prfFuncQuery, WriterT.run_bind', simulateQ_bind, StateT.run_bind] at hmem
   simp only [support_bind, Set.mem_iUnion, exists_prop] at hmem
   obtain ⟨⟨⟨val, log_q⟩, cache_mid⟩, hro, hmem⟩ := hmem

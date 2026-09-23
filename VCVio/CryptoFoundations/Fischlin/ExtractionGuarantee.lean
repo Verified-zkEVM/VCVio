@@ -40,12 +40,9 @@ def knowledgeRun (adv : KnowledgeSoundnessAdv (Stmt := Stmt)
     (x : Stmt) (msg : M) : ProbComp (Bool × Option Wit) := do
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog roSpec) (StateT roSpec.QueryCache ProbComp))
-  let ((π, roLog), cache) ← (simulateQ (idImpl + ro.withLogging) (adv.run x msg)).run |>.run ∅
-  let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT roSpec.QueryCache ProbComp)
-  let (verified, _) ← (simulateQ (idImpl' + ro)
+  let ((π, roLog), cache) ←
+    (simulateQ (unifSpec.passthrough + ro.withLogging) (adv.run x msg)).run.run ∅
+  let (verified, _) ← (simulateQ (unifSpec.passthrough + ro)
     ((Fischlin (m := OracleComp (unifSpec + roSpec)) σ hr ρ b S M).verify x msg π)).run cache
   let extracted ← onlineExtract σ ρ b M x π roLog
   return (verified, extracted)

@@ -55,8 +55,7 @@ def simulatedNmaFwd
     QueryImpl (fsRoSpec M Commit Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
-  (HasQuery.toQueryImpl (spec := fsRoSpec M Commit Chal)
-    (m := OracleComp (fsRoSpec M Commit Chal))).liftTarget _
+  (fsRoSpec M Commit Chal).passthrough
 
 def simulatedNmaUnifSim
     [DecidableEq M] [DecidableEq Commit] :

@@ -175,8 +175,7 @@ noncomputable def unforgeableExp {sigAlg : SignatureAlg (OracleComp spec) M PK S
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let sim_adv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)
@@ -211,8 +210,7 @@ noncomputable def unforgeableExpNoFresh {sigAlg : SignatureAlg (OracleComp spec)
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let sim_adv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)
@@ -243,8 +241,7 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let sim_adv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)
@@ -260,8 +257,7 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
         let (pk, sk) ← sigAlg.keygen
         let impl : QueryImpl (spec + (M →ₒ S))
             (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+          spec.passthrough +
             sigAlg.signingOracle pk sk
         let sim_adv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
           simulateQ impl (adv.main pk)
@@ -276,8 +272,7 @@ lemma unforgeableAdv.advantage_le_unforgeableExpNoFresh
         let (pk, sk) ← sigAlg.keygen
         let impl : QueryImpl (spec + (M →ₒ S))
             (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+          spec.passthrough +
             sigAlg.signingOracle pk sk
         let sim_adv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
           simulateQ impl (adv.main pk)
@@ -347,8 +342,7 @@ noncomputable def strongUnforgeableGame
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)
@@ -404,8 +398,7 @@ noncomputable def sameMessageStrongUnforgeableGame
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)
@@ -480,8 +473,7 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
     let (pk, sk) ← sigAlg.keygen
     let impl : QueryImpl (spec + (M →ₒ S))
         (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+      spec.passthrough +
         sigAlg.signingOracle pk sk
     let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
       simulateQ impl (adv.main pk)
@@ -501,8 +493,7 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
         let (pk, sk) ← sigAlg.keygen
         let impl : QueryImpl (spec + (M →ₒ S))
             (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+          spec.passthrough +
             sigAlg.signingOracle pk sk
         let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
           simulateQ impl (adv.main pk)
@@ -517,8 +508,7 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
         let (pk, sk) ← sigAlg.keygen
         let impl : QueryImpl (spec + (M →ₒ S))
             (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+          spec.passthrough +
             sigAlg.signingOracle pk sk
         let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
           simulateQ impl (adv.toUnforgeableAdv.main pk)
@@ -533,8 +523,7 @@ lemma strongUnforgeableAdv.advantage_eq_euf_add_sameMessage
         let (pk, sk) ← sigAlg.keygen
         let impl : QueryImpl (spec + (M →ₒ S))
             (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-          (HasQuery.toQueryImpl (spec := spec) (m := OracleComp spec)).liftTarget
-            (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) +
+          spec.passthrough +
             sigAlg.signingOracle pk sk
         let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
           simulateQ impl (adv.main pk)

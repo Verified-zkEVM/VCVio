@@ -117,14 +117,14 @@ private theorem slhdsaConcreteAlg_components (prims : Primitives p)
       map_query' := fun q => by
         simpa [unifFwdAnswerImpl] using
           (QueryImpl.simulateQ_add_liftM_query_right
-            (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp))
+            ((QueryImpl.id' unifSpec).liftTarget ProbComp)
             ((PublicHash.impl prims).liftTarget ProbComp) q) }
   have hLift : HasQuery.PreservesProbCompLift F.toMonadHom := by
     intro α oa
     change simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
       (liftM oa : OracleComp (unifSpec + publicHashSpec prims.core) α) = oa
-    rw [unifFwdAnswerImpl, QueryImpl.simulateQ_add_liftM_left,
-      HasQuery.toQueryImpl_eq_id', simulateQ_id']
+    rw [unifFwdAnswerImpl, QueryImpl.passthrough_add, QueryImpl.simulateQ_add_liftM_left,
+      QueryImpl.liftTarget_self, simulateQ_id']
   have hMap :
       SignatureAlg.map F.toMonadHom
           (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) hd prims.core) =
