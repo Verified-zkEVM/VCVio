@@ -109,15 +109,15 @@ def macToPRFQueryImpl :
   fwdTag.withLogging
 
 /-- Composing the outer `prfRealQueryImpl` with the inner `macToPRFQueryImpl` gives exactly
-the forgery-game oracle `MacAlg.taggingQueryImpl` (which uses `withLogging` over
+the forgery-game run `MacAlg.runWithTaggingOracle` (which uses `withLogging` over
 `pure ∘ prf.eval k`). -/
 private theorem simulateQ_prfReal_macToPRFQueryImpl_run [DecidableEq R]
     {α : Type} (prf : PRFScheme K D R) (k : K)
     (oa : OracleComp (unifSpec + (D →ₒ R)) α) :
     simulateQ (prfRealQueryImpl prf k)
         ((simulateQ (macToPRFQueryImpl (D := D) (R := R)) oa).run) =
-      (simulateQ ((prf.toMacAlg).taggingQueryImpl k) oa).run := by
-  rw [QueryImpl.simulateQ_writerTMapBase_run]
+      (prf.toMacAlg).runWithTaggingOracle k oa := by
+  rw [MacAlg.runWithTaggingOracle_def, QueryImpl.simulateQ_writerTMapBase_run]
   congr 2
   funext t
   cases t with
@@ -133,25 +133,26 @@ private theorem simulateQ_prfReal_macToPRFQueryImpl_run [DecidableEq R]
       rw [simulateQ_prfRealQueryImpl_liftComp]
   | inr d =>
       ext
-      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, MacAlg.taggingQueryImpl, prfFuncQuery,
+      simp [QueryImpl.writerTMapBase, macToPRFQueryImpl, prfFuncQuery,
         toMacAlg, MacAlg.taggingOracle, map_eq_bind_pure_comp]
 
 /-- In the real tagging game for `prf.toMacAlg`, every entry of the tagging log records the PRF
 value at its message: the tagging oracle is deterministic. -/
-private theorem snd_eq_eval_of_mem_log_taggingQueryImpl [DecidableEq R] (prf : PRFScheme K D R)
+private theorem snd_eq_eval_of_mem_log_runWithTaggingOracle [DecidableEq R] (prf : PRFScheme K D R)
     (k : K)
     {α : Type} (oa : OracleComp (unifSpec + (D →ₒ R)) α) {z : α × QueryLog (D →ₒ R)}
-    (hz : z ∈ support (simulateQ ((prf.toMacAlg).taggingQueryImpl k) oa).run) :
+    (hz : z ∈ support ((prf.toMacAlg).runWithTaggingOracle k oa)) :
     ∀ e ∈ z.2, e.2 = prf.eval k e.1 := by
   induction oa using OracleComp.inductionOn generalizing z with
   | pure x =>
-    simp only [simulateQ_pure, WriterT.run_pure', support_pure, Set.mem_singleton_iff] at hz
+    simp only [MacAlg.runWithTaggingOracle_def, simulateQ_pure, WriterT.run_pure', support_pure,
+      Set.mem_singleton_iff] at hz
     subst hz
     simp
   | query_bind t f ih =>
     cases t with
     | inl n =>
-      rw [MacAlg.taggingQueryImpl, QueryImpl.passthrough_add,
+      rw [MacAlg.runWithTaggingOracle_def, QueryImpl.passthrough_add,
         QueryImpl.simulateQ_add_query_bind_left] at hz
       simp only [QueryImpl.liftTarget_apply, QueryImpl.id'_apply,
         WriterT.run_bind', mem_support_bind_iff, support_map, Set.mem_image] at hz
@@ -161,7 +162,7 @@ private theorem snd_eq_eval_of_mem_log_taggingQueryImpl [DecidableEq R] (prf : P
       intro e he
       exact ih u hz' e (by simpa using he)
     | inr d =>
-      rw [MacAlg.taggingQueryImpl, QueryImpl.passthrough_add,
+      rw [MacAlg.runWithTaggingOracle_def, QueryImpl.passthrough_add,
         QueryImpl.simulateQ_add_query_bind_right] at hz
       simp only [WriterT.run_bind', mem_support_bind_iff, support_map, Set.mem_image] at hz
       obtain ⟨⟨u, w⟩, hu, z', hz', rfl⟩ := hz
@@ -195,7 +196,7 @@ private theorem prfRealExp_macToPRFReduction_eq_body [DecidableEq R] (prf : PRFS
     (adversary : (prf.toMacAlg).UnforgeableAdversary) :
     prf.prfRealExp (macToPRFReduction prf adversary) = (do
       let k ← prf.keygen
-      let ((msg, τ), log) ← (simulateQ ((prf.toMacAlg).taggingQueryImpl k) adversary.main).run
+      let ((msg, τ), log) ← (prf.toMacAlg).runWithTaggingOracle k adversary.main
       pure (!QueryLog.wasQueried log msg && decide (τ = prf.eval k msg)) :
     ProbComp Bool) := by
   unfold prfRealExp macToPRFReduction
@@ -481,7 +482,7 @@ theorem strongUnforgeableAdvantage_toMacAlg_eq_unforgeableAdvantage [DecidableEq
   congr 1
   refine evalDist_bind_congr _ _ _ fun k => ?_
   refine evalDist_bind_congr_of_support _ _ _ fun ⟨⟨msg, τ⟩, log⟩ hmem => ?_
-  have hlog := snd_eq_eval_of_mem_log_taggingQueryImpl prf k adversary.main hmem
+  have hlog := snd_eq_eval_of_mem_log_runWithTaggingOracle prf k adversary.main hmem
   simp only [toMacAlg, pure_bind]
   by_cases hτ : τ = prf.eval k msg
   · subst hτ

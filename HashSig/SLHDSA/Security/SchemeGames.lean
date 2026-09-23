@@ -181,6 +181,7 @@ section Generic
 
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK S : Type}
 
+open scoped Classical in
 /-- The unforgeability experiment records success paired with a Boolean selector.
 
 The selector may inspect the sampled secret key as well as the returned message and signature.
@@ -190,17 +191,9 @@ Its first marginal is `SignatureAlg.unforgeableExp`; the two selector events par
 noncomputable def instrumentedEufExp {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : unforgeableAdv sigAlg)
     (sel : PK → SK → M → S → Bool) : Measure (Bool × Bool) :=
-  letI : DecidableEq M := Classical.decEq M
-  letI : DecidableEq S := Classical.decEq S
   runtime.evalDist do
     let (pk, sk) ← sigAlg.keygen
-    let impl : QueryImpl (spec + (M →ₒ S))
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      spec.passthrough +
-        sigAlg.signingOracle pk sk
-    let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
-      simulateQ impl (adv.main pk)
-    let ((msg, σ), log) ← simAdv.run
+    let ((msg, σ), log) ← sigAlg.runWithSigningOracle pk sk (adv.main pk)
     let verified ← sigAlg.verify pk msg σ
     return (!log.wasQueried msg && verified, sel pk sk msg σ)
 
@@ -216,10 +209,6 @@ instance {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
 The runtime's `ProbCompRuntime.evalDist_bind_pure` law factors the final projection out of the
 evaluator. Both computations execute the same joint program before applying a pure function to
 its result.
-
-Neither `[DecidableEq M]` nor `[DecidableEq S]` is used, because both computations supply their own
-classical instances; the `omit` records that rather than leaving the binders to be inferred as
-load-bearing.
 
 *Experiment split.* -/
 theorem instrumentedEufExp_fst {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
@@ -269,6 +258,7 @@ theorem advantage_le_arms {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
       (instrumentedEufExp runtime adv sel) {x | x.1 = true ∧ x.2 = false} :=
   (advantage_eq_arms runtime adv sel).le
 
+open scoped Classical in
 /-- The same-message, new-signature event of `SignatureAlg.sameMessageStrongUnforgeableGame`,
 returning its own bit paired with a selector bit.
 
@@ -281,17 +271,9 @@ noncomputable def instrumentedSameMessageExp
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
     (runtime : ProbCompRuntime (OracleComp spec)) (adv : strongUnforgeableAdv sigAlg)
     (sel : QueryLog (M →ₒ S) → M → S → Bool) : Measure (Bool × Bool) :=
-  letI : DecidableEq M := Classical.decEq M
-  letI : DecidableEq S := Classical.decEq S
   runtime.evalDist do
     let (pk, sk) ← sigAlg.keygen
-    let impl : QueryImpl (spec + (M →ₒ S))
-        (WriterT (QueryLog (M →ₒ S)) (OracleComp spec)) :=
-      spec.passthrough +
-        sigAlg.signingOracle pk sk
-    let simAdv : WriterT (QueryLog (M →ₒ S)) (OracleComp spec) (M × S) :=
-      simulateQ impl (adv.main pk)
-    let ((msg, σ), log) ← simAdv.run
+    let ((msg, σ), log) ← sigAlg.runWithSigningOracle pk sk (adv.main pk)
     let verified ← sigAlg.verify pk msg σ
     return (log.wasQueried msg && !signingLogContains log msg σ && verified, sel log msg σ)
 

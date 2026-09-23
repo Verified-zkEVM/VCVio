@@ -64,7 +64,7 @@ example :
     SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp replayAdv {true} = 0 := by
   simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
     replayAdv, twoSignatureAlg,
-    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.probComp_evalDist]
 
 /-- A different valid signature on an already queried message is an eligible strong forgery. -/
@@ -72,7 +72,7 @@ example :
     SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp rerandomizeAdv {true} = 1 := by
   simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
     rerandomizeAdv, twoSignatureAlg,
-    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.probComp_evalDist]
 
 /-- A valid signature on a fresh message wins exactly as in the ordinary unforgeability game. -/
@@ -80,7 +80,7 @@ example :
     SignatureAlg.strongUnforgeableExp ProbCompRuntime.probComp freshMessageAdv {true} = 1 := by
   simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
     freshMessageAdv, twoSignatureAlg,
-    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.probComp_evalDist]
 
 /-- The ENNReal advantage endpoint assigns zero to replay and one to the two valid fresh-pair
@@ -91,7 +91,8 @@ example : replayAdv.advantage ProbCompRuntime.probComp = 0 ∧
   simp [SignatureAlg.strongUnforgeableAdv.advantage,
     SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
     replayAdv, rerandomizeAdv, freshMessageAdv,
-    twoSignatureAlg, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    twoSignatureAlg, SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle,
+    SignatureAlg.signingLogContains,
     ProbCompRuntime.probComp_evalDist]
 
 /-- Exact-pair freshness alone is insufficient: an invalid fresh-message signature loses. -/
@@ -100,7 +101,7 @@ example :
         invalidFreshMessageAdv {true} = 0 := by
   simp [SignatureAlg.strongUnforgeableExp, SignatureAlg.strongUnforgeableGame,
     invalidFreshMessageAdv, twoSignatureAlg,
-    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.probComp_evalDist]
 
 /-- Exact replay is excluded from the same-message residual as well as from SUF itself. This
@@ -111,7 +112,7 @@ example :
   simp [SignatureAlg.strongUnforgeableAdv.sameMessageAdvantage,
     SignatureAlg.sameMessageStrongUnforgeableExp, replayAdv, twoSignatureAlg,
     SignatureAlg.sameMessageStrongUnforgeableGame,
-    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.probComp_evalDist]
 
 /-- The same-message residual requires verification: a new but invalid pair has probability
@@ -122,7 +123,7 @@ example :
   simp [SignatureAlg.sameMessageStrongUnforgeableExp,
     SignatureAlg.sameMessageStrongUnforgeableGame,
     invalidSameMessageAdv, twoSignatureAlg,
-    SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
+    SignatureAlg.runWithSigningOracle, SignatureAlg.signingOracle, SignatureAlg.signingLogContains,
     ProbCompRuntime.probComp_evalDist]
 
 /-- The SUF partition is exact on the two qualitatively different forgery branches: rerandomizing
@@ -138,7 +139,8 @@ example :
     SignatureAlg.sameMessageStrongUnforgeableExp,
     SignatureAlg.sameMessageStrongUnforgeableGame,
     SignatureAlg.strongUnforgeableAdv.toUnforgeableAdv,
-    rerandomizeAdv, freshMessageAdv, twoSignatureAlg, SignatureAlg.signingOracle,
+    rerandomizeAdv, freshMessageAdv, twoSignatureAlg, SignatureAlg.runWithSigningOracle,
+    SignatureAlg.signingOracle,
     SignatureAlg.signingLogContains, QueryLog.wasQueried,
     ProbCompRuntime.probComp_evalDist]
 

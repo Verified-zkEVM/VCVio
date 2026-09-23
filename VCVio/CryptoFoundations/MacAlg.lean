@@ -53,6 +53,25 @@ def taggingOracle (macAlg : MacAlg m M K T) (k : K) :
 
 end taggingOracle
 
+section runWithTaggingOracle
+
+variable {ι : Type u} {spec : OracleSpec ι} {M K T : Type}
+
+/-- Run `oa` against the ambient oracles `spec` and a tagging oracle for `macAlg` under the key
+`k`. Ambient queries are forwarded unchanged and tagging queries are answered by
+`macAlg.taggingOracle k`. The result pairs the output of `oa` with the log of every
+`(message, tag)` pair the tagging oracle returned. -/
+def runWithTaggingOracle (macAlg : MacAlg (OracleComp spec) M K T) (k : K) {α : Type}
+    (oa : OracleComp (spec + (M →ₒ T)) α) : OracleComp spec (α × QueryLog (M →ₒ T)) :=
+  (simulateQ (spec.passthrough + macAlg.taggingOracle k) oa).run
+
+lemma runWithTaggingOracle_def (macAlg : MacAlg (OracleComp spec) M K T) (k : K) {α : Type}
+    (oa : OracleComp (spec + (M →ₒ T)) α) :
+    macAlg.runWithTaggingOracle k oa =
+      (simulateQ (spec.passthrough + macAlg.taggingOracle k) oa).run := rfl
+
+end runWithTaggingOracle
+
 section sound
 
 variable {m : Type → Type v} [Monad m] {M K T : Type}
@@ -77,12 +96,6 @@ structure UnforgeableAdversary (_macAlg : MacAlg (OracleComp spec) M K T) where
   /-- Run against `spec` and the tagging oracle, returning the candidate forgery. -/
   main : OracleComp (spec + (M →ₒ T)) (M × T)
 
-/-- Oracle of the forgery games under key `k`: queries to `spec` are forwarded, and tagging
-queries are answered by `macAlg.tag k` and logged. -/
-def taggingQueryImpl (macAlg : MacAlg (OracleComp spec) M K T) (k : K) :
-    QueryImpl (spec + (M →ₒ T)) (WriterT (QueryLog (M →ₒ T)) (OracleComp spec)) :=
-  spec.passthrough + macAlg.taggingOracle k
-
 /-- UF-CMA experiment for a MAC: the adversary succeeds iff it outputs a valid tag on a message
 it never submitted to the tagging oracle. -/
 noncomputable def unforgeableExp {macAlg : MacAlg (OracleComp spec) M K T}
@@ -90,7 +103,7 @@ noncomputable def unforgeableExp {macAlg : MacAlg (OracleComp spec) M K T}
     (adversary : macAlg.UnforgeableAdversary) : MeasureTheory.Measure Bool :=
   runtime.evalDist do
     let k ← macAlg.keygen
-    let ((msg, τ), log) ← (simulateQ (macAlg.taggingQueryImpl k) adversary.main).run
+    let ((msg, τ), log) ← macAlg.runWithTaggingOracle k adversary.main
     let verified ← macAlg.verify k msg τ
     return !log.wasQueried msg && verified
 
@@ -136,7 +149,7 @@ noncomputable def strongUnforgeableExp {macAlg : MacAlg (OracleComp spec) M K T}
     (adversary : macAlg.UnforgeableAdversary) : MeasureTheory.Measure Bool :=
   runtime.evalDist do
     let k ← macAlg.keygen
-    let ((msg, τ), log) ← (simulateQ (macAlg.taggingQueryImpl k) adversary.main).run
+    let ((msg, τ), log) ← macAlg.runWithTaggingOracle k adversary.main
     let verified ← macAlg.verify k msg τ
     return !taggingLogContains log msg τ && verified
 
@@ -160,7 +173,7 @@ def forgeryRun {macAlg : MacAlg (OracleComp spec) M K T}
     (adversary : macAlg.UnforgeableAdversary) :
     OracleComp spec ((M × T) × QueryLog (M →ₒ T) × Bool) := do
   let k ← macAlg.keygen
-  let ((msg, τ), log) ← (simulateQ (macAlg.taggingQueryImpl k) adversary.main).run
+  let ((msg, τ), log) ← macAlg.runWithTaggingOracle k adversary.main
   let verified ← macAlg.verify k msg τ
   return ((msg, τ), log, verified)
 
