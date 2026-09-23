@@ -1450,7 +1450,7 @@
  ["usesRetiredProbability", "OracleComp.probEvent_collision_win_le"],
  ["usesRetiredProbability", "OracleComp.probEvent_congr'"],
  ["usesRetiredProbability", "OracleComp.probEvent_eq_one_simulateQ_randomOracle_run_iff"],
- ["usesRetiredProbability", "OracleComp.probEvent_eq_one_simulateQ_unifFwdImpl_add_randomOracle_run_iff"],
+ ["usesRetiredProbability", "OracleComp.probEvent_eq_one_simulateQ_romImpl_run_iff"],
  ["usesRetiredProbability", "OracleComp.probEvent_focusCollision_ofFreeM_fork_le"],
  ["usesRetiredProbability", "OracleComp.probEvent_guardedContextFork_eq_contextFork_component"],
  ["usesRetiredProbability", "OracleComp.probEvent_hiddenReadList_le"],

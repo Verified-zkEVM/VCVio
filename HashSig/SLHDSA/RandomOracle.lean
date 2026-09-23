@@ -296,7 +296,7 @@ theorem slhdsaAlg_perfectlyComplete (core : CorePrimitives p)
     alg.verify pk msg sig
   rw [PublicHash.runtime_evalDist]
   have hmeasure :=
-    OracleComp.evalDist_apply_setOf_simulateQ_unifFwdImpl_add_randomOracle_run'_eq_one_iff
+    OracleComp.evalDist_apply_setOf_simulateQ_romImpl_run'_eq_one_iff
     (oa := oa) (preexisting_cache := (∅ : PublicHash.Cache core))
     (fun b => b = true)
   suffices hfixed : ∀ f : QueryImpl (publicHashSpec core) Id,

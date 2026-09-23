@@ -168,23 +168,16 @@ private lemma match_find?_eq_pure_transcriptPreimage [DecidableEq Rand] [Inhabit
 
 /-! ### The random-oracle world
 
-Every handler below answers the lazy random oracle `Rand → M`, so it needs equality on `Rand`
-and a canonical sampler for `M`. -/
+The games below run in the random oracle model `(Rand →ₒ M).romImpl`, whose lazy random oracle
+`Rand → M` needs equality on `Rand` and a canonical sampler for `M`. -/
 
 variable [DecidableEq Rand] [SampleableType M]
-
-/-- Shared implementation of the BR93 random-oracle world: the left component forwards uniform
-sampling, while the right component is a lazy random oracle on `Rand → M`. -/
-abbrev roQueryImpl :
-    QueryImpl (RO_Spec Rand M) (StateT ((Rand →ₒ M).QueryCache) ProbComp) :=
-  unifFwdImpl (Rand →ₒ M) +
-    (randomOracle : QueryImpl (Rand →ₒ M) (StateT ((Rand →ₒ M).QueryCache) ProbComp))
 
 private def runRightLog {α : Type} (mx : OracleComp (RO_Spec Rand M) α)
     (cache : (Rand →ₒ M).QueryCache) :
     ProbComp ((α × QueryLog (Rand →ₒ M)) × (Rand →ₒ M).QueryCache) :=
   (fun x => ((x.1.1, x.1.2.snd), x.2)) <$>
-    (simulateQ roQueryImpl.withLogging mx).run.run cache
+    (simulateQ (Rand →ₒ M).romImpl.withLogging mx).run.run cache
 
 private lemma runRightLog_bind {α β : Type} (mx : OracleComp (RO_Spec Rand M) α)
     (f : α → OracleComp (RO_Spec Rand M) β) (cache : (Rand →ₒ M).QueryCache) :
@@ -204,7 +197,7 @@ private lemma runRightLog_lift {α : Type} (p : ProbComp α)
     runRightLog (liftM p) cache = p >>= fun a => pure ((a, []), cache) := by
   unfold runRightLog
   rw [map_eq_pure_bind]
-  trans (simulateQ roQueryImpl.withLogging (liftM p)).run.run cache >>=
+  trans (simulateQ (Rand →ₒ M).romImpl.withLogging (liftM p)).run.run cache >>=
     fun x => pure ((x.1.1, []), x.2)
   · apply bind_congr_of_forall_mem_support
     intro x hx
@@ -231,7 +224,7 @@ def inverter [Inhabited Rand] [AddCommGroup M] (tdp : TrapdoorPermutation PK SK 
     let loggedRun :
         StateT ((Rand →ₒ M).QueryCache) ProbComp
           (Unit × QueryLog (RO_Spec Rand M)) :=
-      (simulateQ roQueryImpl.withLogging <| (show OracleComp (RO_Spec Rand M) Unit from do
+      (simulateQ (Rand →ₒ M).romImpl.withLogging <| (show OracleComp (RO_Spec Rand M) Unit from do
         let (m₁, m₂, st) ← adv.choose pk
         let b ← $ᵗ Bool
         let h ← $ᵗ M
@@ -299,7 +292,7 @@ private lemma bind_runRightLog_of_log_unused {α β : Type}
     (oa : OracleComp (RO_Spec Rand M) α) (s : (Rand →ₒ M).QueryCache)
     (f : α → (Rand →ₒ M).QueryCache → ProbComp β) :
     (runRightLog oa s >>= fun x => f x.1.1 x.2) =
-      (simulateQ roQueryImpl oa).run s >>= fun x => f x.1 x.2 := by
+      (simulateQ (Rand →ₒ M).romImpl oa).run s >>= fun x => f x.1 x.2 := by
   rw [runRightLog, bind_map_left]
   exact QueryImpl.bind_run_run_simulateQ_withLogging _ oa s f
 
@@ -314,7 +307,7 @@ challenge message preserves uniformity, so the challenge ciphertext no longer de
 def game2 (tdp : TrapdoorPermutation PK SK Rand) (adv : CPA_Adversary PK Rand M) : ProbComp Bool :=
   do
     let b ← ($ᵗ Bool)
-    let b' ← (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
+    let b' ← (simulateQ (Rand →ₒ M).romImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
       let (pk, _sk) ← liftM tdp.keygen
       let (_m₁, _m₂, st) ← adv.choose pk
       let r ← $ᵗ Rand
@@ -328,7 +321,7 @@ adversary succeeds with probability exactly `1/2`. -/
 theorem evalDist_game2_eq_half (adv : CPA_Adversary PK Rand M) :
     𝒟[game2 tdp adv] {true} = 1 / 2 := by
   let f : Bool → ProbComp Bool := fun _ =>
-    (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
+    (simulateQ (Rand →ₒ M).romImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
       let (pk, _sk) ← liftM tdp.keygen
       let (_m₁, _m₂, st) ← adv.choose pk
       let r ← $ᵗ Rand
@@ -348,7 +341,7 @@ variable [AddCommGroup M]
 /-- Real one-time CPA game in the random-oracle model. -/
 def cpaGame (tdp : TrapdoorPermutation PK SK Rand) (adv : CPA_Adversary PK Rand M) :
     ProbComp Bool :=
-  (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
+  (simulateQ (Rand →ₒ M).romImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
     let b ← $ᵗ Bool
     let (pk, _sk) ← liftM tdp.keygen
     let (m₁, m₂, st) ← adv.choose pk
@@ -362,7 +355,7 @@ def cpaGame (tdp : TrapdoorPermutation PK SK Rand) (adv : CPA_Adversary PK Rand 
 interacts with the same lazy random oracle, so this only changes the game if it queries the
 hidden challenge randomness `r`. -/
 def game1 (tdp : TrapdoorPermutation PK SK Rand) (adv : CPA_Adversary PK Rand M) : ProbComp Bool :=
-  (simulateQ roQueryImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
+  (simulateQ (Rand →ₒ M).romImpl <| (show OracleComp (RO_Spec Rand M) Bool from do
     let b ← $ᵗ Bool
     let (pk, _sk) ← liftM tdp.keygen
     let (m₁, m₂, st) ← adv.choose pk
@@ -379,7 +372,7 @@ def badEventExp (tdp : TrapdoorPermutation PK SK Rand)
   let loggedRun :
       StateT ((Rand →ₒ M).QueryCache) ProbComp
         (Rand × QueryLog (RO_Spec Rand M)) :=
-    (simulateQ roQueryImpl.withLogging <| (show OracleComp (RO_Spec Rand M) Rand from do
+    (simulateQ (Rand →ₒ M).romImpl.withLogging <| (show OracleComp (RO_Spec Rand M) Rand from do
       let (pk, _sk) ← liftM tdp.keygen
       let (m₁, m₂, st) ← adv.choose pk
       let b ← $ᵗ Bool
@@ -427,10 +420,10 @@ private def idealFlagged (tdp : TrapdoorPermutation PK SK Rand)
     (adv : CPA_Adversary PK Rand M) : ProbComp (Bool × Bool) := do
   let b ← $ᵗ Bool
   let ks ← tdp.keygen
-  let choice ← (simulateQ roQueryImpl (adv.choose ks.1)).run ∅
+  let choice ← (simulateQ (Rand →ₒ M).romImpl (adv.choose ks.1)).run ∅
   let r ← $ᵗ Rand
   let h ← $ᵗ M
-  let z ← (simulateQ roQueryImpl (adv.guess choice.1.2.2
+  let z ← (simulateQ (Rand →ₒ M).romImpl (adv.guess choice.1.2.2
     (tdp.forward ks.1 r, h + if b then choice.1.1 else choice.1.2.1))).run choice.2
   return (b == z.1, z.2.isCached r)
 
@@ -447,11 +440,11 @@ private lemma evalDist_badEventExp_eq_idealFlagged (adv : CPA_Adversary PK Rand 
     𝒟[badEventExp tdp adv] = 𝒟[Prod.snd <$> idealFlagged tdp adv] := by
   have hforget : badEventExp tdp adv = (do
       let ks ← tdp.keygen
-      let choice ← (simulateQ roQueryImpl (adv.choose ks.1)).run ∅
+      let choice ← (simulateQ (Rand →ₒ M).romImpl (adv.choose ks.1)).run ∅
       let b ← $ᵗ Bool
       let r ← $ᵗ Rand
       let h ← $ᵗ M
-      let z ← (simulateQ roQueryImpl (adv.guess choice.1.2.2
+      let z ← (simulateQ (Rand →ₒ M).romImpl (adv.guess choice.1.2.2
         (tdp.forward ks.1 r, h + if b then choice.1.1 else choice.1.2.1))).run choice.2
       return z.2.isCached r) := by
     rw [badEventExp_eq]
@@ -462,7 +455,7 @@ private lemma evalDist_badEventExp_eq_idealFlagged (adv : CPA_Adversary PK Rand 
       let b ← $ᵗ Bool
       let r ← $ᵗ Rand
       let h ← $ᵗ M
-      let z ← (simulateQ roQueryImpl (adv.guess a.2.2
+      let z ← (simulateQ (Rand →ₒ M).romImpl (adv.guess a.2.2
         (tdp.forward pk r, h + if b then a.1 else a.2.1))).run c
       return z.2.isCached r)]
     refine bind_congr_of_forall_mem_support _ fun choice hchoice => ?_
@@ -573,8 +566,8 @@ theorem evalDist_game1_eq_game2 [MeasurableSpace M] [DiscreteMeasurableSpace M]
   exact evalDist_bind_bijective_of_uniform ($ᵗ M : ProbComp M) hM
     (fun x => x + if b = true then mmst.1.1 else mmst.1.2.1)
     (AddGroup.addRight_bijective (if b = true then mmst.1.1 else mmst.1.2.1))
-    (fun x => (simulateQ roQueryImpl (adv.guess mmst.1.2.2 (tdp.forward ks.1 r, x))).run mmst.2 >>=
-      fun p => pure (b == p.1))
+    (fun x => (simulateQ (Rand →ₒ M).romImpl
+      (adv.guess mmst.1.2.2 (tdp.forward ks.1 r, x))).run mmst.2 >>= fun p => pure (b == p.1))
 
 /-- Finite-distribution form of the uniform masking step. -/
 theorem game1_eq_game2 (adv : CPA_Adversary PK Rand M) :
