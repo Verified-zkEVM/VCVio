@@ -243,7 +243,6 @@ trapdoor sampler differs between `psf` and `falconPSF`, and the collision experi
 it, so the equality holds for any such `psf`. This bridge turns the abstract GPV collision branch
 into the Falcon NTRU-SIS hardness target. -/
 theorem collisionFindingAdvantage_eq_ntruPSF
-    [SampleableType (Rq p.n)]
     (psf : PreimageSampleableFunction (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
     (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
     (hEval : ∀ pk x, psf.eval pk x = (falconPSF p prims).eval pk x)
@@ -579,7 +578,7 @@ the sampler loss. -/
 /-- **A one-shot transport budget dominates the rejection probability.**  On honest keys,
 `hCorrect` and `hNeverFail` make the ideal sampler accept every draw, so total-variation
 closeness to it charges `ε_step` for the entire mass on which Falcon's norm check fails. -/
-theorem oneShot_rejection_prob_le_of_samplerTransport [SampleableType (Rq p.n)]
+theorem oneShot_rejection_prob_le_of_samplerTransport
     (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
     (idealPSF : PreimageSampleableFunction
       (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
@@ -797,7 +796,7 @@ budget.  At attempt granularity, `ε_step = 0` is satisfiable at *any* rejection
 retry-count factor and the exhaustion power. -/
 
 /-- A vanishing one-shot transport budget forces the concrete sampler to accept every draw. -/
-theorem samplerTransport_zero_forces_accept [SampleableType (Rq p.n)]
+theorem samplerTransport_zero_forces_accept
     (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
     (idealPSF : PreimageSampleableFunction
       (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
@@ -905,7 +904,7 @@ theorem oneShot_samplerLoss_one_le (qSign : ℕ) (rejRate ε_step : ℝ)
 signing budget times the per-attempt rejection probability of Falcon's norm check reaches one,
 so does the loss term `qSign · ε_step` of a one-shot transport frontier — whatever the sampler's
 actual precision. -/
-theorem oneShot_samplerLoss_one_le_of_samplerTransport [SampleableType (Rq p.n)]
+theorem oneShot_samplerLoss_one_le_of_samplerTransport
     (hr : GenerableRelation (PublicKey p) (SecretKey p) (validKeyPair p))
     (idealPSF : PreimageSampleableFunction
       (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))

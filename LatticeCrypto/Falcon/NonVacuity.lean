@@ -446,19 +446,25 @@ theorem tgt_coords (c : Rq 2) :
 
 /-- The coordinates read by the sampler at target `c`. -/
 @[expose] noncomputable def ta (c : Rq 2) : ℝ := RealFFTPoly.re (tgt c).1 0
+/-- The imaginary part of the first target coordinate read by the sampler at `c`. -/
 @[expose] noncomputable def tb (c : Rq 2) : ℝ := RealFFTPoly.im (tgt c).1 0
+/-- The real part of the second target coordinate read by the sampler at `c`. -/
 @[expose] noncomputable def tc (c : Rq 2) : ℝ := RealFFTPoly.re (tgt c).2 0
+/-- The imaginary part of the second target coordinate read by the sampler at `c`. -/
 @[expose] noncomputable def td (c : Rq 2) : ℝ := RealFFTPoly.im (tgt c).2 0
 
 /-- The integer coefficients of the unperturbed candidate `(c̃ − z·B)`, with `z = round t`. -/
 @[expose] noncomputable def s10 (c : Rq 2) : ℤ :=
   ((c.get 0).val : ℤ) - (5 * round (ta c) - 2 * round (tb c) - 106 * round (tc c) +
     32 * round (td c))
+/-- The second coefficient of the candidate's first component at target `c`. -/
 @[expose] noncomputable def s11 (c : Rq 2) : ℤ :=
   ((c.get 1).val : ℤ) - (2 * round (ta c) + 5 * round (tb c) - 32 * round (tc c) -
     106 * round (td c))
+/-- The first coefficient of the candidate's second component at target `c`. -/
 @[expose] noncomputable def s20 (c : Rq 2) : ℤ :=
   -(106 * round (ta c) + 32 * round (tb c) + 5 * round (tc c) + 2 * round (td c))
+/-- The second coefficient of the candidate's second component at target `c`. -/
 @[expose] noncomputable def s21 (c : Rq 2) : ℤ :=
   32 * round (ta c) - 106 * round (tb c) + 2 * round (tc c) - 5 * round (td c)
 
@@ -492,8 +498,11 @@ theorem sOf_center_eq (c : Rq 2) :
 
 /-- The rounding residuals `u = t − round t`. -/
 @[expose] noncomputable def ua (c : Rq 2) : ℝ := ta c - round (ta c)
+/-- The rounding residual of `tb c`. -/
 @[expose] noncomputable def ub (c : Rq 2) : ℝ := tb c - round (tb c)
+/-- The rounding residual of `tc c`. -/
 @[expose] noncomputable def uc (c : Rq 2) : ℝ := tc c - round (tc c)
+/-- The rounding residual of `td c`. -/
 @[expose] noncomputable def ud (c : Rq 2) : ℝ := td c - round (td c)
 
 theorem modulus_real : (modulus : ℝ) = 12289 := by norm_num [modulus]
@@ -795,10 +804,13 @@ theorem zOf_zero (δ : Box) :
 /-- The candidate's coefficients at the zero target, as integer linear forms in the offsets. -/
 @[expose]
 def w10 (δ : Box) : ℤ := -(5 * off δ.1 - 2 * off δ.2.1 - 106 * off δ.2.2.1 + 32 * off δ.2.2.2)
+/-- The second coefficient of the candidate's first component at the zero target. -/
 @[expose]
 def w11 (δ : Box) : ℤ := -(2 * off δ.1 + 5 * off δ.2.1 - 32 * off δ.2.2.1 - 106 * off δ.2.2.2)
+/-- The first coefficient of the candidate's second component at the zero target. -/
 @[expose]
 def w20 (δ : Box) : ℤ := -(106 * off δ.1 + 32 * off δ.2.1 + 5 * off δ.2.2.1 + 2 * off δ.2.2.2)
+/-- The second coefficient of the candidate's second component at the zero target. -/
 @[expose]
 def w21 (δ : Box) : ℤ := 32 * off δ.1 - 106 * off δ.2.1 + 2 * off δ.2.2.1 - 5 * off δ.2.2.2
 
