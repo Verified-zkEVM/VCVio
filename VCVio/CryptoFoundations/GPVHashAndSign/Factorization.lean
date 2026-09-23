@@ -98,7 +98,7 @@ This is the content the deferred-sampling fold-level coupling establishes (cf.
 adaptively-interleaved fresh salt draws of `realRun`/`progRun` into the fixed `qSign`-step
 `signRunF` sequence. It is a typed predicate naming the factorization as a single target;
 `factorized_advantage_le_collisionBound` shows it suffices. -/
-def AdaptiveFactorizesSignRunF [Nonempty Salt] {α : Type}
+def AdaptiveFactorizesSignRunF {α : Type}
     (realRun progRun : SPMF α) (qSign qHash : ℕ) : Prop :=
   ∃ (St : Type) (stepReal stepProg : ℕ → St → Salt → ProbComp St)
     (c : ℕ → Finset Salt) (st : St) (g : St × Bool → ProbComp α),

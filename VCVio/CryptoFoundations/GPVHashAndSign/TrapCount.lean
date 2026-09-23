@@ -248,7 +248,7 @@ and an `Option ℕ`-valued index `idx` that is recorded (`≠ none`) on every po
 outcome, the event mass partitions over the index value: `Pr[P] = ∑' j, Pr[P ∧ idx = some j]`.  The
 `some j` atoms tile the event, with the index of each `P`-outcome read off the outcome itself.  This
 is the abstract index partition behind the GPV Step-2 trap-mass decomposition `∑' j, g j = trap`. -/
-theorem probEvent_eq_tsum_probEvent_index_aux {ι : Type} {m : Type → Type} [Monad m]
+theorem probEvent_eq_tsum_probEvent_index_aux {ι : Type} {m : Type → Type}
     [MonadLiftT m SPMF] (mx : m ι) (P : ι → Prop) (idx : ι → Option ℕ)
     (hidx : ∀ x, Pr[= x | mx] ≠ 0 → P x → idx x ≠ none) :
     Pr[P | mx] = ∑' j : ℕ, Pr[fun x => P x ∧ idx x = some j | mx] := by
@@ -722,7 +722,7 @@ threading the start state (hence the running counter):
   (the discarded draw collapses by `probFailure_uniformSample`).  After this step the counter is
   `j + 1 > j`, so the trap-sibling and inline-fresh continuations coincide
   (`evalSPMF_run_embedTrapImpl_eq_embedTrapFresh_of_lt`). -/
-lemma evalSPMF_frontDraw_embedTrapImpl_eq_embedTrapFresh [Inhabited Range]
+lemma evalSPMF_frontDraw_embedTrapImpl_eq_embedTrapFresh
     (pk : PK) (sk : SK) (j : ℕ)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β) :
     ∀ (s : (Salt × M →ₒ Range).QueryCache × ℕ),
@@ -1159,7 +1159,7 @@ embed run over an external target draw `y ← $ᵗ Range` equals the idx-augment
 `y`-independent steps; at the count-`j` winner miss the front `y` is the immediately consumed draw
 (cached at the slot tagged `idx = some j`), so the front `y` *is* the inline-fresh winner draw, and
 post-winner the two runs coincide (`evalSPMF_run_embedTrapIdxImpl_eq_embedTrapFreshIdx_of_lt`). -/
-lemma evalSPMF_frontDraw_embedTrapIdxImpl_eq_embedTrapFreshIdx [Inhabited Range]
+lemma evalSPMF_frontDraw_embedTrapIdxImpl_eq_embedTrapFreshIdx
     (pk : PK) (sk : SK) (j : ℕ)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β) :
     ∀ (s : ((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)),
@@ -1235,7 +1235,7 @@ win mass relative to the un-augmented per-target win on `embedTrapImpl … j y`:
 
 Averaged over the front target `y ← $ᵗ Range` this gives the winner-slot-restricted lower bound
 that the trap-count run's index-tagged trap mass couples to. -/
-lemma reservoir_embed_winnerIdx_le [DecidableEq Domain] [Inhabited Range] (pk : PK) (sk : SK)
+lemma reservoir_embed_winnerIdx_le [DecidableEq Domain] (pk : PK) (sk : SK)
     (j : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt)) :

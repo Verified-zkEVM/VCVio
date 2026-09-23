@@ -372,7 +372,7 @@ fresh coupling (with the signing-free verification continuation, `gpvVerifyKont_
 bounds by `(collisionBound …).toReal`.  Transporting through the bool-valued bridge
 `abs_probOutput_toReal_sub_le_tvDist` gives the `ℝ≥0∞` inequality. -/
 theorem gpv_realGameVerifyFresh_le_progGameVerifyFresh_add_collisionBound
-    [Finite Range] [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (pk : PK) (sk : SK)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -511,7 +511,7 @@ bad-monotonicity `h_mono`s) — with the original-run cardinality telescope `(A2
 avoids the upfront-tape re-interleaving that a coupling over the front-loaded salt tape
 (`TapeFactorization.lean`) would require; that tape-route coupling is not established here. -/
 theorem gpv_tvDist_real_programmed_le_collisionBound
-    [Finite Range] [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (pk : PK) (sk : SK)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -666,7 +666,7 @@ salt-averaged telescope `probEvent_saltSeq_le_collisionBound` (`saltSeq` collisi
 `collisionBound`), then move to `ℝ` with `ENNReal.toReal_mono`. -/
 omit [DecidableEq Range] in
 theorem tvDist_runtime_real_programmed_le_collisionBound_saltInclusive
-    [Finite Range] [Inhabited Range] [Nonempty Salt] {α : Type} (qSign qHash : ℕ)
+    [Nonempty Salt] {α : Type} (qSign qHash : ℕ)
     (policy : OracleSpec.ProgrammingPolicy (Salt × M →ₒ Range))
     (ob : OracleComp (Salt × M →ₒ Range) α)
     (c : ℕ → Finset Salt) (hcache : ∀ j, (c j).card ≤ j + qHash)
