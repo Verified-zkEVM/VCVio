@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.EvalDist.Defs.NeverFails
-public import PolyFun.PFunctor.Free.Basic
+public import PolyFun.PFunctor.Free.Support
 public import PolyFun.PFunctor.Handler
 
 /-!
@@ -23,7 +23,7 @@ polynomial functor.
 
 open ENNReal
 
-universe u v uA
+universe u v w uA
 
 namespace PFunctor
 
@@ -40,9 +40,9 @@ class IsProbabilitySpec (P : PFunctor.{uA, u}) where
 the canonical uniform distribution. -/
 class IsUniformSpec (P : PFunctor.{uA, u}) extends IsProbabilitySpec P where
   /-- Every direction type is finite. -/
-  fintype : P.Fintype
+  fintype : ∀ a, Fintype (P.B a)
   /-- Every direction type is inhabited. -/
-  inhabited : P.Inhabited
+  inhabited : ∀ a, Inhabited (P.B a)
   /-- Each operation uses the canonical uniform distribution on directions. -/
   toPMF_eq_uniform : ∀ operation,
     toPMF operation = PMF.uniformOfFintype (P.B operation)
@@ -54,7 +54,7 @@ types. This is deliberately not an instance: probability semantics remain an
 explicit opt-in. -/
 @[reducible]
 noncomputable def IsUniformSpec.ofFintypeInhabited (P : PFunctor.{uA, u})
-    [hF : P.Fintype] [hI : P.Inhabited] : IsUniformSpec P where
+    [hF : ∀ a, Fintype (P.B a)] [hI : ∀ a, Inhabited (P.B a)] : IsUniformSpec P where
   toPMF operation := PMF.uniformOfFintype (P.B operation)
   fintype := hF
   inhabited := hI
@@ -92,7 +92,8 @@ theorem evalSPMF_eq_liftM [P.IsProbabilitySpec] (program : FreeM P α) :
 /-- The support semantics of a polynomial free program is its universal fold
 with every operation direction available. -/
 theorem support_eq_liftM (program : FreeM P α) :
-    support program = SetM.run (program.liftM fun _ => Set.univ) := rfl
+    support program = SetM.run (program.liftM fun _ => Set.univ) :=
+  FreeM.support_eq_liftM_univ program
 
 /-- A single operation evaluates to its configured direction distribution. -/
 @[simp]
@@ -103,7 +104,6 @@ theorem evalSPMF_lift [P.IsProbabilitySpec] (operation : P.A) :
 
 /-- A single operation on a uniform polynomial interface evaluates to the
 canonical uniform distribution on its directions. -/
-@[simp]
 theorem evalSPMF_lift_eq_uniform [h : P.IsUniformSpec] (operation : P.A) :
     𝒮[(FreeM.lift operation : FreeM P (P.B operation))] =
       (PMF.uniformOfFintype (P.B operation) : SPMF (P.B operation)) := by
@@ -111,26 +111,13 @@ theorem evalSPMF_lift_eq_uniform [h : P.IsUniformSpec] (operation : P.A) :
   exact congrArg (fun distribution : PMF (P.B operation) =>
     (distribution : SPMF (P.B operation))) (h.toPMF_eq_uniform operation)
 
-/-- The support of an operation with a result continuation is the range of
-that continuation. -/
-@[simp]
-theorem support_liftObj (object : P.Obj α) :
-    support (FreeM.liftObj object : FreeM P α) = Set.range object.2 := by
-  change SetM.run ((FreeM.liftObj object).liftM fun _ => Set.univ) =
-    Set.range object.2
-  rw [FreeM.liftM_liftObj]
-  exact Set.image_univ
-
 /-- Every direction of a single operation belongs to its `SetM`-fold support.
 
 This name distinguishes VCVio's denotational `support` from PolyFun's structural
 `MonadAttach.support_lift` theorem. -/
-@[simp]
 theorem support_lift_eq_univ (operation : P.A) :
-    support (FreeM.lift operation : FreeM P (P.B operation)) = Set.univ := by
-  change SetM.run ((FreeM.lift operation).liftM fun _ => Set.univ) = Set.univ
-  rw [FreeM.liftM_lift]
-  exact SetM.run_eq Set.univ
+    support (FreeM.lift operation : FreeM P (P.B operation)) = Set.univ :=
+  FreeM.support_lift operation
 
 /-- Syntactic support and distribution support agree for a uniformly
 interpreted polynomial free monad.
@@ -144,12 +131,14 @@ applicable to the same goal. -/
 instance (priority := 100) instEvalDistCompatible [uniform : P.IsUniformSpec] :
     EvalDistCompatible (FreeM P) where
   support_eq_SPMF_support program := by
-    change support program = SPMF.support 𝒮[program]
+    change support program = (𝒮[program]).support
     induction program with
     | pure result => simp
     | lift_bind operation next ih =>
+        change support (FreeM.lift operation >>= next) =
+          (𝒮[FreeM.lift operation >>= next]).support
         ext result
-        simp [support_lift_eq_univ, uniform.toPMF_eq_uniform, ih]
+        simp [uniform.toPMF_eq_uniform, ih]
 
 end FreeM
 end PFunctor

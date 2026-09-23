@@ -37,12 +37,7 @@ open OracleComp OracleSpec
 
 namespace FiatShamir
 
-variable {Stmt Wit Commit PrvState Chal Resp : Type}
-    [Fintype Chal] [Finite Commit] [Finite Resp]
-    [Inhabited Chal] [Inhabited Commit] [Inhabited Resp]
-    {rel : Stmt → Wit → Bool}
-
-variable [SampleableType Stmt] [SampleableType Wit]
+variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
@@ -60,8 +55,7 @@ def simulatedNmaFwd
     QueryImpl (fsRoSpec M Commit Chal)
       (StateT (fsRoSpec M Commit Chal).QueryCache
         (OracleComp (fsRoSpec M Commit Chal))) :=
-  (HasQuery.toQueryImpl (spec := fsRoSpec M Commit Chal)
-    (m := OracleComp (fsRoSpec M Commit Chal))).liftTarget _
+  (fsRoSpec M Commit Chal).passthrough
 
 def simulatedNmaUnifSim
     [DecidableEq M] [DecidableEq Commit] :
@@ -92,7 +86,6 @@ def simulatedNmaBaseSim
 
 def simulatedNmaSigSim
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (M →ₒ (Commit × Resp))
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -107,7 +100,6 @@ def simulatedNmaSigSim
 
 def simulatedNmaImpl
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) :
     QueryImpl (cmaOracleSpec M Commit Chal Resp)
       (StateT (fsRoSpec M Commit Chal).QueryCache
@@ -116,10 +108,9 @@ def simulatedNmaImpl
     simulatedNmaSigSim (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simTranscript pk
 
-omit [SampleableType Stmt] [SampleableType Wit] in
 /-- CMA-to-NMA reduction at the managed-RO interface.
 
-Builds a `managedRoNmaAdv` from a CMA adversary `adv` and an HVZK
+Builds a `ManagedRoNmaAdversary` from a CMA adversary `adv` and an HVZK
 simulator `simTranscript`: runs `adv.main pk` under a handler that
 forwards live RO queries (with cache side-effects), handles signing
 queries by sampling from `simTranscript` and programming the cache,
@@ -128,19 +119,16 @@ and returns the final cache together with the forgery.
 This is the concrete-interface reduction entering the replay-forking lemma. -/
 def simulatedNmaAdv
     [DecidableEq M] [DecidableEq Commit]
-    [Finite Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M)) :
-    SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M) :=
+    (adv : SignatureAlg.UnforgeableAdversary
+      (FiatShamir.inROM σ hr M)) :
+    SignatureAlg.ManagedRoNmaAdversary
+      (FiatShamir.inROM σ hr M) :=
   ⟨fun pk => (simulateQ
     (simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)
       (Resp := Resp) simTranscript pk)
     (adv.main pk)).run ∅⟩
 
-omit [Finite Commit] [Finite Resp] [Fintype Chal] [Inhabited Chal] [Inhabited Commit] in
-omit [SampleableType Stmt] [SampleableType Wit] in
 private theorem simulatedNmaFwd_run_hashQueryBound
     [DecidableEq M] [DecidableEq Commit]
     (t : (fsRoSpec M Commit Chal).Domain) (s : (fsRoSpec M Commit Chal).QueryCache) :
@@ -163,8 +151,6 @@ private theorem simulatedNmaFwd_run_hashQueryBound
           fun u => show nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
             (oa := pure (u, s)) 0 from trivial
 
-omit [Finite Commit] [Finite Resp] [Fintype Chal] [Inhabited Chal] [Inhabited Commit] in
-omit [SampleableType Stmt] [SampleableType Wit] in
 private theorem simulatedNmaRoSim_run_hashQueryBound
     [DecidableEq M] [DecidableEq Commit]
     (mc : M × Commit) (s : (fsRoSpec M Commit Chal).QueryCache) :
@@ -185,18 +171,13 @@ private theorem simulatedNmaRoSim_run_hashQueryBound
       simpa [nmaHashQueryBound, isQueryBoundP_map_iff] using
         simulatedNmaFwd_run_hashQueryBound (M := M) (.inr mc) s
 
-omit [Fintype Chal] [Finite Commit] [Finite Resp] [Inhabited Resp] [Inhabited Commit] in
-omit [SampleableType Stmt] [SampleableType Wit] in
 private theorem simulatedNmaSigSim_run_hashQueryBound
-    [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
+    [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     (msg : M) (s : (fsRoSpec M Commit Chal).QueryCache) :
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulatedNmaSigSim (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) simTranscript pk msg).run s) 0 := by
-  have : Fintype Chal := Fintype.ofFinite Chal
-  let : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
-    IsUniformSpec.ofFintypeInhabited _
   simpa [simulatedNmaSigSim, nmaHashQueryBound] using
     (OracleComp.isQueryBoundP_map_iff
       (oa := (simulateQ (simulatedNmaUnifSim (M := M) (Commit := Commit) (Chal := Chal))
@@ -214,30 +195,21 @@ private theorem simulatedNmaSigSim_run_hashQueryBound
             simulatedNmaFwd_run_hashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
               (.inl n) s') s)
 
-omit [Finite Commit] [Finite Resp] [Fintype Chal] [Inhabited Chal] in
-omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Hash-query bound for `simulatedNmaAdv`: if the CMA adversary makes at most
 `qS` signing-oracle queries and `qH` random-oracle queries, the NMA reduction
 makes at most `qH` live hash queries. The `qS` signing queries are absorbed
 into the managed cache rather than issued live. -/
 theorem simulatedNmaAdv_hashQueryBound
-    [DecidableEq M] [DecidableEq Commit] [Finite Commit]
-    [Finite Chal] [Inhabited Chal] [SampleableType Chal]
-    [Finite Resp]
+    [DecidableEq M] [DecidableEq Commit]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+    (adv : SignatureAlg.UnforgeableAdversary
+      (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
     ∀ pk, nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := (simulatedNmaAdv (σ := σ) (hr := hr) (M := M)
         (simTranscript := simTranscript) (adv := adv)).main pk) qH := by
-  have : Fintype Chal := Fintype.ofFinite Chal
-  have : Fintype Resp := Fintype.ofFinite Resp
-  have : Fintype Commit := Fintype.ofFinite Commit
-  let : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
-    IsUniformSpec.ofFintypeInhabited _
   intro pk
   change nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
     (oa := (simulateQ (simulatedNmaImpl (M := M) (Commit := Commit) (Chal := Chal)

@@ -64,7 +64,7 @@ formalized here.
 * `InductiveMerkleTree.verifyBatchProof`: compare the putative root against a claimed root.
 
 Completeness is proved in `VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Completeness`,
-and opening uniqueness under an injective hash in
+and opening uniqueness under injectivity of the hash on the queried node-hash inputs in
 `VCVio.CryptoFoundations.MerkleTree.Inductive.Batch.Uniqueness`.
 
 **Tracked follow-up (sparse selectors).** The dense selector `LeafData Bool s` is the

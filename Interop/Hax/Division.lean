@@ -118,7 +118,7 @@ theorem checkedDivLifted_ok_of_ne_zero (x y : u32) (h : y ≠ 0) :
       Interop.Rust.RustOracleComp.ok (x / y) := by
   unfold checkedDivLifted checkedDiv
   change liftRustM (if y = 0 then .fail .divisionByZero else pure (x / y)) = _
-  rw [if_neg h]
+  rw [ite_eq_right h]
   rfl
 
 /-- When the divisor is zero, the lifted computation reduces to
@@ -132,7 +132,7 @@ theorem checkedDivLifted_fail_of_zero (x : u32) :
       Interop.Rust.RustOracleComp.fail .divisionByZero := by
   unfold checkedDivLifted checkedDiv
   change liftRustM (if (0 : u32) = 0 then .fail .divisionByZero else pure (x / 0)) = _
-  rw [if_pos rfl]
+  rw [ite_eq_left rfl]
   rfl
 
 /-! ### Probabilistic spec: panic probability over a uniform coin

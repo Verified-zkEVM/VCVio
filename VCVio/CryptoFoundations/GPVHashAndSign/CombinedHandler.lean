@@ -94,7 +94,7 @@ omit [Fintype Salt] in
 table at the forged point. The two are definitionally equal — `reduction`'s `let impl := …` block
 *is* `reductionImpl`. -/
 lemma reduction_eq_run_reductionImpl
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (pk : PK) :
     reduction psf hr M Salt adv domainSample pk =
@@ -910,10 +910,10 @@ lemma combinedCacheTableInv_step (domainSample : PK → ProbComp Domain) (pk : P
               dsimp only at ht' ⊢
               by_cases htq : t' = q
               · subst htq
-                rw [if_pos rfl, Option.some_inj] at ht'
+                rw [ite_eq_left rfl, Option.some_inj] at ht'
                 subst ht'
                 exact QueryCache.cacheQuery_self _ _ _
-              · rw [if_neg htq] at ht'
+              · rw [ite_eq_right htq] at ht'
                 rw [QueryCache.cacheQuery_of_ne _ _ htq]
                 exact hs t' d ht'
   | inr msg =>
@@ -925,10 +925,10 @@ lemma combinedCacheTableInv_step (domainSample : PK → ProbComp Domain) (pk : P
       dsimp only at ht' ⊢
       by_cases htq : t' = (r, msg)
       · subst htq
-        rw [if_pos rfl, Option.some_inj] at ht'
+        rw [ite_eq_left rfl, Option.some_inj] at ht'
         subst ht'
         exact QueryCache.cacheQuery_self _ _ _
-      · rw [if_neg htq] at ht'
+      · rw [ite_eq_right htq] at ht'
         rw [QueryCache.cacheQuery_of_ne _ _ htq]
         exact hs t' d ht'
 
@@ -996,10 +996,10 @@ lemma combinedCacheImpliesTableInv_step (domainSample : PK → ProbComp Domain) 
               by_cases htq : t' = q
               · subst htq
                 rw [QueryCache.cacheQuery_self, Option.some_inj] at ht'
-                exact ⟨sd, by rw [if_pos rfl], ht'.symm⟩
+                exact ⟨sd, by rw [ite_eq_left rfl], ht'.symm⟩
               · rw [QueryCache.cacheQuery_of_ne _ _ htq] at ht'
                 obtain ⟨d, hd, hv⟩ := hs t' v' ht'
-                exact ⟨d, by rw [if_neg htq]; exact hd, hv⟩
+                exact ⟨d, by rw [ite_eq_right htq]; exact hd, hv⟩
   | inr msg =>
       rw [progGameRunImplCombined_run_inr] at hy
       simp only [support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff] at hy
@@ -1010,10 +1010,10 @@ lemma combinedCacheImpliesTableInv_step (domainSample : PK → ProbComp Domain) 
       by_cases htq : t' = (r, msg)
       · subst htq
         rw [QueryCache.cacheQuery_self, Option.some_inj] at ht'
-        exact ⟨sd, by rw [if_pos rfl], ht'.symm⟩
+        exact ⟨sd, by rw [ite_eq_left rfl], ht'.symm⟩
       · rw [QueryCache.cacheQuery_of_ne _ _ htq] at ht'
         obtain ⟨d, hd, hv⟩ := hs t' v' ht'
-        exact ⟨d, by rw [if_neg htq]; exact hd, hv⟩
+        exact ⟨d, by rw [ite_eq_right htq]; exact hd, hv⟩
 
 omit [DecidableEq Range] [SampleableType Range] [Fintype Salt] in
 /-- **Cache ⇒ table coherence holds throughout the combined simulation.** Starting from any state
@@ -1074,10 +1074,10 @@ lemma combinedTableInDomainInv_step (domainSample : PK → ProbComp Domain) (pk 
               dsimp only at ht' ⊢
               by_cases htq : t' = q
               · subst htq
-                rw [if_pos rfl, Option.some_inj] at ht'
+                rw [ite_eq_left rfl, Option.some_inj] at ht'
                 subst ht'
                 exact hsd
-              · rw [if_neg htq] at ht'
+              · rw [ite_eq_right htq] at ht'
                 exact hs t' d ht'
   | inr msg =>
       rw [progGameRunImplCombined_run_inr] at hy
@@ -1088,10 +1088,10 @@ lemma combinedTableInDomainInv_step (domainSample : PK → ProbComp Domain) (pk 
       dsimp only at ht' ⊢
       by_cases htq : t' = (r, msg)
       · subst htq
-        rw [if_pos rfl, Option.some_inj] at ht'
+        rw [ite_eq_left rfl, Option.some_inj] at ht'
         subst ht'
         exact hsd
-      · rw [if_neg htq] at ht'
+      · rw [ite_eq_right htq] at ht'
         exact hs t' d ht'
 
 omit [DecidableEq Range] [SampleableType Range] [Fintype Salt] in

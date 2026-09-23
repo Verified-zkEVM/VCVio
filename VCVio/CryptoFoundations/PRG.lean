@@ -5,6 +5,7 @@ Authors: Quang Dao
 -/
 
 module
+public import VCVio.CryptoFoundations.SecExp
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.ProbComp
@@ -60,7 +61,6 @@ def prgIdealExp [SampleableType R] (adversary : PRGAdversary R) : ProbComp Bool 
 /-- PRG advantage: how well the adversary distinguishes PRG output from random. -/
 noncomputable def prgAdvantage [SampleableType S] [SampleableType R]
     (prg : PRGScheme S R) (adversary : PRGAdversary R) : ℝ :=
-  |(Pr[= true | prg.prgRealExp adversary]).toReal -
-    (Pr[= true | prgIdealExp adversary]).toReal|
+  (prg.prgRealExp adversary).boolDistAdvantage (prgIdealExp adversary)
 
 end PRGScheme

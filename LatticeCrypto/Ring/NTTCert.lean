@@ -43,7 +43,94 @@ namespace LatticeCrypto.NTTCert
 
 universe u
 
-variable {Coeff : Type u} [Ring Coeff] {backend : LatticeCrypto.PolyBackend Coeff}
+variable {Coeff : Type u} {backend : LatticeCrypto.PolyBackend Coeff}
+
+/-! ## Coefficient-function transforms -/
+
+/-- Lift a transformation on `Fin`-indexed coefficient functions to an
+arbitrary polynomial backend.  Unlike unfolding a nested stage list through
+`Vector.ofFn`, this boundary keeps wrapper proofs at constant elaboration
+depth. -/
+def applyCoeffTransform (backend : LatticeCrypto.PolyBackend Coeff)
+    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    (input : backend.Poly) : backend.Poly :=
+  backend.build (transform (backend.coeff input))
+
+/-- Lift a coefficient-level roundtrip through a polynomial backend. -/
+theorem applyCoeffTransform_comp
+    (forward inverse : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    (hroundtrip : ∀ input, inverse (forward input) = input)
+    (input : backend.Poly) :
+    applyCoeffTransform backend inverse (applyCoeffTransform backend forward input) = input := by
+  unfold applyCoeffTransform
+  have hcoeff : backend.coeff (backend.build (forward (backend.coeff input))) =
+      forward (backend.coeff input) := by
+    funext coord
+    exact backend.coeff_build _ coord
+  rw [hcoeff, hroundtrip, backend.build_coeff]
+
+/-- Lift additivity of a coefficient transformation through a backend whose
+addition is pointwise on coefficients. -/
+theorem applyCoeffTransform_add
+    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    [Add Coeff]
+    [Add backend.Poly]
+    (hcoeffAdd : ∀ left right : backend.Poly,
+      backend.coeff (left + right) = backend.coeff left + backend.coeff right)
+    (htransformAdd : ∀ left right, transform (left + right) =
+      transform left + transform right)
+    (left right : backend.Poly) :
+    applyCoeffTransform backend transform (left + right) =
+      applyCoeffTransform backend transform left + applyCoeffTransform backend transform right := by
+  unfold applyCoeffTransform
+  rw [hcoeffAdd left right, htransformAdd]
+  rw [← backend.build_coeff
+    (backend.build (transform (backend.coeff left)) +
+      backend.build (transform (backend.coeff right)))]
+  congr 1
+  rw [hcoeffAdd]
+  funext coord
+  simp only [backend.coeff_build, Pi.add_apply]
+
+/-- Lift subtraction preservation through a pointwise backend. -/
+theorem applyCoeffTransform_sub
+    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    [Sub Coeff]
+    [Sub backend.Poly]
+    (hcoeffSub : ∀ left right : backend.Poly,
+      backend.coeff (left - right) = backend.coeff left - backend.coeff right)
+    (htransformSub : ∀ left right, transform (left - right) =
+      transform left - transform right)
+    (left right : backend.Poly) :
+    applyCoeffTransform backend transform (left - right) =
+      applyCoeffTransform backend transform left - applyCoeffTransform backend transform right := by
+  unfold applyCoeffTransform
+  rw [hcoeffSub left right, htransformSub]
+  rw [← backend.build_coeff
+    (backend.build (transform (backend.coeff left)) -
+      backend.build (transform (backend.coeff right)))]
+  congr 1
+  rw [hcoeffSub]
+  funext coord
+  simp only [backend.coeff_build, Pi.sub_apply]
+
+/-- Lift zero preservation through a pointwise backend. -/
+theorem applyCoeffTransform_zero
+    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
+    [Zero Coeff]
+    [Zero backend.Poly]
+    (hcoeffZero : backend.coeff (0 : backend.Poly) = 0)
+    (htransformZero : transform 0 = 0) :
+    applyCoeffTransform backend transform 0 = 0 := by
+  unfold applyCoeffTransform
+  rw [hcoeffZero, htransformZero]
+  calc
+    backend.build 0 = backend.build (backend.coeff 0) := congrArg backend.build hcoeffZero.symm
+    _ = 0 := backend.build_coeff 0
+
+/-! ## Matrix transforms -/
+
+variable [Ring Coeff]
 
 /-- Standard basis vector `eᵢ` in the backend carrier, with `1` at position `i`
 and `0` elsewhere. Used to extract transform matrices by evaluating NTT kernels
@@ -99,93 +186,6 @@ theorem applyMatrix_id (f : backend.Poly) :
     · intro b _ hne; simp [idMatrix, hne]
   simp_rw [h]
   exact backend.build_coeff f
-
-/-! ## Coefficient-function transforms -/
-
-/-- Lift a transformation on `Fin`-indexed coefficient functions to an
-arbitrary polynomial backend.  Unlike unfolding a nested stage list through
-`Vector.ofFn`, this boundary keeps wrapper proofs at constant elaboration
-depth. -/
-def applyCoeffTransform (backend : LatticeCrypto.PolyBackend Coeff)
-    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
-    (input : backend.Poly) : backend.Poly :=
-  backend.build (transform (backend.coeff input))
-
-omit [Ring Coeff] in
-/-- Lift a coefficient-level roundtrip through a polynomial backend. -/
-theorem applyCoeffTransform_comp
-    (forward inverse : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
-    (hroundtrip : ∀ input, inverse (forward input) = input)
-    (input : backend.Poly) :
-    applyCoeffTransform backend inverse (applyCoeffTransform backend forward input) = input := by
-  unfold applyCoeffTransform
-  have hcoeff : backend.coeff (backend.build (forward (backend.coeff input))) =
-      forward (backend.coeff input) := by
-    funext coord
-    exact backend.coeff_build _ coord
-  rw [hcoeff, hroundtrip, backend.build_coeff]
-
-omit [Ring Coeff] in
-/-- Lift additivity of a coefficient transformation through a backend whose
-addition is pointwise on coefficients. -/
-theorem applyCoeffTransform_add
-    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
-    [Add Coeff]
-    [Add backend.Poly]
-    (hcoeffAdd : ∀ left right : backend.Poly,
-      backend.coeff (left + right) = backend.coeff left + backend.coeff right)
-    (htransformAdd : ∀ left right, transform (left + right) =
-      transform left + transform right)
-    (left right : backend.Poly) :
-    applyCoeffTransform backend transform (left + right) =
-      applyCoeffTransform backend transform left + applyCoeffTransform backend transform right := by
-  unfold applyCoeffTransform
-  rw [hcoeffAdd left right, htransformAdd]
-  rw [← backend.build_coeff
-    (backend.build (transform (backend.coeff left)) +
-      backend.build (transform (backend.coeff right)))]
-  congr 1
-  rw [hcoeffAdd]
-  funext coord
-  simp only [backend.coeff_build, Pi.add_apply]
-
-omit [Ring Coeff] in
-/-- Lift subtraction preservation through a pointwise backend. -/
-theorem applyCoeffTransform_sub
-    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
-    [Sub Coeff]
-    [Sub backend.Poly]
-    (hcoeffSub : ∀ left right : backend.Poly,
-      backend.coeff (left - right) = backend.coeff left - backend.coeff right)
-    (htransformSub : ∀ left right, transform (left - right) =
-      transform left - transform right)
-    (left right : backend.Poly) :
-    applyCoeffTransform backend transform (left - right) =
-      applyCoeffTransform backend transform left - applyCoeffTransform backend transform right := by
-  unfold applyCoeffTransform
-  rw [hcoeffSub left right, htransformSub]
-  rw [← backend.build_coeff
-    (backend.build (transform (backend.coeff left)) -
-      backend.build (transform (backend.coeff right)))]
-  congr 1
-  rw [hcoeffSub]
-  funext coord
-  simp only [backend.coeff_build, Pi.sub_apply]
-
-omit [Ring Coeff] in
-/-- Lift zero preservation through a pointwise backend. -/
-theorem applyCoeffTransform_zero
-    (transform : (Fin backend.degree → Coeff) → (Fin backend.degree → Coeff))
-    [Zero Coeff]
-    [Zero backend.Poly]
-    (hcoeffZero : backend.coeff (0 : backend.Poly) = 0)
-    (htransformZero : transform 0 = 0) :
-    applyCoeffTransform backend transform 0 = 0 := by
-  unfold applyCoeffTransform
-  rw [hcoeffZero, htransformZero]
-  calc
-    backend.build 0 = backend.build (backend.coeff 0) := congrArg backend.build hcoeffZero.symm
-    _ = 0 := backend.build_coeff 0
 
 /-- Pointwise distributivity of `applyMatrix` over a binary backend operation
 `op` whose coefficient image distributes over multiplication and finite sums.

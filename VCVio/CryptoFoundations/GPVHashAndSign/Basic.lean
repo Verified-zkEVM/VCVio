@@ -9,6 +9,7 @@ module
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.Coercions.Add
@@ -142,12 +143,27 @@ variable {PK SK Domain Range : Type}
 
 /-- Runtime bundle for the GPV hash-and-sign random-oracle world. -/
 @[expose] noncomputable def runtime :
-    ProbCompRuntime (OracleComp (unifSpec + (Salt × M →ₒ Range))) where
-  toSPMFSemantics := SPMFSemantics.withStateOracle
+    ProbCompRuntime (OracleComp (unifSpec + (Salt × M →ₒ Range))) :=
+  ProbCompRuntime.rom (Salt × M →ₒ Range)
+
+/-- The GPV random-oracle world observed as a subprobability distribution: public randomness is
+forwarded and hash queries are answered by the lazy random oracle from the empty cache. The
+measure-valued `runtime` observes the same simulation (`runtime_evalDist_singleton`); the game
+hops are stated against this distribution. -/
+@[expose] noncomputable def runtimeSemantics :
+    SPMFSemantics (OracleComp (unifSpec + (Salt × M →ₒ Range))) :=
+  SPMFSemantics.withStateOracle
     (hashImpl := (randomOracle :
       QueryImpl (Salt × M →ₒ Range) (StateT ((Salt × M →ₒ Range).QueryCache) ProbComp)))
     ∅
-  toProbCompLift := ProbCompLift.ofMonadLift _
+
+omit [DecidableEq Range] [SampleableType Salt] [Fintype Salt] in
+/-- The point masses of `runtime` are those of `runtimeSemantics`. -/
+theorem runtime_evalDist_singleton {α : Type} [MeasurableSpace α] [MeasurableSingletonClass α]
+    (oa : OracleComp (unifSpec + (Salt × M →ₒ Range)) α) (x : α) :
+    (runtime M Salt).evalDist oa {x} = Pr[= x | (runtimeSemantics M Salt).evalSPMF oa] := by
+  rw [runtime, ProbCompRuntime.rom_evalDist, evalDist_apply_singleton]
+  rfl
 
 /-- Structural query bound for GPV EUF-CMA adversaries that tracks both signing-oracle
 queries (`qSign`) and random-oracle queries (`qHash`). Uniform-sampling queries are

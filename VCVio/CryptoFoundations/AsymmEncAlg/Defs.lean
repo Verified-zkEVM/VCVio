@@ -5,8 +5,8 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.Defs.Instances
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.EvalDist.Defs.Measure.Deterministic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.ProbCompLift
 public import PolyFun.Control.Monad.Hom
 
@@ -90,7 +90,7 @@ def CorrectExp (msg : M) : m Bool := do
 /-- An asymmetric encryption scheme is perfectly correct under the given runtime when decrypting a
 fresh encryption of any message succeeds with probability `1`. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  ∀ (msg : M), Pr[= true | runtime.evalSPMF (encAlg.CorrectExp msg)] = 1
+  ∀ (msg : M), runtime.evalDist (encAlg.CorrectExp msg) {true} = 1
 
 end Correct
 

@@ -98,8 +98,7 @@ instance Kernel.comp.instIsSubprobabilityKernel (η : Kernel β γ)
     [IsSubprobabilityKernel η] (κ : Kernel α β) [IsSubprobabilityKernel κ] :
     IsSubprobabilityKernel (η ∘ₖ κ) := ⟨fun a => by
   rw [Kernel.comp_apply]
-  let _ : IsSubprobabilityMeasure ((κ a).bind η) :=
-    isSubprobabilityMeasure_bind η.aemeasurable
+  let := MeasureTheory.isSubprobabilityMeasure_bind (μ := κ a) η.aemeasurable
   exact MeasureTheory.measure_univ_le ((κ a).bind η)⟩
 
 instance Kernel.prod.instIsSubprobabilityKernel (κ : Kernel α β)

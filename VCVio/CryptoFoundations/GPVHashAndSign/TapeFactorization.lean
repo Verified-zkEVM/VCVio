@@ -501,7 +501,7 @@ every adaptively-issued signing salt of the real game into one front block, leav
 run; it is the FS-template factorization pinned to the *actual* game run, and is the prerequisite
 for the `drawList`↔`signRunF` step bridge. -/
 theorem realGameRun_eq_drawList_gpvRealImplTape (pk : PK) (sk : SK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (qSign qHash : ℕ)
     (hQ : signHashQueryBound
@@ -536,7 +536,7 @@ the two bridges put both pinned game runs into the identical front-tape
 `drawList ($ᵗ Salt) qSign >>= (tape-consuming run)` shape, the prerequisite for the
 `drawList`↔`signRunF` step bridge. -/
 theorem progGameRun_eq_drawList_progGameRunImplTape (pk : PK)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
     (domainSample : PK → ProbComp Domain) (qSign qHash : ℕ)
     (hQ : signHashQueryBound
@@ -816,7 +816,7 @@ theorem gpvImplTapeFlag_h_agree_good (pk : PK) (sk : SK) (domainSample : PK → 
   | inl q =>
       -- Non-signing query: flag is passive (`F = false`), reduce to the underlying tape agreement.
       rw [gpvRealImplTapeFlag_run_inl, progGameRunImplTapeFlag_run_inl]
-      rw [probOutput_flagTag_false, probOutput_flagTag_false, if_pos rfl, if_pos rfl]
+      rw [probOutput_flagTag_false, probOutput_flagTag_false, ite_eq_left rfl, ite_eq_left rfl]
       cases q with
       | inl n =>
           -- Uniform query: the two underlying handlers are literally identical.
@@ -835,12 +835,12 @@ theorem gpvImplTapeFlag_h_agree_good (pk : PK) (sk : SK) (domainSample : PK → 
       cases htape : s.2 with
       | nil =>
           -- Empty tape: the flag fires (`true`), both `false`-outputs have probability `0`.
-          simp only [reduceCtorEq, if_false]
+          simp only [reduceCtorEq, ite_false]
       | cons r tl =>
           -- Non-empty tape head `r`: split on whether it is already keyed.
           rcases hkey : saltKeyed M Salt s.1 r with _ | _
           · -- Unkeyed head: flag stays `false`; reduce to the underlying signing-miss agreement.
-            simp only [hkey, if_true]
+            simp only [hkey, ite_true]
             have hmiss : s.1 (r, msg) = none := (saltKeyed_eq_false_iff M Salt s.1 r).1 hkey msg
             -- The underlying tape steps agree off-collision (joint `hreg` substitution).
             rw [show s = (s.1, r :: tl) from by rw [← htape]]
@@ -848,6 +848,6 @@ theorem gpvImplTapeFlag_h_agree_good (pk : PK) (sk : SK) (domainSample : PK → 
               (evalSPMF_gpvImplTape_run_sign_miss_eq psf M Salt pk sk domainSample
                 msg r tl s.1 hmiss hreg)
           · -- Keyed head: the flag fires (`true`), both `false`-outputs have probability `0`.
-            simp only [hkey, reduceCtorEq, if_false]
+            simp only [hkey, reduceCtorEq, ite_false]
 
 end GPVHashAndSign

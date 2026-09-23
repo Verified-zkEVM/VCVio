@@ -132,7 +132,7 @@ lemma negacyclicMul_coeff {n : ℕ} (f g : Rq n) (i : Fin (polyBackend n).degree
 /-- Negacyclic multiplication is linear in its left argument. -/
 lemma negacyclicMul_sub_left {n : ℕ} (f₁ f₂ g : Rq n) :
     negacyclicMul (f₁ - f₂) g = negacyclicMul f₁ g - negacyclicMul f₂ g := by
-  refine LatticeCrypto.NegacyclicRing.poly_ext fun i => ?_
+  refine LatticeCrypto.PolyBackend.ext_coeff fun i => ?_
   rw [negacyclicMul_coeff, LatticeCrypto.NegacyclicRing.coeff_sub, negacyclicMul_coeff,
     negacyclicMul_coeff, ← negacyclicConvCoeff_sub_left]
   congr 1
@@ -153,7 +153,7 @@ theorem ntruSISProblem_isValid_sub
     (ntruSISProblem p).isValid pk.h (xs.1.1 - xs.2.1, xs.1.2 - xs.2.2) = true := by
   have hcomp : ∀ u v : Rq p.n, u - v = 0 → u = v := by
     intro u v huv
-    refine LatticeCrypto.NegacyclicRing.poly_ext fun i => ?_
+    refine LatticeCrypto.PolyBackend.ext_coeff fun i => ?_
     have hcoeff := congrArg (fun w => (polyBackend p.n).coeff w i) huv
     simp only [LatticeCrypto.NegacyclicRing.coeff_sub,
       LatticeCrypto.NegacyclicRing.coeff_zero] at hcoeff
@@ -176,7 +176,7 @@ theorem ntruSISProblem_isValid_sub
       _ = 4 * p.betaSquared := by ring
   · -- kernel membership, from linearity of the evaluation map
     rw [negacyclicMul_sub_left]
-    refine LatticeCrypto.NegacyclicRing.poly_ext fun i => ?_
+    refine LatticeCrypto.PolyBackend.ext_coeff fun i => ?_
     have hk := congrArg (fun w => (polyBackend p.n).coeff w i) (of_decide_eq_true heval)
     simp only [LatticeCrypto.NegacyclicRing.coeff_add] at hk
     simp only [LatticeCrypto.NegacyclicRing.coeff_add, LatticeCrypto.NegacyclicRing.coeff_sub,
@@ -217,7 +217,7 @@ theorem advantage_le_ntruSISProblemKeyed
   have hsamp : (ntruSISProblemKeyed p hr).sampleChallenge
       = (ntruPSFCollisionProblem p prims hr).sampleChallenge := rfl
   unfold SIS.advantage SIS.experiment collisionToKernelAdv
-  rw [hsamp]
+  rw [evalDist_apply_singleton, evalDist_apply_singleton, hsamp]
   simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp_apply]
   rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
   refine ENNReal.tsum_le_tsum fun pk => ?_
@@ -248,49 +248,48 @@ theorem euf_cma_security_oneShot_ntruSIS
       (validKeyPair p))
     (qSign qHash : ℕ)
     (samplerLoss : ENNReal)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconSignatureAlg p prims Salt hr))
     (idealPSF : PreimageSampleableFunction
       (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
     (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
     (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
     (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
-    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
-      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
+    (hReg : ∀ pk sk, (pk, sk) ∈ support hr.gen →
         𝒮[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
         𝒮[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))])
     (hNeverFail : ∀ pk sk, (pk, sk) ∈ support hr.gen →
       ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
-    (hTransport : ∃ adv' : SignatureAlg.unforgeableAdv
-        (GPVHashAndSign idealPSF hr (List Byte) Salt),
-      adv.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) ≤
-          adv'.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) +
-            samplerLoss ∧
-        (∀ ds, GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) Salt adv' ds) ∧
-        (∀ pk, GPVHashAndSign.signHashQueryBound
-          (M := List Byte) (Salt := Salt) (Range := Rq p.n)
-          (S' := Salt × (Rq p.n × Rq p.n))
-          (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
-          (qSign := qSign) (qHash := qHash))) :
-    ∃ (sisReduction : SIS.Adversary (ntruSISProblemKeyed p hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruSISProblemKeyed p hr) sisReduction +
+    (adv' : SignatureAlg.UnforgeableAdversary
+      (GPVHashAndSign idealPSF hr (List Byte) Salt))
+    (hTransport : SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+      SignatureAlg.unforgeableAdvantage
+          (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv' + samplerLoss)
+    (hForge' : GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) Salt adv' domainSample)
+    (hQ' : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Salt) (Range := Rq p.n)
+      (S' := Salt × (Rq p.n × Rq p.n))
+      (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
+      (qSign := qSign) (qHash := qHash)) :
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+      SIS.advantage (ntruSISProblemKeyed p hr)
+          (collisionToKernelAdv p prims hr
+            (GPVHashAndSign.reduction idealPSF hr (List Byte) Salt adv' domainSample)) +
         ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            idealPSF hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage idealPSF hr
+            (GPVHashAndSign.programmedPreimageReduction idealPSF hr (List Byte) Salt adv'
+              domainSample qSign qHash) +
         GPVHashAndSign.collisionBound Salt qSign qHash +
         samplerLoss := by
-  obtain ⟨cRed, eRed, hbound⟩ := euf_cma_security_oneShot p prims Salt hr qSign qHash samplerLoss
-    adv idealPSF hEval hShort hCorrect hReg hNeverFail hTransport
-  refine ⟨collisionToKernelAdv p prims hr cRed, eRed, le_trans hbound ?_⟩
+  refine le_trans (euf_cma_security_oneShot p prims Salt hr qSign qHash samplerLoss adv idealPSF
+    hEval hShort hCorrect domainSample hReg hNeverFail adv' hTransport hForge' hQ') ?_
   gcongr
-  exact advantage_le_ntruSISProblemKeyed p prims hr cRed
+  exact advantage_le_ntruSISProblemKeyed p prims hr _
 
 /-- **Falcon EUF-CMA down to keyed NTRU-SIS, with every other branch priced.**  For an
 adversary against the rejection-loop signer obeying the query bound `(qSign, qHash)`, under
@@ -320,7 +319,7 @@ theorem euf_cma_collision_security_ntruSIS
     (qSign qHash maxAttempts : ℕ)
     (ε_step pRej : ℝ) (hε : 0 ≤ ε_step) (hRej0 : 0 ≤ pRej) (hRej1 : pRej < 1)
     (εpp : ℝ≥0∞)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconRetrySignatureAlg p prims Salt maxAttempts hr))
     (idealAttempt : PublicKey p → SecretKey p → Rq p.n →
       ProbComp (Option (Rq p.n × Rq p.n)))
@@ -329,8 +328,8 @@ theorem euf_cma_collision_security_ntruSIS
     (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
     (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
     (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
-    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
-      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
+    (hReg : ∀ pk sk, (pk, sk) ∈ support hr.gen →
         𝒮[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
         𝒮[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
@@ -346,21 +345,21 @@ theorem euf_cma_collision_security_ntruSIS
       (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash))
     (hGuess : idealSamplerGuessBound p hr idealPSF εpp) :
-    ∃ sisReduction : SIS.Adversary (ntruSISProblemKeyed p hr),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruSISProblemKeyed p hr) sisReduction +
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+      SIS.advantage (ntruSISProblemKeyed p hr)
+          (collisionToKernelAdv p prims hr
+            (GPVHashAndSign.reduction idealPSF hr (List Byte) Salt
+              (GPVHashAndSign.appendForgeQuery idealPSF hr (List Byte) Salt ⟨adv.main⟩)
+              domainSample)) +
         ((qSign + (qHash + 1) : ℕ) : ENNReal) * εpp +
         GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
         ENNReal.ofReal (qSign * (ε_step / (1 - pRej) + pRej ^ maxAttempts)) := by
-  obtain ⟨cRed, hbound⟩ :=
-    euf_cma_collision_security p prims Salt hr qSign qHash maxAttempts
-      ε_step pRej hε hRej0 hRej1 εpp adv idealAttempt idealPSF hEval hShort hCorrect hReg
-      hNeverFail hAttempt hRej hRes hQ hGuess
-  refine ⟨collisionToKernelAdv p prims hr cRed, le_trans hbound ?_⟩
+  refine le_trans (euf_cma_collision_security p prims Salt hr qSign qHash maxAttempts
+    ε_step pRej hε hRej0 hRej1 εpp adv idealAttempt idealPSF hEval hShort hCorrect domainSample
+    hReg hNeverFail hAttempt hRej hRes hQ hGuess) ?_
   gcongr
-  exact advantage_le_ntruSISProblemKeyed p prims hr cRed
+  exact advantage_le_ntruSISProblemKeyed p prims hr _
 
 
 end Falcon

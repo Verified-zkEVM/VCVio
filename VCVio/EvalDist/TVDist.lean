@@ -66,50 +66,45 @@ end SPMF
 
 section monadic
 
-variable {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] {α : Type u}
+variable {m : Type u → Type v} [MonadLiftT m SPMF] {α : Type u}
 
 /-- Total variation distance between two monadic computations,
 defined via their evaluation distributions. -/
 noncomputable def tvDist (mx my : m α) : ℝ :=
   SPMF.tvDist (𝒮[mx]) (𝒮[my])
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 @[simp] lemma tvDist_self (mx : m α) : tvDist mx mx = 0 := SPMF.tvDist_self _
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 @[simp] lemma tvDist_eq_zero_iff (mx my : m α) :
     tvDist mx my = 0 ↔ 𝒮[mx] = 𝒮[my] := by
   simp only [tvDist, SPMF.tvDist_eq_zero_iff, SPMF.toPMF_inj]
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 lemma tvDist_comm (mx my : m α) : tvDist mx my = tvDist my mx :=
   SPMF.tvDist_comm _ _
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 lemma tvDist_nonneg (mx my : m α) : 0 ≤ tvDist mx my := SPMF.tvDist_nonneg _ _
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 lemma tvDist_triangle (mx my mz : m α) :
     tvDist mx mz ≤ tvDist mx my + tvDist my mz :=
   SPMF.tvDist_triangle _ _ _
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 lemma tvDist_le_one (mx my : m α) : tvDist mx my ≤ 1 := SPMF.tvDist_le_one _ _
 
-lemma tvDist_map_le [LawfulMonad m] {β : Type u} (f : α → β) (mx my : m α) :
+lemma tvDist_map_le [Monad m] [LawfulMonadLiftT m SPMF] [LawfulMonad m] {β : Type u}
+    (f : α → β) (mx my : m α) :
     tvDist (f <$> mx) (f <$> my) ≤ tvDist mx my := by
   simpa only [tvDist, evalSPMF_map] using SPMF.tvDist_map_le f (𝒮[mx]) (𝒮[my])
 
-lemma tvDist_bind_right_le [LawfulMonad m] {β : Type u} (f : α → m β) (mx my : m α) :
+lemma tvDist_bind_right_le [Monad m] [LawfulMonadLiftT m SPMF] [LawfulMonad m] {β : Type u}
+    (f : α → m β) (mx my : m α) :
     tvDist (mx >>= f) (my >>= f) ≤ tvDist mx my := by
   simpa only [tvDist, evalSPMF_bind] using SPMF.tvDist_bind_right_le _ _ _
 
 /-! ### TV distance bounds -/
 
-omit [LawfulMonadLiftT m SPMF] in
 /-- Total variation distance is bounded by the probability of an event `p` whenever the two
 computations have equal output distribution off `p` (and equal probability of `p`). -/
-lemma tvDist_le_probEvent_of_probOutput_eq_of_not
+lemma tvDist_le_probEvent_of_probOutput_eq_of_not [Monad m]
     {mx my : m α} [NeverFail mx] [NeverFail my]
     (p : α → Prop) (h_eq : ∀ x, ¬p x → Pr[= x | mx] = Pr[= x | my])
     (h_event_eq : Pr[ p | mx] = Pr[ p | my]) :
@@ -233,7 +228,7 @@ lemma tvDist_bind_left_le
 bound, with `ℝ≥0∞` companion `ofReal_tvDist_bind_left_le_const`. -/
 theorem tvDist_bind_left_le_const
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u} (mx : m α) (f g : α → m β) (c : ℝ)
     (hfg : ∀ a, a ∈ support mx → tvDist (f a) (g a) ≤ c) :
     tvDist (mx >>= f) (mx >>= g) ≤ c := by
@@ -273,7 +268,7 @@ theorem tvDist_bind_left_le_const
 `tvDist (f a) (g a) ≤ c` lifts through the shared `mx` bind. -/
 theorem tvDist_bind_left_le_const'
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u} (mx : m α) (f g : α → m β) (c : ℝ)
     (hfg : ∀ a, tvDist (f a) (g a) ≤ c) :
     tvDist (mx >>= f) (mx >>= g) ≤ c :=
@@ -283,7 +278,7 @@ theorem tvDist_bind_left_le_const'
 `ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε` on the support of `mx` lifts through the shared bind. -/
 theorem ofReal_tvDist_bind_left_le_const
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u}
     (mx : m α) (f g : α → m β) (ε : ℝ≥0∞)
     (hfg : ∀ a, a ∈ support mx → ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε) :
@@ -300,7 +295,7 @@ theorem ofReal_tvDist_bind_left_le_const
 /-- Unrestricted companion of `ofReal_tvDist_bind_left_le_const`. -/
 theorem ofReal_tvDist_bind_left_le_const'
     {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadLiftT m SetM] [EvalDistCompatible m]
+    [MonadAttach m] [EvalDistCompatible m]
     {α β : Type u}
     (mx : m α) (f g : α → m β) (ε : ℝ≥0∞)
     (hfg : ∀ a, ENNReal.ofReal (tvDist (f a) (g a)) ≤ ε) :

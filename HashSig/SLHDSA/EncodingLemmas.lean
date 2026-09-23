@@ -1,7 +1,7 @@
 /-
-Copyright (c) 2026 Nicolas Consigny. All rights reserved.
+Copyright (c) 2026 Nicolas Consigny, Alexander Hicks. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Authors: Nicolas Consigny
+Authors: Nicolas Consigny, Alexander Hicks
 -/
 
 module
@@ -89,6 +89,21 @@ theorem toInt_toByte (x len : ℕ) (h : x < 256 ^ len) :
     toInt (toByte x len) = x := by
   rw [toInt_toByte_mod, Nat.mod_eq_of_lt h]
 
+/-- At a byte string's own width, Algorithm 3 is an exact left inverse of Algorithm 2. -/
+theorem toByte_toInt (x : List Byte) : toByte (toInt x) x.length = x := by
+  induction x using List.reverseRecOn with
+  | nil => simp [toByte]
+  | append_singleton xs b ih =>
+      have hb : b.toNat < 256 := UInt8.toNat_lt_size b
+      rw [toInt_append_byte, List.length_append, List.length_singleton, toByte_succ,
+        show (toInt xs * 256 + b.toNat) / 256 = toInt xs by omega,
+        show (toInt xs * 256 + b.toNat) % 256 = b.toNat by omega, ih, UInt8.ofNat_toNat]
+
+/-- Algorithm 2 is injective on byte strings of a common width. -/
+theorem eq_of_length_eq_of_toInt_eq {x y : List Byte} (hlen : x.length = y.length)
+    (h : toInt x = toInt y) : x = y := by
+  rw [← toByte_toInt x, ← toByte_toInt y, hlen, h]
+
 /-! ## Algorithm 4 (`base2b`) closed form -/
 
 /-- One `base2bFill` call started on a consumed prefix of `x` stops at a longer prefix that
@@ -117,7 +132,7 @@ private theorem base2bFill_consume (b : ℕ) (x : List Byte) :
         | nil => rfl
         | cons y ys =>
             simp only [base2bFill]
-            rw [if_pos hble]
+            rw [ite_eq_left hble]
       · have hclt : c < x.length := by
           rcases Nat.lt_or_ge c x.length with h | h
           · exact h
@@ -129,7 +144,7 @@ private theorem base2bFill_consume (b : ℕ) (x : List Byte) :
         refine ⟨c', by omega, h2, h3, ?_⟩
         rw [List.drop_eq_getElem_cons hclt]
         simp only [base2bFill]
-        rw [if_neg hble, ← htake,
+        rw [ite_eq_right hble, ← htake,
           show 8 * c - b * j + 8 = 8 * (c + 1) - b * j by omega]
         exact h4
 

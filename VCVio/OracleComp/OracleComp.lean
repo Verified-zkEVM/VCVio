@@ -92,9 +92,16 @@ lemma liftM_ne_pure (q : OracleQuery spec α) (x : α) :
 lemma pure_ne_liftM (x : α) (q : OracleQuery spec α) :
     pure x ≠ liftM (n := OracleComp spec) q := PFunctor.FreeM.pure_ne_liftObj q x
 
-@[simp, grind =]
+@[grind =]
 protected lemma liftM_map (q : OracleQuery spec α) (f : α → β) :
     liftM (n := OracleComp spec) (f <$> q) = f <$> liftM q := rfl
+
+/-- Lifting an oracle query maps its response continuation over the primitive input query. -/
+lemma liftM_eq_map_query (q : OracleQuery spec α) :
+    (liftM q : OracleComp spec α) =
+      q.cont <$> (liftM (spec.query q.input) : OracleComp spec (spec.Range q.input)) := by
+  rw [← OracleComp.liftM_map]
+  congr 1
 
 /-- `coin` is the computation representing a coin flip, given a coin flipping oracle. -/
 @[inline]
@@ -216,7 +223,7 @@ protected theorem inductionOptional {α} {C : OptionT (OracleComp spec) α → P
 section construct
 
 /-- Version of `construct` with automatic induction on the `query` in when defining the
-`query_bind` case. Can be useful with `spec.DecidableEq` and `spec.FiniteRange`.
+`query_bind` case. Can be useful with decidable equality or finiteness of the answer types.
 `mapM`/`simulateQ` is usually preferable to this if the object being constructed is a monad. -/
 @[elab_as_elim]
 protected def construct {α}
@@ -268,12 +275,12 @@ def isPure {α : Type _} : OracleComp spec α → Bool
 @[simp] lemma isPure_query : isPure (query t : OracleComp spec _) = false := rfl
 @[simp] lemma isPure_query_bind : isPure (liftM (OracleSpec.query t) >>= ou) = false := rfl
 
-@[simp] lemma pure_ne_query :
+lemma pure_ne_query :
     (pure u : OracleComp spec _) ≠ query t := by
   intro h
   have h' := congrArg (isPure (spec := spec)) h
   simp at h'
-@[simp] lemma query_ne_pure :
+lemma query_ne_pure :
     (query t : OracleComp spec _) ≠ pure u := by
   exact Ne.symm (pure_ne_query (spec := spec) t u)
 
@@ -284,12 +291,12 @@ end noConfusion
 
 /-- Given a computation `oa : OracleComp spec α`, construct a value `x : α`,
 by assuming each query returns the `default` value given by the `Inhabited` instance. -/
-def defaultResult [spec.Inhabited] (oa : OracleComp spec α) : α :=
+def defaultResult [∀ t, Inhabited (spec.Range t)] (oa : OracleComp spec α) : α :=
   PFunctor.FreeM.liftM (m := Id) (fun _ => default) oa
 
 /-- Total number of queries in a computation across all possible execution paths.
 Can be a helpful alternative to `sizeOf` when proving recursive calls terminate. -/
-def totalQueries [spec.Fintype] {α : Type v} (oa : OracleComp spec α) : ℕ := by
+def totalQueries [∀ t, Fintype (spec.Range t)] {α : Type v} (oa : OracleComp spec α) : ℕ := by
   induction oa using OracleComp.construct with
   | pure x => exact 0
   | query_bind t oa rec_n => exact 1 + ∑ x, rec_n x
@@ -297,7 +304,7 @@ def totalQueries [spec.Fintype] {α : Type v} (oa : OracleComp spec α) : ℕ :=
 section inj
 
 /-- Two `pure` computations are equal iff they return the same value. -/
-@[simp] lemma pure_inj (x y : α) : pure (f := OracleComp spec) x = pure y ↔ x = y :=
+lemma pure_inj (x y : α) : pure (f := OracleComp spec) x = pure y ↔ x = y :=
   PFunctor.FreeM.pure_inj x y
 
 /-- Binding two computations gives a pure operation iff the first computation is pure

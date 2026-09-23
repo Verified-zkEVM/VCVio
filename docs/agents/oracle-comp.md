@@ -34,10 +34,13 @@ application lemmas.
 
 Required typeclass instances for probability reasoning:
 
-- `[spec.Fintype]` — all response types are `Fintype`
-- `[spec.Inhabited]` — all response types are `Inhabited`
+- `[OracleSpec.IsMeasureSpec spec]` selects the query measures.
+- Query-answer and result types carry their chosen measurable spaces.
+- Discrete answer spaces discharge measurability of arbitrary free-program continuations.
 
-Without both, `evalSPMF`, `probOutput`, and `Pr[...]` will fail with confusing typeclass errors.
+Structural support, handler composition, instrumentation, and query bounds need no probability
+interpretation. Finite uniform queries are a sampling specialization, not a requirement of the
+native measure API. Retired scalar notation requires its explicit compatibility interpretation.
 
 ## OracleComp
 
@@ -59,6 +62,38 @@ def OracleComp {ι : Type u} (spec : OracleSpec.{u,v} ι) : Type w → Type _ :=
 | `OracleComp.construct` | Same but result is `Type*` (not `Prop`) |
 | `isPure` | Check if computation is `pure` (no queries) |
 | `totalQueries` | Count total oracle queries |
+
+### Checkpoint Placement and Replay
+
+Ordinary program equality does not specify which random choices are shared across resumptions.
+[`Examples/ReplayCheckpoint.lean`](../../Examples/ReplayCheckpoint.lean) gives a concrete
+counterexample: moving a checkpoint across a fair Boolean draw preserves the program after
+erasing the checkpoint, but changes the probability that two resumed outputs agree from `1`
+to `1/2`. A replay-preservation argument must retain the checkpoint boundary and its shared state.
+[`VCVioTest/ReplayCheckpoint.lean`](../../VCVioTest/ReplayCheckpoint.lean) checks the public
+ordinary-execution equality and the distinguishing replay observation together.
+
+### Possible outputs and `MonadAttach`
+
+Use `OracleComp.reachableWhen possibleOutputs oa` when possible query responses
+depend on the oracle interface. It is the `Set` view of PolyFun's
+`FreeM.reachableUnder`, obtained by folding the angelic per-operation predicate
+transformer over the free tree. The pure, query, bind, and monotonicity laws are
+available as `reachableWhen_pure`, `reachableWhen_query`,
+`reachableWhen_bind`, and `reachableWhen_mono`. `supportWhen` remains a deprecated
+compatibility spelling with an equality bridge to `reachableWhen`.
+
+`support oa` admits every typed response; `reachableWhen_univ_eq_support`
+connects it to the operation-indexed construction. The generic `support` name
+is re-exported from PolyFun's `MonadAttach.support` for existing value-level
+proofs. `MonadAttach.CanReturn` certifies what a computation can return; the
+additional `ExactMonadAttach` laws justify the familiar pure and bind support
+equations. They do not supply an oracle policy or an initial state. In
+particular, use a state-indexed execution or handler semantics for state
+monads, where a flattened value-level support loses the relation between the
+initial and final states. The operation-indexed API lives in PolyFun because
+it is a property of free programs, independently of VCVio's probability
+interpretation.
 
 ### Key lemmas
 
@@ -104,7 +139,7 @@ class SubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
 | `onQuery : spec.Domain → superSpec.Domain` | `toFunA : P.A → Q.A` |
 | `onResponse t : superSpec.Range (onQuery t) → spec.Range t` | `toFunB t : Q.B (toFunA t) → P.B t` |
 
-By the Yoneda lemma for polynomial functors this lens data is in bijection with natural transformations `OracleQuery spec ⟹ OracleQuery superSpec`. The `MonadLift` parent records that natural transformation; the `liftM_eq_lift` field is the propositional coherence axiom forcing it to agree with the lens. Concrete `SubSpec` instances spell `monadLift` out *by hand* (rather than letting it default from the lens data), so that the lifted query reduces fully under `isDefEq` — this is what makes pattern-matching simp lemmas like `probEvent_liftComp` actually fire.
+By the Yoneda lemma for polynomial functors this lens data is in bijection with natural transformations `OracleQuery spec ⟹ OracleQuery superSpec`. The `MonadLift` parent records that natural transformation; the `liftM_eq_lift` field is the propositional coherence axiom forcing it to agree with the lens. Concrete `SubSpec` instances spell `monadLift` out *by hand* (rather than letting it default from the lens data), so that the lifted query reduces fully under `isDefEq` — this lets pattern-matching equations such as `probEvent_liftComp` apply through their registered automation or explicitly by name.
 
 `SubSpec.toLens` exposes the underlying lens; `SubSpec.trans` is composition of these lenses; `MonadLiftT.refl` covers the identity.
 
@@ -175,6 +210,12 @@ Constructors:
 | `QueryImpl.ofLift spec m` | From `MonadLift` instance |
 | `QueryImpl.ofFn f` | From pure function `f : (t : Domain) → Range t` |
 | `impl.liftTarget n` | Lift impl from `m` to `n` via `MonadLiftT` |
+| `spec.passthrough + impl` | Handle `spec'` with `impl`; pass `spec` queries through |
+
+To simulate only some of a computation's oracles, `spec.passthrough + impl` handles `spec'` with
+`impl` and answers each `spec` query by issuing the same query in `impl`'s target monad, which
+must lift `OracleComp spec`. `spec.passthrough` is not itself a `QueryImpl`: rewrite with
+`QueryImpl.passthrough_add` before applying `QueryImpl.add_apply_*` or `simulateQ_add_*`.
 
 ### simulateQ
 
@@ -231,7 +272,13 @@ def postInsert (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t 
 | Sees the response? | No | Yes (the response is passed to `nx`) |
 | If the handler fails | Side effect still happens | Side effect skipped |
 
-Both come with a complete generic theory: induction principles (`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection / strip lemmas (`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and bridge lemmas for `probFailure`, `NeverFail`, `evalSPMF`, `probOutput`, `support`, `finSupport`, plus `IsTotalQueryBound` / `IsQueryBoundP` transfer in `QueryBound.lean`. Defining a wrapper via `preInsert` / `postInsert` makes all of this theory available immediately and avoids re-proving instance-specific lemmas.
+`QueryImpl.Constructions.Core` owns the induction principles
+(`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection equations
+(`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and support/finite-support laws.
+The projection equations transport chosen-space measures directly by equality. Query-bound
+transfer lives in `QueryBound.lean`. The older `Constructions` path additionally exports scalar
+compatibility corollaries. Define instrumentation through these combinators so the generic
+structural and observation theory applies without duplicating wrapper-specific proofs.
 
 #### Already in the repo (use these directly when applicable)
 
@@ -272,10 +319,11 @@ noncomputable instance [IsProbabilitySpec spec] : MonadLiftT (OracleComp spec) P
 
 The primary `evalDist` / `𝒟[…]` façade is the successful-output Mathlib measure. Whenever an
 `IsMeasureSpec` is installed, `FreeM.evalDist_eq_denote` identifies it definitionally with the
-direct recursive measure fold. `Pr[...]` stays a scalar adapter; use `probOutput_eq_evalDist`,
-`probEvent_eq_evalDist`, and `probFailure_eq_evalDist` to cross that boundary.
+direct recursive measure fold (`𝒟[…]` stays the public head; the lemma is a transport, not a
+simp rule). `Pr[...]` stays a scalar adapter; `evalDist_apply_singleton`, `evalDist_apply_setOf`,
+`evalDist_apply_univ` and `lintegral_evalDist` cross that boundary in the simp direction.
 
-Uniform response semantics are supplied by `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
+Uniform response semantics are supplied by `[IsUniformSpec spec]`, which bundles `∀ t, Fintype (spec.Range t)`, `∀ t, Inhabited (spec.Range t)`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
 
 Distinct from the `PMF`-target `evalSPMF`, there is also a *syntactic* uniform-sampling handler that rewrites queries into `ProbComp` (i.e. target `OracleComp unifSpec`, not `PMF`):
 
@@ -300,7 +348,7 @@ Key result: `enforceOracle.fst_map_run_simulateQ` — if a computation satisfies
 `IsPerIndexQueryBound oa qb`, then running under enforcement with budget `qb` produces
 the same output distribution as running without enforcement.
 
-Requires `[DecidableEq ι]` and `[spec.Inhabited]` (for `default` values).
+Requires `[DecidableEq ι]` and `[∀ t, Inhabited (spec.Range t)]` (for `default` values).
 
 ## Patterns
 

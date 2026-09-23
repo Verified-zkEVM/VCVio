@@ -1,0 +1,123 @@
+/-
+Copyright (c) 2026 Devon Tuma. All rights reserved.
+Released under Apache 2.0 license as described in the file LICENSE.
+Authors: Devon Tuma
+-/
+
+module
+public import ToMathlib.MeasureTheory.Integral.Bounds
+public import ToMathlib.MeasureTheory.Measure.Subprobability
+public import Mathlib.Probability.UniformOn
+
+/-!
+# Event bounds for subprobability measures
+
+A measurable bad event can be charged separately from a uniform bound on the
+remaining continuations. Uniform finite sampling identifies event mass with
+normalized cardinality directly through counting measure.
+-/
+
+public section
+
+open MeasureTheory
+
+namespace MeasureTheory.Measure
+
+variable {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
+
+/-- Almost-everywhere event-mass bounds on measurable continuations remain valid after binding. -/
+theorem bind_apply_mono (μ : Measure α) (f g : α → Measure β)
+    (hf : Measurable f) (hg : Measurable g) {event : Set β} (hevent : MeasurableSet event)
+    (hfg : ∀ᵐ a ∂μ, f a event ≤ g a event) :
+    μ.bind f event ≤ μ.bind g event := by
+  rw [bind_apply hevent hf.aemeasurable, bind_apply hevent hg.aemeasurable]
+  exact lintegral_mono_ae hfg
+
+/-- AE comparison with finitely many reference events integrates a conditional allowance.
+The reference output spaces may differ, and neither the source measure nor the continuation
+measures need a probability bound. The allowance need not be measurable. -/
+theorem bind_apply_le_sum_add_lintegral_ae
+    {ι : Type*} [Fintype ι] {γ : ι → Type*} [∀ i, MeasurableSpace (γ i)]
+    (μ : Measure α) (f : α → Measure β) (g : ∀ i, α → Measure (γ i))
+    (hf : AEMeasurable f μ) (hg : ∀ i, AEMeasurable (g i) μ)
+    {event : Set β} (hevent : MeasurableSet event)
+    (events : ∀ i, Set (γ i)) (hevents : ∀ i, MeasurableSet (events i))
+    (bound : α → ENNReal)
+    (h : ∀ᵐ a ∂μ, f a event ≤ (∑ i, g i a (events i)) + bound a) :
+    μ.bind f event ≤ (∑ i, μ.bind (g i) (events i)) + ∫⁻ a, bound a ∂μ := by
+  have hg' (i : ι) : AEMeasurable (fun a ↦ g i a (events i)) μ :=
+    (Measure.measurable_coe (hevents i)).comp_aemeasurable (hg i)
+  rw [bind_apply hevent hf]
+  have hi (i : ι) : μ.bind (g i) (events i) = ∫⁻ a, g i a (events i) ∂μ :=
+    bind_apply (hevents i) (hg i)
+  simp_rw [hi]
+  exact lintegral_le_sum_add_lintegral_of_le_ae Finset.univ (fun i _ ↦ hg' i) h
+
+/-- Charge a measurable bad set and integrate an upper bound on the remaining branches. -/
+theorem bind_apply_le_add_lintegral_of_bad (μ : Measure α) [IsSubprobabilityMeasure μ]
+    (f : α → Measure β) (hf : Measurable f) [∀ a, IsSubprobabilityMeasure (f a)]
+    {bad : Set α} (hbad : MeasurableSet bad) {event : Set β} (hevent : MeasurableSet event)
+    {bound : α → ENNReal} {ε : ENNReal}
+    (hgood : ∀ᵐ a ∂μ, a ∉ bad → f a event ≤ bound a + ε) :
+    μ.bind f event ≤ μ bad + ε + ∫⁻ a, bound a ∂μ := by
+  rw [bind_apply hevent hf.aemeasurable]
+  calc
+    _ ≤ ∫⁻ a, bad.indicator 1 a + (ε + bound a) ∂μ := by
+      apply lintegral_mono_ae
+      filter_upwards [hgood] with a ha
+      by_cases h : a ∈ bad
+      · simpa [h] using (measure_le_one (f a) event).trans
+          (le_add_right le_rfl : (1 : ENNReal) ≤ 1 + (ε + bound a))
+      · simpa [h, add_comm] using ha h
+    _ = μ bad + (ε * μ Set.univ + ∫⁻ a, bound a ∂μ) := by
+      rw [lintegral_add_left (measurable_one.indicator hbad), lintegral_indicator_one hbad,
+        lintegral_add_left measurable_const, lintegral_const]
+    _ ≤ μ bad + ε + ∫⁻ a, bound a ∂μ := by
+      have hmass : ε * μ Set.univ ≤ ε :=
+        (mul_le_mul' le_rfl (measure_univ_le μ)).trans_eq (mul_one ε)
+      calc
+        _ ≤ μ bad + (ε + ∫⁻ a, bound a ∂μ) := by gcongr
+        _ = _ := by ac_rfl
+
+/-- A bad-event bound and a uniform good-branch bound control sequential composition. -/
+theorem bind_apply_le_add_of_bad (μ : Measure α) [IsSubprobabilityMeasure μ]
+    (f : α → Measure β) (hf : Measurable f) [∀ a, IsSubprobabilityMeasure (f a)]
+    {bad : Set α} (hbad : MeasurableSet bad) {event : Set β} (hevent : MeasurableSet event)
+    {ε₁ ε₂ : ENNReal} (hbadBound : μ bad ≤ ε₁)
+    (hgood : ∀ a, a ∉ bad → f a event ≤ ε₂) :
+    μ.bind f event ≤ ε₁ + ε₂ := by
+  have h := bind_apply_le_add_lintegral_of_bad (bound := fun _ => 0) μ f hf hbad
+    hevent (Filter.Eventually.of_forall fun a ha => by simpa using hgood a ha)
+  have hzero : μ.bind f event ≤ μ bad + ε₂ := by simpa using h
+  exact hzero.trans (add_le_add_left hbadBound ε₂)
+
+/-- Compare two sequential experiments by charging a measurable disagreement set and a uniform
+bound on the remaining branches. -/
+theorem bind_apply_le_add_of_disagree (μ : Measure α) [IsSubprobabilityMeasure μ]
+    (f g : α → Measure β) (hf : Measurable f) (hg : Measurable g)
+    [∀ a, IsSubprobabilityMeasure (f a)] {bad : Set α} (hbad : MeasurableSet bad)
+    {event : Set β} (hevent : MeasurableSet event) {ε : ENNReal}
+    (hgood : ∀ᵐ a ∂μ, a ∉ bad → f a event ≤ g a event + ε) :
+    μ.bind f event ≤ μ.bind g event + μ bad + ε := by
+  calc
+    _ ≤ μ bad + ε + ∫⁻ a, g a event ∂μ :=
+      bind_apply_le_add_lintegral_of_bad (bound := fun a => g a event) μ f hf
+        hbad hevent hgood
+    _ = μ.bind g event + μ bad + ε := by
+      rw [bind_apply hevent hg.aemeasurable]
+      ac_rfl
+
+end MeasureTheory.Measure
+
+namespace ProbabilityTheory
+
+/-- The uniform measure of a predicate on a finite type is its normalized cardinality. -/
+theorem uniformOn_univ_apply_setOf {α : Type*} [MeasurableSpace α]
+    [MeasurableSingletonClass α] [Fintype α] (p : α → Prop) [DecidablePred p] :
+    (uniformOn Set.univ : Measure α) {x | p x} =
+      ((Finset.univ.filter p).card : ENNReal) / Fintype.card α := by
+  rw [uniformOn_univ]
+  have hset : {x | p x} = (↑(Finset.univ.filter p) : Set α) := by ext; simp
+  rw [hset, Measure.count_apply_finset]
+
+end ProbabilityTheory

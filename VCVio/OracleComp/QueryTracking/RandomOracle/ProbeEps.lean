@@ -47,7 +47,38 @@ open scoped ENNReal
 
 namespace OracleComp
 
-variable {R : Type} [DecidableEq R]
+variable {R : Type}
+
+/-! ## Iterated draws: the explicit front-block key list
+
+Stage A defers a *single* output-irrelevant draw. `drawList` lifts this to `n` interleaved draws
+by collecting them into an explicit front block: draw a list of `n` independent keys up front,
+against which a run's hidden draws can be exhibited and then charged by the abstract
+`hiddenReadList` union bound. -/
+
+/-- Draw a list of `n` independent keys from `oa` (the front block of the deferred-sampling
+factorization). The keys are the hidden targets; the list length is the key count `n`. -/
+noncomputable def drawList (oa : ProbComp R) : ℕ → ProbComp (List R)
+  | 0 => pure []
+  | n + 1 => do
+      let w ← oa
+      let ws ← drawList oa n
+      pure (w :: ws)
+
+/-- The front-block draw never fails: it only ever draws from `oa` (which is failure-free) and
+returns, so `drawList oa n` has zero failure mass. -/
+lemma probFailure_drawList (oa : ProbComp R) (n : ℕ) :
+    Pr[⊥ | drawList oa n] = 0 := by
+  induction n with
+  | zero => simp [drawList]
+  | succ n _ => rw [drawList]; simp
+
+/-- Total output mass of the front-block draw is `1` (it never fails). -/
+lemma tsum_probOutput_drawList_eq_one (oa : ProbComp R) (n : ℕ) :
+    (∑' ws : List R, Pr[= ws | drawList oa n]) = 1 :=
+  tsum_probOutput_eq_one' (probFailure_drawList oa n)
+
+variable [DecidableEq R]
 
 /-! ## Hidden-target adaptive first-fire bound
 
@@ -120,16 +151,16 @@ theorem probEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
     intro w
     by_cases hfire : readMany w q σ = true
     · rw [probEvent_pure]
-      simp only [hfire, if_true, mul_one]
+      simp only [hfire, ite_true, mul_one]
       obtain ⟨j, hj, hwj⟩ := (readMany_true_iff w q σ).1 hfire
       calc Pr[= w | oa]
-          = (if w = σ (List.replicate j false) then Pr[= w | oa] else 0) := by rw [if_pos hwj]
+          = (if w = σ (List.replicate j false) then Pr[= w | oa] else 0) := by rw [ite_eq_left hwj]
         _ ≤ ∑ j ∈ Finset.range q,
               if w = σ (List.replicate j false) then Pr[= w | oa] else 0 :=
             Finset.single_le_sum
               (f := fun j => if w = σ (List.replicate j false) then Pr[= w | oa] else 0)
               (fun i _ => by positivity) (Finset.mem_range.2 hj)
-    · rw [probEvent_pure, if_neg hfire, mul_zero]
+    · rw [probEvent_pure, ite_eq_right hfire, mul_zero]
       exact zero_le
   refine le_trans (ENNReal.tsum_le_tsum hstep) ?_
   rw [Summable.tsum_finsetSum (fun _ _ => ENNReal.summable)]
@@ -138,8 +169,8 @@ theorem probEvent_hiddenReadMany_le {oa : ProbComp R} {ε : ℝ≥0∞}
       ≤ ∑ j ∈ Finset.range q, ε := by
         refine Finset.sum_le_sum fun j _ => ?_
         rw [tsum_eq_single (σ (List.replicate j false))
-          (by intro b hb; rw [if_neg hb])]
-        rw [if_pos rfl]
+          (by intro b hb; rw [ite_eq_right hb])]
+        rw [ite_eq_left rfl]
         exact hε _
     _ = (q : ℝ≥0∞) * ε := by rw [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
 
@@ -367,36 +398,5 @@ theorem probEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbCom
     exact tsum_congr fun w => by rw [hmarg w]
   rw [hcongr]
   exact probEvent_hiddenReadMany_le hε q σ
-
-/-! ## Iterated draws: the explicit front-block key list
-
-Stage A defers a *single* output-irrelevant draw. `drawList` lifts this to `n` interleaved draws
-by collecting them into an explicit front block: draw a list of `n` independent keys up front,
-against which a run's hidden draws can be exhibited and then charged by the abstract
-`hiddenReadList` union bound. -/
-
-/-- Draw a list of `n` independent keys from `oa` (the front block of the deferred-sampling
-factorization). The keys are the hidden targets; the list length is the key count `n`. -/
-noncomputable def drawList (oa : ProbComp R) : ℕ → ProbComp (List R)
-  | 0 => pure []
-  | n + 1 => do
-      let w ← oa
-      let ws ← drawList oa n
-      pure (w :: ws)
-
-omit [DecidableEq R] in
-/-- The front-block draw never fails: it only ever draws from `oa` (which is failure-free) and
-returns, so `drawList oa n` has zero failure mass. -/
-@[simp] lemma probFailure_drawList (oa : ProbComp R) (n : ℕ) :
-    Pr[⊥ | drawList oa n] = 0 := by
-  induction n with
-  | zero => simp [drawList]
-  | succ n _ => rw [drawList]; simp
-
-omit [DecidableEq R] in
-/-- Total output mass of the front-block draw is `1` (it never fails). -/
-lemma tsum_probOutput_drawList_eq_one (oa : ProbComp R) (n : ℕ) :
-    (∑' ws : List R, Pr[= ws | drawList oa n]) = 1 :=
-  tsum_probOutput_eq_one' (probFailure_drawList oa n)
 
 end OracleComp

@@ -99,6 +99,92 @@ namespace Falcon
 
 variable (p : Params) (prims : Primitives p)
 
+/-! ### Correctness -/
+
+/-- **Falcon verification correctness, conditional on the sampler landing on the coset.**
+
+If the fuel-bounded signer returns a signature, `verify` accepts it, given two facts about the
+primitives at the honest key:
+
+1. `hcompress`: the codec round-trips (the `compress_decompress` law of `Primitives.Laws`,
+   a theorem for the concrete codec: `Falcon.Concrete.decompress_compress`);
+2. `hpreimage`: every output of the trapdoor sampler is a preimage of its target,
+   `s₁ + s₂ · h = c`.
+
+Hypothesis 2 is the coset obligation of the FFT pipeline. `fromFFTPreimage` rounds an inverse
+FFT and returns `(c − v₀, −v₁)`. For a valid basis, a sufficient condition is that the rounded
+`v` equals the integer lattice point `z · B`; coordinatewise error strictly below `1/2` before
+rounding establishes that condition. The coset identity itself is the hypothesis here, so exact
+FFT arithmetic and a certified numerical implementation can discharge it separately. Neither the
+NTRU equation nor `validKeyPair` is needed in this theorem: the signer emits only attempts that
+passed the norm check, and that check is `verify`'s own. -/
+theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p) (msg : List Byte)
+    (maxAttempts : ℕ) (sig : Signature)
+    (hcompress : ∀ (s : IntPoly p.n) (slen : ℕ) (bytes : List Byte),
+      prims.compress s slen = some bytes → prims.decompress bytes slen = some s)
+    (hpreimage : ∀ (c : Rq p.n) (x : Rq p.n × Rq p.n),
+      x ∈ support ((falconPSF p prims).trapdoorSample pk sk c) →
+        (falconPSF p prims).eval pk x = c)
+    (hsig : some sig ∈ support (sign p prims pk sk msg maxAttempts)) :
+    verify p prims pk msg sig = true := by
+  induction maxAttempts with
+  | zero =>
+    simp only [sign, support_pure, Set.mem_singleton_iff] at hsig
+    exact absurd hsig (by simp)
+  | succ k ih =>
+    rw [sign, mem_support_bind_iff] at hsig
+    obtain ⟨salt, _hsalt, hsig⟩ := hsig
+    rw [mem_support_bind_iff] at hsig
+    obtain ⟨r, hr, hsig⟩ := hsig
+    match r, hr, hsig with
+    | none, _hr, hsig => exact ih hsig
+    | some (s₁, s₂), hr, hsig =>
+      dsimp only at hsig
+      cases hcomp : prims.compress (rqToIntPolyCentered s₂) p.sbytelen with
+      | none =>
+        rw [hcomp] at hsig
+        exact ih hsig
+      | some comp =>
+        rw [hcomp] at hsig
+        simp only [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hsig
+        subst hsig
+        -- The accepting attempt is a `trapdoorSample` output that passed the norm check.
+        set c := prims.hashToPointForPublicKey pk.h salt msg with hc
+        rw [signAttempt, mem_support_bind_iff] at hr
+        obtain ⟨x, hx, hr⟩ := hr
+        have hshort_eval :
+            (s₁, s₂) ∈ support ((falconPSF p prims).trapdoorSample pk sk c) ∧
+              (falconPSF p prims).isShort (s₁, s₂) = true := by
+          by_cases hshort : (falconPSF p prims).isShort x = true
+          · rw [ite_eq_left hshort, support_pure, Set.mem_singleton_iff, Option.some.injEq] at hr
+            subst hr
+            exact ⟨hx, hshort⟩
+          · rw [ite_eq_right hshort, support_pure, Set.mem_singleton_iff] at hr
+            exact absurd hr (by simp)
+        obtain ⟨hmem, hshort⟩ := hshort_eval
+        have heval : (falconPSF p prims).eval pk (s₁, s₂) = c := hpreimage c (s₁, s₂) hmem
+        -- `verify` decompresses to the same `s₂`, recomputes the same `s₁`, and runs the norm
+        -- check the attempt already passed.
+        have hdec := hcompress _ _ _ hcomp
+        unfold verify
+        simp only [hdec]
+        rw [toRq_rqToIntPolyCentered]
+        have hs1 : c - negacyclicMul s₂ pk.h = s₁ := by
+          rw [← heval]
+          change s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h = s₁
+          apply LatticeCrypto.Poly.ext_get_eq
+          intro i
+          calc (s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h).get i
+              = (s₁ + negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
+                LatticeCrypto.NegacyclicRing.coeff_sub (coeffRing p.n) _ _ i
+            _ = s₁.get i + (negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
+                congrArg (· - (negacyclicMul s₂ pk.h).get i)
+                  (LatticeCrypto.NegacyclicRing.coeff_add (coeffRing p.n) _ _ i)
+            _ = s₁.get i := add_sub_cancel_right _ _
+        change decide (pairL2NormSq (c - negacyclicMul s₂ pk.h) s₂ ≤ p.betaSquared) = true
+        rw [hs1]
+        exact hshort
+
 /-! ### NTRU-SIS Hardness Assumption -/
 
 /-- The NTRU-SIS problem: given `h ∈ R_q` (the Falcon public key), find a short nonzero
@@ -166,7 +252,8 @@ theorem collisionFindingAdvantage_eq_ntruPSF
     GPVHashAndSign.collisionFindingAdvantage psf hr B
       = SIS.advantage (ntruPSFCollisionProblem p prims hr) B := by
   simp only [GPVHashAndSign.collisionFindingAdvantage, GPVHashAndSign.collisionFindingExp,
-    SIS.advantage, SIS.experiment, ntruPSFCollisionProblem, hEval, hShort, bind_assoc, pure_bind]
+    SIS.advantage, SIS.experiment, ntruPSFCollisionProblem, hEval, hShort, bind_assoc, pure_bind,
+    evalDist_apply_singleton]
 
 /-- **One-shot EUF-CMA security of Falcon**, generic in the salt type `Salt`: the split GPV
 bound for the single-draw scheme `falconSignatureAlg`, with the sampler loss assumed
@@ -175,13 +262,15 @@ form; see the module docstring.
 
 For any EUF-CMA adversary `A` making at most `qSign` signing queries and `qHash`
 random-oracle queries against the Falcon+ signature scheme with salt type `Salt`, and
-any transport bound `ε_sampler` on the concrete-to-ideal sampler swap (the
-`hTransport` hypothesis), there exist:
+any ideal-scheme adversary `A'` to which `A` transports at cost `ε_sampler` (the
+`hTransport` hypothesis), the GPV reductions of `A'` at the domain sampler `domainSample`,
 
-- a collision reduction `B_coll` for the distinct-preimage branch,
-- a programmed-preimage replay reduction `B_exact` for the exact-match branch,
+- `B_coll = GPVHashAndSign.reduction idealPSF hr (List Byte) Salt A' domainSample` for the
+  distinct-preimage branch, read as an adversary for `ntruPSFCollisionProblem`,
+- `B_exact = GPVHashAndSign.programmedPreimageReduction idealPSF hr (List Byte) Salt A'
+  domainSample qSign qHash` for the exact-match branch,
 
-such that:
+satisfy:
 
   `Adv^{EUF-CMA}_{Falcon+}(A)`
   `  ≤ Adv^{collision}_{Falcon-PSF}(B_coll)`
@@ -243,7 +332,7 @@ theorem euf_cma_security_oneShot
       (validKeyPair p))
     (qSign qHash : ℕ)
     (samplerLoss : ENNReal)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconSignatureAlg p prims Salt hr))
     -- Ideal preimage-sampleable abstraction (truncated discrete Gaussian over the NTRU coset):
     -- same deterministic `eval`/`isShort` as `falconPSF`, GPV laws on honest keys only.
@@ -252,8 +341,8 @@ theorem euf_cma_security_oneShot
     (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
     (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
     (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
-    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
-      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
+    (hReg : ∀ pk sk, (pk, sk) ∈ support hr.gen →
         𝒮[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
         𝒮[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
@@ -265,41 +354,33 @@ theorem euf_cma_security_oneShot
     -- adversary. Assumed here as a single transport hypothesis; decomposing it into a
     -- per-call sampler-approximation bound with a proven adaptive accumulation is the
     -- intended refinement.
-    (hTransport : ∃ adv' : SignatureAlg.unforgeableAdv
-        (GPVHashAndSign idealPSF hr (List Byte) Salt),
-      adv.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) ≤
-          adv'.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) +
-            samplerLoss ∧
-        (∀ ds, GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) Salt adv' ds) ∧
-        (∀ pk, GPVHashAndSign.signHashQueryBound
-          (M := List Byte) (Salt := Salt) (Range := Rq p.n)
-          (S' := Salt × (Rq p.n × Rq p.n))
-          (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
-          (qSign := qSign) (qHash := qHash))) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    (adv' : SignatureAlg.UnforgeableAdversary
+      (GPVHashAndSign idealPSF hr (List Byte) Salt))
+    (hTransport : SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+      SignatureAlg.unforgeableAdvantage
+          (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv' + samplerLoss)
+    (hForge' : GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) Salt adv' domainSample)
+    (hQ' : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Salt) (Range := Rq p.n)
+      (S' := Salt × (Rq p.n × Rq p.n))
+      (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
+      (qSign := qSign) (qHash := qHash)) :
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction idealPSF hr (List Byte) Salt adv' domainSample) +
         ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            idealPSF hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage idealPSF hr
+            (GPVHashAndSign.programmedPreimageReduction idealPSF hr (List Byte) Salt adv'
+              domainSample qSign qHash) +
         GPVHashAndSign.collisionBound Salt qSign qHash +
         samplerLoss := by
-  obtain ⟨adv', hAdvLe, hForge', hQ'⟩ := hTransport
-  obtain ⟨cRed, eRed, hsplit⟩ :=
-    GPVHashAndSign.euf_cma_split_bound (psf := idealPSF) (hr := hr)
-      (M := List Byte) (Salt := Salt) hCorrect hReg qSign qHash adv'
-      hNeverFail hForge' hQ'
-  refine ⟨cRed, eRed, ?_⟩
-  have hbridge :
-      GPVHashAndSign.collisionFindingAdvantage idealPSF hr cRed
-        = SIS.advantage (ntruPSFCollisionProblem p prims hr) cRed :=
-    collisionFindingAdvantage_eq_ntruPSF p prims idealPSF hr hEval hShort cRed
-  rw [← hbridge]
-  exact le_trans hAdvLe (by gcongr)
+  have hsplit := GPVHashAndSign.euf_cma_split_bound (psf := idealPSF) (hr := hr)
+    (M := List Byte) (Salt := Salt) hCorrect domainSample hReg qSign qHash adv' hNeverFail
+    hForge' hQ'
+  rw [← collisionFindingAdvantage_eq_ntruPSF p prims idealPSF hr hEval hShort]
+  exact le_trans hTransport (by gcongr)
 
 /-- Concrete instantiation of `euf_cma_security_oneShot` with the Falcon-specified 40-byte
 (320-bit) salt.
@@ -312,46 +393,46 @@ theorem euf_cma_security_oneShot_bytes40
       (validKeyPair p))
     (qSign qHash : ℕ)
     (samplerLoss : ENNReal)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconSignatureAlg p prims (Bytes 40) hr))
     (idealPSF : PreimageSampleableFunction
       (PublicKey p) (SecretKey p) (Rq p.n × Rq p.n) (Rq p.n))
     (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
     (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
     (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
-    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
-      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
+    (hReg : ∀ pk sk, (pk, sk) ∈ support hr.gen →
         𝒮[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
         𝒮[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))])
     (hNeverFail : ∀ pk sk, (pk, sk) ∈ support hr.gen →
       ∀ c, NeverFail (idealPSF.trapdoorSample pk sk c))
-    (hTransport : ∃ adv' : SignatureAlg.unforgeableAdv
-        (GPVHashAndSign idealPSF hr (List Byte) (Bytes 40)),
-      adv.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) (Bytes 40)) ≤
-          adv'.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) (Bytes 40)) +
-            samplerLoss ∧
-        (∀ ds, GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) (Bytes 40) adv' ds) ∧
-        (∀ pk, GPVHashAndSign.signHashQueryBound
-          (M := List Byte) (Salt := Bytes 40) (Range := Rq p.n)
-          (S' := Bytes 40 × (Rq p.n × Rq p.n))
-          (α := List Byte × (Bytes 40 × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
-          (qSign := qSign) (qHash := qHash))) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) (Bytes 40)) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    (adv' : SignatureAlg.UnforgeableAdversary
+      (GPVHashAndSign idealPSF hr (List Byte) (Bytes 40)))
+    (hTransport : SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) (Bytes 40)) adv ≤
+      SignatureAlg.unforgeableAdvantage
+          (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) (Bytes 40)) adv' + samplerLoss)
+    (hForge' : GPVHashAndSign.ForgesQueriedPoint idealPSF hr (List Byte) (Bytes 40) adv'
+      domainSample)
+    (hQ' : ∀ pk, GPVHashAndSign.signHashQueryBound
+      (M := List Byte) (Salt := Bytes 40) (Range := Rq p.n)
+      (S' := Bytes 40 × (Rq p.n × Rq p.n))
+      (α := List Byte × (Bytes 40 × (Rq p.n × Rq p.n))) (oa := adv'.main pk)
+      (qSign := qSign) (qHash := qHash)) :
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) (Bytes 40)) adv ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction idealPSF hr (List Byte) (Bytes 40) adv' domainSample) +
         ((qSign + qHash : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            idealPSF hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage idealPSF hr
+            (GPVHashAndSign.programmedPreimageReduction idealPSF hr (List Byte) (Bytes 40) adv'
+              domainSample qSign qHash) +
         GPVHashAndSign.collisionBound (Bytes 40) qSign qHash +
         samplerLoss :=
   euf_cma_security_oneShot p prims (Bytes 40) hr qSign qHash samplerLoss adv
-    idealPSF hEval hShort hCorrect hReg hNeverFail hTransport
+    idealPSF hEval hShort hCorrect domainSample hReg hNeverFail adv' hTransport hForge' hQ'
 
 /-! ### Per-call sampler transport
 
@@ -644,7 +725,7 @@ theorem euf_cma_security
       (validKeyPair p))
     (qSign qHash maxAttempts : ℕ)
     (ε_step pRej : ℝ) (hε : 0 ≤ ε_step) (hRej0 : 0 ≤ pRej) (hRej1 : pRej < 1)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconRetrySignatureAlg p prims Salt maxAttempts hr))
     (idealAttempt : PublicKey p → SecretKey p → Rq p.n →
       ProbComp (Option (Rq p.n × Rq p.n)))
@@ -653,8 +734,8 @@ theorem euf_cma_security
     (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
     (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
     (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
-    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
-      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
+    (hReg : ∀ pk sk, (pk, sk) ∈ support hr.gen →
         𝒮[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
         𝒮[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
@@ -669,36 +750,33 @@ theorem euf_cma_security
       (S' := Salt × (Rq p.n × Rq p.n))
       (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey p) (Domain := Rq p.n × Rq p.n) (Range := Rq p.n)),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction idealPSF hr (List Byte) Salt
+            (GPVHashAndSign.appendForgeQuery idealPSF hr (List Byte) Salt ⟨adv.main⟩)
+            domainSample) +
         ((qSign + (qHash + 1) : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage
-            idealPSF hr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage idealPSF hr
+            (GPVHashAndSign.programmedPreimageReduction idealPSF hr (List Byte) Salt
+              (GPVHashAndSign.appendForgeQuery idealPSF hr (List Byte) Salt ⟨adv.main⟩)
+              domainSample qSign (qHash + 1)) +
         GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
         ENNReal.ofReal (qSign * (ε_step / (1 - pRej) + pRej ^ maxAttempts)) := by
-  obtain ⟨cRed, eRed, hsplit⟩ :=
-    GPVHashAndSign.euf_cma_split_bound_of_queryBound (psf := idealPSF) (hr := hr)
-      (M := List Byte) (Salt := Salt) hCorrect hReg qSign qHash ⟨adv.main⟩
-      hNeverFail hQ
-  refine ⟨cRed, eRed, ?_⟩
-  have hbridge :
-      GPVHashAndSign.collisionFindingAdvantage idealPSF hr cRed
-        = SIS.advantage (ntruPSFCollisionProblem p prims hr) cRed :=
-    collisionFindingAdvantage_eq_ntruPSF p prims idealPSF hr hEval hShort cRed
-  rw [← hbridge]
+  have hsplit := GPVHashAndSign.euf_cma_split_bound_of_queryBound (psf := idealPSF) (hr := hr)
+    (M := List Byte) (Salt := Salt) hCorrect domainSample hReg qSign qHash ⟨adv.main⟩
+    hNeverFail hQ
+  rw [← collisionFindingAdvantage_eq_ntruPSF p prims idealPSF hr hEval hShort]
   have hlt : (0 : ℝ) < 1 - pRej := by linarith
   have hεtot : 0 ≤ ε_step / (1 - pRej) + pRej ^ maxAttempts :=
     add_nonneg (div_nonneg hε (le_of_lt hlt)) (pow_nonneg hRej0 maxAttempts)
   have hAdvLe :
-      adv.advantage (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) ≤
-        (⟨adv.main⟩ : SignatureAlg.unforgeableAdv
-            (GPVHashAndSign idealPSF hr (List Byte) Salt)).advantage
-            (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) +
+      SignatureAlg.unforgeableAdvantage
+          (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+        SignatureAlg.unforgeableAdvantage
+            (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt)
+            (⟨adv.main⟩ : SignatureAlg.UnforgeableAdversary
+              (GPVHashAndSign idealPSF hr (List Byte) Salt)) +
           ENNReal.ofReal (qSign * (ε_step / (1 - pRej) + pRej ^ maxAttempts)) :=
     GPVHashAndSign.advantage_le_advantage_add_of_trapdoorSample_tvDist
       (falconRetryPSF p prims maxAttempts) idealPSF hr (List Byte) Salt
@@ -758,7 +836,7 @@ theorem euf_cma_collision_security
     (qSign qHash maxAttempts : ℕ)
     (ε_step pRej : ℝ) (hε : 0 ≤ ε_step) (hRej0 : 0 ≤ pRej) (hRej1 : pRej < 1)
     (εpp : ℝ≥0∞)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconRetrySignatureAlg p prims Salt maxAttempts hr))
     (idealAttempt : PublicKey p → SecretKey p → Rq p.n →
       ProbComp (Option (Rq p.n × Rq p.n)))
@@ -767,8 +845,8 @@ theorem euf_cma_collision_security
     (hEval : ∀ pk x, idealPSF.eval pk x = (falconPSF p prims).eval pk x)
     (hShort : ∀ x, idealPSF.isShort x = (falconPSF p prims).isShort x)
     (hCorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → idealPSF.CorrectAt pk sk)
-    (hReg : ∃ domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n),
-      ∀ pk sk, (pk, sk) ∈ support hr.gen →
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
+    (hReg : ∀ pk sk, (pk, sk) ∈ support hr.gen →
         𝒮[(do let s ← domainSample pk; pure (idealPSF.eval pk s, s)
               : ProbComp (Rq p.n × (Rq p.n × Rq p.n)))] =
         𝒮[(do let c ← ($ᵗ (Rq p.n)); let s ← idealPSF.trapdoorSample pk sk c; pure (c, s)
@@ -784,22 +862,21 @@ theorem euf_cma_collision_security
       (α := List Byte × (Salt × (Rq p.n × Rq p.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash))
     (hGuess : idealSamplerGuessBound p hr idealPSF εpp) :
-    ∃ collisionReduction : SIS.Adversary (ntruPSFCollisionProblem p prims hr),
-      adv.advantage
-          (GPVHashAndSign.runtime
-            (Range := Rq p.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruPSFCollisionProblem p prims hr) collisionReduction +
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq p.n) (List Byte) Salt) adv ≤
+      SIS.advantage (ntruPSFCollisionProblem p prims hr)
+          (GPVHashAndSign.reduction idealPSF hr (List Byte) Salt
+            (GPVHashAndSign.appendForgeQuery idealPSF hr (List Byte) Salt ⟨adv.main⟩)
+            domainSample) +
         ((qSign + (qHash + 1) : ℕ) : ENNReal) * εpp +
         GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
         ENNReal.ofReal (qSign * (ε_step / (1 - pRej) + pRej ^ maxAttempts)) := by
-  obtain ⟨cRed, eRed, hbound⟩ :=
-    euf_cma_security p prims Salt hr qSign qHash maxAttempts ε_step pRej
-      hε hRej0 hRej1 adv idealAttempt idealPSF hEval hShort hCorrect hReg hNeverFail
-      hAttempt hRej hRes hQ
-  refine ⟨cRed, le_trans hbound ?_⟩
+  refine le_trans (euf_cma_security p prims Salt hr qSign qHash maxAttempts ε_step pRej
+    hε hRej0 hRej1 adv idealAttempt idealPSF hEval hShort hCorrect domainSample hReg hNeverFail
+    hAttempt hRej hRes hQ) ?_
   gcongr
   exact GPVHashAndSign.programmedPreimageAdvantage_le_of_probOutput_trapdoorSample_le
-    idealPSF hr eRed hGuess
+    idealPSF hr _ hGuess
 
 
 /-! ### The two loss regimes, quantitatively

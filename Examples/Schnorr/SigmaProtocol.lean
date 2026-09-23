@@ -76,7 +76,7 @@ open scoped ENNReal
 
 namespace Schnorr
 
-variable (F : Type) [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
+variable (F : Type) [Field F] [SampleableType F]
 variable (G : Type) [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
 
 /-- Standard Schnorr Σ-protocol for knowledge of discrete log.
@@ -96,26 +96,25 @@ def sigma (g : G) : SigmaProtocol G F G F F F
 The three classical Σ-protocol properties: completeness, special soundness,
 and (perfect) honest-verifier zero-knowledge. -/
 
-omit [Fintype F] [DecidableEq F] in
 /-- Perfect completeness: an honest prover with a valid witness always produces
 an accepting transcript. Follows from `add_smul` and `mul_smul`. -/
 theorem sigma_complete (g : G) :
     (sigma F G g).PerfectlyComplete := by
   intro pk sk h
+  rw [evalDist_apply_singleton]
   have h_eq : sk • g = pk := of_decide_eq_true h
   simp only [sigma, monad_norm]
   have hverify : ∀ (r c : F), (r + c * sk) • g = r • g + c • pk := by
     intro r c; rw [add_smul, mul_smul, h_eq]
   simp [hverify]
 
-omit [Fintype F] [DecidableEq F] in
 /-- Special soundness: from two accepting transcripts `(R, c₁, z₁)` and `(R, c₂, z₂)` with
 `c₁ ≠ c₂`, the extracted witness `(z₁ - z₂) * (c₁ - c₂)⁻¹` satisfies the relation. -/
 theorem sigma_speciallySound (g : G) :
     SpeciallySound (sigma F G g) := by
   intro pk R c₁ c₂ z₁ z₂ h_ne h_v1 h_v2 w h_w
   dsimp [sigma] at *
-  simp only [support_pure, Set.mem_singleton_iff] at h_w
+  simp only [Set.mem_singleton_iff] at h_w
   subst h_w
   simp only [decide_eq_true_eq] at h_v1 h_v2 ⊢
   have h_sub : (z₁ - z₂) • g = (c₁ - c₂) • pk := by
@@ -135,7 +134,6 @@ def simTranscript (g : G) (pk : G) : ProbComp (G × F × F) := do
   return (z • g - c • pk, c, z)
 
 open OracleComp.ProgramLogic OracleComp.ProgramLogic.Relational in
-omit [Fintype F] [DecidableEq F] in
 /-- Honest-verifier zero-knowledge: the real transcript distribution equals the simulated one.
 The proof swaps sampling order and uses uniformity of `F` to reindex via the bijection
 `r ↦ r + c * sk`. -/
@@ -168,7 +166,6 @@ HVZK) to bound the probability that the signing-simulator collides with the
 random oracle when programming a hash entry. They concern the shape of the
 *simulator transcript distribution*, not the σ-protocol itself. -/
 
-omit [Fintype F] [DecidableEq F] in
 /-- Closed-form for the Schnorr `realTranscript`: the real transcript is the joint
 distribution of `(r • g, c, r + c * sk)` where `r, c ← $ᵗ F` are sampled *independently*.
 This is the form in which the commitment `r • g` and the challenge `c` are literally
@@ -181,7 +178,6 @@ private lemma realTranscript_eq_indep (g : G) (pk : G) (sk : F) :
         pure ((r • g, c, r + c * sk) : G × F × F)) := by
   simp only [ChallengeVerifyProtocol.realTranscript, sigma, monad_norm]
 
-omit [DecidableEq F] in
 /-- **Simulator commit-predictability for Schnorr.** With the standard bijection
 hypothesis `hg : Function.Bijective (· • g : F → G)` (`F` acts simply transitively on
 `G`, so `g` generates the group), the simulator's commit marginal is uniform over `G`,
@@ -196,7 +192,7 @@ Proof: for any fixed challenge `c`, the response map `z ↦ z • g - c • pk :
 a bijection (composition of `· • g` with translation), so `(z • g - c • pk)` is uniform
 on `G` when `z ← $ᵗ F`. Averaging over `c ← $ᵗ F` preserves uniformity, and uniformity
 on `G` gives probability `1/|G| = 1/|F|` for any specific output. -/
-theorem sigma_simCommitPredictability (g : G)
+theorem sigma_simCommitPredictability [Fintype F] (g : G)
     (hg : Function.Bijective (· • g : F → G)) :
     (sigma F G g).simCommitPredictability (simTranscript F G g)
       ((Fintype.card F : ℝ≥0∞)⁻¹) := by
@@ -234,7 +230,6 @@ theorem sigma_simCommitPredictability (g : G)
       probOutput_uniformSample (α := G), hcard_FG]
   exact h_eq.le
 
-omit [DecidableEq F] in
 /-- **Simulator-challenge uniformity given commit, for Schnorr.** For any commit value
 `c₀ : G` and challenge value `ch₀ : F`, the simulator's joint marginal on
 `(commit, chal)` factors as `Pr[commit = c₀] · (1/|F|)`.
@@ -245,7 +240,7 @@ challenge is uniform on `F`. The proof reduces to the explicit independent produ
 `(do r ← $ᵗ F; c ← $ᵗ F; pure (r • g, c, r + c · sk))` via perfect HVZK and the
 closed form `realTranscript_eq_indep`; in that form the commit `r • g` and challenge
 `c` are literally independent (by sampling order), so the factoring is immediate. -/
-theorem sigma_simChalUniformGivenCommit (g : G) :
+theorem sigma_simChalUniformGivenCommit [Fintype F] (g : G) :
     (sigma F G g).simChalUniformGivenCommit (simTranscript F G g) := by
   classical
   intro pk sk hsk c₀ ch₀
@@ -302,7 +297,7 @@ theorem sigma_simChalUniformGivenCommit (g : G) :
             (if r • g = c₀ then (1 : ℝ≥0∞) else 0) by
       simp_rw [probOutput_uniformSample, probEvent_pure]
       by_cases hr : r • g = c₀
-      · simp only [hr, if_true]
+      · simp only [hr, ite_true]
         rw [ENNReal.tsum_mul_left, ENNReal.tsum_const,
           ENat.card_eq_coe_fintype_card, mul_one, ENat.toENNReal_coe,
           ENNReal.inv_mul_cancel hcard_ne_zero hcard_ne_top]

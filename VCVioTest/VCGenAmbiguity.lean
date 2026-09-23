@@ -25,13 +25,15 @@ public section
 open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic
+open scoped OracleComp.ProgramLogic Std.Internal.Do OracleComp.Quantitative
 
 namespace VCVioTest.VCGenAmbiguity
 
 universe u
 
-variable {ι : Type u} {spec : OracleSpec ι} [IsUniformSpec spec] {α : Type}
+variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
+  [∀ t, MeasurableSpace (spec.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
 
 example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
     ⦃fun s => wp⟦oa⟧ (fun a => post (s, a) (s + 1))⦄

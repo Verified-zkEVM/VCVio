@@ -334,7 +334,7 @@ lemma embedTrapIdxSigImpl_run_step_eq_embedTrapFreshIdxSig (pk : PK) (sk : SK) (
           rw [embedTrapIdxSigImpl_run_inl_inr, embedTrapFreshIdxSigImpl_run_inl_inr]
           cases hq : s.1.1.1 q with
           | some v => rfl
-          | none => simp only [if_neg (hoff q rfl hq)]
+          | none => simp only [ite_eq_right (hoff q rfl hq)]
   | inr msg => rw [embedTrapIdxSigImpl_run_inr, embedTrapFreshIdxSigImpl_run_inr]
 
 omit [DecidableEq Range] [Fintype Salt] in
@@ -556,7 +556,7 @@ lemma embedTrapIdxSigImpl_fresh_idx_cache_eq_general (pk : PK) (sk : SK) (j : �
                   else s.1.1.1.cacheQuery mc v, s.1.1.2 + 1),
                 fun t' => if t' = mc then some s.1.1.2 else s.1.2 t'), s.2) := by
               have h2 := (Prod.ext_iff.mp hh).2
-              by_cases hb : s.1.1.2 = j <;> simp only [hb, if_true, if_false] at h2 ⊢ <;>
+              by_cases hb : s.1.1.2 = j <;> simp only [hb, ite_true, ite_false] at h2 ⊢ <;>
                 exact h2
             refine ih pv pst ?_ z hz2
             intro k hidx hfresh
@@ -566,13 +566,13 @@ lemma embedTrapIdxSigImpl_fresh_idx_cache_eq_general (pk : PK) (sk : SK) (j : �
             · subst hk
               -- The miss at `mc` records `idx mc = some s.1.1.2`; the hypothesis forces it `= j`,
               -- so the winner branch fired and cached `y`.
-              simp only [if_true, Option.some.injEq] at hidx
+              simp only [ite_true, Option.some.injEq] at hidx
               subst hidx
-              simp only [if_true, QueryCache.cacheQuery_self]
+              simp only [ite_true, QueryCache.cacheQuery_self]
             · -- Off the missed key the state is the old one; apply `hs`.
-              simp only [if_neg hk] at hidx
+              simp only [ite_eq_right hk] at hidx
               by_cases hb : s.1.1.2 = j <;>
-                simp only [hb, if_true, if_false, QueryCache.cacheQuery_of_ne _ _ hk] <;>
+                simp only [hb, ite_true, ite_false, QueryCache.cacheQuery_of_ne _ _ hk] <;>
                 exact hs k hidx hfresh
       · rw [embedTrapIdxSigImpl_run_inr] at hps
         obtain ⟨r, -, hps⟩ := (mem_support_bind_iff _ _ _).1 hps
@@ -591,7 +591,7 @@ lemma embedTrapIdxSigImpl_fresh_idx_cache_eq_general (pk : PK) (sk : SK) (j : �
         -- `k.2 ≠ msg` forces `k ≠ (r, msg)`, so the signing step left `idx k` and `cache k` alone.
         have hk : k ≠ (r, msg) := fun hkeq => hne (by rw [hkeq])
         simp only at hidx ⊢
-        simp only [if_neg hk] at hidx
+        simp only [ite_eq_right hk] at hidx
         rw [QueryCache.cacheQuery_of_ne _ _ hk]
         exact hs k hidx hfresh'
 
@@ -680,11 +680,11 @@ lemma progGameRunImplCombinedTrapCount_table_support (pk : PK) (sk : SK) :
             rw [hcache]
             by_cases hk : k = mc
             · subst hk
-              simp only [if_true] at hkx'
+              simp only [ite_true] at hkx'
               rw [Option.some.injEq] at hkx'
               subst hkx'
               exact ⟨v, QueryCache.cacheQuery_self _ _ _, hx⟩
-            · simp only [if_neg hk] at hkx'
+            · simp only [ite_eq_right hk] at hkx'
               obtain ⟨w, hw1, hw2⟩ := hs k x' hkx'
               exact ⟨w, by rw [QueryCache.cacheQuery_of_ne _ _ hk]; exact hw1, hw2⟩
       · rw [progGameRunImplCombinedTrapCount_run_inr] at hps
@@ -699,11 +699,11 @@ lemma progGameRunImplCombinedTrapCount_table_support (pk : PK) (sk : SK) :
         rw [hcache]
         by_cases hk : k = (r, msg)
         · subst hk
-          simp only [if_true] at hkx'
+          simp only [ite_true] at hkx'
           rw [Option.some.injEq] at hkx'
           subst hkx'
           exact ⟨v, QueryCache.cacheQuery_self _ _ _, hx⟩
-        · simp only [if_neg hk] at hkx'
+        · simp only [ite_eq_right hk] at hkx'
           obtain ⟨w, hw1, hw2⟩ := hs k x' hkx'
           exact ⟨w, by rw [QueryCache.cacheQuery_of_ne _ _ hk]; exact hw1, hw2⟩
 

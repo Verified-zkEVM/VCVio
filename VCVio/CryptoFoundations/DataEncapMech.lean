@@ -5,8 +5,9 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
-public import VCVio.OracleComp.ProbComp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.ProbCompLift
 
 /-!
@@ -46,7 +47,7 @@ def CorrectExp (k : K) (msg : M) : m Bool :=
 /-- Perfect correctness for a DEM: every externally supplied key decrypts honest ciphertexts
 correctly with probability `1`. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  ∀ k : K, ∀ msg : M, Pr[= true | runtime.evalSPMF (dem.CorrectExp k msg)] = 1
+  ∀ k : K, ∀ msg : M, runtime.evalDist (dem.CorrectExp k msg) {true} = 1
 
 end Correct
 
@@ -63,20 +64,20 @@ structure IND_CPA_Adversary (_dem : DEMScheme (OracleComp spec) K M C) where
 
 /-- Fixed-branch one-time IND-CPA experiment for a DEM, matching the source proof-ladders
 `DEM_1CPA_Exp.run(b)` presentation. -/
-def IND_CPA_Exp {dem : DEMScheme (OracleComp spec) K M C}
+noncomputable def IND_CPA_Exp {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.IND_CPA_Adversary) (b : Bool) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : dem.IND_CPA_Adversary) (b : Bool) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let k ← runtime.liftProbComp ($ᵗ K)
     let (m₀, m₁, st) ← adversary.chooseMessages
     let c ← dem.encrypt k (if b then m₁ else m₀)
     adversary.distinguish st c
 
 /-- Game-form one-time IND-CPA experiment for a DEM. -/
-def IND_CPA_Game {dem : DEMScheme (OracleComp spec) K M C}
+noncomputable def IND_CPA_Game {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.IND_CPA_Adversary) : SPMF Bool :=
-  runtime.evalSPMF do
+    (adversary : dem.IND_CPA_Adversary) : MeasureTheory.Measure Bool :=
+  runtime.evalDist do
     let b ← runtime.liftProbComp ($ᵗ Bool)
     let k ← runtime.liftProbComp ($ᵗ K)
     let (m₀, m₁, st) ← adversary.chooseMessages
@@ -88,14 +89,14 @@ def IND_CPA_Game {dem : DEMScheme (OracleComp spec) K M C}
 noncomputable def IND_CPA_Advantage {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : dem.IND_CPA_Adversary) : ℝ :=
-  (IND_CPA_Game runtime adversary).boolBiasAdvantage
+  (IND_CPA_Game runtime adversary).boolBias
 
 /-- The canonical one-time IND-CPA advantage is definitionally the bias of the single game. -/
 theorem IND_CPA_Advantage_eq_game_bias {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : dem.IND_CPA_Adversary) :
     dem.IND_CPA_Advantage runtime adversary =
-      (dem.IND_CPA_Game runtime adversary).boolBiasAdvantage := rfl
+      (dem.IND_CPA_Game runtime adversary).boolBias := rfl
 
 end IND_CPA
 

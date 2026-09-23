@@ -128,25 +128,11 @@ theorem toy_ntruEquation_deg2 :
   simp only [integralLift, vectorIntegralLift]
   apply Poly.ext_get_eq
   intro i
+  rw [Poly.get_sub]
   fin_cases i <;>
-  · simp only [schoolbookNegacyclicMul, keyF, keyG, keyCapF, keyCapG, polyOfPair, vectorKernel,
-      vectorBackend, Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size,
-      List.range'_succ, Poly.ofPi, Vector.toArray_ofFn, constPoly, Id.run]
-    simp only [zero_add, Nat.reduceAdd, List.range'_zero, Order.lt_two_iff,
-      Array.getD_eq_getD_getElem?, Int.reduceNeg, Array.set!_eq_setIfInBounds, List.forIn_cons,
-      add_zero, Array.size_ofFn, zero_le, getElem?_pos, Array.getElem_ofFn, Fin.zero_eta,
-      Fin.isValue, Matrix.cons_val_zero, Option.getD_some, mul_neg, sub_neg_eq_add,
-      add_le_iff_nonpos_left, nonpos_iff_eq_zero, Std.le_refl, Fin.mk_one, Matrix.cons_val_one,
-      Matrix.cons_val_fin_one, List.forIn_nil, bind_pure_comp, map_bind, ↓reduceIte, Nat.zero_mod,
-      Array.size_replicate, Array.getElem_replicate, neg_mul, Int.reduceMul, neg_neg, Nat.mod_succ,
-      pure_bind, Array.size_setIfInBounds, ne_eq, zero_ne_one, not_false_eq_true,
-      Array.getElem_setIfInBounds_ne, map_pure, one_ne_zero, Nat.mod_self,
-      Array.getElem?_setIfInBounds_ne, Array.getElem_setIfInBounds_self, add_neg_cancel,
-      Array.setIfInBounds_setIfInBounds, Int.reduceAdd, Int.reduceSub, Poly.get_sub,
-      Fin.val_eq_zero_iff, Vector.get_ofFn]
-    change Vector.get (Vector.ofFn _) _ - Vector.get (Vector.ofFn _) _ = _
-    simp only [Vector.get_ofFn, Array.getElem?_setIfInBounds, modulus]
-    simp
+  · simp only [keyF, keyG, keyCapF, keyCapG, polyOfPair, vectorKernel, vectorBackend, Poly.ofPi,
+      constPoly]
+    simp [negacyclicMulPure, negacyclicConvCoeff, Fintype.sum_prod_type, Fin.sum_univ_two, modulus]
 
 /-- **The NTRU equation** `fG − gF = q` holds exactly for the key. -/
 theorem toy_ntruEquation : ntruEquation toyP keyF keyG keyCapF keyCapG :=
@@ -676,17 +662,22 @@ theorem toy_neverFail (pk : PublicKey toyP) (sk : SecretKey toyP) (c : Rq toyP.n
     NeverFail (toyIdealPSF.trapdoorSample pk sk c) :=
   ⟨by simp [toyIdealPSF, condSample]⟩
 
-/-- `hReg`: regularity, with the domain sampler the ideal sampler's own marginal. Every draw is a
-preimage of its target (`toy_eval_sOf`), so pairing a draw with its image is pairing a uniform
-target with a conditional draw. -/
+/-- The domain sampler witnessing regularity: the ideal sampler's own marginal, a uniform target
+followed by a conditional draw. -/
+noncomputable def toyDomainSample : PublicKey toyP → ProbComp (Rq toyP.n × Rq toyP.n) :=
+  fun _ => do let c ← ($ᵗ (Rq 2)); condSample c
+
+/-- `hReg`: regularity at `toyDomainSample`. Every draw is a preimage of its target
+(`toy_eval_sOf`), so pairing a draw with its image is pairing a uniform target with a conditional
+draw. -/
 theorem toy_hReg :
-    ∃ domainSample : PublicKey toyP → ProbComp (Rq toyP.n × Rq toyP.n),
-      ∀ pk sk, (pk, sk) ∈ support toyHr.gen →
-        𝒮[(do let s ← domainSample pk; pure (toyIdealPSF.eval pk s, s)
-              : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n)))] =
-        𝒮[(do let c ← ($ᵗ (Rq toyP.n)); let s ← toyIdealPSF.trapdoorSample pk sk c; pure (c, s)
-              : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n)))] := by
-  refine ⟨fun _ => do let c ← ($ᵗ (Rq 2)); condSample c, fun pk sk hmem => ?_⟩
+    ∀ pk sk, (pk, sk) ∈ support toyHr.gen →
+      𝒮[(do let s ← toyDomainSample pk; pure (toyIdealPSF.eval pk s, s)
+            : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n)))] =
+      𝒮[(do let c ← ($ᵗ (Rq toyP.n)); let s ← toyIdealPSF.trapdoorSample pk sk c; pure (c, s)
+            : ProbComp (Rq toyP.n × (Rq toyP.n × Rq toyP.n)))] := by
+  intro pk sk hmem
+  unfold toyDomainSample
   obtain ⟨rfl, rfl⟩ := toy_mem_gen hmem
   simp only [bind_assoc]
   refine evalSPMF_bind_congr' _ fun c => ?_
@@ -755,7 +746,8 @@ theorem falcon_attempt_hyps_inhabited :
     attemptTransport toyP toyPrims toyHr (signAttempt toyP toyPrims) 0 ∧
     attemptRejectBound toyP toyHr (signAttempt toyP toyPrims) (80 / 81) ∧
     idealAttemptResamples toyP toyHr (signAttempt toyP toyPrims) toyIdealPSF :=
-  ⟨fun _ _ => rfl, fun _ => rfl, toy_correctAt, fun pk sk _ c => toy_neverFail pk sk c, toy_hReg,
+  ⟨fun _ _ => rfl, fun _ => rfl, toy_correctAt, fun pk sk _ c => toy_neverFail pk sk c,
+    ⟨toyDomainSample, toy_hReg⟩,
     toy_attemptTransport, toy_attemptRejectBound, toy_idealAttemptResamples⟩
 
 /-- **The attempt-level sampler loss at Falcon's signing budget.** With `ε_step = 0` and
@@ -943,31 +935,37 @@ theorem toy_oneShot_samplerLoss_one_le
 /-! ## The headline at the instance -/
 
 /-- **The attempt-level headline, instantiated.** For every query-bounded forger against the
-rejection-loop signer at this key, the split bound of `Falcon.euf_cma_security` holds with the
+rejection-loop signer at this key, the split bound of `Falcon.euf_cma_security` holds, for the
+GPV reductions at `toyDomainSample`, with the
 sampler loss `qSign · (80/81) ^ maxAttempts`: every sampler-side hypothesis is discharged by the
 witnesses above, and nothing is assumed beyond the forger's query bound. -/
 theorem toy_euf_cma_security
     (Salt : Type) [DecidableEq Salt] [SampleableType Salt] [Fintype Salt] [Nonempty Salt]
     (qSign qHash maxAttempts : ℕ)
-    (adv : SignatureAlg.unforgeableAdv
+    (adv : SignatureAlg.UnforgeableAdversary
       (falconRetrySignatureAlg toyP toyPrims Salt maxAttempts toyHr))
     (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
       (M := List Byte) (Salt := Salt) (Range := Rq toyP.n)
       (S' := Salt × (Rq toyP.n × Rq toyP.n))
       (α := List Byte × (Salt × (Rq toyP.n × Rq toyP.n))) (oa := adv.main pk)
       (qSign := qSign) (qHash := qHash)) :
-    ∃ (collisionReduction : SIS.Adversary (ntruPSFCollisionProblem toyP toyPrims toyHr))
-      (exactMatchReduction : GPVHashAndSign.ProgrammedPreimageAdversary
-        (PK := PublicKey toyP) (Domain := Rq toyP.n × Rq toyP.n) (Range := Rq toyP.n)),
-      adv.advantage (GPVHashAndSign.runtime (Range := Rq toyP.n) (List Byte) Salt) ≤
-        SIS.advantage (ntruPSFCollisionProblem toyP toyPrims toyHr) collisionReduction +
+    SignatureAlg.unforgeableAdvantage
+        (GPVHashAndSign.runtime (Range := Rq toyP.n) (List Byte) Salt) adv ≤
+      SIS.advantage (ntruPSFCollisionProblem toyP toyPrims toyHr)
+          (GPVHashAndSign.reduction toyIdealPSF toyHr (List Byte) Salt
+            (GPVHashAndSign.appendForgeQuery toyIdealPSF toyHr (List Byte) Salt ⟨adv.main⟩)
+            toyDomainSample) +
         ((qSign + (qHash + 1) : ℕ) : ENNReal) *
-          GPVHashAndSign.programmedPreimageAdvantage toyIdealPSF toyHr exactMatchReduction +
+          GPVHashAndSign.programmedPreimageAdvantage toyIdealPSF toyHr
+            (GPVHashAndSign.programmedPreimageReduction toyIdealPSF toyHr (List Byte) Salt
+              (GPVHashAndSign.appendForgeQuery toyIdealPSF toyHr (List Byte) Salt ⟨adv.main⟩)
+              toyDomainSample qSign (qHash + 1)) +
         GPVHashAndSign.collisionBound Salt qSign (qHash + 1) +
         ENNReal.ofReal (qSign * (80 / 81 : ℝ) ^ maxAttempts) := by
   have h := euf_cma_security toyP toyPrims Salt toyHr qSign qHash maxAttempts 0 (80 / 81)
     le_rfl (by norm_num) (by norm_num) adv (signAttempt toyP toyPrims) toyIdealPSF
-    (fun _ _ => rfl) (fun _ => rfl) toy_correctAt toy_hReg (fun pk sk _ c => toy_neverFail pk sk c)
+    (fun _ _ => rfl) (fun _ => rfl) toy_correctAt toyDomainSample toy_hReg
+    (fun pk sk _ c => toy_neverFail pk sk c)
     toy_attemptTransport toy_attemptRejectBound toy_idealAttemptResamples hQ
   simpa only [zero_div, zero_add] using h
 
