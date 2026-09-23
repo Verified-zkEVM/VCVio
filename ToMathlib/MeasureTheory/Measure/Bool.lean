@@ -138,6 +138,17 @@ lemma apply_true_le_add_boolDist (μ ν : Measure Bool) :
     μ {true} ≤ ν {true} + μ.boolDist ν :=
   le_add_tsub.trans (by gcongr; exact le_self_add)
 
+/-- Two probability measures on `Bool` are within Boolean distance `ε` when each outcome has
+mass under the first at most its mass under the second plus `ε`. -/
+lemma boolDist_le_of_apply_le (μ ν : Measure Bool) [IsProbabilityMeasure μ]
+    [IsProbabilityMeasure ν] {ε : ℝ≥0∞} (h : ∀ b, μ {b} ≤ ν {b} + ε) : μ.boolDist ν ≤ ε := by
+  refine absDiff_le_iff.2
+    ⟨h true, (ENNReal.add_le_add_iff_right (measure_ne_top μ {false})).1 ?_⟩
+  calc ν {true} + μ {false} ≤ ν {true} + (ν {false} + ε) := by gcongr; exact h false
+    _ = μ {true} + ε + μ {false} := by
+      rw [← add_assoc, apply_true_add_apply_false_eq_one, add_right_comm,
+        apply_true_add_apply_false_eq_one]
+
 /-- A fair hidden-bit guessing experiment has the event distance of its two total branches. -/
 lemma boolBias_bind_coin (coin μ ν : Measure Bool)
     (hcT : coin {true} = 1 / 2) (hcF : coin {false} = 1 / 2)
