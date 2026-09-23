@@ -469,15 +469,15 @@ def unlinkSingleExp {K : Type}
   (simulateQ (unlinkSingleQueryImpl (TagId := TagId) (Nonce := Nonce)
     (Digest := Digest) prfs k) adversary).run' UnlinkState.init
 
-/-- One-sided unlinkability gap `Pr[Multiple] - Pr[Single]` between the two session-allocation
-worlds. -/
+/-- Unlinkability advantage: the distinguishing advantage `Measure.boolDist` between the
+multiple-session and single-session worlds. -/
 noncomputable def unlinkabilityAdvantage {K : Type}
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
-    (adversary : UnlinkAdversary TagId Nonce Digest) : ℝ :=
-  (Pr[= true | unlinkMultipleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary]).toReal -
-    (Pr[= true | unlinkSingleExp (TagId := TagId) (Nonce := Nonce)
-      (Digest := Digest) (sessionsPerTag := sessionsPerTag) prfs adversary]).toReal
+    (adversary : UnlinkAdversary TagId Nonce Digest) : ℝ≥0∞ :=
+  𝒟[unlinkMultipleExp (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) prfs adversary].boolDist
+    𝒟[unlinkSingleExp (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) prfs adversary]
 
 /-! ## Failure-freeness of the unlinkability experiments
 

@@ -103,7 +103,7 @@ noncomputable abbrev cmaH3Advantage
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
-    (A : OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool) : ℝ :=
+    (A : OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool) : ℝ≥0∞ :=
   (cmaReal M Commit Chal σ hr).advantage
     (cmaInit M Commit Chal Stmt Wit)
     (cmaSim M Commit Chal hr simT)
@@ -998,7 +998,7 @@ theorem cmaReal_cmaSim_advantage_le_H3_bound_of_expectedQuerySlack
     (qS : ℕ) (εBound : ℝ≥0∞)
     (stepFacts : CmaH3StepFacts M Commit Chal σ hr simT ζ_zk β)
     (runFacts : CmaH3RunFacts M Commit Chal σ hr ζ_zk β A qS εBound) :
-    ENNReal.ofReal (cmaH3Advantage M Commit Chal σ hr simT A) ≤ εBound := by
+    cmaH3Advantage M Commit Chal σ hr simT A ≤ εBound := by
   have h_bridge :=
     QueryImpl.Stateful.advantage_le_expectedQuerySlack_plus_probEvent_bad_of_inv_preserved
       (h₀ := cmaReal M Commit Chal σ hr)
@@ -1012,7 +1012,7 @@ theorem cmaReal_cmaSim_advantage_le_H3_bound_of_expectedQuerySlack
       stepFacts.preservesValid stepFacts.stepTvCostly stepFacts.stepEqFree
       stepFacts.badMono A runFacts.queryBound
   calc
-    ENNReal.ofReal (cmaH3Advantage M Commit Chal σ hr simT A)
+    cmaH3Advantage M Commit Chal σ hr simT A
         ≤ expectedQuerySlack (cmaReal M Commit Chal σ hr)
           (cmaH3Costly (M := M) (Commit := Commit) (Chal := Chal)
             (Resp := Resp) (Stmt := Stmt))
@@ -1042,7 +1042,7 @@ theorem cmaReal_cmaSim_advantage_le_H3_bound
     (h_qH : OracleComp.IsQueryBoundP A
       (IsHashQuery (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) (Stmt := Stmt)) qH) :
-    ENNReal.ofReal (cmaH3Advantage M Commit Chal σ hr simT A) ≤
+    cmaH3Advantage M Commit Chal σ hr simT A ≤
       (qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + qH) * β :=
   cmaReal_cmaSim_advantage_le_H3_bound_of_expectedQuerySlack
     M Commit Chal σ hr simT ζ_zk β A qS

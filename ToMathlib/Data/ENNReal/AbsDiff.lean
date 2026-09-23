@@ -44,6 +44,12 @@ protected def absDiff (a b : ℝ≥0∞) : ℝ≥0∞ := (a - b) + (b - a)
 @[simp] lemma absDiff_self (a : ℝ≥0∞) : ENNReal.absDiff a a = 0 := by
   simp [ENNReal.absDiff]
 
+@[simp] lemma absDiff_zero_left (a : ℝ≥0∞) : ENNReal.absDiff 0 a = a := by
+  simp [ENNReal.absDiff]
+
+@[simp] lemma absDiff_zero_right (a : ℝ≥0∞) : ENNReal.absDiff a 0 = a := by
+  simp [ENNReal.absDiff]
+
 lemma absDiff_comm (a b : ℝ≥0∞) : ENNReal.absDiff a b = ENNReal.absDiff b a := by
   simp [ENNReal.absDiff, add_comm]
 

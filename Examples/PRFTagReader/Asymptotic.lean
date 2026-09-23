@@ -19,23 +19,21 @@ negligible unlinkability advantage.
 
 ## Framework idiom
 
-The concrete unlinkability quantities (`unlinkabilityAdvantage`, `PRFScheme.prfAdvantage`) are
-`ℝ`-valued, while the asymptotic-security vocabulary of
-`VCVio.CryptoFoundations.Asymptotics.{Negligible,Security}` is phrased over `ℕ → ℝ≥0∞`. We bridge
-the two exactly as the rest of the repository does (see `VCVio/Interaction/UC/Computational.lean`):
-an `ℝ`-valued error family `ε : ℕ → ℝ` is *negligible* when `fun λ => ENNReal.ofReal (ε λ)` is
-`negligible`, and sums of such families are handled by `negligible_ofReal_add`. No
-parallel framework is introduced; the headline is a plain `negligible` statement over a `ℕ`-indexed
-instance family.
+The advantages `unlinkabilityAdvantage` and `PRFScheme.prfAdvantage` are `ℝ≥0∞`-valued, as is
+the asymptotic-security vocabulary of `VCVio.CryptoFoundations.Asymptotics.{Negligible,Security}`,
+so the hypotheses and the headline are plain `negligible` statements over a `ℕ`-indexed instance
+family. The concrete bound's collision and slack terms are `ℝ`-valued; an `ℝ`-valued error family
+`ε : ℕ → ℝ` is *negligible* when `fun λ => ENNReal.ofReal (ε λ)` is `negligible`, and sums of such
+families are handled by `negligible_ofReal_add`.
 
 ## Base bound
 
-The base is the absolute bound `abs_unlinkabilityAdvantage_le_two_prf_plus_collision`, stated for
+The base is the bound `unlinkabilityAdvantage_le_two_prf_plus_collision`, stated for
 the concrete reductions `unlinkToMultiplePRFReduction` and `unlinkToSinglePRFReduction` (applied to
 the adversary and to its output-negated variant). Its two `NeverFail` hypotheses are inherited
 unchanged: they are necessary because an `UnlinkAdversary`
-may itself contain `failure`, in which case `unlinkabilityAdvantage` stops being odd under output
-negation.
+may itself contain `failure`, in which case the one-sided gap `Pr[Multiple] − Pr[Single]` stops
+being odd under output negation.
 
 ## Hypotheses of the headline
 
@@ -89,8 +87,8 @@ instances, suppose:
   `qReader`, `qTag`, `|TagId|`, and `sessionsPerTag` are each bounded by a fixed polynomial in `λ`;
 * both experiments are failure-free at every `λ`.
 
-Then the unlinkability advantage `|unlinkabilityAdvantage|` is negligible. -/
-theorem negligible_abs_unlinkabilityAdvantage
+Then the unlinkability advantage `unlinkabilityAdvantage` is negligible. -/
+theorem negligible_unlinkabilityAdvantage
     (inst : AsymptoticInstance TagId Nonce Digest K sessionsPerTag)
     (adversary : (lam : ℕ) → UnlinkAdversary (TagId lam) (Nonce lam) (Digest lam))
     (qReader qTag : ℕ → ℕ)
@@ -99,18 +97,18 @@ theorem negligible_abs_unlinkabilityAdvantage
     (hMnf : ∀ lam, NeverFail (unlinkMultipleExp (inst.prfs lam) (adversary lam)))
     (hSnf : ∀ lam, NeverFail (unlinkSingleExp (inst.prfs lam) (adversary lam)))
     -- PRF asymptotic security (multiple + single, adversary + negated adversary):
-    (hPRFmulti : negligible (fun lam => ENNReal.ofReal
+    (hPRFmulti : negligible (fun lam =>
       (PRFScheme.prfAdvantage (inst.prfs lam).multiplePRFScheme
         (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag lam) (adversary lam)))))
-    (hPRFsingle : negligible (fun lam => ENNReal.ofReal
+    (hPRFsingle : negligible (fun lam =>
       (PRFScheme.prfAdvantage (inst.prfs lam).singlePRFScheme
         (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag lam) (adversary lam)))))
-    (hPRFmulti' : negligible (fun lam => ENNReal.ofReal
+    (hPRFmulti' : negligible (fun lam =>
       (PRFScheme.prfAdvantage (inst.prfs lam).multiplePRFScheme
         (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag lam)
           (adversary lam >>= fun b => pure (!b) :
             OracleComp (UnlinkOracleSpec (TagId lam) (Nonce lam) (Digest lam)) Bool)))))
-    (hPRFsingle' : negligible (fun lam => ENNReal.ofReal
+    (hPRFsingle' : negligible (fun lam =>
       (PRFScheme.prfAdvantage (inst.prfs lam).singlePRFScheme
         (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag lam)
           (adversary lam >>= fun b => pure (!b) :
@@ -124,8 +122,7 @@ theorem negligible_abs_unlinkabilityAdvantage
     (hpTag : ∀ lam, qTag lam ≤ pTag.eval lam)
     (hpTagId : ∀ lam, Fintype.card (TagId lam) ≤ pTagId.eval lam)
     (hpSessions : ∀ lam, sessionsPerTag lam ≤ pSessions.eval lam) :
-    negligible (fun lam => ENNReal.ofReal
-      |unlinkabilityAdvantage (inst.prfs lam) (adversary lam)|) := by
+    negligible (fun lam => unlinkabilityAdvantage (inst.prfs lam) (adversary lam)) := by
   classical
   -- Negligibility of the collision term: bounded by `sessionsPerTag² · |TagId| / |Nonce|`.
   have hCollision : negligible (fun lam => ENNReal.ofReal
@@ -170,16 +167,24 @@ theorem negligible_abs_unlinkabilityAdvantage
       (fun lam => by
         rw [Polynomial.eval_mul, Polynomial.eval_mul]
         exact Nat.mul_le_mul (Nat.mul_le_mul (hpReader lam) (hpTagId lam)) (hpSessions lam))
-  -- The pointwise abs bound, transported through `ENNReal.ofReal`.
-  -- Pointwise `ofReal |unlink| ≤ ofReal (Σ termᵢ)` by the abs bound; the bounding family is
-  -- negligible as an `ofReal` of eight negligible real summands.
+  -- The PRF hypotheses in `ENNReal.ofReal ∘ toReal` form, matching the real-valued bound.
+  have hofReal {f : ℕ → ℝ≥0∞} (hf : negligible f) (hfin : ∀ lam, f lam ≠ ⊤) :
+      negligible (fun lam => ENNReal.ofReal (f lam).toReal) :=
+    negligible_of_le (fun lam => (ENNReal.ofReal_toReal (hfin lam)).le) hf
+  -- Pointwise `unlink = ofReal unlink.toReal ≤ ofReal (Σ termᵢ)` by the concrete bound; the
+  -- bounding family is negligible as an `ofReal` of eight negligible real summands.
   exact negligible_of_le
-    (fun lam => ENNReal.ofReal_le_ofReal (abs_unlinkabilityAdvantage_le_two_prf_plus_collision
-      (inst.prfs lam) (adversary lam) (qReader lam) (qTag lam) (hqReader lam) (hqTag lam)
-      (hMnf lam) (hSnf lam)))
+    (fun lam => (ENNReal.ofReal_toReal (MeasureTheory.Measure.boolDist_ne_top _ _)).symm.le.trans
+      (ENNReal.ofReal_le_ofReal (unlinkabilityAdvantage_le_two_prf_plus_collision
+        (inst.prfs lam) (adversary lam) (qReader lam) (qTag lam) (hqReader lam) (hqTag lam)
+        (hMnf lam) (hSnf lam))))
     (negligible_ofReal_add (negligible_ofReal_add (negligible_ofReal_add (negligible_ofReal_add
-      (negligible_ofReal_add (negligible_ofReal_add (negligible_ofReal_add hPRFmulti hPRFsingle)
-        hPRFmulti') hPRFsingle') hCollision) hSlack1) hSlack2) hSlack3)
+      (negligible_ofReal_add (negligible_ofReal_add (negligible_ofReal_add
+        (hofReal hPRFmulti fun _ => MeasureTheory.Measure.boolDist_ne_top _ _)
+        (hofReal hPRFsingle fun _ => MeasureTheory.Measure.boolDist_ne_top _ _))
+        (hofReal hPRFmulti' fun _ => MeasureTheory.Measure.boolDist_ne_top _ _))
+        (hofReal hPRFsingle' fun _ => MeasureTheory.Measure.boolDist_ne_top _ _))
+        hCollision) hSlack1) hSlack2) hSlack3)
 
 end AsymptoticInstance
 

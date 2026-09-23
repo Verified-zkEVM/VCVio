@@ -46,7 +46,7 @@ theorem advantage_le_expectedQuerySlack_plus_probEvent_bad
       ∀ z ∈ support ((h₀ t).run p), z.2.2 = true)
     (A : OracleComp E Bool) {queryBudget : ℕ}
     (h_bound : OracleComp.IsQueryBoundP A chargedQuery queryBudget) :
-    ENNReal.ofReal (h₀.advantage (s_init, false) h₁ (s_init, false) A)
+    h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ expectedQuerySlack h₀ chargedQuery querySlack A queryBudget (s_init, false)
         + Pr[fun z : Bool × σ × Bool => z.2.2 = true |
             (simulateQ h₀ A).run (s_init, false)] := by
@@ -57,8 +57,10 @@ theorem advantage_le_expectedQuerySlack_plus_probEvent_bad
   have hrun₁ : h₁.runProb (s_init, false) A = sim₁ := by
     simp [runProb, run, hsim₁_def]
   have h_adv_le_tv :
-      h₀.advantage (s_init, false) h₁ (s_init, false) A ≤ tvDist sim₀ sim₁ := by
-    rw [QueryImpl.Stateful.advantage, ProbComp.boolDistAdvantage, hrun₀, hrun₁]
+      h₀.advantage (s_init, false) h₁ (s_init, false) A ≤ ENNReal.ofReal (tvDist sim₀ sim₁) := by
+    rw [QueryImpl.Stateful.advantage, hrun₀, hrun₁, ENNReal.le_ofReal_iff_toReal_le
+      (MeasureTheory.Measure.boolDist_ne_top _ _) (tvDist_nonneg _ _),
+      MeasureTheory.Measure.toReal_boolDist]
     simpa only [evalDist_apply_singleton] using abs_probOutput_toReal_sub_le_tvDist sim₀ sim₁
   have h_bridge :
       ENNReal.ofReal (tvDist sim₀ sim₁)
@@ -69,7 +71,7 @@ theorem advantage_le_expectedQuerySlack_plus_probEvent_bad
     exact ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad
       h₀ h₁ chargedQuery querySlack h_step_tv_charged h_step_eq_uncharged
         h_mono₀ A h_bound s_init
-  exact (ENNReal.ofReal_le_ofReal h_adv_le_tv).trans h_bridge
+  exact h_adv_le_tv.trans h_bridge
 
 /-- Constant-ε identical-until-bad with output bad flag. -/
 theorem advantage_le_queryBound_mul_slack_plus_probEvent_bad
@@ -86,7 +88,7 @@ theorem advantage_le_queryBound_mul_slack_plus_probEvent_bad
       ∀ z ∈ support ((h₀ t).run p), z.2.2 = true)
     (A : OracleComp E Bool) {queryBudget : ℕ}
     (h_bound : OracleComp.IsQueryBoundP A chargedQuery queryBudget) :
-    ENNReal.ofReal (h₀.advantage (s_init, false) h₁ (s_init, false) A)
+    h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ queryBudget * querySlack
         + Pr[fun z : Bool × σ × Bool => z.2.2 = true |
             (simulateQ h₀ A).run (s_init, false)] := by
@@ -119,7 +121,7 @@ theorem advantage_le_expectedQuerySlack_plus_probEvent_bad_of_inv
       ∀ z ∈ support ((h₀ t).run p), z.2.2 = true)
     (A : OracleComp E Bool) {queryBudget : ℕ}
     (h_bound : OracleComp.IsQueryBoundP A chargedQuery queryBudget) :
-    ENNReal.ofReal (h₀.advantage (s_init, false) h₁ (s_init, false) A)
+    h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ expectedQuerySlack h₀ chargedQuery
           (fun s => if Inv s then querySlack s else 1) A queryBudget (s_init, false)
         + Pr[fun z : Bool × σ × Bool => z.2.2 = true |
@@ -156,7 +158,7 @@ theorem advantage_le_expectedQuerySlack_plus_probEvent_bad_of_inv_preserved
       ∀ z ∈ support ((h₀ t).run p), z.2.2 = true)
     (A : OracleComp E Bool) {queryBudget : ℕ}
     (h_bound : OracleComp.IsQueryBoundP A chargedQuery queryBudget) :
-    ENNReal.ofReal (h₀.advantage (s_init, false) h₁ (s_init, false) A)
+    h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ expectedQuerySlack h₀ chargedQuery querySlack A queryBudget (s_init, false)
         + Pr[fun z : Bool × σ × Bool => z.2.2 = true |
             (simulateQ h₀ A).run (s_init, false)] := by

@@ -607,49 +607,32 @@ noncomputable def oneTimeINDCPASecurityGame
     {gen : G} [DecidableEq G] :
     SecurityGame (AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) where
   advantage adv _ :=
-    ENNReal.ofReal <|
-      |AsymmEncAlg.IND_CPA_OneTime_signedAdvantageReal
-        (encAlg := elGamalAsymmEnc F G gen) adv|
+    AsymmEncAlg.IND_CPA_OneTime_Advantage (elGamalAsymmEnc F G gen) ProbCompRuntime.probComp adv
 
 /-- Asymptotic DDH security game induced by the one-time ElGamal reduction, still indexed by the
 source one-time adversary type.
 
 This packages the target-side game that appears in the ElGamal reduction proof:
 apply the one-time IND-CPA adversary to the concrete DDH reduction
-[`IND_CPA_OneTime_DDHReduction`] and measure the resulting DDH distinguishing advantage. -/
+[`IND_CPA_OneTime_DDHReduction`] and measure the resulting DDH advantage. -/
 noncomputable def oneTimeDDHReductionSecurityGame
     {gen : G} [DecidableEq G] :
     SecurityGame (AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) where
   advantage adv _ :=
-    ENNReal.ofReal <|
-      DiffieHellman.ddhDistAdvantage gen
-        (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
+    DiffieHellman.ddhAdvantage gen
+      (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
 
-/-- The one-time ElGamal IND-CPA game and the DDH reduction game have the same asymptotic
-advantage function. This is the security-side analogue of the exact reduction theorem from
-`Examples.ElGamal.Basic`. -/
-lemma oneTimeINDCPASecurityGame_advantage_eq_oneTimeDDHReductionSecurityGame_advantage
+/-- The asymptotic advantage of the one-time ElGamal IND-CPA game is twice that of the DDH
+reduction game. This is the security-side form of
+`elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage` from `Examples.ElGamal.Basic`. -/
+lemma oneTimeINDCPASecurityGame_advantage_eq_two_mul
     {gen : G} [DecidableEq G]
     (hg : Function.Bijective (· • gen : F → G))
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (n : ℕ) :
     (oneTimeINDCPASecurityGame (F := F) (G := G) (gen := gen)).advantage adv n =
-      (oneTimeDDHReductionSecurityGame (F := F) (G := G) (gen := gen)).advantage adv n := by
-  apply congrArg ENNReal.ofReal
-  calc
-    |AsymmEncAlg.IND_CPA_OneTime_signedAdvantageReal
-        (encAlg := elGamalAsymmEnc F G gen) adv| =
-      2 * DiffieHellman.ddhGuessAdvantage gen
-        (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv) :=
-          elGamal_oneTime_signedAdvantageReal_abs_eq_two_mul_ddhGuessAdvantage
-            (F := F) (G := G) (gen := gen) hg adv
-    _ =
-      DiffieHellman.ddhDistAdvantage gen
-        (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv) := by
-          symm
-          exact DiffieHellman.ddhDistAdvantage_eq_two_mul_ddhGuessAdvantage
-            (F := F) (g := gen)
-            (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv)
+      2 * (oneTimeDDHReductionSecurityGame (F := F) (G := G) (gen := gen)).advantage adv n :=
+  elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage (F := F) (G := G) (gen := gen) hg adv
 
 /-- Cost-aware security reduction for the one-time ElGamal DDH argument.
 
@@ -679,13 +662,12 @@ theorem oneTimeINDCPA_secureAgainst_of_ddh_secureAgainst_withCost
           (oneTimeDDHReductionCost (F := F) (G := G) (gen := gen) intrinsic advCost) isEff')) :
     (oneTimeINDCPASecurityGame (F := F) (G := G) (gen := gen)).secureAgainst
       (SecurityGame.EfficientFor advCost isEff) := by
-  refine SecurityGame.secureAgainst_of_reduction_withCost
-    (R := oneTimeDDHReductionWithCost (F := F) (G := G) (gen := gen) intrinsic advCost)
-    ?_ hmap hsecure
-  intro adv n
+  intro adv hadv
+  have hddh := hsecure _ (SecurityGame.ReductionWithCost.efficientFor_image
+    (oneTimeDDHReductionWithCost (F := F) (G := G) (gen := gen) intrinsic advCost) hadv hmap)
+  refine negligible_of_le (fun n => ?_) (negligible_const_mul hddh (c := 2) ENNReal.ofNat_ne_top)
   simpa [oneTimeDDHReductionWithCost] using le_of_eq
-    (oneTimeINDCPASecurityGame_advantage_eq_oneTimeDDHReductionSecurityGame_advantage
-      (F := F) (G := G) (gen := gen) hg adv n)
+    (oneTimeINDCPASecurityGame_advantage_eq_two_mul (F := F) (G := G) (gen := gen) hg adv n)
 
 /-- Instantiating the open costed reduction with a concrete adversary preserves the exact pathwise
 resource profile proved for the open reduction body.

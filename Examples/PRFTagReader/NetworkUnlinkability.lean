@@ -104,10 +104,10 @@ theorem realSingle_eq (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
 noncomputable def prfTerms [SampleableType Digest]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : UnlinkAdversary TagId Nonce Digest) : Real :=
-  PRFScheme.prfAdvantage prfs.multiplePRFScheme
-      (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary) +
-  PRFScheme.prfAdvantage prfs.singlePRFScheme
-      (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary)
+  (PRFScheme.prfAdvantage prfs.multiplePRFScheme
+      (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary)).toReal +
+  (PRFScheme.prfAdvantage prfs.singlePRFScheme
+      (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary)).toReal
 
 /-- All three reader-cell and nonce-aliasing losses, kept separately in the definition. -/
 @[expose]
@@ -187,13 +187,13 @@ theorem idealSingle_eq (budget : Nat) (adversary : UnlinkAdversary TagId Nonce D
 theorem single_prf_hop (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
     (hbound : IsTotalQueryBound adversary budget) :
-    PRFScheme.prfAdvantage prfs.singlePRFScheme
-      (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary) =
+    (PRFScheme.prfAdvantage prfs.singlePRFScheme
+      (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary)).toReal =
     |(𝒟[realSingle prfs budget adversary] {true}).toReal -
       (𝒟[Network.verdict (CachedPRF.single (sessionsPerTag := sessionsPerTag))
         budget adversary (UnlinkState.init, [])] {true}).toReal| := by
   rw [realSingle_eq _ _ _ hbound, idealSingle_eq _ _ hbound]
-  simp only [PRFScheme.prfAdvantage, ProbComp.boolDistAdvantage,
+  simp only [PRFScheme.prfAdvantage, MeasureTheory.Measure.toReal_boolDist,
     prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp]
 
 /-- Output negation preserves the final list-cache bad-state observation exactly. -/
@@ -215,13 +215,13 @@ theorem multiple_prf_hop [NeZero sessionsPerTag]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
     (hbound : IsTotalQueryBound adversary budget) :
-    PRFScheme.prfAdvantage prfs.multiplePRFScheme
-      (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary) =
+    (PRFScheme.prfAdvantage prfs.multiplePRFScheme
+      (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary)).toReal =
     |(𝒟[realMultiple prfs budget adversary] {true}).toReal -
       (𝒟[Network.verdict (CachedPRF.multiple (sessionsPerTag := sessionsPerTag))
         budget adversary (UnlinkState.init, [])] {true}).toReal| := by
   rw [realMultiple_eq _ _ _ hbound, idealMultiple_eq _ _ hbound]
-  simp only [PRFScheme.prfAdvantage, ProbComp.boolDistAdvantage,
+  simp only [PRFScheme.prfAdvantage, MeasureTheory.Measure.toReal_boolDist,
     prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp]
 
 /-- The changed-cache network's collision probability has the same closed-form bound. -/
@@ -332,13 +332,13 @@ theorem full_unlinkability (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPe
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) (epsilonMultiple epsilonSingle : Real)
     (hMultiple : ∀ flip : Bool,
-      PRFScheme.prfAdvantage prfs.multiplePRFScheme
+      (PRFScheme.prfAdvantage prfs.multiplePRFScheme
         (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag)
-          (polarity adversary flip)) ≤ epsilonMultiple)
+          (polarity adversary flip))).toReal ≤ epsilonMultiple)
     (hSingle : ∀ flip : Bool,
-      PRFScheme.prfAdvantage prfs.singlePRFScheme
+      (PRFScheme.prfAdvantage prfs.singlePRFScheme
         (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag)
-          (polarity adversary flip)) ≤ epsilonSingle) :
+          (polarity adversary flip))).toReal ≤ epsilonSingle) :
     |(𝒟[realMultiple prfs (qReader + qTag) adversary] {true}).toReal -
       (𝒟[realSingle prfs (qReader + qTag) adversary] {true}).toReal| ≤
       epsilonMultiple + epsilonSingle +

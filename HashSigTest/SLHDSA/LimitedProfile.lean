@@ -535,8 +535,8 @@ example (c : Certificate limitedPrimitives adv) :
 
 example (c : Certificate limitedPrimitives adv) :
     c.summands.bound limitedVp.params =
-      prfAbsAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
-        + prfAbsAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
+      PRFScheme.prfAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
+        + PRFScheme.prfAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
         + ITSRAdvantage c.itsrAdv
         + SM_DT_DSPR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
@@ -544,7 +544,7 @@ example (c : Certificate limitedPrimitives adv) :
             (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
         + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
         + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
-        + 2 * SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+        + 2 * SM_DT_UD_SourceFinalValidity.advantage c.wotsFUdAdv
         + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
         + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
         + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
@@ -553,8 +553,8 @@ example (c : Certificate limitedPrimitives adv) :
 
 example (c : Certificate limitedPrimitives adv) :
     unforgeableAdvantage ProbCompRuntime.probComp adv ≤
-      prfAbsAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
-        + prfAbsAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
+      PRFScheme.prfAdvantage (skPrfScheme limitedPrimitives c.pkSeed) c.skgAdv
+        + PRFScheme.prfAdvantage (msgPrfScheme limitedPrimitives) c.mkgAdv
         + ITSRAdvantage c.itsrAdv
         + SM_DT_DSPR_SourceFinalValidity.advantage
             (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
@@ -562,7 +562,7 @@ example (c : Certificate limitedPrimitives adv) :
             (SM_DT_OpenPRE_SourceFinalValidity.toTCR c.openPreAdv)
         + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
         + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
-        + 2 * SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+        + 2 * SM_DT_UD_SourceFinalValidity.advantage c.wotsFUdAdv
         + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
         + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
         + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv

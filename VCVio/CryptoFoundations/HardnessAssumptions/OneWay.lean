@@ -9,7 +9,6 @@ public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
-import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # One-Way Functions and Trapdoor Permutations
@@ -64,18 +63,10 @@ def owfExp [SampleableType X] [DecidableEq Y] (f : X → Y) (adversary : OWFAdve
   let (x, x') ← owfRun f adversary
   return decide (f x' = f x)
 
-/-- OWF advantage: the probability of successfully inverting `f`. -/
-noncomputable def owfAdvantage [SampleableType X] (f : X → Y)
+/-- OWF advantage: the probability that `owfExp` outputs `true`. -/
+noncomputable def owfAdvantage [SampleableType X] [DecidableEq Y] (f : X → Y)
     (adversary : OWFAdversary X Y) : ℝ≥0∞ :=
-  Pr{let (x, x') ← owfRun f adversary}[f x' = f x]
-
-/-- The event-style success mass agrees with the Boolean OWF experiment. -/
-theorem owfAdvantage_eq_evalDist_owfExp [SampleableType X] [DecidableEq Y]
-    (f : X → Y) (adversary : OWFAdversary X Y) :
-    owfAdvantage f adversary = 𝒟[owfExp f adversary] {true} := by
-  simpa only [owfAdvantage, owfExp] using
-    (prEvent_eq_evalDist_decide (mx := owfRun f adversary)
-      (p := fun z => f z.2 = f z.1))
+  𝒟[owfExp f adversary] {true}
 
 /-! ## Trapdoor Permutations -/
 
@@ -114,20 +105,9 @@ def tdpExp [SampleableType X] [DecidableEq X] (tdp : TrapdoorPermutation PK SK X
   let ((pk, x), x') ← tdpRun tdp adversary
   return decide (tdp.forward pk x' = tdp.forward pk x)
 
-/-- TDP advantage: the probability of successfully producing a valid preimage
-without the trapdoor. -/
-noncomputable def tdpAdvantage [SampleableType X]
+/-- TDP advantage: the probability that `tdpExp` outputs `true`. -/
+noncomputable def tdpAdvantage [SampleableType X] [DecidableEq X]
     (tdp : TrapdoorPermutation PK SK X) (adversary : TDPAdversary PK X) : ℝ≥0∞ :=
-  Pr{
-    let ((pk, x), x') ← tdpRun tdp adversary
-  }[tdp.forward pk x' = tdp.forward pk x]
-
-/-- The event-style success mass agrees with the Boolean TDP experiment. -/
-theorem tdpAdvantage_eq_evalDist_tdpExp [SampleableType X] [DecidableEq X]
-    (tdp : TrapdoorPermutation PK SK X) (adversary : TDPAdversary PK X) :
-    tdpAdvantage tdp adversary = 𝒟[tdpExp tdp adversary] {true} := by
-  simpa only [tdpAdvantage, tdpExp] using
-    (prEvent_eq_evalDist_decide (mx := tdpRun tdp adversary)
-      (p := fun z => tdp.forward z.1.1 z.2 = tdp.forward z.1.1 z.1.2))
+  𝒟[tdpExp tdp adversary] {true}
 
 end OneWay

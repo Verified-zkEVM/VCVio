@@ -446,7 +446,7 @@ end RandSwapSymmetry
 The headline security statement: the many-query LR-IND-CPA advantage of ElGamal is bounded by
 the sum of two multi-query DDH advantages (one for each message slot). The multi-query DDH
 advantage is the standard cryptographic hardness assumption in this model; reducing it further
-to the single-query `DiffieHellman.ddhGuessAdvantage` is a separate hybrid argument orthogonal
+to the single-query `DiffieHellman.ddhAdvantage` is a separate hybrid argument orthogonal
 to the state-separating reasoning here. -/
 
 /-- The advantage of distinguishing `elgamalLR_left gen` from `elgamalLR_right gen` is bounded

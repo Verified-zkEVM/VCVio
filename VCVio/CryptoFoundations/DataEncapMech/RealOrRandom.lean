@@ -36,7 +36,7 @@ definitions in `VCVio.CryptoFoundations.DataEncapMech` keep their `IND_CPA_*` na
 
 public section
 
-open OracleSpec OracleComp MeasureTheory
+open OracleSpec OracleComp MeasureTheory ENNReal
 
 namespace DEMScheme
 
@@ -89,7 +89,7 @@ noncomputable def realOrRandomGame {dem : DEMScheme (OracleComp spec) K M C}
 @[expose]
 noncomputable def realOrRandomAdvantage {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.RealOrRandomAdversary) : ℝ :=
+    (adversary : dem.RealOrRandomAdversary) : ℝ≥0∞ :=
   (realOrRandomGame runtime adversary).boolBias
 
 end Games
@@ -276,13 +276,10 @@ theorem IND_CPA_Advantage_le_two_mul_max_realOrRandomAdvantage
         runtime.evalDist mx {true} + runtime.evalDist mx {false} = 1) :
     dem.IND_CPA_Advantage runtime adversary ≤
       2 * max (dem.realOrRandomAdvantage runtime (.ofLeftOrRight adversary false))
-        (dem.realOrRandomAdvantage runtime (.ofLeftOrRight adversary true)) := by
-  have h := IND_CPA_Advantage_le_realOrRandomAdvantage_add runtime adversary heval_pure heval_bind
-    heval_liftProbComp hno_fail
-  linarith [le_max_left (dem.realOrRandomAdvantage runtime (.ofLeftOrRight adversary false))
-      (dem.realOrRandomAdvantage runtime (.ofLeftOrRight adversary true)),
-    le_max_right (dem.realOrRandomAdvantage runtime (.ofLeftOrRight adversary false))
-      (dem.realOrRandomAdvantage runtime (.ofLeftOrRight adversary true))]
+        (dem.realOrRandomAdvantage runtime (.ofLeftOrRight adversary true)) :=
+  (IND_CPA_Advantage_le_realOrRandomAdvantage_add runtime adversary heval_pure heval_bind
+    heval_liftProbComp hno_fail).trans <|
+      (add_le_add (le_max_left _ _) (le_max_right _ _)).trans_eq (two_mul _).symm
 
 end LORToROR
 

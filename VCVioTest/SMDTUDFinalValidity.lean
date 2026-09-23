@@ -217,33 +217,29 @@ private lemma experiment_repeatCollection_ideal :
   rw [run_repeatCollection_ideal]
   rfl
 
-/-- The explicit input/output generators separate the worlds in the source orientation: real minus
-ideal is positive one, and its absolute magnitude is one. -/
+/-- The explicit input/output generators separate the worlds: the real world succeeds with
+probability one, the ideal world with probability zero, and the advantage is one. -/
 theorem real_ideal_separation_canary :
     SM_DT_UD_SourceFinalValidity.experiment .real separate = pure true ∧
       SM_DT_UD_SourceFinalValidity.experiment .ideal separate = pure false ∧
       SM_DT_UD_SourceFinalValidity.RealSuccess separate = 1 ∧
       SM_DT_UD_SourceFinalValidity.IdealSuccess separate = 0 ∧
-      SM_DT_UD_SourceFinalValidity.directedAdvantage separate = 1 ∧
-      SM_DT_UD_SourceFinalValidity.absoluteAdvantage separate = 1 := by
+      SM_DT_UD_SourceFinalValidity.advantage separate = 1 := by
   simp [experiment_separate_real, experiment_separate_ideal,
     SM_DT_UD_SourceFinalValidity.RealSuccess, SM_DT_UD_SourceFinalValidity.IdealSuccess,
-    SM_DT_UD_SourceFinalValidity.directedAdvantage,
-    SM_DT_UD_SourceFinalValidity.absoluteAdvantage, ENNReal.absDiff]
+    SM_DT_UD_SourceFinalValidity.advantage, MeasureTheory.Measure.boolDist, ENNReal.absDiff]
 
-/-- Reversing the distinguisher makes the directed advantage negative one while its absolute
-magnitude remains one. A symmetric-only API would fail to pin this source-game orientation. -/
+/-- Reversing the distinguisher swaps the two success probabilities and leaves the advantage at
+one, so the success probabilities are what pin the orientation of the worlds. -/
 theorem source_orientation_reverse_canary :
     SM_DT_UD_SourceFinalValidity.experiment .real separateReverse = pure false ∧
       SM_DT_UD_SourceFinalValidity.experiment .ideal separateReverse = pure true ∧
       SM_DT_UD_SourceFinalValidity.RealSuccess separateReverse = 0 ∧
       SM_DT_UD_SourceFinalValidity.IdealSuccess separateReverse = 1 ∧
-      SM_DT_UD_SourceFinalValidity.directedAdvantage separateReverse = -1 ∧
-      SM_DT_UD_SourceFinalValidity.absoluteAdvantage separateReverse = 1 := by
+      SM_DT_UD_SourceFinalValidity.advantage separateReverse = 1 := by
   simp [experiment_separateReverse_real, experiment_separateReverse_ideal,
     SM_DT_UD_SourceFinalValidity.RealSuccess, SM_DT_UD_SourceFinalValidity.IdealSuccess,
-    SM_DT_UD_SourceFinalValidity.directedAdvantage,
-    SM_DT_UD_SourceFinalValidity.absoluteAdvantage, ENNReal.absDiff]
+    SM_DT_UD_SourceFinalValidity.advantage, MeasureTheory.Measure.boolDist, ENNReal.absDiff]
 
 /-- Cap, duplicate-target, and cross-oracle violations poison only the final conjunction: all
 queries returned their concrete real-world answers and were recorded in the run lemmas above. -/
@@ -327,10 +323,9 @@ theorem subspace_emb_applied_canary :
     subspaceProblem.HasUniformInputs ∧
       SM_DT_UD_SourceFinalValidity.experiment .real subspaceProbe = pure true ∧
       SM_DT_UD_SourceFinalValidity.experiment .ideal subspaceProbe = pure false ∧
-      SM_DT_UD_SourceFinalValidity.directedAdvantage subspaceProbe = 1 := by
+      SM_DT_UD_SourceFinalValidity.advantage subspaceProbe = 1 := by
   refine ⟨rfl, experiment_subspaceProbe_real, experiment_subspaceProbe_ideal, ?_⟩
-  simp [SM_DT_UD_SourceFinalValidity.directedAdvantage,
-    SM_DT_UD_SourceFinalValidity.RealSuccess, SM_DT_UD_SourceFinalValidity.IdealSuccess,
+  simp [SM_DT_UD_SourceFinalValidity.advantage, MeasureTheory.Measure.boolDist, ENNReal.absDiff,
     experiment_subspaceProbe_real, experiment_subspaceProbe_ideal]
 
 section RunLevelInvariant

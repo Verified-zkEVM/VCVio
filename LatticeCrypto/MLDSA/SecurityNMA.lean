@@ -81,7 +81,7 @@ namespace MLDSA
 
 namespace NMA
 
-/-! ## Short-vector sampling and a generic advantage identity -/
+/-! ## Short-vector sampling -/
 
 /-- `polyVecBounded` is a decidable predicate: it is a `≤` test on the computed
 centered infinity norm. -/
@@ -131,33 +131,6 @@ lemma mem_support_sampleShortVec {k b : ℕ} {v : RqVec k}
   simp only [sampleShortVec, support_map] at hv
   obtain ⟨u, -, rfl⟩ := hv
   exact u.property
-
-/-- **(Hadv) bias domination, in equality form.** For *any* LWE-style problem and decisional
-adversary, the MLWE distinguishing advantage is exactly the Boolean distinguishing advantage between
-the two single-branch games `game0` (real distribution) and `game1` (uniform distribution).
-
-This unfolds `LearningWithErrors.experiment` — `b ← coin; sample ← if b then distr else uniform;
-b' ← adv sample; return (b == b')` — into the hidden-bit guessing form
-`z ← if b then (distr >>= adv) else (uniform >>= adv); pure (b == z)` and applies
-`ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch`. It is fully generic and
-discharges the (Hadv) obligation once the NMA games are identified with `game0`/`game1`. -/
-theorem advantage_eq_game_boolDistAdvantage
-    {Sample Secret Output : Type} [Add Output]
-    (problem : LearningWithErrors.Problem Sample Secret Output)
-    (adv : LearningWithErrors.Adversary problem) :
-    LearningWithErrors.advantage problem adv =
-      (LearningWithErrors.game0 problem adv).boolDistAdvantage
-        (LearningWithErrors.game1 problem adv) := by
-  rw [LearningWithErrors.advantage]
-  rw [show (LearningWithErrors.experiment problem adv) =
-      (do
-        let b ← ($ᵗ Bool)
-        let z ← if b then LearningWithErrors.game0 problem adv
-                      else LearningWithErrors.game1 problem adv
-        pure (b == z)) by
-    simp only [LearningWithErrors.experiment, LearningWithErrors.game0,
-      LearningWithErrors.game1, bind_assoc]]
-  exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
 
 variable (p : Params) (prims : Primitives p) [nttOps : NTTRingOps]
 
@@ -470,15 +443,15 @@ unrestricted-quantifier form is only satisfiable at large `εA` (a distinguisher
 recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#460) it
 should be read computationally, against bounded distinguishers, where it is the
 assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
-def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ) : Prop :=
+def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ≥0∞) : Prop :=
   ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
-    |(𝒟[do
+    𝒟[do
         let rho ← $ᵗ (Bytes 32)
-        D rho (prims.expandA rho)] {true}).toReal -
-      (𝒟[do
+        D rho (prims.expandA rho)].boolDist
+      𝒟[do
         let rho ← $ᵗ (Bytes 32)
         let A ← $ᵗ (TqMatrix p.k p.l)
-        D rho A] {true}).toReal| ≤ εA
+        D rho A] ≤ εA
 
 /-- The short-model MLWE distinguisher: form `pk = (ρ, Power2Round(t).1)` from the challenge
 `(ρ, t)`, run the NMA forging strategy
@@ -520,13 +493,13 @@ target vector. The uniform branches agree exactly (both present an independent u
 `t`), and the real branches differ by one application of the idealization at the
 distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
 
-Proof recipe: rewrite both advantages via `advantage_eq_game_boolDistAdvantage` and
-`ProbComp.boolDistAdvantage`; the `game1` branches are identified by stripping the
+Proof recipe: rewrite both advantages via `NoisyLearning.advantage_eq_boolDist_game` and
+`Measure.boolDist`; the `game1` branches are identified by stripping the
 unused matrix draw with `evalDist_bind_const` and commuting the independent uniform draws with
 `evalDist_bind_bind_swap`; the `game0` branches
 are `≤ εA` by `hA` applied at `D` above, after `bind_assoc` normalization. Conclude
 by the triangle inequality. -/
-lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
+lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ≥0∞}
     (hA : expandAIdealization p prims εA)
     (B : LearningWithErrors.Adversary (mldsaMLWEShort p prims)) :
     LearningWithErrors.advantage (mldsaMLWEShort p prims) B ≤
@@ -538,25 +511,8 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
       let s1 ← sampleShortVec p.l p.eta
       let s2 ← sampleShortVec p.k p.eta
       B (rho, A * s1 + s2)) with hD
-  -- Local copy of the generic `advantage = boolDistAdvantage` bridge (its named form lives later
-  -- in the file, in the `Hop` section, so it is not yet in scope here).
-  have hadv : ∀ {S Sec O : Type} [Add O] (problem : LearningWithErrors.Problem S Sec O)
-      (adv : LearningWithErrors.Adversary problem),
-      LearningWithErrors.advantage problem adv =
-        (LearningWithErrors.game0 problem adv).boolDistAdvantage
-          (LearningWithErrors.game1 problem adv) := by
-    intro S Sec O _ problem adv
-    rw [LearningWithErrors.advantage,
-      show LearningWithErrors.experiment problem adv = (do
-        let b ← ($ᵗ Bool)
-        let z ← if b then LearningWithErrors.game0 problem adv
-                      else LearningWithErrors.game1 problem adv
-        pure (b == z)) by
-        simp only [LearningWithErrors.experiment, LearningWithErrors.game0,
-          LearningWithErrors.game1, bind_assoc]]
-    exact ProbComp.boolBiasAdvantage_eq_boolDistAdvantage_uniformBool_branch _ _
-  rw [hadv (mldsaMLWEShort p prims) B, hadv (mldsaMatrixMLWE p) Bm,
-    ProbComp.boolDistAdvantage, ProbComp.boolDistAdvantage]
+  rw [NoisyLearning.advantage_eq_boolDist_game (mldsaMLWEShort p prims) B,
+    NoisyLearning.advantage_eq_boolDist_game (mldsaMatrixMLWE p) Bm]
   have h1 : 𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] {true} =
       𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] {true} := by
     simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, mldsaMLWEShort,
@@ -565,8 +521,8 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
     rw [OracleComp.evalDist_bind_const,
       OracleComp.evalDist_bind_bind_swap
         ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
-  have h0 : |(𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true}).toReal -
-      (𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] {true}).toReal| ≤ εA := by
+  have h0 : 𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B].boolDist
+      𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] ≤ εA := by
     have hreal : 𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true} =
         𝒟[do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] {true} := by
       simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMLWEShort, hD,
@@ -592,13 +548,20 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ}
         ($ᵗ (TqMatrix p.k p.l)) ($ᵗ (Bytes 32))
         (fun A rho => sampleShortVec p.l p.eta >>= fun s1 =>
           sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
-    rw [hreal, hunif]
+    rw [MeasureTheory.Measure.boolDist, hreal, hunif]
     exact hA D
-  rw [h1]
-  refine le_trans (abs_sub_le _
-    ((𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] {true}).toReal) _) ?_
-  rw [add_comm]
-  exact add_le_add le_rfl h0
+  have h1' : 𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm].boolDist
+      𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] = 0 := by
+    rw [MeasureTheory.Measure.boolDist, h1, ENNReal.absDiff_self]
+  calc _ ≤ _ := MeasureTheory.Measure.boolDist_triangle _
+        𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] _
+    _ ≤ εA + (𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm].boolDist
+          𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] +
+        𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm].boolDist
+          𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B]) := by
+      gcongr
+      exact MeasureTheory.Measure.boolDist_triangle _ _ _
+    _ = _ := by rw [h1', add_zero, add_comm]
 
 section Hop
 
@@ -696,13 +659,13 @@ theorem nma_keyswap_hop_short
     (main : PublicKey p prims →
       OracleComp (unifSpec + (M × Commitment p prims →ₒ CommitHashBytes p))
         (M × Option (Commitment p prims × Response p prims))) :
-    |(nmaAdvantageShort p prims hr maxAttempts (keygenShort p prims) main).toReal -
-        (nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main).toReal| ≤
+    ENNReal.absDiff (nmaAdvantageShort p prims hr maxAttempts (keygenShort p prims) main)
+        (nmaAdvantageShort p prims hr maxAttempts (keygenShort1 p prims) main) =
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
         (distinguisherBShort p prims hr maxAttempts main) := by
   set B := distinguisherBShort p prims hr maxAttempts main (M := M) with hB
-  rw [advantage_eq_game_boolDistAdvantage (mldsaMLWEShort p prims) B,
-    ProbComp.boolDistAdvantage, nmaAdvantageShort, nmaAdvantageShort]
+  rw [NoisyLearning.advantage_eq_boolDist_game (mldsaMLWEShort p prims) B,
+    MeasureTheory.Measure.boolDist, nmaAdvantageShort, nmaAdvantageShort]
   have hH1 : nmaGameShort p prims hr maxAttempts (keygenShort1 p prims) main {true} =
       𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] {true} := by
     rw [nmaGameShort_eq_keygen_bind]

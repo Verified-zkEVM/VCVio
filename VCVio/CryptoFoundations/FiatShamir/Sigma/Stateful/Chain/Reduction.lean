@@ -337,8 +337,7 @@ private theorem signedFreshAdv_H3_bound
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    ENNReal.ofReal (cmaH3Advantage M Commit Chal σ hr simT
-      (signedFreshAdv σ hr M adv)) ≤
+    cmaH3Advantage M Commit Chal σ hr simT (signedFreshAdv σ hr M adv) ≤
       (qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + qH) * β := by
   let A : OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool :=
     signedFreshAdv σ hr M adv
@@ -484,17 +483,13 @@ theorem cma_advantage_le_fork_bound_of_h5
   have hHVZK' : σ.HVZK simT (ENNReal.ofReal ζ_zk).toReal := by
     rwa [ENNReal.toReal_ofReal hζ_zk]
   have hH3_abs :
-      ENNReal.ofReal
-          (((cmaReal M Commit Chal σ hr).runProb
-              (cmaInit M Commit Chal Stmt Wit) A).boolDistAdvantage
-            ((cmaSim M Commit Chal hr simT).runProb
-              (cmaInit M Commit Chal Stmt Wit) A))
+      𝒟[(cmaReal M Commit Chal σ hr).runProb (cmaInit M Commit Chal Stmt Wit) A].boolDist
+          𝒟[(cmaSim M Commit Chal hr simT).runProb (cmaInit M Commit Chal Stmt Wit) A]
         ≤ (qS : ℝ≥0∞) * ENNReal.ofReal ζ_zk
-          + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β := by
-    simpa [A, cmaH3Advantage, QueryImpl.Stateful.advantage] using
-      signedFreshAdv_H3_bound (σ := σ) (hr := hr) (M := M)
-        (Commit := Commit) (Chal := Chal) (Resp := Resp)
-        adv simT (ENNReal.ofReal ζ_zk) β hζ_zk_lt hHVZK' hPredSim qS qH hQ
+          + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β :=
+    signedFreshAdv_H3_bound (σ := σ) (hr := hr) (M := M)
+      (Commit := Commit) (Chal := Chal) (Resp := Resp)
+      adv simT (ENNReal.ofReal ζ_zk) β hζ_zk_lt hHVZK' hPredSim qS qH hQ
   have hH3_prob :
       𝒟[(cmaReal M Commit Chal σ hr).runProb
         (cmaInit M Commit Chal Stmt Wit) A] {true} ≤
@@ -502,13 +497,7 @@ theorem cma_advantage_le_fork_bound_of_h5
         (cmaInit M Commit Chal Stmt Wit) A] {true} +
         ((qS : ℝ≥0∞) * ENNReal.ofReal ζ_zk
           + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β) :=
-    le_trans
-      (ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage
-        ((cmaReal M Commit Chal σ hr).runProb
-          (cmaInit M Commit Chal Stmt Wit) A)
-        ((cmaSim M Commit Chal hr simT).runProb
-          (cmaInit M Commit Chal Stmt Wit) A))
-      (add_le_add le_rfl hH3_abs)
+    (MeasureTheory.Measure.apply_true_le_add_boolDist _ _).trans (add_le_add le_rfl hH3_abs)
   calc
     SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv
         ≤ 𝒟[(cmaReal M Commit Chal σ hr).runProb

@@ -35,8 +35,7 @@ lemma advantage_eq_of_evalSPMF_runProb_eq {σ₀ σ₀' σ₁ : Type}
     h₀.advantage s₀ h₁ s₁ A = h₀'.advantage s₀' h₁ s₁ A := by
   have hm : 𝒟[h₀.runProb s₀ A] {true} = 𝒟[h₀'.runProb s₀' A] {true} := by
     simpa only [evalDist_apply_singleton] using probOutput_congr rfl h_eq
-  simp only [advantage, ProbComp.boolDistAdvantage]
-  rw [hm]
+  rw [advantage, advantage, MeasureTheory.Measure.boolDist, MeasureTheory.Measure.boolDist, hm]
 
 lemma advantage_eq_of_evalSPMF_runProb_eq_right {σ₀ σ₁ σ₁' : Type}
     {h₀ : QueryImpl.Stateful unifSpec E σ₀} {s₀ : σ₀}
@@ -47,8 +46,7 @@ lemma advantage_eq_of_evalSPMF_runProb_eq_right {σ₀ σ₁ σ₁' : Type}
     h₀.advantage s₀ h₁ s₁ A = h₀.advantage s₀ h₁' s₁' A := by
   have hm : 𝒟[h₁.runProb s₁ A] {true} = 𝒟[h₁'.runProb s₁' A] {true} := by
     simpa only [evalDist_apply_singleton] using probOutput_congr rfl h_eq
-  simp only [advantage, ProbComp.boolDistAdvantage]
-  rw [hm]
+  rw [advantage, advantage, MeasureTheory.Measure.boolDist, MeasureTheory.Measure.boolDist, hm]
 
 /-! ## `evalSPMF` congruence for handlers -/
 

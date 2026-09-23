@@ -71,7 +71,7 @@ a one-line comment explaining what shape downstream needs.
 
 ```lean
 theorem myScheme_secure :
-    advantage (myExp adversary) ≤ q * ddhGuessAdvantage (myReduction adversary) := by
+    advantage (myExp adversary) ≤ q * ddhAdvantage (myReduction adversary) := by
 ```
 
 ### Step 2: Define intermediate games (hybrids)
@@ -133,10 +133,10 @@ From `Examples/ElGamal/Basic.lean` — multi-query security via the generic one-
 
 **Key patterns used**:
 - Define ElGamal correctness and the one-time DDH bridge.
-- Prove the one-time signed advantage identity against DDH.
-- Instantiate `AsymmEncAlg.IND_CPA_Advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound`.
-- Final bound: `IND_CPA_Advantage ≤ 2 * (q * 2ε)`, where `IND_CPA_Advantage` is the Boolean bias
-  `2 * |Pr[win] - 1/2|` of the oracle IND-CPA experiment.
+- Prove that the one-time advantage is twice the DDH advantage of the reduction.
+- Instantiate `AsymmEncAlg.IND_CPA_Advantage_le_mul_of_oneTime_bound`.
+- Final bound: `IND_CPA_Advantage ≤ q * (2 * ε)`, where `IND_CPA_Advantage` is the Boolean bias
+  `Measure.boolBias` of the oracle IND-CPA experiment.
 
 For tactic-heavy hybrid proofs, use the generic recipe above or the focused
 examples under `Examples/ProgramLogic/`.

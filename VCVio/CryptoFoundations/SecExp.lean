@@ -21,7 +21,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 # Security Experiments
 
 This file defines `BoundedAdversary α β`, an oracle computation bundled with a query bound, and
-re-exports the Boolean advantages of `VCVio.CryptoFoundations.SecExp.Measure`.
+re-exports the Boolean hidden-bit lemmas of `VCVio.CryptoFoundations.SecExp.Measure`.
 -/
 
 @[expose] public section
@@ -29,13 +29,6 @@ re-exports the Boolean advantages of `VCVio.CryptoFoundations.SecExp.Measure`.
 universe u v w
 
 open MeasureTheory OracleComp OracleSpec ENNReal Polynomial Prod
-
-/-- Compatibility form of `evalDist_apply_true_le_add_ofReal_boolDistAdvantage`. -/
-@[deprecated evalDist_apply_true_le_add_ofReal_boolDistAdvantage (since := "2026-09-15")]
-lemma ProbComp.probOutput_true_le_add_ofReal_boolDistAdvantage (p q : ProbComp Bool) :
-    Pr[= true | p] ≤ Pr[= true | q] + ENNReal.ofReal (p.boolDistAdvantage q) := by
-  simpa only [← evalDist_apply_singleton] using
-    ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage p q
 
 /-- A security adversary bundling a computation with a bound on the number of queries it makes,
 where the bound must be shown to satisfy `IsQueryBound`.

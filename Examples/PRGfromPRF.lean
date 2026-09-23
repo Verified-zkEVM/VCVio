@@ -290,8 +290,8 @@ def idealCollisionExp (n : ℕ) : ProbComp Bool := do
   return decide (¬ states.toList.Nodup)
 
 /-- Probability of the bad event in the ideal random-function world. -/
-noncomputable def collisionProb (n : ℕ) : ℝ :=
-  (Pr[= true | idealCollisionExp (S := S) (O := O) n]).toReal
+noncomputable def collisionProb (n : ℕ) : ℝ≥0∞ :=
+  𝒟[idealCollisionExp (S := S) (O := O) n] {true}
 
 /-- The output distribution that the ideal PRF reduction feeds to the PRG adversary:
 sample an initial seed, then read `n` output blocks off the lazy random oracle chain. -/
@@ -558,8 +558,8 @@ Obtained by averaging the per-seed bound `tvDist_seedOutputs_le_collision` over 
 initial state. -/
 lemma tvDist_idealOutputs_le_collisionProb :
     tvDist (idealOutputs (S := S) (O := O) n) ($ᵗ (List.Vector O n)) ≤
-      collisionProb (S := S) (O := O) n := by
-  rw [collisionProb, idealCollisionExp_eq_bind, idealOutputs_eq_bind]
+      (collisionProb (S := S) (O := O) n).toReal := by
+  rw [collisionProb, evalDist_apply_singleton, idealCollisionExp_eq_bind, idealOutputs_eq_bind]
   -- Replace the constant right-hand side by a (lossless) bind over the same seed.
   have h_const : tvDist (($ᵗ S) >>= seedOutputs n) ($ᵗ (List.Vector O n)) =
       tvDist (($ᵗ S) >>= seedOutputs n) (($ᵗ S) >>= fun _ => $ᵗ (List.Vector O n)) := by
@@ -602,16 +602,20 @@ Full formalization requires coupling the random-oracle chain with independent
 uniform outputs and instantiating the switching-lemma infrastructure for this
 specific oracle. -/
 theorem prfIdealGap_le_collisionProb (adv : PRGAdversary (List.Vector O n)) :
-    |(Pr[= true | PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)]).toReal -
-      (Pr[= true | PRGScheme.prgIdealExp adv]).toReal| ≤
+    𝒟[PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)].boolDist
+        𝒟[PRGScheme.prgIdealExp adv] ≤
       collisionProb (S := S) (O := O) n := by
+  rw [← ENNReal.toReal_le_toReal (MeasureTheory.Measure.boolDist_ne_top _ _)
+      (by rw [collisionProb]; exact MeasureTheory.measure_ne_top _ _),
+    MeasureTheory.Measure.toReal_boolDist]
+  simp only [evalDist_apply_singleton]
   rw [prfIdealExp_prfReduction_eq adv, prgIdealExp_eq_bind adv]
   calc |(Pr[= true | idealOutputs n >>= adv]).toReal -
           (Pr[= true | ($ᵗ (List.Vector O n)) >>= adv]).toReal|
       ≤ tvDist (idealOutputs n >>= adv) (($ᵗ (List.Vector O n)) >>= adv) :=
         abs_probOutput_toReal_sub_le_tvDist _ _
     _ ≤ tvDist (idealOutputs n) ($ᵗ (List.Vector O n)) := tvDist_bind_right_le _ _ _
-    _ ≤ collisionProb (S := S) (O := O) n := tvDist_idealOutputs_le_collisionProb
+    _ ≤ (collisionProb (S := S) (O := O) n).toReal := tvDist_idealOutputs_le_collisionProb
 
 /-- Security of the stream PRG obtained from a PRF: PRG distinguishing advantage is
 bounded by the PRF advantage of the reduction plus the collision probability in the
@@ -629,17 +633,13 @@ theorem security [SampleableType K]
   have hreal : 𝒟[prgReal] {true} = 𝒟[prfReal] {true} := by
     simpa only [prgReal, prfReal, evalDist_apply_singleton] using
       probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv)
-  have hgap : prfIdeal.boolDistAdvantage prgIdeal ≤ collisionProb (S := S) (O := O) n := by
-    simpa only [prfIdeal, prgIdeal, ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
-      prfIdealGap_le_collisionProb adv
-  change prgReal.boolDistAdvantage prgIdeal ≤
-    prfReal.boolDistAdvantage prfIdeal + collisionProb (S := S) (O := O) n
-  have heq : prgReal.boolDistAdvantage prgIdeal = prfReal.boolDistAdvantage prgIdeal := by
-    unfold ProbComp.boolDistAdvantage
-    rw [hreal]
+  change 𝒟[prgReal].boolDist 𝒟[prgIdeal] ≤
+    𝒟[prfReal].boolDist 𝒟[prfIdeal] + collisionProb (S := S) (O := O) n
+  have heq : 𝒟[prgReal].boolDist 𝒟[prgIdeal] = 𝒟[prfReal].boolDist 𝒟[prgIdeal] := by
+    simp only [MeasureTheory.Measure.boolDist, hreal]
   rw [heq]
-  exact (ProbComp.boolDistAdvantage_triangle prfReal prfIdeal prgIdeal).trans
-    (add_le_add_right hgap _)
+  exact (MeasureTheory.Measure.boolDist_triangle _ 𝒟[prfIdeal] _).trans
+    (by gcongr; exact prfIdealGap_le_collisionProb adv)
 
 /-- **Domain-invariance of the collision probability.** The generalized collision experiment reads
 the starting cache only through its domain (`isCached`): on the good path cached values are never
@@ -751,7 +751,8 @@ private lemma probOutput_genCollisionExp_bind_le [Fintype S] (N : ℕ) (c : (S �
 oracle chain, each freshly sampled state is uniform over `S`, so the probability that the chain
 revisits a state is at most `n·(n-1) / (2·|S|)` by a union bound over the at most `C(n,2)` pairs. -/
 theorem collisionProb_le_birthday [Fintype S] (n : ℕ) :
-    collisionProb (S := S) (O := O) n ≤ ((n * (n - 1) : ℕ) : ℝ) / (2 * Fintype.card S) := by
+    collisionProb (S := S) (O := O) n ≤
+      ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * (Fintype.card S : ℝ≥0∞)) := by
   -- The collision probability equals the empty-cache averaged collision probability.
   have hseed : ∀ seed : S,
       genCollisionExp (O := O) n seed ∅ = seedCollisionExp (O := O) n seed := by
@@ -770,15 +771,8 @@ theorem collisionProb_le_birthday [Fintype S] (n : ℕ) :
     refine le_trans (probOutput_genCollisionExp_bind_le n ∅) (le_of_eq ?_)
     simp only [QueryCache.enncard_empty, zero_add]
     exact ENNReal.gauss_sum_inv_eq n (Fintype.card S : ℝ≥0∞)
-  -- Convert the ENNReal bound to a real bound.
-  have hden : (2 * (Fintype.card S : ℝ≥0∞)) ≠ 0 :=
-    mul_ne_zero (by norm_num) (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
-  rw [collisionProb]
-  refine le_trans (ENNReal.toReal_mono
-    (ENNReal.div_ne_top (ENNReal.natCast_ne_top _) hden) hbound) (le_of_eq ?_)
-  rw [ENNReal.toReal_div, ENNReal.toReal_mul, ENNReal.toReal_natCast,
-    ENNReal.toReal_natCast]
-  norm_num
+  rw [collisionProb, evalDist_apply_singleton]
+  exact hbound
 
 /-- **Concrete security of the stream PRG.** The PRG distinguishing advantage is bounded by the
 PRF advantage of the reduction plus the birthday term `n·(n-1) / (2·|S|)`, obtained by combining
@@ -788,10 +782,8 @@ theorem security_birthday [Fintype S] [SampleableType K]
     (adv : PRGAdversary (List.Vector O n)) :
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
-      ((n * (n - 1) : ℕ) : ℝ) / (2 * Fintype.card S) := by
-  refine (security hkey adv).trans ?_
-  have := collisionProb_le_birthday (S := S) (O := O) n
-  linarith
+      ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * (Fintype.card S : ℝ≥0∞)) :=
+  (security hkey adv).trans (by gcongr; exact collisionProb_le_birthday n)
 
 end streamPRG
 

@@ -549,8 +549,8 @@ theorem authExp_le_prfAdvantage_add_collisionBound
       (Pr[= d | ($ᵗ Digest : ProbComp Digest)]).toReal ≤ maxDigestProb) :
     (Pr[= true | authExp (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) prfs adversary]).toReal ≤
-      PRFScheme.prfAdvantage prfs.multiplePRFScheme
-        (authToPRFReduction (TagId := TagId) (Nonce := Nonce) (Digest := Digest) adversary) +
+      (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
+        (Nonce := Nonce) (Digest := Digest) adversary)).toReal +
       ((q * Fintype.card TagId : ℕ) : ℝ) * maxDigestProb := by
   refine le_trans (authExp_le_prfAdvantage_add_authRF prfs adversary) ?_
   gcongr
@@ -569,8 +569,8 @@ theorem authExp_le_prfAdvantage_add_uniformCollisionBound [Fintype Digest]
     (hdistinct : HasDistinctReaderNonces adversary) :
     (Pr[= true | authExp (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) prfs adversary]).toReal ≤
-      PRFScheme.prfAdvantage prfs.multiplePRFScheme
-        (authToPRFReduction (TagId := TagId) (Nonce := Nonce) (Digest := Digest) adversary) +
+      (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction (TagId := TagId)
+        (Nonce := Nonce) (Digest := Digest) adversary)).toReal +
       ((q * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
   refine le_trans (authExp_le_prfAdvantage_add_authRF prfs adversary) ?_
   gcongr

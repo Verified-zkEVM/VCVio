@@ -163,6 +163,8 @@ lemma bias_compose_le
     𝒟[hybrid prepare encaps finish key true false],
     Measure.boolDist_comm 𝒟[hybrid prepare encaps finish key false true]
       𝒟[hybrid prepare encaps finish key false false]] at h₂
-  linarith
+  calc _ ≤ _ := h₁
+    _ ≤ _ := add_le_add le_rfl h₂
+    _ = _ := by ring
 
 end KEMDEM

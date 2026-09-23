@@ -60,13 +60,13 @@ example (flip : Bool) :
 example {K : Type} (prfs : TagReaderPRFs K Bool (Fin 64) (Fin 64) 2)
     (epsilonMultiple epsilonSingle : Real)
     (hMultiple : ∀ flip : Bool,
-      PRFScheme.prfAdvantage prfs.multiplePRFScheme
+      (PRFScheme.prfAdvantage prfs.multiplePRFScheme
         (unlinkToMultiplePRFReduction (sessionsPerTag := 2)
-          (polarity adaptive flip)) ≤ epsilonMultiple)
+          (polarity adaptive flip))).toReal ≤ epsilonMultiple)
     (hSingle : ∀ flip : Bool,
-      PRFScheme.prfAdvantage prfs.singlePRFScheme
+      (PRFScheme.prfAdvantage prfs.singlePRFScheme
         (unlinkToSinglePRFReduction (sessionsPerTag := 2)
-          (polarity adaptive flip)) ≤ epsilonSingle) :
+          (polarity adaptive flip))).toReal ≤ epsilonSingle) :
     |(𝒟[realMultiple prfs 2 adaptive] {true}).toReal -
       (𝒟[realSingle prfs 2 adaptive] {true}).toReal| ≤
       epsilonMultiple + epsilonSingle + 15 / 64 := by

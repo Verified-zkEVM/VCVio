@@ -362,29 +362,6 @@ lemma probOutput_bind_uniformBool {α : Type}
   simp only [probOutput_uniformSample, Fintype.card_bool, Nat.cast_ofNat, add_comm, div_eq_mul_inv]
   rw [← left_distrib, mul_comm]
 
-/-- Guessing a uniformly random bit after branching between `real` and `rand` decomposes into
-the difference of the branch success probabilities. -/
-lemma probOutput_uniformBool_branch_toReal_sub_half (real rand : ProbComp Bool) :
-    (Pr[= true | do
-      let b ← ($ᵗ Bool)
-      let z ← if b then real else rand
-      pure (b == z)]).toReal - 1 / 2 =
-    ((Pr[= true | real]).toReal - (Pr[= true | rand]).toReal) / 2 := by
-  have hformula : Pr[= true | do
-      let b ← ($ᵗ Bool)
-      let z ← if b then real else rand
-      pure (b == z)] = (Pr[= true | real] + Pr[= false | rand]) / 2 := by
-    rw [probOutput_bind_uniformBool]
-    simp
-  have hfalseAsSub : Pr[= false | rand] = 1 - Pr[= true | rand] := by
-    rw [← (by simp : Pr[= true | rand] + Pr[= false | rand] = 1),
-      ENNReal.add_sub_cancel_left probOutput_ne_top]
-  rw [hformula, ENNReal.toReal_div,
-    ENNReal.toReal_add probOutput_ne_top probOutput_ne_top,
-    hfalseAsSub, ENNReal.toReal_sub_of_le probOutput_le_one ENNReal.one_ne_top]
-  simp only [ENNReal.toReal_one, ENNReal.toReal_ofNat]
-  ring
-
 /-- If the distribution of `f b` is independent of `b`, then guessing a uniformly random
 bit by running `f` has success probability exactly 1/2.
 This is the core lemma behind "all-random hybrid has probability 1/2" arguments. -/

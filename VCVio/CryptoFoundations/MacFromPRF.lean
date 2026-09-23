@@ -378,12 +378,11 @@ private theorem log_cache_invariant [SampleableType R]
   simpa [QueryCache.empty_apply] using
     log_cache_invariant_aux adversary_main ∅ state hmem msg hcache
 
-/-- The `ℝ≥0∞`-valued core of `prfIdealExp_macToPRFReduction_le`: in the ideal PRF
-experiment, the reduction outputs `true` with probability at most `1/|R|`. A fresh
-random-oracle query on `msg` returns a uniform `t ← $ᵗ R` independent of the forger's
-claimed tag `τ`, so `Pr[τ = t] = 1/|R|`; if `msg` was already queried the output is
+/-- In the ideal PRF experiment (random oracle), the reduction outputs `true` with probability
+at most `1/|R|`. A fresh random-oracle query on `msg` returns a uniform `t ← $ᵗ R` independent of
+the forger's claimed tag `τ`, so `Pr[τ = t] = 1/|R|`; if `msg` was already queried the output is
 `false`. -/
-private theorem prfIdealExp_macToPRFReduction_probOutput_le [DecidableEq R] [SampleableType R]
+theorem prfIdealExp_macToPRFReduction_le [DecidableEq R] [SampleableType R]
     [Fintype R]
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
     Pr[= true | prfIdealExp (macToPRFReduction prf adversary)] ≤
@@ -416,31 +415,20 @@ private theorem prfIdealExp_macToPRFReduction_probOutput_le [DecidableEq R] [Sam
             all_goals exact zero_le
       _ = c := tsum_ite_eq τ (fun _ => c)
 
-/-- In the ideal PRF experiment (random oracle), the reduction succeeds with probability
-at most `1/|R|` — a fresh random oracle query is independent of the forger's output. -/
-theorem prfIdealExp_macToPRFReduction_le [DecidableEq R] [SampleableType R] [Fintype R]
-    (prf : PRFScheme K D R)
-    (adversary : (prf.toMacAlg).UnforgeableAdversary) :
-    (Pr[= true | prfIdealExp (macToPRFReduction prf adversary)]).toReal ≤
-      (Fintype.card R : ℝ)⁻¹ := by
-  rw [show (Fintype.card R : ℝ)⁻¹ = ((Fintype.card R : ℝ≥0∞)⁻¹).toReal by
-    rw [ENNReal.toReal_inv, ENNReal.toReal_natCast]]
-  exact (ENNReal.toReal_le_toReal probOutput_ne_top (by simp)).mpr
-    (prfIdealExp_macToPRFReduction_probOutput_le prf adversary)
-
 /-- **Boneh-Shoup Theorem 6.2.** PRF security implies UF-CMA security for the derived MAC:
 for any forger `A`, the constructed distinguisher `macToPRFReduction prf A` satisfies
 `unforgeableAdvantage(A) ≤ prfAdvantage(prf, B) + 1/|R|`. -/
 theorem prf_implies_uf_cma [DecidableEq R] [SampleableType R] [Fintype R]
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
-    (MacAlg.unforgeableAdvantage ProbCompRuntime.probComp adversary).toReal ≤
-      prf.prfAdvantage (macToPRFReduction prf adversary) +
-        (Fintype.card R : ℝ)⁻¹ := by
-  rw [← prfRealExp_macToPRFReduction_eq_unforgeableAdvantage prf adversary]
-  simp only [prfAdvantage, ProbComp.boolDistAdvantage, evalDist_apply_singleton]
-  set a := (Pr[= true | prf.prfRealExp (macToPRFReduction prf adversary)]).toReal
-  set b := (Pr[= true | prfIdealExp (macToPRFReduction prf adversary)]).toReal
-  linarith [le_abs_self (a - b), prfIdealExp_macToPRFReduction_le prf adversary]
+    MacAlg.unforgeableAdvantage ProbCompRuntime.probComp adversary ≤
+      prf.prfAdvantage (macToPRFReduction prf adversary) + (Fintype.card R : ℝ≥0∞)⁻¹ := by
+  rw [← prfRealExp_macToPRFReduction_eq_unforgeableAdvantage prf adversary,
+    ← evalDist_apply_singleton, prfAdvantage, add_comm]
+  refine (MeasureTheory.Measure.apply_true_le_add_boolDist _
+    𝒟[prfIdealExp (macToPRFReduction prf adversary)]).trans ?_
+  gcongr
+  rw [evalDist_apply_singleton]
+  exact prfIdealExp_macToPRFReduction_le prf adversary
 
 /-! ## Strong Unforgeability
 
@@ -495,9 +483,8 @@ Attack Game 6.1: for any forger `A`, the constructed distinguisher `macToPRFRedu
 satisfies `strongUnforgeableAdvantage(A) ≤ prfAdvantage(prf, B) + 1/|R|`. -/
 theorem prf_implies_suf_cma [DecidableEq R] [SampleableType R] [Fintype R]
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
-    (MacAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp adversary).toReal ≤
-      prf.prfAdvantage (macToPRFReduction prf adversary) +
-        (Fintype.card R : ℝ)⁻¹ := by
+    MacAlg.strongUnforgeableAdvantage ProbCompRuntime.probComp adversary ≤
+      prf.prfAdvantage (macToPRFReduction prf adversary) + (Fintype.card R : ℝ≥0∞)⁻¹ := by
   rw [strongUnforgeableAdvantage_toMacAlg_eq_unforgeableAdvantage]
   exact prf_implies_uf_cma prf adversary
 
