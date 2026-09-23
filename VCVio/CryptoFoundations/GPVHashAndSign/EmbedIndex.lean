@@ -413,7 +413,7 @@ past `y`-independent steps; at the count-`j` winner miss the front `y` is the im
 draw, so the front `y` *is* the inline-fresh winner draw, and post-winner the two runs coincide
 (`evalSPMF_run_embedTrapIdxSigImpl_eq_embedTrapFreshIdxSig_of_lt`).  The signed set is updated
 identically on both sides (signing ignores `y`) and is never read, so it rides along passively. -/
-lemma evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl [Inhabited Range]
+lemma evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl
     (pk : PK) (sk : SK) (j : ℕ)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β) :
     ∀ (s : (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M),
@@ -484,7 +484,7 @@ run's expectation: `∑' w, Pr[= w | freshSig run] · F w = ∑' y, Pr[= y] · �
 embedTrapIdxSig … j y run] · F w`.  Immediate from
 `evalSPMF_frontDraw_embedTrapIdxSigImpl_eq_embedTrapFreshSigImpl` (the two `evalSPMF`s agree, so
 their expectations of `F` agree) and the Tonelli rearrangement `tsum_probOutput_bind_mul`. -/
-lemma tsum_probOutput_embedTrapFreshIdxSig_mul_eq_frontDraw [Inhabited Range]
+lemma tsum_probOutput_embedTrapFreshIdxSig_mul_eq_frontDraw
     (pk : PK) (sk : SK) (j : ℕ)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
     (s : (((Salt × M →ₒ Range).QueryCache × ℕ) × ((Salt × M) → Option ℕ)) × Finset M)

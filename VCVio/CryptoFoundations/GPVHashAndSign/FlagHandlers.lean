@@ -546,7 +546,7 @@ non-collision branch the cache slice grows by at most one (`keyedSalts_cacheQuer
 continuation is bounded by the IH at offset `m + 1` and residual budget `qS - 1`, and the per-step
 union recombines to the running sum.  Non-signing steps leave the flag untouched; a uniform step
 leaves the cache unchanged and a read step grows the slice by at most one (absorbed by `qH`). -/
-theorem gpv_orig_flag_le_collisionBound_aux [Inhabited Range] [Nonempty Salt]
+theorem gpv_orig_flag_le_collisionBound_aux
     (pk : PK) (sk : SK) :
     ∀ {β : Type}
       (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
@@ -683,7 +683,7 @@ actual game-run vehicle `adv.main pk` (NOT free parameters).  It carries the run
 content; the off-collision per-query agreement it pairs with is `gpvImplFlag_h_agree_good`
 (universal), and the reduction of Step 1's TV to this flag probability is
 `gpv_tvDist_orig_run_le_probEvent_flag`. -/
-theorem gpv_orig_flag_le_collisionBound [Inhabited Range] [Nonempty Salt]
+theorem gpv_orig_flag_le_collisionBound [Nonempty Salt]
     (pk : PK) (sk : SK)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -728,7 +728,7 @@ random-oracle) step leaves the flag at `s.2 = b` (`gpvRealImplFlag_run_inl`) and
 This is the key fact that keeps the verify-Bool lift on the *same* `collisionBound`: appending the
 verification read (a signing-free `.inl` continuation) after `adv.main pk` adds no flag mass, so no
 extra `qHash` budget is charged. -/
-theorem gpvRealImplFlag_run_no_sign_flag_eq [Inhabited Range] (pk : PK) (sk : SK) :
+theorem gpvRealImplFlag_run_no_sign_flag_eq (pk : PK) (sk : SK) :
     ∀ {γ : Type}
       (ob : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) γ)
       (cache : (Salt × M →ₒ Range).QueryCache) (b : Bool),
@@ -770,7 +770,7 @@ verification read) after `oa` does not increase the run-level collision-flag pro
 the final flag of the `kont`-run equals the flag at the end of `oa` on every support point (and the
 `kont` run may only lose mass on failure).  This is the run-level statement of the off-by-one
 resolution: the verification read carries no flag mass. -/
-theorem probEvent_flag_bind_no_sign_le [Inhabited Range] (pk : PK) (sk : SK)
+theorem probEvent_flag_bind_no_sign_le (pk : PK) (sk : SK)
     {β γ : Type}
     (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
     (kont : β → OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) γ)
@@ -820,7 +820,7 @@ shared cache), bounding the TV by the run-level collision flag.  Because `kont` 
 query, the flag carries no extra mass (`probEvent_flag_bind_no_sign_le`), so the flag probability is
 the *same* `collisionBound Salt qSign qHash` as for `adv.main pk` alone
 (`gpv_orig_flag_le_collisionBound`) — no `qHash` off-by-one from the verification read. -/
-theorem gpv_tvDist_orig_verify_le_collisionBound [Inhabited Range] [Nonempty Salt]
+theorem gpv_tvDist_orig_verify_le_collisionBound [Nonempty Salt]
     (pk : PK) (sk : SK)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -1263,7 +1263,7 @@ reduces the fresh flag probability to the `gpvRealImplFlag` flag probability, bo
 Unlike the frozen `gpv_tvDist_orig_verify_le_collisionBound`, the vehicle now carries the signed-set
 factor, so `kont` may compute the EUF-CMA freshness mask (the forged message not being among the
 signed messages) while staying within the same collision bound. -/
-theorem gpv_tvDist_orig_verify_fresh_le_collisionBound [Inhabited Range] [Nonempty Salt]
+theorem gpv_tvDist_orig_verify_fresh_le_collisionBound [Nonempty Salt]
     (pk : PK) (sk : SK)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))

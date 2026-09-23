@@ -43,7 +43,7 @@ with the same continuation `k` does not increase TV distance) chained with Step-
 `ℝ≥0∞` through the bool-valued TV bridge `abs_probOutput_toReal_sub_le_tvDist`. It carries no new
 probabilistic content beyond Step-1 and is reusable for any verification post-processor. -/
 theorem gpv_realGameVerify_le_progGameVerify_add_collisionBound
-    [Finite Range] [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (pk : PK) (sk : SK)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -324,7 +324,7 @@ programmed freshness verify-Bool game plus `collisionBound`.** Chains the keygen
 `(pk, sk) ← hr.gen`.  It reduces closing the split bound to bounding the programmed game
 `progGameVerifyFresh` (the remaining reservoir-sampling extraction). -/
 theorem gpv_advantage_le_progGameVerifyFreshAvg_add_collisionBound
-    [Inhabited Range] [Nonempty Salt]
+    [Nonempty Salt]
     (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
@@ -718,7 +718,7 @@ combined run `progGameRunImplCombined` enlarges the table-domain by at most `qS 
 uniform steps and random-oracle cache hits leave the table untouched, while each signing step and
 each random-oracle miss writes a single key (`combinedTableSupport_write_card_le`), charged against
 the residual signing or hash budget. -/
-lemma combinedTableSupport_run_card_le [Fintype M] [Inhabited Range]
+lemma combinedTableSupport_run_card_le [Fintype M]
     (domainSample : PK → ProbComp Domain) (pk : PK) :
     ∀ {β : Type}
       (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
@@ -796,7 +796,7 @@ omit [DecidableEq Range] [SampleableType Range] in
 the combined run of an adversary `oa` obeying `signHashQueryBound` records at most `qSign + qHash`
 table entries.  This is the reservoir size over which the exact-match programmed-preimage reduction
 samples its embedding slot in the GPV Step-2 collision extraction. -/
-lemma combined_run_table_card_le [Fintype M] [Inhabited Range]
+lemma combined_run_table_card_le [Fintype M]
     (domainSample : PK → ProbComp Domain) (pk : PK) (qSign qHash : ℕ)
     {β : Type} (oa : OracleComp ((unifSpec + (Salt × M →ₒ Range)) + (M →ₒ (Salt × Domain))) β)
     (hQ : signHashQueryBound

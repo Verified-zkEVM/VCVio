@@ -60,7 +60,7 @@ preimages short (the forged one by the verifier's `isShort` check, the hidden on
 This is the Step-2 collision extraction of the GPV proof, stated pinned over the concrete
 programmed forgery game and the concrete reductions. -/
 theorem gpv_progGameVerifyFreshAvg_le_collisionAdv_add_preimageAdv [DecidableEq Domain]
-    [Inhabited Range] [Nonempty Salt]
+    [Inhabited Range]
     (hcorrect : ∀ pk sk, (pk, sk) ∈ support hr.gen → psf.CorrectAt pk sk) (qSign qHash : ℕ)
     (adv : SignatureAlg.UnforgeableAdversary
       (GPVHashAndSign (m := OracleComp (unifSpec + (Salt × M →ₒ Range))) psf hr M Salt))
