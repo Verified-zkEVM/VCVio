@@ -5,7 +5,7 @@ Authors: Oleksandr Vovkotrub
 -/
 
 module
-public import LatticeCrypto.MLDSA.SecurityNMA
+public import LatticeCrypto.MLDSA.SecurityHeadlines
 
 /-!
 # ML-DSA short-model CMA headline: joint hypothesis-consistency witness

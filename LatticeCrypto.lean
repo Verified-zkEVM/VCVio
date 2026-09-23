@@ -34,6 +34,7 @@ public import LatticeCrypto.MLDSA.Scheme
 public import LatticeCrypto.MLDSA.Security
 public import LatticeCrypto.MLDSA.SecurityExpandARO
 public import LatticeCrypto.MLDSA.SecurityHVZK
+public import LatticeCrypto.MLDSA.SecurityHeadlines
 public import LatticeCrypto.MLDSA.SecurityNMA
 public import LatticeCrypto.MLDSA.Signature
 public import LatticeCrypto.MLKEM.Arithmetic
