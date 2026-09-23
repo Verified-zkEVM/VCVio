@@ -33,8 +33,9 @@ generator `keygenShortRO` obtains `Â = ExpandA(ρ)` by querying it, the honest 
   pre-seeded at `ρ` with the challenger's uniform matrix.
 * `game1_le_stmsis_rom`: the uniform branch is bounded by the SelfTargetMSIS advantage of
   `extractorCRom` against the uniform-matrix tailored problem `mldsaSTMSISMatrix`.
-* `nma_security_rom`: for every ROM forger there are a uniform-matrix MLWE adversary `B` and a
-  uniform-matrix SelfTargetMSIS adversary `C` with
+* `nma_security_rom`: for every ROM forger, the uniform-matrix MLWE reduction
+  `B = distinguisherBRom` and the uniform-matrix SelfTargetMSIS reduction `C = extractorCRom`
+  satisfy
   `Adv^{EUF-NMA}_{ROM}(A) ≤ Adv^{MLWE}(B) + Adv^{SelfTargetMSIS}(C)`, with no idealization slack
   and no hypothesis beyond the forger.
 
@@ -682,8 +683,8 @@ theorem game1_le_stmsis_rom [Inhabited (Commitment p prims)] [Inhabited (Respons
 /-- **EUF-NMA security of short-model ML-DSA with `ExpandA` a programmed random oracle.**
 
 For every forging strategy `main` with access to uniform sampling, the commitment hash `H`, and
-the `ExpandA` oracle, there are a uniform-matrix Module-LWE adversary `B` (`distinguisherBRom`)
-and a uniform-matrix tailored SelfTargetMSIS adversary `C` (`extractorCRom`) with
+the `ExpandA` oracle, the uniform-matrix Module-LWE reduction `B = distinguisherBRom main` and the
+uniform-matrix tailored SelfTargetMSIS reduction `C = extractorCRom main` satisfy
 
   `Adv^{EUF-NMA}_{ROM}(main) ≤ Adv^{MLWE}(B) + Adv^{SelfTargetMSIS}(C)`.
 
@@ -697,12 +698,10 @@ the tailored ML-DSA verifier relation at a uniform matrix. -/
 theorem nma_security_rom [Inhabited (Commitment p prims)] [Inhabited (Response p prims)]
     (main : PublicKey p prims → OracleComp (RomSpec p prims M)
       (M × Option (Commitment p prims × Response p prims))) :
-    ∃ (mlweReduction : LearningWithErrors.Adversary (mldsaMatrixMLWE p))
-      (stmsisReduction : SelfTargetMSIS.Adversary (mldsaSTMSISMatrix p prims M)),
-      romNmaAdvantage p prims main ≤
-        ENNReal.ofReal (LearningWithErrors.advantage (mldsaMatrixMLWE p) mlweReduction) +
-        SelfTargetMSIS.advantage stmsisReduction := by
-  refine ⟨distinguisherBRom p prims main, extractorCRom p prims main, ?_⟩
+    romNmaAdvantage p prims main ≤
+      ENNReal.ofReal
+          (LearningWithErrors.advantage (mldsaMatrixMLWE p) (distinguisherBRom p prims main)) +
+        SelfTargetMSIS.advantage (extractorCRom p prims main) := by
   rw [romNmaAdvantage_eq_game0, advantage_eq_game_boolDistAdvantage]
   have hle := ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage
     (LearningWithErrors.game0 (mldsaMatrixMLWE p) (distinguisherBRom p prims main))
