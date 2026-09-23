@@ -16,6 +16,7 @@ public import VCVio.CryptoFoundations.Asymptotics.ReductionCost
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.DataEncapMech
+public import VCVio.CryptoFoundations.DataEncapMech.RealOrRandom
 public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.CmaToNma
