@@ -211,6 +211,39 @@ example (x : Fin 3) (T : Finset (SChal × Fin 3))
       toySigma.verify x () p.1 p.2 = true ∧ toySigma.verify x () q.1 q.2 = true :=
   ht.exists_pair (by norm_num) j
 
+/-! ## All three clauses, of one computation
+
+The point of extracting through `coordForkOpT` rather than the total-lookup core is that the
+output, the success probability and the lookup count are clauses about the *same* named
+computation. These three check that at concrete parameters. -/
+
+/-- **Success**, for the paper's algorithm: the same `1/3` as the table core gives. -/
+theorem one_third_le_prEvent_extracted_op (x : Fin 3) :
+    (1 : ℝ≥0∞) / 3 ≤ Pr{let r ← toySigma.coordExtractOp 2 toyExt x () (toyProver x)}[
+      Extracted (fun x w => x == w) x r.1] := by
+  have h := sub_div_le_prEvent_extracted_coordExtractOp toySigma 2 toyExt x
+    (toySigma_coordSpeciallySoundAt x) () (toyProver x)
+  refine le_trans (le_of_eq ?_) h
+  rw [acceptTable_toyProver, acceptRatio_pure_const_true,
+    show (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 3) = 2 / 3 from by simp,
+    one_sub_two_thirds]
+
+/-- **Cost**, of the same computation: `1 + 2·1 = 3` lookups in expectation. -/
+theorem lintegral_cost_extracted_op_le (x : Fin 3) :
+    ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> toySigma.coordExtractOp 2 toyExt x () (toyProver x)]
+      ≤ 3 := by
+  have h := lintegral_cost_coordExtractOp_le toySigma 2 toyExt x () (toyProver x)
+  refine h.trans (le_of_eq ?_)
+  simp only [Fintype.card_fin, show (2 - 1 : ℕ) = 1 from rfl, Nat.cast_one, mul_one]
+  norm_num
+
+/-- **Output**, of the same computation: what the fork handed the extractor was a set of
+verifier-accepting transcripts whose challenges are `SS(S, ℓ, k)`. -/
+example (x : Fin 3) (p : (SChal → Fin 3) × Finset SChal) (cost : ℕ)
+    (h : (some p, cost) ∈ support (coordForkOpT (toySigma.verify x ()) 2 (toyProver x))) :
+    GoodTranscripts (toySigma.verify x ()) 2 (some p) :=
+  coordForkOpT_success _ _ _ h
+
 /-! ## The generic structure's `t`-value -/
 
 /-- **Non-vacuity of the §7.3 combinatorial bound.** At `ℓ = 2`, `|S| = 3`, the relevant monotone

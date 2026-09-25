@@ -6,30 +6,41 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.Probability.UniformOn
+public import VCVio.CryptoFoundations.CoordinateFork.Operational
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 
 /-!
-# A fixed-statement extraction bound for coordinate-wise special soundness
+# Extracting a witness from a coordinate-wise fork
 
-This module proves the fixed-statement, table-model extraction-success inequality underlying the
-`μ = 1` case of Lemma 2.31 of Fenzi–Moghaddas–Nguyen. Composing the coordinate-wise table fork with
-an extensional `ℓ`-coordinate-wise `k`-special sound extractor yields a valid witness with
-probability at least `ε - ℓ(k-1)/|S|`, where `ε` is the prover's accepting probability.
+`coordExtractOp` is the `μ = 1` Σ-protocol case of Lemma 2.31 of Fenzi–Moghaddas–Nguyen, over the
+paper's own algorithm: run Figure 11's resampling loop (`OracleComp.coordForkOpT`) against the
+prover's response table, then hand the accepting transcripts it returns to an extensional
+`ℓ`-coordinate-wise `k`-special sound extractor. All three clauses of Lemma 7.1 hold of that one
+computation:
 
-`coordExtract` is the composite: fork on the prover's response table to obtain `ℓ(k-1)+1` accepting
-transcripts whose challenges are `SS(S, ℓ, k)`, then hand them to `ext`. Its success event is
-`∃ w, r = some w ∧ rel x w`, which no aborting run satisfies — so the bound is a statement about
-witnesses produced, not merely about the extractor terminating.
+* **output** — `OracleComp.coordForkOpT_success`: a successful run's fork produced `ℓ(k-1)+1`
+  transcripts the verifier accepts, whose challenges form an `SS(S, ℓ, k)` set;
+* **success** — `sub_div_le_prEvent_extracted_coordExtractOp`: a valid witness comes back with
+  probability at least `ε - ℓ(k-1)/|S|`, where `ε` is the prover's accepting probability;
+* **cost** — `lintegral_cost_coordExtractOp_le`: at most `1 + ℓ(k-1)` table lookups in
+  expectation.
 
-The input `P : ProbComp ((ι → S) → Resp)` is a distribution of complete response tables after the
-commitment `pc`. This can encode a responder whose coins are fixed before answering challenges,
-but no theorem here derives such a table distribution, or its cross-rewind coupling, from an
-interactive malicious prover. Query count is also absent; see `CoordinateFork.lean` and
-`docs/agents/forking.md`.
+The success event is `∃ w, r = some w ∧ rel x w`, which no aborting run satisfies, so the middle
+clause is about witnesses produced rather than about the extractor terminating.
 
-This is not the paper's full knowledge-soundness theorem: it has no security-parameter
-quantification, joint bad-event experiment, oracle-query semantics, or expected-polynomial-time
-claim. Only `μ = 1` is represented.
+`coordExtract` is the same composite over the total-lookup table core `coordForkT`. It reads the
+whole response table at once, so it has no query count; it is kept because the averaging over the
+prover's first message below is stated through it, and because the table core is what the counting
+argument is proved about.
+
+What this is not. The input `P : ProbComp ((ι → S) → Resp)` is a distribution of complete response
+tables after the commitment `pc`; no theorem here derives such a distribution, or its cross-rewind
+coupling, from an interactive malicious prover — see `CoordinateFork/Realizability.lean`, which
+also says why the independent construction there is *not* a rewound prover. The count is of table
+lookups, returned as data by the loop, not oracle queries measured by the cost model in
+`docs/agents/query-tracking.md`. And there is no security-parameter quantification, joint bad-event
+experiment, or expected-polynomial-time claim, so this is not Definition 2.28. Only `μ = 1` is
+represented.
 -/
 
 public section
@@ -118,6 +129,96 @@ theorem sub_div_le_prEvent_extracted_coordExtract [Nonempty S]
     (mul_le_prEvent_bind_of_forall _ _ _ _ le_rfl fun r hgood => ?_)
   obtain ⟨τ, X, rfl, hpay⟩ := hgood
   exact le_of_eq (prEvent_extracted_eq_one_of_goodTranscripts hss ⟨τ, X, rfl, hpay⟩).symm
+
+
+/-! ## Extracting through Figure 11
+
+`coordExtract` runs the total-lookup table core: it reads the whole response table, so it has no
+query count to report. `coordExtractOp` runs the paper's algorithm instead — `coordForkOpT`, the
+resampling loop of Figure 11 carrying the prover's responses — and the three clauses of Lemma 7.1
+then hold of *one* named computation: it returns a valid witness with probability at least
+`ε - ℓ(k-1)/|S|` (`sub_div_le_prEvent_extracted_coordExtractOp`) after at most `1 + ℓ(k-1)` table
+lookups in expectation (`lintegral_cost_coordExtractOp_le`), and what the fork handed the
+extractor was `ℓ(k-1)+1` accepting transcripts whose challenges are `SS(S, ℓ, k)`
+(`OracleComp.coordForkOpT_success`).
+
+The count is of *table lookups*, returned as data by the loop; it is not an oracle-query count
+measured by `VCVio/OracleComp/QueryTracking/`. Bridging the two is future work. -/
+
+section Operational
+
+/-- The composite extractor over the paper's algorithm: run Figure 11 against the prover's
+response table, then hand the accepting transcripts it returns to the `k`-ary extractor. The
+lookup count the loop reports is carried through unchanged. -/
+@[expose] noncomputable def coordExtractOp
+    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
+    (pc : Commit) (P : ProbComp ((ι → S) → Resp)) : ProbComp (Option Wit × ℕ) :=
+  coordForkOpT (σ.verify x pc) k P >>= fun r =>
+    match r.1 with
+    | none => pure (none, r.2)
+    | some (τ, X) => (fun w => (some w, r.2)) <$> ext x pc (transcripts τ X)
+
+/-- **The success clause, for the paper's algorithm.** -/
+theorem sub_div_le_prEvent_extracted_coordExtractOp [Nonempty S]
+    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
+    (hss : σ.CoordSpeciallySoundAt k ext x) (pc : Commit)
+    (P : ProbComp ((ι → S) → Resp)) :
+    acceptRatio (acceptTable (σ.verify x pc) P)
+        - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+      ≤ Pr{let r ← σ.coordExtractOp k ext x pc P}[Extracted rel x r.1] := by
+  refine (sub_div_le_prEvent_goodTranscripts_coordForkOpT (σ.verify x pc) k P).trans ?_
+  rw [coordExtractOp]
+  refine le_of_eq_of_le (mul_one _).symm
+    (mul_le_prEvent_bind_of_forall _ _ _ _ le_rfl fun r hgood => ?_)
+  obtain ⟨τ, X, hEq, hss', hpay⟩ := hgood
+  rw [hEq]
+  refine le_of_eq ?_
+  rw [prEvent_map]
+  refine (prEvent_eq_one_of_forall_mem_support _ _ fun w hw => ⟨w, rfl, ?_⟩).symm
+  exact hss pc (transcripts τ X)
+    (isCoordSpecialSoundTranscripts_of_goodTranscripts ⟨τ, X, hEq ▸ rfl, hss', hpay⟩) w hw
+
+/-- **The expected-lookup clause, for the paper's algorithm.** The composite reports exactly the
+lookups its fork made, so the bound is the fork's. -/
+theorem lintegral_cost_coordExtractOp_le [Nonempty S]
+    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+    (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
+    (pc : Commit) (P : ProbComp ((ι → S) → Resp)) :
+    ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> σ.coordExtractOp k ext x pc P]
+      ≤ 1 + Fintype.card ι * (k - 1 : ℕ) := by
+  -- The composite returns the fork's tally verbatim, so the two agree in law even though the
+  -- extractor's own run sits between them.
+  classical
+  let _ : MeasurableSpace (Option (((ι → S) → Resp) × Finset (ι → S)) × ℕ) := ⊤
+  let _ : DiscreteMeasurableSpace (Option (((ι → S) → Resp) × Finset (ι → S)) × ℕ) :=
+    ⟨fun _ => trivial⟩
+  let _ : MeasurableSpace Wit := ⊤
+  let _ : MeasurableSpace (Option Wit × ℕ) := ⊤
+  have hbranch : ∀ r : Option (((ι → S) → Resp) × Finset (ι → S)) × ℕ,
+      𝒟[Prod.snd <$> (match r.1 with
+          | none => (pure (none, r.2) : ProbComp (Option Wit × ℕ))
+          | some (τ, X) => (fun w => (some w, r.2)) <$> ext x pc (transcripts τ X))]
+        = 𝒟[(pure r.2 : ProbComp ℕ)] := by
+    intro r
+    match hr : r.1 with
+    | none => simp
+    | some p =>
+        rw [show (Prod.snd <$> ((fun w => (some w, r.2)) <$> ext x pc (transcripts p.1 p.2)))
+            = ((fun _ => r.2) <$> ext x pc (transcripts p.1 p.2) : ProbComp ℕ) from
+              Functor.map_map .. ,
+          _root_.evalDist_map_const, evalDist_apply_univ_eq_one, one_smul, evalDist_pure]
+  have hlaw : 𝒟[Prod.snd <$> σ.coordExtractOp k ext x pc P]
+      = 𝒟[Prod.snd <$> coordForkOpT (σ.verify x pc) k P] := by
+    rw [coordExtractOp, map_bind, map_eq_bind_pure_comp (f := Prod.snd)
+        (x := coordForkOpT (σ.verify x pc) k P),
+      evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+    exact congrArg (Measure.bind _) (funext fun r => (hbranch r).trans rfl)
+  rw [hlaw]
+  exact lintegral_cost_coordForkOpT_le (σ.verify x pc) k P
+
+end Operational
 
 /-! ## Sampling the first message
 

@@ -618,6 +618,120 @@ theorem map_fst_coordForkOpW (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → 
 
 end Weighted
 
+/-! ## Carrying the prover's responses
+
+`coordForkOp` reports which challenges it found; Lemma 7.1 asks for the accepting *transcripts*.
+`coordForkOpT` is the same loop run against the acceptance table a response table induces,
+returning that table alongside the challenge set — exactly what `coordForkT` is to `coordFork`,
+and the object `CoordinateFork/Extraction.lean` names as the extractor. All three clauses
+transport: the output is `ℓ(k-1)+1` verifier-accepting transcripts whose challenges are
+`SS(S, ℓ, k)`, the success probability is unchanged, and so is the lookup count.
+
+The response type carries no measurable structure, so the proofs introduce the discrete one where
+the averaging step needs it rather than the statements carrying it. -/
+
+section Transcripts
+
+variable {Y : Type} [DecidableEq Y]
+
+/-- Figure 11 with the prover's responses carried alongside. -/
+@[expose] noncomputable def coordForkOpT (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    ProbComp (Option (((ι → S) → Y) × Finset (ι → S)) × ℕ) := do
+  let τ ← D
+  let r ← coordForkOp k fun c => V c (τ c)
+  return (r.1.map fun X => (τ, X), r.2)
+
+/-- **The output clause of Lemma 7.1 with responses.** A successful run returns `ℓ(k-1)+1`
+transcripts that the verifier accepts, whose challenges form an `SS(S, ℓ, k)` set. -/
+theorem coordForkOpT_success (V : (ι → S) → Y → Bool) (k : ℕ) (D : ProbComp ((ι → S) → Y))
+    {p : ((ι → S) → Y) × Finset (ι → S)} {cost : ℕ}
+    (h : (some p, cost) ∈ support (coordForkOpT V k D)) :
+    GoodTranscripts V k (some p) := by
+  rw [coordForkOpT, mem_support_bind_iff] at h
+  obtain ⟨τ, -, h⟩ := h
+  rw [mem_support_bind_iff] at h
+  obtain ⟨⟨r₁, r₂⟩, hr, h⟩ := h
+  rw [support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at h
+  obtain ⟨hopt, -⟩ := h
+  rcases r₁ with _ | X
+  · simp at hopt
+  · obtain rfl : p = (τ, X) := by simpa [eq_comm] using hopt
+    rw [goodTranscripts_some_iff]
+    exact coordForkOp_success hr
+
+omit [DecidableEq Y] in
+/-- **The success clause with responses.** The loop's first component is `some` exactly as often
+as the acceptance-table loop's is, averaged over the response table. -/
+theorem prEvent_isSome_coordForkOpT (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    Pr{let r ← coordForkOpT V k D}[r.1.isSome] = forkSuccOf k (acceptTable V D) := by
+  classical
+  let _ : MeasurableSpace ((ι → S) → Y) := ⊤
+  let _ : DiscreteMeasurableSpace ((ι → S) → Y) := ⟨fun _ => trivial⟩
+  have hinner : ∀ τ : (ι → S) → Y,
+      Pr{let r ← (coordForkOp k (fun c => V c (τ c)) >>= fun r =>
+          pure (r.1.map fun X => (τ, X), r.2))}[r.1.isSome]
+        = ((goodSet k (fun c => V c (τ c))).card : ℝ≥0∞) / Fintype.card (ι → S) := by
+    intro τ
+    rw [← prEvent_isSome_coordForkOp k (fun c => V c (τ c)),
+      show (coordForkOp k (fun c => V c (τ c)) >>= fun r =>
+          pure (r.1.map fun X => (τ, X), r.2))
+        = (fun r : Option (Finset (ι → S)) × ℕ => (r.1.map fun X => (τ, X), r.2)) <$>
+            coordForkOp k (fun c => V c (τ c)) from by rw [map_eq_bind_pure_comp]; rfl,
+      prEvent_map]
+    exact prEvent_congr _ _ _ fun r => by cases r.1 <;> simp
+  rw [coordForkOpT, prEvent_bind_eq_lintegral_of_discrete]
+  simp only [hinner]
+  rw [forkSuccOf, acceptTable,
+    lintegral_evalDist_map_of_discrete D (f := fun (τ : (ι → S) → Y) c => V c (τ c))
+      (g := fun ρ => ((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S))]
+
+/-- Succeeding and returning good transcripts are the same event. -/
+theorem prEvent_goodTranscripts_coordForkOpT (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    Pr{let r ← coordForkOpT V k D}[GoodTranscripts V k r.1]
+      = Pr{let r ← coordForkOpT V k D}[r.1.isSome] := by
+  refine le_antisymm (prEvent_mono_of_support _ fun r _ hr => ?_)
+    (prEvent_mono_of_support _ fun r hr hs => ?_)
+  · obtain ⟨τ, X, hEq, -, -⟩ := hr
+    rw [hEq]; rfl
+  · obtain ⟨⟨o, n⟩, rfl⟩ : ∃ q : Option (((ι → S) → Y) × Finset (ι → S)) × ℕ, q = r := ⟨r, rfl⟩
+    rcases o with _ | p
+    · simp at hs
+    · exact coordForkOpT_success V k D hr
+
+/-- **Lemma 7.1 for the paper's algorithm, with responses.** The resampling loop returns
+`ℓ(k-1)+1` verifier-accepting transcripts whose challenges form an `SS(S, ℓ, k)` set, with
+probability at least `ε - ℓ(k-1)/N`. -/
+theorem sub_div_le_prEvent_goodTranscripts_coordForkOpT [Nonempty S] (V : (ι → S) → Y → Bool)
+    (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
+    acceptRatio (acceptTable V D) - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
+      ≤ Pr{let r ← coordForkOpT V k D}[GoodTranscripts V k r.1] := by
+  rw [prEvent_goodTranscripts_coordForkOpT, prEvent_isSome_coordForkOpT]
+  exact sub_div_le_lintegral_card_goodSet (acceptTable V D) k
+
+omit [DecidableEq Y] in
+/-- **The expected-lookup clause with responses**, unchanged by carrying the table. -/
+theorem lintegral_cost_coordForkOpT_le [Nonempty S] (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
+    ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> coordForkOpT V k D]
+      ≤ 1 + Fintype.card ι * (k - 1 : ℕ) := by
+  classical
+  let _ : MeasurableSpace ((ι → S) → Y) := ⊤
+  let _ : DiscreteMeasurableSpace ((ι → S) → Y) := ⟨fun _ => trivial⟩
+  rw [coordForkOpT, map_bind, lintegral_evalDist_bind_of_discrete _ _ Measurable.of_discrete]
+  refine (lintegral_mono fun τ => ?_).trans (by rw [lintegral_const, measure_univ, mul_one])
+  have hmap : (Prod.snd <$> (coordForkOp k (fun c => V c (τ c)) >>= fun r =>
+      pure (r.1.map fun X => (τ, X), r.2)))
+      = Prod.snd <$> coordForkOp k (fun c => V c (τ c)) := by
+    rw [map_bind, map_eq_bind_pure_comp]
+    exact bind_congr fun r => rfl
+  rw [hmap]
+  exact lintegral_cost_coordForkOp_le k fun c => V c (τ c)
+
+end Transcripts
+
 end Op
 
 end OracleComp
