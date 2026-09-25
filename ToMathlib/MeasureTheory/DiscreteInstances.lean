@@ -58,6 +58,9 @@ choice to be discrete. The guard is `Countable`, not `Finite`: `List α` is coun
 `α` is, and the instances below are the ones Mathlib derives from `⊤` in that case.
 -/
 
+/-- `Countable` is a guard on when this fires, not data the σ-algebra reads, so the argument is
+deliberately unused in the value. -/
+@[nolint unusedArguments]
 instance List.instMeasurableSpace {α : Type*} [Countable α] : MeasurableSpace (List α) := ⊤
 
 instance List.instMeasurableSingletonClass {α : Type*} [Countable α] :
