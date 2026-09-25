@@ -348,8 +348,7 @@ Closure properties: `negligible_add`, `negligible_const_mul`, `negligible_sum`,
 
 `SecurityGame Adv` stores an advantage function rather than an experiment, so the same
 meta-theorems apply to success, bias and distinguishing advantages. Build one by giving the
-notion's advantage at each security parameter, converting an `ℝ`-valued advantage with
-`ENNReal.ofReal`.
+notion's `ℝ≥0∞`-valued advantage at each security parameter.
 
 ```lean
 structure SecurityGame (Adv : Type*) where

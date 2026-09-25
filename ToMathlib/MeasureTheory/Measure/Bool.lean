@@ -126,11 +126,7 @@ lemma boolDist_comm (μ ν : Measure Bool) : μ.boolDist ν = ν.boolDist μ := 
 distances between adjacent hybrids. -/
 lemma boolDist_le_sum_range (μ : ℕ → Measure Bool) (q : ℕ) :
     (μ 0).boolDist (μ q) ≤ ∑ i ∈ Finset.range q, (μ i).boolDist (μ (i + 1)) := by
-  induction q with
-  | zero => simp
-  | succ q ih =>
-    rw [Finset.sum_range_succ]
-    exact (boolDist_triangle _ (μ q) _).trans (by gcongr)
+  simpa only [boolDist, absDiff_eq_edist] using edist_le_range_sum_edist (fun i => μ i {true}) q
 
 /-- The mass of the `true` event is bounded by that of another measure plus their Boolean
 distance. -/
