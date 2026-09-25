@@ -106,10 +106,10 @@ private theorem one_sub_two_thirds : (1 : ℝ≥0∞) - 2 / 3 = 1 / 3 := by
 /-- **Non-vacuity of the fixed-statement extraction bound.** Against the always-accepting prover,
 the composite returns a valid witness with probability at least `1 - 2/3 = 1/3`, so the table-model
 loss `ℓ(k-1)/|S| = 2/3` leaves real slack at these parameters. -/
-theorem one_third_le_probEvent_extracted (x : Fin 3) :
-    (1 : ℝ≥0∞) / 3 ≤ Pr[Extracted (fun x w => x == w) x |
-      toySigma.coordExtract 2 toyExt x () (toyProver x)] := by
-  have h := sub_div_le_probEvent_extracted_coordExtract toySigma 2 toyExt x
+theorem one_third_le_prEvent_extracted (x : Fin 3) :
+    (1 : ℝ≥0∞) / 3 ≤ Pr{let r ← toySigma.coordExtract 2 toyExt x () (toyProver x)}[
+      Extracted (fun x w => x == w) x r] := by
+  have h := sub_div_le_prEvent_extracted_coordExtract toySigma 2 toyExt x
     (toySigma_coordSpeciallySoundAt x) () (toyProver x)
   refine le_trans (le_of_eq ?_) h
   rw [acceptTable_toyProver, acceptRatio_pure_const_true,
@@ -138,10 +138,10 @@ theorem verifyProb_badProverCommit (x : Fin 3) :
 
 /-- **Non-vacuity of the commitment-sampled bound.** Averaging the `μ = 1` bound over the prover's
 first message leaves the same `1 - 2/3 = 1/3` slack. -/
-theorem one_third_le_probEvent_extracted_commit (x : Fin 3) :
-    (1 : ℝ≥0∞) / 3 ≤ Pr[Extracted (fun x w => x == w) x |
-      toySigma.coordExtractCommit 2 toyExt x (toyProverCommit x)] := by
-  have h := sub_div_le_probEvent_extracted_coordExtractCommit toySigma 2 toyExt x
+theorem one_third_le_prEvent_extracted_commit (x : Fin 3) :
+    (1 : ℝ≥0∞) / 3 ≤ Pr{let r ← toySigma.coordExtractCommit 2 toyExt x (toyProverCommit x)}[
+      Extracted (fun x w => x == w) x r] := by
+  have h := sub_div_le_prEvent_extracted_coordExtractCommit toySigma 2 toyExt x
     (toySigma_coordSpeciallySoundAt x) (toyProverCommit x)
   refine le_trans (le_of_eq ?_) h
   rw [verifyProb_toyProverCommit,
