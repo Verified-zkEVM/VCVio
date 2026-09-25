@@ -22,7 +22,7 @@ challenge is chosen. A fixed-coin adversary is exactly a response table, and `in
 table distribution obtained by fixing them.
 
 The success bound only ever reads the marginals of the table distribution
-(`OracleComp.EvalDist.le_tsum_probOutput_mul_goodSet`), so realizing *some* distribution with the
+(`OracleComp.le_tsum_probOutput_mul_goodSet`), so realizing *some* distribution with the
 adversary's marginals is all the transfer needs; `acceptRatio_acceptTable_indepTable` does that,
 and `sub_div_le_probEvent_goodTranscripts_indepTable` restates the transcript bound with
 `advSucc V A` on the left.

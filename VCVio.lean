@@ -164,7 +164,6 @@ public import VCVio.CryptoFoundations.TweakableHash
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Bool
-public import VCVio.EvalDist.CoordinateFork
 public import VCVio.EvalDist.Defs.AlternativeMonad
 public import VCVio.EvalDist.Defs.Basic
 public import VCVio.EvalDist.Defs.Instances
