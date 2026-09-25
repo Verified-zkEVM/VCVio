@@ -5,9 +5,10 @@ Authors: Devon Tuma
 -/
 module
 
+public import ToMathlib.Probability.UniformOn
 public import VCVio.CryptoFoundations.CoordinateFork
-public import VCVio.EvalDist.Expectation
 public import VCVio.EvalDist.IndepProduct
+public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.OracleComp.Constructions.WithoutReplacement
 
 /-!
@@ -21,7 +22,7 @@ output rather than an external accounting.
 
 `VCVio/CryptoFoundations/CoordinateFork.lean` has the same success condition as a total lookup:
 `coordForkCore` reads the whole column and keeps the first `k - 1` accepting values in enumeration
-order. The two agree on what matters. `probEvent_isSome_coordForkOp` shows the loop succeeds with
+order. The two agree on what matters. `prEvent_isSome_coordForkOp` shows the loop succeeds with
 exactly the core's probability — the sampled column order is irrelevant, because the loop stops
 only on success or exhaustion — and `coordForkOp_success` shows a successful run returns a
 coordinate-wise `k`-special sound set of accepting challenges, via the shared
@@ -39,7 +40,7 @@ contribution, but nothing here assembles those into the paper's `1 + ℓ(k - 1)`
 
 public section
 
-open Finset CoordinateWise OracleComp OracleComp.EvalDist ProbComp
+open Finset CoordinateWise OracleComp ProbComp MeasureTheory ProbabilityTheory
 
 open scoped ENNReal
 
@@ -51,7 +52,8 @@ variable {k : ℕ} {ρ : (ι → S) → Bool} {c₀ : ι → S} {d : ι → List
 /-! ## The pool of alternatives -/
 
 /-- The values a coordinate can be resampled to: everything except the one already in use. -/
-@[expose] noncomputable def altPool (c₀ : ι → S) (j : ι) : List S := (Finset.univ.erase (c₀ j)).toList
+@[expose] noncomputable def altPool (c₀ : ι → S) (j : ι) : List S :=
+  (Finset.univ.erase (c₀ j)).toList
 
 omit [DecidableEq ι] [Fintype ι] in
 theorem nodup_altPool (c₀ : ι → S) (j : ι) : (altPool c₀ j).Nodup := Finset.nodup_toList _
@@ -165,19 +167,19 @@ theorem coordForkOpAt_success {X : Finset (ι → S)} {cost : ℕ}
   classical
   rw [coordForkOpAt] at h
   by_cases hacc : ρ c₀
-  · rw [if_pos hacc, mem_support_bind_iff] at h
+  · rw [ite_eq_left hacc, mem_support_bind_iff] at h
     obtain ⟨d, hd, h⟩ := h
     by_cases hcond : ∀ j, (collected ρ c₀ d j).card = k - 1
-    · rw [if_pos hcond] at h
+    · rw [ite_eq_left hcond] at h
       obtain rfl : X = coordFamily c₀ (collected ρ c₀ d) := by
         simp only [support_pure, Set.mem_singleton_iff, Prod.mk.injEq,
           Option.some.injEq] at h
         exact h.1
       exact coordFamily_success hacc (notMem_collected hd) hcond
         fun _ _ hx => accept_of_mem_collected hx
-    · rw [if_neg hcond] at h
+    · rw [ite_eq_right hcond] at h
       simp at h
-  · rw [if_neg hacc] at h
+  · rw [ite_eq_right hacc] at h
     simp at h
 
 theorem coordForkOp_success {X : Finset (ι → S)} {cost : ℕ}
@@ -205,54 +207,57 @@ theorem coordForkOp_exists_pair {X : Finset (ι → S)} {cost : ℕ} (hk : 2 ≤
 omit [SampleableType (ι → S)] in
 /-- On a fixed challenge the loop succeeds with certainty or not at all, according to whether that
 challenge is good. Which values the coordinate resampling happened to draw does not matter. -/
-theorem probEvent_isSome_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
-    Pr[fun r => r.1.isSome | coordForkOpAt k ρ c₀] = if c₀ ∈ goodSet k ρ then 1 else 0 := by
+theorem prEvent_isSome_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
+    Pr{let r ← coordForkOpAt k ρ c₀}[r.1.isSome] = if c₀ ∈ goodSet k ρ then 1 else 0 := by
   classical
   by_cases hacc : ρ c₀
-  · rw [coordForkOpAt, if_pos hacc]
+  · rw [coordForkOpAt, ite_eq_left hacc]
     by_cases hgood : c₀ ∈ goodSet k ρ
-    · refine (probEvent_eq_one ⟨probFailure_of_liftM_PMF _, fun r hr => ?_⟩).trans
-        (if_pos hgood).symm
+    · refine (prEvent_eq_one_of_forall_mem_support _ _ fun r hr => ?_).trans
+        (ite_eq_left hgood).symm
       rw [mem_support_bind_iff] at hr
       obtain ⟨d, hd, hr⟩ := hr
-      rw [if_pos ((forall_card_collected_iff hacc hd).mpr hgood)] at hr
+      rw [ite_eq_left ((forall_card_collected_iff hacc hd).mpr hgood)] at hr
       simp only [support_pure, Set.mem_singleton_iff] at hr
       subst hr
       simp
-    · refine (probEvent_eq_zero fun r hr => ?_).trans (if_neg hgood).symm
+    · refine (prEvent_eq_zero_of_forall_mem_support _ _ fun r hr => ?_).trans
+        (ite_eq_right hgood).symm
       rw [mem_support_bind_iff] at hr
       obtain ⟨d, hd, hr⟩ := hr
-      rw [if_neg fun hc => hgood ((forall_card_collected_iff hacc hd).mp hc)] at hr
+      rw [ite_eq_right fun hc => hgood ((forall_card_collected_iff hacc hd).mp hc)] at hr
       simp only [support_pure, Set.mem_singleton_iff] at hr
       subst hr
       simp
   · have hgood : c₀ ∉ goodSet k ρ := by simp [goodSet, hacc]
-    rw [coordForkOpAt, if_neg hacc, if_neg hgood]
+    rw [coordForkOpAt, ite_eq_right hacc, ite_eq_right hgood]
     simp
 
 /-- **The success probability of Figure 11.** The loop succeeds exactly as often as the
 deterministic table core: on `goodSet k ρ`, the challenges whose every column holds at least `k`
 accepting values. -/
-theorem probEvent_isSome_coordForkOp (k : ℕ) (ρ : (ι → S) → Bool) :
-    Pr[fun r => r.1.isSome | coordForkOp k ρ]
+theorem prEvent_isSome_coordForkOp (k : ℕ) (ρ : (ι → S) → Bool) :
+    Pr{let r ← coordForkOp k ρ}[r.1.isSome]
       = ((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S) := by
   classical
-  rw [coordForkOp, probEvent_bind_eq_tsum]
-  simp only [probEvent_isSome_coordForkOpAt, probOutput_uniformSample]
-  rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), Finset.sum_ite_mem,
-    Finset.univ_inter, Finset.sum_const, nsmul_eq_mul, mul_one, div_eq_mul_inv, mul_comm]
+  let _ : MeasurableSpace (ι → S) := ⊤
+  let _ : MeasurableSingletonClass (ι → S) := ⟨fun _ => trivial⟩
+  rw [coordForkOp, prEvent_bind_eq_lintegral_of_discrete,
+    SampleableType.evalDist_uniformSample, lintegral_uniformOn_univ]
+  simp only [prEvent_isSome_coordForkOpAt]
+  rw [Finset.sum_ite_mem, Finset.univ_inter, Finset.sum_const, nsmul_eq_mul, mul_one]
 
 /-- **Lemma 7.1 for the paper's algorithm**, at a fixed acceptance table: the resampling loop
 returns a coordinate-wise `k`-special sound set of accepting challenges with probability at least
 `ε - ℓ(k-1)/N`, where `ε` is the table's accepting ratio.
 
-The output is guaranteed by `coordForkOp_success`; what is still missing is the expected number of
-table lookups, which the returned count makes available but no theorem here bounds. -/
-theorem sub_div_le_probEvent_isSome_coordForkOp [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) :
+The output is guaranteed by `coordForkOp_success` and the lookup count by
+`lintegral_cost_coordForkOp_le`. -/
+theorem sub_div_le_prEvent_isSome_coordForkOp [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) :
     ((Finset.univ.filter fun c : ι → S => ρ c).card : ℝ≥0∞) / Fintype.card (ι → S)
         - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr[fun r => r.1.isSome | coordForkOp k ρ] := by
-  rw [probEvent_isSome_coordForkOp]
+      ≤ Pr{let r ← coordForkOp k ρ}[r.1.isSome] := by
+  rw [prEvent_isSome_coordForkOp]
   exact CoordinateWise.sub_div_le_div_card_filter (accept := fun c => ρ c = true) k
 
 /-! ## The expected number of lookups -/
@@ -260,35 +265,47 @@ theorem sub_div_le_probEvent_isSome_coordForkOp [Nonempty S] (k : ℕ) (ρ : (ι
 omit [SampleableType (ι → S)] in
 /-- The loop's expected cost at a fixed challenge: one lookup for the challenge itself, and then
 one negative hypergeometric experiment per coordinate. -/
-theorem expectedValue_cost_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
-    expectedValue (coordForkOpAt k ρ c₀) (fun r => (r.2 : ℝ≥0∞))
+theorem lintegral_cost_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
+    ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> coordForkOpAt k ρ c₀]
       = if ρ c₀ then
           1 + ∑ j, NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1)
         else 1 := by
   classical
   rw [coordForkOpAt]
   by_cases hacc : ρ c₀
-  · rw [if_pos hacc, if_pos hacc, expectedValue_bind]
+  · rw [ite_eq_left hacc, ite_eq_left hacc, map_bind,
+      lintegral_evalDist_bind_of_discrete _ _ Measurable.of_discrete]
     have hinner : ∀ d : ι → List S,
-        expectedValue
-          (if ∀ j, (collected ρ c₀ d j).card = k - 1 then
-              (pure (some (coordFamily c₀ (collected ρ c₀ d)), 1 + ∑ j, (d j).length) :
-                ProbComp (Option (Finset (ι → S)) × ℕ))
-            else pure (none, 1 + ∑ j, (d j).length))
-          (fun r => (r.2 : ℝ≥0∞))
+        ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$>
+            (if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+                (pure (some (coordFamily c₀ (collected ρ c₀ d)), 1 + ∑ j, (d j).length) :
+                  ProbComp (Option (Finset (ι → S)) × ℕ))
+              else pure (none, 1 + ∑ j, (d j).length))]
           = 1 + ∑ j, ((d j).length : ℝ≥0∞) := by
       intro d
-      split <;> · rw [expectedValue_pure]; push_cast; rfl
-    rw [expectedValue_congr (fun _ => rfl) _, Finset.sum_congr rfl (fun _ _ => rfl)]
+      rw [show (Prod.snd <$>
+            (if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+                (pure (some (coordFamily c₀ (collected ρ c₀ d)), 1 + ∑ j, (d j).length) :
+                  ProbComp (Option (Finset (ι → S)) × ℕ))
+              else pure (none, 1 + ∑ j, (d j).length)))
+          = (pure (1 + ∑ j, (d j).length) : ProbComp ℕ) from by split <;> rfl,
+        evalDist_pure, lintegral_dirac]
+      push_cast
+      rfl
     simp only [hinner]
-    rw [expectedValue_add, expectedValue_const (probFailure_of_liftM_PMF _),
-      expectedValue_finsetSum]
+    rw [lintegral_add_left measurable_const, lintegral_const, measure_univ, mul_one,
+      lintegral_finsetSum _ fun _ _ => Measurable.of_discrete]
     refine congrArg (1 + ·) (Finset.sum_congr rfl fun j _ => ?_)
-    rw [expectedValue_coord_mPi (coordDraws k ρ c₀) (fun i => probFailure_of_liftM_PMF _) j
-        (fun d => (d.length : ℝ≥0∞)),
-      coordDraws, expectedValue_length_drawUntil _ (altPool c₀ j).length _ _ rfl,
+    rw [lintegral_evalDist_mPi_coord (coordDraws k ρ c₀)
+        (fun i => (isProbabilityMeasure_evalDist_drawUntil _ _ _ _ rfl).measure_univ) j
+        (fun d => (d.length : ℝ≥0∞)) Measurable.of_discrete,
+      ← lintegral_evalDist_map (coordDraws k ρ c₀ j) (f := List.length)
+        (g := fun n : ℕ => (n : ℝ≥0∞)) Measurable.of_discrete Measurable.of_discrete,
+      coordDraws, lintegral_evalDist_length_drawUntil _ (altPool c₀ j).length _ _ rfl,
       length_altPool, countP_altPool]
-  · rw [if_neg hacc, if_neg hacc, expectedValue_pure]
+  · rw [ite_eq_right hacc, ite_eq_right hacc]
+    rw [show (Prod.snd <$> (pure (none, 1) : ProbComp (Option (Finset (ι → S)) × ℕ)))
+        = (pure 1 : ProbComp ℕ) from rfl, evalDist_pure, lintegral_dirac]
     push_cast
     ring
 
@@ -329,9 +346,9 @@ theorem sum_expectedDraws_le [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) (
             / ((columnCount (fun c => ρ c = true) j c₀ : ℕ) : ℝ≥0∞) else 0) := by
         refine mul_le_mul' le_rfl (Finset.sum_le_sum fun c₀ _ => ?_)
         by_cases hacc : ρ c₀
-        · rw [if_pos hacc, if_pos hacc]
+        · rw [ite_eq_left hacc, ite_eq_left hacc]
           exact expectedDraws_hitSet_le hacc j
-        · rw [if_neg hacc, if_neg hacc]
+        · rw [ite_eq_right hacc, ite_eq_right hacc]
     _ ≤ ((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card S : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞) :=
         CoordinateWise.card_mul_sum_div_columnCount_le_card j _
     _ = (Fintype.card S : ℝ≥0∞) * (((k - 1 : ℕ) : ℝ≥0∞) * (Fintype.card (ι → S) : ℝ≥0∞)) := by
@@ -339,12 +356,14 @@ theorem sum_expectedDraws_le [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) (
 
 /-- **The expected-query clause of Lemma 7.1.** The resampling loop looks at one table entry for
 the sampled challenge and, on average, at most `k - 1` further entries per coordinate. Together
-with `sub_div_le_probEvent_isSome_coordForkOp` and `coordForkOp_success` this is all three clauses
+with `sub_div_le_prEvent_isSome_coordForkOp` and `coordForkOp_success` this is all three clauses
 of Lemma 7.1, for the paper's algorithm, at a fixed acceptance table. -/
-theorem expectedValue_cost_coordForkOp_le [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) :
-    expectedValue (coordForkOp k ρ) (fun r => (r.2 : ℝ≥0∞))
+theorem lintegral_cost_coordForkOp_le [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) :
+    ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[Prod.snd <$> coordForkOp k ρ]
       ≤ 1 + Fintype.card ι * (k - 1 : ℕ) := by
   classical
+  let _ : MeasurableSpace (ι → S) := ⊤
+  let _ : MeasurableSingletonClass (ι → S) := ⟨fun _ => trivial⟩
   have hCne : (Fintype.card (ι → S) : ℝ≥0∞) ≠ 0 := by simp [Fintype.card_ne_zero]
   have hCtop : (Fintype.card (ι → S) : ℝ≥0∞) ≠ ⊤ := by finiteness
   have hfin : ((Fintype.card (ι → S) : ℝ≥0∞))⁻¹ *
@@ -366,10 +385,11 @@ theorem expectedValue_cost_coordForkOp_le [Nonempty S] (k : ℕ) (ρ : (ι → S
           else 0) := by
     intro c₀
     by_cases hacc : ρ c₀ <;> simp [hacc]
-  rw [coordForkOp, expectedValue_bind, expectedValue_def]
-  simp only [expectedValue_cost_coordForkOpAt, hsplit, probOutput_uniformSample]
-  rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), Finset.sum_add_distrib,
-    Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one, Finset.sum_comm]
+  rw [coordForkOp, map_bind, lintegral_evalDist_bind_of_discrete _ _ Measurable.of_discrete,
+    SampleableType.evalDist_uniformSample, lintegral_uniformOn_univ]
+  simp only [lintegral_cost_coordForkOpAt, hsplit]
+  rw [Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_one,
+    Finset.sum_comm, div_eq_mul_inv, mul_comm]
   calc (Fintype.card (ι → S) : ℝ≥0∞)⁻¹ *
         ((Fintype.card (ι → S) : ℝ≥0∞) + ∑ j : ι, ∑ c₀ : ι → S, (if ρ c₀ then
           NegHypergeom.expectedDraws (Fintype.card S - 1) ((hitSet ρ c₀ j).card) (k - 1) else 0))
@@ -386,13 +406,13 @@ theorem expectedValue_cost_coordForkOp_le [Nonempty S] (k : ℕ) (ρ : (ι → S
 
 /-! ## The weighted cost
 
-`expectedValue_cost_coordForkOp_le` counts table lookups. When the entries are not all equally
+`lintegral_cost_coordForkOp_le` counts table lookups. When the entries are not all equally
 expensive — as in the multi-round recursion, where looking one up means running a sub-extractor —
 what is wanted instead is a *charge* `Γ` per entry. `coordForkOpW` is Figure 11 with that
-accounting, and `expectedValue_weight_coordForkOpW_le` bounds its expected charge by
+accounting, and `lintegral_weight_coordForkOpW_le` bounds its expected charge by
 `(1 + ℓ(k-1))` times the average charge of a single entry, which is the count bound with `Γ = 1`.
 
-The counting step is `ProbComp.sum_expectedValue_sum_map_erase_le`, applied one column at a time:
+The counting step is `ProbComp.sum_lintegral_sum_map_erase_le`, applied one column at a time:
 across a column's accepting centres no entry is charged more than `k - 1` times over. -/
 
 section Weighted
@@ -421,10 +441,10 @@ private theorem sum_eq_sum_column (j : ι) (F : (ι → S) → ℝ≥0∞) (d : 
 omit [SampleableType (ι → S)] in
 /-- **The weighted counting step.** Averaged over the sampled challenge, one coordinate's
 resampling charges at most `k - 1` entries' worth. -/
-theorem sum_expectedValue_weight_le (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞) (j : ι) :
+theorem sum_lintegral_weight_le (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞) (j : ι) :
     ∑ c₀ : ι → S, (if ρ c₀ then
-        expectedValue (coordDraws k ρ c₀ j)
-          (fun dd => (dd.map (fun x => Γ (Function.update c₀ j x))).sum) else 0)
+        ∫⁻ dd, (dd.map (fun x => Γ (Function.update c₀ j x))).sum ∂𝒟[coordDraws k ρ c₀ j]
+      else 0)
       ≤ ((k - 1 : ℕ) : ℝ≥0∞) * ∑ c : ι → S, Γ c := by
   classical
   obtain ⟨d⟩ := (inferInstance : Nonempty S)
@@ -434,12 +454,13 @@ theorem sum_expectedValue_weight_le (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (
   set g : S → ℝ≥0∞ := fun x => Γ (Function.update r j x) with hg
   have hstep : ∀ v : S,
       (if ρ (Function.update r j v) then
-          expectedValue (coordDraws k ρ (Function.update r j v) j)
-            (fun dd => (dd.map
-              (fun x => Γ (Function.update (Function.update r j v) j x))).sum) else 0)
+          ∫⁻ dd, (dd.map
+              (fun x => Γ (Function.update (Function.update r j v) j x))).sum
+            ∂𝒟[coordDraws k ρ (Function.update r j v) j]
+        else 0)
         = if a v then
-            expectedValue (drawUntil a (k - 1) ((Finset.univ.erase v).toList))
-              (fun dd => (dd.map g).sum) else 0 := by
+            ∫⁻ dd, (dd.map g).sum ∂𝒟[drawUntil a (k - 1) ((Finset.univ.erase v).toList)]
+          else 0 := by
     intro v
     have hupd : ∀ x : S, Function.update (Function.update r j v) j x = Function.update r j x :=
       fun x => Function.update_idem ..
@@ -453,7 +474,7 @@ theorem sum_expectedValue_weight_le (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (
     rw [hdraws, ha, hg]
     simp only [hupd]
   rw [Finset.sum_congr rfl fun v _ => hstep v, ← Finset.sum_filter]
-  exact ProbComp.sum_expectedValue_sum_map_erase_le a (k - 1) g
+  exact ProbComp.sum_lintegral_sum_map_erase_le a (k - 1) g
 
 /-- Figure 11 with each entry examined charged `Γ` instead of counted. -/
 @[expose] noncomputable def coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞)
@@ -474,66 +495,84 @@ theorem sum_expectedValue_weight_le (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (
 omit [Nonempty S] [SampleableType (ι → S)] in
 /-- At a fixed challenge, the charge is the challenge's own plus one resampling experiment per
 coordinate. -/
-theorem expectedValue_weight_coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞)
+theorem lintegral_weight_coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞)
     (c₀ : ι → S) :
-    expectedValue (coordForkOpWAt k ρ Γ c₀) (fun r => r.2)
-      = Γ c₀ + (if ρ c₀ then ∑ j, expectedValue (coordDraws k ρ c₀ j)
-          (fun dd => (dd.map (fun x => Γ (Function.update c₀ j x))).sum) else 0) := by
+    ∫⁻ w, w ∂𝒟[Prod.snd <$> coordForkOpWAt k ρ Γ c₀]
+      = Γ c₀ + (if ρ c₀ then ∑ j,
+          ∫⁻ dd, (dd.map (fun x => Γ (Function.update c₀ j x))).sum ∂𝒟[coordDraws k ρ c₀ j]
+        else 0) := by
   classical
   rw [coordForkOpWAt]
   by_cases hacc : ρ c₀
-  · rw [if_pos hacc, if_pos hacc, expectedValue_bind]
+  · rw [ite_eq_left hacc, ite_eq_left hacc, map_bind,
+      lintegral_evalDist_bind_of_discrete _ _ (g := fun w : ℝ≥0∞ => w) measurable_id']
     have hinner : ∀ d : ι → List S,
-        expectedValue
-          (if ∀ j, (collected ρ c₀ d j).card = k - 1 then
-              (pure (some (coordFamily c₀ (collected ρ c₀ d)),
-                Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum) :
-                ProbComp (Option (Finset (ι → S)) × ℝ≥0∞))
-            else pure (none, Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum))
-          (fun r => r.2)
+        ∫⁻ w, w ∂𝒟[Prod.snd <$>
+            (if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+                (pure (some (coordFamily c₀ (collected ρ c₀ d)),
+                  Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum) :
+                  ProbComp (Option (Finset (ι → S)) × ℝ≥0∞))
+              else pure (none, Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum))]
           = Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum := by
       intro d
-      split <;> rw [expectedValue_pure]
+      rw [show (Prod.snd <$>
+            (if ∀ j, (collected ρ c₀ d j).card = k - 1 then
+                (pure (some (coordFamily c₀ (collected ρ c₀ d)),
+                  Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum) :
+                  ProbComp (Option (Finset (ι → S)) × ℝ≥0∞))
+              else pure (none,
+                Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum)))
+          = (pure (Γ c₀ + ∑ j, ((d j).map (fun x => Γ (Function.update c₀ j x))).sum) :
+              ProbComp ℝ≥0∞) from by split <;> rfl,
+        evalDist_pure, lintegral_dirac]
     simp only [hinner]
-    rw [expectedValue_add, expectedValue_const (probFailure_of_liftM_PMF _),
-      expectedValue_finsetSum]
+    rw [lintegral_add_left measurable_const, lintegral_const, measure_univ, mul_one,
+      lintegral_finsetSum _ fun _ _ => Measurable.of_discrete]
     refine congrArg (Γ c₀ + ·) (Finset.sum_congr rfl fun j _ => ?_)
-    exact expectedValue_coord_mPi (coordDraws k ρ c₀) (fun i => probFailure_of_liftM_PMF _) j
-      (fun dd => (dd.map (fun x => Γ (Function.update c₀ j x))).sum)
-  · rw [if_neg hacc, if_neg hacc, expectedValue_pure, add_zero]
+    exact lintegral_evalDist_mPi_coord (coordDraws k ρ c₀)
+      (fun i => (isProbabilityMeasure_evalDist_drawUntil _ _ _ _ rfl).measure_univ) j
+      (fun dd => (dd.map (fun x => Γ (Function.update c₀ j x))).sum) Measurable.of_discrete
+  · rw [ite_eq_right hacc, ite_eq_right hacc, add_zero,
+      show (Prod.snd <$> (pure (none, Γ c₀) : ProbComp (Option (Finset (ι → S)) × ℝ≥0∞)))
+        = (pure (Γ c₀) : ProbComp ℝ≥0∞) from rfl, evalDist_pure, lintegral_dirac]
 
 /-- **The weighted cost bound.** The fork's expected charge is at most `1 + ℓ(k-1)` times the
-average charge of a single entry. Taking `Γ = 1` recovers `expectedValue_cost_coordForkOp_le`;
+average charge of a single entry. Taking `Γ = 1` recovers `lintegral_cost_coordForkOp_le`;
 taking `Γ` to be a sub-extractor's expected cost is what multiplies the levels of the multi-round
 recursion. -/
-theorem expectedValue_weight_coordForkOpW_le (k : ℕ)
+theorem lintegral_weight_coordForkOpW_le (k : ℕ)
     (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞) :
-    expectedValue (coordForkOpW k ρ Γ) (fun r => r.2)
+    ∫⁻ w, w ∂𝒟[Prod.snd <$> coordForkOpW k ρ Γ]
       ≤ (1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞))
           * ((∑ c : ι → S, Γ c) / Fintype.card (ι → S)) := by
   classical
   have hCne : (Fintype.card (ι → S) : ℝ≥0∞) ≠ 0 := by simp [Fintype.card_ne_zero]
   have hCtop : (Fintype.card (ι → S) : ℝ≥0∞) ≠ ⊤ := by finiteness
+  let _ : MeasurableSpace (ι → S) := ⊤
+  let _ : MeasurableSingletonClass (ι → S) := ⟨fun _ => trivial⟩
   have hsplit : ∀ c₀ : ι → S,
-      (if ρ c₀ then ∑ j : ι, expectedValue (coordDraws k ρ c₀ j)
-          (fun dd => (dd.map (fun x => Γ (Function.update c₀ j x))).sum) else 0)
-        = ∑ j : ι, (if ρ c₀ then expectedValue (coordDraws k ρ c₀ j)
-          (fun dd => (dd.map (fun x => Γ (Function.update c₀ j x))).sum) else 0) := by
+      (if ρ c₀ then ∑ j : ι,
+          ∫⁻ dd, (dd.map (fun x => Γ (Function.update c₀ j x))).sum ∂𝒟[coordDraws k ρ c₀ j]
+        else 0)
+        = ∑ j : ι, (if ρ c₀ then
+            ∫⁻ dd, (dd.map (fun x => Γ (Function.update c₀ j x))).sum ∂𝒟[coordDraws k ρ c₀ j]
+          else 0) := by
     intro c₀
     by_cases hacc : ρ c₀ <;> simp [hacc]
-  rw [coordForkOpW, expectedValue_bind, expectedValue_def]
-  simp only [expectedValue_weight_coordForkOpWAt, hsplit, probOutput_uniformSample]
-  rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), Finset.sum_add_distrib,
-    Finset.sum_comm]
+  rw [coordForkOpW, map_bind,
+    lintegral_evalDist_bind_of_discrete _ _ (g := fun w : ℝ≥0∞ => w) measurable_id',
+    SampleableType.evalDist_uniformSample, lintegral_uniformOn_univ]
+  simp only [lintegral_weight_coordForkOpWAt, hsplit]
+  rw [Finset.sum_add_distrib, Finset.sum_comm, div_eq_mul_inv, mul_comm]
   calc (Fintype.card (ι → S) : ℝ≥0∞)⁻¹ *
         ((∑ c : ι → S, Γ c) + ∑ j : ι, ∑ c₀ : ι → S, (if ρ c₀ then
-          expectedValue (coordDraws k ρ c₀ j)
-            (fun dd => (dd.map (fun x => Γ (Function.update c₀ j x))).sum) else 0))
+          ∫⁻ dd, (dd.map (fun x => Γ (Function.update c₀ j x))).sum ∂𝒟[coordDraws k ρ c₀ j]
+        else 0))
       ≤ (Fintype.card (ι → S) : ℝ≥0∞)⁻¹ *
           ((∑ c : ι → S, Γ c)
             + ∑ _j : ι, ((k - 1 : ℕ) : ℝ≥0∞) * ∑ c : ι → S, Γ c) :=
         mul_le_mul' le_rfl
-          (add_le_add le_rfl (Finset.sum_le_sum fun j _ => sum_expectedValue_weight_le k ρ Γ j))
+          (add_le_add le_rfl (Finset.sum_le_sum fun j _ => sum_lintegral_weight_le k ρ Γ j))
     _ = (1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞))
           * ((∑ c : ι → S, Γ c) / Fintype.card (ι → S)) := by
         rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, div_eq_mul_inv]
@@ -543,11 +582,11 @@ theorem expectedValue_weight_coordForkOpW_le (k : ℕ)
 `(1 + ℓ(k-1)) · B`. Iterating this `μ` times is the paper's `(ℓ(k-1)+1)^μ`; what it still needs is
 a `μ`-round extractor that runs its sub-extractor at the entries it examines rather than eagerly
 at all of them. -/
-theorem expectedValue_weight_coordForkOpW_le_of_le (k : ℕ) (ρ : (ι → S) → Bool)
+theorem lintegral_weight_coordForkOpW_le_of_le (k : ℕ) (ρ : (ι → S) → Bool)
     (Γ : (ι → S) → ℝ≥0∞) {B : ℝ≥0∞} (hΓ : ∀ c, Γ c ≤ B) :
-    expectedValue (coordForkOpW k ρ Γ) (fun r => r.2)
+    ∫⁻ w, w ∂𝒟[Prod.snd <$> coordForkOpW k ρ Γ]
       ≤ (1 + Fintype.card ι * ((k - 1 : ℕ) : ℝ≥0∞)) * B := by
-  refine (expectedValue_weight_coordForkOpW_le k ρ Γ).trans (mul_le_mul' le_rfl ?_)
+  refine (lintegral_weight_coordForkOpW_le k ρ Γ).trans (mul_le_mul' le_rfl ?_)
   have hCne : (Fintype.card (ι → S) : ℝ≥0∞) ≠ 0 := by simp [Fintype.card_ne_zero]
   have hCtop : (Fintype.card (ι → S) : ℝ≥0∞) ≠ ⊤ := by finiteness
   refine ENNReal.div_le_of_le_mul ?_
@@ -564,10 +603,10 @@ theorem map_fst_coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι �
   classical
   rw [coordForkOpWAt, coordForkOpAt]
   by_cases hacc : ρ c₀
-  · rw [if_pos hacc, if_pos hacc, map_bind, map_bind]
+  · rw [ite_eq_left hacc, ite_eq_left hacc, map_bind, map_bind]
     refine bind_congr fun d => ?_
     by_cases hcond : ∀ j, (collected ρ c₀ d j).card = k - 1 <;> simp [hcond]
-  · rw [if_neg hacc, if_neg hacc]
+  · rw [ite_eq_right hacc, ite_eq_right hacc]
     simp
 
 omit [Nonempty S] in

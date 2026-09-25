@@ -81,12 +81,12 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-- The challenges a table accepts. -/
-def acceptSet (ρ : (ι → S) → Bool) : Finset (ι → S) :=
+@[expose] def acceptSet (ρ : (ι → S) → Bool) : Finset (ι → S) :=
   Finset.univ.filter fun c => ρ c
 
 /-- The challenges on which the table core succeeds: accepting, with at least `k` accepting values
 in every column. -/
-def goodSet (k : ℕ) (ρ : (ι → S) → Bool) : Finset (ι → S) :=
+@[expose] def goodSet (k : ℕ) (ρ : (ι → S) → Bool) : Finset (ι → S) :=
   Finset.univ.filter fun c => ρ c ∧ ∀ j, k ≤ columnCount (fun c' => ρ c' = true) j c
 
 /-- The average accepting probability of the table distribution against a uniform challenge. -/
@@ -180,7 +180,8 @@ keep the challenge accepting. -/
 
 /-- The `k - 1` replacements the table core keeps at coordinate `j`. Any choice would do; this one
 takes the first `k - 1` in enumeration order. -/
-@[expose] noncomputable def replacementSet (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
+@[expose] noncomputable def replacementSet (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S)
+    (j : ι) : Finset S :=
   ((hitSet ρ c₀ j).toList.take (k - 1)).toFinset
 
 /-- The deterministic table core: abort unless `c₀` accepts and every coordinate offers
@@ -482,7 +483,8 @@ theorem goodTranscripts_iff_goodOutput (V : (ι → S) → Y → Bool) (k : ℕ)
 
 /-- The table computation with responses: sample a response table and a challenge, run the core
 against the induced acceptance table, and return the table with the challenge set it found. -/
-@[expose] noncomputable def coordForkT (V : (ι → S) → Y → Bool) (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
+@[expose] noncomputable def coordForkT (V : (ι → S) → Y → Bool) (k : ℕ)
+    (D : ProbComp ((ι → S) → Y)) :
     ProbComp (Option (((ι → S) → Y) × Finset (ι → S))) := do
   let τ ← D
   let c₀ ← $ᵗ (ι → S)
