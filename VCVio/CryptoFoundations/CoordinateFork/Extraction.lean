@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
+public import ToMathlib.Probability.UniformOn
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 
 /-!
@@ -33,7 +34,7 @@ claim. Only `μ = 1` is represented.
 
 public section
 
-open Finset CoordinateWise OracleComp OracleComp.EvalDist
+open Finset CoordinateWise OracleComp MeasureTheory ProbabilityTheory
 
 open scoped ENNReal
 
@@ -47,7 +48,8 @@ variable {k : ℕ} {x : Stmt}
 /-- The composite extractor: run the coordinate-wise fork against the prover's response table, then
 apply the `k`-ary extractor to the accepting transcripts it returns. Aborts exactly when the fork
 does. -/
-@[expose] noncomputable def coordExtract (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+@[expose] noncomputable def coordExtract
+    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
     (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) : ProbComp (Option Wit) :=
@@ -85,14 +87,15 @@ theorem isCoordSpecialSoundTranscripts_of_goodTranscripts
 
 omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
 /-- On a good fork the composite extractor certainly produces a valid witness. -/
-theorem probEvent_extracted_eq_one_of_goodTranscripts
+theorem prEvent_extracted_eq_one_of_goodTranscripts
     {σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel}
     {ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit} {pc : Commit}
     (hss : σ.CoordSpeciallySoundAt k ext x) {τ : (ι → S) → Resp} {X : Finset (ι → S)}
     (hgood : GoodTranscripts (σ.verify x pc) k (some (τ, X))) :
-    Pr[Extracted rel x | (some <$> ext x pc (transcripts τ X) : ProbComp (Option Wit))] = 1 := by
-  rw [probEvent_map]
-  refine probEvent_eq_one ⟨by simp, fun w hw => ⟨w, rfl, ?_⟩⟩
+    Pr{let r ← (some <$> ext x pc (transcripts τ X) : ProbComp (Option Wit))}[Extracted rel x r]
+      = 1 := by
+  rw [prEvent_map]
+  refine prEvent_eq_one_of_forall_mem_support _ _ fun w hw => ⟨w, rfl, ?_⟩
   exact hss pc (transcripts τ X) (isCoordSpecialSoundTranscripts_of_goodTranscripts hgood) w hw
 
 /-- The fixed-statement, table-model extraction-success inequality underlying the `μ = 1`
@@ -101,19 +104,20 @@ extractor, the composite returns a valid witness with probability at least `ε -
 where `ε` is the probability that the prover's response is accepted on a uniform challenge.
 
 This theorem alone is not a knowledge-soundness definition or an efficiency theorem. -/
-theorem sub_div_le_probEvent_extracted_coordExtract [Nonempty S]
+theorem sub_div_le_prEvent_extracted_coordExtract [Nonempty S]
     (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (hss : σ.CoordSpeciallySoundAt k ext x) (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) :
     acceptRatio (acceptTable (σ.verify x pc) P)
         - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr[Extracted rel x | σ.coordExtract k ext x pc P] := by
-  refine (sub_div_le_probEvent_goodTranscripts_coordForkT (σ.verify x pc) k P).trans ?_
+      ≤ Pr{let r ← σ.coordExtract k ext x pc P}[Extracted rel x r] := by
+  refine (sub_div_le_prEvent_goodTranscripts_coordForkT (σ.verify x pc) k P).trans ?_
   rw [coordExtract]
-  refine le_of_eq_of_le (mul_one _).symm (mul_le_probEvent_bind le_rfl fun r _ hgood => ?_)
+  refine le_of_eq_of_le (mul_one _).symm
+    (mul_le_prEvent_bind_of_forall _ _ _ _ le_rfl fun r hgood => ?_)
   obtain ⟨τ, X, rfl, hpay⟩ := hgood
-  exact le_of_eq (probEvent_extracted_eq_one_of_goodTranscripts hss ⟨τ, X, rfl, hpay⟩).symm
+  exact le_of_eq (prEvent_extracted_eq_one_of_goodTranscripts hss ⟨τ, X, rfl, hpay⟩).symm
 
 /-! ## Sampling the first message
 
@@ -125,63 +129,74 @@ challenge is still uniform and the response table is still pre-sampled. -/
 section Commit
 
 /-- The composite extractor when the prover chooses its first message too. -/
-@[expose] noncomputable def coordExtractCommit (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+@[expose] noncomputable def coordExtractCommit
+    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
     (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (P : ProbComp (Commit × ((ι → S) → Resp))) : ProbComp (Option Wit) :=
   P >>= fun p => σ.coordExtract k ext x p.1 (pure p.2)
 
 /-- The `ε` of the bound below: the probability that the prover's transcript verifies, over its own
 first message and response table and a uniform challenge. -/
-@[expose] noncomputable def verifyProb (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+@[expose] noncomputable def verifyProb
+    (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
     (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp))) : ℝ≥0∞ :=
-  Pr[fun b => b = true | (do
-    let p ← P
-    let c ← $ᵗ (ι → S)
-    return σ.verify x p.1 c (p.2 c))]
+  Pr{let p ← P; let c ← $ᵗ (ι → S)}[σ.verify x p.1 c (p.2 c)]
 
 omit [DecidableEq S] [DecidableEq Resp] in
 /-- For an already-fixed response table the accepting ratio is the verification probability on a
 uniform challenge. -/
 theorem acceptRatio_acceptTable_pure (V : (ι → S) → Resp → Bool) (τ : (ι → S) → Resp) :
     acceptRatio (acceptTable V (pure τ) : ProbComp ((ι → S) → Bool))
-      = Pr[fun b => b = true | (do let c ← $ᵗ (ι → S); return V c (τ c) : ProbComp Bool)] := by
+      = Pr{let c ← $ᵗ (ι → S)}[V c (τ c)] := by
   classical
-  rw [acceptTable, map_pure, acceptRatio, probEvent_bind_eq_tsum]
-  simp only [probOutput_uniformSample, probEvent_pure, probEvent_pure]
-  rw [ENNReal.tsum_mul_left, tsum_fintype (L := .unconditional _), div_eq_mul_inv, mul_comm]
+  rw [acceptTable, map_pure, acceptRatio, SampleableType.prEvent_uniformSample]
+  refine congrArg (· / _) ?_
+  rw [Finset.natCast_card_filter]
+  refine Finset.sum_congr rfl fun c _ => ?_
+  rw [prEvent_eq_evalDist_map]
+  by_cases h : V c (τ c) <;> simp [h]
 
 omit [DecidableEq S] [DecidableEq Resp] in
 /-- Averaging the fixed-first-message accepting ratio over the prover's choice. -/
-theorem verifyProb_eq_tsum (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
-    (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp))) :
+theorem verifyProb_eq_lintegral (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+    (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp)))
+    [MeasurableSpace (Commit × ((ι → S) → Resp))]
+    [DiscreteMeasurableSpace (Commit × ((ι → S) → Resp))] :
     verifyProb σ x P
-      = ∑' p : Commit × ((ι → S) → Resp),
-          Pr[= p | P] * acceptRatio (acceptTable (σ.verify x p.1) (pure p.2)) := by
-  rw [verifyProb, probEvent_bind_eq_tsum]
-  exact tsum_congr fun p => by rw [acceptRatio_acceptTable_pure]
+      = ∫⁻ p, acceptRatio (acceptTable (σ.verify x p.1) (pure p.2)) ∂𝒟[P] := by
+  have key := prEvent_bind_eq_lintegral_of_discrete P
+    (fun p : Commit × ((ι → S) → Resp) =>
+      (($ᵗ (ι → S)) >>= fun c => pure (σ.verify x p.1 c (p.2 c) = true))) id
+  simp only [id_eq, bind_pure] at key
+  rw [verifyProb, key]
+  exact lintegral_congr fun p => (acceptRatio_acceptTable_pure (σ.verify x p.1) p.2).symm
 
 /-- The `μ = 1` extraction bound with the prover's first message sampled rather than fixed. The
 loss is unchanged: averaging a pointwise bound over the first message costs nothing. -/
-theorem sub_div_le_probEvent_extracted_coordExtractCommit [Nonempty S]
+theorem sub_div_le_prEvent_extracted_coordExtractCommit [Nonempty S]
     (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (hss : σ.CoordSpeciallySoundAt k ext x) (P : ProbComp (Commit × ((ι → S) → Resp))) :
     verifyProb σ x P - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr[Extracted rel x | σ.coordExtractCommit k ext x P] := by
+      ≤ Pr{let r ← σ.coordExtractCommit k ext x P}[Extracted rel x r] := by
+  classical
+  -- The statement mentions no measure on the prover's own output, so the discrete structure the
+  -- averaging step needs is introduced here rather than carried as a hypothesis.
+  let _ : MeasurableSpace (Commit × ((ι → S) → Resp)) := ⊤
+  let _ : MeasurableSingletonClass (Commit × ((ι → S) → Resp)) := ⟨fun _ => trivial⟩
   set L : ℝ≥0∞ := (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S with hL
-  rw [tsub_le_iff_right, verifyProb_eq_tsum, coordExtractCommit, probEvent_bind_eq_tsum]
-  calc ∑' p : Commit × ((ι → S) → Resp),
-        Pr[= p | P] * acceptRatio (acceptTable (σ.verify x p.1) (pure p.2))
-      ≤ ∑' p, Pr[= p | P] *
-          (Pr[Extracted rel x | σ.coordExtract k ext x p.1 (pure p.2)] + L) :=
-        tsum_probOutput_mul_mono P fun p => tsub_le_iff_right.mp
-          (sub_div_le_probEvent_extracted_coordExtract σ k ext x hss p.1 (pure p.2))
-    _ = (∑' p, Pr[= p | P] * Pr[Extracted rel x | σ.coordExtract k ext x p.1 (pure p.2)])
-          + (∑' p : Commit × ((ι → S) → Resp), Pr[= p | P]) * L := by
-        simp_rw [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right]
-    _ ≤ (∑' p, Pr[= p | P] * Pr[Extracted rel x | σ.coordExtract k ext x p.1 (pure p.2)]) + L := by
-        gcongr
-        exact le_of_le_of_eq (mul_le_mul' tsum_probOutput_le_one le_rfl) (one_mul L)
+  have key := prEvent_bind_eq_lintegral_of_discrete P
+    (fun p : Commit × ((ι → S) → Resp) => σ.coordExtract k ext x p.1 (pure p.2))
+    (Extracted rel x)
+  rw [tsub_le_iff_right, verifyProb_eq_lintegral, coordExtractCommit, key]
+  calc ∫⁻ p, acceptRatio (acceptTable (σ.verify x p.1) (pure p.2)) ∂𝒟[P]
+      ≤ ∫⁻ p, (Pr{let r ← σ.coordExtract k ext x p.1 (pure p.2)}[Extracted rel x r] + L) ∂𝒟[P] :=
+        lintegral_mono fun p => tsub_le_iff_right.mp
+          (sub_div_le_prEvent_extracted_coordExtract σ k ext x hss p.1 (pure p.2))
+    _ = (∫⁻ p, Pr{let r ← σ.coordExtract k ext x p.1 (pure p.2)}[Extracted rel x r] ∂𝒟[P])
+          + L := by
+        rw [lintegral_add_right _ measurable_const, lintegral_const, measure_univ, mul_one]
+    _ ≤ _ := by rfl
 
 end Commit
 
