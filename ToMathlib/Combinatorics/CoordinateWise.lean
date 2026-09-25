@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import Mathlib.Algebra.BigOperators.Ring.Finset
-public import Mathlib.Data.ENNReal.Inv
+public import Mathlib.Basic.ENNReal.Inv
 public import Mathlib.Algebra.Order.BigOperators.Group.Finset
 public import Mathlib.Data.Finset.Card
 public import Mathlib.Data.Fin.VecNotation
@@ -77,7 +77,7 @@ namespace Function
 variable {ι S : Type*}
 
 /-- `x` and `y` differ in coordinate `j`, and agree in every other coordinate. -/
-def DiffersOnlyAt (j : ι) (x y : ι → S) : Prop :=
+@[expose] def DiffersOnlyAt (j : ι) (x y : ι → S) : Prop :=
   x j ≠ y j ∧ ∀ j', j' ≠ j → x j' = y j'
 
 namespace DiffersOnlyAt
@@ -123,7 +123,7 @@ variable {k : ℕ} {X : Finset (ι → S)} {e : ι → S} {A : ι → Finset S}
 
 /-- The neighbour condition: some *central* vector of `X` has, in every coordinate, `k - 1`
 further members of `X` differing from it in that coordinate and only there. -/
-def HasCoordNeighbours (k : ℕ) (X : Finset (ι → S)) : Prop :=
+@[expose] def HasCoordNeighbours (k : ℕ) (X : Finset (ι → S)) : Prop :=
   ∃ e ∈ X, ∀ j : ι, ∃ J ⊆ X.erase e, J.card = k - 1 ∧ ∀ y ∈ J, DiffersOnlyAt j e y
 
 /-- A finite set of challenge vectors is coordinate-wise `k`-special sound when it has the
@@ -134,7 +134,7 @@ sets are indexed by `[K]` with `K = ℓ(k - 1) + 1`, so the cardinality is part 
 `le_card_of_hasCoordNeighbours` the neighbour condition already forces `K ≤ X.card`, so the
 conjunct below only rules out sets carrying extra challenges beyond the `K` the extractor
 produces. -/
-def IsCoordSpecialSound (k : ℕ) (X : Finset (ι → S)) : Prop :=
+@[expose] def IsCoordSpecialSound (k : ℕ) (X : Finset (ι → S)) : Prop :=
   HasCoordNeighbours k X ∧ X.card = Fintype.card ι * (k - 1) + 1
 
 omit [DecidableEq ι] in
@@ -263,7 +263,7 @@ verifier enters only as a `Bool`-valued function of the challenge and the respon
 commits to a particular protocol formalization. -/
 
 /-- Transcripts a verifier accepts, whose challenges are coordinate-wise `k`-special sound. -/
-def IsCoordSpecialSoundTranscripts {Resp : Type*} (verify : (ι → S) → Resp → Bool) (k : ℕ)
+@[expose] def IsCoordSpecialSoundTranscripts {Resp : Type*} (verify : (ι → S) → Resp → Bool) (k : ℕ)
     (T : Finset ((ι → S) × Resp)) : Prop :=
   (∀ p ∈ T, verify p.1 p.2 = true) ∧ IsCoordSpecialSound k (T.image Prod.fst)
 
@@ -300,7 +300,7 @@ end TranscriptAccessors
 
 /-- The challenge set centred at `e` whose coordinate-`j` neighbours replace `e j` by each value
 of `A j`. This is the output shape targeted by coordinate-wise rewinding. -/
-def coordFamily (e : ι → S) (A : ι → Finset S) : Finset (ι → S) :=
+@[expose] def coordFamily (e : ι → S) (A : ι → Finset S) : Finset (ι → S) :=
   insert e (Finset.univ.biUnion fun j => (A j).image fun u => Function.update e j u)
 
 theorem mem_coordFamily {x : ι → S} :
@@ -396,7 +396,7 @@ section ColumnCount
 variable [Fintype S] (accept : (ι → S) → Prop) [DecidablePred accept]
 
 /-- The number of values of coordinate `j` that keep `c` accepting. -/
-def columnCount (j : ι) (c : ι → S) : ℕ :=
+@[expose] def columnCount (j : ι) (c : ι → S) : ℕ :=
   (Finset.univ.filter fun x : S => accept (Function.update c j x)).card
 
 variable {accept}
@@ -555,7 +555,7 @@ theorem card_mul_sum_div_columnCount_le [Nonempty S] (j : ι) (w : ℝ≥0∞) :
           simpa [Function.update_eq_self] using hacc
         have hpos' : 0 < columnCount accept j c := Finset.card_pos.mpr ⟨c j, hself⟩
         omega
-      rw [Finset.sum_congr rfl fun c hc => if_neg (hnone c hc)]
+      rw [Finset.sum_congr rfl fun c hc => ite_eq_right (hnone c hc)]
       simp
     · -- A nonempty column contributes `w`, and all `Fintype.card S` of its challenges are good.
       have hsum : (∑ c ∈ (Finset.univ : Finset (ι → S)).filter
@@ -678,14 +678,14 @@ theorem card_mul_card_filter_columnCount_lt_le [Nonempty S] (j : ι) (k : ℕ) :
   rw [← Finset.sum_boole]
   refine Finset.sum_le_sum fun c _ => ?_
   by_cases hc : accept c ∧ columnCount accept j c < k
-  · rw [if_pos hc, if_pos hc.1]
+  · rw [ite_eq_left hc, ite_eq_left hc.1]
     have hpos : 0 < columnCount accept j c :=
       Finset.card_pos.mpr ⟨c j, mem_filter_coord_self hc.1 j⟩
     refine (ENNReal.le_div_iff_mul_le (Or.inl (by exact_mod_cast hpos.ne'))
       (Or.inl (by finiteness))).mpr ?_
     rw [one_mul]
     exact_mod_cast Nat.le_sub_one_of_lt hc.2
-  · rw [if_neg hc]
+  · rw [ite_eq_right hc]
     exact zero_le
 
 omit [DecidableEq S] in

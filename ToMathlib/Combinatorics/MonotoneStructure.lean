@@ -14,7 +14,7 @@ public import ToMathlib.Combinatorics.CoordinateWise
 
 Section 7.3 of Fenzi–Moghaddas–Nguyen, *Lattice-Based Polynomial Commitments* (eprint 2023/846):
 why the published complexity guarantee for the generic `Γ`-out-of-`C` extractor of
-Attema–Fehr–Rambaud does not establish an efficient coordinate-wise extractor.
+Attema–Fehr–Resch does not establish an efficient coordinate-wise extractor.
 
 Coordinate-wise `k`-special soundness is the special case of `Γ`-out-of-`C` special soundness at
 `C := S ^ ℓ` and `Γ := {C' : ∃ X ∈ SS(S, ℓ, k), X ⊆ C'}` (`coordStructure`). The result here is
@@ -24,9 +24,13 @@ Coordinate-wise `k`-special soundness is the special case of `Γ`-out-of-`C` spe
 (`pow_add_one_le_tValue`), exponential in `ℓ = Fintype.card ι` when `|S| > 1`.
 
 Lemma 5 of [AFR23] gives its generic extractor an expected query-count **upper bound** of
-`2 * tᵧ - 1`. Consequently this lower bound on `tᵧ` shows that substituting the available bound
-does not yield a polynomial guarantee. It does **not** prove a lower bound on the extractor's
-actual running time, and this file formalizes neither extractor nor cost semantics.
+`2 * tᵧ - 1` — linear in `tᵧ`, not exponential — and [AFR23] states no lower bound on extraction
+cost anywhere. So what this file's lower bound on `tᵧ` establishes is that the *hypothesis* of
+[AFR23]'s knowledge-soundness theorem, that `tᵧ` is polynomial in the statement size, fails here:
+their result does not apply, and the route through `Γ`-out-of-`C` special soundness is closed. It
+does **not** prove that the generic extractor is slow — substituting a lower bound on `tᵧ` into an
+upper bound on runtime bounds nothing — and this file formalizes neither extractor nor cost
+semantics.
 
 ## Main definitions
 
@@ -58,10 +62,10 @@ section MonotoneStructure
 variable {C : Type*} [DecidableEq C] [Finite C] {Γ : Finset C → Prop} {T : Finset C}
 variable {cs : List C}
 
-/-- **Definition 7.3** of Fenzi–Moghaddas–Nguyen (Useful Elements, after Attema–Fehr–Rambaud). An
+/-- **Definition 7.3** of Fenzi–Moghaddas–Nguyen (Useful Elements, after Attema–Fehr–Resch). An
 element outside `T` is *useful* for `T` when some `Γ`-set containing `T` stops being a `Γ`-set once
 that element is removed. -/
-def usefulElements (Γ : Finset C → Prop) (T : Finset C) : Set C :=
+@[expose] def usefulElements (Γ : Finset C → Prop) (T : Finset C) : Set C :=
   {c | c ∉ T ∧ ∃ A : Finset C, Γ A ∧ T ⊆ A ∧ ¬ Γ (A.erase c)}
 
 omit [Finite C] in
@@ -85,7 +89,7 @@ theorem mem_usefulElements_iff {c : C} :
 
 /-- The witness sequences of **Definition 7.4**: each entry is useful given the starting set
 together with the entries before it. -/
-def IsUsefulSequence (Γ : Finset C → Prop) : Finset C → List C → Prop
+@[expose] def IsUsefulSequence (Γ : Finset C → Prop) : Finset C → List C → Prop
   | _, [] => True
   | T, c :: cs => c ∈ usefulElements Γ T ∧ IsUsefulSequence Γ (insert c T) cs
 
@@ -118,7 +122,7 @@ theorem length_le_card_of_isUsefulSequence (h : IsUsefulSequence Γ T cs) :
   rw [Nat.card_eq_fintype_card, ← List.toFinset_card_of_nodup (nodup_of_isUsefulSequence h).1]
   exact Finset.card_le_univ _
 
-/-- **Definition 7.4** (`t`-value, after Attema–Fehr–Rambaud). -/
+/-- **Definition 7.4** (`t`-value, after Attema–Fehr–Resch). -/
 noncomputable def tValue (Γ : Finset C → Prop) (T : Finset C) : ℕ :=
   sSup {t | ∃ cs : List C, cs.length = t ∧ IsUsefulSequence Γ T cs}
 
@@ -173,11 +177,11 @@ variable {k : ℕ} {j₀ : ι} {d d' : S}
 
 /-- The monotone structure induced by coordinate-wise `k`-special soundness: the challenge sets
 containing an `SS(S, ℓ, k)` set. -/
-def coordStructure (k : ℕ) (X' : Finset (ι → S)) : Prop :=
+@[expose] def coordStructure (k : ℕ) (X' : Finset (ι → S)) : Prop :=
   ∃ X ⊆ X', IsCoordSpecialSound k X
 
 /-- The challenges whose `j₀` coordinate is `d`. -/
-def coordSlice (j₀ : ι) (d : S) : Finset (ι → S) :=
+@[expose] def coordSlice (j₀ : ι) (d : S) : Finset (ι → S) :=
   Finset.univ.filter fun c => c j₀ = d
 
 @[simp] theorem mem_coordSlice {c : ι → S} : c ∈ coordSlice j₀ d ↔ c j₀ = d := by
@@ -211,9 +215,9 @@ theorem coordStructure_insert_update [Nontrivial S] (hd : d' ≠ d) {c : ι → 
     · exact Finset.mem_insert_of_mem hc
     · by_cases hj : j = j₀
       · subst hj
-        rw [if_pos rfl, Finset.mem_singleton] at hu
+        rw [ite_eq_left rfl, Finset.mem_singleton] at hu
         exact hu ▸ Finset.mem_insert_self _ _
-      · rw [if_neg hj, Finset.mem_singleton] at hu
+      · rw [ite_eq_right hj, Finset.mem_singleton] at hu
         exact Finset.mem_insert_of_mem
           (mem_coordSlice.mpr (by rw [Function.update_of_ne (Ne.symm hj), mem_coordSlice.mp hc]))
   · by_cases hj : j = j₀
@@ -319,9 +323,11 @@ omit [DecidableEq ι] in
 /-- **Section 7.3, combinatorial lower bound.** The `t`-value of the coordinate-wise monotone
 structure is at least `|S| ^ (ℓ - 1) + 1`.
 
-Combined externally with [AFR23]'s expected-query upper bound `2 * tᵧ - 1`, this shows that the
-published generic bound does not certify polynomial complexity at these parameters. It does not
-give a lower bound on the generic extractor's actual runtime. -/
+[AFR23]'s expected-query bound for the generic extractor is the upper bound `2 * tᵧ - 1`, so at
+these parameters the published guarantee is no longer polynomial and their knowledge-soundness
+theorem, which assumes a polynomial `tᵧ`, does not apply. That is a statement about the guarantee.
+It is not a lower bound on the generic extractor's actual runtime, which would need an argument
+neither paper makes. -/
 theorem pow_add_one_le_tValue [Nontrivial S] [Nonempty ι] :
     Fintype.card S ^ (Fintype.card ι - 1) + 1 ≤
       tValue (coordStructure 2) (∅ : Finset (ι → S)) := by

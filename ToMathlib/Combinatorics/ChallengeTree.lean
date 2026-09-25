@@ -35,7 +35,7 @@ variable {ι S : Type*} [Fintype ι] [DecidableEq S] {k : ℕ}
 /-- `IsChallengeTree k μ T`: the transcripts in `T` have `μ` rounds, and under every prefix they
 realize, the set of available next challenges is coordinate-wise `k`-special sound with exactly
 `Fintype.card ι * (k - 1) + 1` members. -/
-def IsChallengeTree (k : ℕ) : ℕ → Finset (List (ι → S)) → Prop
+@[expose] def IsChallengeTree (k : ℕ) : ℕ → Finset (List (ι → S)) → Prop
   | 0, T => T = {[]}
   | μ + 1, T => ∃ children : Finset (ι → S), ∃ sub : (ι → S) → Finset (List (ι → S)),
       IsCoordSpecialSound k children ∧
