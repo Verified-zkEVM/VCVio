@@ -403,10 +403,8 @@ theorem observedCompEmulates_realSmcSemantics (sp : ℕ)
         (realSmcSemantics sp readMsg P).evalDist (T.close W_ideal K) := by
     exact (realSmcSemantics_eq_idealSmcSemantics sp readMsg P (T.close W_real K)).trans
       (realSmcSemantics_eq_idealSmcSemantics sp readMsg P (T.close W_ideal K)).symm
-  change Semantics.distAdvantage _ _ _ ≤ (0 : ℝ)
   unfold Semantics.distAdvantage
-  rw [hreal]
-  simp [MeasureTheory.Measure.tvDist_self]
+  rw [hreal, MeasureTheory.Measure.etvDist_self]
 
 /-! ## Concrete instantiation: two structurally distinct closed systems -/
 
