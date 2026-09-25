@@ -31,7 +31,7 @@ The two computational assumptions are:
 
 The statistical loss `L` from the CMA-to-NMA reduction via Fiat-Shamir with aborts is:
 
-  `L = 2·qS·(qH + qS + 1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk + δ`
+  `L = 2·qS·(qH + qS + 1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk/(1-p) + δ`
 
 The proof follows the structure:
 1. EUF-CMA → EUF-NMA via the Fiat-Shamir with aborts CMA-to-NMA reduction (Theorem 3)
@@ -278,7 +278,7 @@ effective random-oracle budget, yielding:
 
   `L = 2·qS·(qH + qS + 1)·ε/(1-p)
      + qS·ε·(qS+1)/(2·(1-p)²)
-     + qS·ζ_zk
+     + qS·ζ_zk/(1-p)
      + δ`
 
 This is exactly `FiatShamirWithAbort.cmaToNmaLoss qS (qH + qS) ...`. -/
@@ -350,11 +350,11 @@ fixed before it is proved:
    `eufCmaSTMSISReduction`, which are `sorry` placeholders over arbitrary MLWE and
    SelfTargetMSIS problems. The final statement must specialize the problems to `mldsaMLWEShort`
    and `mldsaSTMSIS` of `LatticeCrypto.MLDSA.SecurityNMA` and define the reductions as
-   `distinguisherBShort` and `extractorC` applied to an explicit with-aborts CMA-to-NMA
-   simulator, which does not exist yet.
+   `distinguisherBShort` and `extractorC` applied to the with-aborts CMA-to-NMA simulator
+   `FiatShamirWithAbort.simulatedEufNmaAdv`.
 2. `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only `hp : p_abort < 1` is
    assumed). Inherited from `FiatShamirWithAbort.cmaToNmaLoss`, the loss term
-   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
+   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk/(1-p) + δ` can be made arbitrarily negative
    by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`. In the final
    statement `ε`, `p_abort`, `δ` should be nonnegative and identified with the concrete
    commitment guessing probability, abort probability, and regularity failure probability of
@@ -371,7 +371,7 @@ oracle queries, with `B := eufCmaMLWEReduction … A` (against MLWE) and
   `Adv^{EUF-CMA}_{ML-DSA}(A) ≤ Adv^{MLWE}_{k,l,Sη}(B) + Adv^{SelfTargetMSIS}_{G,k,l+1,ζ}(C) + L`
 
 where:
-- `L = 2·qS·(qH+qS+1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk + δ` is
+- `L = 2·qS·(qH+qS+1)·ε/(1-p) + qS·ε·(qS+1)/(2·(1-p)²) + qS·ζ_zk/(1-p) + δ` is
   `MLDSA.cmaToNmaLoss`
 - `ε` is the commitment guessing probability
 - `p` is the effective abort probability

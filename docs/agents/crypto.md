@@ -301,7 +301,7 @@ When the reduction is not implemented yet, do not fall back to `∃`. Either:
 - define it as a `sorry` placeholder and state the bound for that definition, as
   `GPVHashAndSign.reduction` does; or
 - leave the theorem as a placeholder whose docstring warns that the statement has no security
-  content until a reduction is named, as `FiatShamirWithAbort.euf_cma_bound` does.
+  content until a reduction is named, as `MLDSA.euf_cma_security` does.
 
 `∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key
