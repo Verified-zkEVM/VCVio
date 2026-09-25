@@ -58,11 +58,11 @@ variable [SampleableType (ι → S)]
 
 /-- The response table of an adversary whose coins are fixed once and for all: run `A`
 independently at every challenge and record the answers. -/
-noncomputable def indepTable (A : (ι → S) → ProbComp Y) : ProbComp ((ι → S) → Y) :=
+@[expose] noncomputable def indepTable (A : (ι → S) → ProbComp Y) : ProbComp ((ι → S) → Y) :=
   Fintype.mPi A
 
 /-- The verdict the verifier reaches on the adversary's answer to a single challenge. -/
-noncomputable def verdict (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y) (c : ι → S) :
+@[expose] noncomputable def verdict (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y) (c : ι → S) :
     ProbComp Bool :=
   (fun y => V c y) <$> A c
 
@@ -84,7 +84,7 @@ theorem probOutput_false_verdict (V : (ι → S) → Y → Bool) (A : (ι → S)
 
 /-- `ε_V(A)`: the probability that the verifier accepts the adversary's answer to a uniformly
 random challenge. -/
-noncomputable def advSucc (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y) : ℝ≥0∞ :=
+@[expose] noncomputable def advSucc (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y) : ℝ≥0∞ :=
   Pr[fun p => V p.1 p.2 | (do let c ← $ᵗ (ι → S); let y ← A c; return (c, y))]
 
 omit [DecidableEq S] in

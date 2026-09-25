@@ -47,7 +47,7 @@ variable {k : ℕ} {x : Stmt}
 /-- The composite extractor: run the coordinate-wise fork against the prover's response table, then
 apply the `k`-ary extractor to the accepting transcripts it returns. Aborts exactly when the fork
 does. -/
-noncomputable def coordExtract (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+@[expose] noncomputable def coordExtract (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
     (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (pc : Commit)
     (P : ProbComp ((ι → S) → Resp)) : ProbComp (Option Wit) :=
@@ -58,7 +58,7 @@ noncomputable def coordExtract (σ : SigmaProtocol Stmt Wit Commit PrvState (ι 
 
 /-- The event that the composite extractor produced a valid witness. Aborting runs fail it, so a
 bound on this event is not a bound on termination. -/
-def Extracted (rel : Stmt → Wit → Bool) (x : Stmt) (r : Option Wit) : Prop :=
+@[expose] def Extracted (rel : Stmt → Wit → Bool) (x : Stmt) (r : Option Wit) : Prop :=
   ∃ w, r = some w ∧ rel x w = true
 
 @[simp] theorem not_extracted_none : ¬ Extracted rel x none := by
@@ -125,14 +125,14 @@ challenge is still uniform and the response table is still pre-sampled. -/
 section Commit
 
 /-- The composite extractor when the prover chooses its first message too. -/
-noncomputable def coordExtractCommit (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+@[expose] noncomputable def coordExtractCommit (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
     (k : ℕ) (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (P : ProbComp (Commit × ((ι → S) → Resp))) : ProbComp (Option Wit) :=
   P >>= fun p => σ.coordExtract k ext x p.1 (pure p.2)
 
 /-- The `ε` of the bound below: the probability that the prover's transcript verifies, over its own
 first message and response table and a uniform challenge. -/
-noncomputable def verifyProb (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
+@[expose] noncomputable def verifyProb (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
     (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp))) : ℝ≥0∞ :=
   Pr[fun b => b = true | (do
     let p ← P

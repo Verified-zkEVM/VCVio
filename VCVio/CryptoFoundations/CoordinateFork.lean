@@ -9,6 +9,8 @@ public import ToMathlib.Combinatorics.ChallengeTree
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # A coordinate-wise fork over pre-sampled response tables
@@ -21,7 +23,7 @@ with probability at least `ε - ℓ * (k - 1) / N`, where `ℓ = Fintype.card ι
 
 The averaging layer comes first: `goodSet` is the set of challenges the deterministic core
 succeeds on, `acceptRatio` and `forkSuccOf` are its two aggregates over a distribution of tables,
-and `sub_div_le_tsum_probOutput_mul_goodSet` is the counting inequality averaged over that
+and `sub_div_le_lintegral_card_goodSet` is the counting inequality averaged over that
 distribution. It is stated for a general monad because nothing in it is specific to `ProbComp`.
 
 Following `seededFork`, randomness comes first and the core is deterministic: `coordFork` samples
@@ -47,7 +49,7 @@ paper's expected-query clause therefore remains unproved.
 
 public section
 
-open Finset CoordinateWise OracleComp
+open Finset CoordinateWise OracleComp MeasureTheory
 
 open scoped ENNReal
 
@@ -63,7 +65,7 @@ table entry is accepted. `goodSet` is the challenges the deterministic core succ
 is a predicate on the challenge alone, so its count is the finite counting inequality
 `CoordinateWise.sub_div_le_div_card_filter`. Because that bound holds pointwise in `ρ`, it
 survives averaging over an *arbitrary* distribution `D` of tables, with only the marginals
-`Pr[ρ c]` on the left and no independence hypothesis.
+`Pr{let ρ ← D}[ρ c]` on the left and no independence hypothesis.
 
 Note what this does *not* say. `forkSuccOf k D` depends on all of `D`, not just its marginals,
 so fixing a particular coupling of the table entries is a modelling decision about the
@@ -75,7 +77,8 @@ section Averaging
 
 universe v
 
-variable {m : Type → Type v} [Monad m] [MonadLiftT m SPMF]
+variable {m : Type → Type v} [Monad m] [LawfulMonad m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-- The challenges a table accepts. -/
 def acceptSet (ρ : (ι → S) → Bool) : Finset (ι → S) :=
@@ -87,84 +90,84 @@ def goodSet (k : ℕ) (ρ : (ι → S) → Bool) : Finset (ι → S) :=
   Finset.univ.filter fun c => ρ c ∧ ∀ j, k ≤ columnCount (fun c' => ρ c' = true) j c
 
 /-- The average accepting probability of the table distribution against a uniform challenge. -/
-noncomputable def acceptRatio (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
-  (∑ c : ι → S, Pr[fun ρ => ρ c | D]) / Fintype.card (ι → S)
+@[expose] noncomputable def acceptRatio (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
+  (∑ c : ι → S, Pr{let ρ ← D}[ρ c]) / Fintype.card (ι → S)
 
 /-- The chance that a uniform challenge lands in `goodSet`, averaged over a distribution of
 acceptance tables.
 
 This is the single functional the development computes: the extractor's success probability is
-it at a `ProbComp` table distribution (`probEvent_isSome_coordFork`). Naming it separates the
+it at a `ProbComp` table distribution (`prEvent_isSome_coordFork`). Naming it separates the
 averaging argument from the fork that consumes it. -/
-noncomputable def forkSuccOf (k : ℕ) (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
-  ∑' ρ, Pr[= ρ | D] * (((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S))
+@[expose] noncomputable def forkSuccOf (k : ℕ) (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
+  ∫⁻ ρ, ((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S) ∂𝒟[D]
 
 omit [DecidableEq S] in
 /-- The all-accepting table accepts every challenge, so `ε = 1`. Together with a positive
 `ℓ * (k - 1) / N` this is what keeps the truncated subtraction in the headline bounds from
 collapsing to `0 ≤ _`. -/
-@[simp] theorem acceptRatio_pure_const_true [Nonempty S] [LawfulMonadLiftT m SPMF] :
+@[simp] theorem acceptRatio_pure_const_true [Nonempty S] :
     acceptRatio (pure (fun _ => true) : m ((ι → S) → Bool)) = 1 := by
   have hone : ∀ c : ι → S,
-      Pr[fun ρ => ρ c | (pure (fun _ => true) : m ((ι → S) → Bool))] = 1 := fun c => by simp
+      Pr{let ρ ← (pure (fun _ => true) : m ((ι → S) → Bool))}[ρ c] = 1 := fun c => by
+    rw [prEvent_eq_evalDist_map]
+    simp
   rw [acceptRatio, Finset.sum_congr rfl fun c _ => hone c, Finset.sum_const, Finset.card_univ,
     nsmul_eq_mul, mul_one, ENNReal.div_self (by simp) (by finiteness)]
 
-omit [Monad m] [DecidableEq S] in
+omit [DecidableEq S] in
 /-- The expected number of accepting challenges is the sum of the per-challenge marginals. -/
-theorem tsum_probOutput_mul_card_acceptSet (D : m ((ι → S) → Bool)) :
-    ∑' ρ, Pr[= ρ | D] * ((acceptSet ρ).card : ℝ≥0∞) =
-      ∑ c : ι → S, Pr[fun ρ => ρ c | D] := by
+theorem lintegral_card_acceptSet (D : m ((ι → S) → Bool)) :
+    ∫⁻ ρ, ((acceptSet ρ).card : ℝ≥0∞) ∂𝒟[D] = ∑ c : ι → S, Pr{let ρ ← D}[ρ c] := by
   classical
   have hcard : ∀ ρ : (ι → S) → Bool,
       ((acceptSet ρ).card : ℝ≥0∞) = ∑ c : ι → S, if ρ c then (1 : ℝ≥0∞) else 0 :=
     fun ρ => Finset.natCast_card_filter _ _
   simp_rw [hcard]
-  rw [tsum_probOutput_mul_finsetSum]
+  rw [lintegral_finsetSum _ fun _ _ => Measurable.of_discrete]
   refine Finset.sum_congr rfl fun c _ => ?_
-  rw [probEvent_eq_tsum_ite]
-  exact tsum_congr fun ρ => by by_cases h : ρ c = true <;> simp [h]
+  rw [show (fun ρ : (ι → S) → Bool => if ρ c then (1 : ℝ≥0∞) else 0)
+      = Set.indicator {ρ : (ι → S) → Bool | ρ c} (fun _ => 1) from funext fun ρ => by
+        by_cases hρ : ρ c <;> simp [Set.indicator, hρ],
+    lintegral_indicator_const MeasurableSet.of_discrete, one_mul,
+    prEvent_eq_evalDist_of_discrete D fun ρ => ρ c]
 
-omit [Monad m] [DecidableEq S] in
+omit [DecidableEq S] in
 /-- **The averaging step for coordinate-wise forking.**
 
 The counting bound holds pointwise in the acceptance table, so averaging it over any distribution
 `D` on tables costs nothing beyond the `ℓ * (k - 1) / N` term. Only the marginals of `D` appear on
 the left; independence of the table entries is never used. -/
-theorem le_tsum_probOutput_mul_goodSet [Nonempty S] (D : m ((ι → S) → Bool)) (k : ℕ)
-    (hmass : Pr[⊥ | D] = 0) :
+theorem le_lintegral_card_goodSet [Nonempty S] (D : m ((ι → S) → Bool)) (k : ℕ)
+    [IsProbabilityMeasure 𝒟[D]] :
     acceptRatio D
       ≤ forkSuccOf k D + (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S := by
   classical
   rw [acceptRatio, forkSuccOf]
   set T : ℝ≥0∞ := (Fintype.card (ι → S) : ℝ≥0∞) with hT
   set δ : ℝ≥0∞ := (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S with hδ
+  have hTne : T ≠ 0 := by rw [hT]; simp [Fintype.card_ne_zero]
   -- Pointwise: the ToMathlib counting bound, moved to additive form.
   have hpt : ∀ ρ : (ι → S) → Bool,
-      ((acceptSet ρ).card : ℝ≥0∞) / T ≤ ((goodSet k ρ).card : ℝ≥0∞) / T + δ := by
-    intro ρ
-    exact tsub_le_iff_right.mp
-      (sub_div_le_div_card_filter (accept := fun c => ρ c = true) k)
-  calc (∑ c : ι → S, Pr[fun ρ => ρ c | D]) / T
-      = (∑' ρ, Pr[= ρ | D] * ((acceptSet ρ).card : ℝ≥0∞)) / T := by
-        rw [tsum_probOutput_mul_card_acceptSet]
-    _ = ∑' ρ, Pr[= ρ | D] * (((acceptSet ρ).card : ℝ≥0∞) / T) := by
-        rw [div_eq_mul_inv, ← ENNReal.tsum_mul_right]
-        exact tsum_congr fun ρ => by rw [mul_assoc, ← div_eq_mul_inv]
-    _ ≤ ∑' ρ, Pr[= ρ | D] * ((((goodSet k ρ).card : ℝ≥0∞) / T) + δ) :=
-        tsum_probOutput_mul_mono D hpt
-    _ = (∑' ρ, Pr[= ρ | D] * (((goodSet k ρ).card : ℝ≥0∞) / T)) + δ := by
-        simp_rw [mul_add, ENNReal.tsum_add, ENNReal.tsum_mul_right,
-          tsum_probOutput_eq_one' hmass, one_mul]
+      ((acceptSet ρ).card : ℝ≥0∞) / T ≤ ((goodSet k ρ).card : ℝ≥0∞) / T + δ := fun ρ =>
+    tsub_le_iff_right.mp (sub_div_le_div_card_filter (accept := fun c => ρ c = true) k)
+  calc (∑ c : ι → S, Pr{let ρ ← D}[ρ c]) / T
+      = (∫⁻ ρ, ((acceptSet ρ).card : ℝ≥0∞) ∂𝒟[D]) / T := by rw [lintegral_card_acceptSet]
+    _ = ∫⁻ ρ, ((acceptSet ρ).card : ℝ≥0∞) / T ∂𝒟[D] := by
+        simp_rw [div_eq_mul_inv]
+        rw [lintegral_mul_const' _ _ (ENNReal.inv_ne_top.mpr hTne)]
+    _ ≤ ∫⁻ ρ, (((goodSet k ρ).card : ℝ≥0∞) / T + δ) ∂𝒟[D] := lintegral_mono hpt
+    _ = (∫⁻ ρ, ((goodSet k ρ).card : ℝ≥0∞) / T ∂𝒟[D]) + δ := by
+        rw [lintegral_add_right _ measurable_const, lintegral_const, measure_univ, mul_one]
 
-omit [Monad m] [DecidableEq S] in
+omit [DecidableEq S] in
 /-- The averaged table-counting bound, in the subtracted form used by Lemma 7.1 of
 Fenzi–Moghaddas–Nguyen. -/
-theorem sub_div_le_tsum_probOutput_mul_goodSet [Nonempty S] (D : m ((ι → S) → Bool)) (k : ℕ)
-    (hmass : Pr[⊥ | D] = 0) :
+theorem sub_div_le_lintegral_card_goodSet [Nonempty S] (D : m ((ι → S) → Bool)) (k : ℕ)
+    [IsProbabilityMeasure 𝒟[D]] :
     acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
       ≤ forkSuccOf k D :=
-  tsub_le_iff_right.mpr (le_tsum_probOutput_mul_goodSet D k hmass)
+  tsub_le_iff_right.mpr (le_lintegral_card_goodSet D k)
 
 end Averaging
 
@@ -356,24 +359,25 @@ theorem goodOutput_of_mem_support {k : ℕ} {D : ProbComp ((ι → S) → Bool)}
 
 /-- The success probability equals the chance that a uniform challenge lands in `goodSet`,
 averaged over the table distribution. -/
-theorem probEvent_isSome_coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
-    Pr[fun r => r.isSome | coordFork k D] = forkSuccOf k D := by
+theorem prEvent_isSome_coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
+    Pr{let r ← coordFork k D}[r.isSome] = forkSuccOf k D := by
   classical
-  rw [coordFork, forkSuccOf, probEvent_bind_eq_tsum]
-  refine tsum_congr fun ρ => congrArg _ ?_
-  rw [probEvent_bind_eq_tsum]
-  have hinner : ∀ c₀ : ι → S,
-      Pr[fun r => r.isSome |
-          (pure ((coordForkCore k ρ c₀).map fun X => (ρ, X)) : ProbComp _)]
-        = if (coordForkCore k ρ c₀).isSome then 1 else 0 := by
-    intro c₀; by_cases h : (coordForkCore k ρ c₀).isSome <;> simp [h]
-  simp_rw [hinner, mul_ite, mul_one, mul_zero]
-  rw [← probEvent_eq_tsum_ite, probEvent_uniformSample, filter_isSome_coordForkCore]
+  rw [coordFork, forkSuccOf, prEvent_bind_eq_lintegral_of_discrete]
+  refine lintegral_congr fun ρ => ?_
+  rw [show (($ᵗ (ι → S)) >>= fun c₀ =>
+        (pure ((coordForkCore k ρ c₀).map fun X => (ρ, X)) : ProbComp _))
+      = (fun c₀ => (coordForkCore k ρ c₀).map fun X => (ρ, X)) <$> ($ᵗ (ι → S)) from by
+        rw [map_eq_bind_pure_comp]; rfl,
+    prEvent_map, SampleableType.prEvent_uniformSample]
+  congr 1
+  rw [← filter_isSome_coordForkCore (k := k) (ρ := ρ)]
+  exact congrArg (Nat.cast ∘ Finset.card) (Finset.filter_congr fun c₀ _ => by simp)
 
 /-- Succeeding and satisfying `GoodOutput` are the same event: every successful run is good. -/
-theorem probEvent_goodOutput_coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
-    Pr[GoodOutput k | coordFork k D] = Pr[fun r => r.isSome | coordFork k D] := by
-  refine le_antisymm (probEvent_mono fun r _ hr => ?_) (probEvent_mono fun r hr hs => ?_)
+theorem prEvent_goodOutput_coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
+    Pr{let r ← coordFork k D}[GoodOutput k r] = Pr{let r ← coordFork k D}[r.isSome] := by
+  refine le_antisymm (prEvent_mono_of_support _ fun r _ hr => ?_)
+    (prEvent_mono_of_support _ fun r hr hs => ?_)
   · obtain ⟨ρ, X, rfl, -, -⟩ := hr
     rfl
   · exact goodOutput_of_mem_support hr hs
@@ -387,12 +391,12 @@ actually returns — one emitting `some (ρ, ∅)` would fail it.
 
 Not proved here: existence of the paper's oracle extractor or its expected-query clause. This
 object consumes a pre-sampled acceptance table rather than querying an adversary. -/
-theorem sub_div_le_probEvent_goodOutput_coordFork [Nonempty S] (k : ℕ)
+theorem sub_div_le_prEvent_goodOutput_coordFork [Nonempty S] (k : ℕ)
     (D : ProbComp ((ι → S) → Bool)) :
     acceptRatio D - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr[GoodOutput k | coordFork k D] := by
-  rw [probEvent_goodOutput_coordFork, probEvent_isSome_coordFork]
-  exact sub_div_le_tsum_probOutput_mul_goodSet D k (by simp)
+      ≤ Pr{let r ← coordFork k D}[GoodOutput k r] := by
+  rw [prEvent_goodOutput_coordFork, prEvent_isSome_coordFork]
+  exact sub_div_le_lintegral_card_goodSet D k
 
 omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
 theorem goodOutput_some_iff (k : ℕ) (ρ' : (ι → S) → Bool) (X : Finset (ι → S)) :
@@ -495,22 +499,22 @@ theorem coordFork_acceptTable (V : (ι → S) → Y → Bool) (k : ℕ)
   refine bind_congr fun τ => bind_congr fun c₀ => ?_
   cases coordForkCore k (fun c => V c (τ c)) c₀ <;> rfl
 
-theorem probEvent_goodTranscripts_coordForkT (V : (ι → S) → Y → Bool) (k : ℕ)
+theorem prEvent_goodTranscripts_coordForkT (V : (ι → S) → Y → Bool) (k : ℕ)
     (D : ProbComp ((ι → S) → Y)) :
-    Pr[GoodTranscripts V k | coordForkT V k D] =
-      Pr[GoodOutput k | coordFork k (acceptTable V D)] := by
-  rw [coordFork_acceptTable, probEvent_map]
-  exact congrArg _ (funext fun r => propext (goodTranscripts_iff_goodOutput V k r))
+    Pr{let r ← coordForkT V k D}[GoodTranscripts V k r] =
+      Pr{let r ← coordFork k (acceptTable V D)}[GoodOutput k r] := by
+  rw [coordFork_acceptTable, prEvent_map,
+    funext fun r => propext (goodTranscripts_iff_goodOutput V k r)]
 
 /-- The response-table form of the inequality underlying **Lemma 7.1**. With probability at least
 `ε - ℓ(k-1)/N`, it returns `ℓ(k-1)+1` accepting transcripts whose challenges form an
 `SS(S, ℓ, k)` set. -/
-theorem sub_div_le_probEvent_goodTranscripts_coordForkT [Nonempty S] (V : (ι → S) → Y → Bool)
+theorem sub_div_le_prEvent_goodTranscripts_coordForkT [Nonempty S] (V : (ι → S) → Y → Bool)
     (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
     acceptRatio (acceptTable V D) - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr[GoodTranscripts V k | coordForkT V k D] := by
-  rw [probEvent_goodTranscripts_coordForkT]
-  exact sub_div_le_probEvent_goodOutput_coordFork k _
+      ≤ Pr{let r ← coordForkT V k D}[GoodTranscripts V k r] := by
+  rw [prEvent_goodTranscripts_coordForkT]
+  exact sub_div_le_prEvent_goodOutput_coordFork k _
 
 end Transcripts
 

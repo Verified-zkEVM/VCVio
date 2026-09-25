@@ -78,7 +78,7 @@ The hypothesis is `CoordinateWise.IsCoordSpecialSoundTranscripts`, which mention
 `Bool`-valued verifier of a challenge and a response. That is deliberate: it is the shape a
 rewinding argument produces and the shape a downstream reduction consumes, and neither should have
 to adopt `SigmaProtocol` to say it. -/
-def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+@[expose] def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ (pc : Commit) (T : Finset ((ι → S) × Resp)),
     IsCoordSpecialSoundTranscripts (σ.verify x pc) k T →
@@ -86,7 +86,7 @@ def CoordSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S
 
 /-- A Σ-protocol is `ℓ`-coordinate-wise `k`-special sound if `CoordSpeciallySoundAt` holds at every
 statement. -/
-def CoordSpeciallySound (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+@[expose] def CoordSpeciallySound (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) : Prop :=
   ∀ x, σ.CoordSpeciallySoundAt k ext x
 
@@ -94,7 +94,7 @@ def CoordSpeciallySound (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) 
 accepting transcripts with `k` distinct challenges yields a valid witness. This is the `ℓ = 1`
 shape, kept separate so the collapse below is a statement about two independently-written
 definitions. -/
-def KSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
+@[expose] def KSpeciallySoundAt (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel) (k : ℕ)
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt) : Prop :=
   ∀ (pc : Commit) (T : Finset ((ι → S) × Resp)),
     (∀ p ∈ T, σ.verify x pc p.1 p.2 = true) →

@@ -51,7 +51,7 @@ variable {k : ℕ} {ρ : (ι → S) → Bool} {c₀ : ι → S} {d : ι → List
 /-! ## The pool of alternatives -/
 
 /-- The values a coordinate can be resampled to: everything except the one already in use. -/
-noncomputable def altPool (c₀ : ι → S) (j : ι) : List S := (Finset.univ.erase (c₀ j)).toList
+@[expose] noncomputable def altPool (c₀ : ι → S) (j : ι) : List S := (Finset.univ.erase (c₀ j)).toList
 
 omit [DecidableEq ι] [Fintype ι] in
 theorem nodup_altPool (c₀ : ι → S) (j : ι) : (altPool c₀ j).Nodup := Finset.nodup_toList _
@@ -74,19 +74,19 @@ theorem countP_altPool (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) :
 /-! ## The loop -/
 
 /-- The resampling loop at one coordinate. -/
-noncomputable def coordDraws (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) :
+@[expose] noncomputable def coordDraws (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) :
     ProbComp (List S) :=
   drawUntil (fun x => ρ (Function.update c₀ j x)) (k - 1) (altPool c₀ j)
 
 /-- The accepting values a run collected at coordinate `j`. -/
-noncomputable def collected (ρ : (ι → S) → Bool) (c₀ : ι → S) (d : ι → List S) (j : ι) :
+@[expose] noncomputable def collected (ρ : (ι → S) → Bool) (c₀ : ι → S) (d : ι → List S) (j : ι) :
     Finset S :=
   ((d j).filter fun x => ρ (Function.update c₀ j x)).toFinset
 
 /-- The loop once the challenge has been drawn: abort on a rejecting challenge, and otherwise
 resample every coordinate and report what was collected together with the number of table entries
 examined. -/
-noncomputable def coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
+@[expose] noncomputable def coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
     ProbComp (Option (Finset (ι → S)) × ℕ) :=
   if ρ c₀ then do
     let d ← Fintype.mPi (coordDraws k ρ c₀)
@@ -97,7 +97,7 @@ noncomputable def coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι 
   else return (none, 1)
 
 /-- **Figure 11 of Fenzi–Moghaddas–Nguyen**, against a fixed acceptance table. -/
-noncomputable def coordForkOp [SampleableType (ι → S)] (k : ℕ) (ρ : (ι → S) → Bool) :
+@[expose] noncomputable def coordForkOp [SampleableType (ι → S)] (k : ℕ) (ρ : (ι → S) → Bool) :
     ProbComp (Option (Finset (ι → S)) × ℕ) :=
   ($ᵗ (ι → S)) >>= coordForkOpAt k ρ
 
@@ -456,7 +456,7 @@ theorem sum_expectedValue_weight_le (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (
   exact ProbComp.sum_expectedValue_sum_map_erase_le a (k - 1) g
 
 /-- Figure 11 with each entry examined charged `Γ` instead of counted. -/
-noncomputable def coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞)
+@[expose] noncomputable def coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι → S) → ℝ≥0∞)
     (c₀ : ι → S) : ProbComp (Option (Finset (ι → S)) × ℝ≥0∞) :=
   if ρ c₀ then do
     let d ← Fintype.mPi (coordDraws k ρ c₀)
@@ -467,7 +467,7 @@ noncomputable def coordForkOpWAt (k : ℕ) (ρ : (ι → S) → Bool) (Γ : (ι 
   else return (none, Γ c₀)
 
 /-- The weighted fork. -/
-noncomputable def coordForkOpW (k : ℕ) (ρ : (ι → S) → Bool)
+@[expose] noncomputable def coordForkOpW (k : ℕ) (ρ : (ι → S) → Bool)
     (Γ : (ι → S) → ℝ≥0∞) : ProbComp (Option (Finset (ι → S)) × ℝ≥0∞) :=
   ($ᵗ (ι → S)) >>= coordForkOpWAt k ρ Γ
 
