@@ -66,7 +66,7 @@ Only the identification of these cardinality ratios with probabilities under uni
 left to the probability layer.
 -/
 
-@[expose] public section
+public section
 
 open Finset
 

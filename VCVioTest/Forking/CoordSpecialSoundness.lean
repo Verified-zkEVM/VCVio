@@ -21,7 +21,7 @@ is *not* constantly accepting: it accepts a response exactly when the response i
 The witness set is a `coordFamily`, whose special soundness is checked by `decide`.
 -/
 
-@[expose] public section
+public section
 
 open Finset CoordinateWise OracleComp OracleComp.EvalDist SigmaProtocol
 

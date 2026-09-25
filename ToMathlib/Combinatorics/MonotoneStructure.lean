@@ -45,7 +45,7 @@ every not-yet-taken element of the slice useful, and then one element off the sl
 for a sequence of length `|slice| + 1 = |S| ^ (ℓ - 1) + 1`.
 -/
 
-@[expose] public section
+public section
 
 open Finset Function
 

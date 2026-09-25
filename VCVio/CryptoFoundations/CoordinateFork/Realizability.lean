@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 module
 
+public import VCVio.CryptoFoundations.CoordinateFork
 public import VCVio.EvalDist.IndepProduct
 
 /-!
@@ -42,7 +43,7 @@ in expectation. The independence across challenges is likewise a property of *th
 distribution, not something derived from an interactive prover.
 -/
 
-@[expose] public section
+public section
 
 open Finset CoordinateWise OracleComp OracleComp.EvalDist
 

@@ -31,7 +31,7 @@ quantification, joint bad-event experiment, oracle-query semantics, or expected-
 claim. Only `μ = 1` is represented.
 -/
 
-@[expose] public section
+public section
 
 open Finset CoordinateWise OracleComp OracleComp.EvalDist
 

@@ -24,7 +24,7 @@ Fenzi–Moghaddas–Nguyen. Prover messages, their prefix consistency, acceptanc
 to an executed protocol are not represented by this type.
 -/
 
-@[expose] public section
+public section
 
 open Finset
 

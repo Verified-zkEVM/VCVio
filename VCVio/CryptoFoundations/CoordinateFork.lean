@@ -45,7 +45,7 @@ and neither query order, exhaustion, repeated execution, nor expected cost is re
 paper's expected-query clause therefore remains unproved.
 -/
 
-@[expose] public section
+public section
 
 open Finset CoordinateWise OracleComp
 

@@ -34,7 +34,7 @@ distribution with a known accepting ratio. `advSucc_partialAdv` computes one, an
 hypothesis the coordinate marginal of an independent product is not the factor's own.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp OracleComp.EvalDist CoordinateWise
 

@@ -37,7 +37,7 @@ the number of lookups) and `ProbComp.expectedLength_drawUntil` computes each coo
 contribution, but nothing here assembles those into the paper's `1 + ℓ(k - 1)` bound.
 -/
 
-@[expose] public section
+public section
 
 open Finset CoordinateWise OracleComp OracleComp.EvalDist ProbComp
 

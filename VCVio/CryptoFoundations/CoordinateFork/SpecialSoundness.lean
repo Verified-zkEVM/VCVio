@@ -54,7 +54,7 @@ Two things that instantiation would need, and neither is a change to make here:
   the boundary.
 -/
 
-@[expose] public section
+public section
 
 open Finset CoordinateWise OracleComp
 
