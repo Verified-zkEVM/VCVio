@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.Control.Monad.Free
-public import ToMathlib.General
+public import ToMathlib.Control.Monad.Fold
 public import Batteries.Control.Lemmas
 
 /-!
@@ -22,7 +22,14 @@ namespace StateT
 variable {m : Type u → Type v} {m' : Type u → Type w}
   {σ α β : Type u}
 
-instance [MonadLift m m'] : MonadLift (StateT σ m) (StateT σ m') where
+
+
+/-- Running a computation lifted through the direct core monad-lift interface retains state. -/
+@[simp]
+theorem run_core_monadLift [Monad m] (x : m α) (s : σ) :
+    (MonadLift.monadLift x : StateT σ m α).run s = x >>= fun a ↦ pure (a, s) := rfl
+
+instance (priority := low) [MonadLift m m'] : MonadLift (StateT σ m) (StateT σ m') where
   monadLift x := StateT.mk fun s => liftM ((x.run) s)
 
 @[simp]
@@ -61,26 +68,34 @@ section run'
 
 variable [Monad m] [LawfulMonad m]
 
-@[simp]
 lemma run'_pure' (x : α) (s : σ) :
     (pure x : StateT σ m α).run' s = pure x := by
   simp [StateT.run'_eq]
 
-@[simp]
 lemma run'_bind' (x : StateT σ m α) (f : α → StateT σ m β) (s : σ) :
     (x >>= f).run' s = x.run s >>= fun ⟨a, s'⟩ => (f a).run' s' := by
   simp only [StateT.run'_eq, StateT.run, monad_bind_def, StateT.bind,
     map_eq_bind_pure_comp, bind_assoc]
 
-@[simp]
 lemma run'_map' (x : StateT σ m α) (f : α → β) (s : σ) :
     (f <$> x).run' s = f <$> x.run' s := by
   simp [StateT.run'_eq, Functor.map_map]
 
-@[simp]
 lemma run'_lift' (x : m α) (s : σ) :
     (StateT.lift x : StateT σ m α).run' s = x := by
   simp [StateT.run'_eq, map_eq_bind_pure_comp, bind_assoc]
+
+/-- A lifted base computation can be sampled before running a stateful continuation from the
+unchanged initial state. -/
+lemma run'_liftM_bind (x : m α) (f : α → StateT σ m β) (s : σ) :
+    ((liftM x : StateT σ m α) >>= f).run' s = x >>= fun a => (f a).run' s := by
+  rw [run'_bind', run_liftM]
+  simp
+
+/-- A lifted base-monad continuation can be moved outside a discarded-state run. -/
+lemma run'_bind_liftM (x : StateT σ m α) (f : α → m β) (s : σ) :
+    (x >>= fun a => (liftM (f a) : StateT σ m β)).run' s = x.run' s >>= f := by
+  simp [StateT.run'_eq, bind_map_left]
 
 /-- If two `StateT` computations agree after mapping into a common result type, then they
 still agree after projecting away the final state with `run'` from any initial state. -/

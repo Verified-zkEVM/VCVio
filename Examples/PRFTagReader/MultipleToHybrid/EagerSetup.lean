@@ -23,12 +23,13 @@ module hosts:
 * the per-step uniform-table bound `probEvent_cacheBadReader_uniformSample_le` on
   `cacheBadReader` at a freshly sampled fine table;
 * the eager equivalence
-  `evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending` lifting the lazy-vs-eager
-  equivalence to the instrumented handler;
+  `evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending` for the instrumented
+  handler, retaining its bad-state observation;
 * the Fine→original bridges
-  `evalDist_simulateQ_multipleBadTableHandler_cacheBad_irrelevant` and
-  `evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq`, showing the `cacheBad`
-  field is invisible to the original handler and marginalizes away from the Fine handler.
+  `simulateQ_multipleBadTableHandler_cacheBad_irrelevant` and
+  `evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad`, showing the `cacheBad`
+  field is invisible to the original handler. Sampling an auxiliary fine table contributes
+  exactly its success mass to the projected measure.
 
 These shared definitions and bridges supply the eager-table instrumentation consumed by the
 direct-coupling headline in `DirectCoupling.Compose`.
@@ -36,317 +37,20 @@ direct-coupling headline in `DirectCoupling.Compose`.
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
 section UnlinkReduction
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
 
-/-! ### Reader-side cell-collision predicate
+/-! ### Preliminaries
 
-`cacheBadReader T transcript` is the deterministic Boolean predicate that holds at the queried
-reader transcript `⟨nonce, auth⟩` against an eager fine-grained table `T` exactly when *some*
-slot-positive cell at the queried nonce already carries the queried auth. Under the slot-zero
-embedding, only slot-zero cells are M-reachable, so a slot-positive collision is an
-M-rejects / S-accepts witness in the coupled-table comparison of `DirectCoupling/Compose.lean`.
+A single-cell marginal of a uniform fine table, and the `cacheBad` projection of the tag-side
+advance `multipleBadAdvance`; each states only the structure it uses. -/
 
-This is the deterministic per-reader-step indicator that is OR-accumulated into the `cacheBad`
-flag of the bad state via `multipleBadReaderAdvance`. With the bad-state field in place,
-`Pr[cacheBad]` absorbs the reader-cell asymmetry slack as a separate bad-mass term, mirroring
-how `Pr[bad]` absorbs the tag-side nonce-collision mass.
-
-Lives in this module (rather than `DirectCoupling.Compose`) so that the instrumented fine handler
-`multipleBadTableHandlerFine` defined below can reach it without inducing an import cycle. -/
-def cacheBadReader
-    (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (t : TagTranscript Nonce Digest) : Bool :=
-  decide (∃ tag : TagId, ∃ sid : Fin sessionsPerTag, sid ≠ 0 ∧ T ((tag, sid), t.nonce) = t.auth)
-
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] in
-/-- **`cacheBadReader = true` characterization.** Unfolds the `decide` wrapper to its
-existential form, exposing the slot-positive witness used by the structural bridges in
-`DirectCoupling/Compose.lean`. -/
-lemma cacheBadReader_eq_true_iff
-    (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (t : TagTranscript Nonce Digest) :
-    cacheBadReader (sessionsPerTag := sessionsPerTag) T t = true ↔
-      ∃ tag : TagId, ∃ sid : Fin sessionsPerTag, sid ≠ 0 ∧ T ((tag, sid), t.nonce) = t.auth := by
-  unfold cacheBadReader; exact decide_eq_true_iff
-
-/-- Reader-step bad-state advance: OR `cacheBadReader gFine transcript` into the `cacheBad`
-flag, leaving every other field of the bad state untouched. This is the reader-side analogue of
-`multipleBadAdvance`, but mutating `cacheBad` instead of `bad`. The two flags are independent:
-reader steps never touch `bad`, tag steps never touch `cacheBad`. -/
-def multipleBadReaderAdvance
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (transcript : TagTranscript Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) : UnlinkBadState TagId Nonce Digest :=
-  { sB with cacheBad := sB.cacheBad ||
-      cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript }
-
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] in
-/-- `multipleBadReaderAdvance` preserves the tag-side `bad` flag (it only ORs into `cacheBad`). -/
-@[simp] lemma multipleBadReaderAdvance_bad
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (transcript : TagTranscript Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).bad =
-      sB.bad := rfl
-
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] in
-/-- `multipleBadReaderAdvance` preserves `sessionsUsed`. -/
-@[simp] lemma multipleBadReaderAdvance_sessionsUsed
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (transcript : TagTranscript Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).sessionsUsed =
-      sB.sessionsUsed := rfl
-
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] in
-/-- `multipleBadReaderAdvance` preserves `responses`. -/
-@[simp] lemma multipleBadReaderAdvance_responses
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (transcript : TagTranscript Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).responses =
-      sB.responses := rfl
-
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] in
-/-- **`cacheBad` projection through `multipleBadReaderAdvance`.** The post-advance `cacheBad`
-flag equals the pre-advance flag OR the `cacheBadReader` predicate. Definitional rewrite
-extracted as a `@[simp]` lemma so inductive `cacheBad`-probability arguments can split on
-whether the reader step flipped the bit. -/
-@[simp] lemma multipleBadReaderAdvance_cacheBad
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (transcript : TagTranscript Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).cacheBad =
-      (sB.cacheBad || cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript) := rfl
-
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] in
-/-- **`cacheBad`-false characterization of `multipleBadReaderAdvance`.** The post-advance
-`cacheBad = false` iff both the pre-advance flag and the `cacheBadReader` predicate are `false`.
-Direct corollary of `multipleBadReaderAdvance_cacheBad`, for case-splitting on whether the
-current reader step flipped the bit. -/
-lemma multipleBadReaderAdvance_cacheBad_eq_false_iff
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (transcript : TagTranscript Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).cacheBad =
-        false ↔
-      sB.cacheBad = false ∧
-        cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript = false := by
-  rw [multipleBadReaderAdvance_cacheBad]
-  exact Bool.or_eq_false_iff
-
-/-! ### Multiple-to-hybrid: the eager-table instrumented multiple handler
-
-A lazy `Prop`-valued state-coupling induction cannot encode the run-determined session index that
-a later tag query reads back, so the coupling bound is established on the eager route instead, by
-sampling the random-oracle table up front.
-
-`multipleBadTableHandler g` is the deterministic-table instrumented multiple handler: it runs the
-deterministic real handler `multipleTableHandler g` on the multiple-ideal component and threads the
-bad-world `UnlinkBadState` via `multipleBadAdvance` exactly as `multipleBadQueryImpl` does. The
-eager equivalence `evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending` lifts the
-lazy-vs-eager equivalence to the instrumented handler, threading the bad state. -/
-
-/-- Deterministic-table instrumented multiple-session handler: runs `multipleTableHandler g` on the
-multiple-ideal component (now just `UnlinkState`) and, on a tag query, advances the bad-world
-component via `multipleBadAdvance`. The eager-table analogue of `multipleBadQueryImpl`. -/
-noncomputable def multipleBadTableHandler (g : TagId × Nonce → Digest) :
-    QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
-      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) :=
-  fun q => fun p => match q with
-    | Sum.inl tag =>
-        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1 >>= fun r =>
-          pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)
-    | Sum.inr transcript =>
-        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1 >>= fun r =>
-          pure (r.1, r.2, p.2)
-
-omit [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- `simulateQ multipleBadTableHandler` of a `query_bind`, run from a state and projected to its
-full output. -/
-lemma multipleBadTable_run_query_bind' {α : Type} (g : TagId × Nonce → Digest)
-    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
-    (f : (UnlinkOracleSpec TagId Nonce Digest).Range t →
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
-    (s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
-    (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g) (liftM (OracleSpec.query t) >>= f)).run s =
-      (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g t s) >>= fun p =>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) (f p.1)).run p.2 := by
-  rw [simulateQ_query_bind, StateT.run_bind]
-  rfl
-
-omit [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- **Eager-table single-step bad monotonicity.** If the bad flag is already set in the
-multiple-bad state `p.2`, then every reachable output of `multipleBadTableHandler g t p` keeps
-`bad = true`. The eager-table analogue of `multipleBadQueryImpl_step_preserves_bad`; the proof
-case-splits on tag vs. reader and unfolds `multipleBadAdvance`. -/
-lemma multipleBadTableHandler_step_preserves_bad (g : TagId × Nonce → Digest)
-    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
-    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g t p), z.2.2.bad = true := by
-  cases t with
-  | inl tag =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1
-        >>= fun r => pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    cases hr : r.1 <;> simp [multipleBadAdvance, hbad]
-  | inr transcript =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1
-        >>= fun r => pure (r.1, r.2, p.2)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    exact hbad
-
-omit [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- **Eager-table full-run bad monotonicity.** Starting `simulateQ multipleBadTableHandler` from a
-state whose bad flag is set, every reachable output keeps `bad = true`. The eager-table analogue of
-`multipleBadQueryImpl_run_preserves_bad`. -/
-lemma multipleBadTableHandler_run_preserves_bad {α : Type} (g : TagId × Nonce → Digest)
-    (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
-    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support ((simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p), z.2.2.bad = true :=
-  OracleComp.simulateQ_run_preservesInv
-    (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) g)
-    (fun s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest => s.2.bad = true)
-    (fun t s h z hz => multipleBadTableHandler_step_preserves_bad g t s h z hz) oa p hbad
-
-/-! ### Fine-grained eager handler
-
-`multipleBadTableHandlerFine g gFine` is a *parallel* eager handler that runs identical M-side
-dynamics to `multipleBadTableHandler g` (same coarse table `g : TagId × Nonce → Digest` for the
-multiple-ideal output computation, so output-distribution-equivalent) but additionally threads a
-fine-grained eager table `gFine : (TagId × Fin sessionsPerTag) × Nonce → Digest` through the
-reader branch to advance the `cacheBad` flag via `multipleBadReaderAdvance`.
-
-The instrumented variant is invariant on the `bad` flag, on the multiple-ideal output, and on
-`sessionsUsed` / `responses`; it only differs from `multipleBadTableHandler` in the `cacheBad`
-field of the bad state on the reader branch.
-
-The per-step uniform-table bound `probEvent_cacheBadReader_uniformSample_le` below controls
-the probability that a single reader step of this handler flips `cacheBad` at a freshly
-sampled fine table. -/
-noncomputable def multipleBadTableHandlerFine
-    (g : TagId × Nonce → Digest)
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest) :
-    QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
-      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) :=
-  fun q => fun p => match q with
-    | Sum.inl tag =>
-        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1 >>= fun r =>
-          pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)
-    | Sum.inr transcript =>
-        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1 >>= fun r =>
-          pure (r.1, r.2,
-            multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript p.2)
-
-omit [Nonempty TagId] [SampleableType Digest] in
-/-- `simulateQ multipleBadTableHandlerFine` of a `query_bind`, run from a state. Analogue of
-`multipleBadTable_run_query_bind'`. -/
-lemma multipleBadTableFine_run_query_bind' {α : Type} (g : TagId × Nonce → Digest)
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
-    (f : (UnlinkOracleSpec TagId Nonce Digest).Range t →
-      OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
-    (s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
-    (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g gFine) (liftM (OracleSpec.query t) >>= f)).run s =
-      (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g gFine t s) >>= fun p =>
-        (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g gFine) (f p.1)).run p.2 := by
-  rw [simulateQ_query_bind, StateT.run_bind]
-  rfl
-
-omit [Nonempty TagId] [SampleableType Digest] in
-/-- **Fine eager-table single-step bad monotonicity.** If `bad` is set in the multiple-bad state
-`p.2`, every reachable output of `multipleBadTableHandlerFine g gFine t p` keeps `bad = true`. The
-reader branch ORs into `cacheBad` but never touches `bad`. -/
-lemma multipleBadTableHandlerFine_step_preserves_bad (g : TagId × Nonce → Digest)
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
-    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) g gFine t p), z.2.2.bad = true := by
-  cases t with
-  | inl tag =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1
-        >>= fun r => pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    change (multipleBadAdvance tag p.2 r.1).bad = true
-    rcases r.1 with _ | tr
-    · exact hbad
-    · change (p.2.bad || _ : Bool) = true
-      rw [hbad, Bool.true_or]
-  | inr transcript =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1
-        >>= fun r => pure (r.1, r.2,
-          multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript p.2)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    change (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
-      gFine transcript p.2).bad = true
-    rw [multipleBadReaderAdvance_bad]; exact hbad
-
-omit [Nonempty TagId] [SampleableType Digest] in
-/-- **Fine eager-table full-run bad monotonicity.** Starting `simulateQ multipleBadTableHandlerFine`
-from a state whose `bad` flag is set, every reachable output keeps `bad = true`. -/
-lemma multipleBadTableHandlerFine_run_preserves_bad {α : Type} (g : TagId × Nonce → Digest)
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
-    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
-    ∀ z ∈ support ((simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p),
-        z.2.2.bad = true :=
-  OracleComp.simulateQ_run_preservesInv
-    (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) g gFine)
-    (fun s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest => s.2.bad = true)
-    (fun t s h z hz => multipleBadTableHandlerFine_step_preserves_bad g gFine t s h z hz) oa p hbad
-
-/-! ### Per-step uniform-table `cacheBadReader` bound -/
-
-omit [DecidableEq TagId] [Fintype TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [NeZero sessionsPerTag] in
 /-- **Single-cell marginal at a uniform function.** Drawing a uniform function `gFine` and
 reading off its value at a fixed cell `x` produces a uniform digest, so any specific value `v`
 appears with probability `1 / |Digest|`.
@@ -354,18 +58,21 @@ appears with probability `1 / |Digest|`.
 This is a consequence of the marginalization lemma
 `OracleComp.evalDist_uniformSample_bind_update_map`: rewriting a uniform function as the
 post-composition of a fresh uniform value at `x` with a uniform function at the remaining cells. -/
-lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype Digest]
-    [Nonempty Digest]
+lemma probOutput_uniformSample_fun_eval [SampleableType Digest]
+    [Finite TagId] [Finite Nonce] [Fintype Digest]
     [SampleableType (((TagId × Fin sessionsPerTag) × Nonce) → Digest)]
     (x : (TagId × Fin sessionsPerTag) × Nonce) (v : Digest) :
     Pr[= v | do let gFine ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest));
                 pure (gFine x)] =
       (Fintype.card Digest : ℝ≥0∞)⁻¹ := by
   classical
-  -- Bridge via `evalDist_uniformSample_bind_update_map` at the cell `x`, with `ψ = fun g => g x`.
-  have hbridge :=
+  let : MeasurableSpace Digest := ⊤
+  let : MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest) :=
+    MeasurableSpace.pi
+  have hbridge := evalSPMF_eq_of_evalDist_eq _ _ <|
     OracleComp.evalDist_uniformSample_bind_update_map
-      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest) x (fun g => g x)
+      (D := (TagId × Fin sessionsPerTag) × Nonce) (R := Digest)
+      evalDist_uniformSample evalDist_uniformSample x (fun g => g x)
   have hLHS :
       (do let u ← ($ᵗ Digest); let g ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest));
           pure ((Function.update g x u) x))
@@ -397,7 +104,128 @@ lemma probOutput_uniformSample_fun_eval [Finite TagId] [Finite Nonce] [Fintype D
             (fun u => pure u) v).symm]
   rw [probOutput_uniformSample]
 
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce] in
+/-- **`multipleBadAdvance` preserves `cacheBad`.** The bad-side tag advance literally copies
+`cacheBad := sB.cacheBad` in both Option branches; this is `rfl` after pattern-matching. Used at
+the tag-step of the Fine→original bridge induction. -/
+@[simp] lemma multipleBadAdvance_cacheBad [DecidableEq TagId] [DecidableEq Nonce]
+    (tag : TagId) (sB : UnlinkBadState TagId Nonce Digest)
+    (r : Option (TagTranscript Nonce Digest)) :
+    (multipleBadAdvance tag sB r).cacheBad = sB.cacheBad := by
+  cases r <;> rfl
+
+variable [Fintype TagId] [DecidableEq Digest]
+
+section Reader
+
+variable [NeZero sessionsPerTag]
+
+/-! ### Reader-side cell-collision predicate
+
+`cacheBadReader T transcript` is the deterministic Boolean predicate that holds at the queried
+reader transcript `⟨nonce, auth⟩` against an eager fine-grained table `T` exactly when *some*
+slot-positive cell at the queried nonce already carries the queried auth. Under the slot-zero
+embedding, only slot-zero cells are M-reachable, so a slot-positive collision is an
+M-rejects / S-accepts witness in the coupled-table comparison of `DirectCoupling/Compose.lean`.
+
+This is the deterministic per-reader-step indicator that is OR-accumulated into the `cacheBad`
+flag of the bad state via `multipleBadReaderAdvance`. With the bad-state field in place,
+`Pr[cacheBad]` absorbs the reader-cell asymmetry slack as a separate bad-mass term, mirroring
+how `Pr[bad]` absorbs the tag-side nonce-collision mass.
+
+Lives in this module (rather than `DirectCoupling.Compose`) so that the instrumented fine handler
+`multipleBadTableHandlerFine` defined below can reach it without inducing an import cycle. -/
+
+def cacheBadReader
+    (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (t : TagTranscript Nonce Digest) : Bool :=
+  decide (∃ tag : TagId, ∃ sid : Fin sessionsPerTag, sid ≠ 0 ∧ T ((tag, sid), t.nonce) = t.auth)
+
+/-- **`cacheBadReader = true` characterization.** Unfolds the `decide` wrapper to its
+existential form, exposing the slot-positive witness used by the structural bridges in
+`DirectCoupling/Compose.lean`. -/
+lemma cacheBadReader_eq_true_iff
+    (T : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (t : TagTranscript Nonce Digest) :
+    cacheBadReader (sessionsPerTag := sessionsPerTag) T t = true ↔
+      ∃ tag : TagId, ∃ sid : Fin sessionsPerTag, sid ≠ 0 ∧ T ((tag, sid), t.nonce) = t.auth := by
+  unfold cacheBadReader; exact decide_eq_true_iff
+
+/-- Reader-step bad-state advance: OR `cacheBadReader gFine transcript` into the `cacheBad`
+flag, leaving every other field of the bad state untouched. This is the reader-side analogue of
+`multipleBadAdvance`, but mutating `cacheBad` instead of `bad`. The two flags are independent:
+reader steps never touch `bad`, tag steps never touch `cacheBad`. -/
+def multipleBadReaderAdvance
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (transcript : TagTranscript Nonce Digest)
+    (sB : UnlinkBadState TagId Nonce Digest) : UnlinkBadState TagId Nonce Digest :=
+  { sB with cacheBad := sB.cacheBad ||
+      cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript }
+
+/-- `multipleBadReaderAdvance` preserves the tag-side `bad` flag (it only ORs into `cacheBad`). -/
+@[simp] lemma multipleBadReaderAdvance_bad
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (transcript : TagTranscript Nonce Digest)
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).bad =
+      sB.bad := rfl
+
+/-- `multipleBadReaderAdvance` preserves `sessionsUsed`. -/
+@[simp] lemma multipleBadReaderAdvance_sessionsUsed
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (transcript : TagTranscript Nonce Digest)
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).sessionsUsed =
+      sB.sessionsUsed := rfl
+
+/-- `multipleBadReaderAdvance` preserves `responses`. -/
+@[simp] lemma multipleBadReaderAdvance_responses
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (transcript : TagTranscript Nonce Digest)
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).responses =
+      sB.responses := rfl
+
+/-- **`cacheBad` projection through `multipleBadReaderAdvance`.** The post-advance `cacheBad`
+flag equals the pre-advance flag OR the `cacheBadReader` predicate. Definitional rewrite
+extracted as a `@[simp]` lemma so inductive `cacheBad`-probability arguments can split on
+whether the reader step flipped the bit. -/
+@[simp] lemma multipleBadReaderAdvance_cacheBad
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (transcript : TagTranscript Nonce Digest)
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).cacheBad =
+      (sB.cacheBad || cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript) := rfl
+
+/-- **`cacheBad`-false characterization of `multipleBadReaderAdvance`.** The post-advance
+`cacheBad = false` iff both the pre-advance flag and the `cacheBadReader` predicate are `false`.
+Direct corollary of `multipleBadReaderAdvance_cacheBad`, for case-splitting on whether the
+current reader step flipped the bit. -/
+lemma multipleBadReaderAdvance_cacheBad_eq_false_iff
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (transcript : TagTranscript Nonce Digest)
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB).cacheBad =
+        false ↔
+      sB.cacheBad = false ∧
+        cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript = false := by
+  rw [multipleBadReaderAdvance_cacheBad]
+  exact Bool.or_eq_false_iff
+
+/-- **`with cacheBad := cb` flattens `multipleBadReaderAdvance`.** Overwriting the
+post-advance bad state's `cacheBad` field with an arbitrary `cb` discards the only field the
+reader-advance touched — so the result is structurally equal to the pre-advance state with the
+same overwrite. Used at the reader-step of the Fine→original bridge induction to align the
+Fine post-state with the Original post-state under the projection. -/
+lemma multipleBadReaderAdvance_with_cacheBad_eq
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (transcript : TagTranscript Nonce Digest)
+    (sB : UnlinkBadState TagId Nonce Digest) (cb : Bool) :
+    ({multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB with
+        cacheBad := cb} : UnlinkBadState TagId Nonce Digest) = {sB with cacheBad := cb} := by
+  cases sB; rfl
+
+/-! ### Per-step uniform-table `cacheBadReader` bound -/
+
 /-- **Per-step uniform-table bound on `cacheBadReader`.** Sampling a uniform fine-grained
 table `gFine` and checking `cacheBadReader gFine transcript`, the probability of a hit is
 bounded by `|TagId| * sessionsPerTag / |Digest|`.
@@ -407,7 +235,8 @@ finset), where each summand is the single-cell marginal `1 / |Digest|` from
 `probOutput_uniformSample_fun_eval`. The `sid ≠ 0` filter is dropped by monotonicity, giving
 the slightly loose `|TagId| * sessionsPerTag` bound (rather than the tight
 `|TagId| * (sessionsPerTag - 1)`). -/
-lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
+lemma probEvent_cacheBadReader_uniformSample_le [SampleableType Digest]
+    [Finite Nonce] [Fintype Digest]
     [SampleableType (((TagId × Fin sessionsPerTag) × Nonce) → Digest)]
     (transcript : TagTranscript Nonce Digest) :
     Pr[fun b : Bool => b = true |
@@ -416,7 +245,6 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       ((Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
         (Fintype.card Digest : ℝ≥0∞) := by
   classical
-  haveI : Nonempty Digest := ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   -- Step 1: expand the predicate. `cacheBadReader g t = true` is `∃ tag sid, sid ≠ 0 ∧
   -- g((tag,sid), t.nonce) = t.auth`; drop the `sid ≠ 0` filter by monotonicity.
   set P : (((TagId × Fin sessionsPerTag) × Nonce) → Digest) → Prop :=
@@ -443,12 +271,12 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       simp
     rw [hinner]
     by_cases hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gFine transcript = true
-    · rw [if_pos hcb, mul_one, if_pos]
+    · rw [ite_eq_left hcb, mul_one, ite_eq_left]
       unfold cacheBadReader at hcb
       rw [decide_eq_true_eq] at hcb
       obtain ⟨tag, sid, _, hg⟩ := hcb
       exact ⟨(tag, sid), Finset.mem_univ _, hg⟩
-    · rw [if_neg hcb, mul_zero]; exact zero_le
+    · rw [ite_eq_right hcb, mul_zero]; exact zero_le
   refine hmono.trans ?_
   -- Step 2: union bound over the slot set.
   have hsum :
@@ -481,7 +309,7 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       by_cases h : gFine (slot, transcript.nonce) = transcript.auth
       · simp [h, probOutput_pure]
       · simp only [h, ite_false, probOutput_pure]
-        rw [if_neg (fun heq => h heq.symm), mul_zero]
+        rw [ite_eq_right (fun heq => h heq.symm), mul_zero]
     rw [hkey]
     exact probOutput_uniformSample_fun_eval (slot, transcript.nonce) transcript.auth
   rw [Finset.sum_congr rfl (fun slot _ => hcell slot)]
@@ -493,299 +321,94 @@ lemma probEvent_cacheBadReader_uniformSample_le [Finite Nonce] [Fintype Digest]
       = ((Fintype.card TagId : ℝ≥0∞) * (sessionsPerTag : ℝ≥0∞) *
           (Fintype.card Digest : ℝ≥0∞)⁻¹) by ring]
 
-omit [Nonempty TagId] in
-/-- **Eager-table equivalence for the instrumented multiple handler.** Running the instrumented
-multiple handler `multipleBadQueryImpl` from `((s, c), sB)` has the same *full-output* distribution
-(output bit, multiple-ideal state and bad-world state) as sampling a full random-oracle table `g`,
-overlaying the cache `c`, and running the deterministic instrumented table handler
-`multipleBadTableHandler (tableExtending c g)` from `(s, sB)`.
+end Reader
 
-Proved by induction on the adversary, generalized over the state. It mirrors
-`evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending`, threading the bad-world
-component (which `multipleBadAdvance` advances deterministically from the realized transcript). -/
-lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
-    [Fintype Nonce] [Finite Digest]
-    (oa : UnlinkAdversary TagId Nonce Digest)
-    (s : UnlinkState TagId) (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => (z.1, z.2.2)) <$>
-        (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag)) oa).run ((s, c), sB)] =
-      𝒟[do let g ← $ᵗ (TagId × Nonce → Digest);
-            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                (OracleComp.tableExtending c g)) oa).run (s, sB)] := by
-  classical
-  induction oa using OracleComp.inductionOn generalizing s c sB with
-  | pure b =>
-    simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    refine (evalDist_ext fun x => ?_).symm
-    rw [probOutput_bind_const, probFailure_uniformSample, tsub_zero, one_mul]
-  | query_bind t f ih =>
-    rw [multipleBad_run_query_bind', map_bind]
-    have hrhs : 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-              (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c g))
-              (liftM (OracleSpec.query t) >>= f)).run (s, sB)]
-        = 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-            (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g) t (s, sB))
-              >>= fun p =>
-              (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                  (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                  (OracleComp.tableExtending c g)) (f p.1)).run p.2] := by
-      refine congrArg _ (congrArg _ (funext fun g => ?_))
-      rw [multipleBadTable_run_query_bind', map_bind]
-    rw [hrhs]
-    cases t with
-    | inl tag =>
-      by_cases hslot : s.sessionsUsed tag < sessionsPerTag
-      · -- tag query, slot available
-        rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
-        dsimp only
-        rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
-        set advU :=
-          ({ s with sessionsUsed := Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } :
-            UnlinkState TagId) with hadvU
-        -- Normalise the LHS: pull the nonce/cell binds to the top.
-        have hlhs_norm :
-            ((((($ᵗ Nonce) >>= fun nonce => idealCacheStep c (tag, nonce) >>= fun r =>
-              pure (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest), advU, r.2))) >>=
-              fun r => pure (r.1, (r.2.1, r.2.2), multipleBadAdvance tag sB r.1)) >>=
-              fun p => (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-                (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (f p.1)).run p.2)
-            = (($ᵗ Nonce) >>= fun nonce => idealCacheStep c (tag, nonce) >>= fun r =>
-                (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-                    (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag))
-                  (f (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest)))).run
-                    ((advU, r.2), multipleBadAdvance tag sB
-                      (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest)))) := by
-          simp only [bind_assoc, pure_bind]
-        refine (congrArg evalDist hlhs_norm).trans ?_
-        -- per-nonce eager equivalence under the inner idealCacheStep
-        have hlhs_inner : ∀ (n : Nonce),
-            𝒟[idealCacheStep c (tag, n) >>= fun r =>
-                (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-                    (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag))
-                  (f (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))).run
-                    ((advU, r.2), multipleBadAdvance tag sB
-                      (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))]
-            = 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-                  (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                      (z.1, z.2.2)) <$>
-                    (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                      (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                      (OracleComp.tableExtending c g))
-                      (f (some (⟨n, OracleComp.tableExtending c g (tag, n)⟩ :
-                        TagTranscript Nonce Digest)))).run
-                      (advU, multipleBadAdvance tag sB (some (⟨n,
-                        OracleComp.tableExtending c g (tag, n)⟩ :
-                        TagTranscript Nonce Digest)))] := by
-          intro n
-          set Mψ : (TagId × Nonce → Digest) → ProbComp (Bool × UnlinkBadState TagId Nonce Digest) :=
-            fun g' =>
-            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g')
-                (f (some (⟨n, g' (tag, n)⟩ : TagTranscript Nonce Digest)))).run
-                (advU, multipleBadAdvance tag sB
-                  (some (⟨n, g' (tag, n)⟩ : TagTranscript Nonce Digest)))
-            with hMψ
-          refine Eq.trans ?_ (evalDist_idealCacheStep_bind_uniformTable_comp c (tag, n) Mψ)
-          refine evalDist_bind_congr_of_support _ _ _ fun r hr => ?_
-          rw [ih (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)) advU r.2
-            (multipleBadAdvance tag sB (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))]
-          refine congrArg _ (congrArg _ (funext fun g => ?_))
-          have hcell : OracleComp.tableExtending r.2 g (tag, n) = r.1 := by
-            simp only [OracleComp.tableExtending,
-              idealCacheStep_cache_self c (tag, n) r hr, Option.getD_some]
-          rw [hMψ]
-          simp only [hcell]
-        -- RHS: collapse the table-handler tag query and swap the two samples.
-        have hrhs_swap :
-            (($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-              (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
-                (Sum.inl tag) (s, sB)) >>= fun p =>
-                (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                    (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                    (OracleComp.tableExtending c g)) (f p.1)).run p.2)
-            = (($ᵗ (TagId × Nonce → Digest)) >>= fun g => ($ᵗ Nonce) >>= fun n =>
-                (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                    (z.1, z.2.2)) <$>
-                  (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                    (OracleComp.tableExtending c g))
-                    (f (some (⟨n, OracleComp.tableExtending c g (tag, n)⟩ :
-                      TagTranscript Nonce Digest)))).run
-                    (advU, multipleBadAdvance tag sB (some (⟨n,
-                      OracleComp.tableExtending c g (tag, n)⟩ :
-                      TagTranscript Nonce Digest)))) := by
-          refine bind_congr fun g => ?_
-          change ((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
-              (Sum.inl tag)) s >>= (fun r => pure (r.1, r.2,
-                multipleBadAdvance tag sB r.1))) >>= _ = _
-          rw [multipleTableHandler_tag_run_of_lt _ tag s hslot, ← hadvU]
-          simp only [bind_assoc, pure_bind]
-          exact bind_assoc ..
-        refine Eq.trans ?_ (congrArg evalDist hrhs_swap).symm
-        rw [evalDist_bind_bind_swap ($ᵗ (TagId × Nonce → Digest)) ($ᵗ Nonce)]
-        refine evalDist_bind_congr_of_support _ _ _ fun n _ => ?_
-        exact hlhs_inner n
-      · -- tag query, slot exhausted
-        rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
-        dsimp only
-        rw [multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot]
-        change 𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-            (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (f none)).run
-              ((s, c), multipleBadAdvance tag sB none)] = _
-        rw [ih none s c (multipleBadAdvance tag sB none)]
-        refine congrArg _ (congrArg _ (funext fun g => ?_))
-        change _ = ((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
-            (Sum.inl tag)) s >>= (fun r => pure (r.1, r.2,
-              multipleBadAdvance tag sB r.1))) >>= _
-        rw [multipleTableHandler_tag_run_of_not_lt _ tag s hslot]
-        rfl
-    | inr transcript =>
-      rw [multipleBadQueryImpl_reader_run transcript ((s, c), sB)]
-      dsimp only
-      rw [multipleIdealQueryImpl_reader_run transcript s c]
-      set cells := (Finset.univ : Finset TagId).toList.map
-        (fun tag => (tag, transcript.nonce)) with hcells
-      -- Normalise the LHS: pull all binds outward, projection at the leaf.
-      have hlhs_norm :
-          (((idealCacheMapM cells c >>= fun rs =>
-                pure (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s, rs.2))
-              >>= fun r => pure (r.1, (r.2.1, r.2.2), sB)) >>= fun p =>
-              (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-                  (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (f p.1)).run p.2)
-          = (idealCacheMapM cells c >>= fun rs =>
-              (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-                  (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag))
-                  (f (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))))).run
-                  ((s, rs.2), sB)) := by
-        simp only [bind_assoc]; rfl
-      refine (congrArg evalDist hlhs_norm).trans ?_
-      -- eager equivalence under idealCacheMapM
-      set Mψ : (TagId × Nonce → Digest) → ProbComp (Bool × UnlinkBadState TagId Nonce Digest) :=
-        fun g' =>
-        (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-            (z.1, z.2.2)) <$>
-          (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g')
-            (f (ReaderReply.ofBool (decide (∃ d ∈ cells.map g', d = transcript.auth))))).run
-            (s, sB)
-        with hMψ
-      have hstep1 :
-          𝒟[idealCacheMapM cells c >>= fun rs =>
-              (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-                  (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag))
-                (f (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))))).run
-                ((s, rs.2), sB)]
-          = 𝒟[idealCacheMapM cells c >>= fun rs =>
-              ($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
-                Mψ (OracleComp.tableExtending rs.2 g)] := by
-        refine evalDist_bind_congr_of_support _ _ _ fun rs hrs => ?_
-        rw [ih (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))) s rs.2 sB]
-        refine congrArg _ (congrArg _ (funext fun g => ?_))
-        rw [hMψ]
-        simp only [idealCacheMapM_support cells c rs hrs g]
-      rw [hstep1, evalDist_idealCacheMapM_bind_uniformTable_comp cells c Mψ]
-      -- RHS: collapse the table-handler reader query
-      refine (evalDist_bind_congr_of_support _ _ _ fun g _ => ?_).symm
-      have hrhs_reader : (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-          (OracleComp.tableExtending c g) (Sum.inr transcript) (s, sB))
-          = pure (ReaderReply.ofBool (unlinkReaderAccepts (TagId := TagId) (Slot := TagId)
-              (Nonce := Nonce) (Digest := Digest)
-              (fun tag nonce => OracleComp.tableExtending c g (tag, nonce))
-              (multiplePattern (TagId := TagId) sessionsPerTag) transcript), s, sB) := by
-        change (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
-            (Sum.inr transcript)) s >>= _ = _
-        rw [multipleTableHandler_reader_run _ transcript s]; rfl
-      rw [hrhs_reader, hMψ]
-      have hAccept : decide (∃ d ∈ cells.map (OracleComp.tableExtending c g),
-            d = transcript.auth)
-          = unlinkReaderAccepts (TagId := TagId) (Slot := TagId) (Nonce := Nonce) (Digest := Digest)
-            (fun tag nonce => OracleComp.tableExtending c g (tag, nonce))
-            (multiplePattern (TagId := TagId) sessionsPerTag) transcript := by
-        unfold unlinkReaderAccepts tagAccepts
-        rw [hcells]
-        simp only [List.map_map, List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and,
-          multiplePattern, decide_eq_decide, decide_eq_true_eq, Function.comp]
-        constructor
-        · rintro ⟨d, ⟨a, rfl⟩, hd⟩
-          exact ⟨a, ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, hd⟩⟩
-        · rintro ⟨tag, _, hd⟩
-          exact ⟨_, ⟨tag, rfl⟩, hd⟩
-      rw [← hAccept]
-      rfl
+variable [DecidableEq TagId] [DecidableEq Nonce] [SampleableType Nonce]
 
-/-! ### Fine→original eager-table bridge
+/-! ### Multiple-to-hybrid: the eager-table instrumented multiple handler
 
-The Fine handler `multipleBadTableHandlerFine g gFine` agrees with the original
-`multipleBadTableHandler g` on every field of the bad state EXCEPT `cacheBad`. Projecting that
-field away — i.e. overwriting the output bad-state's `cacheBad` with an arbitrary constant `cb` —
-the two handlers produce identical distributions, even pointwise in the outer `gFine` sample.
+A lazy `Prop`-valued state-coupling induction cannot encode the run-determined session index that
+a later tag query reads back, so the coupling bound is established on the eager route instead, by
+sampling the random-oracle table up front.
 
-Together with the constancy of `cacheBad` along original-handler runs, this yields the headline
-bridge: marginalizing the Fine-run distribution over `cacheBad` recovers the original-run
-distribution exactly. -/
+`multipleBadTableHandler g` is the deterministic-table instrumented multiple handler: it runs the
+deterministic real handler `multipleTableHandler g` on the multiple-ideal component and threads the
+bad-world `UnlinkBadState` via `multipleBadAdvance` exactly as `multipleBadQueryImpl` does. The
+eager equivalence `evalSPMF_simulateQ_multipleBadQueryImpl_run_eq_tableExtending` lifts the
+lazy-vs-eager equivalence to the instrumented handler, threading the bad state. -/
 
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-  [SampleableType Digest] in
-/-- **`multipleBadAdvance` preserves `cacheBad`.** The bad-side tag advance literally copies
-`cacheBad := sB.cacheBad` in both Option branches; this is `rfl` after pattern-matching. Used at
-the tag-step of the Fine→original bridge induction. -/
-@[simp] lemma multipleBadAdvance_cacheBad (tag : TagId)
-    (sB : UnlinkBadState TagId Nonce Digest)
-    (r : Option (TagTranscript Nonce Digest)) :
-    (multipleBadAdvance tag sB r).cacheBad = sB.cacheBad := by
-  cases r <;> rfl
+variable (sessionsPerTag) in
+/-- Deterministic-table instrumented multiple-session handler: runs `multipleTableHandler g` on the
+multiple-ideal component (now just `UnlinkState`) and, on a tag query, advances the bad-world
+component via `multipleBadAdvance`. The eager-table analogue of `multipleBadQueryImpl`. -/
+noncomputable def multipleBadTableHandler (g : TagId × Nonce → Digest) :
+    QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
+      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) :=
+  fun q => fun p => match q with
+    | Sum.inl tag =>
+        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+            (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1 >>= fun r =>
+          pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)
+    | Sum.inr transcript =>
+        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+            (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1 >>= fun r =>
+          pure (r.1, r.2, p.2)
 
-omit [DecidableEq TagId] [Nonempty TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [SampleableType Digest] in
-/-- **`with cacheBad := cb` flattens `multipleBadReaderAdvance`.** Overwriting the
-post-advance bad state's `cacheBad` field with an arbitrary `cb` discards the only field the
-reader-advance touched — so the result is structurally equal to the pre-advance state with the
-same overwrite. Used at the reader-step of the Fine→original bridge induction to align the
-Fine post-state with the Original post-state under the projection. -/
-lemma multipleBadReaderAdvance_with_cacheBad_eq
-    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
-    (transcript : TagTranscript Nonce Digest)
-    (sB : UnlinkBadState TagId Nonce Digest) (cb : Bool) :
-    ({multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB with
-        cacheBad := cb} : UnlinkBadState TagId Nonce Digest) = {sB with cacheBad := cb} := by
-  cases sB; rfl
+/-- `simulateQ multipleBadTableHandler` of a `query_bind`, run from a state and projected to its
+full output. -/
+lemma multipleBadTable_run_query_bind' {α : Type} (g : TagId × Nonce → Digest)
+    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
+    (f : (UnlinkOracleSpec TagId Nonce Digest).Range t →
+      OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
+    (simulateQ (multipleBadTableHandler sessionsPerTag g)
+        (liftM (OracleSpec.query t) >>= f)).run s =
+      (multipleBadTableHandler sessionsPerTag g t s) >>= fun p =>
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) (f p.1)).run p.2 := by
+  rw [simulateQ_query_bind, StateT.run_bind]
+  rfl
 
-omit [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
+/-- **Eager-table single-step bad monotonicity.** If the bad flag is already set in the
+multiple-bad state `p.2`, then every reachable output of `multipleBadTableHandler g t p` keeps
+`bad = true`. The eager-table analogue of `multipleBadQueryImpl_step_preserves_bad`; the proof
+case-splits on tag vs. reader and unfolds `multipleBadAdvance`. -/
+lemma multipleBadTableHandler_step_preserves_bad (g : TagId × Nonce → Digest)
+    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
+    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
+    ∀ z ∈ support (multipleBadTableHandler sessionsPerTag g t p), z.2.2.bad = true := by
+  cases t with
+  | inl tag =>
+    intro z hz
+    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1
+        >>= fun r => pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)) at hz
+    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
+    rw [mem_support_pure_iff] at hz
+    subst hz
+    cases hr : r.1 <;> simp [multipleBadAdvance, hbad]
+  | inr transcript =>
+    intro z hz
+    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1
+        >>= fun r => pure (r.1, r.2, p.2)) at hz
+    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
+    rw [mem_support_pure_iff] at hz
+    subst hz
+    exact hbad
+
+/-- **Eager-table full-run bad monotonicity.** Starting `simulateQ multipleBadTableHandler` from a
+state whose bad flag is set, every reachable output keeps `bad = true`. The eager-table analogue of
+`multipleBadQueryImpl_run_preserves_bad`. -/
+lemma multipleBadTableHandler_run_preserves_bad {α : Type} (g : TagId × Nonce → Digest)
+    (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
+    ∀ z ∈ support ((simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p),
+      z.2.2.bad = true :=
+  OracleComp.simulateQ_run_preservesInv
+    (multipleBadTableHandler sessionsPerTag g)
+    (fun s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest => s.2.bad = true)
+    (fun t s h z hz => multipleBadTableHandler_step_preserves_bad g t s h z hz) oa p hbad
+
 /-- **`cacheBad`-constancy of original handler runs.** The original `multipleBadTableHandler g`
 never updates `cacheBad`: the tag branch copies it via `multipleBadAdvance` and the reader branch
 threads the whole bad state through. So every reachable output's `cacheBad` equals the initial
@@ -793,8 +416,7 @@ value. Used to discharge the trailing projection in the Fine→original bridge h
 lemma multipleBadTableHandler_run_cacheBad_const {α : Type} (g : TagId × Nonce → Digest)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
-    ∀ z ∈ support ((simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p),
+    ∀ z ∈ support ((simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p),
         z.2.2.cacheBad = p.2.cacheBad := by
   induction oa using OracleComp.inductionOn generalizing p with
   | pure b =>
@@ -825,47 +447,42 @@ lemma multipleBadTableHandler_run_cacheBad_const {α : Type} (g : TagId × Nonce
         rfl
     exact (ih q.1 q.2 z hz).trans hstep
 
-omit [Nonempty TagId] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- **Original handler is `cacheBad`-irrelevant.** Two initial states `(s, sB)` and `(s, sB')`
 that differ only in `cacheBad` produce identical original-handler-run distributions after the
 projection `with cacheBad := cb`. The original handler never reads or writes `cacheBad`, so the
 field is invisible to the run. -/
-lemma evalDist_simulateQ_multipleBadTableHandler_cacheBad_irrelevant
+lemma simulateQ_multipleBadTableHandler_cacheBad_irrelevant
     {α : Type} (g : TagId × Nonce → Digest)
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (s : UnlinkState TagId) (sB sB' : UnlinkBadState TagId Nonce Digest) (cb : Bool)
     (hSU : sB.sessionsUsed = sB'.sessionsUsed)
     (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
-    𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) oa).run (s, sB)]
-      = 𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) g) oa).run (s, sB')] := by
+    ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB))
+      = ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB')) := by
   induction oa using OracleComp.inductionOn generalizing s sB sB' with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
-    congr 2
+    congr 1
     cases sB; cases sB'
     simp_all
   | query_bind t f ih =>
     rw [multipleBadTable_run_query_bind', multipleBadTable_run_query_bind', map_bind, map_bind]
     cases t with
     | inl tag =>
-      change 𝒟[((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      change (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
               (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) s >>= fun r =>
                 pure (r.1, r.2, multipleBadAdvance tag sB r.1)) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2]
-          = 𝒟[((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
+          = (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
               (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) s >>= fun r =>
                 pure (r.1, r.2, multipleBadAdvance tag sB' r.1)) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2]
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
       rw [bind_assoc, bind_assoc]
-      refine evalDist_bind_congr_of_support _ _ _ fun r _ => ?_
+      refine bind_congr fun r => ?_
       rw [pure_bind, pure_bind]
       have hAdv_SU : (multipleBadAdvance tag sB r.1).sessionsUsed
           = (multipleBadAdvance tag sB' r.1).sessionsUsed := by
@@ -891,40 +508,423 @@ lemma evalDist_simulateQ_multipleBadTableHandler_cacheBad_irrelevant
       exact ih r.1 r.2 (multipleBadAdvance tag sB r.1) (multipleBadAdvance tag sB' r.1)
         hAdv_SU hAdv_R hAdv_B
     | inr transcript =>
-      change 𝒟[((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      change (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
               (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) s >>= fun r =>
                 pure (r.1, r.2, sB)) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2]
-          = 𝒟[((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
+          = (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
               (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) s >>= fun r =>
                 pure (r.1, r.2, sB')) >>= fun a =>
             (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-              (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) (f a.1)).run a.2]
+              (simulateQ (multipleBadTableHandler sessionsPerTag g) (f a.1)).run a.2)
       rw [bind_assoc, bind_assoc]
-      refine evalDist_bind_congr_of_support _ _ _ fun r _ => ?_
+      refine bind_congr fun r => ?_
       rw [pure_bind, pure_bind]
       exact ih r.1 r.2 sB sB' hSU hR hB
 
-omit [Nonempty TagId] [SampleableType Digest] in
+/-- Discrete observation of the structural projection equality. -/
+lemma evalSPMF_simulateQ_multipleBadTableHandler_cacheBad_irrelevant
+    {α : Type} (g : TagId × Nonce → Digest)
+    (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (s : UnlinkState TagId) (sB sB' : UnlinkBadState TagId Nonce Digest) (cb : Bool)
+    (hSU : sB.sessionsUsed = sB'.sessionsUsed)
+    (hR : sB.responses = sB'.responses) (hB : sB.bad = sB'.bad) :
+    𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB)]
+      = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+        (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run (s, sB')] := by
+  exact congrArg evalSPMF
+    (simulateQ_multipleBadTableHandler_cacheBad_irrelevant g oa s sB sB' cb hSU hR hB)
+
+variable [NeZero sessionsPerTag]
+
+/-! ### Fine-grained eager handler
+
+`multipleBadTableHandlerFine g gFine` is a *parallel* eager handler that runs identical M-side
+dynamics to `multipleBadTableHandler g` (same coarse table `g : TagId × Nonce → Digest` for the
+multiple-ideal output computation, so output-distribution-equivalent) but additionally threads a
+fine-grained eager table `gFine : (TagId × Fin sessionsPerTag) × Nonce → Digest` through the
+reader branch to advance the `cacheBad` flag via `multipleBadReaderAdvance`.
+
+The instrumented variant is invariant on the `bad` flag, on the multiple-ideal output, and on
+`sessionsUsed` / `responses`; it only differs from `multipleBadTableHandler` in the `cacheBad`
+field of the bad state on the reader branch.
+
+The per-step uniform-table bound `probEvent_cacheBadReader_uniformSample_le` below controls
+the probability that a single reader step of this handler flips `cacheBad` at a freshly
+sampled fine table. -/
+
+noncomputable def multipleBadTableHandlerFine
+    (g : TagId × Nonce → Digest)
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest) :
+    QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
+      (StateT (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) ProbComp) :=
+  fun q => fun p => match q with
+    | Sum.inl tag =>
+        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+            (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1 >>= fun r =>
+          pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)
+    | Sum.inr transcript =>
+        (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+            (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1 >>= fun r =>
+          pure (r.1, r.2,
+            multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript p.2)
+
+/-- `simulateQ multipleBadTableHandlerFine` of a `query_bind`, run from a state. Analogue of
+`multipleBadTable_run_query_bind'`. -/
+lemma multipleBadTableFine_run_query_bind' {α : Type} (g : TagId × Nonce → Digest)
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
+    (f : (UnlinkOracleSpec TagId Nonce Digest).Range t →
+      OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
+    (simulateQ (multipleBadTableHandlerFine g gFine) (liftM (OracleSpec.query t) >>= f)).run s =
+      (multipleBadTableHandlerFine g gFine t s) >>= fun p =>
+        (simulateQ (multipleBadTableHandlerFine g gFine) (f p.1)).run p.2 := by
+  rw [simulateQ_query_bind, StateT.run_bind]
+  rfl
+
+/-- **Fine eager-table single-step bad monotonicity.** If `bad` is set in the multiple-bad state
+`p.2`, every reachable output of `multipleBadTableHandlerFine g gFine t p` keeps `bad = true`. The
+reader branch ORs into `cacheBad` but never touches `bad`. -/
+lemma multipleBadTableHandlerFine_step_preserves_bad (g : TagId × Nonce → Digest)
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
+    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
+    ∀ z ∈ support (multipleBadTableHandlerFine g gFine t p), z.2.2.bad = true := by
+  cases t with
+  | inl tag =>
+    intro z hz
+    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1
+        >>= fun r => pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)) at hz
+    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
+    rw [mem_support_pure_iff] at hz
+    subst hz
+    change (multipleBadAdvance tag p.2 r.1).bad = true
+    rcases r.1 with _ | tr
+    · exact hbad
+    · change (p.2.bad || _ : Bool) = true
+      rw [hbad, Bool.true_or]
+  | inr transcript =>
+    intro z hz
+    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1
+        >>= fun r => pure (r.1, r.2,
+          multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript p.2)) at hz
+    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
+    rw [mem_support_pure_iff] at hz
+    subst hz
+    change (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
+      gFine transcript p.2).bad = true
+    rw [multipleBadReaderAdvance_bad]; exact hbad
+
+/-- **Fine eager-table full-run bad monotonicity.** Starting `simulateQ multipleBadTableHandlerFine`
+from a state whose `bad` flag is set, every reachable output keeps `bad = true`. -/
+lemma multipleBadTableHandlerFine_run_preserves_bad {α : Type} (g : TagId × Nonce → Digest)
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
+    ∀ z ∈ support ((simulateQ (multipleBadTableHandlerFine g gFine) oa).run p),
+        z.2.2.bad = true :=
+  OracleComp.simulateQ_run_preservesInv
+    (multipleBadTableHandlerFine g gFine)
+    (fun s : UnlinkState TagId × UnlinkBadState TagId Nonce Digest => s.2.bad = true)
+    (fun t s h z hz => multipleBadTableHandlerFine_step_preserves_bad g gFine t s h z hz) oa p hbad
+
+/-! ### Eager equivalence for the instrumented multiple handler -/
+
+/-- **Eager-table equivalence for the instrumented multiple handler.** Running the instrumented
+multiple handler `multipleBadQueryImpl` from `((s, c), sB)` has the same *full-output* distribution
+(output bit, multiple-ideal state and bad-world state) as sampling a full random-oracle table `g`,
+overlaying the cache `c`, and running the deterministic instrumented table handler
+`multipleBadTableHandler (tableExtending c g)` from `(s, sB)`.
+
+Proved by induction on the adversary, generalized over the state. It mirrors
+`evalSPMF_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending`, threading the bad-world
+component (which `multipleBadAdvance` advances deterministically from the realized transcript). -/
+lemma evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableType Digest]
+    [Fintype Nonce] [Finite Digest]
+    [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
+    [MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest)]
+    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    (hDigest : 𝒟[$ᵗ Digest] = uniformOn Set.univ)
+    (hTable : 𝒟[$ᵗ (TagId × Nonce → Digest)] = uniformOn Set.univ)
+    (oa : UnlinkAdversary TagId Nonce Digest)
+    (s : UnlinkState TagId) (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => (z.1, z.2.2)) <$>
+        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) oa).run ((s, c), sB)] =
+      𝒟[do let g ← $ᵗ (TagId × Nonce → Digest);
+            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+                (z.1, z.2.2)) <$>
+              (simulateQ (multipleBadTableHandler sessionsPerTag
+                (OracleComp.tableExtending c g)) oa).run (s, sB)] := by
+  classical
+  let : MeasurableSpace Nonce := ⊤
+  induction oa using OracleComp.inductionOn generalizing s c sB with
+  | pure b =>
+    simp only [simulateQ_pure, StateT.run_pure, map_pure]
+    rw [_root_.evalDist_bind_const, hTable]
+    simp
+  | query_bind t f ih =>
+    rw [multipleBad_run_query_bind', map_bind]
+    have hrhs : 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
+          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+              (z.1, z.2.2)) <$>
+            (simulateQ (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending c g))
+              (liftM (OracleSpec.query t) >>= f)).run (s, sB)]
+        = 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
+            (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending c g) t (s, sB))
+              >>= fun p =>
+              (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+                  (z.1, z.2.2)) <$>
+                (simulateQ (multipleBadTableHandler sessionsPerTag
+                  (OracleComp.tableExtending c g)) (f p.1)).run p.2] := by
+      refine congrArg _ (congrArg _ (funext fun g => ?_))
+      rw [multipleBadTable_run_query_bind', map_bind]
+    rw [hrhs]
+    cases t with
+    | inl tag =>
+      by_cases hslot : s.sessionsUsed tag < sessionsPerTag
+      · -- tag query, slot available
+        rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
+        dsimp only
+        rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
+        set advU :=
+          ({ s with sessionsUsed := Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } :
+            UnlinkState TagId) with hadvU
+        -- Normalise the LHS: pull the nonce/cell binds to the top.
+        have hlhs_norm :
+            ((((($ᵗ Nonce) >>= fun nonce => idealCacheStep c (tag, nonce) >>= fun r =>
+              pure (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest), advU, r.2))) >>=
+              fun r => pure (r.1, (r.2.1, r.2.2), multipleBadAdvance tag sB r.1)) >>=
+              fun p => (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
+                (z.1, z.2.2)) <$>
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                  (f p.1)).run p.2)
+            = (($ᵗ Nonce) >>= fun nonce => idealCacheStep c (tag, nonce) >>= fun r =>
+                (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
+                    (z.1, z.2.2)) <$>
+                  (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                  (f (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest)))).run
+                    ((advU, r.2), multipleBadAdvance tag sB
+                      (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest)))) := by
+          simp only [bind_assoc, pure_bind]
+        refine (congrArg evalDist hlhs_norm).trans ?_
+        -- per-nonce eager equivalence under the inner idealCacheStep
+        have hlhs_inner : ∀ (n : Nonce),
+            𝒟[idealCacheStep c (tag, n) >>= fun r =>
+                (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
+                    (z.1, z.2.2)) <$>
+                  (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                  (f (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))).run
+                    ((advU, r.2), multipleBadAdvance tag sB
+                      (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))]
+            = 𝒟[($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
+                  (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+                      (z.1, z.2.2)) <$>
+                    (simulateQ (multipleBadTableHandler sessionsPerTag
+                      (OracleComp.tableExtending c g))
+                      (f (some (⟨n, OracleComp.tableExtending c g (tag, n)⟩ :
+                        TagTranscript Nonce Digest)))).run
+                      (advU, multipleBadAdvance tag sB (some (⟨n,
+                        OracleComp.tableExtending c g (tag, n)⟩ :
+                        TagTranscript Nonce Digest)))] := by
+          intro n
+          set Mψ : (TagId × Nonce → Digest) → ProbComp (Bool × UnlinkBadState TagId Nonce Digest) :=
+            fun g' =>
+            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+                (z.1, z.2.2)) <$>
+              (simulateQ (multipleBadTableHandler sessionsPerTag g')
+                (f (some (⟨n, g' (tag, n)⟩ : TagTranscript Nonce Digest)))).run
+                (advU, multipleBadAdvance tag sB
+                  (some (⟨n, g' (tag, n)⟩ : TagTranscript Nonce Digest)))
+            with hMψ
+          refine Eq.trans ?_
+            (evalDist_idealCacheStep_bind_uniformTable_comp hDigest hTable c (tag, n) Mψ)
+          refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun r hr => ?_
+          rw [ih (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)) advU r.2
+            (multipleBadAdvance tag sB (some (⟨n, r.1⟩ : TagTranscript Nonce Digest)))]
+          refine congrArg _ (congrArg _ (funext fun g => ?_))
+          have hcell : OracleComp.tableExtending r.2 g (tag, n) = r.1 := by
+            simp only [OracleComp.tableExtending,
+              idealCacheStep_cache_self c (tag, n) r hr, Option.getD_some]
+          rw [hMψ]
+          simp only [hcell]
+        -- RHS: collapse the table-handler tag query and swap the two samples.
+        have hrhs_swap :
+            (($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
+              (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending c g)
+                (Sum.inl tag) (s, sB)) >>= fun p =>
+                (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+                    (z.1, z.2.2)) <$>
+                  (simulateQ (multipleBadTableHandler sessionsPerTag
+                    (OracleComp.tableExtending c g)) (f p.1)).run p.2)
+            = (($ᵗ (TagId × Nonce → Digest)) >>= fun g => ($ᵗ Nonce) >>= fun n =>
+                (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+                    (z.1, z.2.2)) <$>
+                  (simulateQ (multipleBadTableHandler sessionsPerTag
+                    (OracleComp.tableExtending c g))
+                    (f (some (⟨n, OracleComp.tableExtending c g (tag, n)⟩ :
+                      TagTranscript Nonce Digest)))).run
+                    (advU, multipleBadAdvance tag sB (some (⟨n,
+                      OracleComp.tableExtending c g (tag, n)⟩ :
+                      TagTranscript Nonce Digest)))) := by
+          refine bind_congr fun g => ?_
+          change ((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+              (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
+              (Sum.inl tag)) s >>= (fun r => pure (r.1, r.2,
+                multipleBadAdvance tag sB r.1))) >>= _ = _
+          rw [multipleTableHandler_tag_run_of_lt _ tag s hslot, ← hadvU]
+          simp only [unlinkOracleSpec_range_inl, bind_assoc, pure_bind]
+        refine Eq.trans ?_ (congrArg evalDist hrhs_swap).symm
+        rw [evalDist_bind_bind_swap ($ᵗ (TagId × Nonce → Digest)) ($ᵗ Nonce) _ .of_discrete]
+        refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun n _ => ?_
+        exact hlhs_inner n
+      · -- tag query, slot exhausted
+        rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
+        dsimp only
+        rw [multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot]
+        change 𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
+            (z.1, z.2.2)) <$>
+            (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) (f none)).run
+              ((s, c), multipleBadAdvance tag sB none)] = _
+        rw [ih none s c (multipleBadAdvance tag sB none)]
+        refine congrArg _ (congrArg _ (funext fun g => ?_))
+        change _ = ((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+            (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
+            (Sum.inl tag)) s >>= (fun r => pure (r.1, r.2,
+              multipleBadAdvance tag sB r.1))) >>= _
+        rw [multipleTableHandler_tag_run_of_not_lt _ tag s hslot]
+        rfl
+    | inr transcript =>
+      rw [multipleBadQueryImpl_reader_run transcript ((s, c), sB)]
+      dsimp only
+      rw [multipleIdealQueryImpl_reader_run transcript s c]
+      set cells := (Finset.univ : Finset TagId).toList.map
+        (fun tag => (tag, transcript.nonce)) with hcells
+      -- Normalise the LHS: pull all binds outward, projection at the leaf.
+      have hlhs_norm :
+          (((idealCacheMapM cells c >>= fun rs =>
+                pure (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth)), s, rs.2))
+              >>= fun r => pure (r.1, (r.2.1, r.2.2), sB)) >>= fun p =>
+              (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
+                  (z.1, z.2.2)) <$>
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                  (f p.1)).run p.2)
+          = (idealCacheMapM cells c >>= fun rs =>
+              (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
+                  (z.1, z.2.2)) <$>
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                  (f (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))))).run
+                  ((s, rs.2), sB)) := by
+        simp only [bind_assoc]; rfl
+      refine (congrArg evalDist hlhs_norm).trans ?_
+      -- eager equivalence under idealCacheMapM
+      set Mψ : (TagId × Nonce → Digest) → ProbComp (Bool × UnlinkBadState TagId Nonce Digest) :=
+        fun g' =>
+        (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+            (z.1, z.2.2)) <$>
+          (simulateQ (multipleBadTableHandler sessionsPerTag g')
+            (f (ReaderReply.ofBool (decide (∃ d ∈ cells.map g', d = transcript.auth))))).run
+            (s, sB)
+        with hMψ
+      have hstep1 :
+          𝒟[idealCacheMapM cells c >>= fun rs =>
+              (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
+                  (z.1, z.2.2)) <$>
+                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+                (f (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))))).run
+                ((s, rs.2), sB)]
+          = 𝒟[idealCacheMapM cells c >>= fun rs =>
+              ($ᵗ (TagId × Nonce → Digest)) >>= fun g =>
+                Mψ (OracleComp.tableExtending rs.2 g)] := by
+        refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun rs hrs => ?_
+        rw [ih (ReaderReply.ofBool (decide (∃ d ∈ rs.1, d = transcript.auth))) s rs.2 sB]
+        refine congrArg _ (congrArg _ (funext fun g => ?_))
+        rw [hMψ]
+        simp only [idealCacheMapM_support cells c rs hrs g]
+      rw [hstep1, evalDist_idealCacheMapM_bind_uniformTable_comp hDigest hTable cells c Mψ]
+      -- RHS: collapse the table-handler reader query
+      refine (OracleComp.evalDist_bind_congr_of_support _ _ _ fun g _ => ?_).symm
+      have hrhs_reader : (multipleBadTableHandler sessionsPerTag
+          (OracleComp.tableExtending c g) (Sum.inr transcript) (s, sB))
+          = pure (ReaderReply.ofBool (unlinkReaderAccepts (TagId := TagId) (Slot := TagId)
+              (Nonce := Nonce) (Digest := Digest)
+              (fun tag nonce => OracleComp.tableExtending c g (tag, nonce))
+              (multiplePattern (TagId := TagId) sessionsPerTag) transcript), s, sB) := by
+        change (multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+            (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c g)
+            (Sum.inr transcript)) s >>= _ = _
+        rw [multipleTableHandler_reader_run _ transcript s]
+        simp only [unlinkOracleSpec_range_inr, pure_bind]
+      rw [hrhs_reader, hMψ]
+      have hAccept : decide (∃ d ∈ cells.map (OracleComp.tableExtending c g),
+            d = transcript.auth)
+          = unlinkReaderAccepts (TagId := TagId) (Slot := TagId) (Nonce := Nonce) (Digest := Digest)
+            (fun tag nonce => OracleComp.tableExtending c g (tag, nonce))
+            (multiplePattern (TagId := TagId) sessionsPerTag) transcript := by
+        unfold unlinkReaderAccepts tagAccepts
+        rw [hcells]
+        rw [decide_eq_decide]
+        simp only [List.map_map, List.mem_map, Finset.mem_toList, Finset.mem_univ, true_and,
+          multiplePattern, Function.comp]
+        constructor
+        · rintro ⟨d, ⟨a, rfl⟩, hd⟩
+          refine ⟨a, decide_eq_true ?_⟩
+          exact ⟨⟨0, Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)⟩, hd⟩
+        · rintro ⟨tag, htag⟩
+          obtain ⟨_, hd⟩ := of_decide_eq_true htag
+          exact ⟨transcript.auth, ⟨tag, hd⟩, Eq.refl transcript.auth⟩
+      rw [← hAccept]
+      simp only [unlinkOracleSpec_range_inr, pure_bind]
+
+/-- Discrete frontend form of the joint measure observation identity. -/
+lemma evalSPMF_simulateQ_multipleBadQueryImpl_run_eq_tableExtending [SampleableType Digest]
+    [Fintype Nonce] [Finite Digest]
+    (oa : UnlinkAdversary TagId Nonce Digest)
+    (s : UnlinkState TagId) (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
+    (sB : UnlinkBadState TagId Nonce Digest) :
+    𝒮[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => (z.1, z.2.2)) <$>
+        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) oa).run ((s, c), sB)] =
+      𝒮[do let g ← $ᵗ (TagId × Nonce → Digest);
+            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+                (z.1, z.2.2)) <$>
+              (simulateQ (multipleBadTableHandler sessionsPerTag
+                (OracleComp.tableExtending c g)) oa).run (s, sB)] := by
+  let : MeasurableSpace Digest := ⊤
+  let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
+  apply evalSPMF_eq_of_evalDist_eq
+  exact evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
+    evalDist_uniformSample evalDist_uniformSample oa s c sB
+
+/-! ### Fine→original eager-table bridge
+
+The Fine handler `multipleBadTableHandlerFine g gFine` agrees with the original
+`multipleBadTableHandler g` on every field of the bad state EXCEPT `cacheBad`. Projecting that
+field away — i.e. overwriting the output bad-state's `cacheBad` with an arbitrary constant `cb` —
+the two handlers produce identical distributions, even pointwise in the outer `gFine` sample.
+
+Together with the constancy of `cacheBad` along original-handler runs, this yields the headline
+bridge: marginalizing the Fine-run distribution over `cacheBad` recovers the original-run
+distribution exactly. -/
+
 /-- **Pointwise-in-`gFine` Fine→original projection equality.** For every fixed `gFine` and
 every overwrite value `cb`, projecting `cacheBad := cb` on the Fine-run distribution yields the
 same distribution as projecting `cacheBad := cb` on the original-run distribution. The workhorse
 of the headline bridge: parametrized over `cb` (rather than `p.2.cacheBad`) so the induction can
 pass through query-bind steps where the post-state's `cacheBad` differs from the pre-state's. -/
-lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
+lemma simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
     (g : TagId × Nonce → Digest)
     (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
     {α : Type} (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (cb : Bool) :
-    𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-          (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p]
-      = 𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-          (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
+    ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+          (simulateQ (multipleBadTableHandlerFine g gFine) oa).run p)
+      = ((fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+          (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p) := by
   induction oa using OracleComp.inductionOn generalizing p with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, map_pure]
@@ -933,100 +933,115 @@ lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_e
     cases t with
     | inl tag =>
       -- Tag branch: handlers are byte-identical; bind_congr + ih.
-      refine evalDist_bind_congr_of_support _ _ _ fun q _ => ?_
+      refine bind_congr fun q => ?_
       exact ih q.1 q.2
     | inr transcript =>
       -- Reader branch: handlers differ only in cacheBad of post-state.
       -- Unfold both handler-step calls to expose the shared inner `multipleTableHandler` bind.
-      change 𝒟[((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      change (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1 >>= fun r =>
               pure (r.1, r.2,
                 multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                   gFine transcript p.2)) >>= fun a =>
                 (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-                  (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine)
-                    (f a.1)).run a.2]
-            = 𝒟[((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+                  (simulateQ (multipleBadTableHandlerFine g gFine)
+                    (f a.1)).run a.2)
+            = (((multipleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
             (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1 >>= fun r =>
               pure (r.1, r.2, p.2)) >>= fun a =>
                 (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
-                  (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                    (Digest := Digest) (sessionsPerTag := sessionsPerTag) g)
-                    (f a.1)).run a.2]
+                  (simulateQ (multipleBadTableHandler sessionsPerTag g)
+                    (f a.1)).run a.2)
       rw [bind_assoc, bind_assoc]
-      refine evalDist_bind_congr_of_support _ _ _ fun r _ => ?_
+      refine bind_congr fun r => ?_
       rw [pure_bind, pure_bind]
       -- Apply IH on the LHS to convert Fine to Original on a perturbed bad state,
       -- then apply cacheBad-irrelevance to align that to the RHS bad state.
       rw [ih r.1 (r.2, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
         gFine transcript p.2)]
-      exact evalDist_simulateQ_multipleBadTableHandler_cacheBad_irrelevant g (f r.1) r.2
+      exact simulateQ_multipleBadTableHandler_cacheBad_irrelevant g (f r.1) r.2
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript p.2)
         p.2 cb rfl rfl rfl
 
-omit [Nonempty TagId] [SampleableType Digest] in
+/-- Discrete observation of the structural projection equality. -/
+lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
+    (g : TagId × Nonce → Digest)
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    {α : Type} (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (cb : Bool) :
+    𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+          (simulateQ (multipleBadTableHandlerFine g gFine) oa).run p]
+      = 𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := cb})) <$>
+          (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p] := by
+  exact congrArg evalSPMF
+    (simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq g gFine oa p cb)
+
+/-- Forgetting the fine handler's additional flag recovers the original computation. -/
+lemma simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
+    (g : TagId × Nonce → Digest)
+    (gFine : ((TagId × Fin sessionsPerTag) × Nonce) → Digest)
+    {α : Type} (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
+    (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
+        (simulateQ (multipleBadTableHandlerFine g gFine)
+          oa).run p =
+      (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p := by
+  rw [simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq]
+  let run := (simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p
+  change (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$> run = run
+  calc
+    _ = id <$> run := by
+      simp only [map_eq_pure_bind]
+      apply bind_congr_of_forall_mem_support
+      intro z hz
+      have hcb := multipleBadTableHandler_run_cacheBad_const g oa p z hz
+      have hrecord : ({z.2.2 with cacheBad := p.2.cacheBad} :
+          UnlinkBadState TagId Nonce Digest) = z.2.2 := by
+        rw [← hcb]
+      simp only [hrecord, id_eq]
+    _ = run := id_map run
+
+/-- Sampling an auxiliary fine table only contributes its success mass to the original
+handler's observation measure. The sampler need not be uniform or lossless. -/
+lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad
+    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    [MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest)]
+    {α : Type} [MeasurableSpace (α × UnlinkState TagId × UnlinkBadState TagId Nonce Digest)]
+    (sampleFine : ProbComp (((TagId × Fin sessionsPerTag) × Nonce) → Digest))
+    (g : TagId × Nonce → Digest)
+    (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
+    (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
+    𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
+      (do let gFine ← sampleFine
+          (simulateQ (multipleBadTableHandlerFine g gFine)
+            oa).run p)] =
+      𝒟[sampleFine] Set.univ •
+        𝒟[(simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p] := by
+  simp_rw [map_bind, simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq]
+  exact _root_.evalDist_bind_const _ _
+
 /-- **Fine→original eager-table bridge.** Marginalizing the Fine-run output distribution over a
 fresh `gFine ← $ᵗ` and overwriting `cacheBad := p.2.cacheBad` on the final bad state recovers
 the original-run output distribution exactly.
 
 The proof composes the pointwise-in-`gFine` projection equality
 (`…_forget_cacheBad_pointwise_eq`) with the constancy of `cacheBad` along original-handler runs
-(`multipleBadTableHandler_run_cacheBad_const`), then collapses the outer `gFine` binder via
-`probOutput_bind_const` (uniform sample doesn't fail). -/
-lemma evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
+(`multipleBadTableHandler_run_cacheBad_const`), then applies `evalDist_bind_const` and the
+uniform sampler's unit mass. -/
+lemma evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
     [SampleableType (((TagId × Fin sessionsPerTag) × Nonce) → Digest)]
     (g : TagId × Nonce → Digest) {α : Type}
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
-    𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
+    𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
           (do let gFine ← ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest));
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p)]
-      = 𝒟[(simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
-  classical
-  -- Push the projection map under the outer bind.
-  rw [map_bind]
-  -- Per-point distribution equality by extensional probOutput, on every output `x`.
-  refine evalDist_ext fun x => ?_
-  -- Step 1: the per-gFine projected Fine-run distribution equals the projected Original-run
-  -- distribution pointwise in gFine (via the pointwise lemma); collapse the constant gFine
-  -- bind with `probOutput_bind_of_const` and `probFailure_uniformSample = 0`.
-  have hpointwise : ∀ gFine ∈ support
-      ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)),
-      Pr[= x | (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
-        (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag) g gFine) oa).run p] =
-      Pr[= x | (fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})) <$>
-        (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p] := by
-    intro gFine _
-    rw [probOutput_def, probOutput_def,
-      evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_pointwise_eq
-        g gFine oa p p.2.cacheBad]
-  rw [probOutput_bind_of_const _ hpointwise, probFailure_uniformSample, tsub_zero, one_mul]
-  -- Step 2: π acts as identity on the support of the original run (since cacheBad is constant).
-  rw [probOutput_map_eq_tsum_subtype_ite]
-  rw [show Pr[= x | (simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p]
-        = Pr[= x |
-            (id <$> ((simulateQ (multipleBadTableHandler (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag) g) oa).run p))]
-      from by rw [id_map]]
-  rw [probOutput_map_eq_tsum_subtype_ite]
-  -- The two subtype-sums agree pointwise since π acts as identity on the support.
-  have hcb := multipleBadTableHandler_run_cacheBad_const (sessionsPerTag := sessionsPerTag) g oa p
-  refine tsum_congr fun z => ?_
-  have hz := hcb z.val z.property
-  have hrec : ((z.val.1, z.val.2.1,
-        ({z.val.2.2 with cacheBad := p.2.cacheBad} : UnlinkBadState TagId Nonce Digest)) :
-        α × UnlinkState TagId × UnlinkBadState TagId Nonce Digest) = z.val := by
-    have heq : ({z.val.2.2 with cacheBad := p.2.cacheBad} : UnlinkBadState TagId Nonce Digest)
-        = z.val.2.2 := by
-      conv_lhs => rw [← hz]
-    rw [heq]
-  rw [hrec, id_eq]
+              (simulateQ (multipleBadTableHandlerFine g gFine) oa).run p)]
+      = 𝒮[(simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p] := by
+  let : MeasurableSpace (((TagId × Fin sessionsPerTag) × Nonce) → Digest) := ⊤
+  let : MeasurableSpace (α × UnlinkState TagId × UnlinkBadState TagId Nonce Digest) := ⊤
+  apply evalSPMF_eq_of_evalDist_eq
+  rw [evalDist_simulateQ_multipleBadTableHandlerFine_forget_cacheBad, evalDist_uniformSample]
+  simp
 
 end UnlinkReduction
 

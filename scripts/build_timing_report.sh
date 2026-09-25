@@ -132,8 +132,10 @@ ordered_labels = ["clean_build", "warm_rebuild", "test_path"]
 repo_prefixes = (
     "ToMathlib",
     "VCVio",
+    "VCVioCslib",
     "Extern",
     "LatticeCrypto",
+    "HashSig",
     "Examples",
     "VCVioWidgets",
     "Interop",

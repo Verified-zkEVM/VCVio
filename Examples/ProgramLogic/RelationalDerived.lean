@@ -23,7 +23,7 @@ open ENNReal OracleSpec OracleComp
 open OracleComp.ProgramLogic
 open OracleComp.ProgramLogic.Relational
 open Lean.Order
-open scoped OracleComp.ProgramLogic
+open scoped OracleComp.ProgramLogic OracleComp.Rel.Quantitative
 
 universe u
 
@@ -95,14 +95,14 @@ example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦wrappedTrueLeft (spec := spec) ~ wrappedTrueRight (spec := spec) |
         (fun x y => if x = y then (1 : ℝ≥0∞) else 0);
-        Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+        Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
   unfold wrappedTrueLeft wrappedTrueRight
   rvcstep
 
 example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦wrappedTrueLeft (spec := spec) ~ wrappedTrueRight (spec := spec) |
-        (fun _ _ => (1 : ℝ≥0∞)); Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+        (fun _ _ => (1 : ℝ≥0∞)); Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
   rvcstep
   intro a b
   split_ifs <;> simp
@@ -114,14 +114,14 @@ example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦rawAuxLeft (spec := spec) ~ rawAuxRight (spec := spec) |
         (fun x y => if x = y then (1 : ℝ≥0∞) else 0);
-        Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+        Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
   unfold rawAuxLeft rawAuxRight
   rvcstep
 
 example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦rawAuxLeft (spec := spec) ~ rawAuxRight (spec := spec) |
-        (fun _ _ => (1 : ℝ≥0∞)); Std.Do'.EPost.nil.mk, Std.Do'.EPost.nil.mk⟧ := by
+        (fun _ _ => (1 : ℝ≥0∞)); Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
   rvcstep
   intro a b
   split_ifs <;> simp

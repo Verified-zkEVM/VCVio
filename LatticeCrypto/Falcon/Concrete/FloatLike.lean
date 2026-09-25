@@ -83,28 +83,28 @@ instance : FloatLike FPR where
 
 /-! ## Float instance -/
 
-def floatOfInt64 (i : Int64) : Float :=
+private def floatOfInt64 (i : Int64) : Float :=
   if i.toInt >= 0 then Float.ofNat i.toInt.toNat
   else Float.neg (Float.ofNat (-i.toInt).toNat)
 
-def floatOfInt32 (i : Int32) : Float := floatOfInt64 i.toInt64
+private def floatOfInt32 (i : Int32) : Float := floatOfInt64 i.toInt64
 
-def floatScaled (i : Int64) (sc : Int32) : Float :=
+private def floatScaled (i : Int64) (sc : Int32) : Float :=
   (floatOfInt64 i).scaleB sc.toInt
 
-def floatExpmP63 (x ccs : Float) : UInt64 :=
+private def floatExpmP63 (x ccs : Float) : UInt64 :=
   let v := ccs * Float.exp (-x)
   let twoTo63 : Float := 9223372036854775808.0
   let result := v * twoTo63
   if result <= 0.0 then 0
   else result.toUInt64
 
-def floatFloorInt64 (x : Float) : Int64 :=
+private def floatFloorInt64 (x : Float) : Int64 :=
   let r := Float.floor x
   if r >= 0.0 then r.toUInt64.toInt64
   else (0 : Int64) - ((-r).toUInt64).toInt64
 
-def floatRint (x : Float) : Int64 :=
+private def floatRint (x : Float) : Int64 :=
   let floorInt := floatFloorInt64 x
   let frac := x - Float.floor x
   if frac < 0.5 then
@@ -117,7 +117,7 @@ def floatRint (x : Float) : Int64 :=
     floorInt + 1
 
 /-- The fast native-`Float` Falcon floating-point backend. -/
-instance : FloatLike Float where
+@[no_expose] instance : FloatLike Float where
   zero := 0.0
   one := 1.0
   neg := Float.neg

@@ -73,19 +73,11 @@ private def loadingHtml (modName : Name) : Html :=
     </div>
   </details>
 
-private partial def latestReadySnap?
-    (snaps : IO.AsyncList IO.Error Snapshots.Snapshot)
-    (last? : Option Snapshots.Snapshot := none) : BaseIO (Option Snapshots.Snapshot) := do
-  match snaps with
-  | .nil => pure last?
-  | .cons snap rest => latestReadySnap? rest (some snap)
-  | .delayed task =>
-      if ← IO.hasFinished task.task then
-        match task.task.get with
-        | .ok rest => latestReadySnap? rest last?
-        | .error _ => pure last?
-      else
-        pure last?
+private def latestReadySnap?
+    (snaps : Lean.AsyncList IO.Error Snapshots.Snapshot) :
+    BaseIO (Option Snapshots.Snapshot) := do
+  let ⟨ready, _, _⟩ ← snaps.getFinishedPrefix
+  return ready.getLast?
 
 private def wrapPanel (rendered : Html) : Html :=
   <details «open»={true}>
@@ -131,6 +123,7 @@ private def waitForFinalSnapAndRender
       let html ← renderInferenceResult snap doc.meta.mod inferenceResult
       return ServerTask.mk <| Task.pure <| Except.ok html)
 
+/-- Handle a widget request by inferring and rendering the current module's game diagram. -/
 @[server_rpc_method]
 def rpc (_props : PanelWidgetProps) : RequestM (RequestTask Html) := do
   let doc ← RequestM.readDoc
@@ -147,6 +140,7 @@ def rpc (_props : PanelWidgetProps) : RequestM (RequestTask Html) := do
 
 end GameHopPanel
 
+/-- Editor panel displaying the game-hopping argument inferred from registered root theorems. -/
 @[widget_module]
 def GameHopPanel : Component PanelWidgetProps :=
   mk_rpc_widget% GameHopPanel.rpc

@@ -1,14 +1,33 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import Extern.Falcon.ApproxArith
+public import Extern.Falcon.Expm.CertificateCore
+public import Extern.Falcon.Expm.Certificates
+public import Extern.Falcon.Expm.FixedPoint
+public import Extern.Falcon.Expm.Polynomial
+public import Extern.Falcon.ExpmBridge
 public import Extern.Falcon.FFI
 public import Extern.Falcon.FFT
+public import Extern.Falcon.FPR.Add
+public import Extern.Falcon.FPR.AddPipeline
+public import Extern.Falcon.FPR.Common
+public import Extern.Falcon.FPR.Decode
+public import Extern.Falcon.FPR.Div
+public import Extern.Falcon.FPR.Loop
+public import Extern.Falcon.FPR.Mul
+public import Extern.Falcon.FPR.Rounding
+public import Extern.Falcon.FPR.Sqrt
+public import Extern.Falcon.FPR.Verify
+public import Extern.Falcon.FPR.Witnesses
 public import Extern.Falcon.FPRBridge
+public import Extern.Falcon.FPRBridgeRefutations
 public import Extern.Falcon.Instance
 public import Extern.Falcon.KeyGen
 public import Extern.Falcon.SamplerZ
 public import Extern.Falcon.Sampling
 public import Extern.Falcon.Sign
+public import Extern.Falcon.SignCorrectness
+public import Extern.Falcon.VerifyBridge
 public import Extern.Hashing
 public import Extern.MLDSA.FFI
 public import Extern.MLDSA.Instance

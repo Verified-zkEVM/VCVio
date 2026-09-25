@@ -151,7 +151,7 @@ to a polymorphic universe would require polymorphising the entire
 `wpProp` bridge, which the whole `ProgramLogic.Unary.*` stack is not yet
 set up to support. -/
 variable {ι : Type}
-variable {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+variable {spec : OracleSpec.{0, 0} ι}
 
 /-! ## Generic invariant-preservation for `simulateQ` -/
 
@@ -383,11 +383,11 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
     Std.Do.Triple
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
       (spred(fun seed => ⌜seed = seed₀⌝))
-      (⇓ v seed' => ⌜v = u ∧ seed' = Function.update seed₀ t us⌝) := by
+      (⇓ v seed' => ⌜v = u ∧ seed' = seed₀.update t us⌝) := by
   rw [triple_stateT_iff_forall_support]
   intro seed hseed v seed' hmem
   rw [hseed] at hmem
-  change v = u ∧ seed' = Function.update seed₀ t us
+  change v = u ∧ seed' = seed₀.update t us
   simpa only [seededOracle.apply_eq, StateT.run, StateT.mk, h, support_pure,
     Set.mem_singleton_iff, Prod.mk.injEq] using hmem
 
@@ -439,8 +439,9 @@ theorem loggingOracle_triple (t : spec.Domain) (log₀ : QueryLog spec) :
         WriterT (QueryLog spec) (OracleComp spec) (spec.Range t))
       (spred(fun log => ⌜log = log₀⌝))
       (⇓ v log' => ⌜log' = log₀ ++ [⟨t, v⟩]⌝) := by
-  unfold loggingOracle QueryImpl.withLogging QueryImpl.withTraceAppend QueryImpl.postInsert
-    QueryImpl.ofLift
+  unfold loggingOracle
+  rw [QueryImpl.withLogging_apply]
+  unfold QueryImpl.ofLift
   mvcgen
   subst_vars
   rw [wpProp_iff_forall_support]
@@ -455,8 +456,9 @@ theorem loggingOracle_triple_prefix (t : spec.Domain) (log₀ : QueryLog spec) :
         WriterT (QueryLog spec) (OracleComp spec) (spec.Range t))
       (spred(fun log => ⌜log = log₀⌝))
       (⇓ _ log' => ⌜log₀ <+: log'⌝) := by
-  unfold loggingOracle QueryImpl.withLogging QueryImpl.withTraceAppend QueryImpl.postInsert
-    QueryImpl.ofLift
+  unfold loggingOracle
+  rw [QueryImpl.withLogging_apply]
+  unfold QueryImpl.ofLift
   mvcgen
   subst_vars
   rw [wpProp_iff_forall_support]
@@ -481,32 +483,25 @@ section countingOracle
 
 variable [DecidableEq ι]
 
-/-- Spec for `countingOracle t` over `WriterT (QueryCount ι) (OracleComp spec)`:
-the query count is incremented by `QueryCount.single t` (i.e., `+1` at index
-`t`, `+0` elsewhere). Uses the `[Monoid (QueryCount ι)]` parameterization of
-`WriterTBridge`, so the post-state is `s * QueryCount.single t`, which is
-`s + QueryCount.single t` by `QueryCount.monoid_mul_def`.
-
-Proved via `mvcgen` plus a single bridging step for the lifted `query t` leaf:
-the tactic walks the body `do tell (...); liftM (query t)`, consumes the
-`tell`-spec (Monoid variant), and `wpProp_iff_forall_support` discharges the
-`query t` residual. -/
+/-- A counting query adds one at its index. The writer state uses Mathlib's
+multiplicative tag, and the predicates observe the additive count through `toAdd`. -/
 @[spec]
 theorem countingOracle_triple (t : spec.Domain) (qc₀ : QueryCount ι) :
     Std.Do.Triple
       (countingOracle t :
-        WriterT (QueryCount ι) (OracleComp spec) (spec.Range t))
-      (spred(fun qc => ⌜qc = qc₀⌝))
-      (⇓ _ qc' => ⌜qc' = qc₀ + QueryCount.single t⌝) := by
+        AddWriterT (QueryCount ι) (OracleComp spec) (spec.Range t))
+      (spred(fun qc => ⌜Multiplicative.toAdd qc = qc₀⌝))
+      (⇓ _ qc' => ⌜Multiplicative.toAdd qc' = qc₀ + QueryCount.single t⌝) := by
   rw [triple_writerT_iff_forall_support_monoid]
   intro qc hqc v w hmem
-  subst hqc
+  subst qc₀
   have hrun : (countingOracle t :
-      WriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run =
-        (fun x => (x, QueryCount.single t * (1 : QueryCount ι))) <$>
+      AddWriterT (QueryCount ι) (OracleComp spec) (spec.Range t)).run =
+        (fun x => (x, Multiplicative.ofAdd (QueryCount.single t))) <$>
           (HasQuery.query t : OracleComp spec _) := by
+    rw [OracleSpec.countingOracle_apply]
     change (_ >>= _ : OracleComp _ _) = _
-    simp [WriterT.run_tell, HasQuery.instOfMonadLift_query, monad_norm]
+    simp [AddWriterT.addTell, WriterT.run_tell, HasQuery.instOfMonadLift_query, monad_norm]
   rw [hrun] at hmem
   simp only [support_map] at hmem
   obtain ⟨_, _, hw⟩ := hmem
@@ -519,10 +514,10 @@ count by `QueryCount.single t₁ + QueryCount.single t₂`, in that order.
 example (t₁ t₂ : spec.Domain) (qc₀ : QueryCount ι) :
     Std.Do.Triple
       (do let _ ← countingOracle t₁; countingOracle t₂ :
-        WriterT (QueryCount ι) (OracleComp spec) (spec.Range t₂))
-      (spred(fun qc => ⌜qc = qc₀⌝))
+        AddWriterT (QueryCount ι) (OracleComp spec) (spec.Range t₂))
+      (spred(fun qc => ⌜Multiplicative.toAdd qc = qc₀⌝))
       (⇓ _ qc' =>
-        ⌜qc' = qc₀ + QueryCount.single t₁ + QueryCount.single t₂⌝) := by
+        ⌜Multiplicative.toAdd qc' = qc₀ + QueryCount.single t₁ + QueryCount.single t₂⌝) := by
   mvcgen [countingOracle_triple]; grind
 
 /-- Whole-program monotonicity for `countingOracle`: the accumulated query
@@ -533,19 +528,18 @@ theorem simulateQ_countingOracle_preserves_le {α : Type}
     (qc₀ : QueryCount ι) (oa : OracleComp spec α) :
     Std.Do.Triple
       (simulateQ countingOracle oa :
-        WriterT (QueryCount ι) (OracleComp spec) α)
-      (spred(fun qc => ⌜qc₀ ≤ qc⌝))
-      (⇓ _ qc' => ⌜qc₀ ≤ qc'⌝) := by
+        AddWriterT (QueryCount ι) (OracleComp spec) α)
+      (spred(fun qc => ⌜qc₀ ≤ Multiplicative.toAdd qc⌝))
+      (⇓ _ qc' => ⌜qc₀ ≤ Multiplicative.toAdd qc'⌝) := by
   refine simulateQ_writerT_triple_preserves_invariant countingOracle
-    (fun qc => qc₀ ≤ qc) ?_ oa
+    (fun qc => qc₀ ≤ Multiplicative.toAdd qc) ?_ oa
   intro t
   rw [triple_writerT_iff_forall_support_monoid]
   intro qc hqc _ w hmem
-  rw [(triple_writerT_iff_forall_support_monoid ..).mp (countingOracle_triple t qc) qc rfl _ w hmem]
+  change qc₀ ≤ Multiplicative.toAdd (qc * w)
+  rw [(triple_writerT_iff_forall_support_monoid ..).mp
+    (countingOracle_triple t (Multiplicative.toAdd qc)) qc rfl _ w hmem]
   exact fun i => (hqc i).trans (Nat.le_add_right _ _)
-
-@[deprecated (since := "2026-06-25")]
-alias simulateQ_countingOracle_preserves_ge := simulateQ_countingOracle_preserves_le
 
 end countingOracle
 
@@ -568,6 +562,7 @@ theorem costOracle_triple (costFn : spec.Domain → ω) (t : spec.Domain) (s₀ 
   have hrun : (costOracle costFn t : WriterT ω (OracleComp spec) (spec.Range t)).run =
       (fun x => (x, costFn t * (1 : ω))) <$>
         (HasQuery.query t : OracleComp spec _) := by
+    rw [costOracle_apply]
     change (_ >>= _ : OracleComp _ _) = _
     simp [WriterT.run_tell, HasQuery.instOfMonadLift_query, monad_norm]
   rw [hrun] at hmem
@@ -636,7 +631,7 @@ typically a conjunction of one cache property and one log property. -/
 
 section stackedHandlers
 
-variable [spec.DecidableEq]
+variable [DecidableEq ι]
 
 /-- Per-call spec for `cachingLoggingOracle t`: the log is extended by exactly
 one entry `⟨t, v⟩`, the cache only grows, and the returned value is now

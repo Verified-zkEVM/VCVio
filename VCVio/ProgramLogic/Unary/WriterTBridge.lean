@@ -24,19 +24,15 @@ The bridge supports two parameterizations in parallel:
 * `[EmptyCollection ω] [Append ω] [LawfulAppend ω]`, which is what
   `loggingOracle` (over `WriterT (QueryLog spec) (OracleComp spec)`) needs
   because `QueryLog spec` unfolds to `List _`.
-* `[Monoid ω]`, which is what `countingOracle`/`costOracle` (over
-  `WriterT (QueryCount ι) (OracleComp spec)`) need. `QueryCount ι` unfolds
-  to `ι → ℕ`, and the effective monoid on it is the *additive* one
-  repackaged as a multiplicative `Monoid` (so `1` represents the all-zero
-  function and `*` represents pointwise `+`). `ι → ℕ` has no `Append`
-  instance, so only the `[Monoid ω]` parameterization applies there.
+* `[Monoid ω]`, which is what `costOracle` needs for an arbitrary cost monoid.
+  `countingOracle` uses `AddWriterT (QueryCount ι)`, whose writer payload is
+  `Multiplicative (QueryCount ι)`. The tag turns pointwise addition into
+  the writer's multiplication and the zero count into its identity. Plain
+  `QueryCount ι` retains the ordinary function instances.
 
-The two `WP` / `WPMonad` instances live side-by-side and do not overlap on
-any currently used target type (`List _` has no `Monoid` instance;
-`ι → ℕ` has no `Append` instance). To defensively guard against future
-overlap on a type carrying both `Append` and `Monoid`, the `Monoid`
-variants are registered at `low` priority so the `Append` variants win
-typeclass resolution whenever both apply.
+The two `WP` / `WPMonad` interpretations are selected by the writer payload.
+The `Monoid` variants are registered at `low` priority so the `Append`
+variants win typeclass resolution when a payload carries both interfaces.
 
 ## Implementation
 
@@ -107,7 +103,7 @@ instance instWPMonadAppend {m : Type u → Type v} {ω : Type u} {ps : PostShape
 /-! ## `Monoid`-based `WP` interpretation
 
 The dual parameterization: the writer log `ω` carries `[Monoid ω]`
-(e.g. `QueryCount ι = ι → ℕ` with `1 = 0` and `* = +`). The
+(e.g. `Multiplicative (QueryCount ι)` for pointwise additive counts). The
 interpretation is the same as `wpAppend` but with `1` / `*` in place
 of `∅` / `++`. The monoid laws `mul_one`, `one_mul`, `mul_assoc` play
 the role of `LawfulAppend.append_empty`, `empty_append`, `append_assoc`. -/
@@ -123,11 +119,8 @@ def wpMonoid {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}} {α : Ty
 
 /-- `WP` instance for `WriterT ω m` under the `[Monoid ω]` parameterization.
 The writer log is threaded through as state and accumulated via `*` with
-identity `1`. Does not conflict with `instWPAppend` because the target
-types they fire on are disjoint (`List _` has no `Monoid`, `ι → ℕ` has
-no `Append`). The priority is set `low` so that, on a hypothetical `ω`
-carrying *both* `Append` and `Monoid`, `instWPAppend` wins typeclass
-resolution and no WP diamond arises. -/
+identity `1`. The priority is set `low` so that, on a payload carrying
+both `Append` and `Monoid`, `instWPAppend` wins typeclass resolution. -/
 instance (priority := low) instWPMonoid
     {m : Type u → Type v} {ω : Type u} {ps : PostShape.{u}}
     [Monad m] [WP m ps] [Monoid ω] :

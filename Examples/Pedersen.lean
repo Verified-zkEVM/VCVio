@@ -32,8 +32,7 @@ Uses the same additive `Module F G` notation as `DiffieHellman.lean`:
 
 open OracleComp OracleSpec ENNReal DiffieHellman CommitmentScheme
 
-variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
-variable {G : Type} [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
+variable {F : Type} [Field F] {G : Type} [AddCommGroup G] [Module F G]
 
 /-! ## Definition -/
 
@@ -45,7 +44,7 @@ variable {G : Type} [AddCommGroup G] [Module F G] [SampleableType G] [DecidableE
 | Commit(h, m) | Sample `d ← $ᵗ F`, return `(d • g + m • h, d)` |
 | Verify(h, m, c, d) | Check `d • g + m • h = c` |
 -/
-def pedersenCommit (g : G) : CommitmentScheme G F G F where
+def pedersenCommit [SampleableType F] [DecidableEq G] (g : G) : CommitmentScheme G F G F where
   setup := do let x ← $ᵗ F; return (x • g)
   commit pp m := do
     let d ← $ᵗ F
@@ -54,14 +53,13 @@ def pedersenCommit (g : G) : CommitmentScheme G F G F where
 
 namespace pedersenCommit
 
-variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
-variable {G : Type} [AddCommGroup G] [Module F G] [SampleableType G] [DecidableEq G]
+variable {F : Type} [Field F] {G : Type} [AddCommGroup G] [Module F G]
 variable {g : G}
 
 /-! ## Correctness -/
 
-omit [Fintype F] [DecidableEq F] [SampleableType G] in
-theorem correct : (pedersenCommit (F := F) g).PerfectlyCorrect := by
+theorem correct [SampleableType F] [DecidableEq G] :
+    (pedersenCommit (F := F) g).PerfectlyCorrect := by
   intro pp _hpp m cd hmem
   have hmem' : cd ∈ support (do
       let d ← ($ᵗ F); pure ((d : F) • g + m • pp, d)) := hmem
@@ -73,8 +71,6 @@ theorem correct : (pedersenCommit (F := F) g).PerfectlyCorrect := by
 
 /-! ## Perfect hiding -/
 
-omit [Fintype F] [DecidableEq F] [SampleableType F]
-  [SampleableType G] [DecidableEq G] in
 private lemma commit_fst_bijective (hg : Function.Bijective (· • g : F → G))
     (pp : G) (m : F) : Function.Bijective (fun d : F => d • g + m • pp) := by
   change Function.Bijective ((· + m • pp) ∘ (· • g : F → G))
@@ -83,28 +79,27 @@ private lemma commit_fst_bijective (hg : Function.Bijective (· • g : F → G)
      fun y => ⟨y - m • pp, sub_add_cancel y (m • pp)⟩⟩
     hg
 
-omit [Fintype F] [DecidableEq F] [SampleableType G] in
 /-- Rewrite the commitment distribution as a mapped uniform sample. -/
-private lemma commit_fst_eq_map (pp : G) (m : F) :
+private lemma commit_fst_eq_map [SampleableType F] [DecidableEq G] (pp : G) (m : F) :
     Prod.fst <$> (pedersenCommit (F := F) g).commit pp m =
     (fun d : F => d • g + m • pp) <$> ($ᵗ F) := by
   simp [pedersenCommit]
 
-omit [Fintype F] [DecidableEq F] in
 /-- The Pedersen commitment scheme is perfectly hiding: the commitment distribution
 is independent of the committed message.
 
 The proof uses the same bijection-coupling idea as the one-time pad: composing
 the generator bijection `d ↦ d • g` with translation `· + c` gives a bijection
 `F → G`, so the pushforward of uniform on `F` is uniform on `G` regardless of `c`. -/
-theorem perfectlyHiding [Finite F] (hg : Function.Bijective (· • g : F → G)) :
+theorem perfectlyHiding [SampleableType F] [SampleableType G] [DecidableEq G]
+    [Finite F] (hg : Function.Bijective (· • g : F → G)) :
     (pedersenCommit (F := F) g).PerfectlyHiding := by
   let _ : Fintype F := Fintype.ofFinite F
   intro pp _hpp m₁ m₂
   rw [commit_fst_eq_map, commit_fst_eq_map]
-  have h₁ := evalDist_map_bijective_uniform_cross (α := F) (β := G)
+  have h₁ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
     (fun d => d • g + m₁ • pp) (commit_fst_bijective hg pp m₁)
-  have h₂ := evalDist_map_bijective_uniform_cross (α := F) (β := G)
+  have h₂ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
     (fun d => d • g + m₂ • pp) (commit_fst_bijective hg pp m₂)
   exact h₁.trans h₂.symm
 
@@ -113,15 +108,14 @@ theorem perfectlyHiding [Finite F] (hg : Function.Bijective (· • g : F → G)
 /-- Given a binding adversary for Pedersen, construct a DLog adversary.
 If the binder produces two valid openings `(m₁, d₁)` and `(m₂, d₂)` to the same
 commitment `c` with `m₁ ≠ m₂`, extract the discrete log as `(d₁ - d₂) / (m₂ - m₁)`. -/
-def dlogReduction (binder : BindingAdv G F G F) : DLogAdversary F G :=
+def dlogReduction [DecidableEq F] [DecidableEq G]
+    (binder : BindingAdversary G F G F) : DLogAdversary F G :=
   fun gen h => do
     let (c, m₁, d₁, m₂, d₂) ← binder h
     return if decide (m₁ ≠ m₂ ∧ d₁ • gen + m₁ • h = c ∧ d₂ • gen + m₂ • h = c) then
       (d₁ - d₂) / (m₂ - m₁)
     else 0
 
-omit [Fintype F] [DecidableEq F] [SampleableType F]
-  [SampleableType G] [DecidableEq G] in
 private lemma extractedLog_eq_dlog (hg : Function.Bijective (· • g : F → G))
     {x m₁ d₁ m₂ d₂ : F} {c : G}
     (hm : m₁ ≠ m₂)
@@ -146,8 +140,8 @@ private lemma extractedLog_eq_dlog (hg : Function.Bijective (· • g : F → G)
     _ = x := by
       field_simp [hneq]
 
-omit [Fintype F] [SampleableType F] [SampleableType G] in
-private lemma bindingWin_implies_dlogWin (hg : Function.Bijective (· • g : F → G))
+private lemma bindingWin_implies_dlogWin [DecidableEq F] [DecidableEq G]
+    (hg : Function.Bijective (· • g : F → G))
     {x m₁ d₁ m₂ d₂ : F} {c : G}
     (hwin : m₁ ≠ m₂ ∧ d₁ • g + m₁ • (x • g) = c ∧ d₂ • g + m₂ • (x • g) = c) :
     (if decide (m₁ ≠ m₂ ∧ d₁ • g + m₁ • (x • g) = c ∧ d₂ • g + m₂ • (x • g) = c) then
@@ -158,11 +152,11 @@ private lemma bindingWin_implies_dlogWin (hg : Function.Bijective (· • g : F 
     simp [hm, h₁, h₂]
   simp [hdec, extractedLog_eq_dlog hg hm h₁ h₂]
 
-omit [Fintype F] [SampleableType G] in
 /-- Computational binding: a successful Pedersen binding adversary yields a
 successful DLog solver. Specifically, `Pr[binding wins] ≤ Pr[DLog wins]`. -/
-theorem binding_le_dlog (hg : Function.Bijective (· • g : F → G))
-    (binder : BindingAdv G F G F) :
+theorem binding_le_dlog [DecidableEq F] [SampleableType F] [DecidableEq G]
+    (hg : Function.Bijective (· • g : F → G))
+    (binder : BindingAdversary G F G F) :
     Pr[= true | (pedersenCommit g).bindingExp binder] ≤
     Pr[= true | dlogExp g (dlogReduction binder)] := by
   let base : ProbComp (F × (G × F × F × F × F)) := do
@@ -188,7 +182,7 @@ theorem binding_le_dlog (hg : Function.Bijective (· • g : F → G))
       simp [DiffieHellman.dlogExp, dlogReduction, base, dlogWin]]
     grind
   rw [hbinding, hdlog]
-  exact OracleComp.ProgramLogic.probEvent_mono base (fun z hwin => by
+  exact _root_.probEvent_mono (mx := base) (fun z _ hwin => by
     rcases z with ⟨x, ⟨c, m₁, d₁, m₂, d₂⟩⟩
     simpa [bindingWin, dlogWin] using bindingWin_implies_dlogWin (g := g) hg hwin)
 

@@ -38,25 +38,18 @@ def generateSeed {ι} [DecidableEq ι] (spec : OracleSpec ι)
 
 section lemmas
 
-variable {ι} [DecidableEq ι] (spec : OracleSpec ι)
-  [∀ t : spec.Domain, SampleableType (spec.Range t)]
-  (qc : ι → ℕ) (j : ι) (js : List ι)
+/-- The product-of-inverses identity assembling the `j :: js` answer from the `j` and `js`
+parts: `(c ^ qc j)⁻¹ * (∏ js)⁻¹ = (∏ (j :: js))⁻¹` over `ℝ≥0∞`, valid because every factor is
+a finite natural-number cast. -/
+private lemma inv_natCast_pow_mul_inv_list_prod {ι : Type} (qc : ι → ℕ) (j : ι) (js : List ι)
+    (f : ι → ℕ) :
+    ((↑(f j ^ qc j) : ENNReal))⁻¹ * (↑(js.map (fun j => f j ^ qc j)).prod)⁻¹ =
+      (↑((j :: js).map (fun j => f j ^ qc j)).prod)⁻¹ := by
+  rw [List.map_cons, List.prod_cons, Nat.cast_mul,
+    ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
 
-@[simp]
-lemma generateSeed_nil : generateSeed spec qc [] = return ∅ := rfl
+variable {ι} [DecidableEq ι] (spec : OracleSpec ι) (qc : ι → ℕ) (j : ι) (js : List ι)
 
-@[simp]
-lemma generateSeed_cons : generateSeed spec qc (j :: js) = do
-    let xs ← replicate (qc j) ($ᵗ spec.Range j)
-    let rest ← generateSeed spec qc js
-    return rest.prependValues xs := rfl
-
-@[simp]
-lemma generateSeed_zero :
-    generateSeed spec 0 js = (return ∅ : ProbComp (OracleSpec.QuerySeed spec)) := by
-  induction js <;> simp [generateSeed, *]
-
-omit [∀ t : spec.Domain, SampleableType (spec.Range t)] in
 /-- Split a seed whose lengths match the budget for `j :: js` into its leading `qc j` answers at
 `j` and the remaining seed for `js`. The leading block has length `qc j`, the remainder matches
 the budget for `js`, and prepending the block recovers the original seed. -/
@@ -72,6 +65,22 @@ private lemma exists_split_of_length_cons {seed : QuerySeed spec}
     · simp only [Function.update_of_ne hi, h i, List.count_cons_of_ne hi.symm]
   · exact QuerySeed.prependValues_take_drop seed j (qc j)
 
+variable [∀ t : spec.Domain, SampleableType (spec.Range t)]
+
+@[simp]
+lemma generateSeed_nil : generateSeed spec qc [] = return ∅ := rfl
+
+@[simp]
+lemma generateSeed_cons : generateSeed spec qc (j :: js) = do
+    let xs ← replicate (qc j) ($ᵗ spec.Range j)
+    let rest ← generateSeed spec qc js
+    return rest.prependValues xs := rfl
+
+@[simp]
+lemma generateSeed_zero :
+    generateSeed spec 0 js = (return ∅ : ProbComp (OracleSpec.QuerySeed spec)) := by
+  induction js <;> simp [generateSeed, *]
+
 @[simp] lemma support_generateSeed : support (generateSeed spec qc js) =
     {seed : QuerySeed spec | ∀ i, (seed i).length = qc i * js.count i} := by
   induction js with
@@ -81,7 +90,7 @@ private lemma exists_split_of_length_cons {seed : QuerySeed spec}
   | cons j js ih =>
     ext seed
     simp only [generateSeed_cons, mem_support_bind_iff, support_replicate, ih, support_pure,
-      Set.mem_singleton_iff, Set.mem_setOf_eq]
+      Set.mem_singleton_iff, Set.mem_ofPred_eq]
     constructor
     · rintro ⟨xs, ⟨hlen, _⟩, rest, hrest_mem, rfl⟩ i
       rcases eq_or_ne i j with rfl | hi
@@ -173,16 +182,6 @@ lemma probOutput_pop_some_eq_probOutput_prepend
     finSupport (generateSeed spec qc js) ≠ ∅ :=
   (finSupport_nonempty_of_liftM_PMF _).ne_empty
 
-omit [DecidableEq ι] in
-/-- The product-of-inverses identity assembling the `j :: js` answer from the `j` and `js`
-parts: `(c ^ qc j)⁻¹ * (∏ js)⁻¹ = (∏ (j :: js))⁻¹` over `ℝ≥0∞`, valid because every factor is
-a finite natural-number cast. -/
-private lemma inv_natCast_pow_mul_inv_list_prod (qc : ι → ℕ) (j : ι) (js : List ι) (f : ι → ℕ) :
-    ((↑(f j ^ qc j) : ENNReal))⁻¹ * (↑(js.map (fun j => f j ^ qc j)).prod)⁻¹ =
-      (↑((j :: js).map (fun j => f j ^ qc j)).prod)⁻¹ := by
-  rw [List.map_cons, List.prod_cons, Nat.cast_mul,
-    ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
-
 /-- Factor the probability of sampling a fixed `seed` for `j :: js` into the probability of its
 leading `qc j` answers at `j` times the probability of the remaining seed for `js`. The split
 `rest.prependValues xs = seed` is unique because `prependValues` of a length-`qc j` block is
@@ -207,7 +206,7 @@ private lemma probOutput_generateSeed_cons_eq_mul (seed rest : QuerySeed spec)
     (support_replicate .. ▸ hxs').1 ((mem_support_pure_iff' (m := ProbComp) _ _).mp hpure)).1.trans
     hxs_eq.symm
 
-lemma probOutput_generateSeed [spec.Fintype] (seed : QuerySeed spec)
+lemma probOutput_generateSeed [∀ t, Fintype (spec.Range t)] (seed : QuerySeed spec)
     (h : seed ∈ support (generateSeed spec qc js)) :
     Pr[= seed | generateSeed spec qc js] =
       (↑(js.map (fun j => (Fintype.card (spec.Range j)) ^ qc j)).prod)⁻¹ := by
@@ -218,7 +217,7 @@ lemma probOutput_generateSeed [spec.Fintype] (seed : QuerySeed spec)
   | cons j js ih =>
     have hlen : ∀ i, (seed i).length = qc i * (j :: js).count i := by
       rw [support_generateSeed spec qc (j :: js)] at h
-      simpa [Set.mem_setOf_eq] using h
+      simpa [Set.mem_ofPred_eq] using h
     obtain ⟨xs, rest, hxs_len, hrest_len, hseed_eq⟩ :=
       exists_split_of_length_cons spec qc j js hlen
     have hrest_mem : rest ∈ support (generateSeed spec qc js) := by
@@ -227,23 +226,25 @@ lemma probOutput_generateSeed [spec.Fintype] (seed : QuerySeed spec)
       probOutput_replicate_uniformSample hxs_len, ih rest hrest_mem,
       inv_natCast_pow_mul_inv_list_prod qc j js fun j => Fintype.card (spec.Range j)]
 
-lemma probOutput_generateSeed' [spec.Fintype] [DecidableEq (QuerySeed spec)]
+lemma probOutput_generateSeed' [∀ t, Finite (spec.Range t)] [DecidableEq (QuerySeed spec)]
     (seed : QuerySeed spec) (h : seed ∈ support (generateSeed spec qc js)) :
     Pr[= seed | generateSeed spec qc js] =
       1 / (finSupport (generateSeed spec qc js)).card := by
+  have := fun t => Fintype.ofFinite (spec.Range t)
   rw [probOutput_generateSeed spec qc js seed h]
   exact probOutput_eq_inv_finSupport_card_of_liftM_PMF fun s hs =>
     probOutput_generateSeed spec qc js s hs
 
-lemma evalDist_generateSeed_eq_of_countEq [IsUniformSpec spec]
+lemma evalSPMF_generateSeed_eq_of_countEq
     (qc' : ι → ℕ) (js' : List ι)
     (hcount : ∀ i, qc i * js.count i = qc' i * js'.count i) :
-    𝒟[generateSeed spec qc js] = 𝒟[generateSeed spec qc' js'] := by
+    𝒮[generateSeed spec qc js] = 𝒮[generateSeed spec qc' js'] := by
   classical
+  let _ : DecidableEq (QuerySeed spec) := Classical.decEq _
   have hsupp : support (generateSeed spec qc js) = support (generateSeed spec qc' js') := by
     simp only [support_generateSeed, hcount]
   ext seed
-  change Pr[= seed | generateSeed spec qc js] = Pr[= seed | generateSeed spec qc' js']
+  rw [← probOutput_def, ← probOutput_def]
   by_cases hmem : seed ∈ support (generateSeed spec qc js)
   · have hfin : finSupport (generateSeed spec qc js) = finSupport (generateSeed spec qc' js') :=
       finSupport_eq_of_support_eq_coe (by rw [hsupp, coe_finSupport])
@@ -264,7 +265,7 @@ private lemma support_prependValues_iff_of_count_pos {t : ι} (u : spec.Range t)
         (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup) := by
   have ht_mem : t ∈ js := by
     by_contra h; simp [List.count_eq_zero_of_not_mem h] at hpos
-  simp only [support_generateSeed, Set.mem_setOf_eq]
+  simp only [support_generateSeed, Set.mem_ofPred_eq]
   constructor <;> intro h i <;> specialize h i <;> rcases eq_or_ne i t with rfl | hi
   · simp only [QuerySeed.prependValues_singleton, List.length_cons, Function.update_self,
       List.count_dedup, ht_mem, ↓reduceIte, mul_one] at h ⊢
@@ -310,9 +311,9 @@ lemma probOutput_generateSeed_prependValues [IsUniformSpec spec]
     have hcount : ∀ i, N i = N i * js.dedup.count i := fun i => by
       by_cases hi : i ∈ js <;> simp [N, List.count_dedup, hi, List.count_eq_zero_of_not_mem]
     have hmem_canon : s'.prependValues [u] ∈ support (generateSeed spec N js.dedup) := by
-      rw [support_generateSeed, Set.mem_setOf_eq] at hmem ⊢
+      rw [support_generateSeed, Set.mem_ofPred_eq] at hmem ⊢
       exact fun i => (hmem i).trans (hcount i)
-    rw [probOutput_congr rfl (evalDist_generateSeed_eq_of_countEq spec qc js N js.dedup hcount),
+    rw [probOutput_congr rfl (evalSPMF_generateSeed_eq_of_countEq spec qc js N js.dedup hcount),
       probOutput_generateSeed spec N js.dedup _ hmem_canon,
       probOutput_generateSeed spec qc_red js.dedup _ hmem_red]
     refine inv_natCast_list_prod_map_eq_inv_mul js.dedup
@@ -413,7 +414,7 @@ theorem generateSeed_expectedQueryCount_eq
         (sampleCost j)) :
     AddWriterT.expectedCostNat (probCompUnitQueryRun (generateSeed spec qc js)) =
       ((js.map fun j => qc j * sampleCost j).sum : ENNReal) :=
-  AddWriterT.expectedCostNat_eq_of_queryCostExactly
+  AddWriterT.expectedCost_eq_of_pathwiseCostEqOnSupport _ _ Measurable.of_discrete
     (generateSeed_queryCostExactly (spec := spec) qc js sampleCost hSample)
 
 end unitCost

@@ -2,47 +2,55 @@ import Lake
 open Lake DSL
 
 package VCVio where
+  description := "Machine-checked cryptographic proofs in Lean, built on Mathlib: oracle \
+computations, probability semantics, program logic, and lattice- and hash-based schemes."
+  license := "Apache-2.0"
   -- Settings applied to both builds and interactive editing
   leanOptions := #[
     ⟨`pp.unicode.fun, true⟩, -- pretty-prints `fun a ↦ b`
     ⟨`pp.proofs.withType, false⟩,
     ⟨`autoImplicit, false⟩,
     ⟨`relaxedAutoImplicit, false⟩,
+    -- Mathlib's standard linter set (it already includes `linter.style.whitespace`).
     ⟨`weak.linter.mathlibStandardSet, true⟩,
-    ⟨`weak.linter.modulesUpperCamelCase, true⟩,
-    ⟨`weak.linter.style.whitespace, true⟩,
+    -- Flag `public`/`private` modifiers that repeat the enclosing section's visibility.
+    ⟨`weak.linter.redundantVisibility, true⟩,
+    -- Use Mathlib's 1500-line limit downstream too; split files before exceeding it.
+    ⟨`weak.linter.style.longFile, .ofNat 1500⟩,
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
     -- diacritics (e.g. `Cătălin Hriţcu`).
     ⟨`weak.linter.unicodeLinter, false⟩
   ]
 
+/-- Run Mathlib's source-style checks and Batteries' environment linters, with an exact
+exception baseline. The Python coordinator invokes the upstream executables through Lake;
+each library is imported in a separate process and no native FFI executable is linked. -/
+@[lint_driver]
+script lint (args) do
+  let root ← getRootPackage
+  let libraries := (root.defaultTargets.push `VCVioCslib).filterMap fun library =>
+    (root.findLeanLib? library).map fun _ => library.toString
+  let child ← IO.Process.spawn {
+    cmd := "lake"
+    args := #["env", "python3", "scripts/lint.py", "--libraries",
+      String.intercalate "," libraries.toList] ++ args.toArray
+  }
+  child.wait
+
 /-
-Interop backends are intentionally disabled for the Lean 4.32 baseline. Their
+Interop backends are intentionally disabled for the Lean 4.34 baseline. Their
 source remains under `Interop/`, isolated from the trusted libraries by
 `scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
 build it. Re-enable a backend only once its upstream Lean library supports the
 repository's Lean version without a local compatibility layer.
 
 The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
-Lean 4.32 build. Subdirectory: `hax-lib/proof-libs/lean`.
+Lean 4.34 build. Subdirectory: `hax-lib/proof-libs/lean`.
 -/
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
 --   "492a34e3" / "hax-lib/proof-libs/lean"
-
-/-
-Loom2 provides the Loom-style WP / Triple program-logic abstractions used in
-`VCVio/ProgramLogic/`. Lean 4.32 includes the stable `Std.Do` foundations, but
-Loom2's `Std.Do'` layer retains the three-parameter `PredTrans`, `EPost`, and
-relational APIs consumed by VCVio. Migrating those clients to the redesigned
-`PostShape` API is separate work.
-
-The exact pin below is the validated Lean 4.32 compatibility commit.
--/
-require loom2 from git
-  "https://github.com/quangvdao/loom2" @
-  "2f65f311fae959c302586b07aa45390999b935d4"
 
 /-
 Aeneas now natively pins Lean and Mathlib v4.31.0. This dormant pin follows its
@@ -54,41 +62,51 @@ Subdirectory: `backends/lean`.
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
 
-require "leanprover-community" / "mathlib" @ git "v4.32.2"
-
+/-
+List PolyFun before the root Mathlib pin. Lake resolves dependencies in reverse
+declaration order, so this keeps the direct Mathlib requirement authoritative
+over PolyFun's inherited pin and makes `lake update --keep-toolchain`
+idempotent.
+-/
 require PolyFun from git
-  "https://github.com/Verified-zkEVM/PolyFun.git" @
-  "v4.32.2"
+  "https://github.com/Verified-zkEVM/PolyFun" @
+  "3710d71b28404a151b8d1f0ce080ea448778dec0"
+
+require "leanprover-community" / "mathlib" @ git "v4.34.0"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
+
+/-- Optional cslib-backed non-uniform complexity adapters. Kept outside the
+default `VCVio` umbrella so core VCVio remains backend-neutral. -/
+lean_lib VCVioCslib
 
 /-- Native FFI surface: `@[extern]` bindings (SHA-3/SHAKE, ML-KEM, ML-DSA,
 Falcon) and every module whose transitive imports reach them. Isolated here so
 `VCVio`/`LatticeCrypto` stay link-safe when the `third_party/` native backends
 are not checked out. May import `VCVio`/`LatticeCrypto`/`ToMathlib`; nothing in
 those libraries may import `Extern`. -/
-lean_lib Extern
+@[default_target] lean_lib Extern
 
 /-- Lattice-based cryptography: ring arithmetic, hardness assumptions, and scheme definitions. -/
-lean_lib LatticeCrypto
+@[default_target] lean_lib LatticeCrypto
 
 /-- Hash-based signatures: SLH-DSA (SPHINCS+, FIPS 205) proof-level specs and security.
 Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but nothing in
 `VCVio`/`ToMathlib`/`Extern`/`Interop` may import it. -/
-lean_lib HashSig
+@[default_target] lean_lib HashSig
 
 /-- Example constructions of cryptographic primitives. -/
-lean_lib Examples
+@[default_target] lean_lib Examples
 /-- Optional proof widget experiments and visualizations. -/
-lean_lib VCVioWidgets
-/-- Seperate section of the project for things that should be ported. -/
-lean_lib ToMathlib
+@[default_target] lean_lib VCVioWidgets
+/-- Separate section of the project for things that should be ported. -/
+@[default_target] lean_lib ToMathlib
 
 /-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.32 baseline build. -/
+excluded from the Lean 4.34 baseline build. -/
 lean_lib Interop
 
 /-
@@ -352,6 +370,53 @@ lean_lib HashSigTest where
 lean_exe smoke_test where
   root := `VCVioTest.Smoke
 
+/-- `lake test`: build the three test libraries, then run the smoke test and the SLH-DSA test
+executables. `lake test -- --ffi` additionally builds and runs the native-backed ML-KEM / ML-DSA /
+Falcon executables, which compile the vendored C backends under `third_party/`; that path is what
+the nightly FFI workflow runs and is never part of the per-PR CI. -/
+@[test_driver]
+script test (args) do
+  let step (cmdArgs : Array String) : ScriptM UInt32 := do
+    IO.println s!"# lake {" ".intercalate cmdArgs.toList}"
+    let child ← IO.Process.spawn { cmd := "lake", args := cmdArgs }
+    child.wait
+  let mut steps : Array (Array String) := #[
+    #["build", "VCVioTest", "LatticeCryptoTest", "HashSigTest"],
+    #["exe", "smoke_test"],
+    #["exe", "slhdsa_kat"],
+    #["exe", "slhdsa_c13_kat"],
+    #["exe", "slhdsa_data_codec_tests"],
+    #["exe", "slhdsa_primitive_tests"],
+    #["exe", "slhdsa_wots_tests"],
+    #["exe", "slhdsa_xmss_tests"],
+    #["exe", "slhdsa_fors_tests"],
+    #["exe", "slhdsa_hypertree_tests"],
+    #["exe", "slhdsa_external_tests"],
+    #["exe", "slhdsa_target_ledger_tests"],
+    #["exe", "slhdsa_encoded_ledger_tests"],
+    #["exe", "slhdsa_trace_target_tests"],
+    #["exe", "slhdsa_component_trace_tests"],
+    #["exe", "slhdsa_canonical_game_tests"],
+    #["exe", "slhdsa_wots_witness_tests"],
+    #["exe", "slhdsa_fors_witness_tests"],
+    #["exe", "slhdsa_xmss_witness_tests"],
+    #["exe", "slhdsa_hypertree_witness_tests"],
+    #["exe", "slhdsa_scheme_witness_tests"],
+    #["exe", "slhdsa_hmsg_witness_tests"],
+    #["exe", "slhdsa_suf_residual_tests"],
+    #["exe", "slhdsa_scheme_game_tests"],
+    #["exe", "slhdsa_composition_tests"],
+    #["exe", "slhdsa_suf_bound_tests"],
+    #["exe", "slhdsa_limited_profile_tests"]]
+  if args.contains "--ffi" then
+    steps := steps ++ #[#["exe", "mlkem_test"], #["exe", "mldsa_test"], #["exe", "falcon_test"]]
+  for cmdArgs in steps do
+    let rc ← step cmdArgs
+    if rc != 0 then
+      IO.eprintln s!"lake test: `lake {" ".intercalate cmdArgs.toList}` exited with code {rc}"
+      return rc
+  return 0
+
 /-- ML-KEM test executable (links against mlkem-native FFI). -/
 lean_exe mlkem_test where
   root := `LatticeCryptoTest.MLKEM.Main
@@ -371,3 +436,282 @@ lean_exe slhdsa_kat where
 /-- C13 known-answer test: pure-Lean keccak256 concrete verify vs the reference signer vector. -/
 lean_exe slhdsa_c13_kat where
   root := `HashSigTest.SLHDSA.C13KAT
+
+/-- Exact parameter-width and structured key/signature wire-codec regression suite. -/
+lean_exe slhdsa_data_codec_tests where
+  root := `HashSigTest.SLHDSA.DataCodecTests
+
+/-- SHA2/SHAKE vectors, address rejection, and all-profile primitive grammars. -/
+lean_exe slhdsa_primitive_tests where
+  root := `HashSigTest.SLHDSA.PrimitiveTests
+
+/-- WOTS+ checksum/construction exercise across all approved SHA2/SHAKE profiles. -/
+lean_exe slhdsa_wots_tests where
+  root := `HashSigTest.SLHDSA.WotsConstructionTests
+
+/-- Bounded XMSS construction, address-domain, and selected concrete-profile exercise. -/
+lean_exe slhdsa_xmss_tests where
+  root := `HashSigTest.SLHDSA.XmssConstructionTests
+
+/-- S07 FORS extraction, address-domain, tiny exhaustion, and selected concrete-profile exercise. -/
+lean_exe slhdsa_fors_tests where
+  root := `HashSigTest.SLHDSA.ForsConstructionTests
+
+/-- General-hypertree trajectories, checked addresses, and selected concrete construction. -/
+lean_exe slhdsa_hypertree_tests where
+  root := `HashSigTest.SLHDSA.HypertreeConformanceTests
+
+/-- Algorithms 21--25 message boundary and all twelve ACVP pre-hash digest/OID canaries. -/
+lean_exe slhdsa_external_tests where
+  root := `HashSigTest.SLHDSA.External
+
+/-- Sizes, distinctness, cross-role disjointness, and pinned membership of the reachable security
+target ledgers, on small validated profiles. -/
+lean_exe slhdsa_target_ledger_tests where
+  root := `HashSigTest.SLHDSA.ReachableTargets
+
+/-- Encoded distinctness of those ledgers under both approved address encoders, together with the
+encoder field boundaries and the out-of-domain aliasing that makes the obligation real. -/
+lean_exe slhdsa_encoded_ledger_tests where
+  root := `HashSigTest.SLHDSA.EncodedTargets
+
+/-- WOTS+ trace provenance: the union ledger's size and distinctness, and every public-hash query
+logged by the WOTS+ programs under both approved primitive bundles lands in the encoded ledger. -/
+lean_exe slhdsa_trace_target_tests where
+  root := `HashSigTest.SLHDSA.TraceTargets
+
+/-- FORS, XMSS, hypertree, and internal scheme trace provenance: every `thash` query those programs
+log under both approved primitive bundles lands in the encoded ledger, and the FORS, XMSS, and
+hypertree programs and key generation hit exactly the tweak set the FIPS 205 algorithm visits. -/
+lean_exe slhdsa_component_trace_tests where
+  root := `HashSigTest.SLHDSA.ComponentTraces
+
+/-- Canonical component games: the target caps of every instantiated game on a small profile and
+the FIPS sets, and the `H_msg` ITSR index map and keyed hash. -/
+lean_exe slhdsa_canonical_game_tests where
+  root := `HashSigTest.SLHDSA.CanonicalGames
+
+/-- WOTS+ forgery-to-witness extraction: over a toy bundle whose `Thash` collapses its input, the
+extractor returns the chain `F`-collision, the chain `F`-preimage, and the `T_len` second preimage,
+each satisfying its equation by evaluation, plus the empty and malformed-input canaries. -/
+lean_exe slhdsa_wots_witness_tests where
+  root := `HashSigTest.SLHDSA.WotsWitnesses
+
+/-- FORS forgery-to-witness extraction: over a toy bundle whose `Thash` collapses its input and is
+order and address sensitive, the extractor returns the `H`-collision at the exact FORS node
+address — at height one and again at the tree height — the `F`-preimage at the exact FORS leaf
+address, and the `T_k` second preimage, each satisfying its equation by evaluation, plus the
+honest-signature and malformed-input canaries and nine fabricated witnesses, two accepted and
+seven rejected. -/
+lean_exe slhdsa_fors_witness_tests where
+  root := `HashSigTest.SLHDSA.ForsWitnesses
+
+/-- XMSS forgery-to-witness extraction: over a toy bundle whose `Thash` collapses its input and is
+order and address sensitive, the extractor returns the `H`-collision at the exact `TREE` node
+address — at height one and again at the tree height — and the three WOTS+ witnesses at the exact
+address of the leaf the signature opens, each satisfying its equation by evaluation, plus the
+honest-signature and malformed-input canaries and eighteen fabricated witnesses, four accepted and
+fourteen rejected. -/
+lean_exe slhdsa_xmss_witness_tests where
+  root := `HashSigTest.SLHDSA.XmssWitnesses
+
+/-- Hypertree layer-walk extraction: over a three-layer toy profile whose trajectory changes tree,
+leaf and honest running message at every layer, the extractor reports the layer at which the
+forgery meets the honest hypertree and returns an XMSS witness there.  For the three WOTS+
+extractions each re-evaluation at a neighbouring layer's address, leaf and honest running message
+is required to fail; a fourth extraction returns an `H`-collision, whose branch reads the leaf only
+as a node index that layers zero and one share and never reads the honest running message at all,
+so it makes four re-evaluations rather than six — two on the address and two on the leaf, one of
+which is required to hold instead of to fail.  Plus the no-match, early-match and nine
+fabricated-witness canaries, three accepted and six rejected. -/
+lean_exe slhdsa_hypertree_witness_tests where
+  root := `HashSigTest.SLHDSA.HypertreeWitnesses
+
+/-- Scheme-level witness dispatch: over a two-layer toy profile with two FORS trees, a
+message-sensitive `H_msg` and a randomizer-sensitive `PRF_msg`, a verifying signature whose
+recovered FORS public key is the honest one routes to a FORS witness — at all three of that arm's
+constructors — and one whose recovered key differs routes to a hypertree witness; each arm's witness
+is required to fail at the other forgery *site*, and the arm selection is pinned by a pair of
+signatures that share a digest and take different arms. -/
+lean_exe slhdsa_scheme_witness_tests where
+  root := `HashSigTest.SLHDSA.SchemeWitnesses
+
+/-- `H_msg` interleaved-target-subset-resilience bridge: over the scheme-dispatch fixture's own
+two-layer profile, with two FORS trees and an `H_msg` that reads all four of its FIPS arguments, the
+two coordinate maps an ITSR index supplies are matched against hand-written `Adrs` tables and shown
+jointly injective over all sixty-four indices of the profile while neither is injective alone; the
+two conjuncts of the winning condition are falsified separately and one candidate wins; the
+first-uncovered-index extractor is run against four target sets that leave the first index
+uncovered, the second, both and neither; and the widening of the hashed input is exhibited in both
+directions — equivalent to the source's shape inside one key pair, and broken by one target query
+for a bundle whose `H_msg` ignores the key pair, which the fixture's own bundle refuses. -/
+lean_exe slhdsa_hmsg_witness_tests where
+  root := `HashSigTest.SLHDSA.HmsgWitnesses
+
+/-- Deterministic strong-unforgeability residual: over the scheme-dispatch fixture's own two-layer
+profile, a three-entry signing log whose twice-signed message carries two different hedged
+randomizers is read at each of its messages, the two log predicates of the generic SUF surface are
+exhibited at all four of their combinations with the fourth asserted unreachable, and four forgeries
+are sent through the residual's dichotomy: one whose randomizer is new at its message and so leaves
+the recorded pair fresh, one whose randomizer was logged at a *different* message and so also leaves
+it fresh, and two carrying a logged randomizer at that message, which are asserted to read as one
+and the same ITSR candidate, for which the pair is a recorded target, the winning condition fails on
+freshness while coverage is asserted still to hold over an index list asserted non-empty, and the
+first-uncovered-index extractor returns nothing.  The same three queries under FIPS 205's
+deterministic variant are run alongside, and leave one randomizer where the hedged default leaves
+two; a third, longer log pins all four lists the fixture reads a log into — the signatures at a
+message, their randomizers, the pair transcript and its embedding at the honest key pair — at sizes
+neither of the other two reaches, and is where the two `Bool` log predicates of that generic surface
+are read at four entries. -/
+lean_exe slhdsa_suf_residual_tests where
+  root := `HashSigTest.SLHDSA.SufResidual
+
+/-- Scheme games and the two experiment splits: over the scheme-dispatch fixture's own two-layer
+profile, with an `H_msg` whose message fold — unlike the one the earlier fixtures in this lane use,
+which is blind to it at every message, as this fixture asserts at two of them — is asserted to see
+FIPS 205's empty-context encoding at each of the three messages this fixture carries, a one-byte
+fold having collisions and no universal separation being claimed; over that bundle the dispatch
+selector is run against two mutant readers of itself, one with that encoding dropped and one reading
+its public seed off the secret key rather than the public key, and asserted to disagree with each at
+fixture data; two forgeries differing only in the FORS half, with the whole hypertree signature held
+fixed and one digest between them, are shown to take opposite arms, and a third differing only in
+the hypertree half to take the same arm as the signature it came from, which is the selector's
+structural blindness exhibited rather than hidden; a signing log is internalised to the messages the
+signer actually hashed and its four readings are pinned by value across three logs — a hedged log,
+the deterministic variant's, and a four-entry one — against a third mutant that prefixes one zero
+byte rather than two and is separated from the real map by the transcript alone; and both branches
+of the strong-unforgeability residual are run at the embedded transcript, with each of the five
+conjuncts the logged branch yields asserted on its own and three of them falsified alone.  Nothing
+probabilistic is run: every advantage and both instrumented experiments are `noncomputable`, so the
+two splits, the eight theorems bounding each half by the advantage it splits and by its own branch,
+and the two equations saying what each experiment records at a constant selector, are pinned by
+elaboration only. -/
+lean_exe slhdsa_scheme_game_tests where
+  root := `HashSigTest.SLHDSA.SchemeGames
+
+/-- The composition certificate and the conditional bound: nothing about the bound itself is
+runnable, because `Summands.bound` is `ℝ≥0∞`-valued and every advantage it sums is
+`noncomputable`, so what runs is the `Params`-level data the bound is parameterised by — the
+Winternitz coefficient `w - 2` at the scheme-dispatch fixture's two-layer profile and at the
+SP 800-230 reduced set, together with two parameter sets where the coefficient is zero and the
+whole undetectability summand leaves the bound — one with `lgw = 1`, which is *valid*, and one
+with `lgw = 0`, which is not valid and at which the `ℕ` subtraction truncates; the eight
+formula-derived target caps at both profiles; and a twelve-row routing table naming, per summand
+of the source expression, the cap role of the game it is the advantage of and whether one of this
+lane's witness families lands in that game, asserted to have three roleless rows, nine
+witness-backed ones and eight distinct backing branches, the FORS open-preimage branch backing two
+summands.  The two `T_l` compressions' caps are asserted to differ at the two-layer profile and to
+*coincide* at the reduced set; the fixture proves both generally, the coincidence at every
+one-layer set and the separation at every deeper one, and exhibits a *valid* profile with
+`k = len` at which the two games are the same term and nothing can separate them, so the arity
+separation the routing relies on is asserted where it is true — over the whole shipped parameter
+table.  Everything about the bound's own shape — both coefficients, the summand-to-game routing,
+each certificate field's game, the ten games' declared caps and the two open-preimage transports —
+is pinned by elaboration, at least one `example` per exported declaration, in a file no
+library-side edit can reach.  So is the strength of the bound's hypotheses: a vacuity canary
+builds a closed `Certificate` at an arbitrary validated parameter set from an address key and a
+public seed, and proves that the bound it names is at least one.  It builds a second one from
+those two and a counting interface at an open-preimage adversary of advantage one, whose three
+`ℝ≥0∞` fields are the experiment's own quantities — so tying those fields to the experiment
+refuses the first certificate and not the second — and proves that over a node type with at least
+two elements such an interface exists exactly when that adversary's two induced reductions satisfy
+`DSPR + 3 · TCR ≥ 1`. -/
+lean_exe slhdsa_composition_tests where
+  root := `HashSigTest.SLHDSA.Composition
+
+/-- The strong-unforgeability residual bound: nothing about the bound itself is runnable, because
+every statement the module exports is about a probability and every probability in it is
+`noncomputable`, so what runs is the decidable shadow of the residual — which branch of the
+same-message selector a forgery lands in, read at three signing logs over the scheme-games
+fixture's own two-layer profile.  Five forgeries are sent through it: one under randomness no log
+carries, one carrying the randomizer the log recorded at a *different* message, and three that are
+second signatures under a randomizer the log did carry at this message, one at each of the hedged
+log's two entries and one at the deterministic variant's single one.  Each is asserted to satisfy
+the same-message experiment's own freshness conjunct first, and the logged signature itself is
+asserted to fail it.  The two FIPS 205 §9.2 variants are compared at the same three queries: the
+hedged default leaves two randomizers at the twice-signed message and the deterministic alternative
+one, which is asserted to move a forgery between the two branches in both directions — and the
+deterministic log's own second signature is asserted to be on the *logged* branch, so that branch is
+inhabited under either variant.  A third reader, sweeping the whole log rather than the entries at
+one message, is asserted to disagree with the real one at the cross-message forgery and to agree
+with it at a forgery under randomness no log carries and at the deterministic log's second
+signature.  Everything about the bound's own shape — the three-part
+expression, the unit coefficient on each residual, the two equivalences saying the residual cancels,
+and each of the fifteen exported statements — is pinned by elaboration, at least one `example` per
+declaration, in a file no library-side edit can reach.  So is the strength of its hypotheses: the
+vacuity canary rebuilds the composition fixture's free certificate and proves that at it the
+strong-unforgeability headline bounds the advantage by something at least one. -/
+lean_exe slhdsa_suf_bound_tests where
+  root := `HashSigTest.SLHDSA.SufBound
+
+/-- The bound at the SP 800-230 reduced profile: nothing about the corollaries is runnable,
+because each instantiates a statement about a probability and every probability in them is
+`noncomputable`, so what runs is the `Params`-level arithmetic they are stated at — the profile's
+seven parameters and the width, chain count, digest and signature sizes they derive; the
+undetectability coefficient the profile turns from `w - 2` into the numeral two, asserted beside
+the fourteen every FIPS 205 set gives instead; the eight target caps as numerals, together with
+the two structural counts at `d = 1` and four arithmetic relations between the caps that a
+mis-transcribed formula breaks; and a twelve-row summand table carrying, per summand of the source
+expression, its game's cap role, that cap at this profile, and the arity of the hash the game
+attacks — no column of which is only written down, the twelve names being checked in the source's
+order, the caps against `targetCount`, each role against the name its own row carries, and all
+nine arities against literals.  Two cells of that table go dark at this profile and both are
+asserted rather than hidden: the two `T_l` compressions have the same cap at every one-layer
+parameter set and are separated only by their arity, six against sixty-eight, and the WOTS+-`F`
+undetectability and preimage roles have the same cap at *every* parameter set and the same arity
+too, so only their games' types separate them — which the pins read off the two certificate
+fields.  Everything about the corollaries' own shape — the nine carrier instances none of which
+instance search finds at this bundle, the five carriers they are stated at, both coefficients as
+numerals, the ten games' caps read at the concrete bundle, the ten attacked-member statements
+that carry the table's nine arities, and each of the five exported corollaries — is pinned by
+elaboration, at least one `example` per exported declaration, in a file no library-side edit can
+reach.  So is their strength: the vacuity canary rebuilds the composition fixture's free
+certificate at this bundle and proves that at it both headlines bound the advantage by something
+at least one. -/
+lean_exe slhdsa_limited_profile_tests where
+  root := `HashSigTest.SLHDSA.LimitedProfile
+
+/-- Kernel-level axiom / `sorry` accounting across the non-test libraries, with a
+committed regression baseline (`scripts/axiom_baseline.json`). Complements the Interop
+TCB-isolation gate: that gate bounds imports, this one accounts for the axioms every
+declaration ultimately rests on. Runtime-imports built oleans, so run it after
+`lake build`. See `scripts/AxiomSweep.lean`. -/
+lean_exe axiomsweep where
+  srcDir := "scripts"
+  root := `AxiomSweep
+  supportInterpreter := true
+
+/-- Whole-library accounting of eagerly-initialised compiled code: the constants the Lean
+backend evaluates when their module is loaded, before any `main` runs, and the
+compiler-generated declarations it initialises beside them, when what runs builds an
+enumeration of a type. Gated against a list of accepted constant names scoped by library
+(`scripts/init_sweep_baseline.json`), the allowlist idea `scripts/axiom_baseline.json` uses.
+Complements the axiom sweep: that one accounts for what the kernel accepted, this one for
+what the *binary* does at start-up. Runtime-imports built oleans, so run it after
+`lake build`. See `scripts/InitSweep.lean`. -/
+lean_exe initsweep where
+  srcDir := "scripts"
+  root := `InitSweep
+  supportInterpreter := true
+
+/-- Isolated fixtures for the init-sweep ratchet, exercised by `scripts/test-initsweep.sh`.
+Not a default target, and deliberately carrying the spellings of the instance that motivated
+the gate: the plain one, the `noncomputable` one that looks like a fix and is not, the named
+instance that a pure entry-point test accepts, the `decide` over a bounded quantifier that
+writes no instance at all, the `opaque` value the kernel hides, the specialisation that has
+no environment constant to read, and the `Fintype.ofFinite` one that really is a fix. Every
+carrier type is tiny because the gate is a shape check and a large carrier would only cost
+build time. -/
+lean_lib VCVioInitSweepTestFixtures where
+  srcDir := "scripts"
+  globs := #[.submodules `VCVioInitSweepTestFixtures]
+
+/-- Isolated fixtures for the axiom-sweep mutation matrix, exercised by
+`scripts/test-axiomsweep.sh`. Not a default target, and deliberately carrying synthetic
+kernel taint: `sorryAx` reached directly and transitively, an axiom occurring only in a
+type, a mutual-inductive family whose taint crosses the cycle, and names that imitate the
+generated `._native.` suffix. Kept out of every aggregate so the taint stays quarantined
+from the swept libraries. -/
+lean_lib VCVioAxiomSweepTestFixtures where
+  srcDir := "scripts"
+  globs := #[.submodules `VCVioAxiomSweepTestFixtures]

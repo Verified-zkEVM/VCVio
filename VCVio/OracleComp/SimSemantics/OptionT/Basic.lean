@@ -28,14 +28,30 @@ universe u v w
 
 variable {α β γ : Type u}
 
-variable {ι} {spec : OracleSpec ι} {r n : Type u → Type*}
-    [Monad n] [LawfulMonad n] (impl : QueryImpl spec n)
+variable {ι} {spec : OracleSpec ι} {r n : Type u → Type*} [Monad n] (impl : QueryImpl spec n)
 
-omit [LawfulMonad n] in
 @[simp, grind =] lemma simulateQ_option_elim (x : Option α) (my : OracleComp spec β)
     (my' : α → OracleComp spec β) : simulateQ impl (x.elim my my') =
     x.elim (simulateQ impl my) (fun x => simulateQ impl (my' x)) := by
   cases x <;> simp
+
+/-- `simulateQ` preserves a pure `OptionT` computation. -/
+@[simp] lemma simulateQ_optionT_pure (x : α) :
+    simulateQ impl (pure x : OptionT (OracleComp spec) α) = (pure x : OptionT n α) := by
+  apply OptionT.ext
+  change simulateQ impl (pure (some x)) = pure (some x)
+  exact simulateQ_pure impl (some x)
+
+/-- `simulateQ` maps an `OptionT` `failure` (whose run is the underlying `pure none`) to
+`failure`: the `failure` companion of `simulateQ_pure` for `OptionT`-monadic computations.
+Both sides are definitionally `pure none`, but the `failure` spelling is what a failed
+`guard` rewrites to in a simulated verifier body. -/
+lemma simulateQ_optionT_failure :
+    simulateQ impl ((failure : OptionT (OracleComp spec) α) : OracleComp spec (Option α))
+      = (failure : OptionT n α) :=
+  simulateQ_pure impl none
+
+variable [LawfulMonad n]
 
 @[simp, grind =] lemma simulateQ_option_elimM (mx : OracleComp spec (Option α))
     (my : OracleComp spec β) (my' : α → OracleComp spec β) :
@@ -54,18 +70,12 @@ lemma simulateQ_optionT_bind_run
   refine bind_congr fun x => ?_
   induction x <;> simp
 
-@[deprecated (since := "2026-06-25")]
-alias simulateQ_optionT_bind' := simulateQ_optionT_bind_run
-
 /-- `simulateQ` distributes through `OptionT.bind`, stated via `Option.elimM`. -/
 lemma simulateQ_optionT_bind_elimM
     (mx : OptionT (OracleComp spec) α) (f : α → OptionT (OracleComp spec) β) :
     simulateQ impl (mx >>= f).run =
     Option.elimM (simulateQ impl mx.run) (pure none) (fun a => simulateQ impl (f a).run) := by
   simp
-
-@[deprecated (since := "2026-06-25")]
-alias simulateQ_optionT_bind'' := simulateQ_optionT_bind_elimM
 
 /-- `simulateQ` distributes through `OptionT.bind`: the simulated OptionT-bind is the
     OptionT-bind of the simulated pieces. -/
@@ -206,16 +216,6 @@ lemma simulateQ_optionT_forIn_yield_pure_some (xs : List α) (init : β)
           = (pure (ForInStep.yield init) : OptionT n (ForInStep β)) from hbody x, pure_bind]
       exact ih
 
-omit [LawfulMonad n] in
-/-- `simulateQ` maps an `OptionT` `failure` (whose run is the underlying `pure none`) to
-`failure`: the `failure` companion of `simulateQ_pure` for `OptionT`-monadic computations.
-Both sides are definitionally `pure none`, but the `failure` spelling is what a failed
-`guard` rewrites to in a simulated verifier body. -/
-lemma simulateQ_optionT_failure :
-    simulateQ impl ((failure : OptionT (OracleComp spec) α) : OracleComp spec (Option α))
-      = (failure : OptionT n α) :=
-  simulateQ_pure impl none
-
 /-- Failing companion to `simulateQ_optionT_forIn_yield_pure_some`: if each loop body, under
 `simulateQ`, resolves to `pure (some (ForInStep.yield init))` when its per-element condition
 `cond a` holds and to `pure none` otherwise, and *some* element of the list fails its
@@ -246,7 +246,7 @@ lemma simulateQ_optionT_forIn_yield_pure_none (xs : List α) (init : β)
         rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
             OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
             = (pure (ForInStep.yield init) : OptionT n (ForInStep β)) by
-          rw [hbody x, if_pos hx]
+          rw [hbody x, ite_eq_left hx]
           rfl, pure_bind]
         exact ih (fun hall ↦ hfail (List.forall_mem_cons.mpr ⟨hx, hall⟩))
       · change ((simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
@@ -255,9 +255,6 @@ lemma simulateQ_optionT_forIn_yield_pure_none (xs : List α) (init : β)
         rw [show (simulateQ impl ((body x init : OptionT (OracleComp spec) (ForInStep β)) :
             OracleComp spec (Option (ForInStep β))) : OptionT n (ForInStep β))
             = (failure : OptionT n (ForInStep β)) by
-          rw [hbody x, if_neg hx]
+          rw [hbody x, ite_eq_right hx]
           rfl, failure_bind]
         rfl
-
-@[deprecated (since := "2026-06-25")]
-alias simulateQ_optionT_mapM_pure := simulateQ_optionT_vector_mapM_pure

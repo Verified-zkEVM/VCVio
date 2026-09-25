@@ -24,14 +24,10 @@ namespace PRFTagReader
 
 section Theorems
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
 
 /-- The number of still-available successful tag sessions in a bad-event state. -/
-def unlinkBadRemaining (st : UnlinkBadState TagId Nonce Digest) : ℕ :=
+def unlinkBadRemaining [Fintype TagId] (st : UnlinkBadState TagId Nonce Digest) : ℕ :=
   (Finset.univ : Finset TagId).sum fun tag => sessionsPerTag - st.sessionsUsed tag
 
 /-- Reachable bad-event states only cache nonces that came from successful tag sessions. For each
@@ -43,7 +39,7 @@ def unlinkBadCacheBounded (st : UnlinkBadState TagId Nonce Digest) : Prop :=
       ∀ nonce : Nonce, (st.responses (tag, nonce)).isSome = true → nonce ∈ nonces
 
 /-- State produced by a successful `RF_bad` tag query after sampling `nonce` and `auth`. -/
-def unlinkBadTagNext
+def unlinkBadTagNext [DecidableEq TagId] [DecidableEq Nonce]
     (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
     (nonce : Nonce) (auth : Digest) : UnlinkBadState TagId Nonce Digest :=
   { sessionsUsed := Function.update st.sessionsUsed tag (st.sessionsUsed tag + 1)
@@ -52,8 +48,6 @@ def unlinkBadTagNext
     bad := st.bad || (st.responses (tag, nonce)).isSome
     cacheBad := st.cacheBad }
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq TagId] [DecidableEq Nonce]
-    [SampleableType Nonce] [DecidableEq Digest] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- The initial state satisfies `unlinkBadCacheBounded`: the response cache is empty, so the empty
 witness set trivially bounds each tag's nonce count. -/
 lemma unlinkBadCacheBounded_init :
@@ -63,10 +57,8 @@ lemma unlinkBadCacheBounded_init :
   intro nonce hcached
   simp [UnlinkBadState.init] at hcached
 
-omit [Nonempty TagId] [DecidableEq TagId] [DecidableEq Nonce]
-    [SampleableType Nonce] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- The `unlinkBadReaderQueryImpl` does not modify the state. -/
-private lemma unlinkBadReaderQueryImpl_state_eq
+private lemma unlinkBadReaderQueryImpl_state_eq [Fintype TagId] [DecidableEq Digest]
     (transcript : TagTranscript Nonce Digest)
     (st : UnlinkBadState TagId Nonce Digest) :
     ∀ z ∈ support ((unlinkBadReaderQueryImpl transcript).run st), z.2 = st := by
@@ -74,49 +66,19 @@ private lemma unlinkBadReaderQueryImpl_state_eq
   unfold unlinkBadReaderQueryImpl at hz
   simpa using congrArg Prod.snd hz
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- When the tag still has a free slot (`sessionsUsed tag < sessionsPerTag`), the tag oracle samples
-a fresh nonce and digest and advances the state via `unlinkBadTagNext`. -/
-private lemma unlinkBadTagQueryImpl_run_of_lt
+/-- If any tag still has a free slot, the total remaining budget is positive. Used to justify
+the `- 1` arithmetic in `unlinkBadRemaining_tagNext`. -/
+lemma unlinkBadRemaining_pos_of_slot [Fintype TagId]
     (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
     (hslot : st.sessionsUsed tag < sessionsPerTag) :
-    (unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st =
-      (($ᵗ Nonce : ProbComp Nonce) >>= fun nonce =>
-        ($ᵗ Digest : ProbComp Digest) >>= fun auth =>
-          pure (some ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest),
-            unlinkBadTagNext tag st nonce auth)) := by
-  simp [unlinkBadTagQueryImpl, unlinkBadTagNext, hslot]
+    0 < unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st :=
+  lt_of_lt_of_le (Nat.sub_pos_of_lt hslot) (by
+    simpa [unlinkBadRemaining] using Finset.single_le_sum (s := (Finset.univ : Finset TagId))
+      (f := fun tag' => sessionsPerTag - st.sessionsUsed tag')
+      (fun _ _ => Nat.zero_le _) (Finset.mem_univ tag))
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- When the tag has exhausted its slot budget, the tag oracle returns `none` and leaves the state
-unchanged. -/
-private lemma unlinkBadTagQueryImpl_run_of_not_lt
-    (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
-    (hslot : ¬ st.sessionsUsed tag < sessionsPerTag) :
-    (unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st = pure (none, st) := by
-  simp [unlinkBadTagQueryImpl, hslot]
+variable [DecidableEq TagId] [DecidableEq Nonce]
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Digest] [NeZero sessionsPerTag] in
-/-- Every outcome in the support of a successful tag query has the form
-`(some ⟨nonce, auth⟩, unlinkBadTagNext tag st nonce auth)` for some sampled `nonce` and `auth`. -/
-private lemma unlinkBadTagQueryImpl_support_of_lt
-    (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
-    (hslot : st.sessionsUsed tag < sessionsPerTag) :
-    ∀ z ∈ support ((unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st),
-      ∃ nonce auth,
-        z = (some ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest),
-          unlinkBadTagNext tag st nonce auth) := by
-  intro z hz
-  rw [unlinkBadTagQueryImpl_run_of_lt (sessionsPerTag := sessionsPerTag) tag st hslot,
-    mem_support_bind_iff] at hz
-  rcases hz with ⟨nonce, _, hz⟩
-  rw [mem_support_bind_iff] at hz
-  rcases hz with ⟨auth, _, hz⟩
-  simp only [support_pure, Set.mem_singleton_iff] at hz
-  exact ⟨nonce, auth, hz⟩
-
-omit [Fintype TagId] [Nonempty TagId] [SampleableType Nonce]
-    [DecidableEq Digest] [SampleableType Digest] in
 /-- `unlinkBadCacheBounded` is preserved by a successful tag step: the new nonce is added to the
 witness set, keeping its cardinality within the incremented session counter. -/
 lemma unlinkBadTagNext_cacheBounded
@@ -145,8 +107,6 @@ lemma unlinkBadTagNext_cacheBounded
       exact hS nonce' (by
         simpa [unlinkBadTagNext, QueryCache.cacheQuery_of_ne _ _ hkey] using hcached)
 
-omit [Fintype TagId] [Nonempty TagId]
-    [SampleableType Nonce] [DecidableEq Digest] [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- A successful tag step does not push any tag's session counter above `sessionsPerTag`,
 preserving the `sessionsUsed ≤ sessionsPerTag` invariant needed by the induction. -/
 lemma unlinkBadTagNext_sessionsUsed_le
@@ -162,11 +122,9 @@ lemma unlinkBadTagNext_sessionsUsed_le
     omega
   · simpa [unlinkBadTagNext, Function.update_of_ne htag] using hused tag'
 
-omit [Nonempty TagId] [SampleableType Nonce] [DecidableEq Digest]
-    [SampleableType Digest] [NeZero sessionsPerTag] in
 /-- A successful tag step decrements `unlinkBadRemaining` by exactly 1, which is the key
 step in the union-bound induction. -/
-lemma unlinkBadRemaining_tagNext
+lemma unlinkBadRemaining_tagNext [Fintype TagId]
     (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
     (nonce : Nonce) (auth : Digest)
     (hslot : st.sessionsUsed tag < sessionsPerTag) :
@@ -195,20 +153,46 @@ lemma unlinkBadRemaining_tagNext
     _ = unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st - 1 := by
           simp [unlinkBadRemaining, remainingAt]
 
-omit [DecidableEq TagId] [DecidableEq Nonce] [DecidableEq Digest]
-    [Nonempty TagId] [SampleableType Nonce] [SampleableType Digest] [NeZero sessionsPerTag] in
-/-- If any tag still has a free slot, the total remaining budget is positive. Used to justify
-the `- 1` arithmetic in `unlinkBadRemaining_tagNext`. -/
-lemma unlinkBadRemaining_pos_of_slot
+variable [SampleableType Nonce] [SampleableType Digest]
+
+/-- When the tag still has a free slot (`sessionsUsed tag < sessionsPerTag`), the tag oracle samples
+a fresh nonce and digest and advances the state via `unlinkBadTagNext`. -/
+private lemma unlinkBadTagQueryImpl_run_of_lt
     (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
     (hslot : st.sessionsUsed tag < sessionsPerTag) :
-    0 < unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st :=
-  lt_of_lt_of_le (Nat.sub_pos_of_lt hslot) (by
-    simpa [unlinkBadRemaining] using Finset.single_le_sum (s := (Finset.univ : Finset TagId))
-      (f := fun tag' => sessionsPerTag - st.sessionsUsed tag')
-      (fun _ _ => Nat.zero_le _) (Finset.mem_univ tag))
+    (unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st =
+      (($ᵗ Nonce : ProbComp Nonce) >>= fun nonce =>
+        ($ᵗ Digest : ProbComp Digest) >>= fun auth =>
+          pure (some ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest),
+            unlinkBadTagNext tag st nonce auth)) := by
+  simp [unlinkBadTagQueryImpl, unlinkBadTagNext, hslot]
 
-omit [Fintype TagId] [Nonempty TagId] [DecidableEq Digest] [NeZero sessionsPerTag] in
+/-- When the tag has exhausted its slot budget, the tag oracle returns `none` and leaves the state
+unchanged. -/
+private lemma unlinkBadTagQueryImpl_run_of_not_lt
+    (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
+    (hslot : ¬ st.sessionsUsed tag < sessionsPerTag) :
+    (unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st = pure (none, st) := by
+  simp [unlinkBadTagQueryImpl, hslot]
+
+/-- Every outcome in the support of a successful tag query has the form
+`(some ⟨nonce, auth⟩, unlinkBadTagNext tag st nonce auth)` for some sampled `nonce` and `auth`. -/
+private lemma unlinkBadTagQueryImpl_support_of_lt
+    (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
+    (hslot : st.sessionsUsed tag < sessionsPerTag) :
+    ∀ z ∈ support ((unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st),
+      ∃ nonce auth,
+        z = (some ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest),
+          unlinkBadTagNext tag st nonce auth) := by
+  intro z hz
+  rw [unlinkBadTagQueryImpl_run_of_lt (sessionsPerTag := sessionsPerTag) tag st hslot,
+    mem_support_bind_iff] at hz
+  rcases hz with ⟨nonce, _, hz⟩
+  rw [mem_support_bind_iff] at hz
+  rcases hz with ⟨auth, _, hz⟩
+  simp only [support_pure, Set.mem_singleton_iff] at hz
+  exact ⟨nonce, auth, hz⟩
+
 /-- A single tag step raises `bad` with probability at most `sessionsUsed tag * maxNonceProb`:
 the new nonce collides with one of the (at most `sessionsUsed tag`) previously cached nonces,
 each matchable with probability at most `maxNonceProb`. -/
@@ -265,7 +249,8 @@ private lemma unlinkBadTagStep_bad_le
   · rw [unlinkBadTagQueryImpl_run_of_not_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
     simp [hbad]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
+variable [Fintype TagId] [DecidableEq Digest]
+
 /-- For any adversary and state `st` with `bad = false`,
 the probability that bad fires is at most
 `(∑ tag, sessionsPerTag − st.sessionsUsed tag) * sessionsPerTag * maxNonceProb`. -/
@@ -372,7 +357,6 @@ private lemma simulateQ_unlinkBad_prob_le
         _ = (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st : ℝ≥0∞) *
               ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := one_mul _
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- A pointwise bound on the nonce sampler turns the bad-event probability into an explicit session
 collision bound. -/
 theorem unlinkBadExp_le_sessionCollisionBound

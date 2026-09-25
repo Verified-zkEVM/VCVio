@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
 
 /-!
@@ -58,22 +59,26 @@ public parameter, the commitment (first component) has the same distribution
 regardless of the committed message. -/
 def PerfectlyHiding (cs : CommitmentScheme PP M C D) : Prop :=
   ∀ pp, pp ∈ support cs.setup →
-    ∀ m₁ m₂, 𝒟[Prod.fst <$> cs.commit pp m₁] =
-      𝒟[Prod.fst <$> cs.commit pp m₂]
+    ∀ m₁ m₂, 𝒮[Prod.fst <$> cs.commit pp m₁] =
+      𝒮[Prod.fst <$> cs.commit pp m₂]
 
 /-! ### Computational hiding -/
 
 /-- A two-phase hiding adversary: phase 1 chooses two messages given the public parameters;
 phase 2 receives the commitment and tries to guess which message was committed.
 `State` carries information between the two phases. -/
-structure HidingAdv (PP M C : Type) where
+structure HidingAdversary (PP M C : Type) where
+  /-- State carried from the message-choice phase to the distinguishing phase. -/
   State : Type
+  /-- Given the public parameters, choose the two messages and a state. -/
   chooseMessages : PP → ProbComp (M × M × State)
+  /-- Given the state and the commitment, guess which message was committed. -/
   distinguish : State → C → ProbComp Bool
 
 /-- Hiding experiment: the adversary chooses two messages, the challenger commits
 to one at random, and the adversary tries to guess which. -/
-def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdv PP M C) : ProbComp Bool := do
+def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdversary PP M C) :
+    ProbComp Bool := do
   let pp ← cs.setup
   let (m₁, m₂, st) ← adversary.chooseMessages pp
   let b ← $ᵗ Bool
@@ -83,19 +88,19 @@ def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdv PP M C) : 
 
 /-- The hiding advantage of an adversary: how far its winning probability in `hidingExp`
 deviates from the `1 / 2` of a random guess. -/
-noncomputable def hidingAdvantage (cs : CommitmentScheme PP M C D) (adversary : HidingAdv PP M C) :
-    ℝ :=
-  |(Pr[= true | cs.hidingExp adversary]).toReal - 1 / 2|
+noncomputable def hidingAdvantage (cs : CommitmentScheme PP M C D)
+    (adversary : HidingAdversary PP M C) : ℝ :=
+  |(𝒟[cs.hidingExp adversary] {true}).toReal - 1 / 2|
 
 /-! ### Computational binding -/
 
 /-- A binding adversary outputs a commitment with two openings to different messages. -/
-def BindingAdv (PP M C D : Type) := PP → ProbComp (C × M × D × M × D)
+def BindingAdversary (PP M C D : Type) := PP → ProbComp (C × M × D × M × D)
 
 /-- Binding experiment: the adversary tries to open a single commitment to two
 distinct messages. Succeeds iff both openings verify and the messages differ. -/
-def bindingExp [DecidableEq M] (cs : CommitmentScheme PP M C D) (adversary : BindingAdv PP M C D) :
-    ProbComp Bool := do
+def bindingExp [DecidableEq M] (cs : CommitmentScheme PP M C D)
+    (adversary : BindingAdversary PP M C D) : ProbComp Bool := do
   let pp ← cs.setup
   let (c, m₁, d₁, m₂, d₂) ← adversary pp
   return (decide (m₁ ≠ m₂) && cs.verify pp m₁ c d₁ && cs.verify pp m₂ c d₂)
@@ -103,8 +108,8 @@ def bindingExp [DecidableEq M] (cs : CommitmentScheme PP M C D) (adversary : Bin
 /-- The binding advantage of an adversary: its probability of winning `bindingExp` by
 opening a single commitment to two distinct messages. -/
 noncomputable def bindingAdvantage [DecidableEq M] (cs : CommitmentScheme PP M C D)
-    (adversary : BindingAdv PP M C D) : ℝ≥0∞ :=
-  Pr[= true | cs.bindingExp adversary]
+    (adversary : BindingAdversary PP M C D) : ℝ≥0∞ :=
+  𝒟[cs.bindingExp adversary] {true}
 
 /-! ### Trapdoor extractability -/
 
@@ -124,7 +129,7 @@ the scheme's normal setup. Required for reductions that swap in the
 trapdoor setup without the adversary noticing. -/
 def TrapdoorExtractor.SetupConsistent {TD : Type} (extractor : TrapdoorExtractor PP TD C M)
     (cs : CommitmentScheme PP M C D) : Prop :=
-  𝒟[Prod.fst <$> extractor.setupExtract] = 𝒟[cs.setup]
+  𝒮[Prod.fst <$> extractor.setupExtract] = 𝒮[cs.setup]
 
 /-- Extraction experiment: generate parameters with trapdoor, honestly commit
 to message `m`, then check whether the extractor recovers `m` from the commitment.

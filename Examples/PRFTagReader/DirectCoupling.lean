@@ -50,14 +50,37 @@ underlying facts in the explicit shape used by the direct coupling argument.
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
 
 namespace PRFTagReader
 
 section DirectCoupling
 
-variable {TagId Nonce Digest : Type}
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest : Type} {sessionsPerTag : ℕ}
+
+/-! ### Single-side reader cells -/
+
+/-- Single-side reader cells at a fixed transcript: the set of
+`((TagId × Fin sessionsPerTag) × Nonce)` cells the single-session reader inspects at
+`transcript`, namely `{((tag, sid), transcript.nonce) | tag, sid}`. -/
+def sReaderCellsFinset [Fintype TagId] [DecidableEq TagId] [DecidableEq Nonce]
+    (transcript : TagTranscript Nonce Digest) :
+    Finset ((TagId × Fin sessionsPerTag) × Nonce) :=
+  (Finset.univ : Finset (TagId × Fin sessionsPerTag)).image
+    (fun slot => (slot, transcript.nonce))
+
+/-- Single-side reader-cell cardinality: `|TagId| * sessionsPerTag`. -/
+lemma card_sReaderCellsFinset [Fintype TagId] [DecidableEq TagId] [DecidableEq Nonce]
+    (transcript : TagTranscript Nonce Digest) :
+    (sReaderCellsFinset (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+      (sessionsPerTag := sessionsPerTag) transcript).card =
+        Fintype.card TagId * sessionsPerTag := by
+  unfold sReaderCellsFinset
+  rw [Finset.card_image_of_injective _
+    (fun _ _ h => (Prod.mk.injEq _ _ _ _).mp h |>.1), Finset.card_univ,
+    Fintype.card_prod, Fintype.card_fin]
+
+variable [NeZero sessionsPerTag]
 
 /-! ### The cell-identification embedding -/
 
@@ -120,11 +143,16 @@ cells, so the multiple-session sub-table is uniform whenever the single-session 
 lemma evalDist_slotZeroSubTable_uniformSample
     [Fintype TagId] [DecidableEq TagId]
     [Fintype Nonce] [DecidableEq Nonce]
-    [Finite Digest] [Nonempty Digest] [SampleableType Digest] :
+    [Finite Digest] [Nonempty Digest] [SampleableType Digest]
+    [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
+    [EvalDistSemantics ProbComp] [LawfulEvalDistSemantics ProbComp]
+    (hSmall : 𝒟[$ᵗ (TagId × Nonce → Digest)] = uniformOn Set.univ)
+    (hLarge : 𝒟[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] = uniformOn Set.univ) :
     𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
         fun gS => pure (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)] =
-      𝒟[$ᵗ (TagId × Nonce → Digest)] :=
-  evalDist_uniformSample_map_comp_injective (R := Digest)
+      𝒟[$ᵗ (TagId × Nonce → Digest)] := by
+  rw [bind_pure_comp]
+  exact evalDist_map_table_comp_injective _ _ hSmall hLarge
     (slotZeroEmbed_injective (TagId := TagId) (Nonce := Nonce)
       (sessionsPerTag := sessionsPerTag))
 
@@ -139,14 +167,6 @@ multiple-session reader inspects at `transcript`, namely `{(tag, transcript.nonc
 def mReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
     Finset (TagId × Nonce) :=
   (Finset.univ : Finset TagId).image (fun tag => (tag, transcript.nonce))
-
-/-- Single-side reader cells at a fixed transcript: the set of
-`((TagId × Fin sessionsPerTag) × Nonce)` cells the single-session reader inspects at
-`transcript`, namely `{((tag, sid), transcript.nonce) | tag, sid}`. -/
-def sReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
-    Finset ((TagId × Fin sessionsPerTag) × Nonce) :=
-  (Finset.univ : Finset (TagId × Fin sessionsPerTag)).image
-    (fun slot => (slot, transcript.nonce))
 
 /-- **Reader-cell inclusion under the embedding.** At any fixed transcript, the image of the
 multiple-side reader cells under `slotZeroEmbed` is contained in the single-side reader cells.
@@ -176,17 +196,6 @@ lemma card_mReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
   unfold mReaderCellsFinset
   rw [Finset.card_image_of_injective _
     (fun _ _ h => (Prod.mk.injEq _ _ _ _).mp h |>.1), Finset.card_univ]
-
-omit [NeZero sessionsPerTag] in
-/-- Single-side reader-cell cardinality: `|TagId| * sessionsPerTag`. -/
-lemma card_sReaderCellsFinset (transcript : TagTranscript Nonce Digest) :
-    (sReaderCellsFinset (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag) transcript).card =
-        Fintype.card TagId * sessionsPerTag := by
-  unfold sReaderCellsFinset
-  rw [Finset.card_image_of_injective _
-    (fun _ _ h => (Prod.mk.injEq _ _ _ _).mp h |>.1), Finset.card_univ,
-    Fintype.card_prod, Fintype.card_fin]
 
 end ReaderCells
 
@@ -227,7 +236,7 @@ end ReaderCoupling
 
 /-- `slotZeroSubTable` agrees with `projectTable` pointwise. Useful for rewriting this module's
 direct-coupling statements into the established sibling phrasing in `Table.lean`. -/
-@[simp] lemma slotZeroSubTable_eq_projectTable_apply
+lemma slotZeroSubTable_eq_projectTable_apply
     (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest) (p : TagId × Nonce) :
     slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS p =
       projectTable (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
@@ -237,10 +246,8 @@ direct-coupling statements into the established sibling phrasing in `Table.lean`
 
 section TagCoupling
 
-variable [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest]
+variable [DecidableEq TagId] [Fintype TagId] [SampleableType Nonce] [DecidableEq Digest]
 
-omit [DecidableEq Nonce] in
 /-- **Tag-step first-session pointwise equality.** When the queried tag has no prior sessions
 (`s.sessionsUsed tag = 0`), the eager-table tag-handler outputs of the multiple-session world
 (running against the sub-table `slotZeroSubTable gS`) and the single-session world (running against
@@ -259,7 +266,7 @@ lemma multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed
     (hzero : s.sessionsUsed tag = 0) :
     (multipleTableHandler (sessionsPerTag := sessionsPerTag)
       (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inl tag) s) =
-      singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
+      singleTableHandler gS
         (Sum.inl tag) s := by
   have hslot : s.sessionsUsed tag < sessionsPerTag := by
     rw [hzero]; exact Nat.pos_of_ne_zero (NeZero.ne sessionsPerTag)
@@ -274,27 +281,6 @@ lemma multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed
       slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS (tag, nonce) := by
     rw [slotZeroSubTable_apply, hsid]
   rw [hcell]
-
-omit [DecidableEq Nonce] in
-/-- **Tag-step first-session pointwise equality, distribution form.** The distribution-level
-restatement of the pointwise equality: under `s.sessionsUsed tag = 0`, the two eager-table tag
-handlers — run on the sub-table `slotZeroSubTable gS` (multiple side) and on the full table `gS`
-(single side) — produce the same output distribution at every fixed `gS`.
-
-This is the per-sample identical-until-bad bind primitive: in a bind chain
-`($ᵗ gS) >>= fun gS => multipleTableHandler ... tag s >>= continuation`, the multiple-side bind
-is interchangeable with the single-side bind whenever the queried tag has no prior sessions. -/
-lemma evalDist_multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
-    (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest)
-    (tag : TagId) (s : UnlinkState TagId)
-    (hzero : s.sessionsUsed tag = 0) :
-    𝒟[multipleTableHandler (sessionsPerTag := sessionsPerTag)
-        (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inl tag) s] =
-      𝒟[singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
-          (Sum.inl tag) s] :=
-  congrArg evalDist
-    (multipleTableHandler_tag_run_eq_singleTableHandler_tag_run_of_sessionsUsed_zero
-      gS tag s hzero)
 
 end TagCoupling
 
@@ -352,7 +338,7 @@ lemma multipleReader_reply_imp_singleReader_reply
       (multiplePattern (TagId := TagId) sessionsPerTag) transcript = true) :
     (multipleTableHandler (sessionsPerTag := sessionsPerTag)
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) (Sum.inr transcript) s) =
-      singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest) gS
+      singleTableHandler gS
         (Sum.inr transcript) s := by
   rw [multipleTableHandler_reader_run_slotZeroSubTable,
       singleTableHandler_reader_run gS transcript s, hM,

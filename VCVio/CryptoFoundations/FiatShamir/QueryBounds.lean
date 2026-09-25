@@ -117,8 +117,8 @@ lemma nmaHashQueryBound_liftComp_zero [Inhabited Chal] [Finite Chal] {α : Type}
     (oa : ProbComp α) :
     nmaHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (oa := OracleComp.liftComp oa (unifSpec + (M × Commit →ₒ Chal))) 0 := by
-  haveI : Fintype Chal := Fintype.ofFinite Chal
-  letI : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
+  have : Fintype Chal := Fintype.ofFinite Chal
+  let : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
     IsUniformSpec.ofFintypeInhabited _
   rw [nmaHashQueryBound, OracleComp.liftComp_def]
   refine OracleComp.IsQueryBoundP.simulateQ_of_step

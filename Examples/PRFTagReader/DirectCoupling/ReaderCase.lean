@@ -10,6 +10,7 @@ public import Examples.PRFTagReader.DirectCoupling
 public import Examples.PRFTagReader.DirectCoupling.StepLemmas
 public import Examples.PRFTagReader.MultipleToHybrid.EagerSetup
 public import VCVio.EvalDist.Monad.Disagreement
+public import VCVio.EvalDist.Monad.Discard
 
 /-!
 # PRF Tag/Reader Protocol — Direct Coupling, Reader Step
@@ -35,21 +36,19 @@ unit.
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal
+open OracleComp OracleSpec ENNReal MeasureTheory
+open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
 section DirectCouplingCompose
 
-variable {TagId Nonce Digest : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
-  [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
+variable {TagId Nonce Digest : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
+  [DecidableEq Digest] [SampleableType Digest] [NeZero sessionsPerTag]
 
 namespace UnlinkReduction
 
-omit [Nonempty TagId] in
 /-- The reader (`Sum.inr transcript`) induction step of the direct M_ideal/S_ideal coupling aux.
 The induction hypothesis is supplied as the explicit premise `ih`; the conclusion is the aux bound
 specialized to the adversary `query (Sum.inr transcript) >>= k`. -/
@@ -84,21 +83,18 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
             let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c gS)) gFine) (k u)).run (s, sB)] ≤
           Pr[= true | do
             let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS)) (k u)).run' s] +
+            (simulateQ (singleTableHandler (OracleComp.tableExtending c gS)) (k u)).run' s] +
           Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
             let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c gS)) gFine) (k u)).run (s, sB)] +
           ((qR * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) +
@@ -113,23 +109,20 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-          (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+          (simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c gS)) gFine)
             (liftM (OracleSpec.query (Sum.inr transcript)) >>= k)).run (s, sB)] ≤
       Pr[= true | do
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-        (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS))
+        (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
           (liftM (OracleSpec.query (Sum.inr transcript)) >>= k)).run' s] +
       Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
             (z.1, z.2.2)) <$>
-          (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+          (simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c gS)) gFine)
             (liftM (OracleSpec.query (Sum.inr transcript)) >>= k)).run (s, sB)] +
@@ -167,9 +160,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
       (singlePattern (TagId := TagId) sessionsPerTag) transcript with hsAcc
   -- M-Fine reader head step: pure reply, state untouched, `cacheBad` advances by `gFine`.
   have hMstep : ∀ gS gFine,
-      multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag)
-        (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
+      multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c gS)) gFine (Sum.inr transcript) (s, sB)
       = pure (ReaderReply.ofBool (mAcc gS), s,
           multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) := by
@@ -185,30 +176,26 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
     rfl
   -- S reader head step: pure reply, state untouched.
   have hSstep : ∀ gS,
-      singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS)
+      singleTableHandler (OracleComp.tableExtending c gS)
         (Sum.inr transcript) s
       = pure (ReaderReply.ofBool (sAcc gS), s) := fun gS =>
     singleTableHandler_reader_run (OracleComp.tableExtending c gS) transcript s
   -- Collapse the head reader query on all three positions.
   simp only [multipleBadTableFine_run_query_bind', singleTable_run'_query_bind', map_bind]
-  have hLHS_eq :
+  have hM_eq {α : Type}
+      (observe : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) → α) :
       (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let p ← multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-            (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
+          let p ← multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c gS)) gFine (Sum.inr transcript) (s, sB)
-          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+          observe <$>
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c gS)) gFine) (k p.1)).run p.2)
       = (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            observe <$>
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c gS)) gFine)
                 (k (ReaderReply.ofBool (mAcc gS)))).run
@@ -217,53 +204,23 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
     refine bind_congr fun gS => ?_
     refine bind_congr fun gFine => ?_
     rw [hMstep gS gFine]; rfl
+  have hLHS_eq := hM_eq (fun z => z.1)
   have hRHS_eq :
       (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let p ← singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS)
+          let p ← singleTableHandler (OracleComp.tableExtending c gS)
             (Sum.inr transcript) s
-          (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS))
+          (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
             (k p.1)).run' p.2)
       = (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS))
+            (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
               (k (ReaderReply.ofBool (sAcc gS)))).run' s) := by
     refine bind_congr fun gS => ?_
     rw [hSstep gS]; rfl
-  have hBAD_eq :
-      (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let p ← multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-            (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c gS)) gFine (Sum.inr transcript) (s, sB)
-          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-              (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-              (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                (OracleComp.tableExtending c gS)) gFine) (k p.1)).run p.2)
-      = (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                  (OracleComp.tableExtending c gS)) gFine)
-                (k (ReaderReply.ofBool (mAcc gS)))).run
-                (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
-                  gFine transcript sB)) := by
-    refine bind_congr fun gS => ?_
-    refine bind_congr fun gFine => ?_
-    rw [hMstep gS gFine]; rfl
-  rw [probOutput_congr rfl (congrArg evalDist hLHS_eq),
-      probOutput_congr rfl (congrArg evalDist hRHS_eq),
-      probEvent_congr' (fun _ _ => Iff.rfl) (congrArg evalDist hBAD_eq)]
+  have hBAD_eq := hM_eq (fun z => (z.1, z.2.2))
+  rw [probOutput_congr rfl (congrArg evalSPMF hLHS_eq),
+      probOutput_congr rfl (congrArg evalSPMF hRHS_eq),
+      probEvent_congr' (fun _ _ => Iff.rfl) (congrArg evalSPMF hBAD_eq)]
   classical
-  haveI : Nonempty Digest :=
-    ⟨(SampleableType.selectElem (β := Digest)).defaultResult⟩
   -- **C1: slot-0 column lazification.** Cache every slot-0 cell of the queried column.
   set cells : List ((TagId × Fin sessionsPerTag) × Nonce) :=
     (Finset.univ.toList).map
@@ -272,12 +229,12 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
   -- `$ᵗ gS >>= fun gS => Mψ (tableExtending c gS)` for the continuations below; the
   -- lazification lemma rewrites `tableExtending c gS` to `idealCacheMapM cells c >>= …`.
   -- LHS continuation: absorbs the inner `$ᵗ gFine` binder.
-  have hLHS_lazify :
+  have hM_lazify {α : Type} [MeasurableSpace α]
+      (observe : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) → α) :
       𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            observe <$>
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c gS)) gFine)
                 (k (ReaderReply.ofBool (mAcc gS)))).run
@@ -286,10 +243,8 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
       = 𝒟[(do let rs ← idealCacheMapM (Digest := Digest) cells c
               let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-              (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                  z.1) <$>
-                (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              observe <$>
+                (simulateQ (multipleBadTableHandlerFine
                   (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                     (OracleComp.tableExtending rs.2 gS)) gFine)
                   (k (ReaderReply.ofBool (unlinkReaderAccepts (Slot := TagId)
@@ -298,13 +253,14 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
                     (multiplePattern (TagId := TagId) sessionsPerTag) transcript)))).run
                   (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                     gFine transcript sB))] := by
+    let : MeasurableSpace Digest := ⊤
     rw [hmAcc]
-    exact (evalDist_idealCacheMapM_bind_uniformTable_comp cells c
+    exact (evalDist_idealCacheMapM_bind_uniformTable_comp
+      evalDist_uniformSample evalDist_uniformSample cells c
       (fun T => do
         let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-        (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-          (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+        observe <$>
+          (simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag) T) gFine)
             (k (ReaderReply.ofBool (unlinkReaderAccepts (Slot := TagId)
               (fun tag nonce => slotZeroSubTable (sessionsPerTag := sessionsPerTag)
@@ -312,71 +268,31 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
               (multiplePattern (TagId := TagId) sessionsPerTag) transcript)))).run
             (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
               gFine transcript sB))).symm
+  have hLHS_lazify := evalSPMF_eq_of_evalDist_eq _ _ (hM_lazify (fun z => z.1))
   -- RHS continuation (no `gFine`).
   have hRHS_lazify :
-      𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag) (OracleComp.tableExtending c gS))
+      𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
+            (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
               (k (ReaderReply.ofBool (sAcc gS)))).run' s)]
-      = 𝒟[(do let rs ← idealCacheMapM (Digest := Digest) cells c
+      = 𝒮[(do let rs ← idealCacheMapM (Digest := Digest) cells c
               let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-              (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                (OracleComp.tableExtending rs.2 gS))
+              (simulateQ (singleTableHandler (OracleComp.tableExtending rs.2 gS))
                 (k (ReaderReply.ofBool (unlinkReaderAccepts
                   (Slot := TagId × Fin sessionsPerTag)
                   (fun slot nonce => OracleComp.tableExtending rs.2 gS (slot, nonce))
                   (singlePattern (TagId := TagId) sessionsPerTag) transcript)))).run' s)] := by
+    let : MeasurableSpace Digest := ⊤
+    apply evalSPMF_eq_of_evalDist_eq
     rw [hsAcc]
-    exact (evalDist_idealCacheMapM_bind_uniformTable_comp cells c
-      (fun T => (simulateQ (singleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) T)
+    exact (evalDist_idealCacheMapM_bind_uniformTable_comp
+      evalDist_uniformSample evalDist_uniformSample cells c
+      (fun T => (simulateQ (singleTableHandler T)
         (k (ReaderReply.ofBool (unlinkReaderAccepts (Slot := TagId × Fin sessionsPerTag)
           (fun slot nonce => T (slot, nonce))
           (singlePattern (TagId := TagId) sessionsPerTag) transcript)))).run' s)).symm
   -- BAD continuation: same as LHS but with the `(z.1, z.2.2)` projection.
-  have hBAD_lazify :
-      𝒟[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-            (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                (z.1, z.2.2)) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                  (OracleComp.tableExtending c gS)) gFine)
-                (k (ReaderReply.ofBool (mAcc gS)))).run
-                (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
-                  gFine transcript sB))]
-      = 𝒟[(do let rs ← idealCacheMapM (Digest := Digest) cells c
-              let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-              let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-              (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-                  (z.1, z.2.2)) <$>
-                (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                  (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-                  (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                    (OracleComp.tableExtending rs.2 gS)) gFine)
-                  (k (ReaderReply.ofBool (unlinkReaderAccepts (Slot := TagId)
-                    (fun tag nonce => slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                      (OracleComp.tableExtending rs.2 gS) (tag, nonce))
-                    (multiplePattern (TagId := TagId) sessionsPerTag) transcript)))).run
-                  (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
-                    gFine transcript sB))] := by
-    rw [hmAcc]
-    exact (evalDist_idealCacheMapM_bind_uniformTable_comp cells c
-      (fun T => do
-        let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-        (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-            (z.1, z.2.2)) <$>
-          (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
-            (slotZeroSubTable (sessionsPerTag := sessionsPerTag) T) gFine)
-            (k (ReaderReply.ofBool (unlinkReaderAccepts (Slot := TagId)
-              (fun tag nonce => slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                T (tag, nonce))
-              (multiplePattern (TagId := TagId) sessionsPerTag) transcript)))).run
-            (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
-              gFine transcript sB))).symm
+  let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
+  have hBAD_lazify := evalSPMF_eq_of_evalDist_eq _ _ (hM_lazify (fun z => (z.1, z.2.2)))
   -- Rewrite all three terms to their lazified forms.
   rw [probOutput_congr rfl hLHS_lazify, probOutput_congr rfl hRHS_lazify,
       probEvent_congr' (fun _ _ => Iff.rfl) hBAD_lazify]
@@ -487,8 +403,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
@@ -497,8 +412,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, sB)) (fun x => x = true) := by
@@ -506,41 +420,37 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
       refine probEvent_bind_congr' _ _ fun gFine => ?_
       refine probEvent_congr' (fun _ _ => Iff.rfl) ?_
       -- `(z.1) <$> run = (z.1) <$> (proj <$> run)`; apply irrelevance under the outer map.
-      have hirr := evalDist_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
+      have hirr := evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool true)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
         sB.cacheBad rfl rfl rfl
-      calc 𝒟[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+      calc 𝒮[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 z.1) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool true))).run
                 (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                   gFine transcript sB)]
-          = 𝒟[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
+          = 𝒮[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
                 cacheBad := (sB.cacheBad : Bool)})) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool true))).run
                 (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                   gFine transcript sB))] := by rw [Functor.map_map]
-        _ = 𝒟[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
+        _ = 𝒮[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
                 cacheBad := (sB.cacheBad : Bool)})) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool true))).run (s, sB))] := by
-              rw [evalDist_map, hirr, ← evalDist_map]
-        _ = 𝒟[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+              rw [evalSPMF_map, hirr, ← evalSPMF_map]
+        _ = 𝒮[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 z.1) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool true))).run (s, sB)] := by
@@ -551,8 +461,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
               (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
@@ -562,14 +471,13 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
               (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, sB)) (fun z => z.2.bad = true) := by
       refine probEvent_bind_congr' _ _ fun gS => ?_
       refine probEvent_bind_congr' _ _ fun gFine => ?_
-      have hirr := evalDist_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
+      have hirr := evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool true)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
@@ -588,14 +496,12 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
         rw [probEvent_map]
         exact probEvent_congr' (fun _ _ => Iff.rfl) rfl
       rw [probEvent_map, probEvent_map,
-          hElaz ((simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+          hElaz ((simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
             (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
               gFine transcript sB)),
-          hElaz ((simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+          hElaz ((simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
             (s, sB))]
@@ -666,8 +572,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
@@ -676,49 +581,44 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, sB)) (fun x => x = true) := by
       refine probEvent_bind_congr' _ _ fun gS => ?_
       refine probEvent_bind_congr' _ _ fun gFine => ?_
       refine probEvent_congr' (fun _ _ => Iff.rfl) ?_
-      have hirr := evalDist_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
+      have hirr := evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool false)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
         sB.cacheBad rfl rfl rfl
-      calc 𝒟[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+      calc 𝒮[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 z.1) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool false))).run
                 (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                   gFine transcript sB)]
-          = 𝒟[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
+          = 𝒮[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
                 cacheBad := (sB.cacheBad : Bool)})) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool false))).run
                 (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                   gFine transcript sB))] := by rw [Functor.map_map]
-        _ = 𝒟[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
+        _ = 𝒮[(fun z => z.1) <$> ((fun z => (z.1, z.2.1, {z.2.2 with
                 cacheBad := (sB.cacheBad : Bool)})) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool false))).run (s, sB))] := by
-              rw [evalDist_map, hirr, ← evalDist_map]
-        _ = 𝒟[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
+              rw [evalSPMF_map, hirr, ← evalSPMF_map]
+        _ = 𝒮[(fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
                 z.1) <$>
-              (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-                (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+              (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c₀ gS)) gFine)
                 (k (ReaderReply.ofBool false))).run (s, sB)] := by
@@ -729,8 +629,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
               (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
@@ -740,14 +639,13 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
               (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-              (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+            (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, sB)) (fun z => z.2.bad = true) := by
       refine probEvent_bind_congr' _ _ fun gS => ?_
       refine probEvent_bind_congr' _ _ fun gFine => ?_
-      have hirr := evalDist_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
+      have hirr := evalSPMF_simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
           (OracleComp.tableExtending c₀ gS)) gFine (k (ReaderReply.ofBool false)) s
         (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript sB) sB
@@ -764,14 +662,12 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
         rw [probEvent_map]
         exact probEvent_congr' (fun _ _ => Iff.rfl) rfl
       rw [probEvent_map, probEvent_map,
-          hElaz ((simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+          hElaz ((simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
             (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
               gFine transcript sB)),
-          hElaz ((simulateQ (multipleBadTableHandlerFine (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag)
+          hElaz ((simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
             (s, sB))]
@@ -803,23 +699,22 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest]
                 (cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript)))).run' s] +
           ((Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
             (Fintype.card Digest : ℝ≥0∞) := by
-      refine le_trans ?_ (add_le_add_right hEmass _)
-      rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum, probEvent_bind_eq_tsum,
-        ← ENNReal.tsum_add]
-      refine ENNReal.tsum_le_tsum fun gS => ?_
-      rw [← mul_add]
-      gcongr _ * ?_
-      by_cases hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript = true
-      · -- `E gS`: drop the `false`-run summand (`Pr ≤ 1`); charge it to the `E` term, which is
-        -- `1` here.
-        rw [hcb, probEvent_pure_eq_indicator]
-        simp only [Set.indicator, Set.mem_setOf_eq, if_true]
-        exact probOutput_le_one.trans le_add_self
-      · -- `¬E gS`: `cacheBadReader gS = false`, so the actual S-run uses the bit `false`, the two
-        -- summands coincide, and the `E` term is `0`.
-        rw [Bool.not_eq_true] at hcb
-        rw [hcb, probEvent_pure_eq_indicator]
-        simp only [Set.indicator, Set.mem_setOf_eq, reduceCtorEq, if_false, add_zero, le_refl]
+      let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
+      rw [← evalDist_apply_singleton, ← evalDist_apply_singleton]
+      refine (evalDist_bind_apply_le_of_discard _ _
+        (fun gS => (simulateQ (singleTableHandler (OracleComp.tableExtending c₀ gS))
+          (k (ReaderReply.ofBool (cacheBadReader
+            (sessionsPerTag := sessionsPerTag) gS transcript)))).run' s) measurable_from_top
+        measurable_from_top (bad := {gS | cacheBadReader
+          (sessionsPerTag := sessionsPerTag) gS transcript = true})
+        MeasurableSet.of_discrete ?_ (measurableSet_singleton true)).trans ?_
+      · exact Filter.Eventually.of_forall fun gS hg => by
+          have hcb : cacheBadReader (sessionsPerTag := sessionsPerTag) gS transcript = false :=
+            by simpa only [Set.mem_ofPred_eq, Bool.not_eq_true] using hg
+          rw [hcb]
+      · apply add_le_add le_rfl
+        simpa only [evalDist_apply_setOf, bind_pure_comp, probEvent_map, Function.comp_def]
+          using hEmass
     -- Flatten the right-hand slack and split the `(qR'+1)` units so the discard's `T·sp/|D|`
     -- and the `≤`-monotone `qR' ≤ qR'+1` headroom land in their own summands.
     have hsplitR : ((qR' + 1) * Fintype.card TagId : ℕ) =

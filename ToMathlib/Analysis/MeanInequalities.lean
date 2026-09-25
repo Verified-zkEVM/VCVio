@@ -37,12 +37,14 @@ variable {ι : Type*}
 `∑' i, f i * g i ≤ (∑' i, f i ^ p) ^ (1/p) * (∑' i, g i ^ q) ^ (1/q)`.
 
 Obtained by specializing `ENNReal.lintegral_mul_le_Lp_mul_Lq` to the counting measure
-with `DiscreteMeasurableSpace`. No `Summable` hypotheses are needed. -/
+with `DiscreteMeasurableSpace`. No `Summable` hypotheses are needed. Mathlib's lemma of the same
+name lives in the `NNReal` namespace (`Mathlib/Analysis/MeanInequalities`) and carries `Summable`
+hypotheses; this is the `ENNReal.` one. -/
 theorem inner_le_Lp_mul_Lq_tsum {p q : ℝ} (hpq : p.HolderConjugate q)
     (f g : ι → ℝ≥0∞) :
     ∑' i, f i * g i ≤ (∑' i, f i ^ p) ^ (1 / p) * (∑' i, g i ^ q) ^ (1 / q) := by
-  letI : MeasurableSpace ι := ⊤
-  haveI : DiscreteMeasurableSpace ι := ⟨fun _ => trivial⟩
+  let : MeasurableSpace ι := ⊤
+  have : DiscreteMeasurableSpace ι := ⟨fun _ => trivial⟩
   have := lintegral_mul_le_Lp_mul_Lq (α := ι) Measure.count hpq
     (AEMeasurable.of_discrete (f := f)) (AEMeasurable.of_discrete (f := g))
   simp only [lintegral_count, Pi.mul_apply] at this

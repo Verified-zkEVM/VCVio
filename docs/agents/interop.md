@@ -6,9 +6,9 @@ let VCVio reason about Lean code emitted by Rust verification frontends:
 - [hax](https://github.com/cryspen/hax): MIR → Lean/F\*/Coq/EasyCrypt/ProVerif/SSProve via a 35-phase OCaml engine. Lean target produces code in the `Hax.RustM := ExceptT Error Option` monad.
 - [aeneas](https://github.com/AeneasVerif/aeneas): MIR → Lean/Coq/F\* via Charon's LLBC + functional translation. Lean target produces code in an inductive `Aeneas.Std.Result α := ok | fail | div`.
 
-**Current baseline (Lean 4.32):** both integrations are dormant and the
+**Current baseline (Lean 4.33):** both integrations are dormant and the
 aggregate `Interop` target is excluded from CI. Hax is not yet Lean
-4.32-compatible. Aeneas publishes a Lean 4.31 build, so its VCVio bridge must
+4.33-compatible. Aeneas publishes a Lean 4.31 build, so its VCVio bridge must
 be ported and revalidated independently before being enabled.
 
 Both backends collapse panic + divergence into the same shape; VCVio adds
@@ -81,12 +81,12 @@ oracle-aware Rust target monad for both backends.
 state:
 
 ```lean
--- Disabled: upstream Hax does not build under Lean 4.32.
+-- Disabled: upstream Hax does not build under Lean 4.33.
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
 --   "492a34e3" / "hax-lib/proof-libs/lean"
 
--- Disabled pending a Lean 4.32 port; upstream pin uses Lean 4.31.
+-- Disabled pending a Lean 4.33 port; upstream pin uses Lean 4.31.
 -- require aeneas from git
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
@@ -98,9 +98,7 @@ isolation check runs regardless of whether the requires are active, so
 the contract holds even mid-experiment.
 
 **Require-order rule.** `require Hax` (and any future backend require) must
-appear *before* `require "leanprover-community" / "mathlib"`. The current
-`loom2` require also sits before Mathlib because it is part of the same
-toolchain-sensitive dependency block. Hax transitively pins `Qq` at
+appear *before* `require "leanprover-community" / "mathlib"`. Hax transitively pins `Qq` at
 `v4.29.0-rc1`, Mathlib pins it at the final release. Lake's conflict resolver
 takes the *last* `require` of each package, so Mathlib must be last. Wrong
 order produces `mathlib: failed to fetch cache` on `lake update`, with a clear

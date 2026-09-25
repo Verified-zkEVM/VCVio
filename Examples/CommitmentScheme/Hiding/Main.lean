@@ -33,22 +33,19 @@ over the uniform salt is essential. -/
 
 open OracleSpec OracleComp ENNReal
 
-variable {M S C : Type}
-  [DecidableEq M] [DecidableEq S] [DecidableEq C]
-  [Fintype M] [Fintype S] [Finite C]
-  [Inhabited M] [Inhabited S] [Inhabited C]
+variable {M S C : Type} [Fintype S] [Finite C] [Inhabited S] [Inhabited C]
 
 attribute [local instance] Fintype.ofFinite
-omit [DecidableEq M] [DecidableEq S] [DecidableEq C] [Fintype M] [Inhabited M] in
 private lemma tvDist_liftComp_hidingAvgSpec {α : Type}
     (oa ob : OracleComp (CMOracle M S C) α) :
     tvDist
         (OracleComp.liftComp oa (HidingAvgSpec M S C))
         (OracleComp.liftComp ob (HidingAvgSpec M S C)) =
       tvDist oa ob := by
-  rw [tvDist, tvDist, evalDist_liftComp, evalDist_liftComp]
+  rw [tvDist, tvDist, evalSPMF_liftComp, evalSPMF_liftComp]
 
-omit [Fintype M] [DecidableEq C] in
+variable [DecidableEq M] [DecidableEq S] [Inhabited M]
+
 /-- **Hiding bound (averaged technical form, Lemma cm-hiding).**
 
 For every `t`-query two-phase hiding adversary `A`, the average statistical
@@ -71,7 +68,8 @@ in general: a trivial adversary always querying salt `s` makes
 `Pr[bad(s)] = 1`. The textbook lemma silently averages over the uniform
 salt, which `hiding_bound_finite` makes explicit by sampling the salt
 inside a packaged `HidingAvgSpec` experiment. -/
-theorem hiding_bound_avg [Finite M] {AUX : Type} {t : ℕ}
+theorem hiding_bound_avg [Finite M] [MeasurableSpace C] [MeasurableSingletonClass C]
+    {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, tvDist (hidingReal A s) (hidingSim A s)) / (Fintype.card S : ℝ) ≤
     (t : ℝ) / (Fintype.card S : ℝ) := by
@@ -86,6 +84,7 @@ theorem hiding_bound_avg [Finite M] {AUX : Type} {t : ℕ}
         Finset.sum_le_sum fun s _ => h1 s
     _ ≤ (t : ℝ) := by
         have hsum := sum_probEvent_hidingBad_le A
+        simp only [probOutput_true_eq_probEvent] at hsum
         have hne : ∀ s ∈ Finset.univ, Pr[hidingBad ∘ Prod.snd |
             (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)] ≠ ⊤ :=
           fun _ _ => probEvent_ne_top
@@ -94,7 +93,6 @@ theorem hiding_bound_avg [Finite M] {AUX : Type} {t : ℕ}
           (ne_top_of_le_ne_top ENNReal.coe_ne_top hsum)
           ENNReal.coe_ne_top).mpr hsum
 
-omit [Fintype M] [DecidableEq C] in
 /-- **Hiding bound (Lemma cm-hiding, packaged textbook form).**
 
 For every `t`-query two-phase hiding adversary `A`,
@@ -110,7 +108,8 @@ oracle) and then run the corresponding per-salt game.
 This is the textbook-facing wrapper around `hiding_bound_avg`: it pushes
 the salt sampling through `tvDist_bind_left_le`, leaving the per-salt sum
 that `hiding_bound_avg` already controls. -/
-theorem hiding_bound_finite [Finite M] {AUX : Type} {t : ℕ}
+theorem hiding_bound_finite [Finite M] [MeasurableSpace C] [MeasurableSingletonClass C]
+    {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     tvDist (hidingMixedReal (M := M) (S := S) (C := C) A)
       (hidingMixedSim (M := M) (S := S) (C := C) A) ≤

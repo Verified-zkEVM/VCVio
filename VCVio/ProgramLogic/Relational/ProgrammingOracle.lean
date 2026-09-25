@@ -53,8 +53,30 @@ universe u
 
 namespace OracleComp.ProgramLogic.Relational
 
-variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} [IsUniformSpec spec]
-variable {α : Type}
+variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α : Type}
+
+/-! ## Bad-input monotonicity wrappers (`σ × Bool` shape) -/
+
+private lemma withProgramming_mono_pair
+    (so : QueryImpl spec (OracleComp spec)) (policy : ProgrammingPolicy spec)
+    (t : spec.Domain) (p : spec.QueryCache × Bool) (hp : p.2 = true)
+    (z) (hz : z ∈ support ((so.withProgramming policy t).run p)) : z.2.2 = true := by
+  rcases p with ⟨cache, b⟩
+  subst hp
+  exact QueryImpl.withProgramming_bad_monotone (so := so) (policy := policy) t cache z hz
+
+private lemma withCachingTrackingPolicy_mono_pair
+    (so : QueryImpl spec (OracleComp spec)) (policy : ProgrammingPolicy spec)
+    (t : spec.Domain) (p : spec.QueryCache × Bool) (hp : p.2 = true)
+    (z) (hz : z ∈ support ((so.withCachingTrackingPolicy policy t).run p)) :
+    z.2.2 = true := by
+  rcases p with ⟨cache, b⟩
+  subst hp
+  exact QueryImpl.withCachingTrackingPolicy_bad_monotone (so := so) (policy := policy) t cache z hz
+
+section HomogeneousInner
+
+variable [IsUniformSpec spec]
 
 /-! ## Per-step distributional agreement on non-bad outputs -/
 
@@ -65,6 +87,8 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
     Pr[= (u, (cache', false)) | (so.withProgramming policy t).run (cache, false)] =
       Pr[= (u, (cache', false)) | (so.withCachingTrackingPolicy policy t).run (cache, false)] := by
   classical
+  let _ : DecidableEq (spec.Range t) := Classical.decEq _
+  let _ : DecidableEq spec.QueryCache := Classical.decEq _
   cases hcache : cache t with
   | some v =>
     simp [QueryImpl.withProgramming_apply, QueryImpl.withCachingTrackingPolicy_apply, hcache]
@@ -73,27 +97,6 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
     | _ =>
       simp [QueryImpl.withProgramming_apply, QueryImpl.withCachingTrackingPolicy_apply,
         hcache, hpol]
-
-/-! ## Bad-input monotonicity wrappers (`σ × Bool` shape) -/
-
-omit [IsUniformSpec spec] in
-private lemma withProgramming_mono_pair
-    (so : QueryImpl spec (OracleComp spec)) (policy : ProgrammingPolicy spec)
-    (t : spec.Domain) (p : spec.QueryCache × Bool) (hp : p.2 = true)
-    (z) (hz : z ∈ support ((so.withProgramming policy t).run p)) : z.2.2 = true := by
-  rcases p with ⟨cache, b⟩
-  subst hp
-  exact QueryImpl.withProgramming_bad_monotone (so := so) (policy := policy) t cache z hz
-
-omit [IsUniformSpec spec] in
-private lemma withCachingTrackingPolicy_mono_pair
-    (so : QueryImpl spec (OracleComp spec)) (policy : ProgrammingPolicy spec)
-    (t : spec.Domain) (p : spec.QueryCache × Bool) (hp : p.2 = true)
-    (z) (hz : z ∈ support ((so.withCachingTrackingPolicy policy t).run p)) :
-    z.2.2 = true := by
-  rcases p with ⟨cache, b⟩
-  subst hp
-  exact QueryImpl.withCachingTrackingPolicy_bad_monotone (so := so) (policy := policy) t cache z hz
 
 /-! ## TV-distance bound -/
 
@@ -201,6 +204,8 @@ theorem programming_collision_bound_qP_qH_β
       (ENNReal.mul_lt_top (ENNReal.natCast_lt_top _) (ENNReal.natCast_lt_top _)) hβ_lt_top)
     hBad
 
+end HomogeneousInner
+
 /-! ## Heterogeneous inner monad: ProbComp-valued random-oracle bridge
 
 The bridges above fix the inner monad of the wrapped oracle to `OracleComp spec` (the same
@@ -221,7 +226,6 @@ section HeterogeneousInner
 
 variable {ι' : Type} {spec' : OracleSpec ι'} [IsUniformSpec spec']
 
-omit [IsUniformSpec spec] in
 /-- Per-step distributional agreement on non-bad outputs, with the base implementation valued in
 `OracleComp spec'` (heterogeneous inner monad). This is the `spec'`-generalization of
 `probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad_output`; the proof is
@@ -233,6 +237,8 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
     Pr[= (u, (cache', false)) | (so.withProgramming policy t).run (cache, false)] =
       Pr[= (u, (cache', false)) | (so.withCachingTrackingPolicy policy t).run (cache, false)] := by
   classical
+  let _ : DecidableEq (spec.Range t) := Classical.decEq _
+  let _ : DecidableEq spec.QueryCache := Classical.decEq _
   cases hcache : cache t with
   | some v =>
     have hL : (so.withProgramming policy t).run (cache, false) =
@@ -272,13 +278,12 @@ private lemma probOutput_withProgramming_eq_withCachingTrackingPolicy_of_not_bad
             OracleComp spec' (spec.Range t × spec.QueryCache × Bool)) := by
         simp [QueryImpl.withCachingTrackingPolicy_apply, hcache, hpol, Functor.map_map]
       rw [hL_run, hR_run]
-      rw [probOutput_pure, if_neg (hne v _)]
+      rw [probOutput_pure, ite_eq_right (hne v _)]
       rw [probOutput_bind_eq_tsum]
       symm
       refine ENNReal.tsum_eq_zero.mpr (fun u' => ?_)
-      rw [probOutput_pure, if_neg (hne u' _), mul_zero]
+      rw [probOutput_pure, ite_eq_right (hne u' _), mul_zero]
 
-omit [IsUniformSpec spec] in
 /-- Joint (state-included) identical-until-bad TV-distance bound between `withProgramming policy`
 and its tracking partner `withCachingTrackingPolicy policy`, with the base implementation valued
 in `OracleComp spec'`. The conclusion keeps the final `(cache, bad)` state, so a state-dependent
@@ -305,7 +310,6 @@ theorem tvDist_withProgramming_withCachingTrackingPolicy_run_le_probEvent_bad'
     rcases p with ⟨c, b⟩; cases (show b = true from hp)
     exact QueryImpl.withCachingTrackingPolicy_bad_monotone (so := so) (policy := policy) t c z hz
 
-omit [IsUniformSpec spec] in
 /-- **Heterogeneous identical-until-bad bridge (output marginal).**
 
 The TV-distance between the output marginal of `so.withCaching` and the output marginal of

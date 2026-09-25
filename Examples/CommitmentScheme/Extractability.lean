@@ -180,7 +180,7 @@ commitment value, which directly witnesses a cache collision. -/
 When `CMExtract` finds an entry `(m', s')` in the commit trace with `H(m', s') = cm`,
 and verification gives `H(m, s) = cm` with `(m', s') ≠ (m, s)`, both distinct inputs
 map to `cm` in the final cache. -/
-private lemma extractability_someWin_implies_collision {t : ℕ} [Finite C] [Inhabited C]
+private lemma extractability_someWin_implies_collision {t : ℕ}
     (A : ExtractAdversary M S C AUX t) :
     ∀ z ∈ support ((simulateQ cachingOracle (extractabilityInner_tagged A)).run ∅),
       z.1.1 = true → z.1.2 = false → CacheHasCollision z.2 := by
@@ -253,7 +253,7 @@ query bounds) and `isTotalQueryBound_bind` (composition through dependent bind).
 private lemma extractabilityInner_totalBound [Finite C] {t : ℕ}
     (A : ExtractAdversary M S C AUX t) :
     IsTotalQueryBound (extractabilityInner A) (t + 1) := by
-  haveI : Fintype C := Fintype.ofFinite C
+  have : Fintype C := Fintype.ofFinite C
   -- extractabilityInner A =
   --   (simulateQ loggingOracle A.commit).run >>= fun ((cm, aux), tr) =>
   --     A.open_ aux >>= fun (m, s) =>
@@ -291,7 +291,7 @@ private lemma extractabilityInner_totalBound [Finite C] {t : ℕ}
 private lemma extractabilityInner_tagged_totalBound [Finite C] {t : ℕ}
     (A : ExtractAdversary M S C AUX t) :
     IsTotalQueryBound (extractabilityInner_tagged A) (t + 1) := by
-  haveI : Fintype C := Fintype.ofFinite C
+  have : Fintype C := Fintype.ofFinite C
   have h := extractabilityInner_totalBound A
   rw [extractabilityInner_eq_fst_tagged] at h
   rwa [show IsTotalQueryBound (Prod.fst <$> extractabilityInner_tagged A) (t + 1) ↔
@@ -340,10 +340,6 @@ private def extractabilityRestOa {t : ℕ}
       | some (m', s') => (c == cm) && decide ((m', s') ≠ (m, s))
       | none => (c == cm)
 
-variable [Inhabited C] [Finite C]
-
-attribute [local instance] Fintype.ofFinite
-
 /-! ## None-case branch: extractor returned nothing, fresh open/verify lands on `cm`
 
 If `CMExtract` returns `none`, every accepting opening corresponds to a
@@ -351,7 +347,6 @@ If `CMExtract` returns `none`, every accepting opening corresponds to a
 the probability of this by `(t₂ + 1) / |C|` via the per-query
 unpredictability of a fresh random-oracle answer. -/
 
-omit [Inhabited C] [Finite C] in
 /- Under a collision-free commit cache, any extractability win must create a fresh
 post-commit cache entry equal to the commitment value. -/
 private lemma extractability_rest_win_implies_fresh_cm {t : ℕ}
@@ -452,6 +447,10 @@ private lemma extractability_rest_win_implies_fresh_cm {t : ℕ}
       have hcache_final_eq : z.2 = cache₃ := congr_arg (·.2) hz
       rw [hcache_final_eq]
       exact ⟨(m, s), c, hcache₃, hcache₁_none, heq_of_eq hc_eq⟩
+
+variable [Inhabited C] [Finite C]
+
+attribute [local instance] Fintype.ofFinite
 
 /- Winning the extractability rest-game implies a fresh cache entry matching `cm`. -/
 private lemma extractability_rest_win_le_exists_fresh {t : ℕ}

@@ -6,6 +6,7 @@ Authors: Quang Dao
 
 module
 public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
+public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import VCVio.EvalDist.Monad.Map
 
 /-!
@@ -15,7 +16,7 @@ This file extends the Rényi divergence from `PMF` (defined in
 `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`) to:
 
 1. `SPMF.renyiDiv` — on sub-probability mass functions (via `toPMF`)
-2. `renyiDiv` — on any monad with `MonadLiftT m SPMF` (via `evalDist`)
+2. `renyiDiv` — on any monad with `MonadLiftT m SPMF` (via `evalSPMF`)
 
 This mirrors the structure of `VCVio.EvalDist.TVDist`, which performs the same lift for
 total variation distance.
@@ -82,37 +83,37 @@ end SPMF
 
 section monadic
 
-variable {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] {α : Type u}
+variable {m : Type u → Type v} [MonadLiftT m SPMF] {α : Type u}
 
 /-- Rényi divergence between two monadic computations,
 defined via their evaluation distributions. -/
 noncomputable def renyiDiv (a : ℝ) (mx my : m α) : ℝ≥0∞ :=
-  SPMF.renyiDiv a (𝒟[mx]) (𝒟[my])
+  SPMF.renyiDiv a (𝒮[mx]) (𝒮[my])
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 @[simp]
 theorem renyiDiv_self (a : ℝ) (mx : m α) : renyiDiv a mx mx = 1 :=
   SPMF.renyiDiv_self _ _
 
-theorem renyiDiv_map_le [LawfulMonad m] {β : Type u} (a : ℝ) (ha : 1 < a)
-    (f : α → β) (mx my : m α) :
-    renyiDiv a (f <$> mx) (f <$> my) ≤ renyiDiv a mx my := by
-  simpa only [renyiDiv, _root_.evalDist_map] using SPMF.renyiDiv_map_le a ha f _ _
-
-theorem renyiDiv_bind_right_le [LawfulMonad m] {β : Type u} (a : ℝ) (ha : 1 < a)
-    (f : α → m β) (mx my : m α) :
-    renyiDiv a (mx >>= f) (my >>= f) ≤ renyiDiv a mx my := by
-  simpa only [renyiDiv, _root_.evalDist_bind] using SPMF.renyiDiv_bind_right_le a ha _ _ _
-
 /-! ### Rényi to Probability Bounds -/
 
-omit [Monad m] [LawfulMonadLiftT m SPMF] in
 /-- If the Rényi divergence between two computations is at most `R`, then for any
 output `x`, `Pr[= x | my] ≥ Pr[= x | mx]^{a/(a-1)} / R`. -/
 theorem probOutput_le_of_renyiDiv (a : ℝ) (ha : 1 < a) (mx my : m α)
     (R : ℝ≥0∞) (hR : renyiDiv a mx my ≤ R) (x : α) :
     Pr[= x | mx] ^ (a / (a - 1) : ℝ) / R ≤ Pr[= x | my] := by
-  simp only [probOutput, renyiDiv, SPMF.renyiDiv] at *
+  simp only [probOutput_def, renyiDiv, SPMF.renyiDiv] at *
   exact (ENNReal.div_le_div_left hR _).trans (PMF.renyiDiv_apply_bound a ha _ _ _)
+
+variable [Monad m] [LawfulMonadLiftT m SPMF]
+
+theorem renyiDiv_map_le [LawfulMonad m] {β : Type u} (a : ℝ) (ha : 1 < a)
+    (f : α → β) (mx my : m α) :
+    renyiDiv a (f <$> mx) (f <$> my) ≤ renyiDiv a mx my := by
+  simpa only [renyiDiv, _root_.evalSPMF_map] using SPMF.renyiDiv_map_le a ha f _ _
+
+theorem renyiDiv_bind_right_le {β : Type u} (a : ℝ) (ha : 1 < a)
+    (f : α → m β) (mx my : m α) :
+    renyiDiv a (mx >>= f) (my >>= f) ≤ renyiDiv a mx my := by
+  simpa only [renyiDiv, _root_.evalSPMF_bind] using SPMF.renyiDiv_bind_right_le a ha _ _ _
 
 end monadic

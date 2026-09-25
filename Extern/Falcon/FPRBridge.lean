@@ -5,31 +5,67 @@ Authors: Quang Dao
 -/
 
 module
-import all Extern.Falcon.Instance
-public import Batteries.Data.Rat.Float
-public import LatticeCrypto.Falcon.Scheme
-public import LatticeCrypto.Falcon.Concrete.FPR
-public import Extern.Falcon.Instance
-public import LatticeCrypto.Falcon.Concrete.Encoding
-public import Mathlib.Analysis.SpecialFunctions.Pow.Real
+
+public import Extern.Falcon.FPR.Decode
+public import Extern.Falcon.FPR.Rounding
+public import Extern.Falcon.FPR.Common
+public import Extern.Falcon.FPR.AddPipeline
+public import Extern.Falcon.FPR.Add
+public import Extern.Falcon.FPR.Mul
+public import Extern.Falcon.FPR.Loop
+public import Extern.Falcon.FPR.Div
+public import Extern.Falcon.FPR.Sqrt
+public import Extern.Falcon.FPR.Witnesses
+public import Extern.Falcon.FPR.Verify
 
 /-!
 # FPR ↔ ℝ Bridge Theorems
 
-Error bounds connecting the integer-only FPR emulation layer to the
-exact `ℝ` arithmetic used in the abstract Falcon specification.
+Error bounds connecting the integer-only FPR emulation layer to the exact `ℝ` arithmetic used
+in the abstract Falcon specification.
 
-The analytic error bounds in this file are still stated as proof obligations.
-The end-to-end verifier bridge is reduced to explicit codec and fast-kernel
-correctness assumptions so the remaining gap is spelled out precisely.
+`toReal` reads the IEEE-754 binary64 fields straight off the `UInt64` word (`FPR.decode` into
+`FPR.Bits`, denoted by `FPR.Bits.toReal`), so the denotation is elementary arithmetic on `Nat`,
+`Bool` and `ℝ` and reduces in the kernel. Non-finite patterns denote `0`.
+
+## Module layout
+
+The proofs live in `Extern/Falcon/FPR/`, split so the four operation proofs compile in parallel:
+
+```
+Decode ─► Rounding ─► Common ─┬─► AddPipeline ─► Add ─┐
+                              ├─► Mul ────────────────┼─► Witnesses
+                              └─► Loop ─┬─► Div ──────┤
+                                        └─► Sqrt ─────┘
+Verify (independent of the error bounds)
+```
+
+This module re-exports all of them.
 
 ## Per-Operation Error Bounds
 
-Each FPR arithmetic operation introduces at most a relative error of
-`2^{-52}` (matching IEEE-754 binary64 precision):
+Each FPR arithmetic operation is correctly rounded, hence carries at most the relative error
+`2 ^ (-52)` of IEEE-754 binary64 — on the domain the format is closed under, and not outside it:
 
-- `|fpr_add(a, b) - (a_real + b_real)| ≤ 2^{-52} · |a_real + b_real|`
-- `|fpr_mul(a, b) - a_real · b_real| ≤ 2^{-52} · |a_real · b_real|`
+- `add_error`, `sub_error`, `mul_error`, `div_error` bound `|fpr_op a b - (a_real ⋆ b_real)|`
+  by `2 ^ (-52) · |a_real ⋆ b_real|`, for operands in `FPR.IsNormalOrZero` whose *exact* result
+  lands in `FPR.InNormalMagnitudeRange`.
+- `sqrt_error` needs no result-side restriction: a square root cannot leave the window.
+- `expm_p63_error` (in `Extern/Falcon/ExpmBridge.lean`) bounds the FACCT sampler kernel.
+
+Both restrictions are load-bearing rather than defensive. Two maximal-magnitude normals overflow
+the exponent field, which this decoder sends to `0`; two normals whose exact difference is
+subnormal are mis-rounded by the alignment step; and `FPR.sqrt` at `+∞` returns `2 ^ 512` against
+a right-hand side of `0`. The unrestricted readings of these statements are false, and the
+non-vacuity witnesses in `Extern.Falcon.FPR.Witnesses` show the restricted ones still admit ordinary
+values — including, since the widening, exact zeros.
+
+The matching closure facts (`add_isNormalOrZero` and friends) say the domain is closed under each
+operation, which is what lets a compound expression derive *validity* for its intermediate
+results. The range side does not come for free: whether an exact intermediate lands in
+`FPR.InNormalMagnitudeRange` depends on the values an algorithm feeds in, so it stays an explicit
+premise. Together they discharge `FloatLike.HasRealSemantics FPR` in
+`Extern/Falcon/ApproxArith.lean`.
 
 ## Accumulated Error in ffSampling
 
@@ -39,123 +75,11 @@ from Pornin 2019, Section 3:
 
   `R_∞(D_FPR ‖ D_ideal) ≤ 1 + ε_renyi`
 
-where `ε_renyi < 2^{-64}` for 53-bit mantissa precision.
+where `ε_renyi < 2^{-64}` for 53-bit mantissa precision. That analysis is quoted from the
+literature here; it is not established in these modules.
 
 ## References
 
 - Pornin 2019 (eprint 2019/893), Section 3 (precision analysis)
 - Falcon specification v1.2, Section 2.5.2 (sampler quality)
 -/
-
-@[expose] public section
-
-
-namespace Falcon.Concrete.FPRBridge
-
-open Falcon.Concrete.FPR
-
-noncomputable section
-
-/-! ## Interpretation: FPR → ℝ -/
-
-/-- Interpret an `FPR` word as the corresponding IEEE-754 value in `ℝ`,
-mapping non-finite bit patterns to `0`. -/
-def toReal (x : FPR) : ℝ := ((Float.ofBits x).toRat0 : ℝ)
-
-/-! ## Verification-only concrete primitives -/
-
-/-- Concrete primitive bundle restricted to the fields used by `Falcon.verify`.
-The sampler and FFT bridge fields are dummy placeholders because verification never
-invokes them. -/
-def verifyPrimitives (p : Falcon.Params) (hn : p.n = 2 ^ p.logn) : Falcon.Primitives p where
-  publicKeyBytes := fun h => Falcon.Concrete.publicKeyBytes p.logn h
-  hashToPoint := fun salt pkBytes msg => Falcon.Concrete.hashToPoint p.n salt pkBytes msg
-  samplerZ := fun _ _ => pure 0
-  fftTarget := fun _ => 0
-  fftInt := fun _ => 0
-  ifftRound := fun _ => 0
-  compress := Falcon.Concrete.compress p.n
-  decompress := Falcon.Concrete.decompress p.n
-  nttOps := hn ▸ Falcon.Concrete.concreteNTTRingOps p.logn
-
-/-! ## Per-operation error bounds -/
-
-/-- Relative error bound for `FPR.add`. -/
-theorem add_error (a b : FPR) :
-    |toReal (FPR.add a b) - (toReal a + toReal b)| ≤
-    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a + toReal b| := by
-  sorry
-
-/-- Relative error bound for `FPR.mul`. -/
-theorem mul_error (a b : FPR) :
-    |toReal (FPR.mul a b) - toReal a * toReal b| ≤
-    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a * toReal b| := by
-  sorry
-
-/-- Relative error bound for `FPR.div`. -/
-theorem div_error (a b : FPR) (hb : toReal b ≠ 0) :
-    |toReal (FPR.div a b) - toReal a / toReal b| ≤
-    (2 : ℝ) ^ (-(52 : ℤ)) * |toReal a / toReal b| := by
-  sorry
-
-/-- Relative error bound for `FPR.sqrt`. -/
-theorem sqrt_error (a : FPR) (ha : 0 ≤ toReal a) :
-    |toReal (FPR.sqrt a) - Real.sqrt (toReal a)| ≤
-    (2 : ℝ) ^ (-(52 : ℤ)) * Real.sqrt (toReal a) := by
-  sorry
-
-/-! ## Sampler quality -/
-
-/-- Absolute approximation bound for the FACCT-based `expm_p63` routine. -/
-theorem expm_p63_error (x ccs : FPR)
-    (hx : 0 ≤ toReal x) (hx' : toReal x < Real.log 2) :
-    abs ((((FPR.expm_p63 x ccs).toNat : ℕ) : ℝ) / (2 : ℝ) ^ 63 -
-      (toReal ccs * Real.exp (-(toReal x)))) ≤
-    (2 : ℝ) ^ (-(51 : ℤ)) := by
-  sorry
-
-/-! ## End-to-end correctness -/
-
-/-- The concrete Falcon verifier agrees with the abstract verifier once the concrete signature
-codec, public-key codec, and fast arithmetic kernels are related to their specification-level
-counterparts. The abstract verifier is instantiated with the same concrete verification fields. -/
-theorem concrete_verify_eq_verify
-    (p : Falcon.Params) (hn : p.n = 2 ^ p.logn) (hsbytelen : 0 < p.sbytelen)
-    (hsigDecode : ∀ (salt : Bytes 40) (compSig : List Byte),
-      compSig ≠ [] →
-        Falcon.Concrete.sigDecode (Falcon.Concrete.sigEncode salt compSig p.logn) p.logn =
-          some (salt, compSig))
-    (hpkDecode : ∀ h : Falcon.Rq p.n,
-      Falcon.Concrete.pkDecode p.n
-        ((Falcon.Concrete.publicKeyBytes p.logn h).extract 1
-          (Falcon.Concrete.publicKeyBytes p.logn h).size) = some h)
-    (hmul : ∀ s2 h : Falcon.Rq p.n,
-      Falcon.Concrete.negacyclicMulU32 s2 h = Falcon.negacyclicMul s2 h)
-    (hnorm : ∀ s1 s2 : Falcon.Rq p.n,
-      Falcon.Concrete.pairL2NormSqU32 s1 s2 = Falcon.pairL2NormSq s1 s2)
-    (pk : Falcon.PublicKey p) (msg : List Falcon.Byte) (sig : Falcon.Signature) :
-    let prims := verifyPrimitives p hn;
-    Falcon.Concrete.concreteVerify p (prims.publicKeyBytes pk.h) msg
-      (Falcon.Concrete.sigEncode sig.salt sig.compressedS2 p.logn) =
-        Falcon.verify p prims pk msg sig := by
-  dsimp
-  by_cases hcomp : sig.compressedS2 = []
-  · have hdecomp : (verifyPrimitives p hn).decompress [] p.sbytelen = none := by
-      apply Falcon.Concrete.decompress_eq_none_of_length_ne
-      simpa using Nat.ne_of_lt hsbytelen
-    have hleft :
-        Falcon.Concrete.concreteVerify p ((verifyPrimitives p hn).publicKeyBytes pk.h) msg
-          (Falcon.Concrete.sigEncode sig.salt [] p.logn) = false := by
-      exact Falcon.Concrete.concreteVerify_sigEncode_nil_eq_false p
-        ((verifyPrimitives p hn).publicKeyBytes pk.h) sig.salt msg
-    have hright : Falcon.verify p (verifyPrimitives p hn) pk msg sig = false := by
-      simp [Falcon.verify, hcomp, hdecomp]
-    simpa [hcomp] using hleft.trans hright.symm
-  · simp [Falcon.Concrete.concreteVerify, Falcon.verify,
-      hsigDecode sig.salt sig.compressedS2 hcomp, Falcon.Primitives.hashToPointForPublicKey,
-      verifyPrimitives, hpkDecode, hmul, hnorm]
-    rfl
-
-end
-
-end Falcon.Concrete.FPRBridge

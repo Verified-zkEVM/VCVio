@@ -6,9 +6,8 @@ Authors: Quang Dao
 
 module
 
-import all PolyFun.Interaction.Basic.Sampler
-
 public import Std.Tactic.Do
+public import PolyFun.Interaction.Basic.Sampler
 public import VCVio.Interaction.UC.Runtime
 public import VCVio.ProgramLogic.Unary.StdDoBridge
 
@@ -62,31 +61,6 @@ by `rfl`; `Concurrent.StepOver.sample_eq` rephrases the map-shaped
 open Std.Do OracleComp
 
 namespace Interaction
-
-namespace TypeTree
-
-section unfolding
-
-variable {m : Type → Type} [Monad m]
-
-@[simp]
-theorem samplePath_done (samp : Sampler m .done) :
-    samplePath .done samp =
-      (pure (⟨⟩ : Path (.done : TypeTree)) : m (Path .done)) := by
-  rfl
-
-@[simp]
-theorem samplePath_node {X : Type}
-    (rest : X → TypeTree.{0}) (samp : m X) (sampRest : ∀ x, Sampler m (rest x)) :
-    samplePath (.node X rest) ⟨samp, sampRest⟩ =
-      (do let x ← samp
-          let tr ← samplePath (rest x) (sampRest x)
-          return (⟨x, tr⟩ : Path (.node X rest)) : m (Path (.node X rest))) := by
-  rfl
-
-end unfolding
-
-end TypeTree
 
 namespace Concurrent
 
@@ -179,45 +153,38 @@ namespace Interaction.Concurrent.ProcessOver
 
 namespace Example
 
-/-- Trivial node context carrying no per-node metadata. -/
-abbrev trivCtx : Interaction.TypeTree.Node.Context.{0, 0} := fun _ => PUnit
-
-/-- Always-increment process: each step has no moves and bumps the
-counter by one. -/
-def incrementProcess : ProcessOver ℕ trivCtx :=
-  ProcessOver.ofStep ℕ fun p =>
-    { tree := .done
-      semantics := PUnit.unit
-      next := fun _ => p + 1 }
-
-/-- Trivial sampler for the always-`.done` step-spec family. -/
-def trivSampler :
-    ∀ p : incrementProcess.Proc,
-      Interaction.TypeTree.Sampler ProbComp (incrementProcess.step p).tree :=
-  fun _ => PUnit.unit
-
-private theorem incrementProcess_step_triple (p₀ p : ℕ) :
-    Std.Do.Triple
-      ((incrementProcess.step p).sample (trivSampler p) : ProbComp _)
-      (spred(⌜p₀ ≤ p⌝))
-      (⇓ p' => ⌜p₀ ≤ p'⌝) := by
-  refine Std.Do.Triple.pure (p + 1) ?_
-  simp only [SPred.entails_nil, SPred.down_pure]
-  omega
-
-/-- Smoke-test corollary: `runSteps` over `incrementProcess` never
-decreases the counter, starting from any `s₀ ≥ p₀`. The precondition is
-the non-trivial `⌜p₀ ≤ s₀⌝` (as opposed to `⌜p₀ ≤ p₀⌝`), so the test
-actually exercises the `Triple.bind` threading of the invariant through
-the `runSteps` unfolding. -/
-private example (p₀ s₀ n : ℕ) :
-    Std.Do.Triple
-      (incrementProcess.runSteps trivSampler n s₀ : ProbComp ℕ)
-      (spred(⌜p₀ ≤ s₀⌝))
-      (⇓ p' => ⌜p₀ ≤ p'⌝) :=
-  runSteps_triple_preserves_invariant (m := ProbComp)
-    incrementProcess trivSampler (fun s => p₀ ≤ s)
-    (fun p => incrementProcess_step_triple p₀ p) n s₀
+/-- Compile-time smoke test that locally constructs an always-increment process
+and derives that `runSteps` never decreases its counter. -/
+private example (p₀ s₀ n : ℕ) : True := by
+  let process : ProcessOver ℕ (fun _ => PUnit) :=
+    ProcessOver.ofStep ℕ fun p =>
+      { tree := .done
+        semantics := PUnit.unit
+        next := fun _ => p + 1 }
+  let sampler : ∀ p : process.Proc,
+      Interaction.TypeTree.Sampler ProbComp (process.step p).tree :=
+    fun _ => PUnit.unit
+  have stepTriple (p : ℕ) :
+      Std.Do.Triple
+        ((process.step p).sample (sampler p) : ProbComp _)
+        (spred(⌜p₀ ≤ p⌝))
+        (⇓ p' => ⌜p₀ ≤ p'⌝) := by
+    have hsample :
+        ((process.step p).sample (sampler p) : ProbComp ℕ) = pure (p + 1) := by
+      rw [StepOver.sample_eq]
+      simp [process, sampler]
+    rw [hsample]
+    refine Std.Do.Triple.pure (m := ProbComp) (p + 1) ?_
+    simp only [SPred.entails_nil, SPred.down_pure]
+    omega
+  have _h :
+      Std.Do.Triple
+        (process.runSteps sampler n s₀ : ProbComp ℕ)
+        (spred(⌜p₀ ≤ s₀⌝))
+        (⇓ p' => ⌜p₀ ≤ p'⌝) :=
+    runSteps_triple_preserves_invariant (m := ProbComp)
+      process sampler (fun s => p₀ ≤ s) stepTriple n s₀
+  trivial
 
 end Example
 

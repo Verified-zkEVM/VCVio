@@ -12,10 +12,10 @@ public import HashSig.SLHDSA.Xmss
 # C13 XMSS layer (XMSS over WOTS+C)
 
 A single XMSS Merkle tree (height `h' = 11`) whose leaves are **WOTS+C** public keys, reusing the
-generic `SLHDSA.Merkle` core and `SLHDSA.C13.WotsC`. An XMSS+C signature carries the WOTS+C
-signature, its grinding **counter**, and the authentication path. `xmssPkFromSig` reproduces the
-tree root on an honest signature (`xmssPkFromSig_xmssSign`), composing WOTS+C correctness with
-the Merkle auth-path consistency lemma.
+node-addressed `PerfectMerkleTree` layer and `SLHDSA.C13.WotsC`. An XMSS+C signature carries the
+WOTS+C signature, its grinding **counter**, and the authentication path. `xmssPkFromSig`
+reproduces the tree root on an honest signature (`xmssPkFromSig_xmssSign`), composing WOTS+C
+correctness with the Merkle auth-path consistency lemma.
 
 ## References
 
@@ -28,7 +28,7 @@ the Merkle auth-path consistency lemma.
 namespace SLHDSA.C13
 
 open SLHDSA (Adrs)
-open SLHDSA.Merkle
+open PerfectMerkleTree
 
 /-- Base WOTS+C address for the leaf at keypair index `t` (type `WOTS_HASH`). -/
 def wotsLeafAdrs (adrs : Adrs) (t : ℕ) : Adrs :=
@@ -61,12 +61,12 @@ abbrev XmssSig (prims : Primitives) := WotsSig prims × ℕ × List prims.Y
 def xmssSign (prims : Primitives) (node : prims.Y) (sk : prims.SkSeed) (pk : prims.PkSeed)
     (adrs : Adrs) (idx count : ℕ) : XmssSig prims :=
   (wotsSign prims node sk pk (wotsLeafAdrs adrs idx) count, count,
-    authPath (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs) 0 idx params.hp)
+    authPath (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs) idx params.hp)
 
 /-- XMSS+C root recovery: recover the WOTS+C public key (the leaf), then climb the auth path. -/
 def xmssPkFromSig (prims : Primitives) (idx : ℕ) (sig : XmssSig prims) (node : prims.Y)
     (pk : prims.PkSeed) (adrs : Adrs) : prims.Y :=
-  climb (xmssNodeHash prims pk adrs) 0 idx
+  climb (xmssNodeHash prims pk adrs) idx
     (wotsPkFromSig prims sig.1 node pk (wotsLeafAdrs adrs idx) sig.2.1) sig.2.2
 
 /-- **XMSS+C correctness**: root recovery from an honest signature at leaf `idx < 2^{h'}`
@@ -79,8 +79,8 @@ theorem xmssPkFromSig_xmssSign (prims : Primitives) (node : prims.Y) (sk : prims
   dsimp only
   rw [wotsPkFromSig_wotsSign]
   have key := climb_authPath (xmssLeaf prims sk pk adrs) (xmssNodeHash prims pk adrs)
-    params.hp 0 idx
-  rw [Nat.zero_add, Nat.div_eq_of_lt hidx] at key
+    idx params.hp
+  rw [Nat.div_eq_of_lt hidx] at key
   exact key
 
 end SLHDSA.C13

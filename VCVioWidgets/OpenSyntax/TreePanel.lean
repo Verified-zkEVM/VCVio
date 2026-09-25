@@ -292,20 +292,13 @@ private def renderAll (snap : Snapshots.Snapshot) (modName : Name) : RequestM Ht
     </div>
   </details>
 
-private partial def latestReadySnap?
-    (snaps : IO.AsyncList IO.Error Snapshots.Snapshot)
-    (last? : Option Snapshots.Snapshot := none) : BaseIO (Option Snapshots.Snapshot) := do
-  match snaps with
-  | .nil => pure last?
-  | .cons snap rest => latestReadySnap? rest (some snap)
-  | .delayed task =>
-      if ← IO.hasFinished task.task then
-        match task.task.get with
-        | .ok rest => latestReadySnap? rest last?
-        | .error _ => pure last?
-      else
-        pure last?
+private def latestReadySnap?
+    (snaps : Lean.AsyncList IO.Error Snapshots.Snapshot) :
+    BaseIO (Option Snapshots.Snapshot) := do
+  let ⟨ready, _, _⟩ ← snaps.getFinishedPrefix
+  return ready.getLast?
 
+/-- Render the selected composition as a tree for a widget request. -/
 @[server_rpc_method]
 def rpc (_props : PanelWidgetProps) : RequestM (RequestTask Html) := do
   let doc ← RequestM.readDoc
@@ -326,6 +319,7 @@ def rpc (_props : PanelWidgetProps) : RequestM (RequestTask Html) := do
 
 end TreePanelWidget
 
+/-- Editor panel displaying the structure of an open-system composition as a tree. -/
 @[widget_module]
 def TreePanel : Component PanelWidgetProps :=
   mk_rpc_widget% TreePanelWidget.rpc

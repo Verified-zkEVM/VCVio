@@ -54,7 +54,7 @@ fi
 # Forbidden modules in core libraries. Anchored on `import ` plus a word
 # boundary at the end of the head segment so e.g. `import VCVioTest.…`
 # isn't accidentally matched by an `Interop` rule.
-CORE_LIBS=(VCVio LatticeCrypto LatticeCryptoTest Examples ToMathlib Extern VCVioWidgets VCVioTest)
+CORE_LIBS=(VCVio VCVioCslib LatticeCrypto LatticeCryptoTest Examples ToMathlib Extern VCVioWidgets VCVioTest)
 CORE_FORBIDDEN_HEADS=(Interop Hax Aeneas)
 
 # Forbidden imports from inside Interop. We explicitly list downstream

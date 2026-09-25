@@ -9,22 +9,18 @@ public import VCVio.CryptoFoundations.SecExp
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
 
 /-!
-# Asymptotic Security Experiments and Games
+# Asymptotic Security Games
 
-This file defines asymptotic security experiments and games where the advantage function
-is abstract — not tied to any specific game formulation. This allows the same meta-theorems
-(reductions, game-hopping, hybrid arguments) to work for failure-based games (`SecExp`),
-distinguishing games (`ProbComp.distAdvantage`), and any other advantage metric.
+This file defines asymptotic security games whose advantage function is abstract — not tied to
+any specific experiment. The same meta-theorems (reductions, game-hopping, hybrid arguments)
+therefore apply to success, bias and distinguishing advantages alike.
 
 ## Main Definitions
 
-- `SecurityExp`: An advantage function `ℕ → ℝ≥0∞` with security = negligibility.
 - `SecurityGame Adv`: An advantage function `Adv → ℕ → ℝ≥0∞` with quantified security.
-- Smart constructors: `ofSecExp`, `ofDistGame`, `ofGuessGame`.
 
 ## Main Results
 
-- `SecurityExp.secure_of_pointwise_bound`: Pointwise ≤ negligible ⟹ secure.
 - `SecurityGame.secureAgainst_of_reduction`: Basic security reduction (tight).
 - `SecurityGame.secureAgainst_of_poly_reduction`: Polynomial-loss security reduction.
 - `SecurityGame.secureAgainst_of_close`: Game-hopping step.
@@ -35,46 +31,6 @@ distinguishing games (`ProbComp.distAdvantage`), and any other advantage metric.
 
 open OracleComp OracleSpec ENNReal Filter
 
-/-- An asymptotic security experiment: an advantage function of the security parameter.
-Secure means the advantage is negligible. -/
-structure SecurityExp where
-  advantage : ℕ → ℝ≥0∞
-
-namespace SecurityExp
-
-/-- An asymptotic security experiment is **secure** if its advantage is negligible. -/
-def secure (ase : SecurityExp) : Prop :=
-  negligible ase.advantage
-
-/-- If the advantage at each `n` is bounded by `f n`, and `f` is negligible,
-then the experiment is secure. -/
-theorem secure_of_pointwise_bound
-    (ase : SecurityExp) (f : ℕ → ℝ≥0∞) (hf : negligible f)
-    (hbound : ∀ n, ase.advantage n ≤ f n) : ase.secure :=
-  negligible_of_le hbound hf
-
-/-! ### Smart constructors -/
-
-/-- Build from a family of failure-based `SecExp`. -/
-noncomputable def ofSecExp {m : ℕ → Type → Type*}
-    [∀ n, Monad (m n)]
-    (exp : (n : ℕ) → SecExp (m n)) : SecurityExp where
-  advantage n := (exp n).advantage
-
-/-- Build from a two-game distinguishing experiment.
-Advantage = `|Pr[= () | game₀ n] - Pr[= () | game₁ n]|`. -/
-noncomputable def ofDistExp
-    (game₀ game₁ : ℕ → ProbComp Unit) : SecurityExp where
-  advantage n := ENNReal.ofReal ((game₀ n).distAdvantage (game₁ n))
-
-/-- Build from a single-game guessing experiment.
-Advantage = `|1/2 - Pr[= () | game n]|`. -/
-noncomputable def ofGuessExp
-    (game : ℕ → ProbComp Unit) : SecurityExp where
-  advantage n := ENNReal.ofReal ((game n).guessAdvantage)
-
-end SecurityExp
-
 /-! ## Asymptotic Security Games
 
 A security game is parameterized by an adversary type. The advantage function maps
@@ -84,8 +40,8 @@ The predicate `isPPT` is left abstract; users specialize it to `PolyQueries` or 
 efficiency notions as appropriate. -/
 
 /-- An asymptotic security game: maps each adversary and security parameter to an
-advantage value. Decoupled from any specific game formulation — the same meta-theorems
-work for failure-based, distinguishing, and other game styles. -/
+advantage value. It stores the advantage rather than an experiment, so the same meta-theorems
+work for success, bias and distinguishing advantages. -/
 structure SecurityGame (Adv : Type*) where
   advantage : Adv → ℕ → ℝ≥0∞
 
@@ -97,34 +53,6 @@ variable {Adv : Type*}
 if every adversary in that class has negligible advantage. -/
 def secureAgainst (g : SecurityGame Adv) (isPPT : Adv → Prop) : Prop :=
   ∀ A, isPPT A → negligible (g.advantage A)
-
-/-- Fixing an adversary in a game produces an asymptotic security experiment. -/
-def toSecurityExp (g : SecurityGame Adv) (A : Adv) : SecurityExp where
-  advantage := g.advantage A
-
-@[simp]
-theorem toSecurityExp_advantage (g : SecurityGame Adv) (A : Adv) :
-    (g.toSecurityExp A).advantage = g.advantage A := rfl
-
-/-! ### Smart constructors -/
-
-/-- Build from a family of failure-based `SecExp`. -/
-noncomputable def ofSecExp {m : ℕ → Type → Type*}
-    [∀ n, Monad (m n)]
-    (game : Adv → (n : ℕ) → SecExp (m n)) : SecurityGame Adv where
-  advantage A n := (game A n).advantage
-
-/-- Build from a two-game distinguishing experiment.
-Advantage = `|Pr[= () | game₀ A n] - Pr[= () | game₁ A n]|`. -/
-noncomputable def ofDistGame
-    (game₀ game₁ : Adv → ℕ → ProbComp Unit) : SecurityGame Adv where
-  advantage A n := ENNReal.ofReal ((game₀ A n).distAdvantage (game₁ A n))
-
-/-- Build from a single-game guessing experiment.
-Advantage = `|1/2 - Pr[= () | game A n]|`. -/
-noncomputable def ofGuessGame
-    (game : Adv → ℕ → ProbComp Unit) : SecurityGame Adv where
-  advantage A n := ENNReal.ofReal ((game A n).guessAdvantage)
 
 /-! ### Security reductions -/
 
