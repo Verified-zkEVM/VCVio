@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
+public import VCVio.OracleComp.Constructions.WithoutReplacement.Exchangeable
 public import VCVio.EvalDist.Expectation
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
@@ -14,8 +15,10 @@ public import VCVio.OracleComp.EvalDist.UniformCompatibility
 # Drawing without replacement and discrete expectation equations
 
 The drawing loop, operational properties, and measure-valued draw-count integrals live in
-`VCVio.OracleComp.Constructions.WithoutReplacement.Basic`. This module also provides discrete
-`expectedValue` equations for its expected length.
+`VCVio.OracleComp.Constructions.WithoutReplacement.Basic`; exchangeability and the per-element
+draw probabilities it yields live in
+`VCVio.OracleComp.Constructions.WithoutReplacement.Exchangeable`. This module also provides
+discrete `expectedValue` equations for its expected length.
 -/
 
 public section

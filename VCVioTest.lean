@@ -34,6 +34,8 @@ public import VCVioTest.FiatShamirKnowledgeExtraction
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkMeasure
+public import VCVioTest.Forking.CoordSpecialSoundness
+public import VCVioTest.Forking.CoordinateFork
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
