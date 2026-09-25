@@ -88,7 +88,7 @@ needs an instance-synthesis check, not a grep.
 | `VCVio/EvalDist/Inequalities.lean:41–44` private `tsum_sub_tsum_le_tsum_sub` (unused hypothesis) | local `ENNReal.tsum_tsub_le_tsum_tsub`, `ToMathlib/Data/ENNReal/AbsDiff.lean:114` | — | **done** (this PR) |
 | `VCVio/CryptoFoundations/Asymptotics/Negligible.lean:43–46` `negligible_of_le` | `SuperpolynomialDecay.trans_eventuallyLE`, `Mathlib/Analysis/Asymptotics/SuperpolynomialDecay.lean:133–138`, with `g := 0` | yes (`IsOrderedRing ℝ≥0∞`, `Mathlib/Data/ENNReal/Basic.lean:143`) | **open** — restate through it; gains eventually-≤ |
 | `ToMathlib/Data/ENNReal/SumSquares.lean:63–80` `sq_sum_div_card_le_sum_sq` (17 lines) | `ENNReal.div_le_of_le_mul`, `Mathlib/Data/ENNReal/Inv.lean:386` | yes | **open** — keep the statement, two-line proof |
-| `Examples/PRFTagReader/Asymptotic.lean:66–84` `negligible_natMul_of_poly_bound`, `negligible_ofReal_natDiv_of_poly_bound` | generic; belong in `Negligible.lean` | — | **open (internal)** — move |
+| `negligible_natMul_of_poly_bound`, `negligible_ofReal_natDiv_of_poly_bound` | generic; belong in `Negligible.lean` | — | **done** — `VCVio/CryptoFoundations/Asymptotics/Negligible.lean:131,141` |
 | `ToMathlib/ProbabilityTheory/OptimalCoupling.lean:110` private `spmf_ext`; `LatticeCrypto/Ring/Kernel.lean:149` `poly_ext` | local `@[ext] SPMF.ext` (`SPMF.lean:187`), `@[ext] PolyBackend.ext_coeff` (`Ring/Core.lean:142`) | — | **done** (this PR) — wrappers over the `@[ext]` lemmas they call |
 
 ### Keep — genuinely VCVio's, or the upstream form does not fit
@@ -579,11 +579,10 @@ for `∀ n, f n ≠ ⊤` (≈6 lines from `ENNReal.tendsto_toReal_zero_iff`,
 `M:Topology/Instances/ENNReal/Lemmas.lean:549`, `toReal_mul/pow/natCast`) and its `ofReal` twin
 (`ENNReal.toReal_ofReal`). With it the whole field stratum applies on the `toReal` side
 (`superpolynomialDecay_iff_isBigO`, `…_isLittleO`, `…_zpow_tendsto_zero`, `param_zpow_mul`) with
-`hk := tendsto_natCast_atTop_atTop`. Today every consumer re-crosses `ℝ → ℝ≥0∞` by hand
-(`V:Examples/PRFTagReader/Asymptotic.lean:300–310` chains seven `ENNReal.ofReal_add_le`;
-`V:VCVio/CryptoFoundations/SecExp.lean:141–149`),
-and the generic `negligible_natMul_of_poly_bound` / `negligible_ofReal_natDiv_of_poly_bound` live in
-`Examples/PRFTagReader/Asymptotic.lean:66–84` instead of `Negligible.lean`.
+`hk := tendsto_natCast_atTop_atTop`. Advantages and UC error bounds are `ℝ≥0∞`-valued, so no
+consumer crosses `ℝ → ℝ≥0∞` to state negligibility, and the generic
+`negligible_natMul_of_poly_bound` / `negligible_ofReal_natDiv_of_poly_bound` are in
+`V:VCVio/CryptoFoundations/Asymptotics/Negligible.lean:131,141`.
 
 **Idioms VCVio does not use** (counts over `V:{VCVio,ToMathlib,Examples,…}`):
 - `lift a to ℝ≥0 using ha` then `norm_cast`: 39 uses in Mathlib's own `ENNReal` core files, 0 in
