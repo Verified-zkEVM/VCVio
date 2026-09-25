@@ -16,7 +16,7 @@ public import VCVio.OracleComp.EvalDist.UniformCompatibility
 # Hashed ElGamal Encryption
 
 This file defines hashed ElGamal encryption and proves that its one-time IND-CPA
-advantage is at most twice the DDH advantage plus the entropy smoothing advantage.
+advantage is at most twice the sum of the DDH advantage and the entropy smoothing advantage.
 
 Unlike standard ElGamal (where the message space is the group `G`), hashed ElGamal
 uses a hash function `hash : HK → G → M` to map the DH shared secret into the
@@ -437,10 +437,10 @@ theorem esIdeal_eq_half
 
 /-! ## Main theorem -/
 
-/-- **Main theorem.** The one-time IND-CPA advantage of hashed ElGamal is at most twice the DDH
-advantage of `ddhReduction` plus the entropy-smoothing advantage of `esReduction`, both
-constructed from the CPA adversary. The factor `2` converts the Boolean bias of the guessing game
-into the distance of its success probability from `1 / 2`. -/
+/-- **Main theorem.** The one-time IND-CPA advantage of hashed ElGamal is at most twice the sum of
+the DDH advantage of `ddhReduction` and the entropy-smoothing advantage of `esReduction`, both
+constructed from the CPA adversary. The game hops bound the distance of the success probability
+from `1 / 2`, and the Boolean bias of the guessing game is twice that distance. -/
 theorem hashedElGamal_IND_CPA_bound
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
     AsymmEncAlg.IND_CPA_OneTime_Advantage (hashedElGamal F g hash) ProbCompRuntime.probComp
