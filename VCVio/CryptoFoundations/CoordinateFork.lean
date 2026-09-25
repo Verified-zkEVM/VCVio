@@ -175,17 +175,17 @@ end Averaging
 
 /-- The replacements available at coordinate `j`: values other than the one `c₀` already uses that
 keep the challenge accepting. -/
-def hitSet (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
+@[expose] def hitSet (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
   (Finset.univ.erase (c₀ j)).filter fun x => ρ (Function.update c₀ j x)
 
 /-- The `k - 1` replacements the table core keeps at coordinate `j`. Any choice would do; this one
 takes the first `k - 1` in enumeration order. -/
-noncomputable def replacementSet (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
+@[expose] noncomputable def replacementSet (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) (j : ι) : Finset S :=
   ((hitSet ρ c₀ j).toList.take (k - 1)).toFinset
 
 /-- The deterministic table core: abort unless `c₀` accepts and every coordinate offers
 `k - 1` accepting replacements, and otherwise return the challenge family they generate. -/
-noncomputable def coordForkCore (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
+@[expose] noncomputable def coordForkCore (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
     Option (Finset (ι → S)) :=
   if ρ c₀ ∧ ∀ j, k - 1 ≤ (hitSet ρ c₀ j).card then
     some (coordFamily c₀ (replacementSet k ρ c₀))
@@ -324,7 +324,7 @@ the deterministic core.
 The sampled table is returned alongside the challenge set. Without it, "the returned challenges
 accept" could not be stated as a property of the output, and an existential over tables would be
 satisfied by the all-accepting table rather than by the one that actually produced the set. -/
-noncomputable def coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
+@[expose] noncomputable def coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
     ProbComp (Option (((ι → S) → Bool) × Finset (ι → S))) := do
   let ρ ← D
   let c₀ ← $ᵗ (ι → S)
@@ -333,7 +333,7 @@ noncomputable def coordFork (k : ℕ) (D : ProbComp ((ι → S) → Bool)) :
 /-- What the extractor promises when it succeeds: the challenges it returns form an `SS(S, ℓ, k)`
 set — in particular there are exactly `ℓ * (k - 1) + 1` of them — and every one of them accepts
 under the very table that produced them. -/
-def GoodOutput (k : ℕ) (r : Option (((ι → S) → Bool) × Finset (ι → S))) : Prop :=
+@[expose] def GoodOutput (k : ℕ) (r : Option (((ι → S) → Bool) × Finset (ι → S))) : Prop :=
   ∃ ρ X, r = some (ρ, X) ∧ IsCoordSpecialSound k X ∧ ∀ c ∈ X, ρ c
 
 /-- Every successful run satisfies `GoodOutput`, with the table bound to the run that produced the
@@ -420,12 +420,12 @@ section Transcripts
 variable {Y : Type} [DecidableEq Y]
 
 /-- The acceptance table a response table induces under a verifier. -/
-noncomputable def acceptTable (V : (ι → S) → Y → Bool) (D : ProbComp ((ι → S) → Y)) :
+@[expose] noncomputable def acceptTable (V : (ι → S) → Y → Bool) (D : ProbComp ((ι → S) → Y)) :
     ProbComp ((ι → S) → Bool) :=
   (fun τ c => V c (τ c)) <$> D
 
 /-- The accepting transcripts carried by a challenge set, read off the response table. -/
-def transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) : Finset ((ι → S) × Y) :=
+@[expose] def transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) : Finset ((ι → S) × Y) :=
   X.image fun c => (c, τ c)
 
 omit [DecidableEq ι] [Fintype S] [SampleableType (ι → S)] in
@@ -447,12 +447,12 @@ theorem card_transcripts (τ : (ι → S) → Y) (X : Finset (ι → S)) :
 
 /-- What the table computation promises with responses in play: `ℓ(k-1)+1` transcripts, all
 accepted by the verifier, whose challenges form an `SS(S, ℓ, k)` set. -/
-def GoodTranscripts (V : (ι → S) → Y → Bool) (k : ℕ)
+@[expose] def GoodTranscripts (V : (ι → S) → Y → Bool) (k : ℕ)
     (r : Option (((ι → S) → Y) × Finset (ι → S))) : Prop :=
   ∃ τ X, r = some (τ, X) ∧ IsCoordSpecialSound k X ∧ ∀ p ∈ transcripts τ X, V p.1 p.2
 
 /-- Reading a response table as its induced acceptance table. -/
-def toAcceptPair (V : (ι → S) → Y → Bool)
+@[expose] def toAcceptPair (V : (ι → S) → Y → Bool)
     (p : ((ι → S) → Y) × Finset (ι → S)) : ((ι → S) → Bool) × Finset (ι → S) :=
   (fun c => V c (p.1 c), p.2)
 
@@ -482,7 +482,7 @@ theorem goodTranscripts_iff_goodOutput (V : (ι → S) → Y → Bool) (k : ℕ)
 
 /-- The table computation with responses: sample a response table and a challenge, run the core
 against the induced acceptance table, and return the table with the challenge set it found. -/
-noncomputable def coordForkT (V : (ι → S) → Y → Bool) (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
+@[expose] noncomputable def coordForkT (V : (ι → S) → Y → Bool) (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
     ProbComp (Option (((ι → S) → Y) × Finset (ι → S))) := do
   let τ ← D
   let c₀ ← $ᵗ (ι → S)
