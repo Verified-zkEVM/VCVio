@@ -28,8 +28,7 @@ interactive malicious prover. Query count is also absent; see `CoordinateFork.le
 
 This is not the paper's full knowledge-soundness theorem: it has no security-parameter
 quantification, joint bad-event experiment, oracle-query semantics, or expected-polynomial-time
-claim. Only `μ = 1` is represented. The multi-round case needs a transcript-producing multi-round
-extractor, which `CoordinateFork/MultiRound.lean` does not provide.
+claim. Only `μ = 1` is represented.
 -/
 
 @[expose] public section

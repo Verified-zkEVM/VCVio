@@ -5,7 +5,6 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
 public import VCVio.EvalDist.IndepProduct
 
 /-!
@@ -28,11 +27,9 @@ adversary's marginals is all the transfer needs; `acceptRatio_acceptTable_indepT
 and `sub_div_le_probEvent_goodTranscripts_indepTable` restates the transcript bound with
 `advSucc V A` on the left.
 
-`probOutput_acceptTable_indepTable_eq_bernoulliTable` goes further and computes the *whole* joint
-law of the induced acceptance table, which is the independent Bernoulli table at the adversary's
-per-challenge acceptance probabilities. That discharges the hypothesis of
-`forkSucc_eq_probEvent_isSome_coordFork`, so the analytic multi-round recurrence is anchored to a
-computation rather than to a distribution nothing produces.
+`probOutput_acceptTable_indepTable` records the *whole* joint law of the induced acceptance table:
+it is a product across challenges. That is a fact about this construction, not about a rewound
+prover — see the caveat below.
 
 No side condition on `A` is needed. Marginalizing one coordinate out of an independent product is
 an equality only when the remaining factors carry full mass — `probEvent_coord_mOfFn` assumes that
@@ -151,30 +148,5 @@ theorem probOutput_acceptTable_indepTable (V : (ι → S) → Y → Bool) (A : (
       = (fun τ => ∀ c, V c (τ c) = ρ c) from by funext τ; simp [funext_iff],
     probEvent_forall_coord_mPi A fun c y => V c y = ρ c]
   exact Finset.prod_congr rfl fun c _ => by rw [verdict, probOutput_map]
-
-omit [SampleableType (ι → S)] in
-/-- The induced acceptance table *is* the independent Bernoulli table at the adversary's
-per-challenge acceptance probabilities. This is what makes the Bernoulli coupling of the analytic
-multi-round recurrence realizable rather than assumed. -/
-theorem probOutput_acceptTable_indepTable_eq_bernoulliTable (V : (ι → S) → Y → Bool)
-    (A : (ι → S) → ProbComp Y) (ρ : (ι → S) → Bool) :
-    Pr[= ρ | acceptTable V (indepTable A)] =
-      Pr[= ρ | (PMF.bernoulliTable (fun c => Pr[fun y => V c y | A c])
-        (fun _ => probEvent_le_one) : PMF ((ι → S) → Bool))] := by
-  rw [probOutput_acceptTable_indepTable, PMF.probOutput_eq_apply, PMF.bernoulliTable_apply]
-  refine Finset.prod_congr rfl fun c _ => ?_
-  cases hρ : ρ c
-  · rw [PMF.tableWeight_false, probOutput_false_verdict V A c]
-  · rw [PMF.tableWeight_true, probOutput_true_verdict V A c]
-
-/-- **The multi-round single-step bridge, discharged.** The analytic `forkSucc` at the adversary's
-per-challenge acceptance probabilities is the success probability of the table fork run against the
-table the adversary actually induces. -/
-theorem forkSucc_eq_probEvent_isSome_coordFork_indepTable (V : (ι → S) → Y → Bool) (k : ℕ)
-    (A : (ι → S) → ProbComp Y) :
-    forkSucc k (fun c => Pr[fun y => V c y | A c])
-      = Pr[fun r => r.isSome | coordFork k (acceptTable V (indepTable A))] :=
-  forkSucc_eq_probEvent_isSome_coordFork k _ (fun _ => probEvent_le_one) _
-    (probOutput_acceptTable_indepTable_eq_bernoulliTable V A)
 
 end OracleComp

@@ -5,7 +5,8 @@ Authors: Devon Tuma
 -/
 module
 
-public import VCVio.CryptoFoundations.CoordinateFork.MultiRoundOp
+public import VCVio.CryptoFoundations.CoordinateFork.Operational
+public import VCVio.CryptoFoundations.CoordinateFork.Realizability
 
 /-!
 # Adversarial regression checks for coordinate-wise table forking
@@ -23,8 +24,8 @@ strictly positive bound.
 `goodOutput_empty_false` witnesses that an empty challenge set fails `GoodOutput`.
 
 **Adversarial cases.** Further checks use a nonconstant table, exhibit equal marginals with
-different joint fork behavior, exercise `μ = 2`, and pin down truncation and empty-coordinate
-boundaries.
+different joint fork behavior, exhaust a coordinate's pool, and pin down the `k - 1` truncation
+and a column thicker than the alphabet.
 
 **Realizability.** The table bound is only interesting if some ordinary adversary induces a table
 distribution with a known accepting ratio. `advSucc_partialAdv` computes one, and
@@ -244,15 +245,6 @@ theorem probEvent_coord_mOfFn_failFactor :
     Pr[fun v => v 0 = true | Fin.mOfFn 2 failFactor] = 0 := by
   simp [Fin.mOfFn, failFactor]
 
-/-- `PMF.pi` really multiplies: two independent fair bits give joint weight `1/4`, where a
-perfectly correlated pair with the same marginals would give `1/2`. -/
-example : PMF.bernoulliTable (fun _ : Fin 2 => (1 : ℝ≥0∞) / 2) (fun _ => by norm_num)
-    ![true, true] = 1 / 4 := by
-  rw [PMF.bernoulliTable_apply, Fin.prod_univ_two]
-  simp only [PMF.tableWeight, Matrix.cons_val_zero, Matrix.cons_val_one, if_true, one_div]
-  rw [← ENNReal.mul_inv (by norm_num) (by norm_num)]
-  norm_num
-
 /-! ## The resampling loop -/
 
 /-- At these parameters exactly the two accepting challenges are good. -/
@@ -331,106 +323,13 @@ theorem expectedValue_weight_coordForkOpW_partial_skew_le :
     norm_num]
   norm_num
 
-/-! ## The multi-round cost -/
-
-/-- The base level costs exactly one entry. -/
-example (ρ : Transcript (Fin 1) (Fin 5) 0 → Bool) :
-    expectedValue (multiForkOpW 0 2 ρ) (fun r => r.2) = 1 := by
-  rw [multiForkOpW_zero, expectedValue_pure]
-
-/-- **Lemma 7.2's expected-query clause at concrete parameters.** Two rounds over one coordinate at
-`k = 2` cost at most `(1 + 1·1)^2 = 4` entries. -/
-theorem expectedValue_weight_multiForkOpW_two_le (ρ : Transcript (Fin 1) (Fin 5) 2 → Bool) :
-    expectedValue (multiForkOpW 2 2 ρ) (fun r => r.2) ≤ 4 := by
-  have h := expectedValue_weight_multiForkOpW_le (ι := Fin 1) (S := Fin 5) 2 2 ρ
-  refine h.trans (le_of_eq ?_)
-  simp only [Fintype.card_fin, Nat.cast_one, one_mul, show (2 - 1 : ℕ) = 1 from rfl]
-  norm_num
-
-/-- The success and output clauses hold of the same computation: charging instead of counting
-changes nothing about what it returns. -/
-example (μ : ℕ) (ρ : Transcript (Fin 1) (Fin 5) μ → Bool) :
-    Pr[fun r => r.1.isSome | multiForkOpW μ 2 ρ]
-      = Pr[fun r => r.1.isSome | multiForkOp μ 2 ρ] :=
-  probEvent_isSome_multiForkOpW μ 2 ρ
-
 /-! ## Boundary canaries -/
 
 /-- Because subtraction is truncated, `k = 0` and `k = 1` are definitionally identical. -/
 example (X : Finset PartialChal) :
     IsCoordSpecialSound 0 X ↔ IsCoordSpecialSound 1 X := Iff.rfl
 
-/-- With no coordinates the per-round loss is zero. -/
-example : roundLoss (Fin 0) (Fin 3) 2 = 0 := by simp [roundLoss]
-
 /-- Asking for a column thicker than the alphabet makes even the all-accepting table fail. -/
 example : goodSet 4 (fun _ : Fin 1 → Fin 3 => true) = ∅ := by decide
-
-/-- The zero-round recurrence is exactly its input value. -/
-example (p : Transcript (Fin 1) (Fin 3) 0 → ℝ≥0∞) : multiSucc 2 p = p PUnit.unit := rfl
-
-/-! ## A nontrivial two-round recurrence -/
-
-def twoRoundAlways : Transcript (Fin 1) (Fin 5) 2 → ℝ≥0∞ := fun _ => 1
-
-/-- At `μ = 2`, the analytic recurrence has the positive lower bound `1 - 2/5 = 3/5`. This checks
-the induction beyond its definitional zero- and one-round cases; it is not an execution theorem. -/
-theorem three_fifths_le_multiSucc_two :
-    (3 : ℝ≥0∞) / 5 ≤ multiSucc 2 twoRoundAlways := by
-  have h := sub_le_multiSucc (ι := Fin 1) (S := Fin 5) 2 twoRoundAlways (by
-    intro t
-    simp [twoRoundAlways])
-  refine le_trans (le_of_eq ?_) h
-  have havg : avgTranscript twoRoundAlways = 1 := by
-    simp only [avgTranscript, twoRoundAlways, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
-      mul_one]
-    rw [ENNReal.div_self (by norm_num) (by finiteness)]
-    rw [mul_one, ENNReal.div_self (by norm_num) (by finiteness)]
-  rw [havg]
-  simp only [roundLoss, Fintype.card_fin, Nat.cast_one, Nat.reduceSub, one_mul]
-  norm_num only [Nat.cast_ofNat, Nat.cast_one, mul_one]
-  rw [← mul_div_assoc, mul_one]
-  exact one_sub_two_fifths.symm
-
-/-! ## The multi-round recursion -/
-
-/-- **The analytic two-round value is achieved by a computation.** `multiSucc` was defined by
-instantiating an independent Bernoulli coupling; `multiForkOp` produces that coupling by running
-the sub-extractor independently at each first challenge, and hits the same `3/5`. -/
-theorem three_fifths_le_probEvent_isSome_multiForkOp :
-    (3 : ℝ≥0∞) / 5 ≤ Pr[fun r => r.1.isSome |
-      multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)] := by
-  rw [probEvent_isSome_multiForkOp]
-  refine le_trans three_fifths_le_multiSucc_two (le_of_eq (congrArg (multiSucc 2) ?_))
-  funext t
-  simp [twoRoundAlways]
-
-/-- **Per level.** Each round looks at at most `1 + ℓ(k-1) = 2` of the level below. -/
-theorem expectedValue_cost_multiForkOp_partial_le :
-    expectedValue (multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true))
-      (fun r => (r.2 : ℝ≥0∞)) ≤ 2 := by
-  have h := expectedValue_cost_multiForkOp_le (ι := Fin 1) (S := Fin 5) 1 2 (fun _ => true)
-  refine h.trans (le_of_eq ?_)
-  simp
-  norm_num
-
-/-- **Both clauses at once.** Some run succeeds, and what it returns is a tree of challenges of the
-size Definition 2.30 prescribes, `(ℓ(k-1)+1)^μ = 4`. -/
-theorem exists_good_output_multiForkOp :
-    ∃ (T : Finset (Transcript (Fin 1) (Fin 5) 2)) (cost : ℕ),
-      (some T, cost) ∈ support (multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)) ∧
-        IsChallengeTree 2 2 (T.image Transcript.toList) ∧
-        (T.image Transcript.toList).card = 4 := by
-  have hpos : 0 < Pr[fun r => r.1.isSome |
-      multiForkOp 2 2 (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)] :=
-    lt_of_lt_of_le (by norm_num) three_fifths_le_probEvent_isSome_multiForkOp
-  obtain ⟨r, hr, hsome⟩ := probEvent_pos_iff.mp hpos
-  obtain ⟨T, hT⟩ := Option.isSome_iff_exists.mp hsome
-  have hr' : (some T, r.2) ∈ support (multiForkOp 2 2
-      (fun _ : Transcript (Fin 1) (Fin 5) 2 => true)) := by rw [← hT]; exact hr
-  obtain ⟨htree, -⟩ := multiForkOp_success 2 2 _ T r.2 hr'
-  refine ⟨T, r.2, hr', htree, ?_⟩
-  rw [card_of_isChallengeTree htree]
-  simp
 
 end VCVioTest.Forking

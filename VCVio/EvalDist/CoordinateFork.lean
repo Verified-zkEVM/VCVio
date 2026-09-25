@@ -6,7 +6,6 @@ Authors: Devon Tuma
 module
 
 public import ToMathlib.Combinatorics.CoordinateWise
-public import ToMathlib.Probability.BernoulliTable
 public import VCVio.EvalDist.Defs.Instances
 public import VCVio.EvalDist.Monad.Basic
 
@@ -22,13 +21,12 @@ challenge alone, so its success bound is the finite counting inequality
 A *randomized* adversary is a distribution over tables. Because the counting bound holds pointwise
 in `ρ`, it survives averaging over an *arbitrary* distribution `D`, and
 `le_tsum_probOutput_mul_goodSet` records that: only the marginals `Pr[ρ c]` appear on the left, and
-no independence hypothesis is needed. The analytic multi-round recurrence later instantiates this
-at a particular independent Bernoulli coupling; connecting that coupling to executions of a
-multi-round prover is separate and unproved.
+no independence hypothesis is needed.
 
 Note what this does *not* say. `forkSuccOf k D` depends on all of `D`, not just its marginals, so
-picking a particular coupling — as the multi-round layer does, by instantiating at an independent
-Bernoulli table — is a modelling decision about the extractor's randomness, not a theorem.
+fixing a particular coupling of the table entries is a modelling decision about the extractor's
+randomness, not a theorem. `VCVioTest/Forking/CoordinateFork.lean` separates two couplings with
+the same marginals and different `forkSuccOf`.
 -/
 
 @[expose] public section
@@ -60,10 +58,9 @@ noncomputable def acceptRatio (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
 /-- The chance that a uniform challenge lands in `goodSet`, averaged over a distribution of
 acceptance tables.
 
-This is the single functional that both sides of the development compute. The extractor's success
-probability is it at a `ProbComp` table distribution (`probEvent_isSome_coordFork`); the
-multi-round recursion's `forkSucc` is it at a Bernoulli table. Naming it keeps the two from
-drifting apart. -/
+This is the single functional the development computes: the extractor's success probability is
+it at a `ProbComp` table distribution (`probEvent_isSome_coordFork`). Naming it separates the
+averaging argument from the fork that consumes it. -/
 noncomputable def forkSuccOf (k : ℕ) (D : m ((ι → S) → Bool)) : ℝ≥0∞ :=
   ∑' ρ, Pr[= ρ | D] * (((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S))
 
@@ -134,31 +131,5 @@ theorem sub_div_le_tsum_probOutput_mul_goodSet [Nonempty S] (D : m ((ι → S) �
       ≤ forkSuccOf k D :=
   tsub_le_iff_right.mpr (le_tsum_probOutput_mul_goodSet D k hmass)
 
-/-! ## Bernoulli tables
-
-A concrete family of table distributions: entry `c` accepts with probability `p c`, independently.
-This is what the multi-round bound instantiates, with `p c` the sub-extractor's success probability
-on the curried adversary. -/
-
-section Bernoulli
-
-variable {C : Type} [Fintype C] [DecidableEq C] {p : C → ℝ≥0∞}
-
-/-- The marginal of a Bernoulli table is its intended bias. -/
-@[simp] theorem probEvent_apply_bernoulliTable (hp : ∀ c, p c ≤ 1) (c : C) :
-    Pr[fun ρ => ρ c | (PMF.bernoulliTable p hp : PMF (C → Bool))] = p c := by
-  classical
-  rw [probEvent_eq_sum_filter_univ]
-  simp only [PMF.probOutput_eq_apply]
-  exact PMF.sum_filter_bernoulliTable hp c
-
-/-- Against a Bernoulli table the accepting ratio is the average bias, as it should be. -/
-theorem acceptRatio_bernoulliTable {q : (ι → S) → ℝ≥0∞} (hq : ∀ c, q c ≤ 1) :
-    acceptRatio (PMF.bernoulliTable q hq : PMF ((ι → S) → Bool)) =
-      (∑ c : ι → S, q c) / Fintype.card (ι → S) := by
-  rw [acceptRatio]
-  exact congrArg (· / _) (Finset.sum_congr rfl fun c _ => probEvent_apply_bernoulliTable hq c)
-
-end Bernoulli
 
 end OracleComp.EvalDist

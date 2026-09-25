@@ -17,11 +17,8 @@ public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.CoordinateFork
 public import VCVio.CryptoFoundations.CoordinateFork.Extraction
-public import VCVio.CryptoFoundations.CoordinateFork.MultiRound
-public import VCVio.CryptoFoundations.CoordinateFork.MultiRoundOp
 public import VCVio.CryptoFoundations.CoordinateFork.Operational
 public import VCVio.CryptoFoundations.CoordinateFork.Realizability
-public import VCVio.CryptoFoundations.CoordinateFork.SamplingGame
 public import VCVio.CryptoFoundations.CoordinateFork.SpecialSoundness
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.DataEncapMech.RealOrRandom
@@ -356,7 +353,6 @@ public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.Traversal
 public import VCVio.Prelude
 public import VCVio.Prelude.Core
-public import VCVio.ProgramLogic.CoordinateFork
 public import VCVio.ProgramLogic.Notation
 public import VCVio.ProgramLogic.NotationCore
 public import VCVio.ProgramLogic.Prob
