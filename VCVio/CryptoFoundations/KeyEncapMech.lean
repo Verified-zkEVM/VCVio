@@ -99,7 +99,7 @@ noncomputable def IND_CPA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
 game. -/
 noncomputable def IND_CPA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CPA_Adversary) : ℝ :=
+    (adversary : kem.IND_CPA_Adversary) : ℝ≥0∞ :=
   (IND_CPA_Game runtime adversary).boolBias
 
 /-- The canonical IND-CPA advantage is definitionally the bias of the single game. -/
@@ -154,7 +154,7 @@ noncomputable def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
 /-- IND-CCA distinguishing advantage for a KEM. -/
 noncomputable def IND_CCA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CCA_Adversary) : ℝ :=
+    (adversary : kem.IND_CCA_Adversary) : ℝ≥0∞ :=
   (IND_CCA_Game runtime adversary).boolBias
 
 /-- Any IND-CPA adversary can be viewed as an IND-CCA adversary that simply ignores the

@@ -9,6 +9,7 @@ public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.ProbComp
+public import ToMathlib.MeasureTheory.Measure.Bool
 
 /-!
 # Commitment Schemes
@@ -86,11 +87,11 @@ def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdversary PP M
   let b' ← adversary.distinguish st c
   return (b == b')
 
-/-- The hiding advantage of an adversary: how far its winning probability in `hidingExp`
-deviates from the `1 / 2` of a random guess. -/
+/-- The hiding advantage of an adversary: the Boolean bias `Measure.boolBias`
+`|Pr[b = b'] - Pr[b ≠ b']|` of `hidingExp`. -/
 noncomputable def hidingAdvantage (cs : CommitmentScheme PP M C D)
-    (adversary : HidingAdversary PP M C) : ℝ :=
-  |(𝒟[cs.hidingExp adversary] {true}).toReal - 1 / 2|
+    (adversary : HidingAdversary PP M C) : ℝ≥0∞ :=
+  𝒟[cs.hidingExp adversary].boolBias
 
 /-! ### Computational binding -/
 

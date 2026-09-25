@@ -99,10 +99,10 @@ def experiment [Add Output] (problem : Problem Sample Secret Output)
   let b' ← adv sample
   return (b == b')
 
-/-- Distinguishing advantage for the decision experiment. -/
+/-- Distinguishing advantage for the decision experiment: its Boolean bias. -/
 noncomputable def advantage [Add Output] (problem : Problem Sample Secret Output)
-    (adv : Adversary problem) : ℝ :=
-  (experiment problem adv).boolBiasAdvantage
+    (adv : Adversary problem) : ℝ≥0∞ :=
+  𝒟[experiment problem adv].boolBias
 
 /-- Game 0: the adversary sees a sample from the real distribution. -/
 def game0 [Add Output] (problem : Problem Sample Secret Output)
@@ -114,6 +114,13 @@ distribution. -/
 def game1 (problem : Problem Sample Secret Output)
     (adv : Adversary problem) : ProbComp Bool := do
   adv (← uniformDistr problem)
+
+/-- The decision advantage is the Boolean distance between `game0` and `game1`. -/
+theorem advantage_eq_boolDist_game [Add Output] (problem : Problem Sample Secret Output)
+    (adv : Adversary problem) :
+    advantage problem adv = 𝒟[game0 problem adv].boolDist 𝒟[game1 problem adv] := by
+  rw [advantage, ← evalDist_boolBias_bind_uniformBool]
+  simp only [experiment, game0, game1, bind_assoc]
 
 /-- A search adversary for a noisy-learning problem. -/
 abbrev SearchAdversary (_problem : Problem Sample Secret Output) :=
@@ -138,13 +145,14 @@ def searchExperiment [Add Output] [DecidableEq Secret]
 open scoped Classical in
 /-- Search advantage for the noisy-learning experiment. -/
 noncomputable def searchAdvantage [Add Output]
-    (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) : ℝ :=
-  (𝒟[searchExperiment problem adv] {true}).toReal
+    (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) : ℝ≥0∞ :=
+  𝒟[searchExperiment problem adv] {true}
 
-/-- The event-style search advantage agrees with the Boolean experiment's success mass. -/
+/-- The search advantage is the success mass of the search experiment under any decidable
+equality on secrets. -/
 theorem searchAdvantage_eq_evalDist_searchExperiment [Add Output] [DecidableEq Secret]
     (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) :
-    searchAdvantage problem adv = (𝒟[searchExperiment problem adv] {true}).toReal := by
+    searchAdvantage problem adv = 𝒟[searchExperiment problem adv] {true} := by
   unfold searchAdvantage
   congr
 

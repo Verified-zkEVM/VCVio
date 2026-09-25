@@ -17,12 +17,12 @@ public import VCVio.OracleComp.ProbComp.Basic
 This file defines the left-or-right one-time IND-CPA game for a symmetric encryption scheme whose
 algorithms run in `ProbComp`. The key is hidden from the adversary, which chooses two messages,
 receives an encryption of one of them under a fresh key, and guesses which one was encrypted.
-The advantage is the Boolean bias `ProbComp.boolBiasAdvantage` of the hidden-bit game.
+The advantage is the Boolean bias `Measure.boolBias` of the hidden-bit game.
 -/
 
 public section
 
-open OracleComp
+open OracleComp ENNReal
 
 namespace SymmEncAlg
 
@@ -54,7 +54,7 @@ def IND_CPA_OneTime_Game (adv : IND_CPA_OneTime_Adversary encAlg) : ProbComp Boo
 /-- One-time IND-CPA advantage: the Boolean bias `|Pr[true] - Pr[false]|` of
 `IND_CPA_OneTime_Game`, equal to `2 * |Pr[b = b'] - 1/2|`. -/
 @[expose]
-noncomputable def IND_CPA_OneTime_Advantage (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ :=
-  (IND_CPA_OneTime_Game adv).boolBiasAdvantage
+noncomputable def IND_CPA_OneTime_Advantage (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ≥0∞ :=
+  𝒟[IND_CPA_OneTime_Game adv].boolBias
 
 end SymmEncAlg

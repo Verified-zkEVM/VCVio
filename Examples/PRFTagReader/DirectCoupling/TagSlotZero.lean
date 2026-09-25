@@ -51,7 +51,7 @@ namespace UnlinkReduction
 M_ideal/S_ideal coupling aux. The induction hypothesis is supplied as the explicit premise `ih`;
 the conclusion is the aux bound specialized to the adversary `query (Sum.inl tag) >>= k` at a
 slot-zero state. -/
-lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
+lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
     (qRInit qR qT : ℕ)
     (s : UnlinkState TagId)
     (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
@@ -78,14 +78,14 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
         (∀ tag : TagId, ∀ n : Nonce, n ∉ R →
           c ((tag, (0 : Fin sessionsPerTag)), n) ≠ none →
           sB.responses (tag, n) ≠ none) →
-        Pr[= true | do
+        Pr[= out | do
             let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
               (simulateQ (multipleBadTableHandlerFine
                 (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
                   (OracleComp.tableExtending c gS)) gFine) (k u)).run (s, sB)] ≤
-          Pr[= true | do
+          Pr[= out | do
             let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             (simulateQ (singleTableHandler (OracleComp.tableExtending c gS)) (k u)).run' s] +
           Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
@@ -106,7 +106,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
       (·.isLeft) qT)
     (hslot : s.sessionsUsed tag < sessionsPerTag)
     (hzero : s.sessionsUsed tag = 0) :
-    Pr[= true | do
+    Pr[= out | do
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
@@ -114,7 +114,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
               (OracleComp.tableExtending c gS)) gFine)
             (liftM (OracleSpec.query (Sum.inl tag)) >>= k)).run (s, sB)] ≤
-      Pr[= true | do
+      Pr[= out | do
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
           (liftM (OracleSpec.query (Sum.inl tag)) >>= k)).run' s] +
@@ -402,7 +402,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
       rw [OracleComp.tableExtending_cacheQuery]
       simp [Function.update_self]
     have hLHS_marg :
-        Pr[(· = true) |
+        Pr[(· = out) |
           (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
@@ -417,7 +417,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
                     (some (⟨n, OracleComp.tableExtending c gS
                       ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                       TagTranscript Nonce Digest))))]
-      = Pr[(· = true) |
+      = Pr[(· = out) |
           (do let u ← $ᵗ Digest
               let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
@@ -439,13 +439,13 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest]
       refine bind_congr fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     have hRHS_marg :
-        Pr[(· = true) |
+        Pr[(· = out) |
           (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
                 (k (some (⟨n, OracleComp.tableExtending c gS
                     ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                     TagTranscript Nonce Digest)))).run' advM)]
-      = Pr[(· = true) |
+      = Pr[(· = out) |
           (do let u ← $ᵗ Digest
               let gS' ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
               (simulateQ (singleTableHandler (OracleComp.tableExtending

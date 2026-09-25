@@ -44,6 +44,12 @@ protected def absDiff (a b : ℝ≥0∞) : ℝ≥0∞ := (a - b) + (b - a)
 @[simp] lemma absDiff_self (a : ℝ≥0∞) : ENNReal.absDiff a a = 0 := by
   simp [ENNReal.absDiff]
 
+@[simp] lemma absDiff_zero_left (a : ℝ≥0∞) : ENNReal.absDiff 0 a = a := by
+  simp [ENNReal.absDiff]
+
+@[simp] lemma absDiff_zero_right (a : ℝ≥0∞) : ENNReal.absDiff a 0 = a := by
+  simp [ENNReal.absDiff]
+
 lemma absDiff_comm (a b : ℝ≥0∞) : ENNReal.absDiff a b = ENNReal.absDiff b a := by
   simp [ENNReal.absDiff, add_comm]
 
@@ -51,9 +57,9 @@ lemma absDiff_le_add (a b : ℝ≥0∞) : ENNReal.absDiff a b ≤ a + b :=
   add_le_add tsub_le_self tsub_le_self
 
 /-- `absDiff` is the extended distance Mathlib puts on `ℝ≥0∞` (through `WithTop ℝ≥0`, a weak
-extended metric: `⊤` is at distance `⊤` from every finite point and `0` from itself). Mathlib has
-no closed form for that `edist` yet, so this is the bridge from the truncated-subtraction spelling
-to `edist` and its `WeakPseudoEMetricSpace` lemmas. -/
+extended metric: `⊤` is at distance `⊤` from every finite point and `0` from itself). This is the
+bridge from the truncated-subtraction spelling to `edist` and its `WeakPseudoEMetricSpace` lemmas,
+including the closed forms `ENNReal.edist_eq_max` and `ENNReal.edist_le_iff_le_add_right`. -/
 lemma absDiff_eq_edist (a b : ℝ≥0∞) : ENNReal.absDiff a b = edist a b := by
   induction a with
   | top => induction b with
@@ -67,6 +73,14 @@ lemma absDiff_eq_edist (a b : ℝ≥0∞) : ENNReal.absDiff a b = edist a b := b
         NNReal.nndist_eq]
       congr 1
       rcases le_total a b with h | h <;> simp [tsub_eq_zero_of_le h]
+
+/-- One of the two truncated differences vanishes, so `absDiff` is their maximum. -/
+lemma absDiff_eq_max (a b : ℝ≥0∞) : ENNReal.absDiff a b = max (a - b) (b - a) := by
+  rw [absDiff_eq_edist, edist_eq_max]
+
+/-- `absDiff a b ≤ c` exactly when each argument is at most the other plus `c`. -/
+lemma absDiff_le_iff {a b c : ℝ≥0∞} : ENNReal.absDiff a b ≤ c ↔ a ≤ b + c ∧ b ≤ a + c := by
+  rw [absDiff_eq_edist, edist_le_iff_le_add_right]
 
 lemma absDiff_triangle (a b c : ℝ≥0∞) :
     ENNReal.absDiff a c ≤ ENNReal.absDiff a b + ENNReal.absDiff b c := by

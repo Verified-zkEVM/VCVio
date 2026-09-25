@@ -162,7 +162,7 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
         runtime.evalDist (runtime.liftProbComp pc) = 𝒟[pc])
     (hno_fail : ∀ (mx : OracleComp spec Bool),
         runtime.evalDist mx {true} + runtime.evalDist mx {false} = 1) :
-    AsymmEncAlg.IND_CPA_OneTime_biasAdvantage (kem.composeWithDEM dem) runtime adversary ≤
+    AsymmEncAlg.IND_CPA_OneTime_Advantage (kem.composeWithDEM dem) runtime adversary ≤
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMLeftReduction dem adversary) +
       kem.IND_CPA_Advantage runtime (kem.composeWithDEM_toKEMRightReduction dem adversary) +
       dem.IND_CPA_Advantage runtime
@@ -205,7 +205,7 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
   have hnot (b : Bool) (x y : M) : (if !b then x else y) = (if b then y else x) := by
     cases b <;> rfl
   simpa only [evalDist_eq_runtime, Measure.boolBias,
-    AsymmEncAlg.IND_CPA_OneTime_biasAdvantage, KEMScheme.IND_CPA_Advantage,
+    AsymmEncAlg.IND_CPA_OneTime_Advantage, KEMScheme.IND_CPA_Advantage,
     DEMScheme.IND_CPA_Advantage,
     AsymmEncAlg.IND_CPA_OneTime_Game, KEMScheme.IND_CPA_Game, DEMScheme.IND_CPA_Game,
     KEMDEM.composedGame, KEMDEM.kemGame, KEMDEM.demGame, prepare, encaps, finish,

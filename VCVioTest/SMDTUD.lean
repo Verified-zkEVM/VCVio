@@ -369,29 +369,27 @@ private lemma experiment_refusedOnly_ideal :
 
 /-! ## The canaries -/
 
-/-- The two worlds are distinguishable, and the four quantities agree on which way. -/
+/-- The two worlds are distinguishable, and the success probabilities say which way. -/
 theorem real_ideal_separation_canary :
     SM_DT_UD_Experiment .real separate = pure true ∧
       SM_DT_UD_Experiment .ideal separate = pure false ∧
       SM_DT_UD_RealSuccess separate = 1 ∧
       SM_DT_UD_IdealSuccess separate = 0 ∧
-      SM_DT_UD_DirectedAdvantage separate = 1 ∧
-      SM_DT_UD_AbsoluteAdvantage separate = 1 := by
-  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, SM_DT_UD_DirectedAdvantage,
-    SM_DT_UD_AbsoluteAdvantage, ENNReal.absDiff, experiment_separate_real,
+      SM_DT_UD_Advantage separate = 1 := by
+  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, SM_DT_UD_Advantage,
+    MeasureTheory.Measure.boolDist, ENNReal.absDiff, experiment_separate_real,
     experiment_separate_ideal]
 
-/-- Swapping the guess flips the sign of the directed advantage while leaving the absolute one
-alone. A symmetric-only API would fail to pin this orientation. -/
+/-- Swapping the guess swaps the two success probabilities and leaves the advantage alone, so the
+success probabilities are what pin the orientation of the worlds. -/
 theorem orientation_reverse_canary :
     SM_DT_UD_Experiment .real separateReverse = pure false ∧
       SM_DT_UD_Experiment .ideal separateReverse = pure true ∧
       SM_DT_UD_RealSuccess separateReverse = 0 ∧
       SM_DT_UD_IdealSuccess separateReverse = 1 ∧
-      SM_DT_UD_DirectedAdvantage separateReverse = -1 ∧
-      SM_DT_UD_AbsoluteAdvantage separateReverse = 1 := by
-  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, SM_DT_UD_DirectedAdvantage,
-    SM_DT_UD_AbsoluteAdvantage, ENNReal.absDiff, experiment_separateReverse_real,
+      SM_DT_UD_Advantage separateReverse = 1 := by
+  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, SM_DT_UD_Advantage,
+    MeasureTheory.Measure.boolDist, ENNReal.absDiff, experiment_separateReverse_real,
     experiment_separateReverse_ideal]
 
 /-- All three refusal causes fire, separately and in both worlds: the target cap, a duplicate
@@ -426,13 +424,11 @@ theorem refusal_draws_nothing_canary :
         pure (none, ([], [])) ∧
       SM_DT_UD_Experiment .real refusedOnly = pure true ∧
       SM_DT_UD_Experiment .ideal refusedOnly = pure true ∧
-      SM_DT_UD_DirectedAdvantage refusedOnly = 0 ∧
-      SM_DT_UD_AbsoluteAdvantage refusedOnly = 0 := by
+      SM_DT_UD_Advantage refusedOnly = 0 := by
   refine ⟨run_refusedOnly_real, run_refusedOnly_ideal, experiment_refusedOnly_real,
-    experiment_refusedOnly_ideal, ?_, ?_⟩ <;>
-  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, SM_DT_UD_DirectedAdvantage,
-    SM_DT_UD_AbsoluteAdvantage, ENNReal.absDiff, experiment_refusedOnly_real,
-    experiment_refusedOnly_ideal]
+    experiment_refusedOnly_ideal, ?_⟩
+  simp [SM_DT_UD_Advantage, MeasureTheory.Measure.boolDist, ENNReal.absDiff,
+    experiment_refusedOnly_real, experiment_refusedOnly_ideal]
 
 /-- Repeating a collection-only tweak is accepted in both worlds, and both occurrences are
 recorded. This fails if collection tweaks are wrongly required to be distinct. -/
@@ -519,9 +515,9 @@ theorem subspace_emb_applied_canary :
     subspaceProblem.HasUniformInputs ∧
       SM_DT_UD_Experiment .real subspaceProbe = pure true ∧
       SM_DT_UD_Experiment .ideal subspaceProbe = pure false ∧
-      SM_DT_UD_DirectedAdvantage subspaceProbe = 1 := by
+      SM_DT_UD_Advantage subspaceProbe = 1 := by
   refine ⟨rfl, experiment_subspaceProbe_real, experiment_subspaceProbe_ideal, ?_⟩
-  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, SM_DT_UD_DirectedAdvantage,
+  simp [SM_DT_UD_Advantage, MeasureTheory.Measure.boolDist, ENNReal.absDiff,
     experiment_subspaceProbe_real, experiment_subspaceProbe_ideal]
 
 /-! ## The phase split -/

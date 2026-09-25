@@ -631,7 +631,7 @@ theorem measure_badEventExp_le_tdpExp [Inhabited Rand]
 constructed from the adversary's random-oracle transcript. -/
 theorem badEventProb_le_tdpAdvantage [Inhabited Rand] (adv : CPA_Adversary PK Rand M) :
     badEventProb tdp adv ≤ (tdpAdvantage tdp (inverter tdp adv)).toReal := by
-  rw [badEventProb, tdpAdvantage_eq_evalDist_tdpExp]
+  rw [badEventProb, tdpAdvantage]
   exact ENNReal.toReal_mono (MeasureTheory.measure_ne_top _ _)
     (measure_badEventExp_le_tdpExp (tdp := tdp) adv)
 

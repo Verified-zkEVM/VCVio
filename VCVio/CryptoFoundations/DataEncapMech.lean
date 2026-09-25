@@ -88,7 +88,7 @@ noncomputable def IND_CPA_Game {dem : DEMScheme (OracleComp spec) K M C}
 /-- One-time IND-CPA advantage for a DEM, defined canonically as the bias of the single game. -/
 noncomputable def IND_CPA_Advantage {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.IND_CPA_Adversary) : ℝ :=
+    (adversary : dem.IND_CPA_Adversary) : ℝ≥0∞ :=
   (IND_CPA_Game runtime adversary).boolBias
 
 /-- The canonical one-time IND-CPA advantage is definitionally the bias of the single game. -/

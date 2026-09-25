@@ -86,7 +86,7 @@ noncomputable def IND_CCA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C
 /-- Real-valued IND-CCA advantage, expressed as the Boolean bias of the IND-CCA game. -/
 noncomputable def IND_CCA_Advantage {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : encAlg.IND_CCA_Adversary) : ℝ :=
+    (adversary : encAlg.IND_CCA_Adversary) : ℝ≥0∞ :=
   (IND_CCA_Game runtime adversary).boolBias
 
 end IND_CCA

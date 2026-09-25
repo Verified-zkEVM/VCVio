@@ -127,12 +127,16 @@ structure BoundedAdversary {ι : Type u} [DecidableEq ι]
 
 ### Advantage functions
 
-| Function | Input | Type | Measures |
-|----------|-------|------|----------|
-| `ProbComp.boolBiasAdvantage` | `ProbComp Bool` | `ℝ` | `\|(Pr[= true \| p]).toReal - (Pr[= false \| p]).toReal\|` |
-| `ProbComp.boolDistAdvantage` | Two `ProbComp Bool` | `ℝ` | `\|(Pr[= true \| p]).toReal - (Pr[= true \| q]).toReal\|` |
-
-All return `ℝ` via `.toReal` conversion from `ℝ≥0∞`. This is essential since subtraction on `ℝ≥0∞` is truncated.
+Every advantage is `ℝ≥0∞`-valued. The advantage of a hidden-bit guessing game is the
+`Measure.boolBias` of its measure, `absDiff (μ {true}) (μ {false})`, which for a total game is
+twice the distance of the success probability from `1 / 2`
+(`Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure`). The advantage of a
+distinguisher between two worlds is the `Measure.boolDist` of their measures,
+`absDiff (μ {true}) (ν {true})`. A search or forgery advantage is a success probability
+`𝒟[exp] {true}`. `ENNReal.absDiff` is the extended distance on `ℝ≥0∞`, so no truncated subtraction
+occurs; `Measure.toReal_boolDist` and `Measure.toReal_boolBias` give the absolute real difference
+when a proof needs real arithmetic. A one-sided gap, such as the difference of two success
+probabilities without absolute value, is a real-valued lemma rather than an advantage.
 
 ### Random oracle model
 
@@ -344,8 +348,7 @@ Closure properties: `negligible_add`, `negligible_const_mul`, `negligible_sum`,
 
 `SecurityGame Adv` stores an advantage function rather than an experiment, so the same
 meta-theorems apply to success, bias and distinguishing advantages. Build one by giving the
-notion's advantage at each security parameter, converting an `ℝ`-valued advantage with
-`ENNReal.ofReal`.
+notion's `ℝ≥0∞`-valued advantage at each security parameter.
 
 ```lean
 structure SecurityGame (Adv : Type*) where
@@ -363,6 +366,11 @@ structure SecurityGame (Adv : Type*) where
 | `secureAgainst_of_poly_reduction` | Polynomial-loss: `adv(A) ≤ p(n) · adv(reduce A)` |
 | `secureAgainst_of_close` | Game hop: `adv_g₁(A) ≤ adv_g₂(A) + ε(n)` |
 | `secureAgainst_of_hybrid` | Chain of `k` games differing by `ε` each |
+
+The tight and polynomial-loss reductions have cost-aware forms,
+`secureAgainst_of_reduction_withCost` and `secureAgainst_of_poly_reduction_withCost`
+(`Asymptotics/ReductionCost.lean`). They take a `ReductionWithCost`, whose cost transform must
+map the source efficiency class into the target one (`CostClassMap`).
 
 ## Cost Model
 

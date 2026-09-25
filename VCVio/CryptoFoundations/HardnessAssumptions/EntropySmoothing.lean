@@ -46,7 +46,7 @@ def idealExp (adversary : HK × M → ProbComp Bool) : ProbComp Bool := do
 
 /-- Entropy-smoothing distinguishing advantage. -/
 noncomputable def advantage (g : G) (hash : HK → G → M)
-    (adversary : HK × M → ProbComp Bool) : ℝ :=
-  (realExp F g hash adversary).boolDistAdvantage (idealExp adversary)
+    (adversary : HK × M → ProbComp Bool) : ℝ≥0∞ :=
+  𝒟[realExp F g hash adversary].boolDist 𝒟[idealExp adversary]
 
 end EntropySmoothing

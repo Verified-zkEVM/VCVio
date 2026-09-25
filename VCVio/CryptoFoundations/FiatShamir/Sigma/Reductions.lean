@@ -95,7 +95,7 @@ theorem cma_to_nma_advantage_bound
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) + (qS : ENNReal) * (qS + qH) * β :=
   Stateful.cma_advantage_le_fork_bound_of_h1h2 σ hr M
       simTranscript ζ_zk hζ_zk hHVZK β hPredSim adv qS qH hQ
-      (le_of_eq <| (Stateful.publicUnforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
+      (le_of_eq <| (Stateful.unforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
           (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv).trans
         (Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
           (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv))

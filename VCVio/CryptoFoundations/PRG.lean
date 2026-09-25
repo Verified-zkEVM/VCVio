@@ -60,7 +60,7 @@ def prgIdealExp [SampleableType R] (adversary : PRGAdversary R) : ProbComp Bool 
 
 /-- PRG advantage: how well the adversary distinguishes PRG output from random. -/
 noncomputable def prgAdvantage [SampleableType S] [SampleableType R]
-    (prg : PRGScheme S R) (adversary : PRGAdversary R) : ℝ :=
-  (prg.prgRealExp adversary).boolDistAdvantage (prgIdealExp adversary)
+    (prg : PRGScheme S R) (adversary : PRGAdversary R) : ℝ≥0∞ :=
+  𝒟[prg.prgRealExp adversary].boolDist 𝒟[prgIdealExp adversary]
 
 end PRGScheme

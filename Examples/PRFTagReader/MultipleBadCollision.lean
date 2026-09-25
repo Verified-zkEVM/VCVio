@@ -13,14 +13,14 @@ import Mathlib.Tactic.Positivity.Finset
 /-!
 # PRF Tag/Reader Protocol — Multiple-Bad Collision Bound
 
-Discharges the multiple-bad collision term in closed form and packages the multiple-vs-single
-random-function gap of the headline reduction:
+Discharges the multiple-bad collision term in closed form and packages the Boolean distance
+between the multiple- and single-session random-function worlds of the headline reduction:
 
 * `multipleBadStep_*` lemmas track the per-step bad-flag bound and the session counter;
 * `simulateQ_multipleBad_prob_le` unrolls those step lemmas to a union bound, yielding
   `multipleBad_bad_le_sessionCollisionBound`;
 * the bad-event bridge `probOutput_unlinkBadExp_eq` connects `unlinkBadExp` to the bad flag of
-  the instrumented multiple-bad handler, and `unlinkPRFIdeal_gap_le_unlinkBad` packages the
+  the instrumented multiple-bad handler, and `unlinkPRFIdeal_boolDist_le_unlinkBad` packages the
   middle hop of the headline reduction.
 -/
 
@@ -470,75 +470,41 @@ lemma probOutput_unlinkBadExp_eq
   by_cases hz : z.2.bad <;> simp [hz]
 
 /-- Coupling bound for the two random-function worlds (the ideal-PRF experiments of the multiple-
-and single-session reductions): the gap is bounded by the within-tag nonce-collision probability
-(carried by the instrumented `multipleBadQueryImpl`'s `bad` flag) plus three additive slack terms.
-The two worlds are not identical-until-bad — their reader and tag oracles diverge unconditionally
-because the single-session world keys `Fintype.card TagId * sessionsPerTag` random-oracle cells
-against the multiple world's `Fintype.card TagId` cells — so the bound carries reader-cell slacks
+and single-session reductions): their Boolean distance is bounded by the within-tag
+nonce-collision probability (carried by the instrumented `multipleBadQueryImpl`'s `bad` flag) plus
+three additive slack terms. The two worlds are not identical-until-bad — their reader and tag
+oracles diverge unconditionally because the single-session world keys
+`Fintype.card TagId * sessionsPerTag` random-oracle cells against the multiple world's
+`Fintype.card TagId` cells — so the bound carries reader-cell slacks
 `qReader * Fintype.card TagId / Fintype.card Digest` and
 `qReader * Fintype.card TagId * sessionsPerTag / Fintype.card Digest`, and a nonce-aliasing slack
-`qReader * qTag / Fintype.card Nonce`. There is no tag-side slack: the tag-side cell-count gap is
-absorbed by `le_self_add` at every tag step. The bound holds for every adversary. -/
-theorem unlinkPRFIdeal_gap_le_unlinkBad [NeZero sessionsPerTag] [Fintype Nonce] [Fintype Digest]
-    (adversary : UnlinkAdversary TagId Nonce Digest)
-    (qReader qTag : ℕ)
+`qReader * qTag / Fintype.card Nonce`. The bound holds for every adversary.
+
+Both directions come from one coupling: `UnlinkReduction.multipleIdeal_le_singleIdeal_add_bad_DC`
+bounds the multiple-world mass of each output bit by its single-world mass plus the same error, and
+two probability measures on `Bool` with that property are within that Boolean distance
+(`MeasureTheory.Measure.boolDist_le_of_apply_le`). -/
+theorem unlinkPRFIdeal_boolDist_le_unlinkBad [NeZero sessionsPerTag] [Fintype Nonce]
+    [Fintype Digest] (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : ℕ)
     (hqReader : OracleComp.IsQueryBoundP adversary (·.isRight) qReader)
     (hqTag : OracleComp.IsQueryBoundP adversary (·.isLeft) qTag) :
-    (Pr[= true | PRFScheme.prfIdealExp (unlinkToMultiplePRFReduction
-          (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) adversary)]).toReal -
-        (Pr[= true | PRFScheme.prfIdealExp (unlinkToSinglePRFReduction
-          (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          (sessionsPerTag := sessionsPerTag) adversary)]).toReal ≤
-      (Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
+    𝒟[PRFScheme.prfIdealExp (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary)].boolDist
+      𝒟[PRFScheme.prfIdealExp (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary)] ≤
+      𝒟[(fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad) <$>
         (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
-          ((UnlinkState.init, ∅), UnlinkBadState.init)]).toReal +
-      ((qReader * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) +
-      ((qReader * qTag : ℕ) : ℝ) / (Fintype.card Nonce : ℝ) +
-      ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ) /
-        (Fintype.card Digest : ℝ) := by
-  have hcore := UnlinkReduction.multipleIdeal_le_singleIdeal_add_bad_DC
-    (sessionsPerTag := sessionsPerTag) adversary qReader qTag hqReader hqTag
+          ((UnlinkState.init, ∅), UnlinkBadState.init)] {true} +
+      ((qReader * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) +
+      ((qReader * qTag : ℕ) : ℝ≥0∞) / (Fintype.card Nonce : ℝ≥0∞) +
+      ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
+        (Fintype.card Digest : ℝ≥0∞) := by
+  refine MeasureTheory.Measure.boolDist_le_of_apply_le _ _ fun out => ?_
   rw [prfIdealExp_unlinkToMultiplePRFReduction_eq_run' adversary,
     prfIdealExp_unlinkToSinglePRFReduction_eq_run' adversary]
-  set M := Pr[= true | (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-    (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run'
-    (UnlinkState.init, ∅)]
-  set S := Pr[= true | (simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-    (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run'
-    (UnlinkState.init, ∅)]
-  set B := Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-    (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
-      ((UnlinkState.init, ∅), UnlinkBadState.init)]
-  set slackR := ((qReader * Fintype.card TagId : ℕ) : ℝ≥0∞) /
-    (Fintype.card Digest : ℝ≥0∞)
-  set slackN := ((qReader * qTag : ℕ) : ℝ≥0∞) / (Fintype.card Nonce : ℝ≥0∞)
-  set slackS := ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
-    (Fintype.card Digest : ℝ≥0∞)
-  have hSt : S ≠ ⊤ := probOutput_ne_top
-  have hBt : B ≠ ⊤ := probEvent_ne_top
-  have hslackRt : slackR ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
-  have hslackNt : slackN ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
-  have hslackSt : slackS ≠ ⊤ := ENNReal.div_ne_top (by finiteness) (by positivity)
-  have hslackReq : slackR.toReal =
-      ((qReader * Fintype.card TagId : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
-    simp [slackR, ENNReal.toReal_div]
-  have hslackNeq : slackN.toReal =
-      ((qReader * qTag : ℕ) : ℝ) / (Fintype.card Nonce : ℝ) := by
-    simp [slackN, ENNReal.toReal_div]
-  have hslackSeq : slackS.toReal =
-      ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ) / (Fintype.card Digest : ℝ) := by
-    simp [slackS, ENNReal.toReal_div]
-  have hMt : M.toReal ≤ S.toReal + B.toReal + slackR.toReal + slackN.toReal + slackS.toReal := by
-    have hSB : S + B ≠ ⊤ := ENNReal.add_ne_top.mpr ⟨hSt, hBt⟩
-    have hSBR : S + B + slackR ≠ ⊤ := ENNReal.add_ne_top.mpr ⟨hSB, hslackRt⟩
-    have hSBRN : S + B + slackR + slackN ≠ ⊤ := ENNReal.add_ne_top.mpr ⟨hSBR, hslackNt⟩
-    rw [← ENNReal.toReal_add hSt hBt, ← ENNReal.toReal_add hSB hslackRt,
-      ← ENNReal.toReal_add hSBR hslackNt, ← ENNReal.toReal_add hSBRN hslackSt]
-    exact ENNReal.toReal_mono
-      (ENNReal.add_ne_top.mpr ⟨hSBRN, hslackSt⟩) hcore
-  rw [hslackReq, hslackNeq, hslackSeq] at hMt
-  linarith
+  simp only [evalDist_apply_singleton, probOutput_map]
+  simpa only [add_assoc] using UnlinkReduction.multipleIdeal_le_singleIdeal_add_bad_DC
+    (sessionsPerTag := sessionsPerTag) out adversary qReader qTag hqReader hqTag
 
 end UnlinkReduction
 

@@ -22,7 +22,7 @@ headline `advantage_le_bound`, the certificate, the two transports and every sta
 probability have **no runtime coverage at all** and cannot be given any.  The runtime checks below
 are about `Params`-level data only: `p.w - 2`, `SLHDSA.Security.targetCount`, and a routing table
 this file writes down.  What pins the bound's own shape is the `Pins` section, which restates each
-of the twenty-one exported declarations; what pins the *strength* of the hypotheses is the vacuity
+of the nineteen exported declarations; what pins the *strength* of the hypotheses is the vacuity
 canary at the end, which is elaboration-only for the same reason.
 
 A reader of the lane's other fixtures will look for the headline among the runtime checks; it is
@@ -88,9 +88,9 @@ exercised there.
 
 Sixty-seven runtime checks in four groups — the two coefficients (18), the eight caps at both
 profiles (16), the `T_ℓ` separation and the valid profile where it fails (20), and the routing
-table (13).  Eighty `example`s in `Pins`: at least one for each of the twenty-one declarations the
-library module exports, the two `T_ℓ` attacked-member equations, the ten games' declared caps, the
-three general cap separations and the game identity they explain, the `ITSRProblem` shape, and
+table (13).  Seventy-eight `example`s in `Pins`: at least one for each of the nineteen declarations
+the library module exports, the two `T_ℓ` attacked-member equations, the ten games' declared caps,
+the three general cap separations and the game identity they explain, the `ITSRProblem` shape, and
 twenty-two profile pins.  Then the vacuity canary — twenty-five declarations and ten `example`s.
 They build a closed `Certificate` from an address key and a public seed and prove that the bound it
 names is at least one; then a second one, from those two and a `CountingInterface` at an
@@ -419,7 +419,7 @@ def checkRouting : IO Unit := do
 
 /-! ## The pins
 
-Every one of the twenty-one declarations `HashSig.SLHDSA.Security.Composition` exports, restated at
+Every one of the nineteen declarations `HashSig.SLHDSA.Security.Composition` exports, restated at
 this bundle's types, with generic arguments where the statement has them.  These are the only check
 on the bound's own shape: a library-side edit of a coefficient, of a summand's routing, or of a
 certificate field's type moves the library statement and fails the pin here, which no library-side
@@ -431,15 +431,6 @@ open OracleComp ENNReal SignatureAlg
 
 variable (s : Summands) (p : Params) (x : ℝ≥0∞)
   (adv : UnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
-
-/-! ### The PRF seam -/
-
-noncomputable example {K D R : Type} [DecidableEq D] [SampleableType R]
-    (prf : PRFScheme K D R) (a : PRFScheme.PRFAdversary D R) : ℝ≥0∞ := prfAbsAdvantage prf a
-
-example {K D R : Type} [DecidableEq D] [SampleableType R]
-    (prf : PRFScheme K D R) (a : PRFScheme.PRFAdversary D R) :
-    (prfAbsAdvantage prf a).toReal = PRFScheme.prfAdvantage prf a := prfAbsAdvantage_toReal prf a
 
 /-! ### The bound expression, with both coefficients written out -/
 
@@ -501,8 +492,8 @@ example : ℝ≥0∞ := c.forsBranch
 example : ℝ≥0∞ := c.hypertreeBranch
 
 example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
-    prfAbsAdvantage (skPrfScheme toyPrimitives c.pkSeed) c.skgAdv
-      + prfAbsAdvantage (msgPrfScheme toyPrimitives) c.mkgAdv + c.idealAdvantage := c.prfHops
+    PRFScheme.prfAdvantage (skPrfScheme toyPrimitives c.pkSeed) c.skgAdv
+      + PRFScheme.prfAdvantage (msgPrfScheme toyPrimitives) c.mkgAdv + c.idealAdvantage := c.prfHops
 
 example : c.idealAdvantage ≤ c.forsBranch + c.hypertreeBranch := c.split
 
@@ -512,7 +503,7 @@ example : c.forsBranch ≤ ITSRAdvantage c.itsrAdv
     + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv := c.forsBranch_le
 
 example : c.hypertreeBranch ≤
-    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.advantage c.wotsFUdAdv
       + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
       + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
       + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
@@ -523,8 +514,8 @@ example : c.hypertreeBranch ≤
 noncomputable example : Summands := c.summands
 
 example : c.summands.bound toy.params =
-    prfAbsAdvantage (skPrfScheme toyPrimitives c.pkSeed) c.skgAdv
-      + prfAbsAdvantage (msgPrfScheme toyPrimitives) c.mkgAdv
+    PRFScheme.prfAdvantage (skPrfScheme toyPrimitives c.pkSeed) c.skgAdv
+      + PRFScheme.prfAdvantage (msgPrfScheme toyPrimitives) c.mkgAdv
       + ITSRAdvantage c.itsrAdv
       + SM_DT_DSPR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toDSPR c.openPreAdv)
@@ -533,7 +524,7 @@ example : c.summands.bound toy.params =
       + SM_DT_TCR_SourceFinalValidity.advantage c.forsHAdv
       + SM_DT_TCR_SourceFinalValidity.advantage c.forsTlAdv
       + (toy.params.w - 2 : ℕ) *
-          SM_DT_UD_SourceFinalValidity.absoluteAdvantage c.wotsFUdAdv
+          SM_DT_UD_SourceFinalValidity.advantage c.wotsFUdAdv
       + SM_DT_TCR_SourceFinalValidity.advantage c.wotsFTcrAdv
       + SM_DT_PRE_SourceFinalValidity.advantage c.wotsFPreAdv
       + SM_DT_TCR_SourceFinalValidity.advantage c.wotsTlAdv
@@ -564,7 +555,7 @@ variable (skgAdv : PRFScheme.PRFAdversary Adrs toyPrimitives.Y)
     + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
     + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv)
   (hhyper : hypertreeHalf adv ≤
-    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+    (toy.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.advantage wotsFUdAdv
       + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
       + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
       + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
@@ -579,8 +570,8 @@ example :
     (Certificate.ofBranchBounds (vp := toy) (prims := toyPrimitives) (adv := adv)
         skgAdv mkgAdv pkSeed itsrAdv openPreAdv counting forsHAdv
         forsTlAdv wotsFUdAdv wotsFTcrAdv wotsFPreAdv wotsTlAdv xmssHAdv hfors hhyper).summands =
-      { skgPrf := prfAbsAdvantage (skPrfScheme toyPrimitives pkSeed) skgAdv
-        mkgPrf := prfAbsAdvantage (msgPrfScheme toyPrimitives) mkgAdv
+      { skgPrf := PRFScheme.prfAdvantage (skPrfScheme toyPrimitives pkSeed) skgAdv
+        mkgPrf := PRFScheme.prfAdvantage (msgPrfScheme toyPrimitives) mkgAdv
         hmsgItsr := ITSRAdvantage itsrAdv
         forsFDspr := SM_DT_DSPR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openPreAdv)
@@ -588,7 +579,7 @@ example :
           (SM_DT_OpenPRE_SourceFinalValidity.toTCR openPreAdv)
         forsHTcr := SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
         forsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv
-        wotsFUd := SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+        wotsFUd := SM_DT_UD_SourceFinalValidity.advantage wotsFUdAdv
         wotsFTcr := SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
         wotsFPre := SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
         wotsTlTcr := SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
@@ -598,8 +589,8 @@ example :
     forsTlAdv wotsFUdAdv wotsFTcrAdv wotsFPreAdv wotsTlAdv xmssHAdv hfors hhyper
 
 example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
-    prfAbsAdvantage (skPrfScheme toyPrimitives pkSeed) skgAdv
-      + prfAbsAdvantage (msgPrfScheme toyPrimitives) mkgAdv
+    PRFScheme.prfAdvantage (skPrfScheme toyPrimitives pkSeed) skgAdv
+      + PRFScheme.prfAdvantage (msgPrfScheme toyPrimitives) mkgAdv
       + ITSRAdvantage itsrAdv
       + SM_DT_DSPR_SourceFinalValidity.advantage
           (SM_DT_OpenPRE_SourceFinalValidity.toDSPR openPreAdv)
@@ -608,7 +599,7 @@ example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
       + SM_DT_TCR_SourceFinalValidity.advantage forsHAdv
       + SM_DT_TCR_SourceFinalValidity.advantage forsTlAdv
       + (toy.params.w - 2 : ℕ) *
-          SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+          SM_DT_UD_SourceFinalValidity.advantage wotsFUdAdv
       + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
       + SM_DT_PRE_SourceFinalValidity.advantage wotsFPreAdv
       + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv
@@ -1132,7 +1123,7 @@ theorem hypertreeHalf_le_freePre {adv : UnforgeableAdversary (generalAlg prims)}
     (wotsTlAdv : SM_DT_TCR_SourceFinalValidity.Adversary (wotsTlTcrCProblem prims))
     (xmssHAdv : SM_DT_TCR_SourceFinalValidity.Adversary (xmssHTcrCProblem prims)) :
     hypertreeHalf adv ≤
-      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.absoluteAdvantage wotsFUdAdv
+      (vp.params.w - 2 : ℕ) * SM_DT_UD_SourceFinalValidity.advantage wotsFUdAdv
         + SM_DT_TCR_SourceFinalValidity.advantage wotsFTcrAdv
         + SM_DT_PRE_SourceFinalValidity.advantage (freePreAdv prims t)
         + SM_DT_TCR_SourceFinalValidity.advantage wotsTlAdv

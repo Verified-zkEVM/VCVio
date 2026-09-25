@@ -386,12 +386,11 @@ whenever its measure specification agrees with its probability specification
 For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` proves the same
 agreement for the native `uniformOn Set.univ` interpretation. It lets a theorem about a direct
 uniform measure fold use an existing finite probability equation at the compatibility boundary.
-For `ProbComp Bool` security games, use `boolDistAdvantage` for a two-game gap and
+For `ProbComp Bool` security games, use `𝒟[game₀].boolDist 𝒟[game₁]` for a two-game gap and
 `𝒟[game] {true}` for a success probability; prefer `Pr{...}[winningCondition]`
 when the game ends by testing a predicate. The native uniform measure instances for
 `unifSpec` and `coinSpec` are global, so no local uniform certificate is needed.
-`boolDistAdvantage_self`,
-`boolDistAdvantage_comm`, and `boolDistAdvantage_triangle` keep elementary
+`Measure.boolDist_self`, `Measure.boolDist_comm`, and `Measure.boolDist_triangle` keep elementary
 metric proofs independent of the finite façade.
 The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
 only needs equality of result types, whereas a measure denotation also depends on the selected

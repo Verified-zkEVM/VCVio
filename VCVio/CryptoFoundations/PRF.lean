@@ -104,8 +104,8 @@ def prfIdealExp [DecidableEq D] [SampleableType R]
 /-- PRF advantage: how well the adversary distinguishes the real PRF from
 a random function. -/
 noncomputable def prfAdvantage [DecidableEq D] [SampleableType R]
-    (prf : PRFScheme K D R) (adversary : PRFAdversary D R) : ℝ :=
-  (prf.prfRealExp adversary).boolDistAdvantage (prfIdealExp adversary)
+    (prf : PRFScheme K D R) (adversary : PRFAdversary D R) : ℝ≥0∞ :=
+  𝒟[prf.prfRealExp adversary].boolDist 𝒟[prfIdealExp adversary]
 
 /-! ## Forwarding lemmas for the PRF query implementations
 

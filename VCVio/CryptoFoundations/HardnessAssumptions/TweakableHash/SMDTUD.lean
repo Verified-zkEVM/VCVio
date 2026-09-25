@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.TweakableHash.Collection
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.SimSemantics.Append
-public import ToMathlib.Data.ENNReal.AbsDiff
+public import ToMathlib.MeasureTheory.Measure.Bool
 
 import Batteries.Tactic.Lint
 
@@ -52,10 +52,8 @@ the parameterization costs no generality. It buys the ability to state bounds in
 subspace, which is what a quantitative bound of the form `q / |M'|` needs, and
 `SM_DT_UD_Problem.HasUniformOutputs` fixes the ideal response to the uniform distribution on `Y`.
 
-The security quantity is oriented: `SM_DT_UD_DirectedAdvantage` is the signed real gap
-`Pr[real = true] - Pr[ideal = true]`. It can be negative, so swapping the real and ideal worlds is
-observable. `SM_DT_UD_AbsoluteAdvantage` separately provides the symmetric `ℝ≥0∞` magnitude used by
-orientation-independent bounds, with a proved bridge between the two views.
+The security quantity `SM_DT_UD_Advantage` is the distinguishing advantage
+`|Pr[real = true] - Pr[ideal = true]|` of the two worlds (HK22 Def. 4, DKKW25 Def. 5).
 
 ## References
 
@@ -229,29 +227,11 @@ adversary's bit and nothing else. -/
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) : ℝ≥0∞ :=
   𝒟[SM_DT_UD_Experiment .ideal adv] {true}
 
-/-- SM-UD advantage: the directed signed gap from the real world to the ideal world. -/
-@[expose] noncomputable def SM_DT_UD_DirectedAdvantage [DecidableEq Tweak]
-    {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) : ℝ :=
-  (SM_DT_UD_RealSuccess adv).toReal - (SM_DT_UD_IdealSuccess adv).toReal
-
-/-- Orientation-independent magnitude of the SM-UD advantage in `ℝ≥0∞`. This is deliberately
-separate from the game's signed `SM_DT_UD_DirectedAdvantage`. -/
-@[expose] noncomputable def SM_DT_UD_AbsoluteAdvantage [DecidableEq Tweak]
+/-- SM-UD advantage: the distinguishing advantage `Measure.boolDist` between the real and ideal
+worlds. -/
+@[expose] noncomputable def SM_DT_UD_Advantage [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) : ℝ≥0∞ :=
-  ENNReal.absDiff (SM_DT_UD_RealSuccess adv) (SM_DT_UD_IdealSuccess adv)
-
-/-- The `ℝ≥0∞` absolute gap is exactly the absolute value of the directed advantage. -/
-theorem SM_DT_UD_absoluteAdvantage_toReal_eq_abs_directedAdvantage [DecidableEq Tweak]
-    {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    (SM_DT_UD_AbsoluteAdvantage adv).toReal = |SM_DT_UD_DirectedAdvantage adv| := by
-  exact ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _) (MeasureTheory.measure_ne_top _ _)
-
-/-- Forgetting orientation gives a sound upper bound on the directed advantage. -/
-theorem SM_DT_UD_directedAdvantage_le_absoluteAdvantage_toReal [DecidableEq Tweak]
-    {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_DirectedAdvantage adv ≤ (SM_DT_UD_AbsoluteAdvantage adv).toReal := by
-  rw [SM_DT_UD_absoluteAdvantage_toReal_eq_abs_directedAdvantage]
-  exact le_abs_self _
+  𝒟[SM_DT_UD_Experiment .real adv].boolDist 𝒟[SM_DT_UD_Experiment .ideal adv]
 
 /-! ## The accepted branches
 
