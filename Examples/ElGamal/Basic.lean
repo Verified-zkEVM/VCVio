@@ -37,7 +37,7 @@ payloads (for example elliptic-curve points), and `gen : G` is a fixed public ge
 1. ElGamal definition and correctness.
 2. One-time DDH bridge:
    `IND_CPA_OneTime_DDHReduction`,
-   `IND_CPA_OneTime_game_eq_ddhRealExperiment`,
+   `IND_CPA_OneTime_Game_eq_ddhRealExperiment`,
    `IND_CPA_OneTime_DDHReduction_rand_half`, and
    `elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage`.
 3. Final theorem:
@@ -118,7 +118,7 @@ def IND_CPA_OneTime_DDHReduction
 /-- Real-branch identification for the one-time ElGamal reduction. After unfolding
 `AsymmEncAlg.IND_CPA_OneTime_Game`, `elGamalAsymmEnc`, `DiffieHellman.ddhRealExperiment`, and
 `IND_CPA_OneTime_DDHReduction`, both sides normalize to the same sample space. -/
-private lemma IND_CPA_OneTime_game_eq_ddhRealExperiment
+private lemma IND_CPA_OneTime_Game_eq_ddhRealExperiment
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen)) :
     ProbCompRuntime.probComp.evalDist (AsymmEncAlg.IND_CPA_OneTime_Game
         (encAlg := elGamalAsymmEnc F G gen) adv ProbCompRuntime.probComp) =
@@ -304,7 +304,7 @@ theorem elGamal_oneTime_advantage_eq_two_mul_ddhAdvantage
     AsymmEncAlg.IND_CPA_OneTime_Advantage (elGamalAsymmEnc F G gen) ProbCompRuntime.probComp adv =
       2 * DiffieHellman.ddhAdvantage gen
         (IND_CPA_OneTime_DDHReduction (F := F) (G := G) (gen := gen) adv) := by
-  rw [AsymmEncAlg.IND_CPA_OneTime_Advantage, IND_CPA_OneTime_game_eq_ddhRealExperiment,
+  rw [AsymmEncAlg.IND_CPA_OneTime_Advantage, IND_CPA_OneTime_Game_eq_ddhRealExperiment,
     MeasureTheory.Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure,
     DiffieHellman.ddhAdvantage, MeasureTheory.Measure.boolDist]
   simp only [evalDist_apply_singleton]

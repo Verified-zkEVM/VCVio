@@ -33,7 +33,7 @@ of `euf_nma_bound`.
 * `forkPoint`: the query-log index at which to rewind the adversary.
 * `wrappedSpec`: the single-oracle signature `unifSpec + (Unit →ₒ Chal)` that the fork runs in.
 * `runTrace`: the wrapped NMA adversary, packaged as a forkable `OracleComp`.
-* `exp` and `advantage`: the resulting security experiment and its advantage.
+* `experiment` and `advantage`: the resulting security experiment and its advantage.
 
 ## Main results
 
@@ -420,7 +420,7 @@ def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 /-- Forkable managed-RO NMA experiment. Success means the final forged transcript verifies and
 the corresponding hash point appears in the live query log, so the forking lemma can rewind it. -/
-def exp [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
+def experiment [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ProbComp Bool :=
@@ -435,7 +435,7 @@ noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ENNReal :=
-  Pr[= true | exp σ hr M nmaAdv qH]
+  Pr[= true | experiment σ hr M nmaAdv qH]
 
 section Coupling
 

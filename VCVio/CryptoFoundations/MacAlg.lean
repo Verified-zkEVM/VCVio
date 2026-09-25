@@ -17,8 +17,8 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 # Message Authentication Codes
 
 This file defines keyed message-authentication-code algorithms together with their standard
-UF-CMA security game `unforgeableExperiment` (message freshness) and the SUF-CMA security game
-`strongUnforgeableExperiment` (pair freshness).
+UF-CMA security experiment `unforgeableExperiment` (message freshness) and the SUF-CMA security
+experiment `strongUnforgeableExperiment` (pair freshness).
 
 ## References
 

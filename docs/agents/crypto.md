@@ -124,9 +124,12 @@ Used by ML-DSA and the Fiat-Shamir with Aborts transform.
   `IND_CPA_Advantage`).
 - An experiment is a program, for example of type `OracleComp spec Bool`, not a measure, and its
   name ends in `Experiment`. When a notion has several worlds, the world word comes first:
-  `prfRealExperiment` and `prfIdealExperiment`.
+  `prfRealExperiment` and `prfIdealExperiment`. The world words are Real and Ideal, with Random
+  in place of Ideal for a real-or-random notion (`ddhRandomExperiment`).
 - `<notion>Game` is the hidden-bit experiment, which samples a fair bit and returns whether the
   adversary guessed it, as in `CommitmentScheme.hidingGame`.
+- Inside a namespace named after the notion, the experiment is plain `experiment` and the
+  hidden-bit game plain `game`, as in `SIS.experiment` and `NoisyLearning.game`.
 - Hybrids and intermediate games of a proof are `game0`, `game1`, … or `hybrid…`, declared inside
   the proof's namespace, as in `KEMDEM.hybrid`.
 - The advantage is `<notion>Advantage` in the scheme or problem namespace, or plain `advantage`
@@ -135,8 +138,8 @@ Used by ML-DSA and the Fiat-Shamir with Aborts transform.
   experiment with `runtime.evalDist`: `SignatureAlg.unforgeableAdvantage runtime adv` is
   `runtime.evalDist (unforgeableExperiment adv) {true}`. A `ProbComp` experiment is evaluated
   with `𝒟[…]`, as in `DiffieHellman.ddhAdvantage`.
-- A correctness experiment is lowercase `correctnessExperiment`, as in
-  `AsymmEncAlg.correctnessExperiment`.
+- Correctness and completeness experiments are lowercase `correctnessExperiment` and
+  `completenessExperiment`, as in `AsymmEncAlg.correctnessExperiment`.
 
 ### `BoundedAdversary`
 
@@ -159,7 +162,8 @@ probability from `1 / 2` (`Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabi
 advantage of a distinguisher between two worlds is the `Measure.boolDist` of their measures,
 `absDiff (μ {true}) (ν {true})`. A search or forgery advantage is a success probability
 `runtime.evalDist exp {true}`, which is `𝒟[exp] {true}` for `ProbComp`. `ENNReal.absDiff` is the
-extended distance on `ℝ≥0∞`, so no truncated subtraction occurs; `Measure.toReal_boolDist` and
+extended distance on `ℝ≥0∞` (`ENNReal.absDiff_eq_edist`), so neither direction of the gap is
+lost to truncation; `Measure.toReal_boolDist` and
 `Measure.toReal_boolBias` give the absolute real difference when a proof needs real arithmetic. A
 one-sided gap, such as the difference of two success probabilities without absolute value, is a
 real-valued lemma rather than an advantage.
@@ -337,8 +341,8 @@ generation.
 
 For a hand-written q-query IND-CPA → DDH hybrid proof:
 
-1. Define `HybridGame adversary k`: first `k` queries use real encryption, rest use random
-2. `HybridGame 0 = IND-CPA random`, `HybridGame q = IND-CPA real`
+1. Define `hybrid adversary k`: first `k` queries use real encryption, rest use random
+2. `hybrid adversary 0 = IND-CPA random`, `hybrid adversary q = IND-CPA real`
 3. Per-step reduction: `stepDDHReduction adversary k` maps DDH challenge to hybrid k vs k+1
 4. Telescope: `advantage ≤ q * max_per_step_advantage`
 

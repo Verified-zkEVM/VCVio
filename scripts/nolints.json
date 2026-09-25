@@ -1783,7 +1783,7 @@
  ["usesRetiredProbability", "_private.Examples.CommitmentScheme.Extractability.0.extractability_win_le_textbook_bound"],
  ["usesRetiredProbability", "_private.Examples.CommitmentScheme.Hiding.Main.0.tvDist_liftComp_hidingAvgSpec"],
  ["usesRetiredProbability", "_private.Examples.ElGamal.Basic.0.elGamalAsymmEnc.IND_CPA_OneTime_DDHReduction_rand_half"],
- ["usesRetiredProbability", "_private.Examples.ElGamal.Basic.0.elGamalAsymmEnc.IND_CPA_OneTime_game_eq_ddhRealExperiment"],
+ ["usesRetiredProbability", "_private.Examples.ElGamal.Basic.0.elGamalAsymmEnc.IND_CPA_OneTime_Game_eq_ddhRealExperiment"],
  ["usesRetiredProbability", "_private.Examples.ElGamal.SSP.0.VCVio.StateSeparating.Examples.ElGamal.composed_rand_swap_handler_evalSPMF"],
  ["usesRetiredProbability", "_private.Examples.OneTimePad.UC.0.oneTimePad.UC.probOutput_liftM_bind_guard"],
  ["usesRetiredProbability", "_private.Examples.PRFTagReader.BadEvent.0.PRFTagReader.simulateQ_unlinkBad_prob_le"],

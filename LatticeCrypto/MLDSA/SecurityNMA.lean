@@ -491,10 +491,10 @@ target vector. The uniform branches agree exactly (both present an independent u
 `t`), and the real branches differ by one application of the idealization at the
 distinguisher `D ρ A := s₁ ← S_η^ℓ; s₂ ← S_η^k; B (ρ, A·s₁ + s₂)`.
 
-Proof recipe: rewrite both advantages via `NoisyLearning.advantage_eq_boolDist_game` and
-`Measure.boolDist`; the `game1` branches are identified by stripping the
+Proof recipe: rewrite both advantages via `NoisyLearning.advantage_eq_boolDist` and
+`Measure.boolDist`; the `randomExperiment` branches are identified by stripping the
 unused matrix draw with `evalDist_bind_const` and commuting the independent uniform draws with
-`evalDist_bind_bind_swap`; the `game0` branches
+`evalDist_bind_bind_swap`; the `realExperiment` branches
 are `≤ εA` by `hA` applied at `D` above, after `bind_assoc` normalization. Conclude
 by the triangle inequality. -/
 lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ≥0∞}
@@ -509,28 +509,28 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ≥0∞}
       let s1 ← sampleShortVec p.l p.eta
       let s2 ← sampleShortVec p.k p.eta
       B (rho, A * s1 + s2)) with hD
-  rw [NoisyLearning.advantage_eq_boolDist_game (mldsaMLWEShort p prims) B,
-    NoisyLearning.advantage_eq_boolDist_game (mldsaMatrixMLWE p) Bm]
-  have h1 : 𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] {true} =
-      𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] {true} := by
-    simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, mldsaMLWEShort,
+  rw [NoisyLearning.advantage_eq_boolDist (mldsaMLWEShort p prims) B,
+    NoisyLearning.advantage_eq_boolDist (mldsaMatrixMLWE p) Bm]
+  have h1 : 𝒟[LearningWithErrors.randomExperiment (mldsaMLWEShort p prims) B] {true} =
+      𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm] {true} := by
+    simp only [LearningWithErrors.randomExperiment, LearningWithErrors.uniformDistr, mldsaMLWEShort,
       mldsaMatrixMLWE, hBm, matrixLift, bind_assoc, pure_bind]
     -- Strip the unused leading matrix draw on the right, then commute the two uniform draws.
     rw [OracleComp.evalDist_bind_const,
       OracleComp.evalDist_bind_bind_swap
         ($ᵗ (Bytes 32)) ($ᵗ (RqVec p.k)) (fun rho t => B (rho, t))]
-  have h0 : 𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B].boolDist
-      𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] ≤ εA := by
-    have hreal : 𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true} =
+  have h0 : 𝒟[LearningWithErrors.realExperiment (mldsaMLWEShort p prims) B].boolDist
+      𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm] ≤ εA := by
+    have hreal : 𝒟[LearningWithErrors.realExperiment (mldsaMLWEShort p prims) B] {true} =
         𝒟[do let rho ← $ᵗ (Bytes 32); D rho (prims.expandA rho)] {true} := by
-      simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMLWEShort, hD,
+      simp only [LearningWithErrors.realExperiment, LearningWithErrors.distr, mldsaMLWEShort, hD,
         bind_assoc, pure_bind]
-    have hunif : 𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] {true} =
+    have hunif : 𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm] {true} =
         𝒟[do
           let rho ← $ᵗ (Bytes 32)
           let A ← $ᵗ (TqMatrix p.k p.l)
           D rho A] {true} := by
-      simp only [LearningWithErrors.game0, LearningWithErrors.distr, mldsaMatrixMLWE, hBm,
+      simp only [LearningWithErrors.realExperiment, LearningWithErrors.distr, mldsaMatrixMLWE, hBm,
         matrixLift, hD,
         bind_assoc, pure_bind]
       -- Commute the trailing `ρ` draw to the front (three independent-draw transpositions).
@@ -548,15 +548,15 @@ lemma advantage_mldsaMLWEShort_le_matrix {εA : ℝ≥0∞}
           sampleShortVec p.k p.eta >>= fun s2 => B (rho, A * s1 + s2))
     rw [MeasureTheory.Measure.boolDist, hreal, hunif]
     exact hA D
-  have h1' : 𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm].boolDist
-      𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] = 0 := by
+  have h1' : 𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm].boolDist
+      𝒟[LearningWithErrors.randomExperiment (mldsaMLWEShort p prims) B] = 0 := by
     rw [MeasureTheory.Measure.boolDist, h1, ENNReal.absDiff_self]
   calc _ ≤ _ := MeasureTheory.Measure.boolDist_triangle _
-        𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm] _
-    _ ≤ εA + (𝒟[LearningWithErrors.game0 (mldsaMatrixMLWE p) Bm].boolDist
-          𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm] +
-        𝒟[LearningWithErrors.game1 (mldsaMatrixMLWE p) Bm].boolDist
-          𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B]) := by
+        𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm] _
+    _ ≤ εA + (𝒟[LearningWithErrors.realExperiment (mldsaMatrixMLWE p) Bm].boolDist
+          𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm] +
+        𝒟[LearningWithErrors.randomExperiment (mldsaMatrixMLWE p) Bm].boolDist
+          𝒟[LearningWithErrors.randomExperiment (mldsaMLWEShort p prims) B]) := by
       gcongr
       exact MeasureTheory.Measure.boolDist_triangle _ _ _
     _ = _ := by rw [h1', add_zero, add_comm]
@@ -650,8 +650,9 @@ monad-rewriting identities, with no statistical slack: the key generators sample
 do (the unused `K` draw strips off, being the leading draw).
 
 Proof recipe: both branches follow the same shape: `rw [nmaShortExperiment_eq_keygen_bind]`,
-`simp only [LearningWithErrors.game0/1, LearningWithErrors.distr/uniformDistr,
-distinguisherBShort, mldsaMLWEShort, keygenShort/1, keyFromMaterial, bind_assoc, pure_bind]`,
+`simp only [LearningWithErrors.realExperiment/randomExperiment,
+LearningWithErrors.distr/uniformDistr, distinguisherBShort, mldsaMLWEShort, keygenShort/1,
+keyFromMaterial, bind_assoc, pure_bind]`,
 strip unused lossless draws with `OracleComp.evalDist_bind_const`, and
 close by simplifying the resulting plain `ProbComp` bind. -/
 theorem nma_keyswap_hop_short
@@ -665,12 +666,12 @@ theorem nma_keyswap_hop_short
       LearningWithErrors.advantage (mldsaMLWEShort p prims)
         (distinguisherBShort p prims hr maxAttempts main) := by
   set B := distinguisherBShort p prims hr maxAttempts main (M := M) with hB
-  rw [NoisyLearning.advantage_eq_boolDist_game (mldsaMLWEShort p prims) B,
+  rw [NoisyLearning.advantage_eq_boolDist (mldsaMLWEShort p prims) B,
     MeasureTheory.Measure.boolDist]
   have hH1 : nmaShortAdvantage p prims hr maxAttempts (keygenShort1 p prims) main =
-      𝒟[LearningWithErrors.game1 (mldsaMLWEShort p prims) B] {true} := by
+      𝒟[LearningWithErrors.randomExperiment (mldsaMLWEShort p prims) B] {true} := by
     rw [nmaShortAdvantage, nmaShortExperiment_eq_keygen_bind]
-    simp only [LearningWithErrors.game1, LearningWithErrors.uniformDistr, hB,
+    simp only [LearningWithErrors.randomExperiment, LearningWithErrors.uniformDistr, hB,
       distinguisherBShort, mldsaMLWEShort, keygenShort1, keyFromMaterial, bind_assoc, pure_bind]
     -- Strip the unused leading `key` draw, then the unused `s₁`, `s₂` draws under `ρ`.
     rw [OracleComp.evalDist_bind_const]
@@ -678,9 +679,9 @@ theorem nma_keyswap_hop_short
     refine evalDist_bind_congr _ _ _ fun rho => ?_
     rw [OracleComp.evalDist_bind_const, OracleComp.evalDist_bind_const]
   have hH0 : nmaShortAdvantage p prims hr maxAttempts (keygenShort p prims) main =
-      𝒟[LearningWithErrors.game0 (mldsaMLWEShort p prims) B] {true} := by
+      𝒟[LearningWithErrors.realExperiment (mldsaMLWEShort p prims) B] {true} := by
     rw [nmaShortAdvantage, nmaShortExperiment_eq_keygen_bind]
-    simp only [LearningWithErrors.game0, LearningWithErrors.distr, hB, distinguisherBShort,
+    simp only [LearningWithErrors.realExperiment, LearningWithErrors.distr, hB, distinguisherBShort,
       mldsaMLWEShort, keygenShort, keyFromMaterial, bind_assoc, pure_bind]
     -- Only the leading `key` draw is unused here (`s₁`, `s₂` build `t`).
     rw [OracleComp.evalDist_bind_const]

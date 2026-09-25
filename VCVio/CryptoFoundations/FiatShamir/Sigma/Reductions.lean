@@ -380,7 +380,7 @@ theorem nma_to_hard_relation_bound
   have hAdv_eq_tsum :
       Fork.advantage σ hr M nmaAdv qH =
         ∑' pkw : Stmt × Wit, Pr[= pkw | hr.gen] * acc pkw.1 := by
-    simp only [Fork.advantage, Fork.exp, ← probEvent_eq_eq_probOutput,
+    simp only [Fork.advantage, Fork.experiment, ← probEvent_eq_eq_probOutput,
       probEvent_simulateQ_unifChalImpl, probEvent_bind_eq_tsum, bind_pure_comp,
       probEvent_map, Function.comp_def, probEvent_liftComp, acc]
   have hRHS_eq_tsum :
