@@ -48,3 +48,20 @@ instance BitVec.instMeasurableSingletonClass (n : ℕ) :
 
 instance BitVec.instDiscreteMeasurableSpace (n : ℕ) :
     DiscreteMeasurableSpace (BitVec n) := inferInstance
+
+/-! ## Lists over a countable alphabet
+
+A computation that draws repeatedly returns a `List`, and observing the *whole* draw — rather
+than a numeric summary of it — needs a σ-algebra on that list type. Mathlib equips no list type
+with one, so there is nothing to overlap with, and countability already forces any reasonable
+choice to be discrete. The guard is `Countable`, not `Finite`: `List α` is countable exactly when
+`α` is, and the instances below are the ones Mathlib derives from `⊤` in that case.
+-/
+
+instance List.instMeasurableSpace {α : Type*} [Countable α] : MeasurableSpace (List α) := ⊤
+
+instance List.instMeasurableSingletonClass {α : Type*} [Countable α] :
+    MeasurableSingletonClass (List α) := ⟨fun _ => trivial⟩
+
+instance List.instDiscreteMeasurableSpace {α : Type*} [Countable α] :
+    DiscreteMeasurableSpace (List α) := inferInstance
