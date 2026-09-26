@@ -237,6 +237,16 @@ of modules whose imports reach the SPMF backend; this checkpoint takes it from 4
 tracked proof-library modules. Final removal deletes the modules in that closure's core and
 regenerates the umbrellas.
 
+## Leaf example checkpoint
+
+Self-contained examples are native end to end: ElGamal and hashed ElGamal (correctness, the
+real-branch game identity, the uniform-masking random branch, and the IND-CPA bounds), BR93,
+the reactive OTP separation tests, the UC observation success probabilities, and the optional
+failure example. Their game hops use the native bind-swap and support-congruence laws on output
+measures, and several hop lemmas are strengthened from `true`-event equalities to equalities of
+output measures. `simp` evaluates the Boolean sample space `{false, true}` under any probability
+measure. Scalar lemmas that only these examples used are removed with them.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

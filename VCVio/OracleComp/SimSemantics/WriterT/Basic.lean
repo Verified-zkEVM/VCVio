@@ -24,11 +24,4 @@ namespace OracleComp
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type u} {ω : Type u} [Monoid ω]
 
-/-- Running a writer-instrumented simulation preserves the failure probability of the
-underlying computation. -/
-lemma probFailure_writerT_run_simulateQ [IsUniformSpec spec]
-    {so : QueryImpl spec (WriterT ω (OracleComp spec))}
-    (oa : OracleComp spec α) : Pr[⊥ | (simulateQ so oa).run] = Pr[⊥ | oa] := by
-  induction oa using OracleComp.inductionOn <;> simp
-
 end OracleComp

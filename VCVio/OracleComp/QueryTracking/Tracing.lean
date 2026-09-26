@@ -58,18 +58,6 @@ section withTrace
 
 variable {ω : Type u} [Monoid ω]
 
-/-- An "after"-style trace preserves failure probability for any base monad with
-`MonadLiftT m SPMF`: instrumenting with `withTrace` does not change the probability
-of failure. When `m = OracleComp spec`, both sides are `0` (trivially true);
-when `m` can genuinely fail (e.g. `OptionT (OracleComp spec)`), this is a
-non-trivial faithfulness property. -/
-lemma probFailure_run_simulateQ_withTrace [LawfulMonad m] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (traceFn : (t : spec.Domain) → spec.Range t → ω)
-    (mx : OracleComp spec α) :
-    Pr[⊥ | (simulateQ (so.withTrace traceFn) mx).run] = Pr[⊥ | simulateQ so mx] := by
-  rw [← fst_map_run_withTrace so traceFn mx, probFailure_map]
-
 /-! #### `evalSPMF` / `probOutput` / `support` bridges for `withTrace` -/
 
 end withTrace
@@ -80,13 +68,6 @@ handler, accumulating via `∅` / `++` -/
 section withTraceAppendBefore
 
 variable {ω : Type u} [EmptyCollection ω] [Append ω]
-
-lemma probFailure_run_simulateQ_withTraceAppendBefore [LawfulMonad m]
-    [LawfulAppend ω] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (traceFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    Pr[⊥ | (simulateQ (so.withTraceAppendBefore traceFn) mx).run] =
-      Pr[⊥ | simulateQ so mx] := by
-  rw [← fst_map_run_withTraceAppendBefore so traceFn mx, probFailure_map]
 
 /-! #### `evalSPMF` / `probOutput` / `support` bridges for `withTraceAppendBefore` -/
 

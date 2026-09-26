@@ -274,24 +274,6 @@ lemma evalSPMF_uniformSample_patchList
 end Marginalization
 
 -- TODO: generalize this lemma
-/-- If the distribution of `f b` is independent of `b`, then guessing a uniformly random
-bit by running `f` has success probability exactly 1/2.
-This is the core lemma behind "all-random hybrid has probability 1/2" arguments. -/
-lemma probOutput_decide_eq_uniformBool_half
-    (f : Bool → ProbComp Bool)
-    (heq : 𝒮[f true] = 𝒮[f false]) :
-    Pr[= true | do let b ← $ᵗ Bool; let b' ← f b; return decide (b = b')] = 1 / 2 := by
-  rw [probOutput_bind_eq_tsum]
-  simp only [tsum_fintype (L := .unconditional _), Fintype.sum_bool,
-    probOutput_uniformSample, Fintype.card_bool]
-  rw [show Pr[= true | f true >>= fun b' => pure (decide (true = b'))] = Pr[= true | f true] by
-        simp,
-    show Pr[= true | f false >>= fun b' => pure (decide (false = b'))] = Pr[= false | f false] by
-        simp,
-    evalSPMF_ext_iff.mp heq true, ← mul_add,
-    show Pr[= true | f false] + Pr[= false | f false] = 1 by simp, mul_one]
-  simp [one_div]
-
 section UniformSampleImpl
 
 open OracleSpec OracleComp

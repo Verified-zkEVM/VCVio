@@ -51,6 +51,20 @@ lemma apply_true_add_apply_false_eq_one (μ : Measure Bool) [IsProbabilityMeasur
     μ {true} + μ {false} = 1 := by
   rw [apply_true_add_apply_false, measure_univ]
 
+/-- `simp` normalizes `(Set.univ : Set Bool)` to `{false, true}`; under a probability measure that
+event has mass one. -/
+@[simp]
+lemma apply_false_true_eq_one (μ : Measure Bool) [IsProbabilityMeasure μ] :
+    μ {false, true} = 1 := by
+  rw [show ({false, true} : Set Bool) = Set.univ from Set.eq_univ_of_forall fun b ↦ by
+    cases b <;> simp, measure_univ]
+
+/-- The Boolean sample space written in the other order also has probability one. -/
+@[simp]
+lemma apply_true_false_eq_one (μ : Measure Bool) [IsProbabilityMeasure μ] :
+    μ {true, false} = 1 := by
+  rw [Set.pair_comm, apply_false_true_eq_one]
+
 /-- A Boolean selector partitions each event of the first marginal into its two branches. -/
 lemma fst_apply_eq_add {α : Type*} [MeasurableSpace α] (μ : Measure (α × Bool))
     {s : Set α} (hs : MeasurableSet s) :

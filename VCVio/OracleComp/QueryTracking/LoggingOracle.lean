@@ -28,17 +28,6 @@ namespace QueryImpl
 
 variable {m : Type u → Type v} [Monad m]
 
-/-- Logging preserves failure probability: for any base monad `m` with `MonadLiftT m SPMF`,
-wrapping an oracle implementation with `withLogging` does not change the probability of failure.
-When `m = OracleComp spec`, both sides are `0` (trivially true). When `m` can genuinely fail
-(e.g. `OptionT (OracleComp spec)`), this is a non-trivial faithfulness property. -/
-lemma probFailure_run_simulateQ_withLogging [LawfulMonad m] [MonadLiftT m SPMF]
-    [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (mx : OracleComp spec α) :
-    Pr[⊥ | (simulateQ (so.withLogging) mx).run] = Pr[⊥ | simulateQ so mx] :=
-  so.probFailure_run_simulateQ_withTraceAppend
-    (fun (t : spec.Domain) u => ([⟨t, u⟩] : QueryLog spec)) mx
-
 lemma NeverFail_run_simulateQ_withLogging_iff [LawfulMonad m] [MonadLiftT m SPMF]
     [LawfulMonadLiftT m SPMF]
     (so : QueryImpl spec m) (mx : OracleComp spec α) :

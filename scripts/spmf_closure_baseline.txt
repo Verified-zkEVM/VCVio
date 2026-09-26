@@ -11,13 +11,11 @@ Examples.CommitmentScheme.Hiding.LoggingBounds.Average
 Examples.CommitmentScheme.Hiding.LoggingBounds.QuerySalt
 Examples.CommitmentScheme.Hiding.Main
 Examples.ElGamal.Basic
-Examples.ElGamal.Common
 Examples.ElGamal.ComputationalComplexity
 Examples.ElGamal.HandlerExecution
 Examples.ElGamal.Hash
 Examples.ElGamal.ReductionCost
 Examples.ElGamal.SSP
-Examples.EvalDistCompatible.Basic
 Examples.MerkleCheckpoints
 Examples.OneTimePad.Basic
 Examples.OneTimePad.ComputationalComplexity

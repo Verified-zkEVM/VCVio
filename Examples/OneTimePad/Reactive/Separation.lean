@@ -42,15 +42,21 @@ theorem leakingSystem_correct (key : Unit) (message : Bool) :
 theorem leaking_conversation_accepts :
     𝒟[conversation leakEnvironment (realOperations leakingSystem (fun _ => pure false)) ()]
       {true} = 1 := by
-  rw [conversation_realOperations, evalDist_apply_singleton]
+  rw [conversation_realOperations]
   simp [leakEnvironment, leakingSystem]
 
 /-- No message-independent ciphertext simulator predicts the environment's random bit. -/
 theorem ideal_conversation_accepts_half (sim : Simulator Bool) (initialMessage : Bool) :
     𝒟[conversation leakEnvironment (idealOperations sim) initialMessage] {true} = 1 / 2 := by
-  rw [conversation_idealOperations, evalDist_apply_singleton]
-  simpa [leakEnvironment, probOutput_bind_eq_tsum] using
-    probOutput_decide_eq_uniformBool_half (fun _ => sim.ciphertext) rfl
+  rw [conversation_idealOperations]
+  calc _ = 𝒟[do let b ← ($ᵗ Bool); let b' ← sim.ciphertext; return decide (b = b')] {true} := by
+        congr 1
+        simp only [leakEnvironment, map_eq_bind_pure_comp, bind_assoc, Function.comp_apply,
+          pure_bind]
+        refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun b _ ↦ ?_
+        refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun c _ ↦ ?_
+        simp [Bool.beq_eq_decide_eq]
+    _ = 1 / 2 := ProbComp.evalDist_decide_eq_uniformBool_half (fun _ => sim.ciphertext) rfl
 
 /-- The actual leaking network is distinguishable from every allowed simulator. -/
 theorem leaking_tokenLaw_ne [MeasurableSpace (Option (Outcome Bool))]
@@ -106,8 +112,10 @@ theorem evalDist_reusedPair_snd_of_uniform [EvalDistSemantics ProbComp]
 theorem reusedPair_laws_ne : 𝒟[reusedPair false] ≠ 𝒟[reusedPair true] := by
   intro equal
   have event := congrArg (fun μ : Measure (Bool × Bool) => μ {pair | pair.1 = pair.2}) equal
-  simp only [evalDist_apply_setOf] at event
-  simp [reusedPair] at event
+  simp only [reusedPair] at event
+  rw [evalDist_map_apply_of_discrete _ _ MeasurableSet.of_discrete,
+    evalDist_map_apply_of_discrete _ _ MeasurableSet.of_discrete] at event
+  simp [Set.preimage] at event
 
 /-- Uniform ciphertexts with a deliberately incorrect decoder. -/
 @[expose] def brokenDecoder : CipherSystem Bool Bool Bool :=
@@ -128,14 +136,14 @@ theorem brokenDecoder_ciphertext_uniform (message : Bool) :
 theorem brokenDecoder_accepts :
     𝒟[($ᵗ Bool) >>= fun key => conversation wrongPlaintextEnvironment
       (realOperations brokenDecoder (fun _ => pure true)) key] {true} = 1 := by
-  rw [evalDist_apply_singleton]
   simp [conversation_realOperations, wrongPlaintextEnvironment, brokenDecoder]
 
 /-- The ideal service can deliver the input or drop it, but cannot deliver a different plaintext. -/
 theorem ideal_wrongPlaintext_rejects (sim : Simulator Bool) :
     𝒟[conversation wrongPlaintextEnvironment (idealOperations sim) false] {true} = 0 := by
-  rw [conversation_idealOperations, evalDist_apply_singleton]
-  simp [wrongPlaintextEnvironment, apply_ite]
+  rw [conversation_idealOperations]
+  simp only [wrongPlaintextEnvironment, apply_ite]
+  simp [← map_bind]
 
 /-- Dropping correctness from the simulation theorem is unsound even with uniform ciphertexts. -/
 theorem brokenDecoder_tokenLaw_ne [MeasurableSpace (Option (Outcome Bool))]

@@ -104,21 +104,6 @@ section insertPost
 variable {m : Type u → Type v} {n : Type u → Type w} [Monad m] [Monad n] [MonadLiftT m n]
     {ι : Type*} {spec : OracleSpec ι} {α β : Type u}
 
-/-- A `postInsert` instrumentation preserves failure probability for any base monad with
-`[MonadLiftT m SPMF]`, given the projection bundle and its compatibility with failure
-probabilities. -/
-lemma probFailure_proj_simulateQ_postInsert
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
-    (proj : ∀ {γ : Type u}, n γ → m γ)
-    (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
-    (hproj_bind : ∀ {γ δ : Type u} (b : n γ) (f : γ → n δ),
-        proj (b >>= f) = proj b >>= fun x => proj (f x))
-    (hproj_apply : ∀ t, proj ((so.postInsert nx) t) = so t)
-    (oa : OracleComp spec β) :
-    Pr[⊥ | proj (simulateQ (so.postInsert nx) oa)] = Pr[⊥ | simulateQ so oa] := by
-  rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
-
 /-! #### `evalSPMF` / `probOutput` / `support` bridges for `postInsert` -/
 
 end insertPost

@@ -48,13 +48,6 @@ section discreteCompatibility
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
-/-- Cost-tracking preserves failure probability: for any base monad `m` with `MonadLiftT m SPMF`,
-wrapping an oracle implementation with `withCost` does not change the probability of failure. -/
-lemma probFailure_run_simulateQ_withCost [LawfulMonad m]
-    (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    Pr[⊥ | (simulateQ (so.withCost costFn) mx).run] = Pr[⊥ | simulateQ so mx] :=
-  probFailure_run_simulateQ_withTraceBefore so costFn mx
-
 lemma NeverFail_run_simulateQ_withCost_iff [LawfulMonad m]
     (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
     NeverFail (simulateQ (so.withCost costFn) mx).run ↔ NeverFail (simulateQ so mx) :=
