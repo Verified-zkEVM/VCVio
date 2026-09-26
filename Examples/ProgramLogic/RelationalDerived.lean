@@ -29,6 +29,8 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## `rel_conseq` / `rel_inline` / `rel_dist` -/
@@ -91,6 +93,8 @@ example :
     ⟪wrappedAuxLeft (spec := spec) ~ wrappedAuxRight (spec := spec) | fun _ _ => True⟫ := by
   rvcstep
 
+omit [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec] in
 @[local vcspec] theorem rawRWP_wrappedTruePair :
     (1 : ℝ≥0∞) ⊑
       rwp⟦wrappedTrueLeft (spec := spec) ~ wrappedTrueRight (spec := spec) |
@@ -110,6 +114,8 @@ example :
 @[irreducible] def rawAuxLeft : OracleComp spec Bool := pure true
 @[irreducible] def rawAuxRight : OracleComp spec Bool := pure true
 
+omit [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec] in
 @[local vcspec] theorem rawRWP_wrappedAuxPairStep (_haux : True) :
     (1 : ℝ≥0∞) ⊑
       rwp⟦rawAuxLeft (spec := spec) ~ rawAuxRight (spec := spec) |

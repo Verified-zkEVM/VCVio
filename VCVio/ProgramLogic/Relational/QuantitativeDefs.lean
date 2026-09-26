@@ -7,6 +7,13 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.Basic
+public import ToMathlib.ProbabilityTheory.Coupling
+public import VCVio.OracleComp.EvalDist
+public import VCVio.EvalDist.Monad.Map
+public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.EvalDist.Defs.Instances
+public import VCVio.EvalDist.Defs.NeverFails
+public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Core eRHL Definitions

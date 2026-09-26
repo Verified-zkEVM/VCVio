@@ -370,6 +370,21 @@ identifies output distributions through the total-variation characterization, an
 file keeps the direction in which a supported coupling gives the indicator full relational mass.
 The converse returns with the measure-backed rebase of `eRelWP`.
 
+## Qualitative relational checkpoint
+
+`CouplingPost` is a measure coupling of the two output laws, each observed in the discrete
+structure on its output type, under which the relation holds almost everywhere; `RelWP` and
+`RelTriple` keep their names and the sequential rule needs finite response types. The anchoring
+instance and the query bijection rule assume uniform response measures, under which every
+reachable output has positive mass. The second oracle-level coupling interface is folded into
+this one. Equality couplings give equal output measures and equal event probabilities, and an
+implication along a coupling bounds one event by another. Game equivalence compares output
+measures in the discrete structure, and the advantage bound measures the distance of the `true`
+mass from one half, transported by measure total variation. Trace noninterference, trace leakage
+freedom and leakage bounds are native, as are the coupling rules for simulated computations and
+the stochastic-dominance rules for bad-state events; identical-until-bad bounds stay on the
+discrete layer for now. Coupling-existence coherence with `eRelWP` returns with its rebase.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

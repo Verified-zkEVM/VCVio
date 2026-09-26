@@ -54,9 +54,9 @@ candidate registrations are experimental.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `by_equiv` | `g₁ ≡ₚ g₂` or `evalSPMF g₁ = evalSPMF g₂` | Enters relational proof mode (`RelTriple`) |
+| `by_equiv` | `g₁ ≡ₚ g₂` or `𝒟[g₁] = 𝒟[g₂]` | Enters relational proof mode (`RelTriple`) |
 | `game_trans g₂` | `g₁ ≡ₚ g₃` | Splits into `g₁ ≡ₚ g₂` and `g₂ ≡ₚ g₃` |
-| `by_dist` | `AdvBound game ε` | Enters TV distance reasoning |
+| `by_dist` | `AdvBound game ε` | Splits into a second game's bound and a `measureETVDist` bound |
 | `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
 | `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
 
@@ -70,7 +70,7 @@ before generating the remaining subgoals.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `rvcstep` | `g₁ ≡ₚ g₂`, `evalSPMF g₁ = evalSPMF g₂`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
+| `rvcstep` | `g₁ ≡ₚ g₂`, `𝒟[g₁] = 𝒟[g₂]`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
 | `rvcstep using t` | same | Supplies the explicit witness needed by the current shape (bind cut relation, bijection, traversal input relation, or simulation state relation) |
 | `rvcstep with thm` | same | Force one explicit relational theorem/assumption step |
 | `rvcstep left` / `rvcstep right` | raw `VCVio.ProgramLogic.rwp` or folded `VCVio.ProgramLogic.RelTriple` goals | Exposes a controlled one-sided bind step |
@@ -290,7 +290,7 @@ All probability-equality control now lives under `vcstep`.
 
 | Tactic | What it does |
 |--------|--------------|
-| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / `evalSPMF` equality and cheap leaf closure |
+| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / output-measure equality and cheap leaf closure |
 | `rvcfinish` / `rvcgen!` | Opt-in residual search and consequence closing |
 | `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `evalSPMF oa = evalSPMF ob` |
 
@@ -384,13 +384,15 @@ Key rules:
 | `relTriple_bind` | Decompose bind on both sides |
 | `relTriple_refl` | Same computation → `EqRel` |
 | `relTriple_eqRel_of_eq` | Definitionally equal → `EqRel` |
-| `relTriple_eqRel_of_evalSPMF_eq` | Same distribution → `EqRel` |
+| `relTriple_eqRel_of_evalDist_eq` | Same output measure (discrete structure) → `EqRel` |
 | `relTriple_query` | Same query → `EqRel` on response |
 | `relTriple_query_bij` | Same query with bijection `f` → `fun a b => f a = b` |
 | `relTriple_uniformSample_bij` | Uniform sampling with bijection |
 | `relTriple_if` | Synchronized conditional |
 | `relTriple_post_mono` | Weaken postcondition |
-| `evalSPMF_eq_of_relTriple_eqRel` | Extract `evalSPMF` equality from `EqRel` triple |
+| `evalDist_eq_of_relTriple_eqRel` | Extract output-measure equality from `EqRel` triple |
+| `prEvent_eq_of_relTriple_eqRel` | Equal event probabilities from `EqRel` triple |
+| `prEvent_le_of_relTriple` | Event inequality from an implication along the coupling |
 
 ### Relational simulateQ
 

@@ -27,6 +27,8 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## Handler normalization -/
@@ -57,6 +59,8 @@ section ByUpto
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -86,6 +90,8 @@ section RelSim
 
 variable {σ₁ σ₂ : Type} {ι : Type} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -128,6 +134,8 @@ section RelSimDist
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -135,7 +143,7 @@ example
     (impl₂ : QueryImpl spec (StateT σ (OracleComp spec)))
     (oa : OracleComp spec α)
     (himpl : ∀ (t : spec.Domain) (s : σ),
-      𝒮[(impl₁ t).run s] = 𝒮[(impl₂ t).run s])
+      letI : MeasurableSpace (spec.Range t × σ) := ⊤; 𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
     (s₁ s₂ : σ) (hs : s₁ = s₂) :
     ⟪(simulateQ impl₁ oa).run' s₁
      ~ (simulateQ impl₂ oa).run' s₂
@@ -185,8 +193,8 @@ end GameEquiv
 
 section ByDist
 
-example {game₁ game₂ : OracleComp spec Bool} {ε₁ ε₂ : ℝ}
-    (hbound : AdvBound game₁ ε₁) (htv : tvDist game₁ game₂ ≤ ε₂) :
+example {game₁ game₂ : OracleComp spec Bool} {ε₁ ε₂ : ℝ≥0∞}
+    (hbound : AdvBound game₁ ε₁) (htv : measureETVDist game₁ game₂ ≤ ε₂) :
     AdvBound game₂ (ε₁ + ε₂) := by
   by_dist ε₂
   · exact hbound
@@ -199,10 +207,12 @@ end ByDist
 section RelDist
 
 variable {ι : Type} {spec : OracleSpec ι} [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example {oa ob : OracleComp spec α}
-    (h : 𝒮[oa] = 𝒮[ob]) :
+    (h : letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob]) :
     ⟪oa ~ ob | EqRel α⟫ := by
   rel_dist
   exact h

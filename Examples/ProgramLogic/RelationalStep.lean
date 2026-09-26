@@ -31,6 +31,8 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [IsUniformSpec spec]
+variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+  [OracleSpec.IsMeasureSpec spec]
 variable {α β γ δ : Type}
 
 /-! ## Basic relational stepping -/

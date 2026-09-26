@@ -95,15 +95,6 @@ theorem IsCoupling.bind {α₁ α₂ β₁ β₂ : Type u}
       rw [← SPMF.fmap_eq_map]
       exact (h a₁ a₂ ho).map_snd
 
-/-- Every `SPMF` has a diagonal self-coupling. -/
-theorem IsCoupling.refl (p : SPMF α) :
-    IsCoupling (p >>= fun a => pure (a, a)) p p := by
-  constructor <;> ext a <;> simp
-
-/-- Diagonal self-coupling witness. -/
-noncomputable def Coupling.refl (p : SPMF α) : Coupling p p :=
-  ⟨p >>= fun a => pure (a, a), IsCoupling.refl p⟩
-
 /-- Binding against a constant `q` collapses to `q` when the scrutinee has no failure mass. -/
 theorem bind_const_of_toPMF_none_eq_zero {p : SPMF α} (hp : p.toPMF none = 0) (q : SPMF β) :
     (p >>= fun _ => q) = q := by

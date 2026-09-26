@@ -182,11 +182,8 @@ VCVio.OracleComp.QueryTracking.SeededOracle
 VCVio.OracleComp.RunIO
 VCVio.ProgramLogic.Notation
 VCVio.ProgramLogic.NotationCore
-VCVio.ProgramLogic.Relational.Basic
 VCVio.ProgramLogic.Relational.Examples
-VCVio.ProgramLogic.Relational.FromUnary
 VCVio.ProgramLogic.Relational.HandlerFromUnary
-VCVio.ProgramLogic.Relational.Leakage
 VCVio.ProgramLogic.Relational.ProgrammingOracle
 VCVio.ProgramLogic.Relational.Quantitative
 VCVio.ProgramLogic.Relational.QuantitativeDefs
@@ -195,9 +192,7 @@ VCVio.ProgramLogic.Relational.SimulateQ.Basic
 VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 VCVio.ProgramLogic.Relational.SimulateQ.Resource
 VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
-VCVio.ProgramLogic.Relational.WP.Coherence
 VCVio.ProgramLogic.Relational.WP.Probabilistic
-VCVio.ProgramLogic.Relational.WP.Qualitative
 VCVio.ProgramLogic.Relational.WP.Quantitative
 VCVio.ProgramLogic.SeededFork
 VCVio.ProgramLogic.Tactics

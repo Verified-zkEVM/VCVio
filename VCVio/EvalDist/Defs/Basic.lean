@@ -133,9 +133,6 @@ lemma mem_support_iff (mx : m α) (x : α) :
   rw [support_eq_SPMF_support, SPMF.mem_support_iff,
     probOutput_def, evalSPMF_def]
 
-lemma mem_support_iff_evalSPMF_apply_ne_zero (mx : m α) (x : α) :
-    x ∈ support mx ↔ 𝒮[mx] x ≠ 0 := by grind
-
 @[grind =]
 lemma mem_finSupport_iff [DecidableEq α] [HasEvalFinset m] (mx : m α) (x : α) :
     x ∈ finSupport mx ↔ Pr[= x | mx] ≠ 0 := by grind

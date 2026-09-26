@@ -349,16 +349,15 @@ public import VCVio.ProgramLogic.Relational.Leakage
 public import VCVio.ProgramLogic.Relational.Measure
 public import VCVio.ProgramLogic.Relational.Measure.Bind
 public import VCVio.ProgramLogic.Relational.Measure.Deterministic
-public import VCVio.ProgramLogic.Relational.Measure.Oracle
 public import VCVio.ProgramLogic.Relational.ProgrammingOracle
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
+public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.Resource
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
-public import VCVio.ProgramLogic.Relational.WP.Coherence
 public import VCVio.ProgramLogic.Relational.WP.Probabilistic
 public import VCVio.ProgramLogic.Relational.WP.Qualitative
 public import VCVio.ProgramLogic.Relational.WP.Quantitative

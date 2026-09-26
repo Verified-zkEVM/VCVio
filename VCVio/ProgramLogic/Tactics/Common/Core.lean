@@ -506,13 +506,12 @@ def isListFoldlMHead (e : Expr) : Bool :=
 def isGameEquivGoal (target : Expr) : Bool :=
   target.consumeMData.getAppFn.isConstOf ``OracleComp.ProgramLogic.GameEquiv
 
-/-- Recognize equality with compatibility distribution evaluations on both sides. -/
+/-- Recognize an equality of two output measures `𝒟[mx] = 𝒟[my]`. -/
 def isEvalDistEqGoal (target : Expr) : Bool :=
   let target := target.consumeMData
   if target.isAppOfArity ``Eq 3 then
-    let lhs := target.getArg! 1
-    let rhs := target.getArg! 2
-    (findAppWithHead? ``evalSPMF lhs).isSome && (findAppWithHead? ``evalSPMF rhs).isSome
+    (target.getArg! 1).consumeMData.isAppOfArity ``evalDist 5 &&
+      (target.getArg! 2).consumeMData.isAppOfArity ``evalDist 5
   else
     false
 

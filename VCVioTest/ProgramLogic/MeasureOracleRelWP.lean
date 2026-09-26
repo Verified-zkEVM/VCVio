@@ -6,20 +6,20 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.ProgramLogic.Relational.Measure.Oracle
+public import VCVio.ProgramLogic.Relational.Basic
 public import VCVio.OracleComp.ProbComp.Basic
 
 /-!
 # Native relational oracle algebra canaries
 
-The scoped qualitative measure algebra supports the generic relational interface, including
+The qualitative measure coupling algebra supports the generic relational interface, including
 uncountable output types and weighted zero-mass branches. It requires no discrete backend.
 -/
 
 public section
 
 open OracleSpec OracleComp
-open scoped MeasureProgramLogic.Relational
+open OracleComp.ProgramLogic.Relational
 
 run_cmd do
   let env ← Lean.getEnv
@@ -35,12 +35,22 @@ example (a b : ℝ) (R : ℝ → ℝ → Prop) :
 
 example (mx : ProbComp ℝ) : MAlgRelOrdered.RelWP mx mx (· = ·) := by simp
 
-example (mx : ProbComp ℝ) : OracleComp.MeasureRelational.wp mx mx (· = ·) := by simp
+example (mx : ProbComp ℝ) : CouplingPost mx mx (· = ·) := by simp
 
 example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (R : ℝ → ℝ → Prop)
     (h : MAlgRelOrdered.RelWP mx my fun a b ↦ MAlgRelOrdered.RelWP (f a) (g b) R) :
     MAlgRelOrdered.RelWP (mx >>= f) (my >>= g) R :=
   MAlgRelOrdered.relWP_bind_le mx my f g R h
+
+/-- Equality couplings of real-valued computations identify every event probability. -/
+example (mx my : ProbComp ℝ) (h : RelTriple mx my (EqRel ℝ)) (p : ℝ → Prop) :
+    Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] :=
+  prEvent_eq_of_relTriple_eqRel h p
+
+/-- An implication along a coupling bounds one real-valued event by another. -/
+example (mx : ProbComp ℝ) (p q : ℝ → Prop) (hpq : ∀ x, p x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let y ← mx}[q y] :=
+  prEvent_le_of_relTriple (relTriple_refl mx) fun _ _ h hp ↦ h ▸ hpq _ hp
 
 /-- A finite oracle whose true branch is operationally possible but has zero mass. -/
 abbrev weightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool
@@ -51,11 +61,25 @@ noncomputable local instance : IsMeasureSpec weightedSpec where
 
 example : MAlgRelOrdered.RelWP (weightedSpec.query 0 : OracleComp weightedSpec Bool)
     (pure false : OracleComp weightedSpec Bool) (· = ·) := by
-  rw [MeasureProgramLogic.Relational.relWP_eq_wp]
-  simp only [OracleComp.MeasureRelational.wp, MeasureProgramLogic.RelWP,
+  simp only [relWP_iff_couplingPost, CouplingPost, MeasureProgramLogic.RelWP,
     OracleComp.evalDist_liftM_query, evalDist_pure, IsMeasureSpec.toMeasure,
     PFunctor.IsMeasureSpec.toMeasure]
   exact MeasureProgramLogic.couplingPost_refl (MeasureTheory.Measure.dirac false)
+
+/-- The zero-mass reachable answer `true` does not obstruct the coupling, so the anchoring rules
+relating couplings to structural support need uniform response measures. -/
+example : RelTriple (pure false : OracleComp weightedSpec Bool)
+      (weightedSpec.query 0 : OracleComp weightedSpec Bool) (· = ·) ∧
+    true ∈ support (weightedSpec.query 0 : OracleComp weightedSpec Bool) := by
+  refine ⟨fun _ ↦ ?_, by simp⟩
+  have h : MAlgRelOrdered.RelWP (weightedSpec.query 0 : OracleComp weightedSpec Bool)
+      (pure false : OracleComp weightedSpec Bool) (· = ·) := by
+    simp only [relWP_iff_couplingPost, CouplingPost, MeasureProgramLogic.RelWP,
+      OracleComp.evalDist_liftM_query, evalDist_pure, IsMeasureSpec.toMeasure,
+      PFunctor.IsMeasureSpec.toMeasure]
+    exact MeasureProgramLogic.couplingPost_refl (MeasureTheory.Measure.dirac false)
+  exact relTriple_iff_relWP.1 (relTriple_post_mono (relTriple_symm (relTriple_iff_relWP.2 h))
+    fun _ _ h ↦ h.symm)
 
 example (a b : ℝ) (R : ℝ → ℝ → Prop) :
     MAlgRelOrdered.RelWP (pure a : OracleComp weightedSpec ℝ)
