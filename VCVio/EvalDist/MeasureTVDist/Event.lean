@@ -15,6 +15,7 @@ public import VCVio.EvalDist.ProbabilityBounds
 Two computations that give every event the same probability away from a bad event are within the
 bad event's probability in total variation, after any post-processing of their outputs. Events
 are read through `Pr{…}`, so no measurable structure is needed on the outputs themselves.
+Measurable post-processing never increases total variation.
 -/
 
 public section
@@ -26,6 +27,12 @@ universe v
 
 variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
   [LawfulEvalDistSemantics m] {α β : Type}
+
+/-- Measurable post-processing of both computations cannot increase total variation. -/
+theorem measureETVDist_map_le [MeasurableSpace α] [MeasurableSpace β] (mx my : m α) (f : α → β)
+    (hf : Measurable f) : measureETVDist (f <$> mx) (f <$> my) ≤ measureETVDist mx my := by
+  simp only [measureETVDist, evalDist_map mx hf, evalDist_map my hf]
+  exact Measure.etvDist_map_le _ _ f hf
 
 /-- Computations that agree on every event away from a bad event are, after any post-processing,
 within the bad event's probability in total variation. -/
