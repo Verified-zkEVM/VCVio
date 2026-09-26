@@ -247,6 +247,13 @@ measures, and several hop lemmas are strengthened from `true`-event equalities t
 output measures. `simp` evaluates the Boolean sample space `{false, true}` under any probability
 measure. Scalar lemmas that only these examples used are removed with them.
 
+The stream PRG built from a PRF is native as well. Its switching argument bounds the lazy
+random-oracle output chain against a uniform output vector in measure total variation, observed
+in the discrete structure on output vectors, by the state-collision mass, pushing the random seed
+and each fresh block through `measureETVDist_bind_bind_le_lintegral`. The birthday bound reads
+collision masses off output measures, and the uniform-key hypothesis is an equality of key
+measures.
+
 ## Symmetric-encryption checkpoint
 
 `SymmEncAlg` states correctness and perfect secrecy with output measures over any lawful measure
