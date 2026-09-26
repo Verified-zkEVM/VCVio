@@ -404,10 +404,8 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.ProgramLogic.Unary.WP.Quantitative
 public import VCVio.ProgramLogic.Unary.WriterTBridge
-public import VCVio.StateSeparating.Advantage
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef
-public import VCVio.StateSeparating.DistEquiv
 public import VCVio.StateSeparating.Hybrid
 public import VCVio.StateSeparating.IdenticalUntilBad
 public import VCVio.StateSeparating.IndistAt

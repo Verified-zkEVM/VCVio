@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
-public import VCVio.StateSeparating.Advantage
+public import VCVio.StateSeparating.Advantage.Measure
 
 /-!
 # Compatibility endpoints for the stateful Fiat-Shamir CMA proof

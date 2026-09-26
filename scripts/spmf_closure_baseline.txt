@@ -378,9 +378,5 @@ VCVio.ProgramLogic.Tactics.Unary.Internals.Driver
 VCVio.ProgramLogic.Tactics.Unary.Internals.Rules
 VCVio.ProgramLogic.Tactics.Unary.Internals.Steps
 VCVio.ProgramLogic.Unary.HandlerSpecs
-VCVio.StateSeparating.Advantage
 VCVio.StateSeparating.CellRef
-VCVio.StateSeparating.DistEquiv
-VCVio.StateSeparating.Hybrid
 VCVio.StateSeparating.IdenticalUntilBad
-VCVio.StateSeparating.IndistAt

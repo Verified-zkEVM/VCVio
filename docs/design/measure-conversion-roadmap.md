@@ -258,6 +258,17 @@ ciphertext rows. The posterior and joint-factorization restatements of independe
 as is the compatibility bridge to the scalar predicates. The one-time pad proves both forms
 directly from its measure laws.
 
+## State-separating equivalence checkpoint
+
+State-separating packages compare handlers by `MeasureDistEquiv`: equal output measures for
+every client, with the `≡ᵈ` and `≡ᵈ₀` notation. A handler step that agrees with another after
+transporting its state along a bijection gives an equivalence (`of_step_bij`), and parallel
+composition is congruent in both components under uniform measure specifications
+(`parSum_congr`). Distinguishing advantages are read off equivalences directly, so the scalar
+equivalence and advantage modules are removed. The heap one-time pad proves its single and paired
+encryption equivalences from the uniform-mask bijection, and the ElGamal state-separating proof
+states its random-branch swap as a measure equivalence.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
