@@ -276,9 +276,10 @@ Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
 CI keeps two caches: `.lake/packages`, keyed by `lean-toolchain` and `lake-manifest.json`, and
-the project's own `.lake/build`, which every run saves and later runs restore. GitHub scopes a cache
-to the ref that saved it, so a pull request starts from its own previous push or from `main`, and
-`main` only from `main`. Lake rebuilds a module when the content hash of its source or imports
+the project's own `.lake/build`, which every `main` run saves and every run restores. Only `main`
+saves, so pull-request code never publishes a cache another run loads. The `Lint` job restores the
+same caches and builds the changed modules itself, so it runs alongside `Build Project`. Lake
+rebuilds a module when the content hash of its source or imports
 changes, so a restored build only saves work; it never changes a verdict. Lake replays the stored
 messages of modules it does not rebuild, so the warning budgets still see every warning. The
 nightly scheduled run, and a manual run with `clean_build`, skips the build cache.

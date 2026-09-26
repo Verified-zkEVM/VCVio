@@ -253,11 +253,11 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_ENV"
       # Two caches with different lifetimes. Dependencies change only with the manifest; the VCVio
-      # build changes with every commit, so every run saves it and later runs restore the newest
-      # one they may see: GitHub scopes a cache to the ref that saved it, so a PR sees its own
-      # earlier pushes and `main`, and `main` sees only `main`. Lake decides what to rebuild from
-      # content hashes of each module's source and imports, so a restored build is only a starting
-      # point. Lake regenerates the `*.setup.json` files per build and never reads old ones.
+      # build changes with every commit, so it is saved per `main` run and restored from the newest
+      # one. Lake decides what to rebuild from content hashes of each module's source and imports,
+      # so a restored build is only a starting point: whatever this checkout changed, and
+      # everything importing it, is rebuilt. Lake regenerates the `*.setup.json` files per build
+      # and never reads old ones.
       - name: Restore dependency cache
         id: deps-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -398,10 +398,11 @@ jobs:
           python3 scripts/module_times.py update .lake/build/vcvio-module-times.json \
             --commit "$GITHUB_SHA" \
             "$BUILD_TIMING_LOG_DIR/library_build.log" "$BUILD_TIMING_LOG_DIR/test_build.log"
-      # Every run saves both caches the `Lint` job below restores. The saves are scoped to this
-      # run's ref, so a pull request's build is visible only to that pull request.
+      # Only `main` writes caches. Pull request and merge-queue runs restore them and discard their
+      # own build, so untrusted code never publishes an artifact another run loads, and their builds
+      # do not evict the `main` caches from the repository's 10 GB budget.
       - name: Save dependency cache
-        if: steps.deps-cache.outputs.cache-hit != 'true'
+        if: github.ref == 'refs/heads/main' && steps.deps-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -409,8 +410,9 @@ jobs:
             !.lake/packages/**/*.setup.json
           key: ${{ steps.deps-cache.outputs.cache-primary-key }}
       # Keyed by run as well as commit, so a nightly clean build of an already-cached commit still
-      # lands and `Lint` restores exactly this run's build.
+      # lands; restores take the newest match.
       - name: Save build cache
+        if: github.ref == 'refs/heads/main'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
@@ -494,19 +496,20 @@ jobs:
               });
             }
 
+  # Batteries' environment linters over the proof libraries (the lint driver in `lakefile.lean`)
+  # import one whole environment per library; run inside `Build Project` they pushed the hosted
+  # runner into a shutdown, so they get their own runner. The job restores the same caches as
+  # `Build Project` and builds the changed modules itself, so it runs alongside that job instead
+  # of waiting for it.
   lint:
     name: Lint
-    needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      # Batteries' environment linters over the seven proof libraries (the lint driver in
-      # `lakefile.lean`) import one whole environment per library; run inside `Build Project`
-      # they pushed the hosted runner into a shutdown, so they get a fresh runner and the
-      # oleans that job saved. `fail-on-cache-miss` keeps a missing cache from turning into a
-      # second full build.
+          submodules: recursive
+      # Paths and keys must match the saves in `Build Project` exactly, or the restore misses.
       - name: Restore dependency cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -514,15 +517,18 @@ jobs:
             .lake/packages
             !.lake/packages/**/*.setup.json
           key: lake-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
-          fail-on-cache-miss: true
+          restore-keys: |
+            lake-deps-${{ runner.os }}-${{ runner.arch }}-
       - name: Restore build cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             .lake/build
             !.lake/build/**/*.setup.json
-          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.run_id }}
-          fail-on-cache-miss: true
+          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Lean environment
         uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
         with:
@@ -536,11 +542,12 @@ jobs:
         run: lake exe cache get
       - name: Test lint orchestration
         run: python3 scripts/test-lint.py
-      - name: Lint each library and check exact baseline
+      # Without `--no-build` the driver runs `lake build` on the proof libraries first.
+      - name: Build and lint each library, and check exact baseline
         env:
           LINT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha || '' }}
         run: |
-          args=(--env-only --no-build)
+          args=(--env-only)
           if [[ -n "$LINT_BASE_REF" ]]; then
             args+=(--base-ref "$LINT_BASE_REF")
           fi
