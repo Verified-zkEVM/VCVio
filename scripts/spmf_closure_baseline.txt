@@ -158,7 +158,6 @@ VCVio.EvalDist.TVDist.Positivity
 VCVio.Interaction.UC.AsyncRuntime
 VCVio.Interaction.UC.AsyncSecurity
 VCVio.Interaction.UC.Computational
-VCVio.Interaction.UC.ProportionalScheduler
 VCVio.Interaction.UC.ReactiveSecurity
 VCVio.Interaction.UC.ReactiveWorld
 VCVio.Interaction.UC.Runtime

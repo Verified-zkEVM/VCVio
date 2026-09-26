@@ -253,6 +253,27 @@ theorem prEvent_map
     Pr{let y ← f <$> mx}[p y] = Pr{let x ← mx}[p (f x)] := by
   rw [bind_map_left]
 
+/-- An event of a pure computation has probability one exactly when it holds. -/
+theorem prEvent_pure
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (a : α) (p : α → Prop) [Decidable (p a)] :
+    Pr{let x ← (pure a : m α)}[p x] = if p a then 1 else 0 := by
+  rw [pure_bind, evalDist_pure]
+  by_cases h : p a <;> simp [h]
+
+/-- After a draw from a finite type, an event is the finite sum of the draw's point masses times
+the conditional event probabilities. -/
+theorem prEvent_bind_eq_sum_fintype
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type} [Fintype α] (mx : m α) (f : α → m β) (p : β → Prop) :
+    Pr{let y ← mx >>= f}[p y] = ∑ a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, MeasureTheory.lintegral_fintype]
+  refine Finset.sum_congr rfl fun a _ => ?_
+  rw [mul_comm, prEvent_eq_evalDist_singleton]
+
 /-- Events of independent draws have the product of their probabilities. -/
 @[simp↓ high, grind norm↓]
 theorem prEvent_bind_bind_and

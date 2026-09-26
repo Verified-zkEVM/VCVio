@@ -333,6 +333,14 @@ morphisms, bit-vector sampling, and the clean importers of the remaining hubs no
 the discrete layer. Together with the lattice sampling change this takes the SPMF import closure
 from 357 to 227 modules, including the random-oracle simulation and the SLH-DSA stack.
 
+## Scheduling checkpoint
+
+Proportional UC scheduling is native: the output relation compares measures under the discrete
+measurable structure and reads, on countable outputs, as pointwise agreement of `Pr{…}` point
+events; slot draws, binary and flat choices, and the coherence laws are computed with finite
+bind sums. The oracle runtime observes the native output measure of the simulated run. Events of
+pure computations and of binds over finite draws have native equations.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
