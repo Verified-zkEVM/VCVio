@@ -58,7 +58,7 @@ candidate registrations are experimental.
 | `by_equiv` | `g₁ ≡ₚ g₂` or `𝒟[g₁] = 𝒟[g₂]` | Enters relational proof mode (`RelTriple`) |
 | `game_trans g₂` | `g₁ ≡ₚ g₃` | Splits into `g₁ ≡ₚ g₂` and `g₂ ≡ₚ g₃` |
 | `by_dist` | `AdvBound game ε` | Splits into a second game's bound and a `measureETVDist` bound |
-| `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
+| `by_upto bad` | identical-until-bad `measureETVDist` goals | Applies the `simulateQ` up-to-bad bound |
 | `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
 
 `by_equiv` enters the coupling-based `RelTriple` shell, so that `rvcstep` / `rvcgen` can keep
@@ -507,13 +507,17 @@ quantifier.
 ### Identical Until Bad
 
 ```lean
-tvDist_simulateQ_le_probEvent_bad :
-  (¬bad s₀) →
-  (∀ t s, ¬bad s → (impl₁ t).run s = (impl₂ t).run s) →
+measureETVDist_simulateQ_run'_le_prEvent_bad :
+  (∀ t s, ¬bad s → ∀ q, Pr{let z ← (impl₁ t).run s}[q z ∧ ¬bad z.2] =
+    Pr{let z ← (impl₂ t).run s}[q z ∧ ¬bad z.2]) →
   (bad monotone for impl₁ and impl₂) →
-  tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
-    ≤ Pr[bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀].toReal
+  measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+    ≤ Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2]
 ```
+
+The handlers need only agree on good-to-good steps, so they may disagree on the step that sets
+a bad flag; `_of_run_eq` and `_of_evalDist_eq` take agreement off bad input states instead. No
+measurable structure is needed on the state.
 
 ### eRHL (quantitative relational logic)
 

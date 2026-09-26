@@ -415,6 +415,40 @@ theorem relTriple_simulateQ_run'_of_query_map_eq
 
 end coupling
 
+/-- Query-bounded exact-output transport for `simulateQ`.
+
+If `oa` satisfies a structural query bound `IsQueryBound budget canQuery cost`, the two
+implementations agree on every query that the bound permits, and the second implementation
+preserves a budget-indexed invariant `Inv`, then the full simulated computations have the same
+output-state measure from any initial state satisfying `Inv`. -/
+theorem evalDist_simulateQ_run_eq_of_impl_eq_queryBound
+    {ι : Type} {spec : OracleSpec ι} {σ : Type} {B : Type _}
+    (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp))
+    (Inv : σ → B → Prop)
+    (canQuery : spec.Domain → B → Prop)
+    (cost : spec.Domain → B → B)
+    (oa : OracleComp spec α)
+    (budget : B)
+    (hbound : oa.IsQueryBound budget canQuery cost)
+    (himpl_eq : ∀ (t : spec.Domain) (s : σ) (b : B),
+      Inv s b → canQuery t b → (impl₁ t).run s = (impl₂ t).run s)
+    (hpres₂ : ∀ (t : spec.Domain) (s : σ) (b : B), Inv s b → canQuery t b →
+      ∀ z ∈ support ((impl₂ t).run s), Inv z.2 (cost t b))
+    (s : σ) (hs : Inv s budget) :
+    letI : MeasurableSpace (α × σ) := ⊤
+    𝒟[(simulateQ impl₁ oa).run s] = 𝒟[(simulateQ impl₂ oa).run s] := by
+  let : MeasurableSpace (α × σ) := ⊤
+  induction oa using OracleComp.inductionOn generalizing s budget with
+  | pure x => rfl
+  | query_bind t oa ih =>
+      rw [isQueryBound_query_bind_iff] at hbound
+      rcases hbound with ⟨hcan, hcont⟩
+      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+        OracleQuery.cont_query, id_map, StateT.run_bind]
+      rw [himpl_eq t s budget hs hcan]
+      exact evalDist_bind_congr_of_support _ _ _ fun p hp =>
+        ih p.1 (cost t budget) (hcont p.1) p.2 (hpres₂ t s budget hs hcan p hp)
+
 /-! ## Stochastic dominance through `simulateQ` -/
 
 /-- **Marginal stochastic dominance through `simulateQ` (self-referential / Fubini form).**

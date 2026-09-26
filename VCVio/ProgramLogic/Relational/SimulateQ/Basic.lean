@@ -18,8 +18,8 @@ public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 # Identical-until-bad rules for `simulateQ`
 
 Two oracle implementations that agree until a bad event give output distributions within the
-bad event's probability, together with the query-bounded exact-output transport. The coupling
-rules for simulated computations live in `VCVio.ProgramLogic.Relational.SimulateQ.Coupling`.
+bad event's probability, stated with the discrete total variation distance. The native statement
+is `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad`.
 -/
 
 public section
@@ -33,43 +33,6 @@ namespace OracleComp.ProgramLogic.Relational
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α : Type}
-
-/-- Query-bounded exact-output transport for `simulateQ`.
-
-If `oa` satisfies a structural query bound `IsQueryBound budget canQuery cost`, the two
-implementations agree on every query that the bound permits, and the second implementation
-preserves a budget-indexed invariant `Inv`, then the full simulated computations have identical
-output-state probabilities from any initial state satisfying `Inv`. -/
-theorem probOutput_simulateQ_run_eq_of_impl_eq_queryBound
-    {ι : Type} {spec : OracleSpec ι} {σ : Type _} {B : Type _}
-    (impl₁ impl₂ : QueryImpl spec (StateT σ ProbComp))
-    (Inv : σ → B → Prop)
-    (canQuery : spec.Domain → B → Prop)
-    (cost : spec.Domain → B → B)
-    (oa : OracleComp spec α)
-    (budget : B)
-    (hbound : oa.IsQueryBound budget canQuery cost)
-    (himpl_eq : ∀ (t : spec.Domain) (s : σ) (b : B),
-      Inv s b → canQuery t b → (impl₁ t).run s = (impl₂ t).run s)
-    (hpres₂ : ∀ (t : spec.Domain) (s : σ) (b : B), Inv s b → canQuery t b →
-      ∀ z ∈ support ((impl₂ t).run s), Inv z.2 (cost t b))
-    (s : σ) (hs : Inv s budget) (z : α × σ) :
-    Pr[= z | (simulateQ impl₁ oa).run s] = Pr[= z | (simulateQ impl₂ oa).run s] := by
-  induction oa using OracleComp.inductionOn generalizing s budget z with
-  | pure x =>
-      simp
-  | query_bind t oa ih =>
-      rw [isQueryBound_query_bind_iff] at hbound
-      rcases hbound with ⟨hcan, hcont⟩
-      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind]
-      rw [himpl_eq t s budget hs hcan]
-      rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-      refine tsum_congr fun p => ?_
-      by_cases hp : p ∈ support ((impl₂ t).run s)
-      · congr 1
-        exact ih p.1 (cost t budget) (hcont p.1) p.2 (hpres₂ t s budget hs hcan p hp) z
-      · simp [(probOutput_eq_zero_iff _ _).2 hp]
 
 /-! ## "Identical until bad" fundamental lemma -/
 
@@ -438,42 +401,5 @@ theorem tvDist_simulateQ_le_probEvent_output_bad
     tvDist_le_probEvent_of_probOutput_eq_of_not (mx := sim₁) (my := sim₂)
       (fun z : α × σ × Bool => z.2.2 = true) h_eq
       (probEvent_output_bad_eq impl₁ impl₂ h_agree_good h_mono₁ h_mono₂ oa s₀)
-
-/-- **Fundamental lemma of game playing**, in the "identical until bad" form where the
-simulation state is `σ × Bool` and the `Bool` component is the bad flag: the TV distance between
-the output marginals of the two simulations is at most the probability that the flag is set at
-the end of the run of `impl₁`.
-
-`h_agree_good` constrains only those single-step transitions that both start *and* end unflagged,
-so the two implementations may disagree arbitrarily on the very step that raises the flag.
-`h_mono₁` and `h_mono₂` say neither implementation ever lowers the flag again, which is what lets
-an unflagged endpoint witness an entirely unflagged history.
-
-Applying it: `impl₂` does not occur on the right-hand side, so instantiate `impl₁` as the world
-whose flag mass you can bound; the remaining obligation is a `Pr[… z.2.2 = true …]` estimate in
-that world alone. This is the shape the `QueryImpl.withProgramming` collision bound is stated in:
-the two implementations agree on `(s, false)` inputs except on a programming-fired step, and the
-bound is the probability that some policy hit occurs during the run.
-
-`tvDist_simulateQ_le_probEvent_bad` instead takes an arbitrary state predicate `bad : σ → Prop`
-and asks the implementations to agree *definitionally* on unflagged states, while
-`tvDist_simulateQ_le_probEvent_output_bad` carries exactly the hypotheses and conclusion below
-under a name spelling out the inequality rather than the cryptographic idiom. -/
-theorem identical_until_bad_with_flag
-    {σ : Type}
-    (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec)))
-    (oa : OracleComp spec α) (s₀ : σ)
-    (h_agree_good : ∀ (t : spec.Domain) (s : σ) (u : spec.Range t) (s' : σ),
-      Pr[= (u, (s', false)) | (impl₁ t).run (s, false)] =
-        Pr[= (u, (s', false)) | (impl₂ t).run (s, false)])
-    (h_mono₁ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
-      ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true)
-    (h_mono₂ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
-      ∀ z ∈ support ((impl₂ t).run p), z.2.2 = true) :
-    tvDist ((simulateQ impl₁ oa).run' (s₀, false))
-        ((simulateQ impl₂ oa).run' (s₀, false))
-      ≤ Pr[fun z : α × σ × Bool => z.2.2 = true |
-          (simulateQ impl₁ oa).run (s₀, false)].toReal :=
-  tvDist_simulateQ_le_probEvent_output_bad impl₁ impl₂ oa s₀ h_agree_good h_mono₁ h_mono₂
 
 end OracleComp.ProgramLogic.Relational

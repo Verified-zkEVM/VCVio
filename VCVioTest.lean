@@ -79,6 +79,7 @@ public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.NativeOracleWP
+public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
 public import VCVioTest.RandomOracleControls

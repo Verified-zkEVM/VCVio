@@ -45,7 +45,8 @@ condition as `withProgramming` but **without actually programming**: the oracle 
 normally and the (fresh) value is cached. Its purpose is to be the relational bridge between
 `withCaching` (cache-side projection) and `withProgramming` (the "identical-until-bad" partner
 of `withProgramming`); see `OracleComp.ProgramLogic.Relational.ProgrammingOracle` for the
-actual TV-distance bound (`tvDist_simulateQ_withCaching_withProgramming_le_probEvent_bad`)
+actual total variation bound
+(`measureETVDist_simulateQ_withCaching_withProgramming_le_prEvent_bad`)
 and its `programming_collision_bound{,_qP_qH_β}` repackagings.
 -/
 

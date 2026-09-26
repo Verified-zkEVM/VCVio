@@ -408,6 +408,20 @@ variation with the complement of the best coupled probability of equal outputs, 
 equality coupling with error `ε` is exactly a total variation bound `ε`, and a zero-error one gives
 game equivalence.
 
+## Identical-until-bad checkpoint
+
+The fundamental lemma of game playing is native. Two stateful handlers that give every event the
+same probability on steps between good states, and that keep bad states bad, produce simulations
+that agree on every event away from a bad final state; their output-state pairs, and hence their
+outputs, are within the probability of ending in a bad state in measure total variation. The
+handlers may disagree on the step that sets a bad flag, and they may run in a different oracle
+specification than the simulated program; agreement off bad input states, as equal runs or equal
+output measures, is a special case. Two computations that agree on every event away from a bad
+event are within its probability after any post-processing, with no measurable structure on the
+outputs. The programmable-oracle bounds, the random-oracle bridge and the query-bounded
+exact-output transport are native, and `by_upto` targets the native bound; the ε-slack
+refinements and their consumers remain on the discrete layer.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

@@ -58,26 +58,23 @@ example {g₁ g₂ g₃ : OracleComp spec α}
 section ByUpto
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
 variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsMeasureSpec spec]
-variable {α : Type}
+variable {α : Type} [MeasurableSpace α]
 
 example
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec)))
-    (bad : σ → Prop) [DecidablePred bad]
+    (bad : σ → Prop)
     (oa : OracleComp spec α) (s₀ : σ)
-    (h_init : ¬bad s₀)
     (h_agree : ∀ (t : spec.Domain) (s : σ), ¬bad s →
       (impl₁ t).run s = (impl₂ t).run s)
     (h_mono₁ : ∀ (t : spec.Domain) (s : σ), bad s →
       ∀ x ∈ support ((impl₁ t).run s), bad x.2)
     (h_mono₂ : ∀ (t : spec.Domain) (s : σ), bad s →
       ∀ x ∈ support ((impl₂ t).run s), bad x.2) :
-    tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
-      ≤ Pr[ bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀].toReal := by
+    measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+      ≤ Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] := by
   by_upto bad
-  · exact h_init
   · exact h_agree
   · exact h_mono₁
   · exact h_mono₂

@@ -648,7 +648,7 @@ def runRelCondRule : TacticM Bool := do
 /-- Bound simulation distance by the probability of the supplied bad predicate. -/
 def runByUptoRule (bad : TSyntax `term) : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    apply OracleComp.ProgramLogic.Relational.tvDist_simulateQ_le_probEvent_bad
+    apply OracleComp.ProgramLogic.Relational.measureETVDist_simulateQ_run'_le_prEvent_bad_of_run_eq
       (bad := $bad)))
 
 /-- Swap the two computations in a relational triple. -/

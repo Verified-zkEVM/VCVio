@@ -189,6 +189,7 @@ public import VCVio.EvalDist.MeasureSemantics
 public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.MeasureTVDist.Bind
+public import VCVio.EvalDist.MeasureTVDist.Event
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Branch
@@ -358,6 +359,7 @@ public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
 public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.Resource
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
+public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 public import VCVio.ProgramLogic.Relational.WP.Probabilistic
 public import VCVio.ProgramLogic.Relational.WP.Qualitative
 public import VCVio.ProgramLogic.Relational.WP.Quantitative

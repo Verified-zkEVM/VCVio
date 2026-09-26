@@ -353,9 +353,9 @@ macro_rules
     `(tactic|
       (apply OracleComp.ProgramLogic.AdvBound.of_measureETVDist (ε₂ := $eps)))
 
-/-- `by_upto bad` applies the "identical until bad" TV-distance theorem for `simulateQ`.
-It leaves the standard four subgoals: initial non-bad state, agreement off bad,
-and bad-state monotonicity for each implementation. -/
+/-- `by_upto bad` applies the "identical until bad" total-variation theorem for `simulateQ`.
+It leaves the standard three subgoals: agreement off bad states, and bad-state monotonicity for
+each implementation. -/
 syntax "by_upto" term : tactic
 
 elab_rules : tactic
@@ -364,7 +364,7 @@ elab_rules : tactic
         return
       let target ← instantiateMVars (← getMainTarget)
       throwError
-        "by_upto: expected a TV-distance goal for two `simulateQ ... run'` computations\n\
+        "by_upto: expected a `measureETVDist` goal for two `simulateQ ... run'` computations\n\
         bounded by\n\
         the probability of a bad event on the left simulation;\n\
         got:{indentExpr target}"
