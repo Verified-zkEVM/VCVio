@@ -247,6 +247,17 @@ measures, and several hop lemmas are strengthened from `true`-event equalities t
 output measures. `simp` evaluates the Boolean sample space `{false, true}` under any probability
 measure. Scalar lemmas that only these examples used are removed with them.
 
+## Symmetric-encryption checkpoint
+
+`SymmEncAlg` states correctness and perfect secrecy with output measures over any lawful measure
+semantics. Correctness is a Dirac round trip; perfect secrecy has the channel form (equal
+ciphertext rows) and the independence form (the joint law of a lossless message sampler is the
+product of its marginals), and equal rows imply independence. Shannon's theorem is ported: a
+uniform key and deterministic encryption that is bijective in the key give uniform, hence equal,
+ciphertext rows. The posterior and joint-factorization restatements of independence are removed,
+as is the compatibility bridge to the scalar predicates. The one-time pad proves both forms
+directly from its measure laws.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

@@ -316,16 +316,6 @@ theorem denote_probComp_apply_singleton {α : Type} [MeasurableSpace α]
     FreeM.denote program {x} = Pr[= x | program] :=
   evalDist_apply_singleton program x
 
-/-- The one-time-pad ciphertext is uniform, read off the measure denotation.
-
-The statement is about a Mathlib `Measure`; the proof is the existing `Pr[…]` result. This is
-the compatibility gate: converting the semantics does not cost the crypto proofs. -/
-example (sp : ℕ) (mgen : ProbComp (BitVec sp)) (σ : BitVec sp) :
-    FreeM.denote ((oneTimePad sp).perfectSecrecyCipherExperiment mgen) {σ}
-      = (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  rw [denote_probComp_apply_singleton]
-  exact oneTimePad.probOutput_cipher_uniform sp mgen σ
-
 /-! ## Divergence
 
 The point of denoting into `Measure` is that Mathlib's probability library then applies to

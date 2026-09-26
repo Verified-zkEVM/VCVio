@@ -263,8 +263,6 @@ VCVio.CryptoFoundations.ReplayForkCost
 VCVio.CryptoFoundations.SeededFork
 VCVio.CryptoFoundations.SigmaProtocol
 VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
-VCVio.CryptoFoundations.SymmEncAlg
-VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility
 VCVio.EvalDist.BitVec
 VCVio.EvalDist.Bool
 VCVio.EvalDist.Defs.AlternativeMonad

@@ -264,16 +264,6 @@ lemma support_guard {p : Prop} [Decidable p] :
 
 variable [IsProbabilitySpec spec]
 
-lemma probOutput_guard {p : Prop} [Decidable p] :
-    Pr[= () | (guard p : OptionT (OracleComp spec) Unit)] = if p then 1 else 0 := by
-  rw [OracleComp.guard_eq]
-  split_ifs with h
-  · exact probOutput_pure_self ()
-  · -- `probOutput_failure ()` would suit, but `LawfulFailure (OptionT (OracleComp spec))` does
-    -- not resolve through `OptionT.instLawfulFailure` due to a universe-inference quirk in the
-    -- post-refactor diamond. Compute directly.
-    simp [OptionT.probOutput_eq, OptionT.run_failure, probOutput_pure]
-
 end guard
 
 /-! ## Probabilities of `orElse` (`<|>`)

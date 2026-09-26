@@ -502,28 +502,6 @@ private lemma probOutput_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex_e
   rw [probOutput_bind_eq_tsum]
   simp_rw [probOutput_liftComp]
 
-private lemma probOutput_prependValues_takeAtIndex_tsum_eq_query_mul
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (t : ι₀) (i₀ : ι₀) (k : ℕ)
-    {α : Type} (ob : OracleComp spec₀ α) (u : spec₀.Range t) (x : α)
-    (hcount : 0 < qc t * js.count t)
-    (h : 𝒮[(do
-      let seed ← liftComp (generateSeed spec₀
-        (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup) spec₀
-      (simulateQ seededOracle ob).run' (seed.takeAtIndex i₀ k) : OracleComp spec₀ α)] = 𝒮[ob]) :
-    ∑' s : QuerySeed spec₀, Pr[= s.prependValues [u] | generateSeed spec₀ qc js] *
-        Pr[= x | (simulateQ seededOracle ob).run' (s.takeAtIndex i₀ k)] =
-      Pr[= u | (liftM (query t) : OracleComp spec₀ _)] * Pr[= x | ob] := by
-  simp_rw [probOutput_generateSeed_prependValues spec₀ qc js u _ hcount, mul_assoc]
-  rw [ENNReal.tsum_mul_left]
-  congr 1
-  · exact (probOutput_query _ u).symm
-  · rw [← probOutput_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex_eq_tsum]
-    simpa only [probOutput_def] using congrFun (congrArg DFunLike.coe h) x
-
 private lemma takeAtIndex_prependValues_singleton_self_aux {ι₀ : Type} {spec₀ : OracleSpec ι₀}
     [DecidableEq ι₀] (t : ι₀) (k : ℕ) (hk : 0 < k) (u₀ : spec₀.Range t) (s' : QuerySeed spec₀) :
     (s'.prependValues [u₀]).takeAtIndex t k =
