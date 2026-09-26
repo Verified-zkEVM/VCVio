@@ -173,6 +173,22 @@ commitment example's TV theorem remain distinct theorem families. Their required
 use the existing explicit coherence theorem in their compatibility owners. The native Hoare
 and simulation modules do not import PMF/SPMF or probability compatibility classes.
 
+## Dead and orphaned retiring-probability checkpoint
+
+The retirement surface kept for compatibility is the façade itself: `SPMF`, `evalSPMF`/`𝒮[…]`,
+`probOutput`/`probEvent`/`probFailure` with their `Pr[…]` notation, and the equations crossing
+between `Pr[…]` and `𝒟[…]`. Scalar lemmas survive only while an unconverted consumer uses them.
+
+Declarations with no remaining consumer are deleted rather than deprecated: unused scalar
+twins of native lemmas, the unused `SPMFSemantics`/`PMFSemantics` bundles, the ReaderT and
+`FinRatPMF.Raw` PMF lifts, the deprecated fork façade, and orphaned lemmas of the scalar
+EvalDist, SPMF, uniform-selection, tracing, and query-tracking APIs. Consumers are counted
+through proof terms, including the auxiliary declarations that `simp` generates for its lemmas.
+Lemmas carrying `simp`, `grind`, `gcongr`, or `aesop` attributes are kept even when orphaned,
+since automation can use them without a recorded reference; they retire with the scalar
+automation benchmarks. The executable `FinRatPMF.Raw` sampler and its native denotation are
+unaffected.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

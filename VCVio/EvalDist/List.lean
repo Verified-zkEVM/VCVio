@@ -65,13 +65,6 @@ lemma probOutput_cons_seq_map_cons_eq_mul [LawfulMonad m]
     Pr[= x :: xs | cons <$> mx <*> my] = Pr[= x | mx] * Pr[= xs | my] :=
   probOutput_seq_map_eq_mul_of_injective2 mx my cons injective2_cons x xs
 
-lemma probOutput_cons_seq_map_cons_eq_mul' [LawfulMonad m]
-    (mx : m α) (my : m (List α)) (x : α) (xs : List α) :
-    Pr[= x :: xs | (fun xs x => x :: xs) <$> my <*> mx] =
-      Pr[= x | mx] * Pr[= xs | my] :=
-  (probOutput_seq_map_swap mx my cons (x :: xs)).trans
-    (probOutput_cons_seq_map_cons_eq_mul mx my x xs)
-
 @[simp]
 lemma probOutput_map_append_left [LawfulMonad m] [DecidableEq α]
     (xs : List α) (mx : m (List α)) (ys : List α) :

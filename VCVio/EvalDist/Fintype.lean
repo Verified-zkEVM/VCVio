@@ -27,13 +27,3 @@ lemma probOutput_bind_eq_sum_fintype [MonadLiftT m SPMF] [LawfulMonadLiftT m SPM
     (mx : m α) (my : α → m β) [Fintype α] (y : β) :
     Pr[= y | mx >>= my] = ∑ x : α, Pr[= x | mx] * Pr[= y | my x] :=
   (probOutput_bind_eq_tsum mx my y).trans (tsum_fintype _)
-
-lemma probFailure_bind_eq_sum_fintype [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (mx : m α) (my : α → m β) [Fintype α] :
-    Pr[⊥ | mx >>= my] = Pr[⊥ | mx] + ∑ x : α, Pr[= x | mx] * Pr[⊥ | my x] :=
-  (probFailure_bind_eq_add_tsum mx my).trans (congr_arg (Pr[⊥ | mx] + ·) <| tsum_fintype _)
-
-lemma probEvent_bind_eq_sum_fintype [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (mx : m α) (my : α → m β) [Fintype α] (q : β → Prop) :
-    Pr[ q | mx >>= my] = ∑ x : α, Pr[= x | mx] * Pr[ q | my x] :=
-  (probEvent_bind_eq_tsum mx my q).trans (tsum_fintype _)

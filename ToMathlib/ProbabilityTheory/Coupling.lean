@@ -65,26 +65,6 @@ theorem IsCoupling.pure_iff {α β : Type u} {a : α} {b : β} {c : SPMF (α × 
         | inr hy => exact PMF.map_eq_pure_zero _ c _ h2 (some (x, y)) (by simp [hy])
   · intro h; constructor <;> simp [h, - liftM_map]
 
-theorem IsCoupling.none_iff {α β : Type u} {c : SPMF (α × β)} :
-    IsCoupling c (failure : SPMF α) (failure : SPMF β) ↔ c = failure := by
-  simp only [failure]
-  constructor
-  · intro ⟨h1, h2⟩
-    rw [SPMF.fmap_eq_map] at h1
-    change PMF.map (Option.map Prod.fst) c = PMF.pure none at h1
-    exact PMF.eq_pure_of_forall_ne_eq_zero c none fun x hx => by
-      cases x with
-      | none => exact absurd rfl hx
-      | some p =>
-        exact PMF.map_eq_pure_zero _ c _ h1 (some p) (by simp)
-  · intro h
-    constructor
-    · subst h
-      exact LawfulAlternative.map_failure Prod.fst
-    · subst h
-      exact LawfulAlternative.map_failure Prod.snd
-
-
 /-- Main theorem about coupling and bind operations -/
 theorem IsCoupling.bind {α₁ α₂ β₁ β₂ : Type u}
     {p : SPMF α₁} {q : SPMF α₂} {f : α₁ → SPMF β₁} {g : α₂ → SPMF β₂}
@@ -114,18 +94,6 @@ theorem IsCoupling.bind {α₁ α₂ β₁ β₂ : Type u}
       simp only [Function.comp, Option.map]
       rw [← SPMF.fmap_eq_map]
       exact (h a₁ a₂ ho).map_snd
-
-/-- Existential version of `IsCoupling.bind` -/
-theorem IsCoupling.exists_bind {α₁ α₂ β₁ β₂ : Type u}
-    {p : SPMF α₁} {q : SPMF α₂} {f : α₁ → SPMF β₁} {g : α₂ → SPMF β₂}
-    (c : Coupling p q)
-    (h : ∀ (a₁ : α₁) (a₂ : α₂), ∃ (d : SPMF (β₁ × β₂)), IsCoupling d (f a₁) (g a₂)) :
-    ∃ (d : SPMF (β₁ × β₂)), IsCoupling d (p >>= f) (q >>= g) :=
-  let d : (a₁ : α₁) → (a₂ : α₂) → SPMF (β₁ × β₂) :=
-    fun a₁ a₂ => Classical.choose (h a₁ a₂)
-  let hd : ∀ (a₁ : α₁) (a₂ : α₂), c.1.1 (some (a₁, a₂)) ≠ 0 → IsCoupling (d a₁ a₂) (f a₁) (g a₂) :=
-    fun a₁ a₂ _ => Classical.choose_spec (h a₁ a₂)
-  ⟨c.1 >>= fun (p : α₁ × α₂) => d p.1 p.2, IsCoupling.bind c d hd⟩
 
 /-- Every `SPMF` has a diagonal self-coupling. -/
 theorem IsCoupling.refl (p : SPMF α) :

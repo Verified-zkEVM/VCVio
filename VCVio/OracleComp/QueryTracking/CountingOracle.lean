@@ -85,30 +85,9 @@ lemma evalDist_fst_runAdd_withCounting [DecidableEq ι] [LawfulMonad m]
 
 end QueryImpl
 
-namespace costOracle
-
-variable {ω : Type u} [Monoid ω]
-lemma evalSPMF_fst_run_simulateQ [IsUniformSpec spec]
-    (costFn : spec.Domain → ω) (oa : OracleComp spec α) :
-    𝒮[Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = 𝒮[oa] := by
-  rw [fst_map_run_simulateQ]
-
-lemma probOutput_fst_run_simulateQ [IsUniformSpec spec]
-    (costFn : spec.Domain → ω) (oa : OracleComp spec α) (x : α) :
-    Pr[= x | Prod.fst <$> (simulateQ (costOracle costFn) oa).run] = Pr[= x | oa] := by
-  rw [fst_map_run_simulateQ]
-end costOracle
-
 namespace countingOracle
 
 variable [DecidableEq ι]
-/-- Specialization of `QueryImpl.probFailure_run_simulateQ_withCost` to `countingOracle`. -/
-lemma probFailure_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
-    [DecidableEq ι₀] [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
-    Pr[⊥ | (simulateQ (spec₀.countingOracle) oa).run] = Pr[⊥ | oa] := by
-  simp only [countingOracle, QueryImpl.withCounting_eq_withCost,
-    QueryImpl.probFailure_run_simulateQ_withCost, simulateQ_ofLift_eq_self]
-
 /-- Specialization of `QueryImpl.NeverFail_run_simulateQ_withCost_iff` to `countingOracle`. -/
 @[simp]
 lemma NeverFail_run_simulateQ_iff {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
@@ -137,10 +116,4 @@ lemma evalSPMF_fst_map_run_simulateQ {ι₀ : Type} {spec₀ : OracleSpec.{0, 0}
     [IsUniformSpec spec₀] {α : Type} (oa : OracleComp spec₀ α) :
     𝒮[Prod.fst <$> (simulateQ (spec₀.countingOracle) oa).run] = 𝒮[oa] := by
   rw [fst_map_run_simulateQ]
-section support
-
-section snd_map
-end snd_map
-end support
-
 end countingOracle

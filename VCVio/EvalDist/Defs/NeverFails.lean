@@ -112,9 +112,6 @@ namespace NeverFail
 
 variable [MonadLiftT m SPMF]
 
-lemma of_probFailure_eq_zero (mx : m α) (h : Pr[⊥ | mx] = 0) : NeverFail mx :=
-  { probFailure_eq_zero := h }
-
 variable [LawfulMonadLiftT m SPMF]
 
 /--

@@ -35,10 +35,6 @@ protected lemma evalSPMF_def (p : SPMF α) : evalSPMF p = p := rfl
 lemma probOutput_eq_apply (p : SPMF α) (x : α) : Pr[= x | p] = p x :=
   probOutput_def p x
 
-lemma evalSPMF_eq_iff {m} [Monad m] [MonadLiftT m SPMF] (mx : m α) (p : SPMF α) :
-    𝒮[mx] = p ↔ ∀ x, Pr[= x | mx] = p x := by
-  simp only [probOutput_def, DFunLike.ext_iff]
-
 end SPMF
 
 namespace PMF

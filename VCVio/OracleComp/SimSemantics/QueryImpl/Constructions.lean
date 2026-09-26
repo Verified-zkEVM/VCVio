@@ -71,19 +71,6 @@ lemma probFailure_proj_simulateQ_preInsert [Monad m]
     Pr[⊥ | proj (simulateQ (so.preInsert nx) oa)] = Pr[⊥ | simulateQ so oa] := by
   rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
-/-- `NeverFail` biconditional companion of `probFailure_proj_simulateQ_preInsert`. -/
-lemma neverFail_proj_simulateQ_preInsert_iff [Monad m]
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (nx : spec.Domain → n α)
-    (proj : ∀ {γ : Type u}, n γ → m γ)
-    (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
-    (hproj_bind : ∀ {γ δ : Type u} (b : n γ) (f : γ → n δ),
-        proj (b >>= f) = proj b >>= fun x => proj (f x))
-    (hproj_apply : ∀ t, proj ((so.preInsert nx) t) = so t)
-    (oa : OracleComp spec β) :
-    NeverFail (proj (simulateQ (so.preInsert nx) oa)) ↔ NeverFail (simulateQ so oa) := by
-  rw [proj_simulateQ_preInsert so nx proj hproj_pure hproj_bind hproj_apply]
-
 /-! #### `evalSPMF` / `probOutput` / `support` bridges for `preInsert` -/
 
 lemma evalSPMF_proj_simulateQ_preInsert [Monad m]
@@ -132,44 +119,7 @@ lemma probFailure_proj_simulateQ_postInsert
     Pr[⊥ | proj (simulateQ (so.postInsert nx) oa)] = Pr[⊥ | simulateQ so oa] := by
   rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
-/-- `NeverFail` biconditional companion of `probFailure_proj_simulateQ_postInsert`. -/
-lemma neverFail_proj_simulateQ_postInsert_iff
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
-    (proj : ∀ {γ : Type u}, n γ → m γ)
-    (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
-    (hproj_bind : ∀ {γ δ : Type u} (b : n γ) (f : γ → n δ),
-        proj (b >>= f) = proj b >>= fun x => proj (f x))
-    (hproj_apply : ∀ t, proj ((so.postInsert nx) t) = so t)
-    (oa : OracleComp spec β) :
-    NeverFail (proj (simulateQ (so.postInsert nx) oa)) ↔ NeverFail (simulateQ so oa) := by
-  rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
-
 /-! #### `evalSPMF` / `probOutput` / `support` bridges for `postInsert` -/
-
-lemma evalSPMF_proj_simulateQ_postInsert
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
-    (proj : ∀ {γ : Type u}, n γ → m γ)
-    (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
-    (hproj_bind : ∀ {γ δ : Type u} (b : n γ) (f : γ → n δ),
-        proj (b >>= f) = proj b >>= fun x => proj (f x))
-    (hproj_apply : ∀ t, proj ((so.postInsert nx) t) = so t)
-    (oa : OracleComp spec β) :
-    𝒮[proj (simulateQ (so.postInsert nx) oa)] = 𝒮[simulateQ so oa] := by
-  rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
-
-lemma probOutput_proj_simulateQ_postInsert
-    [LawfulMonad m] [LawfulMonad n] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t → n α)
-    (proj : ∀ {γ : Type u}, n γ → m γ)
-    (hproj_pure : ∀ {γ : Type u} (x : γ), proj (pure x : n γ) = pure x)
-    (hproj_bind : ∀ {γ δ : Type u} (b : n γ) (f : γ → n δ),
-        proj (b >>= f) = proj b >>= fun x => proj (f x))
-    (hproj_apply : ∀ t, proj ((so.postInsert nx) t) = so t)
-    (oa : OracleComp spec β) (x : β) :
-    Pr[= x | proj (simulateQ (so.postInsert nx) oa)] = Pr[= x | simulateQ so oa] := by
-  rw [proj_simulateQ_postInsert so nx proj hproj_pure hproj_bind hproj_apply]
 
 end insertPost
 

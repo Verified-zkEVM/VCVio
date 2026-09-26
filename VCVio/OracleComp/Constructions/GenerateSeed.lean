@@ -159,25 +159,6 @@ lemma tail_length_of_mem_support_generateSeed
   simp only [hus, List.length_cons, List.tail_cons] at hlen ⊢
   omega
 
-lemma probOutput_pop_none_eq_zero_of_count_pos [IsUniformSpec spec]
-    (i : ι) (hpos : 0 < qc i * js.count i) :
-    Pr[= none | (fun seed => seed.pop i) <$> generateSeed spec qc js] = 0 := by
-  rw [probOutput_eq_zero_iff]
-  intro hmem
-  simp only [support_map] at hmem
-  obtain ⟨seed, hseed, hpop⟩ := hmem
-  exact ne_nil_of_mem_support_generateSeed spec qc js seed i hseed hpos
-    (by simpa [QuerySeed.pop_eq_none_iff] using hpop)
-
-lemma probOutput_pop_some_eq_probOutput_prepend
-    (i : ι) (u : spec.Range i) (rest : QuerySeed spec) :
-    Pr[= some (u, rest) | (fun seed => seed.pop i) <$> generateSeed spec qc js] =
-      Pr[= rest.prependValues [u] | generateSeed spec qc js] := by
-  simp only [map_eq_bind_pure_comp, Function.comp_def]
-  rw [probOutput_bind_eq_mul (rest.prependValues [u]) fun seed' _ hs =>
-    (QuerySeed.eq_prependValues_of_pop_eq_some ((mem_support_pure_iff' _ _).mp hs)).symm]
-  simp
-
 @[simp] lemma finSupport_generateSeed_ne_empty [DecidableEq (QuerySeed spec)] :
     finSupport (generateSeed spec qc js) ≠ ∅ :=
   (finSupport_nonempty_of_liftM_PMF _).ne_empty
