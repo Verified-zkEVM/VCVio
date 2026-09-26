@@ -6,7 +6,7 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.Bool

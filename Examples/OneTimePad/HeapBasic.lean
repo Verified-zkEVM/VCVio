@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.StateSeparating.DistEquiv
 public import VCVio.OracleComp.Constructions.BitVec
+public import VCVio.OracleComp.Constructions.SampleableType
 public import ToMathlib.Data.Heap
 
 /-!

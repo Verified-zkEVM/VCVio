@@ -6,7 +6,8 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.Constructions.Replicate.Basic
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.List
 public import VCVio.OracleComp.Constructions.SampleableType

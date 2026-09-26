@@ -8,8 +8,12 @@ module
 public import PolyFun.Interaction.UC.ReactiveNetwork.Behavior
 public import PolyFun.Interaction.UC.ReactiveNetwork.Serial
 public import PolyFun.Interaction.UC.ReactiveNetwork.Transport
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
 # Runtime-derived observations of reactive networks

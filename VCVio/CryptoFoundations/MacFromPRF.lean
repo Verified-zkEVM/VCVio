@@ -8,7 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.MacAlg
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.SimSemantics.Append
 public import ToMathlib.Control.StateT

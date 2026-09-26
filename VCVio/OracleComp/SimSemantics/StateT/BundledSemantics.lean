@@ -5,7 +5,8 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.SimSemantics.Append

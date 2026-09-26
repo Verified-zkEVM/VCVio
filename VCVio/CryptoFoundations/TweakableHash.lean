@@ -5,8 +5,10 @@ Authors: Nicolas Consigny
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
 # Tweakable Hash Families

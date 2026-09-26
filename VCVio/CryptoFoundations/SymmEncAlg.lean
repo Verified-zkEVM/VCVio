@@ -7,7 +7,8 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.EvalDist.Prod
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 
 /-!
 # Symmetric Encryption Schemes

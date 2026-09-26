@@ -10,6 +10,7 @@ public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Compatibility
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.EvalDist.Inequalities
+public import VCVio.EvalDist.Expectation
 
 /-!
 # Fiat-Shamir reductions for Sigma protocols

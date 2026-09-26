@@ -14,7 +14,8 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.ProgramLogic.NotationCore
 public import VCVio.ProgramLogic.Tactics.Unary
 

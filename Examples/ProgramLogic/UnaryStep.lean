@@ -8,8 +8,10 @@ module
 
 public import VCVio.ProgramLogic.Tactics.Unary
 public import VCVio.ProgramLogic.Unary.SimulateQ
-public import VCVio.OracleComp.Constructions.Replicate
-public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
 
 /-!
 # Unary VCGen Step Examples

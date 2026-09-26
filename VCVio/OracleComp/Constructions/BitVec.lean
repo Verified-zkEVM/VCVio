@@ -5,13 +5,12 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.BitVec.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
-import VCVio.OracleComp.EvalDist.UniformCompatibility
+import VCVio.OracleComp.EvalDist.MeasureSpec
 
 /-!
 # Uniform bit-vector sampling

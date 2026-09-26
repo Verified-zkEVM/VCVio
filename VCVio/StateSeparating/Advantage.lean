@@ -8,6 +8,8 @@ module
 
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.CryptoFoundations.SecExp
+public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.ProbComp
 
 /-!
 # Discrete probability compatibility for stateful handlers

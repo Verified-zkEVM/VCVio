@@ -5,10 +5,15 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 
 /-!
 # One-Way Functions and Trapdoor Permutations

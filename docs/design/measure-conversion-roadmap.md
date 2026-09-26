@@ -226,6 +226,17 @@ actions. Native Hoare lowering lemmas use `prEvent` names, and the singleton-out
 which are the events `(· = x)`, are removed. `VCVioTest/NativeProbabilityTactics.lean` gates the
 native `simp` and planner contract and records the remaining `simp` gaps.
 
+## Import-closure checkpoint
+
+Modules that import a retiring hub (`SampleableType`, `ProbComp`, `OracleComp.EvalDist`,
+`LoggingOracle`, `SubSpec`, `Replicate`, `UniformCompatibility`, the bundled-semantics and
+random-oracle simulation modules, `SecExp`) but use none of its declarations import the hub's
+native owners instead. `SecExp` itself imports only what `BoundedAdversary` needs, and its clients
+import the scalar modules they use explicitly. `scripts/check-spmf-closure.py` keeps the exact set
+of modules whose imports reach the SPMF backend; this checkpoint takes it from 455 to 390 of the
+tracked proof-library modules. Final removal deletes the modules in that closure's core and
+regenerates the umbrellas.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

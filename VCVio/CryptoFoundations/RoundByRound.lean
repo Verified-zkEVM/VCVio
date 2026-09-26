@@ -6,8 +6,10 @@ Authors: Aristotle (Harmonic), Elias Judin
 
 module
 
-public import VCVio.CryptoFoundations.SecExp
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 /-!
 # Round-indexed event games

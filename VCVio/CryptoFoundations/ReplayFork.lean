@@ -11,7 +11,7 @@ public import VCVio.EvalDist.Option
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.EvalDist.Prod
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Structures
 
 /-!

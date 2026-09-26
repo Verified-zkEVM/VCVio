@@ -7,7 +7,8 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Tactics.Relational
-public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
 
 /-!
 # Relational VCGen Step Examples
