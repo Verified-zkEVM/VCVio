@@ -31,8 +31,8 @@ cache/log induction.
 
 `measure_adaptivePrefixRunFrom_le` proves this bound for any lawful measure semantics with
 uniform query measures and a measurable terminal event. Its proof uses a bad-event decomposition
-of a Lebesgue integral. The original `probEvent_adaptivePrefixRunFrom_le` is a compatibility
-corollary. The online-target counterpart is
+of a Lebesgue integral. `prEvent_adaptivePrefixRunFrom_le` reads it for `Pr{…}` events under
+native uniform oracle semantics. The online-target counterpart is
 `MerkleTreeMultiExtractability.measure_onlineAdaptivePrefixRunFrom_logged_le`; its target set
 is evaluated on the pre-query log.
 

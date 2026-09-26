@@ -10,6 +10,7 @@ public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.Monad.Option
 import ToMathlib.Probability.UniformOn
+import ToMathlib.MeasureTheory.Measure.Bounds
 
 /-!
 # Measure reasoning from structural support
@@ -395,6 +396,24 @@ theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
   push Not
   rfl
+
+/-- Under native uniform oracle semantics, an event of a single lifted query has the
+proportion of satisfying responses as its probability. -/
+theorem prEvent_liftM_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
+    (p : spec.Range t → Prop) [DecidablePred p] :
+    Pr{let u ← (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t))}[p u] =
+      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_liftM_query,
+    show OracleSpec.IsMeasureSpec.toMeasure (spec := spec) t = uniformOn Set.univ from
+      OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform t, uniformOn_univ_apply_setOf]
+
+/-- Under native uniform oracle semantics, an event of a single query has the proportion of
+satisfying responses as its probability. -/
+theorem prEvent_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
+    (p : spec.Range t → Prop) [DecidablePred p] :
+    Pr{let u ← (query t : OracleComp spec (spec.Range t))}[p u] =
+      ((Finset.univ.filter p).card : ℝ≥0∞) / Fintype.card (spec.Range t) := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_query_uniform, uniformOn_univ_apply_setOf]
 
 /-- A wrapped optional oracle computation has a probability-one event exactly when every
 structurally reachable output is a present value satisfying the event. -/

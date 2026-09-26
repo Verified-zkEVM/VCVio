@@ -84,16 +84,6 @@ lemma probOutput_map_bijective_uniform_cross
   obtain ⟨x, rfl⟩ := hf.surjective y
   simp [probOutput_map_injective ($ᵗ α) hf.injective x, Fintype.card_of_bijective hf]
 
-/-- Binding after pushing forward uniform sampling along a bijection preserves output
-probabilities. -/
-lemma probOutput_bind_bijective_uniform_cross
-    {β γ : Type} [SampleableType β] [Finite α]
-    (f : α → β) (hf : Function.Bijective f) (g : β → ProbComp γ) (z : γ) :
-    Pr[= z | ($ᵗ α) >>= fun x => g (f x)] =
-      Pr[= z | ($ᵗ β) >>= fun y => g y] := by
-  simp_rw [show (($ᵗ α) >>= fun x => g (f x)) = ((f <$> ($ᵗ α)) >>= g) from by simp [monad_norm],
-    probOutput_bind_eq_tsum, probOutput_map_bijective_uniform_cross (α := α) (β := β) f hf]
-
 /-- Left-translation by a constant in `AddGroup α` preserves the uniform output distribution,
 since `(m + ·)` is a bijection on `α` with inverse `(-m + ·)`. -/
 lemma probOutput_add_left_uniform [AddGroup α] (m x : α) :
@@ -153,17 +143,6 @@ lemma evalSPMF_bind_bijective_add_right_uniform {β γ : Type}
       show (do let y ← ($ᵗ β); cont (y + m)) = (((· + m) : β → β) <$> ($ᵗ β)) >>= cont
         from by simp [monad_norm], evalSPMF_bind, evalSPMF_add_right_uniform (α := β) m,
       ← evalSPMF_bind]
-
-/-- Constant-irrelevance form of `evalSPMF_bind_bijective_add_right_uniform`: sampling through a
-bijection and right-adding a constant has a distribution independent of the constant. Any two
-offsets produce the same evaluation distribution. -/
-lemma evalSPMF_bind_bijective_add_right_eq {β γ : Type}
-    [AddGroup β] [SampleableType β] [Finite α]
-    (f : α → β) (hf : Function.Bijective f) (m₁ m₂ : β) (cont : β → ProbComp γ) :
-    𝒮[do let x ← ($ᵗ α); cont (f x + m₁)] =
-      𝒮[do let x ← ($ᵗ α); cont (f x + m₂)] := by
-  rw [evalSPMF_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₁ cont,
-      ← evalSPMF_bind_bijective_add_right_uniform (α := α) (β := β) f hf m₂ cont]
 
 lemma probFailure_uniformSample : Pr[⊥ | $ᵗ α] = 0 := by aesop
 

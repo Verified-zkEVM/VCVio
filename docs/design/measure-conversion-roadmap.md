@@ -292,6 +292,18 @@ probabilistic. Merkle-tree completeness is stated in that form. The combined-sig
 coercion façade is removed, so modules that only need the canonical inclusions no longer
 import the discrete hubs; the two consumers that use discrete lemmas import them directly.
 
+## Random-oracle collision checkpoint
+
+The random-oracle collision family is native under uniform measure specifications. A single
+uniform query assigns an event the proportion of satisfying answers, which drives the log and
+cache birthday bounds, fresh-query uniformity, and the cache preimage and finite-target hit
+bounds. Collision resistance in the random-oracle model fixes the discrete answer space and the
+uniform specification inside its advantage. The adaptive-prefix, Merkle extractability,
+multi-checkpoint extractability, and commitment binding and extractability bounds are stated as
+`Pr{…}` events with measurable-answer binders. Unpredictability of a sampler is a pointwise
+`Pr{…}` bound. The universe-polymorphic statements are specialized to `Type`, where the event
+form lives, and the vacuous single-oracle collision bounds are removed.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
