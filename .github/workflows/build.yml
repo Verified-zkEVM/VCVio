@@ -121,12 +121,39 @@ jobs:
   downstream_stub_link:
     name: Downstream Consumer Build (no submodules)
     runs-on: ubuntu-latest
+    env:
+      CLEAN_BUILD: ${{ github.event_name == 'schedule' || inputs.clean_build == true }}
     steps:
       # No `submodules:` input on purpose: this job reproduces issue #495. A
       # downstream `require VCVio` never has the third_party/ submodules
       # checked out, yet Lake links every dependency `extern_lib` into any
       # consumer `lean_exe`, so the native targets must degrade gracefully.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # The same caches as `Build Project`, with the same paths and keys. A path dependency builds
+      # into its own `.lake/build`, so the restored VCVio build serves the consumer as it is. The
+      # dependencies belong to the consumer's workspace, so the restored `.lake/packages` is moved
+      # there before `lake update`. The native stubs this job exists to exercise are still built:
+      # a stub archive's trace differs from the real archive's, so Lake rebuilds it.
+      - name: Restore dependency cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/packages
+            !.lake/packages/**/*.setup.json
+          key: lake-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          restore-keys: |
+            lake-deps-${{ runner.os }}-${{ runner.arch }}-
+      - name: Restore build cache
+        if: env.CLEAN_BUILD != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            !.lake/build/**/*.setup.json
+          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Lean environment
         uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
         with:
@@ -143,7 +170,10 @@ jobs:
           MATHLIB_NO_CACHE_ON_UPDATE: "1"
         run: |
           consumer="$RUNNER_TEMP/vcvio-consumer"
-          mkdir -p "$consumer"
+          mkdir -p "$consumer/.lake"
+          if [ -d .lake/packages ]; then
+            mv .lake/packages "$consumer/.lake/packages"
+          fi
           cp lean-toolchain "$consumer/"
           cp HashSigTest/ModuleAPI/SchemeGames.lean "$consumer/SchemeAPI.lean"
           cp VCVioTest/ModuleAPI/Counting.lean "$consumer/CountingAPI.lean"
@@ -225,9 +255,10 @@ jobs:
     env:
       CLEAN_BUILD: ${{ github.event_name == 'schedule' || inputs.clean_build == true }}
     steps:
+      # Shallow: nothing in this job reads history, and with `fetch-depth: 0` actions/checkout
+      # also clones the full history of every `third_party/` submodule (~2.5 min).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
           submodules: recursive
       # PR-controlled values (the branch name) reach the script through `env`, never through
       # `${{ }}` interpolation into the script text.
@@ -505,10 +536,13 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
+      # Full history for the baseline's merge base, but the submodules only at their pinned
+      # commits: actions/checkout would clone their full history too.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-          submodules: recursive
+      - name: Check out submodules
+        run: git submodule update --init --recursive --depth 1
       # Paths and keys must match the saves in `Build Project` exactly, or the restore misses.
       - name: Restore dependency cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
