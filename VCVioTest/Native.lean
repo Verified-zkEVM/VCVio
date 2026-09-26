@@ -261,7 +261,7 @@ example {α : Type} [MeasurableSpace α] (oa : OracleComp coinSpec α) (calls : 
     𝒟[(simulateQ countingCoin oa).run' calls] = 𝒟[oa] :=
   evalDist_simulateQ_run'_eq_of_forall countingCoin (fun t calls ↦ by
     rw [countingCoin, StateT.run'_eq, StateT.run_mk, Functor.map_map]
-    simp only [Function.comp_def, id_map']
+    simp only [id_map']
     rw [SampleableType.evalDist_uniformSample, IsMeasureSpec.toMeasure_eq_uniformOn]) oa calls
 
 -- The canonical uniform sampler implements a uniform oracle without changing any output law.
