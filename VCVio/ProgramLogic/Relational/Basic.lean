@@ -602,6 +602,21 @@ instance instAnchored : MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp
       exact relTriple_iff_relWP.1 (relTriple_symm (spec₁ := spec₂) (spec₂ := spec₁)
         (relTriple_iff_relWP.2 (couplingPost_pure_left_of_forall_mem_support h)))
 
+/-- The graph of a bijection on a query's responses couples the query with itself. -/
+theorem isCoupling_query_graph (t : spec₁.Domain) {f : spec₁.Range t → spec₁.Range t}
+    (hf : Function.Bijective f) :
+    letI : MeasurableSpace (spec₁.Range t) := ⊤
+    Measure.IsCoupling
+      (𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))].map fun a ↦ (a, f a))
+      𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))]
+      𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] := by
+  have := IsUniformMeasureSpec.nonempty_range (spec := spec₁) t
+  have hq := OracleComp.evalDist_liftM_query_eq_uniformOn_top (spec := spec₁) t
+  let : MeasurableSpace (spec₁.Range t) := ⊤
+  have h := Measure.IsCoupling.graph 𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))]
+    (Measurable.of_discrete (f := f))
+  rwa [hq, map_uniformOn_univ_of_bijective Measurable.of_discrete hf, ← hq] at h
+
 /-- Bijection coupling (the "rnd" rule from EasyCrypt):
 querying the same oracle on both sides, related by a bijection `f`. -/
 lemma relTriple_query_bij (t : spec₁.Domain)
@@ -612,20 +627,11 @@ lemma relTriple_query_bij (t : spec₁.Domain)
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
       (fun a b => f a = b) := by
-  have := IsUniformMeasureSpec.nonempty_range (spec := spec₁) t
-  have hq := OracleComp.evalDist_liftM_query_eq_uniformOn_top (spec := spec₁) t
   let : MeasurableSpace (spec₁.Range t) := ⊤
   have hgraph : Measurable fun a : spec₁.Range t ↦ (a, f a) := Measurable.of_discrete
-  refine relTriple_iff_relWP.2 ⟨⟨𝒟[(liftM (query t) : OracleComp spec₁ _)].map
-    fun a ↦ (a, f a), ?_, ?_⟩, ?_⟩
-  · rw [Measure.fst, Measure.map_map measurable_fst hgraph]
-    exact Measure.map_id
-  · rw [Measure.snd, Measure.map_map measurable_snd hgraph]
-    change Measure.map f _ = _
-    rw [hq]
-    exact map_uniformOn_univ_of_bijective Measurable.of_discrete hf
-  · exact (ae_map_iff hgraph.aemeasurable (Set.to_countable _).measurableSet).2
-      (Filter.Eventually.of_forall fun _ ↦ rfl)
+  refine relTriple_iff_relWP.2 ⟨⟨_, isCoupling_query_graph t hf⟩, ?_⟩
+  exact (ae_map_iff hgraph.aemeasurable (Set.to_countable _).measurableSet).2
+    (Filter.Eventually.of_forall fun _ ↦ rfl)
 
 /-- Bind rule specialized to two equal oracle queries coupled by a bijection.
 
@@ -651,6 +657,17 @@ section Sampling
 
 variable [SampleableType α]
 
+/-- The graph of a bijection couples a uniform sample with itself. -/
+theorem isCoupling_uniformSample_graph {f : α → α} (hf : Function.Bijective f) :
+    letI : MeasurableSpace α := ⊤
+    Measure.IsCoupling (𝒟[($ᵗ α : ProbComp α)].map fun a ↦ (a, f a))
+      𝒟[($ᵗ α : ProbComp α)] 𝒟[($ᵗ α : ProbComp α)] := by
+  let : MeasurableSpace α := ⊤
+  have h := Measure.IsCoupling.graph 𝒟[($ᵗ α : ProbComp α)] (Measurable.of_discrete (f := f))
+  rwa [SampleableType.evalDist_uniformSample,
+    map_uniformOn_univ_of_bijective Measurable.of_discrete hf,
+    ← SampleableType.evalDist_uniformSample] at h
+
 /-- Relational coupling for uniform sampling via bijection.
 Given a bijection `f : α → α` such that `R x (f x)` for all `x`,
 the two uniform samples are related by `R`. -/
@@ -660,15 +677,9 @@ lemma relTriple_uniformSample_bij
     RelTriple ($ᵗ α) ($ᵗ α) R := by
   let : MeasurableSpace α := ⊤
   have hgraph : Measurable fun a : α ↦ (a, f a) := Measurable.of_discrete
-  refine relTriple_iff_relWP.2 ⟨⟨𝒟[($ᵗ α : ProbComp α)].map fun a ↦ (a, f a), ?_, ?_⟩, ?_⟩
-  · rw [Measure.fst, Measure.map_map measurable_fst hgraph]
-    exact Measure.map_id
-  · rw [Measure.snd, Measure.map_map measurable_snd hgraph]
-    change Measure.map f _ = _
-    rw [SampleableType.evalDist_uniformSample]
-    exact map_uniformOn_univ_of_bijective Measurable.of_discrete hf
-  · exact (ae_map_iff hgraph.aemeasurable (Set.to_countable _).measurableSet).2
-      (Filter.Eventually.of_forall hR)
+  refine relTriple_iff_relWP.2 ⟨⟨_, isCoupling_uniformSample_graph hf⟩, ?_⟩
+  exact (ae_map_iff hgraph.aemeasurable (Set.to_countable _).measurableSet).2
+    (Filter.Eventually.of_forall hR)
 
 /-- Bind rule specialized to two uniform samples coupled by a bijection.
 

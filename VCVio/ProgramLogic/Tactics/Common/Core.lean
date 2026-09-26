@@ -12,6 +12,7 @@ public meta import Lean.Meta.Sym.Pattern
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.ProgramLogic.NotationCore
+public import VCVio.EvalDist.Defs.Basic
 
 /-!
 # VCGen Planner Core

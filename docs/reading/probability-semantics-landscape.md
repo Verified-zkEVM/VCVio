@@ -214,7 +214,7 @@ theory that a replacement must either preserve or deliberately supersede.
 | Independent products | [`EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean) | Product distributions and factorization |
 | Total variation | [`EvalDist/TVDist.lean`](../../VCVio/EvalDist/TVDist.lean) | Discrete pointwise definition |
 | Rényi divergence | [`EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean) | Discrete density ratios |
-| Couplings | [`ToMathlib/ProbabilityTheory/Coupling.lean`](../../ToMathlib/ProbabilityTheory/Coupling.lean) | An SPMF on a product with fixed marginals |
+| Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
 | Expected query cost | [`QueryCost.lean`](../../VCVio/OracleComp/QueryTracking/QueryCost.lean) and [`WriterCost.lean`](../../VCVio/OracleComp/QueryTracking/WriterCost.lean) | Expectations of instrumented runs |
 | Relational logic | [`ProgramLogic/Relational`](../../VCVio/ProgramLogic/Relational) | Coupling existence and quantitative relational WP |
 | Executable finite distributions | [`FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean), [`EvalDist/Instances/FinRatPMF.lean`](../../VCVio/EvalDist/Instances/FinRatPMF.lean) | Array-backed `Raw` representation and its `SameDist` quotient |
@@ -1341,7 +1341,7 @@ users retain ordinary discrete probability notation.
 - [`VCVio/EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean)
 - [`VCVio/EvalDist/TVDist.lean`](../../VCVio/EvalDist/TVDist.lean)
 - [`VCVio/EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean)
-- [`ToMathlib/ProbabilityTheory/Coupling.lean`](../../ToMathlib/ProbabilityTheory/Coupling.lean)
+- [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean)
 - [`VCVio/EvalDist/Instances/FinRatPMF.lean`](../../VCVio/EvalDist/Instances/FinRatPMF.lean)
 - [`ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean)

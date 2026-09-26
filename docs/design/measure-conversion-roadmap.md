@@ -385,6 +385,19 @@ freedom and leakage bounds are native, as are the coupling rules for simulated c
 the stochastic-dominance rules for bad-state events; identical-until-bad bounds stay on the
 discrete layer for now. Coupling-existence coherence with `eRelWP` returns with its rebase.
 
+## Quantitative relational checkpoint
+
+`eRelWP` is the supremum of coupled `lintegral` expectations over couplings of the two output
+measures observed in the discrete structure. A coupling of oracle computations concentrates on the
+finite product of their supports, so its expectation is a finite sum; exchanging the supremum with
+that sum and choosing conditional couplings on the support gives the bind rule. A `pure` side
+collapses `eRelWP` to the unary expectation of the other side, and the graph of a bijection
+couples a uniform sample or query with itself, with the unary expectation along the bijection as
+its value. The total-variation characterization of `eRelWP` on equality returns once the maximal
+coupling of output measures is available. The discrete subprobability coupling module is removed,
+and the public-projection total-variation bound used by the stateful Fiat–Shamir hops sits beside
+the discrete event bound it refines.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

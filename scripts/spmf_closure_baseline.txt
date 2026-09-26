@@ -55,7 +55,6 @@ Examples.PRGfromPRF
 Examples.ProgramLogic.Probability
 Examples.ProgramLogic.ProofMode
 Examples.ProgramLogic.Relational
-Examples.ProgramLogic.RelationalAnchored
 Examples.ProgramLogic.RelationalDerived
 Examples.ProgramLogic.RelationalStep
 Examples.ProgramLogic.Unary
@@ -81,7 +80,6 @@ LatticeCrypto.MLDSA.SecurityHVZK
 LatticeCrypto.MLDSA.SecurityNMA
 LatticeCrypto.MLDSA.Signature
 LatticeCrypto.MLKEM.Security
-ToMathlib.ProbabilityTheory.Coupling
 VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.GenericLift
 VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
@@ -180,20 +178,14 @@ VCVio.OracleComp.QueryTracking.HandlerSimp
 VCVio.OracleComp.QueryTracking.RandomOracle.Eager
 VCVio.OracleComp.QueryTracking.SeededOracle
 VCVio.OracleComp.RunIO
-VCVio.ProgramLogic.Notation
-VCVio.ProgramLogic.NotationCore
 VCVio.ProgramLogic.Relational.Examples
 VCVio.ProgramLogic.Relational.HandlerFromUnary
 VCVio.ProgramLogic.Relational.ProgrammingOracle
-VCVio.ProgramLogic.Relational.Quantitative
-VCVio.ProgramLogic.Relational.QuantitativeDefs
 VCVio.ProgramLogic.Relational.SimulateQ
 VCVio.ProgramLogic.Relational.SimulateQ.Basic
 VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 VCVio.ProgramLogic.Relational.SimulateQ.Resource
 VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
-VCVio.ProgramLogic.Relational.WP.Probabilistic
-VCVio.ProgramLogic.Relational.WP.Quantitative
 VCVio.ProgramLogic.SeededFork
 VCVio.ProgramLogic.Tactics
 VCVio.ProgramLogic.Tactics.Common

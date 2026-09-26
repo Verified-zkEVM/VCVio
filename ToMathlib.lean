@@ -86,7 +86,6 @@ public import ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence
 public import ToMathlib.Probability.ProbabilityMassFunction.TotalVariation
 public import ToMathlib.Probability.TailSums
 public import ToMathlib.Probability.UniformOn
-public import ToMathlib.ProbabilityTheory.Coupling
 public import ToMathlib.ProbabilityTheory.FinRatPMF
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Basic
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Measure

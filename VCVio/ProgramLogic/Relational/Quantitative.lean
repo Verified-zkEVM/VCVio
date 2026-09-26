@@ -7,9 +7,8 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
-public import VCVio.EvalDist.TVDist
 public import VCVio.ProgramLogic.Unary.HoareTriple
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
+import ToMathlib.MeasureTheory.Function.AEMeasurable
 
 /-!
 # Quantitative Relational Program Logic (eRHL)
@@ -22,12 +21,15 @@ The core idea (from Avanzini-Barthe-Gregoire-Davoli, POPL 2025) is to make pre/p
 `ℝ≥0∞`-valued instead of `Prop`-valued. This subsumes both pRHL (exact coupling, via indicator
 postconditions) and apRHL (ε-approximate coupling, via threshold preconditions).
 
+Output measures of oracle computations with finite response types concentrate on finite
+structural supports, so coupled expectations are finite sums; this supplies the exchange of the
+coupling supremum with the sum behind the bind rule.
+
 ## Main results in this file
 
-- coupling-mass lemmas and support facts
 - introduction, consequence, and bind rules for eRHL
-- bridges to exact and approximate couplings
-- total-variation characterizations via `EqRel`
+- the quantitative relational algebra and its anchoring to unary expectations
+- witness lower bounds for uniform samples and oracle queries under a bijection
 
 ## Design
 
@@ -42,7 +44,7 @@ indicator R      1-ε, indicator R    1, indicator(=)
 
 @[expose] public section
 
-open ENNReal OracleSpec OracleComp
+open ENNReal OracleSpec OracleComp MeasureTheory ProbabilityTheory
 
 universe u v
 
@@ -50,215 +52,12 @@ open scoped OracleSpec.PrimitiveQuery
 
 namespace OracleComp.ProgramLogic.Relational
 
-variable {ι₁ : Type u} {ι₂ : Type u}
-variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
-variable {α β γ δ : Type}
-
-/-! ## Helpers for coupling mass -/
-
-universe w in
-lemma spmf_bind_const_of_no_failure {α' β' : Type w}
-    {p : SPMF α'} (hp : Pr[⊥ | p] = 0) (q : SPMF β') :
-    (p >>= fun _ => q) = q := by
-  apply SPMF.ext; intro y
-  have h : Pr[= y | p >>= fun _ => q] = Pr[= y | q] := by
-    rw [probOutput_bind_eq_tsum, ENNReal.tsum_mul_right, tsum_probOutput_eq_sub, hp,
-      tsub_zero, one_mul]
-  simpa only [probOutput_def, evalSPMF_def, monadLift_self] using h
-
-universe w in
-lemma spmf_map_const_of_no_failure {α' β' : Type w}
-    {p : SPMF α'} (hp : Pr[⊥ | p] = 0) (b : β') :
-    ((fun _ : α' => b) <$> p) = (pure b : SPMF β') :=
-  spmf_bind_const_of_no_failure hp (pure b : SPMF β')
-
-universe w in
-lemma spmf_bind_bind_const_of_no_failure {α' β' γ' : Type w}
-    {p : SPMF α'} (hp : Pr[⊥ | p] = 0) (q : α' → SPMF β')
-    (hq : ∀ a, Pr[⊥ | q a] = 0) (r : SPMF γ') :
-    (p >>= fun a => q a >>= fun _ => r) = r := by
-  calc
-    (p >>= fun a => q a >>= fun _ => r)
-        = p >>= fun _ => r := bind_congr fun a => spmf_bind_const_of_no_failure (hq a) r
-    _ = r := spmf_bind_const_of_no_failure hp r
-
-lemma probFailure_evalSPMF_eq_zero
-    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    {α : Type u} (mx : m α) :
-    Pr[⊥ | 𝒮[mx]] = 0 := by
-  simpa only [probFailure_evalSPMF] using probFailure_eq_zero (mx := mx)
-
-private lemma nonempty_spmf_coupling
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} :
-    Nonempty (SPMF.Coupling (𝒮[oa]) (𝒮[ob])) :=
-  ⟨SPMF.Coupling.prod
-    (by simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := oa))
-    (by simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := ob))⟩
-
-namespace PMF
-
-/-- Fiber of a deterministic observation map. -/
-def fiber {α β : Type*} (f : α → β) (b : β) : Set α := {a | f a = b}
-
-/-- Conditional distribution of a PMF along a deterministic observation map.
-
-For an observation value outside the support of `f <$> p`, the choice of
-distribution is irrelevant; we use an arbitrary support point of `p`. -/
-noncomputable def condOnMap {α β : Type*} (p : PMF α) (f : α → β) (b : β) : PMF α := by
-    classical
-    exact
-      if h : ∃ a ∈ fiber f b, a ∈ p.support then
-        p.filter (fiber f b) h
-      else
-        pure p.support_nonempty.some
-
-lemma condOnMap_apply_of_not_mem_fiber {α β : Type*} (p : PMF α) (f : α → β)
-    (b : β) {a : α} (ha : a ∉ fiber f b)
-    (hb : ∃ a ∈ fiber f b, a ∈ p.support) :
-    condOnMap p f b a = 0 := by
-  rw [condOnMap, dite_eq_left hb]
-  exact PMF.filter_apply_eq_zero_of_notMem (p := p) (s := fiber f b) (h := hb) ha
-
-lemma condOnMap_apply_of_mem_support {α β : Type*} (p : PMF α) (f : α → β)
-    {a : α} (ha : a ∈ p.support) :
-    condOnMap p f (f a) a = p a * ((PMF.map f p) (f a))⁻¹ := by
-  classical
-  let : DecidableEq β := Classical.decEq β
-  have hb : ∃ x ∈ fiber f (f a), x ∈ p.support := ⟨a, rfl, ha⟩
-  rw [condOnMap, dite_eq_left hb, PMF.filter_apply,
-    Set.indicator_of_mem (show a ∈ fiber f (f a) from rfl)]
-  simp only [PMF.map_apply, Set.indicator_apply, fiber, Set.mem_ofPred_eq, eq_comm]
-
-lemma map_bind_condOnMap {α β : Type*} (p : PMF α) (f : α → β) :
-    (PMF.map f p).bind (condOnMap p f) = p := by
-  classical
-  ext a
-  rw [PMF.bind_apply]
-  by_cases ha : a ∈ p.support
-  · have hsingle : ∀ b, b ≠ f a → (PMF.map f p) b * condOnMap p f b a = 0 := by
-      intro b hb
-      by_cases hbmem : ∃ x ∈ fiber f b, x ∈ p.support
-      · rw [condOnMap_apply_of_not_mem_fiber p f b (fun h => hb h.symm) hbmem, mul_zero]
-      · rw [show (PMF.map f p) b = 0 by
-          rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
-          exact fun ⟨x, hx, hfx⟩ => hbmem ⟨x, hfx, hx⟩, zero_mul]
-    rw [tsum_eq_single (f a) hsingle, condOnMap_apply_of_mem_support p f ha, mul_comm, mul_assoc,
-      ENNReal.inv_mul_cancel
-        (by rw [← PMF.mem_support_iff, PMF.mem_support_map_iff]; exact ⟨a, ha, rfl⟩)
-        (PMF.apply_ne_top _ _), mul_one]
-  · rw [(PMF.apply_eq_zero_iff _ _).2 ha, ENNReal.tsum_eq_zero]
-    intro b
-    by_cases hbmem : ∃ x ∈ fiber f b, x ∈ p.support
-    · rw [show condOnMap p f b a = 0 by
-        rw [condOnMap, dite_eq_left hbmem, PMF.filter_apply_eq_zero_iff]; exact Or.inr ha, mul_zero]
-    · rw [show (PMF.map f p) b = 0 by
-        rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
-        exact fun ⟨x, hx, hfx⟩ => hbmem ⟨x, hfx, hx⟩, zero_mul]
-
-end PMF
-
-namespace PMF
-
-/-- Conditional output kernel induced by a deterministic observation map.
-
-When the observation value is not in the support of `f <$> p`, the fallback
-is used. Since the observation has zero mass there, this does not affect the
-rebuilt distribution, but it makes pointwise continuation equalities easier
-to state. -/
-noncomputable def mapKernelWithFallback {α β γ : Type*}
-    (p : PMF α) (f : α → β) (out : α → γ) (fallback : β → γ) (b : β) : PMF γ := by
-    classical
-    exact
-      if h : ∃ a ∈ fiber f b, a ∈ p.support then
-        PMF.map out (p.filter (fiber f b) h)
-      else
-        pure (fallback b)
-
-lemma map_bind_mapKernelWithFallback {α β γ : Type*}
-    (p : PMF α) (f : α → β) (out : α → γ) (fallback : β → γ) :
-    (PMF.map f p).bind (mapKernelWithFallback p f out fallback) = PMF.map out p := by
-  let K : β → PMF γ := fun b => PMF.map out (condOnMap p f b)
-  have hbind :
-      (PMF.map f p).bind (mapKernelWithFallback p f out fallback) =
-        (PMF.map f p).bind K := by
-    refine PMF.bind_congr (PMF.map f p) _ _ ?_
-    intro b hb
-    obtain ⟨a, ha, hfa⟩ := (PMF.mem_support_map_iff f p b).1 hb
-    have hex : ∃ a ∈ fiber f b, a ∈ p.support := ⟨a, hfa, ha⟩
-    simp only [K, mapKernelWithFallback, condOnMap, dite_eq_left hex]
-  rw [hbind]
-  simp only [K, ← PMF.map_bind, map_bind_condOnMap]
-
-lemma mapKernelWithFallback_eq_pure_of {α β γ : Type*}
-    (p : PMF α) (f : α → β) (out : α → γ) (fallback : β → γ)
-    (bad : β → Prop)
-    (h_eq : ∀ a b, f a = b → ¬ bad b → out a = fallback b)
-    (b : β) (hb : ¬ bad b) :
-    mapKernelWithFallback p f out fallback b = pure (fallback b) := by
-  by_cases hex : ∃ a ∈ fiber f b, a ∈ p.support
-  · rw [mapKernelWithFallback, dite_eq_left hex]
-    refine PMF.eq_pure_of_forall_ne_eq_zero _ (fallback b) ?_
-    intro y hy
-    rw [PMF.apply_eq_zero_iff, PMF.mem_support_map_iff]
-    rintro ⟨a, ha, rfl⟩
-    exact hy (h_eq a b ((PMF.mem_support_filter_iff hex).1 ha).1 hb)
-  · rw [mapKernelWithFallback, dite_eq_right hex]
-
-end PMF
-
-theorem ofReal_tvDist_map_private_right_bad_le
-    {m : Type u → Type v} [Monad m] [LawfulMonad m] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    {α β γ : Type u}
-    (oa : m α) (ob : m β)
-    (pub : α → β) (fa : α → γ) (fb : β → γ) (bad : β → Prop)
-    (h_eq : ∀ a b, pub a = b → ¬ bad b → fa a = fb b) :
-    ENNReal.ofReal (tvDist (fa <$> oa) (fb <$> ob))
-      ≤ ENNReal.ofReal (tvDist (pub <$> oa) ob) + Pr[bad | ob] := by
-  let p : PMF α := liftM oa
-  let q : PMF β := liftM ob
-  let K : β → PMF γ := PMF.mapKernelWithFallback p pub fa fb
-  have hstep : ∀ b, ¬ bad b → 𝒮[K b] = 𝒮[(pure (fb b) : PMF γ)] := fun b hb =>
-    congrArg evalSPMF (PMF.mapKernelWithFallback_eq_pure_of p pub fa fb bad h_eq b hb)
-  have h :=
-    ofReal_tvDist_bind_event_right_le
-      (m := PMF) (mx := PMF.map pub p) (my := q)
-      (f := K) (g := fun b => (pure (fb b) : PMF γ)) bad hstep
-  have hK : (PMF.map pub p).bind K = PMF.map fa p :=
-    PMF.map_bind_mapKernelWithFallback p pub fa fb
-  have hq : q.bind (fun b => (pure (fb b) : PMF γ)) = PMF.map fb q := by
-    simpa [Function.comp_def] using PMF.bind_pure_comp fb q
-  have hp_pub : (liftM (pub <$> oa) : PMF β) = PMF.map pub p :=
-    MonadHom.mmap_map (F := MonadHom.ofLift _ PMF) (x := oa) (g := pub)
-  have hp_fa : (liftM (fa <$> oa) : PMF γ) = PMF.map fa p :=
-    MonadHom.mmap_map (F := MonadHom.ofLift _ PMF) (x := oa) (g := fa)
-  have hq_fb : (liftM (fb <$> ob) : PMF γ) = PMF.map fb q :=
-    MonadHom.mmap_map (F := MonadHom.ofLift _ PMF) (x := ob) (g := fb)
-  have hleft :
-      tvDist (fa <$> oa) (fb <$> ob) =
-        tvDist ((PMF.map pub p).bind K) (q.bind fun b => (pure (fb b) : PMF γ)) := by
-    unfold tvDist
-    rw [evalSPMF_def (fa <$> oa),
-      evalSPMF_def (fb <$> ob),
-      PMF.evalSPMF_eq ((PMF.map pub p).bind K),
-      PMF.evalSPMF_eq (q.bind fun b => (pure (fb b) : PMF γ)),
-      show (liftM (fa <$> oa) : SPMF γ) = liftM ((liftM (fa <$> oa) : PMF γ)) from rfl,
-      show (liftM (fb <$> ob) : SPMF γ) = liftM ((liftM (fb <$> ob) : PMF γ)) from rfl,
-      hp_fa, hq_fb, hK, hq]
-  have hbase :
-      tvDist (pub <$> oa) ob = tvDist (PMF.map pub p) q := by
-    unfold tvDist
-    rw [evalSPMF_def (pub <$> oa),
-      evalSPMF_def ob,
-      PMF.evalSPMF_eq (PMF.map pub p),
-      PMF.evalSPMF_eq q,
-      show (liftM (pub <$> oa) : SPMF β) = liftM ((liftM (pub <$> oa) : PMF β)) from rfl,
-      show (liftM ob : SPMF β) = liftM ((liftM ob : PMF β)) from rfl,
-      hp_pub]
-  have hbad : Pr[bad | q] = Pr[bad | ob] := by
-    rw [probEvent_def, probEvent_def]
-    rfl
-  simpa [hleft, hbase, hbad] using h
+/-- Integrals against a measure concentrated on a countable set are sums over that set. -/
+private theorem lintegral_eq_tsum_of_ae_mem_countable {X : Type*} [MeasurableSpace X]
+    [MeasurableSingletonClass X] {μ : Measure X} {s : Set X} (hs : s.Countable)
+    (h : ∀ᵐ x ∂μ, x ∈ s) (f : X → ℝ≥0∞) :
+    ∫⁻ x, f x ∂μ = ∑' x : s, f x * μ {(x : X)} := by
+  rw [← lintegral_countable f hs, Measure.restrict_eq_self_of_ae_mem h]
 
 private lemma Finset_sum_iSup_le_iSup_sum {ι : Type*} {J : ι → Type*}
     [hne : ∀ i, Nonempty (J i)]
@@ -288,24 +87,25 @@ private lemma ENNReal_tsum_iSup_le {ι : Type*} {J : ι → Type*}
   refine iSup_le fun s => le_trans (Finset_sum_iSup_le_iSup_sum g s) ?_
   exact iSup_mono fun f => ENNReal.sum_le_tsum _
 
+variable {ι₁ : Type u} {ι₂ : Type u}
+variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
+variable {α β γ δ : Type}
+
+section measureSpec
+
+variable [IsMeasureSpec spec₁] [IsMeasureSpec spec₂]
+
 /-! ## Quantitative relational WP rules -/
 
-/-- Pure rule for quantitative relational WP. -/
-theorem eRelWP_pure_le (a : α) (b : β) (post : α → β → ℝ≥0∞) :
-    post a b ≤ eRelWP (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) post := by
-  unfold eRelWP
-  have hc : SPMF.IsCoupling (pure (a, b) : SPMF (α × β))
-      (𝒮[(pure a : OracleComp spec₁ α)]) (𝒮[(pure b : OracleComp spec₂ β)]) := by
-    simpa only [evalSPMF_pure] using SPMF.IsCoupling.pure_iff.mpr rfl
-  apply le_iSup_of_le ⟨pure (a, b), hc⟩
-  have key : ∑' z, Pr[= z | (pure (a, b) : SPMF (α × β))] * post z.1 z.2 = post a b := by
-    rw [tsum_eq_single (a, b)]
-    · simp [SPMF.probOutput_eq_apply]
-    · intro z hz
-      have : Pr[= z | (pure (a, b) : SPMF (α × β))] = 0 := by
-        rw [SPMF.probOutput_eq_apply]; simp [hz]
-      simp [this]
-  exact key ▸ le_refl _
+/-- Quantitative relational weakest precondition is monotone in the postcondition. -/
+theorem eRelWP_mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {post post' : α → β → ℝ≥0∞}
+    (hpost : ∀ a b, post a b ≤ post' a b) :
+    eRelWP oa ob post ≤ eRelWP oa ob post' := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  exact MeasureProgramLogic.eRelWP_mono oa ob hpost
 
 /-- Monotonicity/consequence rule for quantitative relational WP. -/
 theorem eRelWP_conseq {pre pre' : ℝ≥0∞}
@@ -313,13 +113,99 @@ theorem eRelWP_conseq {pre pre' : ℝ≥0∞}
     {post post' : α → β → ℝ≥0∞}
     (hpre : pre' ≤ pre) (hpost : ∀ a b, post a b ≤ post' a b)
     (h : pre ≤ eRelWP oa ob post) :
-    pre' ≤ eRelWP oa ob post' := by
-  refine le_trans hpre (le_trans h ?_)
-  unfold eRelWP
-  refine iSup_le fun c => le_trans
-    (ENNReal.tsum_le_tsum fun z : α × β => mul_le_mul' le_rfl (hpost z.1 z.2))
-    (le_iSup (f := fun c' : SPMF.Coupling (𝒮[oa]) (𝒮[ob]) =>
-      ∑' z : α × β, Pr[= z | c'.1] * post' z.1 z.2) c)
+    pre' ≤ eRelWP oa ob post' :=
+  hpre.trans (h.trans (eRelWP_mono hpost))
+
+/-- A coupling of output measures witnesses a lower bound on the quantitative relational WP. -/
+theorem le_eRelWP_of_isCoupling {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    (post : α → β → ℝ≥0∞)
+    (c : letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
+      Measure.Coupling 𝒟[oa] 𝒟[ob]) :
+    letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
+      ∫⁻ z, post z.1 z.2 ∂c.joint ≤ eRelWP oa ob post := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  exact MeasureProgramLogic.le_eRelWP_of_isCoupling oa ob post c
+
+/-- Coupled expectations are bounded by any pointwise bound on the postcondition. -/
+theorem eRelWP_le (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+    (post : α → β → ℝ≥0∞) (bound : ℝ≥0∞) (h : ∀ a b, post a b ≤ bound) :
+    eRelWP oa ob post ≤ bound := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  exact MeasureProgramLogic.eRelWP_le oa ob post bound h
+
+variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
+
+/-- Pure values characterize the quantitative relational weakest precondition. -/
+theorem eRelWP_pure (a : α) (b : β) (post : α → β → ℝ≥0∞) :
+    eRelWP (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) post = post a b := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  exact MeasureProgramLogic.eRelWP_pure_pure a b post
+
+/-- Pure rule for quantitative relational WP. -/
+theorem eRelWP_pure_le (a : α) (b : β) (post : α → β → ℝ≥0∞) :
+    post a b ≤ eRelWP (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) post :=
+  (eRelWP_pure a b post).ge
+
+section finite
+
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+
+/-- Quantitative relational weakest preconditions compose through bind. A coupling of the first
+two computations concentrates on the finite product of their supports, so its coupled
+expectation is a finite sum, and a choice of conditional couplings on that support gives a
+coupling of the two binds. -/
+theorem eRelWP_bind_le
+    (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+    (fa : α → OracleComp spec₁ γ) (fb : β → OracleComp spec₂ δ)
+    (post : γ → δ → ℝ≥0∞) :
+    eRelWP oa ob (fun a b => eRelWP (fa a) (fb b) post) ≤
+      eRelWP (oa >>= fa) (ob >>= fb) post := by
+  classical
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  let : MeasurableSpace γ := ⊤
+  let : MeasurableSpace δ := ⊤
+  refine iSup_le fun c => ?_
+  let S : Set (α × β) := support oa ×ˢ support ob
+  have hS : S.Countable :=
+    ((PFunctor.FreeM.support_finite oa).prod (PFunctor.FreeM.support_finite ob)).countable
+  have hcS : ∀ᵐ z ∂c.joint, z ∈ S := ae_mem_support_prod c
+  have hne (z : S) : Nonempty (Measure.Coupling 𝒟[fa z.1.1] 𝒟[fb z.1.2]) := by
+    have : IsProbabilityMeasure 𝒟[fa z.1.1] := ⟨evalDist_apply_univ_eq_one _⟩
+    have : IsProbabilityMeasure 𝒟[fb z.1.2] := ⟨evalDist_apply_univ_eq_one _⟩
+    exact ⟨Measure.Coupling.prod _ _⟩
+  change ∫⁻ z, eRelWP (fa z.1) (fb z.2) post ∂c.joint ≤ _
+  rw [lintegral_eq_tsum_of_ae_mem_countable hS hcS]
+  calc ∑' z : S, eRelWP (fa z.1.1) (fb z.1.2) post * c.joint {(z : α × β)}
+      = ∑' z : S, ⨆ d : Measure.Coupling 𝒟[fa z.1.1] 𝒟[fb z.1.2],
+          (∫⁻ w, post w.1 w.2 ∂d.joint) * c.joint {(z : α × β)} :=
+        tsum_congr fun z => ENNReal.iSup_mul ..
+    _ ≤ ⨆ D : ∀ z : S, Measure.Coupling 𝒟[fa z.1.1] 𝒟[fb z.1.2],
+          ∑' z : S, (∫⁻ w, post w.1 w.2 ∂(D z).joint) * c.joint {(z : α × β)} :=
+        ENNReal_tsum_iSup_le _
+    _ ≤ eRelWP (oa >>= fa) (ob >>= fb) post := iSup_le fun D => ?_
+  let j : α × β → Measure (γ × δ) := fun z =>
+    if hz : z ∈ S then (D ⟨z, hz⟩).joint else 0
+  have hj : AEMeasurable j c.joint := aemeasurable_of_ae_mem_countable hS hcS j
+  have hstep : ∀ᵐ z ∂c.joint, Measure.IsCoupling (j z) 𝒟[fa z.1] 𝒟[fb z.2] :=
+    hcS.mono fun z hz => by simpa only [j, dite_eq_left hz] using (D ⟨z, hz⟩).isCoupling
+  have hjoint : Measure.IsCoupling (c.joint.bind j) 𝒟[oa >>= fa] 𝒟[ob >>= fb] := by
+    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+    exact c.isCoupling.bind_of_aemeasurable Measurable.of_discrete Measurable.of_discrete hj hstep
+  let C : Measure.Coupling 𝒟[oa >>= fa] 𝒟[ob >>= fb] := ⟨c.joint.bind j, hjoint⟩
+  have hpost : AEMeasurable (fun w : γ × δ => post w.1 w.2) (c.joint.bind j) :=
+    aemeasurable_of_ae_mem_countable
+      ((PFunctor.FreeM.support_finite (oa >>= fa)).prod
+        (PFunctor.FreeM.support_finite (ob >>= fb))).countable
+      (ae_mem_support_prod C) _
+  refine le_trans (le_of_eq ?_) (le_eRelWP_of_isCoupling post C)
+  change _ = ∫⁻ w, post w.1 w.2 ∂(c.joint.bind j)
+  rw [Measure.lintegral_bind hj hpost, lintegral_eq_tsum_of_ae_mem_countable hS hcS]
+  exact tsum_congr fun z => by simp only [j, dite_eq_left z.2]
 
 /-- Bind/sequential composition rule for quantitative relational WP. -/
 theorem eRelWP_bind_rule
@@ -329,419 +215,93 @@ theorem eRelWP_bind_rule
     {cut : α → β → ℝ≥0∞} {post : γ → δ → ℝ≥0∞}
     (hxy : pre ≤ eRelWP oa ob cut)
     (hfg : ∀ a b, cut a b ≤ eRelWP (fa a) (fb b) post) :
-    pre ≤ eRelWP (oa >>= fa) (ob >>= fb) post := by
-  refine le_trans (eRelWP_conseq le_rfl hfg hxy) ?_
-  unfold eRelWP
-  refine iSup_le fun c => ?_
-  have hne : ∀ a b, Nonempty (SPMF.Coupling (𝒮[fa a]) (𝒮[fb b])) :=
-    fun a b => nonempty_spmf_coupling
-  calc ∑' z, Pr[= z | c.1] *
-        (⨆ d : SPMF.Coupling (𝒮[fa z.1]) (𝒮[fb z.2]),
-          ∑' w, Pr[= w | d.1] * post w.1 w.2)
-      = ∑' z, ⨆ d : SPMF.Coupling (𝒮[fa z.1]) (𝒮[fb z.2]),
-          Pr[= z | c.1] * (∑' w, Pr[= w | d.1] * post w.1 w.2) := by
-        congr 1; ext z; exact ENNReal.mul_iSup ..
-    _ ≤ ⨆ (D : ∀ z : α × β,
-            SPMF.Coupling (𝒮[fa z.1]) (𝒮[fb z.2])),
-          ∑' z, Pr[= z | c.1] * (∑' w, Pr[= w | (D z).1] * post w.1 w.2) :=
-        ENNReal_tsum_iSup_le _
-    _ ≤ ⨆ c' : SPMF.Coupling (𝒮[oa >>= fa]) (𝒮[ob >>= fb]),
-          ∑' w, Pr[= w | c'.1] * post w.1 w.2 := by
-        refine iSup_le fun D => ?_
-        let d : α → β → SPMF (γ × δ) := fun a b => (D (a, b)).1
-        let c' : SPMF.Coupling (𝒮[oa >>= fa]) (𝒮[ob >>= fb]) :=
-          ⟨c.1 >>= fun p => d p.1 p.2, by
-            rw [evalSPMF_bind, evalSPMF_bind]
-            exact SPMF.IsCoupling.bind c d fun a b _ => (D (a, b)).2⟩
-        apply le_iSup_of_le c'
-        suffices h : ∑' z, Pr[= z | c.1] * (∑' w, Pr[= w | d z.1 z.2] * post w.1 w.2) =
-            ∑' w, Pr[= w | c'.1] * post w.1 w.2 from h.le
-        have hbind : ∀ w : γ × δ,
-            Pr[= w | c'.1] = ∑' z : α × β, Pr[= z | c.1] * Pr[= w | d z.1 z.2] :=
-          probOutput_bind_eq_tsum c.1 fun p => d p.1 p.2
-        simp_rw [hbind]
-        calc ∑' z, Pr[= z | c.1] * (∑' w, Pr[= w | d z.1 z.2] * post w.1 w.2)
-            = ∑' z, ∑' w, Pr[= z | c.1] * Pr[= w | d z.1 z.2] * post w.1 w.2 := by
-              simp [ENNReal.tsum_mul_left, mul_assoc]
-          _ = ∑' w, ∑' z, Pr[= z | c.1] * Pr[= w | d z.1 z.2] * post w.1 w.2 :=
-              ENNReal.tsum_comm
-          _ = ∑' w, (∑' z, Pr[= z | c.1] * Pr[= w | d z.1 z.2]) * post w.1 w.2 := by
-              simp [ENNReal.tsum_mul_right]
-
-/-! ## Helpers for statistical distance / coupling characterization -/
-
-private lemma probOutput_diag_le_min_marginals
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
-    (c : SPMF.Coupling (𝒮[oa]) (𝒮[ob])) (a : α) :
-    Pr[= (a, a) | c.1] ≤ min (Pr[= a | 𝒮[oa]]) (Pr[= a | 𝒮[ob]]) := by
-  refine le_min ?_ ?_
-  · calc
-      Pr[= (a, a) | c.1] = Pr[fun z : α × α => z = (a, a) | c.1] :=
-        (probEvent_eq_eq_probOutput c.1 (a, a)).symm
-      _ ≤ Pr[fun z : α × α => z.1 = a | c.1] :=
-        probEvent_mono'' fun z hz => by
-          simp [hz]
-      _ = Pr[fun x : α => x = a | Prod.fst <$> c.1] := by
-        change Pr[((fun x : α => x = a) ∘ Prod.fst) | c.1] = _
-        exact (probEvent_map (mx := c.1) (f := Prod.fst) (q := fun x : α => x = a)).symm
-      _ = Pr[= a | Prod.fst <$> c.1] := by
-        rw [probEvent_eq_eq_probOutput]
-      _ = Pr[= a | 𝒮[oa]] := by
-        rw [c.2.map_fst]
-  · calc
-      Pr[= (a, a) | c.1] = Pr[fun z : α × α => z = (a, a) | c.1] :=
-        (probEvent_eq_eq_probOutput c.1 (a, a)).symm
-      _ ≤ Pr[fun z : α × α => z.2 = a | c.1] :=
-        probEvent_mono'' fun z hz => by
-          simp [hz]
-      _ = Pr[fun x : α => x = a | Prod.snd <$> c.1] := by
-        change Pr[((fun x : α => x = a) ∘ Prod.snd) | c.1] = _
-        exact (probEvent_map (mx := c.1) (f := Prod.snd) (q := fun x : α => x = a)).symm
-      _ = Pr[= a | Prod.snd <$> c.1] := by
-        rw [probEvent_eq_eq_probOutput]
-      _ = Pr[= a | 𝒮[ob]] := by
-        rw [c.2.map_snd]
-
-private lemma eRelWP_indicator_eqRel_le
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} :
-    eRelWP oa ob (RelPost.indicator (EqRel α)) ≤
-      ∑' a, min (Pr[= a | 𝒮[oa]]) (Pr[= a | 𝒮[ob]]) := by
-  let : DecidableEq α := Classical.decEq α
-  unfold eRelWP
-  refine iSup_le fun c => ?_
-  calc ∑' z, Pr[= z | c.1] * RelPost.indicator (EqRel α) z.1 z.2
-      = ∑' z : α × α, if z.1 = z.2 then Pr[= z | c.1] else 0 := by
-        congr 1
-        ext ⟨a, b⟩
-        by_cases h : a = b <;> simp [RelPost.indicator, EqRel, h]
-    _ = ∑' a, Pr[= (a, a) | c.1] := by
-        rw [ENNReal.tsum_prod']
-        congr 1; ext a
-        rw [tsum_eq_single a (fun b hb => ite_eq_right (Ne.symm hb))]
-        simp
-    _ ≤ ∑' a, min (Pr[= a | 𝒮[oa]]) (Pr[= a | 𝒮[ob]]) :=
-        ENNReal.tsum_le_tsum fun a => probOutput_diag_le_min_marginals c a
-
-private lemma min_add_tsub (a b : ℝ≥0∞) : min a b + (a - b) = a := by
-  rw [add_comm, tsub_add_min]
-
-private lemma tsum_min_add_etvDist_eq_one
-    {p q : PMF (Option α)} (hp : p none = 0) (hq : q none = 0) :
-    ∑' a, min (p (some a)) (q (some a)) + p.etvDist q = 1 := by
-  set S := ∑' a, min (p (some a)) (q (some a))
-  have hsum_p : ∑' a, p (some a) = 1 := by
-    simpa [tsum_option _ ENNReal.summable, hp] using p.tsum_coe
-  have hsum_q : ∑' a, q (some a) = 1 := by
-    simpa [tsum_option _ ENNReal.summable, hq] using q.tsum_coe
-  have hS_le : S ≤ 1 := hsum_p ▸ ENNReal.tsum_le_tsum fun a => min_le_left _ _
-  have h1 : S + ∑' a, (p (some a) - q (some a)) = 1 := by
-    rw [← ENNReal.tsum_add, ← hsum_p]
-    exact tsum_congr fun a => min_add_tsub (p (some a)) (q (some a))
-  have h2 : S + ∑' a, (q (some a) - p (some a)) = 1 := by
-    rw [← ENNReal.tsum_add, ← hsum_q]
-    exact tsum_congr fun a => by rw [min_comm]; exact min_add_tsub (q (some a)) (p (some a))
-  have hS_ne_top : S ≠ ⊤ := ne_top_of_le_ne_top one_ne_top hS_le
-  have htsub1 : ∑' a, (p (some a) - q (some a)) = 1 - S :=
-    ENNReal.eq_sub_of_add_eq hS_ne_top (by rwa [add_comm] at h1)
-  have htsub2 : ∑' a, (q (some a) - p (some a)) = 1 - S :=
-    ENNReal.eq_sub_of_add_eq hS_ne_top (by rwa [add_comm] at h2)
-  have habsdiff_sum : ∑' a, ENNReal.absDiff (p (some a)) (q (some a)) = 2 * (1 - S) := by
-    simp only [ENNReal.absDiff, ENNReal.tsum_add, htsub1, htsub2, two_mul]
-  rw [PMF.etvDist, tsum_option _ ENNReal.summable, hp, hq, ENNReal.absDiff_self, zero_add,
-    habsdiff_sum, mul_comm, ENNReal.mul_div_cancel_right two_ne_zero ofNat_ne_top]
-  exact add_tsub_cancel_of_le hS_le
-
-private lemma tsum_min_eq_one_sub_etvDist
-    {p q : PMF (Option α)} (hp : p none = 0) (hq : q none = 0) :
-    ∑' a, min (p (some a)) (q (some a)) = 1 - p.etvDist q :=
-  ENNReal.eq_sub_of_add_eq (PMF.etvDist_ne_top p q) (tsum_min_add_etvDist_eq_one hp hq)
-
-private lemma tsum_min_probOutput_eq_one_sub_etvDist
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} :
-    ∑' a, min (Pr[= a | 𝒮[oa]]) (Pr[= a | 𝒮[ob]]) =
-      1 - (𝒮[oa]).toPMF.etvDist (𝒮[ob]).toPMF := by
-  simp_rw [show ∀ a, min (Pr[= a | 𝒮[oa]]) (Pr[= a | 𝒮[ob]]) =
-      min ((𝒮[oa]).toPMF (some a)) ((𝒮[ob]).toPMF (some a))
-      from fun a => by simp [probOutput_def, SPMF.apply_eq_toPMF_some]]
-  exact tsum_min_eq_one_sub_etvDist
-    (by simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := oa))
-    (by simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := ob))
-
-private lemma tsum_min_le_eRelWP
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} :
-    ∑' a, min (Pr[= a | 𝒮[oa]]) (Pr[= a | 𝒮[ob]]) ≤
-      eRelWP oa ob (RelPost.indicator (EqRel α)) := by
-  let : DecidableEq α := Classical.decEq α
-  set pa := 𝒮[oa]; set pb := 𝒮[ob]
-  set P := fun a => Pr[= a | pa]; set Q := fun a => Pr[= a | pb]
-  set rP := fun a => P a - min (P a) (Q a)
-  set rQ := fun a => Q a - min (Q a) (P a)
-  set δ := ∑' a, rP a
-  have hP_sum : ∑' a, P a = 1 := by
-    simpa only [P, pa, probOutput_evalSPMF] using tsum_probOutput_of_liftM_PMF oa
-  have hQ_sum : ∑' a, Q a = 1 := by
-    simpa only [Q, pb, probOutput_evalSPMF] using tsum_probOutput_of_liftM_PMF ob
-  have hδ_ne_top : δ ≠ ⊤ :=
-    ne_top_of_le_ne_top one_ne_top (hP_sum ▸ ENNReal.tsum_le_tsum fun a => tsub_le_self)
-  have hδ_eq_rQ : ∑' a, rQ a = δ := by
-    have hS_ne_top : (∑' a, min (P a) (Q a)) ≠ ⊤ :=
-      ne_top_of_le_ne_top one_ne_top (hP_sum ▸ ENNReal.tsum_le_tsum fun a => min_le_left _ _)
-    have h1 : ∑' a, min (P a) (Q a) + δ = 1 := by
-      rw [← ENNReal.tsum_add, ← hP_sum]
-      exact tsum_congr fun a => add_tsub_cancel_of_le (min_le_left (P a) (Q a))
-    have h2 : ∑' a, min (P a) (Q a) + ∑' a, rQ a = 1 := by
-      rw [← ENNReal.tsum_add, ← hQ_sum]
-      exact tsum_congr fun a =>
-        min_comm (P a) (Q a) ▸ add_tsub_cancel_of_le (min_le_left (Q a) (P a))
-    exact ((ENNReal.add_right_inj hS_ne_top).mp (h1.trans h2.symm)).symm
-  have hmul_δ : ∀ a, rP a * (δ * δ⁻¹) = rP a := by
-    intro a
-    rcases eq_or_ne δ 0 with hδ0 | hδ0
-    · have : rP a = 0 := le_antisymm (hδ0 ▸ ENNReal.le_tsum a) bot_le
-      simp [this, hδ0]
-    · rw [ENNReal.mul_inv_cancel hδ0 hδ_ne_top, mul_one]
-  set cf : Option (α × α) → ℝ≥0∞ := fun
-    | none => 0
-    | some (a, b) => (if a = b then min (P a) (Q a) else 0) + rP a * rQ b * δ⁻¹
-  have hfst_sum : ∀ a, ∑' b, cf (some (a, b)) = P a := by
-    intro a
-    change ∑' b, ((if a = b then min (P a) (Q a) else 0) + rP a * rQ b * δ⁻¹) = P a
-    rw [ENNReal.tsum_add, tsum_eq_single a (fun b hb => ite_eq_right (Ne.symm hb))]
-    simp only [ite_true]
-    simp_rw [mul_right_comm (rP a) (rQ _) δ⁻¹]
-    rw [ENNReal.tsum_mul_left, hδ_eq_rQ, mul_assoc, mul_comm δ⁻¹ δ, hmul_δ]
-    exact add_tsub_cancel_of_le (min_le_left _ _)
-  have hsnd_sum : ∀ b, ∑' a, cf (some (a, b)) = Q b := by
-    intro b
-    change ∑' a, ((if a = b then min (P a) (Q a) else 0) + rP a * rQ b * δ⁻¹) = Q b
-    rw [ENNReal.tsum_add]
-    conv_lhs => arg 1; rw [show
-      (fun a => if a = b then min (P a) (Q a) else (0 : ℝ≥0∞)) =
-        (fun a => if a = b then min (Q b) (P b) else 0) from by
-          ext a
-          split <;> simp_all [min_comm]]
-    rw [tsum_eq_single b (fun a ha => ite_eq_right ha)]
-    simp only [ite_true]
-    have htsum_rQ : ∑' a, rP a * rQ b * δ⁻¹ = rQ b := by
-      simp_rw [mul_rotate (rP _) (rQ b) δ⁻¹]
-      rw [ENNReal.tsum_mul_left]
-      rcases eq_or_ne δ 0 with hδ0 | hδ0
-      · have hrQ0 : rQ b = 0 :=
-          le_antisymm (hδ0 ▸ hδ_eq_rQ ▸ ENNReal.le_tsum b) bot_le
-        simp only [hrQ0, zero_mul]
-      · rw [mul_assoc, ENNReal.inv_mul_cancel hδ0 hδ_ne_top, mul_one]
-    rw [htsum_rQ]
-    exact add_tsub_cancel_of_le (min_le_left _ _)
-  have hcf_sum : ∑' x, cf x = 1 := by
-    rw [tsum_option _ ENNReal.summable, show cf none = 0 from rfl, zero_add,
-      ENNReal.tsum_prod', tsum_congr hfst_sum]
-    exact hP_sum
-  let c_pmf : PMF (Option (α × α)) := ⟨cf, hcf_sum ▸ ENNReal.summable.hasSum⟩
-  let c_spmf : SPMF (α × α) := c_pmf
-  have hc_spmf_apply (z : α × α) : c_spmf z = cf (some z) := by
-    simp only [c_spmf]
-    rfl
-  have hpa_apply (a : α) : pa a = P a := by
-    dsimp only [P]
-    simp only [probOutput_def, evalSPMF_def, monadLift_self]
-  have hpb_apply (b : α) : pb b = Q b := by
-    dsimp only [Q]
-    simp only [probOutput_def, evalSPMF_def, monadLift_self]
-  have hite_tsum : ∀ {β : Type} (P : Prop) [Decidable P] (f : β → ℝ≥0∞),
-      ∑' b, (if P then f b else 0) = if P then ∑' b, f b else 0 := by
-    intro β P _ f; split <;> simp
-  have hcpl_fst : Prod.fst <$> c_spmf = pa := by
-    apply SPMF.ext; intro a
-    rw [show (Prod.fst <$> c_spmf) a = Pr[= a | Prod.fst <$> c_spmf] by
-          simp only [probOutput_def, evalSPMF_def, monadLift_self],
-      probOutput_map_eq_tsum_ite c_spmf Prod.fst a]
-    simp only [probOutput_def, evalSPMF_def, monadLift_self]
-    simp_rw [hc_spmf_apply]
-    rw [hpa_apply]
-    change ∑' z : α × α, (if a = z.1 then cf (some z) else 0) = P a
-    rw [ENNReal.tsum_prod', tsum_congr fun a₁ => hite_tsum (a = a₁) (fun b => cf (some (a₁, b))),
-      tsum_eq_single a (fun a' (ha' : a' ≠ a) => ite_eq_right (Ne.symm ha')),
-        ite_eq_left rfl, hfst_sum]
-  have hcpl_snd : Prod.snd <$> c_spmf = pb := by
-    apply SPMF.ext; intro b
-    rw [show (Prod.snd <$> c_spmf) b = Pr[= b | Prod.snd <$> c_spmf] by
-          simp only [probOutput_def, evalSPMF_def, monadLift_self],
-      probOutput_map_eq_tsum_ite c_spmf Prod.snd b]
-    simp only [probOutput_def, evalSPMF_def, monadLift_self]
-    simp_rw [hc_spmf_apply]
-    rw [hpb_apply]
-    change ∑' z : α × α, (if b = z.2 then cf (some z) else 0) = Q b
-    rw [ENNReal.tsum_prod', ENNReal.tsum_comm,
-      tsum_congr fun b₁ => hite_tsum (b = b₁) (fun a => cf (some (a, b₁))),
-      tsum_eq_single b (fun b' (hb' : b' ≠ b) => ite_eq_right (Ne.symm hb')),
-        ite_eq_left rfl, hsnd_sum]
-  let c : SPMF.Coupling pa pb := ⟨c_spmf, hcpl_fst, hcpl_snd⟩
-  have hobj_eq : ∑' z : α × α, Pr[= z | c.1] * RelPost.indicator (EqRel α) z.1 z.2 =
-      ∑' a, cf (some (a, a)) := by
-    rw [ENNReal.tsum_prod']
-    refine tsum_congr fun a => ?_
-    rw [tsum_eq_single a fun b hb => ?_]
-    · simp only [RelPost.indicator, EqRel, ite_true, mul_one, SPMF.probOutput_eq_apply]; rfl
-    · simp [RelPost.indicator, EqRel, Ne.symm hb]
-  calc ∑' a, min (P a) (Q a)
-      ≤ ∑' a, cf (some (a, a)) := ENNReal.tsum_le_tsum fun a => by simp [cf]
-    _ = ∑' z : α × α, Pr[= z | c.1] * RelPost.indicator (EqRel α) z.1 z.2 :=
-        hobj_eq.symm
-    _ ≤ eRelWP oa ob (RelPost.indicator (EqRel α)) :=
-        le_iSup (fun c' : SPMF.Coupling pa pb =>
-          ∑' z, Pr[= z | c'.1] * RelPost.indicator (EqRel α) z.1 z.2) c
-
-/-! ## Statistical distance via eRHL -/
-
-/-- Statistical distance as a complement of eRHL value with equality indicator.
-Uses `SPMF.tvDist` directly to handle cross-spec comparison. -/
-theorem spmf_tvDist_eq_one_sub_eRelWP_eqRel
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} :
-    SPMF.tvDist (𝒮[oa]) (𝒮[ob]) =
-      (1 - eRelWP oa ob (RelPost.indicator (EqRel α))).toReal := by
-  set p := (𝒮[oa]).toPMF
-  set q := (𝒮[ob]).toPMF
-  have htmin := tsum_min_probOutput_eq_one_sub_etvDist (oa := oa) (ob := ob)
-  have hle : eRelWP oa ob (RelPost.indicator (EqRel α)) ≤ 1 - p.etvDist q :=
-    htmin ▸ eRelWP_indicator_eqRel_le
-  have hge : 1 - p.etvDist q ≤ eRelWP oa ob (RelPost.indicator (EqRel α)) :=
-    htmin ▸ tsum_min_le_eRelWP
-  have heq : eRelWP oa ob (RelPost.indicator (EqRel α)) =
-      1 - (𝒮[oa]).toPMF.etvDist (𝒮[ob]).toPMF := le_antisymm hle hge
-  simp only [heq, SPMF.tvDist, PMF.tvDist,
-    ENNReal.sub_sub_cancel one_ne_top (PMF.etvDist_le_one _ _)]
-
-/-- Same-spec version using the `tvDist` notation. -/
-theorem tvDist_eq_one_sub_eRelWP_eqRel
-    {oa ob : OracleComp spec₁ α} :
-    tvDist oa ob = (1 - eRelWP (spec₂ := spec₁) oa ob
-      (RelPost.indicator (EqRel α))).toReal := by
-  simpa [tvDist] using
-    (spmf_tvDist_eq_one_sub_eRelWP_eqRel
-      (spec₁ := spec₁) (spec₂ := spec₁) (oa := oa) (ob := ob))
-
-/-- A TV-distance bound induces an approximate equality coupling. -/
-theorem approxRelTriple_eqRel_of_ofReal_tvDist_le
-    {oa ob : OracleComp spec₁ α} {ε : ℝ≥0∞}
-    (h : ENNReal.ofReal (tvDist oa ob) ≤ ε) :
-    ApproxRelTriple ε oa ob (EqRel α) := by
-  unfold ApproxRelTriple
-  rw [tvDist_eq_one_sub_eRelWP_eqRel] at h
-  set w := eRelWP (spec₂ := spec₁) oa ob (RelPost.indicator (EqRel α)) with hw
-  have hsub_ne_top : 1 - w ≠ ⊤ :=
-    ne_top_of_le_ne_top one_ne_top tsub_le_self
-  have hsub_le : 1 - w ≤ ε := by
-    simpa [hw, ENNReal.ofReal_toReal hsub_ne_top] using h
-  rw [tsub_le_iff_right] at hsub_le ⊢
-  simpa [add_comm, add_left_comm, add_assoc] using hsub_le
+    pre ≤ eRelWP (oa >>= fa) (ob >>= fb) post :=
+  (eRelWP_conseq le_rfl hfg hxy).trans (eRelWP_bind_le oa ob fa fb post)
 
 /-! ## Relational algebra instance -/
-
-/-- Pure values characterize the quantitative relational weakest precondition. -/
-theorem eRelWP_pure (a : α) (b : β) (post : α → β → ℝ≥0∞) :
-    eRelWP (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) post = post a b := by
-  apply le_antisymm
-  · unfold eRelWP
-    refine iSup_le fun c => ?_
-    have hcEq : c.1 = (pure (a, b) : SPMF (α × β)) := by
-      apply SPMF.IsCoupling.pure_iff.mp
-      simpa only [evalSPMF_pure] using c.2
-    rw [hcEq, tsum_eq_single (a, b)]
-    · simp [SPMF.probOutput_eq_apply]
-    · intro z hz
-      simp [SPMF.probOutput_eq_apply, hz]
-  · exact eRelWP_pure_le (spec₁ := spec₁) (spec₂ := spec₂) a b post
-
-/-- Quantitative relational weakest precondition is monotone in the postcondition. -/
-theorem eRelWP_mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
-    {post post' : α → β → ℝ≥0∞}
-    (hpost : ∀ a b, post a b ≤ post' a b) :
-    eRelWP oa ob post ≤ eRelWP oa ob post' :=
-  eRelWP_conseq (spec₁ := spec₁) (spec₂ := spec₂)
-    (pre := eRelWP oa ob post) (pre' := eRelWP oa ob post)
-    (oa := oa) (ob := ob) (post := post) (post' := post')
-    le_rfl hpost le_rfl
-
-/-- Quantitative relational weakest preconditions compose through bind. -/
-theorem eRelWP_bind_le
-    (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
-    (fa : α → OracleComp spec₁ γ) (fb : β → OracleComp spec₂ δ)
-    (post : γ → δ → ℝ≥0∞) :
-    eRelWP oa ob (fun a b => eRelWP (fa a) (fb b) post) ≤
-      eRelWP (oa >>= fa) (ob >>= fb) post :=
-  eRelWP_bind_rule (spec₁ := spec₁) (spec₂ := spec₂)
-    (pre := eRelWP oa ob (fun a b => eRelWP (fa a) (fb b) post))
-    (oa := oa) (ob := ob) (fa := fa) (fb := fb)
-    (cut := fun a b => eRelWP (fa a) (fb b) post)
-    (post := post) le_rfl (fun _ _ => le_rfl)
 
 /-- Quantitative relational algebra instance for `OracleComp`, based on `eRelWP`. -/
 noncomputable instance instMAlgRelOrdered_eRelWP :
     MAlgRelOrdered (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ where
   rwp := fun oa ob post => eRelWP oa ob post
-  rwp_pure := fun a b post => eRelWP_pure (spec₁ := spec₁) (spec₂ := spec₂) a b post
-  rwp_mono := fun hpost => eRelWP_mono (spec₁ := spec₁) (spec₂ := spec₂) hpost
-  rwp_bind_le := fun oa ob fa fb post =>
-    eRelWP_bind_le (spec₁ := spec₁) (spec₂ := spec₂) oa ob fa fb post
+  rwp_pure := fun a b post => eRelWP_pure a b post
+  rwp_mono := fun hpost => eRelWP_mono hpost
+  rwp_bind_le := fun oa ob fa fb post => eRelWP_bind_le oa ob fa fb post
+
+end finite
+
+/-- Every coupling of a Dirac law with the output measure of `y` integrates a postcondition as
+the unary expectation of its section at the Dirac point. -/
+private theorem lintegral_coupling_pure_left (a : α) (y : OracleComp spec₂ β)
+    (post : α → β → ℝ≥0∞)
+    (c : letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
+      Measure.Coupling 𝒟[(pure a : OracleComp spec₁ α)] 𝒟[y]) :
+    letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
+      ∫⁻ z, post z.1 z.2 ∂c.joint = wp y (post a) := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have hmeas : MeasurableSet {x : α | x = a} := measurableSet_singleton a
+  have hfst : ∀ᵐ z ∂c.joint, z.1 = a := by
+    refine (ae_map_iff measurable_fst.aemeasurable hmeas).1 ?_
+    rw [show c.joint.map Prod.fst = 𝒟[(pure a : OracleComp spec₁ α)] from c.isCoupling.fst_eq,
+      evalDist_pure]
+    exact (ae_dirac_iff hmeas).2 rfl
+  calc ∫⁻ z, post z.1 z.2 ∂c.joint = ∫⁻ z, post a z.2 ∂c.joint :=
+        lintegral_congr_ae (hfst.mono fun z hz => by simp only [hz])
+    _ = ∫⁻ b, post a b ∂c.joint.map Prod.snd :=
+        (lintegral_map Measurable.of_discrete measurable_snd).symm
+    _ = wp y (post a) := by
+        rw [show c.joint.map Prod.snd = 𝒟[y] from c.isCoupling.snd_eq,
+          wp_eq_lintegral y (post a) Measurable.of_discrete]
+
+/-- A pure first computation collapses the coupled expectation to the unary expectation of the
+second computation. -/
+theorem eRelWP_pure_left (a : α) (y : OracleComp spec₂ β) (post : α → β → ℝ≥0∞) :
+    eRelWP (pure a : OracleComp spec₁ α) y post = wp y (post a) := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have : IsProbabilityMeasure 𝒟[y] := ⟨evalDist_apply_univ_eq_one y⟩
+  have : Nonempty (Measure.Coupling 𝒟[(pure a : OracleComp spec₁ α)] 𝒟[y]) :=
+    ⟨Measure.Coupling.prod _ _⟩
+  change (⨆ c : Measure.Coupling 𝒟[(pure a : OracleComp spec₁ α)] 𝒟[y],
+    ∫⁻ z, post z.1 z.2 ∂c.joint) = _
+  simp only [lintegral_coupling_pure_left a y post, iSup_const]
+
+/-- A pure second computation collapses the coupled expectation to the unary expectation of the
+first computation. -/
+theorem eRelWP_pure_right (x : OracleComp spec₁ α) (b : β) (post : α → β → ℝ≥0∞) :
+    eRelWP x (pure b : OracleComp spec₂ β) post = wp x (fun a => post a b) := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have : IsProbabilityMeasure 𝒟[x] := ⟨evalDist_apply_univ_eq_one x⟩
+  rw [← eRelWP_pure_left (spec₁ := spec₂) b x fun b a => post a b]
+  change (⨆ c : Measure.Coupling 𝒟[x] 𝒟[(pure b : OracleComp spec₂ β)],
+      ∫⁻ z, post z.1 z.2 ∂c.joint) =
+    ⨆ c : Measure.Coupling 𝒟[(pure b : OracleComp spec₂ β)] 𝒟[x], ∫⁻ z, post z.2 z.1 ∂c.joint
+  refine le_antisymm (iSup_le fun c => le_iSup_of_le c.swap (le_of_eq ?_))
+    (iSup_le fun c => le_iSup_of_le c.swap (le_of_eq ?_))
+  · change _ = ∫⁻ z, post z.2 z.1 ∂(c.joint.map (MeasurableEquiv.prodComm (α := α) (β := β)))
+    rw [lintegral_map_equiv]
+    rfl
+  · change _ = ∫⁻ z, post z.1 z.2 ∂(c.joint.map (MeasurableEquiv.prodComm (α := β) (β := α)))
+    rw [lintegral_map_equiv]
+    rfl
 
 /-- Anchoring instance for the quantitative `ℝ≥0∞`-valued relational logic on `OracleComp`.
 
-When one of the two computations is `pure`, the supremum over couplings collapses to the
-single Dirac coupling (existence: `IsCoupling.dirac_left`; uniqueness on the supports follows
-from `IsCoupling.apply_pure_left_eq`), and the relational expectation reduces to the unary
-expectation `wp y (post a)` (resp. `wp x (fun a => post a b)`). This is the genuinely
-quantitative analogue of the qualitative `Anchored Prop` instance in
-`VCVio/ProgramLogic/Relational/Basic.lean`. -/
+When one of the two computations is `pure`, every coupling has that computation's value as its
+coordinate almost surely, so the relational expectation reduces to the unary expectation
+`wp y (post a)` (resp. `wp x (fun a => post a b)`). This is the quantitative analogue of the
+qualitative `Anchored Prop` instance in `VCVio/ProgramLogic/Relational/Basic.lean`. -/
 noncomputable instance instAnchored_eRelWP
-    [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-    [∀ t, MeasurableSpace (spec₂.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)] :
+    [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)] :
     MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ where
-  rwp_pure_left {α β} a y post := by
-    change eRelWP (pure a : OracleComp spec₁ α) y post =
-      wp y (post a)
-    rw [wp_eq_tsum]
-    simp only [probOutput_true_eq_probEvent, probEvent_eq_eq_probOutput]
-    apply le_antisymm
-    · refine iSup_le fun c => ?_
-      have hcPure : SPMF.IsCoupling c.1 (pure a) (𝒮[y]) := by
-        simpa [evalSPMF_pure] using c.2
-      simpa only [probOutput_def, evalSPMF_def, monadLift_self] using
-        (hcPure.tsum_pure_left post).le
-    · have hnf : (𝒮[y]).toPMF none = 0 := by
-        simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := y)
-      have hcPure : SPMF.IsCoupling (((a, ·) : β → α × β) <$> 𝒮[y]) (pure a) (𝒮[y]) :=
-        SPMF.IsCoupling.dirac_left a hnf
-      have hCoupling : SPMF.IsCoupling (((a, ·) : β → α × β) <$> 𝒮[y])
-          (𝒮[(pure a : OracleComp spec₁ α)]) (𝒮[y]) := by
-        simpa [evalSPMF_pure] using hcPure
-      let c : SPMF.Coupling (𝒮[(pure a : OracleComp spec₁ α)]) (𝒮[y]) :=
-        ⟨((a, ·) : β → α × β) <$> 𝒮[y], hCoupling⟩
-      exact le_iSup_of_le c (by
-        simpa only [probOutput_def, evalSPMF_def, monadLift_self] using
-          (hcPure.tsum_pure_left post).ge)
-  rwp_pure_right {α β} x b post := by
-    change eRelWP x (pure b : OracleComp spec₂ β) post =
-      wp x (fun a => post a b)
-    rw [wp_eq_tsum]
-    simp only [probOutput_true_eq_probEvent, probEvent_eq_eq_probOutput]
-    apply le_antisymm
-    · refine iSup_le fun c => ?_
-      have hcPure : SPMF.IsCoupling c.1 (𝒮[x]) (pure b) := by
-        simpa [evalSPMF_pure] using c.2
-      simpa only [probOutput_def, evalSPMF_def, monadLift_self] using
-        (hcPure.tsum_pure_right post).le
-    · have hnf : (𝒮[x]).toPMF none = 0 := by
-        simpa only [← SPMF.run_eq_toPMF, probFailure_def] using probFailure_eq_zero (mx := x)
-      have hcPure : SPMF.IsCoupling (((·, b) : α → α × β) <$> 𝒮[x]) (𝒮[x]) (pure b) :=
-        SPMF.IsCoupling.dirac_right b hnf
-      have hCoupling : SPMF.IsCoupling (((·, b) : α → α × β) <$> 𝒮[x])
-          (𝒮[x]) (𝒮[(pure b : OracleComp spec₂ β)]) := by
-        simpa [evalSPMF_pure] using hcPure
-      let c : SPMF.Coupling (𝒮[x]) (𝒮[(pure b : OracleComp spec₂ β)]) :=
-        ⟨((·, b) : α → α × β) <$> 𝒮[x], hCoupling⟩
-      exact le_iSup_of_le c (by
-        simpa only [probOutput_def, evalSPMF_def, monadLift_self] using
-          (hcPure.tsum_pure_right post).ge)
+  rwp_pure_left a y post := eRelWP_pure_left a y post
+  rwp_pure_right x b post := eRelWP_pure_right x b post
+
+section finite
+
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 noncomputable example :
     MAlgRelOrdered (OptionT (OracleComp spec₁)) (OracleComp spec₂) ℝ≥0∞ :=
@@ -787,57 +347,14 @@ example {α β : Type}
         (if b then oa else oa') (if b then ob else ob') post :=
   MAlgRelOrdered.triple_ite b h_t h_f
 
+end finite
+
 /-! ## Quantitative effect-specific rules (eRHL primitives)
 
-These are the genuinely quantitative companions of the indicator wrappers above: they
-expose witness-based lower bounds for `eRelWP` on the basic `OracleComp` effect operations
-(uniform sampling and oracle queries under a bijection). Together with the existing closed
-form `eRelWP_pure` and the core `eRelWP_pure_le / _conseq / _bind_rule`, they are sufficient to
-discharge most apRHL-style goals without descending to the underlying coupling supremum.
+Witness-based lower bounds for `eRelWP` on the basic `OracleComp` effect operations (uniform
+sampling and oracle queries under a bijection): the graph of the bijection couples the operation
+with itself, and its coupled expectation is the unary expectation along the bijection.
 -/
-
-/-- A witness coupling provides a lower bound on the eRHL weakest precondition.
-
-This is the basic primitive used by every closed-form / lower-bound rule below, and is the
-right tool whenever a proof can exhibit a specific coupling. -/
-theorem le_eRelWP_of_isCoupling
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
-    (post : α → β → ℝ≥0∞)
-    (c : SPMF (α × β)) (hc : SPMF.IsCoupling c (𝒮[oa]) (𝒮[ob])) :
-    (∑' z, Pr[= z | c] * post z.1 z.2) ≤ eRelWP oa ob post :=
-  le_iSup (f := fun c' : SPMF.Coupling (𝒮[oa]) (𝒮[ob]) =>
-    ∑' z, Pr[= z | c'.1] * post z.1 z.2) ⟨c, hc⟩
-
-/-- A witness coupling whose score dominates the precondition discharges a
-quantitative relational WP lower-bound obligation. -/
-theorem eRelWP_of_isCoupling
-    {pre : ℝ≥0∞}
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
-    (post : α → β → ℝ≥0∞)
-    (c : SPMF (α × β)) (hc : SPMF.IsCoupling c (𝒮[oa]) (𝒮[ob]))
-    (hpre : pre ≤ ∑' z, Pr[= z | c] * post z.1 z.2) :
-    pre ≤ eRelWP oa ob post :=
-  hpre.trans (le_eRelWP_of_isCoupling post c hc)
-
-/-- Reindex the score of the bijection coupling `base >>= fun a => pure (a, f a)` as a
-sum over `a`, collapsing the second component. Shared by the uniform-sampling and
-oracle-query lower bounds below. -/
-private lemma tsum_probOutput_bind_pure_pair {α' : Type*}
-    (base : SPMF α') (f : α' → α') (post : α' → α' → ℝ≥0∞) :
-    (∑' z : α' × α', Pr[= z | (base >>= fun a => pure (a, f a))] * post z.1 z.2)
-      = ∑' a : α', Pr[= a | base] * post a (f a) :=
-  calc ∑' z : α' × α', Pr[= z | (base >>= fun a => pure (a, f a))] * post z.1 z.2
-      = ∑' z : α' × α', (∑' a : α', Pr[= a | base] *
-          Pr[= z | (pure (a, f a) : SPMF (α' × α'))]) * post z.1 z.2 := by
-        simp_rw [probOutput_bind_eq_tsum base fun a => pure (a, f a)]
-    _ = ∑' a : α', ∑' z : α' × α', Pr[= a | base] *
-          Pr[= z | (pure (a, f a) : SPMF (α' × α'))] * post z.1 z.2 := by
-        rw [ENNReal.tsum_comm]; exact tsum_congr fun a => by rw [ENNReal.tsum_mul_right]
-    _ = ∑' a : α', Pr[= a | base] * post a (f a) :=
-      tsum_congr fun a => by
-        rw [tsum_eq_single (a, f a) fun z hz => by simp [SPMF.probOutput_eq_apply, hz],
-          show Pr[= (a, f a) | (pure (a, f a) : SPMF (α' × α'))] = 1 by
-            simp [SPMF.probOutput_eq_apply], mul_one]
 
 /-! ### Uniform sampling under a bijection -/
 
@@ -845,52 +362,38 @@ section Sampling
 
 variable [SampleableType α]
 
-/-- Quantitative lower bound for two uniform samples coupled by a bijection.
-
-The bijection coupling `(fun x => (x, f x)) <$> $ᵗ α` realises the sum on the left as a
-score, providing the sharpest "syntactic" lower bound on the coupling supremum. -/
+/-- Quantitative lower bound for two uniform samples coupled by a bijection. -/
 theorem eRelWP_uniformSample_bij_ge
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞) :
-    (∑' a : α, Pr[= a | ($ᵗ α : ProbComp α)] * post a (f a))
+    wp ($ᵗ α : ProbComp α) (fun a => post a (f a))
       ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post := by
-  set c : SPMF (α × α) := 𝒮[($ᵗ α : ProbComp α)] >>= fun a => pure (a, f a)
-  have hc : SPMF.IsCoupling c (𝒮[($ᵗ α : ProbComp α)])
-      (𝒮[($ᵗ α : ProbComp α)]) := by
-    constructor
-    · simp [c]
-    · simp only [c, map_bind, map_pure]
-      calc
-        (do
-            let a ← 𝒮[($ᵗ α : ProbComp α)]
-            pure (f a)) = f <$> 𝒮[($ᵗ α : ProbComp α)] := rfl
-        _ = 𝒮[f <$> ($ᵗ α : ProbComp α)] :=
-          (evalSPMF_map ($ᵗ α : ProbComp α) f).symm
-        _ = 𝒮[($ᵗ α : ProbComp α)] := by
-          apply evalSPMF_ext
-          intro x
-          obtain ⟨x', rfl⟩ := hf.surjective x
-          rw [probOutput_map_injective ($ᵗ α) hf.injective x']
-          simpa [uniformSample] using
-            SampleableType.probOutput_selectElem_eq (β := α) x' (f x')
-  calc ∑' a : α, Pr[= a | ($ᵗ α : ProbComp α)] * post a (f a)
-      = ∑' z : α × α, Pr[= z | c] * post z.1 z.2 :=
-        (by simpa only [c, probOutput_evalSPMF] using
-          (tsum_probOutput_bind_pure_pair (𝒮[($ᵗ α : ProbComp α)]) f post).symm)
-    _ ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post :=
-        le_eRelWP_of_isCoupling post c hc
+  let : MeasurableSpace α := ⊤
+  have hgraph : Measurable fun a : α => (a, f a) := Measurable.of_discrete
+  refine le_trans (le_of_eq ?_)
+    (le_eRelWP_of_isCoupling post ⟨_, isCoupling_uniformSample_graph hf⟩)
+  rw [wp_eq_lintegral _ _ Measurable.of_discrete]
+  change _ = ∫⁻ z, post z.1 z.2 ∂(𝒟[($ᵗ α : ProbComp α)].map fun a => (a, f a))
+  rw [lintegral_map (measurable_of_countable fun z : α × α => post z.1 z.2) hgraph]
 
 /-- Any precondition below the bijection average discharges the quantitative
 relational WP lower-bound for two uniform samples. -/
 theorem eRelWP_uniformSample_bij
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ ∑' a : α, Pr[= a | ($ᵗ α : ProbComp α)] * post a (f a)) :
+    (hpre : pre ≤ wp ($ᵗ α : ProbComp α) (fun a => post a (f a))) :
     pre ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post :=
   hpre.trans (eRelWP_uniformSample_bij_ge hf post)
 
 end Sampling
 
+end measureSpec
+
 /-! ### Oracle queries under a bijection -/
+
+section oracleQuery
+
+variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [IsUniformMeasureSpec spec₁]
+  [∀ t, Finite (spec₁.Range t)]
 
 /-- Quantitative lower bound for two oracle queries coupled by a bijection on the range.
 This is the eRHL counterpart of `relTriple_query_bij`. -/
@@ -898,29 +401,19 @@ theorem eRelWP_query_bij_ge (t : spec₁.Domain)
     {f : spec₁.Range t → spec₁.Range t}
     (hf : Function.Bijective f)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞) :
-    (∑' a : spec₁.Range t,
-        Pr[= a | (liftM (query t) : OracleComp spec₁ (spec₁.Range t))] * post a (f a))
+    wp (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))
       ≤ eRelWP (spec₁ := spec₁) (spec₂ := spec₁)
           (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
           (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) post := by
-  set oq : OracleComp spec₁ (spec₁.Range t) := liftM (query t)
-  set c : SPMF (spec₁.Range t × spec₁.Range t) := 𝒮[oq] >>= fun a => pure (a, f a)
-  have hc : SPMF.IsCoupling c (𝒮[oq]) (𝒮[oq]) := by
-    constructor
-    · simp [c]
-    · simp only [c, map_bind, map_pure, oq, evalSPMF_query]
-      change f <$> (liftM (PMF.uniformOfFintype (spec₁.Range t)) : SPMF _) =
-        (liftM (PMF.uniformOfFintype (spec₁.Range t)) : SPMF _)
-      rw [show f <$> (liftM (PMF.uniformOfFintype (spec₁.Range t)) : SPMF _) =
-        (liftM (f <$> PMF.uniformOfFintype (spec₁.Range t)) : SPMF _) from by simp]
-      congr 1
-      exact PMF.uniformOfFintype_map_of_bijective f hf
-  calc ∑' a : spec₁.Range t, Pr[= a | oq] * post a (f a)
-      = ∑' z : spec₁.Range t × spec₁.Range t, Pr[= z | c] * post z.1 z.2 :=
-        (by simpa only [c, probOutput_evalSPMF] using
-          (tsum_probOutput_bind_pure_pair (𝒮[oq]) f post).symm)
-    _ ≤ eRelWP (spec₁ := spec₁) (spec₂ := spec₁) oq oq post :=
-        le_eRelWP_of_isCoupling post c hc
+  let : MeasurableSpace (spec₁.Range t) := ⊤
+  have hgraph : Measurable fun a : spec₁.Range t => (a, f a) := Measurable.of_discrete
+  refine le_trans (le_of_eq ?_)
+    (le_eRelWP_of_isCoupling post ⟨_, isCoupling_query_graph t hf⟩)
+  rw [wp_eq_lintegral _ _ Measurable.of_discrete]
+  change _ = ∫⁻ z, post z.1 z.2 ∂(𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))].map
+    fun a => (a, f a))
+  rw [lintegral_map (measurable_of_countable fun z : spec₁.Range t × spec₁.Range t =>
+    post z.1 z.2) hgraph]
 
 /-- Triple form of `eRelWP_query_bij_ge`. -/
 theorem eRelWP_query_bij (t : spec₁.Domain)
@@ -928,12 +421,14 @@ theorem eRelWP_query_bij (t : spec₁.Domain)
     (hf : Function.Bijective f)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ ∑' a : spec₁.Range t,
-        Pr[= a | (liftM (query t) : OracleComp spec₁ (spec₁.Range t))] * post a (f a)) :
+    (hpre : pre ≤
+      wp (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))) :
     pre ≤ eRelWP (spec₁ := spec₁) (spec₂ := spec₁)
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) post :=
   hpre.trans (eRelWP_query_bij_ge t hf post)
+
+end oracleQuery
 
 /-! ## Demonstration examples for the quantitative primitives
 
@@ -945,7 +440,7 @@ practice.
 bijection-shifted average is realised by the bijection coupling. -/
 example [SampleableType α]
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞) :
-    (∑' a : α, Pr[= a | ($ᵗ α : ProbComp α)] * post a (f a))
+    wp ($ᵗ α : ProbComp α) (fun a => post a (f a))
       ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post :=
   eRelWP_uniformSample_bij hf post le_rfl
 

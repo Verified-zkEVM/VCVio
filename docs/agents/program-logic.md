@@ -14,9 +14,10 @@
 For continuous or otherwise non-discrete denotations, import
 `VCVio.ProgramLogic.Relational.Measure`. Its `MeasureProgramLogic.RelWP` uses an almost-everywhere
 postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
-post-expectations with `lintegral`. Unary quantitative tactics use the native measure
-interpretation; the remaining relational compatibility theorem families have separate conversion
-checkpoints.
+post-expectations with `lintegral`. The `OracleComp` relational logic (`RelTriple`, `CouplingPost`,
+`eRelWP`) specializes these to the output measures observed in the discrete structure on each
+output type; its sequential rules need finite response types, and its anchoring and bijection
+rules for queries need uniform response measures.
 
 ## In-Tree Walkthroughs
 
@@ -526,6 +527,10 @@ pre ≤ eRelWP oa ob post
 def ApproxRelTriple (ε : ℝ≥0∞) (oa ob : ...) (R : RelPost α β) : Prop :=
   1 - ε ≤ eRelWP oa ob (RelPost.indicator R)
 ```
+
+Uniform samples and queries coupled by a bijection `f` have coupled expectation at least the unary
+expectation `wp ($ᵗ α) (fun a => post a (f a))`; a `pure` side collapses `eRelWP` to the unary `wp`
+of the other side.
 
 pRHL is the special case where `ε = 0` (exact coupling).
 

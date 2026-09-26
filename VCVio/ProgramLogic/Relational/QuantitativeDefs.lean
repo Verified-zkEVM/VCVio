@@ -7,13 +7,6 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.Basic
-public import ToMathlib.ProbabilityTheory.Coupling
-public import VCVio.OracleComp.EvalDist
-public import VCVio.EvalDist.Monad.Map
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.EvalDist.Defs.Instances
-public import VCVio.EvalDist.Defs.NeverFails
-public import VCVio.EvalDist.Monad.Basic
 
 /-!
 # Core eRHL Definitions
@@ -32,17 +25,19 @@ universe u
 namespace OracleComp.ProgramLogic.Relational
 
 variable {ι₁ : Type u} {ι₂ : Type u}
-variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
+  [IsMeasureSpec spec₁] [IsMeasureSpec spec₂]
 variable {α β : Type}
 
 /-- eRHL-style quantitative relational WP for `OracleComp`.
-`eRelWP oa ob g` is the supremum over all couplings `c` of the expected value of `g`
-under `c`. -/
+`eRelWP oa ob g` is the supremum, over couplings of the two output measures observed in the
+discrete structure on each output type, of the coupled expectation of `g`. -/
 noncomputable def eRelWP (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (g : α → β → ℝ≥0∞) : ℝ≥0∞ :=
-  ⨆ (c : SPMF.Coupling (𝒮[oa]) (𝒮[ob])),
-    ∑' z, Pr[= z | c.1] * g z.1 z.2
+  letI : MeasurableSpace α := ⊤
+  letI : MeasurableSpace β := ⊤
+  MeasureProgramLogic.eRelWP oa ob g
 
 /-- Indicator postcondition: lifts a `Prop`-valued relation to an `ℝ≥0∞`-valued one. -/
 noncomputable def RelPost.indicator (R : RelPost α β) (a : α) (b : β) : ℝ≥0∞ :=

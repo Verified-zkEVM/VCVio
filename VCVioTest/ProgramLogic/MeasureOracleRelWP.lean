@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.ProgramLogic.Relational.Basic
+public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.OracleComp.ProbComp.Basic
 
 /-!
@@ -52,6 +52,16 @@ example (mx : ProbComp ℝ) (p q : ℝ → Prop) (hpq : ∀ x, p x → q x) :
     Pr{let x ← mx}[p x] ≤ Pr{let y ← mx}[q y] :=
   prEvent_le_of_relTriple (relTriple_refl mx) fun _ _ h hp ↦ h ▸ hpq _ hp
 
+/-- Pure real-valued computations have their post-expectation as coupled expectation. -/
+example (a b : ℝ) (g : ℝ → ℝ → ENNReal) :
+    eRelWP (pure a : ProbComp ℝ) (pure b : ProbComp ℝ) g = g a b :=
+  eRelWP_pure a b g
+
+/-- Coupled expectations of real-valued computations compose through bind. -/
+example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (post : ℝ → ℝ → ENNReal) :
+    eRelWP mx my (fun a b => eRelWP (f a) (g b) post) ≤ eRelWP (mx >>= f) (my >>= g) post :=
+  eRelWP_bind_le mx my f g post
+
 /-- A finite oracle whose true branch is operationally possible but has zero mass. -/
 abbrev weightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool
 
@@ -80,6 +90,15 @@ example : RelTriple (pure false : OracleComp weightedSpec Bool)
     exact MeasureProgramLogic.couplingPost_refl (MeasureTheory.Measure.dirac false)
   exact relTriple_iff_relWP.1 (relTriple_post_mono (relTriple_symm (relTriple_iff_relWP.2 h))
     fun _ _ h ↦ h.symm)
+
+/-- A pure side anchors the coupled expectation to the unary expectation, which gives the
+zero-mass reachable answer no weight. -/
+example (post : Bool → Bool → ENNReal) :
+    eRelWP (pure false : OracleComp weightedSpec Bool)
+        (weightedSpec.query 0 : OracleComp weightedSpec Bool) post =
+      OracleComp.ProgramLogic.wp (weightedSpec.query 0 : OracleComp weightedSpec Bool)
+        (post false) :=
+  eRelWP_pure_left false _ post
 
 example (a b : ℝ) (R : ℝ → ℝ → Prop) :
     MAlgRelOrdered.RelWP (pure a : OracleComp weightedSpec ℝ)

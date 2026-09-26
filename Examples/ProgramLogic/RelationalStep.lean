@@ -30,7 +30,7 @@ open scoped OracleComp.ProgramLogic
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, Finite (spec.Range t)]
 variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsMeasureSpec spec]
 variable {α β γ δ : Type}
@@ -251,18 +251,25 @@ example [SampleableType α] {my : ProbComp β}
   · exact hf
 
 example [SampleableType α] (post : α → α → ℝ≥0∞) :
-    ⦃∑' a : α, Pr[= a | ($ᵗ α : ProbComp α)] * post a a⦄
+    ⦃wp ($ᵗ α : ProbComp α) (fun a => post a a)⦄
       ($ᵗ α : ProbComp α) ≈ₑ ($ᵗ α : ProbComp α)
     ⦃post⦄ := by
   rvcstep
 
-example (t : spec.Domain) (post : spec.Range t → spec.Range t → ℝ≥0∞) :
-    ⦃∑' a : spec.Range t,
-      Pr[= a | (query t : OracleComp spec (spec.Range t))] * post a a⦄
-      (query t : OracleComp spec (spec.Range t)) ≈ₑ
-      (query t : OracleComp spec (spec.Range t))
+section uniformQuery
+
+variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'} [∀ t, MeasurableSpace (spec'.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec'.Range t)] [OracleSpec.IsUniformMeasureSpec spec']
+  [∀ t, Finite (spec'.Range t)]
+
+example (t : spec'.Domain) (post : spec'.Range t → spec'.Range t → ℝ≥0∞) :
+    ⦃wp (query t : OracleComp spec' (spec'.Range t)) (fun a => post a a)⦄
+      (query t : OracleComp spec' (spec'.Range t)) ≈ₑ
+      (query t : OracleComp spec' (spec'.Range t))
     ⦃post⦄ := by
   exact OracleComp.Rel.Quantitative.relTriple_query_refl t post
+
+end uniformQuery
 
 /-! ## Iteration rules -/
 

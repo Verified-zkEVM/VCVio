@@ -31,10 +31,11 @@ namespace OracleComp.ProgramLogic.AnchoredExamples
 
 open ENNReal MAlgRelOrdered MAlgRelOrdered.Anchored
 
-variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
-  [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, MeasurableSpace (spec₂.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
+variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
+  [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
+  [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 /-! ## Pure-pure base cases -/
 
