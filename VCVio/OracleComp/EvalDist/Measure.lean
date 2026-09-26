@@ -292,8 +292,8 @@ theorem mem_support_iff_evalDist_singleton_pos
     (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) mx x
 
 /-- Under native uniform oracle semantics, an event has probability one exactly when it contains
-every structurally reachable output. -/
-@[grind =]
+every structurally reachable output. Like the scalar support characterizations, it is not a
+default `grind` rule: its unbounded support quantifier saturates `grind`. -/
 theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
     {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
     [∀ t, MeasurableSpace (spec.Range t)]

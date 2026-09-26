@@ -1005,7 +1005,6 @@ theorem evalDist_apply (mx : m α) {s : Set α} (hs : MeasurableSet s) :
   exact tsum_congr fun x => by by_cases hx : x ∈ s <;> simp [hx]
 
 /-- Singleton mass is the point probability. -/
-@[simp]
 theorem evalDist_apply_singleton [MeasurableSingletonClass α] (mx : m α) (x : α) :
     𝒟[mx] {x} = Pr[= x | mx] := by
   rw [evalDist_apply mx (measurableSet_singleton x)]
@@ -1022,13 +1021,11 @@ lemma probOutput_true_eq_probEvent {α : Type} {m : Type → Type u} [Monad m]
   congr 1; aesop
 
 /-- On a discrete space the measure of a predicate's event is its façade probability. -/
-@[simp]
 theorem evalDist_apply_setOf [DiscreteMeasurableSpace α] (mx : m α) (p : α → Prop) :
     𝒟[mx] {x | p x} = Pr[p | mx] :=
   evalDist_apply mx MeasurableSet.of_discrete
 
 /-- Success mass is one minus the failure probability. -/
-@[simp]
 theorem evalDist_apply_univ (mx : m α) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] := by
   rw [evalDist_apply mx MeasurableSet.univ]
   simp

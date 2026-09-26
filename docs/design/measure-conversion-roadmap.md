@@ -189,6 +189,17 @@ since automation can use them without a recorded reference; they retire with the
 automation benchmarks. The executable `FinRatPMF.Raw` sampler and its native denotation are
 unaffected.
 
+## Measure normal form checkpoint
+
+`simp` keeps measure goals in measure normal form. The façade equations
+`evalDist_apply_singleton`, `evalDist_apply_setOf`, and `evalDist_apply_univ` are explicit
+rewrites rather than simp rules, so a native proof is never silently turned into a scalar one;
+a proof that still reasons in `Pr[…]` crosses with `rw`. The `game_rule` set normalizes
+`evalDist_pure` instead of the scalar `pure`/`bind` evaluations. The native support
+characterization of probability-one events follows the scalar ones out of the default `grind`
+set. The native import guard also rejects `evalSPMF`, the scalar evaluation functions, and the
+PMF-backed specification classes.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

@@ -8,6 +8,7 @@ module
 public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import ToMathlib.MeasureTheory.Measure.Prop
 public import Mathlib.MeasureTheory.Measure.Prod
+public import VCVio.Prelude.Core
 
 /-!
 # Measure-valued evaluation and its composition laws
@@ -105,7 +106,7 @@ class LawfulEvalDistSemantics (m : Type u → Type v) [Monad m]
       (mx : m α) (f : α → m β) (hf : Measurable fun x => 𝒟[f x]) :
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] fun x => 𝒟[f x]
 
-@[simp]
+@[simp, game_rule]
 theorem evalDist_pure {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulPureEvalDistSemantics m] {α : Type u} [MeasurableSpace α] (x : α) :
     𝒟[(pure x : m α)] = Measure.dirac x :=

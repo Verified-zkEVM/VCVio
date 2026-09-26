@@ -22,7 +22,9 @@ open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
+  for name in [`PMF, `SPMF, `evalSPMF, `probOutput, `probEvent, `probFailure, `NeverFail,
+      `EvalDistCompatible, `DiscreteEvalDistCompatible, `OracleSpec.IsProbabilitySpec,
+      `OracleSpec.IsUniformSpec, `PFunctor.IsProbabilitySpec, `PFunctor.IsUniformSpec] do
     if env.contains name then
       throwError "native entry point unexpectedly imports {name}"
 

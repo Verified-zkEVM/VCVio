@@ -78,7 +78,7 @@ variable [Monad m]
 /-! ## Probabilities of `pure` -/
 
 section pure
-@[grind =, game_rule]
+@[grind =]
 lemma evalSPMF_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] {α : Type u} (x : α) :
     𝒮[(pure x : m α)] = pure x := by simp [evalSPMF]
 
@@ -90,7 +90,7 @@ lemma evalSPMF_comp_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] :
 lemma evalSPMF_comp_pure' [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (f : α → β) :
     evalSPMF ∘ (pure : β → m β) ∘ f = pure ∘ f := by grind
 
-@[simp, grind =, game_rule]
+@[simp, grind =]
 lemma probOutput_pure [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [DecidableEq α] (x y : α) :
     Pr[= x | (pure y : m α)] = if x = y then 1 else 0 := by
   aesop (rule_sets := [UnfoldEvalDist])
@@ -150,7 +150,7 @@ end pure
 
 section bind
 
-@[grind =, game_rule]
+@[grind =]
 lemma evalSPMF_bind [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx : m α) (my : α → m β) :
     𝒮[mx >>= my] = 𝒮[mx] >>= fun x => 𝒮[my x] :=
   monadLift_bind mx my
@@ -159,7 +159,7 @@ section bind_tsum
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
 
-@[grind =, game_rule]
+@[grind =]
 lemma probOutput_bind_eq_tsum (mx : m α)
     (my : α → m β) (y : β) :
     Pr[= y | mx >>= my] = ∑' x : α, Pr[= x | mx] * Pr[= y | my x] := by

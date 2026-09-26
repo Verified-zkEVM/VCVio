@@ -13,12 +13,12 @@ public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 The measure-side counterpart of `VCVioTest/ProbabilityTactics.lean`: goal families about the
 primary measure `𝒟[…]`, each closed by one terminal tactic, following the conventions of
-`CONTRIBUTING.md` (*Tactic Gate Files*). The contract it pins is that on a discrete carrier the
-measure side reduces *into* the discrete façade: singleton, event and total masses become
-`Pr[…]`, and an integral against `𝒟[mx]` becomes `expectedValue mx g`, after which the façade's
-own `simp`/`grind` contract applies inside `ProbComp.DiscreteCompatibility`. Native integrals
-retain their measure-theoretic normal form; their calibration equations are explicit.
-The Giry laws for `bind`/`map` stay out of default `simp`
+`CONTRIBUTING.md` (*Tactic Gate Files*). The contract it pins is that `simp` keeps the measure
+side in measure normal form: singleton, event and total masses stay `𝒟[mx] s`. Crossing into the
+retiring discrete façade is an explicit rewrite by `evalDist_apply_singleton`,
+`evalDist_apply_setOf` or `evalDist_apply_univ`. Inside `ProbComp.DiscreteCompatibility` an
+integral against `𝒟[mx]` becomes `expectedValue mx g`; native integrals retain their
+measure-theoretic normal form. The Giry laws for `bind`/`map` stay out of default `simp`
 on both sides, and the integral form of a bind is an intermediate, not a target.
 
 The adapter checks open `ProbComp.DiscreteCompatibility` explicitly. Other entries exercise the
@@ -54,8 +54,11 @@ example {r : Type → Type} [Monad r] [LawfulMonad r] [MonadAttach r]
 section adapter
 open scoped ProbComp.DiscreteCompatibility
 
-example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] := by simp
-example (mx : ProbComp Bool) (p : Bool → Prop) : 𝒟[mx] {b | p b} = Pr[p | mx] := by simp
+example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] := by
+  fail_if_success simp  -- by design: the façade bridge is an explicit rewrite
+  exact evalDist_apply_singleton mx x
+example (mx : ProbComp Bool) (p : Bool → Prop) : 𝒟[mx] {b | p b} = Pr[p | mx] :=
+  evalDist_apply_setOf mx p
 example (mx : ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] := by simp
 example (mx : ProbComp Bool) (g : Bool → ℝ≥0∞) :
     ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := by simp
@@ -64,10 +67,11 @@ example (mx : ProbComp Bool) (c : ℝ≥0∞) :
 
 example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] = Measure.dirac x := by simp
 example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] {x} = 1 := by simp
-example : 𝒟[$ᵗ Bool] {true} = 2⁻¹ := by simp
+example : 𝒟[$ᵗ Bool] {true} = 2⁻¹ := by rw [evalDist_apply_singleton]; simp
 
 example (mx : ProbComp (Fin 2)) (my : ProbComp (Fin 3)) (y : Fin 3) :
-    𝒟[mx >>= fun _ => my] {y} = (1 - Pr[⊥ | mx]) * Pr[= y | my] := by simp
+    𝒟[mx >>= fun _ => my] {y} = (1 - Pr[⊥ | mx]) * Pr[= y | my] := by
+  rw [evalDist_apply_singleton]; simp
 example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) :
     𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my] := by simp
 
@@ -104,8 +108,10 @@ noncomputable def unifMeasureSpec : unifSpec.toPFunctor.IsMeasureSpec :=
 
 attribute [local instance] unifMeasureSpec
 
-example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] := by simp
-example (mx : ProbComp Bool) (p : Bool → Prop) : 𝒟[mx] {b | p b} = Pr[p | mx] := by simp
+example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] :=
+  evalDist_apply_singleton mx x
+example (mx : ProbComp Bool) (p : Bool → Prop) : 𝒟[mx] {b | p b} = Pr[p | mx] :=
+  evalDist_apply_setOf mx p
 example (mx : ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] := by simp
 example (mx : ProbComp Bool) (g : Bool → ℝ≥0∞) :
     ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := by simp only [lintegral_evalDist]
@@ -123,8 +129,10 @@ end measureSpec
 section optionCompatibility
 open scoped ProbComp.DiscreteCompatibility
 
-example (mx : OptionT ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] := by simp
-example (mx : OptionT ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] := by simp
+example (mx : OptionT ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] :=
+  evalDist_apply_singleton mx x
+example (mx : OptionT ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] :=
+  evalDist_apply_univ mx
 example (mx : OptionT ProbComp Bool) (g : Bool → ℝ≥0∞) :
     ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := by simp
 example (mx : OptionT ProbComp Bool) (my : OptionT ProbComp (Fin 3)) :
@@ -161,7 +169,7 @@ example :
   evalDist_mPi_const_uniform ($ᵗ Bool : ProbComp Bool)
     (SampleableType.evalDist_finEnum (α := Bool))
 example (f : Bool → ProbComp (Fin 3)) (v : Bool → Fin 3) :
-    𝒟[Fintype.mPi f] {v} = ∏ i, Pr[= v i | f i] := by
+    𝒟[Fintype.mPi f] {v} = ∏ i, 𝒟[f i] {v i} := by
   simp [evalDist_mPi]
 
 /-- A coordinate marginal of a lossless independent family recovers its factor. -/
@@ -218,8 +226,10 @@ def lossyCoin : OptionT ProbComp Bool := do
   if b then pure true else failure
 
 example : 𝒟[lossyCoin] {true} = 2⁻¹ := by
+  rw [evalDist_apply_singleton]
   simp [lossyCoin, OptionT.probOutput_eq, probOutput_bind_eq_tsum]
 example : 𝒟[lossyCoin] {false} = 0 := by
+  rw [evalDist_apply_singleton]
   simp [lossyCoin, OptionT.probOutput_eq, probOutput_bind_eq_tsum]
 example : (𝒟[lossyCoin]).withFailure {none} = 2⁻¹ := by
   simp [lossyCoin, OptionT.probFailure_eq, probOutput_bind_eq_tsum]
@@ -233,11 +243,11 @@ end failureCompatibility
 
 /-! ## A unit-test program
 
-A coin and a die drawn independently, closed on the measure side by the same calls as the
-façade: the point mass is the product of the two uniform masses (the closed form `simp` reaches;
-merging `2⁻¹ * 6⁻¹` into `12⁻¹` is `ℝ≥0∞` arithmetic, not a probability rule), an event on one
-coordinate needs the bind expanded under `Pr[…]` and `ENNReal.div_self` for the total factor, and
-the failure-side facts need nothing beyond the program never failing. -/
+A coin and a die drawn independently. After an explicit rewrite into the façade, the point mass
+is the product of the two uniform masses (the closed form `simp` reaches; merging `2⁻¹ * 6⁻¹`
+into `12⁻¹` is `ℝ≥0∞` arithmetic, not a probability rule), an event on one coordinate needs the
+bind expanded under `Pr[…]` and `ENNReal.div_self` for the total factor, and the failure-side
+facts need nothing beyond the program never failing. -/
 
 /-- A coin and a die, drawn independently. -/
 def coinDie : ProbComp (Bool × Fin 6) := do
@@ -245,9 +255,10 @@ def coinDie : ProbComp (Bool × Fin 6) := do
   let d ← $ᵗ (Fin 6)
   pure (b, d)
 
-example : 𝒟[coinDie] {(true, 0)} = 2⁻¹ * 6⁻¹ := by simp [coinDie]
+example : 𝒟[coinDie] {(true, 0)} = 2⁻¹ * 6⁻¹ := by
+  rw [evalDist_apply_singleton]; simp [coinDie]
 example : 𝒟[coinDie] {z | z.1 = true} = 2⁻¹ := by
-  simp [coinDie, probEvent_bind_eq_tsum, ENNReal.div_self]
+  rw [evalDist_apply_setOf]; simp [coinDie, probEvent_bind_eq_tsum, ENNReal.div_self]
 example (g : Bool × Fin 6 → ℝ≥0∞) :
     ∫⁻ z, g z ∂𝒟[coinDie] = expectedValue coinDie g := by simp only [lintegral_evalDist]
 example : 𝒟[coinDie] Set.univ = 1 := by simp

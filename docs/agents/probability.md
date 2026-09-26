@@ -380,7 +380,8 @@ is derived from it at an explicit compatibility boundary:
 `evalDist_apply_singleton` (`𝒟[mx] {x} = Pr[= x | mx]`), `evalDist_apply_setOf`
 (`𝒟[mx] {x | p x} = Pr[p | mx]` on a discrete space), `evalDist_apply_univ`
 (`𝒟[mx] univ = 1 - Pr[⊥ | mx]`), and `lintegral_evalDist` (`∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g`).
-The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
+These are rewrites, not default `simp` rules: `simp` leaves `𝒟[mx] s` in measure normal form, and a
+proof that wants the façade crosses with an explicit `rw`. The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
 whenever its measure specification agrees with its probability specification
 (`PFunctor.IsMeasureSpec.Compatible`, which `IsProbabilitySpec.toMeasureSpec` satisfies by `rfl`).
 For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` proves the same
