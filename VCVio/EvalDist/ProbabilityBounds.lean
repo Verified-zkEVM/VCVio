@@ -191,6 +191,15 @@ theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] =
   calc ε = ∫⁻ _, ε ∂𝒟[mx] := by rw [lintegral_const, hmx, mul_one]
     _ ≤ _ := lintegral_mono h
 
+/-- A continuation event with the same probability after every draw keeps that probability after a
+lossless draw. -/
+theorem prEvent_bind_eq_of_forall_eq (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
+    (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
+    (h : ∀ a, Pr{let y ← f a}[q y] = ε) :
+    Pr{let y ← mx >>= f}[q y] = ε :=
+  le_antisymm (prEvent_bind_le_of_forall_le mx f q fun a ↦ (h a).le)
+    (le_prEvent_bind_of_forall_le mx hmx f q fun a ↦ (h a).ge)
+
 /-- Multiplying a lower bound for a prefix event by a uniform conditional lower bound gives a
 lower bound for the event after the bind. -/
 theorem mul_le_prEvent_bind_of_forall (mx : m α) (f : α → m β)

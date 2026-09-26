@@ -304,6 +304,15 @@ multi-checkpoint extractability, and commitment binding and extractability bound
 `Pr{…}` bound. The universe-polymorphic statements are specialized to `Type`, where the event
 form lives, and the vacuous single-oracle collision bounds are removed.
 
+## Diffie-Hellman checkpoint
+
+The discrete-logarithm, CDH and DDH relations are native. The DDH game is a uniform-bit branch
+over its real and random experiments at the level of output measures, the CDH-to-DDH reduction
+runs the CDH experiment exactly in the real branch, and in the random branch it hits the target
+with the uniform baseline probability. The DLog-to-CDH bound squares the success probability
+through two independent DLog attempts. A continuation event with a constant probability keeps it
+after any lossless draw.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
