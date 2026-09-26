@@ -31,8 +31,10 @@ test libraries and runs the test executables, and `lake lint` runs source-style 
 
 CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`,
 `LatticeCrypto`, `Extern`, `HashSig`, `Examples`, and `VCVioWidgets`.
-The build timing report parses per-file timings for that same set.
-Test libraries and test executables are intentionally outside the timed build; CI
+CI starts from the newest cached build, so Lake rebuilds only the modules a change invalidated;
+a nightly run builds from scratch. The build timing report compares each rebuilt module, including
+test-library modules that `lake test` rebuilt, against its last recorded time (see `AGENTS.md`).
+Test libraries and test executables are outside the timed build; CI
 only times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
 
 VCVio can also be used as a dependency in another Lake project via a
