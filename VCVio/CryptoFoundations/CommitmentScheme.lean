@@ -7,7 +7,11 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.Support
+public import PolyFun.PFunctor.Free.WP
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.Data.Set.Functor
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure

@@ -448,8 +448,7 @@ ported from VCVio); `simulateQ = FreeM.liftM` with PolyFun's `liftMHom_unique`
 (`PolyFun/PFunctor/Free/Basic.lean:218`) as the universal property; `QueryImpl` is `PFunctor.Handler`
 (`rfl`). `LawfulMonadLift(T)` (`C:Init/Control/Lawful/MonadLift/Basic.lean:29,44`) is consumed 432×;
 Batteries' `LawfulAlternativeLift` and `LawfulMonadStateOf` (`B:Control/LawfulMonadState.lean:48`)
-exist, the latter with 0 VCVio uses although `V:VCVio/OracleComp/SimSemantics/StateT/Basic.lean:15`
-still says "once laws for it exist". `support` (a monad morphism into `SetM`) corresponds to core's
+exist, the latter with 0 VCVio uses. `support` (a monad morphism into `SetM`) corresponds to core's
 `MonadAttach.CanReturn` (`C:Init/Control/MonadAttach.lean:30`, lawful instances for
 `ReaderT/StateT/ExceptT/OptionT`) and to `Functor.Liftp`/`Functor.supp` (`M:Control/Functor.lean:238,251`);
 no bridge exists in either direction. `OrderedMonad` (`V:ToMathlib/Control/Monad/Ordered.lean:52`,
@@ -489,7 +488,7 @@ Mathlib-to-core lattice bridge and the restricted-carrier construction.
    (`:118`) at once; `Fin.mOfFn` (`V:ToMathlib/General.lean:571`) is `traverse` on `flip Vector n`
    (`M:Data/Vector/Basic.lean:709`, `List.Vector.mOfFn` `:387`).
 7. State the `StateT` handler combinators (`withBadFlag`, `withBadUpdate`, `piStateT`,
-   `V:VCVio/OracleComp/SimSemantics/StateT/Basic.lean:125–160`, and the projection lemmas) over
+   `V:VCVio/OracleComp/SimSemantics/StateT/Basic/Native.lean:117–150`, and the projection lemmas) over
    `[MonadStateOf σ m] [LawfulMonadStateOf σ m]` so they apply to `StateT σ (OptionT …)` stacks
    without re-proof.
 8. `QueryImpl unifSpec (RandG g) := fun n => Random.randFin` (`M:Control/Random.lean:38,102`)

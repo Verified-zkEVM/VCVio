@@ -1058,7 +1058,6 @@
  ["usesRetiredProbability", "OracleComp.evalSPMF_query"],
  ["usesRetiredProbability", "OracleComp.evalSPMF_query_bind"],
  ["usesRetiredProbability", "OracleComp.evalSPMF_simulateQ_eq_evalSPMF"],
- ["usesRetiredProbability", "OracleComp.evalSPMF_simulateQ_run_congr"],
  ["usesRetiredProbability", "OracleComp.instEvalDistCompatible"],
  ["usesRetiredProbability", "OracleComp.le_evalDist_isSome_contextFork"],
  ["usesRetiredProbability", "OracleComp.le_evalDist_isSome_seededFork_sq"],

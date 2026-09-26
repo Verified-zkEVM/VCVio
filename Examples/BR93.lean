@@ -17,7 +17,7 @@ public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.EvalDist.Monad.Measure
 import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
-import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import VCVio.OracleComp.EvalDist.MeasureSpec
 
 /-!
 # Bellare-Rogaway 1993 Encryption

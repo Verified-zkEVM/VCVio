@@ -7,7 +7,6 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-public import VCVio.ProgramLogic.NotationCore
 
 /-!
 # Pedersen Commitment Scheme

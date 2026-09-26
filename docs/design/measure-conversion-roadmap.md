@@ -325,6 +325,14 @@ MAC bound and Falcon's discrete-Gaussian sampler law use native events. The latt
 instances import only the sampling class, which removes the lattice stack from the discrete
 import closure.
 
+## Second import-closure checkpoint
+
+Modules that use no discrete declarations import the native layer directly. The stateful
+simulation compatibility module is removed, since its one congruence has a native twin; query
+morphisms, bit-vector sampling, and the clean importers of the remaining hubs no longer pull in
+the discrete layer. Together with the lattice sampling change this takes the SPMF import closure
+from 357 to 227 modules, including the random-oracle simulation and the SLH-DSA stack.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

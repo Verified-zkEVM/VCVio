@@ -6,7 +6,11 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.Support
+public import PolyFun.PFunctor.Free.WP
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.Data.Set.Functor
 
 /-!
 # Probability compatibility for writer-instrumented handlers

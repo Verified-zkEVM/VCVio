@@ -10,7 +10,7 @@ public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.SimSemantics.Append
-public import VCVio.OracleComp.SimSemantics.StateT.Basic
+public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import ToMathlib.Control.StateT
 

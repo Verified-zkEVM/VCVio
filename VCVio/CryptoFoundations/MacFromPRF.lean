@@ -11,7 +11,18 @@ public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.SimSemantics.Append
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.EvalDist.Monad.UniformTable
+public import ToMathlib.Probability.UniformOn
+public import ToMathlib.Data.FinEnum
+public import Init.Data.UInt.Lemmas
+public import Mathlib.Data.FinEnum
+public import Mathlib.Data.Fintype.Perm
+public import Mathlib.Data.Fintype.Pi
+public import Mathlib.Data.Fintype.Vector
 public import ToMathlib.Control.StateT
 
 /-!

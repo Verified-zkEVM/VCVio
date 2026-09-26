@@ -10,6 +10,7 @@ public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.EvalDist
 
 /-!
 # Falcon Security

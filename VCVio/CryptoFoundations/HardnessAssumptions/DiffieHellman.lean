@@ -11,7 +11,6 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
-public import VCVio.EvalDist.Bool
 
 /-!
 # Discrete Logarithm Assumptions (DLog / CDH / DDH)
