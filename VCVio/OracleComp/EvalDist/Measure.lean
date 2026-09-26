@@ -234,18 +234,6 @@ theorem evalDist_bind_apply_eq_one_of_ae
     Measure.bind_apply hevent Measurable.of_discrete.aemeasurable,
     lintegral_congr_ae h, lintegral_const, evalDist_apply_univ_eq_one, one_mul]
 
-/-- Events agreeing on every possible output have equal successful probability. -/
-theorem prEvent_congr_of_support
-    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
-    (mx : OracleComp spec α) (p q : α → Prop)
-    (h : ∀ a ∈ support mx, p a ↔ q a) :
-    Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] := by
-  exact congrArg (fun μ : Measure Prop ↦ μ {True})
-    (evalDist_bind_congr_of_support mx (pure ∘ p) (pure ∘ q)
-      fun a ha ↦ by simp [propext (h a ha)])
-
 /-- Structural support is positive singleton mass when every oracle response has positive
 singleton mass. The full-support hypothesis belongs to the chosen measure interpretation;
 finiteness alone does not determine it. -/
@@ -370,13 +358,6 @@ theorem prEvent_eq_one_of_forall_mem_support (mx : OracleComp spec α) (p : α �
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_of_discrete, ← MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
   exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete h
-
-/-- An event avoiding every structurally reachable output has probability zero. -/
-theorem prEvent_eq_zero_of_forall_mem_support (mx : OracleComp spec α) (p : α → Prop)
-    (h : ∀ x ∈ support mx, ¬ p x) : Pr{let x ← mx}[p x] = 0 := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete]
-  exact evalDist.apply_eq_zero_of_disjoint_support mx MeasurableSet.of_discrete h
 
 end measureSpec
 

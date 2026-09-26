@@ -11,6 +11,7 @@ public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.SimSemantics.Append
+public import VCVio.OracleComp.Constructions.SampleableType
 public import ToMathlib.Control.StateT
 
 /-!

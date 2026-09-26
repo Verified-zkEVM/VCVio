@@ -11,9 +11,31 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 /-!
 # Composition and instrumentation of oracle handlers
 
-`preInsert` and `postInsert` attach
-per-query effects before answering or after successful answers. Projections that preserve
-monadic composition transfer the resulting executions, supports, and finite supports.
+`preInsert` and `postInsert` are the building blocks for instrumented `QueryImpl` values. Both
+take a base `QueryImpl spec m` and a per-query side effect, and produce a `QueryImpl spec n` that
+wraps the base with that side effect:
+
+* `preInsert so nx` runs `nx t` *before* the handler `so t`. The side effect happens
+  unconditionally, including when the handler later fails.
+* `postInsert so nx` runs `nx t u` *after* the handler returns response `u`, so the side
+  effect can depend on the response and is skipped when the handler fails.
+
+Their theory is parametric in a projection `proj : ∀ {γ}, n γ → m γ` that strips the
+instrumentation and preserves monadic composition. `proj_simulateQ_preInsert` identifies the
+projected instrumented execution with the base execution, so every observation of the base
+(output measures, events, supports) transfers by rewriting with it.
+`support_proj_simulateQ_preInsert` and `finSupport_proj_simulateQ_preInsert` record the support
+forms, and `simulateQ_preInsert.induct` is the underlying induction principle; the `postInsert`
+analogues are parallel. Query-bound transfer through these wrappers lives in
+`QueryTracking/QueryBound.lean`.
+
+Most of the wrappers in `QueryTracking/` (`withTraceBefore`, `withTrace`,
+`withTraceAppendBefore`, `withTraceAppend`, `withCost`, `withCounting`, `withAddCost`,
+`withUnitCost`, `withLogging`, `appendInputLog`) bottom out at these combinators. New
+instrumentation should follow the same pattern when its shape is "for each query, run a
+side effect and delegate". Wrappers whose control flow is conditional on external state
+or the would-be response (cache-on-hit, seed fallback, budget gating) need a custom
+`QueryImpl` and stay outside this hierarchy.
 -/
 
 public section

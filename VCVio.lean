@@ -324,7 +324,6 @@ public import VCVio.OracleComp.SimSemantics.Measure
 public import VCVio.OracleComp.SimSemantics.OptionT.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ

@@ -304,6 +304,19 @@ theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
   rw [prEvent_map, prEvent_map]
   exact prEvent_mono _ _ _ fun a ha ↦ h a.1 a.2 ha
 
+/-- Events that agree on every structurally reachable output have equal probability. -/
+theorem prEvent_congr_of_support (mx : m α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a ↔ q a) :
+    Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] :=
+  le_antisymm (prEvent_mono_of_support mx p q fun a ha ↦ (h a ha).1)
+    (prEvent_mono_of_support mx q p fun a ha ↦ (h a ha).2)
+
+/-- An event avoiding every structurally reachable output has probability zero. -/
+theorem prEvent_eq_zero_of_forall_mem_support (mx : m α) (p : α → Prop)
+    (h : ∀ a ∈ support mx, ¬ p a) : Pr{let a ← mx}[p a] = 0 :=
+  (prEvent_congr_of_support mx p (fun _ ↦ False) fun a ha ↦ iff_false_intro (h a ha)).trans
+    (prEvent_eq_zero_of_forall_not mx _ fun _ ↦ id)
+
 /-- A bound on the event of every reachable continuation bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)
     {ε : ℝ≥0∞} (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :

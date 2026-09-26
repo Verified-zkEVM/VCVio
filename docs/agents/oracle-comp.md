@@ -257,7 +257,7 @@ Key lemma: `simulateQ (so' ∘ₛ so) oa = simulateQ so' (simulateQ so oa)`
 
 ### Wrapping a QueryImpl with a per-query side effect (`preInsert` / `postInsert`)
 
-**Prefer these combinators (or their downstream wrappers) over hand-rolling a new `QueryImpl`** whenever the wrapper has the shape "for each query, run a side effect and then delegate to a base implementation". They are defined in `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions.lean`:
+**Prefer these combinators (or their downstream wrappers) over hand-rolling a new `QueryImpl`** whenever the wrapper has the shape "for each query, run a side effect and then delegate to a base implementation". They are defined in `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`:
 
 ```lean
 def preInsert  (so : QueryImpl spec m) (nx : spec.Domain → n α) :
@@ -275,9 +275,8 @@ def postInsert (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t 
 `QueryImpl.Constructions.Core` owns the induction principles
 (`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection equations
 (`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and support/finite-support laws.
-The projection equations transport chosen-space measures directly by equality. Query-bound
-transfer lives in `QueryBound.lean`. The older `Constructions` path additionally exports scalar
-compatibility corollaries. Define instrumentation through these combinators so the generic
+The projection equations transport output measures and events directly by equality. Query-bound
+transfer lives in `QueryBound.lean`. Define instrumentation through these combinators so the generic
 structural and observation theory applies without duplicating wrapper-specific proofs.
 
 #### Already in the repo (use these directly when applicable)

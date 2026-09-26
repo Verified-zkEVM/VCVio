@@ -108,7 +108,7 @@ require their own consistency condition.
 
 Almost every `QueryImpl` wrapper in this directory ultimately bottoms out at the
 `preInsert` / `postInsert` combinators in
-`VCVio/OracleComp/SimSemantics/QueryImpl/Constructions.lean`:
+`VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`:
 
 ```
 preInsert / postInsert  (generic combinators + bridge theory)

@@ -15,7 +15,6 @@ Examples.ElGamal.ComputationalComplexity
 Examples.ElGamal.HandlerExecution
 Examples.ElGamal.Hash
 Examples.ElGamal.ReductionCost
-Examples.ElGamal.SSP
 Examples.MerkleCheckpoints
 Examples.OneTimePad.Basic
 Examples.OneTimePad.ComputationalComplexity
@@ -334,7 +333,6 @@ VCVio.OracleComp.QueryTracking.Tracing
 VCVio.OracleComp.QueryTracking.Unpredictability
 VCVio.OracleComp.RunIO
 VCVio.OracleComp.SimSemantics.Append
-VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 VCVio.OracleComp.SimSemantics.StateT.Basic
 VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 VCVio.OracleComp.SimSemantics.WriterT.Basic
@@ -378,5 +376,4 @@ VCVio.ProgramLogic.Tactics.Unary.Internals.Driver
 VCVio.ProgramLogic.Tactics.Unary.Internals.Rules
 VCVio.ProgramLogic.Tactics.Unary.Internals.Steps
 VCVio.ProgramLogic.Unary.HandlerSpecs
-VCVio.StateSeparating.CellRef
 VCVio.StateSeparating.IdenticalUntilBad

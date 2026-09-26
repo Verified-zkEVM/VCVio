@@ -269,6 +269,17 @@ equivalence and advantage modules are removed. The heap one-time pad proves its 
 encryption equivalences from the uniform-mask bijection, and the ElGamal state-separating proof
 states its random-branch swap as a measure equivalence.
 
+## Cell-frame and instrumentation checkpoint
+
+Support-level cell frames determine event probabilities under any lawful measure semantics:
+a preserved cell changes with probability zero and keeps its value with the full successful
+mass, and the except-event, relational and measured frames give the corresponding event
+bounds. Interpreted handlers reach these through the support frame of the simulation, so the
+per-handler probability restatements are removed. Support-reachability congruence and zero
+events are generic over monads with lawful attachment, replacing their oracle-computation
+copies. The instrumentation combinators document their transfer principle at the projection
+equation, and the scalar corollaries of that equation are removed with their façade module.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
