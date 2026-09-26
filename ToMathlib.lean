@@ -90,7 +90,6 @@ public import ToMathlib.ProbabilityTheory.Coupling
 public import ToMathlib.ProbabilityTheory.FinRatPMF
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Basic
 public import ToMathlib.ProbabilityTheory.FinRatPMF.Measure
-public import ToMathlib.ProbabilityTheory.FinRatPMF.PMF
 public import ToMathlib.ProbabilityTheory.OptimalCoupling
 public import ToMathlib.ProbabilityTheory.SPMF
 public import ToMathlib.Topology.Algebra.InfiniteSum.Option

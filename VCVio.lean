@@ -170,7 +170,6 @@ public import VCVio.EvalDist.Defs.Measure.Failure
 public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.Defs.NeverFails
-public import VCVio.EvalDist.Defs.Semantics
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
@@ -183,9 +182,7 @@ public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.EvalDist.Inequalities
 public import VCVio.EvalDist.Instances.ErrorT
-public import VCVio.EvalDist.Instances.FinRatPMF
 public import VCVio.EvalDist.Instances.OptionT
-public import VCVio.EvalDist.Instances.ReaderT
 public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.List
 public import VCVio.EvalDist.Lossless
@@ -254,7 +251,6 @@ public import VCVio.OracleComp.Coinductive.Responder
 public import VCVio.OracleComp.Coinductive.SecurityFamily
 public import VCVio.OracleComp.Coinductive.WiredRun
 public import VCVio.OracleComp.Constructions.BitVec
-public import VCVio.OracleComp.Constructions.Fork
 public import VCVio.OracleComp.Constructions.Fork.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.Constructions.Replicate
@@ -345,7 +341,6 @@ public import VCVio.OracleComp.SimSemantics.WriterT.Core
 public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.Traversal
-public import VCVio.Prelude
 public import VCVio.Prelude.Core
 public import VCVio.ProgramLogic.Notation
 public import VCVio.ProgramLogic.NotationCore

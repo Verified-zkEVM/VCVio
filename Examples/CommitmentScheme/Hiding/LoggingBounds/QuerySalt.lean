@@ -424,7 +424,7 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     rw [← run_hidingImplCountAll_proj_eq_cachingOracle
       (M := M) (S := S) (C := C) oa freshState]
     rw [prEvent_map]
-    refine prEvent_mono_of_support _ ?_
+    refine prEvent_mono_of_support _ _ _ ?_
     intro z hz hgt
     have hcount1 : (Function.update qchoose.2.2 s 1) s = 1 := by
       simp [Function.update]
@@ -454,7 +454,7 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     rw [← run_cached_logging_proj_eq_cachingOracle
       (M := M) (S := S) (C := C) oa freshCache]
     rw [prEvent_map]
-    refine prEvent_mono_of_support _ ?_
+    refine prEvent_mono_of_support _ _ _ ?_
     intro z hz hcacheEv
     rcases hcacheEv with ⟨m, v, hmne, hcache⟩
     have hlog :=

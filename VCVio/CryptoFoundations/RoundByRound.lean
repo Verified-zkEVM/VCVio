@@ -386,11 +386,6 @@ lemma prEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation
   rw [games.toKnowledgeTransitionFamily_badEvent_iff round context message hdoomed challenge]
   exact ⟨fun h => h.2, fun h => ⟨hrel, h⟩⟩
 
-@[deprecated prEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation
-  (since := "2026-09-15")]
-alias probEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation :=
-  prEvent_toKnowledgeTransitionFamily_badEvent_of_not_relation
-
 /-- **Extensional round-by-round extraction bridge.** The extensional extraction condition with a
 per-round error holds exactly when the doomed-subtype knowledge-transition family is bounded by the
 same error. This is a genuine equivalence: the forward direction turns each bad-event bound into the

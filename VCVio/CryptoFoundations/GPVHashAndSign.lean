@@ -198,7 +198,7 @@ def collisionFindingExperiment [DecidableEq Domain]
 noncomputable def collisionFindingAdvantage [DecidableEq Domain]
     (adversary : CollisionAdversary (PK := PK) (Domain := Domain)) :
     ℝ≥0∞ :=
-  Pr[= true | collisionFindingExperiment (psf := psf) (hr := hr) adversary]
+  𝒟[collisionFindingExperiment (psf := psf) (hr := hr) adversary] {true}
 
 /-- A programmed-preimage adversary receives a public key and a programmed target `y`,
 and tries to reproduce the challenger's hidden short preimage sampled for `y`. -/
@@ -224,7 +224,7 @@ noncomputable def programmedPreimageAdvantage [DecidableEq Domain]
     (adversary : ProgrammedPreimageAdversary
       (PK := PK) (Domain := Domain) (Range := Range)) :
     ℝ≥0∞ :=
-  Pr[= true | programmedPreimageExperiment (psf := psf) (hr := hr) adversary]
+  𝒟[programmedPreimageExperiment (psf := psf) (hr := hr) adversary] {true}
 
 /-! ## Proof Decomposition
 

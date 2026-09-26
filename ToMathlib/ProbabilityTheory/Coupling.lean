@@ -23,19 +23,6 @@ universe u
 
 noncomputable section
 
-namespace PMF
-
-variable {α β : Type*}
-
-class IsCoupling (c : PMF (α × β)) (p : PMF α) (q : PMF β) where
-  map_fst : c.map Prod.fst = p
-  map_snd : c.map Prod.snd = q
-
-def Coupling (p : PMF α) (q : PMF β) :=
-  { c : PMF (α × β) // IsCoupling c p q }
-
-end PMF
-
 namespace SPMF
 
 variable {α β : Type u}

@@ -5,8 +5,9 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.EvalDist
-public import VCVio.EvalDist.Instances.FinRatPMF
+public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.EvalDist.Defs.Measure.FinRatPMF
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.ProbabilityNotation
 
@@ -15,7 +16,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 
 The computable oracle evaluator uses `FinRatPMF.Raw`. Its native output measure agrees with
 uniform oracle semantics, and its positive-weight outputs are exactly the oracle program's
-structurally reachable outputs. Discrete interoperability is available for probability games.
+structurally reachable outputs.
 -/
 
 @[expose] public section
@@ -63,41 +64,6 @@ lemma evalDist_simulateQ {α : Type v} [MeasurableSpace α] (oa : OracleComp spe
         IsMeasureSpec.toMeasure_eq_uniformOn]
 
 end Measure
-
-noncomputable local instance instIsUniformSpec : IsUniformSpec spec :=
-  IsUniformSpec.ofFintypeInhabited _
-
-@[simp] lemma toPMF_apply (t : spec.Domain) :
-    @Raw.toPMF _ (Classical.decEq _) (finRatImpl (spec := spec) t) =
-      PMF.uniformOfFintype (spec.Range t) := by
-  let : DecidableEq (spec.Range t) := Classical.decEq _
-  ext x
-  simp only [finRatImpl, Raw.toPMF_apply, PMF.uniformOfFintype_apply]
-  rw [Raw.prob_eq_prob (Classical.decEq _) FinEnum.decEq, Raw.prob_uniform]
-  have hcard : Fintype.card (spec.Range t) ≠ 0 := Fintype.card_ne_zero
-  rw [NNRat.cast_inv, ENNReal.coe_inv (by exact_mod_cast hcard)]
-  simp
-
-@[simp] lemma evalSPMF_apply (t : spec.Domain) :
-    𝒮[finRatImpl (spec := spec) t] = liftM (PMF.uniformOfFintype (spec.Range t)) := by
-  change (liftM (@Raw.toPMF _ (Classical.decEq _) (finRatImpl (spec := spec) t)) : SPMF _) = _
-  rw [toPMF_apply]
-
-@[simp] lemma evalSPMF_simulateQ {α : Type v} (oa : OracleComp spec α) :
-    𝒮[simulateQ (finRatImpl (spec := spec)) oa] = 𝒮[oa] := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp
-  | query_bind t mx h => simp [evalSPMF_apply, OracleComp.evalSPMF_query, h]
-
-@[simp] lemma probOutput_simulateQ {α : Type v}
-    (oa : OracleComp spec α) (x : α) :
-    Pr[= x | simulateQ (finRatImpl (spec := spec)) oa] = Pr[= x | oa] := by
-  rw [probOutput_def, probOutput_def, evalSPMF_simulateQ]
-
-@[simp] lemma probEvent_simulateQ {α : Type v}
-    (oa : OracleComp spec α) (p : α → Prop) :
-    Pr[ p | simulateQ (finRatImpl (spec := spec)) oa] = Pr[ p | oa] := by
-  simp only [probEvent_eq_tsum_indicator, probOutput_simulateQ]
 
 @[simp] lemma support_simulateQ {α : Type v} [DecidableEq α] (oa : OracleComp spec α) :
     (simulateQ (finRatImpl (spec := spec)) oa).support = support oa := by

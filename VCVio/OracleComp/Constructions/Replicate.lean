@@ -50,12 +50,6 @@ section probability
 
 variable [IsUniformSpec spec]
 
-lemma probFailure_replicate :
-    Pr[⊥ | oa.replicate n] = 1 - (1 - Pr[⊥ | oa]) ^ n := by
-  induction n with
-  | zero => simp
-  | succ n ih => simp
-
 /-- The probability of getting a list from `replicate` is the product of the chances of
 getting each of the individual elements. -/
 @[simp]

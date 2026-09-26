@@ -74,24 +74,6 @@ lemma evalDist_fst_run_withCost [LawfulMonad m] [EvalDistSemantics m] [Measurabl
     𝒟[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] = 𝒟[simulateQ so mx] := by
   rw [fst_map_run_withCost]
 
-section discreteCompatibility
-
-variable [MonadLiftT m SPMF]
-
-lemma evalSPMF_fst_run_withCost [LawfulMonad m] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) :
-    𝒮[Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
-      𝒮[simulateQ so mx] :=
-  evalSPMF_fst_run_withTraceBefore so costFn mx
-
-lemma probOutput_fst_run_withCost [LawfulMonad m] [LawfulMonadLiftT m SPMF]
-    (so : QueryImpl spec m) (costFn : spec.Domain → ω) (mx : OracleComp spec α) (x : α) :
-    Pr[= x | Prod.fst <$> (simulateQ (so.withCost costFn) mx).run] =
-      Pr[= x | simulateQ so mx] :=
-  probOutput_fst_run_withTraceBefore so costFn mx x
-
-end discreteCompatibility
-
 end withCost
 
 /-- Additive counting preserves the successful-output measure after forgetting counts. -/
