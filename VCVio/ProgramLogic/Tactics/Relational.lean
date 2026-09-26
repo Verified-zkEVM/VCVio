@@ -306,8 +306,8 @@ macro "rel_inline" ids:ident* : tactic =>
 
 /-- `by_equiv` transforms a `GameEquiv g₁ g₂` goal into `RelTriple g₁ g₂ (EqRel α)`.
 Also works for `evalSPMF g₁ = evalSPMF g₂` goals.
-Always targets `RelTriple` (coupling-based), never `RelTriple'` (eRHL-based),
-so that `rvcstep` / `rvcgen` work on the resulting goal. -/
+Always targets the coupling-based `RelTriple`, so that `rvcstep` / `rvcgen` work on the
+resulting goal. -/
 macro (name := byEquiv) "by_equiv" : tactic =>
   `(tactic|
     first

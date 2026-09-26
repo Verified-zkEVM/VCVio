@@ -60,8 +60,8 @@ candidate registrations are experimental.
 | `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
 | `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
 
-`by_equiv` enters the coupling-based `RelTriple` shell, not `RelTriple'`, so that
-`rvcstep` / `rvcgen` can keep decomposing the relational goal.
+`by_equiv` enters the coupling-based `RelTriple` shell, so that `rvcstep` / `rvcgen` can keep
+decomposing the relational goal.
 
 `by_dist ε` is the explicit variant that fixes the TV-distance contribution to `ε`
 before generating the remaining subgoals.

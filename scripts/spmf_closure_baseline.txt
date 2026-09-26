@@ -82,7 +82,6 @@ LatticeCrypto.MLDSA.SecurityNMA
 LatticeCrypto.MLDSA.Signature
 LatticeCrypto.MLKEM.Security
 ToMathlib.ProbabilityTheory.Coupling
-ToMathlib.ProbabilityTheory.OptimalCoupling
 VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.GenericLift
 VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle

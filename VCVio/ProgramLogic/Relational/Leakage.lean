@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.ProgramLogic.Relational.Quantitative
+public import VCVio.ProgramLogic.Relational.Basic
 public import VCVio.EvalDist.TVDist
 
 /-!
@@ -17,7 +17,7 @@ computations (outputs of `runObs`) that produce a result paired with an accumula
 
 ## Main Definitions
 
-* `TraceNoninterference`: exact trace equality in every coupling (pRHL indicator).
+* `TraceNoninterference`: exact trace equality along a coupling (a pRHL triple).
   Two observed computations satisfy this when their trace components always match,
   regardless of the result. This is the VCVio analogue of constant-time execution.
 * `ProbLeakFree`: distributional trace independence.
@@ -48,14 +48,12 @@ variable {α β γ : Type} {ω : Type}
 /-! ### TraceNoninterference -/
 
 /-- Exact trace noninterference: two observed computations produce equal trace components
-in every coupled output. This is the strongest leakage judgment, corresponding to
-constant-time execution for deterministic channels.
-
-Defined via `RelTriple'` (the pRHL indicator pattern from `QuantitativeDefs.lean`). -/
+along some coupling of their outputs. This is the strongest leakage judgment, corresponding to
+constant-time execution for deterministic channels. -/
 def TraceNoninterference [IsUniformSpec spec₁] [IsUniformSpec spec₂]
     (oa₁ : OracleComp spec₁ (α × ω))
     (oa₂ : OracleComp spec₂ (β × ω)) : Prop :=
-  ProgramLogic.Relational.RelTriple' oa₁ oa₂ (fun z₁ z₂ => z₁.2 = z₂.2)
+  ProgramLogic.Relational.RelTriple oa₁ oa₂ (fun z₁ z₂ => z₁.2 = z₂.2)
 
 /-! ### ProbLeakFree -/
 
@@ -89,7 +87,7 @@ theorem traceNoninterference_implies_probLeakFree
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : TraceNoninterference oa₁ oa₂) :
     ProbLeakFree oa₁ oa₂ :=
-  ProgramLogic.Relational.evalSPMF_map_eq_of_relTriple' h
+  ProgramLogic.Relational.evalSPMF_map_eq_of_relTriple h
 
 /-- `ProbLeakFree` is equivalent to `LeakageBound 0`. -/
 theorem probLeakFree_iff_leakageBound_zero
@@ -181,7 +179,7 @@ theorem traceNoninterference_map_fst
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : TraceNoninterference oa₁ oa₂) {δ : Type} (f₁ : α → γ) (f₂ : β → δ) :
     TraceNoninterference (Prod.map f₁ id <$> oa₁) (Prod.map f₂ id <$> oa₂) := by
-  simp only [TraceNoninterference, ProgramLogic.Relational.relTriple'_iff_relTriple] at h ⊢
+  simp only [TraceNoninterference] at h ⊢
   exact ProgramLogic.Relational.relTriple_map h
 
 /-- Mapping the trace component with the same function preserves distributional trace
@@ -210,7 +208,7 @@ theorem traceNoninterference_map_snd
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : TraceNoninterference oa₁ oa₂) {ω' : Type} (g : ω → ω') :
     TraceNoninterference (Prod.map id g <$> oa₁) (Prod.map id g <$> oa₂) := by
-  simp only [TraceNoninterference, ProgramLogic.Relational.relTriple'_iff_relTriple] at h ⊢
+  simp only [TraceNoninterference] at h ⊢
   exact ProgramLogic.Relational.relTriple_map
     (ProgramLogic.Relational.relTriple_post_mono h fun {_ _} hw => congrArg g hw)
 
@@ -234,10 +232,10 @@ theorem traceNoninterference_bind
     (h : TraceNoninterference oa₁ oa₂)
     (hf : ∀ a b w, TraceNoninterference (f₁ (a, w)) (f₂ (b, w))) :
     TraceNoninterference (oa₁ >>= f₁) (oa₂ >>= f₂) := by
-  simp only [TraceNoninterference, ProgramLogic.Relational.relTriple'_iff_relTriple] at h ⊢
+  simp only [TraceNoninterference] at h ⊢
   refine ProgramLogic.Relational.relTriple_bind h fun ⟨a, w₁⟩ ⟨b, w₂⟩ hw => ?_
   subst hw
-  exact ProgramLogic.Relational.relTriple'_iff_relTriple.mp (hf a b w₁)
+  exact hf a b w₁
 
 /-- Distributional trace independence is preserved by bind when the continuation
 depends only on the trace (second component). -/

@@ -42,22 +42,10 @@ noncomputable def RelPost.indicator (R : RelPost α β) (a : α) (b : β) : ℝ�
   letI := Classical.dec (R a b)
   if R a b then 1 else 0
 
-/-- pRHL-style exact relational triple, defined via quantitative relational WP with an
-indicator postcondition. -/
-def RelTriple' (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
-    (R : RelPost α β) : Prop :=
-  1 ≤ eRelWP oa ob (RelPost.indicator R)
-
 /-- ε-approximate relational triple via quantitative relational WP:
 `R` holds except with probability at most `ε`. -/
 def ApproxRelTriple (ε : ℝ≥0∞) (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (R : RelPost α β) : Prop :=
   1 - ε ≤ eRelWP oa ob (RelPost.indicator R)
-
-/-- Exact coupling is the zero-error special case of approximate coupling. -/
-theorem relTriple'_eq_approxRelTriple_zero
-    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {R : RelPost α β} :
-    RelTriple' oa ob R ↔ ApproxRelTriple 0 oa ob R := by
-  simp [RelTriple', ApproxRelTriple]
 
 end OracleComp.ProgramLogic.Relational

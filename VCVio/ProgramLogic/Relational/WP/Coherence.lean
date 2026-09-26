@@ -59,35 +59,31 @@ into scope to talk about `VCVio.ProgramLogic.rwp` requires
 `open OracleComp.Rel.Probabilistic`, which then occludes the
 qualitative tier discussed below. -/
 
-/-! ## Qualitative ↔ Quantitative (coupling-existence vs total mass)
+/-! ## Qualitative → Quantitative (coupling existence gives full mass)
 
-For an `OracleComp` pair, the support-based `Prop`-valued relational
-WP (`CouplingPost`) holds iff the quantitative `eRelWP` on the
-indicator post equals `1`. -/
+For an `OracleComp` pair, a coupling supported on a `Prop`-valued relation witnesses that the
+quantitative `eRelWP` of the relation's indicator equals `1`. -/
 
-/-- Qualitative ↔ Quantitative coherence: a `Prop`-valued relation
-holds along some coupling iff the indicator of that relation has
-quantitative `eRelWP` equal to `1`.
+/-- A coupling supported on `R` gives the indicator of `R` full quantitative `eRelWP`.
 
 This is the relational analogue of
-`OracleComp.WP.Coherence.wp_qual_iff_wp_prob_indicator_eq_one` in
-the unary file, and it reduces to the existing
-`relTriple'_iff_couplingPost` bridge plus the upper bound
-`eRelWP_indicator_le_one`. -/
-theorem couplingPost_iff_eRelWP_indicator_eq_one
-    (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) :
-    CouplingPost oa ob R ↔ eRelWP oa ob (RelPost.indicator R) = 1 := by
-  constructor
-  · intro h
-    exact le_antisymm (eRelWP_indicator_le_one oa ob R) (relTriple'_iff_couplingPost.mpr h)
-  · exact fun h => relTriple'_iff_couplingPost.mp h.ge
-
-/-- Convenience: rewrites the `couplingPost_iff_eRelWP_indicator_eq_one`
-bridge as a `RelTriple'` equivalence. The `RelTriple'` form is the
-eRHL-style triple with `pre = 1`. -/
-theorem couplingPost_iff_relTriple'
-    (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) :
-    CouplingPost oa ob R ↔ RelTriple' oa ob R :=
-  relTriple'_iff_couplingPost.symm
+`OracleComp.WP.Coherence.wp_qual_iff_wp_prob_indicator_eq_one` in the unary file. -/
+theorem eRelWP_indicator_eq_one_of_couplingPost
+    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {R : RelPost α β}
+    (h : CouplingPost oa ob R) :
+    eRelWP oa ob (RelPost.indicator R) = 1 := by
+  obtain ⟨c, hc⟩ := h
+  refine le_antisymm (eRelWP_indicator_le_one oa ob R) (le_iSup_of_le c (le_of_eq ?_))
+  have hfail : Pr[⊥ | c.1] = 0 := by
+    rw [← probFailure_map (f := Prod.fst) (mx := c.1), c.2.map_fst]
+    simpa only [probFailure_evalSPMF] using probFailure_eq_zero (mx := oa)
+  rw [← tsub_zero (1 : ℝ≥0∞), ← hfail, ← tsum_probOutput_eq_sub]
+  refine tsum_congr fun z => ?_
+  by_cases hz : z ∈ c.1.support
+  · simp [RelPost.indicator, hc z hz]
+  · have hzero : c.1 z = 0 := by
+      by_contra hne
+      exact hz ((SPMF.mem_support_iff c.1 z).2 hne)
+    simp [probOutput_def, hzero]
 
 end OracleComp.Rel.WP.Coherence

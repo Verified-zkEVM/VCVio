@@ -360,6 +360,16 @@ entries, an empty collection contributing no successful mass; a uniform range an
 give an event its proportion of admissible values. The discrete selection lemmas remain only
 while the legacy tactic benchmarks exercise them. Two orphaned scalar lemmas are removed.
 
+## Indicator-triple checkpoint
+
+The indicator-postcondition relational triple, which restated the coupling-based `RelTriple`
+through `eRelWP`, is removed together with its bridges, its effect rules and the finite-support
+compactness development that proved its equivalence with coupling existence. Trace
+noninterference is stated with `RelTriple`. The zero-error approximate equality coupling
+identifies output distributions through the total-variation characterization, and the coherence
+file keeps the direction in which a supported coupling gives the indicator full relational mass.
+The converse returns with the measure-backed rebase of `eRelWP`.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

@@ -794,13 +794,6 @@ lemma probEvent_mono'' (h : ∀ x, p x → q x) : Pr[ p | mx] ≤ Pr[ q | mx] :=
   refine ENNReal.tsum_le_tsum fun x => ?_
   by_cases hp : p x <;> by_cases hq : q x <;> simp_all
 
-open Classical in
-lemma indicator_objective_eq_probEvent (mx : m (α × β)) (R : α → β → Prop) :
-    (∑' z, Pr[= z | mx] * (if R z.1 z.2 then 1 else 0)) = Pr[ fun z => R z.1 z.2 | mx] := by
-  rw [probEvent_eq_tsum_ite]
-  refine tsum_congr fun z => ?_
-  by_cases hR : R z.1 z.2 <;> simp [hR]
-
 variable [MonadAttach m] [EvalDistCompatible m]
 
 /-- If `p` implies `q` on the `support` of a computation then it is more likely to happen. -/

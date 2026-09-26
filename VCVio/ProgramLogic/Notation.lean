@@ -29,20 +29,16 @@ variable {spec₁ : OracleSpec ι₁}
 variable [IsUniformSpec spec₁]
 variable {α : Type}
 
-/-- Game equivalence from exact pRHL equality coupling. -/
-theorem GameEquiv.of_relTriple'
-    {g₁ g₂ : OracleComp spec₁ α}
-    (h : Relational.RelTriple' (spec₁ := spec₁) (spec₂ := spec₁) g₁ g₂
-      (Relational.EqRel α)) :
-    GameEquiv g₁ g₂ :=
-  Relational.gameEquiv_of_relTriple'_eqRel h
-
 /-- Game equivalence from zero-error approximate coupling. -/
 theorem GameEquiv.of_approxRelTriple_zero
     {g₁ g₂ : OracleComp spec₁ α}
     (h : Relational.ApproxRelTriple (spec₁ := spec₁) (spec₂ := spec₁) 0 g₁ g₂
       (Relational.EqRel α)) :
-    GameEquiv g₁ g₂ :=
-  GameEquiv.of_relTriple' (Relational.relTriple'_eq_approxRelTriple_zero.mpr h)
+    GameEquiv g₁ g₂ := by
+  unfold Relational.ApproxRelTriple at h
+  rw [tsub_zero] at h
+  have htv : tvDist g₁ g₂ = 0 := by
+    rw [Relational.tvDist_eq_one_sub_eRelWP_eqRel, tsub_eq_zero_of_le h, ENNReal.toReal_zero]
+  exact (tvDist_eq_zero_iff g₁ g₂).1 htv
 
 end OracleComp.ProgramLogic

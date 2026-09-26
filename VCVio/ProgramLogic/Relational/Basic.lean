@@ -89,35 +89,6 @@ lemma spmf_probEvent_ext (p : SPMF α) {q r : α → Prop}
     (spmf_probEvent_mono p (fun x hx hq => (h x hx).1 hq))
     (spmf_probEvent_mono p (fun x hx hr => (h x hx).2 hr))
 
-private lemma spmf_probEvent_eq_zero_iff (p : SPMF α) (q : α → Prop) :
-    Pr[q | p] = 0 ↔ ∀ x ∈ p.support, ¬q x := by
-  classical
-  simp only [probEvent_eq_tsum_ite, SPMF.probOutput_eq_apply, ENNReal.tsum_eq_zero]
-  constructor
-  · intro h x hx hq
-    have hx0 := h x
-    simp only [hq, ↓reduceIte] at hx0
-    exact (SPMF.mem_support_iff p x).1 hx hx0
-  · intro h x
-    by_cases hq : q x
-    · have hxnot : x ∉ p.support := fun hx => h x hx hq
-      have hx0 : p x = 0 := by
-        by_contra hn
-        exact hxnot ((SPMF.mem_support_iff p x).2 hn)
-      simp [hq, hx0]
-    · simp [hq]
-
-/-- Full-mass events in a legacy subprobability distribution hold on its positive-mass support. -/
-lemma spmf_probEvent_eq_one_iff (p : SPMF α) (q : α → Prop) :
-    Pr[q | p] = 1 ↔ Pr[⊥ | p] = 0 ∧ ∀ x ∈ p.support, q x := by
-  rw [show (∀ x ∈ p.support, q x) ↔ Pr[fun x => ¬q x | p] = 0 by
-    simpa only [not_not] using (spmf_probEvent_eq_zero_iff p (fun x => ¬q x)).symm]
-  have hadd : Pr[q | p] + (Pr[fun x => ¬q x | p] + Pr[⊥ | p]) = 1 := by
-    rw [← add_assoc, probEvent_compl p q, tsub_add_cancel_of_le probFailure_le_one]
-  refine ⟨fun h => ?_, fun ⟨hf, hb⟩ => by simpa [hf, hb] using hadd⟩
-  rw [h] at hadd
-  exact and_comm.1 (add_eq_zero.1 (by simpa using hadd))
-
 /-- Relational postconditions over two output spaces. -/
 abbrev RelPost (α : Sort w) (β : Sort x) := α → β → Prop
 
