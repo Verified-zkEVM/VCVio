@@ -11,7 +11,8 @@
 2. **Advantage is bounded** (`advantage ≤ ε`):
    → `by_dist` to enter TV distance reasoning
    → Use `by_dist ε₂` when you want to pin the TV-distance contribution explicitly
-   → For identical-until-bad: use `tvDist_simulateQ_le_probEvent_bad`
+   → For identical-until-bad: use `by_upto` or
+     `measureETVDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
 
 3. **Probability equals a specific value** (`Pr[= x | oa] = ...`):
    → Start with `vcstep` if the goal should lower or decompose automatically

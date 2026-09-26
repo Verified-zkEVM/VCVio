@@ -181,7 +181,6 @@ VCVio.OracleComp.RunIO
 VCVio.ProgramLogic.Relational.Examples
 VCVio.ProgramLogic.Relational.HandlerFromUnary
 VCVio.ProgramLogic.Relational.SimulateQ
-VCVio.ProgramLogic.Relational.SimulateQ.Basic
 VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 VCVio.ProgramLogic.Relational.SimulateQ.Resource
 VCVio.ProgramLogic.Relational.SimulateQ.StateDependent

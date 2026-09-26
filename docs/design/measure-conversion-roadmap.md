@@ -419,8 +419,15 @@ specification than the simulated program; agreement off bad input states, as equ
 output measures, is a special case. Two computations that agree on every event away from a bad
 event are within its probability after any post-processing, with no measurable structure on the
 outputs. The programmable-oracle bounds, the random-oracle bridge and the query-bounded
-exact-output transport are native, and `by_upto` targets the native bound; the ε-slack
-refinements and their consumers remain on the discrete layer.
+exact-output transport are native, and `by_upto` targets the native bound.
+
+Per-query slack is native as well. When the two handlers are within total variation `ε` on each
+charged query from a good state and coincide elsewhere, a computation making at most `q` charged
+queries keeps the runs within `q * ε` plus the bad-event mass, and dropping the bad state leaves
+the pure per-query budget. The random-oracle commitment hiding proof uses the native lemma, so
+the discrete identical-until-bad module has been removed. The state-dependent expected slack, its
+constant-slack corollaries and their state-separating and Fiat–Shamir consumers remain on the
+discrete layer.
 
 ## Next conversion batch
 

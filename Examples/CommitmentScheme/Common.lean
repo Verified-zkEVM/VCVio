@@ -9,7 +9,6 @@ public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.QueryTracking.Unpredictability
-public import VCVio.EvalDist.TVDist
 public import VCVio.ProgramLogic.Notation
 public import VCVio.ProgramLogic.Relational.SimulateQ
 

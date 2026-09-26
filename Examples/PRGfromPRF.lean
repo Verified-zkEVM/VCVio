@@ -602,7 +602,7 @@ comes from the probability that the state chain revisits some state.
 3. In the ideal PRG world, the inputs are i.i.d. uniform.
 4. Conditioned on no state collision, the random-oracle chain produces
    independent uniform outputs, so the two input distributions coincide.
-5. By the "identical until bad" lemma (`tvDist_simulateQ_le_probEvent_bad`),
+5. By the "identical until bad" argument,
    the TV distance between the two input distributions is at most `Pr[collision]`.
 6. By the data-processing inequality, running `adv` cannot increase the gap.
 

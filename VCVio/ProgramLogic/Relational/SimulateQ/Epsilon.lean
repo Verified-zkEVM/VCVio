@@ -13,8 +13,6 @@ public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
-public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
-import all VCVio.ProgramLogic.Relational.SimulateQ.Basic
 
 /-!
 # Uniform and selectively charged simulation slack
@@ -38,7 +36,7 @@ variable [IsUniformSpec spec]
 
 /-! ## ε-perturbed "identical until bad" with output bad flag
 
-These lemmas generalize `tvDist_simulateQ_le_probEvent_output_bad` from EXACT agreement on
+These lemmas generalize identical-until-bad with an output bad flag from EXACT agreement on
 the no-bad path to ε-CLOSE agreement: the per-step TV distance between the two oracle
 implementations may be at most `ε` (instead of zero) on the no-bad path. Combined with a
 query bound `q` on the computation, the total bound becomes `q*ε + Pr[bad]`.
@@ -95,12 +93,10 @@ private lemma probEvent_simulateQ_run_bad_eq_one_of_bad
 
 /-! ### Exact identical-until-bad with output bad flag: joint heterogeneous variant
 
-`tvDist_simulateQ_le_probEvent_output_bad` fixes the inner monad to `OracleComp spec`
-over the same spec as the simulated computation, and projects the conclusion to the
-output marginal. The variant here generalizes the inner monad to `OracleComp spec'` and
-keeps the conclusion on the **joint** output-and-state distribution, which is what a
-game with a state-dependent continuation (e.g. a final verification step reading the
-run's cache) consumes. -/
+The inner monad is `OracleComp spec'` for an arbitrary uniform `spec'`, and the conclusion
+is kept on the **joint** output-and-state distribution, which is what a game with a
+state-dependent continuation (e.g. a final verification step reading the run's cache)
+consumes. -/
 
 private lemma probOutput_simulateQ_run_eq_zero_of_output_bad'
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
@@ -155,11 +151,7 @@ only on the already-bad trajectory, where both flags read `true`.
 
 Applying it: because the conclusion is an equality, a bound on the flag probability proved in
 either world transports to the other, which is what lets the TV-distance results in this
-section quantify the loss against `impl₁` alone.
-
-Pinning the inner monad to the simulated spec itself gives the same statement over
-`OracleComp spec`; that same-spec form is the private `probEvent_output_bad_eq` in
-`SimulateQ.Basic`, which backs `tvDist_simulateQ_le_probEvent_output_bad`. -/
+section quantify the loss against `impl₁` alone. -/
 theorem probEvent_output_bad_eq'
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (h_agree_good : ∀ (t : spec.Domain) (s : σ) (u : spec.Range t) (s' : σ),
@@ -197,9 +189,8 @@ distribution, with the inner monad over an arbitrary uniform spec `spec'`.
 Two state-extended oracle implementations that agree on non-bad output transitions from
 non-bad input states (and are bad-input monotone) produce simulated runs whose joint
 output-and-state distributions are within the probability of the flag firing in the run
-of `impl₁`. Unlike `tvDist_simulateQ_le_probEvent_output_bad`, the conclusion keeps the
-final state, so a state-dependent continuation (e.g. verification against the final
-cache) can be appended on both sides. -/
+of `impl₁`. The conclusion keeps the final state, so a state-dependent continuation (e.g.
+verification against the final cache) can be appended on both sides. -/
 theorem tvDist_simulateQ_run_le_probEvent_output_bad
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (oa : OracleComp spec α) (s₀ : σ)
@@ -459,16 +450,16 @@ private theorem tvDist_simulateQ_run_le_qeps_plus_probEvent_output_bad_aux
 /-- **ε-perturbed identical-until-bad with output bad flag.**
 
 If two stateful oracle implementations are `ε`-close in TV distance per step on the no-bad
-path (rather than exactly equal, as in `tvDist_simulateQ_le_probEvent_output_bad`), and `oa`
+path (rather than exactly equal), and `oa`
 makes at most `q` queries, then the TV distance between the two simulated output
 distributions is at most `q * ε + Pr[bad]`, the bad probability being that of `impl₁`
 finishing with its flag set.
 
 Only `impl₁` needs bad-flag monotonicity, since the bad probability on the right is read off
 `impl₁`; beyond `h_step_tv` the implementation `impl₂` is unconstrained, and the two may
-diverge arbitrarily once the flag is set. At `ε = 0` the bound degenerates to the exact one
-of `tvDist_simulateQ_le_probEvent_output_bad`, which phrases per-step agreement as an
-equality of good-transition probabilities and constrains `impl₂` as well.
+diverge arbitrarily once the flag is set. At `ε = 0` the bound degenerates to exact
+identical-until-bad, whose per-step agreement is an equality of good-transition
+probabilities that constrains `impl₂` as well.
 
 When applying: the left-hand side compares output marginals (`StateT.run'`) while the right
 reads the flag off the joint run (`StateT.run`), which is what keeps the bad event
