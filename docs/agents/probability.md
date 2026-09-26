@@ -300,9 +300,9 @@ without requiring discrete answer spaces; continuous final-event proofs can use 
 `le_evalDist_bind_apply` transports an almost-everywhere lower bound through a lossless draw;
 its monad is generic and its event need only be measurable.
 
-Runtime-valued signature experiments expose `IsSubprobabilityMeasure` instances, so
+A runtime assigns every experiment a subprobability measure `runtime.evalDist exp`, so
 `measure_le_one` and `measure_ne_top` apply directly. An instrumented experiment recording
-success and a Boolean selector uses `Measure.fst` for its success marginal.
+success and a Boolean selector uses `Measure.fst` of its measure for the success marginal.
 `Measure.fst_apply_eq_add` splits a marginal event into the two disjoint selector events.
 The SLH-DSA `advantage_eq_arms` and `sameMessageAdvantage_eq_arms` equations use that partition
 without caller-supplied evaluator laws; the runtime already bundles its measurable-map law.

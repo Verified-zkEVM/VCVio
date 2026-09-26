@@ -31,7 +31,7 @@ variable {M : Type} [AddCommGroup M] [SampleableType M] [DecidableEq M]
 
 /-- Real entropy-smoothing experiment. The adversary sees `(hk, hash hk (z • g))`
 for uniform `hk` and `z`, and tries to distinguish this from the ideal experiment. -/
-def realExp (g : G) (hash : HK → G → M) (adversary : HK × M → ProbComp Bool) :
+def realExperiment (g : G) (hash : HK → G → M) (adversary : HK × M → ProbComp Bool) :
     ProbComp Bool := do
   let hk ← $ᵗ HK
   let z ← $ᵗ F
@@ -39,7 +39,7 @@ def realExp (g : G) (hash : HK → G → M) (adversary : HK × M → ProbComp Bo
 
 /-- Ideal entropy-smoothing experiment. The adversary sees `(hk, h)` for independent
 uniform `hk` and uniform `h : M`. -/
-def idealExp (adversary : HK × M → ProbComp Bool) : ProbComp Bool := do
+def idealExperiment (adversary : HK × M → ProbComp Bool) : ProbComp Bool := do
   let hk ← $ᵗ HK
   let h ← $ᵗ M
   adversary (hk, h)
@@ -47,6 +47,6 @@ def idealExp (adversary : HK × M → ProbComp Bool) : ProbComp Bool := do
 /-- Entropy-smoothing distinguishing advantage. -/
 noncomputable def advantage (g : G) (hash : HK → G → M)
     (adversary : HK × M → ProbComp Bool) : ℝ≥0∞ :=
-  𝒟[realExp F g hash adversary].boolDist 𝒟[idealExp adversary]
+  𝒟[realExperiment F g hash adversary].boolDist 𝒟[idealExperiment adversary]
 
 end EntropySmoothing

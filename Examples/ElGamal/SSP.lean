@@ -240,7 +240,7 @@ def dhToLR_right {G : Type} [Add G] : QueryImpl.Stateful (dhSpec G) (lrSpec G) P
 Each of the two named lemmas below shows that two state-separating handlers
 produce the same distribution against any adversary `A`.
 They are the state-separating-level analogues of the rewrites in
-`Examples.ElGamal.Basic.IND_CPA_OneTime_game_evalSPMF_eq_ddhExpReal`. -/
+`IND_CPA_OneTime_Game_eq_ddhRealExperiment` in `Examples/ElGamal/Basic.lean`. -/
 
 section ReductionEquivalences
 

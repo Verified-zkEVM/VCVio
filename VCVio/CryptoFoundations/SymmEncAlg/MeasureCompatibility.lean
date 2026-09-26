@@ -56,17 +56,17 @@ theorem measureComplete_iff_complete [MeasurableSpace M] [MeasurableSingletonCla
     [Countable M] [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     (encAlg : SymmEncAlg m M K C) (semantics : ProbabilitySemantics m)
     (hsingleton : ∀ (msg : M) (value : Option M),
-      semantics.denote (encAlg.CompleteExp msg) {value} =
-        Pr[= value | encAlg.CompleteExp msg]) :
+      semantics.denote (encAlg.completenessExperiment msg) {value} =
+        Pr[= value | encAlg.completenessExperiment msg]) :
     encAlg.measureComplete semantics ↔ encAlg.Complete := by
   constructor
   · intro hmeasure msg
     have heq := congrArg (fun μ : Measure (Option M) ↦ μ {some msg}) (hmeasure msg)
     simpa [hsingleton msg (some msg)] using heq
   · intro hcomplete msg
-    let _ := semantics.isProbabilityMeasure (encAlg.CompleteExp msg)
+    let _ := semantics.isProbabilityMeasure (encAlg.completenessExperiment msg)
     apply (probabilityMeasure_eq_dirac_iff_apply_singleton_eq_one
-      (semantics.denote (encAlg.CompleteExp msg)) (some msg)).2
+      (semantics.denote (encAlg.completenessExperiment msg)) (some msg)).2
     rw [hsingleton]
     exact hcomplete msg
 
@@ -77,8 +77,8 @@ theorem measurePerfectSecrecyAt_iff_ciphertextRowsEqualAt
     [MonadAttach m] [EvalDistCompatible m]
     (encAlg : SymmEncAlg m M K C) (semantics : ProbabilitySemantics m)
     (hsingleton : ∀ (msg : M) (ciphertext : C),
-      semantics.denote (encAlg.PerfectSecrecyCipherGivenMsgExp msg) {ciphertext} =
-        Pr[= ciphertext | encAlg.PerfectSecrecyCipherGivenMsgExp msg]) :
+      semantics.denote (encAlg.perfectSecrecyCipherGivenMsgExperiment msg) {ciphertext} =
+        Pr[= ciphertext | encAlg.perfectSecrecyCipherGivenMsgExperiment msg]) :
     encAlg.measurePerfectSecrecyAt semantics ↔ encAlg.ciphertextRowsEqualAt := by
   constructor
   · intro hmeasure msg₀ msg₁ ciphertext

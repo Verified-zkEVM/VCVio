@@ -25,10 +25,10 @@ properties: correctness, hiding, and binding.
   verify.
 - `CommitmentScheme.PerfectlyHiding` — under honestly generated parameters, commitment
   distribution is independent of the message.
-- `CommitmentScheme.hidingExp` — computational hiding experiment (IND-style).
-- `CommitmentScheme.bindingExp` — computational binding experiment.
+- `CommitmentScheme.hidingGame` — computational hiding experiment (IND-style).
+- `CommitmentScheme.bindingExperiment` — computational binding experiment.
 - `TrapdoorExtractor PP TD C M` — trapdoor-based message extraction algorithm.
-- `CommitmentScheme.extractExp` — extraction experiment (game-based, allows error).
+- `CommitmentScheme.extractExperiment` — extraction experiment (game-based, allows error).
 -/
 
 @[expose] public section
@@ -78,7 +78,7 @@ structure HidingAdversary (PP M C : Type) where
 
 /-- Hiding experiment: the adversary chooses two messages, the challenger commits
 to one at random, and the adversary tries to guess which. -/
-def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdversary PP M C) :
+def hidingGame (cs : CommitmentScheme PP M C D) (adversary : HidingAdversary PP M C) :
     ProbComp Bool := do
   let pp ← cs.setup
   let (m₁, m₂, st) ← adversary.chooseMessages pp
@@ -88,10 +88,10 @@ def hidingExp (cs : CommitmentScheme PP M C D) (adversary : HidingAdversary PP M
   return (b == b')
 
 /-- The hiding advantage of an adversary: the Boolean bias `Measure.boolBias`
-`|Pr[b = b'] - Pr[b ≠ b']|` of `hidingExp`. -/
+`|Pr[b = b'] - Pr[b ≠ b']|` of `hidingGame`. -/
 noncomputable def hidingAdvantage (cs : CommitmentScheme PP M C D)
     (adversary : HidingAdversary PP M C) : ℝ≥0∞ :=
-  𝒟[cs.hidingExp adversary].boolBias
+  𝒟[cs.hidingGame adversary].boolBias
 
 /-! ### Computational binding -/
 
@@ -100,17 +100,17 @@ def BindingAdversary (PP M C D : Type) := PP → ProbComp (C × M × D × M × D
 
 /-- Binding experiment: the adversary tries to open a single commitment to two
 distinct messages. Succeeds iff both openings verify and the messages differ. -/
-def bindingExp [DecidableEq M] (cs : CommitmentScheme PP M C D)
+def bindingExperiment [DecidableEq M] (cs : CommitmentScheme PP M C D)
     (adversary : BindingAdversary PP M C D) : ProbComp Bool := do
   let pp ← cs.setup
   let (c, m₁, d₁, m₂, d₂) ← adversary pp
   return (decide (m₁ ≠ m₂) && cs.verify pp m₁ c d₁ && cs.verify pp m₂ c d₂)
 
-/-- The binding advantage of an adversary: its probability of winning `bindingExp` by
+/-- The binding advantage of an adversary: its probability of winning `bindingExperiment` by
 opening a single commitment to two distinct messages. -/
 noncomputable def bindingAdvantage [DecidableEq M] (cs : CommitmentScheme PP M C D)
     (adversary : BindingAdversary PP M C D) : ℝ≥0∞ :=
-  𝒟[cs.bindingExp adversary] {true}
+  𝒟[cs.bindingExperiment adversary] {true}
 
 /-! ### Trapdoor extractability -/
 
@@ -136,9 +136,9 @@ def TrapdoorExtractor.SetupConsistent {TD : Type} (extractor : TrapdoorExtractor
 to message `m`, then check whether the extractor recovers `m` from the commitment.
 
 Downstream code decides how much error to tolerate:
-- Perfect extraction: `∀ m, Pr[= true | extractExp cs ext m] = 1`
-- Computational: bound `1 - Pr[= true | extractExp cs ext m]` -/
-def extractExp [DecidableEq M] (cs : CommitmentScheme PP M C D) {TD : Type}
+- Perfect extraction: `∀ m, Pr[= true | extractExperiment cs ext m] = 1`
+- Computational: bound `1 - Pr[= true | extractExperiment cs ext m]` -/
+def extractExperiment [DecidableEq M] (cs : CommitmentScheme PP M C D) {TD : Type}
     (extractor : TrapdoorExtractor PP TD C M) (m : M) : ProbComp Bool := do
   let (pp, td) ← extractor.setupExtract
   let (c, _) ← cs.commit pp m

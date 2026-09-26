@@ -95,9 +95,9 @@ theorem verifier_eq (root : Bool) :
       (query (spec := Query →ₒ Bool) (false, false) >>= fun reply => pure (reply == root)) := by
   rfl
 
-theorem game_eq : extractabilityGame model config 1 adversary =
+theorem game_eq : extractabilityExperiment model config 1 adversary =
     (query (spec := Query →ₒ Bool) (false, false) >>= fun reply => pure (outcome reply)) := by
-  simp [extractabilityGame, extractabilityInner, SequentialCommitter.runFromEmpty,
+  simp [extractabilityExperiment, extractabilityInner, SequentialCommitter.runFromEmpty,
     SequentialCommitter.runCommitments, adversary, ExtractorState.empty,
     ExtractorState.record, verifyOpeningClaims, claim, verifier_eq,
     OracleSpec.withCacheOverlay, OracleComp.withQueryLog, outcome, extractorState, checkpoint]
@@ -213,12 +213,12 @@ local instance transcriptDiscrete :
     DiscreteMeasurableSpace (Transcript Unit Query Unit Bool config) :=
   ⟨fun _ => trivial⟩
 
-theorem game_law : 𝒟[extractabilityGame model config 1 adversary] =
+theorem game_law : 𝒟[extractabilityExperiment model config 1 adversary] =
     (uniformOn (Set.univ : Set Bool)).map outcome := by
   rw [game_eq, bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
 
 theorem publicFailure_probability :
-    𝒟[extractabilityGame model config 1 adversary]
+    𝒟[extractabilityExperiment model config 1 adversary]
       {tr | tr.HasOpeningOrEqualRootDisagreement model} = (1 : ENNReal) / 2 := by
   rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
   have hevent : outcome ⁻¹' {tr | tr.HasOpeningOrEqualRootDisagreement model} = {false} := by
@@ -228,7 +228,7 @@ theorem publicFailure_probability :
   simp
 
 theorem lateFailure_probability :
-    𝒟[extractabilityGame model config 1 adversary]
+    𝒟[extractabilityExperiment model config 1 adversary]
       {tr | LateOpeningFailure model.view tr} = 0 := by
   rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
   have hevent : outcome ⁻¹' {tr | LateOpeningFailure model.view tr} = ∅ := by
@@ -237,7 +237,7 @@ theorem lateFailure_probability :
   rw [hevent, measure_empty]
 
 theorem drift_probability :
-    𝒟[extractabilityGame model config 1 adversary] {tr | Drift model.view tr} =
+    𝒟[extractabilityExperiment model config 1 adversary] {tr | Drift model.view tr} =
       (1 : ENNReal) / 2 := by
   rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
   have hevent : outcome ⁻¹' {tr | Drift model.view tr} = {false} := by

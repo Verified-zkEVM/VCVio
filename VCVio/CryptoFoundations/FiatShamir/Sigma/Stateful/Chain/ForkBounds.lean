@@ -773,7 +773,7 @@ private lemma forkH5Body_prob_true_le_fork_advantage
       Pr[= true | pointBody] =
         Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH := by
     rw [← probOutput_simulateQ_forkWrappedUniformImpl (Chal := Chal) (oa := pointBody) true]
-    simp [pointBody, forkWrappedUniformImpl, Fork.advantage, Fork.exp]
+    simp [pointBody, forkWrappedUniformImpl, Fork.advantage, Fork.experiment]
   have hbody :
       Pr[= true |
           forkH5Body (M := M) (Commit := Commit) (Chal := Chal)

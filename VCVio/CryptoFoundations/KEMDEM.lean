@@ -54,16 +54,17 @@ honest ciphertext returns the encapsulated key. -/
 private lemma kem_decaps_mem_support
     [LawfulMonad m]
     {kem : KEMScheme m K PK SK CKEM}
-    (hkem : Pr[= true | kem.CorrectExp] = 1)
+    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
     {pk : PK} {sk : SK} (hks : (pk, sk) ∈ support kem.keygen)
     {c : CKEM} {k : K} (hck : (c, k) ∈ support (kem.encaps pk))
     {kOpt : Option K} (hkOpt : kOpt ∈ support (kem.decaps sk c)) :
     kOpt = some k := by
-  have hmem : decide (kOpt = some k) ∈ support kem.CorrectExp := by
-    simp only [KEMScheme.CorrectExp, mem_support_bind_iff, support_pure,
+  have hmem : decide (kOpt = some k) ∈ support kem.correctnessExperiment := by
+    simp only [KEMScheme.correctnessExperiment, mem_support_bind_iff, support_pure,
       Set.mem_singleton_iff, decide_eq_decide, Prod.exists]
     exact ⟨pk, sk, hks, c, k, hck, kOpt, hkOpt, Iff.rfl⟩
-  simpa [((probOutput_eq_one_iff (mx := kem.CorrectExp) (x := true)).mp hkem).2] using hmem
+  simpa [((probOutput_eq_one_iff (mx := kem.correctnessExperiment) (x := true)).mp hkem).2]
+    using hmem
 
 variable [LawfulMonadLiftT m SPMF]
 
@@ -72,18 +73,19 @@ semantics of `m`, then their composition is also perfectly correct. -/
 theorem perfectlyCorrect_composeWithDEM
     [LawfulMonad m]
     (kem : KEMScheme m K PK SK CKEM) (dem : DEMScheme m K M CDEM)
-    (hkem : Pr[= true | kem.CorrectExp] = 1)
-    (hdem : ∀ k : K, ∀ msg : M, Pr[= true | dem.CorrectExp k msg] = 1) :
-    ∀ msg, Pr[= true | (kem.composeWithDEM dem).CorrectExp msg] = 1 := by
+    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
+    (hdem : ∀ k : K, ∀ msg : M, Pr[= true | dem.correctnessExperiment k msg] = 1) :
+    ∀ msg, Pr[= true | (kem.composeWithDEM dem).correctnessExperiment msg] = 1 := by
   intro msg
   rw [← hkem]
-  simp only [AsymmEncAlg.CorrectExp, composeWithDEM, KEMScheme.CorrectExp, monad_norm]
+  simp only [AsymmEncAlg.correctnessExperiment, composeWithDEM, KEMScheme.correctnessExperiment,
+    monad_norm]
   refine probOutput_bind_congr fun ⟨pk, sk⟩ hks => ?_
   refine probOutput_bind_congr fun ⟨kc, k⟩ hck => ?_
   rw [probOutput_bind_bind_swap (mx := dem.encrypt k msg) (my := kem.decaps sk kc)]
   refine probOutput_bind_congr fun kOpt hkOpt => ?_
   obtain rfl := kem_decaps_mem_support hkem hks hck hkOpt
-  simpa [DEMScheme.CorrectExp, probOutput_pure, monad_norm] using hdem k msg
+  simpa [DEMScheme.correctnessExperiment, probOutput_pure, monad_norm] using hdem k msg
 
 end Correct
 

@@ -63,7 +63,7 @@ variable [DecidableEq F] [SampleableType F]
 
 /-- DLog experiment: sample a random scalar `x`, give the adversary `(g, x • g)`,
 and check whether the adversary's guess equals `x`. -/
-def dlogExp (g : G) (adversary : DLogAdversary F G) : ProbComp Bool := do
+def dlogExperiment (g : G) (adversary : DLogAdversary F G) : ProbComp Bool := do
   let x ← $ᵗ F
   let x' ← adversary g (x • g)
   return decide (x' = x)
@@ -74,7 +74,7 @@ end DLog
 
 /-- A CDH adversary receives `(g, a • g, b • g)` and tries to compute `(a * b) • g`.
 `_F` is a phantom type parameter for the scalar field, enabling Lean to infer `F`
-at call sites of `cdhExp`. -/
+at call sites of `cdhExperiment`. -/
 def CDHAdversary (_F G : Type) := G → G → G → ProbComp G
 
 section CDH
@@ -83,7 +83,7 @@ variable [SampleableType F] [DecidableEq G]
 
 /-- CDH experiment: sample random scalars `a, b`, give the adversary `(g, a • g, b • g)`,
 and check whether the adversary's output equals `(a * b) • g`. -/
-def cdhExp (g : G) (adversary : CDHAdversary F G) : ProbComp Bool := do
+def cdhExperiment (g : G) (adversary : CDHAdversary F G) : ProbComp Bool := do
   let a ← $ᵗ F; let b ← $ᵗ F
   let h ← adversary g (a • g) (b • g)
   return decide (h = (a * b) • g)
@@ -95,43 +95,44 @@ end CDH
 /-- A DDH adversary receives `(g, A, B, T)` and guesses whether `T = (a * b) • g`
 (real) or `T` is a random group element (random).
 `_F` is a phantom type parameter for the scalar field, enabling Lean to infer `F`
-at call sites of `ddhExp` and related definitions. -/
+at call sites of `ddhGame` and related definitions. -/
 def DDHAdversary (_F G : Type) := G → G → G → G → ProbComp Bool
 
 section DDH
 
 variable [SampleableType F]
 
-/-- DDH experiment: sample random scalars `a, b` and a bit. If the bit is `true`, set
+/-- DDH game: sample random scalars `a, b` and a bit. If the bit is `true`, set
 `c = a * b` (the real DH scalar); otherwise sample `c ← $ᵗ F` independently. The adversary
 receives `(g, a • g, b • g, c • g)` and wins by guessing the bit. Its Boolean bias is
-`ddhAdvantage` (`boolBias_evalDist_ddhExp`).
+`ddhAdvantage` (`boolBias_evalDist_ddhGame`).
 
-All sampling is from the scalar field `F`, so the experiment is well-defined for any
+All sampling is from the scalar field `F`, so the game is well-defined for any
 `Module F G` without requiring that `g` generates all of `G`. -/
-def ddhExp (g : G) (adversary : DDHAdversary F G) : ProbComp Bool := do
+def ddhGame (g : G) (adversary : DDHAdversary F G) : ProbComp Bool := do
   let a ← $ᵗ F; let b ← $ᵗ F
   let bit ← $ᵗ Bool
   let c ← if bit then pure (a * b) else $ᵗ F
   let b' ← adversary g (a • g) (b • g) (c • g)
   return (bit == b')
 
-/-! ## DDH: Two-game formulation -/
+/-! ## DDH: real and random experiments -/
 
-/-- DDH real game: the adversary receives a genuine DH triple `(g, a • g, b • g, (a * b) • g)`. -/
-def ddhExpReal (g : G) (adversary : DDHAdversary F G) : ProbComp Bool := do
+/-- DDH real experiment: the adversary receives a genuine DH triple
+`(g, a • g, b • g, (a * b) • g)`. -/
+def ddhRealExperiment (g : G) (adversary : DDHAdversary F G) : ProbComp Bool := do
   let a ← $ᵗ F; let b ← $ᵗ F
   adversary g (a • g) (b • g) ((a * b) • g)
 
-/-- DDH random game: the adversary receives `(g, a • g, b • g, c • g)` with independent
+/-- DDH random experiment: the adversary receives `(g, a • g, b • g, c • g)` with independent
 `c ← $ᵗ F`. -/
-def ddhExpRand (g : G) (adversary : DDHAdversary F G) : ProbComp Bool := do
+def ddhRandomExperiment (g : G) (adversary : DDHAdversary F G) : ProbComp Bool := do
   let a ← $ᵗ F; let b ← $ᵗ F; let c ← $ᵗ F
   adversary g (a • g) (b • g) (c • g)
 
-/-- DDH advantage: the Boolean distance between the real and random DDH games. -/
+/-- DDH advantage: the Boolean distance between the real and random DDH experiments. -/
 noncomputable def ddhAdvantage (g : G) (adversary : DDHAdversary F G) : ℝ≥0∞ :=
-  𝒟[ddhExpReal g adversary].boolDist 𝒟[ddhExpRand g adversary]
+  𝒟[ddhRealExperiment g adversary].boolDist 𝒟[ddhRandomExperiment g adversary]
 
 end DDH
 
@@ -166,26 +167,26 @@ section DDHBranch
 
 variable [SampleableType F]
 
-/-- The single-game DDH experiment is a uniform-bit branch over the real and random DDH games. -/
-private lemma ddhExp_probOutput_eq_branch (g : G) (adversary : DDHAdversary F G) (x : Bool) :
-    Pr[= x | ddhExp g adversary] =
+/-- The DDH game is a uniform-bit branch over the real and random DDH experiments. -/
+private lemma ddhGame_probOutput_eq_branch (g : G) (adversary : DDHAdversary F G) (x : Bool) :
+    Pr[= x | ddhGame g adversary] =
     Pr[= x | do
       let bit ← ($ᵗ Bool)
-      let z ← if bit then ddhExpReal g adversary
-               else ddhExpRand g adversary
+      let z ← if bit then ddhRealExperiment g adversary
+               else ddhRandomExperiment g adversary
       pure (bit == z)] := by
-  unfold ddhExp
+  unfold ddhGame
   rw [probOutput_bind_congr fun a _ => probOutput_bind_bind_swap _ _ _ _,
       probOutput_bind_bind_swap]
   refine probOutput_bind_congr' ($ᵗ Bool) x fun bit => ?_
-  cases bit <;> simp [ddhExpReal, ddhExpRand]
+  cases bit <;> simp [ddhRealExperiment, ddhRandomExperiment]
 
-/-- The Boolean bias of the single-game DDH experiment is the DDH advantage. -/
-theorem boolBias_evalDist_ddhExp (g : G) (adversary : DDHAdversary F G) :
-    𝒟[ddhExp g adversary].boolBias = ddhAdvantage g adversary := by
+/-- The Boolean bias of the DDH game is the DDH advantage. -/
+theorem boolBias_evalDist_ddhGame (g : G) (adversary : DDHAdversary F G) :
+    𝒟[ddhGame g adversary].boolBias = ddhAdvantage g adversary := by
   rw [ddhAdvantage, ← evalDist_boolBias_bind_uniformBool]
   simp only [MeasureTheory.Measure.boolBias, evalDist_apply_singleton,
-    ddhExp_probOutput_eq_branch]
+    ddhGame_probOutput_eq_branch]
 
 end DDHBranch
 
@@ -193,11 +194,12 @@ section CDHToDDH
 
 variable [SampleableType F] [DecidableEq G]
 
-/-- In the real DDH game, the CDH-to-DDH reduction succeeds exactly when the underlying CDH
+/-- In the real DDH experiment, the CDH-to-DDH reduction succeeds exactly when the underlying CDH
 adversary computed the correct shared DH value. -/
-theorem probOutput_ddhExpReal_cdhToDDHReduction_eq_cdhExp (g : G) (adversary : CDHAdversary F G) :
-    Pr[= true | ddhExpReal g (cdhToDDHReduction (F := F) adversary)] =
-      Pr[= true | cdhExp g adversary] := rfl
+theorem probOutput_ddhRealExperiment_cdhToDDHReduction_eq_cdhExperiment (g : G)
+    (adversary : CDHAdversary F G) :
+    Pr[= true | ddhRealExperiment g (cdhToDDHReduction (F := F) adversary)] =
+      Pr[= true | cdhExperiment g adversary] := rfl
 
 private lemma probOutput_decide_smul_eq_inv_card
     [Fintype F] (g : G) (hg : Function.Bijective (· • g : F → G)) (h : G) :
@@ -211,15 +213,15 @@ private lemma probOutput_decide_smul_eq_inv_card
     simp [show c₀ • g ≠ c • g from fun heq => hne (hg.injective heq).symm]
   · exact absurd (Finset.mem_univ c₀)
 
-/-- In the random DDH game, the CDH-to-DDH reduction only matches the target with the uniform
+/-- In the random DDH experiment, the CDH-to-DDH reduction only matches the target with the uniform
 baseline probability. The bijectivity assumption identifies scalar samples with uniformly sampled
 group elements in the subgroup generated by `g`. -/
-theorem probOutput_ddhExpRand_cdhToDDHReduction_eq_uniformScalar
+theorem probOutput_ddhRandomExperiment_cdhToDDHReduction_eq_uniformScalar
     [Fintype F] (g : G) (hg : Function.Bijective (· • g : F → G))
     (adversary : CDHAdversary F G) :
-    Pr[= true | ddhExpRand g (cdhToDDHReduction (F := F) adversary)] =
+    Pr[= true | ddhRandomExperiment g (cdhToDDHReduction (F := F) adversary)] =
       (Fintype.card F : ℝ≥0∞)⁻¹ := by
-  simp only [ddhExpRand, cdhToDDHReduction]
+  simp only [ddhRandomExperiment, cdhToDDHReduction]
   have key : ∀ a b : F,
       Pr[= true | ($ᵗ F) >>= fun c =>
         adversary g (a • g) (b • g) >>= fun h =>
@@ -238,14 +240,14 @@ DH-target baseline `1 / |F|` by the DDH advantage of the associated adversary-ma
 theorem cdhSuccess_le_uniform_add_ddhAdvantage
     [Fintype F] (g : G) (hg : Function.Bijective (· • g : F → G))
     (adversary : CDHAdversary F G) :
-    Pr[= true | cdhExp g adversary] ≤
+    Pr[= true | cdhExperiment g adversary] ≤
       (Fintype.card F : ℝ≥0∞)⁻¹ + ddhAdvantage g (cdhToDDHReduction (F := F) adversary) := by
   have h := MeasureTheory.Measure.apply_true_le_add_boolDist
-    𝒟[ddhExpReal g (cdhToDDHReduction (F := F) adversary)]
-    𝒟[ddhExpRand g (cdhToDDHReduction (F := F) adversary)]
+    𝒟[ddhRealExperiment g (cdhToDDHReduction (F := F) adversary)]
+    𝒟[ddhRandomExperiment g (cdhToDDHReduction (F := F) adversary)]
   simp only [evalDist_apply_singleton,
-    probOutput_ddhExpRand_cdhToDDHReduction_eq_uniformScalar g hg adversary] at h
-  exact probOutput_ddhExpReal_cdhToDDHReduction_eq_cdhExp g adversary ▸ h
+    probOutput_ddhRandomExperiment_cdhToDDHReduction_eq_uniformScalar g hg adversary] at h
+  exact probOutput_ddhRealExperiment_cdhToDDHReduction_eq_cdhExperiment g adversary ▸ h
 
 end CDHToDDH
 
@@ -253,10 +255,11 @@ section DLogToCDH
 
 variable [SampleableType F]
 
-private lemma dlogExp_probOutput_eq_tsum [DecidableEq F] (g : G) (adversary : DLogAdversary F G) :
-    Pr[= true | dlogExp g adversary] =
+private lemma dlogExperiment_probOutput_eq_tsum [DecidableEq F] (g : G)
+    (adversary : DLogAdversary F G) :
+    Pr[= true | dlogExperiment g adversary] =
       ∑' x : F, Pr[= x | $ᵗ F] * Pr[= x | adversary g (x • g)] := by
-  unfold dlogExp
+  unfold dlogExperiment
   rw [probOutput_bind_eq_tsum]
   refine tsum_congr fun x => ?_
   congr 1
@@ -264,14 +267,14 @@ private lemma dlogExp_probOutput_eq_tsum [DecidableEq F] (g : G) (adversary : DL
   refine (tsum_eq_single x fun x' hx' => ?_).trans (by simp)
   simp [show (decide (x' = x) : Bool) = false by simp [hx']]
 
-private lemma cdhExp_dlogToCDHReduction_probOutput_eq_tsum [DecidableEq G] (g : G)
+private lemma cdhExperiment_dlogToCDHReduction_probOutput_eq_tsum [DecidableEq G] (g : G)
     (adversary : DLogAdversary F G) :
-    Pr[= true | cdhExp g (dlogToCDHReduction (F := F) adversary)] =
+    Pr[= true | cdhExperiment g (dlogToCDHReduction (F := F) adversary)] =
       ∑' (a : F) (b : F) (a' : F) (b' : F),
         Pr[= a | $ᵗ F] * (Pr[= b | $ᵗ F] * (Pr[= a' | adversary g (a • g)] *
           (Pr[= b' | adversary g (b • g)] *
             (if (a' * b') • g = (a * b) • g then 1 else 0)))) := by
-  unfold cdhExp dlogToCDHReduction
+  unfold cdhExperiment dlogToCDHReduction
   simp only [monad_norm, probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_left]
   refine tsum_congr fun a => tsum_congr fun b => tsum_congr fun a' => tsum_congr fun b' => ?_
   simp [probOutput_pure]
@@ -282,12 +285,12 @@ variable [DecidableEq F] [DecidableEq G]
 probability `p`, the induced CDH adversary succeeds with probability at least `p^2`. -/
 theorem dlogSuccess_sq_le_cdhSuccess_dlogToCDHReduction
     (g : G) (adversary : DLogAdversary F G) :
-    Pr[= true | dlogExp g adversary] ^ 2 ≤
-      Pr[= true | cdhExp g (dlogToCDHReduction (F := F) adversary)] := by
+    Pr[= true | dlogExperiment g adversary] ^ 2 ≤
+      Pr[= true | cdhExperiment g (dlogToCDHReduction (F := F) adversary)] := by
   set w : F → ℝ≥0∞ := fun x => Pr[= x | $ᵗ F]
   set f : F → ℝ≥0∞ := fun x => Pr[= x | adversary g (x • g)]
-  rw [sq, dlogExp_probOutput_eq_tsum, ← ENNReal.tsum_mul_right,
-    cdhExp_dlogToCDHReduction_probOutput_eq_tsum]
+  rw [sq, dlogExperiment_probOutput_eq_tsum, ← ENNReal.tsum_mul_right,
+    cdhExperiment_dlogToCDHReduction_probOutput_eq_tsum]
   refine ENNReal.tsum_le_tsum fun a => ?_
   rw [← ENNReal.tsum_mul_left]
   refine ENNReal.tsum_le_tsum fun b => ?_
@@ -313,7 +316,7 @@ adversary-map reductions. -/
 theorem dlogSuccess_sq_le_uniform_add_ddhAdvantage
     [Fintype F] (g : G) (hg : Function.Bijective (· • g : F → G))
     (adversary : DLogAdversary F G) :
-    Pr[= true | dlogExp g adversary] ^ 2 ≤
+    Pr[= true | dlogExperiment g adversary] ^ 2 ≤
       (Fintype.card F : ℝ≥0∞)⁻¹ + ddhAdvantage g (dlogToDDHReduction (F := F) adversary) :=
   (dlogSuccess_sq_le_cdhSuccess_dlogToCDHReduction g adversary).trans
     (cdhSuccess_le_uniform_add_ddhAdvantage g hg (dlogToCDHReduction (F := F) adversary))

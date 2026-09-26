@@ -36,7 +36,7 @@ structure GenerableRelation
   gen_sound (x : X) (w : W) : (x, w) ∈ support gen → r x w
 
 /-- Experiment for checking whether an adversary can find a witness for a generated instance. -/
-def hardRelationExp {X W : Type} {r : X → W → Bool} (hr : GenerableRelation X W r)
+def hardRelationExperiment {X W : Type} {r : X → W → Bool} (hr : GenerableRelation X W r)
     (adversary : X → ProbComp W) : ProbComp Bool := do
   let ⟨x, _⟩ ← hr.gen
   let w ← adversary x

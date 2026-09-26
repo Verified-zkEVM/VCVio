@@ -45,7 +45,7 @@ variable [DecidableEq K]
 
 /-- Correctness experiment: decapsulation of an honestly generated encapsulation should recover the
 shared key. -/
-def CorrectExp : m Bool :=
+def correctnessExperiment : m Bool :=
   do
     let (pk, sk) ← kem.keygen
     let (c, k) ← kem.encaps pk
@@ -54,7 +54,7 @@ def CorrectExp : m Bool :=
 
 /-- Perfect correctness of a KEM. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  runtime.evalDist kem.CorrectExp {true} = 1
+  runtime.evalDist kem.correctnessExperiment {true} = 1
 
 end Correct
 
@@ -71,43 +71,41 @@ structure IND_CPA_Adversary (_kem : KEMScheme (OracleComp spec) K PK SK C) where
 
 /-- Fixed-branch IND-CPA experiment for a KEM, matching the source proof-ladders formulation
 `Exp.run(b)`. -/
-noncomputable def IND_CPA_Exp {kem : KEMScheme (OracleComp spec) K PK SK C}
+noncomputable def IND_CPA_Experiment {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CPA_Adversary) (b : Bool) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let (pk, _sk) ← kem.keygen
-    let st ← adversary.preChallenge pk
-    let (cStar, kReal) ← kem.encaps pk
-    let kRand ← runtime.liftProbComp ($ᵗ K)
-    adversary.postChallenge st cStar (if b then kReal else kRand)
+    (adversary : kem.IND_CPA_Adversary) (b : Bool) : OracleComp spec Bool := do
+  let (pk, _sk) ← kem.keygen
+  let st ← adversary.preChallenge pk
+  let (cStar, kReal) ← kem.encaps pk
+  let kRand ← runtime.liftProbComp ($ᵗ K)
+  adversary.postChallenge st cStar (if b then kReal else kRand)
 
 /-- Single-game IND-CPA experiment obtained by sampling the challenge bit uniformly and checking
 whether the adversary guessed it correctly. -/
 noncomputable def IND_CPA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CPA_Adversary) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let (pk, _sk) ← kem.keygen
-    let st ← adversary.preChallenge pk
-    let b ← runtime.liftProbComp ($ᵗ Bool)
-    let (cStar, kReal) ← kem.encaps pk
-    let kRand ← runtime.liftProbComp ($ᵗ K)
-    let b' ← adversary.postChallenge st cStar (if b then kReal else kRand)
-    return (b == b')
+    (adversary : kem.IND_CPA_Adversary) : OracleComp spec Bool := do
+  let (pk, _sk) ← kem.keygen
+  let st ← adversary.preChallenge pk
+  let b ← runtime.liftProbComp ($ᵗ Bool)
+  let (cStar, kReal) ← kem.encaps pk
+  let kRand ← runtime.liftProbComp ($ᵗ K)
+  let b' ← adversary.postChallenge st cStar (if b then kReal else kRand)
+  return (b == b')
 
 /-- IND-CPA distinguishing advantage for a KEM, defined canonically as the bias of the single
 game. -/
 noncomputable def IND_CPA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) : ℝ≥0∞ :=
-  (IND_CPA_Game runtime adversary).boolBias
+  (runtime.evalDist (IND_CPA_Game runtime adversary)).boolBias
 
 /-- The canonical IND-CPA advantage is definitionally the bias of the single game. -/
 theorem IND_CPA_Advantage_eq_game_bias {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CPA_Adversary) :
     kem.IND_CPA_Advantage runtime adversary =
-      (kem.IND_CPA_Game runtime adversary).boolBias := rfl
+      (runtime.evalDist (kem.IND_CPA_Game runtime adversary)).boolBias := rfl
 
 end IND_CPA
 
@@ -140,22 +138,21 @@ def IND_CCA_postChallengeImpl (kem : KEMScheme (OracleComp spec) K PK SK C)
 /-- IND-CCA real-or-random experiment for a KEM. -/
 noncomputable def IND_CCA_Game {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : kem.IND_CCA_Adversary) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let (pk, sk) ← kem.keygen
-    let st ← simulateQ (kem.IND_CCA_preChallengeImpl sk) (adversary.preChallenge pk)
-    let b ← runtime.liftProbComp ($ᵗ Bool)
-    let (cStar, kReal) ← kem.encaps pk
-    let kRand ← runtime.liftProbComp ($ᵗ K)
-    let b' ← simulateQ (kem.IND_CCA_postChallengeImpl sk cStar)
-      (adversary.postChallenge st cStar (if b then kReal else kRand))
-    return (b == b')
+    (adversary : kem.IND_CCA_Adversary) : OracleComp spec Bool := do
+  let (pk, sk) ← kem.keygen
+  let st ← simulateQ (kem.IND_CCA_preChallengeImpl sk) (adversary.preChallenge pk)
+  let b ← runtime.liftProbComp ($ᵗ Bool)
+  let (cStar, kReal) ← kem.encaps pk
+  let kRand ← runtime.liftProbComp ($ᵗ K)
+  let b' ← simulateQ (kem.IND_CCA_postChallengeImpl sk cStar)
+    (adversary.postChallenge st cStar (if b then kReal else kRand))
+  return (b == b')
 
 /-- IND-CCA distinguishing advantage for a KEM. -/
 noncomputable def IND_CCA_Advantage {kem : KEMScheme (OracleComp spec) K PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : kem.IND_CCA_Adversary) : ℝ≥0∞ :=
-  (IND_CCA_Game runtime adversary).boolBias
+  (runtime.evalDist (IND_CCA_Game runtime adversary)).boolBias
 
 /-- Any IND-CPA adversary can be viewed as an IND-CCA adversary that simply ignores the
 decapsulation oracle while preserving its ordinary pre-challenge interaction with the base

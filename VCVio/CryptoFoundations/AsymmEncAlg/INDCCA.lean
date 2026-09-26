@@ -72,22 +72,21 @@ the challenge ciphertext and continues interacting with a decryption oracle that
 on the challenge ciphertext. -/
 noncomputable def IND_CCA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : encAlg.IND_CCA_Adversary) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let (pk, sk) ← encAlg.keygen
-    let (m₀, m₁, st) ← simulateQ (encAlg.IND_CCA_preChallengeImpl sk)
-      (adversary.chooseMessages pk)
-    let b ← runtime.liftProbComp ($ᵗ Bool)
-    let cStar ← encAlg.encrypt pk (if b then m₀ else m₁)
-    let b' ← simulateQ (encAlg.IND_CCA_postChallengeImpl sk cStar)
-      (adversary.distinguish st cStar)
-    return (b == b')
+    (adversary : encAlg.IND_CCA_Adversary) : OracleComp spec Bool := do
+  let (pk, sk) ← encAlg.keygen
+  let (m₀, m₁, st) ← simulateQ (encAlg.IND_CCA_preChallengeImpl sk)
+    (adversary.chooseMessages pk)
+  let b ← runtime.liftProbComp ($ᵗ Bool)
+  let cStar ← encAlg.encrypt pk (if b then m₀ else m₁)
+  let b' ← simulateQ (encAlg.IND_CCA_postChallengeImpl sk cStar)
+    (adversary.distinguish st cStar)
+  return (b == b')
 
-/-- Real-valued IND-CCA advantage, expressed as the Boolean bias of the IND-CCA game. -/
+/-- IND-CCA advantage: the Boolean bias of the IND-CCA game under `runtime`. -/
 noncomputable def IND_CCA_Advantage {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : encAlg.IND_CCA_Adversary) : ℝ≥0∞ :=
-  (IND_CCA_Game runtime adversary).boolBias
+  (runtime.evalDist (IND_CCA_Game runtime adversary)).boolBias
 
 end IND_CCA
 

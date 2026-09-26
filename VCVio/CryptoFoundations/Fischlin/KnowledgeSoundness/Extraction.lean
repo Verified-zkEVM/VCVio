@@ -230,7 +230,7 @@ output is either `none` or an invalid witness.
 The `prover` argument is the raw function rather than `KnowledgeSoundnessAdversary`
 to keep type inference tractable. -/
 @[expose]
-def knowledgeSoundnessExp
+def knowledgeSoundnessExperiment
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
@@ -249,7 +249,7 @@ def knowledgeSoundnessExp
     let extracted ← onlineExtract σ ρ b M x π roLog
     return (verified && !(match extracted with | some w => rel x w | none => false))
 
-/-- The verification step of `knowledgeSoundnessExp`, as a standalone computation
+/-- The verification step of `knowledgeSoundnessExperiment`, as a standalone computation
 (definitionally the same term). -/
 private def ksVerify
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
@@ -262,8 +262,8 @@ private def ksVerify
     ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
       σ hr ρ b S M).verify x msg π)).run cache
 
-/-- The sampling phase of `knowledgeSoundnessExp` (prover run + verification), keeping the proof,
-the random-oracle log, and the verdict, but discarding the extractor. -/
+/-- The sampling phase of `knowledgeSoundnessExperiment` (prover run + verification), keeping the
+proof, the random-oracle log, and the verdict, but discarding the extractor. -/
 private def ksSample
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (prover : Stmt → M →
@@ -310,7 +310,7 @@ The hypothesis `hverSupp` isolates the remaining combinatorial fact about the Fi
 any accepting run of the (simulated) verifier implies per-repetition Σ-verification of the proof
 (the Σ-verification bits inside `Fischlin.verify` are deterministic, independent of the oracle
 answers). -/
-private lemma knowledgeSoundnessExp_bad_le_misses
+private lemma knowledgeSoundnessExperiment_bad_le_misses
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (hss : σ.SpeciallySound)
     (prover : Stmt → M →
@@ -322,10 +322,10 @@ private lemma knowledgeSoundnessExp_bad_le_misses
       (c' : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache),
       (true, c') ∈ support (ksVerify σ hr ρ b S M x msg π cache) →
       ∀ i, σ.verify x (π i).1 (π i).2.1 (π i).2.2 = true) :
-    Pr[= true | knowledgeSoundnessExp σ hr ρ b S M prover x msg] ≤
+    Pr[= true | knowledgeSoundnessExperiment σ hr ρ b S M prover x msg] ≤
       Pr[fun out => out.2 = true ∧ fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none
         | ksSample σ hr ρ b S M prover x msg] := by
-  simp only [knowledgeSoundnessExp, ksSample]
+  simp only [knowledgeSoundnessExperiment, ksSample]
   rw [probOutput_bind_eq_tsum, probEvent_bind_eq_tsum]
   refine ENNReal.tsum_le_tsum fun a => mul_le_mul' le_rfl ?_
   obtain ⟨⟨π', roLog'⟩, cache'⟩ := a
@@ -353,19 +353,19 @@ end extraction
 /-! ### Logged and unlogged random-oracle runs -/
 
 /-- The lifted `unifSpec` forwarder on the logging stack, exactly as in
-`knowledgeSoundnessExp`. -/
+`knowledgeSoundnessExperiment`. -/
 private def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   unifSpec.passthrough
 
-/-- The logged random oracle, exactly as in `knowledgeSoundnessExp`. -/
+/-- The logged random oracle, exactly as in `knowledgeSoundnessExperiment`. -/
 private def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl hashSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (hashSpec.randomOracle).withLogging
 
 /-- The combined logging implementation, exactly the `unifSpec.passthrough + loggedRO` of
-`knowledgeSoundnessExp` and `ksSample`. -/
+`knowledgeSoundnessExperiment` and `ksSample`. -/
 private def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl (unifSpec + hashSpec)

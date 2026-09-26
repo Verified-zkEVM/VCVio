@@ -15,18 +15,18 @@ import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 
 Top-level PRF reduction for the tag/reader unlinkability game of `Examples.PRFTagReader`. The
 unlinkability advantage `unlinkabilityAdvantage` is the Boolean distance between the
-multiple-session world `unlinkMultipleExp` (all sessions of a tag share one secret) and the
-single-session world `unlinkSingleExp` (each session uses an independent secret).
+multiple-session world `unlinkMultipleExperiment` (all sessions of a tag share one secret) and the
+single-session world `unlinkSingleExperiment` (each session uses an independent secret).
 
 The reduction chains three Boolean distances through the triangle inequality:
 
-* a PRF hop replacing `prfs.evalMultiple` by a lazy random function turns `unlinkMultipleExp` into
-  the ideal-PRF world of `unlinkToMultiplePRFReduction`;
+* a PRF hop replacing `prfs.evalMultiple` by a lazy random function turns `unlinkMultipleExperiment`
+  into the ideal-PRF world of `unlinkToMultiplePRFReduction`;
 * the coupling `unlinkPRFIdeal_boolDist_le_unlinkBad` bounds the distance between the two
   random-function worlds by the `multipleBadQueryImpl` bad-flag probability (the within-tag
   nonce-collision mass) and three unconditional slack terms;
-* a second PRF hop replacing `prfs.evalSingle` turns `unlinkSingleExp` into the ideal-PRF world of
-  `unlinkToSinglePRFReduction`.
+* a second PRF hop replacing `prfs.evalSingle` turns `unlinkSingleExperiment` into the ideal-PRF
+  world of `unlinkToSinglePRFReduction`.
 
 The headline is `unlinkabilityAdvantage_le_two_prf_plus_collision`. Chaining
 `multipleBad_bad_le_sessionCollisionBound` yields the explicit session-collision bound
@@ -56,12 +56,12 @@ experiments is bounded by one PRF advantage for each world, the bad-event probab
 intermediate nonce-collision world, and three unconditional slack terms. The bound holds for every
 adversary.
 
-The proof chains `unlinkMultipleExp`, the two ideal-PRF worlds and `unlinkSingleExp` through the
-triangle inequality for `Measure.boolDist`: the outer distances are the two PRF advantages and the
-middle distance is `unlinkPRFIdeal_boolDist_le_unlinkBad`. Each slack is charged by an identified
-proof step in the direct coupling: the single-session world keys `sessionsPerTag` times more
-random-oracle cells than the multiple-session world, an unconditional cell-count gap unrelated to
-nonce collisions. They comprise the reader-cell slacks
+The proof chains `unlinkMultipleExperiment`, the two ideal-PRF worlds and `unlinkSingleExperiment`
+through the triangle inequality for `Measure.boolDist`: the outer distances are the two PRF
+advantages and the middle distance is `unlinkPRFIdeal_boolDist_le_unlinkBad`. Each slack is charged
+by an identified proof step in the direct coupling: the single-session world keys `sessionsPerTag`
+times more random-oracle cells than the multiple-session world, an unconditional cell-count gap
+unrelated to nonce collisions. They comprise the reader-cell slacks
 `qReader * Fintype.card TagId / Fintype.card Digest` and
 `qReader * Fintype.card TagId * sessionsPerTag / Fintype.card Digest` (the latter charged at the
 discarded reader step via `probEvent_cacheBadReader_uniformSample_le`), and the nonce-aliasing
@@ -96,11 +96,11 @@ theorem unlinkabilityAdvantage_le_two_prf_plus_collision [DecidableEq Nonce]
   have hideal := unlinkPRFIdeal_boolDist_le_unlinkBad (sessionsPerTag := sessionsPerTag)
     adversary qReader qTag hqReader hqTag
   rw [unlinkabilityAdvantage, PRFScheme.prfAdvantage, PRFScheme.prfAdvantage,
-    prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp,
-    prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp]
-  set multipleIdeal := 𝒟[PRFScheme.prfIdealExp
+    prfRealExperiment_unlinkToMultiplePRFReduction_eq_unlinkMultipleExperiment,
+    prfRealExperiment_unlinkToSinglePRFReduction_eq_unlinkSingleExperiment]
+  set multipleIdeal := 𝒟[PRFScheme.prfIdealExperiment
     (unlinkToMultiplePRFReduction (sessionsPerTag := sessionsPerTag) adversary)]
-  set singleIdeal := 𝒟[PRFScheme.prfIdealExp
+  set singleIdeal := 𝒟[PRFScheme.prfIdealExperiment
     (unlinkToSinglePRFReduction (sessionsPerTag := sessionsPerTag) adversary)]
   calc _ ≤ _ + multipleIdeal.boolDist _ := Measure.boolDist_triangle _ multipleIdeal _
     _ ≤ _ + (multipleIdeal.boolDist singleIdeal + singleIdeal.boolDist _) := by

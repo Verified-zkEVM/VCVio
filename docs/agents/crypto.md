@@ -55,8 +55,8 @@ structure CommitmentScheme (PP M C D : Type) where
 
 Defined in
 [`VCVio/CryptoFoundations/CommitmentScheme.lean`](../../VCVio/CryptoFoundations/CommitmentScheme.lean)
-together with `PerfectlyCorrect`, `PerfectlyHiding`, `hidingExp`,
-`bindingExp`, and `extractExp`. The standard-model `binding ≤ keyed-CR ≤
+together with `PerfectlyCorrect`, `PerfectlyHiding`, `hidingGame`,
+`bindingExperiment`, and `extractExperiment`. The standard-model `binding ≤ keyed-CR ≤
 birthday` bridge from a `KeyedHashFamily` lives in
 [`VCVio/CryptoFoundations/HashCommitment.lean`](../../VCVio/CryptoFoundations/HashCommitment.lean)
 as `bindingAdvantage_toCommitment_le_keyedCRAdvantage`.
@@ -113,6 +113,34 @@ Used by ML-DSA and the Fiat-Shamir with Aborts transform.
 
 ## Security Experiments
 
+### Naming
+
+- The adversary type of a notion is `<Notion>Adversary`, as in
+  `SignatureAlg.UnforgeableAdversary`. Inside a namespace named after the notion it is plain
+  `Adversary`, as in `SIS.Adversary`.
+- A notion has one token, used in every name that refers to it: uppercase in types and lowercase
+  in definitions and lemmas (`UnforgeableAdversary`, `unforgeableExperiment`,
+  `unforgeableAdvantage`). An underscore acronym keeps its capitals everywhere (`IND_CPA_Game`,
+  `IND_CPA_Advantage`).
+- An experiment is a program, for example of type `OracleComp spec Bool`, not a measure, and its
+  name ends in `Experiment`. When a notion has several worlds, the world word comes first:
+  `prfRealExperiment` and `prfIdealExperiment`. The world words are Real and Ideal, with Random
+  in place of Ideal for a real-or-random notion (`ddhRandomExperiment`).
+- `<notion>Game` is the hidden-bit experiment, which samples a fair bit and returns whether the
+  adversary guessed it, as in `CommitmentScheme.hidingGame`.
+- Inside a namespace named after the notion, the experiment is plain `experiment` and the
+  hidden-bit game plain `game`, as in `SIS.experiment` and `NoisyLearning.game`.
+- Hybrids and intermediate games of a proof are `game0`, `game1`, … or `hybrid…`, declared inside
+  the proof's namespace, as in `KEMDEM.hybrid`.
+- The advantage is `<notion>Advantage` in the scheme or problem namespace, or plain `advantage`
+  inside a namespace named after the notion (`NoisyLearning.advantage`). It is `ℝ≥0∞`-valued.
+  When the experiment runs in a generic monad, the advantage takes the runtime and evaluates the
+  experiment with `runtime.evalDist`: `SignatureAlg.unforgeableAdvantage runtime adv` is
+  `runtime.evalDist (unforgeableExperiment adv) {true}`. A `ProbComp` experiment is evaluated
+  with `𝒟[…]`, as in `DiffieHellman.ddhAdvantage`.
+- Correctness and completeness experiments are lowercase `correctnessExperiment` and
+  `completenessExperiment`, as in `AsymmEncAlg.correctnessExperiment`.
+
 ### `BoundedAdversary`
 
 ```lean
@@ -127,16 +155,18 @@ structure BoundedAdversary {ι : Type u} [DecidableEq ι]
 
 ### Advantage functions
 
-Every advantage is `ℝ≥0∞`-valued. The advantage of a hidden-bit guessing game is the
-`Measure.boolBias` of its measure, `absDiff (μ {true}) (μ {false})`, which for a total game is
-twice the distance of the success probability from `1 / 2`
-(`Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure`). The advantage of a
-distinguisher between two worlds is the `Measure.boolDist` of their measures,
+Every advantage is `ℝ≥0∞`-valued and is a function of the measures `runtime.evalDist` assigns to the
+experiments. The advantage of a hidden-bit guessing game is the `Measure.boolBias` of its measure,
+`absDiff (μ {true}) (μ {false})`, which for a total game is twice the distance of the success
+probability from `1 / 2` (`Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure`). The
+advantage of a distinguisher between two worlds is the `Measure.boolDist` of their measures,
 `absDiff (μ {true}) (ν {true})`. A search or forgery advantage is a success probability
-`𝒟[exp] {true}`. `ENNReal.absDiff` is the extended distance on `ℝ≥0∞`, so no truncated subtraction
-occurs; `Measure.toReal_boolDist` and `Measure.toReal_boolBias` give the absolute real difference
-when a proof needs real arithmetic. A one-sided gap, such as the difference of two success
-probabilities without absolute value, is a real-valued lemma rather than an advantage.
+`runtime.evalDist exp {true}`, which is `𝒟[exp] {true}` for `ProbComp`. `ENNReal.absDiff` is the
+extended distance on `ℝ≥0∞` (`ENNReal.absDiff_eq_edist`), so neither direction of the gap is
+lost to truncation; `Measure.toReal_boolDist` and
+`Measure.toReal_boolBias` give the absolute real difference when a proof needs real arithmetic. A
+one-sided gap, such as the difference of two success probabilities without absolute value, is a
+real-valued lemma rather than an advantage.
 
 ### Random oracle model
 
@@ -202,9 +232,9 @@ Uses additive / EC-style notation: `a • g` means scalar multiplication (textbo
 
 | Problem | Adversary type | Experiment |
 |---------|---------------|------------|
-| DLog | `DLogAdversary F G` (= `G → G → ProbComp F`) | `dlogExp g adversary` |
-| CDH | `CDHAdversary F G` (= `G → G → G → ProbComp G`) | `cdhExp g adversary` |
-| DDH | `DDHAdversary F G` (= `G → G → G → G → ProbComp Bool`) | `ddhExp g adversary` |
+| DLog | `DLogAdversary F G` (= `G → G → ProbComp F`) | `dlogExperiment g adversary` |
+| CDH | `CDHAdversary F G` (= `G → G → G → ProbComp G`) | `cdhExperiment g adversary` |
+| DDH | `DDHAdversary F G` (= `G → G → G → G → ProbComp Bool`) | `ddhGame g adversary` |
 
 `CDHAdversary` and `DDHAdversary` carry a phantom `_F` parameter so Lean can infer the scalar field at call sites.
 
@@ -248,7 +278,7 @@ adversary:
 ```lean
 theorem signature_euf_cma ... :
     eps * (eps / (qH + 1) - challengeSpaceInv F) ≤
-      Pr[= true | dlogExp g (dlogReduction F G g M adv qH)]
+      Pr[= true | dlogExperiment g (dlogReduction F G g M adv qH)]
 ```
 
 Do not quantify over the target adversary:
@@ -257,7 +287,7 @@ Do not quantify over the target adversary:
 -- Do not write this.
 theorem signature_euf_cma ... :
     ∃ reduction : DLogAdversary F G,
-      eps * (eps / (qH + 1) - challengeSpaceInv F) ≤ Pr[= true | dlogExp g reduction]
+      eps * (eps / (qH + 1) - challengeSpaceInv F) ≤ Pr[= true | dlogExperiment g reduction]
 ```
 
 The existential form holds for every source adversary, so it says nothing about the scheme.
@@ -271,8 +301,8 @@ The reasons are specific to how adversaries are represented here.
 - **Lean is classical.** A term may choose a witness with `Classical.choice`, so the unbounded
   adversary does not even need to search. For a `GenerableRelation`, `gen_sound` gives a
   witness for every statement in the support of `gen`, and the reduction
-  `fun x => pure (if h : ∃ w, r x w then h.choose else default)` wins `hardRelationExp` with
-  probability exactly `1`. Any bound of the form `∃ B, f ≤ Pr[= true | hardRelationExp hr B]`
+  `fun x => pure (if h : ∃ w, r x w then h.choose else default)` wins `hardRelationExperiment` with
+  probability exactly `1`. Any bound of the form `∃ B, f ≤ Pr[= true | hardRelationExperiment hr B]`
   with `f ≤ 1` is then provable without looking at the scheme.
 - **No existing check catches it.** The vacuous theorem is true, `sorry`-free, and depends only
   on the standard axioms, so `#print axioms` does not flag it. Checking that the hypotheses are
@@ -311,8 +341,8 @@ generation.
 
 For a hand-written q-query IND-CPA → DDH hybrid proof:
 
-1. Define `HybridGame adversary k`: first `k` queries use real encryption, rest use random
-2. `HybridGame 0 = IND-CPA random`, `HybridGame q = IND-CPA real`
+1. Define `hybrid adversary k`: first `k` queries use real encryption, rest use random
+2. `hybrid adversary 0 = IND-CPA random`, `hybrid adversary q = IND-CPA real`
 3. Per-step reduction: `stepDDHReduction adversary k` maps DDH challenge to hybrid k vs k+1
 4. Telescope: `advantage ≤ q * max_per_step_advantage`
 
@@ -401,4 +431,4 @@ Key results: `fst_map_costDist` (instrumentation is transparent),
 
 2. **`SymmEncAlg` vs `AsymmEncAlg`**: both are monad-parametric, but symmetric schemes carry a single key type while asymmetric schemes split public and secret keys. Pick the monad at the experiment boundary.
 
-3. **DDH experiment uses `$ᵗ Bool`**: the experiment samples a bit `b`, returns real or random based on `b`, then checks `b == b'`.
+3. **`ddhGame` uses `$ᵗ Bool`**: the game samples a bit `b`, returns real or random based on `b`, then checks `b == b'`.

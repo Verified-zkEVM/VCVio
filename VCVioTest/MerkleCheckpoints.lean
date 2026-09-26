@@ -31,10 +31,10 @@ example : Drift model.view (outcome false) ∧ ¬ Drift model.view (outcome true
 -- The drift charge is sharp on the actual executable game.
 example :
     letI : MeasurableSpace (Transcript Unit Query Unit Bool config) := ⊤
-    𝒟[extractabilityGame model config 1 adversary]
+    𝒟[extractabilityExperiment model config 1 adversary]
         {tr | tr.HasOpeningOrEqualRootDisagreement model} =
-      𝒟[extractabilityGame model config 1 adversary] {tr | LateOpeningFailure model.view tr} +
-      𝒟[extractabilityGame model config 1 adversary] {tr | Drift model.view tr} := by
+      𝒟[extractabilityExperiment model config 1 adversary] {tr | LateOpeningFailure model.view tr} +
+      𝒟[extractabilityExperiment model config 1 adversary] {tr | Drift model.view tr} := by
   rw [publicFailure_probability, lateFailure_probability, drift_probability, zero_add]
 
 example : 𝒟[honestShared] {true} - 𝒟[honestReset] {true} = (1 : ENNReal) / 2 := by

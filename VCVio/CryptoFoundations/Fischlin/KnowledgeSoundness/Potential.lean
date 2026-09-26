@@ -408,7 +408,7 @@ private lemma verify_probOutput_true_mixed
 of the simulated Fischlin verifier implies the per-repetition Σ-protocol checks of the proof:
 the Σ-verification bits inside `verify` are deterministic and independent of the oracle
 answers, so a `false` bit forces acceptance probability zero. Discharges the `hverSupp`
-hypothesis of `knowledgeSoundnessExp_bad_le_misses`. -/
+hypothesis of `knowledgeSoundnessExperiment_bad_le_misses`. -/
 private lemma ksVerify_true_support_allVerified
     [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp] [DecidableEq M]
     [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
@@ -434,10 +434,10 @@ private lemma ksVerify_true_support_allVerified
     ite_eq_right hall, zero_mul, ENNReal.zero_div] at hpos
   exact lt_irrefl 0 hpos
 
-/-- `knowledgeSoundnessExp_bad_le_misses` with the verifier-determinism hypothesis discharged:
-the knowledge-soundness bad event is bounded by the probability that the verifier accepts
-while the extractor's scan misses. -/
-private lemma knowledgeSoundnessExp_bad_le_misses'
+/-- `knowledgeSoundnessExperiment_bad_le_misses` with the verifier-determinism hypothesis
+discharged: the knowledge-soundness bad event is bounded by the probability that the verifier
+accepts while the extractor's scan misses. -/
+private lemma knowledgeSoundnessExperiment_bad_le_misses'
     [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp] [DecidableEq M]
     [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
     (hss : σ.SpeciallySound)
@@ -445,10 +445,10 @@ private lemma knowledgeSoundnessExp_bad_le_misses'
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
     (x : Stmt) (msg : M) :
-    Pr[= true | knowledgeSoundnessExp σ hr ρ b S M prover x msg] ≤
+    Pr[= true | knowledgeSoundnessExperiment σ hr ρ b S M prover x msg] ≤
       Pr[fun out => out.2 = true ∧ fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none
         | ksSample σ hr ρ b S M prover x msg] :=
-  knowledgeSoundnessExp_bad_le_misses σ hr ρ b S M hss prover x msg
+  knowledgeSoundnessExperiment_bad_le_misses σ hr ρ b S M hss prover x msg
     (fun π cache c' h => ksVerify_true_support_allVerified σ hr ρ b S M x msg π cache c' h)
 
 /-- Number of unrevealed coordinates of a partial hash assignment. -/

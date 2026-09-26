@@ -343,26 +343,26 @@ lemma simulateQ_singleIdeal_collapse
 
 /-- The multiple-session ideal-PRF experiment is the composed handler `multipleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
-lemma prfIdealExp_unlinkToMultiplePRFReduction_eq_run'
+lemma prfIdealExperiment_unlinkToMultiplePRFReduction_eq_run'
     (adv : UnlinkAdversary TagId Nonce Digest) :
-    PRFScheme.prfIdealExp (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
+    PRFScheme.prfIdealExperiment (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adv) =
       (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run' (UnlinkState.init, ∅) := by
-  unfold PRFScheme.prfIdealExp unlinkToMultiplePRFReduction
+  unfold PRFScheme.prfIdealExperiment unlinkToMultiplePRFReduction
   simp only [StateT.run'_eq, simulateQ_map, StateT.run_map]
   rw [simulateQ_multipleIdeal_collapse adv UnlinkState.init ∅]
   simp only [Functor.map_map]
 
 /-- The single-session ideal-PRF experiment is the composed handler `singleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
-lemma prfIdealExp_unlinkToSinglePRFReduction_eq_run'
+lemma prfIdealExperiment_unlinkToSinglePRFReduction_eq_run'
     (adv : UnlinkAdversary TagId Nonce Digest) :
-    PRFScheme.prfIdealExp (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
+    PRFScheme.prfIdealExperiment (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adv) =
       (simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run' (UnlinkState.init, ∅) := by
-  unfold PRFScheme.prfIdealExp unlinkToSinglePRFReduction
+  unfold PRFScheme.prfIdealExperiment unlinkToSinglePRFReduction
   simp only [StateT.run'_eq, simulateQ_map, StateT.run_map]
   rw [simulateQ_singleIdeal_collapse adv UnlinkState.init ∅]
   simp only [Functor.map_map]

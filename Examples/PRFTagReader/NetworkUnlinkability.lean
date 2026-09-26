@@ -59,15 +59,15 @@ def realSingle (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
 theorem realMultiple_eq (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
     (hbound : IsTotalQueryBound adversary budget) :
-    realMultiple prfs budget adversary = unlinkMultipleExp prfs adversary := by
-  unfold realMultiple unlinkMultipleExp
+    realMultiple prfs budget adversary = unlinkMultipleExperiment prfs adversary := by
+  unfold realMultiple unlinkMultipleExperiment
   exact bind_congr fun key => Network.verdict_eq _ _ _ hbound _
 
 theorem realSingle_eq (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
     (hbound : IsTotalQueryBound adversary budget) :
-    realSingle prfs budget adversary = unlinkSingleExp prfs adversary := by
-  unfold realSingle unlinkSingleExp
+    realSingle prfs budget adversary = unlinkSingleExperiment prfs adversary := by
+  unfold realSingle unlinkSingleExperiment
   exact bind_congr fun key => Network.verdict_eq _ _ _ hbound _
 
 /-- The PRF advantages of the two named distinguishers, with no existential witness. -/
@@ -123,21 +123,21 @@ theorem idealMultiple_eq (budget : Nat) (adversary : UnlinkAdversary TagId Nonce
     (hbound : IsTotalQueryBound adversary budget) :
     Network.verdict (CachedPRF.multiple (sessionsPerTag := sessionsPerTag))
       budget adversary (UnlinkState.init, []) =
-    PRFScheme.prfIdealExp (unlinkToMultiplePRFReduction
+    PRFScheme.prfIdealExperiment (unlinkToMultiplePRFReduction
       (sessionsPerTag := sessionsPerTag) adversary) := by
   rw [CachedPRF.verdict_projection _ _ CachedPRF.projectMultiple CachedPRF.multiple_local
     _ _ hbound, Network.verdict_eq _ _ _ hbound,
-    prfIdealExp_unlinkToMultiplePRFReduction_eq_run', CachedPRF.projectMultiple_init]
+    prfIdealExperiment_unlinkToMultiplePRFReduction_eq_run', CachedPRF.projectMultiple_init]
 
 theorem idealSingle_eq (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
     (hbound : IsTotalQueryBound adversary budget) :
     Network.verdict (CachedPRF.single (sessionsPerTag := sessionsPerTag))
       budget adversary (UnlinkState.init, []) =
-    PRFScheme.prfIdealExp (unlinkToSinglePRFReduction
+    PRFScheme.prfIdealExperiment (unlinkToSinglePRFReduction
       (sessionsPerTag := sessionsPerTag) adversary) := by
   rw [CachedPRF.verdict_projection _ _ CachedPRF.projectSingle CachedPRF.single_local
     _ _ hbound, Network.verdict_eq _ _ _ hbound,
-    prfIdealExp_unlinkToSinglePRFReduction_eq_run', CachedPRF.projectSingle_init]
+    prfIdealExperiment_unlinkToSinglePRFReduction_eq_run', CachedPRF.projectSingle_init]
 
 theorem single_prf_hop (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (budget : Nat) (adversary : UnlinkAdversary TagId Nonce Digest)
@@ -149,7 +149,7 @@ theorem single_prf_hop (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag
         budget adversary (UnlinkState.init, [])] {true}).toReal| := by
   rw [realSingle_eq _ _ _ hbound, idealSingle_eq _ _ hbound]
   simp only [PRFScheme.prfAdvantage, MeasureTheory.Measure.toReal_boolDist,
-    prfRealExp_unlinkToSinglePRFReduction_eq_unlinkSingleExp]
+    prfRealExperiment_unlinkToSinglePRFReduction_eq_unlinkSingleExperiment]
 
 /-- The actual multiple-world PRF hop ends in the association-list ideal packet experiment. -/
 theorem multiple_prf_hop [NeZero sessionsPerTag]
@@ -163,7 +163,7 @@ theorem multiple_prf_hop [NeZero sessionsPerTag]
         budget adversary (UnlinkState.init, [])] {true}).toReal| := by
   rw [realMultiple_eq _ _ _ hbound, idealMultiple_eq _ _ hbound]
   simp only [PRFScheme.prfAdvantage, MeasureTheory.Measure.toReal_boolDist,
-    prfRealExp_unlinkToMultiplePRFReduction_eq_unlinkMultipleExp]
+    prfRealExperiment_unlinkToMultiplePRFReduction_eq_unlinkMultipleExperiment]
 
 /-- The changed-cache network's collision probability has the same closed-form bound. -/
 theorem collision_bound [Fintype Nonce] (adversary : UnlinkAdversary TagId Nonce Digest)

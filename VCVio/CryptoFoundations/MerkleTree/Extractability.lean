@@ -228,7 +228,7 @@ private lemma extractedTargets_toFinset_card_le_cacheKeys
 The oracle syntax underlying the extractability experiment. It runs the committing
 adversary, snapshots that phase's query log for the extractor, runs the opening adversary,
 and finally verifies the opening. Random-function consistency is supplied separately by
-`extractabilityGame`.
+`extractabilityExperiment`.
 -/
 def extractabilityInner (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (𝒜 : Adversary Query Y s) :
@@ -312,8 +312,8 @@ def OpeningExtractionFailure {s : Skeleton} {AuxState : Type} :
 /-- The Merkle-tree extractability experiment in the random-oracle model. All queries made
 by the committing adversary, opening adversary, and verifier are interpreted through one
 shared cache, so repeated equal inputs receive the same answer. -/
-def extractabilityGame [DecidableEq Query] (model : NodeQueryModel Query Address Y) {s : Skeleton}
-    (addressKey : SkeletonInternalIndex s → Address) (𝒜 : Adversary Query Y s) :
+def extractabilityExperiment [DecidableEq Query] (model : NodeQueryModel Query Address Y)
+    {s : Skeleton} (addressKey : SkeletonInternalIndex s → Address) (𝒜 : Adversary Query Y s) :
     OracleComp (Query →ₒ Y) (Y × 𝒜.AuxState ×
         ((idx : SkeletonLeafIndex s) × Y × List.Vector Y idx.depth ×
          FullData (Option Y) s × List.Vector (Option Y) idx.depth × Bool)) :=
@@ -366,12 +366,12 @@ theorem extractabilityInner_isTotalQueryBound
 /-- The shared-cache random-oracle experiment makes at most as many underlying fresh
 queries as `extractabilityInner`. Cache hits skip the underlying query, so the implication
 is intentionally one-way. -/
-theorem extractabilityGame_isTotalQueryBound [DecidableEq Query]
+theorem extractabilityExperiment_isTotalQueryBound [DecidableEq Query]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    IsTotalQueryBound (extractabilityGame model addressKey 𝒜) (qb + s.depth) := by
+    IsTotalQueryBound (extractabilityExperiment model addressKey 𝒜) (qb + s.depth) := by
   apply (isQueryBound_map_iff _ _ (qb + s.depth) _ _).mpr
   exact IsTotalQueryBound.simulateQ_run_withCaching _
     (extractabilityInner_isTotalQueryBound model addressKey 𝒜 qb h)
@@ -541,14 +541,14 @@ private lemma extractabilityRunFrom_le_potential [DecidableEq Query]
     using hgeneric
 
 /-- Initialize the stopping-time induction at the empty cache and empty log, then transport
-the combined caching/logging semantics back to `extractabilityGame`. -/
+the combined caching/logging semantics back to `extractabilityExperiment`. -/
 private lemma extractability_win_le_stopping_bound [DecidableEq Query]
     [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityExperiment model addressKey 𝒜] ≤
       (extractabilityExactPotential (2 * s.leafCount - 1) s.depth qb 0 : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
   have hmain : Pr[fun z => OpeningExtractionFailure z.1 |
@@ -566,7 +566,7 @@ private lemma extractability_win_le_stopping_bound [DecidableEq Query]
   rw [extractabilityRunFrom, adaptivePrefixRunFrom,
     cachingLoggingOracle.run_simulateQ_eq_map_run_simulateQ_withQueryLog] at hmain
   simp only [List.nil_append] at hmain
-  rw [extractabilityGame, OracleSpec.withCacheOverlay, StateT.run'_eq,
+  rw [extractabilityExperiment, OracleSpec.withCacheOverlay, StateT.run'_eq,
     extractabilityInner_eq_commit_bind_rest model addressKey, simulateQ_bind, StateT.run_bind,
     probEvent_map]
   simpa [Function.comp_def] using hmain
@@ -594,7 +594,7 @@ theorem extractability_rom_bound [DecidableEq Query]
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityExperiment model addressKey 𝒜] ≤
       (extractabilityROMErrorNumerator s qb : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
   have hbound := extractability_win_le_stopping_bound model addressKey 𝒜 qb h
@@ -682,7 +682,7 @@ theorem extractability_rom_bound_coarse [DecidableEq Query]
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityExperiment model addressKey 𝒜] ≤
       ((max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
         (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
@@ -698,7 +698,7 @@ theorem extractability_rom_bound_birthday_dominates [DecidableEq Query]
     (𝒜 : Adversary Query Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
-    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityExperiment model addressKey 𝒜] ≤
       ((qb.choose 2 + (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
   let targetCount := 2 * s.leafCount - 1
@@ -722,7 +722,7 @@ theorem extractability_rom_bound_quadratic [DecidableEq Query]
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)
     (hdepth : 2 * (2 * s.leafCount - 1) * s.depth ≤ qb) :
-    Pr[OpeningExtractionFailure | extractabilityGame model addressKey 𝒜] ≤
+    Pr[OpeningExtractionFailure | extractabilityExperiment model addressKey 𝒜] ≤
       (qb : ENNReal) ^ 2 / (2 * Fintype.card Y) := by
   let targetCount := 2 * s.leafCount - 1
   let numerator := qb.choose 2 + targetCount * s.depth

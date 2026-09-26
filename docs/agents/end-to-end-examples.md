@@ -27,7 +27,7 @@ on a single concrete scheme. Reading order:
    extraction via the replay forking lemma and special soundness, for the
    witness finder `nmaReduction`), composed in `euf_cma_bound` for
    `cmaReduction`. The reductions are named in every statement:
-   `∃ reduction, bound ≤ Pr[= true | hardRelationExp hr reduction]` holds
+   `∃ reduction, bound ≤ Pr[= true | hardRelationExperiment hr reduction]` holds
    trivially, because a classical choice of witness per statement succeeds with
    probability `1`.
 4. **Forking lemma:** the replay-based forking lemma lives in
@@ -44,7 +44,7 @@ The combined statement, `Schnorr.signature_euf_cma`, instantiates
 Pointcheval-Stern bound
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction adv qH succeeds in dlogExp g ],
+ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction adv qH succeeds in dlogExperiment g ],
 ε' := ε  -  qS · (qS + qH) / |F|,
 ```
 

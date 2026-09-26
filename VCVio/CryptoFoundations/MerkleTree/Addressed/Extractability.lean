@@ -48,10 +48,10 @@ def inner [DecidableEq Address] [DecidableEq Y] {s : Skeleton}
   MerkleTreeExtractability.extractabilityInner queryModel addressKey 𝒜
 
 /-- One shared lazy random function interprets commit, opening, and verification queries. -/
-def game [DecidableEq Address] [DecidableEq Y] {s : Skeleton}
+def experiment [DecidableEq Address] [DecidableEq Y] {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) :=
-  MerkleTreeExtractability.extractabilityGame queryModel addressKey 𝒜
+  MerkleTreeExtractability.extractabilityExperiment queryModel addressKey 𝒜
 
 /-- Exact stopping-time ROM extractability bound for complete addressed queries. -/
 theorem rom_bound [DecidableEq Address] [DecidableEq Y] [Fintype Y] [Inhabited Y]
@@ -60,10 +60,10 @@ theorem rom_bound [DecidableEq Address] [DecidableEq Y] [Fintype Y] [Inhabited Y
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
     Pr[MerkleTreeExtractability.OpeningExtractionFailure |
-      game addressKey 𝒜] ≤
+      experiment addressKey 𝒜] ≤
       (MerkleTreeExtractability.extractabilityROMErrorNumerator s qb : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
-  simpa [game] using
+  simpa [experiment] using
     MerkleTreeExtractability.extractability_rom_bound queryModel addressKey 𝒜 qb h
 
 /-- Unconditional two-endpoint relaxation of `rom_bound`. -/
@@ -73,11 +73,11 @@ theorem rom_bound_coarse [DecidableEq Address] [DecidableEq Y] [Fintype Y] [Inha
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
     Pr[MerkleTreeExtractability.OpeningExtractionFailure |
-      game addressKey 𝒜] ≤
+      experiment addressKey 𝒜] ≤
       ((max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
         (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
-  simpa [game] using
+  simpa [experiment] using
     MerkleTreeExtractability.extractability_rom_bound_coarse queryModel addressKey 𝒜 qb h
 
 /-- Birthday-dominant specialization once the total query budget is large enough. -/
@@ -89,10 +89,10 @@ theorem rom_bound_birthday_dominates
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
     Pr[MerkleTreeExtractability.OpeningExtractionFailure |
-      game addressKey 𝒜] ≤
+      experiment addressKey 𝒜] ≤
       ((qb.choose 2 + (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card Y : ENNReal)⁻¹ := by
-  simpa [game] using
+  simpa [experiment] using
     MerkleTreeExtractability.extractability_rom_bound_birthday_dominates
       queryModel addressKey 𝒜 qb h hqb
 
@@ -106,9 +106,9 @@ theorem rom_bound_quadratic
     (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)
     (hdepth : 2 * (2 * s.leafCount - 1) * s.depth ≤ qb) :
     Pr[MerkleTreeExtractability.OpeningExtractionFailure |
-      game addressKey 𝒜] ≤
+      experiment addressKey 𝒜] ≤
       (qb : ENNReal) ^ 2 / (2 * Fintype.card Y) := by
-  simpa [game] using
+  simpa [experiment] using
     MerkleTreeExtractability.extractability_rom_bound_quadratic
       queryModel addressKey 𝒜 qb h hdominance hdepth
 

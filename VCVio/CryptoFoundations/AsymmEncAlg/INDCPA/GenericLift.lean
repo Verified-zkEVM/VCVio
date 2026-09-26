@@ -305,12 +305,12 @@ private lemma IND_CPA_stepPrefix_resume_eq_hybridLR (pk : PK) (k : ℕ) (branch 
 adjacent LR hybrids. -/
 private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
     (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
-    IND_CPA_OneTime_Game (encAlg := encAlg')
-        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) ProbCompRuntime.probComp =
+    ProbCompRuntime.probComp.evalDist (IND_CPA_OneTime_Game (encAlg := encAlg')
+        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) ProbCompRuntime.probComp) =
       𝒟[do
           let bit ← ($ᵗ Bool)
-          let z ← if bit then encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)
-                   else encAlg'.IND_CPA_LR_hybridGame adversary k
+          let z ← if bit then encAlg'.IND_CPA_LR_hybrid adversary (k + 1)
+                   else encAlg'.IND_CPA_LR_hybrid adversary k
           pure (bit == z)] := by
   change 𝒟[($ᵗ Bool) >>= fun bit => _] = _
   refine evalDist_eq_of_evalSPMF_eq _ _ (evalSPMF_ext fun x => ?_)
@@ -323,10 +323,10 @@ private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
       let b' ← (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k).distinguish state c
       pure (bit == b')] =
     Pr[= x | do
-      let z ← if bit then encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)
-               else encAlg'.IND_CPA_LR_hybridGame adversary k
+      let z ← if bit then encAlg'.IND_CPA_LR_hybrid adversary (k + 1)
+               else encAlg'.IND_CPA_LR_hybrid adversary k
       pure (bit == z)]
-  simp only [IND_CPA_LR_hybridGame, monad_norm,
+  simp only [IND_CPA_LR_hybrid, monad_norm,
     ← apply_ite (f := fun g => encAlg'.keygen >>= g)]
   refine probOutput_bind_congr' encAlg'.keygen x fun pk_sk => ?_
   simp only [IND_CPA_stepAdversary, monad_norm,
@@ -367,8 +367,8 @@ theorem IND_CPA_OneTime_Advantage_stepAdversary [Inhabited M]
     (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
     IND_CPA_OneTime_Advantage encAlg' ProbCompRuntime.probComp
         (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) =
-      𝒟[encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)].boolDist
-        𝒟[encAlg'.IND_CPA_LR_hybridGame adversary k] := by
+      𝒟[encAlg'.IND_CPA_LR_hybrid adversary (k + 1)].boolDist
+        𝒟[encAlg'.IND_CPA_LR_hybrid adversary k] := by
   rw [IND_CPA_OneTime_Advantage, IND_CPA_stepAdversary_game_eq_hybridBranch,
     evalDist_boolBias_bind_uniformBool]
 
@@ -383,12 +383,12 @@ theorem IND_CPA_Advantage_le_sum_oneTime_stepAdversary
       ∑ k ∈ Finset.range q, IND_CPA_OneTime_Advantage encAlg' ProbCompRuntime.probComp
         (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) := by
   have hleft := evalDist_eq_of_evalSPMF_eq _ _
-    (encAlg'.IND_CPA_LR_hybridGame_q_evalSPMF_eq_left_of_MakesAtMostQueries adversary q hq)
+    (encAlg'.IND_CPA_LR_hybrid_q_evalSPMF_eq_left_of_MakesAtMostQueries adversary q hq)
   have hright := evalDist_eq_of_evalSPMF_eq _ _
-    (encAlg'.IND_CPA_LR_hybridGame_zero_evalSPMF_eq_right adversary)
+    (encAlg'.IND_CPA_LR_hybrid_zero_evalSPMF_eq_right adversary)
   rw [IND_CPA_Advantage_eq_boolDist_LR, ← hleft, ← hright, MeasureTheory.Measure.boolDist_comm]
   refine (MeasureTheory.Measure.boolDist_le_sum_range
-    (fun i ↦ 𝒟[encAlg'.IND_CPA_LR_hybridGame adversary i]) q).trans_eq
+    (fun i ↦ 𝒟[encAlg'.IND_CPA_LR_hybrid adversary i]) q).trans_eq
     (Finset.sum_congr rfl fun k _ ↦ ?_)
   rw [IND_CPA_OneTime_Advantage_stepAdversary, MeasureTheory.Measure.boolDist_comm]
 

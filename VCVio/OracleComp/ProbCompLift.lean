@@ -130,6 +130,12 @@ noncomputable def probComp : ProbCompRuntime ProbComp where
 lemma probComp_evalDist [MeasurableSpace α] (mx : ProbComp α) :
     probComp.evalDist mx = 𝒟[mx] := rfl
 
+/-- The canonical `ProbComp` runtime assigns every computation a probability measure. -/
+instance [MeasurableSpace α] (mx : ProbComp α) :
+    MeasureTheory.IsProbabilityMeasure (probComp.evalDist mx) := by
+  rw [probComp_evalDist]
+  infer_instance
+
 /-- The canonical `ProbComp` runtime satisfies the pure-return factoring law: `evalDist`
 commutes with binding a pure measurable function. Security decompositions that couple several
 experiments through one joint execution (e.g. the exact SUF-CMA partition in

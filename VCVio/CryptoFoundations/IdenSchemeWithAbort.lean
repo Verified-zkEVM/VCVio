@@ -179,7 +179,7 @@ variable [SampleableType Chal] [IsUniformSpec unifSpec]
 
 /-- The impersonation experiment: the adversary tries to produce a valid transcript
 without knowing the witness, against a fixed statement `s`. -/
-def impExp {ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel}
+def impExperiment {ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel}
     {AdvSt : Type} (adv : ImpAdversary ids AdvSt) (s : Stmt) : ProbComp Bool := do
   let (cm, st) ← adv.commit s
   let c ← $ᵗ Chal

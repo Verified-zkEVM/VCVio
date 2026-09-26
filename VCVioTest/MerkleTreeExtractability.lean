@@ -13,7 +13,7 @@ public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.Evolution
 # Inductive Merkle Extractability Canaries
 
 These examples pin the semantic boundary between raw `OracleComp` syntax, where repeated
-queries sample independently, and `extractabilityGame`, where the full experiment is run
+queries sample independently, and `extractabilityExperiment`, where the full experiment is run
 through one shared cache.
 -/
 
@@ -46,10 +46,10 @@ example : ∀ result ∈ support
     simpa [repeatedQuery] using hresult
   rcases hcases with rfl | rfl <;> rfl
 
-/-- `extractabilityGame` is exactly the cached interpretation of its oracle syntax, with
+/-- `extractabilityExperiment` is exactly the cached interpretation of its oracle syntax, with
 the final implementation cache hidden from consumers. -/
 example {s : BinaryTree.Skeleton} (adversary : InductiveMerkleTree.Adversary Bool s) :
-    InductiveMerkleTree.extractabilityGame adversary =
+    InductiveMerkleTree.extractabilityExperiment adversary =
       (InductiveMerkleTree.spec Bool).withCacheOverlay ∅
         (InductiveMerkleTree.extractabilityInner adversary) := rfl
 
@@ -146,7 +146,7 @@ def expectedRightProof : List.Vector (Option Bool) rightIndex.depth :=
   some false ::ᵥ List.Vector.nil
 
 private lemma depthOneGame_eq :
-    InductiveMerkleTree.extractabilityGame depthOneAdversary =
+    InductiveMerkleTree.extractabilityExperiment depthOneAdversary =
       (((InductiveMerkleTree.spec Bool).query (false, true) :
           OracleComp (InductiveMerkleTree.spec Bool) Bool) >>= fun root =>
         if root then
@@ -155,7 +155,7 @@ private lemma depthOneGame_eq :
         else
           pure (root, (), ⟨leftIndex, false, leftProof,
             expectedTree root, expectedLeftProof, true⟩)) := by
-  rw [show InductiveMerkleTree.extractabilityGame depthOneAdversary =
+  rw [show InductiveMerkleTree.extractabilityExperiment depthOneAdversary =
       (InductiveMerkleTree.spec Bool).withCacheOverlay ∅
         (InductiveMerkleTree.extractabilityInner depthOneAdversary) from rfl]
   rw [show InductiveMerkleTree.extractabilityInner depthOneAdversary =
@@ -181,14 +181,14 @@ private lemma depthOneGame_eq :
 /-- If the shared answer is `false`, the adversary opens the left branch. -/
 example : (false, (), ⟨leftIndex, false, leftProof,
     expectedTree false, expectedLeftProof, true⟩) ∈
-    support (InductiveMerkleTree.extractabilityGame depthOneAdversary) := by
+    support (InductiveMerkleTree.extractabilityExperiment depthOneAdversary) := by
   rw [depthOneGame_eq]
   simp
 
 /-- If the shared answer is `true`, the adversary opens the right branch. -/
 example : (true, (), ⟨rightIndex, true, rightProof,
     expectedTree true, expectedRightProof, true⟩) ∈
-    support (InductiveMerkleTree.extractabilityGame depthOneAdversary) := by
+    support (InductiveMerkleTree.extractabilityExperiment depthOneAdversary) := by
   rw [depthOneGame_eq]
   simp
 
@@ -199,7 +199,7 @@ example (transcript : Bool × Unit ×
       List.Vector Bool idx.depth × BinaryTree.FullData (Option Bool) depthOneSkeleton ×
       List.Vector (Option Bool) idx.depth × Bool))
     (htranscript : transcript ∈ support
-      (InductiveMerkleTree.extractabilityGame depthOneAdversary)) :
+      (InductiveMerkleTree.extractabilityExperiment depthOneAdversary)) :
     ¬ InductiveMerkleTree.OpeningExtractionFailure transcript := by
   rw [depthOneGame_eq] at htranscript
   rw [mem_support_bind_iff] at htranscript
@@ -228,7 +228,7 @@ private lemma depthZeroAdversary_totalBound :
 This pins the fact that the verifier hashes internal nodes only; it does not hash a raw leaf. -/
 example :
     Pr[InductiveMerkleTree.OpeningExtractionFailure |
-      InductiveMerkleTree.extractabilityGame depthZeroAdversary] = 0 := by
+      InductiveMerkleTree.extractabilityExperiment depthZeroAdversary] = 0 := by
   apply le_antisymm
   · simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
       MerkleTreeExtractability.extractabilityROMErrorNumerator] using
@@ -251,7 +251,7 @@ private lemma freshHitAdversary_totalBound :
 target, recovering the exact `1 / |Bool| = 1/2` bound for this game. -/
 example :
     Pr[InductiveMerkleTree.OpeningExtractionFailure |
-      InductiveMerkleTree.extractabilityGame freshHitAdversary] ≤ (2 : ENNReal)⁻¹ := by
+      InductiveMerkleTree.extractabilityExperiment freshHitAdversary] ≤ (2 : ENNReal)⁻¹ := by
   simpa [InductiveMerkleTree.extractabilityROMErrorNumerator,
     MerkleTreeExtractability.extractabilityROMErrorNumerator, depthOneSkeleton] using
     InductiveMerkleTree.extractability_rom_bound
@@ -264,12 +264,12 @@ def freshHitExtractedProof : List.Vector (Option Bool) leftIndex.depth :=
   none ::ᵥ List.Vector.nil
 
 private lemma freshHitGame_eq :
-    InductiveMerkleTree.extractabilityGame freshHitAdversary =
+    InductiveMerkleTree.extractabilityExperiment freshHitAdversary =
       (((InductiveMerkleTree.spec Bool).query (false, true) :
           OracleComp (InductiveMerkleTree.spec Bool) Bool) >>= fun answer =>
         pure (false, (), ⟨leftIndex, false, leftProof,
           freshHitExtractedTree, freshHitExtractedProof, answer == false⟩)) := by
-  simp [InductiveMerkleTree.extractabilityGame,
+  simp [InductiveMerkleTree.extractabilityExperiment,
     InductiveMerkleTree.extractabilityInner_eq_unaddressed, OracleSpec.withCacheOverlay,
     freshHitAdversary, freshHitExtractedTree, freshHitExtractedProof,
     InductiveMerkleTree.Extractor.tree, MerkleTreeExtractor.tree,
@@ -287,7 +287,7 @@ def freshHitTranscript : Bool × Unit ×
 
 /-- The fresh verifier answer `false` produces a supported extraction failure. -/
 example : freshHitTranscript ∈
-    support (InductiveMerkleTree.extractabilityGame freshHitAdversary) := by
+    support (InductiveMerkleTree.extractabilityExperiment freshHitAdversary) := by
   rw [freshHitGame_eq]
   simp [freshHitTranscript]
 
@@ -310,14 +310,14 @@ abbrev proofOnlyAdversary : InductiveMerkleTree.Adversary Bool depthOneSkeleton 
   opening _ := pure ⟨rightIndex, true, wrongRightProof⟩
 
 private lemma proofOnlyGame_eq :
-    InductiveMerkleTree.extractabilityGame proofOnlyAdversary =
+    InductiveMerkleTree.extractabilityExperiment proofOnlyAdversary =
       (((InductiveMerkleTree.spec Bool).query (false, true) :
           OracleComp (InductiveMerkleTree.spec Bool) Bool) >>= fun root =>
         ((InductiveMerkleTree.spec Bool).query (true, true) :
           OracleComp (InductiveMerkleTree.spec Bool) Bool) >>= fun answer =>
         pure (root, (), ⟨rightIndex, true, wrongRightProof,
           expectedTree root, expectedRightProof, answer == root⟩)) := by
-  rw [show InductiveMerkleTree.extractabilityGame proofOnlyAdversary =
+  rw [show InductiveMerkleTree.extractabilityExperiment proofOnlyAdversary =
       (InductiveMerkleTree.spec Bool).withCacheOverlay ∅
         (InductiveMerkleTree.extractabilityInner proofOnlyAdversary) from rfl]
   rw [show InductiveMerkleTree.extractabilityInner proofOnlyAdversary =
@@ -347,7 +347,7 @@ def proofOnlyTranscript : Bool × Unit ×
     expectedTree false, expectedRightProof, true⟩)
 
 example : proofOnlyTranscript ∈
-    support (InductiveMerkleTree.extractabilityGame proofOnlyAdversary) := by
+    support (InductiveMerkleTree.extractabilityExperiment proofOnlyAdversary) := by
   rw [proofOnlyGame_eq]
   simp [proofOnlyTranscript]
 

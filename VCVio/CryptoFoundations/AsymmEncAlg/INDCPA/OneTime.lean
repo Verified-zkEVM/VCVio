@@ -44,22 +44,21 @@ variable {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
 sample keys, let the adversary choose challenge messages, encrypt one branch, and return whether
 the adversary guessed the hidden bit. -/
 noncomputable def IND_CPA_OneTime_Game
-    (runtime : ProbCompRuntime (OracleComp spec)) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let b : Bool ← runtime.liftProbComp ($ᵗ Bool)
-    let (pk, _) ← encAlg.keygen
-    let (m₁, m₂, state) ← adv.chooseMessages pk
-    let msg := if b then m₁ else m₂
-    let c ← encAlg.encrypt pk msg
-    let b' ← adv.distinguish state c
-    return (b == b')
+    (runtime : ProbCompRuntime (OracleComp spec)) : OracleComp spec Bool := do
+  let b : Bool ← runtime.liftProbComp ($ᵗ Bool)
+  let (pk, _) ← encAlg.keygen
+  let (m₁, m₂, state) ← adv.chooseMessages pk
+  let msg := if b then m₁ else m₂
+  let c ← encAlg.encrypt pk msg
+  let b' ← adv.distinguish state c
+  return (b == b')
 
 /-- One-time IND-CPA advantage: the Boolean bias `Measure.boolBias` of `IND_CPA_OneTime_Game`. -/
 noncomputable def IND_CPA_OneTime_Advantage
     (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (runtime : ProbCompRuntime (OracleComp spec))
     (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ≥0∞ :=
-  (IND_CPA_OneTime_Game (encAlg := encAlg) adv runtime).boolBias
+  (runtime.evalDist (IND_CPA_OneTime_Game (encAlg := encAlg) adv runtime)).boolBias
 
 end IND_CPA_TwoPhase
 

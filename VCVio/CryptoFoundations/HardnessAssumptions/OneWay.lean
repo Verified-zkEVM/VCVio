@@ -30,10 +30,10 @@ invert given only `pk`; the secret key enables efficient inversion via `f⁻¹(s
 ## Main Definitions
 
 - `OWFAdversary X Y` — an adversary trying to invert `f`.
-- `owfExp` — the one-wayness experiment.
+- `owfExperiment` — the one-wayness experiment.
 - `TrapdoorPermutation PK SK X` — a trapdoor permutation scheme.
 - `TDPAdversary PK X` — an adversary trying to invert the TDP.
-- `tdpExp` — the TDP inversion experiment.
+- `tdpExperiment` — the TDP inversion experiment.
 -/
 
 @[expose] public section
@@ -58,15 +58,15 @@ def owfRun [SampleableType X] (f : X → Y) (adversary : OWFAdversary X Y) :
 
 /-- One-wayness experiment: sample `x` uniformly, give the adversary `f(x)`,
 and check whether the adversary's output is a valid preimage. -/
-def owfExp [SampleableType X] [DecidableEq Y] (f : X → Y) (adversary : OWFAdversary X Y) :
+def owfExperiment [SampleableType X] [DecidableEq Y] (f : X → Y) (adversary : OWFAdversary X Y) :
     ProbComp Bool := do
   let (x, x') ← owfRun f adversary
   return decide (f x' = f x)
 
-/-- OWF advantage: the probability that `owfExp` outputs `true`. -/
+/-- OWF advantage: the probability that `owfExperiment` outputs `true`. -/
 noncomputable def owfAdvantage [SampleableType X] [DecidableEq Y] (f : X → Y)
     (adversary : OWFAdversary X Y) : ℝ≥0∞ :=
-  𝒟[owfExp f adversary] {true}
+  𝒟[owfExperiment f adversary] {true}
 
 /-! ## Trapdoor Permutations -/
 
@@ -100,14 +100,14 @@ def tdpRun [SampleableType X] (tdp : TrapdoorPermutation PK SK X)
 
 /-- TDP inversion experiment: generate keys, sample `x` uniformly,
 and check whether the adversary outputs a valid preimage of `f(pk, x)`. -/
-def tdpExp [SampleableType X] [DecidableEq X] (tdp : TrapdoorPermutation PK SK X)
+def tdpExperiment [SampleableType X] [DecidableEq X] (tdp : TrapdoorPermutation PK SK X)
     (adversary : TDPAdversary PK X) : ProbComp Bool := do
   let ((pk, x), x') ← tdpRun tdp adversary
   return decide (tdp.forward pk x' = tdp.forward pk x)
 
-/-- TDP advantage: the probability that `tdpExp` outputs `true`. -/
+/-- TDP advantage: the probability that `tdpExperiment` outputs `true`. -/
 noncomputable def tdpAdvantage [SampleableType X] [DecidableEq X]
     (tdp : TrapdoorPermutation PK SK X) (adversary : TDPAdversary PK X) : ℝ≥0∞ :=
-  𝒟[tdpExp tdp adversary] {true}
+  𝒟[tdpExperiment tdp adversary] {true}
 
 end OneWay

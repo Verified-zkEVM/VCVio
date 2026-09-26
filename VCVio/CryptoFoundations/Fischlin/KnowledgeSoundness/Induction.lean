@@ -685,12 +685,12 @@ private lemma knowledgeSoundness_badEvent_le
     (hss : σ.SpeciallySound) (hur : σ.UniqueResponses)
     (adv : KnowledgeSoundnessAdversary ρ b M) (Q : ℕ) (_hρ : 0 < ρ)
     (hQ : ∀ x msg, ROQueryBound ρ b M (adv.run x msg) Q) (x : Stmt) (msg : M) :
-    Pr[= true | knowledgeSoundnessExp σ hr ρ b S M adv.run x msg]
+    Pr[= true | knowledgeSoundnessExperiment σ hr ρ b S M adv.run x msg]
       ≤ (↑(Q + 1) : ℝ≥0∞) * ↑(smallSumCount ρ b S) / ((↑(2 ^ b) : ℝ≥0∞) ^ ρ) := by
   classical
   let : ∀ c, DecidablePred (ksDead σ ρ b M x msg c) := fun _ => Classical.decPred _
   -- Step 1: bound the bad event by the verifier-accepts-while-scan-misses event.
-  refine le_trans (knowledgeSoundnessExp_bad_le_misses' σ hr ρ b S M hss adv.run x msg) ?_
+  refine le_trans (knowledgeSoundnessExperiment_bad_le_misses' σ hr ρ b S M hss adv.run x msg) ?_
   -- Step 2: factor the miss event through the logged prover run as an expected payoff.
   rw [ksSample_probEvent_eq_expectedValue σ hr ρ b S M adv.run x msg,
     -- Step 3: on the support, swap the scan-miss indicator for the pinning predicate.
@@ -728,7 +728,7 @@ theorem knowledgeSoundness
     (Q : ℕ) (hρ : 0 < ρ)
     (hQ : ∀ x msg, ROQueryBound ρ b M (adv.run x msg) Q)
     (x : Stmt) (msg : M) :
-    𝒟[knowledgeSoundnessExp σ hr ρ b S M adv.run x msg] {true}
+    𝒟[knowledgeSoundnessExperiment σ hr ρ b S M adv.run x msg] {true}
       ≤ knowledgeSoundnessError Q ρ b S := by
   rw [evalDist_apply_singleton]
   refine le_trans (knowledgeSoundness_badEvent_le σ hr ρ b S M hss hur adv Q hρ hQ x msg) ?_

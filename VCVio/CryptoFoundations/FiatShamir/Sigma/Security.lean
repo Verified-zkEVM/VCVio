@@ -23,7 +23,7 @@ advantage of a named reduction from `FiatShamir.Sigma.Reductions`.
   the framework's `Fin (qH + 1)` indexing in `Fork.forkPoint qH` provides
   exactly the right number of slots for the wrapped adversary.
 - `euf_nma_bound`: NMA-to-extraction via `Fork.replayForkingBound` and special
-  soundness, bounding the success of the witness finder `nmaReduction` in `hardRelationExp`.
+  soundness, bounding the success of the witness finder `nmaReduction` in `hardRelationExperiment`.
 - `euf_cma_bound`: the combined bound for the witness finder `cmaReduction`, instantiating
   `euf_cma_to_nma` into `euf_nma_bound`. The replay-forking denominator is `qH + 1`.
 -/
@@ -101,7 +101,7 @@ theorem euf_nma_bound
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExp hr (nmaReduction σ hr M nmaAdv qH)] :=
+      Pr[= true | hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)] :=
   nma_to_hard_relation_bound σ hr M hss hss_nf nmaAdv qH
 
 /-- **Combined EUF-CMA bound (Pointcheval-Stern with quantitative HVZK, β-parametric).**
@@ -145,7 +145,7 @@ theorem euf_cma_bound
       (ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
         (qS : ENNReal) * (qS + qH) * β)
     eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExp hr (cmaReduction σ hr M simTranscript adv qH)] := by
+      Pr[= true | hardRelationExperiment hr (cmaReduction σ hr M simTranscript adv qH)] := by
   have hAdv := euf_cma_to_nma σ hr M simTranscript ζ_zk hζ_zk hhvzk β hPredSim adv qS qH hQ
   refine le_trans ?_ (euf_nma_bound σ hr M hss hss_nf (cmaToNmaAdv σ hr M simTranscript adv) qH)
   gcongr <;> exact tsub_le_iff_right.mpr (by simpa [add_assoc] using hAdv)

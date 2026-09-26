@@ -61,36 +61,34 @@ variable [SampleableType K] [SampleableType M]
 encrypts the adversary's message and the branch `false` encrypts an independent uniform message.
 The uniform message is sampled in both branches, after message selection. -/
 @[expose]
-noncomputable def realOrRandomExp {dem : DEMScheme (OracleComp spec) K M C}
+noncomputable def realOrRandomExperiment {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.RealOrRandomAdversary) (b : Bool) : Measure Bool :=
-  runtime.evalDist do
-    let k ← runtime.liftProbComp ($ᵗ K)
-    let (m, st) ← adversary.chooseMessage
-    let m' ← runtime.liftProbComp ($ᵗ M)
-    let c ← dem.encrypt k (if b then m else m')
-    adversary.distinguish st c
+    (adversary : dem.RealOrRandomAdversary) (b : Bool) : OracleComp spec Bool := do
+  let k ← runtime.liftProbComp ($ᵗ K)
+  let (m, st) ← adversary.chooseMessage
+  let m' ← runtime.liftProbComp ($ᵗ M)
+  let c ← dem.encrypt k (if b then m else m')
+  adversary.distinguish st c
 
 /-- Game-form one-time real-or-random IND-CPA experiment for a DEM. -/
 @[expose]
 noncomputable def realOrRandomGame {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : dem.RealOrRandomAdversary) : Measure Bool :=
-  runtime.evalDist do
-    let b ← runtime.liftProbComp ($ᵗ Bool)
-    let k ← runtime.liftProbComp ($ᵗ K)
-    let (m, st) ← adversary.chooseMessage
-    let m' ← runtime.liftProbComp ($ᵗ M)
-    let c ← dem.encrypt k (if b then m else m')
-    let b' ← adversary.distinguish st c
-    return (b == b')
+    (adversary : dem.RealOrRandomAdversary) : OracleComp spec Bool := do
+  let b ← runtime.liftProbComp ($ᵗ Bool)
+  let k ← runtime.liftProbComp ($ᵗ K)
+  let (m, st) ← adversary.chooseMessage
+  let m' ← runtime.liftProbComp ($ᵗ M)
+  let c ← dem.encrypt k (if b then m else m')
+  let b' ← adversary.distinguish st c
+  return (b == b')
 
 /-- One-time real-or-random IND-CPA advantage for a DEM: the bias of the single game. -/
 @[expose]
 noncomputable def realOrRandomAdvantage {dem : DEMScheme (OracleComp spec) K M C}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : dem.RealOrRandomAdversary) : ℝ≥0∞ :=
-  (realOrRandomGame runtime adversary).boolBias
+  (runtime.evalDist (realOrRandomGame runtime adversary)).boolBias
 
 end Games
 
@@ -133,12 +131,12 @@ variable [SampleableType K] [SampleableType M] {dem : DEMScheme (OracleComp spec
 
 /-- Each fixed-branch ROR experiment is the corresponding fixed-branch LOR experiment of
 `RealOrRandomAdversary.toLeftOrRight`. -/
-theorem realOrRandomExp_eq_IND_CPA_Exp (runtime : ProbCompRuntime (OracleComp spec))
+theorem realOrRandomExperiment_eq_IND_CPA_Experiment (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : dem.RealOrRandomAdversary) (b : Bool) :
-    realOrRandomExp runtime adversary b =
-      IND_CPA_Exp runtime (adversary.toLeftOrRight runtime) b := by
-  simp only [realOrRandomExp, IND_CPA_Exp, RealOrRandomAdversary.toLeftOrRight, bind_assoc,
-    pure_bind]
+    realOrRandomExperiment runtime adversary b =
+      IND_CPA_Experiment runtime (adversary.toLeftOrRight runtime) b := by
+  simp only [realOrRandomExperiment, IND_CPA_Experiment, RealOrRandomAdversary.toLeftOrRight,
+    bind_assoc, pure_bind]
 
 /-- The ROR game is the LOR game of `RealOrRandomAdversary.toLeftOrRight`. -/
 theorem realOrRandomGame_eq_IND_CPA_Game (runtime : ProbCompRuntime (OracleComp spec))
@@ -233,7 +231,7 @@ theorem IND_CPA_Advantage_le_realOrRandomAdvantage_add
     refine evalDist_bind_congr _ _ _ fun k => ?_
     refine evalDist_bind_congr _ _ _ fun ⟨m₀, m₁, st⟩ => ?_
     rw [_root_.evalDist_bind_const, hunif, one_smul]
-  have hlor : IND_CPA_Game runtime adversary =
+  have hlor : runtime.evalDist (IND_CPA_Game runtime adversary) =
       𝒟[do
         let b ← coin
         let z ← if b then lor true else lor false
@@ -242,7 +240,8 @@ theorem IND_CPA_Advantage_le_realOrRandomAdvantage_add
     congr 1
     refine bind_congr fun b => ?_
     cases b <;> simp only [lor, key, bind_assoc, Bool.false_eq_true, ite_true, ite_false]
-  have hror (side : Bool) : realOrRandomGame runtime (.ofLeftOrRight adversary side) =
+  have hror (side : Bool) :
+      runtime.evalDist (realOrRandomGame runtime (.ofLeftOrRight adversary side)) =
       𝒟[do
         let b ← coin
         let z ← if b then real side else rnd

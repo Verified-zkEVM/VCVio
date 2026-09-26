@@ -31,11 +31,11 @@ protocol parameter.
 ## Main Definitions
 
 - `CRAdversary X` — an adversary outputting a candidate collision pair.
-- `crExp` — the collision-resistance experiment.
+- `crExperiment` — the collision-resistance experiment.
 - `crAdvantage` — the advantage of a CR adversary.
 - `KeyedHashFamily K X Y` — a keyed hash family.
 - `KeyedCRAdversary K X` — an adversary for the keyed variant.
-- `keyedCRExp` — the keyed collision-resistance experiment.
+- `keyedCRExperiment` — the keyed collision-resistance experiment.
 - `keyedCRAdvantage` — the advantage of a keyed CR adversary.
 - `ROMHashSpec X Y` — adversary-facing random-oracle spec; carries no
   probability instances.
@@ -45,7 +45,7 @@ protocol parameter.
   queries and dispatches them through the generic `cachingOracle` on the
   cached spec. The spec transition happens only via `simulateQ`.
 - `ROMCRAdversary X Y` — an adversary for the ROM variant.
-- `romCRExp` — the ROM collision-resistance experiment.
+- `romCRExperiment` — the ROM collision-resistance experiment.
 - `romCRAdvantage` — the advantage of a ROM-CR adversary.
 - `romCRAdvantage_le_birthday` — birthday bound on ROM-CR advantage.
 
@@ -76,7 +76,7 @@ def CRAdversary (X : Type) := ProbComp (X × X)
 /-- Collision-resistance experiment: the adversary proposes a pair `(x, x')`,
 and the experiment returns `true` iff the two inputs are distinct and map to
 the same image under `f`. -/
-def crExp [DecidableEq X] [DecidableEq Y]
+def crExperiment [DecidableEq X] [DecidableEq Y]
     (f : X → Y) (adversary : CRAdversary X) : ProbComp Bool := do
   let (x, x') ← adversary
   return decide (x ≠ x' ∧ f x = f x')
@@ -85,7 +85,7 @@ def crExp [DecidableEq X] [DecidableEq Y]
 produces a valid collision for `f`. -/
 noncomputable def crAdvantage [DecidableEq X] [DecidableEq Y]
     (f : X → Y) (adversary : CRAdversary X) : ℝ≥0∞ :=
-  𝒟[crExp f adversary] {true}
+  𝒟[crExperiment f adversary] {true}
 
 /-! ## Keyed Hash Function Families -/
 
@@ -105,7 +105,7 @@ def KeyedCRAdversary (K X : Type) := K → ProbComp (X × X)
 /-- Keyed collision-resistance experiment: sample a key, run the adversary on
 the key, and return `true` iff the adversary's pair is a valid collision
 under `H.hash k`. -/
-def keyedCRExp [DecidableEq X] [DecidableEq Y]
+def keyedCRExperiment [DecidableEq X] [DecidableEq Y]
     (H : KeyedHashFamily K X Y) (adversary : KeyedCRAdversary K X) :
     ProbComp Bool := do
   let k ← H.keygen
@@ -116,7 +116,7 @@ def keyedCRExp [DecidableEq X] [DecidableEq Y]
 valid collision under the sampled key. -/
 noncomputable def keyedCRAdvantage [DecidableEq X] [DecidableEq Y]
     (H : KeyedHashFamily K X Y) (adversary : KeyedCRAdversary K X) : ℝ≥0∞ :=
-  𝒟[keyedCRExp H adversary] {true}
+  𝒟[keyedCRExperiment H adversary] {true}
 
 /-! ## ROM-Level Collision Resistance
 
@@ -194,7 +194,7 @@ cache). Win iff the inputs are distinct and the queried outputs coincide.
 The bridge takes the entire computation from `OracleComp (ROMHashSpec X Y)`
 into `OracleComp (ROMHashSpec.cached X Y)` in one step — no separate
 oracle-comp lift is needed. -/
-def romCRExp [DecidableEq X] [DecidableEq Y]
+def romCRExperiment [DecidableEq X] [DecidableEq Y]
     {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
     OracleComp (ROMHashSpec.cached X Y)
       (Bool × QueryCache (ROMHashSpec.cached X Y)) :=
@@ -209,9 +209,9 @@ produces a valid collision under the random oracle. -/
 noncomputable def romCRAdvantage [DecidableEq X] [DecidableEq Y]
     [Fintype Y] [Inhabited Y]
     {t : ℕ} (A : BoundedROMCRAdversary X Y t) : ℝ≥0∞ :=
-  Pr[fun z => z.1 = true | romCRExp A]
+  Pr[fun z => z.1 = true | romCRExperiment A]
 
-/-- The inner oracle computation of `romCRExp`, before `simulateQ`. Lives
+/-- The inner oracle computation of `romCRExperiment`, before `simulateQ`. Lives
 entirely on the pre-cache spec — the spec transition happens at the
 `simulateQ ROMHashSpec.cachingOracle` step. -/
 private def romCRInner [DecidableEq X] [DecidableEq Y]
@@ -222,9 +222,9 @@ private def romCRInner [DecidableEq X] [DecidableEq Y]
   let y' ← (ROMHashSpec X Y).query x'
   return decide (x ≠ x' ∧ y = y')
 
-private lemma romCRExp_eq [DecidableEq X] [DecidableEq Y]
+private lemma romCRExperiment_eq [DecidableEq X] [DecidableEq Y]
     {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
-    romCRExp A = (simulateQ ROMHashSpec.cachingOracle (romCRInner A)).run ∅ := rfl
+    romCRExperiment A = (simulateQ ROMHashSpec.cachingOracle (romCRInner A)).run ∅ := rfl
 
 /-- The total query bound on `romCRInner` is `t + 2` — `t` from the adversary
 plus the two verification queries. -/
@@ -269,7 +269,7 @@ adversary's cache. -/
 theorem romCRAdvantage_le_birthday [DecidableEq X] [DecidableEq Y] [Fintype Y] [Inhabited X]
     [Inhabited Y] {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
     romCRAdvantage A ≤ (((t + 2) * (t + 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card Y) := by
-  simp only [romCRAdvantage, romCRExp_eq]
+  simp only [romCRAdvantage, romCRExperiment_eq]
   exact (probEvent_mono (romCRWin_implies_collision A)).trans <|
     probEvent_cacheCollision_le_birthday_total_tight (spec := ROMHashSpec.cached X Y)
       (romCRInner A) (t + 2) (romCRInner_totalBound A) fun _ => le_rfl

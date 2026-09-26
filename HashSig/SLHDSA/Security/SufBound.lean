@@ -276,13 +276,14 @@ theorem strongAdvantage_le_add_arms_iff (sadv : StrongUnforgeableAdversary (gene
     (ε : ℝ≥0∞) (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core) →
       List Byte → GeneralScheme.SignatureCore vp prims.core → Bool) :
     strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ ε +
-        ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        (𝒟[instrumentedSameMessageExperiment sadv sel]
           {x | x.1 = true ∧ x.2 = false} +
-          (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+          𝒟[instrumentedSameMessageExperiment sadv sel]
             {x | x.1 = true ∧ x.2 = true}) ↔
       unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary ≤ ε := by
-  rw [← sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
-    sadv sel]
+  have h := sameMessageAdvantage_eq_arms ProbCompRuntime.probComp sadv sel
+  rw [ProbCompRuntime.probComp_evalDist] at h
+  rw [← h]
   exact strongAdvantage_le_add_sameMessage_iff sadv ε
 
 /-- The fresh-randomizer half is at most the strong advantage it is a piece of.  Together with
@@ -396,9 +397,9 @@ theorem strongAdvantage_le_bound_add_arms {sadv : StrongUnforgeableAdversary (ge
     (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore vp prims.core) →
       List Byte → GeneralScheme.SignatureCore vp prims.core → Bool) :
     strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ c.summands.bound vp.params +
-      ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+      (𝒟[instrumentedSameMessageExperiment sadv sel]
         {x | x.1 = true ∧ x.2 = false} +
-        (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        𝒟[instrumentedSameMessageExperiment sadv sel]
           {x | x.1 = true ∧ x.2 = true}) :=
   (strongAdvantage_le_add_arms_iff sadv _ sel).mpr (advantage_le_bound c)
 
@@ -461,11 +462,11 @@ variable {vp : ValidatedParams} {prims : Primitives vp.params}
 theorem sameMessageAdvantage_eq_halves_of_unfoldings
     (sadv : StrongUnforgeableAdversary (generalAlg prims))
     (hfresh : freshRandomizerHalf sadv =
-      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = false})
+      𝒟[instrumentedSameMessageExperiment sadv
+          (randomizerLogged (prims := prims))] {x | x.1 = true ∧ x.2 = false})
     (hsame : sameRandomizerHalf sadv =
-      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = true}) :
+      𝒟[instrumentedSameMessageExperiment sadv
+          (randomizerLogged (prims := prims))] {x | x.1 = true ∧ x.2 = true}) :
     sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
       freshRandomizerHalf sadv + sameRandomizerHalf sadv := by
   rw [hfresh, hsame]
@@ -486,11 +487,11 @@ its same-message form. -/
 theorem sufBound_eq_bound_add_sameMessage_of_unfoldings (s : Summands) (p : Params)
     (sadv : StrongUnforgeableAdversary (generalAlg prims))
     (hfresh : freshRandomizerHalf sadv =
-      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = false})
+      𝒟[instrumentedSameMessageExperiment sadv
+          (randomizerLogged (prims := prims))] {x | x.1 = true ∧ x.2 = false})
     (hsame : sameRandomizerHalf sadv =
-      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-          (randomizerLogged (prims := prims))) {x | x.1 = true ∧ x.2 = true}) :
+      𝒟[instrumentedSameMessageExperiment sadv
+          (randomizerLogged (prims := prims))] {x | x.1 = true ∧ x.2 = true}) :
     s.sufBound p (freshRandomizerHalf sadv) (sameRandomizerHalf sadv) =
       s.bound p + sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv := by
   rw [Summands.sufBound_eq, sameMessageAdvantage_eq_halves_of_unfoldings sadv hfresh hsame]
