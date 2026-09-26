@@ -8,6 +8,7 @@ module
 
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Unary.HoareTriple
+public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 import ToMathlib.MeasureTheory.Function.AEMeasurable
 
 /-!
@@ -29,6 +30,7 @@ coupling supremum with the sum behind the bind rule.
 
 - introduction, consequence, and bind rules for eRHL
 - the quantitative relational algebra and its anchoring to unary expectations
+- total variation as the complement of the best coupled probability of equal outputs
 - witness lower bounds for uniform samples and oracle queries under a bijection
 
 ## Design
@@ -135,6 +137,13 @@ theorem eRelWP_le (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
   let : MeasurableSpace β := ⊤
   exact MeasureProgramLogic.eRelWP_le oa ob post bound h
 
+/-- An indicator postcondition has coupled expectation at most one. -/
+theorem eRelWP_indicator_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+    (R : RelPost α β) : eRelWP oa ob (RelPost.indicator R) ≤ 1 :=
+  eRelWP_le oa ob _ 1 fun a b => by
+    unfold RelPost.indicator
+    split_ifs <;> simp
+
 variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
   [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
@@ -217,6 +226,73 @@ theorem eRelWP_bind_rule
     (hfg : ∀ a b, cut a b ≤ eRelWP (fa a) (fb b) post) :
     pre ≤ eRelWP (oa >>= fa) (ob >>= fb) post :=
   (eRelWP_conseq le_rfl hfg hxy).trans (eRelWP_bind_le oa ob fa fb post)
+
+/-! ## Statistical distance via eRHL
+
+Output measures of oracle computations concentrate on their finite supports, where the best
+coupled probability of equal outputs is the overlap of the two measures, attained by their
+maximal coupling. -/
+
+/-- Total variation between two output measures is the complement of the best coupled
+probability of equal outputs. -/
+theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ α) :
+    (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) =
+      1 - eRelWP oa ob (RelPost.indicator (EqRel α)) := by
+  classical
+  let : MeasurableSpace α := ⊤
+  let F : Finset α := (PFunctor.FreeM.support_finite oa).toFinset ∪
+    (PFunctor.FreeM.support_finite ob).toFinset
+  have hμ : 𝒟[oa] (↑F)ᶜ = 0 := by
+    have hs := ae_mem_support oa
+    rw [ae_iff] at hs
+    refine measure_mono_null (t := {a | a ∉ support oa}) (fun x hx hxs => hx ?_) hs
+    simp [F, hxs]
+  have hν : 𝒟[ob] (↑F)ᶜ = 0 := by
+    have hs := ae_mem_support ob
+    rw [ae_iff] at hs
+    refine measure_mono_null (t := {a | a ∉ support ob}) (fun x hx hxs => hx ?_) hs
+    simp [F, hxs]
+  have : IsProbabilityMeasure 𝒟[oa] := ⟨evalDist_apply_univ_eq_one oa⟩
+  have : IsProbabilityMeasure 𝒟[ob] := ⟨evalDist_apply_univ_eq_one ob⟩
+  have hdiag (c : Measure.Coupling 𝒟[oa] 𝒟[ob]) :
+      ∫⁻ z, RelPost.indicator (EqRel α) z.1 z.2 ∂c.joint = ∑ a ∈ F, c.joint {(a, a)} := by
+    have hc : c.joint (↑(F ×ˢ F))ᶜ = 0 := by
+      rw [Finset.coe_product]
+      exact ae_iff.1 (c.isCoupling.ae_mem_prod F.measurableSet F.measurableSet
+        (measure_eq_zero_iff_ae_notMem.1 hμ |>.mono fun _ h => not_not.1 h)
+        (measure_eq_zero_iff_ae_notMem.1 hν |>.mono fun _ h => not_not.1 h))
+    rw [Measure.lintegral_eq_sum_of_compl_eq_zero hc, Finset.sum_product]
+    refine Finset.sum_congr rfl fun a ha => ?_
+    rw [Finset.sum_eq_single a (fun b _ hba => by simp [RelPost.indicator, EqRel, Ne.symm hba])
+      (fun h => absurd ha h)]
+    simp [RelPost.indicator, EqRel]
+  have hw : eRelWP oa ob (RelPost.indicator (EqRel α)) =
+      ∑ a ∈ F, min (𝒟[oa] {a}) (𝒟[ob] {a}) := by
+    apply le_antisymm
+    · refine iSup_le fun c => ?_
+      rw [hdiag c]
+      exact Finset.sum_le_sum fun a _ => c.isCoupling.apply_diag_le a
+    · refine le_trans ?_ (le_eRelWP_of_isCoupling _ ⟨_, Measure.isCoupling_maximalCoupling hμ hν⟩)
+      rw [hdiag]
+      exact Finset.sum_le_sum fun a ha => Measure.min_le_maximalCoupling_apply_diag ha
+  rw [hw, Measure.etvDist_eq_one_sub_sum_min hμ hν]
+
+/-- An approximate equality coupling with error `ε` is exactly a total variation bound `ε`
+between the two output measures. -/
+theorem approxRelTriple_eqRel_iff_etvDist_le {oa : OracleComp spec₁ α}
+    {ob : OracleComp spec₂ α} {ε : ℝ≥0∞} :
+    ApproxRelTriple ε oa ob (EqRel α) ↔
+      (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) ≤ ε := by
+  rw [ApproxRelTriple, etvDist_eq_one_sub_eRelWP_eqRel]
+  exact tsub_le_iff_tsub_le
+
+/-- A zero-error approximate equality coupling identifies the two output measures. -/
+theorem evalDist_eq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
+    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) :
+    letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob] := by
+  let : MeasurableSpace α := ⊤
+  exact Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
+    (approxRelTriple_eqRel_iff_etvDist_le.1 h))
 
 /-! ## Relational algebra instance -/
 

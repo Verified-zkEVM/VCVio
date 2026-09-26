@@ -532,7 +532,10 @@ Uniform samples and queries coupled by a bijection `f` have coupled expectation 
 expectation `wp ($ᵗ α) (fun a => post a (f a))`; a `pure` side collapses `eRelWP` to the unary `wp`
 of the other side.
 
-pRHL is the special case where `ε = 0` (exact coupling).
+pRHL is the special case where `ε = 0` (exact coupling). On equality,
+`approxRelTriple_eqRel_iff_etvDist_le` identifies `ApproxRelTriple ε` with a total variation bound
+`ε` between the output measures, through the maximal coupling of
+`ToMathlib/MeasureTheory/Measure/Coupling/Maximal.lean`.
 
 ### Design target
 

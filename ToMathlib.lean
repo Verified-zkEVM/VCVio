@@ -59,6 +59,7 @@ public import ToMathlib.MeasureTheory.Measure.Bounds
 public import ToMathlib.MeasureTheory.Measure.Coupling
 public import ToMathlib.MeasureTheory.Measure.Coupling.Bind
 public import ToMathlib.MeasureTheory.Measure.Coupling.Discard
+public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 public import ToMathlib.MeasureTheory.Measure.Coupling.Residual
 public import ToMathlib.MeasureTheory.Measure.Except
 public import ToMathlib.MeasureTheory.Measure.GiryMonad

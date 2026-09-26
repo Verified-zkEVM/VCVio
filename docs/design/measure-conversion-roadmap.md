@@ -398,6 +398,16 @@ coupling of output measures is available. The discrete subprobability coupling m
 and the public-projection total-variation bound used by the stateful Fiat–Shamir hops sits beside
 the discrete event bound it refines.
 
+## Maximal-coupling checkpoint
+
+Two probability measures concentrated on a common finite set have total variation equal to one
+minus their overlap `∑ a, min (μ {a}) (ν {a})`. No coupling puts more than the overlap on a
+diagonal point, and the maximal coupling, which puts the overlap on the diagonal and spreads the
+residual masses independently, attains it. For oracle computations this identifies measure total
+variation with the complement of the best coupled probability of equal outputs, so an approximate
+equality coupling with error `ε` is exactly a total variation bound `ε`, and a zero-error one gives
+game equivalence.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
