@@ -415,8 +415,8 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     ((simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run freshCache)
   let cacheEvent : Bool × QueryCache (CMOracle M S C) → Prop :=
     fun z => ∃ m : M, ∃ v : C, m ≠ qchoose.1.1 ∧ z.2 (m, s) = some v
-  rw [← OracleComp.ProgramLogic.probEvent_eq_wp_propInd,
-    ← OracleComp.ProgramLogic.probEvent_eq_wp_propInd]
+  rw [← OracleComp.ProgramLogic.prEvent_eq_wp_propInd,
+    ← OracleComp.ProgramLogic.prEvent_eq_wp_propInd]
   have hcount_to_cache :
       Pr{let z ← countRun}[1 < z.2.2 s] ≤
         Pr{let z ← cacheRun}[cacheEvent z] := by

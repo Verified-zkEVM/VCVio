@@ -216,6 +216,16 @@ on the measurable structure that makes the event measurable, so results proved u
 structure `⊤` apply under any chosen space, such as a Borel structure. Native regressions cover a
 hidden counter state, real-valued outputs, and different continuation output types.
 
+## Native probability-equality planner checkpoint
+
+The `vcstep` probability-equality planner recognizes native goals: equalities of `Pr{…}[…]`
+events, of applied `𝒟[…]` masses, and of output measures. Swaps rewrite with the native bind-swap
+laws, under shared prefixes through measure congruence, and congruence leaves the continuations
+on the structural support of the shared prefix. The retiring scalar goals keep their existing
+actions. Native Hoare lowering lemmas use `prEvent` names, and the singleton-output variants,
+which are the events `(· = x)`, are removed. `VCVioTest/NativeProbabilityTactics.lean` gates the
+native `simp` and planner contract and records the remaining `simp` gaps.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

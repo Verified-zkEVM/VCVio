@@ -45,6 +45,6 @@ theorem triple_seededFork :
     (OracleComp.le_probEvent_isSome_seededFork main qb js i cf)
     (by
       rw [← probOutput_true_eq_probEvent]
-      exact triple_toLE (triple_probEvent_indicator (seededFork main qb js i cf) fun r ↦ r.isSome))
+      exact triple_toLE (triple_prEvent_indicator (seededFork main qb js i cf) fun r ↦ r.isSome))
 
 end OracleComp.ProgramLogic
