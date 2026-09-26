@@ -43,21 +43,19 @@ variable [DecidableEq M] [SampleableType R]
 /-- `delta`-correctness: failure in the canonical `AsymmEncAlg.correctnessExperiment` occurs with
 probability at most `delta`. -/
 def deltaCorrect (delta : ℝ≥0∞) : Prop :=
-  ∀ msg : M, Pr[= false | do
+  ∀ msg : M, 𝒟[do
     let (pk, sk) ← pke.keygen
     let r ← ($ᵗ R)
     let c := pke.encrypt pk msg r
     let msg' := pke.decrypt sk c
-    pure (decide (msg' = some msg))] ≤ delta
+    pure (decide (msg' = some msg))] {false} ≤ delta
 
 end Correct
 
 /-- `gamma`-spread: no ciphertext occurs with probability more than `gamma` for any fixed public
 key and plaintext. -/
-def gammaSpread [SampleableType R] [DecidableEq C] (gamma : ℝ≥0∞) : Prop :=
-  ∀ pk msg c, Pr[= c | do
-    let r ← ($ᵗ R)
-    pure (pke.encrypt pk msg r)] ≤ gamma
+def gammaSpread [SampleableType R] (gamma : ℝ≥0∞) : Prop :=
+  ∀ pk msg c, Pr{let r ← $ᵗ R}[pke.encrypt pk msg r = c] ≤ gamma
 
 section OW_CPA
 

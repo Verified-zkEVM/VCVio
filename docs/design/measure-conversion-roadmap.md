@@ -313,6 +313,18 @@ with the uniform baseline probability. The DLog-to-CDH bound squares the success
 through two independent DLog attempts. A continuation event with a constant probability keeps it
 after any lossless draw.
 
+## Primitive-notion checkpoint
+
+Correctness spread, commitment hiding and extractor setup consistency are stated with output
+measures: δ-correctness bounds the mass of a failed round trip, γ-spread bounds each ciphertext
+event, and hiding and setup consistency compare distributions under the discrete measurable
+structure. KEM–DEM correctness composes at the level of reachable outputs and transfers to
+probability one under uniform oracle semantics. The Pedersen commitment is perfectly hiding by
+the uniform bijection law and binding by a DLog reduction on a shared base program; the PRF-based
+MAC bound and Falcon's discrete-Gaussian sampler law use native events. The lattice sampling
+instances import only the sampling class, which removes the lattice stack from the discrete
+import closure.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
