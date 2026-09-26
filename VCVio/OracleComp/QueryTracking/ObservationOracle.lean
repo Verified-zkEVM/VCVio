@@ -8,7 +8,7 @@ module
 public import ToMathlib.Control.WriterT
 public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.HasQuery.Basic
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 
 /-!
 # Observation Oracle for Side-Channel Leakage Modeling

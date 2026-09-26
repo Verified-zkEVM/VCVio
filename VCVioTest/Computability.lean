@@ -65,14 +65,14 @@ def roMixedFixed (f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id) : ProbC
 
 /-- API canary for the probability-one bridge on a computation containing both query kinds. -/
 example (p : Bool → Prop) :
-    Pr[fun v => p v.1 | (simulateQ roSimPipeline roMixedToy).run
-      (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)] = 1
+    Pr{let v ← (simulateQ roSimPipeline roMixedToy).run
+          (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)}[p v.1] = 1
     ↔
     ∀ f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id,
       (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache).AgreesWithFn f →
-        Pr[p | roMixedFixed f] = 1 := by
+        Pr{let x ← roMixedFixed f}[p x] = 1 := by
   simpa only [roSimPipeline, roMixedFixed] using
-    (OracleComp.probEvent_eq_one_simulateQ_romImpl_run_iff
+    (OracleComp.prEvent_eq_one_simulateQ_romImpl_run_iff
       (oa := roMixedToy) (preexisting_cache :=
         (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)) p)
 

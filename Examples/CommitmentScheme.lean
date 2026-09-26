@@ -76,7 +76,7 @@ space, and `|S|` is the size of the salt space.
 
 * `cachingOracle` (`VCVio/OracleComp/QueryTracking/CachingOracle.lean`):
   models the shared random oracle for both adversary and verifier.
-* `loggingOracle` (`VCVio/OracleComp/QueryTracking/LoggingOracle.lean`):
+* `loggingOracle` (`VCVio/OracleComp/QueryTracking/LoggingOracle/Core.lean`):
   records the commit-phase query trace used by the extractor.
 * `IsTotalQueryBound` (`VCVio/OracleComp/QueryTracking/QueryBound.lean`):
   the query budget bookkeeping plumbed through every reduction.

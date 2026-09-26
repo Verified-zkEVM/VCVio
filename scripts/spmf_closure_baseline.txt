@@ -319,9 +319,7 @@ VCVio.OracleComp.QueryTracking
 VCVio.OracleComp.QueryTracking.AdaptivePrefix
 VCVio.OracleComp.QueryTracking.Birthday
 VCVio.OracleComp.QueryTracking.Collision
-VCVio.OracleComp.QueryTracking.CountingOracle
 VCVio.OracleComp.QueryTracking.HandlerSimp
-VCVio.OracleComp.QueryTracking.LoggingOracle
 VCVio.OracleComp.QueryTracking.ObservationOracle
 VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 VCVio.OracleComp.QueryTracking.RandomOracle.Eager
@@ -329,7 +327,6 @@ VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 VCVio.OracleComp.QueryTracking.RandomOracle.Programming
 VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 VCVio.OracleComp.QueryTracking.SeededOracle
-VCVio.OracleComp.QueryTracking.Tracing
 VCVio.OracleComp.QueryTracking.Unpredictability
 VCVio.OracleComp.RunIO
 VCVio.OracleComp.SimSemantics.Append

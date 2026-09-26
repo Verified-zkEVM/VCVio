@@ -7,7 +7,7 @@ Authors: James Waters
 module
 public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.CachingOracle
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!

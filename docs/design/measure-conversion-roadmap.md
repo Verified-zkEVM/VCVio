@@ -280,6 +280,16 @@ events are generic over monads with lawful attachment, replacing their oracle-co
 copies. The instrumentation combinators document their transfer principle at the projection
 equation, and the scalar corollaries of that equation are removed with their façade module.
 
+## Query-instrumentation checkpoint
+
+Counting, logging and trace instrumentation are covered by their native core modules: the
+projection equations identify the uninstrumented execution, so output measures and events
+transfer by rewriting, and the scalar failure, output and event corollaries are removed with
+their compatibility modules. The lazy random oracle's probability-one characterizations are
+stated as `Pr{…}` events: an event holds almost surely exactly when it holds for every total
+answer table extending the starting cache, and the mixed form keeps uniform queries
+probabilistic. Merkle-tree completeness is stated in that form.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

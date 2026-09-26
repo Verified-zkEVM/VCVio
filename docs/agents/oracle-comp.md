@@ -283,13 +283,13 @@ structural and observation theory applies without duplicating wrapper-specific p
 
 | Wrapper | File | Built on |
 |---|---|---|
-| `withTraceBefore` (response-independent monoid trace) | `QueryTracking/Tracing.lean` | `preInsert` |
-| `withTrace` (response-dependent monoid trace) | `QueryTracking/Tracing.lean` | `postInsert` |
-| `withTraceAppendBefore` / `withTraceAppend` (`Append`-flavoured) | `QueryTracking/Tracing.lean` | `preInsert` / `postInsert` |
-| `withCost`, `withCounting` | `QueryTracking/CountingOracle.lean` | `withTraceBefore` |
+| `withTraceBefore` (response-independent monoid trace) | `QueryTracking/Tracing/Core.lean` | `preInsert` |
+| `withTrace` (response-dependent monoid trace) | `QueryTracking/Tracing/Core.lean` | `postInsert` |
+| `withTraceAppendBefore` / `withTraceAppend` (`Append`-flavoured) | `QueryTracking/Tracing/Core.lean` | `preInsert` / `postInsert` |
+| `withCost`, `withCounting` | `QueryTracking/CountingOracle/Core.lean` | `withTraceBefore` |
 | `withAddCost`, `withUnitCost` | `QueryTracking/WriterCost.lean` | `withCost` |
-| `withLogging` | `QueryTracking/LoggingOracle.lean` | `withTraceAppend` |
-| `appendInputLog` (StateT input log) | `QueryTracking/LoggingOracle.lean` | `preInsert` |
+| `withLogging` | `QueryTracking/LoggingOracle/Core.lean` | `withTraceAppend` |
+| `appendInputLog` (StateT input log) | `QueryTracking/LoggingOracle/Core.lean` | `preInsert` |
 
 If a new wrapper looks like one of these, add it as a small specialization rather than starting from `fun t => ...` from scratch.
 

@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import PolyFun.PFunctor.Handler.Normalization
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 

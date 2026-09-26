@@ -9,7 +9,7 @@ module
 public import Std.Tactic.Do
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.CachingOracle
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
@@ -46,7 +46,7 @@ The bridge is two-layered:
   required from the user.
 
 `loggingOracle` is the original `WriterT (QueryLog spec) (OracleComp spec)`
-implementation in `VCVio/OracleComp/QueryTracking/LoggingOracle.lean`.
+implementation in `VCVio/OracleComp/QueryTracking/LoggingOracle/Core.lean`.
 The bridge `WriterTBridge.lean` interprets the writer log `ω = QueryLog spec`
 as a state component of `Std.Do`'s `(.arg ω .pure)` post-shape, so the
 `mvcgen` workflow for `WriterT` and `StateT` handlers is identical.

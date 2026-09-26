@@ -61,13 +61,13 @@ and then applying the functional version of the completeness theorem.
 theorem completeness [DecidableEq α] [SampleableType α] {s}
     (leaf_data_tree : LeafData α s) (idx : BinaryTree.SkeletonLeafIndex s)
     (preexisting_cache : (spec α).QueryCache) :
-    Pr[fun v => v.1 = true | (simulateQ (spec α).randomOracle (do
+    Pr{let v ← (simulateQ (spec α).randomOracle (do
       let cache ← buildMerkleTree leaf_data_tree
       let proof := generateProof cache idx
       let verified ← (verifyProof (m := OracleComp (spec α)) idx (leaf_data_tree.get idx)
         (cache.getRootValue) proof)
-      return verified)).run preexisting_cache] = 1 := by
-  refine (probEvent_eq_one_simulateQ_randomOracle_run_iff (spec := spec α)
+      return verified)).run preexisting_cache}[v.1 = true] = 1 := by
+  refine (prEvent_eq_one_simulateQ_randomOracle_run_iff (spec := spec α)
     (p := fun b : Bool => b = true) _ _).mpr ?_
   intro f _hf
   simp only [evalWithAnswerFn, verifyProof, simulateQ_bind, simulateQ_pure,

@@ -112,13 +112,13 @@ Almost every `QueryImpl` wrapper in this directory ultimately bottoms out at the
 
 ```
 preInsert / postInsert  (generic combinators + bridge theory)
-  withTraceBefore / withTrace                         (Tracing.lean)
-    withCost                                          (CountingOracle.lean)
-      withCounting                                    (CountingOracle.lean)
+  withTraceBefore / withTrace                         (Tracing/Core.lean)
+    withCost                                          (CountingOracle/Core.lean)
+      withCounting                                    (CountingOracle/Core.lean)
       withAddCost / withUnitCost                      (WriterCost.lean)
-    withTraceAppendBefore / withTraceAppend           (Tracing.lean)
-      withLogging                                     (LoggingOracle.lean)
-      appendInputLog                                  (LoggingOracle.lean)
+    withTraceAppendBefore / withTraceAppend           (Tracing/Core.lean)
+      withLogging                                     (LoggingOracle/Core.lean)
+      appendInputLog                                  (LoggingOracle/Core.lean)
 ```
 
 Read this top-down before adding a new instrumentation wrapper. The rule of thumb:

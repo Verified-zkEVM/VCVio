@@ -7,8 +7,8 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.EvalDist.PFunctor
 public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.QueryTracking.Tracing
-import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.Tracing.Core
+import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 
 /-!
 # PFunctor and OracleSpec Semantics Canaries
