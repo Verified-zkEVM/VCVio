@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.ProbCompLift
 public import VCVio.EvalDist.Defs.Semantics.Core
 

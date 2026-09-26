@@ -288,7 +288,9 @@ transfer by rewriting, and the scalar failure, output and event corollaries are 
 their compatibility modules. The lazy random oracle's probability-one characterizations are
 stated as `Pr{…}` events: an event holds almost surely exactly when it holds for every total
 answer table extending the starting cache, and the mixed form keeps uniform queries
-probabilistic. Merkle-tree completeness is stated in that form.
+probabilistic. Merkle-tree completeness is stated in that form. The combined-signature
+coercion façade is removed, so modules that only need the canonical inclusions no longer
+import the discrete hubs; the two consumers that use discrete lemmas import them directly.
 
 ## Next conversion batch
 

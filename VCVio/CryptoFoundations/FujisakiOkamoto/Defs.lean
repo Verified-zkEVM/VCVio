@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Measure
 public import VCVio.OracleComp.SimSemantics.Append

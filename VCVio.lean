@@ -238,7 +238,6 @@ public import VCVio.Interaction.UC.Standard
 public import VCVio.Interaction.UC.StdDoBridge
 public import VCVio.Native
 public import VCVio.OracleComp.CanReturn
-public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.Coercions.SubSpec
 public import VCVio.OracleComp.Coercions.SubSpec.Basic

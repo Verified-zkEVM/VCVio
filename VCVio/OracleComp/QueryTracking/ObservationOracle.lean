@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import ToMathlib.Control.WriterT
-public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.HasQuery.Basic
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 
@@ -39,9 +39,8 @@ values. The definitions `eraseObs` and `runObs` are parameterized by a base orac
 
 ## Main Results
 
-* `fst_map_runObs`: erasure theorem — projecting away the trace recovers `eraseObs`.
-* `probFailure_runObs`: observations do not change failure probability (`[MonadLiftT m SPMF]`).
-* `neverFail_runObs_iff`: `NeverFail` is preserved by observation (`[MonadLiftT m SPMF]`).
+* `fst_map_runObs`: erasure theorem — projecting away the trace recovers `eraseObs`, so every
+  observation of the result (output measures, events, supports) transfers by rewriting.
 -/
 
 @[expose] public section
@@ -151,18 +150,6 @@ theorem fst_map_runObs [LawfulMonad m] (base : QueryImpl spec m) (encode : Ev �
     (oa : OracleComp (spec + ObsSpec Ev) α) :
     (fun z : α × ω => z.1) <$> runObs base encode oa = eraseObs base oa :=
   QueryImpl.fst_map_run_withCost (eraseObsImpl base) (obsCostFn encode) oa
-
-/-- Failure preservation: observations do not change the probability of failure. -/
-theorem probFailure_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
-    Pr[⊥ | runObs base encode oa] = Pr[⊥ | eraseObs base oa] := by
-  rw [← fst_map_runObs base encode oa, probFailure_map]
-
-/-- `NeverFail` is preserved by observation. -/
-theorem neverFail_runObs_iff [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
-    NeverFail (runObs base encode oa) ↔ NeverFail (eraseObs base oa) := by
-  simp only [neverFail_iff, probFailure_runObs]
 
 /-! ### EvalDist Bridge for `runObs`
 
