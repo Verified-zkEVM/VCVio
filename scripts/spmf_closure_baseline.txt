@@ -178,9 +178,7 @@ VCVio.OracleComp.EvalDist.UniformCompatibility
 VCVio.OracleComp.ProbComp
 VCVio.OracleComp.QueryTracking
 VCVio.OracleComp.QueryTracking.HandlerSimp
-VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
 VCVio.OracleComp.QueryTracking.RandomOracle.Eager
-VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 VCVio.OracleComp.QueryTracking.SeededOracle
 VCVio.OracleComp.RunIO
 VCVio.ProgramLogic.Notation

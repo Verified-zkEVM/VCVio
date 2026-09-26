@@ -341,6 +341,17 @@ events; slot draws, binary and flat choices, and the coherence laws are computed
 bind sums. The oracle runtime observes the native output measure of the simulated run. Events of
 pure computations and of binds over finite draws have native equations.
 
+## Deferred-sampling checkpoint
+
+The first-fire and deferred-sampling kernels are native. A hidden target probed by `q` adaptive
+reads fires with probability at most `q · ε` by an event union bound, the multi-key game adds one
+such term per key, and averaging over a random key count integrates the count against its output
+measure. The output-irrelevant draw deferral is an instance of the bind-swap law. The list
+multiplicity kernel integrates the count against the key marginal, tape factorization compares
+output measures under the discrete structure, and state-relation transfer is stated for
+lintegrals through simulated runs. Discrete bind laws already covered by native swap, lossless
+prefix and congruence laws are removed.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
