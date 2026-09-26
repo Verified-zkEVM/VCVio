@@ -6,11 +6,22 @@ on:
   pull_request:
   merge_group:
     types: [checks_requested]
+  # Nightly clean build of `main`: the absolute build-time trend, and a check that nothing passes
+  # only because of the build cache.
+  schedule:
+    - cron: "20 6 * * *"
   workflow_dispatch:
+    inputs:
+      clean_build:
+        description: "Ignore the build cache and build from scratch"
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Runs on `main` save the build cache that later runs start from, so a newer push waits for the
+  # running one instead of cancelling it.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   check_imported:
@@ -211,25 +222,29 @@ jobs:
       contents: read
       issues: write
       pull-requests: write
+    env:
+      CLEAN_BUILD: ${{ github.event_name == 'schedule' || inputs.clean_build == true }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           submodules: recursive
+      # PR-controlled values (the branch name) reach the script through `env`, never through
+      # `${{ }}` interpolation into the script text.
       - name: Initialize timing paths
+        env:
+          SOURCE_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
           echo "BUILD_TIMING_RESULTS=$RUNNER_TEMP/build-timing.jsonl" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_LOG_DIR=$RUNNER_TEMP/build-timing-logs" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_ARTIFACT_DIR=$RUNNER_TEMP/build-timing-artifact" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_ARTIFACT_NAME=build-timing-data" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_BASELINE_DIR=$RUNNER_TEMP/build-timing-baseline" >> "$GITHUB_ENV"
+          echo "MODULE_TIMES_BASE=$RUNNER_TEMP/module-times-base.json" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_REPORT=$RUNNER_TEMP/build-timing.md" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_COMMENT=$RUNNER_TEMP/build-timing-comment.md" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_SOURCE_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_SOURCE_BRANCH=${{ github.head_ref || github.ref_name }}" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_BASE_REF=" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_CLEAN_COMMAND=rm -rf .lake/build && lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
-          echo "BUILD_TIMING_WARM_COMMAND=lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_SOURCE_BRANCH=$SOURCE_BRANCH" >> "$GITHUB_ENV"
+          echo "BUILD_TIMING_BUILD_COMMAND=lake build ToMathlib VCVio VCVioCslib LatticeCrypto Extern HashSig Examples VCVioWidgets" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_NAME=Smoke test" >> "$GITHUB_ENV"
           echo "BUILD_TIMING_TEST_COMMAND=lake env lean VCVioTest/Smoke.lean" >> "$GITHUB_ENV"
           {
@@ -237,18 +252,35 @@ jobs:
             git log -1 --format=%s
             echo "EOF"
           } >> "$GITHUB_ENV"
-      - name: Determine PR timing base ref
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "BUILD_TIMING_BASE_REF=${{ github.event.pull_request.base.ref }}" >> "$GITHUB_ENV"
-      - name: Restore Lake cache
-        id: lake-cache
+      # Two caches with different lifetimes. Dependencies change only with the manifest; the VCVio
+      # build changes with every commit, so every run saves it and later runs restore the newest
+      # one they may see: GitHub scopes a cache to the ref that saved it, so a PR sees its own
+      # earlier pushes and `main`, and `main` sees only `main`. Lake decides what to rebuild from
+      # content hashes of each module's source and imports, so a restored build is only a starting
+      # point. Lake regenerates the `*.setup.json` files per build and never reads old ones.
+      - name: Restore dependency cache
+        id: deps-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('lake-manifest.json') }}-${{ github.sha }}
+          path: |
+            .lake/packages
+            !.lake/packages/**/*.setup.json
+          key: lake-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          # On a dependency bump, start from the previous packages; Lake checks out the new
+          # revisions and rebuilds only the packages that changed.
           restore-keys: |
-            lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('lake-manifest.json') }}
+            lake-deps-${{ runner.os }}-${{ runner.arch }}-
+      - name: Restore build cache
+        if: env.CLEAN_BUILD != 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            !.lake/build/**/*.setup.json
+          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}
+          restore-keys: |
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-
+            vcvio-build-${{ runner.os }}-${{ runner.arch }}-
       - name: Set up Lean environment
         uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1
         with:
@@ -260,13 +292,21 @@ jobs:
           use-mathlib-cache: false
       - name: Fetch Mathlib cache
         run: lake exe cache get
-      - name: Time clean build
+      # The module times recorded with the restored build are this run's per-module baseline.
+      - name: Keep cached module times as the baseline
         run: |
-          bash scripts/build_timing_report.sh run clean_build "$BUILD_TIMING_RESULTS" -- \
-            bash -eo pipefail -c "$BUILD_TIMING_CLEAN_COMMAND"
+          if [ -f .lake/build/vcvio-module-times.json ]; then
+            cp .lake/build/vcvio-module-times.json "$MODULE_TIMES_BASE"
+          fi
+      - name: Time library build
+        run: |
+          bash scripts/build_timing_report.sh run library_build "$BUILD_TIMING_RESULTS" -- \
+            bash -eo pipefail -c "$BUILD_TIMING_BUILD_COMMAND"
+      # Lake stores each module's messages in its trace and replays them for modules it does not
+      # rebuild, so the log carries every warning whether or not the module came from the cache.
       - name: Check warning budget
         run: |
-          python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/clean_build.log" \
+          python3 ./scripts/check-warning-log.py "$BUILD_TIMING_LOG_DIR/library_build.log" \
             --path-prefix ToMathlib/ \
             --path-prefix VCVio/ \
             --path-prefix VCVioCslib/ \
@@ -286,10 +326,6 @@ jobs:
             --exclude-substring 'declaration uses `sorry`' \
             --exclude-substring 'VCVio retiring probability API' \
             --label 'repository non-sorry warnings'
-      - name: Time warm rebuild
-        run: |
-          bash scripts/build_timing_report.sh run warm_rebuild "$BUILD_TIMING_RESULTS" -- \
-            bash -eo pipefail -c "$BUILD_TIMING_WARM_COMMAND"
       - name: Time test module
         run: |
           bash scripts/build_timing_report.sh run test_path "$BUILD_TIMING_RESULTS" -- \
@@ -330,7 +366,7 @@ jobs:
       # and vectors, the SLH-DSA canaries) and runs the smoke test and the SLH-DSA test
       # executables. The native ML-KEM / ML-DSA / Falcon executables are behind `-- --ffi` and
       # stay on the nightly FFI workflow. Kept out of the timed build commands on purpose: the
-      # timing report compares exactly the seven non-test libraries.
+      # library-build row times exactly the non-test libraries.
       - name: Test
         shell: bash  # explicit bash gives pipefail; the default `bash -e {0}` does not
         run: lake test 2>&1 | tee "$BUILD_TIMING_LOG_DIR/test_build.log"
@@ -357,12 +393,30 @@ jobs:
       # `scripts/InitSweep.lean` records precisely what that leaves uncovered.
       - name: Init sweep (test libraries)
         run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
-      - name: Save Lake cache
-        if: success() && steps.lake-cache.outputs.cache-hit != 'true'
+      - name: Record module times
+        run: |
+          python3 scripts/module_times.py update .lake/build/vcvio-module-times.json \
+            --commit "$GITHUB_SHA" \
+            "$BUILD_TIMING_LOG_DIR/library_build.log" "$BUILD_TIMING_LOG_DIR/test_build.log"
+      # Every run saves both caches the `Lint` job below restores. The saves are scoped to this
+      # run's ref, so a pull request's build is visible only to that pull request.
+      - name: Save dependency cache
+        if: steps.deps-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('lake-manifest.json') }}-${{ github.sha }}
+          path: |
+            .lake/packages
+            !.lake/packages/**/*.setup.json
+          key: ${{ steps.deps-cache.outputs.cache-primary-key }}
+      # Keyed by run as well as commit, so a nightly clean build of an already-cached commit still
+      # lands and `Lint` restores exactly this run's build.
+      - name: Save build cache
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            !.lake/build/**/*.setup.json
+          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.run_id }}
       - name: Prepare timing artifact
         if: always()
         run: |
@@ -371,8 +425,16 @@ jobs:
           if [ -f "$BUILD_TIMING_RESULTS" ]; then
             cp "$BUILD_TIMING_RESULTS" "$BUILD_TIMING_ARTIFACT_DIR/results.jsonl"
           fi
-          if [ -f "$BUILD_TIMING_LOG_DIR/clean_build.log" ]; then
-            cp "$BUILD_TIMING_LOG_DIR/clean_build.log" "$BUILD_TIMING_ARTIFACT_DIR/clean_build.log"
+          for log in library_build test_build; do
+            if [ -f "$BUILD_TIMING_LOG_DIR/$log.log" ]; then
+              cp "$BUILD_TIMING_LOG_DIR/$log.log" "$BUILD_TIMING_ARTIFACT_DIR/$log.log"
+            fi
+          done
+          if [ -f "$MODULE_TIMES_BASE" ]; then
+            cp "$MODULE_TIMES_BASE" "$BUILD_TIMING_ARTIFACT_DIR/module-times-base.json"
+          fi
+          if [ -f .lake/build/vcvio-module-times.json ]; then
+            cp .lake/build/vcvio-module-times.json "$BUILD_TIMING_ARTIFACT_DIR/module-times.json"
           fi
       - name: Upload timing artifact
         if: always()
@@ -382,113 +444,13 @@ jobs:
           path: ${{ env.BUILD_TIMING_ARTIFACT_DIR }}
           if-no-files-found: warn
           retention-days: 30
-      - name: Determine comparison baseline artifact
-        if: always() && github.event_name == 'pull_request'
-        id: timing-baseline
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
-        with:
-          script: |
-            const { owner, repo } = context.repo;
-            const artifactName = process.env.BUILD_TIMING_ARTIFACT_NAME;
-            const workflowName = process.env.GITHUB_WORKFLOW;
-            const currentRunId = Number(process.env.GITHUB_RUN_ID);
-            const currentSha = process.env.GITHUB_SHA;
-            const pullRequest = context.payload.pull_request;
-            const headRef = pullRequest.head.ref;
-            const baseRef = process.env.BUILD_TIMING_BASE_REF;
-
-            async function firstRunWithArtifact(runs) {
-              for (const run of runs) {
-                if (run.id === currentRunId) {
-                  continue;
-                }
-                if (run.name !== workflowName || run.conclusion !== 'success') {
-                  continue;
-                }
-                const artifactsResponse = await github.rest.actions.listWorkflowRunArtifacts({
-                  owner,
-                  repo,
-                  run_id: run.id,
-                  per_page: 100,
-                });
-                const artifact = artifactsResponse.data.artifacts.find(candidate =>
-                  candidate.name === artifactName && !candidate.expired
-                );
-                if (artifact) {
-                  return run;
-                }
-              }
-              return null;
-            }
-
-            const baseRunsResponse = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              event: 'push',
-              branch: baseRef,
-              status: 'completed',
-              per_page: 100,
-            });
-            const baseCandidates = baseRunsResponse.data.workflow_runs.filter(run =>
-              run.name === workflowName && run.conclusion === 'success'
-            );
-            const baseRun = await firstRunWithArtifact(baseCandidates);
-            if (baseRun) {
-              core.setOutput('run-id', String(baseRun.id));
-              core.setOutput('sha', baseRun.head_sha);
-              core.setOutput(
-                'label',
-                `the latest successful \`${baseRef}\` run`
-              );
-              return;
-            }
-
-            const prRunsResponse = await github.rest.actions.listWorkflowRunsForRepo({
-              owner,
-              repo,
-              event: 'pull_request',
-              branch: headRef,
-              status: 'completed',
-              per_page: 100,
-            });
-            const previousPrCandidates = prRunsResponse.data.workflow_runs.filter(run => {
-              if (run.head_sha === currentSha) {
-                return false;
-              }
-              const prs = run.pull_requests || [];
-              return prs.length === 0 || prs.some(pr => pr.number === pullRequest.number);
-            });
-            const previousPrRun = await firstRunWithArtifact(previousPrCandidates);
-            if (previousPrRun) {
-              core.setOutput('run-id', String(previousPrRun.id));
-              core.setOutput('sha', previousPrRun.head_sha);
-              core.setOutput('label', 'the previous successful PR update');
-              return;
-            }
-
-            core.info('No comparison baseline artifact found.');
-            core.setOutput('run-id', '');
-            core.setOutput('sha', '');
-            core.setOutput('label', '');
-      - name: Download comparison baseline artifact
-        if: always() && steps.timing-baseline.outputs.run-id != ''
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
-        with:
-          name: ${{ env.BUILD_TIMING_ARTIFACT_NAME }}
-          path: ${{ env.BUILD_TIMING_BASELINE_DIR }}
-          run-id: ${{ steps.timing-baseline.outputs.run-id }}
-          github-token: ${{ github.token }}
+      # The per-module baseline is the module table restored with the build cache, so no other
+      # run's artifact is needed.
       - name: Render build timing report
         if: always()
-        env:
-          BUILD_TIMING_BASELINE_LABEL: ${{ steps.timing-baseline.outputs.label }}
-          BUILD_TIMING_BASELINE_SHA: ${{ steps.timing-baseline.outputs.sha }}
         run: |
-          if [ -f "$BUILD_TIMING_BASELINE_DIR/results.jsonl" ]; then
-            bash scripts/build_timing_report.sh render "$BUILD_TIMING_RESULTS" "$BUILD_TIMING_BASELINE_DIR" > "$BUILD_TIMING_REPORT"
-          else
-            bash scripts/build_timing_report.sh render "$BUILD_TIMING_RESULTS" > "$BUILD_TIMING_REPORT"
-          fi
+          BUILD_TIMING_LOG_DIR="$BUILD_TIMING_ARTIFACT_DIR" bash scripts/build_timing_report.sh \
+            render "$BUILD_TIMING_ARTIFACT_DIR/results.jsonl" > "$BUILD_TIMING_REPORT"
           cat "$BUILD_TIMING_REPORT" >> "$GITHUB_STEP_SUMMARY"
           {
             echo '<!-- vcvio-build-timing-report -->'
@@ -545,11 +507,21 @@ jobs:
       # they pushed the hosted runner into a shutdown, so they get a fresh runner and the
       # oleans that job saved. `fail-on-cache-miss` keeps a missing cache from turning into a
       # second full build.
-      - name: Restore Lake cache
+      - name: Restore dependency cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('lake-manifest.json') }}-${{ github.sha }}
+          path: |
+            .lake/packages
+            !.lake/packages/**/*.setup.json
+          key: lake-deps-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}
+          fail-on-cache-miss: true
+      - name: Restore build cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            .lake/build
+            !.lake/build/**/*.setup.json
+          key: vcvio-build-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain', 'lake-manifest.json') }}-${{ github.sha }}-${{ github.run_id }}
           fail-on-cache-miss: true
       - name: Set up Lean environment
         uses: leanprover/lean-action@50fcf42d2e460296f1a34b402e990d1b24f8b596 # v1

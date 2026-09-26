@@ -272,9 +272,22 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `VCVioCslib`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
 and `VCVioWidgets`. The dormant `Interop` target remains excluded.
-The timing report parses per-file build times only for that same set.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
+
+CI keeps two caches: `.lake/packages`, keyed by `lean-toolchain` and `lake-manifest.json`, and
+the project's own `.lake/build`, which every run saves and later runs restore. GitHub scopes a cache
+to the ref that saved it, so a pull request starts from its own previous push or from `main`, and
+`main` only from `main`. Lake rebuilds a module when the content hash of its source or imports
+changes, so a restored build only saves work; it never changes a verdict. Lake replays the stored
+messages of modules it does not rebuild, so the warning budgets still see every warning. The
+nightly scheduled run, and a manual run with `clean_build`, skips the build cache.
+
+Because an incremental build's wall time depends on what the change invalidated, the timing report
+compares modules instead: `scripts/module_times.py` keeps the latest `Built <module> (<time>)` for
+every module in `.lake/build/vcvio-module-times.json`, which travels with the build cache. The
+report lists the modules this run rebuilt against those times, and the table's sum before and after
+estimates clean-build compile time.
 
 After the build, CI runs `./scripts/test-axiomsweep.sh` and then
 `lake exe axiomsweep --check`: kernel-level axiom/`sorry` accounting for every
