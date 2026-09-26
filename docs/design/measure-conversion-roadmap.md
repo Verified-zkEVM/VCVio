@@ -200,6 +200,22 @@ characterization of probability-one events follows the scalar ones out of the de
 set. The native import guard also rejects `evalSPMF`, the scalar evaluation functions, and the
 PMF-backed specification classes.
 
+## Native simulation and congruence checkpoint
+
+`OracleComp.SimSemantics.Measure` states the simulation laws natively for any lawful target
+semantics: implementations with equal answer measures simulate every computation to the same
+measure, and an implementation denoting each query's configured answer measure preserves the
+computation's denotation. The stateful form constrains only the answer marginal from every
+state; the service state needs no measurable space, and a warm cache is correctly excluded.
+The canonical uniform sampler is such an implementation.
+
+Event and measure congruence after a common oracle computation compare continuations on
+structural support, including continuations with different unmeasured output types. Uniform
+specifications supply the countability that the bind-swap law needs. Event masses do not depend
+on the measurable structure that makes the event measurable, so results proved under the discrete
+structure `⊤` apply under any chosen space, such as a Borel structure. Native regressions cover a
+hidden counter state, real-valued outputs, and different continuation output types.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

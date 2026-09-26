@@ -89,6 +89,21 @@ theorem evalDist_bind_bind_swap
         evalDist_bind_congr_of_support (query t) _ _ fun v _ ↦ ih v
       _ = _ := evalDist_query_bind_bind_swap t my (fun v b ↦ k v >>= fun a ↦ f a b)
 
+/-- Independent oracle computations commute under a uniform oracle specification; the
+countability of the response types follows from uniformity. -/
+theorem evalDist_bind_bind_swap_of_uniform
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+    [MeasurableSpace γ]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec γ) :
+    𝒟[mx >>= fun a ↦ my >>= fun b ↦ f a b] =
+      𝒟[my >>= fun b ↦ mx >>= fun a ↦ f a b] :=
+  have : ∀ t, Countable (spec.Range t) := fun t ↦
+    have := OracleSpec.IsUniformMeasureSpec.finite_range (spec := spec) t
+    Finite.to_countable
+  evalDist_bind_bind_swap mx my f
+
 /-- Compare measurable valuations of continuation outputs on structural support. The common
 computation's unobserved intermediate result needs no measurable-space instance. -/
 theorem lintegral_evalDist_bind_mono_of_support
@@ -173,6 +188,36 @@ theorem le_evalDist_bind_apply_of_support
         rw [lintegral_const, evalDist_apply_univ_eq_one, mul_one]
       _ ≤ _ := lintegral_mono fun u ↦ ih u fun a ha ↦
         h a (MonadAttach.mem_support_bind.mpr ⟨u, by simp, ha⟩)
+
+/-- Continuations whose event masses agree on structurally reachable outputs give equal composed
+event masses. No measurable space is needed on the hidden common result type. -/
+theorem evalDist_bind_apply_congr_of_support
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace β]
+    (mx : OracleComp spec α) (f g : α → OracleComp spec β)
+    {event : Set β} (hevent : MeasurableSet event)
+    (h : ∀ a ∈ support mx, 𝒟[f a] event = 𝒟[g a] event) :
+    𝒟[mx >>= f] event = 𝒟[mx >>= g] event :=
+  le_antisymm
+    (evalDist_bind_apply_mono_of_support mx f g hevent fun a ha ↦ (h a ha).le)
+    (evalDist_bind_apply_mono_of_support mx g f hevent fun a ha ↦ (h a ha).ge)
+
+/-- Continuation events with equal probability on every structurally reachable output give equal
+composed event probabilities. The continuations may have different output types, and neither the
+common result nor the continuation outputs need a measurable space. -/
+theorem prEvent_bind_congr_of_support
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (f : α → OracleComp spec β) (g : α → OracleComp spec γ)
+    (p : β → Prop) (q : γ → Prop)
+    (h : ∀ a ∈ support mx, Pr{let y ← f a}[p y] = Pr{let z ← g a}[q z]) :
+    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
+  simpa only [bind_assoc] using
+    evalDist_bind_apply_congr_of_support mx (fun a ↦ f a >>= fun y ↦ pure (p y))
+      (fun a ↦ g a >>= fun z ↦ pure (q z)) (measurableSet_singleton True) h
 
 /-- Almost-sure probability-one continuation events remain probability one after sequencing a
 lossless oracle computation. -/
@@ -415,5 +460,28 @@ theorem OptionT.isProbabilityMeasure_mk_iff (mx : OracleComp spec (Option α))
     exact h ho
 
 end uniformMeasureSpec
+
+/-! ## Event masses under different measurable structures -/
+
+/-- The mass of an event does not depend on the measurable structure that makes it measurable:
+it is the mass under the discrete structure `⊤`. Statements proved at `⊤` therefore apply under
+any chosen measurable space on the output, such as a Borel structure. -/
+theorem evalDist_apply_eq_top_apply
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    [MeasurableSpace α] (mx : OracleComp spec α) {s : Set α} (hs : MeasurableSet s) :
+    𝒟[mx] s = (letI : MeasurableSpace α := ⊤; 𝒟[mx]) s := by
+  induction mx using OracleComp.inductionOn with
+  | pure a =>
+    rw [evalDist_pure, Measure.dirac_apply' a hs]
+    let : MeasurableSpace α := ⊤
+    rw [evalDist_pure, Measure.dirac_apply' a MeasurableSpace.measurableSet_top]
+  | query_bind t k ih =>
+    rw [evalDist_bind_of_discrete, Measure.bind_apply hs Measurable.of_discrete.aemeasurable]
+    let : MeasurableSpace α := ⊤
+    rw [evalDist_bind_of_discrete, Measure.bind_apply MeasurableSpace.measurableSet_top
+      Measurable.of_discrete.aemeasurable]
+    exact lintegral_congr fun u ↦ ih u
 
 end OracleComp

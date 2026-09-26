@@ -76,6 +76,34 @@ theorem evalDist_simulateQ_run_congr
     filter_upwards [] with output
     exact ih output.1 output.2
 
+/-- A stateful implementation that, from every state, denotes each query's configured answer
+measure preserves the output measure of every simulated computation once the final state is
+discarded. Only the answer marginal is constrained: the service state may evolve arbitrarily and
+needs no measurable space. A caching oracle, whose answer from a warm cache is a Dirac measure,
+does not satisfy the hypothesis. -/
+theorem evalDist_simulateQ_run'_eq_of_forall
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {ι : Type u} {S α : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec] [MeasurableSpace α]
+    (impl : QueryImpl spec (StateT S m))
+    (h : ∀ t state, 𝒟[(impl t).run' state] = OracleSpec.IsMeasureSpec.toMeasure t)
+    (program : OracleComp spec α) (state : S) :
+    𝒟[(simulateQ impl program).run' state] = 𝒟[program] := by
+  induction program using OracleComp.inductionOn generalizing state with
+  | pure value => simp
+  | query_bind operation next ih =>
+    let : MeasurableSpace (spec.Range operation × S) := ⊤
+    have hfst : Measurable (Prod.fst : spec.Range operation × S → spec.Range operation) :=
+      measurable_from_top
+    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq, StateT.run_bind, map_bind]
+    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, evalDist_liftM_query,
+      ← h operation state, StateT.run'_eq, evalDist_map _ hfst,
+      Measure.bind_map _ hfst Measurable.of_discrete]
+    exact Measure.bind_congr_right (Filter.Eventually.of_forall fun output ↦ by
+      simpa only [StateT.run'_eq] using ih output.1 output.2)
+
 end OracleComp
 
 section simulateQ
