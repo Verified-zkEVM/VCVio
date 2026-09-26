@@ -259,6 +259,7 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.Constructions.UniformSelectMeasure
 public import VCVio.OracleComp.Constructions.WithoutReplacement
 public import VCVio.OracleComp.Constructions.WithoutReplacement.Basic
 public import VCVio.OracleComp.EvalDist

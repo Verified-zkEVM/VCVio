@@ -125,25 +125,6 @@ lemma evalSPMF_map_bijective_uniform_cross
     𝒮[f <$> ($ᵗ α)] = 𝒮[$ᵗ β] :=
   evalSPMF_ext (probOutput_map_bijective_uniform_cross (α := α) (β := β) f hf)
 
-/-- **Bijective uniform + right-translation gives uniform.** Sampling `x ← $ᵗ α`, transporting
-through a bijection `f : α → β`, and right-adding any fixed `m : β` yields the same distribution
-as sampling `y ← $ᵗ β` directly, as observed by any continuation `cont : β → ProbComp γ`.
-
-This is the "one-time pad" fact underlying many cryptographic reductions: bijective transport
-makes `f x` uniform on `β`, and in any `AddGroup β` right-translation `(· + m)` is a bijection
-on the uniform measure, so the sum is again uniform. -/
-lemma evalSPMF_bind_bijective_add_right_uniform {β γ : Type}
-    [AddGroup β] [SampleableType β] [Finite α]
-    (f : α → β) (hf : Function.Bijective f) (m : β) (cont : β → ProbComp γ) :
-    𝒮[do let x ← ($ᵗ α); cont (f x + m)] =
-      𝒮[do let y ← ($ᵗ β); cont y] := by
-  rw [show (do let x ← ($ᵗ α); cont (f x + m)) = (f <$> ($ᵗ α)) >>= fun y => cont (y + m)
-        from by simp [monad_norm], evalSPMF_bind,
-      evalSPMF_map_bijective_uniform_cross (α := α) (β := β) f hf, ← evalSPMF_bind,
-      show (do let y ← ($ᵗ β); cont (y + m)) = (((· + m) : β → β) <$> ($ᵗ β)) >>= cont
-        from by simp [monad_norm], evalSPMF_bind, evalSPMF_add_right_uniform (α := β) m,
-      ← evalSPMF_bind]
-
 lemma probFailure_uniformSample : Pr[⊥ | $ᵗ α] = 0 := by aesop
 
 @[simp] instance : NeverFail ($ᵗ α) := inferInstance

@@ -570,13 +570,4 @@ lemma tsum_probOutput_pure_mul (y : α) (f : α → ℝ≥0∞) :
   classical
   simp
 
-/-- Tonelli-style rearrangement: the expectation of a nonnegative functional under a
-`bind` is the outer expectation of the inner expectations. -/
-lemma tsum_probOutput_bind_mul (mx : m α) (g : α → m β) (f : β → ℝ≥0∞) :
-    ∑' z, Pr[= z | mx >>= g] * f z =
-      ∑' x, Pr[= x | mx] * ∑' z, Pr[= z | g x] * f z := by
-  simp_rw [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_right]
-  rw [ENNReal.tsum_comm]
-  simp_rw [mul_assoc, ENNReal.tsum_mul_left]
-
 end tsum_probOutput_mul

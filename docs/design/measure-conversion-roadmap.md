@@ -352,6 +352,14 @@ output measures under the discrete structure, and state-relation transfer is sta
 lintegrals through simulated runs. Discrete bind laws already covered by native swap, lossless
 prefix and congruence laws are removed.
 
+## Uniform-selection checkpoint
+
+Uniform selection has native event formulas: selecting from a nonempty vector or list vector,
+and through the optional monad from a list, finset or multiset, gives an event its proportion of
+entries, an empty collection contributing no successful mass; a uniform range and a fair coin
+give an event its proportion of admissible values. The discrete selection lemmas remain only
+while the legacy tactic benchmarks exercise them. Two orphaned scalar lemmas are removed.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
