@@ -7,15 +7,15 @@ Authors: Devon Tuma
 module
 public import ToMathlib.MeasureTheory.MeasurableSpace.Option
 public import VCVio.CryptoFoundations.ReplayFork
-public import VCVio.CryptoFoundations.SeededFork
 public import VCVio.EvalDist.PFunctorMeasure
 
 /-!
-# Measure-level forking bounds
+# Measure-level replay forking bound
 
-The seeded and replay forking lemmas are proved through VCVio's discrete
-probability surface. This file transports their final success bounds to the
-Mathlib measure denotation of the same oracle programs.
+The replay forking lemma is proved through VCVio's discrete probability surface.
+This file transports its final success bound to the Mathlib measure denotation
+of the same oracle programs. The seeded forking lemma is stated natively in
+`VCVio.CryptoFoundations.SeededFork`.
 
 These are compatibility corollaries rather than new forking arguments. The
 measure semantics is the canonical one induced by the existing per-query
@@ -38,30 +38,6 @@ noncomputable local instance measureSpecOfProbability
     [∀ i, MeasurableSpace (spec.Range i)] [IsProbabilitySpec spec] :
     PFunctor.IsMeasureSpec spec.toPFunctor :=
   PFunctor.IsProbabilitySpec.toMeasureSpec spec.toPFunctor
-
-section seeded
-
-variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι}
-  [IsUniformSpec spec] {α : Type}
-  [∀ i, MeasurableSpace (spec.Range i)]
-  [∀ i, DiscreteMeasurableSpace (spec.Range i)]
-  [MeasurableSpace α]
-
-/-- The canonical Bellare--Neven seeded-fork bound, stated as the Mathlib
-measure of the successful-result event. -/
-theorem le_evalDist_isSome_seededFork_sq
-    (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
-    (cf : α → Option (Fin (qb i + 1)))
-    [∀ j, SampleableType (spec.Range j)] [∀ j, DecidableEq (spec.Range j)]
-    [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec] :
-    ((∑ s, Pr[= some s | cf <$> main]) ^ 2 / ((qb i + 1 : ℕ) : ℝ≥0∞)
-        - (∑ s, Pr[= some s | cf <$> main]) /
-            ((Fintype.card (spec.Range i) : ℕ) : ℝ≥0∞)) ≤
-      𝒟[seededFork main qb js i cf] {result | result.isSome} := by
-  rw [evalDist_apply _ Option.measurableSet_isSome]
-  exact le_probEvent_isSome_seededFork_sq main qb js i cf
-
-end seeded
 
 section replay
 

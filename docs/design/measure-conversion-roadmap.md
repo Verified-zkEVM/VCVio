@@ -478,6 +478,18 @@ product singletons, `Set.univ` on `Bool`, the uniform event law after pushforwar
 and the support bridges need explicit steps. The discrete benchmarks remain until the lemma
 families they gate are retired.
 
+## Seeded forking checkpoint
+
+The Bellare–Neven seeded forking lemma is native. Uniform seed generation has an exact point
+mass on its support and splits off a uniform head answer at any oracle with a positive count.
+Running against the seeded oracle on such a seed has the output measure of the computation
+itself, resampling an appended answer is invisible, and truncating the seed keeps the joint law
+of the truncated prefix and the output. The forking bound follows as events: the squared success
+probability is the Jensen bound over the truncated seed, the resampled second run matches a run on
+the truncated seed, and collisions with the seeded answer cost `acc / h`. The eager random oracle
+averaged over a generated seed has the output measure of fresh independent queries. The replay
+forking lemma and its Fiat–Shamir consumers remain on the discrete layer.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

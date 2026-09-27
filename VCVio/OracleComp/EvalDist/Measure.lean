@@ -360,6 +360,51 @@ theorem prEvent_eq_one_of_forall_mem_support (mx : OracleComp spec α) (p : α �
   rw [prEvent_eq_evalDist_of_discrete, ← MeasureTheory.ae_iff_prob_eq_one Measurable.of_discrete]
   exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete h
 
+/-- When `x` is the only reachable intermediate value that can lead to `y`, the point mass of a
+bind at `y` factors as the point mass of the first draw at `x` times that of its continuation. -/
+theorem prEvent_bind_eq_mul_of_unique {β : Type} (mx : OracleComp spec α)
+    (my : α → OracleComp spec β) (x : α) (y : β)
+    (h : ∀ x' ∈ support mx, y ∈ support (my x') → x' = x) :
+    Pr{let z ← mx >>= my}[z = y] = Pr{let z ← mx}[z = x] * Pr{let z ← my x}[z = y] := by
+  classical
+  let : MeasurableSpace α := ⊤
+  calc Pr{let z ← mx >>= my}[z = y]
+      = ∫⁻ a, Pr{let z ← my a}[z = y] ∂𝒟[mx] := prEvent_bind_eq_lintegral_of_discrete mx my _
+    _ = ∫⁻ a, ({x} : Set α).indicator (fun _ => Pr{let z ← my x}[z = y]) a ∂𝒟[mx] := by
+        refine lintegral_congr_ae ((evalDist.ae_of_forall_mem_support mx (· ∈ support mx)
+          MeasurableSet.of_discrete fun _ ha => ha).mono fun a ha => ?_)
+        by_cases hax : a = x
+        · subst hax
+          simp
+        · rw [Set.indicator_of_notMem (by simpa using hax)]
+          exact prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hzy =>
+            hax (h a ha (hzy ▸ hz))
+    _ = Pr{let z ← my x}[z = y] * 𝒟[mx] {x} :=
+        lintegral_indicator_const (measurableSet_singleton x) _
+    _ = _ := by rw [← prEvent_eq_evalDist_singleton mx x, mul_comm]
+
+/-- Over finite oracle responses, computations with equal point masses have equal output measures
+in the discrete structure: both measures are carried by the finite union of their supports. -/
+theorem evalDist_eq_of_forall_prEvent_eq [∀ t, Finite (spec.Range t)]
+    {mx my : OracleComp spec α} (h : ∀ x, Pr{let z ← mx}[z = x] = Pr{let z ← my}[z = x]) :
+    (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my]) := by
+  classical
+  let : MeasurableSpace α := ⊤
+  let T : Finset α := ((support_finite mx).union (support_finite my)).toFinset
+  have key : ∀ oz : OracleComp spec α, support oz ⊆ ↑T → ∀ s : Set α,
+      𝒟[oz] s = ∑ x ∈ T.filter (· ∈ s), Pr{let z ← oz}[z = x] := by
+    intro oz hsub s
+    simp_rw [prEvent_eq_evalDist_singleton]
+    rw [MeasureTheory.sum_measure_singleton]
+    refine measure_congr ((evalDist.ae_of_forall_mem_support oz (· ∈ support oz)
+      MeasurableSet.of_discrete fun _ ha => ha).mono fun a ha => ?_)
+    have haT : a ∈ T := hsub ha
+    change (a ∈ s) = (a ∈ (↑(T.filter (· ∈ s)) : Set α))
+    simp [haT]
+  ext s -
+  rw [key mx (fun a ha => by simp [T, ha]) s, key my (fun a ha => by simp [T, ha]) s]
+  exact Finset.sum_congr rfl fun x _ => h x
+
 end measureSpec
 
 section uniformMeasureSpec

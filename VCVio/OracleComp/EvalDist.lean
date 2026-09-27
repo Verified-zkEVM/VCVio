@@ -223,13 +223,6 @@ section evalSPMFConvenience
 
 variable [IsUniformSpec spec] [IsProbabilitySpec spec']
 
-lemma evalSPMF_query_bind
-    (t : spec.Domain) (ou : spec.Range t → OracleComp spec α) :
-    𝒮[(query t : OracleComp spec _) >>= ou] =
-      (PMF.uniformOfFintype (spec.Range t) : SPMF _) >>=
-        fun u => evalSPMF (ou u) := by
-  rw [evalSPMF_bind, evalSPMF_query]
-
 lemma probOutput_congr {x y : α} {oa : OracleComp spec α} {oa' : OracleComp spec' α}
     (h1 : x = y) (h2 : 𝒮[oa] = 𝒮[oa']) : Pr[= x | oa] = Pr[= y | oa'] := by
   simp_rw [probOutput_def, h1, h2]

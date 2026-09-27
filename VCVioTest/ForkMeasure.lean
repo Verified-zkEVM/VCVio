@@ -6,13 +6,14 @@ Authors: Devon Tuma
 module
 
 public import VCVio.CryptoFoundations.ForkMeasure
+public import VCVio.CryptoFoundations.SeededFork
 
 /-!
 # External canaries for the measure-level forking bounds
 
-These examples deliberately live outside the defining module. They lock the public hypotheses and
-result shapes of both compatibility corollaries, so changes to the measure bridge cannot silently
-make the wrappers unusable by downstream crypto proofs.
+These examples deliberately live outside the defining modules. They lock the public hypotheses and
+result shapes of the native seeded forking bound and the replay compatibility corollary, so changes
+to either cannot silently make them unusable by downstream crypto proofs.
 -/
 
 public section
@@ -30,22 +31,20 @@ noncomputable local instance measureSpecOfProbability
 
 section seeded
 
-variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι}
-  [IsUniformSpec spec] {α : Type}
-  [∀ i, MeasurableSpace (spec.Range i)]
-  [∀ i, DiscreteMeasurableSpace (spec.Range i)]
-  [MeasurableSpace α]
+variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α : Type}
+  [∀ i, MeasurableSpace (spec.Range i)] [∀ i, DiscreteMeasurableSpace (spec.Range i)]
+  [OracleSpec.IsUniformMeasureSpec spec]
 
-/-- The seeded-fork measure wrapper remains directly consumable from another module. -/
+/-- The native seeded forking bound remains directly consumable from another module. -/
 example (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
     (cf : α → Option (Fin (qb i + 1)))
     [∀ j, SampleableType (spec.Range j)] [∀ j, DecidableEq (spec.Range j)]
-    [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec] :
-    ((∑ s, Pr[= some s | cf <$> main]) ^ 2 / ((qb i + 1 : ℕ) : ℝ≥0∞)
-        - (∑ s, Pr[= some s | cf <$> main]) /
+    [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec] [Fintype (spec.Range i)] :
+    ((∑ s, Pr{let x ← main}[cf x = some s]) ^ 2 / ((qb i + 1 : ℕ) : ℝ≥0∞)
+        - (∑ s, Pr{let x ← main}[cf x = some s]) /
             ((Fintype.card (spec.Range i) : ℕ) : ℝ≥0∞)) ≤
-      𝒟[OracleComp.seededFork main qb js i cf] {result | result.isSome} :=
-  OracleComp.le_evalDist_isSome_seededFork_sq main qb js i cf
+      Pr{let r ← OracleComp.seededFork main qb js i cf}[r.isSome] :=
+  OracleComp.le_prEvent_isSome_seededFork_sq main qb js i cf
 
 end seeded
 

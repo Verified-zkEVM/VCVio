@@ -734,15 +734,6 @@ lemma finSupport_nonempty_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
   rw [Finset.not_nonempty_iff_eq_empty.mp h, Finset.sum_empty] at hsum
   exact zero_ne_one hsum
 
-lemma probOutput_eq_inv_finSupport_card_of_liftM_PMF [MonadAttach m] [EvalDistCompatible m]
-    [HasEvalFinset m] [DecidableEq α] {mx : m α} {c : ENNReal}
-    (hconst : ∀ x ∈ support mx, Pr[= x | mx] = c) :
-    c = 1 / (finSupport mx).card := by
-  have h := sum_finSupport_probOutput_of_liftM_PMF (m := m) mx
-  rw [Finset.sum_congr rfl fun x hx => hconst x (mem_support_of_mem_finSupport hx),
-    Finset.sum_const, nsmul_eq_mul, mul_comm] at h
-  simpa using ENNReal.eq_inv_of_mul_eq_one_left h
-
 end pmf_denotation
 
 /-! ## Monotonicity and complementation for `probEvent` -/

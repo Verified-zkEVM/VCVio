@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.SimSemantics.Measure
 public import ToMathlib.MeasureTheory.DiscreteInstances
@@ -112,6 +113,26 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
     (a : α) : Pr{let x ← $ᵗ α}[x = a] = (Fintype.card α : ℝ≥0∞)⁻¹ := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
+
+/-- Each length-`n` list is drawn by `n` independent uniform samples with probability
+`(|α| ^ n)⁻¹`. -/
+theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]
+    {n : ℕ} {xs : List α} (hlen : xs.length = n) :
+    Pr{let v ← OracleComp.replicate n ($ᵗ α)}[v = xs] =
+      ((Fintype.card α ^ n : ℕ) : ℝ≥0∞)⁻¹ := by
+  induction n generalizing xs with
+  | zero =>
+      obtain rfl : xs = [] := List.eq_nil_of_length_eq_zero hlen
+      simp [OracleComp.replicate_zero]
+  | succ n ih =>
+      obtain ⟨y, ys, rfl⟩ := List.exists_cons_of_length_eq_add_one hlen
+      rw [OracleComp.replicate_succ_bind, OracleComp.prEvent_bind_eq_mul_of_unique _ _ y _
+        fun x' _ hx' => by
+          obtain ⟨xs, -, hxs⟩ := (mem_support_bind_iff _ _ _).mp hx'
+          exact (List.cons.inj ((mem_support_pure_iff' (m := ProbComp) _ _).mp hxs)).1]
+      simp only [bind_assoc, pure_bind, List.cons.injEq, true_and]
+      rw [prEvent_uniformSample_eq_singleton, ih (by simpa using hlen), pow_succ', Nat.cast_mul,
+        ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
 
 section counting
 

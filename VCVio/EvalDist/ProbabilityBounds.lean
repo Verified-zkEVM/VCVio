@@ -179,6 +179,25 @@ theorem prEvent_bind_le_of_forall_le (mx : m α) (f : α → m β) (q : β → P
     _ = ε * 𝒟[mx] Set.univ := lintegral_const ε
     _ ≤ ε := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
 
+/-- A pointwise comparison of continuation events survives a common draw. -/
+theorem prEvent_bind_mono_of_forall_le {γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
+    (p : β → Prop) (q : γ → Prop) (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
+    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
+  exact lintegral_mono h
+
+/-- A pointwise split of a continuation event into two other continuation events survives a
+common draw. -/
+theorem prEvent_bind_le_add_of_forall_le {γ δ : Type} (mx : m α) (f : α → m β)
+    (g : α → m γ) (k : α → m δ) (p : β → Prop) (q : γ → Prop) (r : δ → Prop)
+    (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y] + Pr{let y ← k a}[r y]) :
+    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] + Pr{let y ← mx >>= k}[r y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete,
+    prEvent_bind_eq_lintegral_of_discrete, ← lintegral_add_left Measurable.of_discrete]
+  exact lintegral_mono h
+
 /-- A uniform lower bound on the event of every continuation bounds the event after a lossless
 common draw. -/
 theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)

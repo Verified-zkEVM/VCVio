@@ -419,18 +419,6 @@ lemma probEvent_bind_mono {mx : m α} {my oc : α → m β} {q : β → Prop}
   gcongr with x hx
   exact h x hx
 
-/-- Pointwise division bounds on bind continuations factor through the bind. -/
-lemma probOutput_bind_mono_div_const {mx : m α}
-    {ob₁ ob₂ : α → m β} {y : β} {r : ℝ≥0∞}
-    (h : ∀ x ∈ support mx, Pr[= y | ob₁ x] ≤ Pr[= y | ob₂ x] / r) :
-    Pr[= y | mx >>= ob₁] ≤ Pr[= y | mx >>= ob₂] / r := by
-  simp only [probOutput_bind_eq_tsum, div_eq_mul_inv]
-  rw [← ENNReal.tsum_mul_right]
-  refine ENNReal.tsum_le_tsum fun x ↦ ?_
-  by_cases hx : x ∈ support mx
-  · simpa only [div_eq_mul_inv, mul_assoc] using mul_le_mul' le_rfl (h x hx)
-  · simp [probOutput_eq_zero_of_not_mem_support hx]
-
 lemma probEvent_bind_congr_div_const {mx : m α}
     {ob₁ ob₂ : α → m β} {q : β → Prop} {r : ℝ≥0∞}
     (h : ∀ x ∈ support mx, Pr[ q | ob₁ x] = Pr[ q | ob₂ x] / r) :
@@ -440,20 +428,6 @@ lemma probEvent_bind_congr_div_const {mx : m α}
   refine tsum_congr fun x => ?_
   by_cases hx : x ∈ support mx
   · rw [h x hx, div_eq_mul_inv, mul_assoc]
-  · simp [probOutput_eq_zero_of_not_mem_support hx]
-
-lemma probOutput_bind_congr_le_add {γ₁ γ₂ : Type u}
-    {mx : m α} {my : α → m β}
-      {oc₁ : α → m γ₁} {oc₂ : α → m γ₂}
-    {y : β} {z₁ : γ₁} {z₂ : γ₂}
-    (h : ∀ x ∈ support mx, Pr[= y | my x] ≤ Pr[= z₁ | oc₁ x] + Pr[= z₂ | oc₂ x]) :
-    Pr[= y | mx >>= my] ≤ Pr[= z₁ | mx >>= oc₁] + Pr[= z₂ | mx >>= oc₂] := by
-  simp only [probOutput_bind_eq_tsum, ← ENNReal.tsum_add]
-  refine ENNReal.tsum_le_tsum fun x => ?_
-  by_cases hx : x ∈ support mx
-  · calc Pr[= x | mx] * Pr[= y | my x]
-      _ ≤ Pr[= x | mx] * (Pr[= z₁ | oc₁ x] + Pr[= z₂ | oc₂ x]) := mul_le_mul' le_rfl (h x hx)
-      _ = Pr[= x | mx] * Pr[= z₁ | oc₁ x] + Pr[= x | mx] * Pr[= z₂ | oc₂ x] := left_distrib ..
   · simp [probOutput_eq_zero_of_not_mem_support hx]
 
 /-- Union bound for bind: if `Pr[ ¬p | mx] ≤ ε₁` and `Pr[ ¬q | my x] ≤ ε₂` for all `x` satisfying

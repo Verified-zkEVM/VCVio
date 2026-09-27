@@ -67,18 +67,6 @@ lemma sum_probEvent_option_map_eq_some_le_isSome
     (MeasureTheory.Measure.sum_apply_option_map_eq_some_le_isSome 𝒟[mx] select
       fun _ ↦ MeasurableSet.of_discrete)
 
-lemma probEvent_isSome_eq_one_sub_probOutput_none [Monad m] [NeverFail mx] :
-    Pr[ fun r => r.isSome | mx] = 1 - Pr[= none | mx] := by
-  rw [probEvent_eq_tsum_ite,
-    tsum_option (fun r : Option α => if r.isSome then Pr[= r | mx] else 0) ENNReal.summable]
-  simp only [Option.isSome, reduceCtorEq, ↓reduceIte, zero_add]
-  have hnone_ne_top : Pr[= none | mx] ≠ ⊤ :=
-    ne_top_of_le_ne_top ENNReal.one_ne_top probOutput_le_one
-  have htotal : (∑' x, Pr[= some x | mx]) + Pr[= none | mx] = 1 := by
-    simpa [probFailure_eq_zero (mx := mx), tsub_zero, add_comm]
-      using probOutput_none_add_tsum_some (mx := mx)
-  exact ENNReal.eq_sub_of_add_eq hnone_ne_top htotal
-
 lemma sum_probOutput_some_le_one [Fintype α] :
     ∑ x : α, Pr[= (some x : Option α) | mx] ≤ 1 := by
   classical
