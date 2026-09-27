@@ -60,9 +60,6 @@ noncomputable instance {M S C : Type} [Fintype C] [Inhabited C]
 
 variable {M S C : Type} [DecidableEq M] [DecidableEq S] [Fintype C] [Inhabited C]
 
-noncomputable instance : IsUniformSpec (CMOracle M S C) :=
-  IsUniformSpec.ofFintypeInhabited _
-
 /-- Commit to message `m` with salt `s` by querying the random oracle at `(m, s)`. -/
 def CMCommit (m : M) (s : S) : OracleComp (CMOracle M S C) C :=
   (CMOracle M S C).query (m, s)

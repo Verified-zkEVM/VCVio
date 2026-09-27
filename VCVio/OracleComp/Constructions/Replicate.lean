@@ -66,13 +66,13 @@ lemma probOutput_replicate (xs : List α) :
       rw [replicate_succ, probOutput_cons_seq_map_cons_eq_mul oa (replicate n oa) y ys, ih]
       simp
 
+end probability
+
 @[simp]
-lemma mem_finSupport_replicate [DecidableEq α]
+lemma mem_finSupport_replicate [∀ t, Fintype (spec.Range t)] [DecidableEq α]
     (xs : List α) : xs ∈ finSupport (oa.replicate n) ↔
       xs.length = n ∧ ∀ x ∈ xs, x ∈ finSupport oa := by
   simp [mem_finSupport_iff_mem_support]
-
-end probability
 
 /-! ## SimulateQ distributivity -/
 

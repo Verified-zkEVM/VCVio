@@ -34,6 +34,7 @@ variable {ι} {spec : OracleSpec ι}
 
 /-- A per-query distribution on an `OracleSpec`, definitionally the generic
 probability specification on its underlying polynomial functor. -/
+@[deprecated "VCVio retiring probability API: use OracleSpec.IsMeasureSpec" (since := "2026-09-27")]
 abbrev IsProbabilitySpec (spec : OracleSpec ι) :=
   PFunctor.IsProbabilitySpec spec.toPFunctor
 
@@ -51,6 +52,8 @@ ranges. Bundles finiteness and inhabitedness of every response type with
 agrees with `PMF.uniformOfFintype`. Use this as the canonical input to lemmas
 that mention `Fintype.card (spec.Range _)` or `PMF.uniformOfFintype` in their
 statements. -/
+@[deprecated "VCVio retiring probability API: use OracleSpec.IsUniformMeasureSpec"
+  (since := "2026-09-27")]
 class IsUniformSpec (spec : OracleSpec ι) extends IsProbabilitySpec spec where
   /-- Every response set is finite. -/
   fintype : ∀ t, Fintype (spec.Range t)
@@ -66,7 +69,9 @@ Deliberately **not** an instance — `IsUniformSpec` must be opted into per
 spec so that uniform-sampling semantics never attach silently to a spec
 whose author didn't intend a probabilistic interpretation. Use this
 helper when declaring `IsUniformSpec` for a concrete spec. -/
-@[reducible] noncomputable def IsUniformSpec.ofFintypeInhabited
+@[deprecated "VCVio retiring probability API: use OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty"
+  (since := "2026-09-27"), reducible]
+noncomputable def IsUniformSpec.ofFintypeInhabited
     {ι : Type u} (spec : OracleSpec ι)
     [hF : ∀ t, Fintype (spec.Range t)] [hI : ∀ t, Inhabited (spec.Range t)] :
     IsUniformSpec spec where

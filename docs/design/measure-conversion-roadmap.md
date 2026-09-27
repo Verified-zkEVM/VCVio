@@ -508,6 +508,47 @@ the class certificate; the copy that went through the discrete adapter is gone, 
 scope. Importers that used it or the retiring sampling, `ProbComp`, uniform-compatibility and
 subspec hubs only for native declarations import the native modules directly.
 
+## Retirement preparation checkpoint
+
+The per-query `PMF` interpretations are deprecated: `OracleSpec.IsProbabilitySpec`,
+`OracleSpec.IsUniformSpec`, their polynomial-functor forms, and both `ofFintypeInhabited`
+constructors point to `OracleSpec.IsMeasureSpec`, `OracleSpec.IsUniformMeasureSpec`, and
+`IsUniformMeasureSpec.ofFiniteNonempty`. `NeverFail`, `EvalDistCompatible`, and
+`DiscreteEvalDistCompatible` were already deprecated. The `usesRetiredProbability` linter now
+reports direct uses of all seven classes as well as the scalar API, which enrolled thirty
+declarations that used a class without the scalar functions: the class fields and
+constructors themselves, the uniform instances and the bridge instance they feed, the
+polynomial-functor measure-compatibility class, the query-slack expectation of the until-bad
+family, the Fiat–Shamir challenge instances, and ML-DSA's `ExpandA` idealization. Two unused
+uniform instances and one unused binder were removed instead of enrolled. The local warning
+budget matches CI: nothing uses the deprecated support API, so its exclusion is gone.
+
+## Final removal
+
+Every remaining ledger entry sits in a family waiting on open work or in the façade itself:
+slack, HVZK, and aborting Fiat–Shamir with their ML-DSA clients (#507, #508, #639); Rényi
+divergence and the GPV and Falcon clients (#466, #471, #478); expectation and the Fiat–Shamir
+NMA aggregation (#515); the coinductive responders, which need a measurable coalgebra. Once
+those convert, removal deletes these modules and regenerates the umbrellas:
+
+- `ToMathlib`: `ProbabilityTheory/SPMF`, `Probability/ProbabilityMassFunction/{TotalVariation,
+  RenyiDivergence,RadonNikodym,Lemmas,Measure}`, and `Probability/Divergence/RenyiDiscrete`.
+- `VCVio/EvalDist`: `Defs/{Basic,Instances,NeverFails,AlternativeMonad}`,
+  `Monad/{Basic,Map,Seq}`, `List`, `Prod`, `Option`, `Bool`, `BitVec`, `Fintype`, `TVDist`,
+  `RenyiDivergence`, `Expectation`, `ExpectationMeasure`, `Instances/{OptionT,ErrorT}`, and
+  `PFunctor`, with the discrete bridges of `Defs/Measure` (including the priority-10
+  `instEvalDistSemanticsOfMonadLiftTSPMF` fallback), `FailureMeasure`, `PFunctorMeasure`, and
+  `MeasureTVDist`.
+- `VCVio/OracleComp`: the `EvalDist`, `ProbComp`, `Constructions/SampleableType`, and
+  `Coercions/SubSpec` hubs, `EvalDist/UniformCompatibility`, and
+  `Constructions/SampleableType/MeasureCompatibility`.
+
+The dormant `Interop` library imports the `OptionT` and `ErrorT` instances and moves with them.
+After removal the retired-probability ledger and the SPMF import-closure baseline are empty, and
+both checks can be deleted. One question stays open: whether `Pr[= x | mx]` and `Pr[p | mx]`
+are re-pointed to `𝒟[mx] {x}` and `Pr{let x ← mx}[p x]`, which changes what the singleton form
+requires (measurable singletons), or removed so that `Pr{…}[…]` is the only event syntax.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
@@ -536,7 +577,7 @@ Record each published checkpoint and its remaining compatibility consumers here 
 | Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
 | Forking | Seeded and replay forking are native; the remaining step is the `expectedValue` aggregation in the Fiat–Shamir NMA bound. |
 | Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
-| Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
+| Retirement | Compatibility classes are deprecated and linted; after the remaining families convert, delete the modules listed under *Final removal* and empty the retired-probability ledger. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
 each family before expanding to another subsystem. Publish a complete checkpoint before opening

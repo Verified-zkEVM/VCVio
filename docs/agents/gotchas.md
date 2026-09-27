@@ -4,11 +4,11 @@
 
 ### 1. Probability semantics require the right spec class
 
-Any file using `evalSPMF`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleComp spec` needs `[IsProbabilitySpec spec]`. `evalDist` / `𝒟[…]` also needs a `MeasurableSpace` on the result type. Lemmas that use uniform cardinalities, `PMF.uniformOfFintype`, or connect `support` to nonzero probability need `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
+`evalDist` / `𝒟[…]` and `Pr{…}[…]` on `OracleComp spec` need `[OracleSpec.IsMeasureSpec spec]`, and `𝒟[…]` also needs a `MeasurableSpace` on the result type. Uniform answer measures are `[OracleSpec.IsUniformMeasureSpec spec]`. The deprecated `evalSPMF`, `probOutput`, `probEvent`, and `Pr[...]` need the deprecated `[IsProbabilitySpec spec]`, and their uniform cardinality lemmas the deprecated `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
 
-**Symptom**: "failed to synthesize instance" mentioning `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
+**Symptom**: "failed to synthesize instance" mentioning `OracleSpec.IsMeasureSpec`, `IsUniformMeasureSpec`, or, on legacy statements, `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
 
-**Fix**: Add `[IsProbabilitySpec spec]` for arbitrary per-query probability semantics, or `[IsUniformSpec spec]` for uniform oracle semantics. If you already have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and want uniform sampling, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`; for the measure-native surface, `IsUniformMeasureSpec.ofFiniteNonempty spec` needs only `[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]`.
+**Fix**: Add `[∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]` with `[OracleSpec.IsMeasureSpec spec]` for arbitrary per-query answer measures, or `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers. For a concrete spec with finite, nonempty answer types, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec`. Only a statement that still uses the deprecated `Pr[...]` façade takes `[IsProbabilitySpec spec]` or `[IsUniformSpec spec]`.
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 

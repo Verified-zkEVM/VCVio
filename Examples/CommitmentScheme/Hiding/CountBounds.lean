@@ -1135,9 +1135,6 @@ def hidingSim [Inhabited M] [Inhabited S]
 abbrev HidingAvgSpec (M : Type) (S : Type) (C : Type) :=
   (Unit →ₒ S) + CMOracle M S C
 
-noncomputable instance unitArrowSpecIsUniformSpec (S : Type) [Fintype S] [Inhabited S] :
-    IsUniformSpec (Unit →ₒ S) := IsUniformSpec.ofFintypeInhabited _
-
 /-- Uniform sampling of a salt in its chosen finite response space. -/
 noncomputable instance unitArrowSpecIsUniformMeasureSpec (S : Type) [Fintype S] [Inhabited S]
     [MeasurableSpace S] [MeasurableSingletonClass S] :

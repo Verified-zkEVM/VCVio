@@ -51,9 +51,10 @@ universe-polymorphic observation interface, not a parser trick.
    equations. The one-time-pad UC observation theorem is a concrete example:
    its main equality is now between measures, with a finite `SPMF` corollary.
 3. Replace legacy program-logic and coupling statements in coherent families.
-   `SPMF`, `evalSPMF`, and the scalar `Pr[...]` functions are deprecated; the
-   `usesRetiredProbability` environment linter tracks direct uses of those and
-   Mathlib's imported `PMF` by declaration in `scripts/nolints.json`.
+   `SPMF`, `evalSPMF`, the scalar `Pr[...]` functions, and the classes that
+   interpret them are deprecated; the `usesRetiredProbability` environment linter
+   tracks direct uses of those and Mathlib's imported `PMF` by declaration in
+   `scripts/nolints.json`.
 4. Once the remaining finite adapters have measure-level equivalents, remove
    the compatibility notation and declarations. The exception ledger should
    then become empty for this linter.

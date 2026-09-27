@@ -399,9 +399,10 @@ The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq
 only needs equality of result types, whereas a measure denotation also depends on the selected
 `MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
 
-`SPMF`, `evalSPMF`, `probOutput`, `probEvent`, and `probFailure` are deprecated.
+`SPMF`, `evalSPMF`, `probOutput`, `probEvent`, and `probFailure` are deprecated, as are the
+classes that interpret them: `IsProbabilitySpec`, `IsUniformSpec`, `NeverFail`, `EvalDistCompatible`, and `DiscreteEvalDistCompatible`.
 Mathlib owns `PMF`, so VCVio's `usesRetiredProbability` environment linter
-records direct uses of it and the local finite API in `scripts/nolints.json`.
+records direct uses of it, the local finite API, and those classes in `scripts/nolints.json`.
 New theorem statements should prefer `𝒟` or `Pr{...}[...]` and use a named
 compatibility equation only when discrete execution is needed.
 
@@ -990,7 +991,7 @@ library proofs got shorter; a set with no library caller is itself a finding.
 
 ## Common Mistakes
 
-1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just finite, inhabited answer types. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
+1. **Missing probability spec classes**: on `OracleComp spec`, `𝒟[...]` and `Pr{...}[...]` require `[OracleSpec.IsMeasureSpec spec]` over measurable answer spaces, and uniform answers `[OracleSpec.IsUniformMeasureSpec spec]`, not just finite, nonempty answer types. Use `IsUniformMeasureSpec.ofFiniteNonempty spec` when a concrete finite spec should answer uniformly. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output. The deprecated `evalSPMF`/`probOutput`/`Pr[...]` façade requires the deprecated `[IsProbabilitySpec spec]`, and its cardinality lemmas the deprecated `[IsUniformSpec spec]`.
 
 2. **Carrying duplicate probability instances**: do not add a separate `[IsProbabilitySpec spec]` when `[IsUniformSpec spec]` is already in scope. `IsUniformSpec` extends `IsProbabilitySpec`; a second instance can make instance search ambiguous and may not describe the same distributions.
 
