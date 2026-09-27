@@ -169,4 +169,19 @@ example :
     Pr{let x ← (pure (1 : ℝ) : OptionT (FreeM gaussSpec) ℝ)}[x = 1] = 1 := by
   simp
 
+/-! Equal discrete output measures on an unmeasured payload transport to real-valued
+observations and to structural support. -/
+
+example {α : Type} (mx my : ProbComp α) (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my]))
+    (f : α → ProbComp ℝ) : 𝒟[mx >>= f] = 𝒟[my >>= f] :=
+  evalDist_bind_congr_of_evalDist_eq mx my h f
+
+example {α : Type} (mx my : ProbComp α) (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my]))
+    (f : α → ℝ) : 𝒟[f <$> mx] = 𝒟[f <$> my] :=
+  evalDist_map_congr_of_evalDist_eq mx my h f
+
+example {α : Type} {mx my : ProbComp α}
+    (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) : support mx = support my :=
+  support_eq_of_evalDist_eq h
+
 end VCVioTest.ProbabilityNotation

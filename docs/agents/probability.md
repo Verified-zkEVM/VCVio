@@ -696,7 +696,6 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
 | Lemma | Use |
 |-------|-----|
 | `probOutput_eq_zero_of_not_mem_support` | `x ∉ support mx → Pr[= x \| mx] = 0` |
-| `probOutput_bind_eq_tsum_subtype` | Restrict tsum to `support mx` |
 | `probOutput_bind_eq_sum_finSupport` | Finite sum over `finSupport` |
 
 ## Decision Tree: Which Lemma Do I Reach For?
@@ -716,7 +715,7 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
    → Otherwise: `probOutput_map_eq_tsum_subtype` or `probOutput_map_eq_sum_finSupport_ite`
 
 5. **Need to restrict a sum to support?**
-   → `probOutput_bind_eq_tsum_subtype` or `probOutput_bind_eq_sum_finSupport`
+   → `probOutput_bind_eq_sum_finSupport`
 
 6. **Continuation doesn't depend on result?**
    → `probOutput_bind_const` / `probEvent_bind_const`

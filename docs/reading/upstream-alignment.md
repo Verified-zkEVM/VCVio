@@ -289,7 +289,7 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    `meas_le_lintegral₀` (`M:…/Lebesgue/Markov.lean:61`) on the nose. Duplicate, do not replace: the
    `tsum` forms are generic over `[MonadLiftT m SPMF]`.
 3. Event algebra on the `𝒟` side: `probEvent_or_le` ↔ `measure_union_le`
-   (`M:MeasureTheory/OuterMeasure/Basic.lean:88`), `probEvent_exists_finset_le_sum` ↔
+   (`M:MeasureTheory/OuterMeasure/Basic.lean:88`), `prEvent_exists_finset_le` ↔
    `measure_biUnion_finset_le` (`:80`), `probEvent_compl` ↔ `measure_add_measure_compl`
    (`M:…/MeasureSpace.lean:157`), `probEvent_mono` ↔ `measure_mono`.
 4. `evalDist_bind_const`/`evalDist_map_const` from `Measure.bind_const` (`M:…/GiryMonad.lean:258`)

@@ -28,11 +28,6 @@ lemma probOutput_false_add_true (mx : m Bool) :
     Pr[= false | mx] + Pr[= true | mx] = 1 - Pr[⊥ | mx] := by
   rw [add_comm, probOutput_true_add_false]
 
-lemma probOutput_false_eq_sub (mx : m Bool) :
-    Pr[= false | mx] = 1 - Pr[⊥ | mx] - Pr[= true | mx] := by
-  rw [← probOutput_false_add_true]
-  exact (ENNReal.add_sub_cancel_right probOutput_ne_top).symm
-
 @[simp]
 lemma probOutput_not_map [Monad m] [LawfulMonad m] [LawfulMonadLiftT m SPMF] (mx : m Bool) :
     Pr[= true | (! ·) <$> mx] = Pr[= false | mx] :=

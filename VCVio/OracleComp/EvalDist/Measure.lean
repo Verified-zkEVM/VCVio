@@ -397,6 +397,14 @@ theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
   push Not
   rfl
 
+/-- Under native uniform oracle semantics, computations with the same output measure in the
+discrete structure reach the same outputs. -/
+theorem support_eq_of_evalDist_eq {mx my : OracleComp spec α}
+    (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) : support mx = support my := by
+  let : MeasurableSpace α := ⊤
+  ext x
+  rw [mem_support_iff_evalDist_singleton_pos, mem_support_iff_evalDist_singleton_pos, h]
+
 /-- Under native uniform oracle semantics, an event of a single lifted query has the
 proportion of satisfying responses as its probability. -/
 theorem prEvent_liftM_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]

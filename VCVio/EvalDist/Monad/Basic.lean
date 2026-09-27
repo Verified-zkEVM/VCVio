@@ -45,19 +45,7 @@ section lift
 
 variable [MonadLiftT m SPMF]
 
-/-! ## Complement bounds -/
-
-/-- Union bound for finset-indexed events: the probability that *some* event in `s` holds
-is at most the sum of the individual event probabilities. -/
-lemma probEvent_exists_finset_le_sum
-    {ι : Type*} (s : Finset ι) (mx : m α) (E : ι → α → Prop) :
-    Pr[ (fun x => ∃ i ∈ s, E i x) | mx] ≤ Finset.sum s (fun i => Pr[ E i | mx]) := by
-  classical
-  refine Finset.induction_on s (by simp) fun a s ha ih => ?_
-  rw [Finset.sum_insert ha, show (fun x => ∃ i ∈ insert a s, E i x)
-      = (fun x => E a x ∨ ∃ i ∈ s, E i x) by simp]
-  refine (probEvent_or_le mx (E a) _).trans ?_
-  gcongr
+/-! ## Expectation sums -/
 
 /-- Expectation is monotone in the functional. -/
 lemma tsum_probOutput_mul_mono (mx : m α) {f g : α → ℝ≥0∞} (h : ∀ x, f x ≤ g x) :
@@ -204,17 +192,8 @@ lemma probFailure_bind_eq_zero_iff [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     Pr[⊥ | mx >>= my] = 0 ↔ Pr[⊥ | mx] = 0 ∧ ∀ x ∈ support mx, Pr[⊥ | my x] = 0 := by
   simp [probFailure_bind_eq_add_tsum, or_iff_not_imp_left]
 
-/-- Version of `probOutput_bind_eq_tsum` that sums only over the subtype given by the support
-of the first computation. This can be useful to avoid looking at edge cases that can't actually
-happen in practice after the first computation. A common example is if the first computation
-does some error handling to avoids returning malformed outputs. -/
-lemma probOutput_bind_eq_tsum_subtype [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadAttach m] [EvalDistCompatible m] (mx : m α) (my : α → m β) (y : β) :
-    Pr[= y | mx >>= my] = ∑' x : support mx, Pr[= x | mx] * Pr[= y | my x] := by
-  rw [tsum_subtype _ (fun x => Pr[= x | mx] * Pr[= y | my x]), probOutput_bind_eq_tsum]
-  refine tsum_congr (fun x => ?_)
-  by_cases hx : x ∈ support mx <;> aesop
-
+/-- Version of `probEvent_bind_eq_tsum` that sums only over the subtype given by the support
+of the first computation, avoiding edge cases that the first computation never reaches. -/
 lemma probEvent_bind_eq_tsum_subtype [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [MonadAttach m] [EvalDistCompatible m] (mx : m α) (my : α → m β) (q : β → Prop) :
     Pr[ q | mx >>= my] = ∑' x : support mx, Pr[= x | mx] * Pr[ q | my x] := by

@@ -447,6 +447,19 @@ event probabilities through equalities of output measures and the native disagre
 and the network-level transport reads verdict masses off output measures. The discrete
 disagreement module and the scalar wrappers the coupling used have been removed.
 
+## Fischlin checkpoint
+
+The Fischlin transform is native. Completeness compares the random-oracle game with its
+pure-probability model through equalities of output measures in the discrete structure: each
+repetition's lazy search couples to fresh uniform draws together with its cached hash, the
+repetitions thread the cache without collisions, and the verifier's re-queries become cache hits.
+The rejection bound unions per-repetition tail events on the model's independent product.
+Knowledge soundness bounds the bad event by the verifier accepting while the extractor's scan
+misses, then runs the supermartingale induction over the lazy random oracle in quantitative `wp`;
+each leaf is the verifier's acceptance mass on a partially cached oracle, computed from the
+independent product of hits and fresh draws. Bind and map congruence along equal discrete output
+measures, and the matching support transfer, are part of the general measure API.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
@@ -459,9 +472,6 @@ Continue with independently validated PRs:
    security clients, preserving observable `none` outcomes.
 2. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
    and affected Fiat–Shamir simulation/stateful-hop/security families.
-3. Convert Fischlin search/runtime/model/completeness using native products and projections.
-4. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
-   declarations.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
 (#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.
@@ -478,7 +488,6 @@ Record each published checkpoint and its remaining compatibility consumers here 
 | Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
 | Forking | Seeded and replay forking after their tracking and relational prerequisites pass validation. |
 | Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
-| Fischlin | Convert cost, completeness, and soundness together with all affected clients. |
 | Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
