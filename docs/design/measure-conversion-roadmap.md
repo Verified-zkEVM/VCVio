@@ -460,6 +460,14 @@ each leaf is the verifier's acceptance mass on a partially cached oracle, comput
 independent product of hits and fresh draws. Bind and map congruence along equal discrete output
 measures, and the matching support transfer, are part of the general measure API.
 
+## Oracle IND-CPA checkpoint
+
+The oracle IND-CPA hybrid argument is native. The counted-hybrid transports, the endpoint
+identifications of the left/right hybrids and the uniform-bit branch decomposition are equalities
+of output measures, and the one-time-to-many-time lift no longer assumes a finite or inhabited
+ciphertext type. The machine-level responder readings remain on the discrete coinductive
+handler.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
