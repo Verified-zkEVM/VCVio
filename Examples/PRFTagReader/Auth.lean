@@ -7,7 +7,7 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.Defs
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # PRF Tag/Reader Protocol — Authentication

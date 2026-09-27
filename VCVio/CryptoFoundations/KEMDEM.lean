@@ -10,7 +10,7 @@ public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
 public import VCVio.CryptoFoundations.KEMDEM.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # KEM + DEM Composition
@@ -195,11 +195,11 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     let dc ← dem.encrypt k (if side then p.2.1 else p.2.2.1)
     adversary.distinguish p.2.2.2 (kc, dc)
   have hcoin (b : Bool) : 𝒟[runtime.liftProbComp ($ᵗ Bool)] {b} = 1 / 2 := by
-    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample,
+    rw [evalDist_eq_runtime, heval_liftProbComp, SampleableType.evalDist_uniformSample,
       ProbabilityTheory.uniformOn_univ_apply_singleton]
     simp [Fintype.card_bool]
   have hkey : 𝒟[runtime.liftProbComp ($ᵗ K)] Set.univ = 1 := by
-    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample]
+    rw [evalDist_eq_runtime, heval_liftProbComp, SampleableType.evalDist_uniformSample]
     simp
   have htotal (real side : Bool) :
       𝒟[KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side] {true} +

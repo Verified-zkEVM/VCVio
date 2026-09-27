@@ -569,15 +569,6 @@ lemma one_eq_probOutput_iff' [MonadLiftT m SPMF] [MonadAttach m] [EvalDistCompat
   rw [eq_comm, probOutput_eq_one_iff']
 alias ⟨_, one_eq_probOutput'⟩ := one_eq_probOutput_iff'
 
-/-- If a non-failing computation can only return `x`, then it returns `x` with probability one. -/
-lemma probOutput_eq_one_of_support_subset_singleton [MonadLiftT m SPMF]
-    [MonadAttach m] [EvalDistCompatible m]
-    (hnf : Pr[⊥ | mx] = 0) (huniq : ∀ y ∈ support mx, y = x) :
-    Pr[= x | mx] = 1 := by
-  simpa [hnf, tsum_eq_single (f := (Pr[= · | mx])) x
-    fun y hy ↦ (probOutput_eq_zero_iff _ _).mpr fun hmem ↦ hy (huniq y hmem)]
-    using probFailure_add_tsum_probOutput mx
-
 end bounds
 
 section mono_le
@@ -889,16 +880,6 @@ theorem expectedValue_add (mx : m α) (g h : α → ℝ≥0∞) :
     expectedValue mx (fun x => g x + h x) = expectedValue mx g + expectedValue mx h := by
   simp only [expectedValue, mul_add]
   exact ENNReal.tsum_add
-
-/-- The expectation of an indicator is the event probability. -/
-theorem expectedValue_ite_one (mx : m α) (p : α → Prop) [DecidablePred p] :
-    expectedValue mx (fun x => if p x then 1 else 0) = Pr[ p | mx] := by
-  simp only [expectedValue_def, probEvent_eq_tsum_ite, mul_ite, mul_one, mul_zero]
-
-/-- A constant factor scales the expectation. -/
-theorem expectedValue_mul_const (mx : m α) (g : α → ℝ≥0∞) (c : ℝ≥0∞) :
-    expectedValue mx (fun x => g x * c) = expectedValue mx g * c := by
-  simp only [expectedValue_def, ← mul_assoc, ENNReal.tsum_mul_right]
 
 variable [MonadAttach m] [EvalDistCompatible m]
 

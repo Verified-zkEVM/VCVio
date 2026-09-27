@@ -368,10 +368,11 @@ using the finite-uniform pushforward law. `evalDist_bind_congr` compares continu
 measures pointwise without a measurable-space instance on the intermediate result.
 `VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
 induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
-composed-handler, and shared-observation proofs. `SampleableType.MeasureCompatibility`
-keeps the finite adapter calibration for legacy runtimes. BR93's measure-level masking
-step takes the chosen measure's uniformity certificate explicitly; its finite corollary
-uses the adapter calibration.
+composed-handler, and shared-observation proofs. `SampleableType.evalDist_uniformSample` is
+the one measure law for `$ᵗ α`, read off the class certificate for any measurable space with
+measurable singletons. `SampleableType.MeasureCompatibility` holds only the
+`ProbComp.DiscreteCompatibility` scope for explicitly scoped compatibility proofs. BR93's
+masking step takes the chosen measure's uniformity certificate explicitly.
 
 The finite distribution API is
 explicit as `evalSPMF mx` / `𝒮[mx]`, and `Pr[...]` remains the discrete compatibility façade. One

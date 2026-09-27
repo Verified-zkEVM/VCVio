@@ -12,6 +12,8 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.EvalDist.Inequalities
 public import VCVio.EvalDist.Expectation
 
+import VCVio.OracleComp.Coercions.SubSpec
+
 /-!
 # Fiat-Shamir reductions for Sigma protocols
 

@@ -5,35 +5,17 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.EvalDist.Monad.Measure
-public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.EvalDist.Defs.Measure
 
 /-!
-# Measure compatibility for the discrete sampling frontend
+# Discrete compatibility scope for `ProbComp`
 
-The uniformity certificate of `SampleableType` calibrates its compatibility evaluation
-as a uniform measure. Measure identities can then recover the existing discrete equality
-statements. Measure proof cores take their calibration hypotheses explicitly and do not
-use these adapters.
+Opening `ProbComp.DiscreteCompatibility` gives the finite-distribution evaluation adapter
+precedence, so explicitly scoped compatibility proofs evaluate `ProbComp` through its discrete
+distribution. Native measure proofs do not open this scope.
 -/
 
 public section
-
-open OracleComp OracleSpec MeasureTheory ProbabilityTheory
-
-/-- A certified uniform sampler has uniform measure whenever its measure semantics agrees
-with its finite distribution on singleton masses. -/
-theorem evalDist_uniformSample {α : Type} [SampleableType α] [MeasurableSpace α]
-    [MeasurableSingletonClass α] [EvalDistSemantics ProbComp]
-    [DiscreteEvalDistCompatible ProbComp] :
-    𝒟[$ᵗ α] = uniformOn Set.univ := by
-  classical
-  let : Fintype α := Fintype.ofFinite α
-  apply Measure.ext_of_singleton
-  intro x
-  rw [evalDist_apply_singleton, probOutput_uniformSample, uniformOn_univ]
-  simp
 
 namespace ProbComp.DiscreteCompatibility
 

@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
 public import ToMathlib.Control.StateT
-import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Asymmetric Encryption Schemes: Generic IND-CPA Lifts

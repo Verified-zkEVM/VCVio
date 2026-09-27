@@ -9,7 +9,7 @@ module
 public import Examples.PRFTagReader.PRFReductions
 public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # PRF Tag/Reader Protocol — Composed-Handler Eager-Table Equivalence

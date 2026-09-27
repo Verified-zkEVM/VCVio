@@ -211,21 +211,6 @@ lemma probEvent_bind_le_of_forall_le [MonadLiftT m SPMF] [LawfulMonadLiftT m SPM
   rw [probEvent_bind_eq_expectedValue]
   exact expectedValue_le_of_support h
 
-/-- If a continuation event is bounded by `ε` exactly on a prefix event and is
-impossible off that event, then only the prefix mass is charged. -/
-lemma probEvent_bind_le_probEvent_mul [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadAttach m] [EvalDistCompatible m]
-    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {ε : ENNReal}
-    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ ε)
-    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
-    Pr[ q | mx >>= my] ≤ Pr[ p | mx] * ε := by
-  classical
-  rw [probEvent_bind_eq_expectedValue, ← expectedValue_ite_one, ← expectedValue_mul_const]
-  gcongr with x hx
-  by_cases hp : p x
-  · simp only [ite_eq_left hp, one_mul]; exact hle x hx hp
-  · simp only [ite_eq_right hp, zero_mul, hzero x hx hp, le_refl]
-
 lemma probOutput_bind_eq_sum_finSupport [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [MonadAttach m] [EvalDistCompatible m] [HasEvalFinset m]
     (mx : m α) (my : α → m β) [DecidableEq α] (y : β) :

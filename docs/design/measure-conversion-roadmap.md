@@ -500,6 +500,14 @@ native simulation of the challenge oracle by uniform sampling; only the expectat
 aggregation over key generation remains on the discrete layer, since it goes through the
 Jensen marginal of `expectedValue`. The measure-transport module for the old bound is gone.
 
+## Uniform sampling compatibility checkpoint
+
+Uniform sampling has a single measure law, `SampleableType.evalDist_uniformSample`, taken from
+the class certificate; the copy that went through the discrete adapter is gone, and
+`SampleableType.MeasureCompatibility` now holds only the `ProbComp.DiscreteCompatibility`
+scope. Importers that used it or the retiring sampling, `ProbComp`, uniform-compatibility and
+subspec hubs only for native declarations import the native modules directly.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).

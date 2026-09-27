@@ -17,8 +17,8 @@ public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import ToMathlib.Control.StateT
 public import ToMathlib.Data.ENNReal.Gauss
-import VCVio.OracleComp.EvalDist.UniformCompatibility
-import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import VCVio.OracleComp.EvalDist.MeasureSpec
+import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Asymmetric Encryption Schemes: IND-CPA Oracle Games

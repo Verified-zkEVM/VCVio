@@ -8,9 +8,9 @@ module
 
 public import VCVio.CryptoFoundations.Fischlin.Completeness
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
-import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 import VCVio.EvalDist.IndepProductMeasure
-import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
+import VCVio.OracleComp.Constructions.SampleableType.Basic
 import Mathlib.Probability.UniformOn
 
 /-!
