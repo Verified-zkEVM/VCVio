@@ -54,7 +54,7 @@ salt `s ← $ᵗ S`, is at most `t / |S|`:
 Proof: per-salt identical-until-bad
 (`measureETVDist_hidingReal_hidingSim_le_probBad`) bounds each distance by the
 probability of the bad event for that salt. Summing over `s` and applying
-`sum_probEvent_hidingBad_le` (which exchanges the per-salt bad sum for the
+`sum_prEvent_hidingBad_le` (which exchanges the per-salt bad sum for the
 adversary's total query bound) yields the claim.
 
 The averaging is essential. The per-salt bound `≤ t / |S|` is FALSE in
@@ -68,7 +68,7 @@ theorem hiding_bound_avg [Finite M] [MeasurableSpace C] [MeasurableSingletonClas
     (∑ s : S, measureETVDist (hidingReal A s) (hidingSim A s)) / (Fintype.card S : ℝ≥0∞) ≤
       t / (Fintype.card S : ℝ≥0∞) :=
   ENNReal.div_le_div_right ((Finset.sum_le_sum fun s _ =>
-    measureETVDist_hidingReal_hidingSim_le_probBad A s).trans (sum_probEvent_hidingBad_le A)) _
+    measureETVDist_hidingReal_hidingSim_le_probBad A s).trans (sum_prEvent_hidingBad_le A)) _
 
 /-- **Hiding bound (Lemma cm-hiding, packaged textbook form).**
 

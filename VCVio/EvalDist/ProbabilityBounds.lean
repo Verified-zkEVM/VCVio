@@ -98,6 +98,12 @@ theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → O
   ext x
   simp [Option.isSome_iff_exists]
 
+/-- Disjoint selector events of one computation have total probability at most one. -/
+theorem sum_prEvent_eq_some_le_one {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
+    ∑ k, Pr{let x ← mx}[f x = some k] ≤ 1 := by
+  rw [← prEvent_isSome_eq_sum]
+  exact prEvent_le_one _ _
+
 /-- Union bound over a finite type. -/
 theorem prEvent_exists_le {ι : Type} [Fintype ι] (mx : m α) (p : ι → α → Prop) :
     Pr{let x ← mx}[∃ i, p i x] ≤ ∑ i, Pr{let x ← mx}[p i x] := by

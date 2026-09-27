@@ -329,7 +329,7 @@ variable [MeasurableSpace C] [MeasurableSingletonClass C]
 This packages the per-salt bad probabilities into the shared `hidingAvgComp`
 run, where the salt is sampled once up front and then the shared count-all
 simulation is reused for the rest of the game. -/
-theorem sum_probEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhabited S]
+theorem sum_prEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr{let z ← (
@@ -350,9 +350,9 @@ theorem sum_probEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhab
   apply Finset.sum_congr rfl
   intro s _
   rw [← mul_assoc, ENNReal.mul_inv_cancel (by simp) (by simp), one_mul]
-  exact probEvent_hidingBad_eq_countAll A s
+  exact prEvent_hidingBad_eq_countAll A s
 
-lemma probEvent_hidingAvg_bad_le_wp_selectedCountPred [Fintype S] [Inhabited S]
+lemma prEvent_hidingAvg_bad_le_wp_selectedCountPred [Fintype S] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     Pr{let z ← (
@@ -440,7 +440,7 @@ variable [MeasurableSpace C] [MeasurableSingletonClass C]
 
 /-- The outer counting bridge: the bad-mass sum is bounded by the per-salt
 count-pred expectations from the shared counted implementation. -/
-theorem sum_probEvent_hidingBad_le_sum_wp_countPred [Fintype S]
+theorem sum_prEvent_hidingBad_le_sum_wp_countPred [Fintype S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2]) ≤
@@ -450,8 +450,8 @@ theorem sum_probEvent_hidingBad_le_sum_wp_countPred [Fintype S]
         (fun z : Bool × HidingCountState M S C => (z.2.2 s - 1 : ℝ≥0∞)) := by
   apply Finset.sum_le_sum
   intro s _
-  rw [probEvent_hidingBad_eq_countAll]
-  exact probEvent_countAll_bad_le_wp_countPred A s
+  rw [prEvent_hidingBad_eq_countAll]
+  exact prEvent_countAll_bad_le_wp_countPred A s
 
 /-- Sum of `Pr[bad(s)]` over all salts is at most `t`.
 
@@ -790,7 +790,7 @@ lemma sum_wp_badIndicator_eq_wp_choose [Fintype S]
           OracleComp.ProgramLogic.propInd (2 ≤ z.2.2 s)) := by
         refine Finset.sum_congr rfl ?_
         intro s hs
-        rw [probEvent_hidingBad_eq_countAll (M := M) (S := S) (C := C) A s,
+        rw [prEvent_hidingBad_eq_countAll (M := M) (S := S) (C := C) A s,
           OracleComp.ProgramLogic.prEvent_eq_wp_propInd]
     _ =
       OracleComp.ProgramLogic.wp

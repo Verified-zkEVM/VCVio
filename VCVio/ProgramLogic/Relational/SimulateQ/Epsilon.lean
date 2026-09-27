@@ -13,6 +13,7 @@ public import VCVio.OracleComp.EvalDist
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 
 /-!
 # Uniform and selectively charged simulation slack
@@ -54,29 +55,6 @@ variable {ι : Type} {spec : OracleSpec ι}
 variable {ι' : Type} {spec' : OracleSpec ι'}
 variable {α : Type} {σ : Type}
 
-/-- "Bad propagation": starting from a bad state, every output of the simulation has the
-bad flag set. This generalizes the per-step `h_mono` hypothesis to the full simulation. -/
-private lemma mem_support_simulateQ_run_of_bad
-    (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
-    (h_mono : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
-      ∀ z ∈ support ((impl t).run p), z.2.2 = true)
-    (oa : OracleComp spec α) (p : σ × Bool) (hp : p.2 = true) :
-    ∀ z ∈ support ((simulateQ impl oa).run p), z.2.2 = true := by
-  induction oa using OracleComp.inductionOn generalizing p with
-  | pure x =>
-      intro z hz
-      simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-      subst hz
-      exact hp
-  | query_bind t cont ih =>
-      intro z hz
-      simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind, support_bind, Set.mem_iUnion,
-        exists_prop] at hz
-      obtain ⟨⟨u, p'⟩, h_mem, h_z⟩ := hz
-      have hp' : p'.2 = true := h_mono t p hp (u, p') h_mem
-      exact ih u p' hp' z h_z
-
 variable [IsUniformSpec spec']
 
 /-- Under bad-monotonicity, a simulation started from a bad state has bad output probability
@@ -89,7 +67,8 @@ private lemma probEvent_simulateQ_run_bad_eq_one_of_bad
     (oa : OracleComp spec α) (p : σ × Bool) (hp : p.2 = true) :
     Pr[fun z : α × σ × Bool => z.2.2 = true | (simulateQ impl oa).run p] = 1 := by
   rw [probEvent_eq_one_iff]
-  exact ⟨by simp, mem_support_simulateQ_run_of_bad impl h_mono oa p hp⟩
+  exact ⟨by simp,
+    forall_mem_support_simulateQ_run_of_bad impl (fun p => p.2 = true) h_mono oa hp⟩
 
 /-! ### Exact identical-until-bad with output bad flag: joint heterogeneous variant
 
@@ -105,7 +84,8 @@ private lemma probOutput_simulateQ_run_eq_zero_of_output_bad'
     (oa : OracleComp spec α) (p : σ × Bool) (hp : p.2 = true) (x : α) (s : σ) :
     Pr[= (x, (s, false)) | (simulateQ impl oa).run p] = 0 := by
   refine probOutput_eq_zero_of_not_mem_support fun h => ?_
-  simpa using mem_support_simulateQ_run_of_bad impl h_mono oa p hp (x, (s, false)) h
+  simpa using forall_mem_support_simulateQ_run_of_bad impl (fun p => p.2 = true) h_mono oa hp
+    (x, (s, false)) h
 
 private lemma probOutput_simulateQ_run_eq_of_not_output_bad'
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))

@@ -257,8 +257,8 @@ private lemma evalDist_simulateQ_unifChalImpl {α : Type}
     exact SampleableType.evalDist_uniformSample
 
 /-- At a fixed statement, combine replay forking with the supported special-soundness
-extractor. The measure statement uses the native uniform-oracle interpretation; the
-existing discrete replay theorem is consumed at this compatibility boundary. -/
+extractor: whenever both forked transcripts verify at the same target with distinct challenges,
+extraction yields a valid witness, and the challenge oracle is answered by uniform sampling. -/
 private theorem perPk_extraction_bound
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))

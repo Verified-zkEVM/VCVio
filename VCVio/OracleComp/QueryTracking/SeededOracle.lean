@@ -220,24 +220,20 @@ lemma run'_bind_query_eq_pop {α : Type u}
   | none => simp [map_bind]
   | some p => rfl
 
+/-- A uniform answer draw lifted into the oracle computation keeps its uniform measure. -/
+private lemma evalDist_liftComp_uniformSample {ι₀ : Type} {spec₀ : OracleSpec ι₀}
+    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
+    [∀ t, MeasurableSpace (spec₀.Range t)] [∀ t, DiscreteMeasurableSpace (spec₀.Range t)]
+    [OracleSpec.IsUniformMeasureSpec spec₀] (t : ι₀) :
+    𝒟[liftComp ($ᵗ spec₀.Range t) spec₀] = ProbabilityTheory.uniformOn Set.univ :=
+  (evalDist_liftComp_uniform _).trans SampleableType.evalDist_uniformSample
+
 section native
 
 variable {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
   [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
   [∀ t, MeasurableSpace (spec₀.Range t)] [∀ t, DiscreteMeasurableSpace (spec₀.Range t)]
   [OracleSpec.IsUniformMeasureSpec spec₀]
-
-omit [DecidableEq ι₀] in
-/-- A lifted uniform draw of an answer and the corresponding query have the same output measure
-after continuations with the same per-answer output measures. -/
-lemma evalDist_liftComp_uniformSample_bind_eq_query_bind {β : Type} [MeasurableSpace β]
-    (t : ι₀) (g f : spec₀.Range t → OracleComp spec₀ β) (h : ∀ u, 𝒟[g u] = 𝒟[f u]) :
-    𝒟[liftComp ($ᵗ spec₀.Range t) spec₀ >>= g] =
-      𝒟[(liftM (query t) : OracleComp spec₀ (spec₀.Range t)) >>= f] := by
-  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, evalDist_liftComp_uniform,
-    SampleableType.evalDist_uniformSample, evalDist_liftM_query,
-    OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
-  simp_rw [h]
 
 /-- The lifted seed distribution splits off a uniform head answer at `t` whenever `t` has a
 positive answer count, as `evalDist_generateSeed_eq_prependValues` does before lifting. -/
@@ -294,7 +290,8 @@ theorem evalDist_liftComp_generateSeed_bind_simulateQ_run' (qc : ι₀ → ℕ) 
       rw [evalDist_bind_congr_of_evalDist_eq _ _
         (evalDist_liftComp_generateSeed_eq_prependValues qc js hpos)]
       simp only [bind_assoc, pure_bind, QuerySeed.pop_prependValues_singleton]
-      exact evalDist_liftComp_uniformSample_bind_eq_query_bind t _ _ fun u => ih u _ js.dedup
+      exact evalDist_bind_eq_query_bind_of_uniform t _
+        (evalDist_liftComp_uniformSample t) _ _ fun u => ih u _ js.dedup
 
 private lemma pop_addValue_self_nil_aux {seed : QuerySeed spec} {i : ι} (h : seed i = [])
     (v : spec.Range i) : (seed.addValue i v).pop i = some (v, seed) := by
@@ -351,7 +348,8 @@ theorem evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
       cases hσt : σ t with
       | nil =>
         simp_rw [pop_addValue_self_nil_aux hσt, (QuerySeed.pop_eq_none_iff σ t).mpr hσt]
-        exact evalDist_liftComp_uniformSample_bind_eq_query_bind t _ _ fun _ => rfl
+        exact evalDist_bind_eq_query_bind_of_uniform t _
+          (evalDist_liftComp_uniformSample t) _ _ fun _ => rfl
       | cons u₀ rest =>
         simp_rw [pop_addValue_self_cons_aux hσt, QuerySeed.pop_eq_some_of_cons σ t u₀ rest hσt]
         exact ih u₀ (σ.update t rest)
@@ -472,7 +470,8 @@ theorem evalDist_liftComp_generateSeed_takeAtIndex_run' (qc : ι₀ → ℕ) (js
             (QuerySeed.pop_eq_none_iff _ t).mpr (by simp [QuerySeed.takeAtIndex])
           simp only [takeAtIndex_zero_prependValues_singleton_aux, hpop0, bind_assoc]
           conv_rhs => rw [OracleComp.evalDist_bind_const, OracleComp.evalDist_bind_bind_swap]
-          exact evalDist_liftComp_uniformSample_bind_eq_query_bind t _ _ fun u =>
+          exact evalDist_bind_eq_query_bind_of_uniform t _
+            (evalDist_liftComp_uniformSample t) _ _ fun u =>
             hmap u 0 id
         · -- Both runs consume the head answer; the prefix shortens by one.
           have hk' : 0 < k := Nat.pos_of_ne_zero hk

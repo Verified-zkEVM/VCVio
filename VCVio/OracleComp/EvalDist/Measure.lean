@@ -326,8 +326,8 @@ theorem mem_support_iff_evalDist_singleton_pos
     (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) mx x
 
 /-- Under native uniform oracle semantics, an event has probability one exactly when it contains
-every structurally reachable output. Like the scalar support characterizations, it is not a
-default `grind` rule: its unbounded support quantifier saturates `grind`. -/
+every structurally reachable output. It is not a default `grind` rule: its unbounded support
+quantifier saturates `grind`. -/
 theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
     {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
     [∀ t, MeasurableSpace (spec.Range t)]
@@ -511,6 +511,20 @@ theorem OptionT.isProbabilityMeasure_mk_iff (mx : OracleComp spec (Option α))
   · intro h o ho
     rintro rfl
     exact h ho
+
+/-- A uniform draw of an answer, in any lawful measure semantics, followed by a continuation has
+the output measure of the matching query followed by a continuation with the same per-answer
+output measures. -/
+theorem evalDist_bind_eq_query_bind_of_uniform {m : Type → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {β : Type} [MeasurableSpace β]
+    (t : spec.Domain) (sample : m (spec.Range t)) (hsample : 𝒟[sample] = uniformOn Set.univ)
+    (g : spec.Range t → m β) (f : spec.Range t → OracleComp spec β)
+    (h : ∀ u, 𝒟[g u] = 𝒟[f u]) :
+    𝒟[sample >>= g] =
+      𝒟[(liftM (OracleSpec.query t) : OracleComp spec (spec.Range t)) >>= f] := by
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, hsample, evalDist_liftM_query,
+    OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
+  simp_rw [h]
 
 end uniformMeasureSpec
 

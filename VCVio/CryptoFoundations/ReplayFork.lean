@@ -781,13 +781,8 @@ theorem le_prEvent_isSome_contextFork [DecidableEq ι] [∀ t, DecidableEq (spec
   dsimp only
   set ps : Fin (qb i + 1) → ℝ≥0∞ := fun s => Pr{let x ← main}[cf x = some s]
   set h : ℝ≥0∞ := ↑(Fintype.card (spec.Range i))
-  have hsum : (∑ s, ps s) ≠ ⊤ := by
-    refine ne_top_of_le_ne_top one_ne_top (le_trans (le_of_eq ?_)
-      ((sum_prEvent_option_map_eq_some_le_isSome (some <$> main) cf).trans
-        (prEvent_le_one _ _)))
-    refine Finset.sum_congr rfl fun s _ => ?_
-    rw [prEvent_map]
-    simp [ps]
+  have hsum : (∑ s, ps s) ≠ ⊤ :=
+    ne_top_of_le_ne_top one_ne_top (sum_prEvent_eq_some_le_one main cf)
   have hcard : ((Finset.univ : Finset (Fin (qb i + 1))).card : ℝ≥0∞) =
       ((qb i + 1 : ℕ) : ℝ≥0∞) := by simp
   calc

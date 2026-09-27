@@ -256,6 +256,38 @@ theorem prEvent_uniformSample_fst (p : α → Prop) :
   simp only [and_true] at h
   rw [h, (prEvent_uniformSample_eq_one_iff (fun _ ↦ True)).mpr (fun _ ↦ trivial), mul_one]
 
+/-- A uniform vector of length `N + 1` is a uniform head followed by an independent uniform
+vector of length `N`. -/
+theorem evalDist_uniformSample_vector_succ (N : ℕ) :
+    (letI : MeasurableSpace (List.Vector α (N + 1)) := ⊤;
+      𝒟[($ᵗ (List.Vector α (N + 1)))] =
+        𝒟[(do let a ← $ᵗ α; let rest ← $ᵗ (List.Vector α N); pure (a ::ᵥ rest))]) := by
+  let : MeasurableSpace (List.Vector α (N + 1)) := ⊤
+  have hbij : Function.Bijective
+      (Function.uncurry fun (a : α) (rest : List.Vector α N) => a ::ᵥ rest) :=
+    ⟨fun ⟨a, v⟩ ⟨b, w⟩ h => by
+      have h₁ := congrArg List.Vector.head h
+      have h₂ := congrArg List.Vector.tail h
+      simp only [Function.uncurry_apply_pair, List.Vector.head_cons,
+        List.Vector.tail_cons] at h₁ h₂
+      rw [h₁, h₂],
+      fun v => ⟨(v.head, v.tail), List.Vector.cons_head_tail v⟩⟩
+  refine Measure.ext fun A _ => ?_
+  change 𝒟[_] {x | x ∈ A} = 𝒟[_] {x | x ∈ A}
+  rw [← prEvent_eq_evalDist_of_discrete,
+    ← prEvent_eq_evalDist_of_discrete,
+    ← prEvent_uniformSample_pair_of_bijective hbij (· ∈ A)]
+  simp only [bind_assoc, pure_bind]
+
+/-- A continuation of the first coordinate of a uniform pair has the output measure of the same
+continuation of a uniform first coordinate. -/
+theorem evalDist_uniformSample_prod_bind_fst {δ : Type} [MeasurableSpace δ]
+    (f : α → ProbComp δ) :
+    𝒟[(do let p ← $ᵗ (α × β); f p.1)] = 𝒟[(do let a ← $ᵗ α; f a)] := by
+  rw [SampleableType.uniformSample_prod_eq_bind]
+  simp only [bind_assoc, pure_bind]
+  exact evalDist_bind_congr _ _ _ fun a => OracleComp.evalDist_bind_const _ _
+
 /-- A uniform draw of a successor-indexed tuple is a uniform tuple followed by a uniform last
 entry. -/
 theorem prEvent_uniformSample_finSnoc {n : ℕ} (p : (_root_.Fin (n + 1) → α) → Prop) :

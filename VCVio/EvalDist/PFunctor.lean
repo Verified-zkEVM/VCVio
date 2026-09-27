@@ -39,7 +39,7 @@ class IsProbabilitySpec (P : PFunctor.{uA, u}) where
 
 /-- A finitely branching polynomial interface whose operation responses use
 the canonical uniform distribution. -/
-@[deprecated "VCVio retiring probability API: use OracleSpec.IsUniformMeasureSpec"
+@[deprecated "VCVio retiring probability API: use PFunctor.IsMeasureSpec.uniformOfFiniteNonempty"
   (since := "2026-09-27")]
 class IsUniformSpec (P : PFunctor.{uA, u}) extends IsProbabilitySpec P where
   /-- Every direction type is finite. -/
@@ -55,7 +55,7 @@ attribute [reducible, instance] IsUniformSpec.fintype IsUniformSpec.inhabited
 /-- Construct uniform probability semantics from finite, inhabited direction
 types. This is deliberately not an instance: probability semantics remain an
 explicit opt-in. -/
-@[deprecated "VCVio retiring probability API: use OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty"
+@[deprecated "VCVio retiring probability API: use PFunctor.IsMeasureSpec.uniformOfFiniteNonempty"
   (since := "2026-09-27"), reducible]
 noncomputable def IsUniformSpec.ofFintypeInhabited (P : PFunctor.{uA, u})
     [hF : ∀ a, Fintype (P.B a)] [hI : ∀ a, Inhabited (P.B a)] : IsUniformSpec P where

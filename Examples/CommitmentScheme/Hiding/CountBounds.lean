@@ -903,7 +903,7 @@ variable [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass 
 /-- Probability bridge for bad events:
 `Pr[bad]` under `hidingImpl₁ s` is equal to the corresponding event on the
 shared counted run, projected at `s`. -/
-theorem probEvent_hidingBad_eq_countAll {AUX : Type} {t : ℕ}
+theorem prEvent_hidingBad_eq_countAll {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
     Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2] =
     Pr{let z ← (
@@ -1005,7 +1005,7 @@ lemma wp_choose_sumCounts_le_queryBound [Fintype S] [Inhabited S]
     (M := M) (S := S) (C := C) A hqchoose
 
 /-- Fixed-salt bridge from the counted bad event to the expected excess count. -/
-lemma probEvent_countAll_bad_le_wp_countPred
+lemma prEvent_countAll_bad_le_wp_countPred
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
     Pr{let z ← (simulateQ hidingImplCountAll (hidingOa A s)).run (∅, fun _ => 0)}[2 ≤ z.2.2 s] ≤

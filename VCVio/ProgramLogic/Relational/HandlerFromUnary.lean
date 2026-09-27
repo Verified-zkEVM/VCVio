@@ -62,11 +62,14 @@ open Std.Do
 namespace OracleComp.ProgramLogic.Relational
 
 variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec.{0, 0} ι₁} {spec₂ : OracleSpec.{0, 0} ι₂}
+variable {σ₁ σ₂ α β : Type}
+
+section lifts
+
 variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
   [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
   [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
   [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
-variable {σ₁ σ₂ α β : Type}
 
 /-! ### Per-call lifts (one transformer layer) -/
 
@@ -329,6 +332,8 @@ theorem relTriple_simulateQ_run'_of_triples
   exact relTriple_map (relTriple_post_mono (relTriple_simulateQ_run_of_triples
     impl₁ impl₂ R_state oa Q₁ Q₂ h₁ h₂ hsync s₁ s₂ hs) (fun _ _ hp => hp.1))
 
+end lifts
+
 /-! ### Bridge to support-based simulation lemmas
 
 The lemmas below convert `Std.Do.Triple` invariant specs produced by
@@ -337,8 +342,6 @@ The lemmas below convert `Std.Do.Triple` invariant specs produced by
 recommended entry point from the `mvcgen` proof style into whole-program
 relational reasoning. -/
 
-omit [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [OracleSpec.IsMeasureSpec spec₁] [∀ t, Finite (spec₁.Range t)] in
 /-- Convert a unary `Std.Do.Triple` invariant-preservation spec into the
 `support`-based preservation hypothesis consumed by
 `relTriple_simulateQ_run_of_impl_eq_preservesInv` and friends.

@@ -75,17 +75,6 @@ lemma run_nil {t : spec₀.Domain} {seed : QuerySeed spec₀} (h : seed t = []) 
 variable [∀ t, MeasurableSpace (spec₀.Range t)] [∀ t, DiscreteMeasurableSpace (spec₀.Range t)]
   [OracleSpec.IsUniformMeasureSpec spec₀]
 
-omit [DecidableEq ι₀] in
-/-- A uniform draw of an answer followed by a `ProbComp` continuation has the output measure of
-the corresponding query followed by any continuation with the same per-answer output measures. -/
-lemma evalDist_uniformSample_bind_eq_query_bind {α : Type} [MeasurableSpace α]
-    (t : spec₀.Domain) (g : spec₀.Range t → ProbComp α) (f : spec₀.Range t → OracleComp spec₀ α)
-    (h : ∀ u, 𝒟[g u] = 𝒟[f u]) :
-    𝒟[($ᵗ spec₀.Range t) >>= g] = 𝒟[(liftM (query t) : OracleComp spec₀ _) >>= f] := by
-  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, SampleableType.evalDist_uniformSample,
-    evalDist_liftM_query, OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
-  simp_rw [h]
-
 /-- With an empty seed, the eager random oracle reduces to uniform sampling: every query falls
 through to a fresh uniform answer with no state change. -/
 theorem evalDist_simulateQ_run'_empty {α : Type} [MeasurableSpace α] (oa : OracleComp spec₀ α) :
@@ -104,7 +93,7 @@ theorem evalDist_simulateQ_run'_empty {α : Type} [MeasurableSpace α] (oa : Ora
         $ᵗ spec₀.Range t >>= fun u => Prod.fst <$> (simulateQ eagerRandomOracle (f u)).run ∅
       simp [eagerRandomOracle]
     rw [hsimp]
-    exact evalDist_uniformSample_bind_eq_query_bind t _ f ih
+    exact evalDist_bind_eq_query_bind_of_uniform t _ SampleableType.evalDist_uniformSample _ f ih
 
 end eagerRandomOracle
 
@@ -174,13 +163,15 @@ theorem eagerRandomOracle_evalDist_generateSeed_bind {ι₀ : Type} [DecidableEq
           rw [eagerRandomOracle_run'_nil t f seed
             (eq_nil_of_mem_support_generateSeed spec₀ qc js seed t hs hcount)],
         OracleComp.evalDist_bind_bind_swap]
-      exact eagerRandomOracle.evalDist_uniformSample_bind_eq_query_bind t _ f fun u => ih u qc js
+      exact evalDist_bind_eq_query_bind_of_uniform t _ SampleableType.evalDist_uniformSample _ f
+        fun u => ih u qc js
     · -- Every generated seed starts with a uniform answer at `t`, consumed by the query.
       have hpos : 0 < qc t * js.count t := Nat.pos_of_ne_zero hcount
       rw [evalDist_bind_congr_of_evalDist_eq _ _
         (evalDist_generateSeed_eq_prependValues spec₀ qc js hpos)]
       simp only [bind_assoc, pure_bind]
-      refine eagerRandomOracle.evalDist_uniformSample_bind_eq_query_bind t _ f fun u => ?_
+      refine evalDist_bind_eq_query_bind_of_uniform t _ SampleableType.evalDist_uniformSample _ f
+        fun u => ?_
       refine Eq.trans (evalDist_bind_congr _ _ _ fun s' => ?_) (ih u _ js.dedup)
       rw [eagerRandomOracle_run'_cons t f _ u (s' t) (QuerySeed.prependValues_singleton s' u)]
       simp only [QuerySeed.prependValues, List.singleton_append, QuerySeed.update_idem,

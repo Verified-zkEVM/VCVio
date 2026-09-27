@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.SeededFork
 
 /-!
-# External canaries for the measure-level forking bounds
+# External canaries for the forking bounds
 
 These examples deliberately live outside the defining modules. They lock the public hypotheses and
 result shapes of the native seeded and replay forking bounds, so changes to either cannot silently
@@ -20,7 +20,7 @@ public section
 
 open MeasureTheory OracleSpec ENNReal Finset
 
-namespace VCVioTest.ForkMeasure
+namespace VCVioTest.ForkBounds
 
 section seeded
 
@@ -61,4 +61,4 @@ example [∀ t, DecidableEq (spec.Range t)]
 
 end replay
 
-end VCVioTest.ForkMeasure
+end VCVioTest.ForkBounds

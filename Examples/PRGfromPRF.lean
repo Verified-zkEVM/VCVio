@@ -84,36 +84,6 @@ variable {prf : PRFScheme K S (S × O)} {n : ℕ}
 Facts about uniform samples of pairs and vectors and about cache cardinalities; each states
 the structure it needs on `S` and `O`. -/
 
-/-- Sampling a pair uniformly is the same as sampling each coordinate independently. -/
-private lemma uniformSample_prod_eq_bind [SampleableType S] [SampleableType O] :
-    ($ᵗ (S × O)) = (do let a ← $ᵗ S; let b ← $ᵗ O; pure (a, b)) := by
-  rw [uniformSample]
-  change ((·, ·) <$> ($ᵗ S) <*> ($ᵗ O)) = _
-  simp [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc]
-
-/-- A uniform output vector of length `N + 1` decomposes as a uniform head block prepended to a
-uniform vector of length `N`. -/
-private lemma evalDist_uniformSample_vector_succ [SampleableType O] (N : ℕ) :
-    (letI : MeasurableSpace (List.Vector O (N + 1)) := ⊤;
-      𝒟[($ᵗ (List.Vector O (N + 1)))] =
-        𝒟[(do let out ← $ᵗ O; let rest ← $ᵗ (List.Vector O N); pure (out ::ᵥ rest))]) := by
-  let : MeasurableSpace (List.Vector O (N + 1)) := ⊤
-  have hbij : Function.Bijective
-      (Function.uncurry fun (out : O) (rest : List.Vector O N) => out ::ᵥ rest) :=
-    ⟨fun ⟨a, v⟩ ⟨b, w⟩ h => by
-      have h₁ := congrArg List.Vector.head h
-      have h₂ := congrArg List.Vector.tail h
-      simp only [Function.uncurry_apply_pair, List.Vector.head_cons,
-        List.Vector.tail_cons] at h₁ h₂
-      rw [h₁, h₂],
-      fun v => ⟨(v.head, v.tail), List.Vector.cons_head_tail v⟩⟩
-  refine Measure.ext fun A _ => ?_
-  change 𝒟[_] {x | x ∈ A} = 𝒟[_] {x | x ∈ A}
-  rw [← prEvent_eq_evalDist_of_discrete,
-    ← prEvent_eq_evalDist_of_discrete,
-    ← SampleableType.prEvent_uniformSample_pair_of_bijective hbij (· ∈ A)]
-  simp only [bind_assoc, pure_bind]
-
 /-- The reference uniform output vector of length `N + 1`, written as a bind over a uniformly
 sampled pair `p : S × O` whose first coordinate is discarded and whose second coordinate is the
 prepended head block. This is the shared-base form used for the identical-until-bad coupling. -/
@@ -123,7 +93,7 @@ private lemma evalDist_uniformSample_vector_succ_pair [SampleableType S] [Sample
       𝒟[($ᵗ (List.Vector O (N + 1)))] =
         𝒟[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))]) := by
   let : MeasurableSpace (List.Vector O (N + 1)) := ⊤
-  rw [evalDist_uniformSample_vector_succ, uniformSample_prod_eq_bind]
+  rw [SampleableType.evalDist_uniformSample_vector_succ, SampleableType.uniformSample_prod_eq_bind]
   simp only [bind_assoc, pure_bind, map_eq_bind_pure_comp, Function.comp_def]
   exact (OracleComp.evalDist_bind_const _ _).symm
 
@@ -133,15 +103,6 @@ private lemma evalDist_bind_apply_true {γ : Type} (mx : ProbComp γ) (f : γ �
   let : MeasurableSpace γ := ⊤
   rw [evalDist_bind_of_discrete, Measure.bind_apply (measurableSet_singleton true)
     Measurable.of_discrete.aemeasurable]
-
-/-- Sampling a pair uniformly and discarding the second coordinate is the same as sampling the
-first coordinate uniformly. -/
-private lemma evalDist_bind_uniformSample_prod_fst [SampleableType S] [SampleableType O]
-    (f : S → ProbComp Bool) :
-    𝒟[(do let p ← $ᵗ (S × O); f p.1)] = 𝒟[(do let s' ← $ᵗ S; f s')] := by
-  rw [uniformSample_prod_eq_bind]
-  simp only [bind_assoc, pure_bind]
-  exact evalDist_bind_congr _ _ _ fun a => OracleComp.evalDist_bind_const _ _
 
 /-- Caching a fresh (previously absent) key increases the live-entry count by exactly one. -/
 private lemma enncard_cacheQuery_of_none [DecidableEq S]
@@ -409,7 +370,7 @@ private lemma genCollisionExperiment_succ_of_none (N : ℕ) (s : S) (c : (S →�
   rw [genCollisionExperiment, simulateQ_oracleVisitedStates_succ_run',
     randomOracle_run_of_none s c hc]
   simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp]
-  rw [uniformSample_prod_eq_bind]
+  rw [SampleableType.uniformSample_prod_eq_bind]
   simp only [bind_assoc, pure_bind]
   refine bind_congr fun a => bind_congr fun b => ?_
   rw [genCollisionExperiment]
@@ -688,7 +649,7 @@ private lemma evalDist_genCollisionExperiment_bind_le [Fintype S] (N : ℕ)
           · subst hx; simp
           · rw [QueryCache.isCached_cacheQuery_of_ne c p hx,
               QueryCache.isCached_cacheQuery_of_ne c u₀ hx]
-        rw [hdom, evalDist_bind_uniformSample_prod_fst
+        rw [hdom, SampleableType.evalDist_uniformSample_prod_bind_fst
           (fun s' => genCollisionExperiment N s' (c.cacheQuery s u₀))]
         refine le_trans (ih (c.cacheQuery s u₀)) (le_of_eq ?_)
         rw [hB]

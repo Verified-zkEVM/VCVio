@@ -62,18 +62,6 @@ namespace OracleComp
 
 /-! ## Preliminaries independent of index decidability -/
 
-/-- Disjoint fork-index events of one computation have total probability at most one. -/
-private lemma sum_prEvent_eq_some_le_one {ι : Type} {spec : OracleSpec ι}
-    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-    [OracleSpec.IsMeasureSpec spec] {α γ : Type} [Fintype γ] (main : OracleComp spec α)
-    (cf : α → Option γ) :
-    ∑ k, Pr{let x ← main}[cf x = some k] ≤ 1 := by
-  refine le_trans (le_of_eq ?_) ((sum_prEvent_option_map_eq_some_le_isSome
-    (some <$> main) cf).trans (prEvent_le_one _ _))
-  refine Finset.sum_congr rfl fun k _ => ?_
-  rw [prEvent_map]
-  simp
-
 /-- The standard forking-lemma precondition is itself a valid probability bound. -/
 theorem seededFork_precondition_le_one {ι : Type} {spec : OracleSpec ι}
     [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
@@ -84,6 +72,22 @@ theorem seededFork_precondition_le_one {ι : Type} {spec : OracleSpec ι}
      let q := qb i + 1
      acc * (acc / q - h⁻¹)) ≤ 1 :=
   ENNReal.mul_tsub_div_le_one (sum_prEvent_eq_some_le_one main cf) (by simp)
+
+/-- Guessing a seeded answer with a fresh uniform answer succeeds with probability at most
+`|spec.Range i|⁻¹`. -/
+private lemma prEvent_seedSlot_le_inv {ι : Type} {spec : OracleSpec ι}
+    [∀ i, SampleableType (spec.Range i)] [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec]
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsUniformMeasureSpec spec] (qb : ι → ℕ) (i : ι) [Fintype (spec.Range i)]
+    (s : Fin (qb i + 1)) (seed : QuerySeed spec) :
+    Pr{let u ← liftComp ($ᵗ spec.Range i) spec}[(seed i)[s]? = some u] ≤
+      (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
+  rw [prEvent_eq_evalDist_of_discrete, evalDist_liftComp_uniform,
+    ← prEvent_eq_evalDist_of_discrete]
+  rcases hslot : (seed i)[s]? with _ | u₀
+  · simp
+  · rw [prEvent_congr _ _ (· = u₀) fun u => by simp [eq_comm]]
+    exact (SampleableType.prEvent_uniformSample_eq_singleton u₀).le
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α β γ : Type}
 
@@ -320,25 +324,56 @@ theorem cf_eq_of_mem_support_seededFork [∀ i, DecidableEq (spec.Range i)] (x�
   simp only [seededFork, mem_support_bind_iff] at h
   grind
 
+/-- The two-run success event without the collision guard is bounded by the fork's success plus
+the collision event. -/
+private lemma prEvent_noGuard_le_fork_add_collision
+    [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec] [∀ i, DecidableEq (spec.Range i)]
+    (s : Fin (qb i + 1)) :
+    Pr{let r ← (do
+        let σ ← liftComp (generateSeed spec qb js) spec
+        let a ← (simulateQ seededOracle main).run' σ
+        let u ← liftComp ($ᵗ spec.Range i) spec
+        let b ← (simulateQ seededOracle main).run' ((σ.takeAtIndex i s).addValue i u)
+        return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] ≤
+      Pr{let r ← seededFork main qb js i cf}[r.map (Prod.map cf cf) = some (some s, some s)] +
+        Pr{let r ← (do
+          let σ ← liftComp (generateSeed spec qb js) spec
+          let a ← (simulateQ seededOracle main).run' σ
+          let u ← liftComp ($ᵗ spec.Range i) spec
+          return (a, (σ i)[s]?, u))}[cf r.1 = some s ∧ r.2.1 = some r.2.2] := by
+  unfold seededFork
+  simp only []
+  refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun σ => ?_
+  refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun a => ?_
+  by_cases hcf : cf a = some s
+  · simp only [hcf]
+    refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun u => ?_
+    by_cases hu : (σ i)[s]? = some u
+    · have h3 : Pr{let y ← (pure (a, (σ i)[s]?, u) :
+          OracleComp spec (α × Option (spec.Range i) × spec.Range i))}[
+          cf y.1 = some s ∧ y.2.1 = some y.2.2] = 1 := by
+        rw [prEvent_pure]; exact ite_eq_left ⟨hcf, hu⟩
+      rw [h3]
+      exact (prEvent_le_one _ _).trans le_add_self
+    · have h3 : Pr{let y ← (pure (a, (σ i)[s]?, u) :
+          OracleComp spec (α × Option (spec.Range i) × spec.Range i))}[
+          cf y.1 = some s ∧ y.2.1 = some y.2.2] = 0 := by
+        rw [prEvent_pure]; exact ite_eq_right fun h => hu h.2
+      rw [h3, add_zero, ite_eq_right hu]
+      refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun b => ?_
+      by_cases hb : cf b = some s <;> simp [hb, hcf]
+  · refine (le_of_eq ?_).trans zero_le
+    refine prEvent_eq_zero_of_forall_mem_support _ _ fun r hr => ?_
+    simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hr
+    obtain ⟨u, _, b, _, rfl⟩ := hr
+    simp [hcf]
+
 section forkingBound
 
 variable [unifSpec ˡ⊂ₒ spec]
   [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsUniformMeasureSpec spec]
-
-omit [DecidableEq ι] in
-/-- Guessing a seeded answer with a fresh uniform answer succeeds with probability at most
-`|spec.Range i|⁻¹`. -/
-private lemma prEvent_seedSlot_le_inv [Fintype (spec.Range i)] (s : Fin (qb i + 1))
-    (seed : QuerySeed spec) :
-    Pr{let u ← liftComp ($ᵗ spec.Range i) spec}[(seed i)[s]? = some u] ≤
-      (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
-  rw [prEvent_eq_evalDist_of_discrete, evalDist_liftComp_uniform,
-    ← prEvent_eq_evalDist_of_discrete]
-  rcases hslot : (seed i)[s]? with _ | u₀
-  · simp
-  · rw [prEvent_congr _ _ (· = u₀) fun u => by simp [eq_comm]]
-    exact (SampleableType.prEvent_uniformSample_eq_singleton u₀).le
 
 /-- The seeded run averaged over a uniformly generated seed, with the seed truncated after the
 `s`-th answer at `i`, has the fork-index marginal of `main`. -/
@@ -419,50 +454,6 @@ private lemma prEvent_collision_le [Fintype (spec.Range i)] (s : Fin (qb i + 1))
   simp only [bind_assoc, pure_bind] at h ⊢
   rw [h]
   exact mul_le_mul' le_rfl (prEvent_seedSlot_le_inv qb i s σ)
-
-omit [unifSpec ˡ⊂ₒ spec] in
-/-- The two-run success event without the collision guard is bounded by the fork's success plus
-the collision event. -/
-private lemma prEvent_noGuard_le_fork_add_collision [∀ i, DecidableEq (spec.Range i)]
-    (s : Fin (qb i + 1)) :
-    Pr{let r ← (do
-        let σ ← liftComp (generateSeed spec qb js) spec
-        let a ← (simulateQ seededOracle main).run' σ
-        let u ← liftComp ($ᵗ spec.Range i) spec
-        let b ← (simulateQ seededOracle main).run' ((σ.takeAtIndex i s).addValue i u)
-        return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] ≤
-      Pr{let r ← seededFork main qb js i cf}[r.map (Prod.map cf cf) = some (some s, some s)] +
-        Pr{let r ← (do
-          let σ ← liftComp (generateSeed spec qb js) spec
-          let a ← (simulateQ seededOracle main).run' σ
-          let u ← liftComp ($ᵗ spec.Range i) spec
-          return (a, (σ i)[s]?, u))}[cf r.1 = some s ∧ r.2.1 = some r.2.2] := by
-  unfold seededFork
-  simp only []
-  refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun σ => ?_
-  refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun a => ?_
-  by_cases hcf : cf a = some s
-  · simp only [hcf]
-    refine prEvent_bind_le_add_of_forall_le _ _ _ _ _ _ _ fun u => ?_
-    by_cases hu : (σ i)[s]? = some u
-    · have h3 : Pr{let y ← (pure (a, (σ i)[s]?, u) :
-          OracleComp spec (α × Option (spec.Range i) × spec.Range i))}[
-          cf y.1 = some s ∧ y.2.1 = some y.2.2] = 1 := by
-        rw [prEvent_pure]; exact ite_eq_left ⟨hcf, hu⟩
-      rw [h3]
-      exact (prEvent_le_one _ _).trans le_add_self
-    · have h3 : Pr{let y ← (pure (a, (σ i)[s]?, u) :
-          OracleComp spec (α × Option (spec.Range i) × spec.Range i))}[
-          cf y.1 = some s ∧ y.2.1 = some y.2.2] = 0 := by
-        rw [prEvent_pure]; exact ite_eq_right fun h => hu h.2
-      rw [h3, add_zero, ite_eq_right hu]
-      refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun b => ?_
-      by_cases hb : cf b = some s <;> simp [hb, hcf]
-  · refine (le_of_eq ?_).trans zero_le
-    refine prEvent_eq_zero_of_forall_mem_support _ _ fun r hr => ?_
-    simp only [mem_support_bind_iff, support_pure, Set.mem_singleton_iff] at hr
-    obtain ⟨u, _, b, _, rfl⟩ := hr
-    simp [hcf]
 
 /-- Key bound of the forking lemma: the probability that both runs succeed with fork point `s`
 is at least `Pr{cf main = some s}² - Pr{cf main = some s} / |Range i|`. -/

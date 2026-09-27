@@ -33,7 +33,7 @@ public import VCVioTest.FiatShamirAbort
 public import VCVioTest.FiatShamirKnowledgeExtraction
 public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
-public import VCVioTest.ForkMeasure
+public import VCVioTest.ForkBounds
 public import VCVioTest.Forking.WithoutReplacement
 public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
