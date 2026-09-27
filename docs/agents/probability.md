@@ -858,6 +858,15 @@ to the `ProbComp` forms only because `Pr[⊥] = 0` there. New API filled along t
 `probOutput_map` (the `probOutput`/`<$>` companion to `probEvent_map`, `@[grind =]`), `support_guard`,
 and the `orElse` (`<|>`) probability lemmas for `OptionT (OracleComp spec)` (`probFailure_orElse` etc.).
 
+`VCVioTest/NativeProbabilityTactics.lean` and `VCVioTest/NativeMonadProbability.lean` are the
+measure-side twins of these two gates: the same families stated with `𝒟[…]` and `Pr{…}[…]`, under
+the same rules. Their dated guards record where the native sets are weaker than the discrete ones:
+`grind` has no Dirac, uniform or success-mass rules; a product singleton is not split into a
+rectangle; `simp` rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the lossless-mass
+rule; the uniform event law is keyed on the `Pr{…}` bind form, which `simp` first normalises into a
+pushforward; and the support/mass bridges are applied by name. Closing one of these retires its
+guard in the same change.
+
 **Opting out downstream.** VCVio deliberately extends the *default* `grind` set — the monad laws
 above plus the probability/support bridges — and these tags are inherited by every project that
 imports it. All of the standard escape hatches work if a downstream `grind` call misbehaves:
@@ -946,7 +955,8 @@ normal form.
   boundaries; measure-native proofs without discrete compatibility keep their measure denotation.
 
 **What the gates enforce.** The gate files (`VCVioTest/ProbabilityTactics.lean`,
-`MonadProbability.lean`, `GrindFailFast.lean`, `Tactic/*.lean`, `EvalDist/*.lean`) state
+`MonadProbability.lean`, `NativeProbabilityTactics.lean`, `NativeMonadProbability.lean`,
+`GrindFailFast.lean`, `Tactic/*.lean`, `EvalDist/*.lean`) state
 "goal family → one terminal tactic" and are the gate for every change to these sets:
 
 1. *One terminal call.* A positive entry is `by <one tactic>` or a term: `simp`, `grind`,

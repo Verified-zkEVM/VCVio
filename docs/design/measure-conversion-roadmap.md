@@ -468,6 +468,16 @@ of output measures, and the one-time-to-many-time lift no longer assumes a finit
 ciphertext type. The machine-level responder readings remain on the discrete coinductive
 handler.
 
+## Native tactic gate checkpoint
+
+The discrete probability tactic benchmarks have measure-side twins over `ProbComp`, an abstract
+lawful monad, and the `Id`, `OptionT` and `ExceptT` carriers, covering outcome and event masses,
+uniform draws, independence, success mass, the support bridge, `do`-shapes and long chains. Their
+dated guards list the native automation gaps: `grind` lacks Dirac, uniform and success-mass rules;
+product singletons, `Set.univ` on `Bool`, the uniform event law after pushforward normalisation,
+and the support bridges need explicit steps. The discrete benchmarks remain until the lemma
+families they gate are retired.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
