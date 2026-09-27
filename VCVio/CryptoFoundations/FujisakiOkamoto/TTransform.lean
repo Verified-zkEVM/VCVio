@@ -11,6 +11,7 @@ public import VCVio.OracleComp.Coercions.Add
 public import VCVio.OracleComp.HasQuery.Morphism
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
 
 /-!
@@ -246,10 +247,8 @@ namespace TTransform
 /-- Runtime bundle for the T-transform random-oracle world. -/
 noncomputable def runtime
     [DecidableEq M] [SampleableType R] :
-    ProbCompRuntime (OracleComp (TTransform.oracleSpec M R)) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle TTransform.queryImpl ∅
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+    ProbCompRuntime (OracleComp (TTransform.oracleSpec M R)) :=
+  ProbCompRuntime.rom (M →ₒ R)
 
 /-- Structural query bound for T-transform OW-PCVA adversaries: uniform-sampling queries are
 unrestricted, while `qH`, `qP`, and `qV` bound the hash, plaintext-checking, and validity

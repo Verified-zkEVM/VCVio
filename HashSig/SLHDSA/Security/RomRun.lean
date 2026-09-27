@@ -120,7 +120,7 @@ local notation "romSpec" => unifSpec + publicHashSpec core
 
 /-- `romGameCore` returning its whole transcript instead of the success bit. -/
 @[expose] noncomputable def romGameCoreFull
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     OracleComp romSpec (RomOutcome vp core) := do
   let alg := generalAlgM (m := OracleComp romSpec) vp core
   let (pk, sk) ← alg.keygen
@@ -137,7 +137,7 @@ local notation "romSpec" => unifSpec + publicHashSpec core
 
 /-- The success bit of `romGameCore` is `RomOutcome.wins` of the transcript. -/
 theorem romGameCore_eq_map
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     romGameCore core adv = RomOutcome.wins <$> romGameCoreFull core adv := by
   simp only [romGameCore, romGameCoreFull, map_eq_bind_pure_comp, bind_assoc]
   exact bind_congr fun ⟨pk, sk⟩ => bind_congr fun ⟨⟨msg, sig⟩, log⟩ => by
@@ -148,7 +148,7 @@ theorem romGameCore_eq_map
 /-- The part of the EUF-CMA game that follows key generation: the forger against the given key
 pair under the signing oracle, and the verification of its forgery. -/
 @[expose] noncomputable def romResidual
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (ks : PublicKeyCore core × SecretKeyCore core) :
     OracleComp romSpec (RomOutcome vp core) := do
   let alg := generalAlgM (m := OracleComp romSpec) vp core
@@ -166,14 +166,14 @@ pair under the signing oracle, and the verification of its forgery. -/
 /-- The whole game with the three seeds already sampled: key generation from those seeds
 followed by the residual run. -/
 @[expose] noncomputable def romPostSeed
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     OracleComp romSpec (RomOutcome vp core) :=
   GeneralScheme.keygenInternalM vp core skSeed skPrf pkSeed >>= romResidual core adv
 
 /-- The game is the sampling of its three seeds followed by the post-seed game. -/
 theorem romGameCoreFull_eq_bind_seeds
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     romGameCoreFull core adv = (do
       let skSeed ← (monadLift ($ᵗ core.SkSeed) : OracleComp romSpec core.SkSeed)
       let skPrf ← (monadLift ($ᵗ core.SkPrf) : OracleComp romSpec core.SkPrf)
@@ -189,7 +189,7 @@ variable [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [SampleableType (B
 /-- The transcript of the game under the shared lazy public-hash oracle, run from the empty
 cache, together with the final cache. -/
 @[expose] noncomputable def romRunFull
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     ProbComp (RomOutcome vp core × PublicHash.Cache core) :=
   (simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core)
     (romGameCoreFull core adv)).run ∅
@@ -197,7 +197,7 @@ cache, together with the final cache. -/
 /-- The success bit of the counted experiment is `RomOutcome.wins` of the instrumented run's
 transcript. -/
 theorem fst_map_countedRomExperiment
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     Prod.fst <$> countedRomExperiment core adv =
       (fun z => z.1.wins) <$> romRunFull core adv := by
   unfold countedRomExperiment countedRomImpl romRunFull
@@ -208,7 +208,7 @@ theorem fst_map_countedRomExperiment
 instrumented run. -/
 theorem romForgeAdvantage_eq [MeasurableSpace (RomOutcome vp core × PublicHash.Cache core)]
     [DiscreteMeasurableSpace (RomOutcome vp core × PublicHash.Cache core)]
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     romForgeAdvantage core adv = 𝒟[romRunFull core adv] {z | z.1.wins = true} := by
   rw [romForgeAdvantage, fst_map_countedRomExperiment, evalDist_map_of_discrete,
     MeasureTheory.Measure.map_apply Measurable.of_discrete (measurableSet_singleton true)]
@@ -218,7 +218,7 @@ theorem romForgeAdvantage_eq [MeasurableSpace (RomOutcome vp core × PublicHash.
 forwarding implementation answers without touching the public-hash cache, so the instrumented run
 is a `ProbComp` bind over the seeds of the post-seed run started from the empty cache. -/
 theorem romRunFull_eq_bind_seeds
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     romRunFull core adv = (do
       let skSeed ← ($ᵗ core.SkSeed : ProbComp core.SkSeed)
       let skPrf ← ($ᵗ core.SkPrf : ProbComp core.SkPrf)
@@ -231,7 +231,7 @@ theorem romRunFull_eq_bind_seeds
 
 /-- The residual run copies its key pair into the transcript. -/
 theorem keys_of_mem_support_romResidual
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (ks : PublicKeyCore core × SecretKeyCore core) (c₀ : PublicHash.Cache core)
     {z : RomOutcome vp core × PublicHash.Cache core}
     (hz : z ∈ support ((simulateQ (unifFwdImpl (publicHashSpec core) +
@@ -246,7 +246,7 @@ theorem keys_of_mem_support_romResidual
 
 /-- The post-seed run's transcript carries the seeds it was given. -/
 theorem seeds_of_mem_support_romPostSeed
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
     (c₀ : PublicHash.Cache core) {z : RomOutcome vp core × PublicHash.Cache core}
     (hz : z ∈ support ((simulateQ (unifFwdImpl (publicHashSpec core) +
@@ -262,7 +262,7 @@ theorem seeds_of_mem_support_romPostSeed
 
 /-- Every path of the post-seed run from the empty cache is a path of the whole run. -/
 theorem mem_support_romRunFull_of_mem_support_romPostSeed
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
     {z : RomOutcome vp core × PublicHash.Cache core}
     (hz : z ∈ support ((simulateQ (unifFwdImpl (publicHashSpec core) +

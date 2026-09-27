@@ -767,7 +767,7 @@ theorem evalDist_romPostSeed_keyCollision_le
       ρ (.thash p k xs) = ρ (.thash p k ys) → xs = ys)
     (q : ℕ) (B : ℝ≥0∞) (hB : B ≠ ⊤)
     (hBudget : ∀ c : PublicHash.Cache core, QueryCache.enncard c ≤ (q : ℝ≥0∞) → Ψ c ≤ B)
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (hq : HasHashQueryBound core adv q) :
     (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
       𝒟[(simulateQ romImpl (romPostSeed core adv skSeed skPrf pkSeed)).run ∅]
@@ -823,7 +823,7 @@ theorem evalDist_romRunFull_targetCollision_le'
     (q : ℕ) (B : ℝ≥0∞) (hB : B ≠ ⊤)
     (hBudget : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core),
       QueryCache.enncard c ≤ (q : ℝ≥0∞) → Ψ sk pk c ≤ B)
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (hq : HasHashQueryBound core adv q) :
     (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
       𝒟[romRunFull core adv] {z | TargetCollision z.1 z.2} ≤
@@ -874,7 +874,7 @@ theorem evalDist_romRunFull_targetCollision_le_one
     (q : ℕ) (B : ℝ≥0∞) (hB : B ≠ ⊤)
     (hBudget : ∀ (sk : core.SkSeed) (pk : core.PkSeed) (c : PublicHash.Cache core),
       QueryCache.enncard c ≤ (q : ℝ≥0∞) → Ψ sk pk c ≤ B)
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (hq : HasHashQueryBound core adv q) :
     (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
       𝒟[romRunFull core adv] {z | TargetCollision z.1 z.2} ≤

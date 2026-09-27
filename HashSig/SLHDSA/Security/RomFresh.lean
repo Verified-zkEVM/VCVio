@@ -86,7 +86,7 @@ open scoped Classical in
 /-- The winning bit and the charge of a path of the instrumented run are a path of the counted
 experiment. -/
 theorem mem_support_countedRomExperiment_of_mem_support_runAdd
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     {w : (RomOutcome vp core × ℕ) × PublicHash.Cache core}
     (hw : w ∈ support ((simulateQ (countedRomImpl core)
       (romGameCoreFull core adv)).runAdd.run ∅)) :
@@ -101,7 +101,7 @@ open scoped Classical in
 query invocation, cached repeats and honest-party evaluations included, so the budget is at least
 the number of distinct cached queries and the bound is sound but loose. -/
 theorem enncard_le_of_hasHashQueryBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
     (hq : HasHashQueryBound core adv q)
     {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv)) :
     QueryCache.enncard z.2 ≤ (q : ℝ≥0∞) := by
@@ -129,7 +129,7 @@ theorem evalDist_romRunFull_setOf_le_of_fresh_bound
       c t = none →
       (letI : MeasurableSpace ((publicHashSpec core).Range t) := ⊤;
         𝒟[($ᵗ (publicHashSpec core).Range t : ProbComp _)] {u | P (c.cacheQuery t u)} ≤ ε))
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
     (hq : HasHashQueryBound core adv q) :
     (letI : MeasurableSpace (RomOutcome vp core × PublicHash.Cache core) := ⊤;
       𝒟[romRunFull core adv] {z | P z.2} ≤ (q : ℝ≥0∞) * ε) := by

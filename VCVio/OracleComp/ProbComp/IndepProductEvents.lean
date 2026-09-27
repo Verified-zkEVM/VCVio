@@ -89,7 +89,7 @@ theorem evalDist_bind_apply_le_of_forall_mem_support_notMem_eq_zero {α β : Typ
         filter_upwards [evalDist.ae_of_forall_mem_support mx
           (fun x => x ∉ G → 𝒟[f x] E = 0) MeasurableSet.of_discrete h] with x hx
         by_cases hxG : x ∈ G
-        · simpa [Set.indicator_of_mem hxG] using measure_le_one 𝒟[f x] E
+        · simp [Set.indicator_of_mem hxG]
         · simp [Set.indicator_of_notMem hxG, hx hxG]
     _ = 𝒟[mx] G := by rw [lintegral_indicator_const hG, mul_comm, mul_one]
 

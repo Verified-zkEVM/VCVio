@@ -120,7 +120,7 @@ together with the final cache and the total number of public-hash queries.
 
 *The joint run.* -/
 @[expose] noncomputable def jointRomRun
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     ProbComp (RomOutcome vp core × (PublicHash.Cache core × ℕ)) :=
   (simulateQ (jointRomImpl core) (romGameCoreFull core adv)).run (∅, 0)
 
@@ -131,7 +131,7 @@ counter is a passive auxiliary and the instrumentation does not change the game.
 
 *The two projections.* -/
 theorem proj_jointRomRun_eq_romRunFull
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     Prod.map id Prod.fst <$> jointRomRun core adv = romRunFull core adv :=
   OracleComp.extendState_run_proj_eq _ _ _ _ _
 
@@ -154,7 +154,7 @@ computations.
 
 *The two projections.* -/
 theorem proj_jointRomRun_eq_countedRomExperiment
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     (fun z => (z.1.wins, z.2.2)) <$> jointRomRun core adv = countedRomExperiment core adv := by
   rw [jointRomRun, jointRomImpl, OracleComp.run_extendState_eq_map_runAdd_withAddCost,
     countedRomExperiment, countedRomImpl_eq_withAddCost, romGameCore_eq_map, simulateQ_map,
@@ -200,7 +200,7 @@ queries is at most the number of public-hash queries.
 
 *The pathwise bound.* -/
 theorem length_log_le_hashCount_of_mem_support_jointRomRun
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     {z : RomOutcome vp core × (PublicHash.Cache core × ℕ)}
     (hz : z ∈ support (jointRomRun core adv)) : z.1.log.length ≤ z.2.2 := by
   rw [jointRomRun, romGameCoreFull] at hz
@@ -222,7 +222,7 @@ theorem length_log_le_hashCount_of_mem_support_jointRomRun
 
 *Both budgets on the joint run.* -/
 theorem hashCount_le_of_hasHashQueryBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (qh : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (qh : ℕ)
     (h : HasHashQueryBound core adv qh)
     {z : RomOutcome vp core × (PublicHash.Cache core × ℕ)}
     (hz : z ∈ support (jointRomRun core adv)) : z.2.2 ≤ qh := by
@@ -234,7 +234,7 @@ theorem hashCount_le_of_hasHashQueryBound
 
 *Both budgets on the joint run.* -/
 theorem logLength_le_of_hasSignQueryBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (qs : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (qs : ℕ)
     (h : HasSignQueryBound core adv qs)
     {z : RomOutcome vp core × (PublicHash.Cache core × ℕ)}
     (hz : z ∈ support (jointRomRun core adv)) : z.1.log.length ≤ qs := by
@@ -251,7 +251,7 @@ between the two budget parameters, is the content of the relation between `HasHa
 
 *The budget relation.* -/
 theorem hasSignQueryBound_of_hasHashQueryBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
     (h : HasHashQueryBound core adv q) : HasSignQueryBound core adv q := by
   intro w hw
   rw [← proj_jointRomRun_eq_romRunFull core adv, support_map] at hw
@@ -264,7 +264,7 @@ signing budget.
 
 *The budget relation.* -/
 theorem hasSignQueryBound_mono
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) {qs qs' : ℕ}
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) {qs qs' : ℕ}
     (hle : qs ≤ qs') (h : HasSignQueryBound core adv qs) : HasSignQueryBound core adv qs' :=
   fun w hw => le_trans (h w hw) hle
 
@@ -274,7 +274,7 @@ between the least witnesses rather than between arbitrary ones.
 
 *The budget relation.* -/
 theorem sInf_signBound_le_sInf_hashBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (hne : ∃ q, HasHashQueryBound core adv q) :
     sInf {qs | HasSignQueryBound core adv qs} ≤ sInf {qh | HasHashQueryBound core adv qh} :=
   Nat.sInf_le (hasSignQueryBound_of_hasHashQueryBound core adv _ (Nat.sInf_mem hne))

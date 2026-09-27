@@ -108,15 +108,12 @@ end support
 section spmf
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadAttach m] [EvalDistCompatible m]
 
-omit [MonadAttach m] [EvalDistCompatible m] in
 @[grind norm]
 lemma evalSPMF_seqLeft (mx : m α) (my : m β) :
     𝒮[mx <* my] = 𝒮[mx] <* 𝒮[my] := by
   simp [seqLeft_eq]
 
-omit [MonadAttach m] [EvalDistCompatible m] in
 @[simp, grind =_]
 lemma probOutput_seqLeft (mx : m α) (my : m β) (x : α) :
     Pr[= x | mx <* my] = (1 - Pr[⊥ | my]) * Pr[= x | mx] := by
@@ -127,12 +124,6 @@ lemma probOutput_seqLeft (mx : m α) (my : m β) (x : α) :
     congrArg (fun μ : MeasureTheory.Measure α => μ {x}) (evalDist_seqLeft mx my)
 
 @[simp, grind =_]
-lemma probFailure_seqLeft (mx : m α) (my : m β) :
-    Pr[⊥ | mx <* my] = Pr[⊥ | mx] + Pr[⊥ | my] - Pr[⊥ | mx] * Pr[⊥ | my] := by
-  rw [seqLeft_eq, probFailure_seq, probFailure_map]
-
-omit [MonadAttach m] [EvalDistCompatible m] in
-@[simp, grind =_]
 lemma probEvent_seqLeft (mx : m α) (my : m β) (p : α → Prop) :
     Pr[ p | mx <* my] = (1 - Pr[⊥ | my]) * Pr[ p | mx] := by
   let : MeasurableSpace α := ⊤
@@ -140,6 +131,13 @@ lemma probEvent_seqLeft (mx : m α) (my : m β) (p : α → Prop) :
   simpa only [MeasureTheory.Measure.smul_apply, smul_eq_mul, evalDist_apply_univ,
     evalDist_apply_setOf] using
     congrArg (fun μ : MeasureTheory.Measure α => μ {x | p x}) (evalDist_seqLeft mx my)
+
+variable [MonadAttach m] [EvalDistCompatible m]
+
+@[simp, grind =_]
+lemma probFailure_seqLeft (mx : m α) (my : m β) :
+    Pr[⊥ | mx <* my] = Pr[⊥ | mx] + Pr[⊥ | my] - Pr[⊥ | mx] * Pr[⊥ | my] := by
+  rw [seqLeft_eq, probFailure_seq, probFailure_map]
 
 end spmf
 
@@ -161,13 +159,13 @@ end support
 section spmf
 
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadAttach m] [EvalDistCompatible m]
 
-omit [MonadAttach m] [EvalDistCompatible m] in
 @[grind norm]
 lemma evalSPMF_seqRight (mx : m α) (my : m β) :
     𝒮[mx *> my] = 𝒮[mx] *> 𝒮[my] := by
   simp [seqRight_eq]
+
+variable [MonadAttach m] [EvalDistCompatible m]
 
 @[simp, grind =_]
 lemma probOutput_seqRight (mx : m α) (my : m β) (y : β) :

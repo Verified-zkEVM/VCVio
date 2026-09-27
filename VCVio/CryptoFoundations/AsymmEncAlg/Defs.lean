@@ -81,7 +81,7 @@ variable [DecidableEq M]
 
 The game returns a `Bool` directly rather than using `guard`, so it does not require
 `AlternativeMonad`. -/
-def CorrectExp (msg : M) : m Bool := do
+def correctnessExperiment (msg : M) : m Bool := do
   let (pk, sk) ← encAlg.keygen
   let c ← encAlg.encrypt pk msg
   let msg' ← encAlg.decrypt sk c
@@ -90,7 +90,7 @@ def CorrectExp (msg : M) : m Bool := do
 /-- An asymmetric encryption scheme is perfectly correct under the given runtime when decrypting a
 fresh encryption of any message succeeds with probability `1`. -/
 def PerfectlyCorrect (runtime : ProbCompRuntime m) : Prop :=
-  ∀ (msg : M), runtime.evalDist (encAlg.CorrectExp msg) {true} = 1
+  ∀ (msg : M), runtime.evalDist (encAlg.correctnessExperiment msg) {true} = 1
 
 end Correct
 

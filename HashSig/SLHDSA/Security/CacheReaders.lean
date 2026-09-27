@@ -64,8 +64,9 @@ Twenty-seven declarations.
 `chain_withPublicHash_eq_of_chain?_eq_some`,
 `wotsPkGenTops_withPublicHash_eq_of_wotsPkGenTops?_eq_some`.
 
-*Existence of an agreeing total answer function*: the `(publicHashSpec core).Inhabited`
-instance, through which `QueryCache.exists_agreesWithFn` applies to every public-hash cache.
+*Existence of an agreeing total answer function*: the `Inhabited` instance on every
+public-hash answer type, through which `QueryCache.exists_agreesWithFn` applies to every
+public-hash cache.
 
 *First descent stop case*: `xmss_stop_case`.
 -/
@@ -311,7 +312,8 @@ omit hf
 
 /-- Every public-hash query has an inhabited answer type once the node type is inhabited, so
 `QueryCache.exists_agreesWithFn` extends every public-hash cache to a total answer function. -/
-instance instInhabitedPublicHashSpec [Inhabited core.Y] : (publicHashSpec core).Inhabited where
-  inhabitedB q := by cases q <;> infer_instance
+instance instInhabitedPublicHashSpec [Inhabited core.Y] (t : (publicHashSpec core).Domain) :
+    Inhabited ((publicHashSpec core).Range t) := by
+  cases t <;> infer_instance
 
 end SLHDSA.Security

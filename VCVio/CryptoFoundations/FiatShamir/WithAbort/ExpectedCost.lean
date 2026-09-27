@@ -93,6 +93,25 @@ private lemma signLoop_queryCountDist_succ
       simp [HasQuery.queryCountDist, HasQuery.queryCostDist,
         HasQuery.Program.withAddCost, AddWriterT.costs, add_comm]
 
+private lemma signLoop_queryCountDist_succ_ite
+    (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ) :
+    HasQuery.queryCountDist
+      (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] ↦
+        fsAbortSignLoop (m := AddWriterT ℕ m) ids M pk sk msg (n + 1)) runtime =
+      (HasQuery.Program.eval
+        (fun [HasQuery (M × Commit →ₒ Chal) m] ↦
+          fsAbortSignAttempt (m := m) ids M pk sk msg) runtime >>= fun attempt ↦
+        if attempt.2 = none then
+          Nat.succ <$> HasQuery.queryCountDist
+            (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] ↦
+              fsAbortSignLoop (m := AddWriterT ℕ m) ids M pk sk msg n) runtime
+        else pure 1) := by
+  classical
+  rw [signLoop_queryCountDist_succ]
+  apply bind_congr
+  intro attempt
+  cases attempt.2 <;> simp
+
 end
 
 variable [EvalDistSemantics m] [LawfulEvalDistSemantics m]
@@ -154,26 +173,6 @@ private lemma signLoop_queryTailProbability_succ
   classical
   rw [signLoop_queryCountDist_succ, signAttemptAbortProbability_eq_prEvent]
   apply prEvent_bind_eq_mul_of_ite
-  intro attempt
-  cases attempt.2 <;> simp
-
-omit [EvalDistSemantics m] [LawfulEvalDistSemantics m] in
-private lemma signLoop_queryCountDist_succ_ite
-    (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ) :
-    HasQuery.queryCountDist
-      (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] ↦
-        fsAbortSignLoop (m := AddWriterT ℕ m) ids M pk sk msg (n + 1)) runtime =
-      (HasQuery.Program.eval
-        (fun [HasQuery (M × Commit →ₒ Chal) m] ↦
-          fsAbortSignAttempt (m := m) ids M pk sk msg) runtime >>= fun attempt ↦
-        if attempt.2 = none then
-          Nat.succ <$> HasQuery.queryCountDist
-            (fun [HasQuery (M × Commit →ₒ Chal) (AddWriterT ℕ m)] ↦
-              fsAbortSignLoop (m := AddWriterT ℕ m) ids M pk sk msg n) runtime
-        else pure 1) := by
-  classical
-  rw [signLoop_queryCountDist_succ]
-  apply bind_congr
   intro attempt
   cases attempt.2 <;> simp
 

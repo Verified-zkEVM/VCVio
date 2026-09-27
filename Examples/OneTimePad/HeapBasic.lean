@@ -68,7 +68,7 @@ because the key is single-use anyway.
 ## Comparison with `Examples.OneTimePad.Basic`
 
 `Basic.lean` uses the `SymmEncAlg` abstraction layer (with
-`PerfectSecrecyExp`, `Complete`, `perfectSecrecyAt`); it does not use
+`perfectSecrecyExperiment`, `Complete`, `perfectSecrecyAt`); it does not use
 the SSP handler layer. This file uses the state-separating handler layer
 directly, in the SSProve-style "handler as bounded-query gate" idiom.
 The arithmetic core, "XOR with a uniform key is uniform", is shared
@@ -245,7 +245,7 @@ def encOnce (sp : ℕ) (m : BitVec sp) : OracleComp (otpSpec sp) (BitVec sp) :=
 of `realImpl_distEquiv_idealImpl` by specialising the universal `≡ᵈ` to
 the canonical single-call adversary `encOnce sp m`.
 
-The same content, framed as `SymmEncAlg.PerfectSecrecyCipherGivenMsgExp`
+The same content, framed as `SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment`
 equivalence, is proved as `cipherGivenMsg_equiv` in
 `Examples.OneTimePad.Basic`. The state-separating framing replaces the
 "reductive bijection" of that proof with the "per-call gate" idiom: a

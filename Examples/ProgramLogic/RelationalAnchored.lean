@@ -33,6 +33,8 @@ open ENNReal MAlgRelOrdered MAlgRelOrdered.Anchored
 
 variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
 variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+  [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
+  [∀ t, MeasurableSpace (spec₂.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
 /-! ## Pure-pure base cases -/
 

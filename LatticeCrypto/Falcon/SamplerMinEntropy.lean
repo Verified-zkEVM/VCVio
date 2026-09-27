@@ -43,31 +43,31 @@ namespace Falcon
 mass at most `B` at `y`, and at most one input to the continuation can produce `y`, then the
 bind has pointwise mass at most `M * B` at `y`. -/
 theorem pointMass_bind_le_mul {α β : Type} (mx : ProbComp α) (my : α → ProbComp β) (y : β)
-    {M B : ℝ≥0∞} (hM : ∀ x, Pr{ let a ← mx}[a = x] ≤ M)
-    (hB : ∀ x, Pr{ let b ← my x}[b = y] ≤ B)
-    (huniq : ∀ x₁ x₂, Pr{ let b ← my x₁}[b = y] ≠ 0 →
-      Pr{ let b ← my x₂}[b = y] ≠ 0 → x₁ = x₂) :
-    Pr{ let b ← mx >>= my}[b = y] ≤ M * B := by
+    {M B : ℝ≥0∞} (hM : ∀ x, Pr{let a ← mx}[a = x] ≤ M)
+    (hB : ∀ x, Pr{let b ← my x}[b = y] ≤ B)
+    (huniq : ∀ x₁ x₂, Pr{let b ← my x₁}[b = y] ≠ 0 →
+      Pr{let b ← my x₂}[b = y] ≠ 0 → x₁ = x₂) :
+    Pr{let b ← mx >>= my}[b = y] ≤ M * B := by
   classical
   let : MeasurableSpace α := ⊤
   rw [prEvent_bind_eq_lintegral_of_discrete]
-  rcases Classical.em (∀ x, Pr{ let b ← my x}[b = y] = 0) with h | h
+  rcases Classical.em (∀ x, Pr{let b ← my x}[b = y] = 0) with h | h
   · simp only [h, lintegral_const, zero_mul, zero_le]
   · obtain ⟨x₀, hx₀⟩ := not_forall.mp h
     calc
       _ ≤ ∫⁻ x, ({x₀} : Set α).indicator (fun _ => B) x ∂𝒟[mx] := by
         apply lintegral_mono
         intro x
-        change Pr{ let b ← my x}[b = y] ≤ ({x₀} : Set α).indicator (fun _ => B) x
+        change Pr{let b ← my x}[b = y] ≤ ({x₀} : Set α).indicator (fun _ => B) x
         rcases Classical.em (x = x₀) with hx | hx
         · subst x
           simpa only [Set.indicator_of_mem (Set.mem_singleton x₀)] using hB x₀
-        · have hz : Pr{ let b ← my x}[b = y] = 0 := by
+        · have hz : Pr{let b ← my x}[b = y] = 0 := by
             by_contra hy
             exact hx (huniq x x₀ hy hx₀)
           rw [hz, Set.indicator_of_notMem
             (show x ∉ ({x₀} : Set α) from hx)]
-      _ = B * Pr{ let x ← mx}[x = x₀] := by
+      _ = B * Pr{let x ← mx}[x = x₀] := by
         rw [lintegral_indicator_const (measurableSet_singleton x₀),
           prEvent_eq_evalDist_singleton]
       _ ≤ M * B := by
@@ -75,7 +75,7 @@ theorem pointMass_bind_le_mul {α β : Type} (mx : ProbComp α) (my : α → Pro
         exact mul_le_mul (hM x₀) le_rfl zero_le zero_le
 
 private theorem pointMass_eq_zero_iff {α : Type} (mx : ProbComp α) (x : α) :
-    Pr{ let a ← mx}[a = x] = 0 ↔ x ∉ support mx := by
+    Pr{let a ← mx}[a = x] = 0 ↔ x ∉ support mx := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton]
   simpa only [not_lt, nonpos_iff_eq_zero] using
@@ -142,20 +142,20 @@ one-dimensional sampler at a standard deviation of at least `σmin` has pointwis
 mass at most `M ^ (4 · 2^κ)`: each leaf draws four integers, and the merges are injective. -/
 theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {M : ℝ≥0∞}
     {σmin : ℝ} (hZ : ∀ (μ σ' : ℝ), σmin ≤ σ' → ∀ v : ℤ,
-      Pr{ let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤ M) :
+      Pr{let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤ M) :
     ∀ (κ : ℕ) (t : FFTPair κ) (tree : FalconTree κ), tree.LeavesGE σmin →
-      ∀ z : FFTPair κ, Pr{ let outcome ← prims.ffSampling κ t tree}[outcome = z] ≤ M ^ (4 * 2 ^ κ)
+      ∀ z : FFTPair κ, Pr{let outcome ← prims.ffSampling κ t tree}[outcome = z] ≤ M ^ (4 * 2 ^ κ)
   | 0, (t₀, t₁), .leaf σ, hl, z => by
     rw [Primitives.ffSampling_leaf]
     have hM' : ∀ (μ : ℝ) (v : ℤ),
-        Pr{ let outcome ← prims.samplerZ μ σ}[outcome = v] ≤ M := fun μ v => hZ μ σ hl v
+        Pr{let outcome ← prims.samplerZ μ σ}[outcome = v] ≤ M := fun μ v => hZ μ σ hl v
     have hmem : ∀ {a b c d : ℤ} {w : FFTPair 0},
         w ∈ support (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0)) →
           w = (leafPack a b, leafPack c d) := by
       intro a b c d w hw
       simpa using hw
     have h4 : ∀ a b c : ℤ,
-        Pr{ let outcome ← (prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
+        Pr{let outcome ← (prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
           pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤ M * 1 := by
       intro a b c
       refine pointMass_bind_le_mul _ _ z (hM' _) (fun _ => measure_le_one _ _) ?_
@@ -164,7 +164,7 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).2).2
     have h3 : ∀ a b : ℤ,
-        Pr{ let outcome ← (prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
+        Pr{let outcome ← (prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
           prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
             pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
           M * (M * 1) := by
@@ -177,7 +177,7 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).2).1
     have h2 : ∀ a : ℤ,
-        Pr{ let outcome ← (prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
+        Pr{let outcome ← (prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
           prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
             prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
               pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))}[outcome = z] ≤
@@ -193,7 +193,7 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       obtain ⟨d₂, -, h₂⟩ := h₂
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).1).2
-    have h1 : Pr{ let outcome ← (prims.samplerZ (t₀.re ⟨0, by norm_num⟩) σ >>= fun a =>
+    have h1 : Pr{let outcome ← (prims.samplerZ (t₀.re ⟨0, by norm_num⟩) σ >>= fun a =>
         prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
           prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
             prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
@@ -212,7 +212,7 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       obtain ⟨d₂, -, h₂⟩ := h₂
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).1).1
-    calc Pr{ let outcome ← _}[outcome = z] ≤ M * (M * (M * (M * 1))) := h1
+    calc Pr{let outcome ← _}[outcome = z] ≤ M * (M * (M * (M * 1))) := h1
       _ = M ^ (4 * 2 ^ 0) := by ring
   | k + 1, (t₀, t₁), .node ℓ left right, hl, z => by
     rw [Primitives.ffSampling_node]
@@ -220,7 +220,7 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
     have ihR := fun t => Primitives.ffSampling_pointMass_le prims hZ k t right hlR
     have ihL := fun t => Primitives.ffSampling_pointMass_le prims hZ k t left hlL
     have hinner : ∀ s₁ : FFTPair k,
-        Pr{ let outcome ← (prims.ffSampling k
+        Pr{let outcome ← (prims.ffSampling k
           (Primitives.splitFFT (t₀ + Primitives.adjustTarget ℓ t₁ (Primitives.mergeFFT s₁.1 s₁.2)))
           left >>= fun s₀ =>
           pure (Primitives.mergeFFT s₀.1 s₀.2, Primitives.mergeFFT s₁.1 s₁.2) :
@@ -249,10 +249,10 @@ law for the finite-support computation. -/
 theorem samplerZ_pointMass_le_of_envelope {p : Params} (prims : Primitives p) {σmin : ℝ}
     (hσmin : 1 < σmin * Real.sqrt (2 * Real.pi))
     (hZ : ∀ (μ σ' : ℝ), σmin ≤ σ' → ∀ v : ℤ,
-      Pr{ let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
+      Pr{let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
         ENNReal.ofReal (1 / (σ' * Real.sqrt (2 * Real.pi) - 1)))
     (μ σ' : ℝ) (hσ' : σmin ≤ σ') (v : ℤ) :
-    Pr{ let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
+    Pr{let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
       ENNReal.ofReal (1 / (σmin * Real.sqrt (2 * Real.pi) - 1)) := by
   refine (hZ μ σ' hσ' v).trans ?_
   have hsqrt : 0 < Real.sqrt (2 * Real.pi) := Real.sqrt_pos.mpr (by positivity)
@@ -265,10 +265,10 @@ theorem samplerZ_pointMass_le_of_envelope {p : Params} (prims : Primitives p) {�
 theorem Primitives.ffSampling_pointMass_le_of_envelope {p : Params} (prims : Primitives p)
     {σmin : ℝ} (hσmin : 1 < σmin * Real.sqrt (2 * Real.pi))
     (hZ : ∀ (μ σ' : ℝ), σmin ≤ σ' → ∀ v : ℤ,
-      Pr{ let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
+      Pr{let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
         ENNReal.ofReal (1 / (σ' * Real.sqrt (2 * Real.pi) - 1)))
     (κ : ℕ) (t : FFTPair κ) (tree : FalconTree κ) (hl : tree.LeavesGE σmin) (z : FFTPair κ) :
-    Pr{ let outcome ← prims.ffSampling κ t tree}[outcome = z] ≤
+    Pr{let outcome ← prims.ffSampling κ t tree}[outcome = z] ≤
       ENNReal.ofReal (1 / (σmin * Real.sqrt (2 * Real.pi) - 1)) ^ (4 * 2 ^ κ) :=
   Primitives.ffSampling_pointMass_le prims
     (samplerZ_pointMass_le_of_envelope prims hσmin hZ) κ t tree hl z
@@ -278,10 +278,10 @@ theorem Primitives.ffSampling_pointMass_le_of_envelope {p : Params} (prims : Pri
 theorem Primitives.ffSampling_pointMass_le_half_pow {p : Params} (prims : Primitives p)
     {σmin : ℝ} (h3 : 3 ≤ σmin * Real.sqrt (2 * Real.pi))
     (hZ : ∀ (μ σ' : ℝ), σmin ≤ σ' → ∀ v : ℤ,
-      Pr{ let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
+      Pr{let outcome ← prims.samplerZ μ σ'}[outcome = v] ≤
         ENNReal.ofReal (1 / (σ' * Real.sqrt (2 * Real.pi) - 1)))
     (κ : ℕ) (t : FFTPair κ) (tree : FalconTree κ) (hl : tree.LeavesGE σmin) (z : FFTPair κ) :
-    Pr{ let outcome ← prims.ffSampling κ t tree}[outcome = z] ≤
+    Pr{let outcome ← prims.ffSampling κ t tree}[outcome = z] ≤
       ENNReal.ofReal (1 / 2) ^ (4 * 2 ^ κ) := by
   refine le_trans
     (Primitives.ffSampling_pointMass_le_of_envelope prims (by linarith) hZ κ t tree hl z) ?_

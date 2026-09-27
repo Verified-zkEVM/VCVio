@@ -19,11 +19,12 @@ function).  It does not identify the *experiment*, so the fresh-answer engine of
 `VCVio.OracleComp.QueryTracking.RandomOracle.Joint` was not applicable to it.  This module
 supplies that identification and transports the engine across it.
 
-`prfIdealExp_skgPrfReductionGen` rewrites `PRFScheme.prfIdealExp (skgPrfReductionGen core adv)` as
-an equality of computations: the two seed samples pulled out in front, then the nested lazy run of
-the provider-parametric game `romGameCoreGen` from the two empty caches, which is `skgIdealRun`.
-`skgPrfIdealAdvantage_eq` reads the surviving advantage off the cache-carrying experiment
-`skgIdealExpFull`, and `evalDist_skgIdealRun_setOf_le` transports
+`prfIdealExperiment_skgPrfReductionGen` rewrites
+`PRFScheme.prfIdealExperiment (skgPrfReductionGen core adv)` as an equality of computations: the two
+seed samples pulled out in front, then the nested lazy run of the provider-parametric game
+`romGameCoreGen` from the two empty caches, which is `skgIdealRun`. `skgPrfIdealAdvantage_eq` reads
+the surviving advantage off the cache-carrying experiment `skgIdealExpFull`, and
+`evalDist_skgIdealRun_setOf_le` transports
 `OracleComp.evalDist_run_run_nested_setOf_le_of_fresh_bound` to it, so a predicate of the *joint*
 cache — hash entries and secret entries together, glued by `OracleSpec.QueryCache.addEquiv` — that
 fails at the empty cache and whose fresh-answer mass is at most `ε` holds of a run of at most `q`
@@ -84,7 +85,7 @@ Twelve declarations.  There is no private declaration and no instance.
 *The ideal experiment's run*:
 
 * `SLHDSA.Security.run'_simulateQ_prfIdeal_liftComp_bind`, `SLHDSA.Security.skgIdealRun`,
-  `SLHDSA.Security.prfIdealExp_skgPrfReductionGen`, `SLHDSA.Security.skgIdealExpFull`,
+  `SLHDSA.Security.prfIdealExperiment_skgPrfReductionGen`, `SLHDSA.Security.skgIdealExpFull`,
   `SLHDSA.Security.skgPrfIdealAdvantage_eq`.
 
 *The engine transported*:
@@ -143,7 +144,7 @@ theorem run'_simulateQ_prfIdeal_liftComp_bind {α β : Type} (oa : ProbComp α)
 private-sampling summand in front of the two nested lazy oracles, from both empty caches, keeping
 both caches. -/
 noncomputable def skgIdealRun
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     ProbComp ((Bool × PublicHash.Cache core) ×
       ((core.PkSeed × Adrs) →ₒ core.Y).QueryCache) :=
@@ -155,14 +156,14 @@ noncomputable def skgIdealRun
 
 /-- **The ideal `PRF` experiment at the `SKG_PRF` reduction, as a run of the nested handler.**
 The two seed samples come out in front and the rest is the win bit of `skgIdealRun`. -/
-theorem prfIdealExp_skgPrfReductionGen
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
-    PRFScheme.prfIdealExp (skgPrfReductionGen core adv) =
+theorem prfIdealExperiment_skgPrfReductionGen
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
+    PRFScheme.prfIdealExperiment (skgPrfReductionGen core adv) =
       (do
         let skPrf ← ($ᵗ core.SkPrf : ProbComp core.SkPrf)
         let pkSeed ← ($ᵗ core.PkSeed : ProbComp core.PkSeed)
         (fun w => w.1.1) <$> skgIdealRun core adv skPrf pkSeed) := by
-  rw [PRFScheme.prfIdealExp, skgPrfReductionGen, run'_simulateQ_prfIdeal_liftComp_bind]
+  rw [PRFScheme.prfIdealExperiment, skgPrfReductionGen, run'_simulateQ_prfIdeal_liftComp_bind]
   refine bind_congr fun skPrf => ?_
   rw [run'_simulateQ_prfIdeal_liftComp_bind]
   refine bind_congr fun pkSeed => ?_
@@ -172,7 +173,7 @@ theorem prfIdealExp_skgPrfReductionGen
 /-- The cache-carrying ideal experiment: the two seed samples, then the nested lazy run of the
 provider-parametric game from the two empty caches. -/
 noncomputable def skgIdealExpFull
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     ProbComp ((Bool × PublicHash.Cache core) ×
       ((core.PkSeed × Adrs) →ₒ core.Y).QueryCache) :=
   (do
@@ -184,13 +185,13 @@ noncomputable def skgIdealExpFull
 experiment.**  This is what makes a statement about `skgIdealExpFull` a statement about
 `skgPrfIdealAdvantage`. -/
 theorem skgPrfIdealAdvantage_eq
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     (letI : MeasurableSpace ((Bool × PublicHash.Cache core) ×
         ((core.PkSeed × Adrs) →ₒ core.Y).QueryCache) := ⊤;
       skgPrfIdealAdvantage core adv = 𝒟[skgIdealExpFull core adv] {z | z.1.1 = true}) := by
   let _ : MeasurableSpace ((Bool × PublicHash.Cache core) ×
       ((core.PkSeed × Adrs) →ₒ core.Y).QueryCache) := ⊤
-  rw [skgPrfIdealAdvantage, prfIdealExp_skgPrfReductionGen, skgIdealExpFull]
+  rw [skgPrfIdealAdvantage, prfIdealExperiment_skgPrfReductionGen, skgIdealExpFull]
   rw [show (do
       let skPrf ← ($ᵗ core.SkPrf : ProbComp core.SkPrf)
       let pkSeed ← ($ᵗ core.PkSeed : ProbComp core.PkSeed)
@@ -210,7 +211,7 @@ theorem skgPrfIdealAdvantage_eq
 cache that fails at the empty cache and whose fresh-answer mass is at most `ε`, the mass of the
 runs whose joint cache satisfies it and has at most `q` entries is at most `q * ε`. -/
 theorem evalDist_skgIdealRun_setOf_le
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
     (P : (publicHashSpec core + ((core.PkSeed × Adrs) →ₒ core.Y)).QueryCache → Prop)
     (hP : ¬ P ∅) (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
@@ -235,7 +236,7 @@ theorem evalDist_skgIdealRun_setOf_le
 /-- The same bound for the whole cache-carrying ideal experiment: the seed samples are uniform in
 the bound, so they integrate out. -/
 theorem evalDist_skgIdealExpFull_setOf_le
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (P : (publicHashSpec core + ((core.PkSeed × Adrs) →ₒ core.Y)).QueryCache → Prop)
     (hP : ¬ P ∅) (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
     (hfresh : ∀ (t : (publicHashSpec core + ((core.PkSeed × Adrs) →ₒ core.Y)).Domain)
@@ -266,7 +267,7 @@ theorem evalDist_skgIdealExpFull_setOf_le
 experiment's winning runs whose joint cache satisfies `P` and has at most `q` entries is at most
 `q * ε`. -/
 theorem evalDist_skgIdealExpFull_wins_and_setOf_le
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (P : (publicHashSpec core + ((core.PkSeed × Adrs) →ₒ core.Y)).QueryCache → Prop)
     (hP : ¬ P ∅) (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
     (hfresh : ∀ (t : (publicHashSpec core + ((core.PkSeed × Adrs) →ₒ core.Y)).Domain)
@@ -355,7 +356,7 @@ This is a demonstration that the chain of this module reaches a bound of the for
 over node-type cardinality*.  It is not a bound on `skgPrfIdealAdvantage`: `y₀` is named before
 the experiment, and the restriction to at most `q` joint entries is part of the event. -/
 theorem evalDist_skgIdealExpFull_wins_and_secretHitsTarget_le
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (y₀ : core.Y) (q : ℕ) :
     (letI : MeasurableSpace ((Bool × PublicHash.Cache core) ×
         ((core.PkSeed × Adrs) →ₒ core.Y).QueryCache) := ⊤;

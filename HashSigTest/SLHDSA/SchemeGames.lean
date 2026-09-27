@@ -163,17 +163,17 @@ its experiment recorded is settled there too, and by eight theorems rather than 
 for a reason this file cannot repair: an `example … := rfl` moves with the body it is `rfl` against,
 so a paired weakening of all four halves survives it, survives every check below, and survives this
 executable.  That the recorded bit is the selector's own value rather than its negation or a
-constant is one level down again, and is `instrumentedEufExp_const` and its twin, which refuse both
-of those shapes and every other recorded bit that is not that constant at a constant selector.  Two
-directions below those are refused by nothing in either module — which of a run's values the
-selector is applied to, and any combination of applications of the selector that agrees with it
-wherever the selector is constant — and the paragraphs that close the library module's own section
-beside the four halves record both rather than claiming them.  What this file adds to those eight is
-the selector argument: the four `Pins` entries restating the branch bounds name `forsArm` and
-`randomizerLogged`, so a library-side edit taking one split's two halves at another selector is
-refused by that split's two entries here, although it leaves the library module well-formed.
-Nothing here says that any honest value was recorded as a game target, that any execution produced
-any log below, or that either half is bounded by anything.
+constant is one level down again, and is `instrumentedEufExperiment_const` and its twin, which
+refuse both of those shapes and every other recorded bit that is not that constant at a constant
+selector.  Two directions below those are refused by nothing in either module — which of a run's
+values the selector is applied to, and any combination of applications of the selector that agrees
+with it wherever the selector is constant — and the paragraphs that close the library module's own
+section beside the four halves record both rather than claiming them.  What this file adds to those
+eight is the selector argument: the four `Pins` entries restating the branch bounds name `forsArm`
+and `randomizerLogged`, so a library-side edit taking one split's two halves at another selector is
+refused by that split's two entries here, although it leaves the library module well-formed. Nothing
+here says that any honest value was recorded as a game target, that any execution produced any log
+below, or that either half is bounded by anything.
 
 ## The pins
 
@@ -857,8 +857,8 @@ variable (pk : PublicKeyCore toyPrimitives.core) (sk : SecretKeyCore toyPrimitiv
   (msg : List Byte) (sig sig' : GeneralScheme.SignatureCore toy toyPrimitives.core)
   (target : Fin toyParams.k)
   (log : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core))
-  (adv : unforgeableAdv (generalAlg (vp := toy) toyPrimitives))
-  (sadv : strongUnforgeableAdv (generalAlg (vp := toy) toyPrimitives))
+  (adv : UnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
+  (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitives))
   (sel : PublicKeyCore toyPrimitives.core → SecretKeyCore toyPrimitives.core → List Byte →
     GeneralScheme.SignatureCore toy toyPrimitives.core → Bool)
   (lsel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
@@ -868,43 +868,38 @@ example : SignatureAlg ProbComp (List Byte) (PublicKeyCore toyPrimitives.core)
     (SecretKeyCore toyPrimitives.core) (GeneralScheme.SignatureCore toy toyPrimitives.core) :=
   generalAlg (vp := toy) toyPrimitives
 
-noncomputable example : MeasureTheory.Measure (Bool × Bool) :=
-  instrumentedEufExp ProbCompRuntime.probComp adv sel
+noncomputable example : ProbComp (Bool × Bool) :=
+  instrumentedEufExperiment adv sel
 
-noncomputable example : MeasureTheory.Measure (Bool × Bool) :=
-  instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel
+noncomputable example : ProbComp (Bool × Bool) :=
+  instrumentedSameMessageExperiment sadv lsel
 
-example : unforgeableExp ProbCompRuntime.probComp adv =
-    (instrumentedEufExp ProbCompRuntime.probComp adv sel).fst :=
-  instrumentedEufExp_fst ProbCompRuntime.probComp
-    adv sel
+example : 𝒟[unforgeableExperiment adv] = 𝒟[instrumentedEufExperiment adv sel].fst :=
+  instrumentedEufExperiment_fst ProbCompRuntime.probComp adv sel
 
-example (b : Bool) : instrumentedEufExp ProbCompRuntime.probComp adv (fun _ _ _ _ => b) =
-    (unforgeableExp ProbCompRuntime.probComp adv).map (fun x => (x, b)) :=
-  instrumentedEufExp_const ProbCompRuntime.probComp
-    adv b
+example (b : Bool) :
+    𝒟[instrumentedEufExperiment adv (fun _ _ _ _ => b)] =
+      𝒟[unforgeableExperiment adv].map (fun x => (x, b)) :=
+  instrumentedEufExperiment_const ProbCompRuntime.probComp adv b
 
-example : adv.advantage ProbCompRuntime.probComp ≤
-    (instrumentedEufExp ProbCompRuntime.probComp adv sel) {x | x.1 = true ∧ x.2 = true} +
-    (instrumentedEufExp ProbCompRuntime.probComp adv sel) {x | x.1 = true ∧ x.2 = false} :=
+example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤
+    𝒟[instrumentedEufExperiment adv sel] {x | x.1 = true ∧ x.2 = true} +
+    𝒟[instrumentedEufExperiment adv sel] {x | x.1 = true ∧ x.2 = false} :=
   advantage_le_arms ProbCompRuntime.probComp
     adv sel
 
-example : ProbCompRuntime.probComp.evalDist (sameMessageStrongUnforgeableGame sadv) =
-    (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel).fst :=
-  instrumentedSameMessageExp_fst ProbCompRuntime.probComp
-    sadv lsel
+example : 𝒟[sameMessageStrongUnforgeableExperiment sadv] =
+    𝒟[instrumentedSameMessageExperiment sadv lsel].fst :=
+  instrumentedSameMessageExperiment_fst ProbCompRuntime.probComp sadv lsel
 
 example (b : Bool) :
-    instrumentedSameMessageExp ProbCompRuntime.probComp sadv (fun _ _ _ => b) =
-      (ProbCompRuntime.probComp.evalDist (sameMessageStrongUnforgeableGame sadv)).map
-        (fun x => (x, b)) :=
-  instrumentedSameMessageExp_const ProbCompRuntime.probComp
-    sadv b
+    𝒟[instrumentedSameMessageExperiment sadv (fun _ _ _ => b)] =
+      𝒟[sameMessageStrongUnforgeableExperiment sadv].map (fun x => (x, b)) :=
+  instrumentedSameMessageExperiment_const ProbCompRuntime.probComp sadv b
 
-example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤
-    (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel) {x | x.1 = true ∧ x.2 = true} +
-    (instrumentedSameMessageExp ProbCompRuntime.probComp sadv lsel)
+example : sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+    𝒟[instrumentedSameMessageExperiment sadv lsel] {x | x.1 = true ∧ x.2 = true} +
+    𝒟[instrumentedSameMessageExperiment sadv lsel]
       {x | x.1 = true ∧ x.2 = false} :=
   sameMessageAdvantage_le_arms ProbCompRuntime.probComp
     sadv lsel
@@ -1013,7 +1008,7 @@ noncomputable example : ℝ≥0∞ := forsHalf adv
 
 noncomputable example : ℝ≥0∞ := hypertreeHalf adv
 
-example : adv.advantage ProbCompRuntime.probComp ≤ forsHalf adv + hypertreeHalf adv :=
+example : unforgeableAdvantage ProbCompRuntime.probComp adv ≤ forsHalf adv + hypertreeHalf adv :=
   advantage_le_forsHalf_add_hypertreeHalf adv
 
 example : Function.Injective emptyContextMessage := emptyContextMessage_injective
@@ -1088,47 +1083,51 @@ noncomputable example : ℝ≥0∞ := sameRandomizerHalf sadv
 
 noncomputable example : ℝ≥0∞ := freshRandomizerHalf sadv
 
-example : sadv.sameMessageAdvantage ProbCompRuntime.probComp ≤
+example : sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
     freshRandomizerHalf sadv + sameRandomizerHalf sadv :=
   sameMessageAdvantage_le_freshRandomizer_add_sameRandomizer sadv
 
-example : sadv.advantage ProbCompRuntime.probComp =
-    sadv.toUnforgeableAdv.advantage ProbCompRuntime.probComp +
-      sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
+    unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary +
+      sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   strongAdvantage_eq_advantage_add_sameMessage sadv
 
-example : sadv.advantage ProbCompRuntime.probComp ≤
-    (forsHalf sadv.toUnforgeableAdv + hypertreeHalf sadv.toUnforgeableAdv) +
+example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
+    (forsHalf sadv.toUnforgeableAdversary + hypertreeHalf sadv.toUnforgeableAdversary) +
       (freshRandomizerHalf sadv + sameRandomizerHalf sadv) :=
   strongAdvantage_le_halves sadv
 
-example : forsHalf adv ≤ adv.advantage ProbCompRuntime.probComp := forsHalf_le_advantage adv
+example : forsHalf adv ≤ unforgeableAdvantage ProbCompRuntime.probComp adv :=
+  forsHalf_le_advantage adv
 
-example : hypertreeHalf adv ≤ adv.advantage ProbCompRuntime.probComp :=
+example : hypertreeHalf adv ≤ unforgeableAdvantage ProbCompRuntime.probComp adv :=
   hypertreeHalf_le_advantage adv
 
-example : sameRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+example :
+    sameRandomizerHalf sadv ≤ sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   sameRandomizerHalf_le_sameMessageAdvantage sadv
 
-example : freshRandomizerHalf sadv ≤ sadv.sameMessageAdvantage ProbCompRuntime.probComp :=
+example :
+    freshRandomizerHalf sadv ≤
+      sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv :=
   freshRandomizerHalf_le_sameMessageAdvantage sadv
 
 example : forsHalf adv ≤
-  (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm (vp := toy) toyPrimitives))
+  𝒟[instrumentedEufExperiment adv (forsArm (vp := toy) toyPrimitives)]
     {x | x.2 = true} :=
   forsHalf_le_branch adv
 
 example : hypertreeHalf adv ≤
-  (instrumentedEufExp ProbCompRuntime.probComp adv (forsArm (vp := toy) toyPrimitives))
+  𝒟[instrumentedEufExperiment adv (forsArm (vp := toy) toyPrimitives)]
     {x | x.2 = false} :=
   hypertreeHalf_le_branch adv
 
-example : sameRandomizerHalf sadv ≤ (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-      (randomizerLogged (vp := toy) (prims := toyPrimitives))) {x | x.2 = true} :=
+example : sameRandomizerHalf sadv ≤ 𝒟[instrumentedSameMessageExperiment sadv
+      (randomizerLogged (vp := toy) (prims := toyPrimitives))] {x | x.2 = true} :=
   sameRandomizerHalf_le_branch sadv
 
-example : freshRandomizerHalf sadv ≤ (instrumentedSameMessageExp ProbCompRuntime.probComp sadv
-      (randomizerLogged (vp := toy) (prims := toyPrimitives))) {x | x.2 = false} :=
+example : freshRandomizerHalf sadv ≤ 𝒟[instrumentedSameMessageExperiment sadv
+      (randomizerLogged (vp := toy) (prims := toyPrimitives))] {x | x.2 = false} :=
   freshRandomizerHalf_le_branch sadv
 
 end Pins

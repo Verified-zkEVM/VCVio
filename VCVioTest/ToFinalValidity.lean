@@ -110,17 +110,17 @@ theorem experiment_challengeThenCollection :
 /-- The converted adversary wins the source-final-validity game: the wrapper suppresses the
 poisoning collection query, so the monitor is still valid at the end and the collision counts. -/
 theorem toSourceFinalValidity_suppresses_poison_canary :
-    SM_DT_TCR_SourceFinalValidity.Experiment
+    SM_DT_TCR_SourceFinalValidity.experiment
         challengeThenCollection.toSourceFinalValidity = pure true := by
   rw [SM_DT_TCR_experiment_toSourceFinalValidity, experiment_challengeThenCollection]
 
 /-- The conversion is advantage-preserving on this adversary, at advantage one. -/
 theorem advantage_challengeThenCollection_canary :
     SM_DT_TCR_Advantage challengeThenCollection = 1 ∧
-      SM_DT_TCR_SourceFinalValidity.Advantage
+      SM_DT_TCR_SourceFinalValidity.advantage
         challengeThenCollection.toSourceFinalValidity = 1 := by
   refine ⟨?_, ?_⟩ <;>
-    simp [SM_DT_TCR_Advantage, SM_DT_TCR_SourceFinalValidity.Advantage,
+    simp [SM_DT_TCR_Advantage, SM_DT_TCR_SourceFinalValidity.advantage,
       experiment_challengeThenCollection, toSourceFinalValidity_suppresses_poison_canary]
 
 /-! ## SM-DT-PRE
@@ -167,7 +167,7 @@ theorem pre_experiment_challengeThenCollection :
 
 /-- The SM-PRE conversion carries that win across to the monitor game. -/
 theorem pre_toSourceFinalValidity_suppresses_poison_canary :
-    SM_DT_PRE_SourceFinalValidity.Experiment
+    SM_DT_PRE_SourceFinalValidity.experiment
         preChallengeThenCollection.toSourceFinalValidity = pure true := by
   rw [SM_DT_PRE_experiment_toSourceFinalValidity, pre_experiment_challengeThenCollection]
 
@@ -229,9 +229,9 @@ theorem ud_experiment_ideal :
 /-- The SM-UD conversion carries both worlds across: the wrapper suppresses the poisoning query in
 each, so neither outcome moves. -/
 theorem ud_toSourceFinalValidity_suppresses_poison_canary :
-    SM_DT_UD_SourceFinalValidity.Experiment .real
+    SM_DT_UD_SourceFinalValidity.experiment .real
         udChallengeThenCollection.toSourceFinalValidity = pure true ∧
-      SM_DT_UD_SourceFinalValidity.Experiment .ideal
+      SM_DT_UD_SourceFinalValidity.experiment .ideal
         udChallengeThenCollection.toSourceFinalValidity = pure false := by
   refine ⟨?_, ?_⟩
   · rw [← SM_DT_UD_World.toSourceFinalValidity_real,
@@ -239,18 +239,16 @@ theorem ud_toSourceFinalValidity_suppresses_poison_canary :
   · rw [← SM_DT_UD_World.toSourceFinalValidity_ideal,
       SM_DT_UD_experiment_toSourceFinalValidity, ud_experiment_ideal]
 
-/-- The signed gap survives the conversion with its orientation: real minus ideal is `1`, not
-`-1`. -/
-theorem ud_directedAdvantage_canary :
-    SM_DT_UD_DirectedAdvantage udChallengeThenCollection = 1 ∧
-      SM_DT_UD_SourceFinalValidity.DirectedAdvantage
-        udChallengeThenCollection.toSourceFinalValidity = 1 := by
-  refine ⟨?_, ?_⟩
-  · simp [SM_DT_UD_DirectedAdvantage, SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess,
-      ud_experiment_real, ud_experiment_ideal]
-  · rw [← SM_DT_UD_directedAdvantage_toSourceFinalValidity]
-    simp [SM_DT_UD_DirectedAdvantage, SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess,
-      ud_experiment_real, ud_experiment_ideal]
+/-- The success probabilities survive the conversion with their orientation: the real world
+succeeds with probability one and the ideal world with probability zero, on both sides. -/
+theorem ud_success_orientation_canary :
+    SM_DT_UD_RealSuccess udChallengeThenCollection = 1 ∧
+      SM_DT_UD_IdealSuccess udChallengeThenCollection = 0 ∧
+      SM_DT_UD_SourceFinalValidity.RealSuccess udChallengeThenCollection.toSourceFinalValidity = 1 ∧
+      SM_DT_UD_SourceFinalValidity.IdealSuccess
+        udChallengeThenCollection.toSourceFinalValidity = 0 := by
+  rw [← SM_DT_UD_realSuccess_toSourceFinalValidity, ← SM_DT_UD_idealSuccess_toSourceFinalValidity]
+  simp [SM_DT_UD_RealSuccess, SM_DT_UD_IdealSuccess, ud_experiment_real, ud_experiment_ideal]
 
 /-! ## SM-DT-DSPR
 
@@ -297,7 +295,7 @@ theorem dspr_experiment_challengeThenCollection :
 
 /-- The SM-DSPR conversion carries the prediction across to the monitor game. -/
 theorem dspr_toSourceFinalValidity_suppresses_poison_canary :
-    SM_DT_DSPR_SourceFinalValidity.Experiment
+    SM_DT_DSPR_SourceFinalValidity.experiment
         dsprChallengeThenCollection.toSourceFinalValidity = pure true := by
   rw [SM_DT_DSPR_experiment_toSourceFinalValidity, dspr_experiment_challengeThenCollection]
 
@@ -316,7 +314,7 @@ theorem dspr_baseline_cancels_prediction :
     SM_DT_DSPR_Success dsprChallengeThenCollection = 1 ∧
       SM_DT_DSPR_SPProbability dsprChallengeThenCollection = 1 ∧
       SM_DT_DSPR_Advantage dsprChallengeThenCollection = 0 ∧
-      SM_DT_DSPR_SourceFinalValidity.Advantage
+      SM_DT_DSPR_SourceFinalValidity.advantage
         dsprChallengeThenCollection.toSourceFinalValidity = 0 := by
   rw [← SM_DT_DSPR_advantage_toSourceFinalValidity]
   simp [SM_DT_DSPR_Advantage, SM_DT_DSPR_Success, SM_DT_DSPR_SPProbability,

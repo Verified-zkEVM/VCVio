@@ -61,7 +61,7 @@ asserted, and private sampling is free.
   `SchemeGames.generalAlg`, whose public hash is a function.
   `HashSig.SLHDSA.Security.GeneralAlgBridge` identifies `generalAlg` with `generalAlgM`
   interpreted by the deterministic public hash; nothing relates `romGameCore` or
-  `countedRomExperiment` to `unforgeableExp` under `PublicHash.runtime`.
+  `countedRomExperiment` to `unforgeableExperiment` under `PublicHash.runtime`.
 * Nothing here is quantum.  `PublicHash.randomOracle` is a classical lazily-sampled oracle and
   the count is a classical query count, so any bound proved against this experiment is a
   classical random-oracle statement.
@@ -175,12 +175,12 @@ local notation "romSpec" => unifSpec + publicHashSpec core
 
 /-- **The EUF-CMA game as one program in the shared public-hash world.**  Key generation, a
 logged signing oracle, the forger, then verification — the body of
-`VCVio`'s `unforgeableExp`, but left uninterpreted so that every public-hash evaluation by any
-party is a query rather than a function call.
+`VCVio`'s `unforgeableExperiment`, but left uninterpreted so that every public-hash evaluation by
+any party is a query rather than a function call.
 
 *Counted random-oracle experiment.* -/
 noncomputable def romGameCore
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     OracleComp romSpec Bool :=
   letI : DecidableEq (List Byte) := Classical.decEq _
   letI : DecidableEq (GeneralScheme.SignatureCore vp core) := Classical.decEq _
@@ -237,7 +237,7 @@ public-hash queries the whole execution made.
 
 *Counted random-oracle experiment.* -/
 noncomputable def countedRomExperiment
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     ProbComp (Bool × ℕ) :=
   (simulateQ (countedRomImpl core) (romGameCore core adv)).runAdd.run' ∅
 
@@ -246,7 +246,7 @@ open scoped Classical in
 
 *Counted random-oracle experiment.* -/
 noncomputable def romForgeAdvantage
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) : ℝ≥0∞ :=
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) : ℝ≥0∞ :=
   𝒟[Prod.fst <$> countedRomExperiment core adv] {true}
 
 open scoped Classical in
@@ -261,7 +261,7 @@ named elimination lemmas are preferable wherever one applies.
 
 *Counted random-oracle experiment.* -/
 @[expose] def HasHashQueryBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ) : Prop :=
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ) : Prop :=
   ∀ result ∈ support (countedRomExperiment core adv), result.2 ≤ q
 
 end Counted

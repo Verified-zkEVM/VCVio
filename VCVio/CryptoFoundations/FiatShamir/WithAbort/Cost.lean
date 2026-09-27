@@ -158,9 +158,8 @@ theorem signAttempt_expectedQueryCost_eq_outputExpectation
 
 section queryBounds
 
-variable [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
+variable [MonadAttach m] [ExactMonadAttach m]
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 private lemma signAttempt_usesWeightedQueryCostAtMost
     {κ : Type} [AddCommMonoid κ] [PartialOrder κ] [IsOrderedAddMonoid κ]
     [CanonicallyOrderedAdd κ]
@@ -204,7 +203,6 @@ private lemma signAttempt_usesWeightedQueryCostAtMost
                   (fun oz ↦ AddWriterT.pathwiseCostAtMost_pure
                     (m := m) (ω := κ) (x := (a.1, oz))))))))
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- The retry loop makes weighted query cost at most `n • w` when each query costs at most `w`.
 -/
 theorem fsAbortSignLoop_usesWeightedQueryCostAtMost
@@ -255,7 +253,6 @@ section schemeCost
 
 variable (hr : GenerableRelation Stmt Wit rel)
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Signing makes weighted query cost at most `maxAttempts • w` when each query costs at most
 `w`. -/
 theorem sign_usesWeightedQueryCostAtMost
@@ -268,7 +265,6 @@ theorem sign_usesWeightedQueryCostAtMost
     ] ≤ maxAttempts • w :=
   fsAbortSignLoop_usesWeightedQueryCostAtMost ids M runtime pk sk msg costFn w hcost maxAttempts
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Unit-cost specialization: signing makes at most `maxAttempts` random-oracle queries. -/
 theorem sign_usesAtMostMaxAttemptsQueries
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)
@@ -288,15 +284,13 @@ end queryBounds
 
 section expectedCost
 
-variable [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m]
+variable [EvalDistSemantics m] [LawfulEvalDistSemantics m] [MonadAttach m]
   [ExactMonadAttach m]
 
 section schemeCost
 
 variable (hr : GenerableRelation Stmt Wit rel)
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Tail-sum formula for the expected number of signing queries in Fiat-Shamir with aborts.
 
 The random variable on the right is the unit-cost query count of the signer. The event `i < q`
@@ -320,7 +314,6 @@ theorem sign_expectedQueries_eq_sum_reachedAttemptProbabilities
       (FiatShamirWithAbort ids hr M maxAttempts).sign pk sk msg)
     (sign_usesAtMostMaxAttemptsQueries ids M hr runtime pk sk msg maxAttempts)
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Expected weighted query cost of signing is bounded by the worst-case `maxAttempts • w`
 budget whenever every query costs at most `w`. -/
 theorem sign_expectedQueryCost_le
@@ -337,7 +330,6 @@ theorem sign_expectedQueryCost_le
     (sign_usesWeightedQueryCostAtMost ids M hr runtime pk sk msg costFn w hcost maxAttempts)
     hval hvalMeas
 
-omit [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] in
 /-- Unit-cost specialization: the expected number of signing queries is at most `maxAttempts`. -/
 theorem sign_expectedQueries_le
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M)

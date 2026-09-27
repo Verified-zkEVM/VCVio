@@ -8,12 +8,13 @@ module
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.Oracle
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
 public import ToMathlib.Control.StateT
+import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
 
 /-!
 # Asymmetric Encryption Schemes: Generic IND-CPA Lifts
 
-This file contains the generic step-adversary extraction and the planned one-time-to-many-time
-IND-CPA lift.
+This file contains the generic step-adversary extraction and the one-time-to-many-time IND-CPA
+lift.
 -/
 
 @[expose] public section
@@ -76,8 +77,8 @@ inductive IND_CPA_StepState
       (cont : C → OracleComp encAlg'.IND_CPA_oracleSpec Bool) : IND_CPA_StepState
 
 /-- Generic extraction of the one-time adversary for the `k`-th fresh LR query. -/
-def IND_CPA_stepAdversary [Inhabited M] (adversary : encAlg'.IND_CPA_adversary) (k : ℕ) :
-    IND_CPA_Adv encAlg' where
+def IND_CPA_stepAdversary [Inhabited M] (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
+    IND_CPA_OneTime_Adversary encAlg' where
   State := IND_CPA_StepState (encAlg' := encAlg')
   chooseMessages pk := do
     let ⟨res, st⟩ ← (IND_CPA_stepPrefix (encAlg' := encAlg') pk k (adversary pk)).run (∅, 0)
@@ -300,19 +301,19 @@ private lemma IND_CPA_stepPrefix_resume_eq_hybridLR (pk : PK) (k : ℕ) (branch 
               (if branch then k + 1 else k) mm c oa st hcache]
             exact (evalSPMF_ext_iff.mp (ih c st hst)) x
 
-/-- Planned game-level bridge for the extracted step adversary: its one-time IND-CPA game is the
-uniform-bit branch between adjacent LR hybrids. This is the theorem that converts the local prefix
-decomposition above into a clean hybrid-gap statement. -/
+/-- The one-time IND-CPA game of the extracted step adversary is the uniform-bit branch between
+adjacent LR hybrids. -/
 private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
-    (adversary : encAlg'.IND_CPA_adversary) (k : ℕ) :
-    𝒮[IND_CPA_OneTime_Game_ProbComp (encAlg := encAlg')
-        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)] =
-      𝒮[do
+    (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
+    ProbCompRuntime.probComp.evalDist (IND_CPA_OneTime_Game (encAlg := encAlg')
+        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) ProbCompRuntime.probComp) =
+      𝒟[do
           let bit ← ($ᵗ Bool)
-          let z ← if bit then encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)
-                   else encAlg'.IND_CPA_LR_hybridGame adversary k
+          let z ← if bit then encAlg'.IND_CPA_LR_hybrid adversary (k + 1)
+                   else encAlg'.IND_CPA_LR_hybrid adversary k
           pure (bit == z)] := by
-  refine evalSPMF_ext fun x => ?_
+  change 𝒟[($ᵗ Bool) >>= fun bit => _] = _
+  refine evalDist_eq_of_evalSPMF_eq _ _ (evalSPMF_ext fun x => ?_)
   refine probOutput_bind_congr' ($ᵗ Bool) x fun bit => ?_
   change Pr[= x | do
       let (pk, _sk) ← encAlg'.keygen
@@ -322,10 +323,10 @@ private lemma IND_CPA_stepAdversary_game_eq_hybridBranch [Inhabited M]
       let b' ← (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k).distinguish state c
       pure (bit == b')] =
     Pr[= x | do
-      let z ← if bit then encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)
-               else encAlg'.IND_CPA_LR_hybridGame adversary k
+      let z ← if bit then encAlg'.IND_CPA_LR_hybrid adversary (k + 1)
+               else encAlg'.IND_CPA_LR_hybrid adversary k
       pure (bit == z)]
-  simp only [IND_CPA_LR_hybridGame, monad_norm,
+  simp only [IND_CPA_LR_hybrid, monad_norm,
     ← apply_ite (f := fun g => encAlg'.keygen >>= g)]
   refine probOutput_bind_congr' encAlg'.keygen x fun pk_sk => ?_
   simp only [IND_CPA_stepAdversary, monad_norm,
@@ -360,78 +361,48 @@ section MultiQueryHybridLift
 variable [DecidableEq M]
 variable {encAlg' : AsymmEncAlg ProbComp M PK SK C}
 
-/-- Planned adjacent-gap characterization for the extracted step adversary. Once
-`IND_CPA_stepAdversary_game_eq_hybridBranch` is proved, this is just the one-time analogue of
-`IND_CPA_signedAdvantageReal_eq_lrDiff_half`. -/
-theorem IND_CPA_stepAdversary_signedAdvantageReal_eq_hybridDiff_half
-    [Inhabited M]
-    (adversary : encAlg'.IND_CPA_adversary) (k : ℕ) :
-    IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg')
-      (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) =
-      ((Pr[= true | encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)]).toReal -
-        (Pr[= true | encAlg'.IND_CPA_LR_hybridGame adversary k]).toReal) / 2 := by
-  unfold IND_CPA_OneTime_signedAdvantageReal
-  rw [show
-      (Pr[= true | IND_CPA_OneTime_Game_ProbComp (encAlg := encAlg')
-        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)]).toReal =
-      (Pr[= true | do
-        let bit ← ($ᵗ Bool)
-        let z ← if bit then encAlg'.IND_CPA_LR_hybridGame adversary (k + 1)
-                 else encAlg'.IND_CPA_LR_hybridGame adversary k
-        pure (bit == z)]).toReal from congrArg ENNReal.toReal <|
-          (evalSPMF_ext_iff.mp
-            (IND_CPA_stepAdversary_game_eq_hybridBranch (encAlg' := encAlg') adversary k)) true]
-  exact probOutput_uniformBool_branch_toReal_sub_half
-    (encAlg'.IND_CPA_LR_hybridGame adversary (k + 1))
-    (encAlg'.IND_CPA_LR_hybridGame adversary k)
+/-- The one-time IND-CPA advantage of the extracted step adversary is the distinguishing advantage
+between adjacent LR hybrids. -/
+theorem IND_CPA_OneTime_Advantage_stepAdversary [Inhabited M]
+    (adversary : encAlg'.IND_CPA_Adversary) (k : ℕ) :
+    IND_CPA_OneTime_Advantage encAlg' ProbCompRuntime.probComp
+        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) =
+      𝒟[encAlg'.IND_CPA_LR_hybrid adversary (k + 1)].boolDist
+        𝒟[encAlg'.IND_CPA_LR_hybrid adversary k] := by
+  rw [IND_CPA_OneTime_Advantage, IND_CPA_stepAdversary_game_eq_hybridBranch,
+    evalDist_boolBias_bind_uniformBool]
 
-/-- Planned generic one-time-to-many-time lift: bounded multi-query IND-CPA advantage is at most
-the sum of the extracted one-time signed advantages over the first `q` fresh LR queries. -/
-theorem IND_CPA_advantage_toReal_le_sum_step_signedAdvantageReal_abs
+/-- Generic one-time-to-many-time lift: the IND-CPA advantage of an oracle adversary making at
+most `q` fresh LR queries is at most the sum of the one-time advantages of the extracted step
+adversaries. -/
+theorem IND_CPA_Advantage_le_sum_oneTime_stepAdversary
     [Inhabited M] [Finite C] [Inhabited C]
-    (adversary : encAlg'.IND_CPA_adversary) (q : ℕ)
+    (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
-    (IND_CPA_advantage (encAlg := encAlg') adversary).toReal ≤
-      Finset.sum (Finset.range q) (fun k =>
-        |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg')
-          (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)|) := by
-  let H : ℕ → ℝ := fun i ↦ (Pr[= true | encAlg'.IND_CPA_LR_hybridGame adversary i]).toReal
-  have hleft : (Pr[= true | encAlg'.IND_CPA_LR_experiment adversary true]).toReal = H q :=
-    congrArg ENNReal.toReal
-      (encAlg'.IND_CPA_LR_hybridGame_q_probOutput_eq_left_of_MakesAtMostQueries adversary q hq).symm
-  have hright : (Pr[= true | encAlg'.IND_CPA_LR_experiment adversary false]).toReal = H 0 :=
-    congrArg ENNReal.toReal (encAlg'.IND_CPA_LR_hybridGame_zero_probOutput_eq_right adversary).symm
-  have htri : |H q - H 0| ≤ Finset.sum (Finset.range q) (fun i ↦ |H (i + 1) - H i|) := by
-    rw [← Finset.sum_range_sub H q]
-    exact Finset.abs_sum_le_sum_abs _ _
-  have hsteps : ∀ i ∈ Finset.range q, |(H (i + 1) - H i) / 2| =
-      |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg')
-        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary i)| := fun i _ ↦
-    congrArg abs (IND_CPA_stepAdversary_signedAdvantageReal_eq_hybridDiff_half
-      (encAlg' := encAlg') adversary i).symm
-  refine le_trans
-    (IND_CPA_advantage_toReal_le_abs_signedAdvantageReal (encAlg' := encAlg') adversary) ?_
-  rw [IND_CPA_signedAdvantageReal_eq_lrDiff_half (encAlg' := encAlg') adversary, hleft, hright,
-    ← Finset.sum_congr rfl hsteps]
-  simp only [abs_div, ← Finset.sum_div]
-  gcongr
+    IND_CPA_Advantage (encAlg := encAlg') adversary ≤
+      ∑ k ∈ Finset.range q, IND_CPA_OneTime_Advantage encAlg' ProbCompRuntime.probComp
+        (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k) := by
+  have hleft := evalDist_eq_of_evalSPMF_eq _ _
+    (encAlg'.IND_CPA_LR_hybrid_q_evalSPMF_eq_left_of_MakesAtMostQueries adversary q hq)
+  have hright := evalDist_eq_of_evalSPMF_eq _ _
+    (encAlg'.IND_CPA_LR_hybrid_zero_evalSPMF_eq_right adversary)
+  rw [IND_CPA_Advantage_eq_boolDist_LR, ← hleft, ← hright, MeasureTheory.Measure.boolDist_comm]
+  refine (MeasureTheory.Measure.boolDist_le_sum_range
+    (fun i ↦ 𝒟[encAlg'.IND_CPA_LR_hybrid adversary i]) q).trans_eq
+    (Finset.sum_congr rfl fun k _ ↦ ?_)
+  rw [IND_CPA_OneTime_Advantage_stepAdversary, MeasureTheory.Measure.boolDist_comm]
 
-/-- Planned uniform corollary of the generic lift. If every extracted one-time adversary has
-signed real advantage at most `ε`, then any `q`-query oracle adversary has IND-CPA advantage at
-most `q * ε`. -/
-theorem IND_CPA_advantage_toReal_le_q_mul_of_oneTime_signedAdvantageReal_bound
+/-- Uniform corollary of the generic lift: if every one-time adversary has advantage at most `ε`,
+then any `q`-query oracle adversary has IND-CPA advantage at most `q * ε`. -/
+theorem IND_CPA_Advantage_le_mul_of_oneTime_bound
     [Inhabited M] [Finite C] [Inhabited C]
-    (adversary : encAlg'.IND_CPA_adversary) (q : ℕ) (ε : ℝ)
+    (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ) (ε : ℝ≥0∞)
     (hq : adversary.MakesAtMostQueries q)
-    (hstep : ∀ adv : IND_CPA_Adv encAlg',
-      |IND_CPA_OneTime_signedAdvantageReal (encAlg := encAlg') adv| ≤ ε) :
-    (IND_CPA_advantage (encAlg := encAlg') adversary).toReal ≤ q * ε := by
-  refine le_trans
-    (IND_CPA_advantage_toReal_le_sum_step_signedAdvantageReal_abs
-      (encAlg' := encAlg') adversary q hq)
-    ((Finset.sum_le_sum fun k _ =>
-      hstep (IND_CPA_stepAdversary (encAlg' := encAlg') adversary k)).trans ?_)
-  simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+    (hstep : ∀ adv : IND_CPA_OneTime_Adversary encAlg',
+      IND_CPA_OneTime_Advantage encAlg' ProbCompRuntime.probComp adv ≤ ε) :
+    IND_CPA_Advantage (encAlg := encAlg') adversary ≤ q * ε :=
+  (IND_CPA_Advantage_le_sum_oneTime_stepAdversary adversary q hq).trans <|
+    (Finset.sum_le_card_nsmul _ _ ε fun k _ ↦ hstep _).trans_eq (by simp [nsmul_eq_mul])
 
 end MultiQueryHybridLift
 

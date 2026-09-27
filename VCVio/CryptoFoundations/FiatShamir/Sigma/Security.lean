@@ -23,7 +23,7 @@ advantage of a named reduction from `FiatShamir.Sigma.Reductions`.
   the framework's `Fin (qH + 1)` indexing in `Fork.forkPoint qH` provides
   exactly the right number of slots for the wrapped adversary.
 - `euf_nma_bound`: NMA-to-extraction via `Fork.replayForkingBound` and special
-  soundness, bounding the success of the witness finder `nmaReduction` in `hardRelationExp`.
+  soundness, bounding the success of the witness finder `nmaReduction` in `hardRelationExperiment`.
 - `euf_cma_bound`: the combined bound for the witness finder `cmaReduction`, instantiating
   `euf_cma_to_nma` into `euf_nma_bound`. The replay-forking denominator is `qH + 1`.
 -/
@@ -38,17 +38,11 @@ open scoped OracleSpec.PrimitiveQuery
 
 namespace FiatShamir
 
-variable {Stmt Wit Commit PrvState Chal Resp : Type}
-    [Finite Stmt] [Finite Commit] [Finite Resp] [Fintype Chal]
-    [Inhabited Stmt] [Inhabited Chal]
-    {rel : Stmt → Wit → Bool}
-
-variable [SampleableType Stmt] [SampleableType Wit]
+variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
+variable [SampleableType Wit]
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
-omit [Fintype Chal] in
-omit [Inhabited Stmt] [Inhabited Chal] in
 /-- **CMA-to-NMA reduction via HVZK simulation and managed random-oracle programming.**
 
 For any EUF-CMA adversary `A` making at most `qS` signing-oracle queries and `qH`
@@ -65,27 +59,24 @@ plus an appended verifier-point query); the framework's `Fin (qH + 1)`
 indexing in `Fork.forkPoint qH` provides the matching `qH + 1` forkable slots.
 This step is independent of special soundness and the forking lemma. -/
 theorem euf_cma_to_nma
-    [DecidableEq M] [DecidableEq Commit]
+    [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit]
     [Finite Chal] [Inhabited Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
     (hHVZK : σ.HVZK simTranscript ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simTranscript β)
-    (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+    (adv : SignatureAlg.UnforgeableAdversary
+      (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    adv.advantage (runtime M) ≤
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
       Fork.advantage σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH +
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
         (qS : ENNReal) * (qS + qH) * β :=
   cma_to_nma_advantage_bound σ hr M simTranscript ζ_zk hζ_zk hHVZK β hPredSim adv qS qH hQ
 
-omit [Finite Stmt] [Finite Commit] [Finite Resp] [Inhabited Stmt]
-  [Fintype Chal] [Inhabited Chal] in
-omit [SampleableType Stmt] in
 /-- **NMA-to-extraction via the forking lemma and special soundness.**
 
 For any managed-RO NMA adversary `B` and any fork slot parameter `qH`, the
@@ -105,15 +96,14 @@ theorem euf_nma_bound
     (hss : σ.SpeciallySound)
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
     [Fintype Chal] [Inhabited Chal]
-    (nmaAdv : SignatureAlg.managedRoNmaAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+    (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
+      (FiatShamir.inROM σ hr M))
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExp hr (nmaReduction σ hr M nmaAdv qH)] :=
+      Pr[= true | hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)] :=
   nma_to_hard_relation_bound σ hr M hss hss_nf nmaAdv qH
 
-omit [Inhabited Stmt] [Fintype Chal] [Inhabited Chal] in
 /-- **Combined EUF-CMA bound (Pointcheval-Stern with quantitative HVZK, β-parametric).**
 
 Composes `euf_cma_to_nma` and `euf_nma_bound`:
@@ -136,7 +126,7 @@ The combined bound is:
 where `ε = Adv^{EUF-CMA}(A)`. The ENNReal subtraction truncates at zero, so the
 bound is trivially satisfied when the simulation loss exceeds the advantage. -/
 theorem euf_cma_bound
-    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
+    [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
     [SampleableType Chal]
     (hss : σ.SpeciallySound)
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
@@ -146,16 +136,16 @@ theorem euf_cma_bound
     (hhvzk : σ.HVZK simTranscript ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simTranscript β)
-    (adv : SignatureAlg.unforgeableAdv
-      (FiatShamir (m := OracleComp (unifSpec + (M × Commit →ₒ Chal))) σ hr M))
+    (adv : SignatureAlg.UnforgeableAdversary
+      (FiatShamir.inROM σ hr M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    let eps := adv.advantage (runtime M) -
+    let eps := SignatureAlg.unforgeableAdvantage (runtime M) adv -
       (ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
         (qS : ENNReal) * (qS + qH) * β)
     eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExp hr (cmaReduction σ hr M simTranscript adv qH)] := by
+      Pr[= true | hardRelationExperiment hr (cmaReduction σ hr M simTranscript adv qH)] := by
   have hAdv := euf_cma_to_nma σ hr M simTranscript ζ_zk hζ_zk hhvzk β hPredSim adv qS qH hQ
   refine le_trans ?_ (euf_nma_bound σ hr M hss hss_nf (cmaToNmaAdv σ hr M simTranscript adv) qH)
   gcongr <;> exact tsub_le_iff_right.mpr (by simpa [add_assoc] using hAdv)

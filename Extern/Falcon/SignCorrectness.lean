@@ -6,8 +6,8 @@ Authors: Oleksandr Vovkotrub
 
 module
 import all Extern.Falcon.Instance
-import all Extern.Falcon.FPRBridge
-public import Extern.Falcon.FPRBridge
+import all Extern.Falcon.FPR.Verify
+public import Extern.Falcon.FPR.Verify
 public import LatticeCrypto.Falcon.Security
 public import LatticeCrypto.Falcon.Coset
 

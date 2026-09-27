@@ -334,10 +334,10 @@ theorem exists_two_honestEntry_same_key (o : RomOutcome vp core) (c : PublicHash
     fun h => hne (List.head_eq_of_cons_eq h), .forsLeaf adrs t, hkey ▸ .forsLeaf adrs t'⟩
 
 /-- The cache that settles every public-hash query. -/
-@[expose] def fullCache [(publicHashSpec core).Inhabited] : PublicHash.Cache core :=
+@[expose] def fullCache [∀ t, Inhabited ((publicHashSpec core).Range t)] : PublicHash.Cache core :=
   QueryCache.ofFn fun _ => some default
 
-@[simp] theorem fullCache_apply [(publicHashSpec core).Inhabited]
+@[simp] theorem fullCache_apply [∀ t, Inhabited ((publicHashSpec core).Range t)]
     (t : (publicHashSpec core).Domain) :
     (fullCache (core := core)) t = some default := rfl
 
@@ -345,7 +345,7 @@ theorem exists_two_honestEntry_same_key (o : RomOutcome vp core) (c : PublicHash
 quantify over `SLHDSA.Security.SettledHonest (SLHDSA.Security.HonestSeeded …)` — is at least the
 number of FORS leaf indices the encoding identifies and the secret-key function distinguishes, at
 one fixed transcript. -/
-theorem card_le_of_separator_settled [(publicHashSpec core).Inhabited]
+theorem card_le_of_separator_settled [∀ t, Inhabited ((publicHashSpec core).Range t)]
     (o : RomOutcome vp core) (r : ℕ) (ρ : (publicHashSpec core).Domain → Fin r)
     (hρ : ∀ (c : PublicHash.Cache core) p k (xs ys : List core.Y),
       SettledHonest (HonestSeeded o.sk.skSeed o.pk.pkSeed) c (.thash p k xs) →

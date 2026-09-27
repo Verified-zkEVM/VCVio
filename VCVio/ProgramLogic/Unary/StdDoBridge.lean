@@ -8,14 +8,15 @@ module
 
 public import Std.Tactic.Do
 public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.ProgramLogic.Unary.WriterTBridge
 
 /-!
 # `Std.Do` / `mvcgen` bridge for `OracleComp`
 
-This module provides a proposition-level bridge on top of the quantitative WP in
-`ProgramLogic.Unary.HoareTriple`, with a `Std.Do.WPMonad` instance for `.pure` post-shape.
-The bridge is scoped to almost-sure correctness (`= 1`).
+The proposition-level interpretation quantifies over structural outputs, independently of
+probability semantics. Uniform native measures identify this interpretation with probability-one
+correctness. The transformer bridges retain state and logs in the structural postcondition.
 -/
 
 @[expose] public section
@@ -28,33 +29,33 @@ universe u
 namespace OracleComp.ProgramLogic.StdDo
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
 variable {α β : Type}
 
-open Classical in
-/-- Proposition-level bridge from quantitative WP (`= 1` threshold). -/
-noncomputable def wpProp (oa : OracleComp spec α) (post : α → Prop) : Prop :=
-  wp oa (fun x => if post x then 1 else 0) = 1
+/-- Structural correctness through the core qualitative interpretation. -/
+noncomputable abbrev wpProp (oa : OracleComp spec α) (post : α → Prop) : Prop :=
+  MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post
 
 /-- Proposition-style triple alias used by the `Std.Do` bridge. -/
 def tripleProp (pre : Prop) (oa : OracleComp spec α) (post : α → Prop) : Prop :=
   pre → wpProp (spec := spec) oa post
 
-/-- Adequacy bridge between `wpProp` and event probability `= 1`. -/
-theorem wpProp_iff_probEvent_eq_one (oa : OracleComp spec α) (p : α → Prop) :
-    wpProp (spec := spec) oa p ↔ Pr[ p | oa] = 1 := by
-  classical
-  simp [wpProp, OracleComp.ProgramLogic.probEvent_eq_wp_indicator (spec := spec) oa p]
-
-/-- Support-based characterization of almost-sure postconditions for `OracleComp`. -/
+/-- Structural correctness holds exactly on every possible output. -/
 theorem wpProp_iff_forall_support (oa : OracleComp spec α) (p : α → Prop) :
-    wpProp (spec := spec) oa p ↔ ∀ x ∈ support oa, p x := by
-  simp [wpProp_iff_probEvent_eq_one]
+    wpProp (spec := spec) oa p ↔ ∀ x ∈ support oa, p x :=
+  PropLogic.wp_iff_forall_support oa p
+
+/-- Uniform native measures identify probability-one observations with structural correctness. -/
+theorem wpProp_iff_probEvent_eq_one
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+    (oa : OracleComp spec α) (p : α → Prop) :
+    wpProp (spec := spec) oa p ↔ Pr{let x ← oa}[p x] = 1 := by
+  rw [wpProp_iff_forall_support, OracleComp.prEvent_eq_one_iff]
 
 /-- `wpProp` rule for `pure`. -/
 theorem wpProp_pure (x : α) (p : α → Prop) :
     wpProp (spec := spec) (pure x : OracleComp spec α) p ↔ p x := by
-  simp [wpProp_iff_forall_support]
+  simp
 
 /-- `wpProp` rule for bind. -/
 theorem wpProp_bind (oa : OracleComp spec α) (ob : α → OracleComp spec β) (p : β → Prop) :
@@ -66,7 +67,7 @@ private theorem wpProp_and (oa : OracleComp spec α) (p q : α → Prop) :
       wpProp oa p ∧ wpProp oa q := by
   grind [wpProp_iff_forall_support]
 
-/-- `Std.Do` `WP` instance for `OracleComp`, scoped to almost-sure correctness. -/
+/-- `Std.Do` `WP` instance for `OracleComp`, scoped to structural correctness. -/
 noncomputable instance instWPOracleComp : Std.Do.WP (OracleComp spec) .pure where
   wp oa :=
     { trans := fun Q => ⌜wpProp (spec := spec) oa (fun a => (Q.1 a).down)⌝
@@ -93,7 +94,7 @@ handler proof needs to leave `mvcgen` (e.g. to perform a structural induction on
 
 section StatefulBridges
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
 
 /-- Support characterization of `Std.Do.Triple` on `StateT σ (OracleComp spec)`.
 

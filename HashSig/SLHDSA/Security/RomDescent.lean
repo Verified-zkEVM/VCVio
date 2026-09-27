@@ -409,7 +409,8 @@ variable [SampleableType core.Y] [DecidableEq core.Y] [DecidableEq core.PkSeed]
 target collision in the final cache, or a final-layer position of the top tree at which the
 forger's settled WOTS+ chain tops equal the settled honest ones. -/
 theorem xmss_top_cases
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp (unifSpec + publicHashSpec core)) vp core))
+    (adv : UnforgeableAdversary
+      (generalAlgM (m := OracleComp (unifSpec + publicHashSpec core)) vp core))
     {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv))
     (hv : z.1.verified = true) :
     TargetCollision z.1 z.2 ∨

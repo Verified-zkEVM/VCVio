@@ -26,10 +26,10 @@ uses for the depth-one compatibility programs: the interpreting morphism is a qu
 `PublicHash.impl prims` lifted to `ProbComp` and the component collapses to the pure
 `GeneralScheme.keygenInternal`, `signInternal`, `verifyInternal` that `generalAlg` is built from.
 
-The consequence for the experiments is `unforgeableExp_toMappedAdv`: an EUF-CMA forger against
-`generalAlg prims` is, unchanged, a forger against the interpreted `generalAlgM`, with the same
-experiment and hence the same advantage under every runtime.  The transport is `toMappedAdv`,
-which re-indexes the adversary's `main` program; no cast is involved, because `unforgeableAdv`
+The consequence for the experiments is `unforgeableExperiment_toMappedAdv`: an EUF-CMA forger
+against `generalAlg prims` is, unchanged, a forger against the interpreted `generalAlgM`, with the
+same experiment and hence the same advantage under every runtime.  The transport is `toMappedAdv`,
+which re-indexes the adversary's `main` program; no cast is involved, because `UnforgeableAdversary`
 does not store the scheme and the four carrier types coincide.
 
 ## Scope
@@ -37,7 +37,7 @@ does not store the scheme and the four carrier types coincide.
 * The equality is between `generalAlg prims` and `generalAlgM` interpreted by a *deterministic*
   handler.  `countedRomExperiment` of `HashSig.SLHDSA.Security.CountedRom` interprets the same
   program by the lazily-sampled `PublicHash.randomOracle`; relating it, or `romGameCore`, to
-  `unforgeableExp` under `PublicHash.runtime` is not done here.  The bound of
+  `unforgeableExperiment` under `PublicHash.runtime` is not done here.  The bound of
   `HashSig.SLHDSA.Security.OpenPreBound` and the counted experiment remain unconnected.
 * Nothing here is quantitative.  The module proves that two descriptions of one scheme agree; it
   proves no bound and asserts nothing about the security of SLH-DSA.
@@ -50,7 +50,7 @@ Four declarations.
 *Deterministic bridge*:
 
 * `generalAlgM_map_eq`;
-* `toMappedAdv`, `unforgeableExp_toMappedAdv`, `advantage_toMappedAdv`.
+* `toMappedAdv`, `unforgeableExperiment_toMappedAdv`, `advantage_toMappedAdv`.
 
 ## References
 
@@ -89,15 +89,14 @@ theorem generalAlgM_map_eq :
     { toMonadHom := simulateQ' (unifFwdAnswerImpl (PublicHash.impl prims))
       map_query' := fun q => by
         simpa [unifFwdAnswerImpl] using
-          (QueryImpl.simulateQ_add_liftM_query_right
-            (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp))
+          (QueryImpl.simulateQ_add_liftM_query_right (QueryImpl.id' unifSpec)
             ((PublicHash.impl prims).liftTarget ProbComp) q) }
   have hLift : HasQuery.PreservesProbCompLift F.toMonadHom := by
     intro α oa
     change simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
       (liftM oa : OracleComp (unifSpec + publicHashSpec prims.core) α) = oa
-    rw [unifFwdAnswerImpl, QueryImpl.simulateQ_add_liftM_left,
-      HasQuery.toQueryImpl_eq_id', simulateQ_id']
+    rw [unifFwdAnswerImpl, QueryImpl.passthrough_add, QueryImpl.simulateQ_add_liftM_left]
+    exact simulateQ_id' oa
   have hImpl :
       (HasQuery.toQueryImpl (spec := publicHashSpec prims.core) (m := ProbComp)) =
         (PublicHash.impl prims).liftTarget ProbComp := by
@@ -154,17 +153,18 @@ variable {vp : ValidatedParams} (prims : Primitives vp.params)
 `unifFwdAnswerImpl (PublicHash.impl prims)`.  The adversary's program is unchanged.
 
 *Deterministic bridge.* -/
-def toMappedAdv (adv : unforgeableAdv (generalAlg prims)) :
-    unforgeableAdv (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl (PublicHash.impl prims)))
+def toMappedAdv (adv : UnforgeableAdversary (generalAlg prims)) :
+    UnforgeableAdversary (SignatureAlg.map (simulateQ' (unifFwdAnswerImpl (PublicHash.impl prims)))
       (generalAlgM (m := OracleComp (unifSpec + publicHashSpec prims.core)) vp prims.core)) :=
   ⟨adv.main⟩
 
 /-- The transported forger runs the same EUF-CMA experiment as the original, under every runtime.
 
 *Deterministic bridge.* -/
-theorem unforgeableExp_toMappedAdv (runtime : ProbCompRuntime ProbComp)
-    (adv : unforgeableAdv (generalAlg prims)) :
-    unforgeableExp runtime (toMappedAdv prims adv) = unforgeableExp runtime adv := by
+theorem unforgeableExperiment_toMappedAdv (runtime : ProbCompRuntime ProbComp)
+    (adv : UnforgeableAdversary (generalAlg prims)) :
+    runtime.evalDist (unforgeableExperiment (toMappedAdv prims adv)) =
+      runtime.evalDist (unforgeableExperiment adv) := by
   unfold toMappedAdv
   rw [generalAlgM_map_eq]
 
@@ -172,10 +172,10 @@ theorem unforgeableExp_toMappedAdv (runtime : ProbCompRuntime ProbComp)
 
 *Deterministic bridge.* -/
 theorem advantage_toMappedAdv (runtime : ProbCompRuntime ProbComp)
-    (adv : unforgeableAdv (generalAlg prims)) :
-    (toMappedAdv prims adv).advantage runtime = adv.advantage runtime := by
-  unfold unforgeableAdv.advantage
-  rw [unforgeableExp_toMappedAdv]
+    (adv : UnforgeableAdversary (generalAlg prims)) :
+    unforgeableAdvantage runtime (toMappedAdv prims adv) = unforgeableAdvantage runtime adv := by
+  unfold unforgeableAdvantage
+  rw [unforgeableExperiment_toMappedAdv]
 
 end Forger
 

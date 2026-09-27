@@ -830,7 +830,7 @@ lemma not_isTotalQueryBound_bind_query_prefix_zero
 
 /-- If a computation is followed by a continuation that always starts with one query,
 then a bound on the whole computation by `n + 1` yields a bound on the prefix by `n`. -/
-lemma IsTotalQueryBound.of_bind_query_prefix [spec.Inhabited]
+lemma IsTotalQueryBound.of_bind_query_prefix [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α}
     {next : α → spec.Domain}
     {ob : ∀ x, spec.Range (next x) → OracleComp spec β}
@@ -846,7 +846,7 @@ lemma IsTotalQueryBound.of_bind_query_prefix [spec.Inhabited]
       rw [bind_assoc, isTotalQueryBound_query_bind_iff] at h
       rw [isTotalQueryBound_query_bind_iff]
       have hn : 0 < n := Nat.pos_of_ne_zero fun hz =>
-        absurd (hz ▸ h.2 default) not_isTotalQueryBound_bind_query_prefix_zero
+        absurd (hz ▸ h.2 (Classical.arbitrary _)) not_isTotalQueryBound_bind_query_prefix_zero
       exact ⟨hn, fun u => ih u (n := n - 1) (Nat.sub_add_cancel hn ▸ h.2 u)⟩
 
 theorem IsTotalQueryBound.simulateQ_run_of_step {ι' : Type u} {spec' : OracleSpec ι'}

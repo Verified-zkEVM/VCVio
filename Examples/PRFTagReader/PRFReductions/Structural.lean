@@ -24,11 +24,9 @@ namespace PRFTagReader
 
 section UnlinkReduction
 
-variable {TagId Nonce Digest K : Type}
-  [DecidableEq TagId] [Fintype TagId] [Nonempty TagId]
-  [DecidableEq Nonce] [SampleableType Nonce]
+variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
+  [DecidableEq TagId] [Fintype TagId] [DecidableEq Nonce] [SampleableType Nonce]
   [DecidableEq Digest] [SampleableType Digest]
-  {sessionsPerTag : ℕ} [NeZero sessionsPerTag]
 
 /-! ### Structural reductions of the composed ideal handlers on a `query_bind`
 
@@ -38,7 +36,6 @@ continuation threaded through the resulting state. They are pure rewriting facts
 monad morphism), and they turn the coupling induction into a sequence of `bind`-decomposition
 steps that `probEvent_bind_le_add` / `probEvent_bind_congr_le_add` can attack. -/
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `simulateQ multipleIdealQueryImpl` of a `query_bind`, run from a state and projected to its
 output bit, is the per-query handler followed by the recursive simulation of the continuation. -/
 lemma multipleIdeal_run'_query_bind
@@ -54,7 +51,6 @@ lemma multipleIdeal_run'_query_bind
   rw [simulateQ_query_bind, StateT.run'_eq, StateT.run_bind, map_bind]
   rfl
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `simulateQ singleIdealQueryImpl` of a `query_bind`, run from a state and projected to its
 output bit, is the per-query handler followed by the recursive simulation of the continuation. -/
 lemma singleIdeal_run'_query_bind
@@ -70,7 +66,6 @@ lemma singleIdeal_run'_query_bind
   rw [simulateQ_query_bind, StateT.run'_eq, StateT.run_bind, map_bind]
   rfl
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `simulateQ unlinkBadQueryImpl` of a `query_bind`, run from a state, is the per-query handler
 followed by the recursive simulation of the continuation threaded through the resulting state. -/
 lemma unlinkBad_run_query_bind
@@ -86,7 +81,6 @@ lemma unlinkBad_run_query_bind
   rw [simulateQ_query_bind, StateT.run_bind]
   rfl
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `unlinkBadQueryImpl` on a tag query with the slot budget exhausted: returns `none`, state
 unchanged. -/
 lemma unlinkBadQueryImpl_tag_run_of_not_lt (tag : TagId)
@@ -100,7 +94,6 @@ lemma unlinkBadQueryImpl_tag_run_of_not_lt (tag : TagId)
   unfold unlinkBadTagQueryImpl
   simp [hslot]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `unlinkBadQueryImpl` on a tag query with a free slot: sample a nonce and a fresh digest,
 record the digest under `(tag, nonce)`, set the `bad` flag if `(tag, nonce)` was already cached,
 and advance the session counter. -/
@@ -125,7 +118,6 @@ lemma unlinkBadQueryImpl_tag_run_of_lt (tag : TagId)
   unfold unlinkBadTagQueryImpl
   simp [hslot]
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- `unlinkBadQueryImpl` on a reader query: deterministic acceptance against the recorded
 random-function responses, state untouched. -/
 lemma unlinkBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
@@ -140,7 +132,6 @@ lemma unlinkBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
   unfold unlinkBadReaderQueryImpl
   simp
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The `bad` flag of `unlinkBadQueryImpl` is monotone: a single per-query step started from a
 state with `bad = true` keeps `bad = true`. -/
 lemma unlinkBadQueryImpl_step_preserves_bad
@@ -172,7 +163,6 @@ lemma unlinkBadQueryImpl_step_preserves_bad
     have hz' := (mem_support_pure_iff _ _).mp hz
     subst hz'; exact hbad
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- The `bad` flag of a full `simulateQ unlinkBadQueryImpl` run is monotone: started from a state
 with `bad = true` the run keeps `bad = true`. Derived from the per-step monotonicity via the
 generic `OracleComp.simulateQ_run_preservesInv`. -/
@@ -187,7 +177,6 @@ lemma simulateQ_unlinkBad_preserves_bad
     (fun s => s.bad = true) (fun t s h z hz => unlinkBadQueryImpl_step_preserves_bad t s h z hz)
     adv sB hbad
 
-omit [Nonempty TagId] [NeZero sessionsPerTag] in
 /-- Once the `bad` flag is set, the `Pr[bad]` of the residual `unlinkBadQueryImpl` run is `1`. -/
 lemma probEvent_unlinkBad_bad_eq_one_of_bad
     (adv : UnlinkAdversary TagId Nonce Digest)

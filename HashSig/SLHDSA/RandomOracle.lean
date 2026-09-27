@@ -45,9 +45,9 @@ def slhKeygenM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf]
     [SampleableType core.PkSeed] : m (PublicKeyCore core × SecretKeyCore core) := do
-  let skSeed ← (monadLift ($ᵗ core.SkSeed) : m core.SkSeed)
-  let skPrf ← (monadLift ($ᵗ core.SkPrf) : m core.SkPrf)
-  let pkSeed ← (monadLift ($ᵗ core.PkSeed) : m core.PkSeed)
+  let skSeed ← $ᵗ core.SkSeed
+  let skPrf ← $ᵗ core.SkPrf
+  let pkSeed ← $ᵗ core.PkSeed
   slhKeygenInternalM hd core skSeed skPrf pkSeed
 
 /-- External hedged signing for the empty-context API: sample `addrnd`, encode the external
@@ -56,7 +56,7 @@ def slhSignM (core : CorePrimitives p) {m : Type → Type*} [Monad m]
     [MonadLiftT ProbComp m] [HasQuery (publicHashSpec core) m]
     [SampleableType core.Y] (sk : SecretKeyCore core) (msg : List Byte) :
     m (SignatureCore p core) := do
-  let addrnd ← (monadLift ($ᵗ core.Y) : m core.Y)
+  let addrnd ← $ᵗ core.Y
   slhSignInternalM hd core (emptyContextMessage msg) sk addrnd
 
 /-- External empty-context verification via the `d = 1` compatibility internal explicit-query
@@ -117,14 +117,14 @@ private theorem slhdsaConcreteAlg_components (prims : Primitives p)
       map_query' := fun q => by
         simpa [unifFwdAnswerImpl] using
           (QueryImpl.simulateQ_add_liftM_query_right
-            (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp))
+            ((QueryImpl.id' unifSpec).liftTarget ProbComp)
             ((PublicHash.impl prims).liftTarget ProbComp) q) }
   have hLift : HasQuery.PreservesProbCompLift F.toMonadHom := by
     intro α oa
     change simulateQ (unifFwdAnswerImpl (PublicHash.impl prims))
       (liftM oa : OracleComp (unifSpec + publicHashSpec prims.core) α) = oa
-    rw [unifFwdAnswerImpl, QueryImpl.simulateQ_add_liftM_left,
-      HasQuery.toQueryImpl_eq_id', simulateQ_id']
+    rw [unifFwdAnswerImpl, QueryImpl.passthrough_add, QueryImpl.simulateQ_add_liftM_left,
+      QueryImpl.liftTarget_self, simulateQ_id']
   have hMap :
       SignatureAlg.map F.toMonadHom
           (slhdsaAlg (m := OracleComp (unifSpec + publicHashSpec prims.core)) hd prims.core) =
@@ -237,11 +237,8 @@ noncomputable def runtimeWithCache (core : CorePrimitives p)
     [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [DecidableEq core.Y]
     [SampleableType core.Y] [SampleableType (Bytes p.m)]
     (cache : PublicHash.Cache core) :
-    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
-    (hashImpl := PublicHash.randomOracle core) cache
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+    ProbCompRuntime (OracleComp (unifSpec + publicHashSpec core)) :=
+  ProbCompRuntime.rom (publicHashSpec core) cache
 
 open scoped Classical in
 /-- Standard SLH-DSA public-hash ROM runtime, starting from the empty cache. -/
@@ -260,10 +257,8 @@ lemma runtimeWithCache_evalDist (core : CorePrimitives p)
     (cache : PublicHash.Cache core) {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + publicHashSpec core) α) :
     (runtimeWithCache core cache).evalDist oa =
-      𝒟[(simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core) oa).run'
-        cache] := by
-  simp only [ProbCompRuntime.evalDist, runtimeWithCache,
-    MeasureSemanticsVia.withStateOracle_evalDist, unifFwdImpl]
+      𝒟[(simulateQ (publicHashSpec core).romImpl oa).run' cache] :=
+  rfl
 
 open scoped Classical in
 /-- The standard public-hash runtime starts the explicit lazy random-oracle simulation from the
@@ -273,8 +268,7 @@ lemma runtime_evalDist (core : CorePrimitives p)
     [SampleableType core.Y] [SampleableType (Bytes p.m)]
     {α : Type} [MeasurableSpace α]
     (oa : OracleComp (unifSpec + publicHashSpec core) α) :
-    (runtime core).evalDist oa =
-      𝒟[(simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core) oa).run' ∅] :=
+    (runtime core).evalDist oa = 𝒟[(simulateQ (publicHashSpec core).romImpl oa).run' ∅] :=
   runtimeWithCache_evalDist core ∅ oa
 
 end PublicHash
@@ -302,7 +296,7 @@ theorem slhdsaAlg_perfectlyComplete (core : CorePrimitives p)
     alg.verify pk msg sig
   rw [PublicHash.runtime_evalDist]
   have hmeasure :=
-    OracleComp.evalDist_apply_setOf_simulateQ_unifFwdImpl_add_randomOracle_run'_eq_one_iff
+    OracleComp.evalDist_apply_setOf_simulateQ_romImpl_run'_eq_one_iff
     (oa := oa) (preexisting_cache := (∅ : PublicHash.Cache core))
     (fun b => b = true)
   suffices hfixed : ∀ f : QueryImpl (publicHashSpec core) Id,

@@ -46,8 +46,7 @@ theorem ordinary_execution_equal :
 theorem shared_agreement : 𝒟[agreement ($ᵗ Bool) pure] {true} = 1 := by
   have hprogram : agreement ($ᵗ Bool) pure = (fun _ : Bool => true) <$> ($ᵗ Bool) := by
     simp [agreement]
-  rw [hprogram, evalDist_map_of_discrete,
-    Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
+  rw [hprogram, evalDist_map_apply_of_discrete _ _ (MeasurableSet.singleton true)]
   have hevent : (fun _ : Bool => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
     ext b
     simp

@@ -139,8 +139,7 @@ end insertPre
 
 section insertPost
 
-variable {m : Type u → Type v} [Monad m]
-    {n : Type u → Type w} [Monad n] [MonadLiftT m n]
+variable {m : Type u → Type v} {n : Type u → Type w} [Monad n] [MonadLiftT m n]
     {ι : Type*} {spec : OracleSpec ι}
 
 /-- Oracle-facing compatibility alias for `PFunctor.Handler.postInsert`. -/
@@ -151,14 +150,12 @@ abbrev postInsert (so : QueryImpl spec m) {α}
 
 variable {α β : Type u}
 
-omit [Monad m] in
 @[grind =]
 lemma postInsert_apply (so : QueryImpl spec m)
     (nx : (t : spec.Domain) → spec.Range t → n α) (t : spec.Domain) :
     so.postInsert nx t = (do let u ← liftM (so t); let _ ← nx t u; return u) := by
   exact PFunctor.Handler.postInsert_apply (P := spec.toPFunctor) so nx t
 
-omit [Monad m] in
 /-- One-step characterisation of `simulateQ (postInsert so nx)` on a single query. -/
 lemma simulateQ_postInsert_query [LawfulMonad n]
     (so : QueryImpl spec m)
@@ -166,6 +163,8 @@ lemma simulateQ_postInsert_query [LawfulMonad n]
     simulateQ (so.postInsert nx) (query t) =
       (do let u ← liftM (so t); let _ ← nx t u; return u) := by
   simp
+
+variable [Monad m]
 
 /-- Induction principle for `proj (simulateQ (so.postInsert nx) oa)` parametric in a
 motive `OracleComp spec β → m β → Prop`. The recursion structure of

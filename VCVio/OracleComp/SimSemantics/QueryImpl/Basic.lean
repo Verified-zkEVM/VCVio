@@ -44,7 +44,7 @@ variable {ι} {spec : OracleSpec ι} {m : Type u → Type v} {n : Type u → Typ
 polynomial interface induced by an oracle specification. -/
 theorem eq_handler : QueryImpl spec m = PFunctor.Handler m spec.toPFunctor := rfl
 
-instance [spec.Inhabited] [Pure m] : Inhabited (QueryImpl spec m) where
+instance [∀ t, Inhabited (spec.Range t)] [Pure m] : Inhabited (QueryImpl spec m) where
   default _ := pure default
 
 /-- Two query implementations are the same if they are the same on all query inputs. -/

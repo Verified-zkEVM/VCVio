@@ -39,6 +39,21 @@ their bind with Mathlib kernel composition. `StateT.evalDistKernel_bind` compose
 joint result/final-state space; the continuation receives both components. These rules use the
 chosen measurable spaces and require no discrete structure on environments or states.
 
+`Measure.bind_apply_le_sum_add_lintegral_ae` compares a continuation against a finite family
+of reference measures, with possibly different output spaces and only AE measurability under
+the chosen prefix measure. It requires no probability or finiteness certificates.
+`Kernel.comp_apply_le_sum_add_lintegral_ae` uses the same law for existing Mathlib kernels.
+Both share `lintegral_le_sum_add_lintegral_of_le_ae`, which also accepts a finite index set.
+
+`VCVio.EvalDist.Monad.Disagreement.Measure` compares observed continuations after a common
+prefix. `prEvent_bind_le_sum_add_lintegral_ae` integrates an AE comparison with finitely many
+reference events and a varying allowance on the chosen source space. Continuation observation
+families must be measurable; the allowance need not be. The reachable version uses core
+attachment and the actual continuation-measure observer, leaving hidden source and result types
+unmeasured. `prEvent_bind_le_sum_add_mul_mass_of_support` retains the allowance times the prefix's
+successful mass. The weaker constant-allowance and disagreement/bad-world rules specialize the
+same argument. The native owner imports no retired probability backend or compatibility class.
+
 `AddWriterT.expectedCost` integrates the cost marginal on the chosen cost space. Weighted
 query-cost and CostModel expectations use this same definition. Pathwise expectation bounds
 need a measurable valuation; upper bounds permit failure, while lower and exact bounds require
@@ -109,9 +124,12 @@ lossless Boolean branches. The probability-only security facade supplies its fai
 without first unfolding the universal Boolean event into a finite set.
 
 `VCVio.OracleComp.ProbComp.Basic` owns executable container sampling, and
-`VCVio.OracleComp.Constructions.SampleableType.Basic` owns uniform sampler certificates.
+`VCVio.OracleComp.Constructions.SampleableType.Basic` owns the `$ᵗ` notation class: a
+canonical sampler `selectElem` with the single law `𝒟[$ᵗ β] = uniformOn Set.univ`.
 Product and vector uniformity follow from product measures and bijective pushforwards.
-`SampleableType` derives `Nonempty` and `Finite`; enumeration is a separate computational choice.
+`Nonempty`, `Finite` and full operational support are consequences of the law
+(`SampleableType.nonempty` and `SampleableType.finite` are priority-100 instances,
+`support_uniformSample` a `simp` lemma); enumeration is a separate computational choice.
 An abstract result's `𝒟` still needs its chosen `MeasurableSpace`. Event notation hides intermediate
 spaces, and uniformity certificates apply to any result space with measurable singletons.
 
@@ -136,7 +154,9 @@ judgments and kernels; flattened support does not acquire an exact bind law.
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
-`Pr{let x ← mx; ...}[event]` is the computation-style event notation. It elaborates
+`Pr{let x ← mx; ...}[event]` is the computation-style event notation. Write the first
+statement directly after `Pr{`; no space is required. An explicit line break after `Pr{` is
+also supported for multiline sequences. It elaborates
 an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
 the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The
@@ -280,9 +300,9 @@ without requiring discrete answer spaces; continuous final-event proofs can use 
 `le_evalDist_bind_apply` transports an almost-everywhere lower bound through a lossless draw;
 its monad is generic and its event need only be measurable.
 
-Runtime-valued signature experiments expose `IsSubprobabilityMeasure` instances, so
+A runtime assigns every experiment a subprobability measure `runtime.evalDist exp`, so
 `measure_le_one` and `measure_ne_top` apply directly. An instrumented experiment recording
-success and a Boolean selector uses `Measure.fst` for its success marginal.
+success and a Boolean selector uses `Measure.fst` of its measure for the success marginal.
 `Measure.fst_apply_eq_add` splits a marginal event into the two disjoint selector events.
 The SLH-DSA `advantage_eq_arms` and `sameMessageAdvantage_eq_arms` equations use that partition
 without caller-supplied evaluator laws; the runtime already bundles its measurable-map law.
@@ -366,12 +386,11 @@ whenever its measure specification agrees with its probability specification
 For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` proves the same
 agreement for the native `uniformOn Set.univ` interpretation. It lets a theorem about a direct
 uniform measure fold use an existing finite probability equation at the compatibility boundary.
-For `ProbComp Bool` security games, use `boolDistAdvantage` for a two-game gap and
+For `ProbComp Bool` security games, use `𝒟[game₀].boolDist 𝒟[game₁]` for a two-game gap and
 `𝒟[game] {true}` for a success probability; prefer `Pr{...}[winningCondition]`
 when the game ends by testing a predicate. The native uniform measure instances for
 `unifSpec` and `coinSpec` are global, so no local uniform certificate is needed.
-`boolDistAdvantage_self`,
-`boolDistAdvantage_comm`, and `boolDistAdvantage_triangle` keep elementary
+`Measure.boolDist_self`, `Measure.boolDist_comm`, and `Measure.boolDist_triangle` keep elementary
 metric proofs independent of the finite façade.
 The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
 only needs equality of result types, whereas a measure denotation also depends on the selected
@@ -403,8 +422,8 @@ transport. Its product sampler law uses `evalDist_pair` and the existing
 `uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
 one-time-pad independence theorem. `SampleableType` itself certifies
 `𝒟[$ᵗ α] = uniformOn Set.univ` for every finite discrete measurable structure.
-Its executable sampler and full-support certificate provide the operational
-side; the old `Pr[...]` lemmas are compatibility consequences. Uniform table
+Its executable sampler is the operational side, with full support a consequence
+of the law; the old `Pr[...]` lemmas are compatibility consequences. Uniform table
 resampling and injective restriction use the measure laws in
 `VCVio.EvalDist.Monad.UniformTable`.
 `ProbComp.evalDist_decide_eq_uniformBool_half` proves that an independent Boolean guess
@@ -414,9 +433,13 @@ Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability
 continuation after complementing a fair bit.
 
 The type classes separate a choice of response measures (`IsMeasureSpec`) from the
-additional uniformity and finite-range laws (`IsUniformMeasureSpec`). A blanket instance
-from `[spec.Fintype] [spec.Inhabited]` would silently choose a distribution for an arbitrary
-oracle, so only the concrete `unifSpec` and `coinSpec` instances are global. Structural
+uniformity law (`IsUniformMeasureSpec`), which is a proposition about the chosen measures and
+carries no finiteness data: `IsUniformMeasureSpec.finite_range` and `nonempty_range` recover
+both facts, and a cardinality statement takes `[Fintype (spec.Range t)]` for the query it
+mentions (`IsUniformMeasureSpec.toMeasure_singleton`). A blanket instance from
+`[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]` would silently choose a
+distribution for an arbitrary oracle, so `IsUniformMeasureSpec.ofFiniteNonempty` is an explicit
+opt-in and only the concrete `unifSpec` and `coinSpec` instances are global. Structural
 `OracleComp.support` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
 For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
@@ -434,7 +457,7 @@ full-support condition on each answer measure, without adding a class for that o
 `IsUniformMeasureSpec`; use this native bridge when relating structural reachability to
 singleton mass. Neither theorem requires the PMF-based `IsUniformSpec` class.
 Structural support itself needs no probability interpretation. In particular,
-`OracleComp.support_nonempty` needs only `[spec.Inhabited]`; counting-oracle support
+`OracleComp.support_nonempty` needs only `[∀ t, Nonempty (spec.Range t)]`; counting-oracle support
 and worst-case query bounds use that weaker assumption rather than `IsUniformSpec`.
 Keep the class hierarchy for chosen answer measures, and state one-off properties such as
 positive singleton mass as explicit hypotheses instead of adding a mixin for each bridge.
@@ -585,6 +608,9 @@ constant-continuation laws.
 |-----------|---------|------------|
 | `Measure.etvDist` / `Measure.tvDist` | Total variation on arbitrary subprobability measures | `ToMathlib/MeasureTheory/Measure/TotalVariation.lean` |
 | `measureETVDist` / `measureTVDist` | Total variation directly on `𝒟[…]` | `EvalDist/MeasureTVDist.lean` |
+| `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le` | Common-transition contraction on chosen measurable spaces | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean`, `ToMathlib/Probability/Kernel/TotalVariation.lean` |
+| `measureETVDist_bind_bind_le_lintegral` | Native conditional composition with an AE majorant under the prefix law | `EvalDist/MeasureTVDist/Bind.lean` |
+| `Measure.etvDist_bind_bind_le_of_bad` | Exceptional prefix mass plus the good-branch allowance weighted by its mass | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` |
 | `Measure.Coupling` | Joint measure with prescribed marginals | `ToMathlib/MeasureTheory/Measure/Coupling.lean` |
 | `MeasureProgramLogic.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
 | `MeasureProgramLogic.eRelWP` | Best coupled `lintegral` post-expectation | `ProgramLogic/Relational/Measure.lean` |
@@ -953,7 +979,7 @@ library proofs got shorter; a set with no library caller is itself a finding.
 
 ## Common Mistakes
 
-1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just `[spec.Fintype] [spec.Inhabited]`. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
+1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just finite, inhabited answer types. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
 
 2. **Carrying duplicate probability instances**: do not add a separate `[IsProbabilitySpec spec]` when `[IsUniformSpec spec]` is already in scope. `IsUniformSpec` extends `IsProbabilitySpec`; a second instance can make instance search ambiguous and may not describe the same distributions.
 

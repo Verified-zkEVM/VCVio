@@ -27,7 +27,7 @@ on a single concrete scheme. Reading order:
    extraction via the replay forking lemma and special soundness, for the
    witness finder `nmaReduction`), composed in `euf_cma_bound` for
    `cmaReduction`. The reductions are named in every statement:
-   `∃ reduction, bound ≤ Pr[= true | hardRelationExp hr reduction]` holds
+   `∃ reduction, bound ≤ Pr[= true | hardRelationExperiment hr reduction]` holds
    trivially, because a classical choice of witness per statement succeeds with
    probability `1`.
 4. **Forking lemma:** the replay-based forking lemma lives in
@@ -44,7 +44,7 @@ The combined statement, `Schnorr.signature_euf_cma`, instantiates
 Pointcheval-Stern bound
 
 ```
-ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction adv qH succeeds in dlogExp g ],
+ε' · ( ε' / (qH + 1)  -  1 / |F| )   ≤   Pr[ dlogReduction adv qH succeeds in dlogExperiment g ],
 ε' := ε  -  qS · (qS + qH) / |F|,
 ```
 
@@ -162,7 +162,7 @@ reductions. Its ideal services use the association-list cache from
 the instrumented service's retained collision flag.
 
 `NetworkUnlinkability.full_unlinkability` bounds the absolute real-network verdict gap by the
-two named PRF advantages, for each output polarity, and four explicit losses:
+two named PRF advantages and four explicit losses:
 
 - session collisions: `sessionsPerTag² · |TagId| / |Nonce|`;
 - multiple-session reader cells: `qReader · |TagId| / |Digest|`;
@@ -170,8 +170,8 @@ two named PRF advantages, for each output polarity, and four explicit losses:
 - single-session reader cells: `qReader · |TagId| · sessionsPerTag / |Digest|`.
 
 `named_reduction_budgets` gives the actual distinguishers' PRF-query bounds:
-`qTag + qReader · |TagId|` and `qTag + qReader · |TagId| · sessionsPerTag`, for both
-polarities. These are pathwise oracle-query counts, not machine-time or PPT certificates.
+`qTag + qReader · |TagId|` and `qTag + qReader · |TagId| · sessionsPerTag`. These are
+pathwise oracle-query counts, not machine-time or PPT certificates.
 The FIFO service model and its derived schedule remain those of `Network.lean`.
 The free-program uniform-sampling model supplies probability measures for the real runs;
 there is no additional losslessness assumption.

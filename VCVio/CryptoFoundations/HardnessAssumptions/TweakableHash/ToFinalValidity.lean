@@ -158,9 +158,9 @@ monitor is valid on every reachable run and the two winning conditions agree poi
 theorem SM_DT_TCR_experiment_toSourceFinalValidity [DecidableEq Tweak] [DecidableEq M]
     [DecidableEq Y] {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_TCR_Adversary prob) :
-    SM_DT_TCR_SourceFinalValidity.Experiment adv.toSourceFinalValidity =
+    SM_DT_TCR_SourceFinalValidity.experiment adv.toSourceFinalValidity =
       SM_DT_TCR_Experiment adv := by
-  simp only [SM_DT_TCR_SourceFinalValidity.Experiment, SM_DT_TCR_Experiment,
+  simp only [SM_DT_TCR_SourceFinalValidity.experiment, SM_DT_TCR_Experiment,
     SM_DT_TCR_Adversary.toSourceFinalValidity, SM_DT_TCR_oracles_eq,
     SM_DT_TCR_SourceFinalValidity_oracles_eq]
   refine bind_congr fun pk => ?_
@@ -187,8 +187,8 @@ theorem SM_DT_TCR_advantage_toSourceFinalValidity [DecidableEq Tweak] [Decidable
     [DecidableEq Y] {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_TCR_Adversary prob) :
     SM_DT_TCR_Advantage adv =
-      SM_DT_TCR_SourceFinalValidity.Advantage adv.toSourceFinalValidity := by
-  rw [SM_DT_TCR_Advantage, SM_DT_TCR_SourceFinalValidity.Advantage,
+      SM_DT_TCR_SourceFinalValidity.advantage adv.toSourceFinalValidity := by
+  rw [SM_DT_TCR_Advantage, SM_DT_TCR_SourceFinalValidity.advantage,
     SM_DT_TCR_experiment_toSourceFinalValidity]
 
 /-- A rejection-on-arrival bound follows from any source-final-validity bound: whatever hardness is
@@ -197,7 +197,7 @@ theorem SM_DT_TCR_advantage_le_toSourceFinalValidity [DecidableEq Tweak] [Decida
     [DecidableEq Y] {prob : SM_DT_TCR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_TCR_Adversary prob) :
     SM_DT_TCR_Advantage adv ≤
-      SM_DT_TCR_SourceFinalValidity.Advantage adv.toSourceFinalValidity :=
+      SM_DT_TCR_SourceFinalValidity.advantage adv.toSourceFinalValidity :=
   le_of_eq (SM_DT_TCR_advantage_toSourceFinalValidity adv)
 
 /-! ## SM-DT-PRE
@@ -295,9 +295,9 @@ def SM_DT_PRE_Adversary.toSourceFinalValidity [DecidableEq Tweak]
 theorem SM_DT_PRE_experiment_toSourceFinalValidity [DecidableEq Tweak] [DecidableEq Y]
     [SampleableType M'] {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y}
     (adv : SM_DT_PRE_Adversary prob) :
-    SM_DT_PRE_SourceFinalValidity.Experiment adv.toSourceFinalValidity =
+    SM_DT_PRE_SourceFinalValidity.experiment adv.toSourceFinalValidity =
       SM_DT_PRE_Experiment adv := by
-  simp only [SM_DT_PRE_SourceFinalValidity.Experiment, SM_DT_PRE_Experiment,
+  simp only [SM_DT_PRE_SourceFinalValidity.experiment, SM_DT_PRE_Experiment,
     SM_DT_PRE_Adversary.toSourceFinalValidity, SM_DT_PRE_oracles_eq,
     SM_DT_PRE_SourceFinalValidity_oracles_eq]
   refine bind_congr fun pk => ?_
@@ -326,8 +326,8 @@ theorem SM_DT_PRE_advantage_toSourceFinalValidity [DecidableEq Tweak] [Decidable
     [SampleableType M'] {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y}
     (adv : SM_DT_PRE_Adversary prob) :
     SM_DT_PRE_Advantage adv =
-      SM_DT_PRE_SourceFinalValidity.Advantage adv.toSourceFinalValidity := by
-  rw [SM_DT_PRE_Advantage, SM_DT_PRE_SourceFinalValidity.Advantage,
+      SM_DT_PRE_SourceFinalValidity.advantage adv.toSourceFinalValidity := by
+  rw [SM_DT_PRE_Advantage, SM_DT_PRE_SourceFinalValidity.advantage,
     SM_DT_PRE_experiment_toSourceFinalValidity]
 
 /-- A rejection-on-arrival SM-PRE bound follows from any source-final-validity bound. -/
@@ -335,7 +335,7 @@ theorem SM_DT_PRE_advantage_le_toSourceFinalValidity [DecidableEq Tweak] [Decida
     [SampleableType M'] {prob : SM_DT_PRE_Problem ι PkSeed Tweak M M' Y}
     (adv : SM_DT_PRE_Adversary prob) :
     SM_DT_PRE_Advantage adv ≤
-      SM_DT_PRE_SourceFinalValidity.Advantage adv.toSourceFinalValidity :=
+      SM_DT_PRE_SourceFinalValidity.advantage adv.toSourceFinalValidity :=
   le_of_eq (SM_DT_PRE_advantage_toSourceFinalValidity adv)
 
 /-! ## SM-DT-UD
@@ -346,10 +346,9 @@ the recorded entry is the query itself.
 
 The world enters only through `draw`: `entry`, `resp` and both tweak projections are the same in
 either world, and the wrapper does not see the world at all. So the conversion is world-independent
-and one experiment equality, quantified over the world, serves both. The advantages follow from it,
-which is what keeps the signed `SM_DT_UD_DirectedAdvantage`'s orientation: the two experiments are
-equal as distributions, so the real and ideal success probabilities transfer separately and their
-difference is not re-derived.
+and one experiment equality, quantified over the world, serves both. The advantage follows from it:
+the two experiments are equal as distributions, so the real and ideal success probabilities transfer
+separately.
 
 The two presentations declare their own two-element `World`, so the conversion carries a map between
 them. -/
@@ -476,10 +475,10 @@ rather than forwarding it, so neither run consumes randomness the other does not
 theorem SM_DT_UD_experiment_toSourceFinalValidity [DecidableEq Tweak]
     (world : SM_DT_UD_World) {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y}
     (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_SourceFinalValidity.Experiment world.toSourceFinalValidity
+    SM_DT_UD_SourceFinalValidity.experiment world.toSourceFinalValidity
         adv.toSourceFinalValidity =
       SM_DT_UD_Experiment world adv := by
-  simp only [SM_DT_UD_SourceFinalValidity.Experiment, SM_DT_UD_Experiment,
+  simp only [SM_DT_UD_SourceFinalValidity.experiment, SM_DT_UD_Experiment,
     SM_DT_UD_Adversary.toSourceFinalValidity, SM_DT_UD_oracles_eq,
     SM_DT_UD_SourceFinalValidity_oracles_eq]
   refine bind_congr fun pk => ?_
@@ -512,37 +511,20 @@ theorem SM_DT_UD_idealSuccess_toSourceFinalValidity [DecidableEq Tweak]
     ← SM_DT_UD_experiment_toSourceFinalValidity .ideal adv,
     SM_DT_UD_World.toSourceFinalValidity_ideal]
 
-/-- The conversion preserves the signed gap, orientation included: the two worlds are converted by
-the same map, so neither side of the difference moves. -/
-theorem SM_DT_UD_directedAdvantage_toSourceFinalValidity [DecidableEq Tweak]
+/-- The conversion preserves the advantage. -/
+theorem SM_DT_UD_advantage_toSourceFinalValidity [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_DirectedAdvantage adv =
-      SM_DT_UD_SourceFinalValidity.DirectedAdvantage adv.toSourceFinalValidity := by
-  rw [SM_DT_UD_DirectedAdvantage, SM_DT_UD_SourceFinalValidity.DirectedAdvantage,
-    SM_DT_UD_realSuccess_toSourceFinalValidity, SM_DT_UD_idealSuccess_toSourceFinalValidity]
+    SM_DT_UD_Advantage adv =
+      SM_DT_UD_SourceFinalValidity.advantage adv.toSourceFinalValidity :=
+  congrArg₂ ENNReal.absDiff (SM_DT_UD_realSuccess_toSourceFinalValidity adv)
+    (SM_DT_UD_idealSuccess_toSourceFinalValidity adv)
 
-/-- The conversion preserves the orientation-independent magnitude. -/
-theorem SM_DT_UD_absoluteAdvantage_toSourceFinalValidity [DecidableEq Tweak]
+/-- A rejection-on-arrival SM-UD bound follows from any source-final-validity bound. -/
+theorem SM_DT_UD_advantage_le_toSourceFinalValidity [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_AbsoluteAdvantage adv =
-      SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage adv.toSourceFinalValidity := by
-  rw [SM_DT_UD_AbsoluteAdvantage, SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage,
-    SM_DT_UD_realSuccess_toSourceFinalValidity, SM_DT_UD_idealSuccess_toSourceFinalValidity]
-
-/-- A rejection-on-arrival SM-UD bound follows from any source-final-validity bound on the signed
-gap. -/
-theorem SM_DT_UD_directedAdvantage_le_toSourceFinalValidity [DecidableEq Tweak]
-    {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_DirectedAdvantage adv ≤
-      SM_DT_UD_SourceFinalValidity.DirectedAdvantage adv.toSourceFinalValidity :=
-  le_of_eq (SM_DT_UD_directedAdvantage_toSourceFinalValidity adv)
-
-/-- The same, for the magnitude. -/
-theorem SM_DT_UD_absoluteAdvantage_le_toSourceFinalValidity [DecidableEq Tweak]
-    {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_AbsoluteAdvantage adv ≤
-      SM_DT_UD_SourceFinalValidity.AbsoluteAdvantage adv.toSourceFinalValidity :=
-  le_of_eq (SM_DT_UD_absoluteAdvantage_toSourceFinalValidity adv)
+    SM_DT_UD_Advantage adv ≤
+      SM_DT_UD_SourceFinalValidity.advantage adv.toSourceFinalValidity :=
+  le_of_eq (SM_DT_UD_advantage_toSourceFinalValidity adv)
 
 /-! ## SM-DT-DSPR
 
@@ -626,9 +608,9 @@ experiment. -/
 theorem SM_DT_DSPR_experiment_toSourceFinalValidity [Fintype M] [DecidableEq Tweak]
     [DecidableEq M] [DecidableEq Y] {prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_DSPR_Adversary prob) :
-    SM_DT_DSPR_SourceFinalValidity.Experiment adv.toSourceFinalValidity =
+    SM_DT_DSPR_SourceFinalValidity.experiment adv.toSourceFinalValidity =
       SM_DT_DSPR_Experiment adv := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.Experiment, SM_DT_DSPR_Experiment,
+  simp only [SM_DT_DSPR_SourceFinalValidity.experiment, SM_DT_DSPR_Experiment,
     SM_DT_DSPR_Adversary.toSourceFinalValidity, SM_DT_DSPR_oracles_eq,
     SM_DT_DSPR_SourceFinalValidity_oracles_eq]
   refine bind_congr fun pk => ?_
@@ -655,9 +637,9 @@ conversion preserves the baseline as well as the prediction. -/
 theorem SM_DT_DSPR_spExperiment_toSourceFinalValidity [Fintype M] [DecidableEq Tweak]
     [DecidableEq M] [DecidableEq Y] {prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_DSPR_Adversary prob) :
-    SM_DT_DSPR_SourceFinalValidity.SPExperiment adv.toSourceFinalValidity =
+    SM_DT_DSPR_SourceFinalValidity.spExperiment adv.toSourceFinalValidity =
       SM_DT_DSPR_SPExperiment adv := by
-  simp only [SM_DT_DSPR_SourceFinalValidity.SPExperiment, SM_DT_DSPR_SPExperiment,
+  simp only [SM_DT_DSPR_SourceFinalValidity.spExperiment, SM_DT_DSPR_SPExperiment,
     SM_DT_DSPR_Adversary.toSourceFinalValidity, SM_DT_DSPR_oracles_eq,
     SM_DT_DSPR_SourceFinalValidity_oracles_eq]
   refine bind_congr fun pk => ?_
@@ -702,8 +684,8 @@ theorem SM_DT_DSPR_advantage_toSourceFinalValidity [Fintype M] [DecidableEq Twea
     [DecidableEq M] [DecidableEq Y] {prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_DSPR_Adversary prob) :
     SM_DT_DSPR_Advantage adv =
-      SM_DT_DSPR_SourceFinalValidity.Advantage adv.toSourceFinalValidity := by
-  rw [SM_DT_DSPR_Advantage, SM_DT_DSPR_SourceFinalValidity.Advantage,
+      SM_DT_DSPR_SourceFinalValidity.advantage adv.toSourceFinalValidity := by
+  rw [SM_DT_DSPR_Advantage, SM_DT_DSPR_SourceFinalValidity.advantage,
     SM_DT_DSPR_success_toSourceFinalValidity, SM_DT_DSPR_spProbability_toSourceFinalValidity]
 
 /-- A rejection-on-arrival SM-DSPR bound follows from any source-final-validity bound. -/
@@ -711,13 +693,7 @@ theorem SM_DT_DSPR_advantage_le_toSourceFinalValidity [Fintype M] [DecidableEq T
     [DecidableEq M] [DecidableEq Y] {prob : SM_DT_DSPR_Problem ι PkSeed Tweak M Y}
     (adv : SM_DT_DSPR_Adversary prob) :
     SM_DT_DSPR_Advantage adv ≤
-      SM_DT_DSPR_SourceFinalValidity.Advantage adv.toSourceFinalValidity :=
+      SM_DT_DSPR_SourceFinalValidity.advantage adv.toSourceFinalValidity :=
   le_of_eq (SM_DT_DSPR_advantage_toSourceFinalValidity adv)
-
--- Keep each conversion beside its game's established SM_DT namespace.
-attribute [nolint defsWithUnderscore]
-  SM_DT_UD_World.toSourceFinalValidity SM_DT_UD_Problem.toSourceFinalValidity
-  SM_DT_UD_Adversary.toSourceFinalValidity SM_DT_DSPR_Problem.toSourceFinalValidity
-  SM_DT_DSPR_Adversary.toSourceFinalValidity
 
 end TweakableHash

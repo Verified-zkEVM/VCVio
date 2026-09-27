@@ -23,7 +23,7 @@ public section
 
 open OracleSpec
 
-universe u
+universe u v
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -204,7 +204,17 @@ end countingOracle
 
 section CountingResidual
 
-variable [DecidableEq ι] [Fintype ι]
+variable [DecidableEq ι]
+
+/-- The counting-oracle simulation of any `OracleComp` has non-empty support whenever every
+oracle range is inhabited. Used by the converse direction of
+`isTotalQueryBound_iff_counting_total_le`. -/
+lemma countingOracle.support_simulate_nonempty [∀ t, Nonempty (spec.Range t)]
+    (oa : OracleComp spec α) :
+    (support (countingOracle.simulate oa 0)).Nonempty :=
+  OracleComp.support_nonempty _
+
+variable [Fintype ι]
 
 /-- If `oa >>= ob` is totally query-bounded by `n`, then after any support point of the
 counting run of `oa`, the continuation `ob` is bounded by the residual budget. -/
@@ -255,19 +265,10 @@ theorem IsTotalQueryBound.counting_total_le
         (Finset.single_le_sum (fun _ _ => Nat.zero_le _) (Finset.mem_univ t))
       omega
 
-omit [Fintype ι] in
-/-- The counting-oracle simulation of any `OracleComp` has non-empty support whenever every
-oracle range is inhabited. Used by the converse direction of
-`isTotalQueryBound_iff_counting_total_le`. -/
-lemma countingOracle.support_simulate_nonempty [spec.Inhabited]
-    (oa : OracleComp spec α) :
-    (support (countingOracle.simulate oa 0)).Nonempty :=
-  OracleComp.support_nonempty _
-
 /-- Converse of `IsTotalQueryBound.counting_total_le`: a counting-oracle bound on every
 support path implies the structural total query bound. Together they characterize
 `IsTotalQueryBound` purely in terms of the counting-oracle support. -/
-theorem isTotalQueryBound_iff_counting_total_le [spec.Inhabited]
+theorem isTotalQueryBound_iff_counting_total_le [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {n : ℕ} :
     IsTotalQueryBound oa n ↔
       ∀ z ∈ support (countingOracle.simulate oa 0), (∑ i, z.2 i) ≤ n := by
@@ -278,7 +279,8 @@ theorem isTotalQueryBound_iff_counting_total_le [spec.Inhabited]
       rw [isTotalQueryBound_query_bind_iff]
       have hsplit : ∀ q : QueryCount ι, (∑ i, (QueryCount.single t + q) i) = 1 + ∑ i, q i :=
         fun q => by simp [Pi.add_apply, Finset.sum_add_distrib, sum_single_eq_one]
-      obtain ⟨z₀, hz₀⟩ := countingOracle.support_simulate_nonempty (mx default)
+      obtain ⟨u₀⟩ : Nonempty (spec.Range t) := inferInstance
+      obtain ⟨z₀, hz₀⟩ := countingOracle.support_simulate_nonempty (mx u₀)
       have hbig : (z₀.1, QueryCount.single t + z₀.2) ∈
           support (countingOracle.simulate ((query t : OracleComp spec _) >>= mx) 0) :=
         countingOracle.add_single_mem_support_simulate_queryBind hz₀
@@ -293,13 +295,13 @@ theorem isTotalQueryBound_iff_counting_total_le [spec.Inhabited]
       have hb : 1 + (∑ i, z.2 i) ≤ n := (hsplit z.2) ▸ h _ hbig'
       omega
 
-omit [Fintype ι] [DecidableEq ι] in
+end CountingResidual
+
 /-- If a stateful simulation has support cost at most one per query step, then any support
 point of the simulated prefix leaves the continuation bounded by the residual budget measured
 by that cost. The cost may under-approximate the true query count, so the resulting residual
 budget is correspondingly weaker but still sound. -/
-theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost
-     [Finite ι]
+theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost [Finite ι]
     {σ : Type u} {impl : QueryImpl spec (StateT σ (OracleComp spec))}
     (cost : σ → ℕ)
     (hstep : ∀ t : spec.Domain, ∀ st : σ,
@@ -319,8 +321,6 @@ theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost
     IsTotalQueryBound.residual_of_mem_support_counting
       (spec := spec) (ι := ι) (oa := oa) (ob := ob) (n := n) (z := (z.1, qc)) h hqc
   exact hres.mono (by omega)
-
-end CountingResidual
 
 /-- Per-index bound implies total bound (sum over indices). -/
 theorem IsTotalQueryBound.of_perIndex [DecidableEq ι] [Fintype ι]
@@ -483,7 +483,7 @@ theorem IsQueryBoundP.residual_of_mem_support_counting [DecidableEq ι] [Fintype
 /-- Predicate-targeted analogue of `isTotalQueryBound_iff_counting_total_le`: a
 counting-oracle filtered-sum bound characterizes the structural `IsQueryBoundP` bound. -/
 theorem isQueryBoundP_iff_counting_filter_le
-    [DecidableEq ι] [Fintype ι] [spec.Inhabited]
+    [DecidableEq ι] [Fintype ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {n : ℕ} :
     IsQueryBoundP oa p n ↔
       ∀ z ∈ support (countingOracle.simulate oa 0),
@@ -502,7 +502,8 @@ theorem isQueryBoundP_iff_counting_filter_le
       refine ⟨?_, fun u => ?_⟩
       · by_cases hpt : p t
         · refine Or.inr ?_
-          obtain ⟨z₀, hz₀⟩ := countingOracle.support_simulate_nonempty (mx default)
+          obtain ⟨u₀⟩ : Nonempty (spec.Range t) := inferInstance
+          obtain ⟨z₀, hz₀⟩ := countingOracle.support_simulate_nonempty (mx u₀)
           have hbig : (z₀.1, QueryCount.single t + z₀.2) ∈
               support (countingOracle.simulate ((query t : OracleComp spec _) >>= mx) 0) :=
             countingOracle.add_single_mem_support_simulate_queryBind hz₀
@@ -776,6 +777,46 @@ theorem IsPerIndexQueryBound.simulateQ_run_add_inr_of_uniform_step
   IsPerIndexQueryBound.simulateQ_run_add_of_uniform_step h
     (fun t s' => (hstep₁ t s').mono (fun _ => Nat.zero_le _))
     hstep₂ s
+
+/-! ## Simulation restricted to reachable queries
+
+`AllQueriesSatisfy oa P` bounds which indices `oa` can query, so a stateful handler only needs
+to behave well on `P`-indices for the simulation of `oa` to inherit that behaviour. The handler
+may still update its state on the other indices, which `oa` never reaches. -/
+
+/-- If every query `oa` can make satisfies `P`, and `impl` answers each `P`-query without
+changing its state, then simulating `oa` leaves the state unchanged. -/
+theorem AllQueriesSatisfy.simulateQ_run_eq_map_run'
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ : Type u}
+    {impl : QueryImpl spec (StateT σ m)} {P : ι → Prop} {oa : OracleComp spec α}
+    (h : AllQueriesSatisfy oa P)
+    (himpl : ∀ t, P t → ∀ s, (impl t).run s = (·, s) <$> (impl t).run' s) (s : σ) :
+    (simulateQ impl oa).run s = (·, s) <$> (simulateQ impl oa).run' s := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp
+  | query_bind t mx ih =>
+      rw [allQueriesSatisfy_query_bind_iff] at h
+      have hrun : (simulateQ impl (liftM (spec.query t) >>= mx)).run s =
+          (impl t).run' s >>= fun u => (·, s) <$> (simulateQ impl (mx u)).run' s := by
+        simp only [simulateQ_query_bind, OracleQuery.input_query, OracleQuery.cont_query,
+          monadLift_self, StateT.run_bind, himpl t h.1 s, bind_map_left]
+        exact bind_congr fun u => ih u (h.2 u)
+      rw [StateT.run'_eq, hrun]
+      simp only [map_bind, Functor.map_map, id_map']
+
+/-- Output-only sequencing under `AllQueriesSatisfy.simulateQ_run_eq_map_run'`: a prefix that
+leaves the state unchanged hands the initial state to the continuation. -/
+theorem AllQueriesSatisfy.simulateQ_run'_bind
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ : Type u}
+    {impl : QueryImpl spec (StateT σ m)} {P : ι → Prop} {oa : OracleComp spec α}
+    (h : AllQueriesSatisfy oa P)
+    (himpl : ∀ t, P t → ∀ s, (impl t).run s = (·, s) <$> (impl t).run' s)
+    (ob : α → OracleComp spec β) (s : σ) :
+    (simulateQ impl (oa >>= ob)).run' s =
+      (simulateQ impl oa).run' s >>= fun x => (simulateQ impl (ob x)).run' s := by
+  rw [simulateQ_bind, StateT.run'_eq, StateT.run_bind, h.simulateQ_run_eq_map_run' himpl s,
+    bind_map_left, map_bind]
+  rfl
 
 /-! ## Biconditional transfer under query-count-preserving simulators
 

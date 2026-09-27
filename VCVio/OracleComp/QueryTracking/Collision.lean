@@ -40,7 +40,7 @@ universe u
 
 namespace OracleComp
 
-variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec.{u, u} ι}
+variable {ι : Type u} {spec : OracleSpec.{u, u} ι}
 
 /-! ## Collision Predicates -/
 
@@ -49,7 +49,6 @@ distinct inputs but HEq-equal outputs. -/
 def LogHasCollision (log : QueryLog spec) : Prop :=
   ∃ (i j : Fin log.length), i ≠ j ∧ log[i].1 ≠ log[j].1 ∧ HEq log[i].2 log[j].2
 
-omit [DecidableEq ι] in
 /-- Value-form constructor for `LogHasCollision`: any two distinct log entries with
 `HEq`-equal outputs (note: distinctness forces distinct inputs when outputs match) witness
 a collision. -/
@@ -64,7 +63,6 @@ lemma LogHasCollision.of_mem {log : QueryLog spec}
   exact ⟨⟨i, hi⟩, ⟨j, hj⟩, fun heq => hne (hgi' ▸ hgj' ▸ congrArg (log[·]) heq),
     fun h => hne (Sigma.ext (hgi' ▸ hgj' ▸ h) hresp), hgi' ▸ hgj' ▸ hresp⟩
 
-omit [DecidableEq ι] in
 /-- `LogHasCollision` is monotone under log inclusion (member-wise). -/
 lemma LogHasCollision.mono {log₁ log₂ : QueryLog spec}
     (h_sub : ∀ q, q ∈ log₁ → q ∈ log₂) :
@@ -78,7 +76,6 @@ def CacheHasCollision (cache : QueryCache spec) : Prop :=
   ∃ (t₁ t₂ : spec.Domain) (u₁ : spec.Range t₁) (u₂ : spec.Range t₂),
     t₁ ≠ t₂ ∧ cache t₁ = some u₁ ∧ cache t₂ = some u₂ ∧ HEq u₁ u₂
 
-omit [DecidableEq ι] in
 /-- In a collision-free cache, a value determines at most one query input. -/
 lemma cache_lookup_eq_of_noCollision
     {cache : QueryCache spec}
@@ -88,6 +85,8 @@ lemma cache_lookup_eq_of_noCollision
     (h₁ : ∃ v' : spec.Range t₁, cache t₁ = some v' ∧ HEq v' v) :
     t₀ = t₁ := by
   grind [CacheHasCollision]
+
+variable [DecidableEq ι]
 
 /-! ## Log entries are cached after logging inside caching -/
 

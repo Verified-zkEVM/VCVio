@@ -96,12 +96,12 @@ theorem prEvent_eq [LawfulEvalDistSemantics (OracleComp I)]
   rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete, h client]
 
 /-- Boolean distinguishing advantage vanishes for equivalent probability-only handlers. -/
-theorem boolDistAdvantage_eq_zero
+theorem boolDist_eq_zero
     {left : Stateful unifSpec E σ₀} {right : Stateful unifSpec E σ₁}
     {s₀ : σ₀} {s₁ : σ₁} (h : MeasureDistEquiv left s₀ right s₁)
     (client : OracleComp E Bool) :
-    ProbComp.boolDistAdvantage (left.run s₀ client) (right.run s₁ client) = 0 := by
-  simp [ProbComp.boolDistAdvantage, h client]
+    𝒟[left.run s₀ client].boolDist 𝒟[right.run s₁ client] = 0 := by
+  simp [h client]
 
 /-- Equivalent handlers may replace the left experiment in a distinguishing bound. -/
 theorem advantage_left {left : Stateful unifSpec E σ₀} {left' : Stateful unifSpec E σ₂}
@@ -123,7 +123,7 @@ theorem advantage_right (left : Stateful unifSpec E σ₀) (s₀ : σ₀)
 theorem advantage_eq_zero {left : Stateful unifSpec E σ₀} {right : Stateful unifSpec E σ₁}
     {s₀ : σ₀} {s₁ : σ₁} (h : MeasureDistEquiv left s₀ right s₁)
     (client : OracleComp E Bool) : left.advantage s₀ right s₁ client = 0 :=
-  h.boolDistAdvantage_eq_zero client
+  h.boolDist_eq_zero client
 
 /-- An equivalent inner handler preserves observations through a matching outer handler. -/
 theorem link_inner_congr {μ : Type} {M : OracleSpec μ} {τ : Type}

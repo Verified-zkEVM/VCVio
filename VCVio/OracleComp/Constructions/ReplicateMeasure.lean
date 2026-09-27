@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!

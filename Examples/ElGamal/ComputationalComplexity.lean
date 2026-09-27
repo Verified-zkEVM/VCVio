@@ -162,7 +162,7 @@ one-time ElGamal DDH reduction definitionally. -/
 @[simp]
 theorem IND_CPA_OneTime_DDHReduction_openOracle_eval
     {gen : G}
-    (adv : AsymmEncAlg.IND_CPA_Adv (elGamalAsymmEnc F G gen))
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (elGamalAsymmEnc F G gen))
     (g A B T : G) :
     simulateQ
       (oneTimeINDCPAImpl (gen := gen) adv + oneTimeDDHFairCoinImpl)

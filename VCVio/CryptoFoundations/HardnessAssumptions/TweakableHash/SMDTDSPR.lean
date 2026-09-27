@@ -218,12 +218,4 @@ theorem SM_DT_DSPR_challengeOracle_run_of_collection_clash (hmem : t ∈ twsColl
       pure (none, (qsChal, twsColl)) := by
   simp [SM_DT_DSPR_challengeOracle, TweakFresh, hmem]
 
--- Preserve the established game names with declaration-specific naming exceptions.
-attribute [nolint defsWithUnderscore]
-  SM_DT_DSPR_Advantage SM_DT_DSPR_Adversary.State SM_DT_DSPR_Adversary.choose
-  SM_DT_DSPR_Adversary.guess SM_DT_DSPR_Experiment SM_DT_DSPR_Problem.numTargets
-  SM_DT_DSPR_Problem.standalone SM_DT_DSPR_Problem.th SM_DT_DSPR_Problem.thColl
-  SM_DT_DSPR_SPExperiment SM_DT_DSPR_SPProbability SM_DT_DSPR_State SM_DT_DSPR_Success
-  SM_DT_DSPR_challengeOracle SM_DT_DSPR_challengeSpec SM_DT_DSPR_oracles
-
 end TweakableHash

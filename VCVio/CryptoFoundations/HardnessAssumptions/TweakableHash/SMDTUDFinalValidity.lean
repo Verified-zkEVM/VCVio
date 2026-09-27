@@ -10,7 +10,7 @@ public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.OracleComp.EvalDist.UniformCompatibility
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
-public import ToMathlib.Data.ENNReal.AbsDiff
+public import ToMathlib.MeasureTheory.Measure.Bool
 
 /-!
 # Source-final-validity SM-DT-UD
@@ -42,10 +42,8 @@ These distributional predicates do not identify the final-validity presentation 
 rejection-on-arrival presentation in which an invalid challenge query returns no answer. Relating
 the two presentations for SM-DT-UD requires a separate game conversion.
 
-The source security quantity is oriented: `DirectedAdvantage` is the signed real gap
-`Pr[real = true] - Pr[ideal = true]`. It can be negative, so swapping the real and ideal worlds is
-observable. `AbsoluteAdvantage` separately provides the symmetric ENNReal magnitude used by
-orientation-independent bounds, with a proved bridge between the two views.
+The source security quantity `advantage` is the distinguishing advantage
+`|Pr[real = true] - Pr[ideal = true]|` of the two worlds.
 
 ## References
 
@@ -186,7 +184,7 @@ def oracles [DecidableEq Tweak] (world : World)
 
 /-- The source-final-validity SM-DT-UD experiment. The seed is hidden during `pick`, revealed to
 `distinguish`, and success is the adversary's bit conjoined with the final validity monitor. -/
-noncomputable def Experiment [DecidableEq Tweak]
+noncomputable def experiment [DecidableEq Tweak]
     (world : World) {prob : Problem ι PkSeed Tweak M M' Y}
     (adv : Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
@@ -198,37 +196,18 @@ noncomputable def Experiment [DecidableEq Tweak]
 /-- Success probability when challenges are sampled hash images. -/
 noncomputable def RealSuccess [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  𝒟[Experiment .real adv] {true}
+  𝒟[experiment .real adv] {true}
 
 /-- Success probability when challenges are sampled directly from `outputGen`. -/
 noncomputable def IdealSuccess [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  𝒟[Experiment .ideal adv] {true}
+  𝒟[experiment .ideal adv] {true}
 
-/-- Source SM-DT-UD advantage: the directed signed gap from the real world to the ideal world. -/
-noncomputable def DirectedAdvantage [DecidableEq Tweak]
-    {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ :=
-  (RealSuccess adv).toReal - (IdealSuccess adv).toReal
-
-/-- Orientation-independent magnitude of the SM-DT-UD advantage in `ℝ≥0∞`. This is
-deliberately separate from the source game's signed `DirectedAdvantage`. -/
-noncomputable def AbsoluteAdvantage [DecidableEq Tweak]
+/-- Source SM-DT-UD advantage: the distinguishing advantage `Measure.boolDist` between the real
+and ideal worlds. -/
+noncomputable def advantage [DecidableEq Tweak]
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  ENNReal.absDiff (RealSuccess adv) (IdealSuccess adv)
-
-/-- The ENNReal absolute gap is exactly the absolute value of the source directed advantage. -/
-theorem absoluteAdvantage_toReal_eq_abs_directedAdvantage [DecidableEq Tweak]
-    {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) :
-    (AbsoluteAdvantage adv).toReal = |DirectedAdvantage adv| := by
-  exact ENNReal.absDiff_toReal (MeasureTheory.measure_ne_top _ _)
-    (MeasureTheory.measure_ne_top _ _)
-
-/-- Forgetting orientation gives a sound upper bound on the directed source advantage. -/
-theorem directedAdvantage_le_absoluteAdvantage_toReal [DecidableEq Tweak]
-    {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) :
-    DirectedAdvantage adv ≤ (AbsoluteAdvantage adv).toReal := by
-  rw [absoluteAdvantage_toReal_eq_abs_directedAdvantage]
-  exact le_abs_self _
+  𝒟[experiment .real adv].boolDist 𝒟[experiment .ideal adv]
 
 /-! ## Oracle behavior pins -/
 

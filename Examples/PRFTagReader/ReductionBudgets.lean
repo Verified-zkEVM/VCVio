@@ -79,11 +79,9 @@ private theorem reader_map_bound {Slot : Type} [Fintype Slot] (nonce : Nonce) :
     (fun slot => functionQuery_bound (R := Digest) (slot, nonce))
     (Finset.univ : Finset Slot).toList
 
-variable [DecidableEq TagId] [Fintype TagId] [DecidableEq Digest]
-
-omit [DecidableEq TagId] in
 /-- A multiple-session reader queries every tag once. -/
-theorem multiple_reader_bound (transcript : TagTranscript Nonce Digest)
+theorem multiple_reader_bound [Fintype TagId] [DecidableEq Digest]
+    (transcript : TagTranscript Nonce Digest)
     (state : UnlinkState TagId) :
     IsQueryBoundP ((unlinkToMultiplePRFReaderImpl transcript).run state)
       (·.isRight) (Fintype.card TagId) := by
@@ -91,9 +89,9 @@ theorem multiple_reader_bound (transcript : TagTranscript Nonce Digest)
     StateT.run_pure, bind_assoc, bind_pure_comp] using
     (reader_map_bound (Slot := TagId) (Digest := Digest) transcript.nonce)
 
-omit [DecidableEq TagId] in
 /-- A single-session reader queries every tag and session slot once. -/
-theorem single_reader_bound (transcript : TagTranscript Nonce Digest)
+theorem single_reader_bound [Fintype TagId] [DecidableEq Digest]
+    (transcript : TagTranscript Nonce Digest)
     (state : UnlinkState TagId) :
     IsQueryBoundP
       ((unlinkToSinglePRFReaderImpl (sessionsPerTag := sessionsPerTag) transcript).run state)
@@ -108,9 +106,8 @@ private theorem private_randomness_bound {D R A : Type} (program : ProbComp A) :
   exact (isQueryBoundP_false program 0).liftComp_subSpec
     (fun _ => by change False ↔ false = true; simp)
 
-variable [SampleableType Nonce]
+variable [DecidableEq TagId] [SampleableType Nonce]
 
-omit [Fintype TagId] [DecidableEq Digest] in
 /-- A multiple-session tag issues at most one PRF call, including exhausted sessions. -/
 theorem multiple_tag_bound (tag : TagId) (state : UnlinkState TagId) :
     IsQueryBoundP
@@ -126,7 +123,6 @@ theorem multiple_tag_bound (tag : TagId) (state : UnlinkState TagId) :
       exact functionQuery_bound _
   · simp [hs]
 
-omit [Fintype TagId] [DecidableEq Digest] in
 /-- A single-session tag issues at most one PRF call, including exhausted sessions. -/
 theorem single_tag_bound (tag : TagId) (state : UnlinkState TagId) :
     IsQueryBoundP
@@ -141,6 +137,8 @@ theorem single_tag_bound (tag : TagId) (state : UnlinkState TagId) :
       simp only [bind_pure_comp, isQueryBoundP_map_iff]
       exact functionQuery_bound _
   · simp [hs]
+
+variable [Fintype TagId] [DecidableEq Digest]
 
 /-- The multiple-session handler charges one tag call or one call per reader slot. -/
 theorem multiple_query_bound (q : (UnlinkOracleSpec TagId Nonce Digest).Domain)

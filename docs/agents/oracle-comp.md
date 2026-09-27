@@ -210,6 +210,12 @@ Constructors:
 | `QueryImpl.ofLift spec m` | From `MonadLift` instance |
 | `QueryImpl.ofFn f` | From pure function `f : (t : Domain) → Range t` |
 | `impl.liftTarget n` | Lift impl from `m` to `n` via `MonadLiftT` |
+| `spec.passthrough + impl` | Handle `spec'` with `impl`; pass `spec` queries through |
+
+To simulate only some of a computation's oracles, `spec.passthrough + impl` handles `spec'` with
+`impl` and answers each `spec` query by issuing the same query in `impl`'s target monad, which
+must lift `OracleComp spec`. `spec.passthrough` is not itself a `QueryImpl`: rewrite with
+`QueryImpl.passthrough_add` before applying `QueryImpl.add_apply_*` or `simulateQ_add_*`.
 
 ### simulateQ
 
@@ -317,7 +323,7 @@ direct recursive measure fold (`𝒟[…]` stays the public head; the lemma is a
 simp rule). `Pr[...]` stays a scalar adapter; `evalDist_apply_singleton`, `evalDist_apply_setOf`,
 `evalDist_apply_univ` and `lintegral_evalDist` cross that boundary in the simp direction.
 
-Uniform response semantics are supplied by `[IsUniformSpec spec]`, which bundles `[spec.Fintype]`, `[spec.Inhabited]`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
+Uniform response semantics are supplied by `[IsUniformSpec spec]`, which bundles `∀ t, Fintype (spec.Range t)`, `∀ t, Inhabited (spec.Range t)`, `[IsProbabilitySpec spec]`, and a proof that `toPMF` is `PMF.uniformOfFintype`. The bridge from `support` to `SPMF.support 𝒮[...]` is `EvalDistCompatible (OracleComp spec)` and also requires `[IsUniformSpec spec]`.
 
 Distinct from the `PMF`-target `evalSPMF`, there is also a *syntactic* uniform-sampling handler that rewrites queries into `ProbComp` (i.e. target `OracleComp unifSpec`, not `PMF`):
 
@@ -342,7 +348,7 @@ Key result: `enforceOracle.fst_map_run_simulateQ` — if a computation satisfies
 `IsPerIndexQueryBound oa qb`, then running under enforcement with budget `qb` produces
 the same output distribution as running without enforcement.
 
-Requires `[DecidableEq ι]` and `[spec.Inhabited]` (for `default` values).
+Requires `[DecidableEq ι]` and `[∀ t, Inhabited (spec.Range t)]` (for `default` values).
 
 ## Patterns
 

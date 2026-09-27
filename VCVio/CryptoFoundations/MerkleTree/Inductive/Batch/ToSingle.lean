@@ -26,8 +26,9 @@ openings:
   openings — under *possibly different selectors* — that both select some leaf index, claim
   distinct values there, and produce the same putative root, yield a concrete hash collision
   via the constructive `findCollision` kernel of `Binding.lean`. (Note this is strictly more
-  general than the same-selector uniqueness of `BatchUniqueness.lean`, which needs an
-  injective hash; here the hash is arbitrary and the output is a collision as data.)
+  general than the same-selector uniqueness of `Batch/Uniqueness.lean`, which needs the
+  hash to be injective on the queried pairs; here the hash is arbitrary and the output is a
+  collision as data.)
 * **A deterministic kernel for a future extractability transfer.** This file does *not*
   prove batch extractability. What it provides is the deterministic core such a proof will
   consume: `batchToSingleProof` maps any verifying batch opening, at any *selected* leaf, to
@@ -139,7 +140,7 @@ that both select the leaf index `idx` — which claim distinct values at `idx` y
 same putative root, yield a concrete hash collision, exhibited by the constructive
 `findCollision` kernel applied to the two extracted single-index openings.
 
-This strengthens `BatchUniqueness.getPutativeBatchRootWithHash_unique` in two directions:
+This strengthens `getPutativeBatchRootWithHash_unique` in two directions:
 the two selectors need not be equal, and the hash function is arbitrary (the conclusion is a
 collision as data rather than an agreement under an injectivity hypothesis).
 -/

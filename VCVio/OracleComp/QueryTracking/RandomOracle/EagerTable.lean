@@ -42,15 +42,20 @@ universe u v w
 
 namespace OracleComp
 
-variable {D R : Type} [DecidableEq D] [Finite D] [Finite R] [Nonempty R]
-  [SampleableType R] [SampleableType (D → R)]
+variable {D R : Type}
 
 /-- The total answer table obtained by overlaying a `QueryCache` on top of a full function table:
 cached entries take priority, uncached coordinates fall through to `g`. -/
 @[reducible] def tableExtending (c : (D →ₒ R).QueryCache) (g : D → R) : D → R :=
   fun t => (c t).getD (g t)
 
-omit [Finite D] [Finite R] [Nonempty R] [SampleableType R] [SampleableType (D → R)] in
+/-- Overlaying the empty cache leaves a full table unchanged. -/
+lemma tableExtending_empty (g : D → R) :
+    tableExtending (∅ : (D →ₒ R).QueryCache) g = g := by
+  funext t; simp [tableExtending]
+
+variable [DecidableEq D]
+
 /-- Overlaying `c.cacheQuery t u` on `g` is the `t`-update of overlaying `c` on `g`. -/
 lemma tableExtending_cacheQuery (c : (D →ₒ R).QueryCache) (g : D → R)
     (t : D) (u : R) :
@@ -58,7 +63,6 @@ lemma tableExtending_cacheQuery (c : (D →ₒ R).QueryCache) (g : D → R)
   funext t'
   by_cases ht : t' = t <;> simp_all [tableExtending, QueryCache.cacheQuery, Function.update]
 
-omit [Finite D] [Finite R] [Nonempty R] [SampleableType R] [SampleableType (D → R)] in
 /-- When `t` is uncached, updating the overlaid table at `t` equals overlaying the cache on the
 updated full table. -/
 lemma tableExtending_update_of_none (c : (D →ₒ R).QueryCache) (g : D → R)
@@ -66,6 +70,23 @@ lemma tableExtending_update_of_none (c : (D →ₒ R).QueryCache) (g : D → R)
     Function.update (tableExtending c g) t u = tableExtending c (Function.update g t u) := by
   funext t'
   rcases eq_or_ne t' t with rfl | ht <;> simp_all [tableExtending]
+
+variable [SampleableType R] [SampleableType (D → R)]
+
+/-- Pure-case base step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`: running
+`pure a` under the lazy oracle ignores the table, so its distribution is the constant `pure a`,
+matching the eager side after the (discarded) uniform table draw. -/
+private lemma evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending
+    {α : Type} [MeasurableSpace α] (a : α) (c : (D →ₒ R).QueryCache) :
+    𝒟[(simulateQ randomOracle (pure a : OracleComp (D →ₒ R) α)).run' c] =
+      𝒟[do let g ← $ᵗ (D → R);
+            pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) (pure a))] := by
+  let : MeasurableSpace (D → R) := ⊤
+  simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure,
+    evalWithAnswerFn_pure]
+  rw [OracleComp.evalDist_bind_const]
+
+variable [Finite D]
 
 /-- **Marginalization, post-composed.** For any continuation `ψ : (D → R) → α`, drawing a fresh
 uniform `u`, then a full uniform table `g`, and evaluating `ψ` on `Function.update g t u` has the
@@ -105,20 +126,6 @@ lemma evalDist_uniformSample_bind_update_two_map {α : Type}
       𝒟[do let g ← $ᵗ (D → R); pure (ψ g)] := by
   exact evalDist_bind_bind_bind_update_two_map ($ᵗ R) ($ᵗ (D → R))
     hValue hTable hne ψ
-
-omit [Finite D] [Finite R] [Nonempty R] in
-/-- Pure-case base step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`: running
-`pure a` under the lazy oracle ignores the table, so its distribution is the constant `pure a`,
-matching the eager side after the (discarded) uniform table draw. -/
-private lemma evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending
-    {α : Type} [MeasurableSpace α] (a : α) (c : (D →ₒ R).QueryCache) :
-    𝒟[(simulateQ randomOracle (pure a : OracleComp (D →ₒ R) α)).run' c] =
-      𝒟[do let g ← $ᵗ (D → R);
-            pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) (pure a))] := by
-  let : MeasurableSpace (D → R) := ⊤
-  simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure,
-    evalWithAnswerFn_pure]
-  rw [OracleComp.evalDist_bind_const]
 
 /-- Inductive `query`/`bind` step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`:
 given the eager-table identity for every continuation `k u`, it holds for `liftM (query t) >>= k`.
@@ -199,13 +206,6 @@ theorem evalDist_simulateQ_randomOracle_run'_eq_tableExtending
   | pure a => exact evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending a c
   | query_bind t k ih =>
     exact evalDist_simulateQ_randomOracle_run'_query_bind_eq_tableExtending t k ih c
-
-omit [DecidableEq D] [Finite D] [Finite R] [Nonempty R] [SampleableType R]
-  [SampleableType (D → R)] in
-/-- Overlaying the empty cache leaves a full table unchanged. -/
-lemma tableExtending_empty (g : D → R) :
-    tableExtending (∅ : (D →ₒ R).QueryCache) g = g := by
-  funext t; simp [tableExtending]
 
 /-- **Lazy random oracle equals eager full-table sampling.**
 

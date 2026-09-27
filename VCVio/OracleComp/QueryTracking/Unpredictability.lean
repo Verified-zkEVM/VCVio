@@ -47,10 +47,9 @@ namespace OracleComp
 section Unpredictability
 
 variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec.{u, u} ι}
-  [spec.DecidableEq] [IsUniformSpec spec]
-  {spec' : OracleSpec.{u, u} ι} [spec'.DecidableEq] [IsUniformSpec spec']
+  [IsUniformSpec spec]
+  {spec' : OracleSpec.{u, u} ι} [IsUniformSpec spec']
 
-omit [spec'.DecidableEq] in
 /-- **Fresh query uniformity**: querying `cachingOracle` at an uncached point
 yields each value with probability `1/|C|`. -/
 theorem probOutput_fresh_cachingOracle_query
@@ -62,7 +61,6 @@ theorem probOutput_fresh_cachingOracle_query
     probOutput_map_injective _ fun a b hab => (Prod.ext_iff.mp hab).1]
   exact probOutput_query t u
 
-omit [spec'.DecidableEq] in
 /-- **WARNING: trivially true.** The proof uses only `probEvent_le_one`; the query bound
 `hbound` and `target` are completely unused. The conclusion `Pr[...] * |C|⁻¹ ≤ |C|⁻¹`
 holds for any computation regardless of how many queries it makes.
@@ -381,18 +379,18 @@ theorem probEvent_cache_hits_targets_le_of_noCollision_homogeneous
           apply Nat.le_of_eq
           exact @Fintype.card_congr
             ((ι →ₒ Y).Range default) ((ι →ₒ Y).Range input)
-            (OracleSpec.instFintypeRangeOfFintype default)
-            (OracleSpec.instFintypeRangeOfFintype input) (Equiv.refl Y))
+            (IsUniformSpec.fintype default)
+            (IsUniformSpec.fintype input) (Equiv.refl Y))
         targets cache₀ hno
       have hcard :
           @Fintype.card ((ι →ₒ Y).Range default)
-            (OracleSpec.instFintypeRangeOfFintype default) = Nat.card Y := by
+            (IsUniformSpec.fintype default) = Nat.card Y := by
         calc
           @Fintype.card ((ι →ₒ Y).Range default)
-              (OracleSpec.instFintypeRangeOfFintype default) =
+              (IsUniformSpec.fintype default) =
               Nat.card ((ι →ₒ Y).Range default) :=
                 (@Nat.card_eq_fintype_card ((ι →ₒ Y).Range default)
-                  (OracleSpec.instFintypeRangeOfFintype default)).symm
+                  (IsUniformSpec.fintype default)).symm
           _ = Nat.card Y := Nat.card_congr (Equiv.refl Y)
       simpa only [hcard, heq_eq_eq] using hbase
 
@@ -403,9 +401,8 @@ end Unpredictability
 section CollisionBasedWinBound
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
-  [spec.DecidableEq] [IsUniformSpec spec]
+  [IsUniformSpec spec]
 
-omit [spec.DecidableEq] in
 /-- **WARNING: vacuously true.** The `[Unique ι]` hypothesis means `ι` has exactly one element,
 but `CacheHasCollision` (used via `probEvent_cacheCollision_le_birthday'`) requires two *distinct*
 oracle indices `t₁ ≠ t₂ : ι`, which is impossible when `ι` is unique. The event

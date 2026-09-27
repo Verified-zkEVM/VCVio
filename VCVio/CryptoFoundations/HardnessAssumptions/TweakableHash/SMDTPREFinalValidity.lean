@@ -107,7 +107,7 @@ noncomputable def oracles [DecidableEq Tweak] [SampleableType M']
 
 /-- The source-final-validity SM-DT-PRE experiment. An inversion wins exactly when final validity
 holds and it names a recorded target with an agreeing preimage from `M'`. -/
-noncomputable def Experiment [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
+noncomputable def experiment [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ProbComp Bool := do
   let pk ← prob.th.seedGen
   let (privateState, gameState) ← (simulateQ (oracles prob pk) adv.choose).run .initial
@@ -119,9 +119,9 @@ noncomputable def Experiment [DecidableEq Tweak] [DecidableEq Y] [SampleableType
         decide (prob.th.eval pk t (prob.emb m) = prob.th.eval pk t (prob.emb x))
 
 /-- The source-final-validity SM-DT-PRE advantage. -/
-noncomputable def Advantage [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
+noncomputable def advantage [DecidableEq Tweak] [DecidableEq Y] [SampleableType M']
     {prob : Problem ι PkSeed Tweak M M' Y} (adv : Adversary prob) : ℝ≥0∞ :=
-  𝒟[Experiment adv] {true}
+  𝒟[experiment adv] {true}
 
 variable [DecidableEq Tweak] [SampleableType M']
   {prob : Problem ι PkSeed Tweak M M' Y} {pk : PkSeed} {t : Tweak} {st : State Tweak M'}

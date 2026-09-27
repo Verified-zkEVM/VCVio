@@ -151,7 +151,7 @@ to a polymorphic universe would require polymorphising the entire
 `wpProp` bridge, which the whole `ProgramLogic.Unary.*` stack is not yet
 set up to support. -/
 variable {ι : Type}
-variable {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+variable {spec : OracleSpec.{0, 0} ι}
 
 /-! ## Generic invariant-preservation for `simulateQ` -/
 
@@ -631,7 +631,7 @@ typically a conjunction of one cache property and one log property. -/
 
 section stackedHandlers
 
-variable [spec.DecidableEq]
+variable [DecidableEq ι]
 
 /-- Per-call spec for `cachingLoggingOracle t`: the log is extended by exactly
 one entry `⟨t, v⟩`, the cache only grows, and the returned value is now

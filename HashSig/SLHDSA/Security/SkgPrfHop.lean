@@ -24,15 +24,16 @@ value from `SK.seed` by a challenge oracle, at the cost of one `PRF` distinguish
 counted random-oracle experiment,
 
 `romForgeAdvantage core adv ≤
-  prfAbsAdvantage (skgPrfScheme core) (skgPrfReductionGen core adv) + skgPrfIdealAdvantage core adv`
+  PRFScheme.prfAdvantage (skgPrfScheme core) (skgPrfReductionGen core adv)
+    + skgPrfIdealAdvantage core adv`
 
 Both terms on the right are functions of `adv` alone: `skgPrfReductionGen adv` is a closed term of
 `PRFScheme.PRFAdversary`, and `skgPrfIdealAdvantage adv` is that same distinguisher's success
 probability in the ideal `PRF` experiment — the counted experiment with every WOTS+ and FORS
 secret drawn from a lazily sampled random function of `(PK.seed, ADRS)`.  No certificate supplies
-either, and the inequality is unconditional: `evalDist_prfRealExp_skgPrfReductionGen` proves that
-the reduction's success probability in the *real* `PRF` experiment is `romForgeAdvantage core adv`
-exactly.
+either, and the inequality is unconditional: `evalDist_prfRealExperiment_skgPrfReductionGen` proves
+that the reduction's success probability in the *real* `PRF` experiment is
+`romForgeAdvantage core adv` exactly.
 
 ## Why the hop is needed
 
@@ -62,9 +63,9 @@ The identification of the real experiment has two halves, both proved here.  At 
 `simulateQ_skgRealImpl_romGameCoreGen` pushes that interpretation through the game — through key
 generation, through the forger's own program with its `WriterT` log, and through verification —
 using the naturality lemmas of `HashSig.SLHDSA.SecretProvider` and the specialisation of each
-provider-parametric program at the honest provider.  `prfRealExp_skgPrfReductionGen` then assembles
-the two, and no reordering of the seed samples is needed: the `PRF` experiment draws the key first
-and `generalAlgM`'s key generation draws `SK.seed` first as well.
+provider-parametric program at the honest provider.  `prfRealExperiment_skgPrfReductionGen` then
+assembles the two, and no reordering of the seed samples is needed: the `PRF` experiment draws the
+key first and `generalAlgM`'s key generation draws `SK.seed` first as well.
 
 The signature is *re-associated* relative to the counted lane's `unifSpec + publicHashSpec core`:
 the two random oracles of the ideal experiment — the public hash inside, the challenge function
@@ -77,7 +78,7 @@ joint cache and what its fresh-answer bound consumes.
 
 ## Scope
 
-* **No bound on `prfAbsAdvantage` at this scheme is proved, and none can be proved against an
+* **No bound on `PRFScheme.prfAdvantage` at this scheme is proved, and none can be proved against an
   unbounded distinguisher over a finite key space.**  `SampleableType core.SkSeed`
   makes the key space finite and `OracleComp` carries no resource bound, so a forger may recover
   `SK.seed` from the secret values one signature reveals and then forge, which makes the
@@ -102,14 +103,15 @@ joint cache and what its fresh-answer bound consumes.
   and the challenge signature — the handler
   `VCVio.OracleComp.QueryTracking.RandomOracle.Joint` collapses to one lazy oracle on one joint
   cache, and the handler its fresh-answer bound consumes.  The *experiment*-level rewriting, which
-  would identify `PRFScheme.prfIdealExp (skgPrfReductionGen core adv)` with a run of that handler
-  from the two empty caches, is not stated or proved here, and neither is any bound obtained from
-  the engine.
+  would identify `PRFScheme.prfIdealExperiment (skgPrfReductionGen core adv)` with a run of that
+  handler from the two empty caches, is not stated or proved here, and neither is any bound obtained
+  from the engine.
 * Secret-value queries are not counted.  `HasHashQueryBound` counts public-hash queries only, and
   the reduction issues one challenge query per secret value it needs, which is a separate
   accounting this module does not do.
-* The hop is stated at the *absolute* distinguishing advantage `prfAbsAdvantage`, so it is
-  agnostic about which direction the distinguisher favours; it assumes nothing about `core.PRF`.
+* The hop is stated at `PRFScheme.prfAdvantage`, the Boolean distance between the real and
+  ideal experiments, so it is agnostic about which direction the distinguisher favours; it assumes
+  nothing about `core.PRF`.
 * Nothing here is quantum.  The public hash is a classical lazily-sampled oracle and the `PRF`
   experiments are classical, so the inequality is a classical random-oracle statement.
 * The message randomizer `PRF_msg` is untouched: `signInternalWithSecretM` still takes `SK.prf`,
@@ -147,8 +149,8 @@ Thirty-six declarations.  There is no private declaration and no instance.
   `writerTMapBase_skgRealImpl_skgGameImpl`;
 * `romGameCoreAt`, `simulateQ_skgRealImpl_romGameCoreGen`, `romGameCore_eq_bind`,
   `run'_simulateQ_romImpl_liftM_bind`;
-* `prfRealExp_skgPrfReductionGen`, `fst_map_countedRomExperiment_eq`,
-  `evalDist_prfRealExp_skgPrfReductionGen`.
+* `prfRealExperiment_skgPrfReductionGen`, `fst_map_countedRomExperiment_eq`,
+  `evalDist_prfRealExperiment_skgPrfReductionGen`.
 
 *The ideal experiment's shape*:
 
@@ -161,9 +163,8 @@ Thirty-six declarations.  There is no private declaration and no instance.
 ## References
 
 - NIST FIPS 205, §4.1 (`PRF`), §9, Algorithms 18--19
-- `VCVio.CryptoFoundations.PRF` for the `PRF` notion used: `PRFScheme.prfRealExp`,
-  `PRFScheme.prfIdealExp`, and the absolute advantage `prfAbsAdvantage` of
-  `HashSig.SLHDSA.Security.Composition`
+- `VCVio.CryptoFoundations.PRF` for the `PRF` notion used: `PRFScheme.prfRealExperiment`,
+  `PRFScheme.prfIdealExperiment`, and the distinguishing advantage `PRFScheme.prfAdvantage`
 - Barbosa, Dupressoir, Hülsing, Meijers, and Strub, "A Tight Security Proof for SPHINCS+,
   Formally Verified", whose `SKG_PRF` step keys its oracle on the address alone at a fixed public
   seed and runs outside a random-oracle lane; this one keys on `(PK.seed, ADRS)` and runs inside
@@ -260,7 +261,7 @@ noncomputable def skgGameImpl (skPrf : core.SkPrf) (pkSeed : core.PkSeed) (pkRoo
 /-- **The EUF-CMA game with every WOTS+ and FORS secret taken from an oracle**, left
 uninterpreted.  `SK.seed` does not occur. -/
 noncomputable def romGameCoreGen
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skPrf : core.SkPrf) (pkSeed : core.PkSeed) : OracleComp (skgGameSpec core) Bool :=
   letI : DecidableEq (List Byte) := Classical.decEq _
   letI : DecidableEq (GeneralScheme.SignatureCore vp core) := Classical.decEq _
@@ -288,7 +289,7 @@ def skgLaneImpl : QueryImpl (skgGameSpec core) (SkgLane core) :=
 cache, and outputs the forger's EUF-CMA win bit.  A function of the forger: no certificate supplies
 it. -/
 noncomputable def skgPrfReductionGen
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     PRFScheme.PRFAdversary (core.PkSeed × Adrs) core.Y :=
   (do
     let skPrf ← OracleComp.liftComp ($ᵗ core.SkPrf) (skgPrfSpec core)
@@ -300,13 +301,13 @@ noncomputable def skgPrfReductionGen
 ideal `PRF` experiment, which is the counted random-oracle EUF-CMA game with every WOTS+ and FORS
 secret drawn from a lazily sampled random function of `(PK.seed, ADRS)`. -/
 noncomputable def skgPrfIdealAdvantage
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) : ℝ≥0∞ :=
-  𝒟[PRFScheme.prfIdealExp (skgPrfReductionGen core adv)] {true}
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) : ℝ≥0∞ :=
+  𝒟[PRFScheme.prfIdealExperiment (skgPrfReductionGen core adv)] {true}
 
 /-- The advantage surviving the `SKG_PRF` hop is a probability, so it is at most one.  The body of
 `skgPrfIdealAdvantage` is not exposed, so this is what a consumer bounding it from above uses. -/
 theorem skgPrfIdealAdvantage_le_one
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     skgPrfIdealAdvantage core adv ≤ 1 :=
   MeasureTheory.measure_le_one _ _
 
@@ -512,7 +513,7 @@ theorem writerTMapBase_skgRealImpl_skgGameImpl (skSeed : core.SkSeed) (skPrf : c
 /-- The counted EUF-CMA game at a fixed seed triple: `romGameCore` with its three private
 samples already drawn. -/
 noncomputable def romGameCoreAt
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     OracleComp romSpec Bool :=
   letI : DecidableEq (List Byte) := Classical.decEq _
@@ -528,7 +529,7 @@ omit [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed] [DecidableEq
 /-- **Under the real `PRF` the uninterpreted game is the counted game at the same seeds.**  Key
 generation, every signing query and the final verification all become the honest programs. -/
 theorem simulateQ_skgRealImpl_romGameCoreGen
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core))
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core))
     (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) :
     simulateQ (skgRealImpl core skSeed) (romGameCoreGen core adv skPrf pkSeed) =
       romGameCoreAt core adv skSeed skPrf pkSeed := by
@@ -560,7 +561,7 @@ theorem simulateQ_skgRealImpl_romGameCoreGen
 omit [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] in
 /-- The counted game draws `SK.seed`, `SK.prf` and `PK.seed` and then plays `romGameCoreAt`. -/
 theorem romGameCore_eq_bind
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     romGameCore core adv =
       (do
         let skSeed ← (liftM ($ᵗ core.SkSeed) : OracleComp romSpec core.SkSeed)
@@ -588,12 +589,12 @@ theorem run'_simulateQ_romImpl_liftM_bind {α β : Type} (oa : ProbComp α)
 
 /-- **The real `PRF` experiment at the reduction is the counted random-oracle experiment.**  Both
 sides draw `SK.seed`, `SK.prf`, `PK.seed` in that order, so no reordering is involved. -/
-theorem prfRealExp_skgPrfReductionGen
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
-    PRFScheme.prfRealExp (skgPrfScheme core) (skgPrfReductionGen core adv) =
+theorem prfRealExperiment_skgPrfReductionGen
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
+    PRFScheme.prfRealExperiment (skgPrfScheme core) (skgPrfReductionGen core adv) =
       (simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core)
         (romGameCore core adv)).run' ∅ := by
-  rw [romGameCore_eq_bind, run'_simulateQ_romImpl_liftM_bind, PRFScheme.prfRealExp,
+  rw [romGameCore_eq_bind, run'_simulateQ_romImpl_liftM_bind, PRFScheme.prfRealExperiment,
     skgPrfScheme_keygen]
   refine bind_congr fun skSeed => ?_
   rw [skgPrfReductionGen, simulateQ_bind, PRFScheme.simulateQ_prfRealQueryImpl_liftComp,
@@ -610,7 +611,7 @@ open scoped Classical in
 /-- The success bit of the counted experiment is the outcome of the shared lazy run of
 `romGameCore` from the empty cache; the query charge is discarded. -/
 theorem fst_map_countedRomExperiment_eq
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     Prod.fst <$> countedRomExperiment core adv =
       (simulateQ (unifFwdImpl (publicHashSpec core) + PublicHash.randomOracle core)
         (romGameCore core adv)).run' ∅ := by
@@ -620,11 +621,11 @@ theorem fst_map_countedRomExperiment_eq
 open scoped Classical in
 /-- **In the real `PRF` experiment the reduction wins exactly as often as the forger.**  Its
 success probability is `romForgeAdvantage core adv`, not a bound on it. -/
-theorem evalDist_prfRealExp_skgPrfReductionGen
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
-    𝒟[PRFScheme.prfRealExp (skgPrfScheme core) (skgPrfReductionGen core adv)] {true}
+theorem evalDist_prfRealExperiment_skgPrfReductionGen
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
+    𝒟[PRFScheme.prfRealExperiment (skgPrfScheme core) (skgPrfReductionGen core adv)] {true}
       = romForgeAdvantage core adv := by
-  rw [romForgeAdvantage, fst_map_countedRomExperiment_eq, prfRealExp_skgPrfReductionGen]
+  rw [romForgeAdvantage, fst_map_countedRomExperiment_eq, prfRealExperiment_skgPrfReductionGen]
 
 /-! ## The ideal experiment's shape -/
 
@@ -693,14 +694,15 @@ counted experiment is at most the secret-value `PRF` distinguishing advantage of
 
 Both right-hand terms are functions of `adv`, and the inequality is unconditional: the real `PRF`
 experiment at the reduction *is* the counted experiment
-(`evalDist_prfRealExp_skgPrfReductionGen`). -/
+(`evalDist_prfRealExperiment_skgPrfReductionGen`). -/
 theorem romForgeAdvantage_le_skgPrf_add_ideal
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) :
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) :
     romForgeAdvantage core adv ≤
-      prfAbsAdvantage (skgPrfScheme core) (skgPrfReductionGen core adv)
+      PRFScheme.prfAdvantage (skgPrfScheme core) (skgPrfReductionGen core adv)
         + skgPrfIdealAdvantage core adv := by
-  rw [← evalDist_prfRealExp_skgPrfReductionGen, skgPrfIdealAdvantage]
-  exact prfRealExp_le_prfAbsAdvantage_add_prfIdealExp _ _
+  rw [← evalDist_prfRealExperiment_skgPrfReductionGen, skgPrfIdealAdvantage]
+  rw [PRFScheme.prfAdvantage, add_comm]
+  exact MeasureTheory.Measure.apply_true_le_add_boolDist _ _
 
 end
 

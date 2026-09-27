@@ -138,7 +138,8 @@ tree; at layer `0` it signed the FORS public key its own recovery produced, whic
 theorem exists_honestMessage?_eq_some_of_usedLeaf [SampleableType core.Y] [DecidableEq core.Y]
     [DecidableEq core.PkSeed] [DecidableEq core.AdrsKey] [SampleableType (Bytes vp.params.m)]
     [SampleableType core.SkSeed] [SampleableType core.SkPrf] [SampleableType core.PkSeed]
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp (unifSpec + publicHashSpec core)) vp core))
+    (adv : UnforgeableAdversary
+      (generalAlgM (m := OracleComp (unifSpec + publicHashSpec core)) vp core))
     {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv))
     (j : Fin vp.params.d) (pos : LayerPosition vp) (hused : UsedLeaf z.1 z.2 j pos) :
     ∃ m, honestMessage? z.2 z.1.sk.skSeed z.1.pk.pkSeed pos = some m := by
@@ -199,7 +200,8 @@ disjunct, which without it holds over the whole support: an adversary that repla
 signature on the message it was issued for covers every coordinate of its own digest while not
 winning.  For that disjunct it is also exactly the hypothesis `itsr_wins_of_itsrCovered` takes. -/
 theorem rom_bad_event_of_wins (laws : core.ByteLaws)
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp (unifSpec + publicHashSpec core)) vp core))
+    (adv : UnforgeableAdversary
+      (generalAlgM (m := OracleComp (unifSpec + publicHashSpec core)) vp core))
     {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv))
     (hw : z.1.wins = true) :
     (TargetCollision z.1 z.2 ∧ z.1.msg ∉ z.1.log.map (fun e => e.1)) ∨

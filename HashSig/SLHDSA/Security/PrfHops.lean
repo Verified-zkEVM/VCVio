@@ -18,8 +18,8 @@ This module states the SLH-DSA bound's `MKG_PRF` summand at the advantage of a d
 `SLHDSA.Security.advantage_le_msgPrf_add_ideal` says: for every adversary `adv` against the
 external SLH-DSA algebra `generalAlg`,
 
-`adv.advantage ProbCompRuntime.probComp ≤
-  prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction adv) + msgPrfIdealAdvantage adv`
+`unforgeableAdvantage ProbCompRuntime.probComp adv ≤
+  PRFScheme.prfAdvantage (msgPrfScheme prims) (msgPrfReduction adv) + msgPrfIdealAdvantage adv`
 
 Both terms on the right are functions of `adv` alone.  `msgPrfReduction adv` is a closed term
 of `PRFScheme.PRFAdversary`, and `msgPrfIdealAdvantage adv` is the success probability of that
@@ -50,10 +50,10 @@ value and leaves the rest of Algorithm 19 untouched.
 
 ## What the real experiment is
 
-`prfRealExp_msgPrfReduction` is the content: in the real `PRF` experiment the reduction *is* the
-CMA game, so `𝒟[prfRealExp (msgPrfScheme prims) (msgPrfReduction prims adv)] {true}` is
-`adv.advantage`.  The seed sampling order differs — `prfRealExp` samples the key first,
-`generalAlg.keygen` samples `SK.seed` first — and `evalDist_bind_bind_swap_of_countable`
+`prfRealExperiment_msgPrfReduction` is the content: in the real `PRF` experiment the reduction *is*
+the CMA game, so `𝒟[prfRealExperiment (msgPrfScheme prims) (msgPrfReduction prims adv)] {true}` is
+`unforgeableAdvantage _ adv`.  The seed sampling order differs — `prfRealExperiment` samples the key
+first, `generalAlg.keygen` samples `SK.seed` first — and `evalDist_bind_bind_swap_of_countable`
 reconciles them.  The hop then follows from `a ≤ ENNReal.absDiff a b + b`.
 
 ## What this does not do
@@ -65,7 +65,7 @@ reconciles them.  The hop then follows from `a ≤ ENNReal.absDiff a b + b`.
 * It builds no certificate.  `HashSig.SLHDSA.Security.OpenPreBound` is where the hop is consumed,
   and where the fields it removes are actually removed.
 * The ideal experiment's random function is keyed at `(addrnd, internal message)` pairs and is
-  memoised by `PRFScheme.prfIdealExp`'s lazy oracle, so a repeated signing query on the same
+  memoised by `PRFScheme.prfIdealExperiment`'s lazy oracle, so a repeated signing query on the same
   message answers with the same `R` only when `addrnd` repeats.  That is the behaviour of
   `generalAlg`, which samples a fresh `addrnd` per query, and not the behaviour of a scheme that
   derandomizes; nothing here claims otherwise.
@@ -79,10 +79,10 @@ Twelve declarations.
 * `msgPrfSpec`, `msgPrfSigningOracle`, `msgPrfQueryImpl`, `msgPrfReduction`,
   `msgPrfIdealAdvantage`, `msgPrfIdealAdvantage_le_one`;
 * `cmaImpl`, `simulateQ_prfReal_msgPrfQueryImpl_run`;
-* `prfRealExp_msgPrfReduction`, `unforgeableExp_generalAlg_eq`,
-  `evalDist_prfRealExp_msgPrfReduction`, `advantage_le_msgPrf_add_ideal`.
+* `prfRealExperiment_msgPrfReduction`, `unforgeableExperiment_generalAlg_eq`,
+  `evalDist_prfRealExperiment_msgPrfReduction`, `advantage_le_msgPrf_add_ideal`.
 
-`advantage_le_msgPrf_add_ideal` is the result; `evalDist_prfRealExp_msgPrfReduction` is the
+`advantage_le_msgPrf_add_ideal` is the result; `evalDist_prfRealExperiment_msgPrfReduction` is the
 equality it rests on, and the two experiment-shape theorems above it are what a reader checks to
 see that neither side was bent to fit.
 
@@ -125,7 +125,7 @@ def msgPrfSigningOracle (skSeed : prims.SkSeed) (pkSeed : prims.PkSeed)
 
 /-- The forger's two oracles as the reduction implements them: ambient uniform sampling is
 forwarded unchanged, and signing queries are answered by `msgPrfSigningOracle` and logged, in
-the same `WriterT` layer `unforgeableExp` uses.
+the same `WriterT` layer `unforgeableExperiment` uses.
 
 *Message-`PRF` reduction.* -/
 def msgPrfQueryImpl (skSeed : prims.SkSeed) (pkSeed : prims.PkSeed) (pkRoot : prims.Y) :
@@ -142,7 +142,7 @@ def msgPrfQueryImpl (skSeed : prims.SkSeed) (pkSeed : prims.PkSeed) (pkRoot : pr
 certificate supplies it and no other adversary can be substituted for it.
 
 *Message-`PRF` reduction.* -/
-noncomputable def msgPrfReduction (adv : unforgeableAdv (generalAlg prims)) :
+noncomputable def msgPrfReduction (adv : UnforgeableAdversary (generalAlg prims)) :
     PRFScheme.PRFAdversary (prims.Y × List Byte) prims.Y :=
   letI : DecidableEq (List Byte) := Classical.decEq _
   letI : DecidableEq (GeneralScheme.SignatureCore vp prims.core) := Classical.decEq _
@@ -162,21 +162,21 @@ the reduction's success probability in the ideal `PRF` experiment, which is the 
 with `PRF_msg` replaced by a lazily sampled random function.
 
 *Message-`PRF` reduction.* -/
-noncomputable def msgPrfIdealAdvantage (adv : unforgeableAdv (generalAlg prims)) : ℝ≥0∞ :=
-  𝒟[PRFScheme.prfIdealExp (msgPrfReduction prims adv)] {true}
+noncomputable def msgPrfIdealAdvantage (adv : UnforgeableAdversary (generalAlg prims)) : ℝ≥0∞ :=
+  𝒟[PRFScheme.prfIdealExperiment (msgPrfReduction prims adv)] {true}
 
 /-- The advantage surviving the `MKG_PRF` hop is a probability, so it is at most one.  The body of
 `msgPrfIdealAdvantage` is not exposed, so this is what a consumer bounding it from above uses.
 
 *Message-`PRF` reduction.* -/
-theorem msgPrfIdealAdvantage_le_one (adv : unforgeableAdv (generalAlg prims)) :
+theorem msgPrfIdealAdvantage_le_one (adv : UnforgeableAdversary (generalAlg prims)) :
     msgPrfIdealAdvantage prims adv ≤ 1 :=
   MeasureTheory.measure_le_one _ _
 
 /-! ## The real experiment is the CMA game -/
 
-/-- The forger's two oracles as `unforgeableExp` implements them at a named key pair.  Factored
-out so that the composition of the reduction's handler with the real `PRF` handler can be
+/-- The forger's two oracles as `unforgeableExperiment` implements them at a named key pair.
+Factored out so that the composition of the reduction's handler with the real `PRF` handler can be
 identified with it.
 
 *Message-`PRF` reduction.* -/
@@ -226,11 +226,11 @@ theorem simulateQ_prfReal_msgPrfQueryImpl_run {α : Type} (skPrf : prims.SkPrf)
         GeneralScheme.signInternal_eq_signInternalWithRandomizer, map_eq_bind_pure_comp]
 
 /-- **The real `PRF` experiment at the reduction, written out.**  Its only difference from
-`unforgeableExp` at `generalAlg` is the order in which the three seeds are sampled.
+`unforgeableExperiment` at `generalAlg` is the order in which the three seeds are sampled.
 
 *Message-`PRF` reduction.* -/
-theorem prfRealExp_msgPrfReduction (adv : unforgeableAdv (generalAlg prims)) :
-    PRFScheme.prfRealExp (msgPrfScheme prims) (msgPrfReduction prims adv) =
+theorem prfRealExperiment_msgPrfReduction (adv : UnforgeableAdversary (generalAlg prims)) :
+    PRFScheme.prfRealExperiment (msgPrfScheme prims) (msgPrfReduction prims adv) =
       letI : DecidableEq (List Byte) := Classical.decEq _
       letI : DecidableEq (GeneralScheme.SignatureCore vp prims.core) := Classical.decEq _
       (do
@@ -244,7 +244,7 @@ theorem prfRealExp_msgPrfReduction (adv : unforgeableAdv (generalAlg prims)) :
         pure (!log.wasQueried msg &&
           GeneralScheme.verifyInternal vp prims (emptyContextMessage msg) sig pk) :
       ProbComp Bool) := by
-  unfold PRFScheme.prfRealExp msgPrfReduction
+  unfold PRFScheme.prfRealExperiment msgPrfReduction
   refine bind_congr fun skPrf => ?_
   rw [simulateQ_bind]
   rw [PRFScheme.simulateQ_prfRealQueryImpl_liftComp]
@@ -257,12 +257,12 @@ theorem prfRealExp_msgPrfReduction (adv : unforgeableAdv (generalAlg prims)) :
   rw [simulateQ_pure]
 
 /-- **The CMA experiment at `generalAlg`, written out** with both key components named and the
-deterministic verifier inlined.  This is `prfRealExp_msgPrfReduction`'s right-hand side with
+deterministic verifier inlined.  This is `prfRealExperiment_msgPrfReduction`'s right-hand side with
 `SK.seed` sampled before `SK.prf`.
 
 *Message-`PRF` reduction.* -/
-theorem unforgeableExp_generalAlg_eq (adv : unforgeableAdv (generalAlg prims)) :
-    unforgeableExp ProbCompRuntime.probComp adv =
+theorem unforgeableExperiment_generalAlg_eq (adv : UnforgeableAdversary (generalAlg prims)) :
+    ProbCompRuntime.probComp.evalDist (unforgeableExperiment adv) =
       letI : DecidableEq (List Byte) := Classical.decEq _
       letI : DecidableEq (GeneralScheme.SignatureCore vp prims.core) := Classical.decEq _
       𝒟[(do
@@ -276,7 +276,7 @@ theorem unforgeableExp_generalAlg_eq (adv : unforgeableAdv (generalAlg prims)) :
         pure (!log.wasQueried msg &&
           GeneralScheme.verifyInternal vp prims (emptyContextMessage msg) sig pk) :
       ProbComp Bool)] := by
-  unfold unforgeableExp
+  unfold unforgeableExperiment
   rw [ProbCompRuntime.probComp_evalDist]
   congr 1
   rw [generalAlg_keygen_eq]
@@ -291,11 +291,14 @@ theorem unforgeableExp_generalAlg_eq (adv : unforgeableAdv (generalAlg prims)) :
 the forger's EUF-CMA advantage exactly, not up to a bound.
 
 *Message-`PRF` reduction.* -/
-theorem evalDist_prfRealExp_msgPrfReduction (adv : unforgeableAdv (generalAlg prims)) :
-    𝒟[PRFScheme.prfRealExp (msgPrfScheme prims) (msgPrfReduction prims adv)] {true}
-      = adv.advantage ProbCompRuntime.probComp := by
-  rw [unforgeableAdv.advantage, unforgeableExp_generalAlg_eq, prfRealExp_msgPrfReduction]
+theorem evalDist_prfRealExperiment_msgPrfReduction (adv : UnforgeableAdversary (generalAlg prims)) :
+    𝒟[PRFScheme.prfRealExperiment (msgPrfScheme prims) (msgPrfReduction prims adv)] {true}
+      = unforgeableAdvantage ProbCompRuntime.probComp adv := by
+  rw [unforgeableAdvantage, unforgeableExperiment_generalAlg_eq,
+    prfRealExperiment_msgPrfReduction]
   congr 1
+  let _ : MeasurableSpace prims.SkSeed := ⊤
+  let _ : MeasurableSpace prims.SkPrf := ⊤
   exact evalDist_bind_bind_swap_of_countable _ _ _
 
 /-- **The `MKG_PRF` hop, taken.**  The forger's EUF-CMA advantage is at most the `PRF_msg`
@@ -306,11 +309,12 @@ Both right-hand terms are functions of `adv`: the `MKG_PRF` summand is an advant
 construction, and no caller supplies or re-chooses it.
 
 *Message-`PRF` reduction.* -/
-theorem advantage_le_msgPrf_add_ideal (adv : unforgeableAdv (generalAlg prims)) :
-    adv.advantage ProbCompRuntime.probComp ≤
-      prfAbsAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
+theorem advantage_le_msgPrf_add_ideal (adv : UnforgeableAdversary (generalAlg prims)) :
+    unforgeableAdvantage ProbCompRuntime.probComp adv ≤
+      PRFScheme.prfAdvantage (msgPrfScheme prims) (msgPrfReduction prims adv)
         + msgPrfIdealAdvantage prims adv := by
-  rw [← evalDist_prfRealExp_msgPrfReduction, msgPrfIdealAdvantage]
-  exact prfRealExp_le_prfAbsAdvantage_add_prfIdealExp _ _
+  rw [← evalDist_prfRealExperiment_msgPrfReduction, msgPrfIdealAdvantage]
+  rw [PRFScheme.prfAdvantage, add_comm]
+  exact MeasureTheory.Measure.apply_true_le_add_boolDist _ _
 
 end SLHDSA.Security

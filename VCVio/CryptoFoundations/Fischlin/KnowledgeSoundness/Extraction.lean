@@ -24,14 +24,9 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 
 open ENNReal OracleComp.EvalDist
 
-section security
-
-variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
-  (ρ b S : ℕ) (M : Type) [DecidableEq M]
+  (ρ b S : ℕ) (M : Type)
 
 /-! ### Online Extraction / Knowledge Soundness -/
 
@@ -54,9 +49,15 @@ without knowing the witness.
 The Σ-protocol `σ` is not referenced in the structure itself (only in the
 extraction and verification steps of the experiment), so it enters the
 theorem statements via hypotheses like `σ.SpeciallySound`. -/
-structure KnowledgeSoundnessAdv where
+structure KnowledgeSoundnessAdversary where
+  /-- Given a statement and a message, produce a Fischlin proof with access to uniform
+  sampling and the Fischlin random oracle. -/
   run : Stmt → M → OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
     (FischlinProof Commit Chal Resp ρ)
+
+section extraction
+
+variable [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
 
 /-- Online extractor for the Fischlin transform (Fischlin 2005, Construction 2).
 
@@ -86,8 +87,6 @@ def onlineExtract
   | some (ω₁, p₁, ω₂, p₂) => some <$> σ.extract ω₁ p₁ ω₂ p₂
   | none => return none
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- The deterministic log scan performed by `onlineExtract`: search the repetitions for a logged
 random-oracle query at the proof's statement/commitment-list/repetition tags that verifies
 against the proof's commitment with a challenge different from the proof's challenge.
@@ -106,8 +105,6 @@ private def fischlinFindWitness (x : Stmt) (π : FischlinProof Commit Chal Resp 
         some (ω_i, (π i).2.2, entry.chal, entry.resp)
       else none
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- `onlineExtract` is exactly a match on `fischlinFindWitness`. -/
 private lemma onlineExtract_eq_match (x : Stmt) (π : FischlinProof Commit Chal Resp ρ)
     (log : QueryLog (fischlinROSpec Stmt Commit Chal Resp ρ b M)) :
@@ -116,8 +113,6 @@ private lemma onlineExtract_eq_match (x : Stmt) (π : FischlinProof Commit Chal 
       | some (ω₁, p₁, ω₂, p₂) => some <$> σ.extract ω₁ p₁ ω₂ p₂
       | none => return none := rfl
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- If the scan fires, every element of the support of `onlineExtract` is `some` of a valid
 witness (given special soundness and per-repetition verification of the final proof). -/
 private lemma onlineExtract_support_of_findWitness_ne_none
@@ -150,8 +145,6 @@ private lemma onlineExtract_support_of_findWitness_ne_none
     exact σ.extract_sound_of_speciallySoundAt (hss x) (Ne.symm hneq) (hver i) hverE hw
   · exact absurd hfe (by simp)
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- Every `some w` in the support of `onlineExtract` is a valid witness, given special soundness
 and per-repetition verification of the final proof. -/
 private lemma onlineExtract_some_valid
@@ -170,8 +163,6 @@ private lemma onlineExtract_some_valid
     cases Option.some.inj hw'
     exact hrel
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- If the extractor's scan finds nothing, then every log entry matching a repetition's
 `(stmt, comList, rep)` tags and verifying against the proof's commitment carries exactly the
 proof's challenge. -/
@@ -198,8 +189,6 @@ private lemma chal_pinned_of_findWitness_none
   rw [ite_eq_left (by simp [hstmt, hcom, hrep, hverE, hne])] at hfe
   exact Option.some_ne_none _ hfe
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- Under `UniqueResponses`, if additionally the final proof verifies at repetition `i`, a
 matching log entry carries exactly the proof's challenge *and response*. -/
 private lemma resp_pinned_of_findWitness_none
@@ -238,10 +227,11 @@ Runs a cheating prover with a logged random oracle, then checks:
 Returns `true` (the "bad event") when verification succeeds but the extracted
 output is either `none` or an invalid witness.
 
-The `prover` argument is the raw function rather than `KnowledgeSoundnessAdv`
+The `prover` argument is the raw function rather than `KnowledgeSoundnessAdversary`
 to keep type inference tractable. -/
 @[expose]
-def knowledgeSoundnessExp
+def knowledgeSoundnessExperiment
+    [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
@@ -249,35 +239,33 @@ def knowledgeSoundnessExp
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
   let loggedRO := ro.withLogging
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog roSpec) (StateT roSpec.QueryCache ProbComp))
   do
-    let ((π, roLog), cache) ← (simulateQ (idImpl + loggedRO) (prover x msg)).run |>.run ∅
-    let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-      (StateT roSpec.QueryCache ProbComp)
+    let ((π, roLog), cache) ←
+      (simulateQ (unifSpec.passthrough + loggedRO) (prover x msg)).run.run ∅
     let (verified, _) ←
-      (simulateQ (idImpl' + ro)
+      (simulateQ (unifSpec.passthrough + ro)
         ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).verify x msg π)).run cache
     let extracted ← onlineExtract σ ρ b M x π roLog
     return (verified && !(match extracted with | some w => rel x w | none => false))
 
-/-- The verification step of `knowledgeSoundnessExp`, as a standalone computation
+/-- The verification step of `knowledgeSoundnessExperiment`, as a standalone computation
 (definitionally the same term). -/
-private def ksVerify (x : Stmt) (msg : M) (π : FischlinProof Commit Chal Resp ρ)
+private def ksVerify
+    [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
+    (x : Stmt) (msg : M) (π : FischlinProof Commit Chal Resp ρ)
     (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :
     ProbComp (Bool × (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :=
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
-  let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT roSpec.QueryCache ProbComp)
-  (simulateQ (idImpl' + ro)
+  (simulateQ (unifSpec.passthrough + ro)
     ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
       σ hr ρ b S M).verify x msg π)).run cache
 
-/-- The sampling phase of `knowledgeSoundnessExp` (prover run + verification), keeping the proof,
-the random-oracle log, and the verdict, but discarding the extractor. -/
+/-- The sampling phase of `knowledgeSoundnessExperiment` (prover run + verification), keeping the
+proof, the random-oracle log, and the verdict, but discarding the extractor. -/
 private def ksSample
+    [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
@@ -287,20 +275,15 @@ private def ksSample
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
   let loggedRO := ro.withLogging
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog roSpec) (StateT roSpec.QueryCache ProbComp))
   do
-    let ((π, roLog), cache) ← (simulateQ (idImpl + loggedRO) (prover x msg)).run |>.run ∅
-    let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-      (StateT roSpec.QueryCache ProbComp)
+    let ((π, roLog), cache) ←
+      (simulateQ (unifSpec.passthrough + loggedRO) (prover x msg)).run.run ∅
     let (verified, _) ←
-      (simulateQ (idImpl' + ro)
+      (simulateQ (unifSpec.passthrough + ro)
         ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
           σ hr ρ b S M).verify x msg π)).run cache
     return ((π, roLog), verified)
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- If the scan fires (and the proof verifies per repetition), the "bad-output" map of the
 extractor result never produces `true`. -/
 private lemma probOutput_onlineExtract_bad_eq_zero
@@ -320,7 +303,6 @@ private lemma probOutput_onlineExtract_bad_eq_zero
     simp [hrel]
   · simp [probOutput_eq_zero_of_not_mem_support he]
 
-omit [SampleableType Chal] in
 /-- **Bad-event bridge.** The bad event of the knowledge-soundness experiment is bounded by the
 probability that the verifier accepts while the extractor's scan misses.
 
@@ -328,7 +310,8 @@ The hypothesis `hverSupp` isolates the remaining combinatorial fact about the Fi
 any accepting run of the (simulated) verifier implies per-repetition Σ-verification of the proof
 (the Σ-verification bits inside `Fischlin.verify` are deterministic, independent of the oracle
 answers). -/
-private lemma knowledgeSoundnessExp_bad_le_misses
+private lemma knowledgeSoundnessExperiment_bad_le_misses
+    [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (hss : σ.SpeciallySound)
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
@@ -339,10 +322,10 @@ private lemma knowledgeSoundnessExp_bad_le_misses
       (c' : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache),
       (true, c') ∈ support (ksVerify σ hr ρ b S M x msg π cache) →
       ∀ i, σ.verify x (π i).1 (π i).2.1 (π i).2.2 = true) :
-    Pr[= true | knowledgeSoundnessExp σ hr ρ b S M prover x msg] ≤
+    Pr[= true | knowledgeSoundnessExperiment σ hr ρ b S M prover x msg] ≤
       Pr[fun out => out.2 = true ∧ fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none
         | ksSample σ hr ρ b S M prover x msg] := by
-  simp only [knowledgeSoundnessExp, ksSample]
+  simp only [knowledgeSoundnessExperiment, ksSample]
   rw [probOutput_bind_eq_tsum, probEvent_bind_eq_tsum]
   refine ENNReal.tsum_le_tsum fun a => mul_le_mul' le_rfl ?_
   obtain ⟨⟨π', roLog'⟩, cache'⟩ := a
@@ -365,29 +348,30 @@ private lemma knowledgeSoundnessExp_bad_le_misses
       have hzero := probOutput_onlineExtract_bad_eq_zero σ ρ b M hss hver hfw
       exact le_trans (le_of_eq hzero) zero_le
 
+end extraction
+
+/-! ### Logged and unlogged random-oracle runs -/
+
 /-- The lifted `unifSpec` forwarder on the logging stack, exactly as in
-`knowledgeSoundnessExp`. -/
+`knowledgeSoundnessExperiment`. -/
 private def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp))
+  unifSpec.passthrough
 
-/-- The logged random oracle, exactly as in `knowledgeSoundnessExp`. -/
+/-- The logged random oracle, exactly as in `knowledgeSoundnessExperiment`. -/
 private def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl hashSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (hashSpec.randomOracle).withLogging
 
-/-- The combined logging implementation, exactly the `idImpl + loggedRO` of
-`knowledgeSoundnessExp` and `ksSample`. -/
+/-- The combined logging implementation, exactly the `unifSpec.passthrough + loggedRO` of
+`knowledgeSoundnessExperiment` and `ksSample`. -/
 private def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl (unifSpec + hashSpec)
       (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   idImplW hashSpec + loggedROW hashSpec
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- The lifted unifSpec forwarder neither logs nor touches the cache. -/
 private lemma idImplW_run_run {ι : Type} (hashSpec : OracleSpec ι)
     (i : unifSpec.Domain) (c : hashSpec.QueryCache) :
@@ -396,8 +380,6 @@ private lemma idImplW_run_run {ι : Type} (hashSpec : OracleSpec ι)
         (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) i) := by
   rfl
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Cache hit: the logged random oracle returns the cached value, logs it, leaves the cache. -/
 private lemma loggedROW_run_run_some {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -409,8 +391,6 @@ private lemma loggedROW_run_run_some {ι : Type} {hashSpec : OracleSpec ι} [Dec
     QueryImpl.withCaching_run_some _ h, pure_bind]
   rfl
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Cache miss: the logged random oracle samples, caches the value, and logs it. -/
 private lemma loggedROW_run_run_none {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -426,8 +406,6 @@ private lemma loggedROW_run_run_none {ι : Type} {hashSpec : OracleSpec ι} [Dec
   simp only [Function.comp_apply, pure_bind, map_eq_bind_pure_comp]
   rfl
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- **Master log↔cache correspondence.** For any run of the Fischlin-style logging composite
 from cache `cache₀` (and an empty ambient log), every support outcome `((a, log), cache')`
 satisfies: the cache only grows, every logged entry is in the final cache with the same value,
@@ -514,8 +492,6 @@ private theorem mem_support_run_correspondence {ι : Type} {hashSpec : OracleSpe
                   · rw [QueryCache.cacheQuery_of_ne _ _ ht] at h
                     exact Or.inr h
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Every logged entry is in the final cache with the same value (run from `∅`). -/
 private theorem log_subset_cache {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -525,8 +501,6 @@ private theorem log_subset_cache {ι : Type} {hashSpec : OracleSpec ι} [Decidab
     ∀ e ∈ z.1.2, z.2 e.1 = some e.2 :=
   (mem_support_run_correspondence oa ∅ z hz).2.1
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Every final cache entry was logged (run from `∅`). -/
 private theorem cache_subset_log {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -537,8 +511,6 @@ private theorem cache_subset_log {ι : Type} {hashSpec : OracleSpec ι} [Decidab
       (⟨t, u⟩ : (s : hashSpec.Domain) × hashSpec.Range s) ∈ z.1.2 := fun t u hu =>
   ((mem_support_run_correspondence oa ∅ z hz).2.2 t u hu).resolve_right (by simp)
 
-omit [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal] [DecidableEq Resp]
-  [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal] [DecidableEq M] in
 /-- Each domain point has a unique logged value (run from `∅`). -/
 private theorem log_unique {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq ι]
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
@@ -563,11 +535,10 @@ private def CachePinned (x : Stmt) (π : FischlinProof Commit Chal Resp ρ)
     cache r = some u → r.stmt = x → r.comList = (List.ofFn fun j => (π j).1) →
     σ.verify x (π r.rep).1 r.chal r.resp = true → r.chal = (π r.rep).2.1
 
-omit [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [SampleableType Chal]
-  [DecidableEq M] in
 /-- **Log↔cache transfer.** Under the log↔cache correspondence, the extractor's scan misses
 iff the cache-side pinning predicate holds. -/
 private theorem fischlinFindWitness_eq_none_iff_cachePinned
+    [DecidableEq Stmt] [DecidableEq Commit] [DecidableEq Chal]
     (x : Stmt) (π : FischlinProof Commit Chal Resp ρ)
     {log : QueryLog (fischlinROSpec Stmt Commit Chal Resp ρ b M)}
     {cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache}
@@ -597,7 +568,5 @@ private theorem fischlinFindWitness_eq_none_iff_cachePinned
       have hpinned := hpin e.1 e.2 (hT1 e he) hstmt hcom (by rw [hrep]; exact hver)
       rw [hpinned, hrep]
     · rfl
-
-end security
 
 end Fischlin

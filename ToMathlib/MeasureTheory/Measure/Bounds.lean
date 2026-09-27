@@ -5,6 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
+public import ToMathlib.MeasureTheory.Integral.Bounds
 public import ToMathlib.MeasureTheory.Measure.Subprobability
 public import Mathlib.Probability.UniformOn
 
@@ -31,6 +32,26 @@ theorem bind_apply_mono (μ : Measure α) (f g : α → Measure β)
     μ.bind f event ≤ μ.bind g event := by
   rw [bind_apply hevent hf.aemeasurable, bind_apply hevent hg.aemeasurable]
   exact lintegral_mono_ae hfg
+
+/-- AE comparison with finitely many reference events integrates a conditional allowance.
+The reference output spaces may differ, and neither the source measure nor the continuation
+measures need a probability bound. The allowance need not be measurable. -/
+theorem bind_apply_le_sum_add_lintegral_ae
+    {ι : Type*} [Fintype ι] {γ : ι → Type*} [∀ i, MeasurableSpace (γ i)]
+    (μ : Measure α) (f : α → Measure β) (g : ∀ i, α → Measure (γ i))
+    (hf : AEMeasurable f μ) (hg : ∀ i, AEMeasurable (g i) μ)
+    {event : Set β} (hevent : MeasurableSet event)
+    (events : ∀ i, Set (γ i)) (hevents : ∀ i, MeasurableSet (events i))
+    (bound : α → ENNReal)
+    (h : ∀ᵐ a ∂μ, f a event ≤ (∑ i, g i a (events i)) + bound a) :
+    μ.bind f event ≤ (∑ i, μ.bind (g i) (events i)) + ∫⁻ a, bound a ∂μ := by
+  have hg' (i : ι) : AEMeasurable (fun a ↦ g i a (events i)) μ :=
+    (Measure.measurable_coe (hevents i)).comp_aemeasurable (hg i)
+  rw [bind_apply hevent hf]
+  have hi (i : ι) : μ.bind (g i) (events i) = ∫⁻ a, g i a (events i) ∂μ :=
+    bind_apply (hevents i) (hg i)
+  simp_rw [hi]
+  exact lintegral_le_sum_add_lintegral_of_le_ae Finset.univ (fun i _ ↦ hg' i) h
 
 /-- Charge a measurable bad set and integrate an upper bound on the remaining branches. -/
 theorem bind_apply_le_add_lintegral_of_bad (μ : Measure α) [IsSubprobabilityMeasure μ]

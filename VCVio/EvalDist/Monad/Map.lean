@@ -47,6 +47,27 @@ lemma probOutput_map_eq_of_evalSPMF_eq [MonadLiftT m SPMF] [LawfulMonadLiftT m S
 lemma evalSPMF_comp_map [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] [LawfulMonad m] (mx : m α) :
     evalSPMF ∘ (fun f => f <$> mx) = fun f : (α → β) => f <$> 𝒮[mx] := by aesop
 
+/-! ## Support of a constant map -/
+
+section const_support
+
+variable [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m] (mx : m α) (y : β)
+
+@[aesop safe norm, grind .]
+lemma support_map_const
+    (hx : (support mx).Nonempty) :
+    support ((fun _ => y) <$> mx) = {y} := by
+  aesop
+
+@[grind .]
+lemma finSupport_map_const
+    [DecidableEq α] [DecidableEq β] [HasEvalFinset m]
+    (hx : (finSupport mx).Nonempty) : finSupport ((fun _ => y) <$> mx) =
+      if (finSupport mx).Nonempty then {y} else ∅ := by
+  grind
+
+end const_support
+
 variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] (mx : m α) (f : α → β)
 
 @[simp, grind =]
@@ -149,21 +170,6 @@ lemma probOutput_map_eq_single [MonadAttach m] [ExactMonadAttach m] [EvalDistCom
 section const
 
 variable (mx : m α) (y : β)
-
-omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
-@[aesop safe norm, grind .]
-lemma support_map_const [MonadAttach m] [ExactMonadAttach m]
-    (hx : (support mx).Nonempty) :
-    support ((fun _ => y) <$> mx) = {y} := by
-  aesop
-
-omit [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] in
-@[grind .]
-lemma finSupport_map_const [MonadAttach m] [ExactMonadAttach m]
-    [DecidableEq α] [DecidableEq β] [HasEvalFinset m]
-    (hx : (finSupport mx).Nonempty) : finSupport ((fun _ => y) <$> mx) =
-      if (finSupport mx).Nonempty then {y} else ∅ := by
-  grind
 
 @[simp, aesop safe norm, grind =_]
 lemma probOutput_map_const [MonadAttach m] [EvalDistCompatible m] (y' : β) :

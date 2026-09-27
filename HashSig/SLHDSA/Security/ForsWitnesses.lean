@@ -141,7 +141,7 @@ witness at the ITSR-selected tree.
 The FORS-`F` branch is an **open-preimage** witness, not a target-collision one.  The
 source's postcondition (`FORS_ES.ec:4454-4462`) asks for an index in range, an index the signer
 never opened, and `f pp tw x = y`; it carries no `x <> x'`, and the winning condition of
-`SM_DT_OpenPRE_SourceFinalValidity.Experiment` carries none either.  A value equal to the honest
+`SM_DT_OpenPRE_SourceFinalValidity.experiment` carries none either.  A value equal to the honest
 secret is therefore allowed to win, and adding a distinctness hypothesis here would state
 something strictly stronger than the source establishes and strictly stronger than the game needs.
 
@@ -342,7 +342,7 @@ caller applies it at `t = forsSigLeafIndex p md i`, with `x` the secret value tr
 
 This is the `valid_OpenPRE` branch (`FORS_ES.ec:3231`), whose postcondition's hash obligation is
 `f pp tw x = y` (`:4462`).  There is deliberately no `≠`: the source asks only that the value be
-*a* preimage of the recorded image, and `SM_DT_OpenPRE_SourceFinalValidity.Experiment`'s winning
+*a* preimage of the recorded image, and `SM_DT_OpenPRE_SourceFinalValidity.experiment`'s winning
 condition asks only that too.  The remaining half of that postcondition — that the index was never
 opened (`:4461`) — is the `valid_ITSR` branch and is not proved here.
 
@@ -462,7 +462,7 @@ Write `idx = forsSigLeafIndex p md tree` for the global leaf index the digest op
 
 The two distinctness conjuncts are oriented differently.  `tlCollision`'s reads submitted-first,
 `recovered ≠ forsHonestRoots …`, which is the order
-`SM_DT_TCR_SourceFinalValidity.Experiment` tests (`m ≠ mj`, the submitted message first); the
+`SM_DT_TCR_SourceFinalValidity.experiment` tests (`m ≠ mj`, the submitted message first); the
 `hCollision` one reads honest-first, inherited from `PerfectMerkleTree.findCollision_sound`, whose
 `c₁ ≠ c₂` names the honest pair first.  Nothing turns on it — a consumer that wants the game's
 order applies `Ne.symm` — but the two branches of this one predicate do not agree.
@@ -842,7 +842,7 @@ theorem forsWitness_valid_hCollision_eval [SampleableType prims.PkSeed] (sk : pr
 
 /-- The `F`-preimage branch, read in `forsFOpenPreProblem`'s vocabulary: the submitted value and
 the honest secret value have the same evaluation at the encoded leaf tweak.  That is the shape
-`SM_DT_OpenPRE_SourceFinalValidity.Experiment` tests — `eval pk t m = eval pk t x` at the committed
+`SM_DT_OpenPRE_SourceFinalValidity.experiment` tests — `eval pk t m = eval pk t x` at the committed
 target input `x`, here the honest secret value whose image is the honest leaf image.  It is the hash
 half of that game's winning condition; the other half, that the index was never opened, is not
 established here.  `forsFOpenPreProblem_eval_adrsToKey` is not `@[simp]` where its two siblings are,

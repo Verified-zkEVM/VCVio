@@ -59,6 +59,15 @@ theorem activate_congr
     | tick => simp only [activate, hv]
     | yield => simp only [activate, hv]
 
+/-- One FIFO schedule action preserves its joint residual-state law. -/
+theorem fifoStep_congr
+    {left right : (node : Node) → Handler (StateT S ProbComp) (network.effect node)}
+    (h : JointHandlerLawEq left right) (activation : Activation Node) (state : State network S) :
+    𝒟[fifoStep left activation state] = 𝒟[fifoStep right activation state] := by
+  cases activation with
+  | node node => exact activate_congr h .fifo node state
+  | deliver => rfl
+
 variable [DiscreteMeasurableSpace (State network S)]
 
 /-- Every complete residual-state law is preserved at every finite token horizon. -/
@@ -74,16 +83,6 @@ theorem runToken_congr
     apply Measure.bind_congr_right
     filter_upwards [] with state
     exact ih state
-
-omit [DiscreteMeasurableSpace (State network S)] in
-/-- One FIFO schedule action preserves its joint residual-state law. -/
-theorem fifoStep_congr
-    {left right : (node : Node) → Handler (StateT S ProbComp) (network.effect node)}
-    (h : JointHandlerLawEq left right) (activation : Activation Node) (state : State network S) :
-    𝒟[fifoStep left activation state] = 𝒟[fifoStep right activation state] := by
-  cases activation with
-  | node node => exact activate_congr h .fifo node state
-  | deliver => rfl
 
 /-- Every fixed FIFO schedule preserves residual queues, machines, and service-state laws. -/
 theorem runFIFO_congr

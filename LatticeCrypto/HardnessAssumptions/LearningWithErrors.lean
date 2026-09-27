@@ -22,8 +22,8 @@ statements.
 
 namespace LearningWithErrors
 
-export NoisyLearning (Problem distr uniformDistr Adversary experiment advantage
-  game0 game1 SearchAdversary searchExperiment searchAdvantage
+export NoisyLearning (Problem distr uniformDistr Adversary game advantage
+  realExperiment randomExperiment SearchAdversary searchExperiment searchAdvantage
   matrixProblem zmodMatrixProblem moduleMatrixProblem ringProblem lpnProblem)
 
 end LearningWithErrors

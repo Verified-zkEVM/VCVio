@@ -43,7 +43,14 @@ open MeasureTheory
 
 namespace PMF
 
-variable {α : Type*} [MeasurableSpace α] [MeasurableSingletonClass α]
+variable {α : Type*} [MeasurableSpace α]
+
+/-- Every `PMF` measure is dominated by counting measure. -/
+theorem absolutelyContinuous_count (p : PMF α) : p.toMeasure ≪ Measure.count :=
+  Measure.AbsolutelyContinuous.mk fun s _ h => by
+    simp [Measure.count_eq_zero_iff.mp h]
+
+variable [MeasurableSingletonClass α]
 
 /-- A `PMF`'s measure is counting measure with the mass function as density. -/
 theorem toMeasure_eq_withDensity_count (p : PMF α) :
@@ -51,12 +58,6 @@ theorem toMeasure_eq_withDensity_count (p : PMF α) :
   ext s hs
   rw [PMF.toMeasure_apply_eq_tsum, withDensity_apply _ hs, ← lintegral_indicator hs,
     lintegral_count]
-
-omit [MeasurableSingletonClass α] in
-/-- Every `PMF` measure is dominated by counting measure. -/
-theorem absolutelyContinuous_count (p : PMF α) : p.toMeasure ≪ Measure.count :=
-  Measure.AbsolutelyContinuous.mk fun s _ h => by
-    simp [Measure.count_eq_zero_iff.mp h]
 
 section Countable
 

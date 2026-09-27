@@ -88,7 +88,7 @@ needs an instance-synthesis check, not a grep.
 | `VCVio/EvalDist/Inequalities.lean:41–44` private `tsum_sub_tsum_le_tsum_sub` (unused hypothesis) | local `ENNReal.tsum_tsub_le_tsum_tsub`, `ToMathlib/Data/ENNReal/AbsDiff.lean:114` | — | **done** (this PR) |
 | `VCVio/CryptoFoundations/Asymptotics/Negligible.lean:43–46` `negligible_of_le` | `SuperpolynomialDecay.trans_eventuallyLE`, `Mathlib/Analysis/Asymptotics/SuperpolynomialDecay.lean:133–138`, with `g := 0` | yes (`IsOrderedRing ℝ≥0∞`, `Mathlib/Data/ENNReal/Basic.lean:143`) | **open** — restate through it; gains eventually-≤ |
 | `ToMathlib/Data/ENNReal/SumSquares.lean:63–80` `sq_sum_div_card_le_sum_sq` (17 lines) | `ENNReal.div_le_of_le_mul`, `Mathlib/Data/ENNReal/Inv.lean:386` | yes | **open** — keep the statement, two-line proof |
-| `Examples/PRFTagReader/Asymptotic.lean:66–84` `negligible_natMul_of_poly_bound`, `negligible_ofReal_natDiv_of_poly_bound` | generic; belong in `Negligible.lean` | — | **open (internal)** — move |
+| `negligible_natMul_of_poly_bound`, `negligible_ofReal_natDiv_of_poly_bound` | generic; belong in `Negligible.lean` | — | **done** — `VCVio/CryptoFoundations/Asymptotics/Negligible.lean:131,141` |
 | `ToMathlib/ProbabilityTheory/OptimalCoupling.lean:110` private `spmf_ext`; `LatticeCrypto/Ring/Kernel.lean:149` `poly_ext` | local `@[ext] SPMF.ext` (`SPMF.lean:187`), `@[ext] PolyBackend.ext_coeff` (`Ring/Core.lean:142`) | — | **done** (this PR) — wrappers over the `@[ext]` lemmas they call |
 
 ### Keep — genuinely VCVio's, or the upstream form does not fit
@@ -104,6 +104,8 @@ needs an instance-synthesis check, not a grep.
 | `ToMathlib/Data/ENNReal/SumSquares.lean` `sq_sum_le_card_mul_sum_sq` | Name-collides with `Mathlib/Algebra/Order/Chebyshev.lean:136`, whose hypotheses are ordered-ring; `ℝ≥0∞` is not. Keep under the `ENNReal` namespace with a docstring cross-reference. |
 | `List.Vector` in 30 files (`MerkleTree/{Inductive,Addressed,MultiExtractability}/**`, `EvalDist/List.lean`, `Examples/PRGfromPRF.lean`, `ToMathlib/General.lean`) | Mathlib's `Mathlib/Data/Vector/Defs.lean` docstring steers verification code to core `Vector`, but core `Vector` has no `cons`, `head` needs `[NeZero n]`, `tail : Vector α (n-1)` (`Init/Data/Vector/Basic.lean:138,416`), and no `inductionOn`; no `List.Vector ↔ Vector` conversion exists in core, Batteries, or Mathlib (grep `toListVector\|List.Vector.toVector\|ofListVector` empty). The Merkle proofs are cons/nil inductions along depth. Keep. Both core-`Vector` and `List.Vector` already have `SampleableType` instances in `VCVio/OracleComp/Constructions/SampleableType.lean`; keep their coverage when changing either representation. |
 | `@[reducible]` on `OracleComp`, `OracleSpec.toPFunctor`, `ofFn`, `unifSpec`, `ProbComp`, `QueryImpl` | Type-level constructors; instance discrimination-tree keys depend on them (`docs/agents/gotchas.md` §7). |
+| Unbundled instance hypotheses on oracle answer types (`[DecidableEq ι]`, `[Fintype (spec.Range t)]`, `[∀ t, Inhabited (spec.Range t)]`, …) | Lean core (`DecidableEq (Sigma β)` at `Init/Core.lean:1508`), Mathlib (`PFunctor.Obj.iget [DecidableEq P.A]`, `MvPFunctor.Obj.inhabited [∀ i, Inhabited (α i)]`, `WType` `[∀ a, Fintype (β a)]`, `Sigma.instFintype`, `decidablePiFintype`), cslib, and PolyFun's own API (213 `[DecidableEq P.A]` binders) all take per-consumer hypotheses; no upstream defines an instance-bundle class for a polynomial functor, and every upstream unconstrained `DecidableEq α` conclusion is a `def` or a lowered-priority projection of a class with more content. The former bundled `OracleSpec.{DecidableEq,Fintype,Inhabited}` classes were keyed `C *` through the reducible `Domain`/`Range` (#772; `docs/agents/gotchas.md` §8b) and were deleted; `PFunctor.{DecidableEq,Fintype,Inhabited}` in PolyFun (ported from VCVio, consumed nowhere) are deleted in the follow-up PolyFun PR. `IsUniformMeasureSpec` is a proposition about the chosen measures, matching Mathlib's `uniformOn` API (`instIsProbabilityMeasure_uniformOn_univ [Finite Ω] [Nonempty Ω]`). |
+| `SampleableType` as one class (`selectElem` plus the law `𝒟[$ᵗ β] = uniformOn Set.univ`), with `SampleableType.nonempty`/`SampleableType.finite` as `priority := 100` instances | The bundled shape follows Mathlib's `Fintype`/`FinEnum` (data plus its laws, no separate `Lawful*` mixin; the `BEq`/`LawfulBEq` split exists only because unlawful `BEq` is used). The derived `Prop` instances are wildcard-keyed exactly like `Finite.of_fintype` (`Mathlib/Data/Fintype/EquivFin.lean:170`, `priority := 900`) and `instNonemptyOfInhabited`, and the lowered priority is that file's own "we want `Finite` instances to have higher priority than ones coming from `Fintype`" rule applied one level further down. `Nonempty` and `Finite` are `class inductive`s, so `extends` is not available for them. |
 | `scripts/AxiomSweep.lean` | `leanprover-community/axiom-audit` (reachable through `lean-action`'s `axiom-audit` input) is allowlist-only with **no committed baseline**, so it cannot express the shrink-only `sorryAx` ratchet (40 entries on `main`) or the `._native.` zero-debt rule (now with an empty grandfathered list: no `native_decide` remains in the proof libraries). |
 | Sub-probability, TV/Rényi/KL divergences, couplings, `NegativeHypergeometric`, `MeasurableSpace (Option/Except)`, the `ToMathlib/Control` monad-theory files, `OrderEnrichedCategory`, `FinRatPMF`, the `LatticeCrypto/Ring` backend, the concrete SHA-2/Keccak/FPR implementations | Verified absent from the pinned trees by keyword grep (`IsSubprobability`, `Coupling` (only Gromov–Hausdorff hits), `hypergeometric`, `MeasurableSpace (Option`, `DijkstraMonad\|GradedMonad\|IndexedMonad\|RelativeMonad\|OrderedMonad\|MonadTransformer`, `MonoidalCategory Preord`, `NTT\|negacyclic`). |
 
@@ -122,6 +124,15 @@ needs an instance-synthesis check, not a grep.
 
 ### Track — heading into core, or blocked on a design decision
 
+**Native TV composition.** Bounded-observation contraction uses Mathlib's
+`lintegral_eq_lintegral_meas_lt` layer cake formula and `ENNReal.edist_le_iff_le_add_right`.
+Conditional discrepancy uses `lintegral_sub_le'` and AE-measurable measure families; there is no
+measurable selection of coupling witnesses or assumption that conditional TV is measurable.
+Mathlib kernel composition delegates to the measure rules. Parameterized expected majorants use
+`Measurable.lintegral_kernel_prod_right'` with its s-finite kernel premise. The local owners are
+`ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` and
+`ToMathlib/Probability/Kernel/TotalVariation.lean`.
+
 **Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
 `Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`. Quantitative,
 qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's
@@ -129,8 +140,12 @@ qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mat
 relational coupling interface belongs to VCVio and uses core assertion lattices.
 Loom2 is no longer a dependency. The generic native expectation algebra lives in
 `VCVio.ProgramLogic.Unary.WP.Measure`; its scoped core interpretation needs only
-lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra,
-while explicit compatibility equations retain the old discrete theorem surface.
+lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra
+under configured answer measures. Native Hoare and simulation owners require neither uniformity
+nor probability compatibility classes; public transformer equations normalize their core WP.
+Chosen-space assertions carry measurability premises, while mapped assertions and state-discarding
+simulation leave hidden outputs and states unmeasured. Explicit coherence equations connect the
+remaining discrete relational and forking consumers in their compatibility owners.
 
 Core `vcgen` and VCVio's probability/coupling frontend coexist. The latter still owns
 its `@[vcspec]`/`@[wpStep]` dispatch; the older `Std.Do` handler bridge also remains a
@@ -150,7 +165,11 @@ synthesis at the erased `PFunctor.mk` literal intact (the canary in
 checks of dependent types (`QueryTracking/RandomOracle/EagerTable.lean`) and of
 instance-implicit arguments (`Decidable` searches in
 `MerkleTree/Inductive/Batch/Disagreement.lean` time out), so it stays with a comment that says
-so. Of the twelve `attribute [local implicit_reducible]` sites, six are load-bearing
+so. The same `.implicit` bump applies to assigned-metavariable type checks inside
+`synthInstance`, which runs with `foApprox := true` (`Lean/Meta/SynthInstance.lean:964`): a
+star-keyed instance concluding `C (spec.Range t)` could therefore assign `?spec := β` at a goal
+`C (β a)` and detour through `ofFn`, which is why no such instance exists (#772,
+`docs/agents/gotchas.md` §8b). Of the twelve `attribute [local implicit_reducible]` sites, six are load-bearing
 (`Coupling`, `Structures`, `EvalDist/PFunctor`, `Traversal`, `Coercions/Add`, `ReplayFork`) and
 six compiled without and were deleted. Demoting `evalDist` from `@[reducible]` is deferred to
 after the #637 rework: its first failure is the `LawfulEvalDistSemantics (FreeM P)` instance,
@@ -560,11 +579,10 @@ for `∀ n, f n ≠ ⊤` (≈6 lines from `ENNReal.tendsto_toReal_zero_iff`,
 `M:Topology/Instances/ENNReal/Lemmas.lean:549`, `toReal_mul/pow/natCast`) and its `ofReal` twin
 (`ENNReal.toReal_ofReal`). With it the whole field stratum applies on the `toReal` side
 (`superpolynomialDecay_iff_isBigO`, `…_isLittleO`, `…_zpow_tendsto_zero`, `param_zpow_mul`) with
-`hk := tendsto_natCast_atTop_atTop`. Today every consumer re-crosses `ℝ → ℝ≥0∞` by hand
-(`V:Examples/PRFTagReader/Asymptotic.lean:300–310` chains seven `ENNReal.ofReal_add_le`;
-`V:VCVio/Interaction/UC/Computational.lean:386–390`; `V:VCVio/CryptoFoundations/SecExp.lean:141–149`),
-and the generic `negligible_natMul_of_poly_bound` / `negligible_ofReal_natDiv_of_poly_bound` live in
-`Examples/PRFTagReader/Asymptotic.lean:66–84` instead of `Negligible.lean`.
+`hk := tendsto_natCast_atTop_atTop`. Advantages and UC error bounds are `ℝ≥0∞`-valued, so no
+consumer crosses `ℝ → ℝ≥0∞` to state negligibility, and the generic
+`negligible_natMul_of_poly_bound` / `negligible_ofReal_natDiv_of_poly_bound` are in
+`V:VCVio/CryptoFoundations/Asymptotics/Negligible.lean:131,141`.
 
 **Idioms VCVio does not use** (counts over `V:{VCVio,ToMathlib,Examples,…}`):
 - `lift a to ℝ≥0 using ha` then `norm_cast`: 39 uses in Mathlib's own `ENNReal` core files, 0 in

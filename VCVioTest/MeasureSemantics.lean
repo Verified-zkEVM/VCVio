@@ -106,16 +106,10 @@ theorem isProbabilityMeasure_denote_shiftedGaussian :
 /-- A finite, inhabited interface used without a discrete probability interpretation. -/
 @[expose, reducible] def nativeCoinSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => Bool⟩
 
-instance : nativeCoinSpec.Fintype where
-  fintypeB _ := inferInstance
-
-instance : nativeCoinSpec.Inhabited where
-  inhabitedB _ := inferInstance
-
 /-- The native uniform measure interpretation is an explicit value, not a global instance. -/
 @[instance_reducible]
 noncomputable def nativeCoinMeasureSpec : nativeCoinSpec.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFintypeInhabited _
+  IsMeasureSpec.uniformOfFiniteNonempty _
 
 attribute [local instance] nativeCoinMeasureSpec
 
@@ -327,7 +321,7 @@ theorem denote_probComp_apply_singleton {α : Type} [MeasurableSpace α]
 The statement is about a Mathlib `Measure`; the proof is the existing `Pr[…]` result. This is
 the compatibility gate: converting the semantics does not cost the crypto proofs. -/
 example (sp : ℕ) (mgen : ProbComp (BitVec sp)) (σ : BitVec sp) :
-    FreeM.denote ((oneTimePad sp).PerfectSecrecyCipherExp mgen) {σ}
+    FreeM.denote ((oneTimePad sp).perfectSecrecyCipherExperiment mgen) {σ}
       = (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
   rw [denote_probComp_apply_singleton]
   exact oneTimePad.probOutput_cipher_uniform sp mgen σ

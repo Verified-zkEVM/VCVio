@@ -54,7 +54,7 @@ any given hash budget.  The content of the relation is the implication
 `hasSignQueryBound_of_hasHashQueryBound`, and the inequality that does hold is between the least
 witnesses, `sInf_signBound_le_sInf_hashBound`. -/
 theorem not_forall_signBound_le_hashBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (q : ℕ)
     (hq : HasHashQueryBound core adv q) :
     ¬ ∀ qs qh : ℕ, HasSignQueryBound core adv qs → HasHashQueryBound core adv qh → qs ≤ qh := by
   intro h

@@ -32,8 +32,7 @@ variable {D R : Type} [DecidableEq D]
 @[expose]
 def prfHandler [SampleableType R] :
     QueryImpl (PRFOracleSpec D R) (StateT (List (D × R)) ProbComp) :=
-  (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT (List (D × R)) ProbComp) + handler (D := D) (fun _ => $ᵗ R)
+  unifSpec.passthrough + handler (D := D) (fun _ => $ᵗ R)
 
 /-- Private randomness and ideal PRF calls preserve the decoded cache. -/
 theorem prf_local_projection [SampleableType R]
@@ -49,7 +48,7 @@ theorem prf_local_projection [SampleableType R]
         pure (x, decode cache))
       simp only [map_bind, map_pure, Prod.map_apply, id_eq]
   | inr d =>
-      simp only [prfHandler, QueryImpl.add_apply_inr, PRFScheme.prfIdealQueryImpl_apply_inr]
+      simp only [prfHandler, PRFScheme.prfIdealQueryImpl_apply_inr]
       exact local_projection (fun _ => $ᵗ R) d cache
 
 section Closing
@@ -220,7 +219,7 @@ noncomputable abbrev bad :=
 theorem reference_instrument :
     (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
       (sessionsPerTag := sessionsPerTag)).extendState (fun q _ r _ => advance q r) =
-      multipleBadQueryImpl (sessionsPerTag := sessionsPerTag) := by
+      multipleBadQueryImpl _ _ _ sessionsPerTag := by
   funext q state
   cases q with
   | inl tag => rw [multipleBadQueryImpl_tag_run]; rfl
@@ -231,7 +230,7 @@ theorem bad_local (q : (UnlinkOracleSpec TagId Nonce Digest).Domain)
     (state : (UnlinkState TagId × List ((TagId × Nonce) × Digest)) ×
       UnlinkBadState TagId Nonce Digest) :
     Prod.map id projectBad <$> bad (sessionsPerTag := sessionsPerTag) q state =
-      multipleBadQueryImpl (sessionsPerTag := sessionsPerTag) q (projectBad state) := by
+      multipleBadQueryImpl _ _ _ sessionsPerTag q (projectBad state) := by
   have h := instrument_projection (multiple (sessionsPerTag := sessionsPerTag))
     (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) projectMultiple
     multiple_local advance q state
@@ -241,15 +240,16 @@ theorem bad_local (q : (UnlinkOracleSpec TagId Nonce Digest).Domain)
 
 variable [Fintype Nonce] [Fintype Digest] [NeZero sessionsPerTag]
 
-/-- The list-cached FIFO experiment satisfies the direct-coupling bound with all three losses. -/
-theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
+/-- The list-cached FIFO experiment satisfies the direct-coupling bound, for either verdict `out`,
+with all three losses. -/
+theorem preserved_bound (out : Bool) (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : Nat)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
     𝒟[Network.verdict (multiple (sessionsPerTag := sessionsPerTag))
-      (qReader + qTag) adversary (UnlinkState.init, [])] {true} ≤
+      (qReader + qTag) adversary (UnlinkState.init, [])] {out} ≤
     𝒟[Network.verdict (single (sessionsPerTag := sessionsPerTag))
-      (qReader + qTag) adversary (UnlinkState.init, [])] {true} +
+      (qReader + qTag) adversary (UnlinkState.init, [])] {out} +
     𝒟[Network.stateEvent (bad (sessionsPerTag := sessionsPerTag))
       (qReader + qTag) adversary ((UnlinkState.init, []), UnlinkBadState.init)
       (fun state => state.2.bad)] {true} +
@@ -293,7 +293,7 @@ theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
   rw [verdict_projection _ _ projectMultiple multiple_local _ _ hbound,
       verdict_projection _ _ projectSingle single_local _ _ hbound]
   have hbad := stateEvent_projection (bad (sessionsPerTag := sessionsPerTag))
-    (multipleBadQueryImpl (sessionsPerTag := sessionsPerTag)) projectBad bad_local
+    (multipleBadQueryImpl _ _ _ sessionsPerTag) projectBad bad_local
     (qReader + qTag) adversary hbound ((UnlinkState.init, []), UnlinkBadState.init)
     (fun state => state.2.bad)
   simp only [Function.comp_def, projectBad] at hbad
@@ -302,8 +302,8 @@ theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
     Network.multiple_le_single_add_bad_of_joint_law
       (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
-      (multipleBadQueryImpl (sessionsPerTag := sessionsPerTag))
+      (multipleBadQueryImpl _ _ _ sessionsPerTag)
       (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
-      Measurable.of_discrete adversary qReader qTag hReader hTag
+      Measurable.of_discrete out adversary qReader qTag hReader hTag
 
 end PRFTagReader.CachedPRF

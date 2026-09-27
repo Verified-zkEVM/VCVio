@@ -16,7 +16,7 @@ public import VCVio.OracleComp.EvalDist.UniformCompatibility
 # Hashed ElGamal Encryption
 
 This file defines hashed ElGamal encryption and proves that its one-time IND-CPA
-advantage is bounded by the DDH advantage plus the entropy smoothing advantage.
+advantage is at most twice the sum of the DDH advantage and the entropy smoothing advantage.
 
 Unlike standard ElGamal (where the message space is the group `G`), hashed ElGamal
 uses a hash function `hash : HK → G → M` to map the DH shared secret into the
@@ -33,7 +33,7 @@ message space `M`. This allows encrypting messages in an arbitrary additive grou
 | Game 3 | Replace hash output with random | ES advantage |
 | Game 4 (= 1/2) | The masking term is uniform, so the challenge bit is hidden | 0 |
 
-Main theorem: `|Pr[CPA wins] - 1/2| ≤ ddhAdvantage + esAdvantage`.
+Main theorem: the one-time IND-CPA advantage is at most `2 * (ddhAdvantage + esAdvantage)`.
 
 ## References
 
@@ -41,7 +41,6 @@ Port of EasyCrypt's `hashed_elgamal_std.ec`.
 -/
 
 @[expose] public section
-
 
 open OracleComp OracleSpec ENNReal DiffieHellman
 
@@ -77,21 +76,20 @@ Following `elGamalAsymmEnc`, `F` and `G` are explicit type parameters. -/
 namespace hashedElGamal
 
 variable {F : Type} [Field F] [Fintype F] [DecidableEq F] [SampleableType F]
-variable {G : Type} [AddCommGroup G] [Module F G] [DecidableEq G]
+variable {G : Type} [AddCommGroup G] [Module F G]
 variable {HK : Type} [SampleableType HK]
-variable {M : Type} [AddCommGroup M] [SampleableType M] [DecidableEq M]
+variable {M : Type} [AddCommGroup M] [SampleableType M]
 variable {g : G} {hash : HK → G → M}
 
 /-! ## Correctness -/
 
-omit [DecidableEq G] in
-theorem correct :
+theorem correct [DecidableEq M] :
     (hashedElGamal F g hash).PerfectlyCorrect ProbCompRuntime.probComp := by
   have hcomm : ∀ (a b : F), a • (b • g) = b • (a • g) := by
     intro a b; rw [← mul_smul, mul_comm, mul_smul]
   intro msg
   rw [ProbCompRuntime.probComp_evalDist, evalDist_apply_singleton]
-  simp [AsymmEncAlg.CorrectExp, hashedElGamal, hcomm,
+  simp [AsymmEncAlg.correctnessExperiment, hashedElGamal, hcomm,
     probOutput_bind_const, probOutput_map_const]
 
 /-! ## DDH Reduction -/
@@ -104,7 +102,8 @@ Given DDH challenge `(g, A, B, T)`:
 - Let adversary choose messages
 - Encrypt using `B` as first ciphertext component, `hash hk T + m_b` as second
 - Return adversary's guess -/
-def ddhReduction (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) : DDHAdversary F G :=
+def ddhReduction (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
+    DDHAdversary F G :=
   fun _g A B T => do
     let hk ← $ᵗ HK
     let (m₁, m₂, st) ← adv.chooseMessages (hk, A)
@@ -122,7 +121,7 @@ Given `(hk, v)` where `v` is either `hash hk (z • g)` or random:
 - Let adversary choose messages
 - Encrypt using `(y • g, v + m_b)` as ciphertext
 - Return adversary's guess -/
-def esReduction (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
+def esReduction (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
     HK × M → ProbComp Bool :=
   fun (hk, v) => do
     let sk ← ($ᵗ F)
@@ -135,13 +134,12 @@ def esReduction (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
 
 /-! ## Game-hop lemmas -/
 
-omit [DecidableEq G] [DecidableEq M] in
 /-- Game 0 = CPA game equals DDH real branch (by construction). -/
 theorem cpaGame_eq_ddhReal
-    (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
-    Pr[= true | AsymmEncAlg.IND_CPA_OneTime_Game_ProbComp
-      (encAlg := hashedElGamal F g hash) adv] =
-    Pr[= true | ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)] := by
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
+    ProbCompRuntime.probComp.evalDist (AsymmEncAlg.IND_CPA_OneTime_Game
+        (encAlg := hashedElGamal F g hash) adv ProbCompRuntime.probComp) {true} =
+      Pr[= true | ddhRealExperiment g (ddhReduction (F := F) (hash := hash) adv)] := by
   let cpaCanonical : ProbComp Bool := do
     let b ← ($ᵗ Bool)
     let hk ← ($ᵗ HK)
@@ -161,11 +159,12 @@ theorem cpaGame_eq_ddhReal
       (y • g, hash hk (y • (a • g)) + if b then x.1 else x.2.1)
     pure (b == b')
   have hleft :
-      Pr[= true | AsymmEncAlg.IND_CPA_OneTime_Game_ProbComp
-        (encAlg := hashedElGamal F g hash) adv] =
-      Pr[= true | cpaCanonical] := by
-    simp [AsymmEncAlg.IND_CPA_OneTime_Game_ProbComp, hashedElGamal, cpaCanonical,
-      map_eq_bind_pure_comp, smul_smul, mul_comm]
+      ProbCompRuntime.probComp.evalDist (AsymmEncAlg.IND_CPA_OneTime_Game
+          (encAlg := hashedElGamal F g hash) adv ProbCompRuntime.probComp) {true} =
+        Pr[= true | cpaCanonical] := by
+    change 𝒟[($ᵗ Bool) >>= fun b => _] {true} = _
+    rw [evalDist_apply_singleton]
+    simp [hashedElGamal, cpaCanonical, map_eq_bind_pure_comp, smul_smul, mul_comm]
   have hswap :
       Pr[= true | cpaCanonical] =
       Pr[= true | ddhCanonical] := by
@@ -184,7 +183,7 @@ theorem cpaGame_eq_ddhReal
           pure (b == b'))
         true)
   have hright :
-      Pr[= true | ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)] =
+      Pr[= true | ddhRealExperiment g (ddhReduction (F := F) (hash := hash) adv)] =
       Pr[= true | ddhCanonical] := by
     trans Pr[= true | do
       let a ← ($ᵗ F)
@@ -195,7 +194,7 @@ theorem cpaGame_eq_ddhReal
       let b' ← adv.distinguish x.2.2
         (y • g, hash hk (y • (a • g)) + if b then x.1 else x.2.1)
       pure (b == b')]
-    · simpa [ddhExpReal, ddhReduction, monad_norm,
+    · simpa [ddhRealExperiment, ddhReduction, monad_norm,
         smul_smul, mul_comm] using
         (probOutput_bind_congr' ($ᵗ F) true (fun a => by
           simpa [monad_norm, smul_smul, mul_comm] using
@@ -225,12 +224,11 @@ theorem cpaGame_eq_ddhReal
           true)
   exact hleft.trans (hswap.trans hright.symm)
 
-omit [DecidableEq G] [DecidableEq M] in
 /-- DDH random branch equals ES real experiment (by construction). -/
 theorem ddhRand_eq_esReal
-    (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
-    Pr[= true | ddhExpRand g (ddhReduction (F := F) (hash := hash) adv)] =
-    Pr[= true | EntropySmoothing.realExp F g hash (esReduction (F := F) (g := g) adv)] := by
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
+    Pr[= true | ddhRandomExperiment g (ddhReduction (F := F) (hash := hash) adv)] =
+    Pr[= true | EntropySmoothing.realExperiment F g hash (esReduction (F := F) (g := g) adv)] := by
   let canonical : ProbComp Bool := do
     let hk ← ($ᵗ HK)
     let a ← ($ᵗ F)
@@ -242,7 +240,7 @@ theorem ddhRand_eq_esReal
       (y • g, hash hk (z • g) + if b then x.1 else x.2.1)
     pure (b == b')
   have hleft :
-      Pr[= true | ddhExpRand g (ddhReduction (F := F) (hash := hash) adv)] =
+      Pr[= true | ddhRandomExperiment g (ddhReduction (F := F) (hash := hash) adv)] =
       Pr[= true | canonical] := by
     trans Pr[= true | do
       let a ← ($ᵗ F)
@@ -254,7 +252,7 @@ theorem ddhRand_eq_esReal
       let b' ← adv.distinguish x.2.2
         (y • g, hash hk (z • g) + if b then x.1 else x.2.1)
       pure (b == b')]
-    · simpa [ddhExpRand, ddhReduction, monad_norm] using
+    · simpa [ddhRandomExperiment, ddhReduction, monad_norm] using
         (probOutput_bind_congr' ($ᵗ F) true (fun a => by
           simpa [monad_norm] using
             (probOutput_bind_bind_swap
@@ -310,11 +308,11 @@ theorem ddhRand_eq_esReal
               pure (b == b'))
             true)
   have hright :
-      Pr[= true | EntropySmoothing.realExp F g hash (esReduction (F := F) (g := g) adv)] =
+      Pr[= true | EntropySmoothing.realExperiment F g hash (esReduction (F := F) (g := g) adv)] =
       Pr[= true | canonical] := by
     refine probOutput_bind_congr' ($ᵗ HK) true ?_
     intro hk
-    simpa [EntropySmoothing.realExp, esReduction, canonical, monad_norm] using
+    simpa [EntropySmoothing.realExperiment, esReduction, canonical, monad_norm] using
       (probOutput_bind_bind_swap
         ($ᵗ F)
         (do
@@ -329,13 +327,12 @@ theorem ddhRand_eq_esReal
           pure (b == b'))
         true)
   exact hleft.trans hright.symm
-omit [DecidableEq G] [DecidableEq M] in
 /-- ES ideal experiment: the ciphertext `v + m_b` with uniform `v` is uniform
 regardless of `b`, so the game reduces to random guessing.
 Uses the same uniform-masking principle as the one-time pad. -/
 theorem esIdeal_eq_half
-    (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
-    Pr[= true | EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)] = 1 / 2 := by
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
+    Pr[= true | EntropySmoothing.idealExperiment (esReduction (F := F) (g := g) adv)] = 1 / 2 := by
   let inner : HK → ProbComp Bool := fun hk => do
     let h ← ($ᵗ M)
     let sk ← ($ᵗ F)
@@ -417,11 +414,11 @@ theorem esIdeal_eq_half
     rw [hrepr hk]
     exact probOutput_decide_eq_uniformBool_half (f hk) (hf hk)
   calc
-    Pr[= true | EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)] =
+    Pr[= true | EntropySmoothing.idealExperiment (esReduction (F := F) (g := g) adv)] =
         Pr[= true | do
           let hk ← ($ᵗ HK)
           inner hk] := by
-      simp [EntropySmoothing.idealExp, esReduction,
+      simp [EntropySmoothing.idealExperiment, esReduction,
         show ∀ a b : Bool, (a == b) = decide (a = b) from by decide,
         inner]
     _ = Pr[= true | do
@@ -440,41 +437,38 @@ theorem esIdeal_eq_half
 
 /-! ## Main theorem -/
 
-omit [DecidableEq G] [DecidableEq M] in
-/-- **Main theorem.** The one-time IND-CPA bias of hashed ElGamal is bounded by
-the DDH distinguishing advantage plus the entropy smoothing advantage:
-
-`|Pr[CPA wins] - 1/2| ≤ ddhDistAdvantage(D) + EntropySmoothing.advantage(E)`
-
-where `D` is the DDH reduction and `E` is the ES reduction, both constructed
-from the CPA adversary. -/
+/-- **Main theorem.** The one-time IND-CPA advantage of hashed ElGamal is at most twice the sum of
+the DDH advantage of `ddhReduction` and the entropy-smoothing advantage of `esReduction`, both
+constructed from the CPA adversary. The game hops bound the distance of the success probability
+from `1 / 2`, and the Boolean bias of the guessing game is twice that distance. -/
 theorem hashedElGamal_IND_CPA_bound
-    (adv : AsymmEncAlg.IND_CPA_Adv (hashedElGamal F g hash)) :
-    |(Pr[= true | AsymmEncAlg.IND_CPA_OneTime_Game_ProbComp
-      (encAlg := hashedElGamal F g hash) adv]).toReal - 1 / 2| ≤
-      ddhDistAdvantage g (ddhReduction (F := F) (hash := hash) adv) +
-      EntropySmoothing.advantage F g hash (esReduction (F := F) (g := g) adv) := by
-  rw [cpaGame_eq_ddhReal (F := F) (g := g) (hash := hash)]
-  let real := ddhExpReal g (ddhReduction (F := F) (hash := hash) adv)
-  let rand := ddhExpRand g (ddhReduction (F := F) (hash := hash) adv)
-  let esReal := EntropySmoothing.realExp F g hash (esReduction (F := F) (g := g) adv)
-  let ideal := EntropySmoothing.idealExp (esReduction (F := F) (g := g) adv)
-  change |(Pr[= true | real]).toReal - 1 / 2| ≤
-    real.boolDistAdvantage rand + esReal.boolDistAdvantage ideal
-  have hideal : (𝒟[ideal] {true}).toReal = 1 / 2 := by
+    (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
+    AsymmEncAlg.IND_CPA_OneTime_Advantage (hashedElGamal F g hash) ProbCompRuntime.probComp
+        adv ≤
+      2 * (ddhAdvantage g (ddhReduction (F := F) (hash := hash) adv) +
+        EntropySmoothing.advantage F g hash (esReduction (F := F) (g := g) adv)) := by
+  rw [AsymmEncAlg.IND_CPA_OneTime_Advantage,
+    MeasureTheory.Measure.boolBias_eq_two_mul_absDiff_half_of_isProbabilityMeasure,
+    cpaGame_eq_ddhReal (F := F) (g := g) (hash := hash), ← evalDist_apply_singleton]
+  gcongr
+  let real := ddhRealExperiment g (ddhReduction (F := F) (hash := hash) adv)
+  let rand := ddhRandomExperiment g (ddhReduction (F := F) (hash := hash) adv)
+  let esReal := EntropySmoothing.realExperiment F g hash (esReduction (F := F) (g := g) adv)
+  let ideal := EntropySmoothing.idealExperiment (esReduction (F := F) (g := g) adv)
+  change ENNReal.absDiff (𝒟[real] {true}) (1 / 2) ≤
+    𝒟[real].boolDist 𝒟[rand] + 𝒟[esReal].boolDist 𝒟[ideal]
+  have hideal : 𝒟[ideal] {true} = 1 / 2 := by
     rw [evalDist_apply_singleton, esIdeal_eq_half (F := F) (g := g) (hash := hash) adv]
-    norm_num
   have hrand : 𝒟[rand] {true} = 𝒟[esReal] {true} := by
     simpa only [rand, esReal, evalDist_apply_singleton] using
       ddhRand_eq_esReal (F := F) (g := g) (hash := hash) adv
   calc
-    |(Pr[= true | real]).toReal - 1 / 2| = real.boolDistAdvantage ideal := by
-      unfold ProbComp.boolDistAdvantage
-      rw [hideal, evalDist_apply_singleton]
-    _ ≤ real.boolDistAdvantage rand + rand.boolDistAdvantage ideal :=
-      ProbComp.boolDistAdvantage_triangle _ _ _
-    _ = real.boolDistAdvantage rand + esReal.boolDistAdvantage ideal := by
-      simp only [ProbComp.boolDistAdvantage, hrand]
+    ENNReal.absDiff (𝒟[real] {true}) (1 / 2) = 𝒟[real].boolDist 𝒟[ideal] := by
+      rw [MeasureTheory.Measure.boolDist, hideal]
+    _ ≤ 𝒟[real].boolDist 𝒟[rand] + 𝒟[rand].boolDist 𝒟[ideal] :=
+      MeasureTheory.Measure.boolDist_triangle _ _ _
+    _ = 𝒟[real].boolDist 𝒟[rand] + 𝒟[esReal].boolDist 𝒟[ideal] := by
+      simp only [MeasureTheory.Measure.boolDist, hrand]
 
 end Security
 

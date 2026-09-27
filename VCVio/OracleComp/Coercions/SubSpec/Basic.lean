@@ -198,6 +198,13 @@ lemma liftComp_query (q : OracleQuery spec α) :
       q.cont <$> (liftM (spec.query q.input) : OracleComp superSpec _) := by
   simp [liftComp]
 
+/-- Signature translation of a primitive query is its query lift. -/
+lemma liftComp_liftM_query (t : spec.Domain) :
+    liftComp (liftM (spec.query t) : OracleComp spec (spec.Range t)) superSpec =
+      (liftM (spec.query t) : OracleComp superSpec (spec.Range t)) := by
+  simpa only [OracleQuery.cont_query, OracleQuery.input_query, id_map] using
+    liftComp_query superSpec (spec.query t)
+
 @[simp]
 lemma liftComp_bind (mx : OracleComp spec α) (ob : α → OracleComp spec β) :
     liftComp (mx >>= ob) superSpec =

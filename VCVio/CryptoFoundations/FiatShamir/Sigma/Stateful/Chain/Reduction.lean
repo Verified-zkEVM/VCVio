@@ -48,23 +48,50 @@ attribute [fs_simp]
   simulatedNmaImpl
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
-variable [SampleableType Stmt] [SampleableType Wit]
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
+/-- The final freshness/verification continuation performs no signing queries,
+hence contributes zero cumulative H3 signing cost. -/
+private lemma verifyFreshComp_expectedQuerySlack_eq_zero [DecidableEq M]
+    (G : QueryImpl (cmaSpec M Commit Chal Resp Stmt)
+      (StateT (CmaData M Commit Chal Stmt Wit × Bool) (OracleComp unifSpec)))
+    (ε : CmaData M Commit Chal Stmt Wit → ℝ≥0∞)
+    (p : (Stmt × (M × (Commit × Resp))) × List M)
+    (qS : ℕ)
+    (s : CmaData M Commit Chal Stmt Wit × Bool) :
+    expectedQuerySlack G
+      (IsCostlyQuery (M := M) (Commit := Commit) (Chal := Chal)
+        (Resp := Resp) (Stmt := Stmt))
+      ε
+      (verifyFreshComp (σ := σ) (hr := hr) (M := M)
+        (Commit := Commit) (Chal := Chal) (Resp := Resp) p)
+      qS s = 0 := by
+  rcases p with ⟨⟨pk, msg, sig⟩, signed⟩
+  rcases sig with ⟨c, resp⟩
+  rcases s with ⟨s, bad⟩
+  cases bad
+  · change expectedQuerySlack G
+        (IsCostlyQuery (M := M) (Commit := Commit) (Chal := Chal)
+          (Resp := Resp) (Stmt := Stmt))
+        ε
+        (liftM ((cmaSpec M Commit Chal Resp Stmt).query (.ro (msg, c))) >>= fun a =>
+          pure (!decide (msg ∈ signed) && σ.verify pk c a resp))
+        qS (s, false) = 0
+    rw [expectedQuerySlack_query_bind, expectedQuerySlackStep_free] <;> simp [IsCostlyQuery]
+  · simp [verifyFreshComp, expectedQuerySlack_bad_eq_zero]
+
 variable [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
-  [Finite Chal] [Inhabited Chal]
 
 attribute [local instance] instIsUniformSpecChalSingleton
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)
     (oa : OracleComp (cmaOracleSpec M Commit Chal Resp) (M × (Commit × Resp))) :
     ((simulateQ (forkLoggedProbImpl (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) simT pk) oa).run
         (forkInitialState M Commit Chal) >>= fun x =>
-      simulateQ (forkWrappedUniformImpl (Chal := Chal))
+      simulateQ (forkWrappedUniformImpl Chal)
         (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk x.1 x.2)) =
     ((simulateQ (simulatedNmaLoggedProbImpl (M := M) (Commit := Commit)
@@ -79,7 +106,7 @@ private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux
     ((simulateQ (forkLoggedProbImpl (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) simT pk) oa).run
         (forkInitialState M Commit Chal) >>= fun x =>
-      simulateQ (forkWrappedUniformImpl (Chal := Chal))
+      simulateQ (forkWrappedUniformImpl Chal)
         (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk x.1 x.2))
         =
@@ -114,16 +141,15 @@ private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux
               (Chal := Chal))
           simpa [forkLoggedProj, forkInitialState, forkLoggedProbOrnament] using hrun]
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) :
     (nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
         (nmaInit M Commit Chal Stmt Wit)
         ((cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
           (signedFreshAdv σ hr M adv))
       =
-    simulateQ (forkWrappedUniformImpl (Chal := Chal))
+    simulateQ (forkWrappedUniformImpl Chal)
       (forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) σ hr adv simT) := by
   let : Fintype Chal := Fintype.ofFinite Chal
@@ -173,11 +199,11 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
   apply bind_congr
   intro ps
   change _ =
-    ((simulateQ (forkWrappedUniformImpl (Chal := Chal))
+    ((simulateQ (forkWrappedUniformImpl Chal)
         ((simulateQ (forkLoggedImpl (M := M) (Commit := Commit)
           (Chal := Chal) (Resp := Resp) simT ps.1) (adv.main ps.1)).run
           (forkInitialState M Commit Chal))) >>= fun x =>
-      simulateQ (forkWrappedUniformImpl (Chal := Chal))
+      simulateQ (forkWrappedUniformImpl Chal)
         (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ ps.1 x.1 x.2))
   rw [forkLoggedProbImpl_run (M := M) (Commit := Commit) (Chal := Chal)
@@ -257,15 +283,13 @@ private lemma nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body
           (Resp := Resp) σ ps.1 x.1 x.2) := by
         rw [hcmaRun]
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] in
 /-- H5 boundary in shifted-NMA form. This is the fork-side statement after the
 native H4 normalization has moved `cmaSim` to `nma ∘ cmaToNma`. The bound is in
 terms of the verify-wrapped adversary `nmaAdvFromCmaWithFinalQuery` at fork
 slot parameter `qH` (the framework's `Fin (qH + 1)` indexing accommodates the
 wrapper's verifier-point query). -/
-theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork
-    [Finite Chal] [Finite Commit] [Finite Resp]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork [Inhabited Chal]
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
@@ -301,44 +325,11 @@ theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork
 
 /-! ## H3 cost factoring -/
 
-omit [SampleableType Stmt] [SampleableType Wit] [DecidableEq Commit]
-  [SampleableType Chal] [Finite Chal] [Inhabited Chal] in
-/-- The final freshness/verification continuation performs no signing queries,
-hence contributes zero cumulative H3 signing cost. -/
-private lemma verifyFreshComp_expectedQuerySlack_eq_zero
-    (G : QueryImpl (cmaSpec M Commit Chal Resp Stmt)
-      (StateT (CmaData M Commit Chal Stmt Wit × Bool) (OracleComp unifSpec)))
-    (ε : CmaData M Commit Chal Stmt Wit → ℝ≥0∞)
-    (p : (Stmt × (M × (Commit × Resp))) × List M)
-    (qS : ℕ)
-    (s : CmaData M Commit Chal Stmt Wit × Bool) :
-    expectedQuerySlack G
-      (IsCostlyQuery (M := M) (Commit := Commit) (Chal := Chal)
-        (Resp := Resp) (Stmt := Stmt))
-      ε
-      (verifyFreshComp (σ := σ) (hr := hr) (M := M)
-        (Commit := Commit) (Chal := Chal) (Resp := Resp) p)
-      qS s = 0 := by
-  rcases p with ⟨⟨pk, msg, sig⟩, signed⟩
-  rcases sig with ⟨c, resp⟩
-  rcases s with ⟨s, bad⟩
-  cases bad
-  · change expectedQuerySlack G
-        (IsCostlyQuery (M := M) (Commit := Commit) (Chal := Chal)
-          (Resp := Resp) (Stmt := Stmt))
-        ε
-        (liftM ((cmaSpec M Commit Chal Resp Stmt).query (.ro (msg, c))) >>= fun a =>
-          pure (!decide (msg ∈ signed) && σ.verify pk c a resp))
-        qS (s, false) = 0
-    rw [expectedQuerySlack_query_bind, expectedQuerySlackStep_free] <;> simp [IsCostlyQuery]
-  · simp [verifyFreshComp, expectedQuerySlack_bad_eq_zero]
-
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 /-- Tight native H3 bound for the freshness-preserving adversary, using the
 candidate/verifier split so the final verifier hash query is not charged to H3
 signing replacement. -/
 private theorem signedFreshAdv_H3_bound
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk β : ℝ≥0∞) (hζ_zk : ζ_zk < ∞)
     (hHVZK : σ.HVZK simT ζ_zk.toReal)
@@ -346,8 +337,7 @@ private theorem signedFreshAdv_H3_bound
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    ENNReal.ofReal (cmaH3Advantage M Commit Chal σ hr simT
-      (signedFreshAdv σ hr M adv)) ≤
+    cmaH3Advantage M Commit Chal σ hr simT (signedFreshAdv σ hr M adv) ≤
       (qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + qH) * β := by
   let A : OracleComp (cmaSpec M Commit Chal Resp Stmt) Bool :=
     signedFreshAdv σ hr M adv
@@ -396,7 +386,6 @@ private theorem signedFreshAdv_H3_bound
 
 /-! ## H4: linked simulation as shifted NMA execution -/
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] [Inhabited Chal] in
 /-- Native H4 hop in probability form. -/
 theorem cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -410,11 +399,10 @@ theorem cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
     (Stmt := Stmt) (Wit := Wit) simT A
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 /-- Convert the shifted-NMA H5 boundary into the linked simulated-CMA form used
 by the top-level chain. -/
 theorem cmaSim_signedFreshAdv_le_fork_of_shifted_h5
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qH : ℕ)
     (hH5 :
@@ -435,12 +423,10 @@ theorem cmaSim_signedFreshAdv_le_fork_of_shifted_h5
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp)
     (Stmt := Stmt) (Wit := Wit) simT (signedFreshAdv σ hr M adv)]
 
-omit [SampleableType Stmt] [SampleableType Wit] [Finite Chal] in
 /-- Native H5 boundary in the linked simulated-CMA form used by the top-level
 chain. -/
-theorem cmaSim_signedFreshAdv_le_fork
-    [Finite Chal] [Finite Commit] [Finite Resp]
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+theorem cmaSim_signedFreshAdv_le_fork [Inhabited Chal]
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
@@ -460,7 +446,6 @@ theorem cmaSim_signedFreshAdv_le_fork
 
 /-! ## Top-level chain factored over H5 -/
 
-omit [SampleableType Stmt] [SampleableType Wit] [Inhabited Chal] in
 /-- Native stateful top-level chain, assuming the H5 replay-forking boundary.
 
 This theorem carries the H1/H2/H3/H4 arithmetic directly in the stateful chain.
@@ -472,12 +457,12 @@ theorem cma_advantage_le_fork_bound_of_h5
     (hHVZK : σ.HVZK simT ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simT β)
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH)
     (hH1H2 :
-      adv.advantage (FiatShamir.runtime M) ≤
+      SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
         𝒟[(cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) (signedFreshAdv σ hr M adv)] {true})
     (hH5 :
@@ -487,7 +472,7 @@ theorem cma_advantage_le_fork_bound_of_h5
             (signedFreshAdv σ hr M adv)] ≤
         Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH) :
-    adv.advantage (FiatShamir.runtime M) ≤
+    SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
       Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH +
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
@@ -498,17 +483,13 @@ theorem cma_advantage_le_fork_bound_of_h5
   have hHVZK' : σ.HVZK simT (ENNReal.ofReal ζ_zk).toReal := by
     rwa [ENNReal.toReal_ofReal hζ_zk]
   have hH3_abs :
-      ENNReal.ofReal
-          (((cmaReal M Commit Chal σ hr).runProb
-              (cmaInit M Commit Chal Stmt Wit) A).boolDistAdvantage
-            ((cmaSim M Commit Chal hr simT).runProb
-              (cmaInit M Commit Chal Stmt Wit) A))
+      𝒟[(cmaReal M Commit Chal σ hr).runProb (cmaInit M Commit Chal Stmt Wit) A].boolDist
+          𝒟[(cmaSim M Commit Chal hr simT).runProb (cmaInit M Commit Chal Stmt Wit) A]
         ≤ (qS : ℝ≥0∞) * ENNReal.ofReal ζ_zk
-          + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β := by
-    simpa [A, cmaH3Advantage, QueryImpl.Stateful.advantage] using
-      signedFreshAdv_H3_bound (σ := σ) (hr := hr) (M := M)
-        (Commit := Commit) (Chal := Chal) (Resp := Resp)
-        adv simT (ENNReal.ofReal ζ_zk) β hζ_zk_lt hHVZK' hPredSim qS qH hQ
+          + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β :=
+    signedFreshAdv_H3_bound (σ := σ) (hr := hr) (M := M)
+      (Commit := Commit) (Chal := Chal) (Resp := Resp)
+      adv simT (ENNReal.ofReal ζ_zk) β hζ_zk_lt hHVZK' hPredSim qS qH hQ
   have hH3_prob :
       𝒟[(cmaReal M Commit Chal σ hr).runProb
         (cmaInit M Commit Chal Stmt Wit) A] {true} ≤
@@ -516,15 +497,9 @@ theorem cma_advantage_le_fork_bound_of_h5
         (cmaInit M Commit Chal Stmt Wit) A] {true} +
         ((qS : ℝ≥0∞) * ENNReal.ofReal ζ_zk
           + (qS : ℝ≥0∞) * ((qS : ℝ≥0∞) + (qH : ℝ≥0∞)) * β) :=
-    le_trans
-      (ProbComp.evalDist_apply_true_le_add_ofReal_boolDistAdvantage
-        ((cmaReal M Commit Chal σ hr).runProb
-          (cmaInit M Commit Chal Stmt Wit) A)
-        ((cmaSim M Commit Chal hr simT).runProb
-          (cmaInit M Commit Chal Stmt Wit) A))
-      (add_le_add le_rfl hH3_abs)
+    (MeasureTheory.Measure.apply_true_le_add_boolDist _ _).trans (add_le_add le_rfl hH3_abs)
   calc
-    adv.advantage (FiatShamir.runtime M)
+    SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv
         ≤ 𝒟[(cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) A] {true} := by
             simpa only [A] using hH1H2
@@ -544,25 +519,23 @@ theorem cma_advantage_le_fork_bound_of_h5
         rw [ENNReal.ofReal_mul (Nat.cast_nonneg qS), ENNReal.ofReal_natCast]
         ring_nf
 
-omit [SampleableType Stmt] [SampleableType Wit] in
 /-- Native stateful chain with H5 discharged by the replay-forking boundary,
 leaving only the public-to-stateful H1/H2 compatibility premise. -/
-theorem cma_advantage_le_fork_bound_of_h1h2
-    [Finite Commit] [Finite Resp]
+theorem cma_advantage_le_fork_bound_of_h1h2 [Inhabited Chal]
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
     (hHVZK : σ.HVZK simT ζ_zk)
     (β : ENNReal)
     (hPredSim : σ.simCommitPredictability simT β)
-    (adv : SourceAdv (σ := σ) (hr := hr) (M := M))
+    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH)
     (hH1H2 :
-      adv.advantage (FiatShamir.runtime M) ≤
+      SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
         𝒟[(cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) (signedFreshAdv σ hr M adv)] {true}) :
-    adv.advantage (FiatShamir.runtime M) ≤
+    SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
       Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH +
         ENNReal.ofReal ((qS : ℝ) * ζ_zk) +

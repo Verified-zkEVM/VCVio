@@ -66,10 +66,8 @@ noncomputable def measureSemantics {ι : Type} {hashOracleSpec : OracleSpec ι}
 /-- Full public-randomness runtime for an FO hash world. -/
 noncomputable def runtime {ι : Type} {hashOracleSpec : OracleSpec ι}
     {M PK C R K : Type} (variant : Variant hashOracleSpec M PK C R K) :
-    ProbCompRuntime (OracleComp (unifSpec + hashOracleSpec)) where
-  toMeasureSemanticsVia := measureSemantics variant
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
+    ProbCompRuntime (OracleComp (unifSpec + hashOracleSpec)) :=
+  ProbCompRuntime.withStateOracle variant.queryImpl variant.initCache
 
 /-- Generic FO construction parameterized by a hash world and a rejection policy. -/
 def scheme
@@ -86,7 +84,7 @@ def scheme
     let fb ← monadLift policy.keygen
     return (pk, ((pk, sk), fb))
   encaps := fun pk => do
-    let msg ← monadLift ($ᵗ M : ProbComp M)
+    let msg ← $ᵗ M
     let r ← variant.deriveCoins pk msg
     let c := pke.encrypt pk msg r
     let k ← variant.deriveKey pk msg c
@@ -472,11 +470,8 @@ end costAccounting
 noncomputable def runtime
     {M R KD K : Type}
     [DecidableEq M] [DecidableEq KD] [SampleableType R] [SampleableType K] :
-    ProbCompRuntime (OracleComp (oracleSpec M R KD K)) where
-  toMeasureSemanticsVia := MeasureSemanticsVia.withStateOracle
-    (hashImpl := queryImpl (M := M) (R := R) (KD := KD) (K := K))
+    ProbCompRuntime (OracleComp (oracleSpec M R KD K)) :=
+  ProbCompRuntime.withStateOracle (queryImpl (M := M) (R := R) (KD := KD) (K := K))
     ((∅, ∅) : QueryCache M R KD K)
-  toProbCompLift := ProbCompLift.ofMonadLift _
-  evalDist_map_eq f hf mx := MeasureSemanticsVia.withStateOracle_evalDist_map _ _ f hf mx
 
 end UTransform

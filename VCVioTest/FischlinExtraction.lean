@@ -35,7 +35,7 @@ def record : FischlinROInput Unit Bool Bool Unit 1 Unit :=
 
 /-- A prover that has made no queries when it submits its proof. -/
 @[expose]
-def prover : KnowledgeSoundnessAdv (Stmt := Unit) (Commit := Bool) (Chal := Bool)
+def prover : KnowledgeSoundnessAdversary (Stmt := Unit) (Commit := Bool) (Chal := Bool)
     (Resp := Unit) 1 1 Unit where
   run _ _ := pure proof
 
@@ -72,7 +72,7 @@ example : onlineExtract protocol 1 1 Unit () proof [] = pure none := by
 
 example : (fun z : Bool × Option Unit => z.1 && !(z.2.any (fun _ => true))) <$>
       knowledgeRun protocol relation 1 1 0 Unit prover () () =
-    knowledgeSoundnessExp protocol relation 1 1 0 Unit prover.run () () :=
+    knowledgeSoundnessExperiment protocol relation 1 1 0 Unit prover.run () () :=
   knowledgeRun_bad protocol relation 1 1 0 Unit prover () ()
 
 example :

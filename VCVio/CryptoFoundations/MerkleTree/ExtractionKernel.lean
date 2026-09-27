@@ -48,17 +48,17 @@ structure NodeQueryModel (Query : Type) (Address : Type u) (Y : Type) where
   /-- Constructed queries retain their ordered child pair exactly. -/
   input_mkQuery : ∀ address input, view.input (mkQuery address input) = input
 
-variable [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
 
 /-- The labels of the non-dummy nodes that the extractor actually reconstructs. Unlike the full
 query log, this list follows only response links reachable from the claimed root. -/
-abbrev extractedTargets (model : NodeQueryModel Query Address Y) (s : Skeleton)
+abbrev extractedTargets [DecidableEq Address] [DecidableEq Y]
+    (model : NodeQueryModel Query Address Y) (s : Skeleton)
     (addressKey : SkeletonInternalIndex s → Address)
     (log : (Query →ₒ Y).QueryLog) (root : Y) : List Y :=
   MerkleTreeExtractor.targets model.view s addressKey log root
 
 /-- Verify an opening by issuing the model's complete node query at each typed position. -/
-def verifyOpening (model : NodeQueryModel Query Address Y) {s : Skeleton}
+def verifyOpening [DecidableEq Y] (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (idx : SkeletonLeafIndex s) (leaf root : Y) (proof : List.Vector Y idx.depth) :
     OracleComp (Query →ₒ Y) Bool := do
@@ -91,7 +91,6 @@ def ChainInCache (model : NodeQueryModel Query Address Y) {s : Skeleton}
 def CacheAddsValue (cache₀ cache₁ : (Query →ₒ Y).QueryCache) (target : Y) : Prop :=
   ∃ input : Query, cache₁ input = some target ∧ cache₀ input = none
 
-omit [DecidableEq Query] [DecidableEq Address] [DecidableEq Y] in
 /-- A cache chain remains valid when its cache is extended pointwise. -/
 lemma chainInCache_mono (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (idx : SkeletonLeafIndex s)
@@ -111,10 +110,9 @@ lemma chainInCache_mono (model : NodeQueryModel Query Address Y) {s : Skeleton}
     exact ⟨ancestor, hle hentry,
       ih (fun position => addressKey (.ofRight position)) hrec⟩
 
-omit [DecidableEq Address] [DecidableEq Y] in
 /-- Every supported result of the cached putative-root computation induces a chain in the final
 cache from the supplied leaf to that result. -/
-lemma chainInCache_of_mem_support_getPutativeRoot
+lemma chainInCache_of_mem_support_getPutativeRoot [DecidableEq Query]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (idx : SkeletonLeafIndex s)
     (leaf : Y) (proof : List.Vector Y idx.depth) (root : Y)
@@ -194,10 +192,9 @@ lemma chainInCache_of_mem_support_getPutativeRoot
         (ih (fun position => addressKey (.ofRight position)) proof.tail ancestor
           cache₀ cacheMid hrec)⟩
 
-omit [DecidableEq Address] in
 /-- Every successful supported verifier run induces a chain in its final cache from the claimed
 leaf to the accepted root. -/
-lemma chainInCache_of_mem_support_verifyOpening
+lemma chainInCache_of_mem_support_verifyOpening [DecidableEq Query] [DecidableEq Y]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (idx : SkeletonLeafIndex s)
     (leaf root : Y) (proof : List.Vector Y idx.depth)
@@ -218,7 +215,6 @@ lemma chainInCache_of_mem_support_verifyOpening
   exact chainInCache_of_mem_support_getPutativeRoot model addressKey
     idx leaf proof putativeRoot cache₀ cache₁ hroot
 
-omit [DecidableEq Query] [DecidableEq Y] in
 /-- A collision-free cache makes the response projection injective on every log represented by
 that cache. -/
 lemma responseInjectiveOn_of_cache_noCollision
@@ -230,10 +226,9 @@ lemma responseInjectiveOn_of_cache_noCollision
   exact cache_lookup_eq_of_noCollision hno (hlogCache entry₁ hentry₁)
     ⟨entry₂.2, hlogCache entry₂ hentry₂, heq_of_eq hresponse.symm⟩
 
-omit [DecidableEq Query] in
 /-- If the extractor resolves an internal node's children, its reconstructed tree unfolds to the
 two recursively reconstructed child trees. -/
-lemma extractor_tree_internal_of_children_eq_some
+lemma extractor_tree_internal_of_children_eq_some [DecidableEq Address] [DecidableEq Y]
     (model : NodeQueryModel Query Address Y)
     (left right : Skeleton)
     (addressKey : SkeletonInternalIndex (.internal left right) → Address)
@@ -248,11 +243,10 @@ lemma extractor_tree_internal_of_children_eq_some
           (fun position => addressKey (.ofRight position)) log rightRoot) := by
   simp [MerkleTreeExtractor.tree, MerkleTreeExtractor.treeAt, hchildren]
 
-omit [DecidableEq Query] in
 /-- If a collision-free commit transcript's extracted opening disagrees with a later accepted
 cache chain, then the later phase added a previously uncached query whose response is one of the
 labels reached by extraction from the claimed root. -/
-lemma fresh_extractedTarget_of_extractor_disagreement
+lemma fresh_extractedTarget_of_extractor_disagreement [DecidableEq Address] [DecidableEq Y]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (idx : SkeletonLeafIndex s)

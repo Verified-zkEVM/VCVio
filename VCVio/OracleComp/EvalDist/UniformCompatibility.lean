@@ -32,7 +32,7 @@ noncomputable instance (priority := 50) instIsUniformMeasureSpecOfIsUniformSpec
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)]
     [IsUniformSpec spec] : IsUniformMeasureSpec spec :=
-  IsUniformMeasureSpec.ofFintypeInhabited spec
+  IsUniformMeasureSpec.ofFiniteNonempty spec
 
 end OracleSpec
 
@@ -45,8 +45,6 @@ variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
 
 /-- Uniform measure and mass-function interpretations agree on every oracle answer type. -/
 instance instCompatible : PFunctor.IsMeasureSpec.Compatible spec.toPFunctor := by
-  -- Both specifications carry finite instances; use the one in the mass-function certificate.
-  let : spec.Fintype := IsUniformSpec.fintype
   refine ⟨fun t => ?_⟩
   rw [IsUniformMeasureSpec.toMeasure_eq_uniform t, IsUniformSpec.toPMF_eq_uniform t]
   apply Measure.ext_of_singleton
@@ -57,8 +55,8 @@ instance instCompatible : PFunctor.IsMeasureSpec.Compatible spec.toPFunctor := b
   rw [hset] at h
   rw [PMF.toMeasure_apply_singleton _ x (MeasurableSet.singleton x),
     PMF.uniformOfFintype_apply]
-  have hc : (Finset.univ.filter fun y : spec.Range t => y = x).card = 1 := by
-    simp [Finset.filter_eq']
+  have hc : (Finset.univ.filter fun y : spec.Range t => y = x).card = 1 :=
+    Finset.card_eq_one.mpr ⟨x, by ext y; simp⟩
   rw [hc] at h
   simpa [ENNReal.div_eq_inv_mul] using h
 

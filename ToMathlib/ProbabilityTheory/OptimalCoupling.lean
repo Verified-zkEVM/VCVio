@@ -28,6 +28,17 @@ open Topology ENNReal NNReal Set
 
 universe u
 
+private lemma sum_option_eq_one_of_none_eq_sub {γ : Type u} [Fintype γ]
+    {c : Option γ → ℝ} (h_nonneg : ∀ z, 0 ≤ c z)
+    (h_none : c none = 1 - ∑ z, c (some z)) :
+    ∑ z : Option γ, c z = 1 := by
+  rw [Fintype.sum_option, h_none]
+  have h_some_le_one : ∑ z, c (some z) ≤ 1 := by
+    have hnone_nonneg : 0 ≤ c none := h_nonneg none
+    rw [h_none] at hnone_nonneg
+    linarith
+  linarith
+
 variable {α β : Type u} [Finite α] [Finite β]
 
 -- 1. Space of bounded non-negative real functions
@@ -210,18 +221,6 @@ lemma mem_couplings_set_of_isCoupling {p : SPMF α} {q : SPMF β} (c : SPMF (α 
     rw [h_sum_toReal] at h_toReal
     exact h_toReal
   · exact SPMF.toReal_gap_eq_one_sub_sum_toReal c
-
-omit [Finite α] [Finite β] in
-private lemma sum_option_eq_one_of_none_eq_sub {γ : Type u} [Fintype γ]
-    {c : Option γ → ℝ} (h_nonneg : ∀ z, 0 ≤ c z)
-    (h_none : c none = 1 - ∑ z, c (some z)) :
-    ∑ z : Option γ, c z = 1 := by
-  rw [Fintype.sum_option, h_none]
-  have h_some_le_one : ∑ z, c (some z) ≤ 1 := by
-    have hnone_nonneg : 0 ≤ c none := h_nonneg none
-    rw [h_none] at hnone_nonneg
-    linarith
-  linarith
 
 private lemma exists_coupling_of_mem_couplings_set {p : SPMF α} {q : SPMF β}
     {c : Option (α × β) → ℝ} (hc : c ∈ couplings_set p q) :

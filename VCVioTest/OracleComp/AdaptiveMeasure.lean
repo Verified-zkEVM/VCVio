@@ -52,7 +52,7 @@ example {Y : Type} (value : Y) :
   exact QueryCache.domain_bound_cacheQuery ∅ 7 value 0 ⟨∅, by simp, by simp⟩
 
 noncomputable local instance : (ℕ →ₒ Bool).toPFunctor.IsMeasureSpec :=
-  PFunctor.IsMeasureSpec.uniformOfFintypeInhabited _
+  PFunctor.IsMeasureSpec.uniformOfFiniteNonempty _
 
 example (t : ℕ) : 𝒟[(liftM ((ℕ →ₒ Bool).query t) : OracleComp (ℕ →ₒ Bool) Bool)] =
     ProbabilityTheory.uniformOn Set.univ := by

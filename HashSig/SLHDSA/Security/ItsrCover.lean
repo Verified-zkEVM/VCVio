@@ -197,7 +197,7 @@ local notation "romSpec" => unifSpec + publicHashSpec core
 cache value at the `H_msg` point of some log entry, so the set of logged digests is the image of
 a list of length at most `qs`. -/
 theorem encard_loggedDigests_le_of_hasSignQueryBound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (qs : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (qs : ℕ)
     (hqs : HasSignQueryBound core adv qs)
     {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv)) :
     {d : Bytes vp.params.m | ∃ e ∈ z.1.log, LoggedDigest z.1 z.2 e d}.encard ≤ (qs : ℕ∞) := by
@@ -226,7 +226,7 @@ predicate needs a transport from the abstract model to caches of the SLH-DSA run
 proved, and the arithmetic from the ratio to a bit count is not formalised either.  The
 statement is the shape the term has, not a bound on it; see this module's scope. -/
 theorem evalDist_romRunFull_itsrCovered_le_of_fresh_bound
-    (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q qs : ℕ)
+    (adv : UnforgeableAdversary (generalAlgM (m := OracleComp romSpec) vp core)) (q qs : ℕ)
     (hq : HasHashQueryBound core adv q) (hqs : HasSignQueryBound core adv qs)
     (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
     (hfresh : ∀ (t : (publicHashSpec core).Domain) (c : PublicHash.Cache core),

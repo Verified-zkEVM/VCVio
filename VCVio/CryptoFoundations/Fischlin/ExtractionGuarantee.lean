@@ -35,34 +35,31 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 /-- Run the prover, verify with the continuing oracle, then extract from the pre-verification
 log. The result retains the verdict and the actual optional witness. -/
 @[expose]
-def knowledgeRun (adv : KnowledgeSoundnessAdv (Stmt := Stmt)
+def knowledgeRun (adv : KnowledgeSoundnessAdversary (Stmt := Stmt)
     (Commit := Commit) (Chal := Chal) (Resp := Resp) ρ b M)
     (x : Stmt) (msg : M) : ProbComp (Bool × Option Wit) := do
   let roSpec := fischlinROSpec Stmt Commit Chal Resp ρ b M
   let ro : QueryImpl roSpec (StateT roSpec.QueryCache ProbComp) := randomOracle
-  let idImpl := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (WriterT (QueryLog roSpec) (StateT roSpec.QueryCache ProbComp))
-  let ((π, roLog), cache) ← (simulateQ (idImpl + ro.withLogging) (adv.run x msg)).run |>.run ∅
-  let idImpl' := (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp)).liftTarget
-    (StateT roSpec.QueryCache ProbComp)
-  let (verified, _) ← (simulateQ (idImpl' + ro)
+  let ((π, roLog), cache) ←
+    (simulateQ (unifSpec.passthrough + ro.withLogging) (adv.run x msg)).run.run ∅
+  let (verified, _) ← (simulateQ (unifSpec.passthrough + ro)
     ((Fischlin (m := OracleComp (unifSpec + roSpec)) σ hr ρ b S M).verify x msg π)).run cache
   let extracted ← onlineExtract σ ρ b M x π roLog
   return (verified, extracted)
 
 /-- The bad projection of the joint run is exactly the existing soundness experiment. -/
-theorem knowledgeRun_bad (adv : KnowledgeSoundnessAdv ρ b M) (x : Stmt) (msg : M) :
+theorem knowledgeRun_bad (adv : KnowledgeSoundnessAdversary ρ b M) (x : Stmt) (msg : M) :
     (fun z : Bool × Option Wit => z.1 && !(z.2.any (rel x))) <$>
         knowledgeRun σ hr ρ b S M adv x msg =
-      knowledgeSoundnessExp σ hr ρ b S M adv.run x msg := by
-  simp only [knowledgeRun, knowledgeSoundnessExp, map_bind, map_pure]
+      knowledgeSoundnessExperiment σ hr ρ b S M adv.run x msg := by
+  simp only [knowledgeRun, knowledgeSoundnessExperiment, map_bind, map_pure]
   rfl
 
 /-- The actual online extractor recovers a valid witness with probability at least acceptance
 minus the single-proof knowledge error. -/
 theorem extraction_success_ge_acceptance_sub_error
     (hss : σ.SpeciallySound) (hur : σ.UniqueResponses)
-    (adv : KnowledgeSoundnessAdv ρ b M) (Q : ℕ) (hρ : 0 < ρ)
+    (adv : KnowledgeSoundnessAdversary ρ b M) (Q : ℕ) (hρ : 0 < ρ)
     (hQ : ∀ x msg, ROQueryBound ρ b M (adv.run x msg) Q) (x : Stmt) (msg : M) :
     Pr{let z ← knowledgeRun σ hr ρ b S M adv x msg}[z.1 = true] -
         knowledgeSoundnessError Q ρ b S ≤
@@ -73,9 +70,8 @@ theorem extraction_success_ge_acceptance_sub_error
   have hbad : 𝒟[run] {z | z.1 = true ∧ z.2.any (rel x) ≠ true} ≤
       knowledgeSoundnessError Q ρ b S := by
     have heq : 𝒟[run] {z | z.1 = true ∧ z.2.any (rel x) ≠ true} =
-        𝒟[knowledgeSoundnessExp σ hr ρ b S M adv.run x msg] {true} := by
-      rw [← knowledgeRun_bad, evalDist_map_of_discrete,
-        Measure.map_apply Measurable.of_discrete (measurableSet_singleton true)]
+        𝒟[knowledgeSoundnessExperiment σ hr ρ b S M adv.run x msg] {true} := by
+      rw [← knowledgeRun_bad, evalDist_map_apply_of_discrete _ _ (measurableSet_singleton true)]
       congr 1
       ext z
       simp [Bool.not_eq_true]

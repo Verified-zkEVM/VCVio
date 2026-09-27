@@ -36,3 +36,8 @@ lemma bind_error (error : ε) (f : α → Except ε β) :
     (Except.error error : Except ε α) >>= f = Except.error error := rfl
 
 end Except
+
+/-- A direct core monad lift returns a successful exceptional result. -/
+@[simp]
+theorem ExceptT.run_core_monadLift.{v} {m : Type → Type v} [Monad m] {ε α : Type} (x : m α) :
+    (MonadLift.monadLift x : ExceptT ε m α).run = Except.ok <$> x := rfl

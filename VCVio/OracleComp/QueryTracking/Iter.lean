@@ -127,7 +127,7 @@ private lemma countingOracle.support_simulate_replicate_const [DecidableEq ι]
         · funext i; simp
       · funext i; simp [Pi.add_apply, add_mul, add_comm]
 
-theorem isTotalQueryBound_replicate_iff [Finite ι] [spec.Inhabited]
+theorem isTotalQueryBound_replicate_iff [Finite ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {n k : ℕ} (hn : 0 < n) :
     IsTotalQueryBound (oa.replicate n) (n * k) ↔ IsTotalQueryBound oa k := by
   let : DecidableEq ι := Classical.decEq ι
@@ -139,7 +139,7 @@ theorem isTotalQueryBound_replicate_iff [Finite ι] [spec.Inhabited]
   exact Nat.le_of_mul_le_mul_left
     (by simpa [Finset.mul_sum] using IsTotalQueryBound.counting_total_le h hys) hn
 
-theorem isQueryBoundP_replicate_iff [Finite ι] [spec.Inhabited]
+theorem isQueryBoundP_replicate_iff [Finite ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {p : ι → Prop} [DecidablePred p] {n k : ℕ} (hn : 0 < n) :
     IsQueryBoundP (oa.replicate n) p (n * k) ↔ IsQueryBoundP oa p k := by
   let : DecidableEq ι := Classical.decEq ι
@@ -170,12 +170,12 @@ lemma isPerIndexQueryBound_replicateTR [DecidableEq ι]
     IsPerIndexQueryBound (oa.replicateTR n) (n • qb) := by
   rw [replicateTR_eq_replicate]; exact isPerIndexQueryBound_replicate h n
 
-theorem isTotalQueryBound_replicateTR_iff [Finite ι] [spec.Inhabited]
+theorem isTotalQueryBound_replicateTR_iff [Finite ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {n k : ℕ} (hn : 0 < n) :
     IsTotalQueryBound (oa.replicateTR n) (n * k) ↔ IsTotalQueryBound oa k := by
   rw [replicateTR_eq_replicate]; exact isTotalQueryBound_replicate_iff hn
 
-theorem isQueryBoundP_replicateTR_iff [Finite ι] [spec.Inhabited]
+theorem isQueryBoundP_replicateTR_iff [Finite ι] [∀ t, Nonempty (spec.Range t)]
     {oa : OracleComp spec α} {p : ι → Prop} [DecidablePred p] {n k : ℕ} (hn : 0 < n) :
     IsQueryBoundP (oa.replicateTR n) p (n * k) ↔ IsQueryBoundP oa p k := by
   rw [replicateTR_eq_replicate]; exact isQueryBoundP_replicate_iff hn

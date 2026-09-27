@@ -50,8 +50,8 @@ theorem aliasing_changes_observation :
 theorem separated_probability :
     𝒟[(fun table : Bool → Bool => (table false == table true)) <$> ($ᵗ (Bool → Bool))]
       {true} = (1 : ENNReal) / 2 := by
-  rw [evalDist_map_of_discrete, SampleableType.evalDist_uniformSample]
-  rw [Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
+  rw [evalDist_map_apply_of_discrete _ _ (MeasurableSet.singleton true),
+    SampleableType.evalDist_uniformSample]
   have hevent : (fun table : Bool → Bool => (table false == table true)) ⁻¹' {true} =
       {fun _ => false} ∪ {fun _ => true} := by
     ext table

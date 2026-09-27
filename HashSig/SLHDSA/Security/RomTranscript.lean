@@ -195,7 +195,7 @@ theorem exists_mem_support_run_signInternalM_of_mem_support_run_sign
 generation from the empty cache, the logged forger from the key-generation cache, and
 verification of the forgery from the forger's cache to the final one. -/
 theorem exists_mem_support_run_romImpl_of_mem_support_romRunFull
-    (adv : unforgeableAdv romAlg) {z : RomOutcome vp core × PublicHash.Cache core}
+    (adv : UnforgeableAdversary romAlg) {z : RomOutcome vp core × PublicHash.Cache core}
     (hz : z ∈ support (romRunFull core adv)) :
     ∃ cₖ c_f : PublicHash.Cache core,
       ((z.1.pk, z.1.sk), cₖ) ∈ support ((simulateQ romImpl (romAlg).keygen).run ∅) ∧
@@ -215,7 +215,7 @@ theorem exists_mem_support_run_romImpl_of_mem_support_romRunFull
 /-- Every logged signature of the instrumented run was produced by a run of Algorithm 19 between
 two intermediate caches, the second of which the final cache extends. -/
 theorem exists_mem_support_run_signInternalM_of_mem_log_romRunFull
-    (adv : unforgeableAdv romAlg) {z : RomOutcome vp core × PublicHash.Cache core}
+    (adv : UnforgeableAdversary romAlg) {z : RomOutcome vp core × PublicHash.Cache core}
     (hz : z ∈ support (romRunFull core adv))
     {e : (t : (List Byte →ₒ GeneralScheme.SignatureCore vp core).Domain) ×
       (List Byte →ₒ GeneralScheme.SignatureCore vp core).Range t} (he : e ∈ z.1.log) :
@@ -237,7 +237,7 @@ theorem exists_mem_support_run_signInternalM_of_mem_log_romRunFull
 generation, each logged signature and the final verification are replayed by the final cache
 as a partial oracle: the cache settles every hash any honest party computed. -/
 theorem simulateQ_toPartialImpl_eq_some_of_mem_support_romRunFull
-    (adv : unforgeableAdv romAlg) {z : RomOutcome vp core × PublicHash.Cache core}
+    (adv : UnforgeableAdversary romAlg) {z : RomOutcome vp core × PublicHash.Cache core}
     (hz : z ∈ support (romRunFull core adv)) :
     (∃ (skSeed : core.SkSeed) (skPrf : core.SkPrf) (pkSeed : core.PkSeed),
       simulateQ z.2.toPartialImpl (GeneralScheme.keygenInternalM
@@ -283,11 +283,11 @@ is a field of the transcript, and its length is exactly the number of signing qu
 The body is exposed, so a consumer can both establish and eliminate the bound directly; the
 named elimination lemmas, `length_map_fst_le_of_hasSignQueryBound` among them, are preferable
 wherever one applies. -/
-@[expose] def HasSignQueryBound (adv : unforgeableAdv romAlg) (qs : ℕ) : Prop :=
+@[expose] def HasSignQueryBound (adv : UnforgeableAdversary romAlg) (qs : ℕ) : Prop :=
   ∀ z ∈ support (romRunFull core adv), z.1.log.length ≤ qs
 
 /-- The signing budget bounds the number of logged messages. -/
-theorem length_map_fst_le_of_hasSignQueryBound (adv : unforgeableAdv romAlg) (qs : ℕ)
+theorem length_map_fst_le_of_hasSignQueryBound (adv : UnforgeableAdversary romAlg) (qs : ℕ)
     (hqs : HasSignQueryBound core adv qs)
     {z : RomOutcome vp core × PublicHash.Cache core} (hz : z ∈ support (romRunFull core adv)) :
     (z.1.log.map (fun e => e.1)).length ≤ qs := by
