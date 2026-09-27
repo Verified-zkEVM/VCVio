@@ -20,9 +20,9 @@ conditional-on-success value scaled by the success probability, not a conditiona
 `VCVio.EvalDist.Defs.Basic`, next to `probOutput`, so that the bind equations of
 `VCVio.EvalDist.Monad.Basic` can be stated through it. The laws below are the ones a recursion
 consumes: `pure` and `bind` (`expectedValue_bind` is the tower property) and linearity over a
-`Finset` sum. `OracleComp.EvalDist.acceptRatio`
-and the coordinate-wise fork's `forkSuccOf` are expectations in this sense, and are left written
-out; this definition is for the places where the functional itself recurses.
+`Finset` sum. `OracleComp.acceptRatio` and the coordinate-wise fork's `OracleComp.forkSuccOf` are
+expectations in this sense, and are left written out; this definition is for the places where the
+functional itself recurses.
 -/
 
 @[expose] public section

@@ -4,6 +4,9 @@ public import ToMathlib.Algebra.BigOperators.Finset
 public import ToMathlib.Algebra.BigOperators.List
 public import ToMathlib.Analysis.MeanInequalities
 public import ToMathlib.Analysis.SumIntegralComparisons
+public import ToMathlib.Combinatorics.ChallengeTree
+public import ToMathlib.Combinatorics.CoordinateWise
+public import ToMathlib.Combinatorics.MonotoneStructure
 public import ToMathlib.Control.AlternativeMonad
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Functor.Prod

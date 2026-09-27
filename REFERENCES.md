@@ -93,6 +93,35 @@ Used in:
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/SMDTUD.lean`
 - `VCVio/CryptoFoundations/HardnessAssumptions/TweakableHash/SMDTUDFinalValidity.lean`
 
+### AFR23
+
+Thomas Attema, Serge Fehr, and Nicolas Resch.
+*A Generalized Special-Soundness Notion and its Knowledge Extractors*.
+Cryptology ePrint Archive, Paper 2023/818.
+Preprint: <https://eprint.iacr.org/2023/818>
+(Later revisions are titled *Generalized Special-Sound Interactive Proofs and their Knowledge
+Soundness*.) Their Lemma 5 bounds the generic `Γ`-out-of-`C` extractor's expected queries **above**
+by `2·t_Γ − 1`; the paper states no lower bound on extraction cost.
+
+Used in:
+- `docs/agents/forking.md`
+- `ToMathlib/Combinatorics/MonotoneStructure.lean`
+
+### FMN23
+
+Giacomo Fenzi, Hossein Moghaddas, and Ngoc Khanh Nguyen.
+*Lattice-Based Polynomial Commitments: Towards Asymptotic and Concrete Efficiency*.
+Cryptology ePrint Archive, Paper 2023/846.
+Preprint: <https://eprint.iacr.org/2023/846>
+
+§2.9 defines coordinate-wise special soundness `SS(S, ℓ, k)`; §7 proves that it implies knowledge
+soundness, with Figure 11 the single-round extractor and Lemma 7.1 its three clauses.
+
+Used in:
+- `docs/agents/forking.md`
+- `ToMathlib/Combinatorics/CoordinateWise.lean`
+- `VCVio/CryptoFoundations/CoordinateFork.lean`
+
 ### GHHM21
 
 Alex B. Grilo, Kathrin Hövelmanns, Andreas Hülsing, and Christian Majenz.
