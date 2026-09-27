@@ -38,10 +38,12 @@ fixed-list estimate does not exist.  What the small figures associated with this
 
 ## Scope
 
-* The witness is stated in the abstract model.  A saturating *cache* of the SLH-DSA run would
-  additionally need the byte-level transport — that a digest's hypertree leaf and its `md`
-  digits are surjective images with equal fibres — which is proved nowhere, so the witness does
-  not exhibit a concrete `SLHDSA.Security.ItsrCacheCovered`-avoiding cache.
+* The witness is stated in the abstract model.  The byte-level decoding of a digest to its
+  hypertree leaf and its `md` digits is surjective with equal fibers
+  (`SLHDSA.DigestTransport.surjective_coveringDigest`,
+  `SLHDSA.DigestTransport.card_fiber_coveringDigest`), but that is a statement about uniform
+  digests, so the witness does not exhibit a concrete
+  `SLHDSA.Security.ItsrCacheCovered`-avoiding cache of the SLH-DSA run.
 * No parameter set is substituted.  The statement is the general inequality; the arithmetic that
   turns it into a bit count is not formalised.
 * Nothing here is runnable: every statement is an `ℝ≥0∞` inequality, so the file has no `main`

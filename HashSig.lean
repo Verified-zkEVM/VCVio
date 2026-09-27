@@ -49,6 +49,7 @@ public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.ComponentTraces
 public import HashSig.SLHDSA.Security.Composition
 public import HashSig.SLHDSA.Security.CountedRom
+public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
 public import HashSig.SLHDSA.Security.GeneralAlgBridge

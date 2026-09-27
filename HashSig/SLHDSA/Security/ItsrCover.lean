@@ -47,9 +47,11 @@ where it stops:
   The loss is the formulation's exact worst case and not slack in the counting:
   `KeyedHash.Covering.evalDist_covered_satList_eq` computes the mass at the witness, and it is
   the value `KeyedHash.Covering.evalDist_covered_le` takes there.
-* *Transport to `ItsrCacheCovered` is not proved.*  It needs the map from a real digest to its
-  hypertree leaf and its `md` digits to be surjective with equal fibres, which is proved nowhere,
-  so no cache of the SLH-DSA run is exhibited at which the covering mass is large.  The lower
+* *Transport to `ItsrCacheCovered` is not proved.*  The map from a real digest to its hypertree
+  leaf and its `md` digits is surjective with equal fibers
+  (`SLHDSA.DigestTransport.surjective_coveringDigest`,
+  `SLHDSA.DigestTransport.card_fiber_coveringDigest`), but that carries uniform digests, not a
+  cache: no cache of the SLH-DSA run is exhibited at which the covering mass is large.  The lower
   bound above is a statement about `KeyedHash.Covering.Digest`, not about this module's
   predicate.
 * *The arithmetic is not formalised.*  That `q * ⌊qs / 2 ^ a⌋ / 2 ^ h` exceeds one, by upwards of
@@ -220,9 +222,9 @@ the fresh-answer firing mass of `ItsrCacheCovered qs`.
 adversary's to arrange.  In the abstract covering model of `KeyedHash.Covering` every bound
 uniform over the lists of at most `qs` digests is at least `⌊qs / 2 ^ a⌋ / 2 ^ h`
 (`KeyedHash.Covering.evalDist_covered_satList_ge`); carrying that lower bound over to this
-predicate needs a byte-level transport that is not proved, and the arithmetic from the ratio to a
-bit count is not formalised either.  The statement is the shape the term has, not a bound on it;
-see this module's scope. -/
+predicate needs a transport from the abstract model to caches of the SLH-DSA run that is not
+proved, and the arithmetic from the ratio to a bit count is not formalised either.  The
+statement is the shape the term has, not a bound on it; see this module's scope. -/
 theorem evalDist_romRunFull_itsrCovered_le_of_fresh_bound
     (adv : unforgeableAdv (generalAlgM (m := OracleComp romSpec) vp core)) (q qs : ℕ)
     (hq : HasHashQueryBound core adv q) (hqs : HasSignQueryBound core adv qs)
