@@ -142,7 +142,6 @@ VCVio.EvalDist.Instances.OptionT
 VCVio.EvalDist.List
 VCVio.EvalDist.MeasureTVDist
 VCVio.EvalDist.Monad.Basic
-VCVio.EvalDist.Monad.Disagreement
 VCVio.EvalDist.Monad.Map
 VCVio.EvalDist.Monad.Seq
 VCVio.EvalDist.Option

@@ -16,11 +16,11 @@ and the cache-extension swap-bridge for `singleTableHandler`.
 
 `cellSwap a b` is the involution on a table domain that exchanges the cells `a` and `b`
 (identity when `a = b`). Post-composing a uniform table with it preserves the distribution
-(`evalSPMF_uniformSample_comp_cellSwap`, `evalSPMF_uniformSample_bind_cellSwap`), and when two
+(`evalDist_uniformSample_comp_cellSwap`, `evalDist_uniformSample_bind_cellSwap`), and when two
 tables differ only by a swap of values at the cells `((tag, 0), n)` and `((tag, slotK), n)`,
 the `singleTableHandler` simulateQ outputs are pointwise identical
 (`singleTableHandler_simulateQ_swap_invariant`). Together these give the swap-bridge
-`singleTableHandler_cache_swap_eq`: under a cache with no slot-positive entries and a fresh
+`evalDist_singleTableHandler_cache_swap_eq`: under a cache with no slot-positive entries and a fresh
 slot-0 cell, the cache extensions at `(tag, 0)` and `(tag, slotK)` produce the same output
 distribution over a uniform table draw.
 
@@ -28,15 +28,14 @@ distribution over a uniform table draw.
 
 * `cellSwap` — the two-cell swap involution, with `cellSwap_involution`, `cellSwap_bijective`,
   `cellSwap_right`, and `cellSwap_of_ne`.
-* `evalSPMF_uniformSample_bind_cellSwap` — bind-level measure preservation of the swap.
-* `singleTableHandler_cache_swap_eq` — the cache-extension swap-bridge for the slot-positive
-  Case M-miss of the direct-coupling aux.
+* `evalDist_uniformSample_bind_cellSwap` — bind-level measure preservation of the swap.
+* `evalDist_singleTableHandler_cache_swap_eq` — the cache-extension swap-bridge for the
+  slot-positive Case M-miss of the direct-coupling aux.
 -/
 
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
-open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
@@ -51,7 +50,7 @@ namespace UnlinkReduction
 The permutation argument for the swap-bridge needs a concrete bijection that swaps two cells of
 the table domain. `cellSwap a b` is the involution on `D` that swaps `a` and `b` (identity if
 `a = b`). Its key properties: bijective (involution), and composing a uniform table with it
-preserves the distribution (`evalSPMF_map_bijective_uniform_cross`). -/
+preserves the distribution (`evalDist_uniformSample_comp_cellSwap`). -/
 
 /-- Swap two elements of a type with decidable equality. Identity if `a = b`. -/
 def cellSwap {D : Type} [DecidableEq D] (a b : D) : D → D := fun x =>
@@ -126,21 +125,10 @@ lemma evalDist_uniformSample_comp_cellSwap [DecidableEq Nonce] [SampleableType D
   rw [evalDist_map_of_discrete, hTable]
   exact uniformOn_univ_map_equiv (Equiv.ofBijective _ hbij)
 
-/-- Discrete frontend form of the measure-preserving table permutation. -/
-lemma evalSPMF_uniformSample_comp_cellSwap [DecidableEq Nonce] [SampleableType Digest]
-    [Fintype Nonce]
-    (a b : (TagId × Fin sessionsPerTag) × Nonce) :
-    𝒮[(fun gS : (TagId × Fin sessionsPerTag) × Nonce → Digest =>
-        gS ∘ cellSwap a b) <$> ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest))] =
-      𝒮[$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)] := by
-  let : MeasurableSpace Digest := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_uniformSample_comp_cellSwap evalDist_uniformSample a b
-
 /-- **Bind-level measure-preservation via `cellSwap`.** For any continuation
 `F : (table) → ProbComp α`, drawing a uniform `gS` and applying `F` to `gS` has the same
 distribution as drawing a uniform `gS` and applying `F` to `gS ∘ cellSwap a b`. Direct
-consequence of `evalSPMF_uniformSample_comp_cellSwap` combined with `map_bind`. -/
+consequence of `evalDist_uniformSample_comp_cellSwap` combined with `map_bind`. -/
 lemma evalDist_uniformSample_bind_cellSwap [DecidableEq Nonce] [SampleableType Digest]
     [Fintype Nonce]
     [MeasurableSpace Digest] [MeasurableSingletonClass Digest]
@@ -161,19 +149,6 @@ lemma evalDist_uniformSample_bind_cellSwap [DecidableEq Nonce] [SampleableType D
   rw [← hMapBind, evalDist_bind_of_discrete _ F, evalDist_bind_of_discrete _ F,
       evalDist_uniformSample_comp_cellSwap (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         (sessionsPerTag := sessionsPerTag) hTable a b]
-
-/-- Discrete frontend form of the measure-preserving table permutation. -/
-lemma evalSPMF_uniformSample_bind_cellSwap [DecidableEq Nonce] [SampleableType Digest]
-    [Fintype Nonce]
-    {α : Type} (a b : (TagId × Fin sessionsPerTag) × Nonce)
-    (F : ((TagId × Fin sessionsPerTag) × Nonce → Digest) → ProbComp α) :
-    𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest); F gS)] =
-      𝒮[(do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest);
-            F (gS ∘ cellSwap a b))] := by
-  let : MeasurableSpace Digest := ⊤
-  let : MeasurableSpace α := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_uniformSample_bind_cellSwap evalDist_uniformSample a b F
 
 variable [SampleableType Nonce] [DecidableEq Digest] [NeZero sessionsPerTag]
 
@@ -390,7 +365,7 @@ is overwritten by `u` on the left, and a reader query at that residual digest se
 distributions. The intended call site (Case M-miss) always has this cell fresh.
 
 **Proof structure.** Single measure-preserving permutation argument: let
-`φ = cellSwap ((tag, 0), n) ((tag, slotK), n)`. Apply `evalSPMF_uniformSample_bind_cellSwap` to
+`φ = cellSwap ((tag, 0), n) ((tag, slotK), n)`. Apply `evalDist_uniformSample_bind_cellSwap` to
 rewrite the LHS via `gS ↦ gS ∘ φ`. Then `singleTableHandler_simulateQ_swap_invariant` gives
 POINTWISE equality between the rewritten LHS body and the RHS body, because:
 * Cells off the swap pair: `gS ∘ φ` and `gS` agree (φ identity outside the pair).
@@ -464,28 +439,6 @@ lemma evalDist_singleTableHandler_cache_swap_eq [Fintype Nonce]
     have : φ ((tag, slotK), n) = ((tag, (0 : Fin sessionsPerTag)), n) := by
       rw [hφ, cellSwap_right]
     rw [this]
-
-/-- Discrete frontend form of the measure-preserving table permutation. -/
-lemma singleTableHandler_cache_swap_eq [Fintype Nonce]
-    (s : UnlinkState TagId)
-    (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
-    (tag : TagId) (slotK : Fin sessionsPerTag) (hslotK : slotK ≠ 0)
-    (n : Nonce) (u : Digest)
-    (hcInv : ∀ tag' : TagId, ∀ sid' : Fin sessionsPerTag, sid' ≠ 0 →
-        ∀ n' : Nonce, c ((tag', sid'), n') = none)
-    (hc0 : c ((tag, (0 : Fin sessionsPerTag)), n) = none)
-    (hAdv : slotK.val < s.sessionsUsed tag)
-    (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) Bool) :
-    𝒮[do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-         (simulateQ (singleTableHandler (OracleComp.tableExtending
-              (c.cacheQuery ((tag, (0 : Fin sessionsPerTag)), n) u) gS)) oa).run' s]
-    = 𝒮[do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-           (simulateQ (singleTableHandler (OracleComp.tableExtending
-                (c.cacheQuery ((tag, slotK), n) u) gS)) oa).run' s] := by
-  let : MeasurableSpace Digest := ⊤
-  apply evalSPMF_eq_of_evalDist_eq
-  exact evalDist_singleTableHandler_cache_swap_eq evalDist_uniformSample
-    s c tag slotK hslotK n u hcInv hc0 hAdv oa
 
 end UnlinkReduction
 

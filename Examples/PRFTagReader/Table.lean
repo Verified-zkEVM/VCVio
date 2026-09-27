@@ -21,7 +21,7 @@ The eager-table reformulation of the composed ideal handlers, in four parts:
   `evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending`;
 * the composed single-world measure equivalence
   `evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending`;
-* the eager-form single-world output probability `probOutput_singleIdeal_run'_eq_tableSample`
+* the eager-form single-world output distribution `evalDist_singleIdeal_run'_eq_tableSample`
   and the `projectTable` helper that bridges the two table types.
 
 All declarations live inside `section EagerComposed`; the PRF key type `K` does not appear in
@@ -31,7 +31,6 @@ the eager-table reformulation.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
-open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
@@ -809,18 +808,18 @@ the two ideal-world output probabilities are exposed as
 table-sampled deterministic runs from the empty cache (`tableExtending ∅ g = g`). These are the
 precise eager forms on which the coupled-table union bound operates. -/
 
-/-- Eager form of the single-session ideal output probability: sample a full random-oracle
+/-- Eager form of the single-session ideal output distribution: sample a full random-oracle
 table `g`, then run the deterministic real single-session table handler. -/
-lemma probOutput_singleIdeal_run'_eq_tableSample [Fintype Nonce] [Finite Digest]
-    (adv : UnlinkAdversary TagId Nonce Digest) (out : Bool) :
-    Pr[= out | (simulateQ (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) adv).run'
+lemma evalDist_singleIdeal_run'_eq_tableSample [Fintype Nonce] [Finite Digest]
+    (adv : UnlinkAdversary TagId Nonce Digest) :
+    𝒟[(simulateQ (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) adv).run'
         (UnlinkState.init, ∅)] =
-      Pr[= out | ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= fun g =>
+      𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= fun g =>
           (simulateQ (singleTableHandler g) adv).run' UnlinkState.init] := by
   let : MeasurableSpace Digest := ⊤
-  rw [← evalDist_apply_singleton, ← evalDist_apply_singleton,
-    evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
-      evalDist_uniformSample evalDist_uniformSample adv UnlinkState.init ∅]
+  rw [evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
+    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample adv
+    UnlinkState.init ∅]
   simp only [OracleComp.tableExtending_empty]
 
 /-- The reference-slot projection of a single-session random-oracle table onto a multiple-session

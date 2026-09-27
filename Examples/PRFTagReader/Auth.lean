@@ -239,8 +239,8 @@ queries.
 
 This is the natural PRF-replacement ideal world (in contrast to the look-up-only
 `authIdealExperiment`, which is the stronger ideal world where the reader cannot make oracle
-queries). Random-function matches against an adversary-submitted transcript contribute to
-`Pr[authRFExperiment]`, so it is generally nonzero. -/
+queries). Random-function matches against an adversary-submitted transcript contribute to its
+success probability, so it is generally nonzero. -/
 noncomputable def authRFExperiment [Fintype TagId] [SampleableType Nonce] [SampleableType Digest]
     (adversary : AuthAdversary TagId Nonce Digest) : ProbComp Bool :=
   PRFScheme.prfIdealExperiment (authToPRFReduction adversary)
@@ -372,11 +372,8 @@ theorem prfRealExperiment_authToPRFReduction_eq_authRealExperiment
     [Fintype TagId] [SampleableType Nonce]
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : AuthAdversary TagId Nonce Digest) :
-    Pr[= true | PRFScheme.prfRealExperiment prfs.multiplePRFScheme
-        (authToPRFReduction adversary)] =
-      Pr[= true | authRealExperiment prfs adversary] := by
-  suffices h : PRFScheme.prfRealExperiment prfs.multiplePRFScheme (authToPRFReduction adversary) =
-      authRealExperiment prfs adversary by rw [h]
+    PRFScheme.prfRealExperiment prfs.multiplePRFScheme (authToPRFReduction adversary) =
+      authRealExperiment prfs adversary := by
   unfold PRFScheme.prfRealExperiment authRealExperiment authToPRFReduction
   refine bind_congr (m := ProbComp) fun k => ?_
   change simulateQ (PRFScheme.prfRealQueryImpl prfs.multiplePRFScheme k)
@@ -606,25 +603,20 @@ adversary's submitted authenticator. `authRFExperiment` captures exactly that co
 theorem authRealExperiment_le_prfAdvantage_add_authRF
     (prfs : TagReaderPRFs K TagId Nonce Digest sessionsPerTag)
     (adversary : AuthAdversary TagId Nonce Digest) :
-    (Pr[= true | authRealExperiment prfs adversary]).toReal ≤
-      (PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction adversary)).toReal +
-      (Pr[= true | authRFExperiment adversary]).toReal := by
+    𝒟[authRealExperiment prfs adversary] {true} ≤
+      PRFScheme.prfAdvantage prfs.multiplePRFScheme (authToPRFReduction adversary) +
+      𝒟[authRFExperiment adversary] {true} := by
   have hreal := prfRealExperiment_authToPRFReduction_eq_authRealExperiment prfs adversary
   have hRF :
       authRFExperiment adversary =
         PRFScheme.prfIdealExperiment (authToPRFReduction adversary) := rfl
-  rw [← hreal, hRF]
-  rw [PRFScheme.prfAdvantage, MeasureTheory.Measure.toReal_boolDist]
-  simp only [evalDist_apply_singleton]
-  set a := (Pr[= true | PRFScheme.prfRealExperiment prfs.multiplePRFScheme
-    (authToPRFReduction adversary)]).toReal
-  set b := (Pr[= true | PRFScheme.prfIdealExperiment (authToPRFReduction adversary)]).toReal
-  simpa only [add_comm] using le_add_of_sub_left_le (le_abs_self (a - b))
+  rw [← hreal, hRF, PRFScheme.prfAdvantage, add_comm]
+  exact (ENNReal.absDiff_le_iff.mp le_rfl).1
 
 /-- In the ideal authentication world, a forged reader acceptance never occurs. -/
 theorem authIdealExperiment_eq_zero
     (adversary : AuthAdversary TagId Nonce Digest) :
-    Pr[= true | authIdealExperiment adversary] = 0 := by
+    𝒟[authIdealExperiment adversary] {true} = 0 := by
   let ForgedInv : AuthIdealState TagId Nonce Digest → Prop := fun st => st.readerForged = ∅
   let CacheInv : AuthIdealState TagId Nonce Digest → Prop := fun st =>
     ∀ tag nonce auth, st.responses (tag, nonce) = some auth →
@@ -725,8 +717,9 @@ theorem authIdealExperiment_eq_zero
         (fun st => ForgedInv st ∧ CacheInv st) himpl adversary AuthIdealState.init
         (by simp [ForgedInv, CacheInv, AuthIdealState.init]) z hz
     grind
-  refine (probOutput_eq_zero_iff (mx := authIdealExperiment adversary) (x := true)).mpr ?_
-  intro hmem
+  rw [← prEvent_eq_evalDist_singleton]
+  refine (prEvent_eq_zero_iff _ _).2 fun b hmem hb => ?_
+  subst hb
   rw [authIdealExperiment, mem_support_bind_iff] at hmem
   grind
 

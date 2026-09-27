@@ -436,6 +436,17 @@ the discrete identical-until-bad module has been removed. The state-dependent ex
 constant-slack corollaries and their state-separating and Fiat–Shamir consumers remain on the
 discrete layer.
 
+## PRF tag/reader checkpoint
+
+The PRF tag/reader protocol is native. The authentication bounds are stated in `ℝ≥0∞` on output
+measures: the forged-acceptance collision bound, its uniform-digest specializations and the
+end-to-end PRF-plus-collision bound. The single-cell collision argument is an expectation
+bound on a one-cell potential, discharged through quantitative `wp`. The unlinkability chain's
+session-collision union bounds, eagerizations, cell-swap bridge and direct coupling rewrite
+event probabilities through equalities of output measures and the native disagreement bound,
+and the network-level transport reads verdict masses off output measures. The discrete
+disagreement module and the scalar wrappers the coupling used have been removed.
+
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
@@ -444,15 +455,12 @@ Compact native event formatting is published in #763. The observed continuation 
 is published in #764 as a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
-1. Convert the complete PRFTagReader direct-coupling reader/slot/composition families and their
-   table/cache dependencies through the native disagreement API, then delete unused scalar
-   disagreement declarations.
-2. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
+1. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
    security clients, preserving observable `none` outcomes.
-3. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
+2. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
    and affected Fiat–Shamir simulation/stateful-hop/security families.
-4. Convert Fischlin search/runtime/model/completeness using native products and projections.
-5. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
+3. Convert Fischlin search/runtime/model/completeness using native products and projections.
+4. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
    declarations.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
