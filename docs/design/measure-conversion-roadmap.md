@@ -511,9 +511,10 @@ subspec hubs only for native declarations import the native modules directly.
 ## Retirement preparation checkpoint
 
 The per-query `PMF` interpretations are deprecated: `OracleSpec.IsProbabilitySpec`,
-`OracleSpec.IsUniformSpec`, their polynomial-functor forms, and both `ofFintypeInhabited`
-constructors point to `OracleSpec.IsMeasureSpec`, `OracleSpec.IsUniformMeasureSpec`, and
-`IsUniformMeasureSpec.ofFiniteNonempty`. `NeverFail`, `EvalDistCompatible`, and
+`OracleSpec.IsUniformSpec`, and its `ofFintypeInhabited` constructor point to
+`OracleSpec.IsMeasureSpec`, `OracleSpec.IsUniformMeasureSpec`, and
+`IsUniformMeasureSpec.ofFiniteNonempty`; the polynomial-functor forms point to
+`PFunctor.IsMeasureSpec` and `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty`. `NeverFail`, `EvalDistCompatible`, and
 `DiscreteEvalDistCompatible` were already deprecated. The `usesRetiredProbability` linter now
 reports direct uses of all seven classes as well as the scalar API, which enrolled thirty
 declarations that used a class without the scalar functions: the class fields and
@@ -521,7 +522,8 @@ constructors themselves, the uniform instances and the bridge instance they feed
 polynomial-functor measure-compatibility class, the query-slack expectation of the until-bad
 family, the Fiat–Shamir challenge instances, and ML-DSA's `ExpandA` idealization. Two unused
 uniform instances and one unused binder were removed instead of enrolled. The local warning
-budget matches CI: nothing uses the deprecated support API, so its exclusion is gone.
+budget matches CI: nothing uses the deprecated support API, so its exclusion is gone. The
+`SPMF` import closure stands at 194 modules.
 
 ## Final removal
 

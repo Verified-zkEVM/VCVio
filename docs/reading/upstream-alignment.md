@@ -535,16 +535,17 @@ unverified ticks (cross-reference only). PolyFun's `CodeRetract (List Γ) A` is 
    absent from VCVio: `V:VCVio/EvalDist/Prod.lean:145` has only the independent case and
    `V:VCVio/CryptoFoundations/SymmEncAlg.lean:51` re-proves the dependent case inline for the
    encryption experiment.
-2. `perfectSecrecyAtAllPriors_iff_ciphertextRowsEqualAt` (`V:VCVio/CryptoFoundations/SymmEncAlg.lean:88`)
-   assumes `[Finite M]`; cslib's `perfectlySecret_iff_ciphertextIndist`
-   (`Cs:Crypto/Protocols/PerfectSecrecy/Basic.lean:39`) needs none, by distinguishing with the
-   two-point prior `uniformOfFinset {m₀, m₁}`. The trick transfers verbatim.
+2. VCVio proves only that equal ciphertext rows give independence
+   (`perfectSecrecyAt_of_ciphertextRowsEqualAt`, `V:VCVio/CryptoFoundations/SymmEncAlg.lean`);
+   cslib's `perfectlySecret_iff_ciphertextIndist`
+   (`Cs:Crypto/Protocols/PerfectSecrecy/Basic.lean:39`) also proves the converse, by distinguishing
+   with the two-point prior `uniformOfFinset {m₀, m₁}`. The trick transfers verbatim.
 3. Shannon's key-space bound `Nat.card K ≥ Nat.card M` (`Cs:…/PerfectSecrecy/Basic.lean:46`) is absent
-   from VCVio (the converse constructions `*_of_uniformKey_of_uniqueKey`, `SymmEncAlg.lean:140–210`,
-   exist).
+   from VCVio (the converse construction `ciphertextRowsEqualAt_of_uniformKey_of_bijective`
+   exists).
 4. A `PMF`-valued posterior (`Cs:Probability/PMF.lean:99 posteriorDist`) would let Bayes-style
-   secrecy/privacy be stated as equalities of distributions; VCVio deliberately cross-multiplies
-   (`perfectSecrecyPosteriorEqPriorAt`, `SymmEncAlg.lean:114`). cslib labels its file temporary and
+   secrecy/privacy be stated as equalities of distributions; VCVio states secrecy as independence
+   of the joint message/ciphertext measure (`perfectSecrecyAt`). cslib labels its file temporary and
    Mathlib-bound; prefer importing over copying if adopted.
 5. Secret sharing is absent from VCVio (`grep -rliE "secret.?shar|shamir"` → only Fiat–Shamir); cslib has
    a full threshold scheme with privacy and Shamir (`Cs:Crypto/Protocols/SecretSharing/{Scheme,Shamir}.lean:52,291`),

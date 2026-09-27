@@ -1,5 +1,8 @@
 # Probability Reasoning (EvalDist and ProbComp)
 
+To convert code written against the discrete `Pr[…]`/`evalSPMF` API, follow
+[`probability-migration.md`](probability-migration.md).
+
 For the cross-project survey of SPMF, Mathlib measures and kernels, PolyFun
 coalgebraic limits, ArkLib, Bluebell/Iris, and possible long-term migration paths, see
 [`Probability Semantics for Computations: Landscape and Design Options`](../reading/probability-semantics-landscape.md).
@@ -14,7 +17,8 @@ proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
 `import VCVio.Native` is the public entry point for native oracle, sampling, measure, kernel,
 operational-support, unary/relational WP, and stateful security foundations. Its ordinary import
 closure contains neither
-`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. Some older module paths additionally
+`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. The deprecated hub modules
+`OracleComp.EvalDist`, `OracleComp.ProbComp`, and `Constructions.SampleableType` additionally
 export discrete compatibility corollaries. WriterCost, QueryCost, and CostModel are native owners.
 
 Handler instrumentation uses native owners in `QueryImpl.Constructions.Core`, `Append.Core`,
@@ -861,7 +865,7 @@ to the `ProbComp` forms only because `Pr[⊥] = 0` there. New API filled along t
 and the `orElse` (`<|>`) probability lemmas for `OptionT (OracleComp spec)` (`probFailure_orElse` etc.).
 
 `VCVioTest/NativeProbabilityTactics.lean` and `VCVioTest/NativeMonadProbability.lean` are the
-measure-side twins of these two gates: the same families stated with `𝒟[…]` and `Pr{…}[…]`, under
+measure-side counterparts of these two gates: the same families stated with `𝒟[…]` and `Pr{…}[…]`, under
 the same rules. Their dated guards record where the native sets are weaker than the discrete ones:
 `grind` has no Dirac, uniform or success-mass rules; a product singleton is not split into a
 rectangle; `simp` rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the lossless-mass

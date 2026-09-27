@@ -166,7 +166,7 @@ Security notions, experiments, games, and advantages follow
 - ElGamal IND-CPA via the generic one-time DDH lift: `Examples/ElGamal/Basic.lean`
 - Schnorr sigma protocol (completeness, soundness, HVZK): `Examples/Schnorr/SigmaProtocol.lean`
 - Oracle computation core: `VCVio/OracleComp/OracleComp.lean`
-- Probability lemmas: `VCVio/EvalDist/Monad/Basic.lean`
+- Probability lemmas: `VCVio/EvalDist/ProbabilityNotation.lean`, `VCVio/EvalDist/ProbabilityBounds.lean`, `VCVio/OracleComp/EvalDist/Measure.lean`
 - SubSpec / coercions: `VCVio/OracleComp/Coercions/SubSpec.lean`
 - `QueryImpl` instrumentation primitives (`preInsert` / `postInsert` and their bridge lemmas): `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`. Prefer these (or their downstream wrappers `withTraceBefore` / `withTrace` / `withCost` / `withLogging`) when wrapping a `QueryImpl` with a per-query side effect, so the generic theory in that file applies.
 - DLog / CDH / DDH via HHS: `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`
@@ -429,6 +429,7 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **SLH-DSA implementation status, stale-plan corrections, and remaining slices**:
   [`docs/design/slh-dsa-status-and-roadmap.md`](docs/design/slh-dsa-status-and-roadmap.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
+- **Converting code from the discrete `Pr[…]` API to measures**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)
 - **Program logic tactics**: [`docs/agents/program-logic.md`](docs/agents/program-logic.md)
