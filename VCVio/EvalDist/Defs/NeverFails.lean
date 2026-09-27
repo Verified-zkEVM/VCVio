@@ -57,11 +57,6 @@ export NeverFail (probFailure_eq_zero)
 attribute [simp] probFailure_eq_zero
 attribute [aesop safe apply] NeverFail.mk
 
-/-- Version of `probFailure_eq_zero` that avoids typeclass search. -/
-lemma probFailure_eq_zero' [MonadLiftT m SPMF]
-    {mx : m α} (h : NeverFail mx) : Pr[⊥ | mx] = 0 :=
-  NeverFail.probFailure_eq_zero
-
 /-- A computation in a monad with a total `PMF` lift can't fail. -/
 instance instNeverFailOfLawfulMonadLiftTPMF [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
     (mx : m α) : NeverFail mx where

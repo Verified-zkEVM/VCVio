@@ -206,12 +206,12 @@ adapter.
 ### Forking bounds and measure semantics
 
 `VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
-seeded and context-fork success bounds through the established `Pr[...]`
-surface. `ForkMeasure.lean` states the same final bounds as the Mathlib measure
-of the `Option.isSome` event, using the canonical measure semantics induced by
-the oracle specification's existing per-query probability interpretation.
-These are transport corollaries; the forking arguments remain in the two
-original modules.
+seeded and context-fork success bounds natively, as `Pr{…}` bounds on the
+`Option.isSome` event under uniform native answer measures
+(`OracleSpec.IsUniformMeasureSpec`). `FiatShamir/Sigma/Fork.lean` specializes the
+replay bound to the managed random-oracle trace, with the measure instances of
+`wrappedSpec` taken as hypotheses so each caller fixes its own discrete answer
+spaces.
 
 The stateful Fiat–Shamir chain in `FiatShamir/Sigma/Stateful/Chain.lean` classifies each
 logged handler step with the private `ForkStateStep` relation before proving invariants.

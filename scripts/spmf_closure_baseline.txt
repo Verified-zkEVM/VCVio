@@ -113,15 +113,12 @@ VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness
 VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Induction
 VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Potential
-VCVio.CryptoFoundations.ForkMeasure
 VCVio.CryptoFoundations.FujisakiOkamoto
 VCVio.CryptoFoundations.FujisakiOkamoto.Composed
 VCVio.CryptoFoundations.FujisakiOkamoto.TTransform
 VCVio.CryptoFoundations.FujisakiOkamoto.UTransform
 VCVio.CryptoFoundations.IdenSchemeWithAbort
 VCVio.CryptoFoundations.KEMDEM
-VCVio.CryptoFoundations.ReplayFork
-VCVio.CryptoFoundations.ReplayForkCost
 VCVio.CryptoFoundations.SeededFork
 VCVio.CryptoFoundations.SigmaProtocol
 VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction

@@ -226,15 +226,6 @@ lemma probEvent_bind_le_probEvent_mul [MonadLiftT m SPMF] [LawfulMonadLiftT m SP
   · simp only [ite_eq_left hp, one_mul]; exact hle x hx hp
   · simp only [ite_eq_right hp, zero_mul, hzero x hx hp, le_refl]
 
-/-- Division-form corollary of `probEvent_bind_le_probEvent_mul`. -/
-lemma probEvent_bind_le_probEvent_div [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    [MonadAttach m] [EvalDistCompatible m]
-    {mx : m α} {my : α → m β} {q : β → Prop} {p : α → Prop} {c : ENNReal}
-    (hle : ∀ x ∈ support mx, p x → Pr[ q | my x] ≤ c⁻¹)
-    (hzero : ∀ x ∈ support mx, ¬ p x → Pr[ q | my x] = 0) :
-    Pr[ q | mx >>= my] ≤ Pr[ p | mx] / c := by
-  simpa [div_eq_mul_inv] using probEvent_bind_le_probEvent_mul hle hzero
-
 lemma probOutput_bind_eq_sum_finSupport [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
     [MonadAttach m] [EvalDistCompatible m] [HasEvalFinset m]
     (mx : m α) (my : α → m β) [DecidableEq α] (y : β) :

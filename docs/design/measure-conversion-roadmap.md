@@ -487,8 +487,18 @@ itself, resampling an appended answer is invisible, and truncating the seed keep
 of the truncated prefix and the output. The forking bound follows as events: the squared success
 probability is the Jensen bound over the truncated seed, the resampled second run matches a run on
 the truncated seed, and collisions with the seeded answer cost `acc / h`. The eager random oracle
-averaged over a generated seed has the output measure of fresh independent queries. The replay
-forking lemma and its Fiat–Shamir consumers remain on the discrete layer.
+averaged over a generated seed has the output measure of fresh independent queries.
+
+## Replay forking checkpoint
+
+The replay forking lemma is native under uniform answer measures. Each fork-index component is
+bounded by the pair event after the Cauchy–Schwarz squaring step, less a collision term of
+`acc / h` that the uniform focused answer contributes, so the squared-sum estimate follows from
+events on the canonical context fork alone. The Fiat–Shamir replay bound takes the measure
+instances of `wrappedSpec` as hypotheses, and the NMA extraction bound consumes it through a
+native simulation of the challenge oracle by uniform sampling; only the expectation-level
+aggregation over key generation remains on the discrete layer, since it goes through the
+Jensen marginal of `expectedValue`. The measure-transport module for the old bound is gone.
 
 ## Next conversion batch
 
@@ -516,7 +526,7 @@ Record each published checkpoint and its remaining compatibility consumers here 
 | Program logic | Finish direct core predicate-transformer integration and measurable fixed-program WP; quantitative and relational rules use native measures and explicit measurable joint kernels. |
 | Security and games | Convert reductions, games, advantages, asymptotic packaging, and necessary lattice/hash/example clients by theorem family. |
 | Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
-| Forking | Seeded and replay forking after their tracking and relational prerequisites pass validation. |
+| Forking | Seeded and replay forking are native; the remaining step is the `expectedValue` aggregation in the Fiat–Shamir NMA bound. |
 | Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
 | Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
 

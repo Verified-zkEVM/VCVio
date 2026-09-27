@@ -50,7 +50,6 @@ public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Induction
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Potential
-public import VCVio.CryptoFoundations.ForkMeasure
 public import VCVio.CryptoFoundations.FujisakiOkamoto
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Composed
 public import VCVio.CryptoFoundations.FujisakiOkamoto.Defs
