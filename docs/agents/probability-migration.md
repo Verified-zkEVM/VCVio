@@ -13,10 +13,20 @@ record is `docs/reading/denotational-probability-semantics.md`.
 
 ## Quick path
 
-1. Repin VCVio and fix imports of removed modules (see *Modules*).
-2. Replace legacy notation, classes and lemma names using the tables below.
-3. Build. Work through the remaining errors with the *Symptoms* table.
+1. Repin VCVio.
+2. Run the codemod over your sources, from the VCVio checkout Lake placed in your project:
+   `python3 .lake/packages/VCVio/scripts/migrate-native-probability.py <source directories>`
+   (`--dry-run` prints the diff instead of writing). It rewrites what the tables below convert
+   mechanically: legacy events and `let` items in `Pr{…}`, `GameEquiv` and `≡ₚ`, oracle
+   answer-type binders, the spec classes, renamed declarations, and imports of removed modules.
+   Every site it leaves is reported as `path:line:` with the entry of this guide that converts
+   it; for the most used discrete lemmas the report names the native analogue.
+3. Build. Work through the reported sites and the remaining errors with the *Symptoms* table.
 4. Check that definitions fix their σ-algebras (see *Semantic contract*).
+
+The codemod is textual: it never needs a build and is idempotent, so it can be rerun after a
+further repin. It does not convert proofs; a proof that computed with `probOutput` sums, `SPMF`
+equalities or `tvDist` follows the *Standard proof conversion* table of the roadmap.
 
 ## Notation and definitions
 

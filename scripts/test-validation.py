@@ -27,7 +27,8 @@ class ValidationTests(unittest.TestCase):
                      "test-comment-fences", "test-initsweep"):
             self.script(scripts / f"{name}.sh", 'exit 0\n')
         for name in ("test-check-imports.py", "test-validation.py", "test-lint.py", "check-agent-docs.py",
-                     "extract-doc-fragments.py", "test-spmf-closure.py", "check-spmf-closure.py"):
+                     "extract-doc-fragments.py", "test-spmf-closure.py", "check-spmf-closure.py",
+                     "test-migrate-native-probability.py"):
             (scripts / name).write_text("pass\n")
         # Not a no-op stub: the default pass has to be shown to reach it.
         (scripts / "check-comment-fences.py").write_text(
