@@ -30,7 +30,7 @@ record is `docs/reading/denotational-probability-semantics.md`.
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
-| `GameEquiv g₁ g₂` | same name; it means `letI : MeasurableSpace α := ⊤; 𝒟[g₁] = 𝒟[g₂]` |
+| `GameEquiv g₁ g₂`, `g₁ ≡ₚ g₂`, `letI : MeasurableSpace α := ⊤; 𝒟[g₁] = 𝒟[g₂]` | `g₁ =ᵈ g₂` (`EvalDistEq`); `EvalDistEq.of_evalDist_eq` and `evalDistEq_iff_evalDist_eq` relate it to output measures |
 
 ## Classes and binders
 
@@ -60,8 +60,19 @@ Native lemmas keep the legacy name with the probability head replaced:
 
 Other renames: `AdvBound.of_tvDist` → `AdvBound.of_measureETVDist` (and `AdvBound` takes an
 `ℝ≥0∞` bound); root `evalDist_uniformSample` → `SampleableType.evalDist_uniformSample`;
-`relTriple_eqRel_of_evalSPMF_eq` → `relTriple_eqRel_of_evalDist_eq`;
-`evalSPMF_eq_of_relTriple_eqRel` → `evalDist_eq_of_relTriple_eqRel`.
+`relTriple_eqRel_of_evalSPMF_eq` → `relTriple_eqRel_of_evalDistEq`;
+`evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`.
+
+Statements of equality in distribution now use `=ᵈ`:
+- `prEvent_congr_of_evalDist_eq mx my h p` → `(EvalDistEq.of_evalDist_eq h).prEvent_eq p`;
+- `evalDist_bind_congr_of_evalDist_eq mx my h f` → `((EvalDistEq.of_evalDist_eq h).bind_left f).evalDist_eq`;
+- `evalDist_map_congr_of_evalDist_eq mx my h f` → `((EvalDistEq.of_evalDist_eq h).map f).evalDist_eq`;
+- lemmas named `…_of_evalDist_eq` whose hypothesis was a discrete measure equality become
+  `…_of_evalDistEq`, e.g. `relTriple_of_evalDistEq_left`, `support_eq_of_evalDistEq`,
+  `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`;
+- lemmas whose conclusion was one become `evalDistEq_…`, e.g. `evalDistEq_generateSeed_of_countEq`,
+  `evalDistEq_of_forall_prEvent_eq_output`, `SampleableType.evalDistEq_uniformSample_vector_succ`;
+- `AdvBound.of_gameEquiv` → `AdvBound.of_evalDistEq`.
 
 ## Modules
 
@@ -105,7 +116,7 @@ A removed module may have re-exported legacy hubs; add the imports the build the
 | `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
 | `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
 | measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |
-| an event transported between monads (`ProbComp` and `OracleComp spec`) | with `let : MeasurableSpace α := ⊤`, rewrite both sides by `prEvent_eq_evalDist_of_discrete` and use a measure equation such as `uniformSampleImpl.evalDist_simulateQ` or `OracleComp.evalDist_liftComp_uniform` |
+| an event transported between monads (`ProbComp` and `OracleComp spec`) | take `.prEvent_eq p` of an equality in distribution such as `uniformSampleImpl.evalDistEq_simulateQ` or `OracleComp.evalDistEq_liftComp_uniform` |
 | `x ∈ support mx ↔ 0 < mass` needs a uniform specification | use `mem_support_iff_evalDist_singleton_pos_of_fullSupport` with a full-support hypothesis for other answer measures |
 | probability one from reachability | `prEvent_eq_one_of_forall_mem_support`; the converse `prEvent_eq_one_iff` needs uniform answers |
 | heartbeat timeout on raw `PFunctor.FreeM` terms | normalize with `FreeM.bind_eq_bind`, `FreeM.map_eq_map`, `FreeM.pure_eq_pure`, or state the helper at the `OracleComp` level |
@@ -115,8 +126,10 @@ A removed module may have re-exported legacy hubs; add the imports the build the
 
 - **Fix σ-algebras inside definitions.** A definition stated with `𝒟[…]` depends on the
   measurable space its caller supplies; under `⊥` an equality of measures says nothing. Security
-  definitions put `letI : MeasurableSpace α := ⊤` inside, as `GameEquiv`, `PerfectlyHiding` and
-  `SymmEncAlg.ciphertextRowsEqualAt` do.
+  definitions state equality in distribution with `=ᵈ`, which needs no measurable space, as
+  `SymmEncAlg.ciphertextRowsEqualAt` does. A definition about the measures themselves puts
+  `letI : MeasurableSpace α := ⊤` inside, as `PerfectlyHiding` and `SymmEncAlg.perfectSecrecyAt`
+  do.
 - **Events need no measurable space; singletons do.** `Pr{…}[…]` works on any output type,
   while `𝒟[mx] {x}` needs measurable singletons.
 - **Support is operational.** `support mx` is the set of structurally reachable outputs. It

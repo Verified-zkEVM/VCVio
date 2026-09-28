@@ -382,10 +382,10 @@ private lemma prEvent_main_eq_takeAtIndex (s : Fin (qb i + 1)) :
       Pr{let x ← (liftComp (generateSeed spec qb js) spec >>= fun σ =>
         (simulateQ seededOracle main).run' (σ.takeAtIndex i s))}[cf x = some s] := by
   let : MeasurableSpace α := ⊤
-  rw [prEvent_congr_of_evalDist_eq main _
-    (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm]
-  have h := prEvent_congr_of_evalDist_eq _ _
-    (seededOracle.evalDist_liftComp_generateSeed_takeAtIndex_run' qb js i s main)
+  rw [(EvalDistEq.of_evalDist_eq
+      (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq]
+  have h := (EvalDistEq.of_evalDist_eq
+      (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).prEvent_eq
     (fun w => cf w.2 = some s)
   simpa only [prEvent_norm] using h
 
@@ -403,11 +403,11 @@ private lemma prEvent_pair_eq_takeAtIndex_pair (s : Fin (qb i + 1)) :
         let b ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] := by
   let : MeasurableSpace (α × α) := ⊤
-  have h := evalDist_bind_congr_of_evalDist_eq _ _
-    (seededOracle.evalDist_liftComp_generateSeed_takeAtIndex_run' qb js i s main)
-    (fun w => (simulateQ seededOracle main).run' w.1 >>= fun b => pure (w.2, b))
+  have h := ((EvalDistEq.of_evalDist_eq
+      (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).bind_left
+    (fun w => (simulateQ seededOracle main).run' w.1 >>= fun b => pure (w.2, b))).evalDist_eq
   simp only [bind_assoc, pure_bind] at h
-  exact prEvent_congr_of_evalDist_eq _ _ h _
+  exact (EvalDistEq.of_evalDist_eq h).prEvent_eq _
 
 /-- Resampling the forked answer after truncation leaves the second run distributed as a run on
 the truncated seed. -/
@@ -423,13 +423,13 @@ private lemma prEvent_noGuard_eq_pair (s : Fin (qb i + 1)) :
         let a ← (simulateQ seededOracle main).run' σ
         let b ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] := by
-  refine prEvent_congr_of_evalDist_eq _ _ ?_ _
+  refine (evalDistEq_iff_evalDist_eq.mpr ?_).prEvent_eq _
   let : MeasurableSpace (α × α) := ⊤
   refine evalDist_bind_congr _ _ _ fun σ => evalDist_bind_congr _ _ _ fun a => ?_
   let : MeasurableSpace α := ⊤
-  simpa only [bind_assoc] using evalDist_bind_congr_of_evalDist_eq _ _
-    (seededOracle.evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
-      (σ.takeAtIndex i s) i main) (fun b => pure (a, b))
+  simpa only [bind_assoc] using ((EvalDistEq.of_evalDist_eq
+      (seededOracle.evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
+      (σ.takeAtIndex i s) i main)).bind_left (fun b => pure (a, b))).evalDist_eq
 
 /-- The collision between the resampled answer and the seeded one is rare: it has probability at
 most the fork-index probability divided by `|spec.Range i|`. -/
@@ -442,8 +442,8 @@ private lemma prEvent_collision_le [Fintype (spec.Range i)] (s : Fin (qb i + 1))
       Pr{let x ← main}[cf x = some s] / (Fintype.card (spec.Range i) : ℝ≥0∞) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace (QuerySeed spec) := ⊤
-  rw [prEvent_congr_of_evalDist_eq main _
-    (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm,
+  rw [(EvalDistEq.of_evalDist_eq
+      (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq,
     prEvent_bind_eq_lintegral_of_discrete _ _ (fun x => cf x = some s),
     prEvent_bind_eq_lintegral_of_discrete _ _
       (fun r : α × Option (spec.Range i) × spec.Range i => cf r.1 = some s ∧ r.2.1 = some r.2.2),

@@ -199,18 +199,17 @@ theorem measureETVDist_simulateQ_run'_le_prEvent_bad_of_run_eq [MeasurableSpace 
   measureETVDist_simulateQ_run'_le_prEvent_bad impl₁ impl₂ bad
     (fun t s hs q => by rw [h_agree t s hs]) h_mono₁ h_mono₂ oa s₀
 
-/-- **Identical until bad** for handlers whose output measures coincide off bad input states. -/
-theorem measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDist_eq [MeasurableSpace α]
+/-- **Identical until bad** for handlers equal in distribution off bad input states. -/
+theorem measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq [MeasurableSpace α]
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec'))) (bad : σ → Prop)
-    (h_agree : ∀ t s, ¬bad s → letI : MeasurableSpace (spec.Range t × σ) := ⊤;
-      𝒟[(impl₁ t).run s] = 𝒟[(impl₂ t).run s])
+    (h_agree : ∀ t s, ¬bad s → (impl₁ t).run s =ᵈ (impl₂ t).run s)
     (h_mono₁ : ∀ t s, bad s → ∀ z ∈ support ((impl₁ t).run s), bad z.2)
     (h_mono₂ : ∀ t s, bad s → ∀ z ∈ support ((impl₂ t).run s), bad z.2)
     (oa : OracleComp spec α) (s₀ : σ) :
     measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
       Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] :=
   measureETVDist_simulateQ_run'_le_prEvent_bad impl₁ impl₂ bad
-    (fun t s hs _ => prEvent_congr_of_evalDist_eq _ _ (h_agree t s hs) _) h_mono₁ h_mono₂ oa s₀
+    (fun t s hs _ => (h_agree t s hs).prEvent_eq _) h_mono₁ h_mono₂ oa s₀
 
 /-! ## ε-perturbed identical until bad
 

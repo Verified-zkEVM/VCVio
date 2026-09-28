@@ -167,8 +167,7 @@ theorem eagerRandomOracle_evalDist_generateSeed_bind {ι₀ : Type} [DecidableEq
         fun u => ih u qc js
     · -- Every generated seed starts with a uniform answer at `t`, consumed by the query.
       have hpos : 0 < qc t * js.count t := Nat.pos_of_ne_zero hcount
-      rw [evalDist_bind_congr_of_evalDist_eq _ _
-        (evalDist_generateSeed_eq_prependValues spec₀ qc js hpos)]
+      rw [((evalDistEq_generateSeed_prependValues spec₀ qc js hpos).bind_left _).evalDist_eq]
       simp only [bind_assoc, pure_bind]
       refine evalDist_bind_eq_query_bind_of_uniform t _ SampleableType.evalDist_uniformSample _ f
         fun u => ?_

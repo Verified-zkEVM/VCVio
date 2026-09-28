@@ -93,7 +93,7 @@ theorem traceNoninterference_implies_probLeakFree
     {oa₁ : OracleComp spec₁ (α × ω)} {oa₂ : OracleComp spec₂ (β × ω)}
     (h : TraceNoninterference oa₁ oa₂) :
     ProbLeakFree oa₁ oa₂ :=
-  ProgramLogic.Relational.evalDist_map_eq_of_relTriple h
+  evalDistEq_iff_evalDist_eq.mp (ProgramLogic.Relational.evalDistEq_map_of_relTriple h)
 
 /-- `ProbLeakFree` is equivalent to `LeakageBound 0`. -/
 theorem probLeakFree_iff_leakageBound_zero

@@ -286,13 +286,12 @@ theorem approxRelTriple_eqRel_iff_etvDist_le {oa : OracleComp spec₁ α}
   rw [ApproxRelTriple, etvDist_eq_one_sub_eRelWP_eqRel]
   exact tsub_le_iff_tsub_le
 
-/-- A zero-error approximate equality coupling identifies the two output measures. -/
-theorem evalDist_eq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
-    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) :
-    letI : MeasurableSpace α := ⊤; 𝒟[oa] = 𝒟[ob] := by
+/-- Computations with a zero-error approximate equality coupling are equal in distribution. -/
+theorem evalDistEq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
+    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob := by
   let : MeasurableSpace α := ⊤
-  exact Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
-    (approxRelTriple_eqRel_iff_etvDist_le.1 h))
+  exact EvalDistEq.of_evalDist_eq (Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
+    (approxRelTriple_eqRel_iff_etvDist_le.1 h)))
 
 /-! ## Relational algebra instance -/
 

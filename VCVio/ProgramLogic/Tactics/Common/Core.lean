@@ -503,9 +503,9 @@ def isListMapMHead (e : Expr) : Bool :=
 def isListFoldlMHead (e : Expr) : Bool :=
   (headConstName? e) == some ``List.foldlM
 
-/-- Recognize a game-equivalence goal without unfolding the equivalence predicate. -/
-def isGameEquivGoal (target : Expr) : Bool :=
-  target.consumeMData.getAppFn.isConstOf ``OracleComp.ProgramLogic.GameEquiv
+/-- Recognize an equality in distribution `mx =ᵈ my` without unfolding it. -/
+def isEqualInDistGoal (target : Expr) : Bool :=
+  target.consumeMData.getAppFn.isConstOf ``EvalDistEq
 
 /-- Recognize an equality of two output measures `𝒟[mx] = 𝒟[my]`. -/
 def isEvalDistEqGoal (target : Expr) : Bool :=

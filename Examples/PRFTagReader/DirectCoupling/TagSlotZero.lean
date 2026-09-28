@@ -331,8 +331,9 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
     let : MeasurableSpace Nonce := ⊤
     let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
     exact evalDist_bind_bind_bind_rotate _ _ _ _ .of_discrete
-  rw [prEvent_congr_of_evalDist_eq _ _ hLHS_comm, prEvent_congr_of_evalDist_eq _ _ hRHS_comm,
-    prEvent_congr_of_evalDist_eq _ _ hBAD_comm]
+  rw [(EvalDistEq.of_evalDist_eq hLHS_comm).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq hRHS_comm).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq hBAD_comm).prEvent_eq]
   -- Phase C. Split `qRInit * (qT' + 1) / |Nonce|` into `qRInit / |Nonce| + qRInit * qT' / |Nonce|`
   -- and reassociate. Apply the disagree lemma with empty `D` on the inner `$ᵗ Nonce` (since under
   -- hzero, M and S do the same step — there is no per-step disagreement to charge, and no tag-side
@@ -412,7 +413,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[b = out] := by
-      refine prEvent_congr_of_evalDist_eq _ _ ((@hmarg _ ⊤ _).trans ?_) _
+      refine (EvalDistEq.of_evalDist_eq ((@hmarg _ ⊤ _).trans ?_)).prEvent_eq _
       congr 1
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
@@ -431,7 +432,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler (OracleComp.tableExtending
                   (c.cacheQuery ((tag, (0 : Fin sessionsPerTag)), n) u) gS'))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] := by
-      refine prEvent_congr_of_evalDist_eq _ _ ((@hmarg _ ⊤ _).trans ?_) _
+      refine (EvalDistEq.of_evalDist_eq ((@hmarg _ ⊤ _).trans ?_)).prEvent_eq _
       congr 1
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
@@ -466,7 +467,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
-      refine prEvent_congr_of_evalDist_eq _ _ ((@hmarg _ ⊤ _).trans ?_) _
+      refine (EvalDistEq.of_evalDist_eq ((@hmarg _ ⊤ _).trans ?_)).prEvent_eq _
       congr 1
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_

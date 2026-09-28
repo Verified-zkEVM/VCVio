@@ -213,11 +213,10 @@ lemma prEvent_generateSeed [∀ t, Fintype (spec.Range t)] (seed : QuerySeed spe
       inv_natCast_pow_mul_inv_list_prod qc j js fun j => Fintype.card (spec.Range j)]
 
 /-- The seed distribution depends only on the per-oracle answer counts `qc i * js.count i`. -/
-lemma evalDist_generateSeed_eq_of_countEq
+lemma evalDistEq_generateSeed_of_countEq
     (qc' : ι → ℕ) (js' : List ι)
     (hcount : ∀ i, qc i * js.count i = qc' i * js'.count i) :
-    letI : MeasurableSpace (QuerySeed spec) := ⊤
-    𝒟[generateSeed spec qc js] = 𝒟[generateSeed spec qc' js'] := by
+    generateSeed spec qc js =ᵈ generateSeed spec qc' js' := by
   classical
   let : ∀ t, Fintype (spec.Range t) := fun t => Fintype.ofFinite _
   have hsupp : support (generateSeed spec qc js) = support (generateSeed spec qc' js') := by
@@ -231,7 +230,7 @@ lemma evalDist_generateSeed_eq_of_countEq
     refine Finset.prod_subset hU (fun i _ hi => ?_) |>.symm.trans ?_ |>.symm
     · rw [List.count_eq_zero_of_not_mem (by simpa using hi), mul_zero, pow_zero]
     · exact Finset.prod_congr rfl fun i _ => by rw [← pow_mul]
-  refine evalDist_eq_of_forall_prEvent_eq fun seed => ?_
+  refine evalDistEq_of_forall_prEvent_eq_output fun seed => ?_
   by_cases hmem : seed ∈ support (generateSeed spec qc js)
   · rw [prEvent_generateSeed spec qc js seed hmem,
       prEvent_generateSeed spec qc' js' seed (hsupp ▸ hmem),
@@ -304,8 +303,7 @@ lemma prEvent_generateSeed_prependValues [∀ t, Fintype (spec.Range t)]
     have hmem_canon : s'.prependValues [u] ∈ support (generateSeed spec N js.dedup) := by
       rw [support_generateSeed, Set.mem_ofPred_eq] at hmem ⊢
       exact fun i => (hmem i).trans (hcount i)
-    rw [prEvent_congr_of_evalDist_eq _ _
-        (evalDist_generateSeed_eq_of_countEq spec qc js N js.dedup hcount) _,
+    rw [(evalDistEq_generateSeed_of_countEq spec qc js N js.dedup hcount).prEvent_eq _,
       prEvent_generateSeed spec N js.dedup _ hmem_canon,
       prEvent_generateSeed spec qc_red js.dedup _ hmem_red]
     refine inv_natCast_list_prod_map_eq_inv_mul js.dedup
@@ -319,17 +317,16 @@ lemma prEvent_generateSeed_prependValues [∀ t, Fintype (spec.Range t)]
 
 /-- When oracle `t` has a positive answer count, a generated seed is a uniform head answer at `t`
 prepended to an independently generated seed whose count at `t` is decremented. -/
-lemma evalDist_generateSeed_eq_prependValues {t : ι}
+lemma evalDistEq_generateSeed_prependValues {t : ι}
     (hpos : 0 < qc t * js.count t) :
-    letI : MeasurableSpace (QuerySeed spec) := ⊤
-    𝒟[generateSeed spec qc js] = 𝒟[do
+    generateSeed spec qc js =ᵈ (do
       let u ← $ᵗ spec.Range t
       let s' ← generateSeed spec
         (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup
-      return s'.prependValues [u]] := by
+      return s'.prependValues [u]) := by
   classical
   let : ∀ t, Fintype (spec.Range t) := fun t => Fintype.ofFinite _
-  refine evalDist_eq_of_forall_prEvent_eq fun seed => ?_
+  refine evalDistEq_of_forall_prEvent_eq_output fun seed => ?_
   rcases hst : seed t with _ | ⟨u, us⟩
   · rw [prEvent_eq_zero_of_forall_mem_support _ (· = seed) fun s hs hss => ?_,
       prEvent_eq_zero_of_forall_mem_support _ (· = seed) fun s hs hss => ?_]

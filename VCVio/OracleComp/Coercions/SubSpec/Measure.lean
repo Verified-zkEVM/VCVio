@@ -69,4 +69,12 @@ theorem evalDist_liftComp_uniform [spec ˡ⊂ₒ superSpec]
     𝒟[liftComp mx superSpec] = 𝒟[mx] :=
   evalDist_liftComp_of_evalDist (fun t ↦ evalDist_liftM_query_uniform t) mx
 
+/-- Cartesian inclusions between uniform specifications preserve the distribution of every
+computation. -/
+theorem evalDistEq_liftComp_uniform [spec ˡ⊂ₒ superSpec]
+    [OracleSpec.IsUniformMeasureSpec spec] [OracleSpec.IsUniformMeasureSpec superSpec]
+    {α : Type} (mx : OracleComp spec α) : liftComp mx superSpec =ᵈ mx :=
+  letI : MeasurableSpace α := ⊤
+  EvalDistEq.of_evalDist_eq (evalDist_liftComp_uniform mx)
+
 end OracleComp

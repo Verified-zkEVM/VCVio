@@ -319,8 +319,9 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
     let : MeasurableSpace Nonce := ⊤
     let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
     exact evalDist_bind_bind_bind_rotate _ _ _ _ .of_discrete
-  rw [prEvent_congr_of_evalDist_eq _ _ hLHS_comm, prEvent_congr_of_evalDist_eq _ _ hRHS_comm,
-    prEvent_congr_of_evalDist_eq _ _ hBAD_comm]
+  rw [(EvalDistEq.of_evalDist_eq hLHS_comm).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq hRHS_comm).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq hBAD_comm).prEvent_eq]
   -- Phase C: split `qRInit * (qT' + 1) / |Nonce|` into `qRInit / |Nonce| + qRInit * qT' / |Nonce|`
   -- and reassociate so the per-`n` obligation carries the reader-cell, nonce-remainder, and
   -- reader-slot slacks. No tag-side slack is charged here: cell-pair independence provides per-`n`
@@ -417,7 +418,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[b = out] := by
-      refine prEvent_congr_of_evalDist_eq _ _ ((@hmarg _ ⊤ _).trans ?_) _
+      refine (EvalDistEq.of_evalDist_eq ((@hmarg _ ⊤ _).trans ?_)).prEvent_eq _
       congr 1
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
@@ -453,7 +454,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
-      refine prEvent_congr_of_evalDist_eq _ _ ((@hmarg _ ⊤ _).trans ?_) _
+      refine (EvalDistEq.of_evalDist_eq ((@hmarg _ ⊤ _).trans ?_)).prEvent_eq _
       congr 1
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
@@ -500,7 +501,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler
                 (OracleComp.tableExtending (c.cacheQuery ((tag, slotK), n) u) gS'))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] := by
-      refine prEvent_congr_of_evalDist_eq _ _ ((@hmarg_K _ ⊤ _).trans ?_) _
+      refine (EvalDistEq.of_evalDist_eq ((@hmarg_K _ ⊤ _).trans ?_)).prEvent_eq _
       congr 1
       refine bind_congr fun u => ?_
       refine bind_congr fun gS' => ?_
@@ -589,7 +590,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler (OracleComp.tableExtending
                   (c.cacheQuery ((tag, slotK), n) u) gS))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] :=
-      prEvent_congr_of_evalDist_eq _ _ hbridge _
+      (EvalDistEq.of_evalDist_eq hbridge).prEvent_eq _
     rw [hS_eq] at hihB
     rw [← add_assoc, ← add_assoc]
     exact hihB

@@ -9,6 +9,7 @@ public import VCVio.OracleComp.Support
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.EvalDist.Monad.Option
+public import VCVio.EvalDist.EvalDistEq
 import ToMathlib.Probability.UniformOn
 import ToMathlib.MeasureTheory.Measure.Bounds
 
@@ -249,6 +250,18 @@ theorem prEvent_bind_congr_of_support
     prEvent (mx >>= f) = prEvent (mx >>= g) :=
   evalDist_bind_apply_congr_of_support mx f g (measurableSet_singleton True) h
 
+/-- Continuations equal in distribution on every structurally reachable output of a common draw
+give binds equal in distribution. -/
+theorem EvalDistEq.bind_congr_of_support
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) {f g : α → OracleComp spec β}
+    (h : ∀ a ∈ support mx, f a =ᵈ g a) : mx >>= f =ᵈ mx >>= g :=
+  _root_.EvalDistEq.of_forall_prEvent_eq fun p ↦ by
+    rw [map_bind, map_bind]
+    exact prEvent_bind_congr_of_support mx _ _ fun a ha ↦ (h a ha).prEvent_eq p
+
 /-- Almost-sure probability-one continuation events remain probability one after sequencing a
 lossless oracle computation. -/
 theorem evalDist_bind_apply_eq_one_of_ae
@@ -419,11 +432,11 @@ theorem prEvent_bind_eq_mul_of_unique {β : Type} (mx : OracleComp spec α)
         lintegral_indicator_const (measurableSet_singleton x) _
     _ = _ := by rw [← prEvent_eq_evalDist_singleton mx x, mul_comm]
 
-/-- Over finite oracle responses, computations with equal point masses have equal output measures
-in the discrete structure: both measures are carried by the finite union of their supports. -/
-theorem evalDist_eq_of_forall_prEvent_eq [∀ t, Finite (spec.Range t)]
-    {mx my : OracleComp spec α} (h : ∀ x, Pr{let z ← mx}[z = x] = Pr{let z ← my}[z = x]) :
-    (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my]) := by
+/-- Over finite oracle responses, computations with equal point masses are equal in distribution:
+both output measures are carried by the finite union of their supports. -/
+theorem evalDistEq_of_forall_prEvent_eq_output [∀ t, Finite (spec.Range t)]
+    {mx my : OracleComp spec α} (h : ∀ x, Pr{mx}[= x] = Pr{my}[= x]) : mx =ᵈ my := by
+  refine evalDistEq_iff_evalDist_eq.mpr ?_
   classical
   let : MeasurableSpace α := ⊤
   let T : Finset α := ((support_finite mx).union (support_finite my)).toFinset
@@ -478,13 +491,14 @@ theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
   push Not
   rfl
 
-/-- Under native uniform oracle semantics, computations with the same output measure in the
-discrete structure reach the same outputs. -/
-theorem support_eq_of_evalDist_eq {mx my : OracleComp spec α}
-    (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) : support mx = support my := by
+/-- Under native uniform oracle semantics, computations equal in distribution reach the same
+outputs. -/
+theorem support_eq_of_evalDistEq {mx my : OracleComp spec α} (h : mx =ᵈ my) :
+    support mx = support my := by
   let : MeasurableSpace α := ⊤
   ext x
-  rw [mem_support_iff_evalDist_singleton_pos, mem_support_iff_evalDist_singleton_pos, h]
+  rw [mem_support_iff_evalDist_singleton_pos, mem_support_iff_evalDist_singleton_pos,
+    h.evalDist_eq]
 
 /-- Under native uniform oracle semantics, an event of a single lifted query has the
 proportion of satisfying responses as its probability. -/

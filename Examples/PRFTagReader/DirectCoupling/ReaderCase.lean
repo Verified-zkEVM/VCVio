@@ -289,8 +289,9 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
   let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
   have hBAD_lazify := hM_lazify (fun z => (z.1, z.2.2))
   -- Rewrite all three terms to their lazified forms.
-  rw [prEvent_congr_of_evalDist_eq _ _ hLHS_lazify, prEvent_congr_of_evalDist_eq _ _ hRHS_lazify,
-    prEvent_congr_of_evalDist_eq _ _ hBAD_lazify]
+  rw [(EvalDistEq.of_evalDist_eq hLHS_lazify).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq hRHS_lazify).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq hBAD_lazify).prEvent_eq]
   -- **Per-rs coupling.** All three terms now share the `idealCacheMapM cells c` head; couple
   -- them via the empty-`D` disagreement bound (mirroring the tag cases' `$ᵗ Nonce` coupling).
   -- The slacks are charged entirely in the per-rs obligation (closed in C2/C3); here `ε₁ = 0`,

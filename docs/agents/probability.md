@@ -176,7 +176,17 @@ the event. It is elaborated in the normal form `simp` maintains:
 - uniform sampling, bind swaps and support congruence.
 
 `prEvent_def` unfolds an event to its measure when an argument needs the measure itself. Goals
-display in the draw form. A lemma whose selector's type depends on an implicit argument, such as a
+display in the draw form.
+
+`mx =ᵈ my` (`EvalDistEq`, in `VCVio.EvalDist.EvalDistEq`) states that two computations, possibly
+in different monads, give every event the same probability. It needs no measurable space on the
+output:
+- `EvalDistEq.evalDist_eq` gives equal output measures in every structure;
+- `EvalDistEq.of_evalDist_eq` proves it from equal measures in a discrete structure;
+- `evalDistEq_iff_forall_prEvent_eq_output` reduces it to point masses on countable outputs.
+
+It is an equivalence usable in `calc`, and its bind and map congruences are registered for
+`gcongr` and `grw`. A lemma whose selector's type depends on an implicit argument, such as a
 query index, is rewritten with that argument supplied: `Functor.map` unifies the selector before
 the computation. The notation works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The
@@ -742,8 +752,9 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
    → `probOutput_bind_const` / `probEvent_bind_const`
 
 7. **Two computations have same distribution?**
-   → Compare `𝒟[oa]` and `𝒟[ob]`; `relTriple_eqRel_of_evalDist_eq` turns an equality in the
-     discrete structure into an `EqRel` coupling.
+   → State `oa =ᵈ ob` (`EvalDistEq`, possibly across monads); `relTriple_eqRel_of_evalDistEq`
+     turns it into an `EqRel` coupling, and `EvalDistEq.of_evalDist_eq` proves it from equal
+     output measures in a discrete structure.
 
 ## `grind` vs `simp` on Probability Goals
 

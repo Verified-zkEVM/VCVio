@@ -60,6 +60,13 @@ theorem run_evalDist_eq {left : Stateful I E σ₀} {right : Stateful I E σ₁}
     {α : Type} [MeasurableSpace α] (client : OracleComp E α) :
     𝒟[left.run s₀ client] = 𝒟[right.run s₁ client] := h client
 
+/-- Equivalent handlers run every client to computations equal in distribution. -/
+theorem run_evalDistEq [LawfulEvalDistSemantics (OracleComp I)] {left : Stateful I E σ₀}
+    {right : Stateful I E σ₁} {s₀ : σ₀} {s₁ : σ₁} (h : MeasureDistEquiv left s₀ right s₁)
+    {α : Type} (client : OracleComp E α) : left.run s₀ client =ᵈ right.run s₁ client :=
+  letI : MeasurableSpace α := ⊤
+  EvalDistEq.of_evalDist_eq (h client)
+
 /-- Equality of all client observations establishes handler equivalence. -/
 theorem of_run_evalDist_eq {left : Stateful I E σ₀} {right : Stateful I E σ₁}
     {s₀ : σ₀} {s₁ : σ₁}

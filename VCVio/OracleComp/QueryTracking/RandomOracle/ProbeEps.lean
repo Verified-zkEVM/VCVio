@@ -260,7 +260,7 @@ theorem prEvent_bind_fire_eq_defer {α : Type} (oa : ProbComp R)
       = Pr{let z ← gen >>= fun p => oa >>= fun w =>
           (pure (p.1, readMany w q p.2) : ProbComp (α × Bool))}[z.2 = true] := by
   rw [show k = fun w => gen >>= fun p => pure (p.1, readMany w q p.2) from funext hk]
-  refine prEvent_congr_of_evalDist_eq _ _ ?_ _
+  refine (evalDistEq_iff_evalDist_eq.mpr ?_).prEvent_eq _
   let : MeasurableSpace (α × Bool) := ⊤
   exact OracleComp.evalDist_bind_bind_swap _ _ _
 

@@ -7,6 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.EvalDist.Monad.Measure
+public import VCVio.EvalDist.EvalDistEq
 public import ToMathlib.Probability.UniformOn
 public import ToMathlib.MeasureTheory.Measure.Option
 
@@ -46,13 +47,12 @@ def Complete (encAlg : SymmEncAlg m M K C) : Prop :=
   letI : MeasurableSpace M := ⊤
   ∀ msg : M, 𝒟[encAlg.completenessExperiment msg] = Measure.dirac (some msg)
 
-/-- Channel form of perfect secrecy: every message induces the same ciphertext measure.
-Ciphertexts carry the discrete measurable structure, so the rows agree on every event. -/
+/-- Channel form of perfect secrecy: every message induces ciphertexts with the same
+distribution. -/
 def ciphertextRowsEqualAt (encAlg : SymmEncAlg m M K C) : Prop :=
-  let : MeasurableSpace C := ⊤
   ∀ msg₀ msg₁ : M,
-    𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg₀] =
-      𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg₁]
+    encAlg.perfectSecrecyCipherGivenMsgExperiment msg₀ =ᵈ
+      encAlg.perfectSecrecyCipherGivenMsgExperiment msg₁
 
 /-- Standard perfect secrecy expressed as independence: for every lossless message sampler, the
 joint message/ciphertext measure is the product of the message and ciphertext marginals.
@@ -90,7 +90,7 @@ theorem perfectSecrecyAt_of_ciphertextRowsEqualAt [LawfulMonad m] [Nonempty M]
   intro mgen hmgen
   let row := 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment (Classical.arbitrary M)]
   have hrow : ∀ msg, 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg] = row :=
-    fun msg ↦ hrows msg _
+    fun msg ↦ (hrows msg _).evalDist_eq
   rw [evalDist_perfectSecrecyCipherExperiment_of_rows encAlg mgen row hrow,
     encAlg.perfectSecrecyExperiment_eq_bind mgen, evalDist_bind_of_discrete, Measure.prod_def]
   refine Measure.bind_congr_right (Filter.Eventually.of_forall fun msg ↦ ?_)
@@ -115,7 +115,7 @@ theorem evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijecti
 
 /-- **Shannon's theorem**, channel form: a uniform key and deterministic encryption that is
 bijective in the key give equal ciphertext rows. -/
-theorem ciphertextRowsEqualAt_of_uniformKey_of_bijective
+theorem ciphertextRowsEqualAt_of_uniformKey_of_bijective [LawfulMonad m]
     [MeasurableSpace K] [DiscreteMeasurableSpace K] [MeasurableSingletonClass K]
     [hC : MeasurableSpace C] [DiscreteMeasurableSpace C]
     [Finite K] [Finite C] [Nonempty K] [Nonempty C]
@@ -124,9 +124,8 @@ theorem ciphertextRowsEqualAt_of_uniformKey_of_bijective
     (henc : ∀ k msg, 𝒟[encAlg.encrypt k msg] = Measure.dirac (enc k msg))
     (hbij : ∀ msg, Function.Bijective fun k ↦ enc k msg) :
     encAlg.ciphertextRowsEqualAt := by
-  obtain rfl : hC = ⊤ := top_le_iff.mp fun _ _ ↦ MeasurableSet.of_discrete
-  let : MeasurableSpace C := ⊤
   intro msg₀ msg₁
+  refine EvalDistEq.of_evalDist_eq ?_
   rw [evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijective encAlg enc
       hkey henc hbij msg₀,
     evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijective encAlg enc

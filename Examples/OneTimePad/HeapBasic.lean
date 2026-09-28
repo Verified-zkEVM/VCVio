@@ -254,8 +254,8 @@ def encOnce (sp : ℕ) (m : BitVec sp) : OracleComp (otpSpec sp) (BitVec sp) :=
 of `realImpl_distEquiv_idealImpl` by specialising the universal `≡ᵈ` to
 the canonical single-call adversary `encOnce sp m`.
 
-The same content, framed as `SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment`
-equivalence, is proved as `cipherGivenMsg_equiv` in
+The same content, framed as equality in distribution of
+`SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment` rows, is proved as `ciphertextRowsEqual` in
 `Examples.OneTimePad.Basic`. The state-separating framing replaces the
 "reductive bijection" of that proof with the "per-call gate" idiom: a
 direct existence statement at the handler level rather than a

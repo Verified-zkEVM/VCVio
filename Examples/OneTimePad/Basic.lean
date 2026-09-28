@@ -19,8 +19,8 @@ in both the independence form `SymmEncAlg.perfectSecrecyAt` and the channel form
 `SymmEncAlg.ciphertextRowsEqualAt`.
 
 The measure laws give the Dirac correctness distribution, a product distribution for message
-and ciphertext, and a uniform ciphertext measure for every fixed message. The equal rows also
-give the relational `GameEquiv` statement.
+and ciphertext, and a uniform ciphertext measure for every fixed message, so the ciphertexts of
+any two messages are equal in distribution.
 -/
 
 @[expose] public section
@@ -99,17 +99,8 @@ theorem evalDist_perfectSecrecyCipherGivenMsgExperiment (sp : ℕ) (msg : BitVec
 ciphertext distribution. -/
 @[game_hop_root]
 lemma ciphertextRowsEqual (sp : ℕ) : (oneTimePad sp).ciphertextRowsEqualAt :=
-  fun msg₀ msg₁ => by
-    rw [evalDist_perfectSecrecyCipherGivenMsgExperiment,
-      evalDist_perfectSecrecyCipherGivenMsgExperiment]
-
-open OracleComp.ProgramLogic in
-/-- Encrypting any two fixed messages has the same ciphertext distribution, as a relational
-game equivalence. -/
-lemma cipherGivenMsg_equiv (sp : ℕ) (msg₀ msg₁ : BitVec sp) :
-    GameEquiv
-      ((oneTimePad sp).perfectSecrecyCipherGivenMsgExperiment msg₀)
-      ((oneTimePad sp).perfectSecrecyCipherGivenMsgExperiment msg₁) :=
-  ciphertextRowsEqual sp msg₀ msg₁
+  fun msg₀ msg₁ => EvalDistEq.of_evalDist_eq
+    ((evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₀).trans
+      (evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₁).symm)
 
 end oneTimePad

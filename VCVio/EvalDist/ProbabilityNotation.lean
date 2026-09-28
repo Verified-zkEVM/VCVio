@@ -578,15 +578,6 @@ theorem prEvent_bind_const
   change 𝒟[mx >>= fun _ ↦ my] {True} = 𝒟[mx] Set.univ * 𝒟[my] {True}
   rw [evalDist_bind_const, Measure.smul_apply, smul_eq_mul]
 
-/-- Computations with the same output measure in the discrete structure have the same events. -/
-theorem prEvent_congr_of_evalDist_eq
-    {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx my : m α)
-    (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) (p : α → Prop) :
-    Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete, h]
-
 /-- A true constant event after a lossless draw has probability one. -/
 theorem prEvent_const_of_lossless
     {m : Type → Type v} [Monad m] [EvalDistSemantics m] {α : Type}

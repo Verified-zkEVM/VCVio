@@ -170,20 +170,35 @@ example :
     Pr{let x ← (pure (1 : ℝ) : OptionT (FreeM gaussSpec) ℝ)}[x = 1] = 1 := by
   simp
 
-/-! Equal discrete output measures on an unmeasured payload transport to real-valued
-observations and to structural support. -/
+/-! Computations equal in distribution on an unmeasured payload have equal output measures after
+real-valued continuations, and reach the same outputs. -/
 
-example {α : Type} (mx my : ProbComp α) (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my]))
-    (f : α → ProbComp ℝ) : 𝒟[mx >>= f] = 𝒟[my >>= f] :=
-  evalDist_bind_congr_of_evalDist_eq mx my h f
+example {α : Type} (mx my : ProbComp α) (h : mx =ᵈ my) (f : α → ProbComp ℝ) :
+    𝒟[mx >>= f] = 𝒟[my >>= f] :=
+  (h.bind_left f).evalDist_eq
 
-example {α : Type} (mx my : ProbComp α) (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my]))
-    (f : α → ℝ) : 𝒟[f <$> mx] = 𝒟[f <$> my] :=
-  evalDist_map_congr_of_evalDist_eq mx my h f
+example {α : Type} (mx my : ProbComp α) (h : mx =ᵈ my) (f : α → ℝ) :
+    𝒟[f <$> mx] = 𝒟[f <$> my] :=
+  (h.map f).evalDist_eq
 
-example {α : Type} {mx my : ProbComp α}
-    (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) : support mx = support my :=
-  support_eq_of_evalDist_eq h
+example {α : Type} {mx my : ProbComp α} (h : mx =ᵈ my) : support mx = support my :=
+  support_eq_of_evalDistEq h
+
+/-! Equality in distribution compares computations in different monads and chains in `calc`. -/
+
+example (n : ℕ) : (pure n : ProbComp ℕ) =ᵈ (some n : Option ℕ) :=
+  EvalDistEq.of_forall_prEvent_eq fun p => by
+    classical
+    simp
+
+example {α : Type} {mx my : ProbComp α} {mz : Option α} (h₁ : mx =ᵈ my) (h₂ : my =ᵈ mz) :
+    mx =ᵈ mz :=
+  calc mx =ᵈ my := h₁
+    _ =ᵈ mz := h₂
+
+example {α : Type} [Countable α] (mx my : ProbComp α) (h : ∀ x, Pr{mx}[= x] = Pr{my}[= x]) :
+    mx =ᵈ my :=
+  evalDistEq_iff_forall_prEvent_eq_output.mpr h
 
 /-! ### Event notation
 
