@@ -442,7 +442,7 @@ recompute `ExpandA(ρ)` and compare); pending the cost-model infrastructure (#46
 should be read computationally, against bounded distinguishers, where it is the
 assumption that SHAKE-based expansion yields a pseudorandom matrix. -/
 def expandAIdealization (p : Params) (prims : Primitives p) (εA : ℝ≥0∞) : Prop :=
-  ∀ [IsUniformSpec unifSpec] (D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool),
+  ∀ D : Bytes 32 → TqMatrix p.k p.l → ProbComp Bool,
     𝒟[do
         let rho ← $ᵗ (Bytes 32)
         D rho (prims.expandA rho)].boolDist

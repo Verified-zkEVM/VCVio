@@ -567,9 +567,21 @@ discrete Gaussian is a probability measure on `ℤ`. The `PMF` Rényi, total-var
 Radon–Nikodym modules, the discrete bridge between them and the `SPMF` wrapper are deleted. The
 retired-probability ledger stands at 627 entries and the `SPMF` import closure at 153 modules.
 
-Every remaining ledger entry sits in the façade itself or in the coinductive responders, which
-need a measurable coalgebra. The open Rényi, GPV and Falcon work (#466, #471, #478) builds on the
-native Rényi theory. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
+## Coinductive checkpoint
+
+Randomized oracles and executable responders are `ProbComp` programs read through `𝒟`: a
+`ProbHandler` is a `QueryImpl spec ProbComp`, `ProbResponder.IsExecutable` carries `answerComp`
+whose output measures are the stored kernel, and `ProbResponder.ofQueryImpl` turns a stateful
+`ProbComp` handler into a responder whose handler is the original one, so the machine-level
+IND-CPA run needs no distribution transport. The kernel bridges of the wired runs are
+`stepAgainstKernel_eq_evalDist` and `iterateAgainstKernel_eq_evalDist`. The executable layer lives
+in `Type`, where the measure semantics of `ProbComp` does; kernel responders keep their universe.
+The retired-probability ledger stands at 565 entries and the `SPMF` import closure at 136 modules.
+
+## Final removal
+
+Every remaining ledger entry sits in the façade itself. The open Rényi, GPV and Falcon work
+(#466, #471, #478) builds on the native Rényi theory. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
 builds on the converted slack and zero-knowledge families. Once the rest convert, removal
 deletes these modules and regenerates the umbrellas:
 
@@ -597,7 +609,7 @@ Compact native event formatting is published in #763. The observed continuation 
 is published in #764 as a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
-1. Convert the coinductive responders.
+1. Delete the discrete façade, as listed under *Final removal*.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
 (#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.

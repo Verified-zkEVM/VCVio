@@ -627,13 +627,13 @@ instances once; consumers should not repeatedly unfold it or redeclare the same 
 Lean's instance search does not prove arbitrary mass equations or unfold every named wrapper.
 
 For `ProbResponder`, the kernel is authoritative. `ProbResponder.IsExecutable` optionally carries
-a coherent realization `ProbResponder.IsExecutable.answerSPMF` for machine execution.
-Executable state and answer spaces must have measurable singletons, so equality with
-the authoritative kernel determines every executable point mass and therefore the entire SPMF.
-Pullback along an interface lens preserves executability only when the transported answer space
-also has measurable singletons. This separate capability is important: abstract cryptographic
-caches need not be countable, while a kernel-native responder need not have any executable SPMF
-realization.
+a `ProbComp` realization `ProbResponder.IsExecutable.answerComp` for machine execution, whose
+output measures are the kernel; two realizations therefore agree in distribution. Stateful
+`ProbComp` handlers become responders through `ProbResponder.ofQueryImpl`, and the handler of the
+result is the original one on the nose. Pullback along an interface lens preserves executability.
+This separate capability is important: abstract cryptographic caches need not be countable, while
+a kernel-native responder need not have any executable realization. The executable layer lives in
+`Type`, where the measure semantics of `ProbComp` does.
 
 #### Adoption audit
 
