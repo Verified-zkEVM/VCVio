@@ -1,7 +1,7 @@
 # Converting Downstream Code to Measure-Based Probability
 
 VCVio's probability semantics are Mathlib measures: `𝒟[mx]` is the output measure of a
-computation and `Pr{let x ← mx}[p x]` is the mass of an event. The discrete surface —
+computation and `Pr{x ← mx}[p x]` is the mass of an event. The discrete surface —
 `SPMF`, `evalSPMF`/`𝒮[…]`, `probOutput`/`probEvent`/`probFailure` with the `Pr[…]` notation, and
 the classes that interpret them — is deprecated and is being removed. This guide is the
 conversion path for code that builds on VCVio. Most of it is mechanical: find the legacy form in
@@ -22,9 +22,9 @@ record is `docs/reading/denotational-probability-semantics.md`.
 
 | Legacy | Native |
 |---|---|
-| `Pr[p \| mx]` | `Pr{let x ← mx}[p x]` |
-| `Pr[= x \| mx]` | `Pr{let y ← mx}[y = x]`; or `𝒟[mx] {x}` when the output has measurable singletons |
-| `Pr[⊥ \| mx]` | `1 - Pr{let _ ← mx}[True]`; identically `0` for `OracleComp` |
+| `Pr[p \| mx]` | `Pr{x ← mx}[p x]` |
+| `Pr[= x \| mx]` | `Pr{mx}[= x]`; or `𝒟[mx] {x}` when the output has measurable singletons |
+| `Pr[⊥ \| mx]` | `1 - Pr{_ ← mx}[True]`; identically `0` for `OracleComp` |
 | `evalSPMF mx`, `𝒮[mx]` | `𝒟[mx]` |
 | `tvDist mx my` | `measureETVDist mx my`; `Measure.etvDist` on measures |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
@@ -96,10 +96,15 @@ A removed module may have re-exported legacy hubs; add the imports the build the
 | Symptom | Fix |
 |---|---|
 | failed to synthesize `MeasurableSpace (spec.Range t)` or `OracleSpec.IsMeasureSpec spec` | add the binders from *Classes and binders*, or the local instances for a concrete specification |
-| failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{let y ← mx}[y = x]` |
+| failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{mx}[= x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
-| `simp` stops at `𝒟[(fun a => …) <$> $ᵗ α] {True}` | normalize with `bind_assoc`/`pure_bind` rather than `bind_pure_comp`, or rewrite with `prEvent_map` before `simp` |
-| parse error inside `Pr{let x ← f …}` spanning lines | parenthesize the computation, `Pr{let x ← (f …)}[…]`, or break the line right after `Pr{` |
+| two events that should agree differ only in how their binds and maps are arranged | `simp only [prEvent_norm]` brings both into the normal form of `Pr{…}[…]` |
+| a lemma about `Pr{y ← mx >>= f}[q y]` no longer matches after `simp` pushed the event into the bind | apply the lemma before `simp`, or state it for `prEvent (mx >>= g)` with `g : α → m Prop` |
+| a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | `simp only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def]` recovers that form; better, use the laws keyed on `prEvent` |
+| `simp [prEvent_def]` loops | `simp` rewrites `𝒟[mx] {True}` back to `prEvent mx`; use `rw [prEvent_def]` or `simp only` |
+| `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
+| `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
+| measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |
 | an event transported between monads (`ProbComp` and `OracleComp spec`) | with `let : MeasurableSpace α := ⊤`, rewrite both sides by `prEvent_eq_evalDist_of_discrete` and use a measure equation such as `uniformSampleImpl.evalDist_simulateQ` or `OracleComp.evalDist_liftComp_uniform` |
 | `x ∈ support mx ↔ 0 < mass` needs a uniform specification | use `mem_support_iff_evalDist_singleton_pos_of_fullSupport` with a full-support hypothesis for other answer measures |
 | probability one from reachability | `prEvent_eq_one_of_forall_mem_support`; the converse `prEvent_eq_one_iff` needs uniform answers |

@@ -387,7 +387,8 @@ theorem nma_to_hard_relation_bound
         Pr[ fun w : Wit => rel pk w = true |
           nmaReduction σ hr M nmaAdv qH pk] := by
     intro pk
-    simpa only [acc, evalDist_apply_singleton, probOutput_bind_eq_tsum, probOutput_pure,
+    simpa only [acc, prEvent_def, map_eq_bind_pure_comp, Function.comp_def,
+      evalDist_apply_singleton, probOutput_bind_eq_tsum, probOutput_pure,
       probEvent_eq_tsum_ite, Bool.coe_iff_coe, eq_iff_iff, true_iff,
       mul_ite, mul_one, mul_zero] using
       pointwise_extraction_bound σ hr M nmaAdv qH hss pk

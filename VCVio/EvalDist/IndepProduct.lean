@@ -50,10 +50,10 @@ lemma prEvent_forall_coord_mOfFn {α : Type} {m : Type → Type v}
     (n : ℕ) (g : Fin n → m α) (p : (i : Fin n) → α → Prop) :
     Pr{let v ← Fin.mOfFn n g}[∀ i, p i (v i)] = ∏ i, Pr{let x ← g i}[p i x] := by
   induction n with
-  | zero => simp [Fin.mOfFn, evalDist_pure]
+  | zero => simp [Fin.mOfFn]
   | succ n ih =>
-      simpa only [Fin.mOfFn, bind_assoc, pure_bind, Fin.forall_fin_succ,
-        Fin.cons_zero, Fin.cons_succ, Fin.prod_univ_succ, ih] using
+      simpa only [Fin.mOfFn, map_bind, bind_pure_comp, Functor.map_map, Function.comp_def,
+        Fin.forall_fin_succ, Fin.cons_zero, Fin.cons_succ, Fin.prod_univ_succ, ih] using
         prEvent_bind_bind_and (g 0) (Fin.mOfFn n fun i ↦ g i.succ)
           (p 0) (fun rest ↦ ∀ i, p i.succ (rest i))
 

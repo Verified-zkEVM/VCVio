@@ -181,17 +181,15 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
       = pure (ReaderReply.ofBool (sAcc gS), s) := fun gS =>
     singleTableHandler_reader_run (OracleComp.tableExtending c gS) transcript s
   -- Collapse the head reader query on all three positions.
-  simp only [multipleBadTableFine_run_query_bind', singleTable_run'_query_bind', map_bind]
   have hM_eq {α : Type}
       (observe : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) → α) :
       (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let p ← multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c gS)) gFine (Sum.inr transcript) (s, sB)
           observe <$>
             (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                (OracleComp.tableExtending c gS)) gFine) (k p.1)).run p.2)
+                (OracleComp.tableExtending c gS)) gFine)
+              (liftM (OracleSpec.query (Sum.inr transcript)) >>= k)).run (s, sB))
       = (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             observe <$>
@@ -201,19 +199,19 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (k (ReaderReply.ofBool (mAcc gS)))).run
                 (s, multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
                   gFine transcript sB)) := by
+    simp only [multipleBadTableFine_run_query_bind', map_bind]
     refine bind_congr fun gS => ?_
     refine bind_congr fun gFine => ?_
     rw [hMstep gS gFine]; rfl
   have hLHS_eq := hM_eq (fun z => z.1)
   have hRHS_eq :
       (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let p ← singleTableHandler (OracleComp.tableExtending c gS)
-            (Sum.inr transcript) s
           (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
-            (k p.1)).run' p.2)
+            (liftM (OracleSpec.query (Sum.inr transcript)) >>= k)).run' s)
       = (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
               (k (ReaderReply.ofBool (sAcc gS)))).run' s) := by
+    simp only [singleTable_run'_query_bind']
     refine bind_congr fun gS => ?_
     rw [hSstep gS]; rfl
   have hBAD_eq := hM_eq (fun z => (z.1, z.2.2))

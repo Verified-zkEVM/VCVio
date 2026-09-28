@@ -1241,7 +1241,7 @@ private lemma model_reject_le [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   set minH : (Fin ρ → Option (Chal × Resp × Fin (2 ^ b))) → Fin ρ → ℕ :=
     fun bs i => match bs i with | some (_, _, h) => h.val | none => 0 with hminH
   -- Reduce the rejection event to "the hash sum exceeds `S`".
-  simp only [bind_assoc, pure_bind]
+  simp only [prEvent_norm]
   set bestsComp := Fin.mOfFn ρ
     fun i => fischlinUnifSearch σ pk sk (commits i).2 (FinEnum.toList Chal) none with hbestsComp
   refine le_trans (prEvent_mono_of_support _ _ (fun bs => S < ∑ i, minH bs i)

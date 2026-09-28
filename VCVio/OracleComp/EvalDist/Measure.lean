@@ -105,6 +105,28 @@ theorem evalDist_bind_bind_swap_of_uniform
     Finite.to_countable
   evalDist_bind_bind_swap mx my f
 
+/-- Independent oracle computations commute before an event of their continuation. -/
+theorem prEvent_bind_bind_swap
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [∀ t, Countable (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec Prop) :
+    prEvent (mx >>= fun a ↦ my >>= fun b ↦ f a b) =
+      prEvent (my >>= fun b ↦ mx >>= fun a ↦ f a b) := by
+  rw [prEvent_def, prEvent_def, evalDist_bind_bind_swap]
+
+/-- Independent oracle computations commute before an event of their continuation under a uniform
+oracle specification. -/
+theorem prEvent_bind_bind_swap_of_uniform
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec Prop) :
+    prEvent (mx >>= fun a ↦ my >>= fun b ↦ f a b) =
+      prEvent (my >>= fun b ↦ mx >>= fun a ↦ f a b) := by
+  rw [prEvent_def, prEvent_def, evalDist_bind_bind_swap_of_uniform]
+
 /-- Compare measurable valuations of continuation outputs on structural support. The common
 computation's unobserved intermediate result needs no measurable-space instance. -/
 theorem lintegral_evalDist_bind_mono_of_support
@@ -205,20 +227,27 @@ theorem evalDist_bind_apply_congr_of_support
     (evalDist_bind_apply_mono_of_support mx f g hevent fun a ha ↦ (h a ha).le)
     (evalDist_bind_apply_mono_of_support mx g f hevent fun a ha ↦ (h a ha).ge)
 
-/-- Continuation events with equal probability on every structurally reachable output give equal
-composed event probabilities. The continuations may have different output types, and neither the
-common result nor the continuation outputs need a measurable space. -/
-theorem prEvent_bind_congr_of_support
-    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+/-- Comparing the events of continuations on every structurally reachable output compares the
+composed events. -/
+theorem prEvent_bind_mono_of_support
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
     [∀ t, MeasurableSpace (spec.Range t)]
     [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
-    (mx : OracleComp spec α) (f : α → OracleComp spec β) (g : α → OracleComp spec γ)
-    (p : β → Prop) (q : γ → Prop)
-    (h : ∀ a ∈ support mx, Pr{let y ← f a}[p y] = Pr{let z ← g a}[q z]) :
-    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
-  simpa only [bind_assoc] using
-    evalDist_bind_apply_congr_of_support mx (fun a ↦ f a >>= fun y ↦ pure (p y))
-      (fun a ↦ g a >>= fun z ↦ pure (q z)) (measurableSet_singleton True) h
+    (mx : OracleComp spec α) (f g : α → OracleComp spec Prop)
+    (h : ∀ a ∈ support mx, prEvent (f a) ≤ prEvent (g a)) :
+    prEvent (mx >>= f) ≤ prEvent (mx >>= g) :=
+  evalDist_bind_apply_mono_of_support mx f g (measurableSet_singleton True) h
+
+/-- Continuation events with equal probability on every structurally reachable output give equal
+composed event probabilities. The common result needs no measurable space. -/
+theorem prEvent_bind_congr_of_support
+    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (f g : α → OracleComp spec Prop)
+    (h : ∀ a ∈ support mx, prEvent (f a) = prEvent (g a)) :
+    prEvent (mx >>= f) = prEvent (mx >>= g) :=
+  evalDist_bind_apply_congr_of_support mx f g (measurableSet_singleton True) h
 
 /-- Almost-sure probability-one continuation events remain probability one after sequencing a
 lossless oracle computation. -/
@@ -347,11 +376,18 @@ variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
   [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsMeasureSpec spec] {α : Type}
 
-/-- Oracle computations with a measure interpretation are lossless. -/
+/-- Oracle computations with a measure interpretation are lossless. The law takes precedence
+over the event laws of particular computations, such as the uniform counting law. -/
+@[simp↓ high + 1, grind =]
 theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] = 1 := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
   simp
+
+/-- A lossless prefix whose result is unused leaves the event unchanged. -/
+theorem prEvent_bind_const (mx : OracleComp spec α) (my : OracleComp spec Prop) :
+    prEvent (mx >>= fun _ ↦ my) = prEvent my := by
+  rw [prEvent_def, prEvent_def, evalDist_bind_const]
 
 /-- An event containing every structurally reachable output has probability one. -/
 theorem prEvent_eq_one_of_forall_mem_support (mx : OracleComp spec α) (p : α → Prop)

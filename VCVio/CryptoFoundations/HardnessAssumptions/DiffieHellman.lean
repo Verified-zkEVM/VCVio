@@ -215,7 +215,7 @@ theorem evalDist_ddhRandomExperiment_cdhToDDHReduction_true
     ← prEvent_eq_evalDist_singleton]
   refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun h => ?_
   obtain ⟨c₀, rfl⟩ := hg.surjective h
-  simp only [bind_assoc, pure_bind, decide_eq_true_eq]
+  simp only [prEvent_norm, decide_eq_true_eq]
   rw [prEvent_congr _ _ (· = c₀) fun c => ⟨fun h => (hg.injective h).symm, fun h => h ▸ rfl⟩]
   exact SampleableType.prEvent_uniformSample_eq_singleton c₀
 
@@ -255,12 +255,12 @@ theorem dlogSuccess_sq_le_cdhSuccess_dlogToCDHReduction
     return (z₁, z₂)
   have hdlog : 𝒟[dlogExperiment g adversary] {true} = Pr{let z ← attempt}[z.2 = z.1] := by
     rw [← prEvent_eq_evalDist_singleton _ true]
-    simp only [dlogExperiment, attempt, bind_assoc, pure_bind, decide_eq_true_eq]
+    simp only [dlogExperiment, attempt, prEvent_norm, decide_eq_true_eq]
   have hcdh : Pr{let w ← pairs}[(w.1.2 * w.2.2) • g = (w.1.1 * w.2.1) • g] =
       𝒟[cdhExperiment g (dlogToCDHReduction (F := F) adversary)] {true} := by
     rw [← prEvent_eq_evalDist_singleton _ true]
-    simp only [pairs, attempt, cdhExperiment, dlogToCDHReduction, bind_assoc, pure_bind,
-      decide_eq_true_eq]
+    simp only [pairs, attempt, cdhExperiment, dlogToCDHReduction, prEvent_norm,
+      decide_eq_true_eq, prEvent_def]
     refine congrArg (fun μ : MeasureTheory.Measure Prop => μ {True}) ?_
     refine evalDist_bind_congr_of_support _ _ _ fun a _ => ?_
     exact OracleComp.evalDist_bind_bind_swap _ _ _
@@ -268,7 +268,7 @@ theorem dlogSuccess_sq_le_cdhSuccess_dlogToCDHReduction
       = Pr{let z ← attempt}[z.2 = z.1] * Pr{let z ← attempt}[z.2 = z.1] := by rw [hdlog, sq]
     _ = Pr{let w ← pairs}[w.1.2 = w.1.1 ∧ w.2.2 = w.2.1] := by
         rw [← prEvent_bind_bind_and]
-        simp only [pairs, bind_assoc, pure_bind]
+        simp only [pairs, attempt, prEvent_norm]
     _ ≤ Pr{let w ← pairs}[(w.1.2 * w.2.2) • g = (w.1.1 * w.2.1) • g] :=
         prEvent_mono _ _ _ fun w ⟨h₁, h₂⟩ => by rw [h₁, h₂]
     _ = _ := hcdh

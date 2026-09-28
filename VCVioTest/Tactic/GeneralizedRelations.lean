@@ -104,7 +104,7 @@ example (f' g' : α → ProbComp β) (p : β → Prop)
     (h : ∀ x ∈ support mx, Pr{let y ← f' x}[p y] ≤ Pr{let y ← g' x}[p y]) :
     Pr{let y ← mx >>= f'}[p y] ≤ Pr{let y ← mx >>= g'}[p y] := by
   -- gap(gcongr, 2026-09-08): bind probability needs the expectation normal form.
-  fail_if_success (gcongr; done)
+  fail_if_success gcongr
   simp only [prEvent_eq_wp_propInd, wp_bind] at h ⊢
   grw [h]
   assumption

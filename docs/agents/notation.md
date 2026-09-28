@@ -15,7 +15,8 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | primary `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure.lean` |
-| `Pr{let x ← mx; ...}[event]` | `prEvent`: successful-output measure of the `do` computation returning `event`, evaluated at `{True}` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `Pr{x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; `let x ← mx` and `do` sequences are also accepted | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `Pr{mx}[= a]` | `prEvent ((· = a) <$> mx)`: the mass of the single output `a` | `VCVio/EvalDist/ProbabilityNotation.lean` |
 | `𝒮[mx]` | explicit finite adapter, `evalSPMF mx` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[= x \| mx]` | `probOutput mx x` | `VCVio/EvalDist/Defs/Basic.lean` |
 | `Pr[p \| mx]` | `probEvent mx p` | `VCVio/EvalDist/Defs/Basic.lean` |

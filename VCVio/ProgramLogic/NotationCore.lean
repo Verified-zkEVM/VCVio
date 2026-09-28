@@ -153,7 +153,7 @@ lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
   rw [triple_iff_le_wp, propInd_true, ← prEvent_eq_wp_propInd]
   exact ⟨fun h ↦ le_antisymm
     ((MeasureTheory.measure_mono (Set.subset_univ _)).trans
-      (evalDist_apply_univ_le_one (do let x ← oa; pure (p x)))) h, fun h ↦ h.ge⟩
+      (evalDist_apply_univ_le_one (p <$> oa))) h, fun h ↦ h.ge⟩
 
 /-- Lower-bound event goals are exactly quantitative triples with indicator postconditions. -/
 lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}

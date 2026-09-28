@@ -122,5 +122,5 @@ lemma prEvent_from_fresh_query_le_inv [MeasurableSpace C] [MeasurableSingletonCl
   rw [hrun]
   refine (prEvent_bind_le_prEvent_of_forall_eq_zero _ _ (fun u => u = target) _
     fun u hu => hzero u hu).trans (le_of_eq ?_)
-  rw [prEvent_liftM_query_eq_card_div, Finset.filter_eq' Finset.univ target]
+  rw [prEvent_liftM_query_eq_card_div t, Finset.filter_eq' Finset.univ target]
   simp

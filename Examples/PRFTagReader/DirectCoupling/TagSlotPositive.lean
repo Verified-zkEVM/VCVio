@@ -188,19 +188,16 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
     have := slotPositive_S_tag_step (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
       (sessionsPerTag := sessionsPerTag) c gS tag s hslot
     convert this using 1
-  -- Unfold head queries on both sides.
-  simp only [multipleBadTableFine_run_query_bind', singleTable_run'_query_bind', map_bind]
   -- Phase B-1: rewrite each of LHS, RHS, BAD so the head step exposes the inner `n ← $ᵗ`.
   have hM_eq {α : Type}
       (observe : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) → α) :
       (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let p ← multipleBadTableHandlerFine (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c gS)) gFine (Sum.inl tag) (s, sB)
           observe <$>
             (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-                (OracleComp.tableExtending c gS)) gFine) (k p.1)).run p.2)
+                (OracleComp.tableExtending c gS)) gFine)
+              (liftM (OracleSpec.query (Sum.inl tag)) >>= k)).run (s, sB))
       = (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let n ← $ᵗ Nonce
@@ -215,6 +212,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (some (⟨n, OracleComp.tableExtending c gS
                     ((tag, (0 : Fin sessionsPerTag)), n)⟩ :
                     TagTranscript Nonce Digest)))) := by
+    simp only [multipleBadTableFine_run_query_bind', map_bind]
     refine bind_congr fun gS => ?_
     refine bind_congr fun gFine => ?_
     rw [hMstep gS gFine]
@@ -222,13 +220,14 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
   have hLHS_eq := hM_eq (fun z => z.1)
   have hRHS_eq :
       (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          let p ← singleTableHandler (OracleComp.tableExtending c gS) (Sum.inl tag) s
-          (simulateQ (singleTableHandler (OracleComp.tableExtending c gS)) (k p.1)).run' p.2)
+          (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
+            (liftM (OracleSpec.query (Sum.inl tag)) >>= k)).run' s)
       = (do let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
             let n ← $ᵗ Nonce
             (simulateQ (singleTableHandler (OracleComp.tableExtending c gS))
               (k (some (⟨n, OracleComp.tableExtending c gS
                   ((tag, slotK), n)⟩ : TagTranscript Nonce Digest)))).run' advM) := by
+    simp only [singleTable_run'_query_bind']
     refine bind_congr fun gS => ?_
     rw [hSstep gS]
     exact bind_assoc ..

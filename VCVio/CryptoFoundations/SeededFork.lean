@@ -355,7 +355,7 @@ private lemma prEvent_noGuard_le_fork_add_collision
           cf y.1 = some s ∧ y.2.1 = some y.2.2] = 1 := by
         rw [prEvent_pure]; exact ite_eq_left ⟨hcf, hu⟩
       rw [h3]
-      exact (prEvent_le_one _ _).trans le_add_self
+      exact (prEvent_le_one _).trans le_add_self
     · have h3 : Pr{let y ← (pure (a, (σ i)[s]?, u) :
           OracleComp spec (α × Option (spec.Range i) × spec.Range i))}[
           cf y.1 = some s ∧ y.2.1 = some y.2.2] = 0 := by
@@ -387,7 +387,7 @@ private lemma prEvent_main_eq_takeAtIndex (s : Fin (qb i + 1)) :
   have h := prEvent_congr_of_evalDist_eq _ _
     (seededOracle.evalDist_liftComp_generateSeed_takeAtIndex_run' qb js i s main)
     (fun w => cf w.2 = some s)
-  simpa only [bind_assoc, pure_bind] using h
+  simpa only [prEvent_norm] using h
 
 /-- Two runs on a shared seed, the second truncated after the `s`-th answer at `i`, have the
 distribution of two runs on the truncated seed. -/
@@ -451,7 +451,7 @@ private lemma prEvent_collision_le [Fintype (spec.Range i)] (s : Fin (qb i + 1))
   refine MeasureTheory.lintegral_mono fun σ => ?_
   have h := prEvent_bind_bind_and ((simulateQ seededOracle main).run' σ)
     (liftComp ($ᵗ spec.Range i) spec) (fun a => cf a = some s) (fun u => (σ i)[s]? = some u)
-  simp only [bind_assoc, pure_bind] at h ⊢
+  simp only [prEvent_norm] at h ⊢
   rw [h]
   exact mul_le_mul' le_rfl (prEvent_seedSlot_le_inv qb i s σ)
 
@@ -474,7 +474,7 @@ theorem le_prEvent_seededFork [∀ i, DecidableEq (spec.Range i)] [Fintype (spec
       prEvent_main_eq_takeAtIndex main qb js i cf s]
     have hjensen := prEvent_bind_sq_le_bind_pair (liftComp (generateSeed spec qb js) spec)
       (fun σ => (simulateQ seededOracle main).run' (σ.takeAtIndex i s)) (fun x => cf x = some s)
-    simpa only [bind_assoc, pure_bind] using hjensen
+    simpa only [prEvent_norm] using hjensen
   refine le_trans (tsub_le_tsub
     (hsq.trans (prEvent_noGuard_le_fork_add_collision main qb js i cf s))
     (prEvent_collision_le main qb js i cf s)) ?_

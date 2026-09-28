@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 public import VCVio.EvalDist.Defs.Measure.OptionT
 public import VCVio.EvalDist.ProbabilityBounds
+public import VCVio.EvalDist.Monad.Failure
 public import ToMathlib.Control.OptionT
 
 /-!
@@ -48,6 +49,14 @@ theorem prEvent_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
   rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
     OptionT.evalDist_lift]
 
+/-- A monadic lift into the optional monad preserves the probability of an observed event. -/
+@[simp↓ high, grind norm↓]
+theorem prEvent_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) :
+    Pr{let x ← (liftM mx : OptionT m α)}[p x] = Pr{let x ← mx}[p x] :=
+  prEvent_lift mx p
+
 /-- A guard contributes its condition to the observed event after a lifted draw. -/
 @[simp↓ high, grind norm↓]
 theorem prEvent_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
@@ -60,22 +69,11 @@ theorem prEvent_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
   have h (x : α) : Pr{let _ ← (guard (p x) : OptionT m Unit)}[q x] =
       if p x ∧ q x then 1 else 0 := by
     by_cases hp : p x <;> by_cases hq : q x <;> simp [guard, hp, hq]
-  rw [_root_.evalDist_bind_of_discrete,
-    Measure.bind_apply (measurableSet_singleton True) Measurable.of_discrete.aemeasurable,
-    OptionT.evalDist_lift]
+  rw [prEvent_bind_of_discrete, OptionT.evalDist_lift]
   simp_rw [h]
   rw [prEvent_eq_evalDist_of_discrete]
   simpa only [Set.indicator_apply, Pi.one_apply, Set.mem_ofPred_eq] using
     lintegral_indicator_one (μ := 𝒟[mx]) (MeasurableSet.of_discrete (s := {x | p x ∧ q x}))
-
-/-- A constant map after a sampled guard contributes its guard to the observed event. -/
-@[simp high, grind norm]
-theorem prEvent_bind_map_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p q : α → Prop) [DecidablePred p] :
-    𝒟[do let x ← OptionT.lift mx; (fun _ : Unit ↦ q x) <$> guard (p x)] {True} =
-      Pr{let x ← mx}[p x ∧ q x] := by
-  simpa only [map_eq_bind_pure_comp, Function.comp_def] using prEvent_bind_guard mx p q
 
 /-- A lifted draw followed by a guard puts its successful event mass at the unit output. -/
 @[simp↓ high]
@@ -135,7 +133,7 @@ theorem prEvent_mk_bind_eq_one_of_support (mx : m α) (hmx : Pr{let _ ← mx}[Tr
     (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[p y] = 1) :
     Pr{let y ← OptionT.mk (mx >>= f)}[p y] = 1 := by
   rw [mk_bind_eq_lift_bind]
-  refine le_antisymm (prEvent_le_one _ _) ?_
+  refine le_antisymm (prEvent_le_one _) ?_
   refine le_prEvent_bind_of_forall_le_of_support (OptionT.lift mx) ?_ _ p ?_
   · rwa [prEvent_lift]
   · exact fun a ha ↦ (h a (mem_support_of_mem_support_lift ha)).ge

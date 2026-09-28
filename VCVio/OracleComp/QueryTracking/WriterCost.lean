@@ -210,7 +210,7 @@ variable {ω : Type} [Monad m] [EvalDistSemantics m]
 No measurable space on the discarded outputs is required. -/
 lemma prEvent_costs [LawfulMonad m] (oa : AddWriterT ω m α) (p : ω → Prop) :
     Pr{let c ← oa.costs}[p c] = Pr{let z ← oa.run}[p (Multiplicative.toAdd z.2)] := by
-  simp only [costs_def, bind_map_left]
+  simp only [costs_def, prEvent_map]
 
 variable [MeasurableSpace ω]
 

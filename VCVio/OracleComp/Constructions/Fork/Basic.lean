@@ -240,7 +240,7 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
   have hpair :
       Pr{let x ← source; let a ← kernel x; let b ← kernel x}[a = some value ∧ b = some value] =
         Pr{let pair ← source >>= pairKernel}[pair.1 = some value ∧ pair.2 = some value] := by
-    simp only [pairKernel, bind_assoc, pure_bind]
+    simp only [pairKernel, map_bind, bind_pure_comp, Functor.map_map]
   rw [hpair]
   refine prEvent_bind_congr source pairKernel _ _ _ ?_
   rintro ⟨split, hvalid⟩
@@ -255,8 +255,8 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
       simp only [pairKernel, kernel, Cursor.complete,
         PFunctor.FreeM.Cursor.Split.complete_found,
         PFunctor.FreeM.Cursor.Occurrence.completePath, Cursor.completeOccurrence,
-        ofFreeM_map, bind_assoc, pure_bind, bind_map_left,
-        Option.some.injEq, Prod.mk.injEq,
+        ofFreeM_map, bind_map_left, map_bind, bind_pure_comp,
+        Functor.map_map, Option.some.injEq, Prod.mk.injEq,
         PFunctor.FreeM.Cursor.ForkView.firstPath_mk,
         PFunctor.FreeM.Cursor.ForkView.secondPath_mk,
         observeView, Function.comp_def]

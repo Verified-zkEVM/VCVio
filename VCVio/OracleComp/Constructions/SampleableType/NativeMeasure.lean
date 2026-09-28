@@ -130,7 +130,7 @@ theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.
         fun x' _ hx' => by
           obtain ⟨xs, -, hxs⟩ := (mem_support_bind_iff _ _ _).mp hx'
           exact (List.cons.inj ((mem_support_pure_iff' (m := ProbComp) _ _).mp hxs)).1]
-      simp only [bind_assoc, pure_bind, List.cons.injEq, true_and]
+      simp only [prEvent_norm, List.cons.injEq, true_and]
       rw [prEvent_uniformSample_eq_singleton, ih (by simpa using hlen), pow_succ', Nat.cast_mul,
         ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
 
@@ -211,7 +211,7 @@ theorem prEvent_uniformSample_pair_of_bijective [SampleableType γ] {g : α → 
   calc Pr{let x ← $ᵗ α; let y ← $ᵗ β}[p (g x y)]
       = Pr{let xy ← (do let x ← $ᵗ α; let y ← $ᵗ β; return (x, y))}[
           p (Function.uncurry g xy)] := by
-        simp only [bind_assoc, pure_bind, Function.uncurry_apply_pair]
+        simp only [prEvent_norm, Function.uncurry_apply_pair]
     _ = Pr{let z ← $ᵗ γ}[p z] := by
         rw [← prEvent_map]
         refine prEvent_congr_of_evalDist_eq _ _ ?_ p
@@ -232,10 +232,10 @@ theorem prEvent_uniformSample_prod_le_of_forall_fst (p : α × β → Prop) {ε 
     (h : ∀ x, Pr{let y ← $ᵗ β}[p (x, y)] ≤ ε) :
     Pr{let z ← $ᵗ (α × β)}[p z] ≤ ε := by
   rw [prEvent_uniformSample_prod]
-  simpa only [bind_assoc, pure_bind] using
+  simpa only [prEvent_norm] using
     prEvent_bind_le_of_forall_le ($ᵗ α)
       (fun x => do let y ← $ᵗ β; return (x, y)) p
-      (fun x => by simpa only [bind_assoc, pure_bind] using h x)
+      (fun x => by simpa only [prEvent_norm] using h x)
 
 /-- A uniform bound after fixing the second coordinate bounds an event of a uniform product. -/
 theorem prEvent_uniformSample_prod_le_of_forall_snd (p : α × β → Prop) {ε : ℝ≥0∞}
@@ -243,10 +243,10 @@ theorem prEvent_uniformSample_prod_le_of_forall_snd (p : α × β → Prop) {ε 
     Pr{let z ← $ᵗ (α × β)}[p z] ≤ ε := by
   rw [← prEvent_uniformSample_pair_of_bijective
     (g := fun y x => (x, y)) (Equiv.prodComm β α).bijective]
-  simpa only [bind_assoc, pure_bind] using
+  simpa only [prEvent_norm] using
     prEvent_bind_le_of_forall_le ($ᵗ β)
       (fun y => do let x ← $ᵗ α; return (x, y)) p
-      (fun y => by simpa only [bind_assoc, pure_bind] using h y)
+      (fun y => by simpa only [prEvent_norm] using h y)
 
 /-- The first coordinate of a uniform product draw is a uniform draw. -/
 theorem prEvent_uniformSample_fst (p : α → Prop) :
@@ -277,7 +277,7 @@ theorem evalDist_uniformSample_vector_succ (N : ℕ) :
   rw [← prEvent_eq_evalDist_of_discrete,
     ← prEvent_eq_evalDist_of_discrete,
     ← prEvent_uniformSample_pair_of_bijective hbij (· ∈ A)]
-  simp only [bind_assoc, pure_bind]
+  simp only [prEvent_norm]
 
 /-- A continuation of the first coordinate of a uniform pair has the output measure of the same
 continuation of a uniform first coordinate. -/
@@ -311,10 +311,10 @@ theorem prEvent_uniformSample_finSnoc_le_add {n : ℕ}
     Pr{let z ← $ᵗ (_root_.Fin (n + 1) → α)}[event z] ≤
       Pr{let y ← $ᵗ (_root_.Fin n → α)}[bad y] + ε := by
   rw [prEvent_uniformSample_finSnoc]
-  simpa only [bind_assoc, pure_bind] using
+  simpa only [prEvent_norm] using
     prEvent_bind_le_prEvent_add ($ᵗ (_root_.Fin n → α))
       (fun y => do let x ← $ᵗ α; return Fin.snoc y x) bad event
-      (fun y hy => by simpa only [bind_assoc, pure_bind] using h y hy)
+      (fun y hy => by simpa only [prEvent_norm] using h y hy)
 
 end transport
 

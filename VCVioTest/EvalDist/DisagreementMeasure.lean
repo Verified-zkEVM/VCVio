@@ -35,7 +35,7 @@ universe v
 example {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (mx : m ℝ) (f : ℝ → m ℝ) (g : Fin 2 → ℝ → m Prop)
-    (hf : Measurable fun x ↦ 𝒟[do let y ← f x; return y ≤ 0])
+    (hf : Measurable fun x ↦ 𝒟[(· ≤ 0) <$> f x])
     (hg : ∀ i, Measurable fun x ↦ 𝒟[g i x]) (bound : ℝ → ENNReal)
     (h : ∀ᵐ x ∂𝒟[mx], Pr{let y ← f x}[y ≤ 0] ≤
       (∑ i, Pr{let q ← g i x}[q]) + bound x) :

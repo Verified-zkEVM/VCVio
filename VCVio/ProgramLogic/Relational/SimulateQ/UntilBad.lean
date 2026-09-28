@@ -147,7 +147,7 @@ theorem prEvent_simulateQ_run_bad_eq
     fun z => bad z.2
   rw [OracleComp.prEvent_true_eq_one] at h₁ h₂
   have hne : Pr{let z ← (simulateQ impl₂ oa).run s₀}[¬bad z.2] ≠ ⊤ :=
-    ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one _ _)
+    ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one _)
   rw [ENNReal.eq_sub_of_add_eq (hgood ▸ hne) h₁, ENNReal.eq_sub_of_add_eq hne h₂, hgood]
 
 /-- Two simulations whose handlers agree on good-to-good steps and keep bad states bad have

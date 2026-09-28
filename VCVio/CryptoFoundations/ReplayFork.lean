@@ -667,7 +667,7 @@ theorem prEvent_contextForkViewCollision_le_collision [DecidableEq ι]
       · simp only [heq, hcf, and_self, ite_true]
         rw [prEvent_pure]
         simp only [ite_true]
-        exact prEvent_le_one _ _
+        exact prEvent_le_one _
       · have hfirst : cf (PFunctor.FreeM.output main located.completion.path) ≠ some s := by
           rw [located.path_eq]; exact hcf
         refine (le_of_eq (prEvent_eq_zero_of_forall_not _ _ fun _ h => ?_)).trans zero_le

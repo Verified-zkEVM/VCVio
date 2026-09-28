@@ -146,7 +146,8 @@ open VCVioTest.MeasureSemantics in
 example :
     Pr{let x ← (FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)}[x > 0] =
       gaussianReal 0 1 {x | x > 0} := by
-  rw [FreeM.evalDist_lift_bind_pure (P := gaussSpec) _ _ (by fun_prop),
+  rw [prEvent_def, map_eq_bind_pure_comp, Function.comp_def,
+    FreeM.evalDist_lift_bind_pure (P := gaussSpec) _ _ (by fun_prop),
     FreeM.evalDist_eq_denote (P := gaussSpec), denote_gauss_lift,
     Measure.map_apply (by fun_prop) (measurableSet_singleton True)]
   simp
@@ -183,5 +184,49 @@ example {α : Type} (mx my : ProbComp α) (h : (letI : MeasurableSpace α := ⊤
 example {α : Type} {mx my : ProbComp α}
     (h : (letI : MeasurableSpace α := ⊤; 𝒟[mx] = 𝒟[my])) : support mx = support my :=
   support_eq_of_evalDist_eq h
+
+/-! ### Event notation
+
+`Pr{…}[…]` elaborates to `prEvent` in the form `simp` maintains, whichever surface form is used,
+and goals display in the draw form. -/
+
+section eventNotation
+
+variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ)
+
+example : Pr{x ← mx}[x = true] = prEvent ((fun x => x = true) <$> mx) := rfl
+example : Pr{let x ← mx}[x] = prEvent ((fun x => x = true) <$> mx) := rfl
+example : Pr{x ← mx; y ← my x}[y = 3 ∧ x] =
+    prEvent (mx >>= fun x => (fun y => y = 3 ∧ x = true) <$> my x) := rfl
+example : Pr{x ← mx; y ← my x}[y = 3] = Pr{let x ← mx; let y ← my x}[y = 3] := rfl
+example : Pr{x : Bool ← mx}[x] = Pr{x ← mx}[x = true] := rfl
+example : Pr{mz}[= 3] = Pr{z ← mz}[z = 3] := rfl
+example : Pr{{let x ← mx}}[x] = Pr{x ← mx}[x] := rfl
+example : Pr{
+    let x ← mz
+    let y := x + 1}[y = 3] = prEvent ((fun x => x + 1 = 3) <$> mz) := rfl
+
+/-- A draw's action may continue on the following lines without parentheses. -/
+example (f : ℕ → ℕ → ProbComp ℕ) : Pr{x ← f
+    1 2; y ← f x
+      x}[x = y] = Pr{x ← (f 1 2); y ← (f x x)}[x = y] := rfl
+
+/-- `simp` keeps the notation in normal form and applies laws keyed on the head constant. -/
+example (p : ℕ → Prop) (h : Pr{x ← mz}[p x] = 0) : Pr{x ← mz}[p x] = 0 := by
+  fail_if_success simp only [bind_pure_comp] at h
+  exact h
+
+example (a : ℕ) : Pr{x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
+
+/-- A derived uniform program is closed by the uniform law after `simp` merges its maps. -/
+example : Pr{x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
+  simp [SampleableType.prEvent_uniformSample, Finset.filter_insert, Finset.filter_singleton]
+
+/-- Goals display in the draw form. -/
+example : Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x] := by
+  guard_target =ₛ Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x]
+  rfl
+
+end eventNotation
 
 end VCVioTest.ProbabilityNotation

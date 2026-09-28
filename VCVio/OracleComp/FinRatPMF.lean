@@ -91,9 +91,9 @@ lemma prEvent_simulateQ {ι : Type u} {spec : OracleSpec.{u, 0} ι}
     [∀ t : spec.Domain, FinEnum (spec.Range t)]
     {α : Type} (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← simulateQ (finRatImpl (spec := spec)) oa}[p x] = Pr{let x ← oa}[p x] := by
-  simpa only [simulateQ_bind, simulateQ_pure] using
-    congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
-      (evalDist_simulateQ (spec := spec) (oa >>= fun x => pure (p x)))
+  rw [prEvent_def, prEvent_def, ← simulateQ_map]
+  exact congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
+    (evalDist_simulateQ (spec := spec) (p <$> oa))
 
 end finRatImpl
 

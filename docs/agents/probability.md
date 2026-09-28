@@ -159,11 +159,26 @@ judgments and kernels; flattened support does not acquire an exact bind law.
 The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
 live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
-`Pr{let x ← mx; ...}[event]` is the computation-style event notation. Write the first
-statement directly after `Pr{`; no space is required. An explicit line break after `Pr{` is
-also supported for multiline sequences. It elaborates
-an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
-the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
+`Pr{x ← mx; y ← my x}[event]` is the event notation. Its draws are `x ← e` items separated by
+`;`, and an action may continue on the following lines. An ordinary `do` sequence, such as
+`Pr{let x ← mx; let y := f x}[event]` or a multi-line block, is accepted as well.
+`Pr{mx}[= a]` is the probability of the single output `a` and needs no measurable singletons.
+The notation denotes `prEvent (mx : m Prop) := 𝒟[mx] {True}` of the computation returning
+the event. It is elaborated in the normal form `simp` maintains:
+- binds end in a map of the eta-reduced final event;
+- local `let`s are substituted;
+- a branch is split into its arms.
+
+`simp only [prEvent_norm]` brings any event computation into this form, and `simp` rewrites
+`𝒟[mx] {True}` to `prEvent mx`. The event laws are keyed on `prEvent`:
+- bounds, `pure`, `failure` and constant prefixes;
+- sequencing, deterministic monads and lossless oracle computations;
+- uniform sampling, bind swaps and support congruence.
+
+`prEvent_def` unfolds an event to its measure when an argument needs the measure itself. Goals
+display in the draw form. A lemma whose selector's type depends on an implicit argument, such as a
+query index, is rewritten with that argument supplied: `Functor.map` unifies the selector before
+the computation. The notation works with a direct measure-only oracle
 interpretation as well as a finite compatibility interpretation. The
 `prEvent_eq_evalDist` theorem requires a measurable predicate; its
 discrete specialization discharges that condition. `prEvent_eq_evalDist_decide`
@@ -867,11 +882,10 @@ and the `orElse` (`<|>`) probability lemmas for `OptionT (OracleComp spec)` (`pr
 `VCVioTest/NativeProbabilityTactics.lean` and `VCVioTest/NativeMonadProbability.lean` are the
 measure-side counterparts of these two gates: the same families stated with `𝒟[…]` and `Pr{…}[…]`, under
 the same rules. Their dated guards record where the native sets are weaker than the discrete ones:
-`grind` has no Dirac, uniform or success-mass rules; a product singleton is not split into a
-rectangle; `simp` rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the lossless-mass
-rule; the uniform event law is keyed on the `Pr{…}` bind form, which `simp` first normalises into a
-pushforward; and the support/mass bridges are applied by name. Closing one of these retires its
-guard in the same change.
+`grind` has no Dirac or uniform rules; a product singleton is not split into a rectangle; `simp`
+rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the lossless-mass rule; and the
+support/mass bridges are applied by name. Closing one of these retires its guard in the same
+change.
 
 **Opting out downstream.** VCVio deliberately extends the *default* `grind` set — the monad laws
 above plus the probability/support bridges — and these tags are inherited by every project that

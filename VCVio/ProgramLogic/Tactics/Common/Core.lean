@@ -516,9 +516,12 @@ def isEvalDistEqGoal (target : Expr) : Bool :=
   else
     false
 
-/-- The computation observed by a native measure expression: the argument of `𝒟[…]`, which is
-also the computation of a `Pr{…}[…]` event. -/
+/-- The computation observed by a native measure expression: the event computation of
+`prEvent`, which `Pr{…}[…]` elaborates to, or the argument of `𝒟[…]`. -/
 def evalDistComp? (e : Expr) : Option Expr := do
+  if let some app := findAppWithHead? ``prEvent e then
+    let args ← trailingArgs? app 1
+    return ← args[0]?
   let app ← findAppWithHead? ``evalDist e
   let args ← trailingArgs? app 1
   args[0]?
