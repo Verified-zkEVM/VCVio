@@ -16,11 +16,10 @@ primary measure `𝒟[…]`, each closed by one terminal tactic, following the c
 `docs/agents/probability.md` (*Normal forms and the tactic contract*). The contract it pins is
 that `simp` keeps the measure side in measure normal form: singleton, event and total masses stay
 `𝒟[mx] s`. Crossing into the deprecated discrete notation is an explicit rewrite by
-`evalDist_apply_singleton`, `evalDist_apply_setOf` or `evalDist_apply_univ`. Inside
-`ProbComp.DiscreteCompatibility` an
-integral against `𝒟[mx]` becomes `expectedValue mx g`; native integrals retain their
-measure-theoretic normal form. The Giry laws for `bind`/`map` stay out of default `simp`
-on both sides, and the integral form of a bind is an intermediate, not a target.
+`evalDist_apply_singleton`, `evalDist_apply_setOf` or `evalDist_apply_univ`. Integrals
+against `𝒟[mx]` keep their measure-theoretic normal form. The Giry laws for `bind`/`map` stay
+out of default `simp` on both sides, and the integral form of a bind is an intermediate, not a
+target.
 
 The adapter checks open `ProbComp.DiscreteCompatibility` explicitly. Other entries exercise the
 native free-monad fold, a local `IsProbabilitySpec.toMeasureSpec`, and `OptionT ProbComp`,
@@ -61,10 +60,6 @@ example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] := by
 example (mx : ProbComp Bool) (p : Bool → Prop) : 𝒟[mx] {b | p b} = Pr[p | mx] :=
   evalDist_apply_setOf mx p
 example (mx : ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] := by simp
-example (mx : ProbComp Bool) (g : Bool → ℝ≥0∞) :
-    ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := by simp
-example (mx : ProbComp Bool) (c : ℝ≥0∞) :
-    ∫⁻ _, c ∂𝒟[mx] = expectedValue mx fun _ => c := by simp
 
 example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] = Measure.dirac x := by simp
 example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] {x} = 1 := by simp
@@ -88,11 +83,11 @@ example (mx : ProbComp Bool) (f : Bool → ProbComp (Fin 3)) :
   fail_if_success simp  -- by design: bind expansion is not default simp
   exact evalDist_bind_of_discrete mx f
 
-/-- The integral form of a bind is an intermediate, not a target: `simp` takes the right-hand
-side into the façade instead of meeting it. -/
+/-- The integral form of a bind is an intermediate, not a target: `simp` neither produces nor
+closes it. -/
 example (mx : ProbComp Bool) (f : Bool → ProbComp (Fin 3)) (s : Set (Fin 3)) :
     𝒟[mx >>= f] s = ∫⁻ x, 𝒟[f x] s ∂𝒟[mx] := by
-  fail_if_success (simp; done)  -- by design: the integral form is not a normal form
+  fail_if_success simp  -- by design: the integral form is not a normal form
   rw [evalDist_bind_of_discrete,
     Measure.bind_apply MeasurableSet.of_discrete Measurable.of_discrete.aemeasurable]
 
@@ -114,8 +109,6 @@ example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] :=
 example (mx : ProbComp Bool) (p : Bool → Prop) : 𝒟[mx] {b | p b} = Pr[p | mx] :=
   evalDist_apply_setOf mx p
 example (mx : ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] := by simp
-example (mx : ProbComp Bool) (g : Bool → ℝ≥0∞) :
-    ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := by simp only [lintegral_evalDist]
 example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] = Measure.dirac x := by simp
 example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) :
     𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my] := by simp
@@ -134,8 +127,6 @@ example (mx : OptionT ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = Pr[= x | mx] :=
   evalDist_apply_singleton mx x
 example (mx : OptionT ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 - Pr[⊥ | mx] :=
   evalDist_apply_univ mx
-example (mx : OptionT ProbComp Bool) (g : Bool → ℝ≥0∞) :
-    ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := by simp
 example (mx : OptionT ProbComp Bool) (my : OptionT ProbComp (Fin 3)) :
     𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my] := by simp
 
@@ -260,19 +251,8 @@ example : 𝒟[coinDie] {(true, 0)} = 2⁻¹ * 6⁻¹ := by
   rw [evalDist_apply_singleton]; simp [coinDie]
 example : 𝒟[coinDie] {z | z.1 = true} = 2⁻¹ := by
   rw [evalDist_apply_setOf]; simp [coinDie, probEvent_bind_eq_tsum, ENNReal.div_self]
-example (g : Bool × Fin 6 → ℝ≥0∞) :
-    ∫⁻ z, g z ∂𝒟[coinDie] = expectedValue coinDie g := by simp only [lintegral_evalDist]
 example : 𝒟[coinDie] Set.univ = 1 := by simp
 example : (𝒟[coinDie]).withFailure {none} = 0 := by simp
 example : IsProbabilityMeasure 𝒟[coinDie] := inferInstance
-
-/-! ## Continuous carriers are untouched -/
-
-/-- Without a discrete carrier the bridge does not fire: `lintegral_evalDist` needs
-`DiscreteMeasurableSpace`, which `ℝ` does not have. -/
-example (mx : ProbComp ℝ) (g : ℝ → ℝ≥0∞) (h : ∫⁻ x, g x ∂𝒟[mx] = 0) :
-    ∫⁻ x, g x ∂𝒟[mx] = 0 := by
-  fail_if_success simp only [lintegral_evalDist] at h
-  exact h
 
 end VCVioTest.MeasureBridge

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.EvalDist.ExpectationMeasure
+public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.Defs.NeverFails
 public import VCVio.EvalDist.Instances.OptionT
 

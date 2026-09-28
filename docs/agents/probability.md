@@ -258,10 +258,8 @@ almost-everywhere comparisons have native laws. `gcongr` and `grw` compare point
 postconditions. `wp_le_const_mul_mass_add` retains the mass factor for lossy computations;
 `IsProbabilityMeasure` simplifies it to one automatically. The oracle quantitative facade uses
 this same native algebra and keeps its existing uniformity assumptions for compatibility.
-`OracleComp.EvalDist.lintegral_evalDist` is an explicit discrete calibration equation;
-it is deliberately absent from global `simp`, so integrals stay available to Mathlib's API.
-Opening `ProbComp.DiscreteCompatibility` restores the old simp direction locally for adapter
-proofs; native calibration statements use the equation explicitly.
+Expectations are integrals: `wp_eq_lintegral` identifies the oracle `wp` with `∫⁻` against
+`𝒟[mx]`, and integrals stay available to Mathlib's API.
 
 The native sequencing laws in `VCVio.EvalDist.Monad.Seq.Measure` identify paired draws with
 `Measure.prod` on arbitrary measurable result spaces. Discarding either draw retains its
@@ -410,7 +408,7 @@ functional against `𝒟[mx]` is the façade expectation `∑' x, Pr[= x | mx] *
 is derived from it at an explicit compatibility boundary:
 `evalDist_apply_singleton` (`𝒟[mx] {x} = Pr[= x | mx]`), `evalDist_apply_setOf`
 (`𝒟[mx] {x | p x} = Pr[p | mx]` on a discrete space), `evalDist_apply_univ`
-(`𝒟[mx] univ = 1 - Pr[⊥ | mx]`), and `lintegral_evalDist` (`∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g`).
+and `evalDist_apply_univ` (`𝒟[mx] univ = 1 - Pr[⊥ | mx]`).
 These are rewrites, not default `simp` rules: `simp` leaves `𝒟[mx] s` in measure normal form, and a
 proof that wants the façade crosses with an explicit `rw`. The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
 whenever its measure specification agrees with its probability specification
@@ -941,12 +939,12 @@ Use the tactic that matches the mathematical obligation:
 
 | Obligation | Interface |
 |---|---|
-| Ordered expectations or postconditions | `gcongr with x hx` on `expectedValue` or `OracleComp.ProgramLogic.wp` exposes support membership. |
-| An expectation of a mapped computation | `simp` precomposes the payoff using `expectedValue_map`, retaining the expectation head. |
+| Ordered expectations or postconditions | `gcongr with x hx` on `OracleComp.ProgramLogic.wp` exposes support membership. |
+| An expectation of a mapped computation | `simp` precomposes the payoff using `lintegral_evalDist_map_of_discrete`, retaining the integral. |
 | Directed replacement inside a probability bound | Import `Mathlib.Tactic.GRewrite`; use `grw [h]` for inequalities and `apply_rw [h]` for event implications. A support-restricted rewrite theorem can leave membership as a side goal. |
 | Measure bind ordered in its continuation | `Measure.bind_mono_right_of_forall` supports `gcongr` and `grw`, with explicit `AEMeasurable` side conditions. Use `Measure.bind_mono_right` directly for an almost-everywhere bound. |
-| A finite expectation on a finite result type | `finiteness` uses `expectedValue_ne_top_of_finite` / `wp_ne_top_of_finite` and asks for finite functional values. |
-| A supplied finite bound on an arbitrary result type | Apply `expectedValue_ne_top_of_le mx hc h`; the bound remains explicit. |
+| A finite expectation on a finite result type | `finiteness` uses `wp_ne_top_of_finite` and asks for finite functional values. |
+| A supplied finite bound on an arbitrary result type | Apply `ne_top_of_le_ne_top hc (wp_le_const_of_support oa h)`; the bound remains explicit. |
 | Nonnegative total variation arithmetic | Import `VCVio.EvalDist.MeasureTVDist.Positivity` and use `positivity` on `measureTVDist`; this also arrives through `VCVio.ProgramLogic.Tactics`. |
 | Measurability through optional or exception-valued maps | `fun_prop` uses `Option.measurable_map`, `Except.measurable_map`, and `Option.measurable_elim'` on arbitrary measurable spaces. |
 
@@ -979,14 +977,13 @@ above it by an existing pathway rather than by a per-rung twin lemma.
 |---|---|---|
 | 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`probOutput_pure/query/uniformSample/guard/ite`, `probOutput_bind_const`, `probOutput_map_equiv`) |
 | 1 finite sum | `∑ x, Pr[= x \| mx] * g x` | `simp` from rung 2 through Mathlib's `@[simp] tsum_fintype`; `Finset.sum_boole`/`sum_ite_eq` finish |
-| 2 tsum | `∑' x, Pr[= x \| mx] * g x`, which is `expectedValue mx g` | `grind` (bind expansion, `probOutput_bind_eq_tsum` is `@[grind =]`); `rw [probOutput_bind_eq_tsum, ← expectedValue_def]` exposes the expectation head |
-| 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | countable discrete compatibility measures admit the expectation bridge below; measure-native proofs can keep this form for Mathlib's integration API |
+| 2 tsum | `∑' x, Pr[= x \| mx] * g x` | `grind` (bind expansion, `probOutput_bind_eq_tsum` is `@[grind =]`); `rw [probOutput_bind_eq_tsum]` exposes the sum |
+| 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | the native expectation; measure-native proofs keep this form for Mathlib's integration API |
 
 Mass-left is canonical: it is the orientation of Mathlib's `PMF.bind_apply`,
-`PMF.toMeasure_bind_apply` and Bochner `integral_fintype`, of `expectedValue`, and of every
-bind lemma in this library. Mathlib's `lintegral_countable'`/`lintegral_fintype` are mass-right;
-they meet this library exactly once, inside the proof of the measure-to-façade bridge, never as a
-normal form.
+`PMF.toMeasure_bind_apply` and Bochner `integral_fintype`, and of every bind lemma in this
+library. Mathlib's `lintegral_countable'`/`lintegral_fintype` are mass-right; they appear inside
+proofs, never as a normal form.
 
 **What each tactic promises.**
 
@@ -998,18 +995,15 @@ normal form.
   iffs, `bind`/`pure`-normalised structure. It is not an `ℝ≥0∞`/`Fintype.card` arithmetic engine
   and must keep failing fast on the `Pr[…] = 0/1 ↔ …` characterization family
   (`VCVioTest/GrindFailFast.lean`).
-- `gcongr` and `finiteness` are the *bound* closers, with `expectedValue` as the head symbol for
-  rung 2. Rewrite a bind with `probOutput_bind_eq_tsum` and fold the sum with
-  `← expectedValue_def` to expose that head. `expectedValue` is a `def` that `simp` does not
-  unfold; its untagged `expectedValue_def` equation can be supplied explicitly to `rw` or `grind`.
+- `gcongr` and `finiteness` are the *bound* closers. On expectations they act on
+  `OracleComp.ProgramLogic.wp` (`wp_mono_of_support`, `wp_ne_top_of_finite`); on rung 2 they act
+  on the sum directly.
 - The measure side uses `𝒟[…]`, with `evalDist_pure` and `evalDist_bind` under
   `LawfulEvalDistSemantics`; bind also requires a measurable continuation. For `FreeM`,
   `PFunctor.IsMeasureSpec.Compatible` records agreement between the measure and probability
   query specifications. Under `DiscreteEvalDistCompatible`, the generic `evalDist_apply` connects
   measurable events to `Pr[...]`; `evalDist_apply_singleton` and `evalDist_apply_setOf` are its
-  singleton-measurable and discrete-space specializations. On a discrete result space,
-  `OracleComp.EvalDist.lintegral_evalDist` rewrites an integral against `𝒟[mx]` to
-  `expectedValue mx g`, with no separate countability hypothesis. These are explicit coherence
+  singleton-measurable and discrete-space specializations. These are explicit coherence
   boundaries; measure-native proofs without discrete compatibility keep their measure denotation.
 
 **What the gates enforce.** The gate files (`VCVioTest/ProbabilityTactics.lean`,

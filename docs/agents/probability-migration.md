@@ -108,6 +108,12 @@ Statements of equality in distribution now use `=ᵈ`:
   `evalDistEq_of_forall_prEvent_eq_output`, `SampleableType.evalDistEq_uniformSample_vector_succ`;
 - `AdvBound.of_gameEquiv` → `AdvBound.of_evalDistEq`.
 
+Expectation laws have `wp` and `∫⁻` twins: `expectedValue_bind` → `wp_bind` or
+`lintegral_evalDist_bind`; `expectedValue_map` → `wp_map` or `lintegral_evalDist_map_of_discrete`;
+`expectedValue_mono_of_support` → `wp_mono_of_support`; `expectedValue_ne_top_of_finite` →
+`wp_ne_top_of_finite`; `expectedValue_finsetSum` → `wp_finsetSum`; `expectedValue_iSup` →
+`lintegral_iSup`; the `WithoutReplacement` length equations → `lintegral_evalDist_length_…`.
+
 ## Converted theorem families
 
 These families changed statement shape as well as names. The codemod renames the declarations;
@@ -147,6 +153,7 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` do
 | `VCVio.EvalDist.TVDist`, `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
 | `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
+| `VCVio.EvalDist.Expectation`, `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `VCVio.EvalDist.Defs.Measure.Core` (`∫⁻` laws) |
 | `VCVio.StateSeparating.DistEquiv` | `VCVio.StateSeparating.MeasureDistEquiv` |
 | `VCVio.StateSeparating.Advantage` | `VCVio.StateSeparating.Advantage.Measure` |
 | `VCVio.EvalDist.Monad.Disagreement` | `VCVio.EvalDist.Monad.Disagreement.Measure` |

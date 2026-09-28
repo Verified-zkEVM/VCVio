@@ -255,6 +255,8 @@ MODULES: dict[str, list[str]] = {
     "VCVio.EvalDist.MeasureTVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
     "VCVio.ProgramLogic.Relational.SimulateQ.Epsilon":
         ["VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
+    "VCVio.EvalDist.Expectation": ["VCVio.ProgramLogic.Unary.HoareTriple"],
+    "VCVio.EvalDist.ExpectationMeasure": ["VCVio.ProgramLogic.Unary.HoareTriple"],
     "VCVio.StateSeparating.DistEquiv": ["VCVio.StateSeparating.MeasureDistEquiv"],
     "VCVio.StateSeparating.Advantage": ["VCVio.StateSeparating.Advantage.Measure"],
     "VCVio.EvalDist.Monad.Disagreement": ["VCVio.EvalDist.Monad.Disagreement.Measure"],

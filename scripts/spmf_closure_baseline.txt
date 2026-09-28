@@ -99,8 +99,6 @@ VCVio.EvalDist.Defs.Instances
 VCVio.EvalDist.Defs.Measure
 VCVio.EvalDist.Defs.NeverFails
 VCVio.EvalDist.Divergence.KLDivergence
-VCVio.EvalDist.Expectation
-VCVio.EvalDist.ExpectationMeasure
 VCVio.EvalDist.FailureMeasure
 VCVio.EvalDist.Fintype
 VCVio.EvalDist.Instances.ErrorT
@@ -125,7 +123,6 @@ VCVio.OracleComp.Constructions.GenerateSeed
 VCVio.OracleComp.Constructions.Replicate
 VCVio.OracleComp.Constructions.SampleableType
 VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
-VCVio.OracleComp.Constructions.WithoutReplacement
 VCVio.OracleComp.EvalDist
 VCVio.OracleComp.EvalDist.UniformCompatibility
 VCVio.OracleComp.ProbComp

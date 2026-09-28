@@ -547,11 +547,20 @@ challenge simulation with the forkable computation. The discrete total-variation
 their measure bridges are deleted; `positivity` covers `measureTVDist`. The retired-probability
 ledger stands at 715 entries and the `SPMF` import closure at 158 modules.
 
+## Expectation checkpoint
+
+Expectations are `∫⁻` against `𝒟[mx]`, or the oracle `wp` that `wp_eq_lintegral` identifies with
+it. The discrete expectation modules and their measure bridge are deleted; `gcongr`, `simp` and
+`finiteness` act on the native forms (`wp_mono_of_support`, `lintegral_evalDist_map_of_discrete`,
+`wp_ne_top_of_finite`). The scalar `expectedValue` remains only inside the discrete façade that the
+removal deletes. The retired-probability ledger stands at 701 entries and the `SPMF` import
+closure at 155 modules.
+
 ## Final removal
 
 Every remaining ledger entry sits in a family waiting on open work or in the façade itself:
-Rényi divergence and the GPV and Falcon clients (#466, #471, #478); expectation (#515); the
-coinductive responders, which need a measurable coalgebra. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
+Rényi divergence and the GPV and Falcon clients (#466, #471, #478); the coinductive responders,
+which need a measurable coalgebra. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
 builds on the converted slack and zero-knowledge families. Once the rest convert, removal
 deletes these modules and regenerates the umbrellas:
 
@@ -559,7 +568,7 @@ deletes these modules and regenerates the umbrellas:
   RenyiDivergence,RadonNikodym,Lemmas,Measure}`, and `Probability/Divergence/RenyiDiscrete`.
 - `VCVio/EvalDist`: `Defs/{Basic,Instances,NeverFails,AlternativeMonad}`,
   `Monad/{Basic,Map,Seq}`, `List`, `Prod`, `Option`, `Bool`, `BitVec`, `Fintype`,
-  `RenyiDivergence`, `Expectation`, `ExpectationMeasure`, `Instances/{OptionT,ErrorT}`, and
+  `RenyiDivergence`, `Instances/{OptionT,ErrorT}`, and
   `PFunctor`, with the discrete bridges of `Defs/Measure` (including the priority-10
   `instEvalDistSemanticsOfMonadLiftTSPMF` fallback), `FailureMeasure`, and `PFunctorMeasure`.
 - `VCVio/OracleComp`: the `EvalDist`, `ProbComp`, `Constructions/SampleableType`, and
@@ -580,7 +589,7 @@ Compact native event formatting is published in #763. The observed continuation 
 is published in #764 as a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
-1. Convert expectation, Rényi divergence and the coinductive responders.
+1. Convert Rényi divergence and the coinductive responders.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
 (#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.

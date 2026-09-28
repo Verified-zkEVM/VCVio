@@ -7,7 +7,6 @@ module
 
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
-public import VCVio.EvalDist.ExpectationMeasure
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.OracleComp.EvalDist
 public import VCVio.ProgramLogic.Relational.Measure
@@ -343,25 +342,13 @@ example : klDiv (FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit))
 
 /-! ## Expectation as an integral
 
-`expectedValue` keeps its `∑'` definition and every proof written against it, while the same
-quantity becomes a `∫⁻` on request. Monotone convergence is the payoff: there is no `∑'`-shaped
-counterpart to it in the library. -/
+An expectation is a `∫⁻` against the denoted measure, so Mathlib's integration theory applies to
+it. Monotone convergence is the payoff. -/
 
-open OracleComp.EvalDist in
-/-- The existing sum spelling is untouched. -/
-example (n : ℕ) (mx : ProbComp (BitVec n)) (g : BitVec n → ℝ≥0∞) :
-    expectedValue mx g = ∑' x, Pr[= x | mx] * g x := expectedValue_def mx g
-
-open OracleComp.EvalDist in
-/-- ...and is an integral against the denoted measure. -/
-example (n : ℕ) (mx : ProbComp (BitVec n)) (g : BitVec n → ℝ≥0∞) :
-    ∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g := lintegral_evalDist mx g
-
-open OracleComp.EvalDist in
-/-- **Monotone convergence** for a VCVio expectation, from `lintegral_iSup`. -/
+/-- **Monotone convergence** for an expectation over a VCVio program, from `lintegral_iSup`. -/
 example (n : ℕ) (mx : ProbComp (BitVec n)) (g : ℕ → BitVec n → ℝ≥0∞) (hg : Monotone g) :
-    expectedValue mx (fun x => ⨆ k, g k x) = ⨆ k, expectedValue mx (g k) :=
-  expectedValue_iSup mx g hg
+    ∫⁻ x, ⨆ k, g k x ∂𝒟[mx] = ⨆ k, ∫⁻ x, g k x ∂𝒟[mx] :=
+  lintegral_iSup (fun _ => Measurable.of_discrete) hg
 
 /-! ## Renyi divergence, at both ends of the boundary
 
