@@ -250,6 +250,11 @@ MODULES: dict[str, list[str]] = {
         ["VCVio.CryptoFoundations.ReplayFork", "VCVio.CryptoFoundations.SeededFork"],
     "VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility":
         ["VCVio.CryptoFoundations.SymmEncAlg"],
+    "VCVio.EvalDist.TVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
+    "VCVio.EvalDist.TVDist.Positivity": ["VCVio.EvalDist.MeasureTVDist.Positivity"],
+    "VCVio.EvalDist.MeasureTVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
+    "VCVio.ProgramLogic.Relational.SimulateQ.Epsilon":
+        ["VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
     "VCVio.StateSeparating.DistEquiv": ["VCVio.StateSeparating.MeasureDistEquiv"],
     "VCVio.StateSeparating.Advantage": ["VCVio.StateSeparating.Advantage.Measure"],
     "VCVio.EvalDist.Monad.Disagreement": ["VCVio.EvalDist.Monad.Disagreement.Measure"],

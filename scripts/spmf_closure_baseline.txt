@@ -106,7 +106,6 @@ VCVio.EvalDist.Fintype
 VCVio.EvalDist.Instances.ErrorT
 VCVio.EvalDist.Instances.OptionT
 VCVio.EvalDist.List
-VCVio.EvalDist.MeasureTVDist
 VCVio.EvalDist.Monad.Basic
 VCVio.EvalDist.Monad.Map
 VCVio.EvalDist.Monad.Seq
@@ -115,16 +114,8 @@ VCVio.EvalDist.PFunctor
 VCVio.EvalDist.PFunctorMeasure
 VCVio.EvalDist.Prod
 VCVio.EvalDist.RenyiDivergence
-VCVio.EvalDist.TVDist
-VCVio.EvalDist.TVDist.Positivity
-VCVio.Interaction.UC.AsyncRuntime
-VCVio.Interaction.UC.AsyncSecurity
-VCVio.Interaction.UC.Computational
 VCVio.Interaction.UC.ReactiveSecurity
 VCVio.Interaction.UC.ReactiveWorld
-VCVio.Interaction.UC.Runtime
-VCVio.Interaction.UC.Standard
-VCVio.Interaction.UC.StdDoBridge
 VCVio.OracleComp.Coercions.SubSpec
 VCVio.OracleComp.Coinductive.DynSystem
 VCVio.OracleComp.Coinductive.Machine

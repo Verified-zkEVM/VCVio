@@ -10,7 +10,6 @@ public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Chain
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Compatibility
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.EvalDist.Inequalities
-public import VCVio.EvalDist.Expectation
 
 import VCVio.OracleComp.Coercions.SubSpec
 
@@ -30,7 +29,7 @@ transform of a Sigma protocol and proves their quantitative bounds.
 - `cmaReduction` is the composite witness-finding algorithm.
 
 Every bound names the reduction it is about. A statement of the form
-`∃ reduction, bound ≤ Pr[= true | hardRelationExperiment hr reduction]` would be satisfied by a
+`∃ reduction, bound ≤ Pr{hardRelationExperiment hr reduction}[= true]` would be satisfied by a
 reduction that returns a valid witness chosen classically, so it would carry no security
 content. -/
 
@@ -45,14 +44,6 @@ open scoped OracleSpec.PrimitiveQuery
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
-
-noncomputable local instance instIsUniformSpecChalSingleton [Fintype Chal] [Inhabited Chal] :
-    IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-  IsUniformSpec.ofFintypeInhabited _
-
-noncomputable local instance instIsUniformSpecChalFn [Fintype Chal] [Inhabited Chal]
-    (M Commit : Type) : IsUniformSpec ((M × Commit →ₒ Chal) : OracleSpec _) :=
-  IsUniformSpec.ofFintypeInhabited _
 
 /-- CMA-to-NMA reduction for Fiat-Shamir signatures built from a Sigma protocol: run the
 EUF-CMA adversary against simulated signing transcripts and a managed random oracle, then issue
@@ -104,34 +95,11 @@ theorem cma_to_nma_advantage_bound
         (Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
           (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv))
 
-section probabilityPreservation
-
-variable [SampleableType Chal]
-
-/-- Forwarding uniform queries and sampling challenge responses preserves event probabilities. -/
-private lemma probEvent_simulateQ_unifChalImpl [Fintype Chal] [Inhabited Chal] {α : Type}
-    (oa : OracleComp (unifSpec + (Unit →ₒ Chal)) α) (p : α → Prop) :
-    Pr[ p | simulateQ (QueryImpl.ofLift unifSpec ProbComp +
-      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa] = Pr[ p | oa] := by
-  classical
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp only [simulateQ_pure, probEvent_pure]
-  | query_bind t cont ih =>
-      simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
-        OracleQuery.input_query, probEvent_bind_eq_tsum, ih]
-      refine tsum_congr fun u => ?_
-      congr 1
-      cases t with
-      | inl n =>
-          simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply,
-            probOutput_query, ← Nat.card_eq_fintype_card]
-          rfl
-      | inr t =>
-          simp only [QueryImpl.add_apply_inr, uniformSampleImpl]
-          exact probOutput_uniformSample_eq_query (spec := unifSpec + (Unit →ₒ Chal))
-            (.inr t) u
-
-end probabilityPreservation
+/-- The challenge-space reciprocal `(Fintype.card Chal)⁻¹` is finite. -/
+@[aesop (rule_sets := [finiteness]) safe apply]
+lemma challengeSpaceInv_ne_top [Fintype Chal] [Nonempty Chal] : challengeSpaceInv Chal ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top <|
+    ENNReal.inv_le_one.2 (by exact_mod_cast Fintype.card_pos)
 
 section nmaToExtraction
 
@@ -235,22 +203,6 @@ it with uniform selection. -/
 noncomputable local instance replayChallengeUniform : IsUniformMeasureSpec (Unit →ₒ Chal) :=
   IsUniformMeasureSpec.ofFiniteNonempty _
 
-omit [DecidableEq Chal] in
-/-- Forwarding uniform queries and sampling challenge responses preserves the native output
-measure of every replay computation. -/
-private lemma evalDist_simulateQ_unifChalImpl {α : Type}
-    [MeasurableSpace α] (oa : OracleComp (Fork.wrappedSpec Chal) α) :
-    𝒟[simulateQ (QueryImpl.ofLift unifSpec ProbComp +
-      (uniformSampleImpl (spec := (Unit →ₒ Chal)))) oa] = 𝒟[oa] := by
-  refine evalDist_simulateQ_eq_of_forall _ (fun t => ?_) oa
-  rw [OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
-  rcases t with n | u
-  · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
-    exact evalDist_liftM_query_uniform (spec := unifSpec) n
-  · let : MeasurableSpace Chal := ⊤
-    simp only [QueryImpl.add_apply_inr, uniformSampleImpl_apply]
-    exact SampleableType.evalDist_uniformSample
-
 /-- At a fixed statement, combine replay forking with the supported special-soundness
 extractor: whenever both forked transcripts verify at the same target with distinct challenges,
 extraction yields a valid witness, and the challenge oracle is answered by uniform sampling. -/
@@ -277,11 +229,9 @@ private theorem perPk_extraction_bound
       forkSupportInvariant σ M qH pk x₂ log₂
   have hExtract : Pr{let r ← contextFork wrappedMain qb (Sum.inr ()) cf}[E r] ≤
       Pr{let w ← nmaReduction σ hr M nmaAdv qH pk}[rel pk w = true] := by
-    let : MeasurableSpace Wit := ⊤
     have hsim : Pr{let w ← nmaReduction σ hr M nmaAdv qH pk}[rel pk w = true] =
         Pr{let w ← nmaForkExtract σ hr M nmaAdv qH pk}[rel pk w = true] := by
-      rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete, nmaReduction,
-        evalDist_simulateQ_unifChalImpl]
+      rw [nmaReduction, (Fork.simulateQ_uniformImpl_evalDistEq _).prEvent_eq]
     rw [hsim, show nmaForkExtract σ hr M nmaAdv qH pk =
         contextFork wrappedMain qb (Sum.inr ()) cf >>=
           nmaForkExtractBranch (M := M) (Chal := Chal) σ from rfl]
@@ -327,14 +277,6 @@ theorem pointwise_extraction_bound
       Pr{let w ← nmaReduction σ hr M nmaAdv qH pk}[rel pk w = true] :=
   perPk_extraction_bound σ hr M nmaAdv qH hss pk
 
-end nmaToExtraction
-
-/-- The challenge-space reciprocal `(Fintype.card Chal)⁻¹` is finite. -/
-@[aesop (rule_sets := [finiteness]) safe apply]
-lemma challengeSpaceInv_ne_top [Fintype Chal] [Nonempty Chal] : challengeSpaceInv Chal ≠ ⊤ :=
-  ne_top_of_le_ne_top ENNReal.one_ne_top <|
-    ENNReal.inv_le_one.2 (by exact_mod_cast Fintype.card_pos)
-
 /-- NMA-to-extraction via the forking lemma and special soundness: the witness-finding
 algorithm `nmaReduction σ hr M nmaAdv qH` succeeds in `hardRelationExperiment` with probability at
 least `acc · (acc / (qH + 1) - 1/|Chal|)`, where `acc` is the fork advantage of `nmaAdv`.
@@ -345,58 +287,38 @@ replay-forking lemma sums. It is *not* required to be a valid query bound on
 the adversary: callers may supply a wrapped adversary with up to `qH + 1`
 queries (the framework's structural `+1` in `Fin (qH + 1)` accommodates the
 extra slot). -/
-theorem nma_to_hard_relation_bound
-    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
-    [SampleableType Wit] [SampleableType Chal]
-    (hss : σ.SpeciallySound)
-    (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
-    [Fintype Chal] [Inhabited Chal]
+theorem nma_to_hard_relation_bound (hss : σ.SpeciallySound)
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)] := by
-  classical
-  -- Retain the public losslessness premise for callers of the compatibility theorem.
-  have _ := hss_nf
-  set acc : Stmt → ENNReal := fun pk =>
-    Pr[ fun x => (Fork.forkPoint Commit Chal Resp M qH x).isSome |
-      Fork.runTrace σ hr M nmaAdv pk] with hacc_def
-  have hAdv_eq_tsum :
-      Fork.advantage σ hr M nmaAdv qH =
-        ∑' pkw : Stmt × Wit, Pr[= pkw | hr.gen] * acc pkw.1 := by
-    simp only [Fork.advantage, Fork.experiment, ← probEvent_eq_eq_probOutput,
-      probEvent_simulateQ_unifChalImpl, probEvent_bind_eq_tsum, bind_pure_comp,
-      probEvent_map, Function.comp_def, probEvent_liftComp, acc]
-  have hRHS_eq_tsum :
-      Pr[= true | hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)] =
-        ∑' pkw : Stmt × Wit, Pr[= pkw | hr.gen] *
-          Pr[ fun w : Wit => rel pkw.1 w = true |
-            nmaReduction σ hr M nmaAdv qH pkw.1] := by
-    simp only [hardRelationExperiment, ← probEvent_eq_eq_probOutput, bind_pure_comp,
-      probEvent_bind_eq_tsum, probEvent_map, Function.comp_def]
-  -- The replay-forking bound feeds the per-`pk` witness-extraction bound.
-  have hPerPkFinal : ∀ pk : Stmt,
-      acc pk * (acc pk / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-        Pr[ fun w : Wit => rel pk w = true |
-          nmaReduction σ hr M nmaAdv qH pk] := by
-    intro pk
-    simpa only [acc, prEvent_def, map_eq_bind_pure_comp, Function.comp_def,
-      evalDist_apply_singleton, probOutput_bind_eq_tsum, probOutput_pure,
-      probEvent_eq_tsum_ite, Bool.coe_iff_coe, eq_iff_iff, true_iff,
-      mul_ite, mul_one, mul_zero] using
-      pointwise_extraction_bound σ hr M nmaAdv qH hss pk
+      Pr{hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[= true] := by
+  let : MeasurableSpace (Stmt × Wit) := ⊤
+  let acc : Stmt × Wit → ℝ≥0∞ := fun pkw =>
+    Pr{t ← Fork.runTrace σ hr M nmaAdv pkw.1}[(Fork.forkPoint Commit Chal Resp M qH t).isSome]
+  let B : Stmt × Wit → ℝ≥0∞ := fun pkw =>
+    Pr{w ← nmaReduction σ hr M nmaAdv qH pkw.1}[rel pkw.1 w = true]
+  -- Both sides average a per-statement quantity over the key generator.
+  have hAdv : Fork.advantage σ hr M nmaAdv qH = ∫⁻ pkw, acc pkw ∂𝒟[hr.gen] := by
+    rw [Fork.advantage, Fork.experiment,
+      (Fork.simulateQ_uniformImpl_evalDistEq _).prEvent_eq,
+      prEvent_bind_eq_lintegral_of_discrete, OracleComp.evalDist_liftComp_uniform]
+    refine MeasureTheory.lintegral_congr fun pkw => ?_
+    rcases pkw with ⟨pk, w⟩
+    simp only [acc, prEvent_norm]
+  have hRHS : Pr{hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[= true] =
+      ∫⁻ pkw, B pkw ∂𝒟[hr.gen] := by
+    rw [hardRelationExperiment, prEvent_bind_eq_lintegral_of_discrete]
+    refine MeasureTheory.lintegral_congr fun pkw => ?_
+    rcases pkw with ⟨pk, w⟩
+    simp only [B, prEvent_norm]
+  rw [hAdv, hRHS]
+  exact OracleComp.EvalDist.marginalized_jensen_forking_bound_of_discrete hr.gen acc B _ _
+    (fun _ => prEvent_le_one _)
+    (fun pkw => pointwise_extraction_bound σ hr M nmaAdv qH hss pkw.1)
 
-  rw [hAdv_eq_tsum, hRHS_eq_tsum]
-  simpa only [DiscreteEvalDistCompatible.lintegral_evalDist _ (g := fun a ↦ a) measurable_id,
-    ← OracleComp.EvalDist.expectedValue_def, OracleComp.EvalDist.expectedValue_map] using
-    OracleComp.EvalDist.marginalized_jensen_forking_bound_map (mx := hr.gen)
-    (acc := fun pkw => acc pkw.1)
-    (B := fun pkw => Pr[ fun w : Wit => rel pkw.1 w = true |
-      nmaReduction σ hr M nmaAdv qH pkw.1])
-    (q := (qH : ENNReal) + 1) (hinv := challengeSpaceInv Chal)
-    (fun _ => probEvent_le_one) (fun pkw => hPerPkFinal pkw.1)
+end nmaToExtraction
 
 /-- CMA-to-witness reduction for Fiat-Shamir signatures built from a Sigma protocol: the
 NMA-to-witness reduction `nmaReduction` applied to the CMA-to-NMA adversary `cmaToNmaAdv`,

@@ -95,15 +95,14 @@ theorem euf_nma_bound
     [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
     [SampleableType Chal]
     (hss : σ.SpeciallySound)
-    (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
     [Fintype Chal] [Inhabited Chal]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)] :=
-  nma_to_hard_relation_bound σ hr M hss hss_nf nmaAdv qH
+      Pr{hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[= true] :=
+  nma_to_hard_relation_bound σ hr M hss nmaAdv qH
 
 /-- **Combined EUF-CMA bound (Pointcheval-Stern with quantitative HVZK, β-parametric).**
 
@@ -130,7 +129,6 @@ theorem euf_cma_bound
     [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal]
     [SampleableType Chal]
     (hss : σ.SpeciallySound)
-    (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
     [Fintype Chal] [Inhabited Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ≥0∞)
@@ -146,9 +144,9 @@ theorem euf_cma_bound
       ((qS : ℝ≥0∞) * ζ_zk +
         (qS : ℝ≥0∞) * (qS + qH) * β)
     eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[= true | hardRelationExperiment hr (cmaReduction σ hr M simTranscript adv qH)] := by
+      Pr{hardRelationExperiment hr (cmaReduction σ hr M simTranscript adv qH)}[= true] := by
   have hAdv := euf_cma_to_nma σ hr M simTranscript ζ_zk hhvzk β hPredSim adv qS qH hQ
-  refine le_trans ?_ (euf_nma_bound σ hr M hss hss_nf (cmaToNmaAdv σ hr M simTranscript adv) qH)
+  refine le_trans ?_ (euf_nma_bound σ hr M hss (cmaToNmaAdv σ hr M simTranscript adv) qH)
   gcongr <;> exact tsub_le_iff_right.mpr (by simpa [add_assoc] using hAdv)
 
 end FiatShamir

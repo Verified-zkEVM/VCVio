@@ -103,7 +103,7 @@ an accepting transcript. Follows from `add_smul` and `mul_smul`. -/
 theorem sigma_complete (g : G) :
     (sigma F G g).PerfectlyComplete := by
   intro pk sk h
-  rw [evalDist_apply_singleton]
+  rw [← prEvent_eq_evalDist_singleton]
   have h_eq : sk • g = pk := of_decide_eq_true h
   simp only [sigma, monad_norm]
   have hverify : ∀ (r c : F), (r + c * sk) • g = r • g + c • pk := by

@@ -123,6 +123,11 @@ callers restate the hypotheses they supply.
 | Uncharged steps of the same bounds | `∀ p, (h₀ t).run p = (h₁ t).run p` | `∀ s, (h₀ t).run (s, false) = (h₁ t).run (s, false)`: only good states are compared |
 | `expectedQuerySlack` step | `∑'`-weighted continuation | the unary expectation `wp` of the continuation |
 
+The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound` and
+`euf_cma_bound` no longer take the extractor-failure hypothesis `hss_nf`, which holds for every
+`OracleComp`; drop that argument at call sites. Their conclusions and `Fork.advantage` are
+`Pr{…}[= true]` events.
+
 For an aborting identification scheme whose loss is a real-valued formula, keep `ζ_zk : ℝ` and
 pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` does.
 
@@ -139,6 +144,9 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` do
 | `VCVio.OracleComp.Constructions.Fork` | `VCVio.OracleComp.Constructions.Fork.Basic` |
 | `VCVio.CryptoFoundations.ForkMeasure` | `VCVio.CryptoFoundations.ReplayFork`, `VCVio.CryptoFoundations.SeededFork` |
 | `VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility` | `VCVio.CryptoFoundations.SymmEncAlg` |
+| `VCVio.EvalDist.TVDist`, `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
+| `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
+| `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
 | `VCVio.StateSeparating.DistEquiv` | `VCVio.StateSeparating.MeasureDistEquiv` |
 | `VCVio.StateSeparating.Advantage` | `VCVio.StateSeparating.Advantage.Measure` |
 | `VCVio.EvalDist.Monad.Disagreement` | `VCVio.EvalDist.Monad.Disagreement.Measure` |

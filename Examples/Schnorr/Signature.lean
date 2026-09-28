@@ -148,16 +148,15 @@ the bijection `· • g : F → G`. The factor of `g` ignored by the lifted
 private theorem hardRelationExperiment_dlogGenerable_eq_dlogExperiment [DecidableEq F]
     (g : G) (hg : Function.Bijective (· • g : F → G))
     (red : G → ProbComp F) :
-    Pr[= true | hardRelationExperiment (dlogGenerable F g) red] =
-    Pr[= true | dlogExperiment g (fun _ pk => red pk)] := by
-  rw [show Pr[= true | hardRelationExperiment (dlogGenerable F g) red] =
-      Pr[= true | do
+    Pr{hardRelationExperiment (dlogGenerable F g) red}[= true] =
+    Pr{dlogExperiment g (fun _ pk => red pk)}[= true] := by
+  rw [show Pr{hardRelationExperiment (dlogGenerable F g) red}[= true] =
+      Pr{do
         let x ← $ᵗ F
         let w ← red (x • g)
-        pure (decide (w • g = x • g))] by
+        pure (decide (w • g = x • g))}[= true] by
     simp [hardRelationExperiment, dlogGenerable]]
-  exact probOutput_bind_congr' _ true fun x =>
-    probOutput_bind_congr' _ true fun sk => by simp [hg.1.eq_iff]
+  simp [dlogExperiment, prEvent_norm, hg.1.eq_iff]
 
 variable [DecidableEq F] [SampleableType G]
 
@@ -211,12 +210,11 @@ theorem signature_euf_cma [Fintype F] (g : G)
       SignatureAlg.unforgeableAdvantage (FiatShamir.runtime (Commit := G) (Chal := F) M) adv -
       ((qS : ENNReal) * (qS + qH) * ((Fintype.card F : ℝ≥0∞)⁻¹))
     eps * (eps / (qH + 1 : ENNReal) - FiatShamir.challengeSpaceInv F) ≤
-      Pr[= true | dlogExperiment g (dlogReduction F G g M adv qH)] := by
+      Pr{dlogExperiment g (dlogReduction F G g M adv qH)}[= true] := by
   let : Inhabited F := ⟨0⟩
   have hred := FiatShamir.euf_cma_bound
     (Schnorr.sigma F G g) (dlogGenerable F g) M
     (Schnorr.sigma_speciallySound F G g)
-    (by intro ω₁ p₁ ω₂ p₂; simp [Schnorr.sigma])
     (Schnorr.simTranscript F G g)
     (ζ_zk := 0)
     ((ChallengeVerifyProtocol.perfectHVZK_iff_hvzk_zero _ _).mp (Schnorr.sigma_hvzk F G g))

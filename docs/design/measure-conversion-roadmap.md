@@ -537,23 +537,31 @@ bijections and `measureETVDist_bind_bind_le_of_bad`. The program-logic tactic st
 imports the discrete layer, so the legacy `Pr[…]` rewrite examples became `Pr{…}` examples. The
 `SPMF` import closure stands at 167 modules.
 
+## Fiat–Shamir forking checkpoint
+
+The Fiat–Shamir chain is native end to end. `Fork.advantage` is a `Pr{…}` event, the H5 forking
+bridge compares continuations on structural support, and the NMA-to-extraction bound averages the
+per-statement replay bound over key generation as a `lintegral` against the native Jensen
+inequality. One public equation, `Fork.simulateQ_uniformImpl_evalDistEq`, identifies the uniform
+challenge simulation with the forkable computation. The discrete total-variation modules and
+their measure bridges are deleted; `positivity` covers `measureTVDist`. The retired-probability
+ledger stands at 715 entries and the `SPMF` import closure at 158 modules.
+
 ## Final removal
 
 Every remaining ledger entry sits in a family waiting on open work or in the façade itself:
-the Fiat–Shamir H5 forking bridge; Rényi divergence and the GPV and Falcon clients (#466, #471,
-#478); expectation and the Fiat–Shamir NMA aggregation (#515); the coinductive responders, which
-need a measurable coalgebra. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
+Rényi divergence and the GPV and Falcon clients (#466, #471, #478); expectation (#515); the
+coinductive responders, which need a measurable coalgebra. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
 builds on the converted slack and zero-knowledge families. Once the rest convert, removal
 deletes these modules and regenerates the umbrellas:
 
 - `ToMathlib`: `ProbabilityTheory/SPMF`, `Probability/ProbabilityMassFunction/{TotalVariation,
   RenyiDivergence,RadonNikodym,Lemmas,Measure}`, and `Probability/Divergence/RenyiDiscrete`.
 - `VCVio/EvalDist`: `Defs/{Basic,Instances,NeverFails,AlternativeMonad}`,
-  `Monad/{Basic,Map,Seq}`, `List`, `Prod`, `Option`, `Bool`, `BitVec`, `Fintype`, `TVDist`,
+  `Monad/{Basic,Map,Seq}`, `List`, `Prod`, `Option`, `Bool`, `BitVec`, `Fintype`,
   `RenyiDivergence`, `Expectation`, `ExpectationMeasure`, `Instances/{OptionT,ErrorT}`, and
   `PFunctor`, with the discrete bridges of `Defs/Measure` (including the priority-10
-  `instEvalDistSemanticsOfMonadLiftTSPMF` fallback), `FailureMeasure`, `PFunctorMeasure`, and
-  `MeasureTVDist`.
+  `instEvalDistSemanticsOfMonadLiftTSPMF` fallback), `FailureMeasure`, and `PFunctorMeasure`.
 - `VCVio/OracleComp`: the `EvalDist`, `ProbComp`, `Constructions/SampleableType`, and
   `Coercions/SubSpec` hubs, `EvalDist/UniformCompatibility`, and
   `Constructions/SampleableType/MeasureCompatibility`.
@@ -572,9 +580,7 @@ Compact native event formatting is published in #763. The observed continuation 
 is published in #764 as a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
-1. Convert the Fiat–Shamir H5 forking bridge and NMA aggregation, then delete the discrete
-   total-variation modules and their measure bridges.
-2. Convert expectation, Rényi divergence and the coinductive responders.
+1. Convert expectation, Rényi divergence and the coinductive responders.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
 (#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.
@@ -589,7 +595,7 @@ Record each published checkpoint and its remaining compatibility consumers here 
 | Program logic | Finish direct core predicate-transformer integration and measurable fixed-program WP; quantitative and relational rules use native measures and explicit measurable joint kernels. |
 | Security and games | Convert reductions, games, advantages, asymptotic packaging, and necessary lattice/hash/example clients by theorem family. |
 | Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
-| Forking | Seeded and replay forking are native; the remaining step is the `expectedValue` aggregation in the Fiat–Shamir NMA bound. |
+| Forking | Seeded and replay forking and the Fiat–Shamir NMA aggregation are native. |
 | Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
 | Retirement | Compatibility classes are deprecated and linted; after the remaining families convert, delete the modules listed under *Final removal* and empty the retired-probability ledger. |
 

@@ -367,6 +367,14 @@ theorem prEvent_eq_zero_of_forall_not
   rw [prEvent_eq_evalDist_of_discrete]
   simp [h]
 
+/-- An impossible final observation has zero mass, including after a failed computation. -/
+@[simp↓ high, grind norm↓]
+theorem prEvent_false
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
+  prEvent_eq_zero_of_forall_not mx (fun _ ↦ False) (fun _ ↦ id)
+
 /-- Almost-everywhere implication bounds probabilities of measurable events. -/
 theorem prEvent_mono_ae
     {m : Type → Type v} [Monad m] [LawfulMonad m]

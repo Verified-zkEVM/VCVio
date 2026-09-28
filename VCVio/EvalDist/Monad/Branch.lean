@@ -41,11 +41,6 @@ theorem evalDist_bind_prop {β : Type} [MeasurableSpace β]
 
 variable [LawfulMonad m]
 
-/-- An impossible final observation has zero mass, including after a failed computation. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_false {α : Type} (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
-  prEvent_eq_zero_of_forall_not mx (fun _ ↦ False) (fun _ ↦ id)
-
 /-- An observation's negation is the false mass of the same propositional selector. -/
 theorem prEvent_not_eq_apply_false {α : Type} (mx : m α) (p : α → Prop) :
     Pr{let x ← mx}[¬p x] = 𝒟[p <$> mx] {False} := by

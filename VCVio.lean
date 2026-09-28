@@ -186,10 +186,10 @@ public import VCVio.EvalDist.Kernel
 public import VCVio.EvalDist.List
 public import VCVio.EvalDist.Lossless
 public import VCVio.EvalDist.MeasureSemantics
-public import VCVio.EvalDist.MeasureTVDist
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.MeasureTVDist.Bind
 public import VCVio.EvalDist.MeasureTVDist.Event
+public import VCVio.EvalDist.MeasureTVDist.Positivity
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Branch
@@ -218,8 +218,6 @@ public import VCVio.EvalDist.ProbabilityNotation.Attr
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.RenyiDivergence
 public import VCVio.EvalDist.ResumptionMeasure
-public import VCVio.EvalDist.TVDist
-public import VCVio.EvalDist.TVDist.Positivity
 public import VCVio.EvalDist.WiringKernel
 public import VCVio.EvalDist.WithFailure
 public import VCVio.Interaction.UC.AsyncRuntime
