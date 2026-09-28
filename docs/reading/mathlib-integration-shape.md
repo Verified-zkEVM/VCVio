@@ -48,7 +48,7 @@ so they stay ours — but stating them measure-first is what would make them con
 | `probEvent` | measure application | **defined through `PMF.toOuterMeasure`** |
 | `EvalDist/IndepProduct.lean` | `IndepFun` / `iIndepFun` w.r.t. the denotation | absent |
 | `EvalDist/MeasureTVDist/Basic.lean` | a measure-level total variation | absent upstream; local `Measure.tvDist` |
-| `EvalDist/RenyiDivergence.lean` | via `Measure.rnDeriv`, as `klDiv` is | absent |
+| `Divergence/Renyi.lean` | via `Measure.rnDeriv`, as `klDiv` is | absent upstream; local `InformationTheory.renyiDiv` |
 
 Two of these are worth calling out as liabilities rather than gaps.
 

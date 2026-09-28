@@ -556,19 +556,27 @@ it. The discrete expectation modules and their measure bridge are deleted; `gcon
 removal deletes. The retired-probability ledger stands at 701 entries and the `SPMF` import
 closure at 155 modules.
 
-## Final removal
+## Rényi checkpoint
 
-Every remaining ledger entry sits in a family waiting on open work or in the façade itself:
-Rényi divergence and the GPV and Falcon clients (#466, #471, #478); the coinductive responders,
-which need a measurable coalgebra. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
+The Rényi divergence is the measure-level `InformationTheory.renyiDiv`. Its security-facing
+theory is native: probability preservation (`measure_rpow_div_renyiDiv_le`), bounded likelihood
+ratios (`renyiDiv_le_of_le_smul`), tensorization (`renyiDiv_prod`), the max-divergence `maxDiv`
+with `renyiDiv_le_maxDiv`, and the total-variation bounds of `Divergence/RenyiTotalVariation`
+through Scheffé's bound. Falcon's sampler quality compares the samplers' output measures, and the
+discrete Gaussian is a probability measure on `ℤ`. The `PMF` Rényi, total-variation and
+Radon–Nikodym modules, the discrete bridge between them and the `SPMF` wrapper are deleted. The
+retired-probability ledger stands at 627 entries and the `SPMF` import closure at 153 modules.
+
+Every remaining ledger entry sits in the façade itself or in the coinductive responders, which
+need a measurable coalgebra. The open Rényi, GPV and Falcon work (#466, #471, #478) builds on the
+native Rényi theory. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
 builds on the converted slack and zero-knowledge families. Once the rest convert, removal
 deletes these modules and regenerates the umbrellas:
 
-- `ToMathlib`: `ProbabilityTheory/SPMF`, `Probability/ProbabilityMassFunction/{TotalVariation,
-  RenyiDivergence,RadonNikodym,Lemmas,Measure}`, and `Probability/Divergence/RenyiDiscrete`.
+- `ToMathlib`: `ProbabilityTheory/SPMF` and `Probability/ProbabilityMassFunction/{Lemmas,Measure}`.
 - `VCVio/EvalDist`: `Defs/{Basic,Instances,NeverFails,AlternativeMonad}`,
   `Monad/{Basic,Map,Seq}`, `List`, `Prod`, `Option`, `Bool`, `BitVec`, `Fintype`,
-  `RenyiDivergence`, `Instances/{OptionT,ErrorT}`, and
+  `Instances/{OptionT,ErrorT}`, and
   `PFunctor`, with the discrete bridges of `Defs/Measure` (including the priority-10
   `instEvalDistSemanticsOfMonadLiftTSPMF` fallback), `FailureMeasure`, and `PFunctorMeasure`.
 - `VCVio/OracleComp`: the `EvalDist`, `ProbComp`, `Constructions/SampleableType`, and
@@ -589,7 +597,7 @@ Compact native event formatting is published in #763. The observed continuation 
 is published in #764 as a separate prerequisite for the next complete reader conversion.
 Continue with independently validated PRs:
 
-1. Convert Rényi divergence and the coinductive responders.
+1. Convert the coinductive responders.
 
 Independent products (#756), exact expected signing costs (#752), and reader cache representation
 (#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.

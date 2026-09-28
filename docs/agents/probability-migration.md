@@ -128,6 +128,9 @@ callers restate the hypotheses they supply.
 | Charged steps of the per-query slack bounds (`expectedQuerySlack`, `advantage_le_expectedQuerySlack_add_prEvent_bad` and its variants) | `ENNReal.ofReal (tvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false))) ≤ ε s` | `letI : MeasurableSpace (E.Range t × σ × Bool) := ⊤; measureETVDist … ≤ ε s` |
 | Uncharged steps of the same bounds | `∀ p, (h₀ t).run p = (h₁ t).run p` | `∀ s, (h₀ t).run (s, false) = (h₁ t).run (s, false)`: only good states are compared |
 | `expectedQuerySlack` step | `∑'`-weighted continuation | the unary expectation `wp` of the continuation |
+| Rényi divergence of programs (`renyiDiv a mx my`, `PMF.renyiDiv`) | on `SPMF` or `PMF` | `InformationTheory.renyiDiv a 𝒟[mx] 𝒟[my]` on the output measures, with `⊤` fixed on the output inside definitions |
+| Rényi bounds | `PMF.renyiDiv_prob_bound`, `renyiDiv_le_of_pointwise_le`, `renyiDiv_prod`, `maxDiv`, `etvDist_le_of_maxDiv`, `etvDist_sq_le_of_renyiDiv` | `measure_rpow_div_renyiDiv_le` (an event `s` instead of a predicate), `renyiDiv_le_of_le_smul` (`μ ≤ c • ν`), `renyiDiv_prod` (absolutely continuous factors), `maxDiv`, `etvDist_le_one_sub_inv_maxDiv`, `etvDist_rpow_two_le_one_sub_inv_renyiDiv` |
+| `discreteGaussianDist σ μ hσ : PMF ℤ` | pointwise mass | `discreteGaussianMeasure σ μ : Measure ℤ`, with `discreteGaussianMeasure_singleton` and `isProbabilityMeasure_discreteGaussianMeasure` |
 
 The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound` and
 `euf_cma_bound` no longer take the extractor-failure hypothesis `hss_nf`, which holds for every
@@ -154,6 +157,8 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` do
 | `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
 | `VCVio.EvalDist.Expectation`, `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `VCVio.EvalDist.Defs.Measure.Core` (`∫⁻` laws) |
+| `VCVio.EvalDist.RenyiDivergence`, `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`, `ToMathlib.Probability.Divergence.RenyiDiscrete`, `ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym` | `ToMathlib.Probability.Divergence.Renyi` |
+| `ToMathlib.Probability.ProbabilityMassFunction.TotalVariation` | `ToMathlib.MeasureTheory.Measure.TotalVariation`; `ToMathlib.Probability.Divergence.RenyiTotalVariation` for the Rényi comparisons |
 | `VCVio.StateSeparating.DistEquiv` | `VCVio.StateSeparating.MeasureDistEquiv` |
 | `VCVio.StateSeparating.Advantage` | `VCVio.StateSeparating.Advantage.Measure` |
 | `VCVio.EvalDist.Monad.Disagreement` | `VCVio.EvalDist.Monad.Disagreement.Measure` |

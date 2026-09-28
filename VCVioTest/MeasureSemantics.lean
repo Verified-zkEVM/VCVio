@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.OracleComp.EvalDist
 public import VCVio.ProgramLogic.Relational.Measure
-public import ToMathlib.Probability.Divergence.RenyiDiscrete
+public import ToMathlib.Probability.Divergence.RenyiTotalVariation
 public import Mathlib.Probability.Distributions.Gaussian.Real
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import Examples.OneTimePad.Basic
@@ -350,38 +350,25 @@ example (n : ℕ) (mx : ProbComp (BitVec n)) (g : ℕ → BitVec n → ℝ≥0�
     ∫⁻ x, ⨆ k, g k x ∂𝒟[mx] = ⨆ k, ∫⁻ x, g k x ∂𝒟[mx] :=
   lintegral_iSup (fun _ => Measurable.of_discrete) hg
 
-/-! ## Renyi divergence, at both ends of the boundary
+/-! ## Renyi divergence
 
-The measure-level Renyi MGF is stated for arbitrary measures, so it covers laws no `PMF` can
-carry, and it agrees exactly with the countably supported formula where both are defined. The
-discrete development is therefore a corollary rather than a parallel copy. -/
+The Renyi divergence is stated for arbitrary measures, so it covers laws no countably supported
+distribution can carry, and its security-facing bounds apply to program denotations directly. -/
 
-/-- Renyi between two continuous laws — no `PMF` counterpart exists. -/
+/-- Renyi between two continuous laws. -/
 example (a : ℝ) : renyiMGF a (gaussianReal 0 1) (gaussianReal 0 1) = 1 := renyiMGF_self a _
 
-/-- `PMF.renyiMGF_map_le` is now the measure-level result, and it still carries no instances.
+/-- **The Rényi → total-variation bound** between the output laws of two programs: both halves,
+Cauchy-Schwarz against the Hellinger affinity and log-convexity of the Rényi MGF, reduce to the
+same Mathlib inequality, `ENNReal.lintegral_mul_norm_pow_le`. -/
+example (n : ℕ) (a : ℝ) (ha : 1 < a) (mx my : ProbComp (BitVec n)) :
+    𝒟[mx].etvDist 𝒟[my] ^ (2 : ℝ) ≤ 1 - (renyiDiv a 𝒟[mx] 𝒟[my])⁻¹ :=
+  etvDist_rpow_two_le_one_sub_inv_renyiDiv ha _ _
 
-The carrier here is `ℝ`, which is uncountable and has no discrete measurable structure. That is
-the point of the corollary being stated without a `Countable` hypothesis: a `PMF` has countable
-support whatever its carrier, so the bridge must not demand countability of the carrier itself —
-otherwise it could not reach `SPMF.renyiDiv_map_le`, which instantiates at `Option α'` for an
-arbitrary `α'`. -/
-example (a : ℝ) (ha : 1 ≤ a) (f : ℝ → ℝ) (p q : PMF ℝ) :
-    (f <$> p).renyiMGF a (f <$> q) ≤ p.renyiMGF a q :=
-  PMF.renyiMGF_map_le a ha f p q
-
-/-- **The Rényi → total-variation bound**, which was `sorry` until the measure-level theory
-supplied both of its halves.
-
-`#396` calls this "the headline Rényi → eTV-distance bound". Its two ingredients — Cauchy-Schwarz
-against the Hellinger affinity, and log-convexity of the Rényi MGF — both reduce to the same
-Mathlib inequality, `ENNReal.lintegral_mul_norm_pow_le`. -/
-example (n : ℕ) (a : ℝ) (ha : 1 < a) (p q : PMF (BitVec n)) :
-    p.etvDist q ^ (2 : ℝ) ≤ 1 - (p.renyiDiv a q)⁻¹ :=
-  PMF.etvDist_sq_le_of_renyiDiv a ha p q
-
-/-- ...and it is the existing discrete formula on a finite sample type. -/
-example (n : ℕ) (a : ℝ) (ha : 1 < a) (p q : PMF (BitVec n)) :
-    renyiMGF a p.toMeasure q.toMeasure = PMF.renyiMGF a p q := renyiMGF_toMeasure a ha p q
+/-- **Probability preservation**, the form security reductions consume: an event of one program
+keeps probability under a program at bounded Rényi divergence. -/
+example (n : ℕ) (a : ℝ) (ha : 1 < a) (mx my : ProbComp (BitVec n)) (s : Set (BitVec n)) :
+    𝒟[mx] s ^ (a / (a - 1)) / renyiDiv a 𝒟[mx] 𝒟[my] ≤ 𝒟[my] s :=
+  measure_rpow_div_renyiDiv_le ha _ _ MeasurableSet.of_discrete
 
 end VCVioTest.MeasureSemantics

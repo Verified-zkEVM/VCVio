@@ -43,7 +43,6 @@ Extern.Falcon.FPRBridgeRefutations
 Extern.Falcon.Instance
 Extern.Falcon.SignCorrectness
 Extern.Falcon.VerifyBridge
-LatticeCrypto.Falcon.Security
 LatticeCrypto.MLDSA.Scheme
 LatticeCrypto.MLDSA.Security
 LatticeCrypto.MLDSA.SecurityHVZK
@@ -111,7 +110,6 @@ VCVio.EvalDist.Option
 VCVio.EvalDist.PFunctor
 VCVio.EvalDist.PFunctorMeasure
 VCVio.EvalDist.Prod
-VCVio.EvalDist.RenyiDivergence
 VCVio.Interaction.UC.ReactiveSecurity
 VCVio.Interaction.UC.ReactiveWorld
 VCVio.OracleComp.Coercions.SubSpec

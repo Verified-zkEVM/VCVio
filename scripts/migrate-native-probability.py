@@ -257,6 +257,15 @@ MODULES: dict[str, list[str]] = {
         ["VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
     "VCVio.EvalDist.Expectation": ["VCVio.ProgramLogic.Unary.HoareTriple"],
     "VCVio.EvalDist.ExpectationMeasure": ["VCVio.ProgramLogic.Unary.HoareTriple"],
+    "VCVio.EvalDist.RenyiDivergence": ["ToMathlib.Probability.Divergence.Renyi"],
+    "ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence":
+        ["ToMathlib.Probability.Divergence.Renyi"],
+    "ToMathlib.Probability.Divergence.RenyiDiscrete":
+        ["ToMathlib.Probability.Divergence.RenyiTotalVariation"],
+    "ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym":
+        ["ToMathlib.Probability.Divergence.Renyi"],
+    "ToMathlib.Probability.ProbabilityMassFunction.TotalVariation":
+        ["ToMathlib.MeasureTheory.Measure.TotalVariation"],
     "VCVio.StateSeparating.DistEquiv": ["VCVio.StateSeparating.MeasureDistEquiv"],
     "VCVio.StateSeparating.Advantage": ["VCVio.StateSeparating.Advantage.Measure"],
     "VCVio.EvalDist.Monad.Disagreement": ["VCVio.EvalDist.Monad.Disagreement.Measure"],
