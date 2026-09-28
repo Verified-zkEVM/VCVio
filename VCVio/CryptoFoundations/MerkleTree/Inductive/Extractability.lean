@@ -147,8 +147,8 @@ theorem extractabilityExperiment_isTotalQueryBound [DecidableEq α]
 def extractabilityROMErrorNumerator (s : Skeleton) (qb : ℕ) : ℕ :=
   MerkleTreeExtractability.extractabilityROMErrorNumerator s qb
 
-theorem extractability_rom_bound [DecidableEq α] [Fintype α] [MeasurableSpace α]
-    [DiscreteMeasurableSpace α] [IsUniformMeasureSpec (spec α)]
+theorem extractability_rom_bound [DecidableEq α] [Fintype α]
+    [IsUniformMeasureSpec (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
     Pr{let z ← extractabilityExperiment 𝒜}[OpeningExtractionFailure z] ≤
@@ -160,8 +160,8 @@ theorem extractability_rom_bound [DecidableEq α] [Fintype α] [MeasurableSpace 
     MerkleTreeExtractability.extractability_rom_bound
       unitAddressQueryModel (fun _ => ()) 𝒜.toGeneric qb h
 
-theorem extractability_rom_bound_coarse [DecidableEq α] [Fintype α] [MeasurableSpace α]
-    [DiscreteMeasurableSpace α] [IsUniformMeasureSpec (spec α)]
+theorem extractability_rom_bound_coarse [DecidableEq α] [Fintype α]
+    [IsUniformMeasureSpec (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
     Pr{let z ← extractabilityExperiment 𝒜}[OpeningExtractionFailure z] ≤
@@ -175,8 +175,8 @@ theorem extractability_rom_bound_coarse [DecidableEq α] [Fintype α] [Measurabl
       unitAddressQueryModel (fun _ => ()) 𝒜.toGeneric qb h
 
 theorem extractability_rom_bound_birthday_dominates
-    [DecidableEq α] [Fintype α] [MeasurableSpace α]
-    [DiscreteMeasurableSpace α] [IsUniformMeasureSpec (spec α)]
+    [DecidableEq α] [Fintype α]
+    [IsUniformMeasureSpec (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
@@ -190,8 +190,8 @@ theorem extractability_rom_bound_birthday_dominates
       unitAddressQueryModel (fun _ => ()) 𝒜.toGeneric qb h hqb
 
 theorem extractability_rom_bound_quadratic
-    [DecidableEq α] [Fintype α] [MeasurableSpace α]
-    [DiscreteMeasurableSpace α] [IsUniformMeasureSpec (spec α)]
+    [DecidableEq α] [Fintype α]
+    [IsUniformMeasureSpec (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)

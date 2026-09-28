@@ -223,8 +223,8 @@ lemma run'_bind_query_eq_pop {α : Type u}
 /-- A uniform answer draw lifted into the oracle computation keeps its uniform measure. -/
 private lemma evalDist_liftComp_uniformSample {ι₀ : Type} {spec₀ : OracleSpec ι₀}
     [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
-    [∀ t, MeasurableSpace (spec₀.Range t)] [∀ t, DiscreteMeasurableSpace (spec₀.Range t)]
-    [OracleSpec.IsUniformMeasureSpec spec₀] (t : ι₀) :
+    [OracleSpec.IsUniformMeasureSpec spec₀] (t : ι₀) [MeasurableSpace (spec₀.Range t)]
+    [DiscreteMeasurableSpace (spec₀.Range t)] :
     𝒟[liftComp ($ᵗ spec₀.Range t) spec₀] = ProbabilityTheory.uniformOn Set.univ :=
   (evalDist_liftComp_uniform _).trans SampleableType.evalDist_uniformSample
 
@@ -232,7 +232,6 @@ section native
 
 variable {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
   [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
-  [∀ t, MeasurableSpace (spec₀.Range t)] [∀ t, DiscreteMeasurableSpace (spec₀.Range t)]
   [OracleSpec.IsUniformMeasureSpec spec₀]
 
 /-- The lifted seed distribution splits off a uniform head answer at `t` whenever `t` has a
@@ -271,6 +270,7 @@ theorem evalDist_liftComp_generateSeed_bind_simulateQ_run' (qc : ι₀ → ℕ) 
   induction oa using OracleComp.inductionOn with
   | pure x => intro qc js; simp
   | query_bind t mx ih =>
+    let : MeasurableSpace (spec₀.Range t) := ⊤
     intro qc js
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query,
       id_map]
@@ -338,6 +338,7 @@ theorem evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
   induction oa using OracleComp.inductionOn with
   | pure x => intro σ; simp
   | query_bind t mx ih =>
+    let : MeasurableSpace (spec₀.Range t) := ⊤
     intro σ
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query,
       OracleQuery.input_query, id_map]
@@ -412,6 +413,7 @@ theorem evalDistEq_liftComp_generateSeed_takeAtIndex_run' (qc : ι₀ → ℕ) (
   induction oa using OracleComp.inductionOn with
   | pure a => intro qc js k; simp
   | query_bind t mx ih =>
+    let : MeasurableSpace (spec₀.Range t) := ⊤
     intro qc js k
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query,
       OracleQuery.input_query, id_map]

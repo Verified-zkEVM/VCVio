@@ -8,8 +8,9 @@ Machine-checked cryptographic proofs in Lean, built on Mathlib.
 2. Read `Examples/OneTimePad/Basic.lean` for a compact modern proof (correctness and privacy).
 3. Choose the work area by task: use `VCVio/` for oracle/probability/program-logic work, `LatticeCrypto/` for lattice schemes and reductions, and `LatticeCryptoTest/` for vectors or differential tests.
 4. If `𝒟` lemmas fail unexpectedly, check for `[OracleSpec.IsMeasureSpec spec]`
-   and the required measurable spaces. The concrete `unifSpec` and `coinSpec`
-   have native uniform-measure instances; other specs need a chosen interpretation.
+   and a measurable space on the result type; oracle answer types need none. The
+   concrete `unifSpec` and `coinSpec` have native uniform-measure instances; other
+   specs need a chosen interpretation.
 
 `AGENTS.md` is the canonical guide. `CLAUDE.md` is a symlink to this file.
 
@@ -129,7 +130,7 @@ or `VCVioTest/`. This contract is enforced by
 
 ## Critical Gotchas
 
-1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation. Direct `evalDist` / `𝒟[…]` and `Pr{…}[…]` need `[OracleSpec.IsMeasureSpec spec]` and, for `𝒟[…]`, an ambient `MeasurableSpace` on the result. Native uniform-measure instances are global for `unifSpec` and `coinSpec`; for another spec, uniform answers are `[OracleSpec.IsUniformMeasureSpec spec]`, built by `IsUniformMeasureSpec.ofFiniteNonempty` from `Finite`/`Nonempty` answer types. The deprecated `[IsProbabilitySpec spec]` and `[IsUniformSpec spec]` (`IsUniformSpec.ofFintypeInhabited`) serve only the deprecated `evalSPMF` / `Pr[...]` façade and its cardinality lemmas; new code does not introduce them. There are no bundled `spec.Fintype` / `spec.Inhabited` / `spec.DecidableEq` classes: data on answer types are ordinary hypotheses on `spec.Range t` (see gotcha 12).
+1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation. Direct `evalDist` / `𝒟[…]` and `Pr{…}[…]` need `[OracleSpec.IsMeasureSpec spec]` and, for `𝒟[…]`, an ambient `MeasurableSpace` on the result. Oracle answer measures live on the discrete σ-algebra, so answer types take no `MeasurableSpace` hypotheses; continuous answers belong at the `PFunctor.FreeM` level. Native uniform-measure instances are global for `unifSpec` and `coinSpec`; for another spec, uniform answers are `[OracleSpec.IsUniformMeasureSpec spec]`, built by `IsUniformMeasureSpec.ofFiniteNonempty` from `Finite`/`Nonempty` answer types as a local instance on the component spec (sums get theirs from `IsMeasureSpec.add`). The deprecated `[IsProbabilitySpec spec]` and `[IsUniformSpec spec]` (`IsUniformSpec.ofFintypeInhabited`) serve only the deprecated `evalSPMF` / `Pr[...]` façade and its cardinality lemmas; new code does not introduce them. There are no bundled `spec.Fintype` / `spec.Inhabited` / `spec.DecidableEq` classes: data on answer types are ordinary hypotheses on `spec.Range t` (see gotcha 12).
 2. **`autoImplicit = false` is set globally in `lakefile.lean`**. Do not add `set_option autoImplicit false` in individual files. Every variable must be explicitly declared.
 3. **`evalSPMF` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`). `evalDist` is its successful-output measure façade on the discrete compatibility path and agrees with the direct `FreeM.denote` measure fold when both specifications are present. These identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`: code outside those directories crosses them through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`). Existing downstream `rfl` uses are grandfathered; new proofs use the public equations.
 4. **`++ₒ` is dead** — use `+` for combining oracle specs.

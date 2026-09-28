@@ -33,12 +33,6 @@ namespace VCVioTest.NativeOracleWP
 /-- An oracle whose answer is always true. -/
 abbrev fixedSpec : OracleSpec Unit := fun _ ↦ Bool
 
-instance : (t : fixedSpec.Domain) → MeasurableSpace (fixedSpec.Range t) :=
-  fun _ ↦ inferInstanceAs (MeasurableSpace Bool)
-
-instance : (t : fixedSpec.Domain) → DiscreteMeasurableSpace (fixedSpec.Range t) :=
-  fun _ ↦ inferInstanceAs (DiscreteMeasurableSpace Bool)
-
 noncomputable instance : OracleSpec.IsMeasureSpec fixedSpec where
   toMeasure _ := Measure.dirac true
   isProbabilityMeasure _ := inferInstance
@@ -78,7 +72,9 @@ example {α : Type} (mx : OracleComp fixedSpec α) (counts : ℕ → ℕ) (post 
     wp ((simulateQ countingImpl mx).run' counts) post = wp mx post := by
   apply wp_simulateQ_run'_eq
   intro t s
-  simp [countingImpl, StateT.run'_eq, StateT.run_bind, StateT.run_modify,
-    evalDist_liftM_query]
+  simp only [countingImpl, StateT.run'_eq, StateT.run_bind, StateT.run_modify,
+    HasQuery.instOfMonadLift_query, StateT.run_monadLift, bind_pure_comp, pure_bind,
+    Functor.map_map, id_map']
+  exact .rfl
 
 end VCVioTest.NativeOracleWP

@@ -215,7 +215,8 @@ local instance transcriptDiscrete :
 
 theorem game_law : 𝒟[extractabilityExperiment model config 1 adversary] =
     (uniformOn (Set.univ : Set Bool)).map outcome := by
-  rw [game_eq, bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
+  rw [game_eq, bind_pure_comp, evalDist_map_of_discrete,
+    evalDist_query_uniform (spec := Query →ₒ Bool)]
 
 theorem publicFailure_probability :
     𝒟[extractabilityExperiment model config 1 adversary]
@@ -247,7 +248,8 @@ theorem drift_probability :
   simp
 
 theorem honestShared_probability : 𝒟[honestShared] {true} = 1 := by
-  rw [honestShared_eq, bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
+  rw [honestShared_eq, bind_pure_comp, evalDist_map_of_discrete,
+    evalDist_query_uniform (spec := Query →ₒ Bool)]
   rw [Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
   have hevent : (fun _ : Bool => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
     ext reply
@@ -257,7 +259,8 @@ theorem honestShared_probability : 𝒟[honestShared] {true} = 1 := by
 theorem honestReset_probability : 𝒟[honestReset] {true} = (1 : ENNReal) / 2 := by
   rw [honestReset_eq]
   rw [evalDist_bind_of_discrete]
-  simp only [bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
+  simp only [bind_pure_comp, evalDist_map_of_discrete,
+    evalDist_query_uniform (spec := Query →ₒ Bool)]
   rw [Measure.bind_apply (MeasurableSet.singleton true) (measurable_of_countable _).aemeasurable]
   have hinner (root : Bool) :
       (uniformOn (Set.univ : Set Bool)).map (fun reply => reply == root) {true} =

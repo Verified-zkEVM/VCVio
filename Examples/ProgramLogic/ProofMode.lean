@@ -27,8 +27,7 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α β γ : Type}
 
 /-! ## Handler normalization -/
@@ -58,8 +57,7 @@ example {g₁ g₂ g₃ : OracleComp spec α}
 section ByUpto
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type} [MeasurableSpace α]
 
 example
@@ -87,8 +85,7 @@ section RelSim
 
 variable {σ₁ σ₂ : Type} {ι : Type} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -131,8 +128,7 @@ section RelSimDist
 
 variable {σ : Type} {ι : Type} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example
@@ -203,8 +199,7 @@ end ByDist
 section RelDist
 
 variable {ι : Type} {spec : OracleSpec ι} [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α : Type}
 
 example {oa ob : OracleComp spec α} (h : oa =ᵈ ob) :

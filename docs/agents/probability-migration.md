@@ -36,16 +36,36 @@ record is `docs/reading/denotational-probability-semantics.md`.
 
 | Legacy | Native |
 |---|---|
-| `[IsProbabilitySpec spec]` | `[∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec]` |
-| `[IsUniformSpec spec]` | the same binders with `[OracleSpec.IsUniformMeasureSpec spec]`, plus `[Fintype (spec.Range t)]` where a cardinality appears |
+| `[IsProbabilitySpec spec]` | `[OracleSpec.IsMeasureSpec spec]` |
+| `[IsUniformSpec spec]` | `[OracleSpec.IsUniformMeasureSpec spec]`, plus `[Fintype (spec.Range t)]` where a cardinality appears |
+| `[∀ t, MeasurableSpace (spec.Range t)]`, `[∀ t, DiscreteMeasurableSpace (spec.Range t)]` | delete them: answer measures live on the discrete σ-algebra |
+| `OracleSpec.addRangeMeasurableSpace`, `OracleSpec.addRangeDiscreteMeasurableSpace` | delete them; no replacement is needed |
 | `IsUniformSpec.ofFintypeInhabited spec` | `IsUniformMeasureSpec.ofFiniteNonempty spec`, as a local instance; it needs only `Finite` and `Nonempty` answers |
 | `PFunctor.IsProbabilitySpec`, `PFunctor.IsUniformSpec` | `PFunctor.IsMeasureSpec`, `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty` |
 | `EvalDistCompatible`, `DiscreteEvalDistCompatible` | operational support lemmas and the `𝒟` equations; no class |
 
 `unifSpec` and `coinSpec` carry global uniform measure instances. For a concrete specification
 whose answer types are abstract, such as `unifSpec + (Unit →ₒ Chal)` with `[Fintype Chal]
-[Inhabited Chal]`, declare the answer σ-algebras (`fun _ => ⊤`), their discreteness and
-`IsUniformMeasureSpec.ofFiniteNonempty _` as local instances once per file.
+[Inhabited Chal]`, declare
+`local instance : IsUniformMeasureSpec (Unit →ₒ Chal) := .ofFiniteNonempty _` on the component
+once per file. The sum then gets its instance from `IsUniformMeasureSpec.add`. Do not declare an
+instance on the sum itself, since it would compete with that one.
+
+## Query and handler laws
+
+| Legacy | Native |
+|---|---|
+| `evalDist_liftM_query : 𝒟[liftM (query t)] = toMeasure t` | `evalDist_liftM_query` gives `(toMeasure t).trim le_top` in any measurable structure on the answer; `MeasureTheory.trim_eq_self` removes the trim under `⊤` (including `Bool`, `Fin n`) |
+| `simp [evalDist_liftM_query, toMeasure_singleton]` for `𝒟[liftM (query t)] {u}` | `simp` with the simp lemmas `evalDist_liftM_query_apply` and `IsUniformMeasureSpec.toMeasure_singleton` |
+| `evalDist_liftM_query_eq_uniformOn_top` | `evalDist_liftM_query_uniform`, in any measurable structure; `evalDist_liftM_unifSpec_query` and `evalDist_liftM_coinSpec_query` for the built-in specifications |
+| `evalDist_simulateQ_run_congr_of_forall` | `evalDist_simulateQ_run_congr` with `=ᵈ` step facts; `evalDistEq_simulateQ_run` for the equality in distribution itself |
+| `evalDist_liftComp_of_evalDist`, `wp_liftComp_of_evalDist` | `evalDist_liftComp_of_evalDistEq`, `wp_liftComp_of_evalDistEq` |
+| per-query hypotheses `𝒟[impl t] = 𝒟[liftM (query t)]` or `𝒟[(h q).run s] = 𝒟[(h' q).run s]` (`evalDist_simulateQ_congr`, `wp_simulateQ_eq`, `wp_simulateQ_run'_eq`, `evalDist_simulateQ_run'_eq_of_forall`, `MeasureDistEquiv.of_step`, `of_step_bij`, `parSum_congr`) | the same statements with `=ᵈ`, which need no measurable space on answers or states |
+
+To reuse an existing per-query measure equality `h` proved for an arbitrary measurable structure,
+supply `fun q s => by let : MeasurableSpace (spec.Range q × σ) := ⊤; exact
+EvalDistEq.of_evalDist_eq (h q s)`. Restating the step lemma with `=ᵈ` is better: its
+statement then needs no measurable space at all.
 
 ## Lemma names
 
@@ -106,7 +126,10 @@ A removed module may have re-exported legacy hubs; add the imports the build the
 
 | Symptom | Fix |
 |---|---|
-| failed to synthesize `MeasurableSpace (spec.Range t)` or `OracleSpec.IsMeasureSpec spec` | add the binders from *Classes and binders*, or the local instances for a concrete specification |
+| failed to synthesize `OracleSpec.IsMeasureSpec spec` | add the binder from *Classes and binders*, or the local instance for a concrete specification |
+| failed to synthesize `MeasurableSpace (spec.Range t)` inside a proof | `let : MeasurableSpace (spec.Range t) := ⊤` (use `let`, not `letI`, in a proposition-valued goal); in a statement, state the fact with `=ᵈ` or `Pr{…}[…]`, or take `{_ : MeasurableSpace (spec.Range t)}` |
+| `rw`/`simp` does not find a query law such as `evalDist_liftM_query_apply` when the answer type appears reduced (`Bool` rather than `spec.Range t`) | name the specification: `evalDist_liftM_query_apply (spec := S) t hs` |
+| two instances for a sum specification disagree (e.g. a local `IsUniformMeasureSpec (A + B)`) | declare the local instance on the components and let `IsMeasureSpec.add` build the sum |
 | failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{mx}[= x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
 | two events that should agree differ only in how their binds and maps are arranged | `simp only [prEvent_norm]` brings both into the normal form of `Pr{…}[…]` |

@@ -399,7 +399,6 @@ namespace uniformSampleImpl
 open OracleSpec OracleComp
 
 variable {ι : Type*} {spec : OracleSpec ι} [∀ t, SampleableType (spec.Range t)]
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsUniformMeasureSpec spec]
 
 /-- Answering every query with the canonical uniform sampler preserves the output measure of every
@@ -407,6 +406,7 @@ computation under uniform oracle semantics. -/
 theorem evalDist_simulateQ {α : Type} [MeasurableSpace α] (oa : OracleComp spec α) :
     𝒟[simulateQ uniformSampleImpl oa] = 𝒟[oa] :=
   evalDist_simulateQ_eq_of_forall _ (fun t ↦ by
+    let : MeasurableSpace (spec.Range t) := ⊤
     rw [uniformSampleImpl_apply, SampleableType.evalDist_uniformSample,
       OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]) oa
 

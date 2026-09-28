@@ -60,8 +60,7 @@ theorem forall_mem_support_simulateQ_run_of_bad
     obtain ⟨us, hus, hz⟩ := hz
     exact ih us.1 (h_mono t s₀ h_bad us hus) z hz
 
-variable [∀ t, MeasurableSpace (spec'.Range t)] [∀ t, DiscreteMeasurableSpace (spec'.Range t)]
-  [IsMeasureSpec spec']
+variable [IsMeasureSpec spec']
 
 /-- Two simulations whose handlers agree on good-to-good steps and keep bad states bad give every
 event the same probability away from a bad final state. -/

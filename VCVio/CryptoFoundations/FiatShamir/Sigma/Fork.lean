@@ -1347,8 +1347,6 @@ discharge `hreach` by establishing this correspondence at the level of `runTrace
 theorem replayForkingBound
     [DecidableEq M] [DecidableEq Commit]
     [DecidableEq Chal] [SampleableType Chal] [Fintype Chal]
-    [∀ t, MeasurableSpace ((wrappedSpec Chal).Range t)]
-    [∀ t, DiscreteMeasurableSpace ((wrappedSpec Chal).Range t)]
     [IsUniformMeasureSpec (wrappedSpec Chal)]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))

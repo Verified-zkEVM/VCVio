@@ -158,7 +158,7 @@ private lemma bindingInner_totalBound {t : ℕ} (A : BindingAdversary M S C t) :
 
 /- In a collision-free cache, a value determines at most one query input. -/
 private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
-      [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+      [Inhabited C]
     (c : C) (m₀ m₁ : M) (s₀ s₁ : S)
     (cache₁ : QueryCache (CMOracle M S C))
     (hno : ¬ CacheHasCollision cache₁) :
@@ -284,7 +284,6 @@ private lemma binding_rest_noCollision_le_inv [Finite M] [Finite S] [Fintype C]
  - Case 2 (no collision, fresh query matches `c`): ≤ `1/|C|` by unpredictability -/
 private lemma binding_win_le_advCollision_add_fresh {t : ℕ}
     [Finite M] [Finite S] [Fintype C] [Inhabited C]
-    [MeasurableSpace C] [MeasurableSingletonClass C]
     (A : BindingAdversary M S C t) :
     Pr{let z ← bindingExperiment A}[z.1 = true] ≤
     Pr{let z ← (simulateQ cachingOracle A.run).run ∅}[CacheHasCollision z.2] +
@@ -329,7 +328,7 @@ This is the bound a reader of the textbook lemma should reach for; the
 companion `binding_bound_via_cr_chain` produces the same shape of bound by
 factoring through the standard-model collision-resistance reduction. -/
 theorem binding_bound [Finite M] [Finite S] [Fintype C]
-    [Inhabited M] [Inhabited S] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+    [Inhabited M] [Inhabited S] [Inhabited C]
     {t : ℕ} (A : BindingAdversary M S C t) :
     Pr{let z ← bindingExperiment A}[z.1 = true] ≤
     ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by
@@ -368,7 +367,6 @@ Proof: a binding-game win implies a collision in the final cache
 total queries (`bindingInner_totalBound`); apply
 `prEvent_cacheCollision_le_birthday_total_tight` at `n = t + 2`. -/
 theorem binding_bound_via_cr_chain [Fintype C] [Inhabited M] [Inhabited S] [Inhabited C]
-    [MeasurableSpace C] [MeasurableSingletonClass C]
     {t : ℕ} (A : BindingAdversary M S C t) :
     Pr{let z ← bindingExperiment A}[z.1 = true] ≤
     (((t + 2) * (t + 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by

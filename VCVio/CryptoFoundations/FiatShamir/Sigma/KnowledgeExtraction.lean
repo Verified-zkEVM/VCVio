@@ -189,14 +189,8 @@ section probability
 
 variable [SampleableType Chal]
 
-/-- Replay's finite response spaces carry their discrete measurable structure. -/
-local instance : ∀ t, MeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => ⊤
-
-local instance : ∀ t, DiscreteMeasurableSpace ((Fork.wrappedSpec Chal).Range t) :=
-  fun _ => inferInstance
-
 /-- The singleton replay challenge oracle uses uniform challenges. -/
-noncomputable local instance : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
+noncomputable local instance : IsUniformMeasureSpec (Unit →ₒ Chal) :=
   IsUniformMeasureSpec.ofFiniteNonempty _
 
 /-- Forkable acceptance equals acceptance of the actual verifier for a bounded ordinary prover. -/

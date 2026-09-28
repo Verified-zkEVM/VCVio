@@ -463,9 +463,6 @@ def contextForkCollision [DecidableEq ι] [∀ t, DecidableEq (spec.Range t)]
 
 section nativeBounds
 
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-
-omit [∀ t, DiscreteMeasurableSpace (spec.Range t)] in
 /-- An event of a mapped raw polynomial program is the pulled-back event. -/
 private theorem prEvent_ofFreeM_map [OracleSpec.IsMeasureSpec spec] {β γ : Type}
     (mx : spec.toPFunctor.FreeM β) (f : β → γ) (p : γ → Prop) :

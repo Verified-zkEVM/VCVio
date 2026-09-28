@@ -91,7 +91,6 @@ private lemma ENNReal_tsum_iSup_le {ι : Type*} {J : ι → Type*}
 
 variable {ι₁ : Type u} {ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
 variable {α β γ δ : Type}
 
 section measureSpec
@@ -143,9 +142,6 @@ theorem eRelWP_indicator_le_one (oa : OracleComp spec₁ α) (ob : OracleComp sp
   eRelWP_le oa ob _ 1 fun a b => by
     unfold RelPost.indicator
     split_ifs <;> simp
-
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
 /-- Pure values characterize the quantitative relational weakest precondition. -/
 theorem eRelWP_pure (a : α) (b : β) (post : α → β → ℝ≥0∞) :
@@ -467,7 +463,7 @@ end measureSpec
 
 section oracleQuery
 
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [IsUniformMeasureSpec spec₁]
+variable [IsUniformMeasureSpec spec₁]
   [∀ t, Finite (spec₁.Range t)]
 
 /-- Quantitative lower bound for two oracle queries coupled by a bijection on the range.

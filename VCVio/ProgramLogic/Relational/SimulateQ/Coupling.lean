@@ -32,13 +32,9 @@ namespace OracleComp.ProgramLogic.Relational
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α : Type}
 variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-  [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, MeasurableSpace (spec₂.Range t)]
   [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
 
 section coupling
-
-variable [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
 
 variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
@@ -481,7 +477,6 @@ that version uses a relation on the two *run distributions*, which applies when 
 states are related only through a coupling over a deferred draw, at the price of also having to
 seed the relation at every `pure` leaf. -/
 theorem prEvent_marginal_simulateQ_mono
-    [∀ t, DiscreteMeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
     {σ₁ σ₂ : Type}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))

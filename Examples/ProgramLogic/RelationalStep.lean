@@ -31,8 +31,7 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.IsMeasureSpec spec]
 variable {α β γ δ : Type}
 
 /-! ## Basic relational stepping -/
@@ -258,8 +257,8 @@ example [SampleableType α] (post : α → α → ℝ≥0∞) :
 
 section uniformQuery
 
-variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'} [∀ t, MeasurableSpace (spec'.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec'.Range t)] [OracleSpec.IsUniformMeasureSpec spec']
+variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
+  [OracleSpec.IsUniformMeasureSpec spec']
   [∀ t, Finite (spec'.Range t)]
 
 example (t : spec'.Domain) (post : spec'.Range t → spec'.Range t → ℝ≥0∞) :

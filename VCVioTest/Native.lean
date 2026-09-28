@@ -153,7 +153,8 @@ noncomputable example : IsProbabilityMeasure 𝒟[guardedDraw] := by
   apply evalDist.isProbabilityMeasure_bind_of_ae
     (mx := OptionT.lift (WeightedSpec.query 0 : OracleComp WeightedSpec Bool))
     (f := fun b ↦ if b then failure else pure b) Measurable.of_discrete
-  rw [OptionT.evalDist_lift, OracleComp.evalDist_liftM_query]
+  rw [OptionT.evalDist_lift, OracleComp.evalDist_liftM_query (spec := WeightedSpec),
+    MeasureTheory.trim_eq_self]
   simpa [OracleSpec.IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure] using
     (inferInstance : IsProbabilityMeasure 𝒟[(pure false : OptionT (OracleComp WeightedSpec) Bool)])
 
@@ -262,7 +263,9 @@ example {α : Type} [MeasurableSpace α] (oa : OracleComp coinSpec α) (calls : 
   evalDist_simulateQ_run'_eq_of_forall countingCoin (fun t calls ↦ by
     rw [countingCoin, StateT.run'_eq, StateT.run_mk, Functor.map_map]
     simp only [id_map']
-    rw [SampleableType.evalDist_uniformSample, IsMeasureSpec.toMeasure_eq_uniformOn]) oa calls
+    exact EvalDistEq.of_evalDist_eq (by
+      rw [SampleableType.evalDist_uniformSample,
+        OracleComp.evalDist_liftM_query_uniform (spec := coinSpec)])) oa calls
 
 -- The canonical uniform sampler implements a uniform oracle without changing any output law.
 example {α : Type} [MeasurableSpace α] (oa : OracleComp coinSpec α) :

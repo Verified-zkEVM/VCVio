@@ -475,6 +475,33 @@ distribution for an arbitrary oracle, so `IsUniformMeasureSpec.ofFiniteNonempty`
 opt-in and only the concrete `unifSpec` and `coinSpec` instances are global. Structural
 `OracleComp.support` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
+
+Oracle answer measures live on the discrete σ-algebra. `OracleSpec.IsMeasureSpec spec` is
+`PFunctor.IsMeasureSpec` at `fun _ => ⊤`, so `IsMeasureSpec.toMeasure t` is a measure on
+`(spec.Range t, ⊤)`, and statements about oracle computations take no measurable-space
+hypotheses on answer types. Continuous answer measures belong at the `PFunctor.FreeM` level,
+where `PFunctor.IsMeasureSpec` accepts arbitrary measurable structures. The query laws are generic
+in the measurable structure that observes an answer:
+
+- `evalDist_liftM_query` gives `(toMeasure t).trim le_top`, and `MeasureTheory.trim_eq_self`
+  removes the trim when the observing instance is `⊤` by definition, as for `Bool` and `Fin n`;
+- `evalDist_liftM_query_apply` (simp) evaluates a measurable event to `toMeasure t s`;
+- `evalDist_liftM_query_uniform` gives `uniformOn Set.univ` for a uniform specification, and
+  `evalDist_liftM_unifSpec_query` and `evalDist_liftM_coinSpec_query` are its simp forms for the
+  built-in specifications.
+
+When a concrete specification's answer type appears reduced (`Bool` rather than
+`spec.Range t`), `rw` and `simp` match the generic laws only with the specification named, as in
+`evalDist_liftM_query_apply (spec := S) t hs`: Lean assigns the measurable-space argument before
+the query has determined `spec`. Handler-level hypotheses (`evalDist_simulateQ_congr`,
+`evalDist_simulateQ_run_congr`, `QueryImpl.Stateful.MeasureDistEquiv.of_step`,
+`wp_simulateQ_eq`, `wp_simulateQ_run'_eq`) are equalities in distribution `=ᵈ`, so handler states
+need no measurable structure either. A tactic proof that needs the discrete structure on an answer
+or on a reply-state product declares it with `let : MeasurableSpace (spec.Range t) := ⊤`, using
+`let` because the goal is a proposition. A concrete specification with finite nonempty answers
+takes `IsUniformMeasureSpec.ofFiniteNonempty _` as a local instance on that specification. Sums
+get their instances from `IsMeasureSpec.add` and `IsUniformMeasureSpec.add`, and a local instance
+declared on the sum itself would compete with them.
 For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
 it follows only the query responses in `possibleOutputs`, with pure/query/bind laws
 and a `gcongr` monotonicity rule. PolyFun defines the underlying

@@ -305,7 +305,7 @@ theorem measure_onlineAdaptivePrefixRunFrom_logged_le
 
 /-- The predictable-target bound for events under native uniform oracle semantics. -/
 theorem prEvent_onlineAdaptivePrefixRunFrom_logged_le
-    [DecidableEq Query] [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [DecidableEq Query] [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C)
@@ -371,11 +371,11 @@ theorem prEvent_onlineAdaptivePrefixRunFrom_logged_le
       (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
   classical
+  let : MeasurableSpace Y := ⊤
   let : MeasurableSpace (R × (Query →ₒ Y).QueryCache) := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
   refine measure_onlineAdaptivePrefixRunFrom_logged_le
-    (hquery := fun t => (evalDist_liftM_query t).trans
-      (IsUniformMeasureSpec.toMeasure_eq_uniform t))
+    (hquery := fun t => evalDist_liftM_query_uniform (spec := Query →ₒ Y) t)
     suffix continuation win MeasurableSet.of_discrete targets Good nodeBudget checkpointCount
     overhead prefixComp remaining cached log hbound cache hno hcacheBound hlogCache hcacheLog
     hgood hgoodHit hgoodMiss htargetBound ?_
@@ -385,7 +385,7 @@ theorem prEvent_onlineAdaptivePrefixRunFrom_logged_le
 
 /-- Specialization where structural accounting does not depend on the accumulated log. -/
 theorem prEvent_onlineAdaptivePrefixRunFrom_le
-    [DecidableEq Query] [Finite Y] [MeasurableSpace Y] [DiscreteMeasurableSpace Y]
+    [DecidableEq Query] [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → OracleComp (Query →ₒ Y) C)

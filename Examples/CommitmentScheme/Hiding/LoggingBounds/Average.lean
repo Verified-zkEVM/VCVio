@@ -41,7 +41,7 @@ lemma sum_chooseHitIndicators_le_sumCounts [Fintype S]
     exact_mod_cast hpos
   · simp [OracleComp.ProgramLogic.propInd, hpos]
 
-lemma wp_finset_sum [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+lemma wp_finset_sum [Finite C] [Inhabited C]
     {α : Type}
     (oa : OracleComp (CMOracle M S C) α) (ss : Finset S) (f : S → α → ℝ≥0∞) :
     (ss.sum fun s => OracleComp.ProgramLogic.wp oa (f s)) =
@@ -285,8 +285,7 @@ queries at `(default, default)`. Since the underlying oracle is memoryless
 distribution. The cache update and counter increment are identical (both cache
 at `ms`, both increment when `ms.2 = s`), so the two runs have the same output
 measure. -/
-theorem hidingImpl_agree_dist [Inhabited M] [Inhabited S] [MeasurableSpace C]
-    [MeasurableSingletonClass C] (s : S) (ms : M × S)
+theorem hidingImpl_agree_dist [Inhabited M] [Inhabited S] (s : S) (ms : M × S)
     (st : QueryCache (CMOracle M S C) × ℕ) (h : ¬hidingBad st) :
     (hidingImpl₁ s ms).run st =ᵈ (hidingImplSim s ms).run st := by
   let : MeasurableSpace (C × (QueryCache (CMOracle M S C) × ℕ)) := ⊤
@@ -309,7 +308,7 @@ The proof uses identical-until-bad on output measures
 counter) and `hidingImplSim` (sim with counter) agree distributionally when `¬bad` because the
 underlying oracle is memoryless. -/
 theorem measureETVDist_hidingReal_hidingSim_le_probBad [Inhabited M] [Inhabited S]
-    [MeasurableSpace C] [MeasurableSingletonClass C] {AUX : Type} {t : ℕ}
+    {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
     measureETVDist (hidingReal A s) (hidingSim A s) ≤
       Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2] := by
@@ -320,9 +319,6 @@ theorem measureETVDist_hidingReal_hidingSim_le_probBad [Inhabited M] [Inhabited 
     (hidingImpl₁_bad_mono s) (hidingImplSim_bad_mono s) (hidingOa A s) (∅, 0)
 
 section Averaging
-
-variable [MeasurableSpace C] [MeasurableSingletonClass C]
-  [MeasurableSpace S] [MeasurableSingletonClass S]
 
 /-- Averaged-mass bridge for hiding.
 
@@ -435,8 +431,6 @@ lemma card_mul_wp_hidingAvg_selectedCountPred_eq_sum_wp_countPred
           simp [Q]
 
 end Averaging
-
-variable [MeasurableSpace C] [MeasurableSingletonClass C]
 
 /-- The outer counting bridge: the bad-mass sum is bounded by the per-salt
 count-pred expectations from the shared counted implementation. -/

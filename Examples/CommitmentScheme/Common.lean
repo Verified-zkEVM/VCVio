@@ -53,8 +53,7 @@ the random oracle has signature `H : (M × S) → C`. -/
 abbrev CMOracle (M : Type) (S : Type) (C : Type) : OracleSpec (M × S) := fun _ => C
 
 /-- The commitment oracle samples uniformly in its chosen finite response space. -/
-noncomputable instance {M S C : Type} [Fintype C] [Inhabited C]
-    [MeasurableSpace C] [MeasurableSingletonClass C] :
+noncomputable instance {M S C : Type} [Fintype C] [Inhabited C] :
     OracleSpec.IsUniformMeasureSpec (CMOracle M S C) :=
   OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty _
 
@@ -80,7 +79,7 @@ continuation `cont` to win is for the fresh query at `t` to return a fixed
 target value, then the win probability is at most `1/|C|`. The atomic
 fact: a fresh random-oracle answer is uniform on `C`, so it equals any
 specific target with probability exactly `1/|C|`. -/
-lemma prEvent_from_fresh_query_le_inv [MeasurableSpace C] [MeasurableSingletonClass C]
+lemma prEvent_from_fresh_query_le_inv
     (t : (CMOracle M S C).Domain)
     (target : C)
     (cache₀ : QueryCache (CMOracle M S C))
