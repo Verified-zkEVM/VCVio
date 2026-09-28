@@ -495,6 +495,16 @@ theorem prEvent_pure_prop
   rw [prEvent_def, evalDist_pure]
   by_cases h : P <;> simp [h]
 
+/-- Returned propositions are ordered by implication. A continuation that destructures its input
+with `match` keeps its event in this form, below a bind. -/
+theorem prEvent_pure_mono
+    {m : Type → Type v} [Monad m] [EvalDistSemantics m] [LawfulPureEvalDistSemantics m]
+    {P Q : Prop} (h : P → Q) :
+    prEvent (pure P : m Prop) ≤ prEvent (pure Q : m Prop) := by
+  classical
+  rw [prEvent_pure_prop, prEvent_pure_prop]
+  split_ifs <;> simp_all
+
 /-- An event of a pure computation has probability one exactly when it holds. -/
 @[grind =]
 theorem prEvent_pure

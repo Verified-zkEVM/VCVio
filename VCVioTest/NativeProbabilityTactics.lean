@@ -397,4 +397,15 @@ example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → Pro
     𝒟[mx >>= fun a => my >>= fun b => f a b] = 𝒟[my >>= fun b => mx >>= fun a => f a b] := by
   vcstep
 
+/-! ## 10. Events whose continuation destructures its input
+
+An event computation written as a destructuring `do` block keeps a `match` around the returned
+proposition, so it stays in bind form; implication between the returned propositions is
+transported below the bind. -/
+
+example (mx : ProbComp (Bool × Bool)) :
+    prEvent (do let (a, b) ← mx; pure (a = true ∧ b = true)) ≤
+      prEvent (do let (a, _) ← mx; pure (a = true)) :=
+  prEvent_bind_mono_of_support _ _ _ fun ⟨_, _⟩ _ => prEvent_pure_mono And.left
+
 end VCVioTest.NativeProbabilityTactics

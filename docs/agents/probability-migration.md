@@ -35,6 +35,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | `Pr[p \| mx]` | `Pr{x ← mx}[p x]` |
 | `Pr[= x \| mx]` | `Pr{mx}[= x]`; or `𝒟[mx] {x}` when the output has measurable singletons |
 | `Pr[⊥ \| mx]` | `1 - Pr{_ ← mx}[True]`; identically `0` for `OracleComp` |
+| `Pr{let x ← mx}[p x]` | `Pr{x ← mx}[p x]`; the `let` form still parses, and items are separated by `;` |
 | `evalSPMF mx`, `𝒮[mx]` | `𝒟[mx]` |
 | `tvDist mx my` | `measureETVDist mx my`; `Measure.etvDist` on measures |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
@@ -142,12 +143,16 @@ A removed module may have re-exported legacy hubs; add the imports the build the
 | two instances for a sum specification disagree (e.g. a local `IsUniformMeasureSpec (A + B)`) | declare the local instance on the components and let `IsMeasureSpec.add` build the sum |
 | failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{mx}[= x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
+| a goal shows `(toMeasure t).trim le_top` | `MeasureTheory.trim_eq_self` when the answer's measurable space is `⊤` by definition; otherwise evaluate measurable sets with `evalDist_liftM_query_apply` or `trim_measurableSet_eq` |
 | two events that should agree differ only in how their binds and maps are arranged | `simp only [prEvent_norm]` brings both into the normal form of `Pr{…}[…]` |
 | a lemma about `Pr{y ← mx >>= f}[q y]` no longer matches after `simp` pushed the event into the bind | apply the lemma before `simp`, or state it for `prEvent (mx >>= g)` with `g : α → m Prop` |
 | a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | `simp only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def]` recovers that form; better, use the laws keyed on `prEvent` |
 | `simp [prEvent_def]` loops | `simp` rewrites `𝒟[mx] {True}` back to `prEvent mx`; use `rw [prEvent_def]` or `simp only` |
 | `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
 | `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
+| an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |
+| an event computation that destructures its input (`let (a, b) ← mx` in a `do` block) stays in bind form, so `prEvent_mono` does not apply | `prEvent_bind_mono_of_support _ _ _ fun ⟨a, b⟩ _ => prEvent_pure_mono h`, or `prEvent_bind_congr_of_support` for equalities |
+| `prEvent_le_one mx p` no longer applies | it takes the event computation alone: `prEvent_le_one _` |
 | measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |
 | an event transported between monads (`ProbComp` and `OracleComp spec`) | take `.prEvent_eq p` of an equality in distribution such as `uniformSampleImpl.evalDistEq_simulateQ` or `OracleComp.evalDistEq_liftComp_uniform` |
 | `x ∈ support mx ↔ 0 < mass` needs a uniform specification | use `mem_support_iff_evalDist_singleton_pos_of_fullSupport` with a full-support hypothesis for other answer measures |
@@ -168,5 +173,7 @@ A removed module may have re-exported legacy hubs; add the imports the build the
 - **Support is operational.** `support mx` is the set of structurally reachable outputs. It
   coincides with the positive-mass outputs only when every answer has positive mass, which the
   uniform specifications provide.
-- **Continuous answers.** Oracle answers may carry non-discrete σ-algebras through
-  `PFunctor.IsMeasureSpec`; the `OracleSpec` classes above assume discrete answers.
+- **Discrete answers.** `OracleSpec` answer measures live on the discrete σ-algebra, so
+  oracle programs carry no measurable-space hypotheses on answers. Continuous answer measures
+  belong at the `PFunctor.FreeM` level, where `PFunctor.IsMeasureSpec` takes any measurable
+  structure.

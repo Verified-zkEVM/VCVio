@@ -121,6 +121,11 @@ class NameTests(unittest.TestCase):
         self.assertEqual(migrate("probEvent_mono' h")[0], "probEvent_mono' h")
         self.assertEqual(migrate("my_probEvent_mono h")[0], "my_probEvent_mono h")
 
+    def test_prEvent_le_one_takes_the_event_alone(self):
+        out, items = migrate("exact prEvent_le_one _ _\nexact prEvent_le_one mx")
+        self.assertEqual(out, "exact prEvent_le_one _\nexact prEvent_le_one mx")
+        self.assertEqual([line for _, line, _ in items], [2])
+
     def test_game_equiv(self):
         out, _ = migrate("h : GameEquiv g₁ g₂\nh' : g₁ ≡ₚ g₂\nexact GameEquiv.symm h")
         self.assertEqual(out, "h : EvalDistEq g₁ g₂\nh' : g₁ =ᵈ g₂\nexact EvalDistEq.symm h")

@@ -188,6 +188,10 @@ REPORT_NAMES: dict[str, str] = {
         "the per-query hypothesis is now `=ᵈ` (see *Query and handler laws*)",
     "evalDist_liftM_query":
         "now gives `(toMeasure t).trim le_top` (see *Query and handler laws*)",
+    "prEvent_bind_congr_of_support":
+        "now stated for continuations `f g : α → m Prop`; pass `_ _ _ h` and let unification "
+        "choose them",
+    "prEvent_le_one": "now takes the event computation `mx : m Prop` alone",
     "evalDist_apply_singleton":
         "targets the legacy `Pr[= x | mx]`; `prEvent_eq_evalDist_singleton` relates "
         "`Pr{mx}[= x]` and `𝒟[mx] {x}`",
@@ -607,6 +611,8 @@ RENAME_PATTERNS = sorted(((rename_pattern(old), new) for old, new in RENAMES.ite
 def rewrite_names(text: str) -> str:
     for pattern, new in RENAME_PATTERNS:
         text = pattern.sub(new, text)
+    # `prEvent_le_one` takes the event computation alone.
+    text = re.sub(r"(?<![\w'.])prEvent_le_one _ _(?![\w'])", "prEvent_le_one _", text)
     return text.replace("≡ₚ", "=ᵈ")
 
 
@@ -640,6 +646,9 @@ def report_legacy(text: str, report: Report, path: str) -> None:
                            f"`{m.group(0)}`: {LEGACY_HINTS.get(name, hint)}")
     for name, hint in REPORT_NAMES.items():
         for m in rename_pattern(name).finditer(text):
+            if name == "prEvent_le_one" and re.match(r"prEvent_le_one _(?![\w' ]*_)",
+                                                     text[m.start():]):
+                continue
             if not in_spans(m.start(), spans):
                 report.add(path, text, m.start(), f"`{name}`: {hint}")
 
