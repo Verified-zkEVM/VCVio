@@ -237,6 +237,14 @@ example (a : ℕ) : Pr{x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
 example : Pr{x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
   simp [SampleableType.prEvent_uniformSample, Finset.filter_insert, Finset.filter_singleton]
 
+/-- A final destructuring draw ends the event in a map, whether its action is a term or a nested
+`do` block. -/
+example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp (ℕ × ℕ)) :
+    Pr{let ⟨a, b⟩ ← mp}[a = b] = prEvent ((fun z => match z with | (a, b) => a = b) <$> mp) ∧
+      Pr{let ⟨a, b⟩ ← do f (← init)}[a = b] =
+        prEvent ((fun z => match z with | (a, b) => a = b) <$> (init >>= f)) :=
+  ⟨rfl, rfl⟩
+
 /-- Goals display in the draw form. -/
 example : Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x] := by
   guard_target =ₛ Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x]

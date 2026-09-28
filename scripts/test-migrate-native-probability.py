@@ -69,6 +69,8 @@ class EventTests(unittest.TestCase):
         self.assertMigrates("Pr{let x ← mx}[p x]", "Pr{x ← mx}[p x]")
         self.assertMigrates("Pr{let x ← mx; let y ← my x}[q x y]",
                             "Pr{x ← mx; y ← my x}[q x y]")
+        self.assertMigrates("(h : Pr{\n      let y ← $ᵗ α}[p y])",
+                            "(h : Pr{y ←\n      $ᵗ α}[p y])")
         # Patterns and nested `do` blocks keep their `let`.
         self.assertMigrates("Pr{let (a, b) ← mx}[a = b]", "Pr{let (a, b) ← mx}[a = b]")
         self.assertMigrates("Pr{x ← do\n    let y ← mx\n    pure y}[p x]",
@@ -135,6 +137,16 @@ class NameTests(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0][1], 2)
         self.assertIn("prEvent_bind_eq_lintegral", items[0][2])
+
+
+class ReportTests(unittest.TestCase):
+    def test_answer_instances_are_reported(self):
+        source = ("local instance : ∀ q,\n"
+                  "    MeasurableSpace (([(pSpec l).Message]ₒ).Range q) := fun _ => ⊤\n"
+                  "instance : IsUniformMeasureSpec s :=\n"
+                  "  @IsUniformMeasureSpec.ofFiniteNonempty _ _ h₁ h₂ _ _\n")
+        _, items = migrate(source)
+        self.assertEqual(sorted(line for _, line, _ in items), [2, 4])
 
 
 class ImportTests(unittest.TestCase):

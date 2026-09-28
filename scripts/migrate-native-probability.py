@@ -301,8 +301,10 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"EvalDistCompatible", "operational support lemmas; see *Classes and binders*"),
     (r"PFunctor\.IsProbabilitySpec|PFunctor\.IsUniformSpec",
      "`PFunctor.IsMeasureSpec`; see *Classes and binders*"),
-    (r"MeasurableSpace\s*\([^()\n]*\.Range\b",
+    (r"MeasurableSpace\s*\([^\n]*?\.Range\b",
      "answer measures are discrete; see *Classes and binders*"),
+    (r"@(?:OracleSpec\.)?IsUniformMeasureSpec\.ofFiniteNonempty\b",
+     "takes the specification and its `Finite` and `Nonempty` instances only"),
     (r"(?<![\w'.])SPMF(?![\w'])", "`Measure`; see *Notation and definitions*"),
     (r"(?<![\w'])[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure|tvDist)_[\w'.]*",
      "a legacy lemma name; see *Lemma names*"),
@@ -547,6 +549,10 @@ def rewrite_let_items(text: str) -> str:
             i = k + 3
             continue
         parts = split_top_level(text[k + 3:close], ";")
+        # A first item on its own line keeps the name beside the brace and breaks after the
+        # arrow, the layout Mathlib's whitespace linter accepts.
+        parts[0] = re.sub(r"^\n([ \t]*)let\s+(_|[^\W\d][\w'₀-₉]*)\s*←[ \t]*",
+                          r"\2 ←\n\1", parts[0])
         parts = [re.sub(r"^(\s*)let\s+(_|[^\W\d][\w'₀-₉]*)\s*←", r"\1\2 ←", part)
                  for part in parts]
         out.append(text[i:k + 3] + ";".join(parts) + "}")

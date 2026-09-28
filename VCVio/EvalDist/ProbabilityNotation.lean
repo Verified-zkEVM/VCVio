@@ -191,9 +191,11 @@ def splitFinalPattern (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (t 
   unless decl.isOfKind ``Lean.Parser.Term.doPatDecl && decl[4].isNone && decl[1].isNone do
     return (items, t)
   let action := decl[3]
-  unless action.isOfKind ``Lean.Parser.Term.doExpr do return (items, t)
+  -- The draw is a term, or a nested `do` block that is kept as one.
+  let e : Term ← if action.isOfKind ``Lean.Parser.Term.doExpr then pure ⟨action[0]⟩
+    else if action.isOfKind ``Lean.Parser.Term.doNested then `((do $(⟨action[1]⟩):doSeq))
+    else return (items, t)
   let pat : Term := ⟨decl[0]⟩
-  let e : Term := ⟨action[0]⟩
   let last ← `(Lean.Parser.Term.doSeqItem| let z ← $e:term)
   -- A discarded result binds nothing the event could mention.
   if pat.raw.isOfKind ``Lean.Parser.Term.hole then return (items.pop.push last, t)
