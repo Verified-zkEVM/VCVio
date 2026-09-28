@@ -218,12 +218,12 @@ theorem signature_euf_cma [Fintype F] (g : G)
     (Schnorr.sigma_speciallySound F G g)
     (by intro ω₁ p₁ ω₂ p₂; simp [Schnorr.sigma])
     (Schnorr.simTranscript F G g)
-    (ζ_zk := 0) le_rfl
+    (ζ_zk := 0)
     ((ChallengeVerifyProtocol.perfectHVZK_iff_hvzk_zero _ _).mp (Schnorr.sigma_hvzk F G g))
     (β := (Fintype.card F : ℝ≥0∞)⁻¹)
     (Schnorr.sigma_simCommitPredictability F G g hg)
     adv qS qH hQ
-  simp only [mul_zero, ENNReal.ofReal_zero, zero_add] at hred ⊢
+  simp only [mul_zero, zero_add] at hred ⊢
   exact hred.trans (le_of_eq (hardRelationExperiment_dlogGenerable_eq_dlogExperiment F G g hg
     (FiatShamir.cmaReduction (Schnorr.sigma F G g) (dlogGenerable F g) M
       (Schnorr.simTranscript F G g) adv qH)))

@@ -528,6 +528,18 @@ theorem prEvent_bind_eq_sum_fintype
   refine Finset.sum_congr rfl fun a _ => ?_
   rw [mul_comm, prEvent_eq_evalDist_singleton]
 
+/-- After a draw from a countable type, an event is the sum of the draw's point masses times the
+conditional event probabilities. -/
+theorem prEvent_bind_eq_tsum_of_countable
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type} [Countable α] (mx : m α) (f : α → m β) (p : β → Prop) :
+    Pr{let y ← mx >>= f}[p y] = ∑' a, Pr{mx}[= a] * Pr{let y ← f a}[p y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, MeasureTheory.lintegral_countable']
+  refine tsum_congr fun a => ?_
+  rw [mul_comm, ← prEvent_eq_evalDist_singleton]
+
 /-- Events of independent draws have the product of their probabilities. -/
 @[simp↓ high, grind norm↓]
 theorem prEvent_bind_bind_and

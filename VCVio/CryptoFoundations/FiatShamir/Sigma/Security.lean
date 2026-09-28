@@ -33,6 +33,7 @@ advantage of a named reduction from `FiatShamir.Sigma.Reductions`.
 universe u v
 
 open OracleComp OracleSpec
+open scoped ENNReal
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -50,7 +51,7 @@ random-oracle queries, the managed-RO NMA adversary `B = cmaToNmaAdv σ hr M sim
 satisfies:
 
   `Adv^{EUF-CMA}(A) ≤ Adv^{fork-NMA}_{qH}(B)
-      + ofReal (qS · ζ_zk) + qS · (qS + qH) · β`
+      + qS · ζ_zk + qS · (qS + qH) · β`
 
 where `β` is the simulator's commit-predictability bound and the right-hand
 fork advantage is `Fork.advantage σ hr M B qH` at slot parameter `qH`. The
@@ -62,9 +63,9 @@ theorem euf_cma_to_nma
     [Finite Stmt] [SampleableType Stmt] [DecidableEq M] [DecidableEq Commit]
     [Finite Chal] [Inhabited Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
+    (ζ_zk : ℝ≥0∞)
     (hHVZK : σ.HVZK simTranscript ζ_zk)
-    (β : ENNReal)
+    (β : ℝ≥0∞)
     (hPredSim : σ.simCommitPredictability simTranscript β)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
@@ -73,9 +74,9 @@ theorem euf_cma_to_nma
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
     SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
       Fork.advantage σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH +
-        ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
-        (qS : ENNReal) * (qS + qH) * β :=
-  cma_to_nma_advantage_bound σ hr M simTranscript ζ_zk hζ_zk hHVZK β hPredSim adv qS qH hQ
+        (qS : ℝ≥0∞) * ζ_zk +
+        (qS : ℝ≥0∞) * (qS + qH) * β :=
+  cma_to_nma_advantage_bound σ hr M simTranscript ζ_zk hHVZK β hPredSim adv qS qH hQ
 
 /-- **NMA-to-extraction via the forking lemma and special soundness.**
 
@@ -132,9 +133,9 @@ theorem euf_cma_bound
     (hss_nf : ∀ ω₁ p₁ ω₂ p₂, Pr[⊥ | σ.extract ω₁ p₁ ω₂ p₂] = 0)
     [Fintype Chal] [Inhabited Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
+    (ζ_zk : ℝ≥0∞)
     (hhvzk : σ.HVZK simTranscript ζ_zk)
-    (β : ENNReal)
+    (β : ℝ≥0∞)
     (hPredSim : σ.simCommitPredictability simTranscript β)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
@@ -142,11 +143,11 @@ theorem euf_cma_bound
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit) (Chal := Chal)
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
     let eps := SignatureAlg.unforgeableAdvantage (runtime M) adv -
-      (ENNReal.ofReal ((qS : ℝ) * ζ_zk) +
-        (qS : ENNReal) * (qS + qH) * β)
+      ((qS : ℝ≥0∞) * ζ_zk +
+        (qS : ℝ≥0∞) * (qS + qH) * β)
     eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
       Pr[= true | hardRelationExperiment hr (cmaReduction σ hr M simTranscript adv qH)] := by
-  have hAdv := euf_cma_to_nma σ hr M simTranscript ζ_zk hζ_zk hhvzk β hPredSim adv qS qH hQ
+  have hAdv := euf_cma_to_nma σ hr M simTranscript ζ_zk hhvzk β hPredSim adv qS qH hQ
   refine le_trans ?_ (euf_nma_bound σ hr M hss hss_nf (cmaToNmaAdv σ hr M simTranscript adv) qH)
   gcongr <;> exact tsub_le_iff_right.mpr (by simpa [add_assoc] using hAdv)
 

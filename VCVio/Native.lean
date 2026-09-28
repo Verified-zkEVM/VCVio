@@ -59,8 +59,8 @@ public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.OracleComp.Constructions.UniformSelectMeasure
 public import VCVio.EvalDist.MeasureTVDist.Event
-public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
-public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
+public import VCVio.ProgramLogic.Relational.SimulateQ
+public import VCVio.StateSeparating.IdenticalUntilBad
 public import VCVio.ProgramLogic.Relational.Quantitative
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 

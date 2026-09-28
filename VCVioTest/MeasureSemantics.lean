@@ -9,6 +9,7 @@ public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.ExpectationMeasure
 public import VCVio.EvalDist.MeasureTVDist
+public import VCVio.OracleComp.EvalDist
 public import VCVio.ProgramLogic.Relational.Measure
 public import ToMathlib.Probability.Divergence.RenyiDiscrete
 public import Mathlib.Probability.Distributions.Gaussian.Real

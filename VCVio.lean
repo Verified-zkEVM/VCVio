@@ -355,7 +355,6 @@ public import VCVio.ProgramLogic.Relational.Quantitative
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
-public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
 public import VCVio.ProgramLogic.Relational.SimulateQ.Resource
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
 public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad

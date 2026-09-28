@@ -39,6 +39,7 @@ content. -/
 namespace FiatShamir
 
 open OracleComp OracleSpec
+open scoped ENNReal
 open scoped OracleSpec.PrimitiveQuery
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
@@ -84,9 +85,9 @@ theorem cma_to_nma_advantage_bound
     [DecidableEq M] [DecidableEq Commit] [SampleableType Stmt] [SampleableType Wit]
     [Finite Stmt] [Finite Chal] [Inhabited Chal] [SampleableType Chal]
     (simTranscript : Stmt → ProbComp (Commit × Chal × Resp))
-    (ζ_zk : ℝ) (hζ_zk : 0 ≤ ζ_zk)
+    (ζ_zk : ℝ≥0∞)
     (hHVZK : σ.HVZK simTranscript ζ_zk)
-    (β : ENNReal)
+    (β : ℝ≥0∞)
     (hPredSim : σ.simCommitPredictability simTranscript β)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamir.inROM σ hr M))
@@ -95,9 +96,9 @@ theorem cma_to_nma_advantage_bound
       (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
     SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
       Fork.advantage σ hr M (cmaToNmaAdv σ hr M simTranscript adv) qH +
-        ENNReal.ofReal ((qS : ℝ) * ζ_zk) + (qS : ENNReal) * (qS + qH) * β :=
+        (qS : ℝ≥0∞) * ζ_zk + (qS : ℝ≥0∞) * (qS + qH) * β :=
   Stateful.cma_advantage_le_fork_bound_of_h1h2 σ hr M
-      simTranscript ζ_zk hζ_zk hHVZK β hPredSim adv qS qH hQ
+      simTranscript ζ_zk hHVZK β hPredSim adv qS qH hQ
       (le_of_eq <| (Stateful.unforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
           (σ := σ) (hr := hr) (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv).trans
         (Stateful.statefulPostKeygenFreshAdvantage_eq_cmaRealRunProb_signedFreshAdv
