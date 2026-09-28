@@ -153,6 +153,8 @@ A removed module may have re-exported legacy hubs; add the imports the build the
 | an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |
 | an event computation that destructures its input (`let (a, b) ← mx` in a `do` block) stays in bind form, so `prEvent_mono` does not apply | `prEvent_bind_mono_of_support _ _ _ fun ⟨a, b⟩ _ => prEvent_pure_mono h`, or `prEvent_bind_congr_of_support` for equalities |
 | `prEvent_le_one mx p` no longer applies | it takes the event computation alone: `prEvent_le_one _` |
+| `simp` leaves `Pr{a ← mx; b ← f a}[True]` (or `[False]`) on `OracleComp` | `simp` pushes the constant selector into the binds; `simp [-map_bind]` keeps it outside, where `OracleComp.prEvent_true_eq_one` and `prEvent_false` apply |
+| laws about `pure` (`prEvent_pure`, `map_pure`) do not fire on `pure v` written with an `OracleComp` ascription | that `pure` elaborates through `PFunctor.FreeM.instPure` rather than the monad; `erw [prEvent_pure]`, or state the term through the `do` block that produced it |
 | measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |
 | an event transported between monads (`ProbComp` and `OracleComp spec`) | take `.prEvent_eq p` of an equality in distribution such as `uniformSampleImpl.evalDistEq_simulateQ` or `OracleComp.evalDistEq_liftComp_uniform` |
 | `x ∈ support mx ↔ 0 < mass` needs a uniform specification | use `mem_support_iff_evalDist_singleton_pos_of_fullSupport` with a full-support hypothesis for other answer measures |
