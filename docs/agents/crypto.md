@@ -183,10 +183,12 @@ so programs the oracle at the cached points. `romImpl` is reducibly
 
 `VCVio.CryptoFoundations.KEMDEM.Measure` defines the preparation, encapsulation, and final
 observation games independently of probability. `KEMDEM.bias_compose_le` proves the
-composition bound with native measures. Both KEM message branches use `evalDist_kemGame`;
+composition bound on output measures. Both KEM message branches use `evalDist_kemGame`;
 `evalDist_demGame` performs independent-key interchange. Supply a fair coin, a lossless key
 sampler, and total Boolean hybrid outputs explicitly. Preparation and encapsulation effects
-retain their order. The `ProbCompRuntime` theorem in `KEMDEM.lean` is a compatibility adapter.
+retain their order. `KEMScheme.ind_cpa_one_time_bias_advantage_compose_with_dem_le` in
+`KEMDEM.lean` calibrates the bound to a `ProbCompRuntime` under explicit runtime coherence
+hypotheses.
 
 `ToMathlib.MeasureTheory.Measure.Bool` provides Boolean event distance and bias algebra.
 `Measure.boolBias_bind_coin` requires total branches: missing mass is distinct from returning
@@ -206,8 +208,8 @@ adapter.
 ### Forking bounds and measure semantics
 
 `VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
-seeded and context-fork success bounds natively, as `Pr{…}` bounds on the
-`Option.isSome` event under uniform native answer measures
+seeded and context-fork success bounds as `Pr{…}` bounds on the
+`Option.isSome` event under uniform answer measures
 (`OracleSpec.IsUniformMeasureSpec`). `FiatShamir/Sigma/Fork.lean` specializes the
 replay bound to the managed random-oracle trace, with the measure instances of
 `wrappedSpec` taken as hypotheses so each caller fixes its own discrete answer

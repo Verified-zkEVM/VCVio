@@ -7,7 +7,7 @@ Authors: Quang Dao, Alexander Hicks
 module
 public import HashSig.SLHDSA.GeneralScheme
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # SLH-DSA external interfaces

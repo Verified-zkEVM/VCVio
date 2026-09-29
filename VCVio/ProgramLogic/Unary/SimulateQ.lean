@@ -8,7 +8,7 @@ module
 
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import VCVio.OracleComp.SimSemantics.SimulateQ
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Measure
 public import ToMathlib.MeasureTheory.Measure.UniformTable
 
@@ -37,7 +37,7 @@ namespace OracleComp.ProgramLogic
 variable {ι : Type*} {spec : OracleSpec ι}
 variable {α : Type}
 
-section Native
+section MeasureSpec
 
 variable [OracleSpec.IsMeasureSpec spec]
 
@@ -78,9 +78,9 @@ theorem wp_liftComp_of_evalDistEq {ι' : Type*} {superSpec : OracleSpec ι'}
     rw [wp_eq_lintegral _ _ Measurable.of_discrete, (hMeasure t).evalDist_eq,
       ← wp_eq_lintegral _ _ Measurable.of_discrete]
 
-end Native
+end MeasureSpec
 
-/-- Cartesian lifting between uniform native specifications preserves quantitative WP. -/
+/-- Cartesian lifting between uniform specifications preserves quantitative WP. -/
 @[game_rule] theorem wp_liftComp [OracleSpec.IsUniformMeasureSpec spec]
     {ι' : Type*} {superSpec : OracleSpec ι'}
     [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
@@ -88,7 +88,7 @@ end Native
     wp (liftComp mx superSpec) post = wp mx post :=
   wp_liftComp_of_evalDistEq (fun t ↦ evalDistEq_liftM_query_uniform t) mx post
 
-section Native
+section MeasureSpec
 
 variable [OracleSpec.IsMeasureSpec spec]
 
@@ -117,6 +117,6 @@ after its state is discarded. The hidden state needs no measurable-space instanc
           ← wp_eq_lintegral _ _ Measurable.of_discrete]
 
 
-end Native
+end MeasureSpec
 
 end OracleComp.ProgramLogic

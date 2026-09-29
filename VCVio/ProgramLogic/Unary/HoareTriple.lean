@@ -79,13 +79,13 @@ lemma propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α β σ : Type}
 
-section Native
+section MeasureSpec
 
 variable [OracleSpec.IsMeasureSpec spec]
 
 /-! ## API contract
 
-This interface uses the configured native measure interpretation, with assertions in `ℝ≥0∞`.
+This interface uses the configured measure interpretation, with assertions in `ℝ≥0∞`.
 The abbreviations fix the empty exception postcondition
 while retaining core's WP and triple representations.
 -/
@@ -370,7 +370,7 @@ lemma prEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
       funext x
       by_cases hx : p x <;> simp [hx])
 
-/-- Native event probability is WP of its proposition indicator. -/
+/-- Event probability is WP of its proposition indicator. -/
 lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
@@ -407,7 +407,7 @@ theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (o
       split_ifs <;> simp
 
 open scoped Classical in
-/-- The finite reachable-output partition extends to a native event-weighted sum. -/
+/-- The finite reachable-output partition extends to an event-weighted sum. -/
 theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp oa post = ∑' x, Pr{let y ← oa}[y = x] * post x := by
   let : DecidableEq α := Classical.decEq α
@@ -433,7 +433,7 @@ theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (pos
   let : MeasurableSpace (spec.Range t) := ⊤
   rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
 
-/-- Lifting a primitive query has the same native expectation rule. -/
+/-- Lifting a primitive query has the same expectation rule. -/
 theorem wp_liftM_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (liftM (query t) : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
@@ -445,7 +445,7 @@ theorem wp_liftM_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (spec := spec) (HasQuery.query t : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := wp_query t post
 
-end Native
+end MeasureSpec
 
 section Uniform
 
@@ -465,11 +465,11 @@ theorem wp_query_uniform [OracleSpec.IsUniformMeasureSpec spec]
 
 end Uniform
 
-section Native
+section MeasureSpec
 
 variable [OracleSpec.IsMeasureSpec spec]
 
-/-- Uniform sampling integrates its chosen native measure. -/
+/-- Uniform sampling integrates its chosen measure. -/
 @[game_rule] theorem wp_uniformSample [SampleableType α] (post : α → ℝ≥0∞) :
     wp ($ᵗ α) post = ∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)] :=
   wp_eq_lintegral_map _ _
@@ -479,7 +479,7 @@ theorem triple_prEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [De
     Triple (Pr{let x ← oa}[p x]) oa (fun x => if p x then 1 else 0) :=
   triple_ofLE (by rw [prEvent_eq_wp_indicator])
 
-/-- Lower bounds on `probEvent` are exactly indicator-postcondition triples. -/
+/-- Lower bounds on an event probability are exactly indicator-postcondition triples. -/
 theorem le_prEvent_iff_triple_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (r : ℝ≥0∞) :
     r ≤ Pr{let x ← oa}[p x] ↔
@@ -597,7 +597,7 @@ theorem triple_list_mapM {I : ℝ≥0∞}
     Triple pre (l.mapM f) post :=
   triple_conseq hpre hpost (triple_list_mapM_inv hstep)
 
-/-! ## Congruence of native observations -/
+/-! ## Congruence of observations -/
 
 /-- The expectation algebra evaluates the identity assertion. -/
 lemma μ_eq_wp (oa : OracleComp spec ℝ≥0∞) : μ oa = wp oa (fun x ↦ x) := by
@@ -614,6 +614,6 @@ lemma wp_congr_evalDist [MeasurableSpace α] {oa ob : OracleComp spec α}
     wp oa post = wp ob post := by
   rw [wp_eq_lintegral oa post hpost, wp_eq_lintegral ob post hpost, h]
 
-end Native
+end MeasureSpec
 
 end OracleComp.ProgramLogic

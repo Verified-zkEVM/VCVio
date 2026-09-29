@@ -7,7 +7,7 @@ Authors: James Waters, Quang Dao
 module
 public import VCVio.OracleComp.QueryTracking.Birthday
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # ROM Unpredictability and Collision Win Bounds

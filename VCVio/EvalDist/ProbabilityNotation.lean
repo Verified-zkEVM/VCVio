@@ -578,7 +578,7 @@ theorem prEvent_le_one {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop)
   evalDist_apply_le_one _ _
 
 /-- Every event probability is finite. -/
-@[simp]
+@[simp, aesop (rule_sets := [finiteness]) safe apply]
 theorem prEvent_ne_top {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
     prEvent mx ≠ ⊤ :=
   ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one mx)

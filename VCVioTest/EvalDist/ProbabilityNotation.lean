@@ -13,7 +13,7 @@ public import VCVio.EvalDist.Inequalities
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.EvalDist.PFunctorPath
 public import VCVio.EvalDist.Defs.Measure.ExceptT
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Computation probability notation canaries

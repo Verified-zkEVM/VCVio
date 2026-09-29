@@ -31,8 +31,7 @@ variable {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
   [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
 
 /-- Reindexing a uniform draw by a bijection does not change the measure of any subsequent
-computation. The uniformity hypothesis can come from either native sampling or a compatibility
-certificate. -/
+computation. -/
 theorem evalDist_bind_bijective_of_uniform [LawfulMonad m]
     [DiscreteMeasurableSpace α] [MeasurableSingletonClass α] [Finite α] [Nonempty α]
     (mx : m α) (huniform : 𝒟[mx] = uniformOn Set.univ)

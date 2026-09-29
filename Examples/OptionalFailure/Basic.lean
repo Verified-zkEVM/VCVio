@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.Monad.Option
 
 /-!
@@ -24,7 +24,7 @@ the other half of the mass is missing.
 
 open OracleComp MeasureTheory ENNReal
 
-namespace EvalDistCompatibleExample
+namespace OptionalFailureExample
 
 /-- Sample a Boolean uniformly; commit only on heads. -/
 noncomputable def maybeHeads : OptionT ProbComp Unit := do
@@ -49,4 +49,4 @@ interpretation, independently of how much mass the measure assigns it. -/
 theorem mem_support_maybeHeads : () ∈ support maybeHeads := by
   simp [maybeHeads]
 
-end EvalDistCompatibleExample
+end OptionalFailureExample

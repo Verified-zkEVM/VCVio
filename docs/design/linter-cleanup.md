@@ -79,8 +79,8 @@ of baseline additions.
 * **Proof aliases and redundant rules:** theorem-valued abbreviations in the complexity
   façade use `alias`, preserving names and types. Redundant simp registrations were removed
   while retaining their named lemmas; the pure failure rule has explicit priority because
-  lower semantic layers need it before the general `NeverFail` API is available. The unused
-  syntactic tautology in `ProbComp` was removed.
+  lower semantic layers needed it before the general `NeverFail` API (since removed) was
+  available. The unused syntactic tautology in `ProbComp` was removed.
 * **Unused assumptions:** generalized structural query-bound lemmas and their handler,
   caching, logging, and cryptographic callers. Removed unused private assumptions and
   several unnecessary `NeverFail` premises. The resulting caller generalizations extend
@@ -113,12 +113,13 @@ of baseline additions.
    layer: a premise becomes unused in a wrapper only after its callee is generalized.
    Coordinate changes in probability files with the existing PMF retirement boundary.
 
-3. **Inference-sensitive instance changes (the rest of the unused-argument group).** In
-   particular, keep `instNeverFailOfLawfulMonadLiftTPMF`'s lawfulness premise until the class
-   interface is addressed: deleting it directly leaves unresolved monad metavariables in
-   downstream instance inference. Validate a replacement against `SubSpec`, `StateT.Basic`,
-   and Loom coherence, rather than treating the unused-argument report as a purely textual
-   deletion. Also check explicit `@declaration` applications when reducing public binders.
+3. **Inference-sensitive instance changes (the rest of the unused-argument group).** The
+   `instNeverFailOfLawfulMonadLiftTPMF` lawfulness premise once listed here was resolved by
+   removing that instance with the `NeverFail` class; deleting such a premise directly had left
+   unresolved monad metavariables in downstream instance inference. For the remaining
+   instances, validate a replacement against `SubSpec`, `StateT.Basic`, and Loom coherence,
+   rather than treating the unused-argument report as a purely textual deletion. Also check
+   explicit `@declaration` applications when reducing public binders.
 
 4. **Definition and namespace naming (345 findings).** Migrate contained arithmetic families
    such as `BigInt31` and `SmallPrimeNTT` with their callers first. The larger groups in

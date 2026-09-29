@@ -566,10 +566,9 @@ section Hop
 variable {M : Type} [DecidableEq M] [SampleableType (CommitHashBytes p)] [DecidableEq prims.High]
 
 /-- **NMA-game / distinguisher plumbing.** Pushing the `keygen` sampling out of the
-Fiat-Shamir-with-aborts runtime: the `Pr[= true]` of `nmaExperiment … keygen` equals the
-`Pr[= true]` of first sampling `(pk, _) ← keygen` (in plain `ProbComp`) and then running the
-forge-and-verify tail through `simulateToProbComp` — which is exactly the body of `distinguisherB`
-evaluated at `pk`.
+Fiat-Shamir-with-aborts runtime: the output measure of `nmaExperiment … keygen` equals that of
+first sampling `(pk, _) ← keygen` (in plain `ProbComp`) and then running the forge-and-verify tail
+through `simulateToProbComp` — which is exactly the body of `distinguisherB` evaluated at `pk`.
 
 This is the bundled-semantics fact that `runtime.evalDist (liftM oa >>= rest)` is the measure bind
 of `𝒟[oa]` with the runtime measures of the continuations, specialised to
@@ -609,8 +608,8 @@ theorem nmaExperiment_eq_keygen_bind
 
 /-- Short-model NMA-game / distinguisher plumbing: the `nmaExperiment_eq_keygen_bind` rewrite at the
 short scheme. Pushing the `keygen` sampling out of the Fiat-Shamir-with-aborts runtime, the
-`Pr[= true]` of `nmaShortExperiment … keygen` equals that of first sampling `(pk, _) ← keygen` in
-plain `ProbComp` and then running the forge-and-verify tail through `simulateToProbComp` —
+output measure of `nmaShortExperiment … keygen` equals that of first sampling `(pk, _) ← keygen`
+in plain `ProbComp` and then running the forge-and-verify tail through `simulateToProbComp` —
 exactly the body of `distinguisherBShort` evaluated at `pk`. -/
 theorem nmaShortExperiment_eq_keygen_bind
     (hr : GenerableRelation (PublicKey p prims) (SecretKey p) (validKeyPairShort p prims))
@@ -902,7 +901,8 @@ theorem nmaAdvantage_keygen1_le_stmsis
         (M × Option (Commitment p prims × Response p prims))) :
     nmaAdvantage p prims hr maxAttempts (keygen1 p prims) main ≤
       SelfTargetMSIS.advantage (extractorC p prims main) := by
-  -- Both `Pr[= true]`s reduce, through the shared `withStateOracle` random-oracle semantics, to:
+  -- Both acceptance probabilities reduce, through the shared `withStateOracle` random-oracle
+  -- semantics, to:
   --   sample the uniform-`t` key `(pk, _)`; run `main pk` against the RO; on `some (w', (z,h))`
   --   read `c̃ = H(msg, w')` from the cache and accept iff `ids.verify pk w' c̃ (z,h)`.
   -- The NMA game performs exactly this (its `verify` queries `H(msg, w')` then runs `ids.verify`);
@@ -1252,7 +1252,8 @@ The live short-secret reduction and the extraction bound are fully proven:
   full-ring real branch is not the seed-derived `keygen0` distribution.
 - **STMSIS extraction (`nmaAdvantage_keygen1_le_stmsis`).** The uniform-`t` NMA advantage is bounded
   by the SelfTargetMSIS advantage of `extractorC`; after `nmaExperiment_eq_keygen_bind` both sides
-  bind over the same `keygen1` prefix, so `probOutput_bind_mono` reduces to the per-key lemma
+  bind over the same `keygen1` prefix, so `OracleComp.evalDist_bind_apply_mono_of_support` reduces
+  to the per-key lemma
   `stmsis_tail_le`, which couples the single `H(msg, w')` query (the cached answer is read back and
   `verify = true → isValid = true` closes the per-answer inequality).
 -/

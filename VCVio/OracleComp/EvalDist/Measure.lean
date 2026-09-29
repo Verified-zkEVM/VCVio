@@ -20,11 +20,11 @@ Continuations that denote the same measure on all syntactically reachable output
 be interchanged. The proof inducts on the free program, so no probability/support bridge
 or positivity assumption on query answers is necessary.
 
-If every query answer has positive singleton mass, a second induction identifies structural
-support with positive output mass. Native uniform oracle specifications satisfy that condition,
-so their events of probability one, zero, or positive probability are exactly the events holding
-on all, none, or some structurally reachable outputs; wrapped optional computations are observed
-through their present values.
+If every query answer has positive singleton mass, a second induction identifies structural support
+with positive output mass. Uniform oracle specifications satisfy that condition, so their events of
+probability one, zero, or positive probability are exactly the events holding on all, none, or some
+structurally reachable outputs; wrapped optional computations are observed through their present
+values.
 -/
 
 public section
@@ -343,7 +343,7 @@ theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport
       ((mem_support_iff_evalDist_singleton_pos_of_fullSupport hfull mx x).mp hx)) hxzero
   · exact evalDist.ae_of_forall_mem_support mx p MeasurableSet.of_discrete
 
-/-- Under native uniform oracle semantics, structural reachability is positive singleton mass. -/
+/-- Under uniform oracle semantics, structural reachability is positive singleton mass. -/
 theorem mem_support_iff_evalDist_singleton_pos
     {ι : Type u} {spec : OracleSpec.{u, v} ι}
     [OracleSpec.IsUniformMeasureSpec spec]
@@ -353,9 +353,9 @@ theorem mem_support_iff_evalDist_singleton_pos
   mem_support_iff_evalDist_singleton_pos_of_fullSupport
     (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) mx x
 
-/-- Under native uniform oracle semantics, an event has probability one exactly when it contains
-every structurally reachable output. It is not a default `grind` rule: its unbounded support
-quantifier saturates `grind`. -/
+/-- Under uniform oracle semantics, an event has probability one exactly when it contains every
+structurally reachable output. It is not a default `grind` rule: its unbounded support quantifier
+saturates `grind`. -/
 theorem evalDist_apply_setOf_eq_one_iff_forall_mem_support
     {ι : Type u} {α : Type v} {spec : OracleSpec.{u, v} ι}
     [OracleSpec.IsUniformMeasureSpec spec]
@@ -464,16 +464,16 @@ section uniformMeasureSpec
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
   [OracleSpec.IsUniformMeasureSpec spec] {α : Type}
 
-/-- Under native uniform oracle semantics, an event has probability one exactly when it holds on
-every structurally reachable output. -/
+/-- Under uniform oracle semantics, an event has probability one exactly when it holds on every
+structurally reachable output. -/
 theorem prEvent_eq_one_iff (mx : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← mx}[p x] = 1 ↔ ∀ x ∈ support mx, p x := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
   exact evalDist_apply_setOf_eq_one_iff_forall_mem_support mx p
 
-/-- Under native uniform oracle semantics, an event has probability zero exactly when it fails on
-every structurally reachable output. -/
+/-- Under uniform oracle semantics, an event has probability zero exactly when it fails on every
+structurally reachable output. -/
 theorem prEvent_eq_zero_iff (mx : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← mx}[p x] = 0 ↔ ∀ x ∈ support mx, ¬ p x := by
   let : MeasurableSpace α := ⊤
@@ -485,16 +485,15 @@ theorem prEvent_eq_zero_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [h] at hle
   exact absurd (le_antisymm hle bot_le) (ne_of_gt hpos)
 
-/-- Under native uniform oracle semantics, an event has positive probability exactly when some
-structurally reachable output satisfies it. -/
+/-- Under uniform oracle semantics, an event has positive probability exactly when some structurally
+reachable output satisfies it. -/
 theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
     0 < Pr{let x ← mx}[p x] ↔ ∃ x ∈ support mx, p x := by
   rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
   push Not
   rfl
 
-/-- Under native uniform oracle semantics, computations equal in distribution reach the same
-outputs. -/
+/-- Under uniform oracle semantics, computations equal in distribution reach the same outputs. -/
 theorem support_eq_of_evalDistEq {mx my : OracleComp spec α} (h : mx =ᵈ my) :
     support mx = support my := by
   let : MeasurableSpace α := ⊤
@@ -502,8 +501,8 @@ theorem support_eq_of_evalDistEq {mx my : OracleComp spec α} (h : mx =ᵈ my) :
   rw [mem_support_iff_evalDist_singleton_pos, mem_support_iff_evalDist_singleton_pos,
     h.evalDist_eq]
 
-/-- Under native uniform oracle semantics, an event of a single lifted query has the
-proportion of satisfying responses as its probability. -/
+/-- Under uniform oracle semantics, an event of a single lifted query has the proportion of
+satisfying responses as its probability. -/
 theorem prEvent_liftM_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
     (p : spec.Range t → Prop) [DecidablePred p] :
     Pr{let u ← (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t))}[p u] =
@@ -511,8 +510,8 @@ theorem prEvent_liftM_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t
   let : MeasurableSpace (spec.Range t) := ⊤
   rw [prEvent_eq_evalDist_of_discrete, evalDist_liftM_query_uniform, uniformOn_univ_apply_setOf]
 
-/-- Under native uniform oracle semantics, an event of a single query has the proportion of
-satisfying responses as its probability. -/
+/-- Under uniform oracle semantics, an event of a single query has the proportion of satisfying
+responses as its probability. -/
 theorem prEvent_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
     (p : spec.Range t → Prop) [DecidablePred p] :
     Pr{let u ← (query t : OracleComp spec (spec.Range t))}[p u] =

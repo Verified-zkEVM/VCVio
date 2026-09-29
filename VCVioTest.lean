@@ -35,6 +35,7 @@ public import VCVioTest.FischlinExpectedCost
 public import VCVioTest.FischlinExtraction
 public import VCVioTest.ForkBounds
 public import VCVioTest.Forking.WithoutReplacement
+public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
@@ -53,15 +54,12 @@ public import VCVioTest.ModuleAPI.Cache
 public import VCVioTest.ModuleAPI.Counting
 public import VCVioTest.ModuleAPI.Heap
 public import VCVioTest.MonadProbability
-public import VCVioTest.Native
-public import VCVioTest.NativeMonadProbability
-public import VCVioTest.NativeProbabilityTactics
 public import VCVioTest.OracleComp.AdaptiveMeasure
 public import VCVioTest.OracleComp.PreservesInv
 public import VCVioTest.OracleComp.Query
 public import VCVioTest.OracleComp.SecurityFamily
 public import VCVioTest.OracleComp.SpecInstanceSearch
-public import VCVioTest.OracleComp.SpecInstanceSearchNative
+public import VCVioTest.OracleComp.SpecInstanceSearchLibrary
 public import VCVioTest.OracleComp.SupportMeasure
 public import VCVioTest.OracleComp.UniformMeasureSpec
 public import VCVioTest.OracleNetwork
@@ -79,7 +77,7 @@ public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
-public import VCVioTest.ProgramLogic.NativeOracleWP
+public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
@@ -110,12 +108,11 @@ public import VCVioTest.SchnorrTransforms
 public import VCVioTest.SeparatedOTP
 public import VCVioTest.SigmaChallengeRestriction
 public import VCVioTest.Smoke
-public import VCVioTest.StateSeparating.NativeMeasure
+public import VCVioTest.StateSeparating.Measure
 public import VCVioTest.StateTLift
 public import VCVioTest.Tactic.Expectation
 public import VCVioTest.Tactic.Finiteness
 public import VCVioTest.Tactic.FunProp
-public import VCVioTest.Tactic.GCongr
 public import VCVioTest.Tactic.GeneralizedRelations
 public import VCVioTest.Tactic.GeneralizedRelationsExperiments
 public import VCVioTest.Tactic.Positivity

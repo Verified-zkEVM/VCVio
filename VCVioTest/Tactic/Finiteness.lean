@@ -5,17 +5,17 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.EvalDist.Option
+public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.ProgramLogic.Unary.HoareTriple
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import Mathlib.Tactic.Positivity.Finset
 public import ToMathlib.Data.ENNReal.Finiteness
 
 /-!
 # `finiteness` on probability terms
 
-Canaries for the `finiteness` rule-set tags on `probOutput_ne_top`, `probEvent_ne_top`,
-`probFailure_ne_top`, and `tsum_probOutput_ne_top`, and for the `Finset.sum` rule.
+Canaries for the `finiteness` rule-set tag on `prEvent_ne_top`, for Mathlib's finite-measure
+rule on `𝒟[mx] s`, and for the `Finset.sum` rule.
 -/
 
 public section
@@ -24,23 +24,20 @@ open scoped ENNReal
 
 namespace VCVioTest.Finiteness
 
-universe u v
+variable {α : Type} {m : Type → Type} [Monad m] [EvalDistSemantics m]
 
-variable {α : Type u} {m : Type u → Type v} [Monad m] [MonadLiftT m SPMF]
+example (mx : m α) (x : α) : Pr{mx}[= x] ≠ ⊤ := by finiteness
 
-example (mx : m α) (x : α) : Pr[= x | mx] ≠ ⊤ := by finiteness
+example (mx : m α) (p : α → Prop) : Pr{y ← mx}[p y] * 2 ≠ ⊤ := by finiteness
 
-example (mx : m α) (p : α → Prop) : Pr[ p | mx] * 2 ≠ ⊤ := by finiteness
+example (mx : m α) (x : α) : (1 - Pr{_ ← mx}[True]) + Pr{mx}[= x] / 2 ≠ ⊤ := by finiteness
 
-example (mx : m α) (x : α) : Pr[⊥ | mx] + Pr[= x | mx] / 2 ≠ ⊤ := by finiteness
+example (mx : m α) (x : α) : Pr{mx}[= x] < ⊤ := by finiteness
 
-example (mx : m α) (x : α) : Pr[= x | mx] < ⊤ := by finiteness
+example [MeasurableSpace α] (mx : m α) (s : Set α) (c : ℝ≥0∞) (hc : c ≠ ⊤) :
+    𝒟[mx] s * c ≠ ⊤ := by finiteness
 
-example (mx : m α) : ∑' x, Pr[= x | mx] ≠ ⊤ := by finiteness
-
-example (mx : m α) (c : ℝ≥0∞) (hc : c ≠ ⊤) : (∑' x, Pr[= x | mx]) * c ≠ ⊤ := by finiteness
-
-example [Fintype α] (mx : m α) : ∑ x : α, Pr[= x | mx] ≠ ⊤ := by finiteness
+example [Fintype α] (mx : m α) : ∑ x : α, Pr{mx}[= x] ≠ ⊤ := by finiteness
 
 /-- A quotient by a cardinality, the shape of the slack terms in the tag-reader bounds. The
 nonzero side goal is `positivity`'s, and its `Fintype.card` extension lives in
@@ -54,15 +51,14 @@ def coinDie : ProbComp (Bool × Fin 6) := do
   let d ← $ᵗ (Fin 6)
   pure (b, d)
 
-example : Pr[= (true, 0) | coinDie] * 3 + Pr[⊥ | coinDie] / 2 ≠ ⊤ := by finiteness
+example : Pr{coinDie}[= (true, 0)] * 3 + (1 - Pr{_ ← coinDie}[True]) / 2 ≠ ⊤ := by finiteness
 
 /-- Local abbreviations can be exposed explicitly without changing global unfolding. -/
 example (mx : m α) (p : α → Prop) :
-    let mass := Pr[ p | mx]
+    let mass := Pr{y ← mx}[p y]
     mass + 1 ≠ ⊤ := by
   dsimp only
   finiteness
-
 
 section wp
 

@@ -69,7 +69,7 @@ theorem evalDistEq_liftM_query_uniform [spec ˡ⊂ₒ superSpec]
     exact uniformOn_univ_map_equiv (Equiv.ofBijective _ (LawfulSubSpec.onResponse_bijective t))
   exact EvalDistEq.of_evalDist_eq hsup
 
-/-- Cartesian inclusions between uniform specifications preserve native denotations. -/
+/-- Cartesian inclusions between uniform specifications preserve denotations. -/
 theorem evalDist_liftComp_uniform [spec ˡ⊂ₒ superSpec]
     [OracleSpec.IsUniformMeasureSpec spec] [OracleSpec.IsUniformMeasureSpec superSpec]
     {α : Type} [MeasurableSpace α] (mx : OracleComp spec α) :

@@ -15,7 +15,7 @@ This file develops the honest-verifier zero-knowledge (HVZK) simulators for the 
 identification scheme and proves `MLDSA.idsWithAbort_hvzk` for a named simulator and a named
 error bound. An existential statement asserting only that *some* simulator with *some*
 nonnegative total-variation error exists would be trivially dischargeable with `ζ_zk := 1`
-(because `tvDist ≤ 1` always, `SPMF.tvDist_le_one`) and would carry no content.
+(because total variation is at most one, `Measure.etvDist_le_one`) and would carry no content.
 
 ## The marginal simulator `hvzkSimulator`
 

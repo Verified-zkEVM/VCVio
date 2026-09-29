@@ -6,14 +6,15 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.OracleComp.OracleComp
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 import Mathlib.Tactic.GCongr
 import Mathlib.Tactic.GRewrite
 
@@ -29,15 +30,6 @@ public section
 open MeasureTheory ProbabilityTheory
 
 namespace VCVioTest.UniformMeasureSpec
-
-section DerivedMeasureSpec
-
-variable {ι : Type} {spec : OracleSpec ι}
-  [OracleSpec.IsUniformSpec spec]
-
-noncomputable example : OracleSpec.IsUniformMeasureSpec spec := inferInstance
-
-end DerivedMeasureSpec
 
 /-! ### One measure semantics per specification
 

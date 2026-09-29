@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Ordinary execution does not determine a replay experiment

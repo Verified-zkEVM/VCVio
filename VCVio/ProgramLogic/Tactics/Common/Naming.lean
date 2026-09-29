@@ -74,14 +74,9 @@ def getBindLambdaName? (comp : Expr) : Option Name := do
   guard (isBindExpr comp)
   binderNameFromExpr? comp.consumeMData.getAppArgs.back!
 
-/-- Extract the computation occurring in a native measure expression, including a `Pr{…}[…]`
-event, or in a scalar event or output probability expression. -/
-def probGoalComp? (target : Expr) : Option Expr := do
-  if let some comp := evalDistComp? target then
-    return comp
-  let app ← findAppWithHead? ``probEvent target <|> findAppWithHead? ``probOutput target
-  let args ← trailingArgs? app 2
-  some args[0]!
+/-- Extract the computation occurring in a measure expression, including a `Pr{…}[…]` event. -/
+def probGoalComp? (target : Expr) : Option Expr :=
+  evalDistComp? target
 
 /-- Collect usable names from the leading universal binders of a goal. -/
 partial def getLeadingBinderNames (target : Expr) : Array Name :=

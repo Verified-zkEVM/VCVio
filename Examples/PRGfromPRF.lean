@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
 public import VCVio.EvalDist.MeasureTVDist.Bind
 public import VCVio.EvalDist.MeasureTVDist.Event
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic

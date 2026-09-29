@@ -142,8 +142,9 @@ The separate ordinary-import consumer also builds and runs. All existing structu
 proofs and handler specifications compile. The old additive `Monoid (QueryCount ι)` cannot be
 retained as compatibility: its instance also changed unrelated function multiplication.
 Clients of raw writer state use `Multiplicative.toAdd`; clients of results use `runAdd`.
-The deprecated probability bridges remain; their shared compatibility constraints reduce the
-syntactic source count without claiming removal of the discrete semantic dependency.
+The deprecated probability bridges remained at that revision (they have since been removed);
+their shared compatibility constraints reduced the syntactic source count without claiming
+removal of the discrete semantic dependency.
 
 ### Final-validity conversion validation
 

@@ -303,7 +303,7 @@ theorem measure_onlineAdaptivePrefixRunFrom_logged_le
             nodeBudget checkpointCount overhead remaining cached hremaining
         · exact zero_le
 
-/-- The predictable-target bound for events under native uniform oracle semantics. -/
+/-- The predictable-target bound for events under uniform oracle semantics. -/
 theorem prEvent_onlineAdaptivePrefixRunFrom_logged_le
     [DecidableEq Query] [Finite Y]
     [IsUniformMeasureSpec (Query →ₒ Y)]

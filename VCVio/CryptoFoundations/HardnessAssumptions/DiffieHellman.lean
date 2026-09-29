@@ -8,7 +8,7 @@ module
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.CryptoFoundations.SecExp.Measure
 public import VCVio.OracleComp.QueryTracking.QueryBound
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.ProbComp.Basic
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 

@@ -9,10 +9,10 @@ public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.EvalDist.PFunctorMeasure.Core
 
 /-!
-# Native uniform-table regression checks
+# Uniform-table regression checks
 
-These imports exclude discrete probability compatibility machinery. Tests cover two
-cell updates, restriction to an empty domain, and continuations with missing mass.
+These imports exclude discrete probability machinery. Tests cover two cell updates,
+restriction to an empty domain, and continuations with missing mass.
 -/
 
 public section
@@ -21,9 +21,8 @@ open MeasureTheory ProbabilityTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native table imports unexpectedly include {name}"
+  if env.contains `PMF then
+    throwError "table imports unexpectedly include PMF"
 
 namespace VCVioTest.UniformTable
 

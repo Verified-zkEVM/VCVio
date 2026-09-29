@@ -13,7 +13,7 @@ public import ToMathlib.Control.OptionT
 /-!
 # Events of optional computations
 
-Native successful-output semantics turns a sampled guard into a condition on the sampled value.
+Successful-output semantics turns a sampled guard into a condition on the sampled value.
 The intermediate measurable space is internal to the observation law. Wrapped computations are
 observed through their present values, and sequencing a lossless prefix with continuations that
 succeed on its reachable outputs preserves probability-one events.

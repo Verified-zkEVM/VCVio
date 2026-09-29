@@ -8,7 +8,7 @@ module
 
 public import Examples.PRFTagReader.CacheRepresentation
 public import Examples.PRFTagReader.UnlinkReduction
-import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Real-network unlinkability with association-list caches

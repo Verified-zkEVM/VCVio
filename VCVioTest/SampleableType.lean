@@ -30,8 +30,8 @@ example : SampleableType (Vector Bool 3) := inferInstance
 -- BitVec sampling and finite enumeration share Mathlib's canonical FinEnum-derived Fintype.
 example (n : ℕ) : (inferInstance : Fintype (BitVec n)) = FinEnum.instFintype := rfl
 
-example (n : ℕ) (x : BitVec n) : Pr[= x | $ᵗ (BitVec n)] = (2 ^ n : ℝ≥0∞)⁻¹ := by
-  simp
+example (n : ℕ) (x : BitVec n) : Pr{$ᵗ (BitVec n)}[= x] = (2 ^ n : ℝ≥0∞)⁻¹ := by
+  simp [Finset.filter_eq']
 
 /-- The `Fin n → α` base instance is still present after the generalization. -/
 example : SampleableType (Fin 3 → Bool) := inferInstance
@@ -100,7 +100,9 @@ end HasUniformSelect
 section MultisetProbabilities
 
 /-- For a singleton multiset, sampling always returns the unique element with probability 1. -/
-example : Pr[= true | ($ ({true} : Multiset Bool))] = 1 := by
-  simp
+example : Pr{($ ({true} : Multiset Bool))}[= true] = 1 := by
+  rw [ProbComp.prEvent_uniformSelectMultiset]
+  simp only [Multiset.card_singleton, Nat.cast_one, div_one, Nat.cast_eq_one]
+  decide
 
 end MultisetProbabilities

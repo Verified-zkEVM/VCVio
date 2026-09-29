@@ -4,11 +4,11 @@
 
 ### 1. Probability semantics require the right spec class
 
-`evalDist` / `𝒟[…]` and `Pr{…}[…]` on `OracleComp spec` need `[OracleSpec.IsMeasureSpec spec]`, and `𝒟[…]` also needs a `MeasurableSpace` on the result type. Uniform answer measures are `[OracleSpec.IsUniformMeasureSpec spec]`. The deprecated `evalSPMF`, `probOutput`, `probEvent`, and `Pr[...]` need the deprecated `[IsProbabilitySpec spec]`, and their uniform cardinality lemmas the deprecated `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
+`evalDist` / `𝒟[…]` and `Pr{…}[…]` on `OracleComp spec` need `[OracleSpec.IsMeasureSpec spec]`, and `𝒟[…]` also needs a `MeasurableSpace` on the result type. Uniform answer measures are `[OracleSpec.IsUniformMeasureSpec spec]`; uniform cardinality lemmas additionally take `[Fintype (spec.Range t)]` for the queries they mention. `unifSpec` and `coinSpec` have global instances. Plain `support` works on arbitrary `OracleComp spec`.
 
-**Symptom**: "failed to synthesize instance" mentioning `OracleSpec.IsMeasureSpec`, `IsUniformMeasureSpec`, or, on statements using the deprecated `Pr[...]` notation, `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
+**Symptom**: "failed to synthesize instance" mentioning `OracleSpec.IsMeasureSpec`, `IsUniformMeasureSpec`, `EvalDistSemantics`, or `MeasurableSpace`.
 
-**Fix**: Add `[OracleSpec.IsMeasureSpec spec]` for arbitrary per-query answer measures, or `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers. Answer measures live on the discrete σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite, nonempty answer types, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec` on that spec; a sum of specs gets its instance from `IsMeasureSpec.add`, so do not declare one on the sum. Only a statement that still uses the deprecated `Pr[...]` façade takes `[IsProbabilitySpec spec]` or `[IsUniformSpec spec]`.
+**Fix**: Add `[OracleSpec.IsMeasureSpec spec]` for arbitrary per-query answer measures, or `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers. Answer measures live on the discrete σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite, nonempty answer types, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec` on that spec; a sum of specs gets its instance from `IsMeasureSpec.add`, so do not declare one on the sum. To convert code written against the removed discrete `Pr[…]` API, see [`probability-migration.md`](probability-migration.md).
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 
@@ -17,11 +17,16 @@ and do not add `set_option autoImplicit false` in individual files.
 
 **Symptom**: "unknown identifier" for variables you expected Lean to infer.
 
-### 3. `evalSPMF` is `simulateQ`; `evalDist` is measure-valued
+### 3. `evalDist` is the measure fold; `support` is structural
 
-`evalSPMF` is `simulateQ` with `m = PMF` and the `IsProbabilitySpec.toPMF` query implementation. Under `[IsUniformSpec spec]`, those query distributions are propositionally the uniform distributions. The `evalSPMF_eq_simulateQ` identity is definitional (`rfl`). The primary `evalDist` is the successful-output measure façade; on discrete free programs it agrees with the direct `FreeM.denote` fold.
+On `OracleComp spec`, `𝒟[mx]` is the successful-output measure of `PFunctor.FreeM.denote`, the
+recursive fold that composes the answer measures chosen by `[OracleSpec.IsMeasureSpec spec]` with
+`Measure.bind`; `PFunctor.FreeM.evalDist_eq_denote` states the identity, which holds by `rfl`.
+`Pr{…}[…]` is `prEvent`, the mass `𝒟[…]` puts on `True` (`prEvent_def`). `support` is PolyFun's
+structural `MonadAttach.support` and needs no measure; `PFunctor.FreeM.support_eq_liftM_univ`
+identifies it with the fold of the every-answer-possible handler into `SetM`.
 
-Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`evalSPMF`/`simulateQ`/`support`/`probOutput`; everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests) cross the boundary through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`, `PFunctor.FreeM.evalDist_eq_denote`), so the semantics can be re-implemented without touching downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public definitions and definitional equality* in [`module-system.md`](module-system.md).
+Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`denote`/`prEvent`/`support`; everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests) cross the boundary through the public equation lemmas (`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`, `PFunctor.FreeM.support_eq_liftM_univ`), so the semantics can be re-implemented without touching downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public definitions and definitional equality* in [`module-system.md`](module-system.md).
 
 ### 4. `++ₒ` is dead — use `+`
 
@@ -30,7 +35,7 @@ The README and large amounts of commented-out code use `++ₒ` for combining ora
 ### 5. Delete obsolete commented-out code
 
 Do not keep large commented-out Lean blocks around as reference material,
-especially if they use obsolete patterns (`[= x | ...]`, `++ₒ`, `simulate'`,
+especially if they use obsolete patterns (`Pr[= x | ...]`, `[= x | ...]`, `++ₒ`, `simulate'`,
 `getM`, `guard` via `Alternative`). Delete them instead. This is distinct from
 unfinished live proof attempts, which should be preserved with `stop`.
 Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current style.
@@ -39,7 +44,7 @@ Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current styl
 
 ### 6. `query` resolves to `HasQuery.query`; use `spec.query` for the primitive
 
-The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `query t : OracleComp spec _` produces a monadic value directly and works with `evalSPMF`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked `protected`); reach it via dot notation `spec.query t` (or the fully qualified `OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or pattern-match on the query structure.
+The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `query t : OracleComp spec _` produces a monadic value directly and works with `𝒟[…]` and `support`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked `protected`); reach it via dot notation `spec.query t` (or the fully qualified `OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or pattern-match on the query structure.
 
 ### 7. Core types are thin wrappers with deliberate reducibility
 
@@ -54,7 +59,7 @@ rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
 Two failure modes to recognize under this regime:
 
 - **Dot notation on monadic results fails.** The inferred type of `oa >>= ob` or `liftM (query t)` has head `PFunctor.FreeM`, not `OracleComp`, so `(query t >>= oa).myOracleCompLemma` reports `Invalid field … PFunctor.FreeM.myOracleCompLemma`. State such lemmas in prefix form (`myOracleCompLemma … (query t >>= oa)`); dot notation on plain variables of ascribed type `OracleComp spec α` still works.
-- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalSPMF`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
+- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and the instances found for `OracleComp spec` silently vanish (`support`, `𝒟[…]`, `Pr{…}[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
 
 Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor` under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family can no longer match (typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
 
@@ -117,8 +122,7 @@ the reducible `ofFn` layer. In the `Domain` form that looped until the heartbeat
 unconstrained `DecidableEq α` (VCVio#772). In the `Range` form the unifier's first-order
 approximation assigns `?spec := β` at a goal `DecidableEq (β a)`, so whenever the exact
 instances fail and only a `classical` fallback remains, the elaborated term silently routed
-through oracle-specification data; `UniformCompatibility.instCompatible` once depended on
-that detour for a `Finset.filter_eq'` rewrite to fire.
+through oracle-specification data.
 
 VCVio has no such instances. Write `[DecidableEq ι]` for index equality, and
 `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` — or
@@ -130,7 +134,7 @@ per-query instance proved by `cases` (see `cmaSpec`). The spellings `spec.Range 
 `spec.toPFunctor.B t` are one type at reducible transparency, so a hypothesis in any of them
 serves goals in the others. `IsUniformMeasureSpec` is a proposition
 and derives `finite_range`/`nonempty_range` as theorems, never instances.
-`VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchNative.lean` guard all of
+`VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchLibrary.lean` guard all of
 this with heartbeat-bounded canaries and an elaborated-term dependency check.
 
 A wildcard-keyed instance over a plain type variable is a different matter when its class is a
@@ -160,8 +164,8 @@ answers for types whose finiteness is known through nothing else (`spec.Range t`
   value universe and target monad.
 
 The composition surface already spells the shape to copy: `QueryImpl.parallelStateT`
-(`VCVio/OracleComp/SimSemantics/StateT/Basic/Native.lean`), `QueryImpl.addReaderT`
-(`.../ReaderT/Basic.lean`), `QueryImpl.parallelWriterT` (`.../WriterT/Basic.lean`), and
+(`VCVio/OracleComp/SimSemantics/StateT/Basic.lean`), `QueryImpl.addReaderT`
+(`.../ReaderT/Basic.lean`), `QueryImpl.parallelWriterT` (`.../WriterT/Core.lean`), and
 `VCVio/OracleComp/SimSemantics/Append.lean`. The constraint is always the same: **arbitrary
 index universes, one shared response universe, and `α` in that response universe** —
 `spec₁ + spec₂` goes through a dependent `Sum.rec`, which forces the response universes to agree but
@@ -174,51 +178,47 @@ the package.
 
 ## Proof Patterns
 
-### 10. `grind`/`simp` tagging is split deliberately on probability lemmas
+### 10. Support characterizations stay out of the default `grind` set
 
-`probOutput_bind_eq_tsum` is `@[grind =]` but NOT `@[simp]`: `simp` won't unfold `probOutput` of a
-bind, so use `rw [probOutput_bind_eq_tsum]` or `grind`.
+Bind decomposition of an event is an explicit rewrite, not a default `simp` or `grind` rule:
+`prEvent_bind_eq_lintegral` (or `prEvent_bind_eq_lintegral_of_discrete` when the common draw has a
+discrete measurable space) turns `Pr{y ← mx >>= f}[p y]` into `∫⁻ x, Pr{y ← f x}[p y] ∂𝒟[mx]`.
 
-Conversely, the support-*characterization* lemmas (`Pr[…] = 0/1 ↔ ∃/∀ x ∈ support …`,
-`support = {x}`, `support = ∅`: `probEvent_eq_zero_iff`, `probEvent_eq_one_iff`, `probOutput_eq_one_iff`,
-`probFailure_eq_one_iff`, `mem_support_bind_iff`, …) are `@[simp]` but deliberately **NOT** `@[grind]`.
-Their RHS introduces an unbounded support quantifier that `grind` Skolemizes into fresh witnesses with
-no finite grounding; tagged *together* they form a re-trigger cycle so a naive `grind` on a probability
-value/event goal would *saturate and time out*. The saturation is **combinatorial** — no single lemma
-saturates alone (a few that sit outside the cycle, e.g. `probEvent_pos_iff` and
-`probFailure_bind_eq_zero_iff`, keep `@[grind =]`); the `probEvent_eq_one_iff` family is the cycle's
-hub. Dropped from the default `grind` set, `grind` instead fails fast. If a `grind` proof genuinely
-needs one, re-supply it: `grind [probEvent_eq_zero_iff]`. The native characterization
-`OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support` follows the same rule. The directed
-single-variable membership bridges (`probOutput_eq_zero_iff`, `probOutput_pos_iff`,
-`mem_finSupport_iff`) stay `@[grind =]`. See
-*`grind` vs `simp` on Probability Goals* in [`probability.md`](probability.md) and the benchmarks
+The support-*characterization* lemmas (`Pr{…}[…] = 0/1 ↔ ∀ x ∈ support …`, `0 < Pr{…}[…] ↔ ∃ x ∈
+support …`: `OracleComp.prEvent_eq_zero_iff`, `OracleComp.prEvent_eq_one_iff`,
+`OracleComp.prEvent_pos_iff`, `OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support`)
+are deliberately **not** `@[grind]`. Their RHS introduces an unbounded support quantifier that
+`grind` Skolemizes into fresh witnesses with no finite grounding, so as default rules they make a
+naive `grind` on a probability goal *saturate and time out* instead of failing fast. They hold
+under `[OracleSpec.IsUniformMeasureSpec spec]`, where every reachable output has positive mass. If
+a `grind` proof genuinely needs one, re-supply it: `grind [OracleComp.prEvent_eq_zero_iff]`. The
+directed membership bridges (`support_bind`, `mem_support_bind_iff`,
+`mem_finSupport_iff_mem_support`) stay `@[grind =]`. See the benchmarks
 `VCVioTest/ProbabilityTactics.lean` / `VCVioTest/LongChainPrograms.lean`;
-`VCVioTest/GrindFailFast.lean` gates that each dropped lemma stays dropped (and that the opt-in
-still works).
+`VCVioTest/GrindFailFast.lean` gates that each characterization stays out of the default set (and
+that the opt-in still works).
 
 Downstream escape hatches, since these tags are inherited by importing projects: `grind [-lemma]`
 (disable per call), `grind only [...]` (ignore the default set), `attribute [-grind] lemma`
 (unset for a file), and `grind?` (print a minimal `grind only` call).
 
 Tagging discipline, so the split stays deliberate: an unconditional equation tagged `@[simp]` in
-`VCVio/EvalDist/**` or `VCVio/OracleComp/SimSemantics/**` also carries `grind =`, unless it is one
-of the characterization lemmas above (the ratio in those directories is about one to one and the
-gates check both closers). `@[simp, grind]` without `=` is for definitions, where `grind` uses the
+`VCVio/EvalDist/**` or `VCVio/OracleComp/SimSemantics/**` also carries `grind =`, unless its RHS
+introduces an unbounded support quantifier like the characterization lemmas above (the gates
+check both closers). `@[simp, grind]` without `=` is for definitions, where `grind` uses the
 equation lemmas to unfold, not for stated equations. `grind_pattern` and `[grind hom]` are not used
 yet; adopt them per lemma with a gate entry, not as a sweep.
 
 ### 11. Plain `vcstep` may solve a probability equality when you only wanted a rewrite
 
-On `Pr[...] = Pr[...]` goals, plain `vcstep` heuristically tries swap, congruence, and
-small bounded compositions. If you need to rewrite and continue, use `vcstep rw` for a
-top-level swap, `vcstep rw under 1` under one shared bind prefix, or
-`vcstep rw congr` / `vcstep rw congr'` to expose a shared outer bind. The manual pattern is:
-```lean
-simp only [← probEvent_eq_eq_probOutput ...]
-rw [probEvent_bind_bind_swap]
-simp only [probEvent_eq_eq_probOutput]
-```
+On `Pr{...}[...] = Pr{...}[...]` and `𝒟[oa] = 𝒟[ob]` goals, plain `vcstep` heuristically tries
+swap, congruence, and small bounded compositions. If you need to rewrite and continue, use
+`vcstep rw` for a top-level swap, `vcstep rw under 1` under one shared bind prefix, or
+`vcstep rw congr` / `vcstep rw congr'` to expose a shared outer bind. The underlying rewrites are
+`OracleComp.prEvent_bind_bind_swap` / `OracleComp.evalDist_bind_bind_swap` (countable answer
+types; `_of_uniform` variants under `IsUniformMeasureSpec`) and
+`OracleComp.prEvent_bind_congr_of_support`; `Pr{…}[…]` elaborates its final draw as a map, so
+normalize with `simp only [map_eq_bind_pure_comp, bind_assoc]` before rewriting by hand.
 
 ### 12. Avoid `guard` in experiments
 

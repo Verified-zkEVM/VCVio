@@ -213,7 +213,7 @@ def knowledgeExtractor [DecidableEq Chal] [SampleableType Wit]
     (msg : M) (Q : ℕ) : Stmt → ProbComp Wit :=
   nmaReduction σ hr M (proverWithFinalQuery σ hr M prover msg) Q
 
-/-- Acceptance of the actual verifier under the chosen native uniform replay-oracle semantics. -/
+/-- Acceptance of the actual verifier under the chosen uniform replay-oracle semantics. -/
 @[expose]
 noncomputable def knowledgeAcceptance
     (prover : KnowledgeProver Stmt Commit Chal Resp M)

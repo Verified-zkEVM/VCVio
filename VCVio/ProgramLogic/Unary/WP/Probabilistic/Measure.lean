@@ -41,7 +41,7 @@ theorem wp_one_le {α : Type} (mx : m α) :
     (Filter.Eventually.of_forall fun _ ↦ le_rfl)
 
 
-/-- The native expectation algebra restricted to bounded probability assertions. -/
+/-- The expectation algebra restricted to bounded probability assertions. -/
 @[expose, instance_reducible]
 noncomputable def toMAlgOrdered : MAlgOrdered m Prob :=
   MAlgOrdered.restrictIic 1 (fun {_} mx ↦ wp_one_le m mx)
@@ -62,7 +62,7 @@ theorem mAlgOrdered_wp_val (mx : m α) (post : α → Prob) :
     (MAlgOrdered.wp mx post).val = MAlgOrdered.wp mx (fun a ↦ (post a).val) :=
   MAlgOrdered.wp_restrictIic_val (m := m) 1 (fun {_} mx ↦ wp_one_le m mx) mx post
 
-/-- Forgetting the bound recovers the native quantitative expectation. -/
+/-- Forgetting the bound recovers the quantitative expectation. -/
 theorem wp_val_eq_mAlgOrdered_wp (mx : m α) (post : α → Prob) :
     (wp mx post (Lean.Order.bot : EPost.Nil)).val =
       MAlgOrdered.wp mx (fun a ↦ (post a).val) :=

@@ -10,7 +10,7 @@ public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.Monad.UniformTable
 
 /-!

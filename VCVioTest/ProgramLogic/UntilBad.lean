@@ -10,7 +10,7 @@ public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 public import VCVio.OracleComp.ProbComp.Basic
 
 /-!
-# Native identical-until-bad canaries
+# Identical-until-bad canaries
 
 The fundamental lemma needs no measurable structure on the simulation state and applies to
 real-valued outputs with their Borel structure. It requires no discrete backend.
@@ -22,9 +22,8 @@ open OracleSpec OracleComp OracleComp.ProgramLogic.Relational
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native identical-until-bad unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "identical-until-bad unexpectedly imports PMF"
 
 namespace VCVioTest.ProgramLogic.UntilBad
 

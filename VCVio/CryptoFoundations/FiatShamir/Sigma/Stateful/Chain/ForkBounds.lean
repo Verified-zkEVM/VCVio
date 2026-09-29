@@ -717,7 +717,7 @@ private lemma forkH5Body_prob_true_le_fork_advantage
         (Chal := Chal) (Resp := Resp) σ hr adv simT pk hQ
   exact hbody.trans_eq hpoint
 
-/-- Native H4 hop: running the linked simulated CMA game from the direct initial
+/-- H4 hop: running the linked simulated CMA game from the direct initial
 state is the same as running the NMA game on the `cmaToNma`-shifted adversary.
 
 The initial direct CMA state decomposes into the empty signing log for

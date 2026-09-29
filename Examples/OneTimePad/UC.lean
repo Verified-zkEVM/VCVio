@@ -252,7 +252,7 @@ distinguisher predicate `P`. Models the environment's view under
 `π_OTP`.
 
 The `run` field depends on the closed-system argument through
-`readMsg`; OTP privacy collapses the resulting `SPMF Unit`
+`readMsg`; OTP privacy collapses the resulting `Measure Unit`
 denotations into the plaintext-independent ideal one. -/
 noncomputable def realSmcSemantics (sp : ℕ)
     (readMsg : MsgReader sp) (P : BitVec sp → Bool) :
@@ -292,12 +292,12 @@ theorem idealSmcSemantics_run (sp : ℕ) (P : BitVec sp → Bool)
 /-- **OTP UC indistinguishability at every closed system.** For every
 plug-plaintext reader `readMsg` and every distinguisher predicate `P`,
 the real SMC semantics and the ideal SMC semantics produce identical
-`SPMF Unit` denotations on every closed system.
+`Measure Unit` denotations on every closed system.
 
 This applies `evalDist_realCipherObserve_eq` through the
 bundling layer. Concretely: pick any closed system, read its
 plaintext, encrypt it under a uniform key, and apply the
-distinguisher; the resulting `SPMF Unit` is independent of the
+distinguisher; the resulting `Measure Unit` is independent of the
 plaintext, hence matches the ideal simulation that never needed the
 plaintext in the first place. -/
 theorem realSmcSemantics_eq_idealSmcSemantics (sp : ℕ)
@@ -315,7 +315,7 @@ any two closed systems at any boundary are indistinguishable with
 advantage zero, for every choice of plaintext reader and
 distinguisher predicate.
 
-The real-semantics-view of `close W_real K` is an `SPMF Unit` that
+The real-semantics-view of `close W_real K` is a `Measure Unit` that
 depends on `readMsg (close W_real K)` and `P`; by OTP privacy, this
 is the same as the ideal-semantics view, which depends only on `P`
 and is the same for `W_real` and `W_ideal`. Hence the two
@@ -519,7 +519,7 @@ directly by the emission.
 
 Distributional equivalence with `realOtp` is a theorem, not a
 structural identity: OTP privacy (`evalDist_realCipherObserve_eq`)
-collapses the two bundled `SPMF Unit` observations. -/
+collapses the two bundled `Measure Unit` observations. -/
 noncomputable abbrev idealOtp (sp : ℕ) :
     Interaction.UC.OpenProcess (OptionT ProbComp) Party (Δ_otp sp) where
   Proc := Unit
@@ -607,7 +607,7 @@ Since `observedCompEmulates_realSmcSemantics` quantifies over every pair of
 open processes at every boundary, this follows directly. The content
 lives one level down: OTP privacy
 (`evalDist_realCipherObserve_eq`) collapses the real and ideal
-bundled observations into the same `SPMF Unit`, regardless of what
+bundled observations into the same `Measure Unit`, regardless of what
 open-world object is plugged into the closed system. -/
 theorem observedCompEmulates_realOtp (sp : ℕ) (msg : BitVec sp)
     (readMsg : MsgReader sp) (P : BitVec sp → Bool) :

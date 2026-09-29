@@ -26,9 +26,8 @@ open scoped OracleComp.ProgramLogic
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native Hoare WP unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "Hoare WP unexpectedly imports PMF"
 
 namespace VCVioTest.ProgramLogicGCongr
 

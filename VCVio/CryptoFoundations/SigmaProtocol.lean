@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.MeasureTVDist.Basic
 public import VCVio.EvalDist.EvalDistEq
 public import VCVio.CryptoFoundations.IdenSchemeWithAbort

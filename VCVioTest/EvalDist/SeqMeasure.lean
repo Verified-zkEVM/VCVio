@@ -13,7 +13,7 @@ public import Mathlib.Tactic.GCongr
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Native applicative and finite-product canaries
+# Applicative and finite-product canaries
 
 Sequencing laws preserve successful mass on arbitrary measurable spaces. Lossless factors
 propagate their probability certificates, while potentially failing factors retain their mass
@@ -27,9 +27,8 @@ open MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native sequencing unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "sequencing unexpectedly imports PMF"
 
 namespace VCVioTest.SeqMeasure
 

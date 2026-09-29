@@ -15,9 +15,8 @@ measure. `none` is execution failure/nontermination mass; `some x` is a returned
 any explicit protocol rejection or fault already encoded by `x`. This is a measure operation,
 not an executable recovery procedure or a decoder that silently identifies these outcomes.
 
-This is a thin measure-only interface to `Measure.withFailure`. Unlike the discrete probability
-bridges in `VCVio.EvalDist.FailureMeasure`, its laws require no `SPMF` lift or compatibility
-instance. ArkLib uses this boundary before choosing a discrete probability interpretation.
+This is a thin measure-only interface to `Measure.withFailure`: its laws need only the measure
+semantics of the monad.
 -/
 
 public section

@@ -8,7 +8,7 @@ module
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.MeasureTVDist.Basic
-public import VCVio.OracleComp.EvalDist
+public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.ProgramLogic.Relational.Measure
 public import ToMathlib.Probability.Divergence.RenyiTotalVariation
 public import Mathlib.Probability.Distributions.Gaussian.Real
@@ -18,17 +18,14 @@ public import Examples.OneTimePad.Basic
 /-!
 # Canaries for the measure denotation
 
-Two checks on `VCVio.EvalDist.PFunctorMeasure`, kept in the test library so they stay out of
-the timed build.
+Checks on the measure denotation of `VCVio.EvalDist.PFunctorMeasure.Core`, kept in the test
+library so they stay out of the timed build.
 
-`continuousOracle` is the capability check. It exhibits an oracle whose answers are drawn from
-a continuous distribution, which `PFunctor.IsProbabilitySpec` cannot express at all: that class
-carries a `Handler PMF P`, and `PMF.support_countable` makes every `PMF` countably supported,
-whereas `ProbabilityTheory.gaussianReal` is not. The measure denotation gives it a meaning.
-
-`discreteAgreement` is the compatibility check: on an interface carrying both interpretations,
-the measure denotation is the measure of the `PMF` denotation, so existing probability
-statements transport rather than needing reproof.
+The continuous oracle is the capability check. Its answers are drawn from
+`ProbabilityTheory.gaussianReal`, which has no atoms, so no countably supported distribution can
+express it; the measure denotation gives it a meaning. The discrete coin interface then checks
+the composition laws, transformer stacks, fuelled resumptions and divergences on a finite
+interface.
 -/
 
 public section
@@ -53,23 +50,19 @@ example {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
 /-- An interface with a single operation, answered by a real number. -/
 @[expose, reducible] def gaussSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => ℝ⟩
 
-/-- The operation is answered by a standard Gaussian.
-
-There is no `PFunctor.IsProbabilitySpec gaussSpec`: its `toPMF` field would have to be a
-`PMF ℝ`, and a `PMF` has countable support. -/
+/-- The operation is answered by a standard Gaussian, a law with no atoms. -/
 noncomputable instance : gaussSpec.IsMeasureSpec where
   toMeasure _ := gaussianReal 0 1
   isProbabilityMeasure _ := instIsProbabilityMeasureGaussianReal 0 1
 
 /-- Sampling the oracle once denotes the standard Gaussian on `ℝ`.
 
-This is the statement the conversion buys: it does not typecheck against a `PMF`-valued
-semantics, because its subject is not a `PMF`. -/
+Its subject is not countably supported, so no discrete semantics can state it. -/
 theorem denote_gauss_lift :
     FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit) = gaussianReal 0 1 :=
   FreeM.denote_lift (P := gaussSpec) PUnit.unit
 
-/-- Primary notation selects the direct measure fold when no discrete backend exists. -/
+/-- The `𝒟[…]` notation selects the direct measure fold. -/
 example : 𝒟[(FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)] = gaussianReal 0 1 :=
   denote_gauss_lift
 
@@ -93,7 +86,7 @@ theorem denote_shiftedGaussian :
   fun_prop
 
 /-- The continuous composition remains a probability measure. This proof is the canary for the
-measurable-continuation boundary that a `PMF` semantics cannot state. -/
+measurable-continuation boundary that a discrete semantics cannot state. -/
 theorem isProbabilityMeasure_denote_shiftedGaussian :
     IsProbabilityMeasure (FreeM.denote shiftedGaussian) := by
   apply FreeM.isProbabilityMeasure_denote_liftBind
@@ -101,26 +94,26 @@ theorem isProbabilityMeasure_denote_shiftedGaussian :
     fun_prop
   · exact Filter.Eventually.of_forall fun _ => ⟨by simp⟩
 
-/-! ## Native uniform semantics and composition laws -/
+/-! ## Uniform semantics and composition laws -/
 
-/-- A finite, inhabited interface used without a discrete probability interpretation. -/
-@[expose, reducible] def nativeCoinSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => Bool⟩
+/-- A finite, inhabited interface whose measure interpretation is chosen explicitly. -/
+@[expose, reducible] def explicitCoinSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => Bool⟩
 
-/-- The native uniform measure interpretation is an explicit value, not a global instance. -/
+/-- The uniform measure interpretation is an explicit value, not a global instance. -/
 @[instance_reducible]
-noncomputable def nativeCoinMeasureSpec : nativeCoinSpec.IsMeasureSpec :=
+noncomputable def explicitCoinMeasureSpec : explicitCoinSpec.IsMeasureSpec :=
   IsMeasureSpec.uniformOfFiniteNonempty _
 
-attribute [local instance] nativeCoinMeasureSpec
+attribute [local instance] explicitCoinMeasureSpec
 
-/-- A native uniform operation denotes `uniformOn univ` directly. -/
-theorem denote_nativeCoin_lift :
-    FreeM.denote (FreeM.lift (P := nativeCoinSpec) PUnit.unit) =
+/-- A uniform operation denotes `uniformOn univ` directly. -/
+theorem denote_explicitCoin_lift :
+    FreeM.denote (FreeM.lift (P := explicitCoinSpec) PUnit.unit) =
       (uniformOn Set.univ : Measure Bool) := by
-  rw [FreeM.denote_lift (P := nativeCoinSpec) PUnit.unit]
+  rw [FreeM.denote_lift (P := explicitCoinSpec) PUnit.unit]
   rfl
 
-/-! ## Measure-native distance and relational semantics -/
+/-! ## Distance and relational semantics -/
 
 /-- Total variation is available directly on a continuous computation. -/
 example : measureTVDist shiftedGaussian shiftedGaussian = 0 :=
@@ -135,18 +128,12 @@ example : Measure.IsCoupling (Measure.Coupling.refl (gaussianReal 0 1)).joint
 example : MeasureProgramLogic.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
   MeasureProgramLogic.relWP_refl shiftedGaussian
 
-/-! ## Agreement with the `PMF` denotation on a discrete interface -/
+/-! ## A discrete interface -/
 
 /-- An interface with a single operation, answered by a coin flip. -/
 @[expose, reducible] def coinSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => Bool⟩
 
-noncomputable instance : coinSpec.IsProbabilitySpec where
-  toPMF _ := PMF.uniformOfFintype Bool
-
-noncomputable instance : coinSpec.IsMeasureSpec := IsProbabilitySpec.toMeasureSpec _
-
-/-- The coin's measure specification is its probability specification read as a measure. -/
-instance : PFunctor.IsMeasureSpec.Compatible coinSpec := ⟨fun _ => rfl⟩
+noncomputable instance : coinSpec.IsMeasureSpec := IsMeasureSpec.uniformOfFiniteNonempty _
 
 /-- A nonzero, branch-sensitive lower bound rules out a vacuous quantitative semantics. -/
 example : (1 : ℝ≥0∞) ≤
@@ -157,43 +144,20 @@ example : (1 : ℝ≥0∞) ≤
     (m₁ := FreeM coinSpec) (m₂ := FreeM coinSpec) true false
     (fun a b => if a && !b then 1 else 0) (by fun_prop)
 
-/-- On a discrete interface the two denotations agree, so a `Pr[…]` result proved against the
-`PMF` semantics can be read off the measure semantics. -/
-theorem denote_eq_toMeasure_coin {α : Type} [MeasurableSpace α]
-    (program : FreeM coinSpec α) :
-    FreeM.denote program = (program.liftM IsProbabilitySpec.toPMF).toMeasure :=
-  FreeM.denote_eq_toMeasure program
+/-! ## Output-measure notation -/
 
-/-- Predicate notation transports to arbitrary measurable events, not just singletons. -/
-theorem denote_event_coin {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
-    (program : FreeM coinSpec α) (event : α → Prop) :
-    FreeM.denote program {x | event x} = Pr[event | program] :=
-  evalDist_apply_setOf program event
-
-/-- The reverse discrete adapter preserves both successful branches and missing mass. -/
-example (p : SPMF Bool) :
-    p.toMeasure.toSPMF (SPMF.toMeasure_apply_univ_le_one p) = p := by
-  exact SPMF.toMeasure_toSPMF p
-
-/-! ## Primary notation and the discrete compatibility surface -/
-
-/-- The primary `𝒟[…]` notation is a subprobability measure. -/
+/-- The `𝒟[…]` notation is a subprobability measure. -/
 example (program : FreeM coinSpec Bool) : 𝒟[program] Set.univ ≤ 1 :=
   evalDist_apply_univ_le_one program
 
-/-- On a discrete `FreeM` program, primary notation agrees with the direct measure fold. -/
+/-- On a discrete `FreeM` program, `𝒟[…]` agrees with the direct measure fold. -/
 example (program : FreeM coinSpec Bool) : 𝒟[program] = FreeM.denote program :=
   FreeM.evalDist_eq_denote program
 
-/-- Point notation is an explicit adapter to singleton mass in the primary measure. -/
+/-- Point notation is singleton mass in the output measure. -/
 example (program : FreeM coinSpec Bool) (x : Bool) :
-    Pr[= x | program] = 𝒟[program] {x} :=
-  (evalDist_apply_singleton program x).symm
-
-/-- Predicate notation is likewise an adapter to a measurable event. -/
-example (program : FreeM coinSpec Bool) (event : Bool → Prop) :
-    Pr[event | program] = 𝒟[program] {x | event x} :=
-  (evalDist_apply_setOf program event).symm
+    Pr{program}[= x] = 𝒟[program] {x} :=
+  prEvent_eq_evalDist_singleton program x
 
 /-- Mapping a discrete program pushes its denoted measure forward. -/
 example (program : FreeM coinSpec Bool) :
@@ -288,29 +252,11 @@ example : Resumption.returnedMeasure delayedTrue Set.univ = 1 := by
     _ ≤ Resumption.returnedMeasure delayedTrue Set.univ :=
       (Resumption.outputMeasure_le_returnedMeasure 1 delayedTrue) Set.univ
 
-/-! ## Transporting an existing `Pr[…]` result
-
-`unifSpec` is discrete, so it induces a measure interpretation and the singleton bridge
-applies. Any probability already proved about a `ProbComp` is then a fact about its measure
-denotation, with no reproof. -/
-
-/-- The uniform oracle interpretation induced by its finite-distribution semantics. -/
-@[instance_reducible]
-noncomputable def unifMeasureSpec : unifSpec.toPFunctor.IsMeasureSpec :=
-  PFunctor.IsProbabilitySpec.toMeasureSpec _
-
-attribute [local instance] unifMeasureSpec
-
-theorem denote_probComp_apply_singleton {α : Type} [MeasurableSpace α]
-    [MeasurableSingletonClass α] (program : ProbComp α) (x : α) :
-    FreeM.denote program {x} = Pr[= x | program] :=
-  evalDist_apply_singleton program x
-
 /-! ## Divergence
 
 The point of denoting into `Measure` is that Mathlib's probability library then applies to
-VCVio programs directly. Kullback-Leibler is the check: it does not exist anywhere in the
-`SPMF` layer, and here it arrives with its data-processing inequalities already proved. -/
+VCVio programs directly. Kullback-Leibler is the check: it arrives with its data-processing
+inequalities already proved. -/
 
 open InformationTheory
 
@@ -319,22 +265,22 @@ open InformationTheory
 This is the game-hopping shape, and it is Mathlib's `klDiv_comp_right_le` — `Measure.bind` and
 kernel composition are the same operation, so no transport is involved. -/
 example {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
-    (mx my : ProbComp α) (f : α → ProbComp β) :
+    (mx my : FreeM coinSpec α) (f : α → FreeM coinSpec β) :
     klDiv (FreeM.denote (mx >>= f)) (FreeM.denote (my >>= f))
       ≤ klDiv (FreeM.denote mx) (FreeM.denote my) :=
   FreeM.klDiv_denote_bind_le mx my f
 
 /-- The same for post-processing by a function. -/
 example {α β : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
-    (g : α → β) (mx my : ProbComp α) :
+    (g : α → β) (mx my : FreeM coinSpec α) :
     klDiv (FreeM.denote (g <$> mx)) (FreeM.denote (g <$> my))
       ≤ klDiv (FreeM.denote mx) (FreeM.denote my) :=
   FreeM.klDiv_denote_map_le g mx my
 
 /-- Divergence between *continuous* denotations is expressible at all.
 
-`klDiv` here is applied to two measures on `ℝ` that no `PMF` can carry, so this statement has no
-counterpart in the `SPMF` layer — not a harder proof there, but not a well-formed statement. -/
+`klDiv` here is applied to two measures on `ℝ` that no countably supported distribution can
+carry. -/
 example : klDiv (FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit))
     (FreeM.denote (P := gaussSpec) (FreeM.lift PUnit.unit)) = 0 := by
   rw [denote_gauss_lift]

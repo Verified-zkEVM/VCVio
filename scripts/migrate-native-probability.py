@@ -42,6 +42,7 @@ RENAMES: dict[str, str] = {
     # Probability heads.
     "AdvBound.of_tvDist": "AdvBound.of_measureETVDist",
     "AdvBound.of_gameEquiv": "AdvBound.of_evalDistEq",
+    "wpProp_iff_probEvent_eq_one": "wpProp_iff_prEvent_eq_one",
     "le_probEvent_iff_triple_indicator": "le_prEvent_iff_triple_indicator",
     "le_probEvent_isSome_contextFork": "le_prEvent_isSome_contextFork",
     "le_probEvent_isSome_seededFork": "le_prEvent_isSome_seededFork",
@@ -238,8 +239,14 @@ REPORT_NAMES: dict[str, str] = {
         "choose them",
     "prEvent_le_one": "now takes the event computation `mx : m Prop` alone",
     "evalDist_apply_singleton":
-        "targets the legacy `Pr[= x | mx]`; `prEvent_eq_evalDist_singleton` relates "
+        "targets the removed `Pr[= x | mx]`; `prEvent_eq_evalDist_singleton` relates "
         "`Pr{mx}[= x]` and `𝒟[mx] {x}`",
+    "evalDist_apply_setOf":
+        "targets the removed `Pr[p | mx]`; `prEvent_eq_evalDist_of_discrete` relates "
+        "`Pr{x ← mx}[p x]` and `𝒟[mx] {x | p x}`",
+    "evalDist_apply_univ":
+        "targets the removed `Pr[⊥ | mx]`; `prEvent_true_eq_evalDist_apply_univ` relates "
+        "`Pr{_ ← mx}[True]` and `𝒟[mx] Set.univ`",
 }
 
 # Modules removed from VCVio, keyed by the old module name.
@@ -251,8 +258,8 @@ MODULES: dict[str, list[str]] = {
     "VCVio.OracleComp.QueryTracking.Tracing": ["VCVio.OracleComp.QueryTracking.Tracing.Core"],
     "VCVio.OracleComp.SimSemantics.QueryImpl.Constructions":
         ["VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core"],
-    "VCVio.OracleComp.SimSemantics.StateT.Basic":
-        ["VCVio.OracleComp.SimSemantics.StateT.Basic.Native"],
+    "VCVio.OracleComp.SimSemantics.StateT.Basic.Native":
+        ["VCVio.OracleComp.SimSemantics.StateT.Basic"],
     "VCVio.OracleComp.Coercions.Add": ["VCVio.OracleComp.Coercions.Add.Basic"],
     "VCVio.OracleComp.Constructions.Fork": ["VCVio.OracleComp.Constructions.Fork.Basic"],
     "VCVio.CryptoFoundations.ForkMeasure":
@@ -294,6 +301,32 @@ MODULES: dict[str, list[str]] = {
          "VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
     "VCVio.ProgramLogic.Relational.WP.Coherence": ["VCVio.ProgramLogic.Relational.WP.Quantitative"],
     "VCVio.Prelude": ["VCVio.Prelude.Core"],
+    # The discrete layer itself.
+    "ToMathlib.ProbabilityTheory.SPMF": [],
+    "ToMathlib.Probability.ProbabilityMassFunction.Lemmas":
+        ["Mathlib.Probability.Distributions.Uniform"],
+    "ToMathlib.Probability.ProbabilityMassFunction.Measure": [],
+    "VCVio.EvalDist.Defs.Basic":
+        ["VCVio.EvalDist.Defs.Measure", "VCVio.EvalDist.ProbabilityNotation"],
+    "VCVio.EvalDist.Defs.AlternativeMonad":
+        ["VCVio.EvalDist.Defs.Support.Failure", "VCVio.EvalDist.ProbabilityNotation"],
+    "VCVio.EvalDist.Defs.NeverFails":
+        ["VCVio.EvalDist.Defs.Support.Failure", "VCVio.EvalDist.Monad.Seq"],
+    "VCVio.EvalDist.FailureMeasure": ["VCVio.EvalDist.Defs.Measure", "VCVio.EvalDist.WithFailure"],
+    "VCVio.EvalDist.Bool": ["VCVio.EvalDist.Monad.Map"],
+    "VCVio.EvalDist.BitVec": ["VCVio.EvalDist.Monad.Map"],
+    "VCVio.EvalDist.Option": ["VCVio.EvalDist.Monad.Map"],
+    "VCVio.EvalDist.Fintype": ["VCVio.EvalDist.Monad.Basic"],
+    "VCVio.EvalDist.PFunctor": ["VCVio.EvalDist.PFunctorSupport"],
+    "VCVio.EvalDist.PFunctorMeasure": ["VCVio.EvalDist.PFunctorMeasure.Core"],
+    "VCVio.OracleComp.EvalDist.UniformCompatibility":
+        ["VCVio.OracleComp.EvalDist.Measure", "VCVio.OracleComp.EvalDist.MeasureSpec"],
+    "VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility":
+        ["VCVio.OracleComp.Constructions.SampleableType.Measure"],
+    "VCVio.OracleComp.Constructions.SampleableType.NativeMeasure":
+        ["VCVio.OracleComp.Constructions.SampleableType.Measure"],
+    "VCVio.Native": ["VCVio.Foundations"],
+    "VCVio.OracleComp.SimSemantics.WriterT.Basic": ["VCVio.OracleComp.SimSemantics.WriterT.Core"],
 }
 
 # Native analogues of the most used discrete lemmas, reported where the legacy name appears.

@@ -5,14 +5,15 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.Native
+public import VCVio.Foundations
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Native foundation regressions
+# Foundation regressions
 
-Ordinary imports provide executable sampling, operational support, native probability instances,
-indexed transformer semantics, and measure program logic without discrete compatibility types.
+`VCVio.Foundations` provides executable sampling, operational support, measure semantics
+instances, indexed transformer semantics, and measure program logic without importing Mathlib's
+`PMF`.
 -/
 
 public section
@@ -22,13 +23,10 @@ open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `evalSPMF, `probOutput, `probEvent, `probFailure, `NeverFail,
-      `EvalDistCompatible, `DiscreteEvalDistCompatible, `OracleSpec.IsProbabilitySpec,
-      `OracleSpec.IsUniformSpec, `PFunctor.IsProbabilitySpec, `PFunctor.IsUniformSpec] do
-    if env.contains name then
-      throwError "native entry point unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "entry point unexpectedly imports PMF"
 
-namespace VCVioTest.Native
+namespace VCVioTest.Foundations
 
 def sampleVector : ProbComp (Vector (Fin 3) 4) := $ᵗ _
 
@@ -293,4 +291,4 @@ example {β γ : Type} (mx : ProbComp Bool) (f : Bool → ProbComp β) (g : Bool
 
 end Simulation
 
-end VCVioTest.Native
+end VCVioTest.Foundations

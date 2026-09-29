@@ -14,7 +14,7 @@ introducing competing assertion carriers, coupling structures, or handler repres
 The initial slice moves structural handler composition, instrumentation, tracing, counting,
 logging, finite support, and uniform query implementation into native owners. Cache/programming
 handlers, query bounds, enforcement, state invariants/projections, and the signature/MAC/KEM/DEM
-definition layer use them directly. `VCVio.Native` exports this surface, and `VCVioTest.Native`
+definition layer use them directly. `VCVio.Foundations` exports this surface, and `VCVioTest.Foundations`
 rejects imports of PMF/SPMF and retired compatibility classes.
 
 Core `MonadAttach` and the native measure map law turn pathwise predicates into AE predicates
@@ -66,7 +66,7 @@ families, and a failing handler whose zero query-tail mass differs from the zero
 
 ## Independent-product checkpoint
 
-`EvalDist/IndepProduct` is a native event/reachability owner exported by `VCVio.Native`.
+`EvalDist/IndepProduct` is a native event/reachability owner exported by `VCVio.Foundations`.
 Finite product measures, observable products, lossy coordinate marginals and integrals, and
 measurable product families use Mathlib's `Measure.pi` and kernel products. Coordinate event
 equality needs full success mass only in the other factors. Reachability elimination uses
@@ -116,7 +116,7 @@ continuation-measure observation; arbitrary hidden source and continuation paylo
 measurable space. Constant allowances retain the prefix's success mass. The two-world and
 bad-world disagreement rules share this finite-sum argument.
 
-The API is exported by `VCVio.Native` and has an independent native import guard, chosen real
+The API is exported by `VCVio.Foundations` and has an independent native import guard, chosen real
 source examples, a Gaussian common measure with real/Boolean kernels, arbitrary AE continuations
 under a Dirac measure, unmeasured source/result types, and mixed observed output types.
 It is a prerequisite checkpoint for the full PRFTagReader direct-coupling conversion. Existing
@@ -223,7 +223,7 @@ events, of applied `𝒟[…]` masses, and of output measures. Swaps rewrite wit
 laws, under shared prefixes through measure congruence, and congruence leaves the continuations
 on the structural support of the shared prefix. The retiring scalar goals keep their existing
 actions. Native Hoare lowering lemmas use `prEvent` names, and the singleton-output variants,
-which are the events `(· = x)`, are removed. `VCVioTest/NativeProbabilityTactics.lean` gates the
+which are the events `(· = x)`, are removed. `VCVioTest/ProbabilityTactics.lean` gates the
 native `simp` and planner contract and records the remaining `simp` gaps.
 
 ## Import-closure checkpoint
@@ -580,40 +580,37 @@ The retired-probability ledger stands at 565 entries and the `SPMF` import closu
 
 ## Final removal
 
-Every remaining ledger entry sits in the façade itself. The open Rényi, GPV and Falcon work
-(#466, #471, #478) builds on the native Rényi theory. The open aborting Fiat–Shamir and ML-DSA work (#507, #508, #639)
-builds on the converted slack and zero-knowledge families. Once the rest convert, removal
-deletes these modules and regenerates the umbrellas:
+The discrete layer is deleted. Removed:
 
 - `ToMathlib`: `ProbabilityTheory/SPMF` and `Probability/ProbabilityMassFunction/{Lemmas,Measure}`.
-- `VCVio/EvalDist`: `Defs/{Basic,Instances,NeverFails,AlternativeMonad}`,
-  `Monad/{Basic,Map,Seq}`, `List`, `Prod`, `Option`, `Bool`, `BitVec`, `Fintype`,
-  `Instances/{OptionT,ErrorT}`, and
-  `PFunctor`, with the discrete bridges of `Defs/Measure` (including the priority-10
-  `instEvalDistSemanticsOfMonadLiftTSPMF` fallback), `FailureMeasure`, and `PFunctorMeasure`.
-- `VCVio/OracleComp`: the `EvalDist`, `ProbComp`, `Constructions/SampleableType`, and
-  `Coercions/SubSpec` hubs, `EvalDist/UniformCompatibility`, and
+- `VCVio/EvalDist`: `Defs/{Basic,NeverFails,AlternativeMonad}`, `Option`, `Bool`, `BitVec`,
+  `Fintype`, `PFunctor`, `FailureMeasure` and `PFunctorMeasure`, with the discrete bridges of
+  `Defs/Measure` and its priority-10 `SPMF` fallback instance.
+- `VCVio/OracleComp`: `EvalDist/UniformCompatibility` and
   `Constructions/SampleableType/MeasureCompatibility`.
+- The `Pr[…]` and `𝒮[…]` notation, `SPMF`, `evalSPMF`, `probOutput`, `probEvent`,
+  `probFailure`, and the classes `IsProbabilitySpec`, `IsUniformSpec` (oracle and polynomial),
+  `NeverFail`, `EvalDistCompatible` and `DiscreteEvalDistCompatible`.
 
-The dormant `Interop` library imports the `OptionT` and `ErrorT` instances and moves with them.
-After removal the retired-probability ledger and the SPMF import-closure baseline are empty, and
-both checks can be deleted. One question stays open: whether `Pr[= x | mx]` and `Pr[p | mx]`
-are re-pointed to `𝒟[mx] {x}` and `Pr{let x ← mx}[p x]`, which changes what the singleton form
-requires (measurable singletons), or removed so that `Pr{…}[…]` is the only event syntax.
+The modules whose support lemmas are part of the operational API keep them: `Defs/Instances`,
+`Monad/{Basic,Map,Seq}`, `List`, `Prod` and `Instances/{OptionT,ErrorT}`. The `OracleComp` hubs
+`EvalDist`, `ProbComp`, `Constructions/SampleableType` and `Coercions/SubSpec` remain as
+umbrellas of the measure semantics of their areas, and `Defs/Measure` as the umbrella of the
+measure-semantics instances. The transitional module names became permanent ones:
+`VCVio.Native` is `VCVio.Foundations`, `SampleableType.NativeMeasure` is
+`SampleableType.Measure`, and `StateT.Basic.Native` is `StateT.Basic`.
+
+`Pr{…}[…]` is the only event syntax, with `Pr{mx}[= a]` for single outputs. The
+retired-probability linter reports direct use of Mathlib's `PMF` and its ledger is empty; the
+`SPMF` import-closure ratchet is deleted. The dormant `Interop` library still refers to the
+discrete layer and is converted when it is revived. Downstream code converts with the codemod
+and `docs/agents/probability-migration.md`.
 
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
-Shared integration is published in #758; quantitative WP in #761; native TV composition in #762.
-Compact native event formatting is published in #763. The observed continuation comparison API
-is published in #764 as a separate prerequisite for the next complete reader conversion.
-Continue with independently validated PRs:
-
-1. Delete the discrete façade, as listed under *Final removal*.
-
-Independent products (#756), exact expected signing costs (#752), and reader cache representation
-(#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.
-Record each published checkpoint and its remaining compatibility consumers here and in #532.
+Open pull requests written against the discrete layer convert through the codemod and the
+migration guide; migration branches rebase them onto the measure API.
 
 ## Subsequent campaign work
 
@@ -626,7 +623,7 @@ Record each published checkpoint and its remaining compatibility consumers here 
 | Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
 | Forking | Seeded and replay forking and the Fiat–Shamir NMA aggregation are native. |
 | Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
-| Retirement | Compatibility classes are deprecated and linted; after the remaining families convert, delete the modules listed under *Final removal* and empty the retired-probability ledger. |
+| Retirement | Done: see *Final removal*. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
 each family before expanding to another subsystem. Publish a complete checkpoint before opening

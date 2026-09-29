@@ -12,7 +12,8 @@ public meta import Lean.Meta.Sym.Pattern
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.ProgramLogic.NotationCore
-public import VCVio.EvalDist.Defs.Basic
+public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # VCGen Planner Core
@@ -516,7 +517,7 @@ def isEvalDistEqGoal (target : Expr) : Bool :=
   else
     false
 
-/-- The computation observed by a native measure expression: the event computation of
+/-- The computation observed by a measure expression: the event computation of
 `prEvent`, which `Pr{…}[…]` elaborates to, or the argument of `𝒟[…]`. -/
 def evalDistComp? (e : Expr) : Option Expr := do
   if let some app := findAppWithHead? ``prEvent e then
@@ -526,27 +527,12 @@ def evalDistComp? (e : Expr) : Option Expr := do
   let args ← trailingArgs? app 1
   args[0]?
 
-/-- Recognize an equality with native measure expressions on both sides: event masses
-`𝒟[mx] s`, including `Pr{…}[…]`, or output measures `𝒟[mx]`. -/
-def isNativeProbEqGoal (target : Expr) : Bool :=
-  let target := target.consumeMData
-  if target.isAppOfArity ``Eq 3 then
-    (evalDistComp? (target.getArg! 1)).isSome && (evalDistComp? (target.getArg! 2)).isSome
-  else
-    false
-
-/-- Check if a goal is an equality with probability expressions on both sides, either measure
-expressions or the deprecated `Pr[…]` notation. -/
+/-- Recognize an equality with measure expressions on both sides: event masses `𝒟[mx] s`,
+including `Pr{…}[…]`, or output measures `𝒟[mx]`. -/
 def isProbEqGoal (target : Expr) : Bool :=
   let target := target.consumeMData
   if target.isAppOfArity ``Eq 3 then
-    let lhs := target.getArg! 1
-    let rhs := target.getArg! 2
-    let lhsHasProb := (findAppWithHead? ``probEvent lhs).isSome ||
-                       (findAppWithHead? ``probOutput lhs).isSome
-    let rhsHasProb := (findAppWithHead? ``probEvent rhs).isSome ||
-                       (findAppWithHead? ``probOutput rhs).isSome
-    (lhsHasProb && rhsHasProb) || isNativeProbEqGoal target
+    (evalDistComp? (target.getArg! 1)).isSome && (evalDistComp? (target.getArg! 2)).isSome
   else
     false
 

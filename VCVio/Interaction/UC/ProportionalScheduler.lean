@@ -10,7 +10,7 @@ public import PolyFun.Interaction.UC.OpenProcessQuotient
 public import PolyFun.Interaction.UC.ScheduledSamplerFactorization
 public import PolyFun.Interaction.UC.ScheduledOpenProcessModel
 public import VCVio.EvalDist.Monad.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Proportional UC scheduling

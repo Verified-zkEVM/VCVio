@@ -21,8 +21,8 @@ Usage: ./scripts/validate.sh [--lint] [--test] [--ffi] [--axioms]
 Default fast checks (shared with per-PR CI):
   - lake build of the seven default proof libraries and the optional P/poly facade, with the non-sorry warning budget
   - ./scripts/check-imports.sh (generated umbrella modules are current)
-  - the boundary checks: PolyFun, broad expose, retiring SPMF import closure,
-    complexity backend, Extern and Interop isolation
+  - the boundary checks: PolyFun, broad expose, complexity backend, Extern and
+    Interop isolation
   - the fixture tests of the downstream probability codemod
   - the comment-fence rule over every Lean source the repository tracks or would
     track, `third_party/` excluded and both lakefiles included
@@ -92,8 +92,6 @@ if [[ -f scripts/check-expose-boundary.sh ]]; then
   bash scripts/test-expose-boundary.sh
   bash scripts/check-expose-boundary.sh
 fi
-python3 ./scripts/test-spmf-closure.py
-python3 ./scripts/check-spmf-closure.py
 python3 ./scripts/test-migrate-native-probability.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh

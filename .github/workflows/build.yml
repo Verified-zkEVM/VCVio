@@ -56,11 +56,6 @@ jobs:
         if: github.event_name == 'pull_request'
         run: bash scripts/check-expose-boundary.sh --report "origin/${{ github.base_ref }}"
 
-      - name: Check retiring SPMF import closure
-        run: |
-          python3 scripts/test-spmf-closure.py
-          python3 scripts/check-spmf-closure.py
-
       - name: Test downstream probability codemod
         run: python3 scripts/test-migrate-native-probability.py
 

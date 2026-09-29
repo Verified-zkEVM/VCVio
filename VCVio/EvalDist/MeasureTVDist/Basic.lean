@@ -92,7 +92,7 @@ theorem measureTVDist_eq_zero_iff [EvalDistSemantics m] [MeasurableSpace α]
   Measure.tvDist_eq_zero_iff _ _
     (evalDist_apply_univ_le_one mx) (evalDist_apply_univ_le_one my)
 
-/-- Every measurable-event discrepancy is bounded by measure-native extended TV. -/
+/-- Every measurable-event discrepancy is bounded by the extended TV distance. -/
 theorem measure_absDiff_apply_le_measureETVDist [EvalDistSemantics m] [MeasurableSpace α]
     (mx my : m α) {s : Set α} (hs : MeasurableSet s) :
     ENNReal.absDiff (𝒟[mx] s) (𝒟[my] s) ≤ measureETVDist mx my :=

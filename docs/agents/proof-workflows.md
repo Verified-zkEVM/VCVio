@@ -14,11 +14,12 @@
    → For identical-until-bad: use `by_upto` or
      `measureETVDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
 
-3. **Probability equals a specific value** (`Pr[= x | oa] = ...`):
+3. **Probability equals a specific value** (`Pr{oa}[= x] = ...` or `Pr{x ← oa}[p x] = ...`):
    → Start with `vcstep` if the goal should lower or decompose automatically
    → Use `vcstep?` when you want the explicit script, binder names, rewrite form, or an
     explicit `using` / `inv` / `with` step surfaced
-   → Otherwise use `probOutput_bind_eq_tsum` to decompose binds manually
+   → Otherwise use `prEvent_bind_eq_lintegral_of_discrete` (or `prEvent_bind_eq_lintegral`) to
+    decompose binds manually into `∫⁻ x, … ∂𝒟[oa]`
    → Use `simp` with project simp lemmas
    → Use `vcstep`, `vcstep rw`, or `vcstep rw congr'` for probability equalities
 
@@ -114,19 +115,23 @@ Show that DDH-real corresponds to hybrid k and DDH-random corresponds to hybrid 
 
 From `Examples/OneTimePad/Basic.lean` — the canonical complete proof.
 
-**Setup**: OTP encrypts by XOR with a random key.
+**Setup**: OTP encrypts by XOR with a uniformly random `BitVec` key.
 
 ```lean
-def OTP_keyGen : ProbComp (Fin n → Bool) := $ᵗ (Fin n → Bool)
-def OTP_encrypt (k m : Fin n → Bool) : ProbComp (Fin n → Bool) := pure (k + m)
+def oneTimePad (sp : ℕ) :
+    SymmEncAlg ProbComp (BitVec sp) (BitVec sp) (BitVec sp) :=
+  oneTimePadOfKeygen sp ($ᵗ BitVec sp)   -- encrypt k m := return k ^^^ m
 ```
 
 **Privacy proof sketch**:
-1. The ciphertext `c = k + m` where `k` is uniform
-2. By group theory, `k + m` is uniform for any fixed `m`
-3. So `Pr[= c | encrypt k m₁] = Pr[= c | encrypt k m₂]` for all `c`
+1. The ciphertext is `c = k ^^^ m` where `k` is uniform
+2. XOR with a fixed `m` is a bijection, so `k ^^^ m` is uniform for every `m`
+3. So every message has the same ciphertext measure, `uniformOn Set.univ`, and the rows are
+   equal in distribution (`=ᵈ`)
 
-**Key technique**: `probOutput_map_injective` — if the encryption map is injective (which XOR is), the probability is preserved.
+**Key technique**: `evalDist_xor_uniformSample` (`VCVio/OracleComp/Constructions/BitVec.lean`)
+computes `𝒟[(· ^^^ msg) <$> $ᵗ BitVec sp] = uniformOn Set.univ`; `EvalDistEq.of_evalDist_eq`
+turns the equal measures into `=ᵈ`.
 
 ## Worked Example: ElGamal IND-CPA
 
@@ -194,8 +199,8 @@ rvcstep using S as ⟨a1, a2, hrel⟩
 ### `vcstep` on probability equalities
 
 ```lean
--- Goal: Pr[= true | do let x ← $ᵗ P; let b ← $ᵗ Bool; f x b]
---     = Pr[= true | do let b ← $ᵗ Bool; let x ← $ᵗ P; f x b]
+-- Goal: Pr{x ← $ᵗ P; b ← $ᵗ Bool; z ← f x b}[z = true]
+--     = Pr{b ← $ᵗ Bool; x ← $ᵗ P; z ← f x b}[z = true]
 vcstep                -- closes the goal automatically
 ```
 
@@ -410,14 +415,14 @@ before changing definitions or tactics for eRHL, pRHL, or apRHL.
 ### "typeclass instance problem ... HasQuery spec ?m" or "Monad (OracleQuery spec)"
 After the `HasQuery` cutover, the bare `query t` is `HasQuery.query t` and needs an expected type so Lean can pick the ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form `spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting `OracleQuery.cont`).
 
-### "failed to synthesize ... MonadLiftT (OracleComp spec) SPMF"
-For `OracleComp spec`, add measurable answer spaces with `[OracleSpec.IsMeasureSpec spec]` when you need `𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers and cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec`. The deprecated `[IsProbabilitySpec spec]` and `[IsUniformSpec spec]` belong only to statements still on the `Pr[...]` façade.
+### "failed to synthesize ... OracleSpec.IsMeasureSpec spec"
+For `OracleComp spec`, add answer measures with `[OracleSpec.IsMeasureSpec spec]` when you need `𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers and cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec`. `𝒟[...]` also needs a `MeasurableSpace` on the result type.
 
 ### Universe mismatch around `SubSpec`
-`OracleComp` has 3 universe parameters, `SubSpec` has 6. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
+`OracleComp` has 3 universe parameters, `SubSpec` has 3. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
 
-### `simp` makes no progress on `probOutput`
-`probOutput_bind_eq_tsum` is `@[grind =]` but not `@[simp]`. Use `rw [probOutput_bind_eq_tsum]` or `grind` instead of `simp`.
+### `simp` does not integrate an event over a bind
+`prEvent_bind_eq_lintegral` is not a `simp` lemma. Use `rw [prEvent_bind_eq_lintegral_of_discrete]` when the common draw has a discrete measurable space, or `prEvent_bind_eq_lintegral` with a measurability proof for the continuation.
 
 ### Aggressive unfolding of `OracleComp`
 Core types are `@[reducible]`. Lean may unfold `OracleComp` to `PFunctor.FreeM`. Use `OracleComp.inductionOn` as the canonical eliminator, not pattern matching on `PFunctor.FreeM.pure`/`roll`.

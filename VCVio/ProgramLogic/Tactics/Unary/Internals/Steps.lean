@@ -124,8 +124,7 @@ private def mkVCGenPlannedStep (label replayText : String) (run : TacticM Bool) 
   { label, replayText, run }
 
 private def hasProbGoal (target : Expr) : Bool :=
-  (findAppWithHead? ``prEvent target).isSome || (findAppWithHead? ``evalDist target).isSome ||
-    (findAppWithHead? ``probEvent target).isSome || (findAppWithHead? ``probOutput target).isSome
+  (findAppWithHead? ``prEvent target).isSome || (findAppWithHead? ``evalDist target).isSome
 
 /-- Report why the current weakest-precondition goal admits no selected structural step. -/
 def throwWpStepError : TacticM Unit := withMainContext do
@@ -758,8 +757,8 @@ def throwVCGenStepError : TacticM Unit := withMainContext do
         Try `vcstep`, or manually unfolding the remaining arithmetic side conditions.\
         {cutMsg}{invMsg}{theoremMsg}"
 
-/-- Try to close or rewrite a probability-equality goal by swapping adjacent independent binds.
-Handles 0–2 layers of tsum peeling. -/
+/-- A probability-equality planner action: close by swapping adjacent independent binds, reduce
+by bind congruence with or without support hypotheses, or rewrite one swap at a given depth. -/
 inductive ProbEqAction where
   | swap
   | congr
@@ -785,40 +784,12 @@ def runProbEqSwap : TacticM Bool := do
       | (rw [OracleComp.prEvent_bind_bind_swap]; done)
       | (rw [OracleComp.prEvent_bind_bind_swap_of_uniform]; done)
       | (rw [OracleComp.evalDist_bind_bind_swap]; done)
-      | (rw [OracleComp.evalDist_bind_bind_swap_of_uniform]; done)
-      | (rw [← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput]
-         exact probEvent_bind_bind_swap _ _ _ _)
-      | (rw [show Pr[ _ | _ >>= fun a => _ >>= fun b => _] =
-              Pr[ _ | _ >>= fun b => _ >>= fun a => _] from
-            probEvent_bind_bind_swap _ _ _ _])
-      | (conv in (Pr[ _ | _]) =>
-          rw [show Pr[ _ | _ >>= fun a => _ >>= fun b => _] =
-                Pr[ _ | _ >>= fun b => _ >>= fun a => _] from
-              probEvent_bind_bind_swap _ _ _ _])
-      | (rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-         refine tsum_congr fun _ => ?_
-         congr 1
-         try simp only [monad_norm]
-         first
-           | exact probEvent_bind_bind_swap _ _ _ _
-           | (rw [← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput]
-              exact probEvent_bind_bind_swap _ _ _ _))
-      | (rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-         refine tsum_congr fun _ => ?_
-         congr 1
-         rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-         refine tsum_congr fun _ => ?_
-         congr 1
-         try simp only [monad_norm]
-         first
-           | exact probEvent_bind_bind_swap _ _ _ _
-           | (rw [← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput]
-              exact probEvent_bind_bind_swap _ _ _ _)))))
+      | (rw [OracleComp.evalDist_bind_bind_swap_of_uniform]; done))))
 
-/-- Reduce a native equality of composed event masses, or of composed output measures, to
-the continuations on the structural support of the shared prefix. The goal left behind
-quantifies over a reachable prefix output and its support hypothesis. -/
-private def runNativeProbEqCongr : TacticM Bool := do
+/-- Reduce an equality of composed event masses, or of composed output measures, to the
+continuations on the structural support of the shared prefix. The goal left behind quantifies
+over a reachable prefix output and its support hypothesis. -/
+private def runProbEqCongrCore : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
     first
       | refine OracleComp.prEvent_bind_congr_of_support _ _ _ ?_
@@ -831,15 +802,9 @@ private def runNativeProbEqCongr : TacticM Bool := do
 /-- Apply probability bind congruence without support hypotheses and introduce named values. -/
 def runProbEqCongrNoSupportWithNames (names : Array Name) : TacticM Bool := do
   normalizeProbEqGoal
-  if ← runNativeProbEqCongr then
+  if ← runProbEqCongrCore then
     discard <| introMainGoalNames names
     discard <| tryEvalTacticSyntax (← `(tactic| intro _))
-    return true
-  if ← tryEvalTacticSyntax (← `(tactic| apply probOutput_bind_congr')) then
-    discard <| introMainGoalNames names
-    return true
-  if ← tryEvalTacticSyntax (← `(tactic| apply probEvent_bind_congr')) then
-    discard <| introMainGoalNames names
     return true
   return false
 
@@ -848,17 +813,11 @@ def runProbEqCongrNoSupport : TacticM Bool := do
   let names ← getProbCongrNames false
   runProbEqCongrNoSupportWithNames names
 
-/-- Try to decompose a `Pr[ ... | mx >>= f₁] = Pr[ ... | mx >>= f₂]` goal by congruence,
-then auto-intro the bound variable and support hypothesis. -/
+/-- Try to decompose a `Pr{x ← mx; …}[…] = Pr{x ← mx; …}[…]` goal, or an equality of output
+measures of binds, by congruence, then auto-intro the bound variable and support hypothesis. -/
 def runProbEqCongrWithNames (names : Array Name) : TacticM Bool := do
   normalizeProbEqGoal
-  if ← runNativeProbEqCongr then
-    discard <| introMainGoalNames names
-    return true
-  if ← tryEvalTacticSyntax (← `(tactic| apply probOutput_bind_congr)) then
-    discard <| introMainGoalNames names
-    return true
-  if ← tryEvalTacticSyntax (← `(tactic| apply probEvent_bind_congr)) then
+  if ← runProbEqCongrCore then
     discard <| introMainGoalNames names
     return true
   return false
@@ -901,15 +860,15 @@ def runProbEqCongrChainWithNames
       return false
   return true
 
-/-- Build a native theorem that swaps adjacent binds under `depth` shared prefixes; `uniform`
-selects the swap law that derives countable responses from a uniform specification. -/
-partial def mkNativeSwapUnderProof (uniform : Bool) (depth : Nat) : TacticM (TSyntax `term) := do
+/-- Build an output-measure theorem that swaps adjacent binds under `depth` shared prefixes;
+`uniform` selects the swap law that derives countable responses from a uniform specification. -/
+partial def mkEvalDistSwapUnderProof (uniform : Bool) (depth : Nat) : TacticM (TSyntax `term) := do
   match depth with
   | 0 =>
       if uniform then `(term| OracleComp.evalDist_bind_bind_swap_of_uniform _ _ _)
       else `(term| OracleComp.evalDist_bind_bind_swap _ _ _)
   | depth + 1 =>
-      let inner ← mkNativeSwapUnderProof uniform depth
+      let inner ← mkEvalDistSwapUnderProof uniform depth
       `(term| OracleComp.evalDist_bind_congr_of_support _ _ _ fun _ _ => $inner)
 
 /-- Build an event theorem that swaps adjacent binds under `depth` shared prefixes; `uniform`
@@ -923,14 +882,6 @@ partial def mkPrEventSwapUnderProof (uniform : Bool) (depth : Nat) : TacticM (TS
       let inner ← mkPrEventSwapUnderProof uniform depth
       `(term| OracleComp.prEvent_bind_congr_of_support _ _ _ fun _ _ => $inner)
 
-/-- Build a theorem that swaps adjacent binds under `depth` shared prefixes. -/
-partial def mkProbSwapUnderProof (depth : Nat) : TacticM (TSyntax `term) := do
-  match depth with
-  | 0 => `(term| probEvent_bind_bind_swap _ _ _ _)
-  | depth + 1 =>
-      let inner ← mkProbSwapUnderProof depth
-      `(term| probEvent_bind_congr fun _ _ => $inner)
-
 /-- Try to rewrite one top-level bind-swap without closing the goal. -/
 def runProbEqRewrite : TacticM Bool := do
   normalizeProbEqGoal
@@ -939,18 +890,13 @@ def runProbEqRewrite : TacticM Bool := do
       | rw [OracleComp.prEvent_bind_bind_swap]
       | rw [OracleComp.prEvent_bind_bind_swap_of_uniform]
       | rw [OracleComp.evalDist_bind_bind_swap]
-      | rw [OracleComp.evalDist_bind_bind_swap_of_uniform]
-      | (simp only [← probEvent_eq_eq_probOutput]
-         rw [probEvent_bind_bind_swap]
-         try simp only [probEvent_eq_eq_probOutput])
-      | rw [probEvent_bind_bind_swap])))
+      | rw [OracleComp.evalDist_bind_bind_swap_of_uniform])))
 
 /-- Try to rewrite one bind-swap under `depth` shared prefixes on either side. -/
 def runProbEqRewriteUnder (depth : Nat) : TacticM Bool := do
   normalizeProbEqGoal
-  let proof ← mkProbSwapUnderProof depth
-  let native ← mkNativeSwapUnderProof false depth
-  let nativeUniform ← mkNativeSwapUnderProof true depth
+  let measure ← mkEvalDistSwapUnderProof false depth
+  let measureUniform ← mkEvalDistSwapUnderProof true depth
   let event ← mkPrEventSwapUnderProof false depth
   let eventUniform ← mkPrEventSwapUnderProof true depth
   tryEvalTacticSyntax (← `(tactic| (
@@ -959,18 +905,10 @@ def runProbEqRewriteUnder (depth : Nat) : TacticM Bool := do
       | (conv_rhs => rw [show _ from $event])
       | (conv_lhs => rw [show _ from $eventUniform])
       | (conv_rhs => rw [show _ from $eventUniform])
-      | (conv_lhs => rw [show _ from $native])
-      | (conv_rhs => rw [show _ from $native])
-      | (conv_lhs => rw [show _ from $nativeUniform])
-      | (conv_rhs => rw [show _ from $nativeUniform])
-      | (simp only [← probEvent_eq_eq_probOutput]
-         first
-           | (conv_lhs => rw [show _ from $proof])
-           | (conv_rhs => rw [show _ from $proof])
-         try simp only [probEvent_eq_eq_probOutput])
-      | first
-          | (conv_lhs => rw [show _ from $proof])
-          | (conv_rhs => rw [show _ from $proof]))))
+      | (conv_lhs => rw [show _ from $measure])
+      | (conv_rhs => rw [show _ from $measure])
+      | (conv_lhs => rw [show _ from $measureUniform])
+      | (conv_rhs => rw [show _ from $measureUniform]))))
 
 /-- Execute a probability-equality planner action. -/
 def runProbEqAction : ProbEqAction → TacticM Bool
@@ -1086,16 +1024,8 @@ private def stripEventObservation (comp : Expr) : Expr :=
   else
     comp
 
-private def probExprComp? (expr : Expr) : Option Expr := do
-  if let some comp := evalDistComp? expr then
-    return stripEventObservation comp
-  let app ←
-    match findAppWithHead? ``probOutput expr with
-    | some app => some app
-    | none => findAppWithHead? ``probEvent expr
-  let args ← trailingArgs? app 2
-  let #[comp, _] := args | none
-  some comp
+private def probExprComp? (expr : Expr) : Option Expr :=
+  stripEventObservation <$> evalDistComp? expr
 
 private partial def topBindDepth (expr : Expr) : Nat :=
   let expr := expr.consumeMData
@@ -1218,35 +1148,31 @@ def throwVCGenStepRwNormalizeError : TacticM Unit := withMainContext do
 /-- Try to lower a probability goal into a `Triple`, `wp`, or probability-equality goal. -/
 def tryLowerProbGoal : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
-  let isProbEventGoal := (findAppWithHead? ``prEvent target).isSome ||
-    (findAppWithHead? ``evalDist target).isSome || (findAppWithHead? ``probEvent target).isSome
-  let isProbOutputGoal := (findAppWithHead? ``probOutput target).isSome
-  unless isProbEventGoal || isProbOutputGoal do return false
+  unless hasProbGoal target do return false
   if isProbEqGoal target then
     if ← tryProbEqGoal then return true
-  if isProbEventGoal then
-    if ← tryEvalTacticSyntax (← `(tactic|
-        rw [← OracleComp.ProgramLogic.triple_propInd_iff_prEvent_eq_one];
-        simp only [OracleComp.ProgramLogic.propInd_true])) then
-      return true
-    if ← tryEvalTacticSyntax (← `(tactic|
-        rw [eq_comm (a := 1),
-            ← OracleComp.ProgramLogic.triple_propInd_iff_prEvent_eq_one];
-        simp only [OracleComp.ProgramLogic.propInd_true])) then
-      return true
-    if ← tryEvalTacticSyntax (← `(tactic|
-        rw [← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
-      return true
-    if ← tryEvalTacticSyntax (← `(tactic|
-        rw [ge_iff_le, ← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
-      return true
-    if ← tryEvalTacticSyntax (← `(tactic|
-        rw [OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
-      return true
-    if ← tryEvalTacticSyntax (← `(tactic|
-        simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,
-          OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
-      return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [← OracleComp.ProgramLogic.triple_propInd_iff_prEvent_eq_one];
+      simp only [OracleComp.ProgramLogic.propInd_true])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [eq_comm (a := 1),
+          ← OracleComp.ProgramLogic.triple_propInd_iff_prEvent_eq_one];
+      simp only [OracleComp.ProgramLogic.propInd_true])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [ge_iff_le, ← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      rw [OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
+    return true
+  if ← tryEvalTacticSyntax (← `(tactic|
+      simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,
+        OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
+    return true
   return false
 
 /-- Continue structural stepping on a raw `wp` goal after probability lowering or explicit

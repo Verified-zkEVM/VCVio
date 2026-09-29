@@ -8,7 +8,7 @@ module
 public import Examples.ElGamal.Common
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.Constructions.SampleableType.Measure
 import ToMathlib.Probability.UniformOn
 
 /-!

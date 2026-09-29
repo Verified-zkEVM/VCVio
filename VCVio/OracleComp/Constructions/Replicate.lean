@@ -47,27 +47,6 @@ lemma support_replicate :
     | nil => simp
     | cons x xs => rw [cons_mem_support_seq_map_cons_iff, ih]; aesop
 
-section probability
-
-variable [IsUniformSpec spec]
-
-/-- The probability of getting a list from `replicate` is the product of the chances of
-getting each of the individual elements. -/
-@[simp]
-lemma probOutput_replicate (xs : List α) :
-    Pr[= xs | oa.replicate n] = if xs.length = n then (xs.map (Pr[= · | oa])).prod else 0 := by
-  have : DecidableEq α := Classical.decEq α
-  induction n generalizing xs with
-  | zero => cases xs <;> simp [probOutput_eq_zero_of_not_mem_support]
-  | succ n ih =>
-    cases xs with
-    | nil => simp
-    | cons y ys =>
-      rw [replicate_succ, probOutput_cons_seq_map_cons_eq_mul oa (replicate n oa) y ys, ih]
-      simp
-
-end probability
-
 @[simp]
 lemma mem_finSupport_replicate [∀ t, Fintype (spec.Range t)] [DecidableEq α]
     (xs : List α) : xs ∈ finSupport (oa.replicate n) ↔

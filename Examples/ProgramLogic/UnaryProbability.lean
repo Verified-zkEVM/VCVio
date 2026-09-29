@@ -27,7 +27,7 @@ universe u
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α β γ : Type}
 
-section NativeLowering
+section ProbabilityLowering
 
 variable [OracleSpec.IsMeasureSpec spec]
 
@@ -48,7 +48,7 @@ example {oa : OracleComp spec Bool}
     Pr{let y ← oa}[y = true] = 1 := by
   vcgen
 
-end NativeLowering
+end ProbabilityLowering
 
 section Equalities
 
@@ -105,7 +105,7 @@ example : 𝟙⟦(True : Prop)⟧ * 𝟙⟦(True : Prop)⟧ = (1 : ℝ≥0∞) :
 
 end Equalities
 
-section NativeLowering
+section ProbabilityLowering
 
 variable [OracleSpec.IsMeasureSpec spec]
 
@@ -172,4 +172,4 @@ example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
   · simpa [propInd, hx] using
       triple_zero (oa := f x) (post := fun y => if y = true then 1 else 0)
 
-end NativeLowering
+end ProbabilityLowering

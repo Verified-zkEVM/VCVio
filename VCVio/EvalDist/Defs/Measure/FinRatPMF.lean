@@ -9,7 +9,7 @@ public import ToMathlib.ProbabilityTheory.FinRatPMF.Measure
 public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
-# Native measure semantics for executable rational sampling
+# Measure semantics for executable rational sampling
 
 The rational sampler denotes a finite sum of weighted Dirac measures. Its interpretation
 preserves pure and measurable bind on arbitrary measurable spaces and has total mass one.
@@ -34,7 +34,7 @@ instance : LawfulEvalDistSemantics Raw where
 
 variable {α : Type u} [MeasurableSpace α]
 
-/-- The denotation is the raw distribution's native measure. -/
+/-- The denotation is the measure of the raw distribution. -/
 theorem evalDist_eq_toMeasure (p : Raw α) : 𝒟[p] = p.toMeasure := rfl
 
 /-- Executable rational sampling has total mass one. -/

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.Measure
 

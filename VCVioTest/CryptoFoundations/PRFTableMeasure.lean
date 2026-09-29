@@ -12,7 +12,7 @@ public import VCVio.EvalDist.PFunctorMeasure.Core
 # Measure-based cache and observation checks
 
 The core dependency check follows theorem proofs and types. The cache-list example
-uses native free-program semantics with explicit sampling laws and repeated keys.
+uses free-program measure semantics with explicit sampling laws and repeated keys.
 -/
 
 public section
@@ -29,9 +29,9 @@ run_cmd do
     pending := rest
     unless visited.contains name do
       visited := visited.insert name
-      for forbidden in [`PMF, `SPMF, `evalSPMF, `probEvent, `probOutput, `expectedValue] do
+      for forbidden in [`PMF] do
         if forbidden.isPrefixOf name then
-          throwError "native table proof depends on the discrete declaration {name}"
+          throwError "table proof depends on the discrete declaration {name}"
       if let some info := env.find? name then
         pending := info.getUsedConstantsAsSet.toList ++ pending
 

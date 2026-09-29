@@ -43,10 +43,10 @@ queries.
 * `le_prEvent_isSome_seededFork` and `le_prEvent_isSome_seededFork_sq`: the Bellare-Neven
   forking bound, the latter in its canonical `acc² / q - acc / h` shape.
 
-The bounds are stated with `Pr{…}` events of the native output measures. The seed-averaged run
-has the distribution of `main`, truncating the seed keeps the joint law of the prefix and the
-output, and the squared success probability is bounded by the two-run event through Jensen's
-inequality over the truncated seed.
+The bounds are stated with `Pr{…}` events of the output measures. The seed-averaged run has the
+distribution of `main`, truncating the seed keeps the joint law of the prefix and the output, and
+the squared success probability is bounded by the two-run event through Jensen's inequality over
+the truncated seed.
 
 ## References
 
