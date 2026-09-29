@@ -358,6 +358,7 @@ public import VCVio.OracleComp.SimSemantics.StateT.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.OracleComp.SimSemantics.StateT.StateSeparating
+public import VCVio.OracleComp.SimSemantics.StateT.UntilBad
 public import VCVio.OracleComp.SimSemantics.Wiring
 public import VCVio.OracleComp.SimSemantics.WriterT.Basic
 public import VCVio.OracleComp.SimSemantics.WriterT.Core
