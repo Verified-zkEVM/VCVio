@@ -71,6 +71,7 @@ public import HashSig.SLHDSA.Security.RomKeyed
 public import HashSig.SLHDSA.Security.RomRun
 public import HashSig.SLHDSA.Security.RomSchemeBridge
 public import HashSig.SLHDSA.Security.RomSchemeRun
+public import HashSig.SLHDSA.Security.RomSchemeUnion
 public import HashSig.SLHDSA.Security.RomTranscript
 public import HashSig.SLHDSA.Security.SchemeGames
 public import HashSig.SLHDSA.Security.SchemeWitnesses
