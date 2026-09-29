@@ -26,7 +26,7 @@ and outputting the random-oracle hash `H(m, s)` together with `s` as the
 opening. Verification recomputes the hash and compares.
 
 The example exercises the framework's random-oracle layer (`cachingOracle`,
-`loggingOracle`), the identical-until-bad TVD bound, and the birthday bound
+`loggingOracle`), the identical-until-bad total variation bound, and the birthday bound
 on cache collisions — all on a single concrete scheme.
 
 ## What's in this example
@@ -50,7 +50,7 @@ space, and `|S|` is the size of the salt space.
 1. **Shared ROM definitions:** `Examples/CommitmentScheme/Common.lean` defines
    the random oracle `CMOracle : (M × S) → C` and the scheme algorithms
    `CMCommit` and `CMCheck`, plus the basic single-fresh-query
-   unpredictability bound `probEvent_from_fresh_query_le_inv` (`1/|C|`) that
+   unpredictability bound `prEvent_from_fresh_query_le_inv` (`1/|C|`) that
    all three security proofs ultimately reduce to.
 2. **Binding:** `Examples/CommitmentScheme/Binding.lean` proves both a tight
    bound (`binding_bound`) by direct case-split on cache collisions versus
@@ -76,16 +76,18 @@ space, and `|S|` is the size of the salt space.
 
 * `cachingOracle` (`VCVio/OracleComp/QueryTracking/CachingOracle.lean`):
   models the shared random oracle for both adversary and verifier.
-* `loggingOracle` (`VCVio/OracleComp/QueryTracking/LoggingOracle.lean`):
+* `loggingOracle` (`VCVio/OracleComp/QueryTracking/LoggingOracle/Core.lean`):
   records the commit-phase query trace used by the extractor.
 * `IsTotalQueryBound` (`VCVio/OracleComp/QueryTracking/QueryBound.lean`):
   the query budget bookkeeping plumbed through every reduction.
-* Birthday bound `probEvent_cacheCollision_le_birthday_total_tight`
-  (`VCVio/OracleComp/QueryTracking/Unpredictability.lean`): the
+* Birthday bound `prEvent_cacheCollision_le_birthday_total_tight`
+  (`VCVio/OracleComp/QueryTracking/Birthday.lean`): the
   `n·(n-1) / (2·|C|)` upper bound on cache collisions used by both the
   binding and extractability proofs.
-* Identical-until-bad TVD bound `tvDist_simulateQ_le_probEvent_bad_dist`
-  (`VCVio/EvalDist/TVDist.lean`): the per-salt distinguishing bound for the
+* Identical-until-bad bound
+  `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`
+  (`VCVio/ProgramLogic/Relational/SimulateQ/UntilBad.lean`): the per-salt
+  distinguishing bound for the
   hiding proof.
 
 ## Relation to the generic framework

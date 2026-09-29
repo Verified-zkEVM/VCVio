@@ -23,14 +23,17 @@ guarded by absolute continuity.
 
 `∫⁻ x, (∂μ/∂ν x) ^ a ∂ν` integrates against `ν`, so it cannot see a set where `ν` vanishes and
 `μ` does not — it would report a finite value for a pair at infinite divergence. The `μ ≪ ν`
-guard restores that, and it is what makes `renyiMGF_toMeasure` below an equality rather than an
-inequality. Mathlib's `klDiv` carries the same guard for the same reason.
+guard restores that. Mathlib's `klDiv` carries the same guard for the same reason.
 
-## The discrete theory
+## Contents
 
-`ToMathlib.Probability.Divergence.RenyiDiscrete` identifies this with the countably supported
-formula, so that development becomes a corollary of this one rather than a parallel copy. This
-module is deliberately free of any dependence on that layer.
+* log-convexity of the MGF in its order, and data processing under maps and Markov kernels;
+* probability preservation, `measure_rpow_div_renyiDiv_le`, the bound security reductions use;
+* bounded likelihood ratios: `μ ≤ c • ν` gives `R_a(μ ‖ ν) ≤ c` (`renyiDiv_le_of_le_smul`);
+* tensorization over independent products (`renyiMGF_prod`, `renyiDiv_prod`);
+* the max-divergence `maxDiv`, the order-`∞` limit, which bounds every finite order.
+
+`ToMathlib.Probability.Divergence.RenyiTotalVariation` compares these with total variation.
 -/
 
 @[expose] public section
@@ -45,8 +48,8 @@ variable {α : Type*} [MeasurableSpace α]
 open scoped Classical in
 /-- The Renyi moment generating function of order `a`, also called the Hellinger integral.
 
-For `a > 1` this is `∑' x, p x ^ a * q x ^ (1 - a)` in the countably supported case; see
-`ToMathlib.Probability.Divergence.RenyiDiscrete`. -/
+For `a > 1` and measures supported on a countable set this is `∑' x, μ {x} ^ a * ν {x} ^ (1 - a)`.
+-/
 noncomputable def renyiMGF (a : ℝ) (μ ν : Measure α) : ℝ≥0∞ :=
   if μ ≪ ν then ∫⁻ x, (μ.rnDeriv ν x) ^ a ∂ν else ⊤
 
@@ -236,9 +239,8 @@ theorem integral_toReal_rnDeriv_rpow_map_le (a : ℝ) (ha : 1 < a) (μ ν : Meas
 
 /-- **Data processing inequality for the Renyi MGF.**
 
-Post-processing by a measurable function cannot increase it. Compare the hand-rolled discrete
-proof in `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`, which does the fibrewise
-Holder argument by hand; here the convexity is Mathlib's and the argument is one `calc`. -/
+Post-processing by a measurable function cannot increase it. The convexity is Mathlib's
+conditional Jensen inequality, and the argument is one `calc`. -/
 theorem renyiMGF_map_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
     [IsFiniteMeasure μ] [IsFiniteMeasure ν] {g : α → β} (hg : Measurable g) :
     renyiMGF a (μ.map g) (ν.map g) ≤ renyiMGF a μ ν := by
@@ -326,5 +328,176 @@ theorem renyiDiv_comp_right_le (a : ℝ) (ha : 1 < a) (μ ν : Measure α)
     (inv_nonneg.mpr (sub_nonneg.mpr ha.le))
 
 end DataProcessing
+
+/-! ### Probability preservation -/
+
+/-- **Probability preservation.** An event keeps probability `ν s ≥ μ s ^ (a / (a - 1)) / R`
+when `R` is the Renyi divergence of order `a > 1` from `μ` to `ν`. -/
+theorem measure_rpow_div_renyiDiv_le {a : ℝ} (ha : 1 < a) (μ ν : Measure α)
+    [IsFiniteMeasure μ] [IsFiniteMeasure ν] {s : Set α} (hs : MeasurableSet s) :
+    μ s ^ (a / (a - 1)) / renyiDiv a μ ν ≤ ν s := by
+  have ham1 : 0 < a - 1 := sub_pos.2 ha
+  have ha0 : 0 < a := zero_lt_one.trans ha
+  by_cases hac : μ ≪ ν
+  swap
+  · rw [renyiDiv_eq_rpow ha, renyiMGF_of_not_ac hac,
+      ENNReal.top_rpow_of_pos (inv_pos.2 ham1), ENNReal.div_top]
+    exact bot_le
+  set q : ℝ := a / (a - 1) with hq_def
+  have hpq : a.HolderConjugate q := Real.HolderConjugate.conjExponent ha
+  have hq0 : 0 < q := div_pos ha0 ham1
+  -- `μ s` is the integral of the density against the indicator of `s`.
+  have hμs : μ s = ∫⁻ x, (μ.rnDeriv ν * s.indicator (1 : α → ℝ≥0∞)) x ∂ν := by
+    conv_lhs => rw [← Measure.withDensity_rnDeriv_eq μ ν hac]
+    rw [withDensity_apply _ hs, ← lintegral_indicator hs]
+    refine lintegral_congr fun x => ?_
+    by_cases hx : x ∈ s <;> simp [hx]
+  have hind : ∫⁻ x, (s.indicator (1 : α → ℝ≥0∞) x) ^ q ∂ν = ν s := by
+    rw [← lintegral_indicator_one hs]
+    refine lintegral_congr fun x => ?_
+    by_cases hx : x ∈ s <;> simp [hx, ENNReal.zero_rpow_of_pos hq0]
+  have hHolder := ENNReal.lintegral_mul_le_Lp_mul_Lq ν hpq
+    (Measure.measurable_rnDeriv μ ν).aemeasurable
+    ((measurable_one.indicator hs).aemeasurable)
+  rw [← hμs, hind, ← renyiMGF_of_ac hac] at hHolder
+  -- Raise both sides to the conjugate exponent.
+  have hpow := ENNReal.rpow_le_rpow hHolder hq0.le
+  rw [ENNReal.mul_rpow_of_nonneg _ _ hq0.le, ← ENNReal.rpow_mul, ← ENNReal.rpow_mul,
+    one_div_mul_cancel hq0.ne', ENNReal.rpow_one] at hpow
+  have hexp : 1 / a * q = (a - 1)⁻¹ := by
+    rw [hq_def]; field_simp
+  rw [hexp, ← renyiDiv_eq_rpow ha] at hpow
+  exact ENNReal.div_le_of_le_mul (by rwa [mul_comm] at hpow)
+
+/-! ### Bounded likelihood ratios -/
+
+/-- A measure below `c • ν` has likelihood ratio at most `c`, `ν`-almost everywhere. -/
+theorem rnDeriv_le_of_le_smul {μ ν : Measure α} [SigmaFinite μ] [SigmaFinite ν] {c : NNReal}
+    (hc : c ≠ 0) (h : μ ≤ c • ν) : ∀ᵐ x ∂ν, μ.rnDeriv ν x ≤ c := by
+  have h1 : μ.rnDeriv (c • ν) ≤ᵐ[c • ν] 1 := Measure.rnDeriv_le_one_of_le h
+  have hν : ν ≪ c • ν := fun s hs => by
+    rw [Measure.smul_apply, ENNReal.smul_def, smul_eq_mul, mul_eq_zero] at hs
+    exact hs.resolve_left (by exact_mod_cast hc)
+  filter_upwards [hν.ae_le h1, Measure.rnDeriv_smul_right' μ ν hc] with x hx hx'
+  rw [hx'] at hx
+  simp only [Pi.smul_apply, Pi.one_apply, ENNReal.smul_def, smul_eq_mul] at hx
+  rwa [ENNReal.coe_inv hc, ENNReal.inv_mul_le_iff (by exact_mod_cast hc) ENNReal.coe_ne_top,
+    mul_one] at hx
+
+/-- **Pointwise likelihood ratios bound the Renyi MGF.** If `μ ≤ c • ν`, then
+`M_a(μ ‖ ν) ≤ c ^ (a - 1) · μ univ`. -/
+theorem renyiMGF_le_of_le_smul {a : ℝ} (ha : 1 < a) {μ ν : Measure α} [IsFiniteMeasure μ]
+    [SigmaFinite ν] {c : NNReal} (h : μ ≤ c • ν) :
+    renyiMGF a μ ν ≤ (c : ℝ≥0∞) ^ (a - 1) * μ Set.univ := by
+  have ha0 : 0 < a := zero_lt_one.trans ha
+  have hac : μ ≪ ν := Measure.absolutelyContinuous_of_le_smul h
+  by_cases hc : c = 0
+  · have hμ : μ = 0 := le_antisymm (by simpa [hc] using h) bot_le
+    subst hμ
+    have hzero : ∫⁻ x, (0 : Measure α).rnDeriv ν x ^ a ∂ν = 0 := by
+      rw [lintegral_congr_ae (g := fun _ => 0) ?_, lintegral_const, zero_mul]
+      filter_upwards [Measure.rnDeriv_zero ν] with x hx
+      simp [hx, ENNReal.zero_rpow_of_pos ha0]
+    rw [renyiMGF_of_ac hac, hzero]
+    exact bot_le
+  rw [renyiMGF_of_ac hac]
+  have hf := rnDeriv_le_of_le_smul hc h
+  calc ∫⁻ x, μ.rnDeriv ν x ^ a ∂ν
+      = ∫⁻ x, μ.rnDeriv ν x ^ (a - 1) * μ.rnDeriv ν x ∂ν := by
+        refine lintegral_congr fun x => ?_
+        conv_lhs => rw [show a = (a - 1) + 1 by ring]
+        rw [ENNReal.rpow_add_of_nonneg _ _ (sub_nonneg.2 ha.le) zero_le_one, ENNReal.rpow_one]
+    _ ≤ ∫⁻ x, (c : ℝ≥0∞) ^ (a - 1) * μ.rnDeriv ν x ∂ν := by
+        refine lintegral_mono_ae (hf.mono fun x hx => ?_)
+        gcongr
+    _ = (c : ℝ≥0∞) ^ (a - 1) * ∫⁻ x, μ.rnDeriv ν x ∂ν :=
+        lintegral_const_mul _ (Measure.measurable_rnDeriv μ ν)
+    _ ≤ (c : ℝ≥0∞) ^ (a - 1) * μ Set.univ := by
+        gcongr
+        exact Measure.lintegral_rnDeriv_le
+
+/-- **Pointwise likelihood ratios bound the Renyi divergence.** If `μ ≤ c • ν` for a probability
+measure `μ`, then `R_a(μ ‖ ν) ≤ c`. -/
+theorem renyiDiv_le_of_le_smul {a : ℝ} (ha : 1 < a) {μ ν : Measure α} [IsProbabilityMeasure μ]
+    [SigmaFinite ν] {c : NNReal} (h : μ ≤ c • ν) : renyiDiv a μ ν ≤ c := by
+  have ham1 : 0 < a - 1 := sub_pos.2 ha
+  rw [renyiDiv_eq_rpow ha]
+  calc renyiMGF a μ ν ^ (a - 1)⁻¹
+      ≤ ((c : ℝ≥0∞) ^ (a - 1) * μ Set.univ) ^ (a - 1)⁻¹ :=
+        ENNReal.rpow_le_rpow (renyiMGF_le_of_le_smul ha h) (inv_nonneg.2 ham1.le)
+    _ = c := by
+        rw [measure_univ, mul_one, ← ENNReal.rpow_mul, mul_inv_cancel₀ ham1.ne',
+          ENNReal.rpow_one]
+
+/-! ### Tensorization -/
+
+/-- The Renyi MGF of independent products is the product of the Renyi MGFs. -/
+theorem renyiMGF_prod {β : Type*} [MeasurableSpace β] {a : ℝ} (ha : 0 ≤ a)
+    {μ₁ ν₁ : Measure α} {μ₂ ν₂ : Measure β} [SigmaFinite μ₁] [SigmaFinite ν₁]
+    [SigmaFinite μ₂] [SigmaFinite ν₂] (h₁ : μ₁ ≪ ν₁) (h₂ : μ₂ ≪ ν₂) :
+    renyiMGF a (μ₁.prod μ₂) (ν₁.prod ν₂) = renyiMGF a μ₁ ν₁ * renyiMGF a μ₂ ν₂ := by
+  have hac : μ₁.prod μ₂ ≪ ν₁.prod ν₂ := h₁.prod h₂
+  rw [renyiMGF_of_ac hac, renyiMGF_of_ac h₁, renyiMGF_of_ac h₂]
+  have hd : (μ₁.prod μ₂).rnDeriv (ν₁.prod ν₂) =ᵐ[ν₁.prod ν₂]
+      fun z => μ₁.rnDeriv ν₁ z.1 * μ₂.rnDeriv ν₂ z.2 := by
+    conv_lhs => rw [← Measure.withDensity_rnDeriv_eq μ₁ ν₁ h₁,
+      ← Measure.withDensity_rnDeriv_eq μ₂ ν₂ h₂]
+    rw [prod_withDensity (Measure.measurable_rnDeriv _ _) (Measure.measurable_rnDeriv _ _)]
+    exact Measure.rnDeriv_withDensity _
+      (((Measure.measurable_rnDeriv _ _).comp measurable_fst).mul
+        ((Measure.measurable_rnDeriv _ _).comp measurable_snd))
+  rw [lintegral_congr_ae (hd.mono fun z hz => by rw [hz])]
+  simp_rw [ENNReal.mul_rpow_of_nonneg _ _ ha]
+  exact lintegral_prod_mul ((Measure.measurable_rnDeriv _ _).pow_const _).aemeasurable
+    ((Measure.measurable_rnDeriv _ _).pow_const _).aemeasurable
+
+/-- The Renyi divergence of independent products is the product of the Renyi divergences. -/
+theorem renyiDiv_prod {β : Type*} [MeasurableSpace β] {a : ℝ} (ha : 1 < a)
+    {μ₁ ν₁ : Measure α} {μ₂ ν₂ : Measure β} [SigmaFinite μ₁] [SigmaFinite ν₁]
+    [SigmaFinite μ₂] [SigmaFinite ν₂] (h₁ : μ₁ ≪ ν₁) (h₂ : μ₂ ≪ ν₂) :
+    renyiDiv a (μ₁.prod μ₂) (ν₁.prod ν₂) = renyiDiv a μ₁ ν₁ * renyiDiv a μ₂ ν₂ := by
+  rw [renyiDiv_eq_rpow ha, renyiDiv_eq_rpow ha, renyiDiv_eq_rpow ha,
+    renyiMGF_prod (zero_lt_one.trans ha).le h₁ h₂,
+    ENNReal.mul_rpow_of_nonneg _ _ (inv_nonneg.2 (sub_pos.2 ha).le)]
+
+/-! ### Max-divergence -/
+
+open scoped Classical in
+/-- The max-divergence, the Renyi divergence of order `∞`: the essential supremum of the
+likelihood ratio, and `⊤` without absolute continuity. -/
+noncomputable def maxDiv (μ ν : Measure α) : ℝ≥0∞ :=
+  if μ ≪ ν then essSup (μ.rnDeriv ν) ν else ⊤
+
+/-- Every event's mass is at most the max-divergence times its reference mass. -/
+theorem measure_le_maxDiv_mul {μ ν : Measure α} [SigmaFinite μ] [SigmaFinite ν] (hac : μ ≪ ν)
+    (s : Set α) : μ s ≤ maxDiv μ ν * ν s := by
+  classical
+  simp only [maxDiv, hac, ↓reduceIte]
+  calc μ s = ∫⁻ x in s, μ.rnDeriv ν x ∂ν := (Measure.setLIntegral_rnDeriv hac s).symm
+    _ ≤ ∫⁻ _ in s, essSup (μ.rnDeriv ν) ν ∂ν :=
+        lintegral_mono_ae (ae_restrict_of_ae (ENNReal.ae_le_essSup _))
+    _ = essSup (μ.rnDeriv ν) ν * ν s := setLIntegral_const _ _
+
+/-- A nonzero measure has max-divergence one against itself. -/
+@[simp]
+theorem maxDiv_self (μ : Measure α) [SigmaFinite μ] [NeZero μ] : maxDiv μ μ = 1 := by
+  classical
+  simp only [maxDiv, Measure.AbsolutelyContinuous.refl, ↓reduceIte]
+  rw [essSup_congr_ae (Measure.rnDeriv_self μ), essSup_const _ (NeZero.ne μ)]
+
+/-- The max-divergence bounds the Renyi divergence of every finite order. -/
+theorem renyiDiv_le_maxDiv {a : ℝ} (ha : 1 < a) (μ ν : Measure α) [IsProbabilityMeasure μ]
+    [SigmaFinite ν] : renyiDiv a μ ν ≤ maxDiv μ ν := by
+  classical
+  by_cases hac : μ ≪ ν
+  swap
+  · simp [maxDiv, hac]
+  by_cases htop : maxDiv μ ν = ⊤
+  · rw [htop]; exact le_top
+  have hle : μ ≤ (maxDiv μ ν).toNNReal • ν := by
+    refine Measure.le_iff.2 fun s _ => ?_
+    rw [Measure.smul_apply, ENNReal.smul_def, smul_eq_mul, ENNReal.coe_toNNReal htop]
+    exact measure_le_maxDiv_mul hac s
+  simpa [ENNReal.coe_toNNReal htop] using renyiDiv_le_of_le_smul ha hle
 
 end InformationTheory

@@ -5,10 +5,16 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.ProbComp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 
 /-!
 # Pseudorandom Generators (PRGs)
@@ -23,8 +29,8 @@ from a truly random output `r`.
 
 - `PRGScheme S R` — a PRG with seed space `S` and output space `R`.
 - `PRGAdversary R` — a distinguisher receiving a single value in `R`.
-- `prgRealExp` — the real experiment (adversary sees `gen(s)` for random `s`).
-- `prgIdealExp` — the ideal experiment (adversary sees random `r`).
+- `prgRealExperiment` — the real experiment (adversary sees `gen(s)` for random `s`).
+- `prgIdealExperiment` — the ideal experiment (adversary sees random `r`).
 - `prgAdvantage` — distinguishing advantage.
 -/
 
@@ -48,19 +54,19 @@ abbrev PRGAdversary (R : Type) := R → ProbComp Bool
 
 /-- Real PRG experiment: sample a random seed and let the adversary
 see the PRG output. -/
-def prgRealExp [SampleableType S] (prg : PRGScheme S R) (adversary : PRGAdversary R) :
+def prgRealExperiment [SampleableType S] (prg : PRGScheme S R) (adversary : PRGAdversary R) :
     ProbComp Bool := do
   let s ← $ᵗ S
   adversary (prg.gen s)
 
 /-- Ideal PRG experiment: let the adversary see a uniformly random value. -/
-def prgIdealExp [SampleableType R] (adversary : PRGAdversary R) : ProbComp Bool := do
+def prgIdealExperiment [SampleableType R] (adversary : PRGAdversary R) : ProbComp Bool := do
   let r ← $ᵗ R
   adversary r
 
 /-- PRG advantage: how well the adversary distinguishes PRG output from random. -/
 noncomputable def prgAdvantage [SampleableType S] [SampleableType R]
-    (prg : PRGScheme S R) (adversary : PRGAdversary R) : ℝ :=
-  (prg.prgRealExp adversary).boolDistAdvantage (prgIdealExp adversary)
+    (prg : PRGScheme S R) (adversary : PRGAdversary R) : ℝ≥0∞ :=
+  𝒟[prg.prgRealExperiment adversary].boolDist 𝒟[prgIdealExperiment adversary]
 
 end PRGScheme

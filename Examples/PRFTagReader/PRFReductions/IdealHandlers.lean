@@ -343,26 +343,26 @@ lemma simulateQ_singleIdeal_collapse
 
 /-- The multiple-session ideal-PRF experiment is the composed handler `multipleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
-lemma prfIdealExp_unlinkToMultiplePRFReduction_eq_run'
+lemma prfIdealExperiment_unlinkToMultiplePRFReduction_eq_run'
     (adv : UnlinkAdversary TagId Nonce Digest) :
-    PRFScheme.prfIdealExp (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
+    PRFScheme.prfIdealExperiment (unlinkToMultiplePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adv) =
       (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run' (UnlinkState.init, ∅) := by
-  unfold PRFScheme.prfIdealExp unlinkToMultiplePRFReduction
+  unfold PRFScheme.prfIdealExperiment unlinkToMultiplePRFReduction
   simp only [StateT.run'_eq, simulateQ_map, StateT.run_map]
   rw [simulateQ_multipleIdeal_collapse adv UnlinkState.init ∅]
   simp only [Functor.map_map]
 
 /-- The single-session ideal-PRF experiment is the composed handler `singleIdealQueryImpl`
 simulated over the adversary from the initial state. -/
-lemma prfIdealExp_unlinkToSinglePRFReduction_eq_run'
+lemma prfIdealExperiment_unlinkToSinglePRFReduction_eq_run'
     (adv : UnlinkAdversary TagId Nonce Digest) :
-    PRFScheme.prfIdealExp (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
+    PRFScheme.prfIdealExperiment (unlinkToSinglePRFReduction (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag) adv) =
       (simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run' (UnlinkState.init, ∅) := by
-  unfold PRFScheme.prfIdealExp unlinkToSinglePRFReduction
+  unfold PRFScheme.prfIdealExperiment unlinkToSinglePRFReduction
   simp only [StateT.run'_eq, simulateQ_map, StateT.run_map]
   rw [simulateQ_singleIdeal_collapse adv UnlinkState.init ∅]
   simp only [Functor.map_map]
@@ -477,24 +477,6 @@ lemma singleIdealQueryImpl_reader_run
       ((unlinkToSinglePRFReaderImpl transcript).run s)).run c) >>=
       (fun r => pure (r.1.1, r.1.2, r.2)) = _
   simp [simulateQ_prfIdeal_unlinkToSinglePRFReaderImpl_run transcript s c]
-
-/-- Base case of the multiple-vs-single ideal-world coupling induction: on a `pure`
-adversary the multiple- and single-session ideal handlers return the same bit, so the
-multiple-world success probability is trivially bounded by the single-world one plus the
-bad-event probability. Holds for arbitrary (not necessarily coupled) initial states. -/
-lemma multipleIdeal_le_singleIdeal_add_bad_pure (b : Bool)
-    (sM : UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache)
-    (sS : UnlinkState TagId × (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
-    (sB : UnlinkBadState TagId Nonce Digest) :
-    Pr[= true | (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (pure b)).run' sM] ≤
-      Pr[= true | (simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (pure b)).run' sS] +
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-        (simulateQ (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)) (pure b)).run sB] := by
-  simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-  exact le_add_right (le_refl _)
 
 end UnlinkReduction
 

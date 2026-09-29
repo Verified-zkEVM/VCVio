@@ -9,7 +9,7 @@ module
 public import Examples.PRFTagReader.PRFReductions
 public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # PRF Tag/Reader Protocol — Composed-Handler Eager-Table Equivalence
@@ -21,7 +21,7 @@ The eager-table reformulation of the composed ideal handlers, in four parts:
   `evalDist_simulateQ_multipleIdealQueryImpl_run'_eq_tableExtending`;
 * the composed single-world measure equivalence
   `evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending`;
-* the eager-form single-world success probability `probOutput_singleIdeal_run'_eq_tableSample`
+* the eager-form single-world output distribution `evalDist_singleIdeal_run'_eq_tableSample`
   and the `projectTable` helper that bridges the two table types.
 
 All declarations live inside `section EagerComposed`; the PRF key type `K` does not appear in
@@ -31,7 +31,6 @@ the eager-table reformulation.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
-open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
@@ -40,7 +39,7 @@ section UnlinkReduction
 /-! ### Composed-handler eager-table equivalence
 
 The composed ideal handler `multipleIdealQueryImpl` embeds the lazy random oracle inside a
-stateful handler over `UnlinkOracleSpec`. Structural induction and native uniform-table
+stateful handler over `UnlinkOracleSpec`. Structural induction and uniform-table
 resampling show that running it from `(s, c)` has the same measure as sampling a full table `g`,
 overlaying the cache `c`, and running `multipleTableHandler` against that table. Uniformity of
 the digest and table samplers is explicit in the measure theorem.
@@ -802,25 +801,25 @@ lemma evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
       beta_reduce
       rw [hAccept]
 
-/-! #### Eager-form success probabilities
+/-! #### Eager-form output probabilities
 
 With both ideal worlds shown equal in distribution to deterministic table-handler runs,
-the two ideal-world success probabilities are exposed as
+the two ideal-world output probabilities are exposed as
 table-sampled deterministic runs from the empty cache (`tableExtending ∅ g = g`). These are the
 precise eager forms on which the coupled-table union bound operates. -/
 
-/-- Eager form of the single-session ideal success probability: sample a full random-oracle
+/-- Eager form of the single-session ideal output distribution: sample a full random-oracle
 table `g`, then run the deterministic real single-session table handler. -/
-lemma probOutput_singleIdeal_run'_eq_tableSample [Fintype Nonce] [Finite Digest]
+lemma evalDist_singleIdeal_run'_eq_tableSample [Fintype Nonce] [Finite Digest]
     (adv : UnlinkAdversary TagId Nonce Digest) :
-    Pr[= true | (simulateQ (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) adv).run'
+    𝒟[(simulateQ (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag)) adv).run'
         (UnlinkState.init, ∅)] =
-      Pr[= true | ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= fun g =>
+      𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>= fun g =>
           (simulateQ (singleTableHandler g) adv).run' UnlinkState.init] := by
   let : MeasurableSpace Digest := ⊤
-  rw [← evalDist_apply_singleton, ← evalDist_apply_singleton,
-    evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
-      evalDist_uniformSample evalDist_uniformSample adv UnlinkState.init ∅]
+  rw [evalDist_simulateQ_singleIdealQueryImpl_run'_eq_tableExtending
+    SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample adv
+    UnlinkState.init ∅]
   simp only [OracleComp.tableExtending_empty]
 
 /-- The reference-slot projection of a single-session random-oracle table onto a multiple-session

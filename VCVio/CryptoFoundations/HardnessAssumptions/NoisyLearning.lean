@@ -5,9 +5,12 @@ Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import Mathlib.LinearAlgebra.Matrix.DotProduct
 import VCVio.EvalDist.ProbabilityNotation
 
@@ -89,31 +92,40 @@ def uniformDistr (problem : Problem Sample Secret Output) :
 abbrev Adversary (_problem : Problem Sample Secret Output) :=
   Sample × Output → ProbComp Bool
 
-/-- The decision experiment: flip `b`, give the adversary either the real
+/-- The decision game: flip `b`, give the adversary either the real
 distribution or the matching reference one, then check whether the guess
 matches `b`. -/
-def experiment [Add Output] (problem : Problem Sample Secret Output)
+def game [Add Output] (problem : Problem Sample Secret Output)
     (adv : Adversary problem) : ProbComp Bool := do
   let b ← $ᵗ Bool
   let sample ← if b then distr problem else uniformDistr problem
   let b' ← adv sample
   return (b == b')
 
-/-- Distinguishing advantage for the decision experiment. -/
+/-- Distinguishing advantage for the decision game: its Boolean bias. -/
 noncomputable def advantage [Add Output] (problem : Problem Sample Secret Output)
-    (adv : Adversary problem) : ℝ :=
-  (experiment problem adv).boolBiasAdvantage
+    (adv : Adversary problem) : ℝ≥0∞ :=
+  𝒟[game problem adv].boolBias
 
-/-- Game 0: the adversary sees a sample from the real distribution. -/
-def game0 [Add Output] (problem : Problem Sample Secret Output)
+/-- The real world: the adversary sees a sample from the real distribution. -/
+def realExperiment [Add Output] (problem : Problem Sample Secret Output)
     (adv : Adversary problem) : ProbComp Bool := do
   adv (← distr problem)
 
-/-- Game 1: the adversary sees a sample from the matching reference
+/-- The random world: the adversary sees a sample from the matching reference
 distribution. -/
-def game1 (problem : Problem Sample Secret Output)
+def randomExperiment (problem : Problem Sample Secret Output)
     (adv : Adversary problem) : ProbComp Bool := do
   adv (← uniformDistr problem)
+
+/-- The decision advantage is the Boolean distance between `realExperiment` and
+`randomExperiment`. -/
+theorem advantage_eq_boolDist [Add Output] (problem : Problem Sample Secret Output)
+    (adv : Adversary problem) :
+    advantage problem adv =
+      𝒟[realExperiment problem adv].boolDist 𝒟[randomExperiment problem adv] := by
+  rw [advantage, ← evalDist_boolBias_bind_uniformBool]
+  simp only [game, realExperiment, randomExperiment, bind_assoc]
 
 /-- A search adversary for a noisy-learning problem. -/
 abbrev SearchAdversary (_problem : Problem Sample Secret Output) :=
@@ -138,13 +150,14 @@ def searchExperiment [Add Output] [DecidableEq Secret]
 open scoped Classical in
 /-- Search advantage for the noisy-learning experiment. -/
 noncomputable def searchAdvantage [Add Output]
-    (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) : ℝ :=
-  (𝒟[searchExperiment problem adv] {true}).toReal
+    (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) : ℝ≥0∞ :=
+  𝒟[searchExperiment problem adv] {true}
 
-/-- The event-style search advantage agrees with the Boolean experiment's success mass. -/
+/-- The search advantage is the success mass of the search experiment under any decidable
+equality on secrets. -/
 theorem searchAdvantage_eq_evalDist_searchExperiment [Add Output] [DecidableEq Secret]
     (problem : Problem Sample Secret Output) (adv : SearchAdversary problem) :
-    searchAdvantage problem adv = (𝒟[searchExperiment problem adv] {true}).toReal := by
+    searchAdvantage problem adv = 𝒟[searchExperiment problem adv] {true} := by
   unfold searchAdvantage
   congr
 

@@ -11,7 +11,7 @@ public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Bounded native WP regressions
+# Bounded WP regressions
 
 Probability assertions apply to unsuccessful runs and weighted oracle responses. Ordinary
 imports supply the interpretation, public value laws, and congruence automation.
@@ -24,9 +24,8 @@ open scoped ENNReal MeasureProgramLogic.Probabilistic
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "bounded native WP unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "bounded WP unexpectedly imports PMF"
 
 namespace VCVioTest.ProgramLogic.BoundedMeasureWP
 
@@ -62,7 +61,7 @@ noncomputable instance weightedMeasureSpec : OracleSpec.IsMeasureSpec WeightedSp
 example : (wp (WeightedSpec.query 0 : OracleComp WeightedSpec Bool)
     (fun answer ↦ Prob.indicator (answer = true)) Lean.Order.bot).val = 0 := by
   rw [MeasureProgramLogic.Probabilistic.wp_val_eq_lintegral _ _ Measurable.of_discrete]
-  simp only [OracleComp.evalDist_liftM_query]
+  simp only [OracleComp.evalDist_liftM_query (spec := WeightedSpec), MeasureTheory.trim_eq_self]
   simp [OracleSpec.IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure]
 
 end VCVioTest.ProgramLogic.BoundedMeasureWP

@@ -8,6 +8,8 @@ module
 
 public import VCVio.CryptoFoundations.Fischlin.Completeness
 
+import VCVio.ProgramLogic.Unary.HoareTriple
+
 /-!
 # Fischlin online extraction and logged verification
 -/
@@ -22,7 +24,7 @@ namespace Fischlin
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
-open ENNReal OracleComp.EvalDist
+open ENNReal OracleComp.ProgramLogic
 
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -230,7 +232,7 @@ output is either `none` or an invalid witness.
 The `prover` argument is the raw function rather than `KnowledgeSoundnessAdversary`
 to keep type inference tractable. -/
 @[expose]
-def knowledgeSoundnessExp
+def knowledgeSoundnessExperiment
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (prover : Stmt → M →
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
@@ -249,7 +251,7 @@ def knowledgeSoundnessExp
     let extracted ← onlineExtract σ ρ b M x π roLog
     return (verified && !(match extracted with | some w => rel x w | none => false))
 
-/-- The verification step of `knowledgeSoundnessExp`, as a standalone computation
+/-- The verification step of `knowledgeSoundnessExperiment`, as a standalone computation
 (definitionally the same term). -/
 private def ksVerify
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
@@ -262,8 +264,8 @@ private def ksVerify
     ((Fischlin (m := OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M))
       σ hr ρ b S M).verify x msg π)).run cache
 
-/-- The sampling phase of `knowledgeSoundnessExp` (prover run + verification), keeping the proof,
-the random-oracle log, and the verdict, but discarding the extractor. -/
+/-- The sampling phase of `knowledgeSoundnessExperiment` (prover run + verification), keeping the
+proof, the random-oracle log, and the verdict, but discarding the extractor. -/
 private def ksSample
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (prover : Stmt → M →
@@ -284,33 +286,15 @@ private def ksSample
           σ hr ρ b S M).verify x msg π)).run cache
     return ((π, roLog), verified)
 
-/-- If the scan fires (and the proof verifies per repetition), the "bad-output" map of the
-extractor result never produces `true`. -/
-private lemma probOutput_onlineExtract_bad_eq_zero
-    (hss : σ.SpeciallySound)
-    {x : Stmt} {π : FischlinProof Commit Chal Resp ρ}
-    {log : QueryLog (fischlinROSpec Stmt Commit Chal Resp ρ b M)}
-    (hver : ∀ i, σ.verify x (π i).1 (π i).2.1 (π i).2.2 = true)
-    (hfw : fischlinFindWitness σ ρ b M x π log ≠ none) :
-    Pr[= true | do
-      let e ← onlineExtract σ ρ b M x π log
-      return !(match e with | some w => rel x w | none => false)] = 0 := by
-  rw [probOutput_bind_eq_tsum]
-  refine ENNReal.tsum_eq_zero.mpr fun e => ?_
-  by_cases he : e ∈ support (onlineExtract σ ρ b M x π log)
-  · obtain ⟨w, rfl, hrel⟩ :=
-      onlineExtract_support_of_findWitness_ne_none σ ρ b M hss hver hfw e he
-    simp [hrel]
-  · simp [probOutput_eq_zero_of_not_mem_support he]
-
 /-- **Bad-event bridge.** The bad event of the knowledge-soundness experiment is bounded by the
 probability that the verifier accepts while the extractor's scan misses.
 
 The hypothesis `hverSupp` isolates the remaining combinatorial fact about the Fischlin verifier:
 any accepting run of the (simulated) verifier implies per-repetition Σ-verification of the proof
 (the Σ-verification bits inside `Fischlin.verify` are deterministic, independent of the oracle
-answers). -/
-private lemma knowledgeSoundnessExp_bad_le_misses
+answers). When the scan fires, special soundness makes every extracted witness valid, so the bad
+output is unreachable. -/
+private lemma knowledgeSoundnessExperiment_bad_le_misses
     [DecidableEq Resp] [FinEnum Chal] [Inhabited Chal] [Inhabited Resp] [DecidableEq M]
     (hss : σ.SpeciallySound)
     (prover : Stmt → M →
@@ -322,50 +306,47 @@ private lemma knowledgeSoundnessExp_bad_le_misses
       (c' : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache),
       (true, c') ∈ support (ksVerify σ hr ρ b S M x msg π cache) →
       ∀ i, σ.verify x (π i).1 (π i).2.1 (π i).2.2 = true) :
-    Pr[= true | knowledgeSoundnessExp σ hr ρ b S M prover x msg] ≤
-      Pr[fun out => out.2 = true ∧ fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none
-        | ksSample σ hr ρ b S M prover x msg] := by
-  simp only [knowledgeSoundnessExp, ksSample]
-  rw [probOutput_bind_eq_tsum, probEvent_bind_eq_tsum]
-  refine ENNReal.tsum_le_tsum fun a => mul_le_mul' le_rfl ?_
+    𝒟[knowledgeSoundnessExperiment σ hr ρ b S M prover x msg] {true} ≤
+      Pr{let out ← ksSample σ hr ρ b S M prover x msg}[out.2 = true ∧
+        fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none] := by
+  classical
+  rw [← prEvent_eq_evalDist_singleton, prEvent_eq_wp_indicator, prEvent_eq_wp_indicator]
+  simp only [knowledgeSoundnessExperiment, ksSample, wp_bind]
+  refine wp_mono _ fun a => ?_
   obtain ⟨⟨π', roLog'⟩, cache'⟩ := a
-  rw [probOutput_bind_eq_tsum_subtype, probEvent_bind_eq_tsum_subtype]
-  refine ENNReal.tsum_le_tsum fun vc => mul_le_mul' le_rfl ?_
-  obtain ⟨⟨v, c'⟩, hvc⟩ := vc
+  refine wp_mono_of_support _ fun vc hvc => ?_
+  obtain ⟨v, c'⟩ := vc
   cases v with
-  | false =>
-    have hzero : Pr[= true | do
-        let _e ← onlineExtract σ ρ b M x π' roLog'
-        return false] = 0 := by
-      simp
-    exact le_trans (le_of_eq hzero) zero_le
+  | false => simp
   | true =>
     by_cases hfw : fischlinFindWitness σ ρ b M x π' roLog' = none
-    · refine le_trans probOutput_le_one (le_of_eq ?_)
-      rw [probEvent_pure]
-      simp [hfw]
+    · simp only [wp_pure, hfw, and_self, ite_true]
+      exact wp_le_const_of_support _ fun _ _ => by split_ifs <;> simp
     · have hver := hverSupp π' cache' c' hvc
-      have hzero := probOutput_onlineExtract_bad_eq_zero σ ρ b M hss hver hfw
-      exact le_trans (le_of_eq hzero) zero_le
+      simp only [wp_pure, hfw, and_false, ite_false]
+      refine (wp_le_const_of_support _ fun e he => ?_)
+      obtain ⟨w, rfl, hrel⟩ :=
+        onlineExtract_support_of_findWitness_ne_none σ ρ b M hss hver hfw e he
+      simp [hrel]
 
 end extraction
 
 /-! ### Logged and unlogged random-oracle runs -/
 
 /-- The lifted `unifSpec` forwarder on the logging stack, exactly as in
-`knowledgeSoundnessExp`. -/
+`knowledgeSoundnessExperiment`. -/
 private def idImplW {ι : Type} (hashSpec : OracleSpec ι) :
     QueryImpl unifSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   unifSpec.passthrough
 
-/-- The logged random oracle, exactly as in `knowledgeSoundnessExp`. -/
+/-- The logged random oracle, exactly as in `knowledgeSoundnessExperiment`. -/
 private def loggedROW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl hashSpec (WriterT (QueryLog hashSpec) (StateT hashSpec.QueryCache ProbComp)) :=
   (hashSpec.randomOracle).withLogging
 
 /-- The combined logging implementation, exactly the `unifSpec.passthrough + loggedRO` of
-`knowledgeSoundnessExp` and `ksSample`. -/
+`knowledgeSoundnessExperiment` and `ksSample`. -/
 private def compositeW {ι : Type} (hashSpec : OracleSpec ι) [DecidableEq ι]
      [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)] :
     QueryImpl (unifSpec + hashSpec)

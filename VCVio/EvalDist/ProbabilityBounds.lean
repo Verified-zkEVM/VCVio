@@ -38,15 +38,8 @@ theorem prEvent_bind_sq_le_bind_pair
   have hpair :
       Pr{let x ← source; let a ← f x; let b ← f x}[p a ∧ p b] =
         ∫⁻ x, Pr{let a ← f x}[p a] ^ 2 ∂𝒟[source] := by
-    calc
-      _ = Pr{let z ← (source >>= fun x ↦ do
-              let a ← f x
-              let b ← f x
-              return (a, b))}[p z.1 ∧ p z.2] := by
-        simp only [bind_assoc, pure_bind]
-      _ = _ := by
-        rw [prEvent_bind_eq_lintegral_of_discrete]
-        simp only [bind_assoc, pure_bind, prEvent_bind_bind_and, sq]
+    rw [prEvent_bind_of_discrete]
+    simp only [prEvent_bind_bind_and, sq]
   rw [prEvent_bind_eq_lintegral_of_discrete, hpair]
   exact ENNReal.sq_lintegral_le_lintegral_sq Measurable.of_discrete.aemeasurable
 
@@ -85,6 +78,24 @@ theorem prEvent_exists_finset_le {ι : Type} (s : Finset ι) (mx : m α) (p : ι
   intro x hx
   obtain ⟨i, hi, hp⟩ := hx
   exact Set.mem_biUnion hi hp
+
+/-- Over a finite type of values, the event that an optional observation is present has the total
+probability of its individual values. -/
+theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
+    Pr{let x ← mx}[(f x).isSome] = ∑ k, Pr{let x ← mx}[f x = some k] := by
+  let : MeasurableSpace α := ⊤
+  simp only [prEvent_eq_evalDist_of_discrete]
+  rw [← measure_biUnion_finset (fun i _ j _ hij ↦ Set.disjoint_left.mpr fun _ hi hj ↦
+      hij (Option.some.inj (hi.symm.trans hj))) fun _ _ ↦ MeasurableSet.of_discrete]
+  congr 1
+  ext x
+  simp [Option.isSome_iff_exists]
+
+/-- Disjoint selector events of one computation have total probability at most one. -/
+theorem sum_prEvent_eq_some_le_one {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
+    ∑ k, Pr{let x ← mx}[f x = some k] ≤ 1 := by
+  rw [← prEvent_isSome_eq_sum]
+  exact prEvent_le_one _
 
 /-- Union bound over a finite type. -/
 theorem prEvent_exists_le {ι : Type} [Fintype ι] (mx : m α) (p : ι → α → Prop) :
@@ -139,7 +150,7 @@ theorem prEvent_le_prEvent_add_of_prEvent_not_and_not_le {β : Type} (mx : m α)
     (h : Pr{let x ← mx}[¬p x ∧ ¬bad x] ≤ Pr{let y ← my}[¬q y]) :
     Pr{let y ← my}[q y] ≤ Pr{let x ← mx}[bad x] + Pr{let x ← mx}[p x] := by
   refine ENNReal.le_of_add_le_add_right (a := Pr{let y ← my}[¬q y])
-    (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one my _)) ?_
+    (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one _)) ?_
   rw [prEvent_add_prEvent_not_eq_prEvent_true]
   calc Pr{let _ ← my}[True] ≤ Pr{let _ ← mx}[True] := hmass
     _ = Pr{let x ← mx}[p x] + Pr{let x ← mx}[¬p x] :=
@@ -179,6 +190,40 @@ theorem prEvent_bind_le_of_forall_le (mx : m α) (f : α → m β) (q : β → P
     _ = ε * 𝒟[mx] Set.univ := lintegral_const ε
     _ ≤ ε := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
 
+/-- A pointwise comparison of continuation events survives a common draw. -/
+theorem prEvent_bind_mono_of_forall_le {γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
+    (p : β → Prop) (q : γ → Prop) (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
+    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
+  exact lintegral_mono h
+
+/-- A continuation event bounded by `ε` where `p` holds, and null where it fails, is bounded after
+a common draw by the probability of `p` times `ε`. -/
+theorem prEvent_bind_le_prEvent_mul_of_forall_le (mx : m α) (f : α → m β) (p : α → Prop)
+    (q : β → Prop) {ε : ℝ≥0∞} (h₁ : ∀ a, p a → Pr{let y ← f a}[q y] ≤ ε)
+    (h₂ : ∀ a, ¬ p a → Pr{let y ← f a}[q y] = 0) :
+    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] * ε := by
+  classical
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_eq_evalDist_of_discrete, mul_comm,
+    ← lintegral_indicator_const MeasurableSet.of_discrete]
+  refine lintegral_mono fun a => ?_
+  by_cases hp : p a
+  · simpa [Set.indicator_of_mem (show a ∈ {x | p x} from hp)] using h₁ a hp
+  · rw [Set.indicator_of_notMem (show a ∉ {x | p x} from hp), h₂ a hp]
+
+/-- A pointwise split of a continuation event into two other continuation events survives a
+common draw. -/
+theorem prEvent_bind_le_add_of_forall_le {γ δ : Type} (mx : m α) (f : α → m β)
+    (g : α → m γ) (k : α → m δ) (p : β → Prop) (q : γ → Prop) (r : δ → Prop)
+    (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y] + Pr{let y ← k a}[r y]) :
+    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] + Pr{let y ← mx >>= k}[r y] := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete,
+    prEvent_bind_eq_lintegral_of_discrete, ← lintegral_add_left Measurable.of_discrete]
+  exact lintegral_mono h
+
 /-- A uniform lower bound on the event of every continuation bounds the event after a lossless
 common draw. -/
 theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
@@ -190,6 +235,15 @@ theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] =
   rw [prEvent_bind_eq_lintegral_of_discrete]
   calc ε = ∫⁻ _, ε ∂𝒟[mx] := by rw [lintegral_const, hmx, mul_one]
     _ ≤ _ := lintegral_mono h
+
+/-- A continuation event with the same probability after every draw keeps that probability after a
+lossless draw. -/
+theorem prEvent_bind_eq_of_forall_eq (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
+    (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
+    (h : ∀ a, Pr{let y ← f a}[q y] = ε) :
+    Pr{let y ← mx >>= f}[q y] = ε :=
+  le_antisymm (prEvent_bind_le_of_forall_le mx f q fun a ↦ (h a).le)
+    (le_prEvent_bind_of_forall_le mx hmx f q fun a ↦ (h a).ge)
 
 /-- Multiplying a lower bound for a prefix event by a uniform conditional lower bound gives a
 lower bound for the event after the bind. -/
@@ -235,7 +289,7 @@ theorem prEvent_bind_le_prEvent_add_mul_prEvent_not (mx : m α) (f : α → m β
     by_cases hpa : p a
     · rw [Set.indicator_of_mem (show a ∈ {a | p a} from hpa),
         Set.indicator_of_notMem (show a ∉ {a | ¬ p a} from not_not.mpr hpa), add_zero]
-      exact prEvent_le_one _ _
+      exact prEvent_le_one _
     · rw [Set.indicator_of_notMem (show a ∉ {a | p a} from hpa),
         Set.indicator_of_mem (show a ∈ {a | ¬ p a} from hpa), zero_add]
       exact h a hpa
@@ -264,7 +318,7 @@ theorem prEvent_bind_le_prEvent_add (mx : m α) (f : α → m β)
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q h).trans
-    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one mx fun a ↦ ¬ p a)) _)
+    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 end conditioning
 
@@ -303,6 +357,19 @@ theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
   conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [prEvent_map, prEvent_map]
   exact prEvent_mono _ _ _ fun a ha ↦ h a.1 a.2 ha
+
+/-- Events that agree on every structurally reachable output have equal probability. -/
+theorem prEvent_congr_of_support (mx : m α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a ↔ q a) :
+    Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] :=
+  le_antisymm (prEvent_mono_of_support mx p q fun a ha ↦ (h a ha).1)
+    (prEvent_mono_of_support mx q p fun a ha ↦ (h a ha).2)
+
+/-- An event avoiding every structurally reachable output has probability zero. -/
+theorem prEvent_eq_zero_of_forall_mem_support (mx : m α) (p : α → Prop)
+    (h : ∀ a ∈ support mx, ¬ p a) : Pr{let a ← mx}[p a] = 0 :=
+  (prEvent_congr_of_support mx p (fun _ ↦ False) fun a ha ↦ iff_false_intro (h a ha)).trans
+    (prEvent_eq_zero_of_forall_not mx _ fun _ ↦ id)
 
 /-- A bound on the event of every reachable continuation bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)
@@ -347,6 +414,6 @@ theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q h).trans
-    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one mx fun a ↦ ¬ p a)) _)
+    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 end attach

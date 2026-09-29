@@ -8,22 +8,19 @@ module
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.OracleComp.Constructions.BitVec
 public import VCVio.ProgramLogic.Tactics.Relational
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVioWidgets.GameHop.Panel
-import VCVio.OracleComp.EvalDist.UniformCompatibility
 
 /-!
 # One Time Pad
 
 This file defines the one-time pad scheme, proves correctness, and proves perfect secrecy
-in the canonical independence form used by `SymmEncAlg.perfectSecrecyAt`.
+in both the independence form `SymmEncAlg.perfectSecrecyAt` and the channel form
+`SymmEncAlg.ciphertextRowsEqualAt`.
 
-The native measure laws give the Dirac correctness distribution and a product distribution
-for message and ciphertext. Their singleton consequences supply the discrete `SymmEncAlg`
-predicates during migration.
-
-Fixed-message uniformity gives equal ciphertext rows directly, and a compatibility bridge
-exports the corresponding `GameEquiv` statement.
+The measure laws give the Dirac correctness distribution, a product distribution for message
+and ciphertext, and a uniform ciphertext measure for every fixed message, so the ciphertexts of
+any two messages are equal in distribution.
 -/
 
 @[expose] public section
@@ -34,7 +31,7 @@ open Mathlib OracleSpec OracleComp ENNReal
 
 /-- The one-time-pad scheme body, parameterized only by its key sampler.
 
-Keeping encryption and decryption here gives the discrete and measure-native examples one shared
+Keeping encryption and decryption here gives the `ProbComp` and fair-coin examples one shared
 scheme implementation. -/
 abbrev oneTimePadOfKeygen {m : Type → Type} [Monad m] (sp : ℕ) (keygen : m (BitVec sp)) :
     SymmEncAlg m (BitVec sp) (BitVec sp) (BitVec sp) where
@@ -50,53 +47,39 @@ def oneTimePad (sp : ℕ) :
 namespace oneTimePad
 
 /-- The one-time-pad experiment has independent message and ciphertext measures under
-the native uniform-oracle interpretation. -/
-theorem evalDist_perfectSecrecyExp (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
-    𝒟[(oneTimePad sp).PerfectSecrecyExp mgen] =
+the uniform-oracle interpretation. -/
+theorem evalDist_perfectSecrecyExperiment (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
+    𝒟[(oneTimePad sp).perfectSecrecyExperiment mgen] =
       𝒟[mgen].prod (ProbabilityTheory.uniformOn Set.univ :
         MeasureTheory.Measure (BitVec sp)) := by
-  simpa [SymmEncAlg.PerfectSecrecyExp, oneTimePad, monad_norm] using
+  simpa [SymmEncAlg.perfectSecrecyExperiment, oneTimePad, monad_norm] using
     evalDist_pair_xor_uniformSample sp mgen
 
 /-- A one-time-pad round trip denotes the Dirac measure at the original message. -/
-theorem evalDist_completeExp (sp : ℕ) (msg : BitVec sp) :
-    𝒟[(oneTimePad sp).CompleteExp msg] = MeasureTheory.Measure.dirac (some msg) := by
-  have hsimp : (oneTimePad sp).CompleteExp msg =
+theorem evalDist_completenessExperiment (sp : ℕ) (msg : BitVec sp) :
+    𝒟[(oneTimePad sp).completenessExperiment msg] = MeasureTheory.Measure.dirac (some msg) := by
+  have hsimp : (oneTimePad sp).completenessExperiment msg =
       (fun _ : BitVec sp => (some msg : Option (BitVec sp))) <$>
         ($ᵗ BitVec sp : ProbComp (BitVec sp)) := by
-    simp [SymmEncAlg.CompleteExp, oneTimePad, monad_norm]
+    simp [SymmEncAlg.completenessExperiment, oneTimePad, monad_norm]
   rw [hsimp, evalDist_map_of_discrete, MeasureTheory.Measure.map_const,
     OracleComp.evalDist_apply_univ_eq_one]
   simp
 
 /-- Encryption and decryption are inverses for any OTP key. -/
-lemma complete (sp : ℕ) : (oneTimePad sp).Complete := by
-  intro msg
-  rw [← evalDist_apply_singleton, evalDist_completeExp]
-  simp
+lemma complete (sp : ℕ) : (oneTimePad sp).Complete :=
+  evalDist_completenessExperiment sp
 
 /-- The one-time-pad ciphertext has a uniform measure for every message sampler. -/
-theorem evalDist_perfectSecrecyCipherExp (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
-    𝒟[(oneTimePad sp).PerfectSecrecyCipherExp mgen] =
+theorem evalDist_perfectSecrecyCipherExperiment (sp : ℕ) (mgen : ProbComp (BitVec sp)) :
+    𝒟[(oneTimePad sp).perfectSecrecyCipherExperiment mgen] =
       (ProbabilityTheory.uniformOn Set.univ : MeasureTheory.Measure (BitVec sp)) := by
-  simpa [SymmEncAlg.PerfectSecrecyCipherExp, SymmEncAlg.PerfectSecrecyExp, oneTimePad,
+  simpa [SymmEncAlg.perfectSecrecyCipherExperiment, SymmEncAlg.perfectSecrecyExperiment, oneTimePad,
     monad_norm] using evalDist_cipher_from_pair_uniformSample sp mgen
 
-lemma probOutput_cipher_uniform (sp : ℕ)
-    (mgen : ProbComp (BitVec sp)) (σ : BitVec sp) :
-    Pr[= σ | (oneTimePad sp).PerfectSecrecyCipherExp mgen] =
-      (Fintype.card (BitVec sp) : ℝ≥0∞)⁻¹ := by
-  rw [← evalDist_apply_singleton, evalDist_perfectSecrecyCipherExp,
-    ProbabilityTheory.uniformOn_univ_apply_singleton]
-
 /-- The one-time pad is perfectly secret in the canonical independence form. -/
-lemma perfectSecrecyAt (sp : ℕ) : (oneTimePad sp).perfectSecrecyAt := by
-  intro mgen msg σ
-  simp only [← evalDist_apply_singleton, evalDist_perfectSecrecyExp,
-    evalDist_perfectSecrecyCipherExp]
-  simpa only [Set.singleton_prod_singleton] using
-    (MeasureTheory.Measure.prod_prod (μ := 𝒟[mgen])
-      (ν := ProbabilityTheory.uniformOn Set.univ) {msg} {σ})
+lemma perfectSecrecyAt (sp : ℕ) : (oneTimePad sp).perfectSecrecyAt := fun mgen _ ↦ by
+  rw [evalDist_perfectSecrecyExperiment, evalDist_perfectSecrecyCipherExperiment]
 
 /-- The one-time pad is perfectly secret for all security parameters. -/
 lemma perfectSecrecy : ∀ sp, (oneTimePad sp).perfectSecrecyAt := perfectSecrecyAt
@@ -106,25 +89,18 @@ lemma perfectSecrecy : ∀ sp, (oneTimePad sp).perfectSecrecyAt := perfectSecrec
 Fixed-message uniformity identifies each ciphertext row with the same measure. -/
 
 /-- Every fixed message has the uniform ciphertext measure. -/
-theorem evalDist_perfectSecrecyCipherGivenMsgExp (sp : ℕ) (msg : BitVec sp) :
-    𝒟[(oneTimePad sp).PerfectSecrecyCipherGivenMsgExp msg] =
+theorem evalDist_perfectSecrecyCipherGivenMsgExperiment (sp : ℕ) (msg : BitVec sp) :
+    𝒟[(oneTimePad sp).perfectSecrecyCipherGivenMsgExperiment msg] =
       (ProbabilityTheory.uniformOn Set.univ : MeasureTheory.Measure (BitVec sp)) := by
-  simpa [SymmEncAlg.PerfectSecrecyCipherGivenMsgExp, oneTimePad, monad_norm] using
+  simpa [SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment, oneTimePad, monad_norm] using
     evalDist_xor_uniformSample sp msg
 
-open OracleComp.ProgramLogic in
-/-- Encrypting any two fixed messages has the same ciphertext distribution. -/
-lemma cipherGivenMsg_equiv (sp : ℕ) (msg₀ msg₁ : BitVec sp) :
-    GameEquiv
-      ((oneTimePad sp).PerfectSecrecyCipherGivenMsgExp msg₀)
-      ((oneTimePad sp).PerfectSecrecyCipherGivenMsgExp msg₁) := by
-  apply evalSPMF_eq_of_evalDist_eq
-  rw [evalDist_perfectSecrecyCipherGivenMsgExp, evalDist_perfectSecrecyCipherGivenMsgExp]
-
 /-- The one-time pad has equal ciphertext rows: all messages yield the same
-ciphertext distribution. Derived from the relational `GameEquiv` proof above. -/
+ciphertext distribution. -/
 @[game_hop_root]
 lemma ciphertextRowsEqual (sp : ℕ) : (oneTimePad sp).ciphertextRowsEqualAt :=
-  fun msg₀ msg₁ σ => (cipherGivenMsg_equiv sp msg₀ msg₁).probOutput_eq σ
+  fun msg₀ msg₁ => EvalDistEq.of_evalDist_eq
+    ((evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₀).trans
+      (evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₁).symm)
 
 end oneTimePad

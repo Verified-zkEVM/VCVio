@@ -40,7 +40,7 @@ rank,file,name,declaration_line,proof_line,end_line,proof_lines,have,let,cases,n
 39,VCVio/OracleComp/QueryTracking/SeededOracle.lean,evalSPMF_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex,561,571,678,108,12,1,7,28,0,False
 40,Examples/PRFTagReader/Collision/ForgeStep.lean,authRFReaderStep_forge_le,945,957,1067,106,15,0,2,18,0,False
 41,Examples/CommitmentScheme/Binding.lean,binding_rest_noCollision_le_inv,160,170,274,105,8,7,6,40,0,False
-42,Examples/PRFTagReader/Auth.lean,authIdealExp_eq_zero,309,311,415,105,11,2,11,22,0,False
+42,Examples/PRFTagReader/Auth.lean,authIdealExperiment_eq_zero,309,311,415,105,11,2,11,22,0,False
 43,LatticeCrypto/DiscreteGaussian.lean,le_discreteGaussianSum,216,217,321,105,30,0,0,18,2,False
 44,Examples/PRFTagReader/Auth.lean,simulateQ_prfIdeal_authToPRFReaderImpl_run,636,642,751,104,4,1,0,12,0,False
 45,VCVio/CryptoFoundations/Fischlin/CostAccounting.lean,sign_usesAtMostRhoCardOmegaQueries,384,387,490,104,7,14,2,10,0,False

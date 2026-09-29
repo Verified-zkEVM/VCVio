@@ -346,10 +346,9 @@ the recorded entry is the query itself.
 
 The world enters only through `draw`: `entry`, `resp` and both tweak projections are the same in
 either world, and the wrapper does not see the world at all. So the conversion is world-independent
-and one experiment equality, quantified over the world, serves both. The advantages follow from it,
-which is what keeps the signed `SM_DT_UD_DirectedAdvantage`'s orientation: the two experiments are
-equal as distributions, so the real and ideal success probabilities transfer separately and their
-difference is not re-derived.
+and one experiment equality, quantified over the world, serves both. The advantage follows from it:
+the two experiments are equal as distributions, so the real and ideal success probabilities transfer
+separately.
 
 The two presentations declare their own two-element `World`, so the conversion carries a map between
 them. -/
@@ -512,37 +511,20 @@ theorem SM_DT_UD_idealSuccess_toSourceFinalValidity [DecidableEq Tweak]
     ← SM_DT_UD_experiment_toSourceFinalValidity .ideal adv,
     SM_DT_UD_World.toSourceFinalValidity_ideal]
 
-/-- The conversion preserves the signed gap, orientation included: the two worlds are converted by
-the same map, so neither side of the difference moves. -/
-theorem SM_DT_UD_directedAdvantage_toSourceFinalValidity [DecidableEq Tweak]
+/-- The conversion preserves the advantage. -/
+theorem SM_DT_UD_advantage_toSourceFinalValidity [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_DirectedAdvantage adv =
-      SM_DT_UD_SourceFinalValidity.directedAdvantage adv.toSourceFinalValidity := by
-  rw [SM_DT_UD_DirectedAdvantage, SM_DT_UD_SourceFinalValidity.directedAdvantage,
-    SM_DT_UD_realSuccess_toSourceFinalValidity, SM_DT_UD_idealSuccess_toSourceFinalValidity]
+    SM_DT_UD_Advantage adv =
+      SM_DT_UD_SourceFinalValidity.advantage adv.toSourceFinalValidity :=
+  congrArg₂ ENNReal.absDiff (SM_DT_UD_realSuccess_toSourceFinalValidity adv)
+    (SM_DT_UD_idealSuccess_toSourceFinalValidity adv)
 
-/-- The conversion preserves the orientation-independent magnitude. -/
-theorem SM_DT_UD_absoluteAdvantage_toSourceFinalValidity [DecidableEq Tweak]
+/-- A rejection-on-arrival SM-UD bound follows from any source-final-validity bound. -/
+theorem SM_DT_UD_advantage_le_toSourceFinalValidity [DecidableEq Tweak]
     {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_AbsoluteAdvantage adv =
-      SM_DT_UD_SourceFinalValidity.absoluteAdvantage adv.toSourceFinalValidity := by
-  rw [SM_DT_UD_AbsoluteAdvantage, SM_DT_UD_SourceFinalValidity.absoluteAdvantage,
-    SM_DT_UD_realSuccess_toSourceFinalValidity, SM_DT_UD_idealSuccess_toSourceFinalValidity]
-
-/-- A rejection-on-arrival SM-UD bound follows from any source-final-validity bound on the signed
-gap. -/
-theorem SM_DT_UD_directedAdvantage_le_toSourceFinalValidity [DecidableEq Tweak]
-    {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_DirectedAdvantage adv ≤
-      SM_DT_UD_SourceFinalValidity.directedAdvantage adv.toSourceFinalValidity :=
-  le_of_eq (SM_DT_UD_directedAdvantage_toSourceFinalValidity adv)
-
-/-- The same, for the magnitude. -/
-theorem SM_DT_UD_absoluteAdvantage_le_toSourceFinalValidity [DecidableEq Tweak]
-    {prob : SM_DT_UD_Problem ι PkSeed Tweak M M' Y} (adv : SM_DT_UD_Adversary prob) :
-    SM_DT_UD_AbsoluteAdvantage adv ≤
-      SM_DT_UD_SourceFinalValidity.absoluteAdvantage adv.toSourceFinalValidity :=
-  le_of_eq (SM_DT_UD_absoluteAdvantage_toSourceFinalValidity adv)
+    SM_DT_UD_Advantage adv ≤
+      SM_DT_UD_SourceFinalValidity.advantage adv.toSourceFinalValidity :=
+  le_of_eq (SM_DT_UD_advantage_toSourceFinalValidity adv)
 
 /-! ## SM-DT-DSPR
 

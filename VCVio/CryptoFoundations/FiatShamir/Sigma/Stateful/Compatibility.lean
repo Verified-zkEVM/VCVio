@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Bridge
-public import VCVio.StateSeparating.Advantage
+public import VCVio.StateSeparating.Advantage.Measure
 
 /-!
 # Compatibility endpoints for the stateful Fiat-Shamir CMA proof
@@ -15,11 +15,10 @@ The main stateful proof path uses the full `CmaState` game definitions from
 `Stateful.Games` and the full-state post-keygen normal form in
 `Stateful.Bridge`.
 
-The generic `SignatureAlg.unforgeableExp` experiment is still a useful public
-API, but it interprets signing queries through a `WriterT` query log. Any theorem
-equating that legacy public experiment with the full-state CMA game necessarily
-relates two interpreters. Such theorems belong here, not in the main stateful
-bridge.
+The generic `SignatureAlg.unforgeableExperiment` experiment interprets signing queries
+through a `WriterT` query log. A theorem equating it with the full-state CMA game
+relates two interpreters, so such theorems live here rather than in the main
+stateful bridge.
 -/
 
 @[expose] public section
@@ -39,14 +38,6 @@ variable [DecidableEq M] [DecidableEq Commit]
 variable [SampleableType Chal]
 
 /-! ## Public and stateful endpoints -/
-
-/-- The legacy public EUF-CMA advantage exposed by `SignatureAlg`.
-
-This endpoint uses `SignatureAlg.unforgeableExp`, which logs signing queries via
-`WriterT`. It is kept separate from the full-state stateful proof path. -/
-noncomputable def publicUnforgeableAdvantage
-    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) : ENNReal :=
-  SignatureAlg.unforgeableAdvantage (_root_.FiatShamir.runtime M) adv
 
 /-- The full-state post-keygen CMA advantage used by the stateful proof path.
 
@@ -74,23 +65,12 @@ def statefulCmaFreshExperiment
 
 This endpoint is equivalent to `statefulPostKeygenFreshAdvantage` by unfolding
 the public-key query in `signedAdv`; the equality is a stateful-game normal-form
-fact and does not mention `SignatureAlg.unforgeableExp`. -/
+fact and does not mention `SignatureAlg.unforgeableExperiment`. -/
 noncomputable def statefulCmaFreshAdvantage
     (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) : ENNReal :=
   𝒟[statefulCmaFreshExperiment σ hr M adv] {true}
 
 /-! ## Compatibility boundary -/
-
-/-- Compatibility proposition between the legacy public experiment and the
-full-state stateful experiment.
-
-The main stateful proof path should assume or prove facts about
-`statefulCmaFreshAdvantage`. If a caller needs the historical
-`SignatureAlg.unforgeableAdvantage` API, the required normalization theorem
-should target this proposition in this quarantined module. -/
-def PublicCompatible (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) : Prop :=
-  publicUnforgeableAdvantage σ hr M adv =
-    statefulCmaFreshAdvantage σ hr M adv
 
 /-- Interpreting a lifted source-CMA computation through the named real-CMA
 handler is the same as interpreting it through the source-query full-state
@@ -997,14 +977,14 @@ private theorem runtime_evalDist_postKeygenFreshWriterComp_eq
 omit [DecidableEq Commit] in
 /-- The public EUF-CMA experiment factors into keygen followed by the fixed-key
 WriterT post-keygen computation. -/
-private theorem unforgeableExp_eq_runtime_bind_postKeygenFreshWriterComp
+private theorem unforgeableExperiment_eq_runtime_bind_postKeygenFreshWriterComp
     (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
-    SignatureAlg.unforgeableExp (_root_.FiatShamir.runtime M) adv =
+    (_root_.FiatShamir.runtime M).evalDist (SignatureAlg.unforgeableExperiment adv) =
       (_root_.FiatShamir.runtime M).evalDist
         ((liftM (hr.gen : ProbComp (Stmt × Wit))) >>= fun ps =>
           postKeygenFreshWriterComp (σ := σ) (hr := hr) (M := M)
             (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2) := by
-  unfold SignatureAlg.unforgeableExp postKeygenFreshWriterComp
+  unfold SignatureAlg.unforgeableExperiment postKeygenFreshWriterComp
   simp only [runtime_eq_runtimeWithCache_empty, FiatShamir, HasQuery.instOfMonadLift_query,
     liftM, bind_pure_comp, Functor.map_map, roSpec, signSpec]
   congr 1
@@ -1015,15 +995,15 @@ private theorem unforgeableExp_eq_runtime_bind_postKeygenFreshWriterComp
   refine bind_congr (m := OracleComp (unifSpec + roSpec M Commit Chal)) fun z => ?_
   congr; funext a; congr
 
-/-- Public EUF-CMA advantage in the shared fixed-key post-keygen normal form. -/
-theorem publicUnforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
+/-- The `SignatureAlg` EUF-CMA advantage in the shared fixed-key post-keygen normal form. -/
+theorem unforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
     (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
-    publicUnforgeableAdvantage σ hr M adv =
+    SignatureAlg.unforgeableAdvantage (_root_.FiatShamir.runtime M) adv =
       statefulPostKeygenFreshAdvantage σ hr M adv := by
   let : MeasurableSpace (Stmt × Wit) := ⊤
-  unfold publicUnforgeableAdvantage SignatureAlg.unforgeableAdvantage
+  unfold SignatureAlg.unforgeableAdvantage
     statefulPostKeygenFreshAdvantage
-  rw [unforgeableExp_eq_runtime_bind_postKeygenFreshWriterComp (σ := σ) (hr := hr)
+  rw [unforgeableExperiment_eq_runtime_bind_postKeygenFreshWriterComp (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv,
     _root_.FiatShamir.runtime_evalDist_bind_liftComp (M := M)
       (oa := (hr.gen : ProbComp (Stmt × Wit)))
@@ -1037,23 +1017,14 @@ theorem publicUnforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage
   exact runtime_evalDist_postKeygenFreshWriterComp_eq (σ := σ) (hr := hr)
     (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv ps.1 ps.2
 
-/-- Public compatibility for the legacy `SignatureAlg` endpoint. -/
-theorem publicCompatible
+/-- The `SignatureAlg` EUF-CMA advantage equals the direct full-state freshness advantage. -/
+theorem unforgeableAdvantage_eq_statefulCmaFreshAdvantage
     (adv : SourceAdversary (σ := σ) (hr := hr) (M := M)) :
-    PublicCompatible σ hr M adv := by
-  unfold PublicCompatible
-  rw [publicUnforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage (σ := σ) (hr := hr)
+    SignatureAlg.unforgeableAdvantage (_root_.FiatShamir.runtime M) adv =
+      statefulCmaFreshAdvantage σ hr M adv := by
+  rw [unforgeableAdvantage_eq_statefulPostKeygenFreshAdvantage (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv,
     ← statefulCmaFreshAdvantage_eq_statefulPostKeygenFreshAdvantage (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv]
-
-/-- Public compatibility, in inequality form, against the direct stateful
-freshness experiment. -/
-theorem publicUnforgeableAdvantage_le_statefulCmaFresh
-    (adv : SourceAdversary (σ := σ) (hr := hr) (M := M))
-    (hCompat : PublicCompatible σ hr M adv) :
-    SignatureAlg.unforgeableAdvantage (_root_.FiatShamir.runtime M) adv ≤
-      statefulCmaFreshAdvantage σ hr M adv :=
-  hCompat ▸ le_refl _
 
 end FiatShamir.Stateful

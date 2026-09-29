@@ -6,17 +6,17 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Joint measure laws for stateful oracle interpretation
 
-Local equality of the joint response and retained-state measures preserves the complete
-result/state measure of every adaptive oracle computation. The response/state products
-carry explicit discrete measurable structures. This interface retains service state in its
-premise because later adaptive calls may reveal changes hidden from the immediate response.
+Local equality in distribution of the joint response and retained state preserves the
+distribution of the complete result and state of every adaptive oracle computation. This
+interface retains service state in its premise because later adaptive calls may reveal changes
+hidden from the immediate response.
 
 Stateful simulation from a sampled initial state satisfies an event with probability one
 whenever every structurally possible output of the original computation does: simulation only
@@ -31,50 +31,66 @@ open OracleSpec MeasureTheory
 
 universe u v
 
-/-- Equality of joint local measures in every output space preserves adaptive execution.
-The intermediate response/state type uses a discrete space locally; no product-space
-discreteness or uniform sampling assumption is needed. -/
-theorem evalDist_simulateQ_run_congr_of_forall
+/-- Implementations whose local steps, from every state, are equal in distribution give equal
+distributions of the complete result and retained state. Neither the service state nor the
+response needs a measurable structure. -/
+theorem evalDistEq_simulateQ_run
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {ι : Type u} {S α : Type} {spec : OracleSpec.{u, 0} ι}
+    (left right : QueryImpl spec (StateT S m))
+    (h : ∀ operation state, (left operation).run state =ᵈ (right operation).run state)
+    (program : OracleComp spec α) (state : S) :
+    (simulateQ left program).run state =ᵈ (simulateQ right program).run state := by
+  induction program using OracleComp.inductionOn generalizing state with
+  | pure value =>
+    simp only [simulateQ_pure, StateT.run_pure]
+    exact EvalDistEq.rfl
+  | query_bind operation next ih =>
+    simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
+      OracleQuery.input_query, StateT.run_bind]
+    exact (h operation state).bind fun output ↦ ih output.1 output.2
+
+/-- Implementations whose local steps, from every state, are equal in distribution give equal
+measures of the complete result and retained state. -/
+theorem evalDist_simulateQ_run_congr
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {ι : Type u} {S α : Type} {spec : OracleSpec.{u, 0} ι} [MeasurableSpace (α × S)]
     (left right : QueryImpl spec (StateT S m))
-    (h : ∀ operation state, ∀ [MeasurableSpace (spec.Range operation × S)],
-      𝒟[(left operation).run state] = 𝒟[(right operation).run state])
+    (h : ∀ operation state, (left operation).run state =ᵈ (right operation).run state)
     (program : OracleComp spec α) (state : S) :
-    𝒟[(simulateQ left program).run state] = 𝒟[(simulateQ right program).run state] := by
+    𝒟[(simulateQ left program).run state] = 𝒟[(simulateQ right program).run state] :=
+  (evalDistEq_simulateQ_run left right h program state).evalDist_eq
+
+/-- A stateful implementation that, from every state, denotes each query's configured answer
+measure preserves the output measure of every simulated computation once the final state is
+discarded. Only the answer marginal is constrained: the service state may evolve arbitrarily and
+needs no measurable space. A caching oracle, whose answer from a warm cache is a Dirac measure,
+does not satisfy the hypothesis. -/
+theorem evalDist_simulateQ_run'_eq_of_forall
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {ι : Type u} {S α : Type} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.IsMeasureSpec spec] [MeasurableSpace α]
+    (impl : QueryImpl spec (StateT S m))
+    (h : ∀ t state,
+      (impl t).run' state =ᵈ (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t)))
+    (program : OracleComp spec α) (state : S) :
+    𝒟[(simulateQ impl program).run' state] = 𝒟[program] := by
   induction program using OracleComp.inductionOn generalizing state with
   | pure value => simp
   | query_bind operation next ih =>
     let : MeasurableSpace (spec.Range operation × S) := ⊤
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
-      OracleQuery.input_query, StateT.run_bind, evalDist_bind_of_discrete]
-    rw [h]
-    exact Measure.bind_congr_right (Filter.Eventually.of_forall fun output ↦
-      ih output.1 output.2)
-
-variable {m : Type → Type v} [Monad m] [LawfulMonad m]
-  {ι : Type u} {S α : Type} {spec : OracleSpec.{u, 0} ι}
-  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-  [MeasurableSpace S] [MeasurableSpace α]
-  [∀ operation : spec.Domain, MeasurableSpace (spec.Range operation)]
-  [∀ operation : spec.Domain, DiscreteMeasurableSpace (spec.Range operation × S)]
-
-/-- Equal joint local kernels preserve the full result and retained service-state measure. -/
-theorem evalDist_simulateQ_run_congr
-    (left right : QueryImpl spec (StateT S m))
-    (h : ∀ operation state, 𝒟[(left operation).run state] = 𝒟[(right operation).run state])
-    (program : OracleComp spec α) (state : S) :
-    𝒟[(simulateQ left program).run state] = 𝒟[(simulateQ right program).run state] := by
-  induction program using OracleComp.inductionOn generalizing state with
-  | pure value => simp
-  | query_bind operation next ih =>
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
-      OracleQuery.input_query, StateT.run_bind, evalDist_bind_of_discrete]
-    rw [h]
-    apply Measure.bind_congr_right
-    filter_upwards [] with output
-    exact ih output.1 output.2
+    let : MeasurableSpace (spec.Range operation) := ⊤
+    have hfst : Measurable (Prod.fst : spec.Range operation × S → spec.Range operation) :=
+      measurable_from_top
+    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq, StateT.run_bind, map_bind]
+    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete,
+      ← (h operation state).evalDist_eq, StateT.run'_eq, evalDist_map _ hfst,
+      Measure.bind_map _ hfst Measurable.of_discrete]
+    exact Measure.bind_congr_right (Filter.Eventually.of_forall fun output ↦ by
+      simpa only [StateT.run'_eq] using ih output.1 output.2)
 
 end OracleComp
 

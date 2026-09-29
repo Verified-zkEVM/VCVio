@@ -10,8 +10,9 @@ public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.Coercions.Add.Basic
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.EvalDist.Defs.Semantics.Core
 
 /-!
 # GPV Hash-and-Sign Framework
@@ -182,7 +183,7 @@ short preimages with the same image under `psf.eval`. -/
 abbrev CollisionAdversary := PK → ProbComp (Domain × Domain)
 
 /-- Keyed collision-finding experiment for a preimage sampleable function. -/
-def collisionFindingExp [DecidableEq Domain]
+def collisionFindingExperiment [DecidableEq Domain]
     (adversary : CollisionAdversary (PK := PK) (Domain := Domain)) :
     ProbComp Bool := do
   let pk ← do
@@ -198,7 +199,7 @@ def collisionFindingExp [DecidableEq Domain]
 noncomputable def collisionFindingAdvantage [DecidableEq Domain]
     (adversary : CollisionAdversary (PK := PK) (Domain := Domain)) :
     ℝ≥0∞ :=
-  Pr[= true | collisionFindingExp (psf := psf) (hr := hr) adversary]
+  𝒟[collisionFindingExperiment (psf := psf) (hr := hr) adversary] {true}
 
 /-- A programmed-preimage adversary receives a public key and a programmed target `y`,
 and tries to reproduce the challenger's hidden short preimage sampled for `y`. -/
@@ -209,7 +210,7 @@ abbrev ProgrammedPreimageAdversary := PK → Range → ProbComp Domain
 The challenger samples an honest key pair, then chooses a uniformly random target `y` and a
 hidden short preimage `x ← trapdoorSample pk sk y`. The adversary sees only `(pk, y)` and
 succeeds iff it reproduces exactly the hidden programmed preimage `x`. -/
-def programmedPreimageExp [DecidableEq Domain]
+def programmedPreimageExperiment [DecidableEq Domain]
     (adversary : ProgrammedPreimageAdversary
       (PK := PK) (Domain := Domain) (Range := Range)) :
     ProbComp Bool := do
@@ -224,7 +225,7 @@ noncomputable def programmedPreimageAdvantage [DecidableEq Domain]
     (adversary : ProgrammedPreimageAdversary
       (PK := PK) (Domain := Domain) (Range := Range)) :
     ℝ≥0∞ :=
-  Pr[= true | programmedPreimageExp (psf := psf) (hr := hr) adversary]
+  𝒟[programmedPreimageExperiment (psf := psf) (hr := hr) adversary] {true}
 
 /-! ## Proof Decomposition
 

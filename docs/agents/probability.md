@@ -1,31 +1,32 @@
 # Probability Reasoning (EvalDist and ProbComp)
 
-For the cross-project survey of SPMF, Mathlib measures and kernels, PolyFun
-coalgebraic limits, ArkLib, Bluebell/Iris, and possible long-term migration paths, see
+To convert code written against the removed discrete `Pr[…]` API, follow
+[`probability-migration.md`](probability-migration.md).
+
+For the cross-project survey of subprobability mass functions, Mathlib measures and kernels,
+PolyFun coalgebraic limits, ArkLib, and Bluebell/Iris, see
 [`Probability Semantics for Computations: Landscape and Design Options`](../reading/probability-semantics-landscape.md).
-The accepted design for new work is
+The accepted design is
 [`Denotational Probability Semantics`](../reading/denotational-probability-semantics.md): use
-Mathlib measures for closed denotations, kernels for environment/state-indexed computations,
-effect-preserving outcome types for transformers, and keep `Pr[...]` as the discrete compatibility
-surface. The [notation and computability account](../design/probability-notation-computability.md)
-records which finite events can be evaluated exactly and which semantics require measurable
-proofs. [`docs/reading/`](../reading/README.md) indexes the full design record.
+Mathlib measures for closed denotations, kernels for environment/state-indexed computations, and
+effect-preserving outcome types for transformers. The
+[notation and computability account](../design/probability-notation-computability.md) records
+which finite events can be evaluated exactly and which semantics require measurable proofs.
+[`docs/reading/`](../reading/README.md) indexes the full design record.
 
-`import VCVio.Native` is the public entry point for native oracle, sampling, measure, kernel,
-operational-support, unary/relational WP, and stateful security foundations. Its ordinary import
-closure contains neither
-`PMF` nor `SPMF`; `VCVioTest.Native` checks this boundary. Some older module paths additionally
-export discrete compatibility corollaries. WriterCost, QueryCost, and CostModel are native owners.
+`import VCVio.Foundations` is the public entry point for oracle, sampling, measure, kernel,
+operational-support, unary/relational WP, and stateful security foundations. Its import closure
+excludes Mathlib's `PMF`; `VCVioTest/Foundations.lean` checks this boundary. Across the library,
+the `usesRetiredProbability` environment linter (`ToMathlib/Lint/LegacyProbability.lean`) reports
+any declaration whose type or value uses `PMF` directly.
 
-Handler instrumentation uses native owners in `QueryImpl.Constructions.Core`, `Append.Core`,
-`WriterT.Core`, `Tracing.Core`, `CountingOracle.Core`, and `LoggingOracle.Core`. Their public
-projection equations transport any observation of the computation, including its chosen-space
-measure; no separate scalar evaluation theory is necessary. Query bounds, cache/programming
-handlers, state projections, and invariant reasoning use these owners directly. Structural
-results need no uniform probability interpretation. `StateT.OutputIndependent` compares output
-measures, and `StateT.NeverFailsUnder` requires `IsProbabilityMeasure` on each invariant run.
-Invariant-preserving prefixes may discard their output and state without choosing measurable
-spaces on those discarded types.
+Handler instrumentation lives in `QueryImpl.Constructions.Core`, `Append.Core`, `WriterT.Core`,
+`Tracing.Core`, `CountingOracle.Core`, and `LoggingOracle.Core`. Their public projection
+equations transport any observation of the computation, including its chosen-space measure.
+Query bounds, cache/programming handlers, state projections, and invariant reasoning use these
+modules directly. Structural results need no uniform probability interpretation.
+`StateT.OutputIndependent` compares output measures. Invariant-preserving prefixes may discard
+their output and state without choosing measurable spaces on those discarded types.
 
 `OracleComp.evalDist_bind_apply_mono_of_support` compares continuation events only on reachable
 outputs. `le_evalDist_bind_apply_of_support` supplies the corresponding constant lower bound.
@@ -52,7 +53,7 @@ families must be measurable; the allowance need not be. The reachable version us
 attachment and the actual continuation-measure observer, leaving hidden source and result types
 unmeasured. `prEvent_bind_le_sum_add_mul_mass_of_support` retains the allowance times the prefix's
 successful mass. The weaker constant-allowance and disagreement/bad-world rules specialize the
-same argument. The native owner imports no retired probability backend or compatibility class.
+same argument.
 
 `AddWriterT.expectedCost` integrates the cost marginal on the chosen cost space. Weighted
 query-cost and CostModel expectations use this same definition. Pathwise expectation bounds
@@ -85,7 +86,7 @@ qualitative judgment is false and the quantitative supremum is zero.
 Couplings expose named `joint` and `isCoupling` fields, with public equations for their
 constructors. Their joint laws infer probability, subprobability, and finite-measure certificates
 from the corresponding marginal certificate. Countable-concentration reflexivity needs no
-globally measurable equality relation; native finite-tree reflexivity closes with plain `simp`,
+globally measurable equality relation; finite-tree reflexivity closes with plain `simp`,
 including on uncountable output types.
 `CouplingPost.bind_of_countable` composes pointwise coupling witnesses on countable marginal
 concentration sets: measurability is needed only under the chosen initial joint law. Its proof
@@ -95,16 +96,17 @@ measurable family. The quantitative rule supplies a witness lower bound; it does
 existence of an optimal coupling or interchange a supremum with integration. A product of
 arbitrary discrete measurable spaces need not itself be discrete. Do not hide that distinction
 in an automatic relational assertion-algebra instance.
-`open scoped MeasureProgramLogic.Relational` selects PolyFun's qualitative `MAlgRelOrdered`
-interface for finite-response oracle trees. The source and final operational output sets are
-finite concentration sets, so arbitrary final relations are handled by restricting to their
-countable measurable part. This works for uncountable output types and weighted interpretations;
-it needs only finite responses, without enumerations or uniformity. The quantitative algebra is
-not installed by this scope, and the qualitative algebra is not automatically anchored to
-structural demonic WP under weighted interpretations.
+The qualitative `MAlgRelOrdered` instance for finite-response oracle trees
+(`OracleComp.ProgramLogic.Relational.CouplingPost`) observes each output in its discrete
+measurable structure. The source and final operational output sets are finite concentration
+sets, so arbitrary final relations are handled by restricting to their countable measurable part.
+This works for uncountable output types and weighted interpretations; it needs only finite
+responses, without enumerations or uniformity. The anchoring to structural demonic WP and the
+bijection rules hold under uniform response measures, where every reachable output has positive
+mass.
 The generic relational class and laws come from `PolyFun.Control.Monad.Algebra.Relational`.
 `ToMathlib.Control.Monad.RelationalAlgebra` additionally installs the named upstream transformer
-constructions for compatibility typeclass search. New code can select those constructions
+constructions for typeclass search. New code can select those constructions
 explicitly. `MAlgRelOrdered.rwpExc` accepts one postcondition on both exception outcomes;
 `rwpExcCases` packages four separate corner postconditions, while the one-sided and optional
 case helpers remain available in `RelationalAlgebraAnchored`.
@@ -114,8 +116,7 @@ selected lawful interpretation. Its `of_step` rule retains each joint response/s
 `prEvent_eq` transports final events, and the advantage rules permit replacing experiments
 with different private-state types. `run_evalDist_eq` is the public observation equation.
 Weighted interpretations can give a structurally possible answer zero mass; measure equivalence
-therefore does not assert equality of operational support. Native coercions, state handlers,
-`SecExp.Measure`, and `Advantage.Measure` have ordinary import closures without PMF/SPMF.
+therefore does not assert equality of operational support.
 
 `evalDist_boolBias_bind_coin` is a generic fair-coin reduction for lawful measure semantics and
 lossless Boolean branches. The probability-only security facade supplies its fair-coin law.
@@ -136,12 +137,10 @@ spaces, and uniformity certificates apply to any result space with measurable si
 `VCVio.EvalDist.Lossless` uses Mathlib's `IsProbabilityMeasure` directly. For a lossless prefix,
 `evalDist.isProbabilityMeasure_bind_iff` characterizes a lossless bind by almost everywhere
 lossless continuations. `isProbabilityMeasure_bind_of_ae` supplies the forward construction;
-no structural positivity assumption or bind instance search is needed. `NeverFail`,
-`EvalDistCompatible`, and `DiscreteEvalDistCompatible` are deprecated compatibility classes.
-Their hypotheses remain meaningful only for the discrete adapters that actually satisfy them.
+no structural positivity assumption or bind instance search is needed.
 
-The [conversion checkpoint roadmap](../design/measure-conversion-roadmap.md) records the native
-owners, standard proof conversions, subsequent theorem families, and validation gates.
+The [measure conversion roadmap](../design/measure-conversion-roadmap.md) records the owning
+modules, standard proof conversions, theorem families, and validation gates.
 
 `open scoped MeasureProgramLogic.Probabilistic` selects bounded `Prob` expectations for any
 lawful measure semantics. Public value laws connect them to quantitative WP and Lebesgue
@@ -151,23 +150,47 @@ core WP, which needs only lawful attachment. The exact ordered assertion algebra
 available for free oracle trees. State and reader reasoning uses PolyFun's indexed operational
 judgments and kernels; flattened support does not acquire an exact bind law.
 
-The primary notation is measure-valued: `𝒟[mx] : Measure α`. The generic classes and Giry laws
-live in `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
-`VCVio.EvalDist.PFunctorMeasure.Core`. These core modules do not import a PMF/SPMF backend.
-`Pr{let x ← mx; ...}[event]` is the computation-style event notation. Write the first
-statement directly after `Pr{`; no space is required. An explicit line break after `Pr{` is
-also supported for multiline sequences. It elaborates
-an ordinary Lean `do` sequence, returns its final Boolean or proposition, and takes
-the `{True}` mass of that result's `𝒟`. It works with a direct measure-only oracle
-interpretation as well as a finite compatibility interpretation. The
-`prEvent_eq_evalDist` theorem requires a measurable predicate; its
-discrete specialization discharges that condition. `prEvent_eq_evalDist_decide`
-equates an event with a Boolean experiment's final `decide`, without requiring
-a measurable space on the intermediate result. Factor the common sampling run
-once when both forms of a security game are public. For an optional computation,
+The notation is measure-valued: `𝒟[mx] : Measure α` is the successful-output measure, and mass
+missing from it is failure or nontermination. The generic classes and Giry laws live in
+`VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
+`VCVio.EvalDist.PFunctorMeasure.Core`.
+`Pr{x ← mx; y ← my x}[event]` is the event notation. Its draws are `x ← e` items separated by
+`;`, and an action may continue on the following lines. An ordinary `do` sequence, such as
+`Pr{let x ← mx; let y := f x}[event]` or a multi-line block, is accepted as well.
+`Pr{mx}[= a]` is the probability of the single output `a` and needs no measurable singletons.
+The notation denotes `prEvent (mx : m Prop) := 𝒟[mx] {True}` of the computation returning
+the event. It is elaborated in the normal form `simp` maintains:
+- binds end in a map of the eta-reduced final event;
+- local `let`s are substituted;
+- a branch is split into its arms.
+
+`simp only [prEvent_norm]` brings any event computation into this form, and `simp` rewrites
+`𝒟[mx] {True}` to `prEvent mx`. The event laws are keyed on `prEvent`:
+- bounds, `pure`, `failure` and constant prefixes;
+- sequencing, deterministic monads and lossless oracle computations;
+- uniform sampling, bind swaps and support congruence.
+
+`prEvent_def` unfolds an event to its measure when an argument needs the measure itself. Goals
+display in the draw form.
+
+`mx =ᵈ my` (`EvalDistEq`, in `VCVio.EvalDist.EvalDistEq`) states that two computations, possibly
+in different monads, give every event the same probability. It needs no measurable space on the
+output:
+- `EvalDistEq.evalDist_eq` gives equal output measures in every structure;
+- `EvalDistEq.of_evalDist_eq` proves it from equal measures in a discrete structure;
+- `evalDistEq_iff_forall_prEvent_eq_output` reduces it to point masses on countable outputs.
+
+It is an equivalence usable in `calc`, and its bind and map congruences are registered for
+`gcongr` and `grw`. A lemma whose selector's type depends on an implicit argument, such as a
+query index, is rewritten with that argument supplied: `Functor.map` unifies the selector before
+the computation. `prEvent_eq_evalDist` identifies an event with the measure of its set for a
+measurable predicate; `prEvent_eq_evalDist_of_discrete` discharges that condition on a discrete
+output space. `prEvent_eq_evalDist_decide` equates an event with a Boolean experiment's final
+`decide`, without requiring a measurable space on the intermediate result. Factor the common
+sampling run once when both forms of a security game are public. For an optional computation,
 successful outputs are measured through `Measure.comap some`, so failure contributes no mass.
-The `OptionT` measure instance also works when the base monad has no finite lift.
-Native `OptionT` and `ExceptT` inherit the base pure certificate and, for lawful base monads,
+The `OptionT` measure instance needs only a measure semantics on the base monad.
+`OptionT` and `ExceptT` inherit the base pure certificate and, for lawful base monads,
 the full measurable-bind certificate. Generic bind laws require measurability only of the
 successful-output family, rather than the whole run measure. An auxiliary discrete source space
 and the base map law transport the source measure back to its selected space.
@@ -177,63 +200,56 @@ no measurable space on that intermediate type. A constant output map after the g
 normalization rule, so monad normalization preserves this automation. The guarded unit-output
 measure is its event probability times `Measure.dirac ()`. `OptionT.prEvent_eq_run` observes present
 values in the underlying run, and `OptionT.prEvent_lift` preserves an event through a lift.
-`VCVio.EvalDist.Defs.Measure.Deterministic` gives `Id`, `Option`, and `Except` native Dirac/zero
-semantics without a finite backend. Every `Id` value and successful `Option`/`Except` constructor
-infers its probability-measure instance; arbitrary optional/exceptional values infer only the
+`VCVio.EvalDist.Defs.Measure.Deterministic` gives `Id`, `Option`, and `Except` Dirac/zero
+semantics. Every `Id` value and successful `Option`/`Except` constructor infers its
+probability-measure instance; arbitrary optional/exceptional values infer only the
 subprobability bound. Bare `Except` observes no errors and needs no measurable space on its error
 type. `ExceptT` instead interprets its base run and uses the inherited coproduct space on errors
 and outputs. Deterministic final events simplify to their propositional indicators with `simp`
 and `grind`, using `Measure.dirac_apply_singleton_true`.
-`VCVio.OracleComp.Support` exposes the oracle facade over native attachment, while
+`VCVio.OracleComp.Support` exposes the oracle facade over PolyFun's attachment semantics, while
 `PolyFun.PFunctor.Free.Support` owns the universe-polymorphic map/object equations and
 finite/nonempty bounds. VCVio's `PFunctorSupport` module reexports that API. Support-aware bind
 congruence needs only weakly lawful attachment, through PolyFun's public generic rule.
 `VCVio.OracleComp.EvalDist.Measure` connects structural bounds to almost-everywhere bounds
 under any discrete-answer response measures; neither uniformity nor positive singleton masses
 is required for that direction. `VCVio.ProgramLogic.Unary.WP.OracleMeasure` exposes these
-bounds on native expectation WP, including `gcongr` support hypotheses and additive allowances.
-These modules have ordinary imports without PMF/SPMF.
-`VCVio.EvalDist.Defs.Support` and its `Support.Failure` module expose operational support without
-importing a probability backend. Optional failure has empty support under Lean's
-`LawfulMonadAttach`, independently of any probability interpretation or lift. Its pure-output
-elimination law suffices: no `ExactMonadAttach` is needed, including over state and reader bases.
-`HasEvalSet.LawfulFailure` only requires an `Alternative` and attachment.
+bounds on expectation WP, including `gcongr` support hypotheses and additive allowances.
+`VCVio.EvalDist.Defs.Support` and its `Support.Failure` module expose operational support
+without any probability semantics. Optional failure has empty support under Lean's
+`LawfulMonadAttach`. Its pure-output elimination law suffices: no `ExactMonadAttach` is needed,
+including over state and reader bases. `HasEvalSet.LawfulFailure` only requires an
+`Alternative` and attachment.
 The independent `LawfulFailureEvalDistSemantics` mixin certifies zero measure for failure.
-Native `Option` and `OptionT` export that certificate; `OptionT` needs only the base pure law.
+`Option` and `OptionT` export that certificate; `OptionT` needs only the base pure law.
 `VCVio.EvalDist.Monad.Failure` makes failure before a continuation, a constantly failing
 continuation, and a final event after failure normalize to zero with `simp` and `grind`.
 These composition laws need no attachment or measurable-space instance on intermediate results.
-Native transformer semantics takes priority over the generic finite lifting adapter. Opening
-`ProbComp.DiscreteCompatibility` explicitly selects that adapter for retiring discrete calibration
-proofs. Native certificates describe the native interpretation and do not assert laws about an
-independently chosen interpretation. The successful-output pullback equations
-`OptionT.evalDist_apply` and `ExceptT.evalDist_apply` hold on arbitrary sets, without a
-measurability argument.
+The successful-output pullback equations `OptionT.evalDist_apply` and `ExceptT.evalDist_apply`
+hold on arbitrary sets, without a measurability argument.
 `SampleableType.prEvent_uniformSample` counts a decidable event as its accepted fraction of finite
-outputs, using Mathlib's native `uniformOn` and counting measure.
-`VCVio.EvalDist.Defs.Measure.FinRatPMF` gives the executable rational sampler native measure
-semantics without importing a PMF/SPMF backend. `Raw.toMeasure` is a finite sum of weighted Dirac
-measures; pure and measurable bind have the generic laws on arbitrary measurable spaces.
-`Raw.evalDist_apply` computes decidable event masses as rational sums, and the singleton simp
-lemma reduces to `Raw.prob`. `FinRatPMF.finRatImpl.evalDist_simulateQ` and `prEvent_simulateQ`
-identify executable evaluation with the native uniform oracle interpretation.
+outputs, using Mathlib's `uniformOn` and counting measure.
+`VCVio.EvalDist.Defs.Measure.FinRatPMF` gives the executable rational sampler measure
+semantics. `Raw.toMeasure` is a finite sum of weighted Dirac measures; pure and measurable bind
+have the generic laws on arbitrary measurable spaces. `Raw.evalDist_apply` computes decidable
+event masses as rational sums, and the singleton simp lemma reduces to `Raw.prob`.
+`FinRatPMF.finRatImpl.evalDist_simulateQ` and `prEvent_simulateQ` identify executable evaluation
+with the uniform oracle interpretation.
 `VCVio.ProgramLogic.Unary.WP.Measure` builds the ordered expectation algebra directly from
 lawful measure semantics for any monad. `open scoped MeasureProgramLogic.Quantitative` selects
-its `MAlgOrdered` and core `WPMonad` interpretations; no probability backend or oracle uniformity
-is required. This scope takes precedence over core `Prop` interpretations, including `Option`.
+its `MAlgOrdered` and core `WPMonad` interpretations; no oracle uniformity is required. This
+scope takes precedence over core `Prop` interpretations, including `Option`.
 `wp_eq_lintegral` is an explicit bridge to Mathlib integration. `simp` preserves the WP head
 through addition and scaling, and constants keep the successful-mass factor:
 `MAlgOrdered.wp mx (fun _ ↦ c) = c * 𝒟[mx] Set.univ`. Finite sums, monotone suprema, and
-almost-everywhere comparisons have native laws. `gcongr` and `grw` compare pointwise
+almost-everywhere comparisons have their own laws. `gcongr` and `grw` compare pointwise
 postconditions. `wp_le_const_mul_mass_add` retains the mass factor for lossy computations;
-`IsProbabilityMeasure` simplifies it to one automatically. The oracle quantitative facade uses
-this same native algebra and keeps its existing uniformity assumptions for compatibility.
-`OracleComp.EvalDist.lintegral_evalDist` is an explicit discrete calibration equation;
-it is deliberately absent from global `simp`, so integrals stay available to Mathlib's API.
-Opening `ProbComp.DiscreteCompatibility` restores the old simp direction locally for adapter
-proofs; native calibration statements use the equation explicitly.
+`IsProbabilityMeasure` simplifies it to one automatically. The oracle quantitative facade
+`OracleComp.ProgramLogic.wp` uses this same algebra under any `[OracleSpec.IsMeasureSpec spec]`.
+Expectations are integrals: `wp_eq_lintegral` identifies the oracle `wp` with `∫⁻` against
+`𝒟[mx]`, and integrals stay available to Mathlib's API.
 
-The native sequencing laws in `VCVio.EvalDist.Monad.Seq.Measure` identify paired draws with
+The sequencing laws in `VCVio.EvalDist.Monad.Seq.Measure` identify paired draws with
 `Measure.prod` on arbitrary measurable result spaces. Discarding either draw retains its
 successful-mass factor. `simp` and `grind` also normalize final events after sequencing without
 requiring a measurable space on discarded values. Probability instances propagate automatically
@@ -254,7 +270,7 @@ event probabilities pointwise, hiding the intermediate measurable space and allo
 continuation result types. `prEvent_mono` transports implication between final events without
 an intermediate measurable-space argument. Use `grw [prEvent_mono ...]` to rewrite an event bound;
 `gcongr` handles surrounding arithmetic, with this lemma closing the event comparison.
-For discrete-answer oracle specifications, native `𝒟[mx]` has an automatic
+For discrete-answer oracle specifications, `𝒟[mx]` has an automatic
 `IsProbabilityMeasure` instance, including when the result space is continuous. Mathlib's
 constant-integral and total-mass simp rules therefore need no local instance. This does not
 assert losslessness for arbitrary continuous-answer programs with unmeasurable continuations.
@@ -274,23 +290,24 @@ countable types; do not redeclare them locally when the canonical instance suffi
 Choose the space on the underlying data type once; `Option`, products, and subtypes normally use
 their inherited measurable-space instances rather than separate local top spaces.
 Genuinely measure-indexed results retain their selected measurable spaces as explicit parameters.
-Every `𝒟[mx]` automatically satisfies `IsSubprobabilityMeasure`. Products inherit this bound from their two factors. The upper mass bound also
-propagates automatically through raw `Measure.map`, whose nonmeasurable fallback has mass at
-most one. For raw `Measure.bind`, use `isSubprobabilityMeasure_bind` with an explicit
-almost-everywhere measurability proof. Exact mass preservation requires measurability. `pure` infers a probability-measure
-instance even for continuous-answer specifications. Lifting a computation whose measure already
-has an `IsProbabilityMeasure` instance into `OptionT` or `ExceptT` also infers that instance,
+Every `𝒟[mx]` automatically satisfies `IsSubprobabilityMeasure`. Products inherit this bound from
+their two factors. The upper mass bound also propagates automatically through raw `Measure.map`,
+whose nonmeasurable fallback has mass at most one. For raw `Measure.bind`, use
+`isSubprobabilityMeasure_bind` with an explicit almost-everywhere measurability proof. Exact mass
+preservation requires measurability. `pure` infers a probability-measure instance even for
+continuous-answer specifications. Lifting a computation whose measure already has an
+`IsProbabilityMeasure` instance into `OptionT` or `ExceptT` also infers that instance,
 including through `liftM`. These lifts introduce no failure mass; arbitrary optional or exceptional
 computations still need a losslessness certificate. `FreeM.isProbabilityMeasure_evalDist_lift`
-supplies a single native query's probability proof. It is a theorem: the dependent output type
+supplies a single query's probability proof. It is a theorem: the dependent output type
 `P.B a` gives a projection key that instance search cannot match against a concrete reduced type
 such as `ℝ`. A general continuous program still requires a continuation measurability proof.
 `FreeM.denote` over discrete answers, `FreeM.pathMeasure`, and `FreeM.queryCountMeasure` export
 probability instances; proofs should not install them locally. `evalDist_failure_eq_zero`
-simplifies failure to zero under its native certificate.
+simplifies failure to zero under its `LawfulFailureEvalDistSemantics` certificate.
 `Measure.dropNone` preserves the subprobability instance of an optional measure, and
 `Measure.withFailure` automatically completes any subprobability measure to a probability measure.
-The backend-free `evalDistWithFailure` wrapper exports the same probability-measure instance.
+The `evalDistWithFailure` wrapper exports the same probability-measure instance.
 The mass at `none` needs no discreteness hypothesis: the optional coproduct makes this singleton
 measurable for every result space. Successful singleton masses need only measurable singletons.
 `prEvent_eq_evalDist_singleton` identifies an equality event with its singleton mass under that
@@ -300,17 +317,17 @@ without requiring discrete answer spaces; continuous final-event proofs can use 
 `le_evalDist_bind_apply` transports an almost-everywhere lower bound through a lossless draw;
 its monad is generic and its event need only be measurable.
 
-Runtime-valued signature experiments expose `IsSubprobabilityMeasure` instances, so
+A runtime assigns every experiment a subprobability measure `runtime.evalDist exp`, so
 `measure_le_one` and `measure_ne_top` apply directly. An instrumented experiment recording
-success and a Boolean selector uses `Measure.fst` for its success marginal.
+success and a Boolean selector uses `Measure.fst` of its measure for the success marginal.
 `Measure.fst_apply_eq_add` splits a marginal event into the two disjoint selector events.
 The SLH-DSA `advantage_eq_arms` and `sameMessageAdvantage_eq_arms` equations use that partition
 without caller-supplied evaluator laws; the runtime already bundles its measurable-map law.
 Their named FORS/hypertree and randomizer halves have exported defining equations and exact
 partition theorems, so consumers do not need unfolding hypotheses.
 `OracleComp.evalDist_map_const` handles a constant output map without a measurable space on
-the discarded result type. This lets default `simp` stay on native measure laws after monad
-normalization turns a constant return into a map.
+the discarded result type. This keeps default `simp` on measure laws after monad normalization
+turns a constant return into a map.
 
 `lintegral_evalDist_bind` states the tower law with a measurable continuation;
 `lintegral_evalDist_bind_of_discrete` supplies that proof for a discrete common draw.
@@ -322,31 +339,29 @@ lambda-bound parameters are unavailable as automatic `grind` patterns.
 `lintegral_uniformOn_univ` averages over a finite uniform measure, including the empty space
 and infinite integrands. `ProbComp.lintegral_evalDist_uniformFin` exposes that law for a draw.
 
-The native drawing loop and its measure-valued length integrals live in
+The drawing loop and its measure-valued length integrals live in
 `VCVio.OracleComp.Constructions.WithoutReplacement.Basic`. Observe `List.length` before
 integrating: the pool's value type needs no measurable space. The stopping and exhaustion laws
-use the same negative-hypergeometric recursion. The original import facade also exposes
-deprecated discrete expectation equations.
+use the same negative-hypergeometric recursion.
 
 `ToMathlib.MeasureTheory.Integral.Quadratic` specializes upstream Hölder to Cauchy–Schwarz,
 retaining the total-mass factor for arbitrary measures and bounding it for subprobability
 measures. Its quadratic bound requires only almost-everywhere measurable acceptance and
 almost-everywhere acceptance/extraction bounds; the extraction functional need not be measurable.
 `OracleComp.EvalDist.marginalized_jensen_forking_bound` applies it to any `EvalDistSemantics`,
-without monad laws or discrete-backend assumptions. Its `_map` corollary observes acceptance and
-extraction before integrating and keeps the intermediate measurable-space choice internal.
+without monad laws. Its `_map` corollary observes acceptance and extraction before integrating
+and keeps the intermediate measurable-space choice internal.
 
 `VCVio.EvalDist.ProbabilityBounds` supplies `prEvent_bind_sq_le_bind_pair` for conditional
 independent draws, including lossy common draws and continuations. Its selector-partition bound
 `sum_prEvent_option_map_eq_some_le_isSome` uses finite disjoint unions of measurable events,
 without expanding singleton probabilities. The raw measure lemma needs only measurable selector
-fibers and no measurable space on the selector's target. These native arguments also prove the
-discrete compatibility equations. Finite and weighted sum-of-squares inequalities derive from
-the same integral Cauchy–Schwarz theorem by integrating atomic measures.
+fibers and no measurable space on the selector's target. Finite and weighted sum-of-squares
+inequalities derive from the same integral Cauchy–Schwarz theorem by integrating atomic measures.
 `VCVio.OracleComp.Constructions.Fork.Basic` owns the typed occurrence constructions and
 `prEvent_sq_le_observedForkPair`: arbitrary discrete answer measures suffice, with no uniformity
-assumption or measurable-space arguments on the observed outputs. The original fork import
-facade retains the deprecated discrete equations. `evalDist_map_answer_completeOccurrence` and
+assumption or measurable-space arguments on the observed outputs.
+`evalDist_map_answer_completeOccurrence` and
 `evalDist_map_secondAnswer_fork` recover the configured response measure without assigning a
 measurable space to the completion or fork record. `prEvent_answer_completeOccurrence` transports
 answer events to a fresh query. `prEvent_focusCollision_fork` identifies the exact collision
@@ -358,7 +373,7 @@ decidable equality assumption on oracle names.
 kernel events on arbitrary spaces, so continuous kernel families have the same analytic API.
 
 `VCVio.EvalDist.Monad.UniformTable` supplies cell resampling/extraction, permutation,
-and injective restriction laws with explicit uniform-measure hypotheses. Its native counting
+and injective restriction laws with explicit uniform-measure hypotheses. Its counting
 proofs live in `ToMathlib.MeasureTheory.Measure.UniformTable`. The continuation may lose mass.
 `evalDist_map_equiv_of_uniform` packages Mathlib's `uniformOn_univ_map_equiv` for a computation;
 use it for a uniform permutation before introducing a bind continuation.
@@ -367,68 +382,37 @@ using the finite-uniform pushforward law. `evalDist_bind_congr` compares continu
 measures pointwise without a measurable-space instance on the intermediate result.
 `VCVio.OracleComp.EvalDist.Measure` gives `evalDist_bind_congr_of_support` by structural
 induction, without a probability/support bridge. These laws power the PRF tag/reader cache,
-composed-handler, and shared-observation proofs. `SampleableType.MeasureCompatibility`
-keeps the finite adapter calibration for legacy runtimes. BR93's measure-level masking
-step takes the chosen measure's uniformity certificate explicitly; its finite corollary
-uses the adapter calibration.
+composed-handler, and shared-observation proofs. `SampleableType.evalDist_uniformSample` is
+the one measure law for `$ᵗ α`, read off the class certificate for any measurable space with
+measurable singletons. BR93's masking step takes the chosen measure's uniformity certificate
+explicitly.
 
-The finite distribution API is
-explicit as `evalSPMF mx` / `𝒮[mx]`, and `Pr[...]` remains the discrete compatibility façade. One
-class connects the two: `DiscreteEvalDistCompatible m` says that integrating a measurable
-functional against `𝒟[mx]` is the façade expectation `∑' x, Pr[= x | mx] * g x`. Everything else
-is derived from it at an explicit compatibility boundary:
-`evalDist_apply_singleton` (`𝒟[mx] {x} = Pr[= x | mx]`), `evalDist_apply_setOf`
-(`𝒟[mx] {x | p x} = Pr[p | mx]` on a discrete space), `evalDist_apply_univ`
-(`𝒟[mx] univ = 1 - Pr[⊥ | mx]`), and `lintegral_evalDist` (`∫⁻ x, g x ∂𝒟[mx] = expectedValue mx g`).
-The compatibility adapter satisfies the class definitionally; the free-monad fold satisfies it
-whenever its measure specification agrees with its probability specification
-(`PFunctor.IsMeasureSpec.Compatible`, which `IsProbabilitySpec.toMeasureSpec` satisfies by `rfl`).
-For a finite uniform oracle, `OracleSpec.IsUniformMeasureSpec.instCompatible` proves the same
-agreement for the native `uniformOn Set.univ` interpretation. It lets a theorem about a direct
-uniform measure fold use an existing finite probability equation at the compatibility boundary.
-For `ProbComp Bool` security games, use `boolDistAdvantage` for a two-game gap and
+For `ProbComp Bool` security games, use `𝒟[game₀].boolDist 𝒟[game₁]` for a two-game gap and
 `𝒟[game] {true}` for a success probability; prefer `Pr{...}[winningCondition]`
-when the game ends by testing a predicate. The native uniform measure instances for
+when the game ends by testing a predicate. The uniform measure instances for
 `unifSpec` and `coinSpec` are global, so no local uniform certificate is needed.
-`boolDistAdvantage_self`,
-`boolDistAdvantage_comm`, and `boolDistAdvantage_triangle` keep elementary
-metric proofs independent of the finite façade.
-The split between `𝒟[…]` and `Pr[…]` is intentional: an unconditional `Eq.rec` law for `Pr[...]`
-only needs equality of result types, whereas a measure denotation also depends on the selected
-`MeasurableSpace`, so there is no blanket finite-type measurable-space instance.
+`Measure.boolDist_self`, `Measure.boolDist_comm`, and `Measure.boolDist_triangle` supply the
+elementary metric laws.
+A measure denotation depends on the `MeasurableSpace` selected on its result type, so there is no
+blanket measurable-space instance on finite types: `𝒟[…]` asks for one, while `Pr{…}[…]`
+observes the computation through `Prop` and keeps the choice internal.
 
-`SPMF`, `evalSPMF`, `probOutput`, `probEvent`, and `probFailure` are deprecated.
-Mathlib owns `PMF`, so VCVio's `usesRetiredProbability` environment linter
-records direct uses of it and the local finite API in `scripts/nolints.json`.
-New theorem statements should prefer `𝒟` or `Pr{...}[...]` and use a named
-compatibility equation only when discrete execution is needed.
-
-The notation alone does not make a theorem measure-native: `evalDist` retains its
-`EvalDistSemantics` instance as an implicit argument. If that instance is the
-`MonadLiftT … SPMF` adapter, the theorem's elaborated type still refers to `SPMF`,
-and `usesRetiredProbability` correctly reports it. State generic measure laws under
-an explicit `EvalDistSemantics`, or select a direct `PFunctor.IsMeasureSpec` before
-elaborating a concrete theorem. Keep sampler calibration through the old class in
-compatibility proofs until the sampler's certificate itself is measure-valued.
 For the finite-range and fair-coin oracles, `OracleSpec.IsUniformMeasureSpec.unifSpec`
-and `OracleSpec.IsUniformMeasureSpec.coinSpec` are the canonical native interpretations.
+and `OracleSpec.IsUniformMeasureSpec.coinSpec` are the canonical interpretations.
 Their instances apply only to these concrete oracle specifications; other oracle
-specifications still require an explicit measure interpretation. With the native instance,
-`ProbComp.evalDist_uniformFin` simplifies a query to `uniformOn Set.univ`, and
-`ProbComp.prEvent_uniformFin` evaluates a decidable event by counting
-its satisfying outcomes. These laws avoid a point-mass detour; the
-`FinEnum.SampleableType` construction also has a native uniformity proof in
-`SampleableType.NativeMeasure`, using finite-range sampling and equivalence
-transport. Its product sampler law uses `evalDist_pair` and the existing
+specifications require an explicit measure interpretation. `ProbComp.evalDist_uniformFin`
+simplifies a query to `uniformOn Set.univ`, and `ProbComp.prEvent_uniformFin` evaluates a
+decidable event by counting its satisfying outcomes. These laws avoid a point-mass detour; the
+`FinEnum.SampleableType` construction also has a uniformity proof in
+`SampleableType.Measure` (`SampleableType.evalDist_finEnum`), using finite-range sampling and
+equivalence transport. Its product sampler law uses `evalDist_pair` and the existing
 `uniformOn_univ_prod` construction. These supply the `BitVec` key law and the measure-level
-one-time-pad independence theorem. `SampleableType` itself certifies
-`𝒟[$ᵗ α] = uniformOn Set.univ` for every finite discrete measurable structure.
-Its executable sampler is the operational side, with full support a consequence
-of the law; the old `Pr[...]` lemmas are compatibility consequences. Uniform table
+one-time-pad independence theorem. The executable sampler of a `SampleableType` is the
+operational side, with full support a consequence of its uniformity law. Uniform table
 resampling and injective restriction use the measure laws in
 `VCVio.EvalDist.Monad.UniformTable`.
 `ProbComp.evalDist_decide_eq_uniformBool_half` proves that an independent Boolean guess
-matches a fair hidden bit with mass `1/2`; it uses the native uniform measure and
+matches a fair hidden bit with mass `1/2`; it uses the uniform measure and
 Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability sum.
 `ProbComp.evalDist_bind_not_uniformBool` applies the uniform-reindexing law to any
 continuation after complementing a fair bit.
@@ -443,39 +427,62 @@ distribution for an arbitrary oracle, so `IsUniformMeasureSpec.ofFiniteNonempty`
 opt-in and only the concrete `unifSpec` and `coinSpec` instances are global. Structural
 `OracleComp.support` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
+
+Oracle answer measures live on the discrete σ-algebra. `OracleSpec.IsMeasureSpec spec` is
+`PFunctor.IsMeasureSpec` at `fun _ => ⊤`, so `IsMeasureSpec.toMeasure t` is a measure on
+`(spec.Range t, ⊤)`, and statements about oracle computations take no measurable-space
+hypotheses on answer types. Continuous answer measures belong at the `PFunctor.FreeM` level,
+where `PFunctor.IsMeasureSpec` accepts arbitrary measurable structures. The query laws are generic
+in the measurable structure that observes an answer:
+
+- `evalDist_liftM_query` gives `(toMeasure t).trim le_top`, and `MeasureTheory.trim_eq_self`
+  removes the trim when the observing instance is `⊤` by definition, as for `Bool` and `Fin n`;
+- `evalDist_liftM_query_apply` (simp) evaluates a measurable event to `toMeasure t s`;
+- `evalDist_liftM_query_uniform` gives `uniformOn Set.univ` for a uniform specification, and
+  `evalDist_liftM_unifSpec_query` and `evalDist_liftM_coinSpec_query` are its simp forms for the
+  built-in specifications.
+
+When a concrete specification's answer type appears reduced (`Bool` rather than
+`spec.Range t`), `rw` and `simp` match the generic laws only with the specification named, as in
+`evalDist_liftM_query_apply (spec := S) t hs`: Lean assigns the measurable-space argument before
+the query has determined `spec`. Handler-level hypotheses (`evalDist_simulateQ_congr`,
+`evalDist_simulateQ_run_congr`, `QueryImpl.Stateful.MeasureDistEquiv.of_step`,
+`wp_simulateQ_eq`, `wp_simulateQ_run'_eq`) are equalities in distribution `=ᵈ`, so handler states
+need no measurable structure either. A tactic proof that needs the discrete structure on an answer
+or on a reply-state product declares it with `let : MeasurableSpace (spec.Range t) := ⊤`, using
+`let` because the goal is a proposition. A concrete specification with finite nonempty answers
+takes `IsUniformMeasureSpec.ofFiniteNonempty _` as a local instance on that specification. Sums
+get their instances from `IsMeasureSpec.add` and `IsUniformMeasureSpec.add`, and a local instance
+declared on the sum itself would compete with them.
 For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
 it follows only the query responses in `possibleOutputs`, with pure/query/bind laws
 and a `gcongr` monotonicity rule. PolyFun defines the underlying
 `FreeM.reachableUnder` from an angelic operation-indexed weakest-precondition
 fold. `reachableWhen_univ_eq_support` identifies its all-responses case with
-`MonadAttach.support`; `supportWhen_eq_reachableWhen` keeps the old `SetM` fold
-available as a deprecated compatibility bridge. This distinction matters for
+`MonadAttach.support`. This distinction matters for
 stateful handlers: `MonadAttach` records possible returned values, while a
 state-dependent notion must retain the starting state or operation policy.
 `OracleComp.mem_support_iff_evalDist_singleton_pos_of_fullSupport` takes the precise
 full-support condition on each answer measure, without adding a class for that one law.
 `OracleComp.mem_support_iff_evalDist_singleton_pos` discharges it from
-`IsUniformMeasureSpec`; use this native bridge when relating structural reachability to
-singleton mass. Neither theorem requires the PMF-based `IsUniformSpec` class.
+`IsUniformMeasureSpec`; use this bridge when relating structural reachability to
+singleton mass.
 Structural support itself needs no probability interpretation. In particular,
 `OracleComp.support_nonempty` needs only `[∀ t, Nonempty (spec.Range t)]`; counting-oracle support
-and worst-case query bounds use that weaker assumption rather than `IsUniformSpec`.
+and worst-case query bounds use that assumption alone.
 Keep the class hierarchy for chosen answer measures, and state one-off properties such as
 positive singleton mass as explicit hypotheses instead of adding a mixin for each bridge.
-Compatibility proofs that still use the finite frontend can open
-`ProbComp.DiscreteCompatibility` locally, leaving
-the native interpretation as the default elsewhere.
 
-The adapter is also `LawfulEvalDistSemantics` (`instLawfulEvalDistSemanticsOfMonadLiftTSPMF`), so
-the Giry laws `evalDist_pure`, `evalDist_bind`, `evalDist_map` and the const laws hold with no
-measure specification in scope; `evalDist_eq_evalSPMF_toMeasure` is its definitional unfolding.
-`evalDist_bind`/`evalDist_map` are deliberately not `@[simp]` on either side: a bind is expanded
-only on request (`gotchas.md` §10), and the measure side has no separate family of sum lemmas.
+The Giry laws `evalDist_pure`, `evalDist_bind`, and `evalDist_map` hold under
+`LawfulEvalDistSemantics`; bind needs a measurable continuation and map a measurable function,
+which `evalDist_bind_of_discrete` and `evalDist_map_of_discrete` discharge on a discrete source.
+`evalDist_bind`/`evalDist_map` are deliberately not `@[simp]`: a bind is expanded only on request
+(`gotchas.md` §10).
 Independent products denote product measures: `evalDist_mOfFn` and `evalDist_mPi`
 (`VCVio/EvalDist/IndepProductMeasure.lean`) identify `𝒟[Fintype.mPi f]` with
 `Measure.pi fun i => 𝒟[f i]` directly from `LawfulEvalDistSemantics` and Mathlib's
 `measurePreserving_piFinSuccAbove`/`pi_map_piCongrLeft`. The index traversal itself lives in
-`ToMathlib.Control.Monad.Fold`, so these measure laws do not import the scalar product proofs.
+`ToMathlib.Control.Monad.Fold`.
 `evalDist_map_eval_mOfFn_eq_smul` and `evalDist_map_eval_mPi_eq_smul` use
 `Measure.pi_map_eval`: a coordinate marginal is its factor's measure scaled by every other
 factor's success mass. The full-mass corollaries recover the factor itself.
@@ -488,41 +495,45 @@ chosen observation space without requiring a measurable space on the original pa
 into measurable product families, so `evalDistKernel` packages them as Mathlib kernels on
 the chosen parameter space. The proof uses kernel products and measurable reindexing.
 
-`VCVio.EvalDist.IndepProduct` exports native event and reachability rules, also available through
-`VCVio.Native`. Joint coordinate events factor by `prEvent_forall_coord_mOfFn` and
+`VCVio.EvalDist.IndepProduct` exports event and reachability rules, also available through
+`VCVio.Foundations`. Joint coordinate events factor by `prEvent_forall_coord_mOfFn` and
 `prEvent_forall_coord_mPi`; tuple equality uses `prEvent_eq_mOfFn` and `prEvent_eq_mPi`.
 These event rules require neither a measurable payload space nor attachment. The coordinate
 `_eq_mul` rules retain the other factors' success masses, `_le` gives an unconditional bound,
 and `prEvent_coord_mOfFn`/`prEvent_coord_mPi` need only the *other* factors to be lossless.
 `mem_support_mOfFn` and `mem_support_mPi` eliminate reachable coordinates using core
-`LawfulMonadAttach`; they require no exact-attachment or probability compatibility mixin.
+`LawfulMonadAttach`; they require no exact attachment.
 
 For finite uniform-output computations, `evalDist_mOfFn_uniformOn_pi` and
 `evalDist_mPi_uniformOn_pi` combine those laws with Mathlib's `uniformOn_pi`, allowing each
-factor its own uniform set. Their constant-full-space corollaries take the single-draw
-uniformity certificate explicitly; the Fischlin small-sum count supplies its compatibility
-certificate at the boundary instead of inducting over singleton probabilities.
+factor its own uniform set. Their constant-full-space corollaries
+(`evalDist_mOfFn_const_uniform`, `evalDist_mPi_const_uniform`) take the single-draw
+uniformity certificate explicitly.
 `OracleComp.evalDist_replicate_succ` uses Mathlib's `Measure.bind` and `Measure.map` for repeated
 list-valued sampling, and `evalDist_replicate_apply_univ` gives its success mass as a power.
 Because Mathlib does not install a generic measurable space on `List α`, these laws require the
 chosen list measurable space and measurability of each `List.cons x` map explicitly.
 
-Failure on the measure side is missing mass, recorded in `VCVio/EvalDist/FailureMeasure.lean`:
-`Pr[⊥ | mx] = 1 - 𝒟[mx] univ`, `IsProbabilityMeasure 𝒟[mx] ↔ Pr[⊥ | mx] = 0` (an instance under
-`NeverFail mx`), `𝒟[failure] = 0`, the failure-completed `(𝒟[mx]).withFailure : Measure (Option α)`
-with `{none}` mass `Pr[⊥ | mx]`, the success mass of `bind`/`map` in `expectedValue` form, and
-`OptionT.evalDist_eq_comap_some` (an `OptionT` computation denotes `Measure.comap some` of its run).
-`OptionT.evalDist_eq_dropNone` supplies the equivalent compatibility normal form.
+Failure is missing mass. `𝒟[mx]` measures successful outputs only, so the failure mass of `mx`
+is `1 - Pr{_ ← mx}[True]` (`prEvent_true_eq_evalDist_apply_univ` identifies the event with
+`𝒟[mx] Set.univ`), and `IsProbabilityMeasure 𝒟[mx]` states losslessness.
+`evalDistWithFailure mx : Measure (Option α)` (`VCVio/EvalDist/WithFailure.lean`) is the
+probability measure that puts the missing mass at `none`: `evalDistWithFailure_none` gives
+`1 - 𝒟[mx] Set.univ`, and `evalDistWithFailure_some` recovers the successful singleton masses.
+`𝒟[failure] = 0` under `LawfulFailureEvalDistSemantics` (`evalDist_failure_eq_zero`). An
+`OptionT` computation denotes `Measure.comap some` of its run (`OptionT.evalDist_eq_comap_some`),
+equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in
+`VCVio/EvalDist/Defs/Measure/OptionT.lean`), and a lift keeps the measure:
+`OptionT.evalDist_liftM` (`@[simp]`) states `𝒟[(liftM mx : OptionT m α)] = 𝒟[mx]`.
 
 ## Core Definitions
 
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
 | `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure/Core.lean` |
-| `evalSPMF mx` | `SPMF α` | `𝒮[mx]` | `EvalDist/Defs/Basic.lean` |
-| `probOutput mx x` | `ℝ≥0∞` | `Pr[= x \| mx]` | `EvalDist/Defs/Basic.lean` |
-| `probEvent mx p` | `ℝ≥0∞` | `Pr[p \| mx]` | `EvalDist/Defs/Basic.lean` |
-| `probFailure mx` | `ℝ≥0∞` | `Pr[⊥ \| mx]` | `EvalDist/Defs/Basic.lean` |
+| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{x ← mx; …}[p x]`, `Pr{mx}[= a]` | `EvalDist/ProbabilityNotation.lean` |
+| `evalDistWithFailure mx` | `Measure (Option α)` | — | `EvalDist/WithFailure.lean` |
+| `EvalDistEq mx my` | `Prop` | `mx =ᵈ my` | `EvalDist/EvalDistEq.lean` |
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
 | `finSupport mx` | `Finset α` | — | `EvalDist/Defs/Support.lean` |
 
@@ -553,11 +564,10 @@ the successful-output denotation to its first marginal before the upstream `run'
 unfolds; consumers do not need to supply the measurable-map equation.
 
 `ProbabilitySemantics` is the total/lossless semantics bundle used by transformer adapters.
-The lower-level `MeasureSemanticsVia` continues to describe potentially lossy surface semantics.
-Import `VCVio.EvalDist.Defs.Semantics.Core` for native bundles and
-`VCVio.EvalDist.MeasureSemantics` for effect-preserving transformer observations. These paths
-contain no PMF/SPMF backend; `Defs.Semantics` additionally exports the discrete compatibility
-bundles. Bundled `evalDist` observations infer `IsSubprobabilityMeasure` and `IsFiniteMeasure`.
+The lower-level `MeasureSemanticsVia` describes potentially lossy surface semantics.
+Import `VCVio.EvalDist.Defs.Semantics.Core` for the bundles and
+`VCVio.EvalDist.MeasureSemantics` for effect-preserving transformer observations. Bundled
+`evalDist` observations infer `IsSubprobabilityMeasure` and `IsFiniteMeasure`.
 Known probability certificates propagate through bundling, and bundled kernels infer
 `IsMarkovKernel` from certificates for their output family. The total semantics bundle's bare
 denotation and effect-preserving `optionT`, `exceptT`, and `writerT` observations infer
@@ -571,13 +581,13 @@ instances once; consumers should not repeatedly unfold it or redeclare the same 
 Lean's instance search does not prove arbitrary mass equations or unfold every named wrapper.
 
 For `ProbResponder`, the kernel is authoritative. `ProbResponder.IsExecutable` optionally carries
-a coherent realization `ProbResponder.IsExecutable.answerSPMF` for machine execution.
-Executable state and answer spaces must have measurable singletons, so equality with
-the authoritative kernel determines every executable point mass and therefore the entire SPMF.
-Pullback along an interface lens preserves executability only when the transported answer space
-also has measurable singletons. This separate capability is important: abstract cryptographic
-caches need not be countable, while a kernel-native responder need not have any executable SPMF
-realization.
+a `ProbComp` realization `ProbResponder.IsExecutable.answerComp` for machine execution, whose
+output measures are the kernel; two realizations therefore agree in distribution. Stateful
+`ProbComp` handlers become responders through `ProbResponder.ofQueryImpl`, and the handler of the
+result is the original one on the nose. Pullback along an interface lens preserves executability.
+This separate capability is important: abstract cryptographic caches need not be countable, while
+a kernel-based responder need not have any executable realization. The executable layer lives in
+`Type`, where the measure semantics of `ProbComp` does.
 
 #### Adoption audit
 
@@ -586,9 +596,9 @@ realization.
 | Closed `evalDist`, advantages, couplings | Keep `Measure` | There is no semantic input to bundle. |
 | `ReaderT` and `StateT` observations | Use `Kernel` now | Environment/state is exactly the kernel input; use the adapters above. |
 | Stateful responders and wired rounds | Use `Kernel` now | `answerKernel`, `stepAgainstKernel`, and kernel powers model transitions compositionally. |
-| Executable `QueryImpl`, `simulateQ`, machine runs | Keep monadic/SPMF syntax | These are programs and evaluators; cross to kernels at observation boundaries. |
+| Executable `QueryImpl`, `simulateQ`, machine runs | Keep monadic syntax | These are programs and evaluators; cross to kernels at observation boundaries. |
 | KL/data-processing continuations | Use `Kernel` now | `KLDivergence.denoteKernel` is implemented through `evalDistKernelOfDiscrete`. |
-| Query tracing, caches, costs, enforcement | Migrate observations, not handlers | Add kernel views of their `StateT` runs when a theorem composes distributions across states. |
+| Query tracing, caches, costs, enforcement | Kernel views of observations, not handlers | Add kernel views of their `StateT` runs when a theorem composes distributions across states. |
 | Crypto functions parameterized by keys/messages/security parameter | Add kernels when composed probabilistically | A plain function remains clearer until measurability or data processing is actually used. |
 | UC/open-process runtime | Defer to an observation boundary | Structural process syntax has no canonical measurable space; bundle a kernel only for a chosen execution/observation model. |
 | Program-logic predicates and tactics | Keep computation syntax | Their job is to reason before denotation. Add kernel bridge lemmas, not kernel-valued syntax. |
@@ -600,17 +610,17 @@ measurable space is the explicit escape hatch.
 For generic output types, prefer `[MeasurableSpace α]` and structural instances for products,
 options, and subtypes. A local `MeasurableSpace := ⊤` deliberately selects discrete semantics;
 it is not an extra proof of a property of an already chosen measure. Intermediate choices made
-only to normalize a computation belong inside the semantic API, as in `prEvent` and the native
+only to normalize a computation belong inside the semantic API, as in `prEvent` and the
 constant-continuation laws.
 
-### Measure-native interfaces
+### Measure interfaces
 
 | Definition | Purpose | Defined in |
 |-----------|---------|------------|
 | `Measure.etvDist` / `Measure.tvDist` | Total variation on arbitrary subprobability measures | `ToMathlib/MeasureTheory/Measure/TotalVariation.lean` |
-| `measureETVDist` / `measureTVDist` | Total variation directly on `𝒟[…]` | `EvalDist/MeasureTVDist.lean` |
+| `measureETVDist` / `measureTVDist` | Total variation directly on `𝒟[…]` | `EvalDist/MeasureTVDist/Basic.lean` |
 | `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le` | Common-transition contraction on chosen measurable spaces | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean`, `ToMathlib/Probability/Kernel/TotalVariation.lean` |
-| `measureETVDist_bind_bind_le_lintegral` | Native conditional composition with an AE majorant under the prefix law | `EvalDist/MeasureTVDist/Bind.lean` |
+| `measureETVDist_bind_bind_le_lintegral` | Conditional composition with an AE majorant under the prefix law | `EvalDist/MeasureTVDist/Bind.lean` |
 | `Measure.etvDist_bind_bind_le_of_bad` | Exceptional prefix mass plus the good-branch allowance weighted by its mass | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` |
 | `Measure.Coupling` | Joint measure with prescribed marginals | `ToMathlib/MeasureTheory/Measure/Coupling.lean` |
 | `MeasureProgramLogic.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
@@ -641,227 +651,221 @@ Available for: `Bool`, `Fin n` (for `[NeZero n]`), `ZMod n`, `BitVec n`, `α × 
 
 ## Simp Lemma Catalog
 
+The *Tags* column records the default-set membership each lemma has; an entry without a tag is
+applied by name (`rw`, `exact`, or a `simp [...]` argument).
+
 ### Pure
 
-| Lemma | Statement |
-|-------|-----------|
-| `evalDist_pure` | `𝒟[(pure x : m α)] = Measure.dirac x` |
-| `evalSPMF_pure` | `evalSPMF (pure x : m α) = pure x` |
-| `probOutput_pure` | `Pr[= x \| pure y] = if x = y then 1 else 0` |
-| `probOutput_pure_self` | `Pr[= x \| pure x] = 1` |
-| `probEvent_pure` | `Pr[p \| pure x] = if p x then 1 else 0` |
-| `probFailure_pure` | `Pr[⊥ \| pure x] = 0` |
-| `support_pure` | `support (pure x) = {x}` |
+| Lemma | Statement | Tags |
+|-------|-----------|------|
+| `evalDist_pure` | `𝒟[(pure x : m α)] = Measure.dirac x` | `simp` |
+| `prEvent_pure_prop` | `prEvent (pure P : m Prop) = if P then 1 else 0` | `simp`, `grind =` |
+| `prEvent_pure` | `Pr{x ← (pure a : m α)}[p x] = if p a then 1 else 0` | `grind =` |
+| `support_pure` | `support (pure x) = {x}` | `grind =` |
 
 ### Bind
 
-| Lemma | Statement |
-|-------|-----------|
-| `evalDist_bind` | measure bind, with measurable continuation |
-| `evalDist_bind_of_discrete` | measure bind on a discrete source space |
-| `evalSPMF_bind` | `evalSPMF (mx >>= my) = evalSPMF mx >>= fun x => evalSPMF (my x)` |
-| `probOutput_bind_eq_tsum` | `Pr[= y \| mx >>= my] = ∑' x, Pr[= x \| mx] * Pr[= y \| my x]` |
-| `probEvent_bind_eq_tsum` | `Pr[q \| mx >>= my] = ∑' x, Pr[= x \| mx] * Pr[q \| my x]` |
-| `probFailure_bind_eq_add_tsum` | `Pr[⊥ \| mx >>= my] = Pr[⊥ \| mx] + ∑' x, Pr[= x \| mx] * Pr[⊥ \| my x]` |
-| `support_bind` | `support (mx >>= my) = ⋃ x ∈ support mx, support (my x)` |
-| `finSupport_bind` | `finSupport (mx >>= my) = (finSupport mx).biUnion (fun x => finSupport (my x))` |
+| Lemma | Statement | Tags |
+|-------|-----------|------|
+| `evalDist_bind` | `𝒟[mx >>= f] = 𝒟[mx].bind fun x => 𝒟[f x]`, for a measurable continuation | — |
+| `evalDist_bind_of_discrete` | the same on a discrete source space | — |
+| `prEvent_bind_eq_lintegral_of_discrete` | `Pr{y ← mx >>= f}[p y] = ∫⁻ x, Pr{y ← f x}[p y] ∂𝒟[mx]` | — |
+| `prEvent_bind_eq_sum_fintype` | `Pr{y ← mx >>= f}[p y] = ∑ a, Pr{x ← mx}[x = a] * Pr{y ← f a}[p y]` | — |
+| `prEvent_bind_eq_tsum_of_countable` | the same as a `tsum` over a countable source | — |
+| `evalDist_bind_apply_univ` | `𝒟[mx >>= f] Set.univ = ∫⁻ x, 𝒟[f x] Set.univ ∂𝒟[mx]` | — |
+| `support_bind` | `support (mx >>= my) = ⋃ x ∈ support mx, support (my x)` | `grind =` |
+| `finSupport_bind` | `finSupport (mx >>= my) = (finSupport mx).biUnion (fun x => finSupport (my x))` | `simp`, `grind =` |
 
 ### Bind (constant continuation)
 
-| Lemma | Statement |
-|-------|-----------|
-| `probOutput_bind_const` | `Pr[= y \| mx >>= fun _ => my] = (1 - Pr[⊥ \| mx]) * Pr[= y \| my]` |
-| `probEvent_bind_const` | `Pr[p \| mx >>= fun _ => my] = (1 - Pr[⊥ \| mx]) * Pr[p \| my]` |
+| Lemma | Statement | Tags |
+|-------|-----------|------|
+| `evalDist_bind_const` | `𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my]` | `simp` |
+| `prEvent_bind_const` | `prEvent (mx >>= fun _ => my) = Pr{_ ← mx}[True] * prEvent my` | `simp` |
+| `OracleComp.evalDist_bind_const` | `𝒟[mx >>= fun _ => my] = 𝒟[my]` for a lossless oracle computation | `simp` |
+| `OracleComp.prEvent_true_eq_one` | `Pr{_ ← mx}[True] = 1` for an oracle computation | `simp`, `grind =` |
 
 ### Map
 
-| Lemma | Statement |
-|-------|-----------|
-| `evalSPMF_map` | `evalSPMF (f <$> mx) = f <$> evalSPMF mx` |
-| `probEvent_map` | `Pr[q \| f <$> mx] = Pr[q ∘ f \| mx]` |
-| `probFailure_map` | `Pr[⊥ \| f <$> mx] = Pr[⊥ \| mx]` |
-| `support_map` | `support (f <$> mx) = f '' support mx` |
-| `probOutput_map_injective` | `f.Injective → Pr[= f x \| f <$> mx] = Pr[= x \| mx]` |
+| Lemma | Statement | Tags |
+|-------|-----------|------|
+| `evalDist_map` | `𝒟[f <$> mx] = 𝒟[mx].map f`, for a measurable `f` | — |
+| `evalDist_map_apply` | `𝒟[f <$> mx] s = 𝒟[mx] (f ⁻¹' s)`, for measurable `f` and `s` | — |
+| `prEvent_map` | `Pr{y ← f <$> mx}[q y] = Pr{x ← mx}[q (f x)]` | `grind norm` |
+| `evalDist_map_const` | `𝒟[(fun _ => c) <$> mx] = 𝒟[mx] Set.univ • Measure.dirac c` | `simp` |
+| `support_map` | `support (f <$> mx) = f '' support mx` | `grind =` |
+| `evalDist_map_equiv_of_uniform` | a permutation of a finite uniform draw keeps its measure | — |
 
-### Bind swapping
+### Bind swapping and congruence
 
 | Lemma | Use |
 |-------|-----|
-| `probEvent_bind_bind_swap` | Swap two independent binds (used internally by `vcstep` probability-equality rewrites) |
-| `probOutput_bind_congr` | Congruence: equal on support → equal probability |
-| `probEvent_bind_congr` | Same for events |
+| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.prEvent_bind_bind_swap` | Swap two independent oracle binds (used by `vcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
+| `evalDist_bind_congr` / `prEvent_bind_congr` | Pointwise equal continuations give equal binds, with no measurable space on the intermediate result |
+| `OracleComp.evalDist_bind_congr_of_support` / `OracleComp.prEvent_bind_congr_of_support` | Continuations equal on the support of the shared prefix give equal binds |
 
 ### Zero / membership
 
 | Lemma | Use |
 |-------|-----|
-| `probOutput_eq_zero_of_not_mem_support` | `x ∉ support mx → Pr[= x \| mx] = 0` |
-| `probOutput_bind_eq_tsum_subtype` | Restrict tsum to `support mx` |
-| `probOutput_bind_eq_sum_finSupport` | Finite sum over `finSupport` |
+| `prEvent_eq_zero_of_forall_mem_support` | An event false on every reachable output has probability zero |
+| `evalDist.apply_eq_zero_of_disjoint_support` | A measurable event disjoint from the support has zero mass |
+| `OracleComp.mem_support_iff_evalDist_singleton_pos` | `x ∈ support mx ↔ 0 < 𝒟[mx] {x}` under uniform answers |
 
 ## Decision Tree: Which Lemma Do I Reach For?
 
-1. **Goal is `Pr[= y | mx >>= my] = ...`?**
-   → Start with `probOutput_bind_eq_tsum`
+1. **Goal is `Pr{y ← mx >>= my}[p y] = ...` or `𝒟[mx >>= my] s = ...`?**
+   → `prEvent_bind_eq_lintegral_of_discrete` (or `evalDist_bind_of_discrete` followed by
+     `Measure.bind_apply`) exposes the integral
+   → On a `Fintype` draw, `prEvent_bind_eq_sum_fintype` gives the finite sum directly; on a
+     countable draw, `prEvent_bind_eq_tsum_of_countable`
 
-2. **Goal is `Pr[p | mx >>= my] = ...`?**
-   → Start with `probEvent_bind_eq_tsum`
-
-3. **Need to swap two binds?**
+2. **Need to swap two binds?**
    → Use `vcstep` if the swap should close the equality
    → Use `vcstep rw` / `vcstep rw under n` if you need an explicit rewrite step
 
-4. **Need `Pr[= y | f <$> mx]`?**
-   → If `f` is injective: `probOutput_map_injective`
-   → Otherwise: `probOutput_map_eq_tsum_subtype` or `probOutput_map_eq_sum_finSupport_ite`
+3. **Need an event or measure of `f <$> mx`?**
+   → Events: `simp` or `grind` (`prEvent_map`)
+   → Measures: `evalDist_map` / `evalDist_map_of_discrete`, and `evalDist_map_apply` on a set
+   → A permutation of a uniform draw: `evalDist_map_equiv_of_uniform`
 
-5. **Need to restrict a sum to support?**
-   → `probOutput_bind_eq_tsum_subtype` or `probOutput_bind_eq_sum_finSupport`
+4. **Continuation doesn't depend on result?**
+   → `evalDist_bind_const` / `prEvent_bind_const` (by `simp`; the prefix contributes its success
+     mass), and `OracleComp.evalDist_bind_const` for a lossless oracle prefix
 
-6. **Continuation doesn't depend on result?**
-   → `probOutput_bind_const` / `probEvent_bind_const`
+5. **Continuations agree only on the support of a shared prefix?**
+   → `OracleComp.evalDist_bind_congr_of_support` / `OracleComp.prEvent_bind_congr_of_support`
+     (or `vcstep`)
+
+6. **Relating probability to support?**
+   → Under uniform answers: `OracleComp.mem_support_iff_evalDist_singleton_pos`,
+     `OracleComp.prEvent_eq_zero_iff`, `OracleComp.prEvent_eq_one_iff`, `OracleComp.prEvent_pos_iff`
+   → Without uniformity (one direction): `prEvent_eq_zero_of_forall_mem_support`,
+     `OracleComp.prEvent_eq_one_of_forall_mem_support`, `evalDist.ae_of_forall_mem_support`
 
 7. **Two computations have same distribution?**
-   → For legacy coupling lemmas, show `evalSPMF oa = evalSPMF ob`, or use
-     `relTriple_eqRel_of_evalSPMF_eq`. For Mathlib probability results, compare `𝒟[oa]` and `𝒟[ob]`.
+   → State `oa =ᵈ ob` (`EvalDistEq`, possibly across monads); `relTriple_eqRel_of_evalDistEq`
+     turns it into an `EqRel` coupling, and `EvalDistEq.of_evalDist_eq` proves it from equal
+     output measures in a discrete structure.
 
 ## `grind` vs `simp` on Probability Goals
 
 `grind` and `simp` have complementary strengths here, and reaching for the wrong one is the most
 common way to get a `grind` that hangs.
 
-**Use `simp` to compute a concrete probability or factor structure.** `simp` evaluates
-`Pr[= x | $ᵗ T]`, `Pr[p | $ᵗ T]`, products of uniform draws, etc.; `grind` is not an `ℝ≥0∞`/`Fintype.card`
-arithmetic engine and will not finish these (it fails fast).
+**Use `simp` to compute a concrete probability or factor structure.** `simp` evaluates Dirac
+masses of `pure`, uniform masses such as `𝒟[$ᵗ T] {x}` (and `Pr{x ← $ᵗ T}[p x]` down to its
+filtered cardinality `#{x | p x} / Fintype.card T`), constant continuations
+(`evalDist_bind_const`), bounds (`𝒟[mx] s ≤ 1`, `Pr{…}[…] ≠ ⊤`), and the success mass of an
+oracle computation. `grind` is not an `ℝ≥0∞`/`Fintype.card` arithmetic engine and has no rules
+for Dirac singletons, measure bounds, or the success factor of a constant continuation, so it
+will not finish these (it fails fast).
 
-**Use `grind` for symbolic / membership / directed-iff goals.** Equiprobability
-(`Pr[= x | $ᵗ T] = Pr[= y | $ᵗ T]`), `x ∈ support (…)`, `Pr[= x | mx] = 0 ↔ x ∉ support mx`, and
-similar are squarely in `grind`'s wheelhouse.
+**Use `grind` for symbolic / structural goals.** Equiprobability (`𝒟[$ᵗ T] {x} = 𝒟[$ᵗ T] {y}`,
+through the `grind norm` uniform laws `SampleableType.evalDist_uniformSample_singleton` and
+`SampleableType.prEvent_uniformSample`), the pushforward of an event (`prEvent_map`),
+independent conjunctions (`prEvent_bind_bind_and`), the lossless event `Pr{_ ← mx}[True] = 1` of
+an oracle computation (`OracleComp.prEvent_true_eq_one`), failure (`evalDist_failure_eq_zero`),
+`x ∈ support (…)`, and `bind`/`pure`-shaped equalities of computations and their measures are
+squarely in `grind`'s wheelhouse.
 
-**Why some characterization lemmas are `@[simp]` but not `@[grind]`.** A characterization whose RHS
-introduces an *unbounded* quantifier or set over the support —
-`Pr[…] = 0/1 ↔ ∃/∀ x ∈ support …`, `support = {x}`, `support = ∅` — is a `grind` **saturation
-hazard**: as `grind` case-splits the iff it instantiates and Skolemizes the support quantifier into
-fresh witnesses, which the always-tagged `bind`-expansion lemmas (`support_bind`,
-`probFailure_bind_eq_add_tsum`, `mem_support_bind_iff`, …) re-expand into yet more `support`/`Pr[…]`
-terms, with no finite grounding (`support ($ᵗ α) = Set.univ` is infinite). The hazard is
-**combinatorial, not per-lemma**: no single one of these lemmas saturates `grind` on its own (restore
-any one and a `grind` that should fail fast stays fast), but tagged *together* they form a re-trigger
-cycle — restoring all of them makes that same `grind` run ~25× longer. The **hub of the cycle is the
-`probEvent_eq_one_iff` family**: its RHS `Pr[⊥|mx]=0 ∧ ∀ x∈support, p x` couples the `probEvent`,
-`probFailure`, and `support` layers at once (drop it and the blow-up roughly quarters). So that
-family, together with the `∃`-Skolemizing `probEvent_ne_zero_iff` and the `probEvent_eq_zero_iff`
-families, is kept `@[simp]`-only (fixed orientation, no case-split — safe). The *directed
-single-variable* membership bridges (`probOutput_eq_zero_iff : … ↔ x ∉ support`, `probOutput_pos_iff`,
-`mem_finSupport_iff`, `mem_finSupport_iff_mem_support`) are confluent and stay `@[grind =]`.
+**Support characterizations are opt-in for `grind`.** Under uniform answer measures,
+`OracleComp.prEvent_eq_zero_iff` (`Pr{x ← mx}[p x] = 0 ↔ ∀ x ∈ support mx, ¬ p x`),
+`OracleComp.prEvent_eq_one_iff` (`… = 1 ↔ ∀ x ∈ support mx, p x`), and
+`OracleComp.prEvent_pos_iff` (`0 < … ↔ ∃ x ∈ support mx, p x`), all in
+`VCVio/OracleComp/EvalDist/Measure.lean`, relate event probability to structural support. Their
+right-hand sides introduce an *unbounded* quantifier over the support, which `grind` instantiates
+and Skolemizes into fresh witnesses that the default `support_bind` rules re-expand, with no
+finite grounding (`support ($ᵗ α) = Set.univ` is infinite). A default set containing them
+saturates instead of failing fast, so none of them is a `grind` rule, and neither is
+`OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support`. The point bridge
+`OracleComp.mem_support_iff_evalDist_singleton_pos` (`x ∈ support mx ↔ 0 < 𝒟[mx] {x}`) is in
+neither default set either. A proof that needs one supplies it:
+`grind [OracleComp.prEvent_eq_zero_iff]`. This keeps naive `grind` on a probability goal failing
+fast instead of hanging, while letting the proof that genuinely needs a bridge opt in.
+`VCVioTest/GrindFailFast.lean` gates all of this: each characterization has a
+`fail_if_success grind` + `grind [<lemma>]` example, so both a bad tag (bare `grind` starts
+succeeding) and a new saturation (the timeout escapes `fail_if_success`) fail the build loudly.
 
-Lemmas kept `@[simp]`-only by this rule (in `EvalDist/Defs/Basic.lean` unless noted):
-`probEvent_eq_zero_iff(')`, `probEvent_ne_zero_iff(')`, `probEvent_eq_one_iff(')`,
-`one_eq_probEvent_iff(')`, `probOutput_eq_one_iff`, `one_eq_probOutput_iff`, `probFailure_eq_one_iff`;
-and `mem_support_bind_iff` / `mem_finSupport_bind_iff` (untagged — `support_bind` / `finSupport_bind`
-are the `simp` forms).
+**Monad/functor laws normalise structure for `grind`.** `bind_pure`, `bind_assoc`, `map_pure`,
+and `Functor.map_map` are tagged `@[grind =]` (in `VCVio/EvalDist/Monad/Basic.lean`); `pure_bind`
+is already in the default set from core (`attribute [grind <=] pure_bind` in
+`Init.Control.Lawful`), so it is not re-tagged here. They are confluent rewrites, so `grind`
+collapses a computation's structure (`mx >>= pure = mx`, `pure a >>= f = f a`, …) *before*
+expanding events and measures, turning what would otherwise be a `grind` *explosion* on a
+`bind`/`pure`-shaped equality into a quick solve: over an abstract lawful monad,
+`𝒟[do let a ← mx; let b ← pure a; let c ← pure b; pure c] = 𝒟[mx]` and
+`Pr{_ ← g <$> (f <$> mx)}[True] = Pr{_ ← mx}[True]` close by bare `grind`, and the ten-deep
+redundant-`pure` tower of `VCVioTest/LongChainPrograms.lean` by `grind` given its definition.
+`bind_pure_comp` / `map_eq_bind` are omitted (function argument under a binder, unindexable). A
+*non-trivial* `<$>` / `if` / `<*>` does not normalise to a `pure`, so those structured equalities
+go through the dedicated rules below or stay `simp`-terminal.
 
-**Support-quantifier lemmas verified safe in isolation, kept `@[grind =]`.** A few carry the support
-quantifier yet sit *outside* the `probEvent_eq_one_iff` hub cycle and add no measurable `grind` cost
-on their own, so they keep their `grind` tag: `probEvent_pos_iff(')`, `probOutput_eq_one_iff'` (the
-mirror of the never-dropped `one_eq_probOutput_iff'` — both are the `finSupport`-singleton form), and
-`probFailure_bind_eq_zero_iff` (in `EvalDist/Monad/Basic.lean`). These are safe **only while the hub
-family stays `@[simp]`-only**: re-tagging the `probEvent_eq_one_iff` family alongside them re-forms the
-saturation cycle. `VCVioTest/LongChainPrograms.lean` is the 10+-step stress benchmark for exactly
-this.
-
-**If a `grind` proof needs one of these, re-supply it locally:** `grind [probEvent_eq_zero_iff]`. This
-keeps the bridge out of the default set (so naive `grind` on a probability goal fails fast instead of
-hanging) while letting the proof that genuinely needs it opt in.
-
-**`Set.Nonempty`-phrased companions stay in the default `grind` set.** `grind` keeps `Set.Nonempty`
-atomic (it does not unfold it to `∃ x ∈ support`), so a characterization phrased via `Nonempty`
-carries the same information without the saturating quantifier. `probFailure_eq_one_iff_not_nonempty`
-(`Pr[⊥ | mx] = 1 ↔ ¬ (support mx).Nonempty`) is the `grind`-friendly companion to the `simp`-only
-`probFailure_eq_one_iff` (`… ↔ support mx = ∅`); reach for the `Nonempty` form when a `grind` proof
-needs to reason about a computation failing (or not) with probability one.
-`support_uniformSample_nonempty` (`(support ($ᵗ α)).Nonempty`, `@[grind]`) closes the loop, letting
-`grind` conclude e.g. `Pr[⊥ | $ᵗ α] ≠ 1` end-to-end.
-
-The event-probability versions follow the same recipe with the *filtered* support `{x ∈ support mx | p x}`
-(the reachable outputs satisfying `p`): `probEvent_eq_zero_iff_not_nonempty`
-(`Pr[ p | mx] = 0 ↔ ¬ {x ∈ support mx | p x}.Nonempty`) is the `@[grind =]` companion to the
-`simp`-only `probEvent_eq_zero_iff`. Its sibling `probEvent_ne_zero_iff_nonempty` (`Pr[ p | mx] ≠ 0 ↔ …`)
-exists but is deliberately **untagged**: the trio of `Nonempty` companions tagged together re-forms
-a saturation cycle in the *generic-monad* context (`grind` on the `probEvent_eq_one_iff` statement
-shape times out instead of failing fast; dropping any one of the three restores fail-fast), and
-dropping the `≠ 0` sibling is free — `grind` recovers `≠ 0 ↔ Nonempty` from the kept
-`= 0 ↔ ¬ Nonempty` form by classical negation. The `Pr[…] = 1` companions are deliberately
-*omitted* entirely: a `Nonempty`-phrased `probEvent_eq_one` keeps its `Pr[⊥ | mx] = 0` conjunct,
-which re-couples it to the hub family; the `= 1` cases use `grind [probEvent_eq_one_iff]` opt-in
-instead. `VCVioTest/GrindFailFast.lean` gates all of this: each dropped lemma has a
-`fail_if_success grind` + `grind [<lemma>]` example over a generic `m`, so both a bad re-tag
-(bare `grind` starts succeeding) and a new saturation (the timeout escapes `fail_if_success`)
-fail the build loudly.
-
-**Monad/functor laws normalise structure for `grind`.** `bind_pure`, `bind_assoc`, and
-`map_pure` are tagged `@[grind =]` (in `EvalDist/Monad/Basic.lean`); `pure_bind` is already in the
-default set from core (`attribute [grind <=] pure_bind` in `Init.Control.Lawful`), so it is not
-re-tagged here. They are confluent rewrites, so
-`grind` collapses a computation's structure (`mx >>= pure = mx`, `pure a >>= f = f a`, …) *before*
-falling into `probOutput`/`tsum` expansion — turning what would otherwise be a `grind` *explosion* on
-a `bind`/`pure`-shaped probability/support/distribution equality into a quick solve
-(`Pr[= x | mx >>= pure] = Pr[= x | mx]`, `𝒮[do let x ← mx; pure x] = 𝒮[mx]`,
-`support (do let b ← $ᵗ Bool; pure b) = Set.univ` all close by bare `grind`). `bind_pure_comp` /
-`map_eq_bind` are omitted (function argument under a binder, unindexable). A *non-trivial*
-`<$>` / `if` / `<*>` does not normalise to a `pure`, so those structured equalities stay
-`simp`-terminal.
-
-**Independent products factor via `@[grind norm]`, not E-matching.** The second factor of
-`Pr[= z | (·, ·) <$> mx <*> my]` sits under a binder (`Seq.seq`'s `Unit → _` thunk), which
-`grind`'s pattern compiler cannot index — tagging the factorization lemma `@[grind =]` yields an
-"invalid pattern" error (so do `pure_seq`/`seq_pure`). The escape is `grind`'s *normalization*
-phase: `probOutput_seq_map_prod_mk_eq_mul` is `@[simp high, grind norm]`, so bare `grind` factors
-the applicative spelling (and closes e.g. equiprobability of a uniform product). The `bind`-spelled
-product (`do let x ← mx; let y ← my; pure (x, y)`) remains `simp`-only — the second draw sits under
-`bind`'s continuation, which the seq-keyed norm rule does not reach.
+**Sequencing factors via `@[grind norm]`, not E-matching.** The second factor of
+`(·, ·) <$> mx <*> my` sits under a binder (`Seq.seq`'s `Unit → _` thunk), which `grind`'s
+pattern compiler cannot index: tagging such a lemma `@[grind =]` yields an "invalid pattern" error
+(so do `pure_seq`/`seq_pure`). The escape is `grind`'s *normalization* phase:
+`evalDist_seq_map_prod_mk`, `evalDist_seqLeft`, `evalDist_seqRight`, `prEvent_seqLeft`, and
+`prEvent_seqRight` (`VCVio/EvalDist/Monad/Seq/Measure.lean`) are `@[simp high, grind norm]`, so
+bare `grind` identifies `𝒟[Prod.mk <$> mx <*> my]` with `𝒟[mx].prod 𝒟[my]` and scales a
+discarded computation's event by its success mass. A singleton of the `bind`-spelled product
+(`do let x ← mx; let y ← my; pure (x, y)`) goes through `evalDist_pair` and `Measure.prod_prod` by
+name; independent conjunctions of that shape factor automatically through
+`prEvent_bind_bind_and`.
 
 **`grind norm` can starve E-matching — use it sparingly.** Norm rules rewrite goal/hypothesis
-terms *before* E-matching, so a norm rule whose result no longer matches the `@[grind =]` patterns
+terms *before* E-matching, so a norm rule whose result does not match the `@[grind =]` patterns
 disconnects them. Concretely: `@[grind norm] bind_pure_comp` (`mx >>= fun a => pure (f a)` →
-`f <$> mx`) closes a couple of `target(grind)` gaps but breaks the `replicate` gates — the goal's
+`f <$> mx`) would close a couple of target gaps but breaks the `replicate` gates: the goal's
 do-block normalises to a `<$>` form while the E-matching-side `replicate` unfolds stay in `bind`
 form, and the E-graph never connects the two. It is therefore deliberately **not** tagged. Gate any
 new `@[grind norm]` candidate against all of `VCVioTest/{ProbabilityTactics,MonadProbability,`
-`LongChainPrograms,GrindFailFast}.lean` before keeping it.
+`LongChainPrograms,GrindFailFast}.lean` and `VCVioTest/EvalDist/MeasureBridge.lean` before
+keeping it.
 
 **Structural additions to the default set** (all gated in `VCVioTest/GrindFailFast.lean`):
 `OracleComp.replicate` unfolds (`replicate_zero`, `replicate_succ_bind`, `replicate_pure`,
-`replicateTR_*` — the proof-level loop combinator; core already grind-tags the `List.mapM` /
-`foldlM` / `forIn` layer), `Functor.map_map`, `probEvent_False`/`probEvent_false`, and the
+`replicateTR_zero`, `replicateTR_eq_replicate`; the proof-level loop combinator, while core
+already grind-tags the `List.mapM` / `foldlM` / `forIn` layer), `Functor.map_map`, and the
 `simulateQ` routing layer (`QueryImpl.add_apply_inl/inr`, `simulateQ_add_liftComp_left/right`,
 the `withBadFlag`/`withBadUpdate`/`flattenStateT` run-shapes, `simulateQ_option_elim(M)`). The
-`simulateQ_add_liftComp` pair also *fixes a saturation*: bare `grind` used to time out on a routed
-`simulateQ (impl₁ + impl₂)` goal over a lifted computation.
+`simulateQ_add_liftComp` pair also prevents a saturation: without it, bare `grind` times out on a
+routed `simulateQ (impl₁ + impl₂)` goal over a lifted computation.
 
-`VCVioTest/ProbabilityTactics.lean` is the living benchmark and **gate** for all of this: a broad
-corpus of probability / event / failure / support / distribution facts organised by category, each
-closed by a single *terminal* tactic. Where a fact closes by **both** `simp` and `grind`, both are
-kept (the mirror), so each tactic stays exercised on that shape; where only one closes, the entry
-is a *gap pair* (`fail_if_success (tac; done)` then the working closer, with a dated
-`gap(tac, …)` reason), so the gap is machine-checked and expires the moment the set improves. A
-regression in either tactic surfaces there in isolation. When adding probability automation, add
-the corresponding battery rows and retire the guards it makes obsolete. The rules are in
-*Normal forms and the tactic contract* below.
+`VCVioTest/ProbabilityTactics.lean` is the living benchmark and **gate** for all of this: outcome
+masses `𝒟[mx] {x}`, events `Pr{…}[…]`, success masses, and output measures over `ProbComp` (and
+`OptionT ProbComp` for selection and abort), organised by category, each closed by a single
+*terminal* tactic. Where a fact closes by **both** `simp` and `grind`, both are kept (the mirror),
+so each tactic stays exercised on that shape; where only one closes, the entry is a *gap pair*
+(`fail_if_success (tac; done)` then the working closer, with a dated `gap(tac, …)` reason), so the
+gap is machine-checked and expires the moment the set improves. A regression in either tactic
+surfaces there in isolation. Its recorded gaps: `grind` has no Dirac, bound, or
+`𝒟[mx] Set.univ` success-mass rules and does no counting arithmetic; a product singleton is not
+split into a rectangle; `simp` rewrites `(Set.univ : Set Bool)` to `{false, true}` ahead of the
+lossless-mass rule; finite counting leaves `#{x | p x} / n` unevaluated; and the support/mass
+bridges are applied by name.
+When adding probability automation, add the corresponding battery rows and retire the guards it
+makes obsolete in the same change. The rules are in *Normal forms and the tactic contract* below.
 
 `VCVioTest/MonadProbability.lean` is the **generic-`m`** companion: the same gate over an abstract
-monad `m` with the EvalDist instance stack (`[LawfulMonadLiftT m SPMF]`, …) and over the concrete
-transformers (`OptionT`, `ExceptT`, `SPMF`, `Id`), where the lemmas are actually stated. It surfaces
-facts `ProbComp` masks — chiefly the **failure factor**: over a monad that can fail,
-`Pr[= y | mx *> my] = (1 - Pr[⊥ | mx]) * Pr[= y | my]` and `Pr[⊥ | mx <* my]` /
-`Pr[⊥ | mf <*> mx]` are inclusion–exclusion (`Pr[⊥|a] + Pr[⊥|b] - Pr[⊥|a]*Pr[⊥|b]`); both collapse
-to the `ProbComp` forms only because `Pr[⊥] = 0` there. New API filled along the way:
-`probOutput_map` (the `probOutput`/`<$>` companion to `probEvent_map`, `@[grind =]`), `support_guard`,
-and the `orElse` (`<|>`) probability lemmas for `OptionT (OracleComp spec)` (`probFailure_orElse` etc.).
+monad `m` with `[EvalDistSemantics m] [LawfulEvalDistSemantics m]` and over the concrete carriers
+`Id`, `OptionT ProbComp`, and `ExceptT Bool ProbComp`, where the lemmas are actually stated. It
+surfaces what `ProbComp` masks, chiefly the **success factor**: over a monad that can fail, a
+discarded computation scales the continuation by its success mass,
+`𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my]` and
+`Pr{y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{y ← my}[p y]`. Both collapse to the `ProbComp`
+forms only because oracle computations are lossless (`OracleComp.evalDist_bind_const`).
 
-**Opting out downstream.** VCVio deliberately extends the *default* `grind` set — the monad laws
-above plus the probability/support bridges — and these tags are inherited by every project that
-imports it. All of the standard escape hatches work if a downstream `grind` call misbehaves:
+`VCVioTest/LongChainPrograms.lean` stresses the same sets on programs with ten or more binds:
+the total mass of a twelve-step chain (`simp` and `grind`), the mass of the same chain over
+`OptionT ProbComp` (`simp`), monad-law collapse of a ten-deep redundant-`pure` tower (`simp` and
+`grind`), and a reachable support point (`simp`). Its `target(...)` notes record what neither
+tactic closes yet: the mass of a guarded `OptionT` chain, the full support
+`support chain12 = Set.univ`, and the concrete outcome value `Pr{chain12}[= true] = (2 ^ 12)⁻¹`.
+
+**Opting out downstream.** VCVio deliberately extends the *default* `grind` set (the monad laws
+above plus the event, measure and support rules), and these tags are inherited by every project
+that imports it. All of the standard escape hatches work if a downstream `grind` call misbehaves:
 disable a rule per call (`grind [-bind_pure]`), ignore the default set entirely
 (`grind only [the, lemmas, you, want]`), or unset a tag for a whole file
 (`attribute [-grind] bind_pure`). `grind?` reports a minimal `grind only [...]` call for a goal it
@@ -875,13 +879,14 @@ Use the tactic that matches the mathematical obligation:
 
 | Obligation | Interface |
 |---|---|
-| Ordered expectations or postconditions | `gcongr with x hx` on `expectedValue` or `OracleComp.ProgramLogic.wp` exposes support membership. |
-| An expectation of a mapped computation | `simp` precomposes the payoff using `expectedValue_map`, retaining the expectation head. |
+| Ordered expectations or postconditions | `gcongr with x hx` on `OracleComp.ProgramLogic.wp` exposes support membership. |
+| An expectation of a mapped computation | `simp` precomposes the payoff using `lintegral_evalDist_map_of_discrete`, retaining the integral. |
 | Directed replacement inside a probability bound | Import `Mathlib.Tactic.GRewrite`; use `grw [h]` for inequalities and `apply_rw [h]` for event implications. A support-restricted rewrite theorem can leave membership as a side goal. |
 | Measure bind ordered in its continuation | `Measure.bind_mono_right_of_forall` supports `gcongr` and `grw`, with explicit `AEMeasurable` side conditions. Use `Measure.bind_mono_right` directly for an almost-everywhere bound. |
-| A finite expectation on a finite result type | `finiteness` uses `expectedValue_ne_top_of_finite` / `wp_ne_top_of_finite` and asks for finite functional values. |
-| A supplied finite bound on an arbitrary result type | Apply `expectedValue_ne_top_of_le mx hc h`; the bound remains explicit. |
-| Nonnegative total variation arithmetic | Import `VCVio.EvalDist.TVDist.Positivity` and use `positivity`; this also arrives through `VCVio.ProgramLogic.Tactics`. |
+| A finite event probability or mass | `finiteness` closes `Pr{…}[…] ≠ ⊤` through `prEvent_ne_top` (tagged for its rule set) and `𝒟[mx] s ≠ ⊤` through Mathlib's finite-measure rule, inside sums and arithmetic. |
+| A finite expectation on a finite result type | `finiteness` uses `wp_ne_top_of_finite` and asks for finite functional values. |
+| A supplied finite bound on an arbitrary result type | Apply `ne_top_of_le_ne_top hc (wp_le_const_of_support oa h)`; the bound remains explicit. |
+| Nonnegative total variation arithmetic | Import `VCVio.EvalDist.MeasureTVDist.Positivity` and use `positivity` on `measureTVDist`; this also arrives through `VCVio.ProgramLogic.Tactics`. |
 | Measurability through optional or exception-valued maps | `fun_prop` uses `Option.measurable_map`, `Except.measurable_map`, and `Option.measurable_elim'` on arbitrary measurable spaces. |
 
 For a local abbreviation hiding a probability, use a targeted `change` or `dsimp only` before
@@ -889,14 +894,15 @@ For a local abbreviation hiding a probability, use a targeted `change` or `dsimp
 `finiteness [proof]` supplies an explicit finiteness fact. The tactic does not infer finiteness
 of an expectation over an infinite result type merely from pointwise finiteness of its functional.
 
-The registrations and their failure boundaries are exercised in `VCVioTest/Tactic/` and
-`VCVioTest/ProgramLogic/GCongr.lean`. The expression-specific `fun_prop` rules avoid globally
-registering eliminator theorems whose conclusion is the unrestricted `Measurable f`.
+The registrations and their failure boundaries are exercised in `VCVioTest/Tactic/` (including
+`VCVioTest/Tactic/Finiteness.lean`) and `VCVioTest/ProgramLogic/GCongr.lean`. The
+expression-specific `fun_prop` rules avoid globally registering eliminator theorems whose
+conclusion is the unrestricted `Measurable f`.
 
 For a sum of oracle `wp` bounds, rewrite with `← OracleComp.ProgramLogic.wp_finsetSum`,
 then apply `wp_le_const_of_support`. Use `wp_le_const_add_of_support` for a constant allowance
 plus another postcondition. Both the oracle facade and `MAlgOrdered.wp` expose support membership
-to `gcongr`; callers need no preparatory `change` or discrete expectation expansion.
+to `gcongr`; callers need no preparatory `change`.
 
 See the [generalized-relation investigation](../reading/generalized-relation-automation.md) for
 tested rewrite directions, theorem-shape requirements, and the distinction between `gcongr`
@@ -905,49 +911,50 @@ and `grw` registrations. Measure-bind rewriting requires importing
 
 ### Normalization discipline
 
-The simp, grind and `gcongr` sets of the probability layer are designed around one *normal-form
-ladder*: one canonical spelling per rung, mass-left throughout, each rung reached from the one
-above it by an existing pathway rather than by a per-rung twin lemma.
+The simp, grind and `gcongr` sets of the probability layer are designed around one normal form
+and one *ladder* below it. The normal form is the measure form: singleton, event and total masses
+stay `𝒟[mx] s` or `Pr{…}[…]`, and `simp` leaves it only to reach a closed form.
+`VCVioTest/EvalDist/MeasureBridge.lean` pins this contract. The ladder has one canonical spelling
+per rung, mass-left throughout, each rung reached from the one above it by an existing pathway
+rather than by a per-rung duplicate lemma.
 
 | rung | form | reached by |
 |---|---|---|
-| 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`probOutput_pure/query/uniformSample/guard/ite`, `probOutput_bind_const`, `probOutput_map_equiv`) |
-| 1 finite sum | `∑ x, Pr[= x \| mx] * g x` | `simp` from rung 2 through Mathlib's `@[simp] tsum_fintype`; `Finset.sum_boole`/`sum_ite_eq` finish |
-| 2 tsum | `∑' x, Pr[= x \| mx] * g x`, which is `expectedValue mx g` | `grind` (bind expansion, `probOutput_bind_eq_tsum` is `@[grind =]`); `rw [probOutput_bind_eq_tsum, ← expectedValue_def]` exposes the expectation head |
-| 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | countable discrete compatibility measures admit the expectation bridge below; measure-native proofs can keep this form for Mathlib's integration API |
+| 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`evalDist_pure`, `prEvent_pure_prop`, `SampleableType.evalDist_uniformSample_singleton`, `SampleableType.prEvent_uniformSample`, `ProbComp.evalDist_uniformFin`, `evalDist_bind_const`, `OracleComp.prEvent_true_eq_one`) |
+| 1 finite sum | `∑ x, Pr{mx}[= x] * g x`, or `∑ x, 𝒟[mx] {x} * g x` | `rw [prEvent_bind_eq_sum_fintype]`; from rung 3, Mathlib's `lintegral_fintype`, then `simp [mul_comm]` |
+| 2 countable sum | `∑' x, Pr{mx}[= x] * g x` | `rw [prEvent_bind_eq_tsum_of_countable]`; from rung 3, Mathlib's `lintegral_countable'`; `simp` collapses it to rung 1 on a `Fintype` through `tsum_fintype` |
+| 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | `rw [prEvent_bind_eq_lintegral_of_discrete]`, or `evalDist_bind_of_discrete` with `Measure.bind_apply`; an intermediate for Mathlib's integration API, not a target |
 
-Mass-left is canonical: it is the orientation of Mathlib's `PMF.bind_apply`,
-`PMF.toMeasure_bind_apply` and Bochner `integral_fintype`, of `expectedValue`, and of every
-bind lemma in this library. Mathlib's `lintegral_countable'`/`lintegral_fintype` are mass-right;
-they meet this library exactly once, inside the proof of the measure-to-façade bridge, never as a
-normal form.
+Mass-left is canonical: it is the orientation of `prEvent_bind_eq_sum_fintype`,
+`prEvent_bind_eq_tsum_of_countable`, Mathlib's Bochner `integral_fintype`, and the library's
+own bind lemmas. Mathlib's `lintegral_countable'`/`lintegral_fintype` are mass-right; they appear
+inside proofs, never as a normal form.
 
 **What each tactic promises.**
 
 - `simp` is the *structural* normalizer: it reaches a closed form when one exists, applies the
-  monad laws, and collapses `∑'` to `∑` on a `Fintype`. It never expands a bind into a `tsum`
-  (`gotchas.md` §10); `simp [probOutput_bind_eq_tsum]` is the documented one-step to the sum,
-  and on a `Fintype` that call lands on rung 1 with no library lemma involved.
-- `grind` is the *symbolic* closer after bind expansion: equiprobability, membership, directed
-  iffs, `bind`/`pure`-normalised structure. It is not an `ℝ≥0∞`/`Fintype.card` arithmetic engine
-  and must keep failing fast on the `Pr[…] = 0/1 ↔ …` characterization family
-  (`VCVioTest/GrindFailFast.lean`).
-- `gcongr` and `finiteness` are the *bound* closers, with `expectedValue` as the head symbol for
-  rung 2. Rewrite a bind with `probOutput_bind_eq_tsum` and fold the sum with
-  `← expectedValue_def` to expose that head. `expectedValue` is a `def` that `simp` does not
-  unfold; its untagged `expectedValue_def` equation can be supplied explicitly to `rw` or `grind`.
-- The measure side uses `𝒟[…]`, with `evalDist_pure` and `evalDist_bind` under
-  `LawfulEvalDistSemantics`; bind also requires a measurable continuation. For `FreeM`,
-  `PFunctor.IsMeasureSpec.Compatible` records agreement between the measure and probability
-  query specifications. Under `DiscreteEvalDistCompatible`, the generic `evalDist_apply` connects
-  measurable events to `Pr[...]`; `evalDist_apply_singleton` and `evalDist_apply_setOf` are its
-  singleton-measurable and discrete-space specializations. On a discrete result space,
-  `OracleComp.EvalDist.lintegral_evalDist` rewrites an integral against `𝒟[mx]` to
-  `expectedValue mx g`, with no separate countability hypothesis. These are explicit coherence
-  boundaries; measure-native proofs without discrete compatibility keep their measure denotation.
+  monad laws, keeps `𝒟[mx] s` and `Pr{…}[…]` otherwise, and collapses `∑'` to `∑` on a
+  `Fintype`. It never expands a bind or map into a Giry bind, pushforward or integral:
+  `evalDist_bind`, `evalDist_bind_of_discrete` and `evalDist_map` are not `@[simp]`
+  (`gotchas.md` §10), and `rw [prEvent_bind_eq_sum_fintype]` is the documented one step to a
+  finite sum.
+- `grind` is the *symbolic* closer: equiprobability, event pushforward, independent
+  conjunctions, membership, losslessness of oracle computations, failure, and
+  `bind`/`pure`-normalised structure. It is not an `ℝ≥0∞`/`Fintype.card` arithmetic engine and
+  must keep failing fast on the support characterizations (`VCVioTest/GrindFailFast.lean`).
+- `gcongr` and `finiteness` are the *bound* closers. On expectations they act on
+  `OracleComp.ProgramLogic.wp` (`wp_mono_of_support`, `wp_ne_top_of_finite`); `finiteness`
+  also closes `Pr{…}[…] ≠ ⊤` and `𝒟[mx] s ≠ ⊤` inside arithmetic, and `grw [prEvent_mono …]`
+  rewrites an event under a bound.
+- The measure laws are `evalDist_pure` under `LawfulPureEvalDistSemantics` and `evalDist_bind`
+  under `LawfulEvalDistSemantics`; bind also requires a measurable continuation, which
+  `evalDist_bind_of_discrete` discharges on a discrete source. `prEvent_def`,
+  `prEvent_eq_evalDist` and `prEvent_eq_evalDist_singleton` connect an event to the measure of
+  its set when an argument needs the set form.
 
 **What the gates enforce.** The gate files (`VCVioTest/ProbabilityTactics.lean`,
-`MonadProbability.lean`, `GrindFailFast.lean`, `Tactic/*.lean`, `EvalDist/*.lean`) state
+`MonadProbability.lean`, `LongChainPrograms.lean`, `GrindFailFast.lean`,
+`EvalDist/MeasureBridge.lean`, `Tactic/*.lean`, `ProgramLogic/GCongr.lean`) state
 "goal family → one terminal tactic" and are the gate for every change to these sets:
 
 1. *One terminal call.* A positive entry is `by <one tactic>` or a term: `simp`, `grind`,
@@ -960,7 +967,8 @@ normal form.
    on its own line; bare `fail_if_success simp` passes only when `simp` makes *no progress*,
    hence the `(tac; done)` form for partial-progress gaps. Explicit no-progress checks keep
    bare `fail_if_success simp` to avoid an unreachable `done`. Bare `fail_if_success grind`
-   already tests closure.)
+   already tests closure.) A fact that no single call closes yet is recorded as a `target(…)`
+   note rather than carried as a multi-step proof.
 3. *No multi-call scripts.* A `;`/multi-line script is allowed only as the closer of a gap pair.
    A one-call entry that stops closing is fixed in the set or filed as a dated gap pair, never by
    adding a second call.
@@ -980,17 +988,17 @@ library proofs got shorter; a set with no library caller is itself a finding.
 
 ## Common Mistakes
 
-1. **Missing probability spec classes**: on `OracleComp spec`, `evalSPMF`/`probOutput`/`Pr[...]` require `[IsProbabilitySpec spec]`. Uniform/cardinality lemmas and support-probability lemmas require `[IsUniformSpec spec]`, not just finite, inhabited answer types. Use `IsUniformSpec.ofFintypeInhabited spec` when a concrete finite inhabited spec should use uniform sampling. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output.
+1. **Missing probability spec classes**: on `OracleComp spec`, `𝒟[...]` and `Pr{...}[...]` require `[OracleSpec.IsMeasureSpec spec]`, and uniform-answer lemmas `[OracleSpec.IsUniformMeasureSpec spec]`, not just finite, nonempty answer types. Answer measures live on the discrete σ-algebra, so answer types take no `MeasurableSpace` hypotheses. Use `IsUniformMeasureSpec.ofFiniteNonempty spec` as a local instance when a concrete finite spec should answer uniformly. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output; `Pr{...}[...]` does not.
 
-2. **Carrying duplicate probability instances**: do not add a separate `[IsProbabilitySpec spec]` when `[IsUniformSpec spec]` is already in scope. `IsUniformSpec` extends `IsProbabilitySpec`; a second instance can make instance search ambiguous and may not describe the same distributions.
+2. **Carrying duplicate probability instances**: do not add a separate `[OracleSpec.IsMeasureSpec spec]` when `[OracleSpec.IsUniformMeasureSpec spec]` is already in scope. `IsUniformMeasureSpec` extends `IsMeasureSpec`; a second instance can make instance search ambiguous and need not describe the same answer measures.
 
-3. **Using `support` when `finSupport` is needed**: `probOutput_bind_eq_sum_finSupport` requires `[DecidableEq α]` and `[HasEvalFinset m]`.
+3. **Using `support` when `finSupport` is needed**: `finSupport mx` requires `[HasEvalFinset m]` and `[DecidableEq α]`, and `finSupport_bind` also `[DecidableEq β]`.
 
-4. **Forgetting `probOutput_eq_zero_of_not_mem_support`**: useful when restricting sums.
+4. **Forgetting the support bounds**: `prEvent_eq_zero_of_forall_mem_support` and `evalDist.apply_eq_zero_of_disjoint_support` restrict an event or mass to reachable outputs with no uniformity assumption.
 
-5. **`evalSPMF` on bare `query t`**: works directly when the expected type pins `query t` to a monadic form, since `query` resolves to `HasQuery.query`. Write `evalSPMF (query t : OracleComp spec _)` (or hand the result to a context that provides the same ascription). If you need the primitive `OracleQuery spec _` (e.g. for `OracleQuery.cont`), use `spec.query t` instead.
+5. **`𝒟` on bare `query t`**: works directly when the expected type pins `query t` to a monadic form, since `query` resolves to `HasQuery.query`. Write `𝒟[(query t : OracleComp spec _)]` (or hand the result to a context that provides the same ascription). If you need the primitive `OracleQuery spec _` (e.g. for `OracleQuery.cont`), use `spec.query t` instead.
 
 `evalDist.ae_of_forall_mem_support` converts a pathwise predicate into an almost-everywhere
-predicate under its `MeasurableSet` premise. It uses core `MonadAttach` and native measure laws,
-works for arbitrary chosen result spaces and failing computations, and needs no compatibility
-class. `evalDist.apply_eq_zero_of_disjoint_support` gives the corresponding zero-mass event rule.
+predicate under its `MeasurableSet` premise. It uses core `MonadAttach` and the measure laws, and
+works for arbitrary chosen result spaces and failing computations.
+`evalDist.apply_eq_zero_of_disjoint_support` gives the corresponding zero-mass event rule.

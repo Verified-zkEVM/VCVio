@@ -29,8 +29,7 @@ open ENNReal OracleComp.ProgramLogic OracleComp.ProgramLogic.PropLogic
 namespace OracleComp.WP.Coherence
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+variable [OracleSpec.IsUniformMeasureSpec spec]
 variable {α : Type}
 
 /-! ## Probabilistic ↔ Quantitative
@@ -55,13 +54,13 @@ equal to `1`.
 The `[DecidablePred post]` requirement is intrinsic to the indicator
 construction; consumers without classical-decidable predicates can
 `Classical.dec`-coerce on call sites or reformulate via
-`probEvent_eq_wp_indicator` directly. -/
+`prEvent_eq_wp_indicator` directly. -/
 theorem wp_qual_iff_wp_prob_indicator_eq_one
     (oa : OracleComp spec α) (post : α → Prop) [DecidablePred post] :
     MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post ↔
       MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa
           (fun a => if post a then 1 else 0) = 1 := by
-  rw [wp_iff_forall_support, ← wp_eq_mAlgOrdered_wp, ← probEvent_eq_wp_indicator,
+  rw [wp_iff_forall_support, ← wp_eq_mAlgOrdered_wp, ← prEvent_eq_wp_indicator,
     OracleComp.prEvent_eq_one_iff]
 
 /-- Convenience: the `Prob`-valued indicator-as-`wp` form of the

@@ -6,9 +6,10 @@ Authors: Quang Dao
 
 module
 public import ToMathlib.Data.Heap
-public import VCVio.EvalDist.Defs.Instances
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
 
 /-!
 # State-separating cell references
@@ -28,6 +29,9 @@ The file is organized around four small layers:
 * support-based preservation and write footprints;
 * deterministic specializations for `StateT (Heap Ident) Id`;
 * handler-level footprints for `QueryImpl`.
+
+Support-level frames then determine the probability of cell events under the measure
+semantics of the ambient monad.
 -/
 
 @[expose] public section
@@ -259,77 +263,6 @@ def bind {c : StateT (Heap Ident) m α} {k : α → StateT (Heap Ident) m β}
 
 end SupportWriteFootprint
 
-/-! ## Probability corollaries for cell frames -/
-
-namespace SupportPreserves
-
-variable {m : Type (max u v) → Type*} [Monad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-variable {α : Type (max u v)} {c : StateT (Heap Ident) m α} {r : CellRef Ident}
-
-/-- A support-level frame implies that the cell-change event has probability
-zero. This is the probability-facing corollary most proofs want after a
-generic frame theorem has done the support-level work. -/
-theorem prob_changed_eq_zero (hc : SupportPreserves c r) (h : Heap Ident) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | c.run h] = 0 :=
-  probEvent_eq_zero_iff.2 fun z hz hchange => hchange (hc h z hz)
-
-/-- If a cell is support-preserved, then the probability of reading the
-initial value at the end is exactly one minus the failure probability. -/
-theorem prob_unchanged_eq_sub_probFailure (hc : SupportPreserves c r) (h : Heap Ident) :
-    Pr[ fun z => r.get z.2 = r.get h | c.run h] = 1 - Pr[⊥ | c.run h] := by
-  rw [probEvent_ext (q := fun _ => True) fun z hz => ⟨fun _ => True.intro, fun _ => hc h z hz⟩,
-    probEvent_True_eq_sub]
-
-/-- Failure-free specialization of `prob_unchanged_eq_sub_probFailure`. -/
-theorem prob_unchanged_eq_one_of_probFailure_eq_zero (hc : SupportPreserves c r)
-    (h : Heap Ident) (hnf : Pr[⊥ | c.run h] = 0) :
-    Pr[ fun z => r.get z.2 = r.get h | c.run h] = 1 := by
-  simp [prob_unchanged_eq_sub_probFailure hc h, hnf]
-
-/-- If the ambient monad has total probability semantics, support preservation
-gives probability-one preservation directly. -/
-theorem prob_unchanged_eq_one {m : Type (max u v) → Type*} [Monad m]
-    [MonadLiftT m PMF] [LawfulMonadLiftT m PMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-    {α : Type (max u v)} {c : StateT (Heap Ident) m α} {r : CellRef Ident}
-    (hc : SupportPreserves c r) (h : Heap Ident) :
-    Pr[ fun z => r.get z.2 = r.get h | c.run h] = 1 :=
-  prob_unchanged_eq_one_of_probFailure_eq_zero hc h (probFailure_of_liftM_PMF (c.run h))
-
-/-- If the initial cell value is not `x`, then a support-preserved cell has
-final value `x` with probability zero. -/
-theorem prob_final_eq_eq_zero_of_ne (hc : SupportPreserves c r) (h : Heap Ident)
-    {x : r.Value} (hne : x ≠ r.get h) :
-    Pr[ fun z => r.get z.2 = x | c.run h] = 0 :=
-  probEvent_eq_zero_iff.2 fun z hz hzval => hne (hzval.symm.trans (hc h z hz))
-
-end SupportPreserves
-
-namespace SupportWritesOnly
-
-variable {m : Type (max u v) → Type*} [Monad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-variable {α : Type (max u v)} {c : StateT (Heap Ident) m α} {writes : Set Ident}
-
-theorem prob_changed_eq_zero (hc : SupportWritesOnly c writes)
-    (r : CellRef Ident) (hr : r.id ∉ writes) (h : Heap Ident) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | c.run h] = 0 :=
-  SupportPreserves.prob_changed_eq_zero (hc r hr) h
-
-theorem prob_unchanged_eq_sub_probFailure (hc : SupportWritesOnly c writes)
-    (r : CellRef Ident) (hr : r.id ∉ writes) (h : Heap Ident) :
-    Pr[ fun z => r.get z.2 = r.get h | c.run h] = 1 - Pr[⊥ | c.run h] :=
-  SupportPreserves.prob_unchanged_eq_sub_probFailure (hc r hr) h
-
-theorem prob_final_eq_eq_zero_of_ne (hc : SupportWritesOnly c writes)
-    (r : CellRef Ident) (hr : r.id ∉ writes) (h : Heap Ident)
-    {x : r.Value} (hne : x ≠ r.get h) :
-    Pr[ fun z => r.get z.2 = x | c.run h] = 0 :=
-  SupportPreserves.prob_final_eq_eq_zero_of_ne (hc r hr) h hne
-
-end SupportWritesOnly
-
 /-! ## Preservation except an event -/
 
 /-- A computation preserves a cell except on an event when every
@@ -365,35 +298,6 @@ theorem supportPreserves_of_false_event
   fun h z hz => hc h z hz (by simp)
 
 end support
-
-section probability
-
-variable {m : Type (max u v) → Type*} [Monad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-variable {α : Type (max u v)} {c : StateT (Heap Ident) m α} {r : CellRef Ident}
-variable {event : Heap Ident → α × Heap Ident → Prop}
-
-/-- If a cell can change only when `event` occurs, then the change probability
-is bounded by the event probability. -/
-theorem prob_changed_le_prob_event (hc : SupportPreservesExcept c r event)
-    (h : Heap Ident) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | c.run h] ≤
-      Pr[ fun z => event h z | c.run h] :=
-  probEvent_mono fun z hz hchange => not_not.1 fun hevent => hchange (hc h z hz hevent)
-
-theorem prob_changed_eq_zero_of_prob_event_eq_zero
-    (hc : SupportPreservesExcept c r event) (h : Heap Ident)
-    (hevent : Pr[ fun z => event h z | c.run h] = 0) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | c.run h] = 0 :=
-  le_zero_iff.1 ((prob_changed_le_prob_event hc h).trans hevent.le)
-
-theorem prob_changed_le_of_prob_event_le
-    (hc : SupportPreservesExcept c r event) (h : Heap Ident) {ε : ENNReal}
-    (hevent : Pr[ fun z => event h z | c.run h] ≤ ε) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | c.run h] ≤ ε :=
-  (prob_changed_le_prob_event hc h).trans hevent
-
-end probability
 
 end SupportPreservesExcept
 
@@ -437,21 +341,6 @@ theorem bind [LawfulMonad m] (hc : SupportCellRel c r rel)
 
 end support
 
-section probability
-
-variable {m : Type (max u v) → Type*} [Monad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-variable {α : Type (max u v)} {c : StateT (Heap Ident) m α} {r : CellRef Ident}
-variable {rel : r.Value → r.Value → Prop}
-
-/-- A support-level cell relation makes violations of the relation a
-probability-zero event. -/
-theorem prob_violate_eq_zero (hc : SupportCellRel c r rel) (h : Heap Ident) :
-    Pr[ fun z => ¬ rel (r.get h) (r.get z.2) | c.run h] = 0 :=
-  probEvent_eq_zero_iff.2 fun z hz hviol => hviol (hc h z hz)
-
-end probability
-
 end SupportCellRel
 
 /-- A measured cell bound says a numeric measure of a cell can increase by at
@@ -494,21 +383,6 @@ theorem bind [LawfulMonad m] {δ₁ δ₂ : Nat} (hc : SupportMeasureBound c r m
 
 end support
 
-section probability
-
-variable {m : Type (max u v) → Type*} [Monad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-variable {α : Type (max u v)} {c : StateT (Heap Ident) m α} {r : CellRef Ident}
-variable {measure : r.Value → Nat} {δ : Nat}
-
-/-- A measured support bound gives probability zero to exceeding the bound. -/
-theorem prob_exceeds_eq_zero (hc : SupportMeasureBound c r measure δ)
-    (h : Heap Ident) :
-    Pr[ fun z => measure (r.get h) + δ < measure (r.get z.2) | c.run h] = 0 :=
-  probEvent_eq_zero_iff.2 fun z hz hgt => Nat.not_lt_of_ge (hc h z hz) hgt
-
-end probability
-
 end SupportMeasureBound
 
 /-! ## Deterministic specialization -/
@@ -532,7 +406,7 @@ theorem supportPreserves_of_preserves {α : Type (max u v)} {c : StateT (Heap Id
     {r : CellRef Ident} (hc : Preserves c r) :
     SupportPreserves c r := by
   intro h z hz
-  obtain rfl : z = (c.run h).run := by simpa [Id.support_eq_singleton] using hz
+  obtain rfl : z = (c.run h).run := by simpa [MonadAttach.Id.support_eq_singleton] using hz
   change r.get (c.run h).2 = r.get h
   exact hc h
 
@@ -798,111 +672,19 @@ end OracleComp
 
 namespace QueryImpl
 
-section probability
-
-variable {ι : Type uι} {spec : OracleSpec.{uι, max u₀ v} ι}
-variable {Ident₀ : Type u₀} [CellSpec.{u₀, max u₀ v} Ident₀]
-variable {m : Type (max u₀ v) → Type*} [Monad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-
-theorem PreservesCell.prob_changed_eq_zero
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)} {r : CellRef Ident₀}
-    (himpl : PreservesCell impl r) (t : spec.Domain) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | (impl t).run h] = 0 :=
-  CellRef.SupportPreserves.prob_changed_eq_zero (himpl t) h
-
-theorem PreservesCell.prob_unchanged_eq_sub_probFailure
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)} {r : CellRef Ident₀}
-    (himpl : PreservesCell impl r) (t : spec.Domain) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 = r.get h | (impl t).run h] =
-      1 - Pr[⊥ | (impl t).run h] :=
-  CellRef.SupportPreserves.prob_unchanged_eq_sub_probFailure (himpl t) h
-
-theorem CellWriteFootprint.prob_changed_eq_zero
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)}
-    (footprint : CellWriteFootprint impl) (r : CellRef Ident₀)
-    (hr : ∀ t, r.id ∉ footprint.writes t)
-    (t : spec.Domain) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | (impl t).run h] = 0 :=
-  (footprint.preservesCell r hr).prob_changed_eq_zero t h
-
-theorem CellWriteFootprint.prob_unchanged_eq_sub_probFailure
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)}
-    (footprint : CellWriteFootprint impl) (r : CellRef Ident₀)
-    (hr : ∀ t, r.id ∉ footprint.writes t)
-    (t : spec.Domain) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 = r.get h | (impl t).run h] =
-      1 - Pr[⊥ | (impl t).run h] :=
-  (footprint.preservesCell r hr).prob_unchanged_eq_sub_probFailure t h
-
-end probability
-
-end QueryImpl
-
-namespace OracleComp
-
-section probability
-
-variable {ι : Type uι} {spec : OracleSpec.{uι, max u₀ v} ι}
-variable {α : Type (max u₀ v)}
-variable {Ident₀ : Type u₀} [CellSpec.{u₀, max u₀ v} Ident₀]
-variable {m : Type (max u₀ v) → Type*} [Monad m] [LawfulMonad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-
-theorem simulateQ_run_cellChange_prob_eq_zero
-    (impl : QueryImpl spec (StateT (Heap Ident₀) m))
-    (r : CellRef Ident₀) (himpl : QueryImpl.PreservesCell impl r)
-    (A : OracleComp spec α) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | (simulateQ impl A).run h] = 0 :=
-  probEvent_eq_zero_iff.2 fun z hz hchange =>
-    hchange (simulateQ_run_cellPreserved impl r himpl A h z hz)
-
-theorem simulateQ_run_cellUnchanged_prob_eq_sub_probFailure
-    (impl : QueryImpl spec (StateT (Heap Ident₀) m))
-    (r : CellRef Ident₀) (himpl : QueryImpl.PreservesCell impl r)
-    (A : OracleComp spec α) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 = r.get h | (simulateQ impl A).run h] =
-      1 - Pr[⊥ | (simulateQ impl A).run h] :=
-  CellRef.SupportPreserves.prob_unchanged_eq_sub_probFailure
-    (fun h' z hz => simulateQ_run_cellPreserved impl r himpl A h' z hz) h
-
-theorem simulateQ_run_cellUnchanged_prob_eq_one_of_probFailure_eq_zero
-    (impl : QueryImpl spec (StateT (Heap Ident₀) m))
-    (r : CellRef Ident₀) (himpl : QueryImpl.PreservesCell impl r)
-    (A : OracleComp spec α) (h : Heap Ident₀)
-    (hnf : Pr[⊥ | (simulateQ impl A).run h] = 0) :
-    Pr[ fun z => r.get z.2 = r.get h | (simulateQ impl A).run h] = 1 := by
-  simp [simulateQ_run_cellUnchanged_prob_eq_sub_probFailure impl r himpl A h, hnf]
-
-end probability
-
-section probability_total
-
-variable {ι : Type uι} {spec : OracleSpec.{uι, max u₀ v} ι}
-variable {α : Type (max u₀ v)}
-variable {Ident₀ : Type u₀} [CellSpec.{u₀, max u₀ v} Ident₀]
-variable {m : Type (max u₀ v) → Type*} [Monad m] [LawfulMonad m] [MonadLiftT m PMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-
-theorem simulateQ_run_cellUnchanged_prob_eq_one
-    (impl : QueryImpl spec (StateT (Heap Ident₀) m))
-    (r : CellRef Ident₀) (himpl : QueryImpl.PreservesCell impl r)
-    (A : OracleComp spec α) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 = r.get h | (simulateQ impl A).run h] = 1 :=
-  simulateQ_run_cellUnchanged_prob_eq_one_of_probFailure_eq_zero impl r himpl A h
-    (probFailure_of_liftM_PMF ((simulateQ impl A).run h))
-
-end probability_total
-
-end OracleComp
-
-namespace QueryImpl
-
 variable {ι : Type uι} {spec : OracleSpec.{uι, max u₀ v} ι}
 variable {α : Type (max u₀ v)}
 variable {Ident₀ : Type u₀} [CellSpec.{u₀, max u₀ v} Ident₀]
 variable {m : Type (max u₀ v)
     → Type*} [Monad m] [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+
+/-- If every handler query preserves a cell, then every interpreted computation
+support-preserves it. -/
+theorem PreservesCell.supportPreserves_simulateQ
+    {impl : QueryImpl spec (StateT (Heap Ident₀) m)} {r : CellRef Ident₀}
+    (himpl : PreservesCell impl r) (A : OracleComp spec α) :
+    CellRef.SupportPreserves (simulateQ impl A) r :=
+  OracleComp.simulateQ_run_cellPreserved impl r himpl A
 
 /-- A query-implementation cell-write footprint lifts through interpretation: if a
 cell is outside every per-query footprint, the interpreted computation
@@ -915,67 +697,76 @@ theorem CellWriteFootprint.simulateQ_run_cellPreserved
     ∀ z ∈ support ((simulateQ impl A).run h), r.get z.2 = r.get h :=
   OracleComp.simulateQ_run_cellPreserved impl r (footprint.preservesCell r hr) A h
 
-section probability
-
-variable {ι : Type uι} {spec : OracleSpec.{uι, max u₀ v} ι}
-variable {α : Type (max u₀ v)}
-variable {Ident₀ : Type u₀} [CellSpec.{u₀, max u₀ v} Ident₀]
-variable {m : Type (max u₀ v) → Type*} [Monad m] [LawfulMonad m] [MonadLiftT m SPMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-
-theorem CellWriteFootprint.simulateQ_run_cellChange_prob_eq_zero
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)}
-    (footprint : CellWriteFootprint impl) (r : CellRef Ident₀)
-    (hr : ∀ t, r.id ∉ footprint.writes t)
-    (A : OracleComp spec α) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 ≠ r.get h | (simulateQ impl A).run h] = 0 :=
-  OracleComp.simulateQ_run_cellChange_prob_eq_zero impl r
-    (footprint.preservesCell r hr) A h
-
-theorem CellWriteFootprint.simulateQ_run_cellUnchanged_prob_eq_sub_probFailure
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)}
-    (footprint : CellWriteFootprint impl) (r : CellRef Ident₀)
-    (hr : ∀ t, r.id ∉ footprint.writes t)
-    (A : OracleComp spec α) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 = r.get h | (simulateQ impl A).run h] =
-      1 - Pr[⊥ | (simulateQ impl A).run h] :=
-  OracleComp.simulateQ_run_cellUnchanged_prob_eq_sub_probFailure impl r
-    (footprint.preservesCell r hr) A h
-
-theorem CellWriteFootprint.simulateQ_run_cellUnchanged_prob_eq_one_of_probFailure_eq_zero
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)}
-    (footprint : CellWriteFootprint impl) (r : CellRef Ident₀)
-    (hr : ∀ t, r.id ∉ footprint.writes t)
-    (A : OracleComp spec α) (h : Heap Ident₀)
-    (hnf : Pr[⊥ | (simulateQ impl A).run h] = 0) :
-    Pr[ fun z => r.get z.2 = r.get h | (simulateQ impl A).run h] = 1 :=
-  OracleComp.simulateQ_run_cellUnchanged_prob_eq_one_of_probFailure_eq_zero impl r
-    (footprint.preservesCell r hr) A h hnf
-
-end probability
-
-section probability_total
-
-variable {ι : Type uι} {spec : OracleSpec.{uι, max u₀ v} ι}
-variable {α : Type (max u₀ v)}
-variable {Ident₀ : Type u₀} [CellSpec.{u₀, max u₀ v} Ident₀]
-variable {m : Type (max u₀ v) → Type*} [Monad m] [LawfulMonad m] [MonadLiftT m PMF]
-    [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
-
-theorem CellWriteFootprint.simulateQ_run_cellUnchanged_prob_eq_one
-    {impl : QueryImpl spec (StateT (Heap Ident₀) m)}
-    (footprint : CellWriteFootprint impl) (r : CellRef Ident₀)
-    (hr : ∀ t, r.id ∉ footprint.writes t)
-    (A : OracleComp spec α) (h : Heap Ident₀) :
-    Pr[ fun z => r.get z.2 = r.get h | (simulateQ impl A).run h] = 1 :=
-  OracleComp.simulateQ_run_cellUnchanged_prob_eq_one impl r
-    (footprint.preservesCell r hr) A h
-
-end probability_total
-
 end QueryImpl
 
 end
+
+/-! ## Probability corollaries for cell frames
+
+A support-level frame determines the probability of a cell event under any lawful measure
+semantics. The event form `Pr{…}` observes a proposition, so these corollaries take heaps and
+computations in `Type`. Interpreted handlers reach them through
+`QueryImpl.PreservesCell.supportPreserves_simulateQ`. -/
+
+namespace CellRef
+
+variable {Ident : Type} [CellSpec.{0, 0} Ident]
+variable {m : Type → Type*} [Monad m] [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+variable {α : Type} {c : StateT (Heap Ident) m α} {r : CellRef Ident}
+
+namespace SupportPreserves
+
+/-- A support-level frame makes the cell-change event a probability-zero event. -/
+theorem prEvent_changed_eq_zero (hc : SupportPreserves c r) (h : Heap Ident) :
+    Pr{let z ← c.run h}[r.get z.2 ≠ r.get h] = 0 :=
+  prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hchange => hchange (hc h z hz)
+
+/-- A support-preserved cell keeps its initial value with the full successful mass of the
+computation. -/
+theorem prEvent_unchanged_eq_prEvent_true (hc : SupportPreserves c r) (h : Heap Ident) :
+    Pr{let z ← c.run h}[r.get z.2 = r.get h] = Pr{let _ ← c.run h}[True] :=
+  prEvent_congr_of_support _ _ _ fun z hz => iff_true_intro (hc h z hz)
+
+/-- A support-preserved cell of a lossless computation keeps its initial value with
+probability one. -/
+theorem prEvent_unchanged_eq_one (hc : SupportPreserves c r) (h : Heap Ident)
+    (hloss : Pr{let _ ← c.run h}[True] = 1) :
+    Pr{let z ← c.run h}[r.get z.2 = r.get h] = 1 :=
+  (hc.prEvent_unchanged_eq_prEvent_true h).trans hloss
+
+/-- A support-preserved cell never ends at a value other than its initial one. -/
+theorem prEvent_final_eq_eq_zero_of_ne (hc : SupportPreserves c r) (h : Heap Ident)
+    {x : r.Value} (hne : x ≠ r.get h) :
+    Pr{let z ← c.run h}[r.get z.2 = x] = 0 :=
+  prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hzval =>
+    hne (hzval.symm.trans (hc h z hz))
+
+end SupportPreserves
+
+/-- If a cell can change only when `event` occurs, then the change probability is bounded by
+the event probability. -/
+theorem SupportPreservesExcept.prEvent_changed_le_prEvent_event
+    {event : Heap Ident → α × Heap Ident → Prop} (hc : SupportPreservesExcept c r event)
+    (h : Heap Ident) :
+    Pr{let z ← c.run h}[r.get z.2 ≠ r.get h] ≤ Pr{let z ← c.run h}[event h z] :=
+  prEvent_mono_of_support _ _ _ fun z hz hchange =>
+    not_not.1 fun hevent => hchange (hc h z hz hevent)
+
+/-- A support-level cell relation makes violations of the relation a probability-zero event. -/
+theorem SupportCellRel.prEvent_violate_eq_zero {rel : r.Value → r.Value → Prop}
+    (hc : SupportCellRel c r rel) (h : Heap Ident) :
+    Pr{let z ← c.run h}[¬ rel (r.get h) (r.get z.2)] = 0 :=
+  prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hviol => hviol (hc h z hz)
+
+/-- A measured support bound gives probability zero to exceeding the bound. -/
+theorem SupportMeasureBound.prEvent_exceeds_eq_zero {measure : r.Value → Nat} {δ : Nat}
+    (hc : SupportMeasureBound c r measure δ) (h : Heap Ident) :
+    Pr{let z ← c.run h}[measure (r.get h) + δ < measure (r.get z.2)] = 0 :=
+  prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hgt =>
+    Nat.not_lt_of_ge (hc h z hz) hgt
+
+end CellRef
 
 /-! ## Examples -/
 
@@ -1083,23 +874,21 @@ theorem demoClient_preserves_flag (h : Heap DemoCell) :
 /-- The previous theorem as a reusable support-preservation predicate. -/
 theorem demoClient_supportPreserves_flag :
     CellRef.SupportPreserves (simulateQ demoImpl demoClient) flagRef :=
-  fun h z hz => demoClient_preserves_flag h z hz
+  demoImpl_preserves_flag.supportPreserves_simulateQ demoClient
 
 /-- From the empty heap, the framed flag is never `true`. The cell's
 `CellSpec.default` value is `false`, so support preservation collapses the event
 to one with no reachable witness. -/
-theorem demoClient_prob_flag_true_eq_zero :
-    Pr[ fun z => flagRef.get z.2 = true |
-      (simulateQ demoImpl demoClient).run (Heap.empty : Heap DemoCell)] = 0 :=
-  CellRef.SupportPreserves.prob_final_eq_eq_zero_of_ne
-    demoClient_supportPreserves_flag (Heap.empty : Heap DemoCell) (by decide)
+theorem demoClient_prEvent_flag_true_eq_zero :
+    Pr{let z ← (simulateQ demoImpl demoClient).run (Heap.empty : Heap DemoCell)}[
+      flagRef.get z.2 = true] = 0 :=
+  demoClient_supportPreserves_flag.prEvent_final_eq_eq_zero_of_ne Heap.empty (by decide)
 
 /-- Probability-one preservation for the framed flag: under the uniform-sampling
 semantics of `ProbComp`, the handler never changes the flag and never aborts. -/
-theorem demoClient_prob_flag_unchanged_eq_one (h : Heap DemoCell) :
-    Pr[ fun z => flagRef.get z.2 = flagRef.get h |
-      (simulateQ demoImpl demoClient).run h] = 1 :=
-  CellRef.SupportPreserves.prob_unchanged_eq_one demoClient_supportPreserves_flag h
+theorem demoClient_prEvent_flag_unchanged_eq_one (h : Heap DemoCell) :
+    Pr{let z ← (simulateQ demoImpl demoClient).run h}[flagRef.get z.2 = flagRef.get h] = 1 :=
+  demoClient_supportPreserves_flag.prEvent_unchanged_eq_one h (OracleComp.prEvent_true_eq_one _)
 
 /-- Increment the cache counter and append one log entry. The program never
 writes `flagRef`. -/

@@ -93,4 +93,18 @@ theorem secureAgainst_of_reduction_withCost
     g.secureAgainst (EfficientFor cost isEff) := fun A hA =>
   negligible_of_le (hadv A) (hsecure (R.reduce A) (R.efficientFor_image hA hmap))
 
+/-- Cost-aware security reduction with polynomial advantage loss: the source advantage is at most
+`loss.eval n` times the target advantage of the reduced adversary. A constant factor `c` is the
+case `loss := c`. -/
+theorem secureAgainst_of_poly_reduction_withCost
+    {g : SecurityGame Adv} {g' : SecurityGame Adv'}
+    {cost : Adv → ℕ → σ} {cost' : Adv' → ℕ → σ'}
+    {isEff : (ℕ → σ) → Prop} {isEff' : (ℕ → σ') → Prop}
+    (R : ReductionWithCost cost cost') {loss : Polynomial ℕ}
+    (hadv : ∀ A n, g.advantage A n ≤ ↑(loss.eval n) * g'.advantage (R.reduce A) n)
+    (hmap : CostClassMap isEff isEff' R.transform)
+    (hsecure : g'.secureAgainst (EfficientFor cost' isEff')) :
+    g.secureAgainst (EfficientFor cost isEff) :=
+  secureAgainst_of_poly_reduction (fun _ hA => R.efficientFor_image hA hmap) hadv hsecure
+
 end SecurityGame

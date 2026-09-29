@@ -8,8 +8,9 @@ Machine-checked cryptographic proofs in Lean, built on Mathlib.
 2. Read `Examples/OneTimePad/Basic.lean` for a compact modern proof (correctness and privacy).
 3. Choose the work area by task: use `VCVio/` for oracle/probability/program-logic work, `LatticeCrypto/` for lattice schemes and reductions, and `LatticeCryptoTest/` for vectors or differential tests.
 4. If `𝒟` lemmas fail unexpectedly, check for `[OracleSpec.IsMeasureSpec spec]`
-   and the required measurable spaces. The concrete `unifSpec` and `coinSpec`
-   have native uniform-measure instances; other specs need a chosen interpretation.
+   and a measurable space on the result type; oracle answer types need none. The
+   concrete `unifSpec` and `coinSpec` have global uniform-measure instances; other
+   specs need a chosen interpretation.
 
 `AGENTS.md` is the canonical guide. `CLAUDE.md` is a symlink to this file.
 
@@ -55,7 +56,7 @@ genuine one-off. See *Section Variables* in [`CONTRIBUTING.md`](CONTRIBUTING.md)
 
 ## What This Project Is
 
-VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is definitionally `simulateQ` into `SetM` with queries interpreted by `Set.univ`; the primary `evalDist` / `𝒟[…]` semantics is a successful-output Mathlib `Measure`, while `evalSPMF` / `𝒮[…]`, `probOutput`, and `Pr[…]` form the discrete compatibility surface backed by `simulateQ` into `PMF` using `[IsProbabilitySpec spec]`. Uniform cardinality lemmas and the `support`/probability bridge use `[IsUniformSpec spec]`, which bundles `∀ t, Fintype (spec.Range t)`, `∀ t, Inhabited (spec.Range t)`, and uniform sampling. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
+VCVio is a framework for formal cryptographic proofs built around `OracleComp spec α`, the free monad on the polynomial functor induced by an oracle signature `OracleSpec ι := ι → Type`. Its universal fold `simulateQ impl : OracleComp spec α → r α` is the unique monad morphism extending any `impl : QueryImpl spec r` to the free monad. For `OracleComp`, `support` is the set of possible outputs, equal to the fold into `SetM` that answers every query with `Set.univ`. Its probability semantics `evalDist` / `𝒟[…]` is a successful-output Mathlib `Measure`, the fold of the answer measures chosen by `[OracleSpec.IsMeasureSpec spec]`; missing mass is failure. Events are written `Pr{x ← oa}[p x]` and `Pr{oa}[= a]`, and distributional equality `oa =ᵈ ob`. Uniform answer measures are `[OracleSpec.IsUniformMeasureSpec spec]`. `ProbComp α := OracleComp unifSpec α` specializes to computations whose only oracle is uniform selection.
 
 The repo also includes a first-class lattice cryptography library under `LatticeCrypto/`, built on top of the `VCVio` framework. That layer contains generic lattice algebra plus ML-DSA, ML-KEM, and Falcon specifications, security statements, concrete implementations, and tests; the native FFI bridges live in the separate `Extern/` library.
 
@@ -129,9 +130,9 @@ or `VCVioTest/`. This contract is enforced by
 
 ## Critical Gotchas
 
-1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation. `evalSPMF` / `Pr[...]` need `[IsProbabilitySpec spec]`; direct `evalDist` / `𝒟[…]` need `[OracleSpec.IsMeasureSpec spec]` and an ambient `MeasurableSpace` on the result. Native uniform-measure instances are global for `unifSpec` and `coinSpec`. Uniform/cardinality lemmas and `support ↔ Pr[= _] ≠ 0` need `[IsUniformSpec spec]`. Use `IsUniformSpec.ofFintypeInhabited` when you have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and intend uniform semantics; the measure-native `IsUniformMeasureSpec.ofFiniteNonempty` needs only `Finite`/`Nonempty`. There are no bundled `spec.Fintype` / `spec.Inhabited` / `spec.DecidableEq` classes: data on answer types are ordinary hypotheses on `spec.Range t` (see gotcha 12).
+1. **Probability assumptions are explicit for arbitrary specs.** `support` on `OracleComp spec` works without a probability interpretation. Direct `evalDist` / `𝒟[…]` and `Pr{…}[…]` need `[OracleSpec.IsMeasureSpec spec]` and, for `𝒟[…]`, an ambient `MeasurableSpace` on the result. Oracle answer measures live on the discrete σ-algebra, so answer types take no `MeasurableSpace` hypotheses; continuous answers belong at the `PFunctor.FreeM` level. Uniform-measure instances are global for `unifSpec` and `coinSpec`; for another spec, uniform answers are `[OracleSpec.IsUniformMeasureSpec spec]`, built by `IsUniformMeasureSpec.ofFiniteNonempty` from `Finite`/`Nonempty` answer types as a local instance on the component spec (sums get theirs from `IsMeasureSpec.add`). There are no bundled `spec.Fintype` / `spec.Inhabited` / `spec.DecidableEq` classes: data on answer types are ordinary hypotheses on `spec.Range t` (see gotcha 12).
 2. **`autoImplicit = false` is set globally in `lakefile.lean`**. Do not add `set_option autoImplicit false` in individual files. Every variable must be explicitly declared.
-3. **`evalSPMF` IS `simulateQ`** with `IsProbabilitySpec.toPMF`; under `[IsUniformSpec spec]` this is uniform. This is definitional (`rfl`). `evalDist` is its successful-output measure façade on the discrete compatibility path and agrees with the direct `FreeM.denote` measure fold when both specifications are present. These identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`: code outside those directories crosses them through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`). Existing downstream `rfl` uses are grandfathered; new proofs use the public equations.
+3. **`𝒟[oa]` IS the measure fold** `PFunctor.FreeM.denote` of the answer measures, definitionally, and `Pr{…}[…]` is `prEvent` of that measure. `support` is PolyFun's `MonadAttach` support, equal to the fold into `SetM` that answers every query with `Set.univ` by `PFunctor.FreeM.support_eq_liftM_univ`. The definitional identities are internal to `VCVio/EvalDist/**` and `VCVio/OracleComp/**`: code outside those directories crosses them through the public equation lemmas (`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`). Existing downstream `rfl` uses are grandfathered; new proofs use the public equations.
 4. **`++ₒ` is dead** — use `+` for combining oracle specs.
 5. **Commented-out code is legacy** — follow only uncommented code. Use `Examples/OneTimePad/Basic.lean` as canonical reference.
 6. **Preserve partial proofs** with `stop` instead of deleting large proof blocks.
@@ -139,9 +140,9 @@ or `VCVioTest/`. This contract is enforced by
 8. **Interop TCB isolation is mandatory**. Core VCVio (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `Examples/`, `LatticeCryptoTest/`, `Extern/`, `VCVioWidgets/`, `VCVioTest/`) must never `import Interop.…`, `import Hax.…`, or `import Aeneas.…`. CI fails the PR if it does. See `docs/agents/interop.md`.
 9. **Extern link-safety isolation is mandatory**. Proof libraries (`VCVio/`, `ToMathlib/`, `LatticeCrypto/`, `HashSig/`, `Examples/`, `VCVioWidgets/`, `Interop/`) must never `import Extern.…`: the native backends behind it are built as empty stubs whenever the `third_party/` submodules are absent — always the case for Lake dependency checkouts — so importing `Extern` would break downstream executable links. Test libraries may import it. Enforced by `scripts/check-extern-isolation.sh` in CI.
 
-10. **`PMF`/`SPMF` is a retiring surface, not a coequal representation.** New semantic code uses `Measure`/`Kernel` and the measure-backed `Pr{...}[...]` notation. Local `SPMF`, `evalSPMF`, and the legacy scalar evaluation functions are deprecated. Mathlib owns `PMF`, so VCVio cannot attach Lean's `deprecated` attribute to that imported declaration; `ToMathlib.Lint.usesRetiredProbability` detects direct use of it, alongside the local deprecated declarations. The exact `scripts/nolints.json` entries track existing dependent declarations and must shrink as they migrate. Compiler deprecation warnings remain visible in Lean; the build warning budget delegates only these tagged warnings to the environment linter. The old source-count script has been removed. See `docs/reading/denotational-probability-semantics.md`.
+10. **Probability is `Measure`/`Kernel`, never `PMF`.** Semantic code uses `𝒟[…]`, `Pr{…}[…]`, `=ᵈ`, Mathlib measures and kernels. Mathlib owns `PMF`, so VCVio cannot deprecate it; the environment linter `ToMathlib.Lint.usesRetiredProbability` reports any declaration that uses it directly, and `scripts/nolints.json` holds no exceptions for it. Code written against VCVio's removed discrete API (`SPMF`, `Pr[= x | mx]`, `IsUniformSpec`, …) converts with the codemod and guide in [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md). See `docs/reading/denotational-probability-semantics.md`.
 
-11. **Name the reduction in security theorems.** Write `bound ≤ Pr[= true | exp (myReduction adv)]`, never `∃ B, bound ≤ Pr[= true | exp B]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers. If the reduction does not exist yet, use a named `sorry` definition or a warned placeholder instead. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
+11. **Name the reduction in security theorems.** Write `bound ≤ Pr{exp (myReduction adv)}[= true]`, never `∃ B, bound ≤ Pr{exp B}[= true]`. Adversary types such as `X → ProbComp W` carry no resource bound, and `Classical.choice` can pick a witness directly, so the existential form holds for every scheme and passes the axiom sweep. The same applies to simulators (`∃ sim ζ, HVZK sim ζ` holds with `ζ := 1`), extractors, and distinguishers. If the reduction does not exist yet, use a named `sorry` definition or a warned placeholder instead. See [`docs/agents/crypto.md`](docs/agents/crypto.md#name-the-reduction-in-the-theorem-statement).
 
 12. **No global instance may conclude `C spec.Domain` or `C (spec.Range t)` for a generic `spec`.** `Domain` and `Range` are reducible, so such an instance is indexed as `C ι`, respectively `C (?spec ?t)`, and becomes a candidate for every `C _` goal with `spec` undetermined; search then invents a specification through `ofFn` and either times out or routes ordinary `DecidableEq`/`Fintype`/`Inhabited` instances through oracle data (#772). Write `[DecidableEq ι]` for index equality and `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` (quantified over `t` only when a statement ranges over arbitrary queries) for answer types; concrete specifications reduce to their answer types. `VCVioTest/OracleComp/SpecInstanceSearch.lean` guards this.
 
@@ -150,13 +151,15 @@ For the full list, see `docs/agents/gotchas.md`.
 ## Naming Conventions
 
 Follow Mathlib convention: `{head_symbol}_{operation}_{rhs_form}`.
-Examples: `probOutput_bind_eq_tsum`, `support_pure`, `simulateQ_map`.
+Examples: `prEvent_bind_eq_lintegral`, `support_pure`, `simulateQ_map`.
 Structures use UpperCamelCase: `SecurityGame`, `SymmEncAlg`, `RelTriple`.
 Security-notion names may begin with an underscore-separated acronym:
 `IND_CPA_Advantage`, `SM_DT_UD_Adversary`, `IND_CPA_OneTime_Game`, `OW_CPA_oracleSpec`.
 `scripts/lint.py` accepts a `defsWithUnderscore` finding without a `nolints.json` entry when
 each underscored name component starts with an acronym of two or more capitals or digits and
 every later segment except the last starts with a capital.
+Security notions, experiments, games, and advantages follow
+[`docs/agents/crypto.md`](docs/agents/crypto.md#naming).
 
 ## Canonical Examples
 
@@ -164,9 +167,10 @@ every later segment except the last starts with a capital.
 - ElGamal IND-CPA via the generic one-time DDH lift: `Examples/ElGamal/Basic.lean`
 - Schnorr sigma protocol (completeness, soundness, HVZK): `Examples/Schnorr/SigmaProtocol.lean`
 - Oracle computation core: `VCVio/OracleComp/OracleComp.lean`
-- Probability lemmas: `VCVio/EvalDist/Monad/Basic.lean`
+- Probability lemmas: `VCVio/EvalDist/ProbabilityNotation.lean`, `VCVio/EvalDist/ProbabilityBounds.lean`, `VCVio/OracleComp/EvalDist/Measure.lean`
+- Equality in distribution across monads (`mx =ᵈ my`): `VCVio/EvalDist/EvalDistEq.lean`
 - SubSpec / coercions: `VCVio/OracleComp/Coercions/SubSpec.lean`
-- `QueryImpl` instrumentation primitives (`preInsert` / `postInsert` and their bridge lemmas): `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions.lean`. Prefer these (or their downstream wrappers `withTraceBefore` / `withTrace` / `withCost` / `withLogging`) when wrapping a `QueryImpl` with a per-query side effect, so the generic theory in that file applies.
+- `QueryImpl` instrumentation primitives (`preInsert` / `postInsert` and their bridge lemmas): `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`. Prefer these (or their downstream wrappers `withTraceBefore` / `withTrace` / `withCost` / `withLogging`) when wrapping a `QueryImpl` with a per-query side effect, so the generic theory in that file applies.
 - DLog / CDH / DDH via HHS: `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`
 - Cost model / polynomial time: `VCVio/OracleComp/QueryTracking/CostModel.lean`
 - Query cost / weighted expected cost: `VCVio/OracleComp/QueryTracking/QueryCost.lean`, `VCVio/OracleComp/QueryTracking/WriterCost.lean`
@@ -197,7 +201,7 @@ every later segment except the last starts with a capital.
 - Coordinate-wise special soundness and its single-round rewinding extractor (eprint 2023/846 §2.9 and §7.1): `VCVio/CryptoFoundations/CoordinateFork.lean`, `VCVio/CryptoFoundations/CoordinateFork/Operational.lean`, `VCVio/CryptoFoundations/CoordinateFork/Realizability.lean`, `VCVio/CryptoFoundations/CoordinateFork/SpecialSoundness.lean`, `VCVio/CryptoFoundations/CoordinateFork/Extraction.lean`, over the combinatorics in `ToMathlib/Combinatorics/CoordinateWise.lean`
 - Independent products of computations: `VCVio/EvalDist/IndepProduct.lean`
 - Drawing without replacement and its expected draw count: `VCVio/OracleComp/Constructions/WithoutReplacement.lean`, `ToMathlib/Probability/NegativeHypergeometric.lean`
-- Expected values of `ℝ≥0∞`-valued functionals: `VCVio/EvalDist/Expectation.lean`
+- Expected values of `ℝ≥0∞`-valued functionals (`wp` and `∫⁻` against `𝒟[mx]`): `VCVio/ProgramLogic/Unary/HoareTriple.lean`
 - Fischlin transform: `VCVio/CryptoFoundations/Fischlin/` (`Defs`, `CostAccounting`, `Completeness`, `KnowledgeSoundness`)
 - Interaction type tree and path: `PolyFun/Interaction/Basic/TypeTree.lean`
 - Two-party roles and strategies: `PolyFun/Interaction/TwoParty/Strategy.lean`
@@ -273,9 +277,23 @@ the build just produced; `--test` runs it a second time over `VCVioTest` and
 CI runs the timed build on the non-test Lean libraries:
 `ToMathlib`, `VCVio`, `VCVioCslib`, `LatticeCrypto`, `Extern`, `HashSig`, `Examples`,
 and `VCVioWidgets`. The dormant `Interop` target remains excluded.
-The timing report parses per-file build times only for that same set.
 Test libraries and test executables are not part of the timed build; CI only
 times the smoke module separately with `lake env lean VCVioTest/Smoke.lean`.
+
+CI keeps two caches: `.lake/packages`, keyed by `lean-toolchain` and `lake-manifest.json`, and
+the project's own `.lake/build`, which every `main` run saves and every run restores. Only `main`
+saves, so pull-request code never publishes a cache another run loads. The `Lint` job restores the
+same caches and builds the changed modules itself, so it runs alongside `Build Project`. Lake
+rebuilds a module when the content hash of its source or imports
+changes, so a restored build only saves work; it never changes a verdict. Lake replays the stored
+messages of modules it does not rebuild, so the warning budgets still see every warning. The
+nightly scheduled run, and a manual run with `clean_build`, skips the build cache.
+
+Because an incremental build's wall time depends on what the change invalidated, the timing report
+compares modules instead: `scripts/module_times.py` keeps the latest `Built <module> (<time>)` for
+every module in `.lake/build/vcvio-module-times.json`, which travels with the build cache. The
+report lists the modules this run rebuilt against those times, and the table's sum before and after
+estimates clean-build compile time.
 
 After the build, CI runs `./scripts/test-axiomsweep.sh` and then
 `lake exe axiomsweep --check`: kernel-level axiom/`sorry` accounting for every
@@ -414,6 +432,7 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **SLH-DSA implementation status, stale-plan corrections, and remaining slices**:
   [`docs/design/slh-dsa-status-and-roadmap.md`](docs/design/slh-dsa-status-and-roadmap.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
+- **Converting code written against the removed discrete `Pr[…]` API**: [`docs/agents/probability-migration.md`](docs/agents/probability-migration.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
 - **Forking lemmas (seeded / replay / coordinate-wise)**: [`docs/agents/forking.md`](docs/agents/forking.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)

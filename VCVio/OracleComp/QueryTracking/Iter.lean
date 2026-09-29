@@ -6,7 +6,8 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.QueryTracking.QueryBound
-public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
 
 /-!
 # Query Bounds for Iteration Constructs

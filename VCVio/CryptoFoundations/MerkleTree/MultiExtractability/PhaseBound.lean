@@ -29,9 +29,10 @@ variable {Cfg Query Address Y X R C : Type}
 /-- Log-dependent stateful-phase bound. The proof-only accounting continuation may inspect the
 cumulative query log produced by the prefix, while the executable phase remains
 `adaptivePrefixRunFrom` with the original suffix. -/
-theorem probEvent_stablePhaseRunFrom_logged_le
+theorem prEvent_stablePhaseRunFrom_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [IsUniformMeasureSpec (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
@@ -64,17 +65,16 @@ theorem probEvent_stablePhaseRunFrom_logged_le
       (∀ input value, terminalCache input = some value →
         ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view terminalLog →
-      Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
-          (suffix x terminalLog)).run terminalCache] ≤
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (suffix x terminalLog)).run
+             terminalCache}[win z.1] ≤
         (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
-    Pr[ fun z => win z.1 |
-      adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
-        suffix prefixComp cache log] ≤
+    Pr{let z ← adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R) suffix prefixComp
+           cache log}[win z.1] ≤
       (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
-  apply probEvent_onlineAdaptivePrefixRunFrom_logged_le suffix continuation win
+  apply prEvent_onlineAdaptivePrefixRunFrom_logged_le suffix continuation win
     (state.liveTargetSet view) (fun _ currentLog => state.StableAt view currentLog)
     nodeBudget checkpointCount overhead prefixComp remaining cached log hbound
     cache hno hcacheBound hlogCache hcacheLog hstable
@@ -104,9 +104,10 @@ checkpoint state. Using a uniform envelope is the strongest composable form: aft
 boundary records a new checkpoint, the recursive phase can keep the same final resource budget.
 The local target-cardinality obligation is discharged by
 `liveTargetSet_card_le_sharedExtractedLabelCountBound_of_cover`. -/
-theorem probEvent_stablePhaseRunFrom_le
+theorem prEvent_stablePhaseRunFrom_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [IsUniformMeasureSpec (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
@@ -138,17 +139,16 @@ theorem probEvent_stablePhaseRunFrom_le
       (∀ input value, terminalCache input = some value →
         ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view terminalLog →
-      Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
-          (suffix x terminalLog)).run terminalCache] ≤
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (suffix x terminalLog)).run
+             terminalCache}[win z.1] ≤
         (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
-    Pr[ fun z => win z.1 |
-      adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
-        suffix prefixComp cache log] ≤
+    Pr{let z ← adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R) suffix prefixComp
+           cache log}[win z.1] ≤
       (multiCheckpointErrorNumerator nodeBudget checkpointCount overhead
         remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
-  apply probEvent_onlineAdaptivePrefixRunFrom_le suffix continuation win
+  apply prEvent_onlineAdaptivePrefixRunFrom_le suffix continuation win
     (state.liveTargetSet view) (fun _ currentLog => state.StableAt view currentLog)
     nodeBudget checkpointCount overhead prefixComp remaining cached hbound
     cache log hno hcacheBound hlogCache hcacheLog hstable
@@ -173,11 +173,12 @@ theorem probEvent_stablePhaseRunFrom_le
     exact sharedExtractedLabelCountBound_mono_budget hnodeBudget hcheckpointCount
   · exact hterminal
 
-/-- Exact-state specialization of `probEvent_stablePhaseRunFrom_le`. This is convenient for a
+/-- Exact-state specialization of `prEvent_stablePhaseRunFrom_le`. This is convenient for a
 terminal phase that will not record additional checkpoints. -/
-theorem probEvent_stablePhaseRunFrom_exact_le
+theorem prEvent_stablePhaseRunFrom_exact_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [IsUniformMeasureSpec (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
@@ -207,17 +208,16 @@ theorem probEvent_stablePhaseRunFrom_exact_le
       (∀ input value, terminalCache input = some value →
         ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
       state.StableAt view terminalLog →
-      Pr[ fun z => win z.1 | (simulateQ (Query →ₒ Y).cachingOracle
-          (suffix x terminalLog)).run terminalCache] ≤
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (suffix x terminalLog)).run
+             terminalCache}[win z.1] ≤
         (multiCheckpointErrorNumerator state.totalNodeBudget state.checkpoints.length
           overhead terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹) :
-    Pr[ fun z => win z.1 |
-      adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R)
-        suffix prefixComp cache log] ≤
+    Pr{let z ← adaptivePrefixRunFrom (ι := Query) (Y := Y) (X := X) (R := R) suffix prefixComp
+           cache log}[win z.1] ≤
       (multiCheckpointErrorNumerator state.totalNodeBudget state.checkpoints.length
         overhead remaining cached : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
-  probEvent_stablePhaseRunFrom_le view state suffix continuation win
+  prEvent_stablePhaseRunFrom_le view state suffix continuation win
     state.totalNodeBudget state.checkpoints.length overhead prefixComp remaining cached hbound
     cache log hno hcacheBound hlogCache hcacheLog hstable le_rfl le_rfl hterminal
 

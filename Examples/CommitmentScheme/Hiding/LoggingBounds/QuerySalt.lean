@@ -111,7 +111,7 @@ lemma sum_querySaltIndicators_le_logLength [DecidableEq S] [Fintype S]
   exact le_of_eq hcounts
 
 lemma sum_wp_querySaltIndicators_le_queryBound_of_run_logging [DecidableEq S] [Finite C]
-    [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C] [Fintype S]
+    [Inhabited C] [Fintype S]
     {α : Type} {oa : OracleComp (CMOracle M S C) α} {n : ℕ}
     (hbound : IsTotalQueryBound oa n) :
     (∑ s : S,
@@ -297,7 +297,7 @@ theorem run_cached_logging_proj_eq_cachingOracle
             rfl]
           exact ih u (cache₀.cacheQuery t u)
 
-variable [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+variable [Finite C] [Inhabited C]
 
 lemma wp_choose_sumHitIndicators_le_queryBound [Fintype S] [Inhabited S]
     {AUX : Type} {t : ℕ}
@@ -415,8 +415,8 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     ((simulateQ cachingOracle ((simulateQ loggingOracle oa).run)).run freshCache)
   let cacheEvent : Bool × QueryCache (CMOracle M S C) → Prop :=
     fun z => ∃ m : M, ∃ v : C, m ≠ qchoose.1.1 ∧ z.2 (m, s) = some v
-  rw [← OracleComp.ProgramLogic.probEvent_eq_wp_propInd,
-    ← OracleComp.ProgramLogic.probEvent_eq_wp_propInd]
+  rw [← OracleComp.ProgramLogic.prEvent_eq_wp_propInd,
+    ← OracleComp.ProgramLogic.prEvent_eq_wp_propInd]
   have hcount_to_cache :
       Pr{let z ← countRun}[1 < z.2.2 s] ≤
         Pr{let z ← cacheRun}[cacheEvent z] := by
@@ -424,7 +424,7 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     rw [← run_hidingImplCountAll_proj_eq_cachingOracle
       (M := M) (S := S) (C := C) oa freshState]
     rw [prEvent_map]
-    refine prEvent_mono_of_support _ ?_
+    refine prEvent_mono_of_support _ _ _ ?_
     intro z hz hgt
     have hcount1 : (Function.update qchoose.2.2 s 1) s = 1 := by
       simp [Function.update]
@@ -454,7 +454,7 @@ lemma fresh_incrementIndicator_le_querySaltIndicator_cached_logging
     rw [← run_cached_logging_proj_eq_cachingOracle
       (M := M) (S := S) (C := C) oa freshCache]
     rw [prEvent_map]
-    refine prEvent_mono_of_support _ ?_
+    refine prEvent_mono_of_support _ _ _ ?_
     intro z hz hcacheEv
     rcases hcacheEv with ⟨m, v, hmne, hcache⟩
     have hlog :=
@@ -896,7 +896,7 @@ lemma sum_wp_freshDistinguishIncrement_le_queryResidual_of_choose_support [Finty
           have hcard_top : (Fintype.card C : ℝ≥0∞) ≠ ∞ := by simp
           rw [ENNReal.mul_inv_cancel hcard0 hcard_top, one_mul]
 
-theorem sum_probEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : Type} {t : ℕ}
+theorem sum_prEvent_hidingBad_le [Fintype S] [Inhabited S] [Finite M] {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr{let z ← (
       (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0))}[hidingBad z.2]) ≤ t := by

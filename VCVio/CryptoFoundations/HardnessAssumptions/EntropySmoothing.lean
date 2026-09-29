@@ -5,10 +5,16 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.Support
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Entropy Smoothing
@@ -31,7 +37,7 @@ variable {M : Type} [AddCommGroup M] [SampleableType M] [DecidableEq M]
 
 /-- Real entropy-smoothing experiment. The adversary sees `(hk, hash hk (z • g))`
 for uniform `hk` and `z`, and tries to distinguish this from the ideal experiment. -/
-def realExp (g : G) (hash : HK → G → M) (adversary : HK × M → ProbComp Bool) :
+def realExperiment (g : G) (hash : HK → G → M) (adversary : HK × M → ProbComp Bool) :
     ProbComp Bool := do
   let hk ← $ᵗ HK
   let z ← $ᵗ F
@@ -39,14 +45,14 @@ def realExp (g : G) (hash : HK → G → M) (adversary : HK × M → ProbComp Bo
 
 /-- Ideal entropy-smoothing experiment. The adversary sees `(hk, h)` for independent
 uniform `hk` and uniform `h : M`. -/
-def idealExp (adversary : HK × M → ProbComp Bool) : ProbComp Bool := do
+def idealExperiment (adversary : HK × M → ProbComp Bool) : ProbComp Bool := do
   let hk ← $ᵗ HK
   let h ← $ᵗ M
   adversary (hk, h)
 
 /-- Entropy-smoothing distinguishing advantage. -/
 noncomputable def advantage (g : G) (hash : HK → G → M)
-    (adversary : HK × M → ProbComp Bool) : ℝ :=
-  (realExp F g hash adversary).boolDistAdvantage (idealExp adversary)
+    (adversary : HK × M → ProbComp Bool) : ℝ≥0∞ :=
+  𝒟[realExperiment F g hash adversary].boolDist 𝒟[idealExperiment adversary]
 
 end EntropySmoothing

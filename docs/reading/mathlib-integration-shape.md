@@ -6,6 +6,10 @@
 > measure-semantics work. That document settles *what the semantic objects are*; this one asks what VCVio's probability
 > statements should **look like** so that Mathlib's library applies to them, and so that the parts
 > worth contributing are shaped to be contributable.
+>
+> The discrete surface assessed below (`SPMF`, `Pr[…]`, `probOutput`, `probEvent`,
+> `probFailure`) has since been removed; VCVio's probability API is now the measure one
+> (`𝒟[…]`, `Pr{…}[…]`).
 
 ## Two directions, often confused
 
@@ -47,8 +51,8 @@ so they stay ours — but stating them measure-first is what would make them con
 | `expectedValue mx g` | `∫⁻ x, g x ∂(denote mx)` | **absent** |
 | `probEvent` | measure application | **defined through `PMF.toOuterMeasure`** |
 | `EvalDist/IndepProduct.lean` | `IndepFun` / `iIndepFun` w.r.t. the denotation | absent |
-| `EvalDist/TVDist.lean` | a measure-level total variation | absent upstream and here |
-| `EvalDist/RenyiDivergence.lean` | via `Measure.rnDeriv`, as `klDiv` is | absent |
+| `EvalDist/MeasureTVDist/Basic.lean` | a measure-level total variation | absent upstream; local `Measure.tvDist` |
+| `Divergence/Renyi.lean` | via `Measure.rnDeriv`, as `klDiv` is | absent upstream; local `InformationTheory.renyiDiv` |
 
 Two of these are worth calling out as liabilities rather than gaps.
 

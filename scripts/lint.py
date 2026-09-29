@@ -16,7 +16,6 @@ import tempfile
 
 BASELINE = Path("scripts/nolints.json")
 TEST_ROOTS = ("VCVioTest", "LatticeCryptoTest", "HashSigTest")
-RETIRED_PROBABILITY_LINTER = "usesRetiredProbability"
 UNDERSCORE_LINTER = "defsWithUnderscore"
 ACRONYM = re.compile(r"[A-Z][A-Z0-9]+")
 
@@ -229,11 +228,7 @@ def environment(libraries: list[str], *, no_build: bool, prune: bool,
     if base_ref:
         base = run("git", "merge-base", "HEAD", base_ref, stdout=subprocess.PIPE).stdout.strip()
         previous = run("git", "show", f"{base}:{BASELINE}", stdout=subprocess.PIPE).stdout
-        # Retiring PMF/SPMF is tracked in nolints.json by declaration. A declaration
-        # that already used this API may first be exposed by a new import or linter
-        # improvement, so review additions to this one ledger in the baseline diff.
-        additions = {pair for pair in baseline - read_pairs(previous, base_ref)
-                     if pair[0] != RETIRED_PROBABILITY_LINTER}
+        additions = baseline - read_pairs(previous, base_ref)
         if additions:
             raise ValueError("Lint baseline additions relative to the merge base:\n"
                              + format_pairs(additions))

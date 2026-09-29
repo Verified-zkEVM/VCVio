@@ -160,16 +160,17 @@ from context, and WP-rule unfolding, including `simulateQ ... run'`.
 After the built-in leaf rules, it may also use user-authored `@[vcspec]` lemmas whose
 registered head symbol matches the current computation.
 
-For `Pr[ ...] = 1` and lower-bound goals such as `r ≤ Pr[ p | oa]`: automatically lowers the
-goal into a `Triple` form.
+For `Pr{…}[…] = 1` and lower-bound goals such as `r ≤ Pr{x ← oa}[p x]`: automatically lowers
+the goal into a `Triple` form.
 
-For `Pr[ ...] = Pr[ ...]` goals: tries bind-swap (`probEvent_bind_bind_swap`), bind
-congruence (`probOutput_bind_congr` / `probEvent_bind_congr`), swap-then-congr,
-or an exact-`probOutput` bridge into relational VCGen.
-Handles up to 2 layers of tsum peeling for nested swaps.
+For equalities of events or output measures, such as `Pr{…}[…] = Pr{…}[…]` or
+`𝒟[oa] = 𝒟[ob]`: tries bind-swap (`OracleComp.prEvent_bind_bind_swap`,
+`OracleComp.evalDist_bind_bind_swap`), bind congruence on the support of the shared prefix
+(`OracleComp.prEvent_bind_congr_of_support`, `OracleComp.evalDist_bind_congr_of_support`), and
+swap-then-congr.
 
-For other general `Pr[ ...]` goals: rewrites to raw `wp` form and keeps stepping structurally
-when a `wp` rule applies, rather than immediately exiting the VCGen pipeline.
+For other `Pr{…}[…]` goals: rewrites to raw `wp` form and keeps stepping structurally when a `wp`
+rule applies, rather than immediately exiting the VCGen pipeline.
 
 Variants:
 - `vcstep using cut` for an explicit intermediate postcondition.
@@ -310,12 +311,11 @@ elab_rules : tactic
 with spec-aware stepping.
 
 Accepts `Triple` goals, raw `wp` goals, lower-bound / exact probability goals, and
-`Pr[ ...] = Pr[ ...]` equality goals. Probability goals are automatically lowered or
+`Pr{…}[…] = Pr{…}[…]` equality goals. Probability goals are automatically lowered or
 dispatched (swap/congr) before structural decomposition continues.
 
 Enhancements over simple structural decomposition:
-- Lowers `Pr[ ...]` goals into `Triple` or raw `wp` form before decomposition
-- Bridges exact `Pr[= x | oa] = Pr[= x | ob]` goals into relational VCGen when helpful
+- Lowers `Pr{…}[…]` goals into `Triple` or raw `wp` form before decomposition
 - After bind decomposition, tries to close spec subgoals from local context
 - Falls back to backward WP (`triple_bind_wp`) when no spec is available
 - Splits `ite`/`dite` conditionals into branch goals with hypotheses
@@ -376,8 +376,7 @@ elab_rules (kind := vcgenSuggestion) : tactic
             "exact OracleComp.ProgramLogic.triple_zero _ _ | ",
             "(classical exact OracleComp.ProgramLogic.triple_support _) | ",
             "(exact OracleComp.ProgramLogic.triple_propInd_of_support _ _ (by assumption)) | ",
-            "(exact OracleComp.ProgramLogic.triple_probEvent_eq_one _ _ (by assumption)) | ",
-            "(exact OracleComp.ProgramLogic.triple_probOutput_eq_one _ _ (by assumption)) | ",
+            "(exact OracleComp.ProgramLogic.triple_prEvent_eq_one _ _ (by assumption)) | ",
             "exact le_refl _ | (repeat intro; simp only [OracleComp.ProgramLogic.Triple] at *; ",
             "solve_by_elim (maxDepth := 6) [OracleComp.ProgramLogic.wp_mono, le_trans])",
           ]
@@ -428,9 +427,8 @@ macro (name := expNorm) "exp_norm" : tactic =>
 /-- `by_hoare` transforms a probability goal into a quantitative WP goal. -/
 macro (name := byHoare) "by_hoare" : tactic =>
   `(tactic|
-    simp only [evalDist_ite_apply, evalDist_dite_apply,
-      OracleComp.ProgramLogic.probEvent_eq_wp_propInd,
-      OracleComp.ProgramLogic.probOutput_eq_wp_indicator,
+    simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,
+      OracleComp.ProgramLogic.prEvent_eq_wp_propInd,
       ← OracleComp.ProgramLogic.propInd_eq_ite])
 
 end OracleComp.ProgramLogic

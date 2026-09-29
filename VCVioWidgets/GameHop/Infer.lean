@@ -129,33 +129,33 @@ private def compTitleFromExpr (expr : Expr) : MetaM String := do
     | return "game"
   let base := declBasename head
   let args := expr.consumeMData.getAppArgs
-  if base = "PerfectSecrecyCipherGivenMsgExp" then
+  if base = "perfectSecrecyCipherGivenMsgExperiment" then
     match args.back? with
     | some msg => return s!"Cipher game for {← ppExprString msg}"
     | none => return "Cipher game"
-  if base = "IND_CPA_HybridGame" then
+  if base = "IND_CPA_LR_hybrid" then
     match args.back? with
     | some idx => return s!"Hybrid {← ppExprString idx}"
     | none => return "Hybrid game"
-  if base = "IND_CPA_game" then
+  if base = "IND_CPA_Game" then
     return "IND-CPA game"
   return humanizeName head
 
 private def compKindFromExpr (expr : Expr) : NodeKind :=
   match expr.consumeMData.getAppFn.constName? with
   | some head =>
-      if declBasename head |>.contains "Hybrid" then .hybrid else .game
+      if (declBasename head).toLower.contains "hybrid" then .hybrid else .game
   | none => .game
 
 private def shouldRejectCompHead (head : Name) : Bool :=
   let base := declBasename head
-  base = "ddhExp" || base = "ddhExpReal" || base = "ddhExpRand" ||
+  base = "ddhGame" || base = "ddhRealExperiment" || base = "ddhRandomExperiment" ||
     base.contains "Reduction" || base.contains "advantage"
 
 private def looksLikeComputationHead (head : Name) : Bool :=
   let base := declBasename head
   let lower := base.toLower
-  lower.contains "game" || lower.contains "exp"
+  lower.contains "game" || lower.contains "exp" || lower.contains "hybrid"
 
 private def mkCompRef (rootModule : Name) (expr : Expr) (allowImported : Bool := false) :
     MetaM (Option CompRef) := do

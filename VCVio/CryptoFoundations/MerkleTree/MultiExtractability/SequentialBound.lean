@@ -146,9 +146,10 @@ theorem SequentialCommitter.runCommitments_isTotalQueryBound_schedule
 One total query bound covers the complete proof-only accounting runner. The induction decomposes
 that bound at each commitment phase and passes the actual residual bound to the next phase. The
 executable computation remains `runCommitmentsThen` with the caller's independent `finish`. -/
-theorem SequentialCommitter.probEvent_runCommitmentsThen_logged_le
+theorem SequentialCommitter.prEvent_runCommitmentsThen_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [IsUniformMeasureSpec (Query →ₒ Y)]
     (committer : SequentialCommitter Cfg Query Y)
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
@@ -176,8 +177,8 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_logged_le
       state.StableAt view log →
       state.totalNodeBudget ≤ nodeBudget →
       state.checkpoints.length ≤ checkpointCount →
-      Pr[ fun z => win z.1 |
-        (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run cache] ≤
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run
+             cache}[win z.1] ≤
         (multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹)
@@ -200,10 +201,8 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_logged_le
     (hstable : extractorState.StableAt view log)
     (hnodes : extractorState.totalNodeBudget + rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : extractorState.checkpoints.length + rounds ≤ checkpointCount) :
-    Pr[ fun z => win z.1 |
-      (simulateQ (Query →ₒ Y).cachingOracle
-        (committer.runCommitmentsThen rounds firstRound privateState extractorState finish)).run
-          cache] ≤
+    Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (committer.runCommitmentsThen rounds
+           firstRound privateState extractorState finish)).run cache}[win z.1] ≤
       (multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
         remaining cachedBound : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ := by
@@ -222,18 +221,17 @@ theorem SequentialCommitter.probEvent_runCommitmentsThen_logged_le
       unfold SequentialCommitter.runCommitmentsThen
       simp only [SequentialCommitter.runCommitments]
       rw [bind_assoc]
-      change Pr[ fun z => win z.1 |
-        (simulateQ (Query →ₒ Y).cachingOracle
-          ((committer.commit firstRound privateState).withQueryLog >>= fun phaseResult =>
-            committer.runCommitmentsThen rounds (firstRound + 1) phaseResult.1.2.2
-              (extractorState.record phaseResult.1.1 phaseResult.2 phaseResult.1.2.1)
-              finish)).run cache] ≤ _
+      change Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle ((committer.commit firstRound
+                    privateState).withQueryLog >>= fun phaseResult => committer.runCommitmentsThen
+                    rounds (firstRound + 1) phaseResult.1.2.2 (extractorState.record
+                    phaseResult.1.1 phaseResult.2 phaseResult.1.2.1) finish)).run
+                      cache}[win z.1] ≤ _
       rw [← adaptivePrefixRunFrom_commit_eq extractorState
         (committer.commit firstRound privateState)
         (fun output nextExtractorState =>
           committer.runCommitmentsThen rounds (firstRound + 1) output.2.2
             nextExtractorState finish) cache]
-      apply probEvent_stablePhaseRunFrom_logged_le view extractorState
+      apply prEvent_stablePhaseRunFrom_logged_le view extractorState
         (fun output currentLog =>
           committer.runCommitmentsThen rounds (firstRound + 1) output.2.2
             (extractorState.recordCumulative output.1 currentLog output.2.1) finish)

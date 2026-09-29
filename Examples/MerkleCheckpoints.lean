@@ -32,7 +32,7 @@ namespace MerkleCheckpoints
 abbrev Query := Bool × Bool
 
 /-- Each fresh oracle address receives a uniform Boolean response. -/
-noncomputable local instance nativeUniform : IsUniformMeasureSpec (Query →ₒ Bool) :=
+noncomputable local instance uniformResponses : IsUniformMeasureSpec (Query →ₒ Bool) :=
   IsUniformMeasureSpec.ofFiniteNonempty (Query →ₒ Bool)
 
 /-- Addressed binary-node query interface with one address. -/
@@ -95,9 +95,9 @@ theorem verifier_eq (root : Bool) :
       (query (spec := Query →ₒ Bool) (false, false) >>= fun reply => pure (reply == root)) := by
   rfl
 
-theorem game_eq : extractabilityGame model config 1 adversary =
+theorem game_eq : extractabilityExperiment model config 1 adversary =
     (query (spec := Query →ₒ Bool) (false, false) >>= fun reply => pure (outcome reply)) := by
-  simp [extractabilityGame, extractabilityInner, SequentialCommitter.runFromEmpty,
+  simp [extractabilityExperiment, extractabilityInner, SequentialCommitter.runFromEmpty,
     SequentialCommitter.runCommitments, adversary, ExtractorState.empty,
     ExtractorState.record, verifyOpeningClaims, claim, verifier_eq,
     OracleSpec.withCacheOverlay, OracleComp.withQueryLog, outcome, extractorState, checkpoint]
@@ -213,12 +213,13 @@ local instance transcriptDiscrete :
     DiscreteMeasurableSpace (Transcript Unit Query Unit Bool config) :=
   ⟨fun _ => trivial⟩
 
-theorem game_law : 𝒟[extractabilityGame model config 1 adversary] =
+theorem game_law : 𝒟[extractabilityExperiment model config 1 adversary] =
     (uniformOn (Set.univ : Set Bool)).map outcome := by
-  rw [game_eq, bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
+  rw [game_eq, bind_pure_comp, evalDist_map_of_discrete,
+    evalDist_query_uniform (spec := Query →ₒ Bool)]
 
 theorem publicFailure_probability :
-    𝒟[extractabilityGame model config 1 adversary]
+    𝒟[extractabilityExperiment model config 1 adversary]
       {tr | tr.HasOpeningOrEqualRootDisagreement model} = (1 : ENNReal) / 2 := by
   rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
   have hevent : outcome ⁻¹' {tr | tr.HasOpeningOrEqualRootDisagreement model} = {false} := by
@@ -228,7 +229,7 @@ theorem publicFailure_probability :
   simp
 
 theorem lateFailure_probability :
-    𝒟[extractabilityGame model config 1 adversary]
+    𝒟[extractabilityExperiment model config 1 adversary]
       {tr | LateOpeningFailure model.view tr} = 0 := by
   rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
   have hevent : outcome ⁻¹' {tr | LateOpeningFailure model.view tr} = ∅ := by
@@ -237,7 +238,7 @@ theorem lateFailure_probability :
   rw [hevent, measure_empty]
 
 theorem drift_probability :
-    𝒟[extractabilityGame model config 1 adversary] {tr | Drift model.view tr} =
+    𝒟[extractabilityExperiment model config 1 adversary] {tr | Drift model.view tr} =
       (1 : ENNReal) / 2 := by
   rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
   have hevent : outcome ⁻¹' {tr | Drift model.view tr} = {false} := by
@@ -247,7 +248,8 @@ theorem drift_probability :
   simp
 
 theorem honestShared_probability : 𝒟[honestShared] {true} = 1 := by
-  rw [honestShared_eq, bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
+  rw [honestShared_eq, bind_pure_comp, evalDist_map_of_discrete,
+    evalDist_query_uniform (spec := Query →ₒ Bool)]
   rw [Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
   have hevent : (fun _ : Bool => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
     ext reply
@@ -257,7 +259,8 @@ theorem honestShared_probability : 𝒟[honestShared] {true} = 1 := by
 theorem honestReset_probability : 𝒟[honestReset] {true} = (1 : ENNReal) / 2 := by
   rw [honestReset_eq]
   rw [evalDist_bind_of_discrete]
-  simp only [bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
+  simp only [bind_pure_comp, evalDist_map_of_discrete,
+    evalDist_query_uniform (spec := Query →ₒ Bool)]
   rw [Measure.bind_apply (MeasurableSet.singleton true) (measurable_of_countable _).aemeasurable]
   have hinner (root : Bool) :
       (uniformOn (Set.univ : Set Bool)).map (fun reply => reply == root) {true} =

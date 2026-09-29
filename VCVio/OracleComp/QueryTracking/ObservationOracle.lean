@@ -6,9 +6,9 @@ Authors: Quang Dao
 
 module
 public import ToMathlib.Control.WriterT
-public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.Add.Basic
 public import VCVio.OracleComp.HasQuery.Basic
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 
 /-!
 # Observation Oracle for Side-Channel Leakage Modeling
@@ -39,9 +39,8 @@ values. The definitions `eraseObs` and `runObs` are parameterized by a base orac
 
 ## Main Results
 
-* `fst_map_runObs`: erasure theorem — projecting away the trace recovers `eraseObs`.
-* `probFailure_runObs`: observations do not change failure probability (`[MonadLiftT m SPMF]`).
-* `neverFail_runObs_iff`: `NeverFail` is preserved by observation (`[MonadLiftT m SPMF]`).
+* `fst_map_runObs`: erasure theorem — projecting away the trace recovers `eraseObs`, so every
+  observation of the result (output measures, events, supports) transfers by rewriting.
 -/
 
 @[expose] public section
@@ -152,33 +151,11 @@ theorem fst_map_runObs [LawfulMonad m] (base : QueryImpl spec m) (encode : Ev �
     (fun z : α × ω => z.1) <$> runObs base encode oa = eraseObs base oa :=
   QueryImpl.fst_map_run_withCost (eraseObsImpl base) (obsCostFn encode) oa
 
-/-- Failure preservation: observations do not change the probability of failure. -/
-theorem probFailure_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
-    Pr[⊥ | runObs base encode oa] = Pr[⊥ | eraseObs base oa] := by
-  rw [← fst_map_runObs base encode oa, probFailure_map]
-
-/-- `NeverFail` is preserved by observation. -/
-theorem neverFail_runObs_iff [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
-    NeverFail (runObs base encode oa) ↔ NeverFail (eraseObs base oa) := by
-  simp only [neverFail_iff, probFailure_runObs]
-
 /-! ### EvalDist Bridge for `runObs`
 
 These lemmas connect the result-marginal distribution of `runObs` to the distribution
 of `eraseObs`, enabling direct probability-level reasoning about traces without needing
 to manually simplify the traced computation into its concrete form. -/
-
-lemma evalSPMF_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :
-    𝒮[(fun z : α × ω => z.1) <$> runObs base encode oa] = 𝒮[eraseObs base oa] := by
-  rw [fst_map_runObs]
-
-lemma probOutput_fst_runObs [LawfulMonad m] [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-    (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) (x : α) :
-    Pr[= x | (fun z : α × ω => z.1) <$> runObs base encode oa] = Pr[= x | eraseObs base oa] := by
-  rw [fst_map_runObs]
 
 lemma support_fst_runObs [LawfulMonad m] [MonadAttach m]
     (base : QueryImpl spec m) (encode : Ev → ω) (oa : OracleComp (spec + ObsSpec Ev) α) :

@@ -360,7 +360,7 @@ def secureAgainstFair
       Semantics (openTheory.{u, 0, 0, 0} Party m schedulerSampler))
     {Δ : PortBoundary}
     (real ideal : (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Obj Δ)
-    (ε : ℝ)
+    (ε : ℝ≥0∞)
     (isPPT : SchedulerPair Party m schedulerSampler State Event → Prop)
     (isFair : SchedulerPair Party m schedulerSampler State Event → Prop) :
     Prop :=
@@ -377,7 +377,7 @@ variable {mkSem : SchedulerPair Party m schedulerSampler State Event →
 variable {Δ : PortBoundary}
 variable {real ideal :
   (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Obj Δ}
-variable {ε : ℝ}
+variable {ε : ℝ≥0∞}
 
 /-- Uniform `ObservedCompEmulates` against every scheduler pair implies
 fair-PPT security against any choice of `isPPT` and `isFair`. -/
@@ -398,7 +398,7 @@ theorem refl
   fun _ _ _ => ObservedCompEmulates.refl _ W
 
 /-- Weakening on the advantage bound. -/
-theorem mono {ε₁ ε₂ : ℝ} (hε : ε₁ ≤ ε₂)
+theorem mono {ε₁ ε₂ : ℝ≥0∞} (hε : ε₁ ≤ ε₂)
     {isPPT : SchedulerPair Party m schedulerSampler State Event → Prop}
     {isFair : SchedulerPair Party m schedulerSampler State Event → Prop}
     (h : secureAgainstFair mkSem real ideal ε₁ isPPT isFair) :
@@ -452,12 +452,11 @@ def asympSecureAgainstFair
       SchedulerPair Party m schedulerSampler State Event ×
       (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Plug Δ) : Prop :=
   ∀ A, isPPT A → isFair A → negligible fun n =>
-    ENNReal.ofReal <|
-      (mkSem n (extract A n).1).distAdvantage
-        ((openTheory.{u, 0, 0, 0} Party m schedulerSampler).close
-          (real n) (extract A n).2)
-        ((openTheory.{u, 0, 0, 0} Party m schedulerSampler).close
-          (ideal n) (extract A n).2)
+    (mkSem n (extract A n).1).distAdvantage
+      ((openTheory.{u, 0, 0, 0} Party m schedulerSampler).close
+        (real n) (extract A n).2)
+      ((openTheory.{u, 0, 0, 0} Party m schedulerSampler).close
+        (ideal n) (extract A n).2)
 
 namespace asympSecureAgainstFair
 
@@ -479,25 +478,24 @@ negligible function implies asymptotic fair-PPT security. -/
 theorem of_pointwise_bound
     (f : ℕ → ℝ≥0∞) (hf : negligible f)
     (hbound : ∀ (_A : Adv) (n : ℕ),
-      ENNReal.ofReal ((mkSem n (extract _A n).1).distAdvantage
+      (mkSem n (extract _A n).1).distAdvantage
         ((openTheory.{u, 0, 0, 0} Party m schedulerSampler).close
           (real n) (extract _A n).2)
         ((openTheory.{u, 0, 0, 0} Party m schedulerSampler).close
-          (ideal n) (extract _A n).2)) ≤ f n) :
+          (ideal n) (extract _A n).2) ≤ f n) :
     asympSecureAgainstFair mkSem real ideal Adv isPPT isFair extract :=
   fun A _ _ => negligible_of_le (hbound A) hf
 
 /-- A family of `secureAgainstFair` bounds with negligible advantage
 sequence implies asymptotic fair-PPT security. -/
 theorem of_secureAgainstFair
-    (ε : ℕ → ℝ) (hε : negligible (fun n => ENNReal.ofReal (ε n)))
+    (ε : ℕ → ℝ≥0∞) (hε : negligible ε)
     (h : ∀ n, secureAgainstFair (mkSem n) (real n) (ideal n) (ε n)
       (fun s => ∃ A, isPPT A ∧ (extract A n).1 = s)
       (fun s => ∃ A, isFair A ∧ (extract A n).1 = s)) :
     asympSecureAgainstFair mkSem real ideal Adv isPPT isFair extract :=
   fun A hppt hfair => negligible_of_le
-    (fun n => ENNReal.ofReal_le_ofReal
-      (h n (extract A n).1 ⟨A, hppt, rfl⟩ ⟨A, hfair, rfl⟩ (extract A n).2)) hε
+    (fun n => h n (extract A n).1 ⟨A, hppt, rfl⟩ ⟨A, hfair, rfl⟩ (extract A n).2) hε
 
 end asympSecureAgainstFair
 

@@ -176,7 +176,7 @@ def extractabilityInner [DecidableEq Y]
 
 /-- Shared-cache random-oracle interpretation of the stateful game. All commitments, terminal
 opening work, and honest verification use one lazy random function. -/
-def extractabilityGame [DecidableEq Query] [DecidableEq Y]
+def extractabilityExperiment [DecidableEq Query] [DecidableEq Y]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) :
@@ -211,37 +211,35 @@ theorem Transcript.HasOpeningOrEqualRootDisagreement.toHasAnyCheckpointExtractio
     transcript.extractorState transcript.attempts transcript.terminalSuffix h
 
 /-- Probability of the public textbook event is at most probability of the strongest proof event. -/
-theorem prob_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
+theorem prEvent_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [IsUniformSpec (Query →ₒ Y)]
+    [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) :
-    Pr[ Transcript.HasOpeningOrEqualRootDisagreement model |
-      extractabilityGame model config rounds adversary] ≤
-        Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-          extractabilityGame model config rounds adversary] :=
-  _root_.probEvent_mono
-    (mx := extractabilityGame model config rounds adversary)
-    (fun transcript _ h =>
-      Transcript.HasOpeningOrEqualRootDisagreement.toHasAnyCheckpointExtractionDisagreement
-        model transcript h)
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasOpeningOrEqualRootDisagreement model z] ≤
+        Pr{let z ← extractabilityExperiment model config rounds
+               adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] :=
+  prEvent_mono _ _ _ fun transcript h =>
+    Transcript.HasOpeningOrEqualRootDisagreement.toHasAnyCheckpointExtractionDisagreement
+      model transcript h
 
 /-- Any quantitative theorem for the strongest event immediately yields the same bound for the
 weaker textbook event. Downstream corollaries should use this theorem rather than repeat the event
 decomposition. -/
 theorem openingOrEqualRootDisagreement_bound_of_anyCheckpointExtractionDisagreement_bound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [IsUniformSpec (Query →ₒ Y)]
+    [OracleSpec.IsMeasureSpec (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config) (bound : ENNReal)
     (hstrong :
-      Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-        extractabilityGame model config rounds adversary] ≤ bound) :
-    Pr[ Transcript.HasOpeningOrEqualRootDisagreement model |
-      extractabilityGame model config rounds adversary] ≤ bound :=
-  (prob_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
+      Pr{let z ← extractabilityExperiment model config rounds
+             adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤ bound) :
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasOpeningOrEqualRootDisagreement model z] ≤ bound :=
+  (prEvent_hasOpeningOrEqualRootDisagreement_le_hasAnyCheckpointExtractionDisagreement
     model config rounds adversary).trans hstrong
 
 end MerkleTreeMultiExtractability

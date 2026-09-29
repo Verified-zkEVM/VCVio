@@ -7,9 +7,17 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
-public import VCVio.EvalDist.TVDist
-public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.EvalDist.MeasureTVDist.Bind
+public import VCVio.EvalDist.MeasureTVDist.Event
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
+public import VCVio.OracleComp.QueryTracking.Structures
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
+
+import ToMathlib.Data.ENNReal.Gauss
 
 /-!
 # PRG from PRF
@@ -28,7 +36,7 @@ The proof outline follows the standard switching argument:
 
 @[expose] public section
 
-open OracleComp OracleSpec ENNReal PRFScheme PRGScheme
+open OracleComp OracleSpec ENNReal MeasureTheory PRFScheme PRGScheme
 open List (Vector)
 
 namespace PRGfromPRF
@@ -76,70 +84,26 @@ variable {prf : PRFScheme K S (S × O)} {n : ℕ}
 Facts about uniform samples of pairs and vectors and about cache cardinalities; each states
 the structure it needs on `S` and `O`. -/
 
-/-- Sampling a pair uniformly is the same as sampling each coordinate independently. -/
-private lemma uniformSample_prod_eq_bind [SampleableType S] [SampleableType O] :
-    ($ᵗ (S × O)) = (do let a ← $ᵗ S; let b ← $ᵗ O; pure (a, b)) := by
-  rw [uniformSample]
-  change ((·, ·) <$> ($ᵗ S) <*> ($ᵗ O)) = _
-  simp [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc]
-
-/-- A uniform output vector of length `N + 1` decomposes as a uniform head block prepended to a
-uniform vector of length `N`. -/
-private lemma evalSPMF_uniformSample_vector_succ [SampleableType O] (N : ℕ) :
-    𝒮[($ᵗ (List.Vector O (N + 1)))] =
-      𝒮[(do let out ← $ᵗ O; let rest ← $ᵗ (List.Vector O N); pure (out ::ᵥ rest))] := by
-  classical
-  have : Fintype O := Fintype.ofFinite O
-  refine evalSPMF_ext fun v => ?_
-  obtain ⟨out, rest, rfl⟩ : ∃ out rest, v = out ::ᵥ rest :=
-    ⟨v.head, v.tail, (List.Vector.cons_head_tail v).symm⟩
-  have hR :
-      Pr[= (out ::ᵥ rest) | (do let o ← $ᵗ O; let r ← $ᵗ (List.Vector O N); pure (o ::ᵥ r))]
-        = Pr[= out | ($ᵗ O)] * Pr[= rest | ($ᵗ (List.Vector O N))] := by
-    rw [probOutput_bind_eq_tsum, tsum_eq_single out]
-    · rw [probOutput_bind_eq_tsum, tsum_eq_single rest]
-      · simp
-      · intro b hb
-        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]), mul_zero]
-    · intro b hb
-      rw [probOutput_bind_eq_tsum, ENNReal.tsum_eq_zero.2 (fun r => by
-        rw [probOutput_pure, ite_eq_right (by simp [List.Vector.eq_cons_iff, Ne.symm hb]),
-          mul_zero]), mul_zero]
-  have hL :
-      Pr[= (out ::ᵥ rest) | ($ᵗ (List.Vector O (N + 1)))]
-        = Pr[= out | ($ᵗ O)] * Pr[= rest | ($ᵗ (List.Vector O N))] := by
-    rw [probOutput_uniformSample, probOutput_uniformSample, probOutput_uniformSample,
-      ← ENNReal.mul_inv (by simp) (by simp)]
-    congr 1
-    rw [← Nat.cast_mul]
-    congr 1
-    simp [card_vector, pow_succ, Nat.mul_comm]
-  rw [hL, hR]
-
 /-- The reference uniform output vector of length `N + 1`, written as a bind over a uniformly
 sampled pair `p : S × O` whose first coordinate is discarded and whose second coordinate is the
 prepended head block. This is the shared-base form used for the identical-until-bad coupling. -/
-private lemma evalSPMF_uniformSample_vector_succ_pair [SampleableType S] [SampleableType O]
+private lemma evalDist_uniformSample_vector_succ_pair [SampleableType S] [SampleableType O]
     (N : ℕ) :
-    𝒮[($ᵗ (List.Vector O (N + 1)))] =
-      𝒮[(do let p ← $ᵗ (S × O); let rest ← $ᵗ (List.Vector O N); pure (p.2 ::ᵥ rest))] := by
-  rw [evalSPMF_uniformSample_vector_succ, uniformSample_prod_eq_bind]
-  simp only [bind_assoc, pure_bind]
-  refine (evalSPMF_ext fun v => ?_).symm
-  rw [probOutput_bind_const, probFailure_uniformSample, tsub_zero, one_mul]
+    (letI : MeasurableSpace (List.Vector O (N + 1)) := ⊤;
+      𝒟[($ᵗ (List.Vector O (N + 1)))] =
+        𝒟[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))]) := by
+  let : MeasurableSpace (List.Vector O (N + 1)) := ⊤
+  rw [(SampleableType.evalDistEq_uniformSample_vector_succ N).evalDist_eq,
+    SampleableType.uniformSample_prod_eq_bind]
+  simp only [bind_assoc, pure_bind, map_eq_bind_pure_comp, Function.comp_def]
+  exact (OracleComp.evalDist_bind_const _ _).symm
 
-/-- Sampling a pair uniformly and discarding the second coordinate is the same as sampling the
-first coordinate uniformly. -/
-private lemma probOutput_bind_uniformSample_prod_fst [SampleableType S] [SampleableType O]
-    (f : S → ProbComp Bool) (b : Bool) :
-    Pr[= b | (do let p ← $ᵗ (S × O); f p.1)] = Pr[= b | (do let s' ← $ᵗ S; f s')] := by
-  have heq : (do let p ← $ᵗ (S × O); f p.1) = (do let a ← $ᵗ S; let _ ← $ᵗ O; f a) := by
-    rw [uniformSample_prod_eq_bind]
-    simp only [bind_assoc, pure_bind]
-  rw [heq, probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-  refine tsum_congr fun a => ?_
-  congr 1
-  rw [probOutput_bind_const, probFailure_uniformSample, tsub_zero, one_mul]
+/-- Mass of `true` after a draw, as the integral of the continuation's mass of `true`. -/
+private lemma evalDist_bind_apply_true {γ : Type} (mx : ProbComp γ) (f : γ → ProbComp Bool) :
+    𝒟[mx >>= f] {true} = (letI : MeasurableSpace γ := ⊤; ∫⁻ x, 𝒟[f x] {true} ∂𝒟[mx]) := by
+  let : MeasurableSpace γ := ⊤
+  rw [evalDist_bind_of_discrete, Measure.bind_apply (measurableSet_singleton true)
+    Measurable.of_discrete.aemeasurable]
 
 /-- Caching a fresh (previously absent) key increases the live-entry count by exactly one. -/
 private lemma enncard_cacheQuery_of_none [DecidableEq S]
@@ -255,22 +219,23 @@ private lemma simulateQ_prfReal_reduction [SampleableType S] (k : K) (n : ℕ)
 /-- In the real world, the stream PRG experiment has the same output distribution as
 the real PRF experiment for the reduction adversary, provided the PRF key
 distribution is uniform. -/
-theorem prgRealExp_eq_prfRealExp [SampleableType K] [SampleableType S]
-    (hkey : 𝒮[prf.keygen] = 𝒮[$ᵗ K])
+theorem prgRealExperiment_eq_prfRealExperiment [SampleableType K] [SampleableType S]
+    (hkey : prf.keygen =ᵈ ($ᵗ K : ProbComp K))
     (adv : PRGAdversary (List.Vector O n)) :
-    𝒮[PRGScheme.prgRealExp (streamPRG prf n) adv] =
-      𝒮[PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)] := by
-  simp only [PRGScheme.prgRealExp, PRFScheme.prfRealExp, prfReduction, streamPRG]
+    𝒟[PRGScheme.prgRealExperiment (streamPRG prf n) adv] =
+      𝒟[PRFScheme.prfRealExperiment prf (prfReduction (S := S) (O := O) n adv)] := by
+  simp only [PRGScheme.prgRealExperiment, PRFScheme.prfRealExperiment, prfReduction, streamPRG]
   simp_rw [simulateQ_prfReal_reduction]
-  change 𝒮[(·, ·) <$> ($ᵗ K) <*> ($ᵗ S) >>=
+  change 𝒟[(·, ·) <$> ($ᵗ K) <*> ($ᵗ S) >>=
     fun ks => adv (streamOutputs (prf.eval ks.1) n ks.2)] = _
   simp only [monad_norm, Function.comp_def]
-  rw [evalSPMF_bind, evalSPMF_bind, hkey]
+  let : MeasurableSpace K := ⊤
+  rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete, hkey.evalDist_eq]
 
 /-- The ideal PRG experiment for the stream adversary is exactly: sample a uniform output
 vector and run the adversary on it. -/
-lemma prgIdealExp_eq_bind [SampleableType O] (adv : PRGAdversary (List.Vector O n)) :
-    PRGScheme.prgIdealExp adv = (($ᵗ (List.Vector O n)) >>= adv) :=
+lemma prgIdealExperiment_eq_bind [SampleableType O] (adv : PRGAdversary (List.Vector O n)) :
+    PRGScheme.prgIdealExperiment adv = (($ᵗ (List.Vector O n)) >>= adv) :=
   rfl
 
 /-! ### The ideal world
@@ -282,7 +247,7 @@ variable [DecidableEq S] [SampleableType S] [SampleableType O]
 
 /-- Collision experiment for the ideal random-function world: sample an initial state,
 iterate a lazy random oracle for `n` rounds, and test whether any queried state repeats. -/
-def idealCollisionExp (n : ℕ) : ProbComp Bool := do
+def idealCollisionExperiment (n : ℕ) : ProbComp Bool := do
   let seed ← $ᵗ S
   let states ←
     (simulateQ (PRFScheme.prfIdealQueryImpl (D := S) (R := S × O))
@@ -290,8 +255,8 @@ def idealCollisionExp (n : ℕ) : ProbComp Bool := do
   return decide (¬ states.toList.Nodup)
 
 /-- Probability of the bad event in the ideal random-function world. -/
-noncomputable def collisionProb (n : ℕ) : ℝ :=
-  (Pr[= true | idealCollisionExp (S := S) (O := O) n]).toReal
+noncomputable def collisionProb (n : ℕ) : ℝ≥0∞ :=
+  𝒟[idealCollisionExperiment (S := S) (O := O) n] {true}
 
 /-- The output distribution that the ideal PRF reduction feeds to the PRG adversary:
 sample an initial seed, then read `n` output blocks off the lazy random oracle chain. -/
@@ -302,10 +267,10 @@ def idealOutputs (n : ℕ) : ProbComp (List.Vector O n) := do
 /-- The ideal PRF experiment, applied to the stream reduction, factors as sampling the
 adversary's input via the lazy-random-oracle chain (`idealOutputs`) and then running the
 adversary. -/
-lemma prfIdealExp_prfReduction_eq (adv : PRGAdversary (List.Vector O n)) :
-    PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv) =
+lemma prfIdealExperiment_prfReduction_eq (adv : PRGAdversary (List.Vector O n)) :
+    PRFScheme.prfIdealExperiment (prfReduction (S := S) (O := O) n adv) =
       (idealOutputs (S := S) (O := O) n >>= adv) := by
-  unfold PRFScheme.prfIdealExp prfReduction idealOutputs
+  unfold PRFScheme.prfIdealExperiment prfReduction idealOutputs
   rw [simulateQ_bind, simulateQ_prfIdealQueryImpl_liftComp, StateT.run'_liftM_bind]
   calc
     _ = (($ᵗ S) >>= fun seed =>
@@ -327,8 +292,8 @@ def seedOutputs (n : ℕ) (seed : S) : ProbComp (List.Vector O n) :=
 
 /-- The per-seed collision experiment: run the lazy random oracle chain for `n` rounds from a
 fixed initial state `seed`, and test whether any queried state repeats. Averaging over
-`seed ← $ᵗ S` gives `idealCollisionExp`. -/
-def seedCollisionExp (n : ℕ) (seed : S) : ProbComp Bool := do
+`seed ← $ᵗ S` gives `idealCollisionExperiment`. -/
+def seedCollisionExperiment (n : ℕ) (seed : S) : ProbComp Bool := do
   let states ←
     (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
       (oracleVisitedStates n seed)).run' ∅
@@ -338,17 +303,18 @@ def seedCollisionExp (n : ℕ) (seed : S) : ProbComp Bool := do
 lemma idealOutputs_eq_bind :
     idealOutputs (S := S) (O := O) n = (($ᵗ S) >>= seedOutputs (S := S) (O := O) n) := rfl
 
-/-- `idealCollisionExp` averages the per-seed collision test over a uniform initial state. -/
-lemma idealCollisionExp_eq_bind :
-    idealCollisionExp (S := S) (O := O) n = (($ᵗ S) >>= seedCollisionExp (S := S) (O := O) n) :=
+/-- `idealCollisionExperiment` averages the per-seed collision test over a uniform initial state. -/
+lemma idealCollisionExperiment_eq_bind :
+    idealCollisionExperiment (S := S) (O := O) n =
+      (($ᵗ S) >>= seedCollisionExperiment (S := S) (O := O) n) :=
   rfl
 
 /-- Generalized collision experiment for an arbitrary starting cache `c`. Running the lazy
 random oracle chain for `N` rounds from state `s`, the bad event is that the chain repeats a
 state (`¬ Nodup`) or revisits a state already present in `c`. For `c = ∅` this reduces to
-`seedCollisionExp`. The generalized cache is the induction vehicle: each fresh step extends
+`seedCollisionExperiment`. The generalized cache is the induction vehicle: each fresh step extends
 `c` by the just-visited state. -/
-def genCollisionExp (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache) :
+def genCollisionExperiment (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache) :
     ProbComp Bool := do
   let states ←
     (simulateQ (prfIdealQueryImpl (D := S) (R := S × O)) (oracleVisitedStates N s)).run' c
@@ -398,16 +364,17 @@ private lemma randomOracle_run_of_none (s : S) (c : (S →ₒ S × O).QueryCache
 event on the length-`N + 1` visited chain splits into the fresh draw at `s` (extending the cache by
 `s`) followed by the bad event on the length-`N` sub-chain run against the extended cache. The
 just-visited state `s` is folded into the cache, so the two bad events match pointwise. -/
-private lemma genCollisionExp_succ_of_none (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache)
+private lemma genCollisionExperiment_succ_of_none (N : ℕ) (s : S) (c : (S →ₒ S × O).QueryCache)
     (hc : c s = none) :
-    genCollisionExp (N + 1) s c =
-      (do let p ← $ᵗ (S × O); genCollisionExp N p.1 (c.cacheQuery s p)) := by
-  rw [genCollisionExp, simulateQ_oracleVisitedStates_succ_run', randomOracle_run_of_none s c hc]
+    genCollisionExperiment (N + 1) s c =
+      (do let p ← $ᵗ (S × O); genCollisionExperiment N p.1 (c.cacheQuery s p)) := by
+  rw [genCollisionExperiment, simulateQ_oracleVisitedStates_succ_run',
+    randomOracle_run_of_none s c hc]
   simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp]
-  rw [uniformSample_prod_eq_bind]
+  rw [SampleableType.uniformSample_prod_eq_bind]
   simp only [bind_assoc, pure_bind]
   refine bind_congr fun a => bind_congr fun b => ?_
-  rw [genCollisionExp]
+  rw [genCollisionExperiment]
   refine bind_congr fun rest => ?_
   congr 1
   rw [decide_eq_decide, List.Vector.toList_cons]
@@ -444,18 +411,17 @@ private lemma genCollisionExp_succ_of_none (N : ℕ) (s : S) (c : (S →ₒ S ×
 /-- Cache-hit determinism for the generalized collision experiment. When `s` is already cached, the
 visited chain of length `N + 1` starts at `s`, which lies in the chain and is cached, so the bad
 event always fires and the experiment returns `true` with probability one. -/
-private lemma probOutput_genCollisionExp_succ_of_isCached (N : ℕ) (s : S)
+private lemma evalDist_genCollisionExperiment_succ_of_isCached (N : ℕ) (s : S)
     (c : (S →ₒ S × O).QueryCache) (hc : c.isCached s = true) :
-    Pr[= true | genCollisionExp (N + 1) s c] = 1 := by
-  refine probOutput_eq_one_of_support_subset_singleton ?_ ?_
-  · simp [genCollisionExp]
-  · intro x hx
-    rw [genCollisionExp, simulateQ_oracleVisitedStates_succ_run'] at hx
-    simp only [support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff,
-      exists_prop] at hx
-    obtain ⟨p, ⟨_, -, rest, -, hpeq⟩, rfl⟩ := hx
-    subst hpeq
-    rw [List.Vector.toList_cons, decide_eq_true (Or.inr ⟨s, List.mem_cons_self, hc⟩)]
+    𝒟[genCollisionExperiment (N + 1) s c] {true} = 1 := by
+  rw [← prEvent_eq_evalDist_singleton]
+  refine prEvent_eq_one_of_forall_mem_support _ _ fun x hx => ?_
+  rw [genCollisionExperiment, simulateQ_oracleVisitedStates_succ_run'] at hx
+  simp only [support_bind, support_pure, Set.mem_iUnion, Set.mem_singleton_iff,
+    exists_prop] at hx
+  obtain ⟨p, ⟨_, -, rest, -, hpeq⟩, rfl⟩ := hx
+  subst hpeq
+  rw [List.Vector.toList_cons, decide_eq_true (Or.inr ⟨s, List.mem_cons_self, hc⟩)]
 
 /-- **Generalized per-seed core coupling.** For an arbitrary starting cache `c`, the total
 variation distance between the lazy-random-oracle output chain (run from cache `c`) and a
@@ -463,20 +429,25 @@ uniformly random output vector is bounded by the generalized collision probabili
 induction on the number of rounds: a fresh query produces an independent uniform block and the
 cache grows by exactly the just-visited state, so the collision recursion closes; a repeated
 query has already triggered the bad event, where the bound is trivially `1`. -/
-lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
+lemma measureETVDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
     (c : (S →ₒ S × O).QueryCache) :
-    tvDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
-          (oracleOutputs N s)).run' c) ($ᵗ (List.Vector O N)) ≤
-      (Pr[= true | genCollisionExp N s c]).toReal := by
+    (letI : MeasurableSpace (List.Vector O N) := ⊤;
+      measureETVDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
+          (oracleOutputs N s)).run' c) ($ᵗ (List.Vector O N))) ≤
+      𝒟[genCollisionExperiment N s c] {true} := by
   have : Fintype O := Fintype.ofFinite O
   induction N generalizing s c with
   | zero =>
-    refine le_trans (le_of_eq ?_) ENNReal.toReal_nonneg
-    rw [tvDist_eq_zero_iff]
+    let : MeasurableSpace (List.Vector O 0) := ⊤
+    refine le_of_eq_of_le ((measureETVDist_eq_zero_iff _ _).2 ?_) zero_le
     simp only [oracleOutputs, simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
-    refine evalSPMF_ext fun y => ?_
-    simp [List.Vector.eq_nil y]
+    refine Measure.ext_of_singleton fun y => ?_
+    rw [List.Vector.eq_nil y, SampleableType.evalDist_uniformSample_singleton]
+    simp [card_vector]
   | succ N ih =>
+    let : MeasurableSpace (List.Vector O N) := ⊤
+    let : MeasurableSpace (List.Vector O (N + 1)) := ⊤
+    let : MeasurableSpace (S × O) := ⊤
     cases hc : c.isCached s with
     | false =>
       -- Cache miss: identical-until-bad coupling.
@@ -492,60 +463,45 @@ lemma tvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
                   (oracleOutputs N p.1)).run' (c.cacheQuery s p)) := by
         rw [simulateQ_oracleOutputs_succ_run', randomOracle_run_of_none s c hcnone, bind_map_left]
         simp only [map_eq_bind_pure_comp, bind_pure_comp]
-      have hRHS :
-          𝒮[($ᵗ (List.Vector O (N + 1)))] =
-            𝒮[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))] := by
-        rw [evalSPMF_uniformSample_vector_succ_pair (S := S) N]
-        congr 1
-        refine bind_congr fun p => ?_
-        rw [map_eq_bind_pure_comp]
-        rfl
-      -- Rewrite the goal as a TV distance between two binds over the shared pair `p : S × O`.
-      rw [hLHS]
-      rw [show tvDist
-          (($ᵗ (S × O)) >>= fun p =>
-              (fun v => p.2 ::ᵥ v) <$> (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
-                (oracleOutputs N p.1)).run' (c.cacheQuery s p))
-          ($ᵗ (List.Vector O (N + 1))) =
-          tvDist
-            (($ᵗ (S × O)) >>= fun p =>
+      -- Rewrite the goal as a distance between two binds over the shared pair `p : S × O`.
+      calc measureETVDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
+              (oracleOutputs (N + 1) s)).run' c) ($ᵗ (List.Vector O (N + 1)))
+          = measureETVDist
+              (($ᵗ (S × O)) >>= fun p =>
                 (fun v => p.2 ::ᵥ v) <$> (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
                   (oracleOutputs N p.1)).run' (c.cacheQuery s p))
-            (($ᵗ (S × O)) >>= fun p => (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N))) from by
-        unfold tvDist; rw [hRHS]]
-      refine le_trans (tvDist_bind_left_le _ _ _) ?_
-      -- Bound each per-pair TV distance by the per-pair generalized collision probability.
-      rw [genCollisionExp_succ_of_none N s c hcnone, probOutput_bind_eq_tsum,
-        ENNReal.tsum_toReal_eq (fun p => ENNReal.mul_ne_top probOutput_ne_top probOutput_ne_top)]
-      refine Summable.tsum_le_tsum (fun p => ?_) ?_ ?_
-      · rw [ENNReal.toReal_mul]
-        refine mul_le_mul_of_nonneg_left ?_ ENNReal.toReal_nonneg
-        exact le_trans (tvDist_map_le (fun v => p.2 ::ᵥ v) _ _) (ih p.1 (c.cacheQuery s p))
-      · refine Summable.of_nonneg_of_le
-          (fun p => mul_nonneg ENNReal.toReal_nonneg (tvDist_nonneg _ _))
-          (fun p => mul_le_of_le_one_right ENNReal.toReal_nonneg (tvDist_le_one _ _))
-          (ENNReal.summable_toReal tsum_probOutput_ne_top)
-      · exact ENNReal.summable_toReal
-          (by rw [← probOutput_bind_eq_tsum]; exact probOutput_ne_top)
+              (($ᵗ (S × O)) >>= fun p => (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N))) := by
+            rw [hLHS]
+            simp only [measureETVDist, evalDist_uniformSample_vector_succ_pair (S := S) N]
+        -- Bound each per-pair distance by the per-pair generalized collision probability.
+        _ ≤ ∫⁻ p, 𝒟[genCollisionExperiment N p.1 (c.cacheQuery s p)] {true} ∂𝒟[$ᵗ (S × O)] :=
+            measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete
+              Measurable.of_discrete _ (Filter.Eventually.of_forall fun p =>
+                (measureETVDist_map_le _ _ (fun v => p.2 ::ᵥ v) Measurable.of_discrete).trans
+                  (ih p.1 (c.cacheQuery s p)))
+        _ = 𝒟[genCollisionExperiment (N + 1) s c] {true} := by
+            rw [genCollisionExperiment_succ_of_none N s c hcnone, evalDist_bind_apply_true]
     | true =>
       -- Cache hit: the bad event already fired, so the bound is trivially `1`.
-      rw [probOutput_genCollisionExp_succ_of_isCached N s c hc, ENNReal.toReal_one]
-      exact tvDist_le_one _ _
+      rw [evalDist_genCollisionExperiment_succ_of_isCached N s c hc]
+      exact measureETVDist_le_one _ _
 
 /-- **Per-seed core coupling.** For a fixed initial state, the total variation distance between
 the lazy-random-oracle output chain and a uniformly random output vector is bounded by the
 probability that the state chain revisits a state. This is the fundamental "identical until
 bad" step: until the chain repeats, the lazy random oracle returns independent uniform blocks.
 
-The empty-cache specialization of `tvDist_seedOutputs_le_collision_gen`. -/
-lemma tvDist_seedOutputs_le_collision (seed : S) :
-    tvDist (seedOutputs n seed) ($ᵗ (List.Vector O n)) ≤
-      (Pr[= true | seedCollisionExp (O := O) n seed]).toReal := by
-  have heq : genCollisionExp (O := O) n seed ∅ = seedCollisionExp (O := O) n seed := by
-    unfold genCollisionExp seedCollisionExp
+The empty-cache specialization of `measureETVDist_seedOutputs_le_collision_gen`. -/
+lemma measureETVDist_seedOutputs_le_collision (seed : S) :
+    (letI : MeasurableSpace (List.Vector O n) := ⊤;
+      measureETVDist (seedOutputs n seed) ($ᵗ (List.Vector O n))) ≤
+      𝒟[seedCollisionExperiment (O := O) n seed] {true} := by
+  have heq :
+      genCollisionExperiment (O := O) n seed ∅ = seedCollisionExperiment (O := O) n seed := by
+    unfold genCollisionExperiment seedCollisionExperiment
     refine bind_congr fun states => ?_
     simp [QueryCache.isCached_empty]
-  have h := tvDist_seedOutputs_le_collision_gen (O := O) n seed ∅
+  have h := measureETVDist_seedOutputs_le_collision_gen (O := O) n seed ∅
   rw [heq] at h
   exact h
 
@@ -554,33 +510,22 @@ chain and a uniformly random output vector is bounded by the state-collision pro
 This is the fundamental "identical until bad" step: until the state chain repeats, the lazy
 random oracle returns independent uniform blocks, matching the ideal PRG distribution.
 
-Obtained by averaging the per-seed bound `tvDist_seedOutputs_le_collision` over the uniform
-initial state. -/
-lemma tvDist_idealOutputs_le_collisionProb :
-    tvDist (idealOutputs (S := S) (O := O) n) ($ᵗ (List.Vector O n)) ≤
+Obtained by averaging the per-seed bound `measureETVDist_seedOutputs_le_collision` over the
+uniform initial state. -/
+lemma measureETVDist_idealOutputs_le_collisionProb :
+    (letI : MeasurableSpace (List.Vector O n) := ⊤;
+      measureETVDist (idealOutputs (S := S) (O := O) n) ($ᵗ (List.Vector O n))) ≤
       collisionProb (S := S) (O := O) n := by
-  rw [collisionProb, idealCollisionExp_eq_bind, idealOutputs_eq_bind]
-  -- Replace the constant right-hand side by a (lossless) bind over the same seed.
-  have h_const : tvDist (($ᵗ S) >>= seedOutputs n) ($ᵗ (List.Vector O n)) =
-      tvDist (($ᵗ S) >>= seedOutputs n) (($ᵗ S) >>= fun _ => $ᵗ (List.Vector O n)) := by
-    simp only [tvDist]
-    congr 1
-    refine evalSPMF_ext fun y => ?_
-    rw [probOutput_bind_const]
-    simp
-  rw [h_const]
-  refine le_trans (tvDist_bind_left_le _ _ _) ?_
-  -- Bound each per-seed TV distance by the per-seed collision probability, then reassemble.
-  rw [probOutput_bind_eq_tsum]
-  rw [ENNReal.tsum_toReal_eq (fun seed => ENNReal.mul_ne_top probOutput_ne_top probOutput_ne_top)]
-  refine Summable.tsum_le_tsum (fun seed => ?_) ?_ ?_
-  · rw [ENNReal.toReal_mul]
-    exact mul_le_mul_of_nonneg_left (tvDist_seedOutputs_le_collision seed) ENNReal.toReal_nonneg
-  · exact Summable.of_nonneg_of_le
-      (fun seed => mul_nonneg ENNReal.toReal_nonneg (tvDist_nonneg _ _))
-      (fun seed => mul_le_of_le_one_right ENNReal.toReal_nonneg (tvDist_le_one _ _))
-      (ENNReal.summable_toReal tsum_probOutput_ne_top)
-  · exact ENNReal.summable_toReal (by rw [← probOutput_bind_eq_tsum]; exact probOutput_ne_top)
+  let : MeasurableSpace (List.Vector O n) := ⊤
+  let : MeasurableSpace S := ⊤
+  rw [collisionProb, idealCollisionExperiment_eq_bind, idealOutputs_eq_bind,
+    evalDist_bind_apply_true]
+  calc measureETVDist (($ᵗ S) >>= seedOutputs n) ($ᵗ (List.Vector O n))
+      = measureETVDist (($ᵗ S) >>= seedOutputs n) (($ᵗ S) >>= fun _ => $ᵗ (List.Vector O n)) := by
+        simp only [measureETVDist, OracleComp.evalDist_bind_const]
+    _ ≤ ∫⁻ seed, 𝒟[seedCollisionExperiment (O := O) n seed] {true} ∂𝒟[$ᵗ S] :=
+        measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete Measurable.of_discrete _
+          (Filter.Eventually.of_forall fun seed => measureETVDist_seedOutputs_le_collision seed)
 
 /-- The gap between the ideal PRF and ideal PRG experiments is bounded by the
 collision probability. This follows from the fundamental lemma of game playing:
@@ -594,77 +539,65 @@ comes from the probability that the state chain revisits some state.
 3. In the ideal PRG world, the inputs are i.i.d. uniform.
 4. Conditioned on no state collision, the random-oracle chain produces
    independent uniform outputs, so the two input distributions coincide.
-5. By the "identical until bad" lemma (`tvDist_simulateQ_le_probEvent_bad`),
-   the TV distance between the two input distributions is at most `Pr[collision]`.
-6. By the data-processing inequality, running `adv` cannot increase the gap.
-
-Full formalization requires coupling the random-oracle chain with independent
-uniform outputs and instantiating the switching-lemma infrastructure for this
-specific oracle. -/
+5. By the "identical until bad" coupling (`measureETVDist_idealOutputs_le_collisionProb`),
+   the total variation between the two input distributions is at most the collision
+   probability.
+6. By the data-processing inequality, running `adv` cannot increase the gap. -/
 theorem prfIdealGap_le_collisionProb (adv : PRGAdversary (List.Vector O n)) :
-    |(Pr[= true | PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)]).toReal -
-      (Pr[= true | PRGScheme.prgIdealExp adv]).toReal| ≤
+    𝒟[PRFScheme.prfIdealExperiment (prfReduction (S := S) (O := O) n adv)].boolDist
+        𝒟[PRGScheme.prgIdealExperiment adv] ≤
       collisionProb (S := S) (O := O) n := by
-  rw [prfIdealExp_prfReduction_eq adv, prgIdealExp_eq_bind adv]
-  calc |(Pr[= true | idealOutputs n >>= adv]).toReal -
-          (Pr[= true | ($ᵗ (List.Vector O n)) >>= adv]).toReal|
-      ≤ tvDist (idealOutputs n >>= adv) (($ᵗ (List.Vector O n)) >>= adv) :=
-        abs_probOutput_toReal_sub_le_tvDist _ _
-    _ ≤ tvDist (idealOutputs n) ($ᵗ (List.Vector O n)) := tvDist_bind_right_le _ _ _
-    _ ≤ collisionProb (S := S) (O := O) n := tvDist_idealOutputs_le_collisionProb
+  let : MeasurableSpace (List.Vector O n) := ⊤
+  rw [prfIdealExperiment_prfReduction_eq adv, prgIdealExperiment_eq_bind adv]
+  calc 𝒟[idealOutputs n >>= adv].boolDist 𝒟[($ᵗ (List.Vector O n)) >>= adv]
+      ≤ measureETVDist (idealOutputs n >>= adv) (($ᵗ (List.Vector O n)) >>= adv) :=
+        Measure.absDiff_apply_le_etvDist _ _ (measurableSet_singleton true)
+    _ ≤ measureETVDist (idealOutputs n) ($ᵗ (List.Vector O n)) :=
+        measureETVDist_bind_le _ _ _ Measurable.of_discrete
+    _ ≤ collisionProb (S := S) (O := O) n := measureETVDist_idealOutputs_le_collisionProb
 
 /-- Security of the stream PRG obtained from a PRF: PRG distinguishing advantage is
 bounded by the PRF advantage of the reduction plus the collision probability in the
 ideal random-function world. -/
 theorem security [SampleableType K]
-    (hkey : 𝒮[prf.keygen] = 𝒮[$ᵗ K])
+    (hkey : prf.keygen =ᵈ ($ᵗ K : ProbComp K))
     (adv : PRGAdversary (List.Vector O n)) :
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
       collisionProb (S := S) (O := O) n := by
-  let prgReal := PRGScheme.prgRealExp (streamPRG prf n) adv
-  let prfReal := PRFScheme.prfRealExp prf (prfReduction (S := S) (O := O) n adv)
-  let prfIdeal := PRFScheme.prfIdealExp (prfReduction (S := S) (O := O) n adv)
-  let prgIdeal := PRGScheme.prgIdealExp adv
-  have hreal : 𝒟[prgReal] {true} = 𝒟[prfReal] {true} := by
-    simpa only [prgReal, prfReal, evalDist_apply_singleton] using
-      probOutput_congr rfl (prgRealExp_eq_prfRealExp hkey adv)
-  have hgap : prfIdeal.boolDistAdvantage prgIdeal ≤ collisionProb (S := S) (O := O) n := by
-    simpa only [prfIdeal, prgIdeal, ProbComp.boolDistAdvantage, evalDist_apply_singleton] using
-      prfIdealGap_le_collisionProb adv
-  change prgReal.boolDistAdvantage prgIdeal ≤
-    prfReal.boolDistAdvantage prfIdeal + collisionProb (S := S) (O := O) n
-  have heq : prgReal.boolDistAdvantage prgIdeal = prfReal.boolDistAdvantage prgIdeal := by
-    unfold ProbComp.boolDistAdvantage
-    rw [hreal]
-  rw [heq]
-  exact (ProbComp.boolDistAdvantage_triangle prfReal prfIdeal prgIdeal).trans
-    (add_le_add_right hgap _)
+  let prgReal := PRGScheme.prgRealExperiment (streamPRG prf n) adv
+  let prfReal := PRFScheme.prfRealExperiment prf (prfReduction (S := S) (O := O) n adv)
+  let prfIdeal := PRFScheme.prfIdealExperiment (prfReduction (S := S) (O := O) n adv)
+  let prgIdeal := PRGScheme.prgIdealExperiment adv
+  change 𝒟[prgReal].boolDist 𝒟[prgIdeal] ≤
+    𝒟[prfReal].boolDist 𝒟[prfIdeal] + collisionProb (S := S) (O := O) n
+  have hreal : 𝒟[prgReal] = 𝒟[prfReal] := prgRealExperiment_eq_prfRealExperiment hkey adv
+  rw [hreal]
+  exact (MeasureTheory.Measure.boolDist_triangle _ 𝒟[prfIdeal] _).trans
+    (by gcongr; exact prfIdealGap_le_collisionProb adv)
 
 /-- **Domain-invariance of the collision probability.** The generalized collision experiment reads
 the starting cache only through its domain (`isCached`): on the good path cached values are never
 inspected, and on a hit the bad event has already fired. Hence two caches with the same domain give
 the same collision probability. -/
-private lemma probOutput_genCollisionExp_eq_of_isCached_agree (N : ℕ) (s : S)
+private lemma evalDist_genCollisionExperiment_eq_of_isCached_agree (N : ℕ) (s : S)
     (c c' : (S →ₒ S × O).QueryCache) (h : ∀ x, c.isCached x = c'.isCached x) :
-    Pr[= true | genCollisionExp N s c] = Pr[= true | genCollisionExp N s c'] := by
+    𝒟[genCollisionExperiment N s c] {true} = 𝒟[genCollisionExperiment N s c'] {true} := by
   induction N generalizing s c c' with
-  | zero => simp [genCollisionExp]
+  | zero => simp [genCollisionExperiment]
   | succ N ih =>
     cases hc : c.isCached s with
     | true =>
-      rw [probOutput_genCollisionExp_succ_of_isCached N s c hc,
-        probOutput_genCollisionExp_succ_of_isCached N s c' (by rw [← h s]; exact hc)]
+      rw [evalDist_genCollisionExperiment_succ_of_isCached N s c hc,
+        evalDist_genCollisionExperiment_succ_of_isCached N s c' (by rw [← h s]; exact hc)]
     | false =>
       have hc' : c'.isCached s = false := by rw [← h s]; exact hc
       have hcnone : c s = none := by simpa [QueryCache.isCached] using hc
       have hc'none : c' s = none := by simpa [QueryCache.isCached] using hc'
-      rw [genCollisionExp_succ_of_none N s c hcnone,
-        genCollisionExp_succ_of_none N s c' hc'none,
-        probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-      refine tsum_congr fun p => ?_
-      congr 1
-      refine ih p.1 (c.cacheQuery s p) (c'.cacheQuery s p) fun x => ?_
+      rw [genCollisionExperiment_succ_of_none N s c hcnone,
+        genCollisionExperiment_succ_of_none N s c' hc'none,
+        evalDist_bind_apply_true, evalDist_bind_apply_true]
+      refine lintegral_congr fun p => ih p.1 (c.cacheQuery s p) (c'.cacheQuery s p) fun x => ?_
       by_cases hx : x = s
       · subst hx; simp
       · rw [QueryCache.isCached_cacheQuery_of_ne c p hx,
@@ -676,14 +609,14 @@ generalized collision probability of the length-`N` chain starting from cache `c
 `∑_{j < N} (|c| + j) / |S|`. Proved by induction on `N` (generalizing `c`): a cache miss draws a
 fresh uniform state, growing the cache by one and shifting the bound; the union over already-cached
 states contributes the leading `|c| / |S|` term. -/
-private lemma probOutput_genCollisionExp_bind_le [Fintype S] (N : ℕ) (c : (S →ₒ S × O).QueryCache) :
-    Pr[= true | (do let s ← $ᵗ S; genCollisionExp N s c)] ≤
+private lemma evalDist_genCollisionExperiment_bind_le [Fintype S] (N : ℕ)
+    (c : (S →ₒ S × O).QueryCache) :
+    𝒟[(do let s ← $ᵗ S; genCollisionExperiment N s c)] {true} ≤
       ∑ j ∈ Finset.range N, (QueryCache.enncard c + (j : ℝ≥0∞)) * (Fintype.card S : ℝ≥0∞)⁻¹ := by
+  let : MeasurableSpace S := ⊤
   induction N generalizing c with
   | zero =>
-    simp only [Finset.range_zero, Finset.sum_empty, nonpos_iff_eq_zero]
-    rw [probOutput_bind_eq_tsum]
-    simp [genCollisionExp]
+    simp [genCollisionExperiment, oracleVisitedStates]
   | succ N ih =>
     obtain ⟨u₀⟩ : Nonempty (S × O) := inferInstance
     set C : ℝ≥0∞ := (Fintype.card S : ℝ≥0∞) with hC
@@ -693,51 +626,48 @@ private lemma probOutput_genCollisionExp_bind_le [Fintype S] (N : ℕ) (c : (S �
     have hCcancel : C * C⁻¹ = 1 := ENNReal.mul_inv_cancel hCne hCtop
     set B : ℝ≥0∞ := ∑ j ∈ Finset.range N, (QueryCache.enncard c + 1 + (j : ℝ≥0∞)) * C⁻¹ with hB
     -- Termwise bound on the per-state collision probability.
-    have hterm : ∀ s : S, Pr[= true | genCollisionExp (N + 1) s c] ≤
+    have hterm : ∀ s : S, 𝒟[genCollisionExperiment (N + 1) s c] {true} ≤
         (if c.isCached s then (1 : ℝ≥0∞) else 0) + B := by
       intro s
       cases hcs : c.isCached s with
       | true =>
-        rw [probOutput_genCollisionExp_succ_of_isCached N s c hcs, ite_eq_left rfl]
+        rw [evalDist_genCollisionExperiment_succ_of_isCached N s c hcs, ite_eq_left rfl]
         exact le_self_add
       | false =>
         rw [ite_eq_right (by simp), zero_add]
         have hcnone : c s = none := by simpa [QueryCache.isCached] using hcs
-        rw [genCollisionExp_succ_of_none N s c hcnone]
+        rw [genCollisionExperiment_succ_of_none N s c hcnone]
         -- Replace each fresh cache value by a fixed one (domain invariance), then drop the
         -- unused output coordinate.
         have hdom :
-            Pr[= true | (($ᵗ (S × O)) >>= fun p => genCollisionExp N p.1 (c.cacheQuery s p))]
-              = Pr[= true | (($ᵗ (S × O)) >>= fun p =>
-                  genCollisionExp N p.1 (c.cacheQuery s u₀))] := by
-          rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-          refine tsum_congr fun p => ?_
-          congr 1
-          refine probOutput_genCollisionExp_eq_of_isCached_agree N p.1 _ _ fun x => ?_
+            𝒟[(($ᵗ (S × O)) >>= fun p => genCollisionExperiment N p.1 (c.cacheQuery s p))] {true}
+              = 𝒟[(($ᵗ (S × O)) >>= fun p =>
+                  genCollisionExperiment N p.1 (c.cacheQuery s u₀))] {true} := by
+          rw [evalDist_bind_apply_true, evalDist_bind_apply_true]
+          refine lintegral_congr fun p =>
+            evalDist_genCollisionExperiment_eq_of_isCached_agree N p.1 _ _ fun x => ?_
           by_cases hx : x = s
           · subst hx; simp
           · rw [QueryCache.isCached_cacheQuery_of_ne c p hx,
               QueryCache.isCached_cacheQuery_of_ne c u₀ hx]
-        rw [hdom, probOutput_bind_uniformSample_prod_fst
-          (fun s' => genCollisionExp N s' (c.cacheQuery s u₀)) true]
+        rw [hdom, SampleableType.evalDist_uniformSample_prod_bind_fst
+          (fun s' => genCollisionExperiment N s' (c.cacheQuery s u₀))]
         refine le_trans (ih (c.cacheQuery s u₀)) (le_of_eq ?_)
         rw [hB]
         refine Finset.sum_congr rfl fun j _ => ?_
         rw [enncard_cacheQuery_of_none c s u₀ hcnone]
-    calc Pr[= true | (do let s ← $ᵗ S; genCollisionExp (N + 1) s c)]
-        = ∑ s : S, Pr[= s | ($ᵗ S)] * Pr[= true | genCollisionExp (N + 1) s c] :=
-          probOutput_bind_eq_sum_fintype _ _ true
-      _ ≤ ∑ s : S, Pr[= s | ($ᵗ S)] * ((if c.isCached s then (1 : ℝ≥0∞) else 0) + B) := by
-          refine Finset.sum_le_sum fun s _ => ?_
-          exact mul_le_mul_of_nonneg_left (hterm s) (by simp)
+    calc 𝒟[(do let s ← $ᵗ S; genCollisionExperiment (N + 1) s c)] {true}
+        = ∑ s : S, 𝒟[genCollisionExperiment (N + 1) s c] {true} * C⁻¹ := by
+          rw [evalDist_bind_apply_true, lintegral_fintype]
+          simp_rw [SampleableType.evalDist_uniformSample_singleton, ← hC]
+      _ ≤ ∑ s : S, ((if c.isCached s then (1 : ℝ≥0∞) else 0) + B) * C⁻¹ :=
+          Finset.sum_le_sum fun s _ => mul_le_mul_left (hterm s) _
       _ = QueryCache.enncard c * C⁻¹ + B := by
-          simp_rw [mul_add, Finset.sum_add_distrib]
+          simp_rw [add_mul, Finset.sum_add_distrib]
           congr 1
           · rw [enncard_eq_sum_isCached, Finset.sum_mul]
-            refine Finset.sum_congr rfl fun s _ => ?_
-            rw [probOutput_uniformSample, ← hC, mul_comm]
-          · simp_rw [probOutput_uniformSample, ← hC, ← Finset.sum_mul]
-            rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, ← hC, hCcancel, one_mul]
+          · rw [Finset.sum_const, Finset.card_univ, nsmul_eq_mul, mul_comm B, ← mul_assoc,
+              ← hC, hCcancel, one_mul]
       _ = ∑ j ∈ Finset.range (N + 1), (QueryCache.enncard c + (j : ℝ≥0∞)) * C⁻¹ := by
           rw [Finset.sum_range_succ', hB]
           rw [Nat.cast_zero, add_zero]
@@ -751,47 +681,35 @@ private lemma probOutput_genCollisionExp_bind_le [Fintype S] (N : ℕ) (c : (S �
 oracle chain, each freshly sampled state is uniform over `S`, so the probability that the chain
 revisits a state is at most `n·(n-1) / (2·|S|)` by a union bound over the at most `C(n,2)` pairs. -/
 theorem collisionProb_le_birthday [Fintype S] (n : ℕ) :
-    collisionProb (S := S) (O := O) n ≤ ((n * (n - 1) : ℕ) : ℝ) / (2 * Fintype.card S) := by
+    collisionProb (S := S) (O := O) n ≤
+      ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * (Fintype.card S : ℝ≥0∞)) := by
   -- The collision probability equals the empty-cache averaged collision probability.
   have hseed : ∀ seed : S,
-      genCollisionExp (O := O) n seed ∅ = seedCollisionExp (O := O) n seed := by
+      genCollisionExperiment (O := O) n seed ∅ = seedCollisionExperiment (O := O) n seed := by
     intro seed
-    unfold genCollisionExp seedCollisionExp
+    unfold genCollisionExperiment seedCollisionExperiment
     refine bind_congr fun states => ?_
     simp [QueryCache.isCached_empty]
-  have hcomp : ((do let s ← $ᵗ S; genCollisionExp (O := O) n s ∅) : ProbComp Bool) =
-      idealCollisionExp (S := S) (O := O) n := by
-    rw [idealCollisionExp_eq_bind]
+  have hcomp : ((do let s ← $ᵗ S; genCollisionExperiment (O := O) n s ∅) : ProbComp Bool) =
+      idealCollisionExperiment (S := S) (O := O) n := by
+    rw [idealCollisionExperiment_eq_bind]
     exact bind_congr hseed
-  -- Bound the ENNReal collision probability by the Gauss sum, then collapse it.
-  have hbound : Pr[= true | idealCollisionExp (S := S) (O := O) n] ≤
-      ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * (Fintype.card S : ℝ≥0∞)) := by
-    rw [← hcomp]
-    refine le_trans (probOutput_genCollisionExp_bind_le n ∅) (le_of_eq ?_)
-    simp only [QueryCache.enncard_empty, zero_add]
-    exact ENNReal.gauss_sum_inv_eq n (Fintype.card S : ℝ≥0∞)
-  -- Convert the ENNReal bound to a real bound.
-  have hden : (2 * (Fintype.card S : ℝ≥0∞)) ≠ 0 :=
-    mul_ne_zero (by norm_num) (Nat.cast_ne_zero.mpr Fintype.card_ne_zero)
-  rw [collisionProb]
-  refine le_trans (ENNReal.toReal_mono
-    (ENNReal.div_ne_top (ENNReal.natCast_ne_top _) hden) hbound) (le_of_eq ?_)
-  rw [ENNReal.toReal_div, ENNReal.toReal_mul, ENNReal.toReal_natCast,
-    ENNReal.toReal_natCast]
-  norm_num
+  -- Bound the collision probability by the Gauss sum, then collapse it.
+  rw [collisionProb, ← hcomp]
+  refine le_trans (evalDist_genCollisionExperiment_bind_le n ∅) (le_of_eq ?_)
+  simp only [QueryCache.enncard_empty, zero_add]
+  exact ENNReal.gauss_sum_inv_eq n (Fintype.card S : ℝ≥0∞)
 
 /-- **Concrete security of the stream PRG.** The PRG distinguishing advantage is bounded by the
 PRF advantage of the reduction plus the birthday term `n·(n-1) / (2·|S|)`, obtained by combining
 `security` with `collisionProb_le_birthday`. -/
 theorem security_birthday [Fintype S] [SampleableType K]
-    (hkey : 𝒮[prf.keygen] = 𝒮[$ᵗ K])
+    (hkey : prf.keygen =ᵈ ($ᵗ K : ProbComp K))
     (adv : PRGAdversary (List.Vector O n)) :
     PRGScheme.prgAdvantage (streamPRG prf n) adv ≤
       PRFScheme.prfAdvantage prf (prfReduction (S := S) (O := O) n adv) +
-      ((n * (n - 1) : ℕ) : ℝ) / (2 * Fintype.card S) := by
-  refine (security hkey adv).trans ?_
-  have := collisionProb_le_birthday (S := S) (O := O) n
-  linarith
+      ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * (Fintype.card S : ℝ≥0∞)) :=
+  (security hkey adv).trans (by gcongr; exact collisionProb_le_birthday n)
 
 end streamPRG
 

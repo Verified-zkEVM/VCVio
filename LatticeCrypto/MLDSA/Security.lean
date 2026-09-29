@@ -151,8 +151,7 @@ theorem idsWithAbort_complete' :
     (identificationScheme p prims).Complete := by
   classical
   intro pk sk hvalid
-  rw [probOutput_eq_one_iff_forall]
-  refine ⟨probFailure_of_liftM_PMF _, fun b hb => ?_⟩
+  refine (OracleComp.prEvent_eq_one_iff _ (· = true)).2 fun b hb => ?_
   rw [support_bind] at hb
   simp only [Set.mem_iUnion] at hb
   obtain ⟨t?, ht?, hb⟩ := hb
@@ -248,7 +247,7 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
 
 The HVZK theorem `MLDSA.idsWithAbort_hvzk` is proven downstream in
 `LatticeCrypto.MLDSA.SecurityHVZK`, where the concrete simulator `hvzkSimulatorReal` and the
-extra-rejection-mass bound `hvzkBoundReal` are defined. The simulator reproduces the honest
+extra-rejection-mass bound `hvzkBound` are defined. The simulator reproduces the honest
 transcript pointwise on the accept event, so the total-variation distance is bounded by the
 honest prover's extra-rejection mass; see that file for the quantitative statement. -/
 
@@ -376,13 +375,12 @@ where:
 - `ε` is the commitment guessing probability
 - `p` is the effective abort probability
 - `sim` is an HVZK simulator for the underlying identification scheme
-- `ζ_zk` is a nonnegative bound such that `HVZK sim ζ_zk`
+- `ζ_zk` is a nonnegative bound such that `HVZK sim (ENNReal.ofReal ζ_zk)`
 - `δ` is the regularity failure probability
 - `ζ = max(γ₁ - β, 2γ₂ + 1 + τ · 2^{d-1})`
 
-The MLWE advantage is the real-valued Boolean bias `LearningWithErrors.advantage`, which is
-nonnegative, so its `ENNReal.ofReal` embedding loses nothing; the SelfTargetMSIS advantage is a
-success probability in `ℝ≥0∞`.
+The MLWE advantage is the Boolean bias `LearningWithErrors.advantage`; the SelfTargetMSIS
+advantage is a success probability. Both are `ℝ≥0∞`-valued.
 
 The proof composes:
 1. **CMA → NMA** (Theorem 3): the Fiat-Shamir with aborts CMA-to-NMA reduction, using the
@@ -403,7 +401,7 @@ theorem euf_cma_security
     (sim : PublicKey p prims →
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
     (ζ_zk : ℝ) (_hζ : 0 ≤ ζ_zk)
-    (_hhvzk : (identificationScheme p prims).HVZK sim ζ_zk)
+    (_hhvzk : (identificationScheme p prims).HVZK sim (ENNReal.ofReal ζ_zk))
     (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1) :
     ∀ (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims)
@@ -411,8 +409,8 @@ theorem euf_cma_security
       SignatureAlg.unforgeableAdvantage
           (FiatShamirWithAbort.runtime
             (Commit := Commitment p prims) (Chal := CommitHashBytes p) M) adv ≤
-        ENNReal.ofReal (LearningWithErrors.advantage mlwe
-          (eufCmaMLWEReduction p prims mlwe maxAttempts hr sim adv)) +
+        LearningWithErrors.advantage mlwe
+          (eufCmaMLWEReduction p prims mlwe maxAttempts hr sim adv) +
         SelfTargetMSIS.advantage (eufCmaSTMSISReduction p prims stmsis maxAttempts hr sim adv) +
         ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   sorry

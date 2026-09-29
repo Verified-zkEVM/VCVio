@@ -6,14 +6,16 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import ToMathlib.Control.OptionT
-public import VCVio.EvalDist.Defs.AlternativeMonad
-public import VCVio.EvalDist.Option
+public import VCVio.EvalDist.Defs.Support.Failure
+public import VCVio.EvalDist.ProbabilityNotation
+public import VCVio.EvalDist.Monad.Map
 
 /-!
-# Probability Distributions on Potentially Failing Computations
+# Support of potentially failing computations
 
-This file gives `OptionT` finite-support and legacy probability lemmas in terms of
-the underlying `m (Option α)`. Its support comes from PolyFun's `MonadAttach` instance.
+This file gives the support and finite support of `OptionT` computations in terms of the
+underlying `m (Option α)`. Their support comes from PolyFun's `MonadAttach` instance; their output
+measures are in `VCVio.EvalDist.Defs.Measure.OptionT`.
 -/
 
 @[expose] public section
@@ -90,117 +92,5 @@ lemma finSupport_lift [ExactMonadAttach m] [LawfulMonad m] [DecidableEq α] (mx 
   ext x; simp [mem_finSupport_iff, mem_finSupport_iff_mem_support]
 
 end HasEvalFinset
-
-section EvalSPMF
-
-variable (m)
-variable [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-
-/-- Lift a `MonadLiftT m SPMF` instance to `MonadLiftT (OptionT m) SPMF`. Failure in `OptionT`
-contributes to the failure mass of the resulting `SPMF`. -/
-noncomputable instance instMonadLiftTSPMF :
-    MonadLiftT (OptionT m) SPMF where
-  monadLift x := OptionT.mapM' (MonadHom.ofLift m SPMF) x
-
-noncomputable instance instLawfulMonadLiftTSPMF :
-    LawfulMonadLiftT (OptionT m) SPMF where
-  monadLift_pure x := by
-    change OptionT.mapM' (MonadHom.ofLift m SPMF) (pure x : OptionT m _) = pure x
-    simp
-  monadLift_bind mx my := by
-    change OptionT.mapM' (MonadHom.ofLift m SPMF) (mx >>= my) =
-      OptionT.mapM' (MonadHom.ofLift m SPMF) mx >>=
-        fun a => OptionT.mapM' (MonadHom.ofLift m SPMF) (my a)
-    simp
-
-/-- The native support of `OptionT m` (preimage of `support mx.run` under `some`) agrees with the
-SPMF-lift (the `OptionT.mapM'` bind into `SPMF`) on outputs, given `EvalDistCompatible m`. -/
-instance instEvalDistCompatible
-    [MonadAttach m]
-    [EvalDistCompatible m] :
-    EvalDistCompatible (OptionT m) where
-  support_eq_SPMF_support {α} mx := by
-    change some ⁻¹' (support mx.run) =
-      SPMF.support ((MonadHom.ofLift m SPMF) mx.run >>=
-        fun y => match y with | some a => pure a | none => failure : SPMF α)
-    rw [SPMF.support_bind]
-    have hbridge : support mx.run =
-        SPMF.support ((MonadHom.ofLift m SPMF) mx.run) :=
-      EvalDistCompatible.support_eq_SPMF_support mx.run
-    rw [hbridge]
-    ext a
-    simp only [Set.mem_preimage, Set.mem_iUnion, exists_prop]
-    refine ⟨fun h => ⟨some a, h, by simp⟩, ?_⟩
-    rintro ⟨(_ | y), hy, ha⟩ <;> simp_all
-
-variable {m}
-
-lemma evalSPMF_eq (mx : OptionT m α) :
-    𝒮[mx] = OptionT.mapM' (MonadHom.ofLift m SPMF) mx := rfl
-
-@[grind =]
-lemma probOutput_eq (mx : OptionT m α) (x : α) :
-    Pr[= x | mx] = Pr[= some x | mx.run] := by
-  simp only [probOutput_def, evalSPMF_eq, OptionT.mapM', SPMF.bind_apply_eq_tsum]
-  refine (tsum_eq_single (some x) fun y hy => ?_).trans (by simp)
-  cases y with
-  | none => simp
-  | some a => simp [show ¬x = a from fun h => hy (h ▸ rfl)]
-
-@[grind =]
-lemma probEvent_eq (mx : OptionT m α) (p : α → Prop) [DecidablePred p] :
-    Pr[ p | mx] + Pr[= none | mx.run] = Pr[ fun x => x.all p | mx.run] := by
-  simp [probEvent_eq_tsum_indicator, probOutput_eq, tsum_option _ ENNReal.summable,
-    Set.indicator_apply, add_comm]
-
-@[grind =]
-lemma probFailure_eq (mx : OptionT m α) :
-    Pr[⊥ | mx] = Pr[⊥ | mx.run] + Pr[= none | mx.run] := by
-  simp [probFailure_def, probOutput_def, evalSPMF_eq, OptionT.mapM', SPMF.toPMF_bind,
-    Option.elimM, PMF.bind_apply, tsum_option, SPMF.toPMF_failure, SPMF.toPMF_pure,
-    SPMF.apply_eq_toPMF_some, evalSPMF_def]
-
-@[simp, grind =]
-lemma probOutput_liftM [LawfulMonad m] (mx : m α) (x : α) :
-    Pr[= x | liftM (n := OptionT m) mx] = Pr[= x | mx] := by
-  simp [probOutput_eq]
-
-@[simp, grind =]
-lemma probOutput_lift [LawfulMonad m] (mx : m α) (x : α) :
-    Pr[= x | OptionT.lift mx] = Pr[= x | mx] :=
-  probOutput_liftM mx x
-
-@[simp, grind =]
-lemma probEvent_liftM [LawfulMonad m] (mx : m α) (p : α → Prop) :
-    Pr[ p | liftM (n := OptionT m) mx] = Pr[ p | mx] := by
-  grind only [= probEvent_eq_tsum_indicator, = probOutput_liftM]
-
-@[simp, grind =]
-lemma probEvent_lift [LawfulMonad m] (mx : m α) (p : α → Prop) :
-    Pr[ p | OptionT.lift mx] = Pr[ p | mx] :=
-  probEvent_liftM mx p
-
-@[simp, grind =]
-lemma probFailure_liftM [LawfulMonad m] (mx : m α) :
-    Pr[⊥ | liftM (n := OptionT m) mx] = Pr[⊥ | mx] := by
-  simp [probFailure_eq]
-
-@[simp, grind =]
-lemma probFailure_lift [LawfulMonad m] (mx : m α) :
-    Pr[⊥ | OptionT.lift mx] = Pr[⊥ | mx] :=
-  probFailure_liftM mx
-
-/-- Bridge lemma: when two `OptionT` computations have underlying `run`s related by an
-`Option.map` of a function `f`, their probabilities for the events `P` and `P ∘ f` agree. -/
-lemma probEvent_eq_of_run_map_eq [LawfulMonad m]
-    (mx : OptionT m α) (my : OptionT m β) (f : β → α) (P : α → Prop)
-    (h : mx.run = (Option.map f) <$> my.run) :
-    Pr[P | mx] = Pr[P ∘ f | my] := by
-  have hmx : mx = f <$> my := by
-    change mx.run = (f <$> my).run
-    rw [OptionT.run_map]; exact h
-  rw [hmx, probEvent_map]
-
-end EvalSPMF
 
 end OptionT

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.Coinductive.Responder
-public import VCVio.EvalDist.FailureMeasure
+public import VCVio.EvalDist.Defs.Measure
 public import VCVio.EvalDist.WithFailure
 public import VCVioTest.MeasureSemantics
 public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
@@ -14,8 +14,9 @@ public import Mathlib.MeasureTheory.Constructions.BorelSpace.Basic
 /-!
 # Canaries for kernel-valued semantics
 
-Checks the subprobability closure layer, the coherent executable responder bridge, and a
-kernel-native responder whose state space is genuinely continuous.
+Checks the subprobability closure layer, the coherent executable responder bridge (a `ProbComp`
+handler whose output measures are the kernel), and a kernel-native responder whose state space is
+genuinely continuous.
 -/
 
 public section
@@ -108,16 +109,17 @@ example : lossyKernel false Set.univ = 0 := by
 @[expose, reducible] def boolAnswerSpec : OracleSpec PUnit := fun _ => Bool
 
 @[reducible] noncomputable def togglingResponder : ProbResponder boolAnswerSpec :=
-  .ofSPMF fun _ state => pure (state, !state)
+  .ofQueryImpl fun _ state => pure (state, !state)
 
 noncomputable example : togglingResponder.IsExecutable := by
   unfold togglingResponder
   infer_instance
 
-/-- Any two executable witnesses for one responder have the same observable program. -/
+/-- Any two executable witnesses for one responder have the same output measure. -/
 example (E₁ E₂ : togglingResponder.IsExecutable) (state : Bool) :
-    E₁.answerSPMF state PUnit.unit = E₂.answerSPMF state PUnit.unit :=
-  ProbResponder.IsExecutable.answerSPMF_unique togglingResponder E₁ E₂ state PUnit.unit
+    letI := togglingResponder.instMeasurableSpaceRange PUnit.unit
+    𝒟[E₁.answerComp state PUnit.unit] = 𝒟[E₂.answerComp state PUnit.unit] :=
+  ProbResponder.IsExecutable.evalDist_answerComp_eq togglingResponder E₁ E₂ state PUnit.unit
 
 example : IsSubprobabilityKernel
     (togglingResponder.answerKernel PUnit.unit) := by
@@ -126,7 +128,7 @@ example : IsSubprobabilityKernel
 
 example (state : Bool) :
     togglingResponder.answerKernel PUnit.unit state =
-      (pure (state, !state) : SPMF (Bool × Bool)).toMeasure :=
+      𝒟[(pure (state, !state) : ProbComp (Bool × Bool))] :=
   rfl
 
 section DiscreteWiredCanaries
@@ -171,18 +173,18 @@ example (p : Bool × Bool) :
     togglingResponder, echoStrategy]
 
 example (p : Bool × Bool) : togglingIterKernel 0 p = Measure.dirac p := by
-  rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_toMeasure]
+  rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_evalDist]
   simp
 
 example (p : Bool × Bool) :
     togglingIterKernel 1 p = Measure.dirac (!p.1, p.1) := by
-  rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_toMeasure]
+  rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_evalDist]
   simp [OracleStrategy.iterateAgainst_succ, OracleStrategy.stepAgainst_apply, togglingResponder,
     echoStrategy]
 
 example (p : Bool × Bool) :
     togglingIterKernel 2 p = Measure.dirac (p.1, !p.1) := by
-  rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_toMeasure]
+  rw [togglingIterKernel, OracleStrategy.iterateAgainstKernel_eq_evalDist]
   simp [OracleStrategy.iterateAgainst_succ, OracleStrategy.stepAgainst_apply, togglingResponder,
     echoStrategy]
 

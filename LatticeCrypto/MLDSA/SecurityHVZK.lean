@@ -6,6 +6,7 @@ Authors: Oleksandr Vovkotrub
 
 module
 public import LatticeCrypto.MLDSA.Security
+public import VCVio.EvalDist.MeasureTVDist.Bind
 
 /-!
 # ML-DSA Honest-Verifier Zero-Knowledge: simulators and the quantitative bound
@@ -14,7 +15,7 @@ This file develops the honest-verifier zero-knowledge (HVZK) simulators for the 
 identification scheme and proves `MLDSA.idsWithAbort_hvzk` for a named simulator and a named
 error bound. An existential statement asserting only that *some* simulator with *some*
 nonnegative total-variation error exists would be trivially dischargeable with `ζ_zk := 1`
-(because `tvDist ≤ 1` always, `SPMF.tvDist_le_one`) and would carry no content.
+(because total variation is at most one, `Measure.etvDist_le_one`) and would carry no content.
 
 ## The marginal simulator `hvzkSimulator`
 
@@ -41,7 +42,7 @@ deterministic function of the witness, against the simulator's independent-unifo
 ## The exact-on-accept simulator `hvzkSimulatorReal`
 
 `hvzkSimulatorReal` reproduces the honest transcript *pointwise* on the accept event: it
-samples `(c̃, z)` from the honest marginals (`evalSPMF_uniform_add_right_swap` is the
+samples `(c̃, z)` from the honest marginals (`uniform_add_right_swap_evalDistEq` is the
 `y ↦ y + c·s₁` shift bijection making `z` uniform), applies the `‖z‖∞ < γ₁ − β` gate, and on
 success reconstructs `(w₁, h)` exactly as the honest accept branch does
 (`hvzkSimulatorReal_accept_match`). The honest pair genuinely depends on `t₀` — on the accept
@@ -53,7 +54,7 @@ literature's treatment of the full `t = t₁·2^d + t₀` as public (the `t₁` 
 bandwidth optimization, not a hiding mechanism).
 
 The resulting quantitative statement `idsWithAbort_hvzk` bounds the total-variation
-distance by `hvzkBoundReal`, the honest prover's *extra-rejection mass*: the probability that
+distance by `hvzkBound`, the honest prover's *extra-rejection mass*: the probability that
 the `z`-gate passes but one of the three secret-dependent gates fails. On the accept event the
 two transcripts coincide, so this bound is exact rather than a slack inequality.
 
@@ -163,18 +164,21 @@ local instance instAddCommGroupRqVec {k : ℕ} : AddCommGroup (RqVec k) where
 right-translation `y ↦ y + f a` yields the same joint distribution as sampling the translated
 value directly: the joint distribution of `(a, y + f a)` for independent uniform `y ← $ᵗ β` and
 `a ← $ᵗ α` equals that of `(a, z)` for uniform `z ← $ᵗ β`. Combines independence of the two
-draws (`probOutput_bind_bind_swap`) with right-translation invariance of the uniform
-distribution on an additive group (`probOutput_bind_add_right_uniform`).
+draws (`OracleComp.evalDist_bind_bind_swap`) with right-translation invariance of the uniform
+distribution on an additive group (`SampleableType.map_uniformSample_evalDistEq_of_bijective`).
 
 For ML-DSA this couples the honest pre-gate joint `(c̃, z = y + c·s₁)` (uniform mask `y` drawn
 by `commit` before the challenge) with the simulator's direct draw of `(c̃, z)`. -/
-lemma evalSPMF_uniform_add_right_swap {α β γ : Type} [SampleableType α] [SampleableType β]
+lemma uniform_add_right_swap_evalDistEq {α β γ : Type} [SampleableType α] [SampleableType β]
     [AddGroup β] (f : α → β) (g : α → β → ProbComp γ) :
-    𝒮[do let y ← $ᵗ β; let a ← $ᵗ α; g a (y + f a)] =
-      𝒮[do let a ← $ᵗ α; let z ← $ᵗ β; g a z] := by
-  refine evalSPMF_ext fun x => ?_
-  rw [probOutput_bind_bind_swap ($ᵗ β) ($ᵗ α) (fun y a => g a (y + f a)) x]
-  exact probOutput_bind_congr fun a _ => probOutput_bind_add_right_uniform β (f a) (g a) x
+    (do let y ← $ᵗ β; let a ← $ᵗ α; g a (y + f a)) =ᵈ
+      (do let a ← $ᵗ α; let z ← $ᵗ β; g a z) := by
+  let : MeasurableSpace γ := ⊤
+  refine (EvalDistEq.of_evalDist_eq (OracleComp.evalDist_bind_bind_swap _ _ _)).trans ?_
+  refine EvalDistEq.bind_right _ fun a => ?_
+  simpa only [bind_map_left, Equiv.coe_addRight] using
+    (SampleableType.map_uniformSample_evalDistEq_of_bijective
+      (Equiv.addRight (f a)).bijective).bind_left (g a)
 
 /-! ### Componentwise algebra on `Rq` and `RqVec` -/
 
@@ -210,18 +214,18 @@ masked response `(c̃, z = y + c·s₁)` — with the mask `y` drawn uniformly b
 the uniform challenge — equals the simulator's direct draw of `(c̃, z)` with `z` uniform, as
 observed by any continuation. Over uniform `y`, the map `y ↦ y + c·s₁` is a bijection of
 `RqVec p.l`, so `z` is uniform and independent of `c̃`. -/
-theorem evalSPMF_honest_pregate [SampleableType (CommitHashBytes p)] (sk : SecretKey p)
+theorem honest_pregate_evalDistEq [SampleableType (CommitHashBytes p)] (sk : SecretKey p)
     {γ : Type}
     (g : CommitHashBytes p → RqVec p.l → ProbComp γ) :
-    𝒮[do
+    (do
         let y ← $ᵗ (RqVec p.l)
         let cTilde ← $ᵗ (CommitHashBytes p)
-        g cTilde (y + prims.sampleInBall cTilde • sk.s1)] =
-      𝒮[do
+        g cTilde (y + prims.sampleInBall cTilde • sk.s1)) =ᵈ
+      (do
         let cTilde ← $ᵗ (CommitHashBytes p)
         let z ← $ᵗ (RqVec p.l)
-        g cTilde z] :=
-  evalSPMF_uniform_add_right_swap (fun cTilde => prims.sampleInBall cTilde • sk.s1) g
+        g cTilde z) :=
+  uniform_add_right_swap_evalDistEq (fun cTilde => prims.sampleInBall cTilde • sk.s1) g
 
 /-! ### Public recovery of the withheld key part `t₀` -/
 
@@ -285,7 +289,7 @@ receives only the public key `pk` (no secret) and produces an optional transcrip
 
 1. sample the challenge hash `c̃` uniformly (its honest marginal is uniform);
 2. sample the short response `z` uniformly from `RqVec p.l` (its honest pre-gate marginal is
-   uniform by the `y ↦ y + c·s₁` shift bijection, `evalSPMF_honest_pregate`);
+   uniform by the `y ↦ y + c·s₁` shift bijection, `honest_pregate_evalDistEq`);
 3. apply the response gate `‖z‖∞ < γ₁ − β`, exactly the first gate of the honest `respond` —
    on failure, abort (`none`);
 4. on success, reconstruct the honest accept-branch values from the statement: with
@@ -296,7 +300,7 @@ receives only the public key `pk` (no secret) and produces an optional transcrip
 On the honest accept event the output `(w₁, c̃, (z, h))` coincides with the honest transcript
 pointwise (`hvzkSimulatorReal_accept_match`); the simulator does not mirror the three
 secret-dependent gates, so the total-variation distance to the honest distribution is exactly
-the extra-rejection mass `hvzkBadMass` (bounded by `hvzkBoundReal`). -/
+the extra-rejection mass `hvzkBadMass` (bounded by `hvzkBound`). -/
 noncomputable def hvzkSimulatorReal [SampleableType (CommitHashBytes p)]
     (pk : PublicKey p prims) :
     ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := do
@@ -451,7 +455,7 @@ lemma hvzkSimulatorReal_eq_gated [SampleableType (CommitHashBytes p)] (pk : Publ
 /-- The honest execution as the `(y, c̃)` draw followed by a deterministic continuation of
 `(c̃, z = y + c·s₁)`: the commit value `w = A·y` is re-expressed through `z` by
 `hvzkHonestOut` (which recovers `y = z − c·s₁`), so the uniform-shift coupling
-`evalSPMF_honest_pregate` applies. -/
+`honest_pregate_evalDistEq` applies. -/
 lemma honestExecution_eq_pregate [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
     (pk : PublicKey p prims) (sk : SecretKey p) :
     (identificationScheme p prims).honestExecution pk sk =
@@ -466,15 +470,15 @@ lemma honestExecution_eq_pregate [DecidableEq prims.High] [SampleableType (Commi
   split_ifs with h1 h2 <;> simp
 
 /-- The honest transcript distribution over the simulator's `(c̃, z)` randomness. -/
-lemma evalSPMF_honestExecution_eq_gated [DecidableEq prims.High]
+lemma honestExecution_evalDistEq_gated [DecidableEq prims.High]
     [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims) (sk : SecretKey p) :
-    𝒮[(identificationScheme p prims).honestExecution pk sk] =
-      𝒮[do
+    (identificationScheme p prims).honestExecution pk sk =ᵈ
+      (do
         let cTilde ← $ᵗ (CommitHashBytes p)
         let z ← $ᵗ (RqVec p.l)
-        return hvzkHonestOut p prims pk sk cTilde z] := by
+        return hvzkHonestOut p prims pk sk cTilde z) := by
   rw [honestExecution_eq_pregate p prims pk sk]
-  exact evalSPMF_honest_pregate p prims sk
+  exact honest_pregate_evalDistEq p prims sk
     (fun cT zv =>
       (pure (hvzkHonestOut p prims pk sk cT zv) :
         ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims))))
@@ -515,7 +519,7 @@ honest prover aborts while the simulator emits a transcript; everywhere else the
 distributions coincide, so this mass is exactly the total-variation distance. -/
 noncomputable def hvzkBadMass [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims)
     (sk : SecretKey p) : ℝ≥0∞ :=
-  Pr[= true | do
+  Pr{do
     let y ← $ᵗ (RqVec p.l)
     let cTilde ← $ᵗ (CommitHashBytes p)
     let c := prims.sampleInBall cTilde
@@ -526,24 +530,22 @@ noncomputable def hvzkBadMass [SampleableType (CommitHashBytes p)] (pk : PublicK
     let h := prims.makeHintVec (-ct0) (w - c • sk.s2 + ct0)
     return decide (polyVecNorm z < p.gamma1 - p.beta ∧
       ¬(polyVecNorm r0 < p.gamma2 - p.beta ∧ polyVecNorm ct0 < p.gamma2 ∧
-        prims.hintWeight h ≤ p.omega))]
+        prims.hintWeight h ≤ p.omega))}[= true]
 
 /-- The extra-rejection mass is a probability. -/
 lemma hvzkBadMass_le_one [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims)
     (sk : SecretKey p) :
     hvzkBadMass p prims pk sk ≤ 1 := by
-  unfold hvzkBadMass; exact probOutput_le_one
+  unfold hvzkBadMass; exact prEvent_le_one _
 
 /-- `hvzkBadMass` over the simulator's `(c̃, z)` randomness: transporting the honest `(y, c̃)`
-draw through the `y ↦ y + c·s₁` shift (`evalSPMF_honest_pregate`) re-expresses the
+draw through the `y ↦ y + c·s₁` shift (`honest_pregate_evalDistEq`) re-expresses the
 extra-rejection mass as the probability that `hvzkBadIndicator` fires on a direct draw. -/
-lemma hvzkBadMass_eq_probOutput_indicator [SampleableType (CommitHashBytes p)]
+lemma hvzkBadMass_eq_prEvent_indicator [SampleableType (CommitHashBytes p)]
     (pk : PublicKey p prims) (sk : SecretKey p) :
     hvzkBadMass p prims pk sk =
-      Pr[= true | do
-        let cTilde ← $ᵗ (CommitHashBytes p)
-        let z ← $ᵗ (RqVec p.l)
-        return hvzkBadIndicator p prims pk sk cTilde z] := by
+      Pr{cTilde ← $ᵗ (CommitHashBytes p); z ← $ᵗ (RqVec p.l)}[
+        hvzkBadIndicator p prims pk sk cTilde z = true] := by
   have hnorm : (do
       let y ← $ᵗ (RqVec p.l)
       let cTilde ← $ᵗ (CommitHashBytes p)
@@ -561,124 +563,71 @@ lemma hvzkBadMass_eq_probOutput_indicator [SampleableType (CommitHashBytes p)]
           cTilde (y + prims.sampleInBall cTilde • sk.s1) := by
     refine bind_congr fun y => bind_congr fun cTilde => ?_
     simp only [hvzkBadIndicator, rqVec_add_sub_cancel]
-  have hdist : 𝒮[($ᵗ (RqVec p.l)) >>= fun y => ($ᵗ (CommitHashBytes p)) >>= fun cTilde =>
-      (pure (hvzkBadIndicator p prims pk sk cTilde
-        (y + prims.sampleInBall cTilde • sk.s1)) : ProbComp Bool)] =
-      𝒮[do
-        let cTilde ← $ᵗ (CommitHashBytes p)
-        let z ← $ᵗ (RqVec p.l)
-        return hvzkBadIndicator p prims pk sk cTilde z] :=
-    evalSPMF_honest_pregate p prims sk
-      (fun cT zv => (pure (hvzkBadIndicator p prims pk sk cT zv) : ProbComp Bool))
   unfold hvzkBadMass
   rw [hnorm]
-  simp only [probOutput_def]
-  rw [hdist]
+  simpa only [prEvent_norm] using
+    (honest_pregate_evalDistEq p prims sk
+      (fun cT zv => (pure (hvzkBadIndicator p prims pk sk cT zv) : ProbComp Bool))).prEvent_eq
+      (· = true)
 
 /-- The quantitative HVZK bound for `hvzkSimulatorReal`: the supremum over honestly generated
 key pairs of the extra-rejection mass `hvzkBadMass`. Taking the supremum over seeds makes the
-bound a single real number valid for every key pair satisfying `validKeyPair`, as required by
+bound a single value valid for every key pair satisfying `validKeyPair`, as required by
 `IdenSchemeWithAbort.HVZK`. -/
-noncomputable def hvzkBoundReal [SampleableType (CommitHashBytes p)] : ℝ :=
-  (⨆ seed : Bytes 32, hvzkBadMass p prims
-    (keyGenFromSeed p prims seed).1 (keyGenFromSeed p prims seed).2).toReal
+noncomputable def hvzkBound [SampleableType (CommitHashBytes p)] : ℝ≥0∞ :=
+  ⨆ seed : Bytes 32, hvzkBadMass p prims
+    (keyGenFromSeed p prims seed).1 (keyGenFromSeed p prims seed).2
 
 /-- **Honest-verifier zero-knowledge for the ML-DSA identification scheme.** The transcript
-distribution of `hvzkSimulatorReal` is within total-variation distance `hvzkBoundReal` of the
+distribution of `hvzkSimulatorReal` is within total-variation distance `hvzkBound` of the
 honest transcript distribution, for every valid key pair.
 
 Unlike a `ζ_zk = 0` claim for a single-gate simulator (see the module docstring), this
 statement is sound: the simulator reproduces the honest transcript pointwise on the accept
 event, so the only discrepancy between the two distributions is the honest prover's
-extra-rejection mass, which is what `hvzkBoundReal` measures. -/
+extra-rejection mass, which is what `hvzkBound` measures. -/
 theorem idsWithAbort_hvzk [DecidableEq prims.High] [SampleableType (CommitHashBytes p)]
     (h_laws : Primitives.Laws prims nttOps) :
-    (identificationScheme p prims).HVZK (hvzkSimulatorReal p prims)
-      (hvzkBoundReal p prims) := by
+    (identificationScheme p prims).HVZK (hvzkSimulatorReal p prims) (hvzkBound p prims) := by
   intro pk sk hrel
   obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp hrel
+  let : MeasurableSpace (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := ⊤
+  let : MeasurableSpace (CommitHashBytes p × RqVec p.l) := ⊤
+  let draw : ProbComp (CommitHashBytes p × RqVec p.l) := do
+    let cTilde ← $ᵗ (CommitHashBytes p)
+    let z ← $ᵗ (RqVec p.l)
+    return (cTilde, z)
+  let bad : Set (CommitHashBytes p × RqVec p.l) :=
+    {a | hvzkBadIndicator p prims pk sk a.1 a.2 = true}
   -- The coupling over the shared `(c̃, z)` draw: the honest and simulated continuations are
-  -- deterministic and agree off the gate-mismatch event (`hvzkHonestOut_eq_gated_of_not_bad`),
-  -- so `tvDist ≤ Pr[gate mismatch]` by `tvDist_bind_left_event_le`.
-  have heq : ∀ a : CommitHashBytes p × RqVec p.l,
-      ¬ hvzkBadIndicator p prims pk sk a.1 a.2 = true →
-      𝒮[(pure (hvzkHonestOut p prims pk sk a.1 a.2) :
-        ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))] =
-      𝒮[(pure (if polyVecNorm a.2 < p.gamma1 - p.beta
-          then some (hvzkSimOut p prims pk a.1 a.2) else none) :
-        ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))] :=
-    fun a hbad => congrArg
-      (fun o => 𝒮[(pure o :
-        ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))])
-      (hvzkHonestOut_eq_gated_of_not_bad p prims h_laws seed hkeygen a.1 a.2 hbad)
-  have hb := tvDist_bind_left_event_le
-    (do
-      let cTilde ← $ᵗ (CommitHashBytes p)
-      let z ← $ᵗ (RqVec p.l)
-      return (cTilde, z))
+  -- deterministic and agree off the gate-mismatch event (`hvzkHonestOut_eq_gated_of_not_bad`).
+  have hstep := measureETVDist_bind_bind_le_of_bad draw
     (fun a => pure (hvzkHonestOut p prims pk sk a.1 a.2))
     (fun a => pure (if polyVecNorm a.2 < p.gamma1 - p.beta
       then some (hvzkSimOut p prims pk a.1 a.2) else none))
-    (fun a : CommitHashBytes p × RqVec p.l =>
-      hvzkBadIndicator p prims pk sk a.1 a.2 = true)
-    (fun a hbad => by exact heq a hbad)
-  -- Identify the bound computations with the honest execution and the simulator.
-  have hbindHon : (do
-      let cTilde ← $ᵗ (CommitHashBytes p)
-      let z ← $ᵗ (RqVec p.l)
-      return hvzkHonestOut p prims pk sk cTilde z) =
-      (do
-        let cTilde ← $ᵗ (CommitHashBytes p)
-        let z ← $ᵗ (RqVec p.l)
-        return (cTilde, z)) >>= fun a => pure (hvzkHonestOut p prims pk sk a.1 a.2) := by
-    simp only [bind_assoc, pure_bind]
-  have hbindSim : hvzkSimulatorReal p prims pk =
-      (do
-        let cTilde ← $ᵗ (CommitHashBytes p)
-        let z ← $ᵗ (RqVec p.l)
-        return (cTilde, z)) >>= fun a => pure (if polyVecNorm a.2 < p.gamma1 - p.beta
-          then some (hvzkSimOut p prims pk a.1 a.2) else none) := by
-    rw [hvzkSimulatorReal_eq_gated p prims pk]
-    simp only [bind_assoc, pure_bind]
-  rw [← hbindSim] at hb
-  have hgoal : tvDist ((identificationScheme p prims).honestExecution pk sk)
-      (hvzkSimulatorReal p prims pk) ≤
-      Pr[fun a : CommitHashBytes p × RqVec p.l =>
-        hvzkBadIndicator p prims pk sk a.1 a.2 = true | do
-          let cTilde ← $ᵗ (CommitHashBytes p)
-          let z ← $ᵗ (RqVec p.l)
-          return (cTilde, z)].toReal := by
-    refine le_of_eq_of_le ?_ hb
-    unfold tvDist
-    rw [evalSPMF_honestExecution_eq_gated p prims pk sk, hbindHon]
-  refine le_trans hgoal ?_
+    Measurable.of_discrete Measurable.of_discrete (bad := bad) MeasurableSet.of_discrete 0
+    (Filter.Eventually.of_forall fun a ha => by
+      rw [hvzkHonestOut_eq_gated_of_not_bad p prims h_laws seed hkeygen a.1 a.2 ha,
+        measureETVDist_self])
   -- The mismatch probability is the extra-rejection mass, bounded by its supremum over seeds.
-  have hmass : Pr[fun a : CommitHashBytes p × RqVec p.l =>
-      hvzkBadIndicator p prims pk sk a.1 a.2 = true | do
-        let cTilde ← $ᵗ (CommitHashBytes p)
-        let z ← $ᵗ (RqVec p.l)
-        return (cTilde, z)] = hvzkBadMass p prims pk sk := by
-    rw [hvzkBadMass_eq_probOutput_indicator p prims pk sk]
-    have hmap : (do
-        let cTilde ← $ᵗ (CommitHashBytes p)
-        let z ← $ᵗ (RqVec p.l)
-        return hvzkBadIndicator p prims pk sk cTilde z) =
-        (fun a : CommitHashBytes p × RqVec p.l => hvzkBadIndicator p prims pk sk a.1 a.2) <$>
-          (do
-            let cTilde ← $ᵗ (CommitHashBytes p)
-            let z ← $ᵗ (RqVec p.l)
-            return (cTilde, z)) := by
-      simp only [map_eq_bind_pure_comp, bind_assoc, pure_bind, Function.comp]
-    rw [hmap, ← probEvent_eq_eq_probOutput, probEvent_map]
-    rfl
-  rw [hmass]
-  unfold hvzkBoundReal
-  refine ENNReal.toReal_mono ?_ ?_
-  · exact ne_top_of_le_ne_top one_ne_top
-      (iSup_le fun s => hvzkBadMass_le_one p prims _ _)
-  · have h := le_iSup (fun s : Bytes 32 => hvzkBadMass p prims
-      (keyGenFromSeed p prims s).1 (keyGenFromSeed p prims s).2) seed
-    rwa [hkeygen] at h
+  have hmass : 𝒟[draw] bad = hvzkBadMass p prims pk sk := by
+    rw [hvzkBadMass_eq_prEvent_indicator p prims pk sk, ← prEvent_eq_evalDist_of_discrete]
+    simp only [draw, prEvent_norm]
+  calc measureETVDist ((identificationScheme p prims).honestExecution pk sk)
+        (hvzkSimulatorReal p prims pk)
+      = measureETVDist (draw >>= fun a => pure (hvzkHonestOut p prims pk sk a.1 a.2))
+          (draw >>= fun a => pure (if polyVecNorm a.2 < p.gamma1 - p.beta
+            then some (hvzkSimOut p prims pk a.1 a.2) else none)) := by
+        unfold measureETVDist
+        rw [(honestExecution_evalDistEq_gated p prims pk sk).evalDist_eq,
+          hvzkSimulatorReal_eq_gated p prims pk]
+        simp only [draw, bind_assoc, pure_bind]
+    _ ≤ 𝒟[draw] bad + 0 * 𝒟[draw] badᶜ := hstep
+    _ = hvzkBadMass p prims pk sk := by rw [zero_mul, add_zero, hmass]
+    _ ≤ hvzkBound p prims := by
+        have h := le_iSup (fun s : Bytes 32 => hvzkBadMass p prims
+          (keyGenFromSeed p prims s).1 (keyGenFromSeed p prims s).2) seed
+        rwa [hkeygen] at h
 
 end RealHVZK
 

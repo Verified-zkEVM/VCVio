@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Kernel
-public import VCVio.EvalDist.PFunctorMeasure
+public import VCVio.EvalDist.PFunctorMeasure.Core
 public import Mathlib.InformationTheory.KullbackLeibler.DataProcessing
 
 /-!
@@ -31,12 +31,11 @@ information the two distributions do not already distinguish.
 `klDiv_denote_bind_congr` is the corresponding exact statement — binding the same continuation to
 a common prefix leaves the divergence unchanged — which is Mathlib's `klDiv_compProd_left`.
 
-## Divergences and the discrete layer
+## Divergences of program denotations
 
-VCVio's existing quantitative theory (`VCVio.EvalDist.TVDist`,
-`VCVio.EvalDist.RenyiDivergence`) is stated over `SPMF` and reaches only countably supported
-distributions. Kullback-Leibler is not available there at all. The statements below hold for any
-measurable output type, so they apply to programs whose answers are continuous.
+The statements below hold for any measurable output type, so they apply to programs whose answers
+are continuous, as do total variation (`measureETVDist`) and the Renyi divergence
+(`InformationTheory.renyiDiv`) of the output measures.
 -/
 
 @[expose] public section

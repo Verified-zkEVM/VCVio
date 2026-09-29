@@ -17,8 +17,8 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 # Message Authentication Codes
 
 This file defines keyed message-authentication-code algorithms together with their standard
-UF-CMA security game `unforgeableExp` (message freshness) and the SUF-CMA security game
-`strongUnforgeableExp` (pair freshness).
+UF-CMA security experiment `unforgeableExperiment` (message freshness) and the SUF-CMA security
+experiment `strongUnforgeableExperiment` (pair freshness).
 
 ## References
 
@@ -98,14 +98,12 @@ structure UnforgeableAdversary (_macAlg : MacAlg (OracleComp spec) M K T) where
 
 /-- UF-CMA experiment for a MAC: the adversary succeeds iff it outputs a valid tag on a message
 it never submitted to the tagging oracle. -/
-noncomputable def unforgeableExp {macAlg : MacAlg (OracleComp spec) M K T}
-    (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : macAlg.UnforgeableAdversary) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let k ← macAlg.keygen
-    let ((msg, τ), log) ← macAlg.runWithTaggingOracle k adversary.main
-    let verified ← macAlg.verify k msg τ
-    return !log.wasQueried msg && verified
+noncomputable def unforgeableExperiment {macAlg : MacAlg (OracleComp spec) M K T}
+    (adversary : macAlg.UnforgeableAdversary) : OracleComp spec Bool := do
+  let k ← macAlg.keygen
+  let ((msg, τ), log) ← macAlg.runWithTaggingOracle k adversary.main
+  let verified ← macAlg.verify k msg τ
+  return !log.wasQueried msg && verified
 
 /-- UF-CMA advantage for a MAC: the probability of producing a valid forgery on a fresh
 message. -/
@@ -113,7 +111,7 @@ noncomputable def unforgeableAdvantage
     {macAlg : MacAlg (OracleComp spec) M K T}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : macAlg.UnforgeableAdversary) : ℝ≥0∞ :=
-  unforgeableExp runtime adversary {true}
+  runtime.evalDist (unforgeableExperiment adversary) {true}
 
 end unforgeable
 
@@ -142,22 +140,14 @@ lemma wasQueried_eq_true_of_taggingLogContains_eq_true
 
 /-- SUF-CMA (strong unforgeability under chosen-message attack) experiment for a MAC
 (Bellare-Namprempre 2000; Boneh-Shoup, Attack Game 6.1). The adversary is as in
-`unforgeableExp`, but succeeds iff it outputs a valid pair `(msg, τ)` that the tagging oracle
+`unforgeableExperiment`, but succeeds iff it outputs a valid pair `(msg, τ)` that the tagging oracle
 never returned: a new tag on a previously queried message counts as a forgery. -/
-noncomputable def strongUnforgeableExp {macAlg : MacAlg (OracleComp spec) M K T}
-    (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : macAlg.UnforgeableAdversary) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let k ← macAlg.keygen
-    let ((msg, τ), log) ← macAlg.runWithTaggingOracle k adversary.main
-    let verified ← macAlg.verify k msg τ
-    return !taggingLogContains log msg τ && verified
-
-instance {macAlg : MacAlg (OracleComp spec) M K T}
-    (runtime : ProbCompRuntime (OracleComp spec)) (adversary : macAlg.UnforgeableAdversary) :
-    MeasureTheory.IsSubprobabilityMeasure (strongUnforgeableExp runtime adversary) := by
-  unfold strongUnforgeableExp
-  infer_instance
+noncomputable def strongUnforgeableExperiment {macAlg : MacAlg (OracleComp spec) M K T}
+    (adversary : macAlg.UnforgeableAdversary) : OracleComp spec Bool := do
+  let k ← macAlg.keygen
+  let ((msg, τ), log) ← macAlg.runWithTaggingOracle k adversary.main
+  let verified ← macAlg.verify k msg τ
+  return !taggingLogContains log msg τ && verified
 
 /-- SUF-CMA advantage for a MAC: the probability of producing a valid message-tag pair not
 previously returned by the tagging oracle. -/
@@ -165,10 +155,10 @@ noncomputable def strongUnforgeableAdvantage
     {macAlg : MacAlg (OracleComp spec) M K T}
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : macAlg.UnforgeableAdversary) : ℝ≥0∞ :=
-  strongUnforgeableExp runtime adversary {true}
+  runtime.evalDist (strongUnforgeableExperiment adversary) {true}
 
-/-- The run shared by `unforgeableExp` and `strongUnforgeableExp`: the candidate forgery, the
-tagging log, and the verification bit. -/
+/-- The run shared by `unforgeableExperiment` and `strongUnforgeableExperiment`: the candidate
+forgery, the tagging log, and the verification bit. -/
 def forgeryRun {macAlg : MacAlg (OracleComp spec) M K T}
     (adversary : macAlg.UnforgeableAdversary) :
     OracleComp spec ((M × T) × QueryLog (M →ₒ T) × Bool) := do
@@ -192,14 +182,14 @@ theorem unforgeableAdvantage_le_strongUnforgeableAdvantage
     !taggingLogContains log msg τ && v
   have huf : Measurable uf := Measurable.of_discrete
   have hsuf : Measurable suf := Measurable.of_discrete
-  have hUF : unforgeableExp runtime adversary =
+  have hUF : runtime.evalDist (unforgeableExperiment adversary) =
       (runtime.evalDist (forgeryRun adversary)).map uf := by
     rw [← runtime.evalDist_bind_pure _ uf huf]
-    simp only [unforgeableExp, forgeryRun, uf, monad_norm]
-  have hSUF : strongUnforgeableExp runtime adversary =
+    simp only [unforgeableExperiment, forgeryRun, uf, monad_norm]
+  have hSUF : runtime.evalDist (strongUnforgeableExperiment adversary) =
       (runtime.evalDist (forgeryRun adversary)).map suf := by
     rw [← runtime.evalDist_bind_pure _ suf hsuf]
-    simp only [strongUnforgeableExp, forgeryRun, suf, monad_norm]
+    simp only [strongUnforgeableExperiment, forgeryRun, suf, monad_norm]
   rw [unforgeableAdvantage, strongUnforgeableAdvantage, hUF, hSUF,
     MeasureTheory.Measure.map_apply huf (measurableSet_singleton true),
     MeasureTheory.Measure.map_apply hsuf (measurableSet_singleton true)]

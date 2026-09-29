@@ -14,9 +14,10 @@
 For continuous or otherwise non-discrete denotations, import
 `VCVio.ProgramLogic.Relational.Measure`. Its `MeasureProgramLogic.RelWP` uses an almost-everywhere
 postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
-post-expectations with `lintegral`. Unary quantitative tactics use the native measure
-interpretation; the remaining relational compatibility theorem families have separate conversion
-checkpoints.
+post-expectations with `lintegral`. The `OracleComp` relational logic (`RelTriple`, `CouplingPost`,
+`eRelWP`) specializes these to the output measures observed in the discrete structure on each
+output type; its sequential rules need finite response types, and its anchoring and bijection
+rules for queries need uniform response measures.
 
 ## In-Tree Walkthroughs
 
@@ -43,7 +44,7 @@ The regression module `VCVioTest/ProgramLogic/GCongr.lean` checks the support bi
 explicit raw-WP script, so these examples can be pasted into ordinary-import proofs.
 
 For directional rewriting, explicitly import `Mathlib.Tactic.GRewrite`. With
-`h : ∀ x, f x ≤ g x`, `grw [h]` rewrites through `wp` and native expectation integrals. If `h` is restricted
+`h : ∀ x, f x ≤ g x`, `grw [h]` rewrites through `wp` and expectation integrals `∫⁻ x, f x ∂𝒟[oa]`. If `h` is restricted
 to `support oa`, the rewrite leaves that support premise as a side goal; `grw [h]; assumption`
 closes the direct comparison. `gcongr with x hx` remains useful when the pointwise proof needs
 the support fact explicitly. The [generalized-relation investigation](../reading/generalized-relation-automation.md)
@@ -54,14 +55,14 @@ candidate registrations are experimental.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `by_equiv` | `g₁ ≡ₚ g₂` or `evalSPMF g₁ = evalSPMF g₂` | Enters relational proof mode (`RelTriple`) |
-| `game_trans g₂` | `g₁ ≡ₚ g₃` | Splits into `g₁ ≡ₚ g₂` and `g₂ ≡ₚ g₃` |
-| `by_dist` | `AdvBound game ε` | Enters TV distance reasoning |
-| `by_upto bad` | identical-until-bad TV-distance goals | Applies the `simulateQ` up-to-bad bound |
-| `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters native quantitative WP reasoning, including conditional branches |
+| `by_equiv` | `g₁ =ᵈ g₂` or `𝒟[g₁] = 𝒟[g₂]` | Enters relational proof mode (`RelTriple`) |
+| `game_trans g₂` | `g₁ =ᵈ g₃` | Splits into `g₁ =ᵈ g₂` and `g₂ =ᵈ g₃` |
+| `by_dist` | `AdvBound game ε` | Splits into a second game's bound and a `measureETVDist` bound |
+| `by_upto bad` | identical-until-bad `measureETVDist` goals | Applies the `simulateQ` up-to-bad bound |
+| `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters quantitative WP reasoning, including conditional branches |
 
-`by_equiv` enters the coupling-based `RelTriple` shell, not `RelTriple'`, so that
-`rvcstep` / `rvcgen` can keep decomposing the relational goal.
+`by_equiv` enters the coupling-based `RelTriple` shell, so that `rvcstep` / `rvcgen` can keep
+decomposing the relational goal.
 
 `by_dist ε` is the explicit variant that fixes the TV-distance contribution to `ε`
 before generating the remaining subgoals.
@@ -70,7 +71,7 @@ before generating the remaining subgoals.
 
 | Tactic | Goal shape | What it does |
 |--------|-----------|--------------|
-| `rvcstep` | `g₁ ≡ₚ g₂`, `evalSPMF g₁ = evalSPMF g₂`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
+| `rvcstep` | `g₁ =ᵈ g₂`, `𝒟[g₁] = 𝒟[g₂]`, `⟪oa ~ ob \| R⟫`, or `⦃f⦄ oa ≈ₑ ob ⦃g⦄` | Lowers into relational mode if needed, then applies one obvious relational step |
 | `rvcstep using t` | same | Supplies the explicit witness needed by the current shape (bind cut relation, bijection, traversal input relation, or simulation state relation) |
 | `rvcstep with thm` | same | Force one explicit relational theorem/assumption step |
 | `rvcstep left` / `rvcstep right` | raw `VCVio.ProgramLogic.rwp` or folded `VCVio.ProgramLogic.RelTriple` goals | Exposes a controlled one-sided bind step |
@@ -89,7 +90,7 @@ before generating the remaining subgoals.
 | `rvcgen?` | same | Runs `rvcgen` and emits the corresponding explicit script |
 | `rel_conseq` | `⟪oa ~ ob \| R'⟫` | Weakens/strengthens postcondition |
 | `rel_inline foo` | `⟪... ~ ... \| R⟫` | Unfolds definitions, simplifies |
-| `rel_dist` | `⟪oa ~ ob \| EqRel α⟫` | Exits relational mode back to `evalSPMF oa = evalSPMF ob` |
+| `rel_dist` | `⟪oa ~ ob \| EqRel α⟫` | Exits relational mode back to `𝒟[oa] = 𝒟[ob]` in the discrete structure |
 
 ### Optional arguments
 
@@ -111,7 +112,7 @@ before generating the remaining subgoals.
 ### Quantitative VCGen (`vcgen`)
 
 `vcgen` is the primary unary tactic for new proofs. It accepts both `Triple` goals and
-probability goals, automatically lowering `Pr[...]` into the quantitative engine.
+probability goals, automatically lowering `Pr{...}[...]` events into the quantitative engine.
 
 | Tactic | What it does |
 |--------|--------------|
@@ -123,7 +124,7 @@ probability goals, automatically lowering `Pr[...]` into the quantitative engine
 | `vcstep with thm` | Force one explicit unary theorem/assumption step |
 | `vcstep as ⟨x, hx⟩` | Explicit names for binders introduced by the current step |
 | `vcstep inv I` | Explicit loop invariant for `replicate`/`foldlM`/`mapM` |
-| `vcstep rw` | One explicit top-level bind-swap rewrite on a `Pr[...] = Pr[...]` goal |
+| `vcstep rw` | One explicit top-level bind-swap rewrite on a probability equality |
 | `vcstep rw under n` | One bind-swap rewrite under `n` shared outer bind prefixes |
 | `vcstep rw normalize` | Run the bounded probability-equality planner explicitly |
 | `vcstep rw congr` | Expose one or more shared binds plus their support hypotheses |
@@ -133,24 +134,26 @@ probability goals, automatically lowering `Pr[...]` into the quantitative engine
 **Probability-goal handling**: `vcgen` and `vcstep` automatically handle four
 classes of probability goals:
 
-1. **`Pr[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
-   - `Pr[p | oa] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`
-   - `Pr[= x | oa] = 1` → `Triple 1 oa (fun y => if y = x then 1 else 0)`
+1. **`Pr{...}[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
+   - `Pr{let x ← oa}[p x] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`; a singleton output
+     `Pr{let y ← oa}[y = x]` is the event `p := (· = x)`
 
-2. **Lower-bound event/output goals** → stay inside unary VCGen by reusing the same `Triple`
-   shell:
-   - `r ≤ Pr[p | oa]` / `Pr[p | oa] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
-   - `r ≤ Pr[= x | oa]` / `Pr[= x | oa] ≥ r` → `Triple r oa (fun y => if y = x then 1 else 0)`
+2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same `Triple` shell:
+   - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
 
-3. **`Pr[...] = Pr[...]` equality**:
+3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures):
    - Plain `vcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
      `bind_assoc`), then preview-selects the best bounded swap/congruence plan from the fast path
    - `vcstep rw` performs exactly one top-level bind-swap rewrite
    - `vcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
    - `vcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
    - `vcstep rw congr` / `vcstep rw congr'` expose one or more shared binds explicitly
+   - Swaps use `OracleComp.prEvent_bind_bind_swap` / `OracleComp.evalDist_bind_bind_swap`
+     (countable responses) or their `_of_uniform` variants; congruence uses
+     `OracleComp.prEvent_bind_congr_of_support` / `OracleComp.evalDist_bind_apply_congr_of_support`,
+     leaving the continuations on the structural support of the shared prefix
 
-4. **Other general `Pr[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
+4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
    when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `vcgen?`
    will explicitly note that they are continuing in raw `wp` mode.
 
@@ -159,7 +162,7 @@ in `Triple` goals and applies matching invariant hypotheses from context.
 Use `vcstep inv I` to provide an explicit invariant.
 
 **Support-sensitive leaf closure**: `vcgen` final pass tries `triple_support`,
-`triple_propInd_of_support`, `triple_probEvent_eq_one`, and `triple_probOutput_eq_one`
+`triple_propInd_of_support` and `triple_prEvent_eq_one`
 in addition to the standard `triple_pure`, `triple_zero`, and consequence search.
 
 **Naming and suggestions**: plain `vcstep` / `rvcstep` keep the stable execution path.
@@ -276,29 +279,29 @@ All probability-equality control now lives under `vcstep`.
 
 | Tactic | What it does |
 |--------|--------------|
-| `vcstep` | Fast dispatcher for common `Pr[...] = Pr[...]` steps: syntax normalization, swap, congruence, and bounded compositions chosen by preview |
+| `vcstep` | Fast dispatcher for common probability-equality steps: syntax normalization, swap, congruence, and bounded compositions chosen by preview |
 | `vcstep rw` | Rewrites one top-level bind swap without trying to close the goal |
 | `vcstep rw under n` | Rewrites one bind swap under `n` shared outer bind prefixes on one side |
 | `vcstep rw normalize` | Runs the bounded probability-equality planner explicitly, without broadening plain `vcstep` |
-| `vcstep rw congr` | Reduces `Pr[... \| mx >>= f₁] = Pr[... \| mx >>= f₂]` to a pointwise goal, auto-introducing `x` and `hx : x ∈ support mx`; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
+| `vcstep rw congr` | Reduces `Pr{let y ← mx >>= f₁}[q y] = Pr{let y ← mx >>= f₂}[q y]` to a pointwise goal, auto-introducing `x` and `hx : x ∈ support mx`; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
 | `vcstep rw congr'` | Same, but without the support restriction; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
 
 ### Automation
 
 | Tactic | What it does |
 |--------|--------------|
-| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `GameEquiv` / `evalSPMF` equality and cheap leaf closure |
+| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `=ᵈ` / output-measure equality and cheap leaf closure |
 | `rvcfinish` / `rvcgen!` | Opt-in residual search and consequence closing |
-| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `evalSPMF oa = evalSPMF ob` |
+| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `oa =ᵈ ob` |
 
 ## Probability Equality Guide
 
 ### What plain `vcstep` handles
 
-On `Pr[...] = Pr[...]` goals, plain `vcstep` already tries the common
-`probEvent_bind_bind_swap` / bind-congruence patterns:
+On probability equalities, plain `vcstep` already tries the common bind-swap and
+bind-congruence patterns:
 
-1. **Direct `probOutput` equalities**: `Pr[= x | mx >>= ... >>= ...] = Pr[= x | my >>= ... >>= ...]`
+1. **Direct event equalities**: `Pr{let z ← mx >>= ... >>= ...}[q z] = Pr{let z ← my >>= ... >>= ...}[q z]`
 2. **Nested bounded rewrites**: automatically peels small shared-bind prefixes and prefers a
    closing swap/congruence plan when one is available
 3. **Surface `map` wrappers**: normalizes the common `map_eq_bind_pure_comp` / `bind_assoc` shape
@@ -315,11 +318,13 @@ On `Pr[...] = Pr[...]` goals, plain `vcstep` already tries the common
 - **Need a deeper swap than the current bounded automation knows**: peel outer layers manually, or
   use `vcstep?` to see the best bounded replay the planner found before finishing the rest by hand
 
-### Key insight: `probOutput` vs `probEvent`
+### Key insight: events vs output measures
 
-The underlying bind-swap lemma `probEvent_bind_bind_swap` works with `probEvent`.
-Most crypto proofs use `probOutput`. The `vcstep` probability-equality machinery
-bridges between them with `probEvent_eq_eq_probOutput` when needed.
+The underlying bind-swap lemmas are `OracleComp.prEvent_bind_bind_swap` for events and
+`OracleComp.evalDist_bind_bind_swap` for output measures. A point mass `Pr{oa}[= x]` is the event
+`(· = x)`, and `Pr{…}[…]` elaborates its final draw as a map, so the `vcstep`
+probability-equality machinery normalizes with `map_eq_bind_pure_comp` / `bind_assoc` before
+matching either shape.
 
 ### Patterns
 
@@ -381,13 +386,15 @@ Key rules:
 | `relTriple_bind` | Decompose bind on both sides |
 | `relTriple_refl` | Same computation → `EqRel` |
 | `relTriple_eqRel_of_eq` | Definitionally equal → `EqRel` |
-| `relTriple_eqRel_of_evalSPMF_eq` | Same distribution → `EqRel` |
+| `relTriple_eqRel_of_evalDistEq` | Equal in distribution (`=ᵈ`) → `EqRel` |
 | `relTriple_query` | Same query → `EqRel` on response |
 | `relTriple_query_bij` | Same query with bijection `f` → `fun a b => f a = b` |
 | `relTriple_uniformSample_bij` | Uniform sampling with bijection |
 | `relTriple_if` | Synchronized conditional |
 | `relTriple_post_mono` | Weaken postcondition |
-| `evalSPMF_eq_of_relTriple_eqRel` | Extract `evalSPMF` equality from `EqRel` triple |
+| `evalDistEq_of_relTriple_eqRel` | Extract `oa =ᵈ ob` from an `EqRel` triple; `evalDist_eq_of_relTriple_eqRel` gives the output measures in any structure |
+| `prEvent_eq_of_relTriple_eqRel` | Equal event probabilities from `EqRel` triple |
+| `prEvent_le_of_relTriple` | Event inequality from an implication along the coupling |
 
 ### Relational simulateQ
 
@@ -482,8 +489,6 @@ Projection and bridge variants:
 | `relTriple_simulateQ_run_writerT` | Whole-program `WriterT` coupling from per-query `RelTriple`s plus a monoid-congruence hypothesis on the accumulated writers |
 | `relTriple_simulateQ_run_writerT'` | Output-projection of `relTriple_simulateQ_run_writerT` (drops the writer component, yielding `EqRel α` on outputs) |
 | `relTriple_simulateQ_run_writerT_of_impl_eq` | `WriterT` analogue of `relTriple_simulateQ_run_of_impl_eq_preservesInv`: two handlers with identical `.run` outputs yield `EqRel (α × ω)` on whole simulations |
-| `probOutput_simulateQ_run_writerT_eq_of_impl_eq` | Output-probability projection of `relTriple_simulateQ_run_writerT_of_impl_eq` |
-| `evalSPMF_simulateQ_run_writerT_eq_of_impl_eq` | `evalSPMF` equality projection of `relTriple_simulateQ_run_writerT_of_impl_eq` |
 | `relTriple_simulateQ_run_writerT_of_triples` | `WriterT` handler-level whole-program lift from unary triples (monoid variant) |
 | `relTriple_simulateQ_run_writerT'_of_triples` | Output-projection of `relTriple_simulateQ_run_writerT_of_triples` |
 | `relTriple_run_of_triple` | Per-call product coupling for `StateT` |
@@ -501,13 +506,17 @@ quantifier.
 ### Identical Until Bad
 
 ```lean
-tvDist_simulateQ_le_probEvent_bad :
-  (¬bad s₀) →
-  (∀ t s, ¬bad s → (impl₁ t).run s = (impl₂ t).run s) →
+measureETVDist_simulateQ_run'_le_prEvent_bad :
+  (∀ t s, ¬bad s → ∀ q, Pr{let z ← (impl₁ t).run s}[q z ∧ ¬bad z.2] =
+    Pr{let z ← (impl₂ t).run s}[q z ∧ ¬bad z.2]) →
   (bad monotone for impl₁ and impl₂) →
-  tvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
-    ≤ Pr[bad ∘ Prod.snd | (simulateQ impl₁ oa).run s₀].toReal
+  measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+    ≤ Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2]
 ```
+
+The handlers need only agree on good-to-good steps, so they may disagree on the step that sets
+a bad flag; `_of_run_eq` and `_of_evalDistEq` take agreement off bad input states instead. No
+measurable structure is needed on the state.
 
 ### eRHL (quantitative relational logic)
 
@@ -522,7 +531,14 @@ def ApproxRelTriple (ε : ℝ≥0∞) (oa ob : ...) (R : RelPost α β) : Prop :
   1 - ε ≤ eRelWP oa ob (RelPost.indicator R)
 ```
 
-pRHL is the special case where `ε = 0` (exact coupling).
+Uniform samples and queries coupled by a bijection `f` have coupled expectation at least the unary
+expectation `wp ($ᵗ α) (fun a => post a (f a))`; a `pure` side collapses `eRelWP` to the unary `wp`
+of the other side.
+
+pRHL is the special case where `ε = 0` (exact coupling). On equality,
+`approxRelTriple_eqRel_iff_etvDist_le` identifies `ApproxRelTriple ε` with a total variation bound
+`ε` between the output measures, through the maximal coupling of
+`ToMathlib/MeasureTheory/Measure/Coupling/Maximal.lean`.
 
 ### Design target
 
@@ -544,9 +560,9 @@ design. For the historical pRHL lineage behind exact coupling, see
 ## Game-Hopping Proof Skeleton
 
 ```lean
-theorem my_security : g₁ ≡ₚ gₙ := by
+theorem my_security : g₁ =ᵈ gₙ := by
   game_trans g₂
-  · by_equiv            -- g₁ ≡ₚ g₂ via coupling
+  · by_equiv            -- g₁ =ᵈ g₂ via coupling
     rvcstep using R
     · rvcstep using f
       · exact hf
@@ -554,7 +570,7 @@ theorem my_security : g₁ ≡ₚ gₙ := by
         exact hR x
     · intro a b hab
       rvcgen
-  · game_trans g₃       -- g₂ ≡ₚ gₙ
+  · game_trans g₃       -- g₂ =ᵈ gₙ
     · ...
     · ...
 ```
@@ -703,12 +719,12 @@ stage degrade gracefully.
 Lean v4.34 provides lattice-generic `Std.Internal.Do.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
-- `open scoped OracleComp.Quantitative` selects the compatibility oracle facade
-  for expectation in `ℝ≥0∞`.
-- `open scoped MeasureProgramLogic.Quantitative` selects native measure-backed expectation
+- `open scoped OracleComp.Quantitative` selects expectation in `ℝ≥0∞` for `OracleComp spec`
+  under `[OracleSpec.IsMeasureSpec spec]`.
+- `open scoped MeasureProgramLogic.Quantitative` selects measure-backed expectation
   for any lawful monad with `LawfulEvalDistSemantics`. It also selects this carrier over
-  core `Prop` interpretations for monads such as `Option`. The native module is
-  `VCVio.ProgramLogic.Unary.WP.Measure`; its ordinary imports do not load PMF/SPMF.
+  core `Prop` interpretations for monads such as `Option`. Its module is
+  `VCVio.ProgramLogic.Unary.WP.Measure`.
 - `open scoped OracleComp.Qualitative` selects universal structural reachability.
 - `open scoped OracleComp.Probabilistic` selects the restricted algebra on `Set.Iic 1`.
 
@@ -727,7 +743,7 @@ core and PolyFun's WriterT interpretation; VCVio retains its probability rules a
 existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretation
 uses multiplication; append-based logs use `WriterT.toWPMonad` with explicit operations.
 
-The `Std.Do` handler bridge remains a separate legacy consumer of core's older SPred API.
+The `Std.Do` handler bridge is a separate consumer of core's older SPred API.
 Its migration to lattice-generic triples is a focused follow-up; it does not require Loom.
 Likewise, replacing the probability tactic's `rw` dispatcher with `Sym.Simp` needs a
 separate proof-application adapter and evidence from the existing automation tests.

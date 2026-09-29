@@ -7,8 +7,10 @@ Authors: Quang Dao
 module
 public import LatticeCrypto.Falcon.Scheme
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
-public import VCVio.EvalDist.RenyiDivergence
-public import VCVio.OracleComp.Constructions.SampleableType
+public import ToMathlib.Probability.Divergence.Renyi
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.EvalDist.Measure
 
 /-!
 # Falcon Security
@@ -283,7 +285,9 @@ structure SamplerQuality (pk : PublicKey p) (sk : SecretKey p) where
   /-- Rényi divergence bound: for every target `c`, the Rényi divergence of order `a`
   between the concrete sampler and the ideal Gaussian is at most `R`. -/
   quality : ∀ c : Rq p.n,
-    renyiDiv renyiOrder ((falconPSF p prims).trapdoorSample pk sk c) (idealSampler c) ≤ bound
+    letI : MeasurableSpace (Rq p.n × Rq p.n) := ⊤
+    InformationTheory.renyiDiv renyiOrder 𝒟[(falconPSF p prims).trapdoorSample pk sk c]
+      𝒟[idealSampler c] ≤ bound
   /-- Ideal sampler correctness: the ideal Gaussian always produces valid short preimages.
   This follows from the lattice geometry when `σ ≥ η_ε(Λ^⊥) · ‖B̃‖_GS`. -/
   idealCorrect : ∀ c : Rq p.n,

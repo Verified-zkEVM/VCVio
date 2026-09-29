@@ -33,7 +33,7 @@ of `euf_nma_bound`.
 * `forkPoint`: the query-log index at which to rewind the adversary.
 * `wrappedSpec`: the single-oracle signature `unifSpec + (Unit →ₒ Chal)` that the fork runs in.
 * `runTrace`: the wrapped NMA adversary, packaged as a forkable `OracleComp`.
-* `exp` and `advantage`: the resulting security experiment and its advantage.
+* `experiment` and `advantage`: the resulting security experiment and its advantage.
 
 ## Main results
 
@@ -420,7 +420,7 @@ def runTrace [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
 /-- Forkable managed-RO NMA experiment. Success means the final forged transcript verifies and
 the corresponding hash point appears in the live query log, so the forking lemma can rewind it. -/
-def exp [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
+def experiment [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ProbComp Bool :=
@@ -435,7 +435,23 @@ noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ENNReal :=
-  Pr[= true | exp σ hr M nmaAdv qH]
+  Pr{experiment σ hr M nmaAdv qH}[= true]
+
+/-- Forwarding uniform selection and answering the challenge oracle by uniform sampling
+preserves the distribution of every computation over `wrappedSpec Chal`. -/
+theorem simulateQ_uniformImpl_evalDistEq [SampleableType Chal]
+    [IsUniformMeasureSpec (Unit →ₒ Chal)] {α : Type} (oa : OracleComp (wrappedSpec Chal) α) :
+    simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+      uniformSampleImpl (spec := (Unit →ₒ Chal))) oa =ᵈ oa := by
+  let : MeasurableSpace α := ⊤
+  refine EvalDistEq.of_evalDist_eq (evalDist_simulateQ_eq_of_forall _ (fun t => ?_) oa)
+  rw [OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
+  rcases t with n | u
+  · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
+    exact evalDist_liftM_query_uniform (spec := unifSpec) n
+  · let : MeasurableSpace Chal := ⊤
+    simp only [QueryImpl.add_apply_inr, uniformSampleImpl_apply]
+    exact SampleableType.evalDist_uniformSample
 
 section Coupling
 
@@ -1206,7 +1222,7 @@ end Coupling
 /-- If two successful contextual forks select the same fork index, their
 forgery targets agree. -/
 lemma runTrace_target_eq_of_mem_contextFork
-    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal] [SampleableType Chal] [Inhabited Chal]
+    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal] [SampleableType Chal]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
@@ -1218,9 +1234,6 @@ lemma runTrace_target_eq_of_mem_contextFork
     (h₁ : forkPoint Commit Chal Resp M qH x₁ = some s)
     (h₂ : forkPoint Commit Chal Resp M qH x₂ = some s) :
     x₁.target = x₂.target := by
-  let : Fintype Chal := Fintype.ofFinite Chal
-  let : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-    IsUniformSpec.ofFintypeInhabited _
   let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
   let cf := forkPoint Commit Chal Resp M qH
   let main := runTrace σ hr M nmaAdv pk
@@ -1327,7 +1340,7 @@ postcondition-transfer facts for the wrapped managed random-oracle trace experim
 
 **On the level of the statement.** We state the bound at the `OracleComp` level rather than
 lifting through `simulateQ` to `ProbComp`. Each caller (e.g. `euf_nma_bound`) can bridge to
-`ProbComp` in one line using `uniformSampleImpl.probEvent_simulateQ` when needed, keeping this
+`ProbComp` in one line using `uniformSampleImpl.evalDist_simulateQ` when needed, keeping this
 lemma focused on the forking-lemma content.
 
 **On the target-equality conjunct.** A maximally-informative version would also conclude
@@ -1349,7 +1362,8 @@ into the trace's list corresponds to the same physical position in the outer log
 discharge `hreach` by establishing this correspondence at the level of `runTrace`. -/
 theorem replayForkingBound
     [DecidableEq M] [DecidableEq Commit]
-    [DecidableEq Chal] [SampleableType Chal] [Fintype Chal] [Inhabited Chal]
+    [DecidableEq Chal] [SampleableType Chal] [Fintype Chal]
+    [IsUniformMeasureSpec (wrappedSpec Chal)]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
@@ -1361,16 +1375,12 @@ theorem replayForkingBound
     (hreach : CfReachable (runTrace σ hr M nmaAdv pk)
       (fun j : ℕ ⊕ Unit => match j with | .inl _ => 0 | .inr () => qH) (Sum.inr ())
       (forkPoint Commit Chal Resp M qH)) :
-    letI : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-      IsUniformSpec.ofFintypeInhabited _
     let wrappedMain := runTrace σ hr M nmaAdv pk
     let cf := forkPoint Commit Chal Resp M qH
     let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
-    let acc := Pr[ fun x => (cf x).isSome | wrappedMain]
+    let acc := Pr{let x ← wrappedMain}[(cf x).isSome]
     acc * (acc / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[
-        fun r : Option
-            (Trace Commit Chal Resp M × Trace Commit Chal Resp M) =>
+      Pr{let r ← contextFork wrappedMain qb (Sum.inr ()) cf}[
           ∃ (x₁ x₂ : Trace Commit Chal Resp M)
             (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
             r = some (x₁, x₂) ∧
@@ -1379,25 +1389,16 @@ theorem replayForkingBound
             QueryLog.getQueryValue? log₁ (Sum.inr ()) ↑s ≠
               QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
             P_out x₁ log₁ ∧
-            P_out x₂ log₂
-        | contextFork wrappedMain qb (Sum.inr ()) cf] := by
-  let : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-    IsUniformSpec.ofFintypeInhabited _
+            P_out x₂ log₂] := by
   intro wrappedMain cf qb acc
   classical
-  have hAcc_sum : acc = ∑ s, Pr[= some s | cf <$> wrappedMain] := by
-    simp only [acc]
-    rw [show (fun x => (cf x).isSome = true) =
-        (fun x : _ => (Option.isSome x = true)) ∘ cf from rfl,
-      ← probEvent_map (q := fun r => Option.isSome r = true),
-      probEvent_isSome_eq_tsum_probOutput_some, tsum_fintype]
-  rw [hAcc_sum]
-  have hH_inv : (Fintype.card ((unifSpec + (Unit →ₒ Chal)).Range (Sum.inr ())) : ENNReal)⁻¹ =
+  have hH_inv : (Fintype.card ((wrappedSpec Chal).Range (Sum.inr ())) : ENNReal)⁻¹ =
       challengeSpaceInv Chal := rfl
-  refine (?_ : _ ≤ Pr[ fun r => r.isSome | contextFork wrappedMain qb (Sum.inr ()) cf]).trans
-    (probEvent_mono fun r hr hisSome => ?_)
-  · simpa only [show qb (Sum.inr ()) = qH from rfl, hH_inv, Nat.cast_add, Nat.cast_one] using
-      le_probEvent_isSome_contextFork (main := wrappedMain) (qb := qb) (i := Sum.inr ())
+  refine (?_ : _ ≤ Pr{let r ← contextFork wrappedMain qb (Sum.inr ()) cf}[r.isSome]).trans
+    (prEvent_mono_of_support _ _ _ fun r hr hisSome => ?_)
+  · simpa only [acc, prEvent_isSome_eq_sum, show qb (Sum.inr ()) = qH from rfl, hH_inv,
+      Nat.cast_add, Nat.cast_one] using
+      le_prEvent_isSome_contextFork (main := wrappedMain) (qb := qb) (i := Sum.inr ())
         (cf := cf) hreach.toPathCfReachable
   · rcases r with _ | ⟨x₁, x₂⟩
     · simp at hisSome

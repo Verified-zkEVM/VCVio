@@ -105,6 +105,16 @@ theorem refl (μ : Measure α) :
   · rw [Measure.snd, Measure.map_map measurable_snd hdiag]
     simp [Function.comp_def]
 
+/-- The graph of a measurable map couples a measure with its pushforward. -/
+theorem graph (μ : Measure α) {f : α → β} (hf : Measurable f) :
+    IsCoupling (μ.map fun a => (a, f a)) μ (μ.map f) := by
+  have hgraph : Measurable fun a : α => (a, f a) := measurable_id.prodMk hf
+  constructor
+  · rw [Measure.fst, Measure.map_map measurable_fst hgraph]
+    exact Measure.map_id
+  · rw [Measure.snd, Measure.map_map measurable_snd hgraph]
+    rfl
+
 /-- The product of two probability measures is an independent coupling. -/
 theorem prod (μ : Measure α) (ν : Measure β)
     [IsProbabilityMeasure μ] [IsProbabilityMeasure ν] :

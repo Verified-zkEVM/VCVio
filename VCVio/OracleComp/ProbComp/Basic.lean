@@ -15,7 +15,7 @@ public import Batteries.Control.OptionT
 # Executable uniform oracle programs
 
 `ProbComp` programs draw finite-range uniform inputs. The sampling operations and container
-notation in this module are executable; their possible outputs use native attachment semantics.
+notation in this module are executable; their possible outputs use PolyFun's attachment semantics.
 -/
 
 public section

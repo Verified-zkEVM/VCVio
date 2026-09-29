@@ -77,17 +77,15 @@ lemma propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
 
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)]
 variable {α β σ : Type}
 
-section Native
+section MeasureSpec
 
 variable [OracleSpec.IsMeasureSpec spec]
 
 /-! ## API contract
 
-This interface uses the configured native measure interpretation, with assertions in `ℝ≥0∞`.
+This interface uses the configured measure interpretation, with assertions in `ℝ≥0∞`.
 The abbreviations fix the empty exception postcondition
 while retaining core's WP and triple representations.
 -/
@@ -354,7 +352,7 @@ theorem triple_dite {c : Prop} [Decidable c] {pre : ℝ≥0∞}
 
 open scoped Classical in
 /-- An observed event probability is WP of its indicator assertion. -/
-lemma probEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
+lemma prEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] :
     Pr{let x ← oa}[p x] = wp oa (fun x ↦ if p x then 1 else 0) := by
   rw [prEvent_eq_evalDist_map]
@@ -372,19 +370,13 @@ lemma probEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
       funext x
       by_cases hx : p x <;> simp [hx])
 
-/-- Native event probability is WP of its proposition indicator. -/
-lemma probEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsMeasureSpec spec] {α : Type}
+/-- Event probability is WP of its proposition indicator. -/
+lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
+    [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← oa}[p x] = wp oa (fun x => propInd (p x)) := by
   classical
-  simpa only [propInd_eq_ite] using probEvent_eq_wp_indicator oa p
-
-/-- An observed singleton probability is WP of its indicator assertion. -/
-lemma probOutput_eq_wp_indicator (oa : OracleComp spec α) [DecidableEq α] (x : α) :
-    Pr{let y ← oa}[y = x] = wp oa (fun y ↦ if y = x then 1 else 0) :=
-  probEvent_eq_wp_indicator oa (fun y ↦ y = x)
+  simpa only [propInd_eq_ite] using prEvent_eq_wp_indicator oa p
 
 /-- Assertions agreeing on structural support have equal quantitative WP. -/
 lemma wp_congr_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
@@ -409,13 +401,13 @@ theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (o
     _ = _ := by
       apply Finset.sum_congr rfl
       intro x _
-      rw [probOutput_eq_wp_indicator, ← wp_const_mul]
+      rw [prEvent_eq_wp_indicator, ← wp_const_mul]
       congr 1
       funext y
       split_ifs <;> simp
 
 open scoped Classical in
-/-- The finite reachable-output partition extends to a native event-weighted sum. -/
+/-- The finite reachable-output partition extends to an event-weighted sum. -/
 theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp oa post = ∑' x, Pr{let y ← oa}[y = x] * post x := by
   let : DecidableEq α := Classical.decEq α
@@ -438,20 +430,22 @@ theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (pos
 @[game_rule] theorem wp_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (query t : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
-  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query]
+  let : MeasurableSpace (spec.Range t) := ⊤
+  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
 
-/-- Lifting a primitive query has the same native expectation rule. -/
+/-- Lifting a primitive query has the same expectation rule. -/
 theorem wp_liftM_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (liftM (query t) : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
-  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query]
+  let : MeasurableSpace (spec.Range t) := ⊤
+  rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
 
 /-- The ergonomic query interface integrates the configured answer measure. -/
 @[game_rule] theorem wp_HasQuery_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp (spec := spec) (HasQuery.query t : OracleComp spec (spec.Range t)) post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := wp_query t post
 
-end Native
+end MeasureSpec
 
 section Uniform
 
@@ -460,6 +454,7 @@ theorem wp_query_uniform [OracleSpec.IsUniformMeasureSpec spec]
     (t : spec.Domain) [Fintype (spec.Range t)] (post : spec.Range t → ℝ≥0∞) :
     wp (query t : OracleComp spec (spec.Range t)) post =
       ∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * post u := by
+  let : MeasurableSpace (spec.Range t) := ⊤
   rw [wp_query, OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
   rw [lintegral_fintype]
   apply Finset.sum_congr rfl
@@ -470,80 +465,48 @@ theorem wp_query_uniform [OracleSpec.IsUniformMeasureSpec spec]
 
 end Uniform
 
-section Native
+section MeasureSpec
 
 variable [OracleSpec.IsMeasureSpec spec]
 
-/-- Uniform sampling integrates its chosen native measure. -/
+/-- Uniform sampling integrates its chosen measure. -/
 @[game_rule] theorem wp_uniformSample [SampleableType α] (post : α → ℝ≥0∞) :
     wp ($ᵗ α) post = ∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)] :=
   wp_eq_lintegral_map _ _
 
 /-- Indicator-event probability as an exact quantitative triple. -/
-theorem triple_probEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
+theorem triple_prEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
     Triple (Pr{let x ← oa}[p x]) oa (fun x => if p x then 1 else 0) :=
-  triple_ofLE (by rw [probEvent_eq_wp_indicator])
+  triple_ofLE (by rw [prEvent_eq_wp_indicator])
 
-/-- Singleton-output probability as an exact quantitative triple. -/
-theorem triple_probOutput_indicator (oa : OracleComp spec α) [DecidableEq α] (x : α) :
-    Triple (Pr{let y ← oa}[y = x]) oa (fun y => if y = x then 1 else 0) :=
-  triple_ofLE (by rw [probOutput_eq_wp_indicator])
-
-/-- Lower bounds on `probEvent` are exactly indicator-postcondition triples. -/
-theorem le_probEvent_iff_triple_indicator (oa : OracleComp spec α) (p : α → Prop)
+/-- Lower bounds on an event probability are exactly indicator-postcondition triples. -/
+theorem le_prEvent_iff_triple_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (r : ℝ≥0∞) :
     r ≤ Pr{let x ← oa}[p x] ↔
       Triple r oa (fun x => if p x then 1 else 0) := by
-  rw [triple_iff_le_wp, ← probEvent_eq_wp_indicator]
-
-/-- Lower bounds on `probOutput` are exactly singleton-indicator triples. -/
-theorem le_probOutput_iff_triple_indicator (oa : OracleComp spec α) [DecidableEq α]
-    (x : α) (r : ℝ≥0∞) :
-    r ≤ Pr{let y ← oa}[y = x] ↔
-      Triple r oa (fun y => if y = x then 1 else 0) := by
-  rw [triple_iff_le_wp, ← probOutput_eq_wp_indicator]
+  rw [triple_iff_le_wp, ← prEvent_eq_wp_indicator]
 
 /-- The support event of an `OracleComp` occurs almost surely. -/
-theorem probEvent_mem_support (oa : OracleComp spec α) :
+theorem prEvent_mem_support (oa : OracleComp spec α) :
     Pr{let x ← oa}[x ∈ support oa] = 1 := by
   rw [prEvent_congr_of_support oa _ (fun _ ↦ True) (fun _ hx ↦ by simp only [hx]),
     prEvent_eq_evalDist_map]
   simp
 
 /-- Exact probability-1 events are exact quantitative triples. -/
-theorem triple_probEvent_eq_one (oa : OracleComp spec α) (p : α → Prop)
+theorem triple_prEvent_eq_one (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (h : Pr{let x ← oa}[p x] = 1) :
     Triple (1 : ℝ≥0∞) oa (fun x => if p x then 1 else 0) := by
-  have := triple_probEvent_indicator (oa := oa) p
+  have := triple_prEvent_indicator (oa := oa) p
   rwa [h] at this
-
-/-- Exact probability-1 singleton outputs are exact quantitative triples. -/
-theorem triple_probOutput_eq_one (oa : OracleComp spec α) [DecidableEq α]
-    (x : α) (h : Pr{let y ← oa}[y = x] = 1) :
-    Triple (1 : ℝ≥0∞) oa (fun y => if y = x then 1 else 0) := by
-  have := triple_probOutput_indicator (oa := oa) x
-  rwa [h] at this
-
-/-- Probability-one singleton events are exactly probability-one indicator triples. -/
-theorem probOutput_eq_one_iff_triple (oa : OracleComp spec α) [DecidableEq α]
-    (x : α) :
-    Pr{let y ← oa}[y = x] = 1 ↔
-      Triple (1 : ℝ≥0∞) oa (fun y => if y = x then 1 else 0) := by
-  constructor
-  · exact triple_probOutput_eq_one oa x
-  · intro h
-    have hle : (1 : ℝ≥0∞) ≤ Pr{let y ← oa}[y = x] := by
-      rw [probOutput_eq_wp_indicator]; exact triple_toLE h
-    exact le_antisymm ((measure_mono (Set.subset_univ _)).trans
-      (evalDist_apply_univ_le_one (do let y ← oa; pure (y = x)))) hle
 
 /-- Support membership is a useful default cut function for support-sensitive bind proofs. -/
 theorem triple_support (oa : OracleComp spec α) [DecidablePred fun x => x ∈ support oa] :
     Triple (1 : ℝ≥0∞) oa
       (fun x => if x ∈ support oa then 1 else 0) := by
   simpa using
-    triple_probEvent_eq_one (oa := oa) (p := fun x => x ∈ support oa)
-      (h := probEvent_mem_support (oa := oa))
+    triple_prEvent_eq_one (oa := oa) (p := fun x => x ∈ support oa)
+      (h := prEvent_mem_support (oa := oa))
 
 /-! ## Loop stepping rules (Triple-level) -/
 
@@ -634,7 +597,7 @@ theorem triple_list_mapM {I : ℝ≥0∞}
     Triple pre (l.mapM f) post :=
   triple_conseq hpre hpost (triple_list_mapM_inv hstep)
 
-/-! ## Congruence of native observations -/
+/-! ## Congruence of observations -/
 
 /-- The expectation algebra evaluates the identity assertion. -/
 lemma μ_eq_wp (oa : OracleComp spec ℝ≥0∞) : μ oa = wp oa (fun x ↦ x) := by
@@ -651,6 +614,6 @@ lemma wp_congr_evalDist [MeasurableSpace α] {oa ob : OracleComp spec α}
     wp oa post = wp ob post := by
   rw [wp_eq_lintegral oa post hpost, wp_eq_lintegral ob post hpost, h]
 
-end Native
+end MeasureSpec
 
 end OracleComp.ProgramLogic

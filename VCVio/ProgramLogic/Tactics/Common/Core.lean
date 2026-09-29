@@ -9,8 +9,11 @@ module
 public meta import Lean.Elab.Tactic.Basic
 public meta import Lean.Meta.Match.MatcherApp
 public meta import Lean.Meta.Sym.Pattern
-public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
 public import VCVio.ProgramLogic.NotationCore
+public import VCVio.EvalDist.Defs.Measure
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # VCGen Planner Core
@@ -501,31 +504,35 @@ def isListMapMHead (e : Expr) : Bool :=
 def isListFoldlMHead (e : Expr) : Bool :=
   (headConstName? e) == some ``List.foldlM
 
-/-- Recognize a game-equivalence goal without unfolding the equivalence predicate. -/
-def isGameEquivGoal (target : Expr) : Bool :=
-  target.consumeMData.getAppFn.isConstOf ``OracleComp.ProgramLogic.GameEquiv
+/-- Recognize an equality in distribution `mx =ᵈ my` without unfolding it. -/
+def isEqualInDistGoal (target : Expr) : Bool :=
+  target.consumeMData.getAppFn.isConstOf ``EvalDistEq
 
-/-- Recognize equality with compatibility distribution evaluations on both sides. -/
+/-- Recognize an equality of two output measures `𝒟[mx] = 𝒟[my]`. -/
 def isEvalDistEqGoal (target : Expr) : Bool :=
   let target := target.consumeMData
   if target.isAppOfArity ``Eq 3 then
-    let lhs := target.getArg! 1
-    let rhs := target.getArg! 2
-    (findAppWithHead? ``evalSPMF lhs).isSome && (findAppWithHead? ``evalSPMF rhs).isSome
+    (target.getArg! 1).consumeMData.isAppOfArity ``evalDist 5 &&
+      (target.getArg! 2).consumeMData.isAppOfArity ``evalDist 5
   else
     false
 
-/-- Check if a goal is an equality with probability expressions on both sides. -/
+/-- The computation observed by a measure expression: the event computation of
+`prEvent`, which `Pr{…}[…]` elaborates to, or the argument of `𝒟[…]`. -/
+def evalDistComp? (e : Expr) : Option Expr := do
+  if let some app := findAppWithHead? ``prEvent e then
+    let args ← trailingArgs? app 1
+    return ← args[0]?
+  let app ← findAppWithHead? ``evalDist e
+  let args ← trailingArgs? app 1
+  args[0]?
+
+/-- Recognize an equality with measure expressions on both sides: event masses `𝒟[mx] s`,
+including `Pr{…}[…]`, or output measures `𝒟[mx]`. -/
 def isProbEqGoal (target : Expr) : Bool :=
   let target := target.consumeMData
   if target.isAppOfArity ``Eq 3 then
-    let lhs := target.getArg! 1
-    let rhs := target.getArg! 2
-    let lhsHasProb := (findAppWithHead? ``probEvent lhs).isSome ||
-                       (findAppWithHead? ``probOutput lhs).isSome
-    let rhsHasProb := (findAppWithHead? ``probEvent rhs).isSome ||
-                       (findAppWithHead? ``probOutput rhs).isSome
-    lhsHasProb && rhsHasProb
+    (evalDistComp? (target.getArg! 1)).isSome && (evalDistComp? (target.getArg! 2)).isSome
   else
     false
 

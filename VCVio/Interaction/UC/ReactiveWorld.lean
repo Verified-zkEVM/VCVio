@@ -26,6 +26,7 @@ public section
 namespace Interaction.UC.ReactiveWorld
 
 open ReactiveSecurity
+open scoped ENNReal
 
 variable {H A I J B : PortBoundary}
 
@@ -47,7 +48,7 @@ abbrev Adversary (adversarial backchannel : PortBoundary) :=
   ReactiveSecurity.experiment (world protocol adversary) environment
 
 /-- A named executable simulator bounds every finite environment's statistical advantage. -/
-@[expose] def Simulates (error : ℝ) (real : Protocol H A) (ideal : Protocol H I)
+@[expose] def Simulates (error : ℝ≥0∞) (real : Protocol H A) (ideal : Protocol H I)
     (adversary : Adversary A B) (simulator : Adversary I B) : Prop :=
   Contextual error (world real adversary) (world ideal simulator)
 
@@ -60,12 +61,12 @@ theorem refl (protocol : Protocol H A) (adversary : Adversary A B) :
 /-- Chaining named executable simulators adds their statistical errors. -/
 theorem trans {real : Protocol H A} {middle : Protocol H I} {ideal : Protocol H J}
     {adversary : Adversary A B} {first : Adversary I B} {second : Adversary J B}
-    {error₁ error₂ : ℝ} (h₁ : Simulates error₁ real middle adversary first)
+    {error₁ error₂ : ℝ≥0∞} (h₁ : Simulates error₁ real middle adversary first)
     (h₂ : Simulates error₂ middle ideal first second) :
     Simulates (error₁ + error₂) real ideal adversary second := Contextual.trans h₁ h₂
 
 /-- A local contextual replacement remains valid after wiring the actual adversary. -/
-theorem of_contextual {real ideal : Protocol H A} {error : ℝ}
+theorem of_contextual {real ideal : Protocol H A} {error : ℝ≥0∞}
     (h : Contextual error real ideal) (adversary : Adversary A B) :
     Simulates error real ideal adversary adversary := h.wire_left adversary
 
@@ -73,7 +74,7 @@ end Simulates
 
 /-- Statistical emulation with an executable witness chosen before every closing environment.
 The fixed boundaries are selected before execution and local private sampling. -/
-@[expose] def StatisticallyEmulates (backchannel : PortBoundary) (error : ℝ)
+@[expose] def StatisticallyEmulates (backchannel : PortBoundary) (error : ℝ≥0∞)
     (real : Protocol H A) (ideal : Protocol H I) : Prop :=
   ∀ adversary : Adversary A backchannel,
     ∃ simulator : Adversary I backchannel, Simulates error real ideal adversary simulator
@@ -87,7 +88,7 @@ theorem refl (protocol : Protocol H A) : StatisticallyEmulates B 0 protocol prot
 /-- Emulation composes by feeding the first simulator to the second emulation theorem.
 Both witnesses are fixed before the environment, and the two error bounds add. -/
 theorem trans {real : Protocol H A} {middle : Protocol H I} {ideal : Protocol H J}
-    {error₁ error₂ : ℝ} (h₁ : StatisticallyEmulates B error₁ real middle)
+    {error₁ error₂ : ℝ≥0∞} (h₁ : StatisticallyEmulates B error₁ real middle)
     (h₂ : StatisticallyEmulates B error₂ middle ideal) :
     StatisticallyEmulates B (error₁ + error₂) real ideal := by
   intro adversary
@@ -96,7 +97,7 @@ theorem trans {real : Protocol H A} {middle : Protocol H I} {ideal : Protocol H 
   exact ⟨second, hfirst.trans hsecond⟩
 
 /-- Local replacement yields emulation with the original executable adversary as simulator. -/
-theorem of_contextual {real ideal : Protocol H A} {error : ℝ}
+theorem of_contextual {real ideal : Protocol H A} {error : ℝ≥0∞}
     (h : Contextual error real ideal) : StatisticallyEmulates B error real ideal :=
   fun adversary => ⟨adversary, Simulates.of_contextual h adversary⟩
 

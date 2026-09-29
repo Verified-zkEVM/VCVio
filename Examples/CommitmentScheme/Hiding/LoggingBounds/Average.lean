@@ -41,7 +41,7 @@ lemma sum_chooseHitIndicators_le_sumCounts [Fintype S]
     exact_mod_cast hpos
   · simp [OracleComp.ProgramLogic.propInd, hpos]
 
-lemma wp_finset_sum [Finite C] [Inhabited C] [MeasurableSpace C] [MeasurableSingletonClass C]
+lemma wp_finset_sum [Finite C] [Inhabited C]
     {α : Type}
     (oa : OracleComp (CMOracle M S C) α) (ss : Finset S) (f : S → α → ℝ≥0∞) :
     (ss.sum fun s => OracleComp.ProgramLogic.wp oa (f s)) =
@@ -236,8 +236,8 @@ The proof uses `hidingImplSim`, which redirects all salt-`s` cache misses to
    (both return fresh uniform on cache miss; the query point is irrelevant
    because the underlying oracle is memoryless).
 2. `hidingImplSim.run' = hidingSim` (the simulator matches the implementation).
-3. `tvDist_simulateQ_le_probEvent_bad_dist` bounds the statistical distance
-   by `Pr[bad]`.
+3. `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq` bounds the
+   statistical distance by the probability of `bad`.
 
 The `Pr[bad] ≤ t/|S|` bound requires `s` to be uniformly random (see below). -/
 
@@ -281,65 +281,51 @@ variable [Finite C] [Inhabited C]
 When `cnt < 2`, the two implementations differ only in the query point for
 salt-s cache misses: `hidingImpl₁` queries at `ms`, while `hidingImplSim`
 queries at `(default, default)`. Since the underlying oracle is memoryless
-(`Pr[= u | query t₁] = Pr[= u | query t₂]` for all `u` when both ranges
-are `C`), the returned value has the same distribution. The cache update and
-counter increment are identical (both cache at `ms`, both increment when
-`ms.2 = s`). Therefore every `(output, state)` pair has the same probability. -/
+(every query answers uniformly on `C`), the returned value has the same
+distribution. The cache update and counter increment are identical (both cache
+at `ms`, both increment when `ms.2 = s`), so the two runs have the same output
+measure. -/
 theorem hidingImpl_agree_dist [Inhabited M] [Inhabited S] (s : S) (ms : M × S)
-    (st : QueryCache (CMOracle M S C) × ℕ) (h : ¬hidingBad st)
-    (p : C × (QueryCache (CMOracle M S C) × ℕ)) :
-    Pr[= p | (hidingImpl₁ s ms).run st] =
-      Pr[= p | (hidingImplSim s ms).run st] := by
+    (st : QueryCache (CMOracle M S C) × ℕ) (h : ¬hidingBad st) :
+    (hidingImpl₁ s ms).run st =ᵈ (hidingImplSim s ms).run st := by
+  let : MeasurableSpace (C × (QueryCache (CMOracle M S C) × ℕ)) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
   obtain ⟨cache, cnt⟩ := st
   simp only [hidingBad, ge_iff_le, not_le] at h
   simp only [hidingImpl₁, hidingImplSim, StateT.run_bind, StateT.run_get, pure_bind]
   cases hcache : cache ms with
-  | some u =>
-    -- Cache hit: both return the same cached value, state unchanged
-    simp
+  | some u => rfl
   | none =>
-    -- Cache miss: impl₁ queries at ms, implSim queries at queryPoint.
-    -- Both bind on (liftM (query _)).run st then set+return.
-    -- The continuations are identical; only the query point differs.
-    -- Since (liftM (query t)).run st = query t >>= pure (·, st),
-    -- Pr[= (u, st') | ...] = Pr[= u | query t] · [st' = st],
-    -- and Pr[= u | query t] = 1/|C| for any t, both factors match.
     simp only [StateT.run_bind]
-    refine tsum_congr fun x => ?_
+    rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
     congr 1
 
-/-- For fixed `s`, the TV distance between real and sim games is bounded by
-the probability of the bad event under `hidingImpl₁`.
+/-- For fixed `s`, the total variation distance between the real and simulated games is bounded
+by the probability of the bad event under `hidingImpl₁`.
 
-The proof uses the distributional identical-until-bad lemma
-(`tvDist_simulateQ_le_probEvent_bad_dist`): `hidingImpl₁` (real with counter) and
-`hidingImplSim` (sim with counter) agree distributionally when `¬bad` because the
+The proof uses identical-until-bad on output measures
+(`measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`): `hidingImpl₁` (real with
+counter) and `hidingImplSim` (sim with counter) agree distributionally when `¬bad` because the
 underlying oracle is memoryless. -/
-theorem tvDist_hidingReal_hidingSim_le_probBad [Inhabited M] [Inhabited S]
+theorem measureETVDist_hidingReal_hidingSim_le_probBad [Inhabited M] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
-    tvDist (hidingReal A s) (hidingSim A s) ≤
-    Pr[hidingBad ∘ Prod.snd |
-        (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)].toReal := by
+    measureETVDist (hidingReal A s) (hidingSim A s) ≤
+      Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2] := by
   rw [hidingReal_eq_impl₁ A s, hidingSim_eq_implSim A s]
-  exact OracleComp.ProgramLogic.Relational.tvDist_simulateQ_le_probEvent_bad_dist
-    (hidingImpl₁ s) (hidingImplSim s) hidingBad (hidingOa A s) (∅, 0)
-    (by simp [hidingBad])
-    (fun ms st h p => hidingImpl_agree_dist s ms st h p)
-    (hidingImpl₁_bad_mono s)
-    (hidingImplSim_bad_mono s)
+  exact ProgramLogic.Relational.measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq
+    (hidingImpl₁ s) (hidingImplSim s) hidingBad
+    (fun ms st h => hidingImpl_agree_dist s ms st h)
+    (hidingImpl₁_bad_mono s) (hidingImplSim_bad_mono s) (hidingOa A s) (∅, 0)
 
 section Averaging
-
-variable [MeasurableSpace C] [MeasurableSingletonClass C]
-  [MeasurableSpace S] [MeasurableSingletonClass S]
 
 /-- Averaged-mass bridge for hiding.
 
 This packages the per-salt bad probabilities into the shared `hidingAvgComp`
 run, where the salt is sampled once up front and then the shared count-all
 simulation is reused for the rest of the game. -/
-theorem sum_probEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhabited S]
+theorem sum_prEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr{let z ← (
@@ -349,20 +335,20 @@ theorem sum_probEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhab
         (simulateQ hidingAvgQueryImpl (hidingAvgComp A)).run
           (∅, fun _ => 0))}[2 ≤ z.2.2 z.1.1] := by
   classical
-  rw [OracleComp.ProgramLogic.probEvent_eq_wp_indicator,
+  rw [OracleComp.ProgramLogic.prEvent_eq_wp_indicator,
     run_simulateQ_hidingAvgComp_eq_bind, OracleComp.ProgramLogic.wp_bind,
     ← liftComp_liftM_query (spec := Unit →ₒ S) (superSpec := HidingAvgSpec M S C),
     OracleComp.ProgramLogic.wp_liftComp, OracleComp.ProgramLogic.wp_query_uniform]
   simp_rw [OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_liftComp]
   simp only [Function.comp_def, Prod.map_fst, Prod.map_snd, id_eq]
-  simp_rw [← OracleComp.ProgramLogic.probEvent_eq_wp_indicator]
+  simp_rw [← OracleComp.ProgramLogic.prEvent_eq_wp_indicator]
   rw [Finset.mul_sum]
   apply Finset.sum_congr rfl
   intro s _
   rw [← mul_assoc, ENNReal.mul_inv_cancel (by simp) (by simp), one_mul]
-  exact probEvent_hidingBad_eq_countAll A s
+  exact prEvent_hidingBad_eq_countAll A s
 
-lemma probEvent_hidingAvg_bad_le_wp_selectedCountPred [Fintype S] [Inhabited S]
+lemma prEvent_hidingAvg_bad_le_wp_selectedCountPred [Fintype S] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     Pr{let z ← (
@@ -446,11 +432,9 @@ lemma card_mul_wp_hidingAvg_selectedCountPred_eq_sum_wp_countPred
 
 end Averaging
 
-variable [MeasurableSpace C] [MeasurableSingletonClass C]
-
 /-- The outer counting bridge: the bad-mass sum is bounded by the per-salt
 count-pred expectations from the shared counted implementation. -/
-theorem sum_probEvent_hidingBad_le_sum_wp_countPred [Fintype S]
+theorem sum_prEvent_hidingBad_le_sum_wp_countPred [Fintype S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) :
     (∑ s : S, Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2]) ≤
@@ -460,8 +444,8 @@ theorem sum_probEvent_hidingBad_le_sum_wp_countPred [Fintype S]
         (fun z : Bool × HidingCountState M S C => (z.2.2 s - 1 : ℝ≥0∞)) := by
   apply Finset.sum_le_sum
   intro s _
-  rw [probEvent_hidingBad_eq_countAll]
-  exact probEvent_countAll_bad_le_wp_countPred A s
+  rw [prEvent_hidingBad_eq_countAll]
+  exact prEvent_countAll_bad_le_wp_countPred A s
 
 /-- Sum of `Pr[bad(s)]` over all salts is at most `t`.
 
@@ -800,8 +784,8 @@ lemma sum_wp_badIndicator_eq_wp_choose [Fintype S]
           OracleComp.ProgramLogic.propInd (2 ≤ z.2.2 s)) := by
         refine Finset.sum_congr rfl ?_
         intro s hs
-        rw [probEvent_hidingBad_eq_countAll (M := M) (S := S) (C := C) A s,
-          OracleComp.ProgramLogic.probEvent_eq_wp_propInd]
+        rw [prEvent_hidingBad_eq_countAll (M := M) (S := S) (C := C) A s,
+          OracleComp.ProgramLogic.prEvent_eq_wp_propInd]
     _ =
       OracleComp.ProgramLogic.wp
         ((simulateQ hidingImplCountAll A.choose).run (∅, fun _ => 0))

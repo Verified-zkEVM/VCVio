@@ -12,7 +12,7 @@ public import PolyFun.PFunctor.Free.Support
 /-!
 # Possible outputs of oracle programs
 
-Oracle-facing equations for PolyFun's native attachment semantics. Possible outputs are
+Oracle-facing equations for PolyFun's attachment semantics. Possible outputs are
 structural: this API imposes no probabilistic interpretation or positivity assumption on answers.
 -/
 
@@ -93,5 +93,37 @@ lemma mem_finSupport_query (t : spec.Domain) [DecidableEq (spec.Range t)] (u : s
     u ∈ finSupport (query t : OracleComp spec _) := by grind
 
 end finSupport
+
+section supportPeel
+
+/-- `obtain`-friendly bind support peeler at the bare `OracleComp` level. Unlike `rw
+[mem_support_bind_iff]`, applying this lemma to a hypothesis uses *definitional* unification to
+match `mx >>= f`, so it engages through the `Monad`/`MonadLift` instance-tree mismatches that block
+the syntactic `rw` (the elaborated `OracleComp.instMonad`/`Bind.bind` spelling produced by
+unfolding nested protocol definitions differs syntactically from the canonical `>>=`). -/
+lemma mem_support_bind_peel (mx : OracleComp spec α) (f : α → OracleComp spec β) {y : β}
+    (hy : y ∈ support (mx >>= f)) :
+    ∃ a, a ∈ support mx ∧ y ∈ support (f a) := by
+  rwa [mem_support_bind_iff] at hy
+
+/-- `obtain`-friendly `pure` support resolver at the bare `OracleComp` level: `y ∈ support (pure
+a)` forces `y = a`, matched by definitional unification (so it engages on the
+`PFunctor.FreeM.pure` spelling that the syntactic `support_pure` `rw` rejects). -/
+lemma eq_of_mem_support_pure (a : α) {y : α}
+    (hy : y ∈ support (pure a : OracleComp spec α)) : y = a := by
+  rwa [support_pure, Set.mem_singleton_iff] at hy
+
+/-- `obtain`-friendly `<$>` (map) support peeler at the bare `OracleComp` level: `y ∈ support (g
+<$> mx)` yields a preimage `a ∈ support mx` with `y = g a`, matched by definitional unification
+(so it engages on the elaborated `Functor.map`/`OracleComp.instMonad` spelling that the syntactic
+`support_map` `rw` rejects). -/
+lemma mem_support_map_peel (g : α → β) (mx : OracleComp spec α) {y : β}
+    (hy : y ∈ support (g <$> mx)) :
+    ∃ a, a ∈ support mx ∧ y = g a := by
+  rw [support_map, Set.mem_image] at hy
+  obtain ⟨a, ha, hy⟩ := hy
+  exact ⟨a, ha, hy.symm⟩
+
+end supportPeel
 
 end OracleComp

@@ -31,9 +31,13 @@ universe u
 namespace OracleComp.Rel.Quantitative
 
 variable {ι₁ ι₂ : Type u}
-variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 variable {α β γ δ : Type}
+
+section measureSpec
+
+variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
 
 /-- Quantitative `VCVio.ProgramLogic.RelWP` interpretation of pairs of `OracleComp`
 programs valued in `ℝ≥0∞`.
@@ -117,7 +121,7 @@ theorem relTriple_bind
 theorem relTriple_uniformSample_bij [SampleableType α]
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ ∑' a : α, Pr[= a | ($ᵗ α : ProbComp α)] * post a (f a)) :
+    (hpre : pre ≤ OracleComp.ProgramLogic.wp ($ᵗ α : ProbComp α) (fun a => post a (f a))) :
     VCVio.ProgramLogic.RelTriple pre ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post
       Lean.Order.bot Lean.Order.bot :=
   OracleComp.ProgramLogic.Relational.eRelWP_uniformSample_bij hf post hpre
@@ -127,10 +131,16 @@ theorem relTriple_uniformSample_bij [SampleableType α]
 theorem relTriple_uniformSample_refl [SampleableType α]
     (post : α → α → ℝ≥0∞) :
     VCVio.ProgramLogic.RelTriple
-      (∑' a : α, Pr[= a | ($ᵗ α : ProbComp α)] * post a a)
+      (OracleComp.ProgramLogic.wp ($ᵗ α : ProbComp α) (fun a => post a a))
       ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post
       Lean.Order.bot Lean.Order.bot :=
   relTriple_uniformSample_bij Function.bijective_id post le_rfl
+
+end measureSpec
+
+section oracleQuery
+
+variable [OracleSpec.IsUniformMeasureSpec spec₁]
 
 /-- Oracle query under a bijection for the quantitative
 `VCVio.ProgramLogic.RelTriple` carrier. -/
@@ -139,10 +149,9 @@ theorem relTriple_query_bij (t : spec₁.Domain)
     (hf : Function.Bijective f)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ ∑' a : spec₁.Range t,
-        Pr[= a |
-          (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
-            OracleComp spec₁ (spec₁.Range t))] * post a (f a)) :
+    (hpre : pre ≤ OracleComp.ProgramLogic.wp
+        (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
+          OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))) :
     VCVio.ProgramLogic.RelTriple pre
       (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
         OracleComp spec₁ (spec₁.Range t))
@@ -156,15 +165,16 @@ theorem relTriple_query_bij (t : spec₁.Domain)
 theorem relTriple_query_refl (t : spec₁.Domain)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞) :
     VCVio.ProgramLogic.RelTriple
-      (∑' a : spec₁.Range t,
-        Pr[= a |
-          (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
-            OracleComp spec₁ (spec₁.Range t))] * post a a)
+      (OracleComp.ProgramLogic.wp
+        (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
+          OracleComp spec₁ (spec₁.Range t)) (fun a => post a a))
       (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
         OracleComp spec₁ (spec₁.Range t))
       (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
         OracleComp spec₁ (spec₁.Range t)) post
       Lean.Order.bot Lean.Order.bot :=
   relTriple_query_bij t Function.bijective_id post le_rfl
+
+end oracleQuery
 
 end OracleComp.Rel.Quantitative

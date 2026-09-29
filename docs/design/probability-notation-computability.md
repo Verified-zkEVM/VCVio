@@ -19,7 +19,7 @@ so a failed branch contributes zero; a computation that explicitly returns an
 |---|---|---|
 | `FinRatPMF.Raw` with finite rational branches | Exact rational mass via `Raw.prob` | `DecidableEq` on outputs; a decidable predicate can be compiled to a Boolean output |
 | `OracleComp` with finite, enumerable oracle answers | Exact rational mass after `simulateQ finRatImpl` | `FinEnum` and inhabited answer types, plus an executable event |
-| General discrete `OracleComp` with PMF-backed queries | Measure statement, not necessarily an algorithm | A probability specification; infinite sums need not reduce |
+| General discrete `OracleComp` with measure-specified queries | Measure statement, not necessarily an algorithm | A measure specification (`IsMeasureSpec`); infinite sums need not reduce |
 | Continuous `FreeM` queries | Measure statement and measurable-event proofs | A measure specification and measurable continuation or event; numerical integration is separate |
 | Resumptions or possibly infinite interaction | Finite-fuel observations and limit theorems | No generic exact termination decision procedure |
 
@@ -47,16 +47,18 @@ universe-polymorphic observation interface, not a parser trick.
 
 1. State new theorems with `Pr{...}[...]`, `𝒟[...]`, or `Kernel`. Keep finite
    `Raw` calculations in executable code and bridge them to the measure statement.
-2. Move client proofs from `Pr[...]` and `𝒮[...]` through the public measure
-   equations. The one-time-pad UC observation theorem is a concrete example:
-   its main equality is now between measures, with a finite `SPMF` corollary.
-3. Replace legacy program-logic and coupling statements in coherent families.
-   `SPMF`, `evalSPMF`, and the scalar `Pr[...]` functions are deprecated; the
-   `usesRetiredProbability` environment linter tracks direct uses of those and
-   Mathlib's imported `PMF` by declaration in `scripts/nolints.json`.
-4. Once the remaining finite adapters have measure-level equivalents, remove
-   the compatibility notation and declarations. The exception ledger should
-   then become empty for this linter.
+2. (Done.) Client proofs moved from `Pr[...]` and `𝒮[...]` through the public
+   measure equations. The one-time-pad UC observation theorem is a concrete
+   example: its main equality is between measures.
+3. (Done.) Legacy program-logic and coupling statements were replaced in
+   coherent families. `SPMF`, `evalSPMF`, the scalar `Pr[...]` functions, and
+   the classes that interpreted them were deprecated during the migration and
+   have since been removed; the `usesRetiredProbability` environment linter now
+   tracks direct uses of Mathlib's imported `PMF` by declaration in
+   `scripts/nolints.json`.
+4. (Done.) The compatibility notation and declarations have been removed. The
+   exception ledger should become empty for this linter once the remaining
+   direct `PMF` uses are converted.
 
 Oracle machines beyond well-founded `OracleComp` are a separate semantic
 extension. The notation needs only an `EvalDistSemantics` instance and will

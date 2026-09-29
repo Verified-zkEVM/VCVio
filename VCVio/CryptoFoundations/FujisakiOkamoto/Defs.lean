@@ -7,8 +7,9 @@ Authors: Quang Dao
 module
 
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Coercions.Add.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
@@ -20,8 +21,8 @@ This file defines the shared objects used by the Fujisaki-Okamoto transform:
 
 - explicit-coins PKEs as a specialization of `AsymmEncAlg`
 - the induced randomized `AsymmEncAlg`
-- spread notions and OW-CPA games for the `ProbComp` specialization
-- OW-PCVA games for the general monadic interface
+- spread notions and OW-CPA experiments for the `ProbComp` specialization
+- OW-PCVA experiments for the general monadic interface
 -/
 
 @[expose] public section
@@ -39,30 +40,28 @@ section Correct
 
 variable [DecidableEq M] [SampleableType R]
 
-/-- `delta`-correctness: failure in the canonical `AsymmEncAlg.CorrectExp` experiment occurs with
+/-- `delta`-correctness: failure in the canonical `AsymmEncAlg.correctnessExperiment` occurs with
 probability at most `delta`. -/
 def deltaCorrect (delta : ℝ≥0∞) : Prop :=
-  ∀ msg : M, Pr[= false | do
+  ∀ msg : M, 𝒟[do
     let (pk, sk) ← pke.keygen
     let r ← ($ᵗ R)
     let c := pke.encrypt pk msg r
     let msg' := pke.decrypt sk c
-    pure (decide (msg' = some msg))] ≤ delta
+    pure (decide (msg' = some msg))] {false} ≤ delta
 
 end Correct
 
 /-- `gamma`-spread: no ciphertext occurs with probability more than `gamma` for any fixed public
 key and plaintext. -/
-def gammaSpread [SampleableType R] [DecidableEq C] (gamma : ℝ≥0∞) : Prop :=
-  ∀ pk msg c, Pr[= c | do
-    let r ← ($ᵗ R)
-    pure (pke.encrypt pk msg r)] ≤ gamma
+def gammaSpread [SampleableType R] (gamma : ℝ≥0∞) : Prop :=
+  ∀ pk msg c, Pr{let r ← $ᵗ R}[pke.encrypt pk msg r = c] ≤ gamma
 
 section OW_CPA
 
 variable [SampleableType M] [SampleableType R] [DecidableEq M]
 
-/-- Oracle interface for the one-way under chosen-plaintext attack (OW-CPA) game.
+/-- Oracle interface for the one-way under chosen-plaintext attack (OW-CPA) experiment.
 
 The sum `unifSpec + (M →ₒ C)` gives the adversary two capabilities:
 - unrestricted uniform sampling from any sampleable type
@@ -84,11 +83,11 @@ def OW_CPA_queryImpl (pk : PK) : QueryImpl pke.OW_CPA_oracleSpec ProbComp :=
 
 /-- Main one-way under chosen-plaintext attack (OW-CPA) experiment.
 
-The game samples a fresh keypair and a uniform challenge message, forms the honest challenge
+The experiment samples a fresh keypair and a uniform challenge message, forms the honest challenge
 ciphertext via the induced randomized `AsymmEncAlg`, runs the adversary with oracle access
 described by `OW_CPA_oracleSpec`, and returns `true` exactly when the adversary recovers the
 challenge message. -/
-def OW_CPA_Game (adversary : pke.OW_CPA_Adversary) : ProbComp Bool := do
+def OW_CPA_Experiment (adversary : pke.OW_CPA_Adversary) : ProbComp Bool := do
   let (pk, _sk) ← pke.keygen
   let msg ← $ᵗ M
   let r ← ($ᵗ R)
@@ -98,7 +97,7 @@ def OW_CPA_Game (adversary : pke.OW_CPA_Adversary) : ProbComp Bool := do
 
 /-- OW-CPA advantage is the probability of recovering the sampled challenge plaintext. -/
 noncomputable def OW_CPA_Advantage (adversary : pke.OW_CPA_Adversary) : ℝ≥0∞ :=
-  Pr[= true | pke.OW_CPA_Game adversary]
+  𝒟[pke.OW_CPA_Experiment adversary] {true}
 
 end OW_CPA
 
@@ -109,7 +108,7 @@ section OW_PCVA
 variable {ι : Type u} {spec : OracleSpec ι} {M PK SK C : Type}
 
 /-- Oracle interface for the one-way under plaintext-checking and validity attacks
-(OW-PCVA) game.
+(OW-PCVA) experiment.
 
 The sum `spec + (((C × M) →ₒ Bool) + (C →ₒ Bool))` has three components:
 - the ambient oracle interface `spec`
@@ -137,26 +136,25 @@ def OW_PCVA_queryImpl (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C) [Decida
 
 /-- Main one-way under plaintext-checking and validity attacks (OW-PCVA) experiment.
 
-The game generates a keypair, samples a uniform challenge message, encrypts it honestly, and
+The experiment generates a keypair, samples a uniform challenge message, encrypts it honestly, and
 then runs the adversary on the public key and challenge ciphertext. The adversary may query the
 ambient oracle interface `spec`, the plaintext-checking oracle, and the validity oracle, and the
-game returns `true` exactly when the final guess equals the hidden challenge message. -/
-noncomputable def OW_PCVA_Game {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
+experiment returns `true` exactly when the final guess equals the hidden challenge message. -/
+noncomputable def OW_PCVA_Experiment {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adversary : OW_PCVA_Adversary encAlg) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let (pk, sk) ← encAlg.keygen
-    let msg ← runtime.liftProbComp ($ᵗ M)
-    let cStar ← encAlg.encrypt pk msg
-    let msg' ← simulateQ (OW_PCVA_queryImpl encAlg sk) (adversary pk cStar)
-    return decide (msg' = msg)
+    (adversary : OW_PCVA_Adversary encAlg) : OracleComp spec Bool := do
+  let (pk, sk) ← encAlg.keygen
+  let msg ← runtime.liftProbComp ($ᵗ M)
+  let cStar ← encAlg.encrypt pk msg
+  let msg' ← simulateQ (OW_PCVA_queryImpl encAlg sk) (adversary pk cStar)
+  return decide (msg' = msg)
 
-/-- OW-PCVA advantage is the message-recovery probability in the above game. -/
+/-- OW-PCVA advantage is the message-recovery probability in the above experiment. -/
 noncomputable def OW_PCVA_Advantage {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
     [SampleableType M] [DecidableEq M]
     (runtime : ProbCompRuntime (OracleComp spec))
     (adversary : OW_PCVA_Adversary encAlg) : ℝ≥0∞ :=
-  OW_PCVA_Game runtime adversary {true}
+  runtime.evalDist (OW_PCVA_Experiment runtime adversary) {true}
 
 end OW_PCVA

@@ -113,11 +113,12 @@ theorem oneRound_escape_prob (context : oneRound.Context (0 : Fin 1).castSucc)
     (message : oneRound.Message 0) :
     Pr{let challenge ← oneRound.sampleChallenge 0}[
       oneRound.escapeEvent 0 context message challenge] = 1 / 2 := by
-  rw [show oneRound.sampleChallenge 0 = ($ᵗ (Fin 2)) by rfl]
-  simp only [oneRound, KnowledgeExtractionFamily.escapeEvent, Fin.succ_ne_zero, false_or]
-  rw [prEvent_eq_evalDist_of_discrete, SampleableType.evalDist_uniformSample,
-    ProbabilityTheory.uniformOn_univ_apply_setOf]
-  have hc : (Finset.univ.filter (fun challenge : Fin 2 => challenge ≠ 0)).card = 1 := by decide
+  -- The event is a partially applied predicate, so it is unfolded as a constant.
+  unfold KnowledgeExtractionFamily.escapeEvent
+  simp only [oneRound, Fin.succ_ne_zero, false_or]
+  change Pr{challenge ← ($ᵗ (Fin 2) : ProbComp (Fin 2))}[¬challenge = 0] = 1 / 2
+  rw [SampleableType.prEvent_uniformSample]
+  have hc : (Finset.univ.filter (fun challenge : Fin 2 => ¬challenge = 0)).card = 1 := by decide
   rw [hc, Fintype.card_fin]
   norm_num
 

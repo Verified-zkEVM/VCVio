@@ -30,8 +30,8 @@ open ENNReal Std.Internal.Do OracleComp.Quantitative
 namespace OracleComp.Rel.Probabilistic
 
 variable {ι₁ ι₂ : Type u}
-variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
 variable {α β γ δ : Type}
 
 /-! ## Bound: `eRelWP` on a `Prob`-valued post is always `≤ 1`
@@ -43,13 +43,8 @@ postcondition is `≤ 1`. -/
 private lemma eRelWP_le_one_of_post_le_one
     (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → ℝ≥0∞) (hpost : ∀ a b, post a b ≤ 1) :
-    OracleComp.ProgramLogic.Relational.eRelWP oa ob post ≤ 1 := by
-  unfold OracleComp.ProgramLogic.Relational.eRelWP
-  refine iSup_le fun c => ?_
-  calc ∑' z : α × β, Pr[= z | c.1] * post z.1 z.2
-      ≤ ∑' z : α × β, Pr[= z | c.1] :=
-        ENNReal.tsum_le_tsum fun z => by simpa using mul_le_mul' le_rfl (hpost z.1 z.2)
-    _ ≤ 1 := tsum_probOutput_le_one
+    OracleComp.ProgramLogic.Relational.eRelWP oa ob post ≤ 1 :=
+  OracleComp.ProgramLogic.Relational.eRelWP_le oa ob post 1 hpost
 
 /-- The underlying `ℝ≥0∞`-valued relational WP, packaged for use inside
 the `Prob` constructor. -/
@@ -61,6 +56,8 @@ noncomputable def rwpVal
 private theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → Prob) : rwpVal oa ob post ≤ 1 :=
   eRelWP_le_one_of_post_le_one oa ob _ (fun a b => (post a b).val_le_one)
+
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 /-- Relational coupling expectations restricted to probability-valued assertions.
 Enable with `open scoped OracleComp.Rel.Probabilistic`. -/

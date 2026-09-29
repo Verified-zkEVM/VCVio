@@ -6,7 +6,7 @@ Authors: Quang Dao, Skas
 
 module
 public import LatticeCrypto.Ring.Transform
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Uniform Sampling On Negacyclic Ring Carriers
@@ -51,19 +51,5 @@ instance TransformPoly.instSampleableType {Coeff : Type} [CommRing Coeff]
     [SampleableType Coeff] (ring : NegacyclicRing Coeff) :
     SampleableType (TransformPoly ring) :=
   SampleableType.ofEquiv (TransformPoly.equivPoly ring).symm
-
-/-- Every carrier element is sampled with probability `card⁻¹`. -/
-theorem PolyBackend.probOutput_uniformSample_eq_inv_card {Coeff : Type} [SampleableType Coeff]
-    [Fintype Coeff] (backend : PolyBackend Coeff) (p : backend.Poly) :
-    Pr[= p | $ᵗ backend.Poly] = (Fintype.card backend.Poly : ENNReal)⁻¹ :=
-  probOutput_uniformSample backend.Poly p
-
-/-- Every transform-domain element is sampled with probability `card⁻¹`. -/
-theorem TransformPoly.probOutput_uniformSample_eq_inv_card {Coeff : Type} [CommRing Coeff]
-    [SampleableType Coeff] [Fintype Coeff] (ring : NegacyclicRing Coeff)
-    (fHat : TransformPoly ring) :
-    Pr[= fHat | $ᵗ (TransformPoly ring)] =
-      (Fintype.card (TransformPoly ring) : ENNReal)⁻¹ :=
-  probOutput_uniformSample (TransformPoly ring) fHat
 
 end LatticeCrypto

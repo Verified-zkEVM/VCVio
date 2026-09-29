@@ -4,24 +4,26 @@
 
 **What are you trying to prove?**
 
-1. **Two games have the same distribution** (`g₁ ≡ₚ g₂`):
+1. **Two games have the same distribution** (`g₁ =ᵈ g₂`):
    → `by_equiv` to enter relational mode, then use `rvcstep` / `rvcgen`
    → Add `using ...` when the current relational step needs an explicit witness
 
 2. **Advantage is bounded** (`advantage ≤ ε`):
    → `by_dist` to enter TV distance reasoning
    → Use `by_dist ε₂` when you want to pin the TV-distance contribution explicitly
-   → For identical-until-bad: use `tvDist_simulateQ_le_probEvent_bad`
+   → For identical-until-bad: use `by_upto` or
+     `measureETVDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
 
-3. **Probability equals a specific value** (`Pr[= x | oa] = ...`):
+3. **Probability equals a specific value** (`Pr{oa}[= x] = ...` or `Pr{x ← oa}[p x] = ...`):
    → Start with `vcstep` if the goal should lower or decompose automatically
    → Use `vcstep?` when you want the explicit script, binder names, rewrite form, or an
     explicit `using` / `inv` / `with` step surfaced
-   → Otherwise use `probOutput_bind_eq_tsum` to decompose binds manually
+   → Otherwise use `prEvent_bind_eq_lintegral_of_discrete` (or `prEvent_bind_eq_lintegral`) to
+    decompose binds manually into `∫⁻ x, … ∂𝒟[oa]`
    → Use `simp` with project simp lemmas
    → Use `vcstep`, `vcstep rw`, or `vcstep rw congr'` for probability equalities
 
-4. **Multi-hop security proof** (`g₁ ≡ₚ gₙ`):
+4. **Multi-hop security proof** (`g₁ =ᵈ gₙ`):
    → `game_trans g₂` to split into two goals, repeat
 
 5. **Need to swap sampling order**:
@@ -71,13 +73,13 @@ a one-line comment explaining what shape downstream needs.
 
 ```lean
 theorem myScheme_secure :
-    advantage (myExp adversary) ≤ q * ddhGuessAdvantage (myReduction adversary) := by
+    myAdvantage adversary ≤ q * ddhAdvantage (myReduction adversary) := by
 ```
 
 ### Step 2: Define intermediate games (hybrids)
 
 ```lean
-def hybridGame (adversary : ...) (k : ℕ) : ProbComp Bool := do
+def hybrid (adversary : ...) (k : ℕ) : ProbComp Bool := do
   -- first k queries use real, rest use random
   ...
 ```
@@ -85,11 +87,11 @@ def hybridGame (adversary : ...) (k : ℕ) : ProbComp Bool := do
 ### Step 3: Telescope via `game_trans`
 
 ```lean
-  game_trans (hybridGame adversary 1)
-  · -- prove hybridGame 0 ≡ₚ hybridGame 1
+  game_trans (hybrid adversary 1)
+  · -- prove hybrid 0 =ᵈ hybrid 1
     by_equiv
     ...
-  · game_trans (hybridGame adversary 2)
+  · game_trans (hybrid adversary 2)
     · ...
 ```
 
@@ -113,19 +115,23 @@ Show that DDH-real corresponds to hybrid k and DDH-random corresponds to hybrid 
 
 From `Examples/OneTimePad/Basic.lean` — the canonical complete proof.
 
-**Setup**: OTP encrypts by XOR with a random key.
+**Setup**: OTP encrypts by XOR with a uniformly random `BitVec` key.
 
 ```lean
-def OTP_keyGen : ProbComp (Fin n → Bool) := $ᵗ (Fin n → Bool)
-def OTP_encrypt (k m : Fin n → Bool) : ProbComp (Fin n → Bool) := pure (k + m)
+def oneTimePad (sp : ℕ) :
+    SymmEncAlg ProbComp (BitVec sp) (BitVec sp) (BitVec sp) :=
+  oneTimePadOfKeygen sp ($ᵗ BitVec sp)   -- encrypt k m := return k ^^^ m
 ```
 
 **Privacy proof sketch**:
-1. The ciphertext `c = k + m` where `k` is uniform
-2. By group theory, `k + m` is uniform for any fixed `m`
-3. So `Pr[= c | encrypt k m₁] = Pr[= c | encrypt k m₂]` for all `c`
+1. The ciphertext is `c = k ^^^ m` where `k` is uniform
+2. XOR with a fixed `m` is a bijection, so `k ^^^ m` is uniform for every `m`
+3. So every message has the same ciphertext measure, `uniformOn Set.univ`, and the rows are
+   equal in distribution (`=ᵈ`)
 
-**Key technique**: `probOutput_map_injective` — if the encryption map is injective (which XOR is), the probability is preserved.
+**Key technique**: `evalDist_xor_uniformSample` (`VCVio/OracleComp/Constructions/BitVec.lean`)
+computes `𝒟[(· ^^^ msg) <$> $ᵗ BitVec sp] = uniformOn Set.univ`; `EvalDistEq.of_evalDist_eq`
+turns the equal measures into `=ᵈ`.
 
 ## Worked Example: ElGamal IND-CPA
 
@@ -133,10 +139,10 @@ From `Examples/ElGamal/Basic.lean` — multi-query security via the generic one-
 
 **Key patterns used**:
 - Define ElGamal correctness and the one-time DDH bridge.
-- Prove the one-time signed advantage identity against DDH.
-- Instantiate `AsymmEncAlg.IND_CPA_Advantage_le_two_mul_q_mul_of_oneTime_signedAdvantageReal_bound`.
-- Final bound: `IND_CPA_Advantage ≤ 2 * (q * 2ε)`, where `IND_CPA_Advantage` is the Boolean bias
-  `2 * |Pr[win] - 1/2|` of the oracle IND-CPA experiment.
+- Prove that the one-time advantage is twice the DDH advantage of the reduction.
+- Instantiate `AsymmEncAlg.IND_CPA_Advantage_le_mul_of_oneTime_bound`.
+- Final bound: `IND_CPA_Advantage ≤ q * (2 * ε)`, where `IND_CPA_Advantage` is the Boolean bias
+  `Measure.boolBias` of the oracle IND-CPA game `AsymmEncAlg.IND_CPA_Game`.
 
 For tactic-heavy hybrid proofs, use the generic recipe above or the focused
 examples under `Examples/ProgramLogic/`.
@@ -146,7 +152,7 @@ examples under `Examples/ProgramLogic/`.
 ### `by_equiv` + relational decomposition
 
 ```lean
--- Goal: g₁ ≡ₚ g₂
+-- Goal: g₁ =ᵈ g₂
 by_equiv                    -- now: ⟪g₁ ~ g₂ | EqRel α⟫
 rvcstep using R         -- if needed, provide the bind cut relation
 · rvcstep using f       -- couples the sampling step with a bijection
@@ -193,8 +199,8 @@ rvcstep using S as ⟨a1, a2, hrel⟩
 ### `vcstep` on probability equalities
 
 ```lean
--- Goal: Pr[= true | do let x ← $ᵗ P; let b ← $ᵗ Bool; f x b]
---     = Pr[= true | do let b ← $ᵗ Bool; let x ← $ᵗ P; f x b]
+-- Goal: Pr{x ← $ᵗ P; b ← $ᵗ Bool; z ← f x b}[z = true]
+--     = Pr{b ← $ᵗ Bool; x ← $ᵗ P; z ← f x b}[z = true]
 vcstep                -- closes the goal automatically
 ```
 
@@ -304,7 +310,7 @@ set_option vcvio.vcgen.traceSteps true in
 ```lean
 -- Goal: AdvBound game ε
 by_dist                     -- enters TV distance mode
--- now need to show tvDist ... ≤ ε
+-- now need to show measureETVDist ... ≤ ε
 ```
 
 ```lean
@@ -317,18 +323,16 @@ by_dist ε₂
 When a goal mentions `simulateQ` of a `QueryImpl` wrapper from `QueryTracking/`
 (`countingOracle`, `loggingOracle`, `withCost`, `withLogging`, `withTraceBefore`, etc.) or
 any custom wrapper built on `preInsert` / `postInsert`, **prefer the generic bridge lemmas
-from `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions.lean` over re-proving the
+from `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean` over re-proving the
 specific instance.** The bridges are parameterised over a projection
 `proj : ∀ {γ}, n γ → m γ` (typically `Prod.fst <$> WriterT.run ·` for a writer-style
-wrapper, or `(·.run s) >>= ...` for a state-style wrapper), and they exist for every
-distribution-side observable:
+wrapper, or `(·.run s) >>= ...` for a state-style wrapper). The projection equation is an
+equality of computations, so output measures `𝒟[…]` and events `Pr{…}[…]` transfer by
+rewriting with it:
 
 | Lemma family | What it gives you |
 |---|---|
 | `proj_simulateQ_preInsert` / `proj_simulateQ_postInsert` | Strip the instrumentation: `proj (simulateQ (so.preInsert nx) oa) = simulateQ so oa`. |
-| `probFailure_proj_simulateQ_*` | Failure probability is preserved by the wrapper. |
-| `NeverFail_proj_simulateQ_*_iff` | `NeverFail` lifts through the wrapper iff it holds on the base. |
-| `evalSPMF_proj_simulateQ_*` / `probOutput_proj_simulateQ_*` | Output-marginal distribution / probability is unchanged. |
 | `support_proj_simulateQ_*` / `finSupport_proj_simulateQ_*` | Output-marginal support / `Finset` support is unchanged. |
 | `simulateQ_preInsert.induct` / `simulateQ_postInsert.induct` (`@[elab_as_elim]`) | Induction principle parametric in the projection — useful when the bridges above are too rigid. |
 
@@ -336,10 +340,10 @@ For query-bound transfer through a wrapper, see
 `isTotalQueryBound_simulateQ_preInsert` / `…_postInsert` (and the predicated
 `IsQueryBoundP` versions) in `QueryTracking/QueryBound.lean`.
 
-If you find yourself writing an inductive proof that "running my wrapper preserves
-`probOutput`" and the wrapper is built on `preInsert` / `postInsert`, the proof is almost
-certainly already a one-line specialisation of `probOutput_proj_simulateQ_preInsert` (or
-its `postInsert` sibling) with the right projection. Reach for the bridge before reaching
+If you find yourself writing an inductive proof that "running my wrapper preserves the
+output measure" and the wrapper is built on `preInsert` / `postInsert`, the proof is almost
+certainly a one-line rewrite with `proj_simulateQ_preInsert` (or its `postInsert` sibling)
+under the right projection. Reach for the bridge before reaching
 for `OracleComp.inductionOn`.
 
 ## Asymptotic Security Reductions
@@ -411,14 +415,14 @@ before changing definitions or tactics for eRHL, pRHL, or apRHL.
 ### "typeclass instance problem ... HasQuery spec ?m" or "Monad (OracleQuery spec)"
 After the `HasQuery` cutover, the bare `query t` is `HasQuery.query t` and needs an expected type so Lean can pick the ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form `spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting `OracleQuery.cont`).
 
-### "failed to synthesize ... MonadLiftT (OracleComp spec) SPMF"
-For `OracleComp spec`, add `[IsProbabilitySpec spec]` when you need `evalSPMF` or `Pr[...]`. Add `[IsUniformSpec spec]` when you need uniform/cardinality facts or lemmas relating `support` to nonzero probability. If you have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and intend uniform semantics, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
+### "failed to synthesize ... OracleSpec.IsMeasureSpec spec"
+For `OracleComp spec`, add answer measures with `[OracleSpec.IsMeasureSpec spec]` when you need `𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers and cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec`. `𝒟[...]` also needs a `MeasurableSpace` on the result type.
 
 ### Universe mismatch around `SubSpec`
-`OracleComp` has 3 universe parameters, `SubSpec` has 6. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
+`OracleComp` has 3 universe parameters, `SubSpec` has 3. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
 
-### `simp` makes no progress on `probOutput`
-`probOutput_bind_eq_tsum` is `@[grind =]` but not `@[simp]`. Use `rw [probOutput_bind_eq_tsum]` or `grind` instead of `simp`.
+### `simp` does not integrate an event over a bind
+`prEvent_bind_eq_lintegral` is not a `simp` lemma. Use `rw [prEvent_bind_eq_lintegral_of_discrete]` when the common draw has a discrete measurable space, or `prEvent_bind_eq_lintegral` with a measurability proof for the continuation.
 
 ### Aggressive unfolding of `OracleComp`
 Core types are `@[reducible]`. Lean may unfold `OracleComp` to `PFunctor.FreeM`. Use `OracleComp.inductionOn` as the canonical eliminator, not pattern matching on `PFunctor.FreeM.pure`/`roll`.

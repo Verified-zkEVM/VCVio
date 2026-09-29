@@ -166,7 +166,7 @@ instance optionT.instIsProbabilityMeasure [EvalDistSemantics m]
   rw [optionT_evalDist, Measure.dropNone_eq_comap_some, ← OptionT.evalDist_eq_comap_some]
   infer_instance
 
-/-- Bundle the effect-native successful-output semantics of `ExceptT`. Errors remain observable
+/-- Bundle the successful-output semantics of `ExceptT`. Errors remain observable
 in the run measure and are discarded only by the `Except.ok` observation at this boundary. -/
 @[expose]
 protected noncomputable def exceptT (ε : Type u) [MeasurableSpace ε]

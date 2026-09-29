@@ -33,7 +33,7 @@ Uses `AddWriterT` (defined in `ToMathlib.Control.WriterT`) for additive cost acc
 
 - `fst_map_costDist`: Cost instrumentation doesn't change the output distribution.
 - `expectedCost_pure`: Expected cost of a pure computation is `0`.
-- `probEvent_cost_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
+- `prEvent_costDist_gt_le_expectedCost_div`: Markov's inequality for cost distributions.
 -/
 
 @[expose] public section
@@ -99,8 +99,7 @@ theorem fst_map_costDist [AddCommMonoid ω] (oa : OracleComp spec α) (cm : Cost
 section ExpectedCost
 
 variable [AddCommMonoid ω] [MeasurableSpace ω]
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+variable [IsMeasureSpec spec]
 
 /-- The expected total cost of `oa` under cost model `cm`, valued by `val : ω → ℝ≥0∞`.
 Computed as the Lebesgue integral `∫⁻ (x, c), val c ∂𝒟[costDist oa cm]`.
@@ -168,8 +167,7 @@ theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
 section CostBounds
 
 variable [AddCommMonoid ω] [MeasurableSpace ω]
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+variable [IsMeasureSpec spec]
 
 /-- The expected cost of `oa` under `cm` (valued by `val`) is at most `bound`. -/
 def ExpectedCostBound (oa : OracleComp spec α) (cm : CostModel spec ω)
@@ -187,7 +185,7 @@ theorem WorstCaseCostBound.toExpectedCostBound [Preorder ω]
 
 /-- **Markov's inequality for cost distributions** (multiplication form).
 The probability that the valued cost exceeds `t`, times `t`, is at most `expectedCost`. -/
-theorem probEvent_cost_gt_mul_le_expectedCost
+theorem prEvent_costDist_gt_mul_le_expectedCost
     (oa : OracleComp spec α) (cm : CostModel spec ω)
     (val : ω → ℝ≥0∞) (hval : Measurable val) (t : ℝ≥0∞) :
     Pr{let z ← costDist oa cm}[t < val (Multiplicative.toAdd z.2)] * t ≤
@@ -196,13 +194,13 @@ theorem probEvent_cost_gt_mul_le_expectedCost
     AddWriterT.prEvent_cost_gt_mul_le_expectedCost (instrumentedRun oa cm) hval t
 
 /-- **Markov's inequality for cost distributions** (division form). -/
-theorem probEvent_cost_gt_le_expectedCost_div
+theorem prEvent_costDist_gt_le_expectedCost_div
     (oa : OracleComp spec α) (cm : CostModel spec ω) (val : ω → ℝ≥0∞) (hval : Measurable val)
     (t : ℝ≥0∞) (ht : 0 < t) (ht' : t ≠ ⊤) :
     Pr{let z ← costDist oa cm}[t < val (Multiplicative.toAdd z.2)] ≤
       expectedCost oa cm val / t :=
   (ENNReal.le_div_iff_mul_le (.inl ht.ne') (.inl ht')).mpr
-    (probEvent_cost_gt_mul_le_expectedCost oa cm val hval t)
+    (prEvent_costDist_gt_mul_le_expectedCost oa cm val hval t)
 
 end CostBounds
 
@@ -340,8 +338,7 @@ theorem IsPerIndexQueryBound.toWorstCaseCostBound_unit_sum
 worst-case bound `toWorstCaseCostBound_unit_sum`. -/
 theorem IsPerIndexQueryBound.toExpectedCostBound_unit_sum
     [DecidableEq ι] [Fintype ι]
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [IsMeasureSpec spec]
+    [IsMeasureSpec spec]
     {oa : OracleComp spec α} {qb : ι → ℕ}
     (h : IsPerIndexQueryBound oa qb) :
     ExpectedCostBound oa CostModel.unit (fun n => (n : ENNReal)) (∑ i, qb i) := by

@@ -6,218 +6,129 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
-public import VCVio.EvalDist.Prod
-public import VCVio.OracleComp.ProbComp
+public import VCVio.EvalDist.Monad.Measure
+public import VCVio.EvalDist.EvalDistEq
+public import ToMathlib.Probability.UniformOn
+public import ToMathlib.MeasureTheory.Measure.Option
 
 /-!
 # Symmetric Encryption Schemes
 
-This file gives the discrete-probability-facing correctness and perfect-secrecy predicates for
-`SymmEncAlg m M K C`.
+This file gives the correctness and perfect-secrecy predicates for `SymmEncAlg m M K C`, stated
+with the output measures `𝒟[…]` of the ambient monad.
 
 The struct follows the same pattern as `AsymmEncAlg`, `KEMScheme`, `MacAlg`, etc.: it is
 parameterized by an ambient monad `m` and uses plain `Type` parameters. Asymptotic security
 statements are expressed externally by quantifying over a family
 `(sp : ℕ) → SymmEncAlg m (M sp) (K sp) (C sp)`.
 
-Perfect secrecy is captured by `perfectSecrecyAt` (the canonical independence form), with
-equivalent formulations `perfectSecrecyPosteriorEqPriorAt` (cross-multiplied posterior/prior
-form) and `perfectSecrecyJointFactorizationAt` (factorization with named marginals); the
-`_iff_` lemmas record the equivalences. `perfectSecrecyAtAllPriors` is the strong PMF-level
-quantification, equivalent to `ciphertextRowsEqualAt` over finite message spaces.
+Perfect secrecy has two forms. `ciphertextRowsEqualAt` is the channel form: every message induces
+the same ciphertext measure. `perfectSecrecyAt` is the independence form: for every lossless
+message sampler, the joint message/ciphertext measure is the product of its marginals. Equal rows
+imply independence (`perfectSecrecyAt_of_ciphertextRowsEqualAt`), and Shannon's theorem
+(`ciphertextRowsEqualAt_of_uniformKey_of_bijective`) derives equal, uniform rows from a uniform key
+and deterministic encryption that is bijective in the key.
 -/
 
 @[expose] public section
 
 universe u
 
-open OracleComp ENNReal
+open MeasureTheory ProbabilityTheory
 
 namespace SymmEncAlg
 
-variable {m : Type → Type u} [Monad m] {M K C : Type}
+variable {m : Type → Type u} [Monad m] [EvalDistSemantics m] {M K C : Type}
 
 /-- An encryption scheme is complete if decryption recovers every message with
-probability `1`. -/
-def Complete [MonadLiftT m PMF] [LawfulMonadLiftT m PMF] (encAlg : SymmEncAlg m M K C) : Prop :=
-  ∀ msg : M, Pr[= msg | encAlg.CompleteExp msg] = 1
+probability `1`: each round trip denotes the Dirac measure at the input message. Messages carry
+the discrete measurable structure, so the round trip is determined on every event. -/
+def Complete (encAlg : SymmEncAlg m M K C) : Prop :=
+  letI : MeasurableSpace M := ⊤
+  ∀ msg : M, 𝒟[encAlg.completenessExperiment msg] = Measure.dirac (some msg)
 
-section perfectSecrecy
-
-variable [MonadLiftT m PMF]
-
-lemma probOutput_PerfectSecrecyExp_eq_mul_cipherGivenMsg [LawfulMonadLiftT m PMF] [LawfulMonad m]
-    (encAlg : SymmEncAlg m M K C) (mgen : m M) (msg : M) (σ : C) :
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
-      Pr[= msg | mgen] *
-      Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg] := by
-  have : DecidableEq M := Classical.decEq M
-  rw [encAlg.PerfectSecrecyExp_eq_bind mgen, probOutput_bind_eq_tsum,
-    tsum_eq_single msg fun msg' hmsg' => by simp [Ne.symm hmsg']]
-  simp
-
-lemma probOutput_PerfectSecrecyCipherExp_eq_tsum [LawfulMonadLiftT m PMF] [LawfulMonad m]
-    (encAlg : SymmEncAlg m M K C) (mgen : m M) (σ : C) :
-    Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen] =
-      ∑' msg : M,
-        Pr[= msg | mgen] *
-        Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg] := by
-  rw [encAlg.PerfectSecrecyCipherExp_eq_bind mgen, probOutput_bind_eq_tsum]
-
-/-- Strong perfect secrecy: ciphertexts are independent of messages
-for every prior distribution on messages (PMF-level quantification). -/
-def perfectSecrecyAtAllPriors (encAlg : SymmEncAlg m M K C) : Prop :=
-  ∀ (μ : PMF M) (msg : M) (σ : C),
-    let row := fun x : M => Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp x]
-    μ msg * row msg = μ msg * (∑' x : M, μ x * row x)
-
-/-- Equivalent channel-style formulation: every message induces the same ciphertext
+/-- Channel form of perfect secrecy: every message induces ciphertexts with the same
 distribution. -/
 def ciphertextRowsEqualAt (encAlg : SymmEncAlg m M K C) : Prop :=
-  ∀ (msg₀ msg₁ : M) (σ : C),
-    Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg₀] =
-      Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg₁]
+  ∀ msg₀ msg₁ : M,
+    encAlg.perfectSecrecyCipherGivenMsgExperiment msg₀ =ᵈ
+      encAlg.perfectSecrecyCipherGivenMsgExperiment msg₁
 
-/-- Over a finite message space, strong perfect secrecy is equivalent to all ciphertext
-rows being equal. -/
-theorem perfectSecrecyAtAllPriors_iff_ciphertextRowsEqualAt
-    (encAlg : SymmEncAlg m M K C) [Finite M] :
-    encAlg.perfectSecrecyAtAllPriors ↔ encAlg.ciphertextRowsEqualAt := by
-  have : Fintype M := Fintype.ofFinite M
-  constructor
-  · intro hAll msg₀ msg₁ σ
-    have : Nonempty M := ⟨msg₀⟩
-    let μ : PMF M := PMF.uniformOfFintype M
-    let row := fun x : M => Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp x]
-    have key : ∀ x : M, (Fintype.card M : ℝ≥0∞)⁻¹ * row x =
-        (Fintype.card M : ℝ≥0∞)⁻¹ * ∑' y : M, μ y * row y := fun x => by
-      simpa [perfectSecrecyAtAllPriors, μ, row, PMF.uniformOfFintype_apply] using hAll μ x σ
-    exact (ENNReal.mul_right_inj (ENNReal.inv_ne_zero.2 (by simp))
-      (ENNReal.inv_ne_top.2 (by exact_mod_cast Fintype.card_ne_zero))).1
-      ((key msg₀).trans (key msg₁).symm)
-  · intro hRows μ msg σ
-    simp only [hRows _ msg σ, ENNReal.tsum_mul_right, μ.tsum_coe, one_mul]
-
-/-- Standard perfect secrecy expressed as independence:
-`Pr[(M, C)] = Pr[M] * Pr[C]`. -/
+/-- Standard perfect secrecy expressed as independence: for every lossless message sampler, the
+joint message/ciphertext measure is the product of the message and ciphertext marginals.
+Messages and ciphertexts carry the discrete measurable structure. -/
 def perfectSecrecyAt (encAlg : SymmEncAlg m M K C) : Prop :=
-  ∀ (mgen : m M) (msg : M) (σ : C),
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
-      Pr[= msg | mgen] * Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen]
+  letI : MeasurableSpace M := ⊤
+  let : MeasurableSpace C := ⊤
+  ∀ mgen : m M, IsProbabilityMeasure 𝒟[mgen] →
+    𝒟[encAlg.perfectSecrecyExperiment mgen] =
+      𝒟[mgen].prod 𝒟[encAlg.perfectSecrecyCipherExperiment mgen]
 
-/-- Posterior-equals-prior form, written in cross-multiplied form to avoid division. -/
-def perfectSecrecyPosteriorEqPriorAt (encAlg : SymmEncAlg m M K C) : Prop :=
-  ∀ (mgen : m M) (msg : M) (σ : C),
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
-      Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen] * Pr[= msg | mgen]
+variable [LawfulEvalDistSemantics m]
 
-/-- Joint-factorization form (same mathematical statement as independence, with explicit
-named priors/marginals). -/
-def perfectSecrecyJointFactorizationAt (encAlg : SymmEncAlg m M K C) : Prop :=
-  ∀ (mgen : m M) (msg : M) (σ : C),
-    Pr[= (msg, σ) | encAlg.PerfectSecrecyExp mgen] =
-      Pr[= msg | mgen] * Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen]
+section rows
 
-lemma perfectSecrecyAt_iff_posteriorEqPriorAt (encAlg : SymmEncAlg m M K C) :
-    encAlg.perfectSecrecyAt ↔ encAlg.perfectSecrecyPosteriorEqPriorAt := by
-  simp [perfectSecrecyAt, perfectSecrecyPosteriorEqPriorAt, mul_comm]
+variable [LawfulMonad m] [MeasurableSpace M] [DiscreteMeasurableSpace M] [MeasurableSpace C]
 
-lemma perfectSecrecyAt_iff_jointFactorizationAt (encAlg : SymmEncAlg m M K C) :
-    encAlg.perfectSecrecyAt ↔ encAlg.perfectSecrecyJointFactorizationAt := Iff.rfl
+/-- When every row is the same ciphertext measure, the ciphertext marginal of a lossless message
+sampler is that row. -/
+theorem evalDist_perfectSecrecyCipherExperiment_of_rows (encAlg : SymmEncAlg m M K C)
+    (mgen : m M) [IsProbabilityMeasure 𝒟[mgen]] (row : Measure C)
+    (hrow : ∀ msg, 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg] = row) :
+    𝒟[encAlg.perfectSecrecyCipherExperiment mgen] = row := by
+  rw [encAlg.perfectSecrecyCipherExperiment_eq_bind mgen, evalDist_bind_of_discrete]
+  simp only [hrow, Measure.bind_const, measure_univ, one_smul]
 
-/-- Core uniformity lemma: uniform keygen plus unique key per (message, ciphertext) pair
-implies every (message, ciphertext) conditional has probability `(card K)⁻¹`.
-Both Shannon theorems follow from this. -/
-theorem cipherGivenMsg_uniform_of_uniformKey_of_uniqueKey [LawfulMonadLiftT m PMF] [MonadAttach m]
-    [EvalDistCompatible m]
-    (encAlg : SymmEncAlg m M K C) [Fintype K]
-    (deterministicEnc : ∀ (k : K) (msg : M),
-      ∃ c, support (encAlg.encrypt k msg) = {c})
-    (hKeyUniform : ∀ k : K, Pr[= k | encAlg.keygen] =
-        (Fintype.card K : ℝ≥0∞)⁻¹)
-    (hUniqueKey : ∀ msg : M, ∀ c : C, ∃! k : K,
-        k ∈ support encAlg.keygen ∧
-        c ∈ support (encAlg.encrypt k msg))
-    (msg : M) (σ : C) :
-    Pr[= σ | encAlg.PerfectSecrecyCipherGivenMsgExp msg] =
-      (Fintype.card K : ℝ≥0∞)⁻¹ := by
-  obtain ⟨k0, hk0, hk0uniq⟩ := hUniqueKey msg σ
-  have henc_one : Pr[= σ | encAlg.encrypt k0 msg] = 1 := by
-    obtain ⟨c0, hc0⟩ := deterministicEnc k0 msg
-    obtain rfl : σ = c0 := by simpa [hc0] using hk0.2
-    exact probOutput_eq_one_iff.2 ⟨probFailure_of_liftM_PMF _, by simpa using hc0⟩
-  simp only [PerfectSecrecyCipherGivenMsgExp, probOutput_bind_eq_tsum]
-  rw [tsum_eq_single k0 fun k hkne => mul_eq_zero.2 <|
-    (not_and_or.1 fun h => hkne (hk0uniq k h)).imp
-      probOutput_eq_zero_of_not_mem_support probOutput_eq_zero_of_not_mem_support]
-  simp [hKeyUniform k0, henc_one]
+end rows
 
-theorem ciphertextRowsEqualAt_of_uniformKey_of_uniqueKey [LawfulMonadLiftT m PMF] [MonadAttach m]
-    [EvalDistCompatible m]
-    (encAlg : SymmEncAlg m M K C) [Fintype K]
-    (deterministicEnc : ∀ (k : K) (msg : M),
-      ∃ c, support (encAlg.encrypt k msg) = {c})
-    (hKeyUniform : ∀ k : K, Pr[= k | encAlg.keygen] =
-        (Fintype.card K : ℝ≥0∞)⁻¹)
-    (hUniqueKey : ∀ msg : M, ∀ c : C, ∃! k : K,
-        k ∈ support encAlg.keygen ∧
-        c ∈ support (encAlg.encrypt k msg)) :
-    encAlg.ciphertextRowsEqualAt := by
-  intro msg₀ msg₁ σ
-  rw [encAlg.cipherGivenMsg_uniform_of_uniformKey_of_uniqueKey
-        deterministicEnc hKeyUniform hUniqueKey msg₀ σ,
-      encAlg.cipherGivenMsg_uniform_of_uniformKey_of_uniqueKey
-        deterministicEnc hKeyUniform hUniqueKey msg₁ σ]
-
-/-- Constructive Shannon direction: if keygen is uniform and each `(message, ciphertext)`
-pair is realized by a unique key in support, then perfect secrecy holds.
-
-`deterministicEnc` asserts encryption is deterministic in distribution
-(singleton support for each fixed `(key, message)`). -/
-theorem perfectSecrecyAt_of_uniformKey_of_uniqueKey [LawfulMonadLiftT m PMF] [MonadAttach m]
-    [EvalDistCompatible m] [LawfulMonad m]
-    (encAlg : SymmEncAlg m M K C)
-    [Fintype K]
-    (deterministicEnc : ∀ (k : K) (msg : M),
-      ∃ c, support (encAlg.encrypt k msg) = {c}) :
-    ((∀ k : K, Pr[= k | encAlg.keygen] =
-        (Fintype.card K : ℝ≥0∞)⁻¹) ∧
-    (∀ msg : M, ∀ c : C, ∃! k : K,
-        k ∈ support encAlg.keygen ∧
-        c ∈ support (encAlg.encrypt k msg))) →
+/-- Equal ciphertext rows imply perfect secrecy in the independence form. -/
+theorem perfectSecrecyAt_of_ciphertextRowsEqualAt [LawfulMonad m] [Nonempty M]
+    (encAlg : SymmEncAlg m M K C) (hrows : encAlg.ciphertextRowsEqualAt) :
     encAlg.perfectSecrecyAt := by
-  intro ⟨hKeyUniform, hUniqueKey⟩
-  have hCipherGiven_uniform := encAlg.cipherGivenMsg_uniform_of_uniformKey_of_uniqueKey
-    deterministicEnc hKeyUniform hUniqueKey
-  have hCipher_uniform : ∀ (mgen : m M) (σ : C),
-      Pr[= σ | encAlg.PerfectSecrecyCipherExp mgen] = (Fintype.card K : ℝ≥0∞)⁻¹ := by
-    intro mgen σ
-    rw [encAlg.probOutput_PerfectSecrecyCipherExp_eq_tsum mgen σ]
-    simp_rw [hCipherGiven_uniform _ σ, ENNReal.tsum_mul_right,
-      tsum_probOutput_of_liftM_PMF mgen, one_mul]
-  intro mgen msg σ
-  rw [encAlg.probOutput_PerfectSecrecyExp_eq_mul_cipherGivenMsg mgen msg σ,
-    hCipherGiven_uniform msg σ, hCipher_uniform mgen σ]
+  let : MeasurableSpace M := ⊤
+  let : MeasurableSpace C := ⊤
+  intro mgen hmgen
+  let row := 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment (Classical.arbitrary M)]
+  have hrow : ∀ msg, 𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg] = row :=
+    fun msg ↦ (hrows msg _).evalDist_eq
+  rw [evalDist_perfectSecrecyCipherExperiment_of_rows encAlg mgen row hrow,
+    encAlg.perfectSecrecyExperiment_eq_bind mgen, evalDist_bind_of_discrete, Measure.prod_def]
+  refine Measure.bind_congr_right (Filter.Eventually.of_forall fun msg ↦ ?_)
+  dsimp only
+  rw [evalDist_map _ measurable_prodMk_left, hrow]
 
-/-- Constructive Shannon direction for all priors: uniform keys plus uniqueness
-imply perfect secrecy for all prior distributions on messages. -/
-theorem perfectSecrecyAtAllPriors_of_uniformKey_of_uniqueKey [LawfulMonadLiftT m PMF]
-    [MonadAttach m] [EvalDistCompatible m]
-    (encAlg : SymmEncAlg m M K C)
-    [Finite M] [Fintype K]
-    (deterministicEnc : ∀ (k : K) (msg : M),
-      ∃ c, support (encAlg.encrypt k msg) = {c}) :
-    ((∀ k : K, Pr[= k | encAlg.keygen] =
-        (Fintype.card K : ℝ≥0∞)⁻¹) ∧
-    (∀ msg : M, ∀ c : C, ∃! k : K,
-        k ∈ support encAlg.keygen ∧
-        c ∈ support (encAlg.encrypt k msg))) →
-    encAlg.perfectSecrecyAtAllPriors := by
-  intro ⟨hKeyUniform, hUniqueKey⟩
-  exact (encAlg.perfectSecrecyAtAllPriors_iff_ciphertextRowsEqualAt).2
-    (encAlg.ciphertextRowsEqualAt_of_uniformKey_of_uniqueKey
-      deterministicEnc hKeyUniform hUniqueKey)
+/-- **Shannon's theorem.** If the key is uniform and encryption is deterministic and bijective in
+the key for each message, then every ciphertext row is uniform. -/
+theorem evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijective
+    [MeasurableSpace K] [DiscreteMeasurableSpace K] [MeasurableSingletonClass K]
+    [MeasurableSpace C] [MeasurableSingletonClass C]
+    [Finite K] [Finite C] [Nonempty K] [Nonempty C]
+    (encAlg : SymmEncAlg m M K C) (enc : K → M → C)
+    (hkey : 𝒟[encAlg.keygen] = uniformOn Set.univ)
+    (henc : ∀ k msg, 𝒟[encAlg.encrypt k msg] = Measure.dirac (enc k msg))
+    (hbij : ∀ msg, Function.Bijective fun k ↦ enc k msg) (msg : M) :
+    𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg] = uniformOn Set.univ := by
+  rw [perfectSecrecyCipherGivenMsgExperiment, evalDist_bind_of_discrete, hkey]
+  simp only [henc]
+  rw [Measure.bind_dirac_eq_map _ Measurable.of_discrete]
+  exact map_uniformOn_univ_of_bijective Measurable.of_discrete (hbij msg)
 
-end perfectSecrecy
+/-- **Shannon's theorem**, channel form: a uniform key and deterministic encryption that is
+bijective in the key give equal ciphertext rows. -/
+theorem ciphertextRowsEqualAt_of_uniformKey_of_bijective [LawfulMonad m]
+    [MeasurableSpace K] [DiscreteMeasurableSpace K] [MeasurableSingletonClass K]
+    [hC : MeasurableSpace C] [DiscreteMeasurableSpace C]
+    [Finite K] [Finite C] [Nonempty K] [Nonempty C]
+    (encAlg : SymmEncAlg m M K C) (enc : K → M → C)
+    (hkey : 𝒟[encAlg.keygen] = uniformOn Set.univ)
+    (henc : ∀ k msg, 𝒟[encAlg.encrypt k msg] = Measure.dirac (enc k msg))
+    (hbij : ∀ msg, Function.Bijective fun k ↦ enc k msg) :
+    encAlg.ciphertextRowsEqualAt := by
+  intro msg₀ msg₁
+  refine EvalDistEq.of_evalDist_eq ?_
+  rw [evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijective encAlg enc
+      hkey henc hbij msg₀,
+    evalDist_perfectSecrecyCipherGivenMsgExperiment_of_uniformKey_of_bijective encAlg enc
+      hkey henc hbij msg₁]
 
 end SymmEncAlg

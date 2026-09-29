@@ -8,8 +8,10 @@ module
 
 public import VCVio.ProgramLogic.Tactics.Unary
 public import VCVio.ProgramLogic.Unary.SimulateQ
-public import VCVio.OracleComp.Constructions.Replicate
-public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.ReplicateMeasure
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
 
 /-!
 # Unary VCGen Step Examples
@@ -31,8 +33,7 @@ open scoped OracleComp.ProgramLogic
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformMeasureSpec spec]
+variable [OracleSpec.IsUniformMeasureSpec spec]
 variable {α β : Type}
 
 /-! ## Notation examples -/
@@ -351,7 +352,7 @@ example [SampleableType α] (post : α → ℝ≥0∞) :
 
 example (impl : QueryImpl spec (OracleComp spec))
     (hImpl : ∀ (t : spec.Domain),
-      𝒟[impl t] = 𝒟[(query t : OracleComp spec (spec.Range t))])
+      impl t =ᵈ (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t)))
     (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦simulateQ impl oa⟧ post = wp⟦oa⟧ post := by
   simpa using OracleComp.ProgramLogic.wp_simulateQ_eq impl hImpl oa post
@@ -442,9 +443,7 @@ example :
 section LiftComp
 
 variable {ι' : Type} {superSpec : OracleSpec ι'}
-variable [∀ t, MeasurableSpace (superSpec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (superSpec.Range t)]
-  [OracleSpec.IsUniformMeasureSpec superSpec]
+variable [OracleSpec.IsUniformMeasureSpec superSpec]
 variable [h : spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) :

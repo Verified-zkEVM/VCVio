@@ -9,7 +9,7 @@ public import LatticeCrypto.Falcon.Primitives
 public import VCVio.CryptoFoundations.GPVHashAndSign
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
-public import VCVio.OracleComp.Coercions.Add
+public import VCVio.OracleComp.Coercions.Add.Basic
 
 /-!
 # Falcon Signature Scheme

@@ -240,15 +240,16 @@ theorem bad_local (q : (UnlinkOracleSpec TagId Nonce Digest).Domain)
 
 variable [Fintype Nonce] [Fintype Digest] [NeZero sessionsPerTag]
 
-/-- The list-cached FIFO experiment satisfies the direct-coupling bound with all three losses. -/
-theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
+/-- The list-cached FIFO experiment satisfies the direct-coupling bound, for either verdict `out`,
+with all three losses. -/
+theorem preserved_bound (out : Bool) (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : Nat)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
     𝒟[Network.verdict (multiple (sessionsPerTag := sessionsPerTag))
-      (qReader + qTag) adversary (UnlinkState.init, [])] {true} ≤
+      (qReader + qTag) adversary (UnlinkState.init, [])] {out} ≤
     𝒟[Network.verdict (single (sessionsPerTag := sessionsPerTag))
-      (qReader + qTag) adversary (UnlinkState.init, [])] {true} +
+      (qReader + qTag) adversary (UnlinkState.init, [])] {out} +
     𝒟[Network.stateEvent (bad (sessionsPerTag := sessionsPerTag))
       (qReader + qTag) adversary ((UnlinkState.init, []), UnlinkBadState.init)
       (fun state => state.2.bad)] {true} +
@@ -256,38 +257,6 @@ theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
     ((qReader * qTag : Nat) : ENNReal) / (Fintype.card Nonce : ENNReal) +
     ((qReader * Fintype.card TagId * sessionsPerTag : Nat) : ENNReal) /
       (Fintype.card Digest : ENNReal) := by
-  let : Countable (UnlinkState TagId) :=
-    Function.Injective.countable (f := UnlinkState.sessionsUsed)
-      (by rintro ⟨a⟩ ⟨b⟩ h; cases h; rfl)
-  let : Countable (TagTranscript Nonce Digest) :=
-    Function.Injective.countable
-      (f := fun t : TagTranscript Nonce Digest => (t.nonce, t.auth))
-      (by rintro ⟨a, b⟩ ⟨a', b'⟩ h; cases Prod.mk.inj h; simp_all)
-  let : Countable (UnlinkBadState TagId Nonce Digest) :=
-    Function.Injective.countable
-      (f := fun s : UnlinkBadState TagId Nonce Digest =>
-        (s.sessionsUsed, s.responses, s.bad, s.cacheBad))
-      (by rintro ⟨a, b, c, d⟩ ⟨a', b', c', d'⟩ h; cases Prod.mk.inj h; simp_all)
-  let : Countable ReaderReply :=
-    Function.Injective.countable (f := ReaderReply.accepts)
-      (by intro a b h; cases a <;> cases b <;> simp_all [ReaderReply.accepts])
-  let (q : (UnlinkOracleSpec TagId Nonce Digest).Domain) :
-      Countable ((UnlinkOracleSpec TagId Nonce Digest).Range q) := by
-    cases q <;> dsimp [UnlinkOracleSpec] <;> infer_instance
-  let (q : (UnlinkOracleSpec TagId Nonce Digest).Domain) :
-      MeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range q) := ⊤
-  let (q : (UnlinkOracleSpec TagId Nonce Digest).Domain) :
-      DiscreteMeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range q) :=
-    ⟨fun _ => trivial⟩
-  let : MeasurableSpace (Network.MultipleServiceState TagId Nonce Digest) := ⊤
-  let : DiscreteMeasurableSpace (Network.MultipleServiceState TagId Nonce Digest) :=
-    ⟨fun _ => trivial⟩
-  let : MeasurableSpace (Network.SingleServiceState TagId Nonce Digest sessionsPerTag) := ⊤
-  let : DiscreteMeasurableSpace (Network.SingleServiceState TagId Nonce Digest sessionsPerTag) :=
-    ⟨fun _ => trivial⟩
-  let : MeasurableSpace (MultipleBadState TagId Nonce Digest sessionsPerTag) := ⊤
-  let : DiscreteMeasurableSpace (MultipleBadState TagId Nonce Digest sessionsPerTag) :=
-    ⟨fun _ => trivial⟩
   have hbound := Network.totalQueryBound adversary qReader qTag hReader hTag
   rw [verdict_projection _ _ projectMultiple multiple_local _ _ hbound,
       verdict_projection _ _ projectSingle single_local _ _ hbound]
@@ -302,7 +271,7 @@ theorem preserved_bound (adversary : UnlinkAdversary TagId Nonce Digest)
       (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag))
       (multipleBadQueryImpl _ _ _ sessionsPerTag)
-      (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
-      Measurable.of_discrete adversary qReader qTag hReader hTag
+      (fun _ _ => .rfl) (fun _ _ => .rfl) (fun _ _ => .rfl)
+      out adversary qReader qTag hReader hTag
 
 end PRFTagReader.CachedPRF

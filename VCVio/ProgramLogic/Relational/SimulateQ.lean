@@ -6,8 +6,8 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.ProgramLogic.Relational.SimulateQ.Basic
-public import VCVio.ProgramLogic.Relational.SimulateQ.Epsilon
+public import VCVio.ProgramLogic.Relational.SimulateQ.Coupling
+public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 public import VCVio.ProgramLogic.Relational.SimulateQ.StateDependent
 public import VCVio.ProgramLogic.Relational.SimulateQ.Resource
 
@@ -37,16 +37,15 @@ carrying it as an unbounded remainder.
   `relTriple_simulateQ_run'` projects onto output equality alone.
 - `relTriple_simulateQ_run_writerT`: the `WriterT` analogue, transporting a monoid congruence
   on accumulated logs through the whole simulation.
-- `tvDist_simulateQ_le_probEvent_bad`: "identical until bad" — if two oracle implementations
-  agree whenever a "bad" flag is unset, the TV distance between their simulations is bounded by
-  the probability of bad being set. `tvDist_simulateQ_le_probEvent_output_bad` is the variant
-  whose flag lives in the output, and `identical_until_bad_with_flag` packages the common
-  `σ × Bool` shape.
-- `tvDist_simulateQ_le_qeps_plus_probEvent_output_bad` and
-  `tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad`: ε-perturbed refinements, where
-  the two implementations may differ by up to `ε` on each (charged) query.
-- `ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad`: the state-dependent
+- `measureETVDist_simulateQ_run'_le_prEvent_bad`: "identical until bad" — if two oracle
+  implementations agree on steps between good states and keep bad states bad, the total variation
+  between their simulations is bounded by the probability of ending in a bad state. The handlers
+  may disagree on the step that sets a bad flag, and `_of_run_eq` / `_of_evalDist_eq` take
+  agreement off bad input states.
+- `measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad`: the ε-perturbed
+  refinement, where the two implementations may differ by up to `ε` on each charged query.
+- `measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad`: the state-dependent
   refinement, where the per-step gap is `ε s` and the bound is `expectedQuerySlack`.
-- `probEvent_bad_simulateQ_run_le_expectedQuerySlack`: a single-world accumulator bounding the
+- `prEvent_bad_simulateQ_run_le_expectedQuerySlack`: a single-world accumulator bounding the
   bad-flag mass directly by a resource-weighted query slack.
 -/

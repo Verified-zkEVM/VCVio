@@ -286,10 +286,9 @@ theorem measure_adaptivePrefixRunFrom_le
             targetCount overhead remaining cached hremaining
         · exact zero_le
 
-/-- The adaptive-prefix measure bound read through the discrete probability notation. -/
-theorem probEvent_adaptivePrefixRunFrom_le
-    [DecidableEq ι] [Finite Y] [Inhabited Y]
-    [IsUniformSpec (ι →ₒ Y)]
+/-- The adaptive-prefix bound for events under uniform oracle semantics. -/
+theorem prEvent_adaptivePrefixRunFrom_le
+    [DecidableEq ι] [Finite Y] [IsUniformMeasureSpec (ι →ₒ Y)]
     (suffix : X → (ι →ₒ Y).QueryLog → OracleComp (ι →ₒ Y) R)
     (continuation : X → OracleComp (ι →ₒ Y) C)
     (win : R → Prop) (targetCount : ℕ → ℕ) (overhead : ℕ)
@@ -314,31 +313,24 @@ theorem probEvent_adaptivePrefixRunFrom_le
       (∀ entry ∈ terminalLog, terminalCache entry.1 = some entry.2) →
       (∀ input value, terminalCache input = some value →
         ∃ entry ∈ terminalLog, entry.1 = input ∧ entry.2 = value) →
-      Pr[ fun z => win z.1 | (simulateQ (ι →ₒ Y).cachingOracle
-          (suffix x terminalLog)).run terminalCache] ≤
+      Pr{let z ← (simulateQ (ι →ₒ Y).cachingOracle
+          (suffix x terminalLog)).run terminalCache}[win z.1] ≤
         ((targetCount terminalCached * (terminalRemaining + overhead) : ℕ) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹) :
-    Pr[fun z => win z.1 |
-      adaptivePrefixRunFrom (ι := ι) (Y := Y) (X := X) (R := R)
-        suffix prefixComp cache log] ≤
+    Pr{let z ← adaptivePrefixRunFrom (ι := ι) (Y := Y) (X := X) (R := R)
+        suffix prefixComp cache log}[win z.1] ≤
       (adaptivePrefixPotential targetCount overhead remaining cached : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
   classical
   let : MeasurableSpace Y := ⊤
   let : MeasurableSpace (R × (ι →ₒ Y).QueryCache) := ⊤
-  rw [← evalDist_apply_setOf]
-  refine measure_adaptivePrefixRunFrom_le (hquery := ?_) suffix continuation win
+  rw [prEvent_eq_evalDist_of_discrete]
+  refine measure_adaptivePrefixRunFrom_le
+    (hquery := fun t => evalDist_liftM_query_uniform (spec := ι →ₒ Y) t) suffix continuation win
     MeasurableSet.of_discrete targetCount overhead prefixComp remaining cached hbound
     cache log hno hcacheBound hlogCache hcacheLog ?_
-  · intro t
-    let : Fintype Y := Fintype.ofFinite Y
-    apply MeasureTheory.Measure.ext_of_singleton
-    intro y
-    rw [evalDist_apply_singleton, probOutput_query, ProbabilityTheory.uniformOn_univ,
-      MeasureTheory.Measure.count_singleton, one_div]
-    simp only [← Nat.card_eq_fintype_card]
-  · intro x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc
-    simpa only [evalDist_apply_setOf] using
-      hterminal x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc
+  intro x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc
+  rw [← prEvent_eq_evalDist_of_discrete]
+  exact hterminal x terminalRemaining terminalCached terminalCache terminalLog hq hn hb hl hc
 
 end OracleComp

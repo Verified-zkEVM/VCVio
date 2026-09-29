@@ -6,18 +6,18 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-public import VCVio.CryptoFoundations.SecExp
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
 
 /-!
 # Asymmetric Encryption Schemes: One-Time IND-CPA
 
-This file contains the standard two-phase one-time IND-CPA game together with the `ProbComp`
-specialization used by the generic many-query lift.
+This file contains the standard two-phase one-time IND-CPA game and its advantage.
 -/
 
 @[expose] public section
 
-open OracleSpec OracleComp
+open OracleSpec OracleComp ENNReal
 
 universe v
 
@@ -45,44 +45,22 @@ variable {encAlg : AsymmEncAlg (OracleComp spec) M PK SK C}
 sample keys, let the adversary choose challenge messages, encrypt one branch, and return whether
 the adversary guessed the hidden bit. -/
 noncomputable def IND_CPA_OneTime_Game
-    (runtime : ProbCompRuntime (OracleComp spec)) : MeasureTheory.Measure Bool :=
-  runtime.evalDist do
-    let b : Bool ← runtime.liftProbComp ($ᵗ Bool)
-    let (pk, _) ← encAlg.keygen
-    let (m₁, m₂, state) ← adv.chooseMessages pk
-    let msg := if b then m₁ else m₂
-    let c ← encAlg.encrypt pk msg
-    let b' ← adv.distinguish state c
-    return (b == b')
+    (runtime : ProbCompRuntime (OracleComp spec)) : OracleComp spec Bool := do
+  let b : Bool ← runtime.liftProbComp ($ᵗ Bool)
+  let (pk, _) ← encAlg.keygen
+  let (m₁, m₂, state) ← adv.chooseMessages pk
+  let msg := if b then m₁ else m₂
+  let c ← encAlg.encrypt pk msg
+  let b' ← adv.distinguish state c
+  return (b == b')
 
-/-- Absolute one-time IND-CPA bias advantage for the general two-phase game. -/
-noncomputable def IND_CPA_OneTime_biasAdvantage
+/-- One-time IND-CPA advantage: the Boolean bias `Measure.boolBias` of `IND_CPA_OneTime_Game`. -/
+noncomputable def IND_CPA_OneTime_Advantage
     (encAlg : AsymmEncAlg (OracleComp spec) M PK SK C)
     (runtime : ProbCompRuntime (OracleComp spec))
-    (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ :=
-  (IND_CPA_OneTime_Game (encAlg := encAlg) adv runtime).boolBias
+    (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ≥0∞ :=
+  (runtime.evalDist (IND_CPA_OneTime_Game (encAlg := encAlg) adv runtime)).boolBias
 
 end IND_CPA_TwoPhase
-
-section ProbCompSpecialization
-
-variable {encAlg : AsymmEncAlg ProbComp M PK SK C}
-
-/-- `ProbComp` specialization of the one-time IND-CPA game. -/
-abbrev IND_CPA_OneTime_Game_ProbComp (adv : IND_CPA_OneTime_Adversary encAlg) : ProbComp Bool := do
-  let b ← ($ᵗ Bool)
-  let (pk, _sk) ← encAlg.keygen
-  let (m₁, m₂, state) ← adv.chooseMessages pk
-  let c ← encAlg.encrypt pk (if b then m₁ else m₂)
-  let b' ← adv.distinguish state c
-  pure (b == b')
-
-/-- Real-valued signed one-time IND-CPA advantage. -/
-noncomputable def IND_CPA_OneTime_signedAdvantageReal
-    (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (adv : IND_CPA_OneTime_Adversary encAlg) : ℝ :=
-  (Pr[= true | IND_CPA_OneTime_Game_ProbComp (encAlg := encAlg) adv]).toReal - 1 / 2
-
-end ProbCompSpecialization
 
 end AsymmEncAlg

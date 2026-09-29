@@ -103,7 +103,7 @@ Verification: Query `H(m, s)` and compare to `cm`.
 Extraction: Apply `E` to the commitment and commit-phase trace.
 
 Win: Check passes AND (extractor found nothing OR found a different opening). -/
-def extractabilityGame {AUX : Type} {t : ℕ}
+def extractabilityExperiment {AUX : Type} {t : ℕ}
     (E : C → QueryLog (CMOracle M S C) → Option (M × S))
     (A : ExtractAdversary M S C AUX t) :
     OracleComp (CMOracle M S C) (Bool × QueryCache (CMOracle M S C)) :=
@@ -135,180 +135,9 @@ private def extractabilityInner {AUX : Type} {t : ℕ}
     | none => (c == cm))
 
 /-- The extractability game equals `simulateQ cachingOracle` on `extractabilityInner`. -/
-private lemma extractabilityGame_eq {t : ℕ} (A : ExtractAdversary M S C AUX t) :
-    extractabilityGame CMExtract A =
+private lemma extractabilityExperiment_eq {t : ℕ} (A : ExtractAdversary M S C AUX t) :
+    extractabilityExperiment CMExtract A =
     (simulateQ cachingOracle (extractabilityInner A)).run ∅ := rfl
-
-/-- Tagged inner computation: returns `(win, isNoneCase)` where `isNoneCase = true`
-iff the extractor found no matching entry in the commit trace.
-
-This decomposition allows separate handling of the two win cases:
-- `some` case (`win ∧ ¬isNoneCase`): implies cache collision (pointwise)
-- `none` case (`win ∧ isNoneCase`): requires probabilistic bound -/
-private def extractabilityInner_tagged {AUX : Type} {t : ℕ}
-    (A : ExtractAdversary M S C AUX t) :
-    OracleComp (CMOracle M S C) (Bool × Bool) := do
-  let ((cm, aux), tr) ← (simulateQ loggingOracle A.commit).run
-  let (m, s) ← A.open_ aux
-  let c ← (CMOracle M S C).query (m, s)
-  let extracted := CMExtract cm tr
-  return (match extracted with
-    | some (m', s') => ((c == cm) && decide ((m', s') ≠ (m, s)), false)
-    | none => ((c == cm), true))
-
-/-- The untagged inner computation is the first projection of the tagged one. -/
-private lemma extractabilityInner_eq_fst_tagged {t : ℕ}
-    (A : ExtractAdversary M S C AUX t) :
-    extractabilityInner A = Prod.fst <$> extractabilityInner_tagged A := by
-  simp only [extractabilityInner, extractabilityInner_tagged, monad_norm, Function.comp]
-  congr 1; ext ⟨⟨cm, aux⟩, tr⟩
-  congr 1; ext ⟨m, s⟩
-  congr 1; ext c
-  simp only [CMExtract]
-  cases tr.find? (fun entry => decide (entry.2 = cm)) with
-  | some entry => simp
-  | none => simp
-
-/-! ## Some-case branch: extractor returned, but disagrees with the opening
-
-When `CMExtract` returns an entry `(m', s')` from the commit trace and the
-adversary opens to a *different* `(m, s)`, both inputs hash to the same
-commitment value, which directly witnesses a cache collision. -/
-
-/- The some-case win (extractor found a different opening) implies cache collision.
-
-When `CMExtract` finds an entry `(m', s')` in the commit trace with `H(m', s') = cm`,
-and verification gives `H(m, s) = cm` with `(m', s') ≠ (m, s)`, both distinct inputs
-map to `cm` in the final cache. -/
-private lemma extractability_someWin_implies_collision {t : ℕ}
-    (A : ExtractAdversary M S C AUX t) :
-    ∀ z ∈ support ((simulateQ cachingOracle (extractabilityInner_tagged A)).run ∅),
-      z.1.1 = true → z.1.2 = false → CacheHasCollision z.2 := by
-  intro z hz hwin hsome
-  simp only [extractabilityInner_tagged, simulateQ_bind, simulateQ_pure] at hz
-  rw [StateT.run_bind] at hz
-  rw [support_bind] at hz; simp only [Set.mem_iUnion] at hz
-  obtain ⟨⟨⟨⟨cm, aux⟩, tr⟩, cache₁⟩, hmem₁, hz⟩ := hz
-  rw [StateT.run_bind] at hz
-  rw [support_bind] at hz; simp only [Set.mem_iUnion] at hz
-  obtain ⟨⟨⟨m, s⟩, cache₂⟩, hmem₂, hz⟩ := hz
-  rw [StateT.run_bind] at hz
-  rw [support_bind] at hz; simp only [Set.mem_iUnion] at hz
-  obtain ⟨⟨c, cache₃⟩, hmem₃, hz⟩ := hz
-  simp only [StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-  rw [hz] at hwin hsome ⊢
-  -- cache₃ has entry at (m, s) with value c
-  rw [cachingOracle.simulateQ_query] at hmem₃
-  have hcache₃ : cache₃ (m, s) = some c :=
-    cachingOracle_query_caches (m, s) cache₂ c cache₃ hmem₃
-  -- Cache monotonicity: cache₂ ≤ cache₃
-  have hcache_mono₂₃ : cache₂ ≤ cache₃ := by
-    have hmem₃_co : (c, cache₃) ∈ support
-        (((CMOracle M S C).cachingOracle (m, s)).run cache₂) := hmem₃
-    unfold cachingOracle at hmem₃_co
-    exact QueryImpl.withCaching_cache_le
-      (QueryImpl.ofLift (CMOracle M S C) (OracleComp (CMOracle M S C)))
-      (m, s) cache₂ (c, cache₃) hmem₃_co
-  -- The tag tells us this is the some case
-  unfold CMExtract at hwin hsome
-  cases hfind : (tr.find? (fun entry => decide (entry.2 = cm))) with
-  | none => simp [hfind] at hsome
-  | some entry =>
-    simp only [hfind] at hwin
-    simp only [Bool.and_eq_true, decide_eq_true_eq, beq_iff_eq] at hwin
-    obtain ⟨hceq, hne⟩ := hwin
-    -- entry.2 = cm by the find? predicate
-    have hentry_cm : entry.2 = cm := by
-      have hfound := List.find?_some hfind
-      simp only [decide_eq_true_eq] at hfound
-      exact hfound
-    -- entry is in the log tr
-    have hentry_mem : entry ∈ tr := List.mem_of_find?_eq_some hfind
-    -- Log entries are in cache₁ (via log_entry_in_cache_and_mono)
-    have hlog_cache := (OracleComp.log_entry_in_cache_and_mono A.commit ∅
-      (((cm, aux), tr), cache₁) hmem₁).1
-    have hcache₁_entry : cache₁ entry.1 = some entry.2 :=
-      hlog_cache entry hentry_mem
-    -- cache₁ ≤ cache₂ (simulateQ cachingOracle on open_ only grows cache)
-    have hcache_mono₁₂ : cache₁ ≤ cache₂ :=
-      simulateQ_cachingOracle_cache_le (A.open_ aux) cache₁ _ hmem₂
-    -- cache₃ entry.1 = some entry.2 (by monotonicity chain cache₁ ≤ cache₂ ≤ cache₃)
-    have hcache₃_entry : cache₃ entry.1 = some entry.2 :=
-      hcache_mono₂₃ (hcache_mono₁₂ hcache₁_entry)
-    -- Collision: entry.1 and (m,s) both map to cm in cache₃
-    exact ⟨entry.1, (m, s), entry.2, c, hne, hcache₃_entry, hcache₃,
-      heq_of_eq (by rw [hentry_cm, hceq])⟩
-
-/-- `IsTotalQueryBound` for the extractability game's inner computation.
-
-The inner computation consists of:
-1. `(simulateQ loggingOracle A.commit).run` — `t₁` queries (loggingOracle passes through)
-2. `A.open_ aux` — `t₂` queries
-3. `query (m, s)` — 1 verification query
-
-Total: `t₁ + t₂ + 1 ≤ t + 1`.
-
-The proof uses `isTotalQueryBound_run_simulateQ_loggingOracle_iff` (logging preserves
-query bounds) and `isTotalQueryBound_bind` (composition through dependent bind). -/
-private lemma extractabilityInner_totalBound [Finite C] {t : ℕ}
-    (A : ExtractAdversary M S C AUX t) :
-    IsTotalQueryBound (extractabilityInner A) (t + 1) := by
-  have : Fintype C := Fintype.ofFinite C
-  -- extractabilityInner A =
-  --   (simulateQ loggingOracle A.commit).run >>= fun ((cm, aux), tr) =>
-  --     A.open_ aux >>= fun (m, s) =>
-  --       query (m, s) >>= fun c => pure (...)
-  -- Query budget: t₁ (commit) + t₂ (open) + 1 (verify) ≤ t + 1
-  -- Step 1: (simulateQ loggingOracle A.commit).run has bound t₁
-  have h1 : IsTotalQueryBound ((simulateQ loggingOracle A.commit).run) A.t₁ :=
-    (isTotalQueryBound_run_simulateQ_loggingOracle_iff A.commit A.t₁).mpr A.commitBound
-  -- Step 2: A.open_ aux has bound t₂ for all aux
-  -- Step 3: query (m, s) >>= pure (...) has bound 1
-  -- Combine via isTotalQueryBound_bind
-  have hbind :
-      IsTotalQueryBound
-        (((simulateQ loggingOracle A.commit).run) >>= fun
-          | ((cm, aux), tr) =>
-              A.open_ aux >>= fun (m, s) =>
-                (CMOracle M S C).query (m, s) >>= fun c =>
-                  have extracted : Option (M × S) := CMExtract cm tr
-                  pure
-                    (match extracted with
-                    | some (m', s') => c == cm && decide ((m', s') ≠ (m, s))
-                    | none => c == cm))
-        (A.t₁ + (A.t₂ + 1)) := by
-    apply isTotalQueryBound_bind h1
-    intro ⟨⟨cm, aux⟩, tr⟩
-    apply isTotalQueryBound_bind (A.openBound aux)
-    intro ⟨m, s⟩
-    rw [isTotalQueryBound_query_bind_iff]
-    exact ⟨Nat.one_pos, fun _ => trivial⟩
-  exact hbind.mono (by
-    have := A.totalBound
-    omega)
-
-/-- The tagged inner computation has the same query bound as the untagged one. -/
-private lemma extractabilityInner_tagged_totalBound [Finite C] {t : ℕ}
-    (A : ExtractAdversary M S C AUX t) :
-    IsTotalQueryBound (extractabilityInner_tagged A) (t + 1) := by
-  have : Fintype C := Fintype.ofFinite C
-  have h := extractabilityInner_totalBound A
-  rw [extractabilityInner_eq_fst_tagged] at h
-  rwa [show IsTotalQueryBound (Prod.fst <$> extractabilityInner_tagged A) (t + 1) ↔
-    IsTotalQueryBound (extractabilityInner_tagged A) (t + 1) from
-    isQueryBound_map_iff _ _ _ _ _] at h
-
-/- The some-case win event on the tagged game implies cache collision.
-
-Wraps `extractability_someWin_implies_collision` for use with `probEvent_mono`. -/
-private lemma extractability_someWin_le_collision {t : ℕ}
-    (A : ExtractAdversary M S C AUX t) [Fintype C] [Inhabited C] :
-    Pr[fun z => z.1.1 = true ∧ z.1.2 = false |
-      (simulateQ cachingOracle (extractabilityInner_tagged A)).run ∅] ≤
-    Pr[fun z => CacheHasCollision z.2 |
-      (simulateQ cachingOracle (extractabilityInner_tagged A)).run ∅] :=
-  probEvent_mono fun z hz ⟨hwin, hsome⟩ =>
-    extractability_someWin_implies_collision A z hz hwin hsome
 
 /-- Textbook arithmetic: if `t₁ + t₂ ≤ t` and `t ≥ 3`, then
 `t₁(t₁-1) + 2t₂ ≤ t(t-1)`. -/
@@ -460,12 +289,12 @@ private lemma extractability_rest_win_le_exists_fresh {t : ℕ}
     (hx : (((cm, aux), tr), cache₁) ∈
       support ((simulateQ cachingOracle ((simulateQ loggingOracle A.commit).run)).run ∅))
     (hno : ¬ CacheHasCollision cache₁) :
-    Pr[fun z => z.1 = true |
-      (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run cache₁] ≤
-    Pr[fun z => ∃ t₀ : (CMOracle M S C).Domain, ∃ v : (CMOracle M S C).Range t₀,
-          z.2 t₀ = some v ∧ cache₁ t₀ = none ∧ HEq v cm |
-        (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run cache₁] :=
-  probEvent_mono fun z hz hwin =>
+    Pr{let z ← (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run
+           cache₁}[z.1 = true] ≤
+    Pr{let z ← (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run
+           cache₁}[∃ t₀ : (CMOracle M S C).Domain, ∃ v : (CMOracle M S C).Range t₀,
+        z.2 t₀ = some v ∧ cache₁ t₀ = none ∧ HEq v cm] :=
+  prEvent_mono_of_support _ _ _ fun z hz hwin =>
     extractability_rest_win_implies_fresh_cm A hx hno z hz hwin
 
 /- Conditioned on a collision-free commit trace, the later extractability failure
@@ -477,8 +306,8 @@ private lemma extractability_rest_noCollision_le_inv {t : ℕ} [Inhabited M] [In
     (hx : (((cm, aux), tr), cache₁) ∈
       support ((simulateQ cachingOracle ((simulateQ loggingOracle A.commit).run)).run ∅))
     (hno : ¬ CacheHasCollision cache₁) :
-    Pr[fun z => z.1 = true |
-      (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run cache₁] ≤
+    Pr{let z ← (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run
+           cache₁}[z.1 = true] ≤
       (↑(A.t₂ + 1) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹ := by
   have hrest_bound : IsTotalQueryBound
       (extractabilityRestOa A cm aux tr) (A.t₂ + 1) := by
@@ -487,14 +316,14 @@ private lemma extractability_rest_noCollision_le_inv {t : ℕ} [Inhabited M] [In
     rw [isTotalQueryBound_query_bind_iff]
     exact ⟨Nat.one_pos, fun _ => trivial⟩
   calc
-    Pr[fun z => z.1 = true |
-      (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run cache₁]
-      ≤ Pr[fun z => ∃ t₀ : (CMOracle M S C).Domain, ∃ v : (CMOracle M S C).Range t₀,
-            z.2 t₀ = some v ∧ cache₁ t₀ = none ∧ HEq v cm |
-          (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run cache₁] :=
+    Pr{let z ← (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run
+           cache₁}[z.1 = true]
+      ≤ Pr{let z ← (simulateQ cachingOracle (extractabilityRestOa A cm aux tr)).run
+               cache₁}[∃ t₀ : (CMOracle M S C).Domain, ∃ v : (CMOracle M S C).Range t₀,
+            z.2 t₀ = some v ∧ cache₁ t₀ = none ∧ HEq v cm] :=
           extractability_rest_win_le_exists_fresh A cm aux tr cache₁ hx hno
     _ ≤ (↑(A.t₂ + 1) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹ :=
-      OracleComp.probEvent_cache_has_value_le_of_noCollision
+      OracleComp.prEvent_cache_has_value_le_of_noCollision
         (oa := extractabilityRestOa A cm aux tr)
         (n := A.t₂ + 1) hrest_bound (fun _ => le_refl _)
         cm cache₁ hno
@@ -509,7 +338,7 @@ For `t ≥ 3` this is `t(t-1)/2+1`, yielding `(t(t-1)+2)/(2|C|)`. -/
 private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
     {t : ℕ} (ht : 3 ≤ t)
     (A : ExtractAdversary M S C AUX t) :
-    Pr[fun z => z.1 = true | extractabilityGame CMExtract A] ≤
+    Pr{let z ← extractabilityExperiment CMExtract A}[z.1 = true] ≤
     ((t * (t - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
     (Fintype.card C : ℝ≥0∞)⁻¹ := by
   let commitPart := (simulateQ loggingOracle A.commit).run
@@ -521,32 +350,24 @@ private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
   have hcommit_bound : IsTotalQueryBound commitPart A.t₁ :=
     (isTotalQueryBound_run_simulateQ_loggingOracle_iff A.commit A.t₁).mpr A.commitBound
   have hmain :
-      Pr[fun z => z.1 = true |
-        (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
-          (simulateQ cachingOracle (restPart x.1)).run x.2] ≤
+      Pr{let z ← (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
+          (simulateQ cachingOracle (restPart x.1)).run x.2}[z.1 = true] ≤
         ((A.t₁ * (A.t₁ - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
-        ((A.t₂ + 1 : ℕ) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹ := by
-    simpa [not_not] using
-      (probEvent_bind_le_add
-        (mx := (simulateQ cachingOracle commitPart).run ∅)
-        (my := fun x => (simulateQ cachingOracle (restPart x.1)).run x.2)
-        (p := fun x => ¬ CacheHasCollision x.2)
-        (q := fun z => z.1 ≠ true)
-        (ε₁ := ((A.t₁ * (A.t₁ - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C))
-        (ε₂ := ((A.t₂ + 1 : ℕ) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹)
-        (by
-          simpa using
-            (probEvent_cacheCollision_le_birthday_total_tight commitPart A.t₁
-              hcommit_bound (fun _ => le_refl _)))
-        (by
-          rintro ⟨⟨⟨cm, aux⟩, tr⟩, cache₁⟩ hx hno
-          simpa [restPart, extractabilityRestOa] using
-            extractability_rest_noCollision_le_inv A cm aux tr cache₁ hx hno))
-  rw [extractabilityGame_eq, hdecomp, simulateQ_bind, StateT.run_bind]
+        ((A.t₂ + 1 : ℕ) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹ :=
+    (prEvent_bind_le_prEvent_add_of_support ((simulateQ cachingOracle commitPart).run ∅)
+      (fun x => (simulateQ cachingOracle (restPart x.1)).run x.2)
+      (fun x : ((C × AUX) × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
+        CacheHasCollision x.2)
+      (fun z => z.1 = true)
+      fun ⟨⟨⟨cm, aux⟩, tr⟩, cache₁⟩ hx hno => by
+        simpa [restPart, extractabilityRestOa] using
+          extractability_rest_noCollision_le_inv A cm aux tr cache₁ hx hno).trans
+      (add_le_add (prEvent_cacheCollision_le_birthday_total_tight commitPart A.t₁
+        hcommit_bound (fun _ => le_refl _)) le_rfl)
+  rw [extractabilityExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind]
   calc
-    Pr[fun z => z.1 = true |
-      (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
-        (simulateQ cachingOracle (restPart x.1)).run x.2]
+    Pr{let z ← (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
+        (simulateQ cachingOracle (restPart x.1)).run x.2}[z.1 = true]
       ≤ ((A.t₁ * (A.t₁ - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
           ((A.t₂ + 1 : ℕ) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹ := hmain
     _ = ((A.t₁ * (A.t₁ - 1) + 2 * (A.t₂ + 1) : ℕ) : ℝ≥0∞) /
@@ -591,9 +412,9 @@ single fresh-query unpredictability. The `t ≥ 3` hypothesis is precisely
 where the case-split max collapses; the `t ≤ 2` regime is degenerate. -/
 theorem extractability_bound [Inhabited M] [Inhabited S] {t : ℕ} (ht : 3 ≤ t)
     (A : ExtractAdversary M S C AUX t) :
-    Pr[fun z => z.1 = true | extractabilityGame CMExtract A] ≤
+    Pr{let z ← extractabilityExperiment CMExtract A}[z.1 = true] ≤
     ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by
-  calc Pr[fun z => z.1 = true | extractabilityGame CMExtract A]
+  calc Pr{let z ← extractabilityExperiment CMExtract A}[z.1 = true]
       ≤ ((t * (t - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
         (Fintype.card C : ℝ≥0∞)⁻¹ := extractability_win_le_textbook_bound ht A
     _ = ((t * (t - 1) + 2 : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) := by

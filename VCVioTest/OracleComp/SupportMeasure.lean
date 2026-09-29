@@ -9,7 +9,7 @@ public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Native operational and quantitative oracle reasoning
+# Operational and quantitative oracle reasoning
 
 These canaries require only the chosen response measures, including weighted measures with
 zero-mass possible answers. No discrete probability backend is imported.
@@ -22,9 +22,8 @@ open scoped ENNReal MeasureProgramLogic.Quantitative
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native support/measure bridge unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "support/measure bridge unexpectedly imports PMF"
 
 universe u
 
@@ -33,7 +32,6 @@ namespace VCVioTest.OracleComp.SupportMeasure
 section Generic
 
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
   [OracleSpec.IsMeasureSpec spec]
   {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
 
@@ -65,6 +63,7 @@ example : true ∈ support (liftM (WeightedSpec.query 0) : OracleComp WeightedSp
   OracleComp.mem_support_query (spec := WeightedSpec) 0 true
 
 example : 𝒟[(liftM (WeightedSpec.query 0) : OracleComp WeightedSpec Bool)] {true} = 0 := by
+  rw [OracleComp.evalDist_liftM_query_apply (spec := WeightedSpec) 0 (MeasurableSet.singleton _)]
   simp [OracleSpec.IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure]
 
 end VCVioTest.OracleComp.SupportMeasure

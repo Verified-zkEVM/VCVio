@@ -8,7 +8,8 @@ module
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.HardnessAssumptions.CollisionResistance
 public import VCVio.EvalDist.Monad.Measure
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Hash-Based Commitment Schemes — Binding via Collision Resistance
@@ -81,8 +82,9 @@ theorem bindingAdvantage_toCommitment_le_keyedCRAdvantage
       keyedCRAdvantage H (bindingAdversary_toKeyedCRAdversary A) := by
   let : MeasurableSpace K := ⊤
   let : MeasurableSpace (C × M × S × M × S) := ⊤
-  unfold bindingAdvantage CommitmentScheme.bindingExp
-    keyedCRAdvantage keyedCRExp bindingAdversary_toKeyedCRAdversary KeyedHashFamily.toCommitment
+  unfold bindingAdvantage CommitmentScheme.bindingExperiment
+    keyedCRAdvantage keyedCRExperiment bindingAdversary_toKeyedCRAdversary
+    KeyedHashFamily.toCommitment
   simp only [monad_norm]
   refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true) fun k => ?_
   refine evalDist_bind_apply_mono_of_discrete _ _ _ (MeasurableSet.singleton true)

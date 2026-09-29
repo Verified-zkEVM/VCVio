@@ -27,8 +27,7 @@ run_cmd do
     pending := rest
     unless visited.contains name do
       visited := visited.insert name
-      for forbidden in [`PMF, `SPMF, `evalSPMF, `probEvent, `probOutput, `IsUniformSpec,
-          `IsProbabilitySpec, `SampleableType] do
+      for forbidden in [`PMF, `SampleableType] do
         if forbidden.isPrefixOf name then
           throwError "structural invariant proof depends on probability declaration {name}"
       if let some info := env.find? name then

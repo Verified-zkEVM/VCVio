@@ -245,17 +245,17 @@ private def ownedSubgoalsAfterMainStep (before after : List MVarId) : List MVarI
       | some owned => (owned, rest)
       | none => (after, [])
 
-/-- Lower game equivalence or distribution equality to a relational proof goal. -/
+/-- Lower an equality in distribution or of output measures to a relational proof goal. -/
 def tryLowerRelGoal : TacticM Bool := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
   if relationalGoalParts? target |>.isSome then
     return false
-  if isGameEquivGoal target then
+  if isEqualInDistGoal target then
     tryEvalTacticSyntax (← `(tactic|
-      apply OracleComp.ProgramLogic.GameEquiv.of_relTriple))
+      apply OracleComp.ProgramLogic.Relational.evalDistEq_of_relTriple_eqRel))
   else if isEvalDistEqGoal target then
     tryEvalTacticSyntax (← `(tactic|
-      apply OracleComp.ProgramLogic.Relational.evalSPMF_eq_of_relTriple_eqRel))
+      apply OracleComp.ProgramLogic.Relational.evalDist_eq_of_relTriple_eqRel))
   else
     return false
 
@@ -648,7 +648,7 @@ def runRelCondRule : TacticM Bool := do
 /-- Bound simulation distance by the probability of the supplied bad predicate. -/
 def runByUptoRule (bad : TSyntax `term) : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    apply OracleComp.ProgramLogic.Relational.tvDist_simulateQ_le_probEvent_bad
+    apply OracleComp.ProgramLogic.Relational.measureETVDist_simulateQ_run'_le_prEvent_bad_of_run_eq
       (bad := $bad)))
 
 /-- Swap the two computations in a relational triple. -/
@@ -739,7 +739,7 @@ def runRelSimDistRule : TacticM Bool := withMainContext do
       if !(hasSimulateQRunLike oa) || !(hasSimulateQRunLike ob) || !isEqRelPost post then
         return false
       tryEvalTacticSyntax (← `(tactic|
-        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalSPMF_eq))
+        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalDistEq))
   | none => return false
 
 private def rawRelWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do

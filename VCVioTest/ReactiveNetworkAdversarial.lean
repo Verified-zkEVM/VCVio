@@ -108,7 +108,7 @@ theorem serialRound_ne_token_with_pending :
   have projected := congrArg
     (fun program => (fun state => state.pending.length) <$> program) equal
   rw [serialRound_without_empty_queue.1, serialRound_without_empty_queue.2] at projected
-  have distinguish := congrArg (fun program : ProbComp ℕ => Pr[= 0 | program]) projected
+  have distinguish := congrArg (fun program : ProbComp ℕ => 0 ∈ support program) projected
   simp at distinguish
 
 /-- The finite-policy theorem also needs the empty-queue premise, even for one round. -/

@@ -23,16 +23,19 @@ identification, the sub-table uniform sampler, the deterministic reader lift, an
 first-session tag-step equality) into the headline bound
 
 ```
-Pr[multipleIdealQueryImpl true] ≤
-  Pr[singleIdealQueryImpl true] + Pr[bad]
+Pr{let b ← multipleIdeal}[b = out] ≤
+  Pr{let b ← singleIdeal}[b = out] + Pr{let z ← multipleBad}[bad z]
     + qReader·|TagId| / |Digest| + qReader·qTag / |Nonce|
     + qReader·|TagId|·sessionsPerTag / |Digest|
 ```
 
-for every adversary, with no distinctness hypothesis on its reader nonces. The bound carries no
-tag-side slack term: removing the reader-nonce distinctness hypothesis costs zero extra slack
-compared with the conditional version, because the tag-side cell-count gap is absorbed by
-`le_self_add` at every tag step.
+for every adversary and each output bit `out`, with no distinctness hypothesis on its reader
+nonces. No step of the coupling inspects the output event: the collision branches are bounded by
+the bad mass or discarded over `ℝ≥0∞` whatever the event is. Instantiating the bound at both
+output bits therefore bounds the Boolean distance of the two worlds, not only one signed
+difference. The bound carries no tag-side slack term: removing the reader-nonce distinctness
+hypothesis costs zero extra slack compared with the conditional version, because the tag-side
+cell-count gap is absorbed by `le_self_add` at every tag step.
 
 The direct coupling identifies the multiple-session world's RO cell `(tag, n)` with the
 single-session world's reference-slot cell `((tag, 0), n)` via `slotZeroEmbed` /
@@ -46,10 +49,11 @@ single-session world's reference-slot cell `((tag, 0), n)` via `slotZeroEmbed` /
   both reads are fresh uniforms.
 * **Reader step.** Only the slot-0 column at the queried nonce is lazified on both sides, so the M
   reader bit collapses to a deterministic bit `m` of the resulting cache while slot-positive cells
-  stay uncached. M-accept implies S-accept (`mReader_accepts_imp_sReader_accepts`), and this
-  implication is one-sided: when `m` is `true` both sides continue with the same reply, and when
-  `m` is `false` the S-side's slot-positive collision branch is *discarded* over `ℝ≥0∞`, charging
-  only the collision event's uniform mass `≤ |TagId| · sessionsPerTag / |Digest|` per reader query.
+  stay uncached. M-accept implies S-accept (`mReader_accepts_imp_sReader_accepts`): when `m` is
+  `true` both sides continue with the same reply, and when `m` is `false` the S-side's
+  slot-positive collision branch is *discarded* over `ℝ≥0∞`, charging only the collision event's
+  uniform mass `≤ |TagId| · sessionsPerTag / |Digest|` per reader query. The implication concerns
+  reader bits, so the discard applies to every output event.
 
 ## Main results
 
@@ -66,7 +70,7 @@ induction on the adversary: the `pure` and slot-exhausted tag cases close inline
 large induction cases live in sibling files and are invoked with the induction hypothesis as an
 explicit premise.
 
-* `Examples.PRFTagReader.DirectCoupling.ReaderCase` (`dcAux_reader_step`) — the asymmetric-discard
+* `Examples.PRFTagReader.DirectCoupling.ReaderCase` (`dcAux_reader_step`) — the discarding
   reader (`Sum.inr transcript`) step.
 * `Examples.PRFTagReader.DirectCoupling.TagSlotPositive` (`dcAux_tag_slotPositive`) — the
   slot-positive tag (`Sum.inl tag`, `1 ≤ sessionsUsed < sessionsPerTag`) step.
@@ -80,7 +84,6 @@ packaging) are thin compositions.
 @[expose] public section
 
 open OracleComp OracleSpec ENNReal MeasureTheory ProbabilityTheory
-open scoped ProbComp.DiscreteCompatibility
 
 namespace PRFTagReader
 
@@ -105,9 +108,9 @@ eagerization equivalences. -/
 
 /-- **Direct M-S coupling aux (eager).** Under a shared `$ᵗ gS` sample, the eager-form fine handler
 `multipleBadTableHandlerFine (slotZeroSubTable (tableExtending c gS))` (with `UnlinkBadState`
-instrumentation) success probability is bounded by the eager-form `singleTableHandler
-(tableExtending c gS)` success probability, plus the multiple-bad `bad`-probability, plus three
-additive slacks: `qR·|TagId|/|Digest|`, `qRInit·qT/|Nonce|`, and
+instrumentation) probability of output `out` is bounded by the eager-form `singleTableHandler
+(tableExtending c gS)` probability of output `out`, plus the multiple-bad `bad`-probability, plus
+three additive slacks: `qR·|TagId|/|Digest|`, `qRInit·qT/|Nonce|`, and
 `qR·|TagId|·sessionsPerTag/|Digest|`.
 
 The tag-side cell-count gap costs zero extra slack: at every tag step (slot 0 and slot positive)
@@ -115,8 +118,8 @@ the per-step `|TagId|·sessionsPerTag/|Digest|` carve is dropped via `le_self_ad
 independence provides per-`n` equality off the bad flag), so removing the reader-nonce distinctness
 hypothesis is free on the tag side. The genuinely charged slacks are: `qRInit·qT/|Nonce|`, charged
 at slot-positive tag steps via the reader-touched-set membership event `R.card/|Nonce|`
-(`probEvent_bind_le_add_bad_disagree` with `D = (· ∈ R)`); and `qR·|TagId|·sessionsPerTag/|Digest|`,
-charged at the asymmetric-discard reader step via `probEvent_cacheBadReader_uniformSample_le`. The
+(`prEvent_bind_le_add_bad_disagree` with `D = (· ∈ R)`); and `qR·|TagId|·sessionsPerTag/|Digest|`,
+charged at the discarding reader step via `prEvent_cacheBadReader_uniformSample_le`. The
 reader-cell slack `qR·|TagId|/|Digest|` is carried as headroom for the per-query reader split.
 
 The coupling is hypothesis- and invariant-free at the eager level: no reader-nonce distinctness
@@ -134,10 +137,10 @@ established by structural induction over the adversary `oa`:
   leaving slot-positive cells uncached so the strong cache invariant `hcInv` survives. The M
   reader bit then collapses to a deterministic bit `m` of `c₀`. When `m = true` the S reader also
   accepts (the slot-0 witness lifts), both sides continue with the same reply, and the induction
-  hypothesis at `(c₀, qR', R ∪ {nonce})` closes the step. When `m = false`, M rejects; the asymmetry
-  `mAcc ⟹ sAcc` is one-sided, so over `ℝ≥0∞` the S-side's slot-positive collision branch is
-  *discarded*: the actual S reader bit equals `cacheBadReader gS`, and replacing it by the constant
-  `false` reply costs exactly the collision event `E gS := ∃ T sid ≠ 0, gS ((T,sid), nonce) = auth`,
+  hypothesis at `(c₀, qR', R ∪ {nonce})` closes the step. When `m = false`, M rejects; since only
+  `mAcc ⟹ sAcc` holds, over `ℝ≥0∞` the S-side's slot-positive collision branch is *discarded*:
+  the actual S reader bit equals `cacheBadReader gS`, and replacing it by the constant `false`
+  reply costs exactly the collision event `E gS := ∃ T sid ≠ 0, gS ((T,sid), nonce) = auth`,
   whose uniform mass `≤ |TagId|·sessionsPerTag/|Digest|` is charged to a single slack unit.
 
 The first-time-per-nonce bookkeeping is threaded through `qRInit`, `R`, and `hqRle : qR + R.card ≤
@@ -147,7 +150,7 @@ only break `hRespInv` off `R`, which the gated form `hRespInv` (conditioned on `
 The aux is deliberately formulated in terms of eager table handlers and a shared draw `$ᵗ gS`; the
 lazy headline `multipleIdeal_le_singleIdeal_add_bad_DC` recovers it via the standard eagerization
 equivalences. -/
-lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
+lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest] (out : Bool)
     (oa : UnlinkAdversary TagId Nonce Digest) (qR qT qRInit : ℕ)
     (s : UnlinkState TagId)
     (c : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache)
@@ -161,24 +164,24 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
     (hRespInv : ∀ tag : TagId, ∀ n : Nonce, n ∉ R →
         c ((tag, (0 : Fin sessionsPerTag)), n) ≠ none →
         sB.responses (tag, n) ≠ none) :
-    Pr[= true | do
+    Pr{let b ← (do
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
           (simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c gS)) gFine) oa).run (s, sB)] ≤
-      Pr[= true | do
+              (OracleComp.tableExtending c gS)) gFine) oa).run (s, sB))}[b = out] ≤
+      Pr{let b ← (do
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-        (simulateQ (singleTableHandler (OracleComp.tableExtending c gS)) oa).run' s] +
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
+        (simulateQ (singleTableHandler (OracleComp.tableExtending c gS)) oa).run' s)}[b = out] +
+      Pr{let z ← (do
         let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
         (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
             (z.1, z.2.2)) <$>
           (simulateQ (multipleBadTableHandlerFine
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
-              (OracleComp.tableExtending c gS)) gFine) oa).run (s, sB)] +
+              (OracleComp.tableExtending c gS)) gFine) oa).run (s, sB))}[z.2.bad] +
       ((qR * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) +
       ((qRInit * qT : ℕ) : ℝ≥0∞) / (Fintype.card Nonce : ℝ≥0∞) +
       ((qR * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
@@ -188,15 +191,13 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
   induction oa using OracleComp.inductionOn generalizing qR qT s c sB R hqRle hcInv hRespInv with
   | pure b =>
     -- Pure case: both sides collapse the `simulateQ` to `pure b`. After `simp`, the LHS
-    -- becomes `do gS ← $ᵗ; gFine ← $ᵗ; pure b` (`bind_const` shape since `pure b` ignores
-    -- `gFine`). Collapse the inner `gFine ← $ᵗ; pure b` via `probOutput_bind_const` and the
-    -- uniform `Pr[⊥ | $ᵗ ·] = 0` identity (`probFailure_uniformSample`) so the inner factor
-    -- becomes `1 * Pr[= true | (fun _ => b) <$> $ᵗ ·]`. Bad + 3 slacks are nonnegative, dropped
-    -- via `le_add_right`.
-    simp only [simulateQ_pure, StateT.run_pure, StateT.run'_eq, map_pure, bind_pure_comp,
-      probOutput_bind_const, probFailure_uniformSample, tsub_zero, one_mul]
-    refine le_add_right (le_add_right (le_add_right (le_add_right ?_)))
-    rfl
+    -- becomes `do gS ← $ᵗ; gFine ← $ᵗ; pure b`, whose inner `gFine ← $ᵗ` draw is lossless and
+    -- discarded (`OracleComp.evalDist_bind_const`). Bad + 3 slacks are nonnegative, dropped via
+    -- `le_add_right`.
+    simp only [simulateQ_pure, StateT.run_pure, StateT.run'_eq, map_pure]
+    refine le_add_right (le_add_right (le_add_right (le_add_right (le_of_eq ?_))))
+    refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
+    exact (EvalDistEq.of_evalDist_eq (OracleComp.evalDist_bind_const _ _)).prEvent_eq _
   | query_bind t k ih =>
     cases t with
     | inl tag =>
@@ -204,11 +205,11 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
       · by_cases hzero : s.sessionsUsed tag = 0
         · -- Slot-zero tag case. Delegated to `dcAux_tag_slotZero`, which takes the induction
           -- hypothesis `ih` as an explicit premise.
-          exact dcAux_tag_slotZero qRInit qR qT s c sB R hqRle hcInv hRespInv tag k ih
+          exact dcAux_tag_slotZero out qRInit qR qT s c sB R hqRle hcInv hRespInv tag k ih
             hqR hqT hslot hzero
         · -- Slot-positive tag case. Delegated to `dcAux_tag_slotPositive`, which takes the
           -- induction hypothesis `ih` as an explicit premise.
-          exact dcAux_tag_slotPositive qRInit qR qT s c sB R hqRle hcInv hRespInv tag k ih
+          exact dcAux_tag_slotPositive out qRInit qR qT s c sB R hqRle hcInv hRespInv tag k ih
             hqR hqT hslot hzero
       · -- Slot-exhausted tag case. Both M-Fine and S handlers return `pure (none, s, sB)` /
         -- `pure (none, s)` (since `multipleBadAdvance tag sB none = sB` and `gFine` is not
@@ -248,7 +249,7 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
               (Sum.inl tag) s
             = pure (none, s) := fun gS =>
           singleTableHandler_tag_run_of_not_lt (OracleComp.tableExtending c gS) tag s hslot
-        -- Rewrite each of the three positions (LHS-success, RHS-success, BAD-event) so the head
+        -- Rewrite each of the three positions (LHS-output, RHS-output, BAD-event) so the head
         -- step collapses to running `k none` at the unchanged state. Both M-Fine and S handlers
         -- under `hslot` return `pure (none, …)`, so `pure_bind` reduces the head bind.
         have hLHS_eq :
@@ -301,9 +302,7 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
           refine bind_congr fun gFine => ?_
           rw [multipleBadTableFine_run_query_bind', hMstep gS gFine]
           simp only [unlinkOracleSpec_range_inl, pure_bind]
-        rw [probOutput_congr rfl (congrArg evalSPMF hLHS_eq),
-            probOutput_congr rfl (congrArg evalSPMF hRHS_eq),
-            probEvent_congr' (fun _ _ => Iff.rfl) (congrArg evalSPMF hBAD_eq)]
+        rw [hLHS_eq, hRHS_eq, hBAD_eq]
         -- Now LHS / RHS / BAD all evaluate `k none` at the unchanged state `(s, sB)`. Apply IH at
         -- `qT'`; the `qT`-bearing nonce-aliasing slack weakens back via `gcongr` + `Nat.le_succ`.
         refine (ih none qR qT' s c sB R (hqRk none) (hqTk none) hqRle hcInv hRespInv).trans ?_
@@ -312,7 +311,8 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest]
     | inr transcript =>
       -- Reader case: the asymmetric-discard step. Delegated to `dcAux_reader_step`, which takes
       -- the induction hypothesis `ih` as an explicit premise.
-      exact dcAux_reader_step qRInit qR qT s c sB R hqRle hcInv hRespInv transcript k ih hqR hqT
+      exact dcAux_reader_step out qRInit qR qT s c sB R hqRle hcInv hRespInv transcript k ih
+        hqR hqT
 
 end UnlinkReduction
 
@@ -321,14 +321,15 @@ end UnlinkReduction
 The lazy-form multiple-vs-single ideal-world bound, holding for every adversary with no
 distinctness hypothesis on its reader nonces. Routes through
 `multipleBadEager_le_singleEager_DC_aux` via the standard eagerization equivalences for the
-multiple-bad handler (`evalSPMF_simulateQ_multipleBadQueryImpl_run_eq_tableExtending`) and the
-single-ideal handler (`probOutput_singleIdeal_run'_eq_tableSample`). -/
+multiple-bad handler (`evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending`) and the
+single-ideal handler (`evalDist_singleIdeal_run'_eq_tableSample`). -/
 
 namespace UnlinkReduction
 
-/-- **Multi-to-single via direct M-S coupling.** Bounds the multiple-session ideal world by the
-single-session ideal world plus the multiple-bad collision probability and three unconditional
-slack terms, for every adversary and with no distinctness hypothesis on its reader nonces. None of
+/-- **Multi-to-single via direct M-S coupling.** Bounds the probability that the multiple-session
+ideal world outputs `out` by the same probability in the single-session ideal world plus the
+multiple-bad collision probability and three unconditional slack terms, for every adversary, each
+output bit, and with no distinctness hypothesis on its reader nonces. None of
 the slacks is tag-side: the tag-side cell-count gap is absorbed by `le_self_add` at every tag step,
 so removing the reader-nonce distinctness hypothesis costs zero extra slack.
 
@@ -338,197 +339,155 @@ identification of M's cell `(tag, n)` with S's cell `((tag, 0), n)` is a fixed e
 state-dependent one. The bound is supplied by `multipleBadEager_le_singleEager_DC_aux`, lifted to
 the lazy ideal handlers by the standard eagerization equivalences and instantiated at `R = ∅`,
 `qRInit = qReader`. -/
-theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
+theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest] (out : Bool)
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (qReader qTag : ℕ)
     (hqReader : OracleComp.IsQueryBoundP adversary (·.isRight) qReader)
     (hqTag : OracleComp.IsQueryBoundP adversary (·.isLeft) qTag) :
-    Pr[= true | (simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
+    Pr{let b ← ((simulateQ (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run'
-        (UnlinkState.init, ∅)] ≤
-      Pr[= true | (simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
+        (UnlinkState.init, ∅))}[b = out] ≤
+      Pr{let b ← ((simulateQ (singleIdealQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run'
-        (UnlinkState.init, ∅)] +
-      Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
-          ((UnlinkState.init, ∅), UnlinkBadState.init)] +
+        (UnlinkState.init, ∅))}[b = out] +
+      Pr{let z ← ((simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
+          ((UnlinkState.init, ∅), UnlinkBadState.init))}[z.2.2.bad] +
       ((qReader * Fintype.card TagId : ℕ) : ℝ≥0∞) / (Fintype.card Digest : ℝ≥0∞) +
       ((qReader * qTag : ℕ) : ℝ≥0∞) / (Fintype.card Nonce : ℝ≥0∞) +
       ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
         (Fintype.card Digest : ℝ≥0∞) := by
   classical
-  -- **Step 1.** Replace the multiple-ideal LHS by the multiple-bad LHS (same `Pr[= true]`).
-  rw [← probOutput_multipleBad_run'_eq_multipleIdeal adversary
-      (UnlinkState.init, (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache)) UnlinkBadState.init]
+  let : MeasurableSpace Digest := ⊤
+  let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
+  let : MeasurableSpace (Bool × UnlinkState TagId × UnlinkBadState TagId Nonce Digest) := ⊤
+  -- **Step 1.** Replace the multiple-ideal LHS by the multiple-bad LHS (same output measure).
+  rw [← (EvalDistEq.of_evalDist_eq (evalDist_multipleBad_run'_eq_multipleIdeal adversary
+      (UnlinkState.init, (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache))
+      UnlinkBadState.init)).prEvent_eq]
   -- **Step 2.** Eagerize the M-side: the lazy `multipleBadQueryImpl` run distribution equals the
   -- `$ᵗ gM`-then-eager-table form, modulo the `(z.1, z.2.2)` map projection.
-  have hM := evalSPMF_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
-    (sessionsPerTag := sessionsPerTag) adversary
+  have hM := evalDist_simulateQ_multipleBadQueryImpl_run_eq_tableExtending
+    (sessionsPerTag := sessionsPerTag) SampleableType.evalDist_uniformSample
+    SampleableType.evalDist_uniformSample adversary
     UnlinkState.init (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache) UnlinkBadState.init
-  -- M-side success-term rewrite: factor `run' = (·.1) <$> run` through `(z.1, z.2.2) <$> run`.
+  -- M-side output-term rewrite: factor `run' = (·.1) <$> run` through `(z.1, z.2.2) <$> run`.
   have hMsucc :
-      Pr[= true | (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+      Pr{let b ← ((simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
           adversary).run'
           ((UnlinkState.init, (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache)),
-            UnlinkBadState.init)] =
-      Pr[= true | do
+            UnlinkBadState.init))}[b = out] =
+      Pr{let b ← (do
           let gM ← $ᵗ (TagId × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
             (simulateQ (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending
                 (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache) gM)) adversary).run
-              (UnlinkState.init, UnlinkBadState.init)] := by
-    apply probOutput_congr rfl
-    have h := congrArg (fun d => (fun w : Bool × UnlinkBadState TagId Nonce Digest => w.1) <$> d) hM
-    simpa only [StateT.run'_eq, ← evalSPMF_map, Functor.map_map, map_bind,
-      Function.comp_def] using h
+              (UnlinkState.init, UnlinkBadState.init))}[b = out] := by
+    have h := (EvalDistEq.of_evalDist_eq hM).prEvent_eq (fun w => w.1 = out)
+    simp only [StateT.run'_eq, prEvent_map, ← map_bind] at h ⊢
+    exact h
   -- M-side bad-term rewrite: factor `z.2.2.bad = (z.2.bad) ∘ (z.1, z.2.2)` and apply `hM`.
   have hMbad :
-      Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
-          ((UnlinkState.init, ∅), UnlinkBadState.init)] =
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
+      Pr{let z ← ((simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
+          ((UnlinkState.init, ∅), UnlinkBadState.init))}[z.2.2.bad] =
+      Pr{let z ← (do
         let gM ← $ᵗ (TagId × Nonce → Digest)
         (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
             (z.1, z.2.2)) <$>
           (simulateQ (multipleBadTableHandler sessionsPerTag (OracleComp.tableExtending
               (∅ : ((TagId × Nonce) →ₒ Digest).QueryCache) gM)) adversary).run
-            (UnlinkState.init, UnlinkBadState.init)] := by
-    have hbadev :
-        (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad = true) =
-        (fun w : Bool × UnlinkBadState TagId Nonce Digest => w.2.bad = true) ∘
-          (fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-            (z.1, z.2.2)) := rfl
-    rw [hbadev, ← probEvent_map]
-    exact probEvent_congr' (fun _ _ => Iff.rfl) hM
-  -- **Step 3.** Eagerize the S-side success term to `$ᵗ gS >>= singleTableHandler gS`.
-  rw [hMsucc, hMbad, probOutput_singleIdeal_run'_eq_tableSample adversary]
+            (UnlinkState.init, UnlinkBadState.init))}[z.2.bad] := by
+    have h := (EvalDistEq.of_evalDist_eq hM).prEvent_eq (fun w => w.2.bad = true)
+    rw [prEvent_map] at h
+    exact h
+  -- **Step 3.** Eagerize the S-side output term to `$ᵗ gS >>= singleTableHandler gS`.
+  rw [hMsucc, hMbad,
+    (EvalDistEq.of_evalDist_eq (evalDist_singleIdeal_run'_eq_tableSample adversary)).prEvent_eq]
   -- Collapse `tableExtending ∅ g = g` on both M (over `TagId × Nonce`) and S (over the
   -- `(TagId × Fin sp) × Nonce` domain) sides.
   simp only [OracleComp.tableExtending_empty]
   -- **Step 4.** Bridge `$ᵗ (TagId × Nonce → Digest)` to
-  -- `$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)` via `slotZeroSubTable`. The bridge says:
-  -- for any continuation `F`, the distribution of `$ᵗ gM >>= F gM` equals the distribution of
-  -- `$ᵗ gS >>= F (slotZeroSubTable gS)`. We package this as a generic helper and apply it twice
-  -- (once for the success term, once for the bad term).
-  have hbridge : ∀ {X : Type} (F : (TagId × Nonce → Digest) → ProbComp X),
-      𝒮[($ᵗ (TagId × Nonce → Digest)) >>= F] =
-      𝒮[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
+  -- `$ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)` via `slotZeroSubTable`: for any
+  -- continuation `F`, the distribution of `$ᵗ gM >>= F gM` equals the distribution of
+  -- `$ᵗ gS >>= F (slotZeroSubTable gS)`.
+  have hbridge : ∀ {X : Type} [MeasurableSpace X] (F : (TagId × Nonce → Digest) → ProbComp X),
+      𝒟[($ᵗ (TagId × Nonce → Digest)) >>= F] =
+      𝒟[($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
             fun gS => F (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)] := by
-    intro X F
-    let : MeasurableSpace Digest := ⊤
-    let : MeasurableSpace X := ⊤
-    apply evalSPMF_eq_of_evalDist_eq
+    intro X _ F
     have hSZ := evalDist_slotZeroSubTable_uniformSample
       (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
       (sessionsPerTag := sessionsPerTag)
-      evalDist_uniformSample evalDist_uniformSample
+      SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
     have hR : (($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
             fun gS => F (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS))
         = (($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)) >>=
             fun gS => pure (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)) >>= F := by
       simp
     rw [hR, evalDist_bind_of_discrete _ F, evalDist_bind_of_discrete _ F, hSZ]
-  -- M-success bridge.
-  have hbridge_succ :
-      Pr[= true | do
-          let gM ← $ᵗ (TagId × Nonce → Digest)
-          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-            (simulateQ (multipleBadTableHandler sessionsPerTag gM) adversary).run
-              (UnlinkState.init, UnlinkBadState.init)] =
-      Pr[= true | do
-          let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
-            (simulateQ (multipleBadTableHandler sessionsPerTag
-              (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)) adversary).run
-              (UnlinkState.init, UnlinkBadState.init)] :=
-    probOutput_congr rfl (hbridge _)
-  -- M-bad bridge.
-  have hbridge_bad :
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
-          let gM ← $ᵗ (TagId × Nonce → Digest)
-          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-              (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandler sessionsPerTag gM) adversary).run
-              (UnlinkState.init, UnlinkBadState.init)] =
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
-          let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
-          (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
-              (z.1, z.2.2)) <$>
-            (simulateQ (multipleBadTableHandler sessionsPerTag
-              (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)) adversary).run
-              (UnlinkState.init, UnlinkBadState.init)] :=
-    probEvent_congr' (fun _ _ => Iff.rfl) (hbridge _)
-  rw [hbridge_succ, hbridge_bad]
+  rw [(EvalDistEq.of_evalDist_eq (@hbridge _ ⊤ _)).prEvent_eq,
+    (EvalDistEq.of_evalDist_eq (@hbridge _ ⊤ _)).prEvent_eq]
   -- **Step 4b.** Fine-shape bridges. The aux's signature carries an outer
   -- `gFine ← $ᵗ ((TagId × Fin sp) × Nonce → Digest)` binder and the Fine handler
-  -- `multipleBadTableHandlerFine ... gFine`. Bridge the coarse-shape LHS-success and
-  -- RHS-bad terms (the current goal shapes after `rw [hbridge_succ, hbridge_bad]`) to the
-  -- Fine-shape via `evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq`.
-  -- Per-`gS`, the bridge gives `𝒮[(π <$> gFine←$ᵗ; Fine.run p)] = 𝒮[coarse.run p]` where
-  -- `π = fun z => (z.1, z.2.1, {z.2.2 with cacheBad := p.2.cacheBad})`. Both `Bool.fst` and the
-  -- bad event `z.2.bad` factor through `π` (they ignore `cacheBad`).
+  -- `multipleBadTableHandlerFine ... gFine`. Per-`gS`, marginalizing the Fine run over `gFine`
+  -- and forgetting `cacheBad` recovers the coarse run
+  -- (`evalDist_uniformSample_multipleBadTableHandlerFine_forget_cacheBad_eq`); both `Bool.fst`
+  -- and the bad event `z.2.bad` ignore `cacheBad`.
   have hFineEq : ∀ (gS : (TagId × Fin sessionsPerTag) × Nonce → Digest),
-      𝒮[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad :=
+      𝒟[(fun z => (z.1, z.2.1, {z.2.2 with cacheBad :=
               (UnlinkBadState.init : UnlinkBadState TagId Nonce Digest).cacheBad})) <$>
             (do let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
                 (simulateQ (multipleBadTableHandlerFine
                   (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
                     (UnlinkState.init, UnlinkBadState.init))]
-        = 𝒮[(simulateQ (multipleBadTableHandler sessionsPerTag
+        = 𝒟[(simulateQ (multipleBadTableHandler sessionsPerTag
             (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)) adversary).run
               (UnlinkState.init, UnlinkBadState.init)] := fun gS =>
-    evalSPMF_simulateQ_multipleBadTableHandlerFine_forget_cacheBad_eq
+    evalDist_uniformSample_multipleBadTableHandlerFine_forget_cacheBad_eq
       (sessionsPerTag := sessionsPerTag)
       (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) adversary
       ((UnlinkState.init, UnlinkBadState.init) :
         UnlinkState TagId × UnlinkBadState TagId Nonce Digest)
-  -- Apply the Fine bridge to the success term (event factors through π since π preserves `z.1`).
+  -- Apply the Fine bridge to the output term (the event factors through the projection since it
+  -- preserves `z.1`) and to the bad term (the projection preserves `bad`).
   have hsucc_fine :
-      Pr[= true | do
+      Pr{let b ← (do
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
             (simulateQ (multipleBadTableHandler sessionsPerTag
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)) adversary).run
-                (UnlinkState.init, UnlinkBadState.init)] =
-      Pr[= true | do
+                (UnlinkState.init, UnlinkBadState.init))}[b = out] =
+      Pr{let b ← (do
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) => z.1) <$>
             (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
-                (UnlinkState.init, UnlinkBadState.init)] := by
-    rw [← probEvent_eq_eq_probOutput, ← probEvent_eq_eq_probOutput]
-    refine probEvent_bind_congr' _ _ fun gS => ?_
-    have h := probEvent_congr' (p := fun z => z.1 = true)
-      (fun _ _ => Iff.rfl) (hFineEq gS).symm
-    simpa only [← map_bind, probEvent_map, Function.comp_def] using h
-  -- Apply the Fine bridge to the bad term. The bad event factors through π (cacheBad ≠ bad).
-  -- Strategy: use `probEvent_bind_congr'` to reduce to a per-gS equality, then push the
-  -- `(z.1, z.2.2)` map through `probEvent_map` to expose the `z.2.2.bad` predicate, then
-  -- apply `hFineEq` after observing that the bad predicate is π-invariant.
+                (UnlinkState.init, UnlinkBadState.init))}[b = out] := by
+    refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
+    have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.1 = out)
+    simpa only [← map_bind, prEvent_map, Function.comp_def] using h
   have hbad_fine :
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
+      Pr{let z ← (do
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
               (z.1, z.2.2)) <$>
             (simulateQ (multipleBadTableHandler sessionsPerTag
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS)) adversary).run
-                (UnlinkState.init, UnlinkBadState.init)] =
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad | do
+                (UnlinkState.init, UnlinkBadState.init))}[z.2.bad] =
+      Pr{let z ← (do
           let gS ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           let gFine ← $ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest)
           (fun z : Bool × (UnlinkState TagId × UnlinkBadState TagId Nonce Digest) =>
               (z.1, z.2.2)) <$>
             (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
-                (UnlinkState.init, UnlinkBadState.init)] := by
-    refine probEvent_bind_congr' _ _ fun gS => ?_
-    have h := probEvent_congr' (p := fun z => z.2.2.bad = true)
-      (fun _ _ => Iff.rfl) (hFineEq gS).symm
-    simpa only [← map_bind, probEvent_map, Function.comp_def] using h
+                (UnlinkState.init, UnlinkBadState.init))}[z.2.bad] := by
+    refine prEvent_bind_congr _ _ _ _ _ fun gS => ?_
+    have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.2.2.bad = true)
+    simpa only [← map_bind, prEvent_map, Function.comp_def] using h
   rw [hsucc_fine, hbad_fine]
   -- **Step 5.** Apply the DC aux at `c = ∅`, `s = UnlinkState.init`, `sB = UnlinkBadState.init`.
-  have haux := multipleBadEager_le_singleEager_DC_aux (sessionsPerTag := sessionsPerTag)
+  have haux := multipleBadEager_le_singleEager_DC_aux (sessionsPerTag := sessionsPerTag) out
     adversary qReader qTag qReader UnlinkState.init
     (∅ : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache) UnlinkBadState.init ∅
     hqReader hqTag (by simp) (fun _ _ _ _ => rfl) (fun _ _ _ h => absurd rfl h)

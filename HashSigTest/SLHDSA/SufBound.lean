@@ -505,9 +505,9 @@ variable (sadv : StrongUnforgeableAdversary (generalAlg (vp := toy) toyPrimitive
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
     sameMessageStrongUnforgeableAdvantage ProbCompRuntime.probComp sadv =
-      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+      𝒟[instrumentedSameMessageExperiment sadv sel]
         {z | z.1 = true ∧ z.2 = false} +
-      (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+      𝒟[instrumentedSameMessageExperiment sadv sel]
         {z | z.1 = true ∧ z.2 = true} :=
   sameMessageAdvantage_eq_arms ProbCompRuntime.probComp
     sadv sel
@@ -526,9 +526,9 @@ example :
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
     strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ x +
-        ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        (𝒟[instrumentedSameMessageExperiment sadv sel]
           {z | z.1 = true ∧ z.2 = false} +
-          (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+          𝒟[instrumentedSameMessageExperiment sadv sel]
             {z | z.1 = true ∧ z.2 = true}) ↔
       unforgeableAdvantage ProbCompRuntime.probComp sadv.toUnforgeableAdversary ≤ x :=
   strongAdvantage_le_add_arms_iff sadv x sel
@@ -584,9 +584,9 @@ example : strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤
 example (sel : QueryLog (List Byte →ₒ GeneralScheme.SignatureCore toy toyPrimitives.core) →
       List Byte → GeneralScheme.SignatureCore toy toyPrimitives.core → Bool) :
     strongUnforgeableAdvantage ProbCompRuntime.probComp sadv ≤ c.summands.bound toy.params +
-      ((instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+      (𝒟[instrumentedSameMessageExperiment sadv sel]
         {z | z.1 = true ∧ z.2 = false} +
-        (instrumentedSameMessageExp ProbCompRuntime.probComp sadv sel)
+        𝒟[instrumentedSameMessageExperiment sadv sel]
           {z | z.1 = true ∧ z.2 = true}) :=
   strongAdvantage_le_bound_add_arms c sel
 

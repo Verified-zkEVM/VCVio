@@ -7,7 +7,7 @@ Authors: Quang Dao, Alexander Hicks
 module
 public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import HashSig.SLHDSA.Security.ReachableTargets
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 
 /-!
 # Connecting SLH-DSA construction traces to reachable target ledgers

@@ -16,9 +16,9 @@ follow-up; the CSV and original case studies retain their baseline measurements.
 ## Implementation results — September 2026
 
 The implementation follows the measure-first constraint. Native semantic proofs use `Measure`
-and Giry composition; existing discrete interfaces have compatibility wrappers. Structural
-cache/log proofs use no probability assumptions. This does not remove the library's complete
-retiring probability surface or change the substantive coupling mathematics.
+and Giry composition; existing discrete interfaces then kept compatibility wrappers. Structural
+cache/log proofs use no probability assumptions. This did not remove the library's retiring
+probability surface, which was removed later, or change the substantive coupling mathematics.
 
 The work is split into the following review stages:
 
@@ -62,9 +62,9 @@ potential argument while sharing cache/log updates (106 and 144 body lines respe
 Validation includes the full build, environment and source linters, test libraries, smoke and
 SLH-DSA tests, and the axiom sweep. Native-only import checks cover draw, table, and KEM–DEM
 foundations. Transitive theorem-dependency checks cover the adaptive bounds, table core, and
-pure Fiat–Shamir invariant updates. Sampling frontend types such as `SampleableType` still carry
-compatibility certificates, so these checks deliberately distinguish the native foundation from
-the frontend adapter. No new axioms or `sorry` debt were introduced.
+pure Fiat–Shamir invariant updates. Sampling frontend types such as `SampleableType` then still
+carried compatibility certificates, so these checks deliberately distinguished the native
+foundation from the frontend adapter. No new axioms or `sorry` debt were introduced.
 
 The discrete rotation experiment below is historical. Production callers use
 `evalDist_bind_bind_bind_rotate`; they do not use the prototype's discrete semantic proof.
@@ -152,9 +152,10 @@ retain the large statements of `hLHS_comm` and `hBAD_comm`; naming the continuat
 one result-polymorphic observation equation could reduce repetition further, but that additional
 saving has not been measured.
 
-This is a proof of reuse in the current compatibility layer. It does not require a new congruence
-attribute. Production placement should reuse the existing probability/semantic equation API and
-respect the retiring PMF/SPMF boundary; it should not introduce another semantic representation.
+This is a proof of reuse in the then-current compatibility layer (since removed). It does not
+require a new congruence attribute. Production placement should reuse the existing
+probability/semantic equation API and respect the retiring PMF/SPMF boundary; it should not
+introduce another semantic representation.
 A direct `vcstep` trial on these raw `𝒮[…] = 𝒮[…]` goals failed because that is not a supported
 entry shape. This does not rule out a probability-level or relational reformulation.
 
@@ -323,10 +324,10 @@ triangle inequality is already straightforward.
 
 **Recommendation:** name the real/random message games and extract the four observation identities.
 A message-selection parameter can likely share the left/right KEM identities. Keep the public
-losslessness and runtime-coherence assumptions explicit. Because this file uses the retiring
-SPMF representation directly, coordinate the refactor with the semantic boundary rather than
-exporting a second family of legacy game definitions. More `gcongr` tags have little direct value
-until the game identities are available.
+losslessness and runtime-coherence assumptions explicit. Because this file used the retiring
+SPMF representation directly at the audited revision, coordinate the refactor with the semantic
+boundary rather than exporting a second family of legacy game definitions. More `gcongr` tags
+have little direct value until the game identities are available.
 
 ### 9. Stateful Fiat–Shamir invariant preservation — 175 lines
 
