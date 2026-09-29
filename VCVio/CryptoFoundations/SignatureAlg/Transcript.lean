@@ -6,7 +6,7 @@ Authors: Alexander Hicks
 
 module
 
-public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.SignatureAlg.Naturality
 
 /-!
 # The transcript of the unforgeability experiment
@@ -17,6 +17,14 @@ verification verdict.  The experiment's success bit is `UnforgeableTranscript.wi
 transcript (`map_wins_unforgeableTranscriptExperiment`), so any event of the experiment is an
 event of the transcript, and a proof about the adversary's success may read off the transcript
 everything the experiment computed.
+
+The transcript experiment commutes with oracle interpretation: interpreting the ambient oracles
+of the whole experiment through `G` is the transcript experiment of the interpreted scheme against
+the interpreted adversary (`simulateQ_unforgeableTranscriptExperiment`). A scheme whose key
+generation draws a value `s` and then runs the key generation of a scheme `A s` whose secret keys
+re-encode, through `g s`, into its own, while signing and verification agree under the
+re-encoding, has as transcript experiment the draw followed by the transcript experiment of `A s`
+with its secret key re-encoded (`unforgeableTranscriptExperiment_eq_bind_mapSk`).
 
 Under a stateful interpretation of the ambient oracles, a transcript arises from the three stages
 of the experiment in sequence, each run from the state the previous one left
@@ -32,7 +40,7 @@ open OracleSpec OracleComp
 
 namespace SignatureAlg
 
-variable {ι : Type} {spec : OracleSpec ι} {M PK SK S : Type}
+variable {ι ι' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'} {M PK SK SK' S Sec : Type}
 
 /-- The transcript of one execution of the unforgeability experiment: the key pair, the signing
 oracle's log of queried messages and returned signatures, the forgery, and whether it verifies. -/
@@ -73,6 +81,11 @@ noncomputable def unforgeableTranscriptExperiment
   let verified ← sigAlg.verify pk msg σ
   return ⟨pk, sk, log, msg, σ, verified⟩
 
+/-- The transcript with its secret key replaced by its image under `g`. -/
+def UnforgeableTranscript.mapSk (g : SK' → SK) (z : UnforgeableTranscript M PK SK' S) :
+    UnforgeableTranscript M PK SK S :=
+  ⟨z.pk, g z.sk, z.log, z.msg, z.sig, z.verified⟩
+
 /-- The unforgeability experiment is the success bit of its transcript. -/
 theorem map_wins_unforgeableTranscriptExperiment
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S} (adv : UnforgeableAdversary sigAlg) :
@@ -80,6 +93,45 @@ theorem map_wins_unforgeableTranscriptExperiment
       unforgeableExperiment adv := by
   simp only [unforgeableTranscriptExperiment, unforgeableExperiment, map_bind, map_pure]
   rfl
+
+/-- Interpreting the ambient oracles of the transcript experiment through `G` gives the
+transcript experiment of the interpreted scheme against the interpreted adversary. -/
+theorem simulateQ_unforgeableTranscriptExperiment (G : QueryImpl spec (OracleComp spec'))
+    {sigAlg : SignatureAlg (OracleComp spec) M PK SK S} (adv : UnforgeableAdversary sigAlg) :
+    simulateQ G (unforgeableTranscriptExperiment adv) =
+      unforgeableTranscriptExperiment (sigAlg := sigAlg.map (simulateQ' G))
+        (adv.mapOracles G) := by
+  simp only [unforgeableTranscriptExperiment, runWithSigningOracle, simulateQ_bind,
+    simulateQ_pure, map_keygen, map_verify, UnforgeableAdversary.mapOracles_main]
+  refine bind_congr fun kp => ?_
+  rw [simulateQ_WriterT_compose (spec.passthrough + sigAlg.signingOracle kp.1 kp.2) G
+    ((spec'.passthrough + (sigAlg.map (simulateQ' G)).signingOracle kp.1 kp.2) ∘ₛ
+      G.addLift (QueryImpl.id' (M →ₒ S))), QueryImpl.simulateQ_compose]
+  rintro (t | msg)
+  · simp [QueryImpl.simulateQ_add_liftM_left, writerT_run_simulateQ_liftTarget]
+  · simp [QueryImpl.simulateQ_add_liftM_right, signingOracle]
+
+/-- If the key generation of `B` draws `s` from `draw`, runs the key generation of `A s` and
+re-encodes its secret key through `g s`, and `B` signs a re-encoded key and verifies as `A s` does,
+then the transcript experiment of `B` draws `s` and runs the transcript experiment of `A s`,
+re-encoding the transcript's secret key through `g s`. -/
+theorem unforgeableTranscriptExperiment_eq_bind_mapSk
+    (B : SignatureAlg (OracleComp spec) M PK SK S)
+    (A : Sec → SignatureAlg (OracleComp spec) M PK SK' S)
+    (draw : OracleComp spec Sec) (g : Sec → SK' → SK)
+    (hkg : B.keygen = do let s ← draw; let kp ← (A s).keygen; return (kp.1, g s kp.2))
+    (hsign : ∀ s pk sk' m, B.sign pk (g s sk') m = (A s).sign pk sk' m)
+    (hver : ∀ s, B.verify = (A s).verify)
+    (adv : UnforgeableAdversary B) :
+    unforgeableTranscriptExperiment adv = (draw >>= fun s =>
+      UnforgeableTranscript.mapSk (g s) <$>
+        unforgeableTranscriptExperiment (sigAlg := A s) ⟨adv.main⟩) := by
+  simp only [unforgeableTranscriptExperiment, hkg, bind_assoc, pure_bind, map_bind, map_pure,
+    UnforgeableTranscript.mapSk]
+  refine bind_congr fun s => bind_congr fun kp => ?_
+  have hso : B.signingOracle kp.1 (g s kp.2) = (A s).signingOracle kp.1 kp.2 := by
+    funext m; simp [signingOracle, hsign]
+  simp only [runWithSigningOracle, hso, hver s]
 
 /-- Under a stateful interpretation of the ambient oracles, a transcript arises from key
 generation run from the initial state, the adversary under the logged signing oracle run from

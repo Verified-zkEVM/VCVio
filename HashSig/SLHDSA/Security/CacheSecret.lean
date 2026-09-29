@@ -531,7 +531,7 @@ theorem keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ {m : Type → Type
       (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec core) (m := m)).toMonadHom
         (GeneralScheme.keygenInternalWithSecretM core (oracleSecret core e pk sk) pk) :=
   (GeneralScheme.keygenInternalWithSecretM_natural core _ _ _
-    (oracleSecret_natural core _ e pk sk) pk).symm
+    (fun a _ => oracleSecret_natural core _ e pk sk a) pk).symm
 
 /-- Signing at the oracle-backed provider and a supplied randomizer, in any monad reaching the
 public hash, is the image of the same program in `OracleComp (publicHashSpec core)` under the
@@ -545,7 +545,7 @@ theorem signInternalWithSecretRandomizerM_oracleSecret_eq_ofSimulateQ {m : Type 
         (GeneralScheme.signInternalWithSecretRandomizerM core (oracleSecret core e pk sk) msg pk
           pkRoot R) :=
   (GeneralScheme.signInternalWithSecretRandomizerM_natural core _ _ _
-    (oracleSecret_natural core _ e pk sk) msg pk pkRoot R).symm
+    (fun a _ => oracleSecret_natural core _ e pk sk a) msg pk pkRoot R).symm
 
 end Oracle
 
