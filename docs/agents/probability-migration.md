@@ -235,6 +235,7 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | probability one from reachability | `prEvent_eq_one_of_forall_mem_support`; the converse `prEvent_eq_one_iff` needs uniform answers |
 | heartbeat timeout on raw `PFunctor.FreeM` terms | normalize with `FreeM.bind_eq_bind`, `FreeM.map_eq_map`, `FreeM.pure_eq_pure`, or state the helper at the `OracleComp` level |
 | unknown identifier `SPMF`, `probOutput`, `evalSPMF`, … or unknown `Pr[…]` syntax | run the codemod, then convert with the tables above |
+| failed to synthesize `MeasurableSpace α` at `prEvent_true_eq_evalDist_apply_univ` | it takes the output's measurable space as an instance: `let : MeasurableSpace α := ⊤` first, or use `OracleComp.prEvent_true_eq_one` for an oracle computation |
 | unknown namespace `OracleComp.EvalDist` in an `open` | delete it from the `open`; the codemod does this |
 | failed to synthesize `EvalDistSemantics ProbComp` or `EvalDistSemantics (OracleComp spec)` | import `VCVio.OracleComp.EvalDist.Measure`; removed hubs used to supply it transitively |
 | failed to synthesize `EvalDistSemantics (ExceptT ε m)` | the error type needs a measurable space: supply `MeasurableSpace ε` (e.g. `⊤`) or use an error type that has one |

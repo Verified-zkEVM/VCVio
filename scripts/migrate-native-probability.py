@@ -544,6 +544,7 @@ def fresh_name(*terms: str) -> str:
 
 def draw(x: str, comp: str) -> str:
     """The `do` statement `let x ← comp`, parenthesizing a computation spanning several lines."""
+    comp = comp.strip()
     if "\n" in comp and not is_parenthesized(comp):
         comp = f"({comp})"
     return f"let {x} ← {comp}"
@@ -730,7 +731,8 @@ def rewrite_draw_items(text: str, report: Report, path: str) -> str:
             body = rhs.rstrip()
             trail = rhs[len(body):]
             if "\n" in body and not is_parenthesized(body.strip()):
-                body = " (" + (body if body.startswith("\n") else body.lstrip()) + ")"
+                # The parenthesis opens on the arrow's line, before the action's first line.
+                body = " (" + body.lstrip() + ")"
                 if n + 1 < len(parts) and not in_spans(k, spans):
                     report.add(path, text, k, "an event sequence continues after a multi-line "
                                "draw; lay it out as a `do` block, one statement per line")

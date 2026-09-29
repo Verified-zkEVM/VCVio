@@ -78,8 +78,9 @@ class EventTests(unittest.TestCase):
         self.assertMigrates("Pr{x : α ← mx}[p x]", "Pr{let x : α ← mx}[p x]")
         self.assertMigrates("Pr{_ ← mx}[True]", "Pr{let _ ← mx}[True]")
         # A multi-line right-hand side is parenthesized.
-        self.assertMigrates("(h : Pr{y ←\n      $ᵗ α}[p y])",
-                            "(h : Pr{let y ← (\n      $ᵗ α)}[p y])")
+        self.assertMigrates("(h : Pr{y ←\n      $ᵗ α}[p y])", "(h : Pr{let y ← ($ᵗ α)}[p y])")
+        self.assertMigrates("Pr{y ←\n      f a\n        b}[p y]",
+                            "Pr{let y ← (f a\n        b)}[p y]")
         self.assertMigrates("Pr{x ← f a\n    b}[p x]", "Pr{let x ← (f a\n    b)}[p x]")
         self.assertMigrates("Pr{x ← (f a\n    b)}[p x]", "Pr{let x ← (f a\n    b)}[p x]")
         self.assertMigrates("Pr{x ← do\n    let y ← mx\n    pure y}[p x]",
