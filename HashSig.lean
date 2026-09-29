@@ -74,6 +74,7 @@ public import HashSig.SLHDSA.Security.SkgIdealFresh
 public import HashSig.SLHDSA.Security.SkgPrfHop
 public import HashSig.SLHDSA.Security.SufBound
 public import HashSig.SLHDSA.Security.SufResidual
+public import HashSig.SLHDSA.Security.Target
 public import HashSig.SLHDSA.Security.TargetCounts
 public import HashSig.SLHDSA.Security.TraceTargets
 public import HashSig.SLHDSA.Security.WotsWitnesses

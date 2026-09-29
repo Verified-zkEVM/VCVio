@@ -155,6 +155,7 @@ public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.SignatureAlg.Naturality
+public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
 public import VCVio.CryptoFoundations.SignatureAlg.Tagged
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs

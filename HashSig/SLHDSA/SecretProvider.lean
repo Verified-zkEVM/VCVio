@@ -15,10 +15,10 @@ WOTS+ or FORS secret value at a given address. The honest programs of `HashSig.S
 such value from `CorePrimitives.PRF` at the signer's secret seed, so the secret seed is baked into
 their control flow. This module provides the twin of each honest program in which those draws go
 to a provider instead: `wotsSignWithSecret`, `xmssSignWithSecret`, `forsSignWithSecret`,
-`signFromPositionWithSecret`, `keygenInternalWithSecretM`, `signInternalWithSecretM`, and the
-intermediate programs they are built from. A reduction that must answer the secret draws from an
-oracle — a PRF challenger, or a lazily sampled table — instantiates `secret` with that oracle
-instead of rewriting the program.
+`signFromPositionWithSecret`, `keygenInternalWithSecretM`, `signInternalWithSecretM`,
+`signInternalWithSecretRandomizerM`, and the intermediate programs they are built from. A
+reduction that must answer the secret draws from an oracle — a PRF challenger, or a lazily sampled
+table — instantiates `secret` with that oracle instead of rewriting the program.
 
 The `*_eq_*` theorems are the faithfulness half of the abstraction: at the honest provider
 `fun a => pure (core.PRF pkSeed skSeed a)` each program of this module *is* the landed program it
@@ -41,8 +41,11 @@ whether a particular provider is indistinguishable from the honest one is a ques
 `HashSig.SLHDSA.Security`. The public hash is untouched: the twins take the same hash, compression
 and node-hash callbacks as the `*With` programs, the `*M` twins still reach the public hash through
 `HasQuery (publicHashSpec core)`, and no landed program is redefined in terms of its twin. The
-message randomizer `core.PRFmsg` and the digest split are likewise untouched;
-`signInternalWithSecretM` abstracts only the WOTS+ and FORS secrets, and still takes `skPrf`.
+message randomizer `core.PRFmsg` and the digest split are likewise untouched:
+`signInternalWithSecretM` abstracts only the WOTS+ and FORS secrets, and still takes `skPrf`, while
+`signInternalWithSecretRandomizerM` takes the randomizer `R` itself, so a caller may draw it from
+an oracle; `signInternalWithSecretM` is it at `R := core.PRFmsg skPrf addrnd msg`
+(`signInternalWithSecretM_eq_signInternalWithSecretRandomizerM`).
 
 Each equation pins the *returned value* of a twin, and, because the hash callbacks are universally
 quantified, the hash traffic the twin issues. It pins nothing about the provider traffic: the
@@ -55,10 +58,10 @@ modules carry for their own programs (`wotsPkGenM_isTotalQueryBound` in `HashSig
 
 ## Labels
 
-Fifty-seven declarations: nineteen provider-parametric programs, nineteen specialisation
-equations and nineteen naturality theorems.  There is no private declaration: the monadic-vector
-naturality step the WOTS+ and FORS twins need is `Vector.ofFnM_natural` of
-`ToMathlib.Data.Vector`.
+Sixty declarations: twenty provider-parametric programs, nineteen specialisation equations,
+twenty naturality theorems, and one equation between the two signing twins.  There
+is no private declaration: the monadic-vector naturality step the WOTS+ and FORS twins need is
+`Vector.ofFnM_natural` of `ToMathlib.Data.Vector`.
 
 *Provider-parametric programs*:
 
@@ -68,7 +71,8 @@ naturality step the WOTS+ and FORS twins need is `Vector.ofFnM_natural` of
   `forsSignWithSecret`, and its explicit-public-hash form `forsSignWithSecretM`;
 * hypertree: `signFromPositionWithSecret`, `signWithSecret`, `rootWithSecret`, and their
   explicit-public-hash forms `signWithSecretM`, `rootWithSecretM`;
-* scheme: `keygenInternalWithSecretM`, `signInternalWithSecretM`.
+* scheme: `keygenInternalWithSecretM`, `signInternalWithSecretM`,
+  `signInternalWithSecretRandomizerM`.
 
 *Specialisation at the honest provider* — each states that the twin equals its landed program:
 
@@ -91,7 +95,9 @@ commutes with the twin, named after it: `wotsPkGenTopsWithSecret_natural`,
 `forsSignWithSecret_natural`, `forsSignWithSecretM_natural`,
 `signFromPositionWithSecret_natural`, `signWithSecret_natural`, `rootWithSecret_natural`,
 `signWithSecretM_natural`, `rootWithSecretM_natural`, `keygenInternalWithSecretM_natural`,
-`signInternalWithSecretM_natural`.
+`signInternalWithSecretM_natural`, `signInternalWithSecretRandomizerM_natural`.
+
+*Between the signing twins*: `signInternalWithSecretM_eq_signInternalWithSecretRandomizerM`.
 
 ## References
 
@@ -793,20 +799,35 @@ hypertree root, which is the public key root. -/
     (secret : Adrs → m core.Y) (pkSeed : core.PkSeed) : m core.Y :=
   GeneralHypertree.rootWithSecretM core secret pkSeed
 
-/-- FIPS 205 Algorithm 19 with every WOTS+ and FORS secret drawn from the provider `secret`, so
-that no secret seed appears: the message randomizer still comes from `core.PRFmsg` at `skPrf`, and
-the digest is split exactly as in `signInternalM`. -/
-@[expose] def signInternalWithSecretM {m : Type → Type*} [Monad m]
+/-- FIPS 205 Algorithm 19 with every WOTS+ and FORS secret drawn from the provider `secret` and
+the message randomizer `R` supplied: neither secret seed appears. -/
+@[expose] def signInternalWithSecretRandomizerM {m : Type → Type*} [Monad m]
     [HasQuery (publicHashSpec core) m]
-    (secret : Adrs → m core.Y) (msg : List Byte) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
-    (pkRoot : core.Y) (addrnd : core.Y) : m (SignatureCore vp core) := do
-  let R := core.PRFmsg skPrf addrnd msg
+    (secret : Adrs → m core.Y) (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot : core.Y)
+    (R : core.Y) : m (SignatureCore vp core) := do
   let digest ← PublicHash.hmsg core R pkSeed pkRoot msg
   let parts := splitDigest vp.params digest
   let forsSig ← forsSignWithSecretM core secret parts.md.toList pkSeed parts.forsAdrs
   let forsPk ← forsPkFromSigM core forsSig parts.md.toList pkSeed parts.forsAdrs
   let htSig ← GeneralHypertree.signWithSecretM core secret forsPk pkSeed parts
   return ⟨R, forsSig, htSig⟩
+
+/-- FIPS 205 Algorithm 19 with every WOTS+ and FORS secret drawn from the provider `secret`, so
+that no secret seed appears: the message randomizer still comes from `core.PRFmsg` at `skPrf`, and
+the digest is split exactly as in `signInternalM`. -/
+@[expose] def signInternalWithSecretM {m : Type → Type*} [Monad m]
+    [HasQuery (publicHashSpec core) m]
+    (secret : Adrs → m core.Y) (msg : List Byte) (skPrf : core.SkPrf) (pkSeed : core.PkSeed)
+    (pkRoot : core.Y) (addrnd : core.Y) : m (SignatureCore vp core) :=
+  signInternalWithSecretRandomizerM core secret msg pkSeed pkRoot (core.PRFmsg skPrf addrnd msg)
+
+/-- Provider-parametric signing signs at the randomizer `PRF_msg` derives from `skPrf`. -/
+theorem signInternalWithSecretM_eq_signInternalWithSecretRandomizerM {m : Type → Type*}
+    [Monad m] [HasQuery (publicHashSpec core) m] (secret : Adrs → m core.Y) (msg : List Byte)
+    (skPrf : core.SkPrf) (pkSeed : core.PkSeed) (pkRoot addrnd : core.Y) :
+    signInternalWithSecretM core secret msg skPrf pkSeed pkRoot addrnd =
+      signInternalWithSecretRandomizerM core secret msg pkSeed pkRoot
+        (core.PRFmsg skPrf addrnd msg) := rfl
 
 /-- At the honest provider provider-parametric key generation, paired with the seeds into the
 key structures, is `keygenInternalM`. -/
@@ -829,7 +850,7 @@ theorem signInternalWithSecretM_eq_signInternalM {m : Type → Type*} [Monad m] 
     signInternalWithSecretM core (fun a => pure (core.PRF sk.pkSeed sk.skSeed a)) msg sk.skPrf
         sk.pkSeed sk.pkRoot addrnd =
       (signInternalM vp core msg sk addrnd : m (SignatureCore vp core)) := by
-  rw [signInternalWithSecretM, signInternalM]
+  rw [signInternalWithSecretM, signInternalWithSecretRandomizerM, signInternalM]
   simp only [forsSignWithSecretM_eq_forsSignM, GeneralHypertree.signWithSecretM_eq_signM]
 
 /-! ## Naturality of the scheme twins -/
@@ -845,6 +866,27 @@ theorem keygenInternalWithSecretM_natural {m n : Type → Type*} [Monad m] [Lawf
       keygenInternalWithSecretM core secretn pkSeed :=
   GeneralHypertree.rootWithSecretM_natural core F secretm secretn hsecret pkSeed
 
+/-- A query-preserving monad morphism commutes with provider-parametric signing at a supplied
+randomizer when it commutes with the provider. -/
+theorem signInternalWithSecretRandomizerM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
+    [Monad n] [LawfulMonad n] [HasQuery (publicHashSpec core) m]
+    [HasQuery (publicHashSpec core) n] (F : HasQuery.QueryHom (publicHashSpec core) m n)
+    (secretm : Adrs → m core.Y) (secretn : Adrs → n core.Y)
+    (hsecret : ∀ a, F.toMonadHom (secretm a) = secretn a)
+    (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot R : core.Y) :
+    F.toMonadHom (signInternalWithSecretRandomizerM core secretm msg pkSeed pkRoot R) =
+      signInternalWithSecretRandomizerM core secretn msg pkSeed pkRoot R := by
+  rw [signInternalWithSecretRandomizerM, signInternalWithSecretRandomizerM,
+    F.toMonadHom.mmap_bind, PublicHash.hmsg_natural core F]
+  refine bind_congr fun digest => ?_
+  rw [F.toMonadHom.mmap_bind, forsSignWithSecretM_natural core F secretm secretn hsecret]
+  refine bind_congr fun forsSig => ?_
+  rw [F.toMonadHom.mmap_bind, forsPkFromSigM_natural core F]
+  refine bind_congr fun forsPk => ?_
+  rw [F.toMonadHom.mmap_bind,
+    GeneralHypertree.signWithSecretM_natural core F secretm secretn hsecret]
+  exact bind_congr fun htSig => F.toMonadHom.mmap_pure _
+
 /-- A query-preserving monad morphism commutes with provider-parametric signing when it commutes
 with the provider. -/
 theorem signInternalWithSecretM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
@@ -854,17 +896,8 @@ theorem signInternalWithSecretM_natural {m n : Type → Type*} [Monad m] [Lawful
     (hsecret : ∀ a, F.toMonadHom (secretm a) = secretn a)
     (msg : List Byte) (skPrf : core.SkPrf) (pkSeed : core.PkSeed) (pkRoot addrnd : core.Y) :
     F.toMonadHom (signInternalWithSecretM core secretm msg skPrf pkSeed pkRoot addrnd) =
-      signInternalWithSecretM core secretn msg skPrf pkSeed pkRoot addrnd := by
-  rw [signInternalWithSecretM, signInternalWithSecretM, F.toMonadHom.mmap_bind,
-    PublicHash.hmsg_natural core F]
-  refine bind_congr fun digest => ?_
-  rw [F.toMonadHom.mmap_bind, forsSignWithSecretM_natural core F secretm secretn hsecret]
-  refine bind_congr fun forsSig => ?_
-  rw [F.toMonadHom.mmap_bind, forsPkFromSigM_natural core F]
-  refine bind_congr fun forsPk => ?_
-  rw [F.toMonadHom.mmap_bind,
-    GeneralHypertree.signWithSecretM_natural core F secretm secretn hsecret]
-  exact bind_congr fun htSig => F.toMonadHom.mmap_pure _
+      signInternalWithSecretM core secretn msg skPrf pkSeed pkRoot addrnd :=
+  signInternalWithSecretRandomizerM_natural core F secretm secretn hsecret msg pkSeed pkRoot _
 
 end GeneralScheme
 
