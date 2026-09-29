@@ -154,6 +154,8 @@ public import VCVio.CryptoFoundations.SeededFork
 public import VCVio.CryptoFoundations.SigmaProtocol
 public import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
 public import VCVio.CryptoFoundations.SignatureAlg
+public import VCVio.CryptoFoundations.SignatureAlg.Naturality
+public import VCVio.CryptoFoundations.SignatureAlg.Tagged
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
@@ -307,8 +309,10 @@ public import VCVio.OracleComp.QueryTracking.ObservationOracle
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
+public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
 public import VCVio.OracleComp.QueryTracking.QueryBound.Partition
 public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
+public import VCVio.OracleComp.QueryTracking.QueryBound.Tagged
 public import VCVio.OracleComp.QueryTracking.QueryCost
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
@@ -342,6 +346,7 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Basic
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions
 public import VCVio.OracleComp.SimSemantics.QueryImpl.Constructions.Core
+public import VCVio.OracleComp.SimSemantics.QueryImpl.Tagged
 public import VCVio.OracleComp.SimSemantics.ReaderT.Basic
 public import VCVio.OracleComp.SimSemantics.SimulateQ
 public import VCVio.OracleComp.SimSemantics.SimulateQ.Option
