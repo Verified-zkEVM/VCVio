@@ -1125,7 +1125,7 @@ the challenge `query (m, s)` is redirected → returns fresh uniform, independen
 of `m`. The salt counter is discarded by `run'`.
 
 Using `hidingImplSim` allows direct application of the distributional
-identical-until-bad lemma (`measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDist_eq`) to bound
+identical-until-bad lemma (`measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`) to bound
 the distance between `hidingReal` and `hidingSim`. -/
 def hidingSim [Inhabited M] [Inhabited S]
     {AUX : Type} {t : ℕ} (A : HidingAdversary M S C AUX t) (s : S) :
