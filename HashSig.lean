@@ -45,6 +45,7 @@ public import HashSig.SLHDSA.Security
 public import HashSig.SLHDSA.Security.CacheCoverage
 public import HashSig.SLHDSA.Security.CacheDecomposition
 public import HashSig.SLHDSA.Security.CacheReaders
+public import HashSig.SLHDSA.Security.CacheSecret
 public import HashSig.SLHDSA.Security.CanonicalGames
 public import HashSig.SLHDSA.Security.ComponentTraces
 public import HashSig.SLHDSA.Security.Composition
