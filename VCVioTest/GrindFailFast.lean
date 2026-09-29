@@ -68,7 +68,7 @@ example : 1 = Pr{let y ← mx}[p y] ↔ ∀ y ∈ support mx, p y := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_one_iff]
 
-example : Pr{mx}[= x] = 1 ↔ ∀ y ∈ support mx, y = x := by
+example : Pr{let y ← mx}[y = x] = 1 ↔ ∀ y ∈ support mx, y = x := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_one_iff]
 

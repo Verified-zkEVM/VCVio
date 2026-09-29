@@ -129,9 +129,9 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace_fresh
     {signed : List M}
     (hsigned : msg ∉ signed) (hcache : advCache (.inr (msg, c)) = none)
     (hlive : liveCache (msg, c) = none) (hlenq : queryLog.length ≤ qH) :
-    Pr{forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
+    Pr{let x ← (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk (msg, (c, resp))
-          (((advCache, (liveCache, queryLog)), signed))}[= true]
+          (((advCache, (liveCache, queryLog)), signed)))}[x = true]
       ≤
     Pr{let trace ← (forkFinalQueryTrace (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk (msg, (c, resp))
@@ -139,9 +139,9 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace_fresh
         (Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
   classical
   calc
-    Pr{forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
+    Pr{let x ← (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk (msg, (c, resp))
-          (((advCache, (liveCache, queryLog)), signed))}[= true]
+          (((advCache, (liveCache, queryLog)), signed)))}[x = true]
         =
       Pr{let ch ← (((Fork.wrappedSpec Chal).query (Sum.inr ())) :
             OracleComp (Fork.wrappedSpec Chal) Chal)}[σ.verify pk c ch resp = true] := by
@@ -181,8 +181,8 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace
     (hliveAdv : forkLiveCacheAdvCacheInv (M := M) (Commit := Commit)
       (Chal := Chal) s)
     (hlen : s.1.2.2.length ≤ qH) :
-    Pr{forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
-          (Resp := Resp) σ pk x s}[= true]
+    Pr{let y ← (forkVerifyFreshComp (M := M) (Commit := Commit) (Chal := Chal)
+          (Resp := Resp) σ pk x s)}[y = true]
       ≤
     Pr{let trace ← (forkFinalQueryTrace (M := M) (Commit := Commit) (Chal := Chal)
           (Resp := Resp) σ pk x s)}[
@@ -608,8 +608,8 @@ private lemma forkLogged_verify_prob_true_le_forkPoint_run
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
       (Chal := Chal) (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    Pr{forkLoggedVerifyBody (σ := σ) (hr := hr) (M := M)
-          (Commit := Commit) (Chal := Chal) (Resp := Resp) adv simT pk}[= true]
+    Pr{let x ← (forkLoggedVerifyBody (σ := σ) (hr := hr) (M := M)
+          (Commit := Commit) (Chal := Chal) (Resp := Resp) adv simT pk)}[x = true]
       ≤
     Pr{let trace ← Fork.runTrace σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) pk}[
         (Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
@@ -622,8 +622,8 @@ private lemma forkLogged_verify_prob_true_le_forkPoint_run
       forkFinalQueryTrace (M := M) (Commit := Commit) (Chal := Chal)
         (Resp := Resp) σ pk z.1 z.2
   have hbind' :
-      Pr{forkLoggedVerifyBody (σ := σ) (hr := hr) (M := M)
-            (Commit := Commit) (Chal := Chal) (Resp := Resp) adv simT pk}[= true]
+      Pr{let x ← (forkLoggedVerifyBody (σ := σ) (hr := hr) (M := M)
+            (Commit := Commit) (Chal := Chal) (Resp := Resp) adv simT pk)}[x = true]
         ≤ Pr{let trace ← finalRun}[(Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
     simp only [forkLoggedVerifyBody, finalRun, loggedRun, prEvent_norm]
     refine OracleComp.prEvent_bind_mono_of_support _ _ _ fun z hz => ?_
@@ -692,8 +692,8 @@ private lemma forkH5Body_prob_true_le_fork_advantage
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) {qS qH : ℕ}
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
       (Chal := Chal) (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    Pr{forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
-          (Resp := Resp) σ hr adv simT}[= true]
+    Pr{let x ← (forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
+          (Resp := Resp) σ hr adv simT)}[x = true]
       ≤
     Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH := by
   let pointBody : OracleComp (Fork.wrappedSpec Chal) Bool := do
@@ -701,14 +701,14 @@ private lemma forkH5Body_prob_true_le_fork_advantage
     let trace ← Fork.runTrace σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) pk
     pure (Fork.forkPoint Commit Chal Resp M qH trace).isSome
   have hpoint :
-      Pr{pointBody}[= true] =
+      Pr{let x ← pointBody}[x = true] =
         Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH := by
     rw [Fork.advantage, ← (simulateQ_forkWrappedUniformImpl_evalDistEq pointBody).prEvent_eq]
     rfl
   have hbody :
-      Pr{forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
-            (Resp := Resp) σ hr adv simT}[= true] ≤
-        Pr{pointBody}[= true] := by
+      Pr{let x ← (forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
+            (Resp := Resp) σ hr adv simT)}[x = true] ≤
+        Pr{let x ← pointBody}[x = true] := by
     simp only [forkH5Body, pointBody, prEvent_norm]
     refine OracleComp.prEvent_bind_mono_of_support _ _ _ fun ps _ => ?_
     rcases ps with ⟨pk, sk⟩

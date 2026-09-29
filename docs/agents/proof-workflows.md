@@ -14,7 +14,7 @@
    → For identical-until-bad: use `by_upto` or
      `measureETVDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
 
-3. **Probability equals a specific value** (`Pr{oa}[= x] = ...` or `Pr{let x ← oa}[p x] = ...`):
+3. **Probability equals a specific value** (`Pr{let y ← oa}[y = x] = ...` or `Pr{let x ← oa}[p x] = ...`):
    → Start with `vcstep` if the goal should lower or decompose automatically
    → Use `vcstep?` when you want the explicit script, binder names, rewrite form, or an
     explicit `using` / `inv` / `with` step surfaced

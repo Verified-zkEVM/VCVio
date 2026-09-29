@@ -23,8 +23,11 @@ class EventTests(unittest.TestCase):
         self.assertEqual(migrate(source)[0], expected)
 
     def test_singleton_events(self):
-        self.assertMigrates("Pr[= a | mx]", "Pr{mx}[= a]")
-        self.assertMigrates("Pr[(· = f a) | g <$> mx]", "Pr{g <$> mx}[= f a]")
+        self.assertMigrates("Pr[= a | mx]", "Pr{let x ← mx}[x = a]")
+        self.assertMigrates("Pr[(· = f x) | g <$> mx]", "Pr{let y ← g <$> mx}[y = f x]")
+        # Singleton events of earlier versions of the measure API.
+        self.assertMigrates("Pr{mx}[= a] = Pr{g <$> my}[(· = (f b, c))]",
+                            "Pr{let x ← mx}[x = a] = Pr{let x ← g <$> my}[x = (f b, c)]")
 
     def test_function_events(self):
         self.assertMigrates("Pr[fun x => x.1 = a | mx]", "Pr{let x ← mx}[x.1 = a]")
@@ -42,14 +45,16 @@ class EventTests(unittest.TestCase):
         self.assertMigrates("Pr[p x | f x]", "Pr{let y ← f x}[(p x) y]")
 
     def test_failure_event(self):
-        self.assertMigrates("Pr[⊥ | mx] = 0", "(1 - Pr{let _ ← mx}[True]) = 0")
+        self.assertMigrates("Pr[⊥ | mx] = 0", "prFail mx = 0")
+        self.assertMigrates("Pr[⊥ | f <$> mx] = 0", "prFail (f <$> mx) = 0")
 
     def test_multiline_computation(self):
         source = "Pr[= true | do\n    let y ← mx\n    pure y]"
-        self.assertMigrates(source, "Pr{do\n    let y ← mx\n    pure y}[= true]")
+        self.assertMigrates(source, "Pr{let x ← (do\n    let y ← mx\n    pure y)}[x = true]")
 
     def test_nested_events(self):
-        self.assertMigrates("Pr[= a | mx] ≤ Pr[p | my] + ε", "Pr{mx}[= a] ≤ Pr{let x ← my}[p x] + ε")
+        self.assertMigrates("Pr[= a | mx] ≤ Pr[p | my] + ε",
+                            "Pr{let x ← mx}[x = a] ≤ Pr{let x ← my}[p x] + ε")
 
     def test_unparsed_event_is_reported(self):
         out, items = migrate("theorem t : Pr[(· + ·) | mx] = 0 := sorry")
@@ -63,7 +68,8 @@ class EventTests(unittest.TestCase):
 
     def test_comments_convert_only_syntactic_events(self):
         source = "-- `Pr[= a | mx]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n"
-        self.assertMigrates(source, "-- `Pr{mx}[= a]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n")
+        self.assertMigrates(source,
+                            "-- `Pr{let x ← mx}[x = a]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n")
 
     def test_draw_items(self):
         self.assertMigrates("Pr{x ← mx}[p x]", "Pr{let x ← mx}[p x]")
@@ -82,7 +88,7 @@ class EventTests(unittest.TestCase):
         self.assertMigrates("Pr{let x ← mx; let y := f x}[p y]",
                             "Pr{let x ← mx; let y := f x}[p y]")
         self.assertMigrates("Pr{let (a, b) ← mx}[a = b]", "Pr{let (a, b) ← mx}[a = b]")
-        self.assertMigrates("Pr{mx}[= a]", "Pr{mx}[= a]")
+        self.assertMigrates("prFail mx", "prFail mx")
 
     def test_sequence_after_multiline_draw_is_reported(self):
         text, items = migrate("Pr{x ← f a\n    b; y ← g x}[p y]")
@@ -140,6 +146,10 @@ class NameTests(unittest.TestCase):
         out, items = migrate("exact prEvent_le_one _ _\nexact prEvent_le_one mx")
         self.assertEqual(out, "exact prEvent_le_one _\nexact prEvent_le_one mx")
         self.assertEqual([line for _, line, _ in items], [2])
+
+    def test_failure_probability(self):
+        self.assertEqual(migrate("probFailure mx ≤ 1 := probFailure_le_one mx")[0],
+                         "prFail mx ≤ 1 := prFail_le_one mx")
 
     def test_game_equiv(self):
         out, _ = migrate("h : GameEquiv g₁ g₂\nh' : g₁ ≡ₚ g₂\nexact GameEquiv.symm h")
@@ -208,13 +218,13 @@ class CommandLineTests(unittest.TestCase):
     def test_dry_run_prints_a_diff(self):
         result = self.run_codemod("--dry-run")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("+theorem t : Pr{mx}[= a] = 1 := sorry", result.stdout)
+        self.assertIn("+theorem t : Pr{let x ← mx}[x = a] = 1 := sorry", result.stdout)
         self.assertIn("Pr[= a | mx]", self.file.read_text())
 
     def test_rewrite_is_idempotent_and_skips_lake(self):
         self.assertEqual(self.run_codemod().returncode, 0)
         once = self.file.read_text()
-        self.assertEqual(once, "theorem t : Pr{mx}[= a] = 1 := sorry\n")
+        self.assertEqual(once, "theorem t : Pr{let x ← mx}[x = a] = 1 := sorry\n")
         self.run_codemod()
         self.assertEqual(self.file.read_text(), once)
         self.assertEqual((self.root / ".lake" / "Dep.lean").read_text(), "Pr[= a | mx]\n")

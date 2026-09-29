@@ -14,8 +14,8 @@ public import ToMathlib.Data.ENNReal.Finiteness
 /-!
 # `finiteness` on probability terms
 
-Canaries for the `finiteness` rule-set tag on `prEvent_ne_top`, for Mathlib's finite-measure
-rule on `𝒟[mx] s`, and for the `Finset.sum` rule.
+Canaries for the `finiteness` rule-set tags on `prEvent_ne_top` and `prFail_ne_top`, for
+Mathlib's finite-measure rule on `𝒟[mx] s`, and for the `Finset.sum` rule.
 -/
 
 public section
@@ -26,18 +26,19 @@ namespace VCVioTest.Finiteness
 
 variable {α : Type} {m : Type → Type} [Monad m] [EvalDistSemantics m]
 
-example (mx : m α) (x : α) : Pr{mx}[= x] ≠ ⊤ := by finiteness
+example (mx : m α) (x : α) : Pr{let y ← mx}[y = x] ≠ ⊤ := by finiteness
 
 example (mx : m α) (p : α → Prop) : Pr{let y ← mx}[p y] * 2 ≠ ⊤ := by finiteness
 
-example (mx : m α) (x : α) : (1 - Pr{let _ ← mx}[True]) + Pr{mx}[= x] / 2 ≠ ⊤ := by finiteness
+example (mx : m α) (x : α) : prFail mx + Pr{let y ← mx}[y = x] / 2 ≠ ⊤ := by
+  finiteness
 
-example (mx : m α) (x : α) : Pr{mx}[= x] < ⊤ := by finiteness
+example (mx : m α) (x : α) : Pr{let y ← mx}[y = x] < ⊤ := by finiteness
 
 example [MeasurableSpace α] (mx : m α) (s : Set α) (c : ℝ≥0∞) (hc : c ≠ ⊤) :
     𝒟[mx] s * c ≠ ⊤ := by finiteness
 
-example [Fintype α] (mx : m α) : ∑ x : α, Pr{mx}[= x] ≠ ⊤ := by finiteness
+example [Fintype α] (mx : m α) : ∑ x : α, Pr{let y ← mx}[y = x] ≠ ⊤ := by finiteness
 
 /-- A quotient by a cardinality, the shape of the slack terms in the tag-reader bounds. The
 nonzero side goal is `positivity`'s, and its `Fintype.card` extension lives in
@@ -51,7 +52,7 @@ def coinDie : ProbComp (Bool × Fin 6) := do
   let d ← $ᵗ (Fin 6)
   pure (b, d)
 
-example : Pr{coinDie}[= (true, 0)] * 3 + (1 - Pr{let _ ← coinDie}[True]) / 2 ≠ ⊤ := by finiteness
+example : Pr{let x ← coinDie}[x = (true, 0)] * 3 + prFail coinDie / 2 ≠ ⊤ := by finiteness
 
 /-- Local abbreviations can be exposed explicitly without changing global unfolding. -/
 example (mx : m α) (p : α → Prop) :

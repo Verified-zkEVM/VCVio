@@ -101,7 +101,7 @@ theorem euf_nma_bound
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr{hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[= true] :=
+      Pr{let x ← hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[x = true] :=
   nma_to_hard_relation_bound σ hr M hss nmaAdv qH
 
 /-- **Combined EUF-CMA bound (Pointcheval-Stern with quantitative HVZK, β-parametric).**
@@ -144,7 +144,8 @@ theorem euf_cma_bound
       ((qS : ℝ≥0∞) * ζ_zk +
         (qS : ℝ≥0∞) * (qS + qH) * β)
     eps * (eps / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr{hardRelationExperiment hr (cmaReduction σ hr M simTranscript adv qH)}[= true] := by
+      Pr{let x ← hardRelationExperiment hr (cmaReduction σ hr M simTranscript adv qH)}[
+        x = true] := by
   have hAdv := euf_cma_to_nma σ hr M simTranscript ζ_zk hhvzk β hPredSim adv qS qH hQ
   refine le_trans ?_ (euf_nma_bound σ hr M hss (cmaToNmaAdv σ hr M simTranscript adv) qH)
   gcongr <;> exact tsub_le_iff_right.mpr (by simpa [add_assoc] using hAdv)

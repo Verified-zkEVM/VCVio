@@ -58,13 +58,13 @@ variable [∀ t, Countable (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {z : γ} :
-    Pr{mx >>= fun a => my >>= fun b => f a b}[= z] =
-    Pr{my >>= fun b => mx >>= fun a => f a b}[= z] := by
+    Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = z] =
+    Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = z] := by
   vcstep
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {y : β}
-    (h : ∀ x ∈ support mx, Pr{f x}[= y] = Pr{g x}[= y]) :
-    Pr{mx >>= f}[= y] = Pr{mx >>= g}[= y] := by
+    (h : ∀ x ∈ support mx, Pr{let z ← f x}[z = y] = Pr{let z ← g x}[z = y]) :
+    Pr{let x ← mx >>= f}[x = y] = Pr{let x ← mx >>= g}[x = y] := by
   vcstep rw congr
   exact h _ ‹_›
 

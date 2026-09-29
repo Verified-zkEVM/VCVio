@@ -8,9 +8,10 @@ Each PATH is a Lean file or a directory searched recursively for `*.lean`. Files
 in place unless `--dry-run` is given, in which case a unified diff is printed instead.
 
 Rewrites:
-- legacy events: `Pr[= a | mx]` and `Pr[(· = a) | mx]` become `Pr{mx}[= a]`;
-  `Pr[fun x => p | mx]` becomes `Pr{let x ← mx}[p]`; `Pr[p | mx]` becomes
-  `Pr{let x ← mx}[p x]`; `Pr[⊥ | mx]` becomes `(1 - Pr{let _ ← mx}[True])`;
+- legacy events: `Pr[= a | mx]` and `Pr[(· = a) | mx]` become `Pr{let x ← mx}[x = a]`;
+  `Pr[fun x => p | mx]` becomes `Pr{let x ← mx}[p]`; `Pr[p | mx]` becomes `Pr{let x ← mx}[p x]`;
+  `Pr[⊥ | mx]` becomes `prFail mx`;
+- singleton events `Pr{mx}[= a]` of earlier versions become `Pr{let x ← mx}[x = a]`;
 - bare draws `Pr{x ← e}[…]` become the `do` statements `Pr{let x ← e}[…]`, parenthesizing a
   right-hand side that spans several lines;
 - `GameEquiv` becomes `EvalDistEq` and `≡ₚ` becomes `=ᵈ`;
@@ -44,6 +45,13 @@ RENAMES: dict[str, str] = {
     "AdvBound.of_tvDist": "AdvBound.of_measureETVDist",
     "AdvBound.of_gameEquiv": "AdvBound.of_evalDistEq",
     "wpProp_iff_probEvent_eq_one": "wpProp_iff_prEvent_eq_one",
+    # Failure probability.
+    "probFailure": "prFail",
+    "probFailure_le_one": "prFail_le_one",
+    "probFailure_ne_top": "prFail_ne_top",
+    "probFailure_pure": "prFail_pure",
+    "probFailure_failure": "prFail_failure",
+    "probFailure_map": "prFail_map",
     "le_probEvent_iff_triple_indicator": "le_prEvent_iff_triple_indicator",
     "le_probEvent_isSome_contextFork": "le_prEvent_isSome_contextFork",
     "le_probEvent_isSome_seededFork": "le_prEvent_isSome_seededFork",
@@ -241,13 +249,13 @@ REPORT_NAMES: dict[str, str] = {
     "prEvent_le_one": "now takes the event computation `mx : m Prop` alone",
     "evalDist_apply_singleton":
         "targets the removed `Pr[= x | mx]`; `prEvent_eq_evalDist_singleton` relates "
-        "`Pr{mx}[= x]` and `𝒟[mx] {x}`",
+        "`Pr{let y ← mx}[y = x]` and `𝒟[mx] {x}`",
     "evalDist_apply_setOf":
         "targets the removed `Pr[p | mx]`; `prEvent_eq_evalDist_of_discrete` relates "
         "`Pr{let x ← mx}[p x]` and `𝒟[mx] {x | p x}`",
     "evalDist_apply_univ":
-        "targets the removed `Pr[⊥ | mx]`; `prEvent_true_eq_evalDist_apply_univ` relates "
-        "`Pr{let _ ← mx}[True]` and `𝒟[mx] Set.univ`",
+        "targets the removed `Pr[⊥ | mx]`; `prFail_eq_one_sub_evalDist_univ` relates "
+        "`prFail mx` and `𝒟[mx] Set.univ`",
 }
 
 # Modules removed from VCVio, keyed by the old module name.
@@ -345,7 +353,7 @@ LEGACY_HINTS: dict[str, str] = {
     "evalSPMF_eq_of_evalDist_eq":
         "state the result with `𝒟[…]` or `=ᵈ` (`EvalDistEq.of_evalDist_eq`)",
     "probEvent_eq_eq_probOutput":
-        "`Pr{mx}[= x]` is the singleton event; `prEvent_eq_evalDist_singleton`",
+        "`Pr{let y ← mx}[y = x]` is the singleton event; `prEvent_eq_evalDist_singleton`",
     "probEvent_map": "`prEvent_map`",
     "probOutput_map": "`prEvent_map`",
     "probEvent_eq_tsum_ite": "`prEvent_eq_evalDist_of_discrete`, then Mathlib's `Measure` sums",
@@ -356,8 +364,9 @@ LEGACY_HINTS: dict[str, str] = {
     "probEvent_eq_zero_iff": "`prEvent_eq_zero_iff`",
     "probEvent_eq_one_iff":
         "`prEvent_eq_one_iff` (uniform answers) or `prEvent_eq_one_of_forall_mem_support`",
-    "probFailure_eq_zero": "nothing on `OracleComp`; `evalDist_apply_univ_eq_one` for total mass",
-    "probFailure_def": "`1 - Pr{let _ ← mx}[True]`",
+    "probFailure_eq_zero": "`OracleComp.prFail_eq_zero`, or `prFail_eq_zero_iff` in another monad",
+    "probFailure_def": "`prFail_def`",
+    "probFailure_bind_eq_add_tsum": "`prFail_bind_eq_add_lintegral_of_discrete`",
     "probOutput_pure": "`prEvent_pure` or `evalDist_pure`",
     "probEvent_pure": "`prEvent_pure`",
     "probOutput_uniformSample":
@@ -387,9 +396,8 @@ LEGACY_HINTS: dict[str, str] = {
 # Legacy forms left for a person, with the guide section that converts them.
 LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
-    (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{mx}[= x]` or `𝒟[mx] {x}`"),
+    (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{let y ← mx}[y = x]` or `𝒟[mx] {x}`"),
     (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
-    (r"(?<![\w'.])probFailure(?![\w'])", "`1 - Pr{let _ ← mx}[True]`"),
     (r"(?<![\w'.])tvDist(?![\w'])", "`measureETVDist`"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
@@ -511,6 +519,11 @@ def strip_parens(term: str) -> str:
     return term
 
 
+FUN_TYPED_BINDER = (r"fun\s+\(\s*([^\s():]+)\s*:[^()]*(?:\([^()]*\)[^()]*)*\)"
+                    r"\s*(?:=>|↦)\s*(.+)")
+FUN_BINDER = r"fun\s+(⟨[^⟩]*⟩|[^\s:()]+)(?:\s*:\s*[^=↦]+?)?\s*(?:=>|↦)\s*(.+)"
+
+
 def is_atomic(term: str) -> bool:
     term = term.strip()
     if re.fullmatch(r"@?[^\W\d][\w'.!?₀-₉]*", term):
@@ -529,9 +542,17 @@ def fresh_name(*terms: str) -> str:
     return f"x{n}"
 
 
-FUN_TYPED_BINDER = (r"fun\s+\(\s*([^\s():]+)\s*:[^()]*(?:\([^()]*\)[^()]*)*\)"
-                    r"\s*(?:=>|↦)\s*(.+)")
-FUN_BINDER = r"fun\s+(⟨[^⟩]*⟩|[^\s:()]+)(?:\s*:\s*[^=↦]+?)?\s*(?:=>|↦)\s*(.+)"
+def draw(x: str, comp: str) -> str:
+    """The `do` statement `let x ← comp`, parenthesizing a computation spanning several lines."""
+    if "\n" in comp and not is_parenthesized(comp):
+        comp = f"({comp})"
+    return f"let {x} ← {comp}"
+
+
+def singleton(comp: str, value: str) -> str:
+    """`Pr{let x ← comp}[x = value]`, with `x` fresh for `comp` and `value`."""
+    x = fresh_name(comp, value)
+    return f"Pr{{{draw(x, comp)}}}[{x} = {value}]"
 
 
 def convert_legacy_event(event: str, comp: str, prose: bool = False) -> str | None:
@@ -544,34 +565,72 @@ def convert_legacy_event(event: str, comp: str, prose: bool = False) -> str | No
     if not event or not comp:
         return None
     if event == "⊥":
-        return f"(1 - Pr{{_ ← {comp}}}[True])"
+        return f"prFail {comp}" if is_atomic(comp) else f"prFail ({comp})"
     m = re.fullmatch(r"=\s*(.+)", event, re.S)
     if m:
-        return f"Pr{{{comp}}}[= {m.group(1).strip()}]"
+        return singleton(comp, m.group(1).strip())
     inner = strip_parens(event)
     m = re.fullmatch(r"·\s*=\s*(.+)", inner, re.S)
     if m and "·" not in m.group(1):
-        return f"Pr{{{comp}}}[= {m.group(1).strip()}]"
+        return singleton(comp, m.group(1).strip())
     m = (re.fullmatch(FUN_TYPED_BINDER, inner, re.S)
          or re.fullmatch(FUN_BINDER, inner, re.S))
     if m:
         binder, body = m.group(1), m.group(2).strip()
-        if SIMPLE_BINDER.fullmatch(binder):
-            return f"Pr{{{binder} ← {comp}}}[{body}]"
-        if binder.startswith("⟨"):
-            return f"Pr{{let {binder} ← {comp}}}[{body}]"
+        if SIMPLE_BINDER.fullmatch(binder) or binder.startswith("⟨"):
+            return f"Pr{{{draw(binder, comp)}}}[{body}]"
         return None
     if "·" in inner:
         # A section `(· op e)` with one hole: substitute a fresh name for the hole.
         if inner.count("·") != 1 or not event.strip().startswith("("):
             return None
         x = fresh_name(inner, comp)
-        return f"Pr{{{x} ← {comp}}}[{inner.replace('·', x)}]"
+        return f"Pr{{{draw(x, comp)}}}[{inner.replace('·', x)}]"
     if prose:
         return None
     x = fresh_name(event, comp)
     pred = event if is_atomic(event) else f"({event})"
-    return f"Pr{{{x} ← {comp}}}[{pred} {x}]"
+    return f"Pr{{{draw(x, comp)}}}[{pred} {x}]"
+
+
+def rewrite_eq_events(text: str) -> str:
+    """Write the singleton events `Pr{mx}[= a]` and `Pr{mx}[(· = a)]` of earlier versions of the
+    measure API as `Pr{let x ← mx}[x = a]`."""
+    out: list[str] = []
+    i = 0
+    while True:
+        k = text.find("Pr{", i)
+        if k < 0:
+            out.append(text[i:])
+            return "".join(out)
+        try:
+            close = match_close(text, k + 2)
+        except ValueError:
+            out.append(text[i:k + 3])
+            i = k + 3
+            continue
+        rest = text[close + 1:]
+        m = re.match(r"\[\s*=(?!=)", rest) or re.match(r"\[\s*\(\s*·\s*=(?!=)", rest)
+        if not m or not rest.startswith("["):
+            out.append(text[i:close + 1])
+            i = close + 1
+            continue
+        try:
+            end = match_close(text, close + 1)
+        except ValueError:
+            out.append(text[i:close + 1])
+            i = close + 1
+            continue
+        value = text[close + 1 + m.end():end].strip()
+        if m.group(0).rstrip().endswith("=") and "(" in m.group(0):
+            if not value.endswith(")"):
+                out.append(text[i:close + 1])
+                i = close + 1
+                continue
+            value = value[:-1].strip()
+        comp = text[k + 3:close].strip()
+        out.append(f"{text[i:k]}{singleton(comp, value)}")
+        i = end + 1
 
 
 def comment_spans(text: str) -> list[tuple[int, int]]:
@@ -807,6 +866,7 @@ def migrate(text: str, path: str, report: Report) -> str:
     text = rewrite_imports(text)
     text = rewrite_opens(text)
     text = rewrite_legacy_events(text, report, path)
+    text = rewrite_eq_events(text)
     text = rewrite_draw_items(text, report, path)
     text = delete_answer_binders(text)
     text = rewrite_classes(text, report, path)

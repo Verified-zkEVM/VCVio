@@ -519,7 +519,7 @@ honest prover aborts while the simulator emits a transcript; everywhere else the
 distributions coincide, so this mass is exactly the total-variation distance. -/
 noncomputable def hvzkBadMass [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims)
     (sk : SecretKey p) : ℝ≥0∞ :=
-  Pr{do
+  Pr{let x ← (do
     let y ← $ᵗ (RqVec p.l)
     let cTilde ← $ᵗ (CommitHashBytes p)
     let c := prims.sampleInBall cTilde
@@ -530,7 +530,7 @@ noncomputable def hvzkBadMass [SampleableType (CommitHashBytes p)] (pk : PublicK
     let h := prims.makeHintVec (-ct0) (w - c • sk.s2 + ct0)
     return decide (polyVecNorm z < p.gamma1 - p.beta ∧
       ¬(polyVecNorm r0 < p.gamma2 - p.beta ∧ polyVecNorm ct0 < p.gamma2 ∧
-        prims.hintWeight h ≤ p.omega))}[= true]
+        prims.hintWeight h ≤ p.omega)))}[x = true]
 
 /-- The extra-rejection mass is a probability. -/
 lemma hvzkBadMass_le_one [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims)

@@ -29,8 +29,8 @@ transform of a Sigma protocol and proves their quantitative bounds.
 - `cmaReduction` is the composite witness-finding algorithm.
 
 Every bound names the reduction it is about. A statement of the form
-`∃ reduction, bound ≤ Pr{hardRelationExperiment hr reduction}[= true]` would be satisfied by a
-reduction that returns a valid witness chosen classically, so it would carry no security
+`∃ reduction, bound ≤ Pr{let x ← hardRelationExperiment hr reduction}[x = true]` would be satisfied
+by a reduction that returns a valid witness chosen classically, so it would carry no security
 content. -/
 
 @[expose] public section
@@ -293,7 +293,7 @@ theorem nma_to_hard_relation_bound (hss : σ.SpeciallySound)
     (qH : ℕ) :
     Fork.advantage σ hr M nmaAdv qH *
         (Fork.advantage σ hr M nmaAdv qH / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr{hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[= true] := by
+      Pr{let x ← hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[x = true] := by
   let : MeasurableSpace (Stmt × Wit) := ⊤
   let acc : Stmt × Wit → ℝ≥0∞ := fun pkw =>
     Pr{let t ← Fork.runTrace σ hr M nmaAdv pkw.1}[(Fork.forkPoint Commit Chal Resp M qH t).isSome]
@@ -307,7 +307,7 @@ theorem nma_to_hard_relation_bound (hss : σ.SpeciallySound)
     refine MeasureTheory.lintegral_congr fun pkw => ?_
     rcases pkw with ⟨pk, w⟩
     simp only [acc, prEvent_norm]
-  have hRHS : Pr{hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[= true] =
+  have hRHS : Pr{let x ← hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[x = true] =
       ∫⁻ pkw, B pkw ∂𝒟[hr.gen] := by
     rw [hardRelationExperiment, prEvent_bind_eq_lintegral_of_discrete]
     refine MeasureTheory.lintegral_congr fun pkw => ?_

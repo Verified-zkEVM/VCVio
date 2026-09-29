@@ -109,7 +109,7 @@ theorem _root_.evalDistEq_iff_evalDist_eq {mx : m α} {my : m' α} :
 
 /-- On a countable output type, equality in distribution is equality of every point mass. -/
 theorem _root_.evalDistEq_iff_forall_prEvent_eq_output [Countable α] {mx : m α} {my : m' α} :
-    mx =ᵈ my ↔ ∀ x, Pr{mx}[= x] = Pr{my}[= x] := by
+    mx =ᵈ my ↔ ∀ x, Pr{let y ← mx}[y = x] = Pr{let y ← my}[y = x] := by
   let : MeasurableSpace α := ⊤
   refine ⟨fun h x ↦ h (· = x), fun h ↦ of_evalDist_eq (Measure.ext_of_singleton fun x ↦ ?_)⟩
   rw [← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]

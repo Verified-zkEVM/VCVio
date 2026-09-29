@@ -600,9 +600,10 @@ measure-semantics instances. The transitional module names became permanent ones
 `VCVio.Native` is `VCVio.Foundations`, `SampleableType.NativeMeasure` is
 `SampleableType.Measure`, and `StateT.Basic.Native` is `StateT.Basic`.
 
-`Pr{…}[…]` is the only event syntax, with `Pr{mx}[= a]` for single outputs. The
-retired-probability linter reports direct use of Mathlib's `PMF` and its ledger is empty; the
-`SPMF` import-closure ratchet is deleted. The dormant `Interop` library still refers to the
+`Pr{…}[…]` is the only event syntax: its braces hold an ordinary `do` sequence, as in
+`Pr{let x ← mx}[x = a]`, and `prFail mx` is the failure probability. The retired-probability linter
+reports direct use of Mathlib's `PMF` and its ledger is empty; the `SPMF` import-closure ratchet is
+deleted. The dormant `Interop` library still refers to the
 discrete layer and is converted when it is revived. Downstream code converts with the codemod
 and `docs/agents/probability-migration.md`.
 

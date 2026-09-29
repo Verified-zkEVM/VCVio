@@ -196,7 +196,8 @@ example {α : Type} {mx my : ProbComp α} {mz : Option α} (h₁ : mx =ᵈ my) (
   calc mx =ᵈ my := h₁
     _ =ᵈ mz := h₂
 
-example {α : Type} [Countable α] (mx my : ProbComp α) (h : ∀ x, Pr{mx}[= x] = Pr{my}[= x]) :
+example {α : Type} [Countable α] (mx my : ProbComp α)
+    (h : ∀ x, Pr{let y ← mx}[y = x] = Pr{let y ← my}[y = x]) :
     mx =ᵈ my :=
   evalDistEq_iff_forall_prEvent_eq_output.mpr h
 
@@ -214,7 +215,7 @@ example : Pr{let x ← mx}[x] = prEvent ((fun x => x = true) <$> mx) := rfl
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
     prEvent (mx >>= fun x => (fun y => y = 3 ∧ x = true) <$> my x) := rfl
 example : Pr{let x : Bool ← mx}[x] = Pr{let x ← mx}[x = true] := rfl
-example : Pr{mz}[= 3] = Pr{let z ← mz}[z = 3] := rfl
+example : Pr{let x ← mz}[x = 3] = prEvent ((fun z => z = 3) <$> mz) := rfl
 example : Pr{{let x ← mx}}[x] = Pr{let x ← mx}[x] := rfl
 example : Pr{
     let x ← mz
@@ -242,9 +243,18 @@ variable (q : ℕ → Prop) in
 #guard_msgs in
 #check Pr{let x ← mx; let y ← my x}[q y]
 
-/-- info: Pr{mz}[= 3] : ℝ≥0∞ -/
+/-- info: Pr{let x ← mz}[x = 3] : ℝ≥0∞ -/
 #guard_msgs in
-#check Pr{mz}[= 3]
+#check Pr{let x ← mz}[x = 3]
+
+variable (S : Set ℕ) in
+/-- info: Pr{let x ← mx; let y ← my x}[y ∈ S] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mx; let y ← my x}[y ∈ S]
+
+/-- info: prFail mz : ℝ≥0∞ -/
+#guard_msgs in
+#check prFail mz
 
 /-- `simp` keeps the notation in normal form and applies laws keyed on the head constant. -/
 example (p : ℕ → Prop) (h : Pr{let x ← mz}[p x] = 0) : Pr{let x ← mz}[p x] = 0 := by

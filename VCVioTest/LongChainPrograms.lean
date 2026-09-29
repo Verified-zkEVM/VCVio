@@ -115,7 +115,7 @@ example (mx : ProbComp Bool) : 𝒟[do let a ← mx; pure a] = 𝒟[mx] := by gr
 
 example : 𝒟[coinPadded] = 𝒟[($ᵗ Bool)] := by simp [coinPadded]
 example : 𝒟[coinPadded] = 𝒟[($ᵗ Bool)] := by grind [coinPadded]
-example : Pr{coinPadded}[= true] = Pr{$ᵗ Bool}[= true] := by simp [coinPadded]
+example : Pr{let x ← coinPadded}[x = true] = Pr{let x ← $ᵗ Bool}[x = true] := by simp [coinPadded]
 example : support coinPadded = support ($ᵗ Bool) := by simp [coinPadded]
 
 /-! ## 4. Support of a deep chain
@@ -134,7 +134,7 @@ terminal tactic closes: `simp` normalises the chain step by step but stops befor
 nested integrals to a number, and `grind` does no `ℝ≥0∞` arithmetic. `chain12` returns `true` only
 when all twelve coins do, so
 
-  `Pr{chain12}[= true] = (2 ^ 12)⁻¹`   -- target(simp+grind)
+  `Pr{let x ← chain12}[x = true] = (2 ^ 12)⁻¹`   -- target(simp+grind)
 
 is the representative outcome-value target. -/
 

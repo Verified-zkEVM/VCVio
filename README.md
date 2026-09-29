@@ -139,9 +139,9 @@ chosen by `[OracleSpec.IsMeasureSpec spec]`; `ProbComp` (i.e. `OracleComp unifSp
 query uniformly.
 We introduce notation:
 
-* `Pr{comp}[= x]` - probability of output `x`
+* `Pr{let y ← comp}[y = x]` - probability of output `x`
 * `Pr{let x ← comp}[p x]` - probability of event `p`
-* `1 - Pr{let _ ← comp}[True]` - probability of the computation failing
+* `prFail comp` - probability of the computation failing
 * `mx =ᵈ my` - equality in distribution
 
 A computation is lossless when `IsProbabilityMeasure 𝒟[mx]`; bind preserves losslessness when

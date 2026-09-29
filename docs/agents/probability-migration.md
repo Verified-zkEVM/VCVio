@@ -34,8 +34,9 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | Removed | Replacement |
 |---|---|
 | `Pr[p \| mx]`, `probEvent mx p` | `Pr{let x ← mx}[p x]` |
-| `Pr[= x \| mx]`, `probOutput mx x` | `Pr{mx}[= x]`; or `𝒟[mx] {x}` when the output has measurable singletons |
-| `Pr[⊥ \| mx]`, `probFailure mx` | `1 - Pr{let _ ← mx}[True]`; identically `0` for `OracleComp` |
+| `Pr[= x \| mx]`, `probOutput mx x` | `Pr{let y ← mx}[y = x]`; or `𝒟[mx] {x}` when the output has measurable singletons |
+| `Pr[⊥ \| mx]`, `probFailure mx` | `prFail mx` (`1 - Pr{let _ ← mx}[True]`); identically `0` for `OracleComp` |
+| `Pr{mx}[= a]` (earlier measure API) | `Pr{let x ← mx}[x = a]` |
 | `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
 | `tvDist mx my` | `measureETVDist mx my`; `Measure.etvDist` on measures |
@@ -106,7 +107,8 @@ The bridges between the two representations have no replacement; state the measu
 directly:
 - `evalDist_apply_singleton` → `prEvent_eq_evalDist_singleton` (read backwards);
 - `evalDist_apply_setOf` → `prEvent_eq_evalDist_of_discrete`;
-- `evalDist_apply_univ` → `prEvent_true_eq_evalDist_apply_univ`, or `OptionT.evalDist_apply_univ`;
+- `evalDist_apply_univ` → `prFail_eq_one_sub_evalDist_univ` or
+  `prEvent_true_eq_evalDist_apply_univ`, or `OptionT.evalDist_apply_univ`;
 - `probOutput_bind_eq_tsum`, `probEvent_bind_eq_tsum` → `prEvent_bind_eq_lintegral` (with
   `_of_discrete` for a discrete draw), then `lintegral_fintype` for a finite sum.
 
@@ -149,7 +151,7 @@ callers restate the hypotheses they supply.
 The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound` and
 `euf_cma_bound` no longer take the extractor-failure hypothesis `hss_nf`, which holds for every
 `OracleComp`; drop that argument at call sites. Their conclusions and `Fork.advantage` are
-`Pr{…}[= true]` events.
+`Pr{let x ← …}[x = true]` events.
 
 For an aborting identification scheme whose loss is a real-valued formula, keep `ζ_zk : ℝ` and
 pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` does.
@@ -212,7 +214,7 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | failed to synthesize `MeasurableSpace (spec.Range t)` inside a proof | `let : MeasurableSpace (spec.Range t) := ⊤` (use `let`, not `letI`, in a proposition-valued goal); in a statement, state the fact with `=ᵈ` or `Pr{…}[…]`, or take `{_ : MeasurableSpace (spec.Range t)}` |
 | `rw`/`simp` does not find a query law such as `evalDist_liftM_query_apply` when the answer type appears reduced (`Bool` rather than `spec.Range t`) | name the specification: `evalDist_liftM_query_apply (spec := S) t hs` |
 | two instances for a sum specification disagree (e.g. a local `IsUniformMeasureSpec (A + B)`) | declare the local instance on the components and let `IsMeasureSpec.add` build the sum |
-| failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{mx}[= x]` |
+| failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{let y ← mx}[y = x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
 | a goal shows `(toMeasure t).trim le_top` | `MeasureTheory.trim_eq_self` when the answer's measurable space is `⊤` by definition; otherwise evaluate measurable sets with `evalDist_liftM_query_apply` or `trim_measurableSet_eq` |
 | `unexpected …; expected '}['` in a `Pr{…}` whose action continues on the next line | the braces hold a `do` sequence: indent the continuation past its `let`, start the sequence on its own line as in a `do` block, or parenthesize the action |

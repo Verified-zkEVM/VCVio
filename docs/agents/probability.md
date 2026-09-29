@@ -158,7 +158,7 @@ missing from it is failure or nontermination. The generic classes and Giry laws 
 sequence: statements are separated by `;` or laid out as in a `do` block, and `let y := f x`,
 destructuring draws and `if` are available. An action that continues on the following lines is
 indented past its `let`, as in any `do` block, or parenthesized.
-`Pr{mx}[= a]` is the probability of the single output `a` and needs no measurable singletons.
+`Pr{let x ← mx}[x = a]` is the probability of the single output `a` and needs no measurable singletons.
 The notation denotes `prEvent (mx : m Prop) := 𝒟[mx] {True}` of the computation returning
 the event. It is elaborated in the normal form `simp` maintains:
 - binds end in a map of the eta-reduced final event;
@@ -515,12 +515,16 @@ list-valued sampling, and `evalDist_replicate_apply_univ` gives its success mass
 Because Mathlib does not install a generic measurable space on `List α`, these laws require the
 chosen list measurable space and measurability of each `List.cons x` map explicitly.
 
-Failure is missing mass. `𝒟[mx]` measures successful outputs only, so the failure mass of `mx`
-is `1 - Pr{let _ ← mx}[True]` (`prEvent_true_eq_evalDist_apply_univ` identifies the event with
-`𝒟[mx] Set.univ`), and `IsProbabilityMeasure 𝒟[mx]` states losslessness.
+Failure is missing mass. `𝒟[mx]` measures successful outputs only, so the failure probability of
+`mx` is `prFail mx = 1 - Pr{let _ ← mx}[True]` (`prFail_def`; `prEvent_true_add_prFail` states that
+the two add up to one, and `prFail_eq_one_sub_evalDist_univ` identifies it with
+`1 - 𝒟[mx] Set.univ`), and `IsProbabilityMeasure 𝒟[mx]` states losslessness. `simp` evaluates
+`prFail` on `pure` (`0`), maps, `if`, `failure` (`1`), `guard`, `OptionT.lift`, and oracle
+computations (`OracleComp.prFail_eq_zero`); `prFail_bind_eq_add_lintegral_of_discrete` is the bind
+law.
 `evalDistWithFailure mx : Measure (Option α)` (`VCVio/EvalDist/WithFailure.lean`) is the
-probability measure that puts the missing mass at `none`: `evalDistWithFailure_none` gives
-`1 - 𝒟[mx] Set.univ`, and `evalDistWithFailure_some` recovers the successful singleton masses.
+probability measure that puts the missing mass at `none`: `evalDistWithFailure_none_eq_prFail`
+gives `prFail mx`, and `evalDistWithFailure_some` recovers the successful singleton masses.
 `𝒟[failure] = 0` under `LawfulFailureEvalDistSemantics` (`evalDist_failure_eq_zero`). An
 `OptionT` computation denotes `Measure.comap some` of its run (`OptionT.evalDist_eq_comap_some`),
 equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in
@@ -532,7 +536,8 @@ equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
 | `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure/Core.lean` |
-| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{mx}[= a]` | `EvalDist/ProbabilityNotation.lean` |
+| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{let x ← mx}[x = a]` | `EvalDist/ProbabilityNotation.lean` |
+| `prFail mx` | `ℝ≥0∞` | `1 - Pr{let _ ← mx}[True]` | `EvalDist/ProbabilityNotation.lean` |
 | `evalDistWithFailure mx` | `Measure (Option α)` | — | `EvalDist/WithFailure.lean` |
 | `EvalDistEq mx my` | `Prop` | `mx =ᵈ my` | `EvalDist/EvalDistEq.lean` |
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
@@ -862,7 +867,7 @@ the total mass of a twelve-step chain (`simp` and `grind`), the mass of the same
 `OptionT ProbComp` (`simp`), monad-law collapse of a ten-deep redundant-`pure` tower (`simp` and
 `grind`), and a reachable support point (`simp`). Its `target(...)` notes record what neither
 tactic closes yet: the mass of a guarded `OptionT` chain, the full support
-`support chain12 = Set.univ`, and the concrete outcome value `Pr{chain12}[= true] = (2 ^ 12)⁻¹`.
+`support chain12 = Set.univ`, and the concrete outcome value `Pr{let x ← chain12}[x = true] = (2 ^ 12)⁻¹`.
 
 **Opting out downstream.** VCVio deliberately extends the *default* `grind` set (the monad laws
 above plus the event, measure and support rules), and these tags are inherited by every project
@@ -922,8 +927,8 @@ rather than by a per-rung duplicate lemma.
 | rung | form | reached by |
 |---|---|---|
 | 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`evalDist_pure`, `prEvent_pure_prop`, `SampleableType.evalDist_uniformSample_singleton`, `SampleableType.prEvent_uniformSample`, `ProbComp.evalDist_uniformFin`, `evalDist_bind_const`, `OracleComp.prEvent_true_eq_one`) |
-| 1 finite sum | `∑ x, Pr{mx}[= x] * g x`, or `∑ x, 𝒟[mx] {x} * g x` | `rw [prEvent_bind_eq_sum_fintype]`; from rung 3, Mathlib's `lintegral_fintype`, then `simp [mul_comm]` |
-| 2 countable sum | `∑' x, Pr{mx}[= x] * g x` | `rw [prEvent_bind_eq_tsum_of_countable]`; from rung 3, Mathlib's `lintegral_countable'`; `simp` collapses it to rung 1 on a `Fintype` through `tsum_fintype` |
+| 1 finite sum | `∑ x, Pr{let y ← mx}[y = x] * g x`, or `∑ x, 𝒟[mx] {x} * g x` | `rw [prEvent_bind_eq_sum_fintype]`; from rung 3, Mathlib's `lintegral_fintype`, then `simp [mul_comm]` |
+| 2 countable sum | `∑' x, Pr{let y ← mx}[y = x] * g x` | `rw [prEvent_bind_eq_tsum_of_countable]`; from rung 3, Mathlib's `lintegral_countable'`; `simp` collapses it to rung 1 on a `Fintype` through `tsum_fintype` |
 | 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | `rw [prEvent_bind_eq_lintegral_of_discrete]`, or `evalDist_bind_of_discrete` with `Measure.bind_apply`; an intermediate for Mathlib's integration API, not a target |
 
 Mass-left is canonical: it is the orientation of `prEvent_bind_eq_sum_fintype`,

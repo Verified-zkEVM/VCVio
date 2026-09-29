@@ -40,8 +40,8 @@ example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → 
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {y : γ} :
-    Pr{mx >>= fun a => my >>= fun b => f a b}[= y] =
-    Pr{my >>= fun b => mx >>= fun a => f a b}[= y] := by
+    Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = y] =
+    Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = y] := by
   vcstep rw
 
 /-! ## `rw under` -/
@@ -55,8 +55,10 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
 example {mw : OracleComp spec α} {mx : OracleComp spec β}
     {my : OracleComp spec γ} {mz : OracleComp spec δ}
     {f : α → β → γ → δ → OracleComp spec ε} {out : ε} :
-    Pr{mw >>= fun w => mx >>= fun x => my >>= fun y => mz >>= fun z => f w x y z}[= out] =
-    Pr{mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y => f w x y z}[= out] := by
+    Pr{let v ← mw >>= fun w => mx >>= fun x => my >>= fun y => mz >>= fun z => f w x y z}[
+        v = out] =
+    Pr{let v ← mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y => f w x y z}[
+        v = out] := by
   vcstep rw under 2
 
 /-! ## Auto swap detection -/
@@ -73,10 +75,10 @@ example {mw : OracleComp spec α} {mx : OracleComp spec β}
 example {mv : OracleComp spec α} {mw : OracleComp spec β}
     {mx : OracleComp spec γ} {my : OracleComp spec δ} {mz : OracleComp spec ε}
     {f : α → β → γ → δ → ε → OracleComp spec ζ} {out : ζ} :
-    Pr{mv >>= fun v => mw >>= fun w => mx >>= fun x => my >>= fun y => mz >>= fun z =>
-        f v w x y z}[= out] =
-    Pr{mv >>= fun v => mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y =>
-        f v w x y z}[= out] := by
+    Pr{let u ← (mv >>= fun v => mw >>= fun w => mx >>= fun x => my >>= fun y => mz >>= fun z =>
+        f v w x y z)}[u = out] =
+    Pr{let u ← (mv >>= fun v => mw >>= fun w => mx >>= fun x => mz >>= fun z => my >>= fun y =>
+        f v w x y z)}[u = out] := by
   vcstep rw normalize
 
 example {mw : OracleComp spec α} {mx : OracleComp spec β}

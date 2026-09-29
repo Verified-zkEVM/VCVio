@@ -147,7 +147,7 @@ exhaustion — the `none` branch of the fuelled run through a probabilistic hand
 theorem prEvent_none_runWithInput {ι : Type} {spec : OracleSpec.{0, 0} ι} {α β : Type}
     {M : OracleMachine spec α β} {program : α → OracleComp spec β} {k : ℕ}
     (h : M.ImplementsWithin program k) (impl : ProbHandler spec) (x : α) :
-    Pr{M.runWithInput impl k x}[= none] = 0 := by
+    Pr{let y ← M.runWithInput impl k x}[y = none] = 0 := by
   rw [h.simulateQ_run_eq impl x]
   simp [prEvent_norm]
 

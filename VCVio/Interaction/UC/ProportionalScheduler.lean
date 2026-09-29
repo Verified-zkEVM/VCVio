@@ -64,7 +64,8 @@ noncomputable def outputRel : MonadRelFamily ProbComp where
 pointwise. -/
 @[simp]
 theorem outputRel_rel {α : Type} [Countable α] (left right : ProbComp α) :
-    outputRel.rel left right ↔ ∀ output, Pr{left}[= output] = Pr{right}[= output] :=
+    outputRel.rel left right ↔
+      ∀ output, Pr{let x ← left}[x = output] = Pr{let x ← right}[x = output] :=
   evalDistEq_iff_forall_prEvent_eq_output
 
 /-- `outputRel` is a congruence for the continuation of `bind`. -/

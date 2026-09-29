@@ -294,20 +294,20 @@ theorem nma_runProb_shiftLeft_signedFreshAdv_le_fork [Inhabited Chal]
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
       (Chal := Chal) (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    Pr{(nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
+    Pr{let x ← ((nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
           (nmaInit M Commit Chal Stmt Wit)
           ((cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
-            (signedFreshAdv σ hr M adv))}[= true]
+            (signedFreshAdv σ hr M adv)))}[x = true]
       ≤ Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT)
           qH := by
   have hbridge :
-      Pr{(nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
+      Pr{let x ← ((nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
             (nmaInit M Commit Chal Stmt Wit)
             ((cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
-              (signedFreshAdv σ hr M adv))}[= true]
+              (signedFreshAdv σ hr M adv)))}[x = true]
         =
-      Pr{forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
-            (Resp := Resp) σ hr adv simT}[= true] := by
+      Pr{let x ← (forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
+            (Resp := Resp) σ hr adv simT)}[x = true] := by
     rw [nma_runProb_shiftLeft_signedFreshAdv_eq_forkH5Body (σ := σ) (hr := hr)
       (M := M) (Commit := Commit) (Chal := Chal) (Resp := Resp) adv simT]
     exact (simulateQ_forkWrappedUniformImpl_evalDistEq _).prEvent_eq _
@@ -399,15 +399,15 @@ theorem cmaSim_signedFreshAdv_le_fork_of_shifted_h5
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (qH : ℕ)
     (hH5 :
-      Pr{(nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
+      Pr{let x ← ((nma (Stmt := Stmt) (Wit := Wit) M Commit Chal hr).runProb
             (nmaInit M Commit Chal Stmt Wit)
             ((cmaToNma M Commit Chal simT).shiftLeft ([] : List M)
-              (signedFreshAdv σ hr M adv))}[= true] ≤
+              (signedFreshAdv σ hr M adv)))}[x = true] ≤
         Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT)
           qH) :
-    Pr{(cmaSim M Commit Chal hr simT).runProb
+    Pr{let x ← ((cmaSim M Commit Chal hr simT).runProb
           (cmaInit M Commit Chal Stmt Wit)
-          (signedFreshAdv σ hr M adv)}[= true] ≤
+          (signedFreshAdv σ hr M adv))}[x = true] ≤
       Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT)
         qH := by
   rwa [cmaSim_runProb_eq_nma_runProb_shiftLeft_cmaToNma (hr := hr)
@@ -421,9 +421,9 @@ theorem cmaSim_signedFreshAdv_le_fork [Inhabited Chal]
     (qS qH : ℕ)
     (hQ : ∀ pk, signHashQueryBound (M := M) (Commit := Commit)
       (Chal := Chal) (S' := Commit × Resp) (oa := adv.main pk) qS qH) :
-    Pr{(cmaSim M Commit Chal hr simT).runProb
+    Pr{let x ← ((cmaSim M Commit Chal hr simT).runProb
           (cmaInit M Commit Chal Stmt Wit)
-          (signedFreshAdv σ hr M adv)}[= true] ≤
+          (signedFreshAdv σ hr M adv))}[x = true] ≤
       Fork.advantage σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT)
         qH :=
   cmaSim_signedFreshAdv_le_fork_of_shifted_h5 (σ := σ) (hr := hr)
@@ -455,9 +455,9 @@ theorem cma_advantage_le_fork_bound_of_h5
         𝒟[(cmaReal M Commit Chal σ hr).runProb
           (cmaInit M Commit Chal Stmt Wit) (signedFreshAdv σ hr M adv)] {true})
     (hH5 :
-      Pr{(cmaSim M Commit Chal hr simT).runProb
+      Pr{let x ← ((cmaSim M Commit Chal hr simT).runProb
             (cmaInit M Commit Chal Stmt Wit)
-            (signedFreshAdv σ hr M adv)}[= true] ≤
+            (signedFreshAdv σ hr M adv))}[x = true] ≤
         Fork.advantage σ hr M
           (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) qH) :
     SignatureAlg.unforgeableAdvantage (FiatShamir.runtime M) adv ≤
