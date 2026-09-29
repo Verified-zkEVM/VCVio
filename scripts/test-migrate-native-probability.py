@@ -27,29 +27,29 @@ class EventTests(unittest.TestCase):
         self.assertMigrates("Pr[(· = f a) | g <$> mx]", "Pr{g <$> mx}[= f a]")
 
     def test_function_events(self):
-        self.assertMigrates("Pr[fun x => x.1 = a | mx]", "Pr{x ← mx}[x.1 = a]")
-        self.assertMigrates("Pr[fun x ↦ p x | mx]", "Pr{x ← mx}[p x]")
-        self.assertMigrates("Pr[(fun z : ℕ => z > 3) | mx]", "Pr{z ← mx}[z > 3]")
-        self.assertMigrates("Pr[fun (z : α × β) => p z.1 | mx]", "Pr{z ← mx}[p z.1]")
+        self.assertMigrates("Pr[fun x => x.1 = a | mx]", "Pr{let x ← mx}[x.1 = a]")
+        self.assertMigrates("Pr[fun x ↦ p x | mx]", "Pr{let x ← mx}[p x]")
+        self.assertMigrates("Pr[(fun z : ℕ => z > 3) | mx]", "Pr{let z ← mx}[z > 3]")
+        self.assertMigrates("Pr[fun (z : α × β) => p z.1 | mx]", "Pr{let z ← mx}[p z.1]")
         self.assertMigrates("Pr[fun ⟨a, b⟩ => a = b | mx]", "Pr{let ⟨a, b⟩ ← mx}[a = b]")
 
     def test_sections_and_predicates(self):
-        self.assertMigrates("Pr[(· ∈ S) | mx]", "Pr{x ← mx}[x ∈ S]")
-        self.assertMigrates("Pr[p | mx]", "Pr{x ← mx}[p x]")
-        self.assertMigrates("Pr[S.contains | mx]", "Pr{x ← mx}[S.contains x]")
-        self.assertMigrates("Pr[q ∘ f | mx]", "Pr{x ← mx}[(q ∘ f) x]")
+        self.assertMigrates("Pr[(· ∈ S) | mx]", "Pr{let x ← mx}[x ∈ S]")
+        self.assertMigrates("Pr[p | mx]", "Pr{let x ← mx}[p x]")
+        self.assertMigrates("Pr[S.contains | mx]", "Pr{let x ← mx}[S.contains x]")
+        self.assertMigrates("Pr[q ∘ f | mx]", "Pr{let x ← mx}[(q ∘ f) x]")
         # The bound name avoids the names the event and computation use.
-        self.assertMigrates("Pr[p x | f x]", "Pr{y ← f x}[(p x) y]")
+        self.assertMigrates("Pr[p x | f x]", "Pr{let y ← f x}[(p x) y]")
 
     def test_failure_event(self):
-        self.assertMigrates("Pr[⊥ | mx] = 0", "(1 - Pr{_ ← mx}[True]) = 0")
+        self.assertMigrates("Pr[⊥ | mx] = 0", "(1 - Pr{let _ ← mx}[True]) = 0")
 
     def test_multiline_computation(self):
         source = "Pr[= true | do\n    let y ← mx\n    pure y]"
         self.assertMigrates(source, "Pr{do\n    let y ← mx\n    pure y}[= true]")
 
     def test_nested_events(self):
-        self.assertMigrates("Pr[= a | mx] ≤ Pr[p | my] + ε", "Pr{mx}[= a] ≤ Pr{x ← my}[p x] + ε")
+        self.assertMigrates("Pr[= a | mx] ≤ Pr[p | my] + ε", "Pr{mx}[= a] ≤ Pr{let x ← my}[p x] + ε")
 
     def test_unparsed_event_is_reported(self):
         out, items = migrate("theorem t : Pr[(· + ·) | mx] = 0 := sorry")
@@ -65,16 +65,29 @@ class EventTests(unittest.TestCase):
         source = "-- `Pr[= a | mx]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n"
         self.assertMigrates(source, "-- `Pr{mx}[= a]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n")
 
-    def test_let_items(self):
-        self.assertMigrates("Pr{let x ← mx}[p x]", "Pr{x ← mx}[p x]")
-        self.assertMigrates("Pr{let x ← mx; let y ← my x}[q x y]",
-                            "Pr{x ← mx; y ← my x}[q x y]")
-        self.assertMigrates("(h : Pr{\n      let y ← $ᵗ α}[p y])",
-                            "(h : Pr{y ←\n      $ᵗ α}[p y])")
-        # Patterns and nested `do` blocks keep their `let`.
-        self.assertMigrates("Pr{let (a, b) ← mx}[a = b]", "Pr{let (a, b) ← mx}[a = b]")
+    def test_draw_items(self):
+        self.assertMigrates("Pr{x ← mx}[p x]", "Pr{let x ← mx}[p x]")
+        self.assertMigrates("Pr{x ← mx; y ← my x}[q x y]",
+                            "Pr{let x ← mx; let y ← my x}[q x y]")
+        self.assertMigrates("Pr{x : α ← mx}[p x]", "Pr{let x : α ← mx}[p x]")
+        self.assertMigrates("Pr{_ ← mx}[True]", "Pr{let _ ← mx}[True]")
+        # A multi-line right-hand side is parenthesized.
+        self.assertMigrates("(h : Pr{y ←\n      $ᵗ α}[p y])",
+                            "(h : Pr{let y ← (\n      $ᵗ α)}[p y])")
+        self.assertMigrates("Pr{x ← f a\n    b}[p x]", "Pr{let x ← (f a\n    b)}[p x]")
+        self.assertMigrates("Pr{x ← (f a\n    b)}[p x]", "Pr{let x ← (f a\n    b)}[p x]")
         self.assertMigrates("Pr{x ← do\n    let y ← mx\n    pure y}[p x]",
-                            "Pr{x ← do\n    let y ← mx\n    pure y}[p x]")
+                            "Pr{let x ← (do\n    let y ← mx\n    pure y)}[p x]")
+        # `do` statements, patterns and singleton events are left alone.
+        self.assertMigrates("Pr{let x ← mx; let y := f x}[p y]",
+                            "Pr{let x ← mx; let y := f x}[p y]")
+        self.assertMigrates("Pr{let (a, b) ← mx}[a = b]", "Pr{let (a, b) ← mx}[a = b]")
+        self.assertMigrates("Pr{mx}[= a]", "Pr{mx}[= a]")
+
+    def test_sequence_after_multiline_draw_is_reported(self):
+        text, items = migrate("Pr{x ← f a\n    b; y ← g x}[p y]")
+        self.assertEqual(text, "Pr{let x ← (f a\n    b); let y ← g x}[p y]")
+        self.assertEqual([("do` block" in msg) for _, _, msg in items], [True])
 
 
 class BinderTests(unittest.TestCase):

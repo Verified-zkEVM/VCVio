@@ -14,11 +14,11 @@ public meta import Lean.PrettyPrinter.Delaborator.Basic
 # Event probabilities of computations
 
 `prEvent mx` is the mass that the successful-output measure of `mx : m Prop` puts on `True`.
-`Pr{…}[…]` is its notation. The sequence between the braces is either a list of draws
-`x ← mx; y ← my x`, whose actions may continue on following lines, or an ordinary Lean `do`
-sequence. `Pr{mx}[= a]` is the probability that `mx` returns `a`. The notation elaborates to the
-form `simp` maintains: the final draw becomes a map, `Pr{x ← mx}[p x] = prEvent (p <$> mx)`, so
-event laws keyed on `prEvent` apply to derived programs.
+`Pr{…}[…]` is its notation. The sequence between the braces is an ordinary Lean `do` sequence,
+such as `let x ← mx; let y ← my x`, laid out as in a `do` block. `Pr{mx}[= a]` is the probability
+that `mx` returns `a`. The notation elaborates to the form `simp` maintains: the final draw becomes
+a map, `Pr{let x ← mx}[p x] = prEvent (p <$> mx)`, so event laws keyed on `prEvent` apply to
+derived programs.
 
 The equations below identify an event with the measure of a set when the event is measurable.
 -/
@@ -48,15 +48,8 @@ theorem evalDist_singleton_true {m : Type → Type v} [EvalDistSemantics m] (mx 
 attribute [prEvent_norm] map_bind bind_pure_comp Functor.map_map Function.comp_def map_pure
   bind_assoc pure_bind bind_map_left id_map'
 
-/-- A draw `x ← e` in `Pr{…}[…]`, optionally with a type ascription on `x`. -/
-syntax prEventBind := ident (" : " term)? " ← " term
-
-/-- Probability of an event after a sequence of draws `x ← e` separated by `;`. Each action may
-continue on the following lines. -/
-syntax (name := prEventBindsStx) (priority := high)
-  "Pr{" withoutPosition(sepBy1(prEventBind, "; ")) "}[" term "]" : term
-
-/-- Probability of a successful event after an ordinary Lean `do` sequence. -/
+/-- Probability of a successful event after an ordinary Lean `do` sequence, as in
+`Pr{let x ← mx; let y ← my x}[p y]`. -/
 syntax (name := prEventStx) "Pr{" doSeq "}[" term "]" : term
 
 /-- Probability that a computation returns the given value. -/
@@ -66,9 +59,10 @@ public meta section Formatting
 
 open Lean PrettyPrinter Formatter Syntax.MonadTraverser
 
-/-- Format an event sequence directly after its opening delimiter, keeping the ordinary Lean
-formatter for subsequent statements and explicitly braced sequences. Explicit line breaks
-after the opening delimiter are preserved. -/
+/-- Format an event sequence directly after its opening delimiter, its statements separated by
+`; ` and soft line breaks, so that a short sequence stays on one line. Explicitly braced sequences
+keep the ordinary Lean formatter, and explicit line breaks after the opening delimiter are
+preserved. -/
 @[formatter prEventStx]
 def prEventFormatter : Formatter := do
   let stx ← getCur
@@ -82,14 +76,12 @@ def prEventFormatter : Formatter := do
     let seq ← getCur
     if seq.isOfKind ``Lean.Parser.Term.doSeqIndent then
       let n := seq[0].getArgs.size
-      visitArgs <| visitArgs do
+      group <| indent <| visitArgs <| visitArgs do
         for i in [:n] do
-          if i + 1 == n then
-            visitArgs do
-              optionalNoAntiquot.formatter (symbolNoAntiquot.formatter "; ")
-              categoryParser.formatter `doElem
-          else
-            formatterForKind ``Lean.Parser.Term.doSeqItem
+          visitArgs do
+            optionalNoAntiquot.formatter (symbolNoAntiquot.formatter "; ")
+            categoryParser.formatter `doElem
+          if i + 1 < n then pushLine
     else
       formatterForKind seq.getKind
     if multiline then
@@ -227,13 +219,6 @@ macro_rules (kind := prEventStx)
   | `(Pr{{$items*}}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
   | `(Pr{$items*}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
 
-macro_rules (kind := prEventBindsStx)
-  | `(Pr{$[$xs:ident $[: $tys]? ← $es];*}[$t]) => do
-    let items ← (xs.zip (tys.zip es)).mapM fun (x, ty?, e) => match ty? with
-      | some ty => `(Lean.Parser.Term.doSeqItem| let $x:ident : $ty ← $e:term)
-      | none => `(Lean.Parser.Term.doSeqItem| let $x:ident ← $e:term)
-    `((prEvent% {$items*}[$t] : ENNReal))
-
 macro_rules (kind := prEventEqStx)
   | `(Pr{$mx}[= $a]) => `(prEvent ((· = $a) <$> $mx))
 
@@ -241,8 +226,11 @@ public meta section Delaboration
 
 open Lean PrettyPrinter Delaborator SubExpr
 
-/-- The draws of a normalized event: a chain of binds ending in a map of the final selector. -/
-partial def delabPrEventDraws : DelabM (Array (TSyntax ``prEventBind) × Term) := do
+/-- The draws of a normalized event, as `let x ← a` statements: a chain of binds ending in a map
+of the final selector. An eta-reduced selector is applied to the first of `x`, `y`, `z`, `w` that
+no enclosing draw binds. -/
+partial def delabPrEventDraws :
+    DelabM (Array (TSyntax ``Lean.Parser.Term.doSeqItem) × Term) := do
   let e ← getExpr
   if e.isAppOfArity ``Bind.bind 6 then
     let a ← withNaryArg 4 delab
@@ -250,17 +238,20 @@ partial def delabPrEventDraws : DelabM (Array (TSyntax ``prEventBind) × Term) :
       unless (← getExpr).isLambda do failure
       withBindingBodyUnusedName fun x => do
         let (draws, t) ← delabPrEventDraws
-        return (#[← `(prEventBind| $(⟨x⟩):ident ← $a)] ++ draws, t)
+        return (#[← `(Lean.Parser.Term.doSeqItem| let $(⟨x⟩):ident ← $a:term;)] ++ draws, t)
   else if e.isAppOfArity ``Functor.map 6 then
     let a ← withNaryArg 5 delab
     withNaryArg 4 do
       if (← getExpr).isLambda then
         withBindingBodyUnusedName fun x => do
-          return (#[← `(prEventBind| $(⟨x⟩):ident ← $a)], ← delab)
+          return (#[← `(Lean.Parser.Term.doSeqItem| let $(⟨x⟩):ident ← $a:term)], ← delab)
       else
         let f ← delab
-        let x := mkIdent `x
-        return (#[← `(prEventBind| $x:ident ← $a)], ← `($f $x))
+        let lctx ← getLCtx
+        let name := ([`x, `y, `z, `w].find? fun n => (lctx.findFromUserName? n).isNone).getD
+          (lctx.getUnusedName `x)
+        let x := mkIdent name
+        return (#[← `(Lean.Parser.Term.doSeqItem| let $x:ident ← $a:term)], ← `($f $x))
   else failure
 
 /-- Display `prEvent` in the notation it elaborates from. -/
@@ -277,7 +268,7 @@ def delabPrEvent : Delab := whenPPOption getPPNotation <| withOverApp 3 do
           let a ← withNaryArg 4 <| withBindingBody `x <| withNaryArg 2 delab
           return ← `(Pr{$mx}[= $a])
     let (draws, t) ← delabPrEventDraws
-    `(Pr{$draws;*}[$t])
+    `(Pr{$draws*}[$t])
 
 end Delaboration
 
@@ -285,7 +276,7 @@ end Delaboration
 theorem prEvent_eq_evalDist_map
     {m : Type → Type v} [Monad m] [EvalDistSemantics m]
     {α : Type} (mx : m α) (p : α → Prop) :
-    Pr{x ← mx}[p x] = 𝒟[p <$> mx] {True} := rfl
+    Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True} := rfl
 
 /-- A measurable predicate returned by a computation has the probability of its event. -/
 theorem prEvent_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]

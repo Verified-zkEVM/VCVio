@@ -544,7 +544,7 @@ extra-rejection mass as the probability that `hvzkBadIndicator` fires on a direc
 lemma hvzkBadMass_eq_prEvent_indicator [SampleableType (CommitHashBytes p)]
     (pk : PublicKey p prims) (sk : SecretKey p) :
     hvzkBadMass p prims pk sk =
-      Pr{cTilde ← $ᵗ (CommitHashBytes p); z ← $ᵗ (RqVec p.l)}[
+      Pr{let cTilde ← $ᵗ (CommitHashBytes p); let z ← $ᵗ (RqVec p.l)}[
         hvzkBadIndicator p prims pk sk cTilde z = true] := by
   have hnorm : (do
       let y ← $ᵗ (RqVec p.l)

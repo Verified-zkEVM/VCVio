@@ -178,7 +178,7 @@ there is no additional losslessness assumption.
 
 The PRF-real faithfulness lemmas in `PRFReductions/Reductions.lean` expose equality of the
 whole programs. `multipleBad_bad_le_sessionCollisionBound` takes a point-mass bound
-`Pr{n ← $ᵗ Nonce}[n = nonce]` on the nonce sampler and bounds the measure of the final Boolean
+`Pr{let n ← $ᵗ Nonce}[n = nonce]` on the nonce sampler and bounds the measure of the final Boolean
 collision observation.
 
 ## Fischlin extraction and log inspections

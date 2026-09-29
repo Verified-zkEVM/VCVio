@@ -182,7 +182,7 @@ the package.
 
 Bind decomposition of an event is an explicit rewrite, not a default `simp` or `grind` rule:
 `prEvent_bind_eq_lintegral` (or `prEvent_bind_eq_lintegral_of_discrete` when the common draw has a
-discrete measurable space) turns `Pr{y ← mx >>= f}[p y]` into `∫⁻ x, Pr{y ← f x}[p y] ∂𝒟[mx]`.
+discrete measurable space) turns `Pr{let y ← mx >>= f}[p y]` into `∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx]`.
 
 The support-*characterization* lemmas (`Pr{…}[…] = 0/1 ↔ ∀ x ∈ support …`, `0 < Pr{…}[…] ↔ ∃ x ∈
 support …`: `OracleComp.prEvent_eq_zero_iff`, `OracleComp.prEvent_eq_one_iff`,

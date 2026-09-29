@@ -77,8 +77,8 @@ def longAbort : OptionT ProbComp Bool := do
 The successful mass of `chain12` is one: every `OracleComp` step is lossless. Both tactics close it
 without unfolding the chain, which is the main regression gate of the file. -/
 
-example : Pr{_ ← chain12}[True] = 1 := by simp
-example : Pr{_ ← chain12}[True] = 1 := by grind
+example : Pr{let _ ← chain12}[True] = 1 := by simp
+example : Pr{let _ ← chain12}[True] = 1 := by grind
 
 /-! ## 2. The same chain over a failing carrier
 
@@ -87,7 +87,7 @@ Over `OptionT ProbComp` the lossless chain still has full successful mass under 
 target(simp+grind): the guarded `longAbort` has mass `2⁻¹`; neither tactic shows even that it is
 below one, since the guard's mass sits under nine surrounding draws. -/
 
-example : Pr{_ ← chain12Opt}[True] = 1 := by simp [chain12Opt]
+example : Pr{let _ ← chain12Opt}[True] = 1 := by simp [chain12Opt]
 
 /-! ## 3. Structural normalization — abstract chain and concrete head
 

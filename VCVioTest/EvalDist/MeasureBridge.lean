@@ -168,7 +168,7 @@ example : Pr{lossyCoin}[= true] = 2⁻¹ := by
 example : Pr{lossyCoin}[= false] = 0 := by
   rw [lossyCoin, prEvent_bind_eq_lintegral_of_discrete]
   simp [lintegral_fintype]
-example : Pr{_ ← lossyCoin}[True] = 2⁻¹ := by
+example : Pr{let _ ← lossyCoin}[True] = 2⁻¹ := by
   rw [lossyCoin, prEvent_bind_eq_lintegral_of_discrete]
   simp [lintegral_fintype]
 

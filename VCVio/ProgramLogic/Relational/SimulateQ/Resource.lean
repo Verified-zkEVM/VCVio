@@ -65,16 +65,16 @@ theorem prEvent_bad_simulateQ_run_le_expectedQuerySlack
     [DecidablePred charged] (R : σ → ℝ≥0∞) (ε : ℝ≥0∞)
     (h_charged_step : ∀ (t : spec.Domain) (s : σ), charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
-        Pr{z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤ R s * ε +
+        Pr{let z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤ R s * ε +
           wp ((impl t).run (s, false)) fun z =>
             if z.2.2 then 0 else Pr{let w ← k z}[w.2.2 = true])
     (h_free_step : ∀ (t : spec.Domain) (s : σ), ¬ charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
-        Pr{z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤
+        Pr{let z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤
           wp ((impl t).run (s, false)) fun z =>
             if z.2.2 then 0 else Pr{let w ← k z}[w.2.2 = true])
     (oa : OracleComp spec γ) {qS : ℕ} (h_qb : oa.IsQueryBoundP charged qS) (s : σ) :
-    Pr{z ← (simulateQ impl oa).run (s, false)}[z.2.2 = true] ≤
+    Pr{let z ← (simulateQ impl oa).run (s, false)}[z.2.2 = true] ≤
       expectedQuerySlack impl charged (fun s => R s * ε) oa qS (s, false) := by
   induction oa using OracleComp.inductionOn generalizing qS s with
   | pure x => simp
@@ -120,7 +120,7 @@ The fix carried here is to average not over a single fixed state but over a **st
 `ν : σ × Bool → ℝ≥0∞`, the law of the eager handler's slot under the pending upstream draws.
 The averaged bad mass
 
-  `avgBadM impl ν oa := ∑' p, ν p · Pr{z ← (simulateQ impl oa).run p}[z.2.2 = true]`
+  `avgBadM impl ν oa := ∑' p, ν p · Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true]`
 
 telescopes through the free monad like `expectedQuerySlack`, but the read step's charge is now
 `∑' p, ν p · 1_{mc ∈ slot(p)}`, a probability over the state law.
@@ -144,7 +144,7 @@ by an aborting step. -/
 @[expose] noncomputable def avgBadM
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (ν : σ × Bool → ℝ≥0∞) (oa : OracleComp spec γ) : ℝ≥0∞ :=
-  ∑' p : σ × Bool, ν p * Pr{z ← (simulateQ impl oa).run p}[z.2.2 = true]
+  ∑' p : σ × Bool, ν p * Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true]
 
 open scoped Classical in
 /-- `avgBadM` at a Dirac (single-point indicator) measure is the plain per-state bad
@@ -153,7 +153,7 @@ lemma avgBadM_pure_state
     (impl : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (p₀ : σ × Bool) (oa : OracleComp spec γ) :
     avgBadM impl (fun p => if p = p₀ then 1 else 0) oa =
-      Pr{z ← (simulateQ impl oa).run p₀}[z.2.2 = true] := by
+      Pr{let z ← (simulateQ impl oa).run p₀}[z.2.2 = true] := by
   rw [avgBadM, tsum_eq_single p₀ (by intro p hp; rw [ite_eq_right hp, zero_mul]),
     ite_eq_left rfl, one_mul]
 

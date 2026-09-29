@@ -202,39 +202,59 @@ example {α : Type} [Countable α] (mx my : ProbComp α) (h : ∀ x, Pr{mx}[= x]
 
 /-! ### Event notation
 
-`Pr{…}[…]` elaborates to `prEvent` in the form `simp` maintains, whichever surface form is used,
-and goals display in the draw form. -/
+`Pr{…}[…]` elaborates an ordinary `do` sequence to `prEvent` in the form `simp` maintains, and
+goals display its draws as `let` statements. -/
 
 section eventNotation
 
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ)
 
-example : Pr{x ← mx}[x = true] = prEvent ((fun x => x = true) <$> mx) := rfl
+example : Pr{let x ← mx}[x = true] = prEvent ((fun x => x = true) <$> mx) := rfl
 example : Pr{let x ← mx}[x] = prEvent ((fun x => x = true) <$> mx) := rfl
-example : Pr{x ← mx; y ← my x}[y = 3 ∧ x] =
+example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
     prEvent (mx >>= fun x => (fun y => y = 3 ∧ x = true) <$> my x) := rfl
-example : Pr{x ← mx; y ← my x}[y = 3] = Pr{let x ← mx; let y ← my x}[y = 3] := rfl
-example : Pr{x : Bool ← mx}[x] = Pr{x ← mx}[x = true] := rfl
-example : Pr{mz}[= 3] = Pr{z ← mz}[z = 3] := rfl
-example : Pr{{let x ← mx}}[x] = Pr{x ← mx}[x] := rfl
+example : Pr{let x : Bool ← mx}[x] = Pr{let x ← mx}[x = true] := rfl
+example : Pr{mz}[= 3] = Pr{let z ← mz}[z = 3] := rfl
+example : Pr{{let x ← mx}}[x] = Pr{let x ← mx}[x] := rfl
 example : Pr{
     let x ← mz
     let y := x + 1}[y = 3] = prEvent ((fun x => x + 1 = 3) <$> mz) := rfl
 
-/-- A draw's action may continue on the following lines without parentheses. -/
-example (f : ℕ → ℕ → ProbComp ℕ) : Pr{x ← f
-    1 2; y ← f x
-      x}[x = y] = Pr{x ← (f 1 2); y ← (f x x)}[x = y] := rfl
+/-- A draw whose action continues on the following lines is laid out as in a `do` block, or its
+action is parenthesized. -/
+example (f : ℕ → ℕ → ProbComp ℕ) : Pr{
+    let x ← f
+      1 2
+    let y ← f x
+      x}[x = y] = Pr{let x ← f 1 2; let y ← f x x}[x = y] := rfl
+example (f : ℕ → ℕ → ProbComp ℕ) : Pr{let x ← (f
+    1 2)}[x = 1] = Pr{let x ← f 1 2}[x = 1] := rfl
+
+/-! Goals display the draws as `let` statements on one line when they fit; an eta-reduced final
+selector is applied to a name no draw binds. -/
+
+/-- info: Pr{let x ← mx; let y ← my x}[y = 3 ∧ x = true] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mx; let y ← my x}[y = 3 ∧ x]
+
+variable (q : ℕ → Prop) in
+/-- info: Pr{let x ← mx; let y ← my x}[q y] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mx; let y ← my x}[q y]
+
+/-- info: Pr{mz}[= 3] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{mz}[= 3]
 
 /-- `simp` keeps the notation in normal form and applies laws keyed on the head constant. -/
-example (p : ℕ → Prop) (h : Pr{x ← mz}[p x] = 0) : Pr{x ← mz}[p x] = 0 := by
+example (p : ℕ → Prop) (h : Pr{let x ← mz}[p x] = 0) : Pr{let x ← mz}[p x] = 0 := by
   fail_if_success simp only [bind_pure_comp] at h
   exact h
 
-example (a : ℕ) : Pr{x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
+example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
 
 /-- A derived uniform program is closed by the uniform law after `simp` merges its maps. -/
-example : Pr{x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
+example : Pr{let x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
   simp [SampleableType.prEvent_uniformSample, Finset.filter_insert, Finset.filter_singleton]
 
 /-- A final destructuring draw ends the event in a map, whether its action is a term or a nested
@@ -246,8 +266,8 @@ example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp
   ⟨rfl, rfl⟩
 
 /-- Goals display in the draw form. -/
-example : Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x] := by
-  guard_target =ₛ Pr{x ← mx; y ← my x}[y = 3 ∧ x] = Pr{x ← mx; y ← my x}[y = 3 ∧ x]
+example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] = Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] := by
+  guard_target =ₛ Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] = Pr{let x ← mx; let y ← my x}[y = 3 ∧ x]
   rfl
 
 end eventNotation

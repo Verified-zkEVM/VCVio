@@ -69,14 +69,14 @@ example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {y : β}
   exact h _ ‹_›
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
-    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
+    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
   vcstep rw congr'
   exact h _
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
-    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
+    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
   vcstep rw congr' as ⟨x⟩
   exact h x
 
@@ -87,16 +87,16 @@ info: Try this:
 -/
 #guard_msgs (info) in
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr{y ← f x}[q y] = Pr{y ← g x}[q y]) :
-    Pr{y ← mx >>= f}[q y] = Pr{y ← mx >>= g}[q y] := by
+    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
+    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
   vcstep?
   exact h x
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f g : α → β → OracleComp spec γ} {q : γ → Prop}
-    (h : ∀ x y, Pr{r ← f x y}[q r] = Pr{r ← g x y}[q r]) :
-    Pr{r ← mx >>= fun x => my >>= fun y => f x y}[q r] =
-    Pr{r ← mx >>= fun x => my >>= fun y => g x y}[q r] := by
+    (h : ∀ x y, Pr{let r ← f x y}[q r] = Pr{let r ← g x y}[q r]) :
+    Pr{let r ← mx >>= fun x => my >>= fun y => f x y}[q r] =
+    Pr{let r ← mx >>= fun x => my >>= fun y => g x y}[q r] := by
   vcstep rw congr' as ⟨x, y⟩
   exact h x y
 

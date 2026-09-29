@@ -55,7 +55,7 @@ theorem advantage_le_expectedQuerySlack_add_prEvent_bad
     (h_bound : A.IsQueryBoundP chargedQuery queryBudget) :
     h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ expectedQuerySlack h₀ chargedQuery querySlack A queryBudget (s_init, false)
-        + Pr{z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] :=
+        + Pr{let z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] :=
   (advantage_le_measureETVDist h₀ _ h₁ _ A).trans
     (measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad h₀ h₁ chargedQuery
       querySlack h_step_charged h_step_uncharged h_mono₀ A h_bound (s_init, false))
@@ -77,7 +77,7 @@ theorem advantage_le_queryBound_mul_slack_add_prEvent_bad
     (h_bound : A.IsQueryBoundP chargedQuery queryBudget) :
     h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ queryBudget * querySlack
-        + Pr{z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] := by
+        + Pr{let z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] := by
   refine (advantage_le_expectedQuerySlack_add_prEvent_bad
       h₀ h₁ s_init chargedQuery (fun _ => querySlack)
       h_step_charged h_step_uncharged h_mono₀ A h_bound).trans ?_
@@ -110,7 +110,7 @@ theorem advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv
     h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ expectedQuerySlack h₀ chargedQuery
           (fun s => if Inv s then querySlack s else 1) A queryBudget (s_init, false)
-        + Pr{z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] := by
+        + Pr{let z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] := by
   refine advantage_le_expectedQuerySlack_add_prEvent_bad
     h₀ h₁ s_init chargedQuery (fun s => if Inv s then querySlack s else 1) ?_
     h_step_uncharged h_mono₀ A h_bound
@@ -145,7 +145,7 @@ theorem advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved
     (h_bound : A.IsQueryBoundP chargedQuery queryBudget) :
     h₀.advantage (s_init, false) h₁ (s_init, false) A
       ≤ expectedQuerySlack h₀ chargedQuery querySlack A queryBudget (s_init, false)
-        + Pr{z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] := by
+        + Pr{let z ← (simulateQ h₀ A).run (s_init, false)}[z.2.2 = true] := by
   classical
   have h_cost_eq :
       expectedQuerySlack h₀ chargedQuery (fun s => if Inv s then querySlack s else 1)

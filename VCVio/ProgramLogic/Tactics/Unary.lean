@@ -160,7 +160,7 @@ from context, and WP-rule unfolding, including `simulateQ ... run'`.
 After the built-in leaf rules, it may also use user-authored `@[vcspec]` lemmas whose
 registered head symbol matches the current computation.
 
-For `Pr{…}[…] = 1` and lower-bound goals such as `r ≤ Pr{x ← oa}[p x]`: automatically lowers
+For `Pr{…}[…] = 1` and lower-bound goals such as `r ≤ Pr{let x ← oa}[p x]`: automatically lowers
 the goal into a `Triple` form.
 
 For equalities of events or output measures, such as `Pr{…}[…] = Pr{…}[…]` or

@@ -154,9 +154,10 @@ The notation is measure-valued: `𝒟[mx] : Measure α` is the successful-output
 missing from it is failure or nontermination. The generic classes and Giry laws live in
 `VCVio.EvalDist.Defs.Measure.Core`; the direct free-program instances live in
 `VCVio.EvalDist.PFunctorMeasure.Core`.
-`Pr{x ← mx; y ← my x}[event]` is the event notation. Its draws are `x ← e` items separated by
-`;`, and an action may continue on the following lines. An ordinary `do` sequence, such as
-`Pr{let x ← mx; let y := f x}[event]` or a multi-line block, is accepted as well.
+`Pr{let x ← mx; let y ← my x}[event]` is the event notation. The braces hold an ordinary Lean `do`
+sequence: statements are separated by `;` or laid out as in a `do` block, and `let y := f x`,
+destructuring draws and `if` are available. An action that continues on the following lines is
+indented past its `let`, as in any `do` block, or parenthesized.
 `Pr{mx}[= a]` is the probability of the single output `a` and needs no measurable singletons.
 The notation denotes `prEvent (mx : m Prop) := 𝒟[mx] {True}` of the computation returning
 the event. It is elaborated in the normal form `simp` maintains:
@@ -515,7 +516,7 @@ Because Mathlib does not install a generic measurable space on `List α`, these 
 chosen list measurable space and measurability of each `List.cons x` map explicitly.
 
 Failure is missing mass. `𝒟[mx]` measures successful outputs only, so the failure mass of `mx`
-is `1 - Pr{_ ← mx}[True]` (`prEvent_true_eq_evalDist_apply_univ` identifies the event with
+is `1 - Pr{let _ ← mx}[True]` (`prEvent_true_eq_evalDist_apply_univ` identifies the event with
 `𝒟[mx] Set.univ`), and `IsProbabilityMeasure 𝒟[mx]` states losslessness.
 `evalDistWithFailure mx : Measure (Option α)` (`VCVio/EvalDist/WithFailure.lean`) is the
 probability measure that puts the missing mass at `none`: `evalDistWithFailure_none` gives
@@ -531,7 +532,7 @@ equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
 | `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure/Core.lean` |
-| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{x ← mx; …}[p x]`, `Pr{mx}[= a]` | `EvalDist/ProbabilityNotation.lean` |
+| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{mx}[= a]` | `EvalDist/ProbabilityNotation.lean` |
 | `evalDistWithFailure mx` | `Measure (Option α)` | — | `EvalDist/WithFailure.lean` |
 | `EvalDistEq mx my` | `Prop` | `mx =ᵈ my` | `EvalDist/EvalDistEq.lean` |
 | `support mx` | `Set α` | — | `EvalDist/Defs/Support.lean` |
@@ -660,7 +661,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 |-------|-----------|------|
 | `evalDist_pure` | `𝒟[(pure x : m α)] = Measure.dirac x` | `simp` |
 | `prEvent_pure_prop` | `prEvent (pure P : m Prop) = if P then 1 else 0` | `simp`, `grind =` |
-| `prEvent_pure` | `Pr{x ← (pure a : m α)}[p x] = if p a then 1 else 0` | `grind =` |
+| `prEvent_pure` | `Pr{let x ← (pure a : m α)}[p x] = if p a then 1 else 0` | `grind =` |
 | `support_pure` | `support (pure x) = {x}` | `grind =` |
 
 ### Bind
@@ -669,8 +670,8 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 |-------|-----------|------|
 | `evalDist_bind` | `𝒟[mx >>= f] = 𝒟[mx].bind fun x => 𝒟[f x]`, for a measurable continuation | — |
 | `evalDist_bind_of_discrete` | the same on a discrete source space | — |
-| `prEvent_bind_eq_lintegral_of_discrete` | `Pr{y ← mx >>= f}[p y] = ∫⁻ x, Pr{y ← f x}[p y] ∂𝒟[mx]` | — |
-| `prEvent_bind_eq_sum_fintype` | `Pr{y ← mx >>= f}[p y] = ∑ a, Pr{x ← mx}[x = a] * Pr{y ← f a}[p y]` | — |
+| `prEvent_bind_eq_lintegral_of_discrete` | `Pr{let y ← mx >>= f}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx]` | — |
+| `prEvent_bind_eq_sum_fintype` | `Pr{let y ← mx >>= f}[p y] = ∑ a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y]` | — |
 | `prEvent_bind_eq_tsum_of_countable` | the same as a `tsum` over a countable source | — |
 | `evalDist_bind_apply_univ` | `𝒟[mx >>= f] Set.univ = ∫⁻ x, 𝒟[f x] Set.univ ∂𝒟[mx]` | — |
 | `support_bind` | `support (mx >>= my) = ⋃ x ∈ support mx, support (my x)` | `grind =` |
@@ -681,9 +682,9 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 | Lemma | Statement | Tags |
 |-------|-----------|------|
 | `evalDist_bind_const` | `𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my]` | `simp` |
-| `prEvent_bind_const` | `prEvent (mx >>= fun _ => my) = Pr{_ ← mx}[True] * prEvent my` | `simp` |
+| `prEvent_bind_const` | `prEvent (mx >>= fun _ => my) = Pr{let _ ← mx}[True] * prEvent my` | `simp` |
 | `OracleComp.evalDist_bind_const` | `𝒟[mx >>= fun _ => my] = 𝒟[my]` for a lossless oracle computation | `simp` |
-| `OracleComp.prEvent_true_eq_one` | `Pr{_ ← mx}[True] = 1` for an oracle computation | `simp`, `grind =` |
+| `OracleComp.prEvent_true_eq_one` | `Pr{let _ ← mx}[True] = 1` for an oracle computation | `simp`, `grind =` |
 
 ### Map
 
@@ -691,7 +692,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 |-------|-----------|------|
 | `evalDist_map` | `𝒟[f <$> mx] = 𝒟[mx].map f`, for a measurable `f` | — |
 | `evalDist_map_apply` | `𝒟[f <$> mx] s = 𝒟[mx] (f ⁻¹' s)`, for measurable `f` and `s` | — |
-| `prEvent_map` | `Pr{y ← f <$> mx}[q y] = Pr{x ← mx}[q (f x)]` | `grind norm` |
+| `prEvent_map` | `Pr{let y ← f <$> mx}[q y] = Pr{let x ← mx}[q (f x)]` | `grind norm` |
 | `evalDist_map_const` | `𝒟[(fun _ => c) <$> mx] = 𝒟[mx] Set.univ • Measure.dirac c` | `simp` |
 | `support_map` | `support (f <$> mx) = f '' support mx` | `grind =` |
 | `evalDist_map_equiv_of_uniform` | a permutation of a finite uniform draw keeps its measure | — |
@@ -714,7 +715,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 
 ## Decision Tree: Which Lemma Do I Reach For?
 
-1. **Goal is `Pr{y ← mx >>= my}[p y] = ...` or `𝒟[mx >>= my] s = ...`?**
+1. **Goal is `Pr{let y ← mx >>= my}[p y] = ...` or `𝒟[mx >>= my] s = ...`?**
    → `prEvent_bind_eq_lintegral_of_discrete` (or `evalDist_bind_of_discrete` followed by
      `Measure.bind_apply`) exposes the integral
    → On a `Fintype` draw, `prEvent_bind_eq_sum_fintype` gives the finite sum directly; on a
@@ -754,7 +755,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 common way to get a `grind` that hangs.
 
 **Use `simp` to compute a concrete probability or factor structure.** `simp` evaluates Dirac
-masses of `pure`, uniform masses such as `𝒟[$ᵗ T] {x}` (and `Pr{x ← $ᵗ T}[p x]` down to its
+masses of `pure`, uniform masses such as `𝒟[$ᵗ T] {x}` (and `Pr{let x ← $ᵗ T}[p x]` down to its
 filtered cardinality `#{x | p x} / Fintype.card T`), constant continuations
 (`evalDist_bind_const`), bounds (`𝒟[mx] s ≤ 1`, `Pr{…}[…] ≠ ⊤`), and the success mass of an
 oracle computation. `grind` is not an `ℝ≥0∞`/`Fintype.card` arithmetic engine and has no rules
@@ -764,13 +765,13 @@ will not finish these (it fails fast).
 **Use `grind` for symbolic / structural goals.** Equiprobability (`𝒟[$ᵗ T] {x} = 𝒟[$ᵗ T] {y}`,
 through the `grind norm` uniform laws `SampleableType.evalDist_uniformSample_singleton` and
 `SampleableType.prEvent_uniformSample`), the pushforward of an event (`prEvent_map`),
-independent conjunctions (`prEvent_bind_bind_and`), the lossless event `Pr{_ ← mx}[True] = 1` of
+independent conjunctions (`prEvent_bind_bind_and`), the lossless event `Pr{let _ ← mx}[True] = 1` of
 an oracle computation (`OracleComp.prEvent_true_eq_one`), failure (`evalDist_failure_eq_zero`),
 `x ∈ support (…)`, and `bind`/`pure`-shaped equalities of computations and their measures are
 squarely in `grind`'s wheelhouse.
 
 **Support characterizations are opt-in for `grind`.** Under uniform answer measures,
-`OracleComp.prEvent_eq_zero_iff` (`Pr{x ← mx}[p x] = 0 ↔ ∀ x ∈ support mx, ¬ p x`),
+`OracleComp.prEvent_eq_zero_iff` (`Pr{let x ← mx}[p x] = 0 ↔ ∀ x ∈ support mx, ¬ p x`),
 `OracleComp.prEvent_eq_one_iff` (`… = 1 ↔ ∀ x ∈ support mx, p x`), and
 `OracleComp.prEvent_pos_iff` (`0 < … ↔ ∃ x ∈ support mx, p x`), all in
 `VCVio/OracleComp/EvalDist/Measure.lean`, relate event probability to structural support. Their
@@ -795,7 +796,7 @@ collapses a computation's structure (`mx >>= pure = mx`, `pure a >>= f = f a`, �
 expanding events and measures, turning what would otherwise be a `grind` *explosion* on a
 `bind`/`pure`-shaped equality into a quick solve: over an abstract lawful monad,
 `𝒟[do let a ← mx; let b ← pure a; let c ← pure b; pure c] = 𝒟[mx]` and
-`Pr{_ ← g <$> (f <$> mx)}[True] = Pr{_ ← mx}[True]` close by bare `grind`, and the ten-deep
+`Pr{let _ ← g <$> (f <$> mx)}[True] = Pr{let _ ← mx}[True]` close by bare `grind`, and the ten-deep
 redundant-`pure` tower of `VCVioTest/LongChainPrograms.lean` by `grind` given its definition.
 `bind_pure_comp` / `map_eq_bind` are omitted (function argument under a binder, unindexable). A
 *non-trivial* `<$>` / `if` / `<*>` does not normalise to a `pure`, so those structured equalities
@@ -853,7 +854,7 @@ monad `m` with `[EvalDistSemantics m] [LawfulEvalDistSemantics m]` and over the 
 surfaces what `ProbComp` masks, chiefly the **success factor**: over a monad that can fail, a
 discarded computation scales the continuation by its success mass,
 `𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my]` and
-`Pr{y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{y ← my}[p y]`. Both collapse to the `ProbComp`
+`Pr{let y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{let y ← my}[p y]`. Both collapse to the `ProbComp`
 forms only because oracle computations are lossless (`OracleComp.evalDist_bind_const`).
 
 `VCVioTest/LongChainPrograms.lean` stresses the same sets on programs with ten or more binds:

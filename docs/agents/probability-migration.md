@@ -1,7 +1,7 @@
 # Converting Downstream Code to Measure-Based Probability
 
 VCVio's probability semantics are Mathlib measures: `𝒟[mx]` is the output measure of a
-computation and `Pr{x ← mx}[p x]` is the mass of an event. Earlier versions also had a discrete
+computation and `Pr{let x ← mx}[p x]` is the mass of an event. Earlier versions also had a discrete
 surface — `SPMF`, `evalSPMF`/`𝒮[…]`, `probOutput`/`probEvent`/`probFailure` with the `Pr[…]`
 notation, and the classes that interpret them — which has been removed. This guide converts code
 written against it. Most of the conversion is mechanical: find the removed form in the tables
@@ -17,7 +17,7 @@ record is `docs/reading/denotational-probability-semantics.md`.
 2. Run the codemod over your sources, from the VCVio checkout Lake placed in your project:
    `python3 .lake/packages/VCVio/scripts/migrate-native-probability.py <source directories>`
    (`--dry-run` prints the diff instead of writing). It rewrites what the tables below convert
-   mechanically: legacy events and `let` items in `Pr{…}`, `GameEquiv` and `≡ₚ`, oracle
+   mechanically: legacy events and bare draws in `Pr{…}`, `GameEquiv` and `≡ₚ`, oracle
    answer-type binders, the spec classes, renamed declarations, imports of removed modules, and
    `open`s of removed namespaces.
    Every site it leaves is reported as `path:line:` with the entry of this guide that converts
@@ -33,10 +33,10 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 
 | Removed | Replacement |
 |---|---|
-| `Pr[p \| mx]`, `probEvent mx p` | `Pr{x ← mx}[p x]` |
+| `Pr[p \| mx]`, `probEvent mx p` | `Pr{let x ← mx}[p x]` |
 | `Pr[= x \| mx]`, `probOutput mx x` | `Pr{mx}[= x]`; or `𝒟[mx] {x}` when the output has measurable singletons |
-| `Pr[⊥ \| mx]`, `probFailure mx` | `1 - Pr{_ ← mx}[True]`; identically `0` for `OracleComp` |
-| `Pr{let x ← mx}[p x]` | `Pr{x ← mx}[p x]`; the `let` form still parses, and items are separated by `;` |
+| `Pr[⊥ \| mx]`, `probFailure mx` | `1 - Pr{let _ ← mx}[True]`; identically `0` for `OracleComp` |
+| `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
 | `tvDist mx my` | `measureETVDist mx my`; `Measure.etvDist` on measures |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
@@ -136,7 +136,7 @@ callers restate the hypotheses they supply.
 |---|---|---|
 | `SigmaProtocol.HVZK`, `IdenSchemeWithAbort.HVZK` | `ζ_zk : ℝ` with `0 ≤ ζ_zk`, and `tvDist real sim ≤ ζ_zk` | `ζ_zk : ℝ≥0∞`, and `measureETVDist real sim ≤ ζ_zk` on the discrete transcript σ-algebra; the nonnegativity hypothesis goes |
 | `PerfectHVZK` | `𝒮[real] = 𝒮[sim]` | `real =ᵈ sim`; `perfectHVZK_iff_hvzk_zero` relates it to `HVZK … 0` |
-| `simCommitPredictability` | `Pr[= c₀ \| Prod.fst <$> simT x] ≤ β` | `Pr{t ← simT x}[t.1 = c₀] ≤ β` |
+| `simCommitPredictability` | `Pr[= c₀ \| Prod.fst <$> simT x] ≤ β` | `Pr{let t ← simT x}[t.1 = c₀] ≤ β` |
 | Fiat–Shamir CMA-to-NMA loss (`euf_cma_to_nma`, `euf_cma_bound`) | `ENNReal.ofReal (qS * ζ_zk)` | `qS * ζ_zk` |
 | Charged steps of the per-query slack bounds (`expectedQuerySlack`, `advantage_le_expectedQuerySlack_add_prEvent_bad` and its variants) | `ENNReal.ofReal (tvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false))) ≤ ε s` | `letI : MeasurableSpace (E.Range t × σ × Bool) := ⊤; measureETVDist … ≤ ε s` |
 | Uncharged steps of the same bounds | `∀ p, (h₀ t).run p = (h₁ t).run p` | `∀ s, (h₀ t).run (s, false) = (h₁ t).run (s, false)`: only good states are compared |
@@ -215,8 +215,9 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{mx}[= x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
 | a goal shows `(toMeasure t).trim le_top` | `MeasureTheory.trim_eq_self` when the answer's measurable space is `⊤` by definition; otherwise evaluate measurable sets with `evalDist_liftM_query_apply` or `trim_measurableSet_eq` |
+| `unexpected …; expected '}['` in a `Pr{…}` whose action continues on the next line | the braces hold a `do` sequence: indent the continuation past its `let`, start the sequence on its own line as in a `do` block, or parenthesize the action |
 | two events that should agree differ only in how their binds and maps are arranged | `simp only [prEvent_norm]` brings both into the normal form of `Pr{…}[…]` |
-| a lemma about `Pr{y ← mx >>= f}[q y]` no longer matches after `simp` pushed the event into the bind | apply the lemma before `simp`, or state it for `prEvent (mx >>= g)` with `g : α → m Prop` |
+| a lemma about `Pr{let y ← mx >>= f}[q y]` no longer matches after `simp` pushed the event into the bind | apply the lemma before `simp`, or state it for `prEvent (mx >>= g)` with `g : α → m Prop` |
 | a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | `simp only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def]` recovers that form; better, use the laws keyed on `prEvent` |
 | `simp [prEvent_def]` loops | `simp` rewrites `𝒟[mx] {True}` back to `prEvent mx`; use `rw [prEvent_def]` or `simp only` |
 | `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
@@ -224,7 +225,7 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |
 | an event computation that destructures its input (`let (a, b) ← mx` in a `do` block) stays in bind form, so `prEvent_mono` does not apply | `prEvent_bind_mono_of_support _ _ _ fun ⟨a, b⟩ _ => prEvent_pure_mono h`, or `prEvent_bind_congr_of_support` for equalities |
 | `prEvent_le_one mx p` no longer applies | it takes the event computation alone: `prEvent_le_one _` |
-| `simp` leaves `Pr{a ← mx; b ← f a}[True]` (or `[False]`) on `OracleComp` | `simp` pushes the constant selector into the binds; `simp [-map_bind]` keeps it outside, where `OracleComp.prEvent_true_eq_one` and `prEvent_false` apply |
+| `simp` leaves `Pr{let a ← mx; let b ← f a}[True]` (or `[False]`) on `OracleComp` | `simp` pushes the constant selector into the binds; `simp [-map_bind]` keeps it outside, where `OracleComp.prEvent_true_eq_one` and `prEvent_false` apply |
 | laws about `pure` (`prEvent_pure`, `map_pure`) do not fire on `pure v` written with an `OracleComp` ascription | that `pure` elaborates through `PFunctor.FreeM.instPure` rather than the monad; `erw [prEvent_pure]`, or state the term through the `do` block that produced it |
 | measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |
 | an event transported between monads (`ProbComp` and `OracleComp spec`) | take `.prEvent_eq p` of an equality in distribution such as `uniformSampleImpl.evalDistEq_simulateQ` or `OracleComp.evalDistEq_liftComp_uniform` |

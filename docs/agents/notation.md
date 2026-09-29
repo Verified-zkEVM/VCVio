@@ -16,10 +16,10 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
-| `Pr{x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; `let x ← mx` and `do` sequences are also accepted | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `Pr{let x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; the braces hold an ordinary `do` sequence | `VCVio/EvalDist/ProbabilityNotation.lean` |
 | `Pr{mx}[= a]` | `prEvent ((· = a) <$> mx)`: the mass of the single output `a` | `VCVio/EvalDist/ProbabilityNotation.lean` |
 
-Failure is missing mass: the probability that `mx` fails is `1 - Pr{_ ← mx}[True]`, and a
+Failure is missing mass: the probability that `mx` fails is `1 - Pr{let _ ← mx}[True]`, and a
 lossless computation satisfies `IsProbabilityMeasure 𝒟[mx]`. Every `OracleComp spec`
 computation is lossless under `[OracleSpec.IsMeasureSpec spec]`
 (`OracleComp.prEvent_true_eq_one`); failure arises in `OptionT (OracleComp spec)` and similar
@@ -100,8 +100,8 @@ Precedence ensures `A ∥ B ⊞ C ⊠ K` parses as `((A ∥ B) ⊞ C) ⊠ K`.
 | Dead notation | Replacement |
 |---------------|-------------|
 | `Pr[= x \| comp]`, `[= x \| comp]` | `Pr{comp}[= x]` |
-| `Pr[p \| comp]`, `Pr[p x \| x ← comp]` | `Pr{x ← comp}[p x]` |
-| `Pr[⊥ \| comp]` | `1 - Pr{_ ← comp}[True]` |
+| `Pr[p \| comp]`, `Pr[p x \| x ← comp]` | `Pr{let x ← comp}[p x]` |
+| `Pr[⊥ \| comp]` | `1 - Pr{let _ ← comp}[True]` |
 | `𝒮[comp]` | `𝒟[comp]` |
 | `++ₒ` | `+` |
 

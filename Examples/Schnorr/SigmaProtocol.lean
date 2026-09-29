@@ -202,7 +202,7 @@ theorem sigma_simCommitPredictability [Fintype F] (g : G)
   intro pk c₀
   have hcard_FG : Fintype.card G = Fintype.card F := (Fintype.card_of_bijective hg).symm
   have h_inner : ∀ c : F,
-      Pr{z ← $ᵗ F}[z • g - c • pk = c₀] = (Fintype.card F : ℝ≥0∞)⁻¹ := fun c =>
+      Pr{let z ← $ᵗ F}[z • g - c • pk = c₀] = (Fintype.card F : ℝ≥0∞)⁻¹ := fun c =>
     (SampleableType.prEvent_uniformSample_comp_of_bijective
       (f := fun z : F => z • g - c • pk) ((Equiv.subRight (c • pk)).bijective.comp hg)
       (· = c₀)).trans
@@ -220,7 +220,7 @@ challenge is uniform on `F`. The proof reduces to the explicit independent produ
 `(do r ← $ᵗ F; c ← $ᵗ F; pure (r • g, c, r + c · sk))` via perfect HVZK and the
 closed form `realTranscript_eq_indep`; in that form the commit `r • g` and challenge
 `c` are literally independent (by sampling order), so both events factor through
-`Pr{r ← $ᵗ F}[r • g = c₀]`. -/
+`Pr{let r ← $ᵗ F}[r • g = c₀]`. -/
 theorem sigma_simChalUniformGivenCommit [Fintype F] (g : G) :
     (sigma F G g).simChalUniformGivenCommit (simTranscript F G g) := by
   classical

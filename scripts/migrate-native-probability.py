@@ -9,9 +9,10 @@ in place unless `--dry-run` is given, in which case a unified diff is printed in
 
 Rewrites:
 - legacy events: `Pr[= a | mx]` and `Pr[(· = a) | mx]` become `Pr{mx}[= a]`;
-  `Pr[fun x => p | mx]` becomes `Pr{x ← mx}[p]`; `Pr[p | mx]` becomes `Pr{x ← mx}[p x]`;
-  `Pr[⊥ | mx]` becomes `(1 - Pr{_ ← mx}[True])`;
-- `Pr{let x ← e}[…]` items become `Pr{x ← e}[…]`;
+  `Pr[fun x => p | mx]` becomes `Pr{let x ← mx}[p]`; `Pr[p | mx]` becomes
+  `Pr{let x ← mx}[p x]`; `Pr[⊥ | mx]` becomes `(1 - Pr{let _ ← mx}[True])`;
+- bare draws `Pr{x ← e}[…]` become the `do` statements `Pr{let x ← e}[…]`, parenthesizing a
+  right-hand side that spans several lines;
 - `GameEquiv` becomes `EvalDistEq` and `≡ₚ` becomes `=ᵈ`;
 - oracle answer-type binders `[∀ t, MeasurableSpace (spec.Range t)]`,
   `[∀ t, DiscreteMeasurableSpace (spec.Range t)]` and `[∀ t, MeasurableSingletonClass …]` are
@@ -243,10 +244,10 @@ REPORT_NAMES: dict[str, str] = {
         "`Pr{mx}[= x]` and `𝒟[mx] {x}`",
     "evalDist_apply_setOf":
         "targets the removed `Pr[p | mx]`; `prEvent_eq_evalDist_of_discrete` relates "
-        "`Pr{x ← mx}[p x]` and `𝒟[mx] {x | p x}`",
+        "`Pr{let x ← mx}[p x]` and `𝒟[mx] {x | p x}`",
     "evalDist_apply_univ":
         "targets the removed `Pr[⊥ | mx]`; `prEvent_true_eq_evalDist_apply_univ` relates "
-        "`Pr{_ ← mx}[True]` and `𝒟[mx] Set.univ`",
+        "`Pr{let _ ← mx}[True]` and `𝒟[mx] Set.univ`",
 }
 
 # Modules removed from VCVio, keyed by the old module name.
@@ -356,7 +357,7 @@ LEGACY_HINTS: dict[str, str] = {
     "probEvent_eq_one_iff":
         "`prEvent_eq_one_iff` (uniform answers) or `prEvent_eq_one_of_forall_mem_support`",
     "probFailure_eq_zero": "nothing on `OracleComp`; `evalDist_apply_univ_eq_one` for total mass",
-    "probFailure_def": "`1 - Pr{_ ← mx}[True]`",
+    "probFailure_def": "`1 - Pr{let _ ← mx}[True]`",
     "probOutput_pure": "`prEvent_pure` or `evalDist_pure`",
     "probEvent_pure": "`prEvent_pure`",
     "probOutput_uniformSample":
@@ -387,8 +388,8 @@ LEGACY_HINTS: dict[str, str] = {
 LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
     (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{mx}[= x]` or `𝒟[mx] {x}`"),
-    (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{x ← mx}[p x]`"),
-    (r"(?<![\w'.])probFailure(?![\w'])", "`1 - Pr{_ ← mx}[True]`"),
+    (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
+    (r"(?<![\w'.])probFailure(?![\w'])", "`1 - Pr{let _ ← mx}[True]`"),
     (r"(?<![\w'.])tvDist(?![\w'])", "`measureETVDist`"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
@@ -628,7 +629,26 @@ def rewrite_legacy_events(text: str, report: Report, path: str) -> str:
         i = close + 1
 
 
-def rewrite_let_items(text: str) -> str:
+DRAW_ITEM = re.compile(r"(\s*)(_|[^\W\d][\w'₀-₉]*)((?:\s*:\s*[^←]+?)?)\s*←(.*)", re.S)
+
+
+def is_parenthesized(term: str) -> bool:
+    """Whether `term` is one parenthesized group."""
+    if not term.startswith("("):
+        return False
+    try:
+        return match_close(term, 0) == len(term) - 1
+    except ValueError:
+        return False
+
+
+def rewrite_draw_items(text: str, report: Report, path: str) -> str:
+    """Write each bare draw `x ← e` of a `Pr{…}` sequence as the `do` statement `let x ← e`.
+
+    A right-hand side spanning several lines is parenthesized, since the layout of a `do`
+    statement requires its continuation lines to sit right of the `let`; a sequence continuing
+    after such a draw is reported for layout by hand."""
+    spans = comment_spans(text)
     out: list[str] = []
     i = 0
     while True:
@@ -643,12 +663,19 @@ def rewrite_let_items(text: str) -> str:
             i = k + 3
             continue
         parts = split_top_level(text[k + 3:close], ";")
-        # A first item on its own line keeps the name beside the brace and breaks after the
-        # arrow, the layout Mathlib's whitespace linter accepts.
-        parts[0] = re.sub(r"^\n([ \t]*)let\s+(_|[^\W\d][\w'₀-₉]*)\s*←[ \t]*",
-                          r"\2 ←\n\1", parts[0])
-        parts = [re.sub(r"^(\s*)let\s+(_|[^\W\d][\w'₀-₉]*)\s*←", r"\1\2 ←", part)
-                 for part in parts]
+        for n, part in enumerate(parts):
+            m = DRAW_ITEM.fullmatch(part)
+            if not m:
+                continue
+            lead, name, ty, rhs = m.groups()
+            body = rhs.rstrip()
+            trail = rhs[len(body):]
+            if "\n" in body and not is_parenthesized(body.strip()):
+                body = " (" + (body if body.startswith("\n") else body.lstrip()) + ")"
+                if n + 1 < len(parts) and not in_spans(k, spans):
+                    report.add(path, text, k, "an event sequence continues after a multi-line "
+                               "draw; lay it out as a `do` block, one statement per line")
+            parts[n] = f"{lead}let {name}{ty} ←{body}{trail}"
         out.append(text[i:k + 3] + ";".join(parts) + "}")
         i = close + 1
 
@@ -780,7 +807,7 @@ def migrate(text: str, path: str, report: Report) -> str:
     text = rewrite_imports(text)
     text = rewrite_opens(text)
     text = rewrite_legacy_events(text, report, path)
-    text = rewrite_let_items(text)
+    text = rewrite_draw_items(text, report, path)
     text = delete_answer_binders(text)
     text = rewrite_classes(text, report, path)
     text = rewrite_names(text)

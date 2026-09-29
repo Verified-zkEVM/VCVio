@@ -35,7 +35,7 @@ variable {m : Type → Type v} {m' : Type → Type v'} [EvalDistSemantics m] [Ev
 /-- Two computations are equal in distribution when every event has the same probability under
 both. -/
 def EvalDistEq (mx : m α) (my : m' α) : Prop :=
-  ∀ p : α → Prop, Pr{x ← mx}[p x] = Pr{y ← my}[p y]
+  ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]
 
 @[inherit_doc] infix:50 " =ᵈ " => EvalDistEq
 
@@ -49,12 +49,12 @@ variable {m : Type → Type v} {m' : Type → Type v'} {m'' : Type → Type v''}
 
 /-- Equality in distribution gives every event the same probability. -/
 theorem prEvent_eq {mx : m α} {my : m' α} (h : mx =ᵈ my) (p : α → Prop) :
-    Pr{x ← mx}[p x] = Pr{y ← my}[p y] :=
+    Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] :=
   h p
 
 /-- Computations whose events all have the same probabilities are equal in distribution. -/
 theorem of_forall_prEvent_eq {mx : m α} {my : m' α}
-    (h : ∀ p : α → Prop, Pr{x ← mx}[p x] = Pr{y ← my}[p y]) : mx =ᵈ my :=
+    (h : ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]) : mx =ᵈ my :=
   h
 
 @[refl]

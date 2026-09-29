@@ -296,9 +296,9 @@ theorem nma_to_hard_relation_bound (hss : σ.SpeciallySound)
       Pr{hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[= true] := by
   let : MeasurableSpace (Stmt × Wit) := ⊤
   let acc : Stmt × Wit → ℝ≥0∞ := fun pkw =>
-    Pr{t ← Fork.runTrace σ hr M nmaAdv pkw.1}[(Fork.forkPoint Commit Chal Resp M qH t).isSome]
+    Pr{let t ← Fork.runTrace σ hr M nmaAdv pkw.1}[(Fork.forkPoint Commit Chal Resp M qH t).isSome]
   let B : Stmt × Wit → ℝ≥0∞ := fun pkw =>
-    Pr{w ← nmaReduction σ hr M nmaAdv qH pkw.1}[rel pkw.1 w = true]
+    Pr{let w ← nmaReduction σ hr M nmaAdv qH pkw.1}[rel pkw.1 w = true]
   -- Both sides average a per-statement quantity over the key generator.
   have hAdv : Fork.advantage σ hr M nmaAdv qH = ∫⁻ pkw, acc pkw ∂𝒟[hr.gen] := by
     rw [Fork.advantage, Fork.experiment,

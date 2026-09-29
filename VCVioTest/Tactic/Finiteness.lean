@@ -28,9 +28,9 @@ variable {α : Type} {m : Type → Type} [Monad m] [EvalDistSemantics m]
 
 example (mx : m α) (x : α) : Pr{mx}[= x] ≠ ⊤ := by finiteness
 
-example (mx : m α) (p : α → Prop) : Pr{y ← mx}[p y] * 2 ≠ ⊤ := by finiteness
+example (mx : m α) (p : α → Prop) : Pr{let y ← mx}[p y] * 2 ≠ ⊤ := by finiteness
 
-example (mx : m α) (x : α) : (1 - Pr{_ ← mx}[True]) + Pr{mx}[= x] / 2 ≠ ⊤ := by finiteness
+example (mx : m α) (x : α) : (1 - Pr{let _ ← mx}[True]) + Pr{mx}[= x] / 2 ≠ ⊤ := by finiteness
 
 example (mx : m α) (x : α) : Pr{mx}[= x] < ⊤ := by finiteness
 
@@ -51,11 +51,11 @@ def coinDie : ProbComp (Bool × Fin 6) := do
   let d ← $ᵗ (Fin 6)
   pure (b, d)
 
-example : Pr{coinDie}[= (true, 0)] * 3 + (1 - Pr{_ ← coinDie}[True]) / 2 ≠ ⊤ := by finiteness
+example : Pr{coinDie}[= (true, 0)] * 3 + (1 - Pr{let _ ← coinDie}[True]) / 2 ≠ ⊤ := by finiteness
 
 /-- Local abbreviations can be exposed explicitly without changing global unfolding. -/
 example (mx : m α) (p : α → Prop) :
-    let mass := Pr{y ← mx}[p y]
+    let mass := Pr{let y ← mx}[p y]
     mass + 1 ≠ ⊤ := by
   dsimp only
   finiteness
