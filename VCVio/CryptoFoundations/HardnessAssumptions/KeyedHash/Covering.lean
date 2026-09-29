@@ -77,6 +77,14 @@ counting the assignments with `r` distinct coverers (`card_filter_card_image_eq_
 the shape of the published interleaved-target bound: the coverer multiplicity is drawn from the
 coverer budget and the target from its own.
 
+Factoring out the target count, `evalDist_answerTape_tapeCoveredSplit_le_mul_targetCoverBound`
+states the bound as `qh * targetCoverBound h a k qs`, where the per-target bound
+`targetCoverBound h a k qs` is `2 ^ (-a * k) * E[X ^ k]` for `X` binomial with `qs` trials of
+success probability `2 ^ (-h)`, since `C(qs, r)` times the number of surjections `Fin k → Fin r`
+is `S(k, r) * qs.descFactorial r`, with `S` the Stirling numbers of the second kind.  It vanishes
+at `qs = 0` for `0 < k` (`targetCoverBound_zero`), so a bound that must be positive when there are
+no coverers needs a separate term for that mass.
+
 **The obligation the separation carries.**  Confining the coverers to their own family is sound
 only if every position a coverer may occupy is one at which a digest was really signed; otherwise
 the separated budget is not a budget at all.  That obligation has a cardinality part and a
@@ -120,7 +128,7 @@ identifies either family with hash-query or with signature positions.
 
 ## Labels
 
-Forty-three declarations, six of them `private` and internal to the proofs: the five canonical
+Forty-seven declarations, six of them `private` and internal to the proofs: the five canonical
 representative helpers and `evalDist_answerTape_roleSet_le`.
 
 *The model*: `Digest`, `Covered`.
@@ -147,6 +155,9 @@ representative helpers and `evalDist_answerTape_roleSet_le`.
 *The closed form*: `card_filter_image_eq_card_filter_surjective`, `card_filter_card_image_eq`,
 `card_filter_card_image_eq_split`, `sum_pow_card_image_eq_sum_range`,
 `sum_pow_card_image_eq_closedForm`, `evalDist_answerTape_tapeCoveredSplit_le_closedForm`.
+
+*The per-target bound*: `targetCoverBound`, `closedForm_eq_mul_targetCoverBound`,
+`evalDist_answerTape_tapeCoveredSplit_le_mul_targetCoverBound`, `targetCoverBound_zero`.
 
 *The random-oracle run*: `CacheCovered`, `tapeCoveredReuse_of_cacheCovered`,
 `evalDist_run_randomOracle_setOf_cacheCovered_le`.
@@ -789,6 +800,42 @@ theorem evalDist_answerTape_tapeCoveredSplit_le_closedForm (q qh qs : ℕ) (tgt 
           ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k) :=
   (evalDist_answerTape_tapeCoveredSplit_le h a k q qh qs tgt cov hdisj).trans
     (le_of_eq (sum_pow_card_image_eq_closedForm h a k qh qs))
+
+/-! ### The per-target bound -/
+
+/-- **The per-target coverage bound** at `qs` coverers,
+`∑ r ≤ k, C(qs, r) * #{surjections Fin k → Fin r} * 2 ^ (-h * r) * 2 ^ (-a * k)`, the sum being
+over the number `r` of distinct coverers. -/
+@[expose] noncomputable def targetCoverBound (qs : ℕ) : ℝ≥0∞ :=
+  ∑ r ∈ Finset.range (k + 1),
+    ((qs.choose r * (Finset.univ.filter fun s : Fin k → Fin r => Function.Surjective s).card :
+        ℕ) : ℝ≥0∞) * ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k)
+
+/-- The closed form of the split coverage bound is `qh` times the per-target bound. -/
+theorem closedForm_eq_mul_targetCoverBound (qh qs : ℕ) :
+    ∑ r ∈ Finset.range (k + 1),
+        ((qh * qs.choose r *
+            (Finset.univ.filter fun s : Fin k → Fin r => Function.Surjective s).card : ℕ) :
+          ℝ≥0∞) * ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ r * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k) =
+      qh * targetCoverBound h a k qs := by
+  simp only [targetCoverBound, Finset.mul_sum, Nat.cast_mul, mul_assoc]
+
+/-- **The split coverage bound per target.**  The mass of the event in which a target among `qh`
+positions is covered, with reuse, by coverers among `qs` positions disjoint from them is at most
+`qh * targetCoverBound h a k qs`. -/
+theorem evalDist_answerTape_tapeCoveredSplit_le_mul_targetCoverBound (q qh qs : ℕ)
+    (tgt : Fin qh → Fin q) (cov : Fin qs → Fin q) (hdisj : ∀ n j, tgt n ≠ cov j) :
+    𝒟[answerTape (Digest h a k) q] {v | TapeCoveredSplit h a k q qh qs tgt cov v} ≤
+      qh * targetCoverBound h a k qs :=
+  (evalDist_answerTape_tapeCoveredSplit_le_closedForm h a k q qh qs tgt cov hdisj).trans_eq
+    (closedForm_eq_mul_targetCoverBound h a k qh qs)
+
+/-- **No coverers, no coverage.**  For `0 < k` the per-target bound vanishes at `qs = 0`: the
+`r = 0` summand counts the surjections from a nonempty `Fin k` onto `Fin 0`, and every other
+summand carries `C(0, r) = 0`. -/
+theorem targetCoverBound_zero (hk : 0 < k) : targetCoverBound h a k 0 = 0 := by
+  obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_lt hk
+  simp [targetCoverBound, Finset.sum_range_succ']
 
 /-! ## Coverage of a random-oracle answer cache -/
 
