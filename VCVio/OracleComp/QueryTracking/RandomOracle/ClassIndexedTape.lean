@@ -67,7 +67,8 @@ type equality, and states the entry in cast form rather than as a bare `HEq`.
 
 * Nothing here bounds the mass of any tape event.
   `evalDist_run_dupRandomOracle_setOf_le_of_transport` takes that bound as a hypothesis on an
-  event of the whole family.
+  event of the whole family, and `prEvent_run_dupRandomOracle_le_of_transport` is the same
+  statement for events observed in `Prop`.
 * The set-level bridge to `IndepProductEvents.lean` covers one class
   (`evalDist_tapeFamily_setOf_eq`) or two (`evalDist_tapeFamily_setOf_eq₂`). Both require the
   answer types to carry a measurable space on which every set is measurable, and produce the
@@ -132,45 +133,6 @@ private theorem tapeOn_congr {m m' : J → ℕ} :
   | [], _ => rfl
   | j :: js, h => by
       rw [tapeOn, tapeOn, h j (by simp), tapeOn_congr js fun j' hj' => h j' (by simp [hj'])]
-
-private theorem isProbabilityMeasure_uniformSample (A : Type) [SampleableType A] :
-    letI : MeasurableSpace A := ⊤
-    IsProbabilityMeasure 𝒟[($ᵗ A : ProbComp A)] := by
-  let _ : MeasurableSpace A := ⊤
-  let _ : MeasurableSingletonClass A := ⟨fun _ => trivial⟩
-  rw [SampleableType.evalDist_uniformSample]
-  infer_instance
-
-private theorem isProbabilityMeasure_tapeList (A : Type) [SampleableType A] (n : ℕ) :
-    letI : MeasurableSpace (List A) := ⊤
-    IsProbabilityMeasure 𝒟[tapeList A n] := by
-  let _ : MeasurableSpace A := ⊤
-  let _ : DiscreteMeasurableSpace A := ⟨fun _ => trivial⟩
-  let _ : MeasurableSpace (List A) := ⊤
-  induction n with
-  | zero => rw [tapeList_zero]; infer_instance
-  | succ n ih =>
-      rw [tapeList_succ]
-      have := isProbabilityMeasure_uniformSample A
-      exact evalDist.isProbabilityMeasure_bind _ _ fun _ =>
-        evalDist.isProbabilityMeasure_bind _ _ fun _ => inferInstance
-
-omit [Fintype J] in
-private theorem isProbabilityMeasure_tapeOn (m : J → ℕ) :
-    letI : MeasurableSpace ((j : J) → List (R j)) := ⊤
-    ∀ js : List J, IsProbabilityMeasure 𝒟[tapeOn R m js] := by
-  let _ : MeasurableSpace ((j : J) → List (R j)) := ⊤
-  let _ : DiscreteMeasurableSpace ((j : J) → List (R j)) := ⟨fun _ => trivial⟩
-  intro js
-  induction js with
-  | nil => rw [tapeOn]; infer_instance
-  | cons j js ih =>
-      let _ : MeasurableSpace (List (R j)) := ⊤
-      let _ : DiscreteMeasurableSpace (List (R j)) := ⟨fun _ => trivial⟩
-      have := isProbabilityMeasure_tapeList (R j) (m j)
-      rw [tapeOn]
-      exact evalDist.isProbabilityMeasure_bind _ _ fun _ =>
-        evalDist.isProbabilityMeasure_bind _ _ fun _ => inferInstance
 
 omit [Fintype J] in
 /-- Peeling one draw of class `j` out of the bundled tape draw. -/
@@ -339,12 +301,6 @@ theorem length_of_mem_support_tapeFamily (m : J → ℕ) {L : (j : J) → List (
   length_of_mem_support_tapeOn m Finset.univ.toList (Finset.nodup_toList _) L hL j
     (Finset.mem_toList.mpr (Finset.mem_univ j))
 
-/-- The bundled tape family is lossless. -/
-theorem isProbabilityMeasure_tapeFamily (m : J → ℕ) :
-    letI : MeasurableSpace ((j : J) → List (R j)) := ⊤
-    IsProbabilityMeasure 𝒟[tapeFamily R m] :=
-  isProbabilityMeasure_tapeOn m _
-
 /-! ## Marginal and joint laws -/
 
 omit [DecidableEq ι] in
@@ -370,7 +326,6 @@ theorem evalDist_tapeFamily_bind_eval {β : Type} [MeasurableSpace β] (j : J) :
       rw [evalDist_tapeFamily_bind_of_zero j m hk (fun L => f (L j))]
       simp only [Function.update_self, tapeList_zero, pure_bind]
       rw [_root_.evalDist_bind_const]
-      have := isProbabilityMeasure_tapeFamily (R := R) m
       rw [measure_univ, one_smul]
   | succ n ih =>
       intro m hk f
@@ -729,7 +684,6 @@ theorem evalDist_run_dupRandomOracle_eq_tapeFamily {α : Type}
   | pure x =>
     simp only [simulateQ_pure, StateT.run_pure, pure_bind]
     rw [_root_.evalDist_bind_const]
-    have hprob := isProbabilityMeasure_tapeFamily (R := R) m
     rw [measure_univ, one_smul]
   | query_bind t k ih =>
     have hredL : (simulateQ (dupRandomOracle spec)
@@ -1233,6 +1187,26 @@ theorem evalDist_run_dupRandomOracle_setOf_le_of_transport {α : Type}
   have hyy : y.2.1.1 = w.2.1 := by rw [← hyw]; rfl
   simp only [Set.mem_ofPred_eq, ← hyy]
   exact htransport Lfam hLs hL y hy
+
+/-- **Transporting a tape-family bound to a duplicated lazy random-oracle run, as an event
+probability.** If the event `E` of the tape family has probability at most `b`, and off `E` no
+instrumented run of `oa` on a family the draw can produce can leave a final cache satisfying
+`P`, then the shared lazy random-oracle run leaves a cache satisfying `P` with probability at
+most `b`. -/
+theorem prEvent_run_dupRandomOracle_le_of_transport {α : Type}
+    (oa : OracleComp (spec + spec) α) (P : spec.QueryCache → Prop) (m : J → ℕ)
+    (b : ℝ≥0∞) (E : ((k : J) → List (R k)) → Prop)
+    (hE : Pr{let L ← tapeFamily R m}[E L] ≤ b)
+    (htransport : ∀ Lfam ∈ support (tapeFamily R m), ¬ E Lfam → ∀ z ∈ support ((simulateQ
+        (QueryImpl.extendState (tapeCachingImplClass R τ hR) (classPosAux R τ)) oa).run
+        ((∅, Lfam), ⟨fun _ => none, fun _ => none, fun _ => 0, fun _ => 0⟩)),
+      ¬ P z.2.1.1) :
+    Pr{let z ← (simulateQ (dupRandomOracle spec) oa).run ∅}[P z.2] ≤ b := by
+  let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
+  let _ : MeasurableSpace ((k : J) → List (R k)) := ⊤
+  rw [prEvent_eq_evalDist_of_discrete] at hE ⊢
+  exact evalDist_run_dupRandomOracle_setOf_le_of_transport (τ := τ) (hR := hR) oa P m b
+    {L | E L} hE htransport
 
 end Position
 

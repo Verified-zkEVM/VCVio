@@ -9,6 +9,7 @@ module
 public import VCVio.OracleComp.ProbComp.IndepProductEvents
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+public import VCVio.EvalDist.ProbabilityBounds
 
 /-!
 # The answer tape of a lazy random oracle
@@ -22,7 +23,9 @@ it *is* the lazy random oracle, jointly in the output and the final cache
 the *order* in which fresh answers were produced, and so has one independent coordinate per
 fresh answer rather than one per domain point. That is what turns a statement about the tuple of
 fresh answers — a product bound of `IndepProductEvents.lean` — into a statement about a
-random-oracle run (`evalDist_run_randomOracle_setOf_le_of_transport`).
+random-oracle run (`evalDist_run_randomOracle_setOf_le_of_transport`, and
+`prEvent_run_randomOracle_le_of_transport` for an event observed in `Prop`, which needs no
+measurable space on `R`).
 
 Transporting an event of the final cache back to an event of the tape needs to know which tape
 position each cache entry came from. `positionAux` instruments the tape state with that
@@ -119,9 +122,6 @@ theorem evalDist_run_randomOracle_eq_tapeList {α : Type}
   | pure x =>
     simp only [simulateQ_pure, StateT.run_pure, pure_bind]
     rw [_root_.evalDist_bind_const]
-    have hprob : IsProbabilityMeasure 𝒟[tapeList R m] := by
-      rw [tapeList, evalDist_map_of_discrete]
-      infer_instance
     rw [measure_univ, one_smul]
   | query_bind t k ih =>
     have hredL : (simulateQ (OracleSpec.randomOracle (spec := (D →ₒ R)))
@@ -373,6 +373,24 @@ theorem exists_pos_of_mem_support_run_tapeCachingImpl {α : Type} {q : ℕ} (v :
   simpa using hval
 
 /-! ## Transporting a tape bound -/
+
+/-- **Transporting a tape bound to a lazy random-oracle run, as an event probability.** If the
+tape event `E` has probability at most `b`, and off `E` no run of `oa` under `tapeCachingImpl`
+on that tape can leave a final cache satisfying `P`, then the lazy random-oracle run leaves a
+cache satisfying `P` with probability at most `b`. -/
+theorem prEvent_run_randomOracle_le_of_transport {α : Type} (q : ℕ)
+    (oa : OracleComp (D →ₒ R) α) (P : (D →ₒ R).QueryCache → Prop) (E : (Fin q → R) → Prop)
+    (b : ℝ≥0∞) (hE : Pr{let v ← answerTape R q}[E v] ≤ b)
+    (htransport : ∀ v : Fin q → R, ¬ E v →
+      ∀ z ∈ support ((simulateQ (tapeCachingImpl D R) oa).run (∅, List.ofFn v)), ¬ P z.2.1) :
+    Pr{let z ← (simulateQ (OracleSpec.randomOracle (spec := (D →ₒ R))) oa).run ∅}[P z.2] ≤
+      b := by
+  rw [prEvent_congr_of_evalDist_eq _ _ (evalDist_run_randomOracle_eq_tapeList oa ∅ q)]
+  refine le_trans (le_of_eq ?_) ((prEvent_bind_le_prEvent_of_forall_eq_zero (answerTape R q)
+    (fun v => (simulateQ (tapeCachingImpl D R) oa).run (∅, List.ofFn v)) E (fun z => P z.2.1)
+    fun v hv => ?_).trans hE)
+  · simp only [tapeList_eq_map_answerTape, bind_map_left, bind_assoc, pure_bind]
+  · exact prEvent_eq_zero_of_forall_mem_support _ _ (htransport v hv)
 
 variable [MeasurableSpace R] [DiscreteMeasurableSpace R]
 

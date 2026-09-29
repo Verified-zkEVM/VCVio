@@ -134,12 +134,8 @@ theorem le_snd_of_mem_support_run_unifFwdImpl_add_withCaching (so : QueryImpl sp
     cache ≤ z.2 :=
   simulateQ_run_preservesInv _ (cache ≤ ·)
     (QueryImpl.PreservesInv.add
-      (fun t s hs z hz => by
-        rw [unifFwdImpl, QueryImpl.liftTarget_apply, StateT.run_liftM, bind_pure_comp,
-          support_map] at hz
-        obtain ⟨_, _, rfl⟩ := hz
-        exact hs)
-      (fun t s hs z hz => hs.trans (QueryImpl.withCaching_cache_le so t s z hz)))
+      (fun t s hs _ hz => unifFwdImpl.snd_eq_of_mem_support_run t s hz ▸ hs)
+      (QueryImpl.PreservesInv.withCaching_le so cache))
     oa cache le_rfl z hz
 
 end OracleComp

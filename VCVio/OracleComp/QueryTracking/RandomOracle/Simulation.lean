@@ -80,6 +80,15 @@ lemma simulateQ_run {α : Type} (oa : ProbComp α) (s : hashSpec.QueryCache) :
   | pure x => simp
   | query_bind t oa ih => simp [← ih]
 
+/-- A step of `unifFwdImpl` leaves the cache untouched. -/
+lemma snd_eq_of_mem_support_run (i : unifSpec.Domain) (s : hashSpec.QueryCache)
+    {z : unifSpec.Range i × hashSpec.QueryCache}
+    (hz : z ∈ support ((unifFwdImpl hashSpec i).run s)) : z.2 = s := by
+  rw [unifFwdImpl, QueryImpl.liftTarget_apply, StateT.run_liftM, bind_pure_comp,
+    support_map] at hz
+  obtain ⟨_, -, rfl⟩ := hz
+  rfl
+
 end unifFwdImpl
 
 namespace roSim

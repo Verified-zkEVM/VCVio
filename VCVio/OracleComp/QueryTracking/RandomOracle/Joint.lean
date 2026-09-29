@@ -43,7 +43,8 @@ and `OracleComp.evalDist_run_run_nested_setOf_le_of_fresh_bound`.
 
 * The measurable-space arguments of the `𝒟[…] {z | …}` statements are pinned to `⊤` by a `letI`
   inside the statement, exactly as in `RandomOracle/FreshAnswer.lean`, because the engine they
-  transport pins them that way.  A consumer must fix `⊤` as well.
+  transport pins them that way.  A consumer must fix `⊤` as well, or use the `prEvent_…` forms,
+  which observe the same events in `Prop` by `Pr{…}[…]` and take no measurable-space argument.
 * Nothing here is probabilistic beyond transporting a measure along a map: the two fresh-answer
   bounds are the engine's own bound pushed forward along `OracleSpec.QueryCache.addEquiv` and the
   reassociation of a nested state, and every other statement is an equality of computations with
@@ -63,7 +64,7 @@ and `OracleComp.evalDist_run_run_nested_setOf_le_of_fresh_bound`.
 
 ## Labels
 
-Fifteen declarations.
+Seventeen declarations.
 
 *The nested handlers*:
 
@@ -94,7 +95,9 @@ Fifteen declarations.
 *The fresh-answer bounds*:
 
 * `unifFwdProd`, `OracleComp.evalDist_run_parallel_setOf_le_of_fresh_bound`,
-  `OracleComp.evalDist_run_run_nested_setOf_le_of_fresh_bound`.
+  `OracleComp.evalDist_run_run_nested_setOf_le_of_fresh_bound`,
+  `OracleComp.prEvent_run_parallel_le_of_fresh_bound`,
+  `OracleComp.prEvent_run_run_nested_le_of_fresh_bound`.
 -/
 
 public section
@@ -398,5 +401,49 @@ theorem evalDist_run_run_nested_setOf_le_of_fresh_bound
     rfl
   rw [hpush]
   exact evalDist_run_parallel_setOf_le_of_fresh_bound P hP ε hε hfresh oa q
+
+/-- **The fresh-answer bound for two independently cached lazy random oracles, as an event
+probability.**  A run of the product-cache handler from `(∅, ∅)` ends with a joint cache of at
+most `q` entries satisfying `P` with probability at most `q * ε`. -/
+theorem prEvent_run_parallel_le_of_fresh_bound
+    (P : (spec₁ + spec₂).QueryCache → Prop) (hP : ¬ P ∅)
+    (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
+    (hfresh : ∀ (t : (spec₁ + spec₂).Domain) (c : (spec₁ + spec₂).QueryCache), ¬ P c →
+      c t = none →
+      Pr{let u ← ($ᵗ (spec₁ + spec₂).Range t : ProbComp _)}[P (c.cacheQuery t u)] ≤ ε)
+    {α : Type} (oa : OracleComp (unifSpec + (spec₁ + spec₂)) α) (q : ℕ) :
+    Pr{let z ← (simulateQ (unifFwdProd spec₁ spec₂ +
+          QueryImpl.parallelStateT spec₁.randomOracle spec₂.randomOracle) oa).run (∅, ∅)}[
+      P (addEquiv spec₁ spec₂ z.2) ∧
+        QueryCache.enncard (addEquiv spec₁ spec₂ z.2) ≤ (q : ℝ≥0∞)] ≤ (q : ℝ≥0∞) * ε := by
+  let _ : MeasurableSpace (α × (spec₁.QueryCache × spec₂.QueryCache)) := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  refine evalDist_run_parallel_setOf_le_of_fresh_bound P hP ε hε (fun t c hc ht => ?_) oa q
+  let _ : MeasurableSpace ((spec₁ + spec₂).Range t) := ⊤
+  rw [← prEvent_eq_evalDist_of_discrete]
+  exact hfresh t c hc ht
+
+/-- **The fresh-answer bound for two independently nested lazy random oracles, as an event
+probability.**  A run of the nested handler with both caches started empty ends with a joint
+cache of at most `q` entries satisfying `P` with probability at most `q * ε`. -/
+theorem prEvent_run_run_nested_le_of_fresh_bound
+    (P : (spec₁ + spec₂).QueryCache → Prop) (hP : ¬ P ∅)
+    (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
+    (hfresh : ∀ (t : (spec₁ + spec₂).Domain) (c : (spec₁ + spec₂).QueryCache), ¬ P c →
+      c t = none →
+      Pr{let u ← ($ᵗ (spec₁ + spec₂).Range t : ProbComp _)}[P (c.cacheQuery t u)] ≤ ε)
+    {α : Type} (oa : OracleComp (unifSpec + (spec₁ + spec₂)) α) (q : ℕ) :
+    Pr{let z ← ((simulateQ ((QueryImpl.ofLift unifSpec ProbComp).liftTarget
+            (StateT spec₁.QueryCache (StateT spec₂.QueryCache ProbComp)) +
+          nestedRandomOracle spec₁ spec₂) oa).run ∅).run ∅}[
+      P (addEquiv spec₁ spec₂ (z.1.2, z.2)) ∧
+        QueryCache.enncard (addEquiv spec₁ spec₂ (z.1.2, z.2)) ≤ (q : ℝ≥0∞)] ≤
+      (q : ℝ≥0∞) * ε := by
+  let _ : MeasurableSpace ((α × spec₁.QueryCache) × spec₂.QueryCache) := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  refine evalDist_run_run_nested_setOf_le_of_fresh_bound P hP ε hε (fun t c hc ht => ?_) oa q
+  let _ : MeasurableSpace ((spec₁ + spec₂).Range t) := ⊤
+  rw [← prEvent_eq_evalDist_of_discrete]
+  exact hfresh t c hc ht
 
 end OracleComp

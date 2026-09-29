@@ -9,6 +9,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.WriterCost
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 public import VCVio.EvalDist.Monad.Measure
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # The fresh-answer bound for a shared lazy random oracle
@@ -55,6 +56,8 @@ The private-sampling step shape hands its sampler back existentially
   `[MeasurableSpace] [DiscreteMeasurableSpace]` formulation would give, and strictly stronger in
   general.  A consumer must fix `⊤` as well, and rewriting a set equality under such a `𝒟[…]`
   needs `simp [h]` rather than `rw [h]`, since the instance is not syntactically the ambient one.
+  The `prEvent_…` forms state the same bounds with the events observed in `Prop` by
+  `Pr{…}[…]`, and take no measurable-space argument at all.
 * `ε` is an arbitrary `ℝ≥0∞ ≠ ⊤`.  The uniform instance `ε = k / |spec.Range t|` for a bad set of
   at most `k` answers is `SampleableType.evalDist_uniformSample_le_of_encard_le`.
 * The charge bound is stated for a cost function charging at least `1` per public-hash query; it
@@ -64,23 +67,23 @@ The private-sampling step shape hands its sampler back existentially
 
 ## Labels
 
-Eleven declarations.
+Twelve declarations.
 
 *The potential engine*:
 
 * `OracleComp.le_of_mem_support_run_simulateQ_of_step`,
-  `OracleComp.evalDist_apply_setOf_and_le_of_potential`.
+  `OracleComp.evalDist_apply_setOf_and_le_of_potential`,
+  `OracleComp.prEvent_and_le_of_potential`.
 
 *Step shapes of the shared lazy oracle*:
 
-* `OracleComp.snd_eq_of_mem_support_run_unifFwdImpl`,
-  `OracleComp.exists_run_unifFwdImpl_add_randomOracle_inl`,
+* `OracleComp.exists_run_unifFwdImpl_add_randomOracle_inl`,
   `OracleComp.run_unifFwdImpl_add_randomOracle_inr_some`,
   `OracleComp.run_unifFwdImpl_add_randomOracle_inr_none`.
 
 *The fresh-answer bound*:
 
-* `OracleComp.evalDist_run_setOf_le_of_fresh_bound`.
+* `OracleComp.evalDist_run_setOf_le_of_fresh_bound`, `OracleComp.prEvent_run_le_of_fresh_bound`.
 
 *The charge bound*:
 
@@ -183,6 +186,30 @@ theorem evalDist_apply_setOf_and_le_of_potential (so : QueryImpl spec (StateT σ
         · exact zero_le
         · exact fun z hz hmem => hK ((hpath z hz).trans hmem.2)
 
+/-- **The potential-charged first-fire bound, as an event probability.**  `P` is a predicate on
+the state and `Φ` a potential that never decreases along a step.  If every step out of a state
+where `P` fails is either deterministic and lands again where `P` fails, or a sample `samp` with
+state update `upd` that fires `P` with probability at most a weight `w` that the step adds to
+`Φ`, then from a state where `P` fails the run ends in a state firing `P` with `Φ ≤ K` with
+probability at most `K - Φ s`. -/
+theorem prEvent_and_le_of_potential (so : QueryImpl spec (StateT σ ProbComp))
+    (P : σ → Prop) (Φ : σ → ℝ≥0∞)
+    (hmono : ∀ (t : spec.Domain) (s : σ), ∀ z ∈ support ((so t).run s), Φ s ≤ Φ z.2)
+    (hstep : ∀ (t : spec.Domain) (s : σ), ¬ P s →
+      (∃ a s', (so t).run s = pure (a, s') ∧ ¬ P s') ∨
+      (∃ (samp : ProbComp (spec.Range t)) (upd : spec.Range t → σ) (w : ℝ≥0∞),
+        (so t).run s = (fun u => (u, upd u)) <$> samp ∧
+        Pr{let u ← samp}[P (upd u)] ≤ w ∧
+        ∀ u, w + Φ s ≤ Φ (upd u)))
+    (oa : OracleComp spec α) (K : ℝ≥0∞) (hK' : K ≠ ⊤) (s : σ) (hs : ¬ P s) :
+    Pr{let z ← (simulateQ so oa).run s}[P z.2 ∧ Φ z.2 ≤ K] ≤ K - Φ s := by
+  let _ : MeasurableSpace (α × σ) := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  refine evalDist_apply_setOf_and_le_of_potential so P Φ hmono (fun t s hs => ?_) oa K hK' s hs
+  refine (hstep t s hs).imp id fun ⟨samp, upd, w, hrun, hw, hΦ⟩ => ⟨samp, upd, w, hrun, ?_, hΦ⟩
+  let _ : MeasurableSpace (spec.Range t) := ⊤
+  rwa [prEvent_eq_evalDist_of_discrete] at hw
+
 end Potential
 
 /-! ## Step shapes of the shared lazy oracle -/
@@ -191,16 +218,6 @@ section Steps
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
   [∀ t : spec.Domain, SampleableType (spec.Range t)]
-
-omit [DecidableEq ι] [∀ t : spec.Domain, SampleableType (spec.Range t)] in
-/-- A private-sampling step leaves the cache untouched. -/
-theorem snd_eq_of_mem_support_run_unifFwdImpl (i : unifSpec.Domain) (c : spec.QueryCache)
-    {z : unifSpec.Range i × spec.QueryCache}
-    (hz : z ∈ support ((unifFwdImpl spec i).run c)) : z.2 = c := by
-  rw [unifFwdImpl, QueryImpl.liftTarget_apply, StateT.run_liftM, bind_pure_comp,
-    support_map] at hz
-  obtain ⟨_, -, rfl⟩ := hz
-  rfl
 
 /-- A private-sampling step of the shared lazy oracle is a sample that leaves the cache
 untouched. -/
@@ -278,6 +295,25 @@ theorem evalDist_run_setOf_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP 
   refine le_trans (measure_mono fun z hz => ?_) key
   exact ⟨hz.1, by have := hz.2; gcongr⟩
 
+/-- **The fresh-answer bound for a shared lazy random oracle, as an event probability.**  `P` is
+a predicate on the public-hash cache that fails of the empty cache, and `ε` bounds, uniformly in
+the query and in the not-yet-firing cache, the probability that a fresh answer makes `P` fire.
+Then a whole run of `unifFwdImpl spec + spec.randomOracle` from the empty cache ends with a cache
+of at most `q` entries satisfying `P` with probability at most `q * ε`. -/
+theorem prEvent_run_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP : ¬ P ∅)
+    (ε : ℝ≥0∞) (hε : ε ≠ ⊤)
+    (hfresh : ∀ (t : spec.Domain) (c : spec.QueryCache), ¬ P c → c t = none →
+      Pr{let u ← ($ᵗ spec.Range t : ProbComp (spec.Range t))}[P (c.cacheQuery t u)] ≤ ε)
+    {α : Type} (oa : OracleComp (unifSpec + spec) α) (q : ℕ) :
+    Pr{let z ← (simulateQ (unifFwdImpl spec + spec.randomOracle) oa).run ∅}[
+      P z.2 ∧ QueryCache.enncard z.2 ≤ (q : ℝ≥0∞)] ≤ (q : ℝ≥0∞) * ε := by
+  let _ : MeasurableSpace (α × spec.QueryCache) := ⊤
+  rw [prEvent_eq_evalDist_of_discrete]
+  refine evalDist_run_setOf_le_of_fresh_bound P hP ε hε (fun t c hc ht => ?_) oa q
+  let _ : MeasurableSpace (spec.Range t) := ⊤
+  rw [← prEvent_eq_evalDist_of_discrete]
+  exact hfresh t c hc ht
+
 end Steps
 
 /-! ## The charge bound -/
@@ -354,7 +390,7 @@ theorem enncard_le_add_cost_of_mem_support_runAdd_run_withAddCost
   rintro (i | t) s ⟨⟨u, w⟩, s'⟩ hz
   · obtain ⟨rfl, hmem⟩ := (mem_support_runAdd_run_withAddCost_iff _ _ _ s _).mp hz
     rw [QueryImpl.add_apply_inl] at hmem
-    rw [snd_eq_of_mem_support_run_unifFwdImpl i s hmem]
+    rw [unifFwdImpl.snd_eq_of_mem_support_run i s hmem]
     simp
   · obtain ⟨rfl, hmem⟩ := (mem_support_runAdd_run_withAddCost_iff _ _ _ s _).mp hz
     rcases h : s t with _ | v
