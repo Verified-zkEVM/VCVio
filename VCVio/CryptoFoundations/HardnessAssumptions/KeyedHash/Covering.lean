@@ -88,14 +88,13 @@ no coverers needs a separate term for that mass.
 **The obligation the separation carries.**  Confining the coverers to their own family is sound
 only if every position a coverer may occupy is one at which a digest was really signed; otherwise
 the separated budget is not a budget at all.  That obligation has a cardinality part and a
-positional part, and only the first is met anywhere.  The cardinality part — that a run makes no
-more signing queries than hash queries, so a coverer family of size `qs` fits within a hash
-budget — is what `HashSig.SLHDSA.Security.JointRom.hasSignQueryBound_of_hasHashQueryBound`
-supplies, as an implication between query counts.  The positional part — exhibiting the tape
-positions of the signing queries, and a coverer family confined to them and disjoint from the
-target's — is a statement about positions rather than counts, and no declaration in this
-repository proves it.  Nothing in this module carries out the instantiation, and nothing here
-identifies either family with hash-query or with signature positions.
+positional part.  The cardinality part is a budget on signing queries, which the signature
+experiment's query bound `SignatureAlg.UnforgeableAdversary.RomQueryBound` states separately from
+the hash budget.  The positional part — exhibiting the tape positions of the signing queries,
+and a coverer family confined to them and disjoint from the target's — is a statement about
+positions rather than counts, and no declaration in this repository proves it.  Nothing in this
+module carries out the instantiation, and nothing here identifies either family with hash-query
+or with signature positions.
 
 ## Scope
 

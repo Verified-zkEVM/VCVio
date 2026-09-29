@@ -6,7 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Security.RomKeyed
-public import HashSig.SLHDSA.Security.HonestKeys
+public import HashSig.SLHDSA.Security.AddressKeys
 public import HashSig.SLHDSA.Security.CacheCoverage
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.ForsConformance
@@ -15,18 +15,14 @@ public import HashSig.SLHDSA.Concrete.FIPS
 public import HashSig.SLHDSA.Concrete.Instance
 
 /-!
-# SLH-DSA keyed-collision obstruction witnesses
+# SLH-DSA address-encoding witnesses
 
-The scheme-facing bound of `HashSig.SLHDSA.Security.RomKeyed` is stated at the seed-pinned honest
-relation `SLHDSA.Security.HonestSeeded`, which coincides with the run's own `HonestEntry`, so the
-separator hypothesis is a statement about the run's own key.  What still stands between that bound
-and a number is the address encoding, and that is what these witnesses record: the encoding is
-non-injective at every shipped bundle; the secret-key function nevertheless forces equal secrets
-at every bundle and both secret-reading roles **on the addresses a conformant run reaches**; and
-without that restriction exactly one of the six cells fails, at the one bundle and one role where
-the rejection fallback aliases an address the role owns.  The witnesses also record the
-distinctness hypothesis of the cache-size bounds and how it is discharged at the FIPS SHA-2
-bundle.
+Computations at the three shipped primitive bundles about the address encoding `core.adrsToKey`
+that keys the tweakable-hash oracle: where it is not injective, where the bundles' secret-key
+functions nevertheless agree across a key collision, the checked domain of the FIPS SHA-2
+compression, and the distinctness hypothesis of the cache-size bounds.  They are the concrete
+facts a separator for the key-weighted collision bound of `HashSig.SLHDSA.Security.RomKeyed` is
+checked against.
 
 ## The address encoding is not injective at any shipped bundle
 
@@ -36,173 +32,64 @@ differing only in the leaf index — have the same 32-byte serialization (`toByt
 the same 22-byte `ADRSc` compression (`compressSha2_collision`).  The FIPS SHA-2 tweak map
 `SLHDSA.Concrete.sha2AdrsKey` routes through the *checked* compression instead, and is
 non-injective for a different reason: it maps every address it rejects to the same zero key
-(`sha2AdrsKey_toList_collision`).
-
-`Function.Injective core.adrsToKey` — the hypothesis of
-`SLHDSA.Security.evalDist_romRunFull_targetCollision_le_one` — therefore fails at the map each
-of the three shipped bundles installs, stated at the bundle's own field:
-`not_injective_adrsToKey_shake`, `not_injective_adrsToKey_sha`, `not_injective_adrsToKey_sha2`.
-The carrier-level negations `not_injective_toBytes`, `not_injective_compressSha2` and
-`not_injective_sha2AdrsKey` record the cause underneath.
-
-The repository never claimed otherwise: `SLHDSA.Adrs.compressSha2_injective_of_fits` carries
+(`sha2AdrsKey_toList_collision`).  Hence `not_injective_adrsToKey_shake`,
+`not_injective_adrsToKey_sha` and `not_injective_adrsToKey_sha2`, stated at the field each bundle
+installs, with the carrier-level `not_injective_toBytes`, `not_injective_compressSha2` and
+`not_injective_sha2AdrsKey` underneath.  `SLHDSA.Adrs.compressSha2_injective_of_fits` carries
 twelve range hypotheses.
 
-## The secret-key function does not separate the exhibited collision
+## The secret-key function agrees across the exhibited collision
 
-Non-injectivity of the encoding is by itself *not* enough to break the separator.  The two honest
-entries of `exists_two_honestEntry_same_key` differ only if the two FORS leaf secrets differ, and
-at every shipped bundle they are provably **equal**, because the secret-key function factors
-through the very encoding that caused the key collision.
+At every shipped bundle the two FORS leaf secrets of that pair are equal, because the secret-key
+function reads the address through the same encoding that collides.
 
-* SHAKE: `shakePRF` reads the address only through `SLHDSA.Adrs.toBytes` (`shakePRF_congr`), the
-  same truncating serialization as the SHAKE tweak map's carrier, and the two FORS secret-key
-  addresses of the pair share it (`forsSkAdrs_toBytes_collision`), so the secrets coincide
-  (`forsSkGenCore_shake_eq`).
+* SHAKE: `shakePRF` reads the address only through `SLHDSA.Adrs.toBytes` (`shakePRF_congr`), and
+  the two FORS secret-key addresses share it (`forsSkAdrs_toBytes_collision`), so the secrets
+  coincide (`forsSkGenCore_shake_eq`).
 * The compatibility bundle: `shaPRF` reads the address only through `SLHDSA.Adrs.compressSha2`
-  (`shaPRF_congr`), the same map as `SLHDSA.Concrete.shaAdrsKey`, and the pair shares it
-  (`forsSkAdrs_compressSha2_collision`), so the secrets coincide (`forsSkGenCore_sha_eq`).
+  (`shaPRF_congr`), and the pair shares it (`forsSkAdrs_compressSha2_collision`), so the secrets
+  coincide (`forsSkGenCore_sha_eq`).
 * FIPS SHA-2: both addresses of a pair of out-of-range leaf indices are rejected by
   `SLHDSA.Concrete.Sha2Address.ofAdrs` (`forsSkAdrs_isCanonical_eq_false`), so the checked `PRF`
   falls back to the zero value at both (`forsSkGenCore_sha2_eq`).
 
-So the hypothesis that the secret-key function factors through the address key — the first of the
-three pieces the repair of
-`SLHDSA.Security.evalDist_romRunFull_targetCollision_le_one` needs — is close to free at each
-concrete core, a rewrite along the factorization rather than a fresh assumption.
+## The FIPS SHA-2 checked domain
 
-## Which bundles and roles the factorization covers
+`SLHDSA.Concrete.sha2AdrsKey` and the checked `PRF` reject on the same conditions
+(`sha2AdrsKey_eq_zero_of_not_sha2Domain`, `prf_eq_zero_of_not_sha2Domain`), a key equal to the
+zero key on the domain forces the all-zero address (`eq_zero_of_key_eq_zeroBytes`), and the
+encoding is injective on the domain (`injOn_adrsToKey_sha2`).  A `FORS_TREE` role address and its
+secret-key address lie in the domain together (`sha2Domain_forsSkAdrs_iff`), and so do the FORS
+node and zero-step WOTS+ chain addresses of a base address in the domain
+(`sha2Domain_forsNodeAdrs`, `sha2Domain_wotsChainStepZero`).
 
-`SLHDSA.Security.HonestInput` reads a secret *at the role address itself* in exactly two of its six
-branches — the `forsLeaf` branch through `SLHDSA.forsSkAdrs` and the `wotsChain` branch through
-`SLHDSA.wotsSkAdrs` — so "equal keys force equal secrets" is two statements,
-`SLHDSA.Security.ForsLeafSecretsAgreeOn` and `SLHDSA.Security.WotsChainSecretsAgreeOn`, each
-relative to a set of addresses.  Six cells, and **all six hold on the addresses the FIPS SHA-2
-checked compression accepts**; five hold with no restriction at all.
+Outside the domain the zero-key fallback aliases `SLHDSA.Adrs.zero`, a `WOTS_HASH` address:
+`⟨0, 0, 0, 0, 0, 0⟩` (accepted, `zero_isCanonical`) and `⟨0, 0, 0, 0, 2 ^ 32, 0⟩` (rejected,
+`outOfRange_isCanonical`, `not_sha2Domain_outOfRange`) share a key
+(`sha2AdrsKey_wots_collision`) while their WOTS+ secret-key addresses do not
+(`sha2AdrsKey_wotsSk_ne`), and the second takes the zero fallback
+(`sha2_prf_wotsSk_out_of_range`).  The same pair also collides under the SHAKE encoding
+(`shake_wots_collision`).  Its chain index is far outside `len`, so no conformant run reaches it.
 
-* At the two byte-oriented bundles **both roles force equal secrets, unrestricted**:
-  `forsLeafSecretsAgreeOn_shake`, `wotsChainSecretsAgreeOn_shake`, `forsLeafSecretsAgreeOn_sha`,
-  `wotsChainSecretsAgreeOn_sha`.  Those bundles read the address through exactly the map the key
-  uses, but the role builders keep only some of its fields, so the proofs go through block
-  extraction — equal serializations have equal per-field byte blocks
-  (`SLHDSA.Security.toBytes_blocks`, `SLHDSA.Security.compressSha2_blocks`) — and then through the
-  derived-address congruences.
-* At the principal FIPS SHA-2 bundle **both roles force equal secrets on
-  `SLHDSA.Security.Sha2Domain`**, the addresses the checked compression accepts:
-  `forsLeafSecretsAgreeOn_sha2_domain` and `wotsChainSecretsAgreeOn_sha2_domain`, both from
-  `injOn_adrsToKey_sha2` alone — on that domain equal keys are equal addresses, so no hash
-  property is used.  This is the cell a conformant run needs, because
-  `SLHDSA.Security.sha2Domain_of_addressFacts` puts **every reachable target address** in that
-  domain, out of `SLHDSA.Security.AddressFacts`, and the per-builder canonicality lemmas
-  (`SLHDSA.wotsChainHashAdrs_isCanonical`, `SLHDSA.XmssConformance.wotsLeafAdrs_isCanonical`,
-  `SLHDSA.ForsConformance.forsNodeAdrs_isCanonical`) carry it to the derived role addresses;
-  `sha2Domain_forsNodeAdrs` and `sha2Domain_wotsChainStepZero` are the two instances used here.
-* At that bundle the **FORS-leaf role also holds unrestrictedly** (`forsLeafSecretsAgreeOn_sha2`),
-  on its role restriction alone.  `SLHDSA.Concrete.sha2AdrsKey` and
-  `SLHDSA.Concrete.sha2PRFChecked` reject on the same three conditions, so key and secret agree
-  about which addresses are rejected, and the trichotomy is both-accepted (injective on the
-  checked domain, so the addresses are equal), both-rejected (both secrets the all-zero node), or
-  one accepted and one rejected — and there the accepted one's key is `zeroBytes 22`, which forces
-  it to be `SLHDSA.Adrs.zero` (`eq_zero_of_key_eq_zeroBytes`), whose `type` is `0`.  For the
-  `FORS_TREE` role, type `3`, the mixed case is therefore impossible.
-* Unrestrictedly, the **WOTS+-chain role is false** at that bundle
-  (`not_wotsChainSecretsAgreeOn_sha2`), and its own role restriction does not save it.  The mixed
-  case is live for exactly the role whose addresses have type `0`: the rejection fallback aliases
-  the all-zero address, and that is a `WOTS_HASH` address.  `⟨0, 0, 0, 0, 0, 0⟩` (accepted) and
-  `⟨0, 0, 0, 0, 2 ^ 32, 0⟩` (rejected, since `SLHDSA.Adrs.Fits 4` fails on `word2`) share a key
-  (`sha2AdrsKey_wots_collision`) while their WOTS+ secret-key addresses do not
-  (`sha2AdrsKey_wotsSk_ne`) and their secrets differ — one a genuine SHA-256 value, the other the
-  zero fallback (`sha2_prf_wotsSk_out_of_range`).
-
-## What the one false cell shows, and what it does not
-
-It is a permissiveness of this *model*, not a property of SHA-2.  The colliding partner is
-**outside the checked domain** (`not_sha2Domain_outOfRange`, from `outOfRange_isCanonical`), and
-its chain index is far outside `len`, so no conformant run reaches it and the machinery of
-`HashSig.SLHDSA.Security.EncodedTargets` already excludes it.  What admits it is
-`SLHDSA.Security.HonestEntry`, whose addresses are unconstrained by construction.  The same pair
-also collides under the SHAKE encoding (`shake_wots_collision`), where the secrets are equal, so
-within the FIPS SHA-2 bundle the cause is the zero-key fallback aliasing `SLHDSA.Adrs.zero` — the
-hazard `SLHDSA.Concrete.sha2AdrsKey`'s own docstring warns about — and not the four-byte
-truncation the witnesses of the previous section are about.
-
-What the witnesses then give is `sha2_two_honestEntry_same_key`: two `wotsChain` honest entries of
-one transcript at one encoded key with different input lists, at zero-step chains, so nothing in
-the reading queries the cache and no height or chain budget bounds the pair.  That is a statement
-about `HonestEntry`; it is **not** a lower bound on the separator constant of
-`HashSig.SLHDSA.Security.RomKeyed`, whose theorems quantify the separator over
-`SLHDSA.Security.SettledHonest (SLHDSA.Security.HonestSeeded …)` and to which nothing here lifts
-it — see the next section for what a bound at that hypothesis takes.
-
-So `SLHDSA.Security.honestEntry_unique` needs canonicality somewhere, and there are two repairs
-for different causes.  Carrying canonicality into `SLHDSA.Security.HonestEntry` addresses the
-actual cause; whether that restriction breaks existing proofs is the decisive question and is not
-examined here.  Changing `SLHDSA.Concrete.sha2AdrsKey`'s rejection fallback to a value outside the
-compressed image would also remove the false cell, and changes no behaviour on the specified
-domain (`SLHDSA.Concrete.sha2AdrsKey_eq_compressed` is unaffected), but it treats the encoding for
-a gap the model opened, and it is an interface change to `SLHDSA.CorePrimitives.AdrsKey` with churn
-in the codec agreement lemmas and the byte-law witnesses.
+At the two byte-oriented bundles, two role addresses with equal keys have secret-key addresses
+(at each role's own index) with equal keys (`SLHDSA.Security.toBytes_wotsSkAdrs_congr` and its
+companions in `HashSig.SLHDSA.Security.AddressKeys`).  At FIPS SHA-2 that implication fails
+(`sha2AdrsKey_wots_collision`, `sha2AdrsKey_wotsSk_ne`), so a separator bound of `1` there needs
+the checked-domain restriction or a change to the zero-key fallback.
 
 ## The distinctness hypothesis of the cache-size bounds
 
 `SLHDSA.Security.pow_le_enncard_of_forsNode?` and `SLHDSA.Security.pow_le_enncard_of_xmssNode?`
 bound a cache from below by `2 ^ z` at a settled honest subtree of height `z`, under a
-distinctness hypothesis on the leaves' certifying queries.  That hypothesis is **necessary for an
-arbitrary core**, not convenient: `not_forall_pow_le_enncard_of_forsNode?` refutes the
-unconditional statement at `forsNode?` itself with a core whose address encoding and secret-key
-function are both constant, over a cache of two entries that settles every honest FORS subtree at
-every height; `PerfectMerkleTree.not_forall_pow_le_enncard_of_simulateQ_merkleRootM` refutes the
-generic form.
+distinctness hypothesis on the leaves' certifying queries.  That hypothesis is necessary for an
+arbitrary core: `not_forall_pow_le_enncard_of_forsNode?` refutes the unconditional statement with
+a core whose address encoding and secret-key function are both constant, over a cache of two
+entries that settles every honest FORS subtree at every height
+(`forsNode?_twoEntryCache`, `enncard_twoEntryCache_le`).  At the FIPS SHA-2 bundle it holds at
+every height, subtree index and checked-domain base address from the index range alone
+(`fits_four_of_mem_leafRange`, `injOn_forsLeafKey_sha2`, `injOn_xmssLeafKey_sha2`).
 
-At the FIPS SHA-2 bundle it is **not an extra assumption**: `injOn_forsLeafKey_sha2` and
-`injOn_xmssLeafKey_sha2` discharge it at every height, every subtree index and every
-checked-domain base address, from the index range alone — no hash property and no property of the
-secret values.  Both go through `SLHDSA.Security.injOn_forsLeafKey_of_injOn_adrsToKey` and
-`SLHDSA.Security.injOn_xmssLeafKey_of_injOn_adrsToKey`, which reduce distinctness of the leaf keys
-to injectivity of the address encoding on a set containing the leaf addresses, because the leaf
-index is a field of the leaf address.
-
-## The separator constant at the hypothesis the theorems have
-
-Every theorem of `HashSig.SLHDSA.Security.RomKeyed` quantifies the separator over
-`SLHDSA.Security.SettledHonest (SLHDSA.Security.HonestSeeded skSeed pkSeed)`, not over the bare
-honest-entry relation, so a lower bound on the admissible constant must be stated there and at a
-cache that settles the queries it uses.  `card_le_of_separator_settled` is that bound, taken at
-`fullCache`, the cache that settles every public-hash query: any `ρ` meeting the real hypothesis
-has `r` at least the number of FORS leaf indices the encoding identifies and the secret-key
-function separates.  No such bound is claimed for the WOTS+-chain collision above: it is stated at
-`HonestEntry`, and no lemma here lifts it to `SettledHonest (HonestSeeded …)`.
-
-## What these witnesses do not establish
-
-* **A nonzero concrete hash output.**  Both hypotheses named `hne` say that the genuine SHA-256
-  secret at the all-zero WOTS+ secret-key address is not the all-zero node, and `decide` has no
-  instance for that at a non-literal byte width while the native route would mint an axiom.  Their
-  status differs.  In `not_wotsChainSecretsAgreeOn_sha2` the parameter set and both seeds are
-  explicit arguments, so it is a closed proposition and an evaluation outside the gate settles it
-  at a chosen instance.  In `sha2_two_honestEntry_same_key` it is about the run's own *sampled*
-  seeds, so no evaluation discharges it at all: that conclusion holds on an event of the seed
-  space, which fails for a `Nat.card core.Y`-fraction of seed pairs.
-* **That the repair works.**  Of the three pieces, the factorization is witnessed bundle by bundle
-  rather than as a hypothesis of the general theorem, and it is *false* at one of its six cells
-  without a domain restriction; the kernel-preservation clause is not proved anywhere.  Nor is it
-  known whether restricting `SLHDSA.Security.HonestEntry` to canonical addresses — the repair that
-  addresses the actual cause — breaks any existing proof.
-* **That no other `HonestEntry` branch is covered.**  The two properties compare secrets only at
-  the role address itself, while the other four branches read secrets too, at *nested* addresses:
-  `SLHDSA.wotsPkGenTopsWith` reads `core.PRF pk sk (SLHDSA.wotsSkAdrs adrs i)` for every
-  `i : Fin len`, `SLHDSA.xmssLeafWith` descends to the same builder, and the two FORS-node
-  branches descend to `SLHDSA.forsSkGenCore`.  The four-byte truncation applies to every role
-  address, and that is not formalised either.
-* **Unrestricted injectivity of the encoded role addresses.**  The *in-range* half is already in
-  the repository: `SLHDSA.Security.forsLeafAdrsKey_injective`,
-  `SLHDSA.Security.forsTreeAdrsKey_injective` and `SLHDSA.Security.forsRootAdrsKey_injective` of
-  `HashSig.SLHDSA.Security.ForsWitnesses` prove per-role injectivity of the encoded address on
-  coordinates in range under `SLHDSA.Security.EncodedTargetLedgerConditions`, discharged per
-  profile by `SLHDSA.Security.approvedEncodedTargetLedgerConditions`.  Every witness here uses
-  out-of-range indices, which those lemmas exclude.
-
-Every statement is a `Prop` over a cache, an address encoding or an `ℝ≥0∞` bound, so the file has
+Every statement is a `Prop` over an address encoding, a cache or an `ℝ≥0∞` bound, so the file has
 no `main` and is built by the `HashSigTest` library glob alone.
 -/
 
@@ -257,7 +144,7 @@ theorem not_injective_adrsToKey_sha2 (p : Params) :
   absurd (h (show sha2AdrsKey _ = sha2AdrsKey _ from
     Vector.toList_inj.mp sha2AdrsKey_toList_collision)) (by decide)
 
-/-! ## The secret-key function does not separate the exhibited collision -/
+/-! ## The secret-key function agrees across the exhibited collision -/
 
 /-- The SHAKE `PRF` reads the address only through `SLHDSA.Adrs.toBytes`. -/
 theorem shakePRF_congr {n : ℕ} (pkSeed skSeed : Bytes n) {a b : Adrs}
@@ -280,8 +167,7 @@ theorem forsSkAdrs_compressSha2_collision :
     (forsSkAdrs ⟨0, 0, 3, 0, 0, 0⟩ 0).compressSha2
       = (forsSkAdrs ⟨0, 0, 3, 0, 0, 0⟩ (2 ^ 32)).compressSha2 := by decide
 
-/-- **At the SHAKE bundle the two FORS leaf secrets of the collision witness are equal**, so the
-witnessed honest entries carry the same input and the pair does not break the separator. -/
+/-- **At the SHAKE bundle the two FORS leaf secrets of the collision witness are equal.** -/
 theorem forsSkGenCore_shake_eq (p : Params) (sk pk : Bytes p.n) :
     forsSkGenCore (shakePrimitives p).core sk pk ⟨0, 0, 3, 0, 0, 0⟩ 0 =
       forsSkGenCore (shakePrimitives p).core sk pk ⟨0, 0, 3, 0, 0, 0⟩ (2 ^ 32) :=
@@ -312,70 +198,6 @@ theorem forsSkGenCore_sha2_eq (p : Params) (sk pk : Bytes p.n) :
   simp only [forsSkGenCore, sha2Primitives, sha2PRFChecked,
     Sha2Address.ofAdrs, h0, h1, checkedNodeOrZero]
   simp
-
-/-! ## The separator constant at the hypothesis the theorems have -/
-
-variable {vp : ValidatedParams} {core : CorePrimitives vp.params}
-
-/-- Two FORS leaf secrets at one encoded key are two honest entries of **one** transcript with
-different inputs.  Nothing in `SLHDSA.Security.HonestEntry.forsLeaf` bounds the leaf index.  The
-separation hypothesis is refuted at all three shipped bundles by `forsSkGenCore_shake_eq`,
-`forsSkGenCore_sha_eq` and `forsSkGenCore_sha2_eq`. -/
-theorem exists_two_honestEntry_same_key (o : RomOutcome vp core) (c : PublicHash.Cache core)
-    (adrs : Adrs) (t t' : ℕ)
-    (hkey : core.adrsToKey (forsNodeAdrs adrs 0 t) = core.adrsToKey (forsNodeAdrs adrs 0 t'))
-    (hne : forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t ≠
-      forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t') :
-    ∃ (p : core.PkSeed) (k : core.AdrsKey) (xs ys : List core.Y), xs ≠ ys ∧
-      HonestEntry o c (.thash p k xs) ∧ HonestEntry o c (.thash p k ys) :=
-  ⟨o.pk.pkSeed, core.adrsToKey (forsNodeAdrs adrs 0 t),
-    [forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t],
-    [forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t'],
-    fun h => hne (List.head_eq_of_cons_eq h), .forsLeaf adrs t, hkey ▸ .forsLeaf adrs t'⟩
-
-/-- The cache that settles every public-hash query. -/
-@[expose] def fullCache [∀ t, Inhabited ((publicHashSpec core).Range t)] : PublicHash.Cache core :=
-  QueryCache.ofFn fun _ => some default
-
-@[simp] theorem fullCache_apply [∀ t, Inhabited ((publicHashSpec core).Range t)]
-    (t : (publicHashSpec core).Domain) :
-    (fullCache (core := core)) t = some default := rfl
-
-/-- The separator constant admitted by the theorems of `HashSig.SLHDSA.Security.RomKeyed` — those
-quantify over `SLHDSA.Security.SettledHonest (SLHDSA.Security.HonestSeeded …)` — is at least the
-number of FORS leaf indices the encoding identifies and the secret-key function distinguishes, at
-one fixed transcript. -/
-theorem card_le_of_separator_settled [∀ t, Inhabited ((publicHashSpec core).Range t)]
-    (o : RomOutcome vp core) (r : ℕ) (ρ : (publicHashSpec core).Domain → Fin r)
-    (hρ : ∀ (c : PublicHash.Cache core) p k (xs ys : List core.Y),
-      SettledHonest (HonestSeeded o.sk.skSeed o.pk.pkSeed) c (.thash p k xs) →
-      SettledHonest (HonestSeeded o.sk.skSeed o.pk.pkSeed) c (.thash p k ys) →
-      ρ (.thash p k xs) = ρ (.thash p k ys) → xs = ys)
-    (adrs : Adrs) (T : Finset ℕ)
-    (hkey : ∀ t ∈ T, core.adrsToKey (forsNodeAdrs adrs 0 t) =
-      core.adrsToKey (forsNodeAdrs adrs 0 0))
-    (hinj : ∀ t ∈ T, ∀ t' ∈ T,
-      forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t =
-        forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t' → t = t') :
-    T.card ≤ r := by
-  classical
-  have h := Finset.card_le_card_of_injOn
-    (s := T) (t := (Finset.univ : Finset (Fin r)))
-    (f := fun t => ρ (.thash o.pk.pkSeed (core.adrsToKey (forsNodeAdrs adrs 0 0))
-      [forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t]))
-    (fun _ _ => Finset.mem_univ _) ?_
-  · simpa using h
-  · intro t htm t' htm' heq
-    refine hinj t htm t' htm' ?_
-    have hx : SettledHonest (HonestSeeded o.sk.skSeed o.pk.pkSeed) fullCache
-        (.thash o.pk.pkSeed (core.adrsToKey (forsNodeAdrs adrs 0 0))
-          [forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t]) :=
-      ⟨by simp, (honestSeeded_iff o _ _).mpr (hkey t htm ▸ HonestEntry.forsLeaf adrs t)⟩
-    have hy : SettledHonest (HonestSeeded o.sk.skSeed o.pk.pkSeed) fullCache
-        (.thash o.pk.pkSeed (core.adrsToKey (forsNodeAdrs adrs 0 0))
-          [forsSkGenCore core o.sk.skSeed o.pk.pkSeed adrs t']) :=
-      ⟨by simp, (honestSeeded_iff o _ _).mpr (hkey t' htm' ▸ HonestEntry.forsLeaf adrs t')⟩
-    simpa using hρ fullCache _ _ _ _ hx hy heq
 
 /-! ## The FIPS SHA-2 checked-compression domain -/
 
@@ -453,98 +275,6 @@ theorem sha2Domain_wotsChainStepZero {adrs : Adrs} (hbase : Sha2Domain adrs) {i 
       (XmssConformance.wotsLeafAdrs_isCanonical adrs i hbase.1 hi) (by decide) (by decide),
     hbase.2.1, hbase.2.2⟩
 
-/-! ## Equal keys force equal secrets: the six cells -/
-
-/-- **At the SHAKE bundle the FORS-leaf secret value factors through the address key**, with no
-restriction at all: the secret reads the address through the same serialization as the key, and
-block extraction carries that through the role builder. -/
-theorem forsLeafSecretsAgreeOn_shake (p : Params) :
-    ForsLeafSecretsAgreeOn (shakePrimitives p).core fun _ => True := by
-  intro pk sk a b _ _ hkey
-  replace hkey : Adrs.toVector a = Adrs.toVector b := hkey
-  have h : a.toBytes = b.toBytes := by
-    simpa [Adrs.toVector] using congrArg Vector.toList hkey
-  change shakePRF pk sk _ = shakePRF pk sk _
-  simp only [shakePRF, shakeAddress, toBytes_forsSkAdrs_congr h]
-
-/-- **At the SHAKE bundle the WOTS+-chain secret value factors through the address key**, with no
-restriction at all. -/
-theorem wotsChainSecretsAgreeOn_shake (p : Params) :
-    WotsChainSecretsAgreeOn (shakePrimitives p).core fun _ => True := by
-  intro pk sk a b _ _ hkey
-  replace hkey : Adrs.toVector a = Adrs.toVector b := hkey
-  have h : a.toBytes = b.toBytes := by
-    simpa [Adrs.toVector] using congrArg Vector.toList hkey
-  change shakePRF pk sk _ = shakePRF pk sk _
-  simp only [shakePRF, shakeAddress, toBytes_wotsSkAdrs_congr h]
-
-/-- **At the compatibility bundle the FORS-leaf secret value factors through the address key**,
-with no restriction at all. -/
-theorem forsLeafSecretsAgreeOn_sha :
-    ForsLeafSecretsAgreeOn shaPrimitives.core fun _ => True := by
-  intro pk sk a b _ _ hkey
-  replace hkey : shaAdrsKey a = shaAdrsKey b := hkey
-  have h : a.compressSha2 = b.compressSha2 := by
-    simpa [shaAdrsKey] using congrArg Vector.toList hkey
-  change shaPRF pk sk _ = shaPRF pk sk _
-  simp only [shaPRF, thashPrefix, compressSha2_forsSkAdrs_congr h]
-
-/-- **At the compatibility bundle the WOTS+-chain secret value factors through the address key**,
-with no restriction at all. -/
-theorem wotsChainSecretsAgreeOn_sha :
-    WotsChainSecretsAgreeOn shaPrimitives.core fun _ => True := by
-  intro pk sk a b _ _ hkey
-  replace hkey : shaAdrsKey a = shaAdrsKey b := hkey
-  have h : a.compressSha2 = b.compressSha2 := by
-    simpa [shaAdrsKey] using congrArg Vector.toList hkey
-  change shaPRF pk sk _ = shaPRF pk sk _
-  simp only [shaPRF, thashPrefix, compressSha2_wotsSkAdrs_congr h]
-
-/-- **At the FIPS SHA-2 bundle the FORS-leaf secret value factors through the address key** on
-the `forsLeaf` role, with no domain restriction.  Key and secret are rejected together, so the
-cases are both-accepted (injective on the checked domain), both-rejected (both secrets the zero
-fallback), or one accepted and one rejected — and there the accepted address is
-`SLHDSA.Adrs.zero`, whose `type` is `0`, not `3`. -/
-theorem forsLeafSecretsAgreeOn_sha2 (p : Params) :
-    ForsLeafSecretsAgreeOn (sha2Primitives p).core ForsLeafRole := by
-  intro pk sk a b ⟨hat, haw⟩ ⟨hbt, hbw⟩ hkey
-  replace hkey : sha2AdrsKey a = sha2AdrsKey b := hkey
-  by_cases ha : Sha2Domain a
-  · by_cases hb : Sha2Domain b
-    · obtain rfl : a = b :=
-        sha2AdrsKey_injective_of_domain ha.1 ha.2.1 ha.2.2 hb.1 hb.2.1 hb.2.2 hkey
-      rfl
-    · rw [sha2AdrsKey_eq_zero_of_not_sha2Domain hb] at hkey
-      rw [eq_zero_of_key_eq_zeroBytes ha hkey] at hat
-      exact absurd hat (by decide)
-  · by_cases hb : Sha2Domain b
-    · rw [sha2AdrsKey_eq_zero_of_not_sha2Domain ha] at hkey
-      rw [eq_zero_of_key_eq_zeroBytes hb hkey.symm] at hbt
-      exact absurd hbt (by decide)
-    · exact (prf_eq_zero_of_not_sha2Domain pk sk
-          (fun h => ha ((sha2Domain_forsSkAdrs_iff hat haw).mp h))).trans
-        (prf_eq_zero_of_not_sha2Domain pk sk
-          (fun h => hb ((sha2Domain_forsSkAdrs_iff hbt hbw).mp h))).symm
-
-/-- **At the FIPS SHA-2 bundle the FORS-leaf secret value factors through the address key** on
-the checked domain, with no role restriction: there the encoding is injective, so equal keys are
-equal addresses. -/
-theorem forsLeafSecretsAgreeOn_sha2_domain (p : Params) :
-    ForsLeafSecretsAgreeOn (sha2Primitives p).core Sha2Domain := by
-  intro pk sk a b ha hb hkey
-  obtain rfl := injOn_adrsToKey_sha2 p ha hb hkey
-  rfl
-
-/-- **At the FIPS SHA-2 bundle the WOTS+-chain secret value factors through the address key** on
-the checked domain, with no role restriction.  Since every reachable target address is in that
-domain (`SLHDSA.Security.sha2Domain_of_addressFacts`), this is the cell a conformant run needs,
-and the unrestricted failure below is outside it. -/
-theorem wotsChainSecretsAgreeOn_sha2_domain (p : Params) :
-    WotsChainSecretsAgreeOn (sha2Primitives p).core Sha2Domain := by
-  intro pk sk a b ha hb hkey
-  obtain rfl := injOn_adrsToKey_sha2 p ha hb hkey
-  rfl
-
 /-! ## The one collision the checked domain does not cover -/
 
 /-- The all-zero `WOTS_HASH` address and the same address with an out-of-range chain index share
@@ -575,67 +305,17 @@ theorem zero_isCanonical : (⟨0, 0, 0, 0, 0, 0⟩ : Adrs).isCanonical = true :=
 theorem outOfRange_isCanonical : (⟨0, 0, 0, 0, 2 ^ 32, 0⟩ : Adrs).isCanonical = false := by decide
 
 /-- **The colliding partner is outside the checked domain**, hence outside the addresses
-`SLHDSA.Security.sha2Domain_of_addressFacts` puts every reachable target address in.  This is why
-the failure below is a permissiveness of `SLHDSA.Security.HonestEntry`, whose addresses are
-unconstrained, and not a property of the bundle. -/
+`SLHDSA.Security.sha2Domain_of_addressFacts` puts every reachable target address in, so an
+address property that holds on the checked domain says nothing about it. -/
 theorem not_sha2Domain_outOfRange : ¬ Sha2Domain (⟨0, 0, 0, 0, 2 ^ 32, 0⟩ : Adrs) := by
   simp only [Sha2Domain, outOfRange_isCanonical]
   simp
 
-/-- The same pair collides under the SHAKE encoding as well — there by four-byte truncation of
-`word2` — but there the two secrets are equal (`wotsChainSecretsAgreeOn_shake`), so the FIPS SHA-2
-failure is caused by the zero-key fallback and not by the truncation. -/
+/-- The same pair collides under the SHAKE encoding as well, there by four-byte truncation of
+`word2`. -/
 theorem shake_wots_collision :
     Adrs.toVector ⟨0, 0, 0, 0, 0, 0⟩ = Adrs.toVector ⟨0, 0, 0, 0, 2 ^ 32, 0⟩ :=
   Vector.toList_inj.mp (by decide)
-
-/-- **Without a domain restriction the WOTS+-chain secret value does not factor through the
-address key at the FIPS SHA-2 bundle**, not even on the `wotsChain` role: the rejection fallback
-aliases `SLHDSA.Adrs.zero`, whose type code is exactly that role's, so the mixed case is live at
-that one role.  The hypothesis is that the genuine SHA-256 secret at the all-zero WOTS+
-secret-key address is not the all-zero node; since the parameter set and both seeds are explicit
-arguments, it is a closed proposition, discharged by evaluation outside the gate. -/
-theorem not_wotsChainSecretsAgreeOn_sha2 (p : Params) (pk sk : Bytes p.n)
-    (hne : (sha2Primitives p).core.PRF pk sk (wotsSkAdrs ⟨0, 0, 0, 0, 0, 0⟩ 0) ≠ zeroBytes p.n) :
-    ¬ WotsChainSecretsAgreeOn (sha2Primitives p).core WotsChainRole := by
-  intro h
-  have hkey : (sha2Primitives p).core.adrsToKey (⟨0, 0, 0, 0, 0, 0⟩ : Adrs) =
-      (sha2Primitives p).core.adrsToKey (⟨0, 0, 0, 0, 2 ^ 32, 0⟩ : Adrs) :=
-    sha2AdrsKey_wots_collision
-  exact hne ((h pk sk ⟨0, 0, 0, 0, 0, 0⟩ ⟨0, 0, 0, 0, 2 ^ 32, 0⟩ rfl rfl hkey).trans
-    (sha2_prf_wotsSk_out_of_range p pk sk))
-
-/-- **Two `wotsChain` honest entries of one transcript at one encoded key with different input
-lists**, at zero-step chains — so nothing in the reading queries the cache, and no height or
-chain budget bounds the pair.  The second entry's address is outside the checked domain
-(`not_sha2Domain_outOfRange`), so this exhibits the permissiveness of
-`SLHDSA.Security.HonestEntry` rather than a reachable collision.  The hypothesis is about the
-run's own *sampled* seeds, so it is not a closed proposition and no evaluation discharges it: the
-conclusion holds on the event that the run's secret at the all-zero WOTS+ secret-key address is
-not the all-zero node, which fails for a `Nat.card core.Y`-fraction of seed pairs. -/
-theorem sha2_two_honestEntry_same_key (vp : ValidatedParams)
-    (o : RomOutcome vp (sha2Primitives vp.params).core)
-    (c : PublicHash.Cache (sha2Primitives vp.params).core)
-    (hne : (sha2Primitives vp.params).core.PRF o.pk.pkSeed o.sk.skSeed
-      (wotsSkAdrs ⟨0, 0, 0, 0, 0, 0⟩ 0) ≠ zeroBytes vp.params.n) :
-    ∃ (k : (sha2Primitives vp.params).core.AdrsKey)
-      (xs ys : List (sha2Primitives vp.params).core.Y), xs ≠ ys ∧
-        HonestEntry o c (.thash o.pk.pkSeed k xs) ∧
-        HonestEntry o c (.thash o.pk.pkSeed k ys) := by
-  refine ⟨(sha2Primitives vp.params).core.adrsToKey ⟨0, 0, 0, 0, 0, 0⟩,
-    [(sha2Primitives vp.params).core.PRF o.pk.pkSeed o.sk.skSeed
-      (wotsSkAdrs ⟨0, 0, 0, 0, 0, 0⟩ 0)],
-    [(sha2Primitives vp.params).core.PRF o.pk.pkSeed o.sk.skSeed
-      (wotsSkAdrs ⟨0, 0, 0, 0, 0, 0⟩ (2 ^ 32))], ?_, ?_, ?_⟩
-  · intro h
-    exact hne ((List.head_eq_of_cons_eq h).trans
-      (sha2_prf_wotsSk_out_of_range vp.params o.pk.pkSeed o.sk.skSeed))
-  · exact .wotsChain ⟨0, 0, 0, 0, 0, 0⟩ 0 0 _ (chain?_zero _ _ _ _ _ _)
-  · have h : (sha2Primitives vp.params).core.adrsToKey
-        ((wotsChainAdrs ⟨0, 0, 0, 0, 0, 0⟩ (2 ^ 32)).setHashAddress 0) =
-        (sha2Primitives vp.params).core.adrsToKey (⟨0, 0, 0, 0, 0, 0⟩ : Adrs) :=
-      sha2AdrsKey_wots_collision.symm
-    exact h ▸ .wotsChain ⟨0, 0, 0, 0, 0, 0⟩ (2 ^ 32) 0 _ (chain?_zero _ _ _ _ _ _)
 
 /-! ## The distinctness hypothesis of the cache-size bounds, at the FIPS SHA-2 bundle -/
 

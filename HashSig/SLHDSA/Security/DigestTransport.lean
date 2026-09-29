@@ -76,9 +76,8 @@ sides: the transport contributes no loss.
 
 * **This is a distributional bridge, not a game.**  Every statement here is about a *uniform*
   `Bytes p.m` answer, or a tape of `q` of them.  Nothing here routes the signer's or the
-  forger's `H_msg` query to such an answer: `romRunFull`, `countedRomExperiment` and the
-  random-oracle run of `Covering` itself are untouched, and no SUF-CMA statement follows from
-  anything below.  It supplies the distributional step such an argument needs, not the
+  forger's `H_msg` query to such an answer, and no unforgeability statement follows from anything
+  below.  It supplies the distributional step such an argument needs, not the
   argument.
 * **The positional obligation of the split is not discharged.**  Confining the coverers to their
   own family needs the tape positions of the signing queries exhibited, as `Covering` records
@@ -86,9 +85,8 @@ sides: the transport contributes no loss.
   here are the same abstract maps, and `evalDist_answerTape_tapeCoveredSplit_coveringDigest_le`
   assumes the same disjointness hypothesis.  Decoding the digests does not identify either
   family with anything.
-* **Nothing here bounds `ItsrCacheCovered`.**  `HashSig.SLHDSA.Security.ItsrCover` needs the
-  coverage event of a *cache*, whose logged digests are adversarial rather than uniform; the
-  tape statements below do not reach it.
+* **Nothing here bounds a coverage event of a cache.**  A cache's logged digests are chosen by
+  the run, not drawn uniformly, so the tape statements below do not reach such an event directly.
 * The abstract leaf is the whole hypertree position, `idxTree` and `idxLeaf` packed together,
   and `coveringDigest_fst_eq_iff` states that two decoded leaves agree exactly when both
   indices do, so a coverage event stated on FIPS 205 positions is the event on decoded

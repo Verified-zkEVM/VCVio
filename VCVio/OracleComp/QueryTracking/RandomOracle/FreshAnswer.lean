@@ -19,11 +19,7 @@ holds, keeps holding, and that a *fresh* answer makes fire with mass at most `ε
 query and whatever the not-yet-firing table.  This module turns that per-answer bound into a
 bound on the whole run: along a run of `unifFwdImpl spec + spec.randomOracle` started from the
 empty cache, such a predicate holds of the final cache with mass at most `q * ε` on the paths
-whose final cache has at most `q` entries (`evalDist_run_setOf_le_of_fresh_bound`).  The
-accompanying charge bound (`enncard_le_add_cost_of_mem_support_runAdd_run_withAddCost`) says the
-final cache holds at most as many entries as the initial cache plus the cost-instrumented run's
-total charge, so at most the total charge from the empty cache, which is how a query budget
-discharges the `enncard ≤ q` side condition.
+whose final cache has at most `q` entries (`evalDist_run_setOf_le_of_fresh_bound`).
 
 The engine is `evalDist_apply_setOf_and_le_of_potential`: for an arbitrary
 `QueryImpl spec (StateT σ ProbComp)`, an arbitrary state predicate `P` and an arbitrary potential
@@ -31,10 +27,6 @@ The engine is `evalDist_apply_setOf_and_le_of_potential`: for an arbitrary
 deterministic and still non-firing, or a sample whose firing mass is at most the increment of `Φ`
 that the step pays, then the mass of the paths that fire with `Φ ≤ K` is at most `K - Φ s`.  The
 cache-size potential `enncard · * ε` instantiates this, since a fresh answer pays exactly `ε`.
-
-The private-sampling step shape hands its sampler back existentially
-(`exists_run_unifFwdImpl_add_randomOracle_inl`) instead of naming it, because the
-`liftM (OracleSpec.query i)` that realises the step does not unify across a lemma boundary.
 
 ## Scope
 
@@ -60,14 +52,12 @@ The private-sampling step shape hands its sampler back existentially
   `Pr{…}[…]`, and take no measurable-space argument at all.
 * `ε` is an arbitrary `ℝ≥0∞ ≠ ⊤`.  The uniform instance `ε = k / |spec.Range t|` for a bad set of
   at most `k` answers is `SampleableType.evalDist_uniformSample_le_of_encard_le`.
-* The charge bound is stated for a cost function charging at least `1` per public-hash query; it
-  says nothing about private sampling queries, which may be charged anything.
 * Nothing here is quantum: `spec.randomOracle` is a classical lazily-sampled table and `enncard`
   is a classical query count.
 
 ## Labels
 
-Twelve declarations.
+Eight declarations.
 
 *The potential engine*:
 
@@ -84,13 +74,6 @@ Twelve declarations.
 *The fresh-answer bound*:
 
 * `OracleComp.evalDist_run_setOf_le_of_fresh_bound`, `OracleComp.prEvent_run_le_of_fresh_bound`.
-
-*The charge bound*:
-
-* `OracleComp.le_add_cost_of_mem_support_runAdd_run`,
-  `OracleComp.mem_support_runAdd_run_withAddCost_iff`,
-  `OracleComp.exists_mem_support_runAdd_of_mem_support_run`,
-  `OracleComp.enncard_le_add_cost_of_mem_support_runAdd_run_withAddCost`.
 -/
 
 public section
@@ -315,96 +298,5 @@ theorem prEvent_run_le_of_fresh_bound (P : spec.QueryCache → Prop) (hP : ¬ P 
   exact hfresh t c hc ht
 
 end Steps
-
-/-! ## The charge bound -/
-
-section Charge
-
-variable {ι : Type} {spec : OracleSpec ι} {σ α : Type}
-
-/-- A potential that grows by at most the charge of each step grows by at most the total charge
-of the run. -/
-theorem le_add_cost_of_mem_support_runAdd_run
-    (impl : QueryImpl spec (AddWriterT ℕ (StateT σ ProbComp))) (Φ : σ → ℝ≥0∞)
-    (hstep : ∀ (t : spec.Domain) (s : σ), ∀ z ∈ support ((impl t).runAdd.run s),
-      Φ z.2 ≤ Φ s + z.1.2)
-    (oa : OracleComp spec α) :
-    ∀ (s : σ), ∀ z ∈ support ((simulateQ impl oa).runAdd.run s), Φ z.2 ≤ Φ s + z.1.2 := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => intro s z hz; simp_all
-  | query_bind t k ih =>
-    intro s z hz
-    rw [simulateQ_bind, simulateQ_spec_query, AddWriterT.runAdd_bind, StateT.run_bind,
-      mem_support_bind_iff] at hz
-    obtain ⟨⟨⟨u, w⟩, s'⟩, hu, hz⟩ := hz
-    rw [StateT.run_map, support_map] at hz
-    obtain ⟨z', hz', rfl⟩ := hz
-    have h : Φ z'.2 ≤ Φ s + ((w : ℝ≥0∞) + (z'.1.2 : ℝ≥0∞)) := by
-      refine (ih u s' z' hz').trans ?_
-      rw [← add_assoc]
-      exact add_le_add (hstep t s _ hu) le_rfl
-    simpa [Prod.map, Nat.cast_add, add_assoc] using h
-
-/-- The support of one cost-instrumented step: the charge is the step's cost and the underlying
-step is unchanged. -/
-theorem mem_support_runAdd_run_withAddCost_iff (impl : QueryImpl spec (StateT σ ProbComp))
-    (cost : spec.Domain → ℕ) (t : spec.Domain) (s : σ) (z : (spec.Range t × ℕ) × σ) :
-    z ∈ support (((impl.withAddCost cost) t).runAdd.run s) ↔
-      z.1.2 = cost t ∧ (z.1.1, z.2) ∈ support ((impl t).run s) := by
-  rw [QueryImpl.withAddCost_apply]
-  simp only [AddWriterT.runAdd_bind, AddWriterT.runAdd_addTell, pure_bind,
-    AddWriterT.runAdd_liftM, StateT.run_map, support_map, Set.mem_image, Prod.map, id_eq]
-  constructor
-  · rintro ⟨p, ⟨x, hx, rfl⟩, rfl⟩
-    exact ⟨by simp, by simpa using hx⟩
-  · rintro ⟨hw, hmem⟩
-    exact ⟨((z.1.1, 0), z.2), ⟨(z.1.1, z.2), hmem, rfl⟩, by simp only [add_zero, ← hw]⟩
-
-/-- Every path of an uninstrumented run is a path of the cost-instrumented run at some charge. -/
-theorem exists_mem_support_runAdd_of_mem_support_run (impl : QueryImpl spec (StateT σ ProbComp))
-    (cost : spec.Domain → ℕ) (oa : OracleComp spec α) (s : σ) {z : α × σ}
-    (hz : z ∈ support ((simulateQ impl oa).run s)) :
-    ∃ n, ((z.1, n), z.2) ∈ support ((simulateQ (impl.withAddCost cost) oa).runAdd.run s) := by
-  rw [← QueryImpl.fst_map_runAdd_withAddCost impl cost oa, StateT.run_map, support_map] at hz
-  obtain ⟨w, hw, hwz⟩ := hz
-  exact ⟨w.1.2, by rw [← congrArg Prod.fst hwz, ← congrArg Prod.snd hwz]; exact hw⟩
-
-end Charge
-
-section CacheCharge
-
-variable {ι : Type} [DecidableEq ι] {spec : OracleSpec.{0, 0} ι}
-  [∀ t : spec.Domain, SampleableType (spec.Range t)] {α : Type}
-
-/-- **The cache never holds more entries than the charge.**  For any cost function charging at
-least `1` to every public-hash query, the final cache of a cost-instrumented run of the shared
-lazy oracle has at most `enncard` of the initial cache plus the run's total charge many
-entries. -/
-theorem enncard_le_add_cost_of_mem_support_runAdd_run_withAddCost
-    (cost : (unifSpec + spec).Domain → ℕ) (hcost : ∀ t : spec.Domain, 1 ≤ cost (Sum.inr t))
-    (oa : OracleComp (unifSpec + spec) α) (c : spec.QueryCache) :
-    ∀ z ∈ support ((simulateQ ((unifFwdImpl spec + spec.randomOracle).withAddCost cost)
-      oa).runAdd.run c),
-      QueryCache.enncard z.2 ≤ QueryCache.enncard c + (z.1.2 : ℝ≥0∞) := by
-  refine le_add_cost_of_mem_support_runAdd_run _ QueryCache.enncard ?_ oa c
-  rintro (i | t) s ⟨⟨u, w⟩, s'⟩ hz
-  · obtain ⟨rfl, hmem⟩ := (mem_support_runAdd_run_withAddCost_iff _ _ _ s _).mp hz
-    rw [QueryImpl.add_apply_inl] at hmem
-    rw [unifFwdImpl.snd_eq_of_mem_support_run i s hmem]
-    simp
-  · obtain ⟨rfl, hmem⟩ := (mem_support_runAdd_run_withAddCost_iff _ _ _ s _).mp hz
-    rcases h : s t with _ | v
-    · rw [run_unifFwdImpl_add_randomOracle_inr_none h, support_map] at hmem
-      obtain ⟨u', -, hu'⟩ := hmem
-      obtain ⟨-, rfl⟩ := Prod.mk.inj hu'
-      rw [QueryCache.enncard_cacheQuery s t u' h]
-      gcongr
-      exact_mod_cast hcost t
-    · rw [run_unifFwdImpl_add_randomOracle_inr_some h, support_pure,
-        Set.mem_singleton_iff] at hmem
-      obtain ⟨-, rfl⟩ := Prod.mk.inj hmem
-      simp
-
-end CacheCharge
 
 end OracleComp

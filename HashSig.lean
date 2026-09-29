@@ -42,6 +42,7 @@ public import HashSig.SLHDSA.RandomOracle
 public import HashSig.SLHDSA.Scheme
 public import HashSig.SLHDSA.SecretProvider
 public import HashSig.SLHDSA.Security
+public import HashSig.SLHDSA.Security.AddressKeys
 public import HashSig.SLHDSA.Security.CacheCoverage
 public import HashSig.SLHDSA.Security.CacheDecomposition
 public import HashSig.SLHDSA.Security.CacheReaders
@@ -53,20 +54,14 @@ public import HashSig.SLHDSA.Security.CountedRom
 public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
-public import HashSig.SLHDSA.Security.GeneralAlgBridge
 public import HashSig.SLHDSA.Security.HmsgWitnesses
-public import HashSig.SLHDSA.Security.HonestKeys
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
-public import HashSig.SLHDSA.Security.ItsrCover
-public import HashSig.SLHDSA.Security.JointRom
 public import HashSig.SLHDSA.Security.LimitedProfile
 public import HashSig.SLHDSA.Security.OpenPreBound
 public import HashSig.SLHDSA.Security.PrfHops
 public import HashSig.SLHDSA.Security.ReachableTargets
-public import HashSig.SLHDSA.Security.RomBridge
 public import HashSig.SLHDSA.Security.RomDescent
 public import HashSig.SLHDSA.Security.RomDescentSecret
-public import HashSig.SLHDSA.Security.RomFresh
 public import HashSig.SLHDSA.Security.RomKeyed
 public import HashSig.SLHDSA.Security.RomRun
 public import HashSig.SLHDSA.Security.RomSchemeBridge
@@ -75,8 +70,6 @@ public import HashSig.SLHDSA.Security.RomSchemeUnion
 public import HashSig.SLHDSA.Security.RomTranscript
 public import HashSig.SLHDSA.Security.SchemeGames
 public import HashSig.SLHDSA.Security.SchemeWitnesses
-public import HashSig.SLHDSA.Security.SkgIdealFresh
-public import HashSig.SLHDSA.Security.SkgPrfHop
 public import HashSig.SLHDSA.Security.SufBound
 public import HashSig.SLHDSA.Security.SufResidual
 public import HashSig.SLHDSA.Security.Target

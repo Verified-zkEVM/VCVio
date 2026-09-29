@@ -58,9 +58,7 @@ asserted, and private sampling is free.
   `HashSig.SLHDSA.Security.PrfHops` takes the `MKG_PRF` hop for `PRF_msg`; the `SKG_PRF` hop for
   `PRF` is not taken anywhere in this repository.
 * `HashSig.SLHDSA.Security.PrfHops` and `HashSig.SLHDSA.Security.OpenPreBound` are stated for
-  `SchemeGames.generalAlg`, whose public hash is a function.
-  `HashSig.SLHDSA.Security.GeneralAlgBridge` identifies `generalAlg` with `generalAlgM`
-  interpreted by the deterministic public hash; nothing relates `romGameCore` or
+  `SchemeGames.generalAlg`, whose public hash is a function; nothing relates `romGameCore` or
   `countedRomExperiment` to `unforgeableExperiment` under `PublicHash.runtime`.
 * Nothing here is quantum.  `PublicHash.randomOracle` is a classical lazily-sampled oracle and
   the count is a classical query count, so any bound proved against this experiment is a
