@@ -99,15 +99,15 @@ example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) :
 example [OracleSpec.IsMeasureSpec ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
     (program : OracleComp ((spec₁ + spec₂) + spec₃)
       ((((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))) × Bool)) :
-    Pr{z ← program}[(z : spec₂.Range t × Bool).2 = true] =
-      Pr{z ← program}[(z : spec₂.Range t × Bool).2 = true] := by
+    Pr{let z ← program}[(z : spec₂.Range t × Bool).2 = true] =
+      Pr{let z ← program}[(z : spec₂.Range t × Bool).2 = true] := by
   rfl
 
 example [OracleSpec.IsMeasureSpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
     (program : OracleComp ((spec₁ + spec₂) + spec₃)
       ((((spec₁ + spec₂) + spec₃).Range (.inr t)) × Bool)) :
-    Pr{z ← program}[(z : spec₃.Range t × Bool).2 = true] =
-      Pr{z ← program}[(z : spec₃.Range t × Bool).2 = true] := by
+    Pr{let z ← program}[(z : spec₃.Range t × Bool).2 = true] =
+      Pr{let z ← program}[(z : spec₃.Range t × Bool).2 = true] := by
   rfl
 
 end NestedCoproductTransparency

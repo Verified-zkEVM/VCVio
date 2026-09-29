@@ -813,7 +813,7 @@ def runProbEqCongrNoSupport : TacticM Bool := do
   let names ← getProbCongrNames false
   runProbEqCongrNoSupportWithNames names
 
-/-- Try to decompose a `Pr{x ← mx; …}[…] = Pr{x ← mx; …}[…]` goal, or an equality of output
+/-- Try to decompose a `Pr{let x ← mx; …}[…] = Pr{let x ← mx; …}[…]` goal, or an equality of output
 measures of binds, by congruence, then auto-intro the bound variable and support hypothesis. -/
 def runProbEqCongrWithNames (names : Array Name) : TacticM Bool := do
   normalizeProbEqGoal

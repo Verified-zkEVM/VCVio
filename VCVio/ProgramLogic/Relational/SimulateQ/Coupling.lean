@@ -206,7 +206,7 @@ through an arbitrary state invariant plus a per-query relational triple, and
 `relTriple_simulateQ_run'_of_query_map_eq` through a projection of the first state space onto the
 second. Reach for this one when both simulations share a state space and per-query agreement is an
 equality of distributions rather than of computations.
-`OracleComp.evalDist_simulateQ_run_congr_of_forall` draws the same conclusion as a bare
+`OracleComp.evalDist_simulateQ_run_congr` draws the same conclusion as a bare
 output-measure equality on `run`, but only when both implementations also share the ambient
 spec they simulate into. -/
 theorem relTriple_simulateQ_run'_of_impl_evalDistEq

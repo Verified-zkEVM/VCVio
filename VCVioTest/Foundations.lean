@@ -273,7 +273,7 @@ example {α : Type} [MeasurableSpace α] (oa : OracleComp coinSpec α) :
 -- The sampler simulation and the oracle computation, in different monads, are equal in
 -- distribution, so every event has the same probability.
 example {α : Type} (oa : OracleComp coinSpec α) (p : α → Prop) :
-    Pr{x ← simulateQ uniformSampleImpl oa}[p x] = Pr{x ← oa}[p x] :=
+    Pr{let x ← simulateQ uniformSampleImpl oa}[p x] = Pr{let x ← oa}[p x] :=
   (uniformSampleImpl.evalDistEq_simulateQ oa).prEvent_eq p
 
 -- Borel events on real outputs have their discrete-structure mass.

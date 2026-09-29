@@ -5,7 +5,7 @@ protocols, and implementations. The core framework provides:
 
 * A monadic syntax for representing computations with oracle access (`OracleComp`), with probabilistic computations (`ProbComp`) as a special case of having uniform selection oracles.
 * A measure-valued denotational semantics (`evalDist` / `𝒟[…]`) for probabilistic computations,
-  with event probabilities `Pr{x ← comp}[p x]`, equality in distribution `mx =ᵈ my`, and total
+  with event probabilities `Pr{let x ← comp}[p x]`, equality in distribution `mx =ᵈ my`, and total
   variation distance.
 * An operational semantics (`simulateQ`) for implementing/simulating the behavior of a computation's oracles, including implementations of random oracles, query logging, reductions, etc.
 * A program logic with relational (pRHL-style) and unary (Hoare-style) proof modes, with interactive tactics for stepping through game-based proofs.
@@ -139,9 +139,9 @@ chosen by `[OracleSpec.IsMeasureSpec spec]`; `ProbComp` (i.e. `OracleComp unifSp
 query uniformly.
 We introduce notation:
 
-* `Pr{comp}[= x]` - probability of output `x`
-* `Pr{x ← comp}[p x]` - probability of event `p`
-* `1 - Pr{_ ← comp}[True]` - probability of the computation failing
+* `Pr{let y ← comp}[y = x]` - probability of output `x`
+* `Pr{let x ← comp}[p x]` - probability of event `p`
+* `prFail comp` - probability of the computation failing
 * `mx =ᵈ my` - equality in distribution
 
 A computation is lossless when `IsProbabilityMeasure 𝒟[mx]`; bind preserves losslessness when

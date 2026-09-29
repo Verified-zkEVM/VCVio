@@ -156,7 +156,7 @@ example (program : FreeM coinSpec Bool) : 𝒟[program] = FreeM.denote program :
 
 /-- Point notation is singleton mass in the output measure. -/
 example (program : FreeM coinSpec Bool) (x : Bool) :
-    Pr{program}[= x] = 𝒟[program] {x} :=
+    Pr{let y ← program}[y = x] = 𝒟[program] {x} :=
   prEvent_eq_evalDist_singleton program x
 
 /-- Mapping a discrete program pushes its denoted measure forward. -/

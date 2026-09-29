@@ -172,8 +172,8 @@ structure CmaH3RunFacts
       (Resp := Resp) (Stmt := Stmt)) qS
   /-- The real game never reaches bad from the initial state. -/
   badZero :
-    Pr{z ← (simulateQ (cmaReal M Commit Chal σ hr) A).run
-      (cmaInit M Commit Chal Stmt Wit)}[z.2.2 = true] = 0
+    Pr{let z ← ((simulateQ (cmaReal M Commit Chal σ hr) A).run
+      (cmaInit M Commit Chal Stmt Wit))}[z.2.2 = true] = 0
   /-- The expected accumulated signing loss is at most the requested bound. -/
   expectedLossLe :
     cmaH3ExpectedLoss M Commit Chal σ hr ζ_zk β A qS ≤ εBound
@@ -308,8 +308,8 @@ theorem cmaReal_prEvent_bad_eq_zero
     (hr : GenerableRelation Stmt Wit rel)
     {α : Type}
     (A : OracleComp (cmaSpec M Commit Chal Resp Stmt) α) :
-    Pr{z ← (simulateQ (cmaReal M Commit Chal σ hr) A).run
-      (cmaInit M Commit Chal Stmt Wit)}[z.2.2 = true] = 0 := by
+    Pr{let z ← ((simulateQ (cmaReal M Commit Chal σ hr) A).run
+      (cmaInit M Commit Chal Stmt Wit))}[z.2.2 = true] = 0 := by
   refine prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hbad => ?_
   have hpres := simulateQ_bad_preserved_of_step
     (impl := cmaReal M Commit Chal σ hr)
@@ -701,7 +701,7 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     (hCommit : σ.simCommitPredictability simT β)
     (pk : Stmt) (m : M)
     (cache : RoCache M Commit Chal) :
-    Pr{t ← simT pk}[∃ ch, cache (m, t.1) = some ch] ≤ QueryCache.enncard cache * β := by
+    Pr{let t ← simT pk}[∃ ch, cache (m, t.1) = some ch] ≤ QueryCache.enncard cache * β := by
   classical
   let commitDist : ProbComp Commit := Prod.fst <$> simT pk
   let hit : Commit → Prop := fun c => ∃ ch, cache (m, c) = some ch
@@ -714,8 +714,8 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     simpa only [QueryCache.enncard, Set.encard_coe_eq_coe_finsetCard, ENat.toENNReal_coe]
       using ENat.toENNReal_mono e.encard_le
   calc
-    Pr{t ← simT pk}[∃ ch, cache (m, t.1) = some ch]
-        = Pr{c ← commitDist}[∃ c' ∈ S, c = c'] := by
+    Pr{let t ← simT pk}[∃ ch, cache (m, t.1) = some ch]
+        = Pr{let c ← commitDist}[∃ c' ∈ S, c = c'] := by
           rw [prEvent_map]
           refine prEvent_congr_of_support _ _ _ fun t ht => ⟨fun h => ⟨t.1, ?_, rfl⟩, ?_⟩
           · refine Finset.mem_filter.mpr ⟨(mem_finSupport_iff_mem_support _ _).mpr ?_, h⟩
@@ -723,7 +723,7 @@ private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
             exact ⟨t, ht, rfl⟩
           · rintro ⟨c', hc', rfl⟩
             exact (Finset.mem_filter.mp hc').2
-    _ ≤ ∑ c ∈ S, Pr{c' ← commitDist}[c' = c] :=
+    _ ≤ ∑ c ∈ S, Pr{let c' ← commitDist}[c' = c] :=
           prEvent_exists_finset_le S commitDist fun c c' => c' = c
     _ ≤ ∑ c ∈ S, β := Finset.sum_le_sum fun c _ => by
           simpa only [commitDist, prEvent_map] using hCommit pk c
@@ -738,7 +738,8 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
     (hCommit : σ.simCommitPredictability simT β)
     (m : M)
     (s : CmaData M Commit Chal Stmt Wit) :
-    Pr{y ← cmaSimSignPublicDist M Commit Chal hr simT s}[cmaSimSignPublicBad M Commit Chal m s y]
+    Pr{let y ← cmaSimSignPublicDist M Commit Chal hr simT s}[
+        cmaSimSignPublicBad M Commit Chal m s y]
       ≤ QueryCache.enncard s.2.1 * β := by
   classical
   rcases s with ⟨log, cache, keypair⟩
@@ -961,8 +962,8 @@ theorem cmaReal_cmaSim_advantage_le_H3_bound_of_expectedQuerySlack
             (Resp := Resp) (Stmt := Stmt))
           (cmaSignEpsCore M Commit Chal ζ_zk β) A qS
           (cmaDataInit M Commit Chal Stmt Wit, false)
-        + Pr{z ← (simulateQ (cmaReal M Commit Chal σ hr) A).run
-            (cmaDataInit M Commit Chal Stmt Wit, false)}[z.2.2 = true] := h_bridge
+        + Pr{let z ← ((simulateQ (cmaReal M Commit Chal σ hr) A).run
+            (cmaDataInit M Commit Chal Stmt Wit, false))}[z.2.2 = true] := h_bridge
     _ = cmaH3ExpectedLoss M Commit Chal σ hr ζ_zk β A qS := by
             simp [runFacts.badZero, cmaH3ExpectedLoss]
     _ ≤ εBound := runFacts.expectedLossLe

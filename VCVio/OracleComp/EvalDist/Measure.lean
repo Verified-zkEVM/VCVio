@@ -380,6 +380,11 @@ theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] =
   rw [prEvent_eq_evalDist_of_discrete]
   simp
 
+/-- Oracle computations with a measure interpretation never fail. -/
+@[simp, grind =]
+theorem prFail_eq_zero (mx : OracleComp spec α) : prFail mx = 0 := by
+  simp [prFail_def]
+
 /-- A lossless prefix whose result is unused leaves the event unchanged. -/
 theorem prEvent_bind_const (mx : OracleComp spec α) (my : OracleComp spec Prop) :
     prEvent (mx >>= fun _ ↦ my) = prEvent my := by
@@ -438,7 +443,8 @@ theorem prEvent_bind_eq_mul_of_unique {β : Type} (mx : OracleComp spec α)
 /-- Over finite oracle responses, computations with equal point masses are equal in distribution:
 both output measures are carried by the finite union of their supports. -/
 theorem evalDistEq_of_forall_prEvent_eq_output [∀ t, Finite (spec.Range t)]
-    {mx my : OracleComp spec α} (h : ∀ x, Pr{mx}[= x] = Pr{my}[= x]) : mx =ᵈ my := by
+    {mx my : OracleComp spec α} (h : ∀ x, Pr{let y ← mx}[y = x] = Pr{let y ← my}[y = x]) :
+    mx =ᵈ my := by
   refine evalDistEq_iff_evalDist_eq.mpr ?_
   classical
   let : MeasurableSpace α := ⊤

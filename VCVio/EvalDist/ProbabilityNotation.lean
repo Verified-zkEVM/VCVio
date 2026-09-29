@@ -14,11 +14,15 @@ public meta import Lean.PrettyPrinter.Delaborator.Basic
 # Event probabilities of computations
 
 `prEvent mx` is the mass that the successful-output measure of `mx : m Prop` puts on `True`.
-`Pr{…}[…]` is its notation. The sequence between the braces is either a list of draws
-`x ← mx; y ← my x`, whose actions may continue on following lines, or an ordinary Lean `do`
-sequence. `Pr{mx}[= a]` is the probability that `mx` returns `a`. The notation elaborates to the
-form `simp` maintains: the final draw becomes a map, `Pr{x ← mx}[p x] = prEvent (p <$> mx)`, so
-event laws keyed on `prEvent` apply to derived programs.
+`Pr{…}[…]` is its notation. The braces hold an ordinary Lean `do` sequence, such as
+`let x ← mx; let y ← my x`, laid out as in a `do` block, and the brackets the event over its
+bindings; `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`. The notation elaborates
+to the form `simp` maintains: the final draw becomes a map,
+`Pr{let x ← mx}[p x] = prEvent (p <$> mx)`, so event laws keyed on `prEvent` apply to derived
+programs.
+
+`prFail mx` is the probability that `mx` fails or does not terminate: the mass its
+successful-output measure is missing.
 
 The equations below identify an event with the measure of a set when the event is measurable.
 -/
@@ -45,30 +49,27 @@ the event laws are stated in. -/
 theorem evalDist_singleton_true {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop) :
     𝒟[mx] {True} = prEvent mx := rfl
 
+/-- The probability that a computation fails or does not terminate: the mass its successful-output
+measure is missing. -/
+@[expose] noncomputable def prFail {m : Type → Type v} [Monad m] [EvalDistSemantics m]
+    {α : Type} (mx : m α) : ℝ≥0∞ :=
+  1 - prEvent ((fun _ ↦ True) <$> mx)
+
 attribute [prEvent_norm] map_bind bind_pure_comp Functor.map_map Function.comp_def map_pure
   bind_assoc pure_bind bind_map_left id_map'
 
-/-- A draw `x ← e` in `Pr{…}[…]`, optionally with a type ascription on `x`. -/
-syntax prEventBind := ident (" : " term)? " ← " term
-
-/-- Probability of an event after a sequence of draws `x ← e` separated by `;`. Each action may
-continue on the following lines. -/
-syntax (name := prEventBindsStx) (priority := high)
-  "Pr{" withoutPosition(sepBy1(prEventBind, "; ")) "}[" term "]" : term
-
-/-- Probability of a successful event after an ordinary Lean `do` sequence. -/
+/-- Probability of a successful event after an ordinary Lean `do` sequence, as in
+`Pr{let x ← mx; let y ← my x}[p y]`. -/
 syntax (name := prEventStx) "Pr{" doSeq "}[" term "]" : term
-
-/-- Probability that a computation returns the given value. -/
-syntax (name := prEventEqStx) "Pr{" term "}[" "=" ppSpace term "]" : term
 
 public meta section Formatting
 
 open Lean PrettyPrinter Formatter Syntax.MonadTraverser
 
-/-- Format an event sequence directly after its opening delimiter, keeping the ordinary Lean
-formatter for subsequent statements and explicitly braced sequences. Explicit line breaks
-after the opening delimiter are preserved. -/
+/-- Format an event sequence directly after its opening delimiter, its statements separated by
+`; ` and soft line breaks, so that a short sequence stays on one line. Explicitly braced sequences
+keep the ordinary Lean formatter, and explicit line breaks after the opening delimiter are
+preserved. -/
 @[formatter prEventStx]
 def prEventFormatter : Formatter := do
   let stx ← getCur
@@ -82,14 +83,12 @@ def prEventFormatter : Formatter := do
     let seq ← getCur
     if seq.isOfKind ``Lean.Parser.Term.doSeqIndent then
       let n := seq[0].getArgs.size
-      visitArgs <| visitArgs do
+      group <| indent <| visitArgs <| visitArgs do
         for i in [:n] do
-          if i + 1 == n then
-            visitArgs do
-              optionalNoAntiquot.formatter (symbolNoAntiquot.formatter "; ")
-              categoryParser.formatter `doElem
-          else
-            formatterForKind ``Lean.Parser.Term.doSeqItem
+          visitArgs do
+            optionalNoAntiquot.formatter (symbolNoAntiquot.formatter "; ")
+            categoryParser.formatter `doElem
+          if i + 1 < n then pushLine
     else
       formatterForKind seq.getKind
     if multiline then
@@ -227,22 +226,15 @@ macro_rules (kind := prEventStx)
   | `(Pr{{$items*}}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
   | `(Pr{$items*}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
 
-macro_rules (kind := prEventBindsStx)
-  | `(Pr{$[$xs:ident $[: $tys]? ← $es];*}[$t]) => do
-    let items ← (xs.zip (tys.zip es)).mapM fun (x, ty?, e) => match ty? with
-      | some ty => `(Lean.Parser.Term.doSeqItem| let $x:ident : $ty ← $e:term)
-      | none => `(Lean.Parser.Term.doSeqItem| let $x:ident ← $e:term)
-    `((prEvent% {$items*}[$t] : ENNReal))
-
-macro_rules (kind := prEventEqStx)
-  | `(Pr{$mx}[= $a]) => `(prEvent ((· = $a) <$> $mx))
-
 public meta section Delaboration
 
-open Lean PrettyPrinter Delaborator SubExpr
+open Lean Meta PrettyPrinter Delaborator SubExpr
 
-/-- The draws of a normalized event: a chain of binds ending in a map of the final selector. -/
-partial def delabPrEventDraws : DelabM (Array (TSyntax ``prEventBind) × Term) := do
+/-- The draws of a normalized event, as `let x ← a` statements: a chain of binds ending in a map
+of the final selector. An eta-reduced selector `f` is displayed applied to the first of `x`, `y`,
+`z`, `w` that no enclosing draw binds, so that `Membership.mem S` reads `x ∈ S`. -/
+partial def delabPrEventDraws :
+    DelabM (Array (TSyntax ``Lean.Parser.Term.doSeqItem) × Term) := do
   let e ← getExpr
   if e.isAppOfArity ``Bind.bind 6 then
     let a ← withNaryArg 4 delab
@@ -250,34 +242,30 @@ partial def delabPrEventDraws : DelabM (Array (TSyntax ``prEventBind) × Term) :
       unless (← getExpr).isLambda do failure
       withBindingBodyUnusedName fun x => do
         let (draws, t) ← delabPrEventDraws
-        return (#[← `(prEventBind| $(⟨x⟩):ident ← $a)] ++ draws, t)
+        return (#[← `(Lean.Parser.Term.doSeqItem| let $(⟨x⟩):ident ← $a:term;)] ++ draws, t)
   else if e.isAppOfArity ``Functor.map 6 then
     let a ← withNaryArg 5 delab
     withNaryArg 4 do
-      if (← getExpr).isLambda then
+      let f ← getExpr
+      if f.isLambda then
         withBindingBodyUnusedName fun x => do
-          return (#[← `(prEventBind| $(⟨x⟩):ident ← $a)], ← delab)
+          return (#[← `(Lean.Parser.Term.doSeqItem| let $(⟨x⟩):ident ← $a:term)], ← delab)
       else
-        let f ← delab
-        let x := mkIdent `x
-        return (#[← `(prEventBind| $x:ident ← $a)], ← `($f $x))
+        let .forallE _ dom _ _ ← whnf (← inferType f) | failure
+        let lctx ← getLCtx
+        let name := ([`x, `y, `z, `w].find? fun n => (lctx.findFromUserName? n).isNone).getD
+          (lctx.getUnusedName `x)
+        withLocalDeclD name dom fun x => do
+          let t ← withTheReader SubExpr (fun sub => { sub with expr := mkApp f x }) delab
+          return (#[← `(Lean.Parser.Term.doSeqItem| let $(mkIdent name):ident ← $a:term)], t)
   else failure
 
 /-- Display `prEvent` in the notation it elaborates from. -/
 @[delab app.prEvent]
 def delabPrEvent : Delab := whenPPOption getPPNotation <| withOverApp 3 do
   withNaryArg 2 do
-    let e ← getExpr
-    if e.isAppOfArity ``Functor.map 6 then
-      let f := e.getArg! 4
-      if let .lam _ _ body _ := f then
-        if body.isAppOfArity ``Eq 3 && body.appFn!.appArg! == .bvar 0 &&
-            !body.appArg!.hasLooseBVars then
-          let mx ← withNaryArg 5 delab
-          let a ← withNaryArg 4 <| withBindingBody `x <| withNaryArg 2 delab
-          return ← `(Pr{$mx}[= $a])
     let (draws, t) ← delabPrEventDraws
-    `(Pr{$draws;*}[$t])
+    `(Pr{$draws*}[$t])
 
 end Delaboration
 
@@ -285,7 +273,7 @@ end Delaboration
 theorem prEvent_eq_evalDist_map
     {m : Type → Type v} [Monad m] [EvalDistSemantics m]
     {α : Type} (mx : m α) (p : α → Prop) :
-    Pr{x ← mx}[p x] = 𝒟[p <$> mx] {True} := rfl
+    Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True} := rfl
 
 /-- A measurable predicate returned by a computation has the probability of its event. -/
 theorem prEvent_eq_evalDist {m : Type → Type v} [Monad m] [LawfulMonad m]
@@ -542,7 +530,7 @@ theorem prEvent_bind_eq_tsum_of_countable
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α β : Type} [Countable α] (mx : m α) (f : α → m β) (p : β → Prop) :
-    Pr{let y ← mx >>= f}[p y] = ∑' a, Pr{mx}[= a] * Pr{let y ← f a}[p y] := by
+    Pr{let y ← mx >>= f}[p y] = ∑' a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y] := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_bind_eq_lintegral_of_discrete, MeasureTheory.lintegral_countable']
   refine tsum_congr fun a => ?_
@@ -589,14 +577,14 @@ theorem prEvent_lt_top {m : Type → Type v} [EvalDistSemantics m] (mx : m Prop)
     prEvent mx < ⊤ :=
   (prEvent_ne_top mx).lt_top
 
-/-- The trivially true event is the successful mass of the computation, observed in the discrete
+/-- The trivially true event is the successful mass of the computation, in any measurable
 structure on its outputs. -/
 theorem prEvent_true_eq_evalDist_apply_univ
     {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
-    Pr{let _ ← mx}[True] = (letI : MeasurableSpace α := ⊤; 𝒟[mx] Set.univ) := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} [MeasurableSpace α]
+    (mx : m α) : Pr{let _ ← mx}[True] = 𝒟[mx] Set.univ := by
+  rw [prEvent_eq_evalDist_map,
+    evalDist_map_apply mx measurable_const (measurableSet_singleton True)]
   simp
 
 /-- A prefix whose result is unused scales the event by its successful mass. -/
@@ -624,3 +612,67 @@ theorem prEvent_const_of_not
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
     (mx : m α) {c : Prop} (hc : ¬ c) : Pr{let _ ← mx}[c] = 0 :=
   prEvent_eq_zero_of_forall_not mx _ fun _ ↦ hc
+
+/-! ## Failure
+
+`prFail mx` is the mass the successful-output measure of `mx` is missing: the probability that
+`mx` fails or does not terminate. It needs no measurable structure on the outputs. -/
+
+section prFail
+
+variable {m : Type → Type v} [Monad m] [EvalDistSemantics m] {α : Type}
+
+theorem prFail_def (mx : m α) : prFail mx = 1 - Pr{let _ ← mx}[True] := rfl
+
+/-- Success and failure masses add up to one. -/
+@[simp]
+theorem prEvent_true_add_prFail (mx : m α) : Pr{let _ ← mx}[True] + prFail mx = 1 :=
+  add_tsub_cancel_of_le (prEvent_le_one _)
+
+/-- Failure and success masses add up to one. -/
+@[simp]
+theorem prFail_add_prEvent_true (mx : m α) : prFail mx + Pr{let _ ← mx}[True] = 1 := by
+  rw [add_comm, prEvent_true_add_prFail]
+
+@[simp]
+theorem prFail_le_one (mx : m α) : prFail mx ≤ 1 := tsub_le_self
+
+@[simp, aesop (rule_sets := [finiteness]) safe apply]
+theorem prFail_ne_top (mx : m α) : prFail mx ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (prFail_le_one mx)
+
+/-- A computation never fails exactly when it succeeds with probability one. -/
+theorem prFail_eq_zero_iff (mx : m α) : prFail mx = 0 ↔ Pr{let _ ← mx}[True] = 1 := by
+  rw [prFail_def, tsub_eq_zero_iff_le]
+  exact ⟨fun h ↦ le_antisymm (prEvent_le_one _) h, fun h ↦ h.ge⟩
+
+/-- A computation always fails exactly when it succeeds with probability zero. -/
+theorem prFail_eq_one_iff (mx : m α) : prFail mx = 1 ↔ Pr{let _ ← mx}[True] = 0 := by
+  refine ⟨fun h ↦ ?_, fun h ↦ by rw [prFail_def, h, tsub_zero]⟩
+  by_contra hne
+  exact (ENNReal.sub_lt_self ENNReal.one_ne_top one_ne_zero hne).ne h
+
+/-- A pure computation never fails. -/
+@[simp, grind =]
+theorem prFail_pure [LawfulMonad m] [LawfulPureEvalDistSemantics m] (a : α) :
+    prFail (pure a : m α) = 0 := by
+  simp [prFail_def]
+
+/-- The failure probability of a branch is that of the branch taken. -/
+@[simp]
+theorem prFail_ite (c : Prop) [Decidable c] (mx my : m α) :
+    prFail (if c then mx else my) = if c then prFail mx else prFail my := by
+  split_ifs <;> rfl
+
+/-- Mapping the outputs does not change the failure probability. -/
+@[simp, grind =]
+theorem prFail_map [LawfulMonad m] {β : Type} (f : α → β) (mx : m α) :
+    prFail (f <$> mx) = prFail mx := by
+  rw [prFail, prFail, Functor.map_map]
+
+/-- The failure probability is the mass missing from the output measure. -/
+theorem prFail_eq_one_sub_evalDist_univ [LawfulMonad m] [LawfulEvalDistSemantics m]
+    [MeasurableSpace α] (mx : m α) : prFail mx = 1 - 𝒟[mx] Set.univ := by
+  rw [prFail_def, prEvent_true_eq_evalDist_apply_univ]
+
+end prFail

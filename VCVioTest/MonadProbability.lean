@@ -97,6 +97,18 @@ example [MeasurableSpace α] [MeasurableSpace β] (mx : m α) (my : m β) :
 example [MeasurableSpace α] [MeasurableSpace β] (mx : m α) (my : m β) :
     𝒟[Prod.mk <$> mx <*> my] = 𝒟[mx].prod 𝒟[my] := by grind
 
+/-! ### Failure probability
+`prFail` is the missing mass; `pure` and maps are closed by `simp` and `grind`. -/
+
+example (x : α) : prFail (pure x : m α) = 0 := by simp
+example (x : α) : prFail (pure x : m α) = 0 := by grind
+example (f : α → β) (mx : m α) : prFail (f <$> mx) = prFail mx := by simp
+example (f : α → β) (mx : m α) : prFail (f <$> mx) = prFail mx := by grind
+example (mx : m α) : Pr{let _ ← mx}[True] + prFail mx = 1 := by simp
+example [MeasurableSpace α] [DiscreteMeasurableSpace α] (mx : m α) (f : α → m β) :
+    prFail (mx >>= f) = prFail mx + ∫⁻ x, prFail (f x) ∂𝒟[mx] :=
+  prFail_bind_eq_add_lintegral_of_discrete mx f
+
 end generic
 
 /-! ## Concrete carriers
@@ -122,5 +134,12 @@ example (p : Prop) [Decidable p] :
     𝒟[(guard p : OptionT ProbComp Unit)] Set.univ = if p then 1 else 0 := by simp
 example (p : Prop) [Decidable p] :
     support (guard p : OptionT ProbComp Unit) = if p then {()} else ∅ := by simp
+
+example (oa : ProbComp Bool) : prFail oa = 0 := by simp
+example (oa : ProbComp Bool) : prFail oa = 0 := by grind
+example : prFail (failure : OptionT ProbComp Bool) = 1 := by simp
+example (p : Prop) [Decidable p] :
+    prFail (guard p : OptionT ProbComp Unit) = if p then 0 else 1 := by simp
+example (oa : ProbComp Bool) : prFail (OptionT.lift oa) = 0 := by simp
 
 end VCVioTest.MonadProbability

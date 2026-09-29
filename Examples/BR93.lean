@@ -467,7 +467,7 @@ private lemma evalDist_badEventExperiment_eq_idealFlagged (adv : CPA_Adversary P
 idealized run never queries the hidden input, programming the revealed mask there is invisible. -/
 private lemma prEvent_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand M)
     (E : Bool → Prop) :
-    Pr{z ← idealFlagged tdp adv}[E z.1 ∧ z.2 = false] ≤ Pr{y ← cpaGame tdp adv}[E y] := by
+    Pr{let z ← idealFlagged tdp adv}[E z.1 ∧ z.2 = false] ≤ Pr{let y ← cpaGame tdp adv}[E y] := by
   simp only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def]
   rw [cpaGame, idealFlagged]
   simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, roSim.run_liftM, bind_map_left,

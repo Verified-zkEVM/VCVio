@@ -77,8 +77,8 @@ def longAbort : OptionT ProbComp Bool := do
 The successful mass of `chain12` is one: every `OracleComp` step is lossless. Both tactics close it
 without unfolding the chain, which is the main regression gate of the file. -/
 
-example : Pr{_ ← chain12}[True] = 1 := by simp
-example : Pr{_ ← chain12}[True] = 1 := by grind
+example : Pr{let _ ← chain12}[True] = 1 := by simp
+example : Pr{let _ ← chain12}[True] = 1 := by grind
 
 /-! ## 2. The same chain over a failing carrier
 
@@ -87,7 +87,7 @@ Over `OptionT ProbComp` the lossless chain still has full successful mass under 
 target(simp+grind): the guarded `longAbort` has mass `2⁻¹`; neither tactic shows even that it is
 below one, since the guard's mass sits under nine surrounding draws. -/
 
-example : Pr{_ ← chain12Opt}[True] = 1 := by simp [chain12Opt]
+example : Pr{let _ ← chain12Opt}[True] = 1 := by simp [chain12Opt]
 
 /-! ## 3. Structural normalization — abstract chain and concrete head
 
@@ -115,7 +115,7 @@ example (mx : ProbComp Bool) : 𝒟[do let a ← mx; pure a] = 𝒟[mx] := by gr
 
 example : 𝒟[coinPadded] = 𝒟[($ᵗ Bool)] := by simp [coinPadded]
 example : 𝒟[coinPadded] = 𝒟[($ᵗ Bool)] := by grind [coinPadded]
-example : Pr{coinPadded}[= true] = Pr{$ᵗ Bool}[= true] := by simp [coinPadded]
+example : Pr{let x ← coinPadded}[x = true] = Pr{let x ← $ᵗ Bool}[x = true] := by simp [coinPadded]
 example : support coinPadded = support ($ᵗ Bool) := by simp [coinPadded]
 
 /-! ## 4. Support of a deep chain
@@ -134,7 +134,7 @@ terminal tactic closes: `simp` normalises the chain step by step but stops befor
 nested integrals to a number, and `grind` does no `ℝ≥0∞` arithmetic. `chain12` returns `true` only
 when all twelve coins do, so
 
-  `Pr{chain12}[= true] = (2 ^ 12)⁻¹`   -- target(simp+grind)
+  `Pr{let x ← chain12}[x = true] = (2 ^ 12)⁻¹`   -- target(simp+grind)
 
 is the representative outcome-value target. -/
 

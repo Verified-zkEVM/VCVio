@@ -321,7 +321,7 @@ bind-congruence patterns:
 ### Key insight: events vs output measures
 
 The underlying bind-swap lemmas are `OracleComp.prEvent_bind_bind_swap` for events and
-`OracleComp.evalDist_bind_bind_swap` for output measures. A point mass `Pr{oa}[= x]` is the event
+`OracleComp.evalDist_bind_bind_swap` for output measures. A point mass `Pr{let y ← oa}[y = x]` is the event
 `(· = x)`, and `Pr{…}[…]` elaborates its final draw as a map, so the `vcstep`
 probability-equality machinery normalizes with `map_eq_bind_pure_comp` / `bind_assoc` before
 matching either shape.

@@ -16,10 +16,12 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
-| `Pr{x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; `let x ← mx` and `do` sequences are also accepted | `VCVio/EvalDist/ProbabilityNotation.lean` |
-| `Pr{mx}[= a]` | `prEvent ((· = a) <$> mx)`: the mass of the single output `a` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `Pr{let x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; the braces hold an ordinary `do` sequence | `VCVio/EvalDist/ProbabilityNotation.lean` |
 
-Failure is missing mass: the probability that `mx` fails is `1 - Pr{_ ← mx}[True]`, and a
+The braces take any `do` sequence, with pure `let`s, destructuring, nested `(← e)` actions,
+branches, `match`, `let mut` and loops; see *Writing events with `do` sequences* in
+`probability.md`. A single output is an event like any other, `Pr{let x ← mx}[x = a]`. Failure
+is missing mass: the probability that `mx` fails is `prFail mx = 1 - Pr{let _ ← mx}[True]`, and a
 lossless computation satisfies `IsProbabilityMeasure 𝒟[mx]`. Every `OracleComp spec`
 computation is lossless under `[OracleSpec.IsMeasureSpec spec]`
 (`OracleComp.prEvent_true_eq_one`); failure arises in `OptionT (OracleComp spec)` and similar
@@ -38,7 +40,7 @@ does not require a finite-distribution lift.
 
 State probabilities with `Pr{...}[...]` or apply `𝒟[...]` directly to a
 measurable set; `prEvent_eq_evalDist_singleton` converts a point mass
-`Pr{mx}[= a]` to `𝒟[mx] {a}`. There is no `Pr_{...}[...]` syntax in VCVio.
+`Pr{let x ← mx}[x = a]` to `𝒟[mx] {a}`. There is no `Pr_{...}[...]` syntax in VCVio.
 See [probability notation and computability](../design/probability-notation-computability.md)
 for the exact finite evaluator boundary and decidability requirements.
 
@@ -99,9 +101,9 @@ Precedence ensures `A ∥ B ⊞ C ⊠ K` parses as `((A ∥ B) ⊞ C) ⊠ K`.
 
 | Dead notation | Replacement |
 |---------------|-------------|
-| `Pr[= x \| comp]`, `[= x \| comp]` | `Pr{comp}[= x]` |
-| `Pr[p \| comp]`, `Pr[p x \| x ← comp]` | `Pr{x ← comp}[p x]` |
-| `Pr[⊥ \| comp]` | `1 - Pr{_ ← comp}[True]` |
+| `Pr[= x \| comp]`, `[= x \| comp]` | `Pr{let y ← comp}[y = x]` |
+| `Pr[p \| comp]`, `Pr[p x \| x ← comp]` | `Pr{let x ← comp}[p x]` |
+| `Pr[⊥ \| comp]` | `prFail comp` |
 | `𝒮[comp]` | `𝒟[comp]` |
 | `++ₒ` | `+` |
 

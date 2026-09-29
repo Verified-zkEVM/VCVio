@@ -48,27 +48,27 @@ section uniform
 variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.IsUniformMeasureSpec spec] {α : Type}
   (p : α → Prop) (mx : OracleComp spec α) (x : α)
 
-example : Pr{y ← mx}[p y] = 0 ↔ ∀ y ∈ support mx, ¬ p y := by
+example : Pr{let y ← mx}[p y] = 0 ↔ ∀ y ∈ support mx, ¬ p y := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_zero_iff]
 
-example : Pr{y ← mx}[p y] ≠ 0 ↔ ∃ y ∈ support mx, p y := by
+example : Pr{let y ← mx}[p y] ≠ 0 ↔ ∃ y ∈ support mx, p y := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_zero_iff]
 
-example : 0 < Pr{y ← mx}[p y] ↔ ∃ y ∈ support mx, p y := by
+example : 0 < Pr{let y ← mx}[p y] ↔ ∃ y ∈ support mx, p y := by
   fail_if_success grind
   grind [OracleComp.prEvent_pos_iff]
 
-example : Pr{y ← mx}[p y] = 1 ↔ ∀ y ∈ support mx, p y := by
+example : Pr{let y ← mx}[p y] = 1 ↔ ∀ y ∈ support mx, p y := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_one_iff]
 
-example : 1 = Pr{y ← mx}[p y] ↔ ∀ y ∈ support mx, p y := by
+example : 1 = Pr{let y ← mx}[p y] ↔ ∀ y ∈ support mx, p y := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_one_iff]
 
-example : Pr{mx}[= x] = 1 ↔ ∀ y ∈ support mx, y = x := by
+example : Pr{let y ← mx}[y = x] = 1 ↔ ∀ y ∈ support mx, y = x := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_one_iff]
 
@@ -84,7 +84,7 @@ section probComp
 
 variable (p : Bool → Prop) [DecidablePred p] (mx : ProbComp Bool)
 
-example : Pr{y ← mx}[p y] = 0 ↔ ∀ y ∈ finSupport mx, ¬ p y := by
+example : Pr{let y ← mx}[p y] = 0 ↔ ∀ y ∈ finSupport mx, ¬ p y := by
   fail_if_success grind
   grind [OracleComp.prEvent_eq_zero_iff]
 
@@ -118,7 +118,7 @@ variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m] [EvalDistSema
 
 example (mx : m α) (f g : α → α) : g <$> (f <$> mx) = (fun x => g (f x)) <$> mx := by grind
 example (mx : m α) (f g : α → α) :
-    Pr{_ ← g <$> (f <$> mx)}[True] = Pr{_ ← mx}[True] := by grind
+    Pr{let _ ← g <$> (f <$> mx)}[True] = Pr{let _ ← mx}[True] := by grind
 
 end mapMap
 

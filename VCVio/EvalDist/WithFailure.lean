@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.EvalDist.Defs.Measure.Core
 public import ToMathlib.MeasureTheory.Measure.Option
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-! # Evaluation with an explicit failure result
 
@@ -52,3 +53,10 @@ theorem evalDistWithFailure_none_of_total (program : m α)
     (total : evalDist program Set.univ = 1) :
     evalDistWithFailure program {none} = 0 := by
   rw [evalDistWithFailure_none, total, tsub_self]
+
+/-- The failure-completed measure puts the failure probability `prFail mx` at `none`. -/
+theorem evalDistWithFailure_none_eq_prFail {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} [MeasurableSpace α]
+    (mx : m α) : evalDistWithFailure mx {none} = prFail mx := by
+  rw [evalDistWithFailure_none, prFail_eq_one_sub_evalDist_univ]
+

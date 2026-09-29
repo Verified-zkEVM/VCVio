@@ -27,7 +27,7 @@ on a single concrete scheme. Reading order:
    extraction via the replay forking lemma and special soundness, for the
    witness finder `nmaReduction`), composed in `euf_cma_bound` for
    `cmaReduction`. The reductions are named in every statement:
-   `∃ reduction, bound ≤ Pr{hardRelationExperiment hr reduction}[= true]` holds
+   `∃ reduction, bound ≤ Pr{let x ← hardRelationExperiment hr reduction}[x = true]` holds
    trivially, because a classical choice of witness per statement succeeds with
    probability `1`.
 4. **Forking lemma:** the replay-based forking lemma lives in
@@ -178,7 +178,7 @@ there is no additional losslessness assumption.
 
 The PRF-real faithfulness lemmas in `PRFReductions/Reductions.lean` expose equality of the
 whole programs. `multipleBad_bad_le_sessionCollisionBound` takes a point-mass bound
-`Pr{n ← $ᵗ Nonce}[n = nonce]` on the nonce sampler and bounds the measure of the final Boolean
+`Pr{let n ← $ᵗ Nonce}[n = nonce]` on the nonce sampler and bounds the measure of the final Boolean
 collision observation.
 
 ## Fischlin extraction and log inspections

@@ -23,33 +23,38 @@ class EventTests(unittest.TestCase):
         self.assertEqual(migrate(source)[0], expected)
 
     def test_singleton_events(self):
-        self.assertMigrates("Pr[= a | mx]", "Pr{mx}[= a]")
-        self.assertMigrates("Pr[(· = f a) | g <$> mx]", "Pr{g <$> mx}[= f a]")
+        self.assertMigrates("Pr[= a | mx]", "Pr{let x ← mx}[x = a]")
+        self.assertMigrates("Pr[(· = f x) | g <$> mx]", "Pr{let y ← g <$> mx}[y = f x]")
+        # Singleton events of earlier versions of the measure API.
+        self.assertMigrates("Pr{mx}[= a] = Pr{g <$> my}[(· = (f b, c))]",
+                            "Pr{let x ← mx}[x = a] = Pr{let x ← g <$> my}[x = (f b, c)]")
 
     def test_function_events(self):
-        self.assertMigrates("Pr[fun x => x.1 = a | mx]", "Pr{x ← mx}[x.1 = a]")
-        self.assertMigrates("Pr[fun x ↦ p x | mx]", "Pr{x ← mx}[p x]")
-        self.assertMigrates("Pr[(fun z : ℕ => z > 3) | mx]", "Pr{z ← mx}[z > 3]")
-        self.assertMigrates("Pr[fun (z : α × β) => p z.1 | mx]", "Pr{z ← mx}[p z.1]")
+        self.assertMigrates("Pr[fun x => x.1 = a | mx]", "Pr{let x ← mx}[x.1 = a]")
+        self.assertMigrates("Pr[fun x ↦ p x | mx]", "Pr{let x ← mx}[p x]")
+        self.assertMigrates("Pr[(fun z : ℕ => z > 3) | mx]", "Pr{let z ← mx}[z > 3]")
+        self.assertMigrates("Pr[fun (z : α × β) => p z.1 | mx]", "Pr{let z ← mx}[p z.1]")
         self.assertMigrates("Pr[fun ⟨a, b⟩ => a = b | mx]", "Pr{let ⟨a, b⟩ ← mx}[a = b]")
 
     def test_sections_and_predicates(self):
-        self.assertMigrates("Pr[(· ∈ S) | mx]", "Pr{x ← mx}[x ∈ S]")
-        self.assertMigrates("Pr[p | mx]", "Pr{x ← mx}[p x]")
-        self.assertMigrates("Pr[S.contains | mx]", "Pr{x ← mx}[S.contains x]")
-        self.assertMigrates("Pr[q ∘ f | mx]", "Pr{x ← mx}[(q ∘ f) x]")
+        self.assertMigrates("Pr[(· ∈ S) | mx]", "Pr{let x ← mx}[x ∈ S]")
+        self.assertMigrates("Pr[p | mx]", "Pr{let x ← mx}[p x]")
+        self.assertMigrates("Pr[S.contains | mx]", "Pr{let x ← mx}[S.contains x]")
+        self.assertMigrates("Pr[q ∘ f | mx]", "Pr{let x ← mx}[(q ∘ f) x]")
         # The bound name avoids the names the event and computation use.
-        self.assertMigrates("Pr[p x | f x]", "Pr{y ← f x}[(p x) y]")
+        self.assertMigrates("Pr[p x | f x]", "Pr{let y ← f x}[(p x) y]")
 
     def test_failure_event(self):
-        self.assertMigrates("Pr[⊥ | mx] = 0", "(1 - Pr{_ ← mx}[True]) = 0")
+        self.assertMigrates("Pr[⊥ | mx] = 0", "prFail mx = 0")
+        self.assertMigrates("Pr[⊥ | f <$> mx] = 0", "prFail (f <$> mx) = 0")
 
     def test_multiline_computation(self):
         source = "Pr[= true | do\n    let y ← mx\n    pure y]"
-        self.assertMigrates(source, "Pr{do\n    let y ← mx\n    pure y}[= true]")
+        self.assertMigrates(source, "Pr{let x ← (do\n    let y ← mx\n    pure y)}[x = true]")
 
     def test_nested_events(self):
-        self.assertMigrates("Pr[= a | mx] ≤ Pr[p | my] + ε", "Pr{mx}[= a] ≤ Pr{x ← my}[p x] + ε")
+        self.assertMigrates("Pr[= a | mx] ≤ Pr[p | my] + ε",
+                            "Pr{let x ← mx}[x = a] ≤ Pr{let x ← my}[p x] + ε")
 
     def test_unparsed_event_is_reported(self):
         out, items = migrate("theorem t : Pr[(· + ·) | mx] = 0 := sorry")
@@ -63,18 +68,32 @@ class EventTests(unittest.TestCase):
 
     def test_comments_convert_only_syntactic_events(self):
         source = "-- `Pr[= a | mx]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n"
-        self.assertMigrates(source, "-- `Pr{mx}[= a]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n")
+        self.assertMigrates(source,
+                            "-- `Pr{let x ← mx}[x = a]`, `Pr[ |L| ≤ ℓ ]` and `Pr[good | run]`\n")
 
-    def test_let_items(self):
-        self.assertMigrates("Pr{let x ← mx}[p x]", "Pr{x ← mx}[p x]")
-        self.assertMigrates("Pr{let x ← mx; let y ← my x}[q x y]",
-                            "Pr{x ← mx; y ← my x}[q x y]")
-        self.assertMigrates("(h : Pr{\n      let y ← $ᵗ α}[p y])",
-                            "(h : Pr{y ←\n      $ᵗ α}[p y])")
-        # Patterns and nested `do` blocks keep their `let`.
-        self.assertMigrates("Pr{let (a, b) ← mx}[a = b]", "Pr{let (a, b) ← mx}[a = b]")
+    def test_draw_items(self):
+        self.assertMigrates("Pr{x ← mx}[p x]", "Pr{let x ← mx}[p x]")
+        self.assertMigrates("Pr{x ← mx; y ← my x}[q x y]",
+                            "Pr{let x ← mx; let y ← my x}[q x y]")
+        self.assertMigrates("Pr{x : α ← mx}[p x]", "Pr{let x : α ← mx}[p x]")
+        self.assertMigrates("Pr{_ ← mx}[True]", "Pr{let _ ← mx}[True]")
+        # A multi-line right-hand side is parenthesized.
+        self.assertMigrates("(h : Pr{y ←\n      $ᵗ α}[p y])",
+                            "(h : Pr{let y ← (\n      $ᵗ α)}[p y])")
+        self.assertMigrates("Pr{x ← f a\n    b}[p x]", "Pr{let x ← (f a\n    b)}[p x]")
+        self.assertMigrates("Pr{x ← (f a\n    b)}[p x]", "Pr{let x ← (f a\n    b)}[p x]")
         self.assertMigrates("Pr{x ← do\n    let y ← mx\n    pure y}[p x]",
-                            "Pr{x ← do\n    let y ← mx\n    pure y}[p x]")
+                            "Pr{let x ← (do\n    let y ← mx\n    pure y)}[p x]")
+        # `do` statements, patterns and singleton events are left alone.
+        self.assertMigrates("Pr{let x ← mx; let y := f x}[p y]",
+                            "Pr{let x ← mx; let y := f x}[p y]")
+        self.assertMigrates("Pr{let (a, b) ← mx}[a = b]", "Pr{let (a, b) ← mx}[a = b]")
+        self.assertMigrates("prFail mx", "prFail mx")
+
+    def test_sequence_after_multiline_draw_is_reported(self):
+        text, items = migrate("Pr{x ← f a\n    b; y ← g x}[p y]")
+        self.assertEqual(text, "Pr{let x ← (f a\n    b); let y ← g x}[p y]")
+        self.assertEqual([("do` block" in msg) for _, _, msg in items], [True])
 
 
 class BinderTests(unittest.TestCase):
@@ -128,6 +147,15 @@ class NameTests(unittest.TestCase):
         self.assertEqual(out, "exact prEvent_le_one _\nexact prEvent_le_one mx")
         self.assertEqual([line for _, line, _ in items], [2])
 
+    def test_failure_probability(self):
+        self.assertEqual(migrate("probFailure mx ≤ 1 := probFailure_le_one mx")[0],
+                         "prFail mx ≤ 1 := prFail_le_one mx")
+
+    def test_quoted_names_are_kept(self):
+        # A quoted Lean name denotes the name itself; a code span in prose is a mention.
+        self.assertEqual(migrate("#[`SPMF, `probFailure]\n-- see `probFailure`\n")[0],
+                         "#[`SPMF, `probFailure]\n-- see `prFail`\n")
+
     def test_game_equiv(self):
         out, _ = migrate("h : GameEquiv g₁ g₂\nh' : g₁ ≡ₚ g₂\nexact GameEquiv.symm h")
         self.assertEqual(out, "h : EvalDistEq g₁ g₂\nh' : g₁ =ᵈ g₂\nexact EvalDistEq.symm h")
@@ -163,6 +191,15 @@ class ImportTests(unittest.TestCase):
                     "import VCVio.OracleComp.OracleComp\n")
         self.assertEqual(migrate(source)[0], expected)
 
+    def test_removed_namespaces_leave_open_commands(self):
+        self.assertEqual(migrate("open ENNReal OracleComp.EvalDist OracleComp.ProgramLogic\n")[0],
+                         "open ENNReal OracleComp.ProgramLogic\n")
+        self.assertEqual(migrate("open OracleComp.EvalDist in\ntheorem t : True := trivial\n")[0],
+                         "theorem t : True := trivial\n")
+        self.assertEqual(migrate("open scoped OracleComp.EvalDist\n")[0], "")
+        self.assertEqual(migrate("open OracleComp.EvalDistEq\n")[0],
+                         "open OracleComp.EvalDistEq\n")
+
     def test_unrelated_imports_are_untouched(self):
         source = "public import A\npublic import B\npublic import A\n"
         self.assertEqual(migrate(source)[0], source)
@@ -186,13 +223,13 @@ class CommandLineTests(unittest.TestCase):
     def test_dry_run_prints_a_diff(self):
         result = self.run_codemod("--dry-run")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("+theorem t : Pr{mx}[= a] = 1 := sorry", result.stdout)
+        self.assertIn("+theorem t : Pr{let x ← mx}[x = a] = 1 := sorry", result.stdout)
         self.assertIn("Pr[= a | mx]", self.file.read_text())
 
     def test_rewrite_is_idempotent_and_skips_lake(self):
         self.assertEqual(self.run_codemod().returncode, 0)
         once = self.file.read_text()
-        self.assertEqual(once, "theorem t : Pr{mx}[= a] = 1 := sorry\n")
+        self.assertEqual(once, "theorem t : Pr{let x ← mx}[x = a] = 1 := sorry\n")
         self.run_codemod()
         self.assertEqual(self.file.read_text(), once)
         self.assertEqual((self.root / ".lake" / "Dep.lean").read_text(), "Pr[= a | mx]\n")
