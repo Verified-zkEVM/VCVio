@@ -374,7 +374,6 @@ theorem lintegral_id_evalDist_map_add {m : Type → Type v} [Monad m] [LawfulMon
     lintegral_add_left Measurable.of_discrete]
 
 /-- The constant-zero observation has expectation zero. -/
-@[simp]
 theorem lintegral_id_evalDist_map_zero {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
     ∫⁻ r, r ∂𝒟[(fun _ ↦ (0 : ENNReal)) <$> mx] = 0 :=
