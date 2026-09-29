@@ -787,7 +787,11 @@ def rewrite_classes(text: str, report: Report, path: str) -> str:
 
 
 def rename_pattern(name: str) -> re.Pattern[str]:
-    return re.compile(r"(?<![\w'!?])" + re.escape(name) + r"(?![\w'!?₀-₉])")
+    """Occurrences of the name `name`, except as a quoted Lean name `` `name ``, which denotes
+    the name itself (as in a list of retired names) rather than the declaration. A code span
+    `` `name` `` in prose is an occurrence."""
+    return re.compile(r"(?<![\w'!?])(?:(?<!`)|(?=" + re.escape(name) + r"`))" + re.escape(name)
+                      + r"(?![\w'!?₀-₉])")
 
 
 RENAME_PATTERNS = sorted(((rename_pattern(old), new) for old, new in RENAMES.items()),

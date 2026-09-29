@@ -151,6 +151,11 @@ class NameTests(unittest.TestCase):
         self.assertEqual(migrate("probFailure mx ≤ 1 := probFailure_le_one mx")[0],
                          "prFail mx ≤ 1 := prFail_le_one mx")
 
+    def test_quoted_names_are_kept(self):
+        # A quoted Lean name denotes the name itself; a code span in prose is a mention.
+        self.assertEqual(migrate("#[`SPMF, `probFailure]\n-- see `probFailure`\n")[0],
+                         "#[`SPMF, `probFailure]\n-- see `prFail`\n")
+
     def test_game_equiv(self):
         out, _ = migrate("h : GameEquiv g₁ g₂\nh' : g₁ ≡ₚ g₂\nexact GameEquiv.symm h")
         self.assertEqual(out, "h : EvalDistEq g₁ g₂\nh' : g₁ =ᵈ g₂\nexact EvalDistEq.symm h")
