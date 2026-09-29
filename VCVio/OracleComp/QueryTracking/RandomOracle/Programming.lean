@@ -8,7 +8,7 @@ module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.LoggingOracle
-public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 
 /-!
 # Cache Growth and Programming for the Forwarded Random Oracle
@@ -16,7 +16,8 @@ public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 Facts about the random oracle model handler `hashSpec.romImpl`, which forwards uniform sampling
 and answers `hashSpec` with a lazy random oracle:
 
-* `roSim.le_of_mem_support_run`: a run only extends its cache.
+* `OracleComp.le_snd_of_mem_support_run_unifFwdImpl_add_withCaching` (`CachePartial.lean`): a run
+  only extends its cache.
 * `roSim.isCached_of_mem_support_run_withLogging`: along a logged run, the cache gains an answer
   at `t` exactly when the transcript queries `t`.
 * `roSim.prEvent_run_uncached_le_run_cacheQuery`: programming an answer at an uncached input is
@@ -36,18 +37,13 @@ variable {ι : Type} [DecidableEq ι] {hashSpec : OracleSpec.{0, 0} ι}
   [∀ t, SampleableType (hashSpec.Range t)]
 
 /-- A run of the forwarded lazy random oracle only extends its cache. -/
+@[deprecated OracleComp.le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
+  (since := "2026-09-29")]
 theorem le_of_mem_support_run {α : Type} (oa : OracleComp (unifSpec + hashSpec) α)
     (s : hashSpec.QueryCache) :
-    ∀ z ∈ support ((simulateQ hashSpec.romImpl oa).run s),
-      s ≤ z.2 := by
-  refine OracleComp.simulateQ_run_preservesInv _ (s ≤ ·) ?_ oa s le_rfl
-  refine QueryImpl.PreservesInv.add ?_ (QueryImpl.PreservesInv.withCaching_le _ s)
-  intro n s' hs z hz
-  rw [show (unifFwdImpl hashSpec n).run s' =
-      (hashSpec.romImpl (Sum.inl n)).run s' from rfl,
-    run_apply_inl, support_map] at hz
-  obtain ⟨u, _, rfl⟩ := hz
-  exact hs
+    ∀ z ∈ support ((simulateQ hashSpec.romImpl oa).run s), s ≤ z.2 :=
+  fun _ hz => OracleComp.le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
+    uniformSampleImpl oa hz
 
 /-- One query of the forwarded lazy random oracle gains a cached answer at `t` exactly when it
 queries `t`. -/
@@ -151,7 +147,8 @@ theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
         obtain ⟨z, hz, hp⟩ := hp
         rw [support_pure, Set.mem_singleton_iff] at hp
         subst hp
-        have hcached := le_of_mem_support_run (k v) (s.cacheQuery x v) z hz
+        have hcached := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
+          uniformSampleImpl (k v) hz
           (QueryCache.cacheQuery_self s x v)
         simp [hcached]
       · rw [QueryCache.cacheQuery_of_ne _ _ hxt]

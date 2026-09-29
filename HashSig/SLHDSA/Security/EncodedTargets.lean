@@ -153,7 +153,7 @@ structure AddressFacts (vp : ValidatedParams) (a : Adrs) : Prop where
   tree_lt : a.tree < 2 ^ ((vp.params.d - 1) * vp.params.hp)
 
 /-- Structural addresses that the SHA-2 instantiation compresses without its zero fallback. -/
-def Sha2Domain (a : Adrs) : Prop :=
+@[expose] def Sha2Domain (a : Adrs) : Prop :=
   a.isCanonical = true ∧ Adrs.Fits 1 a.layer = true ∧ Adrs.Fits 8 a.tree = true
 
 /-- The domain is exactly what the checked compression boundary accepts, so a canary that runs

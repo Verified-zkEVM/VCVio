@@ -582,6 +582,32 @@ theorem IsQueryBoundP.simulateQ_of_step {ι' : Type u} {spec' : OracleSpec ι'}
       have hbound : (if p t then 1 else 0) + (if p t then n - 1 else n) = n := by grind
       simpa [hbound] using isQueryBoundP_bind hlift fun u _ => ih u (h.2 u)
 
+/-- Transfer a predicate-targeted query bound through `simulateQ` into an append-logged
+`WriterT` target semantics, provided each simulated source query step is itself `q`-bounded (by
+`1` on `p`-indices, by `0` on `¬ p`-indices). This is the `WriterT` counterpart of
+`IsQueryBoundP.simulateQ_run_of_step`. -/
+theorem IsQueryBoundP.simulateQ_run_writerT_of_step {ι' : Type u} {spec' : OracleSpec ι'}
+    {ω : Type u} [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    {p : ι → Prop} [DecidablePred p] {q : ι' → Prop} [DecidablePred q]
+    {impl : QueryImpl spec (WriterT ω (OracleComp spec'))}
+    {oa : OracleComp spec α} {n : ℕ}
+    (h : IsQueryBoundP oa p n)
+    (hstep_p : ∀ t, p t → IsQueryBoundP (impl t).run q 1)
+    (hstep_np : ∀ t, ¬ p t → IsQueryBoundP (impl t).run q 0) :
+    IsQueryBoundP (simulateQ impl oa).run q n := by
+  induction oa using OracleComp.inductionOn generalizing n with
+  | pure x => simp
+  | query_bind t mx ih =>
+      rw [isQueryBoundP_query_bind_iff] at h
+      simp only [simulateQ_bind, WriterT.run_bind', simulateQ_spec_query]
+      have hlift : IsQueryBoundP (impl t).run q (if p t then 1 else 0) := by
+        by_cases hpt : p t
+        · simpa [ite_eq_left hpt] using hstep_p t hpt
+        · simpa [ite_eq_right hpt] using hstep_np t hpt
+      have hbound : (if p t then 1 else 0) + (if p t then n - 1 else n) = n := by grind
+      simpa [hbound] using isQueryBoundP_bind hlift fun u _ =>
+        (isQueryBoundP_map_iff _ _ _).2 (ih u.1 (h.2 u.1))
+
 /-- Transfer a predicate-targeted bound through `simulateQ` with a sum-of-implementations
 `impl₁ + impl₂` on a sum source spec `spec₁ + spec₂`. The source predicate `p` is split into
 its `.inl` and `.inr` branches, with separate step hypotheses for each impl on its own

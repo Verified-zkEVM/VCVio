@@ -114,6 +114,44 @@ def flattenStateT {ι : Type _} {spec : OracleSpec ι}
       (fun y : spec.Range t × τ => (y.1, (s, y.2))) <$> (impl t).run q := by
   simp [flattenStateT]
 
+/-- Push a `StateT`-valued handler into a deeper `StateT` stack, leaving the new inner state
+untouched: each query runs in the original stack and its result is lifted. -/
+@[expose]
+def liftBase {ι : Type _} {spec : OracleSpec ι}
+    {m : Type u → Type v} [Monad m] {σ τ : Type u}
+    (impl : QueryImpl spec (StateT σ m)) :
+    QueryImpl spec (StateT σ (StateT τ m)) := fun t =>
+  StateT.mk fun s => liftM ((impl t).run s)
+
+/-- Flattening a base-lifted handler leaves the new inner state untouched: the query runs in the
+original stack and the inner state is reattached unchanged. -/
+theorem flattenStateT_liftBase_apply_run {ι : Type _} {spec : OracleSpec ι}
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ τ : Type u}
+    (impl : QueryImpl spec (StateT σ m)) (t : spec.Domain) (s : σ) (q : τ) :
+    ((liftBase (τ := τ) impl).flattenStateT t).run (s, q) =
+      (fun z : spec.Range t × σ => (z.1, (z.2, q))) <$> (impl t).run s := by
+  simp [flattenStateT, liftBase, StateT.run_monadLift, Functor.map_map]
+
+/-- Flattening a stateless handler lifted into a two-level `StateT` stack gives the same handler
+lifted into the flattened stack. -/
+theorem flattenStateT_liftTarget_base {ι : Type _} {spec : OracleSpec ι}
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ τ : Type u}
+    (impl : QueryImpl spec m) :
+    (impl.liftTarget (StateT σ (StateT τ m))).flattenStateT =
+      impl.liftTarget (StateT (σ × τ) m) := by
+  funext t
+  refine StateT.ext fun p => ?_
+  obtain ⟨s, q⟩ := p
+  simp [flattenStateT, StateT.run_monadLift, Functor.map_map]
+
+/-- A stateless forwarding handler commutes with any change of the state it carries. -/
+theorem run_liftTarget_map_eq {ι : Type _} {spec : OracleSpec ι}
+    {m : Type u → Type v} [Monad m] [LawfulMonad m] {σ₁ σ₂ : Type u}
+    (impl : QueryImpl spec m) (f : σ₁ → σ₂) (t : spec.Domain) (s : σ₁) :
+    Prod.map id f <$> ((impl.liftTarget (StateT σ₁ m)) t).run s =
+      ((impl.liftTarget (StateT σ₂ m)) t).run (f s) := by
+  simp [Functor.map_map]
+
 /-- Indexed version of `QueryImpl.parallelStateT`. Note that `m` cannot vary with `t`.
 dtumad: The `Function.update` thing is nice but forces `DecidableEq`. -/
 @[expose]

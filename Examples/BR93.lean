@@ -496,7 +496,8 @@ private lemma evalDist_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand
     obtain ⟨z, hz, hp⟩ := hp
     rw [support_pure, Set.mem_singleton_iff] at hp
     subst hp
-    have hcached := QueryCache.le_def.1 (roSim.le_of_mem_support_run _ choice.2 z hz) hcr
+    have hcached := QueryCache.le_def.1 (le_snd_of_mem_support_run_unifFwdImpl_add_withCaching
+      uniformSampleImpl _ hz) hcr
     simp [QueryCache.isCached, hcached]
   | none =>
     simp only [bind_assoc, pure_bind]

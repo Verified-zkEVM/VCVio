@@ -7,8 +7,10 @@ Authors: Nicolas Consigny, Alexander Hicks
 module
 public import HashSig.SLHDSA.Oracle
 public import HashSig.SLHDSA.WotsEncoding
+public import ToMathlib.Data.Vector
 public import VCVio.OracleComp.HasQuery.Morphism
 public import VCVio.OracleComp.QueryTracking.QueryBound
+import VCVio.OracleComp.SimSemantics.SimulateQ.Option
 
 /-!
 # WOTS+ (FIPS 205 §5)
@@ -366,20 +368,6 @@ def wotsPkFromSig (prims : Primitives p) (sig : WotsSig p prims.core) (msg : pri
 
 /-! ### Naturality -/
 
-private theorem monadHom_ofFnM {m n : Type → Type*} [Monad m] [LawfulMonad m]
-    [Monad n] [LawfulMonad n] (F : m →ᵐ n) {α : Type} {k : ℕ}
-    (fm : Fin k → m α) (fn : Fin k → n α) (h : ∀ i, F (fm i) = fn i) :
-    F (Vector.ofFnM fm) = Vector.ofFnM fn := by
-  induction k with
-  | zero => simp [F.mmap_pure]
-  | succ k ih =>
-      rw [Vector.ofFnM_succ, Vector.ofFnM_succ, F.mmap_bind]
-      rw [ih (fun i => fm i.castSucc) (fun i => fn i.castSucc) (fun i => h i.castSucc)]
-      congr 1
-      funext xs
-      rw [F.mmap_bind, h (Fin.last k)]
-      simp [F.mmap_pure]
-
 /-- A monad morphism commutes with WOTS+ public-key chain generation when it commutes with the
 hash callback. -/
 theorem wotsPkGenTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
@@ -389,7 +377,7 @@ theorem wotsPkGenTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad 
     (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (wotsPkGenTopsWith core hashm sk pk adrs) =
       wotsPkGenTopsWith core hashn sk pk adrs := by
-  apply monadHom_ofFnM F
+  apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
 
@@ -416,7 +404,7 @@ theorem wotsSignWith_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
     (msg : core.Y) (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
     F (wotsSignWith core hashm msg sk pk adrs) =
       wotsSignWith core hashn msg sk pk adrs := by
-  apply monadHom_ofFnM F
+  apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
 
@@ -429,7 +417,7 @@ theorem wotsPkFromSigTopsWith_natural {m n : Type → Type*} [Monad m] [LawfulMo
     (sig : WotsSig p core) (msg : core.Y) (adrs : Adrs) :
     F (wotsPkFromSigTopsWith core hashm sig msg adrs) =
       wotsPkFromSigTopsWith core hashn sig msg adrs := by
-  apply monadHom_ofFnM F
+  apply Vector.ofFnM_natural F
   intro i
   exact chainWith_natural F hashm hashn hhash _ _ _ _
 
@@ -611,16 +599,6 @@ theorem wotsSignM_then_wotsPkFromSigM_isTotalQueryBound (core : CorePrimitives p
 
 /-! ### Pure interpretations -/
 
-/-- Interpreting an `ofFnM` traversal pointwise commutes with the free-monad handler. -/
-private theorem simulateQ_ofFnM {ι α : Type} {spec : OracleSpec ι} {k : ℕ}
-    (answer : QueryImpl spec Id) (g : Fin k → OracleComp spec α) :
-    simulateQ answer (Vector.ofFnM g) = Vector.ofFn fun i => simulateQ answer (g i) := by
-  calc
-    simulateQ answer (Vector.ofFnM g) =
-        Vector.ofFnM (fun i => simulateQ answer (g i)) :=
-      monadHom_ofFnM (simulateQ' answer) g _ (fun _ => rfl)
-    _ = Vector.ofFn fun i => simulateQ answer (g i) := Vector.idRun_ofFnM
-
 @[simp]
 theorem wotsPkGenTops_eq_ofFn (prims : Primitives p) (sk : prims.SkSeed)
     (pk : prims.PkSeed) (adrs : Adrs) :
@@ -629,7 +607,7 @@ theorem wotsPkGenTops_eq_ofFn (prims : Primitives p) (sk : prims.SkSeed)
         (prims.PRF pk sk (wotsSkAdrs adrs i.val)) 0 (p.w - 1) := by
   unfold wotsPkGenTops wotsPkGenTopsM wotsPkGenTopsWith
   rw [simulateQ_ofFnM]
-  rfl
+  exact Vector.idRun_ofFnM
 
 @[simp]
 theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSeed)
@@ -640,7 +618,7 @@ theorem wotsSign_eq_ofFn (prims : Primitives p) (msg : prims.Y) (sk : prims.SkSe
           (chainStepsCore prims.core msg i.val) := by
   unfold wotsSign wotsSignM wotsSignWith
   rw [simulateQ_ofFnM]
-  rfl
+  exact Vector.idRun_ofFnM
 
 @[simp]
 theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims.core)
@@ -651,7 +629,7 @@ theorem wotsPkFromSigTops_eq_ofFn (prims : Primitives p) (sig : WotsSig p prims.
         (p.w - 1 - chainStepsCore prims.core msg i.val) := by
   unfold wotsPkFromSigTops wotsPkFromSigTopsM wotsPkFromSigTopsWith
   rw [simulateQ_ofFnM]
-  rfl
+  exact Vector.idRun_ofFnM
 
 @[simp]
 theorem wotsPkGen_eq_tl (prims : Primitives p) (sk : prims.SkSeed)
