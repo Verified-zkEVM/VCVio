@@ -65,6 +65,7 @@ public import HashSig.SLHDSA.Security.PrfHops
 public import HashSig.SLHDSA.Security.ReachableTargets
 public import HashSig.SLHDSA.Security.RomBridge
 public import HashSig.SLHDSA.Security.RomDescent
+public import HashSig.SLHDSA.Security.RomDescentSecret
 public import HashSig.SLHDSA.Security.RomFresh
 public import HashSig.SLHDSA.Security.RomKeyed
 public import HashSig.SLHDSA.Security.RomRun

@@ -20,7 +20,11 @@ draws a secret, at an arbitrary provider, so that it applies both to the honest 
 `oracleSecret core e pk sk` of `HashSig.SLHDSA.Security.Target`, whose every draw is one `F` query
 of the secret seed at the draw's `PRF` address (`simulateQ_toPartialImpl_oracleSecret`).  At the
 oracle-backed provider a settled reading therefore never supplies a secret the cache does not
-record.
+record.  The programs of `HashSig.SLHDSA.Security.Target` run in a monad reaching a larger
+oracle; every query-preserving monad morphism fixes an oracle-backed draw
+(`oracleSecret_natural`), so key generation and signing there are the images of the programs
+read here (`keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ`,
+`signInternalWithSecretRandomizerM_oracleSecret_eq_ofSimulateQ`).
 
 The readers `wotsPkGenTopsWithSecret?`, `xmssNodeWithSecret?`, `xmssRootWithSecret?`,
 `forsNodeWithSecret?` and `forsPkGenWithSecret?` are the honest programs under the cache; at the
@@ -37,6 +41,10 @@ public key.
 
 * The verifier's programs draw no secret, so their decompositions in
   `HashSig.SLHDSA.Security.CacheDecomposition` apply unchanged and are not restated.
+* Key generation over a provider is the top-tree root program itself
+  (`keygenInternalWithSecretM` is `GeneralHypertree.rootWithSecretM`), so the decomposition of
+  Algorithm 18 into a root reading and the assembled key pair has no counterpart here; the root
+  reading is what `exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM` consumes.
 * The cache-size lower bounds of `HashSig.SLHDSA.Security.CacheCoverage` are not restated here.
 * No property of any particular cache is proved here, and nothing here is probabilistic or quantum.
 
@@ -49,21 +57,24 @@ public key.
 `xmssNode?_eq_xmssNodeWithSecret?`, `xmssRoot?_eq_xmssRootWithSecret?`,
 `forsNode?_eq_forsNodeWithSecret?`, `forsPkGen?_eq_forsPkGenWithSecret?`.
 
-*The oracle-backed provider*: `simulateQ_toPartialImpl_oracleSecret`.
+*The oracle-backed provider*: `simulateQ_toPartialImpl_oracleSecret`, `oracleSecret_natural`,
+`keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ`,
+`signInternalWithSecretRandomizerM_oracleSecret_eq_ofSimulateQ`.
 
-*WOTS+ and XMSS*: `simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_iff`,
+*WOTS+ and XMSS*: `wotsPkGenTopsWithSecret?_eq_some_iff`,
 `simulateQ_toPartialImpl_wotsSignWithSecret_eq_some_iff`,
-`simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_of_wotsSignWithSecret`,
+`wotsPkGenTopsWithSecret?_eq_some_of_wotsSignWithSecret`,
 `simulateQ_toPartialImpl_xmssSignWithSecret_eq_some_iff`.
 
-*FORS*: `simulateQ_toPartialImpl_forsPkGenWithSecret_eq_some_iff`,
+*FORS*: `forsPkGenWithSecret?_eq_some_iff`,
 `simulateQ_toPartialImpl_forsSignWithSecret_eq_some_iff`.
 
 *Hypertree layers and Algorithm 19*:
 `simulateQ_toPartialImpl_signFromPositionWithSecret_add_two_eq_some_iff`,
 `simulateQ_toPartialImpl_signFromPositionWithSecret_one_false_eq_some_iff`,
 `simulateQ_toPartialImpl_signFromPositionWithSecret_one_true_eq_some_iff`,
-`simulateQ_toPartialImpl_signInternalWithSecretRandomizerM_eq_some_iff`.
+`simulateQ_toPartialImpl_signInternalWithSecretRandomizerM_eq_some_iff`,
+`components_of_simulateQ_toPartialImpl_signInternalWithSecretRandomizerM`.
 
 *Signed-through XMSS tree*:
 `simulateQ_toPartialImpl_xmssLeafWithSecret_eq_some_of_xmssSignWithSecret`,
@@ -74,11 +85,11 @@ public key.
 `exists_xmssNodeHash_entry_of_xmssSignWithSecret`.
 
 *Top tree from key generation*: `exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM`,
-`exists_chainM_eq_some_of_rootWithSecretM`.
+`exists_secret_and_chainM_eq_some_of_rootWithSecretM`.
 
 *FORS coverage*: `forsPkGenWithSecret?_eq_some_of_forsSignWithSecret`.
 
-Thirty declarations, none private.
+Thirty-four declarations, none private.
 -/
 
 public section
@@ -172,7 +183,7 @@ theorem forsPkGen?_eq_forsPkGenWithSecret? (sk : core.SkSeed) (pk : core.PkSeed)
 /-- The chain tops over a provider are settled exactly when, for every chain, the secret at its
 `WOTS_PRF` address is settled and the full chain from that secret is settled, at the
 corresponding top. -/
-theorem simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_iff (pk : core.PkSeed)
+theorem wotsPkGenTopsWithSecret?_eq_some_iff (pk : core.PkSeed)
     (adrs : Adrs) {tops : Vector core.Y p.len} :
     wotsPkGenTopsWithSecret? core c secret pk adrs = some tops ↔
       ∀ i : Fin p.len, ∃ x, simulateQ c.toPartialImpl (secret (wotsSkAdrs adrs i.val)) = some x ∧
@@ -195,7 +206,7 @@ theorem simulateQ_toPartialImpl_wotsSignWithSecret_eq_some_iff (msg : core.Y) (p
 
 /-- A settled WOTS+ signature over a provider whose recovered chain tops are settled settles the
 honest chain tops over that provider, at the recovered tops. -/
-theorem simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_of_wotsSignWithSecret
+theorem wotsPkGenTopsWithSecret?_eq_some_of_wotsSignWithSecret
     (msg : core.Y) (pk : core.PkSeed) (adrs : Adrs) {sig : WotsSig p core}
     {tops : Vector core.Y p.len}
     (hsign : simulateQ c.toPartialImpl
@@ -204,7 +215,7 @@ theorem simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_of_wotsSignWithS
     wotsPkGenTopsWithSecret? core c secret pk adrs = some tops := by
   rw [simulateQ_toPartialImpl_wotsSignWithSecret_eq_some_iff] at hsign
   rw [simulateQ_toPartialImpl_wotsPkFromSigTopsM_eq_some_iff] at hrec
-  rw [simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_iff]
+  rw [wotsPkGenTopsWithSecret?_eq_some_iff]
   intro i
   obtain ⟨x, hx, hpre⟩ := hsign i
   refine ⟨x, hx, ?_⟩
@@ -231,7 +242,7 @@ theorem simulateQ_toPartialImpl_xmssSignWithSecret_eq_some_iff (msg : core.Y) (p
 
 /-- The honest FORS public key over a provider is settled exactly when every tree root is settled
 and the `T_k` compression of the roots is cached. -/
-theorem simulateQ_toPartialImpl_forsPkGenWithSecret_eq_some_iff (pk : core.PkSeed) (adrs : Adrs)
+theorem forsPkGenWithSecret?_eq_some_iff (pk : core.PkSeed) (adrs : Adrs)
     {fpk : core.Y} :
     forsPkGenWithSecret? core c secret pk adrs = some fpk ↔
       ∃ roots : Vector core.Y p.k,
@@ -282,7 +293,7 @@ theorem simulateQ_toPartialImpl_xmssLeafWithSecret_eq_some_of_xmssSignWithSecret
   refine ⟨leaf, ?_, hclimb⟩
   simp only [xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff,
     simulateQ_toPartialImpl_tl]
-  exact ⟨tops, simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_of_wotsSignWithSecret core
+  exact ⟨tops, wotsPkGenTopsWithSecret?_eq_some_of_wotsSignWithSecret core
     c secret msg pk (wotsLeafAdrs adrs idx) hwots htops, hleaf⟩
 
 /-- Every honest ancestor of the signed leaf of a tree signed through over a provider is settled,
@@ -364,7 +375,7 @@ theorem forsPkGenWithSecret?_eq_some_of_forsSignWithSecret (md : List Byte) (pk 
     forsPkGenWithSecret? core c secret pk adrs = some fpk := by
   rw [simulateQ_toPartialImpl_forsSignWithSecret_eq_some_iff] at hsign
   rw [simulateQ_toPartialImpl_forsPkFromSigM_eq_some_iff] at hrec
-  rw [simulateQ_toPartialImpl_forsPkGenWithSecret_eq_some_iff]
+  rw [forsPkGenWithSecret?_eq_some_iff]
   obtain ⟨roots, hper, hTk⟩ := hrec
   refine ⟨roots, fun i => ?_, hTk⟩
   obtain ⟨path, hpath, x, hx, hsig⟩ := hsign i
@@ -474,6 +485,30 @@ theorem simulateQ_toPartialImpl_signInternalWithSecretRandomizerM_eq_some_iff (m
   simp only [GeneralScheme.signInternalWithSecretRandomizerM, simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, simulateQ_toPartialImpl_hmsg, exists_and_left]
 
+/-- A settled run of Algorithm 19 over a provider at a supplied randomizer carries that
+randomizer, and its `H_msg` entry, FORS signature, recovered FORS public key and hypertree
+signature are settled, in the shape a top-down reading of the signature uses. -/
+theorem components_of_simulateQ_toPartialImpl_signInternalWithSecretRandomizerM
+    (msg : List Byte) (pkSeed : core.PkSeed) (pkRoot R : core.Y)
+    {σ : GeneralScheme.SignatureCore vp core}
+    (h : simulateQ c.toPartialImpl (GeneralScheme.signInternalWithSecretRandomizerM core secret msg
+      pkSeed pkRoot R) = some σ) :
+    σ.randomness = R ∧
+    ∃ (digest : Bytes vp.params.m) (forsPk : core.Y),
+      c (.hmsg σ.randomness pkSeed pkRoot msg) = some digest ∧
+      simulateQ c.toPartialImpl (forsSignWithSecretM core secret
+        (splitDigest vp.params digest).md.toList pkSeed
+        (splitDigest vp.params digest).forsAdrs) = some σ.fors ∧
+      simulateQ c.toPartialImpl (forsPkFromSigM core σ.fors
+        (splitDigest vp.params digest).md.toList pkSeed
+        (splitDigest vp.params digest).forsAdrs) = some forsPk ∧
+      simulateQ c.toPartialImpl (GeneralHypertree.signWithSecretM core secret forsPk pkSeed
+        (splitDigest vp.params digest)) = some σ.hypertree := by
+  obtain ⟨digest, forsSig, forsPk, htSig, hd, hfs, hfp, hht, rfl⟩ :=
+    (simulateQ_toPartialImpl_signInternalWithSecretRandomizerM_eq_some_iff core c secret msg
+      pkSeed pkRoot R).mp h
+  exact ⟨rfl, digest, forsPk, hd, hfs, hfp, hht⟩
+
 /-! ## The top tree from key generation -/
 
 variable (pk : core.PkSeed) {pkRoot : core.Y}
@@ -491,7 +526,7 @@ theorem exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM :
 
 /-- Every WOTS+ chain of every leaf of the top tree is settled by key generation over a provider:
 its secret is settled, and the full chain from it is settled. -/
-theorem exists_chainM_eq_some_of_rootWithSecretM (t : ℕ) (ht : t < 2 ^ vp.params.hp)
+theorem exists_secret_and_chainM_eq_some_of_rootWithSecretM (t : ℕ) (ht : t < 2 ^ vp.params.hp)
     (i : Fin vp.params.len) :
     ∃ x, simulateQ c.toPartialImpl (secret (wotsSkAdrs
         (wotsLeafAdrs (GeneralHypertree.layerAdrs (vp.params.d - 1) 0) t) i.val)) = some x ∧
@@ -503,7 +538,7 @@ theorem exists_chainM_eq_some_of_rootWithSecretM (t : ℕ) (ht : t < 2 ^ vp.para
   simp only [xmssNodeWithSecret?, xmssNodeWithSecret, PerfectMerkleTree.merkleRootM,
     xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff] at hleaf
   obtain ⟨tops, htops, -⟩ := hleaf
-  obtain ⟨x, hx, hchain⟩ := (simulateQ_toPartialImpl_wotsPkGenTopsWithSecret_eq_some_iff core c
+  obtain ⟨x, hx, hchain⟩ := (wotsPkGenTopsWithSecret?_eq_some_iff core c
     secret pk _).mp htops i
   exact ⟨x, hx, tops[i], hchain⟩
 
@@ -524,6 +559,40 @@ theorem simulateQ_toPartialImpl_oracleSecret (e : core.SkSeed ≃ core.Y) (pk : 
         (oracleSecret core e (m := OracleComp (publicHashSpec core)) pk sk a) =
       c (.thash pk (core.adrsToKey a) [e sk]) := by
   rw [oracleSecret, simulateQ_toPartialImpl_f]
+
+/-- A query-preserving monad morphism fixes every oracle-backed secret draw. -/
+theorem oracleSecret_natural {m n : Type → Type*} [Monad m] [Monad n]
+    [HasQuery (publicHashSpec core) m] [HasQuery (publicHashSpec core) n]
+    (F : HasQuery.QueryHom (publicHashSpec core) m n) (e : core.SkSeed ≃ core.Y)
+    (pk : core.PkSeed) (sk : core.SkSeed) (a : Adrs) :
+    F.toMonadHom (oracleSecret core e (m := m) pk sk a) = oracleSecret core e (m := n) pk sk a :=
+  PublicHash.f_natural core F pk a (e sk)
+
+/-- Key generation at the oracle-backed provider, in any monad reaching the public hash, is the
+image of the same program in `OracleComp (publicHashSpec core)` under the canonical interpretation
+of its queries. -/
+theorem keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ {m : Type → Type*} [Monad m]
+    [LawfulMonad m] [HasQuery (publicHashSpec core) m] (e : core.SkSeed ≃ core.Y)
+    (pk : core.PkSeed) (sk : core.SkSeed) :
+    (GeneralScheme.keygenInternalWithSecretM core (oracleSecret core e pk sk) pk : m core.Y) =
+      (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec core) (m := m)).toMonadHom
+        (GeneralScheme.keygenInternalWithSecretM core (oracleSecret core e pk sk) pk) :=
+  (GeneralScheme.keygenInternalWithSecretM_natural core _ _ _
+    (oracleSecret_natural core _ e pk sk) pk).symm
+
+/-- Signing at the oracle-backed provider and a supplied randomizer, in any monad reaching the
+public hash, is the image of the same program in `OracleComp (publicHashSpec core)` under the
+canonical interpretation of its queries. -/
+theorem signInternalWithSecretRandomizerM_oracleSecret_eq_ofSimulateQ {m : Type → Type*}
+    [Monad m] [LawfulMonad m] [HasQuery (publicHashSpec core) m] (e : core.SkSeed ≃ core.Y)
+    (pk : core.PkSeed) (sk : core.SkSeed) (msg : List Byte) (pkRoot R : core.Y) :
+    (GeneralScheme.signInternalWithSecretRandomizerM core (oracleSecret core e pk sk) msg pk
+        pkRoot R : m (GeneralScheme.SignatureCore vp core)) =
+      (HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec core) (m := m)).toMonadHom
+        (GeneralScheme.signInternalWithSecretRandomizerM core (oracleSecret core e pk sk) msg pk
+          pkRoot R) :=
+  (GeneralScheme.signInternalWithSecretRandomizerM_natural core _ _ _
+    (oracleSecret_natural core _ e pk sk) msg pk pkRoot R).symm
 
 end Oracle
 
