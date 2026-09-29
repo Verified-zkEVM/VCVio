@@ -324,6 +324,14 @@ theorem prEvent_uniformSample_inst_irrel (i₁ i₂ : SampleableType α) (p : α
   rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
     evalDist_uniformSample_inst_irrel]
 
+/-- Transporting a uniform sample along an equality of types gives a uniform sample. -/
+theorem prEvent_map_cast_uniformSample {β : Type} [iα : SampleableType α] [iβ : SampleableType β]
+    (h : α = β) (p : β → Prop) :
+    Pr{let x ← cast h <$> ($ᵗ α)}[p x] = Pr{let x ← $ᵗ β}[p x] := by
+  subst h
+  rw [show (cast rfl : α → α) = id from rfl, id_map]
+  exact prEvent_uniformSample_inst_irrel iα iβ p
+
 end samplerIrrelevance
 
 end SampleableType
