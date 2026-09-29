@@ -129,6 +129,18 @@ Expectation laws have `wp` and `∫⁻` forms: `expectedValue_bind` → `wp_bind
 `wp_ne_top_of_finite`; `expectedValue_finsetSum` → `wp_finsetSum`; `expectedValue_iSup` →
 `lintegral_iSup`; the `WithoutReplacement` length equations → `lintegral_evalDist_length_…`.
 
+Proofs that compute with sums of point masses convert to `VCVio.OracleComp.EvalDist.Sum`. For
+oracle computations with finite answer types, `lintegral_evalDist_eq_tsum` identifies
+`∫⁻ x, f x ∂𝒟[oa]` with `∑' x, Pr{let y ← oa}[y = x] * f x`, with no countability assumption on
+the output type. The sum forms follow from it:
+- `probOutput_bind_eq_tsum` → `OracleComp.prEvent_bind_eq_tsum`;
+- `tsum_probOutput_eq_one` → `tsum_prEvent_eq_one`, and `tsum_prEvent_le_one`;
+- bind, `pure` and map sums → `tsum_prEvent_bind_mul`, `tsum_prEvent_pure_mul`,
+  `tsum_prEvent_map_mul`;
+- `tsum_prEvent_mul_of_const_on_support` and `tsum_prEvent_mul_le_add_of_le`;
+- `tvDist_bind_left_le` → `measureETVDist_bind_left_le_tsum`, where `measureETVDist` takes the
+  place of `ENNReal.ofReal (tvDist …)`.
+
 ## Converted theorem families
 
 These families changed statement shape as well as names. The codemod renames the declarations;
