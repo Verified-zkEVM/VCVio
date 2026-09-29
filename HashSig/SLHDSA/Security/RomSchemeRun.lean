@@ -25,12 +25,13 @@ part of the final cache (`QueryCache.fst`): key generation at the oracle-backed 
 the top-tree root at the public root, and the secret key carries the public seed and root of the
 public key; every logged signature is settled at its own randomizer; and the verification of the
 forgery is settled at its verdict.  The route is the generic
-`OracleComp.simulateQ_toPartialImpl_fst_of_mem_support_run_romImpl`, applied through the lift
+`OracleComp.simulateQ_toPartialImpl_snd_fst_of_mem_support_run_romImpl`, applied through the lift
 lemmas of `HashSig.SLHDSA.Security.CacheSecret`.
 
 ## Scope
 
-* Everything here is deterministic on the support of `romSchemeRun`; no probability is bounded.
+* The settled transcript is a statement about the support of `romSchemeRun`;
+  `unforgeableAdvantage_romScheme_eq` is an equality of masses. No probability is bounded.
 * The forger's own queries are not described; the final cache also holds them.
 * Nothing here is quantum.
 
@@ -39,8 +40,7 @@ lemmas of `HashSig.SLHDSA.Security.CacheSecret`.
 *The run*: `RomOutcome.ofTranscript`, `wins_ofTranscript`, `romSchemeRun`,
 `unforgeableAdvantage_romScheme_eq`.
 
-*Runs under the lazy oracle* (private): `le_snd_of_mem_support_run_romI`,
-`exists_mem_support_run_romI_of_liftM_bind`, `simulateQ_fst_of_mem_support_run_romI`.
+*Runs under the lazy oracle* (private): `simulateQ_fst_of_mem_support_run_romI`.
 
 *The settled transcript*: `settled_of_mem_support_romSchemeRun`.
 -/
@@ -97,26 +97,6 @@ theorem unforgeableAdvantage_romScheme_eq (e : core.SkSeed ≃ core.Y)
 /-! ## Runs under the lazy oracle -/
 
 omit [SampleableType core.SkSeed] [SampleableType core.SkPrf] in
-/-- A run under the lazy oracle only extends the cache. -/
-private theorem le_snd_of_mem_support_run_romI {α : Type}
-    (oa : OracleComp (unifSpec + hashSpec core) α) (s : (hashSpec core).QueryCache)
-    (z : α × (hashSpec core).QueryCache)
-    (hz : z ∈ support ((simulateQ (hashSpec core).romImpl oa).run s)) :
-    s ≤ z.2 :=
-  le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl oa hz
-
-omit [SampleableType core.SkSeed] [SampleableType core.SkPrf] in
-/-- Private sampling at the head of a program leaves the cache untouched. -/
-private theorem exists_mem_support_run_romI_of_liftM_bind {α β : Type} (oa : ProbComp α)
-    (k : α → OracleComp (unifSpec + hashSpec core) β) {c : (hashSpec core).QueryCache}
-    {z : β × (hashSpec core).QueryCache}
-    (hz : z ∈ support ((simulateQ (hashSpec core).romImpl (liftM oa >>= k)).run c)) :
-    ∃ x, z ∈ support ((simulateQ (hashSpec core).romImpl (k x)).run c) := by
-  rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
-  obtain ⟨_, ⟨x, -, rfl⟩, hz⟩ := roSim.run_liftM_support _ _ _ ▸ hz
-  exact ⟨x, hz⟩
-
-omit [SampleableType core.SkSeed] [SampleableType core.SkPrf] in
 /-- A run of a public-hash program issued in the whole oracle world settles, in the public-hash
 part of its final cache, the value it returned. -/
 private theorem simulateQ_fst_of_mem_support_run_romI {α : Type}
@@ -126,7 +106,7 @@ private theorem simulateQ_fst_of_mem_support_run_romI {α : Type}
       ((HasQuery.QueryHom.ofSimulateQ (spec := publicHashSpec core)
         (m := OracleComp (unifSpec + hashSpec core))).toMonadHom P)).run c)) :
     simulateQ z.2.fst.toPartialImpl P = some z.1 :=
-  simulateQ_toPartialImpl_fst_of_mem_support_run_romImpl P hz
+  simulateQ_toPartialImpl_snd_fst_of_mem_support_run_romImpl P hz
 
 /-! ## The settled transcript -/
 
@@ -155,13 +135,13 @@ theorem settled_of_mem_support_romSchemeRun (e : core.SkSeed ≃ core.Y)
   obtain ⟨s₁, s₂, hk, hf, hv⟩ :=
     exists_mem_support_run_of_mem_support_run_unforgeableTranscriptExperiment
       (hashSpec core).romImpl adv hw
-  have h₁₂ : s₁ ≤ s₂ := le_snd_of_mem_support_run_romI core _ _ _ hf
-  have h₂c : s₂ ≤ c := le_snd_of_mem_support_run_romI core _ _ _ hv
+  have h₁₂ : s₁ ≤ s₂ := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl _ hf
+  have h₂c : s₂ ≤ c := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl _ hv
   -- key generation
-  obtain ⟨pkSeed, hk⟩ := exists_mem_support_run_romI_of_liftM_bind core _ _ hk
+  obtain ⟨pkSeed, -, hk⟩ := roSim.exists_mem_support_run_of_mem_support_run_liftM_bind _ _ _ hk
   unfold romKeygenAt at hk
-  obtain ⟨skSeed, hk⟩ := exists_mem_support_run_romI_of_liftM_bind core _ _ hk
-  obtain ⟨skPrf, hk⟩ := exists_mem_support_run_romI_of_liftM_bind core _ _ hk
+  obtain ⟨skSeed, -, hk⟩ := roSim.exists_mem_support_run_of_mem_support_run_liftM_bind _ _ _ hk
+  obtain ⟨skPrf, -, hk⟩ := roSim.exists_mem_support_run_of_mem_support_run_liftM_bind _ _ _ hk
   rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hk
   obtain ⟨⟨pkRoot, s₀⟩, hroot, hk⟩ := hk
   rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hk
@@ -176,9 +156,11 @@ theorem settled_of_mem_support_romSchemeRun (e : core.SkSeed ≃ core.Y)
   · -- a logged signature
     obtain ⟨t₁, t₂, ht₂, hsign⟩ := exists_mem_support_run_sign_of_mem_log
       (hashSpec core).romImpl
-      (fun ob s z hz => le_snd_of_mem_support_run_romI core ob s z hz) adv hw hx
+      (fun ob _ _ hz =>
+        le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl ob hz) adv hw hx
     rw [romScheme_sign] at hsign
-    obtain ⟨addrnd, hsign⟩ := exists_mem_support_run_romI_of_liftM_bind core _ _ hsign
+    obtain ⟨addrnd, -, hsign⟩ :=
+      roSim.exists_mem_support_run_of_mem_support_run_liftM_bind _ _ _ hsign
     rw [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hsign
     obtain ⟨⟨R, t₃⟩, -, hsign⟩ := hsign
     rw [hsk] at hsign

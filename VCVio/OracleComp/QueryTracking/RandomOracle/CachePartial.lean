@@ -145,7 +145,7 @@ variable {ι₁ ι₂ : Type} [DecidableEq ι₁] [DecidableEq ι₂] {spec₁ :
 
 /-- The final cache of a random-oracle run over `spec₁ + spec₂`, restricted to `spec₁`, replays a
 `spec₁`-only program issued through its query capability. -/
-theorem simulateQ_toPartialImpl_fst_of_mem_support_run_romImpl (oa : OracleComp spec₁ α)
+theorem simulateQ_toPartialImpl_snd_fst_of_mem_support_run_romImpl (oa : OracleComp spec₁ α)
     {cache : (spec₁ + spec₂).QueryCache} {z : α × (spec₁ + spec₂).QueryCache}
     (hz : z ∈ support ((simulateQ (spec₁ + spec₂).romImpl (simulateQ (HasQuery.toQueryImpl
       (spec := spec₁) (m := OracleComp (unifSpec + (spec₁ + spec₂)))) oa)).run cache)) :

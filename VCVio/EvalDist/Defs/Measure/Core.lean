@@ -16,9 +16,9 @@ public import Mathlib.MeasureTheory.Measure.Prod
 `LawfulPureEvalDistSemantics` supplies the Dirac equation independently of bind, while
 `LawfulEvalDistSemantics` adds the measurable-bind equation.
 Measurable spaces and continuations are explicit; discrete source spaces discharge
-continuation measurability without constraining the result space.  The closing section states
-the laws of the average `∫⁻ r, r ∂𝒟[f <$> mx]` of a scalar observation, all but one of
-which need no measurable space on the observed type.
+continuation measurability without constraining the result space.
+The final section states the laws of the expectation `∫⁻ r, r ∂𝒟[f <$> mx]` of a scalar
+observation `f`, all but one of which place no measurable space on the observed type.
 -/
 
 public section
@@ -325,25 +325,26 @@ theorem evalDist_pure_apply_le_add_of_imp {m : Type → Type v} [Monad m]
       𝒟[(pure b : m Bool)] {true} + 𝒟[(pure c : m Bool)] {true} := by
   cases a <;> cases b <;> cases c <;> simp_all
 
-/-! ## Averages of a scalar observation
+/-!
+## Expectations of a scalar observation
 
-`∫⁻ r, r ∂𝒟[f <$> mx]` is the average of `f : α → ℝ≥0∞` over the successful outputs of `mx`.
-Pushing `f` through the computation before integrating means only `ENNReal` needs a measurable
-space: apart from `lintegral_id_evalDist_map`, which relates the average to an integral against
-`𝒟[mx]` and so needs a discrete measurable space on `α`, none of these statements constrains
-`α` with an instance.  Under `MeasureProgramLogic.toMAlgOrdered` this average is the quantitative
-weakest precondition `wp mx f`, whose laws in `VCVio.ProgramLogic.Unary.WP.Measure` are stated
-at a discrete measurable space on `α`. -/
+For `f : α → ℝ≥0∞`, `∫⁻ r, r ∂𝒟[f <$> mx]` is the expectation of `f` under the successful-output
+measure `𝒟[mx]`. It is not normalised by the success mass `𝒟[mx] Set.univ`: failure contributes
+zero, so for a constant observation `c` it is `c * 𝒟[mx] Set.univ`. Only `ℝ≥0∞` needs a
+measurable space in this form, so the laws below place none on `α`, except
+`lintegral_id_evalDist_map`, which identifies the expectation with `∫⁻ x, f x ∂𝒟[mx]` at a
+discrete measurable space on `α`.
+-/
 
-/-- Averaging a scalar observation is integrating it against the observed computation's
-measure, at any discrete measurable space on the output type. -/
+/-- The expectation of a scalar observation is its integral against the computation's
+successful-output measure, at any discrete measurable space on the output type. -/
 theorem lintegral_id_evalDist_map {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} [MeasurableSpace α]
     [DiscreteMeasurableSpace α] (mx : m α) (f : α → ENNReal) :
     ∫⁻ r, r ∂𝒟[f <$> mx] = ∫⁻ x, f x ∂𝒟[mx] :=
   lintegral_evalDist_map mx .of_discrete measurable_id
 
-/-- A uniform bound on a scalar observation bounds its average. -/
+/-- A pointwise bound on a scalar observation bounds its expectation. -/
 theorem lintegral_id_evalDist_map_le_of_le {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α)
     {f : α → ENNReal} {c : ENNReal} (hf : ∀ x, f x ≤ c) : ∫⁻ r, r ∂𝒟[f <$> mx] ≤ c := by
@@ -353,7 +354,7 @@ theorem lintegral_id_evalDist_map_le_of_le {m : Type → Type v} [Monad m] [Lawf
     _ = c * 𝒟[mx] Set.univ := lintegral_const c
     _ ≤ c := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
 
-/-- Averaging a scalar observation is monotone in the observation. -/
+/-- The expectation of a scalar observation is monotone in the observation. -/
 theorem lintegral_id_evalDist_map_mono {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α)
     {f g : α → ENNReal} (hfg : ∀ x, f x ≤ g x) :
@@ -362,7 +363,7 @@ theorem lintegral_id_evalDist_map_mono {m : Type → Type v} [Monad m] [LawfulMo
   rw [lintegral_id_evalDist_map, lintegral_id_evalDist_map]
   exact lintegral_mono hfg
 
-/-- Averaging a scalar observation is additive in the observation. -/
+/-- The expectation of a sum of scalar observations is the sum of their expectations. -/
 theorem lintegral_id_evalDist_map_add {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α)
     (f g : α → ENNReal) :
@@ -372,14 +373,15 @@ theorem lintegral_id_evalDist_map_add {m : Type → Type v} [Monad m] [LawfulMon
   rw [lintegral_id_evalDist_map, lintegral_id_evalDist_map, lintegral_id_evalDist_map,
     lintegral_add_left Measurable.of_discrete]
 
-/-- The constant-zero observation averages to zero. -/
+/-- The constant-zero observation has expectation zero. -/
+@[simp]
 theorem lintegral_id_evalDist_map_zero {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type} (mx : m α) :
     ∫⁻ r, r ∂𝒟[(fun _ ↦ (0 : ENNReal)) <$> mx] = 0 :=
   le_zero_iff.mp (lintegral_id_evalDist_map_le_of_le mx fun _ ↦ le_rfl)
 
-/-- **The tower law for averages.**  Averaging an observation of a bind averages, over the
-head's outputs, the average of that observation over the continuation. -/
+/-- The expectation of a scalar observation of a bind is the expectation, under the head's
+measure, of the observation's expectation under the continuation. -/
 theorem lintegral_id_evalDist_map_bind {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type} (mx : m α)
     (g : α → m β) (f : β → ENNReal) :
