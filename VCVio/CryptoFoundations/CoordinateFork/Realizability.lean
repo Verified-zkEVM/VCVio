@@ -81,27 +81,26 @@ prover's joint law is a different statement, and not one this file makes. -/
 omit [DecidableEq ι] [Fintype ι] [DecidableEq S] [Fintype S] [SampleableType (ι → S)] in
 /-- The verdict is `true` exactly as often as the verifier accepts. -/
 theorem prEvent_verdict (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y) (c : ι → S) :
-    Pr{b ← verdict V A c}[b] = Pr{y ← A c}[V c y] := by
+    Pr{let b ← verdict V A c}[b] = Pr{let y ← A c}[V c y] := by
   rw [verdict, prEvent_map]
 
 omit [DecidableEq ι] [Fintype ι] [DecidableEq S] [Fintype S] [SampleableType (ι → S)] in
 /-- A `ProbComp` carries full mass, which is the losslessness the coordinate marginals need. -/
-theorem prEvent_true_probComp {α : Type} (mx : ProbComp α) : Pr{_ ← mx}[True] = 1 := by
-  rw [prEvent_true_eq_evalDist_apply_univ]
-  exact measure_univ
+theorem prEvent_true_probComp {α : Type} (mx : ProbComp α) : Pr{let _ ← mx}[True] = 1 :=
+  OracleComp.prEvent_true_eq_one mx
 
 /-! ## The adversary's success probability -/
 
 /-- `ε_V(A)`: the probability that the verifier accepts the adversary's answer to a uniformly
 random challenge. -/
 @[expose] noncomputable def advSucc (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y) : ℝ≥0∞ :=
-  Pr{c ← $ᵗ (ι → S); y ← A c}[V c y]
+  Pr{let c ← $ᵗ (ι → S); let y ← A c}[V c y]
 
 omit [DecidableEq S] in
 /-- Unfolding the uniform challenge: `ε_V(A)` is the average over challenges of the adversary's
 per-challenge acceptance probability. This is the shape `acceptRatio` is stated in. -/
 theorem advSucc_eq_sum_div (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y) :
-    advSucc V A = (∑ c : ι → S, Pr{y ← A c}[V c y]) / Fintype.card (ι → S) := by
+    advSucc V A = (∑ c : ι → S, Pr{let y ← A c}[V c y]) / Fintype.card (ι → S) := by
   classical
   -- The statement mentions no measure on the challenge space, so the discrete structure the
   -- averaging step needs is introduced here rather than carried as a hypothesis.
@@ -119,7 +118,7 @@ omit [DecidableEq S] [SampleableType (ι → S)] in
 probability there. -/
 theorem prEvent_apply_acceptTable_indepTable (V : (ι → S) → Y → Bool)
     (A : (ι → S) → ProbComp Y) (c : ι → S) :
-    Pr{ρ ← acceptTable V (indepTable A)}[ρ c] = Pr{y ← A c}[V c y] := by
+    Pr{let ρ ← acceptTable V (indepTable A)}[ρ c] = Pr{let y ← A c}[V c y] := by
   simp only [acceptTable, indepTable]
   rw [prEvent_map]
   exact prEvent_coord_mPi A c (fun y => V c y) fun c' _ => prEvent_true_probComp (A c')
@@ -143,7 +142,7 @@ challenge, not `ℓ(k-1)+1` times. -/
 theorem sub_div_le_prEvent_goodTranscripts_indepTable [Nonempty S] [DecidableEq Y]
     (V : (ι → S) → Y → Bool) (k : ℕ) (A : (ι → S) → ProbComp Y) :
     advSucc V A - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr{r ← coordForkT V k (indepTable A)}[GoodTranscripts V k r] := by
+      ≤ Pr{let r ← coordForkT V k (indepTable A)}[GoodTranscripts V k r] := by
   rw [← acceptRatio_acceptTable_indepTable V A]
   exact sub_div_le_prEvent_goodTranscripts_coordForkT V k (indepTable A)
 
@@ -154,8 +153,8 @@ omit [DecidableEq S] [SampleableType (ι → S)] in
 construction, not about a rewound prover. -/
 theorem prEvent_eq_acceptTable_indepTable (V : (ι → S) → Y → Bool) (A : (ι → S) → ProbComp Y)
     (ρ : (ι → S) → Bool) :
-    Pr{ρ' ← acceptTable V (indepTable A)}[ρ' = ρ]
-      = ∏ c : ι → S, Pr{b ← verdict V A c}[b = ρ c] := by
+    Pr{let ρ' ← acceptTable V (indepTable A)}[ρ' = ρ]
+      = ∏ c : ι → S, Pr{let b ← verdict V A c}[b = ρ c] := by
   simp only [acceptTable, indepTable]
   rw [prEvent_map,
     prEvent_congr (Fintype.mPi A) (fun τ : (ι → S) → Y => (fun c => V c (τ c)) = ρ)

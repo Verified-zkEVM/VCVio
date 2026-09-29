@@ -208,7 +208,7 @@ omit [SampleableType (ι → S)] in
 /-- On a fixed challenge the loop succeeds with certainty or not at all, according to whether that
 challenge is good. Which values the coordinate resampling happened to draw does not matter. -/
 theorem prEvent_isSome_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ : ι → S) :
-    Pr{r ← coordForkOpAt k ρ c₀}[r.1.isSome] = if c₀ ∈ goodSet k ρ then 1 else 0 := by
+    Pr{let r ← coordForkOpAt k ρ c₀}[r.1.isSome] = if c₀ ∈ goodSet k ρ then 1 else 0 := by
   classical
   by_cases hacc : ρ c₀
   · rw [coordForkOpAt, ite_eq_left hacc]
@@ -237,7 +237,7 @@ theorem prEvent_isSome_coordForkOpAt (k : ℕ) (ρ : (ι → S) → Bool) (c₀ 
 deterministic table core: on `goodSet k ρ`, the challenges whose every column holds at least `k`
 accepting values. -/
 theorem prEvent_isSome_coordForkOp (k : ℕ) (ρ : (ι → S) → Bool) :
-    Pr{r ← coordForkOp k ρ}[r.1.isSome]
+    Pr{let r ← coordForkOp k ρ}[r.1.isSome]
       = ((goodSet k ρ).card : ℝ≥0∞) / Fintype.card (ι → S) := by
   classical
   let _ : MeasurableSpace (ι → S) := ⊤
@@ -256,7 +256,7 @@ The output is guaranteed by `coordForkOp_success` and the lookup count by
 theorem sub_div_le_prEvent_isSome_coordForkOp [Nonempty S] (k : ℕ) (ρ : (ι → S) → Bool) :
     ((Finset.univ.filter fun c : ι → S => ρ c).card : ℝ≥0∞) / Fintype.card (ι → S)
         - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr{r ← coordForkOp k ρ}[r.1.isSome] := by
+      ≤ Pr{let r ← coordForkOp k ρ}[r.1.isSome] := by
   rw [prEvent_isSome_coordForkOp]
   exact CoordinateWise.sub_div_le_div_card_filter (accept := fun c => ρ c = true) k
 
@@ -665,12 +665,12 @@ omit [DecidableEq Y] in
 as the acceptance-table loop's is, averaged over the response table. -/
 theorem prEvent_isSome_coordForkOpT (V : (ι → S) → Y → Bool) (k : ℕ)
     (D : ProbComp ((ι → S) → Y)) :
-    Pr{r ← coordForkOpT V k D}[r.1.isSome] = forkSuccOf k (acceptTable V D) := by
+    Pr{let r ← coordForkOpT V k D}[r.1.isSome] = forkSuccOf k (acceptTable V D) := by
   classical
   let _ : MeasurableSpace ((ι → S) → Y) := ⊤
   let _ : DiscreteMeasurableSpace ((ι → S) → Y) := ⟨fun _ => trivial⟩
   have hinner : ∀ τ : (ι → S) → Y,
-      Pr{r ← (coordForkOp k (fun c => V c (τ c)) >>= fun r =>
+      Pr{let r ← (coordForkOp k (fun c => V c (τ c)) >>= fun r =>
           pure (r.1.map fun X => (τ, X), r.2))}[r.1.isSome]
         = ((goodSet k (fun c => V c (τ c))).card : ℝ≥0∞) / Fintype.card (ι → S) := by
     intro τ
@@ -690,8 +690,8 @@ theorem prEvent_isSome_coordForkOpT (V : (ι → S) → Y → Bool) (k : ℕ)
 /-- Succeeding and returning good transcripts are the same event. -/
 theorem prEvent_goodTranscripts_coordForkOpT (V : (ι → S) → Y → Bool) (k : ℕ)
     (D : ProbComp ((ι → S) → Y)) :
-    Pr{r ← coordForkOpT V k D}[GoodTranscripts V k r.1]
-      = Pr{r ← coordForkOpT V k D}[r.1.isSome] := by
+    Pr{let r ← coordForkOpT V k D}[GoodTranscripts V k r.1]
+      = Pr{let r ← coordForkOpT V k D}[r.1.isSome] := by
   refine le_antisymm (prEvent_mono_of_support _ _ _ fun r _ hr => ?_)
     (prEvent_mono_of_support _ _ _ fun r hr hs => ?_)
   · obtain ⟨τ, X, hEq, -, -⟩ := hr
@@ -707,7 +707,7 @@ probability at least `ε - ℓ(k-1)/N`. -/
 theorem sub_div_le_prEvent_goodTranscripts_coordForkOpT [Nonempty S] (V : (ι → S) → Y → Bool)
     (k : ℕ) (D : ProbComp ((ι → S) → Y)) :
     acceptRatio (acceptTable V D) - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr{r ← coordForkOpT V k D}[GoodTranscripts V k r.1] := by
+      ≤ Pr{let r ← coordForkOpT V k D}[GoodTranscripts V k r.1] := by
   rw [prEvent_goodTranscripts_coordForkOpT, prEvent_isSome_coordForkOpT]
   exact sub_div_le_lintegral_card_goodSet (acceptTable V D) k
 
