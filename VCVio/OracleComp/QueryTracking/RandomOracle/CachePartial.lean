@@ -138,4 +138,38 @@ theorem le_snd_of_mem_support_run_unifFwdImpl_add_withCaching (so : QueryImpl sp
       (QueryImpl.PreservesInv.withCaching_le so cache))
     oa cache le_rfl z hz
 
+section Sum
+
+variable {ι₁ ι₂ : Type} [DecidableEq ι₁] [DecidableEq ι₂] {spec₁ : OracleSpec ι₁}
+  {spec₂ : OracleSpec ι₂} [∀ t, SampleableType ((spec₁ + spec₂).Range t)]
+
+/-- The final cache of a random-oracle run over `spec₁ + spec₂`, restricted to `spec₁`, replays a
+`spec₁`-only program issued through its query capability. -/
+theorem simulateQ_toPartialImpl_fst_of_mem_support_run_romImpl (oa : OracleComp spec₁ α)
+    {cache : (spec₁ + spec₂).QueryCache} {z : α × (spec₁ + spec₂).QueryCache}
+    (hz : z ∈ support ((simulateQ (spec₁ + spec₂).romImpl (simulateQ (HasQuery.toQueryImpl
+      (spec := spec₁) (m := OracleComp (unifSpec + (spec₁ + spec₂)))) oa)).run cache)) :
+    simulateQ z.2.fst.toPartialImpl oa = some z.1 := by
+  induction oa using OracleComp.inductionOn generalizing cache with
+  | pure x =>
+    rw [simulateQ_pure, simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+    exact hz ▸ rfl
+  | query_bind t k ih =>
+    rw [simulateQ_bind, simulateQ_spec_query, simulateQ_bind, StateT.run_bind,
+      mem_support_bind_iff] at hz
+    obtain ⟨⟨u, c₁⟩, h₁, h₂⟩ := hz
+    rw [show (HasQuery.toQueryImpl (spec := spec₁)
+        (m := OracleComp (unifSpec + (spec₁ + spec₂))) t) =
+        liftM ((unifSpec + (spec₁ + spec₂)).query (.inr (.inl t))) from rfl,
+      simulateQ_spec_query] at h₁
+    have hc₁ : c₁ (.inl t) = some u :=
+      QueryImpl.snd_apply_of_mem_support_run_withCaching (t := .inl t)
+        (uniformSampleImpl (spec := spec₁ + spec₂)) (z := (u, c₁)) (cache := cache) h₁
+    have hle := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl _ h₂
+    rw [simulateQ_bind, simulateQ_spec_query, QueryCache.toPartialImpl_apply,
+      QueryCache.fst_apply, hle hc₁]
+    exact ih u h₂
+
+end Sum
+
 end OracleComp

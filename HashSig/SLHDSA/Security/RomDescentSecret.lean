@@ -17,7 +17,9 @@ core) core.Y`, read off the cache through the readers of `HashSig.SLHDSA.Securit
 At the oracle-backed provider `oracleSecret core e pkSeed skSeed` of
 `HashSig.SLHDSA.Security.Target`, every secret the key holder uses is itself a cache entry, the
 answer of the `F` query of the secret seed at the secret's `PRF` address, so a *settled* secret is
-one some party has queried.  Messages are the internal messages of FIPS 205 Algorithms 19 and 20.
+one some party has queried.  The digest events read the internal messages of FIPS 205
+Algorithms 19 and 20, with no context wrapper, so they apply to the outcomes of the oracle-backed
+run of `HashSig.SLHDSA.Security.RomSchemeRun`, which signs and verifies internal messages.
 
 **Same-address target collision** (`TargetCollision`).  Two cache entries at one tweakable-hash
 key with equal answers and different inputs, one of them an honest entry (`HonestEntry`).  The two
@@ -44,9 +46,12 @@ verifier-side facts that draw no secret, `exists_xmssPkFromSigM_top_of_recoverFr
 * Everything here is deterministic: no probability is bounded and no query budget appears.
 * The composition of these case analyses into a statement about a run of an experiment is not in
   this module.
-* Whether a settled secret was settled by the key holder or first by the forger is not recorded:
-  a forger query that names the secret seed settles the secret it would have derived, and that
-  event is not one of the three here.
+* A settled secret is settled by whichever party queried it first.  A forger query that names
+  the secret seed settles the secret itself, and `HiddenHit` can then fire on it, so a bound on
+  `HiddenHit` must charge the queries that name the secret seed.  The cache records no
+  provenance, so that charge is read off the forger's query log, not off the cache.
+* `ItsrCovered` does not exclude the forger's point being a logged message and randomizer;
+  freshness of the forged message for the signing log, as EUF-CMA requires, excludes it.
 * Nothing here is quantum.
 
 ## Labels

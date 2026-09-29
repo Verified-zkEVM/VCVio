@@ -335,6 +335,14 @@ protected def inr (cache : QueryCache spec₂) : QueryCache (spec₁ + spec₂) 
 @[simp] lemma snd_apply (cache : QueryCache (spec₁ + spec₂)) (t : ι₂) :
     cache.snd t = cache (.inr t) := rfl
 
+/-- Projecting onto the first summand is monotone. -/
+lemma fst_mono {c c' : QueryCache (spec₁ + spec₂)} (h : c ≤ c') : c.fst ≤ c'.fst :=
+  fun _ _ hu => h hu
+
+/-- Projecting onto the second summand is monotone. -/
+lemma snd_mono {c c' : QueryCache (spec₁ + spec₂)} (h : c ≤ c') : c.snd ≤ c'.snd :=
+  fun _ _ hu => h hu
+
 @[simp] lemma inl_apply_inl (cache : QueryCache spec₁) (t : ι₁) :
     (cache.inl : QueryCache (spec₁ + spec₂)) (.inl t) = cache t := rfl
 
