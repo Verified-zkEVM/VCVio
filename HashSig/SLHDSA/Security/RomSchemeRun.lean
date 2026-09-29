@@ -14,11 +14,10 @@ public import VCVio.CryptoFoundations.SignatureAlg.Transcript
 `romSchemeRun` runs the unforgeability experiment of `HashSig.SLHDSA.Security.Target`'s
 `romScheme`, returning its transcript (`SignatureAlg.unforgeableTranscriptExperiment`) under one
 lazy random oracle for every hash, `PRF` and `PRF_msg` query, from the empty cache, together with
-the final cache.  The transcript is read as a `RomOutcome` (`RomOutcome.ofTranscript`), the type
-the events of `HashSig.SLHDSA.Security.RomDescentSecret` are stated over.  The success bit of the
-experiment is `RomOutcome.wins` of the transcript (`wins_ofTranscript`), so the forging advantage
-in the random-oracle runtime is the probability that the run's transcript wins
-(`unforgeableAdvantage_romScheme_eq`).
+the final cache.  The transcript is a `RomOutcome`, the type the events of
+`HashSig.SLHDSA.Security.RomDescentSecret` are stated over, and the success bit of the experiment
+is its `wins`, so the forging advantage in the random-oracle runtime is the probability that the
+run's transcript wins (`unforgeableAdvantage_romScheme_eq`).
 
 `settled_of_mem_support_romSchemeRun` reads every honest computation of the run off the public-hash
 part of the final cache (`QueryCache.fst`): key generation at the oracle-backed provider settles
@@ -37,8 +36,7 @@ lemmas of `HashSig.SLHDSA.Security.CacheSecret`.
 
 ## Labels
 
-*The run*: `RomOutcome.ofTranscript`, `wins_ofTranscript`, `romSchemeRun`,
-`unforgeableAdvantage_romScheme_eq`.
+*The run*: `romSchemeRun`, `unforgeableAdvantage_romScheme_eq`.
 
 *Runs under the lazy oracle* (private): `simulateQ_fst_of_mem_support_run_romI`.
 
@@ -53,20 +51,6 @@ open OracleComp OracleSpec SignatureAlg
 
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
-/-- A transcript of the unforgeability experiment of an SLH-DSA scheme, read as a `RomOutcome`. -/
-@[expose] def RomOutcome.ofTranscript
-    (o : UnforgeableTranscript (List Byte) (PublicKeyCore core) (SecretKeyCore core)
-      (GeneralScheme.SignatureCore vp core)) : RomOutcome vp core :=
-  ⟨o.pk, o.sk, o.log, o.msg, o.sig, o.verified⟩
-
-/-- The success bit of a transcript is that of the `RomOutcome` it is read as. -/
-theorem wins_ofTranscript
-    (o : UnforgeableTranscript (List Byte) (PublicKeyCore core) (SecretKeyCore core)
-      (GeneralScheme.SignatureCore vp core)) :
-    (RomOutcome.ofTranscript core o).wins = o.wins := by
-  rw [Bool.eq_iff_iff, RomOutcome.wins_eq_true_iff, UnforgeableTranscript.wins_eq_true_iff]
-  rfl
-
 variable [SampleableType core.SkSeed] [SampleableType core.SkPrf] [DecidableEq core.Y]
   [SampleableType core.Y] [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed]
   [DecidableEq core.AdrsKey] [DecidableEq core.SkPrf]
@@ -79,7 +63,7 @@ cache. -/
     (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist)) :
     ProbComp (RomOutcome vp core × (hashSpec core).QueryCache) :=
   (simulateQ (hashSpec core).romImpl
-    (RomOutcome.ofTranscript core <$> unforgeableTranscriptExperiment adv)).run ∅
+    (unforgeableTranscriptExperiment adv)).run ∅
 
 /-- The forging advantage against `romScheme` in the random-oracle runtime is the probability that
 the transcript of `romSchemeRun` wins. -/
@@ -92,7 +76,7 @@ theorem unforgeableAdvantage_romScheme_eq (e : core.SkSeed ≃ core.Y)
     ← map_wins_unforgeableTranscriptExperiment, romSchemeRun]
   congr 1
   simp only [simulateQ_map, StateT.run'_eq, StateT.run_map, Functor.map_map, bind_pure_comp,
-    wins_ofTranscript, Bool.decide_eq_true]
+    Bool.decide_eq_true]
 
 /-! ## Runs under the lazy oracle -/
 
@@ -130,11 +114,10 @@ theorem settled_of_mem_support_romSchemeRun (e : core.SkSeed ≃ core.Y)
       (m := OracleComp (publicHashSpec core)) vp core z.1.msg z.1.sig z.1.pk) =
         some z.1.verified := by
   unfold romSchemeRun at hz
-  rw [simulateQ_map, StateT.run_map, support_map] at hz
-  obtain ⟨⟨w, c⟩, hw, rfl⟩ := hz
+  obtain ⟨w, c⟩ := z
   obtain ⟨s₁, s₂, hk, hf, hv⟩ :=
     exists_mem_support_run_of_mem_support_run_unforgeableTranscriptExperiment
-      (hashSpec core).romImpl adv hw
+      (hashSpec core).romImpl adv hz
   have h₁₂ : s₁ ≤ s₂ := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl _ hf
   have h₂c : s₂ ≤ c := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl _ hv
   -- key generation
@@ -149,7 +132,6 @@ theorem settled_of_mem_support_romSchemeRun (e : core.SkSeed ≃ core.Y)
   rw [keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ] at hroot
   have hroot := simulateQ_fst_of_mem_support_run_romI core _ hroot
   obtain ⟨hpk, hsk⟩ := Prod.mk.inj hks
-  simp only [RomOutcome.ofTranscript]
   rw [hpk, hsk]
   refine ⟨rfl, rfl, QueryCache.simulateQ_toPartialImpl_mono
     (QueryCache.fst_mono (h₁₂.trans h₂c)) _ hroot, fun x hx => ?_, ?_⟩
@@ -157,7 +139,7 @@ theorem settled_of_mem_support_romSchemeRun (e : core.SkSeed ≃ core.Y)
     obtain ⟨t₁, t₂, ht₂, hsign⟩ := exists_mem_support_run_sign_of_mem_log
       (hashSpec core).romImpl
       (fun ob _ _ hz =>
-        le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl ob hz) adv hw hx
+        le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl ob hz) adv hz hx
     rw [romScheme_sign] at hsign
     obtain ⟨addrnd, -, hsign⟩ :=
       roSim.exists_mem_support_run_of_mem_support_run_liftM_bind _ _ _ hsign

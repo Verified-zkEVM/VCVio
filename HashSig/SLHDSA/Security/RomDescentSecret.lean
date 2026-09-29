@@ -6,14 +6,17 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Security.CacheSecret
-public import HashSig.SLHDSA.Security.RomDescent
+public import HashSig.SLHDSA.Security.HmsgWitnesses
+public import HashSig.SLHDSA.WotsInjectivity
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Collision
 
 /-!
 # The random-oracle bad events at a secret provider, and the descent from the cached root
 
-The events and case analyses of `HashSig.SLHDSA.Security.RomDescent`, restated for key holders
-whose WOTS+ and FORS secrets come from a provider `secret : Adrs → OracleComp (publicHashSpec
-core) core.Y`, read off the cache through the readers of `HashSig.SLHDSA.Security.CacheSecret`.
+The random-oracle bad events of a forgery, and the case analyses of the descent from the cached
+root, for key holders whose WOTS+ and FORS secrets come from a provider `secret : Adrs →
+OracleComp (publicHashSpec core) core.Y`, read off the cache through the readers of
+`HashSig.SLHDSA.Security.CacheSecret`.
 At the oracle-backed provider `oracleSecret core e pkSeed skSeed` of
 `HashSig.SLHDSA.Security.Target`, every secret the key holder uses is itself a cache entry, the
 answer of the `F` query of the secret seed at the secret's `PRF` address, so a *settled* secret is
@@ -36,10 +39,11 @@ or the forgery carries, at a FORS coordinate no logged signature opened, the set
 selects is selected by the digest of some logged signature.
 
 The case analyses `xmssPkFromSig?_cases`, `wotsChain_cases`, `wotsLeaf_cases`, `xmssLayer_cases`
-and `fors_cases` are those of `HashSig.SLHDSA.Security.RomDescent` over the provider.  The
-verifier-side facts that draw no secret, `exists_xmssPkFromSigM_top_of_recoverFromPositionM`,
-`recoverFromPositionM_pos_congr`, `forgerLayers_of_recoverFromPositionM`, `forgerMessage?`,
-`childTreeAdrs` and `forsInstanceAdrs`, are used from that module unchanged.
+and `fors_cases` split a settled verification step into these events or the next step of the
+descent.  The positional facts draw no secret: `childTreeAdrs` and `forsInstanceAdrs` name the
+tree and FORS instance a hypertree position signs, `forgerMessage?` is the message the verification
+replay presents to each layer, and `forgerLayers_of_recoverFromPositionM` reads every layer of a
+settled Algorithm 13 run off the cache.
 
 ## Scope
 
@@ -56,7 +60,11 @@ verifier-side facts that draw no secret, `exists_xmssPkFromSigM_top_of_recoverFr
 
 ## Labels
 
-Nineteen declarations, none private.
+Twenty-six declarations, none private.
+
+*Positions and the verifier's replay*: `childTreeAdrs`, `childTreeAdrs_next`, `forsInstanceAdrs`,
+`forsInstanceAdrs_initial`, `forgerMessage?`, `recoverFromPositionM_pos_congr`,
+`forgerLayers_of_recoverFromPositionM`.
 
 *Honest entries and the target collision*: `HonestEntry`, `HonestEntry.mono`, `TargetCollision`.
 
@@ -79,11 +87,117 @@ Nineteen declarations, none private.
 
 public section
 
-namespace SLHDSA.Security.WithSecret
+namespace SLHDSA.Security
 
 open OracleComp OracleSpec GeneralHypertree SignatureAlg CanonicalGames
 
 variable {vp : ValidatedParams} {core : CorePrimitives vp.params}
+
+/-! ## Positions and the verifier's replay
+
+These read nothing a key holder computes: the child tree and FORS instance a hypertree position
+signs, and the message the verification replay presents to each layer. -/
+
+/-- The address of the XMSS tree one layer below `pos` whose root the leaf at `pos` signs
+(`LayerPosition.next` in reverse).  Meaningful at `0 < pos.layer`. -/
+@[expose] def childTreeAdrs (pos : LayerPosition vp) : Adrs :=
+  layerAdrs (pos.layer.val - 1) (pos.tree.val * 2 ^ vp.params.hp + pos.leaf.val)
+
+/-- The child tree of the next position is the current tree. -/
+theorem childTreeAdrs_next (pos : LayerPosition vp) (h : pos.layer.val + 1 < vp.params.d) :
+    childTreeAdrs (pos.next h) = pos.toAdrs := by
+  simp only [childTreeAdrs, LayerPosition.next_layer_val, Nat.add_sub_cancel,
+    LayerPosition.next_tree_val, LayerPosition.next_leaf_val, Nat.div_add_mod']
+  rfl
+
+/-- The FORS instance address the leaf at a layer-zero position signs for
+(`DigestParts.forsAdrs` at `LayerPosition.initial`). -/
+@[expose] def forsInstanceAdrs (pos : LayerPosition vp) : Adrs :=
+  ((Adrs.zero.setTreeAddress pos.tree.val).setTypeAndClear .forsTree).setKeyPairAddress
+    pos.leaf.val
+
+/-- The FORS instance address of the initial position is the digest's. -/
+theorem forsInstanceAdrs_initial (parts : DigestParts vp.params) :
+    forsInstanceAdrs (LayerPosition.initial vp parts) = parts.forsAdrs := by rfl
+
+/-- The message the verification replay presents to hypertree layer `j`, read off the cache:
+the FORS public key at layer `0`, then the root each XMSS signature recovers. -/
+@[expose]
+def forgerMessage? (c : PublicHash.Cache core) (pk : core.PkSeed) (parts : DigestParts vp.params)
+    (sig : GeneralHypertree.Signature vp core) (forsPk : core.Y) :
+    (j : ℕ) → j < vp.params.d → Option core.Y
+  | 0, _ => some forsPk
+  | j + 1, hj => (forgerMessage? c pk parts sig forsPk j (by omega)).bind fun m =>
+      xmssPkFromSig? core c (LayerPosition.atLayer vp parts ⟨j, by omega⟩).leaf.val sig[j] m pk
+        (LayerPosition.atLayer vp parts ⟨j, by omega⟩).toAdrs
+
+/-- Algorithm 13 at two equal positions, with the layer-count proof transported along the
+equality: the proof depends on the position, so the position cannot be rewritten in place. -/
+theorem recoverFromPositionM_pos_congr (c : PublicHash.Cache core) (pk : core.PkSeed)
+    {pos pos' : LayerPosition vp} (hpos : pos = pos') (layers : ℕ)
+    (h : pos.layer.val + layers = vp.params.d) (msg : core.Y)
+    (sigs : Vector (XmssSig vp.params core) layers) :
+    simulateQ c.toPartialImpl (recoverFromPositionM vp core pk pos layers h msg sigs) =
+      simulateQ c.toPartialImpl
+        (recoverFromPositionM vp core pk pos' layers (hpos ▸ h) msg sigs) := by
+  subst hpos; rfl
+
+/-- From a settled Algorithm 13 run started at the layer-`n` position with `layers` layers left,
+every layer `j ≥ n` has a settled forger message (`forgerMessage?`) and a settled XMSS recovery on
+the forgery's layer-`j` signature at the layer-`j` position, whose value is the run's result at
+the final layer. -/
+theorem forgerLayers_of_recoverFromPositionM (c : PublicHash.Cache core) (pk : core.PkSeed)
+    (parts : DigestParts vp.params) (full : Signature vp core) (forsPk : core.Y) :
+    ∀ (layers n : ℕ) (hnl : n + layers = vp.params.d) (hl : 0 < layers) (msg : core.Y)
+      (sigs : Vector (XmssSig vp.params core) layers) {root : core.Y},
+      forgerMessage? c pk parts full forsPk n (by omega) = some msg →
+      (∀ k (hk : k < layers), sigs[k] = full[n + k]'(by omega)) →
+      simulateQ c.toPartialImpl (recoverFromPositionM vp core pk
+        (LayerPosition.atLayer vp parts ⟨n, by omega⟩) layers (by simp; omega) msg sigs) =
+          some root →
+      ∀ j : Fin vp.params.d, n ≤ j.val → ∃ m r,
+        forgerMessage? c pk parts full forsPk j.val j.isLt = some m ∧
+        xmssPkFromSig? core c (LayerPosition.atLayer vp parts j).leaf.val full[j] m pk
+          (LayerPosition.atLayer vp parts j).toAdrs = some r ∧
+        (j.val + 1 = vp.params.d → r = root)
+  | 0, _, _, hl, _, _, _, _, _, _, _, _ => absurd hl (Nat.lt_irrefl 0)
+  | 1, n, hnl, _, msg, sigs, root, hmsg, hsigs, hrec, j, hj => by
+    rw [simulateQ_toPartialImpl_recoverFromPositionM_one_eq_some_iff] at hrec
+    obtain ⟨jv, hjlt⟩ := j
+    obtain rfl : jv = n := by simp at hj; omega
+    refine ⟨msg, root, hmsg, ?_, fun _ => rfl⟩
+    have h0 := hsigs 0 Nat.zero_lt_one
+    simp only [Nat.add_zero] at h0
+    rw [Fin.getElem_fin, ← h0]
+    exact hrec
+  | k + 2, n, hnl, _, msg, sigs, root, hmsg, hsigs, hrec, j, hj => by
+    obtain ⟨r, hx, hrest⟩ :=
+      (simulateQ_toPartialImpl_recoverFromPositionM_add_two_eq_some_iff core c pk _ k _ msg
+        sigs).mp hrec
+    have h0 := hsigs 0 (Nat.zero_lt_succ _)
+    simp only [Nat.add_zero] at h0
+    rcases Nat.eq_or_lt_of_le hj with hjn | hjn
+    · obtain ⟨jv, hjlt⟩ := j
+      simp only at hjn
+      subst hjn
+      refine ⟨msg, r, hmsg, ?_, fun h => by simp only at h; omega⟩
+      rw [Fin.getElem_fin, ← h0]
+      exact hx
+    have hmsg' : forgerMessage? c pk parts full forsPk (n + 1) (by omega) = some r := by
+      change (forgerMessage? c pk parts full forsPk n _).bind _ = some r
+      rw [hmsg, Option.bind_some, ← h0]
+      exact hx
+    have hsigs' : ∀ k' (hk' : k' < k + 1), sigs.tail[k'] = full[n + 1 + k']'(by omega) :=
+      fun k' hk' => by simpa [Nat.add_assoc, Nat.add_comm 1 k'] using hsigs (k' + 1) (by omega)
+    have hrest' : simulateQ c.toPartialImpl (recoverFromPositionM vp core pk
+        (LayerPosition.atLayer vp parts ⟨n + 1, by omega⟩) (k + 1) (by simp; omega) r
+          sigs.tail) = some root := by
+      have hnext := LayerPosition.atLayer_succ_eq_next vp parts ⟨n, by omega⟩ (by simp; omega)
+      simp only at hnext
+      rw [recoverFromPositionM_pos_congr c pk hnext]
+      exact hrest
+    exact forgerLayers_of_recoverFromPositionM c pk parts full forsPk (k + 1) (n + 1) (by omega)
+      (Nat.succ_pos k) r sigs.tail hmsg' hsigs' hrest' j hjn
 
 /-! ## Honest entries and the target collision -/
 
@@ -448,4 +562,4 @@ theorem fors_cases (o : RomOutcome vp core) (c : PublicHash.Cache core)
 
 end Descent
 
-end SLHDSA.Security.WithSecret
+end SLHDSA.Security

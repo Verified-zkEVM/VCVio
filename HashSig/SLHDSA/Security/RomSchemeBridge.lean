@@ -19,9 +19,9 @@ signing log (`bad_event_of_wins_romSchemeRun`).  The provider and the seed are f
 not chosen by the caller.
 
 The descent runs top-down from the cached public root: key generation settles the honest root of
-the top tree at the value the forgery's verification recovers there, `WithSecret.xmssLayer_cases`
+the top tree at the value the forgery's verification recovers there, `xmssLayer_cases`
 moves the descent one layer down for as long as the used leaf's honest message is the one the
-verification presents, and `WithSecret.fors_cases` closes it at layer `0`.  Two facts feed it:
+verification presents, and `fors_cases` closes it at layer `0`.  Two facts feed it:
 `exists_xmssSignWithSecret_eq_some_of_signFromPositionWithSecret` reads the honest per-layer
 signing walk (FIPS 205 Algorithm 12) off the cache, and
 `exists_honestMessage?_eq_some_of_usedLeaf_romSchemeRun` settles the honest message at every leaf
@@ -109,7 +109,7 @@ theorem exists_xmssSignWithSecret_eq_some_of_signFromPositionWithSecret
           have hnext := LayerPosition.atLayer_succ_eq_next vp parts ⟨n, by omega⟩
             (by simp; omega)
           simp only at hnext
-          rw [WithSecret.signFromPositionWithSecret_pos_congr secret c pk false hnext]
+          rw [signFromPositionWithSecret_pos_congr secret c pk false hnext]
           exact hrest
         exact ih (n + 1) (by omega) (Nat.succ_pos k) root hrest' j hjn
 
@@ -131,8 +131,8 @@ theorem exists_honestMessage?_eq_some_of_usedLeaf_romSchemeRun (e : core.SkSeed 
     (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist))
     {z : RomOutcome vp core × (hashSpec core).QueryCache}
     (hz : z ∈ support (romSchemeRun core e optRand pkSeedDist adv))
-    (j : Fin vp.params.d) (pos : LayerPosition vp) (hused : WithSecret.UsedLeaf z.1 z.2.fst j pos) :
-    ∃ m, WithSecret.honestMessage? z.2.fst (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed)
+    (j : Fin vp.params.d) (pos : LayerPosition vp) (hused : UsedLeaf z.1 z.2.fst j pos) :
+    ∃ m, honestMessage? z.2.fst (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed)
       z.1.pk.pkSeed pos = some m := by
   obtain ⟨x, hx, digest, hd, rfl⟩ := hused
   obtain ⟨-, -, -, hlog, -⟩ := settled_of_mem_support_romSchemeRun core e optRand pkSeedDist adv hz
@@ -141,7 +141,7 @@ theorem exists_honestMessage?_eq_some_of_usedLeaf_romSchemeRun (e : core.SkSeed 
       (hlog x hx)
   obtain rfl : digest = digest' := Option.some.inj (hd.symm.trans hd')
   set parts := splitDigest vp.params digest
-  unfold WithSecret.honestMessage?
+  unfold honestMessage?
   split_ifs with h0
   · obtain rfl : j = ⟨0, vp.valid.d_pos⟩ := Fin.ext (by simpa using h0)
     rw [LayerPosition.atLayer_zero_eq_initial, forsInstanceAdrs_initial]
@@ -172,17 +172,17 @@ theorem bad_event_of_wins_romSchemeRun (laws : core.ByteLaws) (e : core.SkSeed �
     (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist))
     {z : RomOutcome vp core × (hashSpec core).QueryCache}
     (hz : z ∈ support (romSchemeRun core e optRand pkSeedDist adv)) (hw : z.1.wins = true) :
-    (WithSecret.TargetCollision (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1.pk.pkSeed
+    (TargetCollision (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1.pk.pkSeed
         z.2.fst ∧ z.1.msg ∉ z.1.log.map (fun e => e.1)) ∨
-      (WithSecret.HiddenHit (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1 z.2.fst ∧
+      (HiddenHit (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1 z.2.fst ∧
         z.1.msg ∉ z.1.log.map (fun e => e.1)) ∨
-      (WithSecret.ItsrCovered z.1 z.2.fst ∧ z.1.msg ∉ z.1.log.map (fun e => e.1)) := by
-  obtain ⟨hfresh, hv⟩ := (RomOutcome.wins_eq_true_iff z.1).mp hw
+      (ItsrCovered z.1 z.2.fst ∧ z.1.msg ∉ z.1.log.map (fun e => e.1)) := by
+  obtain ⟨hfresh, hv⟩ := (UnforgeableTranscript.wins_eq_true_iff z.1).mp hw
   set secret := oracleSecret core e (m := OracleComp (publicHashSpec core)) z.1.pk.pkSeed
     z.1.sk.skSeed
   set c := z.2.fst
-  suffices h : WithSecret.TargetCollision secret z.1.pk.pkSeed c ∨
-      WithSecret.HiddenHit secret z.1 c ∨ WithSecret.ItsrCovered z.1 c by
+  suffices h : TargetCollision secret z.1.pk.pkSeed c ∨
+      HiddenHit secret z.1 c ∨ ItsrCovered z.1 c by
     exact h.imp (⟨·, hfresh⟩) (Or.imp (⟨·, hfresh⟩) (⟨·, hfresh⟩))
   obtain ⟨-, -, hroot, -, hver⟩ := settled_of_mem_support_romSchemeRun core e optRand pkSeedDist
     adv hz
@@ -199,21 +199,21 @@ theorem bad_event_of_wins_romSchemeRun (laws : core.ByteLaws) (e : core.SkSeed �
         z.1.pk.pkSeed (LayerPosition.atLayer vp parts j).toAdrs = some r →
       xmssRootWithSecret? core c secret z.1.pk.pkSeed (LayerPosition.atLayer vp parts j).toAdrs =
         some r →
-      WithSecret.TargetCollision secret z.1.pk.pkSeed c ∨ WithSecret.HiddenHit secret z.1 c ∨
-        WithSecret.honestMessage? c secret z.1.pk.pkSeed (LayerPosition.atLayer vp parts j) =
+      TargetCollision secret z.1.pk.pkSeed c ∨ HiddenHit secret z.1 c ∨
+        honestMessage? c secret z.1.pk.pkSeed (LayerPosition.atLayer vp parts j) =
           some m := by
     intro j m r hm hf hh
-    exact (WithSecret.xmssLayer_cases secret laws z.1 c j _ m ⟨digest, forsPk, hd, hfors, rfl, hm⟩
+    exact (xmssLayer_cases secret laws z.1 c j _ m ⟨digest, forsPk, hd, hfors, rfl, hm⟩
       hf hh (exists_honestMessage?_eq_some_of_usedLeaf_romSchemeRun e optRand pkSeedDist adv hz j
         _)).imp id (Or.imp id And.right)
-  have bind3 : ∀ {P Q : Prop}, (WithSecret.TargetCollision secret z.1.pk.pkSeed c ∨
-        WithSecret.HiddenHit secret z.1 c ∨ P) →
-      (P → WithSecret.TargetCollision secret z.1.pk.pkSeed c ∨
-        WithSecret.HiddenHit secret z.1 c ∨ Q) →
-      WithSecret.TargetCollision secret z.1.pk.pkSeed c ∨ WithSecret.HiddenHit secret z.1 c ∨ Q :=
+  have bind3 : ∀ {P Q : Prop}, (TargetCollision secret z.1.pk.pkSeed c ∨
+        HiddenHit secret z.1 c ∨ P) →
+      (P → TargetCollision secret z.1.pk.pkSeed c ∨
+        HiddenHit secret z.1 c ∨ Q) →
+      TargetCollision secret z.1.pk.pkSeed c ∨ HiddenHit secret z.1 c ∨ Q :=
     fun h f => h.elim Or.inl fun h => h.elim (Or.inr ∘ Or.inl) f
   have key : ∀ (i : ℕ) (j : Fin vp.params.d), j.val + i + 1 = vp.params.d →
-      WithSecret.TargetCollision secret z.1.pk.pkSeed c ∨ WithSecret.HiddenHit secret z.1 c ∨
+      TargetCollision secret z.1.pk.pkSeed c ∨ HiddenHit secret z.1 c ∨
         ∃ m r,
         forgerMessage? c z.1.pk.pkSeed parts z.1.sig.hypertree forsPk j j.isLt = some m ∧
         xmssPkFromSig? core c (LayerPosition.atLayer vp parts j).leaf.val z.1.sig.hypertree[j]
@@ -243,16 +243,16 @@ theorem bad_event_of_wins_romSchemeRun (laws : core.ByteLaws) (e : core.SkSeed �
       obtain rfl := Option.some.inj hm'
       refine bind3 (hstep ⟨j.val + 1, by omega⟩ r r' hnext hf' hh') fun h => ?_
       refine Or.inr (Or.inr ⟨m, r, hm, hf, ?_⟩)
-      simp only [WithSecret.honestMessage?, LayerPosition.atLayer_layer_val, Nat.add_one_ne_zero,
+      simp only [honestMessage?, LayerPosition.atLayer_layer_val, Nat.add_one_ne_zero,
         ↓reduceIte] at h
       rwa [LayerPosition.atLayer_succ_eq_next vp parts j (by omega), childTreeAdrs_next] at h
   refine bind3 (key (vp.params.d - 1) ⟨0, vp.valid.d_pos⟩
     (by have := vp.valid.d_pos; simp; omega)) fun ⟨m, r, hm, hf, hh⟩ => ?_
   refine bind3 (hstep ⟨0, vp.valid.d_pos⟩ m r hm hf hh) fun h => ?_
   obtain rfl : forsPk = m := Option.some.inj hm
-  simp only [WithSecret.honestMessage?, LayerPosition.atLayer_zero_eq_initial,
+  simp only [honestMessage?, LayerPosition.atLayer_zero_eq_initial,
     LayerPosition.initial_layer_val, forsInstanceAdrs_initial, ↓reduceIte] at h
-  exact WithSecret.fors_cases secret z.1 c digest hd forsPk hfors h
+  exact fors_cases secret z.1 c digest hd forsPk hfors h
 
 end Run
 

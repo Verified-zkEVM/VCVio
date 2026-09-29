@@ -7,7 +7,6 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.Security.RomKeyed
 public import HashSig.SLHDSA.Security.AddressKeys
-public import HashSig.SLHDSA.Security.CacheCoverage
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.ForsConformance
 public import HashSig.SLHDSA.XmssConformance
@@ -20,7 +19,7 @@ public import HashSig.SLHDSA.Concrete.Instance
 Computations at the three shipped primitive bundles about the address encoding `core.adrsToKey`
 that keys the tweakable-hash oracle: where it is not injective, where the bundles' secret-key
 functions nevertheless agree across a key collision, the checked domain of the FIPS SHA-2
-compression, and the distinctness hypothesis of the cache-size bounds.  They are the concrete
+compression, and the leaf-index range of a subtree.  They are the concrete
 facts a separator for the key-weighted collision bound of `HashSig.SLHDSA.Security.RomKeyed` is
 checked against.
 
@@ -77,19 +76,13 @@ companions in `HashSig.SLHDSA.Security.AddressKeys`).  At FIPS SHA-2 that implic
 (`sha2AdrsKey_wots_collision`, `sha2AdrsKey_wotsSk_ne`), so a separator bound of `1` there needs
 the checked-domain restriction or a change to the zero-key fallback.
 
-## The distinctness hypothesis of the cache-size bounds
+## The leaf-index range of a subtree
 
-`SLHDSA.Security.pow_le_enncard_of_forsNode?` and `SLHDSA.Security.pow_le_enncard_of_xmssNode?`
-bound a cache from below by `2 ^ z` at a settled honest subtree of height `z`, under a
-distinctness hypothesis on the leaves' certifying queries.  That hypothesis is necessary for an
-arbitrary core: `not_forall_pow_le_enncard_of_forsNode?` refutes the unconditional statement with
-a core whose address encoding and secret-key function are both constant, over a cache of two
-entries that settles every honest FORS subtree at every height
-(`forsNode?_twoEntryCache`, `enncard_twoEntryCache_le`).  At the FIPS SHA-2 bundle it holds at
-every height, subtree index and checked-domain base address from the index range alone
-(`fits_four_of_mem_leafRange`, `injOn_forsLeafKey_sha2`, `injOn_xmssLeafKey_sha2`).
+Every global leaf index under the subtree at height `z` and index `t` fits a four-byte field once
+the subtree's own index range does (`fits_four_of_mem_leafRange`), which keeps the FORS node and
+WOTS+ chain addresses of a checked-domain base address inside the checked domain.
 
-Every statement is a `Prop` over an address encoding, a cache or an `ℝ≥0∞` bound, so the file has
+Every statement is a `Prop` about an address encoding, so the file has
 no `main` and is built by the `HashSigTest` library glob alone.
 -/
 
@@ -317,7 +310,7 @@ theorem shake_wots_collision :
     Adrs.toVector ⟨0, 0, 0, 0, 0, 0⟩ = Adrs.toVector ⟨0, 0, 0, 0, 2 ^ 32, 0⟩ :=
   Vector.toList_inj.mp (by decide)
 
-/-! ## The distinctness hypothesis of the cache-size bounds, at the FIPS SHA-2 bundle -/
+/-! ## The leaf-index range of a subtree -/
 
 /-- Every global leaf index under the subtree at `(height z, index t)` fits a four-byte field
 once the subtree's index range does. -/
@@ -325,115 +318,5 @@ theorem fits_four_of_mem_leafRange {z t i : ℕ} (hrange : (t + 1) * 2 ^ z ≤ 2
     (hi : i / 2 ^ z = t) : Adrs.Fits 4 i = true := by
   refine Adrs.fits_iff.2 (lt_of_lt_of_le ?_ (by norm_num at hrange ⊢; omega))
   exact (Nat.div_lt_iff_lt_mul (Nat.two_pow_pos z)).mp (hi ▸ Nat.lt_succ_self t)
-
-/-- **At the FIPS SHA-2 bundle the FORS distinctness hypothesis of
-`SLHDSA.Security.pow_le_enncard_of_forsNode?` follows from address-range facts alone**, at every
-height, index and checked-domain base address: no property of the hash and no property of the
-secret values is used. -/
-theorem injOn_forsLeafKey_sha2 (p : Params) (sk pk : Bytes p.n) {adrs : Adrs}
-    (hbase : Sha2Domain adrs) {z t : ℕ} (hrange : (t + 1) * 2 ^ z ≤ 2 ^ 32) :
-    Set.InjOn (forsLeafKey (sha2Primitives p).core sk pk adrs) {i | i / 2 ^ z = t} :=
-  injOn_forsLeafKey_of_injOn_adrsToKey _ _ _ _ (injOn_adrsToKey_sha2 p)
-    fun _i hi =>
-      sha2Domain_forsNodeAdrs hbase (by decide) (fits_four_of_mem_leafRange hrange hi)
-
-/-- **At the FIPS SHA-2 bundle the XMSS distinctness hypothesis of
-`SLHDSA.Security.pow_le_enncard_of_xmssNode?` follows from address-range facts alone**, at every
-height, index and checked-domain base address. -/
-theorem injOn_xmssLeafKey_sha2 (p : Params) (sk pk : Bytes p.n) {adrs : Adrs}
-    (hbase : Sha2Domain adrs) {z t : ℕ} (hrange : (t + 1) * 2 ^ z ≤ 2 ^ 32) :
-    Set.InjOn (xmssLeafKey (sha2Primitives p).core sk pk adrs) {i | i / 2 ^ z = t} :=
-  injOn_xmssLeafKey_of_injOn_adrsToKey _ _ _ _ (injOn_adrsToKey_sha2 p)
-    fun _i hi => sha2Domain_wotsChainStepZero hbase (fits_four_of_mem_leafRange hrange hi)
-
-/-! ## The unconditional height bound is false for an arbitrary core -/
-
-/-- A core whose address encoding and secret-key function are both constant. -/
-@[expose] def constantCore (p : Params) : CorePrimitives p where
-  PkSeed := Unit
-  SkSeed := Unit
-  SkPrf := Unit
-  Y := Unit
-  AdrsKey := Unit
-  adrsToKey := fun _ => ()
-  PRF := fun _ _ _ => ()
-  PRFmsg := fun _ _ _ => ()
-  yToBytes := fun _ => Vector.replicate p.n 0
-
-/-- A cache that answers exactly the arity-one and arity-two `thash` queries. -/
-@[expose] def twoEntryCache (p : Params) : PublicHash.Cache (constantCore p) :=
-  QueryCache.ofFn fun q =>
-    match q with
-    | .thash _ _ [_] => some ()
-    | .thash _ _ [_, _] => some ()
-    | _ => none
-
-/- The two witnesses above are matched against lemmas whose `CorePrimitives` argument is implicit,
-so their carrier fields must unfold at implicit transparency for those lemmas to apply.  The
-attribute is file-local, so no importer's unifier or instance resolution is affected. -/
-attribute [local implicit_reducible] constantCore twoEntryCache
-
-/-- **Every honest FORS subtree of the constant core, at every height, is settled by that
-two-entry cache.** -/
-theorem forsNode?_twoEntryCache (p : Params) (adrs : Adrs) : ∀ z t : ℕ,
-    forsNode? (constantCore p) (twoEntryCache p) () () adrs z t = some () := by
-  intro z
-  induction z with
-  | zero =>
-    intro t
-    simp only [forsNode?, PerfectMerkleTree.merkleRootM]
-    rw [show forsLeafWith (constantCore p) (PublicHash.f (constantCore p) ()) () () adrs t
-          = PublicHash.f (constantCore p) () (forsNodeAdrs adrs 0 t)
-              (forsSkGenCore (constantCore p) () () adrs t) from rfl,
-      simulateQ_toPartialImpl_f]
-    rfl
-  | succ z ih =>
-    intro t
-    simp only [forsNode?, PerfectMerkleTree.merkleRootM] at ih ⊢
-    rw [simulateQ_bind_eq_some_iff]
-    refine ⟨(), ih (2 * t), ?_⟩
-    rw [simulateQ_bind_eq_some_iff]
-    refine ⟨(), ih (2 * t + 1), ?_⟩
-    rw [show forsNodeHashWith (PublicHash.h (constantCore p) ()) adrs (z + 1) t () ()
-          = PublicHash.h (constantCore p) () (forsNodeAdrs adrs (z + 1) t) () () from rfl,
-      simulateQ_toPartialImpl_h]
-    rfl
-
-/-- That cache holds at most two entries. -/
-theorem enncard_twoEntryCache_le (p : Params) : QueryCache.enncard (twoEntryCache p) ≤ 2 := by
-  have hsub : (twoEntryCache p).toSet ⊆
-      {⟨PublicHashQuery.thash () () [()], ()⟩, ⟨PublicHashQuery.thash () () [(), ()], ()⟩} := by
-    rintro ⟨q, r⟩ hq
-    simp only [QueryCache.mem_toSet, twoEntryCache, QueryCache.ofFn_apply] at hq
-    obtain ⟨pk, k, xs⟩ | ⟨y, pk, root, msg⟩ := q
-    · match xs with
-      | [] => simp at hq
-      | [x] => exact Or.inl (by cases pk; cases k; cases x; cases r; rfl)
-      | [x, x'] => exact Or.inr (by cases pk; cases k; cases x; cases x'; cases r; rfl)
-      | _ :: _ :: _ :: _ => simp at hq
-    · simp at hq
-  calc QueryCache.enncard (twoEntryCache p) = (((twoEntryCache p).toSet.encard : ℕ∞) : ENNReal) :=
-        rfl
-    _ ≤ ((2 : ℕ∞) : ENNReal) := by
-        refine ENat.toENNReal_le.mpr ((Set.encard_mono hsub).trans ?_)
-        exact (Set.encard_insert_le _ _).trans (by simp only [Set.encard_singleton,
-          one_add_one_eq_two, le_refl])
-    _ = 2 := by simp
-
-/-- **The unconditional height bound is false**, so the distinctness hypothesis of
-`SLHDSA.Security.pow_le_enncard_of_forsNode?` is necessary for an arbitrary core rather than
-convenient: a core whose address encoding and secret-key function are both constant settles every
-height off two cache entries.  At the FIPS SHA-2 bundle the hypothesis is nonetheless discharged
-from address-range facts alone (`injOn_forsLeafKey_sha2`). -/
-theorem not_forall_pow_le_enncard_of_forsNode? :
-    ¬ ∀ (p : Params) (core : CorePrimitives p) (c : PublicHash.Cache core)
-        (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) (v : core.Y),
-      forsNode? core c sk pk adrs z t = some v →
-        ((2 ^ z : ℕ) : ENNReal) ≤ QueryCache.enncard c := by
-  intro h
-  have hle := (h FipsParameterSet.SLHDSA_SHA2_128s.params (constantCore _) (twoEntryCache _)
-    () () Adrs.zero 2 0 () (forsNode?_twoEntryCache _ Adrs.zero 2 0)).trans
-    (enncard_twoEntryCache_le _)
-  norm_num at hle
 
 end SLHDSA.RomKeyedTest

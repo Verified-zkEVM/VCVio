@@ -51,20 +51,20 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 public seed, in the public-hash part of its cache, and its forged message is fresh. -/
 @[expose] def RunTargetCollision (e : core.SkSeed ≃ core.Y)
     (z : RomOutcome vp core × (hashSpec core).QueryCache) : Prop :=
-  WithSecret.TargetCollision (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1.pk.pkSeed
+  TargetCollision (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1.pk.pkSeed
     z.2.fst ∧ RunFresh core z
 
 /-- A run point exhibits a hidden-value hit at its own oracle-backed provider, in the public-hash
 part of its cache, and its forged message is fresh. -/
 @[expose] def RunHiddenHit (e : core.SkSeed ≃ core.Y)
     (z : RomOutcome vp core × (hashSpec core).QueryCache) : Prop :=
-  WithSecret.HiddenHit (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1 z.2.fst ∧
+  HiddenHit (oracleSecret core e z.1.pk.pkSeed z.1.sk.skSeed) z.1 z.2.fst ∧
     RunFresh core z
 
 /-- A run point exhibits interleaved-target coverage in the public-hash part of its cache, and
 its forged message is fresh. -/
 @[expose] def RunItsrCovered (z : RomOutcome vp core × (hashSpec core).QueryCache) : Prop :=
-  WithSecret.ItsrCovered z.1 z.2.fst ∧ RunFresh core z
+  ItsrCovered z.1 z.2.fst ∧ RunFresh core z
 
 /-! ## The union bound -/
 

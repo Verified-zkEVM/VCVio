@@ -5,8 +5,10 @@ Authors: Alexander Hicks
 -/
 
 module
-public import HashSig.SLHDSA.Security.CacheCoverage
+public import HashSig.SLHDSA.Security.CacheDecomposition
 public import HashSig.SLHDSA.Security.Target
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.OptionCoverage
+public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Sibling
 
 /-!
 # Honest SLH-DSA values under a public-hash cache, at a secret provider
@@ -15,8 +17,7 @@ The honest programs of `HashSig.SLHDSA.SecretProvider` draw every WOTS+ and FORS
 provider `secret : Adrs → OracleComp (publicHashSpec core) core.Y`.  Read under the partial
 oracle `QueryCache.toPartialImpl c`, such a program settles exactly when every secret it draws and
 every hash query it issues is settled.  This module states that reading for every program that
-draws a secret, at an arbitrary provider, so that it applies both to the honest provider
-`fun a => pure (core.PRF pk sk a)` of the landed programs and to the oracle-backed provider
+draws a secret, at an arbitrary provider; the provider of interest is the oracle-backed
 `oracleSecret core e pk sk` of `HashSig.SLHDSA.Security.Target`, whose every draw is one `F` query
 of the secret seed at the draw's `PRF` address (`simulateQ_toPartialImpl_oracleSecret`).  At the
 oracle-backed provider a settled reading therefore never supplies a secret the cache does not
@@ -27,35 +28,28 @@ read here (`keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ`,
 `signInternalWithSecretRandomizerM_oracleSecret_eq_ofSimulateQ`).
 
 The readers `wotsPkGenTopsWithSecret?`, `xmssNodeWithSecret?`, `xmssRootWithSecret?`,
-`forsNodeWithSecret?` and `forsPkGenWithSecret?` are the honest programs under the cache; at the
-honest provider they are the landed readers of `HashSig.SLHDSA.Security.CacheReaders`
-(`xmssNode?_eq_xmssNodeWithSecret?` and its siblings).  The `*_eq_some_iff` lemmas decompose the
-WOTS+, XMSS, FORS, hypertree and Algorithm 19 programs into their settled draws and queries, with a
-settled secret as a separate conjunct wherever the landed decomposition had the value
-`core.PRF pk sk a`.  The coverage lemmas are those of `HashSig.SLHDSA.Security.CacheCoverage` at an
-arbitrary provider: a signed-through XMSS tree is settled in its entirety, key generation settles
-the top tree, and a settled FORS signature whose recovered key is settled settles the honest FORS
-public key.
+`forsNodeWithSecret?` and `forsPkGenWithSecret?` are the honest programs under the cache.  The
+`*_eq_some_iff` lemmas decompose the WOTS+, XMSS, FORS, hypertree and Algorithm 19 programs into
+their settled draws and queries, each secret draw a separate settled-secret conjunct.  The coverage
+lemmas state that a signed-through XMSS tree is settled in its entirety, that key generation settles
+the top tree, and that a settled FORS signature whose recovered key is settled settles the honest
+FORS public key.
 
 ## Scope
 
-* The verifier's programs draw no secret, so their decompositions in
-  `HashSig.SLHDSA.Security.CacheDecomposition` apply unchanged and are not restated.
+* The verifier's programs draw no secret; their decompositions are those of
+  `HashSig.SLHDSA.Security.CacheDecomposition`.
 * Key generation over a provider is the top-tree root program itself
   (`keygenInternalWithSecretM` is `GeneralHypertree.rootWithSecretM`), so the decomposition of
   Algorithm 18 into a root reading and the assembled key pair has no counterpart here; the root
   reading is what `exists_xmssNodeWithSecret?_eq_some_of_rootWithSecretM` consumes.
-* The cache-size lower bounds of `HashSig.SLHDSA.Security.CacheCoverage` are not restated here.
+* No cache-size lower bound is stated here.
 * No property of any particular cache is proved here, and nothing here is probabilistic or quantum.
 
 ## Labels
 
 *Readers*: `wotsPkGenTopsWithSecret?`, `xmssNodeWithSecret?`, `xmssRootWithSecret?`,
 `forsNodeWithSecret?`, `forsPkGenWithSecret?`.
-
-*The honest provider*: `wotsPkGenTops?_eq_wotsPkGenTopsWithSecret?`,
-`xmssNode?_eq_xmssNodeWithSecret?`, `xmssRoot?_eq_xmssRootWithSecret?`,
-`forsNode?_eq_forsNodeWithSecret?`, `forsPkGen?_eq_forsPkGenWithSecret?`.
 
 *The oracle-backed provider*: `simulateQ_toPartialImpl_oracleSecret`, `oracleSecret_natural`,
 `keygenInternalWithSecretM_oracleSecret_eq_ofSimulateQ`,
@@ -89,7 +83,7 @@ public key.
 
 *FORS coverage*: `forsPkGenWithSecret?_eq_some_of_forsSignWithSecret`.
 
-Thirty-four declarations, none private.
+Twenty-nine declarations, none private.
 -/
 
 public section
@@ -136,47 +130,6 @@ def forsNodeWithSecret? (pk : core.PkSeed) (adrs : Adrs) (z t : ℕ) : Option co
 def forsPkGenWithSecret? (pk : core.PkSeed) (adrs : Adrs) : Option core.Y :=
   simulateQ c.toPartialImpl (forsPkGenWithSecret core (PublicHash.f core pk)
     (PublicHash.h core pk) (PublicHash.tl core pk) secret adrs)
-
-/-! ## The honest provider -/
-
-/-- At the honest provider the chain-top reader is `wotsPkGenTops?`. -/
-theorem wotsPkGenTops?_eq_wotsPkGenTopsWithSecret? (sk : core.SkSeed) (pk : core.PkSeed)
-    (adrs : Adrs) :
-    wotsPkGenTops? core c sk pk adrs =
-      wotsPkGenTopsWithSecret? core c (fun a => pure (core.PRF pk sk a)) pk adrs := by
-  rw [wotsPkGenTops?, wotsPkGenTopsWithSecret?, wotsPkGenTopsWithSecret_eq_wotsPkGenTopsWith,
-    wotsPkGenTopsM]
-
-/-- At the honest provider the XMSS subtree reader is `xmssNode?`. -/
-theorem xmssNode?_eq_xmssNodeWithSecret? (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs)
-    (z t : ℕ) :
-    xmssNode? core c sk pk adrs z t =
-      xmssNodeWithSecret? core c (fun a => pure (core.PRF pk sk a)) pk adrs z t := by
-  rw [xmssNode?, xmssNodeWithSecret?, xmssNodeWithSecret_eq_xmssNodeWith, xmssNodeM]
-
-/-- At the honest provider the XMSS root reader is `xmssRoot?`. -/
-theorem xmssRoot?_eq_xmssRootWithSecret? (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs) :
-    xmssRoot? core c sk pk adrs =
-      xmssRootWithSecret? core c (fun a => pure (core.PRF pk sk a)) pk adrs := by
-  rw [xmssRoot?, xmssRootWithSecret?, xmssRootWithSecret_eq_xmssRootWith, xmssRootM]
-
-/-- At the honest provider the FORS subtree reader is `forsNode?`. -/
-theorem forsNode?_eq_forsNodeWithSecret? (sk : core.SkSeed) (pk : core.PkSeed) (adrs : Adrs)
-    (z t : ℕ) :
-    forsNode? core c sk pk adrs z t =
-      forsNodeWithSecret? core c (fun a => pure (core.PRF pk sk a)) pk adrs z t := by
-  have hleaf : forsLeafWithSecret (m := OracleComp (publicHashSpec core)) core
-      (PublicHash.f core pk) (fun a => pure (core.PRF pk sk a)) adrs =
-        forsLeafWith core (PublicHash.f core pk) sk pk adrs :=
-    funext fun t => forsLeafWithSecret_eq_forsLeafWith core (PublicHash.f core pk) sk pk adrs t
-  rw [forsNode?, forsNodeWithSecret?, hleaf]
-
-/-- At the honest provider the FORS public-key reader is `forsPkGen?`. -/
-theorem forsPkGen?_eq_forsPkGenWithSecret? (sk : core.SkSeed) (pk : core.PkSeed)
-    (adrs : Adrs) :
-    forsPkGen? core c sk pk adrs =
-      forsPkGenWithSecret? core c (fun a => pure (core.PRF pk sk a)) pk adrs := by
-  rw [forsPkGen?, forsPkGenWithSecret?, forsPkGenWithSecret_eq_forsPkGenWith, forsPkGenM]
 
 /-! ## WOTS+ and XMSS -/
 

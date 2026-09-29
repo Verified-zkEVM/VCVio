@@ -21,8 +21,10 @@ The two byte-oriented address encodings, the 32-byte serialization `SLHDSA.Adrs.
 so equal encodings have equal blocks (`toBytes_blocks`, `compressSha2_blocks`).  Consequently a
 secret-key address built from a role address has equal encoding whenever the role address does
 (`toBytes_forsSkAdrs_congr`, `toBytes_wotsSkAdrs_congr`, `compressSha2_forsSkAdrs_congr`,
-`compressSha2_wotsSkAdrs_congr`): at a primitive bundle whose tweak map is one of these encodings,
-equal role-address keys give equal secret-key-address keys.
+`compressSha2_wotsSkAdrs_congr`).  The tweak maps the SHAKE and the compatibility bundles install,
+`SLHDSA.Adrs.toVector` and `SLHDSA.Concrete.shaAdrsKey`, are these two encodings packaged at their
+exact widths, so at those bundles equal role-address keys have equal encodings (`Vector.toList_inj`)
+and hence equal secret-key-address keys.
 
 ## Labels
 

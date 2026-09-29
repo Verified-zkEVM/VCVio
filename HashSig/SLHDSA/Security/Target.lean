@@ -9,6 +9,7 @@ module
 public import HashSig.SLHDSA.SecretProvider
 public import HashSig.SLHDSA.GeneralSchemeQueryBound
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
+public import VCVio.CryptoFoundations.SignatureAlg.Transcript
 public import VCVio.CryptoFoundations.HardnessAssumptions.KeyedHash.Covering
 
 /-!
@@ -42,7 +43,8 @@ The advantage is VCVio's own `unforgeableAdvantage` under VCVio's own random-ora
 `UnforgeableAdversary.RomQueryBound adv qh qs`: at most `qh` hash queries, `PRF_msg` included, and
 at most `qs` signing queries on every path of its own program. The queries key generation, signing
 and verification make are not charged; `SignatureAlg.forgerCount_le_of_mem_support_run` counts the
-adversary's hash queries on every run of the experiment all the same.
+adversary's hash queries on every run of the experiment all the same. `RomOutcome` is the
+transcript of one execution, `SignatureAlg.UnforgeableTranscript` at the SLH-DSA types.
 
 ## The target
 
@@ -104,6 +106,12 @@ abbrev hashSpec (core : CorePrimitives p) :
   publicHashSpec core + prfMsgSpec core
 
 namespace Security
+
+/-- The transcript of one execution of the unforgeability experiment of an SLH-DSA scheme on
+internal messages: key pair, signing log, forgery and verification verdict. -/
+abbrev RomOutcome (vp : ValidatedParams) (core : CorePrimitives vp.params) : Type :=
+  UnforgeableTranscript (List Byte) (PublicKeyCore core) (SecretKeyCore core)
+    (GeneralScheme.SignatureCore vp core)
 
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
