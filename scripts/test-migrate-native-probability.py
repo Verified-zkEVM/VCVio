@@ -163,6 +163,15 @@ class ImportTests(unittest.TestCase):
                     "import VCVio.OracleComp.OracleComp\n")
         self.assertEqual(migrate(source)[0], expected)
 
+    def test_removed_namespaces_leave_open_commands(self):
+        self.assertEqual(migrate("open ENNReal OracleComp.EvalDist OracleComp.ProgramLogic\n")[0],
+                         "open ENNReal OracleComp.ProgramLogic\n")
+        self.assertEqual(migrate("open OracleComp.EvalDist in\ntheorem t : True := trivial\n")[0],
+                         "theorem t : True := trivial\n")
+        self.assertEqual(migrate("open scoped OracleComp.EvalDist\n")[0], "")
+        self.assertEqual(migrate("open OracleComp.EvalDistEq\n")[0],
+                         "open OracleComp.EvalDistEq\n")
+
     def test_unrelated_imports_are_untouched(self):
         source = "public import A\npublic import B\npublic import A\n"
         self.assertEqual(migrate(source)[0], source)

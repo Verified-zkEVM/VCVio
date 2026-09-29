@@ -736,6 +736,29 @@ def rewrite_imports(text: str) -> str:
     return "\n".join(out)
 
 
+OPEN_LINE = re.compile(r"^([ \t]*open(?:[ \t]+scoped)?)[ \t]+(.*?)([ \t]+in)?[ \t]*$")
+
+# Namespaces that removed modules defined and no remaining import provides.
+REMOVED_NAMESPACES = {"OracleComp.EvalDist"}
+
+
+def rewrite_opens(text: str) -> str:
+    """Drop removed namespaces from `open` commands, deleting a command left with none."""
+    out: list[str] = []
+    for line in text.split("\n"):
+        m = OPEN_LINE.match(line)
+        if not m:
+            out.append(line)
+            continue
+        names = m.group(2).split()
+        kept = [name for name in names if name not in REMOVED_NAMESPACES]
+        if kept == names:
+            out.append(line)
+        elif kept:
+            out.append(f"{m.group(1)} {' '.join(kept)}{m.group(3) or ''}")
+    return "\n".join(out)
+
+
 def report_legacy(text: str, report: Report, path: str) -> None:
     spans = comment_spans(text)
     for regex, hint in LEGACY_TOKENS:
@@ -755,6 +778,7 @@ def report_legacy(text: str, report: Report, path: str) -> None:
 
 def migrate(text: str, path: str, report: Report) -> str:
     text = rewrite_imports(text)
+    text = rewrite_opens(text)
     text = rewrite_legacy_events(text, report, path)
     text = rewrite_let_items(text)
     text = delete_answer_binders(text)
