@@ -18,8 +18,10 @@
 | `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
 | `Pr{let x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; the braces hold an ordinary `do` sequence | `VCVio/EvalDist/ProbabilityNotation.lean` |
 
-A single output is an event like any other, `Pr{let x ← mx}[x = a]`. Failure is missing mass:
-the probability that `mx` fails is `prFail mx = 1 - Pr{let _ ← mx}[True]`, and a
+The braces take any `do` sequence, with pure `let`s, destructuring, nested `(← e)` actions,
+branches, `match`, `let mut` and loops; see *Writing events with `do` sequences* in
+`probability.md`. A single output is an event like any other, `Pr{let x ← mx}[x = a]`. Failure
+is missing mass: the probability that `mx` fails is `prFail mx = 1 - Pr{let _ ← mx}[True]`, and a
 lossless computation satisfies `IsProbabilityMeasure 𝒟[mx]`. Every `OracleComp spec`
 computation is lossless under `[OracleSpec.IsMeasureSpec spec]`
 (`OracleComp.prEvent_true_eq_one`); failure arises in `OptionT (OracleComp spec)` and similar

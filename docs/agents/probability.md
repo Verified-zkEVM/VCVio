@@ -172,7 +172,29 @@ the event. It is elaborated in the normal form `simp` maintains:
 - uniform sampling, bind swaps and support congruence.
 
 `prEvent_def` unfolds an event to its measure when an argument needs the measure itself. Goals
-display in the draw form.
+display the draws as `let` statements.
+
+### Writing events with `do` sequences
+
+Because the braces hold an ordinary `do` sequence, Lean's `do` sugar is available with its
+bindings in scope for the event. State an experiment the way it reads, rather than
+pre-composing it into one computation with `>>=` and `<$>`:
+
+```lean
+Pr{let x ← mx; let y := x + 1; let z ← my y}[z = y]      -- pure `let`s
+Pr{let (pk, sk) ← keygen; let c ← enc pk m}[dec sk c = m] -- destructuring draws
+Pr{let z ← f (← mx) (← my)}[z = 0]                       -- nested actions `(← e)`
+Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3]  -- branches on a draw
+Pr{let o ← mo; let x ← match o with | some a => pure a | none => mx}[x = 1]
+Pr{let mut s := 0; for i in [1, 2, 3] do s := s + (← my i)}[s = 3]  -- `let mut` and loops
+Pr{let x : ZMod q ← mx}[x = 0]                            -- type ascriptions
+```
+
+The event in the brackets may mention every binding of the sequence, including destructured
+components and mutable variables. The elaborator appends the event as the sequence's final
+`return`, so the sequence itself does not `return` early. The event laws are keyed on the
+normal form of draws, maps, `let`s and branches: an event over a loop elaborates to `forIn` and
+displays that way, and is reasoned about with the loop's own lemmas or `wp`.
 
 `mx =ᵈ my` (`EvalDistEq`, in `VCVio.EvalDist.EvalDistEq`) states that two computations, possibly
 in different monads, give every event the same probability. It needs no measurable space on the

@@ -231,6 +231,17 @@ example (f : ℕ → ℕ → ProbComp ℕ) : Pr{
 example (f : ℕ → ℕ → ProbComp ℕ) : Pr{let x ← (f
     1 2)}[x = 1] = Pr{let x ← f 1 2}[x = 1] := rfl
 
+/-- The braces take any `do` sequence, and the event may mention all its bindings: pure `let`s,
+nested actions, branches and `match` on the right of a draw, and `let mut` with loops. -/
+example (f : ℕ → ℕ → ProbComp ℕ) :
+    Pr{let z ← f (← mz) (← mz)}[z = 0] = Pr{let a ← mz; let b ← mz; let z ← f a b}[z = 0] := rfl
+example (m₁ m₂ : ProbComp ℕ) (mo : ProbComp (Option ℕ)) :
+    Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] ≤ 1 ∧
+      Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] ≤ 1 :=
+  ⟨by simp, by simp⟩
+example (g : ℕ → ProbComp ℕ) :
+    Pr{let mut s := 0; for i in [1, 2, 3] do s := s + (← g i)}[s = 3] ≤ 1 := by simp
+
 /-! Goals display the draws as `let` statements on one line when they fit; an eta-reduced final
 selector is applied to a name no draw binds. -/
 
