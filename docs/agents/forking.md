@@ -15,7 +15,7 @@ See [crypto.md](crypto.md) for the surrounding primitive and reduction machinery
 | **Coordinate-wise** | the whole acceptance table | `ε − ℓ(k−1)/N` | [`VCVio/CryptoFoundations/CoordinateFork.lean`](../../VCVio/CryptoFoundations/CoordinateFork.lean) |
 
 Seeded and replay share a generic core in
-[`VCVio/OracleComp/Constructions/Fork.lean`](../../VCVio/OracleComp/Constructions/Fork.lean): the
+[`VCVio/OracleComp/Constructions/Fork/Basic.lean`](../../VCVio/OracleComp/Constructions/Fork/Basic.lean): the
 conditional-square step, the fact that completing a retained occurrence resamples the focused
 answer as a fresh query, and the collision bound on the two focused answers. Both end in
 `ENNReal.mul_tsub_inv_le_sum_sq_sub_div` from

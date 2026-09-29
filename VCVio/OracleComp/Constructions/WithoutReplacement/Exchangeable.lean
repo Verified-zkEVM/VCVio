@@ -626,7 +626,6 @@ theorem countP_not_toList_erase (a : S → Bool) {v : S} (hv : a v) :
   have hNpos : 0 < Fintype.card S := lt_of_lt_of_le hHpos hHle
   omega
 
-open OracleComp.EvalDist in
 /-- **The column bound.** Summed over the accepting centres of a column, the chance that a
 resampling loop starting there draws a fixed value `x` is at most the loop's own budget. -/
 theorem sum_evalDist_mem_erase_le (a : S → Bool) (r : ℕ) (x : S) :
@@ -727,7 +726,6 @@ theorem sum_evalDist_mem_erase_le (a : S → Bool) (r : ℕ) (x : S) :
         _ = (H : ℝ≥0∞) := by rw [Finset.sum_const, nsmul_eq_mul, mul_one, hH]
         _ ≤ (r : ℝ≥0∞) := by exact_mod_cast hHr
 
-open OracleComp.EvalDist in
 /-- **The weighted column bound.** Charge every drawn value a weight; summed over the accepting
 centres, a column's expected charge is at most `r` times the column's total weight, whatever the
 weights are.

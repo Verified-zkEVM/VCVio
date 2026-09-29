@@ -103,7 +103,7 @@ theorem prEvent_extracted_eq_one_of_goodTranscripts
     {ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit} {pc : Commit}
     (hss : σ.CoordSpeciallySoundAt k ext x) {τ : (ι → S) → Resp} {X : Finset (ι → S)}
     (hgood : GoodTranscripts (σ.verify x pc) k (some (τ, X))) :
-    Pr{let r ← (some <$> ext x pc (transcripts τ X) : ProbComp (Option Wit))}[Extracted rel x r]
+    Pr{r ← (some <$> ext x pc (transcripts τ X) : ProbComp (Option Wit))}[Extracted rel x r]
       = 1 := by
   rw [prEvent_map]
   refine prEvent_eq_one_of_forall_mem_support _ _ fun w hw => ⟨w, rfl, ?_⟩
@@ -122,7 +122,7 @@ theorem sub_div_le_prEvent_extracted_coordExtract [Nonempty S]
     (P : ProbComp ((ι → S) → Resp)) :
     acceptRatio (acceptTable (σ.verify x pc) P)
         - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr{let r ← σ.coordExtract k ext x pc P}[Extracted rel x r] := by
+      ≤ Pr{r ← σ.coordExtract k ext x pc P}[Extracted rel x r] := by
   refine (sub_div_le_prEvent_goodTranscripts_coordForkT (σ.verify x pc) k P).trans ?_
   rw [coordExtract]
   refine le_of_eq_of_le (mul_one _).symm
@@ -167,7 +167,7 @@ theorem sub_div_le_prEvent_extracted_coordExtractOp [Nonempty S]
     (P : ProbComp ((ι → S) → Resp)) :
     acceptRatio (acceptTable (σ.verify x pc) P)
         - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr{let r ← σ.coordExtractOp k ext x pc P}[Extracted rel x r.1] := by
+      ≤ Pr{r ← σ.coordExtractOp k ext x pc P}[Extracted rel x r.1] := by
   refine (sub_div_le_prEvent_goodTranscripts_coordForkOpT (σ.verify x pc) k P).trans ?_
   rw [coordExtractOp]
   refine le_of_eq_of_le (mul_one _).symm
@@ -241,14 +241,14 @@ first message and response table and a uniform challenge. -/
 @[expose] noncomputable def verifyProb
     (σ : SigmaProtocol Stmt Wit Commit PrvState (ι → S) Resp rel)
     (x : Stmt) (P : ProbComp (Commit × ((ι → S) → Resp))) : ℝ≥0∞ :=
-  Pr{let p ← P; let c ← $ᵗ (ι → S)}[σ.verify x p.1 c (p.2 c)]
+  Pr{p ← P; c ← $ᵗ (ι → S)}[σ.verify x p.1 c (p.2 c)]
 
 omit [DecidableEq S] [DecidableEq Resp] in
 /-- For an already-fixed response table the accepting ratio is the verification probability on a
 uniform challenge. -/
 theorem acceptRatio_acceptTable_pure (V : (ι → S) → Resp → Bool) (τ : (ι → S) → Resp) :
     acceptRatio (acceptTable V (pure τ) : ProbComp ((ι → S) → Bool))
-      = Pr{let c ← $ᵗ (ι → S)}[V c (τ c)] := by
+      = Pr{c ← $ᵗ (ι → S)}[V c (τ c)] := by
   classical
   rw [acceptTable, map_pure, acceptRatio, SampleableType.prEvent_uniformSample]
   refine congrArg (· / _) ?_
@@ -267,8 +267,8 @@ theorem verifyProb_eq_lintegral (σ : SigmaProtocol Stmt Wit Commit PrvState (ι
       = ∫⁻ p, acceptRatio (acceptTable (σ.verify x p.1) (pure p.2)) ∂𝒟[P] := by
   have key := prEvent_bind_eq_lintegral_of_discrete P
     (fun p : Commit × ((ι → S) → Resp) =>
-      (($ᵗ (ι → S)) >>= fun c => pure (σ.verify x p.1 c (p.2 c) = true))) id
-  simp only [id_eq, bind_pure] at key
+      (fun c => σ.verify x p.1 c (p.2 c) = true) <$> ($ᵗ (ι → S))) id
+  simp only [id_map] at key
   rw [verifyProb, key]
   exact lintegral_congr fun p => (acceptRatio_acceptTable_pure (σ.verify x p.1) p.2).symm
 
@@ -279,7 +279,7 @@ theorem sub_div_le_prEvent_extracted_coordExtractCommit [Nonempty S]
     (ext : Stmt → Commit → Finset ((ι → S) × Resp) → ProbComp Wit) (x : Stmt)
     (hss : σ.CoordSpeciallySoundAt k ext x) (P : ProbComp (Commit × ((ι → S) → Resp))) :
     verifyProb σ x P - (Fintype.card ι : ℝ≥0∞) * (k - 1 : ℕ) / Fintype.card S
-      ≤ Pr{let r ← σ.coordExtractCommit k ext x P}[Extracted rel x r] := by
+      ≤ Pr{r ← σ.coordExtractCommit k ext x P}[Extracted rel x r] := by
   classical
   -- The statement mentions no measure on the prover's own output, so the discrete structure the
   -- averaging step needs is introduced here rather than carried as a hypothesis.
@@ -291,10 +291,10 @@ theorem sub_div_le_prEvent_extracted_coordExtractCommit [Nonempty S]
     (Extracted rel x)
   rw [tsub_le_iff_right, verifyProb_eq_lintegral, coordExtractCommit, key]
   calc ∫⁻ p, acceptRatio (acceptTable (σ.verify x p.1) (pure p.2)) ∂𝒟[P]
-      ≤ ∫⁻ p, (Pr{let r ← σ.coordExtract k ext x p.1 (pure p.2)}[Extracted rel x r] + L) ∂𝒟[P] :=
+      ≤ ∫⁻ p, (Pr{r ← σ.coordExtract k ext x p.1 (pure p.2)}[Extracted rel x r] + L) ∂𝒟[P] :=
         lintegral_mono fun p => tsub_le_iff_right.mp
           (sub_div_le_prEvent_extracted_coordExtract σ k ext x hss p.1 (pure p.2))
-    _ = (∫⁻ p, Pr{let r ← σ.coordExtract k ext x p.1 (pure p.2)}[Extracted rel x r] ∂𝒟[P])
+    _ = (∫⁻ p, Pr{r ← σ.coordExtract k ext x p.1 (pure p.2)}[Extracted rel x r] ∂𝒟[P])
           + L := by
         rw [lintegral_add_right _ measurable_const, lintegral_const, measure_univ, mul_one]
     _ ≤ _ := by rfl

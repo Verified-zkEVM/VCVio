@@ -23,7 +23,7 @@ The witness set is a `coordFamily`, whose special soundness is checked by `decid
 
 public section
 
-open Finset CoordinateWise OracleComp OracleComp.EvalDist SigmaProtocol
+open Finset CoordinateWise OracleComp SigmaProtocol
 
 open scoped ENNReal
 
@@ -107,7 +107,7 @@ private theorem one_sub_two_thirds : (1 : ℝ≥0∞) - 2 / 3 = 1 / 3 := by
 the composite returns a valid witness with probability at least `1 - 2/3 = 1/3`, so the table-model
 loss `ℓ(k-1)/|S| = 2/3` leaves real slack at these parameters. -/
 theorem one_third_le_prEvent_extracted (x : Fin 3) :
-    (1 : ℝ≥0∞) / 3 ≤ Pr{let r ← toySigma.coordExtract 2 toyExt x () (toyProver x)}[
+    (1 : ℝ≥0∞) / 3 ≤ Pr{r ← toySigma.coordExtract 2 toyExt x () (toyProver x)}[
       Extracted (fun x w => x == w) x r] := by
   have h := sub_div_le_prEvent_extracted_coordExtract toySigma 2 toyExt x
     (toySigma_coordSpeciallySoundAt x) () (toyProver x)
@@ -139,7 +139,7 @@ theorem verifyProb_badProverCommit (x : Fin 3) :
 /-- **Non-vacuity of the commitment-sampled bound.** Averaging the `μ = 1` bound over the prover's
 first message leaves the same `1 - 2/3 = 1/3` slack. -/
 theorem one_third_le_prEvent_extracted_commit (x : Fin 3) :
-    (1 : ℝ≥0∞) / 3 ≤ Pr{let r ← toySigma.coordExtractCommit 2 toyExt x (toyProverCommit x)}[
+    (1 : ℝ≥0∞) / 3 ≤ Pr{r ← toySigma.coordExtractCommit 2 toyExt x (toyProverCommit x)}[
       Extracted (fun x w => x == w) x r] := by
   have h := sub_div_le_prEvent_extracted_coordExtractCommit toySigma 2 toyExt x
     (toySigma_coordSpeciallySoundAt x) (toyProverCommit x)
@@ -219,7 +219,7 @@ computation. These three check that at concrete parameters. -/
 
 /-- **Success**, for the paper's algorithm: the same `1/3` as the table core gives. -/
 theorem one_third_le_prEvent_extracted_op (x : Fin 3) :
-    (1 : ℝ≥0∞) / 3 ≤ Pr{let r ← toySigma.coordExtractOp 2 toyExt x () (toyProver x)}[
+    (1 : ℝ≥0∞) / 3 ≤ Pr{r ← toySigma.coordExtractOp 2 toyExt x () (toyProver x)}[
       Extracted (fun x w => x == w) x r.1] := by
   have h := sub_div_le_prEvent_extracted_coordExtractOp toySigma 2 toyExt x
     (toySigma_coordSpeciallySoundAt x) () (toyProver x)

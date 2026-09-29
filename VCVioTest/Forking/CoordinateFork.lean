@@ -55,7 +55,7 @@ abbrev Chal : Type := Fin 2 → Fin 5
 `[SampleableType (Fin 2 → Fin 5)]` is discharged rather than assumed. -/
 example (D : ProbComp (Chal → Bool)) :
     acceptRatio D - (Fintype.card (Fin 2) : ℝ≥0∞) * (2 - 1 : ℕ) / Fintype.card (Fin 5)
-      ≤ Pr{let r ← coordFork 2 D}[GoodOutput 2 r] :=
+      ≤ Pr{r ← coordFork 2 D}[GoodOutput 2 r] :=
   sub_div_le_prEvent_goodOutput_coordFork 2 D
 
 /-- At these parameters the loss is `2/5`, so the bound is not truncated away. -/
@@ -70,7 +70,7 @@ example : IsProbabilityMeasure 𝒟[(pure allAccept : ProbComp (Chal → Bool))]
 /-- The all-accepting table accepts every challenge, so `ε = 1`. -/
 theorem acceptRatio_allAccept : acceptRatio (pure allAccept : ProbComp (Chal → Bool)) = 1 := by
   rw [acceptRatio]
-  have hone : ∀ c : Chal, Pr{let ρ ← (pure allAccept : ProbComp (Chal → Bool))}[ρ c] = 1 :=
+  have hone : ∀ c : Chal, Pr{ρ ← (pure allAccept : ProbComp (Chal → Bool))}[ρ c] = 1 :=
     fun c => by rw [prEvent_eq_evalDist_map]; simp [allAccept]
   rw [Finset.sum_congr rfl fun c _ => hone c, Finset.sum_const, Finset.card_univ, nsmul_eq_mul,
     mul_one, ENNReal.div_self (by simp) (by finiteness)]
@@ -85,7 +85,7 @@ bound of `3/5` on the extractor's success probability, so neither the truncated 
 instance hypotheses have hollowed the statement out. -/
 theorem three_fifths_le_prEvent_goodOutput :
     (3 : ℝ≥0∞) / 5
-      ≤ Pr{let r ← coordFork 2 (pure allAccept : ProbComp (Chal → Bool))}[GoodOutput 2 r] := by
+      ≤ Pr{r ← coordFork 2 (pure allAccept : ProbComp (Chal → Bool))}[GoodOutput 2 r] := by
   have h := sub_div_le_prEvent_goodOutput_coordFork 2
     (pure allAccept : ProbComp (Chal → Bool))
   refine le_trans (le_of_eq ?_) h
@@ -116,7 +116,7 @@ theorem acceptTable_selfVerify (D : ProbComp (Chal → Bool)) :
 extractor returns `ℓ(k-1)+1` *accepting transcripts* whose challenges are `SS(S, ℓ, k)`. -/
 theorem three_fifths_le_prEvent_goodTranscripts :
     (3 : ℝ≥0∞) / 5
-      ≤ Pr{let r ← coordForkT selfVerify 2 (pure allAccept : ProbComp (Chal → Bool))}[
+      ≤ Pr{r ← coordForkT selfVerify 2 (pure allAccept : ProbComp (Chal → Bool))}[
           GoodTranscripts selfVerify 2 r] := by
   have h := sub_div_le_prEvent_goodTranscripts_coordForkT selfVerify 2
     (pure allAccept : ProbComp (Chal → Bool))
@@ -179,14 +179,14 @@ noncomputable def coinFlipAdv : CouplingChal → ProbComp Bool := fun _ => $ᵗ 
 noncomputable def coinFlipSharedTape : ProbComp (CouplingChal → Bool) :=
   (fun b _ => b) <$> ($ᵗ Bool)
 
-private theorem prEvent_coinFlip (c : CouplingChal) : Pr{let y ← coinFlipAdv c}[y] = 1 / 2 := by
+private theorem prEvent_coinFlip (c : CouplingChal) : Pr{y ← coinFlipAdv c}[y] = 1 / 2 := by
   rw [coinFlipAdv, SampleableType.prEvent_uniformSample,
     show (Finset.univ.filter fun y : Bool => y = true).card = 1 from by decide]
   norm_num
 
 /-- Identical single-challenge marginals. -/
 theorem coinFlip_same_marginals (c : CouplingChal) :
-    Pr{let τ ← indepTable coinFlipAdv}[τ c] = Pr{let τ ← coinFlipSharedTape}[τ c] := by
+    Pr{τ ← indepTable coinFlipAdv}[τ c] = Pr{τ ← coinFlipSharedTape}[τ c] := by
   rw [indepTable,
     prEvent_coord_mPi coinFlipAdv c (fun y => y = true)
       (fun c' _ => prEvent_true_probComp (coinFlipAdv c')),
@@ -196,14 +196,14 @@ theorem coinFlip_same_marginals (c : CouplingChal) :
 /-- **The joint laws differ.** Two challenges accept together half the time under a shared tape
 and a quarter of the time under independent pre-sampling. -/
 theorem coinFlip_allAccept_sharedTape :
-    Pr{let τ ← coinFlipSharedTape}[∀ c, τ c] = 1 / 2 := by
+    Pr{τ ← coinFlipSharedTape}[∀ c, τ c] = 1 / 2 := by
   rw [coinFlipSharedTape, prEvent_map,
     prEvent_congr ($ᵗ Bool) (fun b => ∀ c : CouplingChal, (fun _ => b) c) (fun b => b = true)
       fun b => by simp]
   exact prEvent_coinFlip ![0]
 
 theorem coinFlip_allAccept_indepTable :
-    Pr{let τ ← indepTable coinFlipAdv}[∀ c, τ c] = 1 / 4 := by
+    Pr{τ ← indepTable coinFlipAdv}[∀ c, τ c] = 1 / 4 := by
   rw [indepTable, prEvent_forall_coord_mPi coinFlipAdv fun _ y => y = true]
   rw [Finset.prod_congr rfl fun c _ => prEvent_coinFlip c, Finset.prod_const, Finset.card_univ,
     show Fintype.card CouplingChal = 2 from rfl]
@@ -229,7 +229,7 @@ example : ![3] ∉ goodSet 2 partialAccept := by decide
 theorem acceptRatio_partialAccept :
     acceptRatio (pure partialAccept : ProbComp (PartialChal → Bool)) = 2 / 5 := by
   have hsum : (∑ c : PartialChal,
-      Pr{let ρ ← (pure partialAccept : ProbComp (PartialChal → Bool))}[ρ c])
+      Pr{ρ ← (pure partialAccept : ProbComp (PartialChal → Bool))}[ρ c])
       = ((Finset.univ.filter fun c : PartialChal => partialAccept c).card : ℝ≥0∞) := by
     rw [Finset.natCast_card_filter]
     refine Finset.sum_congr rfl fun c _ => ?_
@@ -249,7 +249,7 @@ private theorem two_fifths_sub_one_fifth : (2 : ℝ≥0∞) / 5 - 1 / 5 = 1 / 5 
 /-- A nonconstant acceptance table leaves a strictly positive `1/5` lower bound. -/
 theorem one_fifth_le_prEvent_goodOutput_partial :
     (1 : ℝ≥0∞) / 5 ≤
-      Pr{let r ← coordFork 2 (pure partialAccept : ProbComp (PartialChal → Bool))}[GoodOutput 2 r]
+      Pr{r ← coordFork 2 (pure partialAccept : ProbComp (PartialChal → Bool))}[GoodOutput 2 r]
       := by
   have h := sub_div_le_prEvent_goodOutput_coordFork 2
     (pure partialAccept : ProbComp (PartialChal → Bool))
@@ -269,7 +269,7 @@ def selfVerify1 : PartialChal → Bool → Bool := fun _ y => y
 
 /-- The adversary convinces the verifier on exactly two of five challenges. -/
 theorem advSucc_partialAdv : advSucc selfVerify1 partialAdv = 2 / 5 := by
-  have hsum : (∑ c : PartialChal, Pr{let y ← partialAdv c}[selfVerify1 c y])
+  have hsum : (∑ c : PartialChal, Pr{y ← partialAdv c}[selfVerify1 c y])
       = ((Finset.univ.filter fun c : PartialChal => partialAccept c).card : ℝ≥0∞) := by
     rw [Finset.natCast_card_filter]
     refine Finset.sum_congr rfl fun c _ => ?_
@@ -291,7 +291,7 @@ theorem acceptRatio_indepTable_partialAdv :
 /-- **Lemma 7.1 against an actual adversary**, with a strictly positive bound. -/
 theorem one_fifth_le_prEvent_goodTranscripts_indepTable :
     (1 : ℝ≥0∞) / 5 ≤
-      Pr{let r ← coordForkT selfVerify1 2 (indepTable partialAdv)}[GoodTranscripts selfVerify1 2 r]
+      Pr{r ← coordForkT selfVerify1 2 (indepTable partialAdv)}[GoodTranscripts selfVerify1 2 r]
       := by
   have h := sub_div_le_prEvent_goodTranscripts_indepTable selfVerify1 2 partialAdv
   refine le_trans (le_of_eq ?_) h
@@ -304,14 +304,14 @@ so this lives in `OptionT ProbComp`, where the marginal lemma's hypothesis has c
 def failFactor : Fin 2 → OptionT ProbComp Bool := fun i => if i = 0 then pure true else failure
 
 /-- The first factor accepts with certainty. -/
-theorem prEvent_failFactor_zero : Pr{let b ← failFactor 0}[b] = 1 := by
+theorem prEvent_failFactor_zero : Pr{b ← failFactor 0}[b] = 1 := by
   simp [failFactor]
 
 /-- Yet the product's first coordinate accepts with probability zero: a failing factor removes mass
 from every coordinate at once. So the full-mass hypothesis of `prEvent_coord_mOfFn` is
 load-bearing, and only `prEvent_coord_mOfFn_le` survives without it. -/
 theorem prEvent_coord_mOfFn_failFactor :
-    Pr{let v ← Fin.mOfFn 2 failFactor}[v 0] = 0 := by
+    Pr{v ← Fin.mOfFn 2 failFactor}[v 0] = 0 := by
   simp [Fin.mOfFn, failFactor]
 
 /-! ## The resampling loop -/
@@ -322,13 +322,13 @@ theorem card_goodSet_partial : (goodSet 2 partialAccept).card = 2 := by decide
 /-- **The loop is faithful to the table core.** Resampling the column in a random order until two
 accepting values are found succeeds exactly on `goodSet`, so with probability `2/5` here. -/
 theorem prEvent_isSome_coordForkOp_partial :
-    Pr{let r ← coordForkOp 2 partialAccept}[r.1.isSome] = 2 / 5 := by
+    Pr{r ← coordForkOp 2 partialAccept}[r.1.isSome] = 2 / 5 := by
   rw [prEvent_isSome_coordForkOp, card_goodSet_partial]
   simp
 
 /-- The Lemma 7.1 bound for the loop, at parameters where it is strictly positive. -/
 theorem one_fifth_le_prEvent_isSome_coordForkOp :
-    (1 : ℝ≥0∞) / 5 ≤ Pr{let r ← coordForkOp 2 partialAccept}[r.1.isSome] := by
+    (1 : ℝ≥0∞) / 5 ≤ Pr{r ← coordForkOp 2 partialAccept}[r.1.isSome] := by
   rw [prEvent_isSome_coordForkOp_partial]
   gcongr
   norm_num
@@ -337,7 +337,7 @@ theorem one_fifth_le_prEvent_isSome_coordForkOp :
 every coordinate and never succeeds. This is behaviour the total-lookup core cannot exhibit, since
 it reads the column rather than sampling it. -/
 theorem prEvent_isSome_coordForkOp_exhausted :
-    Pr{let r ← coordForkOp 4 partialAccept}[r.1.isSome] = 0 := by
+    Pr{r ← coordForkOp 4 partialAccept}[r.1.isSome] = 0 := by
   rw [prEvent_isSome_coordForkOp, show (goodSet 4 partialAccept).card = 0 from by decide]
   simp
 
