@@ -119,10 +119,24 @@ variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
 and query whose output measure is the stored kernel. This separate typeclass lets kernel-native
 responders remain genuinely measure-theoretic, while responders built from VCVio's `ProbComp`
 execution layer retain their program without imposing countability on abstract state or answer
-types. -/
+types.
+
+The state and answer σ-algebras of an executable responder separate points. This is what makes
+the kernel determine the program's distribution (`IsExecutable.answerComp_evalDistEq`): a
+program's output measure in a σ-algebra that does not separate points, such as the trivial one,
+forgets the program's point masses, so two programs with the same output measure could still
+play a game differently. -/
 class IsExecutable (R : ProbResponder spec) where
   /-- The executable answer-and-successor-state program. -/
   answerComp : R.State → (t : spec.Domain) → ProbComp (spec.Range t × R.State)
+  /-- The state σ-algebra separates points. -/
+  instMeasurableSingletonClassState :
+    letI := R.instMeasurableSpaceState
+    MeasurableSingletonClass R.State
+  /-- The answer σ-algebra of every query separates points. -/
+  instMeasurableSingletonClassRange : ∀ t,
+    letI := R.instMeasurableSpaceRange t
+    MeasurableSingletonClass (spec.Range t)
   /-- The executable realization denotes exactly the stored answer kernel. -/
   answerKernel_eq_evalDist : ∀ s t,
     letI := R.instMeasurableSpaceRange t
@@ -135,6 +149,19 @@ theorem IsExecutable.evalDist_answerComp_eq (R : ProbResponder spec)
     𝒟[E₁.answerComp s t] = 𝒟[E₂.answerComp s t] := by
   let _ := R.instMeasurableSpaceRange t
   rw [← E₁.answerKernel_eq_evalDist s t, ← E₂.answerKernel_eq_evalDist s t]
+
+/-- The authoritative kernel determines every executable realization up to equality in
+distribution: since the responder's σ-algebras separate points, the output measure of a
+realization records each of its point masses. -/
+theorem IsExecutable.answerComp_evalDistEq (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (s : R.State) (t : spec.Domain) :
+    E₁.answerComp s t =ᵈ E₂.answerComp s t := by
+  refine OracleComp.evalDistEq_of_forall_prEvent_eq_output fun x => ?_
+  let _ := R.instMeasurableSpaceRange t
+  have := E₁.instMeasurableSingletonClassState
+  have := E₁.instMeasurableSingletonClassRange t
+  rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton,
+    IsExecutable.evalDist_answerComp_eq R E₁ E₂ s t]
 
 /-- Build a kernel responder from an executable `ProbComp`-valued stateful handler, read through
 its output measures. The constructor equips the state and answers with local discrete measurable
@@ -153,6 +180,8 @@ structures; it does not install blanket measurable-space instances on the underl
 instance ofQueryImpl.instIsExecutable {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) : (ofQueryImpl impl).IsExecutable where
   answerComp s t := impl t s
+  instMeasurableSingletonClassState := inferInstance
+  instMeasurableSingletonClassRange _ := inferInstance
   answerKernel_eq_evalDist _ _ := rfl
 
 /-- A responder as a stateful query implementation in `StateT State ProbComp`: the
@@ -237,20 +266,61 @@ theorem measurable_pullback_answerMap {ι' : Type u}
     exact MeasurableSpace.comap_map_le
   exact (hw.comp measurable_fst).prodMk measurable_snd
 
+/-- The pulled-back answer σ-algebra of a query separates points whenever the target's does
+and the lens translates the answers injectively: the preimage of a singleton under an
+injective map is a singleton or empty. -/
+theorem pullback.measurableSingletonClass_range_of_injective {ι' : Type u}
+    {spec' : OracleSpec.{u, u} ι'}
+    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    (t : spec.Domain) (hw : Function.Injective (w.toFunB t))
+    (h : letI := R.instMeasurableSpaceRange (w.toFunA t)
+      MeasurableSingletonClass (spec'.Range (w.toFunA t))) :
+    letI := (pullback w R).instMeasurableSpaceRange t
+    MeasurableSingletonClass (spec.Range t) := by
+  let _ := R.instMeasurableSpaceRange (w.toFunA t)
+  let _ := (pullback w R).instMeasurableSpaceRange t
+  refine ⟨fun x => ?_⟩
+  change MeasurableSet (w.toFunB t ⁻¹' {x})
+  by_cases hx : x ∈ Set.range (w.toFunB t)
+  · obtain ⟨y, rfl⟩ := hx
+    rw [← Set.image_singleton, hw.preimage_image]
+    exact measurableSet_singleton y
+  · rw [Set.preimage_singleton_eq_empty.mpr hx]
+    exact MeasurableSet.empty
+
 section Executable
 
 variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
 
-/-- Executability is preserved by semantic responder pullback. The executable handler
-maps the same answer/state pair as the kernel, and `evalDist_map` proves that the two
-readings still agree. -/
+/-- Pulling an executable responder back along a lens that translates every answer
+injectively keeps the answer σ-algebras point-separating, which is the side condition of
+`pullback.instIsExecutable`. -/
+theorem pullback.measurableSingletonClass_range_of_forall_injective {ι' : Type}
+    {spec' : OracleSpec.{0, 0} ι'}
+    (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
+    [R.IsExecutable] (hw : ∀ t, Function.Injective (w.toFunB t)) : ∀ t,
+    letI := (pullback w R).instMeasurableSpaceRange t
+    MeasurableSingletonClass (spec.Range t) := fun t =>
+  pullback.measurableSingletonClass_range_of_injective w R t (hw t)
+    (IsExecutable.instMeasurableSingletonClassRange (R := R) (w.toFunA t))
+
+/-- Executability is preserved by semantic responder pullback whose answer σ-algebras
+separate points (`pullback.measurableSingletonClass_range_of_forall_injective` supplies the
+side condition for lenses that translate answers injectively). The executable handler maps
+the same answer/state pair as the kernel, and `evalDist_map` proves that the two readings
+still agree. -/
 noncomputable instance pullback.instIsExecutable {ι' : Type}
     {spec' : OracleSpec.{0, 0} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
-    [R.IsExecutable] : (pullback w R).IsExecutable where
+    [R.IsExecutable]
+    [∀ t, letI := (pullback w R).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)] : (pullback w R).IsExecutable where
   answerComp s t :=
     (fun q => (w.toFunB t q.1, q.2)) <$>
       IsExecutable.answerComp (R := R) s (w.toFunA t)
+  instMeasurableSingletonClassState :=
+    IsExecutable.instMeasurableSingletonClassState (R := R)
+  instMeasurableSingletonClassRange _ := inferInstance
   answerKernel_eq_evalDist s t := by
     let _ := R.instMeasurableSpaceRange (w.toFunA t)
     let _ := (pullback w R).instMeasurableSpaceRange t
@@ -264,7 +334,10 @@ maps the target responder's answer back through the lens. -/
 @[simp] theorem toQueryImpl_pullback {ι' : Type}
     {spec' : OracleSpec.{0, 0} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
-    [R.IsExecutable] (t : spec.toPFunctor.A) :
+    [R.IsExecutable]
+    [∀ t, letI := (pullback w R).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
+    (t : spec.toPFunctor.A) :
     (pullback w R).toQueryImpl t =
       (fun a => w.toFunB t a) <$> R.toQueryImpl (w.toFunA t) := by
   funext s
@@ -280,7 +353,10 @@ pulled-back responder. The handler-level content of the interface-wrapping adjun
 machine-free, so run-level wrapping laws follow from it by pure congruence. -/
 theorem liftM_mapLens_pullback {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
     (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor) (R : ProbResponder spec')
-    [R.IsExecutable] {γ : Type} : ∀ oa : OracleComp spec γ,
+    [R.IsExecutable]
+    [∀ t, letI := (pullback w R).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
+    {γ : Type} : ∀ oa : OracleComp spec γ,
     PFunctor.FreeM.liftM R.toQueryImpl (PFunctor.FreeM.mapLens w oa) =
       PFunctor.FreeM.liftM (pullback w R).toQueryImpl oa
   | .pure x => rfl
@@ -501,6 +577,51 @@ noncomputable def transcriptDistAgainst (A : OracleStrategy S spec) (R : ProbRes
     [R.IsExecutable]
     (p : R.State × S) (n : ℕ) : ProbComp (QueryLog spec) :=
   Prod.fst <$> transcriptAgainst A R p n
+
+/-! ## Independence of the executable realization
+
+The wired runs read the responder through `ProbResponder.toQueryImpl`, so as programs they
+depend on the chosen executable realization; as distributions they do not, because the kernel
+determines every realization up to equality in distribution
+(`ProbResponder.IsExecutable.answerComp_evalDistEq`). Each congruence takes the two
+realizations as explicit arguments and selects them with `letI`, the instance binder of the
+runs being anonymous. -/
+
+/-- One wired round has the same distribution under every executable realization. -/
+theorem stepAgainst_evalDistEq (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (p : R.State × S) :
+    (letI := E₁; stepAgainst A R p) =ᵈ (letI := E₂; stepAgainst A R p) :=
+  EvalDistEq.map_congr _
+    (ProbResponder.IsExecutable.answerComp_evalDistEq R E₁ E₂ p.1 (A.expose p.2))
+
+/-- The `n`-round wired run has the same distribution under every executable realization. -/
+theorem iterateAgainst_evalDistEq (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (n : ℕ) (p : R.State × S) :
+    (letI := E₁; iterateAgainst A R n p) =ᵈ (letI := E₂; iterateAgainst A R n p) := by
+  induction n generalizing p with
+  | zero => exact EvalDistEq.rfl
+  | succ n ih =>
+    rw [@iterateAgainst_succ _ _ _ A R E₁, @iterateAgainst_succ _ _ _ A R E₂]
+    exact (stepAgainst_evalDistEq A R E₁ E₂ p).bind_congr ih
+
+/-- The wired transcript run has the same distribution under every executable realization. -/
+theorem transcriptAgainst_evalDistEq (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (p : R.State × S) (n : ℕ) :
+    (letI := E₁; transcriptAgainst A R p n) =ᵈ (letI := E₂; transcriptAgainst A R p n) := by
+  induction n generalizing p with
+  | zero => exact EvalDistEq.rfl
+  | succ n ih =>
+    simp only [transcriptAgainst]
+    exact (ProbResponder.IsExecutable.answerComp_evalDistEq R E₁ E₂ p.1
+      (A.expose p.2)).bind_congr fun q =>
+        (ih (q.2, A.update p.2 q.1)).bind_congr fun _ => EvalDistEq.rfl
+
+/-- The wired transcripts have the same distribution under every executable realization. -/
+theorem transcriptDistAgainst_evalDistEq (A : OracleStrategy S spec) (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (p : R.State × S) (n : ℕ) :
+    (letI := E₁; transcriptDistAgainst A R p n) =ᵈ
+      (letI := E₂; transcriptDistAgainst A R p n) :=
+  EvalDistEq.map_congr _ (transcriptAgainst_evalDistEq A R E₁ E₂ p n)
 
 /-! ## Deterministic recovery
 

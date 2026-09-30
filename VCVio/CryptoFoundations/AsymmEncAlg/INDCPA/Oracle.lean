@@ -66,6 +66,18 @@ def IND_CPA_swapLens (encAlg : AsymmEncAlg ProbComp M PK SK C) :
 @[simp] theorem IND_CPA_swapLens_query_right (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
 
+/-- Message swapping leaves response values unchanged, so pulling an executable responder
+back along the swap lens keeps its answer σ-algebras point-separating, as executable
+responder pullback requires. -/
+instance IND_CPA_swapLens_pullback.instMeasurableSingletonClassRange
+    (encAlg : AsymmEncAlg ProbComp M PK SK C)
+    (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable] : ∀ t,
+    letI := (R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange t
+    MeasurableSingletonClass (encAlg.IND_CPA_oracleSpec.Range t) :=
+  ProbResponder.pullback.measurableSingletonClass_range_of_forall_injective _ R fun
+    | .inl _ => Function.injective_id
+    | .inr _ => Function.injective_id
+
 /-- Wrapping an IND-CPA machine with message swapping is exactly executable responder
 pullback along the same PolyFun lens: a one-line specialization of the generic
 wrap/pullback adjunction

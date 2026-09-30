@@ -26,7 +26,9 @@ query off (`runAgainst_zero_of_view_query`, from `runWith_query_zero`), and the 
 step law `runAgainst_succ_of_view_query` is `runWith_query_succ_stateT` read at
 `m := ProbComp`: one unit of fuel jointly samples the answer and next responder state,
 then continues. VCVio contributes the measure semantics of `ProbComp`; the constant-state collapse
-`runAgainst_ofHandlerFamily` recovers the memoryless run against the selected handler.
+`runAgainst_ofHandlerFamily` recovers the memoryless run against the selected handler, and
+`runAgainst_evalDistEq` shows that the run's distribution does not depend on which executable
+realization of the responder drives it.
 
 `runAgainst` is deliberately *not* an image of `OracleStrategy.iterateAgainst` in
 general: early stopping matters. Against a stateful responder, running past the
@@ -138,6 +140,37 @@ form of `OracleStrategy.iterateAgainst_ofHandlerFamily`. -/
         _ = (fun ob => (ob, γ)) <$> M.runWith (h γ) (k + 1) s := by
             rw [M.runWith_query_succ (h γ) k s t next hview, map_bind]
 
+/-! ## Independence of the executable realization -/
+
+/-- The wired run has the same distribution under every executable realization of the
+responder: the kernel determines each realization up to equality in distribution
+(`ProbResponder.IsExecutable.answerComp_evalDistEq`), and the run only samples it. The two
+realizations are explicit arguments selected with `letI`, the instance binder of `runAgainst`
+being anonymous. -/
+theorem runAgainst_evalDistEq (M : OracleMachine spec α β) (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (k : ℕ) (r : R.State) (s : M.State) :
+    (letI := E₁; M.runAgainst R k (r, s)) =ᵈ (letI := E₂; M.runAgainst R k (r, s)) := by
+  induction k generalizing r s with
+  | zero =>
+    cases hview : M.view s with
+    | inl b =>
+      rw [@runAgainst_of_view_return _ _ _ _ M R E₁ _ _ hview,
+        @runAgainst_of_view_return _ _ _ _ M R E₂ _ _ hview]
+    | inr q =>
+      rw [@runAgainst_zero_of_view_query _ _ _ _ M R E₁ _ _ _ hview,
+        @runAgainst_zero_of_view_query _ _ _ _ M R E₂ _ _ _ hview]
+  | succ k ih =>
+    cases hview : M.view s with
+    | inl b =>
+      rw [@runAgainst_of_view_return _ _ _ _ M R E₁ _ _ hview,
+        @runAgainst_of_view_return _ _ _ _ M R E₂ _ _ hview]
+    | inr q =>
+      obtain ⟨t, next⟩ := q
+      rw [@runAgainst_succ_of_view_query _ _ _ _ M R E₁ _ _ _ hview,
+        @runAgainst_succ_of_view_query _ _ _ _ M R E₂ _ _ _ hview]
+      exact (ProbResponder.IsExecutable.answerComp_evalDistEq R E₁ E₂ r t).bind_congr
+        fun q => ih q.2 (next q.1)
+
 /-! ## Interface wrapping: reductions as lenses
 
 Installing an interface translation on a machine adversary is PolyFun's
@@ -154,6 +187,8 @@ unrolled query tree, and `ProbResponder.liftM_mapLens_pullback` re-reads the
 translation through the pulled-back handler. -/
 theorem runWith_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
     (M : OracleMachine spec α β) (R : ProbResponder spec') [R.IsExecutable]
+    [∀ t, letI := (R.pullback w).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
     (k : ℕ) (s : M.State) :
     (M.wrap w).runWith R.toQueryImpl k s =
       M.runWith (R.pullback w).toQueryImpl k s := by
@@ -166,6 +201,8 @@ theorem runWith_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
 level. -/
 theorem runAgainst_wrap (w : PFunctor.Lens spec.toPFunctor spec'.toPFunctor)
     (M : OracleMachine spec α β) (R : ProbResponder spec') [R.IsExecutable]
+    [∀ t, letI := (R.pullback w).instMeasurableSpaceRange t
+      MeasurableSingletonClass (spec.Range t)]
     (k : ℕ) (r : R.State)
     (s : M.State) :
     runAgainst (M.wrap w) R k (r, s) = M.runAgainst (R.pullback w) k (r, s) := by
