@@ -28,10 +28,15 @@ with its bridge lemma, and runs core's `vcgen` inside the reading's per-call sco
 | `r ≤ Pr{…}[p]` | expectation (global) | `⦃ r ⦄ oa ⦃ predInd p ⦄` |
 | `Pr{…}[p] ≤ ε`, `Pr{…}[p] = 0` | upper bound | `⦃ toDual ε ⦄ oa ⦃ … ⦄` |
 | `Pr{…}[p] = c` | upper bound and expectation | both of the above |
+| `⦃ pre ⦄ oa ⦃ post ⦄` | read off the assertion type | the goal itself |
 
 The readings are `OracleComp.Qualitative`, `OracleComp.Angelic`, the global expectation reading,
 and `OracleComp.Upper`. `𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does, `≥` is read as
-`≤` with its sides swapped, and an equation may have the expectation on either side.
+`≤` with its sides swapped, and an equation may have the expectation on either side. A triple
+already stated is run in the reading of its assertion type: `ℝ≥0∞` for lower bounds, `ℝ≥0∞ᵒᵈ`
+for upper bounds, and `Prop` for the structural reading, or the angelic one when the triple's
+interpretation is angelic; a state-passing assertion `σ → …` is read by its codomain, so triples
+of handlers over `StateT` are run the same way.
 
 The event forms nest one expectation per draw; the bridges rewrite each nested expectation into
 the reading, so `vcgen` steps through the whole program. The structural and angelic bridges of an
@@ -49,18 +54,24 @@ a simpler route:
 * `= 0` is the upper bound alone, the lower bound `0 ≤ …` holding outright;
 * `= 1` is the structural triple when uniform answers are available, whose verification
   conditions are the event itself at every possible output and whose rule catalogue is the
-  largest; otherwise it splits, and the upper half closes on the range of the indicator.
+  largest; otherwise it splits, the upper half closes on the range of the indicator
+  (`wp_le_of_forall_le`), and the lower half is run in the expectation reading.
 
 The split settles both halves outright with the every-outcome rules, and with a loop invariant or
 handler potential that pins the value exactly. With the averaging rules each half ends in a sum,
 which `simp` on the normal form evaluates. An equation between the probabilities of two programs
-is a program equality, a game hop, and is refused: it is proved with `pvcstep` / `pvcgen`, the
-couplings `rvcstep` / `rvcgen`, or the `=ᵈ` lemmas.
+is a program equality, a game hop, and is refused: it is proved with `prrw` (bind swaps and shared
+prefixes), the couplings `rvcstep` / `rvcgen`, or the `=ᵈ` lemmas. An equation stating the value
+of one program's expectation step by step, such as `wp⟦oa >>= f⟧ g = wp⟦oa⟧ fun x => wp⟦f x⟧ g`,
+is `simp only [expect_norm, expect_eval]`.
 
 ## Arguments
 
-`prvcgen [rules] invariants … with step` passes its rules, invariant alternatives and `with` step
-to `vcgen`. On an equation both halves receive the invariants and the `with` step, and each keeps
+`prvcgen (config) [rules] invariants … with step` passes its configuration, rules, invariant
+alternatives and `with` step to `vcgen`; `prvcgen (errorOnMissingSpec := false)` leaves a program
+without a rule, such as an opaque sub-program, as a verification condition stating its weakest
+precondition. The goal's metavariables are substituted first, since `vcgen` matches programs
+syntactically. On an equation both halves receive the invariants and the `with` step, and each keeps
 the rules whose triples are stated in its reading, read off the assertion type of the rule's
 conclusion; definitions to unfold go to both. An invariant shared by the two halves is written
 without a carrier ascription, as `fun _ suff c => ↑c + ↑suff.length`, so that each half elaborates
@@ -69,7 +80,7 @@ it in its own carrier. `prvcgen => tac` runs `tac` in place of `vcgen`, on each 
 The verification conditions of the expectation readings are read back into `ℝ≥0∞`
 (`Lean.Order.rel_eq_le`; `OracleComp.Upper.rel_iff`, `ofDual_toDual`,
 `OracleComp.Upper.ofDual_wp`, and Mathlib's `ofDual_add`, …), and those an indicator's range
-settles are closed (`propInd_le_one`, `one_le_propInd_iff`).
+settles or that are reflexive are closed (`propInd_le_one`, `one_le_propInd_iff`, `le_refl`).
 
 A comparison `Pr{A}[p] ≤ Pr{B}[q]` of two events has an expectation on both sides; `prvcgen`
 reads it as an upper bound on the left-hand side, with the right-hand side as the bound.
@@ -130,8 +141,25 @@ upper-bound goal and a lower-bound goal. -/
 inductive Plan where
   /-- The main goal is a triple of the reading. -/
   | single (reading : Reading)
-  /-- The main goal was split into `wp⟦oa⟧ g ≤ c` and `c ≤ wp⟦oa⟧ g`. -/
-  | split
+  /-- The main goal was split into `wp⟦oa⟧ g ≤ c` and `c ≤ wp⟦oa⟧ g`; when `upperClosed`, the
+  upper bound was settled on the range of the observation and only the lower bound remains. -/
+  | split (upperClosed : Bool)
+
+/-- The reading of a core triple, read off its assertion type: `ℝ≥0∞ᵒᵈ` for the upper-bound
+reading, `ℝ≥0∞` for the lower-bound reading, and `Prop` for the structural reading, or the angelic
+one when the triple's interpretation is angelic. A state-passing assertion `σ → …` is read by its
+codomain. -/
+def tripleReading? (goal : Expr) : Option Reading :=
+  if !goal.isAppOfArity ``Std.WP.Triple 11 then none else
+  let carrier := (goal.getArg! 0).getForallBody
+  if carrier.isAppOf ``OrderDual then some .upper
+  else if carrier.isConstOf ``ENNReal then some .lower
+  else if carrier.isProp then
+    let angelic := (goal.getArg! 7).find? fun
+      | .const n _ => (`OracleComp.Angelic).isPrefixOf n || n == ``MonadAttach.toWPMonadAngelic
+      | _ => false
+    some (if angelic.isSome then .possible else .necessary)
+  else none
 
 /-- State the structural bridge for `wp⟦oa⟧ g = 1`, rewriting each nested expectation. -/
 def bridgeEqOne : TacticM Unit := do
@@ -141,15 +169,26 @@ def bridgeEqOne : TacticM Unit := do
     refine (OracleComp.Qualitative.wp_iff_triple _ _).2 ?_)))
 
 /-- State the main goal as a triple of the reading it belongs to, or split an equation. -/
-def bridge (goal : Expr) : TacticM Plan := do
+partial def bridge (goal : Expr) : TacticM Plan := do
   let goal := goal.cleanupAnnotations
+  -- a core triple, run in the reading of its assertion type
+  if goal.isAppOf ``Std.WP.Triple then
+    let some reading := tripleReading? goal
+      | throwError "prvcgen: a triple must have assertions in `Prop`, `ℝ≥0∞` or `ℝ≥0∞ᵒᵈ`, \
+          or in functions into them{indentExpr goal}"
+    return .single reading
+  -- `pre ⊑ wp oa post epost`, the unfolded form of a triple
+  if goal.isAppOfArity ``Lean.Order.PartialOrder.rel 4 && isWpApp (goal.getArg! 3) then
+    evalTactic (← `(tactic| refine Std.WP.Triple.iff.1 ?_))
+    return ← bridge (← instantiateMVars (← getMainTarget))
   -- equations: `= 1`, `= 0`, `= c`, and their symmetric forms
   if let some (_, lhs, rhs) := goal.eq? then
     if isWpApp lhs && isWpApp rhs then
-      throwError "prvcgen: both sides are expectations of programs. An equation between two \
-        programs' probabilities is a program equality (a game hop), not a triple of one program; \
-        use `pvcstep` / `pvcgen` on the probability equality, the couplings `rvcstep` / \
-        `rvcgen`, or the `=ᵈ` lemmas"
+      throwError "prvcgen: both sides are expectations. An equation between two programs' \
+        probabilities is a program equality, not a triple of one program: `prrw` swaps binds and \
+        reduces a shared prefix, the couplings `rvcstep` / `rvcgen` relate the programs, and \
+        the `=ᵈ` lemmas relate their distributions. When one side evaluates the other, \
+        `simp only [expect_norm, expect_eval]` unfolds it"
     let (lhs, rhs, swap) :=
       if isWpApp lhs then (lhs, rhs, false) else (rhs, lhs, true)
     unless isWpApp lhs do
@@ -172,7 +211,18 @@ def bridge (goal : Expr) : TacticM Plan := do
         try simp only [OracleComp.Upper.toDual_wp])))
       return .single .upper
     evalTactic (← `(tactic| refine le_antisymm ?_ ?_))
-    return .split
+    if isNumeral rhs 1 then
+      -- the upper half `wp⟦oa⟧ g ≤ 1` on the range of an event's observation
+      let saved ← saveState
+      try
+        evalTactic (← `(tactic| focus
+          refine wp_le_of_forall_le _ ?_
+          prvcgen_le_one
+          done))
+        return .split true
+      catch _ =>
+        saved.restore
+    return .split false
   -- `0 < Pr{…}[p]`
   if goal.isAppOfArity ``LT.lt 4 && isWpApp (goal.getArg! 3) then
     unless isNumeral (goal.getArg! 2) 0 do
@@ -232,7 +282,8 @@ def bridge (goal : Expr) : TacticM Plan := do
       throwError "prvcgen: a universal statement must be `∀ x ∈ support oa, p x`"
   throwError "prvcgen: unsupported goal{indentExpr goal}\n\
     expected `Pr\{…}[…] = c`, `0 < Pr\{…}[…]`, `r ≤ Pr\{…}[…]`, `Pr\{…}[…] ≤ ε` (or the same \
-    with `𝔼\{…}[…]` or `wp⟦…⟧ …`), `∀ x ∈ support oa, p x`, or `∃ x ∈ support oa, p x`"
+    with `𝔼\{…}[…]` or `wp⟦…⟧ …`), `∀ x ∈ support oa, p x`, `∃ x ∈ support oa, p x`, or a \
+    triple `⦃ pre ⦄ oa ⦃ post ⦄`"
 
 /-- The reading a rule is stated in, read off the assertion type of the triple it concludes:
 `ℝ≥0∞ᵒᵈ` for the upper-bound reading, `ℝ≥0∞` for the lower-bound reading, `Prop` for the
@@ -272,12 +323,12 @@ that an indicator's range settles. -/
 def normalizeVCs : Reading → TacticM Unit
   | .lower => do
     evalTactic (← `(tactic| all_goals simp -failIfUnchanged only [Lean.Order.rel_eq_le,
-      binderNameHint, predInd_apply, one_le_propInd_iff]))
+      binderNameHint, predInd_apply, one_le_propInd_iff, le_refl]))
   | .upper => do
     evalTactic (← `(tactic| all_goals simp -failIfUnchanged only [OracleComp.Upper.rel_iff,
       OracleComp.Upper.le_iff_ofDual, OrderDual.ofDual_toDual, OracleComp.Upper.ofDual_wp,
       binderNameHint, predInd_apply, propInd_le_one, ofDual_add, ofDual_mul, ofDual_div,
-      ofDual_inv, ofDual_zero, ofDual_one, ofDual_natCast, ofDual_ofNat]))
+      ofDual_inv, ofDual_zero, ofDual_one, ofDual_natCast, ofDual_ofNat, le_refl]))
   | _ => pure ()
 
 end OracleComp.ProgramLogic.PrVCGen
@@ -286,10 +337,11 @@ end OracleComp.ProgramLogic.PrVCGen
 statement belongs to: `Pr{…}[p] = 1` and `∀ x ∈ support oa, p x` (structural), `0 < Pr{…}[p]` and
 `∃ x ∈ support oa, p x` (angelic), `r ≤ Pr{…}[p]` (expectation lower bound), `Pr{…}[p] ≤ ε` and
 `Pr{…}[p] = 0` (expectation upper bound), and `Pr{…}[p] = c` (both bounds, by antisymmetry), with
-`𝔼{…}[…]` and `wp⟦…⟧ …` in place of `Pr{…}[…]`. The rules, invariants and `with` step are passed
-to `vcgen`; `prvcgen => tac` runs `tac` in the reading's scope in place of `vcgen`. See
+`𝔼{…}[…]` and `wp⟦…⟧ …` in place of `Pr{…}[…]`; a core triple runs in the reading of its
+assertion type. The configuration, rules, invariants and `with` step are passed to `vcgen`;
+`prvcgen => tac` runs `tac` in the reading's scope in place of `vcgen`. See
 `VCVio.ProgramLogic.Tactics.PrVCGen`. -/
-syntax (name := prvcgenStx) "prvcgen"
+syntax (name := prvcgenStx) "prvcgen" Lean.Parser.Tactic.optConfig
   (" [" withoutPosition((Lean.Parser.Tactic.simpStar <|> Lean.Parser.Tactic.simpErase <|>
     Lean.Parser.Tactic.simpLemma),*,?) "] ")?
   (Lean.Parser.Tactic.invariantAlts)?
@@ -300,21 +352,25 @@ namespace OracleComp.ProgramLogic.PrVCGen
 
 /-- Run `vcgen`, or the user's tactic, on the main goal inside the scope of `reading`, then
 normalize the verification conditions. `filter` keeps only the rules stated in the reading. -/
-def runReading (reading : Reading) (rules : Array Syntax)
+def runReading (reading : Reading) (config : Syntax) (rules : Array Syntax)
     (invs? : Option (TSyntax ``Lean.Parser.Tactic.invariantAlts))
     (with? : Option (TSyntax `vcgenDischarge))
     (tac? : Option (TSyntax ``Lean.Parser.Tactic.tacticSeq)) (filter : Bool) :
     TacticM Unit := focus do
+  -- `vcgen` matches programs syntactically, so assigned metavariables must be substituted
+  let g ← getMainGoal
+  replaceMainGoal [← g.replaceTargetDefEq (← instantiateMVars (← g.getType))]
   let tail : TSyntax ``Lean.Parser.Tactic.tacticSeq ← match tac? with
     | some tac => pure tac
     | none => do
       let rules ← if filter then rules.filterM fun r => return reading.accepts (← ruleCarrier? r)
         else pure rules
-      -- `vcgen`'s arguments by position: `[rules]` at 2, `invariants` at 5, `with` at 7
+      -- `vcgen`'s arguments by position: configuration at 1, `[rules]` at 2, `invariants` at 5,
+      -- `with` at 7
       let base ← `(tactic| vcgen)
       unless base.raw.getKind == ``Lean.Parser.Tactic.vcgen && base.raw.getNumArgs == 8 do
         throwError "prvcgen: unexpected shape of `vcgen` syntax"
-      let mut t := base.raw
+      let mut t := base.raw.setArg 1 config
       unless rules.isEmpty do
         t := t.setArg 2 (mkNullNode #[mkAtom "[", Syntax.mkSep rules (mkAtom ","), mkAtom "]"])
       if let some invs := invs? then t := t.setArg 5 (mkNullNode #[invs])
@@ -327,27 +383,31 @@ def runReading (reading : Reading) (rules : Array Syntax)
 
 @[tactic prvcgenStx, inherit_doc prvcgenStx]
 def evalPrvcgen : Tactic := fun stx => focus do
-  let rules := if stx[1].getNumArgs > 0 then stx[1][1].getSepArgs else #[]
+  let config := stx[1]
+  let rules := if stx[2].getNumArgs > 0 then stx[2][1].getSepArgs else #[]
   let invs? : Option (TSyntax ``Lean.Parser.Tactic.invariantAlts) :=
-    if stx[2].getNumArgs > 0 then some ⟨stx[2][0]⟩ else none
+    if stx[3].getNumArgs > 0 then some ⟨stx[3][0]⟩ else none
   let with? : Option (TSyntax `vcgenDischarge) :=
-    if stx[3].getNumArgs > 0 then some ⟨stx[3][1]⟩ else none
-  let tac? : Option (TSyntax ``Lean.Parser.Tactic.tacticSeq) :=
     if stx[4].getNumArgs > 0 then some ⟨stx[4][1]⟩ else none
-  if tac?.isSome && (!rules.isEmpty || invs?.isSome || with?.isSome) then
-    throwError "prvcgen: pass rules, invariants and `with` to `vcgen` inside the `=>` tactic"
+  let tac? : Option (TSyntax ``Lean.Parser.Tactic.tacticSeq) :=
+    if stx[5].getNumArgs > 0 then some ⟨stx[5][1]⟩ else none
+  if tac?.isSome &&
+      (config[0].getNumArgs > 0 || !rules.isEmpty || invs?.isSome || with?.isSome) then
+    throwError "prvcgen: pass the configuration, rules, invariants and `with` to `vcgen` inside \
+      the `=>` tactic"
   match ← bridge (← instantiateMVars (← getMainTarget)) with
-  | .single reading => runReading reading rules invs? with? tac? false
-  | .split =>
+  | .single reading => runReading reading config rules invs? with? tac? false
+  | .split upperClosed =>
     let goals ← getGoals
+    let readings := if upperClosed then [Reading.lower] else [Reading.upper, Reading.lower]
     let mut remaining := #[]
-    for (goal, reading) in goals.zip [Reading.upper, Reading.lower] do
+    for (goal, reading) in goals.zip readings do
       setGoals [goal]
       match ← bridge (← instantiateMVars (← goal.getType)) with
       | .single r =>
         unless r == reading do throwError "prvcgen: unexpected reading for a bound"
-        runReading r rules invs? with? tac? true
-      | .split => throwError "prvcgen: unexpected split of a bound"
+        runReading r config rules invs? with? tac? true
+      | .split _ => throwError "prvcgen: unexpected split of a bound"
       remaining := remaining ++ (← getGoals)
     setGoals remaining.toList
 

@@ -189,7 +189,10 @@ The rules are PolyFun's exact `wp` equations (`ExactWPMonad.wp_bind`, `wp_map`, 
 `wp_ite`, `wp_dite`, `wp_seq`, …), which are in the default `simp` set, and the definitional fold
 `wp_predInd_fold` of an indicator observation `fun x => propInd t` into `predInd (fun x => t)`;
 `simp only [expect_norm]` applies exactly them, through pre-procedures that keep the program's
-binder names. The notations need lawful measure semantics
+binder names. The simp set `expect_eval` continues past the normal form: it unfolds `replicate`,
+`List.mapM` and `List.foldlM` by one iteration and gives the value of a query or a uniform draw
+(`wp_query`, `wp_uniformSample`), so `simp only [expect_norm, expect_eval]` proves an equation
+between one program's expectation and its value. The notations need lawful measure semantics
 (`[LawfulMonad m] [LawfulEvalDistSemantics m]`): a semantics whose bind law fails, such as a free
 monad over continuous answers where a continuation need not be measurable, has no expectations,
 and its events are stated on `𝒟[…]`. A product of indicators merges into the indicator of the
@@ -783,7 +786,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 
 | Lemma | Use |
 |-------|-----|
-| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` | Swap two independent oracle draws (used by `pvcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
+| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` | Swap two independent oracle draws (used by `prrw`; `_of_uniform` variants take uniform answers) |
 | `evalDist_bind_congr` / `MeasureProgramLogic.wp_congr` | Pointwise equal continuations give equal binds or expectations, with no measurable space on the intermediate result |
 | `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` | Continuations equal on the support of the shared prefix give equal binds or expectations |
 
@@ -804,8 +807,9 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
      countable draw, `prEvent_bind_eq_tsum_of_countable`
 
 2. **Need to swap two binds?**
-   → Use `pvcstep` if the swap should close the equality
-   → Use `pvcstep rw` / `pvcstep rw under n` if you need an explicit rewrite step
+   → `prrw` rewrites one swap (`prrw under n` below shared binds) and closes the equality when
+     the two sides then agree
+   → `prrw normalize` searches for a sequence of swaps and shared-prefix steps that closes it
 
 3. **Need an event or measure of `f <$> mx`?**
    → Events: `simp` or `grind` (`prEvent_map`)
@@ -817,7 +821,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
      mass), and `OracleComp.evalDist_bind_const` for a lossless oracle prefix
 
 5. **Continuations agree only on the support of a shared prefix?**
-   → `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` (or `pvcstep`)
+   → `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` (or `prrw congr`)
 
 6. **Relating probability to support?**
    → Under uniform answers: `OracleComp.mem_support_iff_evalDist_singleton_pos`,

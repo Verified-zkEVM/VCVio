@@ -240,19 +240,18 @@ For new program-logic proofs, import `VCVio.ProgramLogic.Tactics`.
 `VCVio.ProgramLogic.Notation` keeps notation plus compatibility macros, but
 `Tactics.lean` is the canonical interactive proof mode.
 
-VCVio's unary probabilistic tactics are `pvcgen` / `pvcstep` and its relational ones
-`rvcgen` / `rvcstep`. A bare `vcgen` is core Lean's `Std.WP` VC generator, used for `Prop`-valued
-triples such as the handler specifications (gotcha 35).
+VCVio's unary probabilistic tactics are `prvcgen`, which runs core `vcgen` under the reading of
+`OracleComp` a goal belongs to, and `prrw`, which rewrites equalities between two programs'
+probabilities; its relational ones are `rvcgen` / `rvcstep`. A bare `vcgen` is core Lean's
+`Std.WP` VC generator, whose rules are `@[spec]` theorems (gotcha 35). Exact expectation values
+are `simp only [expect_norm, expect_eval]`.
 
 For the tactic reference, proof-mode entry points, and workflow details, see
-[`docs/agents/program-logic.md`](docs/agents/program-logic.md). The two
-`@[vcspec]` and `@[wpStep]` registries are indexed via
-`Lean.Meta.Sym.Pattern` / `Lean.Meta.Sym.DiscrTree`. `Sym.*` is under active
-development in core Lean; see the *Internal Architecture* and *SymM
-Stability Note* sections of that doc for the churn classes to watch at each
-toolchain bump and the re-entry plan for the deferred symbolic
-rewriter bridge (when it lands, `Sym.Simp.mkTheoremFromDecl` rebuilds the
-bundle on demand).
+[`docs/agents/program-logic.md`](docs/agents/program-logic.md). The relational
+`@[vcspec]` registry is indexed via `Lean.Meta.Sym.Pattern` /
+`Lean.Meta.Sym.DiscrTree`. `Sym.*` is under active development in core Lean;
+see the *Internal Architecture* and *SymM Stability Note* sections of that doc
+for the churn classes to watch at each toolchain bump.
 
 ## Building
 

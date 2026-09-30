@@ -18,7 +18,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 /-!
 # VCGen Planner Core
 
-Shared planning infrastructure for the unary and relational VCGen tactics.
+Shared planning infrastructure for the relational VCGen tactics and `prrw`.
 -/
 
 public meta section
@@ -30,19 +30,19 @@ namespace OracleComp.ProgramLogic
 /-- Maximum number of exhaustive planner passes before requiring manual stepping. -/
 register_option vcvio.vcgen.maxPasses : Nat := {
   defValue := 64
-  descr := "Maximum number of exhaustive pvcgen/rvcgen passes before requiring manual stepping."
+  descr := "Maximum number of exhaustive rvcgen passes before requiring manual stepping."
 }
 
 /-- Emit the selected steps, goal counts, and planner choice notes. -/
 register_option vcvio.vcgen.traceSteps : Bool := {
   defValue := false
-  descr := "Emit opt-in trace messages for chosen pvcgen/rvcgen planned steps."
+  descr := "Emit opt-in trace messages for chosen rvcgen planned steps."
 }
 
 /-- Collect and report elapsed time for VCGen planner phases. -/
 register_option vcvio.vcgen.time : Bool := {
   defValue := false
-  descr := "Emit cumulative timing for internal pvcgen/rvcgen planner phases."
+  descr := "Emit cumulative timing for internal rvcgen and prrw planner phases."
 }
 
 /-- Trace hits and misses in the registered backward-rule cache. -/
@@ -57,8 +57,6 @@ structure VCGenTimingData where
   previewNs : UInt64 := 0
   /-- Elapsed nanoseconds spent in structural rule selection. -/
   structuralNs : UInt64 := 0
-  /-- Elapsed nanoseconds spent in weakest-precondition steps. -/
-  wpStepNs : UInt64 := 0
   /-- Elapsed nanoseconds spent in probability-equality planning. -/
   probPlannerNs : UInt64 := 0
   /-- Elapsed nanoseconds spent in local hypothesis search. -/
@@ -79,7 +77,7 @@ structure VCGenTimingData where
   finishNs : UInt64 := 0
   deriving Inhabited
 
-/-- Mutable timing counters shared by the unary and relational planners. -/
+/-- Mutable timing counters shared by the relational planner and `prrw normalize`. -/
 initialize vcGenTimingRef : IO.Ref VCGenTimingData ← IO.mkRef {}
 
 /-- Run an action and return its result with the elapsed monotonic time in nanoseconds. -/
@@ -98,9 +96,6 @@ private def addPreviewTime (ns : UInt64) : BaseIO Unit :=
 
 private def addStructuralTime (ns : UInt64) : BaseIO Unit :=
   addVCGenTiming fun d => { d with structuralNs := d.structuralNs + ns }
-
-private def addWpStepTime (ns : UInt64) : BaseIO Unit :=
-  addVCGenTiming fun d => { d with wpStepNs := d.wpStepNs + ns }
 
 private def addProbPlannerTime (ns : UInt64) : BaseIO Unit :=
   addVCGenTiming fun d => { d with probPlannerNs := d.probPlannerNs + ns }
@@ -149,10 +144,6 @@ def withVCGenPreviewTiming {α : Type} (k : TacticM α) : TacticM α :=
 def withVCGenStructuralTiming {α : Type} (k : TacticM α) : TacticM α :=
   withVCGenTiming addStructuralTime k
 
-/-- Accumulate time spent in weakest-precondition steps when VCGen timing is enabled. -/
-def withVCGenWpStepTiming {α : Type} (k : TacticM α) : TacticM α :=
-  withVCGenTiming addWpStepTime k
-
 /-- Accumulate time spent in probability-equality planning when VCGen timing is enabled. -/
 def withVCGenProbPlannerTiming {α : Type} (k : TacticM α) : TacticM α :=
   withVCGenTiming addProbPlannerTime k
@@ -190,7 +181,7 @@ def logVCGenTimingIfEnabled (label : String) : TacticM Unit := do
   if vcvio.vcgen.time.get (← getOptions) then
     let d ← vcGenTimingRef.get
     logInfo m!"[{label} timing] preview={formatNsMs d.previewNs}, \
-      structural={formatNsMs d.structuralNs}, wpStep={formatNsMs d.wpStepNs}, \
+      structural={formatNsMs d.structuralNs}, \
       probPlanner={formatNsMs d.probPlannerNs}, localHints={formatNsMs d.localHintNs}, \
       registered={formatNsMs d.registeredNs}, \
       cachedRules={formatNsMs d.cachedRuleBuildNs} \
@@ -386,33 +377,6 @@ def stdDoRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × E
   let #[pre, oa, ob, post, _epost₁, _epost₂] := args | none
   some (pre, oa, ob, post)
 
-private def findWpApp? (target : Expr) : Option (Expr × Nat) := do
-  let app ← findAppWithHead? ``Std.WP.wp target
-  some (app, 3)
-
-/-- Extract the computation from an algebra or core weakest-precondition expression. -/
-def wpGoalComp? (target : Expr) : Option Expr := do
-  let (app, k) ← findWpApp? target
-  let args ← trailingArgs? app k
-  some args[0]!
-
-/-- Extract the computation and postcondition from a unary weakest precondition. -/
-def wpGoalParts? (target : Expr) : Option (Expr × Expr) := do
-  let (app, k) ← findWpApp? target
-  let args ← trailingArgs? app k
-  some (args[0]!, args[1]!)
-
-/-- Recognize a lower bound on a unary weakest precondition and extract its three parts. -/
-def rawWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
-  let target := target.consumeMData
-  if target.isAppOfArity ``LE.le 4 then
-    let pre := target.getArg! 2
-    let rhs := target.getArg! 3
-    let (oa, post) ← wpGoalParts? rhs
-    some (pre, oa, post)
-  else
-    none
-
 /-- The trailing `(program, WP instance, pre, post, epost)` arguments of the first core triple
 `Std.WP.Triple program pre post epost` in an expression. -/
 private def findTripleArgs? (target : Expr) : Option (Array Expr) := do
@@ -423,11 +387,6 @@ private def findTripleArgs? (target : Expr) : Option (Array Expr) := do
 def tripleGoalComp? (target : Expr) : Option Expr := do
   let args ← findTripleArgs? target
   some args[0]!
-
-/-- Extract a core unary triple's precondition, computation, and postcondition. -/
-def tripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
-  let args ← findTripleArgs? target
-  some (args[2]!, args[0]!, args[3]!)
 
 /-- Check whether an expression contains an oracle simulation. -/
 def isSimulateQAction (e : Expr) : Bool :=
@@ -483,18 +442,6 @@ def isListMapMExpr (e : Expr) : Bool :=
 def isListFoldlMExpr (e : Expr) : Bool :=
   (findAppWithHead? ``List.foldlM e).isSome
 
-/-- Recognize oracle-computation replication at the expression head. -/
-def isReplicateHead (e : Expr) : Bool :=
-  (headConstName? e) == some ``OracleComp.replicate
-
-/-- Recognize monadic list traversal at the expression head. -/
-def isListMapMHead (e : Expr) : Bool :=
-  (headConstName? e) == some ``List.mapM
-
-/-- Recognize monadic list folding at the expression head. -/
-def isListFoldlMHead (e : Expr) : Bool :=
-  (headConstName? e) == some ``List.foldlM
-
 /-- Recognize an equality in distribution `mx =ᵈ my` without unfolding it. -/
 def isEqualInDistGoal (target : Expr) : Bool :=
   target.consumeMData.getAppFn.isConstOf ``EvalDistEq
@@ -536,15 +483,6 @@ def evalDistComp? (e : Expr) : Option Expr := do
   let app ← findAppWithHead? ``evalDist e
   let args ← trailingArgs? app 1
   args[0]?
-
-/-- Recognize an equality with measure expressions on both sides: event masses `𝒟[mx] s`,
-including `Pr{…}[…]`, or output measures `𝒟[mx]`. -/
-def isProbEqGoal (target : Expr) : Bool :=
-  let target := target.consumeMData
-  if target.isAppOfArity ``Eq 3 then
-    (evalDistComp? (target.getArg! 1)).isSome && (evalDistComp? (target.getArg! 2)).isSome
-  else
-    false
 
 /-- Try a tactic syntax node, returning false if tactic evaluation fails. -/
 def tryEvalTacticSyntax (stx : Syntax) : TacticM Bool :=

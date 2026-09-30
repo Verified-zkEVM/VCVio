@@ -7,12 +7,14 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Tactics.Unary
+public import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
-# Unary Probability Goal Examples
+# Probability goals
 
-This file validates probability lowering, probability equalities,
-and `by_hoare` support in the unary tactic layer.
+`prvcgen` states a bound or a probability-one statement about one program as a core triple and
+runs `vcgen` on it; `prrw` rewrites an equality between the probabilities of two programs by bind
+swaps and shared prefixes; `by_hoare` and `exp_norm` state and normalize events as expectations.
 -/
 
 @[expose] public section
@@ -31,22 +33,26 @@ section ProbabilityLowering
 
 variable [OracleSpec.IsMeasureSpec spec]
 
-/-! ### Probability goal lowering -/
+/-! ### Probability one
+
+Without uniform answers `Pr{…}[p] = 1` splits by antisymmetry: the upper half holds on the range
+of the indicator, and the lower half is the triple `⦃ 1 ⦄ oa ⦃ 𝟙⟦p ·⟧ ⦄`. -/
 
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     Pr{let x ← oa}[p x] = 1 := by
-  pvcgen
+  prvcgen
 
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     1 = Pr{let x ← oa}[p x] := by
-  pvcgen
+  prvcgen
 
 example {oa : OracleComp spec Bool}
     (h : ⦃ 1 ⦄ oa ⦃ fun y => if y = true then 1 else 0 ⦄) :
     Pr{let y ← oa}[y = true] = 1 := by
-  pvcgen
+  prvcgen
+  simp only [propInd_eq_ite, le_refl]
 
 end ProbabilityLowering
 
@@ -54,42 +60,30 @@ section Equalities
 
 variable [∀ t, Countable (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
 
-/-! ### Probability equality (swap / congr) -/
+/-! ### Equalities between two programs -/
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {z : γ} :
     Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = z] =
     Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = z] := by
-  pvcstep
+  prrw
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {y : β}
     (h : ∀ x ∈ support mx, Pr{let z ← f x}[z = y] = Pr{let z ← g x}[z = y]) :
     Pr{let x ← mx >>= f}[x = y] = Pr{let x ← mx >>= g}[x = y] := by
-  pvcstep rw congr
+  prrw congr
   exact h _ ‹_›
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
     Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  pvcstep rw congr'
+  prrw congr'
   exact h _
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
     Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  pvcstep rw congr' as ⟨x⟩
-  exact h x
-
-/--
-info: Try this:
-
-  [apply] pvcstep rw congr as ⟨x, hx⟩
--/
-#guard_msgs (info) in
-example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
-    (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
-    Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  pvcstep?
+  prrw congr' as ⟨x⟩
   exact h x
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
@@ -97,7 +91,7 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
     (h : ∀ x y, Pr{let r ← f x y}[q r] = Pr{let r ← g x y}[q r]) :
     Pr{let r ← mx >>= fun x => my >>= fun y => f x y}[q r] =
     Pr{let r ← mx >>= fun x => my >>= fun y => g x y}[q r] := by
-  pvcstep rw congr' as ⟨x, y⟩
+  prrw congr' as ⟨x, y⟩
   exact h x y
 
 example : 𝟙⟦(True : Prop)⟧ * 𝟙⟦(True : Prop)⟧ = (1 : ℝ≥0∞) := by
@@ -114,14 +108,13 @@ variable [OracleSpec.IsMeasureSpec spec]
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p] {r : ℝ≥0∞}
     (h : ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     r ≤ Pr{let x ← oa}[p x] := by
-  pvcstep
-  exact h
+  prvcgen
 
 example {oa : OracleComp spec α} [DecidableEq α] {x : α} {r : ℝ≥0∞}
     (h : ⦃ r ⦄ oa ⦃ fun y => if y = x then 1 else 0 ⦄) :
     Pr{let y ← oa}[y = x] ≥ r := by
-  pvcstep
-  simpa only [← propInd_eq_ite] using h
+  prvcgen
+  simp only [propInd_eq_ite, le_refl]
 
 /-- The notation distributes an event over a branch of its draw when it elaborates. -/
 example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
@@ -147,30 +140,14 @@ example (oa : OracleComp spec α) [DecidableEq α] (x : α) :
     Pr{let y ← oa}[y = x] = wp⟦oa⟧ (fun y => if y = x then 1 else 0) := by
   by_hoare
 
-/--
-info: Try this:
+/-! ### Expectation equations
 
-  [apply] pvcstep
----
-info: Planner note: continuing in raw `wp` mode
--/
-#guard_msgs in
+An equation between an expectation of one program and its unfolding is `expect_norm`. -/
+
 example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
     (post : α → ℝ≥0∞) :
     wp⟦if c then oa else ob⟧ post =
       if c then wp⟦oa⟧ post else wp⟦ob⟧ post := by
-  pvcstep?
-
-/-! ### Support-cut synthesis -/
-
-example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
-    (h : ∀ x ∈ support oa, Pr{let y ← f x}[y = true] = 1) :
-    ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
-  pvcstep
-  intro x
-  by_cases hx : x ∈ support oa
-  · simpa [propInd, hx] using triple_prEvent_eq_one (oa := f x) (p := (· = true)) (h := h x hx)
-  · simpa [propInd, hx] using
-      triple_zero (oa := f x) (post := fun y => if y = true then 1 else 0)
+  simp only [expect_norm]
 
 end ProbabilityLowering

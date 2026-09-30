@@ -210,12 +210,15 @@ check both closers). `@[simp, grind]` without `=` is for definitions, where `gri
 equation lemmas to unfold, not for stated equations. `grind_pattern` and `[grind hom]` are not used
 yet; adopt them per lemma with a gate entry, not as a sweep.
 
-### 11. Plain `pvcstep` may solve a probability equality when you only wanted a rewrite
+### 11. `prrw normalize` closes a program equality or fails; `prrw` takes one step
 
-On `Pr{...}[...] = Pr{...}[...]` and `𝒟[oa] = 𝒟[ob]` goals, plain `pvcstep` heuristically tries
-swap, congruence, and small bounded compositions. If you need to rewrite and continue, use
-`pvcstep rw` for a top-level swap, `pvcstep rw under 1` under one shared bind prefix, or
-`pvcstep rw congr` / `pvcstep rw congr'` to expose a shared outer bind. The underlying rewrites are
+On `Pr{…}[…] = Pr{…}[…]`, `𝔼{…}[…] = 𝔼{…}[…]` and `𝒟[oa] = 𝒟[ob]` goals, `prrw normalize`
+searches bounded sequences of swaps and congruence steps and succeeds only with one that closes
+the goal; it never leaves a partial rewrite. To rewrite and continue, use `prrw` for a top-level
+swap, `prrw under 1` under one shared bind prefix, or `prrw congr` / `prrw congr'` to expose a
+shared outer bind. `prrw` closes the goal when the swap makes both sides equal, and on events
+and expectations every form leaves the remaining goal in the normal form of `Pr{…}[…]`
+(`simp only [expect_norm]`), stated with nested expectations. The underlying rewrites are
 `OracleComp.wp_swap` / `OracleComp.evalDist_bind_bind_swap` (countable answer types;
 `_of_uniform` variants under `IsUniformMeasureSpec`) and `wp_congr_of_support`. `Pr{…}[…]`
 elaborates to nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped
@@ -514,21 +517,26 @@ Mathlib's `⊥`, a different head from the one `simp` lemmas are stated with. Co
 `⦃ P ⦄ x ⦃ Q ⦄` expands to `Lean.Order.bot`, and so do `Pr{…}[…]` and `𝔼{…}[…]`: write
 `Lean.Order.bot` in statements, and `estack⟨e₁, …⟩` for an explicit stack of postconditions.
 
-### 35. `vcgen` is core's tactic; VCVio's unary tactics are `pvcgen` and `pvcstep`
+### 35. `vcgen` is core's tactic; VCVio's unary tactics are `prvcgen` and `prrw`
 
 Core Lean's `vcgen` is in scope in every file that imports `VCVio`. It walks `Std.WP` triples
 through the `@[spec]` catalogue, is experimental in v4.35 (a module that calls it sets
-`set_option experimental.vcgen true`), and is the tool for `Prop`-valued triples under
-`OracleComp.Qualitative`, such as the handler specifications in `Unary/HandlerSpecs.lean`, and for
-lower-bound triples under the global expectation reading (`Unary/WP/QuantitativeSpecs.lean`).
-It does not lower `Pr{…}[…]` goals, which enter through the bridge lemmas of *Core `vcgen` on
-oracle computations* in `program-logic.md`, or through `prvcgen`, which picks the bridge and the
-reading from the goal. It does not consult the `@[vcspec]` / `@[wpStep]`
-registries, and it does not step through `simulateQ`. For those goals use VCVio's `pvcgen` /
-`pvcstep` (and `rvcgen` / `rvcstep` for couplings). The two families share no leading token, so a bare `vcgen` always elaborates core's
-tactic; `VCVioTest/ProgramLogic/VCGenNames.lean` pins this. The `vcvio.vcgen.*` options
-(`maxPasses`, `traceSteps`, `time`, `traceCachedRules`) configure VCVio's planner for `pvcgen` and
-`rvcgen`, not core's `vcgen`.
+`set_option experimental.vcgen true`), and runs in the reading of `OracleComp` that the file's
+scopes select: `Prop`-valued triples under `OracleComp.Qualitative`, such as the handler
+specifications in `Unary/HandlerSpecs.lean`, and lower-bound triples under the global expectation
+reading (`Unary/WP/QuantitativeSpecs.lean`). It does not lower `Pr{…}[…]` goals, which enter
+through the bridge lemmas of *Core `vcgen` on oracle computations* in `program-logic.md`.
+
+VCVio's unary tactics are `prvcgen`, which picks the bridge and the reading from the goal and runs
+core `vcgen` in that reading's `Dispatch` scope with the experimental option set, and `prrw`, which
+rewrites equalities between the probabilities of two programs; `rvcgen` / `rvcstep` are the
+relational ones. Unary rules are core `@[spec]` theorems: `@[vcspec]` registers relational rules
+only and rejects a triple of one program. No `@[spec]` rule steps through `simulateQ`; use a
+whole-program lift such as `simulateQ_triple_preserves_invariant`, or carry an expectation across
+with `wp_simulateQ_eq`. None of VCVio's tactics shares a leading token with core's, so a bare
+`vcgen` always elaborates core's tactic; `VCVioTest/ProgramLogic/VCGenNames.lean` pins this. The
+`vcvio.vcgen.*` options (`maxPasses`, `traceSteps`, `time`, `traceCachedRules`) configure the
+planner of `rvcgen` (and `time` also that of `prrw normalize`), not core's `vcgen`.
 
 ### 36. Core `vcgen` splits lattice connectives only
 
@@ -541,7 +549,7 @@ its precondition with these connectives, as `OracleComp.Quantitative.Spec.query`
 takes a `Type`-indexed binder, so a condition such as `a ∈ support oa` is expressed through the
 subtype `{a // a ∈ support oa}`. Exact rules stated as averages (`Spec.uniformSample_sum`) belong
 at the last draw of a program; exact values in general are computed by `simp` on the normal form
-of `Pr{…}[…]`.
+of `Pr{…}[…]` (`simp only [expect_norm, expect_eval]`).
 
 ### 37. An upper-bound triple's assertions have type `ℝ≥0∞ᵒᵈ`
 

@@ -355,8 +355,6 @@ public import VCVio.ProgramLogic.Tactics.Common.Naming
 public import VCVio.ProgramLogic.Tactics.Common.Registry
 public import VCVio.ProgramLogic.Tactics.Common.SpecIR
 public import VCVio.ProgramLogic.Tactics.Common.Suggestions
-public import VCVio.ProgramLogic.Tactics.Common.WpStepDispatch
-public import VCVio.ProgramLogic.Tactics.Common.WpStepRegistry
 public import VCVio.ProgramLogic.Tactics.Handler
 public import VCVio.ProgramLogic.Tactics.PrVCGen
 public import VCVio.ProgramLogic.Tactics.Relational
@@ -364,10 +362,7 @@ public import VCVio.ProgramLogic.Tactics.Relational.Internals
 public import VCVio.ProgramLogic.Tactics.Relational.Internals.Driver
 public import VCVio.ProgramLogic.Tactics.Relational.Internals.Steps
 public import VCVio.ProgramLogic.Tactics.Unary
-public import VCVio.ProgramLogic.Tactics.Unary.Internals
-public import VCVio.ProgramLogic.Tactics.Unary.Internals.Driver
-public import VCVio.ProgramLogic.Tactics.Unary.Internals.Rules
-public import VCVio.ProgramLogic.Tactics.Unary.Internals.Steps
+public import VCVio.ProgramLogic.Tactics.Unary.Internals.ProbEq
 public import VCVio.ProgramLogic.Unary.Examples
 public import VCVio.ProgramLogic.Unary.HandlerSpecs
 public import VCVio.ProgramLogic.Unary.HoarePropTriple

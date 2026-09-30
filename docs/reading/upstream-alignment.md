@@ -154,9 +154,11 @@ Chosen-space assertions carry measurability premises, while mapped assertions an
 simulation leave hidden outputs and states unmeasured. The explicit coherence equations that once
 connected discrete relational and forking consumers were removed with the discrete layer.
 
-Core `vcgen` and VCVio's probability/coupling frontend (`pvcgen`, `pvcstep`, `rvcgen`,
-`rvcstep`) coexist under distinct names. The latter still owns its `@[vcspec]`/`@[wpStep]`
-dispatch; the older `Std.Do` handler bridge also remains a separate consumer. See the [program-logic guide](../agents/program-logic.md#core-wp-and-the-symbolic-rewriter-boundary)
+Core `vcgen` and VCVio's probability/coupling frontend coexist under distinct names: `prvcgen`
+runs core `vcgen`, with core `@[spec]` rules, under the reading of `OracleComp` a goal belongs to;
+`prrw` rewrites equalities between two programs' probabilities; and `rvcgen` / `rvcstep` own the
+relational `@[vcspec]` dispatch. The older `Std.Do` handler bridge also remains a separate
+consumer. See the [program-logic guide](../agents/program-logic.md#core-wp-and-the-symbolic-rewriter-boundary)
 for these boundaries and the v4.35 tracking links. The source-count survey below
 records the earlier snapshot; its control/WP recommendations are superseded here.
 

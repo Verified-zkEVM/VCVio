@@ -345,6 +345,10 @@ variable [OracleSpec.IsMeasureSpec spec]
     wp⟦$ᵗ α⟧ post = ∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)] :=
   wp_eq_lintegral_map _ _
 
+attribute [expect_eval] OracleComp.replicate_zero OracleComp.replicate_succ_bind
+  List.mapM_nil List.mapM_cons List.foldlM_nil List.foldlM_cons
+  wp_query wp_liftM_query wp_HasQuery_query wp_uniformSample le_refl Function.comp_def
+
 /-- Indicator-event probability as an exact quantitative triple. -/
 theorem triple_prEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
     ⦃ Pr{let x ← oa}[p x] ⦄ oa ⦃ fun x => if p x then 1 else 0 ⦄ :=

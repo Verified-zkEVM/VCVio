@@ -3,11 +3,11 @@
 ## Current Module Boundary
 
 - Import `VCVio.ProgramLogic.Tactics` for normal proof work. This is the canonical user-facing proof mode.
-- Internally the tactic implementation is split into `VCVio.ProgramLogic.Tactics.Unary` and
-  `VCVio.ProgramLogic.Tactics.Relational`; the umbrella import is still the intended default.
+- The umbrella collects `VCVio.ProgramLogic.Tactics.PrVCGen` (`prvcgen`),
+  `VCVio.ProgramLogic.Tactics.Unary` (`prrw`, `exp_norm`, `by_hoare`) and
+  `VCVio.ProgramLogic.Tactics.Relational` (`rvcstep`, `rvcgen` and the proof-mode entries).
 - `VCVio.ProgramLogic.Notation` provides the core notation and convenience predicates used by
   the tactic surface.
-- Prefer the step-through tactics from `Tactics` for new proofs.
 - `VCVio.ProgramLogic.Unary.StdDoBridge` is a narrow unary bridge for almost-sure correctness in the `.pure`
   `Std.Do` view. It is not the main engine for quantitative or relational VCGen.
 
@@ -21,13 +21,39 @@ rules for queries need uniform response measures.
 
 ## In-Tree Walkthroughs
 
-- `Examples/ProgramLogic/UnaryStep.lean`: unary `pvcstep` / `pvcgen` examples.
+- `Examples/ProgramLogic/UnaryTriple.lean`: `prvcgen` on quantitative triples: binds, branches,
+  loop invariants, and opaque sub-programs through `Spec.ofSupport`.
+- `Examples/ProgramLogic/UnaryProbability.lean`: `prvcgen` on probability goals, `prrw`,
+  `by_hoare`, and `exp_norm`.
+- `Examples/ProgramLogic/Probability.lean`: `prrw` on program equalities.
+- `Examples/ProgramLogic/UnaryStep.lean`: expectation equations with `expect_norm` /
+  `expect_eval`, `prvcgen` on transformer triples, local `@[spec]` rules, and opaque sub-programs.
 - `Examples/ProgramLogic/RelationalStep.lean`: step-by-step relational tactic examples.
 - `Examples/ProgramLogic/RelationalDerived.lean`: derived relational patterns and automation examples.
 - `Examples/ProgramLogic/ProofMode.lean`: proof-mode entry points and small end-to-end examples.
 - `VCVio/ProgramLogic/Relational/Examples.lean`: compact API examples for the relational layer.
+- `VCVioTest/ProgramLogic/PrVCGen.lean`, `VCVioTest/ProgramLogic/CoreVCGen.lean`,
+  `VCVioTest/ProgramLogic/VCGenNames.lean`: every reading through `prvcgen`, every `@[spec]` rule
+  and bridge under a bare `vcgen`, and the tactic names.
 
 ## Tactic Quick Reference
+
+### Unary tactics
+
+A statement about the outcomes of one program is a core triple, decomposed by core's `vcgen` with
+`@[spec]` rules. An equality between the probabilities of two programs is a program equality, a
+game hop. The unary tactics follow that split:
+
+| Tactic | Goal shape | What it does |
+|--------|-----------|--------------|
+| `prvcgen` | `Pr{…}[p] = c`, `r ≤ Pr{…}[p]`, `Pr{…}[p] ≤ ε`, `0 < Pr{…}[p]`, `∀ x ∈ support oa, p x`, `∃ x ∈ support oa, p x` (also with `𝔼{…}[…]` or `wp⟦oa⟧ g`), or a core triple `⦃ pre ⦄ oa ⦃ post ⦄` | Runs core `vcgen` under the reading of `OracleComp` the goal belongs to (see *`prvcgen`*) |
+| `vcgen` | a core triple, in the reading the file's scopes select | Core Lean's VC generator over the `@[spec]` catalogue (see *Core `vcgen` on oracle computations*) |
+| `prrw`, `prrw under n`, `prrw congr`, `prrw congr'`, `prrw normalize` | `Pr{…}[…] = Pr{…}[…]`, `𝔼{…}[…] = 𝔼{…}[…]`, `𝒟[oa] {y} = 𝒟[ob] {y}`, `𝒟[oa] = 𝒟[ob]` | One program-equality step: a bind swap or a shared prefix (see *Program equalities*) |
+| `simp only [expect_norm, expect_eval]` | `wp⟦oa⟧ g = …` for one program | States an expectation through the unfolding of the program and the values of its draws (see *Exact values*) |
+| `exp_norm` | indicator / expectation arithmetic | Normalizes `propInd` and `wp` arithmetic |
+
+`prvcgen` and `prrw` share no leading token with core's `vcgen`, so a bare `vcgen` is always
+core's tactic (gotcha 35). The relational counterparts are `rvcstep` / `rvcgen` below.
 
 ### Postcondition bounds
 
@@ -94,7 +120,7 @@ before generating the remaining subgoals.
 | `rel_inline foo` | `⟪... ~ ... \| R⟫` | Unfolds definitions, simplifies |
 | `rel_dist` | `⟪oa ~ ob \| EqRel α⟫` | Exits relational mode back to `𝒟[oa] = 𝒟[ob]` in the discrete structure |
 
-### Optional arguments
+### Relational optional arguments
 
 - `rvcstep using R` — on bind goals, provide the intermediate relation explicitly
 - `rvcstep using f` — on random/query goals, provide the coupling bijection explicitly.
@@ -111,140 +137,29 @@ before generating the remaining subgoals.
 - `rvcgen using t` / `rvcgen with thm` — use one explicit first hint/theorem, then keep stepping automatically
 - `rel_conseq with R` — provide explicit weaker postcondition
 
-### Quantitative VCGen (`pvcgen`)
-
-VCVio's unary tactics are `pvcgen` and `pvcstep`, the probabilistic counterparts of the relational
-`rvcgen` and `rvcstep`. Core Lean's `vcgen` is a separate tactic under its own name: it walks
-`Std.WP` triples of any program type through the core `@[spec]` catalogue and leaves verification
-conditions in the assertion lattice, and it is the tool for `Prop`-valued triples such as the
-handler specifications under `OracleComp.Qualitative` (see *Handler `@[spec]` catalog* below).
-`pvcgen` / `pvcstep` add what core does not provide: lowering of `Pr{…}[…]` goals, quantitative
-`wp` and expectation reasoning, bind-swap and congruence on probability equalities, oracle-query
-and `simulateQ` rules, support and indicator leaf closure, and the `@[vcspec]` / `@[wpStep]`
-registries. Both are in scope after `import VCVio`; a bare `vcgen` always elaborates core's
-tactic, which `VCVioTest/ProgramLogic/VCGenNames.lean` pins.
-
-`pvcgen` is the primary unary tactic for new proofs. It accepts core triples
-`⦃ pre ⦄ oa ⦃ post ⦄` (`Std.WP.Triple oa pre post ⊥`, from `open scoped Std.WP`) and
-probability goals, automatically lowering `Pr{...}[...]` events into the quantitative engine.
-For `OracleComp` the triple reads expectations: `Std.WP.Triple.iff` unfolds it to
-`pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦oa⟧ post`. Core supplies the generic rules
-(`Std.WP.Triple.intro`, `.le_wp`, `Std.WP.Spec.pure`, `Std.WP.Triple.bind`,
-`Std.WP.Triple.entails_wp_of_pre_post`); `Unary/HoareTriple.lean` adds the quantitative
-ones (`triple_conseq`, `triple_bind_wp`, `triple_zero`, `triple_ite`, `triple_dite`, the
-`replicate` / `List.foldlM` / `List.mapM` stepping and invariant rules, and the event triples
-`triple_prEvent_indicator`, `triple_prEvent_eq_one`, `triple_support`).
+### Relational automation
 
 | Tactic | What it does |
 |--------|--------------|
-| `pvcgen` | Exhaustively decomposes a core triple or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
-| `pvcstep` | One step: probability lowering → bind → conditional → match → loop → leaf |
-| `pvcstep?` | Performs one step and emits the corresponding explicit script, often surfacing `as ⟨...⟩`, `using cut`, `inv I`, or `with theorem` |
-| `pvcgen?` | Runs `pvcgen` and emits the planned step replay across each pass |
-| `pvcstep using cut` | Explicit intermediate postcondition for a bind step |
-| `pvcstep with thm` | Force one explicit unary theorem/assumption step |
-| `pvcstep as ⟨x, hx⟩` | Explicit names for binders introduced by the current step |
-| `pvcstep inv I` | Explicit loop invariant for `replicate`/`foldlM`/`mapM` |
-| `pvcstep rw` | One explicit top-level bind-swap rewrite on a probability equality |
-| `pvcstep rw under n` | One bind-swap rewrite under `n` shared outer bind prefixes |
-| `pvcstep rw normalize` | Run the bounded probability-equality planner explicitly |
-| `pvcstep rw congr` | Expose one or more shared binds plus their support hypotheses |
-| `pvcstep rw congr'` | Expose one or more shared binds without support hypotheses |
-| `exp_norm` | Normalize indicator (`propInd`) and expectation (`wp`) arithmetic |
+| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `=ᵈ` / output-measure equality and cheap leaf closure |
+| `rvcfinish` / `rvcgen!` | Opt-in residual search and consequence closing |
+| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `oa =ᵈ ob` |
 
-**Probability-goal handling**: `pvcgen` and `pvcstep` automatically handle four
-classes of probability goals:
+**Registered rules**: mark a relational `RelTriple`, `RelWP`, or quantitative
+`VCVio.ProgramLogic.RelTriple` theorem with `@[vcspec]` to register it for bounded head-pair
+lookup (see *Internal Architecture* below). This is especially useful for automation-oriented
+`simulateQ` transport lemmas whose outer computation heads are stable but whose inner invariants or
+projection arguments still come from the local context. Registered rules are tiered internally:
+plain `rvcstep` / `rvcgen` use default-safe structural and leaf entries, while rules that choose
+cuts, bijections, or broad theorem search are reached through `rvcstep with thm`,
+`rvcstep using t`, `rvcfinish`, or `rvcgen!`. This keeps ordinary rule ordering stable when new
+`@[vcspec]` lemmas are added. A triple of one program is a core `@[spec]` rule, and `@[vcspec]`
+rejects it.
 
-1. **`Pr{...}[...] = 1` lowering** → rewrites into triple form for structural decomposition:
-   - `Pr{let x ← oa}[p x] = 1` → `⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄`; a singleton output
-     `Pr{let y ← oa}[y = x]` is the event `p := (· = x)`
-
-2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same triple shell:
-   - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄`
-
-3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures):
-   - Plain `pvcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
-     `bind_assoc`), then preview-selects the best bounded swap/congruence plan from the fast path
-   - `pvcstep rw` performs exactly one top-level bind-swap rewrite
-   - `pvcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
-   - `pvcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
-   - `pvcstep rw congr` / `pvcstep rw congr'` expose one or more shared binds explicitly
-   - Swaps use `OracleComp.wp_swap` on events and expectations
-     and `OracleComp.evalDist_bind_bind_swap` on output measures (countable responses), or their
-     `_of_uniform` variants; a swap under shared draws descends through the expectations of the
-     event's normal form. Congruence uses `wp_congr_of_support` /
-     `OracleComp.evalDist_bind_apply_congr_of_support`, leaving the continuations on the
-     structural support of the shared prefix
-
-4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
-   when a `wp` rule applies. On an already-lowered raw-`wp` goal, `pvcstep?` / `pvcgen?`
-   will explicitly note that they are continuing in raw `wp` mode.
-
-**Loop invariants**: `pvcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
-in triple goals and applies matching invariant hypotheses from context.
-Use `pvcstep inv I` to provide an explicit invariant.
-
-**Support-sensitive leaf closure**: `pvcgen` final pass tries `triple_support`,
-`triple_propInd_of_support` and `triple_prEvent_eq_one`
-in addition to the standard `Std.WP.Spec.pure`, `triple_zero`, and consequence search.
-
-**Naming and suggestions**: plain `pvcstep` / `rvcstep` keep the stable execution path.
-The `?` variants run a planner-backed version of the same next move and emit a concrete
-`Try this` script, typically surfacing an explicit `using ...` hint, `inv I`, `with theorem`,
-or `as ⟨...⟩` clause that you can paste back into the proof. On probability-equality goals the
-planner may emit a grouped multi-step replay when the best explanation is an explicit rewrite chain.
-
-**Opt-in unary lookup**: mark a unary core triple or raw `wp` theorem with `@[vcspec]` to register it for
-bounded head-symbol lookup. This is intentionally narrow: after the built-in structural step and
-explicit hint opportunities, `pvcstep` / `pvcgen` consult only `@[vcspec]` theorems whose
-computation head matches the current goal. Use `pvcstep with myLemma` when you want to force
-one specific theorem/assumption step manually.
-
-**Opt-in relational lookup**: mark a relational `RelTriple`, `RelWP`, or quantitative
-`VCVio.ProgramLogic.RelTriple` theorem with `@[vcspec]` to register it for the analogous bounded
-head-pair lookup on the relational side.
-This is especially useful for automation-oriented `simulateQ` transport lemmas whose outer
-computation heads are stable but whose inner invariants or projection arguments still come from
-the local context. Relational registered rules are tiered internally:
-plain `rvcstep` / `rvcgen` use default-safe structural and leaf entries, while
-rules that choose cuts, bijections, or broad theorem search are reached through
-`rvcstep with thm`, `rvcstep using t`, `rvcfinish`, or `rvcgen!`.
-This keeps ordinary rule ordering stable when new `@[vcspec]` lemmas are added.
-
-### Handler Normalization
-
-| Tactic | Goal shape | What it does |
-|--------|-----------|--------------|
-| `handler_step` | handler-heavy `FreeM` / `QueryImpl` / `simulateQ` / transformer goals | Runs one `simp only [handler_nf, handler_simp]` normalization pass to expose the next handler body or run-shape |
-
-`handler_step` is deliberately thin. Use it when a proof is stuck behind
-handler combinators such as cache overlays, logging handlers, counting
-handlers, or state-transformer maps; then continue with `pvcstep`, `rvcstep`,
-`rvcgen`, or direct proof steps.
-
-PolyFun owns the generic `handler_nf` rules for `FreeM`,
-`PFunctor.Handler.Stateful`, `StateT`, and standard `WriterT`. VCVio's
-`handler_simp` set adds only oracle simulation, query instrumentation,
-caching, and local WriterT compatibility equations. Downstream code can use
-the two sets independently; `handler_step` composes them in generic-to-specific
-order.
-
-**Opt-in `wp`-rewrite lookup**: mark an equational rewrite of shape
-`wp⟦comp⟧ post = …` with `@[wpStep]` to extend the inner `wp`-stepping driver
-(`runWpStepRules`). The driver indexes registered rules by the path of `comp`
-in a `Lean.Meta.Sym`-backed discrimination tree: pattern construction goes
-through `Lean.Meta.Sym.mkPatternFromDeclWithKey`, which preprocesses the rule's
-LHS (unfolding reducibles, beta/zeta/eta normalizing) and turns universally
-quantified arguments into de Bruijn pattern variables, while
-`Lean.Meta.Sym.insertPattern` automatically wildcards proof / instance
-positions in the discrimination-tree key. Lookup at dispatch time is the pure
-`Lean.Meta.Sym.DiscrTree.getMatch` after a `withReducible whnf` on the goal's
-`comp` to align with the preprocessed patterns. Each match is then tried via
-`rw`, falling back to `simp only`. The default registry already covers
-`wp_pure`, `wp_bind`, `wp_ite`, `wp_dite`, `wp_map`, the `replicate` / `mapM`
-/ `foldlM` families, `wp_query`, `wp_uniformSample`, and the `simulateQ` /
-`liftComp` transport rules, so user-authored `wp` lemmas slot into the same
-dispatch without further wiring.
+**Naming and suggestions**: plain `rvcstep` keeps the stable execution path. `rvcstep?` and
+`rvcgen?` run a planner-backed version of the same move and emit a concrete `Try this` script,
+typically surfacing an explicit `using ...` hint, `with theorem`, or `as ⟨...⟩` clause that you can
+paste back into the proof.
 
 **Bind normalization**: `rvcstep` (and therefore `rvcgen`) runs a best-effort
 `simp only [bind_assoc, pure_bind, bind_pure_comp, Functor.map_map, map_pure]` pre-pass on the
@@ -282,111 +197,34 @@ variants immediately take the next aligned bind step with cut relation `R`.
 Do not emulate stronger coupling transitivity with broad theorem search until
 the full semantic gluing lemma and goal shape are added.
 
-**Pass budget**: exhaustive `pvcgen` / `rvcgen` runs are bounded by
+**Pass budget**: exhaustive `rvcgen` runs are bounded by
 `set_option vcvio.vcgen.maxPasses <n>`. The default is conservative so large proofs stay
 predictable; if you intentionally want a longer exhaustive run, raise the option locally around
 that proof.
 
 **Trace output**: set `set_option vcvio.vcgen.traceSteps true` to log the chosen planned step,
 goal delta, and any planner alternatives that were previewed while debugging tactic choice.
+`vcvio.vcgen.time` reports the time spent in the planner phases, including the search of
+`prrw normalize`, and `vcvio.vcgen.traceCachedRules` traces hits and misses in the cache of
+backward rules built from `@[vcspec]` entries.
 
-### Raw WP Tactics
+### Handler Normalization
 
-Raw `wp` goals (`_ ≤ wp _ _`) now use the same unary entrypoints rather than a separate tactic
-family. `pvcstep` performs one decomposition step and `pvcgen` keeps stepping exhaustively.
+| Tactic | Goal shape | What it does |
+|--------|-----------|--------------|
+| `handler_step` | handler-heavy `FreeM` / `QueryImpl` / `simulateQ` / transformer goals | Runs one `simp only [handler_nf, handler_simp]` normalization pass to expose the next handler body or run-shape |
 
+`handler_step` is deliberately thin. Use it when a proof is stuck behind
+handler combinators such as cache overlays, logging handlers, counting
+handlers, or state-transformer maps; then continue with `prvcgen`, `rvcstep`,
+`rvcgen`, or direct proof steps.
 
-### Probability Equality Control
-
-All probability-equality control now lives under `pvcstep`.
-
-| Tactic | What it does |
-|--------|--------------|
-| `pvcstep` | Fast dispatcher for common probability-equality steps: syntax normalization, swap, congruence, and bounded compositions chosen by preview |
-| `pvcstep rw` | Rewrites one top-level bind swap without trying to close the goal |
-| `pvcstep rw under n` | Rewrites one bind swap under `n` shared outer bind prefixes on one side |
-| `pvcstep rw normalize` | Runs the bounded probability-equality planner explicitly, without broadening plain `pvcstep` |
-| `pvcstep rw congr` | Reduces `Pr{let y ← mx >>= f₁}[q y] = Pr{let y ← mx >>= f₂}[q y]` to a pointwise goal, auto-introducing `x` and `hx : x ∈ support mx`; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
-| `pvcstep rw congr'` | Same, but without the support restriction; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
-
-### Automation
-
-| Tactic | What it does |
-|--------|--------------|
-| `rvcgen` | Exhaustive relational VCGen over all open goals, with automatic lowering from `=ᵈ` / output-measure equality and cheap leaf closure |
-| `rvcfinish` / `rvcgen!` | Opt-in residual search and consequence closing |
-| `rel_dist` | Turns `RelTriple oa ob (EqRel α)` into `oa =ᵈ ob` |
-
-## Probability Equality Guide
-
-### What plain `pvcstep` handles
-
-On probability equalities, plain `pvcstep` already tries the common bind-swap and
-bind-congruence patterns:
-
-1. **Direct event equalities**: `Pr{let z ← mx >>= ... >>= ...}[q z] = Pr{let z ← my >>= ... >>= ...}[q z]`
-2. **Nested bounded rewrites**: automatically peels small shared-bind prefixes and prefers a
-   closing swap/congruence plan when one is available
-3. **Surface `map` wrappers**: normalizes the common `map_eq_bind_pure_comp` / `bind_assoc` shape
-   before searching for swaps or congruence
-
-### When to use the explicit `rw` subcommands
-
-- **Need to keep going after a swap**: use `pvcstep rw`
-- **Need to swap below shared outer binds**: use `pvcstep rw under n`
-- **Need the bounded planner to choose a swap/congruence chain now**: use `pvcstep rw normalize`
-- **Need to expose one or more common outer binds with support information**: use `pvcstep rw congr`
-- **Need the support-free congruence variant**: use `pvcstep rw congr'`
-- **Need the full explicit replay for a bounded nested swap**: use `pvcstep?`
-- **Need a deeper swap than the current bounded automation knows**: peel outer layers manually, or
-  use `pvcstep?` to see the best bounded replay the planner found before finishing the rest by hand
-
-### Key insight: events vs output measures
-
-The underlying bind-swap lemmas are `OracleComp.prEvent_bind_bind_swap` for events and
-`OracleComp.evalDist_bind_bind_swap` for output measures. A point mass `Pr{let y ← oa}[y = x]` is the event
-`(· = x)`, and `Pr{…}[…]` elaborates its final draw as a map, so the `pvcstep`
-probability-equality machinery normalizes with `map_eq_bind_pure_comp` / `bind_assoc` before
-matching either shape.
-
-### Patterns
-
-**Standalone swap**:
-```lean
-pvcstep
-```
-
-**Rewrite one swap and continue**:
-```lean
-pvcstep rw
-```
-
-**Rewrite under one shared bind**:
-```lean
-pvcstep rw under 1
-```
-
-**Run the bounded probability-equality planner explicitly**:
-```lean
-pvcstep rw normalize
-```
-
-**Expose one common bind with support information**:
-```lean
-pvcstep rw congr
-exact h _ ‹_›
-```
-
-**Expose one common bind without support information**:
-```lean
-pvcstep rw congr'
-rename_i x
-```
-
-**Expose two shared binds explicitly at once**:
-```lean
-pvcstep rw congr' as ⟨x, y⟩
-```
+PolyFun owns the generic `handler_nf` rules for `FreeM`,
+`PFunctor.Handler.Stateful`, `StateT`, and standard `WriterT`. VCVio's
+`handler_simp` set adds only oracle simulation, query instrumentation,
+caching, and local WriterT compatibility equations. Downstream code can use
+the two sets independently; `handler_step` composes them in generic-to-specific
+order.
 
 ## Core `vcgen` on oracle computations
 
@@ -413,6 +251,18 @@ reading's scope open. Each reading also registers a per-call scope at priority `
 opens, with a direct `WP` instance as well (gotcha 33): `open scoped OracleComp.Upper.Dispatch in
 vcgen` runs `vcgen` in that reading whatever the file opens. `Pr{…}[…]` is unaffected by the
 scopes. `prvcgen` (below) chooses the reading from the goal.
+
+Triple notation comes from `open scoped Std.WP`. In the expectation reading, `Std.WP.Triple.iff`
+unfolds `⦃ pre ⦄ oa ⦃ post ⦄` to `pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦oa⟧ post`
+(`le_wp_iff_triple`). Core supplies the generic rules (`Std.WP.Triple.intro`, `.le_wp`,
+`Std.WP.Spec.pure`, `Std.WP.Triple.bind`, `Std.WP.Triple.entails_wp_of_pre_post`), steps through
+binds, `if`, `match` and transformer stacks, and applies triples of sub-programs found among the
+hypotheses. `VCVio/ProgramLogic/Unary/HoareTriple.lean` states the quantitative rules that are
+passed explicitly: `triple_conseq`, `triple_bind_wp`, `triple_zero`, `triple_ite`, `triple_dite`,
+the loop unrolling rules (`triple_replicate_succ`, `triple_list_mapM_cons`,
+`triple_list_foldlM_cons`), the loop invariant rules (`triple_replicate_inv`, `triple_replicate`,
+`triple_list_mapM_inv`, `triple_list_mapM`, `triple_list_foldlM_inv`, `triple_list_foldlM`), and
+the event triples `triple_prEvent_indicator`, `triple_prEvent_eq_one` and `triple_support`.
 
 Structural rules (`VCVio/ProgramLogic/Unary/WP/QualitativeSpecs.lean`, namespace
 `OracleComp.Qualitative`):
@@ -518,8 +368,9 @@ set distributes `toDual` over arithmetic before it compares the sides, and a ter
 ### `prvcgen`
 
 `prvcgen` (`VCVio.ProgramLogic.Tactics.PrVCGen`, in the `VCVio.ProgramLogic.Tactics` umbrella)
-classifies a statement about the outcomes of an oracle computation, rewrites it with the bridge of
-its reading, and runs core `vcgen` in that reading's per-call scope:
+classifies a statement about the outcomes of one oracle computation, rewrites it with the bridge
+of its reading, and runs core `vcgen` in that reading's per-call scope, with
+`experimental.vcgen` set:
 
 | Goal | Reading |
 |------|---------|
@@ -528,16 +379,57 @@ its reading, and runs core `vcgen` in that reading's per-call scope:
 | `r ≤ Pr{…}[p]`, `Pr{…}[p] ≥ r` | expectation lower bound |
 | `Pr{…}[p] ≤ ε`, `Pr{…}[p] = 0` | expectation upper bound |
 | `Pr{…}[p] = c` | both bounds, by `le_antisymm` |
+| `⦃ pre ⦄ oa ⦃ post ⦄`, or its unfolded form `pre ⊑ wp oa post epost` | the reading of its assertion type |
 | an angelic or structural `wp oa post ⊥` | continued in its reading |
 
 `𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does, and an equation may have the expectation
-on either side. `prvcgen [rules] invariants … with step` forwards its arguments to `vcgen`;
-`prvcgen => tac` runs `tac` in the reading's scope in place of `vcgen`. The verification
-conditions of the expectation readings are read back into `ℝ≥0∞`, and those that the range of an
-indicator settles are closed. A comparison `Pr{A}[p] ≤ Pr{B}[q]` is read as an upper bound on the
-left-hand side with the right-hand side as the bound.
+on either side. A triple is run in the reading of its assertion type: `ℝ≥0∞` for lower bounds,
+`ℝ≥0∞ᵒᵈ` for upper bounds, and `Prop` for the structural reading, or the angelic one when the
+triple's interpretation is angelic. A state-passing assertion `σ → …` is read by its codomain, so
+triples over `StateT`, `ReaderT`, `WriterT`, `OptionT` and `ExceptT` stacks on `OracleComp spec`,
+the handler specifications among them, run the same way. A comparison `Pr{A}[p] ≤ Pr{B}[q]` is
+read as an upper bound on the left-hand side with the right-hand side as the bound.
 
-Equations. `= 0` is the upper bound alone. `= 1` uses the structural bridge when uniform answers
+Syntax: `prvcgen (config)? [rules]? (invariants · …)? (with step)? (=> tac)?`. The configuration,
+rules, invariant alternatives and `with` step go to `vcgen`; `prvcgen => tac` runs `tac` in the
+reading's scope in place of `vcgen`, with `vcgen`'s arguments written inside `tac`. The goal's
+metavariables are instantiated first, since `vcgen` matches programs syntactically.
+
+**Rules and hypotheses.** `vcgen` uses the `@[spec]` rules registered for the program's parts, the
+rules in brackets, and the triples of sub-programs among the hypotheses, each rule in the reading
+its triple is stated in. A program opaque to `vcgen`, such as an `@[irreducible]` definition, takes
+a triple tagged `@[spec]` or `@[local spec]`, or one passed for a single call as
+`prvcgen [rule]`. A hypothesis about an event is used once it is stated as a triple:
+`triple_prEvent_eq_one` turns `Pr{let x ← oa}[p x] = 1` into
+`⦃ 1 ⦄ oa ⦃ fun x => if p x then 1 else 0 ⦄`, and `le_prEvent_iff_triple` / `le_wp_iff_triple`
+turn lower bounds into triples.
+
+**Opaque sub-programs.** `Spec.ofSupport oa`, in each reading's namespace
+(`OracleComp.Quantitative.Spec.ofSupport`, `OracleComp.Upper.Spec.ofSupport`,
+`OracleComp.Qualitative.Spec.ofSupport`, `OracleComp.Angelic.Spec.ofSupport`), bounds `oa` by its
+continuation's precondition over its support. With `h : ∀ x ∈ support oa, ⦃ r ⦄ f x ⦃ post ⦄`,
+`prvcgen [OracleComp.Quantitative.Spec.ofSupport oa, h]` proves `⦃ r ⦄ (oa >>= f) ⦃ post ⦄` up to
+the support membership, which it leaves. With `prvcgen (errorOnMissingSpec := false)`, a program
+without a rule is left as a verification condition stating its weakest precondition,
+`pre ≤ wp oa k`, whose continuation `k` holds the rest of the program;
+`simp only [expect_norm, le_refl]` closes it when `pre` is that expectation.
+
+**Loops.** A loop takes an invariant: `List.foldlM` through core's rule, as
+`prvcgen invariants · fun _ _ s => I s`, and `replicate` and `List.mapM` through the rules of
+`Unary/HoareTriple.lean` passed explicitly, as `prvcgen [triple_replicate_inv hstep]`
+(`triple_replicate_inv`, `triple_replicate`, `triple_list_mapM_inv`, `triple_list_foldlM_inv` and
+their consequence forms). A loop equation in brackets, such as `prvcgen [replicate_zero]`, unfolds
+the loop for `vcgen`.
+
+**Verification conditions.** The structural reading leaves the postcondition at each possible
+output. The angelic reading leaves `∃ u, wp (rest u) post ⊥` at each draw; name the witness with
+`refine ⟨w, ?_⟩` and run `prvcgen` again. The conditions of the expectation readings are read back
+into `ℝ≥0∞` (`Lean.Order.rel_eq_le`; `OracleComp.Upper.rel_iff`, `OrderDual.ofDual_toDual`,
+`OracleComp.Upper.ofDual_wp`, `ofDual_add`, …), and those that the range of an indicator settles or
+that are reflexive are closed (`propInd_le_one`, `one_le_propInd_iff`, `le_refl`). Name the values a
+condition is stated over with `rename_i`.
+
+**Equations.** `= 0` is the upper bound alone. `= 1` uses the structural bridge when uniform answers
 are available: its conditions are the event itself at every possible output, and the structural
 catalogue (including the handler specifications) is the largest; without uniform answers it
 splits. Any other `= c` splits into the upper bound and the lower bound. Both halves receive the
@@ -553,27 +445,26 @@ carrier of the rule's triple), and definitions to unfold go to both. Where the s
   each half ends in a sum whose continuation `vcgen` did not enter; `simp` on the normal form
   evaluates it, as for `Pr{let b ← $ᵗ Bool}[b = true] = 1 / 2`.
 - **Refused.** An equation between the probabilities of two programs is a program equality, a
-  game hop: `prvcgen` fails and points to `pvcstep` / `pvcgen`, the couplings `rvcstep` / `rvcgen`,
-  and the `=ᵈ` lemmas.
+  game hop: `prvcgen` fails and points to `prrw` (see *Program equalities* below), the couplings
+  `rvcstep` / `rvcgen`, and the `=ᵈ` lemmas.
 
-Adding rules for a reading: state the rule as a triple of that reading, in its namespace, with
+**Adding rules for a reading.** State the rule as a triple of that reading, in its namespace, with
 the precondition built from lattice connectives so that `vcgen` continues through it (gotcha 36):
 `Lean.Order.iInf` for every outcome in the lower-bound reading and the largest outcome in the
 upper-bound reading (whose `iInf` is the supremum in `ℝ≥0∞`), `∀` in the structural reading, and
 `∃` (which `vcgen` does not split) in the angelic reading. Register it with `@[spec]` when it holds
 for every call of the program; pass it explicitly (`prvcgen [rule]`) when it needs a hypothesis or
-ends the descent, as the averaging rules do. A rule is picked up by `prvcgen` in the reading its
-triple is stated in.
+ends the descent, as the averaging rules do.
 
 Known limits:
 
 - **Sums stop `vcgen`.** `vcgen` splits only lattice connectives (`⊓`, `⇨`, `⌜·⌝`, `⊤`,
   `Lean.Order.iInf`). A precondition written with `∑`, `if`, or `∧` becomes a verification
   condition, and `vcgen` does not descend into the programs inside it. Exact values of queries and
-  draws are therefore computed by `simp` on the normal form of `Pr{…}[…]`, and the exact rules
-  serve only for the last draw. Rules meant to be stepped through state their preconditions with
-  lattice connectives. `Lean.Order.iInf` needs a `Type`-indexed binder, so a support condition is
-  indexed by the subtype `{a // a ∈ support oa}`.
+  draws are therefore computed by `simp` on the normal form of `Pr{…}[…]` (see *Exact values*
+  below), and the exact rules serve only for the last draw. Rules meant to be stepped through
+  state their preconditions with lattice connectives. `Lean.Order.iInf` needs a `Type`-indexed
+  binder, so a support condition is indexed by the subtype `{a // a ∈ support oa}`.
 - **Event normal forms.** `Pr{…}[…]` elaborates to its normal form, nested expectations over each
   draw, so `le_prEvent_iff_triple` matches only an event of a named program. A lower bound on
   the normal form of an inline program is read by `le_wp_iff_triple`, and `vcgen` steps through
@@ -596,6 +487,88 @@ Known limits:
   structural reading with `letI := MonadAttach.toWPMonadDemonic (m := m)` in its statement.
   `attribute [local instance] MonadAttach.toWPMonadDemonic` also selects it for `StateT σ m`,
   which pre-empts core's transformer instances.
+
+## Program equalities (`prrw`)
+
+An equality between the probabilities of two programs is a game hop, not a triple of one program.
+`prrw` (`VCVio.ProgramLogic.Tactics.Unary`) proves the ones where the programs differ by the order
+of independent draws or agree after a shared prefix. It works on `Pr{…}[…] = Pr{…}[…]`,
+`𝔼{…}[…] = 𝔼{…}[…]`, applied masses `𝒟[oa] {y} = 𝒟[ob] {y}`, and output measures
+`𝒟[oa] = 𝒟[ob]`. Every form first brings both sides of an event or expectation equation into the
+normal form of `Pr{…}[…]` and `𝔼{…}[…]` (`simp only [expect_norm]`), and those of an output-measure
+equation into plain bind chains (`map_eq_bind_pure_comp`, `bind_assoc`).
+
+| Tactic | What it does |
+|--------|--------------|
+| `prrw` | Rewrites one top-level swap of two adjacent independent binds |
+| `prrw under n` | Rewrites one swap under `n` shared bind prefixes, on either side |
+| `prrw congr` | Reduces a shared first bind to its continuations on the support of the shared program, introducing the value and `hx : x ∈ support mx` |
+| `prrw congr'` | Reduces a shared first bind for every value, without a support hypothesis |
+| `prrw normalize` | Searches bounded sequences of swaps and congruence steps, sized by the bind depth of the goal, for one that closes the equality |
+| `… as ⟨x, …⟩` | On `prrw`, `prrw under n`, `prrw congr`, `prrw congr'`: names the values the step introduces; `prrw congr as ⟨x, hx, y, hy⟩` and `prrw congr' as ⟨x, y⟩` reduce one shared bind per name group |
+
+Swaps use `OracleComp.wp_swap` on events and expectations, descending through the nested
+expectations of the normal form, and `OracleComp.evalDist_bind_bind_swap` on output measures
+(countable answer types), or their `_of_uniform` forms under `IsUniformMeasureSpec`. Congruence uses
+`wp_congr_of_support`, `OracleComp.evalDist_bind_apply_congr_of_support` and
+`OracleComp.evalDist_bind_congr_of_support`, leaving the continuations on the structural support
+of the shared prefix.
+
+Choosing a form:
+
+- **One swap, then continue or close**: `prrw`; a goal that the rewrite makes reflexive closes.
+- **The swap sits below shared outer binds**: `prrw under n`.
+- **The programs share a prefix**: `prrw congr`, or `prrw congr'` when the continuations agree for
+  every value; `as ⟨…⟩` peels several shared binds at once.
+- **The sequence of steps is not obvious**: `prrw normalize`, which fails unless it closes the goal.
+- **Beyond these steps**: peel the shared prefix with `prrw congr` and continue by hand, relate the
+  programs by a coupling (`by_equiv`, `rvcstep` / `rvcgen`), or use the `=ᵈ` lemmas.
+
+A point mass `Pr{let y ← oa}[y = x]` is the event `(· = x)`, and `Pr{…}[…]` elaborates to nested
+expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped by rewriting under the
+expectations it is nested in; `prrw under n` does so through `conv`, and gotcha 11 gives the manual
+form.
+
+```lean
+-- Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = z]
+--   = Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = z]
+prrw
+
+-- h : ∀ x ∈ support mx, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]
+-- ⊢ Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y]
+prrw congr
+exact h _ ‹_›
+
+-- h : ∀ x y, Pr{let r ← f x y}[q r] = Pr{let r ← g x y}[q r], with two shared binds
+prrw congr' as ⟨x, y⟩
+exact h x y
+```
+
+## Exact values (`expect_norm`, `expect_eval`)
+
+An equation between one program's expectation and its value is proved by simplification.
+`simp only [expect_norm]` brings an expectation into the normal form that `𝔼{…}[…]` and
+`Pr{…}[…]` elaborate to (see [`probability.md`](probability.md)). The simp set `expect_eval`
+(registered in `VCVio/EvalDist/ProbabilityNotation/Attr.lean`, its lemmas tagged in
+`VCVio/ProgramLogic/Unary/HoareTriple.lean`) continues with the unfolding of loops
+(`OracleComp.replicate_zero`, `OracleComp.replicate_succ_bind`, `List.mapM_nil`, `List.mapM_cons`,
+`List.foldlM_nil`, `List.foldlM_cons`), the value of a query or a uniform draw (`wp_query`,
+`wp_liftM_query`, `wp_HasQuery_query`, `wp_uniformSample`), and `le_refl`, so
+`simp only [expect_norm, expect_eval]` proves equations such as
+
+```lean
+wp⟦oa >>= f⟧ g = wp⟦oa⟧ fun x => wp⟦f x⟧ g
+wp⟦oa.replicate (n + 1)⟧ post = wp⟦oa⟧ fun x => wp⟦oa.replicate n⟧ fun xs => post (x :: xs)
+wp⟦(query t : OracleComp spec _)⟧ post = ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t
+```
+
+and, through `le_refl`, the matching inequalities. An equation whose value is not an expectation,
+such as `wp⟦pure x⟧ post = post x`, is also a `prvcgen` goal, split into its two bounds. `simp` on
+the normal form averages finite uniform draws and uniform queries (`prEvent_uniformSample`,
+`wp_uniformSample_eq_sum`, `OracleComp.wp_monadLift_query_uniform`), as for
+`Pr{let b ← $ᵗ Bool}[b = true] = 1 / 2`. `wp_simulateQ_eq` and `wp_liftComp`
+(`Unary/SimulateQ.lean`) carry an expectation across a simulation that answers each query in
+distribution as the query itself, and across a lift to a larger specification.
 
 ## Relational Infrastructure
 
@@ -827,9 +800,8 @@ theorem my_security : g₁ =ᵈ gₙ := by
 
 ## Common Pitfalls
 
-1. **Plain `pvcstep` may close or progress a probability equality goal**: use
-   `pvcstep rw` / `pvcstep rw under n` when you specifically want a rewrite and
-   intend to continue.
+1. **`prrw normalize` closes the goal or fails**: use `prrw`, `prrw under n` or `prrw congr`
+   when you want one rewrite step and intend to continue (gotcha 11).
 
 2. **Import `VCVio.ProgramLogic.Tactics`**: tactics are defined there. If a file only imports `VCVio.ProgramLogic.Notation`, add/change the import.
 
@@ -840,129 +812,97 @@ theorem my_security : g₁ =ᵈ gₙ := by
 
 5. **`StdDoBridge` is deliberately narrow**: use it for unary almost-sure `.pure` `Std.Do` experiments, not as the default path for quantitative or relational proofs.
 
-## Internal Architecture (`Sym`-backed Registries)
+## Internal Architecture (`Sym`-backed Registry)
 
 ### Why `Lean.Meta.Sym.*`?
 
-The planner needs to ask "given this `wp⟦comp⟧ post` or `⦃ pre ⦄ comp ⦃ post ⦄`
-goal, which registered rules could fire?" *fast*, and without the cost or
-surprises of `isDefEq` unfolding. Core Lean has been building a dedicated
-symbolic toolkit under `Lean.Meta.Sym` precisely for this: `Sym.Pattern`
-records a de Bruijn-encoded skeleton of the indexed sub-expression together
-with its normalizing preprocess (`preprocessType` unfolds reducible
-abbreviations, beta/zeta/eta-reduces, and elaborates universes); `Sym.DiscrTree`
-is a thin wrapper over `Lean.Meta.DiscrTree` whose insertion keys come from
-those preprocessed patterns and whose lookup is the pure structural
-`getMatch`. Core also ships a `Sym.Simp.Theorems` bundle (discrimination-tree
-+ `Sym.Simp.Theorem` records) that core's own Sym-based `vcgen` consumes
-(`Lean.Elab.Tactic.Do.Internal`); we do not consume it today (see *Future
-`vcgen` bridge (deferred)* below) but
-`Sym.Simp.mkTheoremFromDecl` lets us reconstruct it on demand from the
-`@[wpStep]` registry when VCVio's symbolic proof-application bridge is
-implemented and validated.
-
-Building on `Sym.Pattern` + `Sym.DiscrTree` means our registries share the
-same pattern preprocessing and lookup cost profile as future core tactics,
-and the migration to `Sym.Simp.*`-driven rewriting is a localised follow-up
-in two registry files rather than a framework rewrite.
+The relational planner needs to ask "given this `RelTriple` or `RelWP` goal, which registered
+rules could fire?" *fast*, and without the cost or surprises of `isDefEq` unfolding. Core Lean has
+been building a dedicated symbolic toolkit under `Lean.Meta.Sym` precisely for this: `Sym.Pattern`
+records a de Bruijn-encoded skeleton of the indexed sub-expression together with its normalizing
+preprocess (`preprocessType` unfolds reducible abbreviations, beta/zeta/eta-reduces, and
+elaborates universes); `Sym.DiscrTree` is a thin wrapper over `Lean.Meta.DiscrTree` whose insertion
+keys come from those preprocessed patterns and whose lookup is the pure structural `getMatch`.
+Building on `Sym.Pattern` + `Sym.DiscrTree` gives the registry the same pattern preprocessing and
+lookup cost profile as core's own tactics. Unary rules are core `@[spec]` theorems, which Lean
+indexes itself for `vcgen` and `prvcgen`.
 
 **Key alignment invariant**: `Sym.DiscrTree.getMatch` is purely structural, so
 goal-side query terms must expose the same oracle-wrapper shapes as the pattern
-side. All registry query functions therefore route the extracted computation
+side. The registry query functions therefore route the extracted computation
 through `symMatchKey` (`Tactics/Common/Core.lean`), which recursively unfolds
 only `OracleComp`, `OracleQuery`, and `OracleSpec.toPFunctor`. This targeted
 normalization is necessary because `OracleComp` is a reducible alias of
 `PFunctor.FreeM`, while deliberately avoiding `Sym.preprocessType`: applying
 that declaration-oriented preprocessing to terms can unfold reducible user
 programs and panic when a matcher contains loose de Bruijn variables. Without
-the targeted unfolding, lookup can silently return no candidates (symptom:
-`pvcstep` reports "no matching rule applied" while the corresponding manual
-rewrite works).
+the targeted unfolding, lookup can silently return no candidates (symptom: a
+registered `@[vcspec]` rule never fires in `rvcstep` / `rvcgen` while applying it by hand works).
 
-### Registries and what they index
+### The `@[vcspec]` registry
 
-| File | Attribute | Role |
-|------|-----------|------|
-| `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary core `Std.WP.Triple` and relational `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
-| `VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` | `@[wpStep]` | Equational `wp⟦comp⟧ post = …` rewrites, indexed by a `Sym.Pattern` on `oa` and consulted by `runWpStepRules` via `TacticM` rewriting (`rw` then `simp only`). The `Sym.Simp.Theorem` bundle for an eventual `SymM`-side rewriter is *not* eagerly built; `Sym.Simp.mkTheoremFromDecl` can rebuild it on demand from `getAllWpStepEntries` |
-
-Each entry carries a `SpecProof` (reusing the core-Lean type from
-`Lean.Elab.Tactic.Do.SpecAttr`) so origins can be distinguished between a
-global declaration, a local hypothesis, or a raw term. Priorities are parsed
-from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
+`VCVio/ProgramLogic/Tactics/Common/Registry.lean` defines `@[vcspec]`, which registers relational
+rules: `RelTriple`, quantitative `VCVio.ProgramLogic.RelTriple`, `RelWP`, and raw relational
+weakest-precondition bounds `pre ≤ VCVio.ProgramLogic.rwp oa ob post …`. Each is indexed by a
+`Sym.Pattern` on the left computation `oa`, with a secondary `rightHead?` filter on the head
+constant of the right computation. A theorem whose conclusion is a triple of one program fails to
+register, with an error pointing to core `@[spec]`.
+Each entry carries a `SpecProof` (reusing the core-Lean type from `Lean.Elab.Tactic.Do.SpecAttr`)
+so origins can be distinguished between a global declaration, a local hypothesis, or a raw term.
+Priorities are parsed from the attribute's optional priority argument (`@[vcspec (prio := 200)]`)
+and follow the standard Lean convention: higher priority entries are tried first within the same
+candidate pool. `Tactics/Common/Backward.lean` builds and caches the backward rule of each entry.
 
 ### Dispatch flow
 
-1. **Unary / relational VC-gen** (`VCVio/ProgramLogic/Tactics/Unary/Internals.lean`,
-   `VCVio/ProgramLogic/Tactics/Relational/Internals.lean`): on a `Std.WP.Triple`/`wp`/`RelTriple`/`RelWP`/quantitative
-   `VCVio.ProgramLogic.RelTriple`
-   goal, the planner extracts the computation slot(s), `whnfReducible`s them,
-   asks the registry for candidate `VCSpecEntry`s via
-   `getRegisteredUnaryVCSpecEntries` / `getRegisteredRelationalVCSpecEntries`,
-   filters by `kind` and `spec.compPattern`, previews each candidate (via the
-   shared `runUnaryVCSpecRule` / `runRelationalVCSpecRule` helpers which call
-   the `runVCGenStepWithTheoremDirect` / `runRVCGenStepWithTheoremDirect`
-   applicators), and picks the best plan.
-2. **`wp`-rewrite driver** (`VCVio/ProgramLogic/Tactics/Common/WpStepDispatch.lean`): on any goal
-   containing `wp _ _`, `runWpStepRules` pulls the `oa` argument out of the
-   first matching `wp` application, `whnfReducible`s it, asks
-   `getRegisteredWpStepEntries` for hits on the `oa`-keyed `Sym.DiscrTree`,
-   and tries each via `rw` then `simp only` until one lands.
-3. **Handler `@[spec]` rules**: unary handlers (`loggingOracle`,
-   `cachingOracle`, …) use core `Std.WP` triples and the `@[spec]` catalogue
-   directly; those are indexed by Lean itself and consumed by core `vcgen`.
+1. **Relational VC-gen** (`VCVio/ProgramLogic/Tactics/Relational/Internals.lean`): on a
+   `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` goal, the planner extracts
+   the two computations, `whnfReducible`s them, asks the registry for candidate `VCSpecEntry`s via
+   `getRegisteredRelationalVCSpecEntries`, filters by `kind` and `spec.compPattern`, previews each
+   candidate through `runRelationalVCSpecRule` (which calls the
+   `runRVCGenStepWithTheoremDirect` applicator), and picks the best plan.
+2. **Unary rules**: `prvcgen` and core `vcgen` consult the core `@[spec]` catalogue, which Lean
+   indexes itself; the handler specifications (`loggingOracle`, `cachingOracle`, …) are among
+   its rules.
+3. **Program equalities**: `prrw` applies fixed swap and congruence laws
+   (`Tactics/Unary/Internals/ProbEq.lean`) and consults no registry.
 
-### Extending the registries
+### Extending the rule sets
 
 | Want to add… | Tag it with | Expected shape |
 |--------------|-------------|----------------|
-| A unary triple lemma usable by `pvcstep` / `pvcgen` | `@[vcspec]` | `⦃ pre ⦄ oa ⦃ post ⦄` or raw `wp⟦oa⟧ post ≥ pre` |
+| A unary rule usable by `prvcgen` / `vcgen` | `@[spec]` (or `@[local spec]`) | A core triple `⦃ pre ⦄ oa ⦃ post ⦄` of the reading it belongs to (see *Adding rules for a reading*) |
 | A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
-| A `wp`-driven equational rewrite | `@[wpStep]` | `wp⟦comp⟧ post = …` (exact head: core's `wp`) |
-
-Priorities (`@[vcspec (prio := 200)]`, `@[wpStep (prio := 200)]`) follow the
-standard Lean convention: higher priority entries are tried first within the
-same candidate pool.
+| An evaluation equation for exact values | `@[expect_eval]` | `wp⟦comp⟧ post = …`, or one unfolding of a loop combinator |
 
 ## SymM Stability Note and Future Proof Repair
 
-`Lean.Meta.Sym.*` is still under active development in core Lean. The APIs
-we depend on today (`Sym.Pattern`, `Sym.DiscrTree`, `Sym.insertPattern`,
-`Sym.getMatch`, `Sym.mkPatternFromDeclWithKey`, and `SpecProof` in
-`Lean.Elab.Tactic.Do.SpecAttr`) are all used by core's `mvcgen` and `vcgen`
-too, so their direction is broadly stable, but none of them carry a
-compat-preservation promise yet. Expect the following classes of churn each
-time we bump the toolchain:
+`Lean.Meta.Sym.*` is still under active development in core Lean. The APIs the `@[vcspec]`
+registry depends on (`Sym.Pattern`, `Sym.DiscrTree`, `Sym.insertPattern`, `Sym.getMatch`,
+`Sym.mkPatternFromDeclWithKey`, and `SpecProof` in `Lean.Elab.Tactic.Do.SpecAttr`) are all used by
+core's `mvcgen` and `vcgen` too, so their direction is broadly stable, but none of them carry a
+compat-preservation promise yet. Expect the following classes of churn each time we bump the
+toolchain:
 
 - **Signature changes on `Sym.mkPatternFromDeclWithKey`**. If the selector
   signature changes (e.g. becomes `Expr → MetaM (Pattern × α)` instead of
-  `Expr → MetaM (Expr × α)`), update `buildVCSpecEntry` /
-  `buildWpStepEntry` in `Registry.lean` / `WpStepRegistry.lean` to match.
+  `Expr → MetaM (Expr × α)`), update `buildVCSpecEntry` in `Registry.lean` to match.
 - **`Sym.Pattern` preprocessing behaviour**. If the default reducibility
   used by `preprocessType` shifts (e.g. stops unfolding certain abbreviations
   or starts unfolding more), the "folded vs unfolded head" helpers
-  (`headIsOneOf`, `tripleBodyParts?`, `relTripleBodyParts?`, etc. in
-  `Registry.lean`) may need to grow new cases. All of these live in a
-  clearly-marked `Preprocessed-body head matchers` section.
-- **`Sym.Simp.Theorem` field renames / `mkTheoremFromDecl` moves**. We do
-  *not* call `mkTheoremFromDecl` today (the dispatcher works off the
-  `Sym.DiscrTree` alone). When the deferred `vcgen`/`SymM` bridge lands,
-  this is where we'll need to pick the bundle back up; until then this
-  churn class is no-op for us.
+  (`headIsOneOf`, `relTripleBodyParts?`, `relWpBodyParts?`, `rawRelWpBodyParts?` in
+  `Registry.lean`) may need to grow new cases. All of these live in its
+  `Preprocessed-body head matchers` section.
 - **`SpecProof` variants**. We only use `.global` today. If core splits or
-  merges variants, `VCSpecEntry.declName?` / `WpStepEntry.declName?` plus
-  the matching `MetaM` inserts need to be adjusted.
+  merges variants, `VCSpecEntry.declName?` plus the matching `MetaM` inserts need to be adjusted.
 - **`registerSimpleScopedEnvExtension` purity**. `addEntry` is pure today
-  and we rely on that in both registries; if it changes, the attribute
-  handlers already compute their patterns inside `MetaM` before calling
-  `.add`, so the fix is to thread the `MetaM` result differently, not to
-  restructure the registry.
+  and the registry relies on that; if it changes, the attribute handler already
+  computes its patterns inside `MetaM` before calling `.add`, so the fix is to
+  thread the `MetaM` result differently, not to restructure the registry.
 
-The compensating design choices are: keep `Sym`-aware logic contained to the
-registry modules (`Registry.lean`, `WpStepRegistry.lean`), prefer the
-structural `getMatch` over `isDefEq`, and keep an explicit `TacticM`
-fallback path (`rw` / `simp only`) so failures in any single `Sym` lookup
-stage degrade gracefully.
+The compensating design choices are: keep `Sym`-aware logic contained to the registry module
+(`Registry.lean`, with `symMatchKey` in `Common/Core.lean`), and prefer the structural `getMatch`
+over `isDefEq`.
 
 ### Core WP and the symbolic rewriter boundary
 
@@ -1009,17 +949,15 @@ which side to step and which coupling to use remains `rvcgen`'s job.
 `Relational/FromUnary.lean` takes its unary premises as core triples under the structural
 reading.
 
-VCVio's probability/coupling tactics (`pvcgen`, `pvcstep`, `rvcgen`, `rvcstep`) consume
-`@[vcspec]` and `@[wpStep]`. Core `vcgen` consumes the core `@[spec]` catalogue. Generic
-transformer WP comes from core and PolyFun's WriterT interpretation; VCVio retains its
-probability rules and existing transformer equality lemmas. The scoped `WriterT.MonoidWP`
-interpretation uses multiplication; append-based logs use `WriterT.toWPMonad` with explicit
-operations.
+Core `vcgen` and `prvcgen` consume the core `@[spec]` catalogue, and the coupling tactics
+`rvcgen` / `rvcstep` consume `@[vcspec]`. Generic transformer WP comes from core and PolyFun's
+WriterT interpretation; VCVio retains its probability rules and existing transformer equality
+lemmas. The scoped `WriterT.MonoidWP` interpretation uses multiplication; append-based logs use
+`WriterT.toWPMonad` with explicit operations.
 
 The handler specifications are core triples under the structural reading, proved and composed
 by core `vcgen` (`Unary/HandlerSpecs.lean`); `Unary/StdDoBridge.lean` remains a narrow bridge to
-core's older `Std.Do` SPred API. Replacing the probability tactic's `rw` dispatcher with `Sym.Simp` needs a
-separate proof-application adapter and evidence from the existing automation tests.
+core's older `Std.Do` SPred API.
 
 Core `vcgen` is experimental in v4.35: a module that calls it acknowledges this with
 `set_option experimental.vcgen true`, and `VCVioTest/ProgramLogic/CoreWP.lean` pins the

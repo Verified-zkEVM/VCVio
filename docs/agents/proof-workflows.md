@@ -15,20 +15,23 @@
      `measureETVDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
 
 3. **Probability equals a specific value** (`Pr{let y ← oa}[y = x] = ...` or `Pr{let x ← oa}[p x] = ...`):
-   → Start with `pvcstep` if the goal should lower or decompose automatically
-   → Use `pvcstep?` when you want the explicit script, binder names, rewrite form, or an
-    explicit `using` / `inv` / `with` step surfaced
+   → Use `prvcgen` when the value holds on every outcome (`= 0`, `= 1`) or a loop invariant pins
+    it; it splits `= c` into an upper and a lower bound, and proves bounds `r ≤ Pr{…}[…]`,
+    `Pr{…}[…] ≤ ε` and core triples the same way
+   → Use `simp only [expect_norm, expect_eval]` to state the expectation through the program's
+    unfolding and the values of its draws; `simp` averages finite uniform draws
    → Otherwise use `prEvent_bind_eq_lintegral_of_discrete` (or `prEvent_bind_eq_lintegral`) to
     decompose binds manually into `∫⁻ x, … ∂𝒟[oa]`
    → Use `simp` with project simp lemmas
-   → Use `pvcstep`, `pvcstep rw`, or `pvcstep rw congr'` for probability equalities
+   → Use `prrw`, `prrw congr`, or `prrw normalize` when the value is another program's probability
 
 4. **Multi-hop security proof** (`g₁ =ᵈ gₙ`):
    → `game_trans g₂` to split into two goals, repeat
 
 5. **Need to swap sampling order**:
-   → Use `pvcstep` if the swap should close the goal
-   → Use `pvcstep rw` (or `pvcstep rw under n`) if you need to continue after rewriting
+   → Use `prrw` (or `prrw under n` below shared binds) for one swap; it closes the goal when the
+    two sides then agree
+   → Use `prrw normalize` to search for a sequence of swaps and shared-prefix steps that closes it
 
 ## Monadic Normalization with `monad_norm`
 
@@ -190,119 +193,97 @@ use `rvcfinish` or `rvcgen!` when residual consequence/search is intended.
 rvcstep?
 ```
 
-On bind goals, the replay can now surface the full tuple naming form:
+On bind goals, the replay can surface the full tuple naming form:
 
 ```lean
 rvcstep using S as ⟨a1, a2, hrel⟩
 ```
 
-### `pvcstep` on probability equalities
+### `prrw` on probability equalities
 
 ```lean
 -- Goal: Pr{let x ← $ᵗ P; let b ← $ᵗ Bool; let z ← f x b}[z = true]
 --     = Pr{let b ← $ᵗ Bool; let x ← $ᵗ P; let z ← f x b}[z = true]
-pvcstep               -- closes the goal automatically
+prrw                  -- swaps the first two draws, which closes the goal
 ```
 
 ```lean
--- Same shape, but keep going after one rewrite:
-pvcstep rw
-```
-
-### Naming and suggestion modes
-
-```lean
--- Ask for the explicit next script and binder names:
-pvcstep?
-```
-
-The surfaced script may now include:
-
-```lean
-pvcstep using cut
-pvcstep inv I
-pvcstep with triple_wrappedTrue
+-- Alternatives: the swap below one shared draw, or a search for a closing sequence of steps
+prrw under 1
+prrw normalize
 ```
 
 ```lean
--- Keep the step, but force stable names for the new binders:
-pvcstep as ⟨x⟩
+-- Expose a shared prefix, naming the value and its support hypothesis:
+prrw congr as ⟨x, hx⟩
 ```
+
+### `prvcgen` on bounds and triples
 
 ```lean
--- Same idea on the relational side:
-rvcstep using S as ⟨a₁, a₂, hrel⟩
+-- Goal: r ≤ Pr{let x ← oa}[p x], with h : ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ in context
+prvcgen                     -- lower-bound reading; `vcgen` uses `h`
 ```
 
-### `pvcgen` driver variants
-
-Use `pvcgen using cut` to perform one explicit bind step with an intermediate
-postcondition, then continue with exhaustive decomposition:
+A continuation specified only on the support of the first program uses `Spec.ofSupport`, which
+leaves the support membership:
 
 ```lean
--- Goal: ⦃ 1 ⦄ (do let x ← oa; let y ← f x; g y) ⦃ post ⦄
--- with hoa : ⦃ 1 ⦄ oa ⦃ cut ⦄ in context
-pvcgen using cut           -- splits at first bind with `cut`, then auto-decomposes
+-- Goal: ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ fun y => if y = true then 1 else 0 ⦄
+-- with h' : ∀ x ∈ support oa, ⦃ 1 ⦄ f x ⦃ fun y => if y = true then 1 else 0 ⦄
+prvcgen [OracleComp.Quantitative.Spec.ofSupport oa, h']
+exact Subtype.property _
 ```
 
-Use `pvcgen inv I` to apply an explicit loop invariant to the first
-`replicate`/`foldlM`/`mapM` goal, then continue:
+A loop takes an invariant, as an explicit rule or through `invariants`:
 
 ```lean
--- Goal: ⦃ pre ⦄ oa.replicate n ⦃ post ⦄
--- with hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄ in context
-pvcgen inv I               -- applies invariant I, then auto-decomposes
+-- Goal: ⦃ pre ⦄ oa.replicate n ⦃ post ⦄, with hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄
+prvcgen [triple_replicate_inv hstep]
+all_goals simp_all          -- pre ≤ I and I ≤ post xs
+
+-- Goal: ⦃ I s₀ ⦄ l.foldlM f s₀ ⦃ I ⦄, with hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄
+prvcgen invariants · fun _ _ s => I s
+all_goals simp_all
 ```
 
-### Support-cut synthesis
-
-When decomposing a bind `oa >>= f`, if no explicit spec is available in context,
-`pvcstep` and `pvcgen` will automatically try a support-based intermediate
-postcondition. This applies `Std.WP.Triple.bind` with `triple_support` as the spec for `oa`,
-unifying the cut to `fun x => ⌜x ∈ support oa⌝`:
+A sub-program without a rule is left as its weakest precondition:
 
 ```lean
--- Goal: ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ post ⦄
--- No spec for oa, but h : ∀ x ∈ support oa, ⦃ ... ⦄ f x ⦃ post ⦄
-pvcgen                     -- auto-inserts support cut, then decomposes f
+prvcgen (errorOnMissingSpec := false)
+simp only [expect_norm, le_refl]
 ```
 
-### Opt-in unary theorem lookup
+### Rules for opaque programs
 
-When a computation head is user-defined and not one of the built-in structural cases, register a
-unary triple lemma explicitly:
+An `@[irreducible]` program is opaque to `vcgen`. State its triple as a core `@[spec]` rule
+(`@[local spec]` for one file):
 
 ```lean
 @[irreducible] def wrappedTrue : OracleComp spec Bool := pure true
 
-@[vcspec] theorem triple_wrappedTrue :
+@[local spec] theorem triple_wrappedTrue :
     ⦃ 1 ⦄ wrappedTrue (spec := spec) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
   simpa [wrappedTrue] using
     (Std.WP.Spec.pure (m := OracleComp spec) (post := fun y => if y = true then 1 else 0) true)
 ```
 
-After that, `pvcstep` can use the theorem when the goal head symbol is `wrappedTrue`.
-The lookup is step-level and bounded: it runs after the built-in structural rules and only over
-registered head-matching theorems.
+`prvcgen` then uses the rule wherever `wrappedTrue` occurs; without the attribute,
+`prvcgen [triple_wrappedTrue]` passes it for one call. Relational rules register with `@[vcspec]`
+instead.
 
-You can also force a specific theorem or local assumption explicitly:
-
-```lean
-pvcstep with triple_wrappedTrue
-```
-
-If an exhaustive `pvcgen` / `rvcgen` run stops too early, raise the local pass budget with:
+If an exhaustive `rvcgen` run stops too early, raise the local pass budget with:
 
 ```lean
 set_option vcvio.vcgen.maxPasses 128 in
-  pvcgen
+  rvcgen
 ```
 
 For tactic-choice debugging, enable the planned-step trace locally:
 
 ```lean
 set_option vcvio.vcgen.traceSteps true in
-  pvcstep
+  rvcstep
 ```
 
 ### `by_dist` for advantage bounds

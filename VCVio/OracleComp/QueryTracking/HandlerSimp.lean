@@ -20,7 +20,7 @@ compatibility equations.
 
 The goal is not to create a second proof mode; it is just the shared "open the
 handler one step" surface that proof scripts can use before handing control
-back to `pvcgen`, `pvcstep`, `rvcstep`, or ordinary support reasoning.
+back to `vcgen`, `prvcgen`, `rvcstep`, or ordinary support reasoning.
 -/
 
 @[expose] public section

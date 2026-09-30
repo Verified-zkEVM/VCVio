@@ -19,7 +19,9 @@ Each reading of `OracleComp` is exercised through `prvcgen`, two statements each
 * expectation lower bounds: an event on every path, and an averaged draw;
 * expectation upper bounds: probability zero, an averaged draw, a union bound over a loop as an
   invariant, and a union bound over the queries of an adversary as a ranked handler potential
-  (`simulateQ_triple_ranked`).
+  (`simulateQ_triple_ranked`);
+* triples already stated, quantitative and structural, and their unfolded form, with the
+  configuration passed to `vcgen`.
 
 Equations split by antisymmetry: every-outcome rules and a loop potential settle both halves
 outright, the averaging rules leave sums that `simp` evaluates, and an equation between two
@@ -173,6 +175,51 @@ example [Nonempty R] (T : Finset R) {α : Type} (adv : OracleComp (D →ₒ R) �
   simpa [potential, StateT.wp_apply_eq, OracleComp.Upper.wp_eq] using h
 
 end RankedPotential
+
+/-! ## Triples
+
+A triple already stated runs in the reading of its assertion type, and so does the unfolded form
+`pre ⊑ wp oa post epost`. The configuration is passed to `vcgen`. -/
+
+section Triples
+
+variable [spec.IsMeasureSpec] {α β : Type}
+
+/-- A quantitative triple: `vcgen` composes the triples of the two programs in the context. -/
+example {oa : OracleComp spec α} {f : α → OracleComp spec β}
+    {pre : ℝ≥0∞} {cut : α → ℝ≥0∞} {post : β → ℝ≥0∞}
+    (hoa : ⦃ pre ⦄ oa ⦃ cut ⦄) (hf : ∀ x, ⦃ cut x ⦄ f x ⦃ post ⦄) :
+    ⦃ pre ⦄ (oa >>= f) ⦃ post ⦄ := by
+  prvcgen
+
+open Lean.Order in
+/-- The same triple, unfolded. -/
+example {oa : OracleComp spec α} {f : α → OracleComp spec β}
+    {pre : ℝ≥0∞} {cut : α → ℝ≥0∞} {post : β → ℝ≥0∞}
+    (hoa : ⦃ pre ⦄ oa ⦃ cut ⦄) (hf : ∀ x, ⦃ cut x ⦄ f x ⦃ post ⦄) :
+    pre ⊑ Std.WP.wp (oa >>= f) post Lean.Order.bot := by
+  prvcgen
+
+/-- A program without a rule stops `vcgen`, unless `errorOnMissingSpec := false` leaves its
+weakest precondition as the verification condition. -/
+example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (pre : ℝ≥0∞) (h : pre ≤ wp⟦oa⟧ post) :
+    ⦃ pre ⦄ (do let x ← oa; pure x) ⦃ post ⦄ := by
+  fail_if_success prvcgen
+  prvcgen (errorOnMissingSpec := false)
+  exact h
+
+end Triples
+
+section StructuralTriple
+
+open scoped OracleComp.Qualitative
+
+/-- A triple with assertions in `Prop`, under the structural reading. -/
+example : ⦃ True ⦄ (do let b ← $ᵗ Bool; pure (b || !b) : ProbComp Bool) ⦃ fun r => r = true ⦄ := by
+  prvcgen
+  simp
+
+end StructuralTriple
 
 /-! ## Scope canaries -/
 

@@ -16,7 +16,7 @@ Families of outcome, event, success-mass and distribution facts, stated with `�
 and the tactic contract* in `docs/agents/probability.md`. Where a fact closes by both `simp` and
 `grind` both are kept; where only one closes, a dated `fail_if_success` guard records the gap and
 expires when the set improves. One guard covers a family of same-shaped entries when the family is
-named in the section note. Bind-swap and shared-prefix congruence go through the `pvcstep` planner.
+named in the section note. Bind-swap and shared-prefix congruence go through `prrw`.
 
 Two gaps recur across the file and are named once here. `grind` does no `ℝ≥0∞` or cardinality
 arithmetic and has no measure-side rules for Dirac or uniform masses, so beyond the lossless
@@ -382,22 +382,22 @@ example (z : α × β) :
 
 end abstract
 
-/-! ## 9. Swaps and congruence through the planner -/
+/-! ## 9. Swaps and congruence through `prrw` -/
 
 example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → ProbComp Bool) :
     Pr{let r ← mx >>= fun a => my >>= fun b => f a b}[r = true] =
       Pr{let r ← my >>= fun b => mx >>= fun a => f a b}[r = true] := by
-  pvcstep
+  prrw
 
 example (mx : ProbComp Bool) (f g : Bool → ProbComp (Fin 3)) (y : Fin 3)
     (h : ∀ b ∈ support mx, 𝒟[f b] {y} = 𝒟[g b] {y}) :
     𝒟[mx >>= f] {y} = 𝒟[mx >>= g] {y} := by
-  pvcstep
+  prrw congr
   exact h _ ‹_›
 
 example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → ProbComp Bool) :
     𝒟[mx >>= fun a => my >>= fun b => f a b] = 𝒟[my >>= fun b => mx >>= fun a => f a b] := by
-  pvcstep
+  prrw
 
 /-! ## 10. Events whose continuation destructures its input
 

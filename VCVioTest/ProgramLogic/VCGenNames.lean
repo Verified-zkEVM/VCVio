@@ -11,14 +11,15 @@ public import VCVio
 # Unary VC-generator names
 
 Core Lean ships a tactic spelled `vcgen` (`Std.Tactic.Do`), which the root `VCVio` import brings
-into scope through the core-triple handler specifications. VCVio's unary probabilistic tactics are
-spelled `pvcgen` and `pvcstep`, so the two families never share a leading token. This file pins
-that state:
+into scope through the core-triple handler specifications. VCVio's unary tactics are spelled
+`prvcgen`, which runs core's `vcgen` under the reading of an oracle computation a goal belongs to,
+and `prrw`, which rewrites equalities between two programs' probabilities, so neither shares a
+leading token with core's. This file pins that state:
 
 * each spelling parses to a single syntax kind, with no `choice` node: `vcgen` to core's, and
-  `pvcgen`, `pvcgen?` and `pvcstep` to VCVio's;
-* `pvcgen` and `pvcstep` close quantitative core triples over oracle computations, including
-  `StateT` state operations and lifted oracle computations;
+  `prvcgen` and `prrw` to VCVio's;
+* `prvcgen` closes quantitative core triples over oracle computations, including `StateT` state
+  operations and lifted oracle computations;
 * a bare `vcgen` elaborates core's tactic on `Prop`-valued triples under the structural reading
   `OracleComp.Qualitative`, with VCVio's tactics imported.
 -/
@@ -31,9 +32,8 @@ open scoped OracleComp.ProgramLogic Std.WP
 
 run_cmd do
   for (src, kind) in [("vcgen", ``Lean.Parser.Tactic.vcgen),
-      ("pvcgen", ``OracleComp.ProgramLogic.pvcgenBasic),
-      ("pvcgen?", ``OracleComp.ProgramLogic.pvcgenSuggestion),
-      ("pvcstep", ``OracleComp.ProgramLogic.tacticPvcstepUsing_)] do
+      ("prvcgen", ``prvcgenStx),
+      ("prrw", ``OracleComp.ProgramLogic.prrw)] do
     let .ok stx := Lean.Parser.runParserCategory (← Lean.getEnv) `tactic src
       | throwError "`{src}` does not parse as a tactic"
     unless stx.getKind == kind do
@@ -45,7 +45,7 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
-/-! ## VCVio's probabilistic tactics -/
+/-! ## `prvcgen` -/
 
 section Probabilistic
 
@@ -59,7 +59,8 @@ example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
         let a ← (MonadLift.monadLift oa : StateT Nat (OracleComp spec) α)
         pure (s, a))
     ⦃post⦄ := by
-  pvcgen
+  prvcgen (errorOnMissingSpec := false)
+  simp only [Std.WP.StateT.wp_apply_eq, StateT.run_pure, ExactWPMonad.wp_pure, le_refl]
 
 example (s' : Nat) (oa : OracleComp spec α) (post : α → Nat → ℝ≥0∞) :
     ⦃fun _ => wp⟦oa⟧ (fun a => post a s')⦄
@@ -67,11 +68,11 @@ example (s' : Nat) (oa : OracleComp spec α) (post : α → Nat → ℝ≥0∞) 
         MonadStateOf.set s'
         MonadLift.monadLift oa : StateT Nat (OracleComp spec) α)
     ⦃post⦄ := by
-  pvcgen
+  prvcgen (errorOnMissingSpec := false)
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄ oa ⦃post⦄ := by
-  pvcstep
+  prvcgen (errorOnMissingSpec := false)
 
 end Probabilistic
 
