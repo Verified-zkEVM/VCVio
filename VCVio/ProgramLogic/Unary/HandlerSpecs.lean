@@ -40,7 +40,10 @@ reading to the stateful handlers. The writer handlers read their log as accumula
   (`simulateQ_writerT_triple_preserves_invariant` for monoid logs,
   `simulateQ_writerT_append_triple_preserves_invariant` for append logs) lift a per-query
   invariant to `simulateQ handler oa` by induction on `oa` with `Std.WP.Triple.pure` and
-  `Std.WP.Triple.bind`. The handler may target any oracle world, such as `ProbComp`.
+  `Std.WP.Triple.bind`. The handler may target any oracle world, such as `ProbComp`. The
+  `StateT` lift holds for every reading of the handler's monad, and
+  `simulateQ_triple_ranked` ranks the invariant by a query budget spent one unit per call: a union
+  bound under the upper-bound reading (`OracleComp.Upper`).
 * *Sum handlers*: `QueryImpl.Spec.add_inl` and `QueryImpl.Spec.add_inr` route a query to
   `impl₁ + impl₂` to its component at the component's value type.
 * `triple_stateT_iff_forall_support` and its writer analogues read a triple as a statement
@@ -175,7 +178,9 @@ end addHandler
 
 The lifts take a handler from the simulated oracles `spec` into a state or writer layer over any
 oracle world `spec'`: the simulated world itself for the query-tracking handlers of this file, and
-typically `ProbComp` for the handlers of security games. -/
+typically `ProbComp` for the handlers of security games. The `StateT` lifts
+`simulateQ_triple_preserves_invariant` and `simulateQ_triple_ranked` take any monad with a core
+reading, so they serve the structural, expectation and upper-bound readings alike. -/
 
 section simulateQ
 
@@ -183,22 +188,43 @@ variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
 
 /-- Generic simulation triple: if every handler call `handler t` preserves an invariant `I` on
 the simulation state, then `simulateQ handler oa` preserves `I` for any `oa : OracleComp spec α`.
+It holds for every reading of the handler's monad `m`: under the structural reading `I` is a
+predicate on states, under the upper-bound reading (`OracleComp.Upper`) a potential.
 
 The invariant-only form (same `I` as pre- and postcondition, independent of the return value) is
 the most common case; stronger per-call specifications follow by instantiating `I` or by the
 consequence rules of `Std.WP.Triple`. -/
-theorem simulateQ_triple_preserves_invariant {σ α : Type}
-    (handler : QueryImpl spec (StateT σ (OracleComp spec')))
-    (I : σ → Prop)
-    (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
+theorem simulateQ_triple_preserves_invariant {m : Type → Type} [Monad m] {Pred EPred : Type _}
+    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] {σ α : Type}
+    (handler : QueryImpl spec (StateT σ m)) (I : σ → Pred)
+    (hhandler : ∀ t : spec.Domain, ⦃ I ⦄ handler t ⦃ fun _ => I ⦄)
     (oa : OracleComp spec α) :
-    ⦃ fun s => I s ⦄ (simulateQ handler oa : StateT σ (OracleComp spec') α)
-      ⦃ fun _ s' => I s' ⦄ := by
+    ⦃ I ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => I ⦄ := by
   induction oa using OracleComp.inductionOn with
-  | pure x => exact Std.WP.Triple.pure x fun _ h => h
+  | pure x => exact Std.WP.Triple.pure x Lean.Order.PartialOrder.rel_refl
   | query_bind t oa ih =>
     rw [simulateQ_query_bind]
     exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
+
+/-- A handler invariant ranked by the remaining query budget: if a call from a state with budget
+`k + 1` ends in a state with budget `k`, and an unspent budget can be dropped, then a simulation
+of a computation making at most `k` queries ends in budget `0`. Under the upper-bound reading
+(`OracleComp.Upper`) with `Φ k s` the indicator of a bad state plus `k` times a per-query
+probability, this is the union bound over the queries: `hstep` is the bound for one query. -/
+theorem simulateQ_triple_ranked {m : Type → Type} [Monad m] {Pred EPred : Type _}
+    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] {σ α : Type}
+    (handler : QueryImpl spec (StateT σ m)) (Φ : ℕ → σ → Pred)
+    (hstep : ∀ (t : spec.Domain) (k : ℕ), ⦃ Φ (k + 1) ⦄ handler t ⦃ fun _ => Φ k ⦄)
+    (hdrop : ∀ k, Lean.Order.PartialOrder.rel (Φ k) (Φ 0)) (oa : OracleComp spec α) (k : ℕ)
+    (hq : oa.IsTotalQueryBound k) :
+    ⦃ Φ k ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => Φ 0 ⦄ := by
+  induction oa using OracleComp.inductionOn generalizing k with
+  | pure x => exact Std.WP.Triple.pure x (hdrop k)
+  | query_bind t oa ih =>
+    rw [isTotalQueryBound_query_bind_iff] at hq
+    obtain ⟨j, rfl⟩ : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
+    rw [simulateQ_query_bind]
+    exact Std.WP.Triple.bind _ _ _ (hstep t j) fun u => ih u j (by simpa using hq.2 u)
 
 /-- Specialized simulation triple: combine a starting-state precondition `s = s₀` with an
 invariant that holds of `s₀`. The invariant is threaded through the entire simulation. -/

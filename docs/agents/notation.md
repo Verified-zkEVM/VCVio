@@ -67,6 +67,8 @@ Open `OracleComp.ProgramLogic` for VCVio notation. Unary triples additionally re
 | `rwp⟦c₁ ~ c₂ \| post; epost₁, epost₂⟧` | Relational WP (`VCVio.ProgramLogic.rwp c₁ c₂ post epost₁ epost₂`) | `VCVio/ProgramLogic/NotationCore.lean` |
 | `⦃ P ⦄ c ⦃ Q ⦄` | Core unary Hoare triple `Std.WP.Triple c P Q ⊥`; for `OracleComp` it is `P ≤ wp⟦c⟧ Q` | Lean core `Std.WP.Triple.Basic` |
 | `⦃ P ⦄ c ⦃ Q; E ⦄` | Core unary Hoare triple with exception postcondition `E` (`Std.WP.Triple c P Q E`) | Lean core `Std.WP.Triple.Basic` |
+| `⦃ toDual ε ⦄ c ⦃ Q ⦄` | Under `open scoped OracleComp.Upper`: upper bound `wp⟦c⟧ (ofDual ∘ Q) ≤ ε` (assertions in `ℝ≥0∞ᵒᵈ`, gotcha 37) | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `⦃ True ⦄ c ⦃ p ⦄` (angelic) | Under `open scoped OracleComp.Angelic`: some possible output of `c` satisfies `p` | `VCVio/ProgramLogic/Unary/WP/Angelic.lean` |
 | `mx =ᵈ my` | Equality in distribution (`EvalDistEq`): every event has the same probability, across monads | `VCVio/EvalDist/EvalDistEq.lean` |
 | `⟪c₁ ~ c₂ \| R⟫` | pRHL coupling (`RelTriple c₁ c₂ R`) | `VCVio/ProgramLogic/Notation.lean` |
 | `⟪c₁ ≈[ε] c₂ \| R⟫` | Approximate coupling (`ApproxRelTriple ε c₁ c₂ R`) | `VCVio/ProgramLogic/Notation.lean` |

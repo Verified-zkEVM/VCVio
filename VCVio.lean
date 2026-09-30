@@ -358,6 +358,7 @@ public import VCVio.ProgramLogic.Tactics.Common.Suggestions
 public import VCVio.ProgramLogic.Tactics.Common.WpStepDispatch
 public import VCVio.ProgramLogic.Tactics.Common.WpStepRegistry
 public import VCVio.ProgramLogic.Tactics.Handler
+public import VCVio.ProgramLogic.Tactics.PrVCGen
 public import VCVio.ProgramLogic.Tactics.Relational
 public import VCVio.ProgramLogic.Tactics.Relational.Internals
 public import VCVio.ProgramLogic.Tactics.Relational.Internals.Driver
@@ -374,6 +375,7 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 public import VCVio.ProgramLogic.Unary.SimulateQ
 public import VCVio.ProgramLogic.Unary.StdDoBridge
 public import VCVio.ProgramLogic.Unary.StdDoExamples
+public import VCVio.ProgramLogic.Unary.WP.Angelic
 public import VCVio.ProgramLogic.Unary.WP.Coherence
 public import VCVio.ProgramLogic.Unary.WP.Measure
 public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
@@ -383,6 +385,7 @@ public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 public import VCVio.ProgramLogic.Unary.WP.Quantitative
 public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
+public import VCVio.ProgramLogic.Unary.WP.Upper
 public import VCVio.ProgramLogic.Unary.WriterTBridge
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef

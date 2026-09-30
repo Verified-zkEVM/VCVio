@@ -10,6 +10,7 @@ public meta import VCVio.ProgramLogic.Tactics.Handler
 public meta import VCVio.EvalDist.MeasureTVDist.Positivity
 public meta import VCVio.ProgramLogic.Tactics.Unary
 public meta import VCVio.ProgramLogic.Tactics.Relational
+public meta import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # VCGen Tactics for Probabilistic Program Logic
@@ -20,6 +21,9 @@ This is the canonical user-facing umbrella import for tactic-based program-logic
   `pvcstep`, `pvcgen`, `exp_norm`, and `by_hoare`.
 - `VCVio.ProgramLogic.Tactics.Relational` contains relational proof-mode tactics such as
   `rvcstep`, `rvcgen`, `by_equiv`, `rel_dist`, `game_trans`, `by_dist`, and `by_upto`.
+- `VCVio.ProgramLogic.Tactics.PrVCGen` contains `prvcgen`, which states an event goal as a core
+  triple of the reading it belongs to (structural, angelic, expectation lower or upper bound) and
+  runs core's `vcgen` in that reading.
 
 For probability equalities, use `pvcstep` directly:
 - plain `pvcstep` keeps the heuristic swap/congruence dispatcher;

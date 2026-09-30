@@ -45,6 +45,10 @@ The remaining rules are applied explicitly rather than registered:
 The verification conditions are inequalities in `ℝ≥0∞`; `simp` reads core's order as `≤`
 (`Lean.Order.rel_eq_le`) and an indicator reaching `1` as its proposition
 (`one_le_propInd_iff`).
+
+`OracleComp.Quantitative.Dispatch` registers the expectation reading at a priority above every
+reading a file opens, for per-call use (`open scoped OracleComp.Quantitative.Dispatch in vcgen`).
+Upper bounds have their own reading, `OracleComp.Upper` (`VCVio.ProgramLogic.Unary.WP.Upper`).
 -/
 
 public section
@@ -145,3 +149,21 @@ theorem Spec.query_uniform (t : spec.Domain) [Fintype (spec.Range t)]
   ⟨(OracleComp.ProgramLogic.wp_query_uniform t post).ge⟩
 
 end OracleComp.Quantitative
+
+namespace OracleComp.Quantitative.Dispatch
+
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec]
+
+/-- The expectation reading at the priority of a per-call scope, above every reading a file opens:
+`open scoped OracleComp.Quantitative.Dispatch in vcgen`. -/
+noncomputable scoped instance (priority := 1200) instWP :
+    Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
+  OracleComp.Quantitative.instWP
+
+/-- The per-call expectation reading as a direct `WP` instance, which outranks direct instances
+of other readings. -/
+noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
+    Std.WP.WP (OracleComp spec α) α ℝ≥0∞ EStack⟨⟩ :=
+  (OracleComp.Quantitative.instWP (spec := spec)).toWP α
+
+end OracleComp.Quantitative.Dispatch

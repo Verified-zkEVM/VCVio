@@ -392,12 +392,27 @@ pvcstep rw congr' as ⟨x, y⟩
 
 Core's `vcgen` (`set_option experimental.vcgen true`) decomposes a core triple
 `⦃ pre ⦄ oa ⦃ post ⦄` with the `@[spec]` rules registered for the program's parts and leaves
-verification conditions in the assertion lattice. `OracleComp spec` has two readings. The global
-instance reads expectations (`ℝ≥0∞`), so a triple is a lower bound. Inside
-`open scoped OracleComp.Qualitative` the structural reading applies (`Prop`), so a triple
-constrains every possible output. The two cannot be mixed in one scope: under the structural
-scope, a triple with an `ℝ≥0∞` precondition no longer elaborates. `Pr{…}[…]` is unaffected by
-the scope.
+verification conditions in the assertion lattice. `OracleComp spec` has four readings, one per
+kind of statement about its outcomes:
+
+| Reading | Scope | Carrier | `⦃ pre ⦄ oa ⦃ post ⦄` states | Rules |
+|---------|-------|---------|-------------------------------|-------|
+| structural (necessary) | `OracleComp.Qualitative` | `Prop` | every possible output satisfies `post` | `Unary/WP/QualitativeSpecs.lean` |
+| angelic (possible) | `OracleComp.Angelic` | `Prop` | some possible output satisfies `post` | `Unary/WP/Angelic.lean` |
+| expectation lower bound | global instance | `ℝ≥0∞` | `pre ≤ wp⟦oa⟧ post` | `Unary/WP/QuantitativeSpecs.lean` |
+| expectation upper bound | `OracleComp.Upper` | `ℝ≥0∞ᵒᵈ` | `wp⟦oa⟧ post ≤ pre` | `Unary/WP/Upper.lean` |
+
+The upper-bound reading is PolyFun's `ExactWPMonad.dual` of the expectation reading: the same
+interpretation over the order duals, so core's `vcgen`, transformer rules and loop invariants
+decompose upper bounds unchanged. Core's assertion types are output parameters, so one reading is
+live per program type in a scope: under the structural scope, a triple with an `ℝ≥0∞`
+precondition no longer elaborates, and a triple of one reading cannot be decomposed with another
+reading's scope open. Each reading also registers a per-call scope at priority `1200`
+(`OracleComp.Qualitative.Dispatch`, `OracleComp.Angelic.Dispatch`,
+`OracleComp.Quantitative.Dispatch`, `OracleComp.Upper.Dispatch`), above every reading a file
+opens, with a direct `WP` instance as well (gotcha 33): `open scoped OracleComp.Upper.Dispatch in
+vcgen` runs `vcgen` in that reading whatever the file opens. `Pr{…}[…]` is unaffected by the
+scopes. `prvcgen` (below) chooses the reading from the goal.
 
 Structural rules (`VCVio/ProgramLogic/Unary/WP/QualitativeSpecs.lean`, namespace
 `OracleComp.Qualitative`):
@@ -445,6 +460,110 @@ Bridges:
 The structural bridges are in `VCVio/ProgramLogic/Unary/WP/Coherence.lean`. For a query with
 uniform answers, `simp` averages the expectation in an event's normal form with
 `OracleComp.wp_monadLift_query_uniform`.
+
+Angelic rules (`VCVio/ProgramLogic/Unary/WP/Angelic.lean`, namespace `OracleComp.Angelic`) state
+that a query or draw can return any value, with precondition `∃ u, post u`:
+`Spec.query`, `Spec.monadLift_query`, `Spec.uniformSample`, `Spec.uniformFin`, and `Spec.ofSupport`
+(not registered). `vcgen` does not split an existential, so each draw leaves
+`∃ u, wp (rest u) post ⊥`; name the witness with `refine ⟨w, ?_⟩` and continue with `prvcgen`
+(or `rw [OracleComp.Angelic.wp_iff_triple]` and `vcgen` in the angelic scope). The angelic reading
+is not conjunctive.
+
+Upper-bound rules (`VCVio/ProgramLogic/Unary/WP/Upper.lean`, namespace `OracleComp.Upper`):
+
+| Program | Rule | Precondition (read in `ℝ≥0∞`) |
+|---------|------|------|
+| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨆ u, post u` (core's `Lean.Order.iInf` of the dual) |
+| `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨆ x, post x` |
+| any `oa` (not registered) | `Spec.ofSupport` | `⨆ a : {a // a ∈ support oa}, post a.1` |
+| `$ᵗ β`, finite (not registered) | `Spec.uniformSample_avg` | `(∑ x, post x) / card β` |
+| `query t`, uniform (not registered) | `Spec.query_avg`, `Spec.monadLift_query_avg` | `∑ u, (card)⁻¹ * post u` |
+
+`triple_add_frame c h` adds a constant budget to an upper-bound triple and `triple_const_mul`
+scales one. The registered rules bound a draw by its largest value: they prove events of
+probability zero and bounds that hold on every path. A bound that averages a draw passes the
+averaging rule explicitly. A bound that accumulates over steps, such as a union bound over an
+adversary's queries, is a potential: the bad event's indicator plus the budget of the remaining
+steps, carried by a loop invariant (`Spec.foldlM_list`) or by a ranked handler invariant
+(`OracleComp.ProgramLogic.simulateQ_triple_ranked`, which spends one unit of budget per query of a
+computation with `IsTotalQueryBound`). `vcgen` then leaves one averaging inequality per step and an
+entry condition comparing the initial budget with the bound.
+
+An assertion of the upper-bound reading has type `ℝ≥0∞ᵒᵈ`. Write the precondition as `toDual ε`:
+the triple notation elaborates its precondition before it looks up the interpretation, so an
+`ℝ≥0∞` precondition selects the carrier `ℝ≥0∞`. Bridges:
+
+| Statement | Triple (upper-bound reading) | Lemma |
+|-----------|------------------------------|-------|
+| `wp⟦oa⟧ g ≤ ε` | `⦃ toDual ε ⦄ oa ⦃ fun a => toDual (g a) ⦄` | `OracleComp.Upper.wp_le_iff_triple` |
+| `Pr{let x ← oa}[p x] ≤ ε` | `⦃ toDual ε ⦄ oa ⦃ fun x => toDual (predInd p x) ⦄` | `OracleComp.Upper.prEvent_le_iff_triple` |
+| nested expectations | `toDual (wp⟦oa⟧ g) = wp oa (fun a => toDual (g a)) ⊥` | `OracleComp.Upper.toDual_wp` |
+| `0 < Pr{let x ← oa}[p x]` (uniform answers) | `⦃ True ⦄ oa ⦃ p ⦄` (angelic) | `OracleComp.Angelic.prEvent_pos_iff_triple` |
+| `∃ x ∈ support oa, p x` | `⦃ True ⦄ oa ⦃ p ⦄` (angelic) | `OracleComp.Angelic.exists_mem_support_iff_triple` |
+| `∀ x ∈ support oa, p x` | `⦃ True ⦄ oa ⦃ p ⦄` (structural) | `OracleComp.Qualitative.forall_mem_support_iff_triple` |
+| `wp⟦oa⟧ g = 1`, `g ≤ 1` (uniform answers) | `wp oa (fun a => g a = 1) ⊥` (structural) | `OracleComp.Qualitative.wp_eq_one_eq_wp` |
+| `0 < wp⟦oa⟧ g` (uniform answers) | `wp oa (fun a => 0 < g a) ⊥` (angelic) | `OracleComp.Angelic.pos_wp_eq_wp` |
+
+The positivity and probability-one bridges need answers of positive mass; the `_of_fullSupport`
+forms (`OracleComp.Angelic.pos_wp_iff_of_fullSupport`,
+`OracleComp.Qualitative.wp_eq_one_iff_of_fullSupport`) take that hypothesis in place of uniform
+answers.
+
+The verification conditions of the upper-bound reading are entailments of `ℝ≥0∞ᵒᵈ`. Read them in
+`ℝ≥0∞` with `simp only [OracleComp.Upper.rel_iff, OrderDual.ofDual_toDual,
+OracleComp.Upper.ofDual_wp, ofDual_add, …]` before any other simplification: the default `simp`
+set distributes `toDual` over arithmetic before it compares the sides, and a term elaborated in
+`ℝ≥0∞` but placed in `ℝ≥0∞ᵒᵈ` (a type ascription) is matched against the wrong carrier.
+
+### `prvcgen`
+
+`prvcgen` (`VCVio.ProgramLogic.Tactics.PrVCGen`, in the `VCVio.ProgramLogic.Tactics` umbrella)
+classifies a statement about the outcomes of an oracle computation, rewrites it with the bridge of
+its reading, and runs core `vcgen` in that reading's per-call scope:
+
+| Goal | Reading |
+|------|---------|
+| `Pr{…}[p] = 1` (uniform answers), `∀ x ∈ support oa, p x` | structural |
+| `0 < Pr{…}[p]` (uniform answers), `∃ x ∈ support oa, p x` | angelic |
+| `r ≤ Pr{…}[p]`, `Pr{…}[p] ≥ r` | expectation lower bound |
+| `Pr{…}[p] ≤ ε`, `Pr{…}[p] = 0` | expectation upper bound |
+| `Pr{…}[p] = c` | both bounds, by `le_antisymm` |
+| an angelic or structural `wp oa post ⊥` | continued in its reading |
+
+`𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does, and an equation may have the expectation
+on either side. `prvcgen [rules] invariants … with step` forwards its arguments to `vcgen`;
+`prvcgen => tac` runs `tac` in the reading's scope in place of `vcgen`. The verification
+conditions of the expectation readings are read back into `ℝ≥0∞`, and those that the range of an
+indicator settles are closed. A comparison `Pr{A}[p] ≤ Pr{B}[q]` is read as an upper bound on the
+left-hand side with the right-hand side as the bound.
+
+Equations. `= 0` is the upper bound alone. `= 1` uses the structural bridge when uniform answers
+are available: its conditions are the event itself at every possible output, and the structural
+catalogue (including the handler specifications) is the largest; without uniform answers it
+splits. Any other `= c` splits into the upper bound and the lower bound. Both halves receive the
+invariants, the `with` step and the tail; each keeps the rules stated in its reading (read off the
+carrier of the rule's triple), and definitions to unfold go to both. Where the split works:
+
+- **Settled outright.** Every-outcome rules (`= 0`, `= 1`, an expectation constant on every path),
+  and a loop invariant or handler potential that pins the value exactly, written without a carrier
+  ascription so that each half elaborates it in its own carrier:
+  `prvcgen [count] invariants · fun _ suff c => ↑c + ↑suff.length`.
+- **Sums left for `simp`.** With the averaging rules of both readings
+  (`prvcgen [OracleComp.Upper.Spec.uniformSample_avg, OracleComp.Quantitative.Spec.uniformSample_sum]`)
+  each half ends in a sum whose continuation `vcgen` did not enter; `simp` on the normal form
+  evaluates it, as for `Pr{let b ← $ᵗ Bool}[b = true] = 1 / 2`.
+- **Refused.** An equation between the probabilities of two programs is a program equality, a
+  game hop: `prvcgen` fails and points to `pvcstep` / `pvcgen`, the couplings `rvcstep` / `rvcgen`,
+  and the `=ᵈ` lemmas.
+
+Adding rules for a reading: state the rule as a triple of that reading, in its namespace, with
+the precondition built from lattice connectives so that `vcgen` continues through it (gotcha 36):
+`Lean.Order.iInf` for every outcome in the lower-bound reading and the largest outcome in the
+upper-bound reading (whose `iInf` is the supremum in `ℝ≥0∞`), `∀` in the structural reading, and
+`∃` (which `vcgen` does not split) in the angelic reading. Register it with `@[spec]` when it holds
+for every call of the program; pass it explicitly (`prvcgen [rule]`) when it needs a hypothesis or
+ends the descent, as the averaging rules do. A rule is picked up by `prvcgen` in the reading its
+triple is stated in.
 
 Known limits:
 
@@ -572,7 +691,8 @@ Core-triple whole-program lifts (`Unary/HandlerSpecs.lean`), by induction on the
 
 | Theorem | Shape |
 |---------|-------|
-| `simulateQ_triple_preserves_invariant` | `StateT` version |
+| `simulateQ_triple_preserves_invariant` | `StateT` version, for every reading of the handler's monad |
+| `simulateQ_triple_ranked` | `StateT` invariant ranked by a query budget, one unit per query of an `IsTotalQueryBound` computation (a union bound under `OracleComp.Upper`) |
 | `simulateQ_writerT_triple_preserves_invariant` | `WriterT` (monoid, `WriterT.MonoidWP`) version |
 | `simulateQ_writerT_append_triple_preserves_invariant` | `WriterT` (append log such as `QueryLog`, `WriterT.AppendWP`) version |
 
@@ -858,7 +978,12 @@ instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly
   instances for monads such as `Option` and `Id` while the scope is open (gotcha 33). Its module is
   `VCVio.ProgramLogic.Unary.WP.Measure`.
 - `open scoped OracleComp.Qualitative` selects universal structural reachability.
+- `open scoped OracleComp.Angelic` selects existential structural reachability.
+- `open scoped OracleComp.Upper` selects the expectation over the order duals `ℝ≥0∞ᵒᵈ`
+  (`ExactWPMonad.dual`), whose triples are upper bounds.
 - `open scoped OracleComp.Probabilistic` selects the restricted algebra on `Set.Iic 1`.
+- The `Dispatch` sub-scopes of the structural, angelic, expectation and upper-bound readings
+  register each at priority `1200`, with a direct `WP` instance, for per-call use by `prvcgen`.
 
 Core's assertion carriers are output parameters, so instance search reads a program's
 interpretation off its type alone and one interpretation is live per program type. The scoped

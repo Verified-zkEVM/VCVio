@@ -8,6 +8,7 @@ module
 
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Angelic
 
 /-!
 # Coherence of unary assertion carriers
@@ -23,7 +24,14 @@ The bridges in `OracleComp.Qualitative` state events of probability one or zero 
 triples, the form core's `vcgen` proves: `prEvent_eq_one_iff_triple`,
 `evalDist_true_eq_one_iff_triple` (the shape of the `PerfectlyCorrect` and `PerfectlyComplete`
 notions), and `prEvent_eq_zero_iff_triple`. Establishing probability one from a triple,
-`prEvent_eq_one_of_triple`, needs no uniformity.
+`prEvent_eq_one_of_triple`, needs no uniformity. `forall_mem_support_iff_triple` states a support
+condition as a structural triple, with no probability interpretation.
+
+An event's normal form nests one expectation per draw. `wp_eq_one_iff_of_fullSupport` states an
+expectation of an observation bounded by `1` equal to `1` as the observation equal to `1` at every
+possible output, when every answer has positive mass; `wp_eq_one_eq_wp` is its uniform-answer form
+as an equation of propositions, which rewrites each nested expectation into the structural
+reading.
 -/
 
 @[expose] public section
@@ -89,6 +97,17 @@ open scoped OracleComp.Qualitative
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
+/-- A support condition is a structural triple from `True`. -/
+theorem forall_mem_support_iff_triple (mx : OracleComp spec α) (p : α → Prop) :
+    (∀ x ∈ support mx, p x) ↔ ⦃ True ⦄ mx ⦃ p ⦄ := by
+  rw [Triple.iff]
+  exact ⟨fun h _ => h, fun h => h trivial⟩
+
+/-- A structural weakest precondition is a triple from `True`. -/
+theorem wp_iff_triple (mx : OracleComp spec α) (post : α → Prop) :
+    Std.WP.wp mx post Lean.Order.bot ↔ ⦃ True ⦄ mx ⦃ post ⦄ :=
+  forall_mem_support_iff_triple mx post
+
 /-- A structural triple from `True` gives probability one under any answer measures. -/
 theorem prEvent_eq_one_of_triple [OracleSpec.IsMeasureSpec spec] {mx : OracleComp spec α}
     {p : α → Prop} (h : ⦃ True ⦄ mx ⦃ p ⦄) : Pr{let x ← mx}[p x] = 1 :=
@@ -115,5 +134,60 @@ theorem prEvent_eq_zero_iff_triple (mx : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← mx}[p x] = 0 ↔ ⦃ True ⦄ mx ⦃ fun x => ¬ p x ⦄ := by
   rw [prEvent_eq_zero_iff, Triple.iff]
   exact ⟨fun h _ => h, fun h => h trivial⟩
+
+end OracleComp.Qualitative
+
+/-! ## Nested expectations equal to one -/
+
+namespace OracleComp.Qualitative
+
+open Std.WP
+open scoped OracleComp.Qualitative
+
+section fullSupport
+
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.IsMeasureSpec spec] {α : Type}
+
+/-- When every answer of every query has positive mass, an expectation of an observation bounded
+by `1` equals `1` exactly when the observation equals `1` at every possible output. -/
+theorem wp_eq_one_iff_of_fullSupport
+    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
+    (mx : OracleComp spec α) (g : α → ℝ≥0∞) (hg : ∀ a, g a ≤ 1) :
+    wp⟦mx⟧ g = 1 ↔ ∀ a ∈ support mx, g a = 1 := by
+  constructor
+  · intro h a ha
+    by_contra hne
+    have hsum : wp⟦mx⟧ g + wp⟦mx⟧ (fun x => 1 - g x) = 1 + 0 := by
+      rw [← MeasureProgramLogic.wp_add, add_zero]
+      simp only [add_tsub_cancel_of_le (hg _)]
+      exact MeasureProgramLogic.wp_const_of_oracle mx 1
+    rw [h, ENNReal.add_right_inj ENNReal.one_ne_top] at hsum
+    refine (ne_of_gt ?_) hsum
+    exact (OracleComp.Angelic.pos_wp_iff_of_fullSupport hfull mx _).2
+      ⟨a, ha, tsub_pos_of_lt (lt_of_le_of_ne (hg a) hne)⟩
+  · intro h
+    rw [← MeasureProgramLogic.wp_const_of_oracle mx 1]
+    exact wp_congr_of_support mx h
+
+/-- When every answer of every query has positive mass, an expectation of an observation bounded
+by `1` equals `1` exactly when a structural triple from `True` holds. -/
+theorem wp_eq_one_iff_triple_of_fullSupport
+    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
+    (mx : OracleComp spec α) (g : α → ℝ≥0∞) (hg : ∀ a, g a ≤ 1) :
+    wp⟦mx⟧ g = 1 ↔ ⦃ True ⦄ mx ⦃ fun a => g a = 1 ⦄ := by
+  rw [wp_eq_one_iff_of_fullSupport hfull mx g hg, forall_mem_support_iff_triple]
+
+end fullSupport
+
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.IsUniformMeasureSpec spec]
+  {α : Type}
+
+/-- Under uniform answers, an expectation of an observation bounded by `1` equal to `1` is the
+structural weakest precondition of the observation equal to `1`. As an equation of propositions
+it rewrites the nested expectations of an event's normal form. -/
+theorem wp_eq_one_eq_wp (mx : OracleComp spec α) (g : α → ℝ≥0∞) (hg : ∀ a, g a ≤ 1) :
+    (wp⟦mx⟧ g = 1) = Std.WP.wp mx (fun a => g a = 1) Lean.Order.bot :=
+  propext (wp_eq_one_iff_of_fullSupport
+    (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) mx g hg)
 
 end OracleComp.Qualitative

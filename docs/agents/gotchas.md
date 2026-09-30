@@ -522,7 +522,8 @@ through the `@[spec]` catalogue, is experimental in v4.35 (a module that calls i
 `OracleComp.Qualitative`, such as the handler specifications in `Unary/HandlerSpecs.lean`, and for
 lower-bound triples under the global expectation reading (`Unary/WP/QuantitativeSpecs.lean`).
 It does not lower `Pr{…}[…]` goals, which enter through the bridge lemmas of *Core `vcgen` on
-oracle computations* in `program-logic.md`. It does not consult the `@[vcspec]` / `@[wpStep]`
+oracle computations* in `program-logic.md`, or through `prvcgen`, which picks the bridge and the
+reading from the goal. It does not consult the `@[vcspec]` / `@[wpStep]`
 registries, and it does not step through `simulateQ`. For those goals use VCVio's `pvcgen` /
 `pvcstep` (and `rvcgen` / `rvcstep` for couplings). The two families share no leading token, so a bare `vcgen` always elaborates core's
 tactic; `VCVioTest/ProgramLogic/VCGenNames.lean` pins this. The `vcvio.vcgen.*` options
@@ -541,3 +542,30 @@ takes a `Type`-indexed binder, so a condition such as `a ∈ support oa` is expr
 subtype `{a // a ∈ support oa}`. Exact rules stated as averages (`Spec.uniformSample_sum`) belong
 at the last draw of a program; exact values in general are computed by `simp` on the normal form
 of `Pr{…}[…]`.
+
+### 37. An upper-bound triple's assertions have type `ℝ≥0∞ᵒᵈ`
+
+Under `OracleComp.Upper` a triple `⦃ pre ⦄ oa ⦃ post ⦄` states `wp⟦oa⟧ post ≤ pre` through the
+order duals, so its assertions have type `ℝ≥0∞ᵒᵈ`. The triple notation elaborates the
+precondition before it looks up the interpretation: `⦃ ε ⦄ oa ⦃ … ⦄` with `ε : ℝ≥0∞` selects the
+carrier `ℝ≥0∞`, which the scope does not interpret, and even `(ε : ℝ≥0∞ᵒᵈ)` keeps the inferred
+type. Write `toDual ε` (the bridges `OracleComp.Upper.wp_le_iff_triple` and
+`prEvent_le_iff_triple` produce this form), or leave arithmetic unascribed so that it elaborates
+in `ℝ≥0∞ᵒᵈ`. A term elaborated in `ℝ≥0∞` and placed in `ℝ≥0∞ᵒᵈ` by unfolding `OrderDual`
+type-checks, but `simp` then matches its subterms against the wrong carrier and leaves the
+verification conditions unsimplified. Read a verification condition in `ℝ≥0∞` with
+`simp only [OracleComp.Upper.rel_iff, OrderDual.ofDual_toDual, OracleComp.Upper.ofDual_wp,
+ofDual_add, …]` before the default `simp` set, which distributes `toDual` over arithmetic
+(`toDual_add`) first and leaves `toDual a ≤ toDual b + toDual c`. `prvcgen` applies them to the
+conditions it leaves.
+
+### 38. One reading per `vcgen` call; `Dispatch` scopes outrank file-level readings
+
+Core `vcgen` rebuilds each rule for the interpretation that instance search finds for the
+program's type. A triple of one reading is therefore decomposed only while that reading is the
+highest-priority one: with `OracleComp.Upper` or `OracleComp.Qualitative` opened at file level, a
+lower-bound triple fails to build its rules, and a bridged upper-bound triple fails with no scope
+open. The failure is loud ("failed to synthesize WP …"); no other reading is substituted. Each
+reading has a `Dispatch` sub-scope at priority `1200`, with a direct `WP` instance that also
+outranks `MeasureProgramLogic.Quantitative.wpInst`: `open scoped OracleComp.Upper.Dispatch in
+vcgen` runs `vcgen` in that reading whatever the file opens, and `prvcgen` uses these scopes.

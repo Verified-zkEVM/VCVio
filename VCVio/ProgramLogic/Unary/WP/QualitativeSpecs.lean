@@ -31,6 +31,9 @@ applies to every program, so it is not registered; passing it for an opaque sub-
 The query rules `Spec.query` and `Spec.monadLift_query` are in
 `VCVio.ProgramLogic.Unary.WP.Qualitative`. The bridges between structural triples and events of
 probability one or zero are in `VCVio.ProgramLogic.Unary.WP.Coherence`.
+
+`OracleComp.Qualitative.Dispatch` registers the structural reading at a priority above every
+reading a file opens, for per-call use (`open scoped OracleComp.Qualitative.Dispatch in vcgen`).
 -/
 
 public section
@@ -84,3 +87,21 @@ theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
   ⟨fun h a ha => h a ((mem_support_liftComp_iff oa a).mp ha)⟩
 
 end OracleComp.Qualitative
+
+namespace OracleComp.Qualitative.Dispatch
+
+variable {ι : Type u} {spec : OracleSpec ι}
+
+/-- The structural reading at the priority of a per-call scope, above every reading a file opens:
+`open scoped OracleComp.Qualitative.Dispatch in vcgen`. -/
+noncomputable scoped instance (priority := 1200) instWP :
+    Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
+  OracleComp.Qualitative.instWP
+
+/-- The per-call structural reading as a direct `WP` instance, which outranks direct instances of
+other readings. -/
+noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
+    Std.WP.WP (OracleComp spec α) α Prop EStack⟨⟩ :=
+  (OracleComp.Qualitative.instWP (spec := spec)).toWP α
+
+end OracleComp.Qualitative.Dispatch
