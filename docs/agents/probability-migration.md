@@ -168,6 +168,24 @@ The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound
 For an aborting identification scheme whose loss is a real-valued formula, keep `ζ_zk : ℝ` and
 pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` does.
 
+## Removed and narrowed statements
+
+Statements of the discrete layer that have no literal counterpart, with what states the same
+fact now.
+
+| Removed or narrowed | Current |
+|---|---|
+| `SymmEncAlg.perfectSecrecyPosteriorEqPriorAt`, `perfectSecrecyJointFactorizationAt` and their `_iff_` lemmas | `perfectSecrecyAt`: they were `perfectSecrecyAt` up to `mul_comm` |
+| `SymmEncAlg.perfectSecrecyAtAllPriors`, `perfectSecrecyAtAllPriors_iff_ciphertextRowsEqualAt` | `perfectSecrecyAt` quantifies over the priors `mgen : m M` of mass one; `perfectSecrecyAt_iff_ciphertextRowsEqualAt` (for `ProbComp`) and `ciphertextRowsEqualAt_of_perfectSecrecyAt` (any monad that can draw a two-point prior) give the equivalence |
+| `SymmEncAlg.cipherGivenMsg_uniform_of_uniformKey_of_uniqueKey`, `ciphertextRowsEqualAt_of_uniformKey_of_uniqueKey`, `perfectSecrecyAt_of_uniformKey_of_uniqueKey` | the same names with the key and encryption laws stated as point masses (`prEvent_perfectSecrecyCipherGivenMsgExperiment_eq_of_uniformKey_of_uniqueKey`); the support form, `ciphertextRowsEqualAt_of_uniformKey_of_uniqueKey_support`, needs uniform oracle answers |
+| `SymmEncAlg.MeasureCompatibility.measurePerfectSecrecyAt_iff_ciphertextRowsEqualAt` | `SymmEncAlg.measurePerfectSecrecyAt_iff_ciphertextRowsEqualAt`, whose hypothesis identifies the semantics' rows with `𝒟` |
+| `KEMDEM.perfectlyCorrect_composeWithDEM` over `[MonadLiftT m SPMF]` | the same name, generic in any lawful measure semantics, from `Pr{let b ← …}[b = true] = 1` hypotheses; no support or full-mass assumption |
+| `ProbResponder.IsExecutable.answerSPMF_unique` | `IsExecutable.answerComp_evalDistEq`: two realizations of one kernel are equal in distribution, and `stepAgainst`, `iterateAgainst` and `transcriptAgainst` are congruent across them |
+| Lossy executable responders | none: `IsExecutable.answerComp` is a `ProbComp`, which is lossless; a subprobability kernel stays at the `ProbResponder` level |
+| `OracleSpec.probHandler`, `simulateQ_probHandler` (any `IsProbabilitySpec`) | `OracleSpec.uniformHandler`, `simulateQ_uniformHandler`, for sampleable answer types under `IsUniformMeasureSpec`; a weighted specification has no canonical `ProbComp` handler |
+| The executable layer at `OracleSpec.{u, u}` | `OracleSpec.{0, 0}`: `ProbComp` lives in `Type` |
+| `outputRel_rel [Countable α]` | no countability: a `ProbComp` has finitely many outputs |
+
 ## Modules
 
 | Removed or renamed module | Import instead |
