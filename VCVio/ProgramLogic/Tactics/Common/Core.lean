@@ -371,7 +371,7 @@ def relWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
   some (oa, ob, post)
 
 /-- Extract a quantitative relational triple's precondition, computations, and postcondition. -/
-def stdDoRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × Expr) := do
+def quantRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × Expr) := do
   let app ← findAppWithHead? ``VCVio.ProgramLogic.RelTriple target
   let args ← trailingArgs? app 6
   let #[pre, oa, ob, post, _epost₁, _epost₂] := args | none

@@ -45,9 +45,9 @@ wherever possible:
 
 * `proof : SpecProof` is reused directly, so entries can be global
   declarations (the common case for `@[vcspec]`), local hypotheses, or raw
-  proof expressions. This anticipates the Phase F bridge where a subset of
-  our entries (the `Triple`-shaped ones) is exposed to `mvcgen'` via the
-  core `SpecExtension`.
+  proof expressions, as core's `vcgen` records the origin of its `@[spec]`
+  rules; a triple of one program is a core `@[spec]` rule, which the
+  attribute redirects to.
 * `pattern : Sym.Pattern` is the Sym-side analogue of the combined
   `SpecTheorem.{prog, keys}` pair; it carries the program sub-expression,
   ∀-binder types, level parameters, and proof/instance slot metadata.

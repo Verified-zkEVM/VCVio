@@ -91,7 +91,7 @@ private def rawRelParts? (type : Expr) : MetaM (Option (Expr × Expr)) := do
     return some (type.getArg! 2, type.getArg! 3)
   return none
 
-private def stdDoRelWpParts? (rhs : Expr) : Option (Expr × Expr × Expr × Expr × Expr) := do
+private def rawRelWpParts? (rhs : Expr) : Option (Expr × Expr × Expr × Expr × Expr) := do
   let rhs := rhs.consumeMData
   unless rhs.getAppFn.isConstOf ``VCVio.ProgramLogic.rwp do none
   let args := rhs.getAppArgs
@@ -144,7 +144,7 @@ proof into a reusable backward rule source by abstracting concrete `post` and al
 `pre` through transitivity; qualitative and quantitative carriers share this path once they are
 expressed as `VCVio.ProgramLogic.RelTriple` / raw `VCVio.ProgramLogic.rwp`. -/
 private def mkRelSpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := do
-  let some (oa, ob, postSpec, epost₁, epost₂) := stdDoRelWpParts? rhs
+  let some (oa, ob, postSpec, epost₁, epost₂) := rawRelWpParts? rhs
     | throwError "expected a VCVio.ProgramLogic.rwp RHS, got:{indentExpr rhs}"
   let mut postAbstract := postSpec.consumeMData
   let mut specApplied := specProof
@@ -177,7 +177,7 @@ else is returned unchanged. -/
 private def normalizeRawRelProof (prf type : Expr) : MetaM Expr := do
   match ← rawRelParts? type with
   | some (pre, rhs) =>
-      if (stdDoRelWpParts? rhs).isSome then
+      if (rawRelWpParts? rhs).isSome then
         mkRelSpecBackwardProof pre rhs prf
       else
         pure prf
@@ -242,13 +242,13 @@ def VCSpecEntry.tryApplyRawRelConsequence (entry : VCSpecEntry) (mvarId : MVarId
   let some (preTarget, rhsTarget) ← rawRelParts? goalTy
     | return none
   let some (oaTarget, obTarget, postTarget, _epostTarget₁, _epostTarget₂) :=
-      stdDoRelWpParts? rhsTarget
+      rawRelWpParts? rhsTarget
     | return none
   let (_xs, _bis, specProof, specType) ← entry.proof.instantiate
   let some (preSpec, rhsSpec) ← rawRelParts? specType
     | return none
   let some (oaSpec, obSpec, postSpec, epostSpec₁, epostSpec₂) :=
-      stdDoRelWpParts? rhsSpec
+      rawRelWpParts? rhsSpec
     | return none
   unless (← isDefEq oaSpec oaTarget) && (← isDefEq obSpec obTarget) do
     return none

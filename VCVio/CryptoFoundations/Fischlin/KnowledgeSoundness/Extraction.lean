@@ -311,7 +311,7 @@ private lemma knowledgeSoundnessExperiment_bad_le_misses
         fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none] := by
   classical
   rw [← prEvent_eq_evalDist_singleton, prEvent_eq_wp_indicator, prEvent_eq_wp_indicator]
-  simp only [knowledgeSoundnessExperiment, ksSample, wp_bind]
+  simp only [knowledgeSoundnessExperiment, ksSample, MeasureProgramLogic.wp_bind]
   refine wp_mono _ fun a => ?_
   obtain ⟨⟨π', roLog'⟩, cache'⟩ := a
   refine wp_mono_of_support _ fun vc hvc => ?_
@@ -320,10 +320,10 @@ private lemma knowledgeSoundnessExperiment_bad_le_misses
   | false => simp
   | true =>
     by_cases hfw : fischlinFindWitness σ ρ b M x π' roLog' = none
-    · simp only [wp_pure, hfw, and_self, ite_true]
+    · simp only [MeasureProgramLogic.wp_pure, hfw, and_self, ite_true]
       exact wp_le_const_of_support _ fun _ _ => by split_ifs <;> simp
     · have hver := hverSupp π' cache' c' hvc
-      simp only [wp_pure, hfw, and_false, ite_false]
+      simp only [MeasureProgramLogic.wp_pure, hfw, and_false, ite_false]
       refine (wp_le_const_of_support _ fun e he => ?_)
       obtain ⟨w, rfl, hrel⟩ :=
         onlineExtract_support_of_findWitness_ne_none σ ρ b M hss hver hfw e he

@@ -67,7 +67,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
   induction oa using OracleComp.inductionOn with
   | pure x =>
       intro q _ cache keys st hINV
-      rw [simulateQ_pure, StateT.run_pure, wp_pure]
+      rw [simulateQ_pure, StateT.run_pure, MeasureProgramLogic.wp_pure]
       exact (hleaf x cache keys st hINV).trans (add_le_add le_add_self le_rfl)
   | query_bind t mx ih =>
       intro q hq cache keys st hINV
@@ -93,7 +93,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
           rw [OracleComp.liftM_run_StateT, bind_assoc]
           simp only [pure_bind]
         rw [hrun]
-        rw [wp_bind]
+        rw [MeasureProgramLogic.wp_bind]
         exact wp_le_const_of_support _ fun a _ => ih a q (hrest a) cache keys st hINV
       · -- hash query
         have hp : ((Sum.inr s : ℕ ⊕ T) matches Sum.inr _) := rfl
@@ -137,7 +137,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
                 (hINV.cacheQuery_reveal (hdead_mono cache s u) s hc hrel hstn u)).trans ?_
               gcongr
               exact Phi_mono_dead ρ b S _ _ _ _ (hdead_mono cache s u)
-            rw [wp_bind]
+            rw [MeasureProgramLogic.wp_bind]
             calc wp⟦$ᵗ Fin (2 ^ b)⟧ (fun u =>
                     wp⟦(simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u)⟧
                       (fun z => leaf z.1 z.2))
@@ -206,7 +206,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
                     hts.symm (hcell s t' hrel ht'rel ht'k.symm ht'i.symm h)
                   exact hdead_kill cache s t' u u' hrel ht'rel ht'k.symm ht'i.symm
                     hchal ht'c
-            rw [wp_bind]
+            rw [MeasureProgramLogic.wp_bind]
             refine wp_le_const_of_support _ fun u _ => ?_
             refine (ih u (q - 1) (hrest u) (cache.cacheQuery s u) keys st
               (hINV.cacheQuery_inert (hdead_mono cache s u) s hc u (hinert u))).trans ?_
@@ -373,8 +373,7 @@ private theorem dropLog_wp {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq �
     wp⟦((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache⟧
         (fun z => f z.1.1 z.2)
       = wp⟦(simulateQ hashSpec.romImpl oa).run cache⟧ (fun w => f w.1 w.2) := by
-  rw [← dropLog_run_eq oa cache, wp_map]
-  rfl
+  rw [← dropLog_run_eq oa cache, MeasureProgramLogic.wp_map]
 
 /-! ### Knowledge-Soundness Assembly: Classifier Instantiation
 
@@ -610,12 +609,12 @@ private lemma ksSample_prEvent_eq_wp
                   + fischlinROSpec Stmt Commit Chal Resp ρ b M))
                 σ hr ρ b S M).verify x msg z.1.1)).run z.2 >>= fun vc =>
               pure ((z.1.1, z.1.2), vc.1) := rfl
-  rw [hks, prEvent_eq_wp_indicator, wp_bind]
+  rw [hks, prEvent_eq_wp_indicator, MeasureProgramLogic.wp_bind]
   refine congrArg (wp⟦_⟧) (funext fun z => ?_)
-  rw [wp_bind]
+  rw [MeasureProgramLogic.wp_bind]
   by_cases hfw : fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none
   · rw [ite_eq_left hfw, one_mul, ← prEvent_eq_evalDist_singleton, prEvent_eq_wp_indicator,
-      StateT.run', wp_map]
+      StateT.run', MeasureProgramLogic.wp_map]
     refine congrArg (wp⟦_⟧) (funext fun vc => ?_)
     simp [hfw]
   · rw [ite_eq_right hfw, zero_mul]

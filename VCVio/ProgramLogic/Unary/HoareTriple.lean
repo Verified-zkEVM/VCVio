@@ -32,6 +32,7 @@ with the empty exception postcondition.
 
 open ENNReal MeasureTheory
 open Std.WP
+open scoped OracleComp.Quantitative
 
 universe u
 
@@ -65,31 +66,16 @@ theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞)
     wp⟦oa⟧ post = ∫⁻ y, y ∂𝒟[post <$> oa] :=
   MeasureProgramLogic.wp_eq_lintegral_map oa post
 
-/-! ## `wp` lemmas (against `wp _ _`) -/
+/-! ## `wp` lemmas (against `wp _ _`)
 
-@[game_rule] theorem wp_pure (x : α) (post : α → ℝ≥0∞) :
-    wp⟦(pure x : OracleComp spec α)⟧ post = post x :=
-  ExactWPMonad.wp_pure x post _
+The structural equations of an expectation are the generic ones, `MeasureProgramLogic.wp_pure`,
+`wp_bind`, `wp_map`, `wp_add`, `wp_const_mul` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite`,
+tagged here for the `game_rule` set; a constant observation of an oracle computation is
+`MeasureProgramLogic.wp_const_of_oracle`. The rules below unfold the loop combinators. -/
 
-@[game_rule] theorem wp_ite (c : Prop) [Decidable c]
-    (oa ob : OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp⟦if c then oa else ob⟧ post =
-      if c then wp⟦oa⟧ post
-      else wp⟦ob⟧ post := by
-  split_ifs <;> rfl
-
-@[game_rule] theorem wp_dite (c : Prop) [Decidable c]
-    (oa : c → OracleComp spec α) (ob : ¬c → OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp⟦dite c oa ob⟧ post =
-      dite c (fun h => wp⟦oa h⟧ post)
-        (fun h => wp⟦ob h⟧ post) := by
-  split_ifs <;> rfl
-
-@[game_rule] theorem wp_bind (oa : OracleComp spec α) (ob : α → OracleComp spec β)
-    (post : β → ℝ≥0∞) :
-    wp⟦oa >>= ob⟧ post =
-      wp⟦oa⟧ (fun x => wp⟦ob x⟧ post) :=
-  ExactWPMonad.wp_bind oa ob post _
+attribute [game_rule] MeasureProgramLogic.wp_pure MeasureProgramLogic.wp_bind
+  MeasureProgramLogic.wp_map MeasureProgramLogic.wp_add MeasureProgramLogic.wp_const_mul
+  ExactWPMonad.wp_ite ExactWPMonad.wp_dite
 
 @[game_rule] theorem wp_replicate_zero (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate 0⟧ post = post [] := by
@@ -101,10 +87,10 @@ theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞)
       wp⟦oa⟧
         (fun x => wp⟦oa.replicate n⟧
           (fun xs => post (x :: xs))) := by
-  rw [OracleComp.replicate_succ_bind, wp_bind]
+  rw [OracleComp.replicate_succ_bind, MeasureProgramLogic.wp_bind]
   congr 1
   funext x
-  rw [wp_bind]
+  rw [MeasureProgramLogic.wp_bind]
   simp
 
 @[game_rule] theorem wp_list_mapM_nil
@@ -118,10 +104,10 @@ theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞)
       wp⟦f x⟧
         (fun y => wp⟦xs.mapM f⟧
           (fun ys => post (y :: ys))) := by
-  rw [List.mapM_cons, wp_bind]
+  rw [List.mapM_cons, MeasureProgramLogic.wp_bind]
   congr 1
   funext y
-  rw [wp_bind]
+  rw [MeasureProgramLogic.wp_bind]
   simp
 
 @[game_rule] theorem wp_list_foldlM_nil
@@ -135,7 +121,7 @@ theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞)
     wp⟦(x :: xs).foldlM f init⟧ post =
       wp⟦f init x⟧
         (fun s => wp⟦xs.foldlM f s⟧ post) := by
-  rw [List.foldlM_cons, wp_bind]
+  rw [List.foldlM_cons, MeasureProgramLogic.wp_bind]
 
 /-- `wp` is monotone in the postcondition; `gcongr` descends through it. -/
 @[gcongr low]
@@ -153,32 +139,10 @@ theorem wp_ne_top_of_finite [Finite α] (oa : OracleComp spec α) {post : α →
   exact ne_top_of_le_ne_top hc
     (MeasureProgramLogic.wp_le_const_of_support oa fun x _ ↦ le_iSup post x)
 
-@[game_rule] theorem wp_map (f : α → β) (oa : OracleComp spec α) (post : β → ℝ≥0∞) :
-    wp⟦f <$> oa⟧ post =
-      wp⟦oa⟧ (post ∘ f) := by
-  simp [Function.comp_def]
-
-theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :
-    wp⟦oa⟧ (fun _ ↦ c) = c :=
-  MeasureProgramLogic.wp_const_of_oracle oa c
-
-@[game_rule] theorem wp_add (oa : OracleComp spec α) (f g : α → ℝ≥0∞) :
-    wp⟦oa⟧ (fun x ↦ f x + g x) = wp⟦oa⟧ f + wp⟦oa⟧ g :=
-  MeasureProgramLogic.wp_add oa f g
-
-theorem wp_const_mul (oa : OracleComp spec α) (f : α → ℝ≥0∞) (c : ℝ≥0∞) :
-    wp⟦oa⟧ (fun x ↦ f x * c) = wp⟦oa⟧ f * c := by
-  simpa only [mul_comm] using
-    (MeasureProgramLogic.wp_const_mul oa c f)
-
-@[game_rule] theorem wp_mul_const (oa : OracleComp spec α) (c : ℝ≥0∞) (f : α → ℝ≥0∞) :
-    wp⟦oa⟧ (fun x ↦ c * f x) = c * wp⟦oa⟧ f :=
-  MeasureProgramLogic.wp_const_mul oa c f
-
 /-- A support-wise postcondition bound controls the quantitative WP. -/
 theorem wp_le_const_of_support (oa : OracleComp spec α) {post : α → ℝ≥0∞} {c : ℝ≥0∞}
     (hpost : ∀ x ∈ support oa, post x ≤ c) : wp⟦oa⟧ post ≤ c :=
-  (wp_mono_of_support oa hpost).trans_eq (wp_const oa c)
+  (wp_mono_of_support oa hpost).trans_eq (MeasureProgramLogic.wp_const_of_oracle oa c)
 
 /-- Additive support-wise comparison of quantitative postconditions. -/
 theorem wp_le_const_add_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
@@ -186,7 +150,7 @@ theorem wp_le_const_add_of_support (oa : OracleComp spec α) {f g : α → ℝ�
     wp⟦oa⟧ f ≤ c + wp⟦oa⟧ g := by
   refine (wp_mono_of_support oa hfg).trans_eq ?_
   rw [MeasureProgramLogic.wp_add]
-  exact congrArg (· + wp⟦oa⟧ g) (wp_const oa c)
+  exact congrArg (· + wp⟦oa⟧ g) (MeasureProgramLogic.wp_const_of_oracle oa c)
 
 /-- Finite sums of quantitative postconditions commute with expectation. -/
 theorem wp_finsetSum {κ : Type*} (oa : OracleComp spec α) (s : Finset κ)
@@ -198,48 +162,15 @@ theorem wp_finsetSum {κ : Type*} (oa : OracleComp spec α) (s : Finset κ)
 
 Core's `Std.WP.Triple` is a structure around `pre ⊑ wp …`: `Std.WP.Triple.intro` builds a
 triple from the inequality, `Std.WP.Triple.le_wp` extracts it, and `Std.WP.Triple.iff`
-exchanges the two forms. Core supplies the generic monadic rules (`Std.WP.Spec.pure`,
-`Std.WP.Triple.bind`, `Std.WP.Triple.map`); the rules below are the quantitative ones for
-`OracleComp`, stated with `ℝ≥0∞` inequalities. -/
-
-/-- Consequence rule: strengthen the precondition and weaken the postcondition pointwise. -/
-theorem triple_conseq {pre pre' : ℝ≥0∞} {oa : OracleComp spec α}
-    {post post' : α → ℝ≥0∞}
-    (hpre : pre' ≤ pre) (hpost : ∀ x, post x ≤ post' x) :
-    ⦃ pre ⦄ oa ⦃ post ⦄ → ⦃ pre' ⦄ oa ⦃ post' ⦄ := fun h =>
-  ⟨Std.WP.Triple.entails_wp_of_pre_post h hpre hpost⟩
-
-/-- Bind rule whose intermediate postcondition is the expectation of the continuation. -/
-theorem triple_bind_wp {pre : ℝ≥0∞} {oa : OracleComp spec α}
-    {ob : α → OracleComp spec β} {post : β → ℝ≥0∞}
-    (h : ⦃ pre ⦄ oa ⦃ fun x => wp⟦ob x⟧ post ⦄) :
-    ⦃ pre ⦄ (oa >>= ob) ⦃ post ⦄ :=
-  Std.WP.Triple.bind oa ob _ h fun _ => ⟨le_rfl⟩
+exchanges the two forms. Core supplies the generic rules (`Std.WP.Spec.pure`,
+`Std.WP.Triple.bind`, `Std.WP.Triple.map`, `Std.WP.Triple.entails_wp_of_pre_post`) and `vcgen`
+splits conditionals; the rules below are the quantitative ones for `OracleComp`, stated with
+`ℝ≥0∞` inequalities. -/
 
 /-- A quantitative triple with precondition `0` is always true. -/
 theorem triple_zero (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     ⦃ (0 : ℝ≥0∞) ⦄ oa ⦃ post ⦄ :=
   ⟨bot_le⟩
-
-/-- A conditional program satisfies a triple when each branch does under its guard. -/
-theorem triple_ite {c : Prop} [Decidable c] {pre : ℝ≥0∞}
-    {oa ob : OracleComp spec α} {post : α → ℝ≥0∞}
-    (ht : c → ⦃ pre ⦄ oa ⦃ post ⦄)
-    (hf : ¬c → ⦃ pre ⦄ ob ⦃ post ⦄) :
-    ⦃ pre ⦄ (if c then oa else ob) ⦃ post ⦄ := by
-  split_ifs with h
-  · exact ht h
-  · exact hf h
-
-/-- A dependent conditional program satisfies a triple when each branch does. -/
-theorem triple_dite {c : Prop} [Decidable c] {pre : ℝ≥0∞}
-    {oa : c → OracleComp spec α} {ob : ¬c → OracleComp spec α} {post : α → ℝ≥0∞}
-    (ht : ∀ h : c, ⦃ pre ⦄ oa h ⦃ post ⦄)
-    (hf : ∀ h : ¬c, ⦃ pre ⦄ ob h ⦃ post ⦄) :
-    ⦃ pre ⦄ dite c oa ob ⦃ post ⦄ := by
-  split_ifs with h
-  · exact ht h
-  · exact hf h
 
 open scoped Classical in
 /-- An observed event probability is WP of its indicator assertion. -/
@@ -272,7 +203,7 @@ theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (o
     _ = _ := by
       apply Finset.sum_congr rfl
       intro x _
-      rw [prEvent_eq_wp_indicator, ← wp_const_mul]
+      rw [prEvent_eq_wp_indicator, ← MeasureProgramLogic.wp_mul_const]
       congr 1
       funext y
       split_ifs <;> simp
@@ -449,7 +380,7 @@ theorem triple_replicate {I pre : ℝ≥0∞} {oa : OracleComp spec α} {n : ℕ
     (hpre : pre ≤ I) (hpost : ∀ xs, I ≤ post xs)
     (hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄) :
     ⦃ pre ⦄ oa.replicate n ⦃ post ⦄ :=
-  triple_conseq hpre hpost (triple_replicate_inv hstep)
+  ⟨Std.WP.Triple.entails_wp_of_pre_post (triple_replicate_inv hstep) hpre hpost⟩
 
 /-- `List.foldlM` invariant with consequence. -/
 theorem triple_list_foldlM {I : σ → ℝ≥0∞}
@@ -458,7 +389,7 @@ theorem triple_list_foldlM {I : σ → ℝ≥0∞}
     (hpre : pre ≤ I s₀) (hpost : ∀ s, I s ≤ post s)
     (hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄) :
     ⦃ pre ⦄ l.foldlM f s₀ ⦃ post ⦄ :=
-  triple_conseq hpre hpost (triple_list_foldlM_inv hstep)
+  ⟨Std.WP.Triple.entails_wp_of_pre_post (triple_list_foldlM_inv hstep) hpre hpost⟩
 
 /-- `List.mapM` invariant with consequence. -/
 theorem triple_list_mapM {I : ℝ≥0∞}
@@ -467,7 +398,7 @@ theorem triple_list_mapM {I : ℝ≥0∞}
     (hpre : pre ≤ I) (hpost : ∀ ys, I ≤ post ys)
     (hstep : ∀ x, x ∈ l → ⦃ I ⦄ f x ⦃ fun _ => I ⦄) :
     ⦃ pre ⦄ l.mapM f ⦃ post ⦄ :=
-  triple_conseq hpre hpost (triple_list_mapM_inv hstep)
+  ⟨Std.WP.Triple.entails_wp_of_pre_post (triple_list_mapM_inv hstep) hpre hpost⟩
 
 /-! ## Congruence of observations -/
 

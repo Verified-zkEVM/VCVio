@@ -493,27 +493,17 @@ lemma wp_querySaltIndicator_prepend_eq_one
       (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
         propInd
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) = 1
-  rw [OracleComp.ProgramLogic.wp_map]
-  have hpost :
-      ((fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-        propInd
-          (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) ∘
-        fun zz : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-          ((zz.1.1,
-              (⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: zz.1.2),
-            zz.2)) =
-      fun _ => (1 : ℝ≥0∞) := by
-    funext z
-    have hpos :
-        0 <
-          QueryLog.countQ
-            ((⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: z.1.2)
-            (fun t' : (CMOracle M S C).Domain => t'.2 = s) := by
-      rw [QueryLog.countQ_cons, ite_eq_left hsalt]
-      omega
-    exact propInd_eq_one_iff.mpr hpos
-  rw [hpost]
-  exact OracleComp.ProgramLogic.wp_const _ _
+  rw [MeasureProgramLogic.wp_map]
+  refine (MeasureProgramLogic.wp_congr _ fun z => ?_).trans
+    (MeasureProgramLogic.wp_const_of_oracle _ 1)
+  have hpos :
+      0 <
+        QueryLog.countQ
+          ((⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: z.1.2)
+          (fun t' : (CMOracle M S C).Domain => t'.2 = s) := by
+    rw [QueryLog.countQ_cons, ite_eq_left hsalt]
+    omega
+  exact propInd_eq_one_iff.mpr hpos
 
 lemma wp_querySaltIndicator_prepend_eq_of_ne
     {α : Type}
@@ -545,22 +535,9 @@ lemma wp_querySaltIndicator_prepend_eq_of_ne
       (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
         propInd
           (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s)))
-  rw [OracleComp.ProgramLogic.wp_map]
-  have hpost :
-      ((fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-        propInd
-          (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) ∘
-        fun zz : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-          ((zz.1.1,
-              (⟨t, u⟩ : (i : (CMOracle M S C).Domain) × (CMOracle M S C).Range i) :: zz.1.2),
-            zz.2)) =
-      (fun z : (α × QueryLog (CMOracle M S C)) × QueryCache (CMOracle M S C) =>
-        propInd
-          (0 < QueryLog.countQ z.1.2 (fun t' : (CMOracle M S C).Domain => t'.2 = s))) := by
-    funext z
-    simp only [Function.comp_apply]
-    rw [QueryLog.countQ_cons, ite_eq_right hsalt]
-  rw [hpost]
+  rw [MeasureProgramLogic.wp_map]
+  refine MeasureProgramLogic.wp_congr _ fun z => ?_
+  rw [QueryLog.countQ_cons, ite_eq_right hsalt]
 
 lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entries
     {α : Type}
@@ -584,7 +561,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
   | query_bind t mx ih =>
       rw [OracleComp.run_simulateQ_loggingOracle_query_bind]
       simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind]
-      rw [OracleComp.ProgramLogic.wp_bind, OracleComp.ProgramLogic.wp_bind]
+      rw [MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_bind]
       by_cases hsalt : t.2 = s
       · have hpost :
             (fun qu : C × QueryCache (CMOracle M S C) =>
@@ -659,7 +636,7 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
               simp [liftM, MonadLiftT.monadLift, MonadLift.monadLift,
                 StateT.run_bind, StateT.run_get, ht, pure_bind, StateT.run_pure]
             rw [hcache_fresh_run, hcache_common_run]
-            rw [OracleComp.ProgramLogic.wp_pure, OracleComp.ProgramLogic.wp_pure]
+            rw [MeasureProgramLogic.wp_pure, MeasureProgramLogic.wp_pure]
             simpa [OracleQuery.cont_query] using ih u cache₀ hself hother
         | none =>
             have hcache_none : (cache₀.cacheQuery (m, s) cm) t = none := by
@@ -696,9 +673,9 @@ lemma wp_querySaltIndicator_cached_logging_cacheQuery_eq_of_no_other_salt_entrie
                 modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
                 StateT.modifyGet, StateT.run]
               rfl
-            rw [hmiss_fresh, hmiss_common, OracleComp.ProgramLogic.wp_bind,
-              OracleComp.ProgramLogic.wp_bind]
-            simp_rw [OracleComp.ProgramLogic.wp_pure]
+            rw [hmiss_fresh, hmiss_common, MeasureProgramLogic.wp_bind,
+              MeasureProgramLogic.wp_bind]
+            simp_rw [MeasureProgramLogic.wp_pure]
             apply wp_congr_of_support
             intro u _
             have hself' : (cache₀.cacheQuery t u) (m, s) = none := by

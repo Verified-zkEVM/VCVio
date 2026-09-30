@@ -49,7 +49,7 @@ example (post : ℝ → ENNReal) :
     wp⟦(fun b ↦ if b then (-3 : ℝ) else 1) <$>
       (fixedSpec.query () : OracleComp fixedSpec Bool)⟧ post =
       post (-3) := by
-  rw [wp_map, wp_query]
+  rw [MeasureProgramLogic.wp_map, wp_query]
   simp
 
 example (mx : OracleComp fixedSpec ℝ) (post : ℝ → ENNReal) (hpost : Measurable post) :
