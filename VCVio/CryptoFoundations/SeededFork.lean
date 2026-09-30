@@ -344,14 +344,13 @@ private lemma prEvent_noGuard_le_fork_add_collision
   refine MeasureProgramLogic.wp_mono _ fun a => ?_
   by_cases hcf : cf a = some s
   · simp only [hcf]
-    rw [prEvent_bind, prEvent_eq_wp (liftComp ($ᵗ spec.Range i) spec),
-      ← MeasureProgramLogic.wp_add]
+    rw [prEvent_bind, ← MeasureProgramLogic.wp_add]
     refine MeasureProgramLogic.wp_mono _ fun u => ?_
     by_cases hu : (σ i)[s]? = some u
-    · simp only [hu, true_and, propInd_true, and_true]
+    · simp only [hu, predInd_apply, true_and, propInd_true]
       exact (prEvent_le_one _).trans le_add_self
-    · simp only [hu, ↓reduceIte, and_false, propInd_false, add_zero, prEvent_bind]
-      rw [prEvent_eq_wp]
+    · simp only [hu, ↓reduceIte, predInd_apply, and_false, propInd_false, add_zero,
+        prEvent_bind]
       refine MeasureProgramLogic.wp_mono _ fun b => ?_
       by_cases hb : cf b = some s <;> simp [hb, hcf]
   · refine (le_of_eq ?_).trans zero_le
@@ -374,7 +373,7 @@ private lemma prEvent_main_eq_takeAtIndex (s : Fin (qb i + 1)) :
   have h := (EvalDistEq.of_evalDist_eq
       (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).prEvent_eq
     (fun w => cf w.2 = some s)
-  simpa only [prEvent_norm] using h
+  simpa only [expect_norm] using h
 
 /-- Two runs on a shared seed, the second truncated after the `s`-th answer at `i`, have the
 distribution of two runs on the truncated seed. -/
@@ -394,7 +393,7 @@ private lemma prEvent_pair_eq_takeAtIndex_pair (s : Fin (qb i + 1)) :
       (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).bind_left
     (fun w => (simulateQ seededOracle main).run' w.1 >>= fun b => pure (w.2, b))).evalDist_eq
   simp only [bind_assoc, pure_bind] at h
-  simpa only [prEvent_norm] using (EvalDistEq.of_evalDist_eq h).prEvent_eq
+  simpa only [expect_norm] using (EvalDistEq.of_evalDist_eq h).prEvent_eq
     (fun r : α × α => cf r.1 = some s ∧ cf r.2 = some s)
 
 /-- Resampling the forked answer after truncation leaves the second run distributed as a run on
@@ -460,7 +459,7 @@ theorem le_prEvent_seededFork [∀ i, DecidableEq (spec.Range i)] [Fintype (spec
       prEvent_main_eq_takeAtIndex main qb js i cf s]
     have hjensen := prEvent_bind_sq_le_bind_pair (liftComp (generateSeed spec qb js) spec)
       (fun σ => (simulateQ seededOracle main).run' (σ.takeAtIndex i s)) (fun x => cf x = some s)
-    simpa only [prEvent_norm] using hjensen
+    simpa only [expect_norm] using hjensen
   refine le_trans (tsub_le_tsub
     (hsq.trans (prEvent_noGuard_le_fork_add_collision main qb js i cf s))
     (prEvent_collision_le main qb js i cf s)) ?_

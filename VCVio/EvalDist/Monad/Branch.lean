@@ -44,10 +44,10 @@ variable [LawfulMonad m]
 /-- An observation's negation is the false mass of the same propositional selector. -/
 theorem prEvent_not_eq_apply_false {α : Type} (mx : m α) (p : α → Prop) :
     Pr{let x ← mx}[¬p x] = 𝒟[p <$> mx] {False} := by
-  calc
-    _ = prEvent (p <$> mx) fun b ↦ ¬b := (prEvent_map mx p _).symm
-    _ = 𝒟[p <$> mx] {b | ¬b} := prEvent_eq_evalDist_of_discrete _ _
-    _ = _ := by congr 1; ext b; simp
+  rw [← prEvent_map mx p fun b ↦ ¬b, prEvent_eq_evalDist_of_discrete (p <$> mx) fun b ↦ ¬b]
+  congr 1
+  ext b
+  simp
 
 /-- An event and its negation partition the selector's successful mass, including lossy draws. -/
 theorem prEvent_add_prEvent_not {α : Type} (mx : m α) (p : α → Prop) :
@@ -75,8 +75,7 @@ theorem evalDist_bind_ite {α β : Type} [MeasurableSpace β]
       intro x
       by_cases hx : p x <;> simp [hx]
     _ = _ := by
-      rw [evalDist_bind_prop, prEvent_not_eq_apply_false]
-      rfl
+      rw [evalDist_bind_prop, prEvent_not_eq_apply_false, prEvent_eq_evalDist_map]
 
 /-- Measurable selector measures and branch measures give a measurable conditional family.
 The family can be bundled by `evalDistKernel`; discarded source values need no measurable space.

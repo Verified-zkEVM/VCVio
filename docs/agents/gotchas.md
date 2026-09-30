@@ -22,11 +22,12 @@ and do not add `set_option autoImplicit false` in individual files.
 On `OracleComp spec`, `𝒟[mx]` is the successful-output measure of `PFunctor.FreeM.denote`, the
 recursive fold that composes the answer measures chosen by `[OracleSpec.IsMeasureSpec spec]` with
 `Measure.bind`; `PFunctor.FreeM.evalDist_eq_denote` states the identity, which holds by `rfl`.
-`Pr{…}[…]` is `prEvent`, the mass `𝒟[…]` puts on `True` (`prEvent_def`). `support` is PolyFun's
+`Pr{…}[…]` is the expectation of the event's indicator, core's `wp` under the measure
+interpretation; `prEvent_eq_evalDist_map` identifies it with the mass `𝒟[p <$> mx]` puts on `True`. `support` is PolyFun's
 structural `MonadAttach.support` and needs no measure; `PFunctor.FreeM.support_eq_liftM_univ`
 identifies it with the fold of the every-answer-possible handler into `SetM`.
 
-Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`denote`/`prEvent`/`support`; everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests) cross the boundary through the public equation lemmas (`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`, `PFunctor.FreeM.support_eq_liftM_univ`), so the semantics can be re-implemented without touching downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public definitions and definitional equality* in [`module-system.md`](module-system.md).
+Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`denote`/`support`; everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests) cross the boundary through the public equation lemmas (`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_eq_evalDist_map`, `PFunctor.FreeM.support_eq_liftM_univ`), so the semantics can be re-implemented without touching downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public definitions and definitional equality* in [`module-system.md`](module-system.md).
 
 ### 4. `++ₒ` is dead — use `+`
 
@@ -215,12 +216,12 @@ On `Pr{...}[...] = Pr{...}[...]` and `𝒟[oa] = 𝒟[ob]` goals, plain `vcstep`
 swap, congruence, and small bounded compositions. If you need to rewrite and continue, use
 `vcstep rw` for a top-level swap, `vcstep rw under 1` under one shared bind prefix, or
 `vcstep rw congr` / `vcstep rw congr'` to expose a shared outer bind. The underlying rewrites are
-`OracleComp.wp_prEvent_swap` / `OracleComp.wp_swap` / `OracleComp.evalDist_bind_bind_swap`
-(countable answer types; `_of_uniform` variants under `IsUniformMeasureSpec`) and
-`wp_congr_of_support`. `Pr{…}[…]` elaborates to nested expectations
-`wp⟦mx⟧ fun x => prEvent (my x) p`, so a draw is swapped by rewriting under the expectations it is
-nested in (`conv => arg 2; ext; rw [OracleComp.wp_prEvent_swap]`), and an explicit
-`prEvent (mx >>= f) p` is brought to that form with `rw [prEvent_bind]`.
+`OracleComp.wp_swap` / `OracleComp.evalDist_bind_bind_swap` (countable answer types;
+`_of_uniform` variants under `IsUniformMeasureSpec`) and `wp_congr_of_support`. `Pr{…}[…]`
+elaborates to nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped
+by rewriting under the expectations it is nested in (`conv => arg 2; ext; rw [OracleComp.wp_swap]`),
+and a literal `wp⟦mx >>= f⟧ g` is brought to that form with `rw [MeasureProgramLogic.wp_bind]` or
+`simp only [expect_norm]`.
 
 ### 12. Avoid `guard` in experiments
 
@@ -478,3 +479,15 @@ The fix is source organisation, not an option (`deprecated.oldSectionVars` is de
 `variable` line states only what the theorems in its scope share, per-declaration binders or a
 narrower `section` carry the rest, derivable assumptions are derived in proofs, and `omit` marks
 the genuine exception. See *Section Variables* in `CONTRIBUTING.md`.
+
+### 32. An expectation carries its answer type in its instance
+
+An event or expectation is core's `wp prog post ⊥`, and the answer type of `prog` appears three
+times: in the program, in the observation's domain, and in the interpretation instance
+`instWPOfWPMonad … (measureWP m)`. `simp` and `dsimp` never rewrite instance arguments, so a
+type-level rewrite such as `unlinkOracleSpec_range_inl`, which identifies an answer type with its
+unfolding, cannot repair an equation whose two sides differ in type only up to that unfolding:
+the exact `wp` laws then fail to match. Normalize while the goal is still well-typed
+(`simp only [expect_norm]`), then restate the answer type with
+`change Pr{let r ← (show ProbComp (T × _) from prog)}[…] ≤ _`, and only then rewrite with the
+type-changing equation (`Examples/PRFTagReader/MultipleBadCollision.lean`).

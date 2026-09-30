@@ -243,10 +243,10 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
     rw [hSstep gS]
     exact bind_assoc ..
   have hBAD_eq := hM_eq (fun z => (z.1, z.2.2))
-  have hLHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hLHS_eq
-  have hRHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hRHS_eq
-  have hBAD_ev := congrArg (fun mx => prEvent mx fun z => z.2.bad = true) hBAD_eq
-  simp only [prEvent_norm] at hLHS_ev hRHS_ev hBAD_ev
+  have hLHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hLHS_eq
+  have hRHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hRHS_eq
+  have hBAD_ev := congrArg (fun mx => Pr{let z ← mx}[z.2.bad = true]) hBAD_eq
+  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev
   rw [hLHS_ev, hRHS_ev, hBAD_ev]
   -- Phase B. Commute outer `$ᵗ gS`, `$ᵗ gFine` past inner `$ᵗ Nonce` at the measure level
   -- so the shared nonce draw is outermost. We push `n` out one binder at a time.
@@ -338,7 +338,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
   have hLHS_cm := (EvalDistEq.of_evalDist_eq hLHS_comm).prEvent_eq fun b => b = out
   have hRHS_cm := (EvalDistEq.of_evalDist_eq hRHS_comm).prEvent_eq fun b => b = out
   have hBAD_cm := (EvalDistEq.of_evalDist_eq hBAD_comm).prEvent_eq fun z => z.2.bad = true
-  simp only [prEvent_norm] at hLHS_cm hRHS_cm hBAD_cm
+  simp only [expect_norm] at hLHS_cm hRHS_cm hBAD_cm
   rw [hLHS_cm, hRHS_cm, hBAD_cm]
   -- Phase C. Split `qRInit * (qT' + 1) / |Nonce|` into `qRInit / |Nonce| + qRInit * qT' / |Nonce|`
   -- and reassociate. Apply the disagree lemma with empty `D` on the inner `$ᵗ Nonce` (since under
@@ -379,7 +379,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
             wp⟦($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest) : ProbComp _)⟧ fun gS' =>
               Φ (Function.update gS' ((tag, (0 : Fin sessionsPerTag)), n) u) := fun Φ => by
       let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
-      simpa only [bind_pure, prEvent_norm] using
+      simpa only [bind_pure, expect_norm] using
         EvalDistEq.wp_eq (EvalDistEq.of_evalDist_eq (hmarg pure)) Φ
     have hext_eq : ∀ (gS' : (TagId × Fin sessionsPerTag) × Nonce → Digest)
         (u : Digest),

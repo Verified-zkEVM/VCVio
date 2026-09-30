@@ -41,8 +41,7 @@ example {m : Type → Type v} [Monad m] [LawfulMonad m]
     Pr{let y ← mx >>= f}[y ≤ 0] ≤
       (∑ i, Pr{let q ← mx >>= g i}[q]) + ∫⁻ x, bound x ∂𝒟[mx] :=
   prEvent_bind_le_sum_add_lintegral_ae mx f (fun y ↦ y ≤ 0) (fun i x ↦ Pr{let q ← g i x}[q]) hf
-    (fun i ↦ (Measure.measurable_coe (measurableSet_singleton True)).comp (by
-      simpa only [id_map'] using hg i)) bound h
+    (fun i ↦ measurable_prEvent (by simpa only [id_map'] using hg i)) bound h
 
 example (κ : Kernel ℝ ℝ) (η : Fin 2 → Kernel ℝ Bool) (bound : ℝ → ENNReal)
     (h : ∀ᵐ x ∂gaussianReal 0 1, κ x (Set.Iic 0) ≤

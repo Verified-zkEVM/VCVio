@@ -196,7 +196,7 @@ def coinDie : ProbComp (Bool × Fin 6) := do
 
 example : Pr{let x ← coinDie}[x = (true, 0)] = 2⁻¹ * 6⁻¹ := by
   fail_if_success (simp [coinDie]; done)  -- gap(simp, 2026-09-30): see the section note
-  simp [coinDie, wp_eq_sum_fintype, Finset.filter_eq']
+  simp [coinDie, Finset.filter_eq', ENNReal.div_eq_inv_mul]
 example : 𝒟[coinDie] Set.univ = 1 := by simp
 example : evalDistWithFailure coinDie {none} = 0 := by simp [evalDistWithFailure_none]
 example : IsProbabilityMeasure 𝒟[coinDie] := inferInstance

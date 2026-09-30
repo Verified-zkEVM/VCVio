@@ -50,8 +50,13 @@ theorem propInd_eq_ite {P : Prop} [Decidable P] : propInd P = if P then 1 else 0
   simp [propInd]
 
 open scoped Classical in
-@[simp] theorem propInd_and {P Q : Prop} : propInd (P ∧ Q) = propInd P * propInd Q := by
+theorem propInd_and {P Q : Prop} : propInd (P ∧ Q) = propInd P * propInd Q := by
   unfold propInd; split_ifs <;> simp_all
+
+/-- A product of indicators is the indicator of the conjunction. -/
+@[simp, grind norm]
+theorem propInd_mul_propInd {P Q : Prop} : propInd P * propInd Q = propInd (P ∧ Q) :=
+  propInd_and.symm
 
 open scoped Classical in
 @[gcongr] theorem propInd_mono {P Q : Prop} (h : P → Q) : propInd P ≤ propInd Q := by
@@ -73,6 +78,14 @@ theorem propInd_or_le {P Q : Prop} : propInd (P ∨ Q) ≤ propInd P + propInd Q
 open scoped Classical in
 theorem propInd_not {P : Prop} : propInd (¬P) = 1 - propInd P := by
   unfold propInd; split_ifs <;> simp_all
+
+/-- The indicator of a predicate as an observation: `1` where the predicate holds and `0`
+elsewhere. An event is the expectation of `predInd p`, so its predicate is an argument that
+`simp` and `grind` can match. -/
+@[expose] noncomputable def predInd {α : Type*} (p : α → Prop) : α → ℝ≥0∞ := fun x ↦ propInd (p x)
+
+@[simp, grind norm] theorem predInd_apply {α : Type*} (p : α → Prop) (a : α) :
+    predInd p a = propInd (p a) := rfl
 
 open scoped Classical in
 /-- A weighted sum of the indicators of one point is the weight at that point. -/
@@ -141,17 +154,20 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
   [LawfulEvalDistSemantics m] {α : Type}
 
 /-- The expectation of a returned value is the observation at that value. -/
+@[grind norm]
 theorem wp_pure (a : α) (g : α → ℝ≥0∞) : wp⟦(pure a : m α)⟧ g = g a :=
   letI := measureWP m
   ExactWPMonad.wp_pure a g _
 
 /-- The expectation after a bind is the expectation of the continuations' expectations. -/
+@[grind norm]
 theorem wp_bind {β : Type} (mx : m α) (f : α → m β) (g : β → ℝ≥0∞) :
     wp⟦mx >>= f⟧ g = wp⟦mx⟧ fun a => wp⟦f a⟧ g :=
   letI := measureWP m
   ExactWPMonad.wp_bind mx f g _
 
 /-- The expectation of mapped outputs is the expectation of the composed observation. -/
+@[grind norm]
 theorem wp_map {β : Type} (f : α → β) (mx : m α) (g : β → ℝ≥0∞) :
     wp⟦f <$> mx⟧ g = wp⟦mx⟧ fun a => g (f a) :=
   letI := measureWP m

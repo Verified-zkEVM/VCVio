@@ -145,7 +145,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace_fresh
         =
       Pr{let ch ← (((Fork.wrappedSpec Chal).query (Sum.inr ())) :
             OracleComp (Fork.wrappedSpec Chal) Chal)}[σ.verify pk c ch resp = true] := by
-        simp [forkVerifyFreshComp, hcache, hsigned, prEvent_norm]
+        simp [forkVerifyFreshComp, hcache, hsigned, expect_norm]
     _ ≤
       Pr{let trace ← (forkFinalQueryTrace (M := M) (Commit := Commit) (Chal := Chal)
             (Resp := Resp) σ pk (msg, (c, resp))
@@ -155,7 +155,7 @@ private lemma forkVerifyFreshComp_prob_true_le_finalQueryTrace_fresh
           StateT.run_get, hlive, StateT.run_set,
           StateT.run_pure, monad_norm]
         rw [StateT.run_lift]
-        simp only [prEvent_norm]
+        simp only [expect_norm]
         refine prEvent_mono _ _ _ fun ch hverify => ?_
         have hmem : (msg, c) ∈ queryLog ++ [(msg, c)] := by simp
         have hidx : (queryLog ++ [(msg, c)]).findIdx (· == (msg, c)) ≤ qH := by
@@ -625,7 +625,7 @@ private lemma forkLogged_verify_prob_true_le_forkPoint_run
       Pr{let x ← (forkLoggedVerifyBody (σ := σ) (hr := hr) (M := M)
             (Commit := Commit) (Chal := Chal) (Resp := Resp) adv simT pk)}[x = true]
         ≤ Pr{let trace ← finalRun}[(Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
-    simp only [forkLoggedVerifyBody, finalRun, loggedRun, prEvent_norm]
+    simp only [forkLoggedVerifyBody, finalRun, loggedRun, expect_norm]
     refine wp_mono_of_support _ fun z hz => ?_
     have hinv := forkLoggedImpl_preserves_inv (M := M) (Commit := Commit)
       (Chal := Chal) (Resp := Resp) simT pk (adv.main pk) hz
@@ -634,7 +634,7 @@ private lemma forkLogged_verify_prob_true_le_forkPoint_run
       (adv.main pk) hz
     have hlen := forkLogged_queryLog_length_le (M := M) (Commit := Commit)
       (Chal := Chal) (Resp := Resp) σ hr adv simT pk hQ hz
-    simpa only [prEvent_norm] using
+    simpa only [expect_norm] using
       forkVerifyFreshComp_prob_true_le_finalQueryTrace (M := M)
         (Commit := Commit) (Chal := Chal) (Resp := Resp) σ
         (qH := qH) (pk := pk) (x := z.1) (s := z.2)
@@ -709,10 +709,10 @@ private lemma forkH5Body_prob_true_le_fork_advantage
       Pr{let x ← (forkH5Body (M := M) (Commit := Commit) (Chal := Chal)
             (Resp := Resp) σ hr adv simT)}[x = true] ≤
         Pr{let x ← pointBody}[x = true] := by
-    simp only [forkH5Body, pointBody, prEvent_norm]
+    simp only [forkH5Body, pointBody, expect_norm]
     refine wp_mono_of_support _ fun ps _ => ?_
     rcases ps with ⟨pk, sk⟩
-    simpa only [forkLoggedVerifyBody, prEvent_norm] using
+    simpa only [forkLoggedVerifyBody, expect_norm] using
       forkLogged_verify_prob_true_le_forkPoint_run (M := M) (Commit := Commit)
         (Chal := Chal) (Resp := Resp) σ hr adv simT pk hQ
   exact hbody.trans_eq hpoint

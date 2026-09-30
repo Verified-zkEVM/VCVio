@@ -232,10 +232,10 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
     rw [hSstep gS]
     exact bind_assoc ..
   have hBAD_eq := hM_eq (fun z => (z.1, z.2.2))
-  have hLHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hLHS_eq
-  have hRHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hRHS_eq
-  have hBAD_ev := congrArg (fun mx => prEvent mx fun z => z.2.bad = true) hBAD_eq
-  simp only [prEvent_norm] at hLHS_ev hRHS_ev hBAD_ev
+  have hLHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hLHS_eq
+  have hRHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hRHS_eq
+  have hBAD_ev := congrArg (fun mx => Pr{let z ← mx}[z.2.bad = true]) hBAD_eq
+  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev
   rw [hLHS_ev, hRHS_ev, hBAD_ev]
   -- Phase B-2: commute outer `$ᵗ gS`, `$ᵗ gFine` past inner `$ᵗ Nonce` at the measure
   -- level so `n` is outermost. Identical structure to slot-zero (M-side LHS/BAD have the
@@ -326,7 +326,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
   have hLHS_cm := (EvalDistEq.of_evalDist_eq hLHS_comm).prEvent_eq fun b => b = out
   have hRHS_cm := (EvalDistEq.of_evalDist_eq hRHS_comm).prEvent_eq fun b => b = out
   have hBAD_cm := (EvalDistEq.of_evalDist_eq hBAD_comm).prEvent_eq fun z => z.2.bad = true
-  simp only [prEvent_norm] at hLHS_cm hRHS_cm hBAD_cm
+  simp only [expect_norm] at hLHS_cm hRHS_cm hBAD_cm
   rw [hLHS_cm, hRHS_cm, hBAD_cm]
   -- Phase C: split `qRInit * (qT' + 1) / |Nonce|` into `qRInit / |Nonce| + qRInit * qT' / |Nonce|`
   -- and reassociate so the per-`n` obligation carries the reader-cell, nonce-remainder, and
@@ -383,7 +383,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
             wp⟦($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest) : ProbComp _)⟧ fun gS' =>
               Φ (Function.update gS' ((tag, (0 : Fin sessionsPerTag)), n) u) := fun Φ => by
       let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
-      simpa only [bind_pure, prEvent_norm] using
+      simpa only [bind_pure, expect_norm] using
         EvalDistEq.wp_eq (EvalDistEq.of_evalDist_eq (hmarg pure)) Φ
     have hext_eq : ∀ (gS' : (TagId × Fin sessionsPerTag) × Nonce → Digest)
         (u : Digest),
@@ -490,7 +490,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
             wp⟦($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest) : ProbComp _)⟧ fun gS' =>
               Φ (Function.update gS' ((tag, slotK), n) u) := fun Φ => by
       let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
-      simpa only [bind_pure, prEvent_norm] using
+      simpa only [bind_pure, expect_norm] using
         EvalDistEq.wp_eq (EvalDistEq.of_evalDist_eq (hmarg_K pure)) Φ
     have hext_K_eq : ∀ (gS' : (TagId × Fin sessionsPerTag) × Nonce → Digest)
         (u : Digest),
@@ -608,7 +608,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler (OracleComp.tableExtending
                   (c.cacheQuery ((tag, slotK), n) u) gS))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] :=
-      by simpa only [prEvent_norm] using
+      by simpa only [expect_norm] using
         (EvalDistEq.of_evalDist_eq hbridge).prEvent_eq fun b => b = out
     rw [hS_eq] at hihB
     rw [← add_assoc, ← add_assoc]

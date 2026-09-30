@@ -68,10 +68,15 @@ lemma multipleBadStep_bad_le
     Pr{let z ← ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag))
       ((s, c), sB))}[z.2.2.bad = true] ≤ (sB.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
   rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
+  simp only [expect_norm]
+  -- The tag oracle answers in `Option (TagTranscript Nonce Digest)` only up to unfolding the
+  -- specification; restating the event at that type keeps the step rewrites well-typed.
+  change Pr{let r ← (show ProbComp (Option _ × _) from
+    multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag) (Sum.inl tag) (s, c))}[
+      (multipleBadAdvance tag sB r.1).bad = true] ≤ _
   by_cases hslot : s.sessionsUsed tag < sessionsPerTag
   · rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
-    -- The run's answer type is the tag oracle's range only up to unfolding the specification.
-    simp only [unlinkOracleSpec_range_inl, prEvent_norm]
+    simp only [expect_norm]
     -- `bad` fires exactly when the fresh nonce is already cached for this tag.
     refine (wp_le_prEvent_add _ (fun nonce => (sB.responses (tag, nonce)).isSome = true) _
       (fun nonce hcached => le_of_eq (prEvent_eq_zero_of_forall_not _ _ fun _ => by

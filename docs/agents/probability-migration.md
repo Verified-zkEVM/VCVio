@@ -230,14 +230,14 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
 | a goal shows `(toMeasure t).trim le_top` | `MeasureTheory.trim_eq_self` when the answer's measurable space is `⊤` by definition; otherwise evaluate measurable sets with `evalDist_liftM_query_apply` or `trim_measurableSet_eq` |
 | `unexpected …; expected '}['` in a `Pr{…}` whose action continues on the next line | the braces hold a `do` sequence: indent the continuation past its `let`, start the sequence on its own line as in a `do` block, or parenthesize the action |
-| two events that should agree differ only in how their binds and maps are arranged | `simp only [prEvent_norm]` brings both into the normal form of `Pr{…}[…]` |
-| an explicit `prEvent (p <$> mx)` or `prEvent (mx >>= fun x => …)` over `m Prop` | events take the predicate separately: `prEvent mx p`, or the notation |
-| `rw` with a lemma about `Pr{let y ← mx >>= f}[q y]` does not find its left side | the notation stores it as `wp⟦mx⟧ fun x => prEvent (f x) q`; a goal holding a raw `prEvent (mx >>= f) q` (after unfolding a definition, say) needs `rw [prEvent_bind]` first |
-| `rw` with an equation between whole computations no longer finds them inside an event | turn it into the equation of the events: `congrArg (prEvent · p) h`, then `simp only [prEvent_norm] at …` |
-| a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | use the laws on `prEvent` and `wp⟦·⟧`; `prEvent_def` unfolds a single event to its measure |
-| `simp [prEvent_def]` loops | `simp` rewrites `𝒟[mx] {True}` back to an event; use `rw [prEvent_def]` or `simp only` |
-| `prEvent_bind_of_discrete`, a `lintegral` over `prEvent (f x)` | `prEvent_bind` gives the expectation `wp⟦mx⟧ fun x => prEvent (f x) p`; `MeasureProgramLogic.wp_eq_lintegral mx _ .of_discrete` gives the integral |
-| `prEvent_pure_prop` | `prEvent_pure : prEvent (pure a) p = propInd (p a)`; `propInd_eq_ite` gives the `if` form |
+| two events that should agree differ only in how their binds and maps are arranged | `simp only [expect_norm]` brings both into the normal form of `Pr{…}[…]` |
+| an explicit `prEvent (p <$> mx)`, `prEvent mx p`, or `prEvent (mx >>= fun x => …)` | an event is the expectation of its indicator: `Pr{let x ← mx}[p x]`; a literal non-normal program is `wp⟦mx >>= f⟧ (predInd p)` |
+| `rw` with a lemma about `Pr{let y ← mx >>= f}[q y]` does not find its left side | the notation stores it as `wp⟦mx⟧ fun x => wp⟦f x⟧ fun y => 𝟙⟦q y⟧`; a goal holding a literal `wp (mx >>= f) g ⊥` (after unfolding a definition, say) needs `rw [prEvent_bind]`, `MeasureProgramLogic.wp_bind` or `simp only [expect_norm]` first |
+| `rw` with an equation between whole computations no longer finds them inside an event | turn it into the equation of the events: `congrArg (fun mx => Pr{let x ← mx}[p x]) h`, then `simp only [expect_norm] at …` |
+| a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | `prEvent_eq_evalDist_map : Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True}` rewrites a single event to its measure |
+| `prEvent_bind_of_discrete`, a `lintegral` over the events of `f x` | the notation gives the expectation `wp⟦mx⟧ fun x => Pr{let y ← f x}[p y]`; `MeasureProgramLogic.wp_eq_lintegral mx _ .of_discrete` gives the integral |
+| `prEvent_pure_prop` | `Pr{let y ← pure a}[p y]` elaborates to `𝟙⟦p a⟧`; `propInd_eq_ite` gives the `if` form |
+| `prEvent_eq_wp`, `wp_propInd`, `OracleComp.wp_prEvent_swap` | an event is an expectation, so the first two are identities (drop the rewrite) and `OracleComp.wp_swap` covers the third |
 | `OracleComp.ProgramLogic.wp oa post` | `wp⟦oa⟧ post`, core's `wp` under the measure interpretation; `OracleComp.ProgramLogic.propInd` is `propInd` |
 | `MeasureProgramLogic.Quantitative.wp_*` | `MeasureProgramLogic.wp_*`, stated on `wp⟦·⟧` and without measurability hypotheses except for `wp_eq_lintegral`, `wp_mono_ae`, `wp_iSup` and the `_mass` bounds |
 | `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
@@ -245,7 +245,7 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |
 | `OracleComp.prEvent_bind_mono_of_support`, `OracleComp.prEvent_bind_congr_of_support` | `wp_mono_of_support mx h`, `wp_congr_of_support mx h` on the expectation over the shared draw |
 | `prEvent_le_one mx p` no longer applies | the predicate is implicit: `prEvent_le_one mx`; a nest of expectations is bounded by `wp_le_of_forall_le _ fun _ => prEvent_le_one _` |
-| `OracleComp.prEvent_bind_bind_swap` (continuation of type `m Prop`) | `OracleComp.wp_prEvent_swap`, `OracleComp.wp_swap`, or `prEvent_bind_bind_swap` with a continuation and predicate |
+| `OracleComp.prEvent_bind_bind_swap` (continuation of type `m Prop`) | `OracleComp.wp_swap`, or `prEvent_bind_bind_swap` with a continuation and predicate |
 | `simp` leaves `Pr{let a ← mx; let b ← f a}[True]` on `OracleComp` | `simp` evaluates it through `wp_const` and `OracleComp.prEvent_true_eq_one` |
 | laws about `pure` (`prEvent_pure`, `map_pure`) do not fire on `pure v` written with an `OracleComp` ascription | that `pure` elaborates through `PFunctor.FreeM.instPure` rather than the monad; `erw [prEvent_pure]`, or state the term through the `do` block that produced it |
 | measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |

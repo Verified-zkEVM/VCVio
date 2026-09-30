@@ -412,7 +412,7 @@ theorem prfIdealExperiment_macToPRFReduction_le [DecidableEq R] [SampleableType 
     rw [show ((D →ₒ R).randomOracle msg).run cache =
         (fun u => (u, cache.cacheQuery msg u)) <$> ($ᵗ R) from
       QueryImpl.withCaching_run_none _ hcache]
-    simp only [prEvent_norm]
+    simp only [expect_norm]
     refine (prEvent_mono _ _ (fun t => t = τ) fun t h => ?_).trans
       (SampleableType.prEvent_uniformSample_eq_singleton τ).le
     simp only [Bool.and_eq_true, decide_eq_true_eq] at h

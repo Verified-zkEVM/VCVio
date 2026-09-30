@@ -155,8 +155,9 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       intro a b c d w hw
       simpa using hw
     have h4 : ∀ a b c : ℤ,
-        prEvent (prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-          (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))) (· = z) ≤ M * 1 := by
+        wp⟦prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
+          (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))⟧
+          (predInd (· = z)) ≤ M * 1 := by
       intro a b c
       rw [prEvent_bind]
       refine pointMass_bind_le_mul _ _ z (hM' _) (fun _ => prEvent_le_one _) ?_
@@ -165,10 +166,10 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).2).2
     have h3 : ∀ a b : ℤ,
-        prEvent (prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
+        wp⟦prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
           prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-            (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))) (· = z) ≤
-          M * (M * 1) := by
+            (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))⟧
+            (predInd (· = z)) ≤ M * (M * 1) := by
       intro a b
       rw [prEvent_bind]
       refine pointMass_bind_le_mul _ _ z (hM' _) (fun c => h4 a b c) ?_
@@ -179,11 +180,11 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
       have e := (hmem h₁).symm.trans (hmem h₂)
       exact (leafPack_inj (Prod.mk.inj e).2).1
     have h2 : ∀ a : ℤ,
-        prEvent (prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
+        wp⟦prims.samplerZ (t₀.im ⟨0, by norm_num⟩) σ >>= fun b =>
           prims.samplerZ (t₁.re ⟨0, by norm_num⟩) σ >>= fun c =>
             prims.samplerZ (t₁.im ⟨0, by norm_num⟩) σ >>= fun d =>
-              (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))) (· = z) ≤
-          M * (M * (M * 1)) := by
+              (pure (leafPack a b, leafPack c d) : ProbComp (FFTPair 0))⟧
+            (predInd (· = z)) ≤ M * (M * (M * 1)) := by
       intro a
       rw [prEvent_bind]
       refine pointMass_bind_le_mul _ _ z (hM' _) (fun b => h3 a b) ?_
@@ -218,11 +219,11 @@ theorem Primitives.ffSampling_pointMass_le {p : Params} (prims : Primitives p) {
     have ihR := fun t => Primitives.ffSampling_pointMass_le prims hZ k t right hlR
     have ihL := fun t => Primitives.ffSampling_pointMass_le prims hZ k t left hlL
     have hinner : ∀ s₁ : FFTPair k,
-        prEvent (prims.ffSampling k
+        wp⟦prims.ffSampling k
           (Primitives.splitFFT (t₀ + Primitives.adjustTarget ℓ t₁ (Primitives.mergeFFT s₁.1 s₁.2)))
           left >>= fun s₀ =>
           (pure (Primitives.mergeFFT s₀.1 s₀.2, Primitives.mergeFFT s₁.1 s₁.2) :
-            ProbComp (FFTPair (k + 1)))) (· = z) ≤ M ^ (4 * 2 ^ k) * 1 := by
+            ProbComp (FFTPair (k + 1)))⟧ (predInd (· = z)) ≤ M ^ (4 * 2 ^ k) * 1 := by
       intro s₁
       rw [prEvent_bind]
       refine pointMass_bind_le_mul _ _ z (ihL _) (fun _ => prEvent_le_one _) ?_

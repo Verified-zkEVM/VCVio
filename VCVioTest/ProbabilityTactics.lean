@@ -190,14 +190,12 @@ example (α : Type) [SampleableType α] : Pr{let _ ← ($ᵗ α : ProbComp α)}[
 example (α : Type) [SampleableType α] : Pr{let _ ← ($ᵗ α : ProbComp α)}[True] ≠ 0 := by simp
 example (mx : ProbComp (Fin 3)) : IsProbabilityMeasure 𝒟[mx] := inferInstance
 
--- target(simp): the uniform event law fires first and leaves the arithmetic `2 / 2 = 1`.
-example : Pr{let _ ← ($ᵗ Bool : ProbComp Bool)}[True] = 1 :=
-  OracleComp.prEvent_true_eq_one _
+example : Pr{let _ ← ($ᵗ Bool : ProbComp Bool)}[True] = 1 := by simp
 
 /-! ### Selection and abort (`OptionT ProbComp`)
 Selecting from the empty list and `failure` carry no successful mass.
 
-gap(simp): the list-selection event law leaves `2 / 2` for a nonempty list. -/
+gap(simp): the success mass of a selection from a nonempty list stays unevaluated. -/
 
 example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by simp
 example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by grind
@@ -379,7 +377,7 @@ example (x y : α) :
 example (z : α × β) :
     Pr{let w ← ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β) : ProbComp (α × β))}[w = z] =
       Pr{let a ← ($ᵗ α : ProbComp α)}[a = z.1] * Pr{let b ← ($ᵗ β : ProbComp β)}[b = z.2] := by
-  simp only [seq_eq_bind_map, prEvent_norm, Prod.ext_iff]
+  simp only [expect_norm, Prod.ext_iff]
   exact prEvent_bind_bind_and _ _ _ _
 
 end abstract
@@ -404,19 +402,16 @@ example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → Pro
 /-! ## 10. Events whose continuation destructures its input
 
 The notation turns a destructuring draw into projections of the drawn pair, so the event is a
-predicate on the draw and implication between the returned propositions is `prEvent_mono`. An
-explicit event of a destructuring `do` block keeps its `match`: `prEvent_bind` exposes the
-expectation over the draw, and the implication is transported below it on the reachable
-outputs. -/
+predicate on the draw and implication between the returned propositions is `prEvent_mono`. A draw
+of a destructuring `do` block normalizes to the same event. -/
 
 example (mx : ProbComp (Bool × Bool)) :
     Pr{let (a, b) ← mx}[a = true ∧ b = true] ≤ Pr{let (a, _) ← mx}[a = true] :=
   prEvent_mono mx _ _ fun _ => And.left
 
 example (mx : ProbComp (Bool × Bool)) :
-    prEvent (do let (a, b) ← mx; pure (a = true ∧ b = true)) (fun b => b) ≤
-      prEvent (do let (a, _) ← mx; pure (a = true)) (fun b => b) := by
-  rw [prEvent_bind, prEvent_bind]
-  exact wp_mono_of_support mx fun ⟨_, _⟩ _ => by simpa using propInd_mono And.left
+    Pr{let b ← do let (a, b) ← mx; pure (a = true ∧ b = true)}[b] ≤
+      Pr{let b ← do let (a, _) ← mx; pure (a = true)}[b] :=
+  prEvent_mono mx _ _ fun _ => And.left
 
 end VCVioTest.ProbabilityTactics

@@ -310,8 +310,9 @@ theorem isFlat : BinaryScheduler.IsFlat outputRel binary flat := by
     intro leaf
     obtain ⟨leaf⟩ := leaf
     rw [prEvent_flat, BinaryScheduler.sourceDraw, prEvent_bind, wp_eq_sum_fintype, sum_ulift_bool]
-    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind, wp_eq_sum_fintype,
-      sum_ulift_bool, prEvent_pure]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind, prEvent_pure]
+    rw [wp_eq_sum_fintype (binary _ _), sum_ulift_bool]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_pure]
     cases leaf <;> simp
     · simpa only [Nat.cast_add] using
         nested_ratio first.val (first.val + second.val) context.val
@@ -324,8 +325,9 @@ theorem isFlat : BinaryScheduler.IsFlat outputRel binary flat := by
     intro leaf
     obtain ⟨leaf⟩ := leaf
     rw [prEvent_flat, BinaryScheduler.leftDraw, prEvent_bind, wp_eq_sum_fintype, sum_ulift_bool]
-    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind, wp_eq_sum_fintype,
-      sum_ulift_bool, prEvent_pure]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind, prEvent_pure]
+    rw [wp_eq_sum_fintype (binary _ _), sum_ulift_bool]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_pure]
     cases leaf <;> simp [add_comm, add_assoc]
     · simpa only [Nat.cast_add, add_comm, add_left_comm, add_assoc] using
         nested_ratio second.val (context.val + second.val) first.val
@@ -338,8 +340,9 @@ theorem isFlat : BinaryScheduler.IsFlat outputRel binary flat := by
     intro leaf
     obtain ⟨leaf⟩ := leaf
     rw [prEvent_flat, BinaryScheduler.rightDraw, prEvent_bind, wp_eq_sum_fintype, sum_ulift_bool]
-    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind, wp_eq_sum_fintype,
-      sum_ulift_bool, prEvent_pure]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_bind, prEvent_pure]
+    rw [wp_eq_sum_fintype (binary _ _), sum_ulift_bool]
+    simp only [prEvent_binary, Bool.false_eq_true, ↓reduceIte, prEvent_pure]
     cases leaf <;> simp [add_comm, add_left_comm, add_assoc]
     · simpa only [Nat.cast_add, add_comm, add_left_comm, add_assoc] using
         nested_ratio first.val (context.val + first.val) second.val

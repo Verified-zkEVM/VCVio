@@ -215,10 +215,10 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
     refine bind_congr fun gS => ?_
     rw [hSstep gS]; rfl
   have hBAD_eq := hM_eq (fun z => (z.1, z.2.2))
-  have hLHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hLHS_eq
-  have hRHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hRHS_eq
-  have hBAD_ev := congrArg (fun mx => prEvent mx fun z => z.2.bad = true) hBAD_eq
-  simp only [prEvent_norm] at hLHS_ev hRHS_ev hBAD_ev
+  have hLHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hLHS_eq
+  have hRHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hRHS_eq
+  have hBAD_ev := congrArg (fun mx => Pr{let z ← mx}[z.2.bad = true]) hBAD_eq
+  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev
   rw [hLHS_ev, hRHS_ev, hBAD_ev]
   classical
   -- **C1: slot-0 column lazification.** Cache every slot-0 cell of the queried column.
@@ -296,7 +296,7 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
   have hLHS_lz := (EvalDistEq.of_evalDist_eq hLHS_lazify).prEvent_eq fun b => b = out
   have hRHS_lz := (EvalDistEq.of_evalDist_eq hRHS_lazify).prEvent_eq fun b => b = out
   have hBAD_lz := (EvalDistEq.of_evalDist_eq hBAD_lazify).prEvent_eq fun z => z.2.bad = true
-  simp only [prEvent_norm] at hLHS_lz hRHS_lz hBAD_lz
+  simp only [expect_norm] at hLHS_lz hRHS_lz hBAD_lz
   rw [hLHS_lz, hRHS_lz, hBAD_lz]
   -- **Per-rs coupling.** All three terms now share the `idealCacheMapM cells c` head; couple
   -- them via the empty-`D` disagreement bound (mirroring the tag cases' `$ᵗ Nonce` coupling).

@@ -16,7 +16,8 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
-| `Pr{let x ← mx; ...}[event]` | the event of the `do` sequence, `prEvent (do …; return event) fun b => b`, stored as nested expectations `wp⟦mx⟧ fun x => … prEvent my fun y => event`; `prEvent mx p` is the `{True}` mass of `p <$> mx` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `Pr{let x ← mx; ...}[event]` | the event of the `do` sequence: the expectation `𝔼{let x ← mx; ...}[𝟙⟦event⟧]` of its indicator, stored as nested expectations `wp⟦mx⟧ fun x => … wp⟦my⟧ (predInd fun y => event)` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `𝔼{let x ← mx; ...}[b]` | the expectation of `b : ℝ≥0∞` after the `do` sequence, core's `wp (do …; return b) id ⊥` under the measure interpretation, stored as nested expectations | `VCVio/EvalDist/ProbabilityNotation.lean` |
 | `wp⟦mx⟧ g` | the expectation of `g : α → ℝ≥0∞` over the outputs of `mx`: core's `wp mx g ⊥` under `MeasureProgramLogic.measureWP` | `VCVio/EvalDist/Expectation.lean` |
 
 The braces take any `do` sequence, with pure `let`s, destructuring, nested `(← e)` actions,

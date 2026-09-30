@@ -39,17 +39,8 @@ theorem prEvent_eq_run {m : Type → Type v} [Monad m] [LawfulMonad m]
   ext value
   cases value <;> simp
 
-/-- Lifting into the optional monad preserves the probability of an observed event. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
-    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
-    {α : Type} (mx : m α) (p : α → Prop) :
-    Pr{let x ← OptionT.lift mx}[p x] = Pr{let x ← mx}[p x] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
-    OptionT.evalDist_lift]
-
 /-- Lifting into the optional monad preserves every expectation. -/
+@[simp high, grind norm↓]
 theorem wp_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (g : α → ENNReal) : wp⟦OptionT.lift mx⟧ g = wp⟦mx⟧ g := by
@@ -57,15 +48,22 @@ theorem wp_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
   rw [MeasureProgramLogic.wp_eq_lintegral _ g Measurable.of_discrete,
     MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete, OptionT.evalDist_lift]
 
+/-- Lifting into the optional monad preserves the probability of an observed event. -/
+theorem prEvent_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) :
+    Pr{let x ← OptionT.lift mx}[p x] = Pr{let x ← mx}[p x] :=
+  wp_lift mx _
+
 /-- A monadic lift into the optional monad preserves every expectation. -/
-@[simp↓ high]
+@[simp high]
 theorem wp_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (g : α → ENNReal) : wp⟦(liftM mx : OptionT m α)⟧ g = wp⟦mx⟧ g :=
   wp_lift mx g
 
 /-- The lift instance of the optional monad preserves every expectation. -/
-@[simp↓ high]
+@[simp high]
 theorem wp_monadLift {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (g : α → ENNReal) :
@@ -73,7 +71,6 @@ theorem wp_monadLift {m : Type → Type v} [Monad m] [LawfulMonad m]
   wp_lift mx g
 
 /-- The lift instance of the optional monad preserves the probability of an observed event. -/
-@[simp↓ high, grind norm↓]
 theorem prEvent_monadLift {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (p : α → Prop) :
@@ -81,7 +78,6 @@ theorem prEvent_monadLift {m : Type → Type v} [Monad m] [LawfulMonad m]
   prEvent_lift mx p
 
 /-- A monadic lift into the optional monad preserves the probability of an observed event. -/
-@[simp↓ high, grind norm↓]
 theorem prEvent_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (p : α → Prop) :
@@ -89,16 +85,15 @@ theorem prEvent_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
   prEvent_lift mx p
 
 /-- A guard contributes its condition to the observed event after a lifted draw. -/
-@[simp↓ high, grind norm↓]
 theorem prEvent_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (p q : α → Prop) [DecidablePred p] :
     Pr{let x ← OptionT.lift mx; guard (p x)}[q x] =
       Pr{let x ← mx}[p x ∧ q x] := by
   classical
-  rw [wp_lift, ← wp_propInd mx fun x ↦ p x ∧ q x]
+  rw [wp_lift]
   refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
-  by_cases hp : p x <;> by_cases hq : q x <;> simp [guard, hp, hq]
+  by_cases hp : p x <;> by_cases hq : q x <;> simp [hp, hq]
 
 /-- A lifted draw followed by a guard puts its successful event mass at the unit output. -/
 @[simp↓ high]

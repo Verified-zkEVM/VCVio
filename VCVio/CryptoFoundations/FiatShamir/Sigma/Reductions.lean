@@ -306,13 +306,13 @@ theorem nma_to_hard_relation_bound (hss : σ.SpeciallySound)
       prEvent_bind_eq_lintegral_of_discrete, OracleComp.evalDist_liftComp_uniform]
     refine MeasureTheory.lintegral_congr fun pkw => ?_
     rcases pkw with ⟨pk, w⟩
-    simp only [acc, prEvent_norm]
+    simp only [acc, expect_norm]
   have hRHS : Pr{let x ← hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[x = true] =
       ∫⁻ pkw, B pkw ∂𝒟[hr.gen] := by
     rw [hardRelationExperiment, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
     refine MeasureTheory.lintegral_congr fun pkw => ?_
     rcases pkw with ⟨pk, w⟩
-    simp only [B, prEvent_norm]
+    simp only [B, expect_norm]
   rw [hAdv, hRHS]
   exact OracleComp.EvalDist.marginalized_jensen_forking_bound_of_discrete hr.gen acc B _ _
     (fun _ => prEvent_le_one _)

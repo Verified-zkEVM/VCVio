@@ -49,7 +49,8 @@ def Complete (encAlg : SymmEncAlg m M K C) : Prop :=
 
 /-- Channel form of perfect secrecy: every message induces ciphertexts with the same
 distribution. -/
-def ciphertextRowsEqualAt (encAlg : SymmEncAlg m M K C) : Prop :=
+def ciphertextRowsEqualAt [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (encAlg : SymmEncAlg m M K C) : Prop :=
   ∀ msg₀ msg₁ : M,
     encAlg.perfectSecrecyCipherGivenMsgExperiment msg₀ =ᵈ
       encAlg.perfectSecrecyCipherGivenMsgExperiment msg₁

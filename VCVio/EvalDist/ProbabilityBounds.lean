@@ -252,7 +252,7 @@ theorem prEvent_bind_le_prEvent_add_mul_prEvent_not (mx : m α) (f : α → m β
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
-  rw [← wp_mul_propInd, ← wp_propInd mx p, ← MeasureProgramLogic.wp_add]
+  rw [← wp_mul_propInd, ← MeasureProgramLogic.wp_add]
   refine MeasureProgramLogic.wp_mono mx fun a ↦ ?_
   by_cases hpa : p a
   · simp [hpa]
@@ -294,15 +294,13 @@ theorem bind_eq_attach_bind (mx : m α) (f : α → m β) :
   conv_lhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [bind_map_left]
 
-variable [EvalDistSemantics m]
+variable [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-- The trivially true event is unchanged by attachment. -/
 theorem prEvent_true_attach (mx : m α) :
-    prEvent (MonadAttach.attach mx) (fun _ ↦ True) = prEvent mx fun _ ↦ True := by
+    Pr{let _ ← MonadAttach.attach mx}[True] = Pr{let _ ← mx}[True] := by
   conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [prEvent_map]
-
-variable [LawfulEvalDistSemantics m]
 
 /-- An expectation is the expectation over the attached outputs. -/
 theorem wp_eq_wp_attach (mx : m α) (g : α → ℝ≥0∞) :
@@ -380,7 +378,7 @@ theorem prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support (mx : m α) (f : 
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
-  rw [← wp_mul_propInd, ← wp_propInd mx p, ← MeasureProgramLogic.wp_add]
+  rw [← wp_mul_propInd, ← MeasureProgramLogic.wp_add]
   refine wp_mono_of_support mx fun a ha ↦ ?_
   by_cases hpa : p a
   · simp [hpa]

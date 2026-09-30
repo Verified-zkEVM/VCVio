@@ -198,7 +198,9 @@ lemma avgBadM_query_bind_eq
         ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] *
           Pr{let w ← (simulateQ impl (cont z.1)).run z.2}[w.2.2 = true] := by
   simp only [avgBadM, simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-    OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind, OracleComp.wp_eq_tsum]
+    OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind]
+  refine tsum_congr fun p => ?_
+  rw [OracleComp.wp_eq_tsum]
 
 /-- **Post-step joint measure of a query step (bare-measure form).** The measure over
 `(output, post-state)` produced by averaging the per-state step mass

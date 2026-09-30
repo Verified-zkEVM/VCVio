@@ -256,12 +256,10 @@ lemma prEvent_false_signVerify_le_prEvent_none_sign
     rw [simulateQ_bind, StateT.run'_bind']
   rw [hSV,
     show (simulateQ impl (sigAlg.sign pk sk msg)).run' ∅ = Prod.fst <$> S from rfl,
-    prEvent_def, prEvent_def, map_bind, Functor.map_map]
-  conv_rhs => rw [map_eq_bind_pure_comp]
-  apply OracleComp.evalDist_bind_apply_mono_of_support S _ _ (measurableSet_singleton True)
-  intro p hmem
+    prEvent_bind, prEvent_map]
+  refine wp_mono_of_support S fun p hmem => ?_
   cases hp : p.1 with
-  | none => simp [sigAlg, FiatShamirWithAbort, hp]
+  | none => simp [hp]
   | some wz =>
       obtain ⟨w', z⟩ := wz
       obtain ⟨c₀, hcached, hverify⟩ := fsAbortSignLoop_cache_invariant ids M hc hrel

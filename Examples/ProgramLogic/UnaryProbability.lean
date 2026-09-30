@@ -123,11 +123,12 @@ example {oa : OracleComp spec α} [DecidableEq α] {x : α} {r : ℝ≥0∞}
   vcstep
   simpa only [← propInd_eq_ite] using h
 
+/-- The notation distributes an event over a branch of its draw when it elaborates. -/
 example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
     (p : α → Prop) [DecidablePred p] :
     Pr{let x ← if c then oa else ob}[p x] =
-      if c then wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) else wp⟦ob⟧ (fun x => 𝟙⟦p x⟧) := by
-  vcstep
+      if c then wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) else wp⟦ob⟧ (fun x => 𝟙⟦p x⟧) :=
+  rfl
 
 example (c : Prop) [Decidable c] (oa : c → OracleComp spec α)
     (ob : ¬c → OracleComp spec α) (p : α → Prop) [DecidablePred p] :

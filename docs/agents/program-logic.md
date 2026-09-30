@@ -150,7 +150,7 @@ classes of probability goals:
    - `vcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
    - `vcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
    - `vcstep rw congr` / `vcstep rw congr'` expose one or more shared binds explicitly
-   - Swaps use `OracleComp.wp_prEvent_swap` / `OracleComp.wp_swap` on events and expectations
+   - Swaps use `OracleComp.wp_swap` on events and expectations
      and `OracleComp.evalDist_bind_bind_swap` on output measures (countable responses), or their
      `_of_uniform` variants; a swap under shared draws descends through the expectations of the
      event's normal form. Congruence uses `wp_congr_of_support` /

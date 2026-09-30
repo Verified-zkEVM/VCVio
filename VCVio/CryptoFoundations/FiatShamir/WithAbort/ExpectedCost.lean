@@ -129,18 +129,16 @@ noncomputable abbrev signAttemptAbortProbability
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) : ENNReal :=
   𝒟[signAttemptAborts ids M runtime pk sk msg] {True}
 
-omit [LawfulEvalDistSemantics m] in
+variable [LawfulMonad m]
+
 /-- Single-attempt abort probability is the final event that the attempt returns no response. -/
-@[simp]
 lemma signAttemptAbortProbability_eq_prEvent
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) :
-    signAttemptAbortProbability ids M runtime pk sk msg = prEvent
-      (HasQuery.Program.eval
+    signAttemptAbortProbability ids M runtime pk sk msg = Pr{
+      let attempt ← HasQuery.Program.eval
         (fun [HasQuery (M × Commit →ₒ Chal) m] ↦
-          fsAbortSignAttempt (m := m) ids M pk sk msg) runtime) fun attempt ↦ attempt.2 = none :=
+          fsAbortSignAttempt (m := m) ids M pk sk msg) runtime}[attempt.2 = none] :=
   (prEvent_eq_evalDist_map _ _).symm
-
-variable [LawfulMonad m]
 
 private lemma signLoop_probNone_succ
     (runtime : QueryImpl (M × Commit →ₒ Chal) m) (pk : Stmt) (sk : Wit) (msg : M) (n : ℕ) :
@@ -377,7 +375,7 @@ theorem sign_queryTailProbability_le_signAttemptAbortProbability_pow
   induction i generalizing maxAttempts with
   | zero =>
       rw [pow_zero]
-      apply MeasureTheory.measure_le_one
+      exact prEvent_le_one _
   | succ i ih =>
       cases maxAttempts with
       | zero =>

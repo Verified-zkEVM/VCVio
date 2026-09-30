@@ -18,8 +18,9 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 /-!
 # Computation probability notation canaries
 
-These examples exercise the same `Pr{...}[...]` syntax with a finite computation,
-an optional computation, and a continuous oracle interpreted only by measures.
+These examples exercise the same `Pr{...}[...]` syntax with a finite computation and an optional
+computation, and the measure semantics of a continuous oracle, whose events are stated on the
+measure.
 -/
 
 public section
@@ -142,11 +143,24 @@ open VCVioTest.MeasureSemantics in
 example : ¬ IsProbabilityMeasure 𝒟[(failure : OptionT (FreeM gaussSpec) Bool)] := by
   simp [isProbabilityMeasure_iff]
 
+/-! A continuous free monad has measure semantics but not lawful ones: a bind with a continuation
+that is not measurable has no mass, so the monad's bind law fails. Its events are stated on the
+measure; the event and expectation notations, which are core weakest preconditions, need lawful
+semantics. -/
+
+open VCVioTest.MeasureSemantics in
+/--
+error: an expectation needs lawful measure semantics; no `LawfulEvalDistSemantics` instance for
+  gaussSpec.FreeM
+-/
+#guard_msgs in
+#check Pr{let x ← (FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)}[x > 0]
+
 open VCVioTest.MeasureSemantics in
 example :
-    Pr{let x ← (FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)}[x > 0] =
+    𝒟[(· > 0) <$> (FreeM.lift PUnit.unit : FreeM gaussSpec ℝ)] {True} =
       gaussianReal 0 1 {x | x > 0} := by
-  rw [prEvent_def, map_eq_bind_pure_comp, Function.comp_def,
+  rw [map_eq_bind_pure_comp, Function.comp_def,
     FreeM.evalDist_lift_bind_pure (P := gaussSpec) _ _ (by fun_prop),
     FreeM.evalDist_eq_denote (P := gaussSpec), denote_gauss_lift,
     Measure.map_apply (by fun_prop) (measurableSet_singleton True)]
@@ -167,7 +181,7 @@ example :
 
 open VCVioTest.MeasureSemantics in
 example :
-    Pr{let x ← (pure (1 : ℝ) : OptionT (FreeM gaussSpec) ℝ)}[x = 1] = 1 := by
+    𝒟[(· = 1) <$> (pure (1 : ℝ) : OptionT (FreeM gaussSpec) ℝ)] {True} = 1 := by
   simp
 
 /-! Computations equal in distribution on an unmeasured payload have equal output measures after
@@ -203,45 +217,59 @@ example {α : Type} [Countable α] (mx my : ProbComp α)
 
 /-! ### Event notation
 
-`Pr{items}[t]` is the probability that the `do` sequence `items; return t` returns a true
-proposition, `prEvent (do items; return t) fun b => b`. It is stored in the normal form `simp`
-produces: every draw but the last becomes an expectation `wp⟦a⟧ fun x => …`, the last draw an
-event, and goals display the draws as `let` statements. -/
+`Pr{items}[t]` is the expectation `𝔼{items}[𝟙⟦t⟧]` of the event's indicator: core's
+`wp (do items; return 𝟙⟦t⟧) id ⊥` under the measure interpretation. It is stored in the normal
+form `simp` produces, every draw an expectation `wp⟦a⟧ fun x => …` and the last one observing the
+indicator `predInd p` of the event's predicate, and goals display the draws as `let`
+statements. -/
 
 section eventNotation
+
+open Lean.Order Std.Internal.Do
 
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ)
 
 /-! The specification: the notation equals the event of its literal `do` sequence. -/
 
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
-    prEvent (do let x ← mx; let y ← my x; return (y = 3 ∧ x = true)) fun b => b := by
-  simp only [prEvent_norm]
+    𝔼{let x ← mx; let y ← my x}[propInd (y = 3 ∧ x)] :=
+  rfl
+example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
+    wp (do let x ← mx; let y ← my x; return propInd (y = 3 ∧ x = true) : ProbComp ℝ≥0∞)
+      (fun r => r) (⊥ : EPost.Nil) := by
+  simp only [expect_norm]
 example (m₁ m₂ : ProbComp ℕ) : Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] =
-    prEvent (do let b ← $ᵗ Bool; let x ← (if b then m₁ else m₂); return (x = 3)) fun b => b := by
-  simp only [prEvent_norm]
+    wp (do let b ← $ᵗ Bool; let x ← (if b then m₁ else m₂); return propInd (x = 3) :
+      ProbComp ℝ≥0∞) (fun r => r) (⊥ : EPost.Nil) := by
+  simp only [expect_norm]
 example (mo : ProbComp (Option ℕ)) :
     Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] =
-      prEvent (do
+      wp (do
         let o ← mo
         let x ← match o with | some a => pure a | none => mz
-        return (x = 1)) fun b => b := by
-  simp only [prEvent_norm]
+        return propInd (x = 1) : ProbComp ℝ≥0∞) (fun r => r) (⊥ : EPost.Nil) := by
+  simp only [expect_norm]
 
 /-! The normal form. -/
 
-example : Pr{let x ← mx}[x = true] = prEvent mx fun x => x = true := rfl
-example : Pr{let x ← mx}[x] = prEvent mx fun x => x = true := rfl
+example : Pr{let x ← mx}[x = true] = wp⟦mx⟧ (predInd fun x => x = true) := by
+  guard_target =ₛ wp⟦mx⟧ (predInd fun x => x = true) = wp⟦mx⟧ (predInd fun x => x = true)
+  rfl
+example (p : Bool → Prop) : Pr{let x ← mx}[p x] = wp⟦mx⟧ (predInd p) := by
+  guard_target =ₛ wp⟦mx⟧ (predInd p) = wp⟦mx⟧ (predInd p)
+  rfl
+example : Pr{let x ← mx}[x] = wp⟦mx⟧ (predInd fun x => x = true) := rfl
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
-    wp⟦mx⟧ fun x => prEvent (my x) fun y => y = 3 ∧ x = true := rfl
-example : Pr{let x ← mx >>= my}[x = 3] = wp⟦mx⟧ fun x => prEvent (my x) fun y => y = 3 := rfl
-example : Pr{let x ← not <$> mx}[x] = prEvent mx fun x => (!x) = true := rfl
+    wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => y = 3 ∧ x = true) := rfl
+example : Pr{let x ← mx >>= my}[x = 3] = wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => y = 3) :=
+  rfl
+example : Pr{let x ← not <$> mx}[x] = wp⟦mx⟧ (predInd fun x => (!x) = true) := rfl
 example : Pr{let x : Bool ← mx}[x] = Pr{let x ← mx}[x = true] := rfl
-example : Pr{let x ← mz}[x = 3] = prEvent mz fun z => z = 3 := rfl
+example : Pr{let x ← mz}[x = 3] = wp⟦mz⟧ (predInd fun z => z = 3) := rfl
 example : Pr{{let x ← mx}}[x] = Pr{let x ← mx}[x] := rfl
 example : Pr{
     let x ← mz
-    let y := x + 1}[y = 3] = prEvent mz fun x => x + 1 = 3 := rfl
+    let y := x + 1}[y = 3] = wp⟦mz⟧ (predInd fun x => x + 1 = 3) := rfl
 example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = 3] = propInd (a = 3) := rfl
 
 /-- A draw whose action continues on the following lines is laid out as in a `do` block, or its
@@ -266,13 +294,13 @@ example (g : ℕ → ProbComp ℕ) :
 /-- A single-constructor destructuring draw becomes projections, whether it is the last draw or
 not, and whether its action is a term or a nested `do` block. -/
 example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp (ℕ × ℕ)) :
-    Pr{let ⟨a, b⟩ ← mp}[a = b] = prEvent mp (fun z => z.1 = z.2) ∧
+    Pr{let ⟨a, b⟩ ← mp}[a = b] = wp⟦mp⟧ (predInd fun z => z.1 = z.2) ∧
       Pr{let ⟨a, b⟩ ← do f (← init)}[a = b] =
-        wp⟦init⟧ fun x => prEvent (f x) fun z => z.1 = z.2 :=
+        wp⟦init⟧ fun x => wp⟦f x⟧ (predInd fun z => z.1 = z.2) :=
   ⟨rfl, rfl⟩
 example (mp : ProbComp (ℕ × ℕ)) (g : ℕ → ProbComp ℕ) :
     Pr{let (a, b) ← mp; let c ← g a}[b = c] =
-      wp⟦mp⟧ fun z => prEvent (g z.1) fun c => z.2 = c := rfl
+      wp⟦mp⟧ fun z => wp⟦g z.1⟧ (predInd fun c => z.2 = c) := rfl
 
 /-! Goals display the draws as `let` statements on one line when they fit, an unused draw as
 `_`, and an eta-reduced final selector applied to a name no draw binds. -/
@@ -319,8 +347,8 @@ h : Pr{let b ← mx; let y ← my b}[y = 3] = 0
 /-- `simp` brings an explicit event to the normal form and keeps the program's binder names: `b`
 from the bind, `x` from the map `(· = 3)`. -/
 example (h : Pr{let b ← mx; let y ← my b}[y = 3] = 0) :
-    prEvent (mx >>= fun b => (· = 3) <$> my b) (fun p => p) = 0 := by
-  simp only [prEvent_norm]
+    wp⟦mx >>= fun b => (· = 3) <$> my b⟧ (predInd fun p => p) = 0 := by
+  simp only [expect_norm]
   trace_state
   exact h
 
@@ -333,7 +361,7 @@ example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
 
 /-- A derived uniform program is closed by the uniform law after `simp` merges its maps. -/
 example : Pr{let x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
-  simp [SampleableType.prEvent_uniformSample, Finset.filter_insert, Finset.filter_singleton]
+  simp [Finset.filter_insert, Finset.filter_singleton]
 
 /-- Goals display in the draw form. -/
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] = Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] := by
@@ -361,7 +389,7 @@ variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ) (
 example : 𝔼{let x ← mx; let y ← my x}[f x y] =
     wp (do let x ← mx; let y ← my x; return f x y : ProbComp ℝ≥0∞) (fun r => r)
       (⊥ : EPost.Nil) := by
-  simp only [prEvent_norm]
+  simp only [expect_norm]
 
 /-! The normal form. -/
 
@@ -407,6 +435,11 @@ guard_roundtrip 𝔼{let x ← mx; let y ← my x}[propInd (y = 3) * f x y]
 guard_roundtrip Pr{let x ← mx; let y ← my x}[y = 3]
 guard_roundtrip Pr{let ⟨a, b⟩ ← (mz >>= fun a => (a, ·) <$> mz)}[a = b]
 guard_roundtrip wp⟦mx >>= my⟧ g
+
+/-- A computation behind a reducible definition, which normalization sees through. -/
+abbrev wrapped (mz : ProbComp ℕ) : ProbComp ℕ := mz
+
+guard_roundtrip wp⟦wrapped (pure 1)⟧ g
 
 end expectationNotation
 

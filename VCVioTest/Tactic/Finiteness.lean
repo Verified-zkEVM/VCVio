@@ -24,7 +24,8 @@ open scoped ENNReal
 
 namespace VCVioTest.Finiteness
 
-variable {α : Type} {m : Type → Type} [Monad m] [EvalDistSemantics m]
+variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m]
 
 example (mx : m α) (x : α) : Pr{let y ← mx}[y = x] ≠ ⊤ := by finiteness
 

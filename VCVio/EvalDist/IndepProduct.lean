@@ -55,13 +55,13 @@ lemma prEvent_forall_coord_mOfFn {α : Type} {m : Type → Type v}
       simp [Fin.mOfFn, Fin.forall_fin_succ, Fin.prod_univ_succ, ih]
 
 private lemma prEvent_coord_eq_mul_of_forall {α ι : Type} {m : Type → Type v}
-    [Monad m] [EvalDistSemantics m]
+    [Monad m] [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     [Fintype ι] [DecidableEq ι] (joint : m (ι → α)) (g : ι → m α)
     (hjoint : ∀ p : ι → α → Prop,
-      prEvent joint (fun v ↦ ∀ j, p j (v j)) = ∏ j, prEvent (g j) (p j))
+      Pr{let v ← joint}[∀ j, p j (v j)] = ∏ j, Pr{let x ← g j}[(p j) x])
     (i : ι) (p : α → Prop) :
-    prEvent joint (fun v ↦ p (v i)) =
-      prEvent (g i) p * ∏ j ∈ Finset.univ.erase i, prEvent (g j) fun _ ↦ True := by
+    Pr{let v ← joint}[p (v i)] =
+      Pr{let x ← g i}[p x] * ∏ j ∈ Finset.univ.erase i, Pr{let _ ← g j}[True] := by
   classical
   let q (j : ι) (x : α) : Prop := if j = i then p x else True
   have hq (v : ι → α) : p (v i) ↔ ∀ j, q j (v j) := by

@@ -206,7 +206,7 @@ private lemma unlinkBadTagStep_bad_le
       z.2.bad = true] ≤ (st.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
   by_cases hslot : st.sessionsUsed tag < sessionsPerTag
   · rw [unlinkBadTagQueryImpl_run_of_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
-    simp only [prEvent_norm]
+    simp only [expect_norm]
     -- `bad` fires exactly when the fresh nonce is already cached for this tag.
     have hinner : ∀ nonce, ¬ (st.responses (tag, nonce)).isSome = true →
         Pr{let auth ← ($ᵗ Digest : ProbComp Digest)}[
@@ -323,7 +323,7 @@ theorem unlinkBadExperiment_le_sessionCollisionBound
       Pr{let z ← ((simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
         UnlinkBadState.init)}[z.2.bad = true] := by
     rw [← prEvent_eq_evalDist_singleton, unlinkBadExperiment]
-    simp only [prEvent_norm]
+    simp only [expect_norm]
   rw [hlhs]
   have hremaining :
       unlinkBadRemaining (sessionsPerTag := sessionsPerTag)

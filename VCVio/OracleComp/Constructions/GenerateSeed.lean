@@ -337,7 +337,7 @@ lemma evalDistEq_generateSeed_prependValues {t : ι}
     rw [prEvent_generateSeed_prependValues spec qc js u _ hpos, prEvent_bind,
       prEvent_bind_eq_mul_of_unique _ _ u _ fun u' _ hs => ?_,
       SampleableType.prEvent_uniformSample_eq_singleton]
-    · simp only [prEvent_norm]
+    · simp only [expect_norm]
       exact congrArg _ (prEvent_congr _ _ _ fun s' => ⟨fun h => h ▸ rfl, fun h =>
         (Prod.ext_iff.mp (QuerySeed.prependValues_singleton_injective t (a₁ := (u, s'))
           (a₂ := (u, s₀)) h)).2⟩)

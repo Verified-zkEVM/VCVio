@@ -122,7 +122,7 @@ private def mkVCGenPlannedStep (label replayText : String) (run : TacticM Bool) 
   { label, replayText, run }
 
 private def hasProbGoal (target : Expr) : Bool :=
-  (findAppWithHead? ``prEvent target).isSome || (findAppWithHead? ``evalDist target).isSome
+  (evalDistComp? target).isSome
 
 /-- Report why the current weakest-precondition goal admits no selected structural step. -/
 def throwWpStepError : TacticM Unit := withMainContext do
@@ -712,7 +712,7 @@ def throwVCGenStepError : TacticM Unit := withMainContext do
             Goal:{indentExpr target}\n\
             Supported direct lowerings include `Pr\{...}[...] = 1`, probability equalities,\n\
             and lower bounds such as `r ≤ Pr\{...}[...]` / `Pr\{...}[...] ≥ r`.\n\
-            Try `rw [prEvent_eq_wp_propInd]`, `vcstep?`, or manual rewriting."
+            Try `vcstep?`, or manual rewriting."
       else if let some comp := wpGoalComp? target then
         let comp ← whnfReducible (← instantiateMVars comp)
         let theoremMsg ← do
@@ -764,11 +764,12 @@ inductive ProbEqAction where
   | rewrite
   | rewriteUnder (depth : Nat)
 
-/-- Bring both sides into the bind shape the swap and congruence laws match: events into the
-normal form of `Pr{…}[…]`, output measures into plain bind chains. -/
+/-- Bring both sides into the bind shape the swap and congruence laws match: events and
+expectations into the normal form of `Pr{…}[…]` and `𝔼{…}[…]`, output measures into plain bind
+chains. -/
 private def normalizeProbEqGoal : TacticM Unit := do
-  if (findAppWithHead? ``prEvent (← instantiateMVars (← getMainTarget))).isSome then
-    discard <| tryEvalTacticSyntax (← `(tactic| simp only [prEvent_norm]))
+  if ((← instantiateMVars (← getMainTarget)).find? isExpectationExpr).isSome then
+    discard <| tryEvalTacticSyntax (← `(tactic| simp only [expect_norm]))
   else
     discard <| tryEvalTacticSyntax (← `(tactic|
       simp only [map_eq_bind_pure_comp, bind_assoc]))
@@ -779,8 +780,6 @@ def runProbEqSwap : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic| (
     try simp only [bind_assoc]
     first
-      | (rw [OracleComp.wp_prEvent_swap]; done)
-      | (rw [OracleComp.wp_prEvent_swap_of_uniform]; done)
       | (rw [OracleComp.wp_swap]; done)
       | (rw [OracleComp.wp_swap_of_uniform]; done)
       | (rw [OracleComp.evalDist_bind_bind_swap]; done)
@@ -885,8 +884,6 @@ def runProbEqRewrite : TacticM Bool := do
   normalizeProbEqGoal
   tryEvalTacticSyntax (← `(tactic| (
     first
-      | rw [OracleComp.wp_prEvent_swap]
-      | rw [OracleComp.wp_prEvent_swap_of_uniform]
       | rw [OracleComp.wp_swap]
       | rw [OracleComp.wp_swap_of_uniform]
       | rw [OracleComp.evalDist_bind_bind_swap]
@@ -897,16 +894,10 @@ def runProbEqRewriteUnder (depth : Nat) : TacticM Bool := do
   normalizeProbEqGoal
   let measure ← mkEvalDistSwapUnderProof false depth
   let measureUniform ← mkEvalDistSwapUnderProof true depth
-  let event ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_prEvent_swap) depth
-  let eventUniform ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_prEvent_swap_of_uniform) depth
   let expectation ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_swap) depth
   let expectationUniform ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_swap_of_uniform) depth
   tryEvalTacticSyntax (← `(tactic| (
     first
-      | (conv_lhs => $event:conv)
-      | (conv_rhs => $event:conv)
-      | (conv_lhs => $eventUniform:conv)
-      | (conv_rhs => $eventUniform:conv)
       | (conv_lhs => $expectation:conv)
       | (conv_rhs => $expectation:conv)
       | (conv_lhs => $expectationUniform:conv)
@@ -1181,14 +1172,8 @@ def tryLowerProbGoal : TacticM Bool := do
   if ← tryEvalTacticSyntax (← `(tactic|
       rw [ge_iff_le, ← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
     return true
-  if ← tryEvalTacticSyntax (← `(tactic|
-      simp only [OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
-    return true
-  if ← tryEvalTacticSyntax (← `(tactic|
-      simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,
-        OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
-    return true
-  return false
+  -- An event that no triple matches is already a raw `wp` goal, which the structural steps take.
+  tryEvalTacticSyntax (← `(tactic| simp only [evalDist_ite_apply, evalDist_dite_apply]))
 
 /-- Continue structural stepping on a raw `wp` goal after probability lowering or explicit
 `wp`-level work. This stays deliberately smaller than the `Triple` path. -/

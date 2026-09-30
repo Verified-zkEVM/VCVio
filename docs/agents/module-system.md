@@ -103,12 +103,12 @@ The [API-boundary campaign ledger](../reading/api-boundary-campaign.md) records
 consumer evidence, intentional reducers, instance leaks, and upstream blockers.
 
 The definitional identities among the semantic definitions (`evalDist`,
-`PFunctor.FreeM.denote`, `prEvent`, `support`) are an implementation
+`PFunctor.FreeM.denote`, `support`) are an implementation
 detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. Proofs inside those
 directories may close by `rfl` across them; everywhere else
 (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests)
 crosses the boundary through the public equation lemmas
-(`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_def`, `PFunctor.FreeM.support_eq_liftM_univ`),
+(`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_eq_evalDist_map`, `PFunctor.FreeM.support_eq_liftM_univ`),
 so the semantics can be re-implemented without touching downstream proofs.
 Existing downstream `rfl` uses are grandfathered rather than a precedent; a
 review may ask a new one to go through the equation lemma.

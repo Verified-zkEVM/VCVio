@@ -53,8 +53,7 @@ theorem prEvent_bind_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α]
     (hf : Measurable fun a ↦ 𝒟[p <$> f a]) (hF : ∀ i, Measurable (F i)) (bound : α → ℝ≥0∞)
     (h : ∀ᵐ a ∂𝒟[mx], Pr{let b ← f a}[p b] ≤ (∑ i, F i a) + bound a) :
     Pr{let b ← mx >>= f}[p b] ≤ (∑ i, wp⟦mx⟧ (F i)) + ∫⁻ a, bound a ∂𝒟[mx] :=
-  wp_le_sum_add_lintegral_ae mx F
-    ((Measure.measurable_coe (measurableSet_singleton True)).comp hf) hF bound h
+  wp_le_sum_add_lintegral_ae mx F (measurable_prEvent hf) hF bound h
 
 variable [MonadAttach m] [WeaklyLawfulMonadAttach m]
 
@@ -91,7 +90,7 @@ theorem wp_le_add_add_of_disagree {mx : m α} {f g h : α → ℝ≥0∞} {D : �
           · simpa only [hDx, propInd_false, add_zero] using hfgh x hx hDx
     _ ≤ wp⟦mx⟧ g + wp⟦mx⟧ h + Pr{let x ← mx}[D x] + ε₂ := by
         rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add,
-          wp_propInd, wp_const]
+          wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr
 
@@ -111,7 +110,7 @@ theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
             exact (prEvent_le_one _).trans (le_add_right le_add_self)
           · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
     _ ≤ Pr{let y ← mx >>= oc}[q y] + Pr{let x ← mx}[D x] + ε₂ := by
-        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, wp_propInd, wp_const]
+        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr
 
@@ -166,6 +165,6 @@ theorem prEvent_bind_le_add_bad_disagree {mx : m α}
           · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
     _ ≤ Pr{let y ← mx >>= oc}[q y] + Pr{let z ← mx >>= ob}[r z] + Pr{let x ← mx}[D x] + ε₂ := by
         rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add,
-          wp_propInd, wp_const]
+          wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr

@@ -28,12 +28,6 @@ variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
   [OracleSpec.IsMeasureSpec spec]
   {α : Type}
 
-/-- A constant observation of an oracle computation has that constant as its expectation; `simp`
-reaches it through `wp_const` and `OracleComp.prEvent_true_eq_one`. -/
-theorem wp_const_of_oracle (mx : OracleComp spec α) (c : ℝ≥0∞) : wp⟦mx⟧ (fun _ ↦ c) = c := by
-  rw [wp_eq_lintegral_map]
-  simp
-
 /-- A bound on the possible outputs bounds the expectation. -/
 theorem wp_le_const_of_support (mx : OracleComp spec α) {f : α → ℝ≥0∞} {c : ℝ≥0∞}
     (hf : ∀ x ∈ support mx, f x ≤ c) : wp⟦mx⟧ f ≤ c :=

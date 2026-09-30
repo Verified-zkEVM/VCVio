@@ -468,7 +468,7 @@ idealized run never queries the hidden input, programming the revealed mask ther
 private lemma prEvent_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand M)
     (E : Bool → Prop) :
     Pr{let z ← idealFlagged tdp adv}[E z.1 ∧ z.2 = false] ≤ Pr{let y ← cpaGame tdp adv}[E y] := by
-  simp only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def]
+  simp only [prEvent_eq_evalDist_map, map_eq_bind_pure_comp, Function.comp_def]
   rw [cpaGame, idealFlagged]
   simp only [simulateQ_bind, StateT.run'_eq, StateT.run_bind, roSim.run_liftM, bind_map_left,
     simulateQ_pure, bind_assoc, pure_bind]
@@ -498,7 +498,7 @@ private lemma prEvent_idealFlagged_good_le_cpaGame (adv : CPA_Adversary PK Rand 
     refine OracleComp.evalDist_bind_apply_mono_of_support _ _ _ (measurableSet_singleton True)
       fun h _ => ?_
     simp only [QueryCache.isCached, Option.isSome_eq_false_iff, Option.isNone_iff_eq_none]
-    simpa only [prEvent_def, map_eq_bind_pure_comp, Function.comp_def] using
+    simpa only [prEvent_eq_evalDist_map, map_eq_bind_pure_comp, Function.comp_def] using
       roSim.prEvent_run_uncached_le_run_cacheQuery _ r h (fun b' => E (b == b')) choice.2 hcr
 
 /-- Both one-sided up-to-bad bounds between the real game and Game 1, as event masses. -/
@@ -508,11 +508,11 @@ private lemma evalDist_cpaGame_game1_le_badEventExperiment (adv : CPA_Adversary 
         𝒟[badEventExperiment tdp adv] {true} + 𝒟[game1 tdp adv] {true} := by
   have h1 : 𝒟[game1 tdp adv] {true} = Pr{let z ← idealFlagged tdp adv}[z.1 = true] := by
     rw [← prEvent_eq_evalDist_singleton, game1_eq_idealFlagged]
-    simp only [prEvent_norm]
+    simp only [expect_norm]
   have hb :
       𝒟[badEventExperiment tdp adv] {true} = Pr{let z ← idealFlagged tdp adv}[z.2 = true] := by
     rw [evalDist_badEventExperiment_eq_idealFlagged, ← prEvent_eq_evalDist_singleton]
-    simp only [prEvent_norm]
+    simp only [expect_norm]
   rw [h1, hb, ← prEvent_eq_evalDist_singleton (cpaGame tdp adv) true]
   have hgood := prEvent_idealFlagged_good_le_cpaGame (tdp := tdp) adv
   refine ⟨prEvent_le_prEvent_add_of_prEvent_and_not_le _ _ (fun z : Bool × Bool => z.2 = true)

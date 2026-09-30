@@ -208,8 +208,9 @@ variable {ω : Type} [Monad m] [EvalDistSemantics m]
 
 /-- An event depending only on cost can observe either the cost marginal or the joint run.
 No measurable space on the discarded outputs is required. -/
-lemma prEvent_costs [LawfulMonad m] (oa : AddWriterT ω m α) (p : ω → Prop) :
-    prEvent oa.costs p = prEvent oa.run fun z => p (Multiplicative.toAdd z.2) := by
+lemma prEvent_costs [LawfulMonad m] [LawfulEvalDistSemantics m] (oa : AddWriterT ω m α)
+    (p : ω → Prop) :
+    Pr{let x ← oa.costs}[p x] = Pr{let z ← oa.run}[p (Multiplicative.toAdd z.2)] := by
   rw [costs_def, prEvent_map]
 
 variable [MeasurableSpace ω]

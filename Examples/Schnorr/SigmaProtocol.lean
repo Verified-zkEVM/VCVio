@@ -209,7 +209,7 @@ theorem sigma_simCommitPredictability [Fintype F] (g : G)
       ((SampleableType.prEvent_uniformSample_eq_singleton c₀).trans (by rw [hcard_FG]))
   rw [simTranscript, prEvent_bind]
   refine prEvent_bind_le_of_forall_le ($ᵗ F) _ (fun t : G × F × F => t.1 = c₀) fun c => ?_
-  simpa only [prEvent_norm] using (h_inner c).le
+  simpa only [expect_norm] using (h_inner c).le
 
 /-- **Simulator-challenge uniformity given commit, for Schnorr.** For any commit value
 `c₀ : G` and challenge value `ch₀ : F`, the simulator's joint marginal on
@@ -237,7 +237,7 @@ theorem sigma_simChalUniformGivenCommit [Fintype F] (g : G) :
       by_cases hr : r • g = c₀ <;> simp [cont, hr]
   have hmarg := prEvent_bind_eq_mul_of_ite ($ᵗ F) cont (fun r => r • g = c₀)
     (fun t => t.1 = c₀) (pure () : ProbComp Unit) (fun _ => True) fun r => by
-      by_cases hr : r • g = c₀ <;> simp [cont, hr, ENNReal.div_self]
+      by_cases hr : r • g = c₀ <;> simp [cont, hr]
   simp only [cont] at hjoint hmarg
   rw [hjoint, hmarg, SampleableType.prEvent_uniformSample_eq_singleton]
   simp

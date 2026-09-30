@@ -143,26 +143,6 @@ theorem wp_swap_of_uniform
     (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) = wp⟦my⟧ fun b ↦ wp⟦mx⟧ fun a ↦ g a b := by
   rw [wp_wp_eq_wp_bind_bind, wp_wp_eq_wp_bind_bind, evalDist_bind_bind_swap_of_uniform]
 
-/-- An expectation over one oracle computation of an event of another commutes the two draws. -/
-theorem wp_prEvent_swap
-    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
-    [∀ t, Countable (spec.Range t)]
-    [OracleSpec.IsMeasureSpec spec]
-    (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
-    (wp⟦mx⟧ fun a ↦ prEvent my (p a)) = wp⟦my⟧ fun b ↦ prEvent mx fun a ↦ p a b := by
-  simp only [prEvent_eq_wp]
-  exact wp_swap mx my _
-
-/-- An expectation over one oracle computation of an event of another commutes the two draws under
-a uniform oracle specification. -/
-theorem wp_prEvent_swap_of_uniform
-    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
-    [OracleSpec.IsUniformMeasureSpec spec]
-    (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
-    (wp⟦mx⟧ fun a ↦ prEvent my (p a)) = wp⟦my⟧ fun b ↦ prEvent mx fun a ↦ p a b := by
-  simp only [prEvent_eq_wp]
-  exact wp_swap_of_uniform mx my _
-
 /-- Independent oracle computations commute before an event of their continuation. -/
 theorem prEvent_bind_bind_swap
     {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
@@ -414,11 +394,19 @@ variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
 
 /-- Oracle computations with a measure interpretation are lossless. The law takes precedence
 over the event laws of particular computations, such as the uniform counting law. -/
-@[simp↓ high + 1, grind =]
+@[simp high + 1, grind =]
 theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] = 1 := by
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_of_discrete]
   simp
+
+/-- A constant observation of an oracle computation has that constant as its expectation, since
+oracle computations are lossless. It applies once the observation is simplified to a constant,
+ahead of the expectation laws of particular computations such as the uniform average. -/
+@[simp high]
+theorem _root_.MeasureProgramLogic.wp_const_of_oracle (mx : OracleComp spec α) (c : ℝ≥0∞) :
+    wp⟦mx⟧ (fun _ ↦ c) = c := by
+  rw [_root_.wp_const, prEvent_true_eq_one, mul_one]
 
 /-- Oracle computations with a measure interpretation never fail. -/
 @[simp, grind =]

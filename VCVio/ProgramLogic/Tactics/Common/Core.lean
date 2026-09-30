@@ -519,13 +519,25 @@ def isExpectationExpr (e : Expr) : Bool :=
   e.isAppOfArity ``Std.Internal.Do.WP.wp 10 && (e.getArg! 2).isConstOf ``ENNReal &&
     (e.getArg! 3).isConstOf ``Std.Internal.Do.EPost.Nil
 
-/-- The computation observed by a measure expression: the computation of its event
-(`prEvent mx p`, the last draw of what `Pr{…}[…]` elaborates to), or the argument of `𝒟[…]`. -/
+/-- The last computation drawn by an event: the innermost draw of a nest of expectations whose
+last observation is the indicator `predInd p` of a predicate, which is what `Pr{…}[…]` elaborates
+to. -/
+partial def eventComp? (e : Expr) : Option Expr := do
+  let e := e.consumeMData
+  guard (isExpectationExpr e)
+  match (e.getArg! 8).consumeMData with
+  | .lam _ _ body _ =>
+    let body := body.consumeMData
+    if isExpectationExpr body then eventComp? body
+    else if body.isAppOfArity ``propInd 1 then some (e.getArg! 7) else none
+  | post => if post.isAppOfArity ``predInd 2 then some (e.getArg! 7) else none
+
+/-- The computation observed by a measure expression: the last draw of an event `Pr{…}[…]`, or
+the argument of `𝒟[…]`. -/
 def evalDistComp? (e : Expr) : Option Expr := do
   let e := e.consumeMData
-  if let some app := findAppWithHead? ``prEvent e then
-    let args ← trailingArgs? app 2
-    return ← args[0]?
+  if let some event := e.find? fun s ↦ (eventComp? s).isSome then
+    return ← eventComp? event
   let app ← findAppWithHead? ``evalDist e
   let args ← trailingArgs? app 1
   args[0]?

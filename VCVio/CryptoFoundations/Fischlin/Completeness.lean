@@ -115,8 +115,8 @@ private lemma minUnifAux_prEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))) 
       have hsum : ∀ p : Fin (2 ^ b) → Prop, Pr{let x ← $ᵗ (Fin (2 ^ b))}[p x]
           = ∑ x, Pr{let y ← $ᵗ (Fin (2 ^ b))}[y = x] * if p x then 1 else 0 := by
         intro p
-        rw [prEvent_eq_wp, wp_eq_sum_fintype]
-        simp only [propInd_eq_ite]
+        rw [wp_eq_sum_fintype]
+        simp only [predInd_apply, propInd_eq_ite]
       have hbody : ∀ x : Fin (2 ^ b),
           Pr{let o ← (if (x : ℕ) = 0 then pure (some x)
             else minUnifAux b n (some (match best with
@@ -1238,7 +1238,7 @@ private lemma model_reject_le [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
   set minH : (Fin ρ → Option (Chal × Resp × Fin (2 ^ b))) → Fin ρ → ℕ :=
     fun bs i => match bs i with | some (_, _, h) => h.val | none => 0 with hminH
   -- Reduce the rejection event to "the hash sum exceeds `S`".
-  simp only [prEvent_norm]
+  simp only [expect_norm]
   set bestsComp := Fin.mOfFn ρ
     fun i => fischlinUnifSearch σ pk sk (commits i).2 (FinEnum.toList Chal) none with hbestsComp
   refine le_trans (prEvent_mono_of_support _ _ (fun bs => S < ∑ i, minH bs i)

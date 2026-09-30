@@ -288,28 +288,14 @@ open scoped Classical in
 lemma prEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] :
     Pr{let x ← oa}[p x] = wp⟦oa⟧ (fun x ↦ if p x then 1 else 0) := by
-  rw [prEvent_eq_evalDist_map]
-  have h := wp_eq_lintegral (p <$> oa) (fun b ↦ if b then 1 else 0) Measurable.of_discrete
-  rw [wp_map] at h
-  have hi : (fun b : Prop ↦ if b then (1 : ℝ≥0∞) else 0) =
-      ({True} : Set Prop).indicator (fun _ ↦ 1) := by
-    funext b
-    simp only [Set.indicator_apply, Set.mem_singleton_iff, eq_iff_iff, iff_true]
-  calc
-    _ = ∫⁻ b : Prop, (if b then 1 else 0) ∂𝒟[p <$> oa] := by
-      rw [hi, lintegral_indicator_const (measurableSet_singleton True), one_mul]
-    _ = _ := h.symm.trans (by
-      congr 1
-      funext x
-      by_cases hx : p x <;> simp [hx])
+  change wp⟦oa⟧ (fun x ↦ propInd (p x)) = _
+  simp only [propInd_eq_ite]
 
-/-- Event probability is WP of its proposition indicator. -/
+/-- An event probability is by definition the expectation of its indicator. -/
 lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
-    Pr{let x ← oa}[p x] = wp⟦oa⟧ (fun x => propInd (p x)) := by
-  classical
-  simpa only [propInd_eq_ite] using prEvent_eq_wp_indicator oa p
+    Pr{let x ← oa}[p x] = wp⟦oa⟧ (fun x => propInd (p x)) := rfl
 
 open scoped Classical in
 /-- Finite-response computations integrate assertions by a finite partition of reachable outputs.

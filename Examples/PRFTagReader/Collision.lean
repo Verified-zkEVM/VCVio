@@ -439,7 +439,7 @@ theorem authRFExperiment_le_collisionBound_of_distinctReaderNonces
         AuthIdealState.init)}[z.2.readerForged ≠ ∅] := by
     rw [authRFExperiment_eq_authRFDirectExperiment, ← prEvent_eq_evalDist_singleton,
       authRFDirectExperiment]
-    simp only [prEvent_norm, decide_eq_true_eq]
+    simp only [expect_norm, decide_eq_true_eq]
   rw [hlhs, Nat.cast_mul]
   -- Apply the inductive collision bound from the initial state.
   have hinit : forgeInv (TagId := TagId) (Nonce := Nonce) (Digest := Digest) adversary

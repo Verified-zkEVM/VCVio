@@ -40,8 +40,10 @@ theorem evalDist_uniformSample_singleton {α : Type} [SampleableType α] [_root_
     𝒟[($ᵗ α : ProbComp α)] {x} = (Fintype.card α : ENNReal)⁻¹ := by
   rw [evalDist_uniformSample, uniformOn_univ_apply_singleton]
 
-/-- A uniform finite sample satisfies a decidable event with its accepted fraction of outputs. -/
-@[simp↓ high, grind norm↓]
+/-- A uniform finite sample satisfies a decidable event with its accepted fraction of outputs.
+For events it takes precedence over the average `wp_uniformSample_eq_sum`, wherever in a `simp`
+run the event appears. -/
+@[simp high, grind norm↓]
 theorem prEvent_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]
     (p : α → Prop) [DecidablePred p] :
     Pr{let x ← $ᵗ α}[p x] = (Finset.univ.filter p).card / (Fintype.card α : ENNReal) := by
@@ -114,12 +116,23 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
 
-/-- An expectation over a uniform draw from a finite type is the average of the observation. -/
-@[simp]
+/-- An expectation over a uniform draw from a finite type is the average of the observation.
+`simp` applies it through the simproc `wp_uniformSample_sum` to observations that are not
+events; an event is counted by `prEvent_uniformSample`. -/
 theorem wp_uniformSample_eq_sum {α : Type} [SampleableType α] [_root_.Fintype α]
     (g : α → ENNReal) : wp⟦($ᵗ α : ProbComp α)⟧ g = (∑ x, g x) / Fintype.card α := by
   rw [wp_eq_sum_fintype, ENNReal.div_eq_inv_mul, Finset.mul_sum]
   exact Finset.sum_congr rfl fun a _ ↦ by rw [prEvent_uniformSample_eq_singleton]
+
+open Lean Meta Simp ProbabilityNotation in
+/-- `wp_uniformSample_eq_sum` for an observation that is not an event, `predInd p` or an
+indicator that normalization folds into one. -/
+simproc [simp] wp_uniformSample_sum (@Std.Internal.Do.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
+  unless e.isAppOfArity ``Std.Internal.Do.WP.wp 10 do return .continue
+  let g := e.getArg! 8
+  if g.isAppOfArity ``predInd 2 || isIndicatorLambda g then return .continue
+  let some (rhs, pf) ← rewriteWith? ``wp_uniformSample_eq_sum e | return .continue
+  return .visit { expr := rhs, proof? := pf }
 
 /-- Each length-`n` list is drawn by `n` independent uniform samples with probability
 `(|α| ^ n)⁻¹`. -/
@@ -138,7 +151,7 @@ theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.
         fun x' _ hx' => by
           obtain ⟨xs, -, hxs⟩ := (mem_support_bind_iff _ _ _).mp hx'
           exact (List.cons.inj ((mem_support_pure_iff' (m := ProbComp) _ _).mp hxs)).1]
-      simp only [prEvent_norm, List.cons.injEq, true_and]
+      simp only [expect_norm, List.cons.injEq, true_and]
       rw [prEvent_uniformSample_eq_singleton, ih (by simpa using hlen), pow_succ', Nat.cast_mul,
         ENNReal.mul_inv (Or.inr (ENNReal.natCast_ne_top _)) (Or.inl (ENNReal.natCast_ne_top _))]
 
@@ -231,7 +244,7 @@ theorem prEvent_uniformSample_pair_of_bijective [SampleableType γ] {g : α → 
     rw [evalDist_map_of_discrete, evalDist_pair, evalDist_uniformSample,
       evalDist_uniformSample, evalDist_uniformSample, ← uniformOn_univ_prod]
     exact map_uniformOn_univ_of_bijective Measurable.of_discrete hg
-  simpa only [prEvent_norm, Function.uncurry_apply_pair] using h.prEvent_eq p
+  simpa only [expect_norm, Function.uncurry_apply_pair] using h.prEvent_eq p
 
 /-- A uniform draw from a product is two independent uniform draws. -/
 theorem prEvent_uniformSample_prod (p : α × β → Prop) :
@@ -243,10 +256,10 @@ theorem prEvent_uniformSample_prod_le_of_forall_fst (p : α × β → Prop) {ε 
     (h : ∀ x, Pr{let y ← $ᵗ β}[p (x, y)] ≤ ε) :
     Pr{let z ← $ᵗ (α × β)}[p z] ≤ ε := by
   rw [prEvent_uniformSample_prod]
-  simpa only [prEvent_norm] using
+  simpa only [expect_norm] using
     prEvent_bind_le_of_forall_le ($ᵗ α)
       (fun x => do let y ← $ᵗ β; return (x, y)) p
-      (fun x => by simpa only [prEvent_norm] using h x)
+      (fun x => by simpa only [expect_norm] using h x)
 
 /-- A uniform bound after fixing the second coordinate bounds an event of a uniform product. -/
 theorem prEvent_uniformSample_prod_le_of_forall_snd (p : α × β → Prop) {ε : ℝ≥0∞}
@@ -254,10 +267,10 @@ theorem prEvent_uniformSample_prod_le_of_forall_snd (p : α × β → Prop) {ε 
     Pr{let z ← $ᵗ (α × β)}[p z] ≤ ε := by
   rw [← prEvent_uniformSample_pair_of_bijective
     (g := fun y x => (x, y)) (Equiv.prodComm β α).bijective]
-  simpa only [prEvent_norm] using
+  simpa only [expect_norm] using
     prEvent_bind_le_of_forall_le ($ᵗ β)
       (fun y => do let x ← $ᵗ α; return (x, y)) p
-      (fun y => by simpa only [prEvent_norm] using h y)
+      (fun y => by simpa only [expect_norm] using h y)
 
 /-- The first coordinate of a uniform product draw is a uniform draw. -/
 theorem prEvent_uniformSample_fst (p : α → Prop) :
@@ -288,7 +301,7 @@ theorem evalDistEq_uniformSample_vector_succ (N : ℕ) :
   rw [← prEvent_eq_evalDist_of_discrete,
     ← prEvent_eq_evalDist_of_discrete,
     ← prEvent_uniformSample_pair_of_bijective hbij (· ∈ A)]
-  simp only [prEvent_norm]
+  simp only [expect_norm]
 
 /-- A continuation of the first coordinate of a uniform pair has the output measure of the same
 continuation of a uniform first coordinate. -/
@@ -322,10 +335,10 @@ theorem prEvent_uniformSample_finSnoc_le_add {n : ℕ}
     Pr{let z ← $ᵗ (_root_.Fin (n + 1) → α)}[event z] ≤
       Pr{let y ← $ᵗ (_root_.Fin n → α)}[bad y] + ε := by
   rw [prEvent_uniformSample_finSnoc]
-  simpa only [prEvent_norm] using
+  simpa only [expect_norm] using
     prEvent_bind_le_prEvent_add ($ᵗ (_root_.Fin n → α))
       (fun y => do let x ← $ᵗ α; return Fin.snoc y x) bad event
-      (fun y hy => by simpa only [prEvent_norm] using h y hy)
+      (fun y hy => by simpa only [expect_norm] using h y hy)
 
 end transport
 

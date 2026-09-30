@@ -550,7 +550,7 @@ lemma hvzkBadMass_eq_prEvent_indicator [SampleableType (CommitHashBytes p)]
   have h := (honest_pregate_evalDistEq p prims sk
     (fun cT zv => (pure (hvzkBadIndicator p prims pk sk cT zv) : ProbComp Bool))).prEvent_eq
     (· = true)
-  simp only [prEvent_norm] at h
+  simp only [expect_norm] at h
   unfold hvzkBadMass
   rw [← h]
   simp only [hvzkBadIndicator, rqVec_add_sub_cancel]
@@ -597,7 +597,7 @@ theorem idsWithAbort_hvzk [DecidableEq prims.High] [SampleableType (CommitHashBy
   -- The mismatch probability is the extra-rejection mass, bounded by its supremum over seeds.
   have hmass : 𝒟[draw] bad = hvzkBadMass p prims pk sk := by
     rw [hvzkBadMass_eq_prEvent_indicator p prims pk sk, ← prEvent_eq_evalDist_of_discrete]
-    simp only [draw, prEvent_norm]
+    simp only [draw, expect_norm]
   calc measureETVDist ((identificationScheme p prims).honestExecution pk sk)
         (hvzkSimulatorReal p prims pk)
       = measureETVDist (draw >>= fun a => pure (hvzkHonestOut p prims pk sk a.1 a.2))

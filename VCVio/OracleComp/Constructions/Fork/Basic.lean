@@ -244,10 +244,10 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
         PFunctor.FreeM.Cursor.Split.completeFork_missing, hne]
   | found occurrence =>
       rw [map_completeFork_found_oracleComp]
-      simp only [kernel, Cursor.complete, prEvent_bind, prEvent_map, MeasureProgramLogic.wp_map,
+      simp only [kernel, Cursor.complete, prEvent_bind, MeasureProgramLogic.wp_map,
         PFunctor.FreeM.Cursor.Split.complete_found,
         PFunctor.FreeM.Cursor.Occurrence.completePath, Cursor.completeOccurrence,
-        ofFreeM_map, Functor.map_map, Option.some.injEq, Prod.mk.injEq,
+        ofFreeM_map, Functor.map_map, predInd_apply, Option.some.injEq, Prod.mk.injEq,
         PFunctor.FreeM.Cursor.ForkView.firstPath_mk,
         PFunctor.FreeM.Cursor.ForkView.secondPath_mk,
         observeView, Function.comp_def]

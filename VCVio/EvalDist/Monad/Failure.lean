@@ -39,13 +39,29 @@ theorem evalDist_bind_failure (mx : m α) :
   let : MeasurableSpace α := ⊤
   simp
 
-/-- No event succeeds after failure. -/
+/-- Failure has expectation zero. -/
 @[simp↓ high, grind norm↓]
+theorem wp_failure {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
+    {α : Type} (g : α → ENNReal) : wp⟦(failure : m α)⟧ g = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [MeasureProgramLogic.wp_eq_lintegral _ g Measurable.of_discrete]
+  simp
+
+/-- A guard weights the observation by its condition. It applies ahead of `wp_const`, so the
+condition of a guard stays the first factor. -/
+@[simp high, grind norm]
+theorem wp_guard {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
+    (c : Prop) [Decidable c] (g : Unit → ENNReal) :
+    wp⟦(guard c : m Unit)⟧ g = propInd c * g () := by
+  by_cases hc : c <;> simp [guard, hc]
+
+/-- No event succeeds after failure. -/
 theorem prEvent_failure {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
-    {α : Type} (p : α → Prop) : prEvent (failure : m α) p = 0 := by
-  rw [prEvent_def, map_eq_bind_pure_comp]
-  simp
+    {α : Type} (p : α → Prop) : Pr{let x ← (failure : m α)}[p x] = 0 :=
+  wp_failure (m := m) _
 
 /-- `failure` always fails. -/
 @[simp, grind =]

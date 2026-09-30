@@ -160,49 +160,57 @@ destructuring draws and `if` are available. An action that continues on the foll
 indented past its `let`, as in any `do` block, or parenthesized.
 `Pr{let x ← mx}[x = a]` is the probability of the single output `a` and needs no measurable singletons.
 
-`prEvent mx p := 𝒟[p <$> mx] {True}` is the probability that the output of `mx` satisfies `p`.
-It needs no measurable space on the outputs. The notation means the event of its literal
-sequence:
+`Pr{items}[t]` is the expectation of the event's indicator, `𝔼{items}[𝟙⟦t⟧]`, and `𝔼{items}[b]`
+is the expectation of the value the sequence returns: core's weakest precondition
+`wp (do items; return b) id ⊥` under the measure interpretation `MeasureProgramLogic.measureWP m`
+(`VCVio.EvalDist.Expectation`). Core's `wp` is the only head, so the program logic, `vcgen` and
+the expectation laws apply to events directly. Neither notation needs a measurable space on the
+outputs; `prEvent_eq_evalDist_map` relates an event to the mass `𝒟[p <$> mx] {True}`, and
+`measurable_prEvent` makes a family of events measurable from its selectors' measures.
+
+An event observes the indicator `predInd p` of its predicate (`predInd p x = propInd (p x)`, by
+`predInd_apply`), so the predicate is an argument: `simp` keys, `grind` patterns and `gcongr` see
+it, and an event is never confused with a constant observation. Both notations mean their literal
+sequence. They are stored in the normal form `simp` produces, and elaboration checks the proof
+that the two are equal. Every draw becomes an expectation:
 
 ```lean
-Pr{items}[t] = prEvent (do items; return t) fun b => b
-```
-
-It is stored in the normal form `simp` produces, and elaboration checks the proof that the two
-are equal:
-- every draw but the last becomes an expectation `wp⟦a⟧ fun x => …`;
-- the last draw becomes an event `prEvent a fun y => t`.
-
-```lean
-Pr{let x ← mx; let y ← my x}[p x y] = wp⟦mx⟧ fun x => prEvent (my x) fun y => p x y
+Pr{let x ← mx; let y ← my x}[p x y] = wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => p x y)
 ```
 
 On the way to that form:
 - binds inside draws are reassociated;
-- maps are fused into the event;
+- maps are fused into the observation;
 - returned values and local `let`s are substituted;
 - single-constructor destructuring becomes projections;
 - `if` is pulled outward.
 
-The rules are the default-`simp` event laws, and `simp only [prEvent_norm]` applies exactly
-them:
-- `prEvent_bind`, `prEvent_map`, `prEvent_pure`, `prEvent_ite` and `prEvent_dite`;
-- core's exact `wp` equations (`ExactWPMonad.wp_bind`, `wp_pure`, `wp_map`);
-- the fold `wp_propInd` of an indicator observation back into an event.
+The rules are PolyFun's exact `wp` equations (`ExactWPMonad.wp_bind`, `wp_map`, `wp_pure`,
+`wp_ite`, `wp_dite`, `wp_seq`, …), which are in the default `simp` set, and the definitional fold
+`wp_predInd_fold` of an indicator observation `fun x => propInd t` into `predInd (fun x => t)`;
+`simp only [expect_norm]` applies exactly them, through pre-procedures that keep the program's
+binder names. The notations need lawful measure semantics
+(`[LawfulMonad m] [LawfulEvalDistSemantics m]`): a semantics whose bind law fails, such as a free
+monad over continuous answers where a continuation need not be measurable, has no expectations,
+and its events are stated on `𝒟[…]`. A product of indicators merges into the indicator of the
+conjunction (`propInd_mul_propInd`), so an expectation that multiplies indicators, as a guard
+does, folds back into an event.
 
-`simp` keeps the program's binder names. The laws need lawful semantics
-(`[LawfulMonad m] [LawfulEvalDistSemantics m]`), which every concrete monad has. With only
-`LawfulMonad`, a single final draw still normalizes (`prEvent_bind_pure`). Generic statements
-under weaker assumptions are written with `prEvent` directly.
+`prEvent_bind`, `prEvent_map`, `prEvent_pure`, `prEvent_ite` and `prEvent_dite` state what those
+equations give for a literal event `wp⟦mx >>= f⟧ (predInd p)`; `simp` uses the `wp` equations
+themselves. Leaf laws are stated for every observation (`Option.wp_none`, `wp_failure`, `wp_lift`,
+`wp_guard`), so they apply to events and expectations alike. Over a uniform draw, an event is
+counted (`prEvent_uniformSample`) and any other observation averaged (`wp_uniformSample_eq_sum`,
+through a simproc that leaves events to the counting law).
 
-Goals display a nest of expectations ending in an event as the `Pr{…}[…]` it comes from, and any
-other expectation as `wp⟦a⟧ g`. A non-normal explicit `prEvent (mx >>= f) p` displays as
-`Pr{let x ← mx >>= f}[p x]`; `rw [prEvent_bind]` normalizes it. `prEvent_def` unfolds an event to
-its measure when an argument needs the measure itself.
+Goals display a term in normal form as the notation it elaborates from: `Pr{…}[p x]` when its
+last observation is `predInd p`, and `𝔼{…}[…]` otherwise. A term that normalization would still
+rewrite keeps core's display `wp a g ⊥`. What is displayed therefore elaborates back to the term
+displayed, and a goal that still needs `simp` shows it. A literal, non-normal expectation is
+written `wp⟦mx⟧ g`.
 
 In a definition, name an experiment as a computation and take one event of it,
-`Pr{let b ← exp adv}[b = true]`; a single draw of a named computation is stored as written
-(`prEvent (exp adv) fun b => b = true`).
+`Pr{let b ← exp adv}[b = true]`; a single draw of a named computation is stored as written.
 
 ### Writing events with `do` sequences
 
@@ -249,7 +257,7 @@ The `OptionT` measure instance needs only a measure semantics on the base monad.
 the full measurable-bind certificate. Generic bind laws require measurability only of the
 successful-output family, rather than the whole run measure. An auxiliary discrete source space
 and the base map law transport the source measure back to its selected space.
-`VCVio.EvalDist.Monad.Option` collapses a lifted draw followed by a guard into one `prEvent`
+`VCVio.EvalDist.Monad.Option` collapses a lifted draw followed by a guard into one event
 condition: `simp` and `grind` turn the guard and final event into their conjunction. Callers need
 no measurable space on that intermediate type. A constant output map after the guard has the same
 normalization rule, so monad normalization preserves this automation. The guarded unit-output
@@ -312,8 +320,8 @@ measurability hypotheses. In `VCVio.EvalDist.ProbabilityNotation`:
   `wp_eq_sum_fintype` and `wp_eq_tsum_of_countable`.
 
 For oracle computations with finite answers, `OracleComp.wp_eq_tsum` sums over outputs without
-a countability assumption. `OracleComp.wp_swap` and `OracleComp.wp_prEvent_swap` commute
-independent draws. `wp_mono_of_support` and `wp_congr_of_support` compare observations on the
+a countability assumption. `OracleComp.wp_swap` commutes independent draws,
+including those of an event. `wp_mono_of_support` and `wp_congr_of_support` compare observations on the
 reachable outputs; `wp_mono_of_support` is the preferred `gcongr` rule.
 
 The sequencing laws in `VCVio.EvalDist.Monad.Seq.Measure` identify paired draws with
@@ -602,7 +610,8 @@ equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
 | `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure/Core.lean` |
-| `prEvent mx` (`mx : m Prop`) | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{let x ← mx}[x = a]` | `EvalDist/ProbabilityNotation.lean` |
+| `wp mx g ⊥` under `measureWP m` | `ℝ≥0∞` | `𝔼{let x ← mx; …}[g x]`, `wp⟦mx⟧ g` | `EvalDist/Expectation.lean`, `EvalDist/ProbabilityNotation.lean` |
+| event, `𝔼{…}[𝟙⟦p x⟧]` | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{let x ← mx}[x = a]` | `EvalDist/ProbabilityNotation.lean` |
 | `prFail mx` | `ℝ≥0∞` | `1 - Pr{let _ ← mx}[True]` | `EvalDist/ProbabilityNotation.lean` |
 | `evalDistWithFailure mx` | `Measure (Option α)` | — | `EvalDist/WithFailure.lean` |
 | `EvalDistEq mx my` | `Prop` | `mx =ᵈ my` | `EvalDist/EvalDistEq.lean` |
@@ -682,8 +691,8 @@ measurable space is the explicit escape hatch.
 For generic output types, prefer `[MeasurableSpace α]` and structural instances for products,
 options, and subtypes. A local `MeasurableSpace := ⊤` deliberately selects discrete semantics;
 it is not an extra proof of a property of an already chosen measure. Intermediate choices made
-only to normalize a computation belong inside the semantic API, as in `prEvent` and the
-constant-continuation laws.
+only to normalize a computation belong inside the semantic API, as in the expectation laws and
+the constant-continuation laws.
 
 ### Measure interfaces
 
@@ -731,7 +740,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 | Lemma | Statement | Tags |
 |-------|-----------|------|
 | `evalDist_pure` | `𝒟[(pure x : m α)] = Measure.dirac x` | `simp` |
-| `prEvent_pure` | `prEvent (pure a : m α) p = propInd (p a)` | `simp`, `grind =`, `prEvent_norm` |
+| `prEvent_pure` | `prEvent (pure a : m α) p = propInd (p a)` | `simp`, `grind =`, `expect_norm` |
 | `propInd_eq_ite` | `propInd P = if P then 1 else 0` for decidable `P` | — |
 | `support_pure` | `support (pure x) = {x}` | `grind =` |
 
@@ -741,7 +750,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 |-------|-----------|------|
 | `evalDist_bind` | `𝒟[mx >>= f] = 𝒟[mx].bind fun x => 𝒟[f x]`, for a measurable continuation | — |
 | `evalDist_bind_of_discrete` | the same on a discrete source space | — |
-| `prEvent_bind` | `prEvent (mx >>= f) p = wp⟦mx⟧ fun a => prEvent (f a) p` | `simp`, `grind norm`, `prEvent_norm` |
+| `prEvent_bind` | `prEvent (mx >>= f) p = wp⟦mx⟧ fun a => prEvent (f a) p` | `simp`, `grind norm`, `expect_norm` |
 | `MeasureProgramLogic.wp_bind` | `wp⟦mx >>= f⟧ g = wp⟦mx⟧ fun a => wp⟦f a⟧ g` (`simp` uses `ExactWPMonad.wp_bind`) | — |
 | `prEvent_bind_eq_lintegral_of_discrete` | `Pr{let y ← mx >>= f}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx]` | — |
 | `prEvent_bind_eq_sum_fintype` | `Pr{let y ← mx >>= f}[p y] = ∑ a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y]` | — |
@@ -774,7 +783,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 
 | Lemma | Use |
 |-------|-----|
-| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` / `OracleComp.wp_prEvent_swap` | Swap two independent oracle draws (used by `vcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
+| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` | Swap two independent oracle draws (used by `vcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
 | `evalDist_bind_congr` / `MeasureProgramLogic.wp_congr` | Pointwise equal continuations give equal binds or expectations, with no measurable space on the intermediate result |
 | `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` | Continuations equal on the support of the shared prefix give equal binds or expectations |
 
@@ -1021,7 +1030,7 @@ inside proofs, never as a normal form.
   rewrites an event under a bound.
 - The measure laws are `evalDist_pure` under `LawfulPureEvalDistSemantics` and `evalDist_bind`
   under `LawfulEvalDistSemantics`; bind also requires a measurable continuation, which
-  `evalDist_bind_of_discrete` discharges on a discrete source. `prEvent_def`,
+  `evalDist_bind_of_discrete` discharges on a discrete source. `prEvent_eq_evalDist_map`,
   `prEvent_eq_evalDist` and `prEvent_eq_evalDist_singleton` connect an event to the measure of
   its set when an argument needs the set form.
 

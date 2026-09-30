@@ -76,7 +76,7 @@ example {m : Type → Type v} [Monad m] [EvalDistSemantics m]
 
 example (q : Prop) [Decidable q] : Measure.dirac q {True} = if q then 1 else 0 := by grind
 
-example : prEvent (pure x : Id α) p = propInd (p x) := by simp
+example : Pr{let y ← (pure x : Id α)}[p y] = propInd (p x) := by simp
 
 example : Pr{let value ← (pure x : Id α)}[p value] = propInd (p x) := by grind
 

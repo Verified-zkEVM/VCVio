@@ -40,8 +40,8 @@ variable {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
 example [MeasurableSpace α] (x : α) : 𝒟[(pure x : m α)] = Measure.dirac x := by
   fail_if_success grind  -- gap(grind, 2026-09-26): Dirac and success masses, covers the section
   simp
-example (p : α → Prop) (x : α) : prEvent (pure x : m α) p = propInd (p x) := by simp
-example (p : α → Prop) (x : α) : prEvent (pure x : m α) p = propInd (p x) := by grind
+example (p : α → Prop) (x : α) : Pr{let y ← (pure x : m α)}[p y] = propInd (p x) := by simp
+example (p : α → Prop) (x : α) : Pr{let y ← (pure x : m α)}[p y] = propInd (p x) := by grind
 example (p : α → Prop) [DecidablePred p] (x : α) :
     Pr{let y ← (pure x : m α)}[p y] = if p x then 1 else 0 := by simp [propInd_eq_ite]
 example [MeasurableSpace α] (x : α) : 𝒟[(pure x : m α)] Set.univ = 1 := by simp
@@ -86,14 +86,16 @@ example (f : α → β) (mx : m α) : Pr{let _ ← f <$> mx}[True] = Pr{let _ �
 The discarded computation contributes only its success mass; the `Prod.mk` product is the
 product measure. -/
 
-example [MeasurableSpace α] (mx : m α) (my : m β) (p : β → Prop) :
-    Pr{let y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{let y ← my}[p y] := by simp
-example [MeasurableSpace α] (mx : m α) (my : m β) (p : β → Prop) :
-    Pr{let y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{let y ← my}[p y] := by grind
-example [MeasurableSpace β] (mx : m α) (my : m β) (p : α → Prop) :
-    Pr{let x ← mx <* my}[p x] = 𝒟[my] Set.univ * Pr{let x ← mx}[p x] := by simp
-example [MeasurableSpace β] (mx : m α) (my : m β) (p : α → Prop) :
-    Pr{let x ← mx <* my}[p x] = 𝒟[my] Set.univ * Pr{let x ← mx}[p x] := by grind
+example (mx : m α) (my : m β) (p : β → Prop) :
+    Pr{let y ← mx *> my}[p y] = Pr{let y ← my}[p y] * Pr{let _ ← mx}[True] := by simp
+example (mx : m α) (my : m β) (p : β → Prop) :
+    Pr{let y ← mx *> my}[p y] = Pr{let y ← my}[p y] * Pr{let _ ← mx}[True] := by
+  grind
+example (mx : m α) (my : m β) (p : α → Prop) :
+    Pr{let x ← mx <* my}[p x] = Pr{let x ← mx}[p x] * Pr{let _ ← my}[True] := by simp
+example (mx : m α) (my : m β) (p : α → Prop) :
+    Pr{let x ← mx <* my}[p x] = Pr{let x ← mx}[p x] * Pr{let _ ← my}[True] := by
+  grind
 example [MeasurableSpace α] [MeasurableSpace β] (mx : m α) (my : m β) :
     𝒟[Prod.mk <$> mx <*> my] = 𝒟[mx].prod 𝒟[my] := by simp
 example [MeasurableSpace α] [MeasurableSpace β] (mx : m α) (my : m β) :

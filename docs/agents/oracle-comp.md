@@ -324,10 +324,10 @@ transport, not a simp rule). A lifted query denotes its answer measure (`evalDis
 and `evalDist_liftM_query_uniform` for `uniformOn Set.univ` under `IsUniformMeasureSpec`), and
 `evalDist_apply_univ_eq_one` / `prEvent_true_eq_one` record that oracle computations are lossless.
 
-Events `Pr{…}[…]` are `prEvent`, the mass on `True`. `prEvent_eq_evalDist`,
-`prEvent_eq_evalDist_of_discrete`, and `prEvent_eq_evalDist_singleton` rewrite an event to the
-measure of a set as explicit steps. None of them is a default `simp` rule, so `simp` keeps event
-goals in `prEvent` normal form.
+Events `Pr{…}[…]` are expectations of indicators under the measure interpretation.
+`prEvent_eq_evalDist`, `prEvent_eq_evalDist_of_discrete`, and `prEvent_eq_evalDist_singleton`
+rewrite an event to the measure of a set as explicit steps. None of them is a default `simp` rule,
+so `simp` keeps event goals in the normal form of nested expectations.
 
 There is also a *syntactic* uniform-sampling handler that rewrites queries into `ProbComp` (i.e.
 target `OracleComp unifSpec`):

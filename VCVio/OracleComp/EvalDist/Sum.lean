@@ -79,9 +79,9 @@ theorem prEvent_bind_eq_tsum (oa : OracleComp spec α) (g : α → OracleComp sp
 /-- An event is the sum of the singleton masses of the outputs satisfying it. -/
 theorem prEvent_eq_tsum_ite (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
     Pr{let y ← oa}[p y] = ∑' x, if p x then Pr{let y ← oa}[y = x] else 0 := by
-  rw [prEvent_eq_wp, wp_eq_tsum]
+  rw [wp_eq_tsum]
   refine tsum_congr fun x ↦ ?_
-  rw [propInd_eq_ite]
+  rw [predInd_apply, propInd_eq_ite]
   split_ifs <;> simp
 
 /-- First-moment (Markov) bound: a weight that is at least one on the event bounds the event's
@@ -103,7 +103,8 @@ theorem tsum_prEvent_bind_mul (oa : OracleComp spec α) (g : α → OracleComp s
       ∑' x, Pr{let y ← oa}[y = x] * ∑' z, Pr{let y ← g x}[y = z] * f z := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
-  calc ∑' z, Pr{let y ← oa >>= g}[y = z] * f z = ∑' z, prEvent (oa >>= g) (· = z) * f z := by
+  calc ∑' z, Pr{let y ← oa >>= g}[y = z] * f z =
+        ∑' z, wp⟦oa >>= g⟧ (predInd (· = z)) * f z := by
         simp only [prEvent_bind]
     _ = ∫⁻ z, f z ∂𝒟[oa >>= g] := (lintegral_evalDist_eq_tsum _ f).symm
     _ = ∫⁻ x, ∫⁻ z, f z ∂𝒟[g x] ∂𝒟[oa] := lintegral_evalDist_bind_of_discrete oa g .of_discrete
@@ -114,7 +115,8 @@ theorem tsum_prEvent_map_mul (oa : OracleComp spec α) (h : α → β) (f : β �
     ∑' z, Pr{let y ← h <$> oa}[y = z] * f z = ∑' x, Pr{let y ← oa}[y = x] * f (h x) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
-  calc ∑' z, Pr{let y ← h <$> oa}[y = z] * f z = ∑' z, prEvent (h <$> oa) (· = z) * f z := by
+  calc ∑' z, Pr{let y ← h <$> oa}[y = z] * f z =
+        ∑' z, wp⟦h <$> oa⟧ (predInd (· = z)) * f z := by
         simp only [prEvent_map]
     _ = ∫⁻ z, f z ∂𝒟[h <$> oa] := (lintegral_evalDist_eq_tsum _ f).symm
     _ = ∫⁻ x, f (h x) ∂𝒟[oa] := lintegral_evalDist_map_of_discrete oa h f
