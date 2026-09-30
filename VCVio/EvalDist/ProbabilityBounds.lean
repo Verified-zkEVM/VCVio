@@ -372,12 +372,26 @@ theorem prEvent_eq_zero_of_forall_mem_support (mx : m α) (p : α → Prop)
   (prEvent_congr_of_support mx p (fun _ ↦ False) fun a ha ↦ iff_false_intro (h a ha)).trans
     (prEvent_eq_zero_of_forall_not mx _ fun _ ↦ id)
 
+/-- An unreachable output has probability zero. -/
+theorem prEvent_eq_zero_of_not_mem_support (mx : m α) {x : α} (hx : x ∉ support mx) :
+    Pr{let y ← mx}[y = x] = 0 :=
+  prEvent_eq_zero_of_forall_mem_support mx _ fun _ hy h ↦ hx (h ▸ hy)
+
 /-- A bound on the event of every reachable continuation bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)
     {ε : ℝ≥0∞} (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let y ← mx >>= f}[q y] ≤ ε := by
   rw [bind_eq_attach_bind mx f]
   exact prEvent_bind_le_of_forall_le _ _ q fun a ↦ h a.1 a.2
+
+/-- A comparison of continuation events on the structurally reachable outputs survives a common
+draw. -/
+theorem prEvent_bind_mono_of_forall_le_of_support {γ : Type} (mx : m α) (f : α → m β)
+    (g : α → m γ) (p : β → Prop) (q : γ → Prop)
+    (h : ∀ a ∈ support mx, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
+    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] := by
+  rw [bind_eq_attach_bind mx f, bind_eq_attach_bind mx g]
+  exact prEvent_bind_mono_of_forall_le _ _ _ p q fun a ↦ h a.1 a.2
 
 /-- A lower bound on the event of every reachable continuation bounds the event after a lossless
 draw. -/

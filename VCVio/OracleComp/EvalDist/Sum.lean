@@ -69,6 +69,34 @@ theorem prEvent_bind_eq_tsum (oa : OracleComp spec α) (g : α → OracleComp sp
   let : MeasurableSpace α := ⊤
   rw [prEvent_bind_eq_lintegral_of_discrete, lintegral_evalDist_eq_tsum]
 
+/-- A bind of event computations is the prefix-weighted sum of the continuation's events. This is
+the form events take after `simp` pushes the event inside a bind. -/
+theorem prEvent_bind_eq_tsum_prEvent (oa : OracleComp spec α) (g : α → OracleComp spec Prop) :
+    prEvent (oa >>= g) = ∑' x, Pr{let z ← oa}[z = x] * prEvent (g x) := by
+  let : MeasurableSpace α := ⊤
+  rw [prEvent_bind_of_discrete, lintegral_evalDist_eq_tsum]
+
+/-- An event is the sum of the singleton masses of the outputs satisfying it. -/
+theorem prEvent_eq_tsum_ite (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
+    Pr{let y ← oa}[p y] = ∑' x, if p x then Pr{let y ← oa}[y = x] else 0 := by
+  have h := prEvent_bind_eq_tsum oa pure p
+  rw [bind_pure] at h
+  rw [h]
+  refine tsum_congr fun x ↦ ?_
+  rw [prEvent_pure]
+  split_ifs <;> simp
+
+/-- First-moment (Markov) bound: a weight that is at least one on the event bounds the event's
+probability by the weighted sum. -/
+theorem prEvent_le_tsum_prEvent_mul_cost (oa : OracleComp spec α) (p : α → Prop) (c : α → ℝ≥0∞)
+    (hc : ∀ x, p x → 1 ≤ c x) : Pr{let y ← oa}[p y] ≤ ∑' x, Pr{let y ← oa}[y = x] * c x := by
+  classical
+  rw [prEvent_eq_tsum_ite]
+  refine ENNReal.tsum_le_tsum fun x ↦ ?_
+  split_ifs with hx
+  · exact le_mul_of_one_le_right' (hc x hx)
+  · exact zero_le
+
 /-- A weighted sum over the outputs of a bind is the weighted sum over the prefix's outputs of the
 continuation's weighted sums. -/
 theorem tsum_prEvent_bind_mul (oa : OracleComp spec α) (g : α → OracleComp spec β)
