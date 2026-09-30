@@ -409,14 +409,14 @@ theorem perfectlyCorrect [SampleableType Chal]
   intro msg
   rw [perfectlyCorrect_evalDist_eq σ hr M msg, ← prEvent_eq_evalDist_singleton]
   vcstep
-  vcstep using (fun x => OracleComp.ProgramLogic.propInd (x ∈ support hr.gen))
-  · simpa [OracleComp.ProgramLogic.propInd] using
+  vcstep using (fun x => propInd (x ∈ support hr.gen))
+  · simpa [propInd] using
       OracleComp.ProgramLogic.triple_support (oa := hr.gen)
   · intro x
     rcases x with ⟨pk, sk⟩
     by_cases hx : (pk, sk) ∈ support hr.gen
     · have hrel : rel pk sk = true := hr.gen_sound pk sk hx
-      simpa [← OracleComp.ProgramLogic.propInd_eq_ite, hx] using
+      simpa [← propInd_eq_ite, hx] using
         (OracleComp.ProgramLogic.triple_prEvent_eq_one
           (oa := do
             let (c, e) ← σ.commit pk sk
@@ -424,7 +424,7 @@ theorem perfectlyCorrect [SampleableType Chal]
             let s ← σ.respond pk sk e r
             pure (σ.verify pk c r s))
           (p := (· = true)) (h := by rw [prEvent_eq_evalDist_singleton]; exact hc pk sk hrel))
-    · simpa [← OracleComp.ProgramLogic.propInd_eq_ite, hx] using
+    · simpa [← propInd_eq_ite, hx] using
         (OracleComp.ProgramLogic.triple_zero
           (oa := do
             let (c, e) ← σ.commit pk sk

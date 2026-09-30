@@ -9,18 +9,20 @@ public import ToMathlib.Probability.Kernel.Bounds
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Branch
+public import VCVio.EvalDist.ProbabilityBounds
 import Mathlib.Data.Fin.VecNotation
 
 /-!
 # Additive comparison of observed continuations
 
-Event probabilities after a common prefix satisfy finite-sum comparison rules.
-Measurable continuation observations admit AE premises on the chosen prefix law. Structural
-premises use core attachment and the actual continuation-measure observer; arbitrary hidden
-payloads need no measurable space. Constant allowances retain the prefix's success mass.
+Expectations after a common prefix satisfy finite-sum comparison rules: a comparison of an
+observation with finitely many reference observations and an allowance, on the reachable outputs
+of the prefix, holds between their expectations. Measurable observations admit AE premises on a
+chosen prefix law instead. Constant allowances retain the prefix's success mass. Arbitrary hidden
+payloads need no measurable space.
 
 The disagreement rules charge an exceptional event or an observed bad world while sharing this
-finite-sum integration argument.
+argument.
 -/
 
 public section
@@ -33,114 +35,111 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
   {α β ι : Type}
 
-/-- AE comparison with a finite family of reference events integrates the conditional allowance.
-No measurability of the allowance is required. -/
-theorem prEvent_bind_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α]
-    (mx : m α) (f : α → m β) (p : β → Prop)
-    (g : ι → α → m Prop)
-    (hf : Measurable fun a ↦ 𝒟[p <$> f a])
-    (hg : ∀ i, Measurable fun a ↦ 𝒟[g i a]) (bound : α → ENNReal)
-    (h : ∀ᵐ a ∂𝒟[mx], Pr{let b ← f a}[p b] ≤
-      (∑ i, Pr{let q ← g i a}[q]) + bound a) :
-    Pr{let b ← mx >>= f}[p b] ≤
-      (∑ i, Pr{let q ← mx >>= g i}[q]) + ∫⁻ a, bound a ∂𝒟[mx] := by
-  have hg' (i : ι) : Measurable fun a ↦ Pr{let q ← g i a}[q] :=
-    (Measure.measurable_coe (measurableSet_singleton True)).comp (hg i)
-  rw [prEvent_bind_eq_lintegral mx f p hf]
-  simp_rw [prEvent_bind mx _ (hg _)]
+/-- AE comparison with a finite family of reference observations integrates the conditional
+allowance. No measurability of the allowance is required. -/
+theorem wp_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α] (mx : m α)
+    {f : α → ℝ≥0∞} (F : ι → α → ℝ≥0∞) (hf : Measurable f) (hF : ∀ i, Measurable (F i))
+    (bound : α → ℝ≥0∞) (h : ∀ᵐ a ∂𝒟[mx], f a ≤ (∑ i, F i a) + bound a) :
+    wp⟦mx⟧ f ≤ (∑ i, wp⟦mx⟧ (F i)) + ∫⁻ a, bound a ∂𝒟[mx] := by
+  rw [MeasureProgramLogic.wp_eq_lintegral mx f hf]
+  simp_rw [MeasureProgramLogic.wp_eq_lintegral mx _ (hF _)]
   exact lintegral_le_sum_add_lintegral_of_le_ae Finset.univ
-    (fun i _ ↦ (hg' i).aemeasurable) h
+    (fun i _ ↦ (hF i).aemeasurable) h
 
-/-- Reachable conditional event comparisons hold after a common prefix, retaining the
-allowance's successful-mass factor. Only actual observation measures are made measurable. -/
-theorem prEvent_bind_le_sum_add_mul_mass_of_support [Fintype ι] [MonadAttach m]
-    [WeaklyLawfulMonadAttach m]
-    (mx : m α) (f : α → m β) (p : β → Prop) (g : ι → α → m Prop) (ε : ENNReal)
-    (h : ∀ a ∈ support mx, Pr{let b ← f a}[p b] ≤
-      (∑ i, Pr{let q ← g i a}[q]) + ε) :
-    Pr{let b ← mx >>= f}[p b] ≤ (∑ i, Pr{let q ← mx >>= g i}[q]) +
-      ε * Pr{let _a ← mx}[True] := by
-  let obs : α → Measure Prop × (ι → Measure Prop) := fun a ↦ (𝒟[p <$> f a], fun i ↦ 𝒟[g i a])
-  let : MeasurableSpace α := MeasurableSpace.comap obs inferInstance
-  have hobs : Measurable obs := comap_measurable obs
-  have hf : Measurable fun a ↦ 𝒟[p <$> f a] := measurable_fst.comp hobs
-  have hg (i : ι) : Measurable fun a ↦ 𝒟[g i a] :=
-    (measurable_pi_apply i).comp (measurable_snd.comp hobs)
-  have hp : Measurable fun a ↦ Pr{let b ← f a}[p b] :=
-    (Measure.measurable_coe (measurableSet_singleton True)).comp hf
-  have hq (i : ι) : Measurable fun a ↦ Pr{let q ← g i a}[q] :=
-    (Measure.measurable_coe (measurableSet_singleton True)).comp (hg i)
-  have hae := evalDist.ae_of_forall_mem_support mx _
-    (measurableSet_le hp ((Finset.measurable_sum _ fun i _ ↦ hq i).add_const ε)) h
-  have hb := prEvent_bind_le_sum_add_lintegral_ae mx f p g hf hg (fun _ ↦ ε) hae
-  simpa only [lintegral_const, prEvent_eq_evalDist mx (fun _ ↦ True) measurable_const,
-    Set.ofPred_true] using hb
+/-- AE comparison of continuation events with a finite family of reference observations
+integrates the conditional allowance. -/
+theorem prEvent_bind_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α]
+    (mx : m α) (f : α → m β) (p : β → Prop) (F : ι → α → ℝ≥0∞)
+    (hf : Measurable fun a ↦ 𝒟[p <$> f a]) (hF : ∀ i, Measurable (F i)) (bound : α → ℝ≥0∞)
+    (h : ∀ᵐ a ∂𝒟[mx], Pr{let b ← f a}[p b] ≤ (∑ i, F i a) + bound a) :
+    Pr{let b ← mx >>= f}[p b] ≤ (∑ i, wp⟦mx⟧ (F i)) + ∫⁻ a, bound a ∂𝒟[mx] :=
+  wp_le_sum_add_lintegral_ae mx F
+    ((Measure.measurable_coe (measurableSet_singleton True)).comp hf) hF bound h
 
-/-- A uniform reachable allowance gives an additive comparison with finitely many references. -/
-theorem prEvent_bind_le_sum_add_of_support [Fintype ι] [MonadAttach m]
-    [WeaklyLawfulMonadAttach m]
-    (mx : m α) (f : α → m β) (p : β → Prop) (g : ι → α → m Prop) (ε : ENNReal)
-    (h : ∀ a ∈ support mx, Pr{let b ← f a}[p b] ≤
-      (∑ i, Pr{let q ← g i a}[q]) + ε) :
-    Pr{let b ← mx >>= f}[p b] ≤ (∑ i, Pr{let q ← mx >>= g i}[q]) + ε :=
-  (prEvent_bind_le_sum_add_mul_mass_of_support mx f p g ε h).trans <|
+variable [MonadAttach m] [WeaklyLawfulMonadAttach m]
+
+/-- A reachable comparison with finitely many reference observations holds between their
+expectations, retaining the allowance's successful-mass factor. -/
+theorem wp_le_sum_add_mul_mass_of_support [Fintype ι] (mx : m α) {f : α → ℝ≥0∞}
+    (F : ι → α → ℝ≥0∞) (ε : ℝ≥0∞) (h : ∀ a ∈ support mx, f a ≤ (∑ i, F i a) + ε) :
+    wp⟦mx⟧ f ≤ (∑ i, wp⟦mx⟧ (F i)) + ε * Pr{let _ ← mx}[True] :=
+  (wp_mono_of_support mx h).trans_eq <| by
+    rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_finsetSum, wp_const]
+
+/-- A reachable comparison with finitely many reference observations and a uniform allowance
+holds between their expectations. -/
+theorem wp_le_sum_add_of_support [Fintype ι] (mx : m α) {f : α → ℝ≥0∞} (F : ι → α → ℝ≥0∞)
+    (ε : ℝ≥0∞) (h : ∀ a ∈ support mx, f a ≤ (∑ i, F i a) + ε) :
+    wp⟦mx⟧ f ≤ (∑ i, wp⟦mx⟧ (F i)) + ε :=
+  (wp_le_sum_add_mul_mass_of_support mx F ε h).trans <|
     add_le_add le_rfl ((mul_le_mul' le_rfl (prEvent_le_one _)).trans_eq (mul_one ε))
 
-variable {γ : Type} [MonadAttach m] [WeaklyLawfulMonadAttach m]
+variable {γ : Type}
+
+/-- A reachable comparison of a bounded observation with two others outside a disagreement
+event charges the event's probability and a uniform allowance. -/
+theorem wp_le_add_add_of_disagree {mx : m α} {f g h : α → ℝ≥0∞} {D : α → Prop}
+    {ε₁ ε₂ : ℝ≥0∞} (hD : Pr{let x ← mx}[D x] ≤ ε₁) (hf : ∀ x, f x ≤ 1)
+    (hfgh : ∀ x ∈ support mx, ¬D x → f x ≤ g x + h x + ε₂) :
+    wp⟦mx⟧ f ≤ wp⟦mx⟧ g + wp⟦mx⟧ h + ε₁ + ε₂ := by
+  calc wp⟦mx⟧ f
+      ≤ wp⟦mx⟧ fun x ↦ g x + h x + propInd (D x) + ε₂ :=
+        wp_mono_of_support mx fun x hx ↦ by
+          by_cases hDx : D x
+          · simp only [hDx, propInd_true]
+            exact (hf x).trans (le_add_right le_add_self)
+          · simpa only [hDx, propInd_false, add_zero] using hfgh x hx hDx
+    _ ≤ wp⟦mx⟧ g + wp⟦mx⟧ h + Pr{let x ← mx}[D x] + ε₂ := by
+        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add,
+          wp_propInd, wp_const]
+        exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
+    _ ≤ _ := by gcongr
 
 /-- A reachable conditional comparison outside a disagreement event charges its probability
 and a uniform allowance. -/
 theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
-    {q : β → Prop} {D : α → Prop} {ε₁ ε₂ : ENNReal}
+    {q : β → Prop} {D : α → Prop} {ε₁ ε₂ : ℝ≥0∞}
     (hD : Pr{let x ← mx}[D x] ≤ ε₁)
     (h : ∀ x ∈ support mx, ¬D x →
       Pr{let y ← my x}[q y] ≤ Pr{let y ← oc x}[q y] + ε₂) :
     Pr{let y ← mx >>= my}[q y] ≤ Pr{let y ← mx >>= oc}[q y] + ε₁ + ε₂ := by
-  classical
-  have hb := prEvent_bind_le_sum_add_of_support mx my q
-    ![fun x ↦ q <$> oc x, fun x ↦ pure (D x)] ε₂ (by
-      intro x hx
-      simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-        prEvent_pure_prop]
-      by_cases hDx : D x
-      · simpa only [ite_eq_left hDx] using
-          (prEvent_le_one _).trans
-          (le_add_right (le_add_left le_rfl) : (1 : ENNReal) ≤
-            Pr{let y ← oc x}[q y] + 1 + ε₂)
-      · simpa only [ite_eq_right hDx, add_zero] using h x hx hDx)
-  have hb' : Pr{let y ← mx >>= my}[q y] ≤
-      Pr{let y ← mx >>= oc}[q y] + Pr{let x ← mx}[D x] + ε₂ := by
-    simpa only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-      map_bind, bind_pure_comp] using hb
-  exact hb'.trans (add_le_add (add_le_add le_rfl hD) le_rfl)
+  calc Pr{let y ← mx >>= my}[q y]
+      ≤ wp⟦mx⟧ fun x ↦ Pr{let y ← oc x}[q y] + propInd (D x) + ε₂ :=
+        wp_mono_of_support mx fun x hx ↦ by
+          by_cases hDx : D x
+          · simp only [hDx, propInd_true]
+            exact (prEvent_le_one _).trans (le_add_right le_add_self)
+          · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
+    _ ≤ Pr{let y ← mx >>= oc}[q y] + Pr{let x ← mx}[D x] + ε₂ := by
+        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, wp_propInd, wp_const]
+        exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
+    _ ≤ _ := by gcongr
 
 /-- A bad world that certainly fires on disagreement absorbs that event's charge. The
 good-branch comparison may already contain the conditional bad-world probability. -/
 theorem prEvent_bind_le_add_bad_of_disagree' {mx : m α}
     {my oc : α → m β} {ob : α → m γ}
-    {q : β → Prop} {r : γ → Prop} {D : α → Prop} {ε : ENNReal}
+    {q : β → Prop} {r : γ → Prop} {D : α → Prop} {ε : ℝ≥0∞}
     (hbad : ∀ x ∈ support mx, D x → Pr{let z ← ob x}[r z] = 1)
     (h : ∀ x ∈ support mx, ¬D x → Pr{let y ← my x}[q y] ≤
       Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + ε) :
     Pr{let y ← mx >>= my}[q y] ≤
       Pr{let y ← mx >>= oc}[q y] + Pr{let z ← mx >>= ob}[r z] + ε := by
-  have hb := prEvent_bind_le_sum_add_of_support mx my q
-    ![fun x ↦ q <$> oc x, fun x ↦ r <$> ob x] ε (by
-      intro x hx
-      simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one]
-      by_cases hDx : D x
-      · simpa only [hbad x hx hDx] using
-          (prEvent_le_one _).trans
-            (le_add_right (le_add_left le_rfl) : (1 : ENNReal) ≤
-              Pr{let y ← oc x}[q y] + 1 + ε)
-      · exact h x hx hDx)
-  simpa only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-      map_bind, bind_pure_comp] using hb
+  calc Pr{let y ← mx >>= my}[q y]
+      ≤ wp⟦mx⟧ fun x ↦ Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + ε :=
+        wp_mono_of_support mx fun x hx ↦ by
+          by_cases hDx : D x
+          · rw [hbad x hx hDx]
+            exact (prEvent_le_one _).trans (le_add_right le_add_self)
+          · exact h x hx hDx
+    _ ≤ _ := by
+        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, wp_const]
+        exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
 
 /-- A bad world that certainly fires on disagreement pays for the exceptional branches. -/
 theorem prEvent_bind_le_add_bad_of_disagree {mx : m α}
     {my oc : α → m β} {ob : α → m γ}
-    {q : β → Prop} {r : γ → Prop} {D : α → Prop} {ε : ENNReal}
+    {q : β → Prop} {r : γ → Prop} {D : α → Prop} {ε : ℝ≥0∞}
     (hbad : ∀ x ∈ support mx, D x → Pr{let z ← ob x}[r z] = 1)
     (h : ∀ x ∈ support mx, ¬D x →
       Pr{let y ← my x}[q y] ≤ Pr{let y ← oc x}[q y] + ε) :
@@ -152,27 +151,21 @@ theorem prEvent_bind_le_add_bad_of_disagree {mx : m α}
 /-- Disagreement and a separate conditional bad world are both charged after a shared prefix. -/
 theorem prEvent_bind_le_add_bad_disagree {mx : m α}
     {my oc : α → m β} {ob : α → m γ}
-    {q : β → Prop} {r : γ → Prop} {D : α → Prop} {ε₁ ε₂ : ENNReal}
+    {q : β → Prop} {r : γ → Prop} {D : α → Prop} {ε₁ ε₂ : ℝ≥0∞}
     (hD : Pr{let x ← mx}[D x] ≤ ε₁)
     (h : ∀ x ∈ support mx, ¬D x → Pr{let y ← my x}[q y] ≤
       Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + ε₂) :
     Pr{let y ← mx >>= my}[q y] ≤ Pr{let y ← mx >>= oc}[q y] +
       Pr{let z ← mx >>= ob}[r z] + ε₁ + ε₂ := by
-  classical
-  have hb := prEvent_bind_le_sum_add_of_support mx my q
-    ![fun x ↦ q <$> oc x, fun x ↦ r <$> ob x, fun x ↦ pure (D x)] ε₂ (by
-      intro x hx
-      simp only [Fin.sum_univ_three, Matrix.cons_val_zero, Matrix.cons_val_one,
-        Matrix.cons_val_two, Matrix.head_cons, Matrix.tail_cons, prEvent_pure_prop]
-      by_cases hDx : D x
-      · simpa only [ite_eq_left hDx] using
-          (prEvent_le_one _).trans
-            (le_add_right (le_add_left le_rfl) : (1 : ENNReal) ≤
-              (Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z]) + 1 + ε₂)
-      · simpa only [ite_eq_right hDx, add_zero] using h x hx hDx)
-  have hb' : Pr{let y ← mx >>= my}[q y] ≤ Pr{let y ← mx >>= oc}[q y] +
-      Pr{let z ← mx >>= ob}[r z] + Pr{let x ← mx}[D x] + ε₂ := by
-    simpa only [Fin.sum_univ_three, Matrix.cons_val_zero, Matrix.cons_val_one,
-      Matrix.cons_val_two, Matrix.head_cons, Matrix.tail_cons,
-      map_bind, bind_pure_comp, add_assoc] using hb
-  exact hb'.trans (add_le_add (add_le_add le_rfl hD) le_rfl)
+  calc Pr{let y ← mx >>= my}[q y]
+      ≤ wp⟦mx⟧ fun x ↦ Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + propInd (D x) + ε₂ :=
+        wp_mono_of_support mx fun x hx ↦ by
+          by_cases hDx : D x
+          · simp only [hDx, propInd_true]
+            exact (prEvent_le_one _).trans (le_add_right le_add_self)
+          · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
+    _ ≤ Pr{let y ← mx >>= oc}[q y] + Pr{let z ← mx >>= ob}[r z] + Pr{let x ← mx}[D x] + ε₂ := by
+        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add,
+          wp_propInd, wp_const]
+        exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
+    _ ≤ _ := by gcongr

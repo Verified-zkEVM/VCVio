@@ -29,7 +29,8 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 ### Unary (core WP)
 
 Unary triples additionally require `open scoped Std.Internal.Do OracleComp.Quantitative`.
-- `wp⟦c⟧` — quantitative WP (partial application, use as `wp⟦c⟧ post`)
+- `wp⟦c⟧ post` — expectation of `post` over the outputs of `c` (global, from
+  `VCVio.EvalDist.Expectation`)
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
 
 ### Game-level
@@ -70,17 +71,6 @@ def AdvBound (game : OracleComp spec₁ Bool) (ε : ℝ≥0∞) : Prop :=
 /-- Numeric proposition indicator: `𝟙⟦P⟧ = 1` if `P` holds, `0` otherwise.
 The true branch is the numeric value `1`, including for the unbounded expectation carrier. -/
 scoped notation "𝟙⟦" P "⟧" => propInd P
-
-/-- Quantitative WP notation. `wp⟦c⟧ post` directly elaborates to
-`wp c post`; `wp⟦c⟧` standalone elaborates to
-the lambda `fun post => wp c post` for partial
-application sites (e.g. `change wp⟦c⟧` or composition with `≤`). -/
-scoped syntax:max (name := wpBracket) "wp⟦" term "⟧" : term
-scoped syntax:max (name := wpBracketApp) "wp⟦" term "⟧" term:max : term
-
-scoped macro_rules
-  | `(wp⟦ $c ⟧ $post:term) => `(wp $c $post)
-  | `(wp⟦ $c ⟧)            => `(fun post => wp $c post)
 
 /-- Raw relational WP notation.
 `rwp⟦c₁ ~ c₂ | post; epost₁, epost₂⟧` elaborates to `VCVio.ProgramLogic.rwp`.
@@ -140,9 +130,9 @@ lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
 theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p q : α → Prop) :
-    wp oa (fun x => 𝟙⟦p x ∨ q x⟧) ≤
-        wp oa (fun x => 𝟙⟦p x⟧) +
-          wp oa (fun x => 𝟙⟦q x⟧) := by
+    wp⟦oa⟧ (fun x => 𝟙⟦p x ∨ q x⟧) ≤
+        wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) +
+          wp⟦oa⟧ (fun x => 𝟙⟦q x⟧) := by
   rw [← wp_add]
   apply wp_mono
   intro x
@@ -153,7 +143,7 @@ theorem markov_bound {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
-    a * Pr{let x ← oa}[p x] ≤ wp oa f := by
+    a * Pr{let x ← oa}[p x] ≤ wp⟦oa⟧ f := by
   rw [prEvent_eq_wp_propInd, ← wp_mul_const]
   refine wp_mono oa fun x => ?_
   unfold propInd

@@ -60,7 +60,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
     (oa : OracleComp (unifSpec + (T →ₒ Fin (2 ^ b))) α) :
     ∀ (q : ℕ), IsQueryBoundP oa (· matches .inr _) q →
     ∀ cache keys st, INV' ρ b relevant key coord (dead cache) cache keys st →
-    wp ((simulateQ (roImpl b T) oa).run cache) (fun z => leaf z.1 z.2)
+    wp⟦(simulateQ (roImpl b T) oa).run cache⟧ (fun z => leaf z.1 z.2)
       ≤ (q : ℝ≥0∞) * slotPsi ρ b S (fun _ => none)
         + Phi ρ b S keys st (dead cache) + slotPsi ρ b S (fun _ => none) := by
   classical
@@ -80,9 +80,9 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
         have hbud : (if (Sum.inl n : ℕ ⊕ T) matches Sum.inr _ then q - 1 else q) = q :=
           ite_eq_right (by simp)
         rw [hbud] at hrest
-        change wp ((unifFwdImpl (T →ₒ Fin (2 ^ b)) n).run cache >>=
+        change wp⟦(unifFwdImpl (T →ₒ Fin (2 ^ b)) n).run cache >>=
             fun p : unifSpec.Range n × (T →ₒ Fin (2 ^ b)).QueryCache =>
-              (simulateQ (roImpl b T) (mx p.1)).run p.2) (fun z => leaf z.1 z.2) ≤ _
+              (simulateQ (roImpl b T) (mx p.1)).run p.2⟧ (fun z => leaf z.1 z.2) ≤ _
         have hrun : ((unifFwdImpl (T →ₒ Fin (2 ^ b)) n).run cache >>=
             fun p : unifSpec.Range n × (T →ₒ Fin (2 ^ b)).QueryCache =>
               (simulateQ (roImpl b T) (mx p.1)).run p.2)
@@ -107,9 +107,9 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
           have hcast : ((q - 1 : ℕ) : ℝ≥0∞) + 1 = (q : ℝ≥0∞) := by
             exact_mod_cast Nat.succ_pred_eq_of_pos hq0
           rw [← hcast, add_mul, one_mul]
-        change wp ((randomOracle (spec := T →ₒ Fin (2 ^ b)) s).run cache >>=
+        change wp⟦(randomOracle (spec := T →ₒ Fin (2 ^ b)) s).run cache >>=
             fun p : Fin (2 ^ b) × (T →ₒ Fin (2 ^ b)).QueryCache =>
-              (simulateQ (roImpl b T) (mx p.1)).run p.2) (fun z => leaf z.1 z.2) ≤ _
+              (simulateQ (roImpl b T) (mx p.1)).run p.2⟧ (fun z => leaf z.1 z.2) ≤ _
         rcases hc : cache s with _ | u
         · -- cache miss: fresh uniform sample
           have hrun : ((randomOracle (spec := T →ₒ Fin (2 ^ b)) s).run cache >>=
@@ -127,7 +127,7 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
             set k₀ := key s with hk₀
             set i₀ := coord s with hi₀
             have hIH : ∀ u : Fin (2 ^ b),
-                wp ((simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u))
+                wp⟦(simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u)⟧
                     (fun z => leaf z.1 z.2)
                   ≤ ((q - 1 : ℕ) : ℝ≥0∞) * μ
                     + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache) + μ := by
@@ -138,10 +138,10 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
               gcongr
               exact Phi_mono_dead ρ b S _ _ _ _ (hdead_mono cache s u)
             rw [wp_bind]
-            calc wp ($ᵗ Fin (2 ^ b)) (fun u =>
-                    wp ((simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u))
+            calc wp⟦$ᵗ Fin (2 ^ b)⟧ (fun u =>
+                    wp⟦(simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u)⟧
                       (fun z => leaf z.1 z.2))
-                ≤ wp ($ᵗ Fin (2 ^ b)) (fun u =>
+                ≤ wp⟦$ᵗ Fin (2 ^ b)⟧ (fun u =>
                     ((q - 1 : ℕ) : ℝ≥0∞) * μ
                       + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache) + μ) :=
                   wp_mono _ hIH
@@ -243,7 +243,7 @@ private theorem main_induction_gen_init {T K C : Type} [DecidableEq T]
       leaf a cache ≤ Phi ρ b S keys st (dead cache) + slotPsi ρ b S (fun _ => none))
     (oa : OracleComp (unifSpec + (T →ₒ Fin (2 ^ b))) α)
     (q : ℕ) (hq : IsQueryBoundP oa (· matches .inr _) q) :
-    wp ((simulateQ (roImpl b T) oa).run ∅) (fun z => leaf z.1 z.2)
+    wp⟦(simulateQ (roImpl b T) oa).run ∅⟧ (fun z => leaf z.1 z.2)
       ≤ ((q + 1 : ℕ) : ℝ≥0∞) * slotPsi ρ b S (fun _ => none) := by
   classical
   have hINV : INV' ρ b relevant key coord (dead ∅) ∅ (∅ : Finset K)
@@ -370,9 +370,9 @@ private theorem dropLog_wp {ι : Type} {hashSpec : OracleSpec ι} [DecidableEq �
     [∀ t : hashSpec.Domain, SampleableType (hashSpec.Range t)]
     {α : Type} (oa : OracleComp (unifSpec + hashSpec) α) (cache : hashSpec.QueryCache)
     (f : α → hashSpec.QueryCache → ℝ≥0∞) :
-    wp (((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache)
+    wp⟦((simulateQ (idImplW hashSpec + loggedROW hashSpec) oa).run).run cache⟧
         (fun z => f z.1.1 z.2)
-      = wp ((simulateQ hashSpec.romImpl oa).run cache) (fun w => f w.1 w.2) := by
+      = wp⟦(simulateQ hashSpec.romImpl oa).run cache⟧ (fun w => f w.1 w.2) := by
   rw [← dropLog_run_eq oa cache, wp_map]
   rfl
 
@@ -591,9 +591,9 @@ private lemma ksSample_prEvent_eq_wp
     (x : Stmt) (msg : M) :
     Pr{let out ← ksSample σ hr ρ b S M prover x msg}[out.2 = true ∧
         fischlinFindWitness σ ρ b M x out.1.1 out.1.2 = none]
-      = wp (((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
+      = wp⟦((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
             + loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
-          (prover x msg)).run).run ∅)
+          (prover x msg)).run).run ∅⟧
         (fun z =>
           (if fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none then 1 else 0) *
             𝒟[(simulateQ (fischlinImpl ρ b M)
@@ -611,12 +611,12 @@ private lemma ksSample_prEvent_eq_wp
                 σ hr ρ b S M).verify x msg z.1.1)).run z.2 >>= fun vc =>
               pure ((z.1.1, z.1.2), vc.1) := rfl
   rw [hks, prEvent_eq_wp_indicator, wp_bind]
-  refine congrArg (wp _) (funext fun z => ?_)
+  refine congrArg (wp⟦_⟧) (funext fun z => ?_)
   rw [wp_bind]
   by_cases hfw : fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none
   · rw [ite_eq_left hfw, one_mul, ← prEvent_eq_evalDist_singleton, prEvent_eq_wp_indicator,
       StateT.run', wp_map]
-    refine congrArg (wp _) (funext fun vc => ?_)
+    refine congrArg (wp⟦_⟧) (funext fun vc => ?_)
     simp [hfw]
   · rw [ite_eq_right hfw, zero_mul]
     simp [hfw]
@@ -629,18 +629,18 @@ private lemma EP_scanMiss_eq_EP_ksLeaf
       OracleComp (unifSpec + fischlinROSpec Stmt Commit Chal Resp ρ b M)
         (FischlinProof Commit Chal Resp ρ))
     (x : Stmt) (msg : M) :
-    wp (((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
+    wp⟦((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
             + loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
-          (prover x msg)).run).run ∅)
+          (prover x msg)).run).run ∅⟧
         (fun z =>
           (if fischlinFindWitness σ ρ b M x z.1.1 z.1.2 = none then 1 else 0) *
             𝒟[(simulateQ (fischlinImpl ρ b M)
               ((Fischlin (m := OracleComp (unifSpec
                   + fischlinROSpec Stmt Commit Chal Resp ρ b M))
                 σ hr ρ b S M).verify x msg z.1.1)).run' z.2] {true})
-      = wp (((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
+      = wp⟦((simulateQ (idImplW (fischlinROSpec Stmt Commit Chal Resp ρ b M)
             + loggedROW (fischlinROSpec Stmt Commit Chal Resp ρ b M))
-          (prover x msg)).run).run ∅)
+          (prover x msg)).run).run ∅⟧
         (fun z => ksLeaf σ hr ρ b S M x msg z.1.1 z.2) := by
   classical
   refine wp_congr_of_support _ fun z hz => ?_

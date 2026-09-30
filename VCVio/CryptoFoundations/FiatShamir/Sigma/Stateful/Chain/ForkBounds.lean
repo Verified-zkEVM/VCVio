@@ -626,7 +626,7 @@ private lemma forkLogged_verify_prob_true_le_forkPoint_run
             (Commit := Commit) (Chal := Chal) (Resp := Resp) adv simT pk)}[x = true]
         ≤ Pr{let trace ← finalRun}[(Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
     simp only [forkLoggedVerifyBody, finalRun, loggedRun, prEvent_norm]
-    refine OracleComp.prEvent_bind_mono_of_support _ _ _ fun z hz => ?_
+    refine wp_mono_of_support _ fun z hz => ?_
     have hinv := forkLoggedImpl_preserves_inv (M := M) (Commit := Commit)
       (Chal := Chal) (Resp := Resp) simT pk (adv.main pk) hz
     have hliveAdv := forkLoggedImpl_preserves_live_adv_inv (M := M)
@@ -673,12 +673,12 @@ private lemma forkLogged_verify_prob_true_le_forkPoint_run
             forkFinalQueryTrace (M := M) (Commit := Commit) (Chal := Chal)
               (Resp := Resp) σ pk z.1 (z.2, ([] : List M)))}[
         (Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
-          rw [hproj]
+          rw [← hproj, MeasureProgramLogic.wp_map]
       _ =
         Pr{let trace ← Fork.runTrace σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) pk}[
         (Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
           rw [forkBase_finalQuery_runTrace_eq (M := M) (Commit := Commit)
-            (Chal := Chal) (Resp := Resp) σ hr adv simT pk]
+            (Chal := Chal) (Resp := Resp) σ hr adv simT pk, prEvent_bind]
   exact hbind'.trans_eq hpoint
 
 /-- The H5 body's success probability is bounded by the wrapped adversary's
@@ -710,7 +710,7 @@ private lemma forkH5Body_prob_true_le_fork_advantage
             (Resp := Resp) σ hr adv simT)}[x = true] ≤
         Pr{let x ← pointBody}[x = true] := by
     simp only [forkH5Body, pointBody, prEvent_norm]
-    refine OracleComp.prEvent_bind_mono_of_support _ _ _ fun ps _ => ?_
+    refine wp_mono_of_support _ fun ps _ => ?_
     rcases ps with ⟨pk, sk⟩
     simpa only [forkLoggedVerifyBody, prEvent_norm] using
       forkLogged_verify_prob_true_le_forkPoint_run (M := M) (Commit := Commit)

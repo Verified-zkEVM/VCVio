@@ -123,13 +123,9 @@ initialize wpStepRegistry :
   }
 
 /-- Selector for `Sym.mkPatternFromDeclWithKey`: extract the `comp` argument
-from the LHS of a `wp comp post = …` equation.
-
-After `Sym.preprocessType`, the abbrev `OracleComp.ProgramLogic.wp` has been
-unfolded to `Std.Internal.Do.wp _ _ Order.bot`, the canonical shape; the folded
-abbreviation is accepted as well. The `comp` argument is positionally:
-* `OracleComp.ProgramLogic.wp ι spec … oa post` → 2nd-to-last explicit argument.
-* `Std.Internal.Do.wp m Pred EPred α … oa post epost` → 3rd-to-last explicit argument. -/
+from the LHS of a `wp⟦comp⟧ post = …` equation, core's
+`Std.Internal.Do.wp m Pred EPred α … comp post epost`, where it is the 3rd-to-last explicit
+argument. -/
 private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
   let body := body.consumeMData
   unless body.isAppOfArity ``Eq 3 do
@@ -137,15 +133,11 @@ private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
   let lhs := (body.getArg! 1).consumeMData
   let fn := lhs.getAppFn
   let n := lhs.getAppNumArgs
-  if fn.isConstOf ``Std.Internal.Do.wp then
-    unless n ≥ 3 do
-      throwError m!"@[wpStep] `Std.Internal.Do.wp` LHS has too few arguments:{indentExpr lhs}"
-    return (lhs.getArg! (n - 3), ())
-  unless fn.isConstOf ``OracleComp.ProgramLogic.wp do
-    throwError m!"@[wpStep] expects an `wp _ _` LHS; got:{indentExpr lhs}"
-  unless n ≥ 2 do
-    throwError m!"@[wpStep] LHS has too few arguments:{indentExpr lhs}"
-  return (lhs.getArg! (n - 2), ())
+  unless fn.isConstOf ``Std.Internal.Do.wp do
+    throwError m!"@[wpStep] expects a `wp⟦_⟧ _` LHS; got:{indentExpr lhs}"
+  unless n ≥ 3 do
+    throwError m!"@[wpStep] `Std.Internal.Do.wp` LHS has too few arguments:{indentExpr lhs}"
+  return (lhs.getArg! (n - 3), ())
 
 /-- Construct a registry entry from a theorem declaration. Runs the
 `Sym.Pattern` pipeline once, keyed on the `comp` argument. -/

@@ -40,7 +40,9 @@ example {m : Type → Type v} [Monad m] [LawfulMonad m]
       (∑ i, Pr{let q ← g i x}[q]) + bound x) :
     Pr{let y ← mx >>= f}[y ≤ 0] ≤
       (∑ i, Pr{let q ← mx >>= g i}[q]) + ∫⁻ x, bound x ∂𝒟[mx] :=
-  prEvent_bind_le_sum_add_lintegral_ae mx f (fun y ↦ y ≤ 0) g hf hg bound h
+  prEvent_bind_le_sum_add_lintegral_ae mx f (fun y ↦ y ≤ 0) (fun i x ↦ Pr{let q ← g i x}[q]) hf
+    (fun i ↦ (Measure.measurable_coe (measurableSet_singleton True)).comp (by
+      simpa only [id_map'] using hg i)) bound h
 
 example (κ : Kernel ℝ ℝ) (η : Fin 2 → Kernel ℝ Bool) (bound : ℝ → ENNReal)
     (h : ∀ᵐ x ∂gaussianReal 0 1, κ x (Set.Iic 0) ≤
@@ -66,7 +68,7 @@ example {α β : Type} (mx : Option α) (f : α → Option β) (p : β → Prop)
       (∑ i, Pr{let q ← g i x}[q]) + ε) :
     Pr{let y ← mx >>= f}[p y] ≤ (∑ i, Pr{let q ← mx >>= g i}[q]) +
       ε * Pr{let _x ← mx}[True] :=
-  prEvent_bind_le_sum_add_mul_mass_of_support mx f p g ε h
+  wp_le_sum_add_mul_mass_of_support mx (fun i x ↦ Pr{let q ← g i x}[q]) ε h
 
 example (mx : Option (Nat → Nat)) (f g : (Nat → Nat) → Option ℝ)
     (bad : (Nat → Nat) → Option (ℝ × ℝ)) (D : (Nat → Nat) → Prop) (ε₁ ε₂ : ENNReal)

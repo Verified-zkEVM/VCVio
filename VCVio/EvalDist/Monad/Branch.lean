@@ -45,7 +45,7 @@ variable [LawfulMonad m]
 theorem prEvent_not_eq_apply_false {α : Type} (mx : m α) (p : α → Prop) :
     Pr{let x ← mx}[¬p x] = 𝒟[p <$> mx] {False} := by
   calc
-    _ = Pr{let b ← p <$> mx}[¬b] := by rw [Functor.map_map]
+    _ = prEvent (p <$> mx) fun b ↦ ¬b := (prEvent_map mx p _).symm
     _ = 𝒟[p <$> mx] {b | ¬b} := prEvent_eq_evalDist_of_discrete _ _
     _ = _ := by congr 1; ext b; simp
 
@@ -115,11 +115,9 @@ theorem prEvent_bind_ite {α β : Type} (mx : m α) (p : α → Prop) [Decidable
     Pr{let y ← mx >>= fun x ↦ if p x then yes else no}[q y] =
       Pr{let x ← mx}[p x] * Pr{let y ← yes}[q y] +
         Pr{let x ← mx}[¬p x] * Pr{let y ← no}[q y] := by
-  rw [prEvent_def, map_bind]
-  simp_rw [apply_ite (Functor.map q)]
-  rw [evalDist_bind_ite]
-  simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul]
-  rfl
+  rw [← wp_propInd_mul, ← wp_propInd_mul, ← MeasureProgramLogic.wp_add]
+  refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
+  by_cases hx : p x <;> simp [hx]
 
 /-- A continuation event that is constant on an observed condition and zero otherwise factors
 through that condition's probability. The reference event may have a different output type. -/
@@ -131,13 +129,6 @@ theorem prEvent_bind_eq_mul_of_ite {α β γ : Type}
         let y ← f x}[q y] = if p x then Pr{
         let z ← my}[r z] else 0) :
     Pr{let y ← mx >>= f}[q y] = Pr{let x ← mx}[p x] * Pr{let z ← my}[r z] := by
-  calc
-    _ = Pr{let b ← mx >>= fun x ↦ if p x then r <$> my else pure False}[b] := by
-      rw [prEvent_bind_congr mx f (fun x ↦ if p x then r <$> my else pure False) q id (by
-          intro x
-          rw [h]
-          split_ifs <;> simp), id_map]
-    _ = _ := by
-      rw [prEvent_def, evalDist_bind_ite]
-      simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul, ← prEvent_def]
-      simp
+  rw [MeasureProgramLogic.wp_congr mx h, ← wp_propInd_mul]
+  refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
+  by_cases hx : p x <;> simp [hx]

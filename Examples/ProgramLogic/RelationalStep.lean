@@ -250,7 +250,7 @@ example [SampleableType α] {my : ProbComp β}
   · exact hf
 
 example [SampleableType α] (post : α → α → ℝ≥0∞) :
-    ⦃wp ($ᵗ α : ProbComp α) (fun a => post a a)⦄
+    ⦃wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a a)⦄
       ($ᵗ α : ProbComp α) ≈ₑ ($ᵗ α : ProbComp α)
     ⦃post⦄ := by
   rvcstep
@@ -262,7 +262,7 @@ variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
   [∀ t, Finite (spec'.Range t)]
 
 example (t : spec'.Domain) (post : spec'.Range t → spec'.Range t → ℝ≥0∞) :
-    ⦃wp (query t : OracleComp spec' (spec'.Range t)) (fun a => post a a)⦄
+    ⦃wp⟦(query t : OracleComp spec' (spec'.Range t))⟧ (fun a => post a a)⦄
       (query t : OracleComp spec' (spec'.Range t)) ≈ₑ
       (query t : OracleComp spec' (spec'.Range t))
     ⦃post⦄ := by

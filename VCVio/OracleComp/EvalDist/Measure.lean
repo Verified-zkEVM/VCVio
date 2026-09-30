@@ -115,25 +115,75 @@ theorem EvalDistEq.bind_bind_swap
   let : MeasurableSpace γ := ⊤
   _root_.EvalDistEq.of_evalDist_eq (evalDist_bind_bind_swap_of_uniform mx my f)
 
-/-- Independent oracle computations commute before an event of their continuation. -/
-theorem prEvent_bind_bind_swap
+/-- The expectation after two draws is the expectation of the identity after returning the
+observation. -/
+private theorem wp_wp_eq_wp_bind_bind {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.IsMeasureSpec spec] (mx : OracleComp spec α) (my : OracleComp spec β)
+    (g : α → β → ℝ≥0∞) :
+    (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) =
+      ∫⁻ y, y ∂𝒟[mx >>= fun a ↦ my >>= fun b ↦ (pure (g a b) : OracleComp spec ℝ≥0∞)] := by
+  rw [← MeasureProgramLogic.wp_eq_lintegral _ (fun y : ℝ≥0∞ ↦ y) measurable_id']
+  simp only [MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_pure]
+
+/-- Independent oracle computations commute inside an expectation. -/
+theorem wp_swap
     {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
     [∀ t, Countable (spec.Range t)]
     [OracleSpec.IsMeasureSpec spec]
-    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec Prop) :
-    prEvent (mx >>= fun a ↦ my >>= fun b ↦ f a b) =
-      prEvent (my >>= fun b ↦ mx >>= fun a ↦ f a b) := by
-  rw [prEvent_def, prEvent_def, evalDist_bind_bind_swap]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (g : α → β → ℝ≥0∞) :
+    (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) = wp⟦my⟧ fun b ↦ wp⟦mx⟧ fun a ↦ g a b := by
+  rw [wp_wp_eq_wp_bind_bind, wp_wp_eq_wp_bind_bind, evalDist_bind_bind_swap]
+
+/-- Independent oracle computations commute inside an expectation under a uniform oracle
+specification. -/
+theorem wp_swap_of_uniform
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.IsUniformMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (g : α → β → ℝ≥0∞) :
+    (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) = wp⟦my⟧ fun b ↦ wp⟦mx⟧ fun a ↦ g a b := by
+  rw [wp_wp_eq_wp_bind_bind, wp_wp_eq_wp_bind_bind, evalDist_bind_bind_swap_of_uniform]
+
+/-- An expectation over one oracle computation of an event of another commutes the two draws. -/
+theorem wp_prEvent_swap
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, Countable (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
+    (wp⟦mx⟧ fun a ↦ prEvent my (p a)) = wp⟦my⟧ fun b ↦ prEvent mx fun a ↦ p a b := by
+  simp only [prEvent_eq_wp]
+  exact wp_swap mx my _
+
+/-- An expectation over one oracle computation of an event of another commutes the two draws under
+a uniform oracle specification. -/
+theorem wp_prEvent_swap_of_uniform
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [OracleSpec.IsUniformMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
+    (wp⟦mx⟧ fun a ↦ prEvent my (p a)) = wp⟦my⟧ fun b ↦ prEvent mx fun a ↦ p a b := by
+  simp only [prEvent_eq_wp]
+  exact wp_swap_of_uniform mx my _
+
+/-- Independent oracle computations commute before an event of their continuation. -/
+theorem prEvent_bind_bind_swap
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, Countable (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec γ)
+    (p : γ → Prop) :
+    Pr{let a ← mx; let b ← my; let c ← f a b}[p c] =
+      Pr{let b ← my; let a ← mx; let c ← f a b}[p c] :=
+  wp_swap mx my _
 
 /-- Independent oracle computations commute before an event of their continuation under a uniform
 oracle specification. -/
 theorem prEvent_bind_bind_swap_of_uniform
-    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    {ι : Type u} {α β γ : Type} {spec : OracleSpec.{u, 0} ι}
     [OracleSpec.IsUniformMeasureSpec spec]
-    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec Prop) :
-    prEvent (mx >>= fun a ↦ my >>= fun b ↦ f a b) =
-      prEvent (my >>= fun b ↦ mx >>= fun a ↦ f a b) := by
-  rw [prEvent_def, prEvent_def, evalDist_bind_bind_swap_of_uniform]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (f : α → β → OracleComp spec γ)
+    (p : γ → Prop) :
+    Pr{let a ← mx; let b ← my; let c ← f a b}[p c] =
+      Pr{let b ← my; let a ← mx; let c ← f a b}[p c] :=
+  wp_swap_of_uniform mx my _
 
 /-- Compare measurable valuations of continuation outputs on structural support. The common
 computation's unobserved intermediate result needs no measurable-space instance. -/
@@ -233,26 +283,6 @@ theorem evalDist_bind_apply_congr_of_support
     (evalDist_bind_apply_mono_of_support mx f g hevent fun a ha ↦ (h a ha).le)
     (evalDist_bind_apply_mono_of_support mx g f hevent fun a ha ↦ (h a ha).ge)
 
-/-- Comparing the events of continuations on every structurally reachable output compares the
-composed events. -/
-theorem prEvent_bind_mono_of_support
-    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
-    [OracleSpec.IsMeasureSpec spec]
-    (mx : OracleComp spec α) (f g : α → OracleComp spec Prop)
-    (h : ∀ a ∈ support mx, prEvent (f a) ≤ prEvent (g a)) :
-    prEvent (mx >>= f) ≤ prEvent (mx >>= g) :=
-  evalDist_bind_apply_mono_of_support mx f g (measurableSet_singleton True) h
-
-/-- Continuation events with equal probability on every structurally reachable output give equal
-composed event probabilities. The common result needs no measurable space. -/
-theorem prEvent_bind_congr_of_support
-    {ι : Type u} {α : Type} {spec : OracleSpec.{u, 0} ι}
-    [OracleSpec.IsMeasureSpec spec]
-    (mx : OracleComp spec α) (f g : α → OracleComp spec Prop)
-    (h : ∀ a ∈ support mx, prEvent (f a) = prEvent (g a)) :
-    prEvent (mx >>= f) = prEvent (mx >>= g) :=
-  evalDist_bind_apply_congr_of_support mx f g (measurableSet_singleton True) h
-
 /-- Continuations equal in distribution on every structurally reachable output of a common draw
 give binds equal in distribution. -/
 theorem EvalDistEq.bind_congr_of_support
@@ -261,8 +291,8 @@ theorem EvalDistEq.bind_congr_of_support
     (mx : OracleComp spec α) {f g : α → OracleComp spec β}
     (h : ∀ a ∈ support mx, f a =ᵈ g a) : mx >>= f =ᵈ mx >>= g :=
   _root_.EvalDistEq.of_forall_prEvent_eq fun p ↦ by
-    rw [map_bind, map_bind]
-    exact prEvent_bind_congr_of_support mx _ _ fun a ha ↦ (h a ha).prEvent_eq p
+    rw [prEvent_bind, prEvent_bind]
+    exact wp_congr_of_support mx fun a ha ↦ (h a ha).prEvent_eq p
 
 /-- Almost-sure probability-one continuation events remain probability one after sequencing a
 lossless oracle computation. -/
@@ -395,17 +425,11 @@ theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] =
 theorem prFail_eq_zero (mx : OracleComp spec α) : prFail mx = 0 := by
   simp [prFail_def]
 
-/-- A lossless prefix whose result is unused leaves the event unchanged. -/
-theorem prEvent_bind_const (mx : OracleComp spec α) (my : OracleComp spec Prop) :
-    prEvent (mx >>= fun _ ↦ my) = prEvent my := by
-  rw [prEvent_def, prEvent_def, evalDist_bind_const]
-
 /-- A lossless prefix whose result is unused is equal in distribution to its continuation. -/
 theorem EvalDistEq.bind_const {β : Type} (mx : OracleComp spec α) (my : OracleComp spec β) :
     (mx >>= fun _ ↦ my) =ᵈ my :=
   _root_.EvalDistEq.of_forall_prEvent_eq fun p ↦ by
-    rw [map_bind]
-    exact prEvent_bind_const mx (p <$> my)
+    rw [prEvent_bind, wp_const, prEvent_true_eq_one, mul_one]
 
 /-- Discarding the result of a lossless computation leaves the constant. -/
 theorem EvalDistEq.map_const {β : Type} (mx : OracleComp spec α) (c : β) :

@@ -70,22 +70,22 @@ variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec] {β 
 /-- Not a `finiteness` rule, by design: an arbitrary functional need not have finite expectation,
 so the bound is supplied by hand. -/
 example (oa : OracleComp spec β) (g : β → ℝ≥0∞) (c : ℝ≥0∞) (hc : c ≠ ⊤) (h : ∀ x, g x ≤ c) :
-    wp oa g ≠ ⊤ :=
+    wp⟦oa⟧ g ≠ ⊤ :=
   ne_top_of_le_ne_top hc (wp_le_const_of_support oa fun x _ => h x)
 
 example [Finite β] (oa : OracleComp spec β) (g : β → ℝ≥0∞) (hg : ∀ x, g x ≠ ⊤) :
-    wp oa g + 1 ≠ ⊤ := by finiteness
+    wp⟦oa⟧ g + 1 ≠ ⊤ := by finiteness
 
 /-- A finite output type still requires finiteness of the functional. -/
 example [Finite β] (oa : OracleComp spec β) (g : β → ℝ≥0∞) (hg : ∀ x, g x ≠ ⊤) :
-    wp oa g ≠ ⊤ := by
+    wp⟦oa⟧ g ≠ ⊤ := by
   fail_if_success solve | clear hg; finiteness
   finiteness
 
 /-- Pointwise finiteness alone does not bound an infinite sum. -/
 example (oa : OracleComp spec ℕ) (g : ℕ → ℝ≥0∞) (hg : ∀ x, g x ≠ ⊤) :
-    (∀ x, g x ≠ ⊤) ∧ wp oa g = wp oa g := by
-  fail_if_success have : wp oa g ≠ ⊤ := by finiteness
+    (∀ x, g x ≠ ⊤) ∧ wp⟦oa⟧ g = wp⟦oa⟧ g := by
+  fail_if_success have : wp⟦oa⟧ g ≠ ⊤ := by finiteness
   exact ⟨hg, rfl⟩
 
 end wp

@@ -136,7 +136,7 @@ theorem prEvent_cache_has_value_le_of_unique_preimage {α : Type}
             StateT.modifyGet, StateT.run]
           rfl
         rw [hstep]; simp [monad_norm]
-      rw [hrun]
+      rw [hrun, prEvent_bind]
       have hih : ∀ u ∈ support (liftM (query t) : OracleComp spec (spec.Range t)),
           ¬HEq u v₀ →
           Pr{let z ← (simulateQ cachingOracle (mx u)).run (cache₀.cacheQuery t u)}[∃ t₀ v,

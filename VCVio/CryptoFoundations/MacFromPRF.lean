@@ -398,7 +398,8 @@ theorem prfIdealExperiment_macToPRFReduction_le [DecidableEq R] [SampleableType 
     (prf : PRFScheme K D R) (adversary : (prf.toMacAlg).UnforgeableAdversary) :
     𝒟[prfIdealExperiment (macToPRFReduction prf adversary)] {true} ≤
       (Fintype.card R : ℝ≥0∞)⁻¹ := by
-  rw [← prEvent_eq_evalDist_singleton _ true, prfIdealExperiment_macToPRFReduction_eq_ideal_body]
+  rw [← prEvent_eq_evalDist_singleton _ true, prfIdealExperiment_macToPRFReduction_eq_ideal_body,
+    prEvent_bind]
   refine prEvent_bind_le_of_forall_le_of_support _ _ _ fun ⟨((msg, τ), log), cache⟩ hmem => ?_
   dsimp only
   cases hcache : cache msg with

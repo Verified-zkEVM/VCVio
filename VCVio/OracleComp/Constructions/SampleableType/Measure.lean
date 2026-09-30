@@ -114,6 +114,13 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
 
+/-- An expectation over a uniform draw from a finite type is the average of the observation. -/
+@[simp]
+theorem wp_uniformSample_eq_sum {α : Type} [SampleableType α] [_root_.Fintype α]
+    (g : α → ENNReal) : wp⟦($ᵗ α : ProbComp α)⟧ g = (∑ x, g x) / Fintype.card α := by
+  rw [wp_eq_sum_fintype, ENNReal.div_eq_inv_mul, Finset.mul_sum]
+  exact Finset.sum_congr rfl fun a _ ↦ by rw [prEvent_uniformSample_eq_singleton]
+
 /-- Each length-`n` list is drawn by `n` independent uniform samples with probability
 `(|α| ^ n)⁻¹`. -/
 theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.Fintype α]
@@ -126,7 +133,8 @@ theorem prEvent_replicate_uniformSample {α : Type} [SampleableType α] [_root_.
       simp [OracleComp.replicate_zero]
   | succ n ih =>
       obtain ⟨y, ys, rfl⟩ := List.exists_cons_of_length_eq_add_one hlen
-      rw [OracleComp.replicate_succ_bind, OracleComp.prEvent_bind_eq_mul_of_unique _ _ y _
+      rw [OracleComp.replicate_succ_bind, prEvent_bind,
+        OracleComp.prEvent_bind_eq_mul_of_unique _ _ y _
         fun x' _ hx' => by
           obtain ⟨xs, -, hxs⟩ := (mem_support_bind_iff _ _ _).mp hx'
           exact (List.cons.inj ((mem_support_pure_iff' (m := ProbComp) _ _).mp hxs)).1]
@@ -214,19 +222,16 @@ theorem prEvent_uniformSample_equiv (e : α ≃ β) (p : β → Prop) :
 theorem prEvent_uniformSample_pair_of_bijective [SampleableType γ] {g : α → β → γ}
     (hg : Function.Bijective (Function.uncurry g)) (p : γ → Prop) :
     Pr{let x ← $ᵗ α; let y ← $ᵗ β}[p (g x y)] = Pr{let z ← $ᵗ γ}[p z] := by
-  calc Pr{let x ← $ᵗ α; let y ← $ᵗ β}[p (g x y)]
-      = Pr{let xy ← (do let x ← $ᵗ α; let y ← $ᵗ β; return (x, y))}[
-          p (Function.uncurry g xy)] := by
-        simp only [prEvent_norm, Function.uncurry_apply_pair]
-    _ = Pr{let z ← $ᵗ γ}[p z] := by
-        rw [← prEvent_map]
-        refine (evalDistEq_iff_evalDist_eq.mpr ?_).prEvent_eq p
-        let : MeasurableSpace α := ⊤
-        let : MeasurableSpace β := ⊤
-        let : MeasurableSpace γ := ⊤
-        rw [evalDist_map_of_discrete, evalDist_pair, evalDist_uniformSample,
-          evalDist_uniformSample, evalDist_uniformSample, ← uniformOn_univ_prod]
-        exact map_uniformOn_univ_of_bijective Measurable.of_discrete hg
+  have h : Function.uncurry g <$> (do let x ← $ᵗ α; let y ← $ᵗ β; return (x, y) :
+      ProbComp (α × β)) =ᵈ ($ᵗ γ : ProbComp γ) := by
+    refine evalDistEq_iff_evalDist_eq.mpr ?_
+    let : MeasurableSpace α := ⊤
+    let : MeasurableSpace β := ⊤
+    let : MeasurableSpace γ := ⊤
+    rw [evalDist_map_of_discrete, evalDist_pair, evalDist_uniformSample,
+      evalDist_uniformSample, evalDist_uniformSample, ← uniformOn_univ_prod]
+    exact map_uniformOn_univ_of_bijective Measurable.of_discrete hg
+  simpa only [prEvent_norm, Function.uncurry_apply_pair] using h.prEvent_eq p
 
 /-- A uniform draw from a product is two independent uniform draws. -/
 theorem prEvent_uniformSample_prod (p : α × β → Prop) :

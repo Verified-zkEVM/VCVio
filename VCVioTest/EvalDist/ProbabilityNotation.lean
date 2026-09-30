@@ -203,23 +203,46 @@ example {α : Type} [Countable α] (mx my : ProbComp α)
 
 /-! ### Event notation
 
-`Pr{…}[…]` elaborates an ordinary `do` sequence to `prEvent` in the form `simp` maintains, and
-goals display its draws as `let` statements. -/
+`Pr{items}[t]` is the probability that the `do` sequence `items; return t` returns a true
+proposition, `prEvent (do items; return t) fun b => b`. It is stored in the normal form `simp`
+produces: every draw but the last becomes an expectation `wp⟦a⟧ fun x => …`, the last draw an
+event, and goals display the draws as `let` statements. -/
 
 section eventNotation
 
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ)
 
-example : Pr{let x ← mx}[x = true] = prEvent ((fun x => x = true) <$> mx) := rfl
-example : Pr{let x ← mx}[x] = prEvent ((fun x => x = true) <$> mx) := rfl
+/-! The specification: the notation equals the event of its literal `do` sequence. -/
+
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
-    prEvent (mx >>= fun x => (fun y => y = 3 ∧ x = true) <$> my x) := rfl
+    prEvent (do let x ← mx; let y ← my x; return (y = 3 ∧ x = true)) fun b => b := by
+  simp only [prEvent_norm]
+example (m₁ m₂ : ProbComp ℕ) : Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] =
+    prEvent (do let b ← $ᵗ Bool; let x ← (if b then m₁ else m₂); return (x = 3)) fun b => b := by
+  simp only [prEvent_norm]
+example (mo : ProbComp (Option ℕ)) :
+    Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] =
+      prEvent (do
+        let o ← mo
+        let x ← match o with | some a => pure a | none => mz
+        return (x = 1)) fun b => b := by
+  simp only [prEvent_norm]
+
+/-! The normal form. -/
+
+example : Pr{let x ← mx}[x = true] = prEvent mx fun x => x = true := rfl
+example : Pr{let x ← mx}[x] = prEvent mx fun x => x = true := rfl
+example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
+    wp⟦mx⟧ fun x => prEvent (my x) fun y => y = 3 ∧ x = true := rfl
+example : Pr{let x ← mx >>= my}[x = 3] = wp⟦mx⟧ fun x => prEvent (my x) fun y => y = 3 := rfl
+example : Pr{let x ← not <$> mx}[x] = prEvent mx fun x => (!x) = true := rfl
 example : Pr{let x : Bool ← mx}[x] = Pr{let x ← mx}[x = true] := rfl
-example : Pr{let x ← mz}[x = 3] = prEvent ((fun z => z = 3) <$> mz) := rfl
+example : Pr{let x ← mz}[x = 3] = prEvent mz fun z => z = 3 := rfl
 example : Pr{{let x ← mx}}[x] = Pr{let x ← mx}[x] := rfl
 example : Pr{
     let x ← mz
-    let y := x + 1}[y = 3] = prEvent ((fun x => x + 1 = 3) <$> mz) := rfl
+    let y := x + 1}[y = 3] = prEvent mz fun x => x + 1 = 3 := rfl
+example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = 3] = propInd (a = 3) := rfl
 
 /-- A draw whose action continues on the following lines is laid out as in a `do` block, or its
 action is parenthesized. -/
@@ -235,15 +258,24 @@ example (f : ℕ → ℕ → ProbComp ℕ) : Pr{let x ← (f
 nested actions, branches and `match` on the right of a draw, and `let mut` with loops. -/
 example (f : ℕ → ℕ → ProbComp ℕ) :
     Pr{let z ← f (← mz) (← mz)}[z = 0] = Pr{let a ← mz; let b ← mz; let z ← f a b}[z = 0] := rfl
-example (m₁ m₂ : ProbComp ℕ) (mo : ProbComp (Option ℕ)) :
-    Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] ≤ 1 ∧
-      Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] ≤ 1 :=
-  ⟨by simp, by simp⟩
 example (g : ℕ → ProbComp ℕ) :
-    Pr{let mut s := 0; for i in [1, 2, 3] do s := s + (← g i)}[s = 3] ≤ 1 := by simp
+    Pr{let mut s := 0; for i in [1, 2, 3] do s := s + (← g i)}[s = 3] =
+      Pr{let a ← g 1; let b ← g 2; let c ← g 3}[a + b + c = 3] := by
+  simp
 
-/-! Goals display the draws as `let` statements on one line when they fit; an eta-reduced final
-selector is applied to a name no draw binds. -/
+/-- A single-constructor destructuring draw becomes projections, whether it is the last draw or
+not, and whether its action is a term or a nested `do` block. -/
+example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp (ℕ × ℕ)) :
+    Pr{let ⟨a, b⟩ ← mp}[a = b] = prEvent mp (fun z => z.1 = z.2) ∧
+      Pr{let ⟨a, b⟩ ← do f (← init)}[a = b] =
+        wp⟦init⟧ fun x => prEvent (f x) fun z => z.1 = z.2 :=
+  ⟨rfl, rfl⟩
+example (mp : ProbComp (ℕ × ℕ)) (g : ℕ → ProbComp ℕ) :
+    Pr{let (a, b) ← mp; let c ← g a}[b = c] =
+      wp⟦mp⟧ fun z => prEvent (g z.1) fun c => z.2 = c := rfl
+
+/-! Goals display the draws as `let` statements on one line when they fit, an unused draw as
+`_`, and an eta-reduced final selector applied to a name no draw binds. -/
 
 /-- info: Pr{let x ← mx; let y ← my x}[y = 3 ∧ x = true] : ℝ≥0∞ -/
 #guard_msgs in
@@ -263,9 +295,34 @@ variable (S : Set ℕ) in
 #guard_msgs in
 #check Pr{let x ← mx; let y ← my x}[y ∈ S]
 
+/-- info: Pr{let _ ← mx; let y ← mz}[y = 3] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let _ ← mx; let y ← mz}[y = 3]
+
+variable (g : ℕ → ℝ≥0∞) in
+/-- info: wp⟦mz⟧ g : ℝ≥0∞ -/
+#guard_msgs in
+#check wp⟦mz⟧ g
+
 /-- info: prFail mz : ℝ≥0∞ -/
 #guard_msgs in
 #check prFail mz
+
+/--
+trace: mx : ProbComp Bool
+my : Bool → ProbComp ℕ
+mz : ProbComp ℕ
+h : Pr{let b ← mx; let y ← my b}[y = 3] = 0
+⊢ Pr{let b ← mx; let x ← my b}[x = 3] = 0
+-/
+#guard_msgs in
+/-- `simp` brings an explicit event to the normal form and keeps the program's binder names: `b`
+from the bind, `x` from the map `(· = 3)`. -/
+example (h : Pr{let b ← mx; let y ← my b}[y = 3] = 0) :
+    prEvent (mx >>= fun b => (· = 3) <$> my b) (fun p => p) = 0 := by
+  simp only [prEvent_norm]
+  trace_state
+  exact h
 
 /-- `simp` keeps the notation in normal form and applies laws keyed on the head constant. -/
 example (p : ℕ → Prop) (h : Pr{let x ← mz}[p x] = 0) : Pr{let x ← mz}[p x] = 0 := by
@@ -277,14 +334,6 @@ example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = a] = 1 := by simp
 /-- A derived uniform program is closed by the uniform law after `simp` merges its maps. -/
 example : Pr{let x ← (not <$> ($ᵗ Bool : ProbComp Bool))}[x = true] = 2⁻¹ := by
   simp [SampleableType.prEvent_uniformSample, Finset.filter_insert, Finset.filter_singleton]
-
-/-- A final destructuring draw ends the event in a map, whether its action is a term or a nested
-`do` block. -/
-example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp (ℕ × ℕ)) :
-    Pr{let ⟨a, b⟩ ← mp}[a = b] = prEvent ((fun z => match z with | (a, b) => a = b) <$> mp) ∧
-      Pr{let ⟨a, b⟩ ← do f (← init)}[a = b] =
-        prEvent ((fun z => match z with | (a, b) => a = b) <$> (init >>= f)) :=
-  ⟨rfl, rfl⟩
 
 /-- Goals display in the draw form. -/
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] = Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] := by

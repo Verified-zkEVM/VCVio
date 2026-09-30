@@ -35,7 +35,7 @@ variable {m : Type → Type v} {m' : Type → Type v'} [EvalDistSemantics m] [Ev
 /-- Two computations are equal in distribution when every event has the same probability under
 both. -/
 def EvalDistEq (mx : m α) (my : m' α) : Prop :=
-  ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]
+  ∀ p : α → Prop, prEvent mx p = prEvent my p
 
 @[inherit_doc] infix:50 " =ᵈ " => EvalDistEq
 
@@ -49,12 +49,12 @@ variable {m : Type → Type v} {m' : Type → Type v'} {m'' : Type → Type v''}
 
 /-- Equality in distribution gives every event the same probability. -/
 theorem prEvent_eq {mx : m α} {my : m' α} (h : mx =ᵈ my) (p : α → Prop) :
-    Pr{let x ← mx}[p x] = Pr{let y ← my}[p y] :=
+    prEvent mx p = prEvent my p :=
   h p
 
 /-- Computations whose events all have the same probabilities are equal in distribution. -/
 theorem of_forall_prEvent_eq {mx : m α} {my : m' α}
-    (h : ∀ p : α → Prop, Pr{let x ← mx}[p x] = Pr{let y ← my}[p y]) : mx =ᵈ my :=
+    (h : ∀ p : α → Prop, prEvent mx p = prEvent my p) : mx =ᵈ my :=
   h
 
 @[refl, simp]
@@ -115,13 +115,17 @@ theorem _root_.evalDistEq_iff_forall_prEvent_eq_output [Countable α] {mx : m α
   rw [← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]
   exact h x
 
+/-- Computations equal in distribution give every observation the same expectation. -/
+theorem wp_eq {mx : m α} {my : m' α} (h : mx =ᵈ my) (g : α → ℝ≥0∞) : wp⟦mx⟧ g = wp⟦my⟧ g := by
+  let : MeasurableSpace α := ⊤
+  rw [MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete,
+    MeasureProgramLogic.wp_eq_lintegral my g Measurable.of_discrete, h.evalDist_eq]
+
 /-- Binds of computations and continuations equal in distribution are equal in distribution. -/
 theorem bind {mx : m α} {my : m' α} (h : mx =ᵈ my) {f : α → m β} {g : α → m' β}
-    (hfg : ∀ a, f a =ᵈ g a) : mx >>= f =ᵈ my >>= g := by
-  let : MeasurableSpace α := ⊤
-  intro p
-  rw [map_bind, map_bind, prEvent_bind_of_discrete, prEvent_bind_of_discrete, h.evalDist_eq]
-  exact lintegral_congr fun a ↦ hfg a p
+    (hfg : ∀ a, f a =ᵈ g a) : mx >>= f =ᵈ my >>= g := fun p ↦ by
+  rw [prEvent_bind, prEvent_bind, h.wp_eq]
+  exact MeasureProgramLogic.wp_congr my fun a ↦ hfg a p
 
 end lawful
 

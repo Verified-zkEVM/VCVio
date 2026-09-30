@@ -84,7 +84,7 @@ theorem prEvent_simulateQ_run_and_not_bad_eq
         prEvent_eq_zero_of_forall_mem_support _ _ fun z hz h =>
           h.2 (forall_mem_support_simulateQ_run_of_bad impl₂ bad h_mono₂ _ hb z hz)]
     · simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind]
+        OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind]
       let : MeasurableSpace (spec.Range t × σ) := ⊤
       let G : Set (spec.Range t × σ) := {us | ¬bad us.2}
       have hcont (impl : QueryImpl spec (StateT σ (OracleComp spec')))
@@ -264,7 +264,7 @@ theorem measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad
     · rw [isQueryBoundP_query_bind_iff] at h_qb
       obtain ⟨h_can, h_cont⟩ := h_qb
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind]
+        OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind]
       let : MeasurableSpace (specκ.Range t × σ) := ⊤
       set q' := if S t then qS - 1 else qS
       have hmx : IsProbabilityMeasure 𝒟[(impl₁ t).run s₀] :=

@@ -328,7 +328,8 @@ private lemma verify_evalDist_true_mixed
         (partialSmallSumCount ρ b hits S : ℝ≥0∞) /
           (((2 ^ b : ℕ) : ℝ≥0∞)) ^ (Finset.univ.filter fun i : Fin ρ => hits i = none).card := by
   rw [verify_run'_mixed σ hr ρ b S M pk msg sig cache hits hcache,
-    ← prEvent_eq_evalDist_singleton, prEvent_bind_eq_sum_fintype]
+    ← prEvent_eq_evalDist_singleton, prEvent_bind, wp_eq_sum_fintype]
+  simp only [prEvent_pure]
   by_cases haV :
       ((List.finRange ρ).all fun i => σ.verify pk (sig i).1 (sig i).2.1 (sig i).2.2) = true
   · -- σ-verification accepted: the verdict is exactly the small-sum event.
@@ -346,10 +347,10 @@ private lemma verify_evalDist_true_mixed
                 (Finset.univ.filter fun i : Fin ρ => hits i = none).card
               else 0 := by
       intro u
-      rw [prob_extend_hits ρ b hits u, prEvent_pure, foldl_add_eq_sum ρ b u, haV]
+      rw [prob_extend_hits ρ b hits u, foldl_add_eq_sum ρ b u, haV]
       by_cases h3 : ∀ i h, hits i = some h → u i = h <;>
         by_cases h2 : (∑ i, (u i).val) ≤ S <;>
-        simp [h3, h2]
+        simp [h3, h2, propInd_eq_ite]
     rw [Finset.sum_congr rfl fun u _ => hterm u, ← Finset.sum_filter, Finset.sum_const,
       nsmul_eq_mul, ite_eq_left haV, one_mul, div_eq_mul_inv, ← ENNReal.inv_pow]
     rfl
@@ -368,7 +369,7 @@ private lemma verify_evalDist_true_mixed
             ProbComp Bool)}[r = true]
           = 0 := by
       intro u
-      rw [haV', prEvent_pure]
+      rw [haV']
       simp
     rw [Finset.sum_congr rfl fun u _ => hterm0 u, Finset.sum_const_zero, ite_eq_right haV, zero_mul,
       ENNReal.zero_div]

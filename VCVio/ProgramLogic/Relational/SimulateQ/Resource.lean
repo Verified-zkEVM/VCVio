@@ -67,12 +67,12 @@ theorem prEvent_bad_simulateQ_run_le_expectedQuerySlack
     (h_charged_step : ∀ (t : spec.Domain) (s : σ), charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
         Pr{let z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤ R s * ε +
-          wp ((impl t).run (s, false)) fun z =>
+          wp⟦(impl t).run (s, false)⟧ fun z =>
             if z.2.2 then 0 else Pr{let w ← k z}[w.2.2 = true])
     (h_free_step : ∀ (t : spec.Domain) (s : σ), ¬ charged t →
       ∀ (k : spec.Range t × σ × Bool → OracleComp spec' (γ × σ × Bool)),
         Pr{let z ← (impl t).run (s, false) >>= k}[z.2.2 = true] ≤
-          wp ((impl t).run (s, false)) fun z =>
+          wp⟦(impl t).run (s, false)⟧ fun z =>
             if z.2.2 then 0 else Pr{let w ← k z}[w.2.2 = true])
     (oa : OracleComp spec γ) {qS : ℕ} (h_qb : oa.IsQueryBoundP charged qS) (s : σ) :
     Pr{let z ← (simulateQ impl oa).run (s, false)}[z.2.2 = true] ≤
@@ -83,7 +83,7 @@ theorem prEvent_bad_simulateQ_run_le_expectedQuerySlack
       rw [isQueryBoundP_query_bind_iff] at h_qb
       obtain ⟨hvalid, hcont⟩ := h_qb
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind]
+        OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind]
       rw [expectedQuerySlack_query_bind]
       -- Each good post-state forwards its bad mass to the inductive hypothesis.
       have hpt : ∀ z : spec.Range t × σ × Bool,
@@ -178,7 +178,7 @@ lemma avgBadM_pure
       ∑' p : σ × Bool, ν p * (if p.2 = true then 1 else 0) := by
   rw [avgBadM]
   refine tsum_congr fun p => ?_
-  rw [simulateQ_pure, StateT.run_pure, prEvent_pure]
+  rw [simulateQ_pure, StateT.run_pure, prEvent_pure, propInd_eq_ite]
 
 /-- **One-step telescoping of `avgBadM` (joint-law form).** Moves one query off the front
 and exposes the post-step joint law, holding for any handler and any measure `ν`.
@@ -198,7 +198,7 @@ lemma avgBadM_query_bind_eq
         ∑' z : spec.Range t × σ × Bool, Pr{let x ← (impl t).run p}[x = z] *
           Pr{let w ← (simulateQ impl (cont z.1)).run z.2}[w.2.2 = true] := by
   simp only [avgBadM, simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-    OracleQuery.cont_query, id_map, StateT.run_bind, OracleComp.prEvent_bind_eq_tsum]
+    OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind, OracleComp.wp_eq_tsum]
 
 /-- **Post-step joint measure of a query step (bare-measure form).** The measure over
 `(output, post-state)` produced by averaging the per-state step mass

@@ -82,10 +82,12 @@ example : Pr{let _ ← chain12}[True] = 1 := by grind
 
 /-! ## 2. The same chain over a failing carrier
 
-Over `OptionT ProbComp` the lossless chain still has full successful mass under `simp`.
+Over `OptionT ProbComp` the lossless chain still has full successful mass under `simp`: the
+expectation of each lifted draw is the expectation of the draw.
 
 target(simp+grind): the guarded `longAbort` has mass `2⁻¹`; neither tactic shows even that it is
-below one, since the guard's mass sits under nine surrounding draws. -/
+below one: `simp` factors out the success masses of the surrounding draws but leaves the guard's
+expectation over its lifted draw unevaluated. -/
 
 example : Pr{let _ ← chain12Opt}[True] = 1 := by simp [chain12Opt]
 
@@ -130,9 +132,9 @@ example : (false : Bool) ∈ support chain12 := by simp [chain12]
 /-! ## 5. Outcome value of a multi-step chain — `target(simp+grind)`
 
 Computing a concrete outcome probability of a multi-step bind chain is the one shape **neither**
-terminal tactic closes: `simp` normalises the chain step by step but stops before collapsing the
-nested integrals to a number, and `grind` does no `ℝ≥0∞` arithmetic. `chain12` returns `true` only
-when all twelve coins do, so
+terminal tactic closes: `simp` normalises the chain step by step but stops at a nest of
+expectations over the uniform draws, which it does not collapse to a number, and `grind` does no
+`ℝ≥0∞` arithmetic. `chain12` returns `true` only when all twelve coins do, so
 
   `Pr{let x ← chain12}[x = true] = (2 ^ 12)⁻¹`   -- target(simp+grind)
 

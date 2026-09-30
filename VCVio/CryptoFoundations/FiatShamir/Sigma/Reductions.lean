@@ -234,7 +234,7 @@ private theorem perPk_extraction_bound
       rw [nmaReduction, (Fork.simulateQ_uniformImpl_evalDistEq _).prEvent_eq]
     rw [hsim, show nmaForkExtract σ hr M nmaAdv qH pk =
         contextFork wrappedMain qb (Sum.inr ()) cf >>=
-          nmaForkExtractBranch (M := M) (Chal := Chal) σ from rfl]
+          nmaForkExtractBranch (M := M) (Chal := Chal) σ from rfl, prEvent_bind]
     refine le_trans (le_of_eq (mul_one _).symm) (mul_le_prEvent_bind_of_forall _ _
       (fun r => E r ∧ r ∈ support (contextFork wrappedMain qb (Sum.inr ()) cf)) _
       (prEvent_mono_of_support _ _ _ fun r hr hE => ⟨hE, hr⟩) fun r hr => ?_)
@@ -302,14 +302,14 @@ theorem nma_to_hard_relation_bound (hss : σ.SpeciallySound)
   -- Both sides average a per-statement quantity over the key generator.
   have hAdv : Fork.advantage σ hr M nmaAdv qH = ∫⁻ pkw, acc pkw ∂𝒟[hr.gen] := by
     rw [Fork.advantage, Fork.experiment,
-      (Fork.simulateQ_uniformImpl_evalDistEq _).prEvent_eq,
+      (Fork.simulateQ_uniformImpl_evalDistEq _).prEvent_eq, prEvent_bind,
       prEvent_bind_eq_lintegral_of_discrete, OracleComp.evalDist_liftComp_uniform]
     refine MeasureTheory.lintegral_congr fun pkw => ?_
     rcases pkw with ⟨pk, w⟩
     simp only [acc, prEvent_norm]
   have hRHS : Pr{let x ← hardRelationExperiment hr (nmaReduction σ hr M nmaAdv qH)}[x = true] =
       ∫⁻ pkw, B pkw ∂𝒟[hr.gen] := by
-    rw [hardRelationExperiment, prEvent_bind_eq_lintegral_of_discrete]
+    rw [hardRelationExperiment, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
     refine MeasureTheory.lintegral_congr fun pkw => ?_
     rcases pkw with ⟨pk, w⟩
     simp only [B, prEvent_norm]

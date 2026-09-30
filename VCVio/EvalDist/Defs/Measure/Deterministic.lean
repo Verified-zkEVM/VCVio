@@ -119,47 +119,25 @@ instance (priority := 20) instLawfulEvalDistSemanticsExcept {ε : Type u} :
 
 /-- An absent optional result makes every event impossible. -/
 @[simp, grind =]
-theorem Option.prEvent_none : prEvent (none : Option Prop) = 0 := by
-  rw [prEvent_def, Option.evalDist_none, Measure.coe_zero, Pi.zero_apply]
+theorem Option.prEvent_none {α : Type} (p : α → Prop) : prEvent (none : Option α) p = 0 := by
+  change 𝒟[(none : Option Prop)] {True} = 0
+  rw [Option.evalDist_none, Measure.coe_zero, Pi.zero_apply]
 
-/-- A present optional proposition has probability one exactly when it holds. -/
+/-- An event of a present optional result is the indicator of the event at that result. -/
 @[simp, grind =]
-theorem Option.prEvent_some (P : Prop) [Decidable P] :
-    prEvent (some P) = if P then 1 else 0 :=
-  prEvent_pure_prop (m := Option) P
-
-/-- No event of an absent optional result succeeds. -/
-@[grind =]
-theorem Option.prEvent_map_none {α : Type} (p : α → Prop) :
-    prEvent (p <$> (none : Option α)) = 0 :=
-  Option.prEvent_none
-
-/-- An event of a present optional result has probability one exactly when it holds. -/
-@[grind =]
-theorem Option.prEvent_map_some {α : Type} (p : α → Prop) (x : α) [Decidable (p x)] :
-    prEvent (p <$> some x) = if p x then 1 else 0 :=
-  Option.prEvent_some (p x)
+theorem Option.prEvent_some {α : Type} (x : α) (p : α → Prop) :
+    prEvent (some x) p = propInd (p x) :=
+  prEvent_pure (m := Option) x p
 
 /-- An exceptional result makes every event impossible. -/
 @[simp, grind =]
-theorem Except.prEvent_error {ε : Type u} (error : ε) :
-    prEvent (Except.error error : Except ε Prop) = 0 := by
-  rw [prEvent_def, Except.evalDist_error, Measure.coe_zero, Pi.zero_apply]
+theorem Except.prEvent_error {ε : Type u} {α : Type} (error : ε) (p : α → Prop) :
+    prEvent (Except.error error : Except ε α) p = 0 := by
+  change 𝒟[(Except.error error : Except ε Prop)] {True} = 0
+  rw [Except.evalDist_error, Measure.coe_zero, Pi.zero_apply]
 
-/-- A successful exceptional proposition has probability one exactly when it holds. -/
+/-- An event of a successful exceptional result is the indicator of the event at that result. -/
 @[simp, grind =]
-theorem Except.prEvent_ok {ε : Type u} (P : Prop) [Decidable P] :
-    prEvent (Except.ok P : Except ε Prop) = if P then 1 else 0 :=
-  prEvent_pure_prop (m := Except ε) P
-
-/-- No event of an exceptional result succeeds. -/
-@[grind =]
-theorem Except.prEvent_map_error {ε : Type u} {α : Type} (p : α → Prop) (error : ε) :
-    prEvent (p <$> (Except.error error : Except ε α)) = 0 :=
-  Except.prEvent_error error
-
-/-- An event of a successful exceptional result has probability one exactly when it holds. -/
-@[grind =]
-theorem Except.prEvent_map_ok {ε : Type u} {α : Type} (p : α → Prop) (x : α)
-    [Decidable (p x)] : prEvent (p <$> (Except.ok x : Except ε α)) = if p x then 1 else 0 :=
-  Except.prEvent_ok (p x)
+theorem Except.prEvent_ok {ε : Type u} {α : Type} (x : α) (p : α → Prop) :
+    prEvent (Except.ok x : Except ε α) p = propInd (p x) :=
+  prEvent_pure (m := Except ε) x p

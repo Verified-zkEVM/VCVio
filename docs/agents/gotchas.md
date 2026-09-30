@@ -215,10 +215,12 @@ On `Pr{...}[...] = Pr{...}[...]` and `𝒟[oa] = 𝒟[ob]` goals, plain `vcstep`
 swap, congruence, and small bounded compositions. If you need to rewrite and continue, use
 `vcstep rw` for a top-level swap, `vcstep rw under 1` under one shared bind prefix, or
 `vcstep rw congr` / `vcstep rw congr'` to expose a shared outer bind. The underlying rewrites are
-`OracleComp.prEvent_bind_bind_swap` / `OracleComp.evalDist_bind_bind_swap` (countable answer
-types; `_of_uniform` variants under `IsUniformMeasureSpec`) and
-`OracleComp.prEvent_bind_congr_of_support`; `Pr{…}[…]` elaborates its final draw as a map, so
-normalize with `simp only [map_eq_bind_pure_comp, bind_assoc]` before rewriting by hand.
+`OracleComp.wp_prEvent_swap` / `OracleComp.wp_swap` / `OracleComp.evalDist_bind_bind_swap`
+(countable answer types; `_of_uniform` variants under `IsUniformMeasureSpec`) and
+`wp_congr_of_support`. `Pr{…}[…]` elaborates to nested expectations
+`wp⟦mx⟧ fun x => prEvent (my x) p`, so a draw is swapped by rewriting under the expectations it is
+nested in (`conv => arg 2; ext; rw [OracleComp.wp_prEvent_swap]`), and an explicit
+`prEvent (mx >>= f) p` is brought to that form with `rw [prEvent_bind]`.
 
 ### 12. Avoid `guard` in experiments
 

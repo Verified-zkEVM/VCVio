@@ -779,8 +779,10 @@ def runProbEqSwap : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic| (
     try simp only [bind_assoc]
     first
-      | (rw [OracleComp.prEvent_bind_bind_swap]; done)
-      | (rw [OracleComp.prEvent_bind_bind_swap_of_uniform]; done)
+      | (rw [OracleComp.wp_prEvent_swap]; done)
+      | (rw [OracleComp.wp_prEvent_swap_of_uniform]; done)
+      | (rw [OracleComp.wp_swap]; done)
+      | (rw [OracleComp.wp_swap_of_uniform]; done)
       | (rw [OracleComp.evalDist_bind_bind_swap]; done)
       | (rw [OracleComp.evalDist_bind_bind_swap_of_uniform]; done))))
 
@@ -790,7 +792,7 @@ over a reachable prefix output and its support hypothesis. -/
 private def runProbEqCongrCore : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
     first
-      | refine OracleComp.prEvent_bind_congr_of_support _ _ _ ?_
+      | refine wp_congr_of_support (m := OracleComp _) _ ?_
       | (refine OracleComp.evalDist_bind_apply_congr_of_support _ _ _ ?_ ?_
          · first
              | exact measurableSet_singleton _
@@ -869,24 +871,24 @@ partial def mkEvalDistSwapUnderProof (uniform : Bool) (depth : Nat) : TacticM (T
       let inner ← mkEvalDistSwapUnderProof uniform depth
       `(term| OracleComp.evalDist_bind_congr_of_support _ _ _ fun _ _ => $inner)
 
-/-- Build an event theorem that swaps adjacent binds under `depth` shared prefixes; `uniform`
-selects the swap law that derives countable responses from a uniform specification. -/
-partial def mkPrEventSwapUnderProof (uniform : Bool) (depth : Nat) : TacticM (TSyntax `term) := do
+/-- A conversion that descends through `depth` shared expectations `wp⟦a⟧ fun x => …` of an
+event or expectation in normal form and then rewrites with `swap`. -/
+partial def mkWpSwapUnderConv (swap : Ident) (depth : Nat) : TacticM (TSyntax `conv) := do
   match depth with
-  | 0 =>
-      if uniform then `(term| OracleComp.prEvent_bind_bind_swap_of_uniform _ _ _)
-      else `(term| OracleComp.prEvent_bind_bind_swap _ _ _)
+  | 0 => `(conv| rw [$swap:ident])
   | depth + 1 =>
-      let inner ← mkPrEventSwapUnderProof uniform depth
-      `(term| OracleComp.prEvent_bind_congr_of_support _ _ _ fun _ _ => $inner)
+      let inner ← mkWpSwapUnderConv swap depth
+      `(conv| (arg 2; ext; $inner))
 
 /-- Try to rewrite one top-level bind-swap without closing the goal. -/
 def runProbEqRewrite : TacticM Bool := do
   normalizeProbEqGoal
   tryEvalTacticSyntax (← `(tactic| (
     first
-      | rw [OracleComp.prEvent_bind_bind_swap]
-      | rw [OracleComp.prEvent_bind_bind_swap_of_uniform]
+      | rw [OracleComp.wp_prEvent_swap]
+      | rw [OracleComp.wp_prEvent_swap_of_uniform]
+      | rw [OracleComp.wp_swap]
+      | rw [OracleComp.wp_swap_of_uniform]
       | rw [OracleComp.evalDist_bind_bind_swap]
       | rw [OracleComp.evalDist_bind_bind_swap_of_uniform])))
 
@@ -895,14 +897,20 @@ def runProbEqRewriteUnder (depth : Nat) : TacticM Bool := do
   normalizeProbEqGoal
   let measure ← mkEvalDistSwapUnderProof false depth
   let measureUniform ← mkEvalDistSwapUnderProof true depth
-  let event ← mkPrEventSwapUnderProof false depth
-  let eventUniform ← mkPrEventSwapUnderProof true depth
+  let event ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_prEvent_swap) depth
+  let eventUniform ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_prEvent_swap_of_uniform) depth
+  let expectation ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_swap) depth
+  let expectationUniform ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_swap_of_uniform) depth
   tryEvalTacticSyntax (← `(tactic| (
     first
-      | (conv_lhs => rw [show _ from $event])
-      | (conv_rhs => rw [show _ from $event])
-      | (conv_lhs => rw [show _ from $eventUniform])
-      | (conv_rhs => rw [show _ from $eventUniform])
+      | (conv_lhs => $event:conv)
+      | (conv_rhs => $event:conv)
+      | (conv_lhs => $eventUniform:conv)
+      | (conv_rhs => $eventUniform:conv)
+      | (conv_lhs => $expectation:conv)
+      | (conv_rhs => $expectation:conv)
+      | (conv_lhs => $expectationUniform:conv)
+      | (conv_rhs => $expectationUniform:conv)
       | (conv_lhs => rw [show _ from $measure])
       | (conv_rhs => rw [show _ from $measure])
       | (conv_lhs => rw [show _ from $measureUniform])
@@ -1008,8 +1016,8 @@ private def probEqPlannerActionPlans : List (List ProbEqAction) :=
     , [.swap]
     ]
 
-/-- The observed computation of a `Pr{…}[…]` event is `p <$> comp`, or
-`comp >>= fun x => pure (p x)` once unfolded to its measure; its bind depth is that of `comp`. -/
+/-- The observed computation of an output measure `𝒟[p <$> comp]` is `comp`, also when unfolded to
+`comp >>= fun x => pure (p x)`; its bind depth is that of `comp`. -/
 private def stripEventObservation (comp : Expr) : Expr :=
   let comp := comp.consumeMData
   if comp.isAppOfArity ``Functor.map 6 then comp.appArg!
@@ -1039,12 +1047,21 @@ private partial def topBindDepth (expr : Expr) : Nat :=
   else
     0
 
+/-- The number of draws before the last one in a measure expression: the nested expectations of an
+event or expectation, or the binds of an output measure's computation. -/
+private partial def probExprDepth? (expr : Expr) : Option Nat :=
+  let expr := expr.consumeMData
+  if isExpectationExpr expr then
+    match (expr.getArg! 8).consumeMData with
+    | .lam _ _ body _ => some ((probExprDepth? body).getD 0 + 1)
+    | _ => some 1
+  else
+    topBindDepth <$> probExprComp? expr
+
 private def probEqBindDepth? (target : Expr) : Option Nat := do
   let target := target.consumeMData
   guard <| target.isAppOfArity ``Eq 3
-  let lhsComp ← probExprComp? (target.getArg! 1)
-  let rhsComp ← probExprComp? (target.getArg! 2)
-  some (Nat.min (topBindDepth lhsComp) (topBindDepth rhsComp))
+  some (Nat.min (← probExprDepth? (target.getArg! 1)) (← probExprDepth? (target.getArg! 2)))
 
 private def probEqPlannerActionPlansForDepth (bindDepth : Nat) : List (List ProbEqAction) :=
   let maxRewriteDepth := Nat.min 4 (bindDepth - 2)
@@ -1151,12 +1168,12 @@ def tryLowerProbGoal : TacticM Bool := do
     if ← tryProbEqGoal then return true
   if ← tryEvalTacticSyntax (← `(tactic|
       rw [← OracleComp.ProgramLogic.triple_propInd_iff_prEvent_eq_one];
-      simp only [OracleComp.ProgramLogic.propInd_true])) then
+      simp only [propInd_true])) then
     return true
   if ← tryEvalTacticSyntax (← `(tactic|
       rw [eq_comm (a := 1),
           ← OracleComp.ProgramLogic.triple_propInd_iff_prEvent_eq_one];
-      simp only [OracleComp.ProgramLogic.propInd_true])) then
+      simp only [propInd_true])) then
     return true
   if ← tryEvalTacticSyntax (← `(tactic|
       rw [← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
@@ -1165,7 +1182,7 @@ def tryLowerProbGoal : TacticM Bool := do
       rw [ge_iff_le, ← OracleComp.ProgramLogic.triple_propInd_iff_le_prEvent])) then
     return true
   if ← tryEvalTacticSyntax (← `(tactic|
-      rw [OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
+      simp only [OracleComp.ProgramLogic.prEvent_eq_wp_propInd])) then
     return true
   if ← tryEvalTacticSyntax (← `(tactic|
       simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,

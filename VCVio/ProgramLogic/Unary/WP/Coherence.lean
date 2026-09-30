@@ -59,7 +59,7 @@ theorem wp_qual_iff_wp_prob_indicator_eq_one
     (oa : OracleComp spec α) (post : α → Prop) [DecidablePred post] :
     (letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec);
       Std.Internal.Do.wp oa post Std.Internal.Do.EPost.Nil.mk) ↔
-      wp oa (fun a => if post a then 1 else 0) = 1 := by
+      wp⟦oa⟧ (fun a => if post a then 1 else 0) = 1 := by
   rw [wp_iff_forall_support, ← prEvent_eq_wp_indicator, OracleComp.prEvent_eq_one_iff]
 
 /-- Convenience: the `Prob`-valued indicator-as-`wp` form of the
@@ -69,7 +69,7 @@ theorem wp_qual_iff_wp_prob_indicator_val_eq_one
     (oa : OracleComp spec α) (post : α → Prop) [DecidablePred post] :
     (letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec);
       Std.Internal.Do.wp oa post Std.Internal.Do.EPost.Nil.mk) ↔
-      wp oa (fun a => (Prob.indicator (post a)).val) = 1 :=
+      wp⟦oa⟧ (fun a => (Prob.indicator (post a)).val) = 1 :=
   wp_qual_iff_wp_prob_indicator_eq_one oa post
 
 end OracleComp.WP.Coherence

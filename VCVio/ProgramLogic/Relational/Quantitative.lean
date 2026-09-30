@@ -302,7 +302,7 @@ private theorem lintegral_coupling_pure_left (a : α) (y : OracleComp spec₂ β
     (c : letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
       Measure.Coupling 𝒟[(pure a : OracleComp spec₁ α)] 𝒟[y]) :
     letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
-      ∫⁻ z, post z.1 z.2 ∂c.joint = wp y (post a) := by
+      ∫⁻ z, post z.1 z.2 ∂c.joint = wp⟦y⟧ (post a) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   have hmeas : MeasurableSet {x : α | x = a} := measurableSet_singleton a
@@ -315,14 +315,14 @@ private theorem lintegral_coupling_pure_left (a : α) (y : OracleComp spec₂ β
         lintegral_congr_ae (hfst.mono fun z hz => by simp only [hz])
     _ = ∫⁻ b, post a b ∂c.joint.map Prod.snd :=
         (lintegral_map Measurable.of_discrete measurable_snd).symm
-    _ = wp y (post a) := by
+    _ = wp⟦y⟧ (post a) := by
         rw [show c.joint.map Prod.snd = 𝒟[y] from c.isCoupling.snd_eq,
           wp_eq_lintegral y (post a) Measurable.of_discrete]
 
 /-- A pure first computation collapses the coupled expectation to the unary expectation of the
 second computation. -/
 theorem eRelWP_pure_left (a : α) (y : OracleComp spec₂ β) (post : α → β → ℝ≥0∞) :
-    eRelWP (pure a : OracleComp spec₁ α) y post = wp y (post a) := by
+    eRelWP (pure a : OracleComp spec₁ α) y post = wp⟦y⟧ (post a) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   have : IsProbabilityMeasure 𝒟[y] := ⟨evalDist_apply_univ_eq_one y⟩
@@ -335,7 +335,7 @@ theorem eRelWP_pure_left (a : α) (y : OracleComp spec₂ β) (post : α → β 
 /-- A pure second computation collapses the coupled expectation to the unary expectation of the
 first computation. -/
 theorem eRelWP_pure_right (x : OracleComp spec₁ α) (b : β) (post : α → β → ℝ≥0∞) :
-    eRelWP x (pure b : OracleComp spec₂ β) post = wp x (fun a => post a b) := by
+    eRelWP x (pure b : OracleComp spec₂ β) post = wp⟦x⟧ (fun a => post a b) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
   have : IsProbabilityMeasure 𝒟[x] := ⟨evalDist_apply_univ_eq_one x⟩
@@ -433,7 +433,7 @@ variable [SampleableType α]
 /-- Quantitative lower bound for two uniform samples coupled by a bijection. -/
 theorem eRelWP_uniformSample_bij_ge
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞) :
-    wp ($ᵗ α : ProbComp α) (fun a => post a (f a))
+    wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a (f a))
       ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post := by
   let : MeasurableSpace α := ⊤
   have hgraph : Measurable fun a : α => (a, f a) := Measurable.of_discrete
@@ -448,7 +448,7 @@ relational WP lower-bound for two uniform samples. -/
 theorem eRelWP_uniformSample_bij
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ wp ($ᵗ α : ProbComp α) (fun a => post a (f a))) :
+    (hpre : pre ≤ wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a (f a))) :
     pre ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post :=
   hpre.trans (eRelWP_uniformSample_bij_ge hf post)
 
@@ -469,7 +469,7 @@ theorem eRelWP_query_bij_ge (t : spec₁.Domain)
     {f : spec₁.Range t → spec₁.Range t}
     (hf : Function.Bijective f)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞) :
-    wp (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))
+    wp⟦(liftM (query t) : OracleComp spec₁ (spec₁.Range t))⟧ (fun a => post a (f a))
       ≤ eRelWP (spec₁ := spec₁) (spec₂ := spec₁)
           (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
           (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) post := by
@@ -490,7 +490,7 @@ theorem eRelWP_query_bij (t : spec₁.Domain)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞)
     {pre : ℝ≥0∞}
     (hpre : pre ≤
-      wp (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))) :
+      wp⟦(liftM (query t) : OracleComp spec₁ (spec₁.Range t))⟧ (fun a => post a (f a))) :
     pre ≤ eRelWP (spec₁ := spec₁) (spec₂ := spec₁)
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
       (liftM (query t) : OracleComp spec₁ (spec₁.Range t)) post :=
@@ -508,7 +508,7 @@ practice.
 bijection-shifted average is realised by the bijection coupling. -/
 example [SampleableType α]
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞) :
-    wp ($ᵗ α : ProbComp α) (fun a => post a (f a))
+    wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a (f a))
       ≤ eRelWP ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post :=
   eRelWP_uniformSample_bij hf post le_rfl
 

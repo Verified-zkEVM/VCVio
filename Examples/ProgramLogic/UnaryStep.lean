@@ -286,12 +286,6 @@ example (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate 0⟧ post = post [] := by
   vcstep
 
-/--
-info: [vcspec cache] miss `OracleComp.ProgramLogic.TacticInternals.Unary.wp_pure_le_vcspec`
-(raw, unaryWP)
--/
-#guard_msgs in
-set_option vcvio.vcgen.traceCachedRules true in
 example (x : α) (post : α → ℝ≥0∞) :
     post x ≤ wp⟦(pure x : OracleComp spec α)⟧ post := by
   vcstep
@@ -309,13 +303,6 @@ example (c : Prop) [Decidable c]
     (if h : c then wp⟦a h⟧ post else wp⟦b h⟧ post) ≤ wp⟦dite c a b⟧ post := by
   vcstep
 
-/--
-info: [vcspec cache] miss
-`OracleComp.ProgramLogic.TacticInternals.Unary.wp_replicate_succ_le_vcspec`
-(raw, unaryWP)
--/
-#guard_msgs in
-set_option vcvio.vcgen.traceCachedRules true in
 example (oa : OracleComp spec α) (n : ℕ) (post : List α → ℝ≥0∞) :
     wp⟦oa⟧ (fun x => wp⟦oa.replicate n⟧ (fun xs => post (x :: xs))) ≤
       wp⟦oa.replicate (n + 1)⟧ post := by

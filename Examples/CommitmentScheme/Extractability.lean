@@ -364,7 +364,7 @@ private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
           extractability_rest_noCollision_le_inv A cm aux tr cache₁ hx hno).trans
       (add_le_add (prEvent_cacheCollision_le_birthday_total_tight commitPart A.t₁
         hcommit_bound (fun _ => le_refl _)) le_rfl)
-  rw [extractabilityExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind]
+  rw [extractabilityExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind, prEvent_bind]
   calc
     Pr{let z ← (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
         (simulateQ cachingOracle (restPart x.1)).run x.2}[z.1 = true]

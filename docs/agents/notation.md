@@ -16,7 +16,8 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
-| `Pr{let x ← mx; ...}[event]` | `prEvent`: the `{True}` mass of the computation returning `event`; the braces hold an ordinary `do` sequence | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `Pr{let x ← mx; ...}[event]` | the event of the `do` sequence, `prEvent (do …; return event) fun b => b`, stored as nested expectations `wp⟦mx⟧ fun x => … prEvent my fun y => event`; `prEvent mx p` is the `{True}` mass of `p <$> mx` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `wp⟦mx⟧ g` | the expectation of `g : α → ℝ≥0∞` over the outputs of `mx`: core's `wp mx g ⊥` under `MeasureProgramLogic.measureWP` | `VCVio/EvalDist/Expectation.lean` |
 
 The braces take any `do` sequence, with pure `let`s, destructuring, nested `(← e)` actions,
 branches, `match`, `let mut` and loops; see *Writing events with `do` sequences* in
@@ -62,7 +63,6 @@ Open `OracleComp.ProgramLogic` for VCVio notation. Unary triples additionally re
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝟙⟦P⟧` | Numeric proposition indicator (`propInd P`) | `VCVio/ProgramLogic/NotationCore.lean` |
-| `wp⟦c⟧` | Quantitative WP (`wp c`) | `VCVio/ProgramLogic/NotationCore.lean` |
 | `rwp⟦c₁ ~ c₂ \| post; epost₁, epost₂⟧` | Relational WP (`VCVio.ProgramLogic.rwp c₁ c₂ post epost₁ epost₂`) | `VCVio/ProgramLogic/NotationCore.lean` |
 | `⦃P⦄ c ⦃Q⦄` | Core unary Hoare triple (`Std.Internal.Do.Triple`) | Lean core `Std.Internal.Do.Triple.Basic` |
 | `mx =ᵈ my` | Equality in distribution (`EvalDistEq`): every event has the same probability, across monads | `VCVio/EvalDist/EvalDistEq.lean` |

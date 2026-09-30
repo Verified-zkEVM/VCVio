@@ -121,7 +121,7 @@ theorem relTriple_bind
 theorem relTriple_uniformSample_bij [SampleableType α]
     {f : α → α} (hf : Function.Bijective f) (post : α → α → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ OracleComp.ProgramLogic.wp ($ᵗ α : ProbComp α) (fun a => post a (f a))) :
+    (hpre : pre ≤ wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a (f a))) :
     VCVio.ProgramLogic.RelTriple pre ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post
       Lean.Order.bot Lean.Order.bot :=
   OracleComp.ProgramLogic.Relational.eRelWP_uniformSample_bij hf post hpre
@@ -131,7 +131,7 @@ theorem relTriple_uniformSample_bij [SampleableType α]
 theorem relTriple_uniformSample_refl [SampleableType α]
     (post : α → α → ℝ≥0∞) :
     VCVio.ProgramLogic.RelTriple
-      (OracleComp.ProgramLogic.wp ($ᵗ α : ProbComp α) (fun a => post a a))
+      (wp⟦($ᵗ α : ProbComp α)⟧ (fun a => post a a))
       ($ᵗ α : ProbComp α) ($ᵗ α : ProbComp α) post
       Lean.Order.bot Lean.Order.bot :=
   relTriple_uniformSample_bij Function.bijective_id post le_rfl
@@ -149,9 +149,8 @@ theorem relTriple_query_bij (t : spec₁.Domain)
     (hf : Function.Bijective f)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞)
     {pre : ℝ≥0∞}
-    (hpre : pre ≤ OracleComp.ProgramLogic.wp
-        (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
-          OracleComp spec₁ (spec₁.Range t)) (fun a => post a (f a))) :
+    (hpre : pre ≤ wp⟦(liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
+          OracleComp spec₁ (spec₁.Range t))⟧ (fun a => post a (f a))) :
     VCVio.ProgramLogic.RelTriple pre
       (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
         OracleComp spec₁ (spec₁.Range t))
@@ -165,9 +164,8 @@ theorem relTriple_query_bij (t : spec₁.Domain)
 theorem relTriple_query_refl (t : spec₁.Domain)
     (post : spec₁.Range t → spec₁.Range t → ℝ≥0∞) :
     VCVio.ProgramLogic.RelTriple
-      (OracleComp.ProgramLogic.wp
-        (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
-          OracleComp spec₁ (spec₁.Range t)) (fun a => post a a))
+      (wp⟦(liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
+          OracleComp spec₁ (spec₁.Range t))⟧ (fun a => post a a))
       (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :
         OracleComp spec₁ (spec₁.Range t))
       (liftM (HasQuery.query (spec := spec₁) (m := OracleComp spec₁) t) :

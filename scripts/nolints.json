@@ -490,7 +490,6 @@
  ["docBlame", "OracleComp.ProgramLogic.addTryThisTextSuggestion"],
  ["docBlame", "OracleComp.ProgramLogic.vcSpecRegistry"],
  ["docBlame", "OracleComp.ProgramLogic.vcSpecSimpExt"],
- ["docBlame", "OracleComp.ProgramLogic.wpBracketApp"],
  ["docBlame", "OracleComp.ProgramLogic.wpStepRegistry"],
  ["docBlame", "OracleComp.acceptContextForkWitness"],
  ["docBlame", "OracleComp.classifyForkView"],

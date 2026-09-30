@@ -387,12 +387,8 @@ def stdDoRelTripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr × E
   some (pre, oa, ob, post)
 
 private def findWpApp? (target : Expr) : Option (Expr × Nat) := do
-  if let some app := findAppWithHead? ``OracleComp.ProgramLogic.wp target then
-    some (app, 2)
-  else if let some app := findAppWithHead? ``Std.Internal.Do.wp target then
-    some (app, 3)
-  else
-    none
+  let app ← findAppWithHead? ``Std.Internal.Do.wp target
+  some (app, 3)
 
 /-- Extract the computation from an algebra or core weakest-precondition expression. -/
 def wpGoalComp? (target : Expr) : Option Expr := do
@@ -517,11 +513,18 @@ def isEvalDistEqGoal (target : Expr) : Bool :=
   else
     false
 
-/-- The computation observed by a measure expression: the event computation of
-`prEvent`, which `Pr{…}[…]` elaborates to, or the argument of `𝒟[…]`. -/
+/-- Whether `e` is an expectation `wp⟦mx⟧ g`: core's `wp` with assertions in `ℝ≥0∞` and the empty
+exception postcondition, which is how events and expectations of computations elaborate. -/
+def isExpectationExpr (e : Expr) : Bool :=
+  e.isAppOfArity ``Std.Internal.Do.WP.wp 10 && (e.getArg! 2).isConstOf ``ENNReal &&
+    (e.getArg! 3).isConstOf ``Std.Internal.Do.EPost.Nil
+
+/-- The computation observed by a measure expression: the computation of its event
+(`prEvent mx p`, the last draw of what `Pr{…}[…]` elaborates to), or the argument of `𝒟[…]`. -/
 def evalDistComp? (e : Expr) : Option Expr := do
+  let e := e.consumeMData
   if let some app := findAppWithHead? ``prEvent e then
-    let args ← trailingArgs? app 1
+    let args ← trailingArgs? app 2
     return ← args[0]?
   let app ← findAppWithHead? ``evalDist e
   let args ← trailingArgs? app 1

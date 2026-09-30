@@ -36,8 +36,8 @@ theorem noisy_joint_law {S : Type}
     (operation : (UnlinkOracleSpec Bool Bool Bool).Domain) (state : S) :
     (noisy impl operation).run state =ᵈ (impl operation).run state :=
   EvalDistEq.of_forall_prEvent_eq fun p => by
-    change prEvent (p <$> (($ᵗ Bool) >>= fun _ => (impl operation).run state)) = _
-    rw [map_bind, OracleComp.prEvent_bind_const]
+    change prEvent (($ᵗ Bool) >>= fun _ => (impl operation).run state) p = _
+    rw [prEvent_bind, wp_const, OracleComp.prEvent_true_eq_one, mul_one]
 
 /-- The full three-term packet reduction admits a concretely changed implementation. -/
 example (adversary : UnlinkAdversary Bool Bool Bool) (qReader qTag : ℕ)

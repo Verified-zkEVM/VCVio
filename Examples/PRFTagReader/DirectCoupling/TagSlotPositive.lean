@@ -232,7 +232,11 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
     rw [hSstep gS]
     exact bind_assoc ..
   have hBAD_eq := hM_eq (fun z => (z.1, z.2.2))
-  rw [hLHS_eq, hRHS_eq, hBAD_eq]
+  have hLHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hLHS_eq
+  have hRHS_ev := congrArg (fun mx => prEvent mx fun b => b = out) hRHS_eq
+  have hBAD_ev := congrArg (fun mx => prEvent mx fun z => z.2.bad = true) hBAD_eq
+  simp only [prEvent_norm] at hLHS_ev hRHS_ev hBAD_ev
+  rw [hLHS_ev, hRHS_ev, hBAD_ev]
   -- Phase B-2: commute outer `$ᵗ gS`, `$ᵗ gFine` past inner `$ᵗ Nonce` at the measure
   -- level so `n` is outermost. Identical structure to slot-zero (M-side LHS/BAD have the
   -- same shape — both read slot-0). RHS is shorter (no `gFine` binder).
@@ -319,9 +323,11 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
     let : MeasurableSpace Nonce := ⊤
     let : MeasurableSpace (Bool × UnlinkBadState TagId Nonce Digest) := ⊤
     exact evalDist_bind_bind_bind_rotate _ _ _ _ .of_discrete
-  rw [(EvalDistEq.of_evalDist_eq hLHS_comm).prEvent_eq,
-    (EvalDistEq.of_evalDist_eq hRHS_comm).prEvent_eq,
-    (EvalDistEq.of_evalDist_eq hBAD_comm).prEvent_eq]
+  have hLHS_cm := (EvalDistEq.of_evalDist_eq hLHS_comm).prEvent_eq fun b => b = out
+  have hRHS_cm := (EvalDistEq.of_evalDist_eq hRHS_comm).prEvent_eq fun b => b = out
+  have hBAD_cm := (EvalDistEq.of_evalDist_eq hBAD_comm).prEvent_eq fun z => z.2.bad = true
+  simp only [prEvent_norm] at hLHS_cm hRHS_cm hBAD_cm
+  rw [hLHS_cm, hRHS_cm, hBAD_cm]
   -- Phase C: split `qRInit * (qT' + 1) / |Nonce|` into `qRInit / |Nonce| + qRInit * qT' / |Nonce|`
   -- and reassociate so the per-`n` obligation carries the reader-cell, nonce-remainder, and
   -- reader-slot slacks. No tag-side slack is charged here: cell-pair independence provides per-`n`
@@ -336,7 +342,8 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
   rw [show ∀ a b c d e f : ℝ≥0∞,
         a + b + c + (d + e) + f = a + b + d + (c + e + f) from
         fun a b c d e f => by ring]
-  refine prEvent_bind_le_add_bad_disagree (D := fun n : Nonce => n ∈ R) ?_ ?_
+  refine wp_le_add_add_of_disagree (D := fun n : Nonce => n ∈ R) ?_ (fun _ =>
+    wp_le_of_forall_le _ fun _ => wp_le_of_forall_le _ fun _ => prEvent_le_one _) ?_
   · -- The reader-touched set `R` has uniform-sample probability `R.card / |Nonce|`, which
     -- is at most the `qRInit / |Nonce|` headroom carved out of slack₂.
     rw [SampleableType.prEvent_uniformSample]
@@ -370,6 +377,14 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
         ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest))
         SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
         ((tag, (0 : Fin sessionsPerTag)), n) Mψ).symm
+    have hmargW : ∀ Φ : ((TagId × Fin sessionsPerTag) × Nonce → Digest) → ℝ≥0∞,
+        wp⟦($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest) : ProbComp _)⟧ Φ =
+          wp⟦($ᵗ Digest : ProbComp Digest)⟧ fun u =>
+            wp⟦($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest) : ProbComp _)⟧ fun gS' =>
+              Φ (Function.update gS' ((tag, (0 : Fin sessionsPerTag)), n) u) := fun Φ => by
+      let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
+      simpa only [bind_pure, prEvent_norm] using
+        EvalDistEq.wp_eq (EvalDistEq.of_evalDist_eq (hmarg pure)) Φ
     have hext_eq : ∀ (gS' : (TagId × Fin sessionsPerTag) × Nonce → Digest)
         (u : Digest),
         OracleComp.tableExtending c
@@ -418,11 +433,9 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[b = out] := by
-      refine (EvalDistEq.of_evalDist_eq ((@hmarg _ ⊤ _).trans ?_)).prEvent_eq _
-      congr 1
-      refine bind_congr fun u => ?_
-      refine bind_congr fun gS' => ?_
-      refine bind_congr fun gFine => ?_
+      rw [hmargW]
+      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
+        MeasureProgramLogic.wp_congr _ fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     have hBAD_marg :
         Pr{let z ← ((do
@@ -454,11 +467,9 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
-      refine (EvalDistEq.of_evalDist_eq ((@hmarg _ ⊤ _).trans ?_)).prEvent_eq _
-      congr 1
-      refine bind_congr fun u => ?_
-      refine bind_congr fun gS' => ?_
-      refine bind_congr fun gFine => ?_
+      rw [hmargW]
+      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
+        MeasureProgramLogic.wp_congr _ fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     -- Step 3: marginalize RHS S-event over slot-K cell (uncached by hcInv).
     have hmarg_K : ∀ {β : Type} [MeasurableSpace β]
@@ -473,6 +484,14 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
         ($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest))
         SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
         ((tag, slotK), n) Mψ).symm
+    have hmargW_K : ∀ Φ : ((TagId × Fin sessionsPerTag) × Nonce → Digest) → ℝ≥0∞,
+        wp⟦($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest) : ProbComp _)⟧ Φ =
+          wp⟦($ᵗ Digest : ProbComp Digest)⟧ fun u =>
+            wp⟦($ᵗ ((TagId × Fin sessionsPerTag) × Nonce → Digest) : ProbComp _)⟧ fun gS' =>
+              Φ (Function.update gS' ((tag, slotK), n) u) := fun Φ => by
+      let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
+      simpa only [bind_pure, prEvent_norm] using
+        EvalDistEq.wp_eq (EvalDistEq.of_evalDist_eq (hmarg_K pure)) Φ
     have hext_K_eq : ∀ (gS' : (TagId × Fin sessionsPerTag) × Nonce → Digest)
         (u : Digest),
         OracleComp.tableExtending c
@@ -501,17 +520,16 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler
                 (OracleComp.tableExtending (c.cacheQuery ((tag, slotK), n) u) gS'))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] := by
-      refine (EvalDistEq.of_evalDist_eq ((@hmarg_K _ ⊤ _).trans ?_)).prEvent_eq _
-      congr 1
-      refine bind_congr fun u => ?_
-      refine bind_congr fun gS' => ?_
+      rw [hmargW_K]
+      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' => ?_
       rw [hext_K_eq gS' u, hcell_K_u gS' u]
-    -- Step 4: rewrite the marginalizations and apply `prEvent_bind_le_add_bad_disagree`.
+    -- Step 4: rewrite the marginalizations and apply `wp_le_add_add_of_disagree`.
     rw [hLHS_marg, hRHS_marg, hBAD_marg]
     rw [show ∀ a b c : ℝ≥0∞, a + b + c = a + b + 0 + c from
           fun a b c => by ring]
-    refine prEvent_bind_le_add_bad_disagree (mx := ($ᵗ Digest : ProbComp Digest))
-      (D := fun _ : Digest => False) (by simp) ?_
+    refine wp_le_add_add_of_disagree (mx := ($ᵗ Digest : ProbComp Digest))
+      (D := fun _ : Digest => False) (by simp) (fun _ => wp_le_of_forall_le _ fun _ =>
+        wp_le_of_forall_le _ fun _ => prEvent_le_one _) ?_
     intro u _ _
     -- Step 5: per-`u`. Build new invariants for IH call at cache `c.cacheQuery slot-0 u`.
     have hcInv' : ∀ tag' : TagId, ∀ sid' : Fin sessionsPerTag, sid' ≠ 0 →
@@ -590,7 +608,8 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler (OracleComp.tableExtending
                   (c.cacheQuery ((tag, slotK), n) u) gS))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] :=
-      (EvalDistEq.of_evalDist_eq hbridge).prEvent_eq _
+      by simpa only [prEvent_norm] using
+        (EvalDistEq.of_evalDist_eq hbridge).prEvent_eq fun b => b = out
     rw [hS_eq] at hihB
     rw [← add_assoc, ← add_assoc]
     exact hihB
@@ -636,15 +655,10 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (k (some (⟨n, u₀⟩ : TagTranscript Nonce Digest)))).run
                 (advM, multipleBadAdvance tag sB
                   (some (⟨n, u₀⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
-      -- Both events come from the same underlying run via different `<$>` projections: push the
-      -- two table draws through `lintegral_mono`, then the projections through `prEvent_map`, and
-      -- compare on the support, where bad monotonicity makes the implication unconditional.
-      let : MeasurableSpace ((TagId × Fin sessionsPerTag) × Nonce → Digest) := ⊤
-      rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
-      refine lintegral_mono fun gS => ?_
-      rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
-      refine lintegral_mono fun gFine => ?_
-      rw [prEvent_map, prEvent_map]
+      -- Both events are events of the same underlying run: compare them under the two table
+      -- draws by `wp_mono`, then on the support of the run, where bad monotonicity makes the
+      -- implication unconditional.
+      refine MeasureProgramLogic.wp_mono _ fun gS => MeasureProgramLogic.wp_mono _ fun gFine => ?_
       refine prEvent_mono_of_support _ _ _ fun z hz_mem _ => ?_
       -- z is in support of the simQ run starting at state with bad = true.
       -- By preserves_bad, z.2.2.bad = true.

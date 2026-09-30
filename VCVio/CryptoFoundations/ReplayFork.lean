@@ -466,27 +466,27 @@ section eventBounds
 /-- An event of a mapped raw polynomial program is the pulled-back event. -/
 private theorem prEvent_ofFreeM_map [OracleSpec.IsMeasureSpec spec] {β γ : Type}
     (mx : spec.toPFunctor.FreeM β) (f : β → γ) (p : γ → Prop) :
-    Pr{let r ← OracleComp.ofFreeM (PFunctor.FreeM.map f mx)}[p r] =
-      Pr{let x ← OracleComp.ofFreeM mx}[p (f x)] :=
+    prEvent (OracleComp.ofFreeM (PFunctor.FreeM.map f mx)) p =
+      prEvent (OracleComp.ofFreeM mx) fun x => p (f x) :=
   prEvent_map (OracleComp.ofFreeM mx) f p
 
 /-- An event of a raw polynomial `pure` is its indicator. -/
 private theorem prEvent_ofFreeM_pure [OracleSpec.IsMeasureSpec spec] {β : Type} (x : β)
-    (p : β → Prop) [Decidable (p x)] :
-    Pr{let r ← OracleComp.ofFreeM (pure x : spec.toPFunctor.FreeM β)}[p r] =
-      if p x then 1 else 0 :=
+    (p : β → Prop) :
+    prEvent (OracleComp.ofFreeM (pure x : spec.toPFunctor.FreeM β)) p = propInd (p x) :=
   prEvent_pure (m := OracleComp spec) x p
 
 /-- Raw polynomial binds with pointwise equal continuation events have equal events. -/
 private theorem prEvent_ofFreeM_bind_congr [OracleSpec.IsMeasureSpec spec] {β γ δ : Type}
     (mx : spec.toPFunctor.FreeM β) (f : β → spec.toPFunctor.FreeM γ)
     (g : β → spec.toPFunctor.FreeM δ) (p : γ → Prop) (q : δ → Prop)
-    (h : ∀ x, Pr{let r ← OracleComp.ofFreeM (f x)}[p r] =
-      Pr{let r ← OracleComp.ofFreeM (g x)}[q r]) :
-    Pr{let r ← OracleComp.ofFreeM (PFunctor.FreeM.bind mx f)}[p r] =
-      Pr{let r ← OracleComp.ofFreeM (PFunctor.FreeM.bind mx g)}[q r] :=
-  prEvent_bind_congr (OracleComp.ofFreeM mx) (fun x => OracleComp.ofFreeM (f x))
-    (fun x => OracleComp.ofFreeM (g x)) p q h
+    (h : ∀ x, prEvent (OracleComp.ofFreeM (f x)) p = prEvent (OracleComp.ofFreeM (g x)) q) :
+    prEvent (OracleComp.ofFreeM (PFunctor.FreeM.bind mx f)) p =
+      prEvent (OracleComp.ofFreeM (PFunctor.FreeM.bind mx g)) q :=
+  (prEvent_bind (OracleComp.ofFreeM mx) (fun x => OracleComp.ofFreeM (f x)) p).trans <|
+    (prEvent_bind_congr (OracleComp.ofFreeM mx) (fun x => OracleComp.ofFreeM (f x))
+      (fun x => OracleComp.ofFreeM (g x)) p q h).trans
+    (prEvent_bind (OracleComp.ofFreeM mx) (fun x => OracleComp.ofFreeM (g x)) q).symm
 
 /-- A classified fork whose first completion does not select `s` never succeeds. -/
 private theorem prEvent_classifyForkView_isSome_eq_zero_of_first_ne
@@ -496,11 +496,11 @@ private theorem prEvent_classifyForkView_isSome_eq_zero_of_first_ne
     {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path s)
     (hfirst : cf (PFunctor.FreeM.output main located.completion.path) ≠ some s) :
-    Pr{let result ← OracleComp.ofFreeM (PFunctor.FreeM.map
+    prEvent (OracleComp.ofFreeM (PFunctor.FreeM.map
         (fun second => classifyForkView main qb i cf s {
           occurrence := located.occurrence
           first := located.completion
-          second := second }) located.occurrence.complete)}[result.isSome] = 0 :=
+          second := second }) located.occurrence.complete)) (fun result => result.isSome) = 0 :=
   (prEvent_map (OracleComp.ofFreeM located.occurrence.complete) _ _).trans
     (prEvent_eq_zero_of_forall_not _ _ fun second h => by
       simp [PFunctor.FreeM.Cursor.ForkView.firstPath, hfirst] at h)
@@ -512,12 +512,12 @@ private theorem prEvent_classifyForkView_component_eq_zero_of_ne
     (cf : α → Option (Fin (qb i + 1))) (t s : Fin (qb i + 1))
     {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path t) (hne : t ≠ s) :
-    Pr{let result ← OracleComp.ofFreeM (PFunctor.FreeM.map
+    prEvent (OracleComp.ofFreeM (PFunctor.FreeM.map
         (fun second => classifyForkView main qb i cf t {
           occurrence := located.occurrence
           first := located.completion
-          second := second }) located.occurrence.complete)}[
-        result.map (cf ∘ Prod.fst) = some (some s)] = 0 :=
+          second := second }) located.occurrence.complete))
+      (fun result => result.map (cf ∘ Prod.fst) = some (some s)) = 0 :=
   (prEvent_map (OracleComp.ofFreeM located.occurrence.complete) _ _).trans
     (prEvent_eq_zero_of_forall_not _ _ fun second h => by grind [classifyForkView])
 
@@ -587,16 +587,18 @@ theorem prEvent_contextForkCollision_le_main_div [DecidableEq ι]
   have hpaths : (PFunctor.FreeM.output main <$> PFunctor.FreeM.withPath main :
       OracleComp spec α) = main := PFunctor.FreeM.map_output_withPath main
   conv_rhs => rw [← hpaths, prEvent_map, div_eq_mul_inv]
+  rw [contextForkCollision, prEvent_bind]
   refine prEvent_bind_le_prEvent_mul_of_forall_le _ _ _ _ (fun path hcf => ?_)
     (fun path hcf => ?_)
   · simp only [contextForkCollisionCont]
     rcases PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s
       with _ | located
     · simp
-    · refine (prEvent_bind_mono_of_forall_le _ _ (fun second => pure second) _
-        (fun second => located.completion.answer = second) fun second => ?_).trans ?_
+    · refine (prEvent_bind _ _ _).trans_le <| (MeasureProgramLogic.wp_mono _
+        (g := fun second => propInd (located.completion.answer = second))
+        fun second => ?_).trans ?_
       · by_cases heq : located.completion.answer = second <;> simp [hcf, heq]
-      · rw [bind_pure, prEvent_liftM_query_eq_card_div]
+      · rw [wp_propInd, prEvent_liftM_query_eq_card_div]
         simp [Finset.filter_eq]
   · simp only [contextForkCollisionCont]
     rcases PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s
@@ -641,7 +643,7 @@ theorem prEvent_contextForkViewCollision_le_collision [DecidableEq ι]
         (P := spec.toPFunctor) i main path s with _ | located
     · rfl
     · simp [PFunctor.FreeM.Cursor.Located.fork]
-  rw [hsource, contextForkCollision]
+  rw [hsource, contextForkCollision, prEvent_bind, prEvent_bind]
   refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun path => ?_
   simp only [viewCollision, contextForkCollisionCont]
   rcases hlocated : PFunctor.FreeM.Cursor.locateAt?
@@ -655,16 +657,14 @@ theorem prEvent_contextForkViewCollision_le_collision [DecidableEq ι]
             first := located.completion
             second := ⟨secondAnswer, secondSuffix⟩ })) <$>
           PFunctor.FreeM.withPath (located.occurrence.resume secondAnswer)
-    change Pr{let r ← ((liftM (query i) : OracleComp spec (spec.Range i)) >>= continuation)}[
-      r = some s] ≤ _
-    refine prEvent_bind_mono_of_forall_le _ _ _ _ _ fun secondAnswer => ?_
+    change prEvent ((liftM (query i) : OracleComp spec (spec.Range i)) >>= continuation)
+      (· = some s) ≤ _
+    refine (prEvent_bind _ _ _).trans_le <|
+      (MeasureProgramLogic.wp_mono _ fun secondAnswer => ?_).trans_eq (prEvent_bind _ _ _).symm
     rw [prEvent_map]
     by_cases heq : located.completion.answer = secondAnswer
     · by_cases hcf : cf (PFunctor.FreeM.output main path) = some s
-      · simp only [heq, hcf, and_self, ite_true]
-        rw [prEvent_pure]
-        simp only [ite_true]
-        exact prEvent_le_one _
+      · simp [heq, hcf]
       · have hfirst : cf (PFunctor.FreeM.output main located.completion.path) ≠ some s := by
           rw [located.path_eq]; exact hcf
         refine (le_of_eq (prEvent_eq_zero_of_forall_not _ _ fun _ h => ?_)).trans zero_le

@@ -31,13 +31,16 @@ rules for queries need uniform response measures.
 
 ### Postcondition bounds
 
-For `wp oa f ≤ wp oa g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
-pointwise obligation `f x ≤ g x`. The unrestricted `wp_mono` theorem remains available as a
-lower-priority fallback. The same applies to raw `Std.Internal.Do.wp` expressions.
+For `wp⟦oa⟧ f ≤ wp⟦oa⟧ g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
+pointwise obligation `f x ≤ g x` (`wp_mono_of_support`). The unrestricted
+`MeasureProgramLogic.wp_mono` remains available as a lower-priority fallback. Expectations are
+core's `Std.Internal.Do.wp` under the measure interpretation, so the same rules apply to raw
+`Std.Internal.Do.wp` expressions of that interpretation. An event after a common draw is an
+expectation over that draw, so `gcongr` descends into `Pr{let x ← mx; …}[…]` as well.
 `wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
 `wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
 
-Use `finiteness` for `wp oa post ≠ ⊤` when the result type is finite and the postcondition is
+Use `finiteness` for `wp⟦oa⟧ post ≠ ⊤` when the result type is finite and the postcondition is
 pointwise finite. An arbitrary quantitative postcondition may still take the value `⊤`.
 The regression module `VCVioTest/ProgramLogic/GCongr.lean` checks the support binders and the
 explicit raw-WP script, so these examples can be pasted into ordinary-import proofs.
@@ -147,10 +150,12 @@ classes of probability goals:
    - `vcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
    - `vcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
    - `vcstep rw congr` / `vcstep rw congr'` expose one or more shared binds explicitly
-   - Swaps use `OracleComp.prEvent_bind_bind_swap` / `OracleComp.evalDist_bind_bind_swap`
-     (countable responses) or their `_of_uniform` variants; congruence uses
-     `OracleComp.prEvent_bind_congr_of_support` / `OracleComp.evalDist_bind_apply_congr_of_support`,
-     leaving the continuations on the structural support of the shared prefix
+   - Swaps use `OracleComp.wp_prEvent_swap` / `OracleComp.wp_swap` on events and expectations
+     and `OracleComp.evalDist_bind_bind_swap` on output measures (countable responses), or their
+     `_of_uniform` variants; a swap under shared draws descends through the expectations of the
+     event's normal form. Congruence uses `wp_congr_of_support` /
+     `OracleComp.evalDist_bind_apply_congr_of_support`, leaving the continuations on the
+     structural support of the shared prefix
 
 4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
    when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `vcgen?`
@@ -206,7 +211,7 @@ the two sets independently; `handler_step` composes them in generic-to-specific
 order.
 
 **Opt-in `wp`-rewrite lookup**: mark an equational rewrite of shape
-`wp comp post = …` with `@[wpStep]` to extend the inner `wp`-stepping driver
+`wp⟦comp⟧ post = …` with `@[wpStep]` to extend the inner `wp`-stepping driver
 (`runWpStepRules`). The driver indexes registered rules by the path of `comp`
 in a `Lean.Meta.Sym`-backed discrimination tree: pattern construction goes
 through `Lean.Meta.Sym.mkPatternFromDeclWithKey`, which preprocesses the rule's
@@ -593,7 +598,7 @@ theorem my_security : g₁ =ᵈ gₙ := by
 
 ### Why `Lean.Meta.Sym.*`?
 
-The planner needs to ask "given this `wp comp post` or `Triple pre comp post`
+The planner needs to ask "given this `wp⟦comp⟧ post` or `Triple pre comp post`
 goal, which registered rules could fire?" *fast*, and without the cost or
 surprises of `isDefEq` unfolding. Core Lean has been building a dedicated
 symbolic toolkit under `Lean.Meta.Sym` precisely for this: `Sym.Pattern`
@@ -633,7 +638,7 @@ rewrite works).
 | File | Attribute | Role |
 |------|-----------|------|
 | `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
-| `VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` | `@[wpStep]` | Equational `wp comp post = …` rewrites, indexed by a `Sym.Pattern` on `oa` and consulted by `runWpStepRules` via `TacticM` rewriting (`rw` then `simp only`). The `Sym.Simp.Theorem` bundle for an eventual `SymM`-side rewriter is *not* eagerly built; `Sym.Simp.mkTheoremFromDecl` can rebuild it on demand from `getAllWpStepEntries` |
+| `VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` | `@[wpStep]` | Equational `wp⟦comp⟧ post = …` rewrites, indexed by a `Sym.Pattern` on `oa` and consulted by `runWpStepRules` via `TacticM` rewriting (`rw` then `simp only`). The `Sym.Simp.Theorem` bundle for an eventual `SymM`-side rewriter is *not* eagerly built; `Sym.Simp.mkTheoremFromDecl` can rebuild it on demand from `getAllWpStepEntries` |
 
 Each entry carries a `SpecProof` (reusing the core-Lean type from
 `Lean.Elab.Tactic.Do.SpecAttr`) so origins can be distinguished between a
@@ -665,9 +670,9 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 
 | Want to add… | Tag it with | Expected shape |
 |--------------|-------------|----------------|
-| A unary Triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp oa post ≥ pre` |
+| A unary Triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp⟦oa⟧ post ≥ pre` |
 | A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
-| A `wp`-driven equational rewrite | `@[wpStep]` | `wp comp post = …` (exact head `wp`) |
+| A `wp`-driven equational rewrite | `@[wpStep]` | `wp⟦comp⟧ post = …` (exact head: core's `wp`) |
 
 Priorities (`@[vcspec (prio := 200)]`, `@[wpStep (prio := 200)]`) follow the
 standard Lean convention: higher priority entries are tried first within the

@@ -60,25 +60,22 @@ example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
     wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   grw [hfg]
 
-example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
-    (hf : Measurable f) (hg : Measurable g) :
+example (mx : m α) (f g : α → ENNReal) (c : ENNReal) :
     wp mx (fun x ↦ c + f x + g x) Lean.Order.bot =
       c * 𝒟[mx] Set.univ + wp mx f Lean.Order.bot + wp mx g Lean.Order.bot := by
-  simp only [MeasureProgramLogic.Quantitative.wp_add mx (fun x ↦ c + f x) g
-      (measurable_const.add hf) hg,
-    MeasureProgramLogic.Quantitative.wp_add mx (fun _ ↦ c) f measurable_const hf,
-    MeasureProgramLogic.Quantitative.wp_const]
+  rw [MeasureProgramLogic.wp_add mx (fun x ↦ c + f x) g,
+    MeasureProgramLogic.wp_add mx (fun _ ↦ c) f, wp_const, prEvent_true_eq_evalDist_apply_univ]
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
     wp mx f Lean.Order.bot ≤ c * 𝒟[mx] Set.univ + wp mx g Lean.Order.bot :=
-  MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hf hg hfg
+  MeasureProgramLogic.wp_le_const_mul_mass_add mx hf hg hfg
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal) [IsProbabilityMeasure 𝒟[mx]]
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
     wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot := by
-  simpa using MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hf hg hfg
+  simpa using MeasureProgramLogic.wp_le_const_mul_mass_add mx hf hg hfg
 
 end VCVioTest.ProgramLogic.MeasureWP

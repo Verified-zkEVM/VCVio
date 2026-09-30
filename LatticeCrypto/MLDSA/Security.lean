@@ -151,13 +151,7 @@ theorem idsWithAbort_complete' :
     (identificationScheme p prims).Complete := by
   classical
   intro pk sk hvalid
-  refine (OracleComp.prEvent_eq_one_iff _ (· = true)).2 fun b hb => ?_
-  rw [support_bind] at hb
-  simp only [Set.mem_iUnion] at hb
-  obtain ⟨t?, ht?, hb⟩ := hb
-  rw [support_pure] at hb
-  simp only [Set.mem_singleton_iff] at hb
-  subst hb
+  refine (OracleComp.prEvent_eq_one_iff _ _).2 fun t? ht? => ?_
   match t? with
   | none => rfl
   | some (w1, cTilde, zh) =>

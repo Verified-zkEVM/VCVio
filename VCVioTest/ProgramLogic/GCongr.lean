@@ -39,26 +39,26 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 example (P Q : Prop) (h : P → Q) : propInd P ≤ propInd Q := by apply_rw [h]
 
 example (oa : OracleComp spec α) (p q : α → Prop) (h : ∀ x, p x → q x) :
-    wp oa (fun x ↦ propInd (p x)) ≤ wp oa (fun x ↦ propInd (q x)) := by apply_rw [h]
+    wp⟦oa⟧ (fun x ↦ propInd (p x)) ≤ wp⟦oa⟧ (fun x ↦ propInd (q x)) := by apply_rw [h]
 
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞) (h : ∀ x, f x ≤ g x) :
-    wp oa f ≤ wp oa g := by
+    wp⟦oa⟧ f ≤ wp⟦oa⟧ g := by
   gcongr with x
   exact h x
 
 example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞) (h : ∀ s x, f s x ≤ g s x) :
-    ∑ s, wp oa (f s) ≤ ∑ s, wp oa (g s) := by
+    ∑ s, wp⟦oa⟧ (f s) ≤ ∑ s, wp⟦oa⟧ (g s) := by
   gcongr with s _ x
   exact h s x
 
 example [MeasurableSpace α] (oa : OracleComp spec α) (post : α → ℝ≥0∞)
     (hpost : Measurable post) :
-    wp oa post = ∫⁻ x, post x ∂𝒟[oa] :=
+    wp⟦oa⟧ post = ∫⁻ x, post x ∂𝒟[oa] :=
   wp_eq_lintegral oa post hpost
 
 /-- Support-aware descent exposes exactly the hypothesis needed by the continuation. -/
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
-    (h : ∀ x ∈ support oa, f x ≤ g x) : wp oa f ≤ wp oa g := by
+    (h : ∀ x ∈ support oa, f x ≤ g x) : wp⟦oa⟧ f ≤ wp⟦oa⟧ g := by
   gcongr with x hx
   guard_hyp hx : x ∈ support oa
   guard_target = f x ≤ g x
@@ -66,7 +66,7 @@ example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
 
 example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞)
     (h : ∀ i, ∀ x ∈ support oa, f i x ≤ g i x) :
-    ∑ i, wp oa (f i) ≤ ∑ i, wp oa (g i) := by
+    ∑ i, wp⟦oa⟧ (f i) ≤ ∑ i, wp⟦oa⟧ (g i) := by
   gcongr with i _ x hx
   exact h i x hx
 
@@ -80,13 +80,13 @@ example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
 /-- Averages of inner averages: after `wp_bind`, `gcongr` descends into the continuation with
 the support hypothesis. -/
 example {β : Type} (oa : OracleComp spec α) (ob ob' : α → OracleComp spec β) (g : β → ℝ≥0∞)
-    (h : ∀ x ∈ support oa, wp (ob x) g ≤ wp (ob' x) g) :
-    wp (oa >>= ob) g ≤ wp (oa >>= ob') g := by
+    (h : ∀ x ∈ support oa, wp⟦ob x⟧ g ≤ wp⟦ob' x⟧ g) :
+    wp⟦oa >>= ob⟧ g ≤ wp⟦oa >>= ob'⟧ g := by
   rw [wp_bind, wp_bind]
   gcongr with x hx
   exact h x hx
 
 example [Finite α] (oa : OracleComp spec α) (post : α → ℝ≥0∞)
-    (hpost : ∀ x, post x ≠ ⊤) : wp oa post ≠ ⊤ := by finiteness
+    (hpost : ∀ x, post x ≠ ⊤) : wp⟦oa⟧ post ≠ ⊤ := by finiteness
 
 end VCVioTest.ProgramLogicGCongr

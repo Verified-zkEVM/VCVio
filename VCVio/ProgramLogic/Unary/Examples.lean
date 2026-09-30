@@ -25,7 +25,7 @@ variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
 example (x : α) (post : α → ℝ≥0∞) :
-    wp (pure x : OracleComp spec α) post = post x :=
+    wp⟦(pure x : OracleComp spec α)⟧ post = post x :=
   wp_pure (spec := spec) x post
 
 example (pre : ℝ≥0∞) (oa : OracleComp spec α) (ob : α → OracleComp spec β)
@@ -36,7 +36,7 @@ example (pre : ℝ≥0∞) (oa : OracleComp spec α) (ob : α → OracleComp spe
   triple_bind (spec := spec) hoa hob
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
-    wp (query t : OracleComp spec (spec.Range t)) post =
+    wp⟦(query t : OracleComp spec (spec.Range t))⟧ post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t :=
   wp_query (spec := spec) t post
 

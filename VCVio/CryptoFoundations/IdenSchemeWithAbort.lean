@@ -112,8 +112,7 @@ lemma verify_of_complete (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Cha
     {cm : Commit} {c : Chal} {z : Resp}
     (h_mem : some (cm, c, z) ∈ support (ids.honestExecution s w)) :
     ids.verify s cm c z = true :=
-  (OracleComp.prEvent_eq_one_iff _ _).1 (hc s w hrel) _
-    ((mem_support_bind_iff _ _ _).2 ⟨_, h_mem, by simp⟩)
+  (OracleComp.prEvent_eq_one_iff _ _).1 (hc s w hrel) _ h_mem
 
 end Completeness
 

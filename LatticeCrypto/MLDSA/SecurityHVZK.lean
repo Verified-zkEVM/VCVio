@@ -536,7 +536,8 @@ noncomputable def hvzkBadMass [SampleableType (CommitHashBytes p)] (pk : PublicK
 lemma hvzkBadMass_le_one [SampleableType (CommitHashBytes p)] (pk : PublicKey p prims)
     (sk : SecretKey p) :
     hvzkBadMass p prims pk sk ≤ 1 := by
-  unfold hvzkBadMass; exact prEvent_le_one _
+  unfold hvzkBadMass
+  exact wp_le_of_forall_le _ fun _ => prEvent_le_one _
 
 /-- `hvzkBadMass` over the simulator's `(c̃, z)` randomness: transporting the honest `(y, c̃)`
 draw through the `y ↦ y + c·s₁` shift (`honest_pregate_evalDistEq`) re-expresses the
@@ -546,29 +547,13 @@ lemma hvzkBadMass_eq_prEvent_indicator [SampleableType (CommitHashBytes p)]
     hvzkBadMass p prims pk sk =
       Pr{let cTilde ← $ᵗ (CommitHashBytes p); let z ← $ᵗ (RqVec p.l)}[
         hvzkBadIndicator p prims pk sk cTilde z = true] := by
-  have hnorm : (do
-      let y ← $ᵗ (RqVec p.l)
-      let cTilde ← $ᵗ (CommitHashBytes p)
-      let c := prims.sampleInBall cTilde
-      let w := prims.expandA pk.rho * y
-      let z := y + c • sk.s1
-      let r0 := prims.lowBitsVec (w - c • sk.s2)
-      let ct0 := c • sk.t0
-      let h := prims.makeHintVec (-ct0) (w - c • sk.s2 + ct0)
-      return decide (polyVecNorm z < p.gamma1 - p.beta ∧
-        ¬(polyVecNorm r0 < p.gamma2 - p.beta ∧ polyVecNorm ct0 < p.gamma2 ∧
-          prims.hintWeight h ≤ p.omega)) : ProbComp Bool) =
-      ($ᵗ (RqVec p.l)) >>= fun y => ($ᵗ (CommitHashBytes p)) >>= fun cTilde =>
-        (fun cT zv => (pure (hvzkBadIndicator p prims pk sk cT zv) : ProbComp Bool))
-          cTilde (y + prims.sampleInBall cTilde • sk.s1) := by
-    refine bind_congr fun y => bind_congr fun cTilde => ?_
-    simp only [hvzkBadIndicator, rqVec_add_sub_cancel]
+  have h := (honest_pregate_evalDistEq p prims sk
+    (fun cT zv => (pure (hvzkBadIndicator p prims pk sk cT zv) : ProbComp Bool))).prEvent_eq
+    (· = true)
+  simp only [prEvent_norm] at h
   unfold hvzkBadMass
-  rw [hnorm]
-  simpa only [prEvent_norm] using
-    (honest_pregate_evalDistEq p prims sk
-      (fun cT zv => (pure (hvzkBadIndicator p prims pk sk cT zv) : ProbComp Bool))).prEvent_eq
-      (· = true)
+  rw [← h]
+  simp only [hvzkBadIndicator, rqVec_add_sub_cancel]
 
 /-- The quantitative HVZK bound for `hvzkSimulatorReal`: the supremum over honestly generated
 key pairs of the extra-rejection mass `hvzkBadMass`. Taking the supremum over seeds makes the

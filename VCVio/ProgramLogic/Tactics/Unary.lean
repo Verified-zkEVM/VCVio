@@ -41,8 +41,8 @@ private def runVCGenFinish : TacticM Unit := do
         OracleComp.ProgramLogic.wp_dite, OracleComp.ProgramLogic.wp_map,
         OracleComp.ProgramLogic.wp_uniformSample,
         OracleComp.ProgramLogic.wp_const,
-        OracleComp.ProgramLogic.propInd_true, OracleComp.ProgramLogic.propInd_false,
-        OracleComp.ProgramLogic.propInd_eq_ite,
+        propInd_true, propInd_false,
+        propInd_eq_ite,
         game_rule]))
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
@@ -158,9 +158,9 @@ For `Pr{…}[…] = 1` and lower-bound goals such as `r ≤ Pr{let x ← oa}[p x
 the goal into a `Triple` form.
 
 For equalities of events or output measures, such as `Pr{…}[…] = Pr{…}[…]` or
-`𝒟[oa] = 𝒟[ob]`: tries bind-swap (`OracleComp.prEvent_bind_bind_swap`,
+`𝒟[oa] = 𝒟[ob]`: tries bind-swap (`OracleComp.wp_prEvent_swap`, `OracleComp.wp_swap`,
 `OracleComp.evalDist_bind_bind_swap`), bind congruence on the support of the shared prefix
-(`OracleComp.prEvent_bind_congr_of_support`, `OracleComp.evalDist_bind_congr_of_support`), and
+(`wp_congr_of_support`, `OracleComp.evalDist_bind_congr_of_support`), and
 swap-then-congr.
 
 For other `Pr{…}[…]` goals: rewrites to raw `wp` form and keeps stepping structurally when a `wp`
@@ -360,8 +360,8 @@ elab_rules (kind := vcgenSuggestion) : tactic
             "OracleComp.ProgramLogic.wp_bind, OracleComp.ProgramLogic.wp_query, ",
             "OracleComp.ProgramLogic.wp_ite, OracleComp.ProgramLogic.wp_dite, ",
             "OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_uniformSample, ",
-            "OracleComp.ProgramLogic.wp_const, OracleComp.ProgramLogic.propInd_true, ",
-            "OracleComp.ProgramLogic.propInd_false, OracleComp.ProgramLogic.propInd_eq_ite, ",
+            "OracleComp.ProgramLogic.wp_const, propInd_true, ",
+            "propInd_false, propInd_eq_ite, ",
             "ite_true, ite_false, ite_true, ite_false, dite_true, dite_false, ",
             "one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero, game_rule]",
           ],
@@ -405,10 +405,10 @@ Rewrites using linearity of expectation (`wp_add`, `wp_mul_const`), indicator al
 (`propInd_true`, `propInd_false`, `propInd_and`), and standard WP step rules. -/
 macro (name := expNorm) "exp_norm" : tactic =>
   `(tactic| simp only [
-    OracleComp.ProgramLogic.propInd_true, OracleComp.ProgramLogic.propInd_false,
-    OracleComp.ProgramLogic.propInd_and, OracleComp.ProgramLogic.propInd_eq_ite,
-    OracleComp.ProgramLogic.propInd_not, OracleComp.ProgramLogic.propInd_le_one,
-    OracleComp.ProgramLogic.propInd,
+    propInd_true, propInd_false,
+    propInd_and, propInd_eq_ite,
+    propInd_not, propInd_le_one,
+    propInd,
     OracleComp.ProgramLogic.wp_add, OracleComp.ProgramLogic.wp_mul_const,
     OracleComp.ProgramLogic.wp_const, OracleComp.ProgramLogic.wp_eq_tsum,
     OracleComp.ProgramLogic.wp_pure, OracleComp.ProgramLogic.wp_bind,
@@ -423,6 +423,6 @@ macro (name := byHoare) "by_hoare" : tactic =>
   `(tactic|
     simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,
       OracleComp.ProgramLogic.prEvent_eq_wp_propInd,
-      ← OracleComp.ProgramLogic.propInd_eq_ite])
+      ← propInd_eq_ite])
 
 end OracleComp.ProgramLogic

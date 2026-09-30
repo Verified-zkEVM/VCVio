@@ -223,7 +223,7 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
       _ = _ := by simp only [Functor.map_map, Function.comp_def]
   have hsuccess : Pr{let output ← main}[observe output = some value] =
       Pr{let output ← source >>= kernel}[output = some value] := by
-    rw [← hprogram, prEvent_map]
+    rw [← prEvent_bind source kernel, ← hprogram, prEvent_map]
   rw [hsuccess]
   refine (prEvent_bind_sq_le_bind_pair source kernel (· = some value)).trans_eq ?_
   let observeView := fun view : PFunctor.FreeM.Cursor.ForkView i main n ↦
@@ -233,31 +233,21 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
       source >>= fun certified ↦ Option.map observeView <$> Cursor.completeFork certified.1 := by
     unfold observedForkPair
     rw [← splitAtValid_bind_completeFork_oracleComp, map_bind]
-  rw [hfork]
-  let pairKernel := fun certified ↦ (do
-    let a ← kernel certified
-    let b ← kernel certified
-    return (a, b))
-  have hpair :
-      Pr{let x ← source; let a ← kernel x; let b ← kernel x}[a = some value ∧ b = some value] =
-        Pr{let pair ← source >>= pairKernel}[pair.1 = some value ∧ pair.2 = some value] := by
-    simp only [pairKernel, map_bind, bind_pure_comp, Functor.map_map]
-  rw [hpair]
-  refine prEvent_bind_congr source pairKernel _ _ _ ?_
+  rw [hfork, prEvent_bind]
+  refine MeasureProgramLogic.wp_congr source ?_
   rintro ⟨split, hvalid⟩
   cases split with
   | missing path =>
       have hne := ne_some_of_valid_missing hselect path hvalid
-      simp [pairKernel, kernel, Cursor.complete, Cursor.completeFork,
+      simp [kernel, Cursor.complete, Cursor.completeFork,
         PFunctor.FreeM.Cursor.Split.complete_missing,
         PFunctor.FreeM.Cursor.Split.completeFork_missing, hne]
   | found occurrence =>
       rw [map_completeFork_found_oracleComp]
-      simp only [pairKernel, kernel, Cursor.complete,
+      simp only [kernel, Cursor.complete, prEvent_bind, prEvent_map, MeasureProgramLogic.wp_map,
         PFunctor.FreeM.Cursor.Split.complete_found,
         PFunctor.FreeM.Cursor.Occurrence.completePath, Cursor.completeOccurrence,
-        ofFreeM_map, bind_map_left, map_bind, bind_pure_comp,
-        Functor.map_map, Option.some.injEq, Prod.mk.injEq,
+        ofFreeM_map, Functor.map_map, Option.some.injEq, Prod.mk.injEq,
         PFunctor.FreeM.Cursor.ForkView.firstPath_mk,
         PFunctor.FreeM.Cursor.ForkView.secondPath_mk,
         observeView, Function.comp_def]

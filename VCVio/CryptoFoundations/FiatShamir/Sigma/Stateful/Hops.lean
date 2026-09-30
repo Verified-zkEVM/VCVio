@@ -750,8 +750,8 @@ private lemma cmaSimSignPublicBad_prob_le_roCacheCount_mul
         simTranscript_cacheHit_prob_le_roCacheCount_mul M Commit Chal σ simT β hCommit
           key.1 m cache
   | none =>
-      rw [cmaSimSignPublicDist_none]
-      refine prEvent_bind_le_of_forall_le _ _ _ fun key => ?_
+      rw [cmaSimSignPublicDist_none, prEvent_bind]
+      refine wp_le_of_forall_le _ fun key => ?_
       rw [prEvent_map]
       simpa [cmaSimSignPublicBad, cmaSignPublicOfTranscript] using
         simTranscript_cacheHit_prob_le_roCacheCount_mul M Commit Chal σ simT β hCommit

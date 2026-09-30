@@ -261,7 +261,7 @@ example (msg k : ZMod 2) :
       Pr{let c ← ($ᵗ (ZMod 2) : ProbComp (ZMod 2))}[c = k] := by
   fail_if_success (simp; done)  -- gap(simp, 2026-09-26): translation invariance
   fail_if_success grind  -- gap(grind, 2026-09-26): translation invariance
-  rw [prEvent_map]; exact SampleableType.prEvent_uniformSample_equiv (Equiv.addLeft msg) (· = k)
+  exact SampleableType.prEvent_uniformSample_equiv (Equiv.addLeft msg) (· = k)
 
 /-! ## 6. The shape of `do`
 Pure `let :=` steps, nested blocks, pattern-matching binds, branches and long chains, over
@@ -333,13 +333,18 @@ example : 𝒟[coinPadded] {true} = 𝒟[($ᵗ Bool : ProbComp Bool)] {true} := 
 example : support coinPadded = support ($ᵗ Bool : ProbComp Bool) := by simp [coinPadded]
 example : (false : Bool) ∈ support chain12 := by simp [chain12]
 
-/-! ### Outcome values of multi-step programs — `target(simp+grind)`
+/-! ### Outcome values of multi-step programs
 
-The uniform event law is keyed on the `Pr{…}` bind form, while `simp` first normalises a bind
-into a pushforward, so an event of a derived uniform program such as `coinThenNeg` stops at
-`𝒟[(fun a => a = true) <$> ($ᵗ Bool)] {True}`. Concrete outcome values of long chains
-(`𝒟[chain12] {true} = (2 ^ 12)⁻¹`) and the abort mass of a guarded `OptionT` program are
-recorded here as targets rather than carried as multi-step proofs. -/
+An event of a derived uniform program such as `coinThenNeg` normalizes to an event of its one
+draw, which the uniform event law counts (the counting gap of the header). A long chain stops at a
+nest of expectations over its uniform draws, which neither set evaluates: concrete outcome values
+of long chains (`𝒟[chain12] {true} = (2 ^ 12)⁻¹`) and the abort mass of a guarded `OptionT`
+program are recorded here as `target(simp+grind)` rather than carried as multi-step proofs. -/
+
+example : Pr{let x ← coinThenNeg}[x = true] = 2⁻¹ := by
+  fail_if_success (simp [coinThenNeg]; done)  -- gap(simp, 2026-09-30): counting, see header
+  fail_if_success grind [coinThenNeg]  -- gap(grind, 2026-09-30): counting, see header
+  simp [coinThenNeg, Finset.filter_eq']
 
 /-! ## 7. Cryptography prerequisites
 Guessing a uniform secret, collision probability, and masses summing to one. -/
@@ -398,13 +403,20 @@ example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → Pro
 
 /-! ## 10. Events whose continuation destructures its input
 
-An event computation written as a destructuring `do` block keeps a `match` around the returned
-proposition, so it stays in bind form; implication between the returned propositions is
-transported below the bind. -/
+The notation turns a destructuring draw into projections of the drawn pair, so the event is a
+predicate on the draw and implication between the returned propositions is `prEvent_mono`. An
+explicit event of a destructuring `do` block keeps its `match`: `prEvent_bind` exposes the
+expectation over the draw, and the implication is transported below it on the reachable
+outputs. -/
 
 example (mx : ProbComp (Bool × Bool)) :
-    prEvent (do let (a, b) ← mx; pure (a = true ∧ b = true)) ≤
-      prEvent (do let (a, _) ← mx; pure (a = true)) :=
-  prEvent_bind_mono_of_support _ _ _ fun ⟨_, _⟩ _ => prEvent_pure_mono And.left
+    Pr{let (a, b) ← mx}[a = true ∧ b = true] ≤ Pr{let (a, _) ← mx}[a = true] :=
+  prEvent_mono mx _ _ fun _ => And.left
+
+example (mx : ProbComp (Bool × Bool)) :
+    prEvent (do let (a, b) ← mx; pure (a = true ∧ b = true)) (fun b => b) ≤
+      prEvent (do let (a, _) ← mx; pure (a = true)) (fun b => b) := by
+  rw [prEvent_bind, prEvent_bind]
+  exact wp_mono_of_support mx fun ⟨_, _⟩ _ => by simpa using propInd_mono And.left
 
 end VCVioTest.ProbabilityTactics

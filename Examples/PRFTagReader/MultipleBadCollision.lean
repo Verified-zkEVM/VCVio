@@ -71,17 +71,12 @@ lemma multipleBadStep_bad_le
   by_cases hslot : s.sessionsUsed tag < sessionsPerTag
   · rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
     -- The run's answer type is the tag oracle's range only up to unfolding the specification.
-    erw [bind_assoc]
+    simp only [unlinkOracleSpec_range_inl, prEvent_norm]
     -- `bad` fires exactly when the fresh nonce is already cached for this tag.
-    refine (prEvent_bind_le_prEvent_add_of_support _ _
-      (fun nonce => (sB.responses (tag, nonce)).isSome = true) _
-      fun nonce _ hcached => le_of_eq (prEvent_eq_zero_of_forall_mem_support _ _
-        fun z hz => ?_)).trans ?_
-    · obtain ⟨r, hr, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-      obtain ⟨step, _, hr⟩ := (mem_support_bind_iff _ _ _).mp hr
-      erw [support_pure, Set.mem_singleton_iff] at hr
-      subst hz hr
-      simp [multipleBadAdvance, hbad, Bool.eq_false_iff.mpr hcached]
+    refine (wp_le_prEvent_add _ (fun nonce => (sB.responses (tag, nonce)).isSome = true) _
+      (fun nonce hcached => le_of_eq (prEvent_eq_zero_of_forall_not _ _ fun _ => by
+        simp [multipleBadAdvance, hbad, Bool.eq_false_iff.mpr hcached]))
+      fun _ => prEvent_le_one _).trans ?_
     rw [add_zero]
     obtain ⟨S, hScard, hS⟩ := hbounded tag
     calc Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[(sB.responses (tag, nonce)).isSome = true]
@@ -220,7 +215,7 @@ lemma simulateQ_multipleBad_prob_le
   induction adversary using OracleComp.inductionOn generalizing s c sB with
   | pure b =>
     simp only [simulateQ_pure, StateT.run_pure, prEvent_pure, hbad, Bool.false_eq_true,
-      ite_false]
+      propInd_false]
     exact zero_le
   | query_bind t oa ih =>
     rw [multipleBad_run_query_bind' t (fun r => oa r) ((s, c), sB)]
@@ -274,8 +269,9 @@ lemma simulateQ_multipleBad_prob_le
             ih p.1 p.2.1.1 p.2.1.2 p.2.2 hinvs.1 hpbad hinvs.2.1 hinvs.2.2
           simpa [cont, hRdec, Prod.eq_iff_fst_eq_snd_eq, show (p.2.1.1, p.2.1.2) = p.2.1 from rfl]
             using hih
+        rw [prEvent_bind]
         calc
-          Pr{let z ← step >>= cont}[z.2.2.bad = true]
+          Pr{let p ← step; let z ← cont p}[z.2.2.bad = true]
               ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb +
                   ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB - 1 : ℕ) :
                     ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) :=
@@ -295,6 +291,7 @@ lemma simulateQ_multipleBad_prob_le
         exact ih none s c sB hbounded hbad hused hsync
     | inr transcript =>
       -- Reader branch: bad-world component untouched; induct on the continuation.
+      rw [prEvent_bind]
       refine prEvent_bind_le_of_forall_le_of_support _ _ _ fun z hmem => ?_
       have hzeq := multipleBadStep_reader_state_eq (sessionsPerTag := sessionsPerTag)
         transcript s c sB z hmem

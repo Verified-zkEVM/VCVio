@@ -70,7 +70,7 @@ theorem prEvent_log_entry_eq_le {α : Type}
       Set.mem_singleton_iff] at hz
     subst hz; simp at h
   | query_bind t mx ih =>
-    rw [run_simulateQ_loggingOracle_query_bind]
+    rw [run_simulateQ_loggingOracle_query_bind, prEvent_bind]
     cases k with
     | zero =>
       refine (prEvent_bind_le_prEvent_of_forall_eq_zero _ _
@@ -119,7 +119,7 @@ theorem prEvent_log_output_match_le {α : Type}
     subst hz
     obtain ⟨s, v, hlog, _⟩ := h; simp at hlog
   | query_bind t mx ih =>
-    rw [run_simulateQ_loggingOracle_query_bind]
+    rw [run_simulateQ_loggingOracle_query_bind, prEvent_bind]
     cases k with
     | zero =>
       refine (prEvent_bind_le_prEvent_of_forall_eq_zero _ _ (fun u => HEq u₀ u) _
@@ -178,7 +178,7 @@ theorem prEvent_pair_collision_le {α : Type}
     subst hz; simp at h
   | query_bind t mx ih =>
     intro i j hij
-    rw [run_simulateQ_loggingOracle_query_bind]
+    rw [run_simulateQ_loggingOracle_query_bind, prEvent_bind]
     -- The matched output lives at position `k` in the log; both end cases reduce to
     -- `prEvent_log_output_match_le` after extracting the sigma entry.
     have key : ∀ (u : spec.Range t) (k : ℕ) (e : β × QueryLog spec → Prop),
@@ -408,7 +408,7 @@ private lemma prEvent_cacheCollision_run_le_sum_aux [Inhabited ι]
             Finset.sum_le_sum_of_subset (Finset.range_mono (Nat.sub_le m 1))
     · push Not at ht
       have ht_none : cache₀ t = none := Option.eq_none_iff_forall_ne_some.mpr ht
-      rw [run_simulateQ_cachingOracle_query_bind_of_miss ht_none]
+      rw [run_simulateQ_cachingOracle_query_bind_of_miss ht_none, prEvent_bind]
       have hε₁ : Pr{let u ← (query t : OracleComp spec (spec.Range t))}[CacheHasCollision
           (cache₀.cacheQuery t u)] ≤ (k : ℝ≥0∞) * C⁻¹ := by
         classical

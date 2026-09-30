@@ -48,8 +48,8 @@ then `wp` of the simulated computation equals `wp` of the original. -/
     (hImpl : ∀ (t : spec.Domain),
       impl t =ᵈ (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t)))
     (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp (simulateQ impl oa) post =
-      wp oa post := by
+    wp⟦simulateQ impl oa⟧ post =
+      wp⟦oa⟧ post := by
   induction oa using OracleComp.inductionOn with
   | pure x => simp
   | query_bind t oa ih =>
@@ -67,7 +67,7 @@ theorem wp_liftComp_of_evalDistEq {ι' : Type*} {superSpec : OracleSpec ι'}
     (hMeasure : ∀ t, (liftM (spec.query t) : OracleComp superSpec (spec.Range t)) =ᵈ
       (liftM (spec.query t) : OracleComp spec (spec.Range t)))
     (mx : OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp (liftComp mx superSpec) post = wp mx post := by
+    wp⟦liftComp mx superSpec⟧ post = wp⟦mx⟧ post := by
   induction mx using OracleComp.inductionOn with
   | pure x => simp
   | query_bind t k ih =>
@@ -85,7 +85,7 @@ end MeasureSpec
     {ι' : Type*} {superSpec : OracleSpec ι'}
     [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
     (mx : OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp (liftComp mx superSpec) post = wp mx post :=
+    wp⟦liftComp mx superSpec⟧ post = wp⟦mx⟧ post :=
   wp_liftComp_of_evalDistEq (fun t ↦ evalDistEq_liftM_query_uniform t) mx post
 
 section MeasureSpec
@@ -99,8 +99,8 @@ after its state is discarded. The hidden state needs no measurable-space instanc
     (hImpl : ∀ (t : spec.Domain) (s : σ),
       (impl t).run' s =ᵈ (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t)))
     (oa : OracleComp spec α) (s : σ) (post : α → ℝ≥0∞) :
-    wp ((simulateQ impl oa).run' s) post =
-      wp oa post := by
+    wp⟦(simulateQ impl oa).run' s⟧ post =
+      wp⟦oa⟧ post := by
   induction oa using OracleComp.inductionOn generalizing s with
   | pure x => simp
   | query_bind t k ih =>
@@ -109,9 +109,9 @@ after its state is discarded. The hidden state needs no measurable-space instanc
       OracleQuery.input_query, StateT.run'_bind', wp_bind]
     simp_rw [ih]
     calc
-      _ = wp ((impl t).run' s) (fun u ↦ wp (k u) post) := by
+      _ = wp⟦(impl t).run' s⟧ (fun u ↦ wp⟦k u⟧ post) := by
         simpa only [StateT.run'_eq, Function.comp_def] using
-          (wp_map Prod.fst ((impl t).run s) (fun u ↦ wp (k u) post)).symm
+          (wp_map Prod.fst ((impl t).run s) (fun u ↦ wp⟦k u⟧ post)).symm
       _ = _ := by
         rw [wp_eq_lintegral _ _ Measurable.of_discrete, (hImpl t s).evalDist_eq,
           ← wp_eq_lintegral _ _ Measurable.of_discrete]

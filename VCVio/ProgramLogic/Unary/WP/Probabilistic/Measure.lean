@@ -36,7 +36,7 @@ attribute [local instance] MeasureProgramLogic.Quantitative.instMAlgOrdered
 theorem μ_one_le {α : Type} (mx : m α) :
     MAlgOrdered.μ (mx >>= fun _ ↦ pure (1 : ENNReal)) ≤ 1 := by
   let : MeasurableSpace α := MeasurableSpace.comap (fun _ : α ↦ (1 : ENNReal)) inferInstance
-  exact Quantitative.wp_le_const mx measurable_const
+  exact MeasureProgramLogic.wp_le_const mx measurable_const
     (Filter.Eventually.of_forall fun _ ↦ le_rfl)
 
 /-- The expectation algebra restricted to bounded probability assertions. -/
@@ -73,7 +73,7 @@ theorem wp_mono (mx : m α) {f g : α → Prob} (hfg : ∀ a, f a ≤ g a) :
 theorem wp_val_eq_lintegral_map (mx : m α) (post : α → Prob) :
     (wp mx post (Lean.Order.bot : EPost.Nil)).val = ∫⁻ y, y ∂𝒟[(fun a ↦ (post a).val) <$> mx] := by
   rw [wp_val, bind_pure_comp]
-  exact Quantitative.μ_eq_lintegral _
+  exact μ_toMAlgOrdered _
 
 variable [MeasurableSpace α]
 
@@ -82,7 +82,7 @@ theorem wp_val_eq_lintegral (mx : m α) (post : α → Prob)
     (hpost : Measurable fun a ↦ (post a).val) :
     (wp mx post (Lean.Order.bot : EPost.Nil)).val = ∫⁻ a, (post a).val ∂𝒟[mx] := by
   rw [wp_val]
-  exact Quantitative.wp_eq_lintegral mx _ hpost
+  exact MeasureProgramLogic.wp_eq_lintegral mx _ hpost
 
 /-- Constant assertions retain the successful-output mass. -/
 theorem wp_const (mx : m α) (p : Prob) :

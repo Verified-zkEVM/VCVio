@@ -49,6 +49,37 @@ theorem prEvent_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
   rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete,
     OptionT.evalDist_lift]
 
+/-- Lifting into the optional monad preserves every expectation. -/
+theorem wp_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (g : α → ENNReal) : wp⟦OptionT.lift mx⟧ g = wp⟦mx⟧ g := by
+  let : MeasurableSpace α := ⊤
+  rw [MeasureProgramLogic.wp_eq_lintegral _ g Measurable.of_discrete,
+    MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete, OptionT.evalDist_lift]
+
+/-- A monadic lift into the optional monad preserves every expectation. -/
+@[simp↓ high]
+theorem wp_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (g : α → ENNReal) : wp⟦(liftM mx : OptionT m α)⟧ g = wp⟦mx⟧ g :=
+  wp_lift mx g
+
+/-- The lift instance of the optional monad preserves every expectation. -/
+@[simp↓ high]
+theorem wp_monadLift {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (g : α → ENNReal) :
+    wp⟦(MonadLift.monadLift mx : OptionT m α)⟧ g = wp⟦mx⟧ g :=
+  wp_lift mx g
+
+/-- The lift instance of the optional monad preserves the probability of an observed event. -/
+@[simp↓ high, grind norm↓]
+theorem prEvent_monadLift {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α : Type} (mx : m α) (p : α → Prop) :
+    Pr{let x ← (MonadLift.monadLift mx : OptionT m α)}[p x] = Pr{let x ← mx}[p x] :=
+  prEvent_lift mx p
+
 /-- A monadic lift into the optional monad preserves the probability of an observed event. -/
 @[simp↓ high, grind norm↓]
 theorem prEvent_liftM {m : Type → Type v} [Monad m] [LawfulMonad m]
@@ -65,15 +96,9 @@ theorem prEvent_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
     Pr{let x ← OptionT.lift mx; guard (p x)}[q x] =
       Pr{let x ← mx}[p x ∧ q x] := by
   classical
-  let : MeasurableSpace α := ⊤
-  have h (x : α) : Pr{let _ ← (guard (p x) : OptionT m Unit)}[q x] =
-      if p x ∧ q x then 1 else 0 := by
-    by_cases hp : p x <;> by_cases hq : q x <;> simp [guard, hp, hq]
-  rw [prEvent_bind_of_discrete, OptionT.evalDist_lift]
-  simp_rw [h]
-  rw [prEvent_eq_evalDist_of_discrete]
-  simpa only [Set.indicator_apply, Pi.one_apply, Set.mem_ofPred_eq] using
-    lintegral_indicator_one (μ := 𝒟[mx]) (MeasurableSet.of_discrete (s := {x | p x ∧ q x}))
+  rw [wp_lift, ← wp_propInd mx fun x ↦ p x ∧ q x]
+  refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
+  by_cases hp : p x <;> by_cases hq : q x <;> simp [guard, hp, hq]
 
 /-- A lifted draw followed by a guard puts its successful event mass at the unit output. -/
 @[simp↓ high]
@@ -132,8 +157,8 @@ theorem prEvent_mk_bind_eq_one_of_support (mx : m α) (hmx : Pr{let _ ← mx}[Tr
     (f : α → m (Option β)) (p : β → Prop)
     (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[p y] = 1) :
     Pr{let y ← OptionT.mk (mx >>= f)}[p y] = 1 := by
-  rw [mk_bind_eq_lift_bind]
-  refine le_antisymm (prEvent_le_one _) ?_
+  rw [mk_bind_eq_lift_bind, prEvent_bind]
+  refine le_antisymm (wp_le_of_forall_le _ fun _ ↦ prEvent_le_one _) ?_
   refine le_prEvent_bind_of_forall_le_of_support (OptionT.lift mx) ?_ _ p ?_
   · rwa [prEvent_lift]
   · exact fun a ha ↦ (h a (mem_support_of_mem_support_lift ha)).ge
@@ -142,7 +167,7 @@ theorem prEvent_mk_bind_eq_one_of_support (mx : m α) (hmx : Pr{let _ ← mx}[Tr
 theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (q : β → Prop)
     {ε : ENNReal} (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[q y] ≤ ε) :
     Pr{let y ← OptionT.mk (mx >>= f)}[q y] ≤ ε := by
-  rw [mk_bind_eq_lift_bind]
+  rw [mk_bind_eq_lift_bind, prEvent_bind]
   exact prEvent_bind_le_of_forall_le_of_support (OptionT.lift mx) _ q fun a ha ↦
     h a (mem_support_of_mem_support_lift ha)
 

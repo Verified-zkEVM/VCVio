@@ -40,8 +40,10 @@ variable {α β : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
 example [MeasurableSpace α] (x : α) : 𝒟[(pure x : m α)] = Measure.dirac x := by
   fail_if_success grind  -- gap(grind, 2026-09-26): Dirac and success masses, covers the section
   simp
+example (p : α → Prop) (x : α) : prEvent (pure x : m α) p = propInd (p x) := by simp
+example (p : α → Prop) (x : α) : prEvent (pure x : m α) p = propInd (p x) := by grind
 example (p : α → Prop) [DecidablePred p] (x : α) :
-    Pr{let y ← (pure x : m α)}[p y] = if p x then 1 else 0 := by simp
+    Pr{let y ← (pure x : m α)}[p y] = if p x then 1 else 0 := by simp [propInd_eq_ite]
 example [MeasurableSpace α] (x : α) : 𝒟[(pure x : m α)] Set.univ = 1 := by simp
 example (x : α) : Pr{let _ ← (pure x : m α)}[True] = 1 := by simp
 

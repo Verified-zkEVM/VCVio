@@ -127,7 +127,7 @@ private def runTripleBindStep (comp : Expr) : TacticM Bool := do
 private def runTripleFallback : TacticM Bool := do
   match ← observing? do
       evalTactic (← `(tactic| unfold OracleComp.ProgramLogic.Triple))
-      evalTactic (← `(tactic| change _ ≤ OracleComp.ProgramLogic.wp _ _))
+      evalTactic (← `(tactic| change _ ≤ wp⟦_⟧ _))
       unless ← runWpStepRules do
         throwError "vcstep: no matching wp rule after unfolding `Triple`"
     with

@@ -35,10 +35,10 @@ of the preprocessed body. The resulting `Sym.Pattern` is then inserted into a
 arguments and bound variables in the key sequence.
 
 Because `Sym.preprocessType` unfolds the user-facing abbreviations
-(`Triple`, `wp`, `RelTriple`, `RelWP`) into their cores (core's
-`Std.Internal.Do.Triple` / `Std.Internal.Do.wp` for the unary ones, `MAlgRelOrdered.*` for the
-relational ones), the selector matches on the unfolded heads (plus the folded abbreviations as a
-safety net). On the lookup side we apply
+(`Triple`, `RelTriple`, `RelWP`) into their cores (core's `Std.Internal.Do.Triple` for the unary
+one, `MAlgRelOrdered.*` for the relational ones), the selector matches on the unfolded heads
+(plus the folded abbreviations as a safety net). Expectations are core's `Std.Internal.Do.wp`
+already. On the lookup side we apply
 `withReducible <| whnf` to the goal's computation before querying, matching the
 normalization performed during pattern preprocessing.
 
@@ -203,7 +203,7 @@ private def unaryTripleHeadNames : Array Name :=
   #[``OracleComp.ProgramLogic.Triple, ``Std.Internal.Do.Triple]
 
 private def unaryWpHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.wp, ``Std.Internal.Do.wp]
+  #[``Std.Internal.Do.wp]
 
 private def relTripleHeadNames : Array Name :=
   #[``OracleComp.ProgramLogic.Relational.RelTriple, ``MAlgRelOrdered.Triple,
@@ -246,20 +246,13 @@ private def tripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
     let #[pre, oa, post] := args | none
     some (pre, oa, post)
 
-/-- Preprocessed-body variant of `wpGoalParts?` that also matches the unfolded
-core head `Std.Internal.Do.wp` (which carries a trailing exception postcondition).
-Returns `(oa, post)`. -/
+/-- Preprocessed-body variant of `wpGoalParts?`: core's head `Std.Internal.Do.wp`, which
+carries a trailing exception postcondition. Returns `(oa, post)`. -/
 private def wpBodyParts? (body : Expr) : Option (Expr × Expr) := do
   let body := body.consumeMData
   unless headIsOneOf body unaryWpHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.Internal.Do.wp then 3 else 2
-  let args ← trailingArgsN? body n
-  if n == 3 then
-    let #[oa, post, _epost] := args | none
-    some (oa, post)
-  else
-    let #[oa, post] := args | none
-    some (oa, post)
+  let #[oa, post, _epost] ← trailingArgsN? body 3 | none
+  some (oa, post)
 
 /-- Preprocessed-body variant of `rawWPGoalParts?` that also matches the
 unfolded core `Std.Internal.Do.wp` head under `≤`. Returns `(pre, oa, post)`. -/

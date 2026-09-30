@@ -68,7 +68,7 @@ end measures
 
 section events
 
-variable {ε α : Type} (x : α) (p : α → Prop) [DecidablePred p]
+variable {ε α : Type} (x : α) (p : α → Prop)
 
 example {m : Type → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulPureEvalDistSemantics m] (q : Prop) [Decidable q] :
@@ -76,23 +76,21 @@ example {m : Type → Type v} [Monad m] [EvalDistSemantics m]
 
 example (q : Prop) [Decidable q] : Measure.dirac q {True} = if q then 1 else 0 := by grind
 
-example : Pr{let value ← (pure x : Id α)}[p value] = if p x then 1 else 0 := by simp
+example : prEvent (pure x : Id α) p = propInd (p x) := by simp
 
-example : Pr{let value ← (pure x : Id α)}[p value] = if p x then 1 else 0 := by grind
+example : Pr{let value ← (pure x : Id α)}[p value] = propInd (p x) := by grind
 
-example : Pr{let value ← (some x : Option α)}[p value] = if p x then 1 else 0 := by simp
+example : Pr{let value ← (some x : Option α)}[p value] = propInd (p x) := by simp
 
-example : Pr{let value ← (some x : Option α)}[p value] = if p x then 1 else 0 := by grind
+example : Pr{let value ← (some x : Option α)}[p value] = propInd (p x) := by grind
 
 example : Pr{let value ← (none : Option α)}[p value] = 0 := by simp
 
 example : Pr{let value ← (none : Option α)}[p value] = 0 := by grind
 
-example : Pr{let value ← (Except.ok x : Except ε α)}[p value] =
-    if p x then 1 else 0 := by simp
+example : Pr{let value ← (Except.ok x : Except ε α)}[p value] = propInd (p x) := by simp
 
-example : Pr{let value ← (Except.ok x : Except ε α)}[p value] =
-    if p x then 1 else 0 := by grind
+example : Pr{let value ← (Except.ok x : Except ε α)}[p value] = propInd (p x) := by grind
 
 example (error : ε) : Pr{let value ← (Except.error error : Except ε α)}[p value] = 0 := by
   simp

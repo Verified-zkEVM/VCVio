@@ -126,7 +126,7 @@ private def mergeWpStepCandidateEntries (preferred fallback : Array WpStepEntry)
 /-- Advance a `wp`-shaped goal by one rewrite, dispatching via the `@[wpStep]`
 registry.
 
-Locates the `wp oa post` sub-expression of the main target, first asks the
+Locates the `wp oa post` (or `wp⟦oa⟧ post`) sub-expression of the main target, first asks the
 registry for syntactic candidates, and then appends normalized fallback
 candidates. Each candidate is tried through the cached `SymM` rewrite path.
 
@@ -134,11 +134,8 @@ Returns `false` when no candidate succeeds, or when the goal contains no `wp`
 application at all. -/
 def runWpStepRules : TacticM Bool := withVCGenWpStepTiming do
   let target ← instantiateMVars (← getMainTarget)
-  let some wpApp := findAppWithHead? ``OracleComp.ProgramLogic.wp target | return false
-  let wpApp ← instantiateMVars wpApp
-  let argCount := wpApp.getAppNumArgs
-  if argCount < 2 then return false
-  let oa := wpApp.getArg! (argCount - 2)
+  let some oa := wpGoalComp? target | return false
+  let oa ← instantiateMVars oa
   let entries :=
     mergeWpStepCandidateEntries
       (← getRegisteredWpStepEntriesNoWhnf oa)

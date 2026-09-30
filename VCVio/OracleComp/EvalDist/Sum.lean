@@ -15,11 +15,12 @@ public import ToMathlib.MeasureTheory.Integral.Countable
 An oracle computation with finite answer types reaches finitely many outputs, so its output
 measure is the sum of its singleton masses. The integral of a functional is then the sum
 `∑' x, Pr{let y ← oa}[y = x] * f x` over the whole output type, with no countability assumption on
-that type. This module states that identity and the sum forms of the bind, `pure`, map and total
-variation laws, for arguments that are clearest as weighted sums over outputs.
+that type. This module states that identity, the expectation form `wp_eq_tsum`, and the sum forms
+of the bind, `pure`, map and total variation laws, for arguments that are clearest as weighted sums
+over outputs.
 
-The integral forms (`∫⁻ x, f x ∂𝒟[oa]`, `lintegral_evalDist_bind`, `wp`) remain the primary API;
-these sums are equal to them.
+Expectations `wp⟦oa⟧ f` and integrals `∫⁻ x, f x ∂𝒟[oa]` remain the primary API; these sums are
+equal to them.
 -/
 
 public section
@@ -61,29 +62,26 @@ theorem tsum_prEvent_eq_one (oa : OracleComp spec α) : ∑' x, Pr{let y ← oa}
 theorem tsum_prEvent_le_one (oa : OracleComp spec α) : ∑' x, Pr{let y ← oa}[y = x] ≤ 1 :=
   (tsum_prEvent_eq_one oa).le
 
+/-- An expectation is the sum of the singleton masses times the observation. The output type
+needs no countability. -/
+theorem wp_eq_tsum (oa : OracleComp spec α) (f : α → ℝ≥0∞) :
+    wp⟦oa⟧ f = ∑' x, Pr{let y ← oa}[y = x] * f x := by
+  let : MeasurableSpace α := ⊤
+  rw [MeasureProgramLogic.wp_eq_lintegral oa f .of_discrete, lintegral_evalDist_eq_tsum]
+
 /-- An event after a bind is the weighted sum, over the prefix's outputs, of the continuation's
 event. The prefix's output type needs no countability. -/
 theorem prEvent_bind_eq_tsum (oa : OracleComp spec α) (g : α → OracleComp spec β)
     (p : β → Prop) :
-    Pr{let y ← oa >>= g}[p y] = ∑' x, Pr{let z ← oa}[z = x] * Pr{let y ← g x}[p y] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete, lintegral_evalDist_eq_tsum]
-
-/-- A bind of event computations is the prefix-weighted sum of the continuation's events. This is
-the form events take after `simp` pushes the event inside a bind. -/
-theorem prEvent_bind_eq_tsum_prEvent (oa : OracleComp spec α) (g : α → OracleComp spec Prop) :
-    prEvent (oa >>= g) = ∑' x, Pr{let z ← oa}[z = x] * prEvent (g x) := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_of_discrete, lintegral_evalDist_eq_tsum]
+    Pr{let y ← oa >>= g}[p y] = ∑' x, Pr{let z ← oa}[z = x] * Pr{let y ← g x}[p y] :=
+  wp_eq_tsum oa _
 
 /-- An event is the sum of the singleton masses of the outputs satisfying it. -/
 theorem prEvent_eq_tsum_ite (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
     Pr{let y ← oa}[p y] = ∑' x, if p x then Pr{let y ← oa}[y = x] else 0 := by
-  have h := prEvent_bind_eq_tsum oa pure p
-  rw [bind_pure] at h
-  rw [h]
+  rw [prEvent_eq_wp, wp_eq_tsum]
   refine tsum_congr fun x ↦ ?_
-  rw [prEvent_pure]
+  rw [propInd_eq_ite]
   split_ifs <;> simp
 
 /-- First-moment (Markov) bound: a weight that is at least one on the event bounds the event's
@@ -105,22 +103,28 @@ theorem tsum_prEvent_bind_mul (oa : OracleComp spec α) (g : α → OracleComp s
       ∑' x, Pr{let y ← oa}[y = x] * ∑' z, Pr{let y ← g x}[y = z] * f z := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
-  simp only [← lintegral_evalDist_eq_tsum]
-  exact lintegral_evalDist_bind_of_discrete oa g .of_discrete
+  calc ∑' z, Pr{let y ← oa >>= g}[y = z] * f z = ∑' z, prEvent (oa >>= g) (· = z) * f z := by
+        simp only [prEvent_bind]
+    _ = ∫⁻ z, f z ∂𝒟[oa >>= g] := (lintegral_evalDist_eq_tsum _ f).symm
+    _ = ∫⁻ x, ∫⁻ z, f z ∂𝒟[g x] ∂𝒟[oa] := lintegral_evalDist_bind_of_discrete oa g .of_discrete
+    _ = _ := by simp only [lintegral_evalDist_eq_tsum]
 
 /-- A weighted sum over the outputs of a map is the weighted sum over the source outputs. -/
 theorem tsum_prEvent_map_mul (oa : OracleComp spec α) (h : α → β) (f : β → ℝ≥0∞) :
     ∑' z, Pr{let y ← h <$> oa}[y = z] * f z = ∑' x, Pr{let y ← oa}[y = x] * f (h x) := by
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace β := ⊤
-  simp only [← lintegral_evalDist_eq_tsum]
-  exact lintegral_evalDist_map_of_discrete oa h f
+  calc ∑' z, Pr{let y ← h <$> oa}[y = z] * f z = ∑' z, prEvent (h <$> oa) (· = z) * f z := by
+        simp only [prEvent_map]
+    _ = ∫⁻ z, f z ∂𝒟[h <$> oa] := (lintegral_evalDist_eq_tsum _ f).symm
+    _ = ∫⁻ x, f (h x) ∂𝒟[oa] := lintegral_evalDist_map_of_discrete oa h f
+    _ = _ := lintegral_evalDist_eq_tsum oa _
 
 /-- A weighted sum over the outputs of `pure a` is the weight at `a`. -/
 theorem tsum_prEvent_pure_mul (a : α) (f : α → ℝ≥0∞) :
     ∑' z, Pr{let y ← (pure a : OracleComp spec α)}[y = z] * f z = f a := by
-  let : MeasurableSpace α := ⊤
-  rw [← lintegral_evalDist_eq_tsum, evalDist_pure, lintegral_dirac]
+  classical
+  simp [propInd_eq_ite]
 
 /-- A functional constant on the reachable outputs has that constant as its weighted sum. -/
 theorem tsum_prEvent_mul_of_const_on_support (oa : OracleComp spec α) {f : α → ℝ≥0∞}

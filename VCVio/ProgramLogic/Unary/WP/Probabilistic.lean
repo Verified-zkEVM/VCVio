@@ -52,7 +52,7 @@ noncomputable scoped instance instWP_prob :
 /-- Forgetting the bound recovers quantitative expectation. -/
 theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) :
     (Std.Internal.Do.wp oa post Lean.Order.bot).val =
-      OracleComp.ProgramLogic.wp oa (fun a => (post a).val) :=
+      wp⟦oa⟧ (fun a => (post a).val) :=
   MeasureProgramLogic.Probabilistic.wp_val oa post
 
 end OracleComp.Probabilistic

@@ -399,6 +399,14 @@ def VCSpecEntry.hasProofPremise (entry : VCSpecEntry) : MetaM Bool := do
         return true
   return false
 
+/-- Synthesize the instance arguments among `xs` that unification left unassigned. -/
+def synthesizeInstanceArgs (xs : Array Expr) (bis : Array BinderInfo) : MetaM Bool := do
+  for x in xs, bi in bis do
+    if bi.isInstImplicit && !(← x.mvarId!.isAssigned) then
+      let some inst ← synthInstance? (← instantiateMVars (← inferType x)) | return false
+      unless ← isDefEq x inst do return false
+  return true
+
 /-- Apply a raw unary `@[vcspec]` theorem under consequence, constructing the
 proof directly against the current target. This is the unary analogue of the
 direct raw relational path and covers raw `Std.Internal.Do.wp` goals with `epost⟨⟩`
@@ -410,12 +418,16 @@ def VCSpecEntry.tryApplyRawUnaryConsequence (entry : VCSpecEntry) (mvarId : MVar
     | return none
   let some (progTarget, postTarget, _epostTarget) := stdDoWpParts? rhsTarget
     | return none
-  let (_xs, _bis, specProof, specType) ← entry.proof.instantiate
+  let (xs, bis, specProof, specType) ← entry.proof.instantiate
   let some (preSpec, rhsSpec) ← rawRelParts? specType
     | return none
   let some (progSpec, postSpec, epostSpec) := stdDoWpParts? rhsSpec
     | return none
   unless ← isDefEq progSpec progTarget do
+    return none
+  -- With the program matched, the rule's instance arguments are determined: synthesize them, so
+  -- that its interpretation agrees with the target's syntactically rather than after unfolding.
+  unless ← synthesizeInstanceArgs xs bis do
     return none
   let postTy ← inferType postSpec
   let hpostTy ← mkUnaryPostPointwisePremise postSpec postTarget postTy

@@ -159,20 +159,50 @@ sequence: statements are separated by `;` or laid out as in a `do` block, and `l
 destructuring draws and `if` are available. An action that continues on the following lines is
 indented past its `let`, as in any `do` block, or parenthesized.
 `Pr{let x ← mx}[x = a]` is the probability of the single output `a` and needs no measurable singletons.
-The notation denotes `prEvent (mx : m Prop) := 𝒟[mx] {True}` of the computation returning
-the event. It is elaborated in the normal form `simp` maintains:
-- binds end in a map of the eta-reduced final event;
-- local `let`s are substituted;
-- a branch is split into its arms.
 
-`simp only [prEvent_norm]` brings any event computation into this form, and `simp` rewrites
-`𝒟[mx] {True}` to `prEvent mx`. The event laws are keyed on `prEvent`:
-- bounds, `pure`, `failure` and constant prefixes;
-- sequencing, deterministic monads and lossless oracle computations;
-- uniform sampling, bind swaps and support congruence.
+`prEvent mx p := 𝒟[p <$> mx] {True}` is the probability that the output of `mx` satisfies `p`.
+It needs no measurable space on the outputs. The notation means the event of its literal
+sequence:
 
-`prEvent_def` unfolds an event to its measure when an argument needs the measure itself. Goals
-display the draws as `let` statements.
+```lean
+Pr{items}[t] = prEvent (do items; return t) fun b => b
+```
+
+It is stored in the normal form `simp` produces, and elaboration checks the proof that the two
+are equal:
+- every draw but the last becomes an expectation `wp⟦a⟧ fun x => …`;
+- the last draw becomes an event `prEvent a fun y => t`.
+
+```lean
+Pr{let x ← mx; let y ← my x}[p x y] = wp⟦mx⟧ fun x => prEvent (my x) fun y => p x y
+```
+
+On the way to that form:
+- binds inside draws are reassociated;
+- maps are fused into the event;
+- returned values and local `let`s are substituted;
+- single-constructor destructuring becomes projections;
+- `if` is pulled outward.
+
+The rules are the default-`simp` event laws, and `simp only [prEvent_norm]` applies exactly
+them:
+- `prEvent_bind`, `prEvent_map`, `prEvent_pure`, `prEvent_ite` and `prEvent_dite`;
+- core's exact `wp` equations (`ExactWPMonad.wp_bind`, `wp_pure`, `wp_map`);
+- the fold `wp_propInd` of an indicator observation back into an event.
+
+`simp` keeps the program's binder names. The laws need lawful semantics
+(`[LawfulMonad m] [LawfulEvalDistSemantics m]`), which every concrete monad has. With only
+`LawfulMonad`, a single final draw still normalizes (`prEvent_bind_pure`). Generic statements
+under weaker assumptions are written with `prEvent` directly.
+
+Goals display a nest of expectations ending in an event as the `Pr{…}[…]` it comes from, and any
+other expectation as `wp⟦a⟧ g`. A non-normal explicit `prEvent (mx >>= f) p` displays as
+`Pr{let x ← mx >>= f}[p x]`; `rw [prEvent_bind]` normalizes it. `prEvent_def` unfolds an event to
+its measure when an argument needs the measure itself.
+
+In a definition, name an experiment as a computation and take one event of it,
+`Pr{let b ← exp adv}[b = true]`; a single draw of a named computation is stored as written
+(`prEvent (exp adv) fun b => b = true`).
 
 ### Writing events with `do` sequences
 
@@ -192,16 +222,18 @@ Pr{let x : ZMod q ← mx}[x = 0]                            -- type ascriptions
 
 The event in the brackets may mention every binding of the sequence, including destructured
 components and mutable variables. The elaborator appends the event as the sequence's final
-`return`, so the sequence itself does not `return` early. The event laws are keyed on the
-normal form of draws, maps, `let`s and branches: an event over a loop elaborates to `forIn` and
-displays that way, and is reasoned about with the loop's own lemmas or `wp`.
+`return`, so the sequence itself does not `return` early. An event over a loop keeps its
+`forIn` draw; the default `simp` set unrolls a loop over a literal list, and other loops are
+reasoned about with the loop's own lemmas or `wp⟦·⟧`. A `match` with several cases also stays a
+draw of its own.
 
 `mx =ᵈ my` (`EvalDistEq`, in `VCVio.EvalDist.EvalDistEq`) states that two computations, possibly
 in different monads, give every event the same probability. It needs no measurable space on the
 output:
 - `EvalDistEq.evalDist_eq` gives equal output measures in every structure;
 - `EvalDistEq.of_evalDist_eq` proves it from equal measures in a discrete structure;
-- `evalDistEq_iff_forall_prEvent_eq_output` reduces it to point masses on countable outputs.
+- `evalDistEq_iff_forall_prEvent_eq_output` reduces it to point masses on countable outputs;
+- `EvalDistEq.wp_eq` gives equal expectations of every observation.
 
 It is an equivalence usable in `calc`, and its bind and map congruences are registered for
 `gcongr` and `grw`. A lemma whose selector's type depends on an implicit argument, such as a
@@ -258,20 +290,31 @@ have the generic laws on arbitrary measurable spaces. `Raw.evalDist_apply` compu
 event masses as rational sums, and the singleton simp lemma reduces to `Raw.prob`.
 `FinRatPMF.finRatImpl.evalDist_simulateQ` and `prEvent_simulateQ` identify executable evaluation
 with the uniform oracle interpretation.
-`VCVio.ProgramLogic.Unary.WP.Measure` builds the ordered expectation algebra directly from
-lawful measure semantics for any monad. `open scoped MeasureProgramLogic.Quantitative` selects
-its core `WPMonad` interpretation, built from the measure algebra `MeasureProgramLogic.toMAlgOrdered`
-and exact (PolyFun's `ExactWPMonad`); no oracle uniformity is required. This
-scope takes precedence over core `Prop` interpretations, including `Option`.
-`wp_eq_lintegral` is an explicit bridge to Mathlib integration. `simp` preserves the WP head
-through addition and scaling, and constants keep the successful-mass factor:
-`wp mx (fun _ ↦ c) ⊥ = c * 𝒟[mx] Set.univ`. Finite sums, monotone suprema, and
-almost-everywhere comparisons have their own laws. `gcongr` and `grw` compare pointwise
-postconditions. `wp_le_const_mul_mass_add` retains the mass factor for lossy computations;
-`IsProbabilityMeasure` simplifies it to one automatically. The oracle quantitative facade
-`OracleComp.ProgramLogic.wp` uses this same algebra under any `[OracleSpec.IsMeasureSpec spec]`.
-Expectations are integrals: `wp_eq_lintegral` identifies the oracle `wp` with `∫⁻` against
-`𝒟[mx]`, and integrals stay available to Mathlib's API.
+`VCVio.EvalDist.Expectation` gives every monad with lawful measure semantics its expectations.
+`wp⟦mx⟧ g` is the expectation of `g : α → ℝ≥0∞` over the outputs of `mx`. It is core's
+`wp mx g ⊥` under the measure interpretation `MeasureProgramLogic.measureWP m`, which is built from
+the ordered expectation algebra `MeasureProgramLogic.toMAlgOrdered m` and is exact (PolyFun's
+`ExactWPMonad`). The interpretation is supplied explicitly rather than found by instance search.
+`open scoped MeasureProgramLogic.Quantitative`, or `OracleComp.Quantitative` for oracle
+computations, selects it as the core `WPMonad` instance, so `wp mx g ⊥` and core triples read
+expectations.
+
+The laws in `MeasureProgramLogic` need no measurable structure on the outputs:
+- `wp_mono` (`gcongr`), `wp_congr`, `wp_zero`, `wp_add`;
+- `wp_const_mul`, `wp_mul_const`, `wp_finsetSum`, `wp_pure`, `wp_bind`, `wp_map`.
+
+`wp_eq_lintegral` bridges to Mathlib's lintegral for a measurable observation, and
+`wp_eq_lintegral_comap` does so in the σ-algebra the observation induces. Monotone suprema and
+almost-everywhere comparisons (`wp_iSup`, `wp_mono_ae`, `wp_le_const_mul_mass_add`) keep their
+measurability hypotheses. In `VCVio.EvalDist.ProbabilityNotation`:
+- a constant keeps the successful-mass factor, `wp_const : wp⟦mx⟧ (fun _ ↦ c) = c * Pr{let _ ← mx}[True]`;
+- the event and sum laws are `wp_le_of_forall_le`, `le_wp_of_forall_le`, `wp_le_prEvent_add`,
+  `wp_eq_sum_fintype` and `wp_eq_tsum_of_countable`.
+
+For oracle computations with finite answers, `OracleComp.wp_eq_tsum` sums over outputs without
+a countability assumption. `OracleComp.wp_swap` and `OracleComp.wp_prEvent_swap` commute
+independent draws. `wp_mono_of_support` and `wp_congr_of_support` compare observations on the
+reachable outputs; `wp_mono_of_support` is the preferred `gcongr` rule.
 
 The sequencing laws in `VCVio.EvalDist.Monad.Seq.Measure` identify paired draws with
 `Measure.prod` on arbitrary measurable result spaces. Discarding either draw retains its
@@ -688,8 +731,8 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 | Lemma | Statement | Tags |
 |-------|-----------|------|
 | `evalDist_pure` | `𝒟[(pure x : m α)] = Measure.dirac x` | `simp` |
-| `prEvent_pure_prop` | `prEvent (pure P : m Prop) = if P then 1 else 0` | `simp`, `grind =` |
-| `prEvent_pure` | `Pr{let x ← (pure a : m α)}[p x] = if p a then 1 else 0` | `grind =` |
+| `prEvent_pure` | `prEvent (pure a : m α) p = propInd (p a)` | `simp`, `grind =`, `prEvent_norm` |
+| `propInd_eq_ite` | `propInd P = if P then 1 else 0` for decidable `P` | — |
 | `support_pure` | `support (pure x) = {x}` | `grind =` |
 
 ### Bind
@@ -698,6 +741,8 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 |-------|-----------|------|
 | `evalDist_bind` | `𝒟[mx >>= f] = 𝒟[mx].bind fun x => 𝒟[f x]`, for a measurable continuation | — |
 | `evalDist_bind_of_discrete` | the same on a discrete source space | — |
+| `prEvent_bind` | `prEvent (mx >>= f) p = wp⟦mx⟧ fun a => prEvent (f a) p` | `simp`, `grind norm`, `prEvent_norm` |
+| `MeasureProgramLogic.wp_bind` | `wp⟦mx >>= f⟧ g = wp⟦mx⟧ fun a => wp⟦f a⟧ g` (`simp` uses `ExactWPMonad.wp_bind`) | — |
 | `prEvent_bind_eq_lintegral_of_discrete` | `Pr{let y ← mx >>= f}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx]` | — |
 | `prEvent_bind_eq_sum_fintype` | `Pr{let y ← mx >>= f}[p y] = ∑ a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y]` | — |
 | `prEvent_bind_eq_tsum_of_countable` | the same as a `tsum` over a countable source | — |
@@ -729,9 +774,9 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 
 | Lemma | Use |
 |-------|-----|
-| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.prEvent_bind_bind_swap` | Swap two independent oracle binds (used by `vcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
-| `evalDist_bind_congr` / `prEvent_bind_congr` | Pointwise equal continuations give equal binds, with no measurable space on the intermediate result |
-| `OracleComp.evalDist_bind_congr_of_support` / `OracleComp.prEvent_bind_congr_of_support` | Continuations equal on the support of the shared prefix give equal binds |
+| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` / `OracleComp.wp_prEvent_swap` | Swap two independent oracle draws (used by `vcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
+| `evalDist_bind_congr` / `MeasureProgramLogic.wp_congr` | Pointwise equal continuations give equal binds or expectations, with no measurable space on the intermediate result |
+| `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` | Continuations equal on the support of the shared prefix give equal binds or expectations |
 
 ### Zero / membership
 
@@ -759,12 +804,11 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
    → A permutation of a uniform draw: `evalDist_map_equiv_of_uniform`
 
 4. **Continuation doesn't depend on result?**
-   → `evalDist_bind_const` / `prEvent_bind_const` (by `simp`; the prefix contributes its success
+   → `evalDist_bind_const` / `wp_const` (by `simp`; the prefix contributes its success
      mass), and `OracleComp.evalDist_bind_const` for a lossless oracle prefix
 
 5. **Continuations agree only on the support of a shared prefix?**
-   → `OracleComp.evalDist_bind_congr_of_support` / `OracleComp.prEvent_bind_congr_of_support`
-     (or `vcstep`)
+   → `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` (or `vcstep`)
 
 6. **Relating probability to support?**
    → Under uniform answers: `OracleComp.mem_support_iff_evalDist_singleton_pos`,
@@ -908,7 +952,7 @@ Use the tactic that matches the mathematical obligation:
 
 | Obligation | Interface |
 |---|---|
-| Ordered expectations or postconditions | `gcongr with x hx` on `OracleComp.ProgramLogic.wp` exposes support membership. |
+| Ordered expectations or postconditions | `gcongr with x hx` on `wp⟦mx⟧ f ≤ wp⟦mx⟧ g` exposes support membership. |
 | An expectation of a mapped computation | `simp` precomposes the payoff using `lintegral_evalDist_map_of_discrete`, retaining the integral. |
 | Directed replacement inside a probability bound | Import `Mathlib.Tactic.GRewrite`; use `grw [h]` for inequalities and `apply_rw [h]` for event implications. A support-restricted rewrite theorem can leave membership as a side goal. |
 | Measure bind ordered in its continuation | `Measure.bind_mono_right_of_forall` supports `gcongr` and `grw`, with explicit `AEMeasurable` side conditions. Use `Measure.bind_mono_right` directly for an almost-everywhere bound. |
@@ -949,7 +993,7 @@ rather than by a per-rung duplicate lemma.
 
 | rung | form | reached by |
 |---|---|---|
-| 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`evalDist_pure`, `prEvent_pure_prop`, `SampleableType.evalDist_uniformSample_singleton`, `SampleableType.prEvent_uniformSample`, `ProbComp.evalDist_uniformFin`, `evalDist_bind_const`, `OracleComp.prEvent_true_eq_one`) |
+| 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`evalDist_pure`, `prEvent_pure`, `SampleableType.evalDist_uniformSample_singleton`, `SampleableType.prEvent_uniformSample`, `ProbComp.evalDist_uniformFin`, `evalDist_bind_const`, `OracleComp.prEvent_true_eq_one`) |
 | 1 finite sum | `∑ x, Pr{let y ← mx}[y = x] * g x`, or `∑ x, 𝒟[mx] {x} * g x` | `rw [prEvent_bind_eq_sum_fintype]`; from rung 3, Mathlib's `lintegral_fintype`, then `simp [mul_comm]` |
 | 2 countable sum | `∑' x, Pr{let y ← mx}[y = x] * g x` | `rw [prEvent_bind_eq_tsum_of_countable]`; from rung 3, Mathlib's `lintegral_countable'`; `simp` collapses it to rung 1 on a `Fintype` through `tsum_fintype` |
 | 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | `rw [prEvent_bind_eq_lintegral_of_discrete]`, or `evalDist_bind_of_discrete` with `Measure.bind_apply`; an intermediate for Mathlib's integration API, not a target |
@@ -972,7 +1016,7 @@ inside proofs, never as a normal form.
   `bind`/`pure`-normalised structure. It is not an `ℝ≥0∞`/`Fintype.card` arithmetic engine and
   must keep failing fast on the support characterizations (`VCVioTest/GrindFailFast.lean`).
 - `gcongr` and `finiteness` are the *bound* closers. On expectations they act on
-  `OracleComp.ProgramLogic.wp` (`wp_mono_of_support`, `wp_ne_top_of_finite`); `finiteness`
+  `wp⟦·⟧` (`wp_mono_of_support`, `wp_ne_top_of_finite`); `finiteness`
   also closes `Pr{…}[…] ≠ ⊤` and `𝒟[mx] s ≠ ⊤` inside arithmetic, and `grw [prEvent_mono …]`
   rewrites an event under a bound.
 - The measure laws are `evalDist_pure` under `LawfulPureEvalDistSemantics` and `evalDist_bind`

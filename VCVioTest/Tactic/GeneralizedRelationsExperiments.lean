@@ -63,39 +63,37 @@ section Equality
 
 variable {α : Type} (mx : ProbComp α) (f g : α → ℝ≥0∞)
 
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   -- gap(gcongr, 2026-09-08): support-aware equality congruence is not registered globally.
   fail_if_success gcongr
   exact wp_congr_of_support mx h
 
 attribute [local gcongr] wp_congr_of_support
 
-attribute [local congr] wp_congr_of_support
-
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   gcongr with x hx
   guard_hyp hx : x ∈ support mx
   guard_target = f x = g x
   exact h x hx
 
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   -- gap(grw, 2026-09-08): equality rules use ordinary rewriting without support context.
   fail_if_success grw [h]
   exact wp_congr_of_support mx h
 
-example (h : ∀ x, f x = g x) : wp mx f = wp mx g := by
-  congrm wp mx ?_
+example (h : ∀ x, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
+  congrm wp⟦mx⟧ ?_
   guard_target = f = g
   exact funext h
 
-example (h : ∀ x, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   congr! 1
-  guard_target = f _ = g _
-  exact h _
+  guard_target = f = g
+  exact funext h
 
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   conv_lhs =>
-    apply_congr (wp_congr_of_support (oa := mx) (f := f) (g := g))
+    apply_congr (wp_congr_of_support (mx := mx) (f := f) (g := g))
     tactic => exact h _ (by assumption)
 
 end Equality

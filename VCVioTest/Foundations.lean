@@ -285,9 +285,8 @@ example (oa : ProbComp ℝ) :
 example {β γ : Type} (mx : ProbComp Bool) (f : Bool → ProbComp β) (g : Bool → ProbComp γ)
     (p : β → Prop) (q : γ → Prop)
     (h : ∀ b ∈ support mx, Pr{let y ← f b}[p y] = Pr{let z ← g b}[q z]) :
-    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] := by
-  rw [map_bind, map_bind]
-  exact prEvent_bind_congr_of_support mx _ _ h
+    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] :=
+  wp_congr_of_support mx h
 
 end Simulation
 

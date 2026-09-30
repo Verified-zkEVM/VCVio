@@ -247,10 +247,11 @@ private lemma simulateQ_authRF_forge_le
   | pure x =>
     -- No queries: the forgery log is still empty.
     simp only [simulateQ_pure, StateT.run_pure, prEvent_pure, hinv.1, ne_eq, not_true_eq_false,
-      ite_false]
+      propInd_false]
     exact zero_le
   | query_bind t oa ih =>
-    simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self]
+    simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self,
+      prEvent_bind]
     cases t with
     | inl tag =>
       -- A tag query: the budgets pass unchanged, and `forgeInv` is preserved.

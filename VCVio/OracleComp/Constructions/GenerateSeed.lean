@@ -177,15 +177,12 @@ private lemma prEvent_generateSeed_cons_eq_mul (seed rest : QuerySeed spec)
         Pr{let s ← generateSeed spec qc js}[s = rest] := by
   classical
   obtain ⟨hxs_eq, hrest_eq⟩ := QuerySeed.eq_of_prependValues_eq seed rest xs hxs_len hseed_eq
-  have hinner : Pr{let s ← (generateSeed spec qc js >>= fun rest' =>
-      (return rest'.prependValues xs : ProbComp (QuerySeed spec)))}[s = seed] =
-      Pr{let s ← generateSeed spec qc js}[s = rest] := by
-    rw [prEvent_bind_eq_mul_of_unique _ _ rest seed fun rest' _ hs => hrest_eq ▸
-      (QuerySeed.eq_of_prependValues_eq seed rest' xs hxs_len
-        ((mem_support_pure_iff' (m := ProbComp) _ _).mp hs)).2, prEvent_pure,
-      ite_eq_left hseed_eq, mul_one]
-  rw [generateSeed_cons, ← hinner]
-  refine prEvent_bind_eq_mul_of_unique _ _ xs seed fun xs' hxs' hseed' => ?_
+  have hinner : Pr{let s ← generateSeed spec qc js}[s.prependValues xs = seed] =
+      Pr{let s ← generateSeed spec qc js}[s = rest] :=
+    prEvent_congr _ _ _ fun s => ⟨fun hs => hrest_eq ▸
+      (QuerySeed.eq_of_prependValues_eq seed s xs hxs_len hs).2, fun hs => hs ▸ hseed_eq⟩
+  rw [generateSeed_cons, prEvent_bind, ← hinner]
+  refine (prEvent_bind_eq_mul_of_unique _ _ xs seed fun xs' hxs' hseed' => ?_).trans (by simp)
   obtain ⟨rest', _, hpure⟩ := (mem_support_bind_iff _ _ _).mp hseed'
   exact (QuerySeed.eq_of_prependValues_eq seed rest' xs'
     (support_replicate .. ▸ hxs').1 ((mem_support_pure_iff' (m := ProbComp) _ _).mp hpure)).1.trans
@@ -337,13 +334,13 @@ lemma evalDistEq_generateSeed_prependValues {t : ι}
   · obtain ⟨s₀, rfl⟩ : ∃ s₀ : QuerySeed spec, s₀.prependValues [u] = seed :=
       ⟨_, QuerySeed.eq_prependValues_of_pop_eq_some
         (QuerySeed.pop_eq_some_of_cons seed t u us hst)⟩
-    rw [prEvent_generateSeed_prependValues spec qc js u _ hpos,
+    rw [prEvent_generateSeed_prependValues spec qc js u _ hpos, prEvent_bind,
       prEvent_bind_eq_mul_of_unique _ _ u _ fun u' _ hs => ?_,
-      SampleableType.prEvent_uniformSample_eq_singleton,
-      prEvent_bind_eq_mul_of_unique _ _ s₀ _ fun s' _ hs => ?_,
-      prEvent_pure, ite_eq_left rfl, mul_one]
-    · exact (Prod.ext_iff.mp (QuerySeed.prependValues_singleton_injective t (a₁ := (u, s'))
-        (a₂ := (u, s₀)) ((mem_support_pure_iff' (m := ProbComp) _ _).mp hs))).2
+      SampleableType.prEvent_uniformSample_eq_singleton]
+    · simp only [prEvent_norm]
+      exact congrArg _ (prEvent_congr _ _ _ fun s' => ⟨fun h => h ▸ rfl, fun h =>
+        (Prod.ext_iff.mp (QuerySeed.prependValues_singleton_injective t (a₁ := (u, s'))
+          (a₂ := (u, s₀)) h)).2⟩)
     · obtain ⟨s', _, hpure⟩ := (mem_support_bind_iff _ _ _).mp hs
       exact (Prod.ext_iff.mp (QuerySeed.prependValues_singleton_injective t (a₁ := (u', s'))
         (a₂ := (u, s₀)) ((mem_support_pure_iff' (m := ProbComp) _ _).mp hpure))).1

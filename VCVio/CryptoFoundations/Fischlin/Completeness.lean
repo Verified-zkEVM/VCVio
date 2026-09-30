@@ -107,21 +107,16 @@ private lemma minUnifAux_prEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))) 
   classical
   induction t generalizing best with
   | zero =>
-      simp only [minUnifAux]
-      rw [prEvent_pure]
-      cases best
-      · simp [minGt]
-      · simp [minGt]
-        congr
+      simp only [minUnifAux, prEvent_pure]
+      cases best <;> simp [minGt, propInd_eq_ite]
   | succ n ih =>
       set q : ℝ≥0∞ := (↑(2 ^ b - (k + 1)) : ℝ≥0∞) / ↑(2 ^ b) with hq
       -- An event of the uniform draw is the sum of its point masses over the accepted outputs.
       have hsum : ∀ p : Fin (2 ^ b) → Prop, Pr{let x ← $ᵗ (Fin (2 ^ b))}[p x]
           = ∑ x, Pr{let y ← $ᵗ (Fin (2 ^ b))}[y = x] * if p x then 1 else 0 := by
         intro p
-        conv_lhs => rw [← bind_pure ($ᵗ (Fin (2 ^ b)))]
-        rw [prEvent_bind_eq_sum_fintype]
-        simp only [prEvent_pure]
+        rw [prEvent_eq_wp, wp_eq_sum_fintype]
+        simp only [propInd_eq_ite]
       have hbody : ∀ x : Fin (2 ^ b),
           Pr{let o ← (if (x : ℕ) = 0 then pure (some x)
             else minUnifAux b n (some (match best with
@@ -132,14 +127,14 @@ private lemma minUnifAux_prEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))) 
             * q ^ n := by
         intro x
         by_cases hx : (x : ℕ) = 0
-        · simp only [hx, ite_true]
-          rw [prEvent_pure]
-          simp [minGt, hx]
+        · simp [minGt, hx]
         · simp only [hx, ite_false]
           rw [ih]
           congr 1
           simp only [Option.some.injEq, forall_eq']
-      rw [minUnifAux, prEvent_bind_eq_sum_fintype,
+      rw [minUnifAux, prEvent_bind]
+      simp only [prEvent_ite, prEvent_pure]
+      rw [wp_eq_sum_fintype,
         Finset.sum_congr rfl (fun x _ => by rw [hbody x, ← mul_assoc]), ← Finset.sum_mul,
         pow_succ, mul_comm (q ^ n) q, ← mul_assoc]
       congr 1
@@ -242,8 +237,9 @@ private lemma fischlinUnifSearch_prEvent_minGt_le
       rw [fischlinUnifSearch]
       unfold minUnifAux
       simp only [List.length_cons]
-      refine prEvent_bind_le_of_forall_le _ _ _ (fun resp => ?_)
-      rw [prEvent_bind_eq_sum_fintype, prEvent_bind_eq_sum_fintype]
+      rw [prEvent_bind]
+      refine wp_le_of_forall_le _ (fun resp => ?_)
+      rw [prEvent_bind, prEvent_bind, wp_eq_sum_fintype, wp_eq_sum_fintype]
       refine Finset.sum_le_sum (fun h _ => mul_le_mul' le_rfl ?_)
       by_cases hh : h.val = 0
       · simp only [hh, ite_true]
@@ -1223,12 +1219,13 @@ bound over the `ρ` repetitions together with the per-repetition tail bound
 private lemma model_reject_le [FinEnum Chal] [Inhabited Chal] [Inhabited Resp]
     [SampleableType Chal] (_hρ : 0 < ρ) (hc : σ.PerfectlyComplete) (_msg : M) :
     𝒟[modelGame σ hr ρ b S] {false} ≤ completenessError ρ b S (FinEnum.card Chal) := by
-  rw [← prEvent_eq_evalDist_singleton, modelGame]
+  rw [← prEvent_eq_evalDist_singleton, modelGame, prEvent_bind]
   -- Peel the key-generation and commitment phases; on the support `rel pk sk` holds.
   refine prEvent_bind_le_of_forall_le_of_support _ _ _ (fun pksk hpksk => ?_)
   obtain ⟨pk, sk⟩ := pksk
   have hrel : rel pk sk = true := hr.gen_sound pk sk hpksk
   simp only
+  rw [prEvent_bind]
   refine prEvent_bind_le_of_forall_le_of_support _ _ _ (fun commits hcommits => ?_)
   -- Each commitment lies in the support of `σ.commit pk sk`.
   have hci : ∀ i, (commits i) ∈ support (σ.commit pk sk) :=

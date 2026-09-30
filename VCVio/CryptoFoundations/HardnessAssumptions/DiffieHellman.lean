@@ -207,17 +207,13 @@ theorem evalDist_ddhRandomExperiment_cdhToDDHReduction_true
     (adversary : CDHAdversary F G) :
     𝒟[ddhRandomExperiment g (cdhToDDHReduction (F := F) adversary)] {true} =
       (Fintype.card F : ℝ≥0∞)⁻¹ := by
+  have hinv (h : G) : Pr{let c ← $ᵗ F}[h = c • g] = (Fintype.card F : ℝ≥0∞)⁻¹ := by
+    obtain ⟨c₀, rfl⟩ := hg.surjective h
+    rw [prEvent_congr _ _ (· = c₀) fun c => ⟨fun h => (hg.injective h).symm, fun h => h ▸ rfl⟩]
+    exact SampleableType.prEvent_uniformSample_eq_singleton c₀
   rw [← prEvent_eq_evalDist_singleton _ true]
-  simp only [ddhRandomExperiment, cdhToDDHReduction]
-  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun a => ?_
-  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun b => ?_
-  rw [prEvent_eq_evalDist_singleton, OracleComp.evalDist_bind_bind_swap,
-    ← prEvent_eq_evalDist_singleton]
-  refine prEvent_bind_eq_of_forall_eq _ (prEvent_true_eq_one _) _ _ fun h => ?_
-  obtain ⟨c₀, rfl⟩ := hg.surjective h
-  simp only [prEvent_norm, decide_eq_true_eq]
-  rw [prEvent_congr _ _ (· = c₀) fun c => ⟨fun h => (hg.injective h).symm, fun h => h ▸ rfl⟩]
-  exact SampleableType.prEvent_uniformSample_eq_singleton c₀
+  simp only [ddhRandomExperiment, cdhToDDHReduction, prEvent_norm, decide_eq_true_eq]
+  simp only [OracleComp.wp_prEvent_swap ($ᵗ F), hinv, wp_const, prEvent_true_eq_one, mul_one]
 
 /-- Concrete form of the hardness implication `DDH ⇒ CDH`: a CDH solver can only beat the uniform
 DH-target baseline `1 / |F|` by the DDH advantage of the associated adversary-map reduction. -/
@@ -260,10 +256,8 @@ theorem dlogSuccess_sq_le_cdhSuccess_dlogToCDHReduction
       𝒟[cdhExperiment g (dlogToCDHReduction (F := F) adversary)] {true} := by
     rw [← prEvent_eq_evalDist_singleton _ true]
     simp only [pairs, attempt, cdhExperiment, dlogToCDHReduction, prEvent_norm,
-      decide_eq_true_eq, prEvent_def]
-    refine congrArg (fun μ : MeasureTheory.Measure Prop => μ {True}) ?_
-    refine evalDist_bind_congr_of_support _ _ _ fun a _ => ?_
-    exact OracleComp.evalDist_bind_bind_swap _ _ _
+      decide_eq_true_eq]
+    exact MeasureProgramLogic.wp_congr _ fun a => OracleComp.wp_swap _ _ _
   calc 𝒟[dlogExperiment g adversary] {true} ^ 2
       = Pr{let z ← attempt}[z.2 = z.1] * Pr{let z ← attempt}[z.2 = z.1] := by rw [hdlog, sq]
     _ = Pr{let w ← pairs}[w.1.2 = w.1.1 ∧ w.2.2 = w.2.1] := by

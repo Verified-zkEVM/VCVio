@@ -297,7 +297,7 @@ private lemma binding_win_le_advCollision_add_fresh {t : ℕ}
         return (decide (m₀ ≠ m₁) && (c₀ == c) && (c₁ == c))
   have hdecomp : bindingInner A = A.run >>= restPart := by
     simp [bindingInner, restPart]
-  rw [bindingExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind]
+  rw [bindingExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind, prEvent_bind]
   exact prEvent_bind_le_prEvent_add_of_support ((simulateQ cachingOracle A.run).run ∅)
     (fun x => (simulateQ cachingOracle (restPart x.1)).run x.2)
     (fun x : (C × M × S × M × S) × QueryCache (CMOracle M S C) => CacheHasCollision x.2)

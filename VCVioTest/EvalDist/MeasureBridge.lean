@@ -165,13 +165,13 @@ def lossyCoin : OptionT ProbComp Bool := do
   if b then pure true else failure
 
 example : Pr{let x ← lossyCoin}[x = true] = 2⁻¹ := by
-  rw [lossyCoin, prEvent_bind_eq_lintegral_of_discrete]
+  rw [lossyCoin, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
   simp [lintegral_fintype]
 example : Pr{let x ← lossyCoin}[x = false] = 0 := by
-  rw [lossyCoin, prEvent_bind_eq_lintegral_of_discrete]
+  rw [lossyCoin, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
   simp [lintegral_fintype]
 example : Pr{let _ ← lossyCoin}[True] = 2⁻¹ := by
-  rw [lossyCoin, prEvent_bind_eq_lintegral_of_discrete]
+  rw [lossyCoin, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
   simp [lintegral_fintype]
 example : prFail lossyCoin = 2⁻¹ := by
   rw [lossyCoin, prFail_bind_eq_add_lintegral_of_discrete]
@@ -180,8 +180,13 @@ example : prFail lossyCoin = 2⁻¹ := by
 /-! ## A unit-test program
 
 A coin and a die drawn independently. The point probability is the product of the two uniform
-masses (the closed form `simp` reaches; merging `2⁻¹ * 6⁻¹` into `12⁻¹` is `ℝ≥0∞` arithmetic, not a
-probability rule), and the failure-side facts need nothing beyond the program never failing. -/
+masses (the closed form `simp` reaches through the finite-sum rung `wp_eq_sum_fintype`; merging
+`2⁻¹ * 6⁻¹` into `12⁻¹` is `ℝ≥0∞` arithmetic, not a probability rule), and the failure-side facts
+need nothing beyond the program never failing.
+
+gap(simp): the uniform event law counts the die's event while it still mentions the coin, before
+the pair equation splits into independent factors, and the expectation over the coin that remains
+has no default rule. -/
 
 /-- A coin and a die, drawn independently. -/
 def coinDie : ProbComp (Bool × Fin 6) := do
@@ -189,7 +194,9 @@ def coinDie : ProbComp (Bool × Fin 6) := do
   let d ← $ᵗ (Fin 6)
   pure (b, d)
 
-example : Pr{let x ← coinDie}[x = (true, 0)] = 2⁻¹ * 6⁻¹ := by simp [coinDie, Finset.filter_eq']
+example : Pr{let x ← coinDie}[x = (true, 0)] = 2⁻¹ * 6⁻¹ := by
+  fail_if_success (simp [coinDie]; done)  -- gap(simp, 2026-09-30): see the section note
+  simp [coinDie, wp_eq_sum_fintype, Finset.filter_eq']
 example : 𝒟[coinDie] Set.univ = 1 := by simp
 example : evalDistWithFailure coinDie {none} = 0 := by simp [evalDistWithFailure_none]
 example : IsProbabilityMeasure 𝒟[coinDie] := inferInstance

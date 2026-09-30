@@ -63,11 +63,12 @@ variable {ι : Type u} {spec : OracleSpec ι}
 variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
-/-- Core weakest preconditions from the quantitative expectation algebra.
+/-- Core weakest preconditions under the configured oracle answer measures: the expectation
+interpretation `MeasureProgramLogic.measureWP`, so `wp oa post ⊥` is `wp⟦oa⟧ post`.
 Enable with `open scoped OracleComp.Quantitative`. -/
 noncomputable scoped instance instWP :
     Std.Internal.Do.WPMonad (OracleComp spec) ℝ≥0∞ Std.Internal.Do.EPost.Nil :=
-  MAlgOrdered.toWPMonad
+  MeasureProgramLogic.measureWP (OracleComp spec)
 
 /-! ## `StateT (OracleComp spec)` WP normalization -/
 

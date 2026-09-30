@@ -42,12 +42,12 @@ example (mx : OracleComp spec α) (f g : α → ENNReal)
 
 example (mx : OracleComp spec α) (f g : α → ENNReal)
     (hfg : ∀ x ∈ support mx, f x ≤ g x) : wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
-  grw [MeasureProgramLogic.Quantitative.wp_mono_of_support mx hfg]
+  grw [wp_mono_of_support mx hfg]
 
 example (mx : OracleComp spec α) (f g : α → ENNReal) (c : ENNReal)
     (hfg : ∀ x ∈ support mx, f x ≤ c + g x) :
     wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot :=
-  MeasureProgramLogic.Quantitative.wp_le_const_add_of_support mx hfg
+  MeasureProgramLogic.wp_le_const_add_of_support mx hfg
 
 end Generic
 

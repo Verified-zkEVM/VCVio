@@ -207,6 +207,7 @@ theorem sigma_simCommitPredictability [Fintype F] (g : G)
       (f := fun z : F => z • g - c • pk) ((Equiv.subRight (c • pk)).bijective.comp hg)
       (· = c₀)).trans
       ((SampleableType.prEvent_uniformSample_eq_singleton c₀).trans (by rw [hcard_FG]))
+  rw [simTranscript, prEvent_bind]
   refine prEvent_bind_le_of_forall_le ($ᵗ F) _ (fun t : G × F × F => t.1 = c₀) fun c => ?_
   simpa only [prEvent_norm] using (h_inner c).le
 
@@ -226,16 +227,17 @@ theorem sigma_simChalUniformGivenCommit [Fintype F] (g : G) :
   classical
   intro pk sk hsk c₀ ch₀
   have hHVZK := sigma_hvzk F G g pk sk hsk
-  rw [← hHVZK.prEvent_eq, ← hHVZK.prEvent_eq, realTranscript_eq_indep]
+  rw [← hHVZK.prEvent_eq, ← hHVZK.prEvent_eq, realTranscript_eq_indep, prEvent_bind,
+    prEvent_bind]
   let cont : F → ProbComp (G × F × F) := fun r => do
     let c ← $ᵗ F
     pure (r • g, c, r + c * sk)
   have hjoint := prEvent_bind_eq_mul_of_ite ($ᵗ F) cont (fun r => r • g = c₀)
     (fun t => t.1 = c₀ ∧ t.2.1 = ch₀) ($ᵗ F) (· = ch₀) fun r => by
-      by_cases hr : r • g = c₀ <;> simp [cont, hr, prEvent_norm]
+      by_cases hr : r • g = c₀ <;> simp [cont, hr]
   have hmarg := prEvent_bind_eq_mul_of_ite ($ᵗ F) cont (fun r => r • g = c₀)
     (fun t => t.1 = c₀) (pure () : ProbComp Unit) (fun _ => True) fun r => by
-      by_cases hr : r • g = c₀ <;> simp [cont, hr, prEvent_norm]
+      by_cases hr : r • g = c₀ <;> simp [cont, hr, ENNReal.div_self]
   simp only [cont] at hjoint hmarg
   rw [hjoint, hmarg, SampleableType.prEvent_uniformSample_eq_singleton]
   simp

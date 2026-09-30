@@ -108,7 +108,7 @@ zero-mass reachable answer no weight. -/
 example (post : Bool → Bool → ENNReal) :
     eRelWP (pure false : OracleComp weightedSpec Bool)
         (weightedSpec.query 0 : OracleComp weightedSpec Bool) post =
-      OracleComp.ProgramLogic.wp (weightedSpec.query 0 : OracleComp weightedSpec Bool)
+      wp⟦(weightedSpec.query 0 : OracleComp weightedSpec Bool)⟧
         (post false) :=
   eRelWP_pure_left false _ post
 

@@ -62,19 +62,19 @@ example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
 
 example (oa : OracleComp spec α) (n : ℕ) (pre : ℝ≥0∞) (post : List α → ℝ≥0∞)
     (h :
-      pre ≤ wp⟦oa⟧(fun x => wp⟦oa.replicate n⟧(fun xs => post (x :: xs)))) :
+      pre ≤ wp⟦oa⟧ (fun x => wp⟦oa.replicate n⟧ (fun xs => post (x :: xs)))) :
     ⦃ pre ⦄ oa.replicate (n + 1) ⦃ post ⦄ := by
   vcgen
 
 example (x : α) (xs : List α) (f : α → OracleComp spec β)
     (pre : ℝ≥0∞) (post : List β → ℝ≥0∞)
-    (h : pre ≤ wp⟦f x⟧(fun y => wp⟦xs.mapM f⟧(fun ys => post (y :: ys)))) :
+    (h : pre ≤ wp⟦f x⟧ (fun y => wp⟦xs.mapM f⟧ (fun ys => post (y :: ys)))) :
     ⦃ pre ⦄ (x :: xs).mapM f ⦃ post ⦄ := by
   vcgen
 
 example (x : α) (xs : List α) (f : β → α → OracleComp spec β)
     (init : β) (pre : ℝ≥0∞) (post : β → ℝ≥0∞)
-    (h : pre ≤ wp⟦f init x⟧(fun s => wp⟦xs.foldlM f s⟧post)) :
+    (h : pre ≤ wp⟦f init x⟧ (fun s => wp⟦xs.foldlM f s⟧ post)) :
     ⦃ pre ⦄ (x :: xs).foldlM f init ⦃ post ⦄ := by
   vcgen
 
@@ -131,7 +131,7 @@ example {oa : OracleComp spec α} {ob : α → OracleComp spec β}
 
 example {oa : OracleComp spec α} {ob : α → OracleComp spec β}
     {post : β → ℝ≥0∞}
-    (h : ⦃ 1 ⦄ oa ⦃ fun x => wp⟦ob x⟧post ⦄) :
+    (h : ⦃ 1 ⦄ oa ⦃ fun x => wp⟦ob x⟧ post ⦄) :
     ⦃ 1 ⦄ (oa >>= ob) ⦃ post ⦄ := by
   vcgen
 

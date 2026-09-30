@@ -41,23 +41,23 @@ theorem fixed_toMeasure (t : Unit) : OracleSpec.IsMeasureSpec.toMeasure (spec :=
     Measure.dirac true := rfl
 
 example (post : Bool → ENNReal) :
-    wp (fixedSpec.query () : OracleComp fixedSpec Bool) post = post true := by
+    wp⟦(fixedSpec.query () : OracleComp fixedSpec Bool)⟧ post = post true := by
   rw [wp_query]
   simp
 
 example (post : ℝ → ENNReal) :
-    wp ((fun b ↦ if b then (-3 : ℝ) else 1) <$>
-      (fixedSpec.query () : OracleComp fixedSpec Bool)) post =
+    wp⟦(fun b ↦ if b then (-3 : ℝ) else 1) <$>
+      (fixedSpec.query () : OracleComp fixedSpec Bool)⟧ post =
       post (-3) := by
   rw [wp_map, wp_query]
   simp
 
 example (mx : OracleComp fixedSpec ℝ) (post : ℝ → ENNReal) (hpost : Measurable post) :
-    wp mx post = ∫⁻ x, post x ∂𝒟[mx] := wp_eq_lintegral mx post hpost
+    wp⟦mx⟧ post = ∫⁻ x, post x ∂𝒟[mx] := wp_eq_lintegral mx post hpost
 
 /-- Finite answer partitions leave arbitrary hidden output types unmeasured. -/
 example (mx : OracleComp fixedSpec (ℕ → ℕ)) (post : (ℕ → ℕ) → ENNReal) :
-    wp mx post = ∑' x, Pr{let y ← mx}[y = x] * post x :=
+    wp⟦mx⟧ post = ∑' x, Pr{let y ← mx}[y = x] * post x :=
   wp_eq_tsum mx post
 
 /-- A handler that increments an unobserved function state at each query. -/
@@ -68,7 +68,7 @@ def countingImpl : QueryImpl fixedSpec (StateT (ℕ → ℕ) (OracleComp fixedSp
     query t
 
 example {α : Type} (mx : OracleComp fixedSpec α) (counts : ℕ → ℕ) (post : α → ENNReal) :
-    wp ((simulateQ countingImpl mx).run' counts) post = wp mx post := by
+    wp⟦(simulateQ countingImpl mx).run' counts⟧ post = wp⟦mx⟧ post := by
   apply wp_simulateQ_run'_eq
   intro t s
   simp only [countingImpl, StateT.run'_eq, StateT.run_bind, StateT.run_modify,
