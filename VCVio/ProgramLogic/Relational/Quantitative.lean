@@ -10,7 +10,6 @@ public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 import ToMathlib.MeasureTheory.Function.AEMeasurable
-import ToMathlib.MeasureTheory.Integral.Countable
 
 /-!
 # Quantitative Relational Program Logic (eRHL)
@@ -177,8 +176,11 @@ theorem eRelWP_bind_le
     have : IsProbabilityMeasure 𝒟[fa z.1.1] := ⟨evalDist_apply_univ_eq_one _⟩
     have : IsProbabilityMeasure 𝒟[fb z.1.2] := ⟨evalDist_apply_univ_eq_one _⟩
     exact ⟨Measure.Coupling.prod _ _⟩
+  -- `c.joint` is concentrated on the countable set `S`, so its integrals are sums over `S`.
+  have hsum (g : α × β → ℝ≥0∞) : ∫⁻ z, g z ∂c.joint = ∑' z : S, g z * c.joint {(z : α × β)} := by
+    rw [← lintegral_countable g hS, Measure.restrict_eq_self_of_ae_mem hcS]
   change ∫⁻ z, eRelWP (fa z.1) (fb z.2) post ∂c.joint ≤ _
-  rw [lintegral_eq_tsum_of_ae_mem_countable hS hcS]
+  rw [hsum]
   calc ∑' z : S, eRelWP (fa z.1.1) (fb z.1.2) post * c.joint {(z : α × β)}
       = ∑' z : S, ⨆ d : Measure.Coupling 𝒟[fa z.1.1] 𝒟[fb z.1.2],
           (∫⁻ w, post w.1 w.2 ∂d.joint) * c.joint {(z : α × β)} :=
@@ -203,7 +205,7 @@ theorem eRelWP_bind_le
       (ae_mem_support_prod C) _
   refine le_trans (le_of_eq ?_) (le_eRelWP_of_isCoupling post C)
   change _ = ∫⁻ w, post w.1 w.2 ∂(c.joint.bind j)
-  rw [Measure.lintegral_bind hj hpost, lintegral_eq_tsum_of_ae_mem_countable hS hcS]
+  rw [Measure.lintegral_bind hj hpost, hsum]
   exact tsum_congr fun z => by simp only [j, dite_eq_left z.2]
 
 /-- Bind/sequential composition rule for quantitative relational WP. -/
@@ -251,7 +253,12 @@ theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : Oracl
       exact ae_iff.1 (c.isCoupling.ae_mem_prod F.measurableSet F.measurableSet
         (measure_eq_zero_iff_ae_notMem.1 hμ |>.mono fun _ h => not_not.1 h)
         (measure_eq_zero_iff_ae_notMem.1 hν |>.mono fun _ h => not_not.1 h))
-    rw [Measure.lintegral_eq_sum_of_compl_eq_zero hc, Finset.sum_product]
+    have hmem : ∀ᵐ z ∂c.joint, z ∈ (↑(F ×ˢ F) : Set (α × α)) :=
+      (measure_eq_zero_iff_ae_notMem.1 hc).mono fun _ h => not_not.1 h
+    have hint : ∫⁻ z, RelPost.indicator (EqRel α) z.1 z.2 ∂c.joint =
+        ∑ z ∈ F ×ˢ F, RelPost.indicator (EqRel α) z.1 z.2 * c.joint {z} := by
+      rw [← lintegral_finset, Measure.restrict_eq_self_of_ae_mem hmem]
+    rw [hint, Finset.sum_product]
     refine Finset.sum_congr rfl fun a ha => ?_
     rw [Finset.sum_eq_single a (fun b _ hba => by simp [RelPost.indicator, EqRel, Ne.symm hba])
       (fun h => absurd ha h)]

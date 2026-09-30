@@ -46,8 +46,7 @@ namespace ProportionalScheduler
 /-! ## Denotational relation -/
 
 /-- Equality in distribution of `ProbComp` computations. This is the denotational equality used
-for scheduler coherence; on countable outputs `outputRel_rel` reads it as pointwise equality of
-output probabilities. -/
+for scheduler coherence; `outputRel_rel` reads it as pointwise equality of output probabilities. -/
 noncomputable def outputRel : MonadRelFamily ProbComp where
   rel := fun left right => left =ᵈ right
   refl _ := .rfl
@@ -60,13 +59,13 @@ noncomputable def outputRel : MonadRelFamily ProbComp where
     intro α β left right f h
     exact EvalDistEq.bind_left h f
 
-/-- On a countable output type, `outputRel` holds exactly when the output probabilities agree
-pointwise. -/
+/-- `outputRel` holds exactly when the output probabilities agree pointwise: a `ProbComp` has
+finitely many possible outputs, so its point masses determine every event. -/
 @[simp]
-theorem outputRel_rel {α : Type} [Countable α] (left right : ProbComp α) :
+theorem outputRel_rel {α : Type} (left right : ProbComp α) :
     outputRel.rel left right ↔
       ∀ output, Pr{let x ← left}[x = output] = Pr{let x ← right}[x = output] :=
-  evalDistEq_iff_forall_prEvent_eq_output
+  ⟨fun h output => EvalDistEq.prEvent_eq h (· = output), evalDistEq_of_forall_prEvent_eq_output⟩
 
 /-- `outputRel` is a congruence for the continuation of `bind`. -/
 instance outputRel_isBindCongr : outputRel.IsBindCongr where
@@ -286,12 +285,6 @@ theorem flip_eq_up_iff (choice : ULift Bool) (b : Bool) :
     BinaryScheduler.flip choice = ULift.up b ↔ choice = ULift.up (!b) := by
   obtain ⟨c⟩ := choice
   cases b <;> cases c <;> simp [BinaryScheduler.flip]
-
-/-- The three frontier leaves are countable, so their output laws are pointwise. -/
-local instance leafCountable : Countable Leaf :=
-  ⟨⟨fun | .first => 0 | .second => 1 | .context => 2, by
-    intro a b h
-    cases a <;> cases b <;> simp_all⟩⟩
 
 /-- Proportional scheduling factors every hierarchical three-way draw through
 the same direct distribution. -/

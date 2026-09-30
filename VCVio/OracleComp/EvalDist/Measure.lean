@@ -12,6 +12,7 @@ public import VCVio.EvalDist.Monad.Option
 public import VCVio.EvalDist.EvalDistEq
 import ToMathlib.Probability.UniformOn
 import ToMathlib.MeasureTheory.Measure.Bounds
+import ToMathlib.MeasureTheory.Measure.FinsetConcentrated
 
 /-!
 # Measure reasoning from structural support
@@ -471,19 +472,13 @@ theorem evalDistEq_of_forall_prEvent_eq_output [∀ t, Finite (spec.Range t)]
   classical
   let : MeasurableSpace α := ⊤
   let T : Finset α := ((support_finite mx).union (support_finite my)).toFinset
-  have key : ∀ oz : OracleComp spec α, support oz ⊆ ↑T → ∀ s : Set α,
-      𝒟[oz] s = ∑ x ∈ T.filter (· ∈ s), Pr{let z ← oz}[z = x] := by
-    intro oz hsub s
-    simp_rw [prEvent_eq_evalDist_singleton]
-    rw [MeasureTheory.sum_measure_singleton]
-    refine measure_congr ((evalDist.ae_of_forall_mem_support oz (· ∈ support oz)
-      MeasurableSet.of_discrete fun _ ha => ha).mono fun a ha => ?_)
-    have haT : a ∈ T := hsub ha
-    change (a ∈ s) = (a ∈ (↑(T.filter (· ∈ s)) : Set α))
-    simp [haT]
-  ext s -
-  rw [key mx (fun a ha => by simp [T, ha]) s, key my (fun a ha => by simp [T, ha]) s]
-  exact Finset.sum_congr rfl fun x _ => h x
+  have hT (oz : OracleComp spec α) (hsub : support oz ⊆ ↑T) : 𝒟[oz] (↑T)ᶜ = 0 :=
+    ae_iff.1 (evalDist.ae_of_forall_mem_support oz (· ∈ (↑T : Set α))
+      MeasurableSet.of_discrete fun _ ha => hsub ha)
+  refine Measure.ext_of_compl_eq_zero (hT mx fun a ha => by simp [T, ha])
+    (hT my fun a ha => by simp [T, ha]) fun x _ => ?_
+  rw [← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]
+  exact h x
 
 end measureSpec
 
