@@ -132,7 +132,11 @@ end MeasureProgramLogic
 
 /-- The expectation `wp⟦mx⟧ g` of `g` over the outputs of `mx`: core's `wp mx g ⊥` under the
 measure interpretation `MeasureProgramLogic.measureWP`. Standalone, `wp⟦mx⟧ ` is the function
-`fun g => wp⟦mx⟧ g`. -/
+`fun g => wp⟦mx⟧ g`.
+
+The interpretation is written as core's bridge from a `WPMonad` to program instances applied to
+`measureWP`: that is the instance term core's generic `wp` laws produce on their right-hand
+sides, so a literal expectation and a normalized one carry the same instance. -/
 syntax:max (name := measureWpStx) "wp⟦" term "⟧ " : term
 
 @[inherit_doc measureWpStx]

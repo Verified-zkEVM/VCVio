@@ -287,12 +287,20 @@ partial def isMeasureInterpretation (w : Expr) : MetaM Bool := do
   | some w' => isMeasureInterpretation w'
   | none => return false
 
+/-- The monadic interpretation behind a `WP` instance on programs: `w` when the instance is
+`w.toWP α`, seen through reducible and instance definitions. -/
+partial def wpMonadOf? (inst : Expr) : MetaM (Option Expr) := do
+  let inst := inst.cleanupAnnotations
+  if inst.isAppOfArity ``Std.WP.WPMonad.toWP 8 then return some (inst.getArg! 6)
+  match ← withReducibleAndInstances (unfoldDefinition? inst) with
+  | some inst' => wpMonadOf? inst'
+  | none => return none
+
 /-- Whether `e` is an expectation: core's `wp` under the measure interpretation. -/
 def isExpectation (e : Expr) : MetaM Bool := do
   unless e.isAppOfArity ``Std.WP.WP.wp 10 do return false
-  let inst := e.getArg! 6
-  unless inst.isAppOfArity ``Std.WP.instWPOfWPMonad 8 do return false
-  isMeasureInterpretation (inst.getArg! 7)
+  let some w ← wpMonadOf? (e.getArg! 6) | return false
+  isMeasureInterpretation w
 
 /-- The statement `let x ← a` for a draw bound by the `fun` `f`, or `let _ ← a` when `f` ignores
 its argument. -/
