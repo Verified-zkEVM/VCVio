@@ -31,7 +31,8 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 Unary triples additionally require `open scoped Std.WP`.
 - `wp⟦c⟧ post` — expectation of `post` over the outputs of `c` (global, from
   `VCVio.EvalDist.Expectation`)
-- `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)
+- `⦃ P ⦄ c ⦃ Q ⦄` — core's quantitative Hoare triple `Std.WP.Triple c P Q ⊥`
+  (`P ≤ wp⟦c⟧ Q`)
 
 ### Game-level
 - `g₁ =ᵈ g₂` — equality in distribution, from `VCVio.EvalDist.EvalDistEq`
@@ -49,6 +50,7 @@ Unary triples additionally require `open scoped Std.WP`.
 @[expose] public section
 
 open ENNReal OracleSpec OracleComp
+open scoped Std.WP
 
 universe u
 
@@ -105,23 +107,21 @@ lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
     (R : Relational.RelPost α β) (a : α) (b : β) :
     Relational.RelPost.indicator R a b = 𝟙⟦R a b⟧ := rfl
 
-/-- Almost-sure correctness: `Triple 𝟙⟦True⟧ c (fun x => 𝟙⟦p x⟧)` iff
+/-- Almost-sure correctness: `⦃ 𝟙⟦True⟧ ⦄ c ⦃ fun x => 𝟙⟦p x⟧ ⦄` iff
 `Pr{let x ← c}[p x] = 1`. -/
 lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
-    Triple (𝟙⟦True⟧ : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) ↔
-      Pr{let x ← oa}[p x] = 1 := by
-  rw [triple_iff_le_wp, propInd_true]
+    ⦃ (𝟙⟦True⟧ : ℝ≥0∞) ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ ↔ Pr{let x ← oa}[p x] = 1 := by
+  rw [Std.WP.Triple.iff, propInd_true]
   exact ⟨fun h ↦ le_antisymm (prEvent_le_one oa) h, fun h ↦ h.ge⟩
 
 /-- Lower-bound event goals are exactly quantitative triples with indicator postconditions. -/
 lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
-    Triple r oa (fun x => 𝟙⟦p x⟧) ↔ r ≤ Pr{let x ← oa}[p x] := by
-  rw [triple_iff_le_wp]
-  exact Iff.rfl
+    ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ ↔ r ≤ Pr{let x ← oa}[p x] :=
+  Std.WP.Triple.iff
 
 /-! ## Expectation-level bridge lemmas -/
 
@@ -151,12 +151,13 @@ theorem markov_bound {ι : Type u} {spec : OracleSpec ι}
   · simpa using hf x hp
   · simp
 
-/-- `Triple` with precondition `1` and indicator postcondition when the event is almost sure. -/
+/-- A triple with precondition `1` and indicator postcondition when the event holds on the
+support. -/
 theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support oa, p x) :
-    Triple (1 : ℝ≥0∞) oa (fun x => 𝟙⟦p x⟧) := by
-  apply triple_ofLE
+    ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ := by
+  refine ⟨?_⟩
   rw [← wp_const oa 1]
   apply wp_mono_of_support
   intro x hx

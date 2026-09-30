@@ -34,11 +34,10 @@ of the preprocessed body. The resulting `Sym.Pattern` is then inserted into a
 `Lean.Meta.DiscrTree` via `Sym.insertPattern`, which wildcards proof / instance
 arguments and bound variables in the key sequence.
 
-Because `Sym.preprocessType` unfolds the user-facing abbreviations
-(`Triple`, `RelTriple`, `RelWP`) into their cores (core's `Std.WP.Triple` for the unary
-one, `MAlgRelOrdered.*` for the relational ones), the selector matches on the unfolded heads
-(plus the folded abbreviations as a safety net). Expectations are core's `Std.WP.wp`
-already. On the lookup side we apply
+Unary rules are stated with core's `Std.WP.Triple` or raw `Std.WP.wp`. Because
+`Sym.preprocessType` unfolds the relational abbreviations (`RelTriple`, `RelWP`) into their
+`MAlgRelOrdered.*` cores, the selector matches on the unfolded relational heads (plus the
+folded abbreviations as a safety net). On the lookup side we apply
 `withReducible <| whnf` to the goal's computation before querying, matching the
 normalization performed during pattern preprocessing.
 
@@ -190,17 +189,12 @@ def getVCSpecSimpTheorems : CoreM Meta.SimpTheorems :=
 
 /-! ### Preprocessed-body head matchers
 
-`Sym.preprocessType` aggressively unfolds reducible abbreviations (including our
-own `Triple`, `wp`, `RelTriple`, `RelWP` wrappers) before handing the body to
-the selector. These helpers match on both the folded (`OracleComp.ProgramLogic.…`)
-and unfolded (`Std.WP.…` / `MAlgRelOrdered.…`) heads so registrations are
-robust to future reducibility shifts.
+`Sym.preprocessType` aggressively unfolds reducible abbreviations (including the
+relational `RelTriple` and `RelWP` wrappers) before handing the body to the selector.
+Unary rules carry core's `Std.WP.Triple` / `Std.WP.wp` heads; the relational helpers match on
+both the folded (`OracleComp.ProgramLogic.…`) and unfolded (`MAlgRelOrdered.…`) heads so
+registrations are robust to future reducibility shifts.
 -/
-
-/-- Unfolded cores of the unary triple / wp abbreviations; matched on the
-preprocessed theorem body alongside the folded heads. -/
-private def unaryTripleHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.Triple, ``Std.WP.Triple]
 
 private def unaryWpHeadNames : Array Name :=
   #[``Std.WP.wp]
@@ -231,20 +225,13 @@ private def trailingArgsN? (e : Expr) (n : Nat) : Option (Array Expr) :=
   else
     none
 
-/-- Preprocessed-body variant of `tripleGoalParts?` that also matches the
-unfolded core head `Std.WP.Triple`, whose program argument precedes its
-WP evidence and assertion arguments. Returns `(pre, oa, post)`. -/
+/-- Preprocessed-body variant of `tripleGoalParts?` for core's head `Std.WP.Triple`, whose
+program argument precedes its WP evidence and assertion arguments. Returns `(pre, oa, post)`. -/
 private def tripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   let body := body.consumeMData
-  unless headIsOneOf body unaryTripleHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.WP.Triple then 5 else 3
-  let args ← trailingArgsN? body n
-  if n == 5 then
-    let #[oa, _wp, pre, post, _epost] := args | none
-    some (pre, oa, post)
-  else
-    let #[pre, oa, post] := args | none
-    some (pre, oa, post)
+  unless body.getAppFn.isConstOf ``Std.WP.Triple do none
+  let #[oa, _wp, pre, post, _epost] ← trailingArgsN? body 5 | none
+  some (pre, oa, post)
 
 /-- Preprocessed-body variant of `wpGoalParts?`: core's head `Std.WP.wp`, which
 carries a trailing exception postcondition. Returns `(oa, post)`. -/
@@ -319,10 +306,10 @@ of a `@[vcspec]` theorem, returns the computation expression to use as the
 pattern key, together with the normalized spec description and (for relational
 entries) the right-hand head constant used as a secondary filter.
 
-Handles both the folded (`Triple`, `wp`, `RelTriple`, `RelWP`) and unfolded
-(`MAlgOrdered.Triple`, `MAlgOrdered.wp`, `MAlgRelOrdered.Triple`,
-`MAlgRelOrdered.rwp`) heads because `Sym.preprocessType` aggressively unfolds
-the abbreviations in the source theorem before we see the body. -/
+Unary bodies carry core's `Std.WP.Triple` / `Std.WP.wp` heads. Relational bodies are matched
+in both folded (`RelTriple`, `RelWP`) and unfolded (`MAlgRelOrdered.Triple`,
+`MAlgRelOrdered.rwp`) form because `Sym.preprocessType` aggressively unfolds the abbreviations
+in the source theorem before we see the body. -/
 private def selectVCSpecKey (body : Expr) : MetaM (Expr × NormalizedVCSpec × Option Name) := do
   let body := body.consumeMData
   if let some (_pre, oa, _post) := tripleBodyParts? body then
@@ -375,7 +362,7 @@ private def selectVCSpecKey (body : Expr) : MetaM (Expr × NormalizedVCSpec × O
     return (oa, spec, some rightHead)
   throwError
     m!"@[vcspec] expects a theorem whose target is one of:\n\
-    - a unary `Triple`\n\
+    - a unary core `Std.WP.Triple`\n\
     - a unary raw `wp` goal\n\
     - a relational `RelTriple`\n\
     - a relational raw `RelWP`\n\

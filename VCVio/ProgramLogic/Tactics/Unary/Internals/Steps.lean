@@ -146,7 +146,7 @@ def runHoareStepRuleUsing (cut : TSyntax `term) : TacticM Bool := do
       let comp ← instantiateMVars comp
       if isBindExpr comp then
         tryEvalTacticSyntax (← `(tactic|
-          apply OracleComp.ProgramLogic.triple_bind (cut := $cut)))
+          apply Std.WP.Triple.bind (mid := $cut)))
       else
         return false
   | none => return false
@@ -262,8 +262,8 @@ private def tryApplySpecThenPeel (stx : TSyntax `tactic) : TacticM Bool := do
   return false
 
 /-- Try to close the current goal using only immediate local information.
-This is intentionally cheap: it is used while speculating on `triple_bind`, so it must not
-launch expensive proof search on goals with unresolved cut metavariables. -/
+This is intentionally cheap: it is used while speculating on `Std.WP.Triple.bind`, so it must
+not launch expensive proof search on goals with unresolved cut metavariables. -/
 def tryCloseSpecGoalImmediate : TacticM Bool := do
   tryApplyTripleHyp <||>
   tryCloseNormalizedTransformerWP <||>
@@ -279,24 +279,23 @@ def tryCloseSpecGoalImmediate : TacticM Bool := do
   tryApplySpecThenPeel (← `(tactic| apply Std.WP.Spec.monadLift_ReaderT)) <||>
   tryEvalTacticSyntax (← `(tactic| assumption)) <||>
   tryEvalTacticSyntax (← `(tactic| solve_by_elim (maxDepth := 2))) <||>
-  tryEvalTacticSyntax (← `(tactic|
-    exact OracleComp.ProgramLogic.triple_pure _ _)) <||>
+  tryEvalTacticSyntax (← `(tactic| exact Std.WP.Spec.pure _)) <||>
   tryEvalTacticSyntax (← `(tactic|
     exact OracleComp.ProgramLogic.triple_zero _ _)) <||>
   tryEvalTacticSyntax (← `(tactic| exact le_refl _)) <||>
   tryEvalTacticSyntax (← `(tactic|
-    exact OracleComp.ProgramLogic.triple_ofLE le_rfl))
+    exact Std.WP.Triple.intro Lean.Order.PartialOrder.rel_refl))
 
 /-- Try bounded local proof search on a closed goal.
 We only invoke `solve_by_elim` once the target has no unresolved expression metavariables; this
-avoids pathological search on speculative intermediate cuts introduced by `triple_bind`. -/
+avoids pathological search on speculative intermediate cuts introduced by `Std.WP.Triple.bind`. -/
 def tryCloseSpecGoalSearch : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
   if target.hasExprMVar then
     return false
   tryEvalTacticSyntax (← `(tactic| (
     repeat intro
-    simp only [OracleComp.ProgramLogic.triple_iff_le_wp] at *
+    simp only [Std.WP.Triple.iff] at *
     solve_by_elim (maxDepth := 6) [OracleComp.ProgramLogic.wp_mono, le_trans]
   )))
 
@@ -317,7 +316,7 @@ private def closeTheoremStepGoals : TacticM Unit := do
         | (repeat intro; split_ifs <;> simp_all [Lean.Order.PartialOrder.rel])
         | (
             repeat intro
-            simp only [OracleComp.ProgramLogic.triple_iff_le_wp] at *
+            simp only [Std.WP.Triple.iff] at *
             solve_by_elim (maxDepth := 4) [OracleComp.ProgramLogic.wp_mono, le_trans]
           )))
 
@@ -355,8 +354,8 @@ private def runVCGenStepWithTheoremConseq
   return false
 
 /-- Apply a `@[vcspec]` unary rule to the current goal.
-Default `vcstep` first tries the cached rule directly. For folded unary
-`Triple` goals, a global declaration can also be applied under `triple_conseq`,
+Default `vcstep` first tries the cached rule directly. For unary triple goals, a global
+declaration can also be applied under `triple_conseq`,
 which lets a registered concrete postcondition theorem feed a weaker goal
 postcondition. -/
 private def runUnaryVCSpecRule
@@ -401,22 +400,13 @@ canonical leaf rules, or bounded local consequence search. -/
 def tryCloseSpecGoal : TacticM Bool := do
   tryCloseSpecGoalImmediate <||> tryCloseSpecGoalSearch
 
-/-- Express a core triple over the quantitative OracleComp interpretation through
-VCVio's carrier-specific facade before applying its probability rules. -/
-private def normalizeStdDoTripleGoal : TacticM Bool := do
-  let target ← instantiateMVars (← getMainTarget)
-  unless (findAppWithHead? ``Std.WP.Triple target).isSome do
-    return false
-  tryEvalTacticSyntax (← `(tactic| change OracleComp.ProgramLogic.Triple _ _ _))
-
 /-- Finish-only closure step: includes the support-sensitive leaf rules that are too expensive
 for the default `vcstep` hot path. -/
 def tryCloseSpecGoalFinal : TacticM Bool := do
   tryApplyTripleHyp <||>
   tryCloseNormalizedTransformerWP <||>
   tryEvalTacticSyntax (← `(tactic| assumption)) <||>
-  tryEvalTacticSyntax (← `(tactic|
-    exact OracleComp.ProgramLogic.triple_pure _ _)) <||>
+  tryEvalTacticSyntax (← `(tactic| exact Std.WP.Spec.pure _)) <||>
   tryEvalTacticSyntax (← `(tactic|
     exact OracleComp.ProgramLogic.triple_zero _ _)) <||>
   tryEvalTacticSyntax (← `(tactic|
@@ -428,7 +418,7 @@ def tryCloseSpecGoalFinal : TacticM Bool := do
     exact OracleComp.ProgramLogic.triple_prEvent_eq_one _ _ (by assumption))) <||>
   tryEvalTacticSyntax (← `(tactic| exact le_refl _)) <||>
   tryEvalTacticSyntax (← `(tactic|
-    exact OracleComp.ProgramLogic.triple_ofLE le_rfl)) <||>
+    exact Std.WP.Triple.intro Lean.Order.PartialOrder.rel_refl)) <||>
   tryCloseSpecGoalSearch
 
 /-- Run one bounded finish/closure pass across all current goals. -/
@@ -463,16 +453,13 @@ def isConstantLambda (e : Expr) : Bool :=
   | .lam _ _ body _ => !body.hasLooseBVar 0
   | _ => false
 
-/-- Try the strongest automatic bind step: `triple_bind` plus immediate closure of the
+/-- Try the strongest automatic bind step: `Std.WP.Triple.bind` plus immediate closure of the
 spec side-goal. -/
 def tryBindImmediate (comp : Expr) : TacticM Bool := do
   if !isBindExpr comp then
     return false
   match ← observing? do
-    evalTactic (← `(tactic|
-      first
-        | apply OracleComp.ProgramLogic.triple_bind
-        | apply Std.WP.Triple.bind))
+    evalTactic (← `(tactic| apply Std.WP.Triple.bind))
     unless ← tryCloseSpecGoalImmediate do throwError "" with
   | some _ => return true
   | none => return false
@@ -1200,12 +1187,12 @@ def tryRawWpStructuralStep : TacticM Bool := do
 
 /-- Try to synthesize a support-based intermediate postcondition for a bind step.
 When the computation is `oa >>= f` and no explicit spec is available, tries applying
-`triple_bind` with an inferred cut and closing the spec subgoal via `triple_support`,
+`Std.WP.Triple.bind` with an inferred cut and closing the spec subgoal via `triple_support`,
 which unifies the cut to `fun x => 𝟙⟦x ∈ support oa⟧`. -/
 def trySupportCutBind (comp : Expr) : TacticM Bool := do
   if !isBindExpr comp then return false
   match ← observing? do
-    evalTactic (← `(tactic| apply OracleComp.ProgramLogic.triple_bind))
+    evalTactic (← `(tactic| apply Std.WP.Triple.bind))
     unless ← tryEvalTacticSyntax (← `(tactic|
       classical exact OracleComp.ProgramLogic.triple_support _)) do
       throwError "" with

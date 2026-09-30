@@ -65,7 +65,8 @@ Open `OracleComp.ProgramLogic` for VCVio notation. Unary triples additionally re
 |----------|---------|------------|
 | `𝟙⟦P⟧` | Numeric proposition indicator (`propInd P`) | `VCVio/ProgramLogic/NotationCore.lean` |
 | `rwp⟦c₁ ~ c₂ \| post; epost₁, epost₂⟧` | Relational WP (`VCVio.ProgramLogic.rwp c₁ c₂ post epost₁ epost₂`) | `VCVio/ProgramLogic/NotationCore.lean` |
-| `⦃P⦄ c ⦃Q⦄` | Core unary Hoare triple (`Std.WP.Triple`) | Lean core `Std.WP.Triple.Basic` |
+| `⦃ P ⦄ c ⦃ Q ⦄` | Core unary Hoare triple `Std.WP.Triple c P Q ⊥`; for `OracleComp` it is `P ≤ wp⟦c⟧ Q` | Lean core `Std.WP.Triple.Basic` |
+| `⦃ P ⦄ c ⦃ Q; E ⦄` | Core unary Hoare triple with exception postcondition `E` (`Std.WP.Triple c P Q E`) | Lean core `Std.WP.Triple.Basic` |
 | `mx =ᵈ my` | Equality in distribution (`EvalDistEq`): every event has the same probability, across monads | `VCVio/EvalDist/EvalDistEq.lean` |
 | `⟪c₁ ~ c₂ \| R⟫` | pRHL coupling (`RelTriple c₁ c₂ R`) | `VCVio/ProgramLogic/Notation.lean` |
 | `⟪c₁ ≈[ε] c₂ \| R⟫` | Approximate coupling (`ApproxRelTriple ε c₁ c₂ R`) | `VCVio/ProgramLogic/Notation.lean` |

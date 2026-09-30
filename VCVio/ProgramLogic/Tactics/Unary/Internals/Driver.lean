@@ -107,7 +107,7 @@ private def runProbStep : TacticM Bool := do
     discard <| tryRawWpStructuralStep
   return true
 
-/-- Bind dispatch family: try `triple_bind` immediately, then a support-based
+/-- Bind dispatch family: try `Std.WP.Triple.bind` immediately, then a support-based
 cut, then the explicit `triple_bind_wp` / `stdDoTriple_bind_wp` closers. -/
 private def runTripleBindStep (comp : Expr) : TacticM Bool := do
   if ← tryBindImmediate comp then return true
@@ -126,10 +126,10 @@ private def runTripleBindStep (comp : Expr) : TacticM Bool := do
 `@[wpStep]`. Used when the specialized triple dispatchers do not match. -/
 private def runTripleFallback : TacticM Bool := do
   match ← observing? do
-      evalTactic (← `(tactic| unfold OracleComp.ProgramLogic.Triple))
+      evalTactic (← `(tactic| refine Std.WP.Triple.intro ?_))
       evalTactic (← `(tactic| change _ ≤ wp⟦_⟧ _))
       unless ← runWpStepRules do
-        throwError "vcstep: no matching wp rule after unfolding `Triple`"
+        throwError "vcstep: no matching wp rule after unfolding the triple"
     with
   | some _ => return true
   | none => return false
@@ -145,7 +145,6 @@ opportunistically before classification so that goals where lowering does not
 fire still flow through the structural dispatcher. -/
 def runVCGenStructuralCore : TacticM Bool := withVCGenStructuralTiming do
   if (← getGoals).isEmpty then return false
-  discard <| normalizeStdDoTripleGoal
   if hasProbGoal (← instantiateMVars (← getMainTarget)) then
     if ← runProbStep then return true
   -- For triple-shaped goals, normalize transformer `wp` layers and try an

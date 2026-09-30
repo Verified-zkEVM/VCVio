@@ -413,26 +413,21 @@ def rawWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
   else
     none
 
-private def findTripleApp? (target : Expr) : Option (Expr × Nat) := do
-  if let some app := findAppWithHead? ``OracleComp.ProgramLogic.Triple target then
-    some (app, 3)
-  else if let some app := findAppWithHead? ``Std.WP.Triple target then
-    some (app, 5)
-  else
-    none
+/-- The trailing `(program, WP instance, pre, post, epost)` arguments of the first core triple
+`Std.WP.Triple program pre post epost` in an expression. -/
+private def findTripleArgs? (target : Expr) : Option (Array Expr) := do
+  let app ← findAppWithHead? ``Std.WP.Triple target
+  trailingArgs? app 5
 
-/-- Extract the computation from a VCVio or core unary triple. -/
+/-- Extract the computation from a core unary triple. -/
 def tripleGoalComp? (target : Expr) : Option Expr := do
-  let (app, k) ← findTripleApp? target
-  let args ← trailingArgs? app k
-  some args[if k == 5 then 0 else 1]!
+  let args ← findTripleArgs? target
+  some args[0]!
 
-/-- Extract a unary triple's precondition, computation, and postcondition. -/
+/-- Extract a core unary triple's precondition, computation, and postcondition. -/
 def tripleGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
-  let (app, k) ← findTripleApp? target
-  let args ← trailingArgs? app k
-  if k == 5 then some (args[2]!, args[0]!, args[3]!)
-  else some (args[0]!, args[1]!, args[2]!)
+  let args ← findTripleArgs? target
+  some (args[2]!, args[0]!, args[3]!)
 
 /-- Check whether an expression contains an oracle simulation. -/
 def isSimulateQAction (e : Expr) : Bool :=

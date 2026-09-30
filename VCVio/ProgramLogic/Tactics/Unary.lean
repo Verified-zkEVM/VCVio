@@ -147,7 +147,7 @@ private def logPlannerNotes (steps : Array PlannedStep) : TacticM Unit := do
 
 /-- `vcstep` applies one quantitative VCGen step to a `Triple`, raw `wp`, or probability goal.
 
-For `Triple` goals: decomposes a bind via `triple_bind` and automatically tries to close
+For `Triple` goals: decomposes a bind via `Std.WP.Triple.bind` and automatically tries to close
 the spec subgoal using hypotheses in the local context, with backward WP fallback.
 Also handles `ite`/`dite` splitting, `match` case analysis, loop invariant auto-detection
 from context, and WP-rule unfolding, including `simulateQ ... run'`.
@@ -366,12 +366,12 @@ elab_rules (kind := vcgenSuggestion) : tactic
             "one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero, game_rule]",
           ],
           String.intercalate "" [
-            "all_goals first | assumption | exact OracleComp.ProgramLogic.triple_pure _ _ | ",
+            "all_goals first | assumption | exact Std.WP.Spec.pure _ | ",
             "exact OracleComp.ProgramLogic.triple_zero _ _ | ",
             "(classical exact OracleComp.ProgramLogic.triple_support _) | ",
             "(exact OracleComp.ProgramLogic.triple_propInd_of_support _ _ (by assumption)) | ",
             "(exact OracleComp.ProgramLogic.triple_prEvent_eq_one _ _ (by assumption)) | ",
-            "exact le_refl _ | (repeat intro; simp only [OracleComp.ProgramLogic.Triple] at *; ",
+            "exact le_refl _ | (repeat intro; simp only [Std.WP.Triple.iff] at *; ",
             "solve_by_elim (maxDepth := 6) [OracleComp.ProgramLogic.wp_mono, le_trans])",
           ]
         ]

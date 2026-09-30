@@ -15,6 +15,7 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 @[expose] public section
 
 open ENNReal MeasureTheory
+open scoped Std.WP
 
 universe u
 
@@ -30,10 +31,10 @@ example (x : α) (post : α → ℝ≥0∞) :
 
 example (pre : ℝ≥0∞) (oa : OracleComp spec α) (ob : α → OracleComp spec β)
     (cut : α → ℝ≥0∞) (post : β → ℝ≥0∞)
-    (hoa : Triple pre oa cut)
-    (hob : ∀ x, Triple (cut x) (ob x) post) :
-    Triple pre (oa >>= ob) post :=
-  triple_bind (spec := spec) hoa hob
+    (hoa : ⦃ pre ⦄ oa ⦃ cut ⦄)
+    (hob : ∀ x, ⦃ cut x ⦄ ob x ⦃ post ⦄) :
+    ⦃ pre ⦄ (oa >>= ob) ⦃ post ⦄ :=
+  Std.WP.Triple.bind oa ob cut hoa hob
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp⟦(query t : OracleComp spec (spec.Range t))⟧ post =

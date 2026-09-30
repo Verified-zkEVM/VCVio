@@ -345,7 +345,7 @@ example (impl : QueryImpl spec (OracleComp spec))
 @[local vcspec] theorem triple_wrappedTrue :
     ⦃ 1 ⦄ wrappedTrue (spec := spec) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
   simpa [wrappedTrue] using
-    (triple_pure (spec := spec) true (fun y => if y = true then 1 else 0))
+    (Spec.pure (m := OracleComp spec) (post := fun y => if y = true then 1 else 0) true)
 
 example :
     ⦃ (1 : ℝ≥0∞) ⦄ (wrappedTrue (spec := spec))
@@ -386,7 +386,7 @@ example :
 @[local vcspec] theorem triple_wrappedTrueStep (_haux : True) :
     ⦃ 1 ⦄ wrappedTrueStep (spec := spec) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
   simpa [wrappedTrueStep] using
-    (triple_pure (spec := spec) true (fun y => if y = true then 1 else 0))
+    (Spec.pure (m := OracleComp spec) (post := fun y => if y = true then 1 else 0) true)
 
 example :
     ⦃ (1 : ℝ≥0∞) ⦄ (wrappedTrueStep (spec := spec))
@@ -403,7 +403,8 @@ example :
     ⦃ 1 ⦄ cacheTraceWrapped (spec := spec)
       ⦃ fun y => if y = true then (1 : ℝ≥0∞) else 0 ⦄ := by
   simpa [cacheTraceWrapped] using
-    (triple_pure (spec := spec) true (fun y => if y = true then (1 : ℝ≥0∞) else 0))
+    (Spec.pure (m := OracleComp spec) (post := fun y => if y = true then (1 : ℝ≥0∞) else 0)
+      true)
 
 /--
 info: [vcspec cache] hit `triple_cacheTraceWrapped` (folded, unaryTriple)

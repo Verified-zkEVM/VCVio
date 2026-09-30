@@ -240,8 +240,8 @@ Use `vcgen using cut` to perform one explicit bind step with an intermediate
 postcondition, then continue with exhaustive decomposition:
 
 ```lean
--- Goal: ⦃1⦄ (do let x ← oa; let y ← f x; g y) ⦃post⦄
--- with hoa : ⦃1⦄ oa ⦃cut⦄ in context
+-- Goal: ⦃ 1 ⦄ (do let x ← oa; let y ← f x; g y) ⦃ post ⦄
+-- with hoa : ⦃ 1 ⦄ oa ⦃ cut ⦄ in context
 vcgen using cut            -- splits at first bind with `cut`, then auto-decomposes
 ```
 
@@ -249,8 +249,8 @@ Use `vcgen inv I` to apply an explicit loop invariant to the first
 `replicate`/`foldlM`/`mapM` goal, then continue:
 
 ```lean
--- Goal: ⦃pre⦄ oa.replicate n ⦃post⦄
--- with hstep : ⦃I⦄ oa ⦃fun _ => I⦄ in context
+-- Goal: ⦃ pre ⦄ oa.replicate n ⦃ post ⦄
+-- with hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄ in context
 vcgen inv I                -- applies invariant I, then auto-decomposes
 ```
 
@@ -258,27 +258,27 @@ vcgen inv I                -- applies invariant I, then auto-decomposes
 
 When decomposing a bind `oa >>= f`, if no explicit spec is available in context,
 `vcstep` and `vcgen` will automatically try a support-based intermediate
-postcondition. This applies `triple_bind` with `triple_support` as the spec for `oa`,
+postcondition. This applies `Std.WP.Triple.bind` with `triple_support` as the spec for `oa`,
 unifying the cut to `fun x => ⌜x ∈ support oa⌝`:
 
 ```lean
--- Goal: ⦃1⦄ (do let x ← oa; f x) ⦃post⦄
--- No spec for oa, but h : ∀ x ∈ support oa, ⦃...⦄ f x ⦃post⦄
+-- Goal: ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ post ⦄
+-- No spec for oa, but h : ∀ x ∈ support oa, ⦃ ... ⦄ f x ⦃ post ⦄
 vcgen                      -- auto-inserts support cut, then decomposes f
 ```
 
 ### Opt-in unary theorem lookup
 
 When a computation head is user-defined and not one of the built-in structural cases, register a
-unary `Triple` lemma explicitly:
+unary triple lemma explicitly:
 
 ```lean
 @[irreducible] def wrappedTrue : OracleComp spec Bool := pure true
 
 @[vcspec] theorem triple_wrappedTrue :
-    ⦃1⦄ wrappedTrue (spec := spec) ⦃fun y => if y = true then 1 else 0⦄ := by
+    ⦃ 1 ⦄ wrappedTrue (spec := spec) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
   simpa [wrappedTrue] using
-    (triple_pure (spec := spec) true (fun y => if y = true then 1 else 0))
+    (Std.WP.Spec.pure (m := OracleComp spec) (post := fun y => if y = true then 1 else 0) true)
 ```
 
 After that, `vcstep` can use the theorem when the goal head symbol is `wrappedTrue`.

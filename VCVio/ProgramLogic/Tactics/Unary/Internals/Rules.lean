@@ -110,7 +110,7 @@ theorem wp_uniformSample_le_vcspec {α : Type} [SampleableType α] (post : α �
   rw [OracleComp.ProgramLogic.wp_uniformSample]
 
 /-- Generic core triple bind step with the intermediate postcondition fixed to
-the weakest precondition of the continuation. This is the `Std.WP.Triple`
+the weakest precondition of the continuation. This is the monad-generic
 counterpart of `OracleComp.ProgramLogic.triple_bind_wp`, and lets unary
 automation walk transformer-stack `do` blocks without guessing a user cut. -/
 theorem stdDoTriple_bind_wp {m : Type u → Type v}
@@ -339,7 +339,7 @@ theorem wp_ReaderT_map_layer {m : Type u → Type v} {Pred EPred : Type u}
   rfl
 
 attribute [vcspec]
-  OracleComp.ProgramLogic.triple_pure
+  Std.WP.Spec.pure
   wp_pure_le_vcspec
   wp_map_le_vcspec
   wp_ite_le_vcspec

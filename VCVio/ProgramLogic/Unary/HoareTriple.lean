@@ -16,15 +16,16 @@ public import ToMathlib.MeasureTheory.Measure.Bounds
 /-!
 # Quantitative Hoare triples
 
-Expectations `wp⟦oa⟧ post` (`VCVio.EvalDist.Expectation`) and the triples `Triple pre oa post`
-expose the expectation interpretation of core's lattice-generic weakest-precondition API for
-`OracleComp`. The laws below specialize the generic ones to oracle computations, which are
-lossless, and add the oracle-specific ones: queries, uniform sampling, replication and
-traversals.
+Expectations `wp⟦oa⟧ post` (`VCVio.EvalDist.Expectation`) and core's triples
+`⦃ pre ⦄ oa ⦃ post ⦄` expose the expectation interpretation of core's lattice-generic
+weakest-precondition API for `OracleComp`. The laws below specialize the generic ones to oracle
+computations, which are lossless, and add the oracle-specific ones: queries, uniform sampling,
+replication and traversals.
 
 The expectation interpretation is the core instance of `OracleComp spec`
 (`OracleComp.Quantitative.instWP`), so core's `⦃ pre ⦄ program ⦃ post ⦄` notation, available
-through `open scoped Std.WP`, states these triples.
+through `open scoped Std.WP`, states these triples: it is `Std.WP.Triple program pre post ⊥`,
+with the empty exception postcondition.
 -/
 
 @[expose] public section
@@ -48,18 +49,10 @@ variable [OracleSpec.IsMeasureSpec spec]
 /-! ## API contract
 
 This interface uses the configured measure interpretation, with assertions in `ℝ≥0∞`.
-Expectations are core's `wp` under that interpretation, written `wp⟦oa⟧ post`; the triple
-abbreviation fixes the empty exception postcondition while retaining core's triple
-representation.
+Expectations are core's `wp` under that interpretation, written `wp⟦oa⟧ post`. Triples are
+core's `Std.WP.Triple oa pre post ⊥`, written `⦃ pre ⦄ oa ⦃ post ⦄`: `Std.WP.Triple.iff`
+unfolds one to the inequality `pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦oa⟧ post`.
 -/
-
-/-- Quantitative Hoare triple for `OracleComp spec`, fixing the exception
-postcondition to `Lean.Order.bot`. Definitionally equal to
-`Std.WP.Triple oa pre post Lean.Order.bot`; see the API contract for
-details. -/
-noncomputable abbrev Triple (pre : ℝ≥0∞) (oa : OracleComp spec α)
-    (post : α → ℝ≥0∞) : Prop :=
-  Std.WP.Triple oa pre post Lean.Order.bot
 
 /-- Quantitative WP integrates a measurable assertion in the chosen output space. -/
 theorem wp_eq_lintegral [MeasurableSpace α] (oa : OracleComp spec α)
@@ -71,28 +64,6 @@ theorem wp_eq_lintegral [MeasurableSpace α] (oa : OracleComp spec α)
 theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦oa⟧ post = ∫⁻ y, y ∂𝒟[post <$> oa] :=
   MeasureProgramLogic.wp_eq_lintegral_map oa post
-
-/-- A quantitative core triple is the corresponding inequality of expectations. -/
-theorem triple_iff_le_wp
-    (pre : ℝ≥0∞) (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
-    Triple pre oa post ↔
-      pre ≤ wp⟦oa⟧ post :=
-  Std.WP.Triple.iff (epost := Lean.Order.bot)
-
-/-- Construct a quantitative triple from an expectation inequality. -/
-theorem triple_ofLE
-    {pre : ℝ≥0∞} {oa : OracleComp spec α} {post : α → ℝ≥0∞}
-    (h : pre ≤ wp⟦oa⟧ post) :
-    Triple pre oa post :=
-  (triple_iff_le_wp pre oa post).mpr h
-
-/-- Extract the `≤`-form `pre ≤ wp oa post` from a
-`Triple …`. Companion to `triple_iff_le_wp.mp`. -/
-theorem triple_toLE
-    {pre : ℝ≥0∞} {oa : OracleComp spec α} {post : α → ℝ≥0∞}
-    (h : Triple pre oa post) :
-    pre ≤ wp⟦oa⟧ post :=
-  (triple_iff_le_wp pre oa post).mp h
 
 /-! ## `wp` lemmas (against `wp _ _`) -/
 
@@ -223,60 +194,49 @@ theorem wp_finsetSum {κ : Type*} (oa : OracleComp spec α) (s : Finset κ)
     wp⟦oa⟧ (fun x ↦ ∑ i ∈ s, f i x) = ∑ i ∈ s, wp⟦oa⟧ (f i) :=
   MeasureProgramLogic.wp_finsetSum oa s f
 
-/-! ## `Triple` lemmas (against `Triple _ _ _`)
+/-! ## Triple lemmas
 
-`Std.WP.Triple` is an inductive wrapper around `pre ⊑ wp …`. The
-accessor `Std.WP.Triple.iff` exchanges between the inductive form and
-the `≤`-form; `triple_ofLE` packages a `≤`-proof into the
-constructor; pattern matching `match h with | .intro h => h` extracts
-the underlying inequality. -/
+Core's `Std.WP.Triple` is a structure around `pre ⊑ wp …`: `Std.WP.Triple.intro` builds a
+triple from the inequality, `Std.WP.Triple.le_wp` extracts it, and `Std.WP.Triple.iff`
+exchanges the two forms. Core supplies the generic monadic rules (`Std.WP.Spec.pure`,
+`Std.WP.Triple.bind`, `Std.WP.Triple.map`); the rules below are the quantitative ones for
+`OracleComp`, stated with `ℝ≥0∞` inequalities. -/
 
+/-- Consequence rule: strengthen the precondition and weaken the postcondition pointwise. -/
 theorem triple_conseq {pre pre' : ℝ≥0∞} {oa : OracleComp spec α}
     {post post' : α → ℝ≥0∞}
     (hpre : pre' ≤ pre) (hpost : ∀ x, post x ≤ post' x) :
-    Triple pre oa post →
-      Triple pre' oa post' := fun h =>
-  triple_ofLE
-    (le_trans hpre (le_trans (triple_toLE h)
-      (wp_mono oa hpost)))
+    ⦃ pre ⦄ oa ⦃ post ⦄ → ⦃ pre' ⦄ oa ⦃ post' ⦄ := fun h =>
+  ⟨Std.WP.Triple.entails_wp_of_pre_post h hpre hpost⟩
 
-theorem triple_bind {pre : ℝ≥0∞} {oa : OracleComp spec α}
-    {cut : α → ℝ≥0∞} {ob : α → OracleComp spec β} {post : β → ℝ≥0∞}
-    (hoa : Triple pre oa cut)
-    (hob : ∀ x, Triple (cut x) (ob x) post) :
-    Triple pre (oa >>= ob) post :=
-  Std.WP.Triple.bind oa ob cut hoa hob
-
+/-- Bind rule whose intermediate postcondition is the expectation of the continuation. -/
 theorem triple_bind_wp {pre : ℝ≥0∞} {oa : OracleComp spec α}
     {ob : α → OracleComp spec β} {post : β → ℝ≥0∞}
-    (h : Triple pre oa
-          (fun x => wp⟦ob x⟧ post)) :
-    Triple pre (oa >>= ob) post :=
-  triple_ofLE (by rw [wp_bind]; exact triple_toLE h)
-
-theorem triple_pure (x : α) (post : α → ℝ≥0∞) :
-    Triple (post x) (pure x : OracleComp spec α) post :=
-  Std.WP.Spec.pure x
+    (h : ⦃ pre ⦄ oa ⦃ fun x => wp⟦ob x⟧ post ⦄) :
+    ⦃ pre ⦄ (oa >>= ob) ⦃ post ⦄ :=
+  Std.WP.Triple.bind oa ob _ h fun _ => ⟨le_rfl⟩
 
 /-- A quantitative triple with precondition `0` is always true. -/
 theorem triple_zero (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
-    Triple (0 : ℝ≥0∞) oa post :=
-  triple_ofLE (by simp)
+    ⦃ (0 : ℝ≥0∞) ⦄ oa ⦃ post ⦄ :=
+  ⟨bot_le⟩
 
+/-- A conditional program satisfies a triple when each branch does under its guard. -/
 theorem triple_ite {c : Prop} [Decidable c] {pre : ℝ≥0∞}
     {oa ob : OracleComp spec α} {post : α → ℝ≥0∞}
-    (ht : c → Triple pre oa post)
-    (hf : ¬c → Triple pre ob post) :
-    Triple pre (if c then oa else ob) post := by
+    (ht : c → ⦃ pre ⦄ oa ⦃ post ⦄)
+    (hf : ¬c → ⦃ pre ⦄ ob ⦃ post ⦄) :
+    ⦃ pre ⦄ (if c then oa else ob) ⦃ post ⦄ := by
   split_ifs with h
   · exact ht h
   · exact hf h
 
+/-- A dependent conditional program satisfies a triple when each branch does. -/
 theorem triple_dite {c : Prop} [Decidable c] {pre : ℝ≥0∞}
     {oa : c → OracleComp spec α} {ob : ¬c → OracleComp spec α} {post : α → ℝ≥0∞}
-    (ht : ∀ h : c, Triple pre (oa h) post)
-    (hf : ∀ h : ¬c, Triple pre (ob h) post) :
-    Triple pre (dite c oa ob) post := by
+    (ht : ∀ h : c, ⦃ pre ⦄ oa h ⦃ post ⦄)
+    (hf : ∀ h : ¬c, ⦃ pre ⦄ ob h ⦃ post ⦄) :
+    ⦃ pre ⦄ dite c oa ob ⦃ post ⦄ := by
   split_ifs with h
   · exact ht h
   · exact hf h
@@ -387,15 +347,15 @@ variable [OracleSpec.IsMeasureSpec spec]
 
 /-- Indicator-event probability as an exact quantitative triple. -/
 theorem triple_prEvent_indicator (oa : OracleComp spec α) (p : α → Prop) [DecidablePred p] :
-    Triple (Pr{let x ← oa}[p x]) oa (fun x => if p x then 1 else 0) :=
-  triple_ofLE (by rw [prEvent_eq_wp_indicator])
+    ⦃ Pr{let x ← oa}[p x] ⦄ oa ⦃ fun x => if p x then 1 else 0 ⦄ :=
+  ⟨(prEvent_eq_wp_indicator oa p).le⟩
 
 /-- Lower bounds on an event probability are exactly indicator-postcondition triples. -/
 theorem le_prEvent_iff_triple_indicator (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (r : ℝ≥0∞) :
-    r ≤ Pr{let x ← oa}[p x] ↔
-      Triple r oa (fun x => if p x then 1 else 0) := by
-  rw [triple_iff_le_wp, ← prEvent_eq_wp_indicator]
+    r ≤ Pr{let x ← oa}[p x] ↔ ⦃ r ⦄ oa ⦃ fun x => if p x then 1 else 0 ⦄ := by
+  rw [Std.WP.Triple.iff, ← prEvent_eq_wp_indicator]
+  exact Iff.rfl
 
 /-- The support event of an `OracleComp` occurs almost surely. -/
 theorem prEvent_mem_support (oa : OracleComp spec α) :
@@ -407,87 +367,84 @@ theorem prEvent_mem_support (oa : OracleComp spec α) :
 /-- Exact probability-1 events are exact quantitative triples. -/
 theorem triple_prEvent_eq_one (oa : OracleComp spec α) (p : α → Prop)
     [DecidablePred p] (h : Pr{let x ← oa}[p x] = 1) :
-    Triple (1 : ℝ≥0∞) oa (fun x => if p x then 1 else 0) := by
+    ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun x => if p x then 1 else 0 ⦄ := by
   have := triple_prEvent_indicator (oa := oa) p
   rwa [h] at this
 
 /-- Support membership is a useful default cut function for support-sensitive bind proofs. -/
 theorem triple_support (oa : OracleComp spec α) [DecidablePred fun x => x ∈ support oa] :
-    Triple (1 : ℝ≥0∞) oa
-      (fun x => if x ∈ support oa then 1 else 0) := by
+    ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun x => if x ∈ support oa then 1 else 0 ⦄ := by
   simpa using
     triple_prEvent_eq_one (oa := oa) (p := fun x => x ∈ support oa)
       (h := prEvent_mem_support (oa := oa))
 
-/-! ## Loop stepping rules (Triple-level) -/
+/-! ## Loop stepping rules -/
 
+/-- Unroll one iteration of `replicate`, cutting at the expectation of the remaining ones. -/
 theorem triple_replicate_succ {pre : ℝ≥0∞} {oa : OracleComp spec α} {n : ℕ}
     {post : List α → ℝ≥0∞}
-    (h : Triple pre oa
-          (fun x => wp⟦oa.replicate n⟧
-            (fun xs => post (x :: xs)))) :
-    Triple pre (oa.replicate (n + 1)) post :=
-  triple_ofLE (by rw [wp_replicate_succ]; exact triple_toLE h)
+    (h : ⦃ pre ⦄ oa ⦃ fun x => wp⟦oa.replicate n⟧ (fun xs => post (x :: xs)) ⦄) :
+    ⦃ pre ⦄ oa.replicate (n + 1) ⦃ post ⦄ :=
+  ⟨by rw [wp_replicate_succ]; exact h.le_wp⟩
 
+/-- Unroll the head of a `List.mapM`, cutting at the expectation of the tail. -/
 theorem triple_list_mapM_cons {pre : ℝ≥0∞} {x : α} {xs : List α}
     {f : α → OracleComp spec β} {post : List β → ℝ≥0∞}
-    (h : Triple pre (f x)
-          (fun y => wp⟦xs.mapM f⟧
-            (fun ys => post (y :: ys)))) :
-    Triple pre ((x :: xs).mapM f) post :=
-  triple_ofLE (by rw [wp_list_mapM_cons]; exact triple_toLE h)
+    (h : ⦃ pre ⦄ f x ⦃ fun y => wp⟦xs.mapM f⟧ (fun ys => post (y :: ys)) ⦄) :
+    ⦃ pre ⦄ (x :: xs).mapM f ⦃ post ⦄ :=
+  ⟨by rw [wp_list_mapM_cons]; exact h.le_wp⟩
 
+/-- Unroll the head of a `List.foldlM`, cutting at the expectation of the tail. -/
 theorem triple_list_foldlM_cons {pre : ℝ≥0∞} {x : α} {xs : List α}
     {f : σ → α → OracleComp spec σ} {init : σ} {post : σ → ℝ≥0∞}
-    (h : Triple pre (f init x)
-          (fun s => wp⟦xs.foldlM f s⟧ post)) :
-    Triple pre ((x :: xs).foldlM f init) post :=
-  triple_ofLE (by rw [wp_list_foldlM_cons]; exact triple_toLE h)
+    (h : ⦃ pre ⦄ f init x ⦃ fun s => wp⟦xs.foldlM f s⟧ post ⦄) :
+    ⦃ pre ⦄ (x :: xs).foldlM f init ⦃ post ⦄ :=
+  ⟨by rw [wp_list_foldlM_cons]; exact h.le_wp⟩
 
 /-! ## Loop invariant rules -/
 
 /-- Constant invariant through bounded iteration via `replicate`. -/
 theorem triple_replicate_inv {I : ℝ≥0∞} {oa : OracleComp spec α} {n : ℕ}
-    (hstep : Triple I oa (fun _ => I)) :
-    Triple I (oa.replicate n) (fun _ => I) := by
+    (hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄) :
+    ⦃ I ⦄ oa.replicate n ⦃ fun _ => I ⦄ := by
   induction n with
-  | zero => exact triple_pure [] (fun _ => I)
+  | zero => exact Spec.pure (post := fun _ => I) []
   | succ n ih =>
       rw [OracleComp.replicate_succ_bind]
-      exact triple_bind hstep fun x => triple_bind ih fun xs =>
-        triple_pure (x :: xs) (fun _ => I)
+      exact Triple.bind _ _ _ hstep fun x => Triple.bind _ _ _ ih fun xs =>
+        Spec.pure (post := fun _ => I) (x :: xs)
 
 /-- Indexed invariant through `List.foldlM`. -/
 theorem triple_list_foldlM_inv {I : σ → ℝ≥0∞}
     {f : σ → α → OracleComp spec σ} {l : List α} {s₀ : σ}
-    (hstep : ∀ s x, x ∈ l → Triple (I s) (f s x) I) :
-    Triple (I s₀) (l.foldlM f s₀) I := by
+    (hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄) :
+    ⦃ I s₀ ⦄ l.foldlM f s₀ ⦃ I ⦄ := by
   induction l generalizing s₀ with
-  | nil => exact triple_pure s₀ I
+  | nil => exact Spec.pure (post := I) s₀
   | cons a as ih =>
       rw [List.foldlM_cons]
-      exact triple_bind (hstep s₀ a (by simp)) fun s =>
+      exact Triple.bind _ _ _ (hstep s₀ a (by simp)) fun s =>
         ih fun s x hx => hstep s x (by simp [hx])
 
 /-- Constant invariant through `List.mapM`. -/
 theorem triple_list_mapM_inv {I : ℝ≥0∞}
     {f : α → OracleComp spec β} {l : List α}
-    (hstep : ∀ x, x ∈ l → Triple I (f x) (fun _ => I)) :
-    Triple I (l.mapM f) (fun _ => I) := by
+    (hstep : ∀ x, x ∈ l → ⦃ I ⦄ f x ⦃ fun _ => I ⦄) :
+    ⦃ I ⦄ l.mapM f ⦃ fun _ => I ⦄ := by
   induction l with
-  | nil => exact triple_pure ([] : List β) (fun _ => I)
+  | nil => exact Spec.pure (post := fun _ => I) ([] : List β)
   | cons a as ih =>
       rw [List.mapM_cons]
-      exact triple_bind (hstep a (by simp)) fun y =>
-        triple_bind (ih fun x hx => hstep x (by simp [hx])) fun ys =>
-          triple_pure (y :: ys) (fun _ => I)
+      exact Triple.bind _ _ _ (hstep a (by simp)) fun y =>
+        Triple.bind _ _ _ (ih fun x hx => hstep x (by simp [hx])) fun ys =>
+          Spec.pure (post := fun _ => I) (y :: ys)
 
 /-- `replicate` invariant with consequence: bridges arbitrary pre/post to the invariant. -/
 theorem triple_replicate {I pre : ℝ≥0∞} {oa : OracleComp spec α} {n : ℕ}
     {post : List α → ℝ≥0∞}
     (hpre : pre ≤ I) (hpost : ∀ xs, I ≤ post xs)
-    (hstep : Triple I oa (fun _ => I)) :
-    Triple pre (oa.replicate n) post :=
+    (hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄) :
+    ⦃ pre ⦄ oa.replicate n ⦃ post ⦄ :=
   triple_conseq hpre hpost (triple_replicate_inv hstep)
 
 /-- `List.foldlM` invariant with consequence. -/
@@ -495,8 +452,8 @@ theorem triple_list_foldlM {I : σ → ℝ≥0∞}
     {f : σ → α → OracleComp spec σ} {l : List α} {s₀ : σ}
     {pre : ℝ≥0∞} {post : σ → ℝ≥0∞}
     (hpre : pre ≤ I s₀) (hpost : ∀ s, I s ≤ post s)
-    (hstep : ∀ s x, x ∈ l → Triple (I s) (f s x) I) :
-    Triple pre (l.foldlM f s₀) post :=
+    (hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄) :
+    ⦃ pre ⦄ l.foldlM f s₀ ⦃ post ⦄ :=
   triple_conseq hpre hpost (triple_list_foldlM_inv hstep)
 
 /-- `List.mapM` invariant with consequence. -/
@@ -504,8 +461,8 @@ theorem triple_list_mapM {I : ℝ≥0∞}
     {f : α → OracleComp spec β} {l : List α}
     {pre : ℝ≥0∞} {post : List β → ℝ≥0∞}
     (hpre : pre ≤ I) (hpost : ∀ ys, I ≤ post ys)
-    (hstep : ∀ x, x ∈ l → Triple I (f x) (fun _ => I)) :
-    Triple pre (l.mapM f) post :=
+    (hstep : ∀ x, x ∈ l → ⦃ I ⦄ f x ⦃ fun _ => I ⦄) :
+    ⦃ pre ⦄ l.mapM f ⦃ post ⦄ :=
   triple_conseq hpre hpost (triple_list_mapM_inv hstep)
 
 /-! ## Congruence of observations -/

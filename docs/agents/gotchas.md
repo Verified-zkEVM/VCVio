@@ -511,5 +511,5 @@ apply to those monads registers its own direct instance at its scope's priority
 The empty exception stack `EStack⟨⟩` is `Unit`, which also carries Mathlib's `Bot`. Under
 `open Lean.Order`, a bare `⊥` of that type is ambiguous; without the `open`, it elaborates to
 Mathlib's `⊥`, a different head from the one `simp` lemmas are stated with. Core's triple notation
-`⦃P⦄ x ⦃Q⦄` expands to `Lean.Order.bot`, and so do `Pr{…}[…]` and `𝔼{…}[…]`: write
+`⦃ P ⦄ x ⦃ Q ⦄` expands to `Lean.Order.bot`, and so do `Pr{…}[…]` and `𝔼{…}[…]`: write
 `Lean.Order.bot` in statements, and `estack⟨e₁, …⟩` for an explicit stack of postconditions.

@@ -144,17 +144,13 @@ private def stdDoRelWpParts? (rhs : Expr) : Option (Expr × Expr × Expr × Expr
   let epost₂ := args[args.size - 1]!
   some (oa, ob, post, epost₁, epost₂)
 
+/-- The `(pre, program, post)` parts of a core triple `Std.WP.Triple program pre post epost`. -/
 private def unaryTripleParts? (type : Expr) : Option (Expr × Expr × Expr) := do
   let type := type.consumeMData
-  if type.getAppFn.isConstOf ``OracleComp.ProgramLogic.Triple then
-    let args := type.getAppArgs
-    unless args.size ≥ 3 do none
-    return (args[args.size - 3]!, args[args.size - 2]!, args[args.size - 1]!)
-  if type.getAppFn.isConstOf ``Std.WP.Triple then
-    let args := type.getAppArgs
-    unless args.size ≥ 5 do none
-    return (args[args.size - 3]!, args[args.size - 5]!, args[args.size - 2]!)
-  none
+  unless type.getAppFn.isConstOf ``Std.WP.Triple do none
+  let args := type.getAppArgs
+  unless args.size ≥ 5 do none
+  return (args[args.size - 3]!, args[args.size - 5]!, args[args.size - 2]!)
 
 private def mkOrderRel (lhs rhs : Expr) : MetaM Expr := do
   let pred ← inferType lhs
@@ -208,8 +204,8 @@ private def mkRelPostPointwisePremise (postSpec postTarget postTy : Expr) :
       let rel ← mkOrderRel lhs rhs
       mkForallFVars #[a, b] rel
 
-/-- Build the pointwise postcondition premise used when a concrete folded unary
-`Triple` theorem is generalized to the goal's postcondition. -/
+/-- Build the pointwise postcondition premise used when a concrete unary core
+triple theorem is generalized to the goal's postcondition. -/
 private def mkUnaryPostLEPremise (postSpec postTarget postTy : Expr) :
     MetaM Expr := do
   let .forallE _ α _ _ := postTy.consumeMData
@@ -241,7 +237,7 @@ private def mkTripleConseqApp (hpre hpost specProof : Expr) : MetaM Expr := do
   mkAppOptM ``Std.WP.Triple.intro
     (assertionArgs ++ #[some args[6]!, some args[7]!, none, none, some args[10]!, some h])
 
-/-- Generalize a folded unary `Triple pre prog post` proof into a reusable
+/-- Generalize a unary core triple `Std.WP.Triple prog pre post epost` proof into a reusable
 backward-rule source by abstracting concrete `post` and always abstracting
 `pre` through core's consequence rule. -/
 private def mkUnaryTripleBackwardProof (pre postSpec specProof : Expr) :
@@ -523,6 +519,11 @@ def VCSpecEntry.tryApplyCachedBackward (entry : VCSpecEntry) (mvarId : MVarId) :
   let rawGoal ← isRawBackwardGoal goalTy
   let rule ← getVCSpecBackwardRuleCached entry rawGoal
   if rawGoal then
+    return (← rule.applyProof mvarId goalTy)
+  -- The cache outlives environments: a rule built during a speculative application that was
+  -- rolled back, or in an earlier `example`, names an auxiliary lemma the current environment no
+  -- longer declares. Its abstracted proof source still applies.
+  unless (← getEnv).contains rule.declName do
     return (← rule.applyProof mvarId goalTy)
   let symResult ←
     try

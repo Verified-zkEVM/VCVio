@@ -113,12 +113,20 @@ before generating the remaining subgoals.
 
 ### Quantitative VCGen (`vcgen`)
 
-`vcgen` is the primary unary tactic for new proofs. It accepts both `Triple` goals and
+`vcgen` is the primary unary tactic for new proofs. It accepts core triples
+`⦃ pre ⦄ oa ⦃ post ⦄` (`Std.WP.Triple oa pre post ⊥`, from `open scoped Std.WP`) and
 probability goals, automatically lowering `Pr{...}[...]` events into the quantitative engine.
+For `OracleComp` the triple reads expectations: `Std.WP.Triple.iff` unfolds it to
+`pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦oa⟧ post`. Core supplies the generic rules
+(`Std.WP.Triple.intro`, `.le_wp`, `Std.WP.Spec.pure`, `Std.WP.Triple.bind`,
+`Std.WP.Triple.entails_wp_of_pre_post`); `Unary/HoareTriple.lean` adds the quantitative
+ones (`triple_conseq`, `triple_bind_wp`, `triple_zero`, `triple_ite`, `triple_dite`, the
+`replicate` / `List.foldlM` / `List.mapM` stepping and invariant rules, and the event triples
+`triple_prEvent_indicator`, `triple_prEvent_eq_one`, `triple_support`).
 
 | Tactic | What it does |
 |--------|--------------|
-| `vcgen` | Exhaustively decomposes a `Triple` or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
+| `vcgen` | Exhaustively decomposes a core triple or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
 | `vcstep` | One step: probability lowering → bind → conditional → match → loop → leaf |
 | `vcstep?` | Performs one step and emits the corresponding explicit script, often surfacing `as ⟨...⟩`, `using cut`, `inv I`, or `with theorem` |
 | `vcgen?` | Runs `vcgen` and emits the planned step replay across each pass |
@@ -136,12 +144,12 @@ probability goals, automatically lowering `Pr{...}[...]` events into the quantit
 **Probability-goal handling**: `vcgen` and `vcstep` automatically handle four
 classes of probability goals:
 
-1. **`Pr{...}[...] = 1` lowering** → rewrites into `Triple` form for structural decomposition:
-   - `Pr{let x ← oa}[p x] = 1` → `Triple 1 oa (fun x => 𝟙⟦p x⟧)`; a singleton output
+1. **`Pr{...}[...] = 1` lowering** → rewrites into triple form for structural decomposition:
+   - `Pr{let x ← oa}[p x] = 1` → `⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄`; a singleton output
      `Pr{let y ← oa}[y = x]` is the event `p := (· = x)`
 
-2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same `Triple` shell:
-   - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `Triple r oa (fun x => 𝟙⟦p x⟧)`
+2. **Lower-bound event goals** → stay inside unary VCGen by reusing the same triple shell:
+   - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄`
 
 3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures):
    - Plain `vcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
@@ -162,12 +170,12 @@ classes of probability goals:
    will explicitly note that they are continuing in raw `wp` mode.
 
 **Loop invariants**: `vcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
-in `Triple` goals and applies matching invariant hypotheses from context.
+in triple goals and applies matching invariant hypotheses from context.
 Use `vcstep inv I` to provide an explicit invariant.
 
 **Support-sensitive leaf closure**: `vcgen` final pass tries `triple_support`,
 `triple_propInd_of_support` and `triple_prEvent_eq_one`
-in addition to the standard `triple_pure`, `triple_zero`, and consequence search.
+in addition to the standard `Std.WP.Spec.pure`, `triple_zero`, and consequence search.
 
 **Naming and suggestions**: plain `vcstep` / `rvcstep` keep the stable execution path.
 The `?` variants run a planner-backed version of the same next move and emit a concrete
@@ -175,7 +183,7 @@ The `?` variants run a planner-backed version of the same next move and emit a c
 or `as ⟨...⟩` clause that you can paste back into the proof. On probability-equality goals the
 planner may emit a grouped multi-step replay when the best explanation is an explicit rewrite chain.
 
-**Opt-in unary lookup**: mark a unary `Triple` or raw `wp` theorem with `@[vcspec]` to register it for
+**Opt-in unary lookup**: mark a unary core triple or raw `wp` theorem with `@[vcspec]` to register it for
 bounded head-symbol lookup. This is intentionally narrow: after the built-in structural step and
 explicit hint opportunities, `vcstep` / `vcgen` consult only `@[vcspec]` theorems whose
 computation head matches the current goal. Use `vcstep with myLemma` when you want to force
@@ -609,7 +617,7 @@ theorem my_security : g₁ =ᵈ gₙ := by
 
 ### Why `Lean.Meta.Sym.*`?
 
-The planner needs to ask "given this `wp⟦comp⟧ post` or `Triple pre comp post`
+The planner needs to ask "given this `wp⟦comp⟧ post` or `⦃ pre ⦄ comp ⦃ post ⦄`
 goal, which registered rules could fire?" *fast*, and without the cost or
 surprises of `isDefEq` unfolding. Core Lean has been building a dedicated
 symbolic toolkit under `Lean.Meta.Sym` precisely for this: `Sym.Pattern`
@@ -648,7 +656,7 @@ rewrite works).
 
 | File | Attribute | Role |
 |------|-----------|------|
-| `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary and relational `Triple` / `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
+| `VCVio/ProgramLogic/Tactics/Common/Registry.lean` | `@[vcspec]` | Unary core `Std.WP.Triple` and relational `RelTriple` / `RelWP` / quantitative `VCVio.ProgramLogic.RelTriple` rules, indexed by a `Sym.Pattern` on the computation slot (`oa` for unary, `oa` with a secondary `rightHead?` filter for relational) |
 | `VCVio/ProgramLogic/Tactics/Common/WpStepRegistry.lean` | `@[wpStep]` | Equational `wp⟦comp⟧ post = …` rewrites, indexed by a `Sym.Pattern` on `oa` and consulted by `runWpStepRules` via `TacticM` rewriting (`rw` then `simp only`). The `Sym.Simp.Theorem` bundle for an eventual `SymM`-side rewriter is *not* eagerly built; `Sym.Simp.mkTheoremFromDecl` can rebuild it on demand from `getAllWpStepEntries` |
 
 Each entry carries a `SpecProof` (reusing the core-Lean type from
@@ -659,7 +667,7 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 ### Dispatch flow
 
 1. **Unary / relational VC-gen** (`VCVio/ProgramLogic/Tactics/Unary/Internals.lean`,
-   `VCVio/ProgramLogic/Tactics/Relational/Internals.lean`): on a `Triple`/`wp`/`RelTriple`/`RelWP`/quantitative
+   `VCVio/ProgramLogic/Tactics/Relational/Internals.lean`): on a `Std.WP.Triple`/`wp`/`RelTriple`/`RelWP`/quantitative
    `VCVio.ProgramLogic.RelTriple`
    goal, the planner extracts the computation slot(s), `whnfReducible`s them,
    asks the registry for candidate `VCSpecEntry`s via
@@ -681,7 +689,7 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 
 | Want to add… | Tag it with | Expected shape |
 |--------------|-------------|----------------|
-| A unary Triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `Triple pre oa post` or raw `wp⟦oa⟧ post ≥ pre` |
+| A unary triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `⦃ pre ⦄ oa ⦃ post ⦄` or raw `wp⟦oa⟧ post ≥ pre` |
 | A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
 | A `wp`-driven equational rewrite | `@[wpStep]` | `wp⟦comp⟧ post = …` (exact head: core's `wp`) |
 
