@@ -8,8 +8,6 @@
   `VCVio.ProgramLogic.Tactics.Relational` (`rvcstep`, `rvcgen` and the proof-mode entries).
 - `VCVio.ProgramLogic.Notation` provides the core notation and convenience predicates used by
   the tactic surface.
-- `VCVio.ProgramLogic.Unary.StdDoBridge` is a narrow unary bridge for almost-sure correctness in the `.pure`
-  `Std.Do` view. It is not the main engine for quantitative or relational VCGen.
 
 For continuous or otherwise non-discrete denotations, import
 `VCVio.ProgramLogic.Relational.Measure`. Its `MeasureProgramLogic.RelWP` uses an almost-everywhere
@@ -228,29 +226,32 @@ order.
 
 ## Core `vcgen` on oracle computations
 
-Core's `vcgen` (`set_option experimental.vcgen true`) decomposes a core triple
+Core's `vcgen` decomposes a core triple
 `⦃ pre ⦄ oa ⦃ post ⦄` with the `@[spec]` rules registered for the program's parts and leaves
 verification conditions in the assertion lattice. `OracleComp spec` has four readings, one per
 kind of statement about its outcomes:
 
 | Reading | Scope | Carrier | `⦃ pre ⦄ oa ⦃ post ⦄` states | Rules |
 |---------|-------|---------|-------------------------------|-------|
-| structural (necessary) | `OracleComp.Qualitative` | `Prop` | every possible output satisfies `post` | `Unary/WP/QualitativeSpecs.lean` |
+| structural (necessary) | global instance (`OracleComp.Qualitative`) | `Prop` | every possible output satisfies `post` | `Unary/WP/QualitativeSpecs.lean` |
 | angelic (possible) | `OracleComp.Angelic` | `Prop` | some possible output satisfies `post` | `Unary/WP/Angelic.lean` |
-| expectation lower bound | global instance | `ℝ≥0∞` | `pre ≤ wp⟦oa⟧ post` | `Unary/WP/QuantitativeSpecs.lean` |
+| expectation lower bound | `OracleComp.Quantitative` | `ℝ≥0∞` | `pre ≤ wp⟦oa⟧ post` | `Unary/WP/QuantitativeSpecs.lean` |
 | expectation upper bound | `OracleComp.Upper` | `ℝ≥0∞ᵒᵈ` | `wp⟦oa⟧ post ≤ pre` | `Unary/WP/Upper.lean` |
 
 The upper-bound reading is PolyFun's `ExactWPMonad.dual` of the expectation reading: the same
 interpretation over the order duals, so core's `vcgen`, transformer rules and loop invariants
-decompose upper bounds unchanged. Core's assertion types are output parameters, so one reading is
-live per program type in a scope: under the structural scope, a triple with an `ℝ≥0∞`
-precondition no longer elaborates, and a triple of one reading cannot be decomposed with another
-reading's scope open. Each reading also registers a per-call scope at priority `1200`
-(`OracleComp.Qualitative.Dispatch`, `OracleComp.Angelic.Dispatch`,
+decompose upper bounds unchanged. The structural reading is the global instance, as core's own
+`Prop`-valued instances are for its monads: it needs no probability interpretation, and a bare
+triple says that every possible output satisfies the postcondition. Core's assertion types are
+output parameters, so one reading is live per program type in a scope: under an expectation scope,
+a triple with a `Prop` precondition no longer elaborates, and a triple of one reading cannot be
+decomposed with another reading's scope open. Each scoped reading registers its `WPMonad` and a
+direct `WP` instance at priority `1100`, and each reading also registers a per-call scope at
+priority `1200` (`OracleComp.Qualitative.Dispatch`, `OracleComp.Angelic.Dispatch`,
 `OracleComp.Quantitative.Dispatch`, `OracleComp.Upper.Dispatch`), above every reading a file
-opens, with a direct `WP` instance as well (gotcha 33): `open scoped OracleComp.Upper.Dispatch in
-vcgen` runs `vcgen` in that reading whatever the file opens. `Pr{…}[…]` is unaffected by the
-scopes. `prvcgen` (below) chooses the reading from the goal.
+opens (gotcha 33): `open scoped OracleComp.Upper.Dispatch in vcgen` runs `vcgen` in that reading
+whatever the file opens. `Pr{…}[…]`, `𝔼{…}[…]` and `wp⟦oa⟧ g` name the expectation interpretation
+explicitly and are unaffected by the scopes. `prvcgen` (below) chooses the reading from the goal.
 
 Triple notation comes from `open scoped Std.WP`. In the expectation reading, `Std.WP.Triple.iff`
 unfolds `⦃ pre ⦄ oa ⦃ post ⦄` to `pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦oa⟧ post`
@@ -258,11 +259,14 @@ unfolds `⦃ pre ⦄ oa ⦃ post ⦄` to `pre ⊑ wp oa post ⊥`, which is `pre
 `Std.WP.Spec.pure`, `Std.WP.Triple.bind`, `Std.WP.Triple.entails_wp_of_pre_post`), steps through
 binds, `if`, `match` and transformer stacks, and applies triples of sub-programs found among the
 hypotheses. `VCVio/ProgramLogic/Unary/HoareTriple.lean` states the quantitative rules that are
-passed explicitly: `triple_conseq`, `triple_bind_wp`, `triple_zero`, `triple_ite`, `triple_dite`,
-the loop unrolling rules (`triple_replicate_succ`, `triple_list_mapM_cons`,
-`triple_list_foldlM_cons`), the loop invariant rules (`triple_replicate_inv`, `triple_replicate`,
-`triple_list_mapM_inv`, `triple_list_mapM`, `triple_list_foldlM_inv`, `triple_list_foldlM`), and
-the event triples `triple_prEvent_indicator`, `triple_prEvent_eq_one` and `triple_support`.
+passed explicitly: `triple_zero`, the loop unrolling rules (`triple_replicate_succ`,
+`triple_list_mapM_cons`, `triple_list_foldlM_cons`), the loop invariant rules
+(`triple_replicate_inv`, `triple_replicate`, `triple_list_mapM_inv`, `triple_list_mapM`,
+`triple_list_foldlM_inv`, `triple_list_foldlM`), and the event triples
+`triple_prEvent_indicator`, `triple_prEvent_eq_one` and `triple_support`. The equations of an
+expectation are the generic `MeasureProgramLogic.wp_pure` / `wp_bind` / `wp_map` / `wp_add` /
+`wp_const_mul` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite`; a constant observation of an
+oracle computation is `MeasureProgramLogic.wp_const_of_oracle`.
 
 Structural rules (`VCVio/ProgramLogic/Unary/WP/QualitativeSpecs.lean`, namespace
 `OracleComp.Qualitative`):
@@ -810,8 +814,6 @@ theorem my_security : g₁ =ᵈ gₙ := by
 4. **`rvcstep using R`**: when Lean can't infer the witness for the current relational shape
    (bind cut, bijection, traversal input relation, or simulation invariant), provide it explicitly.
 
-5. **`StdDoBridge` is deliberately narrow**: use it for unary almost-sure `.pure` `Std.Do` experiments, not as the default path for quantitative or relational proofs.
-
 ## Internal Architecture (`Sym`-backed Registry)
 
 ### Why `Lean.Meta.Sym.*`?
@@ -909,15 +911,18 @@ over `isDefEq`.
 Lean v4.35 provides lattice-generic `Std.WP.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
-- Expectation in `ℝ≥0∞` is the core instance of `OracleComp spec` under
-  `[OracleSpec.IsMeasureSpec spec]` (`OracleComp.Quantitative.instWP`), so `wp oa post ⊥`,
-  core triples and `vcgen` read expectations without opening a scope.
+- Universal structural reachability is the core instance of `OracleComp spec`
+  (`OracleComp.Qualitative.instWP`): `wp oa post ⊥`, core triples and `vcgen` read every possible
+  output without opening a scope, and with no probability interpretation.
+- `open scoped OracleComp.Quantitative` selects expectation in `ℝ≥0∞` under
+  `[OracleSpec.IsMeasureSpec spec]` (`OracleComp.Quantitative.instWP`), so `wp oa post ⊥`, core
+  triples and `vcgen` read expectations, with lower-bound triples.
 - `open scoped MeasureProgramLogic.Quantitative` selects measure-backed expectation
   for any lawful monad with `LawfulEvalDistSemantics`. Besides its `WPMonad`, it registers the
-  interpretation as a direct `WP` instance (`wpInst`), which outranks core's own direct `Prop`
-  instances for monads such as `Option` and `Id` while the scope is open (gotcha 33). Its module is
+  interpretation as a direct `WP` instance (`wpInst`) at priority `1050`, which outranks core's
+  own direct `Prop` instances for monads such as `Option` and `Id` while the scope is open, and is
+  outranked by the reading scopes of `OracleComp` (gotcha 33). Its module is
   `VCVio.ProgramLogic.Unary.WP.Measure`.
-- `open scoped OracleComp.Qualitative` selects universal structural reachability.
 - `open scoped OracleComp.Angelic` selects existential structural reachability.
 - `open scoped OracleComp.Upper` selects the expectation over the order duals `ℝ≥0∞ᵒᵈ`
   (`ExactWPMonad.dual`), whose triples are upper bounds.
@@ -956,12 +961,14 @@ lemmas. The scoped `WriterT.MonoidWP` interpretation uses multiplication; append
 `WriterT.toWPMonad` with explicit operations.
 
 The handler specifications are core triples under the structural reading, proved and composed
-by core `vcgen` (`Unary/HandlerSpecs.lean`); `Unary/StdDoBridge.lean` remains a narrow bridge to
-core's older `Std.Do` SPred API.
+by core `vcgen` (`Unary/HandlerSpecs.lean`), and the UC runtime's triples are core triples too
+(`Interaction/UC/WP.lean`). Nothing in the built libraries uses core's older `Std.Do` stack;
+`Interop/` (not built) keeps its `mvcgen` code until its own migration.
 
-Core `vcgen` is experimental in v4.35: a module that calls it acknowledges this with
-`set_option experimental.vcgen true`, and `VCVioTest/ProgramLogic/CoreWP.lean` pins the
-diagnostic once. `mvcgen` is deprecated in favour of `vcgen`, so program-level reasoning uses core
+Core `vcgen` is experimental in v4.35 and warns unless acknowledged: the package acknowledges it
+once in `lakefile.lean` (`experimental.vcgen`), `prvcgen` sets it for its own call so that
+downstream files need nothing, and `VCVioTest/ProgramLogic/CoreWP.lean` pins the diagnostic with
+the option off. `mvcgen` is deprecated in favour of `vcgen`, so program-level reasoning uses core
 `Std.WP` triples. Exception postconditions form stacks written `EStack⟨A, B⟩` (values
 `estack⟨a, b⟩`); an `OptionT` layer contributes `Unit → Pred`, an `ExceptT ε` layer `ε → Pred`.
 

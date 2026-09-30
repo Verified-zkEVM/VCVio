@@ -504,10 +504,15 @@ and exception types are output parameters, so the first instance found fixes the
 local `WPMonad` on one of these monads, or a lemma hypothesis `[WPMonad Option Pred EPred]`, does
 not reach `wp` on that monad. Pass the interpretation explicitly with dot notation,
 `(inst.toWP α).wp x post epost`, as core's `WP.wp` documents
-(`ToMathlib/Control/Monad/Algebra.lean`, `VCVioTest/Foundations.lean`). A scoped reading that must
-apply to those monads registers its own direct instance at its scope's priority
-(`MeasureProgramLogic.Quantitative.wpInst`, `MeasureProgramLogic.Probabilistic.wpInst`).
-`OracleComp` has no direct core instance; its readings are unaffected.
+(`ToMathlib/Control/Monad/Algebra.lean`, `VCVioTest/Foundations.lean`). Every scoped reading
+therefore registers a direct `WP` instance beside its `WPMonad`, and the priorities order the
+scopes: the generic measure scopes (`MeasureProgramLogic.Quantitative.wpInst`,
+`MeasureProgramLogic.Probabilistic.wpInst`) at `1050`, above core's direct instances; the
+reading scopes of `OracleComp` (`OracleComp.Quantitative`, `Angelic`, `Upper`, `Probabilistic`)
+at `1100`; their `Dispatch` sub-scopes at `1200`. `OracleComp` has no direct core instance, and
+its global reading is the structural one, reached through core's low-priority derivation; a
+generic scope opened beside an `OracleComp` reading never outranks it
+(`VCVioTest/ProgramLogic/ReadingScopes.lean`).
 
 ### 34. Write the absent exception postcondition as `Lean.Order.bot`
 
@@ -520,12 +525,12 @@ Mathlib's `⊥`, a different head from the one `simp` lemmas are stated with. Co
 ### 35. `vcgen` is core's tactic; VCVio's unary tactics are `prvcgen` and `prrw`
 
 Core Lean's `vcgen` is in scope in every file that imports `VCVio`. It walks `Std.WP` triples
-through the `@[spec]` catalogue, is experimental in v4.35 (a module that calls it sets
-`set_option experimental.vcgen true`), and runs in the reading of `OracleComp` that the file's
-scopes select: `Prop`-valued triples under `OracleComp.Qualitative`, such as the handler
-specifications in `Unary/HandlerSpecs.lean`, and lower-bound triples under the global expectation
-reading (`Unary/WP/QuantitativeSpecs.lean`). It does not lower `Pr{…}[…]` goals, which enter
-through the bridge lemmas of *Core `vcgen` on oracle computations* in `program-logic.md`.
+through the `@[spec]` catalogue, is experimental in v4.35 (acknowledged once for the package in
+`lakefile.lean`), and runs in the reading of `OracleComp` that the file's scopes select:
+`Prop`-valued triples under the global structural reading, such as the handler specifications in
+`Unary/HandlerSpecs.lean`, and lower-bound triples under `open scoped OracleComp.Quantitative`
+(`Unary/WP/QuantitativeSpecs.lean`). It does not lower `Pr{…}[…]` goals, which enter through the
+bridge lemmas of *Core `vcgen` on oracle computations* in `program-logic.md`.
 
 VCVio's unary tactics are `prvcgen`, which picks the bridge and the reading from the goal and runs
 core `vcgen` in that reading's `Dispatch` scope with the experimental option set, and `prrw`, which
@@ -571,9 +576,10 @@ conditions it leaves.
 
 Core `vcgen` rebuilds each rule for the interpretation that instance search finds for the
 program's type. A triple of one reading is therefore decomposed only while that reading is the
-highest-priority one: with `OracleComp.Upper` or `OracleComp.Qualitative` opened at file level, a
-lower-bound triple fails to build its rules, and a bridged upper-bound triple fails with no scope
-open. The failure is loud ("failed to synthesize WP …"); no other reading is substituted. Each
+highest-priority one: with `OracleComp.Upper` or `OracleComp.Quantitative` opened at file level, a
+structural triple fails to build its rules, and a bridged lower- or upper-bound triple fails with
+no scope open. The failure is loud ("failed to synthesize WP …"); no other reading is
+substituted. Each
 reading has a `Dispatch` sub-scope at priority `1200`, with a direct `WP` instance that also
 outranks `MeasureProgramLogic.Quantitative.wpInst`: `open scoped OracleComp.Upper.Dispatch in
 vcgen` runs `vcgen` in that reading whatever the file opens, and `prvcgen` uses these scopes.

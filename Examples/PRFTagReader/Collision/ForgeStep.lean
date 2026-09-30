@@ -39,9 +39,6 @@ variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
 section Triples
 
 open Std.WP OracleComp.ProgramLogic
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- A structural triple preserving `I` is the support statement `StateT.PreservesInv`. -/
 private theorem preservesInv_of_triple {σ α : Type} {mx : StateT σ ProbComp α} {I : σ → Prop}
@@ -126,7 +123,8 @@ private lemma prEvent_add_mul_prEvent_eq_wp {α : Type} (oa : ProbComp α) (A B 
     [DecidablePred A] [DecidablePred B] (ε : ℝ≥0∞) :
     Pr{let x ← oa}[A x] + ε * Pr{let x ← oa}[B x] =
       wp⟦oa⟧ (fun x => (if A x then 1 else 0) + ε * (if B x then 1 else 0)) := by
-  rw [ProgramLogic.wp_add, ProgramLogic.wp_mul_const, ← ProgramLogic.prEvent_eq_wp_indicator,
+  rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_const_mul,
+    ← ProgramLogic.prEvent_eq_wp_indicator,
     ← ProgramLogic.prEvent_eq_wp_indicator]
 
 /-- One `authRFLookup tag nonce` step at the point `t₀` itself, starting from `responses t₀ = none`
@@ -185,8 +183,8 @@ private lemma authRFLookup_mapM_miss_bound
   | cons hd tl ih =>
     intro hnodup hmem st hnone
     rw [prEvent_add_mul_prEvent_eq_wp, List.mapM_cons]
-    simp only [bind_pure_comp, StateT.run_bind, StateT.run_map, ProgramLogic.wp_bind,
-      ProgramLogic.wp_map, Function.comp_def]
+    simp only [bind_pure_comp, StateT.run_bind, StateT.run_map, MeasureProgramLogic.wp_bind,
+      MeasureProgramLogic.wp_map]
     by_cases hhd : hd = t₀.1
     · -- Head lookup is at `t₀` itself: a cache miss that draws the single fresh digest.
       subst hhd
@@ -293,13 +291,14 @@ private lemma prEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableType 
         (fun p : TagTranscript Nonce Digest × AuthIdealState TagId Nonce Digest =>
           (if p.2.responses t₀ = some v₀ then 1 else 0) +
             maxDigestProb * (if p.2.responses t₀ = none then 1 else 0)) ≤ maxDigestProb := by
-      rw [hrun, ProgramLogic.wp_bind]
+      rw [hrun, MeasureProgramLogic.wp_bind]
       refine ProgramLogic.wp_le_const_of_support _ fun nonce _ => ?_
       by_cases hk : (tag, nonce) = t₀
       · -- The tag step draws the fresh digest at `t₀` itself.
         subst hk
-        simp only [hnone, ProgramLogic.wp_bind, ProgramLogic.wp_pure, QueryCache.cacheQuery_self,
-          Option.some_inj, reduceCtorEq, ite_false, mul_zero, add_zero]
+        simp only [hnone, MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_pure,
+          QueryCache.cacheQuery_self, Option.some_inj, reduceCtorEq, ite_false, mul_zero,
+          add_zero]
         rw [← ProgramLogic.prEvent_eq_wp_indicator]
         exact hmax v₀
       · -- Any other point leaves `t₀` unfilled.
@@ -308,7 +307,7 @@ private lemma prEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableType 
         | some out =>
           simp [hnone]
         | none =>
-          simp only [ProgramLogic.wp_bind, ProgramLogic.wp_pure]
+          simp only [MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_pure]
           refine ProgramLogic.wp_le_const_of_support _ fun out _ => ?_
           simp [QueryCache.cacheQuery_of_ne _ _ hne, hnone]
     exact key
@@ -333,7 +332,7 @@ private lemma prEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableType 
               maxDigestProb * (if p.2.responses t₀ = none then 1 else 0)) := by
       unfold authRFReaderQueryImpl
       simp only [bind_pure_comp, StateT.run_bind, StateT.run_get, StateT.run_map,
-        StateT.run_set, map_pure, ProgramLogic.wp_map, Function.comp_def]
+        StateT.run_set, map_pure, MeasureProgramLogic.wp_map]
     refine le_of_eq_of_le hmapM_run ?_
     rw [← prEvent_add_mul_prEvent_eq_wp]
     by_cases hnonce : transcript.nonce = t₀.2
@@ -378,12 +377,12 @@ private lemma prEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Sampleabl
     induction adv using OracleComp.inductionOn with
     | pure x =>
       intro s
-      simp only [simulateQ_pure, StateT.run_pure, ProgramLogic.wp_pure, hstbound]
+      simp only [simulateQ_pure, StateT.run_pure, MeasureProgramLogic.wp_pure, hstbound]
       split_ifs <;> simp
     | query_bind t oa ih =>
       intro s
       simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self,
-        ProgramLogic.wp_bind]
+        MeasureProgramLogic.wp_bind]
       refine le_trans (ProgramLogic.wp_mono _ fun p => ih p.1 p.2) ?_
       -- Three cases on the value held at `t₀` in the pre-state `s`.
       by_cases hsv : s.responses t₀ = some v₀
@@ -441,9 +440,6 @@ noncomputable def authRFReaderLookups
 section LookupTriples
 
 open Std.WP OracleComp.ProgramLogic
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- Every looked-up pair produced by `authRFReaderLookups` lands in the final cache: if `(tag, d)`
 occurs in the result list, the final `responses` table holds `(tag, nonce) ↦ d`. Each lookup pins

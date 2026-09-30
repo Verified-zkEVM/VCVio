@@ -51,6 +51,8 @@ section Probabilistic
 
 variable [OracleSpec.IsMeasureSpec spec]
 
+open scoped OracleComp.Quantitative
+
 example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
     ⦃fun s => wp⟦oa⟧ (fun a => post (s, a) (s + 1))⦄
       (do
@@ -79,10 +81,6 @@ end Probabilistic
 /-! ## Core `vcgen` -/
 
 section Core
-
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 example : ⦃ True ⦄ (pure 3 : OracleComp spec Nat) ⦃ fun n => n = 3 ⦄ := by
   vcgen

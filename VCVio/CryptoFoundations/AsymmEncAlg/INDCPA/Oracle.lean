@@ -254,8 +254,6 @@ def IND_CPA_LR_hybrid
   (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil) (adversary pk)).run'
     (∅, 0)
 
-open scoped OracleComp.Qualitative in
-set_option experimental.vcgen true in
 /-- One-step counter monotonicity for the counted real IND-CPA implementation. A uniform query
 leaves the state unchanged; a challenge query is stepped by core `vcgen` as a structural triple,
 read against the support by `triple_stateT_iff_forall_support`. -/
@@ -504,8 +502,6 @@ lemma IND_CPA_hybridLR_counted_run_eq_of_le
       (fun n mm => if n < k + 1 then mm.1 else mm.2) mm st
       (by simp [show ¬(st.2 < k) from by omega, show ¬(st.2 < k + 1) from by omega])
 
-open scoped OracleComp.Qualitative in
-set_option experimental.vcgen true in
 /-- Counter monotonicity for the hybrid LR counted oracle: the counter never decreases. A
 challenge query is stepped by core `vcgen` as a structural triple. -/
 lemma IND_CPA_hybridLR_counted_counter_le

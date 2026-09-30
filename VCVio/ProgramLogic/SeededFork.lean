@@ -20,6 +20,7 @@ in the program logic framework.
 
 open OracleSpec OracleComp ENNReal
 open scoped Std.WP
+open scoped OracleComp.Quantitative
 
 namespace OracleComp.ProgramLogic
 

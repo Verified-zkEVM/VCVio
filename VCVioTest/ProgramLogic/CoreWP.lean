@@ -26,17 +26,14 @@ open scoped ENNReal
 
 namespace VCVioTest.ProgramLogic.CoreWP
 
-noncomputable example : WPMonad ProbComp ℝ≥0∞ EStack⟨⟩ := inferInstance
+noncomputable example : WPMonad ProbComp Prop EStack⟨⟩ := inferInstance
 
 example : True := by
   fail_if_success
-    let _ := (inferInstance : WPMonad ProbComp Prop EStack⟨⟩)
+    let _ := (inferInstance : WPMonad ProbComp ℝ≥0∞ EStack⟨⟩)
   trivial
 
 section Qualitative
-open scoped OracleComp.Qualitative
-
-noncomputable example : WPMonad ProbComp Prop EStack⟨⟩ := inferInstance
 
 example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
     (post : α → Prop) :
@@ -46,7 +43,13 @@ example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
 end Qualitative
 
 section Quantitative
+open scoped OracleComp.Quantitative
 
+noncomputable example : WPMonad ProbComp ℝ≥0∞ EStack⟨⟩ := inferInstance
+
+-- The package acknowledges `vcgen`'s experimental status once (`lakefile.lean`); this pins the
+-- warning a file sees without that acknowledgment.
+set_option experimental.vcgen false in
 /--
 warning: The `vcgen` tactic is an experimental drop-in replacement for `mvcgen` that will eventually replace it; `set_option experimental.vcgen true` acknowledges its experimental status and silences this warning.
 -/

@@ -84,12 +84,18 @@ namespace OracleComp.Upper
 
 variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec] {α : Type}
 
+open scoped OracleComp.Quantitative in
 /-- Core weakest preconditions of the expectation reading over the order duals: a triple states
-an upper bound on the expectation. Opening the scope selects it over the global lower-bound
-reading. -/
+an upper bound on the expectation. Opening the scope selects it over the structural reading. -/
 noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
   ExactWPMonad.dual
+
+/-- The upper-bound reading as a direct `WP` instance on programs, at the scope's priority, so
+that no direct instance of another scope outranks it while this one is open. -/
+noncomputable scoped instance (priority := 1100) wpInst :
+    Std.WP.WP (OracleComp spec α) α ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
+  (instWP (spec := spec)).toWP α
 
 /-! ## The interpretation -/
 

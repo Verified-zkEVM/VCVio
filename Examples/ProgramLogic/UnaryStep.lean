@@ -36,6 +36,7 @@ open Lean.Order
 open Std.WP
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic
+open scoped OracleComp.Quantitative
 
 universe u
 
@@ -374,14 +375,14 @@ example :
   prvcgen
   split <;> simp
 
-@[local spec] theorem stdDoTriple_wrappedTrue :
+@[local spec] theorem triple_wrappedTrue' :
     Std.WP.Triple (wrappedTrue (spec := spec)) (1 : ℝ≥0∞)
       (fun y => if y = true then (1 : ℝ≥0∞) else 0) estack⟨⟩ := by
   exact triple_wrappedTrue (spec := spec)
 
 example :
     ⦃ (1 : ℝ≥0∞) ⦄ (wrappedTrue (spec := spec)) ⦃ fun _ => (1 : ℝ≥0∞) ⦄ := by
-  prvcgen [stdDoTriple_wrappedTrue]
+  prvcgen [triple_wrappedTrue']
   split <;> simp
 
 example :

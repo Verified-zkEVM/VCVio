@@ -618,9 +618,6 @@ theorem authRealExperiment_le_prfAdvantage_add_authRF
 section IdealUnwinnable
 
 open Std.WP OracleComp.ProgramLogic
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- In the ideal authentication world, a forged reader acceptance never occurs. Every query keeps
 the forgery log empty while every cached digest belongs to an honest transcript, a structural

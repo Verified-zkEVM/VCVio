@@ -57,9 +57,6 @@ def knowledgeVerifyRun (prover : KnowledgeProver Stmt Commit Chal Resp M) (pk : 
 section HandlerTriples
 
 open Std.WP OracleComp.ProgramLogic
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- `StateT.lift x` has the weakest precondition of `MonadLift.monadLift x`: the `vcgen` rule for
 handlers written with `StateT.lift`, such as `Fork.unifForward` and `Fork.roImpl`. -/

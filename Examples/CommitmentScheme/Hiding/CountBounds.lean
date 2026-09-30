@@ -32,9 +32,6 @@ query-budgeted count, `simulateQ_triple_ranked`. -/
 section HandlerInvariants
 
 open OracleComp.ProgramLogic Std.WP
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 lemma hidingImplCountAll_run_totalBound_current {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
@@ -704,8 +701,7 @@ lemma wp_fresh_challenge_branch_eq
   simp only [hidingImplCountAll, bind_pure_comp, StateT.run_bind, StateT.run_get,
     pure_bind, hnone, hzero, zero_add, StateT.run_monadLift, StateT.run_map,
     StateT.run_set, map_pure, Functor.map_map]
-  rw [OracleComp.ProgramLogic.wp_map]
-  rfl
+  rw [MeasureProgramLogic.wp_map]
 
 lemma wp_freshDistinguishIncrement_eq
     {AUX : Type} {t : ℕ}
@@ -740,7 +736,7 @@ lemma wp_freshDistinguishIncrement_eq
                 (qchoose.2.2 s = 0 ∧ qch.2.2 s < z.2.2 s))) = fun _ => 0 := by
       funext qch
       simp only [hzero, false_and, propInd_false]
-      exact OracleComp.ProgramLogic.wp_const _ 0
+      exact MeasureProgramLogic.wp_const_of_oracle _ 0
     rw [hpost]
     simp [hzero]
 

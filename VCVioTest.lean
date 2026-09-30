@@ -81,6 +81,7 @@ public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
 public import VCVioTest.ProgramLogic.PrVCGen
+public import VCVioTest.ProgramLogic.ReadingScopes
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.VCGenNames
 public import VCVioTest.QueryBounds

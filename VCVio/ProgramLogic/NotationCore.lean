@@ -51,6 +51,7 @@ Unary triples additionally require `open scoped Std.WP`.
 
 open ENNReal OracleSpec OracleComp
 open scoped Std.WP
+open scoped OracleComp.Quantitative
 
 universe u
 
@@ -132,7 +133,7 @@ theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι}
     wp⟦oa⟧ (fun x => 𝟙⟦p x ∨ q x⟧) ≤
         wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) +
           wp⟦oa⟧ (fun x => 𝟙⟦q x⟧) := by
-  rw [← wp_add]
+  rw [← MeasureProgramLogic.wp_add]
   apply wp_mono
   intro x
   by_cases hp : p x <;> by_cases hq : q x <;> simp [propInd, hp, hq]
@@ -143,7 +144,7 @@ theorem markov_bound {ι : Type u} {spec : OracleSpec ι}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
     a * Pr{let x ← oa}[p x] ≤ wp⟦oa⟧ f := by
-  rw [← wp_mul_const]
+  rw [← MeasureProgramLogic.wp_const_mul]
   refine wp_mono oa fun x => ?_
   rw [predInd_apply]
   unfold propInd
@@ -158,7 +159,7 @@ theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
     (oa : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support oa, p x) :
     ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ := by
   refine ⟨?_⟩
-  rw [← wp_const oa 1]
+  rw [← MeasureProgramLogic.wp_const_of_oracle oa 1]
   apply wp_mono_of_support
   intro x hx
   simp [propInd, h x hx]

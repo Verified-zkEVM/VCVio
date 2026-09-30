@@ -139,9 +139,6 @@ lemma unlinkBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
 section BadMonotone
 
 open Std.WP OracleComp.ProgramLogic
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- The `bad` flag of `unlinkBadQueryImpl` is monotone, as a structural triple: a query answered
 from a state with `bad = true` ends in a state with `bad = true`. -/

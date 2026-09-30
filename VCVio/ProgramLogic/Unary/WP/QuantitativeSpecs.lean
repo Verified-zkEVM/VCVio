@@ -56,6 +56,7 @@ public section
 universe u
 
 open ENNReal Std.WP
+open scoped OracleComp.Quantitative
 
 namespace OracleComp.ProgramLogic
 

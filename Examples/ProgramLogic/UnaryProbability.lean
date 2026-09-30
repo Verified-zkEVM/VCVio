@@ -23,6 +23,7 @@ open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic Std.WP
+open scoped OracleComp.Quantitative
 
 universe u
 

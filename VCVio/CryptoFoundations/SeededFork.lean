@@ -57,6 +57,7 @@ the truncated seed.
 @[expose] public section
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal Function Finset
+open scoped OracleComp.Quantitative
 
 namespace OracleComp
 
@@ -233,7 +234,7 @@ private lemma expectedQueryCount_seededForkWithSeedValue_le_aux
     wp⟦$ᵗ spec.Range i⟧ (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u)
       CostModel.unit (fun n : ℕ => (n : ENNReal))) ≤ qb i := by
   let : Fintype ι := Fintype.ofFinite ι
-  rw [← ProgramLogic.wp_const ($ᵗ spec.Range i) (qb i : ENNReal)]
+  rw [← MeasureProgramLogic.wp_const_of_oracle ($ᵗ spec.Range i) (qb i : ENNReal)]
   refine wp_mono _ fun u => ?_
   have hbound := isPerIndexQueryBound_seededForkWithSeedValue
     (main := main) (qb := qb) (i := i) (cf := cf) (u := u) hmain hseed
@@ -258,7 +259,7 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
       intro seed hseed
       exact expectedQueryCount_seededForkWithSeedValue_le_aux main qb i cf hmain
         (generateSeed_covers_queryBound (spec := spec) qb js hjs hseed)
-    _ = _ := ProgramLogic.wp_const _ _
+    _ = _ := MeasureProgramLogic.wp_const_of_oracle _ _
 
 section forkRuntime
 

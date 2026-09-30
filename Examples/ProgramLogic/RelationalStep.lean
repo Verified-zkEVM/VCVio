@@ -26,6 +26,7 @@ open OracleComp.ProgramLogic.Relational
 open Lean.Order
 open Std.WP
 open scoped OracleComp.ProgramLogic
+open scoped OracleComp.Quantitative
 
 universe u
 

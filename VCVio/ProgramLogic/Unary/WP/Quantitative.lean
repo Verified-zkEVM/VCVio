@@ -19,14 +19,18 @@ public import PolyFun.Control.Do.Spec
 /-!
 # Quantitative weakest preconditions
 
-The expectation algebra on `OracleComp spec` is its core `WPMonad` interpretation, with
-`ℝ≥0∞` assertions: `wp oa post ⊥`, core triples and `vcgen` read expectations without opening a
-scope. The algebra-to-WP bridge and lattice instances come from PolyFun. The transformer
-lemmas describe expectation after running state, reader, option, exception, and writer layers.
+The expectation algebra on `OracleComp spec` is a core `WPMonad` interpretation with `ℝ≥0∞`
+assertions, selected by `open scoped OracleComp.Quantitative`: under it, `wp oa post ⊥`, core
+triples and `vcgen` read expectations, with lower-bound triples `pre ≤ wp⟦oa⟧ post`. The
+notations `Pr{…}[…]`, `𝔼{…}[…]` and `wp⟦oa⟧ g` name this interpretation explicitly, so they mean
+the expectation in every scope. The algebra-to-WP bridge and lattice instances come from PolyFun.
+The transformer lemmas describe expectation after running state, reader, option, exception, and
+writer layers.
 
 Core selects one interpretation per program type, since its assertion carriers are output
-parameters. The structural reading (`OracleComp.Qualitative`) and the probability-bounded one
-(`OracleComp.Probabilistic`) take precedence inside their scopes.
+parameters: the global reading of `OracleComp` is the structural one
+(`OracleComp.Qualitative`), and this scope, like `OracleComp.Upper` and
+`OracleComp.Probabilistic`, takes precedence while it is open.
 -/
 
 @[expose] public section
@@ -65,10 +69,17 @@ variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
 /-- Core weakest preconditions under the configured oracle answer measures: the expectation
-interpretation `MeasureProgramLogic.measureWP`, so `wp oa post ⊥` is `wp⟦oa⟧ post`. -/
-noncomputable instance instWP :
+interpretation `MeasureProgramLogic.measureWP`, so `wp oa post ⊥` is `wp⟦oa⟧ post`. Opening the
+scope selects it over the structural reading. -/
+noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
   MeasureProgramLogic.measureWP (OracleComp spec)
+
+/-- The expectation reading as a direct `WP` instance on programs, at the scope's priority, so
+that no direct instance of another scope outranks it while this one is open. -/
+noncomputable scoped instance (priority := 1100) wpInst :
+    Std.WP.WP (OracleComp spec α) α ℝ≥0∞ EStack⟨⟩ :=
+  (instWP (spec := spec)).toWP α
 
 /-! ## `StateT (OracleComp spec)` WP normalization -/
 

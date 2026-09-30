@@ -59,7 +59,7 @@ The lifts fix `OracleSpec.{0, 0}` because the support readings
 
 open ENNReal OracleSpec OracleComp
 open Std.WP
-open scoped OracleComp.Qualitative WriterT.MonoidWP WriterT.AppendWP
+open scoped WriterT.MonoidWP WriterT.AppendWP
 
 namespace OracleComp.ProgramLogic.Relational
 

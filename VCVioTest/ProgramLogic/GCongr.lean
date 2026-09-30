@@ -22,7 +22,7 @@ open scoped Std.WP
 
 open ENNReal OracleSpec OracleComp MeasureTheory
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic
+open scoped OracleComp.ProgramLogic OracleComp.Quantitative
 
 run_cmd do
   let env ← Lean.getEnv
@@ -82,7 +82,7 @@ the support hypothesis. -/
 example {β : Type} (oa : OracleComp spec α) (ob ob' : α → OracleComp spec β) (g : β → ℝ≥0∞)
     (h : ∀ x ∈ support oa, wp⟦ob x⟧ g ≤ wp⟦ob' x⟧ g) :
     wp⟦oa >>= ob⟧ g ≤ wp⟦oa >>= ob'⟧ g := by
-  rw [wp_bind, wp_bind]
+  rw [MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_bind]
   gcongr with x hx
   exact h x hx
 

@@ -16,6 +16,7 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 
 open ENNReal MeasureTheory
 open scoped Std.WP
+open scoped OracleComp.Quantitative
 
 universe u
 
@@ -27,7 +28,7 @@ variable {α β : Type}
 
 example (x : α) (post : α → ℝ≥0∞) :
     wp⟦(pure x : OracleComp spec α)⟧ post = post x :=
-  wp_pure (spec := spec) x post
+  MeasureProgramLogic.wp_pure x post
 
 example (pre : ℝ≥0∞) (oa : OracleComp spec α) (ob : α → OracleComp spec β)
     (cut : α → ℝ≥0∞) (post : β → ℝ≥0∞)

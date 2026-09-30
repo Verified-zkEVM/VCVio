@@ -208,10 +208,6 @@ theorem hidingImpl_agree [Inhabited M] [Inhabited S] (s : S) (ms : M × S)
 
 section CounterSteps
 
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
-
 /-- One-step counter growth bound for `hidingImpl₁`:
 the salt counter is monotone and increases by at most one. -/
 theorem hidingImpl₁_counter_le_succ (s : S) (ms : M × S)
@@ -337,11 +333,11 @@ theorem sum_prEvent_hidingBad_eq_avg_bad_mass [Fintype S] [Inhabited M] [Inhabit
           (∅, fun _ => 0))}[2 ≤ z.2.2 z.1.1] := by
   classical
   rw [OracleComp.ProgramLogic.prEvent_eq_wp_indicator,
-    run_simulateQ_hidingAvgComp_eq_bind, OracleComp.ProgramLogic.wp_bind,
+    run_simulateQ_hidingAvgComp_eq_bind, MeasureProgramLogic.wp_bind,
     ← liftComp_liftM_query (spec := Unit →ₒ S) (superSpec := HidingAvgSpec M S C),
     OracleComp.ProgramLogic.wp_liftComp, OracleComp.ProgramLogic.wp_query_uniform]
-  simp_rw [OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_liftComp]
-  simp only [Function.comp_def, Prod.map_fst, Prod.map_snd, id_eq]
+  simp_rw [MeasureProgramLogic.wp_map, OracleComp.ProgramLogic.wp_liftComp]
+  simp only [Prod.map_fst, Prod.map_snd, id_eq]
   simp_rw [← OracleComp.ProgramLogic.prEvent_eq_wp_indicator]
   rw [Finset.mul_sum]
   apply Finset.sum_congr rfl
@@ -390,12 +386,12 @@ lemma card_mul_wp_hidingAvg_selectedCountPred_eq_sum_wp_countPred
           (fun z : ((S × Bool) × HidingCountState M S C) => (z.2.2 z.1.1 - 1 : ℝ≥0∞)) =
         ∑ s : S,
           (Fintype.card S : ℝ≥0∞)⁻¹ * Q s := by
-    rw [run_simulateQ_hidingAvgComp_eq_bind, OracleComp.ProgramLogic.wp_bind,
+    rw [run_simulateQ_hidingAvgComp_eq_bind, MeasureProgramLogic.wp_bind,
       ← liftComp_liftM_query (spec := Unit →ₒ S) (superSpec := HidingAvgSpec M S C),
       OracleComp.ProgramLogic.wp_liftComp, OracleComp.ProgramLogic.wp_query_uniform]
     refine Finset.sum_congr rfl ?_
     intro s hs
-    rw [OracleComp.ProgramLogic.wp_map, OracleComp.ProgramLogic.wp_liftComp]
+    rw [MeasureProgramLogic.wp_map, OracleComp.ProgramLogic.wp_liftComp]
     rfl
   have hcard0 : (Fintype.card S : ℝ≥0∞) ≠ 0 := by simp
   have hcard_top : (Fintype.card S : ℝ≥0∞) ≠ ∞ := by simp

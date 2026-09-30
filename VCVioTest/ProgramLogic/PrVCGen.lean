@@ -34,8 +34,6 @@ public section
 
 open OracleSpec OracleComp Std.WP ENNReal OrderDual OracleComp.ProgramLogic
 
-set_option experimental.vcgen true
-
 namespace VCVioTest.ProgramLogic.PrVCGen
 
 variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
@@ -185,6 +183,8 @@ section Triples
 
 variable [spec.IsMeasureSpec] {α β : Type}
 
+open scoped OracleComp.Quantitative
+
 /-- A quantitative triple: `vcgen` composes the triples of the two programs in the context. -/
 example {oa : OracleComp spec α} {f : α → OracleComp spec β}
     {pre : ℝ≥0∞} {cut : α → ℝ≥0∞} {post : β → ℝ≥0∞}
@@ -212,8 +212,6 @@ end Triples
 
 section StructuralTriple
 
-open scoped OracleComp.Qualitative
-
 /-- A triple with assertions in `Prop`, under the structural reading. -/
 example : ⦃ True ⦄ (do let b ← $ᵗ Bool; pure (b || !b) : ProbComp Bool) ⦃ fun r => r = true ⦄ := by
   prvcgen
@@ -225,9 +223,7 @@ end StructuralTriple
 
 section FileLevelReading
 
-open scoped OracleComp.Qualitative
-
-/-- A file-level structural reading does not reach `prvcgen`'s lower-bound reading. -/
+/-- The global structural reading does not reach `prvcgen`'s lower-bound reading. -/
 example : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool}[(b || !b) = true] := by
   prvcgen
   simp

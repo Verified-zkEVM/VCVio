@@ -45,8 +45,6 @@ open Std.WP
 
 namespace OracleComp.Qualitative
 
-open scoped OracleComp.Qualitative
-
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
 /-- A uniform sample may return any element. -/

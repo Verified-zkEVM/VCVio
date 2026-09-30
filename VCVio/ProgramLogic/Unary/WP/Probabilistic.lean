@@ -38,7 +38,7 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 /-- Oracle expectation preserves the probability bound. -/
 theorem wp_one_le (oa : OracleComp spec α) :
     MAlgOrdered.μ (oa >>= fun _ => pure (1 : ℝ≥0∞)) ≤ 1 :=
-  (OracleComp.ProgramLogic.wp_const oa 1).le
+  (MeasureProgramLogic.wp_const_of_oracle oa 1).le
 
 /-- The expectation algebra restricted to probability-valued assertions. -/
 noncomputable scoped instance (priority := 1100) instMAlgOrdered :
@@ -49,6 +49,12 @@ noncomputable scoped instance (priority := 1100) instMAlgOrdered :
 noncomputable scoped instance (priority := 1100) instWP_prob :
     Std.WP.WPMonad (OracleComp spec) Prob EStack⟨⟩ :=
   MAlgOrdered.toWPMonad
+
+/-- The probability-bounded reading as a direct `WP` instance on programs, at the scope's
+priority, so that no direct instance of another scope outranks it while this one is open. -/
+noncomputable scoped instance (priority := 1100) wpInst :
+    Std.WP.WP (OracleComp spec α) α Prob EStack⟨⟩ :=
+  (instWP_prob (spec := spec)).toWP α
 
 /-- Forgetting the bound recovers quantitative expectation. -/
 theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) (epost : EStack⟨⟩) :

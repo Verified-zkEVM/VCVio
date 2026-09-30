@@ -102,9 +102,6 @@ private def forgeInv (adversary : AuthAdversary TagId Nonce Digest)
 section StepTriples
 
 open Std.WP OracleComp.ProgramLogic
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- A structural triple preserving `I` is the support statement `StateT.PreservesInv`. -/
 private theorem preservesInv_of_triple {σ α : Type} {mx : StateT σ ProbComp α} {I : σ → Prop}

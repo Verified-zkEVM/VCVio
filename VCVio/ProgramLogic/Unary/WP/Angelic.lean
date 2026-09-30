@@ -68,10 +68,16 @@ namespace OracleComp.Angelic
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
 /-- Core weakest preconditions for some structurally reachable output. Opening the scope selects
-it over the quantitative instance. -/
+it over the structural reading. -/
 noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
   MonadAttach.toWPMonadAngelic
+
+/-- The angelic reading as a direct `WP` instance on programs, at the scope's priority, so that
+no direct instance of another scope outranks it while this one is open. -/
+noncomputable scoped instance (priority := 1100) wpInst :
+    Std.WP.WP (OracleComp spec α) α Prop EStack⟨⟩ :=
+  (instWP (spec := spec)).toWP α
 
 /-- The angelic weakest precondition holds exactly when some possible output satisfies the
 postcondition. -/

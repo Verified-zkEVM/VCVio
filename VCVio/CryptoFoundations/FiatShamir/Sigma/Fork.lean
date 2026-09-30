@@ -331,9 +331,6 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
 section HandlerTriples
 
 open Std.WP OracleComp.ProgramLogic
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- `StateT.lift x` has the weakest precondition of `MonadLift.monadLift x`: the `vcgen` rule for
 handlers written with `StateT.lift`, such as `unifForward` and `roImpl`. -/

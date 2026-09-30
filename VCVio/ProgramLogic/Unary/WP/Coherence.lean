@@ -93,7 +93,6 @@ end OracleComp.WP.Coherence
 namespace OracleComp.Qualitative
 
 open Std.WP
-open scoped OracleComp.Qualitative
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
@@ -142,7 +141,6 @@ end OracleComp.Qualitative
 namespace OracleComp.Qualitative
 
 open Std.WP
-open scoped OracleComp.Qualitative
 
 section fullSupport
 

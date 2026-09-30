@@ -81,9 +81,7 @@ The product-state representation matches the Fiat-Shamir and forking proofs in
 
 open OracleSpec OracleComp Std.WP
 
-open scoped OracleComp.Qualitative WriterT.MonoidWP WriterT.AppendWP
-
-set_option experimental.vcgen true
+open scoped WriterT.MonoidWP WriterT.AppendWP
 
 namespace OracleComp.ProgramLogic
 

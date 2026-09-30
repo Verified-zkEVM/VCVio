@@ -119,9 +119,6 @@ then sampling one full table is distributionally the same as sampling the full t
 reading the cells deterministically against `tableExtending`. -/
 
 open Std.WP
-open scoped OracleComp.Qualitative
-
-set_option experimental.vcgen true
 
 /-- One `idealCacheStep` at `d` stores the produced digest at `d` and leaves every other cell, and
 an already-cached `d`, unchanged. -/

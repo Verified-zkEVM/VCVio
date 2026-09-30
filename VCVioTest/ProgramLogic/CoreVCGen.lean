@@ -29,15 +29,11 @@ public section
 
 open OracleSpec OracleComp Std.WP ENNReal OracleComp.ProgramLogic
 
-set_option experimental.vcgen true
-
 namespace VCVioTest.ProgramLogic.CoreVCGen
 
 /-! ## Structural reading -/
 
 section Structural
-
-open scoped OracleComp.Qualitative
 
 variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
 
@@ -125,8 +121,6 @@ end Structural
 
 section Bridges
 
-open scoped OracleComp.Qualitative
-
 /-- A program with two draws whose output pair always agrees. -/
 def agreeProg (α : Type) [SampleableType α] (f : α → ℕ) : ProbComp (ℕ × ℕ) := do
   let u ← $ᵗ α
@@ -163,6 +157,8 @@ end Bridges
 section Quantitative
 
 variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [spec.IsMeasureSpec] {α : Type}
+
+open scoped OracleComp.Quantitative
 
 /-- Probability one through two queries. -/
 example (t : spec.Domain) (f : spec.Range t → ℕ) :

@@ -44,17 +44,18 @@ theorem μ_one_le {α : Type} (mx : m α) :
 noncomputable def toMAlgOrdered : MAlgOrdered m Prob :=
   MAlgOrdered.restrictIic 1 (fun {_} mx ↦ μ_one_le m mx)
 
-/-- Select probability-bounded measure expectations. -/
-noncomputable scoped instance (priority := 1100) instMAlgOrdered : MAlgOrdered m Prob :=
+/-- Select probability-bounded measure expectations, at the priority of the generic scopes
+(above core's direct instances, below the reading scopes of `OracleComp`). -/
+noncomputable scoped instance (priority := 1050) instMAlgOrdered : MAlgOrdered m Prob :=
   toMAlgOrdered m
 
 /-- Core WP with bounded probability assertions and no exception postcondition. -/
-noncomputable scoped instance (priority := 1100) instWP : WPMonad m Prob EStack⟨⟩ :=
+noncomputable scoped instance (priority := 1050) instWP : WPMonad m Prob EStack⟨⟩ :=
   MAlgOrdered.toWPMonad
 
 /-- The bounded interpretation as a direct `WP` instance on programs, which outranks core's direct
 instances for its concrete monads (`Id`, `Option`, `Except`, …) while the scope is open. -/
-noncomputable scoped instance (priority := 1100) wpInst {α : Type} : WP (m α) α Prob EStack⟨⟩ :=
+noncomputable scoped instance (priority := 1050) wpInst {α : Type} : WP (m α) α Prob EStack⟨⟩ :=
   (instWP m).toWP α
 
 variable {m} {α : Type}

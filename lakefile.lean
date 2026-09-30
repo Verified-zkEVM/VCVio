@@ -17,6 +17,9 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     ⟨`weak.linter.redundantVisibility, true⟩,
     -- Use Mathlib's 1500-line limit downstream too; split files before exceeding it.
     ⟨`weak.linter.style.longFile, .ofNat 1500⟩,
+    -- Core's `vcgen` is experimental in Lean v4.35 and warns unless acknowledged; the
+    -- program logic runs on it, so the package acknowledges it once. Drop when core does.
+    ⟨`experimental.vcgen, true⟩,
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
     -- diacritics (e.g. `Cătălin Hriţcu`).

@@ -32,7 +32,7 @@ into relational arguments (e.g. game-hopping reductions) without redoing the und
 @[expose] public section
 
 open ENNReal OracleSpec OracleComp
-open scoped Std.WP OracleComp.Qualitative
+open scoped Std.WP
 
 universe u
 
