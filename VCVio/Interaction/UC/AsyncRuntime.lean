@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import PolyFun.Interaction.UC.EnvOpenProcess
+public import PolyFun.Interaction.Open.EnvOpenProcess
 public import VCVio.Interaction.UC.Runtime
 
 /-!
@@ -196,7 +196,7 @@ end UC
 
 namespace Concurrent
 
-open Interaction.UC
+open Interaction Interaction.Open Interaction.UC
 
 /--
 Async core engine. Iterates `fuel` ticks, alternating between process
@@ -215,7 +215,7 @@ noncomputable def runStepsAsync
     {Γ : TypeTree.Node.Context}
     {State : Type} {Event : Type} {P : Type}
     (process : ProcessOver P Γ)
-    (envAction : Interaction.UC.EnvAction m Event State)
+    (envAction : Interaction.Open.EnvAction m Event State)
     (procScheduler :
       Interaction.UC.ProcessScheduler m process.Proc State
         (fun st => (process.step st.proc).tree))
@@ -257,7 +257,7 @@ theorem runStepsAsync_empty_trivial_eq
     (process : ProcessOver P Γ)
     (sampler : (s : process.Proc) → TypeTree.Sampler m (process.step s).tree)
     (fuel : ℕ) (s : process.Proc) :
-    runStepsAsync (m := m) process (Interaction.UC.EnvAction.empty Unit)
+    runStepsAsync (m := m) process (Interaction.Open.EnvAction.empty Unit)
         (fun st => sampler st.proc)
         (Interaction.UC.trivialEnvScheduler (m := m) Unit Empty)
         fuel
@@ -279,7 +279,7 @@ theorem runStepsAsync_empty_trivial_openProcess_eq
     {m : Type → Type} [Monad m] [LawfulMonad m]
     {Party : Type u} (process : OpenProcess m Party PortBoundary.empty)
     (fuel : ℕ) (s : process.Proc) :
-    runStepsAsync process.toProcess (Interaction.UC.EnvAction.empty Unit)
+    runStepsAsync process.toProcess (Interaction.Open.EnvAction.empty Unit)
         (fun st => process.stepSampler st.proc)
         (Interaction.UC.trivialEnvScheduler (m := m) Unit Empty)
         fuel
@@ -295,7 +295,7 @@ end Concurrent
 
 namespace UC
 
-open Concurrent
+open Concurrent Interaction.Open
 
 abbrev AsyncClosed (Party : Type u) (m : Type → Type)
     (schedulerSampler : m (ULift Bool)) :=

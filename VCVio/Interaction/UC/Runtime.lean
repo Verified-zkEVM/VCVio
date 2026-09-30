@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import PolyFun.Interaction.Basic.Sampler
 public import PolyFun.Interaction.Basic.TypeTreeFintype
-public import PolyFun.Interaction.UC.OpenProcessModel
+public import PolyFun.Interaction.Open.OpenProcessModel
 public import VCVio.Interaction.UC.Computational
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
@@ -169,7 +169,7 @@ end Concurrent
 
 namespace UC
 
-open Concurrent
+open Concurrent Interaction.Open
 
 abbrev RuntimeClosed (Party : Type u) (m : Type → Type) (schedulerSampler : m (ULift Bool)) :=
   (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed

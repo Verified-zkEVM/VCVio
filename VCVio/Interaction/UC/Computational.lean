@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import PolyFun.Interaction.UC.Emulates
+public import PolyFun.Interaction.Open.Emulates
 public import VCVio.CryptoFoundations.Asymptotics.Negligible
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.EvalDist.Defs.Semantics.Core
@@ -95,6 +95,8 @@ open OracleComp ENNReal
 
 namespace Interaction
 namespace UC
+
+open Interaction.Open
 
 variable {T : OpenTheory.{u}}
 

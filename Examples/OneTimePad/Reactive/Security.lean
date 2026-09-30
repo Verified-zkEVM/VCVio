@@ -26,7 +26,8 @@ public section
 
 namespace OneTimePad.Reactive
 
-open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork ReactiveRuntime
+open PFunctor Interaction Interaction.UC Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork ReactiveRuntime
   OracleComp MeasureTheory ProbabilityTheory
 
 variable {Message Cipher Key Memory : Type}

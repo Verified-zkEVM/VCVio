@@ -255,8 +255,9 @@ theorem wp_ne_top_of_finite [Finite α] (oa : OracleComp spec α) {post : α →
       wp oa (post ∘ f) := by
   simp [Function.comp_def]
 
+@[simp]
 theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :
-    MAlgOrdered.wp oa (fun _ ↦ c) = c :=
+    wp oa (fun _ ↦ c) = c :=
   MeasureProgramLogic.Quantitative.wp_const_of_oracle oa c
 
 @[game_rule] theorem wp_add (oa : OracleComp spec α) (f g : α → ℝ≥0∞) :
@@ -275,7 +276,7 @@ theorem wp_const_mul (oa : OracleComp spec α) (f : α → ℝ≥0∞) (c : ℝ�
 /-- A support-wise postcondition bound controls the quantitative WP. -/
 theorem wp_le_const_of_support (oa : OracleComp spec α) {post : α → ℝ≥0∞} {c : ℝ≥0∞}
     (hpost : ∀ x ∈ support oa, post x ≤ c) : wp oa post ≤ c :=
-  (wp_mono_of_support oa hpost).trans_eq (by simp)
+  (wp_mono_of_support oa hpost).trans_eq (wp_const oa c)
 
 /-- Additive support-wise comparison of quantitative postconditions. -/
 theorem wp_le_const_add_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
@@ -283,7 +284,7 @@ theorem wp_le_const_add_of_support (oa : OracleComp spec α) {f g : α → ℝ�
     wp oa f ≤ c + wp oa g := by
   refine (wp_mono_of_support oa hfg).trans_eq ?_
   rw [wp_add]
-  simp
+  exact congrArg (· + wp oa g) (wp_const oa c)
 
 /-- Finite sums of quantitative postconditions commute with expectation. -/
 theorem wp_finsetSum {κ : Type*} (oa : OracleComp spec α) (s : Finset κ)
@@ -601,6 +602,7 @@ theorem triple_list_mapM {I : ℝ≥0∞}
 
 /-- The expectation algebra evaluates the identity assertion. -/
 lemma μ_eq_wp (oa : OracleComp spec ℝ≥0∞) : μ oa = wp oa (fun x ↦ x) := by
+  rw [wp_eq_mAlgOrdered_wp]
   simp [MAlgOrdered.wp, μ]
 
 /-- Equal assertion-valued observations have equal quantitative WP. -/

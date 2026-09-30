@@ -20,7 +20,8 @@ public section
 
 namespace Interaction.UC.ReactiveSecurity.Tests
 
-open PFunctor OracleComp ReactiveProcess ReactiveNetwork DynSystem MeasureTheory
+open PFunctor OracleComp Interaction.Execution.ReactiveProcess Interaction.Execution.ReactiveNetwork
+  DynSystem MeasureTheory
 open scoped ENNReal
 
 @[expose] def bitEffect : PFunctor.{0, 0} := ⟨Unit, fun _ => Bool⟩

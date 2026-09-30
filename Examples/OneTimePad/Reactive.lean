@@ -26,7 +26,8 @@ public section
 
 namespace OneTimePad.Reactive
 
-open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork ReactiveRuntime
+open PFunctor Interaction Interaction.UC Interaction.Execution
+  Interaction.Execution.ReactiveProcess Interaction.Execution.ReactiveNetwork ReactiveRuntime
   DynSystem OracleComp MeasureTheory ProbabilityTheory
 
 attribute [local implicit_reducible] signature Response

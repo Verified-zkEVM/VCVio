@@ -65,7 +65,7 @@ example (post : PUnit.{1} → List Nat → ℝ≥0∞) :
     ⦃ post ⦄ := by
   refine Triple.intro ?_
   intro log
-  simp [WriterT.run_bind, WriterT.run_tell, MAlgOrdered.wp_pure]
+  simp [WriterT.run_bind, WriterT.run_tell]
 
 end Quantitative
 

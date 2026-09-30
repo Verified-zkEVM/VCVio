@@ -370,7 +370,7 @@ A `QueryLog spec` is morally a free monoid on `Idx spec.toPFunctor`, with
 identity `[]` and product `(++)`. By Mathlib reducibility this is exactly
 `FreeMonoid (Idx spec.toPFunctor) = TraceList spec.toPFunctor`, so a
 trace-valued boundary description such as `BoundaryAction.emit` (in
-`PolyFun/Interaction/UC/OpenProcess.lean`) and a per-call `QueryLog`-valued
+`PolyFun/Interaction/Open/OpenProcess.lean`) and a per-call `QueryLog`-valued
 writer share the same underlying free-monoid carrier.
 
 We do *not* declare a global `Monoid (QueryLog spec)` instance: doing so
@@ -531,6 +531,7 @@ generic occurrence count on erased polynomial traces. -/
 lemma countQ_eq_occurrences [DecidableEq ι] (log : QueryLog spec) (t : ι) :
     log.countQ (· = t) = PFunctor.TraceList.occurrences (P := spec.toPFunctor) t
       (show PFunctor.TraceList spec.toPFunctor from log) := by
+  change log.countQ (· = t) = log.countP (fun event => decide (event.1 = t))
   induction log with
   | nil => rfl
   | cons entry log ih =>
@@ -539,14 +540,10 @@ lemma countQ_eq_occurrences [DecidableEq ι] (log : QueryLog spec) (t : ι) :
       · subst t'
         simp only [QueryLog.countQ, QueryLog.getQ_cons, ite_eq_left trivial,
           List.length_cons]
-        rw [PFunctor.TraceList.occurrences,
-          List.countP_cons_of_pos (by simp)]
-        rw [PFunctor.TraceList.occurrences] at ih
+        rw [List.countP_cons_of_pos (by simp)]
         simpa [QueryLog.countQ] using ih
       · simp only [QueryLog.countQ, QueryLog.getQ_cons, ite_eq_right h]
-        rw [PFunctor.TraceList.occurrences,
-          List.countP_cons_of_neg (by simp [h])]
-        rw [PFunctor.TraceList.occurrences] at ih
+        rw [List.countP_cons_of_neg (by simp [h])]
         simpa [QueryLog.countQ] using ih
 
 /-- Query-log lookup is the `OracleSpec` specialization of dependent lookup

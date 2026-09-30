@@ -6,9 +6,9 @@ Authors: Quang Dao
 
 module
 
-public import PolyFun.Interaction.UC.OpenProcessQuotient
-public import PolyFun.Interaction.UC.ScheduledSamplerFactorization
-public import PolyFun.Interaction.UC.ScheduledOpenProcessModel
+public import PolyFun.Interaction.Open.OpenProcessQuotient
+public import PolyFun.Interaction.Open.ScheduledSamplerFactorization
+public import PolyFun.Interaction.Open.ScheduledOpenProcessModel
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
@@ -39,7 +39,7 @@ universe u
 namespace Interaction
 namespace UC
 
-open OpenProcessFactorization OracleComp
+open Interaction.Open Interaction.Open.OpenProcessFactorization OracleComp
 
 namespace ProportionalScheduler
 

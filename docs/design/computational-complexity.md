@@ -86,8 +86,8 @@ claim that a pull request has been opened or merged.
   input, with derived `2n + 7` work and linear state/readout sizes. This is a specialized exact
   realization, not the general handler compiler. It does not yet export an inhabitant of the general machine-level
   closure gates or compile arbitrary PolyFun machines to complexitylib machines.
-- The optional `PolyFunCslib` library now owns a separate cslib-backed,
-  parameter-indexed P/poly model: pinned encodings, polynomial description
+- PolyFun's optional `ComplexityBackends` library (its `CslibSingleTape` backend) owns a
+  separate cslib-backed, parameter-indexed P/poly model: pinned encodings, polynomial description
   bounds, nonvacuous progress, generic execution traces, closure operations,
   and a counting nontriviality theorem. The optional `VCVioCslib` library is a
   thin crypto-facing facade over that model, adding oracle specialization, a
@@ -139,7 +139,7 @@ The separate cslib library integration is:
 
 ```text
 VCVioCslib ----> VCVio
-      `----> PolyFunCslib ----> PolyFun ----> Mathlib
+      `----> ComplexityBackends ----> PolyFun ----> Mathlib
                          `----> ToCslib ----> cslib ----> Mathlib
 ```
 
@@ -761,7 +761,7 @@ machine. That is compatible with this design.
 
 The current integration deliberately requires no CSLib change. Low-level
 cslib/mathlib-only compatibility material lives in PolyFun's `ToCslib`
-library, the reusable quantitative P/poly backend lives in `PolyFunCslib`, and
+library, the reusable quantitative P/poly backend lives in `ComplexityBackends`, and
 VCVio's optional `VCVioCslib` library adds only the crypto-facing facade. This
 establishes a narrow backend-relative nonuniform model; it does not claim a
 strict-uniform adequacy theorem or equivalence with the complexitylib backend.

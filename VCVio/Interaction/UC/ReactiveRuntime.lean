@@ -5,9 +5,9 @@ Authors: Devon Tuma
 -/
 
 module
-public import PolyFun.Interaction.UC.ReactiveNetwork.Behavior
-public import PolyFun.Interaction.UC.ReactiveNetwork.Serial
-public import PolyFun.Interaction.UC.ReactiveNetwork.Transport
+public import PolyFun.Interaction.Execution.ReactiveNetwork.Behavior
+public import PolyFun.Interaction.Execution.ReactiveNetwork.Serial
+public import PolyFun.Interaction.Execution.ReactiveNetwork.Transport
 public import VCVio.OracleComp.Support
 public import VCVio.OracleComp.ReachableWhen
 public import VCVio.OracleComp.SimSemantics.SimulateQ
@@ -36,7 +36,8 @@ public section
 
 namespace Interaction.UC.ReactiveRuntime
 
-open PFunctor OracleComp ReactiveProcess ReactiveNetwork MeasureTheory
+open PFunctor OracleComp Interaction.Execution Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork MeasureTheory
 
 variable {Node result S : Type} {boundary : PortBoundary}
   [DecidableEq Node] (network : Network Node boundary result)

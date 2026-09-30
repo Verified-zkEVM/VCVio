@@ -73,7 +73,7 @@ Open `OracleComp.ProgramLogic` for VCVio notation. Unary triples additionally re
 ## UC Composition Notations
 
 Scoped to `Interaction.UC` (activated by `open Interaction.UC`).
-Defined in `PolyFun/Interaction/UC/Notation.lean`.
+Defined in `PolyFun/Interaction/Open/Notation.lean`.
 
 ### Boundary-level
 

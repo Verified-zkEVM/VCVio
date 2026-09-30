@@ -103,7 +103,6 @@ theorem wp_StateT_bind {σ : Type} (x : StateT σ (OracleComp spec) α)
   simp only [StateT.wp_apply_eq, ← StateT.monad_bind_def, StateT.run_bind, MAlgOrdered.toWPMonad_wp,
     MAlgOrdered.wp_bind]
 
-@[simp]
 theorem wp_StateT_bind' {σ : Type} (x : StateT σ (OracleComp spec) α)
     (f : α → StateT σ (OracleComp spec) β) (post : β → σ → ℝ≥0∞) :
     Std.Internal.Do.wp (x >>= f) post Lean.Order.bot =
@@ -111,7 +110,6 @@ theorem wp_StateT_bind' {σ : Type} (x : StateT σ (OracleComp spec) α)
         Lean.Order.bot s :=
   wp_StateT_bind x f post
 
-@[simp]
 theorem wp_StateT_pure {σ : Type} (x : α) (post : α → σ → ℝ≥0∞) :
     Std.Internal.Do.wp (pure x : StateT σ (OracleComp spec) α) post Lean.Order.bot =
       fun s => post x s := by
@@ -224,7 +222,6 @@ theorem wp_ExceptT_monadLift {ε : Type} (oa : OracleComp spec α) (post : α �
 
 /-! ## `ReaderT (OracleComp spec)` WP normalization -/
 
-@[simp]
 theorem wp_ReaderT_bind {ρ : Type} (x : ReaderT ρ (OracleComp spec) α)
     (f : α → ReaderT ρ (OracleComp spec) β) (post : β → ρ → ℝ≥0∞) :
     Std.Internal.Do.wp (x >>= f) post Lean.Order.bot =
@@ -234,7 +231,6 @@ theorem wp_ReaderT_bind {ρ : Type} (x : ReaderT ρ (OracleComp spec) α)
   simp only [ReaderT.wp_apply_eq, ReaderT.run_bind, MAlgOrdered.toWPMonad_wp,
     MAlgOrdered.wp_bind]
 
-@[simp]
 theorem wp_ReaderT_pure {ρ : Type} (x : α) (post : α → ρ → ℝ≥0∞) :
     Std.Internal.Do.wp (pure x : ReaderT ρ (OracleComp spec) α) post Lean.Order.bot =
       fun r => post x r :=
