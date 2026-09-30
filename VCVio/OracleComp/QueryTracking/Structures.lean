@@ -376,9 +376,9 @@ writer share the same underlying free-monoid carrier.
 We do *not* declare a global `Monoid (QueryLog spec)` instance: doing so
 would conflict with the `[EmptyCollection ω] [Append ω] → Monad (WriterT ω M)`
 instance Mathlib already provides for `WriterT (QueryLog spec) M`, which the
-`Std.Do` bridge `WriterTBridge` and the append-based reading `WriterT.AppendWP` rely on. The
-`QueryImpl.withTrace`/`withLogging` API instead uses the Append-based
-`Monad (WriterT _ _)` directly via `QueryImpl.withTraceAppend`. -/
+append-based reading `WriterT.AppendWP` relies on. The `QueryImpl.withTrace`/`withLogging`
+API instead uses the Append-based `Monad (WriterT _ _)` directly via
+`QueryImpl.withTraceAppend`. -/
 @[reducible] def QueryLog (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
   List ((t : spec.Domain) × spec.Range t)
 

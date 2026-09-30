@@ -35,7 +35,7 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 | `VCVio/Interaction/UC/ReactiveKernel.lean` | Joint local-handler laws preserve complete residual-state measures at every token/FIFO prefix. |
 | `VCVio/Interaction/UC/ReactiveBudget.lean` | Global rank certificates exclude unfinished probabilistic observations after sufficient activations. |
 | `VCVio/Interaction/UC/Standard.lean` | Standard VCVio UC imports and conveniences. |
-| `VCVio/Interaction/UC/StdDoBridge.lean` | Bridges from VCVio program-logic/Std.Do idioms into the UC runtime layer. |
+| `VCVio/Interaction/UC/WP.lean` | Core `Std.WP` triples for the UC runtime: the run equations of `StepOver.sample` / `ProcessOver.runSteps` and the fuel-indexed invariant lemma `runSteps_triple_preserves_invariant`, lattice-generic. |
 
 These files may import PolyFun interaction modules.
 Generic interaction modules should not be reintroduced under `VCVio/Interaction` or `ToMathlib`.

@@ -173,9 +173,13 @@ maps from the upstream isomorphic enum.
   `Interop.Rust.Error` and convert at the boundary to avoid littering
   proofs with three-way coercions.
 - **Hax `Std.Do` `@[spec]` `DiscrTree`**. Both hax and VCVio register
-  `@[spec]` lemmas with `mvcgen`. Quarantine hax tactic imports to
-  `Interop/Hax/**` so the global key set is loaded only when an Interop
-  module asks for it.
+  `@[spec]` lemmas; hax's go to the deprecated `mvcgen` database, VCVio's
+  to core `vcgen`'s. Quarantine hax tactic imports to `Interop/Hax/**` so
+  the global key set is loaded only when an Interop module asks for it.
+  The `Std.Do` bridge modules that `Interop/Hax` and `Interop/Rust` import
+  (`VCVio.ProgramLogic.Unary.StdDoBridge`) no longer exist in the built
+  libraries; restating Interop on core `Std.WP` is part of its own
+  migration, together with the toolchain move of its pinned frontends.
 - **Notation collisions**. The `⦃ ⦄ ⦃ ⦄` Hoare-triple notation is
   shared. Practice has been fine because both notations resolve through
   `Std.Do.Triple`, but be alert to `local notation` overrides in hax
@@ -185,7 +189,8 @@ maps from the upstream isomorphic enum.
   may not need to if the lift comes after partial-fixpoint resolution
   on the hax side.
 - **Aeneas tactic infrastructure** (`@[step]`, `step!`) cannot be reused
-  on the VCVio side. Drive proofs with VCVio's `mvcgen` after lifting.
+  on the VCVio side. Drive proofs with core `vcgen` (`prvcgen` for
+  probability goals) after lifting.
 - **Verification Facade / Theatre concerns**. Both Charon and the hax
   engine are part of the TCB once a backend is enabled. Document any
   trusted assumption in `Interop/{Hax,Aeneas}/README.md`. See

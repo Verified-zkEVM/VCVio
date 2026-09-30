@@ -293,7 +293,7 @@ Unary carrier interpretations live in `VCVio/ProgramLogic/Unary/WP/` and consume
 live in `VCVio/ProgramLogic/Relational/WP/` and use VCVio's coupling interface. Carrier
 instances are scoped, so importing either layer does not choose a global semantics.
 
-The `Std.Do` handler bridge and the lattice-generic core WP API coexist.
+Every program-logic layer is stated on the lattice-generic core `Std.WP` API.
 See [program-logic.md](program-logic.md#core-wp-and-the-symbolic-rewriter-boundary) for
 selection, tactic boundaries, and the v4.35 tracking links.
 
