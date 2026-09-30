@@ -18,6 +18,8 @@ public import VCVio.OracleComp.ProbCompLift
 public import VCVio.EvalDist.Defs.Semantics.Core
 public import VCVio.ProgramLogic.NotationCore
 public import VCVio.ProgramLogic.Tactics.Unary
+import VCVio.CryptoFoundations.SigmaProtocol.ChallengeRestriction
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Fiat-Shamir transform for Σ-protocols
@@ -408,30 +410,11 @@ theorem perfectlyCorrect [SampleableType Chal]
       (runtime M) := by
   intro msg
   rw [perfectlyCorrect_evalDist_eq σ hr M msg, ← prEvent_eq_evalDist_singleton]
-  pvcstep
-  pvcstep using (fun x => propInd (x ∈ support hr.gen))
-  · simpa [propInd] using
-      OracleComp.ProgramLogic.triple_support (oa := hr.gen)
-  · intro x
-    rcases x with ⟨pk, sk⟩
-    by_cases hx : (pk, sk) ∈ support hr.gen
-    · have hrel : rel pk sk = true := hr.gen_sound pk sk hx
-      simpa [← propInd_eq_ite, hx] using
-        (OracleComp.ProgramLogic.triple_prEvent_eq_one
-          (oa := do
-            let (c, e) ← σ.commit pk sk
-            let r ← $ᵗ Chal
-            let s ← σ.respond pk sk e r
-            pure (σ.verify pk c r s))
-          (p := (· = true)) (h := by rw [prEvent_eq_evalDist_singleton]; exact hc pk sk hrel))
-    · simpa [← propInd_eq_ite, hx] using
-        (OracleComp.ProgramLogic.triple_zero
-          (oa := do
-            let (c, e) ← σ.commit pk sk
-            let r ← $ᵗ Chal
-            let s ← σ.respond pk sk e r
-            pure (σ.verify pk c r s))
-          (post := fun y => if y = true then 1 else 0))
+  prvcgen [OracleComp.Qualitative.Spec.ofSupport hr.gen,
+    OracleComp.Qualitative.Spec.ofSupport (σ.commit _ _),
+    OracleComp.Qualitative.Spec.ofSupport (σ.respond _ _ _ _)]
+  rename_i keys hkeys cm hcm hs
+  exact hc.verify _ _ (hr.gen_sound _ _ hkeys) _ _ hcm _ _ hs
 
 end correctness
 

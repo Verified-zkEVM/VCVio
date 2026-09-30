@@ -10,6 +10,7 @@ public import VCVio.EvalDist.Monad.Branch
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.ProgramLogic.Tactics.Unary
 public import VCVio.ProgramLogic.Tactics.Relational
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Schnorr Σ-protocol
@@ -104,11 +105,9 @@ theorem sigma_complete (g : G) :
     (sigma F G g).PerfectlyComplete := by
   intro pk sk h
   rw [← prEvent_eq_evalDist_singleton]
-  have h_eq : sk • g = pk := of_decide_eq_true h
-  simp only [sigma, monad_norm]
-  have hverify : ∀ (r c : F), (r + c * sk) • g = r • g + c • pk := by
-    intro r c; rw [add_smul, mul_smul, h_eq]
-  simp [hverify]
+  dsimp only [sigma]
+  prvcgen
+  simp_all [add_smul, mul_smul]
 
 /-- Special soundness: from two accepting transcripts `(R, c₁, z₁)` and `(R, c₂, z₂)` with
 `c₁ ≠ c₂`, the extracted witness `(z₁ - z₂) * (c₁ - c₂)⁻¹` satisfies the relation. -/

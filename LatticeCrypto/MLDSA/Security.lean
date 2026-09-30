@@ -9,6 +9,7 @@ public import LatticeCrypto.MLDSA.Scheme
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # ML-DSA Security
@@ -149,21 +150,14 @@ from the key generation identity, NTT linearity, and `Primitives.Laws`, but is i
 here to separate the probabilistic argument from the algebraic one. -/
 theorem idsWithAbort_complete' :
     (identificationScheme p prims).Complete := by
-  classical
   intro pk sk hvalid
-  refine (OracleComp.prEvent_eq_one_iff _ _).2 fun t? ht? => ?_
-  match t? with
+  prvcgen [IdenSchemeWithAbort.honestExecution,
+    OracleComp.Qualitative.Spec.ofSupport ((identificationScheme p prims).commit pk sk),
+    OracleComp.Qualitative.Spec.ofSupport ((identificationScheme p prims).respond pk sk _ _)]
+  rename_i x hx hoz
+  cases oz with
   | none => rfl
-  | some (w1, cTilde, zh) =>
-    simp only [IdenSchemeWithAbort.honestExecution, support_bind, Set.mem_iUnion,
-      support_pure, Set.mem_singleton_iff] at ht?
-    obtain ⟨⟨w1', st⟩, hw1st, cTilde', hcTilde, oz, hoz, heq⟩ := ht?
-    cases oz with
-    | none => simp only [Option.map, reduceCtorEq] at heq
-    | some zh' =>
-      simp only [Option.map, Option.some.injEq, Prod.mk.injEq] at heq
-      obtain ⟨rfl, rfl, rfl⟩ := heq
-      exact hRespondVerify pk sk hvalid w1 st cTilde hw1st _ hoz
+  | some zh => exact hRespondVerify pk sk hvalid x.1 x.2 c hx zh hoz
 
 end conditional
 
@@ -171,22 +165,18 @@ end conditional
 the verifier always accepts. This follows from the correctness of the rounding operations
 and the norm bounds satisfied by honest responses.
 
-The proof requires deriving the `hRespondVerify` algebraic fact from `Primitives.Laws`;
-see `idsWithAbort_complete'` for the conditional version. -/
+On each accepting branch the proof derives, from `Primitives.Laws`, the `hRespondVerify`
+algebraic fact that the conditional version `idsWithAbort_complete'` assumes. -/
 theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
     (identificationScheme p prims).Complete := by
-  classical
-  refine idsWithAbort_complete' p prims ?_
-  intro pk sk hvalid w1 st cTilde hw1st zh hzh
+  intro pk sk hvalid
   obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp hvalid
-  simp only [identificationScheme, support_bind, support_pure, Set.mem_iUnion,
-    Set.mem_singleton_iff, Prod.mk.injEq] at hw1st
-  simp only [identificationScheme] at hzh
-  obtain ⟨y, -, hw1, hst⟩ := hw1st
-  subst hst hw1
-  split_ifs at hzh with hc1 hc2
-  · rw [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hzh
-    subst hzh
+  dsimp only [IdenSchemeWithAbort.honestExecution, identificationScheme]
+  prvcgen
+  case vc2 | vc3 => rfl
+  case vc1 =>
+    rename' c => cTilde
+    rename_i hc1 hc2
     dsimp only at hc1 hc2 ⊢
     obtain ⟨hz_norm, hr0_norm⟩ := hc1
     obtain ⟨hct0_norm, hweight⟩ := hc2
@@ -231,11 +221,10 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
     -- The key-generation identity for `wApprox`.
     have hwa := keyGenFromSeed_wApprox_eq p prims h_laws seed hkeygen c y
     -- Discharge `verify`.
-    simp only [identificationScheme, Bool.and_eq_true, decide_eq_true_eq]
+    simp only [Option.map, Bool.and_eq_true, decide_eq_true_eq]
     refine ⟨⟨hz_norm, ?_⟩, hweight⟩
     rw [hwa, useHintVec_makeHintVec p prims h_laws (-(c • sk.t0))
         (aHat * y - c • sk.s2 + c • sk.t0) hcond_t0, harith1, hhide]
-  all_goals (rw [support_pure, Set.mem_singleton_iff] at hzh; exact absurd hzh (by simp))
 
 /-! ### Honest-Verifier Zero-Knowledge
 

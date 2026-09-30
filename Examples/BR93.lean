@@ -18,6 +18,7 @@ public import VCVio.EvalDist.Monad.Measure
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
 import VCVio.OracleComp.EvalDist.MeasureSpec
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Bellare-Rogaway 1993 Encryption
@@ -73,29 +74,11 @@ variable {tdp : TrapdoorPermutation PK SK Rand} {hash : Rand → M}
 theorem correct [SampleableType Rand] [DecidableEq M] [AddCommGroup M] (hcorrect : tdp.Correct) :
     (br93AsymmEnc (M := M) tdp hash).PerfectlyCorrect ProbCompRuntime.probComp := by
   intro msg
-  let mx : ProbComp Bool := do
-    let x ← tdp.keygen
-    let c ← (do let r ← $ᵗ Rand; pure (tdp.forward x.1 r, hash r + msg))
-    let msg' ← pure (some (c.2 - hash (tdp.inverse x.2 c.1)))
-    pure (decide (msg' = some msg))
-  rw [ProbCompRuntime.probComp_evalDist]
-  have huniq : ∀ y ∈ support mx, y = true := by
-    intro y hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨⟨pk, sk⟩, hpksk, hy⟩ := hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨c, hc, hy⟩ := hy
-    rw [mem_support_bind_iff] at hc
-    obtain ⟨r, _, hc⟩ := hc
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨msg', hmsg', hy⟩ := hy
-    simp only [support_pure, Set.mem_singleton_iff] at hc hmsg' hy
-    obtain rfl := hc
-    obtain rfl := hmsg'
-    obtain rfl := hy
-    simp [hcorrect pk sk hpksk r]
-  rw [← prEvent_eq_evalDist_singleton]
-  exact OracleComp.prEvent_eq_one_of_forall_mem_support mx _ huniq
+  rw [ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_singleton]
+  prvcgen [AsymmEncAlg.correctnessExperiment, br93AsymmEnc_keygen, br93AsymmEnc_encrypt,
+    br93AsymmEnc_decrypt, OracleComp.Qualitative.Spec.ofSupport tdp.keygen]
+  rename_i keys hkeys r
+  simp [hcorrect keys.1 keys.2 hkeys r]
 
 /-! ## One-time IND-CPA in the random-oracle model -/
 

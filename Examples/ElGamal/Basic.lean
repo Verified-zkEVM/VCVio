@@ -10,6 +10,7 @@ public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 import ToMathlib.Probability.UniformOn
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # ElGamal Encryption: IND-CPA via the generic one-time lift
@@ -90,16 +91,11 @@ abbrev oneTimeDDHReductionBody {m : Type → Type} [Monad m] {State : Type}
 /-- ElGamal decryption perfectly inverts encryption: `Dec(sk, Enc(pk, msg)) = msg`. -/
 theorem correct [DecidableEq G] :
     (elGamalAsymmEnc F G gen).PerfectlyCorrect ProbCompRuntime.probComp := by
-  have hcancel : ∀ (msg : G) (sk r : F),
-      msg + r • (sk • gen) - sk • (r • gen) = msg := by
-    intro msg sk r
-    have : r • (sk • gen) = sk • (r • gen) := by
-      rw [← mul_smul, ← mul_smul, mul_comm]
-    rw [this, add_sub_cancel_right]
-  simp only [AsymmEncAlg.PerfectlyCorrect]
   intro msg
-  rw [ProbCompRuntime.probComp_evalDist]
-  simp [AsymmEncAlg.correctnessExperiment, elGamalAsymmEnc, hcancel]
+  rw [ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_singleton]
+  prvcgen [AsymmEncAlg.correctnessExperiment, elGamalAsymmEnc_keygen, elGamalAsymmEnc_encrypt,
+    elGamalAsymmEnc_decrypt]
+  simp [smul_smul, mul_comm]
 
 section IND_CPA
 
