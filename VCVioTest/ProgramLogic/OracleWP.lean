@@ -20,7 +20,7 @@ public section
 
 open MeasureTheory OracleComp OracleSpec
 open OracleComp.ProgramLogic
-open scoped ENNReal OracleComp.Quantitative
+open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv

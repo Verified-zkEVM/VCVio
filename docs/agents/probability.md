@@ -295,9 +295,9 @@ with the uniform oracle interpretation.
 `wp mx g ⊥` under the measure interpretation `MeasureProgramLogic.measureWP m`, which is built from
 the ordered expectation algebra `MeasureProgramLogic.toMAlgOrdered m` and is exact (PolyFun's
 `ExactWPMonad`). The interpretation is supplied explicitly rather than found by instance search.
-`open scoped MeasureProgramLogic.Quantitative`, or `OracleComp.Quantitative` for oracle
-computations, selects it as the core `WPMonad` instance, so `wp mx g ⊥` and core triples read
-expectations.
+For oracle computations it is the core `WPMonad` instance, and
+`open scoped MeasureProgramLogic.Quantitative` selects it for any other lawful monad, so
+`wp mx g ⊥` and core triples read expectations.
 
 The laws in `MeasureProgramLogic` need no measurable structure on the outputs:
 - `wp_mono` (`gcongr`), `wp_congr`, `wp_zero`, `wp_add`;

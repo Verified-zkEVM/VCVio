@@ -22,7 +22,7 @@ registered `@[vcspec]` hints, and `liftComp`.
 
 @[expose] public section
 
-open scoped Std.Internal.Do OracleComp.Quantitative WriterT.MonoidWP
+open scoped Std.Internal.Do WriterT.MonoidWP
 
 open ENNReal OracleSpec OracleComp
 open Lean.Order

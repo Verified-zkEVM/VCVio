@@ -26,7 +26,7 @@ The companion `GeneralizedRelationsExperiments` module isolates proposed registr
 public section
 
 open OracleComp OracleComp.ProgramLogic OracleSpec MeasureTheory
-open scoped ENNReal Std.Internal.Do OracleComp.Quantitative
+open scoped ENNReal Std.Internal.Do
 
 run_cmd do
   let env ← Lean.getEnv

@@ -723,8 +723,9 @@ stage degrade gracefully.
 Lean v4.34 provides lattice-generic `Std.Internal.Do.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
-- `open scoped OracleComp.Quantitative` selects expectation in `ℝ≥0∞` for `OracleComp spec`
-  under `[OracleSpec.IsMeasureSpec spec]`.
+- Expectation in `ℝ≥0∞` is the core instance of `OracleComp spec` under
+  `[OracleSpec.IsMeasureSpec spec]` (`OracleComp.Quantitative.instWP`), so `wp oa post ⊥`,
+  core triples and `vcgen` read expectations without opening a scope.
 - `open scoped MeasureProgramLogic.Quantitative` selects measure-backed expectation
   for any lawful monad with `LawfulEvalDistSemantics`. It also selects this carrier over
   core `Prop` interpretations for monads such as `Option`. Its module is
@@ -732,10 +733,16 @@ instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly
 - `open scoped OracleComp.Qualitative` selects universal structural reachability.
 - `open scoped OracleComp.Probabilistic` selects the restricted algebra on `Set.Iic 1`.
 
-Use `open scoped Std.Internal.Do` for core triple notation. Carrier choice is local;
-importing the library does not install a global unary WP interpretation. Quantitative
-expectation does not provide a general structural reachability certificate. The
-probability-one coherence theorems state their additional uniformity assumptions.
+Core's assertion carriers are output parameters, so instance search reads a program's
+interpretation off its type alone and one interpretation is live per program type. The scoped
+readings take precedence over the quantitative instance where they are opened. Support facts do
+not need a second interpretation: the quantitative one consumes them through `MonadAttach`
+(`wp_mono_of_support`, `wp_congr_of_support`), as core's own specifications pair `MonadAttach`
+with any `WPMonad`. Quantitative expectation does not provide a general structural reachability
+certificate. The probability-one coherence theorems state their additional uniformity
+assumptions.
+
+Use `open scoped Std.Internal.Do` for core triple notation.
 
 The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares core's
 assertion lattices. Its three carriers in `Relational/WP/` also use explicit scopes

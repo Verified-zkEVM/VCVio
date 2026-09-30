@@ -19,13 +19,14 @@ public import PolyFun.Control.Do.Spec
 /-!
 # Quantitative weakest preconditions
 
-The expectation algebra on `OracleComp spec` gives a core `WPMonad` interpretation
-with `ℝ≥0∞` assertions. Enable it with `open scoped OracleComp.Quantitative`.
-The algebra-to-WP bridge and lattice instances come from PolyFun. The transformer
+The expectation algebra on `OracleComp spec` is its core `WPMonad` interpretation, with
+`ℝ≥0∞` assertions: `wp oa post ⊥`, core triples and `vcgen` read expectations without opening a
+scope. The algebra-to-WP bridge and lattice instances come from PolyFun. The transformer
 lemmas describe expectation after running state, reader, option, exception, and writer layers.
 
-This interpretation is quantitative. Structural reachability and its qualitative
-interpretation are independent of the choice of probability semantics.
+Core selects one interpretation per program type, since its assertion carriers are output
+parameters. The structural reading (`OracleComp.Qualitative`) and the probability-bounded one
+(`OracleComp.Probabilistic`) take precedence inside their scopes.
 -/
 
 @[expose] public section
@@ -64,9 +65,8 @@ variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
 /-- Core weakest preconditions under the configured oracle answer measures: the expectation
-interpretation `MeasureProgramLogic.measureWP`, so `wp oa post ⊥` is `wp⟦oa⟧ post`.
-Enable with `open scoped OracleComp.Quantitative`. -/
-noncomputable scoped instance instWP :
+interpretation `MeasureProgramLogic.measureWP`, so `wp oa post ⊥` is `wp⟦oa⟧ post`. -/
+noncomputable instance instWP :
     Std.Internal.Do.WPMonad (OracleComp spec) ℝ≥0∞ Std.Internal.Do.EPost.Nil :=
   MeasureProgramLogic.measureWP (OracleComp spec)
 

@@ -15,7 +15,7 @@ public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
 The qualitative core `WPMonad` interpretation quantifies over every structurally
 reachable output of `OracleComp spec`, independently of a probability interpretation.
-Enable it with `open scoped OracleComp.Qualitative`.
+`open scoped OracleComp.Qualitative` selects it over the quantitative instance.
 
 `wp_iff_forall_support` states it against the structural support. Probability-one coherence
 additionally needs the uniform, finite-support assumptions stated in `Unary/WP/Coherence.lean`.
@@ -32,9 +32,9 @@ namespace OracleComp.Qualitative
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α β : Type}
 
-/-- Core weakest preconditions for all structurally reachable outputs.
-Enable with `open scoped OracleComp.Qualitative`. -/
-noncomputable scoped instance instWP :
+/-- Core weakest preconditions for all structurally reachable outputs. Opening the scope selects
+it over the quantitative instance. -/
+noncomputable scoped instance (priority := 1100) instWP :
     Std.Internal.Do.WPMonad (OracleComp spec) Prop Std.Internal.Do.EPost.Nil :=
   MonadAttach.toWPMonadDemonic
 

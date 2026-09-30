@@ -18,7 +18,7 @@ postcondition and structural support, also under a finite sum. Measurable assert
 
 public section
 
-open scoped OracleComp.Quantitative Std.Internal.Do
+open scoped Std.Internal.Do
 
 open ENNReal OracleSpec OracleComp MeasureTheory
 open OracleComp.ProgramLogic

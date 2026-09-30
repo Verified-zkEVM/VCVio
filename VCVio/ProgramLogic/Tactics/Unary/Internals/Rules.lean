@@ -18,7 +18,7 @@ public import PolyFun.Control.Do.Spec
 public meta section
 
 open Lean Elab Tactic Meta
-open scoped OracleComp.Quantitative WriterT.MonoidWP
+open scoped WriterT.MonoidWP
 
 namespace OracleComp.ProgramLogic
 namespace TacticInternals

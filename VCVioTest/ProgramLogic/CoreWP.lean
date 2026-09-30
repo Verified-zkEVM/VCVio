@@ -13,9 +13,10 @@ public import ToMathlib.Control.WriterT
 /-!
 # Core WP carrier selection and transformer consumers
 
-Ordinary imports expose all three interpretations without selecting one globally.
-State and append-based logs retain their input and output information. The quantitative
-example uses core's tactic directly, without VCVio's probability-tactic frontend.
+Oracle computations read expectations by default; the structural and probability-bounded
+interpretations take precedence inside their scopes. State and append-based logs retain their
+input and output information. The quantitative example uses core's tactic directly, without
+VCVio's probability-tactic frontend.
 -/
 
 public section
@@ -25,13 +26,17 @@ open scoped ENNReal
 
 namespace VCVioTest.ProgramLogic.CoreWP
 
+noncomputable example : WPMonad ProbComp ℝ≥0∞ EPost.Nil := inferInstance
+
 example : True := by
   fail_if_success
-    let _ := (inferInstance : WPMonad ProbComp ℝ≥0∞ EPost.Nil)
+    let _ := (inferInstance : WPMonad ProbComp Prop EPost.Nil)
   trivial
 
 section Qualitative
 open scoped OracleComp.Qualitative
+
+noncomputable example : WPMonad ProbComp Prop EPost.Nil := inferInstance
 
 example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
     (post : α → Prop) :
@@ -41,7 +46,6 @@ example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
 end Qualitative
 
 section Quantitative
-open scoped OracleComp.Quantitative
 
 /--
 warning: The `vcgen` tactic is an experimental drop-in replacement for `mvcgen` that will eventually replace it. Avoid using it in production projects.

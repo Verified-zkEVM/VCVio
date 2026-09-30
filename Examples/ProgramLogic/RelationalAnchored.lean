@@ -30,7 +30,6 @@ universe u
 namespace OracleComp.ProgramLogic.AnchoredExamples
 
 open ENNReal MAlgRelOrdered MAlgRelOrdered.Anchored Std.Internal.Do
-open scoped OracleComp.Quantitative
 
 variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
 variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]

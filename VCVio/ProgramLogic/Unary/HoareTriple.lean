@@ -22,16 +22,15 @@ expose the expectation interpretation of core's lattice-generic weakest-precondi
 lossless, and add the oracle-specific ones: queries, uniform sampling, replication and
 traversals.
 
-Core's `⦃ pre ⦄ program ⦃ post ⦄` notation is available through
-`open scoped Std.Internal.Do OracleComp.Quantitative`. VCVio's quantitative facade
-keeps the carrier explicit in its definitions.
+The expectation interpretation is the core instance of `OracleComp spec`
+(`OracleComp.Quantitative.instWP`), so core's `⦃ pre ⦄ program ⦃ post ⦄` notation, available
+through `open scoped Std.Internal.Do`, states these triples.
 -/
 
 @[expose] public section
 
 open ENNReal MeasureTheory
 open Std.Internal.Do
-open scoped OracleComp.Quantitative
 
 universe u
 

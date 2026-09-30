@@ -58,7 +58,7 @@ for the exact finite evaluator boundary and decidability requirements.
 ## Program Logic Notations
 
 Open `OracleComp.ProgramLogic` for VCVio notation. Unary triples additionally require
-`open scoped Std.Internal.Do` and an interpretation, such as `OracleComp.Quantitative`.
+`open scoped Std.Internal.Do`; oracle computations read expectations by default.
 
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
