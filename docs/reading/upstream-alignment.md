@@ -143,7 +143,8 @@ relational coupling interface belongs to VCVio and uses core assertion lattices;
 relational WP, coupling API, or relational `vcgen`. Core's `WP` accepts non-monadic program types,
 so a product-program interpretation can let core `vcgen` drive lockstep relational goals, while
 alignment and coupling choice stay with `rvcgen`. The handler specifications are core triples
-driven by core `vcgen`; the relational `FromUnary` bridge still consumes `Std.Do.Triple`.
+driven by core `vcgen`, and the relational `FromUnary` bridge takes core triples under the
+structural reading.
 Loom2 is no longer a dependency. The generic native expectation algebra lives in
 `VCVio.ProgramLogic.Unary.WP.Measure`; its scoped core interpretation needs only
 lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra

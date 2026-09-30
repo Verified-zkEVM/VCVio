@@ -766,7 +766,8 @@ assertion lattices. Its three carriers in `Relational/WP/` also use explicit sco
 logic and none is planned; its `WP` class accepts non-monadic program types, so a
 product-program interpretation can let core `vcgen` walk two programs in lockstep, but choosing
 which side to step and which coupling to use remains `rvcgen`'s job.
-`Relational/FromUnary.lean` still takes its unary premises as `Std.Do.Triple`s.
+`Relational/FromUnary.lean` takes its unary premises as core triples under the structural
+reading.
 
 VCVio's probability/coupling tactics continue to consume `@[vcspec]` and `@[wpStep]`.
 Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
