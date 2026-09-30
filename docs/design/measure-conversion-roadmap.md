@@ -6,7 +6,7 @@ samplers retain their algorithms and carry measure certificates. Operational rea
 separate structural notion.
 
 Current upstream already supplies the native sampling, unary/relational WP, measure-coupling,
-stateful security, and `Std.Internal.Do` foundations. Continue from those owners rather than
+stateful security, and `Std.WP` foundations. Continue from those owners rather than
 introducing competing assertion carriers, coupling structures, or handler representations.
 
 ## First integrated conversion
@@ -151,7 +151,7 @@ The public native facade exports the composition API and checks its retired-impo
 
 Quantitative Hoare triples, simulation and oracle-signature lifting now interpret configured
 answer measures directly. The expectation carrier and transformer laws use core
-`Std.Internal.Do`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
+`Std.WP`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
 The qualitative oracle WP remains structural and requires no probability interpretation.
 
 Chosen-space assertion integrals require measurable postconditions. Mapped assertion integrals,

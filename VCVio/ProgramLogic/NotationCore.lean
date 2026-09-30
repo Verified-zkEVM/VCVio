@@ -28,7 +28,7 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 
 ### Unary (core WP)
 
-Unary triples additionally require `open scoped Std.Internal.Do`.
+Unary triples additionally require `open scoped Std.WP`.
 - `wp⟦c⟧ post` — expectation of `post` over the outputs of `c` (global, from
   `VCVio.EvalDist.Expectation`)
 - `⦃P⦄ c ⦃Q⦄` — quantitative Hoare triple (`P ≤ wp c Q`)

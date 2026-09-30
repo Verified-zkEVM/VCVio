@@ -34,8 +34,8 @@ rules for queries need uniform response measures.
 For `wp⟦oa⟧ f ≤ wp⟦oa⟧ g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
 pointwise obligation `f x ≤ g x` (`wp_mono_of_support`). The unrestricted
 `MeasureProgramLogic.wp_mono` remains available as a lower-priority fallback. Expectations are
-core's `Std.Internal.Do.wp` under the measure interpretation, so the same rules apply to raw
-`Std.Internal.Do.wp` expressions of that interpretation. An event after a common draw is an
+core's `Std.WP.wp` under the measure interpretation, so the same rules apply to raw
+`Std.WP.wp` expressions of that interpretation. An event after a common draw is an
 expectation over that draw, so `gcongr` descends into `Pr{let x ← mx; …}[…]` as well.
 `wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
 `wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
@@ -415,8 +415,9 @@ relTriple_simulateQ_run :
 
 ### Handler `@[spec]` catalog (`Unary/HandlerSpecs.lean`)
 
-Per-call `Std.Do.Triple` specs, all tagged `@[spec]` so `mvcgen` can
-compose them automatically through multi-query handler programs:
+Per-call core triples `⦃ pre ⦄ handler t ⦃ post ⦄` under the structural reading
+(`open scoped OracleComp.Qualitative`), tagged `@[spec]` so core `vcgen` composes them through
+multi-query handler programs:
 
 | Handler | Spec | Postcondition |
 |---------|------|---------------|
@@ -426,11 +427,21 @@ compose them automatically through multi-query handler programs:
 | `countingOracle` | `countingOracle_triple` | `toAdd qc' = qc₀ + QueryCount.single t` (additive writer via the monoid bridge) |
 | `costOracle` | `costOracle_triple` | `s' = s₀ * costFn t` for arbitrary `[Monoid ω]` |
 
-The `WriterT`-based handlers come in both `Append`-parameterized
-(`loggingOracle`) and `Monoid`-parameterized (`countingOracle`,
-`costOracle`) flavors; the corresponding bridge lemmas
-`triple_writerT_iff_forall_support` and
-`triple_writerT_iff_forall_support_monoid` live in `Unary/StdDoBridge.lean`.
+The `WriterT`-based handlers read their log as accumulated state: `WriterT.AppendWP`
+(`ToMathlib/Control/WriterT/WP.lean`) for the list log of `loggingOracle`, and PolyFun's
+`WriterT.MonoidWP` for the monoid logs of `countingOracle` and `costOracle`. The support readings
+`triple_stateT_iff_forall_support`, `triple_writerT_iff_forall_support` and
+`triple_writerT_iff_forall_support_monoid` are in `Unary/HandlerSpecs.lean`.
+
+`vcgen` on handler programs:
+
+- Core registers no rule for `StateT.mk`; `triple_stateT_mk` supplies it (`seededOracle`).
+- A query reaches `vcgen` as `MonadLift.monadLift (MonadLiftT.monadLift q)` once `liftM q`
+  unfolds, and `HasQuery.query t` is not unfolded; `Spec.monadLift_query` and `Spec.query` in
+  `Unary/WP/Qualitative.lean` are stated in those forms.
+- A ghost argument that only a non-equational precondition determines is passed explicitly:
+  `vcgen [cachingOracle_triple _ cache₀]`. Equational ghosts (`seed = seed₀`) unify.
+- `vcgen … with` takes a single `grind`-mode step.
 
 ### Whole-program invariant preservation (`SimSemantics/PreservesInv.lean`)
 
@@ -445,7 +456,8 @@ state-transformer and writer-transformer models:
 | `OracleComp.simulateQ_run_preservesInv` | — | lift per-query `PreservesInv` to whole simulation |
 | `OracleComp.simulateQ_run_writerPreservesInv` | — | writer analogue |
 
-`Std.Do.Triple`-fronted whole-program lifts (`Unary/HandlerSpecs.lean`):
+Core-triple whole-program lifts (`Unary/HandlerSpecs.lean`), by induction on the program with
+`Std.WP.Triple.pure` and `Std.WP.Triple.bind`:
 
 | Theorem | Shape |
 |---------|-------|
@@ -468,15 +480,14 @@ Worked examples in `HandlerSpecs.lean`:
 
 ### Unary-to-relational handler lift (`Relational/HandlerFromUnary.lean`)
 
-If each handler has a `Std.Do.Triple` spec (produced by `mvcgen` or a
-`@[spec]` lemma), you do not have to assemble per-call `RelTriple`s by
-hand. The lift converts unary handler specs plus a synchronization
+If each handler has a core triple spec (proved by `vcgen` or a `@[spec]` lemma), you do not have
+to assemble per-call `RelTriple`s by hand. The lift converts unary handler specs plus a synchronization
 condition into a whole-program `RelTriple`:
 
 ```lean
 relTriple_simulateQ_run_of_triples :
-  (∀ t s, Triple (impl₁ t) ⌜· = s⌝ (⇓a s' => ⌜Q₁ t s a s'⌝)) →
-  (∀ t s, Triple (impl₂ t) ⌜· = s⌝ (⇓a s' => ⌜Q₂ t s a s'⌝)) →
+  (∀ t s, ⦃ fun s' => s' = s ⦄ impl₁ t ⦃ fun a s' => Q₁ t s a s' ⦄) →
+  (∀ t s, ⦃ fun s' => s' = s ⦄ impl₂ t ⦃ fun a s' => Q₂ t s a s' ⦄) →
   (hsync : Q₁ ∧ Q₂ ⇒ output equality + R_state preservation) →
   R_state s₁ s₂ →
   RelTriple ((simulateQ impl₁ oa).run s₁) ((simulateQ impl₂ oa).run s₂)
@@ -489,7 +500,7 @@ Projection and bridge variants:
 |---------|----------|
 | `relTriple_simulateQ_run_of_triples` | Full `(value, state)` postcondition (`StateT`) |
 | `relTriple_simulateQ_run'_of_triples` | Only `EqRel α` on projected outputs (`StateT`) |
-| `relTriple_simulateQ_run_of_impl_eq_triple` | Two handlers agreeing on `Inv`; preservation spec is a `Std.Do.Triple`; conclude `EqRel (α × σ)` |
+| `relTriple_simulateQ_run_of_impl_eq_triple` | Two handlers agreeing on `Inv`; preservation spec is a core triple; conclude `EqRel (α × σ)` |
 | `relTriple_simulateQ_run_writerT` | Whole-program `WriterT` coupling from per-query `RelTriple`s plus a monoid-congruence hypothesis on the accumulated writers |
 | `relTriple_simulateQ_run_writerT'` | Output-projection of `relTriple_simulateQ_run_writerT` (drops the writer component, yielding `EqRel α` on outputs) |
 | `relTriple_simulateQ_run_writerT_of_impl_eq` | `WriterT` analogue of `relTriple_simulateQ_run_of_impl_eq_preservesInv`: two handlers with identical `.run` outputs yield `EqRel (α × ω)` on whole simulations |
@@ -498,11 +509,11 @@ Projection and bridge variants:
 | `relTriple_run_of_triple` | Per-call product coupling for `StateT` |
 | `relTriple_run_writerT_of_triple` | Per-call product coupling for `WriterT` (`Append` variant, e.g. `loggingOracle`) |
 | `relTriple_run_writerT_of_triple_monoid` | Per-call product coupling for `WriterT` (`Monoid` variant, e.g. `countingOracle`, `costOracle`) |
-| `support_preservesInv_of_triple` | Convert `Std.Do.Triple` preservation into `support`-based preservation consumed by `SimulateQ.lean` (`StateT`) |
-| `writerPreservesInv_of_triple` | `WriterT` analogue: produces `QueryImpl.WriterPreservesInv impl Inv` from a per-query `Std.Do.Triple` |
+| `support_preservesInv_of_triple` | Convert core-triple preservation into `support`-based preservation consumed by `SimulateQ.lean` (`StateT`) |
+| `writerPreservesInv_of_triple` | `WriterT` analogue: produces `QueryImpl.WriterPreservesInv impl Inv` from a per-query core triple |
 
 Whenever the handler's invariant-preservation proof already lives as a
-`Std.Do.Triple`, prefer `relTriple_simulateQ_run_of_impl_eq_triple` over
+core triple, prefer `relTriple_simulateQ_run_of_impl_eq_triple` over
 the raw `relTriple_simulateQ_run_of_impl_eq_preservesInv` — the bridge
 saves you from re-expressing the preservation as a `support`-based
 quantifier.
@@ -663,8 +674,8 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
    `getRegisteredWpStepEntries` for hits on the `oa`-keyed `Sym.DiscrTree`,
    and tries each via `rw` then `simp only` until one lands.
 3. **Handler `@[spec]` rules**: unary handlers (`loggingOracle`,
-   `cachingOracle`, …) use core Lean's `Std.Do.Triple` + `@[spec]` catalogue
-   directly; those are indexed by Lean itself and consumed by `mvcgen`.
+   `cachingOracle`, …) use core `Std.WP` triples and the `@[spec]` catalogue
+   directly; those are indexed by Lean itself and consumed by core `vcgen`.
 
 ### Extending the registries
 
@@ -720,15 +731,16 @@ stage degrade gracefully.
 
 ### Core WP and the symbolic rewriter boundary
 
-Lean v4.34 provides lattice-generic `Std.Internal.Do.WPMonad`, `Triple`, transformer
+Lean v4.35 provides lattice-generic `Std.WP.WPMonad`, `Triple`, transformer
 instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly:
 
 - Expectation in `ℝ≥0∞` is the core instance of `OracleComp spec` under
   `[OracleSpec.IsMeasureSpec spec]` (`OracleComp.Quantitative.instWP`), so `wp oa post ⊥`,
   core triples and `vcgen` read expectations without opening a scope.
 - `open scoped MeasureProgramLogic.Quantitative` selects measure-backed expectation
-  for any lawful monad with `LawfulEvalDistSemantics`. It also selects this carrier over
-  core `Prop` interpretations for monads such as `Option`. Its module is
+  for any lawful monad with `LawfulEvalDistSemantics`. Besides its `WPMonad`, it registers the
+  interpretation as a direct `WP` instance (`wpInst`), which outranks core's own direct `Prop`
+  instances for monads such as `Option` and `Id` while the scope is open (gotcha 33). Its module is
   `VCVio.ProgramLogic.Unary.WP.Measure`.
 - `open scoped OracleComp.Qualitative` selects universal structural reachability.
 - `open scoped OracleComp.Probabilistic` selects the restricted algebra on `Set.Iic 1`.
@@ -746,11 +758,15 @@ VCVio does not define one yet. Quantitative expectation does not provide a gener
 reachability certificate. The probability-one coherence theorems state their additional uniformity
 assumptions.
 
-Use `open scoped Std.Internal.Do` for core triple notation.
+Use `open scoped Std.WP` for core triple notation.
 
 The coupling interface `VCVio.ProgramLogic.RelWP` is local to VCVio and shares core's
 assertion lattices. Its three carriers in `Relational/WP/` also use explicit scopes
-(`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`).
+(`OracleComp.Rel.Quantitative`, `.Qualitative`, `.Probabilistic`). Core has no relational program
+logic and none is planned; its `WP` class accepts non-monadic program types, so a
+product-program interpretation can let core `vcgen` walk two programs in lockstep, but choosing
+which side to step and which coupling to use remains `rvcgen`'s job.
+`Relational/FromUnary.lean` still takes its unary premises as `Std.Do.Triple`s.
 
 VCVio's probability/coupling tactics continue to consume `@[vcspec]` and `@[wpStep]`.
 Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
@@ -758,14 +774,20 @@ core and PolyFun's WriterT interpretation; VCVio retains its probability rules a
 existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretation
 uses multiplication; append-based logs use `WriterT.toWPMonad` with explicit operations.
 
-The `Std.Do` handler bridge is a separate consumer of core's older SPred API.
-Its migration to lattice-generic triples is a focused follow-up; it does not require Loom.
-Likewise, replacing the probability tactic's `rw` dispatcher with `Sym.Simp` needs a
+The handler specifications are core triples under the structural reading, proved and composed
+by core `vcgen` (`Unary/HandlerSpecs.lean`); `Unary/StdDoBridge.lean` remains a narrow bridge to
+core's older `Std.Do` SPred API. Replacing the probability tactic's `rw` dispatcher with `Sym.Simp` needs a
 separate proof-application adapter and evidence from the existing automation tests.
 
-For v4.35, track the [Std.WP namespace work](https://github.com/leanprover/lean4/pull/14783),
-[LawfulWPMonadAttach](https://github.com/leanprover/lean4/pull/14801),
-[exception-stack tuples](https://github.com/leanprover/lean4/pull/14836), and
-[mvcgen deprecation](https://github.com/leanprover/lean4/pull/14874), alongside the
+Core `vcgen` is experimental in v4.35: a module that calls it acknowledges this with
+`set_option experimental.vcgen true`, and `VCVioTest/ProgramLogic/CoreWP.lean` pins the
+diagnostic once. `mvcgen` is deprecated in favour of `vcgen`, so program-level reasoning uses core
+`Std.WP` triples. Exception postconditions form stacks written `EStack⟨A, B⟩` (values
+`estack⟨a, b⟩`); an `OptionT` layer contributes `Unit → Pred`, an `ExceptT ε` layer `ε → Pred`.
+
+For the next release, track the
+[`WP.trans` renames](https://github.com/leanprover/lean4/pull/15171), the move of `vcgen`'s syntax
+to `Std.WP.Tactic` with the deprecation of the `Std.Do` proof mode
+([#15290](https://github.com/leanprover/lean4/pull/15290)), and exception-channel frames
+([#15067](https://github.com/leanprover/lean4/pull/15067)), alongside the
 [upstream roadmap](https://lean-lang.org/fro/roadmap/y4-1/).
-These inform the next stable upgrade; they do not change this package's v4.34 pin.

@@ -34,7 +34,7 @@ variable {α β : Type}
 /-- Structural correctness through the core qualitative interpretation. -/
 noncomputable abbrev wpProp (oa : OracleComp spec α) (post : α → Prop) : Prop :=
   letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec)
-  Std.Internal.Do.wp oa post Std.Internal.Do.EPost.Nil.mk
+  Std.WP.wp oa post estack⟨⟩
 
 /-- Proposition-style triple alias used by the `Std.Do` bridge. -/
 def tripleProp (pre : Prop) (oa : OracleComp spec α) (post : α → Prop) : Prop :=

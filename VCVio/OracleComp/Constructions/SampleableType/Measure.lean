@@ -127,8 +127,8 @@ theorem wp_uniformSample_eq_sum {α : Type} [SampleableType α] [_root_.Fintype 
 open Lean Meta Simp ProbabilityNotation in
 /-- `wp_uniformSample_eq_sum` for an observation that is not an event, `predInd p` or an
 indicator that normalization folds into one. -/
-simproc [simp] wp_uniformSample_sum (@Std.Internal.Do.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
-  unless e.isAppOfArity ``Std.Internal.Do.WP.wp 10 do return .continue
+simproc [simp] wp_uniformSample_sum (@Std.WP.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
   let g := e.getArg! 8
   if g.isAppOfArity ``predInd 2 || isIndicatorLambda g then return .continue
   let some (rhs, pf) ← rewriteWith? ``wp_uniformSample_eq_sum e | return .continue

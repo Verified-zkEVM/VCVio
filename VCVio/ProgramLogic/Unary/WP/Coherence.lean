@@ -34,11 +34,11 @@ variable {α : Type}
 
 /-! ## Probabilistic ↔ Quantitative
 
-The probabilistic `Std.Internal.Do.wp` agrees with the quantitative one
+The probabilistic `Std.WP.wp` agrees with the quantitative one
 under `Subtype.val`; that statement lives in `…/WP/Probabilistic.lean`
 as `OracleComp.Probabilistic.wp_val_eq_wp`. We do not restate
 it here because pulling `OracleComp.Probabilistic.instWP_prob` into scope
-to talk about `Std.Internal.Do.wp` requires `open OracleComp.Probabilistic`,
+to talk about `Std.WP.wp` requires `open OracleComp.Probabilistic`,
 which then occludes the qualitative tier discussed below. -/
 
 /-! ## Qualitative ↔ Probabilistic (support-vs-expectation bridge)
@@ -58,7 +58,7 @@ construction; consumers without classical-decidable predicates can
 theorem wp_qual_iff_wp_prob_indicator_eq_one
     (oa : OracleComp spec α) (post : α → Prop) [DecidablePred post] :
     (letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec);
-      Std.Internal.Do.wp oa post Std.Internal.Do.EPost.Nil.mk) ↔
+      Std.WP.wp oa post estack⟨⟩) ↔
       wp⟦oa⟧ (fun a => if post a then 1 else 0) = 1 := by
   rw [wp_iff_forall_support, ← prEvent_eq_wp_indicator, OracleComp.prEvent_eq_one_iff]
 
@@ -68,7 +68,7 @@ via `Prob.indicator`. -/
 theorem wp_qual_iff_wp_prob_indicator_val_eq_one
     (oa : OracleComp spec α) (post : α → Prop) [DecidablePred post] :
     (letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec);
-      Std.Internal.Do.wp oa post Std.Internal.Do.EPost.Nil.mk) ↔
+      Std.WP.wp oa post estack⟨⟩) ↔
       wp⟦oa⟧ (fun a => (Prob.indicator (post a)).val) = 1 :=
   wp_qual_iff_wp_prob_indicator_eq_one oa post
 

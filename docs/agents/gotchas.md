@@ -409,8 +409,8 @@ their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.34.0`: `lean-toolchain` pins `leanprover/lean4:v4.34.0` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.34.0"`.
+Both currently `v4.35.0-rc3`: `lean-toolchain` pins `leanprover/lean4:v4.35.0-rc3` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.35.0-rc3"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs
@@ -491,3 +491,25 @@ the exact `wp` laws then fail to match. Normalize while the goal is still well-t
 (`simp only [expect_norm]`), then restate the answer type with
 `change Pr{let r ← (show ProbComp (T × _) from prog)}[…] ≤ _`, and only then rewrite with the
 type-changing equation (`Examples/PRFTagReader/MultipleBadCollision.lean`).
+
+### 33. Core's concrete monads carry direct `WP` instances
+
+Core interprets `Id`, `Option`, `Except ε`, `EStateM ε σ` and the `StateT`, `ReaderT`, `ExceptT`,
+`OptionT` lifts through direct instances (`Option.wpInst`, `StateT.wpInst`, …), and instance
+search tries them before the low-priority instance it derives from a `WPMonad`. The assertion
+and exception types are output parameters, so the first instance found fixes them: a `letI` or
+local `WPMonad` on one of these monads, or a lemma hypothesis `[WPMonad Option Pred EPred]`, does
+not reach `wp` on that monad. Pass the interpretation explicitly with dot notation,
+`(inst.toWP α).wp x post epost`, as core's `WP.wp` documents
+(`ToMathlib/Control/Monad/Algebra.lean`, `VCVioTest/Foundations.lean`). A scoped reading that must
+apply to those monads registers its own direct instance at its scope's priority
+(`MeasureProgramLogic.Quantitative.wpInst`, `MeasureProgramLogic.Probabilistic.wpInst`).
+`OracleComp` has no direct core instance; its readings are unaffected.
+
+### 34. Write the absent exception postcondition as `Lean.Order.bot`
+
+The empty exception stack `EStack⟨⟩` is `Unit`, which also carries Mathlib's `Bot`. Under
+`open Lean.Order`, a bare `⊥` of that type is ambiguous; without the `open`, it elaborates to
+Mathlib's `⊥`, a different head from the one `simp` lemmas are stated with. Core's triple notation
+`⦃P⦄ x ⦃Q⦄` expands to `Lean.Order.bot`, and so do `Pr{…}[…]` and `𝔼{…}[…]`: write
+`Lean.Order.bot` in statements, and `estack⟨e₁, …⟩` for an explicit stack of postconditions.

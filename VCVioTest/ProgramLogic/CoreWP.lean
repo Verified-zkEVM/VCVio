@@ -21,26 +21,26 @@ VCVio's probability-tactic frontend.
 
 public section
 
-open Std.Internal.Do
+open Std.WP
 open scoped ENNReal
 
 namespace VCVioTest.ProgramLogic.CoreWP
 
-noncomputable example : WPMonad ProbComp ℝ≥0∞ EPost.Nil := inferInstance
+noncomputable example : WPMonad ProbComp ℝ≥0∞ EStack⟨⟩ := inferInstance
 
 example : True := by
   fail_if_success
-    let _ := (inferInstance : WPMonad ProbComp Prop EPost.Nil)
+    let _ := (inferInstance : WPMonad ProbComp Prop EStack⟨⟩)
   trivial
 
 section Qualitative
 open scoped OracleComp.Qualitative
 
-noncomputable example : WPMonad ProbComp Prop EPost.Nil := inferInstance
+noncomputable example : WPMonad ProbComp Prop EStack⟨⟩ := inferInstance
 
 example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
     (post : α → Prop) :
-    wp oa post EPost.Nil.mk ↔ ∀ a ∈ support oa, post a :=
+    wp oa post estack⟨⟩ ↔ ∀ a ∈ support oa, post a :=
   OracleComp.Qualitative.wp_iff_forall_support oa post
 
 end Qualitative
@@ -48,7 +48,7 @@ end Qualitative
 section Quantitative
 
 /--
-warning: The `vcgen` tactic is an experimental drop-in replacement for `mvcgen` that will eventually replace it. Avoid using it in production projects.
+warning: The `vcgen` tactic is an experimental drop-in replacement for `mvcgen` that will eventually replace it; `set_option experimental.vcgen true` acknowledges its experimental status and silences this warning.
 -/
 #guard_msgs in
 example (post : Nat → Nat → ℝ≥0∞) :
@@ -60,7 +60,7 @@ example (post : Nat → Nat → ℝ≥0∞) :
     ⦃ post ⦄ := by
   vcgen
 
-noncomputable local instance : WPMonad (WriterT (List Nat) ProbComp) (List Nat → ℝ≥0∞) EPost.Nil :=
+noncomputable local instance : WPMonad (WriterT (List Nat) ProbComp) (List Nat → ℝ≥0∞) EStack⟨⟩ :=
   WriterT.wpMonadOf [] (· ++ ·) List.append_nil List.append_assoc
 
 example (post : PUnit.{1} → List Nat → ℝ≥0∞) :
@@ -77,9 +77,9 @@ section Probabilistic
 open scoped OracleComp.Probabilistic
 
 example (oa : ProbComp Nat) (post : Nat → Prob) :
-    (wp oa post EPost.Nil.mk).val =
+    (wp oa post estack⟨⟩).val =
       wp⟦oa⟧ (fun a => (post a).val) :=
-  OracleComp.Probabilistic.wp_val_eq_wp oa post
+  OracleComp.Probabilistic.wp_val_eq_wp oa post _
 
 end Probabilistic
 

@@ -23,7 +23,7 @@ Use `open scoped OracleComp.Rel.Qualitative` to select this carrier.
 
 universe u
 
-open Std.Internal.Do
+open Std.WP
 
 namespace OracleComp.Rel.Qualitative
 
@@ -37,7 +37,7 @@ variable {α β : Type}
 Enable with `open scoped OracleComp.Rel.Qualitative`. -/
 noncomputable scoped instance instRelWP :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prop
-      Std.Internal.Do.EPost.Nil Std.Internal.Do.EPost.Nil where
+      EStack⟨⟩ EStack⟨⟩ where
   rwpTrans oa ob post _epost₁ _epost₂ :=
     OracleComp.ProgramLogic.Relational.CouplingPost oa ob post
   rwp_trans_pure a b post _epost₁ _epost₂ :=

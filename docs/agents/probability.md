@@ -983,7 +983,7 @@ conclusion is the unrestricted `Measurable f`.
 
 For a sum of oracle `wp` bounds, rewrite with `← OracleComp.ProgramLogic.wp_finsetSum`,
 then apply `wp_le_const_of_support`. Use `wp_le_const_add_of_support` for a constant allowance
-plus another postcondition. Both the oracle facade and core's raw `Std.Internal.Do.wp` expose
+plus another postcondition. Both the oracle facade and core's raw `Std.WP.wp` expose
 support membership to `gcongr`; callers need no preparatory `change`.
 
 See the [generalized-relation investigation](../reading/generalized-relation-automation.md) for

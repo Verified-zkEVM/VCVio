@@ -17,15 +17,18 @@ operations have reduced to their concrete representation: `simp` rewrites `pure 
 
 public section
 
-open Std.Internal.Do
+open Std.WP
 
 namespace ExactWPMonad
 
-/-- A successful optional computation evaluates its postcondition. -/
+/-- A successful optional computation evaluates its postcondition. The interpretation is named
+explicitly: core's own `Option` instance answers `WP (Option α) …` before an arbitrary
+`WPMonad Option Pred EPred`. -/
 @[simp]
 theorem wp_some {Pred : Type} {EPred : Type} [Assertion Pred] [Assertion EPred]
-    [WPMonad Option Pred EPred] [ExactWPMonad Option Pred EPred]
-    {α : Type} (a : α) (post : α → Pred) (epost : EPred) : wp (some a) post epost = post a :=
+    [inst : WPMonad Option Pred EPred] [ExactWPMonad Option Pred EPred]
+    {α : Type} (a : α) (post : α → Pred) (epost : EPred) :
+    (inst.toWP α).wp (some a) post epost = post a :=
   wp_pure a post epost
 
 end ExactWPMonad

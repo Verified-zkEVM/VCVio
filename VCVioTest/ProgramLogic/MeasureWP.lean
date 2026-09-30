@@ -19,7 +19,7 @@ factors, generalized congruence, directional rewriting, and core triples through
 
 public section
 
-open MeasureTheory Std.Internal.Do
+open MeasureTheory Std.WP
 open scoped ENNReal
 
 run_cmd do
@@ -30,7 +30,7 @@ run_cmd do
 namespace VCVioTest.ProgramLogic.MeasureWP
 
 example : True := by
-  fail_if_success let _ := inferInstanceAs (WPMonad Option ENNReal EPost.Nil)
+  fail_if_success let _ := inferInstanceAs (WPMonad Option ENNReal EStack⟨⟩)
   trivial
 
 open scoped MeasureProgramLogic.Quantitative
@@ -39,10 +39,10 @@ example (c : ENNReal) : wp (none : Option Nat) (fun _ ↦ c) Lean.Order.bot = 0 
 
 example (c : ENNReal) : wp (some 7 : Option Nat) (fun _ ↦ c) Lean.Order.bot = c := by simp
 
-noncomputable example : WPMonad Option ENNReal EPost.Nil := inferInstance
+noncomputable example : WPMonad Option ENNReal EStack⟨⟩ := inferInstance
 
 example : Triple (none : Option Nat) (0 : ENNReal) (fun _ : Nat ↦ (1 : ENNReal))
-    (Lean.Order.bot : EPost.Nil) := by
+    (Lean.Order.bot : EStack⟨⟩) := by
   exact Triple.intro (by simp)
 
 universe v

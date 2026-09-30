@@ -26,7 +26,7 @@ The underlying value agrees with the quantitative expectation by `wp_val_eq_wp`.
 
 universe u
 
-open ENNReal Std.Internal.Do
+open ENNReal Std.WP
 
 /-! ## Restricted expectation algebra -/
 
@@ -47,13 +47,13 @@ noncomputable scoped instance (priority := 1100) instMAlgOrdered :
 
 /-- Core weakest preconditions for probability-valued assertions. -/
 noncomputable scoped instance (priority := 1100) instWP_prob :
-    Std.Internal.Do.WPMonad (OracleComp spec) Prob Std.Internal.Do.EPost.Nil :=
+    Std.WP.WPMonad (OracleComp spec) Prob EStack⟨⟩ :=
   MAlgOrdered.toWPMonad
 
 /-- Forgetting the bound recovers quantitative expectation. -/
-theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) :
-    (Std.Internal.Do.wp oa post Lean.Order.bot).val =
+theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) (epost : EStack⟨⟩) :
+    (Std.WP.wp oa post epost).val =
       wp⟦oa⟧ (fun a => (post a).val) :=
-  MeasureProgramLogic.Probabilistic.wp_val oa post
+  MeasureProgramLogic.Probabilistic.wp_val oa post epost
 
 end OracleComp.Probabilistic

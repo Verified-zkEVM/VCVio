@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import PolyFun.Control.Monad.Support.WP
-public import Std.Internal.Do.ExceptPost
+public import Std.WP
 public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
 /-!
@@ -25,7 +25,7 @@ additionally needs the uniform, finite-support assumptions stated in `Unary/WP/C
 
 universe u
 
-open Std.Internal.Do
+open Std.WP
 
 namespace OracleComp.Qualitative
 
@@ -35,12 +35,27 @@ variable {α β : Type}
 /-- Core weakest preconditions for all structurally reachable outputs. Opening the scope selects
 it over the quantitative instance. -/
 noncomputable scoped instance (priority := 1100) instWP :
-    Std.Internal.Do.WPMonad (OracleComp spec) Prop Std.Internal.Do.EPost.Nil :=
+    Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
   MonadAttach.toWPMonadDemonic
 
 /-- Structural weakest preconditions hold precisely on every possible output. -/
 theorem wp_iff_forall_support (oa : OracleComp spec α) (post : α → Prop) :
-    Std.Internal.Do.wp oa post Lean.Order.bot ↔ ∀ a ∈ support oa, post a :=
+    Std.WP.wp oa post Lean.Order.bot ↔ ∀ a ∈ support oa, post a :=
   Iff.rfl
+
+/-- A lifted primitive query may return any answer. This is the form `vcgen` reaches from
+`liftM (OracleSpec.query t)` once it unfolds the `MonadLiftT` chain. -/
+@[spec]
+theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → Prop)
+    {epost : EStack⟨⟩} :
+    Triple (MonadLift.monadLift (liftM (OracleSpec.query t) : OracleQuery spec (spec.Range t)) :
+      OracleComp spec (spec.Range t)) (∀ u, post u) post epost :=
+  ⟨fun h u _ => h u⟩
+
+/-- A query issued through `HasQuery` may return any answer. -/
+@[spec]
+theorem Spec.query (t : spec.Domain) (post : spec.Range t → Prop) {epost : EStack⟨⟩} :
+    Triple (HasQuery.query t : OracleComp spec (spec.Range t)) (∀ u, post u) post epost :=
+  ⟨fun h u _ => h u⟩
 
 end OracleComp.Qualitative

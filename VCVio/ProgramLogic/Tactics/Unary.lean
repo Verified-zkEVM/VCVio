@@ -47,7 +47,7 @@ private def runVCGenFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
       (← `(tactic| all_goals try
-        (refine Std.Internal.Do.Triple.intro ?_
+        (refine Std.WP.Triple.intro ?_
          repeat intro _
          simp [Lean.Order.PartialOrder.rel,
            MonadStateOf.get, MonadStateOf.set, MonadReaderOf.read, MonadWriter.tell,

@@ -24,7 +24,7 @@ The qualitative and probability-bounded carriers have separate scopes.
 @[expose] public section
 
 open VCVio.ProgramLogic
-open ENNReal Std.Internal.Do OracleComp.Quantitative
+open ENNReal Std.WP OracleComp.Quantitative
 
 universe u
 
@@ -43,13 +43,13 @@ variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
 programs valued in `ℝ≥0∞`.
 
 The `rwpTrans` is the existing `eRelWP` (the supremum over couplings
-of expected values); the two `EPost.Nil` arguments are ignored since
+of expected values); the two `EStack⟨⟩` arguments are ignored since
 neither side of an `OracleComp` pair has a first-class exception slot.
 The three `RelWP` axioms reduce to the existing `eRelWP_pure`,
 `eRelWP_bind_le`, `eRelWP_mono` lemmas. -/
 noncomputable scoped instance instRelWP :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞
-      Std.Internal.Do.EPost.Nil Std.Internal.Do.EPost.Nil where
+      EStack⟨⟩ EStack⟨⟩ where
   rwpTrans oa ob post _epost₁ _epost₂ :=
     OracleComp.ProgramLogic.Relational.eRelWP oa ob post
   rwp_trans_pure a b := by

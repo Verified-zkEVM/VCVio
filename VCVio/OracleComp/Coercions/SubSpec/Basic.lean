@@ -307,8 +307,8 @@ Registered as a low-priority `MonadLift` (not `MonadLiftT`) so that:
 
 * For `spec = superSpec`, Lean's built-in `MonadLiftT.refl` (which is
   definitionally `id`) wins typeclass resolution. This is what
-  `Std.Do.Spec.UnfoldLift.monadLift_refl` (a `rfl`-based lemma) needs in
-  order to peel off spurious self-lifts inside `mvcgen`-elaborated terms.
+  `Std.WP.Spec.UnfoldLift.monadLift_refl` (a `rfl`-based lemma) needs in
+  order to peel off spurious self-lifts inside terms `vcgen` walks.
 
 * For `MonadLiftT (OracleQuery spec) (OracleComp superSpec)`, the built-in
   high-priority `MonadLift (OracleQuery superSpec) (OracleComp superSpec)` is

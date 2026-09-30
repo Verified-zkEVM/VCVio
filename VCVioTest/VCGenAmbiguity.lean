@@ -25,7 +25,7 @@ public section
 open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic Std.Internal.Do
+open scoped OracleComp.ProgramLogic Std.WP
 
 namespace VCVioTest.VCGenAmbiguity
 

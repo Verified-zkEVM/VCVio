@@ -418,12 +418,12 @@ These rules require `MAlgRelOrdered.Anchored m₁ m₂ l`: the mixed `(error, ok
 
 namespace MAlgRelOrdered.Anchored
 
-open Std.Internal.Do
+open Std.WP
 
 variable {m₁ : Type u → Type v₁} {m₂ : Type u → Type v₂} {l : Type u}
 variable [Monad m₁] [Monad m₂]
 variable [CompleteLattice l]
-variable [WPMonad m₁ l EPost.Nil] [WPMonad m₂ l EPost.Nil] [MAlgRelOrdered m₁ m₂ l]
+variable [WPMonad m₁ l EStack⟨⟩] [WPMonad m₂ l EStack⟨⟩] [MAlgRelOrdered m₁ m₂ l]
   [Anchored m₁ m₂ l]
 variable {α β γ δ : Type u} {ε ε₁ ε₂ : Type u}
 
@@ -435,7 +435,7 @@ theorem rwpExcCases_pure_left (a : α) (y : ExceptT ε₂ m₂ β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
     rwpExcCases (pure a : ExceptT ε₁ m₁ α) y postOO postEO postOE postEE =
-      wp y (postOO a) (EPost.Cons.mk (postOE a) EPost.Nil.mk) := by
+      wp y (postOO a) estack⟨postOE a⟩ := by
   unfold rwpExcCases
   rw [ExceptT.wp_apply_eq]
   rw [show (pure a : ExceptT ε₁ m₁ α).run = pure (Except.ok a) from ExceptT.run_pure a]
@@ -453,7 +453,7 @@ theorem rwpExcCases_throw_left (e : ε₁) (y : ExceptT ε₂ m₂ β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
     rwpExcCases (throw e : ExceptT ε₁ m₁ α) y postOO postEO postOE postEE =
-      wp y (postEO e) (EPost.Cons.mk (postEE e) EPost.Nil.mk) := by
+      wp y (postEO e) estack⟨postEE e⟩ := by
   unfold rwpExcCases
   rw [ExceptT.wp_apply_eq]
   rw [show (throw e : ExceptT ε₁ m₁ α).run = pure (Except.error e) from ExceptT.run_throw]
@@ -469,7 +469,7 @@ theorem rwpExcCases_pure_right (x : ExceptT ε₁ m₁ α) (b : β)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
     rwpExcCases x (pure b : ExceptT ε₂ m₂ β) postOO postEO postOE postEE =
-      wp x (fun a => postOO a b) (EPost.Cons.mk (fun e => postEO e b) EPost.Nil.mk) := by
+      wp x (fun a => postOO a b) estack⟨fun e => postEO e b⟩ := by
   unfold rwpExcCases
   rw [ExceptT.wp_apply_eq]
   rw [show (pure b : ExceptT ε₂ m₂ β).run = pure (Except.ok b) from ExceptT.run_pure b]
@@ -485,7 +485,7 @@ theorem rwpExcCases_throw_right (x : ExceptT ε₁ m₁ α) (e : ε₂)
     (postOO : α → β → l) (postEO : ε₁ → β → l)
     (postOE : α → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
     rwpExcCases x (throw e : ExceptT ε₂ m₂ β) postOO postEO postOE postEE =
-      wp x (fun a => postOE a e) (EPost.Cons.mk (fun e₁ => postEE e₁ e) EPost.Nil.mk) := by
+      wp x (fun a => postOE a e) estack⟨fun e₁ => postEE e₁ e⟩ := by
   unfold rwpExcCases
   rw [ExceptT.wp_apply_eq]
   rw [show (throw e : ExceptT ε₂ m₂ β).run = pure (Except.error e) from ExceptT.run_throw]
@@ -547,7 +547,7 @@ core `OptionT` weakest precondition of the right side, specialized at the left's
 theorem rwpOpt_pure_left (a : α) (y : OptionT m₂ β)
     (postSS : α → β → l) (postSN : α → l) (postNS : β → l) (postNN : l) :
     rwpOpt (pure a : OptionT m₁ α) y postSS postSN postNS postNN =
-      wp y (postSS a) (EPost.Cons.mk (postSN a) EPost.Nil.mk) := by
+      wp y (postSS a) estack⟨fun _ => postSN a⟩ := by
   unfold rwpOpt
   rw [OptionT.wp_apply_eq]
   rw [show (pure a : OptionT m₁ α).run = pure (some a) from OptionT.run_pure a]
@@ -564,7 +564,7 @@ specialized to the failure case. -/
 theorem rwpOpt_fail_left (y : OptionT m₂ β)
     (postSS : α → β → l) (postSN : α → l) (postNS : β → l) (postNN : l) :
     rwpOpt (OptionT.mk (pure none) : OptionT m₁ α) y postSS postSN postNS postNN =
-      wp y postNS (EPost.Cons.mk postNN EPost.Nil.mk) := by
+      wp y postNS estack⟨fun _ => postNN⟩ := by
   unfold rwpOpt
   rw [OptionT.wp_apply_eq]
   change MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (pure none) y.run
@@ -580,7 +580,7 @@ theorem rwpOpt_fail_left (y : OptionT m₂ β)
 theorem rwpOpt_pure_right (x : OptionT m₁ α) (b : β)
     (postSS : α → β → l) (postSN : α → l) (postNS : β → l) (postNN : l) :
     rwpOpt x (pure b : OptionT m₂ β) postSS postSN postNS postNN =
-      wp x (fun a => postSS a b) (EPost.Cons.mk (postNS b) EPost.Nil.mk) := by
+      wp x (fun a => postSS a b) estack⟨fun _ => postNS b⟩ := by
   unfold rwpOpt
   rw [OptionT.wp_apply_eq]
   rw [show (pure b : OptionT m₂ β).run = pure (some b) from OptionT.run_pure b]
@@ -595,7 +595,7 @@ theorem rwpOpt_pure_right (x : OptionT m₁ α) (b : β)
 theorem rwpOpt_fail_right (x : OptionT m₁ α)
     (postSS : α → β → l) (postSN : α → l) (postNS : β → l) (postNN : l) :
     rwpOpt x (OptionT.mk (pure none) : OptionT m₂ β) postSS postSN postNS postNN =
-      wp x postSN (EPost.Cons.mk postNN EPost.Nil.mk) := by
+      wp x postSN estack⟨fun _ => postNN⟩ := by
   unfold rwpOpt
   rw [OptionT.wp_apply_eq]
   change MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) x.run (pure none)
@@ -746,9 +746,9 @@ theorem rwpExcCases_bind_le
     (postOE : γ → ε₂ → l) (postEE : ε₁ → ε₂ → l) :
     rwpExcCases x y
         (fun a b => rwpExcCases (f a) (g b) postOO postEO postOE postEE)
-        (fun e b => wp (g b) (postEO e) (EPost.Cons.mk (postEE e) EPost.Nil.mk))
+        (fun e b => wp (g b) (postEO e) estack⟨postEE e⟩)
         (fun a e => wp (f a) (fun c => postOE c e)
-          (EPost.Cons.mk (fun e₁ => postEE e₁ e) EPost.Nil.mk))
+          estack⟨fun e₁ => postEE e₁ e⟩)
         postEE ≤
       rwpExcCases (x >>= f) (y >>= g) postOO postEO postOE postEE := by
   simp only [rwpExcCases]
@@ -760,9 +760,9 @@ theorem rwpExcCases_bind_le
     | Except.ok a, Except.ok b =>
         MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (f a).run (g b).run
           (excPostBoth postOO postEO postOE postEE)
-    | Except.error e, Except.ok b => wp (g b) (postEO e) (EPost.Cons.mk (postEE e) EPost.Nil.mk)
+    | Except.error e, Except.ok b => wp (g b) (postEO e) estack⟨postEE e⟩
     | Except.ok a, Except.error e =>
-        wp (f a) (fun c => postOE c e) (EPost.Cons.mk (fun e₁ => postEE e₁ e) EPost.Nil.mk)
+        wp (f a) (fun c => postOE c e) estack⟨fun e₁ => postEE e₁ e⟩
     | Except.error e₁, Except.error e₂ => postEE e₁ e₂
   have hpost : LHSpost = MID := by
     funext ea eb
@@ -772,7 +772,7 @@ theorem rwpExcCases_bind_le
         | ok b => rfl
         | error e =>
             change wp (f a) (fun c => postOE c e)
-                (EPost.Cons.mk (fun e₁ => postEE e₁ e) EPost.Nil.mk) =
+                estack⟨fun e₁ => postEE e₁ e⟩ =
               MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (f a) (pure (Except.error e))
                 (excPostBoth postOO postEO postOE postEE)
             rw [Anchored.rwp_pure_right]
@@ -785,7 +785,7 @@ theorem rwpExcCases_bind_le
     | error e =>
         cases eb with
         | ok b =>
-            change wp (g b) (postEO e) (EPost.Cons.mk (postEE e) EPost.Nil.mk) =
+            change wp (g b) (postEO e) estack⟨postEE e⟩ =
               MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (pure (Except.error e)) (g b)
                 (excPostBoth postOO postEO postOE postEE)
             rw [Anchored.rwp_pure_left]
@@ -913,8 +913,8 @@ theorem rwpOpt_bind_le
     (postNS : δ → l) (postNN : l) :
     rwpOpt x y
         (fun a b => rwpOpt (f a) (g b) postSS postSN postNS postNN)
-        (fun a => wp (f a) postSN (EPost.Cons.mk postNN EPost.Nil.mk))
-        (fun b => wp (g b) postNS (EPost.Cons.mk postNN EPost.Nil.mk))
+        (fun a => wp (f a) postSN estack⟨fun _ => postNN⟩)
+        (fun b => wp (g b) postNS estack⟨fun _ => postNN⟩)
         postNN ≤
       rwpOpt (x >>= f) (y >>= g) postSS postSN postNS postNN := by
   simp only [rwpOpt]
@@ -928,8 +928,8 @@ theorem rwpOpt_bind_le
   let postSS' : α → β → l := fun a b =>
     MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (f a).run (g b).run
       (optPostBoth postSS postSN postNS postNN)
-  let postSN' : α → l := fun a => wp (f a) postSN (EPost.Cons.mk postNN EPost.Nil.mk)
-  let postNS' : β → l := fun b => wp (g b) postNS (EPost.Cons.mk postNN EPost.Nil.mk)
+  let postSN' : α → l := fun a => wp (f a) postSN estack⟨fun _ => postNN⟩
+  let postNS' : β → l := fun b => wp (g b) postNS estack⟨fun _ => postNN⟩
   have hpost : optPostBoth postSS' postSN' postNS' postNN = MID := by
     funext oa ob
     cases oa with
@@ -937,7 +937,7 @@ theorem rwpOpt_bind_le
         cases ob with
         | some b => rfl
         | none =>
-            change wp (f a) postSN (EPost.Cons.mk postNN EPost.Nil.mk) =
+            change wp (f a) postSN estack⟨fun _ => postNN⟩ =
               MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (f a) (pure none)
                 (optPostBoth postSS postSN postNS postNN)
             rw [Anchored.rwp_pure_right]
@@ -950,7 +950,7 @@ theorem rwpOpt_bind_le
     | none =>
         cases ob with
         | some b =>
-            change wp (g b) postNS (EPost.Cons.mk postNN EPost.Nil.mk) =
+            change wp (g b) postNS estack⟨fun _ => postNN⟩ =
               MAlgRelOrdered.rwp (m₁ := m₁) (m₂ := m₂) (pure none) (g b)
                 (optPostBoth postSS postSN postNS postNN)
             rw [Anchored.rwp_pure_left]

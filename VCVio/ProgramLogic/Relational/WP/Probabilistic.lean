@@ -25,7 +25,7 @@ Use `open scoped OracleComp.Rel.Probabilistic` to select this carrier.
 universe u
 
 open VCVio.ProgramLogic
-open ENNReal Std.Internal.Do OracleComp.Quantitative
+open ENNReal Std.WP OracleComp.Quantitative
 
 namespace OracleComp.Rel.Probabilistic
 
@@ -63,7 +63,7 @@ variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 Enable with `open scoped OracleComp.Rel.Probabilistic`. -/
 noncomputable scoped instance instRelWP_prob :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prob
-      Std.Internal.Do.EPost.Nil Std.Internal.Do.EPost.Nil where
+      EStack⟨⟩ EStack⟨⟩ where
   rwpTrans oa ob post _epost₁ _epost₂ :=
     ⟨rwpVal oa ob post, by exact rwpVal_le_one oa ob post⟩
   rwp_trans_pure a b := by

@@ -80,16 +80,16 @@ private def instantiateProofNoBridge (proof : Lean.Elab.Tactic.Do.SpecAttr.SpecP
   return (xs, bis, prf, type)
 
 /--
-If `(prf, type)` proves a `Std.Internal.Do.Triple`, return the corresponding
-`pre ⊑ wp ...` proof via `Std.Internal.Do.Triple.le_wp`.
+If `(prf, type)` proves a `Std.WP.Triple`, return the corresponding
+`pre ⊑ wp ...` proof via `Std.WP.Triple.le_wp`.
 Relational `VCVio.ProgramLogic.RelTriple` is a reducible definition, so later raw
 normalization sees it by weak-head reducing the type to `pre ⊑ rwp ...`.
 Otherwise return the proof unchanged.
 -/
 private def bridgeTriple? (prf type : Expr) : MetaM (Expr × Expr) := do
   let type ← whnfR type
-  if type.isAppOfArity ``Std.Internal.Do.Triple 11 then
-    let prf' ← mkAppM ``Std.Internal.Do.Triple.le_wp #[prf]
+  if type.isAppOfArity ``Std.WP.Triple 11 then
+    let prf' ← mkAppM ``Std.WP.Triple.le_wp #[prf]
     let type' ← instantiateMVars (← inferType prf')
     return (prf', type')
   return (prf, type)
@@ -124,7 +124,7 @@ private def rawRelParts? (type : Expr) : MetaM (Option (Expr × Expr)) := do
 
 private def stdDoWpParts? (rhs : Expr) : Option (Expr × Expr × Expr) := do
   let rhs := rhs.consumeMData
-  unless rhs.getAppFn.isConstOf ``Std.Internal.Do.wp do none
+  unless rhs.getAppFn.isConstOf ``Std.WP.wp do none
   let args := rhs.getAppArgs
   unless args.size ≥ 3 do none
   let oa := args[args.size - 3]!
@@ -150,7 +150,7 @@ private def unaryTripleParts? (type : Expr) : Option (Expr × Expr × Expr) := d
     let args := type.getAppArgs
     unless args.size ≥ 3 do none
     return (args[args.size - 3]!, args[args.size - 2]!, args[args.size - 1]!)
-  if type.getAppFn.isConstOf ``Std.Internal.Do.Triple then
+  if type.getAppFn.isConstOf ``Std.WP.Triple then
     let args := type.getAppArgs
     unless args.size ≥ 5 do none
     return (args[args.size - 3]!, args[args.size - 5]!, args[args.size - 2]!)
@@ -230,15 +230,15 @@ private def mkUnaryPostLERfl (post postTy : Expr) : MetaM Expr := do
 
 private def mkTripleConseqApp (hpre hpost specProof : Expr) : MetaM Expr := do
   let type ← whnfR (← inferType specProof)
-  unless type.isAppOfArity ``Std.Internal.Do.Triple 11 do
+  unless type.isAppOfArity ``Std.WP.Triple 11 do
     throwError "expected a core triple, got:{indentExpr type}"
   let args := type.getAppArgs
   -- Retain the source proof's assertion and WP instances while its program is abstract.
   let assertionArgs : Array (Option Expr) := (args.extract 0 6).map some
-  let h ← mkAppOptM ``Std.Internal.Do.Triple.entails_wp_of_pre_post
+  let h ← mkAppOptM ``Std.WP.Triple.entails_wp_of_pre_post
     (assertionArgs ++ #[some args[7]!, some args[6]!, none, some args[8]!, none,
       some args[9]!, some args[10]!, some specProof, some hpre, some hpost])
-  mkAppOptM ``Std.Internal.Do.Triple.intro
+  mkAppOptM ``Std.WP.Triple.intro
     (assertionArgs ++ #[some args[6]!, some args[7]!, none, none, some args[10]!, some h])
 
 /-- Generalize a folded unary `Triple pre prog post` proof into a reusable
@@ -271,7 +271,7 @@ backward rule source by abstracting concrete `post` and always abstracting
 `mkSpecBackwardProof`. -/
 private def mkUnarySpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := do
   let some (prog, postSpec, epostSpec) := stdDoWpParts? rhs
-    | throwError "expected a Std.Internal.Do.wp RHS, got:{indentExpr rhs}"
+    | throwError "expected a Std.WP.wp RHS, got:{indentExpr rhs}"
   let mut postAbstract := postSpec.consumeMData
   let mut specApplied := specProof
   unless postAbstract.isMVar do
@@ -280,7 +280,7 @@ private def mkUnarySpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := 
     let hpostTy ← mkUnaryPostPointwisePremise postSpec postAbstract postTy
     let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
     specApplied ←
-      mkAppM ``Std.Internal.Do.WP.wp_consequence_le
+      mkAppM ``Std.WP.WP.wp_consequence_le
         #[prog, postSpec, postAbstract, epostSpec, hpost, specApplied]
   let preTy ← inferType pre
   let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
@@ -321,7 +321,7 @@ private def mkBackwardRuleFromProofExpr (prf : Expr) :
   return (res, decl, rule)
 
 /-- Normalize a `pre ⊑ rhs` / `pre ≤ rhs` proof into a reusable backward-rule
-source by dispatching on the `rhs` weakest-precondition shape: raw `Std.Internal.Do.wp`
+source by dispatching on the `rhs` weakest-precondition shape: raw `Std.WP.wp`
 goes through `mkUnarySpecBackwardProof`, raw `VCVio.ProgramLogic.rwp` through
 `mkRelSpecBackwardProof`, and anything else is returned unchanged. -/
 private def normalizeRawRelProof (prf type : Expr) : MetaM Expr := do
@@ -409,7 +409,7 @@ def synthesizeInstanceArgs (xs : Array Expr) (bis : Array BinderInfo) : MetaM Bo
 
 /-- Apply a raw unary `@[vcspec]` theorem under consequence, constructing the
 proof directly against the current target. This is the unary analogue of the
-direct raw relational path and covers raw `Std.Internal.Do.wp` goals with `epost⟨⟩`
+direct raw relational path and covers raw `Std.WP.wp` goals with `epost⟨⟩`
 without going through theorem-syntax replay. -/
 def VCSpecEntry.tryApplyRawUnaryConsequence (entry : VCSpecEntry) (mvarId : MVarId) :
     MetaM (Option (List MVarId)) := do
@@ -433,7 +433,7 @@ def VCSpecEntry.tryApplyRawUnaryConsequence (entry : VCSpecEntry) (mvarId : MVar
   let hpostTy ← mkUnaryPostPointwisePremise postSpec postTarget postTy
   let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
   let specApplied ←
-    mkAppM ``Std.Internal.Do.WP.wp_consequence_le
+    mkAppM ``Std.WP.WP.wp_consequence_le
       #[progSpec, postSpec, postTarget, epostSpec, hpost, specProof]
   let hpreTy ← mkOrderRel preTarget preSpec
   let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
@@ -593,7 +593,7 @@ def runVCSpecEntryCachedBackward (entry : VCSpecEntry) : TacticM Bool := do
 errors and unchanged-goal failures.
 
 The set peels transformer `wp` layers (`apply_wp`, `*.run`, lifts,
-`Std.Internal.Do.EPost.Cons.push*`), distributes `wp` over program structure with the
+`Lean.Order.push*`), distributes `wp` over program structure with the
 exact equations of `ExactWPMonad`, and applies the assorted monad rewrites. Tag a new
 normalization lemma with `@[vcspec_simp]` (or rely on the `@[vcspec]` fallback) instead of
 appending it to a tactic-local simp list. -/

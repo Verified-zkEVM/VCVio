@@ -31,7 +31,7 @@ or `OptionT m` over other assertion carriers.
 
 public section
 
-open MeasureTheory Std.Internal.Do
+open MeasureTheory Std.WP
 open scoped ENNReal
 
 universe v
@@ -125,7 +125,7 @@ noncomputable def toMAlgOrdered : MAlgOrdered m ℝ≥0∞ where
 /-- Core weakest preconditions under successful-output measures: `wp mx g ⊥` is the expectation
 of `g` over the outputs of `mx`. -/
 @[expose, reducible]
-noncomputable def measureWP [LawfulMonad m] : WPMonad m ℝ≥0∞ EPost.Nil :=
+noncomputable def measureWP [LawfulMonad m] : WPMonad m ℝ≥0∞ EStack⟨⟩ :=
   @MAlgOrdered.toWPMonad m ℝ≥0∞ _ _ (toMAlgOrdered m) _
 
 end MeasureProgramLogic
@@ -140,10 +140,10 @@ syntax:max (name := measureWpAppStx) "wp⟦" term "⟧ " term:max : term
 
 macro_rules
   | `(wp⟦ $mx ⟧ $g:term) =>
-    `(@Std.Internal.Do.WP.wp _ _ ENNReal Std.Internal.Do.EPost.Nil _ _
-      (@Std.Internal.Do.instWPOfWPMonad _ ENNReal Std.Internal.Do.EPost.Nil _ _ _ _
+    `(@Std.WP.WP.wp _ _ ENNReal EStack⟨⟩ _ _
+      (@Std.WP.instWPOfWPMonad _ ENNReal EStack⟨⟩ _ _ _ _
         (MeasureProgramLogic.measureWP _)) $mx $g
-      (open Lean.Order in (Lean.Order.bot : Std.Internal.Do.EPost.Nil)))
+      Lean.Order.bot)
   | `(wp⟦ $mx ⟧) => `(fun g => wp⟦ $mx ⟧ g)
 
 namespace MeasureProgramLogic

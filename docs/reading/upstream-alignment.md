@@ -133,12 +133,17 @@ Mathlib kernel composition delegates to the measure rules. Parameterized expecte
 `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` and
 `ToMathlib/Probability/Kernel/TotalVariation.lean`.
 
-**Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
-`Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`, which presents an exact
+**Program logic: core lattice-generic WP on v4.35.** Unary carriers consume
+`Std.WP.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`, which presents an exact
 interpretation (`ExactWPMonad`); reasoning is stated on core's `wp`. Quantitative,
 qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's
 `Set.Iic 1` with `MAlgOrdered.restrictIic`; no local lattice bridge is needed. The
-relational coupling interface belongs to VCVio and uses core assertion lattices.
+relational coupling interface belongs to VCVio and uses core assertion lattices; as of
+2026-09-30 neither core (v4.35.0-rc3 and master), Loom2, cslib, nor Mathlib has or plans a
+relational WP, coupling API, or relational `vcgen`. Core's `WP` accepts non-monadic program types,
+so a product-program interpretation can let core `vcgen` drive lockstep relational goals, while
+alignment and coupling choice stay with `rvcgen`. The handler specifications are core triples
+driven by core `vcgen`; the relational `FromUnary` bridge still consumes `Std.Do.Triple`.
 Loom2 is no longer a dependency. The generic native expectation algebra lives in
 `VCVio.ProgramLogic.Unary.WP.Measure`; its scoped core interpretation needs only
 lawful measure semantics and a lawful monad. Oracle quantitative WP delegates to that algebra

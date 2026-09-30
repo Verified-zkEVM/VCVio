@@ -28,7 +28,7 @@ require VCVio from ".."
 /- Use the exact PolyFun source against which the root VCVio checkout is being developed. -/
 require PolyFun from "../.lake/packages/PolyFun"
 
-require "leanprover-community" / "mathlib" @ git "v4.34.0"
+require "leanprover-community" / "mathlib" @ git "v4.35.0-rc3"
 
 @[default_target] lean_lib VCVioComplexity
 

@@ -17,7 +17,7 @@ zero-mass possible answers. No discrete probability backend is imported.
 
 public section
 
-open MeasureTheory Std.Internal.Do
+open MeasureTheory Std.WP
 open scoped ENNReal MeasureProgramLogic.Quantitative
 
 run_cmd do

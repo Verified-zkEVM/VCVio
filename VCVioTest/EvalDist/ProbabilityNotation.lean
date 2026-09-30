@@ -225,7 +225,7 @@ statements. -/
 
 section eventNotation
 
-open Lean.Order Std.Internal.Do
+open Lean.Order Std.WP
 
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ)
 
@@ -236,18 +236,18 @@ example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
   rfl
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
     wp (do let x ← mx; let y ← my x; return propInd (y = 3 ∧ x = true) : ProbComp ℝ≥0∞)
-      (fun r => r) (⊥ : EPost.Nil) := by
+      (fun r => r) Lean.Order.bot := by
   simp only [expect_norm]
 example (m₁ m₂ : ProbComp ℕ) : Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] =
     wp (do let b ← $ᵗ Bool; let x ← (if b then m₁ else m₂); return propInd (x = 3) :
-      ProbComp ℝ≥0∞) (fun r => r) (⊥ : EPost.Nil) := by
+      ProbComp ℝ≥0∞) (fun r => r) Lean.Order.bot := by
   simp only [expect_norm]
 example (mo : ProbComp (Option ℕ)) :
     Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] =
       wp (do
         let o ← mo
         let x ← match o with | some a => pure a | none => mz
-        return propInd (x = 1) : ProbComp ℝ≥0∞) (fun r => r) (⊥ : EPost.Nil) := by
+        return propInd (x = 1) : ProbComp ℝ≥0∞) (fun r => r) Lean.Order.bot := by
   simp only [expect_norm]
 
 /-! The normal form. -/
@@ -379,7 +379,7 @@ display. -/
 
 section expectationNotation
 
-open Lean.Order Std.Internal.Do
+open Lean.Order Std.WP
 
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ) (g : ℕ → ℝ≥0∞)
   (f : Bool → ℕ → ℝ≥0∞)
@@ -388,7 +388,7 @@ variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ) (
 
 example : 𝔼{let x ← mx; let y ← my x}[f x y] =
     wp (do let x ← mx; let y ← my x; return f x y : ProbComp ℝ≥0∞) (fun r => r)
-      (⊥ : EPost.Nil) := by
+      Lean.Order.bot := by
   simp only [expect_norm]
 
 /-! The normal form. -/

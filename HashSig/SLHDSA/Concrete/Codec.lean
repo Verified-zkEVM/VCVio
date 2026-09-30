@@ -317,7 +317,7 @@ theorem decodeSignature_encodeSignature
   conv_rhs => rw [show sig = (⟨sig.randomness, sig.fors, sig.hypertree⟩ :
     SignatureCore slhdsaSha2_128_24 shaPrimitives.core) from rfl]
   simp only []
-  congr 1
+  refine congr (congr (congrArg _ ?_) ?_) ?_
   · exact baSliceToB16_of_slice 0 rfl
       (SLHDSA.encodeSignature_randomness_slice sha128_24Vp shaWireCodec sig) (by omega)
   · apply Vector.ext

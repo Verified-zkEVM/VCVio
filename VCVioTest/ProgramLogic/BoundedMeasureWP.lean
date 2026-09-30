@@ -19,7 +19,7 @@ imports supply the interpretation, public value laws, and congruence automation.
 
 public section
 
-open MeasureTheory Std.Internal.Do
+open MeasureTheory Std.WP
 open scoped ENNReal MeasureProgramLogic.Probabilistic
 
 run_cmd do
@@ -29,7 +29,7 @@ run_cmd do
 
 namespace VCVioTest.ProgramLogic.BoundedMeasureWP
 
-noncomputable example : WPMonad Option Prob EPost.Nil := inferInstance
+noncomputable example : WPMonad Option Prob EStack⟨⟩ := inferInstance
 
 example (p : Prob) : wp (pure 7 : Option Nat) (fun _ ↦ p) Lean.Order.bot = p :=
   ExactWPMonad.wp_pure 7 _ _
@@ -47,12 +47,12 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
 
 example (mx : m α) (f g : α → Prob) (hfg : ∀ a, f a ≤ g a) :
-    wp mx f (Lean.Order.bot : EPost.Nil) ≤ wp mx g (Lean.Order.bot : EPost.Nil) := by
+    wp mx f (Lean.Order.bot : EStack⟨⟩) ≤ wp mx g (Lean.Order.bot : EStack⟨⟩) := by
   gcongr with a
   exact hfg a
 
 example (mx : m α) (f g : α → Prob) (hfg : ∀ a, f a ≤ g a) :
-    wp mx f (Lean.Order.bot : EPost.Nil) ≤ wp mx g (Lean.Order.bot : EPost.Nil) := by
+    wp mx f (Lean.Order.bot : EStack⟨⟩) ≤ wp mx g (Lean.Order.bot : EStack⟨⟩) := by
   grw [hfg]
 
 abbrev WeightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool

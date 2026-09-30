@@ -338,7 +338,7 @@ def runVCGenStep : TacticM Bool := do
       return true
   let cheapCloseState ← saveState
   if ← tryEvalTacticSyntax (← `(tactic|
-      (refine Std.Internal.Do.Triple.intro ?_
+      (refine Std.WP.Triple.intro ?_
        repeat intro _
        simp [Lean.Order.PartialOrder.rel, MonadLift.monadLift,
          ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,

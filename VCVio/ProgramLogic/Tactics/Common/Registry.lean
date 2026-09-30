@@ -35,9 +35,9 @@ of the preprocessed body. The resulting `Sym.Pattern` is then inserted into a
 arguments and bound variables in the key sequence.
 
 Because `Sym.preprocessType` unfolds the user-facing abbreviations
-(`Triple`, `RelTriple`, `RelWP`) into their cores (core's `Std.Internal.Do.Triple` for the unary
+(`Triple`, `RelTriple`, `RelWP`) into their cores (core's `Std.WP.Triple` for the unary
 one, `MAlgRelOrdered.*` for the relational ones), the selector matches on the unfolded heads
-(plus the folded abbreviations as a safety net). Expectations are core's `Std.Internal.Do.wp`
+(plus the folded abbreviations as a safety net). Expectations are core's `Std.WP.wp`
 already. On the lookup side we apply
 `withReducible <| whnf` to the goal's computation before querying, matching the
 normalization performed during pattern preprocessing.
@@ -193,17 +193,17 @@ def getVCSpecSimpTheorems : CoreM Meta.SimpTheorems :=
 `Sym.preprocessType` aggressively unfolds reducible abbreviations (including our
 own `Triple`, `wp`, `RelTriple`, `RelWP` wrappers) before handing the body to
 the selector. These helpers match on both the folded (`OracleComp.ProgramLogic.…`)
-and unfolded (`Std.Internal.Do.…` / `MAlgRelOrdered.…`) heads so registrations are
+and unfolded (`Std.WP.…` / `MAlgRelOrdered.…`) heads so registrations are
 robust to future reducibility shifts.
 -/
 
 /-- Unfolded cores of the unary triple / wp abbreviations; matched on the
 preprocessed theorem body alongside the folded heads. -/
 private def unaryTripleHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.Triple, ``Std.Internal.Do.Triple]
+  #[``OracleComp.ProgramLogic.Triple, ``Std.WP.Triple]
 
 private def unaryWpHeadNames : Array Name :=
-  #[``Std.Internal.Do.wp]
+  #[``Std.WP.wp]
 
 private def relTripleHeadNames : Array Name :=
   #[``OracleComp.ProgramLogic.Relational.RelTriple, ``MAlgRelOrdered.Triple,
@@ -232,12 +232,12 @@ private def trailingArgsN? (e : Expr) (n : Nat) : Option (Array Expr) :=
     none
 
 /-- Preprocessed-body variant of `tripleGoalParts?` that also matches the
-unfolded core head `Std.Internal.Do.Triple`, whose program argument precedes its
+unfolded core head `Std.WP.Triple`, whose program argument precedes its
 WP evidence and assertion arguments. Returns `(pre, oa, post)`. -/
 private def tripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   let body := body.consumeMData
   unless headIsOneOf body unaryTripleHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.Internal.Do.Triple then 5 else 3
+  let n := if body.getAppFn.isConstOf ``Std.WP.Triple then 5 else 3
   let args ← trailingArgsN? body n
   if n == 5 then
     let #[oa, _wp, pre, post, _epost] := args | none
@@ -246,7 +246,7 @@ private def tripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
     let #[pre, oa, post] := args | none
     some (pre, oa, post)
 
-/-- Preprocessed-body variant of `wpGoalParts?`: core's head `Std.Internal.Do.wp`, which
+/-- Preprocessed-body variant of `wpGoalParts?`: core's head `Std.WP.wp`, which
 carries a trailing exception postcondition. Returns `(oa, post)`. -/
 private def wpBodyParts? (body : Expr) : Option (Expr × Expr) := do
   let body := body.consumeMData
@@ -255,7 +255,7 @@ private def wpBodyParts? (body : Expr) : Option (Expr × Expr) := do
   some (oa, post)
 
 /-- Preprocessed-body variant of `rawWPGoalParts?` that also matches the
-unfolded core `Std.Internal.Do.wp` head under `≤`. Returns `(pre, oa, post)`. -/
+unfolded core `Std.WP.wp` head under `≤`. Returns `(pre, oa, post)`. -/
 private def rawWpBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
   let body := body.consumeMData
   unless body.isAppOfArity ``LE.le 4 || body.isAppOfArity ``Lean.Order.PartialOrder.rel 4 do

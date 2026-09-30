@@ -47,28 +47,28 @@ section ExactTransformers
 /-! Core's transformer interpretations over an exact base are exact, so `wp` distributes over
 their `bind` with equality. -/
 
-open Std.Internal.Do
+open Std.WP
 
 universe v
 
 variable {m : Type u → Type v} {L : Type u}
-variable [Monad m] [Assertion L] [WPMonad m L EPost.Nil] [ExactWPMonad m L EPost.Nil]
+variable [Monad m] [Assertion L] [WPMonad m L EStack⟨⟩] [ExactWPMonad m L EStack⟨⟩]
 variable {α β σ ρ ε : Type u}
 
-example (x : StateT σ m α) (f : α → StateT σ m β) (post : β → σ → L) (e : EPost.Nil) :
+example (x : StateT σ m α) (f : α → StateT σ m β) (post : β → σ → L) (e : EStack⟨⟩) :
     wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
   ExactWPMonad.wp_bind x f post e
 
-example (x : ReaderT ρ m α) (f : α → ReaderT ρ m β) (post : β → ρ → L) (e : EPost.Nil) :
+example (x : ReaderT ρ m α) (f : α → ReaderT ρ m β) (post : β → ρ → L) (e : EStack⟨⟩) :
     wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
   ExactWPMonad.wp_bind x f post e
 
 example (x : ExceptT ε m α) (f : α → ExceptT ε m β) (post : β → L)
-    (e : EPost.Cons (ε → L) EPost.Nil) :
+    (e : EStack⟨ε → L⟩) :
     wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
   ExactWPMonad.wp_bind x f post e
 
-example (x : OptionT m α) (f : α → OptionT m β) (post : β → L) (e : EPost.Cons L EPost.Nil) :
+example (x : OptionT m α) (f : α → OptionT m β) (post : β → L) (e : EStack⟨Unit → L⟩) :
     wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
   ExactWPMonad.wp_bind x f post e
 

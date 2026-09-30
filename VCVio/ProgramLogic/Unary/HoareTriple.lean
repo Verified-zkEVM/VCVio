@@ -24,13 +24,13 @@ traversals.
 
 The expectation interpretation is the core instance of `OracleComp spec`
 (`OracleComp.Quantitative.instWP`), so core's `⦃ pre ⦄ program ⦃ post ⦄` notation, available
-through `open scoped Std.Internal.Do`, states these triples.
+through `open scoped Std.WP`, states these triples.
 -/
 
 @[expose] public section
 
 open ENNReal MeasureTheory
-open Std.Internal.Do
+open Std.WP
 
 universe u
 
@@ -55,11 +55,11 @@ representation.
 
 /-- Quantitative Hoare triple for `OracleComp spec`, fixing the exception
 postcondition to `Lean.Order.bot`. Definitionally equal to
-`Std.Internal.Do.Triple oa pre post Lean.Order.bot`; see the API contract for
+`Std.WP.Triple oa pre post Lean.Order.bot`; see the API contract for
 details. -/
 noncomputable abbrev Triple (pre : ℝ≥0∞) (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) : Prop :=
-  Std.Internal.Do.Triple oa pre post Lean.Order.bot
+  Std.WP.Triple oa pre post Lean.Order.bot
 
 /-- Quantitative WP integrates a measurable assertion in the chosen output space. -/
 theorem wp_eq_lintegral [MeasurableSpace α] (oa : OracleComp spec α)
@@ -77,7 +77,7 @@ theorem triple_iff_le_wp
     (pre : ℝ≥0∞) (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     Triple pre oa post ↔
       pre ≤ wp⟦oa⟧ post :=
-  Std.Internal.Do.Triple.iff (epost := Lean.Order.bot)
+  Std.WP.Triple.iff (epost := Lean.Order.bot)
 
 /-- Construct a quantitative triple from an expectation inequality. -/
 theorem triple_ofLE
@@ -225,8 +225,8 @@ theorem wp_finsetSum {κ : Type*} (oa : OracleComp spec α) (s : Finset κ)
 
 /-! ## `Triple` lemmas (against `Triple _ _ _`)
 
-`Std.Internal.Do.Triple` is an inductive wrapper around `pre ⊑ wp …`. The
-accessor `Std.Internal.Do.Triple.iff` exchanges between the inductive form and
+`Std.WP.Triple` is an inductive wrapper around `pre ⊑ wp …`. The
+accessor `Std.WP.Triple.iff` exchanges between the inductive form and
 the `≤`-form; `triple_ofLE` packages a `≤`-proof into the
 constructor; pattern matching `match h with | .intro h => h` extracts
 the underlying inequality. -/
@@ -245,9 +245,7 @@ theorem triple_bind {pre : ℝ≥0∞} {oa : OracleComp spec α}
     (hoa : Triple pre oa cut)
     (hob : ∀ x, Triple (cut x) (ob x) post) :
     Triple pre (oa >>= ob) post :=
-  triple_ofLE <| by
-    rw [wp_bind]
-    exact le_trans (triple_toLE hoa) (wp_mono oa fun x => triple_toLE (hob x))
+  Std.WP.Triple.bind oa ob cut hoa hob
 
 theorem triple_bind_wp {pre : ℝ≥0∞} {oa : OracleComp spec α}
     {ob : α → OracleComp spec β} {post : β → ℝ≥0∞}
@@ -258,7 +256,7 @@ theorem triple_bind_wp {pre : ℝ≥0∞} {oa : OracleComp spec α}
 
 theorem triple_pure (x : α) (post : α → ℝ≥0∞) :
     Triple (post x) (pure x : OracleComp spec α) post :=
-  triple_ofLE (by simp)
+  Std.WP.Spec.pure x
 
 /-- A quantitative triple with precondition `0` is always true. -/
 theorem triple_zero (oa : OracleComp spec α) (post : α → ℝ≥0∞) :

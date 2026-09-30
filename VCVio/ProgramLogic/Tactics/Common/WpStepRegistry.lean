@@ -124,7 +124,7 @@ initialize wpStepRegistry :
 
 /-- Selector for `Sym.mkPatternFromDeclWithKey`: extract the `comp` argument
 from the LHS of a `wp⟦comp⟧ post = …` equation, core's
-`Std.Internal.Do.wp m Pred EPred α … comp post epost`, where it is the 3rd-to-last explicit
+`Std.WP.wp m Pred EPred α … comp post epost`, where it is the 3rd-to-last explicit
 argument. -/
 private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
   let body := body.consumeMData
@@ -133,10 +133,10 @@ private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
   let lhs := (body.getArg! 1).consumeMData
   let fn := lhs.getAppFn
   let n := lhs.getAppNumArgs
-  unless fn.isConstOf ``Std.Internal.Do.wp do
+  unless fn.isConstOf ``Std.WP.wp do
     throwError m!"@[wpStep] expects a `wp⟦_⟧ _` LHS; got:{indentExpr lhs}"
   unless n ≥ 3 do
-    throwError m!"@[wpStep] `Std.Internal.Do.wp` LHS has too few arguments:{indentExpr lhs}"
+    throwError m!"@[wpStep] `Std.WP.wp` LHS has too few arguments:{indentExpr lhs}"
   return (lhs.getArg! (n - 3), ())
 
 /-- Construct a registry entry from a theorem declaration. Runs the

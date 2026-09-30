@@ -22,7 +22,7 @@ Opening the scope selects the quantitative carrier before core instances whose c
 
 public section
 
-open MeasureTheory Std.Internal.Do
+open MeasureTheory Std.WP
 open scoped ENNReal
 
 universe v
@@ -42,7 +42,14 @@ theorem μ_eq_lintegral (mx : m ℝ≥0∞) : MAlgOrdered.μ mx = ∫⁻ x, x �
 
 /-- Select the expectation interpretation of successful-output measures. -/
 noncomputable scoped instance (priority := 1100) instWP [LawfulMonad m] :
-    WPMonad m ℝ≥0∞ EPost.Nil :=
+    WPMonad m ℝ≥0∞ EStack⟨⟩ :=
   measureWP m
+
+/-- The expectation interpretation as a direct `WP` instance on programs. Core interprets its
+concrete monads (`Id`, `Option`, `Except`, …) through direct `WP` instances, which instance search
+tries before any `WPMonad`-derived one; this instance outranks them while the scope is open. -/
+noncomputable scoped instance (priority := 1100) wpInst [LawfulMonad m] {α : Type} :
+    WP (m α) α ℝ≥0∞ EStack⟨⟩ :=
+  (measureWP m).toWP α
 
 end MeasureProgramLogic.Quantitative

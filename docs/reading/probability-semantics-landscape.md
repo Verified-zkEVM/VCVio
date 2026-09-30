@@ -4,9 +4,10 @@
 > use [`denotational-probability-semantics.md`](denotational-probability-semantics.md) and
 > [`docs/agents/probability.md`](../agents/probability.md).
 >
-> Current v4.34 implementation: Loom2 has been removed; unary carriers use core WP,
-> shared algebra/transformer constructions come from PolyFun, and coupling remains local.
-> See [upstream alignment](upstream-alignment.md) and the
+> Current v4.35 implementation: Loom2 has been removed; unary carriers use core `Std.WP`, public
+> since v4.35, and core `vcgen` (`mvcgen` is deprecated); shared algebra/transformer constructions
+> come from PolyFun; coupling remains local, with no relational program logic upstream or
+> planned as of 2026-09-30. See [upstream alignment](upstream-alignment.md) and the
 > [program-logic guide](../agents/program-logic.md) for the implemented boundary.
 >
 > Original snapshot: 2026-08-21. Section 19 preserves that audit in its original time context.
@@ -662,8 +663,9 @@ VCVio-visible rename.
 ### 5.3 loom2
 
 VCVio depends on [`loom2`](https://github.com/quangvdao/loom2) for `Std.Do'`,
-`PredTrans`, `EPost`, `RelTriple`, and `rwp` — the substrate under
-`VCVio/ProgramLogic/{Unary,Relational}/WP/`. It is omitted from the layering picture
+`PredTrans`, and `EPost` — the substrate under `VCVio/ProgramLogic/{Unary,Relational}/WP/`;
+`RelTriple` and `rwp` are VCVio's own, declared in `ToMathlib/Control/Monad/RelWP.lean` on top
+of `Loom.WP.Basic`. It is omitted from the layering picture
 above, and it should not be: it is the least stable link in the chain.
 
 - It is pinned to a single commit and targets a Lean **v4.32.0** toolchain, while VCVio

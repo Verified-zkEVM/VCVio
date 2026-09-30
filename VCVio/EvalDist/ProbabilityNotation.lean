@@ -242,10 +242,10 @@ def elabExpectDo (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (b : Ter
       throwError m!"an expectation needs lawful measure semantics; no `{cls}` instance for\
         {indentExpr m}"
   let wp ← withSynthesize do
-    elabTermEnsuringType (← `(@Std.Internal.Do.WP.wp _ _ ENNReal Std.Internal.Do.EPost.Nil _ _
-      (@Std.Internal.Do.instWPOfWPMonad _ ENNReal Std.Internal.Do.EPost.Nil _ _ _ _
+    elabTermEnsuringType (← `(@Std.WP.WP.wp _ _ ENNReal EStack⟨⟩ _ _
+      (@Std.WP.instWPOfWPMonad _ ENNReal EStack⟨⟩ _ _ _ _
         (MeasureProgramLogic.measureWP _)) $(← exprToSyntax e) (fun r => r)
-      (open Lean.Order in (Lean.Order.bot : Std.Internal.Do.EPost.Nil)))) ennreal
+      Lean.Order.bot)) ennreal
   normalize (← instantiateMVars wp)
 
 end ProbabilityNotation
@@ -289,9 +289,9 @@ partial def isMeasureInterpretation (w : Expr) : MetaM Bool := do
 
 /-- Whether `e` is an expectation: core's `wp` under the measure interpretation. -/
 def isExpectation (e : Expr) : MetaM Bool := do
-  unless e.isAppOfArity ``Std.Internal.Do.WP.wp 10 do return false
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return false
   let inst := e.getArg! 6
-  unless inst.isAppOfArity ``Std.Internal.Do.instWPOfWPMonad 8 do return false
+  unless inst.isAppOfArity ``Std.WP.instWPOfWPMonad 8 do return false
   isMeasureInterpretation (inst.getArg! 7)
 
 /-- The statement `let x ← a` for a draw bound by the `fun` `f`, or `let _ ← a` when `f` ignores
@@ -320,7 +320,7 @@ partial def isStructural (prog : Expr) : MetaM Bool := do
 
 /-- The applications of core's `wp` in `e`. -/
 partial def wpApps (e : Expr) (acc : Array Expr := #[]) : Array Expr :=
-  let acc := if e.isAppOfArity ``Std.Internal.Do.WP.wp 10 then acc.push e else acc
+  let acc := if e.isAppOfArity ``Std.WP.WP.wp 10 then acc.push e else acc
   match e with
   | .app f a => wpApps a (wpApps f acc)
   | .lam _ t b _ | .forallE _ t b _ => wpApps b (wpApps t acc)
@@ -397,7 +397,7 @@ partial def delabDraws :
 /-- Display an expectation in normal form in the notation it elaborates from: `Pr{…}[p x]` when
 its last observation is the indicator `predInd p` and `𝔼{…}[…]` otherwise. An expectation not in
 normal form keeps core's display `wp a g ⊥`. -/
-@[delab app.Std.Internal.Do.WP.wp]
+@[delab app.Std.WP.WP.wp]
 def delabExpectation : Delab := whenPPOption getPPNotation <| withOverApp 10 do
   let e ← getExpr
   unless ← isExpectation e do failure
@@ -462,8 +462,8 @@ end Rewriting
 open Lean Meta Simp ProbabilityNotation in
 /-- `ExactWPMonad.wp_bind`, naming the new binder after the continuation's. -/
 simproc ↓ [simp, expect_norm] wp_bind_named
-    (@Std.Internal.Do.WP.wp _ _ _ _ _ _ ?_ (_ >>= _) _ _) := fun e => do
-  unless e.isAppOfArity ``Std.Internal.Do.WP.wp 10 do return .continue
+    (@Std.WP.WP.wp _ _ _ _ _ _ ?_ (_ >>= _) _ _) := fun e => do
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
   let mb := e.getArg! 7
   unless mb.isAppOfArity ``Bind.bind 6 do return .continue
   namedStep ``ExactWPMonad.wp_bind e 8 #[mb.getArg! 5]
@@ -471,8 +471,8 @@ simproc ↓ [simp, expect_norm] wp_bind_named
 open Lean Meta Simp ProbabilityNotation in
 /-- `ExactWPMonad.wp_map`, naming the observation's binder after the map's. -/
 simproc ↓ [simp, expect_norm] wp_map_named
-    (@Std.Internal.Do.WP.wp _ _ _ _ _ _ ?_ (_ <$> _) _ _) := fun e => do
-  unless e.isAppOfArity ``Std.Internal.Do.WP.wp 10 do return .continue
+    (@Std.WP.WP.wp _ _ _ _ _ _ ?_ (_ <$> _) _ _) := fun e => do
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
   let mb := e.getArg! 7
   unless mb.isAppOfArity ``Functor.map 6 do return .continue
   namedStep ``ExactWPMonad.wp_map e 8 #[mb.getArg! 4, e.getArg! 8]
@@ -483,8 +483,8 @@ predicate, eta-reduced, so that an event's predicate is an argument of its obser
 observation `propInd` of a proposition-valued computation is `predInd (fun b => b)`. The two are
 equal by definition. -/
 simproc [simp, expect_norm] wp_predInd_fold
-    (@Std.Internal.Do.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
-  unless e.isAppOfArity ``Std.Internal.Do.WP.wp 10 do return .continue
+    (@Std.WP.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
+  unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
   let some pred := ProbabilityNotation.indicatorPred? (e.getArg! 8) | return .continue
   let obs ← mkAppM ``predInd #[pred]
   return .visit { expr := mkAppN e.getAppFn (e.getAppArgs.set! 8 obs) }

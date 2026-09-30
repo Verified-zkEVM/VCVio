@@ -29,7 +29,7 @@ interpretation would capture every `wp` on `OracleComp`.
 
 universe u
 
-open Std.Internal.Do
+open Std.WP
 
 namespace OracleComp.ProgramLogic.PropLogic
 
@@ -39,7 +39,7 @@ variable {α : Type}
 /-- Support-based characterization of the qualitative weakest precondition for `OracleComp`. -/
 theorem wp_iff_forall_support (oa : OracleComp spec α) (post : α → Prop) :
     (letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec);
-      Std.Internal.Do.wp oa post Lean.Order.bot) ↔ ∀ x ∈ support oa, post x :=
+      Std.WP.wp oa post Lean.Order.bot) ↔ ∀ x ∈ support oa, post x :=
   Iff.rfl
 
 end OracleComp.ProgramLogic.PropLogic

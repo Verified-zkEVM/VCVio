@@ -18,7 +18,7 @@ postcondition and structural support, also under a finite sum. Measurable assert
 
 public section
 
-open scoped Std.Internal.Do
+open scoped Std.WP
 
 open ENNReal OracleSpec OracleComp MeasureTheory
 open OracleComp.ProgramLogic
@@ -73,7 +73,7 @@ example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞)
 /-- Public normalization exposes structural support to core WP congruence. -/
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
     (h : ∀ x ∈ support oa, f x ≤ g x) :
-    Std.Internal.Do.wp oa f Lean.Order.bot ≤ Std.Internal.Do.wp oa g Lean.Order.bot := by
+    Std.WP.wp oa f Lean.Order.bot ≤ Std.WP.wp oa g Lean.Order.bot := by
   gcongr with x hx
   exact h x hx
 
