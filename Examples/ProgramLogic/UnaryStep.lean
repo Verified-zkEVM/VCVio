@@ -40,52 +40,52 @@ variable {α β : Type}
 
 example (oa : OracleComp spec α) (f : α → OracleComp spec β) (post : β → ℝ≥0∞) :
     wp⟦oa >>= f⟧ post = wp⟦oa⟧ (fun u => wp⟦f u⟧ post) := by
-  vcstep
+  pvcstep
 
-/-! ## `vcstep` on raw `wp` goals -/
+/-! ## `pvcstep` on raw `wp` goals -/
 
 example (x : α) (post : α → ℝ≥0∞) :
     wp⟦(pure x : OracleComp spec α)⟧ post = post x := by
-  vcstep
+  pvcstep
 
 example (c : Prop) [Decidable c] (a b : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦if c then a else b⟧ post = if c then wp⟦a⟧ post else wp⟦b⟧ post := by
-  vcstep
+  pvcstep
 
 example (oa : OracleComp spec α) (n : ℕ) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate (n + 1)⟧ post =
       wp⟦oa⟧ (fun x => wp⟦oa.replicate n⟧ (fun xs => post (x :: xs))) := by
-  vcstep
+  pvcstep
 
 example (x : α) (xs : List α) (f : α → OracleComp spec β) (post : List β → ℝ≥0∞) :
     wp⟦(x :: xs).mapM f⟧ post =
       wp⟦f x⟧ (fun y => wp⟦xs.mapM f⟧ (fun ys => post (y :: ys))) := by
-  vcstep
+  pvcstep
 
 example (x : α) (xs : List α) (f : β → α → OracleComp spec β)
     (init : β) (post : β → ℝ≥0∞) :
     wp⟦(x :: xs).foldlM f init⟧ post =
       wp⟦f init x⟧ (fun s => wp⟦xs.foldlM f s⟧ post) := by
-  vcstep
+  pvcstep
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp⟦(query t : OracleComp spec (spec.Range t))⟧ post =
       ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
-  vcstep
+  pvcstep
 
 example (c : Prop) [Decidable c]
     (a : c → OracleComp spec α) (b : ¬c → OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦dite c a b⟧ post = if h : c then wp⟦a h⟧ post else wp⟦b h⟧ post := by
-  vcstep
+  pvcstep
 
 example [SampleableType α] (post : α → ℝ≥0∞) :
     wp⟦($ᵗ α : ProbComp α)⟧ post =
       ∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)] := by
-  vcstep
+  pvcstep
 
 example (f : α → β) (oa : OracleComp spec α) (post : β → ℝ≥0∞) :
     wp⟦f <$> oa⟧ post = wp⟦oa⟧ (post ∘ f) := by
-  vcstep
+  pvcstep
 
 /-! ## `StateT (OracleComp spec)` transformer steps -/
 
@@ -93,25 +93,25 @@ example (post : Nat → Nat → ℝ≥0∞) :
     ⦃fun s => post s s⦄
       (MonadStateOf.get : StateT Nat (OracleComp spec) Nat)
     ⦃post⦄ := by
-  vcstep
+  pvcstep
 
 example (s' : Nat) (post : PUnit → Nat → ℝ≥0∞) :
     ⦃fun _ => post ⟨⟩ s'⦄
       (MonadStateOf.set s' : StateT Nat (OracleComp spec) PUnit)
     ⦃post⦄ := by
-  vcstep
+  pvcstep
 
 example (f : Nat → α × Nat) (post : α → Nat → ℝ≥0∞) :
     ⦃fun s => post (f s).1 (f s).2⦄
       (MonadStateOf.modifyGet f : StateT Nat (OracleComp spec) α)
     ⦃post⦄ := by
-  vcstep
+  pvcstep
 
 example (oa : OracleComp spec α) (post : α → Nat → ℝ≥0∞) :
     ⦃fun s => wp⟦oa⟧ (fun a => post a s)⦄
       (MonadLift.monadLift oa : StateT Nat (OracleComp spec) α)
     ⦃post⦄ := by
-  vcstep
+  pvcstep
 
 example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
     ⦃fun s => wp⟦oa⟧ (fun a => post (s, a) (s + 1))⦄
@@ -121,7 +121,7 @@ example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
         let a ← (MonadLift.monadLift oa : StateT Nat (OracleComp spec) α)
         pure (s, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (s' : Nat) (oa : OracleComp spec α) (post : α → Nat → ℝ≥0∞) :
     ⦃fun _ => wp⟦oa⟧ (fun a => post a s')⦄
@@ -129,7 +129,7 @@ example (s' : Nat) (oa : OracleComp spec α) (post : α → Nat → ℝ≥0∞) 
         MonadStateOf.set s'
         MonadLift.monadLift oa : StateT Nat (OracleComp spec) α)
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (f : Nat → α × Nat) (post : α → Nat → ℝ≥0∞) :
     ⦃fun s => post (f s).1 (f s).2⦄
@@ -137,14 +137,14 @@ example (f : Nat → α × Nat) (post : α → Nat → ℝ≥0∞) :
         let a ← (MonadStateOf.modifyGet f : StateT Nat (OracleComp spec) α)
         pure a)
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## `OptionT (OracleComp spec)` transformer steps -/
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄ (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
       ⦃post; estack⟨nonePost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄
@@ -152,18 +152,18 @@ example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (nonePost : Unit �
         let a ← (MonadLift.monadLift oa : OptionT (OracleComp spec) α)
         pure a)
       ⦃post; estack⟨nonePost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (post : α → ℝ≥0∞) (nonePost : Unit → ℝ≥0∞) :
     ⦃nonePost ()⦄ (failure : OptionT (OracleComp spec) α) ⦃post; estack⟨nonePost⟩⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## `ExceptT (OracleComp spec)` transformer steps -/
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄ (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
       ⦃post; estack⟨errPost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     ⦃wp⟦oa⟧ post⦄
@@ -171,11 +171,11 @@ example (oa : OracleComp spec α) (post : α → ℝ≥0∞) (errPost : String �
         let a ← (MonadLift.monadLift oa : ExceptT String (OracleComp spec) α)
         pure a)
       ⦃post; estack⟨errPost⟩⦄ := by
-  vcgen
+  pvcgen
 
 example (err : String) (post : α → ℝ≥0∞) (errPost : String → ℝ≥0∞) :
     ⦃errPost err⦄ (throw err : ExceptT String (OracleComp spec) α) ⦃post; estack⟨errPost⟩⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## `ReaderT (OracleComp spec)` transformer steps -/
 
@@ -183,7 +183,7 @@ example (oa : OracleComp spec α) (post : α → String → ℝ≥0∞) :
     ⦃fun r => wp⟦oa⟧ (fun a => post a r)⦄
       (MonadLift.monadLift oa : ReaderT String (OracleComp spec) α)
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (post : String × α → String → ℝ≥0∞) :
     ⦃fun r => wp⟦oa⟧ (fun a => post (r, a) r)⦄
@@ -192,7 +192,7 @@ example (oa : OracleComp spec α) (post : String × α → String → ℝ≥0∞
         let a ← (MonadLift.monadLift oa : ReaderT String (OracleComp spec) α)
         pure (r, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## Mixed transformer stack steps -/
 
@@ -205,7 +205,7 @@ example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) (non
           StateT Nat (OptionT (OracleComp spec)) α)
         pure (s, a))
       ⦃post; estack⟨nonePost⟩⦄ := by
-  vcgen
+  pvcgen
 
 /-! ## `WriterT (OracleComp spec)` transformer steps -/
 
@@ -213,13 +213,13 @@ example (oa : OracleComp spec α) (post : α → Multiplicative Nat → ℝ≥0�
     ⦃fun w => wp⟦oa⟧ (fun a => post a w)⦄
       (MonadLift.monadLift oa : WriterT (Multiplicative Nat) (OracleComp spec) α)
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (out : Multiplicative Nat) (post : PUnit → Multiplicative Nat → ℝ≥0∞) :
     ⦃fun w => post ⟨⟩ (w * out)⦄
       (MonadWriter.tell out : WriterT (Multiplicative Nat) (OracleComp spec) PUnit)
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (out : Multiplicative Nat)
     (post : PUnit × α → Multiplicative Nat → ℝ≥0∞) :
@@ -229,7 +229,7 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
         let a ← (MonadLift.monadLift oa : WriterT (Multiplicative Nat) (OracleComp spec) α)
         pure (PUnit.unit, a))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (out : Multiplicative Nat)
     (post : Nat × α → Nat → Multiplicative Nat → ℝ≥0∞) :
@@ -249,7 +249,7 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
           StateT Nat (WriterT (Multiplicative Nat) (OracleComp spec)) (Nat × α))) :
         StateT Nat (WriterT (Multiplicative Nat) (OracleComp spec)) (Nat × α))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 example (oa : OracleComp spec α) (out : Multiplicative Nat)
     (post : String × α → String → Multiplicative Nat → ℝ≥0∞) :
@@ -267,7 +267,7 @@ example (oa : OracleComp spec α) (out : Multiplicative Nat)
           ReaderT String (WriterT (Multiplicative Nat) (OracleComp spec)) (String × α))) :
         ReaderT String (WriterT (Multiplicative Nat) (OracleComp spec)) (String × α))
     ⦃post⦄ := by
-  vcgen
+  pvcgen
 
 /--
 info: [wpstep cache] hit `OracleComp.ProgramLogic.wp_replicate_succ`
@@ -278,58 +278,58 @@ info: [wpstep cache] miss `OracleComp.ProgramLogic.wp_replicate_zero`
 set_option vcvio.vcgen.traceCachedRules true in
 example (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate 0⟧ post = post [] := by
-  vcstep
+  pvcstep
 
 example (x : α) (post : α → ℝ≥0∞) :
     post x ≤ wp⟦(pure x : OracleComp spec α)⟧ post := by
-  vcstep
+  pvcstep
 
 example (f : α → β) (oa : OracleComp spec α) (post : β → ℝ≥0∞) :
     wp⟦oa⟧ (post ∘ f) ≤ wp⟦f <$> oa⟧ post := by
-  vcstep
+  pvcstep
 
 example (c : Prop) [Decidable c] (a b : OracleComp spec α) (post : α → ℝ≥0∞) :
     (if c then wp⟦a⟧ post else wp⟦b⟧ post) ≤ wp⟦if c then a else b⟧ post := by
-  vcstep
+  pvcstep
 
 example (c : Prop) [Decidable c]
     (a : c → OracleComp spec α) (b : ¬c → OracleComp spec α) (post : α → ℝ≥0∞) :
     (if h : c then wp⟦a h⟧ post else wp⟦b h⟧ post) ≤ wp⟦dite c a b⟧ post := by
-  vcstep
+  pvcstep
 
 example (oa : OracleComp spec α) (n : ℕ) (post : List α → ℝ≥0∞) :
     wp⟦oa⟧ (fun x => wp⟦oa.replicate n⟧ (fun xs => post (x :: xs))) ≤
       wp⟦oa.replicate (n + 1)⟧ post := by
-  vcstep
+  pvcstep
 
 example (x : α) (xs : List α) (f : α → OracleComp spec β) (post : List β → ℝ≥0∞) :
     wp⟦f x⟧ (fun y => wp⟦xs.mapM f⟧ (fun ys => post (y :: ys))) ≤
       wp⟦(x :: xs).mapM f⟧ post := by
-  vcstep
+  pvcstep
 
 example (f : α → OracleComp spec β) (post : List β → ℝ≥0∞) :
     wp⟦([].mapM f : OracleComp spec (List β))⟧ post = post [] := by
-  vcstep
+  pvcstep
 
 example (x : α) (xs : List α) (f : β → α → OracleComp spec β)
     (init : β) (post : β → ℝ≥0∞) :
     wp⟦f init x⟧ (fun s => wp⟦xs.foldlM f s⟧ post) ≤
       wp⟦(x :: xs).foldlM f init⟧ post := by
-  vcstep
+  pvcstep
 
 example (f : β → α → OracleComp spec β) (init : β) (post : β → ℝ≥0∞) :
     wp⟦([].foldlM f init : OracleComp spec β)⟧ post = post init := by
-  vcstep
+  pvcstep
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     (∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t) ≤
       wp⟦(query t : OracleComp spec (spec.Range t))⟧ post := by
-  vcstep
+  pvcstep
 
 example [SampleableType α] (post : α → ℝ≥0∞) :
     (∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)]) ≤
       wp⟦($ᵗ α : ProbComp α)⟧ post := by
-  vcstep
+  pvcstep
 
 example (impl : QueryImpl spec (OracleComp spec))
     (hImpl : ∀ (t : spec.Domain),
@@ -350,11 +350,11 @@ example (impl : QueryImpl spec (OracleComp spec))
 example :
     ⦃ (1 : ℝ≥0∞) ⦄ (wrappedTrue (spec := spec))
       ⦃ fun y => if y = true then (1 : ℝ≥0∞) else 0 ⦄ := by
-  vcstep
+  pvcstep
 
 example :
     ⦃ (1 : ℝ≥0∞) ⦄ (wrappedTrue (spec := spec)) ⦃ fun _ => (1 : ℝ≥0∞) ⦄ := by
-  vcstep
+  pvcstep
 
 @[local vcspec] theorem stdDoTriple_wrappedTrue :
     Std.WP.Triple (wrappedTrue (spec := spec)) (1 : ℝ≥0∞)
@@ -363,12 +363,12 @@ example :
 
 example :
     ⦃ (1 : ℝ≥0∞) ⦄ (wrappedTrue (spec := spec)) ⦃ fun _ => (1 : ℝ≥0∞) ⦄ := by
-  vcstep with stdDoTriple_wrappedTrue
+  pvcstep with stdDoTriple_wrappedTrue
 
 example :
     Std.WP.Triple (wrappedTrue (spec := spec)) (1 : ℝ≥0∞)
       (fun _ => (1 : ℝ≥0∞)) estack⟨⟩ := by
-  vcstep
+  pvcstep
 
 @[local vcspec] theorem rawWP_wrappedTrue :
     (1 : ℝ≥0∞) ⊑
@@ -379,7 +379,7 @@ example :
 example :
     (1 : ℝ≥0∞) ⊑
       Std.WP.wp (wrappedTrue (spec := spec)) (fun _ => (1 : ℝ≥0∞)) estack⟨⟩ := by
-  vcstep
+  pvcstep
 
 @[irreducible] def wrappedTrueStep : OracleComp spec Bool := pure true
 
@@ -391,11 +391,11 @@ example :
 example :
     ⦃ (1 : ℝ≥0∞) ⦄ (wrappedTrueStep (spec := spec))
       ⦃ fun y => if y = true then (1 : ℝ≥0∞) else 0 ⦄ := by
-  vcstep
+  pvcstep
 
 example :
     ⦃ 1 ⦄ wrappedTrueStep (spec := spec) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
-  vcstep with triple_wrappedTrueStep
+  pvcstep with triple_wrappedTrueStep
 
 @[irreducible] def cacheTraceWrapped : OracleComp spec Bool := pure true
 
@@ -418,7 +418,7 @@ example :
       ⦃ fun y => if y = true then (1 : ℝ≥0∞) else 0 ⦄) ∧
       (⦃ (1 : ℝ≥0∞) ⦄ (cacheTraceWrapped (spec := spec))
         ⦃ fun y => if y = true then (1 : ℝ≥0∞) else 0 ⦄) := by
-  constructor <;> vcstep
+  constructor <;> pvcstep
 
 /-! ## `liftComp` -/
 

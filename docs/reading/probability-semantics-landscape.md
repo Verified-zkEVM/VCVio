@@ -46,7 +46,7 @@ several meanings of “probability semantics”:
 - expectations, costs, couplings, and divergences;
 - measure-theoretic independence and conditioning for Bluebell;
 - bounded and unbounded execution for PolyFun's coalgebraic computations;
-- a semantic base that can be exposed through `mvcgen`, VCVio's `vcgen`, and Iris-style
+- a semantic base that can be exposed through `mvcgen`, VCVio's `pvcgen`, and Iris-style
   weakest preconditions.
 
 The central conclusion of this survey is that no single upstream type is a drop-in
@@ -258,7 +258,7 @@ quantitative mass, and probability is a bounded presentation of the quantitative
 families:
 
 - Lean core `mvcgen`, built around `Std.Do`, `WPSound`, and `MonadAttach`;
-- VCVio `vcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
+- VCVio `pvcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
   oracle simulation, coupling rules, and VCVio-specific registries.
 
 The long-term goal should not be to make probability semantics depend on a particular
@@ -266,7 +266,7 @@ tactic. Instead:
 
 1. semantic laws should be stated at the appropriate carrier;
 2. `WPSound`/`MonadAttach` should provide the common qualitative adequacy boundary;
-3. `mvcgen` and `vcgen` should consume shared laws where their proof modes overlap;
+3. `mvcgen` and `pvcgen` should consume shared laws where their proof modes overlap;
 4. VCVio should retain domain-specific quantitative and relational automation.
 
 #### 2.5.1 The upstream side of this picture is moving
@@ -319,9 +319,9 @@ support/indicator leaf closure, and the `@[vcspec]` / `@[wpStep]` registries. Co
 expose extension points for these (the `@[spec]` database, `vcgen [terms]`, and
 `mvcgen_trivial_extensible`).
 
-One immediate consequence is a name collision rather than a semantic one: core already
-declares a bare `vcgen` tactic token at `v4.33.0`, so VCVio's `vcgen` now shares a
-leading token with it and survives only by careful syntax-kind splitting.
+Core owns the `vcgen` name. VCVio's unary tactics are `pvcgen` and `pvcstep`, mirroring the
+relational `rvcgen` and `rvcstep`, so the two families share no leading token and a bare `vcgen`
+in a VCVio file is core's (`VCVioTest/ProgramLogic/VCGenNames.lean`).
 
 ## 3. Consumers at the Original Snapshot
 
@@ -1124,7 +1124,7 @@ The division of labor should be:
 
 - upstream `vcgen` (and `mvcgen` while it lasts): generic structural reasoning justified
   by `WPSound` and `MonadAttach`;
-- VCVio's unary tactic: event/expectation normalization, oracle-query rules, support
+- VCVio's unary `pvcgen`: event/expectation normalization, oracle-query rules, support
   bridges, loops, and probability arithmetic;
 - VCVio `rvcgen`: coupling and quantitative relational rules;
 - Iris proof mode: resource-sensitive reasoning after a VCVio/Bluebell WP instance is
@@ -1141,14 +1141,13 @@ in favour of `vcgen`, which dispatches on `Std.WP.wp` rather than `Std.Do`'s
 bridge — will need retargeting, and the natural time to do it is the same cycle in which
 `Std.WP` becomes public.
 
-**`vcgen` is already a taken name.** Lean `v4.33.0` declares a bare `vcgen` tactic token
-in `Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`. VCVio's
-own `vcgen` therefore shares a leading token with a core tactic that is under active
-development and is about to become *the* VC generator. Renaming VCVio's is cheap now and
-gets steadily less so; more importantly, once VCVio's domain tactic is layered *on top
-of* core's, having two tactics named `vcgen` in scope stops being merely confusing.
+**`vcgen` is core's name.** Lean declares a bare `vcgen` tactic token in
+`Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`, and that tactic
+is *the* VC generator. VCVio's unary tactics are `pvcgen` and `pvcstep`, so they never share a
+leading token with it, and VCVio's domain tactic can be layered *on top of* core's with both in
+scope.
 
-This does not change the division of labor above. It changes who owns the name.
+This does not change the division of labor above. It settles who owns the name.
 
 ## 13. No-Regret Roadmap
 

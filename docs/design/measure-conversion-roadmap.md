@@ -218,7 +218,7 @@ hidden counter state, real-valued outputs, and different continuation output typ
 
 ## Native probability-equality planner checkpoint
 
-The `vcstep` probability-equality planner recognizes native goals: equalities of `Pr{…}[…]`
+The `pvcstep` probability-equality planner recognizes native goals: equalities of `Pr{…}[…]`
 events, of applied `𝒟[…]` masses, and of output measures. Swaps rewrite with the native bind-swap
 laws, under shared prefixes through measure congruence, and congruence leaves the continuations
 on the structural support of the shared prefix. The retiring scalar goals keep their existing

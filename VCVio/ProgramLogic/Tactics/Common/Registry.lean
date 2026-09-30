@@ -400,7 +400,7 @@ private def buildVCSpecEntry (decl : Name) (priority : Nat) : MetaM VCSpecEntry 
 
 initialize registerBuiltinAttribute {
   name := `vcspec
-  descr := "Register a unary or relational program-logic theorem for vcgen/rvcgen \
+  descr := "Register a unary or relational program-logic theorem for pvcgen/rvcgen \
     lookup, or a normalization simp lemma for the internal `vcspec_simp` set."
   applicationTime := AttributeApplicationTime.afterCompilation
   add := fun decl stx kind => MetaM.run' do

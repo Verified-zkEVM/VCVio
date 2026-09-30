@@ -15,7 +15,7 @@ public meta import VCVio.ProgramLogic.Tactics.Common.Core
 # `@[wpStep]` Registry
 
 Discrimination-tree backed registry for the equational `wp comp post = …`
-rewrites used by the inner driver of `vcstep` / `vcgen` for raw `wp`-shaped
+rewrites used by the inner driver of `pvcstep` / `pvcgen` for raw `wp`-shaped
 goals.
 
 Each `@[wpStep]` rule is compiled once, at attribute-registration time, into

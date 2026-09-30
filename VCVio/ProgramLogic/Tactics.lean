@@ -17,19 +17,19 @@ public meta import VCVio.ProgramLogic.Tactics.Relational
 This is the canonical user-facing umbrella import for tactic-based program-logic proofs.
 
 - `VCVio.ProgramLogic.Tactics.Unary` contains unary / quantitative tactics such as
-  `vcstep`, `vcgen`, `exp_norm`, and `by_hoare`.
+  `pvcstep`, `pvcgen`, `exp_norm`, and `by_hoare`.
 - `VCVio.ProgramLogic.Tactics.Relational` contains relational proof-mode tactics such as
   `rvcstep`, `rvcgen`, `by_equiv`, `rel_dist`, `game_trans`, `by_dist`, and `by_upto`.
 
-For probability equalities, use `vcstep` directly:
-- plain `vcstep` keeps the heuristic swap/congruence dispatcher;
-- `vcstep rw` / `vcstep rw under n` expose explicit bind-swap rewrites;
-- `vcstep rw congr` / `vcstep rw congr'` expose one shared bind explicitly.
+For probability equalities, use `pvcstep` directly:
+- plain `pvcstep` keeps the heuristic swap/congruence dispatcher;
+- `pvcstep rw` / `pvcstep rw under n` expose explicit bind-swap rewrites;
+- `pvcstep rw congr` / `pvcstep rw congr'` expose one shared bind explicitly.
 
 For unary theorem-driven steps:
-- `vcstep with thm` forces one explicit unary theorem/assumption step;
+- `pvcstep with thm` forces one explicit unary theorem/assumption step;
 - `@[vcspec]` registers an explicit opt-in theorem for bounded lookup by
-  `vcstep` / `vcgen` / `rvcstep` / `rvcgen`.
+  `pvcstep` / `pvcgen` / `rvcstep` / `rvcgen`.
 
 For tactic-choice debugging, enable `set_option vcvio.vcgen.traceSteps true`.
 

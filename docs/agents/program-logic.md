@@ -21,7 +21,7 @@ rules for queries need uniform response measures.
 
 ## In-Tree Walkthroughs
 
-- `Examples/ProgramLogic/UnaryStep.lean`: unary `vcstep` / `vcgen` examples.
+- `Examples/ProgramLogic/UnaryStep.lean`: unary `pvcstep` / `pvcgen` examples.
 - `Examples/ProgramLogic/RelationalStep.lean`: step-by-step relational tactic examples.
 - `Examples/ProgramLogic/RelationalDerived.lean`: derived relational patterns and automation examples.
 - `Examples/ProgramLogic/ProofMode.lean`: proof-mode entry points and small end-to-end examples.
@@ -111,9 +111,20 @@ before generating the remaining subgoals.
 - `rvcgen using t` / `rvcgen with thm` — use one explicit first hint/theorem, then keep stepping automatically
 - `rel_conseq with R` — provide explicit weaker postcondition
 
-### Quantitative VCGen (`vcgen`)
+### Quantitative VCGen (`pvcgen`)
 
-`vcgen` is the primary unary tactic for new proofs. It accepts core triples
+VCVio's unary tactics are `pvcgen` and `pvcstep`, the probabilistic counterparts of the relational
+`rvcgen` and `rvcstep`. Core Lean's `vcgen` is a separate tactic under its own name: it walks
+`Std.WP` triples of any program type through the core `@[spec]` catalogue and leaves verification
+conditions in the assertion lattice, and it is the tool for `Prop`-valued triples such as the
+handler specifications under `OracleComp.Qualitative` (see *Handler `@[spec]` catalog* below).
+`pvcgen` / `pvcstep` add what core does not provide: lowering of `Pr{…}[…]` goals, quantitative
+`wp` and expectation reasoning, bind-swap and congruence on probability equalities, oracle-query
+and `simulateQ` rules, support and indicator leaf closure, and the `@[vcspec]` / `@[wpStep]`
+registries. Both are in scope after `import VCVio`; a bare `vcgen` always elaborates core's
+tactic, which `VCVioTest/ProgramLogic/VCGenNames.lean` pins.
+
+`pvcgen` is the primary unary tactic for new proofs. It accepts core triples
 `⦃ pre ⦄ oa ⦃ post ⦄` (`Std.WP.Triple oa pre post ⊥`, from `open scoped Std.WP`) and
 probability goals, automatically lowering `Pr{...}[...]` events into the quantitative engine.
 For `OracleComp` the triple reads expectations: `Std.WP.Triple.iff` unfolds it to
@@ -126,22 +137,22 @@ ones (`triple_conseq`, `triple_bind_wp`, `triple_zero`, `triple_ite`, `triple_di
 
 | Tactic | What it does |
 |--------|--------------|
-| `vcgen` | Exhaustively decomposes a core triple or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
-| `vcstep` | One step: probability lowering → bind → conditional → match → loop → leaf |
-| `vcstep?` | Performs one step and emits the corresponding explicit script, often surfacing `as ⟨...⟩`, `using cut`, `inv I`, or `with theorem` |
-| `vcgen?` | Runs `vcgen` and emits the planned step replay across each pass |
-| `vcstep using cut` | Explicit intermediate postcondition for a bind step |
-| `vcstep with thm` | Force one explicit unary theorem/assumption step |
-| `vcstep as ⟨x, hx⟩` | Explicit names for binders introduced by the current step |
-| `vcstep inv I` | Explicit loop invariant for `replicate`/`foldlM`/`mapM` |
-| `vcstep rw` | One explicit top-level bind-swap rewrite on a probability equality |
-| `vcstep rw under n` | One bind-swap rewrite under `n` shared outer bind prefixes |
-| `vcstep rw normalize` | Run the bounded probability-equality planner explicitly |
-| `vcstep rw congr` | Expose one or more shared binds plus their support hypotheses |
-| `vcstep rw congr'` | Expose one or more shared binds without support hypotheses |
+| `pvcgen` | Exhaustively decomposes a core triple or probability goal with spec-aware stepping, loop invariant auto-detection, and support/indicator leaf closure |
+| `pvcstep` | One step: probability lowering → bind → conditional → match → loop → leaf |
+| `pvcstep?` | Performs one step and emits the corresponding explicit script, often surfacing `as ⟨...⟩`, `using cut`, `inv I`, or `with theorem` |
+| `pvcgen?` | Runs `pvcgen` and emits the planned step replay across each pass |
+| `pvcstep using cut` | Explicit intermediate postcondition for a bind step |
+| `pvcstep with thm` | Force one explicit unary theorem/assumption step |
+| `pvcstep as ⟨x, hx⟩` | Explicit names for binders introduced by the current step |
+| `pvcstep inv I` | Explicit loop invariant for `replicate`/`foldlM`/`mapM` |
+| `pvcstep rw` | One explicit top-level bind-swap rewrite on a probability equality |
+| `pvcstep rw under n` | One bind-swap rewrite under `n` shared outer bind prefixes |
+| `pvcstep rw normalize` | Run the bounded probability-equality planner explicitly |
+| `pvcstep rw congr` | Expose one or more shared binds plus their support hypotheses |
+| `pvcstep rw congr'` | Expose one or more shared binds without support hypotheses |
 | `exp_norm` | Normalize indicator (`propInd`) and expectation (`wp`) arithmetic |
 
-**Probability-goal handling**: `vcgen` and `vcstep` automatically handle four
+**Probability-goal handling**: `pvcgen` and `pvcstep` automatically handle four
 classes of probability goals:
 
 1. **`Pr{...}[...] = 1` lowering** → rewrites into triple form for structural decomposition:
@@ -152,12 +163,12 @@ classes of probability goals:
    - `r ≤ Pr{let x ← oa}[p x]` / `Pr{let x ← oa}[p x] ≥ r` → `⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄`
 
 3. **Probability equalities** (`Pr{...}[...]`, applied `𝒟[...]` masses, or output measures):
-   - Plain `vcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
+   - Plain `pvcstep` first normalizes common `map`/`bind` surface syntax (`map_eq_bind_pure_comp`,
      `bind_assoc`), then preview-selects the best bounded swap/congruence plan from the fast path
-   - `vcstep rw` performs exactly one top-level bind-swap rewrite
-   - `vcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
-   - `vcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
-   - `vcstep rw congr` / `vcstep rw congr'` expose one or more shared binds explicitly
+   - `pvcstep rw` performs exactly one top-level bind-swap rewrite
+   - `pvcstep rw under n` rewrites one swap beneath `n` shared outer bind prefixes
+   - `pvcstep rw normalize` runs the deeper bounded planner used for explicit suggestions
+   - `pvcstep rw congr` / `pvcstep rw congr'` expose one or more shared binds explicitly
    - Swaps use `OracleComp.wp_swap` on events and expectations
      and `OracleComp.evalDist_bind_bind_swap` on output measures (countable responses), or their
      `_of_uniform` variants; a swap under shared draws descends through the expectations of the
@@ -166,18 +177,18 @@ classes of probability goals:
      structural support of the shared prefix
 
 4. **Other general `Pr{...}[...]` goals** → rewrite to raw `wp` form and keep stepping structurally
-   when a `wp` rule applies. On an already-lowered raw-`wp` goal, `vcstep?` / `vcgen?`
+   when a `wp` rule applies. On an already-lowered raw-`wp` goal, `pvcstep?` / `pvcgen?`
    will explicitly note that they are continuing in raw `wp` mode.
 
-**Loop invariants**: `vcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
+**Loop invariants**: `pvcgen` auto-detects `replicate`, `List.foldlM`, and `List.mapM`
 in triple goals and applies matching invariant hypotheses from context.
-Use `vcstep inv I` to provide an explicit invariant.
+Use `pvcstep inv I` to provide an explicit invariant.
 
-**Support-sensitive leaf closure**: `vcgen` final pass tries `triple_support`,
+**Support-sensitive leaf closure**: `pvcgen` final pass tries `triple_support`,
 `triple_propInd_of_support` and `triple_prEvent_eq_one`
 in addition to the standard `Std.WP.Spec.pure`, `triple_zero`, and consequence search.
 
-**Naming and suggestions**: plain `vcstep` / `rvcstep` keep the stable execution path.
+**Naming and suggestions**: plain `pvcstep` / `rvcstep` keep the stable execution path.
 The `?` variants run a planner-backed version of the same next move and emit a concrete
 `Try this` script, typically surfacing an explicit `using ...` hint, `inv I`, `with theorem`,
 or `as ⟨...⟩` clause that you can paste back into the proof. On probability-equality goals the
@@ -185,8 +196,8 @@ planner may emit a grouped multi-step replay when the best explanation is an exp
 
 **Opt-in unary lookup**: mark a unary core triple or raw `wp` theorem with `@[vcspec]` to register it for
 bounded head-symbol lookup. This is intentionally narrow: after the built-in structural step and
-explicit hint opportunities, `vcstep` / `vcgen` consult only `@[vcspec]` theorems whose
-computation head matches the current goal. Use `vcstep with myLemma` when you want to force
+explicit hint opportunities, `pvcstep` / `pvcgen` consult only `@[vcspec]` theorems whose
+computation head matches the current goal. Use `pvcstep with myLemma` when you want to force
 one specific theorem/assumption step manually.
 
 **Opt-in relational lookup**: mark a relational `RelTriple`, `RelWP`, or quantitative
@@ -208,7 +219,7 @@ This keeps ordinary rule ordering stable when new `@[vcspec]` lemmas are added.
 
 `handler_step` is deliberately thin. Use it when a proof is stuck behind
 handler combinators such as cache overlays, logging handlers, counting
-handlers, or state-transformer maps; then continue with `vcstep`, `rvcstep`,
+handlers, or state-transformer maps; then continue with `pvcstep`, `rvcstep`,
 `rvcgen`, or direct proof steps.
 
 PolyFun owns the generic `handler_nf` rules for `FreeM`,
@@ -271,7 +282,7 @@ variants immediately take the next aligned bind step with cut relation `R`.
 Do not emulate stronger coupling transitivity with broad theorem search until
 the full semantic gluing lemma and goal shape are added.
 
-**Pass budget**: exhaustive `vcgen` / `rvcgen` runs are bounded by
+**Pass budget**: exhaustive `pvcgen` / `rvcgen` runs are bounded by
 `set_option vcvio.vcgen.maxPasses <n>`. The default is conservative so large proofs stay
 predictable; if you intentionally want a longer exhaustive run, raise the option locally around
 that proof.
@@ -282,21 +293,21 @@ goal delta, and any planner alternatives that were previewed while debugging tac
 ### Raw WP Tactics
 
 Raw `wp` goals (`_ ≤ wp _ _`) now use the same unary entrypoints rather than a separate tactic
-family. `vcstep` performs one decomposition step and `vcgen` keeps stepping exhaustively.
+family. `pvcstep` performs one decomposition step and `pvcgen` keeps stepping exhaustively.
 
 
 ### Probability Equality Control
 
-All probability-equality control now lives under `vcstep`.
+All probability-equality control now lives under `pvcstep`.
 
 | Tactic | What it does |
 |--------|--------------|
-| `vcstep` | Fast dispatcher for common probability-equality steps: syntax normalization, swap, congruence, and bounded compositions chosen by preview |
-| `vcstep rw` | Rewrites one top-level bind swap without trying to close the goal |
-| `vcstep rw under n` | Rewrites one bind swap under `n` shared outer bind prefixes on one side |
-| `vcstep rw normalize` | Runs the bounded probability-equality planner explicitly, without broadening plain `vcstep` |
-| `vcstep rw congr` | Reduces `Pr{let y ← mx >>= f₁}[q y] = Pr{let y ← mx >>= f₂}[q y]` to a pointwise goal, auto-introducing `x` and `hx : x ∈ support mx`; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
-| `vcstep rw congr'` | Same, but without the support restriction; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
+| `pvcstep` | Fast dispatcher for common probability-equality steps: syntax normalization, swap, congruence, and bounded compositions chosen by preview |
+| `pvcstep rw` | Rewrites one top-level bind swap without trying to close the goal |
+| `pvcstep rw under n` | Rewrites one bind swap under `n` shared outer bind prefixes on one side |
+| `pvcstep rw normalize` | Runs the bounded probability-equality planner explicitly, without broadening plain `pvcstep` |
+| `pvcstep rw congr` | Reduces `Pr{let y ← mx >>= f₁}[q y] = Pr{let y ← mx >>= f₂}[q y]` to a pointwise goal, auto-introducing `x` and `hx : x ∈ support mx`; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
+| `pvcstep rw congr'` | Same, but without the support restriction; the explicit `as ⟨...⟩` form can peel multiple shared binds at once |
 
 ### Automation
 
@@ -308,9 +319,9 @@ All probability-equality control now lives under `vcstep`.
 
 ## Probability Equality Guide
 
-### What plain `vcstep` handles
+### What plain `pvcstep` handles
 
-On probability equalities, plain `vcstep` already tries the common bind-swap and
+On probability equalities, plain `pvcstep` already tries the common bind-swap and
 bind-congruence patterns:
 
 1. **Direct event equalities**: `Pr{let z ← mx >>= ... >>= ...}[q z] = Pr{let z ← my >>= ... >>= ...}[q z]`
@@ -321,20 +332,20 @@ bind-congruence patterns:
 
 ### When to use the explicit `rw` subcommands
 
-- **Need to keep going after a swap**: use `vcstep rw`
-- **Need to swap below shared outer binds**: use `vcstep rw under n`
-- **Need the bounded planner to choose a swap/congruence chain now**: use `vcstep rw normalize`
-- **Need to expose one or more common outer binds with support information**: use `vcstep rw congr`
-- **Need the support-free congruence variant**: use `vcstep rw congr'`
-- **Need the full explicit replay for a bounded nested swap**: use `vcstep?`
+- **Need to keep going after a swap**: use `pvcstep rw`
+- **Need to swap below shared outer binds**: use `pvcstep rw under n`
+- **Need the bounded planner to choose a swap/congruence chain now**: use `pvcstep rw normalize`
+- **Need to expose one or more common outer binds with support information**: use `pvcstep rw congr`
+- **Need the support-free congruence variant**: use `pvcstep rw congr'`
+- **Need the full explicit replay for a bounded nested swap**: use `pvcstep?`
 - **Need a deeper swap than the current bounded automation knows**: peel outer layers manually, or
-  use `vcstep?` to see the best bounded replay the planner found before finishing the rest by hand
+  use `pvcstep?` to see the best bounded replay the planner found before finishing the rest by hand
 
 ### Key insight: events vs output measures
 
 The underlying bind-swap lemmas are `OracleComp.prEvent_bind_bind_swap` for events and
 `OracleComp.evalDist_bind_bind_swap` for output measures. A point mass `Pr{let y ← oa}[y = x]` is the event
-`(· = x)`, and `Pr{…}[…]` elaborates its final draw as a map, so the `vcstep`
+`(· = x)`, and `Pr{…}[…]` elaborates its final draw as a map, so the `pvcstep`
 probability-equality machinery normalizes with `map_eq_bind_pure_comp` / `bind_assoc` before
 matching either shape.
 
@@ -342,39 +353,39 @@ matching either shape.
 
 **Standalone swap**:
 ```lean
-vcstep
+pvcstep
 ```
 
 **Rewrite one swap and continue**:
 ```lean
-vcstep rw
+pvcstep rw
 ```
 
 **Rewrite under one shared bind**:
 ```lean
-vcstep rw under 1
+pvcstep rw under 1
 ```
 
 **Run the bounded probability-equality planner explicitly**:
 ```lean
-vcstep rw normalize
+pvcstep rw normalize
 ```
 
 **Expose one common bind with support information**:
 ```lean
-vcstep rw congr
+pvcstep rw congr
 exact h _ ‹_›
 ```
 
 **Expose one common bind without support information**:
 ```lean
-vcstep rw congr'
+pvcstep rw congr'
 rename_i x
 ```
 
 **Expose two shared binds explicitly at once**:
 ```lean
-vcstep rw congr' as ⟨x, y⟩
+pvcstep rw congr' as ⟨x, y⟩
 ```
 
 ## Relational Infrastructure
@@ -441,7 +452,7 @@ The `WriterT`-based handlers read their log as accumulated state: `WriterT.Appen
 `triple_stateT_iff_forall_support`, `triple_writerT_iff_forall_support` and
 `triple_writerT_iff_forall_support_monoid` are in `Unary/HandlerSpecs.lean`.
 
-`vcgen` on handler programs:
+Core `vcgen` on handler programs:
 
 - Core registers no rule for `StateT.mk`; `triple_stateT_mk` supplies it (`seededOracle`).
 - A query reaches `vcgen` as `MonadLift.monadLift (MonadLiftT.monadLift q)` once `liftM q`
@@ -488,9 +499,9 @@ Worked examples in `HandlerSpecs.lean`:
 
 ### Unary-to-relational handler lift (`Relational/HandlerFromUnary.lean`)
 
-If each handler has a core triple spec (proved by `vcgen` or a `@[spec]` lemma), you do not have
-to assemble per-call `RelTriple`s by hand. The lift converts unary handler specs plus a synchronization
-condition into a whole-program `RelTriple`:
+If each handler has a core triple spec (proved by core `vcgen` or a `@[spec]` lemma), you do not
+have to assemble per-call `RelTriple`s by hand. The lift converts unary handler specs plus a
+synchronization condition into a whole-program `RelTriple`:
 
 ```lean
 relTriple_simulateQ_run_of_triples :
@@ -600,8 +611,8 @@ theorem my_security : g₁ =ᵈ gₙ := by
 
 ## Common Pitfalls
 
-1. **Plain `vcstep` may close or progress a probability equality goal**: use
-   `vcstep rw` / `vcstep rw under n` when you specifically want a rewrite and
+1. **Plain `pvcstep` may close or progress a probability equality goal**: use
+   `pvcstep rw` / `pvcstep rw under n` when you specifically want a rewrite and
    intend to continue.
 
 2. **Import `VCVio.ProgramLogic.Tactics`**: tactics are defined there. If a file only imports `VCVio.ProgramLogic.Notation`, add/change the import.
@@ -649,7 +660,7 @@ normalization is necessary because `OracleComp` is a reducible alias of
 that declaration-oriented preprocessing to terms can unfold reducible user
 programs and panic when a matcher contains loose de Bruijn variables. Without
 the targeted unfolding, lookup can silently return no candidates (symptom:
-`vcstep` reports "no matching rule applied" while the corresponding manual
+`pvcstep` reports "no matching rule applied" while the corresponding manual
 rewrite works).
 
 ### Registries and what they index
@@ -689,7 +700,7 @@ from the attribute's optional priority argument (`@[vcspec (prio := 200)]`).
 
 | Want to add… | Tag it with | Expected shape |
 |--------------|-------------|----------------|
-| A unary triple lemma usable by `vcstep` / `vcgen` | `@[vcspec]` | `⦃ pre ⦄ oa ⦃ post ⦄` or raw `wp⟦oa⟧ post ≥ pre` |
+| A unary triple lemma usable by `pvcstep` / `pvcgen` | `@[vcspec]` | `⦃ pre ⦄ oa ⦃ post ⦄` or raw `wp⟦oa⟧ post ≥ pre` |
 | A relational lemma usable by `rvcstep` / `rvcgen` | `@[vcspec]` | `RelTriple oa ob R`, `RelWP oa ob post`, or quantitative `VCVio.ProgramLogic.RelTriple pre oa ob post Lean.Order.bot Lean.Order.bot` |
 | A `wp`-driven equational rewrite | `@[wpStep]` | `wp⟦comp⟧ post = …` (exact head: core's `wp`) |
 
@@ -777,11 +788,12 @@ which side to step and which coupling to use remains `rvcgen`'s job.
 `Relational/FromUnary.lean` takes its unary premises as core triples under the structural
 reading.
 
-VCVio's probability/coupling tactics continue to consume `@[vcspec]` and `@[wpStep]`.
-Core `vcgen` consumes the core `@[spec]` catalogue. Generic transformer WP comes from
-core and PolyFun's WriterT interpretation; VCVio retains its probability rules and
-existing transformer equality lemmas. The scoped `WriterT.MonoidWP` interpretation
-uses multiplication; append-based logs use `WriterT.toWPMonad` with explicit operations.
+VCVio's probability/coupling tactics (`pvcgen`, `pvcstep`, `rvcgen`, `rvcstep`) consume
+`@[vcspec]` and `@[wpStep]`. Core `vcgen` consumes the core `@[spec]` catalogue. Generic
+transformer WP comes from core and PolyFun's WriterT interpretation; VCVio retains its
+probability rules and existing transformer equality lemmas. The scoped `WriterT.MonoidWP`
+interpretation uses multiplication; append-based logs use `WriterT.toWPMonad` with explicit
+operations.
 
 The handler specifications are core triples under the structural reading, proved and composed
 by core `vcgen` (`Unary/HandlerSpecs.lean`); `Unary/StdDoBridge.lean` remains a narrow bridge to

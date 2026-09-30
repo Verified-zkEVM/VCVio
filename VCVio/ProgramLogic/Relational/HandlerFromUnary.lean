@@ -19,7 +19,7 @@ This file generalizes the unary-to-relational bridge in
 handlers*. It bridges the gap between
 
 * core `Std.WP` triples for `QueryImpl spec (StateT σ (OracleComp spec'))` under the
-  structural reading (`open scoped OracleComp.Qualitative`), proved by `vcgen` and
+  structural reading (`open scoped OracleComp.Qualitative`), proved by core `vcgen` and
   registered via `@[spec]` (e.g. `cachingOracle_triple`, `seededOracle_triple`,
   `loggingOracle_triple`), and
 * `RelTriple` couplings on the `.run` distributions of those handlers,
@@ -316,7 +316,7 @@ end lifts
 
 /-! ### Bridge to support-based simulation lemmas
 
-The lemmas below convert invariant triples proved by `vcgen` into the
+The lemmas below convert invariant triples proved by core `vcgen` into the
 `support`-based hypotheses that the `Relational/SimulateQ.lean` infrastructure
 consumes. They are the entry point from the `vcgen` proof style into whole-program
 relational reasoning. -/

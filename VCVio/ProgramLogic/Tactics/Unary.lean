@@ -11,7 +11,15 @@ public meta import VCVio.ProgramLogic.Tactics.Unary.Internals
 /-!
 # Unary VC Tactics
 
-User-facing unary VCGen tactics and finish passes.
+User-facing unary tactics of VCVio's probabilistic VC generator (`pvcstep`, `pvcgen`, and their
+finish passes), plus `exp_norm` and `by_hoare`.
+
+The `p` prefix sets them apart from core's `vcgen`, which walks `Std.WP` triples through the
+`@[spec]` catalogue and stays available under its own name. `pvcstep` and `pvcgen` work on the
+same core triples of oracle computations, read as expectations, and add the probabilistic layer:
+lowering of `Pr{…}[…]` goals, bind-swap and congruence on probability equalities, oracle-query
+and `simulateQ` rules, support and indicator leaf closure, and the `@[vcspec]` / `@[wpStep]`
+registries. `rvcstep` and `rvcgen` are the relational counterparts.
 -/
 
 public meta section
@@ -32,7 +40,7 @@ private def runVCGenFinish : TacticM Unit := do
     -- Only `wp_*`, `propInd_*`, and `game_rule` are kept here; generic ring/if normalization
     -- (`one_mul`, `zero_add`, `ite_true`, `ite_false`, `dite_true`, …) is already in Mathlib's
     -- default simp-set and was rarely firing on the Triple/wp-shaped goals that reach this
-    -- finish pass — building those extra simp entries on every `vcgen` invocation was a
+    -- finish pass — building those extra simp entries on every `pvcgen` invocation was a
     -- constant tax without an observed win.
     let _ ← tryEvalTacticSyntax
       (← `(tactic| all_goals try simp only [
@@ -88,7 +96,7 @@ private def runVCGenFinish : TacticM Unit := do
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
   unless (← getGoals).isEmpty do
-    discard <| runBoundedPasses "vcgen finish" TacticInternals.Unary.runVCGenClosePass
+    discard <| runBoundedPasses "pvcgen finish" TacticInternals.Unary.runVCGenClosePass
   unless (← getGoals).isEmpty do
     discard <| tryEvalTacticSyntax
       (← `(tactic| all_goals try
@@ -145,7 +153,11 @@ private def logPlannerNotes (steps : Array PlannedStep) : TacticM Unit := do
         emitted := emitted.push note
         logInfo m!"Planner note: {note}"
 
-/-- `vcstep` applies one quantitative VCGen step to a `Triple`, raw `wp`, or probability goal.
+/-- `pvcstep` applies one step of VCVio's probabilistic VC generator to a quantitative `Triple`,
+raw `wp`, or probability goal about oracle computations. `pvcgen` repeats these steps
+exhaustively, and `rvcstep` is the relational counterpart. Core's `vcgen` is a separate tactic
+for `Std.WP` triples driven by the `@[spec]` catalogue; `pvcstep` reads core triples of oracle
+computations as expectations and adds the probability-specific rules below.
 
 For `Triple` goals: decomposes a bind via `Std.WP.Triple.bind` and automatically tries to close
 the spec subgoal using hypotheses in the local context, with backward WP fallback.
@@ -167,87 +179,87 @@ For other `Pr{…}[…]` goals: rewrites to raw `wp` form and keeps stepping str
 rule applies, rather than immediately exiting the VCGen pipeline.
 
 Variants:
-- `vcstep using cut` for an explicit intermediate postcondition.
-- `vcstep with thm` to force a specific unary theorem/assumption step.
-- `vcstep inv I` to apply a loop invariant `I` to a `replicate`/`foldlM`/`mapM` goal.
-- `vcstep rw` to perform one explicit top-level probability-equality rewrite step.
-- `vcstep rw under n` to rewrite one bind-swap under `n` shared bind prefixes.
-- `vcstep rw normalize` to run the bounded probability-equality planner explicitly.
-- `vcstep rw congr` to expose one shared bind plus its support hypothesis.
-- `vcstep rw congr'` to expose one shared bind without a support hypothesis.
+- `pvcstep using cut` for an explicit intermediate postcondition.
+- `pvcstep with thm` to force a specific unary theorem/assumption step.
+- `pvcstep inv I` to apply a loop invariant `I` to a `replicate`/`foldlM`/`mapM` goal.
+- `pvcstep rw` to perform one explicit top-level probability-equality rewrite step.
+- `pvcstep rw under n` to rewrite one bind-swap under `n` shared bind prefixes.
+- `pvcstep rw normalize` to run the bounded probability-equality planner explicitly.
+- `pvcstep rw congr` to expose one shared bind plus its support hypothesis.
+- `pvcstep rw congr'` to expose one shared bind without a support hypothesis.
 
 Use `@[vcspec]` on unary `Triple` or raw `wp` theorems to opt them into bounded lookup. -/
-syntax "vcstep" ("using" term)? : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" "with" term : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" "as" "⟨" binderIdent,* "⟩" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" "using" term "as" "⟨" binderIdent,* "⟩" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" "with" term "as" "⟨" binderIdent,* "⟩" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep?" : tactic
+syntax "pvcstep" ("using" term)? : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" "with" term : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" "using" term "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" "with" term "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep?" : tactic
 
 elab_rules : tactic
-  | `(tactic| vcstep as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep as ⟨ $ids,* ⟩) => do
       let names := binderIdentsToNames ids
       if ← runVCGenStepWithNames names then return
       TacticInternals.Unary.throwVCGenStepError
-  | `(tactic| vcstep using $cut as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep using $cut as ⟨ $ids,* ⟩) => do
       let names := binderIdentsToNames ids
       if ← TacticInternals.Unary.runHoareStepRuleUsing cut then
         introAllGoalsNames names
         renameInaccessibleNames names
         return
       TacticInternals.Unary.throwVCGenStepError
-  | `(tactic| vcstep with $thm as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep with $thm as ⟨ $ids,* ⟩) => do
       let names := binderIdentsToNames ids
       if ← runVCGenStepWithTheoremNames thm names then return
       TacticInternals.Unary.throwVCGenStepError
-  | `(tactic| vcstep) => do
+  | `(tactic| pvcstep) => do
       if ← TacticInternals.Unary.runVCGenStep then return
       TacticInternals.Unary.throwVCGenStepError
-  | `(tactic| vcstep using $cut) => do
+  | `(tactic| pvcstep using $cut) => do
       if ← TacticInternals.Unary.runHoareStepRuleUsing cut then return
       TacticInternals.Unary.throwVCGenStepError
-  | `(tactic| vcstep with $thm) => do
+  | `(tactic| pvcstep with $thm) => do
       if ← TacticInternals.Unary.runVCGenStepWithTheorem thm then return
       TacticInternals.Unary.throwVCGenStepError
-  | `(tactic| vcstep?) => do
+  | `(tactic| pvcstep?) => do
       let some step ← TacticInternals.Unary.runVCGenPlannedStep?
         | TacticInternals.Unary.throwVCGenStepError
       addTryThisTextSuggestion (← getRef) step.replayText
       logPlannerNotes #[step]
 
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" " under " num : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" &"normalize" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" &"congr" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" &"congr'" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" "as" "⟨" binderIdent,* "⟩" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" " under " num "as" "⟨" binderIdent,* "⟩" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" &"congr" "as" "⟨" binderIdent,* "⟩" : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"rw" &"congr'" "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" " under " num : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" &"normalize" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" &"congr" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" &"congr'" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" " under " num "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" &"congr" "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"rw" &"congr'" "as" "⟨" binderIdent,* "⟩" : tactic
 
 elab_rules : tactic
-  | `(tactic| vcstep rw as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep rw as ⟨ $ids,* ⟩) => do
       let names := binderIdentsToNames ids
       if ← TacticInternals.Unary.runProbEqAction .rewrite then
         introAllGoalsNames names
         renameInaccessibleNames names
         return
       TacticInternals.Unary.throwVCGenStepRwError 0
-  | `(tactic| vcstep rw under $n:num as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep rw under $n:num as ⟨ $ids,* ⟩) => do
       let depth := n.getNat
       let names := binderIdentsToNames ids
       if ← TacticInternals.Unary.runProbEqAction (.rewriteUnder depth) then
@@ -255,54 +267,65 @@ elab_rules : tactic
         renameInaccessibleNames names
         return
       TacticInternals.Unary.throwVCGenStepRwError depth
-  | `(tactic| vcstep rw congr as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep rw congr as ⟨ $ids,* ⟩) => do
       let names := binderIdentsToNames ids
       if ← TacticInternals.Unary.runProbEqCongrChainWithNames true names then return
       TacticInternals.Unary.throwVCGenStepRwCongrError true
-  | `(tactic| vcstep rw congr' as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep rw congr' as ⟨ $ids,* ⟩) => do
       let names := binderIdentsToNames ids
       if ← TacticInternals.Unary.runProbEqCongrChainWithNames false names then return
       TacticInternals.Unary.throwVCGenStepRwCongrError false
-  | `(tactic| vcstep rw) => do
+  | `(tactic| pvcstep rw) => do
       if ← TacticInternals.Unary.runProbEqAction .rewrite then return
       TacticInternals.Unary.throwVCGenStepRwError 0
-  | `(tactic| vcstep rw under $n:num) => do
+  | `(tactic| pvcstep rw under $n:num) => do
       let depth := n.getNat
       if ← TacticInternals.Unary.runProbEqAction (.rewriteUnder depth) then return
       TacticInternals.Unary.throwVCGenStepRwError depth
-  | `(tactic| vcstep rw normalize) => do
+  | `(tactic| pvcstep rw normalize) => do
       if ← TacticInternals.Unary.runProbEqNormalize then return
       TacticInternals.Unary.throwVCGenStepRwNormalizeError
-  | `(tactic| vcstep rw congr) => do
+  | `(tactic| pvcstep rw congr) => do
       if ← TacticInternals.Unary.runProbEqAction .congr then return
       TacticInternals.Unary.throwVCGenStepRwCongrError true
-  | `(tactic| vcstep rw congr') => do
+  | `(tactic| pvcstep rw congr') => do
       if ← TacticInternals.Unary.runProbEqAction .congrNoSupport then return
       TacticInternals.Unary.throwVCGenStepRwCongrError false
 
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"inv" term : tactic
-@[inherit_doc tacticVcstepUsing_, tactic_alt tacticVcstepUsing_]
-syntax "vcstep" &"inv" term "as" "⟨" binderIdent,* "⟩" : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"inv" term : tactic
+@[inherit_doc tacticPvcstepUsing_, tactic_alt tacticPvcstepUsing_]
+syntax "pvcstep" &"inv" term "as" "⟨" binderIdent,* "⟩" : tactic
 
 elab_rules : tactic
-  | `(tactic| vcstep inv $inv as ⟨ $ids,* ⟩) => do
+  | `(tactic| pvcstep inv $inv as ⟨ $ids,* ⟩) => do
       let names := binderIdentsToNames ids
       if ← TacticInternals.Unary.runLoopInvExplicit inv then
         introAllGoalsNames names
         renameInaccessibleNames names
         return
       throwError
-        "vcstep inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
+        "pvcstep inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
         or `List.mapM`."
-  | `(tactic| vcstep inv $inv) => do
+  | `(tactic| pvcstep inv $inv) => do
       if ← TacticInternals.Unary.runLoopInvExplicit inv then return
       throwError
-        "vcstep inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
+        "pvcstep inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
         or `List.mapM`."
 
-/-- `vcgen` exhaustively decomposes a `Triple`, raw `wp`, or probability goal
-with spec-aware stepping.
+/-- `pvcgen` exhaustively decomposes a quantitative `Triple`, raw `wp`, or probability goal
+about oracle computations with spec-aware stepping. It is the exhaustive driver of VCVio's
+probabilistic VC generator: `pvcstep` takes a single step, and `rvcgen` is the relational
+counterpart.
+
+Core's `vcgen` generates verification conditions for `Std.WP` triples from the `@[spec]`
+catalogue, and stays available under that name alongside `pvcgen`. `pvcgen` works on the same
+core triples, read as expectations (for `OracleComp`, `⦃ pre ⦄ oa ⦃ post ⦄` unfolds to
+`pre ≤ wp⟦oa⟧ post`), and adds the probabilistic layer that core does not provide: lowering of
+`Pr{…}[…]` goals, bind-swap and congruence on probability equalities, oracle-query and
+`simulateQ` rules, support and indicator leaf closure, and lookup in the `@[vcspec]` and
+`@[wpStep]` registries. Core's `vcgen` remains the tool for `Prop`-valued triples under a scoped
+reading such as `OracleComp.Qualitative`, whose handler specifications are `@[spec]` rules.
 
 Accepts `Triple` goals, raw `wp` goals, lower-bound / exact probability goals, and
 `Pr{…}[…] = Pr{…}[…]` equality goals. Probability goals are automatically lowered or
@@ -321,32 +344,30 @@ Enhancements over simple structural decomposition:
 - Finishes with bounded local consequence search on closed goals
 
 Typical usage: bring specs into context with `have` or as function parameters, then
-call `vcgen` to automatically decompose and apply them.
+call `pvcgen` to automatically decompose and apply them.
 
 Variants:
-- `vcgen using cut` performs one explicit bind step with intermediate postcondition `cut`,
+- `pvcgen using cut` performs one explicit bind step with intermediate postcondition `cut`,
   then continues with exhaustive decomposition on all resulting goals.
-- `vcgen inv I` applies an explicit loop invariant `I` to the first `replicate`/`foldlM`/`mapM`
-  goal, then continues with exhaustive decomposition. -/
-tactic_extension Lean.Parser.Tactic.vcgenMacro
+- `pvcgen inv I` applies an explicit loop invariant `I` to the first `replicate`/`foldlM`/`mapM`
+  goal, then continues with exhaustive decomposition.
+- `pvcgen?` runs `pvcgen` and suggests the explicit step script it followed. -/
+syntax (name := pvcgenBasic) "pvcgen" : tactic
+@[inherit_doc pvcgenBasic, tactic_alt pvcgenBasic]
+syntax (name := pvcgenUsing) "pvcgen" "using" term : tactic
+@[inherit_doc pvcgenBasic, tactic_alt pvcgenBasic]
+syntax (name := pvcgenInv) "pvcgen" &"inv" term : tactic
+@[inherit_doc pvcgenBasic, tactic_alt pvcgenBasic]
+syntax (name := pvcgenSuggestion) "pvcgen?" : tactic
 
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenBasic) "vcgen" : tactic
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenUsing) "vcgen" "using" term : tactic
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenInv) "vcgen" &"inv" term : tactic
-@[tactic_alt Lean.Parser.Tactic.vcgenMacro]
-syntax (name := vcgenSuggestion) "vcgen?" : tactic
-
-elab_rules (kind := vcgenBasic) : tactic
-  | `(tactic| vcgen) => withVCGenRunTiming "vcgen" do
-      discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+elab_rules (kind := pvcgenBasic) : tactic
+  | `(tactic| pvcgen) => withVCGenRunTiming "pvcgen" do
+      discard <| runBoundedPasses "pvcgen" TacticInternals.Unary.runVCGenPass
       withVCGenFinishTiming runVCGenFinish
 
-elab_rules (kind := vcgenSuggestion) : tactic
-  | `(tactic| vcgen?) => withVCGenRunTiming "vcgen?" do
-      let batches ← runBoundedPassesCollect "vcgen?" TacticInternals.Unary.runVCGenPassPlanned
+elab_rules (kind := pvcgenSuggestion) : tactic
+  | `(tactic| pvcgen?) => withVCGenRunTiming "pvcgen?" do
+      let batches ← runBoundedPassesCollect "pvcgen?" TacticInternals.Unary.runVCGenPassPlanned
       let needsFinish := !(← getGoals).isEmpty
       withVCGenFinishTiming runVCGenFinish
       for batch in batches do
@@ -376,27 +397,27 @@ elab_rules (kind := vcgenSuggestion) : tactic
           ]
         ]
       if lines.isEmpty then
-        lines := ["vcgen"]
+        lines := ["pvcgen"]
       addTryThisTextSuggestion (← getRef) <| String.intercalate "\n" lines
 
-elab_rules (kind := vcgenUsing) : tactic
-  | `(tactic| vcgen using $cut) => withVCGenRunTiming "vcgen" do
+elab_rules (kind := pvcgenUsing) : tactic
+  | `(tactic| pvcgen using $cut) => withVCGenRunTiming "pvcgen" do
       discard <| TacticInternals.Unary.tryLowerProbGoal
       if ← TacticInternals.Unary.runHoareStepRuleUsing cut then
-        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+        discard <| runBoundedPasses "pvcgen" TacticInternals.Unary.runVCGenPass
         withVCGenFinishTiming runVCGenFinish
       else
         TacticInternals.Unary.throwVCGenStepError
 
-elab_rules (kind := vcgenInv) : tactic
-  | `(tactic| vcgen inv $inv) => withVCGenRunTiming "vcgen" do
+elab_rules (kind := pvcgenInv) : tactic
+  | `(tactic| pvcgen inv $inv) => withVCGenRunTiming "pvcgen" do
       discard <| TacticInternals.Unary.tryLowerProbGoal
       if ← TacticInternals.Unary.runLoopInvExplicit inv then
-        discard <| runBoundedPasses "vcgen" TacticInternals.Unary.runVCGenPass
+        discard <| runBoundedPasses "pvcgen" TacticInternals.Unary.runVCGenPass
         withVCGenFinishTiming runVCGenFinish
       else
         throwError
-          "vcgen inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
+          "pvcgen inv: expected a `Triple` goal about `replicate`, `List.foldlM`, \
           or `List.mapM`."
 
 /-- `exp_norm` normalizes expectation / indicator arithmetic in the current goal.

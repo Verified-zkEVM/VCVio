@@ -783,7 +783,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 
 | Lemma | Use |
 |-------|-----|
-| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` | Swap two independent oracle draws (used by `vcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
+| `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` | Swap two independent oracle draws (used by `pvcstep` probability-equality rewrites; `_of_uniform` variants take uniform answers) |
 | `evalDist_bind_congr` / `MeasureProgramLogic.wp_congr` | Pointwise equal continuations give equal binds or expectations, with no measurable space on the intermediate result |
 | `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` | Continuations equal on the support of the shared prefix give equal binds or expectations |
 
@@ -804,8 +804,8 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
      countable draw, `prEvent_bind_eq_tsum_of_countable`
 
 2. **Need to swap two binds?**
-   → Use `vcstep` if the swap should close the equality
-   → Use `vcstep rw` / `vcstep rw under n` if you need an explicit rewrite step
+   → Use `pvcstep` if the swap should close the equality
+   → Use `pvcstep rw` / `pvcstep rw under n` if you need an explicit rewrite step
 
 3. **Need an event or measure of `f <$> mx`?**
    → Events: `simp` or `grind` (`prEvent_map`)
@@ -817,7 +817,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
      mass), and `OracleComp.evalDist_bind_const` for a lossless oracle prefix
 
 5. **Continuations agree only on the support of a shared prefix?**
-   → `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` (or `vcstep`)
+   → `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` (or `pvcstep`)
 
 6. **Relating probability to support?**
    → Under uniform answers: `OracleComp.mem_support_iff_evalDist_singleton_pos`,

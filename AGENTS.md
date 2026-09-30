@@ -240,6 +240,10 @@ For new program-logic proofs, import `VCVio.ProgramLogic.Tactics`.
 `VCVio.ProgramLogic.Notation` keeps notation plus compatibility macros, but
 `Tactics.lean` is the canonical interactive proof mode.
 
+VCVio's unary probabilistic tactics are `pvcgen` / `pvcstep` and its relational ones
+`rvcgen` / `rvcstep`. A bare `vcgen` is core Lean's `Std.WP` VC generator, used for `Prop`-valued
+triples such as the handler specifications (gotcha 35).
+
 For the tactic reference, proof-mode entry points, and workflow details, see
 [`docs/agents/program-logic.md`](docs/agents/program-logic.md). The two
 `@[vcspec]` and `@[wpStep]` registries are indexed via

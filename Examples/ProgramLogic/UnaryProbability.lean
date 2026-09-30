@@ -36,17 +36,17 @@ variable [OracleSpec.IsMeasureSpec spec]
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     Pr{let x ← oa}[p x] = 1 := by
-  vcgen
+  pvcgen
 
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p]
     (h : ⦃ 1 ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     1 = Pr{let x ← oa}[p x] := by
-  vcgen
+  pvcgen
 
 example {oa : OracleComp spec Bool}
     (h : ⦃ 1 ⦄ oa ⦃ fun y => if y = true then 1 else 0 ⦄) :
     Pr{let y ← oa}[y = true] = 1 := by
-  vcgen
+  pvcgen
 
 end ProbabilityLowering
 
@@ -60,36 +60,36 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
     {f : α → β → OracleComp spec γ} {z : γ} :
     Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = z] =
     Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = z] := by
-  vcstep
+  pvcstep
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {y : β}
     (h : ∀ x ∈ support mx, Pr{let z ← f x}[z = y] = Pr{let z ← g x}[z = y]) :
     Pr{let x ← mx >>= f}[x = y] = Pr{let x ← mx >>= g}[x = y] := by
-  vcstep rw congr
+  pvcstep rw congr
   exact h _ ‹_›
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
     Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  vcstep rw congr'
+  pvcstep rw congr'
   exact h _
 
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
     Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  vcstep rw congr' as ⟨x⟩
+  pvcstep rw congr' as ⟨x⟩
   exact h x
 
 /--
 info: Try this:
 
-  [apply] vcstep rw congr as ⟨x, hx⟩
+  [apply] pvcstep rw congr as ⟨x, hx⟩
 -/
 #guard_msgs (info) in
 example {mx : OracleComp spec α} {f g : α → OracleComp spec β} {q : β → Prop}
     (h : ∀ x, Pr{let y ← f x}[q y] = Pr{let y ← g x}[q y]) :
     Pr{let y ← mx >>= f}[q y] = Pr{let y ← mx >>= g}[q y] := by
-  vcstep?
+  pvcstep?
   exact h x
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}
@@ -97,7 +97,7 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
     (h : ∀ x y, Pr{let r ← f x y}[q r] = Pr{let r ← g x y}[q r]) :
     Pr{let r ← mx >>= fun x => my >>= fun y => f x y}[q r] =
     Pr{let r ← mx >>= fun x => my >>= fun y => g x y}[q r] := by
-  vcstep rw congr' as ⟨x, y⟩
+  pvcstep rw congr' as ⟨x, y⟩
   exact h x y
 
 example : 𝟙⟦(True : Prop)⟧ * 𝟙⟦(True : Prop)⟧ = (1 : ℝ≥0∞) := by
@@ -114,13 +114,13 @@ variable [OracleSpec.IsMeasureSpec spec]
 example {oa : OracleComp spec α} {p : α → Prop} [DecidablePred p] {r : ℝ≥0∞}
     (h : ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄) :
     r ≤ Pr{let x ← oa}[p x] := by
-  vcstep
+  pvcstep
   exact h
 
 example {oa : OracleComp spec α} [DecidableEq α] {x : α} {r : ℝ≥0∞}
     (h : ⦃ r ⦄ oa ⦃ fun y => if y = x then 1 else 0 ⦄) :
     Pr{let y ← oa}[y = x] ≥ r := by
-  vcstep
+  pvcstep
   simpa only [← propInd_eq_ite] using h
 
 /-- The notation distributes an event over a branch of its draw when it elaborates. -/
@@ -150,7 +150,7 @@ example (oa : OracleComp spec α) [DecidableEq α] (x : α) :
 /--
 info: Try this:
 
-  [apply] vcstep
+  [apply] pvcstep
 ---
 info: Planner note: continuing in raw `wp` mode
 -/
@@ -159,14 +159,14 @@ example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
     (post : α → ℝ≥0∞) :
     wp⟦if c then oa else ob⟧ post =
       if c then wp⟦oa⟧ post else wp⟦ob⟧ post := by
-  vcstep?
+  pvcstep?
 
 /-! ### Support-cut synthesis -/
 
 example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
     (h : ∀ x ∈ support oa, Pr{let y ← f x}[y = true] = 1) :
     ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
-  vcstep
+  pvcstep
   intro x
   by_cases hx : x ∈ support oa
   · simpa [propInd, hx] using triple_prEvent_eq_one (oa := f x) (p := (· = true)) (h := h x hx)

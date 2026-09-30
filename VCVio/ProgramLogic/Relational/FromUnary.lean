@@ -25,8 +25,8 @@ This file provides the "unary → relational" bridge:
 
 Both specialize `relTriple_prod`, which takes `support`-style postconditions: under the structural
 reading, `⦃ True ⦄ oa ⦃ P ⦄` says that every reachable output of `oa` satisfies `P`
-(`OracleComp.Qualitative.wp_iff_forall_support`). Unary facts proved with `vcgen` compose into
-relational arguments (e.g. game-hopping reductions) without redoing the underlying analysis.
+(`OracleComp.Qualitative.wp_iff_forall_support`). Unary facts proved with core `vcgen` compose
+into relational arguments (e.g. game-hopping reductions) without redoing the underlying analysis.
 -/
 
 @[expose] public section

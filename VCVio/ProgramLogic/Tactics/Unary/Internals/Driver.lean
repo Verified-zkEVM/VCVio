@@ -129,7 +129,7 @@ private def runTripleFallback : TacticM Bool := do
       evalTactic (← `(tactic| refine Std.WP.Triple.intro ?_))
       evalTactic (← `(tactic| change _ ≤ wp⟦_⟧ _))
       unless ← runWpStepRules do
-        throwError "vcstep: no matching wp rule after unfolding the triple"
+        throwError "pvcstep: no matching wp rule after unfolding the triple"
     with
   | some _ => return true
   | none => return false
@@ -185,8 +185,8 @@ def runVCGenStructuralCore : TacticM Bool := withVCGenStructuralTiming do
 
 private def mkStructuralStepForTarget (target : Expr) : PlannedStep :=
   let step := mkVCGenPlannedStep
-    "vcgen structural step"
-    "vcstep"
+    "pvcgen structural step"
+    "pvcstep"
     runVCGenStructuralCore
   if !(hasProbGoal target) && (tripleGoalComp? target |>.isNone) &&
       (relTripleGoalParts? target |>.isNone) &&
@@ -206,8 +206,8 @@ private def chooseBestCutStep? : TacticM (Option (PlannedStep × PreviewResult))
   withVCGenLocalHintTiming do
     let steps := (← potentialLocalHintNames).map fun cutName =>
       mkVCGenPlannedStep
-        "vcgen explicit cut"
-        s!"vcstep using {cutName}"
+        "pvcgen explicit cut"
+        s!"pvcstep using {cutName}"
         (runHoareStepRuleUsing (mkIdent cutName))
     chooseBestPlannedStepCandidate? steps
 
@@ -215,8 +215,8 @@ private def chooseBestInvariantStep? : TacticM (Option (PlannedStep × PreviewRe
   withVCGenLocalHintTiming do
     let steps := (← potentialLocalHintNames).map fun invName =>
       mkVCGenPlannedStep
-        "vcgen explicit invariant"
-        s!"vcstep inv {invName}"
+        "pvcgen explicit invariant"
+        s!"pvcstep inv {invName}"
         (runLoopInvExplicit (mkIdent invName))
     chooseBestPlannedStepCandidate? steps
 
@@ -225,8 +225,8 @@ private def chooseBestTheoremStep? : TacticM (Option (PlannedStep × PreviewResu
     for tier in ← registeredVCGenRuleCandidateTiers do
       let steps := tier.map fun entry =>
         mkVCGenPlannedStep
-          "vcgen @[vcspec] theorem rule"
-          s!"vcstep with {entry.theoremName!}"
+          "pvcgen @[vcspec] theorem rule"
+          s!"pvcstep with {entry.theoremName!}"
           (runUnaryVCSpecRule entry)
       if let some chosen ← chooseBestPlannedStepCandidate? steps then
         return some chosen
@@ -241,7 +241,7 @@ private def planExplicitProbEqStep? (plainPreview : PreviewResult) :
   for plan in ← probEqPlannerActionPlansForGoal do
     let replayText ← renderProbEqPlan plan
     steps := steps.push <| mkVCGenPlannedStep
-      "vcgen probability plan"
+      "pvcgen probability plan"
       replayText
       (tryProbEqActions plan)
   match ← chooseBestPlannedStepCandidate? steps with
@@ -260,8 +260,8 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     let names ← getSuggestedIntroNames 1
     let introStep :=
       mkVCGenPlannedStep
-        "vcgen intro"
-        s!"vcstep{renderAsClause names}"
+        "pvcgen intro"
+        s!"pvcstep{renderAsClause names}"
         (introMainGoalNames names)
     if ← previewPlannedStep introStep then
       return some introStep
@@ -271,15 +271,15 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     if isBindExpr comp then
       let immediateBindStep :=
         mkVCGenPlannedStep
-          "vcgen bind step"
-          "vcstep"
+          "pvcgen bind step"
+          "pvcstep"
           (tryBindImmediate comp)
       if ← previewPlannedStep immediateBindStep then
         let names ← getSuggestedIntroNames 1
         let namedStructuralStep :=
           mkVCGenPlannedStep
-            "vcgen named bind step"
-            s!"vcstep{renderAsClause names}"
+            "pvcgen named bind step"
+            s!"pvcstep{renderAsClause names}"
             (runVCGenStructuralCoreWithNames names)
         if ← previewPlannedStep namedStructuralStep then
           return some namedStructuralStep
@@ -289,8 +289,8 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     if isReplicateHead comp || isListFoldlMHead comp || isListMapMHead comp then
       let autoInvariantStep :=
         mkVCGenPlannedStep
-          "vcgen automatic loop invariant"
-          "vcstep"
+          "pvcgen automatic loop invariant"
+          "pvcstep"
           (tryLoopInvariantRuleAuto comp)
       if ← previewPlannedStep autoInvariantStep then
         return some structuralStep
@@ -311,8 +311,8 @@ def planVCGenStep? : TacticM (Option PlannedStep) := do
     return some theoremStep
   let closeStep :=
     mkVCGenPlannedStep
-      "vcgen close/search"
-      "vcstep"
+      "pvcgen close/search"
+      "pvcstep"
       tryCloseSpecGoal
   if ← previewPlannedStep closeStep then
     return some closeStep

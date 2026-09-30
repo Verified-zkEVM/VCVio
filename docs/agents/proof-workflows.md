@@ -15,20 +15,20 @@
      `measureETVDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
 
 3. **Probability equals a specific value** (`Pr{let y ← oa}[y = x] = ...` or `Pr{let x ← oa}[p x] = ...`):
-   → Start with `vcstep` if the goal should lower or decompose automatically
-   → Use `vcstep?` when you want the explicit script, binder names, rewrite form, or an
+   → Start with `pvcstep` if the goal should lower or decompose automatically
+   → Use `pvcstep?` when you want the explicit script, binder names, rewrite form, or an
     explicit `using` / `inv` / `with` step surfaced
    → Otherwise use `prEvent_bind_eq_lintegral_of_discrete` (or `prEvent_bind_eq_lintegral`) to
     decompose binds manually into `∫⁻ x, … ∂𝒟[oa]`
    → Use `simp` with project simp lemmas
-   → Use `vcstep`, `vcstep rw`, or `vcstep rw congr'` for probability equalities
+   → Use `pvcstep`, `pvcstep rw`, or `pvcstep rw congr'` for probability equalities
 
 4. **Multi-hop security proof** (`g₁ =ᵈ gₙ`):
    → `game_trans g₂` to split into two goals, repeat
 
 5. **Need to swap sampling order**:
-   → Use `vcstep` if the swap should close the goal
-   → Use `vcstep rw` (or `vcstep rw under n`) if you need to continue after rewriting
+   → Use `pvcstep` if the swap should close the goal
+   → Use `pvcstep rw` (or `pvcstep rw under n`) if you need to continue after rewriting
 
 ## Monadic Normalization with `monad_norm`
 
@@ -196,37 +196,37 @@ On bind goals, the replay can now surface the full tuple naming form:
 rvcstep using S as ⟨a1, a2, hrel⟩
 ```
 
-### `vcstep` on probability equalities
+### `pvcstep` on probability equalities
 
 ```lean
 -- Goal: Pr{let x ← $ᵗ P; let b ← $ᵗ Bool; let z ← f x b}[z = true]
 --     = Pr{let b ← $ᵗ Bool; let x ← $ᵗ P; let z ← f x b}[z = true]
-vcstep                -- closes the goal automatically
+pvcstep               -- closes the goal automatically
 ```
 
 ```lean
 -- Same shape, but keep going after one rewrite:
-vcstep rw
+pvcstep rw
 ```
 
 ### Naming and suggestion modes
 
 ```lean
 -- Ask for the explicit next script and binder names:
-vcstep?
+pvcstep?
 ```
 
 The surfaced script may now include:
 
 ```lean
-vcstep using cut
-vcstep inv I
-vcstep with triple_wrappedTrue
+pvcstep using cut
+pvcstep inv I
+pvcstep with triple_wrappedTrue
 ```
 
 ```lean
 -- Keep the step, but force stable names for the new binders:
-vcstep as ⟨x⟩
+pvcstep as ⟨x⟩
 ```
 
 ```lean
@@ -234,37 +234,37 @@ vcstep as ⟨x⟩
 rvcstep using S as ⟨a₁, a₂, hrel⟩
 ```
 
-### `vcgen` driver variants
+### `pvcgen` driver variants
 
-Use `vcgen using cut` to perform one explicit bind step with an intermediate
+Use `pvcgen using cut` to perform one explicit bind step with an intermediate
 postcondition, then continue with exhaustive decomposition:
 
 ```lean
 -- Goal: ⦃ 1 ⦄ (do let x ← oa; let y ← f x; g y) ⦃ post ⦄
 -- with hoa : ⦃ 1 ⦄ oa ⦃ cut ⦄ in context
-vcgen using cut            -- splits at first bind with `cut`, then auto-decomposes
+pvcgen using cut           -- splits at first bind with `cut`, then auto-decomposes
 ```
 
-Use `vcgen inv I` to apply an explicit loop invariant to the first
+Use `pvcgen inv I` to apply an explicit loop invariant to the first
 `replicate`/`foldlM`/`mapM` goal, then continue:
 
 ```lean
 -- Goal: ⦃ pre ⦄ oa.replicate n ⦃ post ⦄
 -- with hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄ in context
-vcgen inv I                -- applies invariant I, then auto-decomposes
+pvcgen inv I               -- applies invariant I, then auto-decomposes
 ```
 
 ### Support-cut synthesis
 
 When decomposing a bind `oa >>= f`, if no explicit spec is available in context,
-`vcstep` and `vcgen` will automatically try a support-based intermediate
+`pvcstep` and `pvcgen` will automatically try a support-based intermediate
 postcondition. This applies `Std.WP.Triple.bind` with `triple_support` as the spec for `oa`,
 unifying the cut to `fun x => ⌜x ∈ support oa⌝`:
 
 ```lean
 -- Goal: ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ post ⦄
 -- No spec for oa, but h : ∀ x ∈ support oa, ⦃ ... ⦄ f x ⦃ post ⦄
-vcgen                      -- auto-inserts support cut, then decomposes f
+pvcgen                     -- auto-inserts support cut, then decomposes f
 ```
 
 ### Opt-in unary theorem lookup
@@ -281,28 +281,28 @@ unary triple lemma explicitly:
     (Std.WP.Spec.pure (m := OracleComp spec) (post := fun y => if y = true then 1 else 0) true)
 ```
 
-After that, `vcstep` can use the theorem when the goal head symbol is `wrappedTrue`.
+After that, `pvcstep` can use the theorem when the goal head symbol is `wrappedTrue`.
 The lookup is step-level and bounded: it runs after the built-in structural rules and only over
 registered head-matching theorems.
 
 You can also force a specific theorem or local assumption explicitly:
 
 ```lean
-vcstep with triple_wrappedTrue
+pvcstep with triple_wrappedTrue
 ```
 
-If an exhaustive `vcgen` / `rvcgen` run stops too early, raise the local pass budget with:
+If an exhaustive `pvcgen` / `rvcgen` run stops too early, raise the local pass budget with:
 
 ```lean
 set_option vcvio.vcgen.maxPasses 128 in
-  vcgen
+  pvcgen
 ```
 
 For tactic-choice debugging, enable the planned-step trace locally:
 
 ```lean
 set_option vcvio.vcgen.traceSteps true in
-  vcstep
+  pvcstep
 ```
 
 ### `by_dist` for advantage bounds

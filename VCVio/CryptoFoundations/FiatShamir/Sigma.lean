@@ -408,8 +408,8 @@ theorem perfectlyCorrect [SampleableType Chal]
       (runtime M) := by
   intro msg
   rw [perfectlyCorrect_evalDist_eq σ hr M msg, ← prEvent_eq_evalDist_singleton]
-  vcstep
-  vcstep using (fun x => propInd (x ∈ support hr.gen))
+  pvcstep
+  pvcstep using (fun x => propInd (x ∈ support hr.gen))
   · simpa [propInd] using
       OracleComp.ProgramLogic.triple_support (oa := hr.gen)
   · intro x

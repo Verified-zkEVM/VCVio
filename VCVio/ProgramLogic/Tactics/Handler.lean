@@ -15,7 +15,7 @@ public import VCVio.OracleComp.QueryTracking.HandlerSimp
 `handler_step` performs one small normalization pass using PolyFun's generic
 `handler_nf` set followed by VCVio's `handler_simp` extension. It is
 intentionally thin: use it to expose the next handler body or run-shape, then
-continue with `vcgen`, `vcstep`, `rvcstep`, or direct proof steps.
+continue with `pvcgen`, `pvcstep`, `rvcstep`, or direct proof steps.
 -/
 
 public meta section

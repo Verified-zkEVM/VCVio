@@ -129,11 +129,11 @@ def throwWpStepError : TacticM Unit := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
   match wpGoalComp? target with
   | none =>
-      throwError "vcstep: expected a goal containing `wp`; got:{indentExpr target}"
+      throwError "pvcstep: expected a goal containing `wp`; got:{indentExpr target}"
   | some comp =>
       let comp ← instantiateMVars comp
       throwError
-        "vcstep: found a `wp` goal, but none of the current single-step rules apply to:\n\
+        "pvcstep: found a `wp` goal, but none of the current single-step rules apply to:\n\
         {indentExpr comp}\n\
         Current rules handle bind, pure, `replicate`, `List.mapM`, `List.foldlM`, query, `if`, \
         uniform sampling, `map`, `simulateQ`, `simulateQ ... run'`, and `liftComp`."
@@ -354,7 +354,7 @@ private def runVCGenStepWithTheoremConseq
   return false
 
 /-- Apply a `@[vcspec]` unary rule to the current goal.
-Default `vcstep` first tries the cached rule directly. For unary triple goals, a global
+Default `pvcstep` first tries the cached rule directly. For unary triple goals, a global
 declaration can also be applied under `triple_conseq`,
 which lets a registered concrete postcondition theorem feed a weaker goal
 postcondition. -/
@@ -365,7 +365,7 @@ private def runUnaryVCSpecRule
     let ok ←
       match ← observing? do
         unless ← runVCSpecEntryRawUnaryConsequence entry do
-          throwError "vcstep: raw unary `@[vcspec]` consequence did not apply"
+          throwError "pvcstep: raw unary `@[vcspec]` consequence did not apply"
         closeTheoremStepGoals
       with
       | some _ => pure true
@@ -377,7 +377,7 @@ private def runUnaryVCSpecRule
   let ok ←
     match ← observing? do
       unless ← runVCSpecEntryCachedBackward entry do
-        throwError "vcstep: registered `@[vcspec]` rule did not apply"
+        throwError "pvcstep: registered `@[vcspec]` rule did not apply"
       closeTheoremStepGoals
     with
     | some _ => pure true
@@ -401,7 +401,7 @@ def tryCloseSpecGoal : TacticM Bool := do
   tryCloseSpecGoalImmediate <||> tryCloseSpecGoalSearch
 
 /-- Finish-only closure step: includes the support-sensitive leaf rules that are too expensive
-for the default `vcstep` hot path. -/
+for the default `pvcstep` hot path. -/
 def tryCloseSpecGoalFinal : TacticM Bool := do
   tryApplyTripleHyp <||>
   tryCloseNormalizedTransformerWP <||>
@@ -687,19 +687,19 @@ def throwVCGenStepError : TacticM Unit := withMainContext do
       if hasProbGoal target then
         if isProbEqGoal target then
           throwError
-            "vcstep: found a probability equality but no swap or congruence rule applied.\n\
+            "pvcstep: found a probability equality but no swap or congruence rule applied.\n\
             Goal:{indentExpr target}\n\
-            Try `vcstep rw`, `vcstep rw under 1`, `vcstep rw congr`, \
-            `vcstep rw congr'`, `vcstep?`, or manual rewriting with \
+            Try `pvcstep rw`, `pvcstep rw under 1`, `pvcstep rw congr`, \
+            `pvcstep rw congr'`, `pvcstep?`, or manual rewriting with \
             `OracleComp.evalDist_bind_bind_swap`."
         else
           throwError
-            "vcstep: found a probability goal but could not lower it to a supported\n\
+            "pvcstep: found a probability goal but could not lower it to a supported\n\
             `Triple` or raw `wp` shape.\n\
             Goal:{indentExpr target}\n\
             Supported direct lowerings include `Pr\{...}[...] = 1`, probability equalities,\n\
             and lower bounds such as `r ≤ Pr\{...}[...]` / `Pr\{...}[...] ≥ r`.\n\
-            Try `vcstep?`, or manual rewriting."
+            Try `pvcstep?`, or manual rewriting."
       else if let some comp := wpGoalComp? target then
         let comp ← whnfReducible (← instantiateMVars comp)
         let theoremMsg ← do
@@ -709,12 +709,12 @@ def throwVCGenStepError : TacticM Unit := withMainContext do
           pure <| if thms.isEmpty then "" else
             s!"\nRegistered `@[vcspec]` candidates: {formatCandidateNames thms}"
         throwError
-          "vcstep: currently in raw `wp` continuation mode, but no matching rule applied to:\n\
+          "pvcstep: currently in raw `wp` continuation mode, but no matching rule applied to:\n\
           {indentExpr comp}\n\
-          Try `vcstep?`, `vcstep`, or manual rewriting.{theoremMsg}"
+          Try `pvcstep?`, `pvcstep`, or manual rewriting.{theoremMsg}"
       else
         throwError
-          "vcstep: expected a `Triple`, raw `wp`, or probability goal; got:{indentExpr target}"
+          "pvcstep: expected a `Triple`, raw `wp`, or probability goal; got:{indentExpr target}"
   | some comp =>
       let comp ← whnfReducible (← instantiateMVars comp)
       let cutMsg ←
@@ -738,8 +738,8 @@ def throwVCGenStepError : TacticM Unit := withMainContext do
         pure <| if thms.isEmpty then "" else
           s!"\nRegistered `@[vcspec]` candidates: {formatCandidateNames thms}"
       throwError
-        "vcstep: found a `Triple` goal, but no matching rule applied to:{indentExpr comp}\n\
-        Try `vcstep`, or manually unfolding the remaining arithmetic side conditions.\
+        "pvcstep: found a `Triple` goal, but no matching rule applied to:{indentExpr comp}\n\
+        Try `pvcstep`, or manually unfolding the remaining arithmetic side conditions.\
         {cutMsg}{invMsg}{theoremMsg}"
 
 /-- A probability-equality planner action: close by swapping adjacent independent binds, reduce
@@ -907,20 +907,20 @@ def runProbEqAction : ProbEqAction → TacticM Bool
         runProbEqRewriteUnder depth
 
 private def renderProbEqAction : ProbEqAction → TacticM String
-  | .swap => pure "vcstep"
+  | .swap => pure "pvcstep"
   | .congr => do
       let names ← getProbCongrNames true
-      pure s!"vcstep rw congr{renderAsClause names}"
+      pure s!"pvcstep rw congr{renderAsClause names}"
   | .congrNoSupport => do
       let names ← getProbCongrNames false
-      pure s!"vcstep rw congr'{renderAsClause names}"
-  | .rewrite => pure "vcstep rw"
-  | .rewriteUnder depth => pure s!"vcstep rw under {depth}"
+      pure s!"pvcstep rw congr'{renderAsClause names}"
+  | .rewrite => pure "pvcstep rw"
+  | .rewriteUnder depth => pure s!"pvcstep rw under {depth}"
 
 private def renderProbEqPlan (actions : List ProbEqAction) : TacticM String := do
   let parts ← actions.mapM renderProbEqAction
   match parts with
-  | [] => pure "vcstep"
+  | [] => pure "pvcstep"
   | [part] => pure part
   | _ => pure s!"({String.intercalate "; " parts})"
 
@@ -1066,8 +1066,8 @@ def tryProbEqPlans (plans : List (List ProbEqAction)) : TacticM Bool := do
 
 /-- Explicit probability-equality normalization.
 
-This runs the deeper planner-backed bind-rewrite/congruence search used by `vcstep?`, but only
-when the user asks for it. Plain `vcstep` keeps the smaller default plan set. -/
+This runs the deeper planner-backed bind-rewrite/congruence search used by `pvcstep?`, but only
+when the user asks for it. Plain `pvcstep` keeps the smaller default plan set. -/
 def runProbEqNormalize : TacticM Bool := do
   for plan in ← probEqPlannerActionPlansForGoal do
     let preview ← previewActionWithGoals (tryProbEqActions plan)
@@ -1107,12 +1107,12 @@ def throwVCGenStepRwError (depth : Nat) : TacticM Unit := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
   if depth = 0 then
     throwError
-      "vcstep rw: expected a probability-equality goal where one top-level\n\
+      "pvcstep rw: expected a probability-equality goal where one top-level\n\
       bind-swap rewrite applies.\n\
       Goal:{indentExpr target}"
   else
     throwError
-      "vcstep rw under {depth}: expected a probability-equality goal where one\n\
+      "pvcstep rw under {depth}: expected a probability-equality goal where one\n\
       bind-swap rewrite applies under {depth} shared bind prefix(es).\n\
       Goal:{indentExpr target}"
 
@@ -1121,12 +1121,12 @@ def throwVCGenStepRwCongrError (supportSensitive : Bool) : TacticM Unit := withM
   let target ← instantiateMVars (← getMainTarget)
   if supportSensitive then
     throwError
-      "vcstep rw congr: expected a probability-equality goal with a shared outer\n\
+      "pvcstep rw congr: expected a probability-equality goal with a shared outer\n\
       bind, leaving the bound variable and a support hypothesis.\n\
       Goal:{indentExpr target}"
   else
     throwError
-      "vcstep rw congr': expected a probability-equality goal with a shared outer\n\
+      "pvcstep rw congr': expected a probability-equality goal with a shared outer\n\
       bind, leaving only the bound variable.\n\
       Goal:{indentExpr target}"
 
@@ -1134,7 +1134,7 @@ def throwVCGenStepRwCongrError (supportSensitive : Bool) : TacticM Unit := withM
 def throwVCGenStepRwNormalizeError : TacticM Unit := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
   throwError
-    "vcstep rw normalize: expected a probability-equality goal where the bounded\n\
+    "pvcstep rw normalize: expected a probability-equality goal where the bounded\n\
     probability-equality planner can close the goal by bind-swap and congruence steps.\n\
     Goal:{indentExpr target}"
 
