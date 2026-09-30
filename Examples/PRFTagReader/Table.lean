@@ -10,6 +10,8 @@ public import Examples.PRFTagReader.PRFReductions
 public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.ProgramLogic.Unary.WP.Qualitative
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # PRF Tag/Reader Protocol — Composed-Handler Eager-Table Equivalence
@@ -116,23 +118,25 @@ list, by induction on the cell list. The end result: folding `idealCacheStep` ov
 then sampling one full table is distributionally the same as sampling the full table up front and
 reading the cells deterministically against `tableExtending`. -/
 
+open Std.WP
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
+/-- One `idealCacheStep` at `d` stores the produced digest at `d` and leaves every other cell, and
+an already-cached `d`, unchanged. -/
+theorem idealCacheStep_triple {D : Type} [DecidableEq D] (c : (D →ₒ Digest).QueryCache) (d : D) :
+    ⦃ True ⦄ idealCacheStep (Digest := Digest) c d
+    ⦃ fun r => r.2 d = some r.1 ∧ ∀ d', d' ≠ d ∨ (c d').isSome → r.2 d' = c d' ⦄ := by
+  vcgen [idealCacheStep] <;> grind
+
 /-- After one `idealCacheStep` at `d`, the resulting cache stores the produced digest at `d`. -/
 lemma idealCacheStep_cache_self {D : Type} [DecidableEq D]
     (c : (D →ₒ Digest).QueryCache) (d : D)
     (r : Digest × (D →ₒ Digest).QueryCache)
     (hr : r ∈ support (idealCacheStep (Digest := Digest) c d)) :
-    r.2 d = some r.1 := by
-  classical
-  unfold idealCacheStep at hr
-  rcases hc : c d with _ | u
-  · rw [hc, mem_support_bind_iff] at hr
-    obtain ⟨u, _, hr⟩ := hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    subst hr
-    simp [QueryCache.cacheQuery]
-  · rw [hc, support_pure, Set.mem_singleton_iff] at hr
-    subst hr
-    exact hc
+    r.2 d = some r.1 :=
+  ((Qualitative.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c d) r hr).1
 
 /-- After one `idealCacheStep` at `d`, the resulting cache's domain includes `d`. -/
 lemma idealCacheStep_cache_self_dom {D : Type} [DecidableEq D]
@@ -148,18 +152,9 @@ lemma idealCacheStep_cache_off {D : Type} [DecidableEq D]
     (r : Digest × (D →ₒ Digest).QueryCache)
     (hr : r ∈ support (idealCacheStep (Digest := Digest) c d))
     (d' : D) (hd' : d' ≠ d) :
-    r.2 d' = c d' := by
-  classical
-  unfold idealCacheStep at hr
-  rcases hc : c d with _ | u
-  · rw [hc, mem_support_bind_iff] at hr
-    obtain ⟨u, _, hr⟩ := hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    subst hr
-    simp [QueryCache.cacheQuery_of_ne _ _ hd']
-  · rw [hc, support_pure, Set.mem_singleton_iff] at hr
-    subst hr
-    rfl
+    r.2 d' = c d' :=
+  ((Qualitative.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c d) r hr).2 d'
+    (.inl hd')
 
 /-- One `idealCacheStep` at `e` leaves any already-cached cell `d` unchanged. -/
 lemma idealCacheStep_preserves_some {D : Type} [DecidableEq D]
@@ -167,17 +162,9 @@ lemma idealCacheStep_preserves_some {D : Type} [DecidableEq D]
     (r : Digest × (D →ₒ Digest).QueryCache)
     (hr : r ∈ support (idealCacheStep (Digest := Digest) c e))
     (d : D) (hd : (c d).isSome) :
-    r.2 d = c d := by
-  classical
-  by_cases hde : d = e
-  · subst hde
-    unfold idealCacheStep at hr
-    rcases hc : c d with _ | u
-    · rw [hc] at hd; simp at hd
-    · rw [hc, support_pure, Set.mem_singleton_iff] at hr
-      subst hr
-      exact hc
-  · exact idealCacheStep_cache_off c e r hr d hde
+    r.2 d = c d :=
+  ((Qualitative.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c e) r hr).2 d
+    (.inr hd)
 
 /-- Folding `idealCacheStep` over `l` leaves any already-cached cell `d` unchanged. -/
 lemma idealCacheMapM_cache_off {D : Type} [DecidableEq D]
@@ -186,18 +173,14 @@ lemma idealCacheMapM_cache_off {D : Type} [DecidableEq D]
     (hr : r ∈ support (idealCacheMapM (Digest := Digest) l c))
     (d : D) (hd : (c d).isSome) :
     r.2 d = c d := by
-  induction l generalizing c r with
-  | nil =>
-    simp only [idealCacheMapM, support_pure, Set.mem_singleton_iff] at hr
-    subst hr; rfl
+  revert r
+  induction l generalizing c with
+  | nil => prvcgen [idealCacheMapM] with finish
   | cons e es ih =>
-    simp only [idealCacheMapM, mem_support_bind_iff] at hr
-    obtain ⟨step, hstep, rest, hrest, hr⟩ := hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    subst hr
-    have hstepd : (step.2 d).isSome := by
-      rw [idealCacheStep_preserves_some c e step hstep d hd]; exact hd
-    rw [ih step.2 rest hrest hstepd, idealCacheStep_preserves_some c e step hstep d hd]
+    prvcgen [idealCacheMapM, idealCacheStep_triple,
+      Qualitative.Spec.ofSupport (idealCacheMapM es _)]
+    rename_i h hrs
+    rw [ih _ (by rwa [h.2 d (.inr hd)]) rs hrs, h.2 d (.inr hd)]
 
 /-- Folding `idealCacheStep` over `l` leaves any cell `d` outside `l` unchanged. -/
 lemma idealCacheMapM_cache_not_mem {D : Type} [DecidableEq D]
@@ -206,18 +189,15 @@ lemma idealCacheMapM_cache_not_mem {D : Type} [DecidableEq D]
     (hr : r ∈ support (idealCacheMapM (Digest := Digest) l c))
     (d : D) (hd : d ∉ l) :
     r.2 d = c d := by
-  induction l generalizing c r with
-  | nil =>
-    simp only [idealCacheMapM, support_pure, Set.mem_singleton_iff] at hr
-    subst hr; rfl
+  revert r
+  induction l generalizing c with
+  | nil => prvcgen [idealCacheMapM] with finish
   | cons e es ih =>
     simp only [List.mem_cons, not_or] at hd
-    obtain ⟨hde, hdes⟩ := hd
-    simp only [idealCacheMapM, mem_support_bind_iff] at hr
-    obtain ⟨step, hstep, rest, hrest, hr⟩ := hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    subst hr
-    rw [ih step.2 rest hrest hdes, idealCacheStep_cache_off c e step hstep d hde]
+    prvcgen [idealCacheMapM, idealCacheStep_triple,
+      Qualitative.Spec.ofSupport (idealCacheMapM es _)]
+    rename_i h hrs
+    exact (ih _ hd.2 rs hrs).trans (h.2 d (.inl hd.1))
 
 /-- Every result of folding `idealCacheStep` over a list `l` from cache `c` has a final cache that
 caches all cells of `l` and agrees with `c` off the cells of `l`. Consequently, overlaying that
@@ -229,25 +209,16 @@ lemma idealCacheMapM_support {D : Type} [DecidableEq D]
     (hr : r ∈ support (idealCacheMapM (Digest := Digest) l c))
     (g : D → Digest) :
     r.1 = l.map (OracleComp.tableExtending r.2 g) := by
-  induction l generalizing c r with
-  | nil =>
-    simp only [idealCacheMapM, support_pure, Set.mem_singleton_iff] at hr
-    subst hr; rfl
-  | cons d ds ih =>
-    simp only [idealCacheMapM, mem_support_bind_iff] at hr
-    obtain ⟨step, hstep, rest, hrest, hr⟩ := hr
-    rw [support_pure, Set.mem_singleton_iff] at hr
-    subst hr
-    have hstepd : step.2 d = some step.1 :=
-      idealCacheStep_cache_self c d step hstep
-    have hrestd : rest.2 d = some step.1 := by
-      have hoff := idealCacheMapM_cache_off ds step.2 rest hrest d
-        (idealCacheStep_cache_self_dom c d step hstep)
-      rw [hoff, hstepd]
-    simp only [List.map_cons]
-    rw [ih step.2 rest hrest]
-    congr 1
-    simp [OracleComp.tableExtending, hrestd]
+  revert r
+  induction l generalizing c with
+  | nil => prvcgen [idealCacheMapM] with finish
+  | cons e es ih =>
+    prvcgen [idealCacheMapM, idealCacheStep_triple,
+      Qualitative.Spec.ofSupport (idealCacheMapM es _)]
+    rename_i a b h hrs
+    rw [List.map_cons, ← ih _ rs hrs,
+      idealCacheMapM_cache_off es b rs hrs e (Option.isSome_of_eq_some h.1), h.1]
+    rfl
 
 /-- Folding `idealCacheStep` over `l` caches every cell of `l`: any `d ∈ l` is `isSome` in the
 final cache. Dual of `idealCacheMapM_cache_not_mem`. -/

@@ -8,6 +8,8 @@ module
 
 public import Examples.PRFTagReader.Defs
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 
 /-!
 # PRF Tag/Reader Protocol — Authentication
@@ -613,115 +615,37 @@ theorem authRealExperiment_le_prfAdvantage_add_authRF
   rw [← hreal, hRF, PRFScheme.prfAdvantage, add_comm]
   exact (ENNReal.absDiff_le_iff.mp le_rfl).1
 
-/-- In the ideal authentication world, a forged reader acceptance never occurs. -/
+section IdealUnwinnable
+
+open Std.WP OracleComp.ProgramLogic
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
+/-- In the ideal authentication world, a forged reader acceptance never occurs. Every query keeps
+the forgery log empty while every cached digest belongs to an honest transcript, a structural
+triple lifted to the whole run by `simulateQ_triple_preserves_invariant`. -/
 theorem authIdealExperiment_eq_zero
     (adversary : AuthAdversary TagId Nonce Digest) :
     𝒟[authIdealExperiment adversary] {true} = 0 := by
-  let ForgedInv : AuthIdealState TagId Nonce Digest → Prop := fun st => st.readerForged = ∅
-  let CacheInv : AuthIdealState TagId Nonce Digest → Prop := fun st =>
-    ∀ tag nonce auth, st.responses (tag, nonce) = some auth →
-      (tag, ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest)) ∈ st.honestOutputs
-  have htagForged :
-      QueryImpl.PreservesInv (authIdealTagQueryImpl (TagId := TagId)) ForgedInv := by
-    intro tag st hst z hz
-    unfold authIdealTagQueryImpl at hz
-    simp only [bind_pure_comp, pure_bind, StateT.run_bind, StateT.run_get, StateT.run_monadLift,
-      monadLift_eq_self, bind_map_left, support_bind, support_uniformSample, Set.mem_univ,
-      Set.iUnion_true, Set.mem_iUnion] at hz
-    rcases hz with ⟨i, hz⟩
-    cases hresp : st.responses (tag, i) with
-    | none =>
-      simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self, bind_pure_comp,
-        StateT.run_map, StateT.run_set, map_pure, Functor.map_map, support_map,
-        support_uniformSample, Set.image_univ, Set.mem_range] at hz
-      grind
-    | some out =>
-      simp only [hresp, StateT.run_map, StateT.run_set, map_pure, support_pure,
-        Set.mem_singleton_iff] at hz
-      grind
-  have htagCached :
-      QueryImpl.PreservesInv (authIdealTagQueryImpl (TagId := TagId)) CacheInv := by
-    intro tag st hst z hz
-    unfold authIdealTagQueryImpl at hz
-    simp only [bind_pure_comp, pure_bind, StateT.run_bind, StateT.run_get, StateT.run_monadLift,
-      monadLift_eq_self, bind_map_left, support_bind, support_uniformSample, Set.mem_univ,
-      Set.iUnion_true, Set.mem_iUnion] at hz
-    rcases hz with ⟨nonce, hz⟩
-    cases hresp : st.responses (tag, nonce) with
-    | none =>
-      simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self, bind_pure_comp,
-        StateT.run_map, StateT.run_set, map_pure, Functor.map_map, support_map,
-        support_uniformSample, Set.image_univ, Set.mem_range] at hz
-      rcases hz with ⟨auth, rfl⟩
-      intro tag' nonce' auth' hlookup
-      by_cases hkey : (tag', nonce') = (tag, nonce)
-      · cases hkey
-        simp only [QueryCache.cacheQuery_self, Option.some.injEq] at hlookup
-        subst auth'
-        simp
-      · have hlookup' : st.responses (tag', nonce') = some auth' := by
-          simpa [QueryCache.cacheQuery_of_ne (cache := st.responses) auth hkey] using hlookup
-        exact Finset.mem_insert_of_mem (hst tag' nonce' auth' hlookup')
-    | some out =>
-      simp only [hresp, StateT.run_map, StateT.run_set, map_pure, support_pure,
-        Set.mem_singleton_iff] at hz
-      rcases hz with rfl
-      intro tag' nonce' auth' hlookup
-      exact Finset.mem_insert_of_mem (hst tag' nonce' auth' hlookup)
-  have hreaderForged :
-      ∀ transcript st, ForgedInv st ∧ CacheInv st →
-        ∀ z ∈ support (((authIdealReaderQueryImpl (TagId := TagId)) transcript).run st),
-          ForgedInv z.2 := by
-    intro transcript st hst z hz
-    have hz' := hz
-    have hcached := hst.2
-    unfold authIdealReaderQueryImpl at hz'
-    simp only [bind_pure_comp, StateT.run_bind, StateT.run_get, StateT.run_map, StateT.run_set,
-      map_pure, support_pure, Set.mem_singleton_iff] at hz'
-    rcases hz' with rfl
-    unfold ForgedInv at *
-    have hnewForged :
-        ((Finset.univ.filter fun tag =>
-          st.responses (tag, transcript.nonce) = some transcript.auth).filter fun tag =>
-            (tag, transcript) ∉ st.honestOutputs) = ∅ := by
-      ext tag
-      constructor
-      · intro hmem
-        simp only [Finset.mem_filter, Finset.mem_univ, true_and] at hmem
-        rcases hmem with ⟨hmatch, hnotmem⟩
-        simpa using (False.elim (hnotmem (hcached tag transcript.nonce transcript.auth hmatch)))
-      · intro hmem
-        simp at hmem
-    rw [hst.1, hnewForged, Finset.image_empty, Finset.empty_union]
-  have hreaderCached :
-      QueryImpl.PreservesInv (authIdealReaderQueryImpl (TagId := TagId)) CacheInv := by
-    intro transcript st hst z hz
-    unfold authIdealReaderQueryImpl at hz
-    simp only [bind_pure_comp, StateT.run_bind, StateT.run_get, StateT.run_map, StateT.run_set,
-      map_pure, support_pure, Set.mem_singleton_iff] at hz
-    rcases hz with rfl
-    exact hst
-  have himpl :
-      QueryImpl.PreservesInv (authIdealQueryImpl (TagId := TagId))
-        (fun st => ForgedInv st ∧ CacheInv st) :=
-    (htagForged.and htagCached).add (by
-      intro transcript st hst z hz
-      exact ⟨hreaderForged transcript st hst z hz, hreaderCached transcript st hst.2 z hz⟩)
-  have hfinal :
-      ∀ z ∈ support ((simulateQ (authIdealQueryImpl (TagId := TagId))
-            adversary).run AuthIdealState.init),
-        z.2.readerForged = ∅ := by
-    intro z hz
-    have hz' :=
-      OracleComp.simulateQ_run_preservesInv (authIdealQueryImpl (TagId := TagId))
-        (fun st => ForgedInv st ∧ CacheInv st) himpl adversary AuthIdealState.init
-        (by simp [ForgedInv, CacheInv, AuthIdealState.init]) z hz
+  have hrun := (triple_stateT_iff_forall_support _ _ _ ⊥).1
+    (simulateQ_triple_preserves_invariant authIdealQueryImpl (fun st => st.readerForged = ∅ ∧
+      ∀ tag nonce auth, st.responses (tag, nonce) = some auth →
+        (tag, ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest)) ∈ st.honestOutputs)
+      ?_ adversary) AuthIdealState.init (by simp [AuthIdealState.init])
+  · rw [← prEvent_eq_evalDist_singleton]
+    refine (prEvent_eq_zero_iff _ _).2 fun b hmem hb => ?_
+    subst hb
+    rw [authIdealExperiment, mem_support_bind_iff] at hmem
     grind
-  rw [← prEvent_eq_evalDist_singleton]
-  refine (prEvent_eq_zero_iff _ _).2 fun b hmem hb => ?_
-  subst hb
-  rw [authIdealExperiment, mem_support_bind_iff] at hmem
-  grind
+  · rw [authIdealQueryImpl]
+    delta AuthOracleSpec
+    rintro (tag | tr) <;> vcgen [authIdealTagQueryImpl, authIdealReaderQueryImpl]
+    · grind
+    · grind
+    · simp_all [Finset.filter_eq_empty_iff]
+
+end IdealUnwinnable
 
 /-- Inductive helper (ideal side): simulating the auth-game adversary through the reduction's
 query implementation and then through the lazy random oracle, threaded through the cache, is the

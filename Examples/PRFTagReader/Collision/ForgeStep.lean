@@ -8,12 +8,15 @@ module
 
 public import Examples.PRFTagReader.Auth
 public import VCVio.ProgramLogic.Unary.HoareTriple
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound, Per-Step Forge Infrastructure
 
 Per-step random-oracle infrastructure for the random-function authentication world: cache
-monotonicity of `authRFLookup` (the `StateT.PreservesInv` lemmas), single-point miss bounds for
+monotonicity of `authRFLookup` (the `StateT.PreservesInv` lemmas, each a structural triple proved
+by core `vcgen`), single-point miss bounds for
 fresh lookups, the per-query step core, and the per-reader-step forge bound
 `authRFReaderStep_forge_le` together with the reader lookup pass `authRFReaderLookups` and its
 log characterization `authRFLookup_mapM_logs_eq`.
@@ -33,6 +36,18 @@ section Theorems
 variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
   [DecidableEq TagId] [DecidableEq Nonce] [SampleableType Digest]
 
+section Triples
+
+open Std.WP OracleComp.ProgramLogic
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
+/-- A structural triple preserving `I` is the support statement `StateT.PreservesInv`. -/
+private theorem preservesInv_of_triple {σ α : Type} {mx : StateT σ ProbComp α} {I : σ → Prop}
+    (h : ⦃ I ⦄ mx ⦃ fun _ => I ⦄) : StateT.PreservesInv mx I :=
+  fun s hs _ hz => (triple_stateT_iff_forall_support _ _ _ ⊥).1 h s hs _ _ hz
+
 /-- One `authRFLookup` step preserves the invariant `responses t₀ = some d`: a cache hit leaves the
 table unchanged, and a cache miss only writes a fresh entry at the looked-up point, which is
 necessarily distinct from `t₀` since `t₀` is already cached. -/
@@ -40,22 +55,8 @@ private lemma authRFLookup_responses_some_preservesInv
     (t₀ : TagId × Nonce) (d : Digest) (tag : TagId) (nonce : Nonce) :
     StateT.PreservesInv
       (authRFLookup Digest tag nonce)
-      (fun st => st.responses t₀ = some d) := by
-  unfold authRFLookup
-  refine StateT.preservesInv_get_bind _ fun st hst => ?_
-  cases hresp : st.responses (tag, nonce) with
-  | some out => exact StateT.preservesInv_pure _ _
-  | none =>
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun i => ?_
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ ?_) fun _ =>
-      StateT.preservesInv_pure _ _
-    have hkey : t₀ ≠ (tag, nonce) := by
-      rintro rfl
-      rw [hresp] at hst
-      simp at hst
-    change (st.responses.cacheQuery (tag, nonce) i) t₀ = some d
-    rw [QueryCache.cacheQuery_of_ne _ _ hkey]
-    exact hst
+      (fun st => st.responses t₀ = some d) :=
+  preservesInv_of_triple (by vcgen [authRFLookup]; grind)
 
 /-- The reader's `mapM` of `authRFLookup` over a list of tags preserves the invariant
 `responses t₀ = some d`, by iterating `authRFLookup_responses_some_preservesInv`. -/
@@ -77,31 +78,8 @@ private lemma authIdealTagQueryImpl_responses_some_preservesInv [SampleableType 
     (t₀ : TagId × Nonce) (d : Digest) :
     QueryImpl.PreservesInv
       (authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
-      (fun st => st.responses t₀ = some d) := by
-  intro tag
-  unfold authIdealTagQueryImpl
-  refine StateT.preservesInv_get_bind _ fun st hst => ?_
-  refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun nonce => ?_
-  dsimp only
-  cases hresp : st.responses (tag, nonce) with
-  | some out =>
-    dsimp only
-    rw [pure_bind]
-    exact StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ hst) fun _ =>
-      StateT.preservesInv_pure _ _
-  | none =>
-    dsimp only
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun out => ?_
-    rw [pure_bind]
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ ?_) fun _ =>
-      StateT.preservesInv_pure _ _
-    have hkey : t₀ ≠ (tag, nonce) := by
-      rintro rfl
-      rw [hresp] at hst
-      simp at hst
-    change (st.responses.cacheQuery (tag, nonce) out) t₀ = some d
-    rw [QueryCache.cacheQuery_of_ne _ _ hkey]
-    exact hst
+      (fun st => st.responses t₀ = some d) :=
+  fun _ => preservesInv_of_triple (by vcgen [authIdealTagQueryImpl] <;> grind)
 
 /-- The lazy random-oracle cache threaded by `authRFQueryImpl` only grows: once a point `t₀`
 holds a digest `d`, every reachable later state still has `t₀ ↦ d`. -/
@@ -125,18 +103,8 @@ private lemma authRFLookup_responses_none_preservesInv
     (t₀ : TagId × Nonce) (tag : TagId) (nonce : Nonce) (hne : (tag, nonce) ≠ t₀) :
     StateT.PreservesInv
       (authRFLookup Digest tag nonce)
-      (fun st => st.responses t₀ = none) := by
-  unfold authRFLookup
-  refine StateT.preservesInv_get_bind _ fun st hst => ?_
-  cases hresp : st.responses (tag, nonce) with
-  | some out => exact StateT.preservesInv_pure _ _
-  | none =>
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun i => ?_
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ ?_) fun _ =>
-      StateT.preservesInv_pure _ _
-    change (st.responses.cacheQuery (tag, nonce) i) t₀ = none
-    rw [QueryCache.cacheQuery_of_ne _ _ (fun h => hne h.symm)]
-    exact hst
+      (fun st => st.responses t₀ = none) :=
+  preservesInv_of_triple (by vcgen [authRFLookup]; grind)
 
 /-- The reader's `mapM` of `authRFLookup` at a nonce different from `t₀.2` preserves
 `responses t₀ = none`: every looked-up point `(tag, nonce)` differs from `t₀`. -/
@@ -150,6 +118,8 @@ private lemma authRFLookup_mapM_responses_none_preservesInv
   StateT.preservesInv_mapM _ (fun tag => StateT.preservesInv_bind _ _ _
     (authRFLookup_responses_none_preservesInv t₀ tag nonce fun h => hne (congrArg Prod.snd h))
     fun _ => StateT.preservesInv_pure _ _) tags
+
+end Triples
 
 /-- A weighted sum of two event probabilities is the expectation of the weighted indicators. -/
 private lemma prEvent_add_mul_prEvent_eq_wp {α : Type} (oa : ProbComp α) (A B : α → Prop)
@@ -468,6 +438,13 @@ noncomputable def authRFReaderLookups
     let dg ← authRFLookup Digest tag nonce
     pure (tag, dg))
 
+section LookupTriples
+
+open Std.WP OracleComp.ProgramLogic
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
 /-- Every looked-up pair produced by `authRFReaderLookups` lands in the final cache: if `(tag, d)`
 occurs in the result list, the final `responses` table holds `(tag, nonce) ↦ d`. Each lookup pins
 its own point, and the tail `mapM` preserves it. -/
@@ -491,21 +468,10 @@ private lemma authRFLookup_mapM_pairs_responses
       Set.mem_iUnion, Set.mem_image] at hz
     obtain ⟨r, ⟨lk, hlk, rfl⟩, w, hw, rfl⟩ := hz
     -- The head lookup at `hd` pins `(hd, nonce) ↦ lk.1` in `lk.2`.
-    have hlook : lk.2.responses (hd, nonce) = some lk.1 := by
-      unfold authRFLookup at hlk
-      simp only [StateT.run_bind, StateT.run_get, pure_bind] at hlk
-      cases hresp : st.responses (hd, nonce) with
-      | some out =>
-        simp only [hresp, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hlk
-        rcases hlk with rfl
-        exact hresp
-      | none =>
-        simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self,
-          bind_pure_comp, StateT.run_map, StateT.run_set, support_bind, support_uniformSample,
-          Set.mem_univ, Set.mem_iUnion, support_map, Set.mem_image, support_pure,
-          Set.mem_singleton_iff] at hlk
-        obtain ⟨i, -, x, rfl, rfl⟩ := hlk
-        exact QueryCache.cacheQuery_self _ _ _
+    have hlook : lk.2.responses (hd, nonce) = some lk.1 :=
+      (triple_stateT_iff_forall_support _ (· = st)
+        (fun d s => s.responses (hd, nonce) = some d) ⊥).1
+        (by vcgen [authRFLookup] <;> grind) st rfl _ _ hlk
     intro p hp
     rcases List.mem_cons.1 hp with rfl | hp'
     · -- `p` is the head pair `(hd, lk.1)`: the tail `mapM` keeps `(hd, nonce)` pinned.
@@ -520,37 +486,14 @@ lemma authRFLookup_mapM_logs_eq
     (nonce : Nonce) (tags : List TagId) (st : AuthIdealState TagId Nonce Digest) :
     ∀ z ∈ support ((authRFReaderLookups (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         nonce tags).run st),
-      z.2.honestOutputs = st.honestOutputs ∧ z.2.readerForged = st.readerForged := by
-  unfold authRFReaderLookups
-  induction tags generalizing st with
-  | nil =>
-    intro z hz
-    simp only [List.mapM_nil, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-    rcases hz with rfl
-    exact ⟨rfl, rfl⟩
-  | cons hd tl ih =>
-    intro z hz
-    rw [List.mapM_cons] at hz
-    simp only [bind_pure_comp, StateT.run_bind, StateT.run_map, support_bind, support_map,
-      Set.mem_iUnion, Set.mem_image] at hz
-    obtain ⟨r, ⟨lk, hlk, rfl⟩, w, hw, rfl⟩ := hz
-    have hhead : lk.2.honestOutputs = st.honestOutputs ∧ lk.2.readerForged = st.readerForged := by
-      unfold authRFLookup at hlk
-      simp only [StateT.run_bind, StateT.run_get, pure_bind] at hlk
-      cases hresp : st.responses (hd, nonce) with
-      | some out =>
-        simp only [hresp, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hlk
-        rcases hlk with rfl
-        exact ⟨rfl, rfl⟩
-      | none =>
-        simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self,
-          bind_pure_comp, StateT.run_map, StateT.run_set, support_bind, support_uniformSample,
-          Set.mem_univ, Set.mem_iUnion, support_map, Set.mem_image, support_pure,
-          Set.mem_singleton_iff] at hlk
-        obtain ⟨i, -, x, rfl, rfl⟩ := hlk
-        exact ⟨rfl, rfl⟩
-    obtain ⟨htail₁, htail₂⟩ := ih lk.2 w hw
-    exact ⟨htail₁.trans hhead.1, htail₂.trans hhead.2⟩
+      z.2.honestOutputs = st.honestOutputs ∧ z.2.readerForged = st.readerForged :=
+  StateT.preservesInv_mapM (fun s => s.honestOutputs = st.honestOutputs ∧
+      s.readerForged = st.readerForged)
+    (fun _ => StateT.preservesInv_bind _ _ _
+      (preservesInv_of_triple (by vcgen [authRFLookup]; grind))
+      fun _ => StateT.preservesInv_pure _ _) tags st ⟨rfl, rfl⟩
+
+end LookupTriples
 
 /-- Per-reader-step collision bound. When the pre-state has no recorded forgeries and every cached
 cell in the queried nonce's column belongs to `honestOutputs`, one `authRFReaderQueryImpl` step

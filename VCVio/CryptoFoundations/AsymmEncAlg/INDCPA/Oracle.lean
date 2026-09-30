@@ -19,6 +19,8 @@ public import ToMathlib.Control.StateT
 public import ToMathlib.Data.ENNReal.Gauss
 import VCVio.OracleComp.EvalDist.MeasureSpec
 import VCVio.OracleComp.Constructions.SampleableType.Basic
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 
 /-!
 # Asymmetric Encryption Schemes: IND-CPA Oracle Games
@@ -240,7 +242,11 @@ def IND_CPA_LR_hybrid
   (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil) (adversary pk)).run'
     (∅, 0)
 
-/-- One-step counter monotonicity for the counted real IND-CPA implementation. -/
+open scoped OracleComp.Qualitative in
+set_option experimental.vcgen true in
+/-- One-step counter monotonicity for the counted real IND-CPA implementation. A uniform query
+leaves the state unchanged; a challenge query is stepped by core `vcgen` as a structural triple,
+read against the support by `triple_stateT_iff_forall_support`. -/
 lemma IND_CPA_queryImpl'_counted_counter_le_succ
     (pk : PK) (b : Bool)
     (t : encAlg'.IND_CPA_oracleSpec.Domain)
@@ -248,29 +254,14 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
     (p : encAlg'.IND_CPA_oracleSpec.Range t × encAlg'.IND_CPA_CountedState)
     (hp : p ∈ support ((encAlg'.IND_CPA_queryImpl'_counted pk b t).run st)) :
     p.2.2 ≤ st.2 + 1 := by
-  cases t with
-  | inl tu =>
-      change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at p
-      simp only [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
-        QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
-        liftM, monadLift] at hp
-      change p ∈ support ((StateT.lift _).run st) at hp
-      rw [StateT.run_lift, mem_support_bind_iff] at hp
-      obtain ⟨a, _, rfl⟩ := hp
-      simp
-  | inr mm =>
-      change C × encAlg'.IND_CPA_CountedState at p
-      change p ∈ support ((encAlg'.IND_CPA_challengeOracle'_counted pk b mm).run st) at hp
-      revert hp
-      rcases hcache : st.1 mm with _ | c <;> intro hp
-      · simp only [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle, hcache,
-          StateT.run_bind, StateT.run_get, pure_bind] at hp
-        rw [mem_support_bind_iff] at hp
-        obtain ⟨c, _, hp⟩ := hp
-        simp only [StateT.run_set, StateT.run_pure] at hp
-        subst p
-        simp
-      · simp_all [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle]
+  rcases t with tu | mm
+  · simp [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge] at hp
+    grind
+  · refine (ProgramLogic.triple_stateT_iff_forall_support _ (· = st)
+      (fun _ st' => st'.2 ≤ st.2 + 1) ⊥).1 ?_ st rfl _ _ hp
+    vcgen [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
+      IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle,
+      Qualitative.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
 
 private lemma IND_CPA_countedChallengeOracle_proj_eq_cached
     (pk : PK)
@@ -323,21 +314,13 @@ private lemma IND_CPA_queryImpl'_counted_run_invariant_le
     (z : encAlg'.IND_CPA_oracleSpec.Range t × encAlg'.IND_CPA_CountedState)
     (hz : z ∈ support ((encAlg'.IND_CPA_queryImpl'_counted pk b t).run st)) :
     z.2.2 + (if Sum.isRight t = true then budget - 1 else budget) ≤ q := by
-  cases t with
-  | inl tu =>
-      change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at z
-      simp only [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
-        QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
-        liftM, monadLift] at hz
-      change z ∈ support ((StateT.lift _).run st) at hz
-      rw [StateT.run_lift, mem_support_bind_iff] at hz
-      obtain ⟨a, _, rfl⟩ := hz
-      simpa using hInv
-  | inr mm =>
-      have hsucc :=
-        encAlg'.IND_CPA_queryImpl'_counted_counter_le_succ pk b (Sum.inr mm) st z hz
-      simp only [Sum.isRight, not_true, reduceIte, false_or] at hcan ⊢
-      omega
+  rcases t with tu | mm
+  · simp [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge] at hz
+    grind
+  · have hsucc :=
+      encAlg'.IND_CPA_queryImpl'_counted_counter_le_succ pk b (Sum.inr mm) st z hz
+    simp only [Sum.isRight, not_true, reduceIte, false_or] at hcan ⊢
+    omega
 
 /-- If a counted IND-CPA hybrid implementation agrees with the counted real implementation
 through the first `q` fresh LR queries, then any adversary making at most `q` LR queries sees
@@ -509,7 +492,10 @@ lemma IND_CPA_hybridLR_counted_run_eq_of_le
       (fun n mm => if n < k + 1 then mm.1 else mm.2) mm st
       (by simp [show ¬(st.2 < k) from by omega, show ¬(st.2 < k + 1) from by omega])
 
-/-- Counter monotonicity for the hybrid LR counted oracle: the counter never decreases. -/
+open scoped OracleComp.Qualitative in
+set_option experimental.vcgen true in
+/-- Counter monotonicity for the hybrid LR counted oracle: the counter never decreases. A
+challenge query is stepped by core `vcgen` as a structural triple. -/
 lemma IND_CPA_hybridLR_counted_counter_le
     (pk : PK) (k : ℕ)
     (t : encAlg'.IND_CPA_oracleSpec.Domain)
@@ -517,26 +503,14 @@ lemma IND_CPA_hybridLR_counted_counter_le
     (p : encAlg'.IND_CPA_oracleSpec.Range t × encAlg'.IND_CPA_CountedState)
     (hp : p ∈ support ((encAlg'.IND_CPA_queryImpl_hybridLR_counted pk k t).run st)) :
     st.2 ≤ p.2.2 := by
-  cases t with
-  | inl tu =>
-    change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at p
-    simp only [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge,
-      QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
-      liftM, monadLift] at hp
-    change p ∈ support ((StateT.lift _).run st) at hp
-    rw [StateT.run_lift, mem_support_bind_iff] at hp
-    obtain ⟨a, _, rfl⟩ := hp
-    simp
-  | inr mm =>
-    change C × encAlg'.IND_CPA_CountedState at p
-    change p ∈ support
-      ((IND_CPA_hybridChallengeOracleLR_counted (encAlg' := encAlg') pk k mm).run st) at hp
-    revert hp
-    simp only [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle]
-    rcases hcache : st.1 mm with _ | c <;> intro hp <;> simp_all
-    obtain ⟨x, _, hp⟩ := hp
-    subst p
-    simp
+  rcases t with tu | mm
+  · simp [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge] at hp
+    grind
+  · refine (ProgramLogic.triple_stateT_iff_forall_support _ (· = st)
+      (fun _ st' => st.2 ≤ st'.2) ⊥).1 ?_ st rfl _ _ hp
+    vcgen [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge,
+      IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle,
+      Qualitative.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
 
 /-- Behavior of the hybrid challenge oracle on a cache miss. -/
 lemma IND_CPA_hybridChallengeOracleLR_counted_run_none

@@ -7,13 +7,17 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
+public import VCVio.ProgramLogic.Unary.WP.Qualitative
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 
 /-!
 # PRF Tag/Reader Protocol — Structural `query_bind` Reductions
 
 Structural `query_bind`-decomposition lemmas for the composed ideal handlers (turning the
 coupling induction into a sequence of `bind`-decomposition steps), together with per-query
-reductions and `bad` monotonicity for `unlinkBadQueryImpl`.
+reductions and `bad` monotonicity for `unlinkBadQueryImpl`. The monotonicity is a structural
+triple proved by core `vcgen` and lifted to whole runs by `simulateQ_triple_preserves_invariant`.
 -/
 
 @[expose] public section
@@ -132,50 +136,47 @@ lemma unlinkBadQueryImpl_reader_run (transcript : TagTranscript Nonce Digest)
   unfold unlinkBadReaderQueryImpl
   simp
 
+section BadMonotone
+
+open Std.WP OracleComp.ProgramLogic
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
+/-- The `bad` flag of `unlinkBadQueryImpl` is monotone, as a structural triple: a query answered
+from a state with `bad = true` ends in a state with `bad = true`. -/
+theorem unlinkBadQueryImpl_triple_bad (t : (UnlinkOracleSpec TagId Nonce Digest).Domain) :
+    ⦃ fun s => s.bad = true ⦄
+      unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+        (sessionsPerTag := sessionsPerTag) t
+    ⦃ fun _ s' => s'.bad = true ⦄ := by
+  rw [unlinkBadQueryImpl]
+  delta UnlinkOracleSpec
+  rcases t with tag | tr <;> vcgen [unlinkBadTagQueryImpl, unlinkBadReaderQueryImpl] with finish
+
 /-- The `bad` flag of `unlinkBadQueryImpl` is monotone: a single per-query step started from a
 state with `bad = true` keeps `bad = true`. -/
 lemma unlinkBadQueryImpl_step_preserves_bad
     (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
     (sB : UnlinkBadState TagId Nonce Digest) (hbad : sB.bad = true) :
     ∀ z ∈ support ((unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        (sessionsPerTag := sessionsPerTag) t) sB), z.2.bad = true := by
-  cases t with
-  | inl tag =>
-    by_cases hslot : sB.sessionsUsed tag < sessionsPerTag
-    · have key : ∀ z : Option (TagTranscript Nonce Digest) × UnlinkBadState TagId Nonce Digest,
-          z ∈ support
-            ((unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) sB) → z.2.bad = true := by
-        intro z hz
-        rw [unlinkBadQueryImpl_tag_run_of_lt tag sB hslot] at hz
-        obtain ⟨nonce, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-        obtain ⟨auth, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-        rw [mem_support_pure_iff] at hz
-        subst hz; simp [hbad]
-      exact key
-    · intro z hz
-      rw [unlinkBadQueryImpl_tag_run_of_not_lt tag sB hslot] at hz
-      have hz' := (mem_support_pure_iff _ _).mp hz
-      subst hz'; exact hbad
-  | inr transcript =>
-    intro z hz
-    rw [unlinkBadQueryImpl_reader_run transcript sB] at hz
-    have hz' := (mem_support_pure_iff _ _).mp hz
-    subst hz'; exact hbad
+        (sessionsPerTag := sessionsPerTag) t) sB), z.2.bad = true :=
+  fun _ hz => (triple_stateT_iff_forall_support _ _ _ ⊥).1
+    (unlinkBadQueryImpl_triple_bad t) sB hbad _ _ hz
 
 /-- The `bad` flag of a full `simulateQ unlinkBadQueryImpl` run is monotone: started from a state
-with `bad = true` the run keeps `bad = true`. Derived from the per-step monotonicity via the
-generic `OracleComp.simulateQ_run_preservesInv`. -/
+with `bad = true` the run keeps `bad = true`. The per-query triple
+`unlinkBadQueryImpl_triple_bad` lifts to the whole run by
+`simulateQ_triple_preserves_invariant`. -/
 lemma simulateQ_unlinkBad_preserves_bad
     (adv : UnlinkAdversary TagId Nonce Digest)
     (sB : UnlinkBadState TagId Nonce Digest) (hbad : sB.bad = true) :
     ∀ z ∈ support ((simulateQ (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adv).run sB), z.2.bad = true :=
-  OracleComp.simulateQ_run_preservesInv
-    (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-      (sessionsPerTag := sessionsPerTag))
-    (fun s => s.bad = true) (fun t s h z hz => unlinkBadQueryImpl_step_preserves_bad t s h z hz)
-    adv sB hbad
+  fun _ hz => (triple_stateT_iff_forall_support _ _ _ ⊥).1
+    (simulateQ_triple_preserves_invariant _ _ unlinkBadQueryImpl_triple_bad adv) sB hbad _ _ hz
+
+end BadMonotone
 
 end UnlinkReduction
 

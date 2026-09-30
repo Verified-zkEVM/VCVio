@@ -7,6 +7,8 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.Collision.ForgeStep
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound
@@ -97,6 +99,18 @@ private def forgeInv (adversary : AuthAdversary TagId Nonce Digest)
       ((tag, (⟨nonce, d⟩ : TagTranscript Nonce Digest)) ∈ st.honestOutputs ∨
         OracleComp.IsQueryBoundP adversary (pNonce nonce) 0)
 
+section StepTriples
+
+open Std.WP OracleComp.ProgramLogic
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
+/-- A structural triple preserving `I` is the support statement `StateT.PreservesInv`. -/
+private theorem preservesInv_of_triple {σ α : Type} {mx : StateT σ ProbComp α} {I : σ → Prop}
+    (h : ⦃ I ⦄ mx ⦃ fun _ => I ⦄) : StateT.PreservesInv mx I :=
+  fun s hs _ hz => (triple_stateT_iff_forall_support _ _ _ ⊥).1 h s hs _ _ hz
+
 /-- Column-indexed cell invariant of the random-function tag oracle. With a fixed per-column
 predicate `Q`, a tag step preserves both an empty forgery log and the property that every cached
 cell is honest or sits in a `Q`-column: a freshly cached cell is the honest transcript just
@@ -112,42 +126,11 @@ private lemma authIdealTagStep_cell_inv [SampleableType Nonce] [DecidableEq Dige
         (Digest := Digest) tag).run st),
       z.2.readerForged = ∅ ∧
         ∀ (t' : TagId) (n : Nonce) (d : Digest), z.2.responses (t', n) = some d →
-          ((t', (⟨n, d⟩ : TagTranscript Nonce Digest)) ∈ z.2.honestOutputs ∨ Q n) := by
-  intro z hz
-  unfold authIdealTagQueryImpl at hz
-  simp only [bind_pure_comp, pure_bind, StateT.run_bind, StateT.run_get, StateT.run_monadLift,
-    monadLift_eq_self, bind_map_left, support_bind, support_uniformSample, Set.mem_univ,
-    Set.iUnion_true, Set.mem_iUnion] at hz
-  rcases hz with ⟨nonce, hz⟩
-  cases hresp : st.responses (tag, nonce) with
-  | none =>
-    simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self, bind_pure_comp,
-      StateT.run_map, StateT.run_set, map_pure, Functor.map_map, support_map,
-      support_uniformSample, Set.image_univ, Set.mem_range] at hz
-    obtain ⟨auth, rfl⟩ := hz
-    refine ⟨hread, ?_⟩
-    intro t' n d hlookup
-    by_cases hkey : (t', n) = (tag, nonce)
-    · -- The freshly cached cell is the honest transcript just emitted.
-      cases hkey
-      simp only [QueryCache.cacheQuery_self, Option.some.injEq] at hlookup
-      subst hlookup
-      exact Or.inl (Finset.mem_insert_self _ _)
-    · -- A pre-existing cell keeps its disjunct; honest membership survives the `insert`.
-      have hlookup' : st.responses (t', n) = some d := by
-        simpa [QueryCache.cacheQuery_of_ne (cache := st.responses) auth hkey] using hlookup
-      rcases hcell t' n d hlookup' with hh | hq
-      · exact Or.inl (Finset.mem_insert_of_mem hh)
-      · exact Or.inr hq
-  | some out =>
-    simp only [hresp, StateT.run_map, StateT.run_set, map_pure, support_pure,
-      Set.mem_singleton_iff] at hz
-    rcases hz with rfl
-    refine ⟨hread, ?_⟩
-    intro t' n d hlookup
-    rcases hcell t' n d hlookup with hh | hq
-    · exact Or.inl (Finset.mem_insert_of_mem hh)
-    · exact Or.inr hq
+          ((t', (⟨n, d⟩ : TagTranscript Nonce Digest)) ∈ z.2.honestOutputs ∨ Q n) :=
+  fun _ hz => (triple_stateT_iff_forall_support _ (· = st) (fun _ s => s.readerForged = ∅ ∧
+    ∀ (t' : TagId) (n : Nonce) (d : Digest), s.responses (t', n) = some d →
+      ((t', (⟨n, d⟩ : TagTranscript Nonce Digest)) ∈ s.honestOutputs ∨ Q n)) ⊥).1
+    (by vcgen [authIdealTagQueryImpl] <;> grind) st rfl _ _ hz
 
 /-- `authRFReaderLookups` at column `nm` never disturbs cells outside that column: any cached cell
 at a nonce `n ≠ nm` keeps its pre-step value in every reachable outcome. -/
@@ -156,37 +139,13 @@ private lemma authRFLookup_mapM_responses_eq_of_ne_column
     (st : AuthIdealState TagId Nonce Digest) :
     ∀ z ∈ support ((authRFReaderLookups (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         nm tags).run st),
-      z.2.responses (t', n) = st.responses (t', n) := by
-  unfold authRFReaderLookups
-  induction tags generalizing st with
-  | nil =>
-    intro z hz
-    simp only [List.mapM_nil, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-    rcases hz with rfl
-    rfl
-  | cons hd tl ih =>
-    intro z hz
-    rw [List.mapM_cons] at hz
-    simp only [bind_pure_comp, StateT.run_bind, StateT.run_map, support_bind, support_map,
-      Set.mem_iUnion, Set.mem_image] at hz
-    obtain ⟨r, ⟨lk, hlk, rfl⟩, w, hw, rfl⟩ := hz
-    have hhead : lk.2.responses (t', n) = st.responses (t', n) := by
-      unfold authRFLookup at hlk
-      simp only [StateT.run_bind, StateT.run_get, pure_bind] at hlk
-      cases hresp : st.responses (hd, nm) with
-      | some out =>
-        simp only [hresp, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hlk
-        rcases hlk with rfl
-        rfl
-      | none =>
-        simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self,
-          bind_pure_comp, StateT.run_map, StateT.run_set, support_bind, support_uniformSample,
-          Set.mem_univ, Set.mem_iUnion, support_map, Set.mem_image, support_pure,
-          Set.mem_singleton_iff] at hlk
-        obtain ⟨i, -, x, rfl, rfl⟩ := hlk
-        change (st.responses.cacheQuery (hd, nm) i.1) (t', n) = st.responses (t', n)
-        rw [QueryCache.cacheQuery_of_ne _ _ (fun h => hne (congrArg Prod.snd h))]
-    rw [ih lk.2 w hw, hhead]
+      z.2.responses (t', n) = st.responses (t', n) :=
+  StateT.preservesInv_mapM (fun s => s.responses (t', n) = st.responses (t', n))
+    (fun _ => StateT.preservesInv_bind _ _ _
+      (preservesInv_of_triple (by vcgen [authRFLookup]; grind))
+      fun _ => StateT.preservesInv_pure _ _) tags st rfl
+
+end StepTriples
 
 /-- A reader step at nonce `nm` only adds cells in column `nm`: every reachable outcome leaves the
 honest-tag log unchanged, and every cached cell outside column `nm` keeps its pre-step value. -/

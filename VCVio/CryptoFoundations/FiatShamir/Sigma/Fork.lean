@@ -10,6 +10,8 @@ public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.SeededFork
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 
 /-!
 # Fiat-Shamir forking infrastructure
@@ -326,6 +328,21 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
   · rintro ⟨v, hz⟩
     exact ⟨v, support_wrapped_query_inr ▸ Set.mem_univ v, hz⟩
 
+section HandlerTriples
+
+open Std.WP OracleComp.ProgramLogic
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
+/-- `StateT.lift x` has the weakest precondition of `MonadLift.monadLift x`: the `vcgen` rule for
+handlers written with `StateT.lift`, such as `unifForward` and `roImpl`. -/
+private theorem spec_stateT_lift {σ α : Type} {m : Type → Type} [Monad m] {Pred EPred : Type}
+    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] (x : m α) (post : α → σ → Pred)
+    (epost : EPred) :
+    Triple (StateT.lift x : StateT σ m α) (fun s => wp x (fun a => post a s) epost) post epost :=
+  Spec.monadLift_StateT x post
+
 /-- Running the inner `unifForward + roImpl` simulator against a source computation with
 an `nmaHashQueryBound Q` can grow the internal `queryLog` by at most `Q`.
 
@@ -345,48 +362,22 @@ theorem queryLog_length_le_of_nmaHashQueryBound
       simp
   | query_bind t mx ih =>
       rw [nmaHashQueryBound_query_bind_iff (M := M) (Commit := Commit) (Chal := Chal)] at hQ
-      rw [simulateQ_query_bind, StateT.run_bind, support_bind] at hz
-      simp only [Set.mem_iUnion] at hz
+      simp only [simulateQ_query_bind, OracleQuery.input_query, OracleQuery.cont_query,
+        StateT.run_bind, mem_support_bind_iff] at hz
       obtain ⟨us, hus, hz'⟩ := hz
-      cases t with
-      | inl n =>
-          change unifSpec.Range n × SimState M Commit Chal at us
-          rcases st with ⟨cache, log⟩
-          rcases us with ⟨u, usState⟩
-          have hstate := (mem_support_unifForward_run_iff
-            (M := M) (Commit := Commit) (Chal := Chal)
-            n (cache, log) (u, usState)).mp hus
-          change usState = (cache, log) at hstate
-          subst usState
-          simpa using ih u (hQ.2 u) (cache, log) hz'
-      | inr mc =>
-          change Chal × SimState M Commit Chal at us
-          rcases st with ⟨cache, log⟩
-          cases hcache : cache mc with
-          | some v =>
-              have hus' : us ∈ ({(v, cache, log)} : Set _) := by
-                change us ∈ support ((roImpl M Commit Chal mc).run (cache, log)) at hus
-                rw [roImpl_run_some (M := M) (Commit := Commit) (Chal := Chal)
-                  mc cache log v hcache] at hus
-                simpa only [support_pure] using hus
-              obtain rfl := Set.mem_singleton_iff.mp hus'
-              have hrec : z.2.2.length ≤ log.length + (Q - 1) := by
-                simpa using ih v (hQ.2 v) (cache, log) hz'
-              exact le_trans hrec (Nat.add_le_add_left (Nat.sub_le _ _) _)
-          | none =>
-              obtain ⟨u, rfl⟩ : us ∈ Set.range (fun u : Chal =>
-                  (u, cache.cacheQuery mc u, log ++ [mc])) := by
-                change us ∈ support ((roImpl M Commit Chal mc).run (cache, log)) at hus
-                rw [roImpl_run_none (M := M) (Commit := Commit) (Chal := Chal)
-                  mc cache log hcache, support_bind, support_wrapped_query_inr] at hus
-                simpa [support_bind] using hus
-              have hrec : z.2.2.length ≤ (log ++ [mc]).length + (Q - 1) := by
-                simpa using
-                  ih u (hQ.2 u)
-                    ((cache.cacheQuery mc u : (M × Commit →ₒ Chal).QueryCache), log ++ [mc]) hz'
-              have hQpos : 0 < Q := hQ.1
-              simp only [List.length_append, List.length_singleton] at hrec ⊢
-              lia
+      rcases t with n | mc
+      · simpa [(mem_support_unifForward_run_iff (M := M) (Commit := Commit) (Chal := Chal)
+          n st us).1 hus] using ih us.1 (hQ.2 us.1) us.2 hz'
+      · have hstep := (triple_stateT_iff_forall_support _ (· = st)
+          (fun _ s' => s'.2.length ≤ st.2.length + 1) ⊥).1 (by
+            vcgen [roImpl, spec_stateT_lift,
+              Qualitative.Spec.ofSupport (wrappedChallengeQuery Chal)] <;> simp_all)
+          st rfl _ _ hus
+        have := ih us.1 (Q := Q - 1) (hQ.2 us.1) us.2 hz'
+        have := hQ.1
+        omega
+
+end HandlerTriples
 
 /-- Replay a managed-RO NMA adversary against a single counted challenge oracle, keeping both
 the adversary-returned cache and the live query log that the forking lemma can rewind.

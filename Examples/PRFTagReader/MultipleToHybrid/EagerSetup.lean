@@ -7,6 +7,7 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.MultipleToHybrid.Setup
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # PRF Tag/Reader Protocol — Multiple-to-hybrid eager coupling, shared setup
@@ -291,31 +292,16 @@ lemma multipleBadTable_run_query_bind' {α : Type} (g : TagId × Nonce → Diges
 
 /-- **Eager-table single-step bad monotonicity.** If the bad flag is already set in the
 multiple-bad state `p.2`, then every reachable output of `multipleBadTableHandler g t p` keeps
-`bad = true`. The eager-table analogue of `multipleBadQueryImpl_step_preserves_bad`; the proof
-case-splits on tag vs. reader and unfolds `multipleBadAdvance`. -/
+`bad = true`. The eager-table analogue of `multipleBadQueryImpl_step_preserves_bad`; `prvcgen`
+steps through each branch, reading the table handler through its support. -/
 lemma multipleBadTableHandler_step_preserves_bad (g : TagId × Nonce → Digest)
     (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
     ∀ z ∈ support (multipleBadTableHandler sessionsPerTag g t p), z.2.2.bad = true := by
-  cases t with
-  | inl tag =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1
-        >>= fun r => pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    cases hr : r.1 <;> simp [multipleBadAdvance, hbad]
-  | inr transcript =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1
-        >>= fun r => pure (r.1, r.2, p.2)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    exact hbad
+  rcases t with tag | tr <;>
+    prvcgen [multipleBadTableHandler, Qualitative.Spec.ofSupport (multipleTableHandler g _ p.1)]
+  · rcases r with ⟨_ | _, _⟩ <;> simp [multipleBadAdvance, hbad]
+  · exact hbad
 
 /-- **Eager-table full-run bad monotonicity.** Starting `simulateQ multipleBadTableHandler` from a
 state whose bad flag is set, every reachable output keeps `bad = true`. The eager-table analogue of
@@ -338,35 +324,13 @@ lemma multipleBadTableHandler_run_cacheBad_const {α : Type} (g : TagId × Nonce
     (oa : OracleComp (UnlinkOracleSpec TagId Nonce Digest) α)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) :
     ∀ z ∈ support ((simulateQ (multipleBadTableHandler sessionsPerTag g) oa).run p),
-        z.2.2.cacheBad = p.2.cacheBad := by
-  induction oa using OracleComp.inductionOn generalizing p with
-  | pure b =>
-    intro z hz
-    rw [simulateQ_pure, StateT.run_pure, mem_support_pure_iff] at hz
-    subst hz; rfl
-  | query_bind t f ih =>
-    intro z hz
-    rw [multipleBadTable_run_query_bind', mem_support_bind_iff] at hz
-    obtain ⟨q, hq, hz⟩ := hz
-    have hstep : q.2.2.cacheBad = p.2.cacheBad := by
-      cases t with
-      | inl tag =>
-        change q ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1
-            >>= fun r => pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)) at hq
-        obtain ⟨r, _, hq⟩ := (mem_support_bind_iff _ _ _).mp hq
-        rw [mem_support_pure_iff] at hq
-        subst hq
-        exact multipleBadAdvance_cacheBad tag p.2 r.1
-      | inr transcript =>
-        change q ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-            (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1
-            >>= fun r => pure (r.1, r.2, p.2)) at hq
-        obtain ⟨r, _, hq⟩ := (mem_support_bind_iff _ _ _).mp hq
-        rw [mem_support_pure_iff] at hq
-        subst hq
-        rfl
-    exact (ih q.1 q.2 z hz).trans hstep
+        z.2.2.cacheBad = p.2.cacheBad :=
+  OracleComp.simulateQ_run_preservesInv (multipleBadTableHandler sessionsPerTag g)
+    (fun s => s.2.cacheBad = p.2.cacheBad) (fun t s h => by
+      rcases t with tag | tr <;>
+        prvcgen [multipleBadTableHandler, Qualitative.Spec.ofSupport (multipleTableHandler g _ s.1)]
+      · exact (multipleBadAdvance_cacheBad tag s.2 _).trans h
+      · exact h) oa p rfl
 
 /-- **Original handler is `cacheBad`-irrelevant.** Two initial states `(s, sB)` and `(s, sB')`
 that differ only in `cacheBad` produce identical original-handler-run distributions after the
@@ -500,32 +464,10 @@ lemma multipleBadTableHandlerFine_step_preserves_bad (g : TagId × Nonce → Dig
     (t : (UnlinkOracleSpec TagId Nonce Digest).Domain)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
     ∀ z ∈ support (multipleBadTableHandlerFine g gFine t p), z.2.2.bad = true := by
-  cases t with
-  | inl tag =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inl tag)) p.1
-        >>= fun r => pure (r.1, r.2, multipleBadAdvance tag p.2 r.1)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    change (multipleBadAdvance tag p.2 r.1).bad = true
-    rcases r.1 with _ | tr
-    · exact hbad
-    · change (p.2.bad || _ : Bool) = true
-      rw [hbad, Bool.true_or]
-  | inr transcript =>
-    intro z hz
-    change z ∈ support ((multipleTableHandler (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) g (Sum.inr transcript)) p.1
-        >>= fun r => pure (r.1, r.2,
-          multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag) gFine transcript p.2)) at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz
-    subst hz
-    change (multipleBadReaderAdvance (sessionsPerTag := sessionsPerTag)
-      gFine transcript p.2).bad = true
-    rw [multipleBadReaderAdvance_bad]; exact hbad
+  rcases t with tag | tr <;> prvcgen [multipleBadTableHandlerFine,
+    Qualitative.Spec.ofSupport (multipleTableHandler g _ p.1)]
+  · rcases r with ⟨_ | _, _⟩ <;> simp [multipleBadAdvance, hbad]
+  · exact (multipleBadReaderAdvance_bad _ _ _).trans hbad
 
 /-- **Fine eager-table full-run bad monotonicity.** Starting `simulateQ multipleBadTableHandlerFine`
 from a state whose `bad` flag is set, every reachable output keeps `bad = true`. -/

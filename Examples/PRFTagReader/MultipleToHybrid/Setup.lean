@@ -7,6 +7,7 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.Table
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # PRF Tag/Reader Protocol — Instrumented multiple-session handler
@@ -208,17 +209,10 @@ lemma multipleBadQueryImpl_step_preserves_bad
     (s : MultipleBadState TagId Nonce Digest sessionsPerTag) (hbad : s.2.bad = true) :
     ∀ z ∈ support ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag t) s),
       z.2.2.bad = true := by
-  intro z hz
-  cases t with
-  | inl tag =>
-    rw [multipleBadQueryImpl_tag_run tag s] at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz; subst hz
-    cases r.1 <;> simp [multipleBadAdvance, hbad]
-  | inr transcript =>
-    rw [multipleBadQueryImpl_reader_run transcript s] at hz
-    obtain ⟨r, _, hz⟩ := (mem_support_bind_iff _ _ _).mp hz
-    rw [mem_support_pure_iff] at hz; subst hz; exact hbad
+  rcases t with tag | tr <;> prvcgen [multipleBadQueryImpl_tag_run, multipleBadQueryImpl_reader_run,
+    Qualitative.Spec.ofSupport (multipleIdealQueryImpl _ s.1)]
+  · rcases r with ⟨_ | _, _⟩ <;> simp [multipleBadAdvance, hbad]
+  · exact hbad
 
 /-- Bad monotonicity for a full `simulateQ multipleBadQueryImpl` run: started from a state whose
 bad flag is set, every reachable output state keeps it set. This is the `hmono` hypothesis of the

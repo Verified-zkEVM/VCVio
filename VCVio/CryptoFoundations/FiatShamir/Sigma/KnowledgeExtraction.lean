@@ -8,6 +8,8 @@ module
 
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Reductions
 public import VCVio.OracleComp.EvalDist.Measure
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 
 /-!
 # Fixed-statement Fiat–Shamir extraction
@@ -52,6 +54,21 @@ def knowledgeVerifyRun (prover : KnowledgeProver Stmt Commit Chal Resp M) (pk : 
       let proof ← prover pk msg
       (FiatShamir σ hr M).verify pk msg proof).run' (∅, []))
 
+section HandlerTriples
+
+open Std.WP OracleComp.ProgramLogic
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
+/-- `StateT.lift x` has the weakest precondition of `MonadLift.monadLift x`: the `vcgen` rule for
+handlers written with `StateT.lift`, such as `Fork.unifForward` and `Fork.roImpl`. -/
+private theorem spec_stateT_lift {σ α : Type} {m : Type → Type} [Monad m] {Pred EPred : Type}
+    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] (x : m α) (post : α → σ → Pred)
+    (epost : EPred) :
+    Triple (StateT.lift x : StateT σ m α) (fun s => wp x (fun a => post a s) epost) post epost :=
+  Spec.monadLift_StateT x post
+
 private theorem cache_mem_log {α : Type}
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α)
     (st : Fork.SimState M Commit Chal)
@@ -59,39 +76,16 @@ private theorem cache_mem_log {α : Type}
     {z : α × Fork.SimState M Commit Chal}
     (hz : z ∈ support
       ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal) oa).run st)) :
-    ∀ t v, z.2.1 t = some v → t ∈ z.2.2 := by
-  induction oa using OracleComp.inductionOn generalizing st z with
-  | pure a =>
-    obtain rfl : z = (a, st) := by simpa using hz
-    exact hinv
-  | query_bind t k ih =>
-    rw [simulateQ_query_bind, StateT.run_bind, mem_support_bind_iff] at hz
-    obtain ⟨us, hus, hz⟩ := hz
-    apply ih us.1 us.2 _ hz
-    cases t with
-    | inl n =>
-      have heq := (Fork.mem_support_unifForward_run_iff
-        (M := M) (Commit := Commit) (Chal := Chal) n st us).mp hus
-      simpa only [heq] using hinv
-    | inr mc =>
-      change Chal × Fork.SimState M Commit Chal at us
-      rcases st with ⟨cache, log⟩
-      change us ∈ support ((Fork.roImpl M Commit Chal mc).run (cache, log)) at hus
-      cases hc : cache mc with
-      | some v =>
-        rw [Fork.roImpl_run_some M mc cache log v hc, mem_support_pure_iff] at hus
-        obtain rfl := hus
-        exact hinv
-      | none =>
-        rw [Fork.roImpl_run_none M mc cache log hc, mem_support_bind_iff] at hus
-        obtain ⟨v, _, hus⟩ := hus
-        obtain rfl : us = (v, cache.cacheQuery mc v, log ++ [mc]) := by simpa using hus
-        intro t v' ht
-        by_cases heq : t = mc
-        · simp [heq]
-        · have ht' : cache t = some v' :=
-            (QueryCache.cacheQuery_of_ne cache v heq).symm.trans ht
-          exact List.mem_append_left _ (hinv t v' ht')
+    ∀ t v, z.2.1 t = some v → t ∈ z.2.2 :=
+  (triple_stateT_iff_forall_support _ _ _ ⊥).1 (simulateQ_triple_preserves_invariant _
+    (fun st : Fork.SimState M Commit Chal => ∀ t v, st.1 t = some v → t ∈ st.2) (fun t => by
+      rcases t with n | mc <;>
+        vcgen [Fork.unifForward, Fork.roImpl, spec_stateT_lift,
+          Qualitative.Spec.ofSupport (Fork.wrappedUniformQuery Chal _),
+          Qualitative.Spec.ofSupport (Fork.wrappedChallengeQuery Chal)] <;> grind) oa)
+    st hinv _ _ hz
+
+end HandlerTriples
 
 private def finishTrace (pk : Stmt) (msg : M) (proof : Commit × Resp)
     (st : Fork.SimState M Commit Chal) : OracleComp (Fork.wrappedSpec Chal)

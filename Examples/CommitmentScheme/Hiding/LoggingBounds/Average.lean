@@ -7,6 +7,7 @@ Authors: James Waters
 module
 public import VCVio.ProgramLogic.Unary.SimulateQ
 public import Examples.CommitmentScheme.Hiding.CountBounds
+import VCVio.ProgramLogic.Unary.HandlerSpecs
 
 /-!
 # Averaged logging bounds for commitment-scheme hiding
@@ -205,6 +206,12 @@ theorem hidingImpl_agree [Inhabited M] [Inhabited S] (s : S) (ms : M × S)
       simp [this]
     rw [hcnt]
 
+section CounterSteps
+
+open scoped OracleComp.Qualitative
+
+set_option experimental.vcgen true
+
 /-- One-step counter growth bound for `hidingImpl₁`:
 the salt counter is monotone and increases by at most one. -/
 theorem hidingImpl₁_counter_le_succ (s : S) (ms : M × S)
@@ -212,13 +219,9 @@ theorem hidingImpl₁_counter_le_succ (s : S) (ms : M × S)
     (x : C × (QueryCache (CMOracle M S C) × ℕ))
     (hx : x ∈ support ((hidingImpl₁ s ms).run st)) :
     st.2 ≤ x.2.2 ∧ x.2.2 ≤ st.2 + 1 := by
-  obtain ⟨cache, cnt⟩ := st
-  simp only [hidingImpl₁, StateT.run_bind, StateT.run_get, pure_bind] at hx
-  cases hcache : cache ms <;>
-    simp_all [StateT.run_bind, StateT.run_set, StateT.run_pure]
-  obtain ⟨_, rfl⟩ := hx
-  dsimp only
-  split_ifs <;> omega
+  refine (ProgramLogic.triple_stateT_iff_forall_support _ (· = st)
+    (fun _ st' => st.2 ≤ st'.2 ∧ st'.2 ≤ st.2 + 1) ⊥).1 ?_ st rfl _ _ hx
+  vcgen [hidingImpl₁] <;> grind
 
 /-- Bad is monotone for `hidingImpl₁`: once the counter reaches 2, it stays ≥ 2. -/
 theorem hidingImpl₁_bad_mono (s : S) (ms : M × S)
@@ -248,13 +251,9 @@ theorem hidingImplSim_counter_le_succ [Inhabited M] [Inhabited S] (s : S) (ms : 
     (x : C × (QueryCache (CMOracle M S C) × ℕ))
     (hx : x ∈ support ((hidingImplSim s ms).run st)) :
     st.2 ≤ x.2.2 ∧ x.2.2 ≤ st.2 + 1 := by
-  obtain ⟨cache, cnt⟩ := st
-  simp only [hidingImplSim, StateT.run_bind, StateT.run_get, pure_bind] at hx
-  cases hcache : cache ms <;>
-    simp_all [StateT.run_bind, StateT.run_set, StateT.run_pure]
-  obtain ⟨_, rfl⟩ := hx
-  dsimp only
-  split_ifs <;> omega
+  refine (ProgramLogic.triple_stateT_iff_forall_support _ (· = st)
+    (fun _ st' => st.2 ≤ st'.2 ∧ st'.2 ≤ st.2 + 1) ⊥).1 ?_ st rfl _ _ hx
+  vcgen [hidingImplSim] <;> grind
 
 /-- Bad is monotone for `hidingImplSim`: once cnt ≥ 2, it stays ≥ 2. -/
 theorem hidingImplSim_bad_mono [Inhabited M] [Inhabited S] (s : S) (ms : M × S)
@@ -263,6 +262,8 @@ theorem hidingImplSim_bad_mono [Inhabited M] [Inhabited S] (s : S) (ms : M × S)
     (hx : x ∈ support ((hidingImplSim s ms).run st)) :
     hidingBad x.2 :=
   hidingBad_of_counter_le h (hidingImplSim_counter_le_succ s ms st x hx).1
+
+end CounterSteps
 
 /-- The sim game equals `hidingImplSim` applied to `hidingOa`, projected to output.
 
