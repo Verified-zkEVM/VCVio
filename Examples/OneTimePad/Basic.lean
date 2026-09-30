@@ -103,4 +103,9 @@ lemma ciphertextRowsEqual (sp : ℕ) : (oneTimePad sp).ciphertextRowsEqualAt :=
     ((evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₀).trans
       (evalDist_perfectSecrecyCipherGivenMsgExperiment sp msg₁).symm)
 
+/-- The independence form of the one-time pad's perfect secrecy gives back its equal ciphertext
+rows through the `ProbComp` converse. -/
+example (sp : ℕ) : (oneTimePad sp).ciphertextRowsEqualAt :=
+  (oneTimePad sp).ciphertextRowsEqualAt_of_perfectSecrecyAt_probComp (perfectSecrecyAt sp)
+
 end oneTimePad

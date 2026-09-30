@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 
+public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.EvalDist.MeasureSemantics
 
@@ -19,7 +20,9 @@ the row family is measurable.
 
 The definitions do not select a discrete probability representation and do not assume that an
 arbitrary monad is efficient. They isolate the semantic claim that concrete complexity proofs can
-compose with separately.
+compose with separately. When the semantics denotes the ciphertext rows by their output measures
+under the ambient `EvalDistSemantics`, measure-level perfect secrecy is the channel form
+`SymmEncAlg.ciphertextRowsEqualAt` (`measurePerfectSecrecyAt_iff_ciphertextRowsEqualAt`).
 -/
 
 @[expose] public section
@@ -121,5 +124,20 @@ theorem measurePerfectSecrecyAt_of_constant [MeasurableSpace C]
     encAlg.measurePerfectSecrecyAt semantics := by
   intro msg₀ msg₁
   rw [hlaw msg₀, hlaw msg₁]
+
+/-! ## Agreement with the ambient semantics -/
+
+/-- When a probability semantics denotes every fixed-message ciphertext experiment by its output
+measure under the ambient `EvalDistSemantics`, in a discrete structure on ciphertexts,
+measure-level perfect secrecy is the channel form `ciphertextRowsEqualAt`. -/
+theorem measurePerfectSecrecyAt_iff_ciphertextRowsEqualAt [LawfulMonad m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] {_ : MeasurableSpace C} [DiscreteMeasurableSpace C]
+    (encAlg : SymmEncAlg m M K C) (semantics : ProbabilitySemantics m)
+    (hden : ∀ msg, semantics.denote (encAlg.perfectSecrecyCipherGivenMsgExperiment msg) =
+      𝒟[encAlg.perfectSecrecyCipherGivenMsgExperiment msg]) :
+    encAlg.measurePerfectSecrecyAt semantics ↔ encAlg.ciphertextRowsEqualAt := by
+  unfold measurePerfectSecrecyAt ciphertextRowsEqualAt
+  simp only [hden]
+  exact forall₂_congr fun _ _ => ⟨EvalDistEq.of_evalDist_eq, EvalDistEq.evalDist_eq⟩
 
 end SymmEncAlg
