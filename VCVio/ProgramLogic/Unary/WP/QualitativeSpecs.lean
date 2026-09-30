@@ -21,8 +21,9 @@ structurally reachable output of `oa` satisfies `post` when `pre` holds. The rul
 * `Spec.uniformSample` and `Spec.uniformFin`: a uniform draw (`$ᵗ β`, `$[0..n]`) may return any
   value;
 * `Spec.replicate`: `oa.replicate n` returns `n` possible outputs of `oa`;
-* `Spec.liftComp`: lifting to a larger oracle world keeps the possible outputs, and `vcgen`
-  continues into the lifted program.
+* `Spec.liftComp` and `Spec.monadLift_liftComp`: lifting to a larger oracle world, written
+  `liftComp oa superSpec` or `liftM oa`, keeps the possible outputs, and `vcgen` continues into
+  the lifted program.
 
 `Spec.ofSupport` states that every program meets a postcondition holding on its support. It
 applies to every program, so it is not registered; passing it for an opaque sub-program, as in
@@ -85,6 +86,16 @@ theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
     {epost : EStack⟨⟩} :
     Triple (liftComp oa superSpec) (wp oa post epost) post epost :=
   ⟨fun h a ha => h a ((mem_support_liftComp_iff oa a).mp ha)⟩
+
+/-- A lift along a subspec keeps the possible outputs: `Spec.liftComp` for the lift written as
+`liftM oa`, the form `liftComp oa superSpec` takes after `simp` (`liftComp_eq_liftM`) and the one a
+`do` block produces when it uses `oa` in the larger oracle world. -/
+@[spec]
+theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec] (oa : OracleComp spec α) (post : α → Prop)
+    {epost : EStack⟨⟩} :
+    Triple (MonadLift.monadLift oa : OracleComp superSpec α) (wp oa post epost) post epost :=
+  Spec.liftComp oa post
 
 end OracleComp.Qualitative
 

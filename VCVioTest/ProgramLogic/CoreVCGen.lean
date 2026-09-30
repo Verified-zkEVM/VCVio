@@ -66,6 +66,17 @@ example {τ : Type} {superSpec : OracleSpec.{0, 0} τ} [spec ⊂ₒ superSpec] [
       ⦃ fun n => ∃ u, n = f u ⦄ := by
   vcgen with finish
 
+/-- The same lift written `liftM`, the form `simp` gives `liftComp`. -/
+example {τ : Type} {superSpec : OracleSpec.{0, 0} τ} [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    (t : spec.Domain) (f : spec.Range t → ℕ) :
+    ⦃ True ⦄
+      (do
+        let p ← (liftM (do let u ← query t; pure (f u, f u) : OracleComp spec _) :
+          OracleComp superSpec _)
+        pure p.1 : OracleComp superSpec ℕ)
+      ⦃ fun n => ∃ u, n = f u ⦄ := by
+  vcgen with finish
+
 /-- An opaque sub-program is specified by its support. -/
 example (keygen : OracleComp spec (ℕ × ℕ)) (hk : ∀ k ∈ support keygen, k.1 ≤ k.2) :
     ⦃ True ⦄ (do let k ← keygen; pure (k.2 - k.1 + k.1) : OracleComp spec ℕ)
