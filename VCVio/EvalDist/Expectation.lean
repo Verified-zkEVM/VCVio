@@ -15,7 +15,8 @@ public import PolyFun.Control.Monad.Algebra.WP
 Under lawful measure semantics a computation `mx : m α` has an expectation for every
 nonnegative observation `g : α → ℝ≥0∞`: the integral of `g` against the successful-output
 measure of `mx`. It is core's weakest precondition `wp mx g ⊥` under the measure interpretation
-`measureWP m`, written `wp⟦mx⟧ g`. The interpretation is exact (`ExactWPMonad`), so `simp`
+`measureWP m`, written `wp⟦mx⟧ g`; `𝔼{let x ← mx}[g x]` (`VCVio.EvalDist.ProbabilityNotation`)
+writes it through a `do` sequence. The interpretation is exact (`ExactWPMonad`), so `simp`
 distributes `wp⟦·⟧ ` over `pure`, `bind`, and `map` with core's own equations; the laws below
 relate it to Mathlib's lintegral and to the order and arithmetic of `ℝ≥0∞`.
 
@@ -273,3 +274,27 @@ theorem wp_le_const_mul_mass_add [MeasurableSpace α] (mx : m α) {f g : α → 
 end Laws
 
 end MeasureProgramLogic
+
+/-! ## Expectation names
+
+The laws above are named after core's `wp`, the constant they are stated on, so that they sit
+with core's and PolyFun's `wp` lemmas. The `expect_*` aliases find them by what they state. -/
+
+alias expect_pure := MeasureProgramLogic.wp_pure
+alias expect_bind := MeasureProgramLogic.wp_bind
+alias expect_map := MeasureProgramLogic.wp_map
+alias expect_eq_lintegral_map := MeasureProgramLogic.wp_eq_lintegral_map
+alias expect_eq_lintegral := MeasureProgramLogic.wp_eq_lintegral
+alias expect_eq_lintegral_comap := MeasureProgramLogic.wp_eq_lintegral_comap
+alias expect_mono := MeasureProgramLogic.wp_mono
+alias expect_congr := MeasureProgramLogic.wp_congr
+alias expect_zero := MeasureProgramLogic.wp_zero
+alias expect_add := MeasureProgramLogic.wp_add
+alias expect_mul_const := MeasureProgramLogic.wp_mul_const
+alias expect_const_mul := MeasureProgramLogic.wp_const_mul
+alias expect_finsetSum := MeasureProgramLogic.wp_finsetSum
+alias expect_mono_ae := MeasureProgramLogic.wp_mono_ae
+alias expect_iSup := MeasureProgramLogic.wp_iSup
+alias expect_le_mul_mass := MeasureProgramLogic.wp_le_mul_mass
+alias expect_le_const := MeasureProgramLogic.wp_le_const
+alias expect_le_const_mul_mass_add := MeasureProgramLogic.wp_le_const_mul_mass_add

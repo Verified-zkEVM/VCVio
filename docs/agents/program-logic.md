@@ -738,8 +738,12 @@ interpretation off its type alone and one interpretation is live per program typ
 readings take precedence over the quantitative instance where they are opened. Support facts do
 not need a second interpretation: the quantitative one consumes them through `MonadAttach`
 (`wp_mono_of_support`, `wp_congr_of_support`), as core's own specifications pair `MonadAttach`
-with any `WPMonad`. Quantitative expectation does not provide a general structural reachability
-certificate. The probability-one coherence theorems state their additional uniformity
+with any `WPMonad`. Core also documents how to keep several readings of one monad live at once:
+a type synonym carrying its own instance, selected by the program's type (core's tests use
+`HeapM` and `TickT`). A structural reading of oracle computations on such a synonym, with its own
+global instance, is the route for running `vcgen` over `Prop` assertions on oracle computations;
+VCVio does not define one yet. Quantitative expectation does not provide a general structural
+reachability certificate. The probability-one coherence theorems state their additional uniformity
 assumptions.
 
 Use `open scoped Std.Internal.Do` for core triple notation.

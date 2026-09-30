@@ -300,7 +300,7 @@ variable (S : Set ℕ) in
 #check Pr{let _ ← mx; let y ← mz}[y = 3]
 
 variable (g : ℕ → ℝ≥0∞) in
-/-- info: wp⟦mz⟧ g : ℝ≥0∞ -/
+/-- info: 𝔼{let x ← mz}[g x] : ℝ≥0∞ -/
 #guard_msgs in
 #check wp⟦mz⟧ g
 
@@ -341,5 +341,73 @@ example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] = Pr{let x ← mx; let y
   rfl
 
 end eventNotation
+
+/-! ### Expectation notation
+
+`𝔼{items}[b]` is core's `wp (do items; return b) id ⊥` under the measure interpretation, stored in
+the same normal form as events: every draw becomes an expectation `wp a fun x => …`. A term in
+normal form displays as the notation it elaborates from, and any other expectation keeps core's
+display. -/
+
+section expectationNotation
+
+open Lean.Order Std.Internal.Do
+
+variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ) (g : ℕ → ℝ≥0∞)
+  (f : Bool → ℕ → ℝ≥0∞)
+
+/-! The specification: the notation equals the expectation of its literal `do` sequence. -/
+
+example : 𝔼{let x ← mx; let y ← my x}[f x y] =
+    wp (do let x ← mx; let y ← my x; return f x y : ProbComp ℝ≥0∞) (fun r => r)
+      (⊥ : EPost.Nil) := by
+  simp only [prEvent_norm]
+
+/-! The normal form. -/
+
+example : 𝔼{let x ← mz}[g x] = wp⟦mz⟧ g := rfl
+example : 𝔼{let x ← mx; let y ← my x}[f x y] = wp⟦mx⟧ fun x => wp⟦my x⟧ fun y => f x y := rfl
+example : 𝔼{let y ← mx >>= my}[g y] = wp⟦mx⟧ fun x => wp⟦my x⟧ fun y => g y := rfl
+example : 𝔼{let x ← not <$> mx; let y ← my x}[g y] = wp⟦mx⟧ fun x => wp⟦my (!x)⟧ g := rfl
+example (a : ℕ) : 𝔼{let x ← (pure a : ProbComp ℕ)}[g x] = g a := rfl
+
+/-! Display. -/
+
+/-- info: 𝔼{let x ← mx; let y ← my x}[f x y] : ℝ≥0∞ -/
+#guard_msgs in
+#check 𝔼{let x ← mx; let y ← my x}[f x y]
+
+/-- info: 𝔼{let x ← mx; let y ← my x}[f x y * 2] : ℝ≥0∞ -/
+#guard_msgs in
+#check 𝔼{let x ← mx; let y ← my x}[f x y * 2]
+
+/-- info: 𝔼{let _ ← mz}[1] : ℝ≥0∞ -/
+#guard_msgs in
+#check 𝔼{let _ ← mz}[(1 : ℝ≥0∞)]
+
+/-! An expectation that is not in normal form keeps core's display. -/
+
+/-- info: wp (mx >>= my) g ⊥ : ℝ≥0∞ -/
+#guard_msgs in
+#check wp⟦mx >>= my⟧ g
+
+open Lean Elab Command Term Meta in
+/-- Elaborate a term, display it, and check that the display elaborates back to the same term, up
+to binder names, eta and reducible unfolding. -/
+elab "guard_roundtrip " t:term : command => runTermElabM fun _ => do
+  let e ← instantiateMVars (← withSynthesize (elabTerm t none))
+  let stx ← PrettyPrinter.delab e
+  let e' ← instantiateMVars (← withSynthesize (elabTerm stx none))
+  unless ← withReducible (isDefEq e e') do
+    throwError m!"the display{indentD stx}\nelaborates to{indentExpr e'}\nnot to{indentExpr e}"
+
+guard_roundtrip 𝔼{let x ← mx; let y ← my x}[f x y]
+guard_roundtrip wp⟦mz⟧ g
+guard_roundtrip 𝔼{let x ← mx; let y ← my x}[propInd (y = 3) * f x y]
+guard_roundtrip Pr{let x ← mx; let y ← my x}[y = 3]
+guard_roundtrip Pr{let ⟨a, b⟩ ← (mz >>= fun a => (a, ·) <$> mz)}[a = b]
+guard_roundtrip wp⟦mx >>= my⟧ g
+
+end expectationNotation
 
 end VCVioTest.ProbabilityNotation

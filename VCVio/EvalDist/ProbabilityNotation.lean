@@ -11,13 +11,17 @@ public meta import Lean.PrettyPrinter.Formatter
 public meta import Lean.PrettyPrinter.Delaborator.Basic
 
 /-!
-# Event probabilities of computations
+# Event probabilities and expectations of computations
 
 `prEvent mx p` is the probability that the output of `mx` satisfies `p`: the mass the
 successful-output measure of `p <$> mx` puts on `True`. It needs no measurable structure on the
 outputs. `Pr{…}[…]` is its notation. The braces hold an ordinary Lean `do` sequence, such as
 `let x ← mx; let y ← my x`, laid out as in a `do` block, and the brackets the event over its
 bindings; `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`.
+
+`𝔼{…}[…]` is the expectation of a nonnegative value over the same kind of sequence: core's
+`wp (do items; return b) id ⊥` under the measure interpretation (`VCVio.EvalDist.Expectation`),
+so `𝔼{let x ← mx}[g x]` is the expectation of `g` over the outputs of `mx`.
 
 ## Normal form
 
@@ -34,8 +38,12 @@ exact `wp` equations (`ExactWPMonad.wp_bind`, …) do the same for expectations,
 folds an indicator observation back into an event. `simp only [prEvent_norm]` applies exactly
 these rules. Rewriting keeps the binder names of the program.
 
-The display inverts the elaboration: a nest of expectations ending in an event prints as the
-`Pr{…}[…]` it elaborates from, and any other expectation as `wp⟦a⟧ g`.
+Expectations elaborate the same way, every draw becoming an expectation.
+
+The display inverts the elaboration, and only where it can: a term in normal form prints as the
+notation it elaborates from, `Pr{…}[…]` when it ends in an event and `𝔼{…}[…]` otherwise, and an
+expectation that normalization would still rewrite keeps core's display `wp a g ⊥`. What is
+displayed therefore elaborates back to the term displayed.
 
 `prFail mx` is the probability that `mx` fails or does not terminate: the mass its
 successful-output measure is missing.
@@ -74,16 +82,20 @@ measure is missing. -/
 `Pr{let x ← mx; let y ← my x}[p y]`. -/
 syntax (name := prEventStx) "Pr{" doSeq "}[" term "]" : term
 
+/-- Expectation of a nonnegative value after an ordinary Lean `do` sequence, as in
+`𝔼{let x ← mx; let y ← my x}[f x y]`: core's `wp (do items; return f x y) id ⊥` under the
+measure interpretation. -/
+syntax (name := expectStx) "𝔼{" doSeq "}[" term "]" : term
+
 public meta section Formatting
 
 open Lean PrettyPrinter Formatter Syntax.MonadTraverser
 
-/-- Format an event sequence directly after its opening delimiter, its statements separated by
-`; ` and soft line breaks, so that a short sequence stays on one line. Explicitly braced sequences
-keep the ordinary Lean formatter, and explicit line breaks after the opening delimiter are
-preserved. -/
-@[formatter prEventStx]
-def prEventFormatter : Formatter := do
+/-- Format a `do` sequence directly after its opening delimiter `opening`, its statements
+separated by `; ` and soft line breaks, so that a short sequence stays on one line. Explicitly
+braced sequences keep the ordinary Lean formatter, and explicit line breaks after the opening
+delimiter are preserved. -/
+def seqFormatter (opening : String) : Formatter := do
   let stx ← getCur
   let multiline := match stx[0].getTailInfo with
     | .original _ _ trailing _ => trailing.contains '\n'
@@ -105,7 +117,15 @@ def prEventFormatter : Formatter := do
       formatterForKind seq.getKind
     if multiline then
       pushWhitespace "\n"
-    symbolNoAntiquot.formatter "Pr{"
+    symbolNoAntiquot.formatter opening
+
+/-- Format an event as its `do` sequence and event. -/
+@[formatter prEventStx]
+def prEventFormatter : Formatter := seqFormatter "Pr{"
+
+/-- Format an expectation as its `do` sequence and observed value. -/
+@[formatter expectStx]
+def expectFormatter : Formatter := seqFormatter "𝔼{"
 
 end Formatting
 
@@ -138,10 +158,10 @@ def normalize (e : Expr) : MetaM Expr := do
 /-- Internal form of the event notation: the computation's `do` sequence and its final event. -/
 syntax (name := prEventElabStx) "prEvent% " "{" doSeq "}[" term "]" : term
 
-/-- The monad of an event sequence, when its own terms determine it: the type of the first draw
-`let x ← e` or, failing that, of the whole sequence elaborated on its own. The probe's elaboration
-is discarded. -/
-def prEventMonad? (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (body : Term) :
+/-- The monad of an event or expectation sequence `body` returning a value of type `res`, when its
+own terms determine it: the type of the first draw `let x ← e` or, failing that, of the whole
+sequence elaborated on its own. The probe's elaboration is discarded. -/
+def seqMonad? (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (body : Term) (res : Expr) :
     TermElabM (Option Expr) := do
   let firstDraw? : Option Syntax := do
     let elem := (← items[0]?).raw[0]
@@ -159,7 +179,7 @@ def prEventMonad? (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (body :
         else
           -- `do` infers its monad from the sequence when the expected type leaves it open.
           let m ← mkFreshExprMVar (← mkArrow (mkSort Level.one) (mkSort (← mkFreshLevelMVar).succ))
-          discard <| elabTerm body (mkApp m (mkSort .zero))
+          discard <| elabTerm body (mkApp m res)
           synthesizeSyntheticMVarsNoPostponing
           let m ← instantiateMVars m
           pure <| if m.hasExprMVar then none else some m
@@ -167,15 +187,15 @@ def prEventMonad? (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (body :
     catch _ => pure none
   saved.restore
   -- Universe metavariables of the discarded probe are reopened as fresh ones.
-  m?.mapM fun m => do atProp (← openAbstractMVarsResult m).2.2
+  m?.mapM fun m => do atResult (← openAbstractMVarsResult m).2.2
 where
-  /-- The monad at a proposition result: the universe levels of its head constant are
-  re-solved against `m Prop`, since a draw fixes the monad at the universe of its own result
+  /-- The monad at the result type: the universe levels of its head constant are re-solved
+  against `m res`, since a draw fixes the monad at the universe of its own result
   (`OracleComp spec` carries its result universe as a parameter). -/
-  atProp (m : Expr) : MetaM Expr := do
+  atResult (m : Expr) : MetaM Expr := do
     let .const c ls := m.getAppFn | return m
     let m' := mkAppN (mkConst c (← ls.mapM fun _ ↦ mkFreshLevelMVar)) m.getAppArgs
-    if ← isTypeCorrect (mkApp m' (mkSort .zero)) then instantiateMVars m' else return m
+    if ← isTypeCorrect (mkApp m' res) then instantiateMVars m' else return m
 
 /-- A final destructuring draw `let pat ← e` becomes a plain draw whose event matches on `pat`,
 so the event is a predicate on the draw. -/
@@ -208,7 +228,7 @@ def elabPrEventDo (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (t : Te
     TermElabM Expr := do
   let (items, t) ← splitFinalPattern items t
   let body ← `(do $items:doSeqItem* return ($t : Prop))
-  let expected? := (← prEventMonad? items body).map (mkApp · (mkSort .zero))
+  let expected? := (← seqMonad? items body (mkSort .zero)).map (mkApp · (mkSort .zero))
   -- The sequence's own elaboration problems are solved as far as they can be before normalizing
   -- it; those of the surrounding term are left alone. While the sequence still depends on
   -- unsolved problems, for example a binder whose type the enclosing term fixes later, the
@@ -234,16 +254,63 @@ def elabPrEventDo (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (t : Te
     mkAppOptM ``prEvent #[m, ← mkInstMVar (← mkAppM ``Monad #[m]),
       ← mkInstMVar (← mkAppM ``EvalDistSemantics #[m]), none, e, pred]
 
+/-- Internal form of the expectation notation: the computation's `do` sequence and its value. -/
+syntax (name := expectElabStx) "expect% " "{" doSeq "}[" term "]" : term
+
+/-- Elaborate the expectation of a `do` sequence: core's `wp (do items; return b) id ⊥` under the
+measure interpretation `MeasureProgramLogic.measureWP`, rewritten into normal form by `normalize`.
+The monad is found and elaboration postponed as for events; the monad needs lawful measure
+semantics. -/
+def elabExpectDo (items : Array (TSyntax ``Lean.Parser.Term.doSeqItem)) (b : Term) :
+    TermElabM Expr := do
+  let (items, b) ← splitFinalPattern items b
+  let ennreal := Lean.mkConst ``ENNReal
+  let body ← `(do $items:doSeqItem* return ($b : ENNReal))
+  let expected? := (← seqMonad? items body ennreal).map (mkApp · ennreal)
+  let e ← withSynthesize (postpone := .yes) do
+    let e ← instantiateMVars (← elabTerm body expected?)
+    if e.getAppFn.isMVar then tryPostpone
+    pure e
+  let e ← instantiateMVars e
+  if e.hasExprMVar then tryPostpone
+  let ty ← instantiateMVars (← inferType e)
+  let ty ← if ty.isApp then pure ty else whnfR ty
+  unless ty.isApp do
+    throwError m!"an expectation expects a computation in a monad, got{indentExpr ty}"
+  let m := ty.appFn!
+  for cls in [``Monad, ``LawfulMonad, ``EvalDistSemantics, ``LawfulEvalDistSemantics] do
+    let found ← try
+        -- The class applied to the monad, its instance arguments synthesized.
+        let arity ← forallTelescopeReducing (← getConstInfo cls).type fun xs _ => pure xs.size
+        let ty ← mkAppOptM cls (#[some m] ++ .replicate (arity - 1) none)
+        pure (← synthInstance? ty).isSome
+      catch _ => pure false
+    unless found do
+      if (← instantiateMVars m).hasMVar then tryPostpone
+      throwError m!"an expectation needs lawful measure semantics; no `{cls}` instance for\
+        {indentExpr m}"
+  let wp ← withSynthesize do
+    elabTermEnsuringType (← `(@Std.Internal.Do.WP.wp _ _ ENNReal Std.Internal.Do.EPost.Nil _ _
+      (@Std.Internal.Do.instWPOfWPMonad _ ENNReal Std.Internal.Do.EPost.Nil _ _ _ _
+        (MeasureProgramLogic.measureWP _)) $(← exprToSyntax e) (fun r => r)
+      (open Lean.Order in (Lean.Order.bot : Std.Internal.Do.EPost.Nil)))) ennreal
+  normalize (← instantiateMVars wp)
+
 end ProbabilityNotation
 
 elab_rules : term
   | `(prEvent% {$items*}[$t]) => ProbabilityNotation.elabPrEventDo items t
+  | `(expect% {$items*}[$b]) => ProbabilityNotation.elabExpectDo items b
 
 end Elaboration
 
 macro_rules (kind := prEventStx)
   | `(Pr{{$items*}}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
   | `(Pr{$items*}[$t]) => `((prEvent% {$items*}[$t] : ENNReal))
+
+macro_rules (kind := expectStx)
+  | `(𝔼{{$items*}}[$b]) => `((expect% {$items*}[$b] : ENNReal))
+  | `(𝔼{$items*}[$b]) => `((expect% {$items*}[$b] : ENNReal))
 
 public meta section Delaboration
 
@@ -268,7 +335,7 @@ partial def isMeasureInterpretation (w : Expr) : MetaM Bool := do
   | some w' => isMeasureInterpretation w'
   | none => return false
 
-/-- Whether `e` is an expectation `wp⟦a⟧ g`: core's `wp` under the measure interpretation. -/
+/-- Whether `e` is an expectation: core's `wp` under the measure interpretation. -/
 def isExpectation (e : Expr) : MetaM Bool := do
   unless e.isAppOfArity ``Std.Internal.Do.WP.wp 10 do return false
   let inst := e.getArg! 6
@@ -283,53 +350,92 @@ def drawItem (f : Expr) (x : Syntax) (a : Term) (sep : Bool) :
   if sep then `(Lean.Parser.Term.doSeqItem| let $x:term ← $a:term;)
   else `(Lean.Parser.Term.doSeqItem| let $x:term ← $a:term)
 
-/-- The draws of an event in normal form, as `let x ← a` statements: a nest of expectations
-ending in an event. A predicate that is not a `fun` is displayed applied to the first of `x`, `y`,
-`z`, `w` that no enclosing draw binds, so that `Membership.mem S` reads `x ∈ S`. -/
-partial def delabDraws : DelabM (Array (TSyntax ``Lean.Parser.Term.doSeqItem) × Term) := do
+/-- Heads of computations that the notation's normalization rewrites. -/
+def structuralHeads : Array Name := #[``Bind.bind, ``Functor.map, ``Pure.pure, ``ite, ``dite,
+  ``Seq.seq, ``SeqLeft.seqLeft, ``SeqRight.seqRight, ``Option.elim, ``Sum.elim]
+
+/-- Whether normalization rewrites a computation at its head: a structural head, a `let`, or a
+`fun` applied to arguments. -/
+def isStructural (prog : Expr) : Bool :=
+  let prog := prog.cleanupAnnotations
+  prog.isHeadBetaTarget || prog.isLet || match prog.getAppFn with
+    | .const n _ => structuralHeads.contains n
+    | _ => false
+
+/-- Whether an observation is an indicator, which normalization folds into an event. -/
+def isIndicatorObservation (g : Expr) : Bool :=
+  match g.cleanupAnnotations with
+  | .lam _ _ b _ => b.cleanupAnnotations.isAppOf ``propInd
+  | _ => false
+
+/-- Whether normalization leaves `e` unchanged: no expectation or event in it has a computation
+that normalization rewrites, and no expectation observes an indicator. Only such terms display
+as notation, so that what is displayed elaborates back to the term it displays. -/
+def isNormal (e : Expr) : Bool :=
+  (e.find? fun s =>
+    (s.isAppOfArity ``Std.Internal.Do.WP.wp 10 &&
+      (isStructural (s.getArg! 7) || isIndicatorObservation (s.getArg! 8))) ||
+    (s.isAppOfArity ``prEvent 6 && isStructural (s.getArg! 4))).isNone
+
+/-- The last draw `let x ← a` of a sequence observed by `f` when `f` is not a `fun`: the
+observation is displayed applied to the first of `x`, `y`, `z`, `w` that no enclosing draw binds,
+so that `Membership.mem S` reads `x ∈ S`. -/
+def applyDraw (a : Term) : DelabM (TSyntax ``Lean.Parser.Term.doSeqItem × Term) := do
+  let f ← getExpr
+  let .forallE _ dom _ _ ← whnf (← inferType f) | failure
+  let lctx ← getLCtx
+  let name := ([`x, `y, `z, `w].find? fun n => (lctx.findFromUserName? n).isNone).getD
+    (lctx.getUnusedName `x)
+  withLocalDeclD name dom fun x => do
+    let t ← withTheReader SubExpr (fun sub => { sub with expr := mkApp f x }) delab
+    return (← `(Lean.Parser.Term.doSeqItem| let $(mkIdent name):ident ← $a:term), t)
+
+/-- The draws of an expectation or event in normal form, as `let x ← a` statements, the value or
+event after them, and whether the nest ends in an event. -/
+partial def delabDraws :
+    DelabM (Array (TSyntax ``Lean.Parser.Term.doSeqItem) × Term × Bool) := do
   let e ← getExpr
   if ← isExpectation e then
     let a ← withNaryArg 7 delab
     withNaryArg 8 do
       let g ← getExpr
-      unless g.isLambda do failure
+      unless g.isLambda do
+        let (item, t) ← applyDraw a
+        return (#[item], t, false)
       withBindingBodyUnusedName fun x => do
-        let (draws, t) ← delabDraws
-        return (#[← drawItem g x a true] ++ draws, t)
+        let body ← getExpr
+        if (← isExpectation body) || body.isAppOfArity ``prEvent 6 then
+          let (draws, t, event) ← delabDraws
+          return (#[← drawItem g x a true] ++ draws, t, event)
+        return (#[← drawItem g x a false], ← delab, false)
   else if e.isAppOfArity ``prEvent 6 then
     let a ← withNaryArg 4 delab
     withNaryArg 5 do
       let p ← getExpr
-      if p.isLambda then
-        withBindingBodyUnusedName fun x => do
-          return (#[← drawItem p x a false], ← delab)
-      else
-        let .forallE _ dom _ _ ← whnf (← inferType p) | failure
-        let lctx ← getLCtx
-        let name := ([`x, `y, `z, `w].find? fun n => (lctx.findFromUserName? n).isNone).getD
-          (lctx.getUnusedName `x)
-        withLocalDeclD name dom fun x => do
-          let t ← withTheReader SubExpr (fun sub => { sub with expr := mkApp p x }) delab
-          return (#[← `(Lean.Parser.Term.doSeqItem| let $(mkIdent name):ident ← $a:term)], t)
+      unless p.isLambda do
+        let (item, t) ← applyDraw a
+        return (#[item], t, true)
+      withBindingBodyUnusedName fun x => do
+        return (#[← drawItem p x a false], ← delab, true)
   else failure
 
-/-- Display an event in the notation it elaborates from. -/
+/-- Display an event in normal form in the notation it elaborates from. -/
 @[delab app.prEvent]
 def delabPrEvent : Delab := whenPPOption getPPNotation <| withOverApp 6 do
-  let (draws, t) ← delabDraws
+  unless isNormal (← getExpr) do failure
+  let (draws, t, _) ← delabDraws
   `(Pr{$draws*}[$t])
 
-/-- Display a nest of expectations ending in an event as that event, and any other expectation
-under the measure interpretation as `wp⟦a⟧ g`. -/
+/-- Display an expectation in normal form in the notation it elaborates from: `Pr{…}[…]` when it
+ends in an event and `𝔼{…}[…]` otherwise. An expectation not in normal form keeps core's display
+`wp a g ⊥`. -/
 @[delab app.Std.Internal.Do.WP.wp]
 def delabExpectation : Delab := whenPPOption getPPNotation <| withOverApp 10 do
-  unless ← isExpectation (← getExpr) do failure
-  (do
-    let (draws, t) ← delabDraws
-    `(Pr{$draws*}[$t])) <|> (do
-    let a ← withNaryArg 7 delab
-    let g ← withNaryArg 8 delab
-    `(wp⟦$a⟧ $g))
+  let e ← getExpr
+  unless ← isExpectation e do failure
+  unless isNormal e do failure
+  let (draws, t, event) ← delabDraws
+  if event then `(Pr{$draws*}[$t]) else `(𝔼{$draws*}[$t])
 
 end ProbabilityNotation
 
