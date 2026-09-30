@@ -519,10 +519,25 @@ Mathlib's `⊥`, a different head from the one `simp` lemmas are stated with. Co
 Core Lean's `vcgen` is in scope in every file that imports `VCVio`. It walks `Std.WP` triples
 through the `@[spec]` catalogue, is experimental in v4.35 (a module that calls it sets
 `set_option experimental.vcgen true`), and is the tool for `Prop`-valued triples under
-`OracleComp.Qualitative`, such as the handler specifications in `Unary/HandlerSpecs.lean`. It does
-not lower `Pr{…}[…]` goals, consult the `@[vcspec]` / `@[wpStep]` registries, or step through
-`simulateQ`; for those goals use VCVio's `pvcgen` / `pvcstep` (and `rvcgen` / `rvcstep` for
-couplings). The two families share no leading token, so a bare `vcgen` always elaborates core's
+`OracleComp.Qualitative`, such as the handler specifications in `Unary/HandlerSpecs.lean`, and for
+lower-bound triples under the global expectation reading (`Unary/WP/QuantitativeSpecs.lean`).
+It does not lower `Pr{…}[…]` goals, which enter through the bridge lemmas of *Core `vcgen` on
+oracle computations* in `program-logic.md`. It does not consult the `@[vcspec]` / `@[wpStep]`
+registries, and it does not step through `simulateQ`. For those goals use VCVio's `pvcgen` /
+`pvcstep` (and `rvcgen` / `rvcstep` for couplings). The two families share no leading token, so a bare `vcgen` always elaborates core's
 tactic; `VCVioTest/ProgramLogic/VCGenNames.lean` pins this. The `vcvio.vcgen.*` options
 (`maxPasses`, `traceSteps`, `time`, `traceCachedRules`) configure VCVio's planner for `pvcgen` and
 `rvcgen`, not core's `vcgen`.
+
+### 36. Core `vcgen` splits lattice connectives only
+
+`vcgen` continues through a rule's precondition only where it is built from lattice connectives
+(`⊓`, `⇨`, `⌜·⌝`, `⊤`, `Lean.Order.iInf`); in the `Prop` reading it also introduces `∀` and `→`.
+Anything else (`∑`, `if`, `∧`) is left as a verification condition as it stands, and in `ℝ≥0∞`
+the programs inside a sum stay unprocessed there. A rule meant to be stepped through states
+its precondition with these connectives, as `OracleComp.Quantitative.Spec.query` does with
+`Lean.Order.iInf` and PolyFun's `Spec.guard_OptionT` does with `⊓` and `⇨`. `Lean.Order.iInf`
+takes a `Type`-indexed binder, so a condition such as `a ∈ support oa` is expressed through the
+subtype `{a // a ∈ support oa}`. Exact rules stated as averages (`Spec.uniformSample_sum`) belong
+at the last draw of a program; exact values in general are computed by `simp` on the normal form
+of `Pr{…}[…]`.

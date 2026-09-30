@@ -73,6 +73,7 @@ public import VCVioTest.PerfectMerkleTree
 public import VCVioTest.ProbabilityTactics
 public import VCVioTest.ProductRelationControls
 public import VCVioTest.ProgramLogic.BoundedMeasureWP
+public import VCVioTest.ProgramLogic.CoreVCGen
 public import VCVioTest.ProgramLogic.CoreWP
 public import VCVioTest.ProgramLogic.GCongr
 public import VCVioTest.ProgramLogic.MeasureOracleRelWP

@@ -72,6 +72,13 @@ open scoped Classical in
 theorem propInd_eq_zero_iff {P : Prop} : propInd P = 0 ↔ ¬P := by simp [propInd]
 
 open scoped Classical in
+/-- An indicator reaches `1` exactly when its proposition holds: the verification condition a
+lower-bound triple leaves at an indicator postcondition. -/
+@[simp]
+theorem one_le_propInd_iff {P : Prop} : 1 ≤ propInd P ↔ P := by
+  unfold propInd; split_ifs with h <;> simp [h]
+
+open scoped Classical in
 theorem propInd_or_le {P Q : Prop} : propInd (P ∨ Q) ≤ propInd P + propInd Q := by
   unfold propInd; split_ifs <;> simp_all
 

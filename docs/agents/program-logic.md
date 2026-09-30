@@ -388,6 +388,96 @@ rename_i x
 pvcstep rw congr' as ⟨x, y⟩
 ```
 
+## Core `vcgen` on oracle computations
+
+Core's `vcgen` (`set_option experimental.vcgen true`) decomposes a core triple
+`⦃ pre ⦄ oa ⦃ post ⦄` with the `@[spec]` rules registered for the program's parts and leaves
+verification conditions in the assertion lattice. `OracleComp spec` has two readings. The global
+instance reads expectations (`ℝ≥0∞`), so a triple is a lower bound. Inside
+`open scoped OracleComp.Qualitative` the structural reading applies (`Prop`), so a triple
+constrains every possible output. The two cannot be mixed in one scope: under the structural
+scope, a triple with an `ℝ≥0∞` precondition no longer elaborates. `Pr{…}[…]` is unaffected by
+the scope.
+
+Structural rules (`VCVio/ProgramLogic/Unary/WP/QualitativeSpecs.lean`, namespace
+`OracleComp.Qualitative`):
+
+| Program | Rule | Precondition |
+|---------|------|--------------|
+| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` (in `Unary/WP/Qualitative.lean`) | `∀ u, post u` |
+| `$ᵗ β` | `Spec.uniformSample` | `∀ x, post x` |
+| `$[0..n]` | `Spec.uniformFin` | `∀ i, post i` |
+| `oa.replicate n` | `Spec.replicate` | `∀ xs, xs.length = n → (∀ x ∈ xs, x ∈ support oa) → post xs` |
+| `liftComp oa superSpec` | `Spec.liftComp` | `wp oa post epost` (continues into `oa`) |
+| any `oa` (not registered) | `Spec.ofSupport` | `∀ a ∈ support oa, post a` |
+
+Quantitative rules (`VCVio/ProgramLogic/Unary/WP/QuantitativeSpecs.lean`, namespace
+`OracleComp.Quantitative`) state that a lower bound holding for every outcome holds in expectation,
+with `Lean.Order.iInf`, which `vcgen` splits into one condition per outcome:
+
+| Program | Rule | Precondition |
+|---------|------|--------------|
+| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨅ u, post u` |
+| `$ᵗ β` | `Spec.uniformSample` | `⨅ x, post x` |
+| any `oa` (not registered) | `Spec.ofSupport` | `⨅ a : {a // a ∈ support oa}, post a.1` |
+| `$ᵗ β`, finite (not registered) | `Spec.uniformSample_sum` | `(∑ x, post x) / card β` |
+| `query t`, uniform (not registered) | `Spec.query_uniform` | `∑ u, (card)⁻¹ * post u` |
+
+`OracleComp.ProgramLogic.triple_const_mul c h` scales a lower-bound triple. Passing it for an
+adversary's success bound composes that bound with a later draw, as in
+`vcgen [triple_const_mul 2⁻¹ hadv, Spec.uniformSample_sum]`. A hypothesis
+`h : ∀ k ∈ support gen, ⦃ r ⦄ f k ⦃ post ⦄` is used by `vcgen [Spec.ofSupport gen]`, which leaves
+the support side condition. The quantitative verification conditions are `ℝ≥0∞` inequalities.
+`simp` reads core's order as `≤` (PolyFun's `Lean.Order.rel_eq_le`) and `1 ≤ propInd P` as `P`
+(`one_le_propInd_iff`).
+
+Bridges:
+
+| Statement | Triple | Lemma |
+|-----------|--------|-------|
+| `Pr{let x ← mx}[p x] = 1` (uniform answers) | `⦃ True ⦄ mx ⦃ p ⦄` (structural) | `OracleComp.Qualitative.prEvent_eq_one_iff_triple` |
+| `𝒟[mx] {true} = 1` (uniform answers; `PerfectlyCorrect`, `PerfectlyComplete`) | `⦃ True ⦄ mx ⦃ (· = true) ⦄` | `evalDist_true_eq_one_iff_triple` |
+| `Pr{let x ← mx}[p x] = 0` (uniform answers) | `⦃ True ⦄ mx ⦃ fun x => ¬ p x ⦄` | `prEvent_eq_zero_iff_triple` |
+| `Pr{let x ← mx}[p x] = 1` (any answer measures, one direction) | from `⦃ True ⦄ mx ⦃ p ⦄` | `prEvent_eq_one_of_triple` |
+| `r ≤ Pr{let x ← oa}[p x]` | `⦃ r ⦄ oa ⦃ predInd p ⦄` (quantitative) | `OracleComp.ProgramLogic.le_prEvent_iff_triple` |
+| `r ≤ wp⟦oa⟧ g` | `⦃ r ⦄ oa ⦃ g ⦄` | `le_wp_iff_triple` |
+
+The structural bridges are in `VCVio/ProgramLogic/Unary/WP/Coherence.lean`. For a query with
+uniform answers, `simp` averages the expectation in an event's normal form with
+`OracleComp.wp_monadLift_query_uniform`.
+
+Known limits:
+
+- **Sums stop `vcgen`.** `vcgen` splits only lattice connectives (`⊓`, `⇨`, `⌜·⌝`, `⊤`,
+  `Lean.Order.iInf`). A precondition written with `∑`, `if`, or `∧` becomes a verification
+  condition, and `vcgen` does not descend into the programs inside it. Exact values of queries and
+  draws are therefore computed by `simp` on the normal form of `Pr{…}[…]`, and the exact rules
+  serve only for the last draw. Rules meant to be stepped through state their preconditions with
+  lattice connectives. `Lean.Order.iInf` needs a `Type`-indexed binder, so a support condition is
+  indexed by the subtype `{a // a ∈ support oa}`.
+- **Event normal forms.** `Pr{…}[…]` elaborates to its normal form, nested expectations over each
+  draw, so `le_prEvent_iff_triple` matches only an event of a named program. A lower bound on
+  the normal form of an inline program is read by `le_wp_iff_triple`, and `vcgen` steps through
+  the nested expectations.
+- **Structure-literal projections.** `vcgen` does not reduce a projection of a structure literal
+  (`{ keygen := …, … }.keygen`); it reports "no spec found". Use `dsimp only` first, or unfold with
+  the `@[simps]` projection lemmas.
+- **Invariant bullets.** In `vcgen … invariants · I`, the following `·` bullets are read as further
+  invariants. Address the verification conditions with `case vc1 => …` instead.
+- **Sum handlers.** A query to `impl₁ + impl₂` at `.inl t` has value type
+  `(spec₁ + spec₂).Range (.inl t)`. `vcgen` does not unfold the sum while matching, so
+  `QueryImpl.Spec.add_inl` / `add_inr` (`Unary/HandlerSpecs.lean`) route the query to the
+  component at the component's value type. A handler defined as a sum is unfolded in the same
+  call, as in `vcgen [myHandler, componentHandler]`. The rules match only when the handler's
+  specification is spelled `spec₁ + spec₂` up to reducible unfolding. A combined specification
+  introduced by a plain `def` (`def MySpec := spec₁ + spec₂`) hides the sum. For such a
+  specification, declare it `abbrev`, or `change` the goal to the component's program and value
+  type.
+- **Generic monads.** A lemma over a generic `[MonadAttach m] [LawfulMonadAttach m]` installs the
+  structural reading with `letI := MonadAttach.toWPMonadDemonic (m := m)` in its statement.
+  `attribute [local instance] MonadAttach.toWPMonadDemonic` also selects it for `StateT σ m`,
+  which pre-empts core's transformer instances.
+
 ## Relational Infrastructure
 
 ### RelTriple (pRHL coupling)
@@ -461,6 +551,8 @@ Core `vcgen` on handler programs:
 - A ghost argument that only a non-equational precondition determines is passed explicitly:
   `vcgen [cachingOracle_triple _ cache₀]`. Equational ghosts (`seed = seed₀`) unify.
 - `vcgen … with` takes a single `grind`-mode step.
+- A sum handler `impl₁ + impl₂` is stepped by `QueryImpl.Spec.add_inl` / `add_inr` after a case
+  split on the query index; see *Core `vcgen` on oracle computations* above.
 
 ### Whole-program invariant preservation (`SimSemantics/PreservesInv.lean`)
 
@@ -481,7 +573,11 @@ Core-triple whole-program lifts (`Unary/HandlerSpecs.lean`), by induction on the
 | Theorem | Shape |
 |---------|-------|
 | `simulateQ_triple_preserves_invariant` | `StateT` version |
-| `simulateQ_writerT_triple_preserves_invariant` | `WriterT` (monoid) version |
+| `simulateQ_writerT_triple_preserves_invariant` | `WriterT` (monoid, `WriterT.MonoidWP`) version |
+| `simulateQ_writerT_append_triple_preserves_invariant` | `WriterT` (append log such as `QueryLog`, `WriterT.AppendWP`) version |
+
+The handler may target any oracle world: `QueryImpl spec (StateT σ (OracleComp spec'))` covers
+the handlers of security games, which answer into `ProbComp`.
 
 `WriterPreservesInv` is the canonical invariant-preservation API for
 writer-based handlers like `countingOracle`/`costOracle`. Typical use:

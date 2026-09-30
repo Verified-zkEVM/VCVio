@@ -36,9 +36,13 @@ reading to the stateful handlers. The writer handlers read their log as accumula
   `grind`. Specifications with a single canonical postcondition are `@[spec]`-tagged.
 * *Composite programs* are handled by `vcgen` from the per-query specifications: the worked
   examples below compose two-, three-, and four-query bind chains.
-* *Whole simulations*: `simulateQ_triple_preserves_invariant` and its `WriterT` analogue
-  lift a per-query invariant to `simulateQ handler oa` by induction on `oa` with
-  `Std.WP.Triple.pure` and `Std.WP.Triple.bind`.
+* *Whole simulations*: `simulateQ_triple_preserves_invariant` and its `WriterT` analogues
+  (`simulateQ_writerT_triple_preserves_invariant` for monoid logs,
+  `simulateQ_writerT_append_triple_preserves_invariant` for append logs) lift a per-query
+  invariant to `simulateQ handler oa` by induction on `oa` with `Std.WP.Triple.pure` and
+  `Std.WP.Triple.bind`. The handler may target any oracle world, such as `ProbComp`.
+* *Sum handlers*: `QueryImpl.Spec.add_inl` and `QueryImpl.Spec.add_inr` route a query to
+  `impl₁ + impl₂` to its component at the component's value type.
 * `triple_stateT_iff_forall_support` and its writer analogues read a triple as a statement
   about the support of the run, the form consumed by the relational lifts in
   `VCVio.ProgramLogic.Relational.HandlerFromUnary`.
@@ -131,7 +135,51 @@ theorem triple_writerT_iff_forall_support_monoid {ω α : Type} [Monoid ω]
     rw [WriterT.wp_apply_eq, OracleComp.Qualitative.wp_iff_forall_support]
     exact ⟨fun h a w => h (a, w), fun h p => h p.1 p.2⟩
 
-/-! ## Generic invariant preservation for `simulateQ` -/
+/-! ## Sum handlers
+
+A query to `impl₁ + impl₂` at `.inl t` is a program over `(spec₁ + spec₂).Range (.inl t)`, while
+`impl₁ t` is a program over `spec₁.Range t`. The two types agree only after unfolding the sum
+specification, which `vcgen` does not do while it matches rules, so these rules route the query to
+its component with the component's value type. They hold for every interpretation of the handler
+monad. A handler defined as a sum is unfolded first, as in `vcgen [myHandler]`. The rules match a
+handler whose specification is spelled `spec₁ + spec₂` up to reducible unfolding; a combined
+specification introduced by a plain `def` hides the sum from them. -/
+
+section addHandler
+
+universe u v w z
+
+variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, v} ι₁} {spec₂ : OracleSpec.{u, v} ι₂}
+  {m : Type v → Type w} [Monad m] {Pred EPred : Type z} [Assertion Pred] [Assertion EPred]
+  [WPMonad m Pred EPred]
+
+/-- A left query to a sum handler runs the left handler. -/
+@[spec]
+theorem _root_.QueryImpl.Spec.add_inl (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
+    (t : spec₁.Domain) (post : (spec₁ + spec₂).Range (.inl t) → Pred) (epost : EPred) :
+    Triple ((impl₁ + impl₂) (.inl t)) (wp (Value := spec₁.Range t) (impl₁ t) post epost) post
+      epost :=
+  ⟨Lean.Order.PartialOrder.rel_refl⟩
+
+/-- A right query to a sum handler runs the right handler. -/
+@[spec]
+theorem _root_.QueryImpl.Spec.add_inr (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
+    (t : spec₂.Domain) (post : (spec₁ + spec₂).Range (.inr t) → Pred) (epost : EPred) :
+    Triple ((impl₁ + impl₂) (.inr t)) (wp (Value := spec₂.Range t) (impl₂ t) post epost) post
+      epost :=
+  ⟨Lean.Order.PartialOrder.rel_refl⟩
+
+end addHandler
+
+/-! ## Generic invariant preservation for `simulateQ`
+
+The lifts take a handler from the simulated oracles `spec` into a state or writer layer over any
+oracle world `spec'`: the simulated world itself for the query-tracking handlers of this file, and
+typically `ProbComp` for the handlers of security games. -/
+
+section simulateQ
+
+variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
 
 /-- Generic simulation triple: if every handler call `handler t` preserves an invariant `I` on
 the simulation state, then `simulateQ handler oa` preserves `I` for any `oa : OracleComp spec α`.
@@ -140,11 +188,11 @@ The invariant-only form (same `I` as pre- and postcondition, independent of the 
 the most common case; stronger per-call specifications follow by instantiating `I` or by the
 consequence rules of `Std.WP.Triple`. -/
 theorem simulateQ_triple_preserves_invariant {σ α : Type}
-    (handler : QueryImpl spec (StateT σ (OracleComp spec)))
+    (handler : QueryImpl spec (StateT σ (OracleComp spec')))
     (I : σ → Prop)
     (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
     (oa : OracleComp spec α) :
-    ⦃ fun s => I s ⦄ (simulateQ handler oa : StateT σ (OracleComp spec) α)
+    ⦃ fun s => I s ⦄ (simulateQ handler oa : StateT σ (OracleComp spec') α)
       ⦃ fun _ s' => I s' ⦄ := by
   induction oa using OracleComp.inductionOn with
   | pure x => exact Std.WP.Triple.pure x fun _ h => h
@@ -155,30 +203,50 @@ theorem simulateQ_triple_preserves_invariant {σ α : Type}
 /-- Specialized simulation triple: combine a starting-state precondition `s = s₀` with an
 invariant that holds of `s₀`. The invariant is threaded through the entire simulation. -/
 theorem simulateQ_triple_of_state_and_invariant {σ α : Type}
-    (handler : QueryImpl spec (StateT σ (OracleComp spec)))
+    (handler : QueryImpl spec (StateT σ (OracleComp spec')))
     (I : σ → Prop)
     (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
     (oa : OracleComp spec α) (s₀ : σ) (hI : I s₀) :
-    ⦃ fun s => s = s₀ ⦄ (simulateQ handler oa : StateT σ (OracleComp spec) α)
+    ⦃ fun s => s = s₀ ⦄ (simulateQ handler oa : StateT σ (OracleComp spec') α)
       ⦃ fun _ s' => I s' ⦄ :=
   ⟨fun _ hs => hs ▸ (simulateQ_triple_preserves_invariant handler I hhandler oa).le_wp s₀ hI⟩
 
-/-- `WriterT` analogue of `simulateQ_triple_preserves_invariant`: if every per-query handler
-call preserves an invariant `I` on the accumulated writer log, then the whole simulation
-`simulateQ handler oa` preserves `I`. Typical `handler` values are `countingOracle` and
-`costOracle costFn`. -/
+/-- `WriterT` analogue of `simulateQ_triple_preserves_invariant` for monoid logs, read by
+`WriterT.MonoidWP`: if every per-query handler call preserves an invariant `I` on the accumulated
+writer log, then the whole simulation `simulateQ handler oa` preserves `I`. Typical `handler`
+values are `countingOracle` and `costOracle costFn`. -/
 theorem simulateQ_writerT_triple_preserves_invariant {ω α : Type} [Monoid ω]
-    (handler : QueryImpl spec (WriterT ω (OracleComp spec)))
+    (handler : QueryImpl spec (WriterT ω (OracleComp spec')))
     (I : ω → Prop)
     (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
     (oa : OracleComp spec α) :
-    ⦃ fun s => I s ⦄ (simulateQ handler oa : WriterT ω (OracleComp spec) α)
+    ⦃ fun s => I s ⦄ (simulateQ handler oa : WriterT ω (OracleComp spec') α)
       ⦃ fun _ s' => I s' ⦄ := by
   induction oa using OracleComp.inductionOn with
   | pure x => exact Std.WP.Triple.pure x fun _ h => h
   | query_bind t oa ih =>
     rw [simulateQ_query_bind]
     exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
+
+/-- `WriterT` analogue of `simulateQ_triple_preserves_invariant` for append logs such as
+`QueryLog`, read by `WriterT.AppendWP`: if every per-query handler call preserves an invariant `I`
+on the accumulated log, then the whole simulation `simulateQ handler oa` preserves `I`. Typical
+`handler` values are `loggingOracle` and `so.withLogging`. -/
+theorem simulateQ_writerT_append_triple_preserves_invariant {ω α : Type}
+    [EmptyCollection ω] [Append ω] [LawfulAppend ω]
+    (handler : QueryImpl spec (WriterT ω (OracleComp spec')))
+    (I : ω → Prop)
+    (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s' => I s' ⦄)
+    (oa : OracleComp spec α) :
+    ⦃ fun s => I s ⦄ (simulateQ handler oa : WriterT ω (OracleComp spec') α)
+      ⦃ fun _ s' => I s' ⦄ := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact Std.WP.Triple.pure x fun _ h => h
+  | query_bind t oa ih =>
+    rw [simulateQ_query_bind]
+    exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
+
+end simulateQ
 
 section cachingOracle
 

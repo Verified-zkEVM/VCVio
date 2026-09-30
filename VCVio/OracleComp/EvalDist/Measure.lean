@@ -559,6 +559,23 @@ theorem prEvent_query_eq_card_div (t : spec.Domain) [Fintype (spec.Range t)]
   let : MeasurableSpace (spec.Range t) := ⊤
   rw [prEvent_eq_evalDist_of_discrete, evalDist_query_uniform, uniformOn_univ_apply_setOf]
 
+/-- Under uniform oracle semantics, the expectation over a single query is the average of the
+observation over the responses. It is stated on the lifted query, the form a query takes in the
+normal form of `Pr{…}[…]` and `𝔼{…}[…]`, so `simp` averages the queries of a normalized event. -/
+@[simp]
+theorem wp_monadLift_query_uniform (t : spec.Domain) [Fintype (spec.Range t)]
+    (g : spec.Range t → ℝ≥0∞) :
+    wp⟦(MonadLift.monadLift (OracleSpec.query t) : OracleComp spec (spec.Range t))⟧ g =
+      ∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * g u := by
+  classical
+  let : MeasurableSpace (spec.Range t) := ⊤
+  refine (wp_eq_sum_fintype _ g).trans (Finset.sum_congr rfl fun u _ => ?_)
+  congr 1
+  have h := prEvent_liftM_query_eq_card_div (spec := spec) t (· = u)
+  rw [Finset.filter_eq' Finset.univ u, ite_eq_left (Finset.mem_univ u), Finset.card_singleton,
+    Nat.cast_one, one_div] at h
+  exact h
+
 /-- A wrapped optional oracle computation has a probability-one event exactly when every
 structurally reachable output is a present value satisfying the event. -/
 theorem OptionT.prEvent_mk_eq_one_iff (mx : OracleComp spec (Option α)) (p : α → Prop) :

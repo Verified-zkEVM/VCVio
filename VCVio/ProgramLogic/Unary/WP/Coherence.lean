@@ -18,6 +18,12 @@ identification of measure-theoretic almost-sure behavior with structural reachab
 
 The statements expose the underlying algebras, so several carrier instances need not be
 active in the same scope. Forgetting the probability bound uses `wp_restrictIic_val`.
+
+The bridges in `OracleComp.Qualitative` state events of probability one or zero as structural
+triples, the form core's `vcgen` proves: `prEvent_eq_one_iff_triple`,
+`evalDist_true_eq_one_iff_triple` (the shape of the `PerfectlyCorrect` and `PerfectlyComplete`
+notions), and `prEvent_eq_zero_iff_triple`. Establishing probability one from a triple,
+`prEvent_eq_one_of_triple`, needs no uniformity.
 -/
 
 @[expose] public section
@@ -73,3 +79,41 @@ theorem wp_qual_iff_wp_prob_indicator_val_eq_one
   wp_qual_iff_wp_prob_indicator_eq_one oa post
 
 end OracleComp.WP.Coherence
+
+/-! ## Events as structural triples -/
+
+namespace OracleComp.Qualitative
+
+open Std.WP
+open scoped OracleComp.Qualitative
+
+variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
+
+/-- A structural triple from `True` gives probability one under any answer measures. -/
+theorem prEvent_eq_one_of_triple [OracleSpec.IsMeasureSpec spec] {mx : OracleComp spec α}
+    {p : α → Prop} (h : ⦃ True ⦄ mx ⦃ p ⦄) : Pr{let x ← mx}[p x] = 1 :=
+  prEvent_eq_one_of_forall_mem_support mx p (h.le_wp trivial)
+
+variable [OracleSpec.IsUniformMeasureSpec spec]
+
+/-- Under uniform answers, an event has probability one exactly when every possible output
+satisfies it: a structural triple from `True`. -/
+theorem prEvent_eq_one_iff_triple (mx : OracleComp spec α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 1 ↔ ⦃ True ⦄ mx ⦃ p ⦄ := by
+  rw [prEvent_eq_one_iff, Triple.iff]
+  exact ⟨fun h _ => h, fun h => h trivial⟩
+
+/-- Under uniform answers, a Boolean computation puts mass one on `true` exactly when it always
+returns `true`: the form of the `PerfectlyCorrect` and `PerfectlyComplete` notions. -/
+theorem evalDist_true_eq_one_iff_triple (mx : OracleComp spec Bool) :
+    𝒟[mx] {true} = 1 ↔ ⦃ True ⦄ mx ⦃ fun b => b = true ⦄ := by
+  rw [← prEvent_eq_evalDist_singleton, prEvent_eq_one_iff_triple]
+
+/-- Under uniform answers, an event has probability zero exactly when no possible output
+satisfies it. -/
+theorem prEvent_eq_zero_iff_triple (mx : OracleComp spec α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 0 ↔ ⦃ True ⦄ mx ⦃ fun x => ¬ p x ⦄ := by
+  rw [prEvent_eq_zero_iff, Triple.iff]
+  exact ⟨fun h _ => h, fun h => h trivial⟩
+
+end OracleComp.Qualitative

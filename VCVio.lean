@@ -380,7 +380,9 @@ public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 public import VCVio.ProgramLogic.Unary.WP.Quantitative
+public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
 public import VCVio.ProgramLogic.Unary.WriterTBridge
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef
