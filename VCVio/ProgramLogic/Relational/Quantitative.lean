@@ -360,9 +360,12 @@ coordinate almost surely, so the relational expectation reduces to the unary exp
 qualitative `Anchored Prop` instance in `VCVio/ProgramLogic/Relational/Basic.lean`. -/
 noncomputable instance instAnchored_eRelWP
     [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)] :
-    MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ where
-  rwp_pure_left a y post := eRelWP_pure_left a y post
-  rwp_pure_right x b post := eRelWP_pure_right x b post
+    @MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ _ _ _
+      OracleComp.Quantitative.instWP OracleComp.Quantitative.instWP _ :=
+  letI := OracleComp.Quantitative.instWP (spec := spec₁)
+  letI := OracleComp.Quantitative.instWP (spec := spec₂)
+  { rwp_pure_left := fun a y post => eRelWP_pure_left a y post
+    rwp_pure_right := fun x b post => eRelWP_pure_right x b post }
 
 section finite
 

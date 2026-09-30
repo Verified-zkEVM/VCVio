@@ -34,9 +34,9 @@ variable {α : Type}
 
 /-! ## Probabilistic ↔ Quantitative
 
-The probabilistic `Std.Internal.Do.wp` agrees with the quantitative `MAlgOrdered.wp`
+The probabilistic `Std.Internal.Do.wp` agrees with the quantitative one
 under `Subtype.val`; that statement lives in `…/WP/Probabilistic.lean`
-as `OracleComp.Probabilistic.wp_val_eq_mAlgOrdered_wp`. We do not restate
+as `OracleComp.Probabilistic.wp_val_eq_wp`. We do not restate
 it here because pulling `OracleComp.Probabilistic.instWP_prob` into scope
 to talk about `Std.Internal.Do.wp` requires `open OracleComp.Probabilistic`,
 which then occludes the qualitative tier discussed below. -/
@@ -57,20 +57,19 @@ construction; consumers without classical-decidable predicates can
 `prEvent_eq_wp_indicator` directly. -/
 theorem wp_qual_iff_wp_prob_indicator_eq_one
     (oa : OracleComp spec α) (post : α → Prop) [DecidablePred post] :
-    MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post ↔
-      MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa
-          (fun a => if post a then 1 else 0) = 1 := by
-  rw [wp_iff_forall_support, ← wp_eq_mAlgOrdered_wp, ← prEvent_eq_wp_indicator,
-    OracleComp.prEvent_eq_one_iff]
+    (letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec);
+      Std.Internal.Do.wp oa post Std.Internal.Do.EPost.Nil.mk) ↔
+      wp oa (fun a => if post a then 1 else 0) = 1 := by
+  rw [wp_iff_forall_support, ← prEvent_eq_wp_indicator, OracleComp.prEvent_eq_one_iff]
 
 /-- Convenience: the `Prob`-valued indicator-as-`wp` form of the
 coherence lemma, for users who have already lifted their post to `Prob`
 via `Prob.indicator`. -/
 theorem wp_qual_iff_wp_prob_indicator_val_eq_one
     (oa : OracleComp spec α) (post : α → Prop) [DecidablePred post] :
-    MAlgOrdered.wp (m := OracleComp spec) (l := Prop) oa post ↔
-      MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa
-          (fun a => (Prob.indicator (post a)).val) = 1 :=
+    (letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec);
+      Std.Internal.Do.wp oa post Std.Internal.Do.EPost.Nil.mk) ↔
+      wp oa (fun a => (Prob.indicator (post a)).val) = 1 :=
   wp_qual_iff_wp_prob_indicator_eq_one oa post
 
 end OracleComp.WP.Coherence

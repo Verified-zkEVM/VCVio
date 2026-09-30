@@ -42,38 +42,34 @@ example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
 
 end OracleComp.ProgramLogic
 
-namespace MAlgOrdered
+section ExactTransformers
 
-open MAlgOrdered
+/-! Core's transformer interpretations over an exact base are exact, so `wp` distributes over
+their `bind` with equality. -/
+
+open Std.Internal.Do
 
 universe v
 
 variable {m : Type u → Type v} {L : Type u}
-variable [Monad m] [LawfulMonad m] [CompleteLattice L] [MAlgOrdered m L]
+variable [Monad m] [Assertion L] [WPMonad m L EPost.Nil] [ExactWPMonad m L EPost.Nil]
 variable {α β σ ρ ε : Type u}
 
-example (x : StateT σ m α) (f : α → StateT σ m β) (post : β → σ → L) :
-    MAlgOrdered.wp (m := StateT σ m) (l := σ → L) (x >>= f) post =
-      MAlgOrdered.wp (m := StateT σ m) (l := σ → L) x
-        (fun a => MAlgOrdered.wp (m := StateT σ m) (l := σ → L) (f a) post) :=
-  MAlgOrdered.wp_bind (m := StateT σ m) (l := σ → L) x f post
+example (x : StateT σ m α) (f : α → StateT σ m β) (post : β → σ → L) (e : EPost.Nil) :
+    wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
+  ExactWPMonad.wp_bind x f post e
 
-example (x : ReaderT ρ m α) (f : α → ReaderT ρ m β) (post : β → ρ → L) :
-    MAlgOrdered.wp (m := ReaderT ρ m) (l := ρ → L) (x >>= f) post =
-      MAlgOrdered.wp (m := ReaderT ρ m) (l := ρ → L) x
-        (fun a => MAlgOrdered.wp (m := ReaderT ρ m) (l := ρ → L) (f a) post) :=
-  MAlgOrdered.wp_bind (m := ReaderT ρ m) (l := ρ → L) x f post
+example (x : ReaderT ρ m α) (f : α → ReaderT ρ m β) (post : β → ρ → L) (e : EPost.Nil) :
+    wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
+  ExactWPMonad.wp_bind x f post e
 
-example (x : ExceptT ε m α) (f : α → ExceptT ε m β) (post : β → L) :
-    MAlgOrdered.wp (m := ExceptT ε m) (l := L) (x >>= f) post =
-      MAlgOrdered.wp (m := ExceptT ε m) (l := L) x
-        (fun a => MAlgOrdered.wp (m := ExceptT ε m) (l := L) (f a) post) :=
-  MAlgOrdered.wp_bind (m := ExceptT ε m) (l := L) x f post
+example (x : ExceptT ε m α) (f : α → ExceptT ε m β) (post : β → L)
+    (e : EPost.Cons (ε → L) EPost.Nil) :
+    wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
+  ExactWPMonad.wp_bind x f post e
 
-example [MAlgOrdered (OptionT m) L] (x : OptionT m α) (f : α → OptionT m β) (post : β → L) :
-    MAlgOrdered.wp (m := OptionT m) (l := L) (x >>= f) post =
-      MAlgOrdered.wp (m := OptionT m) (l := L) x
-        (fun a => MAlgOrdered.wp (m := OptionT m) (l := L) (f a) post) :=
-  MAlgOrdered.wp_bind (m := OptionT m) (l := L) x f post
+example (x : OptionT m α) (f : α → OptionT m β) (post : β → L) (e : EPost.Cons L EPost.Nil) :
+    wp (x >>= f) post e = wp x (fun a => wp (f a) post e) e :=
+  ExactWPMonad.wp_bind x f post e
 
-end MAlgOrdered
+end ExactTransformers

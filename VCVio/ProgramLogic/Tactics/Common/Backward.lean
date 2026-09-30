@@ -580,11 +580,10 @@ def runVCSpecEntryCachedBackward (entry : VCSpecEntry) : TacticM Bool := do
 /-- Run the cached `vcspec_simp` simp set on the main goal target, swallowing
 errors and unchanged-goal failures.
 
-This is the single replacement for the previous open-coded `simp only [...]`
-blocks that peeled transformer `wp` layers (`apply_wp`, `*.run`, lifts,
-`Std.Internal.Do.EPost.Cons.push*`, `MAlgOrdered.wp_*`, the `Quantitative.wp_eq_mAlgOrdered_wp`
-bridges, and the assorted monad/algebra rewrites). Tag a new normalization
-lemma with `@[vcspec_simp]` (or rely on the `@[vcspec]` fallback) instead of
+The set peels transformer `wp` layers (`apply_wp`, `*.run`, lifts,
+`Std.Internal.Do.EPost.Cons.push*`), distributes `wp` over program structure with the
+exact equations of `ExactWPMonad`, and applies the assorted monad rewrites. Tag a new
+normalization lemma with `@[vcspec_simp]` (or rely on the `@[vcspec]` fallback) instead of
 appending it to a tactic-local simp list. -/
 def runVCSpecSimp : TacticM Unit := withMainContext do
   let goal ← getMainGoal

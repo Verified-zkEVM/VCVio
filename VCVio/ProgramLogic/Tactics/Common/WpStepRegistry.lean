@@ -126,10 +126,8 @@ initialize wpStepRegistry :
 from the LHS of a `wp comp post = …` equation.
 
 After `Sym.preprocessType`, the abbrev `OracleComp.ProgramLogic.wp` has been
-unfolded to either `MAlgOrdered.wp` (legacy structural form) or
-`Std.Internal.Do.wp _ _ Order.bot` (core WP form, the canonical
-shape). All three heads are accepted; the `comp` argument is positionally:
-* `MAlgOrdered.wp m l … oa post` → 2nd-to-last explicit argument.
+unfolded to `Std.Internal.Do.wp _ _ Order.bot`, the canonical shape; the folded
+abbreviation is accepted as well. The `comp` argument is positionally:
 * `OracleComp.ProgramLogic.wp ι spec … oa post` → 2nd-to-last explicit argument.
 * `Std.Internal.Do.wp m Pred EPred α … oa post epost` → 3rd-to-last explicit argument. -/
 private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
@@ -143,7 +141,7 @@ private def selectWpStepLhsComp (body : Expr) : MetaM (Expr × Unit) := do
     unless n ≥ 3 do
       throwError m!"@[wpStep] `Std.Internal.Do.wp` LHS has too few arguments:{indentExpr lhs}"
     return (lhs.getArg! (n - 3), ())
-  unless fn.isConstOf ``MAlgOrdered.wp || fn.isConstOf ``OracleComp.ProgramLogic.wp do
+  unless fn.isConstOf ``OracleComp.ProgramLogic.wp do
     throwError m!"@[wpStep] expects an `wp _ _` LHS; got:{indentExpr lhs}"
   unless n ≥ 2 do
     throwError m!"@[wpStep] LHS has too few arguments:{indentExpr lhs}"

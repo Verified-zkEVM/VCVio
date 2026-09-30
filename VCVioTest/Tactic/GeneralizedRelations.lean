@@ -65,12 +65,9 @@ example (h : ∀ x ∈ support mx, f x ≤ g x) : wp mx f ≤ wp mx g := by
   grw [h]
   assumption
 
+/-- Core's raw `wp` head carries the support-aware congruence directly. -/
 example (h : ∀ x ∈ support mx, f x ≤ g x) :
     Std.Internal.Do.wp mx f Lean.Order.bot ≤ Std.Internal.Do.wp mx g Lean.Order.bot := by
-  -- gap(gcongr, 2026-09-08): the raw WP head needs explicit facade normalization.
-  fail_if_success gcongr
-  simp only [OracleComp.Quantitative.wp_eq_mAlgOrdered_wp]
-  guard_target = MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g
   gcongr with x hx
   guard_hyp hx : x ∈ support mx
   guard_target = f x ≤ g x

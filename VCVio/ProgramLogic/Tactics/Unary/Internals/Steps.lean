@@ -30,8 +30,8 @@ universe u v
 /-! ## `vcspec_simp` normalization set
 
 Centralized registration of the transformer-`wp` peel lemmas, `*.run`
-projections, monadic-algebra rewrites, and the `Quantitative.wp_eq_mAlgOrdered_wp`
-bridges that the unary tactic uses to expose spec-applicable goal shapes.
+projections, and the exact `ExactWPMonad` equations for `pure`, `bind`, and `map`
+that the unary tactic uses to expose spec-applicable goal shapes.
 The single simp set is consumed by `runVCSpecSimp`. New normalization rewrites
 should be tagged here (or at definition) rather than inserted into a
 tactic-local `simp only [...]` list. -/
@@ -51,10 +51,8 @@ attribute [vcspec_simp]
   OptionT.run_map
   ExceptT.run_bind ExceptT.run_pure ExceptT.run_lift ExceptT.run_throw
   ExceptT.run_map
-  -- VCVio expectation bridges and the underlying quantitative `MAlgOrdered.wp`
-  OracleComp.Quantitative.wp_eq_mAlgOrdered_wp
-  OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost
-  MAlgOrdered.wp_bind MAlgOrdered.wp_pure MAlgOrdered.wp_map
+  -- PolyFun's exact equations on core `wp`
+  ExactWPMonad.wp_bind ExactWPMonad.wp_pure ExactWPMonad.wp_map
   -- VCVio per-transformer `Quantitative.wp_*` peeling lemmas
   OracleComp.Quantitative.wp_StateT_bind
   OracleComp.Quantitative.wp_StateT_bind'
@@ -90,11 +88,11 @@ attribute [vcspec_simp]
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_set_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_run_set_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_run_set_layer'
-  OracleComp.ProgramLogic.TacticInternals.Unary.mAlgOrdered_wp_OptionT_run_StateT_get
-  OracleComp.ProgramLogic.TacticInternals.Unary.mAlgOrdered_wp_OptionT_run_StateT_set
-  OracleComp.ProgramLogic.TacticInternals.Unary.mAlgOrdered_wp_OptionT_run_lift
-  mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift
-  mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift_map
+  OracleComp.ProgramLogic.TacticInternals.Unary.wp_OptionT_run_StateT_get
+  OracleComp.ProgramLogic.TacticInternals.Unary.wp_OptionT_run_StateT_set
+  OracleComp.ProgramLogic.TacticInternals.Unary.wp_OptionT_run_lift
+  wp_OptionT_run_StateT_monadLift_lift
+  wp_OptionT_run_StateT_monadLift_lift_map
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_OptionT_monadLift_lift
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_StateT_map_layer
   OracleComp.ProgramLogic.TacticInternals.Unary.wp_ReaderT_read_layer

@@ -134,7 +134,8 @@ Mathlib kernel composition delegates to the measure rules. Parameterized expecte
 `ToMathlib/Probability/Kernel/TotalVariation.lean`.
 
 **Program logic: core lattice-generic WP on v4.34.** Unary carriers consume
-`Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`. Quantitative,
+`Std.Internal.Do.WPMonad` through PolyFun's `MAlgOrdered.toWPMonad`, which presents an exact
+interpretation (`ExactWPMonad`); reasoning is stated on core's `wp`. Quantitative,
 qualitative, and probability-bounded interpretations are scoped. `Prob` uses Mathlib's
 `Set.Iic 1` with `MAlgOrdered.restrictIic`; no local lattice bridge is needed. The
 relational coupling interface belongs to VCVio and uses core assertion lattices.
@@ -1004,7 +1005,8 @@ PolyFun's `MonadAttach.toWPMonadDemonic` supplies qualitative core WP with lawfu
 including state monads. The exact ordered assertion algebra is installed only where the free
 tree's exactness is available. Indexed state/reader judgments and kernel semantics retain their
 initial index. The probability-bounded measure WP restricts the native expectation algebra using
-PolyFun's `MAlgOrdered.restrictIic`; its scopes take precedence over generic transformer algebras.
+PolyFun's `MAlgOrdered.restrictIic`; its scopes take precedence over core's `Prop`-valued
+interpretations.
 
 `VCVio.Foundations` has an ordinary import canary excluding `PMF`. At the time, other imports
 remained facades for discrete corollaries; those corollaries, `SPMF`, and the compatibility

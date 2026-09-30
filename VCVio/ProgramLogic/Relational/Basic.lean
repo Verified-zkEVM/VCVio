@@ -582,24 +582,28 @@ When one of the two computations is `pure`, the relational coupling logic collap
 unary support-based logic of the other side. Every reachable output has positive mass under
 uniform response measures, so an almost-sure relation holds on the whole structural support.
 
-Together with the unary `Prop` algebra in `VCVio/ProgramLogic/Unary/HoarePropTriple.lean`,
-this lets `wpExc` / `rwpExc`-style honest exception combinators (in
-`ToMathlib/Control/Monad/RelationalAlgebraAnchored.lean`) be derived uniformly. -/
-instance instAnchored : MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) Prop where
-  rwp_pure_left {α β} a y post := by
-    refine propext ⟨fun h ↦ ?_, fun h ↦ ?_⟩
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
-      exact forall_mem_support_of_couplingPost_pure_left h
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at h
-      exact couplingPost_pure_left_of_forall_mem_support h
-  rwp_pure_right {α β} x b post := by
-    refine propext ⟨fun h ↦ ?_, fun h ↦ ?_⟩
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
-      exact forall_mem_support_of_couplingPost_pure_left
-        (relTriple_iff_relWP.1 (relTriple_symm (relTriple_iff_relWP.2 h)))
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at h
-      exact relTriple_iff_relWP.1 (relTriple_symm (spec₁ := spec₂) (spec₂ := spec₁)
-        (relTriple_iff_relWP.2 (couplingPost_pure_left_of_forall_mem_support h)))
+The unary sides are the qualitative support readings (`MonadAttach.toWPMonadDemonic`,
+`VCVio/ProgramLogic/Unary/HoarePropTriple.lean`); `open scoped OracleComp.Qualitative` installs
+them. -/
+instance instAnchored :
+    @MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) Prop _ _ _
+      MonadAttach.toWPMonadDemonic MonadAttach.toWPMonadDemonic _ :=
+  letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec₁)
+  letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec₂)
+  { rwp_pure_left := fun {α β} a y post => by
+      refine propext ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
+        exact forall_mem_support_of_couplingPost_pure_left h
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at h
+        exact couplingPost_pure_left_of_forall_mem_support h
+    rwp_pure_right := fun {α β} x b post => by
+      refine propext ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
+        exact forall_mem_support_of_couplingPost_pure_left
+          (relTriple_iff_relWP.1 (relTriple_symm (relTriple_iff_relWP.2 h)))
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at h
+        exact relTriple_iff_relWP.1 (relTriple_symm (spec₁ := spec₂) (spec₂ := spec₁)
+          (relTriple_iff_relWP.2 (couplingPost_pure_left_of_forall_mem_support h))) }
 
 /-- The graph of a bijection on a query's responses couples the query with itself. -/
 theorem isCoupling_query_graph (t : spec₁.Domain) {f : spec₁.Range t → spec₁.Range t}

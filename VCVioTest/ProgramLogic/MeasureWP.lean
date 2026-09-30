@@ -35,9 +35,9 @@ example : True := by
 
 open scoped MeasureProgramLogic.Quantitative
 
-example (c : ENNReal) : MAlgOrdered.wp (none : Option Nat) (fun _ ↦ c) = 0 := by simp
+example (c : ENNReal) : wp (none : Option Nat) (fun _ ↦ c) Lean.Order.bot = 0 := by simp
 
-example (c : ENNReal) : MAlgOrdered.wp (some 7 : Option Nat) (fun _ ↦ c) = c := by simp
+example (c : ENNReal) : wp (some 7 : Option Nat) (fun _ ↦ c) Lean.Order.bot = c := by simp
 
 noncomputable example : WPMonad Option ENNReal EPost.Nil := inferInstance
 
@@ -52,18 +52,18 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   {α : Type} [MeasurableSpace α]
 
 example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
-    MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
+    wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   gcongr with x
   exact hfg x
 
 example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
-    MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
+    wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   grw [hfg]
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
     (hf : Measurable f) (hg : Measurable g) :
-    MAlgOrdered.wp mx (fun x ↦ c + f x + g x) =
-      c * 𝒟[mx] Set.univ + MAlgOrdered.wp mx f + MAlgOrdered.wp mx g := by
+    wp mx (fun x ↦ c + f x + g x) Lean.Order.bot =
+      c * 𝒟[mx] Set.univ + wp mx f Lean.Order.bot + wp mx g Lean.Order.bot := by
   simp only [MeasureProgramLogic.Quantitative.wp_add mx (fun x ↦ c + f x) g
       (measurable_const.add hf) hg,
     MeasureProgramLogic.Quantitative.wp_add mx (fun _ ↦ c) f measurable_const hf,
@@ -72,13 +72,13 @@ example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
-    MAlgOrdered.wp mx f ≤ c * 𝒟[mx] Set.univ + MAlgOrdered.wp mx g :=
+    wp mx f Lean.Order.bot ≤ c * 𝒟[mx] Set.univ + wp mx g Lean.Order.bot :=
   MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hf hg hfg
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal) [IsProbabilityMeasure 𝒟[mx]]
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
-    MAlgOrdered.wp mx f ≤ c + MAlgOrdered.wp mx g := by
+    wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot := by
   simpa using MeasureProgramLogic.Quantitative.wp_le_const_mul_mass_add mx hf hg hfg
 
 end VCVioTest.ProgramLogic.MeasureWP

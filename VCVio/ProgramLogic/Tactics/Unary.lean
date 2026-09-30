@@ -63,9 +63,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Quantitative.WriterT.wp_monadLift,
            OracleComp.Quantitative.WriterT.wp_map,
            WriterT.run_bind, WriterT.run_pure, WriterT.run_tell, WriterT.run_map,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
-           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
-           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -85,9 +83,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Quantitative.WriterT.wp_tell,
            OracleComp.Quantitative.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
-           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))
@@ -109,9 +105,7 @@ private def runVCGenFinish : TacticM Unit := do
            OracleComp.Quantitative.WriterT.wp_tell,
            OracleComp.Quantitative.WriterT.wp_monadLift,
            WriterT.run_tell, WriterT.run_pure, WriterT.run_monadLift, WriterT.run_map,
-           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
-           OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
-           MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+           ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
            MonadLift.monadLift, pure_bind, bind_assoc, map_pure, Functor.map_map,
            one_mul, mul_one, mul_assoc]
          try exact le_rfl)))

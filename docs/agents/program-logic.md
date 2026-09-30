@@ -33,8 +33,7 @@ rules for queries need uniform response measures.
 
 For `wp oa f ≤ wp oa g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
 pointwise obligation `f x ≤ g x`. The unrestricted `wp_mono` theorem remains available as a
-lower-priority fallback. On raw `Std.Internal.Do.wp` expressions, normalize with
-`simp only [OracleComp.Quantitative.wp_eq_mAlgOrdered_wp]` before `gcongr`.
+lower-priority fallback. The same applies to raw `Std.Internal.Do.wp` expressions.
 `wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
 `wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
 

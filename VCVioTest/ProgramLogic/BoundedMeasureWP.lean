@@ -32,14 +32,13 @@ namespace VCVioTest.ProgramLogic.BoundedMeasureWP
 noncomputable example : WPMonad Option Prob EPost.Nil := inferInstance
 
 example (p : Prob) : wp (pure 7 : Option Nat) (fun _ ↦ p) Lean.Order.bot = p :=
-  MeasureProgramLogic.Probabilistic.wp_pure 7 _
+  ExactWPMonad.wp_pure 7 _ _
 
 example (p : Prob) : (wp (none : Option Nat) (fun _ ↦ p) Lean.Order.bot).val = 0 := by
-  rw [MeasureProgramLogic.Probabilistic.wp_val_eq_mAlgOrdered_wp]
+  rw [MeasureProgramLogic.Probabilistic.wp_val]
   simp
 
 example (p : Prob) : (wp (some 7 : Option Nat) (fun _ ↦ p) Lean.Order.bot).val = p.val := by
-  rw [MeasureProgramLogic.Probabilistic.wp_val_eq_mAlgOrdered_wp]
   simp
 
 universe v

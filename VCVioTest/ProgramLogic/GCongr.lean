@@ -74,7 +74,6 @@ example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞)
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
     (h : ∀ x ∈ support oa, f x ≤ g x) :
     Std.Internal.Do.wp oa f Lean.Order.bot ≤ Std.Internal.Do.wp oa g Lean.Order.bot := by
-  simp only [OracleComp.Quantitative.wp_eq_mAlgOrdered_wp]
   gcongr with x hx
   exact h x hx
 

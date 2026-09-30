@@ -104,17 +104,6 @@ noncomputable abbrev Triple (pre : ℝ≥0∞) (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) : Prop :=
   Std.Internal.Do.Triple oa pre post Lean.Order.bot
 
-/-! ## Internal alias
-
-`MAlgOrdered.wp` is `rfl`-equal to `wp _ _` on
-`OracleComp` via the `OracleComp.Quantitative.instWP` instance. The bridge `wp_eq_mAlgOrdered_wp`
-re-exposes this so existing `MAlgOrdered.wp_*` lemmas can be applied with
-a single rewrite. -/
-
-theorem wp_eq_mAlgOrdered_wp (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
-    wp oa post =
-      MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa post := rfl
-
 /-- Quantitative WP integrates a measurable assertion in the chosen output space. -/
 theorem wp_eq_lintegral [MeasurableSpace α] (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) (hpost : Measurable post) :
@@ -151,8 +140,8 @@ theorem triple_toLE
 /-! ## `wp` lemmas (against `wp _ _`) -/
 
 @[game_rule] theorem wp_pure (x : α) (post : α → ℝ≥0∞) :
-    wp (pure x : OracleComp spec α) post = post x := by
-  rw [wp_eq_mAlgOrdered_wp, MAlgOrdered.wp_pure]
+    wp (pure x : OracleComp spec α) post = post x :=
+  ExactWPMonad.wp_pure x post _
 
 @[game_rule] theorem wp_ite (c : Prop) [Decidable c]
     (oa ob : OracleComp spec α) (post : α → ℝ≥0∞) :
@@ -171,9 +160,8 @@ theorem triple_toLE
 @[game_rule] theorem wp_bind (oa : OracleComp spec α) (ob : α → OracleComp spec β)
     (post : β → ℝ≥0∞) :
     wp (oa >>= ob) post =
-      wp oa (fun x => wp (ob x) post) := by
-  simp only [wp_eq_mAlgOrdered_wp]
-  exact MAlgOrdered.wp_bind (m := OracleComp spec) (l := ℝ≥0∞) oa ob post
+      wp oa (fun x => wp (ob x) post) :=
+  ExactWPMonad.wp_bind oa ob post _
 
 @[game_rule] theorem wp_replicate_zero (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
     wp (oa.replicate 0) post = post [] := by
@@ -225,21 +213,14 @@ theorem triple_toLE
 @[gcongr low]
 theorem wp_mono (oa : OracleComp spec α) {post post' : α → ℝ≥0∞}
     (hpost : ∀ x, post x ≤ post' x) :
-    wp oa post ≤ wp oa post' := by
-  exact MAlgOrdered.wp_mono oa hpost
+    wp oa post ≤ wp oa post' :=
+  MeasureProgramLogic.Quantitative.wp_mono oa hpost
 
 /-- `wp` is monotone when the postconditions are ordered on the computation's support. -/
 @[gcongr]
 theorem wp_mono_of_support (oa : OracleComp spec α) {post post' : α → ℝ≥0∞}
     (hpost : ∀ x ∈ support oa, post x ≤ post' x) : wp oa post ≤ wp oa post' :=
   MeasureProgramLogic.Quantitative.wp_mono_of_support oa hpost
-
-/-- Support-aware comparison on PolyFun's canonical quantitative WP head. -/
-@[gcongr]
-theorem mAlgOrdered_wp_mono_of_support (oa : OracleComp spec α) {post post' : α → ℝ≥0∞}
-    (hpost : ∀ x ∈ support oa, post x ≤ post' x) :
-    MAlgOrdered.wp oa post ≤ MAlgOrdered.wp oa post' :=
-  wp_mono_of_support oa hpost
 
 /-- Finite postconditions over a finite result type have finite weakest precondition. -/
 @[aesop (rule_sets := [finiteness]) safe apply]
@@ -255,7 +236,6 @@ theorem wp_ne_top_of_finite [Finite α] (oa : OracleComp spec α) {post : α →
       wp oa (post ∘ f) := by
   simp [Function.comp_def]
 
-@[simp]
 theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :
     wp oa (fun _ ↦ c) = c :=
   MeasureProgramLogic.Quantitative.wp_const_of_oracle oa c
@@ -266,7 +246,7 @@ theorem wp_const (oa : OracleComp spec α) (c : ℝ≥0∞) :
 
 theorem wp_const_mul (oa : OracleComp spec α) (f : α → ℝ≥0∞) (c : ℝ≥0∞) :
     wp oa (fun x ↦ f x * c) = wp oa f * c := by
-  simpa only [wp_eq_mAlgOrdered_wp, mul_comm] using
+  simpa only [mul_comm] using
     (MeasureProgramLogic.Quantitative.wp_const_mul_of_oracle oa c f)
 
 @[game_rule] theorem wp_mul_const (oa : OracleComp spec α) (c : ℝ≥0∞) (f : α → ℝ≥0∞) :
@@ -307,15 +287,16 @@ theorem triple_conseq {pre pre' : ℝ≥0∞} {oa : OracleComp spec α}
       Triple pre' oa post' := fun h =>
   triple_ofLE
     (le_trans hpre (le_trans (triple_toLE h)
-      (MAlgOrdered.wp_mono (m := OracleComp spec) (l := ℝ≥0∞) oa hpost)))
+      (wp_mono oa hpost)))
 
 theorem triple_bind {pre : ℝ≥0∞} {oa : OracleComp spec α}
     {cut : α → ℝ≥0∞} {ob : α → OracleComp spec β} {post : β → ℝ≥0∞}
     (hoa : Triple pre oa cut)
     (hob : ∀ x, Triple (cut x) (ob x) post) :
     Triple pre (oa >>= ob) post :=
-  triple_ofLE (MAlgOrdered.triple_bind (m := OracleComp spec) (l := ℝ≥0∞)
-    (triple_toLE hoa) fun x => triple_toLE (hob x))
+  triple_ofLE <| by
+    rw [wp_bind]
+    exact le_trans (triple_toLE hoa) (wp_mono oa fun x => triple_toLE (hob x))
 
 theorem triple_bind_wp {pre : ℝ≥0∞} {oa : OracleComp spec α}
     {ob : α → OracleComp spec β} {post : β → ℝ≥0∞}
@@ -602,8 +583,8 @@ theorem triple_list_mapM {I : ℝ≥0∞}
 
 /-- The expectation algebra evaluates the identity assertion. -/
 lemma μ_eq_wp (oa : OracleComp spec ℝ≥0∞) : μ oa = wp oa (fun x ↦ x) := by
-  rw [wp_eq_mAlgOrdered_wp]
-  simp [MAlgOrdered.wp, μ]
+  change MAlgOrdered.μ oa = MAlgOrdered.μ (oa >>= fun x ↦ pure x)
+  rw [bind_pure]
 
 /-- Equal assertion-valued observations have equal quantitative WP. -/
 lemma wp_congr_evalDist_map {oa ob : OracleComp spec α} (post : α → ℝ≥0∞)

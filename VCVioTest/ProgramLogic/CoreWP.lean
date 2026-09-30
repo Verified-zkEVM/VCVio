@@ -74,8 +74,8 @@ open scoped OracleComp.Probabilistic
 
 example (oa : ProbComp Nat) (post : Nat → Prob) :
     (wp oa post EPost.Nil.mk).val =
-      MAlgOrdered.wp (l := ℝ≥0∞) oa (fun a => (post a).val) :=
-  OracleComp.Probabilistic.wp_val_eq_mAlgOrdered_wp oa post
+      OracleComp.ProgramLogic.wp oa (fun a => (post a).val) :=
+  OracleComp.Probabilistic.wp_val_eq_wp oa post
 
 end Probabilistic
 

@@ -19,7 +19,7 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 algebra to this interval gives a core `WPMonad` interpretation with probability-valued
 assertions. Enable it with `open scoped OracleComp.Probabilistic`.
 
-The underlying value agrees with the quantitative expectation by `wp_val_eq_mAlgOrdered_wp`.
+The underlying value agrees with the quantitative expectation by `wp_val_eq_wp`.
 -/
 
 @[expose] public section
@@ -37,7 +37,7 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
 /-- Oracle expectation preserves the probability bound. -/
 theorem wp_one_le (oa : OracleComp spec α) :
-    MAlgOrdered.wp oa (fun _ => (1 : ℝ≥0∞)) ≤ 1 :=
+    MAlgOrdered.μ (oa >>= fun _ => pure (1 : ℝ≥0∞)) ≤ 1 :=
   (OracleComp.ProgramLogic.wp_const oa 1).le
 
 /-- The expectation algebra restricted to probability-valued assertions. -/
@@ -50,9 +50,9 @@ noncomputable scoped instance instWP_prob :
   MAlgOrdered.toWPMonad
 
 /-- Forgetting the bound recovers quantitative expectation. -/
-theorem wp_val_eq_mAlgOrdered_wp (oa : OracleComp spec α) (post : α → Prob) :
+theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) :
     (Std.Internal.Do.wp oa post Lean.Order.bot).val =
-      MAlgOrdered.wp (m := OracleComp spec) (l := ℝ≥0∞) oa (fun a => (post a).val) :=
-  MeasureProgramLogic.Probabilistic.wp_val_eq_mAlgOrdered_wp oa post
+      OracleComp.ProgramLogic.wp oa (fun a => (post a).val) :=
+  MeasureProgramLogic.Probabilistic.wp_val oa post
 
 end OracleComp.Probabilistic

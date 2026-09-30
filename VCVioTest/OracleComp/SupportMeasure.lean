@@ -17,7 +17,7 @@ zero-mass possible answers. No discrete probability backend is imported.
 
 public section
 
-open MeasureTheory
+open MeasureTheory Std.Internal.Do
 open scoped ENNReal MeasureProgramLogic.Quantitative
 
 run_cmd do
@@ -36,17 +36,17 @@ variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
   {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
 
 example (mx : OracleComp spec α) (f g : α → ENNReal)
-    (hfg : ∀ x ∈ support mx, f x ≤ g x) : MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
+    (hfg : ∀ x ∈ support mx, f x ≤ g x) : wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   gcongr with x hx
   exact hfg x hx
 
 example (mx : OracleComp spec α) (f g : α → ENNReal)
-    (hfg : ∀ x ∈ support mx, f x ≤ g x) : MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
+    (hfg : ∀ x ∈ support mx, f x ≤ g x) : wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   grw [MeasureProgramLogic.Quantitative.wp_mono_of_support mx hfg]
 
 example (mx : OracleComp spec α) (f g : α → ENNReal) (c : ENNReal)
     (hfg : ∀ x ∈ support mx, f x ≤ c + g x) :
-    MAlgOrdered.wp mx f ≤ c + MAlgOrdered.wp mx g :=
+    wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot :=
   MeasureProgramLogic.Quantitative.wp_le_const_add_of_support mx hfg
 
 end Generic

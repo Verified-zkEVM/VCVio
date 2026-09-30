@@ -341,9 +341,7 @@ def runVCGenStep : TacticM Bool := do
       (refine Std.Internal.Do.Triple.intro ?_
        repeat intro _
        simp [Lean.Order.PartialOrder.rel, MonadLift.monadLift,
-         OracleComp.Quantitative.wp_eq_mAlgOrdered_wp,
-         OracleComp.Quantitative.wp_eq_mAlgOrdered_wp_epost,
-         MAlgOrdered.wp_bind, MAlgOrdered.wp_pure, MAlgOrdered.wp_map,
+         ExactWPMonad.wp_bind, ExactWPMonad.wp_pure, ExactWPMonad.wp_map,
          one_mul, mul_one]))) then
     if (← getGoals).isEmpty then
       return true

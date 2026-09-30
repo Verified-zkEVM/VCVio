@@ -275,58 +275,58 @@ theorem wp_ReaderT_run_read_layer' {m : Type u → Type v} {Pred EPred : Type u}
       Std.Internal.Do.wp (pure r : m ρ) (fun a : ρ => post a r) epost :=
   rfl
 
-theorem mAlgOrdered_wp_OptionT_run_StateT_get {ι : Type u} {spec : OracleSpec ι}
+theorem wp_OptionT_run_StateT_get {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {σ : Type} (s : σ)
     (post : σ → σ → ENNReal)
     (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
-    MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+    OracleComp.ProgramLogic.wp
       (((StateT.get : StateT σ (OptionT (OracleComp spec)) σ).run s).run)
       (epost.pushOption (fun p : σ × σ => post p.1 p.2)) = post s s := by
-  change MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+  change OracleComp.ProgramLogic.wp
       (pure (some (s, s)) : OracleComp spec (Option (σ × σ)))
       (epost.pushOption (fun p : σ × σ => post p.1 p.2)) = post s s
-  rw [MAlgOrdered.wp_pure]
+  rw [OracleComp.ProgramLogic.wp_pure]
 
-theorem mAlgOrdered_wp_OptionT_run_StateT_set {ι : Type u} {spec : OracleSpec ι}
+theorem wp_OptionT_run_StateT_set {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec]
     {σ : Type} (s s' : σ)
     (post : PUnit → σ → ENNReal)
     (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
-    MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+    OracleComp.ProgramLogic.wp
       (((StateT.set s' : StateT σ (OptionT (OracleComp spec)) PUnit).run s).run)
       (epost.pushOption (fun p : PUnit × σ => post p.1 p.2)) = post PUnit.unit s' := by
-  change MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+  change OracleComp.ProgramLogic.wp
       (pure (some (PUnit.unit, s')) : OracleComp spec (Option (PUnit × σ)))
       (epost.pushOption (fun p : PUnit × σ => post p.1 p.2)) = post PUnit.unit s'
-  rw [MAlgOrdered.wp_pure]
+  rw [OracleComp.ProgramLogic.wp_pure]
 
-theorem mAlgOrdered_wp_OptionT_run_lift {ι : Type u} {spec : OracleSpec ι}
+theorem wp_OptionT_run_lift {ι : Type u} {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec] {α : Type}
     (oa : OracleComp spec α) (post : α → ENNReal)
     (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
-    MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) (OptionT.lift oa).run
+    OracleComp.ProgramLogic.wp (OptionT.lift oa).run
       (epost.pushOption post) =
-        MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa post := by
-  change MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+        OracleComp.ProgramLogic.wp oa post := by
+  change OracleComp.ProgramLogic.wp
       (oa >>= fun a => pure (some a) : OracleComp spec (Option α))
       (epost.pushOption post) =
-    MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa post
-  rw [MAlgOrdered.wp_bind]
-  refine congrArg (MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa) ?_
+    OracleComp.ProgramLogic.wp oa post
+  rw [OracleComp.ProgramLogic.wp_bind]
+  refine congrArg (OracleComp.ProgramLogic.wp oa) ?_
   funext a
-  rw [MAlgOrdered.wp_pure]
+  rw [OracleComp.ProgramLogic.wp_pure]
 
-theorem mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift {ι : Type u}
+theorem wp_OptionT_run_StateT_monadLift_lift {ι : Type u}
     {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec]
     {σ α : Type} (oa : OracleComp spec α) (s : σ) (post : α → σ → ENNReal)
     (epost : Std.Internal.Do.EPost.Cons ENNReal Std.Internal.Do.EPost.Nil) :
-    MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+    OracleComp.ProgramLogic.wp
       (((MonadLift.monadLift (OptionT.lift oa) :
         StateT σ (OptionT (OracleComp spec)) α).run s).run)
       (epost.pushOption (fun p : α × σ => post p.1 p.2)) =
-        MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa (fun a => post a s) := by
-  simp [MonadLift.monadLift, OptionT.run_lift, MAlgOrdered.wp_map,
+        OracleComp.ProgramLogic.wp oa (fun a => post a s) := by
+  simp [MonadLift.monadLift, OptionT.run_lift,
     Std.Internal.Do.EPost.Cons.pushOption]
 
 theorem wp_StateT_OptionT_monadLift_lift {ι : Type u} {spec : OracleSpec ι}
@@ -336,28 +336,28 @@ theorem wp_StateT_OptionT_monadLift_lift {ι : Type u} {spec : OracleSpec ι}
     Std.Internal.Do.wp
       (MonadLift.monadLift (OptionT.lift oa) : StateT σ (OptionT (OracleComp spec)) α)
       post epost =
-        fun s => MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa
+        fun s => OracleComp.ProgramLogic.wp oa
           (fun a => post a s) := by
   funext s
-  change MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+  change OracleComp.ProgramLogic.wp
       (((MonadLift.monadLift (OptionT.lift oa) :
         StateT σ (OptionT (OracleComp spec)) α).run s).run)
       (epost.pushOption (fun p : α × σ => post p.1 p.2)) =
-        MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa (fun a => post a s)
-  exact mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift (spec := spec) oa s post epost
+        OracleComp.ProgramLogic.wp oa (fun a => post a s)
+  exact wp_OptionT_run_StateT_monadLift_lift (spec := spec) oa s post epost
 
-theorem mAlgOrdered_wp_OptionT_run_StateT_monadLift_lift_map {ι : Type u}
+theorem wp_OptionT_run_StateT_monadLift_lift_map {ι : Type u}
     {spec : OracleSpec ι}
     [OracleSpec.IsMeasureSpec spec]
     {σ α β : Type} (oa : OracleComp spec α) (s : σ) (f : α × σ → β)
     (post : β → ENNReal) (nonePost : ENNReal) :
-    MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal)
+    OracleComp.ProgramLogic.wp
       (((MonadLift.monadLift (OptionT.lift oa) :
         StateT σ (OptionT (OracleComp spec)) α).run s).run)
       (fun o => match Option.map f o with | some b => post b | none => nonePost) =
-        MAlgOrdered.wp (m := OracleComp spec) (l := ENNReal) oa
+        OracleComp.ProgramLogic.wp oa
           (fun a => post (f (a, s))) := by
-  simp [MonadLift.monadLift, OptionT.run_lift, MAlgOrdered.wp_map]
+  simp [MonadLift.monadLift, OptionT.run_lift]
 
 theorem wp_ReaderT_map_layer {m : Type u → Type v} {Pred EPred : Type u}
     [Monad m] [Std.Internal.Do.Assertion Pred] [Std.Internal.Do.Assertion EPred]
