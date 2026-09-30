@@ -16,7 +16,9 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 # KEM + DEM Composition
 
 This file defines the textbook KEM+DEM public-key encryption construction and the proof-ladders A1
-reduction skeleton against the repo's existing KEM and one-time IND-CPA interfaces.
+reduction skeleton against the repo's existing KEM and one-time IND-CPA interfaces. Correctness of
+the composition follows from that of its components, on reachable outputs and with probability
+one, in any monad with the corresponding semantics.
 -/
 
 @[expose] public section
@@ -46,12 +48,11 @@ def composeWithDEM [Monad m]
 
 section Correct
 
-variable [DecidableEq K] [DecidableEq M] [Monad m] [LawfulMonad m] [MonadAttach m]
-  [ExactMonadAttach m]
+variable [DecidableEq K] [DecidableEq M] [Monad m] [LawfulMonad m]
 
 /-- Reachable KEM and DEM round trips that always succeed make every reachable round trip of the
 composed scheme succeed. -/
-theorem support_correctnessExperiment_composeWithDEM
+theorem support_correctnessExperiment_composeWithDEM [MonadAttach m] [ExactMonadAttach m]
     (kem : KEMScheme m K PK SK CKEM) (dem : DEMScheme m K M CDEM)
     (hkem : ∀ b ∈ support kem.correctnessExperiment, b = true)
     (hdem : ∀ k msg, ∀ b ∈ support (dem.correctnessExperiment k msg), b = true)
@@ -76,23 +77,32 @@ theorem support_correctnessExperiment_composeWithDEM
     exact ⟨c₂, hc₂, m', hm', rfl⟩
   simpa using hdem k msg _ hmem
 
-/-- Perfect correctness composes for oracle computations whose answer measures give every
-response positive mass: a KEM and an externally keyed DEM that each succeed with probability `1`
-give a composed scheme that succeeds with probability `1`. Uniform answer measures supply the
-full-support hypothesis through `OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos`. -/
-theorem perfectlyCorrect_composeWithDEM {ι : Type} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec]
-    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
-    (kem : KEMScheme (OracleComp spec) K PK SK CKEM) (dem : DEMScheme (OracleComp spec) K M CDEM)
-    (hkem : 𝒟[kem.correctnessExperiment] {true} = 1)
-    (hdem : ∀ k : K, ∀ msg : M, 𝒟[dem.correctnessExperiment k msg] {true} = 1) :
-    ∀ msg, 𝒟[(kem.composeWithDEM dem).correctnessExperiment msg] {true} = 1 := by
-  have key (mx : OracleComp spec Bool) : 𝒟[mx] {true} = 1 ↔ ∀ b ∈ support mx, b = true := by
-    simpa only [Set.ofPred_eq_eq_singleton] using
-      evalDist_apply_setOf_eq_one_iff_forall_mem_support_of_fullSupport hfull mx (· = true)
-  intro msg
-  exact (key _).2 <| support_correctnessExperiment_composeWithDEM kem dem ((key _).1 hkem)
-    (fun k msg => (key _).1 (hdem k msg)) msg
+/-- Perfect correctness composes under any lawful measure semantics: a KEM and an externally
+keyed DEM that each succeed with probability `1` give a composed scheme that succeeds with
+probability `1`. -/
+theorem perfectlyCorrect_composeWithDEM [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    (kem : KEMScheme m K PK SK CKEM) (dem : DEMScheme m K M CDEM)
+    (hkem : Pr{let b ← kem.correctnessExperiment}[b = true] = 1)
+    (hdem : ∀ k msg, Pr{let b ← dem.correctnessExperiment k msg}[b = true] = 1) (msg : M) :
+    Pr{let b ← (kem.composeWithDEM dem).correctnessExperiment msg}[b = true] = 1 := by
+  simp only [AsymmEncAlg.correctnessExperiment, composeWithDEM, KEMScheme.correctnessExperiment,
+    DEMScheme.correctnessExperiment, bind_assoc, pure_bind, expect_norm, decide_eq_true_eq]
+    at hkem hdem ⊢
+  refine wp_eq_one_of_prEvent_eq_one kem.keygen
+    (prEvent_eq_one_of_wp_eq_one _ (fun _ => wp_le_of_forall_le _ fun _ => prEvent_le_one _) hkem)
+    (fun keys hkeys => ?_) fun _ => wp_le_of_forall_le _ fun _ => wp_le_of_forall_le _ fun _ =>
+      wp_le_of_forall_le _ fun _ => prEvent_le_one _
+  refine wp_eq_one_of_prEvent_eq_one (kem.encaps keys.1)
+    (prEvent_eq_one_of_wp_eq_one _ (fun _ => prEvent_le_one _) hkeys)
+    (fun ck hck => ?_) fun _ => wp_le_of_forall_le _ fun _ => wp_le_of_forall_le _ fun _ =>
+      prEvent_le_one _
+  refine wp_eq_one_of_prEvent_eq_one (dem.encrypt ck.2 msg)
+    (prEvent_eq_one_of_wp_eq_one _ (fun _ => prEvent_le_one _) (hdem ck.2 msg))
+    (fun c hc => ?_) fun _ => wp_le_of_forall_le _ fun _ => prEvent_le_one _
+  refine wp_eq_one_of_prEvent_eq_one (kem.decaps keys.2 ck.1) hck (fun k hk => ?_)
+    fun _ => prEvent_le_one _
+  subst hk
+  simpa only [expect_norm, Option.some.injEq] using hc
 
 end Correct
 

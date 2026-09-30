@@ -17,8 +17,10 @@ import Mathlib.MeasureTheory.Integral.Lebesgue.Sub
 Union bounds, event splitting, and conditioning on a common draw are stated for events observed
 in `Prop`, so intermediate types need no measurable-space arguments in the public statements. The
 common draw may lose mass; lower bounds ask for its losslessness as the trivially true event.
-Bounds that only need to hold on structurally reachable outputs go through core attachment.
-Conditional independent draws bound the squared probability of a single event.
+An observation bounded by one has expectation one exactly when it equals one almost surely, which
+passes a probability-one event through the nested normal form of a bind. Bounds that only need to
+hold on structurally reachable outputs go through core attachment. Conditional independent draws
+bound the squared probability of a single event.
 -/
 
 public section
@@ -277,6 +279,51 @@ theorem prEvent_bind_le_prEvent_add (mx : m α) (f : α → m β)
     (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 end conditioning
+
+/-! ## Conditioning on a probability-one event
+
+An observation bounded by one has expectation one exactly when it equals one almost surely. In the
+nested normal form of an event, a probability-one event of the whole computation is a
+probability-one event of the first draw under which every continuation's event has probability
+one, with no losslessness or support hypothesis on the draw. -/
+
+section probabilityOne
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
+
+/-- An observation bounded by one that equals one wherever a probability-one event holds has
+expectation one. -/
+theorem wp_eq_one_of_prEvent_eq_one (mx : m α) {q : α → Prop} {g : α → ℝ≥0∞}
+    (hq : Pr{let x ← mx}[q x] = 1) (hg : ∀ x, q x → g x = 1) (hg1 : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g = 1 :=
+  le_antisymm (wp_le_of_forall_le mx hg1) <| hq.symm.trans_le <|
+    MeasureProgramLogic.wp_mono mx fun x => by
+      by_cases hx : q x <;> simp [propInd, hx, hg]
+
+/-- An observation bounded by one with expectation one equals one almost surely. -/
+theorem prEvent_eq_one_of_wp_eq_one (mx : m α) {g : α → ℝ≥0∞} (hg : ∀ x, g x ≤ 1)
+    (h : wp⟦mx⟧ g = 1) : Pr{let x ← mx}[g x = 1] = 1 := by
+  let : MeasurableSpace α := ⊤
+  rw [MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete] at h
+  have hmass : 𝒟[mx] Set.univ = 1 :=
+    le_antisymm (evalDist_apply_univ_le_one mx) <| by
+      calc (1 : ℝ≥0∞) = ∫⁻ x, g x ∂𝒟[mx] := h.symm
+        _ ≤ ∫⁻ _, 1 ∂𝒟[mx] := lintegral_mono hg
+        _ = 𝒟[mx] Set.univ := by simp
+  have : IsProbabilityMeasure 𝒟[mx] := ⟨hmass⟩
+  rw [prEvent_eq_evalDist_of_discrete, ← ae_iff_prob_eq_one Measurable.of_discrete]
+  exact ae_eq_of_ae_le_of_lintegral_le (Filter.Eventually.of_forall hg)
+    (ne_top_of_le_ne_top ENNReal.one_ne_top h.le) measurable_const.aemeasurable (by simp [h])
+
+/-- An observation bounded by one has expectation one exactly when it equals one almost
+surely. -/
+theorem wp_eq_one_iff_prEvent_eq_one (mx : m α) {g : α → ℝ≥0∞} (hg : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g = 1 ↔ Pr{let x ← mx}[g x = 1] = 1 :=
+  ⟨prEvent_eq_one_of_wp_eq_one mx hg,
+    fun h => wp_eq_one_of_prEvent_eq_one mx h (fun _ hx => hx) hg⟩
+
+end probabilityOne
 
 /-! ## Reachable continuations through core attachment
 
