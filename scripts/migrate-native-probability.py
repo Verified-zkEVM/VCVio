@@ -63,7 +63,7 @@ RENAMES: dict[str, str] = {
     "AdvBound.of_tvDist": "AdvBound.of_etvDist",
     "AdvBound.of_measureETVDist": "AdvBound.of_etvDist",
     "AdvBound.of_gameEquiv": "AdvBound.of_evalDistEq",
-    "wpProp_iff_probEvent_eq_one": "wpProp_iff_prEvent_eq_one",
+    "wpProp_iff_probEvent_eq_one": "OracleComp.Necessary.prEvent_eq_one_iff_triple",
     # Failure probability.
     "probFailure": "prFail",
     "probFailure_le_one": "prFail_le_one",
@@ -291,9 +291,6 @@ REPORT_NAMES: dict[str, str] = {
         "the per-query hypothesis is now `=ᵈ` (see *Query and handler laws*)",
     "evalDist_liftM_query":
         "now gives `(toMeasure t).trim le_top` (see *Query and handler laws*)",
-    "prEvent_bind_congr_of_support":
-        "now stated for continuations `f g : α → m Prop`; pass `_ _ _ h` and let unification "
-        "choose them",
     "prEvent_le_one": "now takes the event computation `mx : m Prop` alone",
     "evalDist_apply_singleton":
         "targets the removed `Pr[= x | mx]`; `prEvent_eq_evalDist_singleton` relates "
@@ -335,7 +332,6 @@ MODULES: dict[str, list[str]] = {
     "VCVio.EvalDist.MeasureTVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
     "VCVio.ProgramLogic.Relational.SimulateQ.Epsilon":
         ["VCVio.ProgramLogic.Relational.SimulateQ.UntilBad"],
-    "VCVio.EvalDist.Expectation": ["VCVio.ProgramLogic.Unary.HoareTriple"],
     "VCVio.EvalDist.ExpectationMeasure": ["VCVio.ProgramLogic.Unary.HoareTriple"],
     "VCVio.EvalDist.RenyiDivergence": ["ToMathlib.Probability.Divergence.Renyi"],
     "ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence":
@@ -403,9 +399,16 @@ LEGACY_HINTS: dict[str, str] = {
     "tsum_probOutput_eq_one'": "`OracleComp.tsum_prEvent_eq_one`",
     "tsum_probOutput_le_one": "`OracleComp.tsum_prEvent_le_one`",
     "probEvent_bind_eq_expectedValue": "`prEvent_bind_eq_lintegral`",
-    "probOutput_def": "`prEvent_def`",
-    "probEvent_def": "`prEvent_def`",
-    "evalSPMF_def": "`𝒟[mx]` is primitive; unfold events with `prEvent_def`",
+    "probOutput_def": "`prEvent_eq_evalDist_singleton` (an output's probability is its singleton's "
+                      "measure)",
+    "probEvent_def": "`prEvent_eq_evalDist_of_discrete`, or `prEvent_eq_evalDist_map` on the output "
+                     "measure",
+    "evalSPMF_def": "`𝒟[mx]` is primitive; an event is an expectation, and "
+                    "`prEvent_eq_evalDist_of_discrete` reaches the measure",
+    "prEvent_bind_congr_of_support":
+        "`prEvent_bind_congr` when the continuations' events agree at every `x`, or "
+        "`wp_congr_of_support` on the `expect_norm` normal form when they agree on "
+        "`support mx`",
     "evalSPMF_bind": "`evalDist_bind` or `evalDist_bind_of_discrete`",
     "evalSPMF_map": "`evalDist_map`",
     "evalSPMF_pure": "`evalDist_pure`",
@@ -440,10 +443,13 @@ LEGACY_HINTS: dict[str, str] = {
     "probOutput_congr": "`prEvent_congr_of_support`",
     "probEvent_congr'": "`prEvent_congr_of_support`",
     "probOutput_bind_congr'": "`prEvent_bind_congr` or `evalDist_bind_congr_of_support`",
-    "probEvent_bind_congr'": "`prEvent_bind_congr` or `prEvent_bind_congr_of_support`",
+    "probEvent_bind_congr'": "`prEvent_bind_congr`, or `wp_congr_of_support` on the `expect_norm` "
+                             "normal form",
     "probOutput_bind_bind_swap": "`prEvent_bind_bind_swap`",
     "probEvent_bind_bind_swap": "`prEvent_bind_bind_swap`",
-    "probOutput_bind_const": "`prEvent_bind_const` or `evalDist_bind_const`",
+    "probOutput_bind_const": "`evalDist_bind_const` (`OracleComp.evalDist_bind_const` for a "
+                             "lossless oracle computation); for an event, "
+                             "`simp only [expect_norm, wp_const]`",
 }
 
 # Legacy forms left for a person, with the guide section that converts them.

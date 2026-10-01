@@ -44,6 +44,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
+| `spec₁ ++ₒ spec₂` | `spec₁ + spec₂` |
 | `GameEquiv g₁ g₂`, `g₁ ≡ₚ g₂`, `letI : MeasurableSpace α := ⊤; 𝒟[g₁] = 𝒟[g₂]` | `g₁ =ᵈ g₂` (`EvalDistEq`); `EvalDistEq.of_evalDist_eq` and `evalDistEq_iff_evalDist_eq` relate it to output measures |
 
 ## Classes and binders
@@ -92,7 +93,7 @@ Replacement lemmas keep the removed name with the probability head replaced:
 
 | Removed name part | Replacement name part | Example |
 |---|---|---|
-| `open scoped OracleComp.Qualitative` / `.Angelic` / `.Quantitative` | `open scoped OracleComp.Necessary` / `.Possible` / `.Lower` (the readings are named by what a triple states; `OracleComp.Upper` and `.Probabilistic` are unchanged; `OracleComp.Qualitative.Dispatch`, … follow) |
+| `open scoped OracleComp.Qualitative` / `.Angelic` / `.Quantitative` | `open scoped OracleComp.Necessary` / `.Possible` / `.Lower` (the readings are named by what a triple states; `OracleComp.Upper` and `.Probabilistic` are unchanged, and the `Dispatch` scopes follow) |
 | `open scoped ExpectationWP.Quantitative` | `open scoped ExpectationWP.Lower` |
 | `exp_norm` (tactic) | `expect_arith` |
 | `simp only [game_rule]`, `@[game_rule]` | `simp only [expect_norm, expect_eval]`; loop unfoldings, values and simulation steps are `@[expect_eval]`, linearity is `@[expect_arith]` |
@@ -109,7 +110,8 @@ Other renames: `MeasureProgramLogic` → `ExpectationWP` (`measureWP` → `wpMon
 family `_plus_probEvent_bad` → `_add_prEvent_bad` (for example
 `advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved`) and `tvDist_simulateQ_…` →
 the `etvDist_simulateQ_run…` lemmas in `Relational/SimulateQ/UntilBad.lean`;
-`wpProp_iff_probEvent_eq_one` → `wpProp_iff_prEvent_eq_one`.
+`wpProp_iff_probEvent_eq_one` → `OracleComp.Necessary.prEvent_eq_one_iff_triple` (a core triple in
+the necessary reading in place of the proposition-valued weakest precondition).
 
 The bridges between the two representations have no replacement; state the measure fact
 directly:
@@ -231,7 +233,7 @@ fact now.
 | `VCVio.EvalDist.TVDist`, `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
 | `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
-| `VCVio.EvalDist.Expectation`, `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `VCVio.EvalDist.Defs.Measure.Core` (`∫⁻` laws) |
+| `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `VCVio.EvalDist.Defs.Measure.Core` (`∫⁻` laws) |
 | `VCVio.EvalDist.RenyiDivergence`, `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`, `ToMathlib.Probability.Divergence.RenyiDiscrete`, `ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym` | `ToMathlib.Probability.Divergence.Renyi` |
 | `ToMathlib.Probability.ProbabilityMassFunction.TotalVariation` | `ToMathlib.MeasureTheory.Measure.TotalVariation`; `ToMathlib.Probability.Divergence.RenyiTotalVariation` for the Rényi comparisons |
 | `VCVio.StateSeparating.DistEquiv` | `VCVio.StateSeparating.MeasureDistEquiv` |
@@ -272,7 +274,7 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | `prEvent_bind_of_discrete`, a `lintegral` over the events of `f x` | the notation gives the expectation `wp⟦mx⟧ fun x => Pr{let y ← f x}[p y]`; `ExpectationWP.wp_eq_lintegral mx _ .of_discrete` gives the integral |
 | `prEvent_pure_prop` | `Pr{let y ← pure a}[p y]` elaborates to `𝟙⟦p a⟧`; `propInd_eq_ite` gives the `if` form |
 | `prEvent_eq_wp`, `wp_propInd`, `OracleComp.wp_prEvent_swap` | an event is an expectation, so the first two are identities (drop the rewrite) and `OracleComp.wp_swap` covers the third |
-| `OracleComp.ProgramLogic.wp oa post` | `wp⟦oa⟧ post`, core's `wp` under the measure interpretation; `OracleComp.ProgramLogic.propInd` is `propInd` |
+| `OracleComp.ProgramLogic.wp oa post`, `OracleComp.ProgramLogic.propInd` | `wp⟦oa⟧ post`, core's `wp` under the measure interpretation; `propInd` at the root |
 | `ExpectationWP.Lower.wp_*` | `ExpectationWP.wp_*`, stated on `wp⟦·⟧` and without measurability hypotheses except for `wp_eq_lintegral`, `wp_mono_ae`, `wp_iSup` and the `_mass` bounds |
 | `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
 | `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
