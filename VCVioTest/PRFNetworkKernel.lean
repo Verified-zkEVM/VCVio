@@ -37,7 +37,7 @@ theorem noisy_joint_law {S : Type}
     (noisy impl operation).run state =ᵈ (impl operation).run state :=
   EvalDistEq.of_forall_prEvent_eq fun p => by
     change wp⟦($ᵗ Bool) >>= fun _ => (impl operation).run state⟧ (predInd p) = _
-    rw [prEvent_bind, MeasureProgramLogic.wp_const_of_oracle]
+    rw [prEvent_bind, ExpectationWP.wp_const_of_oracle]
 
 /-- The full three-term packet reduction admits a concretely changed implementation. -/
 example (adversary : UnlinkAdversary Bool Bool Bool) (qReader qTag : ℕ)

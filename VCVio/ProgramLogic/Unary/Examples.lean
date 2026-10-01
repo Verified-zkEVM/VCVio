@@ -28,7 +28,7 @@ variable {α β : Type}
 
 example (x : α) (post : α → ℝ≥0∞) :
     wp⟦(pure x : OracleComp spec α)⟧ post = post x :=
-  MeasureProgramLogic.wp_pure x post
+  ExpectationWP.wp_pure x post
 
 example (pre : ℝ≥0∞) (oa : OracleComp spec α) (ob : α → OracleComp spec β)
     (cut : α → ℝ≥0∞) (post : β → ℝ≥0∞)

@@ -223,7 +223,7 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
       _ = _ := by simp only [Functor.map_map, Function.comp_def]
   have hsuccess : Pr{let output ← main}[observe output = some value] =
       Pr{let split ← source; let output ← kernel split}[output = some value] := by
-    rw [← MeasureProgramLogic.wp_bind, ← hprogram, prEvent_map]
+    rw [← ExpectationWP.wp_bind, ← hprogram, prEvent_map]
   rw [hsuccess]
   refine (prEvent_bind_sq_le_bind_pair source kernel (· = some value)).trans_eq ?_
   let observeView := fun view : PFunctor.FreeM.Cursor.ForkView i main n ↦
@@ -234,7 +234,7 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
     unfold observedForkPair
     rw [← splitAtValid_bind_completeFork_oracleComp, map_bind]
   rw [hfork, prEvent_bind]
-  refine MeasureProgramLogic.wp_congr source ?_
+  refine ExpectationWP.wp_congr source ?_
   rintro ⟨split, hvalid⟩
   cases split with
   | missing path =>
@@ -244,7 +244,7 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
         PFunctor.FreeM.Cursor.Split.completeFork_missing, hne]
   | found occurrence =>
       rw [map_completeFork_found_oracleComp]
-      simp only [kernel, Cursor.complete, prEvent_bind, MeasureProgramLogic.wp_map,
+      simp only [kernel, Cursor.complete, prEvent_bind, ExpectationWP.wp_map,
         PFunctor.FreeM.Cursor.Split.complete_found,
         PFunctor.FreeM.Cursor.Occurrence.completePath, Cursor.completeOccurrence,
         ofFreeM_map, Functor.map_map, predInd_apply, Option.some.injEq, Prod.mk.injEq,

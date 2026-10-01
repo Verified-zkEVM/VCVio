@@ -234,7 +234,7 @@ private lemma expectedQueryCount_seededForkWithSeedValue_le_aux
     wp⟦$ᵗ spec.Range i⟧ (fun u => expectedCost (seededForkWithSeedValue main qb i cf seed u)
       CostModel.unit (fun n : ℕ => (n : ENNReal))) ≤ qb i := by
   let : Fintype ι := Fintype.ofFinite ι
-  rw [← MeasureProgramLogic.wp_const_of_oracle ($ᵗ spec.Range i) (qb i : ENNReal)]
+  rw [← ExpectationWP.wp_const_of_oracle ($ᵗ spec.Range i) (qb i : ENNReal)]
   refine wp_mono _ fun u => ?_
   have hbound := isPerIndexQueryBound_seededForkWithSeedValue
     (main := main) (qb := qb) (i := i) (cf := cf) (u := u) hmain hseed
@@ -259,7 +259,7 @@ theorem expectedQueryCount_seededForkWithSeedValue_le
       intro seed hseed
       exact expectedQueryCount_seededForkWithSeedValue_le_aux main qb i cf hmain
         (generateSeed_covers_queryBound (spec := spec) qb js hjs hseed)
-    _ = _ := MeasureProgramLogic.wp_const_of_oracle _ _
+    _ = _ := ExpectationWP.wp_const_of_oracle _ _
 
 section forkRuntime
 
@@ -340,20 +340,20 @@ private lemma prEvent_noGuard_le_fork_add_collision
           return (a, (σ i)[s]?, u))}[cf r.1 = some s ∧ r.2.1 = some r.2.2] := by
   unfold seededFork
   simp only [expect_norm]
-  rw [← MeasureProgramLogic.wp_add]
-  refine MeasureProgramLogic.wp_mono _ fun σ => ?_
-  rw [← MeasureProgramLogic.wp_add]
-  refine MeasureProgramLogic.wp_mono _ fun a => ?_
+  rw [← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_mono _ fun σ => ?_
+  rw [← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_mono _ fun a => ?_
   by_cases hcf : cf a = some s
   · simp only [hcf]
-    rw [prEvent_bind, ← MeasureProgramLogic.wp_add]
-    refine MeasureProgramLogic.wp_mono _ fun u => ?_
+    rw [prEvent_bind, ← ExpectationWP.wp_add]
+    refine ExpectationWP.wp_mono _ fun u => ?_
     by_cases hu : (σ i)[s]? = some u
     · simp only [hu, predInd_apply, true_and, propInd_true]
       exact (prEvent_le_one _).trans le_add_self
     · simp only [hu, ↓reduceIte, predInd_apply, and_false, propInd_false, add_zero,
         prEvent_bind]
-      refine MeasureProgramLogic.wp_mono _ fun b => ?_
+      refine ExpectationWP.wp_mono _ fun b => ?_
       by_cases hb : cf b = some s <;> simp [hb, hcf]
   · refine (le_of_eq ?_).trans zero_le
     simp [hcf]
@@ -413,7 +413,7 @@ private lemma prEvent_noGuard_eq_pair (s : Fin (qb i + 1)) :
         let b ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] := by
   simp only [expect_norm]
-  refine MeasureProgramLogic.wp_congr _ fun σ => MeasureProgramLogic.wp_congr _ fun a => ?_
+  refine ExpectationWP.wp_congr _ fun σ => ExpectationWP.wp_congr _ fun a => ?_
   let : MeasurableSpace α := ⊤
   rw [← prEvent_bind]
   exact (EvalDistEq.of_evalDist_eq
@@ -434,9 +434,9 @@ private lemma prEvent_collision_le [Fintype (spec.Range i)] (s : Fin (qb i + 1))
   rw [(EvalDistEq.of_evalDist_eq
       (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq]
   simp only [expect_norm]
-  rw [MeasureProgramLogic.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
+  rw [ExpectationWP.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
       Measurable.of_discrete,
-    MeasureProgramLogic.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
+    ExpectationWP.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
       Measurable.of_discrete,
     div_eq_mul_inv, ← MeasureTheory.lintegral_mul_const' _ _ (ENNReal.inv_ne_top.mpr (by simp))]
   refine MeasureTheory.lintegral_mono fun σ => ?_

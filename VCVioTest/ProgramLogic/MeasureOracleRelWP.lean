@@ -83,10 +83,10 @@ noncomputable local instance : IsMeasureSpec weightedSpec where
 
 example : MAlgRelOrdered.RelWP (weightedSpec.query 0 : OracleComp weightedSpec Bool)
     (pure false : OracleComp weightedSpec Bool) (· = ·) := by
-  simp only [relWP_iff_couplingPost, CouplingPost, MeasureProgramLogic.RelWP,
+  simp only [relWP_iff_couplingPost, CouplingPost, ExpectationWP.RelWP,
     OracleComp.evalDist_liftM_query, MeasureTheory.trim_eq_self, evalDist_pure,
     IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure]
-  exact MeasureProgramLogic.couplingPost_refl (MeasureTheory.Measure.dirac false)
+  exact ExpectationWP.couplingPost_refl (MeasureTheory.Measure.dirac false)
 
 /-- The zero-mass reachable answer `true` does not obstruct the coupling, so the anchoring rules
 relating couplings to structural support need uniform response measures. -/
@@ -96,10 +96,10 @@ example : RelTriple (pure false : OracleComp weightedSpec Bool)
   refine ⟨fun _ ↦ ?_, by simp⟩
   have h : MAlgRelOrdered.RelWP (weightedSpec.query 0 : OracleComp weightedSpec Bool)
       (pure false : OracleComp weightedSpec Bool) (· = ·) := by
-    simp only [relWP_iff_couplingPost, CouplingPost, MeasureProgramLogic.RelWP,
+    simp only [relWP_iff_couplingPost, CouplingPost, ExpectationWP.RelWP,
       OracleComp.evalDist_liftM_query, MeasureTheory.trim_eq_self, evalDist_pure,
       IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure]
-    exact MeasureProgramLogic.couplingPost_refl (MeasureTheory.Measure.dirac false)
+    exact ExpectationWP.couplingPost_refl (MeasureTheory.Measure.dirac false)
   exact relTriple_iff_relWP.1 (relTriple_post_mono (relTriple_symm (relTriple_iff_relWP.2 h))
     fun _ _ h ↦ h.symm)
 

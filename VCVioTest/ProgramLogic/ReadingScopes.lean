@@ -12,7 +12,7 @@ public import VCVio.ProgramLogic.Tactics
 
 The structural reading is the global `WP` instance of `OracleComp`. The other readings are
 scoped, each registering its `WPMonad` and a direct `WP` instance at priority `1100`, above the
-generic measure scopes (`MeasureProgramLogic.Quantitative`, `MeasureProgramLogic.Probabilistic`,
+generic measure scopes (`ExpectationWP.Quantitative`, `ExpectationWP.Probabilistic`,
 priority `1050`) and below the per-call `Dispatch` scopes (`1200`). Core's assertion carriers are
 output parameters, so exactly one reading is live per program type in a scope; these checks pin
 which one it is under each combination of open scopes, on `ProbComp`.
@@ -59,7 +59,7 @@ end Quantitative
 /-! ## The generic measure scope alone -/
 
 section GenericMeasure
-open scoped MeasureProgramLogic.Quantitative
+open scoped ExpectationWP.Quantitative
 
 noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ EStack⟨⟩ := inferInstance
 
@@ -75,7 +75,7 @@ end GenericMeasure
 The reading of `OracleComp` outranks the generic measure scope's direct instance. -/
 
 section AngelicBesideGeneric
-open scoped MeasureProgramLogic.Quantitative OracleComp.Angelic
+open scoped ExpectationWP.Quantitative OracleComp.Angelic
 
 noncomputable example : WP (ProbComp Bool) Bool Prop EStack⟨⟩ := inferInstance
 
@@ -91,7 +91,7 @@ example (oa : ProbComp Bool) (post : Bool → Prop) :
 end AngelicBesideGeneric
 
 section UpperBesideGeneric
-open scoped MeasureProgramLogic.Quantitative OracleComp.Upper
+open scoped ExpectationWP.Quantitative OracleComp.Upper
 
 noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ := inferInstance
 
@@ -103,7 +103,7 @@ example : True := by
 end UpperBesideGeneric
 
 section ProbabilisticBesideGeneric
-open scoped MeasureProgramLogic.Quantitative OracleComp.Probabilistic
+open scoped ExpectationWP.Quantitative OracleComp.Probabilistic
 
 noncomputable example : WP (ProbComp Bool) Bool Prob EStack⟨⟩ := inferInstance
 

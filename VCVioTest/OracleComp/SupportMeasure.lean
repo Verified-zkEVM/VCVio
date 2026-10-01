@@ -18,7 +18,7 @@ zero-mass possible answers. No discrete probability backend is imported.
 public section
 
 open MeasureTheory Std.WP
-open scoped ENNReal MeasureProgramLogic.Quantitative
+open scoped ENNReal ExpectationWP.Quantitative
 
 run_cmd do
   let env ← Lean.getEnv
@@ -47,7 +47,7 @@ example (mx : OracleComp spec α) (f g : α → ENNReal)
 example (mx : OracleComp spec α) (f g : α → ENNReal) (c : ENNReal)
     (hfg : ∀ x ∈ support mx, f x ≤ c + g x) :
     wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot :=
-  MeasureProgramLogic.wp_le_const_add_of_support mx hfg
+  ExpectationWP.wp_le_const_add_of_support mx hfg
 
 end Generic
 

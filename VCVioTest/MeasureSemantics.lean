@@ -125,8 +125,8 @@ example : Measure.IsCoupling (Measure.Coupling.refl (gaussianReal 0 1)).joint
   (Measure.Coupling.refl (gaussianReal 0 1)).property
 
 /-- Relational reasoning applies directly to a continuous denotation. -/
-example : MeasureProgramLogic.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
-  MeasureProgramLogic.relWP_refl shiftedGaussian
+example : ExpectationWP.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
+  ExpectationWP.relWP_refl shiftedGaussian
 
 /-! ## A discrete interface -/
 
@@ -137,10 +137,10 @@ noncomputable instance : coinSpec.IsMeasureSpec := IsMeasureSpec.uniformOfFinite
 
 /-- A nonzero, branch-sensitive lower bound rules out a vacuous quantitative semantics. -/
 example : (1 : ℝ≥0∞) ≤
-    MeasureProgramLogic.eRelWP (pure true : FreeM coinSpec Bool)
+    ExpectationWP.eRelWP (pure true : FreeM coinSpec Bool)
       (pure false : FreeM coinSpec Bool)
       (fun a b => if a && !b then 1 else 0) := by
-  exact MeasureProgramLogic.le_eRelWP_pure_pure
+  exact ExpectationWP.le_eRelWP_pure_pure
     (m₁ := FreeM coinSpec) (m₂ := FreeM coinSpec) true false
     (fun a b => if a && !b then 1 else 0) (by fun_prop)
 

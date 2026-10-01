@@ -41,8 +41,8 @@ theorem wp_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α] (mx : m α)
     {f : α → ℝ≥0∞} (F : ι → α → ℝ≥0∞) (hf : Measurable f) (hF : ∀ i, Measurable (F i))
     (bound : α → ℝ≥0∞) (h : ∀ᵐ a ∂𝒟[mx], f a ≤ (∑ i, F i a) + bound a) :
     wp⟦mx⟧ f ≤ (∑ i, wp⟦mx⟧ (F i)) + ∫⁻ a, bound a ∂𝒟[mx] := by
-  rw [MeasureProgramLogic.wp_eq_lintegral mx f hf]
-  simp_rw [MeasureProgramLogic.wp_eq_lintegral mx _ (hF _)]
+  rw [ExpectationWP.wp_eq_lintegral mx f hf]
+  simp_rw [ExpectationWP.wp_eq_lintegral mx _ (hF _)]
   exact lintegral_le_sum_add_lintegral_of_le_ae Finset.univ
     (fun i _ ↦ (hF i).aemeasurable) h
 
@@ -63,7 +63,7 @@ theorem wp_le_sum_add_mul_mass_of_support [Fintype ι] (mx : m α) {f : α → �
     (F : ι → α → ℝ≥0∞) (ε : ℝ≥0∞) (h : ∀ a ∈ support mx, f a ≤ (∑ i, F i a) + ε) :
     wp⟦mx⟧ f ≤ (∑ i, wp⟦mx⟧ (F i)) + ε * Pr{let _ ← mx}[True] :=
   (wp_mono_of_support mx h).trans_eq <| by
-    rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_finsetSum, wp_const]
+    rw [ExpectationWP.wp_add, ExpectationWP.wp_finsetSum, wp_const]
 
 /-- A reachable comparison with finitely many reference observations and a uniform allowance
 holds between their expectations. -/
@@ -89,7 +89,7 @@ theorem wp_le_add_add_of_disagree {mx : m α} {f g h : α → ℝ≥0∞} {D : �
             exact (hf x).trans (le_add_right le_add_self)
           · simpa only [hDx, propInd_false, add_zero] using hfgh x hx hDx
     _ ≤ wp⟦mx⟧ g + wp⟦mx⟧ h + Pr{let x ← mx}[D x] + ε₂ := by
-        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add,
+        rw [ExpectationWP.wp_add, ExpectationWP.wp_add, ExpectationWP.wp_add,
           wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr
@@ -110,7 +110,7 @@ theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
             exact (prEvent_le_one _).trans (le_add_right le_add_self)
           · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
     _ ≤ Pr{let x ← mx; let y ← oc x}[q y] + Pr{let x ← mx}[D x] + ε₂ := by
-        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, wp_const]
+        rw [ExpectationWP.wp_add, ExpectationWP.wp_add, wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr
 
@@ -132,7 +132,7 @@ theorem prEvent_bind_le_add_bad_of_disagree' {mx : m α}
             exact (prEvent_le_one _).trans (le_add_right le_add_self)
           · exact h x hx hDx
     _ ≤ _ := by
-        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, wp_const]
+        rw [ExpectationWP.wp_add, ExpectationWP.wp_add, wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
 
 /-- A bad world that certainly fires on disagreement pays for the exceptional branches. -/
@@ -165,7 +165,7 @@ theorem prEvent_bind_le_add_bad_disagree {mx : m α}
           · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
     _ ≤ Pr{let x ← mx; let y ← oc x}[q y] + Pr{let x ← mx; let z ← ob x}[r z] +
           Pr{let x ← mx}[D x] + ε₂ := by
-        rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add,
+        rw [ExpectationWP.wp_add, ExpectationWP.wp_add, ExpectationWP.wp_add,
           wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr

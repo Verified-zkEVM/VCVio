@@ -52,7 +52,7 @@ variable {α β : Type}
 
 /-- The nonnegative expectation algebra under the configured oracle answer measures. -/
 noncomputable instance instMAlgOrdered : MAlgOrdered (OracleComp spec) ℝ≥0∞ :=
-  MeasureProgramLogic.toMAlgOrdered (OracleComp spec)
+  ExpectationWP.algebra (OracleComp spec)
 
 /-- The expectation of the identity under the configured oracle answer measures. -/
 noncomputable def μ (oa : OracleComp spec ℝ≥0∞) : ℝ≥0∞ :=
@@ -69,11 +69,11 @@ variable [OracleSpec.IsMeasureSpec spec]
 variable {α β : Type}
 
 /-- Core weakest preconditions under the configured oracle answer measures: the expectation
-interpretation `MeasureProgramLogic.measureWP`, so `wp oa post ⊥` is `wp⟦oa⟧ post`. Opening the
+interpretation `ExpectationWP.wpMonad`, so `wp oa post ⊥` is `wp⟦oa⟧ post`. Opening the
 scope selects it over the structural reading. -/
 noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
-  MeasureProgramLogic.measureWP (OracleComp spec)
+  ExpectationWP.wpMonad (OracleComp spec)
 
 /-- The expectation reading as a direct `WP` instance on programs, at the scope's priority, so
 that no direct instance of another scope outranks it while this one is open. -/

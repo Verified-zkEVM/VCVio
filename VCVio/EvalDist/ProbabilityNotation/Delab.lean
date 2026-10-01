@@ -28,20 +28,20 @@ open Lean Meta PrettyPrinter Delaborator SubExpr
 namespace ProbabilityNotation
 
 /-- Whether an ordered algebra is the expectation algebra of successful-output measures. -/
-partial def isMeasureAlgebra (a : Expr) : MetaM Bool := do
+partial def isExpectationAlgebra (a : Expr) : MetaM Bool := do
   let a := a.cleanupAnnotations
-  if a.isAppOf ``MeasureProgramLogic.toMAlgOrdered then return true
+  if a.isAppOf ``ExpectationWP.algebra then return true
   match ← withReducibleAndInstances (unfoldDefinition? a) with
-  | some a' => isMeasureAlgebra a'
+  | some a' => isExpectationAlgebra a'
   | none => return false
 
 /-- Whether a weakest-precondition interpretation is the measure interpretation. -/
-partial def isMeasureInterpretation (w : Expr) : MetaM Bool := do
+partial def isExpectationInterpretation (w : Expr) : MetaM Bool := do
   let w := w.cleanupAnnotations
-  if w.isAppOf ``MeasureProgramLogic.measureWP then return true
-  if w.isAppOfArity ``MAlgOrdered.toWPMonad 6 then return ← isMeasureAlgebra (w.getArg! 4)
+  if w.isAppOf ``ExpectationWP.wpMonad then return true
+  if w.isAppOfArity ``MAlgOrdered.toWPMonad 6 then return ← isExpectationAlgebra (w.getArg! 4)
   match ← withReducibleAndInstances (unfoldDefinition? w) with
-  | some w' => isMeasureInterpretation w'
+  | some w' => isExpectationInterpretation w'
   | none => return false
 
 /-- The monadic interpretation behind a `WP` instance on programs: `w` when the instance is
@@ -60,7 +60,7 @@ def isExpectation (e : Expr) : MetaM Bool := do
   unless (e.getArg! 2).isConstOf ``ENNReal do return false
   unless (e.getArg! 9).isAppOf ``Lean.Order.bot do return false
   let some w ← wpMonadOf? (e.getArg! 6) | return false
-  isMeasureInterpretation w
+  isExpectationInterpretation w
 
 /-- The statement `let x ← a` for a draw bound by the `fun` `f`, or `let _ ← a` when `f` ignores
 its argument. -/

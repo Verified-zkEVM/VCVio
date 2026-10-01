@@ -125,7 +125,7 @@ event forms follow. -/
 @[simp, grind =]
 theorem Option.wp_none {α : Type} (g : α → ENNReal) : wp⟦(none : Option α)⟧ g = 0 := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral _ g Measurable.of_discrete, Option.evalDist_none,
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete, Option.evalDist_none,
     lintegral_zero_measure]
 
 /-- An absent optional result makes every event impossible. -/
@@ -136,7 +136,7 @@ theorem Option.prEvent_none {α : Type} (p : α → Prop) : Pr{let x ← (none :
 applies PolyFun's `ExactWPMonad.wp_some`. -/
 @[grind =]
 theorem Option.wp_some {α : Type} (x : α) (g : α → ENNReal) : wp⟦some x⟧ g = g x :=
-  MeasureProgramLogic.wp_pure (m := Option) x g
+  ExpectationWP.wp_pure (m := Option) x g
 
 /-- An event of a present optional result is the indicator of the event at that result. -/
 theorem Option.prEvent_some {α : Type} (x : α) (p : α → Prop) :
@@ -148,7 +148,7 @@ theorem Option.prEvent_some {α : Type} (x : α) (p : α → Prop) :
 theorem Except.wp_error {ε : Type u} {α : Type} (error : ε) (g : α → ENNReal) :
     wp⟦(Except.error error : Except ε α)⟧ g = 0 := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral _ g Measurable.of_discrete, Except.evalDist_error,
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete, Except.evalDist_error,
     lintegral_zero_measure]
 
 /-- An exceptional result makes every event impossible. -/
@@ -160,7 +160,7 @@ theorem Except.prEvent_error {ε : Type u} {α : Type} (error : ε) (p : α → 
 @[simp, grind =]
 theorem Except.wp_ok {ε : Type u} {α : Type} (x : α) (g : α → ENNReal) :
     wp⟦(Except.ok x : Except ε α)⟧ g = g x :=
-  MeasureProgramLogic.wp_pure (m := Except ε) x g
+  ExpectationWP.wp_pure (m := Except ε) x g
 
 /-- An event of a successful exceptional result is the indicator of the event at that result. -/
 theorem Except.prEvent_ok {ε : Type u} {α : Type} (x : α) (p : α → Prop) :

@@ -251,14 +251,14 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | `unexpected …; expected '}['` in a `Pr{…}` whose action continues on the next line | the braces hold a `do` sequence: indent the continuation past its `let`, start the sequence on its own line as in a `do` block, or parenthesize the action |
 | two events that should agree differ only in how their binds and maps are arranged | `simp only [expect_norm]` brings both into the normal form of `Pr{…}[…]` |
 | an explicit `prEvent (p <$> mx)`, `prEvent mx p`, or `prEvent (mx >>= fun x => …)` | an event is the expectation of its indicator: `Pr{let x ← mx}[p x]`; a literal non-normal program is `wp⟦mx >>= f⟧ (predInd p)` |
-| `rw` with a lemma about `Pr{let y ← mx >>= f}[q y]` does not find its left side | the notation stores it as `wp⟦mx⟧ fun x => wp⟦f x⟧ fun y => 𝟙⟦q y⟧`; a goal holding a literal `wp (mx >>= f) g ⊥` (after unfolding a definition, say) needs `rw [prEvent_bind]`, `MeasureProgramLogic.wp_bind` or `simp only [expect_norm]` first |
+| `rw` with a lemma about `Pr{let y ← mx >>= f}[q y]` does not find its left side | the notation stores it as `wp⟦mx⟧ fun x => wp⟦f x⟧ fun y => 𝟙⟦q y⟧`; a goal holding a literal `wp (mx >>= f) g ⊥` (after unfolding a definition, say) needs `rw [prEvent_bind]`, `ExpectationWP.wp_bind` or `simp only [expect_norm]` first |
 | `rw` with an equation between whole computations no longer finds them inside an event | turn it into the equation of the events: `congrArg (fun mx => Pr{let x ← mx}[p x]) h`, then `simp only [expect_norm] at …` |
 | a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | `prEvent_eq_evalDist_map : Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True}` rewrites a single event to its measure |
-| `prEvent_bind_of_discrete`, a `lintegral` over the events of `f x` | the notation gives the expectation `wp⟦mx⟧ fun x => Pr{let y ← f x}[p y]`; `MeasureProgramLogic.wp_eq_lintegral mx _ .of_discrete` gives the integral |
+| `prEvent_bind_of_discrete`, a `lintegral` over the events of `f x` | the notation gives the expectation `wp⟦mx⟧ fun x => Pr{let y ← f x}[p y]`; `ExpectationWP.wp_eq_lintegral mx _ .of_discrete` gives the integral |
 | `prEvent_pure_prop` | `Pr{let y ← pure a}[p y]` elaborates to `𝟙⟦p a⟧`; `propInd_eq_ite` gives the `if` form |
 | `prEvent_eq_wp`, `wp_propInd`, `OracleComp.wp_prEvent_swap` | an event is an expectation, so the first two are identities (drop the rewrite) and `OracleComp.wp_swap` covers the third |
 | `OracleComp.ProgramLogic.wp oa post` | `wp⟦oa⟧ post`, core's `wp` under the measure interpretation; `OracleComp.ProgramLogic.propInd` is `propInd` |
-| `MeasureProgramLogic.Quantitative.wp_*` | `MeasureProgramLogic.wp_*`, stated on `wp⟦·⟧` and without measurability hypotheses except for `wp_eq_lintegral`, `wp_mono_ae`, `wp_iSup` and the `_mass` bounds |
+| `ExpectationWP.Quantitative.wp_*` | `ExpectationWP.wp_*`, stated on `wp⟦·⟧` and without measurability hypotheses except for `wp_eq_lintegral`, `wp_mono_ae`, `wp_iSup` and the `_mass` bounds |
 | `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
 | `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
 | an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |

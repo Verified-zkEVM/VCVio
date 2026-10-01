@@ -36,7 +36,7 @@ noncomputable def eRelWP (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ �
     (g : α → β → ℝ≥0∞) : ℝ≥0∞ :=
   letI : MeasurableSpace α := ⊤
   letI : MeasurableSpace β := ⊤
-  MeasureProgramLogic.eRelWP oa ob g
+  ExpectationWP.eRelWP oa ob g
 
 /-- Indicator postcondition: lifts a `Prop`-valued relation to an `ℝ≥0∞`-valued one. -/
 noncomputable def RelPost.indicator (R : RelPost α β) (a : α) (b : β) : ℝ≥0∞ :=

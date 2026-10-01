@@ -82,7 +82,7 @@ the support hypothesis. -/
 example {β : Type} (oa : OracleComp spec α) (ob ob' : α → OracleComp spec β) (g : β → ℝ≥0∞)
     (h : ∀ x ∈ support oa, wp⟦ob x⟧ g ≤ wp⟦ob' x⟧ g) :
     wp⟦oa >>= ob⟧ g ≤ wp⟦oa >>= ob'⟧ g := by
-  rw [MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_bind]
+  rw [ExpectationWP.wp_bind, ExpectationWP.wp_bind]
   gcongr with x hx
   exact h x hx
 

@@ -435,8 +435,8 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[b = out] := by
       simp only [expect_norm]
       rw [hmargW]
-      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun u => ExpectationWP.wp_congr _ fun gS' =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     have hBAD_marg :
         Pr{let z ← ((do
@@ -470,8 +470,8 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
       simp only [expect_norm]
       rw [hmargW]
-      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun u => ExpectationWP.wp_congr _ fun gS' =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     -- Step 3: marginalize RHS S-event over slot-K cell (uncached by hcInv).
     have hmarg_K : ∀ {β : Type} [MeasurableSpace β]
@@ -524,7 +524,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] := by
       simp only [expect_norm]
       rw [hmargW_K]
-      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' => ?_
+      refine ExpectationWP.wp_congr _ fun u => ExpectationWP.wp_congr _ fun gS' => ?_
       rw [hext_K_eq gS' u, hcell_K_u gS' u]
     -- Step 4: rewrite the marginalizations and apply `wp_le_add_add_of_disagree`.
     simp only [expect_norm] at hLHS_marg hRHS_marg hBAD_marg
@@ -663,7 +663,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
       -- Both events are events of the same underlying run: compare them under the two table
       -- draws by `wp_mono`, then on the support of the run, where bad monotonicity makes the
       -- implication unconditional.
-      refine MeasureProgramLogic.wp_mono _ fun gS => MeasureProgramLogic.wp_mono _ fun gFine => ?_
+      refine ExpectationWP.wp_mono _ fun gS => ExpectationWP.wp_mono _ fun gFine => ?_
       refine prEvent_mono_of_support _ _ _ fun z hz_mem _ => ?_
       -- z is in support of the simQ run starting at state with bad = true.
       -- By preserves_bad, z.2.2.bad = true.

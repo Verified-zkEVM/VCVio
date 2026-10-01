@@ -45,8 +45,8 @@ theorem wp_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α : Type} (mx : m α) (g : α → ENNReal) : wp⟦OptionT.lift mx⟧ g = wp⟦mx⟧ g := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral _ g Measurable.of_discrete,
-    MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete, OptionT.evalDist_lift]
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete,
+    ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete, OptionT.evalDist_lift]
 
 /-- Lifting into the optional monad preserves the probability of an observed event. -/
 theorem prEvent_lift {m : Type → Type v} [Monad m] [LawfulMonad m]
@@ -92,7 +92,7 @@ theorem prEvent_bind_guard {m : Type → Type v} [Monad m] [LawfulMonad m]
       Pr{let x ← mx}[p x ∧ q x] := by
   classical
   rw [wp_lift]
-  refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
+  refine ExpectationWP.wp_congr mx fun x ↦ ?_
   by_cases hp : p x <;> by_cases hq : q x <;> simp [hp, hq]
 
 /-- A lifted draw followed by a guard puts its successful event mass at the unit output. -/

@@ -19,7 +19,7 @@ and transitions are continuous.
 
 public section
 
-open MeasureTheory ProbabilityTheory MeasureProgramLogic PFunctor
+open MeasureTheory ProbabilityTheory ExpectationWP PFunctor
 open scoped NNReal
 
 namespace Examples.GaussianWiring

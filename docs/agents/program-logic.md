@@ -10,7 +10,7 @@
   the tactic surface.
 
 For continuous or otherwise non-discrete denotations, import
-`VCVio.ProgramLogic.Relational.Measure`. Its `MeasureProgramLogic.RelWP` uses an almost-everywhere
+`VCVio.ProgramLogic.Relational.Measure`. Its `ExpectationWP.RelWP` uses an almost-everywhere
 postcondition under a Mathlib `Measure.Coupling`, and `eRelWP` integrates quantitative
 post-expectations with `lintegral`. The `OracleComp` relational logic (`RelTriple`, `CouplingPost`,
 `eRelWP`) specializes these to the output measures observed in the discrete structure on each
@@ -57,7 +57,7 @@ core's tactic (gotcha 35). The relational counterparts are `rvcstep` / `rvcgen` 
 
 For `wp⟦oa⟧ f ≤ wp⟦oa⟧ g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
 pointwise obligation `f x ≤ g x` (`wp_mono_of_support`). The unrestricted
-`MeasureProgramLogic.wp_mono` remains available as a lower-priority fallback. Expectations are
+`ExpectationWP.wp_mono` remains available as a lower-priority fallback. Expectations are
 core's `Std.WP.wp` under the measure interpretation, so the same rules apply to raw
 `Std.WP.wp` expressions of that interpretation. An event after a common draw is an
 expectation over that draw, so `gcongr` descends into `Pr{let x ← mx; …}[…]` as well.
@@ -264,9 +264,9 @@ passed explicitly: `triple_zero`, the loop unrolling rules (`triple_replicate_su
 (`triple_replicate_inv`, `triple_replicate`, `triple_list_mapM_inv`, `triple_list_mapM`,
 `triple_list_foldlM_inv`, `triple_list_foldlM`), and the event triples
 `triple_prEvent_indicator`, `triple_prEvent_eq_one` and `triple_support`. The equations of an
-expectation are the generic `MeasureProgramLogic.wp_pure` / `wp_bind` / `wp_map` / `wp_add` /
+expectation are the generic `ExpectationWP.wp_pure` / `wp_bind` / `wp_map` / `wp_add` /
 `wp_const_mul` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite`; a constant observation of an
-oracle computation is `MeasureProgramLogic.wp_const_of_oracle`.
+oracle computation is `ExpectationWP.wp_const_of_oracle`.
 
 Structural rules (`VCVio/ProgramLogic/Unary/WP/QualitativeSpecs.lean`, namespace
 `OracleComp.Qualitative`):
@@ -917,7 +917,7 @@ instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly
 - `open scoped OracleComp.Quantitative` selects expectation in `ℝ≥0∞` under
   `[OracleSpec.IsMeasureSpec spec]` (`OracleComp.Quantitative.instWP`), so `wp oa post ⊥`, core
   triples and `vcgen` read expectations, with lower-bound triples.
-- `open scoped MeasureProgramLogic.Quantitative` selects measure-backed expectation
+- `open scoped ExpectationWP.Quantitative` selects measure-backed expectation
   for any lawful monad with `LawfulEvalDistSemantics`. Besides its `WPMonad`, it registers the
   interpretation as a direct `WP` instance (`wpInst`) at priority `1050`, which outranks core's
   own direct `Prop` instances for monads such as `Option` and `Id` while the scope is open, and is

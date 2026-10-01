@@ -38,12 +38,12 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 /-- Oracle expectation preserves the probability bound. -/
 theorem wp_one_le (oa : OracleComp spec α) :
     MAlgOrdered.μ (oa >>= fun _ => pure (1 : ℝ≥0∞)) ≤ 1 :=
-  (MeasureProgramLogic.wp_const_of_oracle oa 1).le
+  (ExpectationWP.wp_const_of_oracle oa 1).le
 
 /-- The expectation algebra restricted to probability-valued assertions. -/
 noncomputable scoped instance (priority := 1100) instMAlgOrdered :
     MAlgOrdered (OracleComp spec) Prob :=
-  MeasureProgramLogic.Probabilistic.toMAlgOrdered (OracleComp spec)
+  ExpectationWP.Probabilistic.algebra (OracleComp spec)
 
 /-- Core weakest preconditions for probability-valued assertions. -/
 noncomputable scoped instance (priority := 1100) instWP_prob :
@@ -60,6 +60,6 @@ noncomputable scoped instance (priority := 1100) wpInst :
 theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) (epost : EStack⟨⟩) :
     (Std.WP.wp oa post epost).val =
       wp⟦oa⟧ (fun a => (post a).val) :=
-  MeasureProgramLogic.Probabilistic.wp_val oa post epost
+  ExpectationWP.Probabilistic.wp_val oa post epost
 
 end OracleComp.Probabilistic

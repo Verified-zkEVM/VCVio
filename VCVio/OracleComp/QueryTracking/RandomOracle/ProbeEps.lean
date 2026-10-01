@@ -292,7 +292,7 @@ theorem prEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbComp 
     (hmarg : ∀ w : R, Pr{let z ← k w}[z.2 = true]
       = Pr{let b ← (pure (readMany w q σ) : ProbComp Bool)}[b = true]) :
     Pr{let z ← oa >>= k}[z.2 = true] ≤ (q : ℝ≥0∞) * ε := by
-  rw [prEvent_bind, MeasureProgramLogic.wp_congr oa hmarg]
+  rw [prEvent_bind, ExpectationWP.wp_congr oa hmarg]
   simpa only [hiddenReadMany, expect_norm] using prEvent_hiddenReadMany_le hε q σ
 
 end OracleComp

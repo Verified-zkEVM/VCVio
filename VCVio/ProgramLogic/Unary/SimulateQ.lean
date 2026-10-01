@@ -56,7 +56,7 @@ then `wp` of the simulated computation equals `wp` of the original. -/
     let : MeasurableSpace (spec.Range t) := ⊤
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
       OracleQuery.input_query]
-    rw [MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_bind]
+    rw [ExpectationWP.wp_bind, ExpectationWP.wp_bind]
     simp_rw [ih]
     exact wp_congr_evalDist (hImpl t).evalDist_eq _ Measurable.of_discrete
 
@@ -73,7 +73,7 @@ theorem wp_liftComp_of_evalDistEq {ι' : Type*} {superSpec : OracleSpec ι'}
   | query_bind t k ih =>
     let : MeasurableSpace (spec.Range t) := ⊤
     simp only [liftComp_bind, liftComp_query, OracleQuery.cont_query, id_map,
-      OracleQuery.input_query, MeasureProgramLogic.wp_bind]
+      OracleQuery.input_query, ExpectationWP.wp_bind]
     simp_rw [ih]
     rw [wp_eq_lintegral _ _ Measurable.of_discrete, (hMeasure t).evalDist_eq,
       ← wp_eq_lintegral _ _ Measurable.of_discrete]
@@ -106,12 +106,12 @@ after its state is discarded. The hidden state needs no measurable-space instanc
   | query_bind t k ih =>
     let : MeasurableSpace (spec.Range t) := ⊤
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, id_map,
-      OracleQuery.input_query, StateT.run'_bind', MeasureProgramLogic.wp_bind]
+      OracleQuery.input_query, StateT.run'_bind', ExpectationWP.wp_bind]
     simp_rw [ih]
     calc
       _ = wp⟦(impl t).run' s⟧ (fun u ↦ wp⟦k u⟧ post) := by
         simpa only [StateT.run'_eq, Function.comp_def] using
-          (MeasureProgramLogic.wp_map Prod.fst ((impl t).run s) (fun u ↦ wp⟦k u⟧ post)).symm
+          (ExpectationWP.wp_map Prod.fst ((impl t).run s) (fun u ↦ wp⟦k u⟧ post)).symm
       _ = _ := by
         rw [wp_eq_lintegral _ _ Measurable.of_discrete, (hImpl t s).evalDist_eq,
           ← wp_eq_lintegral _ _ Measurable.of_discrete]

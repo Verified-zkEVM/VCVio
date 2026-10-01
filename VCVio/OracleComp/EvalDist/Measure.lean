@@ -123,8 +123,8 @@ private theorem wp_wp_eq_wp_bind_bind {ι : Type u} {α β : Type} {spec : Oracl
     (g : α → β → ℝ≥0∞) :
     (wp⟦mx⟧ fun a ↦ wp⟦my⟧ fun b ↦ g a b) =
       ∫⁻ y, y ∂𝒟[mx >>= fun a ↦ my >>= fun b ↦ (pure (g a b) : OracleComp spec ℝ≥0∞)] := by
-  rw [← MeasureProgramLogic.wp_eq_lintegral _ (fun y : ℝ≥0∞ ↦ y) measurable_id']
-  simp only [MeasureProgramLogic.wp_bind, MeasureProgramLogic.wp_pure]
+  rw [← ExpectationWP.wp_eq_lintegral _ (fun y : ℝ≥0∞ ↦ y) measurable_id']
+  simp only [ExpectationWP.wp_bind, ExpectationWP.wp_pure]
 
 /-- Independent oracle computations commute inside an expectation. -/
 theorem wp_swap
@@ -405,7 +405,7 @@ theorem prEvent_true_eq_one (mx : OracleComp spec α) : Pr{let _ ← mx}[True] =
 oracle computations are lossless. It applies once the observation is simplified to a constant,
 ahead of the expectation laws of particular computations such as the uniform average. -/
 @[simp high]
-theorem _root_.MeasureProgramLogic.wp_const_of_oracle (mx : OracleComp spec α) (c : ℝ≥0∞) :
+theorem _root_.ExpectationWP.wp_const_of_oracle (mx : OracleComp spec α) (c : ℝ≥0∞) :
     wp⟦mx⟧ (fun _ ↦ c) = c := by
   rw [_root_.wp_const, prEvent_true_eq_one, mul_one]
 

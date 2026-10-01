@@ -134,7 +134,7 @@ theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
     cases q with
     | inl n =>
       simp only [run_apply_inl, bind_map_left, prEvent_bind]
-      exact MeasureProgramLogic.wp_mono _ fun v => ih v s hs
+      exact ExpectationWP.wp_mono _ fun v => ih v s hs
     | inr x =>
       simp only [QueryImpl.add_apply_inr, randomOracle.run_eq]
       by_cases hxt : x = t
@@ -155,7 +155,7 @@ theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
           exact ih v s hs
         | none =>
           simp only [bind_assoc, pure_bind, prEvent_bind]
-          refine MeasureProgramLogic.wp_mono _ fun v => ?_
+          refine ExpectationWP.wp_mono _ fun v => ?_
           rw [QueryCache.cacheQuery_comm s (Ne.symm hxt) u v]
           exact ih v (s.cacheQuery x v)
             (by rw [QueryCache.cacheQuery_of_ne _ _ (Ne.symm hxt)]; exact hs)

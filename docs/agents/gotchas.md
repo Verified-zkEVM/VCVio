@@ -224,7 +224,7 @@ and expectations every form leaves the remaining goal in the normal form of `Pr{
 `Pr{…}[…]` is nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped
 by rewriting under the expectations it is nested in (`conv => arg 2; ext; rw [OracleComp.wp_swap]`);
 a draw written as a bind, `Pr{let y ← mx >>= f}[q y]`, or a literal `wp⟦mx >>= f⟧ g`, is brought
-to that form with `rw [MeasureProgramLogic.wp_bind]` or `simp only [expect_norm]`. Two events
+to that form with `rw [ExpectationWP.wp_bind]` or `simp only [expect_norm]`. Two events
 that read the same but differ in how a draw is written are therefore not the same term until
 one of them is normalized: `simpa only [expect_norm] using h` is the one-line repair.
 
@@ -489,7 +489,7 @@ the genuine exception. See *Section Variables* in `CONTRIBUTING.md`.
 
 An event or expectation is core's `wp prog post ⊥`, and the answer type of `prog` appears three
 times: in the program, in the observation's domain, and in the interpretation instance
-`instWPOfWPMonad … (measureWP m)`. `simp` and `dsimp` never rewrite instance arguments, so a
+`instWPOfWPMonad … (wpMonad m)`. `simp` and `dsimp` never rewrite instance arguments, so a
 type-level rewrite such as `unlinkOracleSpec_range_inl`, which identifies an answer type with its
 unfolding, cannot repair an equation whose two sides differ in type only up to that unfolding:
 the exact `wp` laws then fail to match. Normalize while the goal is still well-typed
@@ -508,8 +508,8 @@ not reach `wp` on that monad. Pass the interpretation explicitly with dot notati
 `(inst.toWP α).wp x post epost`, as core's `WP.wp` documents
 (`ToMathlib/Control/Monad/Algebra.lean`, `VCVioTest/Foundations.lean`). Every scoped reading
 therefore registers a direct `WP` instance beside its `WPMonad`, and the priorities order the
-scopes: the generic measure scopes (`MeasureProgramLogic.Quantitative.wpInst`,
-`MeasureProgramLogic.Probabilistic.wpInst`) at `1050`, above core's direct instances; the
+scopes: the generic measure scopes (`ExpectationWP.Quantitative.wpInst`,
+`ExpectationWP.Probabilistic.wpInst`) at `1050`, above core's direct instances; the
 reading scopes of `OracleComp` (`OracleComp.Quantitative`, `Angelic`, `Upper`, `Probabilistic`)
 at `1100`; their `Dispatch` sub-scopes at `1200`. `OracleComp` has no direct core instance, and
 its global reading is the structural one, reached through core's low-priority derivation; a
@@ -585,5 +585,5 @@ structural triple fails to build its rules, and a bridged lower- or upper-bound 
 no scope open. The failure is loud ("failed to synthesize WP …"); no other reading is
 substituted. Each
 reading has a `Dispatch` sub-scope at priority `1200`, with a direct `WP` instance that also
-outranks `MeasureProgramLogic.Quantitative.wpInst`: `open scoped OracleComp.Upper.Dispatch in
+outranks `ExpectationWP.Quantitative.wpInst`: `open scoped OracleComp.Upper.Dispatch in
 vcgen` runs `vcgen` in that reading whatever the file opens, and `prvcgen` uses these scopes.

@@ -192,11 +192,11 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest] (o
   | pure b =>
     -- Pure case: both sides collapse the `simulateQ` to `pure b`. After `simp`, both events are
     -- the indicator of `b = out` after lossless table draws, which are discarded
-    -- (`MeasureProgramLogic.wp_const_of_oracle`). Bad + 3 slacks are nonnegative, dropped via
+    -- (`ExpectationWP.wp_const_of_oracle`). Bad + 3 slacks are nonnegative, dropped via
     -- `le_add_right`.
     simp only [simulateQ_pure, StateT.run_pure, StateT.run'_eq, map_pure]
     refine le_add_right (le_add_right (le_add_right (le_add_right (le_of_eq ?_))))
-    simp only [expect_norm, MeasureProgramLogic.wp_const_of_oracle]
+    simp only [expect_norm, ExpectationWP.wp_const_of_oracle]
   | query_bind t k ih =>
     cases t with
     | inl tag =>
@@ -476,7 +476,7 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
                 (UnlinkState.init, UnlinkBadState.init))}[b = out] := by
     simp only [expect_norm]
-    refine MeasureProgramLogic.wp_congr _ fun gS => ?_
+    refine ExpectationWP.wp_congr _ fun gS => ?_
     have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.1 = out)
     simpa only [expect_norm] using h
   have hbad_fine :
@@ -496,7 +496,7 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
                 (UnlinkState.init, UnlinkBadState.init))}[z.2.bad] := by
     simp only [expect_norm]
-    refine MeasureProgramLogic.wp_congr _ fun gS => ?_
+    refine ExpectationWP.wp_congr _ fun gS => ?_
     have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.2.2.bad = true)
     simpa only [expect_norm] using h
   simp only [expect_norm] at hsucc_fine hbad_fine

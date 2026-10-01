@@ -418,8 +418,8 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, sB)))}[b = out] := by
       simp only [expect_norm]
-      refine MeasureProgramLogic.wp_congr _ fun gS =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The output bool ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
@@ -450,8 +450,8 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool true))).run
               (s, sB)))}[z.2.bad = true] := by
       simp only [expect_norm]
-      refine MeasureProgramLogic.wp_congr _ fun gS =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The bad flag ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
@@ -544,8 +544,8 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, sB)))}[b = out] := by
       simp only [expect_norm]
-      refine MeasureProgramLogic.wp_congr _ fun gS =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The output bool ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)
@@ -576,8 +576,8 @@ lemma dcAux_reader_step [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (OracleComp.tableExtending c₀ gS)) gFine) (k (ReaderReply.ofBool false))).run
               (s, sB)))}[z.2.bad = true] := by
       simp only [expect_norm]
-      refine MeasureProgramLogic.wp_congr _ fun gS =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun gS =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       -- The bad flag ignores `cacheBad`, so the `cacheBad` projection leaves it unchanged.
       have hirr := simulateQ_multipleBadTableHandlerFine_cacheBad_irrelevant
         (slotZeroSubTable (sessionsPerTag := sessionsPerTag)

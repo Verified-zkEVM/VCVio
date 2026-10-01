@@ -217,7 +217,7 @@ obligations here before updating paper snippets or pins.
 
 `Coupling/Bind.lean` composes explicit measurable joint families under almost-everywhere marginal
 laws. `Coupling/Residual.lean` propagates unmatched left mass and proves one-sided event bounds
-with a separate joint bad event. `MeasureProgramLogic.CouplingPost.bind` and `relWP_bind` expose
+with a separate joint bad event. `ExpectationWP.CouplingPost.bind` and `relWP_bind` expose
 this through the existing relational logic without assuming measurable choice.
 
 `Examples/ProgramLogic/MeasureCoupling.lean` applies the rule to shared Gaussian noise and

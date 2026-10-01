@@ -116,14 +116,14 @@ theorem _root_.evalDistEq_iff_forall_prEvent_eq_output [Countable α] {mx : m α
 /-- Computations equal in distribution give every observation the same expectation. -/
 theorem wp_eq {mx : m α} {my : m' α} (h : mx =ᵈ my) (g : α → ℝ≥0∞) : wp⟦mx⟧ g = wp⟦my⟧ g := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete,
-    MeasureProgramLogic.wp_eq_lintegral my g Measurable.of_discrete, h.evalDist_eq]
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete,
+    ExpectationWP.wp_eq_lintegral my g Measurable.of_discrete, h.evalDist_eq]
 
 /-- Binds of computations and continuations equal in distribution are equal in distribution. -/
 theorem bind {mx : m α} {my : m' α} (h : mx =ᵈ my) {f : α → m β} {g : α → m' β}
     (hfg : ∀ a, f a =ᵈ g a) : mx >>= f =ᵈ my >>= g := fun p ↦ by
   rw [prEvent_bind, prEvent_bind, h.wp_eq]
-  exact MeasureProgramLogic.wp_congr my fun a ↦ hfg a p
+  exact ExpectationWP.wp_congr my fun a ↦ hfg a p
 
 section sameMonad
 

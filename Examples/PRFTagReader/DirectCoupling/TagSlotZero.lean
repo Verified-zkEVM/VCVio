@@ -430,8 +430,8 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[b = out] := by
       simp only [expect_norm]
       rw [hmargW]
-      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun u => ExpectationWP.wp_congr _ fun gS' =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     have hRHS_marg :
         Pr{let b ← ((do
@@ -448,7 +448,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] := by
       simp only [expect_norm]
       rw [hmargW]
-      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' => ?_
+      refine ExpectationWP.wp_congr _ fun u => ExpectationWP.wp_congr _ fun gS' => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     have hBAD_marg :
         Pr{let z ← ((do
@@ -482,8 +482,8 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
       simp only [expect_norm]
       rw [hmargW]
-      refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
-        MeasureProgramLogic.wp_congr _ fun gFine => ?_
+      refine ExpectationWP.wp_congr _ fun u => ExpectationWP.wp_congr _ fun gS' =>
+        ExpectationWP.wp_congr _ fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
     simp only [expect_norm] at hLHS_marg hRHS_marg hBAD_marg
     rw [hLHS_marg, hRHS_marg, hBAD_marg]

@@ -20,7 +20,7 @@ imports supply the interpretation, public value laws, and congruence automation.
 public section
 
 open MeasureTheory Std.WP
-open scoped ENNReal MeasureProgramLogic.Probabilistic
+open scoped ENNReal ExpectationWP.Probabilistic
 
 run_cmd do
   let env ← Lean.getEnv
@@ -35,7 +35,7 @@ example (p : Prob) : wp (pure 7 : Option Nat) (fun _ ↦ p) Lean.Order.bot = p :
   ExactWPMonad.wp_pure 7 _ _
 
 example (p : Prob) : (wp (none : Option Nat) (fun _ ↦ p) Lean.Order.bot).val = 0 := by
-  rw [MeasureProgramLogic.Probabilistic.wp_val]
+  rw [ExpectationWP.Probabilistic.wp_val]
   simp
 
 example (p : Prob) : (wp (some 7 : Option Nat) (fun _ ↦ p) Lean.Order.bot).val = p.val := by
@@ -63,7 +63,7 @@ noncomputable instance weightedMeasureSpec : OracleSpec.IsMeasureSpec WeightedSp
 
 example : (wp (WeightedSpec.query 0 : OracleComp WeightedSpec Bool)
     (fun answer ↦ Prob.indicator (answer = true)) Lean.Order.bot).val = 0 := by
-  rw [MeasureProgramLogic.Probabilistic.wp_val_eq_lintegral _ _ Measurable.of_discrete]
+  rw [ExpectationWP.Probabilistic.wp_val_eq_lintegral _ _ Measurable.of_discrete]
   simp only [OracleComp.evalDist_liftM_query (spec := WeightedSpec), MeasureTheory.trim_eq_self]
   simp [OracleSpec.IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure]
 

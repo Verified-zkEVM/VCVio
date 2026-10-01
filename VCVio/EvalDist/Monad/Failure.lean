@@ -45,7 +45,7 @@ theorem wp_failure {m : Type → Type v} [AlternativeMonad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m] [LawfulFailureEvalDistSemantics m]
     {α : Type} (g : α → ENNReal) : wp⟦(failure : m α)⟧ g = 0 := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral _ g Measurable.of_discrete]
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete]
   simp
 
 /-- A guard weights the observation by its condition. It applies ahead of `wp_const`, so the

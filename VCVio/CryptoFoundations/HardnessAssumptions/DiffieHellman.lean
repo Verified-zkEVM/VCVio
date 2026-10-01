@@ -213,7 +213,7 @@ theorem evalDist_ddhRandomExperiment_cdhToDDHReduction_true
     exact SampleableType.prEvent_uniformSample_eq_singleton c₀
   rw [← prEvent_eq_evalDist_singleton _ true]
   simp only [ddhRandomExperiment, cdhToDDHReduction, expect_norm, decide_eq_true_eq,
-    OracleComp.wp_swap ($ᵗ F) (adversary _ _ _), hinv, MeasureProgramLogic.wp_const_of_oracle]
+    OracleComp.wp_swap ($ᵗ F) (adversary _ _ _), hinv, ExpectationWP.wp_const_of_oracle]
 
 /-- Concrete form of the hardness implication `DDH ⇒ CDH`: a CDH solver can only beat the uniform
 DH-target baseline `1 / |F|` by the DDH advantage of the associated adversary-map reduction. -/
@@ -257,7 +257,7 @@ theorem dlogSuccess_sq_le_cdhSuccess_dlogToCDHReduction
     rw [← prEvent_eq_evalDist_singleton _ true]
     simp only [pairs, attempt, cdhExperiment, dlogToCDHReduction, expect_norm,
       decide_eq_true_eq]
-    exact MeasureProgramLogic.wp_congr _ fun a => OracleComp.wp_swap _ _ _
+    exact ExpectationWP.wp_congr _ fun a => OracleComp.wp_swap _ _ _
   calc 𝒟[dlogExperiment g adversary] {true} ^ 2
       = Pr{let z ← attempt}[z.2 = z.1] * Pr{let z ← attempt}[z.2 = z.1] := by rw [hdlog, sq]
     _ = Pr{let w ← pairs}[w.1.2 = w.1.1 ∧ w.2.2 = w.2.1] := by

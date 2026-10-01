@@ -34,7 +34,7 @@ open scoped ENNReal
 
 universe u v w₁ w₂
 
-namespace MeasureProgramLogic
+namespace ExpectationWP
 
 variable {α : Type u} {β : Type v}
 variable [MeasurableSpace α] [MeasurableSpace β]
@@ -220,4 +220,4 @@ theorem relWP_pure_pure_iff [MeasurableSingletonClass α] [MeasurableSingletonCl
   · intro hR
     exact ⟨Measure.Coupling.dirac a b, by simp [hR]⟩
 
-end MeasureProgramLogic
+end ExpectationWP

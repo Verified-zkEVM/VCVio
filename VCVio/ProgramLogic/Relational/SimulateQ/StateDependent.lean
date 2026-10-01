@@ -48,7 +48,7 @@ variable {α : Type} {σ : Type}
 /-- A lossless computation has the constant expectation of a constant. -/
 private lemma wp_const_eq {β : Type} (oa : OracleComp spec' β) (c : ℝ≥0∞) :
     (wp⟦oa⟧ fun _ => c) = c :=
-  MeasureProgramLogic.wp_const_of_oracle oa c
+  ExpectationWP.wp_const_of_oracle oa c
 
 /-- Per-`query_bind` step of `expectedQuerySlack`. Given the handler, the charged-query predicate
 `S`, the per-state query slack `ε`, the query symbol `t`, and the continuation
@@ -576,7 +576,7 @@ lemma expectedQuerySlack_expected_resource_le
                 ((m : ℝ≥0∞) * (qH : ℝ≥0∞) + (m.choose 2 : ℝ≥0∞) * g) * β)
               + (m : ℝ≥0∞) * β * (R s + g) := by
           refine (wp_mono _ h_pt).trans ?_
-          rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_const_mul, wp_const_eq]
+          rw [ExpectationWP.wp_add, ExpectationWP.wp_const_mul, wp_const_eq]
           exact add_le_add le_rfl (mul_le_mul_right (h_charged t (s, false) rfl hSt) _)
         have hch : (((m + 1).choose 2 : ℕ) : ℝ≥0∞) = (m : ℝ≥0∞) + (m.choose 2 : ℝ≥0∞) := by
           have hch_nat : (m + 1).choose 2 = m + m.choose 2 := by
@@ -726,7 +726,7 @@ lemma expectedQuerySlack_charged_read_expected_growth_le
                   | false => exact (ih u (hcontS u) (hcontH u) s').trans (le_of_eq (by ring))
             _ = (qS : ℝ≥0∞) * β *
                   ((wp⟦(impl t).run (s, false)⟧ fun z => R z.2.1) + (h : ℝ≥0∞) * g) := by
-                rw [MeasureProgramLogic.wp_const_mul, MeasureProgramLogic.wp_add, wp_const_eq]
+                rw [ExpectationWP.wp_const_mul, ExpectationWP.wp_add, wp_const_eq]
             _ ≤ (qS : ℝ≥0∞) * β * ((R s + g) + (h : ℝ≥0∞) * g) := by
                 gcongr
                 exact h_growth t (s, false) rfl hSt hHt

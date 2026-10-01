@@ -192,7 +192,7 @@ theorem triple_add_frame {oa : OracleComp spec α} {ε : ℝ≥0∞} {post : α 
     ⦃ toDual (c + ε) ⦄ oa ⦃ fun a => toDual (c + ofDual (post a)) ⦄ := by
   rw [triple_iff] at h ⊢
   simp only [ofDual_toDual] at h ⊢
-  rw [MeasureProgramLogic.wp_add]
+  rw [ExpectationWP.wp_add]
   exact add_le_add (OracleComp.ProgramLogic.wp_le_const_of_support oa fun _ _ => le_rfl) h
 
 /-- Scaling an upper-bound triple by a constant. -/
@@ -201,7 +201,7 @@ theorem triple_const_mul {oa : OracleComp spec α} {ε : ℝ≥0∞} {post : α 
     ⦃ toDual (c * ε) ⦄ oa ⦃ fun a => toDual (c * ofDual (post a)) ⦄ := by
   rw [triple_iff] at h ⊢
   simp only [ofDual_toDual] at h ⊢
-  rw [MeasureProgramLogic.wp_const_mul]
+  rw [ExpectationWP.wp_const_mul]
   exact mul_le_mul_right h c
 
 end OracleComp.Upper
@@ -261,7 +261,7 @@ noncomputable scoped instance (priority := 1200) instWP :
   OracleComp.Upper.instWP
 
 /-- The per-call upper-bound reading as a direct `WP` instance, which outranks direct instances
-of other readings (`MeasureProgramLogic.Quantitative.wpInst`). -/
+of other readings (`ExpectationWP.Quantitative.wpInst`). -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
   (OracleComp.Upper.instWP (spec := spec)).toWP α

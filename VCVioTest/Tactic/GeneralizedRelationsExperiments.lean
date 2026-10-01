@@ -129,18 +129,18 @@ This means that the `@[gcongr]` lemma cannot be used in the `grw` tactic. Please
 #guard_msgs in
 attribute [local gcongr] Measure.bind_mono_right
 
-attribute [local gcongr] MeasureProgramLogic.eRelWP_mono MeasureProgramLogic.CouplingPost.mono
+attribute [local gcongr] ExpectationWP.eRelWP_mono ExpectationWP.CouplingPost.mono
 
 example {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
     {m : Type → Type} [EvalDistSemantics m]
     (mx : m α) (my : m β) (g h : α → β → ℝ≥0∞)
     (hgh : ∀ a b, g a b ≤ h a b) :
-    MeasureProgramLogic.eRelWP mx my g ≤ MeasureProgramLogic.eRelWP mx my h := by grw [hgh]
+    ExpectationWP.eRelWP mx my g ≤ ExpectationWP.eRelWP mx my h := by grw [hgh]
 
 example {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
     (μ : Measure α) (ν : Measure β) (R S : α → β → Prop)
     (h : ∀ a b, R a b → S a b) :
-    MeasureProgramLogic.CouplingPost μ ν R → MeasureProgramLogic.CouplingPost μ ν S := by
+    ExpectationWP.CouplingPost μ ν R → ExpectationWP.CouplingPost μ ν S := by
   gcongr with a b
   guard_target = R a b → S a b
   exact h a b

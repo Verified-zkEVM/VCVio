@@ -59,22 +59,22 @@ unfolds one to the inequality `pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦o
 theorem wp_eq_lintegral [MeasurableSpace α] (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) (hpost : Measurable post) :
     wp⟦oa⟧ post = ∫⁻ x, post x ∂𝒟[oa] :=
-  MeasureProgramLogic.wp_eq_lintegral oa post hpost
+  ExpectationWP.wp_eq_lintegral oa post hpost
 
 /-- Quantitative WP integrates the assertion-valued observation, without an output space. -/
 theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦oa⟧ post = ∫⁻ y, y ∂𝒟[post <$> oa] :=
-  MeasureProgramLogic.wp_eq_lintegral_map oa post
+  ExpectationWP.wp_eq_lintegral_map oa post
 
 /-! ## `wp` lemmas (against `wp _ _`)
 
-The structural equations of an expectation are the generic ones, `MeasureProgramLogic.wp_pure`,
+The structural equations of an expectation are the generic ones, `ExpectationWP.wp_pure`,
 `wp_bind`, `wp_map`, `wp_add`, `wp_const_mul` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite`,
 tagged here for the `game_rule` set; a constant observation of an oracle computation is
-`MeasureProgramLogic.wp_const_of_oracle`. The rules below unfold the loop combinators. -/
+`ExpectationWP.wp_const_of_oracle`. The rules below unfold the loop combinators. -/
 
-attribute [game_rule] MeasureProgramLogic.wp_pure MeasureProgramLogic.wp_bind
-  MeasureProgramLogic.wp_map MeasureProgramLogic.wp_add MeasureProgramLogic.wp_const_mul
+attribute [game_rule] ExpectationWP.wp_pure ExpectationWP.wp_bind
+  ExpectationWP.wp_map ExpectationWP.wp_add ExpectationWP.wp_const_mul
   ExactWPMonad.wp_ite ExactWPMonad.wp_dite
 
 @[game_rule] theorem wp_replicate_zero (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
@@ -87,10 +87,10 @@ attribute [game_rule] MeasureProgramLogic.wp_pure MeasureProgramLogic.wp_bind
       wp⟦oa⟧
         (fun x => wp⟦oa.replicate n⟧
           (fun xs => post (x :: xs))) := by
-  rw [OracleComp.replicate_succ_bind, MeasureProgramLogic.wp_bind]
+  rw [OracleComp.replicate_succ_bind, ExpectationWP.wp_bind]
   congr 1
   funext x
-  rw [MeasureProgramLogic.wp_bind]
+  rw [ExpectationWP.wp_bind]
   simp
 
 @[game_rule] theorem wp_list_mapM_nil
@@ -104,10 +104,10 @@ attribute [game_rule] MeasureProgramLogic.wp_pure MeasureProgramLogic.wp_bind
       wp⟦f x⟧
         (fun y => wp⟦xs.mapM f⟧
           (fun ys => post (y :: ys))) := by
-  rw [List.mapM_cons, MeasureProgramLogic.wp_bind]
+  rw [List.mapM_cons, ExpectationWP.wp_bind]
   congr 1
   funext y
-  rw [MeasureProgramLogic.wp_bind]
+  rw [ExpectationWP.wp_bind]
   simp
 
 @[game_rule] theorem wp_list_foldlM_nil
@@ -121,14 +121,14 @@ attribute [game_rule] MeasureProgramLogic.wp_pure MeasureProgramLogic.wp_bind
     wp⟦(x :: xs).foldlM f init⟧ post =
       wp⟦f init x⟧
         (fun s => wp⟦xs.foldlM f s⟧ post) := by
-  rw [List.foldlM_cons, MeasureProgramLogic.wp_bind]
+  rw [List.foldlM_cons, ExpectationWP.wp_bind]
 
 /-- `wp` is monotone in the postcondition; `gcongr` descends through it. -/
 @[gcongr low]
 theorem wp_mono (oa : OracleComp spec α) {post post' : α → ℝ≥0∞}
     (hpost : ∀ x, post x ≤ post' x) :
     wp⟦oa⟧ post ≤ wp⟦oa⟧ post' :=
-  MeasureProgramLogic.wp_mono oa hpost
+  ExpectationWP.wp_mono oa hpost
 
 /-- Finite postconditions over a finite result type have finite weakest precondition. -/
 @[aesop (rule_sets := [finiteness]) safe apply]
@@ -137,26 +137,26 @@ theorem wp_ne_top_of_finite [Finite α] (oa : OracleComp spec α) {post : α →
   let c := ⨆ x, post x
   have hc : c ≠ ⊤ := iSup_ne_top hpost
   exact ne_top_of_le_ne_top hc
-    (MeasureProgramLogic.wp_le_const_of_support oa fun x _ ↦ le_iSup post x)
+    (ExpectationWP.wp_le_const_of_support oa fun x _ ↦ le_iSup post x)
 
 /-- A support-wise postcondition bound controls the quantitative WP. -/
 theorem wp_le_const_of_support (oa : OracleComp spec α) {post : α → ℝ≥0∞} {c : ℝ≥0∞}
     (hpost : ∀ x ∈ support oa, post x ≤ c) : wp⟦oa⟧ post ≤ c :=
-  (wp_mono_of_support oa hpost).trans_eq (MeasureProgramLogic.wp_const_of_oracle oa c)
+  (wp_mono_of_support oa hpost).trans_eq (ExpectationWP.wp_const_of_oracle oa c)
 
 /-- Additive support-wise comparison of quantitative postconditions. -/
 theorem wp_le_const_add_of_support (oa : OracleComp spec α) {f g : α → ℝ≥0∞}
     {c : ℝ≥0∞} (hfg : ∀ x ∈ support oa, f x ≤ c + g x) :
     wp⟦oa⟧ f ≤ c + wp⟦oa⟧ g := by
   refine (wp_mono_of_support oa hfg).trans_eq ?_
-  rw [MeasureProgramLogic.wp_add]
-  exact congrArg (· + wp⟦oa⟧ g) (MeasureProgramLogic.wp_const_of_oracle oa c)
+  rw [ExpectationWP.wp_add]
+  exact congrArg (· + wp⟦oa⟧ g) (ExpectationWP.wp_const_of_oracle oa c)
 
 /-- Finite sums of quantitative postconditions commute with expectation. -/
 theorem wp_finsetSum {κ : Type*} (oa : OracleComp spec α) (s : Finset κ)
     (f : κ → α → ℝ≥0∞) :
     wp⟦oa⟧ (fun x ↦ ∑ i ∈ s, f i x) = ∑ i ∈ s, wp⟦oa⟧ (f i) :=
-  MeasureProgramLogic.wp_finsetSum oa s f
+  ExpectationWP.wp_finsetSum oa s f
 
 /-! ## Triple lemmas
 
@@ -203,7 +203,7 @@ theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (o
     _ = _ := by
       apply Finset.sum_congr rfl
       intro x _
-      rw [prEvent_eq_wp_indicator, ← MeasureProgramLogic.wp_mul_const]
+      rw [prEvent_eq_wp_indicator, ← ExpectationWP.wp_mul_const]
       congr 1
       funext y
       split_ifs <;> simp

@@ -18,7 +18,7 @@
 | `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
 | `Pr{let x ← mx; ...}[event]` | the event of the sequence of draws: the expectation `𝔼{let x ← mx; ...}[𝟙⟦event⟧]` of its indicator, the nested expectations `wp⟦mx⟧ fun x => … wp⟦my⟧ (predInd fun y => event)` of its draws | `VCVio/EvalDist/ProbabilityNotation/Elab.lean` |
 | `𝔼{let x ← mx; ...}[b]` | the expectation of `b : ℝ≥0∞` over the sequence of draws, the nested core weakest preconditions of the draws under the measure interpretation of each draw's monad | `VCVio/EvalDist/ProbabilityNotation/Elab.lean` |
-| `wp⟦mx⟧ g` | the expectation of `g : α → ℝ≥0∞` over the outputs of `mx`: core's `wp mx g ⊥` under `MeasureProgramLogic.measureWP` | `VCVio/EvalDist/Expectation.lean` |
+| `wp⟦mx⟧ g` | the expectation of `g : α → ℝ≥0∞` over the outputs of `mx`: core's `wp mx g ⊥` under `ExpectationWP.wpMonad` | `VCVio/EvalDist/Expectation.lean` |
 
 The braces take a `do`-style sequence, with pure `let`s, destructuring, nested `(← e)` actions,
 branches, `match`, `let mut` and loops, but no `return` at their top level; see *Writing events

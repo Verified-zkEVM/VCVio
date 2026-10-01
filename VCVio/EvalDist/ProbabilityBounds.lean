@@ -41,7 +41,7 @@ theorem prEvent_bind_sq_le_bind_pair
   have hpair :
       Pr{let x ← source; let a ← f x; let b ← f x}[p a ∧ p b] =
         ∫⁻ x, Pr{let a ← f x}[p a] ^ 2 ∂𝒟[source] := by
-    rw [MeasureProgramLogic.wp_eq_lintegral source _ Measurable.of_discrete]
+    rw [ExpectationWP.wp_eq_lintegral source _ Measurable.of_discrete]
     simp only [prEvent_bind_bind_and, sq]
   rw [prEvent_bind_eq_lintegral_of_discrete, hpair]
   exact ENNReal.sq_lintegral_le_lintegral_sq Measurable.of_discrete.aemeasurable
@@ -192,7 +192,7 @@ theorem prEvent_bind_le_of_forall_le (mx : m α) (f : α → m β) (q : β → P
 theorem prEvent_bind_mono_of_forall_le {γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
     (p : β → Prop) (q : γ → Prop) (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
     Pr{let x ← mx; let y ← f x}[p y] ≤ Pr{let x ← mx; let y ← g x}[q y] :=
-  MeasureProgramLogic.wp_mono mx h
+  ExpectationWP.wp_mono mx h
 
 /-- A continuation event bounded by `ε` where `p` holds, and null where it fails, is bounded after
 a common draw by the probability of `p` times `ε`. -/
@@ -201,7 +201,7 @@ theorem prEvent_bind_le_prEvent_mul_of_forall_le (mx : m α) (f : α → m β) (
     (h₂ : ∀ a, ¬ p a → Pr{let y ← f a}[q y] = 0) :
     Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] * ε := by
   rw [← wp_propInd_mul]
-  refine MeasureProgramLogic.wp_mono mx fun a ↦ ?_
+  refine ExpectationWP.wp_mono mx fun a ↦ ?_
   by_cases hp : p a
   · simpa [hp] using h₁ a hp
   · simp [hp, h₂ a hp]
@@ -213,7 +213,7 @@ theorem prEvent_bind_le_add_of_forall_le {γ δ : Type} (mx : m α) (f : α → 
     (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y] + Pr{let y ← k a}[r y]) :
     Pr{let x ← mx; let y ← f x}[p y] ≤
       Pr{let x ← mx; let y ← g x}[q y] + Pr{let x ← mx; let y ← k x}[r y] :=
-  (MeasureProgramLogic.wp_mono mx h).trans_eq (MeasureProgramLogic.wp_add mx _ _)
+  (ExpectationWP.wp_mono mx h).trans_eq (ExpectationWP.wp_add mx _ _)
 
 /-- A uniform lower bound on the event of every continuation bounds the event after a lossless
 common draw. -/
@@ -242,7 +242,7 @@ theorem mul_le_prEvent_bind_of_forall (mx : m α) (f : α → m β)
   calc
     r * r' ≤ Pr{let x ← mx}[p x] * r' := by gcongr
     _ = wp⟦mx⟧ fun x ↦ propInd (p x) * r' := (wp_propInd_mul mx p r').symm
-    _ ≤ _ := MeasureProgramLogic.wp_mono mx fun x ↦ by
+    _ ≤ _ := ExpectationWP.wp_mono mx fun x ↦ by
       by_cases hx : p x
       · simpa [hx] using h' x hx
       · simp [hx]
@@ -255,8 +255,8 @@ theorem prEvent_bind_le_prEvent_add_mul_prEvent_not (mx : m α) (f : α → m β
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
-  rw [← wp_mul_propInd, ← MeasureProgramLogic.wp_add]
-  refine MeasureProgramLogic.wp_mono mx fun a ↦ ?_
+  rw [← wp_mul_propInd, ← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_mono mx fun a ↦ ?_
   by_cases hpa : p a
   · simp [hpa]
   · simpa [hpa] using h a hpa
@@ -299,14 +299,14 @@ theorem wp_eq_one_of_prEvent_eq_one (mx : m α) {q : α → Prop} {g : α → �
     (hq : Pr{let x ← mx}[q x] = 1) (hg : ∀ x, q x → g x = 1) (hg1 : ∀ x, g x ≤ 1) :
     wp⟦mx⟧ g = 1 :=
   le_antisymm (wp_le_of_forall_le mx hg1) <| hq.symm.trans_le <|
-    MeasureProgramLogic.wp_mono mx fun x => by
+    ExpectationWP.wp_mono mx fun x => by
       by_cases hx : q x <;> simp [propInd, hx, hg]
 
 /-- An observation bounded by one with expectation one equals one almost surely. -/
 theorem prEvent_eq_one_of_wp_eq_one (mx : m α) {g : α → ℝ≥0∞} (hg : ∀ x, g x ≤ 1)
     (h : wp⟦mx⟧ g = 1) : Pr{let x ← mx}[g x = 1] = 1 := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete] at h
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete] at h
   have hmass : 𝒟[mx] Set.univ = 1 :=
     le_antisymm (evalDist_apply_univ_le_one mx) <| by
       calc (1 : ℝ≥0∞) = ∫⁻ x, g x ∂𝒟[mx] := h.symm
@@ -354,14 +354,14 @@ theorem prEvent_true_attach (mx : m α) :
 theorem wp_eq_wp_attach (mx : m α) (g : α → ℝ≥0∞) :
     wp⟦mx⟧ g = wp⟦MonadAttach.attach mx⟧ fun a ↦ g a.1 := by
   conv_lhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
-  exact MeasureProgramLogic.wp_map _ _ _
+  exact ExpectationWP.wp_map _ _ _
 
 /-- Comparing observations on the structurally reachable outputs compares their expectations. -/
 @[gcongr]
 theorem wp_mono_of_support (mx : m α) {f g : α → ℝ≥0∞}
     (h : ∀ a ∈ support mx, f a ≤ g a) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
   rw [wp_eq_wp_attach mx f, wp_eq_wp_attach mx g]
-  exact MeasureProgramLogic.wp_mono _ fun a ↦ h a.1 a.2
+  exact ExpectationWP.wp_mono _ fun a ↦ h a.1 a.2
 
 /-- Observations that agree on the structurally reachable outputs have equal expectations. -/
 theorem wp_congr_of_support (mx : m α) {f g : α → ℝ≥0∞}
@@ -426,7 +426,7 @@ theorem prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support (mx : m α) (f : 
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
-  rw [← wp_mul_propInd, ← MeasureProgramLogic.wp_add]
+  rw [← wp_mul_propInd, ← ExpectationWP.wp_add]
   refine wp_mono_of_support mx fun a ha ↦ ?_
   by_cases hpa : p a
   · simp [hpa]

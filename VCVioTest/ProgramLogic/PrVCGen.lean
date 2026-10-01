@@ -121,7 +121,7 @@ example (n q : ℕ) : Pr{let b ← hits n q}[b = true] ≤ q * (n + 1 : ℝ≥0�
   case vc1 => simp
   case vc2 => simp
   case vc3 =>
-    simp only [MeasureProgramLogic.wp_pure]
+    simp only [ExpectationWP.wp_pure]
     refine (avg_or_le (fun x : Fin (n + 1) => x = 0) _ _).trans_eq ?_
     simp [add_mul, add_comm, Finset.filter_eq']
 

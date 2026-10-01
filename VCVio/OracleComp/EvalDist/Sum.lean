@@ -73,7 +73,7 @@ needs no countability. -/
 theorem wp_eq_tsum (oa : OracleComp spec α) (f : α → ℝ≥0∞) :
     wp⟦oa⟧ f = ∑' x, Pr{let y ← oa}[y = x] * f x := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral oa f .of_discrete, lintegral_evalDist_eq_tsum]
+  rw [ExpectationWP.wp_eq_lintegral oa f .of_discrete, lintegral_evalDist_eq_tsum]
 
 /-- An event after a bind is the weighted sum, over the prefix's outputs, of the continuation's
 event. The prefix's output type needs no countability. -/

@@ -22,7 +22,7 @@ open scoped ENNReal
 
 universe u
 
-namespace MeasureProgramLogic
+namespace ExpectationWP
 
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
   [OracleSpec.IsMeasureSpec spec]
@@ -39,4 +39,4 @@ theorem wp_le_const_add_of_support (mx : OracleComp spec α) {f g : α → ℝ�
   refine (_root_.wp_mono_of_support mx hfg).trans_eq ?_
   rw [wp_add, wp_const_of_oracle]
 
-end MeasureProgramLogic
+end ExpectationWP

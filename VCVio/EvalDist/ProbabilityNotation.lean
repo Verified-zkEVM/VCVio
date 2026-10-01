@@ -17,7 +17,7 @@ public import VCVio.EvalDist.ProbabilityNotation.Delab
 `Pr{…}[…]` the probability of an event, the expectation of its indicator: `Pr{items}[t]` is
 `𝔼{items}[𝟙⟦t⟧]`, and `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`. Both are
 translations of the sequence into nested core weakest preconditions under the expectation
-interpretation `MeasureProgramLogic.measureWP` of each draw's monad
+interpretation `ExpectationWP.wpMonad` of each draw's monad
 (`VCVio.EvalDist.ProbabilityNotation.Elab`):
 ```
 Pr{let x ← mx; let y ← my x}[p x y] = wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => p x y)
@@ -154,17 +154,17 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
 each continuation. -/
 theorem prEvent_bind (mx : m α) (f : α → m β) (p : β → Prop) :
     wp⟦mx >>= f⟧ (predInd p) = Pr{let x ← mx; let y ← f x}[p y] :=
-  MeasureProgramLogic.wp_bind mx f _
+  ExpectationWP.wp_bind mx f _
 
 /-- An event of mapped outputs is the event of the composed predicate. -/
 theorem prEvent_map (mx : m α) (f : α → β) (p : β → Prop) :
     wp⟦f <$> mx⟧ (predInd p) = Pr{let x ← mx}[p (f x)] :=
-  MeasureProgramLogic.wp_map f mx _
+  ExpectationWP.wp_map f mx _
 
 /-- An event of a returned value is the indicator of the predicate at that value. -/
 theorem prEvent_pure (a : α) (p : α → Prop) :
     wp⟦(pure a : m α)⟧ (predInd p) = propInd (p a) :=
-  MeasureProgramLogic.wp_pure a _
+  ExpectationWP.wp_pure a _
 
 /-- An event of a conditional computation is the conditional event. -/
 theorem prEvent_ite (c : Prop) [Decidable c] (mx my : m α) (p : α → Prop) :
@@ -190,20 +190,20 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
 /-- A constant observation has the expectation of the constant times the success mass. -/
 @[simp]
 theorem wp_const (mx : m α) (c : ℝ≥0∞) : wp⟦mx⟧ (fun _ => c) = c * Pr{let _ ← mx}[True] := by
-  simpa only [predInd_apply, propInd_true, mul_one] using MeasureProgramLogic.wp_const_mul mx c
+  simpa only [predInd_apply, propInd_true, mul_one] using ExpectationWP.wp_const_mul mx c
     (predInd fun _ ↦ True)
 
 /-- An indicator observation scaled on the right is the scaled event. -/
 @[simp]
 theorem wp_propInd_mul (mx : m α) (p : α → Prop) (c : ℝ≥0∞) :
     wp⟦mx⟧ (fun a => propInd (p a) * c) = Pr{let x ← mx}[p x] * c :=
-  MeasureProgramLogic.wp_mul_const mx _ c
+  ExpectationWP.wp_mul_const mx _ c
 
 /-- An indicator observation scaled on the left is the scaled event. -/
 @[simp]
 theorem wp_mul_propInd (mx : m α) (p : α → Prop) (c : ℝ≥0∞) :
     wp⟦mx⟧ (fun a => c * propInd (p a)) = c * Pr{let x ← mx}[p x] :=
-  MeasureProgramLogic.wp_const_mul mx c _
+  ExpectationWP.wp_const_mul mx c _
 
 end Indicators
 
@@ -224,8 +224,8 @@ theorem prEvent_eq_evalDist_map (mx : m α) (p : α → Prop) :
     funext b
     by_cases hb : b <;> simp [propInd, hb]
   change wp⟦mx⟧ (fun x ↦ propInd (p x)) = _
-  rw [← MeasureProgramLogic.wp_map p mx propInd,
-    MeasureProgramLogic.wp_eq_lintegral (p <$> mx) propInd Measurable.of_discrete, hind,
+  rw [← ExpectationWP.wp_map p mx propInd,
+    ExpectationWP.wp_eq_lintegral (p <$> mx) propInd Measurable.of_discrete, hind,
     lintegral_indicator_one (measurableSet_singleton True)]
 
 /-- A family of events is measurable when the measures of its selectors are. -/
@@ -358,7 +358,7 @@ theorem prEvent_mono_ae [MeasurableSpace α] (mx : m α) (p q : α → Prop)
 /-- Implication between events bounds their probabilities. -/
 theorem prEvent_mono (mx : m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
     Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] :=
-  MeasureProgramLogic.wp_mono mx fun x ↦ propInd_mono (hpq x)
+  ExpectationWP.wp_mono mx fun x ↦ propInd_mono (hpq x)
 
 /-- A constant event conjoined on the left factors out as its indicator. -/
 theorem prEvent_const_and_left (mx : m α) (P : Prop) (q : α → Prop) :
@@ -383,7 +383,7 @@ theorem prEvent_bind_bind_and (mx : m α) (my : m β) (p : α → Prop) (q : β 
 /-- An expectation of an observation bounded by a constant is at most that constant. -/
 theorem wp_le_of_forall_le (mx : m α) {g : α → ℝ≥0∞} {c : ℝ≥0∞} (h : ∀ x, g x ≤ c) :
     wp⟦mx⟧ g ≤ c :=
-  (MeasureProgramLogic.wp_mono mx h).trans <| by
+  (ExpectationWP.wp_mono mx h).trans <| by
     rw [wp_const]
     exact mul_le_of_le_one_right' (prEvent_le_one mx)
 
@@ -391,20 +391,20 @@ theorem wp_le_of_forall_le (mx : m α) {g : α → ℝ≥0∞} {c : ℝ≥0∞} 
 expectation. -/
 theorem le_wp_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1) {g : α → ℝ≥0∞}
     {c : ℝ≥0∞} (h : ∀ x, c ≤ g x) : c ≤ wp⟦mx⟧ g :=
-  le_of_eq_of_le (by rw [wp_const, hmx, mul_one]) (MeasureProgramLogic.wp_mono mx h)
+  le_of_eq_of_le (by rw [wp_const, hmx, mul_one]) (ExpectationWP.wp_mono mx h)
 
 /-- An expectation after a bind is at most the bound on each continuation's expectation. -/
 theorem wp_le_prEvent_add (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞) {ε : ℝ≥0∞}
     (hg : ∀ x, ¬bad x → g x ≤ ε) (hle : ∀ x, g x ≤ 1) :
     wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + ε := by
   calc wp⟦mx⟧ g ≤ wp⟦mx⟧ fun x => propInd (bad x) + ε :=
-        MeasureProgramLogic.wp_mono mx fun x => by
+        ExpectationWP.wp_mono mx fun x => by
           classical
           by_cases h : bad x
           · simpa [h] using (hle x).trans le_self_add
           · simpa [h] using hg x h
     _ ≤ Pr{let x ← mx}[bad x] + ε := by
-        rw [MeasureProgramLogic.wp_add, wp_const]
+        rw [ExpectationWP.wp_add, wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one mx))
 
 end Bounds
@@ -421,7 +421,7 @@ observation. -/
 theorem wp_eq_sum_fintype [Fintype α] (mx : m α) (g : α → ℝ≥0∞) :
     wp⟦mx⟧ g = ∑ a, Pr{let x ← mx}[x = a] * g a := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete, lintegral_fintype]
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete, lintegral_fintype]
   refine Finset.sum_congr rfl fun a _ => ?_
   rw [mul_comm, prEvent_eq_evalDist_singleton]
 
@@ -430,7 +430,7 @@ observation. -/
 theorem wp_eq_tsum_of_countable [Countable α] (mx : m α) (g : α → ℝ≥0∞) :
     wp⟦mx⟧ g = ∑' a, Pr{let x ← mx}[x = a] * g a := by
   let : MeasurableSpace α := ⊤
-  rw [MeasureProgramLogic.wp_eq_lintegral mx g Measurable.of_discrete, lintegral_countable']
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete, lintegral_countable']
   refine tsum_congr fun a => ?_
   rw [mul_comm, prEvent_eq_evalDist_singleton]
 
@@ -440,7 +440,7 @@ Only the common draw needs a selected measurable space; the continuation is obse
 theorem prEvent_bind_eq_lintegral [MeasurableSpace α] (mx : m α) (f : α → m β) (p : β → Prop)
     (hf : Measurable fun x ↦ 𝒟[p <$> f x]) :
     Pr{let x ← mx; let y ← f x}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx] :=
-  MeasureProgramLogic.wp_eq_lintegral mx _ (measurable_prEvent hf)
+  ExpectationWP.wp_eq_lintegral mx _ (measurable_prEvent hf)
 
 /-- A discrete common draw discharges the observed continuation's measurability. -/
 theorem prEvent_bind_eq_lintegral_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
@@ -462,7 +462,7 @@ draw. -/
 theorem prEvent_bind_congr (mx : m α) (f : α → m β) (g : α → m γ) (p : β → Prop) (q : γ → Prop)
     (h : ∀ x, Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
     Pr{let x ← mx; let y ← f x}[p y] = Pr{let x ← mx; let z ← g x}[q z] :=
-  MeasureProgramLogic.wp_congr mx h
+  ExpectationWP.wp_congr mx h
 
 /-- After a draw from a finite type, an event is the finite sum of the draw's point masses times
 the conditional event probabilities. -/

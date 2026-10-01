@@ -156,15 +156,15 @@ theorem wp_eq_one_iff_of_fullSupport
   · intro h a ha
     by_contra hne
     have hsum : wp⟦mx⟧ g + wp⟦mx⟧ (fun x => 1 - g x) = 1 + 0 := by
-      rw [← MeasureProgramLogic.wp_add, add_zero]
+      rw [← ExpectationWP.wp_add, add_zero]
       simp only [add_tsub_cancel_of_le (hg _)]
-      exact MeasureProgramLogic.wp_const_of_oracle mx 1
+      exact ExpectationWP.wp_const_of_oracle mx 1
     rw [h, ENNReal.add_right_inj ENNReal.one_ne_top] at hsum
     refine (ne_of_gt ?_) hsum
     exact (OracleComp.Angelic.pos_wp_iff_of_fullSupport hfull mx _).2
       ⟨a, ha, tsub_pos_of_lt (lt_of_le_of_ne (hg a) hne)⟩
   · intro h
-    rw [← MeasureProgramLogic.wp_const_of_oracle mx 1]
+    rw [← ExpectationWP.wp_const_of_oracle mx 1]
     exact wp_congr_of_support mx h
 
 /-- When every answer of every query has positive mass, an expectation of an observation bounded

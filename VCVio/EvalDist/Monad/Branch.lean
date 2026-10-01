@@ -114,8 +114,8 @@ theorem prEvent_bind_ite {α β : Type} (mx : m α) (p : α → Prop) [Decidable
     Pr{let x ← mx; let y ← if p x then yes else no}[q y] =
       Pr{let x ← mx}[p x] * Pr{let y ← yes}[q y] +
         Pr{let x ← mx}[¬p x] * Pr{let y ← no}[q y] := by
-  rw [← wp_propInd_mul, ← wp_propInd_mul, ← MeasureProgramLogic.wp_add]
-  refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
+  rw [← wp_propInd_mul, ← wp_propInd_mul, ← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_congr mx fun x ↦ ?_
   by_cases hx : p x <;> simp [hx]
 
 /-- A continuation event that is constant on an observed condition and zero otherwise factors
@@ -128,6 +128,6 @@ theorem prEvent_bind_eq_mul_of_ite {α β γ : Type}
         let y ← f x}[q y] = if p x then Pr{
         let z ← my}[r z] else 0) :
     Pr{let x ← mx; let y ← f x}[q y] = Pr{let x ← mx}[p x] * Pr{let z ← my}[r z] := by
-  rw [MeasureProgramLogic.wp_congr mx h, ← wp_propInd_mul]
-  refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
+  rw [ExpectationWP.wp_congr mx h, ← wp_propInd_mul]
+  refine ExpectationWP.wp_congr mx fun x ↦ ?_
   by_cases hx : p x <;> simp [hx]

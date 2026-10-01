@@ -36,7 +36,7 @@ open scoped OracleSpec.PrimitiveQuery
 
 namespace OracleComp.ProgramLogic.Relational
 
-open OracleSpec MeasureProgramLogic
+open OracleSpec ExpectationWP
 
 /-- Relational postconditions over two output spaces. -/
 abbrev RelPost (α : Sort w) (β : Sort x) := α → β → Prop
@@ -70,7 +70,7 @@ everywhere. -/
 def CouplingPost (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) : Prop :=
   letI : MeasurableSpace α := ⊤
   letI : MeasurableSpace β := ⊤
-  MeasureProgramLogic.RelWP oa ob R
+  ExpectationWP.RelWP oa ob R
 
 /-- Implication of postconditions preserves a coupling. -/
 theorem CouplingPost.mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}

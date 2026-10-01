@@ -129,7 +129,7 @@ theorem prEvent_seqLeft (mx : m α) (my : m β) (p : α → Prop) :
     Pr{let x ← mx <* my}[p x] = Pr{let x ← mx}[p x] * Pr{let _ ← my}[True] := by
   simp only [ExactWPMonad.wp_seqLeft]
   calc _ = wp⟦mx⟧ fun a ↦ propInd (p a) * Pr{let _ ← my}[True] :=
-        MeasureProgramLogic.wp_congr mx fun a ↦ wp_const my _
+        ExpectationWP.wp_congr mx fun a ↦ wp_const my _
     _ = _ := wp_propInd_mul mx p _
 
 /-- A final event about the second result retains the first computation's success mass. `simp`

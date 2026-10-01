@@ -18,7 +18,7 @@ probability backend. Pointwise postcondition bounds support generalized congruen
 
 public section
 
-open MeasureTheory MeasureProgramLogic
+open MeasureTheory ExpectationWP
 open scoped ENNReal
 
 run_cmd do

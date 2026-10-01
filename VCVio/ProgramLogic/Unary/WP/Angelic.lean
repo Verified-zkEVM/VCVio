@@ -166,8 +166,8 @@ theorem pos_wp_iff_of_fullSupport
       rw [prEvent_eq_evalDist_singleton]
       exact (mem_support_iff_evalDist_singleton_pos_of_fullSupport hfull oa a).mp ha
     calc (0 : ℝ≥0∞) < g a * Pr{let x ← oa}[x = a] := ENNReal.mul_pos hpos.ne' hmass.ne'
-      _ = wp⟦oa⟧ (fun x => g a * propInd (x = a)) := (MeasureProgramLogic.wp_const_mul _ _ _).symm
-      _ ≤ wp⟦oa⟧ g := MeasureProgramLogic.wp_mono oa fun x => by
+      _ = wp⟦oa⟧ (fun x => g a * propInd (x = a)) := (ExpectationWP.wp_const_mul _ _ _).symm
+      _ ≤ wp⟦oa⟧ g := ExpectationWP.wp_mono oa fun x => by
           by_cases hx : x = a
           · subst hx
             simp

@@ -142,7 +142,7 @@ no structural positivity assumption or bind instance search is needed.
 The [measure conversion roadmap](../design/measure-conversion-roadmap.md) records the owning
 modules, standard proof conversions, theorem families, and validation gates.
 
-`open scoped MeasureProgramLogic.Probabilistic` selects bounded `Prob` expectations for any
+`open scoped ExpectationWP.Probabilistic` selects bounded `Prob` expectations for any
 lawful measure semantics. Public value laws connect them to quantitative WP and Lebesgue
 integration; constants retain success mass. Plain `simp`, `gcongr`, and `grw` work on optional
 computations and weighted oracles. Qualitative oracle WP delegates to PolyFun's direct demonic
@@ -163,7 +163,7 @@ indented past its `let`, as in any `do` block, or parenthesized.
 `Pr{items}[t]` is the expectation of the event's indicator, `𝔼{items}[𝟙⟦t⟧]`, and `𝔼{items}[b]`
 is the expectation of the value `b` over the draws of the sequence: each draw `let x ← a` is
 core's weakest precondition `wp a (fun x => …) ⊥` under the measure interpretation
-`MeasureProgramLogic.measureWP` of `a`'s monad (`VCVio.EvalDist.Expectation`), and the notation is
+`ExpectationWP.wpMonad` of `a`'s monad (`VCVio.EvalDist.Expectation`), and the notation is
 the translation of its sequence into these nested expectations:
 
 | item | term |
@@ -311,14 +311,14 @@ event masses as rational sums, and the singleton simp lemma reduces to `Raw.prob
 with the uniform oracle interpretation.
 `VCVio.EvalDist.Expectation` gives every monad with lawful measure semantics its expectations.
 `wp⟦mx⟧ g` is the expectation of `g : α → ℝ≥0∞` over the outputs of `mx`. It is core's
-`wp mx g ⊥` under the measure interpretation `MeasureProgramLogic.measureWP m`, which is built from
-the ordered expectation algebra `MeasureProgramLogic.toMAlgOrdered m` and is exact (PolyFun's
+`wp mx g ⊥` under the measure interpretation `ExpectationWP.wpMonad m`, which is built from
+the ordered expectation algebra `ExpectationWP.algebra m` and is exact (PolyFun's
 `ExactWPMonad`). The interpretation is supplied explicitly rather than found by instance search.
 For oracle computations it is the core `WPMonad` instance, and
-`open scoped MeasureProgramLogic.Quantitative` selects it for any other lawful monad, so
+`open scoped ExpectationWP.Quantitative` selects it for any other lawful monad, so
 `wp mx g ⊥` and core triples read expectations.
 
-The laws in `MeasureProgramLogic` need no measurable structure on the outputs:
+The laws in `ExpectationWP` need no measurable structure on the outputs:
 - `wp_mono` (`gcongr`), `wp_congr`, `wp_zero`, `wp_add`;
 - `wp_const_mul`, `wp_mul_const`, `wp_finsetSum`, `wp_pure`, `wp_bind`, `wp_map`.
 
@@ -621,7 +621,7 @@ equivalently its run's `dropNone` (`OptionT.evalDist_eq_dropNone`, in
 | Definition | Type | Notation | Defined in |
 |-----------|------|----------|------------|
 | `evalDist mx` | `Measure α` | `𝒟[mx]` | `EvalDist/Defs/Measure/Core.lean` |
-| `wp mx g ⊥` under `measureWP m` | `ℝ≥0∞` | `𝔼{let x ← mx; …}[g x]`, `wp⟦mx⟧ g` | `EvalDist/Expectation.lean`, `EvalDist/ProbabilityNotation.lean` |
+| `wp mx g ⊥` under `wpMonad m` | `ℝ≥0∞` | `𝔼{let x ← mx; …}[g x]`, `wp⟦mx⟧ g` | `EvalDist/Expectation.lean`, `EvalDist/ProbabilityNotation.lean` |
 | event, `𝔼{…}[𝟙⟦p x⟧]` | `ℝ≥0∞` | `Pr{let x ← mx; …}[p x]`, `Pr{let x ← mx}[x = a]` | `EvalDist/ProbabilityNotation.lean` |
 | `prFail mx` | `ℝ≥0∞` | `1 - Pr{let _ ← mx}[True]` | `EvalDist/ProbabilityNotation.lean` |
 | `evalDistWithFailure mx` | `Measure (Option α)` | — | `EvalDist/WithFailure.lean` |
@@ -718,8 +718,8 @@ the constant-continuation laws.
 | `measureETVDist_bind_bind_le_lintegral` | Conditional composition with an AE majorant under the prefix law | `EvalDist/MeasureTVDist/Bind.lean` |
 | `Measure.etvDist_bind_bind_le_of_bad` | Exceptional prefix mass plus the good-branch allowance weighted by its mass | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` |
 | `Measure.Coupling` | Joint measure with prescribed marginals | `ToMathlib/MeasureTheory/Measure/Coupling.lean` |
-| `MeasureProgramLogic.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
-| `MeasureProgramLogic.eRelWP` | Best coupled `lintegral` post-expectation | `ProgramLogic/Relational/Measure.lean` |
+| `ExpectationWP.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
+| `ExpectationWP.eRelWP` | Best coupled `lintegral` post-expectation | `ProgramLogic/Relational/Measure.lean` |
 
 ## ProbComp and Sampling
 
@@ -765,7 +765,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 | `evalDist_bind` | `𝒟[mx >>= f] = 𝒟[mx].bind fun x => 𝒟[f x]`, for a measurable continuation | — |
 | `evalDist_bind_of_discrete` | the same on a discrete source space | — |
 | `prEvent_bind` | `prEvent (mx >>= f) p = wp⟦mx⟧ fun a => prEvent (f a) p` | `simp`, `grind norm`, `expect_norm` |
-| `MeasureProgramLogic.wp_bind` | `wp⟦mx >>= f⟧ g = wp⟦mx⟧ fun a => wp⟦f a⟧ g` (`simp` uses `ExactWPMonad.wp_bind`) | — |
+| `ExpectationWP.wp_bind` | `wp⟦mx >>= f⟧ g = wp⟦mx⟧ fun a => wp⟦f a⟧ g` (`simp` uses `ExactWPMonad.wp_bind`) | — |
 | `prEvent_bind_eq_lintegral_of_discrete` | `Pr{let y ← mx >>= f}[p y] = ∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx]` | — |
 | `prEvent_bind_eq_sum_fintype` | `Pr{let y ← mx >>= f}[p y] = ∑ a, Pr{let x ← mx}[x = a] * Pr{let y ← f a}[p y]` | — |
 | `prEvent_bind_eq_tsum_of_countable` | the same as a `tsum` over a countable source | — |
@@ -798,7 +798,7 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 | Lemma | Use |
 |-------|-----|
 | `OracleComp.evalDist_bind_bind_swap` / `OracleComp.wp_swap` | Swap two independent oracle draws (used by `prrw`; `_of_uniform` variants take uniform answers) |
-| `evalDist_bind_congr` / `MeasureProgramLogic.wp_congr` | Pointwise equal continuations give equal binds or expectations, with no measurable space on the intermediate result |
+| `evalDist_bind_congr` / `ExpectationWP.wp_congr` | Pointwise equal continuations give equal binds or expectations, with no measurable space on the intermediate result |
 | `OracleComp.evalDist_bind_congr_of_support` / `wp_congr_of_support` | Continuations equal on the support of the shared prefix give equal binds or expectations |
 
 ### Zero / membership

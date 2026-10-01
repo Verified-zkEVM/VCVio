@@ -78,7 +78,7 @@ theorem le_wp_iff_triple (oa : OracleComp spec α) (g : α → ℝ≥0∞) (r : 
 theorem triple_const_mul {oa : OracleComp spec α} {r : ℝ≥0∞} {g : α → ℝ≥0∞} (c : ℝ≥0∞)
     (h : ⦃ r ⦄ oa ⦃ g ⦄) : ⦃ c * r ⦄ oa ⦃ fun a => c * g a ⦄ := by
   rw [← le_wp_iff_triple] at h ⊢
-  rw [MeasureProgramLogic.wp_const_mul]
+  rw [ExpectationWP.wp_const_mul]
   exact mul_le_mul_right h c
 
 /-- A lower bound at every output of a lossless computation bounds its expectation. -/
@@ -133,7 +133,7 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epo
   rw [MAlgOrdered.iInf_eq_iInf]
   refine ⟨le_trans (le_of_eq ?_) (wp_mono_of_support oa fun x hx =>
     iInf_le (fun a : {a // a ∈ support oa} => post a.1) ⟨x, hx⟩)⟩
-  rw [MeasureProgramLogic.wp_const_of_oracle]
+  rw [ExpectationWP.wp_const_of_oracle]
 
 end OracleComp.Quantitative
 

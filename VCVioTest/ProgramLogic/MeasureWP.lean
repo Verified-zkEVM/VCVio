@@ -33,7 +33,7 @@ example : True := by
   fail_if_success let _ := inferInstanceAs (WPMonad Option ENNReal EStack⟨⟩)
   trivial
 
-open scoped MeasureProgramLogic.Quantitative
+open scoped ExpectationWP.Quantitative
 
 example (c : ENNReal) : wp (none : Option Nat) (fun _ ↦ c) Lean.Order.bot = 0 := by simp
 
@@ -63,19 +63,19 @@ example (mx : m α) (f g : α → ENNReal) (hfg : ∀ x, f x ≤ g x) :
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal) :
     wp mx (fun x ↦ c + f x + g x) Lean.Order.bot =
       c * 𝒟[mx] Set.univ + wp mx f Lean.Order.bot + wp mx g Lean.Order.bot := by
-  rw [MeasureProgramLogic.wp_add mx (fun x ↦ c + f x) g,
-    MeasureProgramLogic.wp_add mx (fun _ ↦ c) f, wp_const, prEvent_true_eq_evalDist_apply_univ]
+  rw [ExpectationWP.wp_add mx (fun x ↦ c + f x) g,
+    ExpectationWP.wp_add mx (fun _ ↦ c) f, wp_const, prEvent_true_eq_evalDist_apply_univ]
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal)
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
     wp mx f Lean.Order.bot ≤ c * 𝒟[mx] Set.univ + wp mx g Lean.Order.bot :=
-  MeasureProgramLogic.wp_le_const_mul_mass_add mx hf hg hfg
+  ExpectationWP.wp_le_const_mul_mass_add mx hf hg hfg
 
 example (mx : m α) (f g : α → ENNReal) (c : ENNReal) [IsProbabilityMeasure 𝒟[mx]]
     (hf : Measurable f) (hg : Measurable g)
     (hfg : ∀ᵐ x ∂𝒟[mx], f x ≤ c + g x) :
     wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot := by
-  simpa using MeasureProgramLogic.wp_le_const_mul_mass_add mx hf hg hfg
+  simpa using ExpectationWP.wp_le_const_mul_mass_add mx hf hg hfg
 
 end VCVioTest.ProgramLogic.MeasureWP

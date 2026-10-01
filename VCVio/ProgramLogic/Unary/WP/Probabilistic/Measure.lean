@@ -15,7 +15,7 @@ public import ToMathlib.Control.Monad.Algebra
 
 Lawful successful-output measure semantics give bounded probability assertions by restricting
 the expectation algebra to `Prob`. Enable this interpretation with
-`open scoped MeasureProgramLogic.Probabilistic`.
+`open scoped ExpectationWP.Probabilistic`.
 -/
 
 public section
@@ -25,29 +25,29 @@ open scoped ENNReal
 
 universe v
 
-namespace MeasureProgramLogic.Probabilistic
+namespace ExpectationWP.Probabilistic
 
 variable (m : Type → Type v) [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
-attribute [local instance] MeasureProgramLogic.Quantitative.instMAlgOrdered
+attribute [local instance] ExpectationWP.Quantitative.instMAlgOrdered
 
 /-- Subprobability expectations preserve the upper bound one. -/
 theorem μ_one_le {α : Type} (mx : m α) :
     MAlgOrdered.μ (mx >>= fun _ ↦ pure (1 : ENNReal)) ≤ 1 := by
   let : MeasurableSpace α := MeasurableSpace.comap (fun _ : α ↦ (1 : ENNReal)) inferInstance
-  exact MeasureProgramLogic.wp_le_const mx measurable_const
+  exact ExpectationWP.wp_le_const mx measurable_const
     (Filter.Eventually.of_forall fun _ ↦ le_rfl)
 
 /-- The expectation algebra restricted to bounded probability assertions. -/
 @[expose, instance_reducible]
-noncomputable def toMAlgOrdered : MAlgOrdered m Prob :=
+noncomputable def algebra : MAlgOrdered m Prob :=
   MAlgOrdered.restrictIic 1 (fun {_} mx ↦ μ_one_le m mx)
 
 /-- Select probability-bounded measure expectations, at the priority of the generic scopes
 (above core's direct instances, below the reading scopes of `OracleComp`). -/
 noncomputable scoped instance (priority := 1050) instMAlgOrdered : MAlgOrdered m Prob :=
-  toMAlgOrdered m
+  algebra m
 
 /-- Core WP with bounded probability assertions and no exception postcondition. -/
 noncomputable scoped instance (priority := 1050) instWP : WPMonad m Prob EStack⟨⟩ :=
@@ -79,7 +79,7 @@ theorem wp_mono (mx : m α) {f g : α → Prob} (hfg : ∀ a, f a ≤ g a) (epos
 theorem wp_val_eq_lintegral_map (mx : m α) (post : α → Prob) :
     (wp mx post (Lean.Order.bot : EStack⟨⟩)).val = ∫⁻ y, y ∂𝒟[(fun a ↦ (post a).val) <$> mx] := by
   rw [wp_val, bind_pure_comp]
-  exact μ_toMAlgOrdered _
+  exact μ_algebra _
 
 variable [MeasurableSpace α]
 
@@ -88,11 +88,11 @@ theorem wp_val_eq_lintegral (mx : m α) (post : α → Prob)
     (hpost : Measurable fun a ↦ (post a).val) :
     (wp mx post (Lean.Order.bot : EStack⟨⟩)).val = ∫⁻ a, (post a).val ∂𝒟[mx] := by
   rw [wp_val]
-  exact MeasureProgramLogic.wp_eq_lintegral mx _ hpost
+  exact ExpectationWP.wp_eq_lintegral mx _ hpost
 
 /-- Constant assertions retain the successful-output mass. -/
 theorem wp_const (mx : m α) (p : Prob) :
     (wp mx (fun _ ↦ p) (Lean.Order.bot : EStack⟨⟩)).val = p.val * 𝒟[mx] Set.univ := by
   rw [wp_val_eq_lintegral mx _ measurable_const, lintegral_const]
 
-end MeasureProgramLogic.Probabilistic
+end ExpectationWP.Probabilistic

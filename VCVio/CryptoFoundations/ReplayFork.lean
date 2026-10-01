@@ -589,7 +589,7 @@ theorem prEvent_contextForkCollision_le_main_div [DecidableEq ι]
     rcases PFunctor.FreeM.Cursor.locateAt? (P := spec.toPFunctor) i main path s
       with _ | located
     · simp
-    · refine (prEvent_bind _ _ _).trans_le <| (MeasureProgramLogic.wp_mono _
+    · refine (prEvent_bind _ _ _).trans_le <| (ExpectationWP.wp_mono _
         (g := predInd fun second => located.completion.answer = second)
         fun second => ?_).trans ?_
       · by_cases heq : located.completion.answer = second <;> simp [hcf, heq]
@@ -655,7 +655,7 @@ theorem prEvent_contextForkViewCollision_le_collision [DecidableEq ι]
     change wp⟦(liftM (query i) : OracleComp spec (spec.Range i)) >>= continuation⟧
       (fun x => propInd (x = some s)) ≤ _
     refine (prEvent_bind _ _ _).trans_le <|
-      (MeasureProgramLogic.wp_mono _ fun secondAnswer => ?_).trans_eq (prEvent_bind _ _ _).symm
+      (ExpectationWP.wp_mono _ fun secondAnswer => ?_).trans_eq (prEvent_bind _ _ _).symm
     rw [prEvent_map]
     by_cases heq : located.completion.answer = secondAnswer
     · by_cases hcf : cf (PFunctor.FreeM.output main path) = some s
