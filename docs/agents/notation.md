@@ -16,13 +16,13 @@
 | Notation | Meaning | Defined in |
 |----------|---------|------------|
 | `𝒟[mx]` | successful-output `Measure` denotation, `evalDist mx` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
-| `Pr{let x ← mx; ...}[event]` | the event of the `do` sequence: the expectation `𝔼{let x ← mx; ...}[𝟙⟦event⟧]` of its indicator, stored as nested expectations `wp⟦mx⟧ fun x => … wp⟦my⟧ (predInd fun y => event)` | `VCVio/EvalDist/ProbabilityNotation.lean` |
-| `𝔼{let x ← mx; ...}[b]` | the expectation of `b : ℝ≥0∞` after the `do` sequence, core's `wp (do …; return b) id ⊥` under the measure interpretation, stored as nested expectations | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `Pr{let x ← mx; ...}[event]` | the event of the sequence of draws: the expectation `𝔼{let x ← mx; ...}[𝟙⟦event⟧]` of its indicator, the nested expectations `wp⟦mx⟧ fun x => … wp⟦my⟧ (predInd fun y => event)` of its draws | `VCVio/EvalDist/ProbabilityNotation/Elab.lean` |
+| `𝔼{let x ← mx; ...}[b]` | the expectation of `b : ℝ≥0∞` over the sequence of draws, the nested core weakest preconditions of the draws under the measure interpretation of each draw's monad | `VCVio/EvalDist/ProbabilityNotation/Elab.lean` |
 | `wp⟦mx⟧ g` | the expectation of `g : α → ℝ≥0∞` over the outputs of `mx`: core's `wp mx g ⊥` under `MeasureProgramLogic.measureWP` | `VCVio/EvalDist/Expectation.lean` |
 
-The braces take any `do` sequence, with pure `let`s, destructuring, nested `(← e)` actions,
-branches, `match`, `let mut` and loops; see *Writing events with `do` sequences* in
-`probability.md`. A single output is an event like any other, `Pr{let x ← mx}[x = a]`. Failure
+The braces take a `do`-style sequence, with pure `let`s, destructuring, nested `(← e)` actions,
+branches, `match`, `let mut` and loops, but no `return` at their top level; see *Writing events
+with `do` sequences* in `probability.md`. A single output is an event like any other, `Pr{let x ← mx}[x = a]`. Failure
 is missing mass: the probability that `mx` fails is `prFail mx = 1 - Pr{let _ ← mx}[True]`, and a
 lossless computation satisfies `IsProbabilityMeasure 𝒟[mx]`. Every `OracleComp spec`
 computation is lossless under `[OracleSpec.IsMeasureSpec spec]`

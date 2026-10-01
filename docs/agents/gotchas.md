@@ -220,11 +220,13 @@ shared outer bind. `prrw` closes the goal when the swap makes both sides equal, 
 and expectations every form leaves the remaining goal in the normal form of `Pr{…}[…]`
 (`simp only [expect_norm]`), stated with nested expectations. The underlying rewrites are
 `OracleComp.wp_swap` / `OracleComp.evalDist_bind_bind_swap` (countable answer types;
-`_of_uniform` variants under `IsUniformMeasureSpec`) and `wp_congr_of_support`. `Pr{…}[…]`
-elaborates to nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped
-by rewriting under the expectations it is nested in (`conv => arg 2; ext; rw [OracleComp.wp_swap]`),
-and a literal `wp⟦mx >>= f⟧ g` is brought to that form with `rw [MeasureProgramLogic.wp_bind]` or
-`simp only [expect_norm]`.
+`_of_uniform` variants under `IsUniformMeasureSpec`) and `wp_congr_of_support`. A multi-draw
+`Pr{…}[…]` is nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped
+by rewriting under the expectations it is nested in (`conv => arg 2; ext; rw [OracleComp.wp_swap]`);
+a draw written as a bind, `Pr{let y ← mx >>= f}[q y]`, or a literal `wp⟦mx >>= f⟧ g`, is brought
+to that form with `rw [MeasureProgramLogic.wp_bind]` or `simp only [expect_norm]`. Two events
+that read the same but differ in how a draw is written are therefore not the same term until
+one of them is normalized: `simpa only [expect_norm] using h` is the one-line repair.
 
 ### 12. Avoid `guard` in experiments
 
@@ -512,7 +514,9 @@ reading scopes of `OracleComp` (`OracleComp.Quantitative`, `Angelic`, `Upper`, `
 at `1100`; their `Dispatch` sub-scopes at `1200`. `OracleComp` has no direct core instance, and
 its global reading is the structural one, reached through core's low-priority derivation; a
 generic scope opened beside an `OracleComp` reading never outranks it
-(`VCVioTest/ProgramLogic/ReadingScopes.lean`).
+(`VCVioTest/ProgramLogic/ReadingScopes.lean`). The notations `Pr{…}[…]`, `𝔼{…}[…]` and
+`wp⟦oa⟧ g` spell the measure interpretation for each draw themselves, so a draw in `Option` or
+`Id` reads that interpretation and not core's direct instance.
 
 ### 34. Write the absent exception postcondition as `Lean.Order.bot`
 

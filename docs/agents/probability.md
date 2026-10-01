@@ -161,43 +161,49 @@ indented past its `let`, as in any `do` block, or parenthesized.
 `Pr{let x ← mx}[x = a]` is the probability of the single output `a` and needs no measurable singletons.
 
 `Pr{items}[t]` is the expectation of the event's indicator, `𝔼{items}[𝟙⟦t⟧]`, and `𝔼{items}[b]`
-is the expectation of the value the sequence returns: core's weakest precondition
-`wp (do items; return b) id ⊥` under the measure interpretation `MeasureProgramLogic.measureWP m`
-(`VCVio.EvalDist.Expectation`). Core's `wp` is the only head, so the program logic, `vcgen` and
-the expectation laws apply to events directly. Neither notation needs a measurable space on the
-outputs; `prEvent_eq_evalDist_map` relates an event to the mass `𝒟[p <$> mx] {True}`, and
-`measurable_prEvent` makes a family of events measurable from its selectors' measures.
+is the expectation of the value `b` over the draws of the sequence: each draw `let x ← a` is
+core's weakest precondition `wp a (fun x => …) ⊥` under the measure interpretation
+`MeasureProgramLogic.measureWP` of `a`'s monad (`VCVio.EvalDist.Expectation`), and the notation is
+the translation of its sequence into these nested expectations:
 
-An event observes the indicator `predInd p` of its predicate (`predInd p x = propInd (p x)`, by
-`predInd_apply`), so the predicate is an argument: `simp` keys, `grind` patterns and `gcongr` see
-it, and an event is never confused with a constant observation. Both notations mean their literal
-sequence. They are stored in the normal form `simp` produces, and elaboration checks the proof
-that the two are equal. Every draw becomes an expectation:
+| item | term |
+|---|---|
+| `let x ← e` (also `let x : τ ← e`, `let _ ← e`, a bare action `e`) | `wp⟦e⟧ fun x => …` |
+| `let pat ← e` | `wp⟦e⟧ fun z => match z with \| pat => …` |
+| `let x := v`, `have h : p := v` | `let x := v; …`, `have h : p := v; …` |
+| `let x ← do …`, `let x ← if …`, a draw with a nested action `(← g)` | the draw of that program |
+| an imperative tail (`let mut`, a loop, a do-level `if`) | one program `do tail; pure (v₁, …, vₖ)` of the variables it binds, observed from outside |
 
 ```lean
 Pr{let x ← mx; let y ← my x}[p x y] = wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => p x y)
 ```
 
-On the way to that form:
-- binds inside draws are reassociated;
-- maps are fused into the observation;
-- returned values and local `let`s are substituted;
-- single-constructor destructuring becomes projections;
-- `if` is pulled outward.
+Nothing is rewritten at elaboration: the term is the translation, so what a statement says is
+what was written. A draw written as a bind, a map, a returned value or a `do` block stays as
+written, `Pr{let y ← mx >>= f}[q y]` is `wp⟦mx >>= f⟧ (predInd q)`, and the normal form of a draw
+chain is a proof-time notion: `simp only [expect_norm]` applies PolyFun's exact `wp` equations
+(`ExactWPMonad.wp_bind`, `wp_map`, `wp_pure`, `wp_ite`, `wp_dite`, `wp_seq`, …), through
+pre-procedures that keep the program's binder names, and the fold `wp_predInd_fold` of an
+indicator observation `fun x => propInd t` into `predInd (fun x => t)`. Core's `wp` is the only
+head, so the program logic, `vcgen` and the expectation laws apply to events directly. Neither
+notation needs a measurable space on the outputs; `prEvent_eq_evalDist_map` relates an event to
+the mass `𝒟[p <$> mx] {True}`, and `measurable_prEvent` makes a family of events measurable from
+its selectors' measures.
 
-The rules are PolyFun's exact `wp` equations (`ExactWPMonad.wp_bind`, `wp_map`, `wp_pure`,
-`wp_ite`, `wp_dite`, `wp_seq`, …), which are in the default `simp` set, and the definitional fold
-`wp_predInd_fold` of an indicator observation `fun x => propInd t` into `predInd (fun x => t)`;
-`simp only [expect_norm]` applies exactly them, through pre-procedures that keep the program's
-binder names. The simp set `expect_eval` continues past the normal form: it unfolds `replicate`,
-`List.mapM` and `List.foldlM` by one iteration and gives the value of a query or a uniform draw
-(`wp_query`, `wp_uniformSample`), so `simp only [expect_norm, expect_eval]` proves an equation
-between one program's expectation and its value. The notations need lawful measure semantics
-(`[LawfulMonad m] [LawfulEvalDistSemantics m]`): a semantics whose bind law fails, such as a free
-monad over continuous answers where a continuation need not be measurable, has no expectations,
-and its events are stated on `𝒟[…]`. A product of indicators merges into the indicator of the
-conjunction (`propInd_mul_propInd`), so an expectation that multiplies indicators, as a guard
-does, folds back into an event.
+An event observes the indicator `predInd p` of its predicate (`predInd p x = propInd (p x)`, by
+`predInd_apply`), so the predicate is an argument: `simp` keys, `grind` patterns and `gcongr` see
+it, and an event is never confused with a constant observation. Each draw is read in the
+expectation interpretation of its own monad, so a sequence may draw from several monads, an
+`OptionT ProbComp` adversary inside a `ProbComp` game, and the failure of a draw contributes
+nothing to the event. The simp set `expect_eval` continues past the normal form: it unfolds
+`replicate`, `List.mapM` and `List.foldlM` by one iteration and gives the value of a query or a
+uniform draw (`wp_query`, `wp_uniformSample`), so `simp only [expect_norm, expect_eval]` proves
+an equation between one program's expectation and its value. The notations need lawful measure
+semantics (`[LawfulMonad m] [LawfulEvalDistSemantics m]`): a semantics whose bind law fails, such
+as a free monad over continuous answers where a continuation need not be measurable, has no
+expectations, and its events are stated on `𝒟[…]`. A product of indicators merges into the
+indicator of the conjunction (`propInd_mul_propInd`), so an expectation that multiplies
+indicators, as a guard does, folds back into an event.
 
 `prEvent_bind`, `prEvent_map`, `prEvent_pure`, `prEvent_ite` and `prEvent_dite` state what those
 equations give for a literal event `wp⟦mx >>= f⟧ (predInd p)`; `simp` uses the `wp` equations
@@ -206,14 +212,15 @@ themselves. Leaf laws are stated for every observation (`Option.wp_none`, `wp_fa
 counted (`prEvent_uniformSample`) and any other observation averaged (`wp_uniformSample_eq_sum`,
 through a simproc that leaves events to the counting law).
 
-Goals display a term in normal form as the notation it elaborates from: `Pr{…}[p x]` when its
-last observation is `predInd p`, and `𝔼{…}[…]` otherwise. A term that normalization would still
-rewrite keeps core's display `wp a g ⊥`. What is displayed therefore elaborates back to the term
-displayed, and a goal that still needs `simp` shows it. A literal, non-normal expectation is
-written `wp⟦mx⟧ g`.
+Goals display an expectation as the notation it elaborates from: `Pr{…}[p x]` when its innermost
+observation is `predInd p` or `propInd t`, and `𝔼{…}[…]` otherwise, with a draw that is a bind,
+a map or a `do` block displayed as such, which is how a goal that still needs
+`simp only [expect_norm]` shows it. What is displayed elaborates back to the term displayed,
+except that a draw whose display carries no monad, such as `pure a`, needs an ascription or
+`pp.analyze` to be read back. A literal expectation is written `wp⟦mx⟧ g`.
 
 In a definition, name an experiment as a computation and take one event of it,
-`Pr{let b ← exp adv}[b = true]`; a single draw of a named computation is stored as written.
+`Pr{let b ← exp adv}[b = true]`; every draw is stored as written.
 
 ### Writing events with `do` sequences
 
@@ -232,11 +239,12 @@ Pr{let x : ZMod q ← mx}[x = 0]                            -- type ascriptions
 ```
 
 The event in the brackets may mention every binding of the sequence, including destructured
-components and mutable variables. The elaborator appends the event as the sequence's final
-`return`, so the sequence itself does not `return` early. An event over a loop keeps its
-`forIn` draw; the default `simp` set unrolls a loop over a literal list, and other loops are
-reasoned about with the loop's own lemmas or `wp⟦·⟧`. A `match` with several cases also stays a
-draw of its own.
+components and mutable variables. The observation sits outside the sequence's programs, so a
+`return` at the top level of the braces is rejected (a computation that returns early is bound
+as `let x ← (do …)`), and bindings inside a tail's `if` or loop are not visible to the event. An
+event over a loop keeps its `forIn` draw; the default `simp` set unrolls a loop over a literal
+list, and other loops are reasoned about with the loop's own lemmas or `wp⟦·⟧`. A `match` with
+several cases also stays a draw of its own.
 
 `mx =ᵈ my` (`EvalDistEq`, in `VCVio.EvalDist.EvalDistEq`) states that two computations, possibly
 in different monads, give every event the same probability. It needs no measurable space on the

@@ -34,6 +34,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | Removed | Replacement |
 |---|---|
 | `Pr[p \| mx]`, `probEvent mx p` | `Pr{let x ← mx}[p x]` |
+| `Pr[fun (x : τ) => t \| mx]` | `Pr{let x : τ ← mx}[t]`: the codemod keeps the binder's type, so a numeral in the event is read at `τ` rather than at `ℕ` |
 | `Pr[= x \| mx]`, `probOutput mx x` | `Pr{let y ← mx}[y = x]`; or `𝒟[mx] {x}` when the output has measurable singletons |
 | `Pr[⊥ \| mx]`, `probFailure mx` | `prFail mx` (`1 - Pr{let _ ← mx}[True]`); identically `0` for `OracleComp` |
 | `Pr{mx}[= a]` (earlier measure API) | `Pr{let x ← mx}[x = a]` |

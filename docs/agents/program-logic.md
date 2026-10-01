@@ -469,10 +469,9 @@ Known limits:
   below), and the exact rules serve only for the last draw. Rules meant to be stepped through
   state their preconditions with lattice connectives. `Lean.Order.iInf` needs a `Type`-indexed
   binder, so a support condition is indexed by the subtype `{a // a ∈ support oa}`.
-- **Event normal forms.** `Pr{…}[…]` elaborates to its normal form, nested expectations over each
-  draw, so `le_prEvent_iff_triple` matches only an event of a named program. A lower bound on
-  the normal form of an inline program is read by `le_wp_iff_triple`, and `vcgen` steps through
-  the nested expectations.
+- **Inline programs.** `Pr{let x ← prog}[p x]` is `wp⟦prog⟧ (predInd p)` for any program `prog`,
+  so `le_prEvent_iff_triple` reads it directly and `vcgen` walks `prog`; a multi-draw event is
+  nested expectations, which `vcgen` steps through one draw at a time.
 - **Structure-literal projections.** `vcgen` does not reduce a projection of a structure literal
   (`{ keygen := …, … }.keygen`); it reports "no spec found". Use `dsimp only` first, or unfold with
   the `@[simps]` projection lemmas.
@@ -528,10 +527,10 @@ Choosing a form:
 - **Beyond these steps**: peel the shared prefix with `prrw congr` and continue by hand, relate the
   programs by a coupling (`by_equiv`, `rvcstep` / `rvcgen`), or use the `=ᵈ` lemmas.
 
-A point mass `Pr{let y ← oa}[y = x]` is the event `(· = x)`, and `Pr{…}[…]` elaborates to nested
-expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped by rewriting under the
-expectations it is nested in; `prrw under n` does so through `conv`, and gotcha 11 gives the manual
-form.
+A point mass `Pr{let y ← oa}[y = x]` is the event `(· = x)`, and a multi-draw `Pr{…}[…]` is
+nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped by rewriting
+under the expectations it is nested in; `prrw under n` does so through `conv`, and gotcha 11
+gives the manual form.
 
 ```lean
 -- Pr{let x ← mx >>= fun a => my >>= fun b => f a b}[x = z]
@@ -551,8 +550,9 @@ exact h x y
 ## Exact values (`expect_norm`, `expect_eval`)
 
 An equation between one program's expectation and its value is proved by simplification.
-`simp only [expect_norm]` brings an expectation into the normal form that `𝔼{…}[…]` and
-`Pr{…}[…]` elaborate to (see [`probability.md`](probability.md)). The simp set `expect_eval`
+`simp only [expect_norm]` brings an expectation into the normal form of a draw chain, which a
+multi-draw `𝔼{…}[…]` or `Pr{…}[…]` elaborates to directly (see
+[`probability.md`](probability.md)). The simp set `expect_eval`
 (registered in `VCVio/EvalDist/ProbabilityNotation/Attr.lean`, its lemmas tagged in
 `VCVio/ProgramLogic/Unary/HoareTriple.lean`) continues with the unfolding of loops
 (`OracleComp.replicate_zero`, `OracleComp.replicate_succ_bind`, `List.mapM_nil`, `List.mapM_cons`,
