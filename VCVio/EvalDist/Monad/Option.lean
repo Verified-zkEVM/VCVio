@@ -268,6 +268,12 @@ theorem prEvent_bind_le_prEvent_of_support {β : Type} (mx : OptionT m α) (f : 
   simp only [← wp_ofMeasure_eq] at h ⊢
   exact _root_.prEvent_bind_le_prEvent_of_support mx f p q h
 
+/-- Implication between events on the reachable outputs bounds their probabilities. -/
+theorem prEvent_mono_of_support (mx : OptionT m α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a → q a) : Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
+  simp only [← wp_ofMeasure_eq]
+  exact _root_.prEvent_mono_of_support mx p q h
+
 /-- An upper bound on the wrapped continuation event over reachable prefixes. -/
 theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (q : β → Prop)
     {ε : ENNReal} (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[q y] ≤ ε) :
