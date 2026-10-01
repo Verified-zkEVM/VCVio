@@ -219,6 +219,30 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ
   exact OracleComp.ProgramLogic.wp_le_const_of_support oa fun x hx =>
     le_iSup (fun a : {a // a ∈ support oa} => ofDual (post a.1)) ⟨x, hx⟩
 
+/-- An opaque sub-program's expectation, as its own upper bound. Not registered, since it applies
+to every program; `vcgen [Spec.ofWp oa]` leaves the expectation of `oa` in the verification
+condition, for a hypothesis on it to bound, where `Spec.ofSupport` takes the largest value and
+`Spec.uniformSample_avg` needs the finite average. -/
+theorem Spec.ofWp (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    Triple oa (toDual (wp⟦oa⟧ fun a => ofDual (post a))) post epost := by
+  rw [triple_iff, ofDual_toDual]
+
+/-- The bad-event rule for a bind: the first draw's bad event is charged in full, and off it,
+on the support, every continuation meets the bound. Not registered, since the event is a
+proof-side choice: `vcgen [Spec.bind_of_bad mx f bad]`. -/
+theorem Spec.bind_of_bad {β : Type} (oa : OracleComp spec α) (f : α → OracleComp spec β)
+    (bad : α → Prop)
+    {ε : ℝ≥0∞} (post : β → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} (hle : ∀ b, ofDual (post b) ≤ 1)
+    (hgood : ∀ a ∈ support oa, ¬bad a → Triple (f a) (toDual ε) post epost) :
+    Triple (oa >>= f) (toDual (Pr{let a ← oa}[bad a] + ε)) post epost := by
+  rw [triple_iff, ofDual_toDual, ExpectationWP.wp_bind]
+  refine wp_le_prEvent_add_of_support oa bad _ (fun a ha hbad => ?_) fun a _ => ?_
+  · exact (triple_iff _ _ _ _).1 (hgood a ha hbad) |>.trans_eq (ofDual_toDual _)
+  · calc wp⟦f a⟧ (fun b => ofDual (post b)) ≤ wp⟦f a⟧ (fun _ => 1) := ExpectationWP.wp_mono _ hle
+      _ ≤ 1 := by
+        rw [wp_const]
+        exact mul_le_of_le_one_right' (prEvent_le_one _)
+
 /-- The expectation of `oa.replicate n` is at most its largest value on a list of `n` possible
 outputs of `oa`. -/
 @[spec]

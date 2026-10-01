@@ -441,6 +441,35 @@ theorem prEvent_bind_le_prEvent_of_support (mx : m α) (f : α → m β)
   simpa using prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q (ε := 0)
     fun a ha hp ↦ (h a ha hp).le
 
+/-- An expectation splits along an event, with the observation bounded by one on the support
+only. -/
+theorem wp_le_prEvent_add_wp_of_support (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞)
+    (hle : ∀ x ∈ support mx, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) := by
+  classical
+  calc wp⟦mx⟧ g ≤ wp⟦mx⟧ fun x => propInd (bad x) + propInd (¬bad x) * g x :=
+        wp_mono_of_support mx fun x hx => by
+          by_cases h : bad x
+          · simpa [h] using hle x hx
+          · simp [h]
+    _ = _ := ExpectationWP.wp_add mx _ _
+
+/-- An expectation is at most the probability of an event plus a bound holding off the event on
+the support, for an observation bounded by one on the support. -/
+theorem wp_le_prEvent_add_of_support (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞) {ε : ℝ≥0∞}
+    (hg : ∀ x ∈ support mx, ¬bad x → g x ≤ ε) (hle : ∀ x ∈ support mx, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + ε := by
+  classical
+  refine (wp_le_prEvent_add_wp_of_support mx bad g hle).trans (add_le_add le_rfl ?_)
+  calc wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) ≤ wp⟦mx⟧ (fun _ => ε) :=
+        wp_mono_of_support mx fun x hx => by
+          by_cases h : bad x
+          · simp [h]
+          · simpa [h] using hg x hx h
+    _ ≤ ε := by
+        rw [wp_const]
+        exact mul_le_of_le_one_right' (prEvent_le_one mx)
+
 /-- A continuation event bounded outside a predicate of the reachable draw. -/
 theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}

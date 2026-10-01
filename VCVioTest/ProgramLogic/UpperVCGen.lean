@@ -83,6 +83,27 @@ example (gen : OracleComp spec ℕ) (hg : ∀ n ∈ support gen, n ≤ 3) :
   rename_i n
   simp [propInd_eq_ite, Nat.not_le.mpr (Nat.lt_succ_of_le (hg n.1 n.2))]
 
+/-- `Spec.ofWp`, passed for an opaque draw: its expectation stays in the condition, for the
+hypothesis on it to close. -/
+example (gen : OracleComp spec ℕ) (ε : ℝ≥0∞) (hg : Pr{let n ← gen}[n = 0] ≤ ε) :
+    ⦃ toDual ε ⦄ (do let n ← gen; pure (n + 0) : OracleComp spec ℕ)
+      ⦃ fun n => toDual (propInd (n = 0)) ⦄ := by
+  vcgen [OracleComp.Upper.Spec.ofWp gen]
+  simp only [upper_readback]
+  simpa using hg
+
+/-- `Spec.bind_of_bad`, passed with its event: the bad event of the first draw is charged, the
+bound on the postcondition and the continuations off the event, on the support, are the
+conditions, and a triple in the context serves the continuations. -/
+example (gen : OracleComp spec ℕ) (f : ℕ → OracleComp spec Bool) (ε : ℝ≥0∞)
+    (hf : ∀ n ∈ support gen, n ≠ 0 →
+      ⦃ toDual ε ⦄ f n ⦃ fun b => toDual (propInd (b = true)) ⦄) :
+    ⦃ toDual (Pr{let n ← gen}[n = 0] + ε) ⦄ (gen >>= f)
+      ⦃ fun b => toDual (propInd (b = true)) ⦄ := by
+  vcgen [OracleComp.Upper.Spec.bind_of_bad gen f (· = 0)]
+  · simp only [upper_readback]
+  all_goals assumption
+
 end Rules
 
 section Uniform

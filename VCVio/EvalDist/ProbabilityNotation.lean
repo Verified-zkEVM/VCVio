@@ -409,6 +409,18 @@ theorem wp_le_prEvent_add (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞
         rw [ExpectationWP.wp_add, wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one mx))
 
+/-- An expectation splits along an event: on the event the observation, at most one, is charged
+in full, and off it the observation is kept. -/
+theorem wp_le_prEvent_add_wp (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞) (hle : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) := by
+  classical
+  calc wp⟦mx⟧ g ≤ wp⟦mx⟧ fun x => propInd (bad x) + propInd (¬bad x) * g x :=
+        ExpectationWP.wp_mono mx fun x => by
+          by_cases h : bad x
+          · simpa [h] using hle x
+          · simp [h]
+    _ = _ := ExpectationWP.wp_add mx _ _
+
 end Bounds
 
 /-! ## Integrals and sums -/

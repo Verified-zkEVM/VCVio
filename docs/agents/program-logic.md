@@ -416,6 +416,8 @@ Upper-bound rules (`VCVio/ProgramLogic/Unary/WP/Upper.lean`, namespace `OracleCo
 | `oa.replicate n` | `Spec.replicate` | `⨆ xs : {xs // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa}, post xs.1` |
 | `liftComp oa superSpec`, `liftM oa` (uniform answers on both specifications) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨆ a : {a // a ∈ support oa}, post a.1` |
+| any `oa` (not registered) | `Spec.ofWp` | `wp⟦oa⟧ post`, for a hypothesis to bound |
+| `oa >>= f` with a bad event (not registered) | `Spec.bind_of_bad oa f bad` | `Pr{let a ← oa}[bad a] + ε`, with `⦃ toDual ε ⦄ f a ⦃ post ⦄` off the event on the support and `post ≤ 1` as conditions |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_avg` | `(∑ x, post x) / card β` |
 | `query t`, uniform (not registered) | `Spec.query_avg`, `Spec.monadLift_query_avg` | `∑ u, (card)⁻¹ * post u` |
 
@@ -524,7 +526,13 @@ turn lower bounds into triples.
 `OracleComp.Necessary.Spec.ofSupport`, `OracleComp.Possible.Spec.ofSupport`), bounds `oa` by its
 continuation's precondition over its support. With `h : ∀ x ∈ support oa, ⦃ r ⦄ f x ⦃ post ⦄`,
 `prvcgen [OracleComp.Lower.Spec.ofSupport oa, h]` proves `⦃ r ⦄ (oa >>= f) ⦃ post ⦄` up to
-the support membership, which it leaves. With `prvcgen (errorOnMissingSpec := false)`, a program
+the support membership, which it leaves. `OracleComp.Upper.Spec.ofWp oa` keeps the expectation
+of `oa` itself in the condition, under `toDual`, for a hypothesis such as a per-draw bound to
+close, where the support rule would take the largest value and an averaging rule needs the finite
+average (the lower reading has no such rule: its precondition would be the weakest precondition
+`vcgen` just stepped from, which it would step again). A passed rule whose instance arguments
+cannot be synthesized at the site is skipped without a message, and the registered rule applies
+instead (`trace.Elab.Tactic.Do.vcgen` shows the attempt). With `prvcgen (errorOnMissingSpec := false)`, a program
 without a rule is left as a verification condition stating its weakest precondition,
 `pre ≤ wp oa k`, whose continuation `k` holds the rest of the program;
 `simp only [expect_norm, le_refl]` closes it when `pre` is that expectation.
@@ -657,7 +665,9 @@ Observing a stack differently is a run, not another instance: `Spec.run'_StateT`
 `Spec.run_OptionT'` and `Spec.run_ExceptT'` (`Unary/WP/TransformerSpecs.lean`) read a program
 through its state, option or result. `WriterT ω m` has no expectation interpretation of its own
 (its lift interprets assertions over the log, not expectations of outputs): observe a writer
-program through its run, as `AddWriterT.expectedCost_eq_lintegral_run` does.
+program through its run. `AddWriterT.expectedCost_eq_wp_run` states an expected cost as the
+expectation of the valued cost of the run, the goal `prvcgen` enters through the `WriterT` rules;
+`AddWriterT.expectedCost_eq_lintegral_run` is its integral form.
 
 ## Program equalities (`prrw`)
 

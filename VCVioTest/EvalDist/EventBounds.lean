@@ -231,4 +231,18 @@ noncomputable example : SampleableType (∀ _i : Fin 0, Empty) := by
 
 end uniform
 
+/-! ### Splitting an expectation along an event
+
+The observation is charged in full on the event and kept off it; with a bound off the event on
+the support, the expectation is at most the event's probability plus the bound. -/
+
+example (mx : ProbComp Bool) (bad : Bool → Prop) (g : Bool → ℝ≥0∞) (hle : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) :=
+  wp_le_prEvent_add_wp mx bad g hle
+
+example (mx : ProbComp Bool) (bad : Bool → Prop) (g : Bool → ℝ≥0∞) (ε : ℝ≥0∞)
+    (hg : ∀ x ∈ support mx, ¬bad x → g x ≤ ε) (hle : ∀ x ∈ support mx, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + ε :=
+  wp_le_prEvent_add_of_support mx bad g hg hle
+
 end VCVioTest.EventBounds
