@@ -145,8 +145,8 @@ modules, standard proof conversions, theorem families, and validation gates.
 `open scoped ExpectationWP.Probabilistic` selects bounded `Prob` expectations for any
 lawful measure semantics. Public value laws connect them to quantitative WP and Lebesgue
 integration; constants retain success mass. Plain `simp`, `gcongr`, and `grw` work on optional
-computations and weighted oracles. Qualitative oracle WP delegates to PolyFun's direct demonic
-core WP, which needs only lawful attachment. The exact ordered assertion algebra remains
+computations and weighted oracles. The necessary reading of oracle WP delegates to PolyFun's
+direct demonic core WP, which needs only lawful attachment. The exact ordered assertion algebra remains
 available for free oracle trees. State and reader reasoning uses PolyFun's indexed operational
 judgments and kernels; flattened support does not acquire an exact bind law.
 
