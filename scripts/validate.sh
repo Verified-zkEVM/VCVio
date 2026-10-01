@@ -39,7 +39,9 @@ Default fast checks (shared with per-PR CI):
 
 Optional checks:
   --lint    Batteries environment linters, one process per proof library as in CI
-  --test    lake test (test libraries, the SLH-DSA test executables, the smoke test)
+  --test    lake test (test libraries, the SLH-DSA test executables, the smoke test), then
+            scripts/spec-coverage.py --check (the registered @[spec] rules each fire in
+            some program-logic test, against scripts/spec_coverage_baseline.json)
   --ffi     with --test: also the native ML-KEM / ML-DSA / Falcon executables
             (initialises the third_party/ submodules; slow)
   --axioms  ./scripts/test-axiomsweep.sh, then lake exe axiomsweep --check
@@ -152,6 +154,13 @@ if (( run_test )); then
   echo ""
   echo "# Checking eagerly-initialised constants in the test libraries"
   lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
+
+  # Every registered `@[spec]` rule fires in some program-logic test: the trace of core's
+  # `vcgen` over the test files, against the list of rules known to be uncovered.
+  echo ""
+  echo "# Checking the coverage of the registered @[spec] rules"
+  python3 ./scripts/test-spec-coverage.py
+  python3 ./scripts/spec-coverage.py --check
 fi
 
 if (( run_axioms )); then

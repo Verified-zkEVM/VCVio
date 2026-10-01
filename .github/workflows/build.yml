@@ -436,6 +436,13 @@ jobs:
       # `scripts/InitSweep.lean` records precisely what that leaves uncovered.
       - name: Init sweep (test libraries)
         run: lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
+      # Every registered `@[spec]` rule of the program logic fires in some test: core's `vcgen`
+      # trace over the program-logic test files, gated against the list of rules known to be
+      # uncovered (`scripts/spec_coverage_baseline.json`), which only shrinks.
+      - name: Test the spec-coverage ratchet
+        run: python3 scripts/test-spec-coverage.py
+      - name: Spec coverage
+        run: python3 scripts/spec-coverage.py --check
       - name: Record module times
         run: |
           python3 scripts/module_times.py update .lake/build/vcvio-module-times.json \
