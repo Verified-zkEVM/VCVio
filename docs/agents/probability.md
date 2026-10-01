@@ -195,7 +195,13 @@ An event observes the indicator `predInd p` of its predicate (`predInd p x = pro
 it, and an event is never confused with a constant observation. Each draw is read in the
 expectation interpretation of its own monad, so a sequence may draw from several monads, an
 `OptionT ProbComp` adversary inside a `ProbComp` game, and the failure of a draw contributes
-nothing to the event. The simp set `expect_eval` continues past the normal form: it unfolds
+nothing to the event. The interpretation of a draw's monad is `ExpectationWP`: the
+successful-output measure for a base monad (`ExpectationWP.ofMeasure`), and core's lift of the
+base's interpretation for `OptionT` and `ExceptT` (`ExpectationWP.optionT`, `exceptT`), the one
+`vcgen` and the readings use, with the bottom exception assertion; `OptionT.wp_eq_run` reads a
+lifted expectation through the run, and `OptionT.wp_ofMeasure_eq` / `ExceptT.wp_ofMeasure_eq`
+state that the lift and the stack's measure interpretation agree (*Transformer stacks* in
+`program-logic.md`). The simp set `expect_eval` continues past the normal form: it unfolds
 `replicate`, `List.mapM` and `List.foldlM` by one iteration and gives the value of a query or a
 uniform draw (`wp_query`, `wp_uniformSample`), so `simp only [expect_norm, expect_eval]` proves
 an equation between one program's expectation and its value. The notations need lawful measure

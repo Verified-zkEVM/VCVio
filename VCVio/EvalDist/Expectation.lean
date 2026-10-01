@@ -24,9 +24,10 @@ The laws need no measurable structure on the outputs: when an argument integrate
 the σ-algebra that the observation itself induces. `wp_eq_lintegral` states the integral form
 for a chosen output space.
 
-`wpMonad m` is supplied explicitly rather than found by instance search. An instance for every
-`m` with measure semantics would overlap core's transformer lifts, which interpret `StateT σ m`
-or `OptionT m` over other assertion carriers.
+`ExpectationWP m EPred` names the expectation interpretation of a monad: the measure
+interpretation `wpMonad m` for a monad with lawful measure semantics, and core's lift of the base
+monad's interpretation for `OptionT m` and `ExceptT ε m`, so that a stack has one `wp`, the one
+core's transformer rules decompose, with the exception assertions of its layers.
 -/
 
 public section
@@ -137,13 +138,143 @@ noncomputable def wpMonad [LawfulMonad m] : WPMonad m ℝ≥0∞ EStack⟨⟩ :=
 
 end ExpectationWP
 
+/-! ## Expectation interpretations
+
+`ExpectationWP m EPred` is the expectation interpretation of `m`: an exact core `WPMonad` over
+`ℝ≥0∞` whose exception assertions `EPred` are those of `m`'s transformer stack. A monad with
+lawful measure semantics is interpreted by its successful-output measures (`ofMeasure`, the
+interpretation `wpMonad m`, with no exception layer). `OptionT m` and `ExceptT ε m` are
+interpreted by core's lifts of `m`'s interpretation, which outrank the measure interpretation of
+the stack: `wp⟦x⟧ g` on a stack is the weakest precondition core's transformer rules decompose,
+and `OptionT.wp_apply_eq` / `ExceptT.wp_apply_eq` read it as an expectation over the run. -/
+
+/-- The expectation interpretation of `m`: exact core weakest preconditions over `ℝ≥0∞`, with the
+exception assertions `EPred` of `m`'s stack. -/
+class ExpectationWP (m : Type → Type v) [Monad m] (EPred : outParam Type) [Assertion EPred] where
+  /-- The interpretation. -/
+  toWPMonad : WPMonad m ℝ≥0∞ EPred
+  /-- The interpretation distributes over `pure` and `bind` as equations. -/
+  exact : @ExactWPMonad m ℝ≥0∞ EPred _ _ _ toWPMonad
+
+namespace ExpectationWP
+
+/-- A monad with lawful measure semantics is interpreted by its successful-output measures. -/
+noncomputable instance (priority := low) ofMeasure (m : Type → Type v) [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] : ExpectationWP m EStack⟨⟩ where
+  toWPMonad := wpMonad m
+  exact := letI := wpMonad m; inferInstance
+
+set_option warn.classDefReducibility false in
+/-- Core's `OptionT` lift of an interpretation over `ℝ≥0∞`, as a definition of its own: `simp`
+keeps a lifted expectation in the lifted language (core's `OptionT.wp_apply_eq` does not see
+through it), and `wp_liftOptionT_apply` opens it on request. It is semireducible on purpose:
+`vcgen` unifies core's rules with it by definitional unfolding, while `simp` matches instances
+up to instance reducibility only. -/
+noncomputable def liftOptionT (m : Type → Type v) [Monad m] {EPred : Type} [Assertion EPred]
+    (base : WPMonad m ℝ≥0∞ EPred) : WPMonad (OptionT m) ℝ≥0∞ ((Unit → ℝ≥0∞) × EPred) :=
+  @OptionT.instWPMonad m EPred ℝ≥0∞ _ _ _ base
+
+/-- The lift of an interpretation reads an optional computation through its run (core's
+`OptionT.wp_apply_eq`). -/
+theorem wp_liftOptionT_apply (m : Type → Type v) [Monad m] {EPred : Type} [Assertion EPred]
+    (base : WPMonad m ℝ≥0∞ EPred) {α : Type} (x : OptionT m α) (post : α → ℝ≥0∞)
+    (epost : (Unit → ℝ≥0∞) × EPred) :
+    @WP.wp _ _ _ _ _ _ (@instWPOfWPMonad _ _ _ _ _ _ _ (liftOptionT m base)) x post epost =
+      @WP.wp _ _ _ _ _ _ (@instWPOfWPMonad _ _ _ _ _ _ _ base) x.run
+        (Lean.Order.pushOption post epost.1) epost.2 := by
+  unfold liftOptionT
+  exact OptionT.wp_apply_eq x post epost
+
+set_option warn.classDefReducibility false in
+/-- Core's `ExceptT` lift of an interpretation over `ℝ≥0∞`, as a definition of its own (see
+`liftOptionT`). -/
+noncomputable def liftExceptT (m : Type → Type v) [Monad m] (ε : Type) {EPred : Type}
+    [Assertion EPred] (base : WPMonad m ℝ≥0∞ EPred) :
+    WPMonad (ExceptT ε m) ℝ≥0∞ ((ε → ℝ≥0∞) × EPred) :=
+  @ExceptT.instWPMonad m EPred ε ℝ≥0∞ _ _ _ base
+
+/-- The lift of an interpretation reads an exceptional computation through its run (core's
+`ExceptT.wp_apply_eq`). -/
+theorem wp_liftExceptT_apply (m : Type → Type v) [Monad m] (ε : Type) {EPred : Type}
+    [Assertion EPred] (base : WPMonad m ℝ≥0∞ EPred) {α : Type} (x : ExceptT ε m α)
+    (post : α → ℝ≥0∞) (epost : (ε → ℝ≥0∞) × EPred) :
+    @WP.wp _ _ _ _ _ _ (@instWPOfWPMonad _ _ _ _ _ _ _ (liftExceptT m ε base)) x post epost =
+      @WP.wp _ _ _ _ _ _ (@instWPOfWPMonad _ _ _ _ _ _ _ base) x.run
+        (Lean.Order.pushExcept post epost.1) epost.2 := by
+  unfold liftExceptT
+  exact ExceptT.wp_apply_eq x post epost
+
+/-- `OptionT m` is interpreted by core's lift of `m`'s interpretation: failure is an exception
+assertion, and the expectation of a successful output is read over the run. -/
+noncomputable instance optionT (m : Type → Type v) [Monad m] {EPred : Type} [Assertion EPred]
+    [ExpectationWP m EPred] : ExpectationWP (OptionT m) ((Unit → ℝ≥0∞) × EPred) where
+  toWPMonad := liftOptionT m (toWPMonad (m := m))
+  exact := by
+    unfold liftOptionT
+    let : WPMonad m ℝ≥0∞ EPred := toWPMonad (m := m)
+    have : ExactWPMonad m ℝ≥0∞ EPred := exact (m := m)
+    infer_instance
+
+/-- `ExceptT ε m` is interpreted by core's lift of `m`'s interpretation. -/
+noncomputable instance exceptT (m : Type → Type v) [Monad m] {ε : Type} {EPred : Type}
+    [Assertion EPred] [ExpectationWP m EPred] :
+    ExpectationWP (ExceptT ε m) ((ε → ℝ≥0∞) × EPred) where
+  toWPMonad := liftExceptT m ε (toWPMonad (m := m))
+  exact := by
+    unfold liftExceptT
+    let : WPMonad m ℝ≥0∞ EPred := toWPMonad (m := m)
+    have : ExactWPMonad m ℝ≥0∞ EPred := exact (m := m)
+    infer_instance
+
+/-- The expectation carrier is a chain-complete partial order, as core's assertion lattices are:
+the bottom exception assertion of a transformer stack over `ℝ≥0∞` elaborates without opening
+`Std.WP`'s scope. -/
+noncomputable instance : Lean.Order.CCPO ℝ≥0∞ := Lean.Order.instCCPOOfCompleteLattice
+
+/-- The exactness of an expectation interpretation, for instance search. -/
+instance instExactWPMonad (m : Type → Type v) [Monad m] {EPred : Type} [Assertion EPred]
+    [inst : ExpectationWP m EPred] : @ExactWPMonad m ℝ≥0∞ EPred _ _ _ inst.toWPMonad :=
+  inst.exact
+
+/-! ### The bottom assertion of a stack
+
+A stack's exception assertions are products of function assertions over the base's; the bottom
+exception assertion `⊥` that `wp⟦·⟧` passes charges every failure `0`. -/
+
+/-- The bottom of a product of assertions is the pair of bottoms. -/
+theorem bot_eq_prod {A B : Type} [Lean.Order.CCPO A] [Lean.Order.CCPO B] :
+    (Lean.Order.bot : A × B) = (Lean.Order.bot, Lean.Order.bot) :=
+  Lean.Order.PartialOrder.rel_antisymm (Lean.Order.bot_le _)
+    (show Lean.Order.PartialOrder.rel (Lean.Order.bot : A) (Lean.Order.bot : A × B).1 ∧
+        Lean.Order.PartialOrder.rel (Lean.Order.bot : B) (Lean.Order.bot : A × B).2 from
+      ⟨Lean.Order.bot_le _, Lean.Order.bot_le _⟩)
+
+/-- The first component of the bottom of a product of assertions. -/
+@[simp]
+theorem bot_fst {A B : Type} [Lean.Order.CCPO A] [Lean.Order.CCPO B] :
+    (Lean.Order.bot : A × B).1 = Lean.Order.bot :=
+  congrArg Prod.fst bot_eq_prod
+
+/-- The second component of the bottom of a product of assertions. -/
+@[simp]
+theorem bot_snd {A B : Type} [Lean.Order.CCPO A] [Lean.Order.CCPO B] :
+    (Lean.Order.bot : A × B).2 = Lean.Order.bot :=
+  congrArg Prod.snd bot_eq_prod
+
+/-- The bottom of the expectation carrier is `0`. -/
+@[simp]
+theorem bot_eq_zero : (Lean.Order.bot : ℝ≥0∞) = 0 :=
+  Lean.Order.PartialOrder.rel_antisymm (Lean.Order.bot_le 0) (show (0 : ℝ≥0∞) ≤ _ from zero_le)
+
+end ExpectationWP
+
 /-- The expectation `wp⟦mx⟧ g` of `g` over the outputs of `mx`: core's `wp mx g ⊥` under the
-measure interpretation `ExpectationWP.wpMonad`. Standalone, `wp⟦mx⟧ ` is the function
-`fun g => wp⟦mx⟧ g`.
+expectation interpretation `ExpectationWP` of `mx`'s monad. Standalone, `wp⟦mx⟧ ` is the
+function `fun g => wp⟦mx⟧ g`.
 
 The interpretation is written as core's bridge from a `WPMonad` to program instances applied to
-`wpMonad`: that is the instance term core's generic `wp` laws produce on their right-hand
-sides, so a literal expectation and a normalized one carry the same instance. -/
+the interpretation: that is the instance term core's generic `wp` laws produce on their
+right-hand sides, so a literal expectation and a normalized one carry the same instance. -/
 syntax:max (name := measureWpStx) "wp⟦" term "⟧ " : term
 
 @[inherit_doc measureWpStx]
@@ -151,38 +282,53 @@ syntax:max (name := measureWpAppStx) "wp⟦" term "⟧ " term:max : term
 
 macro_rules
   | `(wp⟦ $mx ⟧ $g:term) =>
-    `(@Std.WP.WP.wp _ _ ENNReal EStack⟨⟩ _ _
-      (@Std.WP.instWPOfWPMonad _ ENNReal EStack⟨⟩ _ _ _ _
-        (ExpectationWP.wpMonad _)) $mx $g
+    `(@Std.WP.WP.wp _ _ ENNReal _ _ _
+      (@Std.WP.instWPOfWPMonad _ ENNReal _ _ _ _ _
+        (ExpectationWP.toWPMonad (m := _))) $mx $g
       Lean.Order.bot)
   | `(wp⟦ $mx ⟧) => `(fun g => wp⟦ $mx ⟧ g)
 
 namespace ExpectationWP
 
-section Laws
+section Exact
 
-variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-  [LawfulEvalDistSemantics m] {α : Type}
+variable {m : Type → Type v} [Monad m] {EPred : Type} [Assertion EPred] [ExpectationWP m EPred]
+  {α : Type}
 
 /-- The expectation of a returned value is the observation at that value. -/
 @[grind norm]
 theorem wp_pure (a : α) (g : α → ℝ≥0∞) : wp⟦(pure a : m α)⟧ g = g a :=
-  letI := wpMonad m
+  letI := toWPMonad (m := m)
+  letI := exact (m := m)
   ExactWPMonad.wp_pure a g _
 
 /-- The expectation after a bind is the expectation of the continuations' expectations. -/
 @[grind norm]
 theorem wp_bind {β : Type} (mx : m α) (f : α → m β) (g : β → ℝ≥0∞) :
     wp⟦mx >>= f⟧ g = wp⟦mx⟧ fun a => wp⟦f a⟧ g :=
-  letI := wpMonad m
+  letI := toWPMonad (m := m)
+  letI := exact (m := m)
   ExactWPMonad.wp_bind mx f g _
 
 /-- The expectation of mapped outputs is the expectation of the composed observation. -/
 @[grind norm]
 theorem wp_map {β : Type} (f : α → β) (mx : m α) (g : β → ℝ≥0∞) :
     wp⟦f <$> mx⟧ g = wp⟦mx⟧ fun a => g (f a) :=
-  letI := wpMonad m
+  letI := toWPMonad (m := m)
+  letI := exact (m := m)
   ExactWPMonad.wp_map f mx g _
+
+/-- Observations that agree on every output have the same expectation. -/
+theorem wp_congr (mx : m α) {f g : α → ℝ≥0∞} (hfg : ∀ x, f x = g x) :
+    wp⟦mx⟧ f = wp⟦mx⟧ g := by
+  rw [show f = g from funext hfg]
+
+end Exact
+
+section Laws
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α : Type}
 
 omit [LawfulMonad m] in
 /-- The expectation algebra integrates its actual nonnegative output. -/
@@ -219,11 +365,6 @@ on possible outputs, `wp_mono_of_support`, takes precedence. -/
 @[gcongr low]
 theorem wp_mono (mx : m α) {f g : α → ℝ≥0∞} (hfg : ∀ x, f x ≤ g x) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g :=
   @MAlgOrdered.μ_bind_pure_mono m ℝ≥0∞ _ _ (algebra m) α mx f g hfg
-
-/-- Observations that agree on every output have the same expectation. -/
-theorem wp_congr (mx : m α) {f g : α → ℝ≥0∞} (hfg : ∀ x, f x = g x) :
-    wp⟦mx⟧ f = wp⟦mx⟧ g := by
-  rw [show f = g from funext hfg]
 
 /-- The zero observation has expectation zero. -/
 @[simp]

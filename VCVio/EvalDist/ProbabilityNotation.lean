@@ -17,7 +17,7 @@ public import VCVio.EvalDist.ProbabilityNotation.Delab
 `Pr{…}[…]` the probability of an event, the expectation of its indicator: `Pr{items}[t]` is
 `𝔼{items}[𝟙⟦t⟧]`, and `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`. Both are
 translations of the sequence into nested core weakest preconditions under the expectation
-interpretation `ExpectationWP.wpMonad` of each draw's monad
+interpretation `ExpectationWP` of each draw's monad
 (`VCVio.EvalDist.ProbabilityNotation.Elab`):
 ```
 Pr{let x ← mx; let y ← my x}[p x y] = wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => p x y)
@@ -39,6 +39,7 @@ successful-output measure is missing.
 public section
 
 open MeasureTheory
+open scoped Std.WP
 open scoped ENNReal
 
 universe v
@@ -129,8 +130,8 @@ simproc [simp, expect_norm] wp_predInd_fold
 /-- An indicator observation is the indicator of its predicate, by definition. `simp` folds it
 through the simproc `wp_predInd_fold`; `grind` normalizes with this lemma. -/
 @[grind norm]
-theorem wp_fun_propInd {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-    [LawfulEvalDistSemantics m] {α : Type} (mx : m α) (p : α → Prop) :
+theorem wp_fun_propInd {m : Type → Type v} [Monad m] {EPred : Type} [Std.WP.Assertion EPred]
+    [ExpectationWP m EPred] {α : Type} (mx : m α) (p : α → Prop) :
     wp⟦mx⟧ (fun a => propInd (p a)) = wp⟦mx⟧ (predInd p) := rfl
 
 attribute [expect_norm] ExactWPMonad.wp_pure ExactWPMonad.wp_bind ExactWPMonad.wp_map
@@ -147,8 +148,8 @@ give for events. -/
 
 section Structure
 
-variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-  [LawfulEvalDistSemantics m] {α β : Type}
+variable {m : Type → Type v} [Monad m] {EPred : Type} [Std.WP.Assertion EPred]
+  [ExpectationWP m EPred] {α β : Type}
 
 /-- An event after a bind is the expectation, over the first computation, of the event after
 each continuation. -/
@@ -486,15 +487,23 @@ end Sums
 
 section prFail
 
-variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
-  [LawfulEvalDistSemantics m] {α : Type}
+variable {m : Type → Type v} [Monad m] {EPred : Type} [Std.WP.Assertion EPred]
+  [ExpectationWP m EPred] {α : Type}
 
 /-- The probability that a computation fails or does not terminate: the mass its successful-output
-measure is missing. -/
+measure is missing, under the expectation interpretation of its monad. -/
 @[expose] noncomputable def prFail {α : Type} (mx : m α) : ℝ≥0∞ :=
   1 - Pr{let _ ← mx}[True]
 
 theorem prFail_def (mx : m α) : prFail mx = 1 - Pr{let _ ← mx}[True] := rfl
+
+end prFail
+
+section prFailMeasure
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α : Type}
+
 
 /-- Success and failure masses add up to one. -/
 @[simp]
@@ -545,4 +554,4 @@ theorem prFail_eq_one_sub_evalDist_univ [MeasurableSpace α] (mx : m α) :
     prFail mx = 1 - 𝒟[mx] Set.univ := by
   rw [prFail_def, prEvent_true_eq_evalDist_apply_univ]
 
-end prFail
+end prFailMeasure

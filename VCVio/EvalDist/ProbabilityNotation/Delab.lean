@@ -38,6 +38,7 @@ partial def isExpectationAlgebra (a : Expr) : MetaM Bool := do
 /-- Whether a weakest-precondition interpretation is the measure interpretation. -/
 partial def isExpectationInterpretation (w : Expr) : MetaM Bool := do
   let w := w.cleanupAnnotations
+  if w.isAppOf ``ExpectationWP.toWPMonad then return true
   if w.isAppOf ``ExpectationWP.wpMonad then return true
   if w.isAppOfArity ``MAlgOrdered.toWPMonad 6 then return ← isExpectationAlgebra (w.getArg! 4)
   match ← withReducibleAndInstances (unfoldDefinition? w) with

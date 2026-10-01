@@ -246,19 +246,27 @@ def indicatorPred? (g : Expr) : Option Expr :=
   | .const ``propInd _ => some (.lam `b (.sort .zero) (.bvar 0) .default)
   | _ => none
 
-/-- The expectation interpretation of the monad of a draw, or a postponement while it cannot be
-determined, or an error naming the missing class. -/
+/-- The expectation interpretation of the monad of a draw (`ExpectationWP`), or a postponement
+while the monad cannot be determined, or an error naming what is missing. The interpretation is
+elaborated as the `wp⟦ ⟧` macro elaborates it, and the state is restored afterwards. -/
 def checkMeasureSemantics (m : Expr) : TermElabM Unit := do
-  for cls in [``Monad, ``LawfulMonad, ``EvalDistSemantics, ``LawfulEvalDistSemantics] do
-    let found ← try
-        let arity ← forallTelescopeReducing (← getConstInfo cls).type fun xs _ => pure xs.size
-        let ty ← mkAppOptM cls (#[some m] ++ .replicate (arity - 1) none)
-        pure (← synthInstance? ty).isSome
-      catch _ => pure false
-    unless found do
-      if (← instantiateMVars m).hasMVar then tryPostpone
-      throwError m!"an expectation needs lawful measure semantics; no `{cls}` instance for\
-        {indentExpr m}"
+  let found ← if (← instantiateMVars m).hasExprMVar then pure false else do
+    let s ← saveState
+    try
+      let e ← withSynthesize (postpone := .no) <|
+        elabTerm (← `(ExpectationWP.toWPMonad (m := $(← exprToSyntax m)))) none
+      let ok := !(← instantiateMVars e).hasExprMVar
+      s.restore
+      pure ok
+    catch _ =>
+      s.restore
+      pure false
+  unless found do
+    if (← instantiateMVars m).hasMVar then tryPostpone
+    throwError m!"an expectation needs an expectation interpretation of its monad \
+      (`ExpectationWP`): lawful measure semantics (`EvalDistSemantics`, \
+      `LawfulEvalDistSemantics`, `LawfulMonad`), or `OptionT` / `ExceptT` over such a monad; \
+      none for{indentExpr m}"
 
 /-- The monad and result type of a draw `a`, when its type determines them: the head of the type
 as written, never unfolded. -/

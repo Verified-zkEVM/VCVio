@@ -193,7 +193,8 @@ theorem probability_realCipherObserve (sp : ℕ) (msg : BitVec sp)
     Pr{let x ← realCipherObserve sp msg P}[x = ()] =
       (Finset.univ.filter fun k : BitVec sp => P (k ^^^ msg) = true).card /
         (Fintype.card (BitVec sp) : ℝ≥0∞) := by
-  rw [prEvent_eq_evalDist_singleton, realCipherObserve, OptionT.evalDist_liftM_bind_guard]
+  rw [← OptionT.wp_ofMeasure_eq, prEvent_eq_evalDist_singleton, realCipherObserve,
+    OptionT.evalDist_liftM_bind_guard]
   simp
 
 /-- A uniform ideal-world ciphertext satisfies the observation predicate with its accepted
@@ -202,7 +203,8 @@ theorem probability_idealCipherObserve (sp : ℕ) (P : BitVec sp → Bool) :
     Pr{let x ← idealCipherObserve sp P}[x = ()] =
       (Finset.univ.filter fun c : BitVec sp ↦ P c = true).card /
         (Fintype.card (BitVec sp) : ℝ≥0∞) := by
-  rw [prEvent_eq_evalDist_singleton, idealCipherObserve, OptionT.evalDist_liftM_bind_guard]
+  rw [← OptionT.wp_ofMeasure_eq, prEvent_eq_evalDist_singleton, idealCipherObserve,
+    OptionT.evalDist_liftM_bind_guard]
   simp
 
 /-! ## Concrete closed processes carrying a plaintext -/

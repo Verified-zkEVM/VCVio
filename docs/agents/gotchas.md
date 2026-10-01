@@ -576,6 +576,13 @@ ofDual_add, …]` before the default `simp` set, which distributes `toDual` over
 (`toDual_add`) first and leaves `toDual a ≤ toDual b + toDual c`. `prvcgen` applies them to the
 conditions it leaves.
 
+On a stack the dual reading's default exception postcondition charges a failure the dual's bottom,
+`toDual ⊤`: a raw `⦃ toDual ε ⦄ x ⦃ post ⦄` for `x : OptionT (OracleComp spec) α` holds only when
+`x` never fails. State the exception postcondition that charges a failure `0`,
+`⦃ toDual ε ⦄ x ⦃ post; (fun _ => toDual 0, Lean.Order.bot) ⦄`; the bridges
+`OracleComp.Upper.OptionT.wp_le_iff_triple` and `….ExceptT.wp_le_iff_triple`, which `prvcgen`
+uses, produce that form from `Pr{…}[…] ≤ ε` (*Transformer stacks* in `program-logic.md`).
+
 ### 38. One reading per `vcgen` call; `Dispatch` scopes outrank file-level readings
 
 Core `vcgen` rebuilds each rule for the interpretation that instance search finds for the
@@ -587,3 +594,18 @@ substituted. Each
 reading has a `Dispatch` sub-scope at priority `1200`, with a direct `WP` instance that also
 outranks `ExpectationWP.Quantitative.wpInst`: `open scoped OracleComp.Upper.Dispatch in
 vcgen` runs `vcgen` in that reading whatever the file opens, and `prvcgen` uses these scopes.
+
+### 39. Readings are installed at the base; a reading constructor at a stack type is not the lift
+
+A reading of `OracleComp spec` lifts to `OptionT (OracleComp spec)`, `ExceptT ε (OracleComp spec)`
+and `StateT σ (OracleComp spec)` through core's transformer instances, one equation each
+(`OptionT.wp_apply_eq`, …): the transformer contributes the outcome case split, the base reading
+the modality, so a failure is a violation under the necessary reading, no witness under the
+possible one, and worth the exception assertion under the expectation (`0` for `Pr{…}`). A reading
+constructor applied *at the stack type* is a different interpretation: `MonadAttach.toWPMonadDemonic`
+at `OptionT m` quantifies over the present outputs and ignores failures, so a triple under it is
+weaker than the lifted one and is not what `Pr{…} = 1` states. Install a reading at the base only
+(`attribute [local instance] MonadAttach.toWPMonadDemonic` also catches the stack, see *Generic
+monads* in `program-logic.md`), and read a stack through its run with `OptionT.wp_eq_run`,
+`Spec.run_OptionT'` and their `ExceptT`/`StateT` forms (*Transformer stacks* in
+`program-logic.md`).

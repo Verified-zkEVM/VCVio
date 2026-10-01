@@ -205,7 +205,6 @@ example (mx : OptionT ProbComp Bool) :
     𝒟[mx >>= fun _ => (failure : OptionT ProbComp Bool)] = 0 := by simp
 
 example : Pr{let _ ← (($ ([true, false] : List Bool)) : OptionT ProbComp Bool)}[True] = 1 := by
-  fail_if_success simp  -- gap(simp, 2026-09-26): no rule reaches the unevaluated selection
   rw [ProbComp.prEvent_uniformSelectList]; simp [ENNReal.div_self]
 
 /-- Selecting from a list counts entries with multiplicity. -/

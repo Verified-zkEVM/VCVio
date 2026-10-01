@@ -109,8 +109,8 @@ example (init : ProbComp Nat) :
 assumption or a measurable space on the payload. -/
 example {α : Type} (mx : OptionT ProbComp α) (p q : α → Prop)
     (h : ∀ a ∈ support mx, p a → q a) :
-    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] :=
-  prEvent_mono_of_support mx p q h
+    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] := by
+  simpa only [OptionT.wp_ofMeasure_eq] using prEvent_mono_of_support mx p q h
 
 /-- A potentially failing optional prefix preserves the honest product lower bound: only the
 mass of the prefix event contributes, and every continuation reached under that event satisfies
@@ -119,8 +119,10 @@ example {α β : Type} (mx : OptionT ProbComp α) (f : α → OptionT ProbComp �
     (p : α → Prop) (q : β → Prop) {r r' : ℝ≥0∞}
     (h : r ≤ Pr{let a ← mx}[p a])
     (h' : ∀ a, p a → r' ≤ Pr{let b ← f a}[q b]) :
-    r * r' ≤ Pr{let a ← mx; let b ← f a}[q b] :=
-  mul_le_prEvent_bind_of_forall mx f p q h h'
+    r * r' ≤ Pr{let a ← mx; let b ← f a}[q b] := by
+  simpa only [OptionT.wp_ofMeasure_eq] using mul_le_prEvent_bind_of_forall mx f p q
+    (by simpa only [OptionT.wp_ofMeasure_eq] using h)
+    (fun a ha => by simpa only [OptionT.wp_ofMeasure_eq] using h' a ha)
 
 /-- Two reductions share the adversary's draw; the draw's payload needs no measurable space. -/
 example {α : Type} (mx : ProbComp α) (win left right : α → Bool)

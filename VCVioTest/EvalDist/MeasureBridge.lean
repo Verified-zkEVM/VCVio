@@ -153,8 +153,8 @@ example : 𝒟[familyWithFailure false] ≠ 0 := by
 example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by simp
 example (mx : OptionT ProbComp Bool) : evalDistWithFailure mx {none} = 1 - 𝒟[mx] Set.univ :=
   evalDistWithFailure_none mx
-example (mx : OptionT ProbComp Bool) : evalDistWithFailure mx {none} = prFail mx :=
-  evalDistWithFailure_none_eq_prFail mx
+example (mx : OptionT ProbComp Bool) : evalDistWithFailure mx {none} = prFail mx := by
+  simpa only [prFail_def, OptionT.wp_ofMeasure_eq] using evalDistWithFailure_none_eq_prFail mx
 example (mx : ProbComp Bool) : IsProbabilityMeasure 𝒟[mx] := inferInstance
 example (mx : ProbComp (Fin 3)) (f : Fin 3 → ProbComp (Fin 2)) : 𝒟[mx >>= f] Set.univ = 1 := by
   simp
@@ -165,16 +165,20 @@ def lossyCoin : OptionT ProbComp Bool := do
   if b then pure true else failure
 
 example : Pr{let x ← lossyCoin}[x = true] = 2⁻¹ := by
-  rw [lossyCoin, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
+  rw [lossyCoin, prEvent_bind, OptionT.wp_liftM,
+    ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
   simp [lintegral_fintype]
 example : Pr{let x ← lossyCoin}[x = false] = 0 := by
-  rw [lossyCoin, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
+  rw [lossyCoin, prEvent_bind, OptionT.wp_liftM,
+    ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
   simp [lintegral_fintype]
 example : Pr{let _ ← lossyCoin}[True] = 2⁻¹ := by
-  rw [lossyCoin, prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
+  rw [lossyCoin, prEvent_bind, OptionT.wp_liftM,
+    ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
   simp [lintegral_fintype]
 example : prFail lossyCoin = 2⁻¹ := by
-  rw [lossyCoin, prFail_bind_eq_add_lintegral_of_discrete]
+  rw [prFail_def, lossyCoin, prEvent_bind, OptionT.wp_liftM,
+    ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
   simp [lintegral_fintype]
 
 /-! ## A unit-test program

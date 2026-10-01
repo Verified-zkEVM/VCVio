@@ -397,8 +397,14 @@ for upper bounds, and `Prop` for the structural reading, or the angelic one when
 interpretation's head is the angelic `WPMonad`. A state-passing assertion `σ → …` is read by its
 codomain and a transformer's interpretation by the base monad's, so triples over `StateT`,
 `ReaderT`, `WriterT`, `OptionT` and `ExceptT` stacks on `OracleComp spec`, the handler
-specifications among them, run the same way. A comparison `Pr{A}[p] ≤ Pr{B}[q]` is read as an
-upper bound on the left-hand side with the right-hand side as the bound.
+specifications among them, run the same way. An event of an `OptionT` or `ExceptT` program is
+bridged to the lower reading generically (`ExpectationWP.le_wp_iff_triple`: the scope's stack
+instance is the lift the notation pins) and to the upper reading by the transformer's bridge
+(`OracleComp.Upper.OptionT.wp_le_iff_triple`, `….ExceptT.wp_le_iff_triple`), which supplies the
+exception postcondition that charges a failure `0`; the readback unfolds `pushOption`/`pushExcept`
+and the stack's bottom (`ExpectationWP.bot_fst`, `bot_snd`, `bot_eq_zero`). A comparison
+`Pr{A}[p] ≤ Pr{B}[q]` is read as an upper bound on the left-hand side with the right-hand side as
+the bound.
 
 Syntax: `prvcgen (config)? [rules]? (until t)? (frames …)? (invariants · …)?
 (simplifying_assumptions …)? (with step)? (=> tac)?`: `vcgen`'s arguments, in `vcgen`'s positions,
@@ -505,6 +511,50 @@ Known limits:
   structural reading with `letI := MonadAttach.toWPMonadDemonic (m := m)` in its statement.
   `attribute [local instance] MonadAttach.toWPMonadDemonic` also selects it for `StateT σ m`,
   which pre-empts core's transformer instances.
+
+## Transformer stacks
+
+A reading is chosen at the base monad; a stack has no reading of its own. Under reading R, a
+program of `OptionT (OracleComp spec)`, `ExceptT ε (OracleComp spec)` or `StateT σ (OracleComp
+spec)` is interpreted by core's lift of R, one equation per transformer:
+
+| transformer | lift (`rfl`) | exception assertions |
+|---|---|---|
+| `OptionT` | `OptionT.wp_apply_eq : wp x post epost = wp x.run (pushOption post epost.1) epost.2` | `(Unit → Pred) × EPred` |
+| `ExceptT ε` | `ExceptT.wp_apply_eq : wp x post epost = wp x.run (pushExcept post epost.1) epost.2` | `(ε → Pred) × EPred` |
+| `StateT σ` | `StateT.wp_apply_eq : wp x post epost s = wp (x.run s) (fun p => post p.1 p.2) epost` | `EPred` |
+
+The transformer contributes the outcome case split; the base reading contributes the modality. Under
+the necessary base every layer is necessary (a failure is a violation, charged by the exception
+postcondition), under the possible base every layer is possible, under the expectation every layer
+integrates. The notation follows the same rule: `Pr{…}`, `𝔼{…}` and `wp⟦·⟧` on a stack pin
+`ExpectationWP`, which is `ofMeasure` for a base monad and the lift for `OptionT`/`ExceptT`, with
+the bottom exception assertion, so a failure is worth `0`. The lift is core's, wrapped in a
+definition of its own (`ExpectationWP.liftOptionT`, `liftExceptT`) so that `simp` keeps a stack
+expectation in the stack's language, where `OptionT.wp_lift`, `wp_guard`, `wp_failure`,
+`prEvent_bind_bind_and`, … apply; `ExpectationWP.wp_liftOptionT_apply` and `OptionT.wp_eq_run`
+open it on request (`vcgen` sees through it by definitional unfolding). That the lifted expectation is the
+stack's own successful-output measure is a theorem (`OptionT.wp_ofMeasure_eq`,
+`ExceptT.wp_ofMeasure_eq`), as is the reading of a stack through its run (`OptionT.wp_eq_run`,
+`ExceptT.wp_eq_run`), and the bridges between readings (`Pr{…} = 1` is the lifted necessary
+triple, `0 < Pr{…}` the lifted possible one) lift with it.
+
+Two things are not lifts and must not be confused with them:
+
+- A reading constructor applied at a stack type. `MonadAttach.toWPMonadDemonic` at `OptionT m`
+  reads a triple over the *present* outputs and ignores failures; the lift forbids them. Install
+  readings at the base only (gotcha 39); the lifted readings are the ones coherent with
+  `Pr{…} = 1`.
+- The default exception postcondition in a dual reading. Under `OracleComp.Upper` the bottom of
+  the dual lattice is `toDual ⊤`, so a raw `⦃ toDual ε ⦄ x ⦃ post ⦄` on a lossy `OptionT` program
+  charges a failure `∞` and holds only when the program never fails. Write the exception
+  postcondition, `⦃ toDual ε ⦄ x ⦃ post; (fun _ => toDual 0, Lean.Order.bot) ⦄`, as the bridge
+  `OracleComp.Upper.OptionT.wp_le_iff_triple` does (gotcha 37).
+
+Observing a stack differently is a run, not another instance: `Spec.run'_StateT`,
+`Spec.run_OptionT'` and `Spec.run_ExceptT'` (`Unary/WP/TransformerSpecs.lean`) read a program
+through its state, option or result. `WriterT ω m` keeps the measure interpretation of the stack
+(its lift interprets assertions over the log, not expectations of outputs).
 
 ## Program equalities (`prrw`)
 

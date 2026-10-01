@@ -75,6 +75,16 @@ theorem le_wp_iff_triple (oa : OracleComp spec α) (g : α → ℝ≥0∞) (r : 
   rw [Triple.iff]
   exact Iff.rfl
 
+/-- A lower bound on an expectation is a core triple of the expectation interpretation of its
+monad, for every monad with one. -/
+theorem _root_.ExpectationWP.le_wp_iff_triple {m : Type → Type u'} [Monad m] {EPred : Type}
+    [Assertion EPred] [ExpectationWP m EPred] {α : Type} (mx : m α) (g : α → ℝ≥0∞) (r : ℝ≥0∞) :
+    r ≤ wp⟦mx⟧ g ↔ @Std.WP.Triple ℝ≥0∞ EPred (m α) α _ _ mx
+      (@Std.WP.instWPOfWPMonad _ ENNReal _ _ _ _ _ (ExpectationWP.toWPMonad (m := m))) r g
+      Lean.Order.bot := by
+  let : WPMonad m ℝ≥0∞ EPred := ExpectationWP.toWPMonad (m := m)
+  rw [Triple.iff, Lean.Order.rel_eq_le]
+
 /-- Scaling a lower-bound triple by a constant. -/
 theorem triple_const_mul {oa : OracleComp spec α} {r : ℝ≥0∞} {g : α → ℝ≥0∞} (c : ℝ≥0∞)
     (h : ⦃ r ⦄ oa ⦃ g ⦄) : ⦃ c * r ⦄ oa ⦃ fun a => c * g a ⦄ := by

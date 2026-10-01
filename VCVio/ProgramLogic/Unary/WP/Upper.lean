@@ -8,6 +8,7 @@ module
 
 public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
 public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.EvalDist.Monad.Except
 
 /-!
 # Upper bounds as core triples
@@ -135,11 +136,32 @@ theorem prEvent_le_iff_triple (oa : OracleComp spec α) (p : α → Prop) (ε : 
     Pr{let x ← oa}[p x] ≤ ε ↔ ⦃ toDual ε ⦄ oa ⦃ fun x => toDual (predInd p x) ⦄ :=
   (triple_iff oa _ _ _).symm
 
+
 /-! ## Verification conditions -/
 
 /-- The entailment of the dual carrier is the reversed order of `ℝ≥0∞`. -/
 theorem rel_iff (a b : ℝ≥0∞ᵒᵈ) : Lean.Order.PartialOrder.rel a b ↔ ofDual b ≤ ofDual a :=
   Iff.rfl
+
+/-- An upper bound on an expectation over an optional oracle computation is a triple of core's
+`OptionT` lift of the upper-bound reading, with a failure worth `0`. -/
+theorem OptionT.wp_le_iff_triple (mx : OptionT (OracleComp spec) α) (g : α → ℝ≥0∞)
+    (ε : ℝ≥0∞) :
+    wp⟦mx⟧ g ≤ ε ↔
+      ⦃ toDual ε ⦄ mx ⦃ fun a => toDual (g a); (fun _ => toDual 0, Lean.Order.bot) ⦄ := by
+  rw [_root_.OptionT.wp_eq_run, Triple.iff]
+  simp only [Std.WP.OptionT.wp_apply_eq, rel_iff, ofDual_toDual, ofDual_wp]
+  exact Iff.of_eq (congrArg (· ≤ ε) (ExpectationWP.wp_congr _ fun o => by cases o <;> rfl))
+
+/-- An upper bound on an expectation over an exceptional oracle computation is a triple of core's
+`ExceptT` lift of the upper-bound reading, with an exception worth `0`. -/
+theorem ExceptT.wp_le_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α)
+    (g : α → ℝ≥0∞) (ε : ℝ≥0∞) :
+    wp⟦mx⟧ g ≤ ε ↔
+      ⦃ toDual ε ⦄ mx ⦃ fun a => toDual (g a); (fun _ => toDual 0, Lean.Order.bot) ⦄ := by
+  rw [_root_.ExceptT.wp_eq_run, Triple.iff]
+  simp only [Std.WP.ExceptT.wp_apply_eq, rel_iff, ofDual_toDual, ofDual_wp]
+  exact Iff.of_eq (congrArg (· ≤ ε) (ExpectationWP.wp_congr _ fun r => by cases r <;> rfl))
 
 /-- Mathlib's order on the dual carrier is the reversed order of `ℝ≥0∞`. -/
 theorem le_iff_ofDual (a b : ℝ≥0∞ᵒᵈ) : a ≤ b ↔ ofDual b ≤ ofDual a :=

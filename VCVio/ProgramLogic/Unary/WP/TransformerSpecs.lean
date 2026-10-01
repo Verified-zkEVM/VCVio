@@ -128,6 +128,32 @@ theorem Spec.run_ExceptT' (x : ExceptT ε m α) (post : Except ε α → Pred) {
 
 end ExceptT
 
+/-! ## `guard` -/
+
+section guard
+
+variable {m : Type → Type v} {Pred EPred : Type}
+  [Monad m] [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred]
+
+/-- `guard p` in `OptionT`: the postcondition when `p` holds and the failure assertion when it
+does not, stated with lattice connectives so that every reading decomposes it. Core's
+`Spec.guard_OptionT` is stated for `Prop` assertions and takes precedence there. -/
+@[spec low]
+theorem Spec.guard_OptionT_iInf (p : Prop) [Decidable p] (post : Unit → Pred)
+    (epost : (Unit → Pred) × EPred) :
+    ⦃ (Lean.Order.iInf fun _ : PLift p => post ()) ⊓
+        (Lean.Order.iInf fun _ : PLift ¬p => epost.1 ()) ⦄ (guard p : OptionT m Unit)
+      ⦃ post; epost ⦄ := by
+  rw [Triple.iff]
+  unfold guard
+  split_ifs with hp
+  · exact PartialOrder.rel_trans (meet_le_left _ _)
+      (PartialOrder.rel_trans (iInf_le _ ⟨hp⟩) (Spec.pure ()).le_wp)
+  · exact PartialOrder.rel_trans (meet_le_right _ _)
+      (PartialOrder.rel_trans (iInf_le _ ⟨hp⟩) (Spec.failure_OptionT post epost).le_wp)
+
+end guard
+
 /-! ## `List.mapM` -/
 
 section mapM

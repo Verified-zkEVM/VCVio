@@ -114,7 +114,7 @@ example (mx : ProbComp Bool) :
 
 example (mx : OptionT ProbComp Bool) :
     Pr{let b ← mx}[b] = 𝒟[mx] {true} := by
-  rw [prEvent_eq_evalDist_of_discrete]
+  rw [← OptionT.wp_ofMeasure_eq, prEvent_eq_evalDist_of_discrete]
   simp
 
 example (mx : FinRatPMF.Raw Bool) :
@@ -151,7 +151,7 @@ semantics. -/
 
 open VCVioTest.MeasureSemantics in
 /--
-error: an expectation needs lawful measure semantics; no `LawfulEvalDistSemantics` instance for
+error: an expectation needs an expectation interpretation of its monad (`ExpectationWP`): lawful measure semantics (`EvalDistSemantics`, `LawfulEvalDistSemantics`, `LawfulMonad`), or `OptionT` / `ExceptT` over such a monad; none for
   gaussSpec.FreeM
 -/
 #guard_msgs in
