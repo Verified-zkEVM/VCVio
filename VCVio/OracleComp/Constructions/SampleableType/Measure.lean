@@ -130,7 +130,7 @@ indicator that normalization folds into one. -/
 simproc [simp] wp_uniformSample_sum (@Std.WP.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
   unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
   let g := e.getArg! 8
-  if g.isAppOfArity ``predInd 2 || isIndicatorLambda g then return .continue
+  if g.isAppOfArity ``predInd 2 || (indicatorPred? g).isSome then return .continue
   let some (rhs, pf) ← rewriteWith? ``wp_uniformSample_eq_sum e | return .continue
   return .visit { expr := rhs, proof? := pf }
 

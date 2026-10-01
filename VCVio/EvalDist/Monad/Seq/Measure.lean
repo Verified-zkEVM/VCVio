@@ -122,10 +122,12 @@ universe v'
 variable {m : Type → Type v'} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type}
 
-/-- A final event about the first result retains the second computation's success mass. -/
-@[simp, grind norm]
+/-- A final event about the first result retains the second computation's success mass. `simp`
+reaches it through `wp_seqLeft` and `wp_const`. -/
+@[grind norm]
 theorem prEvent_seqLeft (mx : m α) (my : m β) (p : α → Prop) :
     Pr{let x ← mx <* my}[p x] = Pr{let x ← mx}[p x] * Pr{let _ ← my}[True] := by
+  simp only [ExactWPMonad.wp_seqLeft]
   calc _ = wp⟦mx⟧ fun a ↦ propInd (p a) * Pr{let _ ← my}[True] :=
         MeasureProgramLogic.wp_congr mx fun a ↦ wp_const my _
     _ = _ := wp_propInd_mul mx p _
@@ -134,7 +136,8 @@ theorem prEvent_seqLeft (mx : m α) (my : m β) (p : α → Prop) :
 reaches it through `wp_const`. -/
 @[grind norm]
 theorem prEvent_seqRight (mx : m α) (my : m β) (p : β → Prop) :
-    Pr{let y ← mx *> my}[p y] = Pr{let y ← my}[p y] * Pr{let _ ← mx}[True] :=
-  wp_const mx _
+    Pr{let y ← mx *> my}[p y] = Pr{let y ← my}[p y] * Pr{let _ ← mx}[True] := by
+  simp only [ExactWPMonad.wp_seqRight]
+  exact wp_const mx _
 
 end events

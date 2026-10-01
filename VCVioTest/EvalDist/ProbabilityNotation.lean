@@ -218,11 +218,12 @@ example {α : Type} [Countable α] (mx my : ProbComp α)
 
 /-! ### Event notation
 
-`Pr{items}[t]` is the expectation `𝔼{items}[𝟙⟦t⟧]` of the event's indicator: core's
-`wp (do items; return 𝟙⟦t⟧) id ⊥` under the measure interpretation. It is stored in the normal
-form `simp` produces, every draw an expectation `wp⟦a⟧ fun x => …` and the last one observing the
-indicator `predInd p` of the event's predicate, and goals display the draws as `let`
-statements. -/
+`Pr{items}[t]` is the expectation `𝔼{items}[𝟙⟦t⟧]` of the event's indicator: the translation of
+the sequence into nested expectations of its draws, one `wp⟦a⟧ fun x => …` per draw, the last
+observing the indicator `predInd p` of the event's predicate. Nothing is rewritten at
+elaboration: a draw written as a bind, a map or a `do` block stays as written, and
+`simp only [expect_norm]` brings it to the normal form of a draw chain. Goals display the draws
+as `let` statements. -/
 
 section eventNotation
 
@@ -230,29 +231,11 @@ open Lean.Order Std.WP
 
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ)
 
-/-! The specification: the notation equals the event of its literal `do` sequence. -/
+/-! The specification: the notation is the nested expectation of its draws. -/
 
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
     𝔼{let x ← mx; let y ← my x}[propInd (y = 3 ∧ x)] :=
   rfl
-example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
-    wp (do let x ← mx; let y ← my x; return propInd (y = 3 ∧ x = true) : ProbComp ℝ≥0∞)
-      (fun r => r) Lean.Order.bot := by
-  simp only [expect_norm]
-example (m₁ m₂ : ProbComp ℕ) : Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] =
-    wp (do let b ← $ᵗ Bool; let x ← (if b then m₁ else m₂); return propInd (x = 3) :
-      ProbComp ℝ≥0∞) (fun r => r) Lean.Order.bot := by
-  simp only [expect_norm]
-example (mo : ProbComp (Option ℕ)) :
-    Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] =
-      wp (do
-        let o ← mo
-        let x ← match o with | some a => pure a | none => mz
-        return propInd (x = 1) : ProbComp ℝ≥0∞) (fun r => r) Lean.Order.bot := by
-  simp only [expect_norm]
-
-/-! The normal form. -/
-
 example : Pr{let x ← mx}[x = true] = wp⟦mx⟧ (predInd fun x => x = true) := by
   guard_target =ₛ wp⟦mx⟧ (predInd fun x => x = true) = wp⟦mx⟧ (predInd fun x => x = true)
   rfl
@@ -262,16 +245,32 @@ example (p : Bool → Prop) : Pr{let x ← mx}[p x] = wp⟦mx⟧ (predInd p) := 
 example : Pr{let x ← mx}[x] = wp⟦mx⟧ (predInd fun x => x = true) := rfl
 example : Pr{let x ← mx; let y ← my x}[y = 3 ∧ x] =
     wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => y = 3 ∧ x = true) := rfl
-example : Pr{let x ← mx >>= my}[x = 3] = wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd fun y => y = 3) :=
-  rfl
-example : Pr{let x ← not <$> mx}[x] = wp⟦mx⟧ (predInd fun x => (!x) = true) := rfl
 example : Pr{let x : Bool ← mx}[x] = Pr{let x ← mx}[x = true] := rfl
 example : Pr{let x ← mz}[x = 3] = wp⟦mz⟧ (predInd fun z => z = 3) := rfl
 example : Pr{{let x ← mx}}[x] = Pr{let x ← mx}[x] := rfl
+example : Pr{let _ ← mx; let y ← mz}[y = 3] = wp⟦mx⟧ fun _ => wp⟦mz⟧ (predInd fun y => y = 3) :=
+  rfl
+example : Pr{let x ← mz; mz}[x = 1] = wp⟦mz⟧ fun x => wp⟦mz⟧ (predInd fun _ => x = 1) := rfl
 example : Pr{
     let x ← mz
     let y := x + 1}[y = 3] = wp⟦mz⟧ (predInd fun x => x + 1 = 3) := rfl
-example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = 3] = propInd (a = 3) := rfl
+example : Pr{let x ← mz; let y := x + 1; let z ← my (y = 3)}[z = y] =
+    wp⟦mz⟧ fun x => let y := x + 1; wp⟦my (y = 3)⟧ (predInd fun z => z = y) := rfl
+
+/-! A draw written as a bind, a map, a returned value or a `do` block stays as written; the
+normal form is one `simp only [expect_norm]` away. -/
+
+example : Pr{let x ← mx >>= my}[x = 3] = wp⟦mx >>= my⟧ (predInd fun x => x = 3) := rfl
+example : Pr{let x ← mx >>= my}[x = 3] = Pr{let x ← mx; let y ← my x}[y = 3] := by
+  simp only [expect_norm]
+example : Pr{let x ← not <$> mx}[x] = wp⟦not <$> mx⟧ (predInd fun x => x = true) := rfl
+example : Pr{let x ← not <$> mx}[x] = wp⟦mx⟧ (predInd fun x => (!x) = true) := by
+  simp only [expect_norm]
+example (a : ℕ) : Pr{let x ← (pure a : ProbComp ℕ)}[x = 3] = propInd (a = 3) := by
+  simp only [expect_norm]
+example (f : ℕ → ℕ → ProbComp ℕ) :
+    Pr{let z ← f (← mz) (← mz)}[z = 0] = Pr{let a ← mz; let b ← mz; let z ← f a b}[z = 0] := by
+  simp only [expect_norm]
 
 /-- A draw whose action continues on the following lines is laid out as in a `do` block, or its
 action is parenthesized. -/
@@ -283,25 +282,97 @@ example (f : ℕ → ℕ → ProbComp ℕ) : Pr{
 example (f : ℕ → ℕ → ProbComp ℕ) : Pr{let x ← (f
     1 2)}[x = 1] = Pr{let x ← f 1 2}[x = 1] := rfl
 
-/-- The braces take any `do` sequence, and the event may mention all its bindings: pure `let`s,
-nested actions, branches and `match` on the right of a draw, and `let mut` with loops. -/
-example (f : ℕ → ℕ → ProbComp ℕ) :
-    Pr{let z ← f (← mz) (← mz)}[z = 0] = Pr{let a ← mz; let b ← mz; let z ← f a b}[z = 0] := rfl
+/-- Branches and `match` on the right of a draw are ordinary draws. -/
+example (m₁ m₂ : ProbComp ℕ) (c : Prop) [Decidable c] :
+    Pr{let b ← $ᵗ Bool; let x ← if b then m₁ else m₂}[x = 3] =
+      wp⟦$ᵗ Bool⟧ fun b => wp⟦if b then m₁ else m₂⟧ (predInd fun x => x = 3) := rfl
+example (mo : ProbComp (Option ℕ)) :
+    Pr{let o ← mo; let x ← match o with | some a => pure a | none => mz}[x = 1] =
+      wp⟦mo⟧ fun o => wp⟦match o with | some a => pure a | none => mz⟧ (predInd fun x => x = 1) :=
+  rfl
+
+/-- A single-constructor destructuring draw matches on the drawn value, whether it is the last
+draw or not, and whether its action is a term or a nested `do` block. -/
+example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp (ℕ × ℕ)) :
+    Pr{let ⟨a, b⟩ ← mp}[a = b] = wp⟦mp⟧ (predInd fun z => z.1 = z.2) ∧
+      Pr{let ⟨a, b⟩ ← do f (← init)}[a = b] =
+        wp⟦init⟧ fun x => wp⟦f x⟧ (predInd fun z => z.1 = z.2) := by
+  constructor <;> simp only [expect_norm]
+example (mp : ProbComp (ℕ × ℕ)) (g : ℕ → ProbComp ℕ) :
+    Pr{let (a, b) ← mp; let c ← g a}[b = c] =
+      wp⟦mp⟧ fun z => wp⟦g z.1⟧ (predInd fun c => z.2 = c) := by
+  simp only [expect_norm]
+
+/-- An imperative tail (`let mut`, a loop, a do-level `if`) is one program whose result is the
+tuple of the variables it binds, observed from outside. -/
 example (g : ℕ → ProbComp ℕ) :
     Pr{let mut s := 0; for i in [1, 2, 3] do s := s + (← g i)}[s = 3] =
       Pr{let a ← g 1; let b ← g 2; let c ← g 3}[a + b + c = 3] := by
   simp
+example : Pr{let b ← mx; let mut n := 0; if b then n := 1}[n = 1] =
+    𝔼{let b ← mx}[if b then 1 else 0] := by
+  simp
+example : Pr{let b ← (do if true then return true else return false : ProbComp Bool)}[b = true]
+    = 1 := by
+  simp
 
-/-- A single-constructor destructuring draw becomes projections, whether it is the last draw or
-not, and whether its action is a term or a nested `do` block. -/
-example (mp : ProbComp (ℕ × ℕ)) (init : ProbComp ℕ) (f : ℕ → ProbComp (ℕ × ℕ)) :
-    Pr{let ⟨a, b⟩ ← mp}[a = b] = wp⟦mp⟧ (predInd fun z => z.1 = z.2) ∧
-      Pr{let ⟨a, b⟩ ← do f (← init)}[a = b] =
-        wp⟦init⟧ fun x => wp⟦f x⟧ (predInd fun z => z.1 = z.2) :=
-  ⟨rfl, rfl⟩
-example (mp : ProbComp (ℕ × ℕ)) (g : ℕ → ProbComp ℕ) :
-    Pr{let (a, b) ← mp; let c ← g a}[b = c] =
-      wp⟦mp⟧ fun z => wp⟦g z.1⟧ (predInd fun c => z.2 = c) := rfl
+/-- A draw whose program is a `let`-bound `do` block typed by its own binds elaborates once the
+surrounding term has forced that block: the draw postpones instead of forcing its own binds. -/
+noncomputable example (mx : OptionT ProbComp ℕ) : ℝ≥0∞ :=
+  let exec := do
+    let n ← mx
+    return n + 1
+  Pr{let x ← exec.run}[x = some 1]
+
+/-! Each draw is read in the expectation interpretation of its own monad, so a sequence may
+draw from several monads, and the failure of a draw contributes nothing to the event. -/
+
+section mixedMonads
+
+variable (outer : ProbComp Bool) (inner : OptionT ProbComp Bool) (p : Bool → Bool → Prop)
+
+/-- info: Pr{let x ← outer; let y ← inner}[p x y] : ℝ≥0∞ -/
+#guard_msgs in
+#check 𝔼{let x ← outer}[Pr{let y ← inner}[p x y]]
+
+example : 𝔼{let x ← outer}[Pr{let y ← inner}[p x y]] =
+    Pr{let x ← outer; let y ← inner}[p x y] := rfl
+example : Pr{let x ← outer; let y ← inner}[p x y] =
+    wp⟦outer⟧ fun x => wp⟦inner⟧ (predInd fun y => p x y) := rfl
+example : Pr{let _ ← outer; let _ ← (failure : OptionT ProbComp Bool)}[True] = 0 := by
+  simp
+
+end mixedMonads
+
+/-! A `return` at the top level of the braces is rejected; inside a bound computation it is
+ordinary. -/
+
+/--
+error: `return` is not allowed at the top level of the braces: the sequence's bindings are what
+the event observes; bind a computation that returns early as `let x ← (do …)`
+-/
+#guard_msgs (whitespace := lax) in
+noncomputable example : ℝ≥0∞ :=
+  Pr{let b ← (pure true : ProbComp Bool); if b then return (2 : ℝ≥0∞)}[False]
+
+/--
+error: `return` is not allowed at the top level of the braces: the sequence's bindings are what
+the event observes; bind a computation that returns early as `let x ← (do …)`
+-/
+#guard_msgs (whitespace := lax) in
+noncomputable example : ℝ≥0∞ := Pr{let b ← mx; return b}[b = true]
+
+/--
+error: `return` is not allowed at the top level of the braces: the sequence's bindings are what
+the event observes; bind a computation that returns early as `let x ← (do …)`
+-/
+#guard_msgs (whitespace := lax) in
+noncomputable example : ℝ≥0∞ :=
+  Pr{let mut s := 0; for i in [1, 2] do if i = 1 then return s}[s = 0]
+
+/-- error: an event needs a draw: the braces hold only `let`s -/
+#guard_msgs in
+#check Pr{let y := 1}[y = 1]
 
 /-! Goals display the draws as `let` statements on one line when they fit, an unused draw as
 `_`, and an eta-reduced final selector applied to a name no draw binds. -/
@@ -327,6 +398,10 @@ variable (S : Set ℕ) in
 /-- info: Pr{let _ ← mx; let y ← mz}[y = 3] : ℝ≥0∞ -/
 #guard_msgs in
 #check Pr{let _ ← mx; let y ← mz}[y = 3]
+
+/-- info: Pr{let x ← mx >>= my}[x = 3] : ℝ≥0∞ -/
+#guard_msgs in
+#check Pr{let x ← mx >>= my}[x = 3]
 
 variable (g : ℕ → ℝ≥0∞) in
 /-- info: 𝔼{let x ← mz}[g x] : ℝ≥0∞ -/
@@ -373,10 +448,9 @@ end eventNotation
 
 /-! ### Expectation notation
 
-`𝔼{items}[b]` is core's `wp (do items; return b) id ⊥` under the measure interpretation, stored in
-the same normal form as events: every draw becomes an expectation `wp a fun x => …`. A term in
-normal form displays as the notation it elaborates from, and any other expectation keeps core's
-display. -/
+`𝔼{items}[b]` is the nested expectation of the draws of `items`, observing `b`: a term of the
+same shape as an event, whose innermost observation is the value rather than an indicator. Every
+expectation under the measure interpretation displays as the notation it elaborates from. -/
 
 section expectationNotation
 
@@ -385,20 +459,17 @@ open Lean.Order Std.WP
 variable (mx : ProbComp Bool) (my : Bool → ProbComp ℕ) (mz : ProbComp ℕ) (g : ℕ → ℝ≥0∞)
   (f : Bool → ℕ → ℝ≥0∞)
 
-/-! The specification: the notation equals the expectation of its literal `do` sequence. -/
-
-example : 𝔼{let x ← mx; let y ← my x}[f x y] =
-    wp (do let x ← mx; let y ← my x; return f x y : ProbComp ℝ≥0∞) (fun r => r)
-      Lean.Order.bot := by
-  simp only [expect_norm]
-
-/-! The normal form. -/
+/-! The translation. -/
 
 example : 𝔼{let x ← mz}[g x] = wp⟦mz⟧ g := rfl
 example : 𝔼{let x ← mx; let y ← my x}[f x y] = wp⟦mx⟧ fun x => wp⟦my x⟧ fun y => f x y := rfl
-example : 𝔼{let y ← mx >>= my}[g y] = wp⟦mx⟧ fun x => wp⟦my x⟧ fun y => g y := rfl
-example : 𝔼{let x ← not <$> mx; let y ← my x}[g y] = wp⟦mx⟧ fun x => wp⟦my (!x)⟧ g := rfl
-example (a : ℕ) : 𝔼{let x ← (pure a : ProbComp ℕ)}[g x] = g a := rfl
+example : 𝔼{let y ← mx >>= my}[g y] = wp⟦mx >>= my⟧ g := rfl
+example : 𝔼{let y ← mx >>= my}[g y] = wp⟦mx⟧ fun x => wp⟦my x⟧ fun y => g y := by
+  simp only [expect_norm]
+example : 𝔼{let x ← not <$> mx; let y ← my x}[g y] = wp⟦mx⟧ fun x => wp⟦my (!x)⟧ g := by
+  simp only [expect_norm]
+example (a : ℕ) : 𝔼{let x ← (pure a : ProbComp ℕ)}[g x] = g a := by simp only [expect_norm]
+example (t : ℕ → Prop) : 𝔼{let x ← mz}[propInd (t x)] = Pr{let x ← mz}[t x] := rfl
 
 /-! Display. -/
 
@@ -414,9 +485,7 @@ example (a : ℕ) : 𝔼{let x ← (pure a : ProbComp ℕ)}[g x] = g a := rfl
 #guard_msgs in
 #check 𝔼{let _ ← mz}[(1 : ℝ≥0∞)]
 
-/-! An expectation that is not in normal form keeps core's display. -/
-
-/-- info: wp (mx >>= my) g ⊥ : ℝ≥0∞ -/
+/-- info: 𝔼{let x ← mx >>= my}[g x] : ℝ≥0∞ -/
 #guard_msgs in
 #check wp⟦mx >>= my⟧ g
 
@@ -434,10 +503,24 @@ guard_roundtrip 𝔼{let x ← mx; let y ← my x}[f x y]
 guard_roundtrip wp⟦mz⟧ g
 guard_roundtrip 𝔼{let x ← mx; let y ← my x}[propInd (y = 3) * f x y]
 guard_roundtrip Pr{let x ← mx; let y ← my x}[y = 3]
+guard_roundtrip Pr{let x : Bool ← mx}[x]
+guard_roundtrip Pr{let _ ← mx; let y ← mz}[y = 3]
 guard_roundtrip Pr{let ⟨a, b⟩ ← (mz >>= fun a => (a, ·) <$> mz)}[a = b]
+guard_roundtrip Pr{let x ← mz; let y := x + 1}[y = 3]
+guard_roundtrip Pr{let x ← mx >>= my}[x = 3]
+guard_roundtrip Pr{let x ← not <$> mx}[x]
 guard_roundtrip wp⟦mx >>= my⟧ g
 
-/-- A computation behind a reducible definition, which normalization sees through. -/
+section mixedMonads
+
+variable (outer : ProbComp Bool) (inner : OptionT ProbComp Bool) (p : Bool → Bool → Prop)
+
+guard_roundtrip 𝔼{let x ← outer}[Pr{let y ← inner}[p x y]]
+guard_roundtrip Pr{let x ← outer; let y ← inner}[p x y]
+
+end mixedMonads
+
+/-- A computation behind a reducible definition. -/
 abbrev wrapped (mz : ProbComp ℕ) : ProbComp ℕ := mz
 
 guard_roundtrip wp⟦wrapped (pure 1)⟧ g

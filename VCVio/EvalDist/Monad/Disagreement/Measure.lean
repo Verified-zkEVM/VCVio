@@ -52,7 +52,7 @@ theorem prEvent_bind_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α]
     (mx : m α) (f : α → m β) (p : β → Prop) (F : ι → α → ℝ≥0∞)
     (hf : Measurable fun a ↦ 𝒟[p <$> f a]) (hF : ∀ i, Measurable (F i)) (bound : α → ℝ≥0∞)
     (h : ∀ᵐ a ∂𝒟[mx], Pr{let b ← f a}[p b] ≤ (∑ i, F i a) + bound a) :
-    Pr{let b ← mx >>= f}[p b] ≤ (∑ i, wp⟦mx⟧ (F i)) + ∫⁻ a, bound a ∂𝒟[mx] :=
+    Pr{let a ← mx; let b ← f a}[p b] ≤ (∑ i, wp⟦mx⟧ (F i)) + ∫⁻ a, bound a ∂𝒟[mx] :=
   wp_le_sum_add_lintegral_ae mx F (measurable_prEvent hf) hF bound h
 
 variable [MonadAttach m] [WeaklyLawfulMonadAttach m]
@@ -101,15 +101,15 @@ theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
     (hD : Pr{let x ← mx}[D x] ≤ ε₁)
     (h : ∀ x ∈ support mx, ¬D x →
       Pr{let y ← my x}[q y] ≤ Pr{let y ← oc x}[q y] + ε₂) :
-    Pr{let y ← mx >>= my}[q y] ≤ Pr{let y ← mx >>= oc}[q y] + ε₁ + ε₂ := by
-  calc Pr{let y ← mx >>= my}[q y]
+    Pr{let x ← mx; let y ← my x}[q y] ≤ Pr{let x ← mx; let y ← oc x}[q y] + ε₁ + ε₂ := by
+  calc Pr{let x ← mx; let y ← my x}[q y]
       ≤ wp⟦mx⟧ fun x ↦ Pr{let y ← oc x}[q y] + propInd (D x) + ε₂ :=
         wp_mono_of_support mx fun x hx ↦ by
           by_cases hDx : D x
           · simp only [hDx, propInd_true]
             exact (prEvent_le_one _).trans (le_add_right le_add_self)
           · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
-    _ ≤ Pr{let y ← mx >>= oc}[q y] + Pr{let x ← mx}[D x] + ε₂ := by
+    _ ≤ Pr{let x ← mx; let y ← oc x}[q y] + Pr{let x ← mx}[D x] + ε₂ := by
         rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr
@@ -122,9 +122,9 @@ theorem prEvent_bind_le_add_bad_of_disagree' {mx : m α}
     (hbad : ∀ x ∈ support mx, D x → Pr{let z ← ob x}[r z] = 1)
     (h : ∀ x ∈ support mx, ¬D x → Pr{let y ← my x}[q y] ≤
       Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + ε) :
-    Pr{let y ← mx >>= my}[q y] ≤
-      Pr{let y ← mx >>= oc}[q y] + Pr{let z ← mx >>= ob}[r z] + ε := by
-  calc Pr{let y ← mx >>= my}[q y]
+    Pr{let x ← mx; let y ← my x}[q y] ≤
+      Pr{let x ← mx; let y ← oc x}[q y] + Pr{let x ← mx; let z ← ob x}[r z] + ε := by
+  calc Pr{let x ← mx; let y ← my x}[q y]
       ≤ wp⟦mx⟧ fun x ↦ Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + ε :=
         wp_mono_of_support mx fun x hx ↦ by
           by_cases hDx : D x
@@ -142,8 +142,8 @@ theorem prEvent_bind_le_add_bad_of_disagree {mx : m α}
     (hbad : ∀ x ∈ support mx, D x → Pr{let z ← ob x}[r z] = 1)
     (h : ∀ x ∈ support mx, ¬D x →
       Pr{let y ← my x}[q y] ≤ Pr{let y ← oc x}[q y] + ε) :
-    Pr{let y ← mx >>= my}[q y] ≤
-      Pr{let y ← mx >>= oc}[q y] + Pr{let z ← mx >>= ob}[r z] + ε :=
+    Pr{let x ← mx; let y ← my x}[q y] ≤
+      Pr{let x ← mx; let y ← oc x}[q y] + Pr{let x ← mx; let z ← ob x}[r z] + ε :=
   prEvent_bind_le_add_bad_of_disagree' hbad fun x hx hDx ↦
     (h x hx hDx).trans (add_le_add (le_add_right le_rfl) le_rfl)
 
@@ -154,16 +154,17 @@ theorem prEvent_bind_le_add_bad_disagree {mx : m α}
     (hD : Pr{let x ← mx}[D x] ≤ ε₁)
     (h : ∀ x ∈ support mx, ¬D x → Pr{let y ← my x}[q y] ≤
       Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + ε₂) :
-    Pr{let y ← mx >>= my}[q y] ≤ Pr{let y ← mx >>= oc}[q y] +
-      Pr{let z ← mx >>= ob}[r z] + ε₁ + ε₂ := by
-  calc Pr{let y ← mx >>= my}[q y]
+    Pr{let x ← mx; let y ← my x}[q y] ≤ Pr{let x ← mx; let y ← oc x}[q y] +
+      Pr{let x ← mx; let z ← ob x}[r z] + ε₁ + ε₂ := by
+  calc Pr{let x ← mx; let y ← my x}[q y]
       ≤ wp⟦mx⟧ fun x ↦ Pr{let y ← oc x}[q y] + Pr{let z ← ob x}[r z] + propInd (D x) + ε₂ :=
         wp_mono_of_support mx fun x hx ↦ by
           by_cases hDx : D x
           · simp only [hDx, propInd_true]
             exact (prEvent_le_one _).trans (le_add_right le_add_self)
           · simpa only [hDx, propInd_false, add_zero] using h x hx hDx
-    _ ≤ Pr{let y ← mx >>= oc}[q y] + Pr{let z ← mx >>= ob}[r z] + Pr{let x ← mx}[D x] + ε₂ := by
+    _ ≤ Pr{let x ← mx; let y ← oc x}[q y] + Pr{let x ← mx; let z ← ob x}[r z] +
+          Pr{let x ← mx}[D x] + ε₂ := by
         rw [MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add, MeasureProgramLogic.wp_add,
           wp_const]
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))

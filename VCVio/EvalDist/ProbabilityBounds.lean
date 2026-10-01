@@ -35,7 +35,7 @@ theorem prEvent_bind_sq_le_bind_pair
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α β : Type} (source : m α) (f : α → m β) (p : β → Prop) :
-    Pr{let y ← source >>= f}[p y] ^ 2 ≤
+    Pr{let x ← source; let y ← f x}[p y] ^ 2 ≤
       Pr{let x ← source; let a ← f x; let b ← f x}[p a ∧ p b] := by
   let : MeasurableSpace α := ⊤
   have hpair :
@@ -185,13 +185,13 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m]
 No losslessness of the draw is needed. -/
 theorem prEvent_bind_le_of_forall_le (mx : m α) (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ ε :=
   wp_le_of_forall_le mx h
 
 /-- A pointwise comparison of continuation events survives a common draw. -/
 theorem prEvent_bind_mono_of_forall_le {γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
     (p : β → Prop) (q : γ → Prop) (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
-    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] :=
+    Pr{let x ← mx; let y ← f x}[p y] ≤ Pr{let x ← mx; let y ← g x}[q y] :=
   MeasureProgramLogic.wp_mono mx h
 
 /-- A continuation event bounded by `ε` where `p` holds, and null where it fails, is bounded after
@@ -199,7 +199,7 @@ a common draw by the probability of `p` times `ε`. -/
 theorem prEvent_bind_le_prEvent_mul_of_forall_le (mx : m α) (f : α → m β) (p : α → Prop)
     (q : β → Prop) {ε : ℝ≥0∞} (h₁ : ∀ a, p a → Pr{let y ← f a}[q y] ≤ ε)
     (h₂ : ∀ a, ¬ p a → Pr{let y ← f a}[q y] = 0) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] * ε := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] * ε := by
   rw [← wp_propInd_mul]
   refine MeasureProgramLogic.wp_mono mx fun a ↦ ?_
   by_cases hp : p a
@@ -211,7 +211,8 @@ common draw. -/
 theorem prEvent_bind_le_add_of_forall_le {γ δ : Type} (mx : m α) (f : α → m β)
     (g : α → m γ) (k : α → m δ) (p : β → Prop) (q : γ → Prop) (r : δ → Prop)
     (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y] + Pr{let y ← k a}[r y]) :
-    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] + Pr{let y ← mx >>= k}[r y] :=
+    Pr{let x ← mx; let y ← f x}[p y] ≤
+      Pr{let x ← mx; let y ← g x}[q y] + Pr{let x ← mx; let y ← k x}[r y] :=
   (MeasureProgramLogic.wp_mono mx h).trans_eq (MeasureProgramLogic.wp_add mx _ _)
 
 /-- A uniform lower bound on the event of every continuation bounds the event after a lossless
@@ -219,7 +220,7 @@ common draw. -/
 theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
     (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ε ≤ Pr{let y ← f a}[q y]) :
-    ε ≤ Pr{let y ← mx >>= f}[q y] :=
+    ε ≤ Pr{let x ← mx; let y ← f x}[q y] :=
   le_wp_of_forall_le mx hmx h
 
 /-- A continuation event with the same probability after every draw keeps that probability after a
@@ -227,7 +228,7 @@ lossless draw. -/
 theorem prEvent_bind_eq_of_forall_eq (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
     (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, Pr{let y ← f a}[q y] = ε) :
-    Pr{let y ← mx >>= f}[q y] = ε :=
+    Pr{let x ← mx; let y ← f x}[q y] = ε :=
   le_antisymm (prEvent_bind_le_of_forall_le mx f q fun a ↦ (h a).le)
     (le_prEvent_bind_of_forall_le mx hmx f q fun a ↦ (h a).ge)
 
@@ -237,7 +238,7 @@ theorem mul_le_prEvent_bind_of_forall (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {r r' : ℝ≥0∞}
     (h : r ≤ Pr{let x ← mx}[p x])
     (h' : ∀ x, p x → r' ≤ Pr{let y ← f x}[q y]) :
-    r * r' ≤ Pr{let y ← mx >>= f}[q y] := by
+    r * r' ≤ Pr{let x ← mx; let y ← f x}[q y] := by
   calc
     r * r' ≤ Pr{let x ← mx}[p x] * r' := by gcongr
     _ = wp⟦mx⟧ fun x ↦ propInd (p x) * r' := (wp_propInd_mul mx p r').symm
@@ -253,7 +254,7 @@ is `1 - Pr{let a ← mx}[p a]` by `prEvent_add_prEvent_not`. -/
 theorem prEvent_bind_le_prEvent_add_mul_prEvent_not (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
   rw [← wp_mul_propInd, ← MeasureProgramLogic.wp_add]
   refine MeasureProgramLogic.wp_mono mx fun a ↦ ?_
   by_cases hpa : p a
@@ -265,7 +266,7 @@ predicate's probability. -/
 theorem prEvent_bind_le_prEvent_of_forall_eq_zero (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop)
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] = 0) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] := by
   simpa using prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q (ε := 0)
     fun a ha ↦ (h a ha).le
 
@@ -274,7 +275,7 @@ predicate's probability plus `ε`. -/
 theorem prEvent_bind_le_prEvent_add (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q h).trans
     (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
@@ -399,7 +400,7 @@ theorem prEvent_eq_zero_of_not_mem_support (mx : m α) {x : α} (hx : x ∉ supp
 /-- A bound on the event of every reachable continuation bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)
     {ε : ℝ≥0∞} (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ ε := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ ε := by
   rw [wp_eq_wp_attach]
   exact wp_le_of_forall_le _ fun a ↦ h a.1 a.2
 
@@ -408,7 +409,7 @@ draw. -/
 theorem prEvent_bind_mono_of_forall_le_of_support {γ : Type} (mx : m α) (f : α → m β)
     (g : α → m γ) (p : β → Prop) (q : γ → Prop)
     (h : ∀ a ∈ support mx, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
-    Pr{let y ← mx >>= f}[p y] ≤ Pr{let y ← mx >>= g}[q y] :=
+    Pr{let x ← mx; let y ← f x}[p y] ≤ Pr{let x ← mx; let y ← g x}[q y] :=
   wp_mono_of_support mx h
 
 /-- A lower bound on the event of every reachable continuation bounds the event after a lossless
@@ -416,7 +417,7 @@ draw. -/
 theorem le_prEvent_bind_of_forall_le_of_support (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
     (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ε ≤ Pr{let y ← f a}[q y]) :
-    ε ≤ Pr{let y ← mx >>= f}[q y] := by
+    ε ≤ Pr{let x ← mx; let y ← f x}[q y] := by
   rw [wp_eq_wp_attach]
   exact le_wp_of_forall_le _ (by rwa [prEvent_true_attach]) fun a ↦ h a.1 a.2
 
@@ -424,7 +425,7 @@ theorem le_prEvent_bind_of_forall_le_of_support (mx : m α) (hmx : Pr{let _ ← 
 theorem prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
   rw [← wp_mul_propInd, ← MeasureProgramLogic.wp_add]
   refine wp_mono_of_support mx fun a ha ↦ ?_
   by_cases hpa : p a
@@ -436,7 +437,7 @@ predicate's probability. -/
 theorem prEvent_bind_le_prEvent_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop)
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] = 0) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] := by
   simpa using prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q (ε := 0)
     fun a ha hp ↦ (h a ha hp).le
 
@@ -444,7 +445,7 @@ theorem prEvent_bind_le_prEvent_of_support (mx : m α) (f : α → m β)
 theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q h).trans
     (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
@@ -462,7 +463,7 @@ output. -/
 theorem prFail_bind_eq_add_lintegral_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (mx : m α) (f : α → m β) :
     prFail (mx >>= f) = prFail mx + ∫⁻ x, prFail (f x) ∂𝒟[mx] := by
-  have hbind : Pr{let _ ← mx >>= f}[True] = ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] :=
+  have hbind : Pr{let x ← mx; let _ ← f x}[True] = ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] :=
     prEvent_bind_eq_lintegral_of_discrete mx f (fun _ ↦ True)
   have hle : ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ 𝒟[mx] Set.univ :=
     calc ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ ∫⁻ _, 1 ∂𝒟[mx] :=

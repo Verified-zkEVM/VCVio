@@ -445,10 +445,10 @@ bind at `y` factors as the point mass of the first draw at `x` times that of its
 theorem prEvent_bind_eq_mul_of_unique {β : Type} (mx : OracleComp spec α)
     (my : α → OracleComp spec β) (x : α) (y : β)
     (h : ∀ x' ∈ support mx, y ∈ support (my x') → x' = x) :
-    Pr{let z ← mx >>= my}[z = y] = Pr{let z ← mx}[z = x] * Pr{let z ← my x}[z = y] := by
+    Pr{let a ← mx; let z ← my a}[z = y] = Pr{let z ← mx}[z = x] * Pr{let z ← my x}[z = y] := by
   classical
   let : MeasurableSpace α := ⊤
-  calc Pr{let z ← mx >>= my}[z = y]
+  calc Pr{let a ← mx; let z ← my a}[z = y]
       = ∫⁻ a, Pr{let z ← my a}[z = y] ∂𝒟[mx] := prEvent_bind_eq_lintegral_of_discrete mx my _
     _ = ∫⁻ a, ({x} : Set α).indicator (fun _ => Pr{let z ← my x}[z = y]) a ∂𝒟[mx] := by
         refine lintegral_congr_ae ((evalDist.ae_of_forall_mem_support mx (· ∈ support mx)

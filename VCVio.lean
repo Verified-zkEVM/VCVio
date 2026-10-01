@@ -204,6 +204,8 @@ public import VCVio.EvalDist.PFunctorSupport
 public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.ProbabilityNotation.Attr
+public import VCVio.EvalDist.ProbabilityNotation.Delab
+public import VCVio.EvalDist.ProbabilityNotation.Elab
 public import VCVio.EvalDist.Prod
 public import VCVio.EvalDist.ResumptionMeasure
 public import VCVio.EvalDist.WiringKernel

@@ -111,7 +111,7 @@ theorem evalDist.isProbabilityMeasure_bind_ite {α β : Type} [MeasurableSpace �
 event probabilities. Each weight retains successful mass. -/
 theorem prEvent_bind_ite {α β : Type} (mx : m α) (p : α → Prop) [DecidablePred p]
     (yes no : m β) (q : β → Prop) :
-    Pr{let y ← mx >>= fun x ↦ if p x then yes else no}[q y] =
+    Pr{let x ← mx; let y ← if p x then yes else no}[q y] =
       Pr{let x ← mx}[p x] * Pr{let y ← yes}[q y] +
         Pr{let x ← mx}[¬p x] * Pr{let y ← no}[q y] := by
   rw [← wp_propInd_mul, ← wp_propInd_mul, ← MeasureProgramLogic.wp_add]
@@ -127,7 +127,7 @@ theorem prEvent_bind_eq_mul_of_ite {α β γ : Type}
       Pr{
         let y ← f x}[q y] = if p x then Pr{
         let z ← my}[r z] else 0) :
-    Pr{let y ← mx >>= f}[q y] = Pr{let x ← mx}[p x] * Pr{let z ← my}[r z] := by
+    Pr{let x ← mx; let y ← f x}[q y] = Pr{let x ← mx}[p x] * Pr{let z ← my}[r z] := by
   rw [MeasureProgramLogic.wp_congr mx h, ← wp_propInd_mul]
   refine MeasureProgramLogic.wp_congr mx fun x ↦ ?_
   by_cases hx : p x <;> simp [hx]
