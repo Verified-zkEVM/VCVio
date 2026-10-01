@@ -543,7 +543,7 @@ VCVio's unary tactics are `prvcgen`, which picks the bridge and the reading from
 core `vcgen` in that reading's `Dispatch` scope with the experimental option set, and `prrw`, which
 rewrites equalities between the probabilities of two programs; `rvcgen` / `rvcstep` are the
 relational ones. Unary rules are core `@[spec]` theorems: `@[vcspec]` registers relational rules
-only and rejects a triple of one program. `Spec.simulateQ` (`Unary/HandlerSpecs.lean`) steps
+only and rejects a triple of one program. `Spec.simulateQ` (`Unary/SimulateQSpecs.lean`) steps
 through `simulateQ handler oa` with a handler invariant passed as `prvcgen invariants · fun s => I s`;
 a whole-program lift such as `simulateQ_triple_preserves_invariant`, or `wp_simulateQ_eq` to carry
 an expectation across, is the alternative. None of VCVio's tactics shares a leading token with core's, so a bare

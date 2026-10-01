@@ -7,7 +7,6 @@ Authors: Devon Tuma
 module
 
 public import VCVio.ProgramLogic.Tactics.PrVCGen
-public import VCVio.ProgramLogic.Unary.HandlerSpecs
 
 /-!
 # `prvcgen`: core `vcgen` on events under the four readings

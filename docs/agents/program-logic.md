@@ -276,15 +276,15 @@ regenerates this table; `--check` fails when it is stale):
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
-| `OracleComp.ProgramLogic.Spec` | `OracleComp.ProgramLogic.Spec.simulateQ` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.ProgramLogic.Spec` | `OracleComp.ProgramLogic.Spec.simulateQ` | `@[spec]` | `VCVio/ProgramLogic/Unary/SimulateQSpecs.lean` |
 | `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.cachingLoggingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
 | `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.cachingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
 | `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.costOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
 | `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.countingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
 | `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.loggingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
 | `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.seededOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
-| `QueryImpl.Spec` | `QueryImpl.Spec.add_inl` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
-| `QueryImpl.Spec` | `QueryImpl.Spec.add_inr` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `QueryImpl.Spec` | `QueryImpl.Spec.add_inl` | `@[spec]` | `VCVio/ProgramLogic/Unary/SimulateQSpecs.lean` |
+| `QueryImpl.Spec` | `QueryImpl.Spec.add_inr` | `@[spec]` | `VCVio/ProgramLogic/Unary/SimulateQSpecs.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
@@ -529,7 +529,8 @@ lists of possible outputs), or through the invariant rules of `Unary/HoareTriple
 explicitly, as `prvcgen [triple_replicate_inv hstep]` (`triple_replicate_inv`, `triple_replicate`,
 `triple_list_mapM_inv`, `triple_list_foldlM_inv` and their consequence forms). A simulation
 `simulateQ handler oa` in `StateT σ m` takes a handler invariant through `Spec.simulateQ`
-(`Unary/HandlerSpecs.lean`), as `prvcgen invariants · fun s => I s`; `vcgen` then walks the
+(`Unary/SimulateQSpecs.lean`, the generic layer below the handler catalogue), as
+`prvcgen invariants · fun s => I s`; `vcgen` then walks the
 handler's body at each query. A loop equation in brackets, such as `prvcgen [replicate_zero]`,
 unfolds the loop for `vcgen`.
 
@@ -590,7 +591,7 @@ Known limits:
   invariants. Address the verification conditions with `case vc1 => …` instead.
 - **Sum handlers.** A query to `impl₁ + impl₂` at `.inl t` has value type
   `(spec₁ + spec₂).Range (.inl t)`. `vcgen` does not unfold the sum while matching, so
-  `QueryImpl.Spec.add_inl` / `add_inr` (`Unary/HandlerSpecs.lean`) route the query to the
+  `QueryImpl.Spec.add_inl` / `add_inr` (`Unary/SimulateQSpecs.lean`) route the query to the
   component at the component's value type. A handler defined as a sum is unfolded in the same
   call, as in `vcgen [myHandler, componentHandler]`. The rules match only when the handler's
   specification is spelled `spec₁ + spec₂` up to reducible unfolding. A combined specification
@@ -794,7 +795,7 @@ The `WriterT`-based handlers read their log as accumulated state: `WriterT.Appen
 (`ToMathlib/Control/WriterT/WP.lean`) for the list log of `loggingOracle`, and PolyFun's
 `WriterT.MonoidWP` for the monoid logs of `countingOracle` and `costOracle`. The support readings
 `triple_stateT_iff_forall_support`, `triple_writerT_iff_forall_support` and
-`triple_writerT_iff_forall_support_monoid` are in `Unary/HandlerSpecs.lean`.
+`triple_writerT_iff_forall_support_monoid` are in `Unary/SimulateQSpecs.lean`.
 
 Core `vcgen` on handler programs:
 
@@ -822,7 +823,7 @@ state-transformer and writer-transformer models:
 | `OracleComp.simulateQ_run_preservesInv` | — | lift per-query `PreservesInv` to whole simulation |
 | `OracleComp.simulateQ_run_writerPreservesInv` | — | writer analogue |
 
-Core-triple whole-program lifts (`Unary/HandlerSpecs.lean`), by induction on the program with
+Core-triple whole-program lifts (`Unary/SimulateQSpecs.lean`), by induction on the program with
 `Std.WP.Triple.pure` and `Std.WP.Triple.bind`:
 
 | Theorem | Shape |

@@ -371,6 +371,7 @@ public import VCVio.ProgramLogic.Unary.HandlerSpecs
 public import VCVio.ProgramLogic.Unary.HoarePropTriple
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import VCVio.ProgramLogic.Unary.SimulateQ
+public import VCVio.ProgramLogic.Unary.SimulateQSpecs
 public import VCVio.ProgramLogic.Unary.WP.Coherence
 public import VCVio.ProgramLogic.Unary.WP.Lower
 public import VCVio.ProgramLogic.Unary.WP.LowerSpecs

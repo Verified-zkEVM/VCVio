@@ -12,6 +12,7 @@ public import VCVio.ProgramLogic.Unary.WP.Coherence
 public import VCVio.ProgramLogic.Unary.WP.Possible
 public import VCVio.ProgramLogic.Unary.WP.Upper
 public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
+public import VCVio.ProgramLogic.Unary.SimulateQSpecs
 public meta import Lean.Elab.Tactic.Basic
 public meta import Std.Tactic.Do
 
