@@ -398,6 +398,29 @@ example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → Pro
     𝒟[mx >>= fun a => my >>= fun b => f a b] = 𝒟[my >>= fun b => mx >>= fun a => f a b] := by
   prrw
 
+/-- `prrw move i j` sinks the draw at depth `i` of the left-hand side to depth `j` by adjacent
+swaps, and closes the goal once the sides agree. -/
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    𝒟[do let a ← mx; let b ← my; let c ← mz; f a b c] =
+      𝒟[do let b ← my; let c ← mz; let a ← mx; f a b c] := by
+  prrw move 0 2
+
+/-- A lift: the draw at depth `2` rises to the top. -/
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    Pr{let r ← do let b ← my; let c ← mz; let a ← mx; f a b c}[r = true] =
+      Pr{let r ← do let a ← mx; let b ← my; let c ← mz; f a b c}[r = true] := by
+  prrw move 2 0
+
+/-- A move stops at a draw that depends on the one being moved. -/
+example (mx : ProbComp Bool) (my : Bool → ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    𝒟[do let a ← mx; let b ← my a; let c ← mz; f a b c] =
+      𝒟[do let a ← mx; let c ← mz; let b ← my a; f a b c] := by
+  fail_if_success prrw move 0 2
+  prrw under 1
+
 /-! ## 10. Events whose continuation destructures its input
 
 The notation turns a destructuring draw into projections of the drawn pair, so the event is a

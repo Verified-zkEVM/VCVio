@@ -39,6 +39,9 @@ private def binderIdentsToNames (ids : Syntax.TSepArray `Lean.binderIdent ",") :
 - `prrw` swaps two adjacent independent binds at the top of one side (`OracleComp.wp_swap`,
   `OracleComp.evalDist_bind_bind_swap`, or their uniform-answer forms);
 - `prrw under n` swaps two adjacent binds under `n` shared bind prefixes;
+- `prrw move i j` moves the draw at depth `i` of the left-hand side to depth `j` by adjacent
+  swaps of independent draws, sinking it when `i < j` and lifting it when `j < i` (`symm` first
+  to move a draw of the right-hand side);
 - `prrw congr` reduces a shared first bind to its continuations on the support of the shared
   program (`wp_congr_of_support`, `OracleComp.evalDist_bind_congr_of_support`), introducing the
   bound value and its support hypothesis;
@@ -52,6 +55,8 @@ bind per name pair. Both sides are first brought into the normal form of `Pr{…
 syntax (name := prrw) "prrw" : tactic
 @[inherit_doc prrw, tactic_alt prrw]
 syntax "prrw" " under " num : tactic
+@[inherit_doc prrw, tactic_alt prrw]
+syntax (name := prrwMove) "prrw" &"move" num num : tactic
 @[inherit_doc prrw, tactic_alt prrw]
 syntax "prrw" &"normalize" : tactic
 @[inherit_doc prrw, tactic_alt prrw]
@@ -98,6 +103,11 @@ elab_rules : tactic
       let depth := n.getNat
       if ← TacticInternals.Unary.runProbEqAction (.rewriteUnder depth) then return
       TacticInternals.Unary.throwPrrwError depth
+  | `(tactic| prrw move $i:num $j:num) => do
+      let i := i.getNat
+      let j := j.getNat
+      if ← TacticInternals.Unary.runProbEqMove i j then return
+      TacticInternals.Unary.throwPrrwMoveError i j
   | `(tactic| prrw normalize) => do
       if ← TacticInternals.Unary.runProbEqNormalize then return
       TacticInternals.Unary.throwPrrwNormalizeError

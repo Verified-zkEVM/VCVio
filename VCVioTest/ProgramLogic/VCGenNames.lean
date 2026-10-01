@@ -33,7 +33,8 @@ open scoped OracleComp.ProgramLogic Std.WP
 run_cmd do
   for (src, kind) in [("vcgen", ``Lean.Parser.Tactic.vcgen),
       ("prvcgen", ``prvcgenStx),
-      ("prrw", ``OracleComp.ProgramLogic.prrw)] do
+      ("prrw", ``OracleComp.ProgramLogic.prrw),
+      ("prrw move 0 2", ``OracleComp.ProgramLogic.prrwMove)] do
     let .ok stx := Lean.Parser.runParserCategory (← Lean.getEnv) `tactic src
       | throwError "`{src}` does not parse as a tactic"
     unless stx.getKind == kind do

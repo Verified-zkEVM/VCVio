@@ -181,6 +181,49 @@ def runProbEqRewriteUnder (depth : Nat) : TacticM Bool := do
       | (conv_lhs => rw [show _ from $measureUniform])
       | (conv_rhs => rw [show _ from $measureUniform]))))
 
+/-- The side of a probability equality a rewrite is confined to. -/
+inductive ProbEqSide where
+  | lhs
+  | rhs
+
+/-- Try to rewrite one bind-swap under `depth` shared prefixes on one side only. -/
+def runProbEqRewriteAt (side : ProbEqSide) (depth : Nat) : TacticM Bool := do
+  normalizeProbEqGoal
+  let measure ← mkEvalDistSwapUnderProof false depth
+  let measureUniform ← mkEvalDistSwapUnderProof true depth
+  let expectation ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_swap) depth
+  let expectationUniform ← mkWpSwapUnderConv (mkIdent ``OracleComp.wp_swap_of_uniform) depth
+  match side with
+  | .lhs =>
+      tryEvalTacticSyntax (← `(tactic| (
+        first
+          | (conv_lhs => $expectation:conv)
+          | (conv_lhs => $expectationUniform:conv)
+          | (conv_lhs => rw [show _ from $measure])
+          | (conv_lhs => rw [show _ from $measureUniform]))))
+  | .rhs =>
+      tryEvalTacticSyntax (← `(tactic| (
+        first
+          | (conv_rhs => $expectation:conv)
+          | (conv_rhs => $expectationUniform:conv)
+          | (conv_rhs => rw [show _ from $measure])
+          | (conv_rhs => rw [show _ from $measureUniform]))))
+
+/-- Move the draw at depth `i` of the left-hand side to depth `j` by adjacent swaps of
+independent draws: sinking it through the draws below it when `i < j`, lifting it through the
+draws above it when `j < i`. Stops early when a swap makes the equality reflexive. -/
+def runProbEqMove (i j : Nat) : TacticM Bool := do
+  if i = j then return false
+  let depths := if i < j then (List.range (j - i)).map (i + ·)
+    else ((List.range (i - j)).map (j + ·)).reverse
+  let saved ← saveState
+  for depth in depths do
+    if (← getGoals).isEmpty then return true
+    unless ← runProbEqRewriteAt .lhs depth do
+      saved.restore
+      return false
+  return true
+
 /-- Execute a probability-equality planner action. -/
 def runProbEqAction : ProbEqAction → TacticM Bool
   | .swap => runProbEqSwap
@@ -317,6 +360,16 @@ def throwPrrwError (depth : Nat) : TacticM Unit := withMainContext do
       "prrw under {depth}: expected a probability-equality goal where one\n\
       bind-swap rewrite applies under {depth} shared bind prefix(es).\n\
       Goal:{indentExpr target}"
+
+/-- Explain why moving a draw of the left-hand side failed. -/
+def throwPrrwMoveError (i j : Nat) : TacticM Unit := withMainContext do
+  let target ← instantiateMVars (← getMainTarget)
+  if i = j then
+    throwError "prrw move {i} {j}: the source and target depths are equal."
+  throwError
+    "prrw move {i} {j}: expected a probability-equality goal whose left-hand side has a\n\
+    draw at depth {i} that adjacent swaps of independent draws take to depth {j}.\n\
+    Goal:{indentExpr target}"
 
 /-- Explain a failed combined bind-swap and congruence step. -/
 def throwPrrwCongrError (supportSensitive : Bool) : TacticM Unit := withMainContext do

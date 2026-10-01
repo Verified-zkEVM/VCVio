@@ -673,6 +673,7 @@ equation into plain bind chains (`map_eq_bind_pure_comp`, `bind_assoc`).
 |--------|--------------|
 | `prrw` | Rewrites one top-level swap of two adjacent independent binds |
 | `prrw under n` | Rewrites one swap under `n` shared bind prefixes, on either side |
+| `prrw move i j` | Moves the draw at depth `i` of the left-hand side to depth `j` by adjacent swaps of independent draws, sinking it when `i < j` and lifting it when `j < i`; `symm` first for a draw of the right-hand side |
 | `prrw congr` | Reduces a shared first bind to its continuations on the support of the shared program, introducing the value and `hx : x ∈ support mx` |
 | `prrw congr'` | Reduces a shared first bind for every value, without a support hypothesis |
 | `prrw normalize` | Searches bounded sequences of swaps and congruence steps, sized by the bind depth of the goal, for one that closes the equality |
@@ -689,6 +690,9 @@ Choosing a form:
 
 - **One swap, then continue or close**: `prrw`; a goal that the rewrite makes reflexive closes.
 - **The swap sits below shared outer binds**: `prrw under n`.
+- **One draw has to travel past several others**: `prrw move i j`, the swaps `prrw under i`, …,
+  `prrw under (j - 1)` on the left-hand side in one step; a game hop that reorders the draws of
+  an experiment into a canonical order is a sequence of moves.
 - **The programs share a prefix**: `prrw congr`, or `prrw congr'` when the continuations agree for
   every value; `as ⟨…⟩` peels several shared binds at once.
 - **The sequence of steps is not obvious**: `prrw normalize`, which fails unless it closes the goal.
