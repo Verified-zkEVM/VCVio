@@ -8,6 +8,8 @@ module
 public import VCVio.OracleComp.QueryTracking.Collision
 public import ToMathlib.Data.ENNReal.Gauss
 public import VCVio.OracleComp.EvalDist.Measure
+import VCVio.ProgramLogic.Unary.SimulateQSpecs
+import VCVio.ProgramLogic.Unary.WP.Upper
 
 /-!
 # ROM Birthday Bound
@@ -19,7 +21,7 @@ collision bounds, with per-index corollaries.
 
 @[expose] public section
 
-open OracleSpec OracleComp ENNReal Finset
+open OracleSpec OracleComp ENNReal Finset OrderDual Std.WP
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -335,127 +337,103 @@ theorem card_responses_creating_cacheCollision_le [∀ t, Fintype (spec.Range t)
     intro a b va vb ha hb hab
     subst hab; rw [ha] at hb; exact heq_of_eq (Option.some.inj hb)
 
-private lemma run_simulateQ_cachingOracle_query_bind_of_hit {α : Type} {t : spec.Domain}
-    {mx : spec.Range t → OracleComp spec α} {cache₀ : QueryCache spec} {v : spec.Range t}
-    (hv : cache₀ t = some v) :
-    (simulateQ cachingOracle (liftM (query t) >>= mx)).run cache₀ =
-      (simulateQ cachingOracle (mx v)).run cache₀ := by
-  simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind]
-  have hcache : (liftM (cachingOracle t) : StateT _ (OracleComp spec) _).run cache₀ =
-      pure (v, cache₀) := by
-    simp [liftM, MonadLiftT.monadLift, MonadLift.monadLift,
-      StateT.run_bind, StateT.run_get, hv, pure_bind, StateT.run_pure]
-  rw [hcache, pure_bind]
-  simp [OracleQuery.cont_query]
-
-private lemma run_simulateQ_cachingOracle_query_bind_of_miss {α : Type} {t : spec.Domain}
-    {mx : spec.Range t → OracleComp spec α} {cache₀ : QueryCache spec}
-    (ht_none : cache₀ t = none) :
-    (simulateQ cachingOracle (liftM (query t) >>= mx)).run cache₀ =
-      liftM (query t) >>= fun u =>
-        (simulateQ cachingOracle (mx u)).run (cache₀.cacheQuery t u) := by
-  simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind]
-  have hstep : (liftM (cachingOracle t) : StateT _ (OracleComp spec) _).run cache₀ =
-      (liftM (query t) >>= fun u => pure (u, cache₀.cacheQuery t u) : OracleComp spec _) := by
-    simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
-      StateT.run_bind, StateT.run_get, pure_bind, ht_none]
-    change (StateT.lift (PFunctor.FreeM.lift (P := spec.toPFunctor) t) cache₀ >>= _) = _
-    simp only [StateT.lift, monad_norm, modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
-      StateT.modifyGet, StateT.run]; rfl
-  rw [hstep]; simp [monad_norm]
-
 variable [UniformAnswerMeasure spec] [∀ t, Fintype (spec.Range t)]
 
-/-- **Cache-collision induction core**: running any computation `ob` (bounded by `m` queries)
-through `cachingOracle` starting from a collision-free cache `cache₀` whose populated keys fit
-in a set of size at most `k` produces a collision with probability at most
-`∑ j ∈ range m, (k + j) / |Range default|`.
+/-- The populated keys of a cache fit in a set of size `k`. -/
+private def KeyBound (cache : QueryCache spec) (k : ℕ) : Prop :=
+  ∃ S : Finset spec.Domain, S.card ≤ k ∧ ∀ t, cache t ≠ none → t ∈ S
 
-Generalizing over the starting cache and its key budget `k` lets the bound thread through each
-fresh query: a cache miss enlarges the support set by one and shifts the per-step factor from
-`k` to `k + 1`. The `hrange` hypothesis ensures `|Range default|` is minimal across oracle
-indices, so the uniform per-query bound `1/|Range t|` is dominated by `1/|Range default|`.
-This is the inductive engine behind `prEvent_cacheCollision_le_birthday_total_tight`. -/
-private lemma prEvent_cacheCollision_run_le_sum_aux [Inhabited ι]
+/-- The ranked potential of the birthday bound, under the upper-bound reading: a collision so
+far, plus the birthday budget `∑ j < m, (k + j) / C` of the remaining `m` queries from a cache
+whose populated keys fit in a set of size `k`, the infimum over such `k`. -/
+private noncomputable def collisionPotential (C : ℝ≥0∞) (m : ℕ) (cache : QueryCache spec) :
+    ℝ≥0∞ᵒᵈ :=
+  toDual (propInd (CacheHasCollision cache) +
+    ⨅ (k : ℕ) (_ : KeyBound cache k), ∑ j ∈ range m, ((k + j : ℕ) : ℝ≥0∞) * C⁻¹)
+
+open scoped OracleComp.Upper in
+/-- One query of `cachingOracle` spends one unit of the budget: a cache hit keeps the cache and
+drops the unused budget, and a cache miss draws a fresh uniform answer, which creates a collision
+with probability at most the number of populated keys over the answer count and enlarges the
+key budget by one. `hrange` makes `|Range default|` the smallest answer count, so every per-query
+bound is dominated by `1 / |Range default|`. -/
+private theorem cachingOracle_collisionPotential_step [Inhabited ι]
     (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
-    {β : Type} (ob : OracleComp spec β) (m k : ℕ)
-    (hm : IsTotalQueryBound ob m)
-    (cache₀ : QueryCache spec)
-    (hnocoll : ¬CacheHasCollision cache₀)
-    (hbnd : ∃ S : Finset spec.Domain, S.card ≤ k ∧ ∀ t, cache₀ t ≠ none → t ∈ S) :
-    Pr{let z ← (simulateQ cachingOracle ob).run cache₀}[CacheHasCollision z.2] ≤
-      ∑ j ∈ range m, ((k + j : ℕ) : ℝ≥0∞) *
-        (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
-  let C := (Fintype.card (spec.Range default) : ℝ≥0∞)
-  induction ob using OracleComp.inductionOn generalizing m k cache₀ with
-  | pure x =>
-    rw [simulateQ_pure]
-    refine le_of_eq_of_le (prEvent_eq_zero_of_forall_mem_support _ _ fun z hz h => ?_) bot_le
-    change z ∈ support (pure (x, cache₀) : OracleComp _ _) at hz
-    rw [support_pure, Set.mem_singleton_iff] at hz
-    subst hz
-    exact hnocoll h
-  | query_bind t mx ih =>
-    rw [isTotalQueryBound_query_bind_iff] at hm
-    obtain ⟨hpos, hrest⟩ := hm
-    by_cases ht : ∃ v, cache₀ t = some v
-    · obtain ⟨v, hv⟩ := ht
-      rw [run_simulateQ_cachingOracle_query_bind_of_hit hv]
-      calc Pr{let z ← (simulateQ cachingOracle (mx v)).run cache₀}[CacheHasCollision z.2]
-          ≤ ∑ j ∈ range (m - 1), ((k + j : ℕ) : ℝ≥0∞) * C⁻¹ :=
-            ih v (m - 1) k (hrest v) cache₀ hnocoll hbnd
-        _ ≤ ∑ j ∈ range m, ((k + j : ℕ) : ℝ≥0∞) * C⁻¹ :=
-            Finset.sum_le_sum_of_subset (Finset.range_mono (Nat.sub_le m 1))
-    · push Not at ht
-      have ht_none : cache₀ t = none := Option.eq_none_iff_forall_ne_some.mpr ht
-      rw [run_simulateQ_cachingOracle_query_bind_of_miss ht_none, prEvent_bind]
-      have hε₁ : Pr{let u ← (query t : OracleComp spec (spec.Range t))}[CacheHasCollision
-          (cache₀.cacheQuery t u)] ≤ (k : ℝ≥0∞) * C⁻¹ := by
-        classical
-        obtain ⟨S, hScard, hSmem⟩ := hbnd
-        rw [prEvent_liftM_query_eq_card_div]
-        have hbad_le_k :=
-          (card_responses_creating_cacheCollision_le (t := t) hnocoll hSmem).trans hScard
-        calc (↑(Finset.univ.filter (fun u => CacheHasCollision (cache₀.cacheQuery t u))).card :
-                ℝ≥0∞) / ↑(Fintype.card (spec.Range t))
-            ≤ (k : ℝ≥0∞) / ↑(Fintype.card (spec.Range t)) :=
-              ENNReal.div_le_div_right (by exact_mod_cast hbad_le_k) _
-          _ ≤ (k : ℝ≥0∞) * C⁻¹ := by
-              rw [ENNReal.div_eq_inv_mul, mul_comm]
-              gcongr
-              change (Fintype.card (spec.Range default) : ℝ≥0∞) ≤ ↑(Fintype.card (spec.Range t))
-              exact_mod_cast hrange t
-      have hε₂ : ∀ u ∈ support (query t : OracleComp spec (spec.Range t)),
-          ¬CacheHasCollision (cache₀.cacheQuery t u) →
-          Pr{let z ← (simulateQ cachingOracle (mx u)).run
-                 (cache₀.cacheQuery t u)}[CacheHasCollision z.2] ≤
-              ∑ j ∈ range (m - 1), ((k + 1 + j : ℕ) : ℝ≥0∞) * C⁻¹ := by
-        intro u _ hnocoll'
-        apply ih u (m - 1) (k + 1) (hrest u) _ hnocoll'
-        obtain ⟨S, hScard, hSmem⟩ := hbnd
-        exact ⟨insert t S,
-          le_trans (Finset.card_insert_le t S) (by lia),
-          fun t' ht' => by
-            by_cases heq : t' = t
-            · exact heq ▸ Finset.mem_insert_self _ S
-            · rw [QueryCache.cacheQuery_of_ne cache₀ _ heq] at ht'
-              exact Finset.mem_insert_of_mem (hSmem t' ht')⟩
-      calc Pr{let u ← (query t : OracleComp spec (spec.Range t));
-              let z ← (simulateQ cachingOracle (mx u)).run
-                (cache₀.cacheQuery t u)}[CacheHasCollision z.2]
-          ≤ (k : ℝ≥0∞) * C⁻¹ + ∑ j ∈ range (m - 1), ((k + 1 + j : ℕ) : ℝ≥0∞) * C⁻¹ :=
-            (prEvent_bind_le_prEvent_add_of_support _ _
-              (fun u => CacheHasCollision (cache₀.cacheQuery t u)) _ hε₂).trans
-              (add_le_add hε₁ le_rfl)
-        _ = ∑ j ∈ range m, ((k + j : ℕ) : ℝ≥0∞) * C⁻¹ := by
-            conv_rhs => rw [show m = (m - 1) + 1 from by lia]
-            rw [Finset.sum_range_succ' (fun j => ((k + j : ℕ) : ℝ≥0∞) * C⁻¹)]
-            simp only [Nat.add_zero]
-            rw [add_comm, Finset.sum_congr rfl fun j _ => by
-              rw [show k + 1 + j = k + (j + 1) from by lia]]
+    (t : spec.Domain) (m : ℕ) :
+    ⦃ collisionPotential (Fintype.card (spec.Range default)) (m + 1) ⦄
+      (cachingOracle t : StateT (QueryCache spec) (OracleComp spec) _)
+      ⦃ fun _ => collisionPotential (Fintype.card (spec.Range default)) m ⦄ := by
+  classical
+  set C : ℝ≥0∞ := (Fintype.card (spec.Range default) : ℝ≥0∞)
+  rw [cachingOracle.apply_eq]
+  vcgen [OracleComp.Upper.Spec.monadLift_query_avg]
+  · -- cache hit: the unused budget is dropped
+    simp only [OracleComp.Upper.rel_iff, collisionPotential, ofDual_toDual]
+    gcongr with k hk
+    omega
+  · -- cache miss: one fresh uniform answer
+    rename_i s hs
+    simp only [OracleComp.Upper.rel_iff, collisionPotential, ofDual_toDual, binderNameHint,
+      StateT.wp_apply_eq, StateT.run_modifyGet, ExactWPMonad.wp_pure]
+    have := UniformAnswerMeasure.nonempty_range (spec := spec) t
+    set c : ℝ≥0∞ := (Fintype.card (spec.Range t) : ℝ≥0∞)
+    have hc0 : c ≠ 0 := by simp [c]
+    have hct : c ≠ ⊤ := by simp [c]
+    rw [ENNReal.add_iInf]
+    refine le_iInf fun k => ?_
+    rw [ENNReal.add_iInf]
+    refine le_iInf fun hk => ?_
+    -- each fresh cache has key budget `k + 1`
+    have hk' : ∀ u, KeyBound (s.cacheQuery t u) (k + 1) := by
+      obtain ⟨S, hS, hSm⟩ := hk
+      refine fun u => ⟨insert t S, (Finset.card_insert_le t S).trans (by omega), fun t' ht' => ?_⟩
+      by_cases heq : t' = t
+      · exact heq ▸ Finset.mem_insert_self _ S
+      · rw [QueryCache.cacheQuery_of_ne s _ heq] at ht'
+        exact Finset.mem_insert_of_mem (hSm t' ht')
+    -- the fresh answer creates a collision with probability at most `propInd coll + k / C`
+    have hbad : ∑ u, c⁻¹ * propInd (CacheHasCollision (s.cacheQuery t u)) ≤
+        propInd (CacheHasCollision s) + k * C⁻¹ := by
+      rw [← Finset.mul_sum]
+      simp only [propInd_eq_ite, Finset.sum_boole]
+      by_cases hcoll : CacheHasCollision s
+      · simp only [hcoll, ite_true]
+        refine le_add_right ?_
+        rw [← ENNReal.div_eq_inv_mul, ENNReal.div_le_iff hc0 hct, one_mul]
+        simp only [c]
+        exact_mod_cast Finset.card_le_univ _
+      · simp only [hcoll, ite_false, zero_add]
+        obtain ⟨S, hS, hSm⟩ := hk
+        have hle := (card_responses_creating_cacheCollision_le (t := t) hcoll hSm).trans hS
+        calc c⁻¹ * _ ≤ c⁻¹ * k := by gcongr
+          _ ≤ C⁻¹ * k := by
+            gcongr
+            simp only [C, c]
+            exact_mod_cast hrange t
+          _ = k * C⁻¹ := mul_comm _ _
+    calc ∑ u, c⁻¹ * (propInd (CacheHasCollision (s.cacheQuery t u)) +
+            ⨅ (k' : ℕ) (_ : KeyBound (s.cacheQuery t u) k'),
+              ∑ j ∈ range m, ((k' + j : ℕ) : ℝ≥0∞) * C⁻¹)
+        ≤ ∑ u, c⁻¹ * (propInd (CacheHasCollision (s.cacheQuery t u)) +
+            ∑ j ∈ range m, ((k + 1 + j : ℕ) : ℝ≥0∞) * C⁻¹) := by
+          gcongr with u
+          exact iInf₂_le (k + 1) (hk' u)
+      _ = ∑ u, c⁻¹ * propInd (CacheHasCollision (s.cacheQuery t u)) +
+            ∑ j ∈ range m, ((k + 1 + j : ℕ) : ℝ≥0∞) * C⁻¹ := by
+          simp only [mul_add, Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
+            nsmul_eq_mul, ← mul_assoc]
+          rw [show (Fintype.card (spec.Range t) : ℝ≥0∞) = c from rfl,
+            ENNReal.mul_inv_cancel hc0 hct, one_mul]
+      _ ≤ propInd (CacheHasCollision s) + k * C⁻¹ +
+            ∑ j ∈ range m, ((k + 1 + j : ℕ) : ℝ≥0∞) * C⁻¹ := by gcongr
+      _ = propInd (CacheHasCollision s) + ∑ j ∈ range (m + 1), ((k + j : ℕ) : ℝ≥0∞) * C⁻¹ := by
+          rw [Finset.sum_range_succ', add_assoc, add_comm (k * C⁻¹)]
+          simp [add_comm, add_left_comm]
 
+open scoped OracleComp.Upper in
 /-- **Tight birthday bound for `cachingOracle`** (total query bound):
-The probability of a collision in the cache is ≤ n*(n-1)/(2|C|). -/
+The probability of a collision in the cache is ≤ n*(n-1)/(2|C|), from the ranked potential
+spent one unit per query (`simulateQ_triple_ranked`). -/
 theorem prEvent_cacheCollision_le_birthday_total_tight {α : Type}
     [Inhabited ι]
     (oa : OracleComp spec α)
@@ -464,14 +442,26 @@ theorem prEvent_cacheCollision_le_birthday_total_tight {α : Type}
     (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t)) :
     Pr{let z ← (simulateQ cachingOracle oa).run ∅}[CacheHasCollision z.2] ≤
       ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card (spec.Range default)) := by
-  let C := (Fintype.card (spec.Range default) : ℝ≥0∞)
+  set C : ℝ≥0∞ := (Fintype.card (spec.Range default) : ℝ≥0∞)
+  have h := (OracleComp.ProgramLogic.simulateQ_triple_ranked cachingOracle (collisionPotential C)
+    (cachingOracle_collisionPotential_step hrange)
+    (fun k s => by
+      simp only [OracleComp.Upper.rel_iff, collisionPotential, ofDual_toDual, range_zero,
+        Finset.sum_empty]
+      gcongr
+      exact zero_le) oa n hbound).le_wp ∅
+  rw [OracleComp.Upper.rel_iff, StateT.wp_apply_eq, OracleComp.Upper.ofDual_wp] at h
   calc Pr{let z ← (simulateQ cachingOracle oa).run ∅}[CacheHasCollision z.2]
-      ≤ ∑ j ∈ range n, ((0 + j : ℕ) : ℝ≥0∞) * C⁻¹ :=
-        prEvent_cacheCollision_run_le_sum_aux hrange oa n 0 hbound ∅
-          (by intro ⟨t₁, _, _, _, _, h1, _, _⟩; simp at h1)
-          ⟨∅, by simp, fun t ht => absurd (by simp : (∅ : QueryCache spec) t = none) ht⟩
-    _ = ∑ j ∈ range n, (j : ℝ≥0∞) * C⁻¹ := by simp
-    _ = ((n * (n - 1) : ℕ) : ℝ≥0∞) / (2 * C) := ENNReal.gauss_sum_inv_eq n C
+      ≤ _ := ExpectationWP.wp_mono _ fun z => le_add_right le_rfl
+    _ ≤ _ := h
+    _ ≤ propInd (CacheHasCollision (∅ : QueryCache spec)) +
+          ∑ j ∈ range n, ((0 + j : ℕ) : ℝ≥0∞) * C⁻¹ := by
+        simp only [collisionPotential, ofDual_toDual]
+        gcongr
+        exact iInf₂_le 0 ⟨∅, by simp, fun t ht => absurd (by simp) ht⟩
+    _ = _ := by
+        rw [propInd_eq_zero_iff.mpr (by intro ⟨t₁, _, _, _, _, h1, _, _⟩; simp at h1), zero_add]
+        simpa using ENNReal.gauss_sum_inv_eq n C
 
 /-- **Loose birthday bound for `cachingOracle`** (total query bound):
 The probability of a collision in the cache is ≤ n²/(2|C|).

@@ -10,6 +10,7 @@ public import Examples.PRFTagReader.Auth
 public import VCVio.ProgramLogic.Unary.HoareTriple
 import VCVio.ProgramLogic.Unary.HandlerSpecs
 import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
+import VCVio.ProgramLogic.Unary.WP.Upper
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound, Per-Step Forge Infrastructure
@@ -158,6 +159,8 @@ private lemma authRFLookup_miss_bound
     rw [QueryCache.cacheQuery_self]
     exact Option.some_ne_none d
 
+open Std.WP in
+open scoped OracleComp.Upper in
 /-- The reader's `mapM` of `authRFLookup` over a nodup list of tags that contains `t₀.1`, run at
 nonce `t₀.2`, fills the cache point `t₀` with exactly one fresh uniform draw: starting from
 `responses t₀ = none`, the probability the final state has `t₀ ↦ v₀` plus `maxDigestProb` times the
@@ -177,54 +180,40 @@ private lemma authRFLookup_mapM_miss_bound
               pure (tag, dg))).run st}[p.2.responses t₀ = none] ≤
         maxDigestProb := by
   classical
-  intro tags
-  induction tags with
-  | nil => intro _ hmem; exact absurd hmem (List.not_mem_nil)
-  | cons hd tl ih =>
-    intro hnodup hmem st hnone
-    rw [prEvent_add_mul_prEvent_eq_wp, List.mapM_cons]
-    simp only [bind_pure_comp, StateT.run_bind, StateT.run_map, ExpectationWP.wp_bind,
-      ExpectationWP.wp_map]
-    by_cases hhd : hd = t₀.1
-    · -- Head lookup is at `t₀` itself: a cache miss that draws the single fresh digest.
-      subst hhd
-      have hlook := authRFLookup_miss_bound (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        maxDigestProb hmax t₀ v₀ st hnone
-      -- After the head lookup `t₀` is pinned, so the tail `mapM` keeps `t₀` filled.
-      have hpin : ∀ q ∈ support
-          ((authRFLookup Digest t₀.1 t₀.2).run st),
-          ∃ d, q.2.responses t₀ = some d := by
-        intro q hq
-        unfold authRFLookup at hq
-        simp only [StateT.run_bind, StateT.run_get, pure_bind] at hq
-        rw [show st.responses (t₀.1, t₀.2) = none from hnone] at hq
-        simp only [StateT.run_bind, StateT.run_monadLift, monadLift_eq_self, bind_pure_comp,
-          StateT.run_map, StateT.run_set, support_bind, support_uniformSample, Set.mem_univ,
-          Set.mem_iUnion, support_map, Set.mem_image, support_pure, Set.mem_singleton_iff] at hq
-        obtain ⟨i, -, x, rfl, rfl⟩ := hq
-        exact ⟨i.1, QueryCache.cacheQuery_self _ _ _⟩
-      refine le_trans (wp_mono_of_support _ (g := fun q =>
-        if q.2.responses t₀ = some v₀ then 1 else 0) fun q hq => ?_) ?_
-      · obtain ⟨d, hqd⟩ := hpin q hq
-        refine ProgramLogic.wp_le_const_of_support _ fun r hr => ?_
-        have hrd := authRFLookup_mapM_responses_some_preservesInv (TagId := TagId)
-          (Nonce := Nonce) (Digest := Digest) t₀ d t₀.2 tl q.2 hqd r hr
-        simp [hrd, hqd]
-      · exact (ProgramLogic.prEvent_eq_wp_indicator _ _).symm.trans_le hlook.1
-    · -- Head lookup is at a tag `≠ t₀.1`: the point `(hd, t₀.2) ≠ t₀`, so `t₀` stays `none`.
-      have hmemtl : t₀.1 ∈ tl := by
-        rcases List.mem_cons.1 hmem with h | h
-        · exact absurd h.symm hhd
-        · exact h
-      have hnoduptl : tl.Nodup := (List.nodup_cons.1 hnodup).2
-      have hne : (hd, t₀.2) ≠ t₀ := by
-        intro hc
-        exact hhd (congrArg Prod.fst hc)
-      have hpres := authRFLookup_responses_none_preservesInv (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) t₀ hd t₀.2 hne
-      refine ProgramLogic.wp_le_const_of_support _ fun q hq => ?_
-      have h := ih hnoduptl hmemtl q.2 (hpres st hnone q hq)
-      rwa [prEvent_add_mul_prEvent_eq_wp] at h
+  intro tags _ _ st hnone
+  rw [prEvent_add_mul_prEvent_eq_wp]
+  -- the potential: the target already hit, plus one draw's budget while the point is unfilled;
+  -- every lookup preserves it, so the `mapM` keeps it from the initial state
+  have h : ⦃ fun st : AuthIdealState TagId Nonce Digest =>
+        OrderDual.toDual ((if st.responses t₀ = some v₀ then 1 else 0) +
+          maxDigestProb * (if st.responses t₀ = none then 1 else 0)) ⦄
+      (tags.mapM (fun tag => do
+        let dg ← authRFLookup Digest tag t₀.2
+        pure (tag, dg)) : StateT (AuthIdealState TagId Nonce Digest) ProbComp _)
+      ⦃ fun _ st => OrderDual.toDual ((if st.responses t₀ = some v₀ then 1 else 0) +
+          maxDigestProb * (if st.responses t₀ = none then 1 else 0)) ⦄ := by
+    vcgen [authRFLookup, OracleComp.Upper.Spec.ofWp ($ᵗ Digest : ProbComp Digest)] invariants
+      · fun _ _ _ st => OrderDual.toDual ((if st.responses t₀ = some v₀ then 1 else 0) +
+          maxDigestProb * (if st.responses t₀ = none then 1 else 0))
+    all_goals simp only [upper_readback, StateT.wp_apply_eq, StateT.run_bind, StateT.run_set,
+      StateT.run_pure, ExactWPMonad.wp_bind, ExactWPMonad.wp_pure]
+    rename_i _ _ cur _ _ _ hcur
+    by_cases hcur₀ : cur = t₀.1
+    · -- the lookup at `t₀` itself: one fresh draw fills it
+      subst hcur₀
+      have ht₀ : (t₀.1, t₀.2) = t₀ := rfl
+      rw [ht₀] at hcur ⊢
+      simp only [QueryCache.cacheQuery_self, hcur, Option.some.injEq, reduceCtorEq, ite_false,
+        ite_true, mul_zero, add_zero, mul_one, zero_add]
+      exact (ProgramLogic.prEvent_eq_wp_indicator _ _).symm.trans_le (hmax v₀)
+    · -- a lookup at another point leaves `t₀` as it is
+      have hne : t₀ ≠ (cur, t₀.2) := fun h => hcur₀ (congrArg Prod.fst h).symm
+      simp only [QueryCache.cacheQuery_of_ne _ _ hne]
+      exact le_of_eq (ExpectationWP.wp_const_of_oracle _ _)
+  have hrun := h.le_wp st
+  rw [OracleComp.Upper.rel_iff, StateT.wp_apply_eq, OracleComp.Upper.ofDual_wp] at hrun
+  refine hrun.trans (le_of_eq ?_)
+  simp [hnone]
 
 /-- Single-step random-oracle bound for a cache point `t₀` that is not yet filled: after one
 `authRFQueryImpl` query step, the probability that `t₀` ends holding `v₀` plus `maxDigestProb`

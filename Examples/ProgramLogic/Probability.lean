@@ -45,6 +45,14 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
     Pr{let x ← my >>= fun b => mx >>= fun a => f a b}[x = y] := by
   prrw
 
+/-! ## One draw past several others -/
+
+example {mx : OracleComp spec α} {my : OracleComp spec β}
+    {mz : OracleComp spec γ} {f : α → β → γ → OracleComp spec δ} {q : δ → Prop} :
+    Pr{let r ← mx >>= fun a => my >>= fun b => mz >>= fun c => f a b c}[q r] =
+    Pr{let r ← my >>= fun b => mz >>= fun c => mx >>= fun a => f a b c}[q r] := by
+  prrw move 0 2
+
 /-! ## Swaps under a shared prefix -/
 
 example {mx : OracleComp spec α} {my : OracleComp spec β}

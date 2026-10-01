@@ -8,6 +8,8 @@ module
 public import VCVio.OracleComp.QueryTracking.Birthday
 public import VCVio.OracleComp.QueryTracking.ProgrammingOracle
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
+import VCVio.ProgramLogic.Unary.SimulateQSpecs
+import VCVio.ProgramLogic.Unary.WP.Upper
 
 /-!
 # ROM Unpredictability and Collision Win Bounds
@@ -33,7 +35,7 @@ while the unpredictability primitive stays here in `QueryTracking`.
 
 @[expose] public section
 
-open OracleSpec OracleComp ENNReal Finset
+open OracleSpec OracleComp ENNReal Finset OrderDual Std.WP
 
 open scoped OracleSpec.PrimitiveQuery
 
@@ -64,11 +66,107 @@ theorem prEvent_fresh_cachingOracle_query
   rw [prEvent_liftM_query_eq_card_div, Finset.filter_eq' Finset.univ u]
   simp
 
-/-- **Cache preimage bound**: if the initial cache contains at most one preimage
-of a target value `v₀`, then the probability that `simulateQ cachingOracle oa`
-creates a fresh cache entry equal to `v₀` is at most `n / |C|`, where `n` is the
-total query bound. Each cache miss is a fresh uniform draw, so a union bound
-over the at most `n` misses gives the result.
+/-- The fresh-target potential: the target sits at a key the initial cache left empty, plus `k`
+remaining queries, each hitting it with probability at most `1 / C`. -/
+private noncomputable def hitPotential [Inhabited ι] (C : ℝ≥0∞) (cache₀ : QueryCache spec)
+    (v₀ : spec.Range default) (k : ℕ) (cache : QueryCache spec) : ℝ≥0∞ᵒᵈ :=
+  toDual (propInd (∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+    cache t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀) + k * C⁻¹)
+
+omit [DecidableEq ι] [UniformAnswerMeasure spec] in
+/-- At most one answer of a query is the target, so the fresh answer hits it with probability
+at most `1 / |Range t|`. -/
+private theorem sum_propInd_heq_le_one [Inhabited ι] (t : spec.Domain)
+    (v₀ : spec.Range default) :
+    ∑ u : spec.Range t, propInd (HEq u v₀) ≤ 1 := by
+  classical
+  simp only [propInd_eq_ite, Finset.sum_boole]
+  have hcard : (Finset.univ.filter fun u : spec.Range t => HEq u v₀).card ≤ 1 :=
+    Finset.card_le_one.mpr fun a ha b hb => by
+      simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ha hb
+      exact eq_of_heq (ha.trans hb.symm)
+  exact_mod_cast hcard
+
+open scoped OracleComp.Upper in
+private theorem cachingOracle_hitPotential_step [Inhabited ι]
+    (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
+    (cache₀ : QueryCache spec) (v₀ : spec.Range default) (t : spec.Domain) (k : ℕ) :
+    ⦃ hitPotential (Fintype.card (spec.Range default)) cache₀ v₀ (k + 1) ⦄
+      (cachingOracle t : StateT (QueryCache spec) (OracleComp spec) _)
+      ⦃ fun _ => hitPotential (Fintype.card (spec.Range default)) cache₀ v₀ k ⦄ := by
+  classical
+  set C : ℝ≥0∞ := (Fintype.card (spec.Range default) : ℝ≥0∞)
+  rw [cachingOracle.apply_eq]
+  vcgen [OracleComp.Upper.Spec.monadLift_query_avg]
+  · -- cache hit: the cache is unchanged and the unused budget is dropped
+    simp only [OracleComp.Upper.rel_iff, hitPotential, ofDual_toDual]
+    gcongr
+    exact_mod_cast Nat.le_succ k
+  · -- cache miss: the fresh answer hits the target with probability at most `1 / C`
+    rename_i s hs
+    simp only [OracleComp.Upper.rel_iff, hitPotential, ofDual_toDual, binderNameHint,
+      StateT.wp_apply_eq, StateT.run_modifyGet, ExactWPMonad.wp_pure]
+    have := UniformAnswerMeasure.nonempty_range (spec := spec) t
+    set c : ℝ≥0∞ := (Fintype.card (spec.Range t) : ℝ≥0∞)
+    have hc0 : c ≠ 0 := by simp [c]
+    have hct : c ≠ ⊤ := by simp [c]
+    -- a hit after the fresh answer is a hit before it, or the fresh answer itself
+    have hpt : ∀ u : spec.Range t,
+        propInd (∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            (s.cacheQuery t u) t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀) ≤
+          propInd (∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            s t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀) + propInd (HEq u v₀) := by
+      intro u
+      by_cases hE : ∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+          (s.cacheQuery t u) t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀
+      · obtain ⟨t₀, v, hv, h0, hheq⟩ := hE
+        rw [propInd_eq_one_iff.mpr ⟨t₀, v, hv, h0, hheq⟩]
+        by_cases ht₀ : t₀ = t
+        · subst ht₀
+          rw [QueryCache.cacheQuery_self, Option.some.injEq] at hv
+          subst hv
+          rw [propInd_eq_one_iff.mpr hheq]
+          exact le_add_self
+        · rw [QueryCache.cacheQuery_of_ne s u ht₀] at hv
+          rw [propInd_eq_one_iff.mpr ⟨t₀, v, hv, h0, hheq⟩]
+          exact le_self_add
+      · rw [propInd_eq_zero_iff.mpr hE]
+        exact zero_le
+    calc ∑ u, c⁻¹ * (propInd (∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            (s.cacheQuery t u) t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀) + k * C⁻¹)
+        ≤ ∑ u, c⁻¹ * (propInd (∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            s t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀) + propInd (HEq u v₀) + k * C⁻¹) := by
+          gcongr with u
+          exact hpt u
+      _ = propInd (∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            s t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀) +
+            c⁻¹ * ∑ u, propInd (HEq u v₀) + k * C⁻¹ := by
+          simp only [mul_add, Finset.sum_add_distrib, Finset.sum_const, Finset.card_univ,
+            nsmul_eq_mul, ← mul_assoc, ← Finset.mul_sum]
+          rw [show (Fintype.card (spec.Range t) : ℝ≥0∞) = c from rfl,
+            ENNReal.mul_inv_cancel hc0 hct]
+          simp only [one_mul]
+          rfl
+      _ ≤ propInd (∃ t₀ : spec.Domain, ∃ v : spec.Range t₀,
+            s t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀) + C⁻¹ + k * C⁻¹ := by
+          gcongr
+          calc c⁻¹ * ∑ u, propInd (HEq u v₀) ≤ c⁻¹ * 1 := by
+                gcongr
+                exact sum_propInd_heq_le_one t v₀
+            _ ≤ C⁻¹ := by
+                rw [mul_one]
+                gcongr
+                simp only [C, c]
+                exact_mod_cast hrange t
+      _ = _ := by
+          rw [add_assoc, Nat.cast_succ, add_mul, one_mul, add_comm C⁻¹]
+
+open scoped OracleComp.Upper in
+/-- **Cache preimage bound**: the probability that `simulateQ cachingOracle oa` creates a fresh
+cache entry equal to a target `v₀` is at most `n / |C|`, where `n` is the total query bound.
+Each cache miss is a fresh uniform draw that hits the target with probability at most `1 / |C|`,
+whatever the cache holds, so the bound is the ranked potential `hitPotential` spent one unit per
+query; the hypothesis `_hunique_v₀` on the initial cache is not used.
 
 This is the reusable ROM lemma for the extractability "fresh target hit" case. -/
 theorem prEvent_cache_has_value_le_of_unique_preimage {α : Type}
@@ -78,7 +176,7 @@ theorem prEvent_cache_has_value_le_of_unique_preimage {α : Type}
     (hrange : ∀ t, Fintype.card (spec.Range default) ≤ Fintype.card (spec.Range t))
     (v₀ : spec.Range default)
     (cache₀ : QueryCache spec)
-    (hunique_v₀ :
+    (_hunique_v₀ :
       ∀ t₀ t₁ : spec.Domain,
         ∀ v₁ : spec.Range t₀, ∀ v₂ : spec.Range t₁,
           cache₀ t₀ = some v₁ →
@@ -90,113 +188,22 @@ theorem prEvent_cache_has_value_le_of_unique_preimage {α : Type}
         ∃ v : spec.Range t₀, z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀] ≤
       (n : ℝ≥0∞) * (Fintype.card (spec.Range default) : ℝ≥0∞)⁻¹ := by
   classical
-  let C := (Fintype.card (spec.Range default) : ℝ≥0∞)
-  induction oa using OracleComp.inductionOn generalizing n cache₀ with
-  | pure x =>
-    rw [simulateQ_pure]
-    refine le_of_eq_of_le (prEvent_eq_zero_of_forall_mem_support _ _ fun z hz h => ?_) bot_le
-    change z ∈ support (pure (x, cache₀) : OracleComp _ _) at hz
-    rw [support_pure, Set.mem_singleton_iff] at hz
-    subst hz
-    obtain ⟨t₀, v, hcache, hnone, _⟩ := h
-    simp [hnone] at hcache
-  | query_bind t mx ih =>
-    rw [isTotalQueryBound_query_bind_iff] at hbound
-    obtain ⟨hpos, hrest⟩ := hbound
-    by_cases ht : ∃ v, cache₀ t = some v
-    · obtain ⟨v, hv⟩ := ht
-      have hrun : (simulateQ cachingOracle (liftM (query t) >>= mx)).run cache₀ =
-          (simulateQ cachingOracle (mx v)).run cache₀ := by
-        simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind]
-        have hcache : (liftM (cachingOracle t) : StateT _ (OracleComp spec) _).run cache₀ =
-            pure (v, cache₀) := by
-          simp [liftM, MonadLiftT.monadLift, MonadLift.monadLift,
-            StateT.run_bind, StateT.run_get, hv, pure_bind, StateT.run_pure]
-        rw [hcache, pure_bind]
-        simp [OracleQuery.cont_query]
-      rw [hrun]
-      calc Pr{let z ← (simulateQ cachingOracle (mx v)).run cache₀}[∃ t₀ v,
-            z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀]
-          ≤ ((n - 1 : ℕ) : ℝ≥0∞) * C⁻¹ := ih v (n - 1) (hrest v) cache₀ hunique_v₀
-        _ ≤ (n : ℝ≥0∞) * C⁻¹ := by gcongr; exact_mod_cast Nat.sub_le n 1
-    · push Not at ht
-      have ht_none : cache₀ t = none := Option.eq_none_iff_forall_ne_some.mpr ht
-      have hrun : (simulateQ cachingOracle (liftM (query t) >>= mx)).run cache₀ =
-          (liftM (query t) >>= fun u =>
-            (simulateQ cachingOracle (mx u)).run (cache₀.cacheQuery t u)) := by
-        simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind]
-        have hstep : (liftM (cachingOracle t) : StateT _ (OracleComp spec) _).run cache₀ =
-            (liftM (query t) >>= fun u =>
-              pure (u, cache₀.cacheQuery t u) : OracleComp spec _) := by
-          simp only [cachingOracle.apply_eq, liftM, MonadLiftT.monadLift, MonadLift.monadLift,
-            StateT.run_bind, StateT.run_get, pure_bind, ht_none]
-          change (StateT.lift (PFunctor.FreeM.lift (P := spec.toPFunctor) t) cache₀ >>= _) = _
-          simp only [StateT.lift, monad_norm,
-            modifyGet, MonadState.modifyGet, MonadStateOf.modifyGet,
-            StateT.modifyGet, StateT.run]
-          rfl
-        rw [hstep]; simp [monad_norm]
-      rw [hrun, prEvent_bind]
-      have hih : ∀ u ∈ support (liftM (query t) : OracleComp spec (spec.Range t)),
-          ¬HEq u v₀ →
-          Pr{let z ← (simulateQ cachingOracle (mx u)).run (cache₀.cacheQuery t u)}[∃ t₀ v,
-            z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀] ≤
-          ((n - 1 : ℕ) : ℝ≥0∞) * C⁻¹ := by
-        intro u _ heq_v₀
-        have hunique_v₀' :
-            ∀ t₀ t₁ : spec.Domain,
-              ∀ v₁ : spec.Range t₀, ∀ v₂ : spec.Range t₁,
-                (cache₀.cacheQuery t u) t₀ = some v₁ →
-                (cache₀.cacheQuery t u) t₁ = some v₂ →
-                HEq v₁ v₀ →
-                HEq v₂ v₀ →
-                t₀ = t₁ := by
-          intro t₀ t₁ v₁ v₂ hcache₁ hcache₂ hheq₁ hheq₂
-          by_cases heq_t₀ : t₀ = t
-          · subst heq_t₀
-            rw [QueryCache.cacheQuery_self] at hcache₁
-            cases hcache₁
-            exact (heq_v₀ hheq₁).elim
-          · by_cases heq_t₁ : t₁ = t
-            · subst heq_t₁
-              rw [QueryCache.cacheQuery_self] at hcache₂
-              cases hcache₂
-              exact (heq_v₀ hheq₂).elim
-            · rw [QueryCache.cacheQuery_of_ne _ _ heq_t₀] at hcache₁
-              rw [QueryCache.cacheQuery_of_ne _ _ heq_t₁] at hcache₂
-              exact hunique_v₀ t₀ t₁ v₁ v₂ hcache₁ hcache₂ hheq₁ hheq₂
-        refine le_trans (prEvent_mono_of_support _ _ (fun z => ∃ t₀ v, z.2 t₀ = some v ∧
-            (cache₀.cacheQuery t u) t₀ = none ∧ HEq v v₀)
-          fun z hz ⟨t₀, v, hcache_f, hnone₀, hheq⟩ => ?_) (ih u (n - 1) (hrest u) _ hunique_v₀')
-        by_cases heq_t : t₀ = t
-        · exfalso
-          subst heq_t
-          have hle := simulateQ_cachingOracle_cache_le (mx u) (cache₀.cacheQuery t₀ u) _ hz
-          have hzu : z.2 t₀ = some u := hle (QueryCache.cacheQuery_self cache₀ t₀ u)
-          rw [hzu] at hcache_f; cases hcache_f
-          exact heq_v₀ hheq
-        · exact ⟨t₀, v, hcache_f,
-            (QueryCache.cacheQuery_of_ne cache₀ u heq_t).trans hnone₀, hheq⟩
-      have hhit : Pr{let u ← (liftM (query t) : OracleComp spec (spec.Range t))}[HEq u v₀] ≤
-          C⁻¹ := by
-        rw [prEvent_liftM_query_eq_card_div]
-        have hcard : (Finset.univ.filter fun u : spec.Range t => HEq u v₀).card ≤ 1 :=
-          Finset.card_le_one.mpr fun a ha b hb => by
-            simp only [Finset.mem_filter, Finset.mem_univ, true_and] at ha hb
-            exact eq_of_heq (ha.trans hb.symm)
-        calc ((Finset.univ.filter fun u : spec.Range t => HEq u v₀).card : ℝ≥0∞) /
-              Fintype.card (spec.Range t)
-            ≤ 1 / Fintype.card (spec.Range t) := by gcongr; exact_mod_cast hcard
-          _ ≤ C⁻¹ := by
-            rw [one_div]; exact ENNReal.inv_le_inv.mpr (Nat.cast_le.mpr (hrange t))
-      calc Pr{let u ← (liftM (query t) : OracleComp spec (spec.Range t));
-              let z ← (simulateQ cachingOracle (mx u)).run (cache₀.cacheQuery t u)}[∃ t₀ v,
-                z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀]
-          ≤ C⁻¹ + ((n - 1 : ℕ) : ℝ≥0∞) * C⁻¹ :=
-            (prEvent_bind_le_prEvent_add_of_support _ _ (fun u => HEq u v₀) _ hih).trans
-              (add_le_add hhit le_rfl)
-        _ = (n : ℝ≥0∞) * C⁻¹ := by
-            rw [← one_add_mul, ← Nat.cast_one, ← Nat.cast_add, Nat.add_sub_cancel' hpos]
+  set C : ℝ≥0∞ := (Fintype.card (spec.Range default) : ℝ≥0∞)
+  have h := (OracleComp.ProgramLogic.simulateQ_triple_ranked cachingOracle
+    (hitPotential C cache₀ v₀) (cachingOracle_hitPotential_step hrange cache₀ v₀)
+    (fun k s => by
+      simp only [OracleComp.Upper.rel_iff, hitPotential, ofDual_toDual, Nat.cast_zero, zero_mul,
+        add_zero]
+      exact le_self_add) oa n hbound).le_wp cache₀
+  rw [OracleComp.Upper.rel_iff, StateT.wp_apply_eq, OracleComp.Upper.ofDual_wp] at h
+  calc Pr{let z ← (simulateQ cachingOracle oa).run cache₀}[∃ t₀ : spec.Domain,
+        ∃ v : spec.Range t₀, z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀]
+      ≤ _ := ExpectationWP.wp_mono _ fun z => le_self_add
+    _ ≤ _ := h
+    _ = n * C⁻¹ := by
+        simp only [hitPotential, ofDual_toDual]
+        rw [propInd_eq_zero_iff.mpr fun ⟨_, _, hsome, hnone, _⟩ => by simp [hnone] at hsome,
+          zero_add]
 
 /-- Special case of
 `prEvent_cache_has_value_le_of_unique_preimage` when the initial cache

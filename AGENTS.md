@@ -94,7 +94,11 @@ ToMathlib → Prelude → EvalDist/Defs → OracleComp core → EvalDist bridge
   → {ProgramLogic, CryptoFoundations, CryptoFoundations/Asymptotics} → Examples
 ```
 
-New files must respect this DAG. `EvalDist/` must never import from `OracleComp/`.
+New files must respect this DAG. `EvalDist/` must never import from `OracleComp/`. The generic
+program-logic layer, `ProgramLogic/Unary/WP/*`, `HoareTriple.lean` and `SimulateQSpecs.lean`,
+imports only `Constructions`, `Coercions` and `QueryTracking/QueryBound`, so a query-tracking
+module may import it to prove a bound by a ranked potential, as `QueryTracking/Birthday.lean`
+does; the tactics and the handler catalogue stay above `QueryTracking`.
 
 For `LatticeCrypto/`, the rough dependency direction is:
 
