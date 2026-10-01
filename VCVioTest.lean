@@ -89,6 +89,7 @@ public import VCVioTest.ProgramLogic.RelationalVCGen
 public import VCVioTest.ProgramLogic.UntilBad
 public import VCVioTest.ProgramLogic.UpperVCGen
 public import VCVioTest.ProgramLogic.VCGenNames
+public import VCVioTest.ProgramLogic.VCGenShapes
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
 public import VCVioTest.RandomOracleControls
