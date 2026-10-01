@@ -332,14 +332,6 @@ section HandlerTriples
 
 open Std.WP OracleComp.ProgramLogic
 
-/-- `StateT.lift x` has the weakest precondition of `MonadLift.monadLift x`: the `vcgen` rule for
-handlers written with `StateT.lift`, such as `unifForward` and `roImpl`. -/
-private theorem spec_stateT_lift {σ α : Type} {m : Type → Type} [Monad m] {Pred EPred : Type}
-    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] (x : m α) (post : α → σ → Pred)
-    (epost : EPred) :
-    Triple (StateT.lift x : StateT σ m α) (fun s => wp x (fun a => post a s) epost) post epost :=
-  Spec.monadLift_StateT x post
-
 /-- Running the inner `unifForward + roImpl` simulator against a source computation with
 an `nmaHashQueryBound Q` can grow the internal `queryLog` by at most `Q`.
 
@@ -367,7 +359,7 @@ theorem queryLog_length_le_of_nmaHashQueryBound
           n st us).1 hus] using ih us.1 (hQ.2 us.1) us.2 hz'
       · have hstep := (triple_stateT_iff_forall_support _ (· = st)
           (fun _ s' => s'.2.length ≤ st.2.length + 1) ⊥).1 (by
-            vcgen [roImpl, spec_stateT_lift,
+            vcgen [roImpl, Spec.lift_StateT,
               Qualitative.Spec.ofSupport (wrappedChallengeQuery Chal)] <;> simp_all)
           st rfl _ _ hus
         have := ih us.1 (Q := Q - 1) (hQ.2 us.1) us.2 hz'

@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
+public import VCVio.OracleComp.Constructions.Replicate
 
 /-!
 # Upper bounds as core triples
@@ -76,7 +77,7 @@ opens, for per-call use (`open scoped OracleComp.Upper.Dispatch in vcgen`).
 
 public section
 
-universe u
+universe u u'
 
 open ENNReal Std.WP OrderDual
 
@@ -158,14 +159,6 @@ theorem iInf_eq {κ : Type _} (f : κ → ℝ≥0∞ᵒᵈ) :
 theorem wp_le_iSup (oa : OracleComp spec α) (g : α → ℝ≥0∞) : wp⟦oa⟧ g ≤ ⨆ x, g x :=
   OracleComp.ProgramLogic.wp_le_const_of_support oa fun x _ => le_iSup g x
 
-/-- The expectation of a query is at most the value of its largest answer. -/
-@[spec]
-theorem Spec.query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
-    Triple (HasQuery.query t : OracleComp spec (spec.Range t)) (Lean.Order.iInf post) post
-      epost := by
-  rw [triple_iff, iInf_eq, ofDual_toDual]
-  exact wp_le_iSup _ _
-
 /-- The expectation of a lifted primitive query is at most the value of its largest answer. This
 is the form `vcgen` reaches from `liftM (OracleSpec.query t)`. -/
 @[spec]
@@ -184,6 +177,19 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ
   rw [triple_iff, iInf_eq, ofDual_toDual]
   exact OracleComp.ProgramLogic.wp_le_const_of_support oa fun x hx =>
     le_iSup (fun a : {a // a ∈ support oa} => ofDual (post a.1)) ⟨x, hx⟩
+
+/-- The expectation of `oa.replicate n` is at most its largest value on a list of `n` possible
+outputs of `oa`. -/
+@[spec]
+theorem Spec.replicate (n : ℕ) (oa : OracleComp spec α) (post : List α → ℝ≥0∞ᵒᵈ)
+    {epost : EStack⟨⟩ᵒᵈ} :
+    ⦃ Lean.Order.iInf fun xs : {xs : List α // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa} =>
+        post xs.1 ⦄ oa.replicate n ⦃ post; epost ⦄ := by
+  rw [triple_iff, iInf_eq, ofDual_toDual]
+  refine OracleComp.ProgramLogic.wp_le_const_of_support (oa.replicate n) fun xs hxs => ?_
+  rw [support_replicate] at hxs
+  exact le_iSup (fun xs : {xs : List α // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa} =>
+    ofDual (post xs.1)) ⟨xs, hxs⟩
 
 /-- Adding a constant to an upper-bound triple: the frame rule of the upper-bound reading, for
 composing a sub-program's bound with a budget that the rest of the program spends. -/
@@ -247,6 +253,24 @@ theorem Spec.monadLift_query_avg (t : spec.Domain) [Fintype (spec.Range t)]
         OracleComp spec (spec.Range t))
       (toDual (∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * ofDual (post u))) post epost :=
   (triple_iff _ _ _ _).2 (OracleComp.ProgramLogic.wp_query_uniform t _).le
+
+/-- Lifting between uniform oracle worlds keeps the expectation. The precondition is the
+upper-bound weakest precondition of the lifted program, so `vcgen` continues into it. -/
+@[spec]
+theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ := by
+  rw [triple_iff, ofDual_wp]
+  exact (OracleComp.ProgramLogic.wp_liftComp oa _).le
+
+/-- `Spec.liftComp` for the lift written as `liftM oa`. -/
+@[spec]
+theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
+  Spec.liftComp oa post
 
 end OracleComp.Upper
 

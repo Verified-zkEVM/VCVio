@@ -54,10 +54,8 @@ theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → Prop)
       OracleComp spec (spec.Range t)) (∀ u, post u) post epost :=
   ⟨fun h u _ => h u⟩
 
-/-- A query issued through `HasQuery` may return any answer. -/
-@[spec]
-theorem Spec.query (t : spec.Domain) (post : spec.Range t → Prop) {epost : EStack⟨⟩} :
-    Triple (HasQuery.query t : OracleComp spec (spec.Range t)) (∀ u, post u) post epost :=
-  ⟨fun h u _ => h u⟩
+-- `query t` is `liftM (OracleSpec.query t)` in every monad with queries, so `vcgen` reaches the
+-- lifted form in `OracleComp` and through its transformers alike.
+attribute [spec] HasQuery.instOfMonadLift_query
 
 end OracleComp.Qualitative

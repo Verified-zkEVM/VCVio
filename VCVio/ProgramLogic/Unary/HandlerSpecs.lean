@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 
 public import PolyFun.Control.Do.Spec
+public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
 public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
@@ -70,7 +71,7 @@ The product-state representation matches the Fiat-Shamir and forking proofs in
 ## Limitations
 
 * `seededOracle` is defined with `StateT.mk`, for which core registers no `vcgen` rule;
-  `triple_stateT_mk` supplies it to the proofs of the seeded specifications.
+  `Std.WP.Spec.mk_StateT` supplies it.
 * `seededOracle_triple_of_cons` and `seededOracle_triple_of_nil` are not `@[spec]`-tagged.
   `vcgen` applies the highest-priority registered rule that fits a program, and these rules
   fit every call of `seededOracle` while holding only under their seed hypothesis, so
@@ -90,14 +91,6 @@ namespace OracleComp.ProgramLogic
 needs them in `Type v`; both universes are pinned to `Type`. -/
 variable {ι : Type}
 variable {spec : OracleSpec.{0, 0} ι}
-
-/-- `StateT.mk f` runs `f` at the incoming state. -/
-theorem triple_stateT_mk {m : Type → Type} [Monad m] {Pred EPred : Type}
-    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred]
-    {σ α : Type} (f : σ → m (α × σ)) (post : α → σ → Pred) (epost : EPred) :
-    Std.WP.Triple (StateT.mk f : StateT σ m α)
-      (fun s => wp (f s) (fun p => post p.1 p.2) epost) post epost :=
-  ⟨fun _ => Lean.Order.PartialOrder.rel_refl⟩
 
 /-! ## Reading triples against the support -/
 
@@ -184,25 +177,40 @@ section simulateQ
 
 variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
 
+/-- The type of handler invariants used by the specification of `simulateQ`: an assertion on
+the handler's state that every query preserves. `vcgen`'s `invariants` clause fills it. -/
+@[spec_invariant_type, simp, grind =]
+def HandlerInvariant (σ : Type) (Pred : Type _) := σ → Pred
+
 /-- Generic simulation triple: if every handler call `handler t` preserves an invariant `I` on
 the simulation state, then `simulateQ handler oa` preserves `I` for any `oa : OracleComp spec α`.
 It holds for every reading of the handler's monad `m`: under the structural reading `I` is a
-predicate on states, under the upper-bound reading (`OracleComp.Upper`) a potential.
-
-The invariant-only form (same `I` as pre- and postcondition, independent of the return value) is
-the most common case; stronger per-call specifications follow by instantiating `I` or by the
-consequence rules of `Std.WP.Triple`. -/
-theorem simulateQ_triple_preserves_invariant {m : Type → Type} [Monad m] {Pred EPred : Type _}
+predicate on states, under the upper-bound reading (`OracleComp.Upper`) a potential. The
+per-query triples are verification conditions, one for each query kind, which `vcgen` continues
+into when the handler unfolds. -/
+@[spec]
+theorem Spec.simulateQ {m : Type → Type} [Monad m] {Pred EPred : Type _}
     [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] {σ α : Type}
-    (handler : QueryImpl spec (StateT σ m)) (I : σ → Pred)
-    (hhandler : ∀ t : spec.Domain, ⦃ I ⦄ handler t ⦃ fun _ => I ⦄)
-    (oa : OracleComp spec α) :
-    ⦃ I ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => I ⦄ := by
+    (handler : QueryImpl spec (StateT σ m)) (oa : OracleComp spec α)
+    (I : HandlerInvariant σ Pred) {epost : EPred}
+    (hhandler : ∀ t : spec.Domain, ⦃ fun s => I s ⦄ handler t ⦃ fun _ s => I s; epost ⦄) :
+    ⦃ fun s => I s ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ s => I s; epost ⦄ := by
   induction oa using OracleComp.inductionOn with
   | pure x => exact Std.WP.Triple.pure x Lean.Order.PartialOrder.rel_refl
   | query_bind t oa ih =>
     rw [simulateQ_query_bind]
     exact Std.WP.Triple.bind _ _ _ (hhandler t) ih
+
+/-- The invariant-only form of `Spec.simulateQ` (same `I` as pre- and postcondition, independent
+of the return value) is the most common case; stronger per-call specifications follow by
+instantiating `I` or by the consequence rules of `Std.WP.Triple`. -/
+theorem simulateQ_triple_preserves_invariant {m : Type → Type} [Monad m] {Pred EPred : Type _}
+    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] {σ α : Type}
+    (handler : QueryImpl spec (StateT σ m)) (I : σ → Pred)
+    (hhandler : ∀ t : spec.Domain, ⦃ I ⦄ handler t ⦃ fun _ => I ⦄)
+    (oa : OracleComp spec α) :
+    ⦃ I ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => I ⦄ :=
+  Spec.simulateQ handler oa I hhandler
 
 /-- A handler invariant ranked by the remaining query budget: if a call from a state with budget
 `k + 1` ends in a state with budget `k`, and an unspent budget can be dropped, then a simulation
@@ -348,7 +356,7 @@ theorem seededOracle_triple (t : spec.Domain) (seed₀ : QuerySeed spec) :
     ⦃ fun v seed' => (seed₀ t = [] ∧ seed' = seed₀) ∨
         ∃ us, seed₀ t = v :: us ∧ seed' = Function.update seed₀ t us ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] <;> grind [QuerySeed.update]
+  vcgen <;> grind [QuerySeed.update]
 
 /-- Specialized specification: if the seed has at least one value at `t`, `seededOracle t`
 deterministically pops the head and updates the state. -/
@@ -359,7 +367,7 @@ theorem seededOracle_triple_of_cons (t : spec.Domain)
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
     ⦃ fun v seed' => v = u ∧ seed' = seed₀.update t us ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] with finish
+  vcgen with finish
 
 /-- Specialized specification: if the seed is empty at `t`, `seededOracle t` makes a live
 query and leaves the state untouched. -/
@@ -369,7 +377,7 @@ theorem seededOracle_triple_of_nil (t : spec.Domain) (seed₀ : QuerySeed spec)
       (seededOracle t : StateT (QuerySeed spec) (OracleComp spec) (spec.Range t))
     ⦃ fun _ seed' => seed' = seed₀ ⦄ := by
   rw [seededOracle.apply_eq]
-  vcgen [triple_stateT_mk] with finish
+  vcgen with finish
 
 /-- `vcgen` example: two consecutive `seededOracle` calls from a seed that is empty at both
 indices fall through to live queries, leaving the seed unchanged. The two hypotheses on the

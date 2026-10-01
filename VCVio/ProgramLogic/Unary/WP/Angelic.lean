@@ -9,6 +9,8 @@ module
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.Replicate
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
 
 /-!
 # The angelic reading of oracle computations
@@ -52,7 +54,7 @@ opens, for per-call use (`open scoped OracleComp.Angelic.Dispatch in vcgen`).
 
 public section
 
-universe u
+universe u u'
 
 open ENNReal Std.WP
 
@@ -104,12 +106,6 @@ theorem wp_iff_triple (oa : OracleComp spec α) (post : α → Prop) :
 
 /-! ## Rules -/
 
-/-- A query may return any answer. -/
-@[spec]
-theorem Spec.query (t : spec.Domain) (post : spec.Range t → Prop) {epost : EStack⟨⟩} :
-    Triple (HasQuery.query t : OracleComp spec (spec.Range t)) (∃ u, post u) post epost :=
-  ⟨fun ⟨u, hu⟩ => ⟨u, OracleComp.mem_support_query t u, hu⟩⟩
-
 /-- A lifted primitive query may return any answer. This is the form `vcgen` reaches from
 `liftM (OracleSpec.query t)`. -/
 @[spec]
@@ -124,6 +120,32 @@ registered, since it applies to every program. -/
 theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → Prop) {epost : EStack⟨⟩} :
     Triple oa (∃ a ∈ support oa, post a) post epost :=
   ⟨id⟩
+
+/-- `oa.replicate n` may return any list of `n` possible outputs of `oa`. -/
+@[spec]
+theorem Spec.replicate (n : ℕ) (oa : OracleComp spec α) (post : List α → Prop)
+    {epost : EStack⟨⟩} :
+    ⦃ ∃ xs : List α, xs.length = n ∧ (∀ x ∈ xs, x ∈ support oa) ∧ post xs ⦄ oa.replicate n
+      ⦃ post; epost ⦄ :=
+  ⟨fun ⟨xs, hlen, hmem, h⟩ =>
+    ⟨xs, show xs ∈ support (oa.replicate n) by rw [support_replicate]; exact ⟨hlen, hmem⟩, h⟩⟩
+
+/-- Lifting to a larger oracle world keeps the possible outputs. The precondition is the angelic
+weakest precondition of the lifted program, so `vcgen` continues into it. -/
+@[spec]
+theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec] (oa : OracleComp spec α) (post : α → Prop)
+    {epost : EStack⟨⟩} :
+    ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ :=
+  ⟨fun ⟨a, ha, h⟩ => ⟨a, (mem_support_liftComp_iff oa a).mpr ha, h⟩⟩
+
+/-- `Spec.liftComp` for the lift written as `liftM oa`. -/
+@[spec]
+theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec] (oa : OracleComp spec α) (post : α → Prop)
+    {epost : EStack⟨⟩} :
+    ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
+  Spec.liftComp oa post
 
 end OracleComp.Angelic
 

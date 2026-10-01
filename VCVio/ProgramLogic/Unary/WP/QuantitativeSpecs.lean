@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.ProgramLogic.Unary.SimulateQ
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
@@ -53,7 +54,7 @@ Upper bounds have their own reading, `OracleComp.Upper` (`VCVio.ProgramLogic.Una
 
 public section
 
-universe u
+universe u u'
 
 open ENNReal Std.WP
 open scoped OracleComp.Quantitative
@@ -93,14 +94,6 @@ open OracleComp.ProgramLogic
 
 variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec] {α : Type}
 
-/-- A lower bound on every answer to a query bounds its expectation. -/
-@[spec]
-theorem Spec.query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) {epost : EStack⟨⟩} :
-    Triple (HasQuery.query t : OracleComp spec (spec.Range t)) (Lean.Order.iInf post) post
-      epost := by
-  rw [MAlgOrdered.iInf_eq_iInf]
-  exact ⟨iInf_le_wp _ post⟩
-
 /-- A lower bound on every answer to a lifted primitive query bounds its expectation. This is
 the form `vcgen` reaches from `liftM (OracleSpec.query t)`. -/
 @[spec]
@@ -115,6 +108,13 @@ theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → ℝ≥0�
 @[spec]
 theorem Spec.uniformSample (β : Type) [SampleableType β] (post : β → ℝ≥0∞)
     {epost : EStack⟨⟩} : Triple ($ᵗ β) (Lean.Order.iInf post) post epost := by
+  rw [MAlgOrdered.iInf_eq_iInf]
+  exact ⟨iInf_le_wp _ post⟩
+
+/-- A lower bound on every value of a uniform index `$[0..n]` bounds its expectation. -/
+@[spec]
+theorem Spec.uniformFin (n : ℕ) (post : Fin (n + 1) → ℝ≥0∞) {epost : EStack⟨⟩} :
+    ⦃ Lean.Order.iInf post ⦄ ($[0..n]) ⦃ post; epost ⦄ := by
   rw [MAlgOrdered.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
 
@@ -148,6 +148,23 @@ theorem Spec.query_uniform (t : spec.Domain) [Fintype (spec.Range t)]
     Triple (HasQuery.query t : OracleComp spec (spec.Range t))
       (∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * post u) post epost :=
   ⟨(OracleComp.ProgramLogic.wp_query_uniform t post).ge⟩
+
+/-- Lifting between uniform oracle worlds keeps the expectation. The precondition is the
+expectation of the lifted program, so `vcgen` continues into it. -/
+@[spec]
+theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
+    ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ :=
+  ⟨(OracleComp.ProgramLogic.wp_liftComp oa post).ge⟩
+
+/-- `Spec.liftComp` for the lift written as `liftM oa`. -/
+@[spec]
+theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
+    ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
+  Spec.liftComp oa post
 
 end OracleComp.Quantitative
 

@@ -553,8 +553,8 @@ planner of `rvcgen` (and `time` also that of `prrw normalize`), not core's `vcge
 (`⊓`, `⇨`, `⌜·⌝`, `⊤`, `Lean.Order.iInf`); in the `Prop` reading it also introduces `∀` and `→`.
 Anything else (`∑`, `if`, `∧`) is left as a verification condition as it stands, and in `ℝ≥0∞`
 the programs inside a sum stay unprocessed there. A rule meant to be stepped through states
-its precondition with these connectives, as `OracleComp.Quantitative.Spec.query` does with
-`Lean.Order.iInf` and PolyFun's `Spec.guard_OptionT` does with `⊓` and `⇨`. `Lean.Order.iInf`
+its precondition with these connectives, as `OracleComp.Quantitative.Spec.monadLift_query` does
+with `Lean.Order.iInf` and PolyFun's `Spec.guard_OptionT` does with `⊓` and `⇨`. `Lean.Order.iInf`
 takes a `Type`-indexed binder, so a condition such as `a ∈ support oa` is expressed through the
 subtype `{a // a ∈ support oa}`. Exact rules stated as averages (`Spec.uniformSample_sum`) belong
 at the last draw of a program; exact values in general are computed by `simp` on the normal form

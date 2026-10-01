@@ -58,14 +58,6 @@ section HandlerTriples
 
 open Std.WP OracleComp.ProgramLogic
 
-/-- `StateT.lift x` has the weakest precondition of `MonadLift.monadLift x`: the `vcgen` rule for
-handlers written with `StateT.lift`, such as `Fork.unifForward` and `Fork.roImpl`. -/
-private theorem spec_stateT_lift {σ α : Type} {m : Type → Type} [Monad m] {Pred EPred : Type}
-    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] (x : m α) (post : α → σ → Pred)
-    (epost : EPred) :
-    Triple (StateT.lift x : StateT σ m α) (fun s => wp x (fun a => post a s) epost) post epost :=
-  Spec.monadLift_StateT x post
-
 private theorem cache_mem_log {α : Type}
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α)
     (st : Fork.SimState M Commit Chal)
@@ -77,7 +69,7 @@ private theorem cache_mem_log {α : Type}
   (triple_stateT_iff_forall_support _ _ _ ⊥).1 (simulateQ_triple_preserves_invariant _
     (fun st : Fork.SimState M Commit Chal => ∀ t v, st.1 t = some v → t ∈ st.2) (fun t => by
       rcases t with n | mc <;>
-        vcgen [Fork.unifForward, Fork.roImpl, spec_stateT_lift,
+        vcgen [Fork.unifForward, Fork.roImpl, Spec.lift_StateT,
           Qualitative.Spec.ofSupport (Fork.wrappedUniformQuery Chal _),
           Qualitative.Spec.ofSupport (Fork.wrappedChallengeQuery Chal)] <;> grind) oa)
     st hinv _ _ hz

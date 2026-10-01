@@ -380,6 +380,7 @@ public import VCVio.ProgramLogic.Unary.WP.Qualitative
 public import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
 public import VCVio.ProgramLogic.Unary.WP.Quantitative
 public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
+public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
 public import VCVio.ProgramLogic.Unary.WP.Upper
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef

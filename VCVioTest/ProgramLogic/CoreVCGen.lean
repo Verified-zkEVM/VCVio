@@ -22,7 +22,10 @@ exercised with a bare core `vcgen`:
   a whole simulation into `ProbComp`, and an append-log handler lifted to a whole simulation;
 * events as structural triples: probability one, mass one on `true`, and probability zero;
 * quantitative reading (the global instance): lower bounds through queries and `$ᵗ`, an event
-  normal form, a support-conditioned bind, and a scaled adversary spec.
+  normal form, a support-conditioned bind, and a scaled adversary spec;
+* the transformers' constructors, lifts and runners, `List.mapM` with an invariant, the sequence
+  combinators, a query inside a transformer through the `query` unfold, and a simulation with a
+  handler invariant.
 -/
 
 public section
@@ -205,5 +208,94 @@ example (adv : ProbComp α) (win : α → Prop) [DecidablePred win] (r : ℝ≥0
   by_cases h : win a <;> simp [h, ENNReal.div_eq_inv_mul]
 
 end Quantitative
+
+/-! ## Transformers, loops and simulations -/
+
+section Transformers
+
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
+
+/-- `StateT.lift` through the base draw. -/
+example : ⦃ fun _ => True ⦄ (StateT.lift ($ᵗ Bool) : StateT ℕ ProbComp Bool)
+    ⦃ fun b _ => (b || !b) = true ⦄ := by
+  vcgen
+  simp
+
+/-- A handler written with `StateT.mk` runs its body at the incoming state. -/
+example : ⦃ fun _ => True ⦄
+    (StateT.mk fun s => (fun b => (b, s + 1)) <$> ($ᵗ Bool) : StateT ℕ ProbComp Bool)
+    ⦃ fun _ s => 0 < s ⦄ := by
+  vcgen
+  simp
+
+/-- Running a `StateT` program at a state, with the final state discarded. -/
+example : ⦃ True ⦄ ((do
+      let b ← StateT.lift ($ᵗ Bool)
+      set (1 : ℕ)
+      pure b : StateT ℕ ProbComp Bool).run' 0) ⦃ fun b => (b || !b) = true ⦄ := by
+  vcgen
+  simp
+
+/-- An `OptionT` lift succeeds; running it observes the option. -/
+example : ⦃ True ⦄ (OptionT.lift ($ᵗ Bool) : OptionT ProbComp Bool).run ⦃ fun o => o ≠ none ⦄ := by
+  vcgen
+  simp
+
+/-- `OptionT.mk` is read through the option its body returns. -/
+example : ⦃ True ⦄ (OptionT.mk (pure (some true)) : OptionT ProbComp Bool).run
+    ⦃ fun o => o = some true ⦄ := by
+  vcgen
+  simp [Lean.Order.pushOption]
+
+/-- An `ExceptT` lift succeeds; running it observes the result. -/
+example : ⦃ True ⦄ (ExceptT.lift ($ᵗ Bool) : ExceptT String ProbComp Bool).run
+    ⦃ fun r => ∀ e, r ≠ .error e ⦄ := by
+  vcgen
+  simp
+
+/-- `ExceptT.mk` is read through the result its body returns. -/
+example : ⦃ True ⦄ (ExceptT.mk (pure (.ok true)) : ExceptT String ProbComp Bool).run
+    ⦃ fun r => r = .ok true ⦄ := by
+  vcgen
+  simp [Lean.Order.pushExcept]
+
+/-- `List.mapM` with an invariant relating the outputs so far to the elements consumed. -/
+example : ⦃ True ⦄ ([1, 2, 3].mapM fun n => (fun b => if b then n else 0) <$> ($ᵗ Bool) :
+    ProbComp (List ℕ)) ⦃ fun bs => bs.length = 3 ⦄ := by
+  vcgen invariants
+    · fun pref _ bs => bs.length = pref.length
+  all_goals simp_all
+
+/-- The sequence combinators keep the first, respectively the second, value. -/
+example : ⦃ True ⦄ (($ᵗ Bool) <* ($ᵗ Bool) : ProbComp Bool) ⦃ fun b => (b || !b) = true ⦄ := by
+  vcgen
+  simp
+
+example : ⦃ True ⦄ (($ᵗ Bool) *> ($ᵗ Bool) : ProbComp Bool) ⦃ fun b => (b || !b) = true ⦄ := by
+  vcgen
+  simp
+
+/-- A query inside a transformer reaches the primitive query through the `query` unfold and
+core's lift rule. -/
+example (t : spec.Domain) (p : spec.Range t → Prop) (h : ∀ u, p u) :
+    ⦃ fun _ => True ⦄ (do let u ← (query t : StateT ℕ (OracleComp spec) _); pure u)
+      ⦃ fun u _ => p u ⦄ := by
+  vcgen
+  simp [h]
+
+/-- A handler that resets its state after every query. -/
+def resetHandler : QueryImpl (Unit →ₒ Bool) (StateT ℕ ProbComp) := fun _ => do
+  let b ← StateT.lift ($ᵗ Bool)
+  set (0 : ℕ)
+  pure b
+
+/-- A simulation preserves a handler invariant that every query preserves: the per-query
+triples are the verification conditions, continued into the handler's body. -/
+example {α : Type} (oa : OracleComp (Unit →ₒ Bool) α) :
+    ⦃ fun s => s = 0 ⦄ (simulateQ resetHandler oa : StateT ℕ ProbComp α) ⦃ fun _ s => s = 0 ⦄ := by
+  vcgen [resetHandler] invariants
+    · fun s => s = 0
+
+end Transformers
 
 end VCVioTest.ProgramLogic.CoreVCGen

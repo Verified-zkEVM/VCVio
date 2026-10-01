@@ -273,7 +273,7 @@ Structural rules (`VCVio/ProgramLogic/Unary/WP/QualitativeSpecs.lean`, namespace
 
 | Program | Rule | Precondition |
 |---------|------|--------------|
-| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` (in `Unary/WP/Qualitative.lean`) | `∀ u, post u` |
+| `query t` (both spellings) | `Spec.monadLift_query` (in `Unary/WP/Qualitative.lean`) | `∀ u, post u` |
 | `$ᵗ β` | `Spec.uniformSample` | `∀ x, post x` |
 | `$[0..n]` | `Spec.uniformFin` | `∀ i, post i` |
 | `oa.replicate n` | `Spec.replicate` | `∀ xs, xs.length = n → (∀ x ∈ xs, x ∈ support oa) → post xs` |
@@ -286,7 +286,7 @@ with `Lean.Order.iInf`, which `vcgen` splits into one condition per outcome:
 
 | Program | Rule | Precondition |
 |---------|------|--------------|
-| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨅ u, post u` |
+| `query t` (both spellings) | `Spec.monadLift_query` | `⨅ u, post u` |
 | `$ᵗ β` | `Spec.uniformSample` | `⨅ x, post x` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨅ a : {a // a ∈ support oa}, post a.1` |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_sum` | `(∑ x, post x) / card β` |
@@ -317,8 +317,8 @@ uniform answers, `simp` averages the expectation in an event's normal form with
 
 Angelic rules (`VCVio/ProgramLogic/Unary/WP/Angelic.lean`, namespace `OracleComp.Angelic`) state
 that a query or draw can return any value, with precondition `∃ u, post u`:
-`Spec.query`, `Spec.monadLift_query`, `Spec.uniformSample`, `Spec.uniformFin`, and `Spec.ofSupport`
-(not registered). `vcgen` does not split an existential, so each draw leaves
+`Spec.monadLift_query`, `Spec.uniformSample`, `Spec.uniformFin`, `Spec.replicate`, `Spec.liftComp`,
+and `Spec.ofSupport` (not registered). `vcgen` does not split an existential, so each draw leaves
 `∃ u, wp (rest u) post ⊥`; name the witness with `refine ⟨w, ?_⟩` and continue with `prvcgen`
 (or `rw [OracleComp.Angelic.wp_iff_triple]` and `vcgen` in the angelic scope). The angelic reading
 is not conjunctive.
@@ -327,7 +327,7 @@ Upper-bound rules (`VCVio/ProgramLogic/Unary/WP/Upper.lean`, namespace `OracleCo
 
 | Program | Rule | Precondition (read in `ℝ≥0∞`) |
 |---------|------|------|
-| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨆ u, post u` (core's `Lean.Order.iInf` of the dual) |
+| `query t` (both spellings) | `Spec.monadLift_query` | `⨆ u, post u` (core's `Lean.Order.iInf` of the dual) |
 | `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨆ x, post x` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨆ a : {a // a ∈ support oa}, post a.1` |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_avg` | `(∑ x, post x) / card β` |
@@ -424,11 +424,16 @@ without a rule is left as a verification condition stating its weakest precondit
 `simp only [expect_norm, le_refl]` closes it when `pre` is that expectation.
 
 **Loops.** A loop takes an invariant: `List.foldlM` through core's rule, as
-`prvcgen invariants · fun _ _ s => I s`, and `replicate` and `List.mapM` through the rules of
-`Unary/HoareTriple.lean` passed explicitly, as `prvcgen [triple_replicate_inv hstep]`
-(`triple_replicate_inv`, `triple_replicate`, `triple_list_mapM_inv`, `triple_list_foldlM_inv` and
-their consequence forms). A loop equation in brackets, such as `prvcgen [replicate_zero]`, unfolds
-the loop for `vcgen`.
+`prvcgen invariants · fun _ _ s => I s`, `List.mapM` through `Std.WP.Spec.mapM_list`
+(`Unary/WP/TransformerSpecs.lean`), whose invariant ranges over the elements consumed, the elements
+remaining and the outputs so far, as `prvcgen invariants · fun pref _ bs => bs.length = pref.length`,
+and `replicate` through the rules of `Unary/HoareTriple.lean` passed explicitly, as
+`prvcgen [triple_replicate_inv hstep]` (`triple_replicate_inv`, `triple_replicate`,
+`triple_list_mapM_inv`, `triple_list_foldlM_inv` and their consequence forms). A simulation
+`simulateQ handler oa` in `StateT σ m` takes a handler invariant through `Spec.simulateQ`
+(`Unary/HandlerSpecs.lean`), as `prvcgen invariants · fun s => I s`; `vcgen` then walks the
+handler's body at each query. A loop equation in brackets, such as `prvcgen [replicate_zero]`,
+unfolds the loop for `vcgen`.
 
 **Verification conditions.** The structural reading leaves the postcondition at each possible
 output. The angelic reading leaves `∃ u, wp (rest u) post ⊥` at each draw; name the witness with
@@ -457,7 +462,10 @@ half, and definitions to unfold go to both. Where the split works:
   game hop: `prvcgen` fails and points to `prrw` (see *Program equalities* below), the couplings
   `rvcstep` / `rvcgen`, and the `=ᵈ` lemmas.
 
-**Adding rules for a reading.** State the rule as a triple of that reading, in its namespace, with
+**Adding rules for a reading.** A rule that holds in every `WPMonad` (the transformers'
+constructors, lifts and runners, `List.mapM`, `<*` and `*>`: `Unary/WP/TransformerSpecs.lean`) is
+stated once, in the `Std.WP` namespace, and serves every reading. A rule of one reading is stated
+as a triple of that reading, in its namespace, with
 the precondition built from lattice connectives so that `vcgen` continues through it (gotcha 36):
 `Lean.Order.iInf` for every outcome in the lower-bound reading and the largest outcome in the
 upper-bound reading (whose `iInf` is the supremum in `ℝ≥0∞`), `∀` in the structural reading, and
@@ -645,10 +653,11 @@ The `WriterT`-based handlers read their log as accumulated state: `WriterT.Appen
 
 Core `vcgen` on handler programs:
 
-- Core registers no rule for `StateT.mk`; `triple_stateT_mk` supplies it (`seededOracle`).
+- Core registers no rule for `StateT.mk`; `Std.WP.Spec.mk_StateT` supplies it (`seededOracle`).
 - A query reaches `vcgen` as `MonadLift.monadLift (MonadLiftT.monadLift q)` once `liftM q`
-  unfolds, and `HasQuery.query t` is not unfolded; `Spec.monadLift_query` and `Spec.query` in
-  `Unary/WP/Qualitative.lean` are stated in those forms.
+  unfolds, and `HasQuery.query t` unfolds to `liftM (OracleSpec.query t)` for `vcgen`
+  (`HasQuery.instOfMonadLift_query` is a `@[spec]` unfold rule), so a query inside a transformer
+  stack reaches core's lift rules and then each reading's `Spec.monadLift_query`.
 - A ghost argument that only a non-equational precondition determines is passed explicitly:
   `vcgen [cachingOracle_triple _ cache₀]`. Equational ghosts (`seed = seed₀`) unify.
 - `vcgen … with` takes a single `grind`-mode step.
