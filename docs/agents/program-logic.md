@@ -372,9 +372,10 @@ set distributes `toDual` over arithmetic before it compares the sides, and a ter
 ### `prvcgen`
 
 `prvcgen` (`VCVio.ProgramLogic.Tactics.PrVCGen`, in the `VCVio.ProgramLogic.Tactics` umbrella)
-classifies a statement about the outcomes of one oracle computation, rewrites it with the bridge
-of its reading, and runs core `vcgen` in that reading's per-call scope, with
-`experimental.vcgen` set:
+does what `vcgen` cannot: it classifies a statement about the outcomes of one oracle computation,
+states it as a triple of its reading with the bridge lemmas, runs core `vcgen` in that reading's
+per-call scope with `experimental.vcgen` set, and reads the verification conditions back into
+`ℝ≥0∞`:
 
 | Goal | Reading |
 |------|---------|
@@ -383,21 +384,25 @@ of its reading, and runs core `vcgen` in that reading's per-call scope, with
 | `r ≤ Pr{…}[p]`, `Pr{…}[p] ≥ r` | expectation lower bound |
 | `Pr{…}[p] ≤ ε`, `Pr{…}[p] = 0` | expectation upper bound |
 | `Pr{…}[p] = c` | both bounds, by `le_antisymm` |
-| `⦃ pre ⦄ oa ⦃ post ⦄`, or its unfolded form `pre ⊑ wp oa post epost` | the reading of its assertion type |
-| an angelic or structural `wp oa post ⊥` | continued in its reading |
+| `⦃ pre ⦄ oa ⦃ post ⦄`, or its unfolded form `pre ⊑ wp oa post epost` | the reading of its interpretation |
+| a `Prop`-valued `wp oa post epost` | the reading of its interpretation |
 
 `𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does, and an equation may have the expectation
-on either side. A triple is run in the reading of its assertion type: `ℝ≥0∞` for lower bounds,
-`ℝ≥0∞ᵒᵈ` for upper bounds, and `Prop` for the structural reading, or the angelic one when the
-triple's interpretation is angelic. A state-passing assertion `σ → …` is read by its codomain, so
-triples over `StateT`, `ReaderT`, `WriterT`, `OptionT` and `ExceptT` stacks on `OracleComp spec`,
-the handler specifications among them, run the same way. A comparison `Pr{A}[p] ≤ Pr{B}[q]` is
-read as an upper bound on the left-hand side with the right-hand side as the bound.
+on either side. A triple, an unfolded triple and a `Prop`-valued weakest precondition are shapes
+`vcgen` reads itself, so `prvcgen` only classifies them and hands them over: the reading is read
+off the assertion type and the interpretation behind the `wp`, `ℝ≥0∞` for lower bounds, `ℝ≥0∞ᵒᵈ`
+for upper bounds, and `Prop` for the structural reading, or the angelic one when the
+interpretation's head is the angelic `WPMonad`. A state-passing assertion `σ → …` is read by its
+codomain and a transformer's interpretation by the base monad's, so triples over `StateT`,
+`ReaderT`, `WriterT`, `OptionT` and `ExceptT` stacks on `OracleComp spec`, the handler
+specifications among them, run the same way. A comparison `Pr{A}[p] ≤ Pr{B}[q]` is read as an
+upper bound on the left-hand side with the right-hand side as the bound.
 
-Syntax: `prvcgen (config)? [rules]? (invariants · …)? (with step)? (=> tac)?`. The configuration,
-rules, invariant alternatives and `with` step go to `vcgen`; `prvcgen => tac` runs `tac` in the
-reading's scope in place of `vcgen`, with `vcgen`'s arguments written inside `tac`. The goal's
-metavariables are instantiated first, since `vcgen` matches programs syntactically.
+Syntax: `prvcgen (config)? [rules]? (until t)? (frames …)? (invariants · …)?
+(simplifying_assumptions …)? (with step)? (=> tac)?`: `vcgen`'s arguments, in `vcgen`'s positions,
+passed on unchanged. `prvcgen => tac` runs `tac` in the reading's scope in place of `vcgen`, with
+`vcgen`'s arguments written inside `tac`. `vcgen` instantiates the goal's metavariables itself
+before matching programs.
 
 **Rules and hypotheses.** `vcgen` uses the `@[spec]` rules registered for the program's parts, the
 rules in brackets, and the triples of sub-programs among the hypotheses, each rule in the reading
@@ -437,8 +442,8 @@ condition is stated over with `rename_i`.
 are available: its conditions are the event itself at every possible output, and the structural
 catalogue (including the handler specifications) is the largest; without uniform answers it
 splits. Any other `= c` splits into the upper bound and the lower bound. Both halves receive the
-invariants, the `with` step and the tail; each keeps the rules stated in its reading (read off the
-carrier of the rule's triple), and definitions to unfold go to both. Where the split works:
+invariants, the `with` step and the tail; a rule stated in the other reading does not match its
+half, and definitions to unfold go to both. Where the split works:
 
 - **Settled outright.** Every-outcome rules (`= 0`, `= 1`, an expectation constant on every path),
   and a loop invariant or handler potential that pins the value exactly, written without a carrier

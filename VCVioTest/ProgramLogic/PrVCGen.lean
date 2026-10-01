@@ -212,6 +212,12 @@ end Triples
 
 section StructuralTriple
 
+open scoped OracleComp.Angelic in
+/-- A weakest precondition of the angelic reading is continued in it, as `⊤ ⊑ wp …`. -/
+example : Std.WP.wp ($ᵗ Bool : ProbComp Bool) (fun b => b = true) Lean.Order.bot := by
+  prvcgen
+  exact ⟨true, rfl⟩
+
 /-- A triple with assertions in `Prop`, under the structural reading. -/
 example : ⦃ True ⦄ (do let b ← $ᵗ Bool; pure (b || !b) : ProbComp Bool) ⦃ fun r => r = true ⦄ := by
   prvcgen

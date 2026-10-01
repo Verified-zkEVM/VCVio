@@ -41,9 +41,11 @@ of handlers over `StateT` are run the same way.
 The event forms nest one expectation per draw; the bridges rewrite each nested expectation into
 the reading, so `vcgen` steps through the whole program. The structural and angelic bridges of an
 event need answers of positive mass; `prvcgen` uses their uniform-answer forms
-(`IsUniformMeasureSpec`). A goal that is already a weakest precondition of the angelic or the
-structural reading, such as the `∃ u, wp (rest u) post ⊥` an angelic draw leaves once its witness
-is named, is continued in its reading.
+(`IsUniformMeasureSpec`). The shapes `vcgen` reads itself — a triple, its unfolded form
+`pre ⊑ wp oa post epost`, and a weakest precondition of a `Prop` reading such as the
+`∃ u, wp (rest u) post ⊥` an angelic draw leaves once its witness is named — are only classified,
+by the assertion type and the interpretation of their `wp`, and handed to `vcgen` in that reading's
+scope.
 
 ## Equations
 
@@ -67,15 +69,14 @@ is `simp only [expect_norm, expect_eval]`.
 
 ## Arguments
 
-`prvcgen (config) [rules] invariants … with step` passes its configuration, rules, invariant
-alternatives and `with` step to `vcgen`; `prvcgen (errorOnMissingSpec := false)` leaves a program
-without a rule, such as an opaque sub-program, as a verification condition stating its weakest
-precondition. The goal's metavariables are substituted first, since `vcgen` matches programs
-syntactically. On an equation both halves receive the invariants and the `with` step, and each keeps
-the rules whose triples are stated in its reading, read off the assertion type of the rule's
-conclusion; definitions to unfold go to both. An invariant shared by the two halves is written
-without a carrier ascription, as `fun _ suff c => ↑c + ↑suff.length`, so that each half elaborates
-it in its own carrier. `prvcgen => tac` runs `tac` in place of `vcgen`, on each half of an equation.
+`prvcgen` takes `vcgen`'s arguments and passes them on unchanged:
+`prvcgen (config) [rules] until pat frames … invariants … simplifying_assumptions … with step`.
+`prvcgen (errorOnMissingSpec := false)` leaves a program without a rule, such as an opaque
+sub-program, as a verification condition stating its weakest precondition. On an equation both
+halves receive the same arguments; a rule stated in the other half's reading does not match there.
+An invariant shared by the two halves is written without a carrier ascription, as
+`fun _ suff c => ↑c + ↑suff.length`, so that each half elaborates it in its own carrier.
+`prvcgen => tac` runs `tac` in place of `vcgen`, on each half of an equation.
 
 The verification conditions of the expectation readings are read back into `ℝ≥0∞`
 (`Lean.Order.rel_eq_le`; `OracleComp.Upper.rel_iff`, `ofDual_toDual`,
@@ -145,21 +146,44 @@ inductive Plan where
   upper bound was settled on the range of the observation and only the lower bound remains. -/
   | split (upperClosed : Bool)
 
-/-- The reading of a core triple, read off its assertion type: `ℝ≥0∞ᵒᵈ` for the upper-bound
-reading, `ℝ≥0∞` for the lower-bound reading, and `Prop` for the structural reading, or the angelic
-one when the triple's interpretation is angelic. A state-passing assertion `σ → …` is read by its
-codomain. -/
-def tripleReading? (goal : Expr) : Option Reading :=
-  if !goal.isAppOfArity ``Std.WP.Triple 11 then none else
-  let carrier := (goal.getArg! 0).getForallBody
-  if carrier.isAppOf ``OrderDual then some .upper
-  else if carrier.isConstOf ``ENNReal then some .lower
-  else if carrier.isProp then
-    let angelic := (goal.getArg! 7).find? fun
-      | .const n _ => (`OracleComp.Angelic).isPrefixOf n || n == ``MonadAttach.toWPMonadAngelic
-      | _ => false
-    some (if angelic.isSome then .possible else .necessary)
-  else none
+/-- The interpretation behind a `WP` instance term, by its head constant: the `WPMonad` an
+instance wraps (`instWPOfWPMonad`, `WPMonad.toWP`), the interpretation of the base monad inside a
+transformer's instance, and otherwise the instance seen through reducible and instance
+definitions, until a `MonadAttach` interpretation or an irreducible head. -/
+partial def interpretationHead? (inst : Expr) : MetaM (Option Name) := do
+  let inst := inst.cleanupAnnotations
+  if inst.isAppOfArity ``Std.WP.instWPOfWPMonad 8 then
+    return ← interpretationHead? (inst.getArg! 7)
+  if inst.isAppOfArity ``Std.WP.WPMonad.toWP 8 then
+    return ← interpretationHead? (inst.getArg! 6)
+  let .const n _ := inst.getAppFn | return none
+  if n == ``MonadAttach.toWPMonadAngelic || n == ``MonadAttach.toWPMonadDemonic then
+    return some n
+  for arg in inst.getAppArgs do
+    if (← inferType arg).cleanupAnnotations.isAppOf ``Std.WP.WPMonad then
+      if let some h ← interpretationHead? arg then return some h
+  match ← withReducibleAndInstances (unfoldDefinition? inst) with
+  | some inst' => interpretationHead? inst'
+  | none => return some n
+
+/-- The reading of a triple or an entailment, read off its assertion type: `ℝ≥0∞ᵒᵈ` for the
+upper-bound reading, `ℝ≥0∞` for the lower-bound reading, and `Prop` for the structural reading, or
+the angelic one when the interpretation behind its `wp` is angelic. A state-passing assertion
+`σ → …` is read by its codomain. -/
+def readingOf? (carrier inst : Expr) : MetaM (Option Reading) := do
+  let carrier := carrier.cleanupAnnotations.getForallBody
+  if carrier.isAppOf ``OrderDual then return some .upper
+  if carrier.isConstOf ``ENNReal then return some .lower
+  unless carrier.isProp do return none
+  let angelic := match ← interpretationHead? inst with
+    | some h => h == ``MonadAttach.toWPMonadAngelic || (`OracleComp.Angelic).isPrefixOf h
+    | none => false
+  return some (if angelic then .possible else .necessary)
+
+/-- The reading of a core triple `Triple x pre post epost`. -/
+def tripleReading? (goal : Expr) : MetaM (Option Reading) := do
+  unless goal.isAppOfArity ``Std.WP.Triple 11 do return none
+  readingOf? (goal.getArg! 0) (goal.getArg! 7)
 
 /-- State the structural bridge for `wp⟦oa⟧ g = 1`, rewriting each nested expectation. -/
 def bridgeEqOne : TacticM Unit := do
@@ -173,14 +197,17 @@ partial def bridge (goal : Expr) : TacticM Plan := do
   let goal := goal.cleanupAnnotations
   -- a core triple, run in the reading of its assertion type
   if goal.isAppOf ``Std.WP.Triple then
-    let some reading := tripleReading? goal
+    let some reading ← tripleReading? goal
       | throwError "prvcgen: a triple must have assertions in `Prop`, `ℝ≥0∞` or `ℝ≥0∞ᵒᵈ`, \
           or in functions into them{indentExpr goal}"
     return .single reading
-  -- `pre ⊑ wp oa post epost`, the unfolded form of a triple
+  -- `pre ⊑ wp oa post epost`, the unfolded form of a triple, which `vcgen` reads itself
   if goal.isAppOfArity ``Lean.Order.PartialOrder.rel 4 && isWpApp (goal.getArg! 3) then
-    evalTactic (← `(tactic| refine Std.WP.Triple.iff.1 ?_))
-    return ← bridge (← instantiateMVars (← getMainTarget))
+    let w := (goal.getArg! 3).cleanupAnnotations
+    let some reading ← readingOf? (goal.getArg! 0) (w.getArg! 6)
+      | throwError "prvcgen: an entailment must have assertions in `Prop`, `ℝ≥0∞` or `ℝ≥0∞ᵒᵈ`, \
+          or in functions into them{indentExpr goal}"
+    return .single reading
   -- equations: `= 1`, `= 0`, `= c`, and their symmetric forms
   if let some (_, lhs, rhs) := goal.eq? then
     if isWpApp lhs && isWpApp rhs then
@@ -260,18 +287,13 @@ partial def bridge (goal : Expr) : TacticM Plan := do
       return .single .possible
     catch _ =>
       throwError "prvcgen: an existential must be `∃ x ∈ support oa, p x`"
-  -- a weakest precondition of the angelic or the structural reading
+  -- a weakest precondition of a `Prop` reading, which `vcgen` reads as `⊤ ⊑ wp …`
   if isWpApp goal then
-    try
-      evalTactic (← `(tactic| refine (OracleComp.Angelic.wp_iff_triple _ _).2 ?_))
-      return .single .possible
-    catch _ =>
-    try
-      evalTactic (← `(tactic| refine (OracleComp.Qualitative.wp_iff_triple _ _).2 ?_))
-      return .single .necessary
-    catch _ =>
-      throwError "prvcgen: a weakest-precondition goal must be of the angelic or the \
-        structural reading of an oracle computation"
+    let w := goal.cleanupAnnotations
+    let some reading ← readingOf? (w.getArg! 2) (w.getArg! 6)
+      | throwError "prvcgen: a weakest-precondition goal must be of the angelic or the \
+          structural reading of an oracle computation"
+    return .single reading
   -- `∀ x ∈ support oa, p x`
   if goal.isForall then
     try
@@ -284,39 +306,6 @@ partial def bridge (goal : Expr) : TacticM Plan := do
     expected `Pr\{…}[…] = c`, `0 < Pr\{…}[…]`, `r ≤ Pr\{…}[…]`, `Pr\{…}[…] ≤ ε` (or the same \
     with `𝔼\{…}[…]` or `wp⟦…⟧ …`), `∀ x ∈ support oa, p x`, `∃ x ∈ support oa, p x`, or a \
     triple `⦃ pre ⦄ oa ⦃ post ⦄`"
-
-/-- The reading a rule is stated in, read off the assertion type of the triple it concludes:
-`ℝ≥0∞ᵒᵈ` for the upper-bound reading, `ℝ≥0∞` for the lower-bound reading, `Prop` for the
-structural and angelic readings, and `none` for a rule that is not a triple (a definition to
-unfold, an equation). -/
-def ruleCarrier? (rule : Syntax) : TacticM (Option Name) := withMainContext do
-  unless rule.getKind == ``Lean.Parser.Tactic.simpLemma do return none
-  let saved ← saveState
-  try
-    let e ← Term.withoutErrToSorry <| Term.elabTerm rule[2] none
-    let ty ← instantiateMVars (← inferType e)
-    let res ← forallTelescopeReducing ty fun _ body => do
-      let body := body.cleanupAnnotations
-      unless body.isAppOf ``Std.WP.Triple do return none
-      let mut pred := body.getArg! 0
-      while pred.isForall do pred := pred.bindingBody!
-      if pred.isAppOf ``OrderDual then return some ``OrderDual
-      if pred.isConstOf ``ENNReal then return some ``ENNReal
-      if pred.isProp then return some `Prop
-      return none
-    saved.restore
-    return res
-  catch _ =>
-    saved.restore
-    return none
-
-/-- Whether a rule stated in `carrier` applies to the triples of `reading`. -/
-def Reading.accepts (reading : Reading) : Option Name → Bool
-  | none => true
-  | some c => match reading with
-    | .upper => c == ``OrderDual
-    | .lower => c == ``ENNReal
-    | .necessary | .possible => c == `Prop
 
 /-- Read the verification conditions of the expectation readings back into `ℝ≥0∞`, closing those
 that an indicator's range settles. -/
@@ -338,43 +327,31 @@ statement belongs to: `Pr{…}[p] = 1` and `∀ x ∈ support oa, p x` (structur
 `∃ x ∈ support oa, p x` (angelic), `r ≤ Pr{…}[p]` (expectation lower bound), `Pr{…}[p] ≤ ε` and
 `Pr{…}[p] = 0` (expectation upper bound), and `Pr{…}[p] = c` (both bounds, by antisymmetry), with
 `𝔼{…}[…]` and `wp⟦…⟧ …` in place of `Pr{…}[…]`; a core triple runs in the reading of its
-assertion type. The configuration, rules, invariants and `with` step are passed to `vcgen`;
-`prvcgen => tac` runs `tac` in the reading's scope in place of `vcgen`. See
-`VCVio.ProgramLogic.Tactics.PrVCGen`. -/
+assertion type. `vcgen`'s arguments — configuration, rules, `until`, `frames`, invariants,
+`simplifying_assumptions`, `with` — are passed to it; `prvcgen => tac` runs `tac` in the
+reading's scope in place of `vcgen`. See `VCVio.ProgramLogic.Tactics.PrVCGen`. -/
 syntax (name := prvcgenStx) "prvcgen" Lean.Parser.Tactic.optConfig
   (" [" withoutPosition((Lean.Parser.Tactic.simpStar <|> Lean.Parser.Tactic.simpErase <|>
     Lean.Parser.Tactic.simpLemma),*,?) "] ")?
+  (&" until " term)?
+  (&" frames " withPosition((colGe Lean.Parser.Tactic.frameAlt)+))?
   (Lean.Parser.Tactic.invariantAlts)?
+  (&" simplifying_assumptions" (ppSpace colGt ident)? (" [" ident,* "]")?)?
   (&" with " vcgenDischarge)?
   (" => " tacticSeq)? : tactic
 
 namespace OracleComp.ProgramLogic.PrVCGen
 
-/-- Run `vcgen`, or the user's tactic, on the main goal inside the scope of `reading`, then
-normalize the verification conditions. `filter` keeps only the rules stated in the reading. -/
-def runReading (reading : Reading) (config : Syntax) (rules : Array Syntax)
-    (invs? : Option (TSyntax ``Lean.Parser.Tactic.invariantAlts))
-    (with? : Option (TSyntax `vcgenDischarge))
-    (tac? : Option (TSyntax ``Lean.Parser.Tactic.tacticSeq)) (filter : Bool) :
-    TacticM Unit := focus do
-  -- `vcgen` matches programs syntactically, so assigned metavariables must be substituted
-  let g ← getMainGoal
-  replaceMainGoal [← g.replaceTargetDefEq (← instantiateMVars (← g.getType))]
+/-- Run `vcgen` with `prvcgen`'s arguments, or the user's tactic, on the main goal inside the
+scope of `reading`, then normalize the verification conditions. -/
+def runReading (reading : Reading) (stx : Syntax)
+    (tac? : Option (TSyntax ``Lean.Parser.Tactic.tacticSeq)) : TacticM Unit := focus do
   let tail : TSyntax ``Lean.Parser.Tactic.tacticSeq ← match tac? with
     | some tac => pure tac
-    | none => do
-      let rules ← if filter then rules.filterM fun r => return reading.accepts (← ruleCarrier? r)
-        else pure rules
-      -- `vcgen`'s arguments by position: configuration at 1, `[rules]` at 2, `invariants` at 5,
-      -- `with` at 7
-      let base ← `(tactic| vcgen)
-      unless base.raw.getKind == ``Lean.Parser.Tactic.vcgen && base.raw.getNumArgs == 8 do
-        throwError "prvcgen: unexpected shape of `vcgen` syntax"
-      let mut t := base.raw.setArg 1 config
-      unless rules.isEmpty do
-        t := t.setArg 2 (mkNullNode #[mkAtom "[", Syntax.mkSep rules (mkAtom ","), mkAtom "]"])
-      if let some invs := invs? then t := t.setArg 5 (mkNullNode #[invs])
-      if let some w := with? then t := t.setArg 7 (mkNullNode #[mkAtom "with", w])
+    | none =>
+      -- `prvcgen` takes `vcgen`'s arguments in `vcgen`'s positions
+      let t := mkNode ``Lean.Parser.Tactic.vcgen
+        #[mkAtom "vcgen", stx[1], stx[2], stx[3], stx[4], stx[5], stx[6], stx[7]]
       `(tacticSeq| $(⟨t⟩):tactic)
   let scope := mkIdent reading.scope
   evalTactic (← `(tactic|
@@ -383,20 +360,13 @@ def runReading (reading : Reading) (config : Syntax) (rules : Array Syntax)
 
 @[tactic prvcgenStx, inherit_doc prvcgenStx]
 def evalPrvcgen : Tactic := fun stx => focus do
-  let config := stx[1]
-  let rules := if stx[2].getNumArgs > 0 then stx[2][1].getSepArgs else #[]
-  let invs? : Option (TSyntax ``Lean.Parser.Tactic.invariantAlts) :=
-    if stx[3].getNumArgs > 0 then some ⟨stx[3][0]⟩ else none
-  let with? : Option (TSyntax `vcgenDischarge) :=
-    if stx[4].getNumArgs > 0 then some ⟨stx[4][1]⟩ else none
   let tac? : Option (TSyntax ``Lean.Parser.Tactic.tacticSeq) :=
-    if stx[5].getNumArgs > 0 then some ⟨stx[5][1]⟩ else none
+    if stx[8].getNumArgs > 0 then some ⟨stx[8][1]⟩ else none
   if tac?.isSome &&
-      (config[0].getNumArgs > 0 || !rules.isEmpty || invs?.isSome || with?.isSome) then
-    throwError "prvcgen: pass the configuration, rules, invariants and `with` to `vcgen` inside \
-      the `=>` tactic"
+      (stx[1][0].getNumArgs > 0 || (List.range 6).any fun i => stx[2 + i].getNumArgs > 0) then
+    throwError "prvcgen: pass `vcgen`'s arguments to `vcgen` inside the `=>` tactic"
   match ← bridge (← instantiateMVars (← getMainTarget)) with
-  | .single reading => runReading reading config rules invs? with? tac? false
+  | .single reading => runReading reading stx tac?
   | .split upperClosed =>
     let goals ← getGoals
     let readings := if upperClosed then [Reading.lower] else [Reading.upper, Reading.lower]
@@ -406,7 +376,7 @@ def evalPrvcgen : Tactic := fun stx => focus do
       match ← bridge (← instantiateMVars (← goal.getType)) with
       | .single r =>
         unless r == reading do throwError "prvcgen: unexpected reading for a bound"
-        runReading r config rules invs? with? tac? true
+        runReading r stx tac?
       | .split _ => throwError "prvcgen: unexpected split of a bound"
       remaining := remaining ++ (← getGoals)
     setGoals remaining.toList
