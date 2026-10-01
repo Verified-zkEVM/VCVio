@@ -12,7 +12,7 @@ public import VCVio.ProgramLogic.Relational.SimulateQ.UntilBad
 /-!
 # Total variation between `withProgramming` and `withCaching`
 
-The headline theorem `measureETVDist_simulateQ_withCaching_withProgramming_le_prEvent_bad` bounds
+The headline theorem `etvDist_simulateQ_withCaching_withProgramming_le_prEvent_bad` bounds
 the total variation distance between the output measure of `withCaching` and the output measure
 of `withProgramming policy` by the probability that the bad flag of `withProgramming policy` ever
 fires (i.e., the adversary queries a point on which `policy` is defined).
@@ -23,7 +23,7 @@ The proof factors through the auxiliary `withCachingTrackingPolicy` (defined alo
 * On every step from a good input `(cache, false)`, the two implementations give every event the
   same probability on good outputs. On policy-firing steps, both produce only bad outputs (with
   possibly different `(value, cache)` components). This is the agreement consumed by
-  `measureETVDist_simulateQ_run_le_prEvent_bad`.
+  `etvDist_simulateQ_run_le_prEvent_bad`.
 * `withCachingTrackingPolicy_run'_eq'` projects `withCachingTrackingPolicy` to `withCaching`
   on the output marginal, eliminating the auxiliary implementation from the user-facing
   statement.
@@ -133,14 +133,13 @@ private lemma prEvent_withProgramming_and_not_bad_eq
 tracking partner `withCachingTrackingPolicy policy`. The conclusion keeps the final
 `(cache, bad)` state, so a state-dependent continuation (e.g. GPV `verify` reading the run's
 cache) can be appended on both sides. -/
-theorem measureETVDist_withProgramming_withCachingTrackingPolicy_run_le_prEvent_bad
-    [MeasurableSpace (α × spec.QueryCache × Bool)]
+theorem etvDist_withProgramming_withCachingTrackingPolicy_run_le_prEvent_bad
     (so : QueryImpl spec (OracleComp spec')) (policy : ProgrammingPolicy spec)
     (oa : OracleComp spec α) (cache : spec.QueryCache) :
-    measureETVDist ((simulateQ (so.withProgramming policy) oa).run (cache, false))
+    etvDist ((simulateQ (so.withProgramming policy) oa).run (cache, false))
         ((simulateQ (so.withCachingTrackingPolicy policy) oa).run (cache, false)) ≤
       Pr{let z ← (simulateQ (so.withProgramming policy) oa).run (cache, false)}[z.2.2 = true] :=
-  measureETVDist_simulateQ_run_le_prEvent_bad _ _ (fun s => s.2 = true)
+  etvDist_simulateQ_run_le_prEvent_bad _ _ (fun s => s.2 = true)
     (prEvent_withProgramming_and_not_bad_eq so policy) (withProgramming_mono_pair so policy)
     (withCachingTrackingPolicy_mono_pair so policy) oa (cache, false)
 
@@ -152,14 +151,14 @@ This is the user-facing "identical until bad" bound: programming an oracle is in
 from the unprogrammed oracle until the adversary queries a programmed point. The bound controls
 the answer measure under the unprogrammed oracle by the bad-event probability under the
 programmed oracle. -/
-theorem measureETVDist_simulateQ_withCaching_withProgramming_le_prEvent_bad [MeasurableSpace α]
+theorem etvDist_simulateQ_withCaching_withProgramming_le_prEvent_bad
     (so : QueryImpl spec (OracleComp spec')) (policy : ProgrammingPolicy spec)
     (oa : OracleComp spec α) (cache : spec.QueryCache) :
-    measureETVDist ((simulateQ so.withCaching oa).run' cache)
+    etvDist ((simulateQ so.withCaching oa).run' cache)
         ((simulateQ (so.withProgramming policy) oa).run' (cache, false)) ≤
       Pr{let z ← (simulateQ (so.withProgramming policy) oa).run (cache, false)}[z.2.2 = true] := by
-  rw [← withCachingTrackingPolicy_run'_eq' so policy oa cache false, measureETVDist_comm]
-  exact measureETVDist_simulateQ_run'_le_prEvent_bad _ _ (fun s => s.2 = true)
+  rw [← withCachingTrackingPolicy_run'_eq' so policy oa cache false, etvDist_comm]
+  exact etvDist_simulateQ_run'_le_prEvent_bad _ _ (fun s => s.2 = true)
     (prEvent_withProgramming_and_not_bad_eq so policy) (withProgramming_mono_pair so policy)
     (withCachingTrackingPolicy_mono_pair so policy) oa (cache, false)
 
@@ -185,25 +184,25 @@ The canonical `qP * qH * β` Fiat-Shamir slack is recovered by instantiating
 via a union bound over the at most `qP` programmed points (each contributing at most `qH * β`
 by per-step unpredictability of the queried inputs). For Schnorr with `spec.Domain = M × Commit`,
 `β = 1/|G|`, `qP = qS`, and effective `qH = qS + qH`, this matches `collisionSlack qS qH G`. -/
-theorem programming_collision_bound [MeasurableSpace α]
+theorem programming_collision_bound
     (oa : OracleComp spec α)
     (so : QueryImpl spec (OracleComp spec'))
     (policy : ProgrammingPolicy spec)
     {B : ℝ≥0∞} (hBad : withProgrammingBadProb so policy oa ≤ B) :
-    measureETVDist ((simulateQ so.withCaching oa).run' ∅)
+    etvDist ((simulateQ so.withCaching oa).run' ∅)
         ((simulateQ (so.withProgramming policy) oa).run' (∅, false)) ≤ B :=
-  (measureETVDist_simulateQ_withCaching_withProgramming_le_prEvent_bad so policy oa ∅).trans hBad
+  (etvDist_simulateQ_withCaching_withProgramming_le_prEvent_bad so policy oa ∅).trans hBad
 
 /-- Convenience repackaging of `programming_collision_bound`: a bad-event bound of the canonical
 `qP * qH * β` shape bounds the total variation by the canonical Fiat-Shamir slack. The caller
 need only discharge `hBad` (typically by a union bound over at most `qP` programmed points, each
 hit with probability `≤ qH * β`). -/
-theorem programming_collision_bound_qP_qH_β [MeasurableSpace α]
+theorem programming_collision_bound_qP_qH_β
     (oa : OracleComp spec α) (qH qP : ℕ) (β : ℝ≥0∞)
     (so : QueryImpl spec (OracleComp spec'))
     (policy : ProgrammingPolicy spec)
     (hBad : withProgrammingBadProb so policy oa ≤ (qP : ℝ≥0∞) * qH * β) :
-    measureETVDist ((simulateQ so.withCaching oa).run' ∅)
+    etvDist ((simulateQ so.withCaching oa).run' ∅)
         ((simulateQ (so.withProgramming policy) oa).run' (∅, false)) ≤
       (qP : ℝ≥0∞) * qH * β :=
   programming_collision_bound oa so policy hBad
@@ -224,15 +223,15 @@ For a lazy random oracle over a spec with sampleable ranges, the total variation
 output measure of the unprogrammed run (`simulateQ spec.randomOracle oa`, started from `cache`)
 and the programmed run (`simulateQ (uniformSampleImpl.withProgramming policy) oa`, started from
 `(cache, false)`) is bounded by the probability that the programming bad flag fires. -/
-theorem measureETVDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad
-    [∀ t : spec.Domain, SampleableType (spec.Range t)] [MeasurableSpace α]
+theorem etvDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad
+    [∀ t : spec.Domain, SampleableType (spec.Range t)]
     (policy : OracleSpec.ProgrammingPolicy spec)
     (oa : OracleComp spec α) (cache : spec.QueryCache) :
-    measureETVDist ((simulateQ spec.randomOracle oa).run' cache)
+    etvDist ((simulateQ spec.randomOracle oa).run' cache)
         ((simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) oa).run' (cache, false)) ≤
       Pr{let z ← (simulateQ (QueryImpl.withProgramming uniformSampleImpl policy) oa).run
           (cache, false)}[z.2.2 = true] :=
-  measureETVDist_simulateQ_withCaching_withProgramming_le_prEvent_bad
+  etvDist_simulateQ_withCaching_withProgramming_le_prEvent_bad
     (spec' := unifSpec) uniformSampleImpl policy oa cache
 
 end OracleComp.ProgramLogic.Relational

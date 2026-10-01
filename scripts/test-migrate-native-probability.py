@@ -181,6 +181,20 @@ class NameTests(unittest.TestCase):
         out, _ = migrate("h : GameEquiv g₁ g₂\nh' : g₁ ≡ₚ g₂\nexact GameEquiv.symm h")
         self.assertEqual(out, "h : EvalDistEq g₁ g₂\nh' : g₁ =ᵈ g₂\nexact EvalDistEq.symm h")
 
+    def test_total_variation(self):
+        # The real-valued algebra keeps its names; the bounds are stated on `etvDist`.
+        out, items = migrate(
+            "exact (tvDist_simulateQ_le_probEvent_bad h).trans (tvDist_le_one _ _)\n"
+            "exact AdvBound.of_measureETVDist hb "
+            "(measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq i j)\n")
+        self.assertEqual(out,
+            "exact (etvDist_simulateQ_run'_le_prEvent_bad h).trans (tvDist_le_one _ _)\n"
+            "exact AdvBound.of_etvDist hb (etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq i j)\n")
+        self.assertEqual(items, [])
+        _, items = migrate("exact tvDist_bind_left_le mx f g")
+        self.assertEqual(len(items), 1)
+        self.assertIn("etvDist_bind_left_le_tsum", items[0][2])
+
     def test_legacy_names_are_reported_with_hints(self):
         _, items = migrate("theorem t : True := by\n  rw [probOutput_bind_eq_tsum]\n  exact h")
         self.assertEqual(len(items), 1)

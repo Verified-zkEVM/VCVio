@@ -7,8 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.PRF
 public import VCVio.CryptoFoundations.PRG
-public import VCVio.EvalDist.MeasureTVDist.Bind
-public import VCVio.EvalDist.MeasureTVDist.Event
+public import VCVio.EvalDist.EvalDistTV
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.Structures
@@ -87,12 +86,12 @@ the structure it needs on `S` and `O`. -/
 /-- The reference uniform output vector of length `N + 1`, written as a bind over a uniformly
 sampled pair `p : S × O` whose first coordinate is discarded and whose second coordinate is the
 prepended head block. This is the shared-base form used for the identical-until-bad coupling. -/
-private lemma evalDist_uniformSample_vector_succ_pair [SampleableType S] [SampleableType O]
+private lemma evalDistEq_uniformSample_vector_succ_pair [SampleableType S] [SampleableType O]
     (N : ℕ) :
-    (letI : MeasurableSpace (List.Vector O (N + 1)) := ⊤;
-      𝒟[($ᵗ (List.Vector O (N + 1)))] =
-        𝒟[(do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N)))]) := by
+    ($ᵗ (List.Vector O (N + 1)) : ProbComp _) =ᵈ
+      (do let p ← $ᵗ (S × O); (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N))) := by
   let : MeasurableSpace (List.Vector O (N + 1)) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
   rw [(SampleableType.evalDistEq_uniformSample_vector_succ N).evalDist_eq,
     SampleableType.uniformSample_prod_eq_bind]
   simp only [bind_assoc, pure_bind, map_eq_bind_pure_comp, Function.comp_def]
@@ -429,24 +428,21 @@ uniformly random output vector is bounded by the generalized collision probabili
 induction on the number of rounds: a fresh query produces an independent uniform block and the
 cache grows by exactly the just-visited state, so the collision recursion closes; a repeated
 query has already triggered the bad event, where the bound is trivially `1`. -/
-lemma measureETVDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
+lemma etvDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
     (c : (S →ₒ S × O).QueryCache) :
-    (letI : MeasurableSpace (List.Vector O N) := ⊤;
-      measureETVDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
-          (oracleOutputs N s)).run' c) ($ᵗ (List.Vector O N))) ≤
+    etvDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
+        (oracleOutputs N s)).run' c) ($ᵗ (List.Vector O N)) ≤
       𝒟[genCollisionExperiment N s c] {true} := by
   have : Fintype O := Fintype.ofFinite O
   induction N generalizing s c with
   | zero =>
     let : MeasurableSpace (List.Vector O 0) := ⊤
-    refine le_of_eq_of_le ((measureETVDist_eq_zero_iff _ _).2 ?_) zero_le
+    refine le_of_eq_of_le ((etvDist_eq_zero_iff _ _).2 (EvalDistEq.of_evalDist_eq ?_)) zero_le
     simp only [oracleOutputs, simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure]
     refine Measure.ext_of_singleton fun y => ?_
     rw [List.Vector.eq_nil y, SampleableType.evalDist_uniformSample_singleton]
     simp [card_vector]
   | succ N ih =>
-    let : MeasurableSpace (List.Vector O N) := ⊤
-    let : MeasurableSpace (List.Vector O (N + 1)) := ⊤
     let : MeasurableSpace (S × O) := ⊤
     cases hc : c.isCached s with
     | false =>
@@ -464,44 +460,41 @@ lemma measureETVDist_seedOutputs_le_collision_gen (N : ℕ) (s : S)
         rw [simulateQ_oracleOutputs_succ_run', randomOracle_run_of_none s c hcnone, bind_map_left]
         simp only [map_eq_bind_pure_comp, bind_pure_comp]
       -- Rewrite the goal as a distance between two binds over the shared pair `p : S × O`.
-      calc measureETVDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
+      calc etvDist ((simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
               (oracleOutputs (N + 1) s)).run' c) ($ᵗ (List.Vector O (N + 1)))
-          = measureETVDist
+          = etvDist
               (($ᵗ (S × O)) >>= fun p =>
                 (fun v => p.2 ::ᵥ v) <$> (simulateQ (prfIdealQueryImpl (D := S) (R := S × O))
                   (oracleOutputs N p.1)).run' (c.cacheQuery s p))
               (($ᵗ (S × O)) >>= fun p => (fun v => p.2 ::ᵥ v) <$> ($ᵗ (List.Vector O N))) := by
-            rw [hLHS]
-            simp only [measureETVDist, evalDist_uniformSample_vector_succ_pair (S := S) N]
+            rw [hLHS, (evalDistEq_uniformSample_vector_succ_pair (S := S) N).etvDist_congr_right]
         -- Bound each per-pair distance by the per-pair generalized collision probability.
-        _ ≤ ∫⁻ p, 𝒟[genCollisionExperiment N p.1 (c.cacheQuery s p)] {true} ∂𝒟[$ᵗ (S × O)] :=
-            measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete
-              Measurable.of_discrete _ (Filter.Eventually.of_forall fun p =>
-                (measureETVDist_map_le _ _ (fun v => p.2 ::ᵥ v) Measurable.of_discrete).trans
-                  (ih p.1 (c.cacheQuery s p)))
+        _ ≤ wp⟦$ᵗ (S × O)⟧ fun p => 𝒟[genCollisionExperiment N p.1 (c.cacheQuery s p)] {true} :=
+            etvDist_bind_bind_le_wp _ _ _ _ fun p =>
+              (etvDist_map_le _ _ (fun v => p.2 ::ᵥ v)).trans (ih p.1 (c.cacheQuery s p))
         _ = 𝒟[genCollisionExperiment (N + 1) s c] {true} := by
-            rw [genCollisionExperiment_succ_of_none N s c hcnone, evalDist_bind_apply_true]
+            rw [genCollisionExperiment_succ_of_none N s c hcnone, evalDist_bind_apply_true,
+              ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
     | true =>
       -- Cache hit: the bad event already fired, so the bound is trivially `1`.
       rw [evalDist_genCollisionExperiment_succ_of_isCached N s c hc]
-      exact measureETVDist_le_one _ _
+      exact etvDist_le_one _ _
 
 /-- **Per-seed core coupling.** For a fixed initial state, the total variation distance between
 the lazy-random-oracle output chain and a uniformly random output vector is bounded by the
 probability that the state chain revisits a state. This is the fundamental "identical until
 bad" step: until the chain repeats, the lazy random oracle returns independent uniform blocks.
 
-The empty-cache specialization of `measureETVDist_seedOutputs_le_collision_gen`. -/
-lemma measureETVDist_seedOutputs_le_collision (seed : S) :
-    (letI : MeasurableSpace (List.Vector O n) := ⊤;
-      measureETVDist (seedOutputs n seed) ($ᵗ (List.Vector O n))) ≤
+The empty-cache specialization of `etvDist_seedOutputs_le_collision_gen`. -/
+lemma etvDist_seedOutputs_le_collision (seed : S) :
+    etvDist (seedOutputs n seed) ($ᵗ (List.Vector O n)) ≤
       𝒟[seedCollisionExperiment (O := O) n seed] {true} := by
   have heq :
       genCollisionExperiment (O := O) n seed ∅ = seedCollisionExperiment (O := O) n seed := by
     unfold genCollisionExperiment seedCollisionExperiment
     refine bind_congr fun states => ?_
     simp [QueryCache.isCached_empty]
-  have h := measureETVDist_seedOutputs_le_collision_gen (O := O) n seed ∅
+  have h := etvDist_seedOutputs_le_collision_gen (O := O) n seed ∅
   rw [heq] at h
   exact h
 
@@ -510,22 +503,21 @@ chain and a uniformly random output vector is bounded by the state-collision pro
 This is the fundamental "identical until bad" step: until the state chain repeats, the lazy
 random oracle returns independent uniform blocks, matching the ideal PRG distribution.
 
-Obtained by averaging the per-seed bound `measureETVDist_seedOutputs_le_collision` over the
+Obtained by averaging the per-seed bound `etvDist_seedOutputs_le_collision` over the
 uniform initial state. -/
-lemma measureETVDist_idealOutputs_le_collisionProb :
-    (letI : MeasurableSpace (List.Vector O n) := ⊤;
-      measureETVDist (idealOutputs (S := S) (O := O) n) ($ᵗ (List.Vector O n))) ≤
+lemma etvDist_idealOutputs_le_collisionProb :
+    etvDist (idealOutputs (S := S) (O := O) n) ($ᵗ (List.Vector O n)) ≤
       collisionProb (S := S) (O := O) n := by
   let : MeasurableSpace (List.Vector O n) := ⊤
   let : MeasurableSpace S := ⊤
   rw [collisionProb, idealCollisionExperiment_eq_bind, idealOutputs_eq_bind,
-    evalDist_bind_apply_true]
-  calc measureETVDist (($ᵗ S) >>= seedOutputs n) ($ᵗ (List.Vector O n))
-      = measureETVDist (($ᵗ S) >>= seedOutputs n) (($ᵗ S) >>= fun _ => $ᵗ (List.Vector O n)) := by
-        simp only [measureETVDist, OracleComp.evalDist_bind_const]
-    _ ≤ ∫⁻ seed, 𝒟[seedCollisionExperiment (O := O) n seed] {true} ∂𝒟[$ᵗ S] :=
-        measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete Measurable.of_discrete _
-          (Filter.Eventually.of_forall fun seed => measureETVDist_seedOutputs_le_collision seed)
+    evalDist_bind_apply_true, ← ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
+  calc etvDist (($ᵗ S) >>= seedOutputs n) ($ᵗ (List.Vector O n))
+      = etvDist (($ᵗ S) >>= seedOutputs n) (($ᵗ S) >>= fun _ => $ᵗ (List.Vector O n)) := by
+        rw [(EvalDistEq.of_evalDist_eq
+          (OracleComp.evalDist_bind_const _ _).symm).etvDist_congr_right]
+    _ ≤ wp⟦$ᵗ S⟧ fun seed => 𝒟[seedCollisionExperiment (O := O) n seed] {true} :=
+        etvDist_bind_bind_le_wp _ _ _ _ fun seed => etvDist_seedOutputs_le_collision seed
 
 /-- The gap between the ideal PRF and ideal PRG experiments is bounded by the
 collision probability. This follows from the fundamental lemma of game playing:
@@ -539,7 +531,7 @@ comes from the probability that the state chain revisits some state.
 3. In the ideal PRG world, the inputs are i.i.d. uniform.
 4. Conditioned on no state collision, the random-oracle chain produces
    independent uniform outputs, so the two input distributions coincide.
-5. By the "identical until bad" coupling (`measureETVDist_idealOutputs_le_collisionProb`),
+5. By the "identical until bad" coupling (`etvDist_idealOutputs_le_collisionProb`),
    the total variation between the two input distributions is at most the collision
    probability.
 6. By the data-processing inequality, running `adv` cannot increase the gap. -/
@@ -547,14 +539,13 @@ theorem prfIdealGap_le_collisionProb (adv : PRGAdversary (List.Vector O n)) :
     𝒟[PRFScheme.prfIdealExperiment (prfReduction (S := S) (O := O) n adv)].boolDist
         𝒟[PRGScheme.prgIdealExperiment adv] ≤
       collisionProb (S := S) (O := O) n := by
-  let : MeasurableSpace (List.Vector O n) := ⊤
   rw [prfIdealExperiment_prfReduction_eq adv, prgIdealExperiment_eq_bind adv]
   calc 𝒟[idealOutputs n >>= adv].boolDist 𝒟[($ᵗ (List.Vector O n)) >>= adv]
-      ≤ measureETVDist (idealOutputs n >>= adv) (($ᵗ (List.Vector O n)) >>= adv) :=
-        Measure.absDiff_apply_le_etvDist _ _ (measurableSet_singleton true)
-    _ ≤ measureETVDist (idealOutputs n) ($ᵗ (List.Vector O n)) :=
-        measureETVDist_bind_le _ _ _ Measurable.of_discrete
-    _ ≤ collisionProb (S := S) (O := O) n := measureETVDist_idealOutputs_le_collisionProb
+      ≤ etvDist (idealOutputs n >>= adv) (($ᵗ (List.Vector O n)) >>= adv) :=
+        (Measure.absDiff_apply_le_etvDist _ _ (measurableSet_singleton true)).trans
+          (evalDist_etvDist_le_etvDist _ _)
+    _ ≤ etvDist (idealOutputs n) ($ᵗ (List.Vector O n)) := etvDist_bind_le _ _ _
+    _ ≤ collisionProb (S := S) (O := O) n := etvDist_idealOutputs_le_collisionProb
 
 /-- Security of the stream PRG obtained from a PRF: PRG distinguishing advantage is
 bounded by the PRF advantage of the reduction plus the collision probability in the

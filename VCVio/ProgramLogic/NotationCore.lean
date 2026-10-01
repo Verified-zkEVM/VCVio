@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Unary.HoareTriple
-public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.EvalDistTV
 public import VCVio.ProgramLogic.Relational.Basic
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import ToMathlib.Control.Monad.RelWP
@@ -167,8 +167,8 @@ theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
 /-! ## Bridge lemmas: advantage -/
 
 /-- Advantage bound via total variation distance. -/
-theorem AdvBound.of_measureETVDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ≥0∞}
-    (hbound : AdvBound game₁ ε₁) (htv : measureETVDist game₁ game₂ ≤ ε₂) :
+theorem AdvBound.of_etvDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ ε₂ : ℝ≥0∞}
+    (hbound : AdvBound game₁ ε₁) (htv : etvDist game₁ game₂ ≤ ε₂) :
     AdvBound game₂ (ε₁ + ε₂) := by
   unfold AdvBound at *
   calc ENNReal.absDiff (𝒟[game₂] {true}) (1 / 2)
@@ -176,9 +176,8 @@ theorem AdvBound.of_measureETVDist {game₁ game₂ : OracleComp spec₁ Bool} {
           ENNReal.absDiff (𝒟[game₁] {true}) (1 / 2) := ENNReal.absDiff_triangle _ _ _
     _ ≤ ε₂ + ε₁ := by
       refine add_le_add ?_ hbound
-      rw [ENNReal.absDiff_comm]
-      exact (measure_absDiff_apply_le_measureETVDist game₁ game₂
-        (measurableSet_singleton true)).trans htv
+      rw [ENNReal.absDiff_comm, ← prEvent_eq_evalDist_singleton, ← prEvent_eq_evalDist_singleton]
+      exact (absDiff_prEvent_le_etvDist game₁ game₂ _).trans htv
     _ = ε₁ + ε₂ := add_comm _ _
 
 /-- Transfer advantage bounds across games equal in distribution. -/

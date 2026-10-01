@@ -578,6 +578,7 @@ theorem idsWithAbort_hvzk [DecidableEq prims.High] [SampleableType (CommitHashBy
   obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp hrel
   let : MeasurableSpace (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := ⊤
   let : MeasurableSpace (CommitHashBytes p × RqVec p.l) := ⊤
+  rw [etvDist_eq_measureETVDist]
   let draw : ProbComp (CommitHashBytes p × RqVec p.l) := do
     let cTilde ← $ᵗ (CommitHashBytes p)
     let z ← $ᵗ (RqVec p.l)

@@ -83,8 +83,8 @@ candidate registrations are experimental.
 |--------|-----------|--------------|
 | `by_equiv` | `g₁ =ᵈ g₂` or `𝒟[g₁] = 𝒟[g₂]` | Enters relational proof mode (`RelTriple`) |
 | `game_trans g₂` | `g₁ =ᵈ g₃` | Splits into `g₁ =ᵈ g₂` and `g₂ =ᵈ g₃` |
-| `by_dist` | `AdvBound game ε` | Splits into a second game's bound and a `measureETVDist` bound |
-| `by_upto bad` | identical-until-bad `measureETVDist` goals | Applies the `simulateQ` up-to-bad bound |
+| `by_dist` | `AdvBound game ε` | Splits into a second game's bound and an `etvDist` bound |
+| `by_upto bad` | identical-until-bad `etvDist` goals | Applies the `simulateQ` up-to-bad bound |
 | `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters quantitative WP reasoning, including conditional branches |
 
 `by_equiv` enters the coupling-based `RelTriple` shell, so that `rvcstep` / `rvcgen` can keep
@@ -799,17 +799,20 @@ quantifier.
 ### Identical Until Bad
 
 ```lean
-measureETVDist_simulateQ_run'_le_prEvent_bad :
+etvDist_simulateQ_run'_le_prEvent_bad :
   (∀ t s, ¬bad s → ∀ q, Pr{let z ← (impl₁ t).run s}[q z ∧ ¬bad z.2] =
     Pr{let z ← (impl₂ t).run s}[q z ∧ ¬bad z.2]) →
   (bad monotone for impl₁ and impl₂) →
-  measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
+  etvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀)
     ≤ Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2]
 ```
 
 The handlers need only agree on good-to-good steps, so they may disagree on the step that sets
-a bad flag; `_of_run_eq` and `_of_evalDistEq` take agreement off bad input states instead. No
-measurable structure is needed on the state.
+a bad flag; `_of_run_eq` and `_of_evalDistEq` take agreement off bad input states instead. The
+distance `etvDist` is keyed on events (`EvalDist/EvalDistTV.lean`), so neither the state nor
+the output needs a measurable structure; the ε-perturbed and state-dependent refinements
+(`…_le_queryBoundP_mul_add_prEvent_bad`, `…_le_expectedQuerySlack_add_prEvent_bad`) take their
+per-step hypotheses as `etvDist` bounds on the handlers' runs from good states.
 
 ### eRHL (quantitative relational logic)
 

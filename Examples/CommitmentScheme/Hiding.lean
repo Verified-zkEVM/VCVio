@@ -14,7 +14,7 @@ public import Examples.CommitmentScheme.Hiding.Main
 # Hiding security for the random-oracle commitment scheme
 
 Re-exports the four submodules that together prove the textbook
-hiding bound `measureETVDist real sim ≤ t / |S|` (averaged over the salt
+hiding bound `etvDist real sim ≤ t / |S|` (averaged over the salt
 `s ← $ᵗ S`) for the ROM commitment scheme `Commit(m) = (H(m, s), s)`.
 
 The main result is `hiding_bound_finite` in `Hiding.Main`.

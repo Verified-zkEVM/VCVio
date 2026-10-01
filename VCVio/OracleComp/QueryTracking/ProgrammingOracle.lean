@@ -46,7 +46,7 @@ normally and the (fresh) value is cached. Its purpose is to be the relational br
 `withCaching` (cache-side projection) and `withProgramming` (the "identical-until-bad" partner
 of `withProgramming`); see `OracleComp.ProgramLogic.Relational.ProgrammingOracle` for the
 actual total variation bound
-(`measureETVDist_simulateQ_withCaching_withProgramming_le_prEvent_bad`)
+(`etvDist_simulateQ_withCaching_withProgramming_le_prEvent_bad`)
 and its `programming_collision_bound{,_qP_qH_β}` repackagings.
 -/
 

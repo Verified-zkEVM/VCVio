@@ -164,6 +164,26 @@ theorem prEvent_bind_bind_and {β : Type} (mx : OptionT m α) (my : OptionT m β
   simp only [← wp_ofMeasure_eq]
   exact _root_.prEvent_bind_bind_and mx my p q
 
+/-- An event is at most as likely as a weaker one. -/
+theorem prEvent_mono (mx : OptionT m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
+  simp only [← wp_ofMeasure_eq]
+  exact _root_.prEvent_mono mx p q hpq
+
+/-- No event has probability above one. -/
+theorem prEvent_le_one (mx : OptionT m α) (p : α → Prop) : Pr{let x ← mx}[p x] ≤ 1 := by
+  rw [← wp_ofMeasure_eq]
+  exact _root_.prEvent_le_one _
+
+/-- An event after a continuation is at most the probability of a prefix event plus a bound on
+the continuation's event outside of it. -/
+theorem prEvent_bind_le_prEvent_add_mul_prEvent_not {β : Type} (mx : OptionT m α)
+    (f : α → OptionT m β) (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
+    (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
+  simp only [← wp_ofMeasure_eq] at h ⊢
+  exact _root_.prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q h
+
 /-- A lifted draw followed by a guard puts its successful event mass at the unit output. -/
 @[simp↓ high]
 theorem evalDist_lift_bind_guard (mx : m α) (p : α → Prop) [DecidablePred p] :
@@ -235,9 +255,18 @@ theorem prEvent_mk_bind_eq_one_of_support (mx : m α) (hmx : Pr{let _ ← mx}[Tr
     (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[p y] = 1) :
     Pr{let y ← OptionT.mk (mx >>= f)}[p y] = 1 := by
   rw [prEvent_mk, prEvent_bind]
-  refine le_antisymm (wp_le_of_forall_le _ fun _ ↦ prEvent_le_one _) ?_
+  refine le_antisymm (wp_le_of_forall_le _ fun _ ↦ _root_.prEvent_le_one _) ?_
   exact le_prEvent_bind_of_forall_le_of_support mx hmx _ _ fun a ha ↦
     ((prEvent_mk (f a) p).symm.trans (h a ha)).ge
+
+/-- An event after a continuation is at most as likely as a prefix event outside of which, on
+the reachable prefix outputs, the continuation never satisfies it. -/
+theorem prEvent_bind_le_prEvent_of_support {β : Type} (mx : OptionT m α) (f : α → OptionT m β)
+    (p : α → Prop) (q : β → Prop)
+    (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] = 0) :
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] := by
+  simp only [← wp_ofMeasure_eq] at h ⊢
+  exact _root_.prEvent_bind_le_prEvent_of_support mx f p q h
 
 /-- An upper bound on the wrapped continuation event over reachable prefixes. -/
 theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (q : β → Prop)

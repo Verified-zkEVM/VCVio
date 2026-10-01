@@ -347,10 +347,10 @@ syntax "by_dist" (term)? : tactic
 macro_rules
   | `(tactic| by_dist) =>
     `(tactic|
-      apply OracleComp.ProgramLogic.AdvBound.of_measureETVDist)
+      apply OracleComp.ProgramLogic.AdvBound.of_etvDist)
   | `(tactic| by_dist $eps) =>
     `(tactic|
-      (apply OracleComp.ProgramLogic.AdvBound.of_measureETVDist (ε₂ := $eps)))
+      (apply OracleComp.ProgramLogic.AdvBound.of_etvDist (ε₂ := $eps)))
 
 /-- `by_upto bad` applies the "identical until bad" total-variation theorem for `simulateQ`.
 It leaves the standard three subgoals: agreement off bad states, and bad-state monotonicity for
@@ -363,7 +363,7 @@ elab_rules : tactic
         return
       let target ← instantiateMVars (← getMainTarget)
       throwError
-        "by_upto: expected a `measureETVDist` goal for two `simulateQ ... run'` computations\n\
+        "by_upto: expected an `etvDist` goal for two `simulateQ ... run'` computations\n\
         bounded by\n\
         the probability of a bad event on the left simulation;\n\
         got:{indentExpr target}"

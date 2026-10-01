@@ -168,6 +168,7 @@ public import VCVio.EvalDist.Defs.Support
 public import VCVio.EvalDist.Defs.Support.Failure
 public import VCVio.EvalDist.Divergence.KLDivergence
 public import VCVio.EvalDist.EvalDistEq
+public import VCVio.EvalDist.EvalDistTV
 public import VCVio.EvalDist.Expectation
 public import VCVio.EvalDist.IndepProduct
 public import VCVio.EvalDist.IndepProductMeasure

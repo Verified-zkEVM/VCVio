@@ -5,7 +5,7 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.EvalDist.MeasureTVDist.Basic
+public import VCVio.EvalDist.EvalDistTV
 public import VCVio.EvalDist.EvalDistEq
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType
@@ -131,9 +131,7 @@ Both distributions are over `Option (Commit × Chal × Resp)`, where `none` repr
 The parameter `ζ_zk` captures both transcript mismatch and abort-probability mismatch. -/
 def HVZK (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp))) (ζ_zk : ℝ≥0∞) : Prop :=
-  ∀ s w, rel s w = true →
-    letI : MeasurableSpace (Option (Commit × Chal × Resp)) := ⊤
-    measureETVDist (ids.honestExecution s w) (sim s) ≤ ζ_zk
+  ∀ s w, rel s w = true → etvDist (ids.honestExecution s w) (sim s) ≤ ζ_zk
 
 /-- Exact honest-verifier zero-knowledge for an identification scheme with aborts:
 the honest prover's transcript is equal in distribution to the simulator's. -/
@@ -147,8 +145,7 @@ lemma perfectHVZK_iff_hvzk_zero
     (ids : IdenSchemeWithAbort Stmt Wit Commit PrvState Chal Resp rel)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp))) :
     ids.PerfectHVZK sim ↔ ids.HVZK sim 0 := by
-  simp only [PerfectHVZK, HVZK, evalDistEq_iff_evalDist_eq, nonpos_iff_eq_zero,
-    measureETVDist_eq_zero_iff]
+  simp only [PerfectHVZK, HVZK, nonpos_iff_eq_zero, etvDist_eq_zero_iff]
 
 end HVZK
 

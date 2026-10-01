@@ -6,7 +6,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.OracleComp.EvalDist.Measure
-public import VCVio.EvalDist.MeasureTVDist.Bind
+public import VCVio.EvalDist.EvalDistTV
 public import ToMathlib.MeasureTheory.Integral.Countable
 
 /-!
@@ -147,13 +147,8 @@ theorem tsum_prEvent_mul_le_add_of_le (oa : OracleComp spec α) {f g : α → �
 
 /-- The total variation after a common prefix is at most the prefix-weighted sum of the
 continuations' total variations. -/
-theorem measureETVDist_bind_left_le_tsum [MeasurableSpace β] (oa : OracleComp spec α)
-    (f g : α → OracleComp spec β) :
-    measureETVDist (oa >>= f) (oa >>= g) ≤
-      ∑' x, Pr{let y ← oa}[y = x] * measureETVDist (f x) (g x) := by
-  let : MeasurableSpace α := ⊤
-  rw [← lintegral_evalDist_eq_tsum]
-  exact measureETVDist_bind_bind_le_lintegral oa f g .of_discrete .of_discrete _
-    (Filter.Eventually.of_forall fun _ ↦ le_rfl)
+theorem etvDist_bind_left_le_tsum (oa : OracleComp spec α) (f g : α → OracleComp spec β) :
+    etvDist (oa >>= f) (oa >>= g) ≤ ∑' x, Pr{let y ← oa}[y = x] * etvDist (f x) (g x) :=
+  (etvDist_bind_bind_le_wp oa f g _ fun _ ↦ le_rfl).trans_eq (wp_eq_tsum oa _)
 
 end OracleComp

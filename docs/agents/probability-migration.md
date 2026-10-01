@@ -40,7 +40,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | `Pr{mx}[= a]` (earlier measure API) | `Pr{let x ← mx}[x = a]` |
 | `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
-| `tvDist mx my` | `measureETVDist mx my`; `Measure.etvDist` on measures |
+| `tvDist mx my` | `etvDist mx my` (`ℝ≥0∞`, keyed on events, across monads) or `tvDist mx my` (its real form); `measureETVDist mx my` on a chosen σ-algebra, `Measure.etvDist` on measures |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
@@ -99,15 +99,15 @@ Replacement lemmas keep the removed name with the probability head replaced:
 | `probEvent_` | `prEvent_` | `le_probEvent_isSome_contextFork` → `le_prEvent_isSome_contextFork` |
 | `probOutput_` | `prEvent_` or `evalDist_` | `IND_CPA_Game_probOutput_eq_branch` → `IND_CPA_Game_evalDist_eq_branch` |
 | `evalSPMF_` | `evalDist_` | `evalSPMF_simulateQ_run_congr` → `evalDist_simulateQ_run_congr` |
-| `tvDist_` | `measureETVDist_` | `tvDist_simulateQ_le_probEvent_bad` → `measureETVDist_simulateQ_run'_le_prEvent_bad` |
+| `tvDist_` (bounds stated on `ENNReal.ofReal (tvDist …)`) | `etvDist_` | `tvDist_simulateQ_le_probEvent_bad` → `etvDist_simulateQ_run'_le_prEvent_bad` |
 
-Other renames: `AdvBound.of_tvDist` → `AdvBound.of_measureETVDist` (and `AdvBound` takes an
+Other renames: `AdvBound.of_tvDist` → `AdvBound.of_etvDist` (and `AdvBound` takes an
 `ℝ≥0∞` bound); root `evalDist_uniformSample` → `SampleableType.evalDist_uniformSample`;
 `relTriple_eqRel_of_evalSPMF_eq` → `relTriple_eqRel_of_evalDistEq`;
 `evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`; in the identical-until-bad
 family `_plus_probEvent_bad` → `_add_prEvent_bad` (for example
 `advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved`) and `tvDist_simulateQ_…` →
-the `measureETVDist_simulateQ_run…` lemmas in `Relational/SimulateQ/UntilBad.lean`;
+the `etvDist_simulateQ_run…` lemmas in `Relational/SimulateQ/UntilBad.lean`;
 `wpProp_iff_probEvent_eq_one` → `wpProp_iff_prEvent_eq_one`.
 
 The bridges between the two representations have no replacement; state the measure fact
@@ -125,7 +125,7 @@ Statements of equality in distribution now use `=ᵈ`:
 - `evalDist_map_congr_of_evalDist_eq mx my h f` → `((EvalDistEq.of_evalDist_eq h).map f).evalDist_eq`;
 - lemmas named `…_of_evalDist_eq` whose hypothesis was a discrete measure equality become
   `…_of_evalDistEq`, e.g. `relTriple_of_evalDistEq_left`, `support_eq_of_evalDistEq`,
-  `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`;
+  `etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`;
 - lemmas whose conclusion was one become `evalDistEq_…`, e.g. `evalDistEq_generateSeed_of_countEq`,
   `evalDistEq_of_forall_prEvent_eq_output`, `SampleableType.evalDistEq_uniformSample_vector_succ`;
 - `AdvBound.of_gameEquiv` → `AdvBound.of_evalDistEq`.
@@ -145,8 +145,10 @@ the output type. The sum forms follow from it:
 - bind, `pure` and map sums → `tsum_prEvent_bind_mul`, `tsum_prEvent_pure_mul`,
   `tsum_prEvent_map_mul`;
 - `tsum_prEvent_mul_of_const_on_support` and `tsum_prEvent_mul_le_add_of_le`;
-- `tvDist_bind_left_le` → `measureETVDist_bind_left_le_tsum`, where `measureETVDist` takes the
-  place of `ENNReal.ofReal (tvDist …)`.
+- `tvDist_bind_left_le` → `etvDist_bind_left_le_tsum`, where `etvDist` takes the place of
+  `ENNReal.ofReal (tvDist …)`; the algebra of the real form (`tvDist_self`, `tvDist_comm`,
+  `tvDist_triangle`, `tvDist_le_one`, `tvDist_map_le`, `tvDist_bind_le`, `tvDist_eq_zero_iff`)
+  keeps its names in `EvalDist/EvalDistTV.lean`.
 
 ## Converted theorem families
 
@@ -155,11 +157,11 @@ callers restate the hypotheses they supply.
 
 | Family | Removed statement | Current statement |
 |---|---|---|
-| `SigmaProtocol.HVZK`, `IdenSchemeWithAbort.HVZK` | `ζ_zk : ℝ` with `0 ≤ ζ_zk`, and `tvDist real sim ≤ ζ_zk` | `ζ_zk : ℝ≥0∞`, and `measureETVDist real sim ≤ ζ_zk` on the discrete transcript σ-algebra; the nonnegativity hypothesis goes |
+| `SigmaProtocol.HVZK`, `IdenSchemeWithAbort.HVZK` | `ζ_zk : ℝ` with `0 ≤ ζ_zk`, and `tvDist real sim ≤ ζ_zk` | `ζ_zk : ℝ≥0∞`, and `etvDist real sim ≤ ζ_zk`; the nonnegativity hypothesis goes |
 | `PerfectHVZK` | `𝒮[real] = 𝒮[sim]` | `real =ᵈ sim`; `perfectHVZK_iff_hvzk_zero` relates it to `HVZK … 0` |
 | `simCommitPredictability` | `Pr[= c₀ \| Prod.fst <$> simT x] ≤ β` | `Pr{let t ← simT x}[t.1 = c₀] ≤ β` |
 | Fiat–Shamir CMA-to-NMA loss (`euf_cma_to_nma`, `euf_cma_bound`) | `ENNReal.ofReal (qS * ζ_zk)` | `qS * ζ_zk` |
-| Charged steps of the per-query slack bounds (`expectedQuerySlack`, `advantage_le_expectedQuerySlack_add_prEvent_bad` and its variants) | `ENNReal.ofReal (tvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false))) ≤ ε s` | `letI : MeasurableSpace (E.Range t × σ × Bool) := ⊤; measureETVDist … ≤ ε s` |
+| Charged steps of the per-query slack bounds (`expectedQuerySlack`, `advantage_le_expectedQuerySlack_add_prEvent_bad` and its variants) | `ENNReal.ofReal (tvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false))) ≤ ε s` | `etvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false)) ≤ ε s` |
 | Uncharged steps of the same bounds | `∀ p, (h₀ t).run p = (h₁ t).run p` | `∀ s, (h₀ t).run (s, false) = (h₁ t).run (s, false)`: only good states are compared |
 | `expectedQuerySlack` step | `∑'`-weighted continuation | the unary expectation `wp` of the continuation |
 | Rényi divergence of programs (`renyiDiv a mx my`, `PMF.renyiDiv`) | on `SPMF` or `PMF` | `InformationTheory.renyiDiv a 𝒟[mx] 𝒟[my]` on the output measures, with `⊤` fixed on the output inside definitions |

@@ -235,7 +235,7 @@ The proof uses `hidingImplSim`, which redirects all salt-`s` cache misses to
    (both return fresh uniform on cache miss; the query point is irrelevant
    because the underlying oracle is memoryless).
 2. `hidingImplSim.run' = hidingSim` (the simulator matches the implementation).
-3. `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq` bounds the
+3. `etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq` bounds the
    statistical distance by the probability of `bad`.
 
 The `Pr[bad] ≤ t/|S|` bound requires `s` to be uniformly random (see below). -/
@@ -301,16 +301,16 @@ theorem hidingImpl_agree_dist [Inhabited M] [Inhabited S] (s : S) (ms : M × S)
 by the probability of the bad event under `hidingImpl₁`.
 
 The proof uses identical-until-bad on output measures
-(`measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`): `hidingImpl₁` (real with
+(`etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`): `hidingImpl₁` (real with
 counter) and `hidingImplSim` (sim with counter) agree distributionally when `¬bad` because the
 underlying oracle is memoryless. -/
-theorem measureETVDist_hidingReal_hidingSim_le_probBad [Inhabited M] [Inhabited S]
+theorem etvDist_hidingReal_hidingSim_le_probBad [Inhabited M] [Inhabited S]
     {AUX : Type} {t : ℕ}
     (A : HidingAdversary M S C AUX t) (s : S) :
-    measureETVDist (hidingReal A s) (hidingSim A s) ≤
+    etvDist (hidingReal A s) (hidingSim A s) ≤
       Pr{let z ← (simulateQ (hidingImpl₁ s) (hidingOa A s)).run (∅, 0)}[hidingBad z.2] := by
   rw [hidingReal_eq_impl₁ A s, hidingSim_eq_implSim A s]
-  exact ProgramLogic.Relational.measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq
+  exact ProgramLogic.Relational.etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq
     (hidingImpl₁ s) (hidingImplSim s) hidingBad
     (fun ms st h => hidingImpl_agree_dist s ms st h)
     (hidingImpl₁_bad_mono s) (hidingImplSim_bad_mono s) (hidingOa A s) (∅, 0)

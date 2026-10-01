@@ -141,7 +141,7 @@ Reading order:
    delivers the bound
 
 ```
-measureETVDist (hidingMixedReal A) (hidingMixedSim A)  ≤  t / |S|,
+etvDist (hidingMixedReal A) (hidingMixedSim A)  ≤  t / |S|,
 ```
 
 where the salt is sampled inside the experiment and `t` is the adversary's
@@ -151,7 +151,7 @@ per-salt version is false.
 The framework machinery exercised: `cachingOracle`, `loggingOracle`,
 `IsTotalQueryBound`, the birthday bound
 `prEvent_cacheCollision_le_birthday_total_tight`, and the identical-until-bad
-bound `measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`.
+bound `etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`.
 
 ## PRF Tag/Reader Network Unlinkability
 

@@ -8,6 +8,7 @@ module
 
 public import VCVio.ProgramLogic.Relational.QuantitativeDefs
 public import VCVio.ProgramLogic.Unary.HoareTriple
+public import VCVio.EvalDist.EvalDistTV
 public import ToMathlib.MeasureTheory.Measure.Coupling.Maximal
 import ToMathlib.MeasureTheory.Function.AEMeasurable
 
@@ -228,10 +229,10 @@ maximal coupling. -/
 /-- Total variation between two output measures is the complement of the best coupled
 probability of equal outputs. -/
 theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ α) :
-    (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) =
-      1 - eRelWP oa ob (RelPost.indicator (EqRel α)) := by
+    etvDist oa ob = 1 - eRelWP oa ob (RelPost.indicator (EqRel α)) := by
   classical
   let : MeasurableSpace α := ⊤
+  rw [etvDist_eq_evalDist_etvDist]
   let F : Finset α := (PFunctor.FreeM.support_finite oa).toFinset ∪
     (PFunctor.FreeM.support_finite ob).toFinset
   have hμ : 𝒟[oa] (↑F)ᶜ = 0 := by
@@ -278,17 +279,14 @@ theorem etvDist_eq_one_sub_eRelWP_eqRel (oa : OracleComp spec₁ α) (ob : Oracl
 between the two output measures. -/
 theorem approxRelTriple_eqRel_iff_etvDist_le {oa : OracleComp spec₁ α}
     {ob : OracleComp spec₂ α} {ε : ℝ≥0∞} :
-    ApproxRelTriple ε oa ob (EqRel α) ↔
-      (letI : MeasurableSpace α := ⊤; 𝒟[oa].etvDist 𝒟[ob]) ≤ ε := by
+    ApproxRelTriple ε oa ob (EqRel α) ↔ etvDist oa ob ≤ ε := by
   rw [ApproxRelTriple, etvDist_eq_one_sub_eRelWP_eqRel]
   exact tsub_le_iff_tsub_le
 
 /-- Computations with a zero-error approximate equality coupling are equal in distribution. -/
 theorem evalDistEq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
-    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob := by
-  let : MeasurableSpace α := ⊤
-  exact EvalDistEq.of_evalDist_eq (Measure.etvDist_eq_zero_iff.1 (nonpos_iff_eq_zero.1
-    (approxRelTriple_eqRel_iff_etvDist_le.1 h)))
+    {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob :=
+  (etvDist_eq_zero_iff oa ob).1 (nonpos_iff_eq_zero.1 (approxRelTriple_eqRel_iff_etvDist_le.1 h))
 
 /-! ## Relational algebra instance -/
 

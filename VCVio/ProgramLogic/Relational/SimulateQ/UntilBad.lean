@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.EvalDist.MeasureTVDist.Event
+public import VCVio.EvalDist.EvalDistTV
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.Basic
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
@@ -152,7 +152,7 @@ theorem prEvent_simulateQ_run_bad_eq
 
 /-- Computations over flagged outputs that give each unflagged output the same mass agree on every
 event of unflagged outputs. This supplies the good-to-good agreement of
-`prEvent_simulateQ_run_bad_eq` and `measureETVDist_simulateQ_run_le_prEvent_bad` for the flag
+`prEvent_simulateQ_run_bad_eq` and `etvDist_simulateQ_run_le_prEvent_bad` for the flag
 `fun p => p.2 = true` from per-output agreement. -/
 theorem prEvent_and_not_flag_eq_of_forall_prEvent_eq [∀ t, Finite (spec'.Range t)] {β : Type}
     {mx my : OracleComp spec' (β × σ × Bool)}
@@ -170,7 +170,7 @@ theorem prEvent_and_not_flag_eq_of_forall_prEvent_eq [∀ t, Finite (spec'.Range
 
 /-- Two simulations whose handlers agree on good-to-good steps and keep bad states bad have
 output-state pairs within the probability of ending in a bad state in total variation. -/
-theorem measureETVDist_simulateQ_run_le_prEvent_bad [MeasurableSpace (α × σ)]
+theorem etvDist_simulateQ_run_le_prEvent_bad
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec'))) (bad : σ → Prop)
     (h_agree : ∀ t s, ¬bad s → ∀ q : spec.Range t × σ → Prop,
       Pr{let z ← (impl₁ t).run s}[q z ∧ ¬bad z.2] =
@@ -178,9 +178,9 @@ theorem measureETVDist_simulateQ_run_le_prEvent_bad [MeasurableSpace (α × σ)]
     (h_mono₁ : ∀ t s, bad s → ∀ z ∈ support ((impl₁ t).run s), bad z.2)
     (h_mono₂ : ∀ t s, bad s → ∀ z ∈ support ((impl₂ t).run s), bad z.2)
     (oa : OracleComp spec α) (s₀ : σ) :
-    measureETVDist ((simulateQ impl₁ oa).run s₀) ((simulateQ impl₂ oa).run s₀) ≤
+    etvDist ((simulateQ impl₁ oa).run s₀) ((simulateQ impl₂ oa).run s₀) ≤
       Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] := by
-  have h := measureETVDist_map_le_prEvent_of_agree ((simulateQ impl₁ oa).run s₀)
+  have h := etvDist_map_le_prEvent_of_agree ((simulateQ impl₁ oa).run s₀)
     ((simulateQ impl₂ oa).run s₀) id (fun z => bad z.2)
     (prEvent_simulateQ_run_and_not_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀)
     (prEvent_simulateQ_run_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀).ge
@@ -191,7 +191,7 @@ bad states bad have outputs within the probability of ending in a bad state in t
 
 Both handlers must keep bad states bad: otherwise one could enter a bad state, diverge, and
 return to a good state, giving different outputs with no final bad mass. -/
-theorem measureETVDist_simulateQ_run'_le_prEvent_bad [MeasurableSpace α]
+theorem etvDist_simulateQ_run'_le_prEvent_bad
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec'))) (bad : σ → Prop)
     (h_agree : ∀ t s, ¬bad s → ∀ q : spec.Range t × σ → Prop,
       Pr{let z ← (impl₁ t).run s}[q z ∧ ¬bad z.2] =
@@ -199,60 +199,57 @@ theorem measureETVDist_simulateQ_run'_le_prEvent_bad [MeasurableSpace α]
     (h_mono₁ : ∀ t s, bad s → ∀ z ∈ support ((impl₁ t).run s), bad z.2)
     (h_mono₂ : ∀ t s, bad s → ∀ z ∈ support ((impl₂ t).run s), bad z.2)
     (oa : OracleComp spec α) (s₀ : σ) :
-    measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
+    etvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
       Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] :=
-  measureETVDist_map_le_prEvent_of_agree _ _ Prod.fst (fun z => bad z.2)
+  etvDist_map_le_prEvent_of_agree _ _ Prod.fst (fun z => bad z.2)
     (prEvent_simulateQ_run_and_not_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀)
     (prEvent_simulateQ_run_bad_eq impl₁ impl₂ bad h_agree h_mono₁ h_mono₂ oa s₀).ge
 
 /-- **Identical until bad** for handlers whose runs coincide off bad input states. -/
-theorem measureETVDist_simulateQ_run'_le_prEvent_bad_of_run_eq [MeasurableSpace α]
+theorem etvDist_simulateQ_run'_le_prEvent_bad_of_run_eq
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec'))) (bad : σ → Prop)
     (h_agree : ∀ t s, ¬bad s → (impl₁ t).run s = (impl₂ t).run s)
     (h_mono₁ : ∀ t s, bad s → ∀ z ∈ support ((impl₁ t).run s), bad z.2)
     (h_mono₂ : ∀ t s, bad s → ∀ z ∈ support ((impl₂ t).run s), bad z.2)
     (oa : OracleComp spec α) (s₀ : σ) :
-    measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
+    etvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
       Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] :=
-  measureETVDist_simulateQ_run'_le_prEvent_bad impl₁ impl₂ bad
+  etvDist_simulateQ_run'_le_prEvent_bad impl₁ impl₂ bad
     (fun t s hs q => by rw [h_agree t s hs]) h_mono₁ h_mono₂ oa s₀
 
 /-- **Identical until bad** for handlers equal in distribution off bad input states. -/
-theorem measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq [MeasurableSpace α]
+theorem etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq
     (impl₁ impl₂ : QueryImpl spec (StateT σ (OracleComp spec'))) (bad : σ → Prop)
     (h_agree : ∀ t s, ¬bad s → (impl₁ t).run s =ᵈ (impl₂ t).run s)
     (h_mono₁ : ∀ t s, bad s → ∀ z ∈ support ((impl₁ t).run s), bad z.2)
     (h_mono₂ : ∀ t s, bad s → ∀ z ∈ support ((impl₂ t).run s), bad z.2)
     (oa : OracleComp spec α) (s₀ : σ) :
-    measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
+    etvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
       Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] :=
-  measureETVDist_simulateQ_run'_le_prEvent_bad impl₁ impl₂ bad
+  etvDist_simulateQ_run'_le_prEvent_bad impl₁ impl₂ bad
     (fun t s hs _ => (h_agree t s hs).prEvent_eq _) h_mono₁ h_mono₂ oa s₀
 
 /-! ## ε-perturbed identical until bad
 
-The handlers may differ by total variation `ε`, measured in the discrete structure on their
-answer-state pairs, on each query in a charged set `S` from a good state, and must coincide on
-the other queries from good states. A computation making at most `qS` charged queries then keeps
-the two runs within `qS * ε` plus the probability of ending in a bad state. The uniform form
-charges every query, and taking no bad state gives a pure per-query budget. -/
+The handlers may differ by total variation `ε` on their answer-state pairs on each query in a
+charged set `S` from a good state, and must coincide on the other queries from good states. A
+computation making at most `qS` charged queries then keeps the two runs within `qS * ε` plus the
+probability of ending in a bad state. The uniform form charges every query, and taking no bad
+state gives a pure per-query budget. -/
 
 section epsilon
 
 variable {κ : Type} {specκ : OracleSpec.{0, 0} κ}
 
 /-- **ε-perturbed identical until bad**, on output-state pairs from any starting state. -/
-theorem measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad
-    [MeasurableSpace (α × σ)]
+theorem etvDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad
     (impl₁ impl₂ : QueryImpl specκ (StateT σ (OracleComp spec'))) (bad : σ → Prop)
     (S : κ → Prop) [DecidablePred S] {ε : ℝ≥0∞}
-    (h_step_S : ∀ t, S t → ∀ s, ¬bad s →
-      letI : MeasurableSpace (specκ.Range t × σ) := ⊤
-      measureETVDist ((impl₁ t).run s) ((impl₂ t).run s) ≤ ε)
+    (h_step_S : ∀ t, S t → ∀ s, ¬bad s → etvDist ((impl₁ t).run s) ((impl₂ t).run s) ≤ ε)
     (h_step_nS : ∀ t, ¬S t → ∀ s, ¬bad s → (impl₁ t).run s = (impl₂ t).run s)
     (h_mono₁ : ∀ t s, bad s → ∀ z ∈ support ((impl₁ t).run s), bad z.2)
     (oa : OracleComp specκ α) {qS : ℕ} (h_qb : oa.IsQueryBoundP S qS) (s₀ : σ) :
-    measureETVDist ((simulateQ impl₁ oa).run s₀) ((simulateQ impl₂ oa).run s₀) ≤
+    etvDist ((simulateQ impl₁ oa).run s₀) ((simulateQ impl₂ oa).run s₀) ≤
       qS * ε + Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] := by
   induction oa using OracleComp.inductionOn generalizing qS s₀ with
   | pure a => simp
@@ -260,35 +257,31 @@ theorem measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad
     by_cases hb : bad s₀
     · rw [prEvent_eq_one_of_forall_mem_support _ _ fun z hz =>
         forall_mem_support_simulateQ_run_of_bad impl₁ bad h_mono₁ _ hb z hz]
-      exact (measureETVDist_le_one _ _).trans le_add_self
+      exact (etvDist_le_one _ _).trans le_add_self
     · rw [isQueryBoundP_query_bind_iff] at h_qb
       obtain ⟨h_can, h_cont⟩ := h_qb
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
         OracleQuery.cont_query, id_map, StateT.run_bind]
-      let : MeasurableSpace (specκ.Range t × σ) := ⊤
       set q' := if S t then qS - 1 else qS
-      have hmx : IsProbabilityMeasure 𝒟[(impl₁ t).run s₀] :=
-        ⟨evalDist_apply_univ_eq_one _⟩
-      have hswap : measureETVDist ((impl₁ t).run s₀ >>= fun us =>
+      have hswap : etvDist ((impl₁ t).run s₀ >>= fun us =>
             (simulateQ impl₂ (k us.1)).run us.2)
           ((impl₂ t).run s₀ >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
           if S t then ε else 0 := by
-        refine (measureETVDist_bind_le _ _ _ Measurable.of_discrete).trans ?_
+        refine (etvDist_bind_le _ _ _).trans ?_
         split_ifs with hS
         · exact h_step_S t hS s₀ hb
-        · rw [h_step_nS t hS s₀ hb, measureETVDist_self]
-      have hcont : measureETVDist ((impl₁ t).run s₀ >>= fun us =>
+        · rw [h_step_nS t hS s₀ hb, etvDist_self]
+      have hcont : etvDist ((impl₁ t).run s₀ >>= fun us =>
             (simulateQ impl₁ (k us.1)).run us.2)
           ((impl₁ t).run s₀ >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
           q' * ε + Pr{let z ← (impl₁ t).run s₀ >>= fun us =>
             (simulateQ impl₁ (k us.1)).run us.2}[bad z.2] := by
-        refine (measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete
-          Measurable.of_discrete (fun us => q' * ε +
+        refine (etvDist_bind_bind_le_wp _ _ _ (fun us => q' * ε +
             Pr{let z ← (simulateQ impl₁ (k us.1)).run us.2}[bad z.2])
-          (Filter.Eventually.of_forall fun us => ih us.1 (h_cont us.1) us.2)).trans_eq ?_
-        rw [lintegral_add_left measurable_const, lintegral_const, measure_univ, mul_one,
-          prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
-      calc _ ≤ _ := measureETVDist_triangle _ _ _
+          fun us => ih us.1 (h_cont us.1) us.2).trans_eq ?_
+        rw [ExpectationWP.wp_add, wp_const, OracleComp.prEvent_true_eq_one, mul_one,
+          prEvent_bind]
+      calc _ ≤ _ := etvDist_triangle _ _ _
         _ ≤ (q' * ε + Pr{let z ← (impl₁ t).run s₀ >>= fun us =>
               (simulateQ impl₁ (k us.1)).run us.2}[bad z.2]) + if S t then ε else 0 :=
             add_le_add hcont hswap
@@ -302,36 +295,31 @@ theorem measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad
           · simp only [q', hS, ↓reduceIte, add_zero, le_refl]
 
 /-- **ε-perturbed identical until bad**, on outputs. -/
-theorem measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad [MeasurableSpace α]
+theorem etvDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad
     (impl₁ impl₂ : QueryImpl specκ (StateT σ (OracleComp spec'))) (bad : σ → Prop)
     (S : κ → Prop) [DecidablePred S] {ε : ℝ≥0∞}
-    (h_step_S : ∀ t, S t → ∀ s, ¬bad s →
-      letI : MeasurableSpace (specκ.Range t × σ) := ⊤
-      measureETVDist ((impl₁ t).run s) ((impl₂ t).run s) ≤ ε)
+    (h_step_S : ∀ t, S t → ∀ s, ¬bad s → etvDist ((impl₁ t).run s) ((impl₂ t).run s) ≤ ε)
     (h_step_nS : ∀ t, ¬S t → ∀ s, ¬bad s → (impl₁ t).run s = (impl₂ t).run s)
     (h_mono₁ : ∀ t s, bad s → ∀ z ∈ support ((impl₁ t).run s), bad z.2)
     (oa : OracleComp specκ α) {qS : ℕ} (h_qb : oa.IsQueryBoundP S qS) (s₀ : σ) :
-    measureETVDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
+    etvDist ((simulateQ impl₁ oa).run' s₀) ((simulateQ impl₂ oa).run' s₀) ≤
       qS * ε + Pr{let z ← (simulateQ impl₁ oa).run s₀}[bad z.2] := by
-  let : MeasurableSpace (α × σ) := ⊤
   simp only [StateT.run'_eq]
-  exact (measureETVDist_map_le _ _ Prod.fst Measurable.of_discrete).trans
-    (measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad impl₁ impl₂ bad S
+  exact (etvDist_map_le _ _ Prod.fst).trans
+    (etvDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad impl₁ impl₂ bad S
       h_step_S h_step_nS h_mono₁ oa h_qb s₀)
 
 /-- **Query-bounded total-variation budget.** Handlers that differ by `ε` on each charged query
 and coincide on the others keep the runs of a computation making at most `qS` charged queries
 within `qS * ε`. -/
-theorem measureETVDist_simulateQ_run_le_queryBoundP_mul [MeasurableSpace (α × σ)]
+theorem etvDist_simulateQ_run_le_queryBoundP_mul
     (impl₁ impl₂ : QueryImpl specκ (StateT σ (OracleComp spec')))
     (S : κ → Prop) [DecidablePred S] {ε : ℝ≥0∞}
-    (h_step_S : ∀ t, S t → ∀ s,
-      letI : MeasurableSpace (specκ.Range t × σ) := ⊤
-      measureETVDist ((impl₁ t).run s) ((impl₂ t).run s) ≤ ε)
+    (h_step_S : ∀ t, S t → ∀ s, etvDist ((impl₁ t).run s) ((impl₂ t).run s) ≤ ε)
     (h_step_nS : ∀ t, ¬S t → ∀ s, (impl₁ t).run s = (impl₂ t).run s)
     (oa : OracleComp specκ α) {qS : ℕ} (h_qb : oa.IsQueryBoundP S qS) (s₀ : σ) :
-    measureETVDist ((simulateQ impl₁ oa).run s₀) ((simulateQ impl₂ oa).run s₀) ≤ qS * ε := by
-  have h := measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad impl₁ impl₂
+    etvDist ((simulateQ impl₁ oa).run s₀) ((simulateQ impl₂ oa).run s₀) ≤ qS * ε := by
+  have h := etvDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad impl₁ impl₂
     (fun _ => False) S (fun t hS s _ => h_step_S t hS s) (fun t hS s _ => h_step_nS t hS s)
     (fun _ _ h => h.elim) oa h_qb s₀
   rwa [prEvent_eq_zero_of_forall_not _ _ fun _ h => h, add_zero] at h

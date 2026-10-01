@@ -139,9 +139,7 @@ structure CmaH3StepFacts
         (Resp := Resp) (Stmt := Stmt) t →
       ∀ (s : CmaData M Commit Chal Stmt Wit),
         CmaData.Valid (rel := rel) s →
-          letI : MeasurableSpace ((cmaSpec M Commit Chal Resp Stmt).Range t ×
-            CmaData M Commit Chal Stmt Wit × Bool) := ⊤
-          measureETVDist
+          etvDist
             (((cmaReal M Commit Chal σ hr) t).run (s, false))
             (((cmaSim M Commit Chal hr simT) t).run (s, false))
             ≤ cmaSignEpsCore M Commit Chal ζ_zk β s
@@ -662,25 +660,21 @@ private lemma cmaRealSignGhost_public_evalDistEq_publicDist [SampleableType Chal
       simp only [Functor.map_map, Function.comp_apply, CmaRealSignGhost.public]
       exact OracleComp.EvalDistEq.map_const _ _
 
-private lemma cmaSignPublicDist_measureETVDist_le_hvzk [SampleableType Chal]
+private lemma cmaSignPublicDist_etvDist_le_hvzk [SampleableType Chal]
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
     (ζ_zk : ℝ≥0∞) (hHVZK : σ.HVZK simT ζ_zk)
     (s : CmaData M Commit Chal Stmt Wit)
     (hvalid : CmaData.Valid (rel := rel) s) :
-    letI : MeasurableSpace (CmaSignPublic Stmt Wit Commit Chal Resp) := ⊤
-    measureETVDist
+    etvDist
       (cmaRealSignPublicDist M Commit Chal σ hr s)
       (cmaSimSignPublicDist M Commit Chal hr simT s) ≤ ζ_zk := by
-  let : MeasurableSpace (CmaSignPublic Stmt Wit Commit Chal Resp) := ⊤
-  let : MeasurableSpace (Commit × Chal × Resp) := ⊤
-  let : MeasurableSpace (Stmt × Wit) := ⊤
   -- A fixed keypair's public transcript is a post-processing of its HVZK transcript.
   have hkey : ∀ key : Stmt × Wit, rel key.1 key.2 = true →
-      measureETVDist (cmaSignPublicOfTranscript key.1 key.2 <$> σ.realTranscript key.1 key.2)
+      etvDist (cmaSignPublicOfTranscript key.1 key.2 <$> σ.realTranscript key.1 key.2)
         (cmaSignPublicOfTranscript key.1 key.2 <$> simT key.1) ≤ ζ_zk := fun key hrel =>
-    (measureETVDist_map_le _ _ _ Measurable.of_discrete).trans (hHVZK key.1 key.2 hrel)
+    (etvDist_map_le _ _ _).trans (hHVZK key.1 key.2 hrel)
   rcases s with ⟨log, cache, keypair⟩
   cases keypair with
   | some key =>
@@ -688,11 +682,9 @@ private lemma cmaSignPublicDist_measureETVDist_le_hvzk [SampleableType Chal]
       exact hkey key (by simpa [CmaData.Valid] using hvalid)
   | none =>
       rw [cmaRealSignPublicDist_none, cmaSimSignPublicDist_none]
-      refine (measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete
-        Measurable.of_discrete (fun _ => ζ_zk)
-        (OracleComp.ae_evalDist_of_forall_mem_support _ fun key hkeygen =>
-          hkey key (hr.gen_sound key.1 key.2 hkeygen))).trans ?_
-      rw [MeasureTheory.lintegral_const, OracleComp.evalDist_apply_univ_eq_one, mul_one]
+      refine (etvDist_bind_bind_le_wp_of_support _ _ _ (fun _ => ζ_zk) fun key hkeygen =>
+        hkey key (hr.gen_sound key.1 key.2 hkeygen)).trans ?_
+      exact wp_le_of_forall_le _ fun _ => le_rfl
 
 private lemma simTranscript_cacheHit_prob_le_roCacheCount_mul
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
@@ -845,7 +837,7 @@ private lemma cmaSimSignStep_evalDistEq_public
 
 /-- On a valid keypair state, the total-variation distance between the real and simulated
 signing oracle on a single signing query is bounded by `cmaSignEpsCore`. -/
-theorem cmaReal_cmaSim_measureETVDist_sign_le_cmaSignEpsCore_of_valid
+theorem cmaReal_cmaSim_etvDist_sign_le_cmaSignEpsCore_of_valid
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -854,38 +846,32 @@ theorem cmaReal_cmaSim_measureETVDist_sign_le_cmaSignEpsCore_of_valid
     (hCommit : σ.simCommitPredictability simT β)
     (m : M) (s : CmaData M Commit Chal Stmt Wit)
     (hvalid : CmaData.Valid (rel := rel) s) :
-    letI : MeasurableSpace ((Commit × Resp) × CmaData M Commit Chal Stmt Wit × Bool) := ⊤
-    measureETVDist
+    etvDist
       (((cmaReal M Commit Chal σ hr) (CmaQuery.sign m)).run (s, false))
       (((cmaSim M Commit Chal hr simT) (CmaQuery.sign m)).run (s, false))
       ≤ cmaSignEpsCore M Commit Chal ζ_zk β s := by
-  let : MeasurableSpace ((Commit × Resp) × CmaData M Commit Chal Stmt Wit × Bool) := ⊤
-  let : MeasurableSpace (CmaSignPublic Stmt Wit Commit Chal Resp) := ⊤
-  let : MeasurableSpace (CmaRealSignGhost Stmt Wit Commit PrvState Chal Resp) := ⊤
   let realGhost := cmaRealSignGhostDist M Commit Chal σ hr m s
   let simPub := cmaSimSignPublicDist M Commit Chal hr simT s
-  have hstep : measureETVDist
+  have hstep : etvDist
         (((cmaReal M Commit Chal σ hr) (CmaQuery.sign m)).run (s, false))
         (((cmaSim M Commit Chal hr simT) (CmaQuery.sign m)).run (s, false)) =
-      measureETVDist (cmaRealSignGhostOut M Commit Chal m s <$> realGhost)
+      etvDist (cmaRealSignGhostOut M Commit Chal m s <$> realGhost)
         (cmaSimSignPublicOut M Commit Chal m s <$> simPub) := by
-    rw [measureETVDist, measureETVDist,
-      (cmaRealSignStep_evalDistEq_ghost M Commit Chal σ hr m s).evalDist_eq,
-      (cmaSimSignStep_evalDistEq_public M Commit Chal hr simT m s).evalDist_eq]
-  have hprivate := measureETVDist_map_le_map_add_prEvent_bad realGhost simPub
+    rw [(cmaRealSignStep_evalDistEq_ghost M Commit Chal σ hr m s).etvDist_congr_left,
+      (cmaSimSignStep_evalDistEq_public M Commit Chal hr simT m s).etvDist_congr_right]
+  have hprivate := etvDist_map_le_map_add_prEvent_bad realGhost simPub
     CmaRealSignGhost.public (cmaRealSignGhostOut M Commit Chal m s)
     (cmaSimSignPublicOut M Commit Chal m s) (cmaSimSignPublicBad M Commit Chal m s)
     fun x y hpub hbad =>
       cmaRealSignGhostOut_eq_cmaSimSignPublicOut_of_not_bad M Commit Chal m s x y hpub hbad
-  have hpublic : measureETVDist (CmaRealSignGhost.public <$> realGhost) simPub ≤ ζ_zk := by
-    rw [measureETVDist,
-      (cmaRealSignGhost_public_evalDistEq_publicDist M Commit Chal σ hr m s).evalDist_eq]
-    exact cmaSignPublicDist_measureETVDist_le_hvzk M Commit Chal σ hr simT ζ_zk hHVZK s hvalid
+  have hpublic : etvDist (CmaRealSignGhost.public <$> realGhost) simPub ≤ ζ_zk := by
+    rw [(cmaRealSignGhost_public_evalDistEq_publicDist M Commit Chal σ hr m s).etvDist_congr_left]
+    exact cmaSignPublicDist_etvDist_le_hvzk M Commit Chal σ hr simT ζ_zk hHVZK s hvalid
   have hbad := cmaSimSignPublicBad_prob_le_roCacheCount_mul M Commit Chal σ hr simT β hCommit m s
   rw [hstep]
   exact (hprivate.trans (add_le_add hpublic hbad)).trans_eq rfl
 
-theorem cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid
+theorem cmaReal_cmaSim_etvDist_costly_le_cmaSignEpsCore_of_valid
     (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
     (hr : GenerableRelation Stmt Wit rel)
     (simT : Stmt → ProbComp (Commit × Chal × Resp))
@@ -897,16 +883,14 @@ theorem cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid
       (Resp := Resp) (Stmt := Stmt) t)
     (s : CmaData M Commit Chal Stmt Wit)
     (hvalid : CmaData.Valid (rel := rel) s) :
-    letI : MeasurableSpace ((cmaSpec M Commit Chal Resp Stmt).Range t ×
-      CmaData M Commit Chal Stmt Wit × Bool) := ⊤
-    measureETVDist
+    etvDist
       (((cmaReal M Commit Chal σ hr) t).run (s, false))
       (((cmaSim M Commit Chal hr simT) t).run (s, false))
       ≤ cmaSignEpsCore M Commit Chal ζ_zk β s := by
   rcases t with n | mc | m | ⟨⟩
   · exact ht.elim
   · exact ht.elim
-  · exact cmaReal_cmaSim_measureETVDist_sign_le_cmaSignEpsCore_of_valid
+  · exact cmaReal_cmaSim_etvDist_sign_le_cmaSignEpsCore_of_valid
       M Commit Chal σ hr simT ζ_zk β hHVZK hCommit m s hvalid
   · exact ht.elim
 
@@ -921,7 +905,7 @@ theorem cmaH3StepFacts_of_hvzk_predictability
     CmaH3StepFacts M Commit Chal σ hr simT ζ_zk β where
   preservesValid := cmaReal_preserves_valid M Commit Chal σ hr
   stepTvCostly t ht s hvalid :=
-    cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid
+    cmaReal_cmaSim_etvDist_costly_le_cmaSignEpsCore_of_valid
       M Commit Chal σ hr simT ζ_zk β hHVZK hCommit t ht s hvalid
   stepEqFree := cmaReal_eq_cmaSim_of_not_costly M Commit Chal σ hr simT
   badMono := cmaReal_bad_mono M Commit Chal σ hr

@@ -169,6 +169,7 @@ Security notions, experiments, games, and advantages follow
 - Oracle computation core: `VCVio/OracleComp/OracleComp.lean`
 - Probability lemmas: `VCVio/EvalDist/ProbabilityNotation.lean`, `VCVio/EvalDist/ProbabilityBounds.lean`, `VCVio/OracleComp/EvalDist/Measure.lean`
 - Equality in distribution across monads (`mx =ᵈ my`): `VCVio/EvalDist/EvalDistEq.lean`
+- Event-keyed total variation (`etvDist`, `tvDist`) and identical-until-bad on events: `VCVio/EvalDist/EvalDistTV.lean`
 - SubSpec / coercions: `VCVio/OracleComp/Coercions/SubSpec.lean`
 - `QueryImpl` instrumentation primitives (`preInsert` / `postInsert` and their bridge lemmas): `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`. Prefer these (or their downstream wrappers `withTraceBefore` / `withTrace` / `withCost` / `withLogging`) when wrapping a `QueryImpl` with a per-query side effect, so the generic theory in that file applies.
 - DLog / CDH / DDH via HHS: `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`

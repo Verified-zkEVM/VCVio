@@ -51,7 +51,8 @@ RENAMES: dict[str, str] = {
     "exp_norm": "expect_arith",
     "game_rule": "expect_norm, expect_eval",
     # Probability heads.
-    "AdvBound.of_tvDist": "AdvBound.of_measureETVDist",
+    "AdvBound.of_tvDist": "AdvBound.of_etvDist",
+    "AdvBound.of_measureETVDist": "AdvBound.of_etvDist",
     "AdvBound.of_gameEquiv": "AdvBound.of_evalDistEq",
     "wpProp_iff_probEvent_eq_one": "wpProp_iff_prEvent_eq_one",
     # Failure probability.
@@ -132,22 +133,46 @@ RENAMES: dict[str, str] = {
     "triple_probOutput_indicator": "triple_prEvent_indicator",
     "triple_propInd_iff_le_probEvent": "triple_propInd_iff_le_prEvent",
     "triple_propInd_iff_probEvent_eq_one": "triple_propInd_iff_prEvent_eq_one",
-    "tvDist_simulateQ_le_probEvent_bad": "measureETVDist_simulateQ_run'_le_prEvent_bad",
+    "tvDist_simulateQ_le_probEvent_bad": "etvDist_simulateQ_run'_le_prEvent_bad",
     # Identical-until-bad and per-query slack.
-    "tvDist_simulateQ_run_le_probEvent_output_bad": "measureETVDist_simulateQ_run_le_prEvent_bad",
+    "tvDist_simulateQ_run_le_probEvent_output_bad": "etvDist_simulateQ_run_le_prEvent_bad",
     "tvDist_simulateQ_le_qeps_plus_probEvent_output_bad":
-        "measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
+        "etvDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
     "tvDist_simulateQ_run_le_queryBound_mul_slack_plus_probEvent_bad":
-        "measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
+        "etvDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
     "tvDist_simulateQ_le_queryBound_mul_slack_plus_probEvent_bad":
-        "measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
-    "tvDist_simulateQ_run_le_queryBoundP_mul": "measureETVDist_simulateQ_run_le_queryBoundP_mul",
+        "etvDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
+    "tvDist_simulateQ_run_le_queryBoundP_mul": "etvDist_simulateQ_run_le_queryBoundP_mul",
     "ofReal_tvDist_simulateQ_run_le_expectedQuerySlack_plus_probEvent_output_bad":
-        "measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad",
+        "etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad",
     "ofReal_tvDist_simulateQ_le_expectedQuerySlack_plus_probEvent_output_bad":
-        "measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad",
+        "etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad",
     "ofReal_tvDist_simulateQ_run_le_queryBound_mul_slack_plus_probEvent_bad":
-        "measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
+        "etvDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
+    # The same bounds stated on the measure-level distance of a chosen σ-algebra.
+    "measureETVDist_simulateQ_run_le_prEvent_bad": "etvDist_simulateQ_run_le_prEvent_bad",
+    "measureETVDist_simulateQ_run'_le_prEvent_bad": "etvDist_simulateQ_run'_le_prEvent_bad",
+    "measureETVDist_simulateQ_run'_le_prEvent_bad_of_run_eq":
+        "etvDist_simulateQ_run'_le_prEvent_bad_of_run_eq",
+    "measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq":
+        "etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq",
+    "measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad":
+        "etvDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad",
+    "measureETVDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad":
+        "etvDist_simulateQ_run'_le_queryBoundP_mul_add_prEvent_bad",
+    "measureETVDist_simulateQ_run_le_queryBoundP_mul": "etvDist_simulateQ_run_le_queryBoundP_mul",
+    "measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad":
+        "etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad",
+    "measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad":
+        "etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad",
+    "measureETVDist_withProgramming_withCachingTrackingPolicy_run_le_prEvent_bad":
+        "etvDist_withProgramming_withCachingTrackingPolicy_run_le_prEvent_bad",
+    "measureETVDist_simulateQ_withCaching_withProgramming_le_prEvent_bad":
+        "etvDist_simulateQ_withCaching_withProgramming_le_prEvent_bad",
+    "measureETVDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad":
+        "etvDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad",
+    "measureETVDist_bind_left_le_tsum": "etvDist_bind_left_le_tsum",
+    "advantage_le_measureETVDist": "advantage_le_etvDist",
     "probEvent_bad_simulateQ_run_le_expectedQuerySlack":
         "prEvent_bad_simulateQ_run_le_expectedQuerySlack",
     "advantage_le_expectedQuerySlack_plus_probEvent_bad":
@@ -170,9 +195,13 @@ RENAMES: dict[str, str] = {
     # Fiat–Shamir and ML-DSA zero knowledge.
     "cmaReal_probEvent_bad_eq_zero": "cmaReal_prEvent_bad_eq_zero",
     "cmaReal_cmaSim_tv_sign_le_cmaSignEpsCore_of_valid":
-        "cmaReal_cmaSim_measureETVDist_sign_le_cmaSignEpsCore_of_valid",
+        "cmaReal_cmaSim_etvDist_sign_le_cmaSignEpsCore_of_valid",
     "cmaReal_cmaSim_tv_costly_le_cmaSignEpsCore_of_valid":
-        "cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid",
+        "cmaReal_cmaSim_etvDist_costly_le_cmaSignEpsCore_of_valid",
+    "cmaReal_cmaSim_measureETVDist_sign_le_cmaSignEpsCore_of_valid":
+        "cmaReal_cmaSim_etvDist_sign_le_cmaSignEpsCore_of_valid",
+    "cmaReal_cmaSim_measureETVDist_costly_le_cmaSignEpsCore_of_valid":
+        "cmaReal_cmaSim_etvDist_costly_le_cmaSignEpsCore_of_valid",
     "hvzkBoundReal": "hvzkBound",
     "evalSPMF_uniform_add_right_swap": "uniform_add_right_swap_evalDistEq",
     "evalSPMF_honest_pregate": "honest_pregate_evalDistEq",
@@ -220,7 +249,7 @@ RENAMES: dict[str, str] = {
     "relTriple_simulateQ_run'_of_impl_evalDist_eq": "relTriple_simulateQ_run'_of_impl_evalDistEq",
     "support_eq_of_evalDist_eq": "support_eq_of_evalDistEq",
     "measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDist_eq":
-        "measureETVDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq",
+        "etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq",
     "evalSPMF_simulateQ_run_congr": "evalDist_simulateQ_run_congr",
     # Discrete answer measures.
     "evalDist_liftM_query_eq_uniformOn_top": "evalDist_liftM_query_uniform",
@@ -363,7 +392,6 @@ LEGACY_HINTS: dict[str, str] = {
     "tsum_probOutput_eq_one": "`OracleComp.tsum_prEvent_eq_one`",
     "tsum_probOutput_eq_one'": "`OracleComp.tsum_prEvent_eq_one`",
     "tsum_probOutput_le_one": "`OracleComp.tsum_prEvent_le_one`",
-    "tvDist_bind_left_le": "`OracleComp.measureETVDist_bind_left_le_tsum`",
     "probEvent_bind_eq_expectedValue": "`prEvent_bind_eq_lintegral`",
     "probOutput_def": "`prEvent_def`",
     "probEvent_def": "`prEvent_def`",
@@ -406,13 +434,6 @@ LEGACY_HINTS: dict[str, str] = {
     "probOutput_bind_bind_swap": "`prEvent_bind_bind_swap`",
     "probEvent_bind_bind_swap": "`prEvent_bind_bind_swap`",
     "probOutput_bind_const": "`prEvent_bind_const` or `evalDist_bind_const`",
-    "tvDist_le_one": "`measureETVDist_le_one`",
-    "tvDist_map_le": "`measureETVDist_map_le`",
-    "tvDist_eq_zero_iff": "`measureETVDist_eq_zero_iff`",
-    "tvDist_triangle": "`measureETVDist_triangle`",
-    "tvDist_self": "`measureETVDist_self`",
-    "tvDist_comm": "`measureETVDist_comm`",
-    "tvDist_nonneg": "nothing: `measureETVDist` is `ℝ≥0∞`-valued",
 }
 
 # Legacy forms left for a person, with the guide section that converts them.
@@ -420,7 +441,8 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
     (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{let y ← mx}[y = x]` or `𝒟[mx] {x}`"),
     (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
-    (r"(?<![\w'.])tvDist(?![\w'])", "`measureETVDist`"),
+    (r"(?<![\w'.])tvDist_bind_left_le(?![\w'])",
+     "`OracleComp.etvDist_bind_left_le_tsum`, with `etvDist` in place of `ENNReal.ofReal (tvDist …)`"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
     (r"EvalDistCompatible", "operational support lemmas; see *Classes and binders*"),
@@ -431,7 +453,7 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"@(?:OracleSpec\.)?UniformAnswerMeasure\.ofFiniteNonempty\b",
      "takes the specification and its `Finite` and `Nonempty` instances only"),
     (r"(?<![\w'.])SPMF(?![\w'])", "`Measure`; see *Notation and definitions*"),
-    (r"(?<![\w'])[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure|tvDist)_[\w'.]*",
+    (r"(?<![\w'])[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure)_[\w'.]*",
      "a legacy lemma name; see *Lemma names*"),
 ]
 

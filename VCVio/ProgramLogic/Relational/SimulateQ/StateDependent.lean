@@ -27,9 +27,9 @@ oracle, `ζ_zk + |s.cache| · β`, is of the second kind.
 
 ## Main results
 
-- `measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad`: total variation of the
+- `etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad`: total variation of the
   joint runs is at most the expected slack plus the probability of a bad final state.
-- `measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad`: the same on outputs.
+- `etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad`: the same on outputs.
 -/
 
 public section
@@ -271,21 +271,19 @@ a good state `(s, false)`, and must coincide on uncharged queries from good stat
 handler keeps bad states bad. The joint runs of a computation making at most `queryBudget`
 charged queries then stay within its expected accumulated slack plus the probability that the
 first run ends in a bad state. -/
-theorem measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
-    [MeasurableSpace (α × σ × Bool)]
+theorem etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (chargedQuery : spec.Domain → Prop) [DecidablePred chargedQuery]
     (querySlack : σ → ℝ≥0∞)
     (h_step_charged : ∀ (t : spec.Domain), chargedQuery t → ∀ (s : σ),
-      letI : MeasurableSpace (spec.Range t × σ × Bool) := ⊤
-      measureETVDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false)) ≤ querySlack s)
+      etvDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false)) ≤ querySlack s)
     (h_step_uncharged : ∀ (t : spec.Domain), ¬ chargedQuery t → ∀ (s : σ),
       (impl₁ t).run (s, false) = (impl₂ t).run (s, false))
     (h_mono₁ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
       ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true)
     (oa : OracleComp spec α) {queryBudget : ℕ}
     (h_qb : oa.IsQueryBoundP chargedQuery queryBudget) (p : σ × Bool) :
-    measureETVDist ((simulateQ impl₁ oa).run p) ((simulateQ impl₂ oa).run p) ≤
+    etvDist ((simulateQ impl₁ oa).run p) ((simulateQ impl₂ oa).run p) ≤
       expectedQuerySlack impl₁ chargedQuery querySlack oa queryBudget p +
         Pr{let z ← (simulateQ impl₁ oa).run p}[z.2.2 = true] := by
   induction oa using OracleComp.inductionOn generalizing queryBudget p with
@@ -297,38 +295,35 @@ theorem measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
       rw [prEvent_eq_one_of_forall_mem_support _ _ fun z hz =>
         forall_mem_support_simulateQ_run_of_bad impl₁ (fun p : σ × Bool => p.2 = true)
           h_mono₁ _ rfl z hz]
-      exact (measureETVDist_le_one _ _).trans le_add_self
+      exact (etvDist_le_one _ _).trans le_add_self
     | false =>
       rw [isQueryBoundP_query_bind_iff] at h_qb
       obtain ⟨h_can, h_cont⟩ := h_qb
       rw [expectedQuerySlack_query_bind]
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
         OracleQuery.cont_query, id_map, StateT.run_bind]
-      let : MeasurableSpace (spec.Range t × σ × Bool) := ⊤
       set q' := if chargedQuery t then queryBudget - 1 else queryBudget
-      have hswap : measureETVDist ((impl₁ t).run (s, false) >>= fun us =>
+      have hswap : etvDist ((impl₁ t).run (s, false) >>= fun us =>
             (simulateQ impl₂ (k us.1)).run us.2)
           ((impl₂ t).run (s, false) >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
           if chargedQuery t then querySlack s else 0 := by
-        refine (measureETVDist_bind_le _ _ _ Measurable.of_discrete).trans ?_
+        refine (etvDist_bind_le _ _ _).trans ?_
         split_ifs with hS
         · exact h_step_charged t hS s
-        · rw [h_step_uncharged t hS s, measureETVDist_self]
-      have hcont : measureETVDist ((impl₁ t).run (s, false) >>= fun us =>
+        · rw [h_step_uncharged t hS s, etvDist_self]
+      have hcont : etvDist ((impl₁ t).run (s, false) >>= fun us =>
             (simulateQ impl₁ (k us.1)).run us.2)
           ((impl₁ t).run (s, false) >>= fun us => (simulateQ impl₂ (k us.1)).run us.2) ≤
           (wp⟦(impl₁ t).run (s, false)⟧ fun us =>
               expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2) +
             Pr{let z ← ((impl₁ t).run (s, false) >>= fun us =>
               (simulateQ impl₁ (k us.1)).run us.2)}[z.2.2 = true] := by
-        refine (measureETVDist_bind_bind_le_lintegral _ _ _ Measurable.of_discrete
-          Measurable.of_discrete (fun us =>
+        refine (etvDist_bind_bind_le_wp _ _ _ (fun us =>
             expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2 +
               Pr{let z ← (simulateQ impl₁ (k us.1)).run us.2}[z.2.2 = true])
-          (Filter.Eventually.of_forall fun us => ih us.1 (h_cont us.1) us.2)).trans_eq ?_
-        rw [lintegral_add_left Measurable.of_discrete, prEvent_bind,
-          prEvent_bind_eq_lintegral_of_discrete, wp_eq_lintegral _ _ Measurable.of_discrete]
-      calc _ ≤ _ := measureETVDist_triangle _ _ _
+          fun us => ih us.1 (h_cont us.1) us.2).trans_eq ?_
+        rw [ExpectationWP.wp_add, prEvent_bind]
+      calc _ ≤ _ := etvDist_triangle _ _ _
         _ ≤ ((wp⟦(impl₁ t).run (s, false)⟧ fun us =>
                 expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2) +
               Pr{let z ← ((impl₁ t).run (s, false) >>= fun us =>
@@ -345,27 +340,24 @@ theorem measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
             simp only [q', hS, ↓reduceIte, add_zero]
 
 /-- **State-dependent ε-perturbed identical until bad**, on outputs. -/
-theorem measureETVDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad
-    [MeasurableSpace α]
+theorem etvDist_simulateQ_run'_le_expectedQuerySlack_add_prEvent_bad
     (impl₁ impl₂ : QueryImpl spec (StateT (σ × Bool) (OracleComp spec')))
     (chargedQuery : spec.Domain → Prop) [DecidablePred chargedQuery]
     (querySlack : σ → ℝ≥0∞)
     (h_step_charged : ∀ (t : spec.Domain), chargedQuery t → ∀ (s : σ),
-      letI : MeasurableSpace (spec.Range t × σ × Bool) := ⊤
-      measureETVDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false)) ≤ querySlack s)
+      etvDist ((impl₁ t).run (s, false)) ((impl₂ t).run (s, false)) ≤ querySlack s)
     (h_step_uncharged : ∀ (t : spec.Domain), ¬ chargedQuery t → ∀ (s : σ),
       (impl₁ t).run (s, false) = (impl₂ t).run (s, false))
     (h_mono₁ : ∀ (t : spec.Domain) (p : σ × Bool), p.2 = true →
       ∀ z ∈ support ((impl₁ t).run p), z.2.2 = true)
     (oa : OracleComp spec α) {queryBudget : ℕ}
     (h_qb : oa.IsQueryBoundP chargedQuery queryBudget) (p : σ × Bool) :
-    measureETVDist ((simulateQ impl₁ oa).run' p) ((simulateQ impl₂ oa).run' p) ≤
+    etvDist ((simulateQ impl₁ oa).run' p) ((simulateQ impl₂ oa).run' p) ≤
       expectedQuerySlack impl₁ chargedQuery querySlack oa queryBudget p +
         Pr{let z ← (simulateQ impl₁ oa).run p}[z.2.2 = true] := by
-  let : MeasurableSpace (α × σ × Bool) := ⊤
   simp only [StateT.run'_eq]
-  exact (measureETVDist_map_le _ _ Prod.fst Measurable.of_discrete).trans
-    (measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad impl₁ impl₂
+  exact (etvDist_map_le _ _ Prod.fst).trans
+    (etvDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad impl₁ impl₂
       chargedQuery querySlack h_step_charged h_step_uncharged h_mono₁ oa h_qb p)
 
 /-! ### Closed-form bounds on the expected slack -/

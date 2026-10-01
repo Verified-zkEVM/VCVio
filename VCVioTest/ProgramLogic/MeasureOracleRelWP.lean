@@ -61,16 +61,14 @@ example (mx my : ProbComp ℝ) (f g : ℝ → ProbComp ℝ) (post : ℝ → ℝ 
     eRelWP mx my (fun a b => eRelWP (f a) (g b) post) ≤ eRelWP (mx >>= f) (my >>= g) post :=
   eRelWP_bind_le mx my f g post
 
-/-- Total variation between real-valued output measures is the complement of the best coupled
-probability of equal outputs. -/
+/-- Total variation between real-valued outputs is the complement of the best coupled
+probability of equal outputs, with no measurable structure chosen on the outputs. -/
 example (mx my : ProbComp ℝ) :
-    (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].etvDist 𝒟[my]) =
-      1 - eRelWP mx my (RelPost.indicator (EqRel ℝ)) :=
+    etvDist mx my = 1 - eRelWP mx my (RelPost.indicator (EqRel ℝ)) :=
   etvDist_eq_one_sub_eRelWP_eqRel mx my
 
 /-- A total variation bound on real-valued outputs is an approximate equality coupling. -/
-example (mx my : ProbComp ℝ) (ε : ENNReal)
-    (h : (letI : MeasurableSpace ℝ := ⊤; 𝒟[mx].etvDist 𝒟[my]) ≤ ε) :
+example (mx my : ProbComp ℝ) (ε : ENNReal) (h : etvDist mx my ≤ ε) :
     ApproxRelTriple ε mx my (EqRel ℝ) :=
   approxRelTriple_eqRel_iff_etvDist_le.2 h
 

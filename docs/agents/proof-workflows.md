@@ -12,7 +12,7 @@
    → `by_dist` to enter TV distance reasoning
    → Use `by_dist ε₂` when you want to pin the TV-distance contribution explicitly
    → For identical-until-bad: use `by_upto` or
-     `measureETVDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
+     `etvDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
 
 3. **Probability equals a specific value** (`Pr{let y ← oa}[y = x] = ...` or `Pr{let x ← oa}[p x] = ...`):
    → Use `prvcgen` when the value holds on every outcome (`= 0`, `= 1`) or a loop invariant pins
@@ -291,7 +291,7 @@ set_option vcvio.vcgen.traceSteps true in
 ```lean
 -- Goal: AdvBound game ε
 by_dist                     -- enters TV distance mode
--- now need to show measureETVDist ... ≤ ε
+-- now need to show etvDist ... ≤ ε
 ```
 
 ```lean

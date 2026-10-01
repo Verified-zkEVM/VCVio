@@ -718,10 +718,13 @@ the constant-continuation laws.
 
 | Definition | Purpose | Defined in |
 |-----------|---------|------------|
+| `etvDist mx my` / `tvDist mx my` | Event-keyed total variation, `⨆ p, absDiff Pr{let x ← mx}[p x] Pr{let y ← my}[p y]`, and its real form; the two computations may live in different monads, and no measurable structure is involved (`etvDist_eq_zero_iff` is `=ᵈ`) | `EvalDist/EvalDistTV.lean` |
+| `etvDist_map_le`, `etvDist_bind_le`, `etvDist_bind_bind_le_wp`, `etvDist_bind_bind_le_of_bad` | Post-processing and common-prefix contraction, conditional composition with a pointwise majorant as the prefix's expectation `wp⟦mx⟧ bound`, exceptional prefix mass plus the good-branch allowance | `EvalDist/EvalDistTV.lean` |
+| `etvDist_map_le_prEvent_of_agree`, `etvDist_map_le_map_add_prEvent_bad` | Identical-until-bad on events: agreement off a bad event bounds the distance by the bad mass | `EvalDist/EvalDistTV.lean` |
 | `Measure.etvDist` / `Measure.tvDist` | Total variation on arbitrary subprobability measures | `ToMathlib/MeasureTheory/Measure/TotalVariation.lean` |
-| `measureETVDist` / `measureTVDist` | Total variation directly on `𝒟[…]` | `EvalDist/MeasureTVDist/Basic.lean` |
+| `measureETVDist` / `measureTVDist` | Total variation of `𝒟[…]` on a chosen σ-algebra; `etvDist_eq_measureETVDist` identifies it with the event-keyed distance on a discrete output space, `measureETVDist_le_etvDist` bounds it on any other | `EvalDist/MeasureTVDist/Basic.lean`, `EvalDist/EvalDistTV.lean` |
 | `Measure.etvDist_bind_le` / `Kernel.etvDist_comp_le` | Common-transition contraction on chosen measurable spaces | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean`, `ToMathlib/Probability/Kernel/TotalVariation.lean` |
-| `measureETVDist_bind_bind_le_lintegral` | Conditional composition with an AE majorant under the prefix law | `EvalDist/MeasureTVDist/Bind.lean` |
+| `measureETVDist_bind_bind_le_lintegral` | Conditional composition with an AE majorant under the prefix law, for σ-algebra-parametric statements | `EvalDist/MeasureTVDist/Bind.lean` |
 | `Measure.etvDist_bind_bind_le_of_bad` | Exceptional prefix mass plus the good-branch allowance weighted by its mass | `ToMathlib/MeasureTheory/Measure/TotalVariation/Bind.lean` |
 | `Measure.Coupling` | Joint measure with prescribed marginals | `ToMathlib/MeasureTheory/Measure/Coupling.lean` |
 | `ExpectationWP.RelWP` | Almost-everywhere relational postcondition under a measure coupling | `ProgramLogic/Relational/Measure.lean` |
@@ -989,7 +992,7 @@ Use the tactic that matches the mathematical obligation:
 | A finite event probability or mass | `finiteness` closes `Pr{…}[…] ≠ ⊤` through `prEvent_ne_top` (tagged for its rule set) and `𝒟[mx] s ≠ ⊤` through Mathlib's finite-measure rule, inside sums and arithmetic. |
 | A finite expectation on a finite result type | `finiteness` uses `wp_ne_top_of_finite` and asks for finite functional values. |
 | A supplied finite bound on an arbitrary result type | Apply `ne_top_of_le_ne_top hc (wp_le_const_of_support oa h)`; the bound remains explicit. |
-| Nonnegative total variation arithmetic | Import `VCVio.EvalDist.MeasureTVDist.Positivity` and use `positivity` on `measureTVDist`; this also arrives through `VCVio.ProgramLogic.Tactics`. |
+| Nonnegative total variation arithmetic | Import `VCVio.EvalDist.MeasureTVDist.Positivity` and use `positivity` on `tvDist` and `measureTVDist`; this also arrives through `VCVio.ProgramLogic.Tactics`. |
 | Measurability through optional or exception-valued maps | `fun_prop` uses `Option.measurable_map`, `Except.measurable_map`, and `Option.measurable_elim'` on arbitrary measurable spaces. |
 
 For a local abbreviation hiding a probability, use a targeted `change` or `dsimp only` before
