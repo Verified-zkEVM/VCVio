@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.DelayedObservation
 import VCVio.EvalDist.Monad.UniformTable
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Merkle checkpoint and cache-reset counterexamples
@@ -221,40 +222,27 @@ theorem game_law : 𝒟[extractabilityExperiment model config 1 adversary] =
 theorem publicFailure_probability :
     𝒟[extractabilityExperiment model config 1 adversary]
       {tr | tr.HasOpeningOrEqualRootDisagreement model} = (1 : ENNReal) / 2 := by
-  rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
-  have hevent : outcome ⁻¹' {tr | tr.HasOpeningOrEqualRootDisagreement model} = {false} := by
-    ext reply
-    exact publicFailure_outcome reply
-  rw [hevent, uniformOn_univ_apply_singleton]
-  simp
+  rw [← prEvent_eq_evalDist_of_discrete, game_eq]
+  prvcgen [OracleComp.Upper.Spec.query_avg, OracleComp.Lower.Spec.query_uniform]
+  all_goals simp [publicFailure_outcome, propInd_eq_ite, one_div]
 
 theorem lateFailure_probability :
     𝒟[extractabilityExperiment model config 1 adversary]
       {tr | LateOpeningFailure model.view tr} = 0 := by
-  rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
-  have hevent : outcome ⁻¹' {tr | LateOpeningFailure model.view tr} = ∅ := by
-    ext reply
-    exact iff_false_intro (no_lateFailure_outcome reply)
-  rw [hevent, measure_empty]
+  rw [← prEvent_eq_evalDist_of_discrete, game_eq]
+  prvcgen [OracleComp.Upper.Spec.query_avg]
+  simp [no_lateFailure_outcome, propInd_eq_ite]
 
 theorem drift_probability :
     𝒟[extractabilityExperiment model config 1 adversary] {tr | Drift model.view tr} =
       (1 : ENNReal) / 2 := by
-  rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
-  have hevent : outcome ⁻¹' {tr | Drift model.view tr} = {false} := by
-    ext reply
-    cases reply <;> simp [drift_outcome_false, no_drift_outcome_true]
-  rw [hevent, uniformOn_univ_apply_singleton]
-  simp
+  rw [← prEvent_eq_evalDist_of_discrete, game_eq]
+  prvcgen [OracleComp.Upper.Spec.query_avg, OracleComp.Lower.Spec.query_uniform]
+  all_goals simp [drift_outcome_false, no_drift_outcome_true, propInd_eq_ite, one_div]
 
 theorem honestShared_probability : 𝒟[honestShared] {true} = 1 := by
-  rw [honestShared_eq, bind_pure_comp, evalDist_map_of_discrete,
-    evalDist_query_uniform (spec := Query →ₒ Bool)]
-  rw [Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
-  have hevent : (fun _ : Bool => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
-    ext reply
-    simp
-  rw [hevent, measure_univ]
+  rw [← prEvent_eq_evalDist_singleton, honestShared_eq]
+  prvcgen
 
 theorem honestReset_probability : 𝒟[honestReset] {true} = (1 : ENNReal) / 2 := by
   rw [honestReset_eq]

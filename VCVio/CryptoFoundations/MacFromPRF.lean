@@ -24,6 +24,7 @@ public import Mathlib.Data.Fintype.Perm
 public import Mathlib.Data.Fintype.Pi
 public import Mathlib.Data.Fintype.Vector
 public import ToMathlib.Control.StateT
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Deterministic MAC from a PRF
@@ -77,14 +78,10 @@ def toMacAlg [DecidableEq R] (prf : PRFScheme K D R) : MacAlg ProbComp D K R whe
 theorem toMacAlg_perfectlyComplete [DecidableEq R] (prf : PRFScheme K D R) :
     prf.toMacAlg.PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
-  let : MeasurableSpace K := ⊤
-  rw [ProbCompRuntime.probComp_evalDist]
-  simp only [toMacAlg, monad_norm, decide_true]
-  rw [show (do let k ← prf.keygen; pure true) = (fun _ => true) <$> prf.keygen by
-    simp only [map_eq_bind_pure_comp, Function.comp_def]]
-  rw [evalDist_map_apply prf.keygen measurable_const (measurableSet_singleton true)]
-  rw [show (fun _ : K => true) ⁻¹' {true} = Set.univ by ext; simp,
-    OracleComp.evalDist_apply_univ_eq_one]
+  rw [ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_singleton]
+  simp only [toMacAlg]
+  prvcgen [OracleComp.Necessary.Spec.ofSupport prf.keygen]
+  simp
 
 /-! ## Security Reduction (Boneh-Shoup Theorem 6.2)
 

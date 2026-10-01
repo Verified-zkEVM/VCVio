@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.SigmaProtocol
 import VCVio.OracleComp.EvalDist.Measure
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Restricting the challenge space of a Σ-protocol
@@ -67,10 +68,10 @@ theorem PerfectlyComplete.restrictChallenges [SampleableType Chal] [SampleableTy
     (σ.restrictChallenges encode).PerfectlyComplete := by
   intro x w hrel
   apply (evalDist_apply_setOf_eq_one_iff_forall_mem_support _ (· = true)).mpr
-  intro b hb
-  simp only [mem_support_bind_iff, mem_support_pure_iff] at hb
-  obtain ⟨⟨pc, sc⟩, hpc, c, _, p, hp, rfl⟩ := hb
-  exact hc.verify x w hrel pc sc hpc (encode c) p hp
+  simp only [ChallengeVerifyProtocol.restrictChallenges]
+  prvcgen [OracleComp.Necessary.Spec.ofSupport (σ.commit x w),
+    OracleComp.Necessary.Spec.ofSupport (σ.respond x w _ _)]
+  exact hc.verify x w hrel _ _ ‹_› _ _ ‹_›
 
 /-- Restricting challenges cannot create two responses to a single original challenge. -/
 theorem UniqueResponses.restrictChallenges
