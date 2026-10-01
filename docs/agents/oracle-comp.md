@@ -121,7 +121,7 @@ induction oa using OracleComp.inductionOn with
 
 ## SubSpec (⊂ₒ)
 
-`spec ⊂ₒ superSpec` means every query in `spec` can be simulated in `superSpec` without changing the distribution.
+`spec ⊂ₒ superSpec` means every query in `spec` can be simulated in the larger specification without changing the distribution.
 
 ```lean
 class SubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
@@ -144,7 +144,7 @@ class SubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
 
 By the Yoneda lemma for polynomial functors this lens data is in bijection with natural transformations `OracleQuery spec ⟹ OracleQuery superSpec`. The `MonadLift` parent records that natural transformation; the `liftM_eq_lift` field is the propositional coherence axiom forcing it to agree with the lens. Concrete `SubSpec` instances spell `monadLift` out *by hand* (rather than letting it default from the lens data), so that the lifted query reduces fully under `isDefEq` — this lets pattern-matching equations about lifted queries, such as `liftComp_query`, apply through their registered automation or explicitly by name.
 
-`SubSpec.toLens` exposes the underlying lens; `SubSpec.trans` is composition of these lenses; `MonadLiftT.refl` covers the identity.
+`SubSpec.toLens` exposes the underlying lens; `SubSpec.trans` is composition of these lenses; Lean's reflexive `MonadLiftT` instance covers the identity.
 
 #### Why `SubSpec` extends `MonadLift` rather than `PFunctor.Lens`
 

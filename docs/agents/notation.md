@@ -107,15 +107,8 @@ Each type has `@[simp]` bridge lemmas (e.g., `Raw.hasPar`) that normalize
 
 Precedence ensures `A ∥ B ⊞ C ⊠ K` parses as `((A ∥ B) ⊞ C) ⊠ K`.
 
-## Removed Notation (Do NOT Use)
+## Removed Notation
 
-| Dead notation | Replacement |
-|---------------|-------------|
-| `Pr[= x \| comp]`, `[= x \| comp]` | `Pr{let y ← comp}[y = x]` |
-| `Pr[p \| comp]`, `Pr[p x \| x ← comp]` | `Pr{let x ← comp}[p x]` |
-| `Pr[⊥ \| comp]` | `prFail comp` |
-| `𝒮[comp]` | `𝒟[comp]` |
-| `++ₒ` | `+` |
-
-To convert code written against the removed discrete probability API, see
-[`probability-migration.md`](probability-migration.md).
+The notation of the removed discrete probability API, and its replacements, are tabulated in
+[`probability-migration.md`](probability-migration.md), which also converts code written against
+it.

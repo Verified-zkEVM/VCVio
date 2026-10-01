@@ -14,13 +14,13 @@ public import VCVio.ProgramLogic.Unary.HandlerSpecs
 
 Each reading of `OracleComp` is exercised through `prvcgen`, two statements each:
 
-* structural: probability one, over draws and over queries, and a support condition;
-* angelic: positive probability, with a named witness per draw, and a possible output;
+* necessary: probability one, over draws and over queries, and a support condition;
+* possible: positive probability, with a named witness per draw, and a possible output;
 * expectation lower bounds: an event on every path, and an averaged draw;
 * expectation upper bounds: probability zero, an averaged draw, a union bound over a loop as an
   invariant, and a union bound over the queries of an adversary as a ranked handler potential
   (`simulateQ_triple_ranked`);
-* triples already stated, quantitative and structural, and their unfolded form, with the
+* triples already stated, lower and necessary, and their unfolded form, with the
   configuration passed to `vcgen`.
 
 Equations split by antisymmetry: every-outcome rules and a loop potential settle both halves
@@ -38,7 +38,7 @@ namespace VCVioTest.ProgramLogic.PrVCGen
 
 variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
 
-/-! ## Structural reading -/
+/-! ## Necessary reading -/
 
 example : Pr{let b ← $ᵗ Bool; let c ← $ᵗ Bool}[(b || c) = (c || b)] = 1 := by
   prvcgen
@@ -55,7 +55,7 @@ example (n : ℕ) :
   prvcgen
   split <;> rfl
 
-/-! ## Angelic reading -/
+/-! ## Possible reading -/
 
 /-- Each draw leaves an existential; the witness is named and `prvcgen` continues. -/
 example : 0 < Pr{let x ← $ᵗ (Fin 5); let y ← $ᵗ (Fin 5)}[x.val + y.val = 7] := by
@@ -213,12 +213,12 @@ end Triples
 section StructuralTriple
 
 open scoped OracleComp.Possible in
-/-- A weakest precondition of the angelic reading is continued in it, as `⊤ ⊑ wp …`. -/
+/-- A weakest precondition of the possible reading is continued in it, as `⊤ ⊑ wp …`. -/
 example : Std.WP.wp ($ᵗ Bool : ProbComp Bool) (fun b => b = true) Lean.Order.bot := by
   prvcgen
   exact ⟨true, rfl⟩
 
-/-- A triple with assertions in `Prop`, under the structural reading. -/
+/-- A triple with assertions in `Prop`, under the necessary reading. -/
 example : ⦃ True ⦄ (do let b ← $ᵗ Bool; pure (b || !b) : ProbComp Bool) ⦃ fun r => r = true ⦄ := by
   prvcgen
   simp
@@ -229,7 +229,7 @@ end StructuralTriple
 
 section FileLevelReading
 
-/-- The global structural reading does not reach `prvcgen`'s lower-bound reading. -/
+/-- The global necessary reading does not reach `prvcgen`'s lower-bound reading. -/
 example : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool}[(b || !b) = true] := by
   prvcgen
   simp
@@ -237,7 +237,7 @@ example : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool}[(b || !b) = true] := by
 end FileLevelReading
 
 /-- An upper-bound triple needs its reading: a bare `vcgen` fails to build its rules, and does
-not fall back to the global lower-bound reading. -/
+not fall back to the lower-bound reading. -/
 example : Pr{let b ← $ᵗ Bool; let c ← (pure b : ProbComp Bool)}[b ≠ c] ≤ 0 := by
   rw [OracleComp.Upper.wp_le_iff_triple]
   fail_if_success vcgen
@@ -287,7 +287,7 @@ example : Pr{let b ← $ᵗ Bool; let c ← $ᵗ Bool}[(b && c) = true] = 1 / 4 
   all_goals simp [Finset.filter_eq', ENNReal.div_eq_inv_mul, ← ENNReal.mul_inv]
   all_goals norm_num
 
-/-- Without uniform answers the structural bridge for `= 1` does not apply; the equation splits,
+/-- Without uniform answers the necessary bridge for `= 1` does not apply; the equation splits,
 the upper half closes on the indicator's range, and the lower half leaves the event. -/
 example [spec.AnswerMeasure] (t : spec.Domain) (f : spec.Range t → ℕ) :
     Pr{let u ← (query t : OracleComp spec _); let v ← (query t : OracleComp spec _)}[

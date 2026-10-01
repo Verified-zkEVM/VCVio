@@ -13,13 +13,13 @@ public import VCVio.EvalDist.Monad.Except
 /-!
 # Upper bounds as core triples
 
-A core triple `⦃ pre ⦄ x ⦃ post ⦄` states `pre ⊑ wp x post epost`. Under the global expectation
-reading of `OracleComp spec` that is a lower bound, `pre ≤ wp⟦x⟧ post`. The expectation
-interpretation is exact, so PolyFun's `ExactWPMonad.dual` is the same interpretation over the
-order duals `ℝ≥0∞ᵒᵈ` and `EStack⟨⟩ᵒᵈ`, where `⊑` is `≥`: a triple of that reading states
-`wp⟦x⟧ post ≤ pre`, an upper bound. `open scoped OracleComp.Upper` selects it, and core's
-`vcgen` then decomposes upper bounds with the same `@[spec]` catalogue, transformer rules, and loop
-invariants as lower bounds.
+A core triple `⦃ pre ⦄ x ⦃ post ⦄` states `pre ⊑ wp x post epost`. Under the lower-bound reading of
+`OracleComp spec` (`OracleComp.Lower`) that is a lower bound, `pre ≤ wp⟦x⟧ post`. The expectation
+interpretation is exact, so PolyFun's `ExactWPMonad.dual` is the same interpretation over the order
+duals `ℝ≥0∞ᵒᵈ` and `EStack⟨⟩ᵒᵈ`, where `⊑` is `≥`: a triple of that reading states `wp⟦x⟧ post ≤
+pre`, an upper bound. `open scoped OracleComp.Upper` selects it, and core's `vcgen` then decomposes
+upper bounds with the same `@[spec]` catalogue, transformer rules, and loop invariants as lower
+bounds.
 
 ## Stating an upper bound
 
@@ -36,8 +36,10 @@ assertion type to `ℝ≥0∞`, for which this scope has no interpretation.
 
 The registered rules bound the expectation of a query or a uniform draw by its largest value, with
 core's indexed infimum `Lean.Order.iInf` of the dual, which `vcgen` splits into one verification
-condition per outcome: `Spec.query`, `Spec.monadLift_query`, `Spec.uniformSample`,
-`Spec.uniformFin`. They prove events of probability zero and bounds that hold on every path.
+condition per outcome: `Spec.monadLift_query` (with the global `HasQuery.query` unfold),
+`Spec.uniformSample`, `Spec.uniformFin`, `Spec.replicate`, and the lifts `Spec.liftComp` and
+`Spec.monadLift_liftComp`. They prove events of probability zero and bounds that hold on every
+path.
 
 The averaging rules state the exact expectation of a finite uniform draw or a uniform query as a
 sum: `Spec.uniformSample_avg`, `Spec.query_avg`, `Spec.monadLift_query_avg`. They are applied

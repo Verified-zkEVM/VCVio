@@ -22,10 +22,10 @@ weakest-precondition API for `OracleComp`. The laws below specialize the generic
 computations, which are lossless, and add the oracle-specific ones: queries, uniform sampling,
 replication and traversals.
 
-The expectation interpretation is the core instance of `OracleComp spec`
-(`OracleComp.Lower.instWP`), so core's `⦃ pre ⦄ program ⦃ post ⦄` notation, available
-through `open scoped Std.WP`, states these triples: it is `Std.WP.Triple program pre post ⊥`,
-with the empty exception postcondition.
+The expectation interpretation is the scoped core instance of `OracleComp spec`
+(`OracleComp.Lower.instWP`, under `open scoped OracleComp.Lower`), so core's `⦃ pre ⦄ program ⦃ post
+⦄` notation, available through `open scoped Std.WP`, states these triples: it is `Std.WP.Triple
+program pre post ⊥`, with the empty exception postcondition.
 -/
 
 @[expose] public section

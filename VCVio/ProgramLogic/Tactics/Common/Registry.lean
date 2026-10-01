@@ -57,7 +57,7 @@ wherever possible:
 ## Future-proofing note
 
 `Lean.Meta.Sym` is under active development upstream; minor shape changes to
-`Sym.Pattern`, `Sym.insertPattern`, or `Sym.DiscrTree.getMatch` between Lean
+`Sym.Pattern`, `Sym.insertPattern`, or `Sym.getMatch` between Lean
 releases should be expected. If a toolchain bump breaks the registry, the
 affected surface is confined to the selector in `buildVCSpecEntry` and the
 lookup path in `getRegisteredRelationalVCSpecEntries`; downstream tactic dispatch works

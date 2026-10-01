@@ -292,9 +292,9 @@ Use an exact pathwise theorem when every run really has the same cost.
 
 Examples:
 
-- `FiatShamir.verify` uses exactly one query
-- `TTransform.encrypt` uses exactly one query
-- `Fischlin.verify` uses exactly `ρ` queries
+- the Fiat–Shamir verifier uses exactly one query
+- the T-transform's encryption uses exactly one query
+- the Fischlin verifier uses exactly `ρ` queries
 
 ### Prove `UsesCostAs`
 
@@ -315,7 +315,8 @@ Use a pathwise upper bound when branching or retrying changes the cost across ru
 Examples:
 
 - `TTransform.decrypt` uses at most one query
-- `FiatShamirWithAbort.sign` uses at most `maxAttempts` queries
+- Fiat–Shamir-with-aborts signing uses at most the attempt bound many queries
+  (`sign_usesAtMostMaxAttemptsQueries`)
 - Fischlin signing uses at most `ρ * |Ω|` queries
 
 These are the right first theorems for search loops, aborting schemes, and stopping-time style

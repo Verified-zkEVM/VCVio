@@ -13,12 +13,12 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 /-!
 # `vcgen` rules for the quantitative reading of oracle computations
 
-The expectation interpretation is the global core instance of `OracleComp spec`
-(`OracleComp.Lower.instWP`), so a triple `⦃ r ⦄ oa ⦃ post ⦄` states the lower bound
-`r ≤ wp⟦oa⟧ post`. With the indicator postcondition of an event it is a lower bound on the event:
-`le_prEvent_iff_triple` states `r ≤ Pr{let x ← oa}[p x]` as `⦃ r ⦄ oa ⦃ predInd p ⦄`, and
-`le_wp_iff_triple` reads any lower bound on an expectation, including the nested expectations of
-an event's normal form, as a triple.
+The expectation interpretation is the scoped core instance of `OracleComp spec`
+(`OracleComp.Lower.instWP`, under `open scoped OracleComp.Lower`), so a triple `⦃ r ⦄ oa ⦃ post ⦄`
+states the lower bound `r ≤ wp⟦oa⟧ post`. With the indicator postcondition of an event it is a lower
+bound on the event: `le_prEvent_iff_triple` states `r ≤ Pr{let x ← oa}[p x]` as `⦃ r ⦄ oa ⦃ predInd
+p ⦄`, and `le_wp_iff_triple` reads any lower bound on an expectation, including the nested
+expectations of an event's normal form, as a triple.
 
 ## Rules
 
@@ -26,8 +26,9 @@ Oracle computations are lossless, so a lower bound that holds for every outcome 
 uniform draw holds in expectation. The registered rules state exactly that, with core's indexed
 infimum `Lean.Order.iInf`, which `vcgen` splits into one verification condition per outcome:
 
-* `Spec.query`, `Spec.monadLift_query`: an oracle query;
-* `Spec.uniformSample`: a uniform draw `$ᵗ β`.
+* `Spec.monadLift_query` (with the global `HasQuery.query` unfold): an oracle query;
+* `Spec.uniformSample`, `Spec.uniformFin`: uniform draws;
+* `Spec.liftComp`, `Spec.monadLift_liftComp`: lifts between specifications with uniform answers.
 
 These rules establish probability-one events and lower bounds that hold on every path. They lose
 the averaging of a fractional event: the exact values of queries and draws are sums, which

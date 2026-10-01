@@ -29,10 +29,20 @@ rules for queries need uniform response measures.
 - `Examples/ProgramLogic/RelationalStep.lean`: step-by-step relational tactic examples.
 - `Examples/ProgramLogic/RelationalDerived.lean`: derived relational patterns and automation examples.
 - `Examples/ProgramLogic/ProofMode.lean`: proof-mode entry points and small end-to-end examples.
+- `Examples/ProgramLogic/RelationalAnchored.lean`: the honest exception and option relational
+  combinators, which keep each side's failure outcomes apart.
+- `Examples/ProgramLogic/MeasureCoupling.lean`: continuous transitions and unequal successful-output
+  mass through the sequential relational rule.
+- `Examples/ProgramLogic/GaussianWiring.lean`: a continuous state service behind polynomial wiring,
+  with discrete replies and continuous private state.
+- `Examples/ProgramLogic/RandomOracleRouting.lean`: input aliasing changes a random-oracle
+  observation (one half versus one), for eager and lazy oracles.
+- `Examples/ProgramLogic/RandomOracleWiring.lean`: adaptive and repeated calls to a shared wired
+  random oracle; the lazy cache and eager table laws agree.
 - `VCVio/ProgramLogic/Relational/Examples.lean`: compact API examples for the relational layer.
 - `VCVioTest/ProgramLogic/PrVCGen.lean`, `VCVioTest/ProgramLogic/CoreVCGen.lean`,
-  `VCVioTest/ProgramLogic/VCGenNames.lean`: every reading through `prvcgen`, every `@[spec]` rule
-  and bridge under a bare `vcgen`, and the tactic names.
+  `VCVioTest/ProgramLogic/VCGenNames.lean`: every reading through `prvcgen`, the necessary-reading
+  rules, transformer rules and bridges under a bare `vcgen`, and the tactic names.
 
 ## Tactic Quick Reference
 
@@ -58,8 +68,8 @@ core's tactic (gotcha 35). The relational counterparts are `rvcstep` / `rvcgen` 
 For `wp⟦oa⟧ f ≤ wp⟦oa⟧ g`, `gcongr with x hx` exposes `hx : x ∈ support oa` and the
 pointwise obligation `f x ≤ g x` (`wp_mono_of_support`). The unrestricted
 `ExpectationWP.wp_mono` remains available as a lower-priority fallback. Expectations are
-core's `Std.WP.wp` under the measure interpretation, so the same rules apply to raw
-`Std.WP.wp` expressions of that interpretation. An event after a common draw is an
+core's `Std.WP.WP.wp` under the measure interpretation, so the same rules apply to raw
+`Std.WP.WP.wp` expressions of that interpretation. An event after a common draw is an
 expectation over that draw, so `gcongr` descends into `Pr{let x ← mx; …}[…]` as well.
 `wp_eq_lintegral` integrates a measurable assertion in the chosen result space;
 `wp_eq_lintegral_map` observes an arbitrary assertion without requiring a space on hidden results.
@@ -233,10 +243,65 @@ kind of statement about its outcomes:
 
 | Reading | Scope | Carrier | `⦃ pre ⦄ oa ⦃ post ⦄` states | Rules |
 |---------|-------|---------|-------------------------------|-------|
-| necessary (necessary) | global instance (`OracleComp.Necessary`) | `Prop` | every possible output satisfies `post` | `Unary/WP/NecessarySpecs.lean` |
-| possible (possible) | `OracleComp.Possible` | `Prop` | some possible output satisfies `post` | `Unary/WP/Possible.lean` |
+| necessary | global instance (`OracleComp.Necessary`) | `Prop` | every possible output satisfies `post` | `Unary/WP/NecessarySpecs.lean` |
+| possible | `OracleComp.Possible` | `Prop` | some possible output satisfies `post` | `Unary/WP/Possible.lean` |
 | expectation lower bound | `OracleComp.Lower` | `ℝ≥0∞` | `pre ≤ wp⟦oa⟧ post` | `Unary/WP/LowerSpecs.lean` |
 | expectation upper bound | `OracleComp.Upper` | `ℝ≥0∞ᵒᵈ` | `wp⟦oa⟧ post ≤ pre` | `Unary/WP/Upper.lean` |
+
+The registered `@[spec]` rules, by namespace (`scripts/extract-doc-fragments.py --write`
+regenerates this table; `--check` fails when it is stale):
+
+<!-- BEGIN AUTO:specRules -->
+| Namespace | Rule | Attribute | Defined in |
+|-----------|------|-----------|------------|
+| `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
+| `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
+| `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
+| `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
+| `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
+| `HasQuery` | `HasQuery.instOfMonadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Necessary.lean` |
+| `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
+| `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
+| `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Necessary.lean` |
+| `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
+| `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
+| `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
+| `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
+| `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
+| `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
+| `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
+| `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
+| `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
+| `OracleComp.ProgramLogic.Spec` | `OracleComp.ProgramLogic.Spec.simulateQ` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.cachingLoggingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.cachingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.costOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.countingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.loggingOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.ProgramLogic` | `OracleComp.ProgramLogic.seededOracle_triple` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `QueryImpl.Spec` | `QueryImpl.Spec.add_inl` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `QueryImpl.Spec` | `QueryImpl.Spec.add_inr` | `@[spec]` | `VCVio/ProgramLogic/Unary/HandlerSpecs.lean` |
+| `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.guard_OptionT_iInf` | `@[spec low]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.lift_ExceptT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.lift_StateT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.mapM_list` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.mk_ExceptT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.mk_OptionT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.mk_StateT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.run'_StateT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.run_ExceptT'` | `@[spec high]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.run_OptionT'` | `@[spec high]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.seqLeft` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `Std.WP.Spec` | `Std.WP.Spec.seqRight` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
+| `WriterT.AppendWP.Spec` | `WriterT.AppendWP.Spec.monadLift` | `@[spec]` | `ToMathlib/Control/WriterT/WP.lean` |
+| `WriterT.AppendWP.Spec` | `WriterT.AppendWP.Spec.tell` | `@[spec]` | `ToMathlib/Control/WriterT/WP.lean` |
+<!-- END AUTO:specRules -->
 
 The upper-bound reading is PolyFun's `ExactWPMonad.dual` of the expectation reading: the same
 interpretation over the order duals, so core's `vcgen`, transformer rules and loop invariants
@@ -289,7 +354,8 @@ with `Lean.Order.iInf`, which `vcgen` splits into one condition per outcome:
 | Program | Rule | Precondition |
 |---------|------|--------------|
 | `query t` (both spellings) | `Spec.monadLift_query` | `⨅ u, post u` |
-| `$ᵗ β` | `Spec.uniformSample` | `⨅ x, post x` |
+| `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨅ x, post x` |
+| `liftComp oa superSpec`, `liftM oa` (uniform answers on both specifications) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨅ a : {a // a ∈ support oa}, post a.1` |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_sum` | `(∑ x, post x) / card β` |
 | `query t`, uniform (not registered) | `Spec.query_uniform` | `∑ u, (card)⁻¹ * post u` |
@@ -331,6 +397,8 @@ Upper-bound rules (`VCVio/ProgramLogic/Unary/WP/Upper.lean`, namespace `OracleCo
 |---------|------|------|
 | `query t` (both spellings) | `Spec.monadLift_query` | `⨆ u, post u` (core's `Lean.Order.iInf` of the dual) |
 | `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨆ x, post x` |
+| `oa.replicate n` | `Spec.replicate` | `⨆ xs : {xs // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa}, post xs.1` |
+| `liftComp oa superSpec`, `liftM oa` (uniform answers on both specifications) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨆ a : {a // a ∈ support oa}, post a.1` |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_avg` | `(∑ x, post x) / card β` |
 | `query t`, uniform (not registered) | `Spec.query_avg`, `Spec.monadLift_query_avg` | `∑ u, (card)⁻¹ * post u` |
@@ -342,12 +410,18 @@ averaging rule explicitly. A bound that accumulates over steps, such as a union 
 adversary's queries, is a potential: the bad event's indicator plus the budget of the remaining
 steps, carried by a loop invariant (`Spec.foldlM_list`) or by a ranked handler invariant
 (`OracleComp.ProgramLogic.simulateQ_triple_ranked`, which spends one unit of budget per query of a
-computation with `IsTotalQueryBound`). `vcgen` then leaves one averaging inequality per step and an
-entry condition comparing the initial budget with the bound.
+computation with `IsTotalQueryBound`; its budget is a proof-side fact, so it is not a registered
+rule: apply it by hand or pass it instantiated in brackets). `vcgen` then leaves one averaging
+inequality per step and an entry condition comparing the initial budget with the bound.
 
 An assertion of the upper-bound reading has type `ℝ≥0∞ᵒᵈ`. Write the precondition as `toDual ε`:
 the triple notation elaborates its precondition before it looks up the interpretation, so an
-`ℝ≥0∞` precondition selects the carrier `ℝ≥0∞`. Bridges:
+`ℝ≥0∞` precondition selects the carrier `ℝ≥0∞`. Read a verification condition of a bare `vcgen`
+back through `OracleComp.Upper.rel_iff` before `simp` touches it: `simp` alone rewrites
+`toDual 5` to the dual numeral and `rel` to the dual's order, leaving `5 ≤ 3` in `ℝ≥0∞ᵒᵈ`, which
+holds but which no numeral tactic closes, whereas after `rw [OracleComp.Upper.rel_iff]` the
+condition is `3 ≤ 5` in `ℝ≥0∞`, for `simp` or `norm_num`. `prvcgen` reads its conditions back
+this way. Bridges:
 
 | Statement | Triple (upper-bound reading) | Lemma |
 |-----------|------------------------------|-------|
@@ -397,14 +471,19 @@ for upper bounds, and `Prop` for the necessary reading, or the possible one when
 interpretation's head is the possible `WPMonad`. A state-passing assertion `σ → …` is read by its
 codomain and a transformer's interpretation by the base monad's, so triples over `StateT`,
 `ReaderT`, `WriterT`, `OptionT` and `ExceptT` stacks on `OracleComp spec`, the handler
-specifications among them, run the same way. An event of an `OptionT` or `ExceptT` program is
-bridged to the lower reading generically (`ExpectationWP.le_wp_iff_triple`: the scope's stack
-instance is the lift the notation pins) and to the upper reading by the transformer's bridge
-(`OracleComp.Upper.OptionT.wp_le_iff_triple`, `….ExceptT.wp_le_iff_triple`), which supplies the
-exception postcondition that charges a failure `0`; the readback unfolds `pushOption`/`pushExcept`
-and the stack's bottom (`ExpectationWP.bot_fst`, `bot_snd`, `bot_eq_zero`). A comparison
-`Pr{A}[p] ≤ Pr{B}[q]` is read as an upper bound on the left-hand side with the right-hand side as
-the bound.
+specifications among them, run the same way. An event of an `OptionT` or `ExceptT` program on
+`OracleComp spec` is read through the stack's run: its lifted expectation is, by definition, the
+base expectation of `pushOption`/`pushExcept` over `mx.run` (`OptionT.wp_eq_run`,
+`ExceptT.wp_eq_run`), so a lower bound is bridged by `OracleComp.ProgramLogic.le_wp_iff_triple`
+on the run, where core's `Spec.run_OptionT'`/`Spec.run_ExceptT'` and the lift rules continue, and
+an upper bound by the transformer's bridge (`OracleComp.Upper.OptionT.wp_le_iff_triple`,
+`….ExceptT.wp_le_iff_triple`), which supplies the exception postcondition that charges a failure
+`0`. `ExpectationWP.le_wp_iff_triple` is the generic fallback for a stack whose base is not an
+oracle computation; the triple it states is over the stack's own interpretation, which core's
+transformer rules do not match, so it is not a route into `vcgen`. The readback unfolds
+`pushOption`/`pushExcept` and, in the lower reading, the stack's bottom (`ExpectationWP.bot_fst`,
+`bot_snd`, `bot_eq_zero`). A comparison `Pr{A}[p] ≤ Pr{B}[q]` is read as an upper bound on the
+left-hand side with the right-hand side as the bound.
 
 Syntax: `prvcgen (config)? [rules]? (until t)? (frames …)? (invariants · …)?
 (simplifying_assumptions …)? (with step)? (=> tac)?`: `vcgen`'s arguments, in `vcgen`'s positions,
@@ -435,7 +514,8 @@ without a rule is left as a verification condition stating its weakest precondit
 `prvcgen invariants · fun _ _ s => I s`, `List.mapM` through `Std.WP.Spec.mapM_list`
 (`Unary/WP/TransformerSpecs.lean`), whose invariant ranges over the elements consumed, the elements
 remaining and the outputs so far, as `prvcgen invariants · fun pref _ bs => bs.length = pref.length`,
-and `replicate` through the rules of `Unary/HoareTriple.lean` passed explicitly, as
+and `replicate` through `Spec.replicate` in the necessary, possible and upper readings, or in the
+lower reading through the rules of `Unary/HoareTriple.lean` passed explicitly, as
 `prvcgen [triple_replicate_inv hstep]` (`triple_replicate_inv`, `triple_replicate`,
 `triple_list_mapM_inv`, `triple_list_foldlM_inv` and their consequence forms). A simulation
 `simulateQ handler oa` in `StateT σ m` takes a handler invariant through `Spec.simulateQ`
@@ -536,8 +616,10 @@ expectation in the stack's language, where `OptionT.wp_lift`, `wp_guard`, `wp_fa
 open it on request (`vcgen` sees through it by definitional unfolding). That the lifted expectation is the
 stack's own successful-output measure is a theorem (`OptionT.wp_ofMeasure_eq`,
 `ExceptT.wp_ofMeasure_eq`), as is the reading of a stack through its run (`OptionT.wp_eq_run`,
-`ExceptT.wp_eq_run`), and the bridges between readings (`Pr{…} = 1` is the lifted necessary
-triple, `0 < Pr{…}` the lifted possible one) lift with it.
+`ExceptT.wp_eq_run`). The bridges from a stack program's `Pr{…} = 1` and `0 < Pr{…}` to the
+lifted necessary and possible triples are not stated yet: `prvcgen` bridges those two shapes for
+`OracleComp` only, and a stack event enters them through `OptionT.prEvent_mk_eq_one_iff` and
+`OptionT.prEvent_mk_pos_iff`.
 
 Two things are not lifts and must not be confused with them:
 
@@ -553,8 +635,9 @@ Two things are not lifts and must not be confused with them:
 
 Observing a stack differently is a run, not another instance: `Spec.run'_StateT`,
 `Spec.run_OptionT'` and `Spec.run_ExceptT'` (`Unary/WP/TransformerSpecs.lean`) read a program
-through its state, option or result. `WriterT ω m` keeps the measure interpretation of the stack
-(its lift interprets assertions over the log, not expectations of outputs).
+through its state, option or result. `WriterT ω m` has no expectation interpretation of its own
+(its lift interprets assertions over the log, not expectations of outputs): observe a writer
+program through its run, as `AddWriterT.expectedCost_eq_lintegral_run` does.
 
 ## Program equalities (`prrw`)
 
@@ -685,8 +768,8 @@ relTriple_simulateQ_run :
 
 ### Handler `@[spec]` catalog (`Unary/HandlerSpecs.lean`)
 
-Per-call core triples `⦃ pre ⦄ handler t ⦃ post ⦄` under the necessary reading
-(`open scoped OracleComp.Necessary`), tagged `@[spec]` so core `vcgen` composes them through
+Per-call core triples `⦃ pre ⦄ handler t ⦃ post ⦄` under the necessary reading (the global
+instance), tagged `@[spec]` so core `vcgen` composes them through
 multi-query handler programs:
 
 | Handler | Spec | Postcondition |
@@ -892,13 +975,13 @@ rules could fire?" *fast*, and without the cost or surprises of `isDefEq` unfold
 been building a dedicated symbolic toolkit under `Lean.Meta.Sym` precisely for this: `Sym.Pattern`
 records a de Bruijn-encoded skeleton of the indexed sub-expression together with its normalizing
 preprocess (`preprocessType` unfolds reducible abbreviations, beta/zeta/eta-reduces, and
-elaborates universes); `Sym.DiscrTree` is a thin wrapper over `Lean.Meta.DiscrTree` whose insertion
-keys come from those preprocessed patterns and whose lookup is the pure structural `getMatch`.
-Building on `Sym.Pattern` + `Sym.DiscrTree` gives the registry the same pattern preprocessing and
+elaborates universes); `Sym.insertPattern` and `Sym.getMatch` (`Lean.Meta.Sym.Simp.DiscrTree`)
+index a `Lean.Meta.DiscrTree` by those preprocessed patterns, with a purely structural lookup.
+Building on `Sym.Pattern` + `Sym.getMatch` gives the registry the same pattern preprocessing and
 lookup cost profile as core's own tactics. Unary rules are core `@[spec]` theorems, which Lean
 indexes itself for `vcgen` and `prvcgen`.
 
-**Key alignment invariant**: `Sym.DiscrTree.getMatch` is purely structural, so
+**Key alignment invariant**: `Sym.getMatch` is purely structural, so
 goal-side query terms must expose the same oracle-wrapper shapes as the pattern
 side. The registry query functions therefore route the extracted computation
 through `symMatchKey` (`Tactics/Common/Core.lean`), which recursively unfolds
@@ -949,7 +1032,7 @@ candidate pool. `Tactics/Common/Backward.lean` builds and caches the backward ru
 ## SymM Stability Note and Future Proof Repair
 
 `Lean.Meta.Sym.*` is still under active development in core Lean. The APIs the `@[vcspec]`
-registry depends on (`Sym.Pattern`, `Sym.DiscrTree`, `Sym.insertPattern`, `Sym.getMatch`,
+registry depends on (`Sym.Pattern`, `Sym.insertPattern`, `Sym.getMatch`,
 `Sym.mkPatternFromDeclWithKey`, and `SpecProof` in `Lean.Elab.Tactic.Do.SpecAttr`) are all used by
 core's `mvcgen` and `vcgen` too, so their direction is broadly stable, but none of them carry a
 compat-preservation promise yet. Expect the following classes of churn each time we bump the
@@ -1001,15 +1084,15 @@ instances, and `vcgen`. The unary carriers in `Unary/WP/` consume these directly
 
 Core's assertion carriers are output parameters, so instance search reads a program's
 interpretation off its type alone and one interpretation is live per program type. The scoped
-readings take precedence over the quantitative instance where they are opened. Support facts do
+readings take precedence over the global necessary instance where they are opened. Support facts do
 not need a second interpretation: the quantitative one consumes them through `MonadAttach`
 (`wp_mono_of_support`, `wp_congr_of_support`), as core's own specifications pair `MonadAttach`
 with any `WPMonad`. Core also documents how to keep several readings of one monad live at once:
 a type synonym carrying its own instance, selected by the program's type (core's tests use
-`HeapM` and `TickT`). A necessary reading of oracle computations on such a synonym, with its own
-global instance, is the route for running `vcgen` over `Prop` assertions on oracle computations;
-VCVio does not define one yet. Quantitative expectation does not provide a general structural
-reachability certificate. The probability-one coherence theorems state their additional uniformity
+`HeapM` and `TickT`). VCVio takes the other route: the necessary reading is the global instance
+of `OracleComp` itself and the quantitative readings are scoped, so `vcgen` runs over `Prop`
+assertions on oracle computations with no synonym. Quantitative expectation does not provide a
+general structural reachability certificate. The probability-one coherence theorems state their additional uniformity
 assumptions.
 
 Use `open scoped Std.WP` for core triple notation.
@@ -1027,7 +1110,7 @@ Core `vcgen` and `prvcgen` consume the core `@[spec]` catalogue, and the couplin
 `rvcgen` / `rvcstep` consume `@[vcspec]`. Generic transformer WP comes from core and PolyFun's
 WriterT interpretation; VCVio retains its probability rules and existing transformer equality
 lemmas. The scoped `WriterT.MonoidWP` interpretation uses multiplication; append-based logs use
-`WriterT.toWPMonad` with explicit operations.
+the scoped `WriterT.AppendWP` interpretation.
 
 The handler specifications are core triples under the necessary reading, proved and composed
 by core `vcgen` (`Unary/HandlerSpecs.lean`), and the UC runtime's triples are core triples too

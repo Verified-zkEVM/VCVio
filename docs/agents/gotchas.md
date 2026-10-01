@@ -234,15 +234,18 @@ Use `return (b == b')` or `return decide (r x w)` instead. `guard` requires `Opt
 
 ### 13. `do`-notation bind uses a different `Bind` instance (Lean 4.29+)
 
-Lean 4.29 changed `do`-block elaboration so the desugared bind may use a `Bind` instance
-that differs syntactically from `Monad.toBind`. This means `pure_bind`, `bind_assoc`, and
-`bind_pure` won't fire via `simp` or `rw` on goals produced by `do` notation in special cases of using more non-standard instances.
+A `do` block elaborates its binds through the `Bind` instance of the monad it is elaborated at.
+When a program is written at a transformer stack, a structure field or a type synonym whose
+instance is not reducibly `Monad.toBind` of the lawful monad, `pure_bind`, `bind_assoc` and
+`bind_pure` may not match the desugared binds.
 
-**Symptom**: `simp [pure_bind]` or `rw [bind_assoc]` does nothing on a `do`-block goal.
+**Symptom**: `simp only [pure_bind]` or `rw [bind_assoc]` does nothing on a `do`-block goal, and
+`set_option pp.explicit true` shows two different `Bind` instances.
 
-**Fix**: Use the restated lemmas from `ToMathlib.Control.Lawful.Basic` (namespace `LawfulMonad`):
-`do_pure_bind`, `do_bind_pure`, `do_bind_assoc`, `do_bind_pure_comp`, `do_map_bind`,
-`do_bind_map_left`. All are `@[simp]`.
+**Fix**: canonicalize the definition (state it at the monad whose instance is the lawful one, or
+`change` the goal to that instance) rather than adding restated monad laws. For `OracleComp`
+programs the standard laws fire; `prrw normalize` and `simp only [expect_norm]` normalize binds
+with `map_eq_bind_pure_comp` and `bind_assoc` before searching.
 
 ### 14. Hypothesis satisfiability is a proof obligation
 
@@ -540,9 +543,10 @@ VCVio's unary tactics are `prvcgen`, which picks the bridge and the reading from
 core `vcgen` in that reading's `Dispatch` scope with the experimental option set, and `prrw`, which
 rewrites equalities between the probabilities of two programs; `rvcgen` / `rvcstep` are the
 relational ones. Unary rules are core `@[spec]` theorems: `@[vcspec]` registers relational rules
-only and rejects a triple of one program. No `@[spec]` rule steps through `simulateQ`; use a
-whole-program lift such as `simulateQ_triple_preserves_invariant`, or carry an expectation across
-with `wp_simulateQ_eq`. None of VCVio's tactics shares a leading token with core's, so a bare
+only and rejects a triple of one program. `Spec.simulateQ` (`Unary/HandlerSpecs.lean`) steps
+through `simulateQ handler oa` with a handler invariant passed as `prvcgen invariants · fun s => I s`;
+a whole-program lift such as `simulateQ_triple_preserves_invariant`, or `wp_simulateQ_eq` to carry
+an expectation across, is the alternative. None of VCVio's tactics shares a leading token with core's, so a bare
 `vcgen` always elaborates core's tactic; `VCVioTest/ProgramLogic/VCGenNames.lean` pins this. The
 `vcvio.vcgen.*` options (`maxPasses`, `traceSteps`, `time`, `traceCachedRules`) configure the
 planner of `rvcgen` (and `time` also that of `prrw normalize`), not core's `vcgen`.

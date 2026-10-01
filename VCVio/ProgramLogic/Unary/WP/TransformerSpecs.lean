@@ -136,7 +136,7 @@ variable {m : Type → Type v} {Pred EPred : Type}
   [Monad m] [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred]
 
 /-- `guard p` in `OptionT`: the postcondition when `p` holds and the failure assertion when it
-does not, stated with lattice connectives so that every reading decomposes it. Core's
+does not, stated with lattice connectives so that every reading decomposes it. PolyFun's
 `Spec.guard_OptionT` is stated for `Prop` assertions and takes precedence there. -/
 @[spec low]
 theorem Spec.guard_OptionT_iInf (p : Prop) [Decidable p] (post : Unit → Pred)

@@ -125,7 +125,7 @@ and that uniform ciphertext marginals do not justify key reuse.
 `VCVioTest/ReactiveNetworkAdversarial.lean` checks insufficient fuel, missing deliveries,
 a reachable nonempty serial queue, and shared-state reply dependence.
 
-`PolyFun.Interaction.UC.ReactiveNetwork.Assembly` compiles raw open syntax to finite typed
+`PolyFun.Interaction.Execution.ReactiveNetwork.Assembly` compiles raw open syntax to finite typed
 diagrams; select the single global environment after composition. `Factorization` and
 `Factorization.Right` prove all four parallel/wired closure factorizations under explicit
 node bijections, retaining the original machines. The generic `runToken_reindex_cast` and

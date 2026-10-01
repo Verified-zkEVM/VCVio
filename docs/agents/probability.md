@@ -51,7 +51,7 @@ prefix. `prEvent_bind_le_sum_add_lintegral_ae` integrates an AE comparison with 
 reference events and a varying allowance on the chosen source space. Continuation observation
 families must be measurable; the allowance need not be. The reachable version uses core
 attachment and the actual continuation-measure observer, leaving hidden source and result types
-unmeasured. `prEvent_bind_le_sum_add_mul_mass_of_support` retains the allowance times the prefix's
+unmeasured. `wp_le_sum_add_mul_mass_of_support` retains the allowance times the prefix's
 successful mass. The weaker constant-allowance and disagreement/bad-world rules specialize the
 same argument.
 
@@ -375,7 +375,8 @@ property under that hypothesis. Such a local certificate is appropriate for a pa
 measurable pushforward; repeated certificates for the same named measure indicate a missing
 exported instance. For an abstract
 intermediate type, a local `MeasurableSpace α := ⊤` chooses the discrete structure; Mathlib uses
-this idiom in `MeasureTheory.Function.Piecewise` and `MeasureTheory.Function.SimpleFunc`.
+this idiom in `Mathlib/MeasureTheory/Function/Piecewise.lean` and
+`Mathlib/MeasureTheory/Function/SimpleFunc.lean`.
 Keep that choice inside structural APIs when callers do not need to observe intermediate values.
 Mathlib already supplies discrete measurable spaces for `Bool`, `ℕ`, `Fin n`, and other standard
 countable types; do not redeclare them locally when the canonical instance suffices.
@@ -517,7 +518,7 @@ mentions (`UniformAnswerMeasure.toMeasure_singleton`). A blanket instance from
 `[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]` would silently choose a
 distribution for an arbitrary oracle, so `UniformAnswerMeasure.ofFiniteNonempty` is an explicit
 opt-in and only the concrete `unifSpec` and `coinSpec` instances are global. Structural
-`OracleComp.support` needs neither measure class; a
+`support` on `OracleComp` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
 
 Oracle answer measures live on the discrete σ-algebra. `OracleSpec.AnswerMeasure spec` is
@@ -547,7 +548,7 @@ takes `UniformAnswerMeasure.ofFiniteNonempty _` as a local instance on that spec
 get their instances from `AnswerMeasure.add` and `UniformAnswerMeasure.add`, and a local instance
 declared on the sum itself would compete with them.
 For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
-it follows only the query responses in `possibleOutputs`, with pure/query/bind laws
+it follows only the query responses its first argument allows, with pure/query/bind laws
 and a `gcongr` monotonicity rule. PolyFun defines the underlying
 `FreeM.reachableUnder` from an angelic operation-indexed weakest-precondition
 fold. `reachableWhen_univ_eq_support` identifies its all-responses case with
@@ -698,7 +699,7 @@ a kernel-based responder need not have any executable realization. The executabl
 | `ReaderT` and `StateT` observations | Use `Kernel` now | Environment/state is exactly the kernel input; use the adapters above. |
 | Stateful responders and wired rounds | Use `Kernel` now | `answerKernel`, `stepAgainstKernel`, and kernel powers model transitions compositionally. |
 | Executable `QueryImpl`, `simulateQ`, machine runs | Keep monadic syntax | These are programs and evaluators; cross to kernels at observation boundaries. |
-| KL/data-processing continuations | Use `Kernel` now | `KLDivergence.denoteKernel` is implemented through `evalDistKernelOfDiscrete`. |
+| KL/data-processing continuations | Use `Kernel` now | `PFunctor.FreeM.denoteKernel` is implemented through `evalDistKernelOfDiscrete`. |
 | Query tracing, caches, costs, enforcement | Kernel views of observations, not handlers | Add kernel views of their `StateT` runs when a theorem composes distributions across states. |
 | Crypto functions parameterized by keys/messages/security parameter | Add kernels when composed probabilistically | A plain function remains clearer until measurability or data processing is actually used. |
 | UC/open-process runtime | Defer to an observation boundary | Structural process syntax has no canonical measurable space; bundle a kernel only for a chosen execution/observation model. |
@@ -787,7 +788,6 @@ applied by name (`rw`, `exact`, or a `simp [...]` argument).
 | Lemma | Statement | Tags |
 |-------|-----------|------|
 | `evalDist_bind_const` | `𝒟[mx >>= fun _ => my] = 𝒟[mx] Set.univ • 𝒟[my]` | `simp` |
-| `prEvent_bind_const` | `prEvent (mx >>= fun _ => my) = Pr{let _ ← mx}[True] * prEvent my` | `simp` |
 | `OracleComp.evalDist_bind_const` | `𝒟[mx >>= fun _ => my] = 𝒟[my]` for a lossless oracle computation | `simp` |
 | `OracleComp.prEvent_true_eq_one` | `Pr{let _ ← mx}[True] = 1` for an oracle computation | `simp`, `grind =` |
 
@@ -935,7 +935,7 @@ keeping it.
 already grind-tags the `List.mapM` / `foldlM` / `forIn` layer), `Functor.map_map`, and the
 `simulateQ` routing layer (`QueryImpl.add_apply_inl/inr`, `simulateQ_add_liftComp_left/right`,
 the `withBadFlag`/`withBadUpdate`/`flattenStateT` run-shapes, `simulateQ_option_elim(M)`). The
-`simulateQ_add_liftComp` pair also prevents a saturation: without it, bare `grind` times out on a
+`simulateQ_add_liftComp_left` and `simulateQ_add_liftComp_right` pair also prevents a saturation: without it, bare `grind` times out on a
 routed `simulateQ (impl₁ + impl₂)` goal over a lifted computation.
 
 `VCVioTest/ProbabilityTactics.lean` is the living benchmark and **gate** for all of this: outcome
@@ -1007,7 +1007,7 @@ conclusion is the unrestricted `Measurable f`.
 
 For a sum of oracle `wp` bounds, rewrite with `← OracleComp.ProgramLogic.wp_finsetSum`,
 then apply `wp_le_const_of_support`. Use `wp_le_const_add_of_support` for a constant allowance
-plus another postcondition. Both the oracle facade and core's raw `Std.WP.wp` expose
+plus another postcondition. Both the oracle facade and core's raw `Std.WP.WP.wp` expose
 support membership to `gcongr`; callers need no preparatory `change`.
 
 See the [generalized-relation investigation](../reading/generalized-relation-automation.md) for

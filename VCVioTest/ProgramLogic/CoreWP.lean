@@ -13,10 +13,10 @@ public import ToMathlib.Control.WriterT
 /-!
 # Core WP carrier selection and transformer consumers
 
-Oracle computations read expectations by default; the structural and probability-bounded
-interpretations take precedence inside their scopes. State and append-based logs retain their
-input and output information. The quantitative example uses core's tactic directly, without
-VCVio's probability-tactic frontend.
+Oracle computations read `Prop` triples by default (the necessary reading); the expectation and
+probability-bounded interpretations take precedence inside their scopes. State and append-based logs
+retain their input and output information. The quantitative example uses core's tactic directly,
+without VCVio's probability-tactic frontend.
 -/
 
 public section

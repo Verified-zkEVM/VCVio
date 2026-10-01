@@ -387,8 +387,9 @@ structure SecurityGame (Adv : Type*) where
   advantage : Adv → ℕ → ℝ≥0∞
 ```
 
-- `SecurityGame.secureAgainst isPPT`: every adversary satisfying `isPPT` has negligible advantage.
-- The predicate `isPPT` is abstract — specialize to `PolyQueries` or custom efficiency notions.
+- `SecurityGame.secureAgainst isPPT`: every adversary in the class has negligible advantage.
+- The adversary-class predicate is abstract: specialize it to `PolyQueries` or a custom
+  efficiency notion.
 
 ### Key reduction/game-hopping lemmas
 
@@ -423,9 +424,8 @@ structure CostModel (spec : OracleSpec ι) (ω : Type) [AddCommMonoid ω] where
 | `WorstCasePolyTime family cm val` | Worst-case poly bound over security parameter |
 | `ExpectedPolyTime family cm val` | Expected poly bound over security parameter |
 
-Key results: `fst_map_costDist` (instrumentation is transparent),
-`prEvent_costDist_gt_le_expectedCost_div` (Markov's inequality),
-`WorstCasePolyTime.toExpectedPolyTime`.
+Key results: `fst_map_costDist` (instrumentation is transparent) and
+`prEvent_costDist_gt_le_expectedCost_div` (Markov's inequality).
 
 ## Common Gotchas
 

@@ -17,7 +17,7 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 
 `Prob` is Mathlib's lower interval `Set.Iic (1 : ℝ≥0∞)`. Restricting the expectation
 algebra to this interval gives a core `WPMonad` interpretation with probability-valued
-assertions. `open scoped OracleComp.Probabilistic` selects it over the quantitative instance.
+assertions. `open scoped OracleComp.Probabilistic` selects it.
 
 The underlying value agrees with the quantitative expectation by `wp_val_eq_wp`.
 -/

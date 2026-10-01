@@ -26,25 +26,25 @@ with its bridge lemma, and runs core's `vcgen` inside the reading's per-call sco
 |------|---------|--------|
 | `Pr{…}[p] = 1`, `∀ x ∈ support oa, p x` | necessary | `⦃ True ⦄ oa ⦃ p ⦄` |
 | `0 < Pr{…}[p]`, `∃ x ∈ support oa, p x` | possible | `⦃ True ⦄ oa ⦃ p ⦄` |
-| `r ≤ Pr{…}[p]` | expectation (global) | `⦃ r ⦄ oa ⦃ predInd p ⦄` |
+| `r ≤ Pr{…}[p]` | lower bound (`OracleComp.Lower`) | `⦃ r ⦄ oa ⦃ predInd p ⦄` |
 | `Pr{…}[p] ≤ ε`, `Pr{…}[p] = 0` | upper bound | `⦃ toDual ε ⦄ oa ⦃ … ⦄` |
-| `Pr{…}[p] = c` | upper bound and expectation | both of the above |
+| `Pr{…}[p] = c` | upper and lower bound | both of the above |
 | `⦃ pre ⦄ oa ⦃ post ⦄` | read off the assertion type | the goal itself |
 
-The readings are `OracleComp.Necessary`, `OracleComp.Possible`, the global expectation reading,
-and `OracleComp.Upper`. `𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does, `≥` is read as
-`≤` with its sides swapped, and an equation may have the expectation on either side. A triple
-already stated is run in the reading of its assertion type: `ℝ≥0∞` for lower bounds, `ℝ≥0∞ᵒᵈ`
-for upper bounds, and `Prop` for the necessary reading, or the possible one when the triple's
-interpretation is possible; a state-passing assertion `σ → …` is read by its codomain, so triples
-of handlers over `StateT` are run the same way.
+The readings are `OracleComp.Necessary` (the global instance), `OracleComp.Possible`,
+`OracleComp.Lower` and `OracleComp.Upper`. `𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does,
+`≥` is read as `≤` with its sides swapped, and an equation may have the expectation on either side.
+A triple already stated is run in the reading of its assertion type: `ℝ≥0∞` for lower bounds,
+`ℝ≥0∞ᵒᵈ` for upper bounds, and `Prop` for the necessary reading, or the possible one when the
+triple's interpretation is possible; a state-passing assertion `σ → …` is read by its codomain, so
+triples of handlers over `StateT` are run the same way.
 
 The event forms nest one expectation per draw; the bridges rewrite each nested expectation into
 the reading, so `vcgen` steps through the whole program. The necessary and possible bridges of an
 event need answers of positive mass; `prvcgen` uses their uniform-answer forms
 (`UniformAnswerMeasure`). The shapes `vcgen` reads itself — a triple, its unfolded form
 `pre ⊑ wp oa post epost`, and a weakest precondition of a `Prop` reading such as the
-`∃ u, wp (rest u) post ⊥` an possible draw leaves once its witness is named — are only classified,
+`∃ u, wp (rest u) post ⊥` a possible draw leaves once its witness is named — are only classified,
 by the assertion type and the interpretation of their `wp`, and handed to `vcgen` in that reading's
 scope.
 
@@ -116,7 +116,7 @@ inductive Reading where
   | necessary
   /-- Some possible output: `OracleComp.Possible`. -/
   | possible
-  /-- Expectation lower bounds: the global reading. -/
+  /-- Expectation lower bounds: `OracleComp.Lower`. -/
   | lower
   /-- Expectation upper bounds: `OracleComp.Upper`. -/
   | upper

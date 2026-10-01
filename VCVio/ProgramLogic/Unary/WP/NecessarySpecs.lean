@@ -29,7 +29,7 @@ structurally reachable output of `oa` satisfies `post` when `pre` holds. The rul
 applies to every program, so it is not registered; passing it for an opaque sub-program, as in
 `vcgen [Spec.ofSupport keygen]`, exposes the support hypothesis in the verification condition.
 
-The query rules `Spec.query` and `Spec.monadLift_query` are in
+The query rule `Spec.monadLift_query` and the `HasQuery.query` unfold are in
 `VCVio.ProgramLogic.Unary.WP.Necessary`. The bridges between structural triples and events of
 probability one or zero are in `VCVio.ProgramLogic.Unary.WP.Coherence`.
 

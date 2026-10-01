@@ -14,14 +14,15 @@ public import VCVio.ProgramLogic.Unary.HandlerSpecs
 /-!
 # Core `vcgen` on oracle computations
 
-Each `@[spec]` rule for oracle computations, and each bridge between events and triples, is
-exercised with a bare core `vcgen`:
+The necessary-reading rules for oracle computations, the bridges between events and triples, a
+sample of the lower-reading rules and the transformer rules are exercised with a bare core
+`vcgen`:
 
-* structural reading (`open scoped OracleComp.Necessary`): uniform draws `$ᵗ` and `$[0..n]`,
+* necessary reading (the global instance): uniform draws `$ᵗ` and `$[0..n]`,
   `replicate`, `liftComp`, an opaque sub-program through `Spec.ofSupport`, a sum handler lifted to
   a whole simulation into `ProbComp`, and an append-log handler lifted to a whole simulation;
 * events as structural triples: probability one, mass one on `true`, and probability zero;
-* quantitative reading (the global instance): lower bounds through queries and `$ᵗ`, an event
+* lower reading (`open scoped OracleComp.Lower`): lower bounds through queries and `$ᵗ`, an event
   normal form, a support-conditioned bind, and a scaled adversary spec;
 * the transformers' constructors, lifts and runners, `List.mapM` with an invariant, the sequence
   combinators, a query inside a transformer through the `query` unfold, and a simulation with a

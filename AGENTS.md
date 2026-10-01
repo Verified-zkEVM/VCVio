@@ -249,8 +249,8 @@ are `simp only [expect_norm, expect_eval]`.
 
 For the tactic reference, proof-mode entry points, and workflow details, see
 [`docs/agents/program-logic.md`](docs/agents/program-logic.md). The relational
-`@[vcspec]` registry is indexed via `Lean.Meta.Sym.Pattern` /
-`Lean.Meta.Sym.DiscrTree`. `Sym.*` is under active development in core Lean;
+`@[vcspec]` registry is indexed by `Lean.Meta.Sym.Pattern` keys in a `Lean.Meta.DiscrTree`
+(`Sym.insertPattern` / `Sym.getMatch`). `Sym.*` is under active development in core Lean;
 see the *Internal Architecture* and *SymM Stability Note* sections of that doc
 for the churn classes to watch at each toolchain bump.
 

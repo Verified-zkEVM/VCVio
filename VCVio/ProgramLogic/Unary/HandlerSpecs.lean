@@ -21,7 +21,7 @@ public import ToMathlib.Control.WriterT.WP
 
 Core `Std.WP` Hoare triples for the query-tracking handlers `cachingOracle`, `seededOracle`,
 `loggingOracle`, `countingOracle`, `costOracle`, and `cachingLoggingOracle`, under the
-structural reading of `OracleComp` (`open scoped OracleComp.Necessary`): a triple
+necessary reading of `OracleComp` (the global instance): a triple
 `⦃ pre ⦄ handler t ⦃ post ⦄` says that from every state satisfying `pre`, every reachable
 result and final state satisfy `post`. Core's `StateT` interpretation lifts the structural
 reading to the stateful handlers. The writer handlers read their log as accumulated state:
