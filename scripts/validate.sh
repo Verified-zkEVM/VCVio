@@ -95,6 +95,7 @@ if [[ -f scripts/check-expose-boundary.sh ]]; then
   bash scripts/check-expose-boundary.sh
 fi
 python3 ./scripts/test-migrate-native-probability.py
+python3 ./scripts/test-check-reading-citations.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh

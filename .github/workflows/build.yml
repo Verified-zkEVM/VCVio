@@ -59,6 +59,9 @@ jobs:
       - name: Test downstream probability codemod
         run: python3 scripts/test-migrate-native-probability.py
 
+      - name: Test the reading-citation checker
+        run: python3 scripts/test-check-reading-citations.py
+
       - name: Check optional complexity backend isolation
         run: |
           bash scripts/test-complexity-backend-isolation.sh
