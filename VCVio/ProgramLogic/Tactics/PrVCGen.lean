@@ -11,6 +11,7 @@ public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
 public import VCVio.ProgramLogic.Unary.WP.Coherence
 public import VCVio.ProgramLogic.Unary.WP.Angelic
 public import VCVio.ProgramLogic.Unary.WP.Upper
+public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
 public meta import Lean.Elab.Tactic.Basic
 public meta import Std.Tactic.Do
 
