@@ -525,9 +525,9 @@ def strip_parens(term: str) -> str:
     return term
 
 
-FUN_TYPED_BINDER = (r"fun\s+\(\s*([^\s():]+)\s*:[^()]*(?:\([^()]*\)[^()]*)*\)"
+FUN_TYPED_BINDER = (r"fun\s+\(\s*(⟨[^⟩]*⟩|[^\s():]+)\s*:\s*([^()]*(?:\([^()]*\)[^()]*)*?)\s*\)"
                     r"\s*(?:=>|↦)\s*(.+)")
-FUN_BINDER = r"fun\s+(⟨[^⟩]*⟩|[^\s:()]+)(?:\s*:\s*[^=↦]+?)?\s*(?:=>|↦)\s*(.+)"
+FUN_BINDER = r"fun\s+(⟨[^⟩]*⟩|[^\s:()]+)(?:\s*:\s*([^=↦]+?))?\s*(?:=>|↦)\s*(.+)"
 
 
 def is_atomic(term: str) -> bool:
@@ -583,9 +583,11 @@ def convert_legacy_event(event: str, comp: str, prose: bool = False) -> str | No
     m = (re.fullmatch(FUN_TYPED_BINDER, inner, re.S)
          or re.fullmatch(FUN_BINDER, inner, re.S))
     if m:
-        binder, body = m.group(1), m.group(2).strip()
+        binder, ty, body = m.group(1), m.group(2), m.group(3).strip()
         if SIMPLE_BINDER.fullmatch(binder) or binder.startswith("⟨"):
-            return f"Pr{{{draw(binder, comp)}}}[{body}]"
+            # The binder's type is kept: a numeral in the event would otherwise default to `ℕ`.
+            lhs = f"{binder} : {ty.strip()}" if ty else binder
+            return f"Pr{{{draw(lhs, comp)}}}[{body}]"
         return None
     if "·" in inner:
         # A section `(· op e)` with one hole: substitute a fresh name for the hole.

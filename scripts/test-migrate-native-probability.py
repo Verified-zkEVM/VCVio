@@ -32,9 +32,19 @@ class EventTests(unittest.TestCase):
     def test_function_events(self):
         self.assertMigrates("Pr[fun x => x.1 = a | mx]", "Pr{let x ← mx}[x.1 = a]")
         self.assertMigrates("Pr[fun x ↦ p x | mx]", "Pr{let x ← mx}[p x]")
-        self.assertMigrates("Pr[(fun z : ℕ => z > 3) | mx]", "Pr{let z ← mx}[z > 3]")
-        self.assertMigrates("Pr[fun (z : α × β) => p z.1 | mx]", "Pr{let z ← mx}[p z.1]")
+        self.assertMigrates("Pr[(fun z : ℕ => z > 3) | mx]", "Pr{let z : ℕ ← mx}[z > 3]")
+        self.assertMigrates("Pr[fun (z : α × β) => p z.1 | mx]", "Pr{let z : α × β ← mx}[p z.1]")
         self.assertMigrates("Pr[fun ⟨a, b⟩ => a = b | mx]", "Pr{let ⟨a, b⟩ ← mx}[a = b]")
+        self.assertMigrates("Pr[fun (⟨a, b⟩ : α × β) => a = b | mx]",
+                            "Pr{let ⟨a, b⟩ : α × β ← mx}[a = b]")
+        # A typed binder keeps its type: `x - 2 = 0` at `ℤ` is not the same event at `ℕ`.
+        self.assertMigrates("Pr[fun (x : ℤ) => x - 2 = 0 | mx]", "Pr{let x : ℤ ← mx}[x - 2 = 0]")
+        self.assertMigrates("Pr[fun x : ℤ => x - 2 = 0 | mx]", "Pr{let x : ℤ ← mx}[x - 2 = 0]")
+
+    def test_deeply_typed_binder_is_kept_as_an_applied_predicate(self):
+        # A type the binder regexes do not reach stays inside the predicate, type and all.
+        self.assertMigrates("Pr[fun (x : ((ℕ × ℕ) × ℕ) → ℕ) => p x | mx]",
+                            "Pr{let y ← mx}[(fun (x : ((ℕ × ℕ) × ℕ) → ℕ) => p x) y]")
 
     def test_sections_and_predicates(self):
         self.assertMigrates("Pr[(· ∈ S) | mx]", "Pr{let x ← mx}[x ∈ S]")
