@@ -576,40 +576,29 @@ theorem idsWithAbort_hvzk [DecidableEq prims.High] [SampleableType (CommitHashBy
     (identificationScheme p prims).HVZK (hvzkSimulatorReal p prims) (hvzkBound p prims) := by
   intro pk sk hrel
   obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp hrel
-  let : MeasurableSpace (Option (Commitment p prims × CommitHashBytes p × Response p prims)) := ⊤
-  let : MeasurableSpace (CommitHashBytes p × RqVec p.l) := ⊤
-  rw [etvDist_eq_measureETVDist]
   let draw : ProbComp (CommitHashBytes p × RqVec p.l) := do
     let cTilde ← $ᵗ (CommitHashBytes p)
     let z ← $ᵗ (RqVec p.l)
     return (cTilde, z)
-  let bad : Set (CommitHashBytes p × RqVec p.l) :=
-    {a | hvzkBadIndicator p prims pk sk a.1 a.2 = true}
   -- The coupling over the shared `(c̃, z)` draw: the honest and simulated continuations are
-  -- deterministic and agree off the gate-mismatch event (`hvzkHonestOut_eq_gated_of_not_bad`).
-  have hstep := measureETVDist_bind_bind_le_of_bad draw
-    (fun a => pure (hvzkHonestOut p prims pk sk a.1 a.2))
-    (fun a => pure (if polyVecNorm a.2 < p.gamma1 - p.beta
-      then some (hvzkSimOut p prims pk a.1 a.2) else none))
-    Measurable.of_discrete Measurable.of_discrete (bad := bad) MeasurableSet.of_discrete 0
-    (Filter.Eventually.of_forall fun a ha => by
-      rw [hvzkHonestOut_eq_gated_of_not_bad p prims h_laws seed hkeygen a.1 a.2 ha,
-        measureETVDist_self])
-  -- The mismatch probability is the extra-rejection mass, bounded by its supremum over seeds.
-  have hmass : 𝒟[draw] bad = hvzkBadMass p prims pk sk := by
-    rw [hvzkBadMass_eq_prEvent_indicator p prims pk sk, ← prEvent_eq_evalDist_of_discrete]
-    simp only [draw, expect_norm]
-  calc measureETVDist ((identificationScheme p prims).honestExecution pk sk)
+  -- deterministic and agree off the gate-mismatch event (`hvzkHonestOut_eq_gated_of_not_bad`),
+  -- whose probability is the extra-rejection mass, bounded by its supremum over seeds.
+  calc etvDist ((identificationScheme p prims).honestExecution pk sk)
         (hvzkSimulatorReal p prims pk)
-      = measureETVDist (draw >>= fun a => pure (hvzkHonestOut p prims pk sk a.1 a.2))
+      = etvDist (draw >>= fun a => pure (hvzkHonestOut p prims pk sk a.1 a.2))
           (draw >>= fun a => pure (if polyVecNorm a.2 < p.gamma1 - p.beta
             then some (hvzkSimOut p prims pk a.1 a.2) else none)) := by
-        unfold measureETVDist
-        rw [(honestExecution_evalDistEq_gated p prims pk sk).evalDist_eq,
+        rw [(honestExecution_evalDistEq_gated p prims pk sk).etvDist_congr_left,
           hvzkSimulatorReal_eq_gated p prims pk]
         simp only [draw, bind_assoc, pure_bind]
-    _ ≤ 𝒟[draw] bad + 0 * 𝒟[draw] badᶜ := hstep
-    _ = hvzkBadMass p prims pk sk := by rw [zero_mul, add_zero, hmass]
+    _ ≤ Pr{let a ← draw}[hvzkBadIndicator p prims pk sk a.1 a.2 = true] +
+          0 * Pr{let a ← draw}[¬ hvzkBadIndicator p prims pk sk a.1 a.2 = true] :=
+        etvDist_bind_bind_le_of_bad draw _ _ _ 0 fun a ha => by
+          rw [hvzkHonestOut_eq_gated_of_not_bad p prims h_laws seed hkeygen a.1 a.2 ha,
+            etvDist_self]
+    _ = hvzkBadMass p prims pk sk := by
+        rw [zero_mul, add_zero, hvzkBadMass_eq_prEvent_indicator p prims pk sk]
+        simp only [draw, expect_norm]
     _ ≤ hvzkBound p prims := by
         have h := le_iSup (fun s : Bytes 32 => hvzkBadMass p prims
           (keyGenFromSeed p prims s).1 (keyGenFromSeed p prims s).2) seed
