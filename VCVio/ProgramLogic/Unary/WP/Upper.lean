@@ -169,6 +169,12 @@ theorem ExceptT.wp_le_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α
 theorem le_iff_ofDual (a b : ℝ≥0∞ᵒᵈ) : a ≤ b ↔ ofDual b ≤ ofDual a :=
   Iff.rfl
 
+/-! The readback of this reading's verification conditions; the sets are registered in
+`VCVio.ProgramLogic.Unary.WP.Readback`. -/
+attribute [upper_readback] rel_iff le_iff_ofDual ofDual_toDual ofDual_wp binderNameHint
+  Lean.Order.pushOption Lean.Order.pushExcept predInd_apply propInd_le_one ofDual_add ofDual_mul
+  ofDual_div ofDual_inv ofDual_zero ofDual_one ofDual_natCast ofDual_ofNat le_refl
+
 /-- Core's indexed infimum on the dual carrier is the supremum in `ℝ≥0∞`: the largest value. -/
 theorem iInf_eq {κ : Type _} (f : κ → ℝ≥0∞ᵒᵈ) :
     Lean.Order.iInf f = toDual (⨆ i, ofDual (f i)) :=

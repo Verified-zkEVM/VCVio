@@ -244,7 +244,9 @@ For new program-logic proofs, import `VCVio.ProgramLogic.Tactics`.
 VCVio's unary probabilistic tactics are `prvcgen`, which runs core `vcgen` under the reading of
 `OracleComp` a goal belongs to, and `prrw`, which rewrites equalities between two programs'
 probabilities; its relational ones are `rvcgen` / `rvcstep`. A bare `vcgen` is core Lean's
-`Std.WP` VC generator, whose rules are `@[spec]` theorems (gotcha 35). Exact expectation values
+`Std.WP` VC generator, whose rules are `@[spec]` theorems (gotcha 35); its verification
+conditions under a bound reading read back with `simp only [lower_readback]` or
+`simp only [upper_readback]`, the sets `prvcgen` runs itself. Exact expectation values
 are `simp only [expect_norm, expect_eval]`.
 
 For the tactic reference, proof-mode entry points, and workflow details, see

@@ -420,8 +420,10 @@ the triple notation elaborates its precondition before it looks up the interpret
 back through `OracleComp.Upper.rel_iff` before `simp` touches it: `simp` alone rewrites
 `toDual 5` to the dual numeral and `rel` to the dual's order, leaving `5 ≤ 3` in `ℝ≥0∞ᵒᵈ`, which
 holds but which no numeral tactic closes, whereas after `rw [OracleComp.Upper.rel_iff]` the
-condition is `3 ≤ 5` in `ℝ≥0∞`, for `simp` or `norm_num`. `prvcgen` reads its conditions back
-this way. Bridges:
+condition is `3 ≤ 5` in `ℝ≥0∞`, for `simp` or `norm_num`. The simp set `upper_readback`
+(`VCVio.ProgramLogic.Unary.WP.Readback`) is that step with the `ofDual` pushes, and
+`lower_readback` its twin for the lower reading; `prvcgen` runs the set of its reading on every
+condition it leaves, and `simp only [upper_readback]` after a bare `vcgen` does the same. Bridges:
 
 | Statement | Triple (upper-bound reading) | Lemma |
 |-----------|------------------------------|-------|
@@ -472,15 +474,16 @@ interpretation's head is the possible `WPMonad`. A state-passing assertion `σ �
 codomain and a transformer's interpretation by the base monad's, so triples over `StateT`,
 `ReaderT`, `WriterT`, `OptionT` and `ExceptT` stacks on `OracleComp spec`, the handler
 specifications among them, run the same way. An event of an `OptionT` or `ExceptT` program on
-`OracleComp spec` is read through the stack's run: its lifted expectation is, by definition, the
-base expectation of `pushOption`/`pushExcept` over `mx.run` (`OptionT.wp_eq_run`,
-`ExceptT.wp_eq_run`), so a lower bound is bridged by `OracleComp.ProgramLogic.le_wp_iff_triple`
-on the run, where core's `Spec.run_OptionT'`/`Spec.run_ExceptT'` and the lift rules continue, and
-an upper bound by the transformer's bridge (`OracleComp.Upper.OptionT.wp_le_iff_triple`,
-`….ExceptT.wp_le_iff_triple`), which supplies the exception postcondition that charges a failure
-`0`. `ExpectationWP.le_wp_iff_triple` is the generic fallback for a stack whose base is not an
-oracle computation; the triple it states is over the stack's own interpretation, which core's
-transformer rules do not match, so it is not a route into `vcgen`. The readback unfolds
+`OracleComp spec` is bridged by the transformer's own lemma in each bound reading
+(`OracleComp.Lower.OptionT.le_wp_iff_triple`, `OracleComp.Upper.OptionT.wp_le_iff_triple`, and
+their `ExceptT` twins): the triple is stated in core's lift of the reading, where the lift,
+constructor, run and `guard` rules match, with the exception postcondition that charges a failure
+`0` (the lower reading's bottom supplies it). The lemmas matter because the lifted expectation
+is only *propositionally* the base expectation over `mx.run` (`OptionT.wp_eq_run`): a bridge
+that relied on unfolding it works in a legacy file and fails in a `module`, where the instance
+is opaque to importers. `ExpectationWP.le_wp_iff_triple` is the generic fallback for a stack
+whose base is not an oracle computation; the triple it states is over the stack's own
+interpretation, which core's transformer rules do not match, so it is not a route into `vcgen`. The readback unfolds
 `pushOption`/`pushExcept` and, in the lower reading, the stack's bottom (`ExpectationWP.bot_fst`,
 `bot_snd`, `bot_eq_zero`). A comparison `Pr{A}[p] ≤ Pr{B}[q]` is read as an upper bound on the
 left-hand side with the right-hand side as the bound.

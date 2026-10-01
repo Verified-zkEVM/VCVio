@@ -9,6 +9,8 @@ module
 public import VCVio.ProgramLogic.Unary.HoareTriple
 public import VCVio.ProgramLogic.Unary.SimulateQ
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.EvalDist.Monad.Except
+public import VCVio.ProgramLogic.Unary.WP.Readback
 
 /-!
 # `vcgen` rules for the quantitative reading of oracle computations
@@ -145,6 +147,34 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epo
   refine ⟨le_trans (le_of_eq ?_) (wp_mono_of_support oa fun x hx =>
     iInf_le (fun a : {a // a ∈ support oa} => post a.1) ⟨x, hx⟩)⟩
   rw [ExpectationWP.wp_const_of_oracle]
+
+/-- A lower bound on an expectation over an optional oracle computation is a triple of core's
+`OptionT` lift of the lower-bound reading; the reading's bottom charges a failure `0`. Stated as
+a lemma, so that `vcgen` sees the stack's own rules without unfolding the lifted expectation. -/
+theorem OptionT.le_wp_iff_triple (mx : OptionT (OracleComp spec) α) (g : α → ℝ≥0∞) (r : ℝ≥0∞) :
+    r ≤ wp⟦mx⟧ g ↔ ⦃ r ⦄ mx ⦃ g ⦄ := by
+  rw [_root_.OptionT.wp_eq_run, Triple.iff]
+  simp only [Std.WP.OptionT.wp_apply_eq, Lean.Order.rel_eq_le, ExpectationWP.bot_snd]
+  refine Iff.of_eq (congrArg (r ≤ ·) (ExpectationWP.wp_congr _ fun o => ?_))
+  cases o <;> simp [Lean.Order.pushOption, ExpectationWP.bot_fst, Lean.Order.bot_apply,
+    ExpectationWP.bot_eq_zero]
+
+/-- A lower bound on an expectation over an exceptional oracle computation is a triple of core's
+`ExceptT` lift of the lower-bound reading; the reading's bottom charges an exception `0`. -/
+theorem ExceptT.le_wp_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α) (g : α → ℝ≥0∞)
+    (r : ℝ≥0∞) :
+    r ≤ wp⟦mx⟧ g ↔ ⦃ r ⦄ mx ⦃ g ⦄ := by
+  rw [_root_.ExceptT.wp_eq_run, Triple.iff]
+  simp only [Std.WP.ExceptT.wp_apply_eq, Lean.Order.rel_eq_le, ExpectationWP.bot_snd]
+  refine Iff.of_eq (congrArg (r ≤ ·) (ExpectationWP.wp_congr _ fun e => ?_))
+  cases e <;> simp [Lean.Order.pushExcept, Except.toOption, ExpectationWP.bot_fst,
+    Lean.Order.bot_apply, ExpectationWP.bot_eq_zero]
+
+/-! The readback of this reading's verification conditions; the sets are registered in
+`VCVio.ProgramLogic.Unary.WP.Readback`. -/
+attribute [lower_readback] Lean.Order.rel_eq_le binderNameHint Lean.Order.pushOption
+  Lean.Order.pushExcept ExpectationWP.bot_fst ExpectationWP.bot_snd Lean.Order.bot_apply
+  ExpectationWP.bot_eq_zero predInd_apply one_le_propInd_iff le_refl
 
 end OracleComp.Lower
 

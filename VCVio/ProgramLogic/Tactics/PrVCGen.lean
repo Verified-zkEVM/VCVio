@@ -282,7 +282,11 @@ partial def bridge (goal : Expr) : TacticM Plan := do
         try simp only [OracleComp.Upper.toDual_wp])))
       return .single .upper
     if isWpApp rhs then
+      -- the stack bridges first: they state the triple in core's lift of the reading, which
+      -- the transformer rules match without unfolding the lifted expectation
       evalTactic (← `(tactic| first
+        | refine (OracleComp.Lower.OptionT.le_wp_iff_triple _ _ _).2 ?_
+        | refine (OracleComp.Lower.ExceptT.le_wp_iff_triple _ _ _).2 ?_
         | refine (OracleComp.ProgramLogic.le_wp_iff_triple _ _ _).2 ?_
         | refine (ExpectationWP.le_wp_iff_triple _ _ _).2 ?_))
       return .single .lower
@@ -320,16 +324,9 @@ partial def bridge (goal : Expr) : TacticM Plan := do
 that an indicator's range settles. -/
 def normalizeVCs : Reading → TacticM Unit
   | .lower => do
-    evalTactic (← `(tactic| all_goals simp -failIfUnchanged only [Lean.Order.rel_eq_le,
-      binderNameHint, Lean.Order.pushOption, Lean.Order.pushExcept, ExpectationWP.bot_fst,
-      ExpectationWP.bot_snd, Lean.Order.bot_apply, ExpectationWP.bot_eq_zero,
-      predInd_apply, one_le_propInd_iff, le_refl]))
+    evalTactic (← `(tactic| all_goals simp -failIfUnchanged only [lower_readback]))
   | .upper => do
-    evalTactic (← `(tactic| all_goals simp -failIfUnchanged only [OracleComp.Upper.rel_iff,
-      OracleComp.Upper.le_iff_ofDual, OrderDual.ofDual_toDual, OracleComp.Upper.ofDual_wp,
-      binderNameHint, Lean.Order.pushOption, Lean.Order.pushExcept,
-      predInd_apply, propInd_le_one, ofDual_add, ofDual_mul, ofDual_div,
-      ofDual_inv, ofDual_zero, ofDual_one, ofDual_natCast, ofDual_ofNat, le_refl]))
+    evalTactic (← `(tactic| all_goals simp -failIfUnchanged only [upper_readback]))
   | _ => pure ()
 
 end OracleComp.ProgramLogic.PrVCGen
