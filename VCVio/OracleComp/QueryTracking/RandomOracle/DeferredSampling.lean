@@ -91,16 +91,14 @@ vocabulary. -/
 that running the deferred-draw computation `run : ProbComp γ` is distributionally identical
 to first drawing an independent front tape `tape : ProbComp τ` and then running the
 tape-consuming variant `tapeRun : τ → ProbComp γ` that reads its per-step draws off the
-tape head-first. The outputs carry the discrete measurable structure, so the two output
-measures agree on every event.
+tape head-first: the two computations agree on every event.
 
 A scheme establishes this by induction on its adversary computation: at an
 *answer-irrelevant* step the front tape commutes past the query (`evalDistEq_step_commute_tape`),
 and at a *drawing* step the inline draw block is split off the front tape. -/
 def Factorizes {γ τ : Type} (run : ProbComp γ) (tape : ProbComp τ)
     (tapeRun : τ → ProbComp γ) : Prop :=
-  letI : MeasurableSpace γ := ⊤
-  𝒟[run] = 𝒟[tape >>= tapeRun]
+  run =ᵈ (tape >>= tapeRun)
 
 /-- A factorization may be rewritten through any continuation: if `run` factorizes through
 `tape`/`tapeRun`, then binding a continuation `k` after `run` factorizes through `tape` and
@@ -108,11 +106,9 @@ def Factorizes {γ τ : Type} (run : ProbComp γ) (tape : ProbComp τ)
 theorem Factorizes.bind {γ τ δ : Type} {run : ProbComp γ} {tape : ProbComp τ}
     {tapeRun : τ → ProbComp γ} (h : Factorizes run tape tapeRun) (k : γ → ProbComp δ) :
     Factorizes (run >>= k) tape (fun t => tapeRun t >>= k) := by
-  let : MeasurableSpace γ := ⊤
-  let : MeasurableSpace δ := ⊤
-  change 𝒟[run >>= k] = 𝒟[tape >>= fun t => tapeRun t >>= k]
-  rw [← bind_assoc, evalDist_bind_of_discrete, evalDist_bind_of_discrete (tape >>= tapeRun)]
-  exact congrArg (Measure.bind · fun x => 𝒟[k x]) h
+  unfold Factorizes at h ⊢
+  rw [← bind_assoc]
+  exact h.bind_left k
 
 /-! ## The answer-irrelevant step commute (the framework induction step)
 
@@ -172,11 +168,11 @@ handler state. Suppose:
   continuation functional `K`, the per-query expected `K` agrees at the two states (`hstep`);
 * the output functional `F : γ → σ → ℝ≥0∞` is `Rel`-invariant (`hF`).
 
-Then the run-level expected output `∫⁻ z, F z.1 z.2` agrees at `Rel`-related start states. The
-proof inducts on `oa`: at `pure` the output is the start state (`hF` applies); at a query bind the
-step's expected continuation functional is itself `Rel`-invariant by the inductive hypothesis, so
-`hstep` closes the step. Outputs and states carry the discrete measurable structure. -/
-theorem lintegral_simulateQ_run_eq_of_rel
+Then the run-level expected output `wp⟦(simulateQ impl oa).run s⟧ fun z => F z.1 z.2` agrees at
+`Rel`-related start states. The proof inducts on `oa`: at `pure` the output is the start state
+(`hF` applies); at a query bind the step's expected continuation functional is itself
+`Rel`-invariant by the inductive hypothesis, so `hstep` closes the step. -/
+theorem wp_simulateQ_run_eq_of_rel
     {ι : Type} {spec : OracleSpec ι} {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp))
     {γ : Type} (oa : OracleComp spec γ)
@@ -184,29 +180,19 @@ theorem lintegral_simulateQ_run_eq_of_rel
     (hstep : ∀ (t : spec.Domain) (s₁ s₂ : σ), Rel s₁ s₂ →
       ∀ (K : spec.Range t → σ → ℝ≥0∞),
         (∀ (b : spec.Range t) (t₁ t₂ : σ), Rel t₁ t₂ → K b t₁ = K b t₂) →
-        letI : MeasurableSpace (spec.Range t × σ) := ⊤
-        ∫⁻ p, K p.1 p.2 ∂𝒟[(impl t).run s₁] = ∫⁻ p, K p.1 p.2 ∂𝒟[(impl t).run s₂]) :
+        wp⟦(impl t).run s₁⟧ (fun p => K p.1 p.2) = wp⟦(impl t).run s₂⟧ (fun p => K p.1 p.2)) :
     ∀ (F : γ → σ → ℝ≥0∞), (∀ (g : γ) (s₁ s₂ : σ), Rel s₁ s₂ → F g s₁ = F g s₂) →
       ∀ (s₁ s₂ : σ), Rel s₁ s₂ →
-        letI : MeasurableSpace (γ × σ) := ⊤
-        ∫⁻ z, F z.1 z.2 ∂𝒟[(simulateQ impl oa).run s₁] =
-          ∫⁻ z, F z.1 z.2 ∂𝒟[(simulateQ impl oa).run s₂] := by
-  let : MeasurableSpace (γ × σ) := ⊤
+        wp⟦(simulateQ impl oa).run s₁⟧ (fun z => F z.1 z.2) =
+          wp⟦(simulateQ impl oa).run s₂⟧ (fun z => F z.1 z.2) := by
   induction oa using OracleComp.inductionOn with
   | pure a =>
       intro F hF s₁ s₂ hs
-      simp only [simulateQ_pure, StateT.run_pure, evalDist_pure]
-      rw [lintegral_dirac' _ Measurable.of_discrete, lintegral_dirac' _ Measurable.of_discrete]
+      simp only [simulateQ_pure, StateT.run_pure, ExpectationWP.wp_pure]
       exact hF a s₁ s₂ hs
   | query_bind t ob ih =>
       intro F hF s₁ s₂ hs
-      let : MeasurableSpace (spec.Range t × σ) := ⊤
-      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
-      rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete,
-        Measure.lintegral_bind Measurable.of_discrete.aemeasurable
-          Measurable.of_discrete.aemeasurable,
-        Measure.lintegral_bind Measurable.of_discrete.aemeasurable
-          Measurable.of_discrete.aemeasurable]
+      simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, ExpectationWP.wp_bind]
       exact hstep t s₁ s₂ hs _ fun b t₁ t₂ ht => ih b F hF t₁ t₂ ht
 
 end OracleComp.DeferredSampling

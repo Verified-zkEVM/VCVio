@@ -172,6 +172,7 @@ RENAMES: dict[str, str] = {
     "measureETVDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad":
         "etvDist_simulateQ_randomOracle_withProgramming_le_prEvent_bad",
     "measureETVDist_bind_left_le_tsum": "etvDist_bind_left_le_tsum",
+    "lintegral_simulateQ_run_eq_of_rel": "wp_simulateQ_run_eq_of_rel",
     "advantage_le_measureETVDist": "advantage_le_etvDist",
     "probEvent_bad_simulateQ_run_le_expectedQuerySlack":
         "prEvent_bad_simulateQ_run_le_expectedQuerySlack",

@@ -372,9 +372,8 @@ private lemma prEvent_main_eq_takeAtIndex (s : Fin (qb i + 1)) :
   let : MeasurableSpace α := ⊤
   rw [(EvalDistEq.of_evalDist_eq
       (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq]
-  have h := (EvalDistEq.of_evalDist_eq
-      (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).prEvent_eq
-    (fun w => cf w.2 = some s)
+  have h := (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run'
+    qb js i s main).prEvent_eq (fun w => cf w.2 = some s)
   simpa only [expect_norm] using h
 
 /-- Two runs on a shared seed, the second truncated after the `s`-th answer at `i`, have the
@@ -390,12 +389,11 @@ private lemma prEvent_pair_eq_takeAtIndex_pair (s : Fin (qb i + 1)) :
         let a ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         let b ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] := by
-  let : MeasurableSpace (α × α) := ⊤
-  have h := ((EvalDistEq.of_evalDist_eq
-      (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run' qb js i s main)).bind_left
-    (fun w => (simulateQ seededOracle main).run' w.1 >>= fun b => pure (w.2, b))).evalDist_eq
+  have h := (seededOracle.evalDistEq_liftComp_generateSeed_takeAtIndex_run'
+    qb js i s main).bind_left
+    (fun w => (simulateQ seededOracle main).run' w.1 >>= fun b => pure (w.2, b))
   simp only [bind_assoc, pure_bind] at h
-  simpa only [expect_norm] using (EvalDistEq.of_evalDist_eq h).prEvent_eq
+  simpa only [expect_norm] using h.prEvent_eq
     (fun r : α × α => cf r.1 = some s ∧ cf r.2 = some s)
 
 /-- Resampling the forked answer after truncation leaves the second run distributed as a run on

@@ -159,6 +159,8 @@ callers restate the hypotheses they supply.
 |---|---|---|
 | `SigmaProtocol.HVZK`, `IdenSchemeWithAbort.HVZK` | `ζ_zk : ℝ` with `0 ≤ ζ_zk`, and `tvDist real sim ≤ ζ_zk` | `ζ_zk : ℝ≥0∞`, and `etvDist real sim ≤ ζ_zk`; the nonnegativity hypothesis goes |
 | `PerfectHVZK` | `𝒮[real] = 𝒮[sim]` | `real =ᵈ sim`; `perfectHVZK_iff_hvzk_zero` relates it to `HVZK … 0` |
+| `SymmEncAlg.Complete` | `∀ msg, 𝒮[completenessExperiment msg] = PMF.pure (some msg)` | `∀ msg, Pr{let x ← encAlg.completenessExperiment msg}[x = some msg] = 1`; `measureComplete` is the Dirac form under a chosen `ProbabilitySemantics` |
+| `CommitmentScheme.PerfectlyHiding`, `TrapdoorExtractor.SetupConsistent`, `DeferredSampling.Factorizes` | equalities of `𝒮[…]` | equalities in distribution `=ᵈ` |
 | `simCommitPredictability` | `Pr[= c₀ \| Prod.fst <$> simT x] ≤ β` | `Pr{let t ← simT x}[t.1 = c₀] ≤ β` |
 | Fiat–Shamir CMA-to-NMA loss (`euf_cma_to_nma`, `euf_cma_bound`) | `ENNReal.ofReal (qS * ζ_zk)` | `qS * ζ_zk` |
 | Charged steps of the per-query slack bounds (`expectedQuerySlack`, `advantage_le_expectedQuerySlack_add_prEvent_bad` and its variants) | `ENNReal.ofReal (tvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false))) ≤ ε s` | `etvDist ((h₀ t).run (s, false)) ((h₁ t).run (s, false)) ≤ ε s` |
@@ -296,9 +298,10 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 - **Fix σ-algebras inside definitions.** A definition stated with `𝒟[…]` depends on the
   measurable space its caller supplies; under `⊥` an equality of measures says nothing. Security
   definitions state equality in distribution with `=ᵈ`, which needs no measurable space, as
-  `SymmEncAlg.ciphertextRowsEqualAt` does. A definition about the measures themselves puts
-  `letI : MeasurableSpace α := ⊤` inside, as `PerfectlyHiding` and `SymmEncAlg.perfectSecrecyAt`
-  do.
+  `SymmEncAlg.ciphertextRowsEqualAt`, `CommitmentScheme.PerfectlyHiding` and
+  `DeferredSampling.Factorizes` do, and a distance between computations is `etvDist`. A
+  definition about the measures themselves, such as the product measure of
+  `SymmEncAlg.perfectSecrecyAt`, puts `letI : MeasurableSpace α := ⊤` inside.
 - **Events need no measurable space; singletons do.** `Pr{…}[…]` works on any output type,
   while `𝒟[mx] {x}` needs measurable singletons.
 - **Support is operational.** `support mx` is the set of structurally reachable outputs. It

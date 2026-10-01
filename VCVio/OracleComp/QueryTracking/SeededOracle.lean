@@ -398,17 +398,17 @@ distribution of that prefix and the seeded run's output: the discarded answers a
 values, exactly as the oracle would answer after the truncated seed runs out. -/
 theorem evalDistEq_liftComp_generateSeed_takeAtIndex_run' (qc : ι₀ → ℕ) (js : List ι₀)
     (i₀ : ι₀) (k : ℕ) {α : Type} (oa : OracleComp spec₀ α) :
-    letI : MeasurableSpace (QuerySeed spec₀ × α) := ⊤
-    𝒟[(do
+    (do
       let σ ← liftComp (generateSeed spec₀ qc js) spec₀
       let z ← (simulateQ seededOracle oa).run' σ
-      return (σ.takeAtIndex i₀ k, z) : OracleComp spec₀ (QuerySeed spec₀ × α))] =
-    𝒟[(do
+      return (σ.takeAtIndex i₀ k, z) : OracleComp spec₀ (QuerySeed spec₀ × α)) =ᵈ
+    (do
       let σ ← liftComp (generateSeed spec₀ qc js) spec₀
       let z ← (simulateQ seededOracle oa).run' (σ.takeAtIndex i₀ k)
-      return (σ.takeAtIndex i₀ k, z) : OracleComp spec₀ (QuerySeed spec₀ × α))] := by
+      return (σ.takeAtIndex i₀ k, z) : OracleComp spec₀ (QuerySeed spec₀ × α)) := by
   classical
   let : MeasurableSpace (QuerySeed spec₀ × α) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
   revert qc js k
   induction oa using OracleComp.inductionOn with
   | pure a => intro qc js k; simp

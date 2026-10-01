@@ -201,12 +201,10 @@ def romCRExperiment [DecidableEq X] [DecidableEq Y]
     return decide (x ≠ x' ∧ y = y'))).run ∅
 
 /-- ROM collision-resistance advantage: probability that the adversary
-produces a valid collision when every random-oracle answer is uniform on `Y`. The answers carry
-the discrete measurable structure, so every event of the experiment is observed. -/
+produces a valid collision when every random-oracle answer is uniform on `Y`. -/
 noncomputable def romCRAdvantage [DecidableEq X] [DecidableEq Y]
     [Fintype Y] [Nonempty Y]
     {t : ℕ} (A : BoundedROMCRAdversary X Y t) : ℝ≥0∞ :=
-  letI : MeasurableSpace Y := ⊤
   letI : UniformAnswerMeasure (ROMHashSpec.cached X Y) :=
     UniformAnswerMeasure.ofFiniteNonempty _
   Pr{let z ← romCRExperiment A}[z.1 = true]

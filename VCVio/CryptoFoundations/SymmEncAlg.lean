@@ -54,11 +54,9 @@ namespace SymmEncAlg
 variable {m : Type → Type u} [Monad m] [EvalDistSemantics m] {M K C : Type}
 
 /-- An encryption scheme is complete if decryption recovers every message with
-probability `1`: each round trip denotes the Dirac measure at the input message. Messages carry
-the discrete measurable structure, so the round trip is determined on every event. -/
-def Complete (encAlg : SymmEncAlg m M K C) : Prop :=
-  letI : MeasurableSpace M := ⊤
-  ∀ msg : M, 𝒟[encAlg.completenessExperiment msg] = Measure.dirac (some msg)
+probability `1`. -/
+def Complete [LawfulMonad m] [LawfulEvalDistSemantics m] (encAlg : SymmEncAlg m M K C) : Prop :=
+  ∀ msg : M, Pr{let x ← encAlg.completenessExperiment msg}[x = some msg] = 1
 
 /-- Channel form of perfect secrecy: every message induces ciphertexts with the same
 distribution. -/

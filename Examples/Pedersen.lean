@@ -102,7 +102,8 @@ theorem perfectlyHiding [SampleableType F] [SampleableType G] [DecidableEq G]
         SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
         _ (commit_fst_bijective hg pp m) pure
   intro pp _hpp m₁ m₂
-  rw [commit_fst_eq_map, commit_fst_eq_map, huniform, huniform]
+  rw [commit_fst_eq_map, commit_fst_eq_map]
+  exact EvalDistEq.of_evalDist_eq ((huniform m₁ pp).trans (huniform m₂ pp).symm)
 
 /-! ## Computational binding reduces to DLog -/
 
