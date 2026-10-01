@@ -26,6 +26,15 @@ rules for queries need uniform response measures.
 - `Examples/ProgramLogic/Probability.lean`: `prrw` on program equalities.
 - `Examples/ProgramLogic/UnaryStep.lean`: expectation equations with `expect_norm` /
   `expect_eval`, `prvcgen` on transformer triples, local `@[spec]` rules, and opaque sub-programs.
+- `Examples/ProgramLogic/UnaryReadings.lean`: the four shapes `= 1`, `0 <`, `r ≤` and `≤ r` of
+  one program through `prvcgen`, the averaging rules with their leftover events, and a
+  `for … in` loop with an invariant under the necessary reading.
+- `Examples/ProgramLogic/UnaryUpper.lean`: upper bounds, the reading of cryptographic
+  statements: a guessing game, the comparison `Pr{A}[p] ≤ Pr{B}[q]`, an aborting program
+  through the `OptionT` bridge, and the readback of a bare `vcgen` with `upper_readback`.
+- `Examples/ProgramLogic/HandlerInvariants.lean`: `Spec.simulateQ` with a handler invariant
+  through `prvcgen invariants`, a union bound over adaptive random-oracle queries as a ranked
+  potential (`simulateQ_triple_ranked`), and a triple read against the support of its run.
 - `Examples/ProgramLogic/RelationalStep.lean`: step-by-step relational tactic examples.
 - `Examples/ProgramLogic/RelationalDerived.lean`: derived relational patterns and automation examples.
 - `Examples/ProgramLogic/ProofMode.lean`: proof-mode entry points and small end-to-end examples.

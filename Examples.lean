@@ -66,6 +66,7 @@ public import Examples.PRFTagReader.UnlinkReduction
 public import Examples.PRGfromPRF
 public import Examples.Pedersen
 public import Examples.ProgramLogic.GaussianWiring
+public import Examples.ProgramLogic.HandlerInvariants
 public import Examples.ProgramLogic.MeasureCoupling
 public import Examples.ProgramLogic.Probability
 public import Examples.ProgramLogic.ProofMode
@@ -77,8 +78,10 @@ public import Examples.ProgramLogic.RelationalDerived
 public import Examples.ProgramLogic.RelationalStep
 public import Examples.ProgramLogic.Unary
 public import Examples.ProgramLogic.UnaryProbability
+public import Examples.ProgramLogic.UnaryReadings
 public import Examples.ProgramLogic.UnaryStep
 public import Examples.ProgramLogic.UnaryTriple
+public import Examples.ProgramLogic.UnaryUpper
 public import Examples.ReplayCheckpoint
 public import Examples.ResumptionRejection
 public import Examples.Schnorr.BoundedChallenges
