@@ -58,6 +58,13 @@ example : ⦃ 1 ⦄ (do let i ← $[0..3]; pure i.val : ProbComp ℕ) ⦃ fun k 
   vcgen
   simp [Lean.Order.rel_eq_le, propInd_eq_ite, Nat.lt_succ_iff.mp i.isLt]
 
+/-- `Spec.replicate`: every list of possible outputs. -/
+example : ⦃ 1 ⦄ (($ᵗ Bool).replicate 2 : ProbComp (List Bool))
+    ⦃ fun l => propInd (l.length = 2) ⦄ := by
+  vcgen
+  rename_i xs
+  simp [Lean.Order.rel_eq_le, propInd_eq_ite, xs.2.1]
+
 /-- `Spec.uniformSample_sum`, passed: the exact average of a finite uniform draw. -/
 example : ⦃ 1 / 2 ⦄ ($ᵗ Bool : ProbComp Bool) ⦃ fun b => propInd (b = true) ⦄ := by
   vcgen [OracleComp.Lower.Spec.uniformSample_sum]
@@ -126,6 +133,12 @@ example : (3 : ℝ≥0∞) ≤ wp⟦($ᵗ Bool : ProbComp Bool)⟧ fun b => if b
   rename_i b
   cases b <;> simp [Lean.Order.rel_eq_le]
   norm_num
+
+/-- `triple_add_frame` adds a constant to a triple of an adversary. -/
+example (adv : ProbComp Bool) (r : ℝ≥0∞) (hadv : ⦃ r ⦄ adv ⦃ fun b => propInd (b = true) ⦄) :
+    ⦃ 1 + r ⦄ (do let b ← adv; pure b) ⦃ fun b => propInd (b = true) + 1 ⦄ := by
+  vcgen [triple_add_frame 1 hadv]
+  simp [Lean.Order.rel_eq_le, add_comm]
 
 /-- The infimum of the postcondition bounds the expectation. -/
 example (g : Bool → ℝ≥0∞) : ⨅ b, g b ≤ wp⟦($ᵗ Bool : ProbComp Bool)⟧ g :=

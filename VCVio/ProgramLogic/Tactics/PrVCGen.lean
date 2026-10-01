@@ -191,7 +191,7 @@ def bridgeEqOne : TacticM Unit := do
   evalTactic (← `(tactic| (
     simp (disch := prvcgen_le_one) only
       [OracleComp.Necessary.wp_eq_one_eq_wp, predInd_apply, propInd_eq_one_iff]
-    refine (OracleComp.Necessary.wp_iff_triple _ _).2 ?_)))
+    rw [OracleComp.Necessary.wp_iff_triple])))
 
 /-- State the main goal as a triple of the reading it belongs to, or split an equation. -/
 partial def bridge (goal : Expr) : TacticM Plan := do
@@ -236,9 +236,9 @@ partial def bridge (goal : Expr) : TacticM Plan := do
       evalTactic (← `(tactic| (
         rw [← nonpos_iff_eq_zero]
         first
-          | refine (OracleComp.Upper.wp_le_iff_triple _ _ _).2 ?_
-          | refine (OracleComp.Upper.OptionT.wp_le_iff_triple _ _ _).2 ?_
-          | refine (OracleComp.Upper.ExceptT.wp_le_iff_triple _ _ _).2 ?_
+          | rw [OracleComp.Upper.wp_le_iff_triple]
+          | rw [OracleComp.Upper.OptionT.wp_le_iff_triple]
+          | rw [OracleComp.Upper.ExceptT.wp_le_iff_triple]
         try simp only [OracleComp.Upper.toDual_wp])))
       return .single .upper
     evalTactic (← `(tactic| refine le_antisymm ?_ ?_))
@@ -261,7 +261,7 @@ partial def bridge (goal : Expr) : TacticM Plan := do
     evalTactic (← `(tactic| (
       simp only [OracleComp.Possible.pos_wp_eq_wp, predInd_apply, propInd_pos_iff]
       first
-        | refine (OracleComp.Possible.wp_iff_triple _ _).2 ?_
+        | rw [OracleComp.Possible.wp_iff_triple]
         | fail "prvcgen: the possible bridge for `0 < …` needs uniform answers \
             (`UniformAnswerMeasure`); otherwise use \
             `OracleComp.Possible.prEvent_pos_iff_triple_of_fullSupport`")))
@@ -276,19 +276,21 @@ partial def bridge (goal : Expr) : TacticM Plan := do
     if isWpApp lhs then
       evalTactic (← `(tactic| (
         first
-          | refine (OracleComp.Upper.wp_le_iff_triple _ _ _).2 ?_
-          | refine (OracleComp.Upper.OptionT.wp_le_iff_triple _ _ _).2 ?_
-          | refine (OracleComp.Upper.ExceptT.wp_le_iff_triple _ _ _).2 ?_
+          | rw [OracleComp.Upper.wp_le_iff_triple]
+          | rw [OracleComp.Upper.OptionT.wp_le_iff_triple]
+          | rw [OracleComp.Upper.ExceptT.wp_le_iff_triple]
         try simp only [OracleComp.Upper.toDual_wp])))
       return .single .upper
     if isWpApp rhs then
       -- the stack bridges first: they state the triple in core's lift of the reading, which
-      -- the transformer rules match without unfolding the lifted expectation
+      -- the transformer rules match without unfolding the lifted expectation. The bridges are
+      -- applied by `rw`, which keeps the goal's spelling of the specification: `refine` lets
+      -- unification unfold a concrete specification, after which no rule matches its queries
       evalTactic (← `(tactic| first
-        | refine (OracleComp.Lower.OptionT.le_wp_iff_triple _ _ _).2 ?_
-        | refine (OracleComp.Lower.ExceptT.le_wp_iff_triple _ _ _).2 ?_
-        | refine (OracleComp.ProgramLogic.le_wp_iff_triple _ _ _).2 ?_
-        | refine (ExpectationWP.le_wp_iff_triple _ _ _).2 ?_))
+        | rw [OracleComp.Lower.OptionT.le_wp_iff_triple]
+        | rw [OracleComp.Lower.ExceptT.le_wp_iff_triple]
+        | rw [OracleComp.ProgramLogic.le_wp_iff_triple]
+        | rw [ExpectationWP.le_wp_iff_triple]))
       return .single .lower
     throwError "prvcgen: neither side of the inequality is an expectation `Pr\{…}[…]`, \
       `𝔼\{…}[…]`, or `wp⟦…⟧ …`"
@@ -296,7 +298,7 @@ partial def bridge (goal : Expr) : TacticM Plan := do
   if goal.isAppOfArity ``Exists 2 then
     try
       evalTactic (← `(tactic|
-        refine (OracleComp.Possible.exists_mem_support_iff_triple _ _).2 ?_))
+        rw [OracleComp.Possible.exists_mem_support_iff_triple]))
       return .single .possible
     catch _ =>
       throwError "prvcgen: an existential must be `∃ x ∈ support oa, p x`"
@@ -311,7 +313,7 @@ partial def bridge (goal : Expr) : TacticM Plan := do
   if goal.isForall then
     try
       evalTactic (← `(tactic|
-        refine (OracleComp.Necessary.forall_mem_support_iff_triple _ _).2 ?_))
+        rw [OracleComp.Necessary.forall_mem_support_iff_triple]))
       return .single .necessary
     catch _ =>
       throwError "prvcgen: a universal statement must be `∀ x ∈ support oa, p x`"

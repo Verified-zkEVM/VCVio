@@ -36,7 +36,8 @@ assertion type to `ℝ≥0∞`, for which this scope has no interpretation.
 
 The registered rules bound the expectation of a query or a uniform draw by its largest value, with
 core's indexed infimum `Lean.Order.iInf` of the dual, which `vcgen` splits into one verification
-condition per outcome: `Spec.monadLift_query` (with the global `HasQuery.query` unfold),
+condition per outcome: `Spec.query` and `Spec.monadLift_query` (with the global `HasQuery.query`
+unfold),
 `Spec.uniformSample`, `Spec.uniformFin`, `Spec.replicate`, and the lifts `Spec.liftComp` and
 `Spec.monadLift_liftComp`. They prove events of probability zero and bounds that hold on every
 path.
@@ -198,6 +199,16 @@ theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → ℝ≥0�
       OracleComp spec (spec.Range t)) (Lean.Order.iInf post) post epost := by
   rw [triple_iff, iInf_eq, ofDual_toDual]
   exact wp_le_iSup _ _
+
+/-- The rule for the `query t` spelling itself, stated on `OracleComp spec`. It applies where the
+program's answer type was elaborated to its reduced form (a concrete specification's `Bool` rather
+than `spec.Range t`), on which the generic `HasQuery.instOfMonadLift_query` unfold cannot be
+unified: here the specification is fixed by the monad before the answer type is compared. -/
+@[spec]
+theorem Spec.query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    Triple (query t : OracleComp spec (spec.Range t)) (Lean.Order.iInf post) post epost := by
+  rw [HasQuery.instOfMonadLift_query]
+  exact Spec.monadLift_query t post
 
 /-- An opaque sub-program's expectation is at most the largest value on its support. Not
 registered, since it applies to every program; `vcgen [Spec.ofSupport oa]` splits the supremum

@@ -257,18 +257,22 @@ regenerates this table; `--check` fails when it is stale):
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
+| `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
+| `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
 | `HasQuery` | `HasQuery.instOfMonadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Necessary.lean` |
 | `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
 | `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
 | `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Necessary.lean` |
+| `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Necessary.lean` |
 | `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
 | `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
 | `OracleComp.Necessary.Spec` | `OracleComp.Necessary.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/NecessarySpecs.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
+| `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
 | `OracleComp.Possible.Spec` | `OracleComp.Possible.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Possible.lean` |
@@ -284,6 +288,7 @@ regenerates this table; `--check` fails when it is stale):
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
+| `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
@@ -353,14 +358,16 @@ with `Lean.Order.iInf`, which `vcgen` splits into one condition per outcome:
 
 | Program | Rule | Precondition |
 |---------|------|--------------|
-| `query t` (both spellings) | `Spec.monadLift_query` | `⨅ u, post u` |
+| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨅ u, post u` |
 | `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨅ x, post x` |
+| `oa.replicate n` | `Spec.replicate` | `⨅ xs : {xs // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa}, post xs.1` |
 | `liftComp oa superSpec`, `liftM oa` (uniform answers on both specifications) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨅ a : {a // a ∈ support oa}, post a.1` |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_sum` | `(∑ x, post x) / card β` |
 | `query t`, uniform (not registered) | `Spec.query_uniform` | `∑ u, (card)⁻¹ * post u` |
 
-`OracleComp.ProgramLogic.triple_const_mul c h` scales a lower-bound triple. Passing it for an
+`OracleComp.ProgramLogic.triple_const_mul c h` scales a lower-bound triple and
+`triple_add_frame c h` adds a constant to one. Passing the former for an
 adversary's success bound composes that bound with a later draw, as in
 `vcgen [triple_const_mul 2⁻¹ hadv, Spec.uniformSample_sum]`. A hypothesis
 `h : ∀ k ∈ support gen, ⦃ r ⦄ f k ⦃ post ⦄` is used by `vcgen [Spec.ofSupport gen]`, which leaves
@@ -395,7 +402,7 @@ Upper-bound rules (`VCVio/ProgramLogic/Unary/WP/Upper.lean`, namespace `OracleCo
 
 | Program | Rule | Precondition (read in `ℝ≥0∞`) |
 |---------|------|------|
-| `query t` (both spellings) | `Spec.monadLift_query` | `⨆ u, post u` (core's `Lean.Order.iInf` of the dual) |
+| `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨆ u, post u` (core's `Lean.Order.iInf` of the dual) |
 | `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨆ x, post x` |
 | `oa.replicate n` | `Spec.replicate` | `⨆ xs : {xs // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa}, post xs.1` |
 | `liftComp oa superSpec`, `liftM oa` (uniform answers on both specifications) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
@@ -517,9 +524,9 @@ without a rule is left as a verification condition stating its weakest precondit
 `prvcgen invariants · fun _ _ s => I s`, `List.mapM` through `Std.WP.Spec.mapM_list`
 (`Unary/WP/TransformerSpecs.lean`), whose invariant ranges over the elements consumed, the elements
 remaining and the outputs so far, as `prvcgen invariants · fun pref _ bs => bs.length = pref.length`,
-and `replicate` through `Spec.replicate` in the necessary, possible and upper readings, or in the
-lower reading through the rules of `Unary/HoareTriple.lean` passed explicitly, as
-`prvcgen [triple_replicate_inv hstep]` (`triple_replicate_inv`, `triple_replicate`,
+and `replicate` through `Spec.replicate` in every reading (its precondition ranges over the
+lists of possible outputs), or through the invariant rules of `Unary/HoareTriple.lean` passed
+explicitly, as `prvcgen [triple_replicate_inv hstep]` (`triple_replicate_inv`, `triple_replicate`,
 `triple_list_mapM_inv`, `triple_list_foldlM_inv` and their consequence forms). A simulation
 `simulateQ handler oa` in `StateT σ m` takes a handler invariant through `Spec.simulateQ`
 (`Unary/HandlerSpecs.lean`), as `prvcgen invariants · fun s => I s`; `vcgen` then walks the

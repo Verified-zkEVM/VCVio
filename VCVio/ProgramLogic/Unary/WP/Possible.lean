@@ -115,6 +115,16 @@ theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → Prop)
       OracleComp spec (spec.Range t)) (∃ u, post u) post epost :=
   ⟨fun ⟨u, hu⟩ => ⟨u, OracleComp.mem_support_query t u, hu⟩⟩
 
+/-- The rule for the `query t` spelling itself, stated on `OracleComp spec`. It applies where the
+program's answer type was elaborated to its reduced form (a concrete specification's `Bool` rather
+than `spec.Range t`), on which the generic `HasQuery.instOfMonadLift_query` unfold cannot be
+unified: here the specification is fixed by the monad before the answer type is compared. -/
+@[spec]
+theorem Spec.query (t : spec.Domain) (post : spec.Range t → Prop) {epost : EStack⟨⟩} :
+    Triple (query t : OracleComp spec (spec.Range t)) (∃ u, post u) post epost := by
+  rw [HasQuery.instOfMonadLift_query]
+  exact Spec.monadLift_query t post
+
 /-- An opaque sub-program meets a postcondition that holds at one of its possible outputs. Not
 registered, since it applies to every program. -/
 theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → Prop) {epost : EStack⟨⟩} :

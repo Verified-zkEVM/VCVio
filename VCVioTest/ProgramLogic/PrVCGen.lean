@@ -353,6 +353,43 @@ example (x : Bool) (hx : x = true) : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool
   prvcgen simplifying_assumptions [hx]
   simp
 
+/-! ## A concrete specification
+
+On a concrete specification the answer type of a query elaborates to its reduced form (`Bool`
+rather than `spec.Range t`), on which the generic query unfold cannot be unified; the direct
+`Spec.query` rules of the four readings apply. -/
+
+section Concrete
+
+/-- Two Boolean cells. -/
+abbrev Cells := Bool × Bool
+
+noncomputable local instance : UniformAnswerMeasure (Cells →ₒ Bool) :=
+  UniformAnswerMeasure.ofFiniteNonempty (Cells →ₒ Bool)
+
+/-- One query at the first cell, at the reduced answer type. -/
+def cell : OracleComp (Cells →ₒ Bool) Bool := query (spec := Cells →ₒ Bool) (false, false)
+
+example : Pr{let b ← cell}[b = b] = 1 := by
+  prvcgen [cell]
+
+example : 0 < Pr{let b ← cell}[b = true] := by
+  prvcgen [cell]
+  exact ⟨true, rfl⟩
+
+example : (1 : ℝ≥0∞) ≤ Pr{let b ← cell}[b = b] := by
+  prvcgen [cell]
+
+example : Pr{let b ← cell}[b ≠ b] = 0 := by
+  prvcgen [cell]
+  simp
+
+example : Pr{let b ← cell}[b = true] ≤ 1 / 2 := by
+  prvcgen [cell, OracleComp.Upper.Spec.query_avg]
+  simp
+
+end Concrete
+
 section UpperFileLevel
 
 open scoped OracleComp.Upper

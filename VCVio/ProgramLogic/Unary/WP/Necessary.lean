@@ -58,4 +58,14 @@ theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → Prop)
 -- lifted form in `OracleComp` and through its transformers alike.
 attribute [spec] HasQuery.instOfMonadLift_query
 
+/-- The rule for the `query t` spelling itself, stated on `OracleComp spec`. It applies where the
+program's answer type was elaborated to its reduced form (a concrete specification's `Bool` rather
+than `spec.Range t`), on which the generic `HasQuery.instOfMonadLift_query` unfold cannot be
+unified: here the specification is fixed by the monad before the answer type is compared. -/
+@[spec]
+theorem Spec.query (t : spec.Domain) (post : spec.Range t → Prop) {epost : EStack⟨⟩} :
+    Triple (query t : OracleComp spec (spec.Range t)) (∀ u, post u) post epost := by
+  rw [HasQuery.instOfMonadLift_query]
+  exact Spec.monadLift_query t post
+
 end OracleComp.Necessary

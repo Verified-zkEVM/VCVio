@@ -11,6 +11,7 @@ public import VCVio.ProgramLogic.Unary.SimulateQ
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.EvalDist.Monad.Except
 public import VCVio.ProgramLogic.Unary.WP.Readback
+public import VCVio.OracleComp.Constructions.Replicate
 
 /-!
 # `vcgen` rules for the quantitative reading of oracle computations
@@ -28,8 +29,10 @@ Oracle computations are lossless, so a lower bound that holds for every outcome 
 uniform draw holds in expectation. The registered rules state exactly that, with core's indexed
 infimum `Lean.Order.iInf`, which `vcgen` splits into one verification condition per outcome:
 
-* `Spec.monadLift_query` (with the global `HasQuery.query` unfold): an oracle query;
+* `Spec.query` and `Spec.monadLift_query` (with the global `HasQuery.query` unfold): an oracle
+  query;
 * `Spec.uniformSample`, `Spec.uniformFin`: uniform draws;
+* `Spec.replicate`: a replicated draw, over the lists of possible outputs;
 * `Spec.liftComp`, `Spec.monadLift_liftComp`: lifts between specifications with uniform answers.
 
 These rules establish probability-one events and lower bounds that hold on every path. They lose
@@ -95,6 +98,14 @@ theorem triple_const_mul {oa : OracleComp spec α} {r : ℝ≥0∞} {g : α → 
   rw [ExpectationWP.wp_const_mul]
   exact mul_le_mul_right h c
 
+/-- Adding a constant to a lower-bound triple: the frame rule of the lower-bound reading, for
+composing a sub-program's bound with a budget the rest of the program keeps. -/
+theorem triple_add_frame {oa : OracleComp spec α} {r : ℝ≥0∞} {g : α → ℝ≥0∞} (c : ℝ≥0∞)
+    (h : ⦃ r ⦄ oa ⦃ g ⦄) : ⦃ c + r ⦄ oa ⦃ fun a => c + g a ⦄ := by
+  rw [← le_wp_iff_triple] at h ⊢
+  rw [ExpectationWP.wp_add, ExpectationWP.wp_const_of_oracle]
+  exact add_le_add le_rfl h
+
 /-- A lower bound at every output of a lossless computation bounds its expectation. -/
 theorem iInf_le_wp (oa : OracleComp spec α) (g : α → ℝ≥0∞) : ⨅ x, g x ≤ wp⟦oa⟧ g :=
   le_wp_of_forall_le oa (prEvent_true_eq_one oa) fun x => iInf_le g x
@@ -116,6 +127,16 @@ theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → ℝ≥0�
       OracleComp spec (spec.Range t)) (Lean.Order.iInf post) post epost := by
   rw [MAlgOrdered.iInf_eq_iInf]
   exact ⟨iInf_le_wp _ post⟩
+
+/-- The rule for the `query t` spelling itself, stated on `OracleComp spec`. It applies where the
+program's answer type was elaborated to its reduced form (a concrete specification's `Bool` rather
+than `spec.Range t`), on which the generic `HasQuery.instOfMonadLift_query` unfold cannot be
+unified: here the specification is fixed by the monad before the answer type is compared. -/
+@[spec]
+theorem Spec.query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) {epost : EStack⟨⟩} :
+    Triple (query t : OracleComp spec (spec.Range t)) (Lean.Order.iInf post) post epost := by
+  rw [HasQuery.instOfMonadLift_query]
+  exact Spec.monadLift_query t post
 
 /-- A lower bound on every value of a uniform draw bounds its expectation. -/
 @[spec]
@@ -146,6 +167,19 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epo
   rw [MAlgOrdered.iInf_eq_iInf]
   refine ⟨le_trans (le_of_eq ?_) (wp_mono_of_support oa fun x hx =>
     iInf_le (fun a : {a // a ∈ support oa} => post a.1) ⟨x, hx⟩)⟩
+  rw [ExpectationWP.wp_const_of_oracle]
+
+/-- The expectation of `oa.replicate n` is at least its smallest value on a list of `n` possible
+outputs of `oa`. -/
+@[spec]
+theorem Spec.replicate (n : ℕ) (oa : OracleComp spec α) (post : List α → ℝ≥0∞)
+    {epost : EStack⟨⟩} :
+    ⦃ Lean.Order.iInf fun xs : {xs : List α // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa} =>
+        post xs.1 ⦄ oa.replicate n ⦃ post; epost ⦄ := by
+  rw [MAlgOrdered.iInf_eq_iInf]
+  refine ⟨le_trans (le_of_eq ?_) (wp_mono_of_support (oa.replicate n) fun xs hxs =>
+    iInf_le (fun xs : {xs : List α // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa} => post xs.1)
+      ⟨xs, by rwa [support_replicate] at hxs⟩)⟩
   rw [ExpectationWP.wp_const_of_oracle]
 
 /-- A lower bound on an expectation over an optional oracle computation is a triple of core's
