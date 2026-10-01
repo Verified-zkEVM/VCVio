@@ -163,6 +163,12 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
   - All other terms of `Type`s (basically anything else) are in `lowerCamelCase`.
 - Respect the module layering documented in [`AGENTS.md`](AGENTS.md).
 - Use `/-! ## Title -/` doc-headers, not ASCII banners, for inline section breaks (see *Documentation Expectations* above).
+- Write triples in core's notation, `⦃ pre ⦄ c ⦃ post ⦄` and, with an exception postcondition,
+  `⦃ pre ⦄ c ⦃ post; epost ⦄` (`scoped` in `Std.WP`), rather than as `Std.WP.Triple c pre post epost`;
+  `⦃ pre ⦄ (m := M) c ⦃ post ⦄` ascribes the program's monad. The same goes for the relational
+  triples and the event notations: a statement reads as the notation the guides document, and the
+  unfolded forms (`pre ⊑ wp c post epost`, `Triple …`) are what proofs reach, not what statements
+  say.
 
 For probability tactic tests, follow the
 [tactic-test conventions](docs/agents/probability.md#normal-forms-and-the-tactic-contract).

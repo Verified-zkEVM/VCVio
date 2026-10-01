@@ -59,7 +59,9 @@ for the exact finite evaluator boundary and decidability requirements.
 ## Program Logic Notations
 
 Open `OracleComp.ProgramLogic` for VCVio notation. Unary triples additionally require
-`open scoped Std.WP`; oracle computations read expectations by default.
+`open scoped Std.WP`, and statements use the triple notation rather than `Std.WP.Triple c P Q E`
+(see *Style Notes* in `CONTRIBUTING.md`); the structural reading of an oracle computation is the
+global instance.
 
 | Notation | Meaning | Defined in |
 |----------|---------|------------|

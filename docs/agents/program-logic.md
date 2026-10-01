@@ -253,9 +253,11 @@ opens (gotcha 33): `open scoped OracleComp.Upper.Dispatch in vcgen` runs `vcgen`
 whatever the file opens. `Pr{…}[…]`, `𝔼{…}[…]` and `wp⟦oa⟧ g` name the expectation interpretation
 explicitly and are unaffected by the scopes. `prvcgen` (below) chooses the reading from the goal.
 
-Triple notation comes from `open scoped Std.WP`. In the expectation reading, `Std.WP.Triple.iff`
-unfolds `⦃ pre ⦄ oa ⦃ post ⦄` to `pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦oa⟧ post`
-(`le_wp_iff_triple`). Core supplies the generic rules (`Std.WP.Triple.intro`, `.le_wp`,
+Triple notation comes from `open scoped Std.WP`, and statements are written in it: a rule or a
+theorem says `⦃ pre ⦄ c ⦃ post ⦄`, or `⦃ pre ⦄ c ⦃ post; epost ⦄` with an exception
+postcondition, never `Std.WP.Triple c pre post epost` (style guidance, in `CONTRIBUTING.md`). In
+the expectation reading, `Std.WP.Triple.iff` unfolds `⦃ pre ⦄ oa ⦃ post ⦄` to
+`pre ⊑ wp oa post ⊥`, which is `pre ≤ wp⟦oa⟧ post` (`le_wp_iff_triple`). Core supplies the generic rules (`Std.WP.Triple.intro`, `.le_wp`,
 `Std.WP.Spec.pure`, `Std.WP.Triple.bind`, `Std.WP.Triple.entails_wp_of_pre_post`), steps through
 binds, `if`, `match` and transformer stacks, and applies triples of sub-programs found among the
 hypotheses. `VCVio/ProgramLogic/Unary/HoareTriple.lean` states the quantitative rules that are
