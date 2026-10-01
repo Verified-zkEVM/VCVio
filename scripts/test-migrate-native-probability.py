@@ -190,6 +190,12 @@ class NameTests(unittest.TestCase):
             "prvcgen [Necessary.Spec.ofSupport init, OracleComp.Necessary.Spec.ofSupport oa]\n"
             "rw [Necessary.prEvent_eq_one_iff_triple]; exact ProtocolSpec.Necessary.Spec.getChallenge")
 
+    def test_expectation_interpretation_namespace(self):
+        out, _ = migrate("simp only [MeasureProgramLogic.wp_pure, MeasureProgramLogic.measureWP m,\n"
+                         "  MeasureProgramLogic.toMAlgOrdered, MeasureProgramLogic.Quantitative.Spec.pure]")
+        self.assertEqual(out, "simp only [ExpectationWP.wp_pure, ExpectationWP.wpMonad m,\n"
+                              "  ExpectationWP.algebra, ExpectationWP.Lower.Spec.pure]")
+
     def test_total_variation(self):
         # The real-valued algebra keeps its names; the bounds are stated on `etvDist`.
         out, items = migrate(

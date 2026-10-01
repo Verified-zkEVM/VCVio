@@ -48,6 +48,10 @@ RENAMES: dict[str, str] = {
     "OracleComp.Angelic": "OracleComp.Possible",
     "OracleComp.Quantitative": "OracleComp.Lower",
     "ExpectationWP.Quantitative": "ExpectationWP.Lower",
+    # The expectation interpretation and its laws.
+    "MeasureProgramLogic.measureWP": "ExpectationWP.wpMonad",
+    "MeasureProgramLogic.toMAlgOrdered": "ExpectationWP.algebra",
+    "MeasureProgramLogic": "ExpectationWP",
     # The same scopes written relative to an opened `OracleComp`.
     "Qualitative.Spec": "Necessary.Spec",
     "Qualitative.prEvent_eq_one_iff_triple": "Necessary.prEvent_eq_one_iff_triple",

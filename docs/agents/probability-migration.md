@@ -101,7 +101,8 @@ Replacement lemmas keep the removed name with the probability head replaced:
 | `evalSPMF_` | `evalDist_` | `evalSPMF_simulateQ_run_congr` → `evalDist_simulateQ_run_congr` |
 | `tvDist_` (bounds stated on `ENNReal.ofReal (tvDist …)`) | `etvDist_` | `tvDist_simulateQ_le_probEvent_bad` → `etvDist_simulateQ_run'_le_prEvent_bad` |
 
-Other renames: `AdvBound.of_tvDist` → `AdvBound.of_etvDist` (and `AdvBound` takes an
+Other renames: `MeasureProgramLogic` → `ExpectationWP` (`measureWP` → `wpMonad`, `toMAlgOrdered`
+→ `algebra`; the reading `Quantitative` → `Lower`); `AdvBound.of_tvDist` → `AdvBound.of_etvDist` (and `AdvBound` takes an
 `ℝ≥0∞` bound); root `evalDist_uniformSample` → `SampleableType.evalDist_uniformSample`;
 `relTriple_eqRel_of_evalSPMF_eq` → `relTriple_eqRel_of_evalDistEq`;
 `evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`; in the identical-until-bad
