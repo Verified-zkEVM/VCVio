@@ -30,8 +30,8 @@ variable {ι : Type u} {τ : Type v} {spec : OracleSpec ι} {superSpec : OracleS
   [h : spec ⊂ₒ superSpec]
 
 /-- Translated queries equal in distribution to the original ones preserve every output measure. -/
-theorem evalDist_liftComp_of_evalDistEq [OracleSpec.IsMeasureSpec spec]
-    [OracleSpec.IsMeasureSpec superSpec]
+theorem evalDist_liftComp_of_evalDistEq [OracleSpec.AnswerMeasure spec]
+    [OracleSpec.AnswerMeasure superSpec]
     (hMeasure : ∀ t, (liftM (spec.query t) : OracleComp superSpec (spec.Range t)) =ᵈ
       (liftM (spec.query t) : OracleComp spec (spec.Range t)))
     {α : Type} [MeasurableSpace α] (mx : OracleComp spec α) :
@@ -48,14 +48,14 @@ theorem evalDist_liftComp_of_evalDistEq [OracleSpec.IsMeasureSpec spec]
 /-- Cartesian answer translations preserve uniform answer measures: a translated query is
 distributed as the original one. -/
 theorem evalDistEq_liftM_query_uniform [spec ˡ⊂ₒ superSpec]
-    [OracleSpec.IsUniformMeasureSpec spec] [OracleSpec.IsUniformMeasureSpec superSpec]
+    [OracleSpec.UniformAnswerMeasure spec] [OracleSpec.UniformAnswerMeasure superSpec]
     (t : spec.Domain) :
     (liftM (spec.query t) : OracleComp superSpec (spec.Range t)) =ᵈ
       (liftM (spec.query t) : OracleComp spec (spec.Range t)) := by
   let : MeasurableSpace (spec.Range t) := ⊤
   let : MeasurableSpace (superSpec.Range (h.onQuery t)) := ⊤
-  have := OracleSpec.IsUniformMeasureSpec.finite_range t
-  have := OracleSpec.IsUniformMeasureSpec.finite_range (h.onQuery t)
+  have := OracleSpec.UniformAnswerMeasure.finite_range t
+  have := OracleSpec.UniformAnswerMeasure.finite_range (h.onQuery t)
   have hsup : 𝒟[(liftM (spec.query t) : OracleComp superSpec (spec.Range t))] =
       𝒟[(liftM (spec.query t) : OracleComp spec (spec.Range t))] := by
     rw [liftM_eq_liftM_liftM]
@@ -71,7 +71,7 @@ theorem evalDistEq_liftM_query_uniform [spec ˡ⊂ₒ superSpec]
 
 /-- Cartesian inclusions between uniform specifications preserve denotations. -/
 theorem evalDist_liftComp_uniform [spec ˡ⊂ₒ superSpec]
-    [OracleSpec.IsUniformMeasureSpec spec] [OracleSpec.IsUniformMeasureSpec superSpec]
+    [OracleSpec.UniformAnswerMeasure spec] [OracleSpec.UniformAnswerMeasure superSpec]
     {α : Type} [MeasurableSpace α] (mx : OracleComp spec α) :
     𝒟[liftComp mx superSpec] = 𝒟[mx] :=
   evalDist_liftComp_of_evalDistEq (fun t ↦ evalDistEq_liftM_query_uniform t) mx
@@ -79,7 +79,7 @@ theorem evalDist_liftComp_uniform [spec ˡ⊂ₒ superSpec]
 /-- Cartesian inclusions between uniform specifications preserve the distribution of every
 computation. -/
 theorem evalDistEq_liftComp_uniform [spec ˡ⊂ₒ superSpec]
-    [OracleSpec.IsUniformMeasureSpec spec] [OracleSpec.IsUniformMeasureSpec superSpec]
+    [OracleSpec.UniformAnswerMeasure spec] [OracleSpec.UniformAnswerMeasure superSpec]
     {α : Type} (mx : OracleComp spec α) : liftComp mx superSpec =ᵈ mx :=
   letI : MeasurableSpace α := ⊤
   EvalDistEq.of_evalDist_eq (evalDist_liftComp_uniform mx)

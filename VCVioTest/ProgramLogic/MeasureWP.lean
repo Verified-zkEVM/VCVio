@@ -33,7 +33,7 @@ example : True := by
   fail_if_success let _ := inferInstanceAs (WPMonad Option ENNReal EStack⟨⟩)
   trivial
 
-open scoped ExpectationWP.Quantitative
+open scoped ExpectationWP.Lower
 
 example (c : ENNReal) : wp (none : Option Nat) (fun _ ↦ c) Lean.Order.bot = 0 := by simp
 

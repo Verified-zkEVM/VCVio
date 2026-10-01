@@ -57,7 +57,7 @@ the truncated seed.
 @[expose] public section
 
 open OracleSpec OracleComp OracleComp.ProgramLogic ENNReal Function Finset
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 namespace OracleComp
 
@@ -65,7 +65,7 @@ namespace OracleComp
 
 /-- The standard forking-lemma precondition is itself a valid probability bound. -/
 theorem seededFork_precondition_le_one {ι : Type} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec] {α : Type} (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
+    [OracleSpec.AnswerMeasure spec] {α : Type} (main : OracleComp spec α) (qb : ι → ℕ) (i : ι)
     [Fintype (spec.Range i)] (cf : α → Option (Fin (qb i + 1))) :
     (let acc : ℝ≥0∞ := ∑ s, Pr{let x ← main}[cf x = some s]
      let h : ℝ≥0∞ := Fintype.card (spec.Range i)
@@ -77,7 +77,7 @@ theorem seededFork_precondition_le_one {ι : Type} {spec : OracleSpec ι}
 `|spec.Range i|⁻¹`. -/
 private lemma prEvent_seedSlot_le_inv {ι : Type} {spec : OracleSpec ι}
     [∀ i, SampleableType (spec.Range i)] [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec]
-    [OracleSpec.IsUniformMeasureSpec spec] (qb : ι → ℕ) (i : ι) [Fintype (spec.Range i)]
+    [OracleSpec.UniformAnswerMeasure spec] (qb : ι → ℕ) (i : ι) [Fintype (spec.Range i)]
     (s : Fin (qb i + 1)) (seed : QuerySeed spec) :
     Pr{let u ← liftComp ($ᵗ spec.Range i) spec}[(seed i)[s]? = some u] ≤
       (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
@@ -224,7 +224,7 @@ theorem isPerIndexQueryBound_seededForkWithSeedValue
 section generateSeedCoverage
 
 variable [∀ i, SampleableType (spec.Range i)]
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 
 private lemma expectedQueryCount_seededForkWithSeedValue_le_aux
     [∀ i, DecidableEq (spec.Range i)] [Finite ι]
@@ -324,7 +324,7 @@ theorem cf_eq_of_mem_support_seededFork [∀ i, DecidableEq (spec.Range i)] (x�
 /-- The two-run success event without the collision guard is bounded by the fork's success plus
 the collision event. -/
 private lemma prEvent_noGuard_le_fork_add_collision
-    [OracleSpec.IsMeasureSpec spec] [∀ i, DecidableEq (spec.Range i)]
+    [OracleSpec.AnswerMeasure spec] [∀ i, DecidableEq (spec.Range i)]
     (s : Fin (qb i + 1)) :
     Pr{let r ← (do
         let σ ← liftComp (generateSeed spec qb js) spec
@@ -361,7 +361,7 @@ private lemma prEvent_noGuard_le_fork_add_collision
 section forkingBound
 
 variable [unifSpec ˡ⊂ₒ spec]
-  [OracleSpec.IsUniformMeasureSpec spec]
+  [OracleSpec.UniformAnswerMeasure spec]
 
 /-- The seeded run averaged over a uniformly generated seed, with the seed truncated after the
 `s`-th answer at `i`, has the fork-index marginal of `main`. -/

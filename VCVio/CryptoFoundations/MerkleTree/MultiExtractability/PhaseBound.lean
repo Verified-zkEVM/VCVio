@@ -32,7 +32,7 @@ cumulative query log produced by the prefix, while the executable phase remains
 theorem prEvent_stablePhaseRunFrom_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
@@ -107,7 +107,7 @@ The local target-cardinality obligation is discharged by
 theorem prEvent_stablePhaseRunFrom_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)
@@ -178,7 +178,7 @@ terminal phase that will not record additional checkpoints. -/
 theorem prEvent_stablePhaseRunFrom_exact_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)

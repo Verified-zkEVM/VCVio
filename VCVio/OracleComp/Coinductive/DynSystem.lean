@@ -125,7 +125,7 @@ open OracleComp in
 distribution: machine-level game values against `uniformHandler` are statements about the
 program itself. -/
 theorem simulateQ_uniformHandler {ι : Type} {spec : OracleSpec.{0, 0} ι}
-    [∀ t, SampleableType (spec.Range t)] [IsUniformMeasureSpec spec] {α : Type}
+    [∀ t, SampleableType (spec.Range t)] [UniformAnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) : simulateQ spec.uniformHandler oa =ᵈ oa :=
   uniformSampleImpl.evalDistEq_simulateQ oa
 

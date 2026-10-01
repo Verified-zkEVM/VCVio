@@ -417,7 +417,7 @@ namespace uniformSampleImpl
 open OracleSpec OracleComp
 
 variable {ι : Type*} {spec : OracleSpec ι} [∀ t, SampleableType (spec.Range t)]
-  [OracleSpec.IsUniformMeasureSpec spec]
+  [OracleSpec.UniformAnswerMeasure spec]
 
 /-- Answering every query with the canonical uniform sampler preserves the output measure of every
 computation under uniform oracle semantics. -/
@@ -426,7 +426,7 @@ theorem evalDist_simulateQ {α : Type} [MeasurableSpace α] (oa : OracleComp spe
   evalDist_simulateQ_eq_of_forall _ (fun t ↦ by
     let : MeasurableSpace (spec.Range t) := ⊤
     rw [uniformSampleImpl_apply, SampleableType.evalDist_uniformSample,
-      OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]) oa
+      OracleSpec.AnswerMeasure.toMeasure_eq_uniformOn]) oa
 
 /-- Answering every query with the canonical uniform sampler gives a probabilistic computation
 equal in distribution to the oracle computation. -/

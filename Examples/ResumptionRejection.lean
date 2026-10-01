@@ -23,7 +23,7 @@ namespace ResumptionRejection
 /-- A request for one of four equiprobable outcomes. -/
 abbrev four : PFunctor.{0, 0} := ⟨Unit, fun _ => Fin 4⟩
 
-noncomputable instance : four.IsMeasureSpec where
+noncomputable instance : four.AnswerMeasure where
   toMeasure _ := uniformOn Set.univ
   isProbabilityMeasure _ := inferInstance
 

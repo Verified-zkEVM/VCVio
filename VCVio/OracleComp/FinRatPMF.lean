@@ -47,7 +47,7 @@ lemma evalDist_apply (t : spec.Domain) [MeasurableSpace (spec.Range t)]
     𝒟[finRatImpl (spec := spec) t] = ProbabilityTheory.uniformOn Set.univ :=
   Raw.evalDist_uniform
 
-variable [IsUniformMeasureSpec spec]
+variable [UniformAnswerMeasure spec]
 
 /-- The executable evaluator preserves the uniform oracle measure. -/
 @[simp]
@@ -85,7 +85,7 @@ namespace finRatImpl
 
 /-- Final event checks have the same probability under executable and oracle evaluation. -/
 lemma prEvent_simulateQ {ι : Type u} {spec : OracleSpec.{u, 0} ι}
-    [IsUniformMeasureSpec spec] [∀ t, Inhabited (spec.Range t)]
+    [UniformAnswerMeasure spec] [∀ t, Inhabited (spec.Range t)]
     [∀ t : spec.Domain, FinEnum (spec.Range t)]
     {α : Type} (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← simulateQ (finRatImpl (spec := spec)) oa}[p x] = Pr{let x ← oa}[p x] := by

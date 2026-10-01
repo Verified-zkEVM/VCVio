@@ -66,7 +66,7 @@ section wp
 
 open OracleComp.ProgramLogic
 
-variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec] {β : Type}
+variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec] {β : Type}
 
 /-- Not a `finiteness` rule, by design: an arbitrary functional need not have finite expectation,
 so the bound is supplied by hand. -/

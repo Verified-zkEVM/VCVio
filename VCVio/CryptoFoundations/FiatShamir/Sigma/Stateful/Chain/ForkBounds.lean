@@ -49,7 +49,7 @@ variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Boo
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel) (M : Type)
 
-attribute [local instance] instIsUniformMeasureSpecChalSingleton
+attribute [local instance] instUniformAnswerMeasureChalSingleton
 
 private lemma forkInitialState_liveCacheAdvCacheInv :
     forkLiveCacheAdvCacheInv (M := M) (Commit := Commit) (Chal := Chal)

@@ -288,7 +288,7 @@ theorem perfectSecrecyAt_of_uniformKey_of_uniqueKey [LawfulMonad m] [Nonempty M]
 hypotheses in support form: encryption under each key has a single reachable ciphertext, and a
 unique reachable key carries each message to each ciphertext. -/
 theorem ciphertextRowsEqualAt_of_uniformKey_of_uniqueKey_support {ι : Type u}
-    {spec : OracleSpec.{u, 0} ι} [OracleSpec.IsUniformMeasureSpec spec] [Fintype K] [Countable C]
+    {spec : OracleSpec.{u, 0} ι} [OracleSpec.UniformAnswerMeasure spec] [Fintype K] [Countable C]
     (encAlg : SymmEncAlg (OracleComp spec) M K C)
     (deterministicEnc : ∀ k msg, ∃ c, support (encAlg.encrypt k msg) = {c})
     (hkey : ∀ k, Pr{let k' ← encAlg.keygen}[k' = k] = (Fintype.card K : ℝ≥0∞)⁻¹)

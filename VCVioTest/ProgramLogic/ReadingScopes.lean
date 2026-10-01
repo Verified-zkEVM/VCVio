@@ -12,7 +12,7 @@ public import VCVio.ProgramLogic.Tactics
 
 The structural reading is the global `WP` instance of `OracleComp`. The other readings are
 scoped, each registering its `WPMonad` and a direct `WP` instance at priority `1100`, above the
-generic measure scopes (`ExpectationWP.Quantitative`, `ExpectationWP.Probabilistic`,
+generic measure scopes (`ExpectationWP.Lower`, `ExpectationWP.Probabilistic`,
 priority `1050`) and below the per-call `Dispatch` scopes (`1200`). Core's assertion carriers are
 output parameters, so exactly one reading is live per program type in a scope; these checks pin
 which one it is under each combination of open scopes, on `ProbComp`.
@@ -41,7 +41,7 @@ example (oa : ProbComp Bool) (post : Bool → Prop) :
 /-! ## The expectation scope -/
 
 section Quantitative
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ EStack⟨⟩ := inferInstance
 
@@ -59,7 +59,7 @@ end Quantitative
 /-! ## The generic measure scope alone -/
 
 section GenericMeasure
-open scoped ExpectationWP.Quantitative
+open scoped ExpectationWP.Lower
 
 noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ EStack⟨⟩ := inferInstance
 
@@ -75,7 +75,7 @@ end GenericMeasure
 The reading of `OracleComp` outranks the generic measure scope's direct instance. -/
 
 section AngelicBesideGeneric
-open scoped ExpectationWP.Quantitative OracleComp.Angelic
+open scoped ExpectationWP.Lower OracleComp.Possible
 
 noncomputable example : WP (ProbComp Bool) Bool Prop EStack⟨⟩ := inferInstance
 
@@ -91,7 +91,7 @@ example (oa : ProbComp Bool) (post : Bool → Prop) :
 end AngelicBesideGeneric
 
 section UpperBesideGeneric
-open scoped ExpectationWP.Quantitative OracleComp.Upper
+open scoped ExpectationWP.Lower OracleComp.Upper
 
 noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ := inferInstance
 
@@ -103,7 +103,7 @@ example : True := by
 end UpperBesideGeneric
 
 section ProbabilisticBesideGeneric
-open scoped ExpectationWP.Quantitative OracleComp.Probabilistic
+open scoped ExpectationWP.Lower OracleComp.Probabilistic
 
 noncomputable example : WP (ProbComp Bool) Bool Prob EStack⟨⟩ := inferInstance
 
@@ -121,10 +121,10 @@ open scoped OracleComp.Upper
 
 noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ := inferInstance
 
-open scoped OracleComp.Quantitative.Dispatch in
+open scoped OracleComp.Lower.Dispatch in
 noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ EStack⟨⟩ := inferInstance
 
-open scoped OracleComp.Qualitative.Dispatch in
+open scoped OracleComp.Necessary.Dispatch in
 noncomputable example : WP (ProbComp Bool) Bool Prop EStack⟨⟩ := inferInstance
 
 end Dispatch

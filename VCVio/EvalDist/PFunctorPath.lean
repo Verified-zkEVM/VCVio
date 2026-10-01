@@ -33,7 +33,7 @@ universe u v uA
 
 namespace PFunctor.FreeM
 
-variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec]
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.AnswerMeasure]
   [∀ a, DiscreteMeasurableSpace (P.B a)] {α : Type v}
 
 /-! ## Observable measures -/

@@ -36,12 +36,12 @@ open Lean.Order
 open Std.WP
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [OracleSpec.IsUniformMeasureSpec spec]
+variable [OracleSpec.UniformAnswerMeasure spec]
 variable {α β : Type}
 
 /-! ## Evaluating an expectation
@@ -93,7 +93,7 @@ example (f : β → α → OracleComp spec β) (init : β) (post : β → ℝ≥
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp⟦(query t : OracleComp spec (spec.Range t))⟧ post =
-      ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
+      ∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t := by
   simp only [expect_norm, expect_eval]
 
 example (c : Prop) [Decidable c]
@@ -342,7 +342,7 @@ example (x : α) (xs : List α) (f : β → α → OracleComp spec β)
   simp only [expect_norm, expect_eval]
 
 example (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
-    (∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t) ≤
+    (∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t) ≤
       wp⟦(query t : OracleComp spec (spec.Range t))⟧ post := by
   simp only [expect_norm, expect_eval]
 
@@ -434,7 +434,7 @@ example (impl : QueryImpl spec (OracleComp spec))
 section LiftComp
 
 variable {ι' : Type} {superSpec : OracleSpec ι'}
-variable [OracleSpec.IsUniformMeasureSpec superSpec]
+variable [OracleSpec.UniformAnswerMeasure superSpec]
 variable [h : spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
 
 example (oa : OracleComp spec α) (post : α → ℝ≥0∞) :

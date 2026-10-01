@@ -34,11 +34,11 @@ def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
 variable {ι} {spec : OracleSpec ι} {r m n : Type u → Type*}
     [Monad r] (impl : QueryImpl spec r)
 
-@[simp, grind =, game_rule]
+@[simp, grind =, expect_eval]
 lemma simulateQ_pure (x : α) :
     simulateQ impl (pure x : OracleComp spec α) = pure x := rfl
 
-@[simp, grind =, game_rule]
+@[simp, grind =, expect_eval]
 lemma simulateQ_bind [LawfulMonad r] (mx : OracleComp spec α) (my : α → OracleComp spec β) :
     simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x) := by
   unfold simulateQ; exact PFunctor.FreeM.liftM_bind impl mx my
@@ -59,7 +59,7 @@ theorem simulateQ_isMonadHom [LawfulMonad r] (impl : QueryImpl spec r) :
 lemma simulateQ'_apply [LawfulMonad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) :
     simulateQ' impl mx = simulateQ impl mx := rfl
 
-@[simp, grind =, game_rule]
+@[simp, grind =, expect_eval]
 lemma simulateQ_query [LawfulMonad r] (q : OracleQuery spec α) :
     simulateQ impl (liftM q) = q.cont <$> (impl q.input) := by
   simp [simulateQ, OracleComp.liftM_def, OracleQuery.cont,

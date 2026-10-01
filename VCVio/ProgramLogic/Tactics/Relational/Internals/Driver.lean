@@ -924,7 +924,7 @@ rules. -/
 def runRVCGenSearchFinish : TacticM Unit := do
   unless (← getGoals).isEmpty do
     let _ ← tryEvalTacticSyntax
-      (← `(tactic| all_goals try simp only [game_rule]))
+      (← `(tactic| all_goals try simp only [expect_norm, expect_eval]))
   unless (← getGoals).isEmpty do
     let _ ← tryEvalTacticSyntax
       (← `(tactic| all_goals first

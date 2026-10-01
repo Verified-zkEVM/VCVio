@@ -134,7 +134,7 @@ section Weighted
 
 abbrev WeightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool
 
-noncomputable instance : OracleSpec.IsMeasureSpec WeightedSpec where
+noncomputable instance : OracleSpec.AnswerMeasure WeightedSpec where
   toMeasure _ := Measure.dirac false
   isProbabilityMeasure _ := inferInstance
 
@@ -152,7 +152,7 @@ noncomputable example : IsProbabilityMeasure 𝒟[guardedDraw] := by
     (f := fun b ↦ if b then failure else pure b) Measurable.of_discrete
   rw [OptionT.evalDist_lift, OracleComp.evalDist_liftM_query (spec := WeightedSpec),
     MeasureTheory.trim_eq_self]
-  simpa [OracleSpec.IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure] using
+  simpa [OracleSpec.AnswerMeasure.toMeasure, PFunctor.AnswerMeasure.toMeasure] using
     (inferInstance : IsProbabilityMeasure 𝒟[(pure false : OptionT (OracleComp WeightedSpec) Bool)])
 
 end Weighted

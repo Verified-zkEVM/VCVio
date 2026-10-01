@@ -77,13 +77,13 @@ abbrev GaussianSpec : PFunctor := ⟨Unit, fun _ ↦ ℝ⟩
 instance : (a : GaussianSpec.A) → MeasurableSpace (GaussianSpec.B a) :=
   fun _ ↦ inferInstanceAs (MeasurableSpace ℝ)
 
-noncomputable instance : IsMeasureSpec GaussianSpec where
+noncomputable instance : AnswerMeasure GaussianSpec where
   toMeasure _ := gaussianReal 0 1
   isProbabilityMeasure _ := instIsProbabilityMeasureGaussianReal 0 1
 
 /-- The real-valued operation has the standard Gaussian answer law. -/
 @[simp]
-theorem gaussian_toMeasure : IsMeasureSpec.toMeasure (P := GaussianSpec) () =
+theorem gaussian_toMeasure : AnswerMeasure.toMeasure (P := GaussianSpec) () =
     gaussianReal 0 1 := rfl
 
 example (g : ℝ → ENNReal) (hg : AEMeasurable g (gaussianReal 0 1)) :

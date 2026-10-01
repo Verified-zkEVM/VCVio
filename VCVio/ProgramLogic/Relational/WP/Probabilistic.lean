@@ -25,13 +25,13 @@ Use `open scoped OracleComp.Rel.Probabilistic` to select this carrier.
 universe u
 
 open VCVio.ProgramLogic
-open ENNReal Std.WP OracleComp.Quantitative
+open ENNReal Std.WP OracleComp.Lower
 
 namespace OracleComp.Rel.Probabilistic
 
 variable {ι₁ ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
 variable {α β γ δ : Type}
 
 /-! ## Bound: `eRelWP` on a `Prob`-valued post is always `≤ 1`

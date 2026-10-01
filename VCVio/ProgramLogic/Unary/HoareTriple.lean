@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
-public import VCVio.ProgramLogic.Unary.WP.Quantitative
+public import VCVio.ProgramLogic.Unary.WP.Lower
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
@@ -23,7 +23,7 @@ computations, which are lossless, and add the oracle-specific ones: queries, uni
 replication and traversals.
 
 The expectation interpretation is the core instance of `OracleComp spec`
-(`OracleComp.Quantitative.instWP`), so core's `⦃ pre ⦄ program ⦃ post ⦄` notation, available
+(`OracleComp.Lower.instWP`), so core's `⦃ pre ⦄ program ⦃ post ⦄` notation, available
 through `open scoped Std.WP`, states these triples: it is `Std.WP.Triple program pre post ⊥`,
 with the empty exception postcondition.
 -/
@@ -32,7 +32,7 @@ with the empty exception postcondition.
 
 open ENNReal MeasureTheory
 open Std.WP
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 universe u
 
@@ -45,7 +45,7 @@ variable {α β σ : Type}
 
 section MeasureSpec
 
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 
 /-! ## API contract
 
@@ -69,19 +69,18 @@ theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞)
 /-! ## `wp` lemmas (against `wp _ _`)
 
 The structural equations of an expectation are the generic ones, `ExpectationWP.wp_pure`,
-`wp_bind`, `wp_map`, `wp_add`, `wp_const_mul` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite`,
-tagged here for the `game_rule` set; a constant observation of an oracle computation is
-`ExpectationWP.wp_const_of_oracle`. The rules below unfold the loop combinators. -/
+`wp_bind`, `wp_map` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite` (the `expect_norm` set);
+linearity, `wp_add` and `wp_const_mul`, is the `expect_arith` set; a constant observation of an
+oracle computation is `ExpectationWP.wp_const_of_oracle`. The rules below unfold the loop
+combinators (`expect_eval`). -/
 
-attribute [game_rule] ExpectationWP.wp_pure ExpectationWP.wp_bind
-  ExpectationWP.wp_map ExpectationWP.wp_add ExpectationWP.wp_const_mul
-  ExactWPMonad.wp_ite ExactWPMonad.wp_dite
+attribute [expect_arith] ExpectationWP.wp_add ExpectationWP.wp_const_mul
 
-@[game_rule] theorem wp_replicate_zero (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
+@[expect_eval] theorem wp_replicate_zero (oa : OracleComp spec α) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate 0⟧ post = post [] := by
   simp [OracleComp.replicate_zero]
 
-@[game_rule] theorem wp_replicate_succ
+@[expect_eval] theorem wp_replicate_succ
     (oa : OracleComp spec α) (n : ℕ) (post : List α → ℝ≥0∞) :
     wp⟦oa.replicate (n + 1)⟧ post =
       wp⟦oa⟧
@@ -93,12 +92,12 @@ attribute [game_rule] ExpectationWP.wp_pure ExpectationWP.wp_bind
   rw [ExpectationWP.wp_bind]
   simp
 
-@[game_rule] theorem wp_list_mapM_nil
+@[expect_eval] theorem wp_list_mapM_nil
     (f : α → OracleComp spec β) (post : List β → ℝ≥0∞) :
     wp⟦([] : List α).mapM f⟧ post = post [] := by
   simp
 
-@[game_rule] theorem wp_list_mapM_cons
+@[expect_eval] theorem wp_list_mapM_cons
     (x : α) (xs : List α) (f : α → OracleComp spec β) (post : List β → ℝ≥0∞) :
     wp⟦(x :: xs).mapM f⟧ post =
       wp⟦f x⟧
@@ -110,12 +109,12 @@ attribute [game_rule] ExpectationWP.wp_pure ExpectationWP.wp_bind
   rw [ExpectationWP.wp_bind]
   simp
 
-@[game_rule] theorem wp_list_foldlM_nil
+@[expect_eval] theorem wp_list_foldlM_nil
     (f : σ → α → OracleComp spec σ) (init : σ) (post : σ → ℝ≥0∞) :
     wp⟦([] : List α).foldlM f init⟧ post = post init := by
   simp
 
-@[game_rule] theorem wp_list_foldlM_cons
+@[expect_eval] theorem wp_list_foldlM_cons
     (x : α) (xs : List α) (f : σ → α → OracleComp spec σ)
     (init : σ) (post : σ → ℝ≥0∞) :
     wp⟦(x :: xs).foldlM f init⟧ post =
@@ -182,7 +181,7 @@ lemma prEvent_eq_wp_indicator (oa : OracleComp spec α) (p : α → Prop)
 
 /-- An event probability is by definition the expectation of its indicator. -/
 lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     Pr{let x ← oa}[p x] = wp⟦oa⟧ (fun x => propInd (p x)) := rfl
 
@@ -229,35 +228,35 @@ theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (pos
   rw [hz, zero_mul]
 
 /-- A query's quantitative WP integrates against its configured answer measure. -/
-@[game_rule] theorem wp_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
+@[expect_eval] theorem wp_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp⟦(query t : OracleComp spec (spec.Range t))⟧ post =
-      ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
+      ∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t := by
   let : MeasurableSpace (spec.Range t) := ⊤
   rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
 
 /-- Lifting a primitive query has the same expectation rule. -/
 theorem wp_liftM_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp⟦(liftM (query t) : OracleComp spec (spec.Range t))⟧ post =
-      ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := by
+      ∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t := by
   let : MeasurableSpace (spec.Range t) := ⊤
   rw [wp_eq_lintegral _ _ Measurable.of_discrete, evalDist_liftM_query, trim_eq_self]
 
 /-- The ergonomic query interface integrates the configured answer measure. -/
-@[game_rule] theorem wp_HasQuery_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
+@[expect_eval] theorem wp_HasQuery_query (t : spec.Domain) (post : spec.Range t → ℝ≥0∞) :
     wp⟦(HasQuery.query t : OracleComp spec (spec.Range t))⟧ post =
-      ∫⁻ u, post u ∂OracleSpec.IsMeasureSpec.toMeasure t := wp_query t post
+      ∫⁻ u, post u ∂OracleSpec.AnswerMeasure.toMeasure t := wp_query t post
 
 end MeasureSpec
 
 section Uniform
 
 /-- A uniform query's expectation is its finite average. -/
-theorem wp_query_uniform [OracleSpec.IsUniformMeasureSpec spec]
+theorem wp_query_uniform [OracleSpec.UniformAnswerMeasure spec]
     (t : spec.Domain) [Fintype (spec.Range t)] (post : spec.Range t → ℝ≥0∞) :
     wp⟦(query t : OracleComp spec (spec.Range t))⟧ post =
       ∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * post u := by
   let : MeasurableSpace (spec.Range t) := ⊤
-  rw [wp_query, OracleSpec.IsMeasureSpec.toMeasure_eq_uniformOn]
+  rw [wp_query, OracleSpec.AnswerMeasure.toMeasure_eq_uniformOn]
   rw [lintegral_fintype]
   apply Finset.sum_congr rfl
   intro u _
@@ -269,10 +268,10 @@ end Uniform
 
 section MeasureSpec
 
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 
 /-- Uniform sampling integrates its chosen measure. -/
-@[game_rule] theorem wp_uniformSample [SampleableType α] (post : α → ℝ≥0∞) :
+@[expect_eval] theorem wp_uniformSample [SampleableType α] (post : α → ℝ≥0∞) :
     wp⟦$ᵗ α⟧ post = ∫⁻ y, y ∂𝒟[post <$> ($ᵗ α : ProbComp α)] :=
   wp_eq_lintegral_map _ _
 

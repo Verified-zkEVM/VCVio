@@ -16,8 +16,8 @@ open OracleComp OracleSpec MeasureTheory
 open MerkleTreeMultiExtractability MerkleTreeMultiExtractability.DelayedObservation
 open MerkleCheckpoints
 
-noncomputable local instance : IsUniformMeasureSpec (Query →ₒ Bool) :=
-  IsUniformMeasureSpec.ofFiniteNonempty (Query →ₒ Bool)
+noncomputable local instance : UniformAnswerMeasure (Query →ₒ Bool) :=
+  UniformAnswerMeasure.ofFiniteNonempty (Query →ₒ Bool)
 
 example : (atTerminal (outcome false) checkpoint).root = checkpoint.root := rfl
 

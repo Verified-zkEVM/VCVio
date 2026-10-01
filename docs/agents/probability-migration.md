@@ -50,12 +50,14 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 
 | Removed | Replacement |
 |---|---|
-| `[IsProbabilitySpec spec]` | `[OracleSpec.IsMeasureSpec spec]` |
-| `[IsUniformSpec spec]` | `[OracleSpec.IsUniformMeasureSpec spec]`, plus `[Fintype (spec.Range t)]` where a cardinality appears |
+| `[OracleSpec.IsMeasureSpec spec]`, `PFunctor.IsMeasureSpec` | `[OracleSpec.AnswerMeasure spec]`, `PFunctor.AnswerMeasure` (the class carries the answer measures, so it is not an `Is…` mixin) |
+| `[OracleSpec.IsUniformMeasureSpec spec]` | `[OracleSpec.UniformAnswerMeasure spec]` |
+| `[IsProbabilitySpec spec]` | `[OracleSpec.AnswerMeasure spec]` |
+| `[IsUniformSpec spec]` | `[OracleSpec.UniformAnswerMeasure spec]`, plus `[Fintype (spec.Range t)]` where a cardinality appears |
 | `[∀ t, MeasurableSpace (spec.Range t)]`, `[∀ t, DiscreteMeasurableSpace (spec.Range t)]` | delete them: answer measures live on the discrete σ-algebra |
 | `OracleSpec.addRangeMeasurableSpace`, `OracleSpec.addRangeDiscreteMeasurableSpace` | delete them; no replacement is needed |
-| `IsUniformSpec.ofFintypeInhabited spec` | `IsUniformMeasureSpec.ofFiniteNonempty spec`, as a local instance; it needs only `Finite` and `Nonempty` answers |
-| `PFunctor.IsProbabilitySpec`, `PFunctor.IsUniformSpec` | `PFunctor.IsMeasureSpec`, `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty` |
+| `IsUniformSpec.ofFintypeInhabited spec` | `UniformAnswerMeasure.ofFiniteNonempty spec`, as a local instance; it needs only `Finite` and `Nonempty` answers |
+| `PFunctor.IsProbabilitySpec`, `PFunctor.IsUniformSpec` | `PFunctor.AnswerMeasure`, `PFunctor.AnswerMeasure.uniformOfFiniteNonempty` |
 | `EvalDistCompatible`, `DiscreteEvalDistCompatible` | operational support lemmas and the `𝒟` equations; no class |
 | `[MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]` | `[EvalDistSemantics m] [LawfulEvalDistSemantics m]` |
 | `[MonadLiftT m SetM] [LawfulMonadLiftT m SetM]` for `support` | `[MonadAttach m] [ExactMonadAttach m]` |
@@ -64,8 +66,8 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 `unifSpec` and `coinSpec` carry global uniform measure instances. For a concrete specification
 whose answer types are abstract, such as `unifSpec + (Unit →ₒ Chal)` with `[Fintype Chal]
 [Inhabited Chal]`, declare
-`local instance : IsUniformMeasureSpec (Unit →ₒ Chal) := .ofFiniteNonempty _` on the component
-once per file. The sum then gets its instance from `IsUniformMeasureSpec.add`. Do not declare an
+`local instance : UniformAnswerMeasure (Unit →ₒ Chal) := .ofFiniteNonempty _` on the component
+once per file. The sum then gets its instance from `UniformAnswerMeasure.add`. Do not declare an
 instance on the sum itself, since it would compete with that one.
 
 ## Query and handler laws
@@ -73,7 +75,7 @@ instance on the sum itself, since it would compete with that one.
 | Removed | Replacement |
 |---|---|
 | `evalDist_liftM_query : 𝒟[liftM (query t)] = toMeasure t` | `evalDist_liftM_query` gives `(toMeasure t).trim le_top` in any measurable structure on the answer; `MeasureTheory.trim_eq_self` removes the trim under `⊤` (including `Bool`, `Fin n`) |
-| `simp [evalDist_liftM_query, toMeasure_singleton]` for `𝒟[liftM (query t)] {u}` | `simp` with the simp lemmas `evalDist_liftM_query_apply` and `IsUniformMeasureSpec.toMeasure_singleton` |
+| `simp [evalDist_liftM_query, toMeasure_singleton]` for `𝒟[liftM (query t)] {u}` | `simp` with the simp lemmas `evalDist_liftM_query_apply` and `UniformAnswerMeasure.toMeasure_singleton` |
 | `evalDist_liftM_query_eq_uniformOn_top` | `evalDist_liftM_query_uniform`, in any measurable structure; `evalDist_liftM_unifSpec_query` and `evalDist_liftM_coinSpec_query` for the built-in specifications |
 | `evalDist_simulateQ_run_congr_of_forall` | `evalDist_simulateQ_run_congr` with `=ᵈ` step facts; `evalDistEq_simulateQ_run` for the equality in distribution itself |
 | `evalDist_liftComp_of_evalDist`, `wp_liftComp_of_evalDist` | `evalDist_liftComp_of_evalDistEq`, `wp_liftComp_of_evalDistEq` |
@@ -90,6 +92,10 @@ Replacement lemmas keep the removed name with the probability head replaced:
 
 | Removed name part | Replacement name part | Example |
 |---|---|---|
+| `open scoped OracleComp.Qualitative` / `.Angelic` / `.Quantitative` | `open scoped OracleComp.Necessary` / `.Possible` / `.Lower` (the readings are named by what a triple states; `OracleComp.Upper` and `.Probabilistic` are unchanged; `OracleComp.Qualitative.Dispatch`, … follow) |
+| `open scoped ExpectationWP.Quantitative` | `open scoped ExpectationWP.Lower` |
+| `exp_norm` (tactic) | `expect_arith` |
+| `simp only [game_rule]`, `@[game_rule]` | `simp only [expect_norm, expect_eval]`; loop unfoldings, values and simulation steps are `@[expect_eval]`, linearity is `@[expect_arith]` |
 | `probEvent_` | `prEvent_` | `le_probEvent_isSome_contextFork` → `le_prEvent_isSome_contextFork` |
 | `probOutput_` | `prEvent_` or `evalDist_` | `IND_CPA_Game_probOutput_eq_branch` → `IND_CPA_Game_evalDist_eq_branch` |
 | `evalSPMF_` | `evalDist_` | `evalSPMF_simulateQ_run_congr` → `evalDist_simulateQ_run_congr` |
@@ -183,7 +189,7 @@ fact now.
 | `KEMDEM.perfectlyCorrect_composeWithDEM` over `[MonadLiftT m SPMF]` | the same name, generic in any lawful measure semantics, from `Pr{let b ← …}[b = true] = 1` hypotheses; no support or full-mass assumption |
 | `ProbResponder.IsExecutable.answerSPMF_unique` | `IsExecutable.answerComp_evalDistEq`: two realizations of one kernel are equal in distribution, and `stepAgainst`, `iterateAgainst` and `transcriptAgainst` are congruent across them |
 | Lossy executable responders | none: `IsExecutable.answerComp` is a `ProbComp`, which is lossless; a subprobability kernel stays at the `ProbResponder` level |
-| `OracleSpec.probHandler`, `simulateQ_probHandler` (any `IsProbabilitySpec`) | `OracleSpec.uniformHandler`, `simulateQ_uniformHandler`, for sampleable answer types under `IsUniformMeasureSpec`; a weighted specification has no canonical `ProbComp` handler |
+| `OracleSpec.probHandler`, `simulateQ_probHandler` (any `IsProbabilitySpec`) | `OracleSpec.uniformHandler`, `simulateQ_uniformHandler`, for sampleable answer types under `UniformAnswerMeasure`; a weighted specification has no canonical `ProbComp` handler |
 | The executable layer at `OracleSpec.{u, u}` | `OracleSpec.{0, 0}`: `ProbComp` lives in `Type` |
 | `outputRel_rel [Countable α]` | no countability: a `ProbComp` has finitely many outputs |
 
@@ -191,6 +197,10 @@ fact now.
 
 | Removed or renamed module | Import instead |
 |---|---|
+| `VCVio.ProgramLogic.Unary.WP.Qualitative`, `….QualitativeSpecs` | `VCVio.ProgramLogic.Unary.WP.Necessary`, `….NecessarySpecs` |
+| `VCVio.ProgramLogic.Unary.WP.Angelic` | `VCVio.ProgramLogic.Unary.WP.Possible` |
+| `VCVio.ProgramLogic.Unary.WP.Quantitative`, `….QuantitativeSpecs` | `VCVio.ProgramLogic.Unary.WP.Lower`, `….LowerSpecs` |
+| `VCVio.Prelude.Core` | `VCVio.Prelude.Core` (the `expect_norm`, `expect_eval` and `expect_arith` simp sets) |
 | `ToMathlib.ProbabilityTheory.SPMF`, `ToMathlib.Probability.ProbabilityMassFunction.Measure` | nothing; state facts with Mathlib measures |
 | `ToMathlib.Probability.ProbabilityMassFunction.Lemmas` | `Mathlib.Probability.Distributions.Uniform` |
 | `VCVio.EvalDist.Defs.Basic` | `VCVio.EvalDist.Defs.Measure`, `VCVio.EvalDist.ProbabilityNotation` |
@@ -241,10 +251,10 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 
 | Symptom | Fix |
 |---|---|
-| failed to synthesize `OracleSpec.IsMeasureSpec spec` | add the binder from *Classes and binders*, or the local instance for a concrete specification |
+| failed to synthesize `OracleSpec.AnswerMeasure spec` | add the binder from *Classes and binders*, or the local instance for a concrete specification |
 | failed to synthesize `MeasurableSpace (spec.Range t)` inside a proof | `let : MeasurableSpace (spec.Range t) := ⊤` (use `let`, not `letI`, in a proposition-valued goal); in a statement, state the fact with `=ᵈ` or `Pr{…}[…]`, or take `{_ : MeasurableSpace (spec.Range t)}` |
 | `rw`/`simp` does not find a query law such as `evalDist_liftM_query_apply` when the answer type appears reduced (`Bool` rather than `spec.Range t`) | name the specification: `evalDist_liftM_query_apply (spec := S) t hs` |
-| two instances for a sum specification disagree (e.g. a local `IsUniformMeasureSpec (A + B)`) | declare the local instance on the components and let `IsMeasureSpec.add` build the sum |
+| two instances for a sum specification disagree (e.g. a local `UniformAnswerMeasure (A + B)`) | declare the local instance on the components and let `AnswerMeasure.add` build the sum |
 | failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{let y ← mx}[y = x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
 | a goal shows `(toMeasure t).trim le_top` | `MeasureTheory.trim_eq_self` when the answer's measurable space is `⊤` by definition; otherwise evaluate measurable sets with `evalDist_liftM_query_apply` or `trim_measurableSet_eq` |
@@ -258,7 +268,7 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | `prEvent_pure_prop` | `Pr{let y ← pure a}[p y]` elaborates to `𝟙⟦p a⟧`; `propInd_eq_ite` gives the `if` form |
 | `prEvent_eq_wp`, `wp_propInd`, `OracleComp.wp_prEvent_swap` | an event is an expectation, so the first two are identities (drop the rewrite) and `OracleComp.wp_swap` covers the third |
 | `OracleComp.ProgramLogic.wp oa post` | `wp⟦oa⟧ post`, core's `wp` under the measure interpretation; `OracleComp.ProgramLogic.propInd` is `propInd` |
-| `ExpectationWP.Quantitative.wp_*` | `ExpectationWP.wp_*`, stated on `wp⟦·⟧` and without measurability hypotheses except for `wp_eq_lintegral`, `wp_mono_ae`, `wp_iSup` and the `_mass` bounds |
+| `ExpectationWP.Lower.wp_*` | `ExpectationWP.wp_*`, stated on `wp⟦·⟧` and without measurability hypotheses except for `wp_eq_lintegral`, `wp_mono_ae`, `wp_iSup` and the `_mass` bounds |
 | `rw` does not find an event lemma whose selector's type depends on an implicit argument | supply that argument, e.g. the query index: `rw [prEvent_liftM_query_eq_card_div t]` |
 | `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
 | an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |
@@ -294,5 +304,5 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
   uniform specifications provide.
 - **Discrete answers.** `OracleSpec` answer measures live on the discrete σ-algebra, so
   oracle programs carry no measurable-space hypotheses on answers. Continuous answer measures
-  belong at the `PFunctor.FreeM` level, where `PFunctor.IsMeasureSpec` takes any measurable
+  belong at the `PFunctor.FreeM` level, where `PFunctor.AnswerMeasure` takes any measurable
   structure.

@@ -14,7 +14,7 @@ public import VCVio.OracleComp.Constructions.SampleableType.Measure
 # `vcgen` rules for the quantitative reading of oracle computations
 
 The expectation interpretation is the global core instance of `OracleComp spec`
-(`OracleComp.Quantitative.instWP`), so a triple `⦃ r ⦄ oa ⦃ post ⦄` states the lower bound
+(`OracleComp.Lower.instWP`), so a triple `⦃ r ⦄ oa ⦃ post ⦄` states the lower bound
 `r ≤ wp⟦oa⟧ post`. With the indicator postcondition of an event it is a lower bound on the event:
 `le_prEvent_iff_triple` states `r ≤ Pr{let x ← oa}[p x]` as `⦃ r ⦄ oa ⦃ predInd p ⦄`, and
 `le_wp_iff_triple` reads any lower bound on an expectation, including the nested expectations of
@@ -47,8 +47,8 @@ The verification conditions are inequalities in `ℝ≥0∞`; `simp` reads core'
 (`Lean.Order.rel_eq_le`) and an indicator reaching `1` as its proposition
 (`one_le_propInd_iff`).
 
-`OracleComp.Quantitative.Dispatch` registers the expectation reading at a priority above every
-reading a file opens, for per-call use (`open scoped OracleComp.Quantitative.Dispatch in vcgen`).
+`OracleComp.Lower.Dispatch` registers the expectation reading at a priority above every
+reading a file opens, for per-call use (`open scoped OracleComp.Lower.Dispatch in vcgen`).
 Upper bounds have their own reading, `OracleComp.Upper` (`VCVio.ProgramLogic.Unary.WP.Upper`).
 -/
 
@@ -57,11 +57,11 @@ public section
 universe u u'
 
 open ENNReal Std.WP
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 namespace OracleComp.ProgramLogic
 
-variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec] {α : Type}
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec] {α : Type}
 
 /-- A lower bound on an event is a triple with the event's indicator as postcondition. -/
 theorem le_prEvent_iff_triple (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
@@ -98,11 +98,11 @@ theorem iInf_le_wp (oa : OracleComp spec α) (g : α → ℝ≥0∞) : ⨅ x, g 
 
 end OracleComp.ProgramLogic
 
-namespace OracleComp.Quantitative
+namespace OracleComp.Lower
 
 open OracleComp.ProgramLogic
 
-variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec] {α : Type}
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec] {α : Type}
 
 /-- A lower bound on every answer to a lifted primitive query bounds its expectation. This is
 the form `vcgen` reaches from `liftM (OracleSpec.query t)`. -/
@@ -145,11 +145,11 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epo
     iInf_le (fun a : {a // a ∈ support oa} => post a.1) ⟨x, hx⟩)⟩
   rw [ExpectationWP.wp_const_of_oracle]
 
-end OracleComp.Quantitative
+end OracleComp.Lower
 
-namespace OracleComp.Quantitative
+namespace OracleComp.Lower
 
-variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsUniformMeasureSpec spec]
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.UniformAnswerMeasure spec]
 
 /-- The exact rule for a query with uniform answers: the average of the postcondition over the
 answers. Not registered, for the reason given at `Spec.uniformSample_sum`. -/
@@ -163,7 +163,7 @@ theorem Spec.query_uniform (t : spec.Domain) [Fintype (spec.Range t)]
 expectation of the lifted program, so `vcgen` continues into it. -/
 @[spec]
 theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
     {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
     ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ :=
   ⟨(OracleComp.ProgramLogic.wp_liftComp oa post).ge⟩
@@ -171,27 +171,27 @@ theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
 /-- `Spec.liftComp` for the lift written as `liftM oa`. -/
 @[spec]
 theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
     {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
     ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
   Spec.liftComp oa post
 
-end OracleComp.Quantitative
+end OracleComp.Lower
 
-namespace OracleComp.Quantitative.Dispatch
+namespace OracleComp.Lower.Dispatch
 
-variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec]
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec]
 
 /-- The expectation reading at the priority of a per-call scope, above every reading a file opens:
-`open scoped OracleComp.Quantitative.Dispatch in vcgen`. -/
+`open scoped OracleComp.Lower.Dispatch in vcgen`. -/
 noncomputable scoped instance (priority := 1200) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
-  OracleComp.Quantitative.instWP
+  OracleComp.Lower.instWP
 
 /-- The per-call expectation reading as a direct `WP` instance, which outranks direct instances
 of other readings. -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α ℝ≥0∞ EStack⟨⟩ :=
-  (OracleComp.Quantitative.instWP (spec := spec)).toWP α
+  (OracleComp.Lower.instWP (spec := spec)).toWP α
 
-end OracleComp.Quantitative.Dispatch
+end OracleComp.Lower.Dispatch

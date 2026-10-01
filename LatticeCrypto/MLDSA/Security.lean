@@ -152,8 +152,8 @@ theorem idsWithAbort_complete' :
     (identificationScheme p prims).Complete := by
   intro pk sk hvalid
   prvcgen [IdenSchemeWithAbort.honestExecution,
-    OracleComp.Qualitative.Spec.ofSupport ((identificationScheme p prims).commit pk sk),
-    OracleComp.Qualitative.Spec.ofSupport ((identificationScheme p prims).respond pk sk _ _)]
+    OracleComp.Necessary.Spec.ofSupport ((identificationScheme p prims).commit pk sk),
+    OracleComp.Necessary.Spec.ofSupport ((identificationScheme p prims).respond pk sk _ _)]
   rename_i x hx hoz
   cases oz with
   | none => rfl

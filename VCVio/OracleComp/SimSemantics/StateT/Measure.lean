@@ -72,7 +72,7 @@ theorem evalDist_simulateQ_run'_eq_of_forall
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {ι : Type u} {S α : Type} {spec : OracleSpec.{u, 0} ι}
-    [OracleSpec.IsMeasureSpec spec] [MeasurableSpace α]
+    [OracleSpec.AnswerMeasure spec] [MeasurableSpace α]
     (impl : QueryImpl spec (StateT S m))
     (h : ∀ t state,
       (impl t).run' state =ᵈ (liftM (OracleSpec.query t) : OracleComp spec (spec.Range t)))

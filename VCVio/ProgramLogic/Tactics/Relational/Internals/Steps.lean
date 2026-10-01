@@ -636,7 +636,7 @@ def runRelCondRule : TacticM Bool := do
   if ← tryEvalTacticSyntax (← `(tactic|
       apply OracleComp.ProgramLogic.Relational.relTriple_if <;> intro _)) <||>
       tryEvalTacticSyntax (← `(tactic|
-        (simp only [game_rule]
+        (simp only [expect_norm, expect_eval]
          apply OracleComp.ProgramLogic.Relational.relTriple_if <;> intro _))) then
     let after ← getGoals
     let (owned, rest) := ownedSubgoalsAfterMainStep before after

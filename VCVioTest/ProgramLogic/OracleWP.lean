@@ -32,12 +32,12 @@ namespace VCVioTest.OracleWP
 /-- An oracle whose answer is always true. -/
 abbrev fixedSpec : OracleSpec Unit := fun _ ↦ Bool
 
-noncomputable instance : OracleSpec.IsMeasureSpec fixedSpec where
+noncomputable instance : OracleSpec.AnswerMeasure fixedSpec where
   toMeasure _ := Measure.dirac true
   isProbabilityMeasure _ := inferInstance
 
 @[simp]
-theorem fixed_toMeasure (t : Unit) : OracleSpec.IsMeasureSpec.toMeasure (spec := fixedSpec) t =
+theorem fixed_toMeasure (t : Unit) : OracleSpec.AnswerMeasure.toMeasure (spec := fixedSpec) t =
     Measure.dirac true := rfl
 
 example (post : Bool → ENNReal) :

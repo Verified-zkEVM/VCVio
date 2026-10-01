@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.ProgramLogic.Unary.HoareTriple
-public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
@@ -17,7 +17,7 @@ public import VCVio.OracleComp.Coercions.SubSpec.Basic
 
 The angelic interpretation of `OracleComp spec` (PolyFun's `MonadAttach.toWPMonadAngelic`) reads
 `wp oa post ⊥` as "some structurally reachable output of `oa` satisfies `post`". Under
-`open scoped OracleComp.Angelic` a triple `⦃ True ⦄ oa ⦃ p ⦄` states that `p` is possible, and
+`open scoped OracleComp.Possible` a triple `⦃ True ⦄ oa ⦃ p ⦄` states that `p` is possible, and
 core's `vcgen` decomposes it. Like the structural reading it needs no probability interpretation.
 
 ## Bridges
@@ -41,15 +41,15 @@ continuing with the rest of the program, as in
 
 ```
 refine ⟨w, ?_⟩
-rw [OracleComp.Angelic.wp_iff_triple]
-open scoped OracleComp.Angelic in vcgen
+rw [OracleComp.Possible.wp_iff_triple]
+open scoped OracleComp.Possible in vcgen
 ```
 
 or with `prvcgen` (`VCVio.ProgramLogic.Tactics.PrVCGen`), which recognizes the remaining angelic
 weakest precondition. The angelic reading is not conjunctive: core's `Triple.and` does not apply.
 
-`OracleComp.Angelic.Dispatch` registers the same reading at a priority above every reading a file
-opens, for per-call use (`open scoped OracleComp.Angelic.Dispatch in vcgen`).
+`OracleComp.Possible.Dispatch` registers the same reading at a priority above every reading a file
+opens, for per-call use (`open scoped OracleComp.Possible.Dispatch in vcgen`).
 -/
 
 public section
@@ -65,7 +65,7 @@ theorem propInd_pos_iff {P : Prop} : 0 < propInd P ↔ P := by
   unfold propInd
   split_ifs with h <;> simp [h]
 
-namespace OracleComp.Angelic
+namespace OracleComp.Possible
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
@@ -147,9 +147,9 @@ theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
     ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
   Spec.liftComp oa post
 
-end OracleComp.Angelic
+end OracleComp.Possible
 
-namespace OracleComp.Angelic
+namespace OracleComp.Possible
 
 /-- A uniform draw may return any value. -/
 @[spec]
@@ -168,12 +168,12 @@ theorem Spec.uniformFin (n : ℕ) (post : Fin (n + 1) → Prop) {epost : EStack�
 
 /-! ## Positive probability -/
 
-variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.IsMeasureSpec spec] {α : Type}
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.AnswerMeasure spec] {α : Type}
 
 /-- When every answer of every query has positive mass, an expectation is positive exactly when
 its observation is positive at some possible output. -/
 theorem pos_wp_iff_of_fullSupport
-    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
+    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.AnswerMeasure.toMeasure t {u})
     (oa : OracleComp spec α) (g : α → ℝ≥0∞) :
     0 < wp⟦oa⟧ g ↔ ∃ a ∈ support oa, 0 < g a := by
   constructor
@@ -198,7 +198,7 @@ theorem pos_wp_iff_of_fullSupport
 /-- When every answer of every query has positive mass, an event has positive probability
 exactly when it is possible. -/
 theorem prEvent_pos_iff_of_fullSupport
-    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
+    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.AnswerMeasure.toMeasure t {u})
     (oa : OracleComp spec α) (p : α → Prop) :
     0 < Pr{let x ← oa}[p x] ↔ ∃ x ∈ support oa, p x := by
   rw [pos_wp_iff_of_fullSupport hfull]
@@ -207,19 +207,19 @@ theorem prEvent_pos_iff_of_fullSupport
 /-- When every answer of every query has positive mass, a positive probability is an angelic
 triple from `True`. -/
 theorem prEvent_pos_iff_triple_of_fullSupport
-    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.IsMeasureSpec.toMeasure t {u})
+    (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.AnswerMeasure.toMeasure t {u})
     (oa : OracleComp spec α) (p : α → Prop) :
     0 < Pr{let x ← oa}[p x] ↔ ⦃ True ⦄ oa ⦃ p ⦄ := by
   rw [prEvent_pos_iff_of_fullSupport hfull, exists_mem_support_iff_triple]
 
-variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.IsUniformMeasureSpec spec]
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.UniformAnswerMeasure spec]
   {α : Type}
 
 /-- Under uniform answers, a positive probability is an angelic triple from `True`. -/
 theorem prEvent_pos_iff_triple (oa : OracleComp spec α) (p : α → Prop) :
     0 < Pr{let x ← oa}[p x] ↔ ⦃ True ⦄ oa ⦃ p ⦄ :=
   prEvent_pos_iff_triple_of_fullSupport
-    (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) oa p
+    (fun t u => OracleSpec.UniformAnswerMeasure.toMeasure_singleton_pos t u) oa p
 
 /-- Under uniform answers, positivity of an expectation is the angelic weakest precondition of
 positivity. As an equation of propositions it rewrites the nested expectations of an event's
@@ -227,24 +227,24 @@ normal form. -/
 theorem pos_wp_eq_wp (oa : OracleComp spec α) (g : α → ℝ≥0∞) :
     (0 < wp⟦oa⟧ g) = Std.WP.wp oa (fun a => 0 < g a) Lean.Order.bot :=
   propext (pos_wp_iff_of_fullSupport
-    (fun t u => OracleSpec.IsUniformMeasureSpec.toMeasure_singleton_pos t u) oa g)
+    (fun t u => OracleSpec.UniformAnswerMeasure.toMeasure_singleton_pos t u) oa g)
 
-end OracleComp.Angelic
+end OracleComp.Possible
 
-namespace OracleComp.Angelic.Dispatch
+namespace OracleComp.Possible.Dispatch
 
 variable {ι : Type u} {spec : OracleSpec ι}
 
 /-- The angelic reading at the priority of a per-call scope, above every reading a file opens:
-`open scoped OracleComp.Angelic.Dispatch in vcgen`. -/
+`open scoped OracleComp.Possible.Dispatch in vcgen`. -/
 noncomputable scoped instance (priority := 1200) instWP :
     Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
-  OracleComp.Angelic.instWP
+  OracleComp.Possible.instWP
 
 /-- The per-call angelic reading as a direct `WP` instance, which outranks direct instances of
 other readings. -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α Prop EStack⟨⟩ :=
-  (OracleComp.Angelic.instWP (spec := spec)).toWP α
+  (OracleComp.Possible.instWP (spec := spec)).toWP α
 
-end OracleComp.Angelic.Dispatch
+end OracleComp.Possible.Dispatch

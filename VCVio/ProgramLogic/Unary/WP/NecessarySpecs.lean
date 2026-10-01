@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
@@ -14,7 +14,7 @@ public import VCVio.OracleComp.Coercions.SubSpec.Basic
 /-!
 # `vcgen` rules for the structural reading of oracle computations
 
-Under `open scoped OracleComp.Qualitative` a triple `⦃ pre ⦄ oa ⦃ post ⦄` says that every
+Under `open scoped OracleComp.Necessary` a triple `⦃ pre ⦄ oa ⦃ post ⦄` says that every
 structurally reachable output of `oa` satisfies `post` when `pre` holds. The rules below let core's
 `vcgen` step through the common primitives of oracle computations in that reading:
 
@@ -30,11 +30,11 @@ applies to every program, so it is not registered; passing it for an opaque sub-
 `vcgen [Spec.ofSupport keygen]`, exposes the support hypothesis in the verification condition.
 
 The query rules `Spec.query` and `Spec.monadLift_query` are in
-`VCVio.ProgramLogic.Unary.WP.Qualitative`. The bridges between structural triples and events of
+`VCVio.ProgramLogic.Unary.WP.Necessary`. The bridges between structural triples and events of
 probability one or zero are in `VCVio.ProgramLogic.Unary.WP.Coherence`.
 
-`OracleComp.Qualitative.Dispatch` registers the structural reading at a priority above every
-reading a file opens, for per-call use (`open scoped OracleComp.Qualitative.Dispatch in vcgen`).
+`OracleComp.Necessary.Dispatch` registers the structural reading at a priority above every
+reading a file opens, for per-call use (`open scoped OracleComp.Necessary.Dispatch in vcgen`).
 -/
 
 public section
@@ -43,7 +43,7 @@ universe u u'
 
 open Std.WP
 
-namespace OracleComp.Qualitative
+namespace OracleComp.Necessary
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
@@ -95,22 +95,22 @@ theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
     Triple (MonadLift.monadLift oa : OracleComp superSpec α) (wp oa post epost) post epost :=
   Spec.liftComp oa post
 
-end OracleComp.Qualitative
+end OracleComp.Necessary
 
-namespace OracleComp.Qualitative.Dispatch
+namespace OracleComp.Necessary.Dispatch
 
 variable {ι : Type u} {spec : OracleSpec ι}
 
 /-- The structural reading at the priority of a per-call scope, above every reading a file opens:
-`open scoped OracleComp.Qualitative.Dispatch in vcgen`. -/
+`open scoped OracleComp.Necessary.Dispatch in vcgen`. -/
 noncomputable scoped instance (priority := 1200) instWP :
     Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
-  OracleComp.Qualitative.instWP
+  OracleComp.Necessary.instWP
 
 /-- The per-call structural reading as a direct `WP` instance, which outranks direct instances of
 other readings. -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α Prop EStack⟨⟩ :=
-  (OracleComp.Qualitative.instWP (spec := spec)).toWP α
+  (OracleComp.Necessary.instWP (spec := spec)).toWP α
 
-end OracleComp.Qualitative.Dispatch
+end OracleComp.Necessary.Dispatch

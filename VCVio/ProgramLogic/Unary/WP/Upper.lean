@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
+public import VCVio.ProgramLogic.Unary.WP.LowerSpecs
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.EvalDist.Monad.Except
 
@@ -84,9 +84,9 @@ open ENNReal Std.WP OrderDual
 
 namespace OracleComp.Upper
 
-variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec] {α : Type}
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec] {α : Type}
 
-open scoped OracleComp.Quantitative in
+open scoped OracleComp.Lower in
 /-- Core weakest preconditions of the expectation reading over the order duals: a triple states
 an upper bound on the expectation. Opening the scope selects it over the structural reading. -/
 noncomputable scoped instance (priority := 1100) instWP :
@@ -258,7 +258,7 @@ theorem Spec.uniformSample_avg (β : Type) [SampleableType β] [Fintype β] (pos
     Triple ($ᵗ β) (toDual ((∑ x, ofDual (post x)) / Fintype.card β)) post epost := by
   rw [triple_iff, ofDual_toDual, SampleableType.wp_uniformSample_eq_sum]
 
-variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsUniformMeasureSpec spec]
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.UniformAnswerMeasure spec]
 
 /-- The exact rule for a query with uniform answers: the average of the postcondition over the
 answers. Not registered, for the reason given at `Spec.uniformSample_avg`. -/
@@ -280,7 +280,7 @@ theorem Spec.monadLift_query_avg (t : spec.Domain) [Fintype (spec.Range t)]
 upper-bound weakest precondition of the lifted program, so `vcgen` continues into it. -/
 @[spec]
 theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
     {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
     ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ := by
   rw [triple_iff, ofDual_wp]
@@ -289,7 +289,7 @@ theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
 /-- `Spec.liftComp` for the lift written as `liftM oa`. -/
 @[spec]
 theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.IsUniformMeasureSpec superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
     {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
     ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
   Spec.liftComp oa post
@@ -298,7 +298,7 @@ end OracleComp.Upper
 
 namespace OracleComp.Upper.Dispatch
 
-variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.IsMeasureSpec spec]
+variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec]
 
 /-- The upper-bound reading at the priority of a per-call scope, above every reading a file
 opens: `open scoped OracleComp.Upper.Dispatch in vcgen`. -/
@@ -307,7 +307,7 @@ noncomputable scoped instance (priority := 1200) instWP :
   OracleComp.Upper.instWP
 
 /-- The per-call upper-bound reading as a direct `WP` instance, which outranks direct instances
-of other readings (`ExpectationWP.Quantitative.wpInst`). -/
+of other readings (`ExpectationWP.Lower.wpInst`). -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
   (OracleComp.Upper.instWP (spec := spec)).toWP α

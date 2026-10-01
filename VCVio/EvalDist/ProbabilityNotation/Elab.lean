@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Expectation
-public import VCVio.EvalDist.ProbabilityNotation.Attr
+public import VCVio.Prelude.Core
 public meta import Lean.PrettyPrinter.Formatter
 public meta import Lean.Elab.PatternVar
 

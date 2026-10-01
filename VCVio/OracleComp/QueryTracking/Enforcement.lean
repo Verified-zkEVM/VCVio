@@ -78,7 +78,7 @@ theorem fst_map_run_simulateQ {oa : OracleComp spec α} {qb : ι → ℕ}
 section Probability
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type} [DecidableEq ι]
-  [IsMeasureSpec spec]
+  [AnswerMeasure spec]
 
 /-- A structural query bound makes its budget check redundant in the counting event. -/
 theorem prEvent_counting_budget_eq {oa : OracleComp spec α} {qb : ι → ℕ}

@@ -51,8 +51,8 @@ example {Y : Type} (value : Y) :
       ((∅ : (ℕ →ₒ Y).QueryCache).cacheQuery 7 value) input ≠ none → input ∈ keys := by
   exact QueryCache.domain_bound_cacheQuery ∅ 7 value 0 ⟨∅, by simp, by simp⟩
 
-noncomputable local instance : (ℕ →ₒ Bool).toPFunctor.IsMeasureSpec :=
-  PFunctor.IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable local instance : (ℕ →ₒ Bool).toPFunctor.AnswerMeasure :=
+  PFunctor.AnswerMeasure.uniformOfFiniteNonempty _
 
 example (t : ℕ) : 𝒟[(liftM ((ℕ →ₒ Bool).query t) : OracleComp (ℕ →ₒ Bool) Bool)] =
     ProbabilityTheory.uniformOn Set.univ := by

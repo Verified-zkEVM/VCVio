@@ -299,7 +299,7 @@ lemma multipleBadTableHandler_step_preserves_bad (g : TagId × Nonce → Digest)
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
     ∀ z ∈ support (multipleBadTableHandler sessionsPerTag g t p), z.2.2.bad = true := by
   rcases t with tag | tr <;>
-    prvcgen [multipleBadTableHandler, Qualitative.Spec.ofSupport (multipleTableHandler g _ p.1)]
+    prvcgen [multipleBadTableHandler, Necessary.Spec.ofSupport (multipleTableHandler g _ p.1)]
   · rcases r with ⟨_ | _, _⟩ <;> simp [multipleBadAdvance, hbad]
   · exact hbad
 
@@ -328,7 +328,7 @@ lemma multipleBadTableHandler_run_cacheBad_const {α : Type} (g : TagId × Nonce
   OracleComp.simulateQ_run_preservesInv (multipleBadTableHandler sessionsPerTag g)
     (fun s => s.2.cacheBad = p.2.cacheBad) (fun t s h => by
       rcases t with tag | tr <;>
-        prvcgen [multipleBadTableHandler, Qualitative.Spec.ofSupport (multipleTableHandler g _ s.1)]
+        prvcgen [multipleBadTableHandler, Necessary.Spec.ofSupport (multipleTableHandler g _ s.1)]
       · exact (multipleBadAdvance_cacheBad tag s.2 _).trans h
       · exact h) oa p rfl
 
@@ -465,7 +465,7 @@ lemma multipleBadTableHandlerFine_step_preserves_bad (g : TagId × Nonce → Dig
     (p : UnlinkState TagId × UnlinkBadState TagId Nonce Digest) (hbad : p.2.bad = true) :
     ∀ z ∈ support (multipleBadTableHandlerFine g gFine t p), z.2.2.bad = true := by
   rcases t with tag | tr <;> prvcgen [multipleBadTableHandlerFine,
-    Qualitative.Spec.ofSupport (multipleTableHandler g _ p.1)]
+    Necessary.Spec.ofSupport (multipleTableHandler g _ p.1)]
   · rcases r with ⟨_ | _, _⟩ <;> simp [multipleBadAdvance, hbad]
   · exact (multipleBadReaderAdvance_bad _ _ _).trans hbad
 

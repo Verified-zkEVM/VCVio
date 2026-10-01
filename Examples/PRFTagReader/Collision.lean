@@ -8,7 +8,7 @@ module
 
 public import Examples.PRFTagReader.Collision.ForgeStep
 import VCVio.ProgramLogic.Unary.HandlerSpecs
-import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound

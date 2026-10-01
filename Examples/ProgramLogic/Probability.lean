@@ -26,7 +26,7 @@ open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic
 
 variable {ι : Type} {spec : OracleSpec ι}
-  [∀ t, Countable (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+  [∀ t, Countable (spec.Range t)] [OracleSpec.AnswerMeasure spec]
 variable {α β γ δ ε ζ : Type}
 
 /-! ## Congruence -/

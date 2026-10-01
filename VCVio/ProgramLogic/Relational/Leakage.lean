@@ -45,7 +45,7 @@ namespace OracleComp.Leakage
 variable {ι₁ : Type u} {ι₂ : Type u} {ι₃ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
   {spec₃ : OracleSpec.{u, 0} ι₃}
-variable [IsMeasureSpec spec₁] [IsMeasureSpec spec₂] [IsMeasureSpec spec₃]
+variable [AnswerMeasure spec₁] [AnswerMeasure spec₂] [AnswerMeasure spec₃]
 variable {α β γ : Type} {ω : Type}
 
 /-! ### TraceNoninterference -/

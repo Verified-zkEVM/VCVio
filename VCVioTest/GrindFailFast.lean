@@ -45,7 +45,7 @@ Bare `grind` must fail (fast); the documented opt-in `grind [<lemma>]` must clos
 
 section uniform
 
-variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.IsUniformMeasureSpec spec] {α : Type}
+variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.UniformAnswerMeasure spec] {α : Type}
   (p : α → Prop) (mx : OracleComp spec α) (x : α)
 
 example : Pr{let y ← mx}[p y] = 0 ↔ ∀ y ∈ support mx, ¬ p y := by

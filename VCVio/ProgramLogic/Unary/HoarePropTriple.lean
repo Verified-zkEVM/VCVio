@@ -15,7 +15,7 @@ public import VCVio.OracleComp.Support
 The qualitative reading of `OracleComp spec` is PolyFun's demonic support interpretation
 `MonadAttach.toWPMonadDemonic`: core's `wp oa post` holds when every structurally possible
 output of `oa` satisfies `post`. It needs no probability interpretation. `wp_iff_forall_support`
-states it against the support; `OracleComp.Qualitative` installs it as a scoped instance, and the
+states it against the support; `OracleComp.Necessary` installs it as a scoped instance, and the
 relational `Anchored` instance in `VCVio/ProgramLogic/Relational/Basic.lean` anchors the
 coupling logic to it.
 

@@ -33,7 +33,7 @@ open ENNReal Std.WP
 namespace OracleComp.Probabilistic
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
-  [OracleSpec.IsMeasureSpec spec]
+  [OracleSpec.AnswerMeasure spec]
 
 /-- Oracle expectation preserves the probability bound. -/
 theorem wp_one_le (oa : OracleComp spec α) :

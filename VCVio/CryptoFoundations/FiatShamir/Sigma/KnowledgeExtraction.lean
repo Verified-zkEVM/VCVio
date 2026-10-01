@@ -9,7 +9,7 @@ module
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Reductions
 public import VCVio.OracleComp.EvalDist.Measure
 import VCVio.ProgramLogic.Unary.HandlerSpecs
-import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # Fixed-statement Fiat–Shamir extraction
@@ -70,8 +70,8 @@ private theorem cache_mem_log {α : Type}
     (fun st : Fork.SimState M Commit Chal => ∀ t v, st.1 t = some v → t ∈ st.2) (fun t => by
       rcases t with n | mc <;>
         vcgen [Fork.unifForward, Fork.roImpl, Spec.lift_StateT,
-          Qualitative.Spec.ofSupport (Fork.wrappedUniformQuery Chal _),
-          Qualitative.Spec.ofSupport (Fork.wrappedChallengeQuery Chal)] <;> grind) oa)
+          Necessary.Spec.ofSupport (Fork.wrappedUniformQuery Chal _),
+          Necessary.Spec.ofSupport (Fork.wrappedChallengeQuery Chal)] <;> grind) oa)
     st hinv _ _ hz
 
 end HandlerTriples
@@ -173,8 +173,8 @@ section probability
 variable [SampleableType Chal]
 
 /-- The singleton replay challenge oracle uses uniform challenges. -/
-noncomputable local instance : IsUniformMeasureSpec (Unit →ₒ Chal) :=
-  IsUniformMeasureSpec.ofFiniteNonempty _
+noncomputable local instance : UniformAnswerMeasure (Unit →ₒ Chal) :=
+  UniformAnswerMeasure.ofFiniteNonempty _
 
 /-- Forkable acceptance equals acceptance of the actual verifier for a bounded ordinary prover. -/
 theorem forkable_acceptance_eq_verification

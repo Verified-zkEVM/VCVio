@@ -52,7 +52,7 @@ variable {m : Type u → Type v} {α ε ω ρ σ : Type u}
 
 /-- The discrete `FreeM` measure denotation packaged as a reusable semantics. -/
 noncomputable def freeM {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)]
-    [P.IsMeasureSpec] [∀ a, DiscreteMeasurableSpace (P.B a)] :
+    [P.AnswerMeasure] [∀ a, DiscreteMeasurableSpace (P.B a)] :
     ProbabilitySemantics (PFunctor.FreeM P) where
   denote := PFunctor.FreeM.denote
   apply_univ_le_one := PFunctor.FreeM.denote_apply_univ_le_one

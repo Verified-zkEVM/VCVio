@@ -134,8 +134,8 @@ theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p) (msg : List By
   induction maxAttempts with
   | zero => simp [sign]
   | succ k ih =>
-    prvcgen [sign, signAttempt, OracleComp.Qualitative.Spec.ofSupport (sign p prims pk sk msg k),
-      OracleComp.Qualitative.Spec.ofSupport ((falconPSF p prims).trapdoorSample pk sk _)]
+    prvcgen [sign, signAttempt, OracleComp.Necessary.Spec.ofSupport (sign p prims pk sk msg k),
+      OracleComp.Necessary.Spec.ofSupport ((falconPSF p prims).trapdoorSample pk sk _)]
     -- A rejected attempt, or one that does not compress, retries.
     case vc2 | vc3 => rename_i r hr sig hsig; exact ih r hr sig hsig
     -- The accepting attempt is a `trapdoorSample` output that passed the norm check.

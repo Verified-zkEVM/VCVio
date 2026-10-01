@@ -70,7 +70,7 @@ end Cursor
 
 section answer
 
-variable [IsMeasureSpec spec]
+variable [AnswerMeasure spec]
 
 /-- The answer marginal of an occurrence completion is its configured query measure, trimmed to the
 measurable structure observing the answer. -/
@@ -78,7 +78,7 @@ measurable structure observing the answer. -/
 theorem evalDist_map_answer_completeOccurrence {main : OracleComp spec α} {i : ι} {n : Nat}
     (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun completion ↦ completion.answer) <$> Cursor.completeOccurrence occurrence] =
-      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by
+      @Measure.trim _ _ ⊤ (AnswerMeasure.toMeasure (spec := spec) i) le_top := by
   simp only [Cursor.completeOccurrence, PFunctor.FreeM.Cursor.Occurrence.complete,
     PFunctor.FreeM.liftBind_eq, ofFreeM_bind, ofFreeM_map, map_bind, Functor.map_map]
   calc
@@ -107,7 +107,7 @@ theorem evalDist_map_secondAnswer_fork {main : OracleComp spec α} {i : ι} {n :
     {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun view ↦ view.secondAnswer) <$> ofFreeM located.fork] =
-      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by
+      @Measure.trim _ _ ⊤ (AnswerMeasure.toMeasure (spec := spec) i) le_top := by
   rw [PFunctor.FreeM.Cursor.Located.fork_eq_map_complete, ofFreeM_map, Functor.map_map]
   simpa only [Function.comp_def, PFunctor.FreeM.Cursor.ForkView.secondAnswer_mk,
     Cursor.completeOccurrence] using evalDist_map_answer_completeOccurrence located.occurrence
@@ -118,7 +118,7 @@ theorem prEvent_focusCollision_fork {main : OracleComp spec α} {i : ι} {n : Na
     {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) :
     Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer] =
-      IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} := by
+      AnswerMeasure.toMeasure (spec := spec) i {located.completion.answer} := by
   rw [PFunctor.FreeM.Cursor.Located.fork_eq_map_complete, ofFreeM_map, prEvent_map]
   simp only [PFunctor.FreeM.Cursor.ForkView.firstAnswer_mk,
     PFunctor.FreeM.Cursor.ForkView.secondAnswer_mk]
@@ -135,20 +135,20 @@ theorem prEvent_focusCollision_fork_le {main : OracleComp spec α} {i : ι} {n :
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
     Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
       accept (PFunctor.FreeM.output main view.firstPath)] ≤
-      IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} :=
+      AnswerMeasure.toMeasure (spec := spec) i {located.completion.answer} :=
   (prEvent_mono _ _ _ fun _ h ↦ h.1).trans_eq (prEvent_focusCollision_fork located)
 
 end answer
 
 /-- Under uniform answer measures, a guarded collision is bounded by inverse cardinality. -/
 theorem prEvent_focusCollision_fork_le_of_uniform
-    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
+    [UniformAnswerMeasure spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
     {n : Nat} {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
     Pr{let view ← ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
       accept (PFunctor.FreeM.output main view.firstPath)] ≤
       (Fintype.card (spec.Range i) : ℝ≥0∞)⁻¹ := by
-  simpa only [IsUniformMeasureSpec.toMeasure_singleton] using
+  simpa only [UniformAnswerMeasure.toMeasure_singleton] using
     prEvent_focusCollision_fork_le located accept
 
 /-- Observe the outputs of both completions of a fixed typed occurrence. -/
@@ -207,7 +207,7 @@ lemma ne_some_of_valid_missing [DecidableEq ι]
 /-- Fixed-index observed success squares under two independent completions of the selected
 occurrence context. Answer measures need not be uniform. -/
 theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
-    [IsMeasureSpec spec]
+    [AnswerMeasure spec]
     (main : OracleComp spec α) (i : ι) (n : Nat) (observe : α → Option β) (value : β)
     (hselect : OutputSelectsOccurrence main i n observe value) :
     Pr{let output ← main}[observe output = some value] ^ 2 ≤

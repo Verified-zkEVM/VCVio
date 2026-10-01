@@ -50,7 +50,7 @@ after the logged prefix. -/
 theorem prEvent_withQueryLog_stablePhase_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}
     (state : ExtractorState Cfg Query Address Y config)

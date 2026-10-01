@@ -32,8 +32,8 @@ namespace VCVioTest.KEMDEMMeasure
 /-- A fair-coin query interface. -/
 @[expose, reducible] def coinSpec : PFunctor.{0, 0} := ⟨Unit, fun _ => Bool⟩
 
-noncomputable instance : coinSpec.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable instance : coinSpec.AnswerMeasure :=
+  AnswerMeasure.uniformOfFiniteNonempty _
 
 example (mx : FreeM coinSpec Bool) : IsProbabilityMeasure (evalDistWithFailure mx) := inferInstance
 

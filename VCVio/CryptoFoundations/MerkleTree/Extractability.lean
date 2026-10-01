@@ -425,7 +425,7 @@ opening budget. Its hypotheses are precisely the log/cache invariants maintained
 combined caching-and-logging interpreter used in the stopping-time proof below. -/
 private lemma extractability_rest_noCollision_le_of_opening_bound [DecidableEq Query]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (openingBound targetBound : ℕ)
@@ -482,7 +482,7 @@ would create a collision. When the commit stops, the suffix theorem pays for at 
 `targetCount * (remaining + depth)` fresh-target opportunities. -/
 private lemma extractabilityRunFrom_le_potential [DecidableEq Query]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address) (𝒜 : Adversary Query Y s)
     (commit : OracleComp (Query →ₒ Y) (Y × 𝒜.AuxState))
@@ -546,7 +546,7 @@ private lemma extractabilityRunFrom_le_potential [DecidableEq Query]
 the combined caching/logging semantics back to `extractabilityExperiment`. -/
 private lemma extractability_win_le_stopping_bound [DecidableEq Query]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
@@ -593,7 +593,7 @@ length. The proof is therefore valid when the adversary adaptively decides when 
 commit phase and when it repeats cached queries. -/
 theorem extractability_rom_bound [DecidableEq Query]
     [Fintype Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
@@ -682,7 +682,7 @@ private lemma extractabilityROMErrorNumerator_le_coarse (s : Skeleton) (qb : ℕ
 counterpart of the maximum appearing before the final case split in the source proof. -/
 theorem extractability_rom_bound_coarse [DecidableEq Query]
     [Fintype Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
@@ -698,7 +698,7 @@ theorem extractability_rom_bound_coarse [DecidableEq Query]
 /-- Once `qb ≥ 2T + 1`, the birthday endpoint dominates the other coarse endpoint. -/
 theorem extractability_rom_bound_birthday_dominates [DecidableEq Query]
     [Fintype Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)
@@ -722,7 +722,7 @@ theorem extractability_rom_bound_birthday_dominates [DecidableEq Query]
 condition used in the Chiesa–Yogev presentation. -/
 theorem extractability_rom_bound_quadratic [DecidableEq Query]
     [Fintype Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : NodeQueryModel Query Address Y) {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : Adversary Query Y s) (qb : ℕ)

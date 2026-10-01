@@ -109,20 +109,20 @@ example {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
 /-- A measure-only interface whose query always returns `true`. -/
 @[expose, reducible] def biasedSpec : OracleSpec Unit := fun _ ↦ Bool
 
-noncomputable instance : IsMeasureSpec biasedSpec where
+noncomputable instance : AnswerMeasure biasedSpec where
   toMeasure _ := Measure.dirac true
   isProbabilityMeasure _ := inferInstance
 
 section fork
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type}
-  [IsMeasureSpec spec] {main : OracleComp spec α} {i : ι} {n : Nat}
+  [AnswerMeasure spec] {main : OracleComp spec α} {i : ι} {n : Nat}
 
 example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n)
     {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun completion ↦ completion.answer) <$>
       OracleComp.Cursor.completeOccurrence occurrence] =
-      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by simp
+      @Measure.trim _ _ ⊤ (AnswerMeasure.toMeasure (spec := spec) i) le_top := by simp
 
 example (occurrence : PFunctor.FreeM.Cursor.Occurrence i main n) (p : spec.Range i → Prop) :
     Pr{let completion ← OracleComp.Cursor.completeOccurrence occurrence}[p completion.answer] =
@@ -148,11 +148,11 @@ example {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n)
     {_ : MeasurableSpace (spec.Range i)} :
     𝒟[(fun view ↦ view.secondAnswer) <$> OracleComp.ofFreeM located.fork] =
-      @Measure.trim _ _ ⊤ (IsMeasureSpec.toMeasure (spec := spec) i) le_top := by simp
+      @Measure.trim _ _ ⊤ (AnswerMeasure.toMeasure (spec := spec) i) le_top := by simp
 
 example {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) {bound : ENNReal}
-    (h : IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} ≤ bound) :
+    (h : AnswerMeasure.toMeasure (spec := spec) i {located.completion.answer} ≤ bound) :
     Pr{let view ← OracleComp.ofFreeM located.fork}[view.firstAnswer = view.secondAnswer] ≤
       bound := by grind
 
@@ -160,13 +160,13 @@ example {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
     Pr{let view ← OracleComp.ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧
       accept (PFunctor.FreeM.output main view.firstPath)] ≤
-      IsMeasureSpec.toMeasure (spec := spec) i {located.completion.answer} :=
+      AnswerMeasure.toMeasure (spec := spec) i {located.completion.answer} :=
   OracleComp.prEvent_focusCollision_fork_le located accept
 
 end fork
 
 example {ι : Type} {spec : OracleSpec ι} {α : Type}
-    [IsUniformMeasureSpec spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
+    [UniformAnswerMeasure spec] {main : OracleComp spec α} {i : ι} [Fintype (spec.Range i)]
     {n : Nat} {path : PFunctor.FreeM.Path main}
     (located : PFunctor.FreeM.Cursor.Located i main path n) (accept : α → Prop) :
     Pr{let view ← OracleComp.ofFreeM located.fork}[view.firstAnswer = view.secondAnswer ∧

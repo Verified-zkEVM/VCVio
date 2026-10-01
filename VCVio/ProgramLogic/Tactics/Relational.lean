@@ -281,7 +281,7 @@ macro "rel_inline" ids:ident* : tactic =>
   if ids.size > 0 then
     `(tactic|
       (unfold $ids*
-       try simp only [game_rule]
+       try simp only [expect_norm, expect_eval]
        try first
          | exact OracleComp.ProgramLogic.Relational.relTriple_true _ _
          | (refine OracleComp.ProgramLogic.Relational.relTriple_post_const ?_
@@ -292,7 +292,7 @@ macro "rel_inline" ids:ident* : tactic =>
          | (apply OracleComp.ProgramLogic.Relational.relTriple_pure_pure; assumption)))
   else
     `(tactic|
-      (simp only [game_rule]
+      (simp only [expect_norm, expect_eval]
        try first
          | exact OracleComp.ProgramLogic.Relational.relTriple_true _ _
          | (refine OracleComp.ProgramLogic.Relational.relTriple_post_const ?_

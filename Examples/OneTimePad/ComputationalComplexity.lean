@@ -47,10 +47,10 @@ namespace oneTimePad
 /-- Fair-coin measure semantics for the polynomial interface underlying `coinSpec`.
 
 This is an explicit semantic choice rather than an instance inferred from finiteness. Callers may
-replace it with another `IsMeasureSpec` when studying a biased or otherwise concrete source. -/
+replace it with another `AnswerMeasure` when studying a biased or otherwise concrete source. -/
 @[instance_reducible]
-noncomputable def fairCoinMeasureSpec : coinSpec.toPFunctor.IsMeasureSpec :=
-  PFunctor.IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable def fairCoinMeasureSpec : coinSpec.toPFunctor.AnswerMeasure :=
+  PFunctor.AnswerMeasure.uniformOfFiniteNonempty _
 
 attribute [local instance] fairCoinMeasureSpec
 

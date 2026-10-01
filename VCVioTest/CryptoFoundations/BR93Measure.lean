@@ -28,12 +28,12 @@ variable {PK SK Rand M : Type} [Inhabited Rand] [DecidableEq Rand]
   (tdp : TrapdoorPermutation PK SK Rand)
   (adv : CPA_Adversary PK Rand M)
 
-example [unifSpec.toPFunctor.IsMeasureSpec] :
+example [unifSpec.toPFunctor.AnswerMeasure] :
     PFunctor.FreeM.denote (badEventExperiment tdp adv) {true} ≤
       PFunctor.FreeM.denote (tdpExperiment tdp (inverter tdp adv)) {true} := by
   exact measure_badEventExperiment_le_tdpExperiment adv
 
-noncomputable local instance : unifSpec.toPFunctor.IsMeasureSpec where
+noncomputable local instance : unifSpec.toPFunctor.AnswerMeasure where
   toMeasure _ := Measure.dirac 0
   isProbabilityMeasure _ := inferInstance
 

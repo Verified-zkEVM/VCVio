@@ -6,10 +6,10 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
-public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
+public import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
+public import VCVio.ProgramLogic.Unary.WP.LowerSpecs
 public import VCVio.ProgramLogic.Unary.WP.Coherence
-public import VCVio.ProgramLogic.Unary.WP.Angelic
+public import VCVio.ProgramLogic.Unary.WP.Possible
 public import VCVio.ProgramLogic.Unary.WP.Upper
 public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
 public meta import Lean.Elab.Tactic.Basic
@@ -24,27 +24,27 @@ with its bridge lemma, and runs core's `vcgen` inside the reading's per-call sco
 
 | Goal | Reading | Triple |
 |------|---------|--------|
-| `Pr{…}[p] = 1`, `∀ x ∈ support oa, p x` | structural | `⦃ True ⦄ oa ⦃ p ⦄` |
-| `0 < Pr{…}[p]`, `∃ x ∈ support oa, p x` | angelic | `⦃ True ⦄ oa ⦃ p ⦄` |
+| `Pr{…}[p] = 1`, `∀ x ∈ support oa, p x` | necessary | `⦃ True ⦄ oa ⦃ p ⦄` |
+| `0 < Pr{…}[p]`, `∃ x ∈ support oa, p x` | possible | `⦃ True ⦄ oa ⦃ p ⦄` |
 | `r ≤ Pr{…}[p]` | expectation (global) | `⦃ r ⦄ oa ⦃ predInd p ⦄` |
 | `Pr{…}[p] ≤ ε`, `Pr{…}[p] = 0` | upper bound | `⦃ toDual ε ⦄ oa ⦃ … ⦄` |
 | `Pr{…}[p] = c` | upper bound and expectation | both of the above |
 | `⦃ pre ⦄ oa ⦃ post ⦄` | read off the assertion type | the goal itself |
 
-The readings are `OracleComp.Qualitative`, `OracleComp.Angelic`, the global expectation reading,
+The readings are `OracleComp.Necessary`, `OracleComp.Possible`, the global expectation reading,
 and `OracleComp.Upper`. `𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does, `≥` is read as
 `≤` with its sides swapped, and an equation may have the expectation on either side. A triple
 already stated is run in the reading of its assertion type: `ℝ≥0∞` for lower bounds, `ℝ≥0∞ᵒᵈ`
-for upper bounds, and `Prop` for the structural reading, or the angelic one when the triple's
-interpretation is angelic; a state-passing assertion `σ → …` is read by its codomain, so triples
+for upper bounds, and `Prop` for the necessary reading, or the possible one when the triple's
+interpretation is possible; a state-passing assertion `σ → …` is read by its codomain, so triples
 of handlers over `StateT` are run the same way.
 
 The event forms nest one expectation per draw; the bridges rewrite each nested expectation into
-the reading, so `vcgen` steps through the whole program. The structural and angelic bridges of an
+the reading, so `vcgen` steps through the whole program. The necessary and possible bridges of an
 event need answers of positive mass; `prvcgen` uses their uniform-answer forms
-(`IsUniformMeasureSpec`). The shapes `vcgen` reads itself — a triple, its unfolded form
+(`UniformAnswerMeasure`). The shapes `vcgen` reads itself — a triple, its unfolded form
 `pre ⊑ wp oa post epost`, and a weakest precondition of a `Prop` reading such as the
-`∃ u, wp (rest u) post ⊥` an angelic draw leaves once its witness is named — are only classified,
+`∃ u, wp (rest u) post ⊥` an possible draw leaves once its witness is named — are only classified,
 by the assertion type and the interpretation of their `wp`, and handed to `vcgen` in that reading's
 scope.
 
@@ -55,7 +55,7 @@ bound `Pr{…}[p] ≤ c` and the lower bound `c ≤ Pr{…}[p]`, each run in its
 a simpler route:
 
 * `= 0` is the upper bound alone, the lower bound `0 ≤ …` holding outright;
-* `= 1` is the structural triple when uniform answers are available, whose verification
+* `= 1` is the necessary triple when uniform answers are available, whose verification
   conditions are the event itself at every possible output and whose rule catalogue is the
   largest; otherwise it splits, the upper half closes on the range of the indicator
   (`wp_le_of_forall_le`), and the lower half is run in the expectation reading.
@@ -87,8 +87,8 @@ settles or that are reflexive are closed (`propInd_le_one`, `one_le_propInd_iff`
 A comparison `Pr{A}[p] ≤ Pr{B}[q]` of two events has an expectation on both sides; `prvcgen`
 reads it as an upper bound on the left-hand side, with the right-hand side as the bound.
 
-The per-call scopes (`OracleComp.Qualitative.Dispatch`, `OracleComp.Angelic.Dispatch`,
-`OracleComp.Quantitative.Dispatch`, `OracleComp.Upper.Dispatch`) register each reading above every
+The per-call scopes (`OracleComp.Necessary.Dispatch`, `OracleComp.Possible.Dispatch`,
+`OracleComp.Lower.Dispatch`, `OracleComp.Upper.Dispatch`) register each reading above every
 reading a file opens, so `prvcgen` is unaffected by the file's `open scoped` readings.
 -/
 
@@ -97,7 +97,7 @@ public meta section
 open Lean Elab Tactic Meta
 
 /-- Discharge `∀ a, g a ≤ 1` for an observation built from indicators and nested expectations of
-indicators, the side condition of the structural bridge on an event's normal form. -/
+indicators, the side condition of the necessary bridge on an event's normal form. -/
 syntax (name := prvcgenLeOne) "prvcgen_le_one" : tactic
 
 macro_rules
@@ -112,9 +112,9 @@ namespace OracleComp.ProgramLogic.PrVCGen
 
 /-- The four readings `prvcgen` dispatches to. -/
 inductive Reading where
-  /-- All possible outputs: `OracleComp.Qualitative`. -/
+  /-- All possible outputs: `OracleComp.Necessary`. -/
   | necessary
-  /-- Some possible output: `OracleComp.Angelic`. -/
+  /-- Some possible output: `OracleComp.Possible`. -/
   | possible
   /-- Expectation lower bounds: the global reading. -/
   | lower
@@ -124,9 +124,9 @@ inductive Reading where
 
 /-- The per-call scope of a reading. -/
 def Reading.scope : Reading → Name
-  | .necessary => `OracleComp.Qualitative.Dispatch
-  | .possible => `OracleComp.Angelic.Dispatch
-  | .lower => `OracleComp.Quantitative.Dispatch
+  | .necessary => `OracleComp.Necessary.Dispatch
+  | .possible => `OracleComp.Possible.Dispatch
+  | .lower => `OracleComp.Lower.Dispatch
   | .upper => `OracleComp.Upper.Dispatch
 
 /-- Whether `e` is an application of core's `wp`. -/
@@ -168,30 +168,30 @@ partial def interpretationHead? (inst : Expr) : MetaM (Option Name) := do
   | none => return some n
 
 /-- The reading of a triple or an entailment, read off its assertion type: `ℝ≥0∞ᵒᵈ` for the
-upper-bound reading, `ℝ≥0∞` for the lower-bound reading, and `Prop` for the structural reading, or
-the angelic one when the interpretation behind its `wp` is angelic. A state-passing assertion
+upper-bound reading, `ℝ≥0∞` for the lower-bound reading, and `Prop` for the necessary reading, or
+the possible one when the interpretation behind its `wp` is possible. A state-passing assertion
 `σ → …` is read by its codomain. -/
 def readingOf? (carrier inst : Expr) : MetaM (Option Reading) := do
   let carrier := carrier.cleanupAnnotations.getForallBody
   if carrier.isAppOf ``OrderDual then return some .upper
   if carrier.isConstOf ``ENNReal then return some .lower
   unless carrier.isProp do return none
-  let angelic := match ← interpretationHead? inst with
-    | some h => h == ``MonadAttach.toWPMonadAngelic || (`OracleComp.Angelic).isPrefixOf h
+  let possible := match ← interpretationHead? inst with
+    | some h => h == ``MonadAttach.toWPMonadAngelic || (`OracleComp.Possible).isPrefixOf h
     | none => false
-  return some (if angelic then .possible else .necessary)
+  return some (if possible then .possible else .necessary)
 
 /-- The reading of a core triple `Triple x pre post epost`. -/
 def tripleReading? (goal : Expr) : MetaM (Option Reading) := do
   unless goal.isAppOfArity ``Std.WP.Triple 11 do return none
   readingOf? (goal.getArg! 0) (goal.getArg! 7)
 
-/-- State the structural bridge for `wp⟦oa⟧ g = 1`, rewriting each nested expectation. -/
+/-- State the necessary bridge for `wp⟦oa⟧ g = 1`, rewriting each nested expectation. -/
 def bridgeEqOne : TacticM Unit := do
   evalTactic (← `(tactic| (
     simp (disch := prvcgen_le_one) only
-      [OracleComp.Qualitative.wp_eq_one_eq_wp, predInd_apply, propInd_eq_one_iff]
-    refine (OracleComp.Qualitative.wp_iff_triple _ _).2 ?_)))
+      [OracleComp.Necessary.wp_eq_one_eq_wp, predInd_apply, propInd_eq_one_iff]
+    refine (OracleComp.Necessary.wp_iff_triple _ _).2 ?_)))
 
 /-- State the main goal as a triple of the reading it belongs to, or split an equation. -/
 partial def bridge (goal : Expr) : TacticM Plan := do
@@ -224,7 +224,7 @@ partial def bridge (goal : Expr) : TacticM Plan := do
         `𝔼\{…}[…]`, or `wp⟦…⟧ …`"
     if swap then evalTactic (← `(tactic| apply Eq.symm))
     if isNumeral rhs 1 then
-      -- the structural bridge, when its uniform-answer form applies
+      -- the necessary bridge, when its uniform-answer form applies
       let saved ← saveState
       try
         bridgeEqOne
@@ -259,12 +259,12 @@ partial def bridge (goal : Expr) : TacticM Plan := do
     unless isNumeral (goal.getArg! 2) 0 do
       throwError "prvcgen: a strict inequality must be `0 < Pr\{…}[…]`"
     evalTactic (← `(tactic| (
-      simp only [OracleComp.Angelic.pos_wp_eq_wp, predInd_apply, propInd_pos_iff]
+      simp only [OracleComp.Possible.pos_wp_eq_wp, predInd_apply, propInd_pos_iff]
       first
-        | refine (OracleComp.Angelic.wp_iff_triple _ _).2 ?_
-        | fail "prvcgen: the angelic bridge for `0 < …` needs uniform answers \
-            (`IsUniformMeasureSpec`); otherwise use \
-            `OracleComp.Angelic.prEvent_pos_iff_triple_of_fullSupport`")))
+        | refine (OracleComp.Possible.wp_iff_triple _ _).2 ?_
+        | fail "prvcgen: the possible bridge for `0 < …` needs uniform answers \
+            (`UniformAnswerMeasure`); otherwise use \
+            `OracleComp.Possible.prEvent_pos_iff_triple_of_fullSupport`")))
     return .single .possible
   -- `≤` and `≥`
   let ineq? : Option (Expr × Expr × Bool) :=
@@ -292,7 +292,7 @@ partial def bridge (goal : Expr) : TacticM Plan := do
   if goal.isAppOfArity ``Exists 2 then
     try
       evalTactic (← `(tactic|
-        refine (OracleComp.Angelic.exists_mem_support_iff_triple _ _).2 ?_))
+        refine (OracleComp.Possible.exists_mem_support_iff_triple _ _).2 ?_))
       return .single .possible
     catch _ =>
       throwError "prvcgen: an existential must be `∃ x ∈ support oa, p x`"
@@ -300,14 +300,14 @@ partial def bridge (goal : Expr) : TacticM Plan := do
   if isWpApp goal then
     let w := goal.cleanupAnnotations
     let some reading ← readingOf? (w.getArg! 2) (w.getArg! 6)
-      | throwError "prvcgen: a weakest-precondition goal must be of the angelic or the \
-          structural reading of an oracle computation"
+      | throwError "prvcgen: a weakest-precondition goal must be of the possible or the \
+          necessary reading of an oracle computation"
     return .single reading
   -- `∀ x ∈ support oa, p x`
   if goal.isForall then
     try
       evalTactic (← `(tactic|
-        refine (OracleComp.Qualitative.forall_mem_support_iff_triple _ _).2 ?_))
+        refine (OracleComp.Necessary.forall_mem_support_iff_triple _ _).2 ?_))
       return .single .necessary
     catch _ =>
       throwError "prvcgen: a universal statement must be `∀ x ∈ support oa, p x`"
@@ -335,8 +335,8 @@ def normalizeVCs : Reading → TacticM Unit
 end OracleComp.ProgramLogic.PrVCGen
 
 /-- Core `vcgen` on a statement about the outcomes of an oracle computation, under the reading the
-statement belongs to: `Pr{…}[p] = 1` and `∀ x ∈ support oa, p x` (structural), `0 < Pr{…}[p]` and
-`∃ x ∈ support oa, p x` (angelic), `r ≤ Pr{…}[p]` (expectation lower bound), `Pr{…}[p] ≤ ε` and
+statement belongs to: `Pr{…}[p] = 1` and `∀ x ∈ support oa, p x` (necessary), `0 < Pr{…}[p]` and
+`∃ x ∈ support oa, p x` (possible), `r ≤ Pr{…}[p]` (expectation lower bound), `Pr{…}[p] ≤ ε` and
 `Pr{…}[p] = 0` (expectation upper bound), and `Pr{…}[p] = c` (both bounds, by antisymmetry), with
 `𝔼{…}[…]` and `wp⟦…⟧ …` in place of `Pr{…}[…]`; a core triple runs in the reading of its
 assertion type. `vcgen`'s arguments — configuration, rules, `until`, `frames`, invariants,

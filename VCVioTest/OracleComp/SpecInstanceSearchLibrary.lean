@@ -53,10 +53,10 @@ set_option synthInstance.maxHeartbeats 2000 in
 /-- Under uniform measure semantics, the cardinality of one answer type is an ordinary
 per-query hypothesis; the semantics class carries no finiteness data. -/
 example {ι : Type} {spec : OracleSpec ι}
-    [OracleSpec.IsUniformMeasureSpec spec]
+    [OracleSpec.UniformAnswerMeasure spec]
     (t : spec.Domain) [Fintype (spec.Range t)] (u : spec.Range t) :
-    OracleSpec.IsMeasureSpec.toMeasure t {u} = (Fintype.card (spec.Range t) : ENNReal)⁻¹ :=
-  OracleSpec.IsUniformMeasureSpec.toMeasure_singleton t u
+    OracleSpec.AnswerMeasure.toMeasure t {u} = (Fintype.card (spec.Range t) : ENNReal)⁻¹ :=
+  OracleSpec.UniformAnswerMeasure.toMeasure_singleton t u
 
 set_option synthInstance.maxHeartbeats 2000 in
 -- A reintroduced search loop must fail here rather than eventually succeed (VCVio#772).

@@ -72,7 +72,7 @@ lemma run_nil {t : spec₀.Domain} {seed : QuerySeed spec₀} (h : seed t = []) 
     (eagerRandomOracle t).run seed = (·, seed) <$> ($ᵗ spec₀.Range t) := by
   rw [apply_eq, StateT.run_mk, h]
 
-variable [OracleSpec.IsUniformMeasureSpec spec₀]
+variable [OracleSpec.UniformAnswerMeasure spec₀]
 
 /-- With an empty seed, the eager random oracle reduces to uniform sampling: every query falls
 through to a fresh uniform answer with no state change. -/
@@ -138,7 +138,7 @@ This is the analog of `seededOracle.evalDist_liftComp_generateSeed_bind_simulate
 theorem eagerRandomOracle_evalDist_generateSeed_bind {ι₀ : Type} [DecidableEq ι₀]
     {spec₀ : OracleSpec.{0, 0} ι₀}
     [∀ t : spec₀.Domain, SampleableType (spec₀.Range t)]
-    [OracleSpec.IsUniformMeasureSpec spec₀]
+    [OracleSpec.UniformAnswerMeasure spec₀]
     {α : Type} [MeasurableSpace α] (oa : OracleComp spec₀ α) (qc : ι₀ → ℕ) (js : List ι₀) :
     𝒟[do
       let seed ← generateSeed spec₀ qc js

@@ -30,7 +30,7 @@ namespace ExpectationWP.Probabilistic
 variable (m : Type → Type v) [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
-attribute [local instance] ExpectationWP.Quantitative.instMAlgOrdered
+attribute [local instance] ExpectationWP.Lower.instMAlgOrdered
 
 /-- Subprobability expectations preserve the upper bound one. -/
 theorem μ_one_le {α : Type} (mx : m α) :

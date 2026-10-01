@@ -22,7 +22,7 @@ open scoped Std.WP
 
 open ENNReal OracleSpec OracleComp MeasureTheory
 open OracleComp.ProgramLogic
-open scoped OracleComp.ProgramLogic OracleComp.Quantitative
+open scoped OracleComp.ProgramLogic OracleComp.Lower
 
 run_cmd do
   let env ← Lean.getEnv
@@ -34,7 +34,7 @@ namespace VCVioTest.ProgramLogicGCongr
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
-  [OracleSpec.IsMeasureSpec spec]
+  [OracleSpec.AnswerMeasure spec]
 
 example (P Q : Prop) (h : P → Q) : propInd P ≤ propInd Q := by apply_rw [h]
 

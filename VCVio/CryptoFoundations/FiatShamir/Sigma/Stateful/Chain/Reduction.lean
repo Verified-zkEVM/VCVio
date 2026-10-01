@@ -83,7 +83,7 @@ private lemma verifyFreshComp_expectedQuerySlack_eq_zero [DecidableEq M]
 
 variable [DecidableEq M] [DecidableEq Commit] [SampleableType Chal]
 
-attribute [local instance] instIsUniformMeasureSpecChalSingleton
+attribute [local instance] instUniformAnswerMeasureChalSingleton
 
 private lemma forkLoggedProbImpl_run_bind_verify_eq_simulatedNma_aux
     (simT : Stmt → ProbComp (Commit × Chal × Resp)) (pk : Stmt)

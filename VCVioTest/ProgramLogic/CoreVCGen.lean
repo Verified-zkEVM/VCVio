@@ -6,8 +6,8 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
-public import VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs
+public import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
+public import VCVio.ProgramLogic.Unary.WP.LowerSpecs
 public import VCVio.ProgramLogic.Unary.WP.Coherence
 public import VCVio.ProgramLogic.Unary.HandlerSpecs
 
@@ -17,7 +17,7 @@ public import VCVio.ProgramLogic.Unary.HandlerSpecs
 Each `@[spec]` rule for oracle computations, and each bridge between events and triples, is
 exercised with a bare core `vcgen`:
 
-* structural reading (`open scoped OracleComp.Qualitative`): uniform draws `$ᵗ` and `$[0..n]`,
+* structural reading (`open scoped OracleComp.Necessary`): uniform draws `$ᵗ` and `$[0..n]`,
   `replicate`, `liftComp`, an opaque sub-program through `Spec.ofSupport`, a sum handler lifted to
   a whole simulation into `ProbComp`, and an append-log handler lifted to a whole simulation;
 * events as structural triples: probability one, mass one on `true`, and probability zero;
@@ -80,7 +80,7 @@ example {τ : Type} {superSpec : OracleSpec.{0, 0} τ} [spec ⊂ₒ superSpec] [
 example (keygen : OracleComp spec (ℕ × ℕ)) (hk : ∀ k ∈ support keygen, k.1 ≤ k.2) :
     ⦃ True ⦄ (do let k ← keygen; pure (k.2 - k.1 + k.1) : OracleComp spec ℕ)
       ⦃ fun n => ∃ k ∈ support keygen, n = k.2 ⦄ := by
-  vcgen [OracleComp.Qualitative.Spec.ofSupport keygen]
+  vcgen [OracleComp.Necessary.Spec.ofSupport keygen]
   rename_i hk'
   exact ⟨k, hk', by have := hk k hk'; omega⟩
 
@@ -132,24 +132,24 @@ def agreeProg (α : Type) [SampleableType α] (f : α → ℕ) : ProbComp (ℕ �
 
 example (α : Type) [SampleableType α] (f : α → ℕ) :
     Pr{let p ← agreeProg α f}[p.1 = p.2] = 1 := by
-  rw [OracleComp.Qualitative.prEvent_eq_one_iff_triple]
+  rw [OracleComp.Necessary.prEvent_eq_one_iff_triple]
   vcgen [agreeProg]
   omega
 
 example (α : Type) [SampleableType α] (f : α → ℕ) :
     Pr{let p ← agreeProg α f}[p.1 = p.2] = 1 :=
-  OracleComp.Qualitative.prEvent_eq_one_of_triple (by vcgen [agreeProg]; omega)
+  OracleComp.Necessary.prEvent_eq_one_of_triple (by vcgen [agreeProg]; omega)
 
 example (α : Type) [SampleableType α] (f : α → ℕ) :
     𝒟[(fun p : ℕ × ℕ => decide (p.1 = p.2)) <$> agreeProg α f] {true} = 1 := by
-  rw [OracleComp.Qualitative.evalDist_true_eq_one_iff_triple]
+  rw [OracleComp.Necessary.evalDist_true_eq_one_iff_triple]
   vcgen [agreeProg]
   simp only [decide_eq_true_eq]
   omega
 
 example (α : Type) [SampleableType α] (f : α → ℕ) :
     Pr{let p ← agreeProg α f}[p.1 < p.2] = 0 := by
-  rw [OracleComp.Qualitative.prEvent_eq_zero_iff_triple]
+  rw [OracleComp.Necessary.prEvent_eq_zero_iff_triple]
   vcgen [agreeProg]
   omega
 
@@ -159,9 +159,9 @@ end Bridges
 
 section Quantitative
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [spec.IsMeasureSpec] {α : Type}
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [spec.AnswerMeasure] {α : Type}
 
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 /-- Probability one through two queries. -/
 example (t : spec.Domain) (f : spec.Range t → ℕ) :
@@ -180,14 +180,14 @@ example (β : Type) [SampleableType β] (f : β → ℕ) :
 /-- A named program through `le_prEvent_iff_triple`, with the exact rule on the last draw. -/
 example : (1 : ℝ≥0∞) / 2 ≤ Pr{let b ← ($ᵗ Bool : ProbComp Bool)}[b = true] := by
   rw [le_prEvent_iff_triple]
-  vcgen [OracleComp.Quantitative.Spec.uniformSample_sum]
+  vcgen [OracleComp.Lower.Spec.uniformSample_sum]
   simp
 
 /-- A support-conditioned bind: the continuation's bound on the support of the prefix. -/
 example (gen : OracleComp spec α) (f : α → OracleComp spec Bool) (r : ℝ≥0∞)
     (hf : ∀ k ∈ support gen, ⦃ r ⦄ f k ⦃ predInd (· = true) ⦄) :
     ⦃ r ⦄ (do let k ← gen; f k) ⦃ predInd (· = true) ⦄ := by
-  vcgen [OracleComp.Quantitative.Spec.ofSupport gen]
+  vcgen [OracleComp.Lower.Spec.ofSupport gen]
   exact ‹{a // a ∈ support gen}›.2
 
 /-- A post-processed adversary keeps its success bound. -/
@@ -203,7 +203,7 @@ example (adv : ProbComp α) (win : α → Prop) [DecidablePred win] (r : ℝ≥0
     (hadv : ⦃ r ⦄ adv ⦃ predInd win ⦄) :
     ⦃ 2⁻¹ * r ⦄ (do let a ← adv; let b ← $ᵗ Bool; pure (decide (win a) && b))
       ⦃ predInd (· = true) ⦄ := by
-  vcgen [triple_const_mul 2⁻¹ hadv, OracleComp.Quantitative.Spec.uniformSample_sum]
+  vcgen [triple_const_mul 2⁻¹ hadv, OracleComp.Lower.Spec.uniformSample_sum]
   rename_i a
   by_cases h : win a <;> simp [h, ENNReal.div_eq_inv_mul]
 

@@ -18,9 +18,9 @@ Rewrites:
 - oracle answer-type binders `[∀ t, MeasurableSpace (spec.Range t)]`,
   `[∀ t, DiscreteMeasurableSpace (spec.Range t)]` and `[∀ t, MeasurableSingletonClass …]` are
   deleted, with the `omit … in` and `variable` lines they leave empty;
-- `IsProbabilitySpec` and `IsUniformSpec` binders become `IsMeasureSpec` and
-  `IsUniformMeasureSpec`, and `IsUniformSpec.ofFintypeInhabited` becomes
-  `IsUniformMeasureSpec.ofFiniteNonempty`;
+- `IsProbabilitySpec` and `IsUniformSpec` binders become `AnswerMeasure` and
+  `UniformAnswerMeasure`, and `IsUniformSpec.ofFintypeInhabited` becomes
+  `UniformAnswerMeasure.ofFiniteNonempty`;
 - renamed declarations (`RENAMES`) and removed modules (`MODULES`).
 
 Everything the script cannot rewrite is reported as `path:line: …` with a pointer into
@@ -41,6 +41,15 @@ GUIDE = "docs/agents/probability-migration.md"
 # Declarations renamed between the discrete API and the measure API, keyed by the old name.
 # A chain of renames is recorded by its final name.
 RENAMES: dict[str, str] = {
+    # Answer measures and the reading scopes.
+    "IsUniformMeasureSpec": "UniformAnswerMeasure",
+    "IsMeasureSpec": "AnswerMeasure",
+    "OracleComp.Qualitative": "OracleComp.Necessary",
+    "OracleComp.Angelic": "OracleComp.Possible",
+    "OracleComp.Quantitative": "OracleComp.Lower",
+    "ExpectationWP.Quantitative": "ExpectationWP.Lower",
+    "exp_norm": "expect_arith",
+    "game_rule": "expect_norm, expect_eval",
     # Probability heads.
     "AdvBound.of_tvDist": "AdvBound.of_measureETVDist",
     "AdvBound.of_gameEquiv": "AdvBound.of_evalDistEq",
@@ -219,7 +228,7 @@ RENAMES: dict[str, str] = {
     "evalDist_liftComp_of_evalDist": "evalDist_liftComp_of_evalDistEq",
     "wp_liftComp_of_evalDist": "wp_liftComp_of_evalDistEq",
     # Classes.
-    "IsUniformSpec.ofFintypeInhabited": "IsUniformMeasureSpec.ofFiniteNonempty",
+    "IsUniformSpec.ofFintypeInhabited": "UniformAnswerMeasure.ofFiniteNonempty",
     "GameEquiv": "EvalDistEq",
 }
 
@@ -260,6 +269,13 @@ REPORT_NAMES: dict[str, str] = {
 
 # Modules removed from VCVio, keyed by the old module name.
 MODULES: dict[str, list[str]] = {
+    "VCVio.ProgramLogic.Unary.WP.Qualitative": ["VCVio.ProgramLogic.Unary.WP.Necessary"],
+    "VCVio.ProgramLogic.Unary.WP.QualitativeSpecs":
+        ["VCVio.ProgramLogic.Unary.WP.NecessarySpecs"],
+    "VCVio.ProgramLogic.Unary.WP.Angelic": ["VCVio.ProgramLogic.Unary.WP.Possible"],
+    "VCVio.ProgramLogic.Unary.WP.Quantitative": ["VCVio.ProgramLogic.Unary.WP.Lower"],
+    "VCVio.ProgramLogic.Unary.WP.QuantitativeSpecs": ["VCVio.ProgramLogic.Unary.WP.LowerSpecs"],
+    "VCVio.EvalDist.ProbabilityNotation.Attr": ["VCVio.Prelude.Core"],
     "VCVio.OracleComp.QueryTracking.LoggingOracle":
         ["VCVio.OracleComp.QueryTracking.LoggingOracle.Core"],
     "VCVio.OracleComp.QueryTracking.CountingOracle":
@@ -409,10 +425,10 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'.])NeverFail(?![\w'])", "nothing on `OracleComp`; see *Classes and binders*"),
     (r"EvalDistCompatible", "operational support lemmas; see *Classes and binders*"),
     (r"PFunctor\.IsProbabilitySpec|PFunctor\.IsUniformSpec",
-     "`PFunctor.IsMeasureSpec`; see *Classes and binders*"),
+     "`PFunctor.AnswerMeasure`; see *Classes and binders*"),
     (r"MeasurableSpace\s*\([^\n]*?\.Range\b",
      "answer measures are discrete; see *Classes and binders*"),
-    (r"@(?:OracleSpec\.)?IsUniformMeasureSpec\.ofFiniteNonempty\b",
+    (r"@(?:OracleSpec\.)?UniformAnswerMeasure\.ofFiniteNonempty\b",
      "takes the specification and its `Finite` and `Nonempty` instances only"),
     (r"(?<![\w'.])SPMF(?![\w'])", "`Measure`; see *Notation and definitions*"),
     (r"(?<![\w'])[\w'.]*?(?:evalSPMF|probOutput|probEvent|probFailure|tvDist)_[\w'.]*",
@@ -781,8 +797,8 @@ def delete_answer_binders(text: str) -> str:
 
 
 CLASS_BINDERS = [
-    (re.compile(r"\[\s*(?:OracleSpec\.)?IsProbabilitySpec\s+"), "[OracleSpec.IsMeasureSpec "),
-    (re.compile(r"\[\s*(?:OracleSpec\.)?IsUniformSpec\s+"), "[OracleSpec.IsUniformMeasureSpec "),
+    (re.compile(r"\[\s*(?:OracleSpec\.)?IsProbabilitySpec\s+"), "[OracleSpec.AnswerMeasure "),
+    (re.compile(r"\[\s*(?:OracleSpec\.)?IsUniformSpec\s+"), "[OracleSpec.UniformAnswerMeasure "),
 ]
 
 

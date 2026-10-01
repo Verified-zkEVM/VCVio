@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Expectation
 /-!
 # Selecting the measure interpretation
 
-`open scoped ExpectationWP.Quantitative` makes the expectation interpretation of lawful
+`open scoped ExpectationWP.Lower` makes the expectation interpretation of lawful
 measure semantics, `ExpectationWP.wpMonad` (`VCVio.EvalDist.Expectation`), the core
 weakest-precondition instance of every such monad, so `wp mx post ⊥` and core triples read
 expectations. Its laws are stated on `wp⟦mx⟧ post` in `VCVio.EvalDist.Expectation` and
@@ -27,13 +27,13 @@ open scoped ENNReal
 
 universe v
 
-namespace ExpectationWP.Quantitative
+namespace ExpectationWP.Lower
 
 variable (m : Type → Type v) [Monad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-- Select the ordered expectation algebra of successful-output measures. The scope's priority
 sits above core's direct instances and below the reading scopes of `OracleComp`
-(`OracleComp.Qualitative.Dispatch`, `OracleComp.Angelic`, `OracleComp.Upper`, …), so a reading
+(`OracleComp.Necessary.Dispatch`, `OracleComp.Possible`, `OracleComp.Upper`, …), so a reading
 opened for oracle computations is never outranked by this generic one. -/
 noncomputable scoped instance (priority := 1050) instMAlgOrdered : MAlgOrdered m ℝ≥0∞ :=
   algebra m
@@ -55,4 +55,4 @@ noncomputable scoped instance (priority := 1050) wpInst [LawfulMonad m] {α : Ty
     WP (m α) α ℝ≥0∞ EStack⟨⟩ :=
   (wpMonad m).toWP α
 
-end ExpectationWP.Quantitative
+end ExpectationWP.Lower

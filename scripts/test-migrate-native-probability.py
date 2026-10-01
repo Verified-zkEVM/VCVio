@@ -29,6 +29,16 @@ class EventTests(unittest.TestCase):
         self.assertMigrates("Pr{mx}[= a] = Pr{g <$> my}[(· = (f b, c))]",
                             "Pr{let x ← mx}[x = a] = Pr{let x ← g <$> my}[x = (f b, c)]")
 
+    def test_reading_scopes_and_answer_measures(self):
+        self.assertMigrates(
+            "open scoped OracleComp.Qualitative in\n"
+            "example [OracleSpec.IsMeasureSpec spec] [IsUniformMeasureSpec spec'] : True := by\n"
+            "  exp_norm",
+            "open scoped OracleComp.Necessary in\n"
+            "example [OracleSpec.AnswerMeasure spec] [UniformAnswerMeasure spec'] : True := by\n"
+            "  expect_arith")
+        self.assertMigrates("simp only [game_rule]", "simp only [expect_norm, expect_eval]")
+
     def test_function_events(self):
         self.assertMigrates("Pr[fun x => x.1 = a | mx]", "Pr{let x ← mx}[x.1 = a]")
         self.assertMigrates("Pr[fun x ↦ p x | mx]", "Pr{let x ← mx}[p x]")
@@ -112,7 +122,7 @@ class BinderTests(unittest.TestCase):
         source = (
             "variable {ι : Type} {spec : OracleSpec ι}\n"
             "  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]\n"
-            "  [OracleSpec.IsMeasureSpec spec]\n"
+            "  [OracleSpec.AnswerMeasure spec]\n"
             "\n"
             "omit [∀ t, DiscreteMeasurableSpace (spec.Range t)] in\n"
             "theorem t [∀ t : spec.Domain, MeasurableSpace (spec.Range t)] (x : Nat) : x = x := rfl\n"
@@ -121,7 +131,7 @@ class BinderTests(unittest.TestCase):
         )
         expected = (
             "variable {ι : Type} {spec : OracleSpec ι}\n"
-            "  [OracleSpec.IsMeasureSpec spec]\n"
+            "  [OracleSpec.AnswerMeasure spec]\n"
             "\n"
             "theorem t (x : Nat) : x = x := rfl\n"
             "theorem u : True := trivial\n"
@@ -138,9 +148,9 @@ class BinderTests(unittest.TestCase):
     def test_classes(self):
         out, items = migrate("variable [IsProbabilitySpec spec] [OracleSpec.IsUniformSpec spec']\n"
                              "instance : IsUniformSpec s := IsUniformSpec.ofFintypeInhabited s\n")
-        self.assertEqual(out, "variable [OracleSpec.IsMeasureSpec spec] "
-                              "[OracleSpec.IsUniformMeasureSpec spec']\n"
-                              "instance : IsUniformSpec s := IsUniformMeasureSpec.ofFiniteNonempty s\n")
+        self.assertEqual(out, "variable [OracleSpec.AnswerMeasure spec] "
+                              "[OracleSpec.UniformAnswerMeasure spec']\n"
+                              "instance : IsUniformSpec s := UniformAnswerMeasure.ofFiniteNonempty s\n")
         self.assertTrue(any("Fintype" in msg for _, _, msg in items))
 
 
@@ -182,8 +192,8 @@ class ReportTests(unittest.TestCase):
     def test_answer_instances_are_reported(self):
         source = ("local instance : ∀ q,\n"
                   "    MeasurableSpace (([(pSpec l).Message]ₒ).Range q) := fun _ => ⊤\n"
-                  "instance : IsUniformMeasureSpec s :=\n"
-                  "  @IsUniformMeasureSpec.ofFiniteNonempty _ _ h₁ h₂ _ _\n")
+                  "instance : UniformAnswerMeasure s :=\n"
+                  "  @UniformAnswerMeasure.ofFiniteNonempty _ _ h₁ h₂ _ _\n")
         _, items = migrate(source)
         self.assertEqual(sorted(line for _, line, _ in items), [2, 4])
 

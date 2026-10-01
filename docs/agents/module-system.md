@@ -48,11 +48,11 @@ of the generic handler operations.
 
 Probability semantics are PFunctor-parametric but remain in VCVio: PolyFun is
 domain-independent and should not acquire VCVio's measure policy. The
-`OracleSpec.IsMeasureSpec` name is a definitional abbreviation of
-`PFunctor.IsMeasureSpec` on `spec.toPFunctor` with the discrete σ-algebra on
-answers. `OracleSpec.IsUniformMeasureSpec` is a proposition about those chosen
+`OracleSpec.AnswerMeasure` name is a definitional abbreviation of
+`PFunctor.AnswerMeasure` on `spec.toPFunctor` with the discrete σ-algebra on
+answers. `OracleSpec.UniformAnswerMeasure` is a proposition about those chosen
 measures; it carries no finite or inhabited data, and oracle-level uniform
-interpretations are explicit (`IsUniformMeasureSpec.ofFiniteNonempty`) rather
+interpretations are explicit (`UniformAnswerMeasure.ofFiniteNonempty`) rather
 than derived from finiteness.
 
 Do not add a conversion instance whose target is headed by the reducible

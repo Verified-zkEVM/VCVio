@@ -107,7 +107,7 @@ class LawfulEvalDistSemantics (m : Type u → Type v) [Monad m]
       (mx : m α) (f : α → m β) (hf : Measurable fun x => 𝒟[f x]) :
     𝒟[mx >>= f] = Measure.bind 𝒟[mx] fun x => 𝒟[f x]
 
-@[simp, game_rule]
+@[simp, expect_eval]
 theorem evalDist_pure {m : Type u → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulPureEvalDistSemantics m] {α : Type u} [MeasurableSpace α] (x : α) :
     𝒟[(pure x : m α)] = Measure.dirac x :=

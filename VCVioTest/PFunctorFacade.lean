@@ -25,8 +25,8 @@ namespace VCVioTest.PFunctorFacade
 /-- A one-operation polynomial interface returning one of three directions. -/
 @[expose, reducible] def triPFunctor : PFunctor := ⟨Unit, fun _ => Fin 3⟩
 
-noncomputable instance : triPFunctor.IsMeasureSpec :=
-  PFunctor.IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable instance : triPFunctor.AnswerMeasure :=
+  PFunctor.AnswerMeasure.uniformOfFiniteNonempty _
 
 /-- The direct PFunctor program issuing the three-way operation once. -/
 @[expose]
@@ -57,7 +57,7 @@ example : zeroHandler.postInsert (fun _ _ => some ()) () = some 0 := by
 /-- The oracle presentation of the same Boolean interface. -/
 @[expose, reducible] def boolOracleSpec : OracleSpec (Fin 1) := fun _ => Bool
 
-noncomputable instance : OracleSpec.IsUniformMeasureSpec boolOracleSpec :=
+noncomputable instance : OracleSpec.UniformAnswerMeasure boolOracleSpec :=
   .ofFiniteNonempty _
 
 noncomputable example : EvalDistSemantics (OracleComp boolOracleSpec) := inferInstance
@@ -96,14 +96,14 @@ example (impl : QueryImpl ((spec₁ + spec₂) + spec₃) Id) :
     QueryImpl spec₃ (StateT (List spec₃.Domain) Id) :=
   QueryImpl.appendInputLog (fun t => impl (.inr t))
 
-example [OracleSpec.IsMeasureSpec ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
+example [OracleSpec.AnswerMeasure ((spec₁ + spec₂) + spec₃)] (t : spec₂.Domain)
     (program : OracleComp ((spec₁ + spec₂) + spec₃)
       ((((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))) × Bool)) :
     Pr{let z ← program}[(z : spec₂.Range t × Bool).2 = true] =
       Pr{let z ← program}[(z : spec₂.Range t × Bool).2 = true] := by
   rfl
 
-example [OracleSpec.IsMeasureSpec ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
+example [OracleSpec.AnswerMeasure ((spec₁ + spec₂) + spec₃)] (t : spec₃.Domain)
     (program : OracleComp ((spec₁ + spec₂) + spec₃)
       ((((spec₁ + spec₂) + spec₃).Range (.inr t)) × Bool)) :
     Pr{let z ← program}[(z : spec₃.Range t × Bool).2 = true] =

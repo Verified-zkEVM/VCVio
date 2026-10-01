@@ -25,7 +25,7 @@ namespace VCVioTest.Unpredictability
 section Generic
 
 variable {ι : Type} [DecidableEq ι] [Inhabited ι] {spec : OracleSpec.{0, 0} ι}
-  [IsUniformMeasureSpec spec] [∀ t, Fintype (spec.Range t)]
+  [UniformAnswerMeasure spec] [∀ t, Fintype (spec.Range t)]
 
 /-- The finite-target bound applies to a genuine fresh query over an arbitrary uniform oracle
 specification. The singleton target is reachable by the query at `default`, so this is not
@@ -64,8 +64,8 @@ end Generic
 
 abbrev TestSpec : OracleSpec Bool := Bool →ₒ Fin 4
 
-noncomputable local instance : IsUniformMeasureSpec TestSpec :=
-  IsUniformMeasureSpec.ofFiniteNonempty TestSpec
+noncomputable local instance : UniformAnswerMeasure TestSpec :=
+  UniformAnswerMeasure.ofFiniteNonempty TestSpec
 
 def oneQuery : OracleComp TestSpec Unit := do
   let _ ← (TestSpec.query false : OracleComp TestSpec (Fin 4))

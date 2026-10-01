@@ -73,7 +73,7 @@ private lemma withCachingTrackingPolicy_mono_pair
 
 section measure
 
-variable [IsMeasureSpec spec']
+variable [AnswerMeasure spec']
 
 /-! ## Per-step agreement on good outputs -/
 

@@ -288,7 +288,7 @@ theorem measure_adaptivePrefixRunFrom_le
 
 /-- The adaptive-prefix bound for events under uniform oracle semantics. -/
 theorem prEvent_adaptivePrefixRunFrom_le
-    [DecidableEq ι] [Finite Y] [IsUniformMeasureSpec (ι →ₒ Y)]
+    [DecidableEq ι] [Finite Y] [UniformAnswerMeasure (ι →ₒ Y)]
     (suffix : X → (ι →ₒ Y).QueryLog → OracleComp (ι →ₒ Y) R)
     (continuation : X → OracleComp (ι →ₒ Y) C)
     (win : R → Prop) (targetCount : ℕ → ℕ) (overhead : ℕ)

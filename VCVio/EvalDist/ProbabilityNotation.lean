@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Expectation
-public import VCVio.EvalDist.ProbabilityNotation.Attr
+public import VCVio.Prelude.Core
 public import VCVio.EvalDist.ProbabilityNotation.Elab
 public import VCVio.EvalDist.ProbabilityNotation.Delab
 

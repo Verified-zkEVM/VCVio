@@ -190,7 +190,7 @@ theorem link_inner_congr {μ : Type} {M : OracleSpec μ} {τ : Type}
 section parSum
 
 variable {ι₁ ι₂ : Type u} {I₁ : OracleSpec.{u, 0} ι₁} {I₂ : OracleSpec.{u, 0} ι₂}
-  [OracleSpec.IsUniformMeasureSpec I₁] [OracleSpec.IsUniformMeasureSpec I₂]
+  [OracleSpec.UniformAnswerMeasure I₁] [OracleSpec.UniformAnswerMeasure I₂]
   {ε₁ ε₂ : Type v} {E₁ : OracleSpec.{v, 0} ε₁} {E₂ : OracleSpec.{v, 0} ε₂}
 
 /-- Parallel composition preserves local measure equality of both factors, over uniform import

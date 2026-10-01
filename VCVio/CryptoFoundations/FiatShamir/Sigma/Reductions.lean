@@ -200,8 +200,8 @@ variable [Fintype Chal] [Inhabited Chal]
 
 /-- The replay experiment's challenge oracle answers uniformly; the wrapped specification combines
 it with uniform selection. -/
-noncomputable local instance replayChallengeUniform : IsUniformMeasureSpec (Unit →ₒ Chal) :=
-  IsUniformMeasureSpec.ofFiniteNonempty _
+noncomputable local instance replayChallengeUniform : UniformAnswerMeasure (Unit →ₒ Chal) :=
+  UniformAnswerMeasure.ofFiniteNonempty _
 
 /-- At a fixed statement, combine replay forking with the supported special-soundness
 extractor: whenever both forked transcripts verify at the same target with distinct challenges,

@@ -7,9 +7,9 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.PRFReductions.IdealHandlers
-public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 import VCVio.ProgramLogic.Unary.HandlerSpecs
-import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # PRF Tag/Reader Protocol — Structural `query_bind` Reductions

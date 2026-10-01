@@ -207,8 +207,8 @@ noncomputable def romCRAdvantage [DecidableEq X] [DecidableEq Y]
     [Fintype Y] [Nonempty Y]
     {t : ℕ} (A : BoundedROMCRAdversary X Y t) : ℝ≥0∞ :=
   letI : MeasurableSpace Y := ⊤
-  letI : IsUniformMeasureSpec (ROMHashSpec.cached X Y) :=
-    IsUniformMeasureSpec.ofFiniteNonempty _
+  letI : UniformAnswerMeasure (ROMHashSpec.cached X Y) :=
+    UniformAnswerMeasure.ofFiniteNonempty _
   Pr{let z ← romCRExperiment A}[z.1 = true]
 
 /-- The inner oracle computation of `romCRExperiment`, before `simulateQ`. Lives
@@ -270,7 +270,7 @@ theorem romCRAdvantage_le_birthday [DecidableEq X] [DecidableEq Y] [Fintype Y] [
     [Nonempty Y] {t : ℕ} (A : BoundedROMCRAdversary X Y t) :
     romCRAdvantage A ≤ (((t + 2) * (t + 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card Y) := by
   let : MeasurableSpace Y := ⊤
-  let : IsUniformMeasureSpec (ROMHashSpec.cached X Y) := IsUniformMeasureSpec.ofFiniteNonempty _
+  let : UniformAnswerMeasure (ROMHashSpec.cached X Y) := UniformAnswerMeasure.ofFiniteNonempty _
   change Pr{let z ← romCRExperiment A}[z.1 = true] ≤ _
   rw [romCRExperiment_eq]
   exact (prEvent_mono_of_support _ _ _ (romCRWin_implies_collision A)).trans <|

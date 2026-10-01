@@ -54,8 +54,8 @@ abbrev CMOracle (M : Type) (S : Type) (C : Type) : OracleSpec (M × S) := fun _ 
 
 /-- The commitment oracle samples uniformly in its chosen finite response space. -/
 noncomputable instance {M S C : Type} [Fintype C] [Inhabited C] :
-    OracleSpec.IsUniformMeasureSpec (CMOracle M S C) :=
-  OracleSpec.IsUniformMeasureSpec.ofFiniteNonempty _
+    OracleSpec.UniformAnswerMeasure (CMOracle M S C) :=
+  OracleSpec.UniformAnswerMeasure.ofFiniteNonempty _
 
 variable {M S C : Type} [DecidableEq M] [DecidableEq S] [Fintype C] [Inhabited C]
 

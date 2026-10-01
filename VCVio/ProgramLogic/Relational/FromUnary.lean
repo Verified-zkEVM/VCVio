@@ -7,13 +7,13 @@ Authors: Quang Dao
 module
 
 public import VCVio.ProgramLogic.Relational.Basic
-public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 
 /-!
 # Lifting unary triples to relational couplings
 
 Two `OracleComp` computations that are independently correct, each satisfying a core triple under
-the structural reading (`open scoped OracleComp.Qualitative`), can always be paired via the
+the structural reading (`open scoped OracleComp.Necessary`), can always be paired via the
 product coupling, since every `OracleComp` output measure is a probability measure.
 
 This file provides the "unary → relational" bridge:
@@ -25,7 +25,7 @@ This file provides the "unary → relational" bridge:
 
 Both specialize `relTriple_prod`, which takes `support`-style postconditions: under the structural
 reading, `⦃ True ⦄ oa ⦃ P ⦄` says that every reachable output of `oa` satisfies `P`
-(`OracleComp.Qualitative.wp_iff_forall_support`). Unary facts proved with core `vcgen` compose
+(`OracleComp.Necessary.wp_iff_forall_support`). Unary facts proved with core `vcgen` compose
 into relational arguments (e.g. game-hopping reductions) without redoing the underlying analysis.
 -/
 
@@ -40,7 +40,7 @@ namespace OracleComp.ProgramLogic.Relational
 
 variable {ι₁ : Type u} {ι₂ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
   [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 variable {α β : Type}
 
@@ -49,8 +49,8 @@ product postcondition. -/
 theorem relTriple_prod_of_triple {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {P : α → Prop} {Q : β → Prop} (hP : ⦃ True ⦄ oa ⦃ P ⦄) (hQ : ⦃ True ⦄ ob ⦃ Q ⦄) :
     RelTriple oa ob (fun a b => P a ∧ Q b) :=
-  relTriple_prod ((OracleComp.Qualitative.wp_iff_forall_support oa P).1 (hP.le_wp trivial))
-    ((OracleComp.Qualitative.wp_iff_forall_support ob Q).1 (hQ.le_wp trivial))
+  relTriple_prod ((OracleComp.Necessary.wp_iff_forall_support oa P).1 (hP.le_wp trivial))
+    ((OracleComp.Necessary.wp_iff_forall_support ob Q).1 (hQ.le_wp trivial))
 
 /-- Relational triples are monotone in the postcondition, so a product coupling can be
 weakened to any relation implied by the conjunction of independent postconditions. -/
@@ -69,16 +69,16 @@ private example (x : α) (y : β) :
     RelTriple (pure x : OracleComp spec₁ α) (pure y : OracleComp spec₂ β)
       (fun a b => a = x ∧ b = y) :=
   relTriple_prod_of_triple
-    ⟨fun _ => (OracleComp.Qualitative.wp_iff_forall_support _ _).2 (by simp)⟩
-    ⟨fun _ => (OracleComp.Qualitative.wp_iff_forall_support _ _).2 (by simp)⟩
+    ⟨fun _ => (OracleComp.Necessary.wp_iff_forall_support _ _).2 (by simp)⟩
+    ⟨fun _ => (OracleComp.Necessary.wp_iff_forall_support _ _).2 (by simp)⟩
 
 /-- Smoke test: using `relTriple_of_triple_of_implies` to project a product coupling onto
 any logically weaker relation. -/
 private example (x : α) :
     RelTriple (pure x : OracleComp spec₁ α) (pure x : OracleComp spec₁ α) (EqRel α) :=
   relTriple_of_triple_of_implies (P := fun a => a = x) (Q := fun a => a = x)
-    ⟨fun _ => (OracleComp.Qualitative.wp_iff_forall_support _ _).2 (by simp)⟩
-    ⟨fun _ => (OracleComp.Qualitative.wp_iff_forall_support _ _).2 (by simp)⟩
+    ⟨fun _ => (OracleComp.Necessary.wp_iff_forall_support _ _).2 (by simp)⟩
+    ⟨fun _ => (OracleComp.Necessary.wp_iff_forall_support _ _).2 (by simp)⟩
     (fun _ _ hP hQ => by dsimp [EqRel]; rw [hP, hQ])
 
 end OracleComp.ProgramLogic.Relational

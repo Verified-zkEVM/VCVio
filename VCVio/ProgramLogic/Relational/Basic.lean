@@ -62,7 +62,7 @@ variable {α β γ δ : Type}
 
 section measureSpec
 
-variable [IsMeasureSpec spec₁] [IsMeasureSpec spec₂]
+variable [AnswerMeasure spec₁] [AnswerMeasure spec₂]
 
 /-- Coupling-based semantic relational WP for `OracleComp`: some coupling of the two output
 measures, each observed in the discrete structure on its output type, satisfies `R` almost
@@ -232,7 +232,7 @@ lemma relTriple_symm {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {
 /-- Transport a relational triple across equality in distribution of the left computation. -/
 lemma relTriple_of_evalDistEq_left
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
-    [IsMeasureSpec spec₃]
+    [AnswerMeasure spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {oa' : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
@@ -248,7 +248,7 @@ lemma relTriple_of_evalDistEq_left
 /-- Transport a relational triple across equality in distribution of the right computation. -/
 lemma relTriple_of_evalDistEq_right
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
-    [IsMeasureSpec spec₃]
+    [AnswerMeasure spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {ob' : OracleComp spec₃ β} {R : RelPost α β}
@@ -339,7 +339,7 @@ lemma prEvent_le_of_relTriple {oa : OracleComp spec₁ α} {ob : OracleComp spec
 /-- Transitivity through an intermediate computation related to the left side by `EqRel`. -/
 lemma relTriple_trans_eqRel_left
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
-    [IsMeasureSpec spec₃]
+    [AnswerMeasure spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
@@ -350,7 +350,7 @@ lemma relTriple_trans_eqRel_left
 /-- Transitivity through an intermediate computation related to the right side by `EqRel`. -/
 lemma relTriple_trans_eqRel_right
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
-    [IsMeasureSpec spec₃]
+    [AnswerMeasure spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ β}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
@@ -361,7 +361,7 @@ lemma relTriple_trans_eqRel_right
 /-- Transitivity of equality-relation relational triples through an intermediate computation. -/
 lemma relTriple_trans_eqRel
     {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
-    [IsMeasureSpec spec₃]
+    [AnswerMeasure spec₃]
     [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α} {ob : OracleComp spec₃ α}
     (hleft : RelTriple oa mid (EqRel α)) (hright : RelTriple mid ob (EqRel α)) :
@@ -529,7 +529,7 @@ end measureSpec
 
 section uniformMeasureSpec
 
-variable [IsUniformMeasureSpec spec₁] [IsUniformMeasureSpec spec₂]
+variable [UniformAnswerMeasure spec₁] [UniformAnswerMeasure spec₂]
 
 /-- A coupling with a Dirac first marginal forces the first coordinate, so an almost-sure
 relation holds between that value and every structurally reachable output of the second
@@ -583,7 +583,7 @@ unary support-based logic of the other side. Every reachable output has positive
 uniform response measures, so an almost-sure relation holds on the whole structural support.
 
 The unary sides are the qualitative support readings (`MonadAttach.toWPMonadDemonic`,
-`VCVio/ProgramLogic/Unary/HoarePropTriple.lean`); `open scoped OracleComp.Qualitative` installs
+`VCVio/ProgramLogic/Unary/HoarePropTriple.lean`); `open scoped OracleComp.Necessary` installs
 them. -/
 instance instAnchored :
     @MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) Prop _ _ _
@@ -613,7 +613,7 @@ theorem isCoupling_query_graph (t : spec₁.Domain) {f : spec₁.Range t → spe
       (𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))].map fun a ↦ (a, f a))
       𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))]
       𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] := by
-  have := IsUniformMeasureSpec.nonempty_range (spec := spec₁) t
+  have := UniformAnswerMeasure.nonempty_range (spec := spec₁) t
   let : MeasurableSpace (spec₁.Range t) := ⊤
   have hq : 𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] = uniformOn Set.univ :=
     OracleComp.evalDist_liftM_query_uniform t

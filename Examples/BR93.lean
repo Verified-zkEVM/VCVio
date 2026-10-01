@@ -76,7 +76,7 @@ theorem correct [SampleableType Rand] [DecidableEq M] [AddCommGroup M] (hcorrect
   intro msg
   rw [ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_singleton]
   prvcgen [AsymmEncAlg.correctnessExperiment, br93AsymmEnc_keygen, br93AsymmEnc_encrypt,
-    br93AsymmEnc_decrypt, OracleComp.Qualitative.Spec.ofSupport tdp.keygen]
+    br93AsymmEnc_decrypt, OracleComp.Necessary.Spec.ofSupport tdp.keygen]
   rename_i keys hkeys r
   simp [hcorrect keys.1 keys.2 hkeys r]
 

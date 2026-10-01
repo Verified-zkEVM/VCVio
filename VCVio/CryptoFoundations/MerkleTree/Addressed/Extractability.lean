@@ -55,7 +55,7 @@ def experiment [DecidableEq Address] [DecidableEq Y] {s : Skeleton}
 
 /-- Exact stopping-time ROM extractability bound for complete addressed queries. -/
 theorem rom_bound [DecidableEq Address] [DecidableEq Y] [Fintype Y]
-    [IsUniformMeasureSpec (nodeSpec Address Y)] {s : Skeleton}
+    [UniformAnswerMeasure (nodeSpec Address Y)] {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
@@ -67,7 +67,7 @@ theorem rom_bound [DecidableEq Address] [DecidableEq Y] [Fintype Y]
 
 /-- Unconditional two-endpoint relaxation of `rom_bound`. -/
 theorem rom_bound_coarse [DecidableEq Address] [DecidableEq Y] [Fintype Y]
-    [IsUniformMeasureSpec (nodeSpec Address Y)] {s : Skeleton}
+    [UniformAnswerMeasure (nodeSpec Address Y)] {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
@@ -81,7 +81,7 @@ theorem rom_bound_coarse [DecidableEq Address] [DecidableEq Y] [Fintype Y]
 /-- Birthday-dominant specialization once the total query budget is large enough. -/
 theorem rom_bound_birthday_dominates
     [DecidableEq Address] [DecidableEq Y] [Fintype Y]
-    [IsUniformMeasureSpec (nodeSpec Address Y)] {s : Skeleton}
+    [UniformAnswerMeasure (nodeSpec Address Y)] {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
@@ -96,7 +96,7 @@ theorem rom_bound_birthday_dominates
 /-- Textbook-shaped quadratic corollary under explicit dominance hypotheses. -/
 theorem rom_bound_quadratic
     [DecidableEq Address] [DecidableEq Y] [Fintype Y]
-    [IsUniformMeasureSpec (nodeSpec Address Y)] {s : Skeleton}
+    [UniformAnswerMeasure (nodeSpec Address Y)] {s : Skeleton}
     (addressKey : SkeletonInternalIndex s → Address)
     (𝒜 : MerkleTreeExtractability.Adversary (NodeQuery Address Y) Y s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)

@@ -32,7 +32,7 @@ namespace OracleComp.ProgramLogic.Relational
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α : Type}
 variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-  [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+  [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
 
 section coupling
 

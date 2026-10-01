@@ -210,7 +210,7 @@ lemma multipleBadQueryImpl_step_preserves_bad
     ∀ z ∈ support ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag t) s),
       z.2.2.bad = true := by
   rcases t with tag | tr <;> prvcgen [multipleBadQueryImpl_tag_run, multipleBadQueryImpl_reader_run,
-    Qualitative.Spec.ofSupport (multipleIdealQueryImpl _ s.1)]
+    Necessary.Spec.ofSupport (multipleIdealQueryImpl _ s.1)]
   · rcases r with ⟨_ | _, _⟩ <;> simp [multipleBadAdvance, hbad]
   · exact hbad
 

@@ -14,7 +14,7 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 
 `prrw` proves equalities between the events, expectations or output measures of two programs that
 differ by the order of independent draws or agree after a shared prefix, the program equalities of
-a game hop. `exp_norm` normalizes expectation and indicator arithmetic, and `by_hoare` states a
+a game hop. `expect_arith` normalizes expectation and indicator arithmetic, and `by_hoare` states a
 probability goal as an expectation.
 
 Statements about the outcomes of one program (bounds, probability one, possibility) are core
@@ -108,23 +108,20 @@ elab_rules : tactic
       if ← TacticInternals.Unary.runProbEqAction .congrNoSupport then return
       TacticInternals.Unary.throwPrrwCongrError false
 
-/-- `exp_norm` normalizes expectation / indicator arithmetic in the current goal.
-
-Rewrites using linearity of expectation (`wp_add`, `wp_mul_const`), indicator algebra
-(`propInd_true`, `propInd_false`, `propInd_and`), and standard WP step rules. -/
-macro (name := expNorm) "exp_norm" : tactic =>
+/-- `expect_arith` normalizes expectation / indicator arithmetic in the current goal: the
+normal form (`expect_norm`), the evaluation of loops, queries and uniform draws (`expect_eval`),
+linearity of expectation (`expect_arith`), and the algebra of indicators (`propInd_true`,
+`propInd_false`, `propInd_and`, …). -/
+macro (name := expectArith) "expect_arith" : tactic =>
   `(tactic| simp only [
     propInd_true, propInd_false,
     propInd_and, propInd_eq_ite,
     propInd_not, propInd_le_one,
     propInd,
-    ExpectationWP.wp_add, ExpectationWP.wp_const_mul,
     ExpectationWP.wp_const_of_oracle, OracleComp.ProgramLogic.wp_eq_tsum,
-    ExpectationWP.wp_pure, ExpectationWP.wp_bind,
-    ExpectationWP.wp_map, ExactWPMonad.wp_ite, ExactWPMonad.wp_dite,
     ite_true, ite_false, ite_true, ite_false, dite_true, dite_false,
     one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero,
-    game_rule])
+    expect_norm, expect_eval, expect_arith])
 
 /-- `by_hoare` transforms a probability goal into a quantitative WP goal. -/
 macro (name := byHoare) "by_hoare" : tactic =>

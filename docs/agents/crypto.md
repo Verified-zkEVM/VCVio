@@ -210,7 +210,7 @@ adapter.
 `VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
 seeded and context-fork success bounds as `Pr{…}` bounds on the
 `Option.isSome` event under uniform answer measures
-(`OracleSpec.IsUniformMeasureSpec`). `FiatShamir/Sigma/Fork.lean` specializes the
+(`OracleSpec.UniformAnswerMeasure`). `FiatShamir/Sigma/Fork.lean` specializes the
 replay bound to the managed random-oracle trace, with the measure instances of
 `wrappedSpec` taken as hypotheses so each caller fixes its own discrete answer
 spaces.

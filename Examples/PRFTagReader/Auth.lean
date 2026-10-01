@@ -9,7 +9,7 @@ module
 public import Examples.PRFTagReader.Defs
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 import VCVio.ProgramLogic.Unary.HandlerSpecs
-import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # PRF Tag/Reader Protocol — Authentication

@@ -144,7 +144,7 @@ universe u w
 variable {ι : Type u} {spec : OracleSpec.{u, w + 1} ι}
 
 /-- The AE sequencing API accepts oracle answers and results strictly above `Type 0`. -/
-example [OracleSpec.IsMeasureSpec spec]
+example [OracleSpec.AnswerMeasure spec]
     {α β : Type (w + 1)} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
     (mx : OracleComp spec α) (f : α → OracleComp spec β)
     {event : Set β} (hevent : MeasurableSet event)
@@ -153,7 +153,7 @@ example [OracleSpec.IsMeasureSpec spec]
   evalDist_bind_apply_eq_one_of_ae mx f hevent h
 
 /-- The support characterization also accepts oracle answers and results above `Type 0`. -/
-example [OracleSpec.IsUniformMeasureSpec spec]
+example [OracleSpec.UniformAnswerMeasure spec]
     {α : Type (w + 1)} [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (mx : OracleComp spec α) (p : α → Prop) :
     𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x :=

@@ -23,8 +23,8 @@ open OracleComp OracleSpec
 
 namespace VCVioTest.MerkleTreeExtractability
 
-noncomputable local instance : IsUniformMeasureSpec (InductiveMerkleTree.spec Bool) :=
-  IsUniformMeasureSpec.ofFiniteNonempty (InductiveMerkleTree.spec Bool)
+noncomputable local instance : UniformAnswerMeasure (InductiveMerkleTree.spec Bool) :=
+  UniformAnswerMeasure.ofFiniteNonempty (InductiveMerkleTree.spec Bool)
 
 def repeatedQuery : OracleComp (InductiveMerkleTree.spec Bool) (Bool × Bool) := do
   let first ← ((InductiveMerkleTree.spec Bool).query (false, false) :

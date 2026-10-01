@@ -14,7 +14,7 @@ public import VCVio.ProgramLogic.Tactics.PrVCGen
 
 `prvcgen` states a bound or a probability-one statement about one program as a core triple and
 runs `vcgen` on it; `prrw` rewrites an equality between the probabilities of two programs by bind
-swaps and shared prefixes; `by_hoare` and `exp_norm` state and normalize events as expectations.
+swaps and shared prefixes; `by_hoare` and `expect_arith` state and normalize events as expectations.
 -/
 
 @[expose] public section
@@ -23,7 +23,7 @@ open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic Std.WP
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 universe u
 
@@ -32,7 +32,7 @@ variable {α β γ : Type}
 
 section ProbabilityLowering
 
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 
 /-! ### Probability one
 
@@ -59,7 +59,7 @@ end ProbabilityLowering
 
 section Equalities
 
-variable [∀ t, Countable (spec.Range t)] [OracleSpec.IsMeasureSpec spec]
+variable [∀ t, Countable (spec.Range t)] [OracleSpec.AnswerMeasure spec]
 
 /-! ### Equalities between two programs -/
 
@@ -96,13 +96,13 @@ example {mx : OracleComp spec α} {my : OracleComp spec β}
   exact h x y
 
 example : 𝟙⟦(True : Prop)⟧ * 𝟙⟦(True : Prop)⟧ = (1 : ℝ≥0∞) := by
-  exp_norm
+  expect_arith
 
 end Equalities
 
 section ProbabilityLowering
 
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 
 /-! ### Probability lower bounds -/
 

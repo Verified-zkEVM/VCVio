@@ -8,7 +8,7 @@ module
 
 public import Std.WP
 public import VCVio.Interaction.UC.Runtime
-import VCVio.ProgramLogic.Unary.WP.Qualitative
+import VCVio.ProgramLogic.Unary.WP.Necessary
 
 /-!
 # Hoare triples for the Interaction / UC runtime
@@ -27,7 +27,7 @@ per-step invariant triple to any number of steps by induction on the fuel, with
 Every statement is for an arbitrary monad `m` under an arbitrary `WPMonad m Pred EPred` reading,
 which covers `m = ProbComp` for coin-flip-only protocols and `m = OracleComp superSpec` for
 protocols with a shared random oracle or CRS, under any reading of `OracleComp` such as the
-structural one of `VCVio.ProgramLogic.Unary.WP.Qualitative`.
+structural one of `VCVio.ProgramLogic.Unary.WP.Necessary`.
 -/
 
 public section

@@ -44,7 +44,7 @@ example : Pr{let b ← $ᵗ Bool; let c ← $ᵗ Bool}[(b || c) = (c || b)] = 1 
   prvcgen
   exact Bool.or_comm _ _
 
-example [spec.IsUniformMeasureSpec] (t : spec.Domain) (f : spec.Range t → ℕ) :
+example [spec.UniformAnswerMeasure] (t : spec.Domain) (f : spec.Range t → ℕ) :
     Pr{let u ← (query t : OracleComp spec _); let v ← (query t : OracleComp spec _)}[
       f u + f v = f v + f u] = 1 := by
   prvcgen
@@ -75,7 +75,7 @@ example : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool}[(b || !b) = true] := by
   simp
 
 example : (1 / 2 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool}[b = true] := by
-  prvcgen [OracleComp.Quantitative.Spec.uniformSample_sum]
+  prvcgen [OracleComp.Lower.Spec.uniformSample_sum]
   simp
 
 /-! ## Expectation upper bounds -/
@@ -181,9 +181,9 @@ A triple already stated runs in the reading of its assertion type, and so does t
 
 section Triples
 
-variable [spec.IsMeasureSpec] {α β : Type}
+variable [spec.AnswerMeasure] {α β : Type}
 
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 /-- A quantitative triple: `vcgen` composes the triples of the two programs in the context. -/
 example {oa : OracleComp spec α} {f : α → OracleComp spec β}
@@ -212,7 +212,7 @@ end Triples
 
 section StructuralTriple
 
-open scoped OracleComp.Angelic in
+open scoped OracleComp.Possible in
 /-- A weakest precondition of the angelic reading is continued in it, as `⊤ ⊑ wp …`. -/
 example : Std.WP.wp ($ᵗ Bool : ProbComp Bool) (fun b => b = true) Lean.Order.bot := by
   prvcgen
@@ -279,17 +279,17 @@ example (q : ℕ) : 𝔼{let c ← count q}[(c : ℝ≥0∞)] = q := by
 /-- The averaging rules of both readings, passed together: each half ends in a sum that the
 normal form's `simp` evaluates. -/
 example : Pr{let b ← $ᵗ Bool}[b = true] = 1 / 2 := by
-  prvcgen [OracleComp.Upper.Spec.uniformSample_avg, OracleComp.Quantitative.Spec.uniformSample_sum]
+  prvcgen [OracleComp.Upper.Spec.uniformSample_avg, OracleComp.Lower.Spec.uniformSample_sum]
   all_goals simp
 
 example : Pr{let b ← $ᵗ Bool; let c ← $ᵗ Bool}[(b && c) = true] = 1 / 4 := by
-  prvcgen [OracleComp.Upper.Spec.uniformSample_avg, OracleComp.Quantitative.Spec.uniformSample_sum]
+  prvcgen [OracleComp.Upper.Spec.uniformSample_avg, OracleComp.Lower.Spec.uniformSample_sum]
   all_goals simp [Finset.filter_eq', ENNReal.div_eq_inv_mul, ← ENNReal.mul_inv]
   all_goals norm_num
 
 /-- Without uniform answers the structural bridge for `= 1` does not apply; the equation splits,
 the upper half closes on the indicator's range, and the lower half leaves the event. -/
-example [spec.IsMeasureSpec] (t : spec.Domain) (f : spec.Range t → ℕ) :
+example [spec.AnswerMeasure] (t : spec.Domain) (f : spec.Range t → ℕ) :
     Pr{let u ← (query t : OracleComp spec _); let v ← (query t : OracleComp spec _)}[
       f u + f v = f v + f u] = 1 := by
   prvcgen

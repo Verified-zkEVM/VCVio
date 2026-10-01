@@ -65,7 +65,7 @@ theorem reveal_not_aemeasurable :
 /-- One operation with the coarse two-point answer space. -/
 @[expose, reducible] def coarseSpec : PFunctor.{0, 0} := ⟨Unit, fun _ => CoarseBit⟩
 
-noncomputable instance : coarseSpec.IsMeasureSpec where
+noncomputable instance : coarseSpec.AnswerMeasure where
   toMeasure _ := Measure.dirac ⟨false⟩
   isProbabilityMeasure _ := inferInstance
 
@@ -92,6 +92,6 @@ theorem constant_continuation_lossless :
       Measure.dirac true := by
   rw [FreeM.denote_liftBind (P := coarseSpec) _ _ measurable_const.aemeasurable]
   simp only [FreeM.denote_pure, Measure.bind_const,
-    (IsMeasureSpec.isProbabilityMeasure (P := coarseSpec) ()).measure_univ, one_smul]
+    (AnswerMeasure.isProbabilityMeasure (P := coarseSpec) ()).measure_univ, one_smul]
 
 end VCVioTest.MeasurabilityBoundary

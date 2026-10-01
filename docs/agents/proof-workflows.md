@@ -231,7 +231,7 @@ leaves the support membership:
 ```lean
 -- Goal: ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ fun y => if y = true then 1 else 0 ⦄
 -- with h' : ∀ x ∈ support oa, ⦃ 1 ⦄ f x ⦃ fun y => if y = true then 1 else 0 ⦄
-prvcgen [OracleComp.Quantitative.Spec.ofSupport oa, h']
+prvcgen [OracleComp.Lower.Spec.ofSupport oa, h']
 exact Subtype.property _
 ```
 
@@ -396,8 +396,8 @@ before changing definitions or tactics for eRHL, pRHL, or apRHL.
 ### "typeclass instance problem ... HasQuery spec ?m" or "Monad (OracleQuery spec)"
 After the `HasQuery` cutover, the bare `query t` is `HasQuery.query t` and needs an expected type so Lean can pick the ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form `spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting `OracleQuery.cont`).
 
-### "failed to synthesize ... OracleSpec.IsMeasureSpec spec"
-For `OracleComp spec`, add answer measures with `[OracleSpec.IsMeasureSpec spec]` when you need `𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers and cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec`. `𝒟[...]` also needs a `MeasurableSpace` on the result type.
+### "failed to synthesize ... OracleSpec.AnswerMeasure spec"
+For `OracleComp spec`, add answer measures with `[OracleSpec.AnswerMeasure spec]` when you need `𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.UniformAnswerMeasure spec]` for uniform answers and cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics, install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec`. `𝒟[...]` also needs a `MeasurableSpace` on the result type.
 
 ### Universe mismatch around `SubSpec`
 `OracleComp` has 3 universe parameters, `SubSpec` has 3. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.

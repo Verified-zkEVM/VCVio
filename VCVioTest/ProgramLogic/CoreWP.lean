@@ -38,12 +38,12 @@ section Qualitative
 example {ι : Type} {spec : OracleSpec ι} {α : Type} (oa : OracleComp spec α)
     (post : α → Prop) :
     wp oa post estack⟨⟩ ↔ ∀ a ∈ support oa, post a :=
-  OracleComp.Qualitative.wp_iff_forall_support oa post
+  OracleComp.Necessary.wp_iff_forall_support oa post
 
 end Qualitative
 
 section Quantitative
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 noncomputable example : WPMonad ProbComp ℝ≥0∞ EStack⟨⟩ := inferInstance
 

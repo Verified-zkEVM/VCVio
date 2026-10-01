@@ -25,8 +25,8 @@ open BinaryTree InductiveMerkleTree _root_.MerkleTreeMultiExtractability
 
 abbrev Query := Bool × Bool
 
-noncomputable local instance : IsUniformMeasureSpec (Query →ₒ Bool) :=
-  IsUniformMeasureSpec.ofFiniteNonempty (Query →ₒ Bool)
+noncomputable local instance : UniformAnswerMeasure (Query →ₒ Bool) :=
+  UniformAnswerMeasure.ofFiniteNonempty (Query →ₒ Bool)
 
 /-- Unaddressed Boolean hashes packaged through the query-parametric node interface. -/
 def model : MerkleTreeExtractability.NodeQueryModel Query Unit Bool where

@@ -20,7 +20,7 @@ public import ToMathlib.Data.ENNReal.Gauss
 import VCVio.OracleComp.EvalDist.MeasureSpec
 import VCVio.OracleComp.Constructions.SampleableType.Basic
 import VCVio.ProgramLogic.Unary.HandlerSpecs
-import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # Asymmetric Encryption Schemes: IND-CPA Oracle Games
@@ -271,7 +271,7 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
       (fun _ st' => st'.2 ≤ st.2 + 1) ⊥).1 ?_ st rfl _ _ hp
     vcgen [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
       IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle,
-      Qualitative.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
+      Necessary.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
 
 private lemma IND_CPA_countedChallengeOracle_proj_eq_cached
     (pk : PK)
@@ -518,7 +518,7 @@ lemma IND_CPA_hybridLR_counted_counter_le
       (fun _ st' => st.2 ≤ st'.2) ⊥).1 ?_ st rfl _ _ hp
     vcgen [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge,
       IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle,
-      Qualitative.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
+      Necessary.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
 
 /-- Behavior of the hybrid challenge oracle on a cache miss. -/
 lemma IND_CPA_hybridChallengeOracleLR_counted_run_none

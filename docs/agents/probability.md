@@ -321,7 +321,7 @@ with the uniform oracle interpretation.
 the ordered expectation algebra `ExpectationWP.algebra m` and is exact (PolyFun's
 `ExactWPMonad`). The interpretation is supplied explicitly rather than found by instance search.
 For oracle computations it is the core `WPMonad` instance, and
-`open scoped ExpectationWP.Quantitative` selects it for any other lawful monad, so
+`open scoped ExpectationWP.Lower` selects it for any other lawful monad, so
 `wp mx g ⊥` and core triples read expectations.
 
 The laws in `ExpectationWP` need no measurable structure on the outputs:
@@ -489,8 +489,8 @@ A measure denotation depends on the `MeasurableSpace` selected on its result typ
 blanket measurable-space instance on finite types: `𝒟[…]` asks for one, while `Pr{…}[…]`
 observes the computation through `Prop` and keeps the choice internal.
 
-For the finite-range and fair-coin oracles, `OracleSpec.IsUniformMeasureSpec.unifSpec`
-and `OracleSpec.IsUniformMeasureSpec.coinSpec` are the canonical interpretations.
+For the finite-range and fair-coin oracles, `OracleSpec.UniformAnswerMeasure.unifSpec`
+and `OracleSpec.UniformAnswerMeasure.coinSpec` are the canonical interpretations.
 Their instances apply only to these concrete oracle specifications; other oracle
 specifications require an explicit measure interpretation. `ProbComp.evalDist_uniformFin`
 simplifies a query to `uniformOn Set.univ`, and `ProbComp.prEvent_uniformFin` evaluates a
@@ -509,22 +509,22 @@ Mathlib's `lintegral_fintype`, so all-random game hops need no point-probability
 `ProbComp.evalDist_bind_not_uniformBool` applies the uniform-reindexing law to any
 continuation after complementing a fair bit.
 
-The type classes separate a choice of response measures (`IsMeasureSpec`) from the
-uniformity law (`IsUniformMeasureSpec`), which is a proposition about the chosen measures and
-carries no finiteness data: `IsUniformMeasureSpec.finite_range` and `nonempty_range` recover
+The type classes separate a choice of response measures (`AnswerMeasure`) from the
+uniformity law (`UniformAnswerMeasure`), which is a proposition about the chosen measures and
+carries no finiteness data: `UniformAnswerMeasure.finite_range` and `nonempty_range` recover
 both facts, and a cardinality statement takes `[Fintype (spec.Range t)]` for the query it
-mentions (`IsUniformMeasureSpec.toMeasure_singleton`). A blanket instance from
+mentions (`UniformAnswerMeasure.toMeasure_singleton`). A blanket instance from
 `[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]` would silently choose a
-distribution for an arbitrary oracle, so `IsUniformMeasureSpec.ofFiniteNonempty` is an explicit
+distribution for an arbitrary oracle, so `UniformAnswerMeasure.ofFiniteNonempty` is an explicit
 opt-in and only the concrete `unifSpec` and `coinSpec` instances are global. Structural
 `OracleComp.support` needs neither measure class; a
 positive-mass bridge needs assumptions on the chosen measures.
 
-Oracle answer measures live on the discrete σ-algebra. `OracleSpec.IsMeasureSpec spec` is
-`PFunctor.IsMeasureSpec` at `fun _ => ⊤`, so `IsMeasureSpec.toMeasure t` is a measure on
+Oracle answer measures live on the discrete σ-algebra. `OracleSpec.AnswerMeasure spec` is
+`PFunctor.AnswerMeasure` at `fun _ => ⊤`, so `AnswerMeasure.toMeasure t` is a measure on
 `(spec.Range t, ⊤)`, and statements about oracle computations take no measurable-space
 hypotheses on answer types. Continuous answer measures belong at the `PFunctor.FreeM` level,
-where `PFunctor.IsMeasureSpec` accepts arbitrary measurable structures. The query laws are generic
+where `PFunctor.AnswerMeasure` accepts arbitrary measurable structures. The query laws are generic
 in the measurable structure that observes an answer:
 
 - `evalDist_liftM_query` gives `(toMeasure t).trim le_top`, and `MeasureTheory.trim_eq_self`
@@ -543,8 +543,8 @@ the query has determined `spec`. Handler-level hypotheses (`evalDist_simulateQ_c
 need no measurable structure either. A tactic proof that needs the discrete structure on an answer
 or on a reply-state product declares it with `let : MeasurableSpace (spec.Range t) := ⊤`, using
 `let` because the goal is a proposition. A concrete specification with finite nonempty answers
-takes `IsUniformMeasureSpec.ofFiniteNonempty _` as a local instance on that specification. Sums
-get their instances from `IsMeasureSpec.add` and `IsUniformMeasureSpec.add`, and a local instance
+takes `UniformAnswerMeasure.ofFiniteNonempty _` as a local instance on that specification. Sums
+get their instances from `AnswerMeasure.add` and `UniformAnswerMeasure.add`, and a local instance
 declared on the sum itself would compete with them.
 For oracle-relative possibility, use `OracleComp.reachableWhen possibleOutputs oa`:
 it follows only the query responses in `possibleOutputs`, with pure/query/bind laws
@@ -557,7 +557,7 @@ state-dependent notion must retain the starting state or operation policy.
 `OracleComp.mem_support_iff_evalDist_singleton_pos_of_fullSupport` takes the precise
 full-support condition on each answer measure, without adding a class for that one law.
 `OracleComp.mem_support_iff_evalDist_singleton_pos` discharges it from
-`IsUniformMeasureSpec`; use this bridge when relating structural reachability to
+`UniformAnswerMeasure`; use this bridge when relating structural reachability to
 singleton mass.
 Structural support itself needs no probability interpretation. In particular,
 `OracleComp.support_nonempty` needs only `[∀ t, Nonempty (spec.Range t)]`; counting-oracle support
@@ -1091,9 +1091,9 @@ library proofs got shorter; a set with no library caller is itself a finding.
 
 ## Common Mistakes
 
-1. **Missing probability spec classes**: on `OracleComp spec`, `𝒟[...]` and `Pr{...}[...]` require `[OracleSpec.IsMeasureSpec spec]`, and uniform-answer lemmas `[OracleSpec.IsUniformMeasureSpec spec]`, not just finite, nonempty answer types. Answer measures live on the discrete σ-algebra, so answer types take no `MeasurableSpace` hypotheses. Use `IsUniformMeasureSpec.ofFiniteNonempty spec` as a local instance when a concrete finite spec should answer uniformly. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output; `Pr{...}[...]` does not.
+1. **Missing probability spec classes**: on `OracleComp spec`, `𝒟[...]` and `Pr{...}[...]` require `[OracleSpec.AnswerMeasure spec]`, and uniform-answer lemmas `[OracleSpec.UniformAnswerMeasure spec]`, not just finite, nonempty answer types. Answer measures live on the discrete σ-algebra, so answer types take no `MeasurableSpace` hypotheses. Use `UniformAnswerMeasure.ofFiniteNonempty spec` as a local instance when a concrete finite spec should answer uniformly. `𝒟[...]` additionally needs an ambient `MeasurableSpace` on the output; `Pr{...}[...]` does not.
 
-2. **Carrying duplicate probability instances**: do not add a separate `[OracleSpec.IsMeasureSpec spec]` when `[OracleSpec.IsUniformMeasureSpec spec]` is already in scope. `IsUniformMeasureSpec` extends `IsMeasureSpec`; a second instance can make instance search ambiguous and need not describe the same answer measures.
+2. **Carrying duplicate probability instances**: do not add a separate `[OracleSpec.AnswerMeasure spec]` when `[OracleSpec.UniformAnswerMeasure spec]` is already in scope. `UniformAnswerMeasure` extends `AnswerMeasure`; a second instance can make instance search ambiguous and need not describe the same answer measures.
 
 3. **Using `support` when `finSupport` is needed**: `finSupport mx` requires `[HasEvalFinset m]` and `[DecidableEq α]`, and `finSupport_bind` also `[DecidableEq β]`.
 

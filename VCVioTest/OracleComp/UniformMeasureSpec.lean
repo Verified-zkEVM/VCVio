@@ -39,20 +39,20 @@ spellings of one instance. -/
 
 example : (inferInstance : EvalDistSemantics ProbComp) =
     @OracleComp.instEvalDistSemantics ℕ unifSpec
-      OracleSpec.IsUniformMeasureSpec.unifSpec.toIsMeasureSpec := by
+      OracleSpec.UniformAnswerMeasure.unifSpec.toAnswerMeasure := by
   with_reducible_and_instances rfl
 
-example : (inferInstance : OracleSpec.IsMeasureSpec (unifSpec + coinSpec)) =
-    OracleSpec.IsMeasureSpec.add (spec := unifSpec) coinSpec := by
+example : (inferInstance : OracleSpec.AnswerMeasure (unifSpec + coinSpec)) =
+    OracleSpec.AnswerMeasure.add (spec := unifSpec) coinSpec := by
   with_reducible_and_instances rfl
 
-example : (inferInstance : OracleSpec.IsMeasureSpec (unifSpec + coinSpec)) =
-    (OracleSpec.IsUniformMeasureSpec.add (spec := unifSpec) coinSpec).toIsMeasureSpec := by
+example : (inferInstance : OracleSpec.AnswerMeasure (unifSpec + coinSpec)) =
+    (OracleSpec.UniformAnswerMeasure.add (spec := unifSpec) coinSpec).toAnswerMeasure := by
   with_reducible_and_instances rfl
 
-example : OracleSpec.IsMeasureSpec.toMeasure (spec := coinSpec) () =
+example : OracleSpec.AnswerMeasure.toMeasure (spec := coinSpec) () =
     (uniformOn Set.univ : Measure Bool) :=
-  OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform ()
+  OracleSpec.UniformAnswerMeasure.toMeasure_eq_uniform ()
 
 example : 𝒟[(pure true : OracleComp coinSpec Bool)] = Measure.dirac true := by
   simp

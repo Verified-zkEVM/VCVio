@@ -4,11 +4,11 @@
 
 ### 1. Probability semantics require the right spec class
 
-`evalDist` / `𝒟[…]` and `Pr{…}[…]` on `OracleComp spec` need `[OracleSpec.IsMeasureSpec spec]`, and `𝒟[…]` also needs a `MeasurableSpace` on the result type. Uniform answer measures are `[OracleSpec.IsUniformMeasureSpec spec]`; uniform cardinality lemmas additionally take `[Fintype (spec.Range t)]` for the queries they mention. `unifSpec` and `coinSpec` have global instances. Plain `support` works on arbitrary `OracleComp spec`.
+`evalDist` / `𝒟[…]` and `Pr{…}[…]` on `OracleComp spec` need `[OracleSpec.AnswerMeasure spec]`, and `𝒟[…]` also needs a `MeasurableSpace` on the result type. Uniform answer measures are `[OracleSpec.UniformAnswerMeasure spec]`; uniform cardinality lemmas additionally take `[Fintype (spec.Range t)]` for the queries they mention. `unifSpec` and `coinSpec` have global instances. Plain `support` works on arbitrary `OracleComp spec`.
 
-**Symptom**: "failed to synthesize instance" mentioning `OracleSpec.IsMeasureSpec`, `IsUniformMeasureSpec`, `EvalDistSemantics`, or `MeasurableSpace`.
+**Symptom**: "failed to synthesize instance" mentioning `OracleSpec.AnswerMeasure`, `UniformAnswerMeasure`, `EvalDistSemantics`, or `MeasurableSpace`.
 
-**Fix**: Add `[OracleSpec.IsMeasureSpec spec]` for arbitrary per-query answer measures, or `[OracleSpec.IsUniformMeasureSpec spec]` for uniform answers. Answer measures live on the discrete σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite, nonempty answer types, install a local instance with `IsUniformMeasureSpec.ofFiniteNonempty spec` on that spec; a sum of specs gets its instance from `IsMeasureSpec.add`, so do not declare one on the sum. To convert code written against the removed discrete `Pr[…]` API, see [`probability-migration.md`](probability-migration.md).
+**Fix**: Add `[OracleSpec.AnswerMeasure spec]` for arbitrary per-query answer measures, or `[OracleSpec.UniformAnswerMeasure spec]` for uniform answers. Answer measures live on the discrete σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite, nonempty answer types, install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec` on that spec; a sum of specs gets its instance from `AnswerMeasure.add`, so do not declare one on the sum. To convert code written against the removed discrete `Pr[…]` API, see [`probability-migration.md`](probability-migration.md).
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 
@@ -20,7 +20,7 @@ and do not add `set_option autoImplicit false` in individual files.
 ### 3. `evalDist` is the measure fold; `support` is structural
 
 On `OracleComp spec`, `𝒟[mx]` is the successful-output measure of `PFunctor.FreeM.denote`, the
-recursive fold that composes the answer measures chosen by `[OracleSpec.IsMeasureSpec spec]` with
+recursive fold that composes the answer measures chosen by `[OracleSpec.AnswerMeasure spec]` with
 `Measure.bind`; `PFunctor.FreeM.evalDist_eq_denote` states the identity, which holds by `rfl`.
 `Pr{…}[…]` is the expectation of the event's indicator, core's `wp` under the measure
 interpretation; `prEvent_eq_evalDist_map` identifies it with the mass `𝒟[p <$> mx]` puts on `True`. `support` is PolyFun's
@@ -133,7 +133,7 @@ built with `ofFn` (`unifSpec`, `coinSpec`, `A →ₒ B`) reduce to their answer 
 combines per-branch instances; a specification defined by a `match` on the query keeps a
 per-query instance proved by `cases` (see `cmaSpec`). The spellings `spec.Range t`, `spec t`, and
 `spec.toPFunctor.B t` are one type at reducible transparency, so a hypothesis in any of them
-serves goals in the others. `IsUniformMeasureSpec` is a proposition
+serves goals in the others. `UniformAnswerMeasure` is a proposition
 and derives `finite_range`/`nonempty_range` as theorems, never instances.
 `VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchLibrary.lean` guard all of
 this with heartbeat-bounded canaries and an elaborated-term dependency check.
@@ -191,7 +191,7 @@ support …`: `OracleComp.prEvent_eq_zero_iff`, `OracleComp.prEvent_eq_one_iff`,
 are deliberately **not** `@[grind]`. Their RHS introduces an unbounded support quantifier that
 `grind` Skolemizes into fresh witnesses with no finite grounding, so as default rules they make a
 naive `grind` on a probability goal *saturate and time out* instead of failing fast. They hold
-under `[OracleSpec.IsUniformMeasureSpec spec]`, where every reachable output has positive mass. If
+under `[OracleSpec.UniformAnswerMeasure spec]`, where every reachable output has positive mass. If
 a `grind` proof genuinely needs one, re-supply it: `grind [OracleComp.prEvent_eq_zero_iff]`. The
 directed membership bridges (`support_bind`, `mem_support_bind_iff`,
 `mem_finSupport_iff_mem_support`) stay `@[grind =]`. See the benchmarks
@@ -220,7 +220,7 @@ shared outer bind. `prrw` closes the goal when the swap makes both sides equal, 
 and expectations every form leaves the remaining goal in the normal form of `Pr{…}[…]`
 (`simp only [expect_norm]`), stated with nested expectations. The underlying rewrites are
 `OracleComp.wp_swap` / `OracleComp.evalDist_bind_bind_swap` (countable answer types;
-`_of_uniform` variants under `IsUniformMeasureSpec`) and `wp_congr_of_support`. A multi-draw
+`_of_uniform` variants under `UniformAnswerMeasure`) and `wp_congr_of_support`. A multi-draw
 `Pr{…}[…]` is nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped
 by rewriting under the expectations it is nested in (`conv => arg 2; ext; rw [OracleComp.wp_swap]`);
 a draw written as a bind, `Pr{let y ← mx >>= f}[q y]`, or a literal `wp⟦mx >>= f⟧ g`, is brought
@@ -508,11 +508,11 @@ not reach `wp` on that monad. Pass the interpretation explicitly with dot notati
 `(inst.toWP α).wp x post epost`, as core's `WP.wp` documents
 (`ToMathlib/Control/Monad/Algebra.lean`, `VCVioTest/Foundations.lean`). Every scoped reading
 therefore registers a direct `WP` instance beside its `WPMonad`, and the priorities order the
-scopes: the generic measure scopes (`ExpectationWP.Quantitative.wpInst`,
+scopes: the generic measure scopes (`ExpectationWP.Lower.wpInst`,
 `ExpectationWP.Probabilistic.wpInst`) at `1050`, above core's direct instances; the
-reading scopes of `OracleComp` (`OracleComp.Quantitative`, `Angelic`, `Upper`, `Probabilistic`)
+reading scopes of `OracleComp` (`OracleComp.Lower`, `Possible`, `Upper`, `Probabilistic`)
 at `1100`; their `Dispatch` sub-scopes at `1200`. `OracleComp` has no direct core instance, and
-its global reading is the structural one, reached through core's low-priority derivation; a
+its global reading is the necessary one, reached through core's low-priority derivation; a
 generic scope opened beside an `OracleComp` reading never outranks it
 (`VCVioTest/ProgramLogic/ReadingScopes.lean`). The notations `Pr{…}[…]`, `𝔼{…}[…]` and
 `wp⟦oa⟧ g` spell the measure interpretation for each draw themselves, so a draw in `Option` or
@@ -531,9 +531,9 @@ Mathlib's `⊥`, a different head from the one `simp` lemmas are stated with. Co
 Core Lean's `vcgen` is in scope in every file that imports `VCVio`. It walks `Std.WP` triples
 through the `@[spec]` catalogue, is experimental in v4.35 (acknowledged once for the package in
 `lakefile.lean`), and runs in the reading of `OracleComp` that the file's scopes select:
-`Prop`-valued triples under the global structural reading, such as the handler specifications in
-`Unary/HandlerSpecs.lean`, and lower-bound triples under `open scoped OracleComp.Quantitative`
-(`Unary/WP/QuantitativeSpecs.lean`). It does not lower `Pr{…}[…]` goals, which enter through the
+`Prop`-valued triples under the global necessary reading, such as the handler specifications in
+`Unary/HandlerSpecs.lean`, and lower-bound triples under `open scoped OracleComp.Lower`
+(`Unary/WP/LowerSpecs.lean`). It does not lower `Pr{…}[…]` goals, which enter through the
 bridge lemmas of *Core `vcgen` on oracle computations* in `program-logic.md`.
 
 VCVio's unary tactics are `prvcgen`, which picks the bridge and the reading from the goal and runs
@@ -553,7 +553,7 @@ planner of `rvcgen` (and `time` also that of `prrw normalize`), not core's `vcge
 (`⊓`, `⇨`, `⌜·⌝`, `⊤`, `Lean.Order.iInf`); in the `Prop` reading it also introduces `∀` and `→`.
 Anything else (`∑`, `if`, `∧`) is left as a verification condition as it stands, and in `ℝ≥0∞`
 the programs inside a sum stay unprocessed there. A rule meant to be stepped through states
-its precondition with these connectives, as `OracleComp.Quantitative.Spec.monadLift_query` does
+its precondition with these connectives, as `OracleComp.Lower.Spec.monadLift_query` does
 with `Lean.Order.iInf` and PolyFun's `Spec.guard_OptionT` does with `⊓` and `⇨`. `Lean.Order.iInf`
 takes a `Type`-indexed binder, so a condition such as `a ∈ support oa` is expressed through the
 subtype `{a // a ∈ support oa}`. Exact rules stated as averages (`Spec.uniformSample_sum`) belong
@@ -587,12 +587,12 @@ uses, produce that form from `Pr{…}[…] ≤ ε` (*Transformer stacks* in `pro
 
 Core `vcgen` rebuilds each rule for the interpretation that instance search finds for the
 program's type. A triple of one reading is therefore decomposed only while that reading is the
-highest-priority one: with `OracleComp.Upper` or `OracleComp.Quantitative` opened at file level, a
-structural triple fails to build its rules, and a bridged lower- or upper-bound triple fails with
+highest-priority one: with `OracleComp.Upper` or `OracleComp.Lower` opened at file level, a
+necessary triple fails to build its rules, and a bridged lower- or upper-bound triple fails with
 no scope open. The failure is loud ("failed to synthesize WP …"); no other reading is
 substituted. Each
 reading has a `Dispatch` sub-scope at priority `1200`, with a direct `WP` instance that also
-outranks `ExpectationWP.Quantitative.wpInst`: `open scoped OracleComp.Upper.Dispatch in
+outranks `ExpectationWP.Lower.wpInst`: `open scoped OracleComp.Upper.Dispatch in
 vcgen` runs `vcgen` in that reading whatever the file opens, and `prvcgen` uses these scopes.
 
 ### 39. Readings are installed at the base; a reading constructor at a stack type is not the lift

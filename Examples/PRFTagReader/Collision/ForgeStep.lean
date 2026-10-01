@@ -9,7 +9,7 @@ module
 public import Examples.PRFTagReader.Auth
 public import VCVio.ProgramLogic.Unary.HoareTriple
 import VCVio.ProgramLogic.Unary.HandlerSpecs
-import VCVio.ProgramLogic.Unary.WP.QualitativeSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound, Per-Step Forge Infrastructure

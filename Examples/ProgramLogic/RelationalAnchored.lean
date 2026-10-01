@@ -30,10 +30,10 @@ universe u
 namespace OracleComp.ProgramLogic.AnchoredExamples
 
 open ENNReal MAlgRelOrdered MAlgRelOrdered.Anchored Std.WP
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
-variable [OracleSpec.IsMeasureSpec spec₁] [OracleSpec.IsMeasureSpec spec₂]
+variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
   [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 /-! ## Pure-pure base cases -/

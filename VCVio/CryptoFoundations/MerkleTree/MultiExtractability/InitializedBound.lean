@@ -41,7 +41,7 @@ log-dependent accounting computation. The executable runner still ends in the in
 theorem SequentialCommitter.prEvent_runFromEmptyThen_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (committer : SequentialCommitter Cfg Query Y)
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     (config : Configuration Cfg Address)

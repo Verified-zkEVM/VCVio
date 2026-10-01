@@ -47,9 +47,9 @@ theorem evalDist_simulateQ_congr (impl₁ impl₂ : QueryImpl spec m)
 
 /-- An implementation that denotes each query's configured answer measure, over the discrete
 structure on answers, preserves the output measure of every simulated computation. -/
-theorem evalDist_simulateQ_eq_of_forall [OracleSpec.IsMeasureSpec spec]
+theorem evalDist_simulateQ_eq_of_forall [OracleSpec.AnswerMeasure spec]
     (impl : QueryImpl spec m)
-    (h : ∀ t, @evalDist m _ (spec.Range t) ⊤ (impl t) = OracleSpec.IsMeasureSpec.toMeasure t)
+    (h : ∀ t, @evalDist m _ (spec.Range t) ⊤ (impl t) = OracleSpec.AnswerMeasure.toMeasure t)
     {α : Type} [MeasurableSpace α] (oa : OracleComp spec α) :
     𝒟[simulateQ impl oa] = 𝒟[oa] := by
   induction oa using OracleComp.inductionOn with

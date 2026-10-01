@@ -51,7 +51,7 @@ example {α β : Type*} [MeasurableSpace α] [MeasurableSpace β]
 @[expose, reducible] def gaussSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => ℝ⟩
 
 /-- The operation is answered by a standard Gaussian, a law with no atoms. -/
-noncomputable instance : gaussSpec.IsMeasureSpec where
+noncomputable instance : gaussSpec.AnswerMeasure where
   toMeasure _ := gaussianReal 0 1
   isProbabilityMeasure _ := instIsProbabilityMeasureGaussianReal 0 1
 
@@ -101,8 +101,8 @@ theorem isProbabilityMeasure_denote_shiftedGaussian :
 
 /-- The uniform measure interpretation is an explicit value, not a global instance. -/
 @[instance_reducible]
-noncomputable def explicitCoinMeasureSpec : explicitCoinSpec.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable def explicitCoinMeasureSpec : explicitCoinSpec.AnswerMeasure :=
+  AnswerMeasure.uniformOfFiniteNonempty _
 
 attribute [local instance] explicitCoinMeasureSpec
 
@@ -133,7 +133,7 @@ example : ExpectationWP.RelWP shiftedGaussian shiftedGaussian (· = ·) :=
 /-- An interface with a single operation, answered by a coin flip. -/
 @[expose, reducible] def coinSpec : PFunctor.{0, 0} := ⟨PUnit, fun _ => Bool⟩
 
-noncomputable instance : coinSpec.IsMeasureSpec := IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable instance : coinSpec.AnswerMeasure := AnswerMeasure.uniformOfFiniteNonempty _
 
 /-- A nonzero, branch-sensitive lower bound rules out a vacuous quantitative semantics. -/
 example : (1 : ℝ≥0∞) ≤
@@ -239,7 +239,7 @@ theorem outputMeasure_one_delayedTrue :
     Resumption.outputMeasure 1 delayedTrue = Measure.dirac true := by
   rw [delayedTrue, Resumption.outputMeasure_query_succ (P := coinSpec)]
   rw [Measure.bind_const,
-    (IsMeasureSpec.isProbabilityMeasure (P := coinSpec) PUnit.unit).measure_univ, one_smul]
+    (AnswerMeasure.isProbabilityMeasure (P := coinSpec) PUnit.unit).measure_univ, one_smul]
   exact Resumption.outputMeasure_pure (P := coinSpec) 0 true
 
 /-- The fuel-free returned-output semantics sees the delayed return with total mass one. -/

@@ -219,7 +219,7 @@ jobs:
             echo 'public import FinalValidityAPI'
             echo ''
             echo '#check OracleComp'
-            echo '#check PFunctor.IsMeasureSpec'
+            echo '#check PFunctor.AnswerMeasure'
             echo '#check PFunctor.Handler.preInsert'
             echo ''
             echo '-- A downstream consumer whose oracle responses do not live in `Type 0`.'

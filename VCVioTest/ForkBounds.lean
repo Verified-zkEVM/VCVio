@@ -25,7 +25,7 @@ namespace VCVioTest.ForkBounds
 section seeded
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α : Type}
-  [OracleSpec.IsUniformMeasureSpec spec]
+  [OracleSpec.UniformAnswerMeasure spec]
 
 /-- The seeded forking bound remains directly consumable from another module. -/
 example (main : OracleComp spec α) (qb : ι → ℕ) (js : List ι) (i : ι)
@@ -43,7 +43,7 @@ end seeded
 section replay
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α : Type}
-  [OracleSpec.IsUniformMeasureSpec spec]
+  [OracleSpec.UniformAnswerMeasure spec]
 
 /-- The replay forking bound retains its reachability premise and success-event shape. -/
 example [∀ t, DecidableEq (spec.Range t)]

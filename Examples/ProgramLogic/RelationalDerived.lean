@@ -29,7 +29,7 @@ universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable [∀ t, Finite (spec.Range t)]
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 variable {α β γ : Type}
 
 /-! ## `rel_conseq` / `rel_inline` / `rel_dist` -/

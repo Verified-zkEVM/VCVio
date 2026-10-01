@@ -27,7 +27,7 @@ public section
 
 open MeasureTheory ProbabilityTheory OracleComp PFunctor ProbComp
 open scoped ENNReal
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 namespace VCVioTest.ProbabilityNotation
 

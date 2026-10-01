@@ -27,8 +27,8 @@ measurability obligations while leaving the result space arbitrary.
 
 ## Main definitions
 
-* `PFunctor.IsMeasureSpec` assigns a probability measure to each operation.
-* `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty` assigns the uniform measure to every finite,
+* `PFunctor.AnswerMeasure` assigns a probability measure to each operation.
+* `PFunctor.AnswerMeasure.uniformOfFiniteNonempty` assigns the uniform measure to every finite,
   nonempty answer type.
 * `PFunctor.FreeM.denote` is the measure denoted by a free program.
 
@@ -54,28 +54,28 @@ namespace PFunctor
 The measurable structure on answer types is a separate parameter rather than a field, mirroring
 Mathlib's separation of `MeasurableSpace` from the measures carried on it. Answer types need not
 be discrete. -/
-class IsMeasureSpec (P : PFunctor.{uA, u}) [∀ a, MeasurableSpace (P.B a)] where
+class AnswerMeasure (P : PFunctor.{uA, u}) [∀ a, MeasurableSpace (P.B a)] where
   /-- The distribution of answers to an operation. -/
   toMeasure : (a : P.A) → Measure (P.B a)
   /-- Answering an operation is lossless. -/
   isProbabilityMeasure : ∀ a, IsProbabilityMeasure (toMeasure a)
 
-attribute [instance] IsMeasureSpec.isProbabilityMeasure
+attribute [instance] AnswerMeasure.isProbabilityMeasure
 
 /-- Construct uniform measure semantics from finite, nonempty answer types.
 
 This is deliberately not an instance: measure semantics remain an explicit choice at each use
 site, and are never inferred merely from finiteness. -/
 @[reducible]
-noncomputable def IsMeasureSpec.uniformOfFiniteNonempty (P : PFunctor.{uA, u})
+noncomputable def AnswerMeasure.uniformOfFiniteNonempty (P : PFunctor.{uA, u})
     [∀ a, Finite (P.B a)] [∀ a, Nonempty (P.B a)] [∀ a, MeasurableSpace (P.B a)] :
-    P.IsMeasureSpec where
+    P.AnswerMeasure where
   toMeasure _ := uniformOn Set.univ
   isProbabilityMeasure _ := inferInstance
 
 namespace FreeM
 
-variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec]
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.AnswerMeasure]
   {α : Type v} {β : Type w}
 
 open scoped Classical in
@@ -84,8 +84,8 @@ an unmeasurable continuation denotes zero. Probability-mass preservation require
 noncomputable def denote [MeasurableSpace α] : FreeM P α → Measure α
   | .pure x => Measure.dirac x
   | .liftBind a cont =>
-      if AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a) then
-        Measure.bind (IsMeasureSpec.toMeasure a) fun b => denote (cont b)
+      if AEMeasurable (fun b => denote (cont b)) (AnswerMeasure.toMeasure a) then
+        Measure.bind (AnswerMeasure.toMeasure a) fun b => denote (cont b)
       else 0
 
 @[simp]
@@ -93,22 +93,22 @@ theorem denote_pure [MeasurableSpace α] (x : α) :
     denote (pure x : FreeM P α) = Measure.dirac x := rfl
 
 theorem denote_liftBind [MeasurableSpace α] (a : P.A) (cont : P.B a → FreeM P α)
-    (h : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a)) :
+    (h : AEMeasurable (fun b => denote (cont b)) (AnswerMeasure.toMeasure a)) :
     denote (FreeM.liftBind a cont)
-      = Measure.bind (IsMeasureSpec.toMeasure a) fun b => denote (cont b) := by
+      = Measure.bind (AnswerMeasure.toMeasure a) fun b => denote (cont b) := by
   simp [denote, h]
 
 /-- An unmeasurable operation continuation has zero denotation. -/
 theorem denote_liftBind_of_not_aemeasurable [MeasurableSpace α]
     (a : P.A) (cont : P.B a → FreeM P α)
-    (h : ¬AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a)) :
+    (h : ¬AEMeasurable (fun b => denote (cont b)) (AnswerMeasure.toMeasure a)) :
     denote (FreeM.liftBind a cont) = 0 := by
   simp [denote, h]
 
 /-- A one-operation program denotes its configured answer measure. -/
 @[simp]
 theorem denote_lift (a : P.A) :
-    denote (FreeM.lift a : FreeM P (P.B a)) = IsMeasureSpec.toMeasure a := by
+    denote (FreeM.lift a : FreeM P (P.B a)) = AnswerMeasure.toMeasure a := by
   rw [FreeM.lift, denote_liftBind a pure Measure.measurable_dirac.aemeasurable]
   exact Measure.bind_dirac
 
@@ -120,8 +120,8 @@ automatic; for a genuinely continuous oracle they are precisely the obligations 
 a Mathlib `Kernel`. -/
 theorem isProbabilityMeasure_denote_liftBind [MeasurableSpace α] (a : P.A)
     (cont : P.B a → FreeM P α)
-    (hMeasurable : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a))
-    (hProbability : ∀ᵐ b ∂IsMeasureSpec.toMeasure a,
+    (hMeasurable : AEMeasurable (fun b => denote (cont b)) (AnswerMeasure.toMeasure a))
+    (hProbability : ∀ᵐ b ∂AnswerMeasure.toMeasure a,
       IsProbabilityMeasure (denote (cont b))) :
     IsProbabilityMeasure (denote (FreeM.liftBind a cont)) := by
   rw [denote_liftBind a cont hMeasurable]
@@ -202,7 +202,7 @@ end FreeM
 
 namespace FreeM
 
-variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec]
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.AnswerMeasure]
   {α : Type u}
 
 /-- Every free program denotes a subprobability measure. Measurable continuations preserve the
@@ -213,11 +213,11 @@ theorem denote_apply_univ_le_one [MeasurableSpace α] (program : FreeM P α) :
   | pure _ => simp
   | lift_bind a cont ih =>
       change denote (FreeM.liftBind a cont) Set.univ ≤ 1
-      by_cases h : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a)
+      by_cases h : AEMeasurable (fun b => denote (cont b)) (AnswerMeasure.toMeasure a)
       · rw [denote_liftBind a cont h, Measure.bind_apply MeasurableSet.univ h]
         calc
-          (∫⁻ b, denote (cont b) Set.univ ∂IsMeasureSpec.toMeasure a) ≤
-              ∫⁻ _b, 1 ∂IsMeasureSpec.toMeasure a := lintegral_mono ih
+          (∫⁻ b, denote (cont b) Set.univ ∂AnswerMeasure.toMeasure a) ≤
+              ∫⁻ _b, 1 ∂AnswerMeasure.toMeasure a := lintegral_mono ih
           _ = 1 := by simp
       · simp only [denote_liftBind_of_not_aemeasurable a cont h, Measure.coe_zero,
           Pi.zero_apply, zero_le]
@@ -243,21 +243,21 @@ theorem evalDist_eq_denote [MeasurableSpace α] (program : FreeM P α) :
 /-- A one-operation program denotes its configured answer measure. -/
 @[simp]
 theorem evalDist_lift (a : P.A) :
-    𝒟[(FreeM.lift a : FreeM P (P.B a))] = IsMeasureSpec.toMeasure a :=
+    𝒟[(FreeM.lift a : FreeM P (P.B a))] = AnswerMeasure.toMeasure a :=
   denote_lift a
 
 /-- A one-operation program observed in a coarser measurable structure on its answers denotes the
 configured answer measure trimmed to that structure. -/
 theorem evalDist_lift_of_le (a : P.A) {m : MeasurableSpace (P.B a)}
     (hm : m ≤ ‹∀ a, MeasurableSpace (P.B a)› a) :
-    @evalDist (FreeM P) _ (P.B a) m (FreeM.lift a) = (IsMeasureSpec.toMeasure a).trim hm := by
+    @evalDist (FreeM P) _ (P.B a) m (FreeM.lift a) = (AnswerMeasure.toMeasure a).trim hm := by
   have hid : Measurable[‹∀ a, MeasurableSpace (P.B a)› a, m] (id : P.B a → P.B a) :=
     fun _ hs => hm _ hs
   have hdirac : Measurable[‹∀ a, MeasurableSpace (P.B a)› a]
       (fun b => @Measure.dirac (P.B a) m b) :=
     (@Measure.measurable_dirac _ m).comp hid
   have hcont : AEMeasurable (fun b => @denote P _ _ (P.B a) m (pure b))
-      (IsMeasureSpec.toMeasure a) := by
+      (AnswerMeasure.toMeasure a) := by
     simp only [denote_pure]
     exact hdirac.aemeasurable
   change @denote P _ _ (P.B a) m (FreeM.liftBind a pure) = _
@@ -276,19 +276,19 @@ theorem isProbabilityMeasure_evalDist_lift (a : P.A) :
 
 /-- An operation with an almost everywhere measurable continuation denotes Giry bind. -/
 theorem evalDist_liftBind [MeasurableSpace α] (a : P.A) (cont : P.B a → FreeM P α)
-    (h : AEMeasurable (fun b => denote (cont b)) (IsMeasureSpec.toMeasure a)) :
-    𝒟[FreeM.liftBind a cont] = Measure.bind (IsMeasureSpec.toMeasure a) fun b => 𝒟[cont b] :=
+    (h : AEMeasurable (fun b => denote (cont b)) (AnswerMeasure.toMeasure a)) :
+    𝒟[FreeM.liftBind a cont] = Measure.bind (AnswerMeasure.toMeasure a) fun b => 𝒟[cont b] :=
   denote_liftBind a cont h
 
 /-- Integrating a single operation uses the tower law under AE-measurable continuation and
 valuation hypotheses, including for continuous query answers. -/
 theorem lintegral_evalDist_liftBind [MeasurableSpace α] (a : P.A)
     (cont : P.B a → FreeM P α)
-    (hcont : AEMeasurable (fun b ↦ 𝒟[cont b]) (IsMeasureSpec.toMeasure a))
+    (hcont : AEMeasurable (fun b ↦ 𝒟[cont b]) (AnswerMeasure.toMeasure a))
     {g : α → ENNReal} (hg : AEMeasurable g 𝒟[FreeM.liftBind a cont]) :
     ∫⁻ y, g y ∂𝒟[FreeM.liftBind a cont] =
-      ∫⁻ b, ∫⁻ y, g y ∂𝒟[cont b] ∂IsMeasureSpec.toMeasure a := by
-  have hdenote : AEMeasurable (fun b ↦ denote (cont b)) (IsMeasureSpec.toMeasure a) := by
+      ∫⁻ b, ∫⁻ y, g y ∂𝒟[cont b] ∂AnswerMeasure.toMeasure a := by
+  have hdenote : AEMeasurable (fun b ↦ denote (cont b)) (AnswerMeasure.toMeasure a) := by
     simpa only [evalDist_eq_denote] using hcont
   rw [evalDist_liftBind a cont hdenote] at hg ⊢
   exact Measure.lintegral_bind hcont hg
@@ -300,8 +300,8 @@ theorem evalDist_lift_bind_pure [MeasurableSpace α] (a : P.A) (f : P.B a → α
     𝒟[(FreeM.lift a >>= fun b ↦ pure (f b) : FreeM P α)] =
       (𝒟[(FreeM.lift a : FreeM P (P.B a))]).map f := by
   have hcont : AEMeasurable (fun b => denote (pure (f b) : FreeM P α))
-      (IsMeasureSpec.toMeasure a) := by
-    change AEMeasurable (Measure.dirac ∘ f) (IsMeasureSpec.toMeasure a)
+      (AnswerMeasure.toMeasure a) := by
+    change AEMeasurable (Measure.dirac ∘ f) (AnswerMeasure.toMeasure a)
     exact (Measure.measurable_dirac.comp hf).aemeasurable
   change 𝒟[FreeM.liftBind a (fun b => pure (f b))] = _
   rw [evalDist_liftBind (P := P) a _ hcont, evalDist_lift (P := P)]

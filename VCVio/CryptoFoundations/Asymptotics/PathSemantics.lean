@@ -44,7 +44,7 @@ The all-answers premise is explicit because `StrictPPTWitness` can also describe
 contracts which intentionally exclude some typed replies. A later support-aware theorem may
 weaken it to almost-sure conformance without changing the syntactic definition. -/
 theorem expectedQueryCount_le [∀ position, MeasurableSpace (p.B position)]
-    [p.IsMeasureSpec] [∀ position, DiscreteMeasurableSpace (p.B position)]
+    [p.AnswerMeasure] [∀ position, DiscreteMeasurableSpace (p.B position)]
     (witness : StrictPPTWitness Q bd contract program) (model : contract.Model)
     (hAllows : ∀ position answer, model.resourceModel.allows position answer)
     (value : input) :

@@ -37,7 +37,7 @@ run_cmd do
 
 namespace VCVioTest.PRFTableMeasure
 
-variable [unifSpec.toPFunctor.IsMeasureSpec]
+variable [unifSpec.toPFunctor.AnswerMeasure]
 
 example (hvalue : 𝒟[$ᵗ Bool] = uniformOn Set.univ)
     (htable : 𝒟[$ᵗ (Fin 3 → Bool)] = uniformOn Set.univ)

@@ -223,7 +223,7 @@ lemma run'_bind_query_eq_pop {α : Type u}
 /-- A uniform answer draw lifted into the oracle computation keeps its uniform measure. -/
 private lemma evalDist_liftComp_uniformSample {ι₀ : Type} {spec₀ : OracleSpec ι₀}
     [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
-    [OracleSpec.IsUniformMeasureSpec spec₀] (t : ι₀) [MeasurableSpace (spec₀.Range t)]
+    [OracleSpec.UniformAnswerMeasure spec₀] (t : ι₀) [MeasurableSpace (spec₀.Range t)]
     [DiscreteMeasurableSpace (spec₀.Range t)] :
     𝒟[liftComp ($ᵗ spec₀.Range t) spec₀] = ProbabilityTheory.uniformOn Set.univ :=
   (evalDist_liftComp_uniform _).trans SampleableType.evalDist_uniformSample
@@ -232,7 +232,7 @@ section uniformSeeds
 
 variable {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
   [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
-  [OracleSpec.IsUniformMeasureSpec spec₀]
+  [OracleSpec.UniformAnswerMeasure spec₀]
 
 /-- The lifted seed distribution splits off a uniform head answer at `t` whenever `t` has a
 positive answer count, as `evalDistEq_generateSeed_prependValues` does before lifting. -/

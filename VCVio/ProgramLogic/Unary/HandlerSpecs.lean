@@ -13,7 +13,7 @@ public import VCVio.OracleComp.QueryTracking.CachingOracle
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.SeededOracle
-public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import ToMathlib.Control.WriterT.WP
 
 /-!
@@ -21,7 +21,7 @@ public import ToMathlib.Control.WriterT.WP
 
 Core `Std.WP` Hoare triples for the query-tracking handlers `cachingOracle`, `seededOracle`,
 `loggingOracle`, `countingOracle`, `costOracle`, and `cachingLoggingOracle`, under the
-structural reading of `OracleComp` (`open scoped OracleComp.Qualitative`): a triple
+structural reading of `OracleComp` (`open scoped OracleComp.Necessary`): a triple
 `⦃ pre ⦄ handler t ⦃ post ⦄` says that from every state satisfying `pre`, every reachable
 result and final state satisfy `post`. Core's `StateT` interpretation lifts the structural
 reading to the stateful handlers. The writer handlers read their log as accumulated state:
@@ -32,7 +32,7 @@ reading to the stateful handlers. The writer handlers read their log as accumula
 
 * *Per-query specifications* are proved by core's `vcgen`, which walks each handler body
   (`get`, `match`, the underlying query, `modifyGet`, `tell`) with the query rules of
-  `VCVio.ProgramLogic.Unary.WP.Qualitative` and core's transformer rules. The verification
+  `VCVio.ProgramLogic.Unary.WP.Necessary` and core's transformer rules. The verification
   conditions it leaves are first-order facts about caches, seeds, logs, and counts, closed by
   `grind`. Specifications with a single canonical postcondition are `@[spec]`-tagged.
 * *Composite programs* are handled by `vcgen` from the per-query specifications: the worked
@@ -102,7 +102,7 @@ theorem triple_stateT_iff_forall_support {σ α : Type}
     Std.WP.Triple mx P Q epost ↔
       ∀ s, P s → ∀ a s', (a, s') ∈ support (mx.run s) → Q a s' :=
   Std.WP.Triple.iff.trans <| forall_congr' fun s => imp_congr_right fun _ => by
-    rw [StateT.wp_apply_eq, OracleComp.Qualitative.wp_iff_forall_support]
+    rw [StateT.wp_apply_eq, OracleComp.Necessary.wp_iff_forall_support]
     exact ⟨fun h a s' => h (a, s'), fun h p => h p.1 p.2⟩
 
 /-- A triple for an append-based `WriterT` computation over `OracleComp`, read by
@@ -115,7 +115,7 @@ theorem triple_writerT_iff_forall_support {ω α : Type}
     Std.WP.Triple mx P Q epost ↔
       ∀ s, P s → ∀ a w, (a, w) ∈ support mx.run → Q a (s ++ w) :=
   Std.WP.Triple.iff.trans <| forall_congr' fun s => imp_congr_right fun _ => by
-    rw [WriterT.wpInstOf_apply_eq, OracleComp.Qualitative.wp_iff_forall_support]
+    rw [WriterT.wpInstOf_apply_eq, OracleComp.Necessary.wp_iff_forall_support]
     exact ⟨fun h a w => h (a, w), fun h p => h p.1 p.2⟩
 
 /-- `Monoid` variant of `triple_writerT_iff_forall_support`, read by `WriterT.MonoidWP`: the
@@ -126,7 +126,7 @@ theorem triple_writerT_iff_forall_support_monoid {ω α : Type} [Monoid ω]
     Std.WP.Triple mx P Q epost ↔
       ∀ s, P s → ∀ a w, (a, w) ∈ support mx.run → Q a (s * w) :=
   Std.WP.Triple.iff.trans <| forall_congr' fun s => imp_congr_right fun _ => by
-    rw [WriterT.wp_apply_eq, OracleComp.Qualitative.wp_iff_forall_support]
+    rw [WriterT.wp_apply_eq, OracleComp.Necessary.wp_iff_forall_support]
     exact ⟨fun h a w => h (a, w), fun h p => h p.1 p.2⟩
 
 /-! ## Sum handlers

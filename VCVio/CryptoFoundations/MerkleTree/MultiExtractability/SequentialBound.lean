@@ -149,7 +149,7 @@ executable computation remains `runCommitmentsThen` with the caller's independen
 theorem SequentialCommitter.prEvent_runCommitmentsThen_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (committer : SequentialCommitter Cfg Query Y)
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     {config : Configuration Cfg Address}

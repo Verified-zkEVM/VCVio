@@ -20,7 +20,7 @@ public import PolyFun.Control.Do.Spec
 # Quantitative weakest preconditions
 
 The expectation algebra on `OracleComp spec` is a core `WPMonad` interpretation with `ℝ≥0∞`
-assertions, selected by `open scoped OracleComp.Quantitative`: under it, `wp oa post ⊥`, core
+assertions, selected by `open scoped OracleComp.Lower`: under it, `wp oa post ⊥`, core
 triples and `vcgen` read expectations, with lower-bound triples `pre ≤ wp⟦oa⟧ post`. The
 notations `Pr{…}[…]`, `𝔼{…}[…]` and `wp⟦oa⟧ g` name this interpretation explicitly, so they mean
 the expectation in every scope. The algebra-to-WP bridge and lattice instances come from PolyFun.
@@ -29,7 +29,7 @@ writer layers.
 
 Core selects one interpretation per program type, since its assertion carriers are output
 parameters: the global reading of `OracleComp` is the structural one
-(`OracleComp.Qualitative`), and this scope, like `OracleComp.Upper` and
+(`OracleComp.Necessary`), and this scope, like `OracleComp.Upper` and
 `OracleComp.Probabilistic`, takes precedence while it is open.
 -/
 
@@ -45,7 +45,7 @@ universe u v
 namespace OracleComp.ProgramLogic
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 variable {α β : Type}
 
 /-! ## The expectation algebra -/
@@ -60,12 +60,12 @@ noncomputable def μ (oa : OracleComp spec ℝ≥0∞) : ℝ≥0∞ :=
 
 end OracleComp.ProgramLogic
 
-namespace OracleComp.Quantitative
+namespace OracleComp.Lower
 
 /-! ## `Std.WP.WP` instance for `OracleComp` -/
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 variable {α β : Type}
 
 /-- Core weakest preconditions under the configured oracle answer measures: the expectation
@@ -232,12 +232,12 @@ theorem wp_ReaderT_read {ρ : Type} (post : ρ → ρ → ℝ≥0∞) (epost : E
       (epost := epost)
     r (fun a => post a r)
 
-end OracleComp.Quantitative
+end OracleComp.Lower
 
-namespace OracleComp.Quantitative
+namespace OracleComp.Lower
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 variable {α β : Type}
 
 namespace WriterT
@@ -288,4 +288,4 @@ theorem wp_map {ω : Type} [Monoid ω] (f : α → β)
 
 end WriterT
 
-end OracleComp.Quantitative
+end OracleComp.Lower

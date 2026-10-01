@@ -88,7 +88,7 @@ variable {α β γ δ : Type}
 
 section measureSpec
 
-variable [IsMeasureSpec spec₁] [IsMeasureSpec spec₂]
+variable [AnswerMeasure spec₁] [AnswerMeasure spec₂]
 
 /-! ## Quantitative relational WP rules -/
 
@@ -368,9 +368,9 @@ qualitative `Anchored Prop` instance in `VCVio/ProgramLogic/Relational/Basic.lea
 noncomputable instance instAnchored_eRelWP
     [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)] :
     @MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞ _ _ _
-      OracleComp.Quantitative.instWP OracleComp.Quantitative.instWP _ :=
-  letI := OracleComp.Quantitative.instWP (spec := spec₁)
-  letI := OracleComp.Quantitative.instWP (spec := spec₂)
+      OracleComp.Lower.instWP OracleComp.Lower.instWP _ :=
+  letI := OracleComp.Lower.instWP (spec := spec₁)
+  letI := OracleComp.Lower.instWP (spec := spec₂)
   { rwp_pure_left := fun a y post => eRelWP_pure_left a y post
     rwp_pure_right := fun x b post => eRelWP_pure_right x b post }
 
@@ -467,7 +467,7 @@ end measureSpec
 
 section oracleQuery
 
-variable [IsUniformMeasureSpec spec₁]
+variable [UniformAnswerMeasure spec₁]
   [∀ t, Finite (spec₁.Range t)]
 
 /-- Quantitative lower bound for two oracle queries coupled by a bijection on the range.

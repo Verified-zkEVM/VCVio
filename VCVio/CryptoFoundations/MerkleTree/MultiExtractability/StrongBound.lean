@@ -426,7 +426,7 @@ different residual budget on every supported branch. -/
 private theorem Adversary.prEvent_terminalExecution_le_of_freshTarget
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address}
     (adversary : Adversary Cfg Query Address Y config)
@@ -516,7 +516,7 @@ strong failure event under one shared cached homogeneous random oracle. -/
 theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -567,7 +567,7 @@ paths cost at most `perClaim` yield the explicit verifier overhead
 theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -593,7 +593,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCount
 theorem anyCheckpointDisagreement_rom_bound_uniformShape
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -614,7 +614,7 @@ and terminal opening bound. -/
 theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -647,7 +647,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
 theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds_and_openingCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -680,7 +680,7 @@ theorem. -/
 theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -704,7 +704,7 @@ theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
 theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -728,7 +728,7 @@ theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
 theorem anyCheckpointDisagreement_quadratic_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
     [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)

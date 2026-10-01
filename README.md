@@ -135,7 +135,7 @@ interpretation.
 
 `evalDist` (notation `𝒟[comp]`) exposes the successful-output law as a Mathlib `Measure`; missing
 mass represents failure or nontermination. On `OracleComp spec` it composes the answer measures
-chosen by `[OracleSpec.IsMeasureSpec spec]`; `ProbComp` (i.e. `OracleComp unifSpec`) answers each
+chosen by `[OracleSpec.AnswerMeasure spec]`; `ProbComp` (i.e. `OracleComp unifSpec`) answers each
 query uniformly.
 We introduce notation:
 

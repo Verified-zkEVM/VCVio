@@ -54,7 +54,7 @@ public import VCVio.CryptoFoundations.MacAlg
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
-public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.OracleComp.Constructions.UniformSelectMeasure

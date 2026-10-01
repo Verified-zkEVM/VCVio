@@ -46,7 +46,7 @@ universe u uA
 
 namespace PFunctor.FreeM
 
-variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec] {α β : Type u}
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.AnswerMeasure] {α β : Type u}
   [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
 
 /-! ### A continuation as a Markov kernel -/

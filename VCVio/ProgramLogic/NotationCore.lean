@@ -51,7 +51,7 @@ Unary triples additionally require `open scoped Std.WP`.
 
 open ENNReal OracleSpec OracleComp
 open scoped Std.WP
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 universe u
 
@@ -59,7 +59,7 @@ namespace OracleComp.ProgramLogic
 
 variable {ι₁ : Type u}
 variable {spec₁ : OracleSpec.{u, 0} ι₁}
-  [IsMeasureSpec spec₁]
+  [AnswerMeasure spec₁]
 variable {α β : Type}
 
 /-! ## Convenience predicates -/
@@ -111,7 +111,7 @@ lemma Relational.RelPost.indicator_eq_propInd {α β : Type}
 /-- Almost-sure correctness: `⦃ 𝟙⟦True⟧ ⦄ c ⦃ fun x => 𝟙⟦p x⟧ ⦄` iff
 `Pr{let x ← c}[p x] = 1`. -/
 lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) :
     ⦃ (𝟙⟦True⟧ : ℝ≥0∞) ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ ↔ Pr{let x ← oa}[p x] = 1 := by
   rw [Std.WP.Triple.iff, propInd_true]
@@ -119,7 +119,7 @@ lemma triple_propInd_iff_prEvent_eq_one {ι : Type u} {spec : OracleSpec ι}
 
 /-- Lower-bound event goals are exactly quantitative triples with indicator postconditions. -/
 lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (r : ℝ≥0∞) :
     ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ ↔ r ≤ Pr{let x ← oa}[p x] :=
   Std.WP.Triple.iff
@@ -128,7 +128,7 @@ lemma triple_propInd_iff_le_prEvent {ι : Type u} {spec : OracleSpec ι}
 
 /-- WP of a disjunction indicator is bounded by the sum of individual WP indicators. -/
 theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p q : α → Prop) :
     wp⟦oa⟧ (fun x => 𝟙⟦p x ∨ q x⟧) ≤
         wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) +
@@ -140,7 +140,7 @@ theorem wp_propInd_or_le {ι : Type u} {spec : OracleSpec ι}
 
 /-- Markov inequality: if `a ≤ f x` whenever `p x`, then `a * Pr{let x ← oa}[p x] ≤ E[f | oa]`. -/
 theorem markov_bound {ι : Type u} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (f : α → ℝ≥0∞) (a : ℝ≥0∞) (p : α → Prop)
     (hf : ∀ x, p x → a ≤ f x) :
     a * Pr{let x ← oa}[p x] ≤ wp⟦oa⟧ f := by
@@ -155,7 +155,7 @@ theorem markov_bound {ι : Type u} {spec : OracleSpec ι}
 /-- A triple with precondition `1` and indicator postcondition when the event holds on the
 support. -/
 theorem triple_propInd_of_support {ι : Type u} {spec : OracleSpec ι}
-    [OracleSpec.IsMeasureSpec spec] {α : Type}
+    [OracleSpec.AnswerMeasure spec] {α : Type}
     (oa : OracleComp spec α) (p : α → Prop) (h : ∀ x ∈ support oa, p x) :
     ⦃ (1 : ℝ≥0∞) ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ := by
   refine ⟨?_⟩

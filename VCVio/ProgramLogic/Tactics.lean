@@ -24,7 +24,7 @@ This is the canonical user-facing umbrella import for tactic-based program-logic
 - `VCVio.ProgramLogic.Tactics.Unary` contains `prrw`, which rewrites an equality between the
   probabilities of two programs by bind swaps (`prrw`, `prrw under n`), shared prefixes
   (`prrw congr`, `prrw congr'`) and a bounded search over both (`prrw normalize`), together with
-  `exp_norm` and `by_hoare`.
+  `expect_arith` and `by_hoare`.
 - `VCVio.ProgramLogic.Tactics.Relational` contains relational proof-mode tactics such as
   `rvcstep`, `rvcgen`, `by_equiv`, `rel_dist`, `game_trans`, `by_dist`, and `by_upto`;
   `@[vcspec]` registers a relational rule for their bounded lookup.

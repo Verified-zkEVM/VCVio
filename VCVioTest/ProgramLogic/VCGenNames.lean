@@ -21,7 +21,7 @@ leading token with core's. This file pins that state:
 * `prvcgen` closes quantitative core triples over oracle computations, including `StateT` state
   operations and lifted oracle computations;
 * a bare `vcgen` elaborates core's tactic on `Prop`-valued triples under the structural reading
-  `OracleComp.Qualitative`, with VCVio's tactics imported.
+  `OracleComp.Necessary`, with VCVio's tactics imported.
 -/
 
 public section
@@ -49,9 +49,9 @@ variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
 section Probabilistic
 
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 example (oa : OracleComp spec α) (post : Nat × α → Nat → ℝ≥0∞) :
     ⦃fun s => wp⟦oa⟧ (fun a => post (s, a) (s + 1))⦄

@@ -19,7 +19,7 @@ The structural instrumentation owners are `Tracing.Core`, `CountingOracle.Core`,
 handler machinery; their structural laws need no probability specification. `VCVio.Foundations`
 imports these owners together with the measure semantics.
 
-Enforcement event laws use `Pr{...}[...]` and a chosen `IsMeasureSpec`, with discrete query-answer
+Enforcement event laws use `Pr{...}[...]` and a chosen `AnswerMeasure`, with discrete query-answer
 spaces to interpret arbitrary oracle continuations. They do not require uniform sampling or
 discrete result, budget, or state spaces.
 

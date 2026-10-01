@@ -25,7 +25,7 @@ universe u
 namespace ExpectationWP
 
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
-  [OracleSpec.IsMeasureSpec spec]
+  [OracleSpec.AnswerMeasure spec]
   {α : Type}
 
 /-- A bound on the possible outputs bounds the expectation. -/

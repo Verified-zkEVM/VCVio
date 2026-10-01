@@ -17,7 +17,7 @@ computation, whose assertions are expectations in `ℝ≥0∞`. `vcgen` steps th
 and matches, applies triples of sub-programs found in the local context, and uses the registered
 `@[spec]` rules; a loop takes an invariant, as an explicit rule such as `triple_replicate` or as
 `invariants` for `List.foldlM`. An opaque sub-program is bounded on its support by
-`OracleComp.Quantitative.Spec.ofSupport`.
+`OracleComp.Lower.Spec.ofSupport`.
 -/
 
 @[expose] public section
@@ -26,12 +26,12 @@ open ENNReal OracleSpec OracleComp
 open Lean.Order
 open OracleComp.ProgramLogic
 open scoped OracleComp.ProgramLogic Std.WP
-open scoped OracleComp.Quantitative
+open scoped OracleComp.Lower
 
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [OracleSpec.IsMeasureSpec spec]
+variable [OracleSpec.AnswerMeasure spec]
 variable {α β γ : Type}
 
 /-! ## Binds -/
@@ -75,7 +75,7 @@ example (oa : OracleComp spec α) (f : α → OracleComp spec Bool)
   classical
   have h' (x : α) (hx : x ∈ support oa) : ⦃ 1 ⦄ f x ⦃ fun y => if y = true then 1 else 0 ⦄ := by
     simpa [propInd_eq_ite] using triple_prEvent_eq_one (oa := f x) (p := (· = true)) (h x hx)
-  prvcgen [OracleComp.Quantitative.Spec.ofSupport oa, h']
+  prvcgen [OracleComp.Lower.Spec.ofSupport oa, h']
   exact Subtype.property _
 
 /-! ## Branches -/
@@ -154,8 +154,8 @@ of itself; `Spec.ofSupport` states it for any program. -/
 
 example {oa : OracleComp spec α} {I : ℝ≥0∞} {n : ℕ} :
     ⦃ I ⦄ oa.replicate n ⦃ fun _ => I ⦄ := by
-  prvcgen [OracleComp.Quantitative.Spec.ofSupport (OracleComp.replicate n oa)]
+  prvcgen [OracleComp.Lower.Spec.ofSupport (OracleComp.replicate n oa)]
 
 example {f : α → OracleComp spec β} {l : List α} {I : ℝ≥0∞} :
     ⦃ I ⦄ l.mapM f ⦃ fun _ => I ⦄ := by
-  prvcgen [OracleComp.Quantitative.Spec.ofSupport (l.mapM f : OracleComp spec (List β))]
+  prvcgen [OracleComp.Lower.Spec.ofSupport (l.mapM f : OracleComp spec (List β))]

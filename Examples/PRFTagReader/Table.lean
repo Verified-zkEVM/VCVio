@@ -10,7 +10,7 @@ public import Examples.PRFTagReader.PRFReductions
 public import VCVio.EvalDist.Monad.UniformTable
 public import VCVio.OracleComp.EvalDist.Measure
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
-public import VCVio.ProgramLogic.Unary.WP.Qualitative
+public import VCVio.ProgramLogic.Unary.WP.Necessary
 import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
@@ -133,7 +133,7 @@ lemma idealCacheStep_cache_self {D : Type} [DecidableEq D]
     (r : Digest × (D →ₒ Digest).QueryCache)
     (hr : r ∈ support (idealCacheStep (Digest := Digest) c d)) :
     r.2 d = some r.1 :=
-  ((Qualitative.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c d) r hr).1
+  ((Necessary.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c d) r hr).1
 
 /-- After one `idealCacheStep` at `d`, the resulting cache's domain includes `d`. -/
 lemma idealCacheStep_cache_self_dom {D : Type} [DecidableEq D]
@@ -150,7 +150,7 @@ lemma idealCacheStep_cache_off {D : Type} [DecidableEq D]
     (hr : r ∈ support (idealCacheStep (Digest := Digest) c d))
     (d' : D) (hd' : d' ≠ d) :
     r.2 d' = c d' :=
-  ((Qualitative.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c d) r hr).2 d'
+  ((Necessary.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c d) r hr).2 d'
     (.inl hd')
 
 /-- One `idealCacheStep` at `e` leaves any already-cached cell `d` unchanged. -/
@@ -160,7 +160,7 @@ lemma idealCacheStep_preserves_some {D : Type} [DecidableEq D]
     (hr : r ∈ support (idealCacheStep (Digest := Digest) c e))
     (d : D) (hd : (c d).isSome) :
     r.2 d = c d :=
-  ((Qualitative.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c e) r hr).2 d
+  ((Necessary.forall_mem_support_iff_triple _ _).2 (idealCacheStep_triple c e) r hr).2 d
     (.inr hd)
 
 /-- Folding `idealCacheStep` over `l` leaves any already-cached cell `d` unchanged. -/
@@ -175,7 +175,7 @@ lemma idealCacheMapM_cache_off {D : Type} [DecidableEq D]
   | nil => prvcgen [idealCacheMapM] with finish
   | cons e es ih =>
     prvcgen [idealCacheMapM, idealCacheStep_triple,
-      Qualitative.Spec.ofSupport (idealCacheMapM es _)]
+      Necessary.Spec.ofSupport (idealCacheMapM es _)]
     rename_i h hrs
     rw [ih _ (by rwa [h.2 d (.inr hd)]) rs hrs, h.2 d (.inr hd)]
 
@@ -192,7 +192,7 @@ lemma idealCacheMapM_cache_not_mem {D : Type} [DecidableEq D]
   | cons e es ih =>
     simp only [List.mem_cons, not_or] at hd
     prvcgen [idealCacheMapM, idealCacheStep_triple,
-      Qualitative.Spec.ofSupport (idealCacheMapM es _)]
+      Necessary.Spec.ofSupport (idealCacheMapM es _)]
     rename_i h hrs
     exact (ih _ hd.2 rs hrs).trans (h.2 d (.inl hd.1))
 
@@ -211,7 +211,7 @@ lemma idealCacheMapM_support {D : Type} [DecidableEq D]
   | nil => prvcgen [idealCacheMapM] with finish
   | cons e es ih =>
     prvcgen [idealCacheMapM, idealCacheStep_triple,
-      Qualitative.Spec.ofSupport (idealCacheMapM es _)]
+      Necessary.Spec.ofSupport (idealCacheMapM es _)]
     rename_i a b h hrs
     rw [List.map_cons, ← ih _ rs hrs,
       idealCacheMapM_cache_off es b rs hrs e (Option.isSome_of_eq_some h.1), h.1]

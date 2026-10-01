@@ -306,7 +306,7 @@ theorem measure_onlineAdaptivePrefixRunFrom_logged_le
 /-- The predictable-target bound for events under uniform oracle semantics. -/
 theorem prEvent_onlineAdaptivePrefixRunFrom_logged_le
     [DecidableEq Query] [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) C)
     (win : R → Prop)
@@ -386,7 +386,7 @@ theorem prEvent_onlineAdaptivePrefixRunFrom_logged_le
 /-- Specialization where structural accounting does not depend on the accumulated log. -/
 theorem prEvent_onlineAdaptivePrefixRunFrom_le
     [DecidableEq Query] [Finite Y]
-    [IsUniformMeasureSpec (Query →ₒ Y)]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (suffix : X → (Query →ₒ Y).QueryLog → OracleComp (Query →ₒ Y) R)
     (continuation : X → OracleComp (Query →ₒ Y) C)
     (win : R → Prop)

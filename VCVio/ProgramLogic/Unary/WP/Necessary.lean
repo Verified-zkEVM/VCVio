@@ -17,7 +17,7 @@ The structural core `WPMonad` interpretation quantifies over every structurally 
 output of `OracleComp spec`, independently of a probability interpretation. It is the global
 instance of `OracleComp`, as core's own `Prop`-valued instances are for its monads: a triple
 `⦃ pre ⦄ oa ⦃ post ⦄` with no scope open says that every possible output satisfies `post`. The
-expectation readings are selected by their scopes (`OracleComp.Quantitative`, `OracleComp.Upper`).
+expectation readings are selected by their scopes (`OracleComp.Lower`, `OracleComp.Upper`).
 
 `wp_iff_forall_support` states it against the structural support. Probability-one coherence
 additionally needs the uniform, finite-support assumptions stated in `Unary/WP/Coherence.lean`.
@@ -29,7 +29,7 @@ universe u
 
 open Std.WP
 
-namespace OracleComp.Qualitative
+namespace OracleComp.Necessary
 
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α β : Type}
@@ -58,4 +58,4 @@ theorem Spec.monadLift_query (t : spec.Domain) (post : spec.Range t → Prop)
 -- lifted form in `OracleComp` and through its transformers alike.
 attribute [spec] HasQuery.instOfMonadLift_query
 
-end OracleComp.Qualitative
+end OracleComp.Necessary

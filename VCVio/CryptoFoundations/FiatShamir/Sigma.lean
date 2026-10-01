@@ -410,9 +410,9 @@ theorem perfectlyCorrect [SampleableType Chal]
       (runtime M) := by
   intro msg
   rw [perfectlyCorrect_evalDist_eq σ hr M msg, ← prEvent_eq_evalDist_singleton]
-  prvcgen [OracleComp.Qualitative.Spec.ofSupport hr.gen,
-    OracleComp.Qualitative.Spec.ofSupport (σ.commit _ _),
-    OracleComp.Qualitative.Spec.ofSupport (σ.respond _ _ _ _)]
+  prvcgen [OracleComp.Necessary.Spec.ofSupport hr.gen,
+    OracleComp.Necessary.Spec.ofSupport (σ.commit _ _),
+    OracleComp.Necessary.Spec.ofSupport (σ.respond _ _ _ _)]
   rename_i keys hkeys cm hcm hs
   exact hc.verify _ _ (hr.gen_sound _ _ hkeys) _ _ hcm _ _ hs
 
