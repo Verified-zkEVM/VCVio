@@ -7,6 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.ProgramLogic.Tactics.PrVCGen
+public import VCVio.OracleComp.QueryTracking.WriterCost
 
 /-!
 # `prvcgen`: core `vcgen` on events under the four readings
@@ -415,5 +416,24 @@ error: prvcgen: an existential must be `∃ x ∈ support oa, p x`
 #guard_msgs in
 example : ∃ b : Bool, b = true := by
   prvcgen
+
+/-! ## Expected cost through the run
+
+An expected cost is the expectation of the valued cost of the run (`expectedCost_eq_wp_run`),
+which the upper-bound reading enters through the `WriterT` rules under
+`open scoped WriterT.MonoidWP`: each `tell` along the program is a verification condition on the
+accumulated cost. -/
+
+open scoped WriterT.MonoidWP in
+example : AddWriterT.expectedCost
+    (do
+      AddWriterT.addTell (M := ProbComp) 1
+      let b ← ($ᵗ Bool : ProbComp Bool)
+      if b then AddWriterT.addTell (M := ProbComp) 1
+      pure b : AddWriterT ℕ ProbComp Bool)
+    (fun n => (n : ℝ≥0∞)) ≤ 2 := by
+  rw [AddWriterT.expectedCost_eq_wp_run _ _ Measurable.of_discrete]
+  prvcgen [AddWriterT.addTell]
+  all_goals simp
 
 end VCVioTest.ProgramLogic.PrVCGen
