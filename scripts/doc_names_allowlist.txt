@@ -1,0 +1,20 @@
+# Tokens of the agent guides that `scripts/check-doc-names.py --resolve` may leave unresolved,
+# one per line with an optional `# reason`. An entry that resolves, or is no longer cited, is
+# obsolete and fails the check, so this list only shrinks.
+AlternatingFaceMapComplex.obj # Mathlib example in the module-system guide, outside the import closure
+CURRENT_YEAR # placeholder in the header template of CONTRIBUTING.md
+Experiment # a name part of the security-notion naming convention
+HeapM # core's test synonym, cited from core's own test suite
+TickT # core's test synonym, cited from core's own test suite
+Std.WP.Tactic # upstream namespace of a later toolchain, in the stability note
+WP.trans # upstream rename of a later toolchain, in the stability note
+UpperCamelCase # naming style
+lowerCamelCase # naming style
+snake_case # naming style
+clean_build # workflow input of the scheduled build
+complexity_backend # CI job name
+grandfatheredNativeTrust # constant of scripts/AxiomSweep.lean, outside the proof libraries
+hss_nf # retired argument name of the Fiat–Shamir extraction bounds
+merge_action # GitHub merge-queue event
+merge_queue # GitHub merge-queue event
+query_bind # case name of OracleComp.inductionOn

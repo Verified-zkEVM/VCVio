@@ -34,6 +34,8 @@ Default fast checks (shared with per-PR CI):
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
   - python3 ./scripts/check-reading-citations.py --require-upstream (the source
     citations of docs/reading against the checked-out pins)
+  - scripts/test-docnames.sh, then python3 ./scripts/check-doc-names.py --resolve
+    (the declaration names the guides cite, against the oleans the build produced)
 
 Optional checks:
   --lint    Batteries environment linters, one process per proof library as in CI
@@ -117,6 +119,8 @@ echo "# Checking the agent documentation"
 python3 ./scripts/check-agent-docs.py
 python3 ./scripts/extract-doc-fragments.py --check
 python3 ./scripts/check-reading-citations.py --require-upstream
+bash scripts/test-docnames.sh
+python3 ./scripts/check-doc-names.py --resolve
 
 if (( run_lint )); then
   echo ""

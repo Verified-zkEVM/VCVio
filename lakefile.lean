@@ -697,6 +697,15 @@ lean_exe initsweep where
   root := `InitSweep
   supportInterpreter := true
 
+/-- Resolution of the declaration names the agent documentation cites against the compiled
+environment of the proof libraries: the second half of `scripts/check-doc-names.py`, which
+extracts the tokens and applies `scripts/doc_names_allowlist.txt`. Runtime-imports built
+oleans, so run it after `lake build`. See `scripts/DocNames.lean`. -/
+lean_exe docnames where
+  srcDir := "scripts"
+  root := `DocNames
+  supportInterpreter := true
+
 /-- Isolated fixtures for the init-sweep ratchet, exercised by `scripts/test-initsweep.sh`.
 Not a default target, and deliberately carrying the spellings of the instance that motivated
 the gate: the plain one, the `noncomputable` one that looks like a fix and is not, the named

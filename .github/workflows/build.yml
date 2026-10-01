@@ -398,6 +398,12 @@ jobs:
         run: ./scripts/test-initsweep.sh
       - name: Init sweep
         run: lake exe initsweep --check
+      # The guides cite declarations by name; `lake exe docnames` resolves every cited name
+      # against the oleans the build above produced, and the fixtures show the gate can fail.
+      - name: Test the documentation name checker
+        run: bash scripts/test-docnames.sh
+      - name: Check documentation names
+        run: python3 scripts/check-doc-names.py --resolve
       # `lake test` runs the `test` script from `lakefile.lean`: it builds the three test
       # libraries (every module reachable from `VCVioTest.lean`, the Lean-only lattice helpers
       # and vectors, the SLH-DSA canaries) and runs the smoke test and the SLH-DSA test
