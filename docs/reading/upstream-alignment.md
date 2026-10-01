@@ -25,8 +25,9 @@ little else as it can get away with.**
 
 ## Method, and how to repeat it
 
-The original survey recorded source checks at the revisions below. File/line citations,
-usage counts, and the area surveys describe that snapshot; they are not current inventories.
+The original survey recorded source checks at the revisions below. Usage counts and the area
+surveys describe that snapshot and are not current inventories; file/line citations are kept
+resolvable at the current pins (see the re-verification note after the table).
 The status table at the end records subsequent integration. Current agent guides take
 precedence for implementation policy. A name is a hypothesis; inspect the declaration and
 compile a client before adopting it. A negative keyword search records what was searched,
@@ -47,6 +48,13 @@ necessarily newer than the pin (check `bin/lean --version`); an API found on `ma
 absent from a release tag must not be assigned to a future release without checking that tag; and an
 instance-providing module can be load-bearing with zero textual references, so "unused"
 needs an instance-synthesis check, not a grep.
+
+Re-verified 2026-10-01 at the current pins — Lean `v4.35.0-rc3`, Mathlib `c55e6e78`
+(`v4.35.0-rc3`), Batteries `3b7c8101`, cslib `a91aaaf9` (`v4.35.0-rc3`), PolyFun `e01481ca`, and
+VCVio's `measure-probability` branch (#821): every `K:path:line` citation in this file resolves
+in those trees, which `scripts/check-reading-citations.py` checks in `validate.sh` and in the
+*Agent Docs* workflow. A location whose target was removed or moved since the original survey is
+written without the tree prefix as a *snapshot* location, with its current disposition beside it.
 
 ## Ledger
 
@@ -256,12 +264,15 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
 **Idioms VCVio fights.**
 - *Factor order at every bridge.* `lintegral_countable'` (`M:…/Lebesgue/Countable.lean:121`)
   yields `∑' a, f a * μ {a}` (mass right); VCVio's normal form is `Pr[= x | mx] * g x` (mass left),
-  so every bridge proof ends in `tsum_congr fun _ => mul_comm` (`V:VCVio/EvalDist/Defs/Measure.lean:215`,
-  `V:VCVio/EvalDist/ExpectationMeasure.lean:66`, `V:ToMathlib/Probability/ProbabilityMassFunction/Measure.lean:63`).
+  so every bridge proof ends in `tsum_congr fun _ => mul_comm` (snapshot `VCVio/EvalDist/Defs/Measure.lean:215`,
+  `VCVio/EvalDist/ExpectationMeasure.lean:66`, `ToMathlib/Probability/ProbabilityMassFunction/Measure.lean:63`;
+  **done** — the `SPMF` layer and its bridges are gone, `𝒟` is primitive).
   One local `lintegral_countable'_comm` closes them by `simp`.
 - *`ite` vs `Set.indicator`.* Mathlib's dirac normal form is `dirac_apply' : dirac a s = s.indicator 1 a`
-  (`M:MeasureTheory/Measure/Dirac.lean:44`); VCVio's is `if x = y then 1 else 0`.
-  `probEvent_eq_tsum_indicator`/`_ite` (`V:VCVio/EvalDist/Defs/Basic.lean:250,262`) already carry both.
+  (`M:MeasureTheory/Measure/Dirac/Def.lean:38`); VCVio's is `if x = y then 1 else 0`.
+  `probEvent_eq_tsum_indicator`/`_ite` (snapshot `VCVio/EvalDist/Defs/Basic.lean:250,262`) carried both;
+  today an event is `wp⟦mx⟧ (predInd p)` and `OracleComp.wp_eq_tsum`
+  (`V:VCVio/OracleComp/EvalDist/Sum.lean:73`) is its sum form.
 - *Side conditions.* `Measure.map_apply`/`bind_apply` need `Measurable`/`MeasurableSet`; on discrete
   types these are `Measurable.of_discrete`/`MeasurableSet.of_discrete`, which VCVio invokes by hand
   33× while `fun_prop` (which `Measurable.of_discrete` is tagged for, `M:…/MeasurableSpace/Defs.lean:561`)
@@ -286,7 +297,8 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    (`:298`), `probEvent_coord_mPi` (`:314`) from `Measure.pi_pi` (`:290`), and "independent"/"same
    distribution" can be phrased with `IndepFun` (`M:Probability/Independence/Basic.lean:144`;
    `indepFun_iff_map_prod_eq_prod_map_map` `:703` is `probOutput_seq_map_prod_mk_eq_mul`
-   `V:VCVio/EvalDist/Prod.lean:91` in measure form), `HasLaw` (`M:Probability/HasLaw.lean:39`) and
+   snapshot `VCVio/EvalDist/Prod.lean:91`; today `evalDist_mOfFn`,
+   `V:VCVio/EvalDist/IndepProductMeasure.lean:42`, in measure form), `HasLaw` (`M:Probability/HasLaw.lean:39`) and
    `IdentDistrib` (`M:Probability/IdentDistrib.lean:71`) — all three have 0 uses in VCVio.
    The uniform-on-product laws also use Mathlib's `ProbabilityTheory.uniformOn_pi`
    (`M:Probability/UniformOn.lean:226`); Fischlin's small-sum proof now counts its target set
@@ -295,7 +307,8 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    (`V:VCVio/EvalDist/Expectation.lean:49–85`) via `lintegral_bind` (`M:…/GiryMonad.lean:285`),
    `lintegral_map` (`M:…/Lebesgue/Map.lean:27`), `lintegral_mono` (`M:…/Lebesgue/Basic.lean:84`),
    `lintegral_add_left` (`M:…/Lebesgue/Add.lean:314`), `lintegral_const` (`:110`); and the Markov
-   bound `probEvent_le_tsum_probOutput_mul_cost` (`V:VCVio/EvalDist/Defs/Basic.lean:898`), which is
+   bound `probEvent_le_tsum_probOutput_mul_cost` (snapshot `VCVio/EvalDist/Defs/Basic.lean:898`; today
+   `tsum_prEvent_mul_le_add_of_le`, `V:VCVio/OracleComp/EvalDist/Sum.lean:136`), which is
    `meas_le_lintegral₀` (`M:…/Lebesgue/Markov.lean:61`) on the nose. Duplicate, do not replace: the
    `tsum` forms are generic over `[MonadLiftT m SPMF]`.
 3. Event algebra on the `𝒟` side: `probEvent_or_le` ↔ `measure_union_le`
@@ -304,11 +317,13 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    (`M:…/MeasureSpace.lean:157`), `probEvent_mono` ↔ `measure_mono`.
 4. `evalDist_bind_const`/`evalDist_map_const` from `Measure.bind_const` (`M:…/GiryMonad.lean:258`)
    and `Measure.map_const` (`M:…/Dirac.lean:91`): one-liners, absent today
-   (`probOutput_bind_const` `V:VCVio/EvalDist/Monad/Basic.lean:432` is their `Pr` shadow).
+   (`evalDist_bind_const` `V:VCVio/EvalDist/Defs/Measure/Core.lean:207` is their `𝒟` form).
 5. Conditional probability is `ProbabilityTheory.cond` (`M:Probability/ConditionalProbability.lean:76`,
    `cond_apply` `:216`, Bayes `cond_mul_eq_inter` `:264`, total probability `cond_add_cond_compl_eq`
    `:268`): the hand-rolled divide-by-`Pr` family (`probEvent_bind_congr_div_const`
-   `V:VCVio/EvalDist/Monad/Basic.lean:413`) and the Σ-protocol comment
+   snapshot `VCVio/EvalDist/Monad/Basic.lean:413`; gone with the `SPMF` layer, nothing divides by a
+   probability today, and `ProbabilityTheory.cond` is the route for a posterior statement) and the
+   Σ-protocol comment
    (`V:VCVio/CryptoFoundations/SigmaProtocol.lean:220–227`, "avoids conditional probability").
 6. Upstream the local `Option` and `Except` coproduct measurable embeddings
    (`V:ToMathlib/MeasureTheory/MeasurableSpace/{Option,Except}.lean`). They now prove
@@ -318,16 +333,17 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
    (`Mathlib/MeasureTheory/Measure/Restrict.lean`), via `Option.measurableEmbedding_some`.
    The remaining work here is to move
    these generally useful constructions upstream and then delete the local copies.
-7. Hypothesis hygiene: bind laws (`V:VCVio/EvalDist/Defs/Measure.lean:85`,
+7. Hypothesis hygiene: bind laws (`V:VCVio/EvalDist/Defs/Measure/Core.lean:122`,
    `V:VCVio/EvalDist/PFunctorMeasure/Core.lean:133`) ask `Measurable`, Mathlib's
    `bind_apply`/`bind_bind`/`lintegral_bind` ask `AEMeasurable`; `Measure.toSPMF`
    (`V:…/Defs/Measure.lean:236`) takes `hμ : μ univ ≤ 1` where the class exists and Mathlib's
    `Measure.toPMF` takes `[IsProbabilityMeasure μ]`; `SPMF.toMeasure_bind` (`:205`) needs countability
    on both sides only because it goes through `ext_of_singleton`.
-8. Bind-swap `evalSPMF_bind_bind_swap` (`V:VCVio/EvalDist/Monad/Basic.lean:885`) is `PMF.bind_comm`
+8. Bind-swap `evalDist_bind_bind_swap` (`V:VCVio/EvalDist/Monad/Measure.lean:67`) is `PMF.bind_comm`
    (`M:…/Monad.lean:144`) through `SPMF.toPMF_bind`, or Tonelli `lintegral_lintegral_swap`.
 9. Discrete density normal form `𝒟[mx] = Measure.count.withDensity (Pr[= · | mx])` (generalising
-   `V:ToMathlib/Probability/ProbabilityMassFunction/RadonNikodym.lean:49`), the form in which
+   snapshot `ToMathlib/Probability/ProbabilityMassFunction/RadonNikodym.lean:49`, gone with `PMF`; the
+   Rényi layer is stated on measures, `V:ToMathlib/Probability/Divergence/Renyi.lean`), the form in which
    `Measure.rnDeriv`, `klDiv_eq_lintegral_klFun` (`M:InformationTheory/KullbackLeibler/Basic.lean:119`)
    and the local Rényi MGF compute. `Measure.sum_smul_dirac` (`M:…/Dirac.lean:138`) and
    `Measure.ext_of_singleton` (`:111`) are the companion normal form; `Measure.sum` has 0 uses.
@@ -337,10 +353,12 @@ favour of the measures `Ber(x,y,p)` / `Bin(n,p)` (`M:Probability/Distributions/{
     `IsDeterministic`, `boolKernel`, `Kernel.ext_fun` (`M:…/Kernel/Defs.lean:255`, the kernel form of
     `evalSPMF_ext`). Moments (`mgf`, `cgf`, `evariance`, Chernoff, `Measure.tilted`,
     `M:Probability/Moments/*`) have 0 uses; `renyiMGF` is a Hellinger integral, `tilted` its companion.
-11. Cauchy–Schwarz in `V:VCVio/EvalDist/Inequalities.lean:70` rests on the local
+11. **Done:** Cauchy–Schwarz (snapshot `VCVio/EvalDist/Inequalities.lean:70`) rested on a local
     `ENNReal.sq_tsum_le_tsum_sq`; Mathlib's `ENNReal.lintegral_mul_le_Lp_mul_Lq`
     (`M:MeasureTheory/Integral/MeanInequalities.lean:24`) at `p = q = 2` against `𝒟[mx]` is the
-    upstream form and drops the `∑' w ≤ 1` hypothesis.
+    upstream form and drops the `∑' w ≤ 1` hypothesis; it is what
+    `V:ToMathlib/MeasureTheory/Integral/Quadratic.lean:33` uses, and the local lemma
+    (`V:ToMathlib/Analysis/MeanInequalities.lean:48`) specializes it to the counting measure.
 
 Executable rational sampling uses upstream `Measure.dirac`, measure addition/scaling, and Giry
 bind in `ToMathlib.ProbabilityTheory.FinRatPMF.Measure`. Finite uniform sampling is identified
@@ -475,9 +493,9 @@ coherence theorems state the needed probability assumptions. PolyFun supplies th
 Mathlib-to-core lattice bridge and the restricted-carrier construction.
 
 **Integration candidates (ranked).**
-1. `V:ToMathlib/Control/Monad/Indexed.lean` is a verbatim copy of `PolyFun/Control/Monad/Indexed.lean`
-   (`ireturn`↔`ipure` rename only); both declare a root-namespace `class IndexedMonad`. Delete the copy,
-   import PolyFun's from `Graded.lean`.
+1. **Done:** `ToMathlib/Control/Monad/Indexed.lean` was a verbatim copy of `PolyFun/Control/Monad/Indexed.lean`
+   (`ireturn`↔`ipure` rename only); both declared a root-namespace `class IndexedMonad`. The copy is
+   deleted and PolyFun's is imported.
 2. `SetM.pure_def/bind_def/run_eq` (`V:VCVio/EvalDist/Defs/Support.lean:31–41`) duplicate
    `SetM.run_pure/run_bind/run_map` (`V:ToMathlib/Data/Set/Functor.lean:36–45`) with a competing simp
    normal form; keep the `run_*` family (core's `StateT.run_*` idiom).
@@ -495,7 +513,7 @@ Mathlib-to-core lattice bridge and the restricted-carrier construction.
    (`M:Control/Traversable/Lemmas.lean:66–123`; `simulateQ'` is a monad hom, hence an
    `ApplicativeTransformation`) subsume `simulateQ_list_mapM/forM/forIn`
    (`V:VCVio/OracleComp/SimSemantics/SimulateQ.lean:261–296`) and `simulateQ_optionT_vector_mapM_pure`
-   (`:118`) at once; `Fin.mOfFn` (`V:ToMathlib/General.lean:571`) is `traverse` on `flip Vector n`
+   (`:118`) at once; `Fin.mOfFn` (`V:ToMathlib/Control/Monad/Fold.lean:30`) is `traverse` on `flip Vector n`
    (`M:Data/Vector/Basic.lean:709`, `List.Vector.mOfFn` `:387`).
 7. State the `StateT` handler combinators (`withBadFlag`, `withBadUpdate`, `piStateT`,
    `V:VCVio/OracleComp/SimSemantics/StateT/Basic.lean:117–150`, and the projection lemmas) over
@@ -531,8 +549,8 @@ help is a `CCPO` on `ITree`, PolyFun-side).
 `StepClass.computable` already sets `Str := Primcodable`, `Hom := Computable`
 (`PolyFun/Realizability/Instances.lean:142–233`), so Mathlib's computability theory is a *qualitative*
 backend today; nothing in VCVio exercises it (`IsRealizableBy StepClass.computable` has 0 examples).
-Mathlib's only polytime notion, `TM2ComputableInPolyTime`, has `proof_wanted` composition
-(`M:Computability/TuringMachine/Computable.lean:284`); cslib's `PolyTimeComputable.comp`
+Mathlib's only polytime notion, `TM2ComputableInPolyTime`, has no composition lemma
+(the structure is `M:Computability/TuringMachine/Computable.lean:179`); cslib's `PolyTimeComputable.comp`
 (`Cs:Computability/Machines/Turing/SingleTape/Deterministic.lean:490`) is proved — which is why the
 in-flight cslib route (VCVio #576, PolyFun #178/#179) is the right one. `Encodable`/`Nat.pair` cannot
 serve polynomial classes (`Nat.pair` is quadratic in value, `M:Data/Nat/Pairing.lean:136`; list encoding
@@ -543,9 +561,10 @@ unverified ticks (cross-reference only). PolyFun's `CodeRetract (List Γ) A` is 
 **Integration candidates.**
 1. A generic dependent pairing lemma `Pr[= (x, y) | do let a ← mx; let b ← f a; return (a, b)] =
    Pr[= x | mx] * Pr[= y | f x]` — cslib's `PMF.bind_pair_apply` (`Cs:Probability/PMF.lean:49`) — is
-   absent from VCVio: `V:VCVio/EvalDist/Prod.lean:145` has only the independent case and
-   `V:VCVio/CryptoFoundations/SymmEncAlg.lean:51` re-proves the dependent case inline for the
-   encryption experiment.
+   absent from VCVio: `V:VCVio/EvalDist/IndepProduct.lean:82` has only the independent case and
+   `evalDist_perfectSecrecyExperiment_apply_singleton_prod`
+   (`V:VCVio/CryptoFoundations/SymmEncAlg.lean:98`) proves the dependent case for the encryption
+   experiment.
 2. VCVio proves only that equal ciphertext rows give independence
    (`perfectSecrecyAt_of_ciphertextRowsEqualAt`, `V:VCVio/CryptoFoundations/SymmEncAlg.lean`);
    cslib's `perfectlySecret_iff_ciphertextIndist`
@@ -600,17 +619,19 @@ consumer crosses `ℝ → ℝ≥0∞` to state negligibility, and the generic
 - `finiteness` (`M:Tactic/Finiteness.lean`, an aesop rule set with `positivity` fallback, even used as
   an autoparam in statements: `tendsto_toReal_zero_iff (hf : … := by finiteness)`): a handful of uses vs
   dozens of hand-written `≠ ⊤` hypotheses, 69 `one_ne_top`, 50 `ne_top_of_le_ne_top`, and `aesop` calls
-  whose only job is a `≠ ⊤` side goal (`V:ToMathlib/Data/ENNReal/Gauss.lean:224,229`).
+  whose only job is a `≠ ⊤` side goal (snapshot `ToMathlib/Data/ENNReal/Gauss.lean:224,229`, since gone).
 - `gcongr`: 110 uses against ≈400 hand-written monotonicity steps (`mul_le_mul'` 103 — 29 in
   `V:VCVio/EvalDist/Monad/Basic.lean` alone, all of the shape `gcongr with x; exact h x` —
   `add_le_add` 98, `tsum_le_tsum` 136, `Finset.sum_le_sum` 39). `bound` is not a lever
   (only `ofReal_le_ofReal` is `@[bound]` on `ℝ≥0∞`).
 - Side-condition-free division (`ENNReal.div_le_of_le_mul`, `mul_le_of_le_div`,
-  `M:Data/ENNReal/Inv.lean:386,408`), `ENNReal.mul_le_mul_iff_right` (`M:Data/ENNReal/Operations.lean:74`),
-  `ENNReal.le_of_forall_pos_le_add` (`M:Data/ENNReal/Basic.lean:607`): 0 uses; VCVio multiplies both sides
+  `M:Basic/ENNReal/Inv.lean:392,414`), `ENNReal.mul_le_mul_iff_right` (`M:Basic/ENNReal/Operations.lean:75`),
+  `ENNReal.le_of_forall_pos_le_add` (`M:Basic/ENNReal/Basic.lean:613`): 0 uses; VCVio multiplies both sides
   by `2⁻¹ * 2` with two `inv_mul_cancel`s instead (`V:ToMathlib/Data/ENNReal/SumSquares.lean:36–44,124–131`).
 - Stay in `ℝ≥0∞` and transfer once: `ℝ`-valued `tsum` proofs carry five to seven `Summable`/nonneg
-  `have`s (`V:VCVio/EvalDist/TVDist.lean:240–270`, `V:VCVio/ProgramLogic/Relational/SimulateQ.lean:1315–1348`)
+  `have`s (snapshot `VCVio/EvalDist/TVDist.lean:240–270`,
+  `VCVio/ProgramLogic/Relational/SimulateQ.lean:1315–1348`; **done**, total variation is the
+  `ℝ≥0∞`-valued `etvDist`)
   where the `etvDist` statement in `ℝ≥0∞` (`ENNReal.tsum_le_tsum` is unconditional) followed by one
   `toReal_mono` is roughly 60 % shorter.
 - `tsum` orientation is consistent with Mathlib (660 `∑'`, 0 `tsum (fun`).
@@ -618,17 +639,19 @@ consumer crosses `ℝ → ℝ≥0∞` to state negligibility, and the generic
 **Integration candidates (ranked).**
 1. The two bridge lemmas above in `Negligible.lean`, plus moving the two `_of_poly_bound` lemmas there.
 2. `negligible_of_le` (`Negligible.lean:43–46`) is `SuperpolynomialDecay.trans_eventuallyLE` with
-   `g := 0` (typeclasses verified against `M:Data/ENNReal/Basic.lean:143`); adopting it upgrades VCVio to
+   `g := 0` (typeclasses verified against `M:Basic/ENNReal/Basic.lean:121`); adopting it upgrades VCVio to
    eventually-≤ for free.
 3. Delete the private `tsub_le_tsub_add_tsub` (`V:ToMathlib/Data/ENNReal/AbsDiff.lean:51–55`, Mathlib's
    `M:Algebra/Order/Sub/Defs.lean:138` with the same name and statement) and the private
    `tsum_sub_tsum_le_tsum_sub` (`V:VCVio/EvalDist/Inequalities.lean:41–44`, unused hypothesis), which
    duplicates VCVio's own `ENNReal.tsum_tsub_le_tsum_tsub` (`AbsDiff.lean:114`).
 4. One lemma `tsum_probOutput_mul_le_of_le : (∀ x, f x ≤ c) → ∑' x, Pr[= x | mx] * f x ≤ c` next to
-   `tsum_probOutput_mul_mono` (`V:VCVio/EvalDist/Monad/Basic.lean:998`) retires ≈8 hand-rolled copies of
+   `tsum_probOutput_mul_mono` (snapshot `VCVio/EvalDist/Monad/Basic.lean:998`; **done** as
+   `tsum_prEvent_mul_le_add_of_le`, `V:VCVio/OracleComp/EvalDist/Sum.lean:136`, and
+   `wp_le_of_forall_le`, `V:VCVio/EvalDist/ProbabilityNotation.lean:385`) retires ≈8 hand-rolled copies of
    the `tsum_le_tsum (mul_le_mul' …) / tsum_mul_right / tsum_probOutput_le_one` chain
    (`V:VCVio/OracleComp/QueryTracking/Birthday.lean:44–46`,
-   `V:VCVio/CryptoFoundations/Fischlin/KnowledgeSoundness.lean:1381–1385`, `Monad/Basic.lean:258–264,343–345,507–513`).
+   snapshot `VCVio/CryptoFoundations/Fischlin/KnowledgeSoundness.lean:1381–1385`, `Monad/Basic.lean:258–264,343–345,507–513`).
 5. `sq_sum_div_card_le_sum_sq` (17 lines, `SumSquares.lean:63–80`) is two lines by
    `ENNReal.div_le_of_le_mul`; `add_div_two_mul_nat` (18 lines, `Gauss.lean:283–300`) is four by
    `ENNReal.mul_div_mul_left` + `div_add_div_same`.
@@ -649,8 +672,8 @@ the `Iic` sum–integral comparison; `ℝ≥0∞` negligible closure under `cons
 executable code (LatticeCrypto, HashSig; 231 hits) — matches Mathlib's own guidance
 (`M:Data/Vector/Defs.lean:14–32`). Core `Vector` has no `cons` and no induction principle
 (`C:Init/Data/Vector/*`: only `exists_push`, `vector₂_induction`); VCVio's own proofs use the
-core-idiomatic `push` decomposition (`V:VCVio/EvalDist/List.lean:352`, `V:ToMathlib/Data/Vector.lean:318`)
-while `V:ToMathlib/General.lean:462–502` hand-rolls an `insertIdx 0` induction — two competing styles;
+core-idiomatic `push` decomposition (`V:VCVio/EvalDist/List.lean:68`)
+while `V:ToMathlib/Data/Vector/Induction.lean:30–44` hand-rolls an `insertIdx 0` induction — two competing styles;
 standardise on `push`. `QueryCount ι := ι → ℕ` with `mul := +` is `Multiplicative (ι → ℕ)`, and keeping
 the plain function is justified (computable, pointwise `+`/`≤`); `ResourceProfile.usage : κ →₀ ℕ` is
 the Mathlib idiom at the price of `noncomputable`, and there is no `Finsupp.equivFunOnFinite` bridge
@@ -681,17 +704,18 @@ to `lt_of_mem_digitsAppend`, `setInvOn_digitsAppend_ofDigits`, `ofDigits_lt_base
 `List.sum_le_card_nsmul` (`M:Algebra/Order/BigOperators/Group/List.lean:92`);
 `WotsChecksum.mod_pow_succ_extract` (52 lines) ↔ `Nat.mod_pow_succ` (`C:Init/Data/Nat/Mod.lean:79`)
 plus commutativity; `sum_update_succ_count`/`sum_update_pred`/`sum_filter_update_*`
-(`V:ToMathlib/General.lean:37–109`) ↔ `Finset.sum_update_of_mem`
-(`M:Algebra/BigOperators/Group/Finset/Piecewise.lean:246`), which `V:VCVio/OracleComp/QueryTracking/QueryBound.lean:1196`
+(`V:ToMathlib/Algebra/BigOperators/Finset.lean:23`) ↔ `Finset.sum_update_of_mem`
+(`M:Algebra/BigOperators/Group/Finset/Piecewise.lean:246`), which `V:VCVio/OracleComp/QueryTracking/QueryBound/Simulation.lean:238`
 already uses; `Finset.count_toList` ↔ `List.Nodup.count` (`C:Init/Data/List/Pairwise.lean:348`) via
 `Finset.nodup_toList`; the hand-built equivalence in `instSampleableTypeListVector`
-(`V:VCVio/OracleComp/Constructions/SampleableType.lean:364–370`) ↔ `Equiv.vectorEquivFin`
+(snapshot `VCVio/OracleComp/Constructions/SampleableType.lean:364–370`; **done**,
+`V:VCVio/OracleComp/Constructions/SampleableType/Basic.lean:289` is `ofEquiv` of it) ↔ `Equiv.vectorEquivFin`
 (`M:Data/Fintype/Vector.lean:24–28`); `QueryCount.single i := Function.update 0 i 1`
 (`V:VCVio/OracleComp/QueryTracking/Structures.lean:321`) is definitionally `Pi.single i 1`
 (`M:Algebra/Notation/Pi/Basic.lean:30`), and its 50 consumers redo the `update_self`/`of_ne` case
 split that `Pi.single_eq_same/of_ne` and `Finset.sum_pi_single'` (`Piecewise.lean:168`) give.
-Medium: `Finset.countP_toList` (`V:…/WithoutReplacement.lean:98`) is proved inline again at
-`V:VCVio/OracleComp/ProbComp.lean:377`; `packByte_bitOf_fin` (`fin_cases` over `Fin 256`) is `decide`;
+Medium: `Finset.countP_toList` (`V:…/WithoutReplacement.lean:98`) was proved inline again at
+snapshot `VCVio/OracleComp/ProbComp.lean:377` (**done**, gone); `packByte_bitOf_fin` (`fin_cases` over `Fin 256`) is `decide`;
 `Fin.mOfFn` is `Vector.ofFnM` (`C:Init/Data/Vector/OfFn.lean:79`) through `arrayVectorEquivFin`.
 One row corrected during cross-checking: the data-idiom pass filed "ordered pairs of `Fin n` count"
 as a gap after a name-based search; the declaration `Fintype.card_product_filter_lt`
@@ -807,32 +831,35 @@ default, `docPrime`/`haveLet`/`tacticAnalysis.*` are off.
 `MathlibTest` style — `#guard_msgs`, `guard_target`, `fail_if_success`).**
 1. **`gcongr` tagging.** ≈208 hand-written monotonicity steps (`ENNReal.tsum_le_tsum`,
    `mul_le_mul' le_rfl` ×91, `add_le_add le_rfl` ×73, `tsub_le_tsub`, `Finset.sum_le_sum`) sit on heads
-   `gcongr` already descends through — VCVio's own working uses at `V:VCVio/EvalDist/Inequalities.lean:85,110`,
-   `V:VCVio/EvalDist/TVDist.lean:134`, `V:VCVio/CryptoFoundations/SeededFork.lean:229` prove the descent
+   `gcongr` already descends through — VCVio's own working uses (`V:ToMathlib/MeasureTheory/Integral/Quadratic.lean:59`; snapshot
+   `VCVio/EvalDist/Inequalities.lean:85,110`, `VCVio/EvalDist/TVDist.lean:134`,
+   `VCVio/CryptoFoundations/SeededFork.lean:229`) prove the descent
    through `∑'`, `*`, `+`, `-`, `/`, `⁻¹`, casts. The recurring blocker: 33 of the
    `refine ENNReal.tsum_le_tsum fun x => ?_` sites are followed by `by_cases hx : x ∈ support mx`
    because the hypothesis is support-restricted. Fix: tag `expectedValue_mono`
    (`V:VCVio/EvalDist/Expectation.lean:66`; its head `expectedValue mx g` has `g` as a direct argument,
    exactly the `Finset.sum_le_sum` shape `gcongr` keys on) and add `expectedValue_mono_of_support`
    (`∀ x ∈ support mx, g x ≤ h x`) plus `probEvent_bind_eq_expectedValue`/`probOutput_bind_eq_expectedValue`
-   beside `probEvent_bind_eq_tsum` (`V:VCVio/EvalDist/Monad/Basic.lean:197`); then tag
-   `probEvent_mono''` (`V:VCVio/EvalDist/Defs/Basic.lean:949`), `probOutput_bind_mono`/`probEvent_bind_mono`
-   (`Monad/Basic.lean:614,648`), `supportWhen_mono` (`V:VCVio/OracleComp/EvalDist.lean:565`),
+   beside `prEvent_bind_eq_tsum` (`V:VCVio/OracleComp/EvalDist/Sum.lean:80`); then tag
+   `prEvent_mono` (`V:VCVio/EvalDist/ProbabilityNotation.lean:360`), `wp_mono`
+   (`V:VCVio/EvalDist/Expectation.lean:366`), `supportWhen_mono` (`V:VCVio/OracleComp/ReachableWhen.lean:119`),
    `pathwiseCostAtMost_mono`/`queryBoundedAboveBy_mono` (`V:VCVio/OracleComp/QueryTracking/WriterCost.lean:445,654`),
-   `expectedQuerySlack_mono`/`probEvent_*_simulateQ_mono` (`V:VCVio/ProgramLogic/Relational/SimulateQ.lean:692,752,2055`).
+   `expectedQuerySlack_mono` (`V:VCVio/ProgramLogic/Relational/SimulateQ/StateDependent.lean:207`),
+   `relTriple_simulateQ_run_mono` (`V:VCVio/ProgramLogic/Relational/SimulateQ/Coupling.lean:96`).
    Sampled sites: `Monad/Basic.lean:250–265,329–345,488–513,614–622,733–768,840–853`,
    `Monad/Disagreement.lean:52–176`, `IndepProduct.lean:233–254`, `Hops.lean:736–741`,
    `ReplayFork.lean:700–748`, `Unpredictability.lean:205–247`. Expected: 150–250 lines removed and one
    idiom (`gcongr with x hx`) for every bind bound.
-2. **`finiteness` tagging.** `probOutput_ne_top`/`probEvent_ne_top`/`probFailure_ne_top`
-   (`V:VCVio/EvalDist/Defs/Basic.lean:599,616,625`, already `@[simp, grind .]` and in the preferred
-   `≠ ⊤` form) get `@[aesop (rule_sets := [finiteness]) safe apply]` (Mathlib's idiom,
-   `M:Data/ENNReal/Basic.lean:366`), likewise `etvDist_ne_top`, `challengeSpaceInv_ne_top`; then the
+2. **`finiteness` tagging** (**done** for the events). `prEvent_ne_top`
+   (`V:VCVio/EvalDist/ProbabilityNotation.lean:310`, in the preferred `≠ ⊤` form) and
+   `etvDist_ne_top` (`V:VCVio/EvalDist/EvalDistTV.lean:98`) carry
+   `@[aesop (rule_sets := [finiteness]) safe apply]` (Mathlib's idiom,
+   `M:Basic/ENNReal/Basic.lean:364`); then the
    46 `ne_top_of_le_ne_top one_ne_top (prob…_le_one)`, 19 `natCast_ne_top`, 34 `mul/add/div_ne_top`
-   chains (e.g. `V:Examples/PRFTagReader/MultipleBadCollision.lean:531–552`, `Inequalities.lean:90`,
+   chains (e.g. `V:Examples/PRFTagReader/MultipleBadCollision.lean:323`, `Inequalities.lean:90`,
    `SeededFork.lean:632,665`, six `hDtop` in `Fischlin/KnowledgeSoundness.lean`) become `by finiteness`,
    and hypotheses can use the `(h : c ≠ ⊤ := by finiteness)` autoparam idiom
-   (`M:Data/ENNReal/Operations.lean:348`).
+   (`M:Basic/ENNReal/Operations.lean:352`).
 3. **`positivity`.** `mul_nonneg (Nat.cast_nonneg _) hε` ×6 (`SimulateQ.lean:1455–1820`),
    `pow_pos (by decide) _` (`MerkleTree/…/QueryBound.lean:37,50`), 43 `Nat.mod_lt _ (by decide)`-style
    goals in ML-KEM/ML-DSA (HashSig already uses `positivity` 17×). Optional ~10-line extensions for
@@ -841,7 +868,7 @@ default, `docPrime`/`haveLet`/`tacticAnalysis.*` are off.
 4. **`fun_prop`.** Tag `measurable_dropNoneKernel` (`V:ToMathlib/MeasureTheory/Measure/Option.lean:38`),
    `measurable_none/elim` (`MeasurableSpace/Option.lean:35,65`, `Except.lean:42`),
    `measurable_pullback_answerMap` (`V:VCVio/OracleComp/Coinductive/Responder.lean:244`); replace the
-   `Measurable.of_discrete` term proofs at `V:VCVio/EvalDist/Defs/Measure.lean:152,212`,
+   `Measurable.of_discrete` term proofs at `V:VCVio/EvalDist/Defs/Measure/Core.lean:133,173`,
    `RenyiDiscrete.lean:136,148`. `@[measurability]` merely forwards `Measurable`-shaped lemmas to
    `fun_prop` with a warning (`M:Tactic/Measurability.lean:36–40`): tag `@[fun_prop]` directly.
 5. **`push_cast`** for the 37 `rw [… Nat.cast_add, Nat.cast_one …]` sites
@@ -852,15 +879,16 @@ default, `docPrime`/`haveLet`/`tacticAnalysis.*` are off.
    which otherwise evaluate twice; axiom-free, so compatible with the zero-native-trust rule. Try `cbv`
    on `V:LatticeCrypto/MLKEM/Concrete/Encoding.lean:44–63`; run `linter.tacticAnalysis.omegaToLia` once
    on `Rounding.lean` (53 `omega`).
-7. **`grind`.** Tagging stops at `EvalDist/` (the `grind norm` vs `=` choice is documented at
-   `V:VCVio/EvalDist/Prod.lean:86`); `grind_pattern` (`C:Init/Grind/Tactics.lean:93–125`) is unused
+7. **`grind`.** Tagging stops at `EvalDist/` (the `grind norm` vs `=` choice was documented at
+   snapshot `VCVio/EvalDist/Prod.lean:86`; the expectation laws carry `grind norm`,
+   `V:VCVio/EvalDist/Expectation.lean:58`); `grind_pattern` (`C:Init/Grind/Tactics.lean:93–125`) is unused
    although transitivity-shaped `*_mono` lemmas are its textbook case; `[grind hom]` is v4.34. Mathlib's
    `tacticAnalysis.{mergeWithGrind,terminalToGrind}` (`M:Tactic/TacticAnalysis/Declarations.lean:257,285`)
    can be run ad hoc on `simp …; grind` sites (`Prod.lean:136,143`).
 8. **`bound`**: low value on `ℝ≥0∞` (its seed set is `ℝ`-centric; only `ofReal_le_ofReal` is tagged);
    `gcongr` covers the same sites.
 9. **Structures.** Thin hand-written ext wrappers over existing `@[ext]` lemmas: `spmf_ext`
-   (`V:ToMathlib/ProbabilityTheory/OptimalCoupling.lean:110` vs `SPMF.ext`, `SPMF.lean:187`) and
+   (snapshot `ToMathlib/ProbabilityTheory/OptimalCoupling.lean:110` vs `SPMF.ext`; gone with `SPMF`) and
    `poly_ext` (`V:LatticeCrypto/Ring/Kernel.lean:149` vs `PolyBackend.ext_coeff`, `Ring/Core.lean:142`);
    the `unfold` top-25 is dominated by record heads that `@[simps]` would eliminate;
    `deriving Countable` is unused although `Countable` is load-bearing for the measure layer;
@@ -941,8 +969,9 @@ audit before deletion (see Method).
 
 The area surveys above preserve candidate lists from the original snapshot. In particular,
 the asymptotic bridges listed as missing are supplied by #635, and the lattice candidates
-are partly implemented by #634; consult those PRs before repeating the work. The initial
-source line numbers remain search aids, not stable links into the current tree.
+are partly implemented by #634; consult those PRs before repeating the work. Source citations
+resolve at the current pins (`scripts/check-reading-citations.py`); a snapshot location is marked
+as such.
 
 Items 6 (`Lean.Order` bridge, `MonadAttach`, `simulateQ_traverse`), 7 (HashSig digit bridges)
 and 8 (cslib-inspired lemmas) are not started.
@@ -1085,3 +1114,37 @@ fair-coin identity. One-time-pad privacy uses `Measure.prod_prod` and singleton 
 of a point-mass calculation. ElGamal's computational handler identities induce native measure
 equivalence; the discrete theorem names then kept as compatibility corollaries have since been
 removed.
+
+## Core `Std.WP` and measure probability (2026-10-01)
+
+Re-verified with the `measure-probability` branch (#821) on Lean `v4.35.0-rc3` and PolyFun
+`e01481ca`. Verdicts that changed:
+
+- **Program logic — adopt core.** Core's `Std.WP` (`WP`, `WPMonad`, `Triple`, `vcgen`) is the one
+  program-logic head; VCVio's own `wp` abbreviation, unary VC generator and the legacy `Std.Do`
+  bridges are gone. Exactness is PolyFun's `ExactWPMonad` (oplax laws with the dual built), and
+  the four readings of an oracle computation are scoped instances
+  (`V:VCVio/ProgramLogic/Unary/WP/Necessary.lean`, `Possible.lean`, `Lower.lean`, `Upper.lean`)
+  dispatched by `prvcgen` (`V:VCVio/ProgramLogic/Tactics/PrVCGen.lean`). Upstream has no
+  relational program logic; `RelWP`/`eRelWP` stay (**keep**).
+- **Probability items 2–4 — done.** An expectation is core `wp` under the measure interpretation
+  of its monad (`ExpectationWP`, `V:VCVio/EvalDist/Expectation.lean`; core's `OptionT`/`ExceptT`
+  lifts for stacks), the algebra `wp_pure`/`wp_bind`/`wp_map`/`wp_mono` is the exactness law set,
+  and the measure twins (`evalDist_bind`, `evalDist_bind_const`, …) live in
+  `V:VCVio/EvalDist/Defs/Measure/Core.lean`. `Pr{…}[…]` is a syntactic translation into nested
+  expectations (`V:VCVio/EvalDist/ProbabilityNotation/Elab.lean`); equality in distribution is
+  the cross-monad `=ᵈ` (`V:VCVio/EvalDist/EvalDistEq.lean`); total variation is the event-keyed
+  `etvDist` (`V:VCVio/EvalDist/EvalDistTV.lean`), with `measureETVDist` kept for
+  σ-algebra-parametric statements.
+- **Item 5 (conditional probability) — track.** The divide-by-`Pr` family is gone with `SPMF`
+  and nothing in the tree uses `ProbabilityTheory.cond`; it remains the route for a posterior
+  statement.
+- **Item 9 (discrete density normal form) — dropped.** It presupposed `PMF`, which VCVio no
+  longer uses; the Rényi and total-variation layers are stated on measures
+  (`V:ToMathlib/Probability/Divergence/Renyi.lean`, `V:ToMathlib/Probability/Divergence/TotalVariation.lean`).
+- **`SPMF`/`PMF` — removed.** The environment linter `usesRetiredProbability`
+  (`V:ToMathlib/Lint/LegacyProbability.lean:28`) reports any direct use of Mathlib's `PMF`.
+- **Tooling.** `scripts/check-reading-citations.py` keeps the citations of this directory
+  resolvable at the pins; `scripts/migrate-native-probability.py` converts code written against
+  the removed discrete API.
+

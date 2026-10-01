@@ -41,6 +41,13 @@ checked. The failure mode these documents are most exposed to is asserting that 
 something on the strength of a name matching. A name is a hypothesis; the declaration in the pinned
 tree is the evidence.
 
+**Cite sources so that the checker can resolve them.** A source location is written `K:path` or
+`K:path:line`, where `K` names the tree: `V:` this repository, `M:` Mathlib, `B:` Batteries, `Cs:`
+cslib, `P:` PolyFun, `C:` Lean core and Std. `scripts/check-reading-citations.py` (run by
+`validate.sh` and the *Agent Docs* workflow) fails on a path that does not exist at the pins or a
+line past the end of its file. A location whose target has since been removed or moved is kept as
+history without the tree prefix, marked as a snapshot, with its current disposition beside it.
+
 **Re-check volatile facts at the moment of editing.** Upstream tags, PR statuses, and draft-versus-
 open state change faster than the documents that cite them — the PolyFun tag in §19.4 went stale
 twice in a single day. Preserve the dated result as history, then add a new dated disposition backed

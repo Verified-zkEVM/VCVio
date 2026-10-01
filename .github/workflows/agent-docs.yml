@@ -19,3 +19,5 @@ jobs:
         run: python scripts/check-agent-docs.py
       - name: Check auto-generated doc fragments
         run: python scripts/extract-doc-fragments.py --check
+      - name: Check reading citations
+        run: python scripts/check-reading-citations.py

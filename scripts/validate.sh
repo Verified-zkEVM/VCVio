@@ -32,6 +32,8 @@ Default fast checks (shared with per-PR CI):
     modules, once lake test has built them
   - lake lint -- --style-only on every library and test module
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
+  - python3 ./scripts/check-reading-citations.py --require-upstream (the source
+    citations of docs/reading against the checked-out pins)
 
 Optional checks:
   --lint    Batteries environment linters, one process per proof library as in CI
@@ -113,6 +115,7 @@ echo ""
 echo "# Checking the agent documentation"
 python3 ./scripts/check-agent-docs.py
 python3 ./scripts/extract-doc-fragments.py --check
+python3 ./scripts/check-reading-citations.py --require-upstream
 
 if (( run_lint )); then
   echo ""

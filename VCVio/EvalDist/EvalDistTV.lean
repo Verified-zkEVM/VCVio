@@ -95,6 +95,7 @@ theorem etvDist_le_one (mx : m α) (my : m' α) : etvDist mx my ≤ 1 :=
   iSup_le fun _ => ENNReal.absDiff_le_iff.2
     ⟨(prEvent_le_one _).trans le_add_self, (prEvent_le_one _).trans le_add_self⟩
 
+@[aesop (rule_sets := [finiteness]) safe apply]
 theorem etvDist_ne_top (mx : m α) (my : m' α) : etvDist mx my ≠ ⊤ :=
   ne_top_of_le_ne_top ENNReal.one_ne_top (etvDist_le_one mx my)
 
