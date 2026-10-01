@@ -77,13 +77,17 @@ public import VCVioTest.ProgramLogic.BoundedMeasureWP
 public import VCVioTest.ProgramLogic.CoreVCGen
 public import VCVioTest.ProgramLogic.CoreWP
 public import VCVioTest.ProgramLogic.GCongr
+public import VCVioTest.ProgramLogic.LowerVCGen
 public import VCVioTest.ProgramLogic.MeasureOracleRelWP
 public import VCVioTest.ProgramLogic.MeasureRelWP
 public import VCVioTest.ProgramLogic.MeasureWP
 public import VCVioTest.ProgramLogic.OracleWP
+public import VCVioTest.ProgramLogic.PossibleVCGen
 public import VCVioTest.ProgramLogic.PrVCGen
 public import VCVioTest.ProgramLogic.ReadingScopes
+public import VCVioTest.ProgramLogic.RelationalVCGen
 public import VCVioTest.ProgramLogic.UntilBad
+public import VCVioTest.ProgramLogic.UpperVCGen
 public import VCVioTest.ProgramLogic.VCGenNames
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom

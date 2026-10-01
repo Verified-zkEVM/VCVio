@@ -21,13 +21,17 @@ Each reading of `OracleComp` is exercised through `prvcgen`, two statements each
   invariant, and a union bound over the queries of an adversary as a ranked handler potential
   (`simulateQ_triple_ranked`);
 * triples already stated, lower and necessary, and their unfolded form, with the
-  configuration passed to `vcgen`.
+  configuration passed to `vcgen`;
+* the other statement shapes: the expectation on the right of an equation, `≥`, a comparison of
+  two events, events of `OptionT` and `ExceptT` programs in both bound readings, and `vcgen`'s
+  `until` and `simplifying_assumptions` clauses passed through.
 
 Equations split by antisymmetry: every-outcome rules and a loop potential settle both halves
 outright, the averaging rules leave sums that `simp` evaluates, and an equation between two
-programs is refused. The scope canaries check that a file-level reading does not reach `prvcgen`,
-that the upper-bound reading is required for its triples (a bare `vcgen` fails), and that an
-unsupported goal is refused.
+programs is refused. The scope canaries check that a file-level reading, necessary or
+upper-bound, does not reach `prvcgen`'s lower-bound reading, that the upper-bound reading is
+required for its triples (a bare `vcgen` fails), and that each unsupported goal is refused with
+its message.
 -/
 
 public section
@@ -299,5 +303,81 @@ example [spec.AnswerMeasure] (t : spec.Domain) (f : spec.Range t → ℕ) :
 example : Pr{let b ← $ᵗ Bool}[b = true] = Pr{let b ← $ᵗ Bool}[b = true] := by
   fail_if_success prvcgen
   rfl
+
+/-! ## Other statement shapes -/
+
+/-- The expectation may stand on the right of an equation. -/
+example : 1 = Pr{let b ← $ᵗ Bool; let c ← $ᵗ Bool}[(b || c) = (c || b)] := by
+  prvcgen
+  exact Bool.or_comm _ _
+
+/-- `≥` is read as `≤` with its sides swapped. -/
+example : Pr{let b ← $ᵗ Bool}[(b || !b) = true] ≥ 1 := by
+  prvcgen
+  simp
+
+/-- A comparison of two events is an upper bound on the left-hand side, with the right-hand side
+as the bound. -/
+example : Pr{let b ← $ᵗ Bool}[(b && !b) = true] ≤ Pr{let c ← $ᵗ Bool}[c = true] := by
+  prvcgen
+  simp [propInd_eq_ite]
+
+/-- An event of an `OptionT` program, bounded below: the stack is read through its run. -/
+example : (1 : ℝ≥0∞) ≤ Pr{let b ← (OptionT.lift ($ᵗ Bool) : OptionT ProbComp Bool)}[
+    (b || !b) = true] := by
+  prvcgen
+  simp
+
+/-- An event of an `OptionT` program, bounded above: the transformer's bridge charges a failure
+nothing. -/
+example : Pr{let b ← (OptionT.lift ($ᵗ Bool) : OptionT ProbComp Bool)}[(b && !b) = true] ≤ 0 := by
+  prvcgen
+  simp [propInd_eq_ite]
+
+/-- An event of an `ExceptT` program, bounded below. -/
+example : (1 : ℝ≥0∞) ≤ Pr{let b ← (ExceptT.lift ($ᵗ Bool) : ExceptT String ProbComp Bool)}[
+    (b || !b) = true] := by
+  prvcgen
+  simp
+
+/-- `until` stops at the first program matching the pattern, leaving its weakest precondition,
+which a second `prvcgen` continues. -/
+example : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool; let i ← $ᵗ (Fin 2)}[(b || !b) = true ∨ i = i] := by
+  prvcgen until ($ᵗ (Fin 2))
+  prvcgen
+  simp
+
+/-- `simplifying_assumptions` rewrites with the given hypotheses while the conditions are
+generated. -/
+example (x : Bool) (hx : x = true) : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool}[(b || x) = true] := by
+  prvcgen simplifying_assumptions [hx]
+  simp
+
+section UpperFileLevel
+
+open scoped OracleComp.Upper
+
+/-- A file-level upper-bound scope does not reach `prvcgen`'s lower-bound reading. -/
+example : (1 : ℝ≥0∞) ≤ Pr{let b ← $ᵗ Bool}[(b || !b) = true] := by
+  prvcgen
+  simp
+
+end UpperFileLevel
+
+/-! ## Refusals -/
+
+/--
+error: prvcgen: neither side of the equation is an expectation `Pr{…}[…]`, `𝔼{…}[…]`, or `wp⟦…⟧ …`
+-/
+#guard_msgs in
+example : (1 : ℝ≥0∞) = 1 := by
+  prvcgen
+
+/--
+error: prvcgen: an existential must be `∃ x ∈ support oa, p x`
+-/
+#guard_msgs in
+example : ∃ b : Bool, b = true := by
+  prvcgen
 
 end VCVioTest.ProgramLogic.PrVCGen
