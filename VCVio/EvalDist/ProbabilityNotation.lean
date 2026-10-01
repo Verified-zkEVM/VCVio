@@ -9,6 +9,7 @@ public import VCVio.EvalDist.Expectation
 public import VCVio.Prelude.Core
 public import VCVio.EvalDist.ProbabilityNotation.Elab
 public import VCVio.EvalDist.ProbabilityNotation.Delab
+public import Mathlib.Tactic.Basify
 
 /-!
 # Event probabilities and expectations of computations

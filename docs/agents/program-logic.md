@@ -738,7 +738,16 @@ and, through `le_refl`, the matching inequalities. An equation whose value is no
 such as `wp⟦pure x⟧ post = post x`, is also a `prvcgen` goal, split into its two bounds. `simp` on
 the normal form averages finite uniform draws and uniform queries (`prEvent_uniformSample`,
 `wp_uniformSample_eq_sum`, `OracleComp.wp_monadLift_query_uniform`), as for
-`Pr{let b ← $ᵗ Bool}[b = true] = 1 / 2`. `wp_simulateQ_eq` and `wp_liftComp`
+`Pr{let b ← $ᵗ Bool}[b = true] = 1 / 2`; under `simp only`, the average of a query of a uniform
+specification is `wp_HasQuery_query_uniform` for the `query t` of a `do` block and
+`wp_query_uniform` for the primitive, in place of the integrals of `expect_eval`, as in
+`simp only [expect_norm, wp_HasQuery_query_uniform]` for nested queries. The numeral equation
+that remains, such as `2 * (2⁻¹ * 2⁻¹) = 2⁻¹`, is closed by Mathlib's `basify`, which moves
+the goal to `ℝ`, followed by `norm_num`, or by the cancellation lemma that fits
+(`ENNReal.mul_inv_cancel`, `ENNReal.inv_two_add_inv_two`). `VCVioTest/ENNRealNumerals.lean`
+pins the recipe and its one current gap: a numeral that `Nat.cast_ofNat` produced from a
+cardinality is annotated `no_index`, which `basify` generalizes as an atom; `ring_nf` first
+rebuilds it. `wp_simulateQ_eq` and `wp_liftComp`
 (`Unary/SimulateQ.lean`) carry an expectation across a simulation that answers each query in
 distribution as the query itself, and across a lift to a larger specification.
 

@@ -1026,7 +1026,7 @@ rather than by a per-rung duplicate lemma.
 
 | rung | form | reached by |
 |---|---|---|
-| 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`evalDist_pure`, `prEvent_pure`, `SampleableType.evalDist_uniformSample_singleton`, `SampleableType.prEvent_uniformSample`, `ProbComp.evalDist_uniformFin`, `evalDist_bind_const`, `OracleComp.prEvent_true_eq_one`) |
+| 0 closed | numerals, `(Fintype.card α)⁻¹`, `if … then 1 else 0`, `#{x \| p x} / Fintype.card α` | `simp` (`evalDist_pure`, `prEvent_pure`, `SampleableType.evalDist_uniformSample_singleton`, `SampleableType.prEvent_uniformSample`, `ProbComp.evalDist_uniformFin`, `evalDist_bind_const`, `OracleComp.prEvent_true_eq_one`); a numeral equation or inequality that `simp` leaves, such as `2 / 4 = 2⁻¹`, is closed by Mathlib's `basify`, which moves the goal to `ℝ`, followed by `norm_num` (`VCVioTest/ENNRealNumerals.lean`, including the `ring_nf` detour for a numeral `Nat.cast_ofNat` produced) |
 | 1 finite sum | `∑ x, Pr{let y ← mx}[y = x] * g x`, or `∑ x, 𝒟[mx] {x} * g x` | `rw [prEvent_bind_eq_sum_fintype]`; from rung 3, Mathlib's `lintegral_fintype`, then `simp [mul_comm]` |
 | 2 countable sum | `∑' x, Pr{let y ← mx}[y = x] * g x` | `rw [prEvent_bind_eq_tsum_of_countable]`; from rung 3, Mathlib's `lintegral_countable'`; `simp` collapses it to rung 1 on a `Fintype` through `tsum_fintype` |
 | 3 integral | `∫⁻ x, g x ∂𝒟[mx]` | `rw [prEvent_bind_eq_lintegral_of_discrete]`, or `evalDist_bind_of_discrete` with `Measure.bind_apply`; an intermediate for Mathlib's integration API, not a target |

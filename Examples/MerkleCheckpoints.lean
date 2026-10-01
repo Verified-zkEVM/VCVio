@@ -245,21 +245,13 @@ theorem honestShared_probability : 𝒟[honestShared] {true} = 1 := by
   prvcgen
 
 theorem honestReset_probability : 𝒟[honestReset] {true} = (1 : ENNReal) / 2 := by
-  rw [honestReset_eq]
-  rw [evalDist_bind_of_discrete]
-  simp only [bind_pure_comp, evalDist_map_of_discrete,
-    evalDist_query_uniform (spec := Query →ₒ Bool)]
-  rw [Measure.bind_apply (MeasurableSet.singleton true) (measurable_of_countable _).aemeasurable]
-  have hinner (root : Bool) :
-      (uniformOn (Set.univ : Set Bool)).map (fun reply => reply == root) {true} =
-        (1 : ENNReal) / 2 := by
-    rw [Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
-    have hevent : (fun reply : Bool => reply == root) ⁻¹' {true} = {root} := by
-      ext reply
-      simp
-    rw [hevent, uniformOn_univ_apply_singleton]
-    simp
-  simp only [hinner, lintegral_const, measure_univ, mul_one]
-
+  rw [← prEvent_eq_evalDist_singleton, honestReset_eq]
+  simp only [expect_norm, OracleComp.ProgramLogic.wp_HasQuery_query_uniform]
+  simp only [InductiveMerkleTree.domain_def, InductiveMerkleTree.range_def, Fintype.univ_bool,
+    Fintype.card_bool, Nat.cast_ofNat, beq_iff_eq, propInd_eq_ite, mul_ite, mul_one, mul_zero,
+    Finset.sum_ite_eq', Finset.mem_insert, Finset.mem_singleton, Bool.eq_true_or_eq_false_self,
+    ↓reduceIte, Finset.sum_const, Bool.true_eq_false, not_false_eq_true,
+    Finset.card_insert_of_notMem, Finset.card_singleton, Nat.reduceAdd, nsmul_eq_mul, one_div]
+  rw [← mul_assoc, ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_mul]
 
 end MerkleCheckpoints

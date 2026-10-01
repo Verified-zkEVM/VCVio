@@ -264,6 +264,14 @@ theorem wp_query_uniform [OracleSpec.UniformAnswerMeasure spec]
   congr 1
   simp [ProbabilityTheory.uniformOn_univ]
 
+/-- The ergonomic query interface averages a uniform answer type: the form a `do` block's
+`query t` takes after `expect_norm`, where `wp_query_uniform` is stated on the primitive query. -/
+theorem wp_HasQuery_query_uniform [OracleSpec.UniformAnswerMeasure spec]
+    (t : spec.Domain) [Fintype (spec.Range t)] (post : spec.Range t → ℝ≥0∞) :
+    wp⟦(HasQuery.query t : OracleComp spec (spec.Range t))⟧ post =
+      ∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * post u :=
+  wp_query_uniform t post
+
 end Uniform
 
 section MeasureSpec
