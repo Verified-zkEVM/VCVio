@@ -235,7 +235,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
   have hLHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hLHS_eq
   have hRHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hRHS_eq
   have hBAD_ev := congrArg (fun mx => Pr{let z ← mx}[z.2.bad = true]) hBAD_eq
-  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev
+  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev ⊢
   rw [hLHS_ev, hRHS_ev, hBAD_ev]
   -- Phase B-2: commute outer `$ᵗ gS`, `$ᵗ gFine` past inner `$ᵗ Nonce` at the measure
   -- level so `n` is outermost. Identical structure to slot-zero (M-side LHS/BAD have the
@@ -433,6 +433,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[b = out] := by
+      simp only [expect_norm]
       rw [hmargW]
       refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
         MeasureProgramLogic.wp_congr _ fun gFine => ?_
@@ -467,6 +468,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
+      simp only [expect_norm]
       rw [hmargW]
       refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
         MeasureProgramLogic.wp_congr _ fun gFine => ?_
@@ -520,10 +522,12 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler
                 (OracleComp.tableExtending (c.cacheQuery ((tag, slotK), n) u) gS'))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] := by
+      simp only [expect_norm]
       rw [hmargW_K]
       refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' => ?_
       rw [hext_K_eq gS' u, hcell_K_u gS' u]
     -- Step 4: rewrite the marginalizations and apply `wp_le_add_add_of_disagree`.
+    simp only [expect_norm] at hLHS_marg hRHS_marg hBAD_marg
     rw [hLHS_marg, hRHS_marg, hBAD_marg]
     rw [show ∀ a b c : ℝ≥0∞, a + b + c = a + b + 0 + c from
           fun a b c => by ring]
@@ -612,7 +616,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
         (EvalDistEq.of_evalDist_eq hbridge).prEvent_eq fun b => b = out
     rw [hS_eq] at hihB
     rw [← add_assoc, ← add_assoc]
-    exact hihB
+    simpa only [expect_norm] using hihB
   · -- Case M-hit: c slot-0 = some u₀.
     -- Step 1: M's transcript becomes constant ⟨n, u₀⟩.
     have hcell : ∀ gS : (TagId × Fin sessionsPerTag) × Nonce → Digest,
@@ -655,6 +659,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
                 (k (some (⟨n, u₀⟩ : TagTranscript Nonce Digest)))).run
                 (advM, multipleBadAdvance tag sB
                   (some (⟨n, u₀⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
+      simp only [expect_norm]
       -- Both events are events of the same underlying run: compare them under the two table
       -- draws by `wp_mono`, then on the support of the run, where bad monotonicity makes the
       -- implication unconditional.
@@ -670,6 +675,7 @@ lemma dcAux_tag_slotPositive [Fintype Nonce] [Fintype Digest] (out : Bool)
         (advM, multipleBadAdvance tag sB
           (some (⟨n, u₀⟩ : TagTranscript Nonce Digest))) hbad_init z hz_mem
     -- Step 4: BAD ≤ (S + BAD) + slacks. Chain: `le_add_self` then `le_self_add`.
+    simp only [expect_norm] at hLHS_le_BAD
     refine hLHS_le_BAD.trans ?_
     exact le_add_self.trans le_self_add
 

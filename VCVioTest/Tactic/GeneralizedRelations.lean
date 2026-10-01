@@ -100,7 +100,7 @@ example (h : ∀ x, f x ≤ g x) (c : ℝ≥0∞) (hf : c ≤ wp⟦mx⟧ f) :
 
 example (f' g' : α → ProbComp β) (p : β → Prop)
     (h : ∀ x ∈ support mx, Pr{let y ← f' x}[p y] ≤ Pr{let y ← g' x}[p y]) :
-    Pr{let y ← mx >>= f'}[p y] ≤ Pr{let y ← mx >>= g'}[p y] := by
+    Pr{let x ← mx; let y ← f' x}[p y] ≤ Pr{let x ← mx; let y ← g' x}[p y] := by
   -- The event is an expectation over the common draw, so congruence descends into it.
   gcongr with x hx
   exact h x hx

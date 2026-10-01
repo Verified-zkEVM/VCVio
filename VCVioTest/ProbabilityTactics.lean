@@ -411,7 +411,8 @@ example (mx : ProbComp (Bool × Bool)) :
 
 example (mx : ProbComp (Bool × Bool)) :
     Pr{let b ← do let (a, b) ← mx; pure (a = true ∧ b = true)}[b] ≤
-      Pr{let b ← do let (a, _) ← mx; pure (a = true)}[b] :=
-  prEvent_mono mx _ _ fun _ => And.left
+      Pr{let b ← do let (a, _) ← mx; pure (a = true)}[b] := by
+  simp only [expect_norm]
+  exact prEvent_mono mx _ _ fun _ => And.left
 
 end VCVioTest.ProbabilityTactics

@@ -246,7 +246,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
   have hLHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hLHS_eq
   have hRHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hRHS_eq
   have hBAD_ev := congrArg (fun mx => Pr{let z ← mx}[z.2.bad = true]) hBAD_eq
-  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev
+  simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev ⊢
   rw [hLHS_ev, hRHS_ev, hBAD_ev]
   -- Phase B. Commute outer `$ᵗ gS`, `$ᵗ gFine` past inner `$ᵗ Nonce` at the measure level
   -- so the shared nonce draw is outermost. We push `n` out one binder at a time.
@@ -428,6 +428,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[b = out] := by
+      simp only [expect_norm]
       rw [hmargW]
       refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
         MeasureProgramLogic.wp_congr _ fun gFine => ?_
@@ -445,6 +446,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
               (simulateQ (singleTableHandler (OracleComp.tableExtending
                   (c.cacheQuery ((tag, (0 : Fin sessionsPerTag)), n) u) gS'))
                 (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run' advM))}[b = out] := by
+      simp only [expect_norm]
       rw [hmargW]
       refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
@@ -478,10 +480,12 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
                   (k (some (⟨n, u⟩ : TagTranscript Nonce Digest)))).run
                   (advM, multipleBadAdvance tag sB
                     (some (⟨n, u⟩ : TagTranscript Nonce Digest)))))}[z.2.bad = true] := by
+      simp only [expect_norm]
       rw [hmargW]
       refine MeasureProgramLogic.wp_congr _ fun u => MeasureProgramLogic.wp_congr _ fun gS' =>
         MeasureProgramLogic.wp_congr _ fun gFine => ?_
       rw [hext_eq gS' u, hcell_u gS' u]
+    simp only [expect_norm] at hLHS_marg hRHS_marg hBAD_marg
     rw [hLHS_marg, hRHS_marg, hBAD_marg]
     rw [show ∀ a b c : ℝ≥0∞, a + b + c = a + b + 0 + c from
           fun a b c => by ring]
@@ -537,7 +541,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
       (multipleBadAdvance tag sB (some (⟨n, u⟩ : TagTranscript Nonce Digest))) R
       (hqRk _) (hqTk _) hqRle hcInv' hRespInv'
     rw [← add_assoc, ← add_assoc]
-    exact hihB
+    simpa only [expect_norm] using hihB
   · -- Case A: cache hit `u₀`. Cell read is `u₀` regardless of `gS`. Apply IH at unchanged
     -- cache `c`.
     have hcell : ∀ gS : (TagId × Fin sessionsPerTag) × Nonce → Digest,
@@ -573,7 +577,7 @@ lemma dcAux_tag_slotZero [Fintype Nonce] [Fintype Digest] (out : Bool)
       (multipleBadAdvance tag sB (some (⟨n, u₀⟩ : TagTranscript Nonce Digest))) R
       (hqRk _) (hqTk _) hqRle hcInv hRespInv''
     rw [← add_assoc, ← add_assoc]
-    exact hihA
+    simpa only [expect_norm] using hihA
 
 end UnlinkReduction
 

@@ -339,9 +339,10 @@ private lemma prEvent_noGuard_le_fork_add_collision
           let u ← liftComp ($ᵗ spec.Range i) spec
           return (a, (σ i)[s]?, u))}[cf r.1 = some s ∧ r.2.1 = some r.2.2] := by
   unfold seededFork
-  rw [prEvent_bind, ← MeasureProgramLogic.wp_add]
+  simp only [expect_norm]
+  rw [← MeasureProgramLogic.wp_add]
   refine MeasureProgramLogic.wp_mono _ fun σ => ?_
-  rw [prEvent_bind, ← MeasureProgramLogic.wp_add]
+  rw [← MeasureProgramLogic.wp_add]
   refine MeasureProgramLogic.wp_mono _ fun a => ?_
   by_cases hcf : cf a = some s
   · simp only [hcf]
@@ -411,6 +412,7 @@ private lemma prEvent_noGuard_eq_pair (s : Fin (qb i + 1)) :
         let a ← (simulateQ seededOracle main).run' σ
         let b ← (simulateQ seededOracle main).run' (σ.takeAtIndex i s)
         return (a, b))}[cf r.1 = some s ∧ cf r.2 = some s] := by
+  simp only [expect_norm]
   refine MeasureProgramLogic.wp_congr _ fun σ => MeasureProgramLogic.wp_congr _ fun a => ?_
   let : MeasurableSpace α := ⊤
   rw [← prEvent_bind]
@@ -430,9 +432,9 @@ private lemma prEvent_collision_le [Fintype (spec.Range i)] (s : Fin (qb i + 1))
   let : MeasurableSpace α := ⊤
   let : MeasurableSpace (QuerySeed spec) := ⊤
   rw [(EvalDistEq.of_evalDist_eq
-      (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq,
-    prEvent_bind,
-    MeasureProgramLogic.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
+      (seededOracle.evalDist_liftComp_generateSeed_bind_simulateQ_run' qb js main).symm).prEvent_eq]
+  simp only [expect_norm]
+  rw [MeasureProgramLogic.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
       Measurable.of_discrete,
     MeasureProgramLogic.wp_eq_lintegral (liftComp (generateSeed spec qb js) spec) _
       Measurable.of_discrete,

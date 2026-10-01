@@ -189,8 +189,8 @@ theorem prEvent_cache_has_value_le_of_unique_preimage {α : Type}
             ≤ 1 / Fintype.card (spec.Range t) := by gcongr; exact_mod_cast hcard
           _ ≤ C⁻¹ := by
             rw [one_div]; exact ENNReal.inv_le_inv.mpr (Nat.cast_le.mpr (hrange t))
-      calc Pr{let z ← (liftM (query t) : OracleComp spec (spec.Range t)) >>= fun u =>
-              (simulateQ cachingOracle (mx u)).run (cache₀.cacheQuery t u)}[∃ t₀ v,
+      calc Pr{let u ← (liftM (query t) : OracleComp spec (spec.Range t));
+              let z ← (simulateQ cachingOracle (mx u)).run (cache₀.cacheQuery t u)}[∃ t₀ v,
                 z.2 t₀ = some v ∧ cache₀ t₀ = none ∧ HEq v v₀]
           ≤ C⁻¹ + ((n - 1 : ℕ) : ℝ≥0∞) * C⁻¹ :=
             (prEvent_bind_le_prEvent_add_of_support _ _ (fun u => HEq u v₀) _ hih).trans

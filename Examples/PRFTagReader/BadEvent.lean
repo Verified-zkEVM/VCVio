@@ -287,7 +287,7 @@ private lemma simulateQ_unlinkBad_prob_le
               (unlinkBadTagNext_sessionsUsed_le (sessionsPerTag := sessionsPerTag)
                 tag st nonce auth hslot hused)
         calc
-          Pr{let z ← step >>= cont}[z.2.bad = true]
+          Pr{let x ← step; let z ← cont x}[z.2.bad = true]
               ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb +
                   ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st - 1 : ℕ) :
                     ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) :=
@@ -301,8 +301,8 @@ private lemma simulateQ_unlinkBad_prob_le
                   exact_mod_cast Nat.add_sub_cancel' (Nat.succ_le_iff.mpr hRpos)
                 nth_rw 1 [← one_mul ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)]
                 rw [← add_mul, hRcast]
-      · change Pr{let z ← ((unlinkBadTagQueryImpl tag).run st >>= fun p =>
-              (simulateQ unlinkBadQueryImpl (oa p.1)).run p.2)}[z.2.bad = true] ≤ _
+      · change Pr{let p ← (unlinkBadTagQueryImpl tag).run st;
+                  let z ← (simulateQ unlinkBadQueryImpl (oa p.1)).run p.2}[z.2.bad = true] ≤ _
         rw [unlinkBadTagQueryImpl_run_of_not_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
         simpa using ih none st hbounded hbad hused
     | inr transcript =>

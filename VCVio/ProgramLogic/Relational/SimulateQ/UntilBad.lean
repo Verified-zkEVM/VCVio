@@ -264,7 +264,7 @@ theorem measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad
     · rw [isQueryBoundP_query_bind_iff] at h_qb
       obtain ⟨h_can, h_cont⟩ := h_qb
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind]
+        OracleQuery.cont_query, id_map, StateT.run_bind]
       let : MeasurableSpace (specκ.Range t × σ) := ⊤
       set q' := if S t then qS - 1 else qS
       have hmx : IsProbabilityMeasure 𝒟[(impl₁ t).run s₀] :=
@@ -287,7 +287,7 @@ theorem measureETVDist_simulateQ_run_le_queryBoundP_mul_add_prEvent_bad
             Pr{let z ← (simulateQ impl₁ (k us.1)).run us.2}[bad z.2])
           (Filter.Eventually.of_forall fun us => ih us.1 (h_cont us.1) us.2)).trans_eq ?_
         rw [lintegral_add_left measurable_const, lintegral_const, measure_univ, mul_one,
-          prEvent_bind_eq_lintegral_of_discrete]
+          prEvent_bind, prEvent_bind_eq_lintegral_of_discrete]
       calc _ ≤ _ := measureETVDist_triangle _ _ _
         _ ≤ (q' * ε + Pr{let z ← (impl₁ t).run s₀ >>= fun us =>
               (simulateQ impl₁ (k us.1)).run us.2}[bad z.2]) + if S t then ε else 0 :=

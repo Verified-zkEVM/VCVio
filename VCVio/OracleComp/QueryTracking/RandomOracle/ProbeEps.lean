@@ -207,7 +207,7 @@ theorem prEvent_bind_hiddenReadList_le {oa : ProbComp R} {ε : ℝ≥0∞}
     (hε : ∀ r : R, Pr{let w ← oa}[w = r] ≤ ε) (q : ℕ) (σ : List Bool → R) (kn : ProbComp ℕ) :
     Pr{let b ← kn >>= fun n => hiddenReadList oa q σ n}[b = true]
       ≤ (∫⁻ n, (n : ℝ≥0∞) ∂𝒟[kn]) * ((q : ℝ≥0∞) * ε) := by
-  rw [prEvent_bind_eq_lintegral_of_discrete,
+  rw [prEvent_bind, prEvent_bind_eq_lintegral_of_discrete,
     ← MeasureTheory.lintegral_mul_const _ Measurable.of_discrete]
   exact MeasureTheory.lintegral_mono fun n => prEvent_hiddenReadList_le hε q σ n
 
@@ -277,6 +277,7 @@ theorem prEvent_bind_fire_le_of_gen {α : Type} {oa : ProbComp R} {ε : ℝ≥0�
     (hk : ∀ w : R, k w = gen >>= fun p => pure (p.1, readMany w q p.2)) :
     Pr{let z ← oa >>= k}[z.2 = true] ≤ (q : ℝ≥0∞) * ε := by
   rw [prEvent_bind_fire_eq_defer oa q gen k hk]
+  simp only [expect_norm]
   refine wp_le_of_forall_le gen fun p => ?_
   simpa only [hiddenReadMany, expect_norm] using prEvent_hiddenReadMany_le hε q p.2
 
@@ -291,7 +292,7 @@ theorem prEvent_bind_fire_le_of_marginal_eq_readMany {α : Type} {oa : ProbComp 
     (hmarg : ∀ w : R, Pr{let z ← k w}[z.2 = true]
       = Pr{let b ← (pure (readMany w q σ) : ProbComp Bool)}[b = true]) :
     Pr{let z ← oa >>= k}[z.2 = true] ≤ (q : ℝ≥0∞) * ε := by
-  rw [MeasureProgramLogic.wp_congr oa hmarg]
+  rw [prEvent_bind, MeasureProgramLogic.wp_congr oa hmarg]
   simpa only [hiddenReadMany, expect_norm] using prEvent_hiddenReadMany_le hε q σ
 
 end OracleComp

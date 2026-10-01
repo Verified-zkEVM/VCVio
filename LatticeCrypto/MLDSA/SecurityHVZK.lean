@@ -537,7 +537,7 @@ lemma hvzkBadMass_le_one [SampleableType (CommitHashBytes p)] (pk : PublicKey p 
     (sk : SecretKey p) :
     hvzkBadMass p prims pk sk ≤ 1 := by
   unfold hvzkBadMass
-  exact wp_le_of_forall_le _ fun _ => prEvent_le_one _
+  exact prEvent_le_one _
 
 /-- `hvzkBadMass` over the simulator's `(c̃, z)` randomness: transporting the honest `(y, c̃)`
 draw through the `y ↦ y + c·s₁` shift (`honest_pregate_evalDistEq`) re-expresses the
@@ -553,7 +553,7 @@ lemma hvzkBadMass_eq_prEvent_indicator [SampleableType (CommitHashBytes p)]
   simp only [expect_norm] at h
   unfold hvzkBadMass
   rw [← h]
-  simp only [hvzkBadIndicator, rqVec_add_sub_cancel]
+  simp only [hvzkBadIndicator, rqVec_add_sub_cancel, expect_norm]
 
 /-- The quantitative HVZK bound for `hvzkSimulatorReal`: the supremum over honestly generated
 key pairs of the extra-rejection mass `hvzkBadMass`. Taking the supremum over seeds makes the

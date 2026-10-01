@@ -101,8 +101,7 @@ theorem prEvent_counting_budget_eq_enforce {oa : OracleComp spec α} {qb : ι �
     (h : IsPerIndexQueryBound oa qb) (p : α → Prop) :
     Pr{let z ← countingOracle.simulate oa 0}[p z.1 ∧ z.2 ≤ qb] =
       Pr{let x ← Prod.fst <$> (simulateQ enforceOracle oa).run qb}[p x] := by
-  rw [← prEvent_map ((simulateQ enforceOracle oa).run qb) Prod.fst p,
-    fst_map_run_simulateQ h]
+  rw [fst_map_run_simulateQ h]
   exact prEvent_counting_budget_eq h p
 
 /-- Structural boundedness implies the counting-to-enforcement event inequality. -/

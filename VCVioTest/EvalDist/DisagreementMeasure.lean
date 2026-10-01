@@ -38,8 +38,8 @@ example {m : Type → Type v} [Monad m] [LawfulMonad m]
     (hg : ∀ i, Measurable fun x ↦ 𝒟[g i x]) (bound : ℝ → ENNReal)
     (h : ∀ᵐ x ∂𝒟[mx], Pr{let y ← f x}[y ≤ 0] ≤
       (∑ i, Pr{let q ← g i x}[q]) + bound x) :
-    Pr{let y ← mx >>= f}[y ≤ 0] ≤
-      (∑ i, Pr{let q ← mx >>= g i}[q]) + ∫⁻ x, bound x ∂𝒟[mx] :=
+    Pr{let x ← mx; let y ← f x}[y ≤ 0] ≤
+      (∑ i, Pr{let x ← mx; let q ← g i x}[q]) + ∫⁻ x, bound x ∂𝒟[mx] :=
   prEvent_bind_le_sum_add_lintegral_ae mx f (fun y ↦ y ≤ 0) (fun i x ↦ Pr{let q ← g i x}[q]) hf
     (fun i ↦ measurable_prEvent (by simpa only [id_map'] using hg i)) bound h
 
@@ -65,7 +65,7 @@ example {α β : Type} (mx : Option α) (f : α → Option β) (p : β → Prop)
     (g : Fin 2 → α → Option Prop) (ε : ENNReal)
     (h : ∀ x ∈ support mx, Pr{let y ← f x}[p y] ≤
       (∑ i, Pr{let q ← g i x}[q]) + ε) :
-    Pr{let y ← mx >>= f}[p y] ≤ (∑ i, Pr{let q ← mx >>= g i}[q]) +
+    Pr{let x ← mx; let y ← f x}[p y] ≤ (∑ i, Pr{let x ← mx; let q ← g i x}[q]) +
       ε * Pr{let _x ← mx}[True] :=
   wp_le_sum_add_mul_mass_of_support mx (fun i x ↦ Pr{let q ← g i x}[q]) ε h
 
@@ -74,8 +74,8 @@ example (mx : Option (Nat → Nat)) (f g : (Nat → Nat) → Option ℝ)
     (hD : Pr{let x ← mx}[D x] ≤ ε₁)
     (h : ∀ x ∈ support mx, ¬D x → Pr{let y ← f x}[y ≤ 0] ≤
       Pr{let y ← g x}[y ≤ 0] + Pr{let z ← bad x}[z.1 ≤ z.2] + ε₂) :
-    Pr{let y ← mx >>= f}[y ≤ 0] ≤ Pr{let y ← mx >>= g}[y ≤ 0] +
-      Pr{let z ← mx >>= bad}[z.1 ≤ z.2] + ε₁ + ε₂ :=
+    Pr{let x ← mx; let y ← f x}[y ≤ 0] ≤ Pr{let x ← mx; let y ← g x}[y ≤ 0] +
+      Pr{let x ← mx; let z ← bad x}[z.1 ≤ z.2] + ε₁ + ε₂ :=
   prEvent_bind_le_add_bad_disagree hD h
 
 end VCVioTest.DisagreementMeasure

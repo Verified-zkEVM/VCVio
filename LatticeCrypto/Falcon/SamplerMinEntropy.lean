@@ -47,7 +47,7 @@ theorem pointMass_bind_le_mul {α β : Type} (mx : ProbComp α) (my : α → Pro
     (hB : ∀ x, Pr{let b ← my x}[b = y] ≤ B)
     (huniq : ∀ x₁ x₂, Pr{let b ← my x₁}[b = y] ≠ 0 →
       Pr{let b ← my x₂}[b = y] ≠ 0 → x₁ = x₂) :
-    Pr{let b ← mx >>= my}[b = y] ≤ M * B := by
+    Pr{let x ← mx; let b ← my x}[b = y] ≤ M * B := by
   classical
   let : MeasurableSpace α := ⊤
   rw [prEvent_bind_eq_lintegral_of_discrete]

@@ -53,14 +53,14 @@ example (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] ≤ 1 := by simp
 /-- Conditioning on a bad event of the common draw. -/
 example (mx : m α) (f : α → m β) (bad : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ bad a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[bad a] + ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[bad a] + ε :=
   prEvent_bind_le_prEvent_add mx f bad q h
 
 /-- The conditional bound only needs to hold on reachable draws. -/
 example [MonadAttach m] [WeaklyLawfulMonadAttach m]
     (mx : m α) (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ ε :=
   prEvent_bind_le_of_forall_le_of_support mx f q h
 
 end monad
@@ -119,7 +119,7 @@ example {α β : Type} (mx : OptionT ProbComp α) (f : α → OptionT ProbComp �
     (p : α → Prop) (q : β → Prop) {r r' : ℝ≥0∞}
     (h : r ≤ Pr{let a ← mx}[p a])
     (h' : ∀ a, p a → r' ≤ Pr{let b ← f a}[q b]) :
-    r * r' ≤ Pr{let b ← mx >>= f}[q b] :=
+    r * r' ≤ Pr{let a ← mx; let b ← f a}[q b] :=
   mul_le_prEvent_bind_of_forall mx f p q h h'
 
 /-- Two reductions share the adversary's draw; the draw's payload needs no measurable space. -/

@@ -133,7 +133,6 @@ private lemma minUnifAux_prEvent_gt (b k t : ℕ) (best : Option (Fin (2 ^ b))) 
           congr 1
           simp only [Option.some.injEq, forall_eq']
       rw [minUnifAux, prEvent_bind]
-      simp only [prEvent_ite, prEvent_pure]
       rw [wp_eq_sum_fintype,
         Finset.sum_congr rfl (fun x _ => by rw [hbody x, ← mul_assoc]), ← Finset.sum_mul,
         pow_succ, mul_comm (q ^ n) q, ← mul_assoc]

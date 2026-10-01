@@ -304,11 +304,13 @@ lemma multipleBadEager_le_singleEager_DC_aux [Fintype Nonce] [Fintype Digest] (o
         have hLHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hLHS_eq
         have hRHS_ev := congrArg (fun mx => Pr{let b ← mx}[b = out]) hRHS_eq
         have hBAD_ev := congrArg (fun mx => Pr{let z ← mx}[z.2.bad = true]) hBAD_eq
-        simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev
+        simp only [expect_norm] at hLHS_ev hRHS_ev hBAD_ev ⊢
         rw [hLHS_ev, hRHS_ev, hBAD_ev]
         -- Now LHS / RHS / BAD all evaluate `k none` at the unchanged state `(s, sB)`. Apply IH at
         -- `qT'`; the `qT`-bearing nonce-aliasing slack weakens back via `gcongr` + `Nat.le_succ`.
-        refine (ih none qR qT' s c sB R (hqRk none) (hqTk none) hqRle hcInv hRespInv).trans ?_
+        have hih := ih none qR qT' s c sB R (hqRk none) (hqTk none) hqRle hcInv hRespInv
+        simp only [expect_norm] at hih
+        refine hih.trans ?_
         gcongr
         exact Nat.le_succ _
     | inr transcript =>
@@ -434,8 +436,8 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
           Φ (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) := fun Φ => by
     simpa only [expect_norm] using EvalDistEq.wp_eq
       (EvalDistEq.of_evalDist_eq (@hbridge ℝ≥0∞ ⊤ fun g => pure (Φ g))) fun x => x
-  rw [hbridgeW, hbridgeW]
   simp only [expect_norm]
+  rw [hbridgeW, hbridgeW]
   -- **Step 4b.** Fine-shape bridges. The aux's signature carries an outer
   -- `gFine ← $ᵗ ((TagId × Fin sp) × Nonce → Digest)` binder and the Fine handler
   -- `multipleBadTableHandlerFine ... gFine`. Per-`gS`, marginalizing the Fine run over `gFine`
@@ -473,6 +475,7 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
             (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
                 (UnlinkState.init, UnlinkBadState.init))}[b = out] := by
+    simp only [expect_norm]
     refine MeasureProgramLogic.wp_congr _ fun gS => ?_
     have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.1 = out)
     simpa only [expect_norm] using h
@@ -492,16 +495,18 @@ theorem multipleIdeal_le_singleIdeal_add_bad_DC [Fintype Nonce] [Fintype Digest]
             (simulateQ (multipleBadTableHandlerFine
               (slotZeroSubTable (sessionsPerTag := sessionsPerTag) gS) gFine) adversary).run
                 (UnlinkState.init, UnlinkBadState.init))}[z.2.bad] := by
+    simp only [expect_norm]
     refine MeasureProgramLogic.wp_congr _ fun gS => ?_
     have h := (EvalDistEq.of_evalDist_eq (hFineEq gS).symm).prEvent_eq (fun z => z.2.2.bad = true)
     simpa only [expect_norm] using h
+  simp only [expect_norm] at hsucc_fine hbad_fine
   rw [hsucc_fine, hbad_fine]
   -- **Step 5.** Apply the DC aux at `c = ∅`, `s = UnlinkState.init`, `sB = UnlinkBadState.init`.
   have haux := multipleBadEager_le_singleEager_DC_aux (sessionsPerTag := sessionsPerTag) out
     adversary qReader qTag qReader UnlinkState.init
     (∅ : (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache) UnlinkBadState.init ∅
     hqReader hqTag (by simp) (fun _ _ _ _ => rfl) (fun _ _ _ h => absurd rfl h)
-  simp only [OracleComp.tableExtending_empty] at haux
+  simp only [OracleComp.tableExtending_empty, expect_norm] at haux
   -- The aux bound is term-by-term equal to the headline RHS: the three eager slacks match exactly.
   exact haux
 

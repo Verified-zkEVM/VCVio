@@ -673,6 +673,7 @@ private lemma forkLogged_verify_prob_true_le_forkPoint_run
             forkFinalQueryTrace (M := M) (Commit := Commit) (Chal := Chal)
               (Resp := Resp) σ pk z.1 (z.2, ([] : List M)))}[
         (Fork.forkPoint Commit Chal Resp M qH trace).isSome] := by
+          simp only [expect_norm]
           rw [← hproj, MeasureProgramLogic.wp_map]
       _ =
         Pr{let trace ← Fork.runTrace σ hr M (nmaAdvFromCmaWithFinalQuery σ hr M adv simT) pk}[

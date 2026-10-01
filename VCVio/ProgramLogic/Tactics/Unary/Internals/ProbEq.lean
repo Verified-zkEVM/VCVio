@@ -294,9 +294,10 @@ private def probEqPlannerActionPlansForGoal : TacticM (List (List ProbEqAction))
   | some depth => return probEqPlannerActionPlansForDepth depth
   | none => return probEqPlannerActionPlans
 
-/-- Search the bounded sequences of bind-swap rewrites and congruence steps, sized by the bind
-depth of the goal, for one that closes the equality, and run it. -/
+/-- Bring the goal to normal form, then search the bounded sequences of bind-swap rewrites and
+congruence steps, sized by its bind depth, for one that closes the equality, and run it. -/
 def runProbEqNormalize : TacticM Bool := withVCGenProbPlannerTiming do
+  normalizeProbEqGoal
   for plan in ← probEqPlannerActionPlansForGoal do
     let preview ← previewActionWithGoals (tryProbEqActions plan)
     if preview.ok && preview.goalCount = 0 then

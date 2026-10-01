@@ -83,7 +83,7 @@ theorem prEvent_bad_simulateQ_run_le_expectedQuerySlack
       rw [isQueryBoundP_query_bind_iff] at h_qb
       obtain ⟨hvalid, hcont⟩ := h_qb
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind]
+        OracleQuery.cont_query, id_map, StateT.run_bind]
       rw [expectedQuerySlack_query_bind]
       -- Each good post-state forwards its bad mass to the inductive hypothesis.
       have hpt : ∀ z : spec.Range t × σ × Bool,

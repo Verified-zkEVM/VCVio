@@ -440,8 +440,8 @@ private lemma prEvent_cacheCollision_run_le_sum_aux [Inhabited ι]
             · exact heq ▸ Finset.mem_insert_self _ S
             · rw [QueryCache.cacheQuery_of_ne cache₀ _ heq] at ht'
               exact Finset.mem_insert_of_mem (hSmem t' ht')⟩
-      calc Pr{let z ← (query t : OracleComp spec (spec.Range t)) >>= fun u =>
-              (simulateQ cachingOracle (mx u)).run
+      calc Pr{let u ← (query t : OracleComp spec (spec.Range t));
+              let z ← (simulateQ cachingOracle (mx u)).run
                 (cache₀.cacheQuery t u)}[CacheHasCollision z.2]
           ≤ (k : ℝ≥0∞) * C⁻¹ + ∑ j ∈ range (m - 1), ((k + 1 + j : ℕ) : ℝ≥0∞) * C⁻¹ :=
             (prEvent_bind_le_prEvent_add_of_support _ _

@@ -350,8 +350,8 @@ private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
   have hcommit_bound : IsTotalQueryBound commitPart A.t₁ :=
     (isTotalQueryBound_run_simulateQ_loggingOracle_iff A.commit A.t₁).mpr A.commitBound
   have hmain :
-      Pr{let z ← (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
-          (simulateQ cachingOracle (restPart x.1)).run x.2}[z.1 = true] ≤
+      Pr{let x ← (simulateQ cachingOracle commitPart).run ∅;
+          let z ← (simulateQ cachingOracle (restPart x.1)).run x.2}[z.1 = true] ≤
         ((A.t₁ * (A.t₁ - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
         ((A.t₂ + 1 : ℕ) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹ :=
     (prEvent_bind_le_prEvent_add_of_support ((simulateQ cachingOracle commitPart).run ∅)
@@ -366,8 +366,8 @@ private lemma extractability_win_le_textbook_bound [Inhabited M] [Inhabited S]
         hcommit_bound (fun _ => le_refl _)) le_rfl)
   rw [extractabilityExperiment_eq, hdecomp, simulateQ_bind, StateT.run_bind, prEvent_bind]
   calc
-    Pr{let z ← (simulateQ cachingOracle commitPart).run ∅ >>= fun x =>
-        (simulateQ cachingOracle (restPart x.1)).run x.2}[z.1 = true]
+    Pr{let x ← (simulateQ cachingOracle commitPart).run ∅;
+        let z ← (simulateQ cachingOracle (restPart x.1)).run x.2}[z.1 = true]
       ≤ ((A.t₁ * (A.t₁ - 1) : ℕ) : ℝ≥0∞) / (2 * Fintype.card C) +
           ((A.t₂ + 1 : ℕ) : ℝ≥0∞) * (Fintype.card C : ℝ≥0∞)⁻¹ := hmain
     _ = ((A.t₁ * (A.t₁ - 1) + 2 * (A.t₂ + 1) : ℕ) : ℝ≥0∞) /

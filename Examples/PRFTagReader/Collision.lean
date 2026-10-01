@@ -354,8 +354,8 @@ private lemma simulateQ_authRF_forge_le
         (fun p => (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2)
         (fun z => ¬ z.2.readerForged = ∅) (fun y => y.2.readerForged ≠ ∅)
         fun p hp hpf => hcont p hp (not_not.mp hpf)).trans (add_le_add_left hstepForge _)
-      calc Pr{let z ← (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st >>=
-              fun p => (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2}[
+      calc Pr{let p ← (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st;
+              let z ← (simulateQ (authRFQueryImpl TagId Nonce Digest) (oa p.1)).run p.2}[
                 z.2.readerForged ≠ ∅]
           ≤ (Fintype.card TagId : ℝ≥0∞) * maxDigestProb +
               ((q - 1 : ℕ) : ℝ≥0∞) * (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by

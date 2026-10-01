@@ -222,8 +222,8 @@ theorem prEvent_sq_le_observedForkPair [DecidableEq ι]
         rw [Cursor.map_output_withPath]
       _ = _ := by simp only [Functor.map_map, Function.comp_def]
   have hsuccess : Pr{let output ← main}[observe output = some value] =
-      Pr{let output ← source >>= kernel}[output = some value] := by
-    rw [← prEvent_bind source kernel, ← hprogram, prEvent_map]
+      Pr{let split ← source; let output ← kernel split}[output = some value] := by
+    rw [← MeasureProgramLogic.wp_bind, ← hprogram, prEvent_map]
   rw [hsuccess]
   refine (prEvent_bind_sq_le_bind_pair source kernel (· = some value)).trans_eq ?_
   let observeView := fun view : PFunctor.FreeM.Cursor.ForkView i main n ↦

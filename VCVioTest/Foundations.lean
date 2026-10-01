@@ -221,7 +221,7 @@ variable {m : Type → Type*} [Monad m] [LawfulMonad m]
 example (mx : m α) : Pr{let _ ← mx}[False] = 0 := by simp
 
 example (mx : m α) (p : α → Prop) [DecidablePred p] (yes no : m β) (q : β → Prop) :
-    Pr{let y ← mx >>= fun x ↦ if p x then yes else no}[q y] =
+    Pr{let x ← mx; let y ← if p x then yes else no}[q y] =
       Pr{let x ← mx}[p x] * Pr{let y ← yes}[q y] +
         Pr{let x ← mx}[¬p x] * Pr{let y ← no}[q y] :=
   prEvent_bind_ite mx p yes no q
@@ -284,7 +284,7 @@ example (oa : ProbComp ℝ) :
 example {β γ : Type} (mx : ProbComp Bool) (f : Bool → ProbComp β) (g : Bool → ProbComp γ)
     (p : β → Prop) (q : γ → Prop)
     (h : ∀ b ∈ support mx, Pr{let y ← f b}[p y] = Pr{let z ← g b}[q z]) :
-    Pr{let y ← mx >>= f}[p y] = Pr{let z ← mx >>= g}[q z] :=
+    Pr{let b ← mx; let y ← f b}[p y] = Pr{let b ← mx; let z ← g b}[q z] :=
   wp_congr_of_support mx h
 
 end Simulation

@@ -117,12 +117,13 @@ example {oa : OracleComp spec α} [DecidableEq α] {x : α} {r : ℝ≥0∞}
   prvcgen
   simp only [propInd_eq_ite, le_refl]
 
-/-- The notation distributes an event over a branch of its draw when it elaborates. -/
+/-- An event of a branching draw is the branch of the two events: the notation keeps the branch
+as the draw's program, and `expect_norm` distributes the event over it. -/
 example (c : Prop) [Decidable c] (oa ob : OracleComp spec α)
     (p : α → Prop) [DecidablePred p] :
     Pr{let x ← if c then oa else ob}[p x] =
-      if c then wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) else wp⟦ob⟧ (fun x => 𝟙⟦p x⟧) :=
-  rfl
+      if c then wp⟦oa⟧ (fun x => 𝟙⟦p x⟧) else wp⟦ob⟧ (fun x => 𝟙⟦p x⟧) := by
+  simp only [expect_norm]
 
 example (c : Prop) [Decidable c] (oa : c → OracleComp spec α)
     (ob : ¬c → OracleComp spec α) (p : α → Prop) [DecidablePred p] :

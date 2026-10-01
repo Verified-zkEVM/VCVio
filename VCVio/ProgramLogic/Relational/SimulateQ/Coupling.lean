@@ -505,7 +505,6 @@ theorem prEvent_marginal_simulateQ_mono
   | query_bind t ob ih =>
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query, OracleQuery.cont_query,
       id_map, StateT.run_bind]
-    rw [prEvent_bind, prEvent_bind]
     exact h_step t s₁ s₂ hR _ _ ih
 
 /-- **Distribution-level stochastic dominance through `simulateQ`.**

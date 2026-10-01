@@ -329,7 +329,6 @@ private lemma verify_evalDist_true_mixed
           (((2 ^ b : ℕ) : ℝ≥0∞)) ^ (Finset.univ.filter fun i : Fin ρ => hits i = none).card := by
   rw [verify_run'_mixed σ hr ρ b S M pk msg sig cache hits hcache,
     ← prEvent_eq_evalDist_singleton, prEvent_bind, wp_eq_sum_fintype]
-  simp only [prEvent_pure]
   by_cases haV :
       ((List.finRange ρ).all fun i => σ.verify pk (sig i).1 (sig i).2.1 (sig i).2.2) = true
   · -- σ-verification accepted: the verdict is exactly the small-sum event.

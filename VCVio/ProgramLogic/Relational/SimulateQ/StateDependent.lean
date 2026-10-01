@@ -303,7 +303,7 @@ theorem measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
       obtain ⟨h_can, h_cont⟩ := h_qb
       rw [expectedQuerySlack_query_bind]
       simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
-        OracleQuery.cont_query, id_map, StateT.run_bind, prEvent_bind]
+        OracleQuery.cont_query, id_map, StateT.run_bind]
       let : MeasurableSpace (spec.Range t × σ × Bool) := ⊤
       set q' := if chargedQuery t then queryBudget - 1 else queryBudget
       have hswap : measureETVDist ((impl₁ t).run (s, false) >>= fun us =>
@@ -326,8 +326,8 @@ theorem measureETVDist_simulateQ_run_le_expectedQuerySlack_add_prEvent_bad
             expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2 +
               Pr{let z ← (simulateQ impl₁ (k us.1)).run us.2}[z.2.2 = true])
           (Filter.Eventually.of_forall fun us => ih us.1 (h_cont us.1) us.2)).trans_eq ?_
-        rw [lintegral_add_left Measurable.of_discrete, prEvent_bind_eq_lintegral_of_discrete,
-          wp_eq_lintegral _ _ Measurable.of_discrete]
+        rw [lintegral_add_left Measurable.of_discrete, prEvent_bind,
+          prEvent_bind_eq_lintegral_of_discrete, wp_eq_lintegral _ _ Measurable.of_discrete]
       calc _ ≤ _ := measureETVDist_triangle _ _ _
         _ ≤ ((wp⟦(impl₁ t).run (s, false)⟧ fun us =>
                 expectedQuerySlack impl₁ chargedQuery querySlack (k us.1) q' us.2) +
