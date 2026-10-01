@@ -18,6 +18,7 @@ public import VCVio.EvalDist.Monad.Measure
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
 import VCVio.OracleComp.EvalDist.MeasureSpec
+import VCVio.ProgramLogic.Tactics.Unary
 import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
@@ -442,9 +443,8 @@ private lemma evalDist_badEventExperiment_eq_idealFlagged (adv : CPA_Adversary P
       QueryCache.isCached_empty, Bool.false_or]
   rw [hforget, idealFlagged]
   simp only [map_bind, map_pure]
-  rw [OracleComp.evalDist_bind_bind_swap ($ᵗ Bool) tdp.keygen]
-  refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun ks _ => ?_
-  exact OracleComp.evalDist_bind_bind_swap _ _ _
+  symm
+  prrw move 0 2
 
 /-- Off the bad flag, the flagged idealized game is dominated by the real game: when the
 idealized run never queries the hidden input, programming the revealed mask there is invisible. -/

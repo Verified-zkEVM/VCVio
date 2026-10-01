@@ -49,30 +49,22 @@ theorem pointMass_bind_le_mul {α β : Type} (mx : ProbComp α) (my : α → Pro
       Pr{let b ← my x₂}[b = y] ≠ 0 → x₁ = x₂) :
     Pr{let x ← mx; let b ← my x}[b = y] ≤ M * B := by
   classical
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete]
   rcases Classical.em (∀ x, Pr{let b ← my x}[b = y] = 0) with h | h
-  · simp only [h, lintegral_const, zero_mul, zero_le]
+  · simp [h]
   · obtain ⟨x₀, hx₀⟩ := not_forall.mp h
-    calc
-      _ ≤ ∫⁻ x, ({x₀} : Set α).indicator (fun _ => B) x ∂𝒟[mx] := by
-        apply lintegral_mono
-        intro x
-        change Pr{let b ← my x}[b = y] ≤ ({x₀} : Set α).indicator (fun _ => B) x
-        rcases Classical.em (x = x₀) with hx | hx
-        · subst x
-          simpa only [Set.indicator_of_mem (Set.mem_singleton x₀)] using hB x₀
-        · have hz : Pr{let b ← my x}[b = y] = 0 := by
-            by_contra hy
-            exact hx (huniq x x₀ hy hx₀)
-          rw [hz, Set.indicator_of_notMem
-            (show x ∉ ({x₀} : Set α) from hx)]
-      _ = B * Pr{let x ← mx}[x = x₀] := by
-        rw [lintegral_indicator_const (measurableSet_singleton x₀),
-          prEvent_eq_evalDist_singleton]
-      _ ≤ M * B := by
-        rw [mul_comm B]
-        exact mul_le_mul (hM x₀) le_rfl zero_le zero_le
+    calc Pr{let x ← mx; let b ← my x}[b = y]
+        ≤ wp⟦mx⟧ (fun x => B * propInd (x = x₀)) := by
+          gcongr with x _
+          by_cases hx : x = x₀
+          · subst hx
+            simpa [propInd_eq_ite] using hB x
+          · have hz : Pr{let b ← my x}[b = y] = 0 := by
+              by_contra hy
+              exact hx (huniq x x₀ hy hx₀)
+            simp [hz, propInd_eq_ite, hx]
+      _ = B * Pr{let x ← mx}[x = x₀] := ExpectationWP.wp_const_mul _ _ _
+      _ ≤ B * M := by gcongr; exact hM x₀
+      _ = M * B := mul_comm _ _
 
 private theorem pointMass_eq_zero_iff {α : Type} (mx : ProbComp α) (x : α) :
     Pr{let a ← mx}[a = x] = 0 ↔ x ∉ support mx := by

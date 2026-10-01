@@ -10,6 +10,7 @@ public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 public import VCVio.CryptoFoundations.HardnessAssumptions.EntropySmoothing
 public import VCVio.OracleComp.Constructions.SampleableType.Measure
+import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # Hashed ElGamal Encryption
@@ -132,22 +133,15 @@ def esReduction (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g 
 
 /-! ## Game-hop lemmas -/
 
-/-- Game 0 = CPA game equals DDH real branch (by construction). -/
+/-- Game 0 = CPA game equals DDH real branch (by construction): both are the canonical program
+up to the order of the independent draws, the game drawing the bit first and the reduction
+drawing the second exponent second. -/
 theorem cpaGame_eq_ddhReal
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
     ProbCompRuntime.probComp.evalDist (AsymmEncAlg.IND_CPA_OneTime_Game
         (encAlg := hashedElGamal F g hash) adv ProbCompRuntime.probComp) =
       𝒟[ddhRealExperiment g (ddhReduction (F := F) (hash := hash) adv)] := by
-  let cpaCanonical : ProbComp Bool := do
-    let b ← ($ᵗ Bool)
-    let hk ← ($ᵗ HK)
-    let a ← ($ᵗ F)
-    let x ← adv.chooseMessages (hk, a • g)
-    let y ← ($ᵗ F)
-    let b' ← adv.distinguish x.2.2
-      (y • g, hash hk (y • (a • g)) + if b then x.1 else x.2.1)
-    pure (b == b')
-  let ddhCanonical : ProbComp Bool := do
+  let canonical : ProbComp Bool := do
     let hk ← ($ᵗ HK)
     let a ← ($ᵗ F)
     let x ← adv.chooseMessages (hk, a • g)
@@ -159,63 +153,20 @@ theorem cpaGame_eq_ddhReal
   have hleft :
       ProbCompRuntime.probComp.evalDist (AsymmEncAlg.IND_CPA_OneTime_Game
           (encAlg := hashedElGamal F g hash) adv ProbCompRuntime.probComp) =
-        𝒟[cpaCanonical] := by
+        𝒟[canonical] := by
     change 𝒟[($ᵗ Bool) >>= fun b => _] = _
-    simp [hashedElGamal, cpaCanonical, map_eq_bind_pure_comp, smul_smul, mul_comm]
-  have hswap : 𝒟[cpaCanonical] = 𝒟[ddhCanonical] := by
-    simpa [cpaCanonical, ddhCanonical, monad_norm] using
-      (OracleComp.evalDist_bind_bind_swap
-        ($ᵗ Bool)
-        (do
-          let hk ← ($ᵗ HK)
-          let a ← ($ᵗ F)
-          let x ← adv.chooseMessages (hk, a • g)
-          pure (hk, a, x))
-        (fun b ⟨hk, a, x⟩ => do
-          let y ← ($ᵗ F)
-          let b' ← adv.distinguish x.2.2
-            (y • g, hash hk (y • (a • g)) + if b then x.1 else x.2.1)
-          pure (b == b')))
+    simp only [hashedElGamal, canonical, bind_pure_comp, map_eq_bind_pure_comp, bind_assoc,
+      Function.comp_apply, pure_bind, smul_smul, mul_comm]
+    prrw move 0 3
   have hright :
-      𝒟[ddhRealExperiment g (ddhReduction (F := F) (hash := hash) adv)] = 𝒟[ddhCanonical] := by
-    trans 𝒟[do
-      let a ← ($ᵗ F)
-      let hk ← ($ᵗ HK)
-      let x ← adv.chooseMessages (hk, a • g)
-      let b ← ($ᵗ Bool)
-      let y ← ($ᵗ F)
-      let b' ← adv.distinguish x.2.2
-        (y • g, hash hk (y • (a • g)) + if b then x.1 else x.2.1)
-      pure (b == b')]
-    · simpa [ddhRealExperiment, ddhReduction, monad_norm,
-        smul_smul, mul_comm] using
-        (OracleComp.evalDist_bind_congr_of_support ($ᵗ F) _ _ (fun a _ => by
-          simpa [monad_norm, smul_smul, mul_comm] using
-            (OracleComp.evalDist_bind_bind_swap
-              ($ᵗ F)
-              (do
-                let hk ← ($ᵗ HK)
-                let x ← adv.chooseMessages (hk, a • g)
-                let b ← ($ᵗ Bool)
-                pure (hk, x, b))
-              (fun y (z : HK × (M × M × adv.State) × Bool) => do
-                let b' ← adv.distinguish z.2.1.2.2
-                  (y • g, hash z.1 (y • (a • g)) + if z.2.2 then z.2.1.1 else z.2.1.2.1)
-                pure (z.2.2 == b')))))
-    · simpa [ddhCanonical, monad_norm] using
-        (OracleComp.evalDist_bind_bind_swap
-          ($ᵗ F)
-          ($ᵗ HK)
-          (fun a hk => do
-            let x ← adv.chooseMessages (hk, a • g)
-            let b ← ($ᵗ Bool)
-            let y ← ($ᵗ F)
-            let b' ← adv.distinguish x.2.2
-              (y • g, hash hk (y • (a • g)) + if b then x.1 else x.2.1)
-            pure (b == b')))
-  exact hleft.trans (hswap.trans hright.symm)
+      𝒟[ddhRealExperiment g (ddhReduction (F := F) (hash := hash) adv)] = 𝒟[canonical] := by
+    simp only [ddhRealExperiment, ddhReduction, canonical, monad_norm, smul_smul, mul_comm]
+    prrw move 1 4
+    prrw move 0 1
+  exact hleft.trans hright.symm
 
-/-- DDH random branch equals ES real experiment (by construction). -/
+/-- DDH random branch equals ES real experiment (by construction): both are the canonical
+program up to the order of the independent draws. -/
 theorem ddhRand_eq_esReal
     (adv : AsymmEncAlg.IND_CPA_OneTime_Adversary (hashedElGamal F g hash)) :
     𝒟[ddhRandomExperiment g (ddhReduction (F := F) (hash := hash) adv)] =
@@ -232,85 +183,15 @@ theorem ddhRand_eq_esReal
     pure (b == b')
   have hleft :
       𝒟[ddhRandomExperiment g (ddhReduction (F := F) (hash := hash) adv)] = 𝒟[canonical] := by
-    trans 𝒟[do
-      let a ← ($ᵗ F)
-      let z ← ($ᵗ F)
-      let hk ← ($ᵗ HK)
-      let x ← adv.chooseMessages (hk, a • g)
-      let b ← ($ᵗ Bool)
-      let y ← ($ᵗ F)
-      let b' ← adv.distinguish x.2.2
-        (y • g, hash hk (z • g) + if b then x.1 else x.2.1)
-      pure (b == b')]
-    · simpa [ddhRandomExperiment, ddhReduction, monad_norm] using
-        (OracleComp.evalDist_bind_congr_of_support ($ᵗ F) _ _ (fun a _ => by
-          simpa [monad_norm] using
-            (OracleComp.evalDist_bind_bind_swap
-              ($ᵗ F)
-              (do
-                let z ← ($ᵗ F)
-                let hk ← ($ᵗ HK)
-                let x ← adv.chooseMessages (hk, a • g)
-                let b ← ($ᵗ Bool)
-                pure (z, hk, x, b))
-              (fun y (w : F × HK × (M × M × adv.State) × Bool) => do
-                let b' ← adv.distinguish w.2.2.1.2.2
-                  (y • g, hash w.2.1 (w.1 • g) + if w.2.2.2 then w.2.2.1.1 else w.2.2.1.2.1)
-                pure (w.2.2.2 == b')))))
-    · trans 𝒟[do
-          let a ← ($ᵗ F)
-          let hk ← ($ᵗ HK)
-          let x ← adv.chooseMessages (hk, a • g)
-          let b ← ($ᵗ Bool)
-          let z ← ($ᵗ F)
-          let y ← ($ᵗ F)
-          let b' ← adv.distinguish x.2.2
-            (y • g, hash hk (z • g) + if b then x.1 else x.2.1)
-          pure (b == b')]
-      · simpa [monad_norm] using
-          (OracleComp.evalDist_bind_congr_of_support ($ᵗ F) _ _ (fun a _ => by
-            simpa [monad_norm] using
-              (OracleComp.evalDist_bind_bind_swap
-                ($ᵗ F)
-                (do
-                  let hk ← ($ᵗ HK)
-                  let x ← adv.chooseMessages (hk, a • g)
-                  let b ← ($ᵗ Bool)
-                  pure (hk, x, b))
-                (fun z (w : HK × (M × M × adv.State) × Bool) => do
-                  let y ← ($ᵗ F)
-                  let b' ← adv.distinguish w.2.1.2.2
-                    (y • g, hash w.1 (z • g) + if w.2.2 then w.2.1.1 else w.2.1.2.1)
-                  pure (w.2.2 == b')))))
-      · simpa [canonical, monad_norm] using
-          (OracleComp.evalDist_bind_bind_swap
-            ($ᵗ F)
-            ($ᵗ HK)
-            (fun a hk => do
-              let x ← adv.chooseMessages (hk, a • g)
-              let b ← ($ᵗ Bool)
-              let z ← ($ᵗ F)
-              let y ← ($ᵗ F)
-              let b' ← adv.distinguish x.2.2
-                (y • g, hash hk (z • g) + if b then x.1 else x.2.1)
-              pure (b == b')))
+    simp only [ddhRandomExperiment, ddhReduction, canonical, monad_norm]
+    prrw move 1 5
+    prrw move 1 4
+    prrw move 0 1
   have hright :
       𝒟[EntropySmoothing.realExperiment F g hash (esReduction (F := F) (g := g) adv)] =
         𝒟[canonical] := by
-    refine OracleComp.evalDist_bind_congr_of_support ($ᵗ HK) _ _ fun hk _ => ?_
-    simpa [EntropySmoothing.realExperiment, esReduction, canonical, monad_norm] using
-      (OracleComp.evalDist_bind_bind_swap
-        ($ᵗ F)
-        (do
-          let a ← ($ᵗ F)
-          let x ← adv.chooseMessages (hk, a • g)
-          let b ← ($ᵗ Bool)
-          pure (a, x, b))
-        (fun z (w : F × (M × M × adv.State) × Bool) => do
-          let y ← ($ᵗ F)
-          let b' ← adv.distinguish w.2.1.2.2
-            (y • g, hash hk (z • g) + if w.2.2 then w.2.1.1 else w.2.1.2.1)
-          pure (w.2.2 == b')))
+    simp only [EntropySmoothing.realExperiment, esReduction, canonical, monad_norm]
+    prrw move 1 4
   exact hleft.trans hright.symm
 
 /-- ES ideal experiment: the ciphertext `v + m_b` with uniform `v` is uniform
@@ -338,10 +219,8 @@ theorem esIdeal_eq_half
     adv.distinguish st (y • g, h + if b then m₁ else m₂)
   have hf : ∀ hk, 𝒟[f hk true] = 𝒟[f hk false] := by
     intro hk
-    refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun sk _ => ?_
-    refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun x _ => ?_
+    prrw congr' as ⟨sk, x, y⟩
     rcases x with ⟨m₁, m₂, st⟩
-    refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun y _ => ?_
     simpa [add_comm, add_left_comm, add_assoc] using
       ElGamalExamples.evalDist_uniformMaskedCipher_bind_dist_indep ($ᵗ M) hM
         (y • g) m₁ m₂ (adv.distinguish st)
@@ -352,39 +231,9 @@ theorem esIdeal_eq_half
           let b' ← f hk b
           pure (decide (b = b'))] := by
     intro hk
-    trans 𝒟[do
-      let sk ← ($ᵗ F)
-      let x ← adv.chooseMessages (hk, sk • g)
-      let b ← ($ᵗ Bool)
-      let y ← ($ᵗ F)
-      let h ← ($ᵗ M)
-      let b' ← adv.distinguish x.2.2 (y • g, h + if b then x.1 else x.2.1)
-      pure (decide (b = b'))]
-    · simpa [inner, monad_norm] using
-        (OracleComp.evalDist_bind_bind_swap
-          ($ᵗ M)
-          (do
-            let sk ← ($ᵗ F)
-            let x ← adv.chooseMessages (hk, sk • g)
-            let b ← ($ᵗ Bool)
-            let y ← ($ᵗ F)
-            pure (sk, x, b, y))
-          (fun h (w : F × (M × M × adv.State) × Bool × F) => do
-            let b' ← adv.distinguish w.2.1.2.2
-              (w.2.2.2 • g, h + if w.2.2.1 then w.2.1.1 else w.2.1.2.1)
-            pure (decide (w.2.2.1 = b'))))
-    · simpa [f, monad_norm] using
-        (OracleComp.evalDist_bind_bind_swap
-          (do
-            let sk ← ($ᵗ F)
-            let x ← adv.chooseMessages (hk, sk • g)
-            pure (sk, x))
-          ($ᵗ Bool)
-          (fun (w : F × M × M × adv.State) b => do
-            let y ← ($ᵗ F)
-            let h ← ($ᵗ M)
-            let b' ← adv.distinguish w.2.2.2 (y • g, h + if b then w.2.1 else w.2.2.1)
-            pure (decide (b = b'))))
+    simp only [inner, f, monad_norm]
+    prrw move 0 4
+    prrw move 2 0
   have hhalf : ∀ hk, 𝒟[inner hk] {true} = 1 / 2 := fun hk => by
     rw [hrepr hk]
     exact ProbComp.evalDist_decide_eq_uniformBool_half (f hk) (hf hk)

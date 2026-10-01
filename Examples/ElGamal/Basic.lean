@@ -11,6 +11,7 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
 import VCVio.OracleComp.Constructions.SampleableType.Measure
 import ToMathlib.Probability.UniformOn
 import VCVio.ProgramLogic.Tactics.PrVCGen
+import VCVio.ProgramLogic.Tactics.Unary
 
 /-!
 # ElGamal Encryption: IND-CPA via the generic one-time lift
@@ -183,37 +184,9 @@ private lemma IND_CPA_OneTime_DDHReduction_rand_half
         let bit' ← f pk bit
         pure (decide (bit = bit'))] {true} := by
     intro pk
-    trans 𝒟[do
-      let head ← ($ᵗ G)
-      let x ← adv.chooseMessages pk
-      let bit ← ($ᵗ Bool)
-      let mask ← ($ᵗ G)
-      let bit' ← adv.distinguish x.2.2 (head, mask + if bit then x.1 else x.2.1)
-      pure (decide (bit = bit'))] {true}
-    · congr 1
-      refine OracleComp.evalDist_bind_congr_of_support _ _ _ fun head _ => ?_
-      simpa [inner, monad_norm] using
-        (OracleComp.evalDist_bind_bind_swap
-          ($ᵗ G)
-          (do
-            let x ← adv.chooseMessages pk
-            let bit ← ($ᵗ Bool)
-            pure (x, bit))
-          (fun mask (y : (G × G × adv.State) × Bool) => do
-            let bit' ← adv.distinguish y.1.2.2 (head, mask + if y.2 then y.1.1 else y.1.2.1)
-            pure (decide (y.2 = bit'))))
-    · congr 1
-      simpa [f, monad_norm] using
-        (OracleComp.evalDist_bind_bind_swap
-          (do
-            let head ← ($ᵗ G)
-            let x ← adv.chooseMessages pk
-            pure (head, x))
-          ($ᵗ Bool)
-          (fun (y : G × G × G × adv.State) bit => do
-            let mask ← ($ᵗ G)
-            let bit' ← adv.distinguish y.2.2.2 (y.1, mask + if bit then y.2.1 else y.2.2.1)
-            pure (decide (bit = bit'))))
+    simp only [inner, f, monad_norm]
+    prrw move 1 3
+    prrw move 2 0
   have hhalf : ∀ pk, 𝒟[inner pk] {true} = 1 / 2 := fun pk =>
     (hrepr pk).trans (ProbComp.evalDist_decide_eq_uniformBool_half (f pk) (hf pk))
   calc
