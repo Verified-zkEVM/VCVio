@@ -48,6 +48,11 @@ RENAMES: dict[str, str] = {
     "OracleComp.Angelic": "OracleComp.Possible",
     "OracleComp.Quantitative": "OracleComp.Lower",
     "ExpectationWP.Quantitative": "ExpectationWP.Lower",
+    # The same scopes written relative to an opened `OracleComp`.
+    "Qualitative.Spec": "Necessary.Spec",
+    "Qualitative.prEvent_eq_one_iff_triple": "Necessary.prEvent_eq_one_iff_triple",
+    "Angelic.Spec": "Possible.Spec",
+    "Quantitative.Spec": "Lower.Spec",
     "exp_norm": "expect_arith",
     "game_rule": "expect_norm, expect_eval",
     # Probability heads.

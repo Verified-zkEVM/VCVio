@@ -181,6 +181,15 @@ class NameTests(unittest.TestCase):
         out, _ = migrate("h : GameEquiv g₁ g₂\nh' : g₁ ≡ₚ g₂\nexact GameEquiv.symm h")
         self.assertEqual(out, "h : EvalDistEq g₁ g₂\nh' : g₁ =ᵈ g₂\nexact EvalDistEq.symm h")
 
+    def test_reading_scopes_relative_to_open_oracle_comp(self):
+        # A downstream rule that follows the scope idiom (`ProtocolSpec.Qualitative.Spec.…`) is
+        # renamed with the scope.
+        out, _ = migrate("prvcgen [Qualitative.Spec.ofSupport init, OracleComp.Qualitative.Spec.ofSupport oa]\n"
+                         "rw [Qualitative.prEvent_eq_one_iff_triple]; exact ProtocolSpec.Qualitative.Spec.getChallenge")
+        self.assertEqual(out,
+            "prvcgen [Necessary.Spec.ofSupport init, OracleComp.Necessary.Spec.ofSupport oa]\n"
+            "rw [Necessary.prEvent_eq_one_iff_triple]; exact ProtocolSpec.Necessary.Spec.getChallenge")
+
     def test_total_variation(self):
         # The real-valued algebra keeps its names; the bounds are stated on `etvDist`.
         out, items = migrate(
