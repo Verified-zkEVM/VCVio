@@ -102,6 +102,7 @@ if [[ -f scripts/check-expose-boundary.sh ]]; then
 fi
 python3 ./scripts/test-migrate-native-probability.py
 python3 ./scripts/test-check-reading-citations.py
+python3 ./scripts/test-module-times.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh

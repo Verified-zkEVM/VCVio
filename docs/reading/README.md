@@ -31,6 +31,7 @@ section or the pinned source tree.
 | [`internal-duplication.md`](internal-duplication.md) | Living record | Where does VCVio say the same thing twice *inside* the repository (cost layers, invariant predicates, the two Merkle engines, `OracleSpec` operations versus PolyFun's), which spelling is canonical, and what blocks folding the rest? |
 | [`generalized-relation-automation.md`](generalized-relation-automation.md) | Investigation with tested pilots | How do `gcongr`, `grw`, and related tactics apply to VCVio's relations, which registrations simplify current proofs, and which candidates should remain experimental? |
 | [`long-proof-audit.md`](long-proof-audit.md) | Source audit with compiled experiments | What drives the longest proofs, how much can small automation or shared lemmas remove, and which arguments need deeper refactoring? |
+| [`program-logic-performance.md`](program-logic-performance.md) | Measurement record, 2026-10-02 | Did the core-WP program logic make the library slower to build, and where does compile time go? Sequential profiled replays of `main` and #821. |
 
 ## Keeping these honest
 

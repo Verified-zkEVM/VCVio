@@ -302,7 +302,11 @@ Because an incremental build's wall time depends on what the change invalidated,
 compares modules instead: `scripts/module_times.py` keeps the latest `Built <module> (<time>)` for
 every module in `.lake/build/vcvio-module-times.json`, which travels with the build cache. The
 report lists the modules this run rebuilt against those times, and the table's sum before and after
-estimates clean-build compile time.
+estimates clean-build compile time. Its *Modules Over Budget* section, from
+`scripts/compare_module_times.py`, names the modules whose time grew by more than 5s and 50%; CI's
+times are wall-clock under parallel load, so such a module is a pointer for a sequential profile
+(`lake env lean -Dprofiler=true <file>`), and the script's `--gate` is for comparable measurements
+such as two sequential replays. `docs/reading/program-logic-performance.md` records one.
 
 After the build, CI runs `./scripts/test-axiomsweep.sh` and then
 `lake exe axiomsweep --check`: kernel-level axiom/`sorry` accounting for every
