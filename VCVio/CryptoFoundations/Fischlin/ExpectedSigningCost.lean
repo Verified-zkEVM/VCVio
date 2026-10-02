@@ -114,14 +114,6 @@ private theorem searchesQueryCount_succ {T : Type} (n : ℕ) (e : Fin (n + 1) �
   simp [searchesQueryCount, searchesCostRun, searchCostRun, HasQuery.Program.withUnitCost,
     Fin.mOfFn, WriterT.run_bind, StateT.run_bind, map_bind, monad_norm]
 
-private theorem integral_count_add (c : ℕ) (run : ProbComp ℕ) :
-    ∫⁻ (n : ℕ), (n : ℝ≥0∞) ∂𝒟[(fun n : ℕ => c + n) <$> run] =
-      c + ∫⁻ (n : ℕ), (n : ℝ≥0∞) ∂𝒟[run] := by
-  rw [lintegral_evalDist_map run Measurable.of_discrete Measurable.of_discrete]
-  simp only [Nat.cast_add]
-  rw [lintegral_add_left measurable_const]
-  simp only [lintegral_const, OracleComp.evalDist_apply_univ_eq_one, mul_one]
-
 /-- Expected query count for sequential searches at distinct repetition tags. The cache may
 contain other records, but every candidate at a selected repetition must initially be fresh. -/
 theorem searches_expectedQueries {T : Type} (n : ℕ) (e : Fin n → Fin ρ)
@@ -142,10 +134,11 @@ theorem searches_expectedQueries {T : Type} (n : ℕ) (e : Fin n → Fin ρ)
   | succ n ih =>
     have htail (z) (hz : z ∈ support
         (searchCostRun σ ρ b M pk sk (sc 0) msg comList (e 0) cs none cache)) :
-        ∫⁻ (q : ℕ), (q : ℝ≥0∞)
-          ∂𝒟[searchesQueryCount σ ρ b M n (fun j => e j.succ) pk sk
-            (fun j => sc j.succ) msg comList cs (fun j => format j.succ) z.2] =
+        𝔼{let q ← (searchesQueryCount σ ρ b M n (fun j => e j.succ) pk sk
+          (fun j => sc j.succ) msg comList cs (fun j => format j.succ) z.2 : ProbComp ℕ)}[
+          (q : ℝ≥0∞)] =
           n * ∑ j ∈ Finset.range cs.length, (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j := by
+      rw [ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
       apply ih
       · exact he.comp (Fin.succ_injective _)
       · intro j c hc r
@@ -154,30 +147,13 @@ theorem searches_expectedQueries {T : Type} (n : ℕ) (e : Fin n → Fin ρ)
           ⟨pk, msg, comList, e j.succ, c, r⟩
           (fun h => Fin.succ_ne_zero j (he h))]
         exact hfresh j.succ c hc r
-    rw [searchesQueryCount_succ]
-    simp only [bind_pure_comp]
-    rw [lintegral_evalDist_bind _ _ Measurable.of_discrete Measurable.of_discrete]
-    have hae := evalDist.ae_of_forall_mem_support
-      (searchCostRun σ ρ b M pk sk (sc 0) msg comList (e 0) cs none cache) _
-      MeasurableSet.of_discrete htail
-    calc
-      _ = ∫⁻ z, (z.1.2.toAdd : ℝ≥0∞) +
-          n * ∑ j ∈ Finset.range cs.length, (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j
-          ∂𝒟[searchCostRun σ ρ b M pk sk (sc 0) msg comList (e 0) cs none cache] := by
-        apply lintegral_congr_ae
-        filter_upwards [hae] with z hz
-        rw [integral_count_add, hz]
-      _ = searchExpectedQueries σ ρ b M pk sk (sc 0) msg comList (e 0) cs none cache +
-          n * ∑ j ∈ Finset.range cs.length, (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j := by
-        rw [lintegral_add_left Measurable.of_discrete]
-        simp only [lintegral_const, OracleComp.evalDist_apply_univ_eq_one, mul_one]
-        congr 1
-        rw [searchExpectedQueries, searchQueryCount,
-          lintegral_evalDist_map _ Measurable.of_discrete Measurable.of_discrete]
-      _ = _ := by
-        rw [searchExpectedQueries_eq_sum σ ρ b M pk sk (sc 0) msg comList (e 0) cs hcs
-          none cache (fun c hc r => hfresh 0 c hc r)]
-        simp [Nat.cast_add, add_mul, add_comm]
+    rw [← ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete, searchesQueryCount_succ]
+    simp only [expect_norm, Nat.cast_add, ExpectationWP.wp_add, ExpectationWP.wp_const_of_oracle]
+    rw [wp_congr_of_support _ (fun z hz => htail z hz), ExpectationWP.wp_const_of_oracle,
+      ← ExpectationWP.wp_map, ← searchQueryCount, ← searchExpectedQueries_eq_wp,
+      searchExpectedQueries_eq_sum σ ρ b M pk sk (sc 0) msg comList (e 0) cs hcs none cache
+        (fun c hc r => hfresh 0 c hc r)]
+    simp [add_mul, add_comm]
 
 section signing
 
@@ -239,25 +215,22 @@ search costs. Repetition indices and distinct enumerated challenges discharge fr
 theorem sign_expectedQueries_eq_sum (pk : Stmt) (sk : Wit) (msg : M) :
     ∫⁻ (q : ℕ), (q : ℝ≥0∞) ∂𝒟[signingQueryCount σ ρ b M hr S pk sk msg] =
       ρ * ∑ j ∈ Finset.range (FinEnum.card Chal), (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j := by
-  let : MeasurableSpace (Fin ρ → Commit × PrvState) := ⊤
-  rw [signingQueryCount_eq,
-    lintegral_evalDist_bind _ _ Measurable.of_discrete Measurable.of_discrete]
+  rw [← ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete, signingQueryCount_eq]
   have hsearch (commits : Fin ρ → Commit × PrvState) :
-      ∫⁻ (q : ℕ), (q : ℝ≥0∞)
-        ∂𝒟[searchesQueryCount σ ρ b M ρ id pk sk (fun i => (commits i).2) msg
+      𝔼{let q ← (searchesQueryCount σ ρ b M ρ id pk sk (fun i => (commits i).2) msg
           (List.ofFn fun i => (commits i).1) (FinEnum.toList Chal)
           (fun i result => match result with
             | some (c, r) => ((commits i).1, c, r)
-            | none => ((commits i).1, default, default)) ∅] =
+            | none => ((commits i).1, default, default)) ∅ : ProbComp ℕ)}[(q : ℝ≥0∞)] =
         ρ * ∑ j ∈ Finset.range (FinEnum.card Chal), (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j := by
+    rw [ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
     simpa [FinEnum.toList] using searches_expectedQueries σ ρ b M ρ id Function.injective_id pk sk
       (fun i => (commits i).2) msg (List.ofFn fun i => (commits i).1)
       (FinEnum.toList Chal) FinEnum.nodup_toList
       (fun i result => match result with
         | some (c, r) => ((commits i).1, c, r)
         | none => ((commits i).1, default, default)) ∅ (by simp)
-  simp_rw [hsearch]
-  simp only [lintegral_const, OracleComp.evalDist_apply_univ_eq_one, mul_one]
+  simp only [expect_norm, hsearch, ExpectationWP.wp_const_of_oracle]
 
 /-- Closed geometric form of the actual signer's expected number of hash calls. -/
 theorem sign_expectedQueries_eq_geometric (pk : Stmt) (sk : Wit) (msg : M) :
