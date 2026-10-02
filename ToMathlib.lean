@@ -47,6 +47,7 @@ public import ToMathlib.Data.Vector.Count
 public import ToMathlib.Data.Vector.Induction
 public import ToMathlib.Data.Vector.ListVector
 public import ToMathlib.Lint.LegacyProbability
+public import ToMathlib.Lint.SecurityStatements
 public import ToMathlib.Logic.Basic
 public import ToMathlib.MeasureTheory.DiscreteInstances
 public import ToMathlib.MeasureTheory.Function.AEMeasurable

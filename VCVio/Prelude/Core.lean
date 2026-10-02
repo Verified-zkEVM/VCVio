@@ -18,6 +18,7 @@ public import ToMathlib.Data.Vector.Induction
 public import ToMathlib.Topology.Algebra.InfiniteSum.Option
 public import ToMathlib.Control.Monad.Fold
 public meta import ToMathlib.Lint.LegacyProbability
+public meta import ToMathlib.Lint.SecurityStatements
 
 /-!
 # Shared utilities and semantic normalization
