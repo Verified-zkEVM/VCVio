@@ -67,13 +67,26 @@ noncomputable def cmaToNmaLoss (qS qH : ℕ) (ε p ζ_zk δ : ℝ) (_hp : p < 1)
   qS * ζ_zk +
   δ
 
+/-- The CMA-to-witness reduction of the with-aborts transform: the composite of the CMA-to-NMA
+simulation, through the HVZK simulator `sim` and the commitment recovery `recover`, with the
+NMA-to-witness forking reduction, as `FiatShamir.cmaReduction` composes them for the plain
+transform. It is not constructed yet: a named placeholder, carried by the axiom baseline, so that
+`euf_cma_bound` names the reduction it bounds. -/
+noncomputable def cmaReduction
+    (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
+    (recover : Stmt → Chal → Resp → Commit)
+    (adv : SignatureAlg.UnforgeableAdversary
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts))
+    (qH : ℕ) : Stmt → ProbComp Wit :=
+  sorry
+
 /-- **CMA-to-NMA reduction for Fiat-Shamir with aborts (Theorem 3, CRYPTO 2023).**
 
 For any EUF-CMA adversary `A` making at most `qS` signing-oracle queries and `qH`
-random-oracle queries, the intended statement bounds the advantage of an explicit NMA
-reduction `B`:
+random-oracle queries, the reduction `cmaReduction` finds a witness with probability at least
+the advantage of `A` less the statistical loss `L`:
 
-  `Adv^{EUF-CMA}(A) ≤ Adv^{EUF-NMA}(B) + L`
+  `Adv^{EUF-CMA}(A) ≤ Pr[cmaReduction A finds a witness] + L`
 
 The reduction uses:
 1. The quantitative HVZK simulator `sim` to answer signing queries without the secret key
@@ -82,30 +95,19 @@ The reduction uses:
 3. Nested hybrid arguments over ROM reprogramming (accepted and rejected transcripts)
 
 The statistical loss `L` involves the commitment guessing probability `ε`, the effective
-abort probability `p`, the simulator error `ζ_zk`, the regularity failure probability `δ`,
-and the query bounds `qS`, `qH`; it is captured here by `cmaToNmaLoss`.
+abort probability `p_abort`, the simulator error `ζ_zk`, the regularity failure probability `δ`,
+and the query bounds `qS`, `qH`; it is captured here by `cmaToNmaLoss`, with `ε`, `p_abort` and
+`δ` nonnegative and `p_abort < 1`.
 
 The scheme-specific reduction from NMA to computational assumptions (e.g., MLWE +
 SelfTargetMSIS for ML-DSA) is stated separately with each scheme; see
 `MLDSA.euf_cma_security`.
 
-**WARNING: this is a placeholder statement with no security content.** Two defects must be
-fixed before it is proved:
-
-1. The reduction is existentially quantified. `GenerableRelation.gen_sound` guarantees a
-   witness for every generated statement, so the reduction that returns such a witness, chosen
-   classically, wins `hardRelationExperiment` with probability `1`, and the statement holds for
-   every adversary. The final statement must name the reduction, as `FiatShamir.euf_cma_bound` does
-   with `FiatShamir.cmaReduction`; this requires a with-aborts analogue of
-   `FiatShamir.cmaToNmaAdv`.
-2. `ε`, `p_abort`, and `δ : ℝ` are not tied to the identification scheme and are not
-   constrained to be nonnegative (only `0 ≤ ζ_zk` and `p_abort < 1` are assumed). Choosing `ε`
-   and `δ` very negative drives `cmaToNmaLoss` below `0`, and `ENNReal.ofReal` clamps the loss
-   to `0`. In the final statement `ε`, `p_abort`, and `δ` should be nonnegative and identified
-   with the commitment-guessing probability, abort probability, and regularity failure
-   probability of `ids`.
-
-The proof is intentionally deferred. -/
+**WARNING: this is a placeholder statement.** Its reduction `cmaReduction` is a named placeholder
+and its proof is deferred. One defect of the statement remains: `ε`, `p_abort` and `δ` are not
+identified with the commitment-guessing probability, abort probability and regularity failure
+probability of `ids`, which `IdenSchemeWithAbort` does not define yet; the final statement takes
+them as those probabilities rather than as free parameters. -/
 theorem euf_cma_bound
     (hc : ids.Complete)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
@@ -116,26 +118,31 @@ theorem euf_cma_bound
     (hcr : ids.CommitmentRecoverable recover)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort.inROM ids hr M maxAttempts))
-    (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
+    (qS qH : ℕ) (ε p_abort δ : ℝ) (hε : 0 ≤ ε) (hp0 : 0 ≤ p_abort) (hp : p_abort < 1)
+    (hδ : 0 ≤ δ)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
-    ∃ reduction : Stmt → ProbComp Wit,
-      SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
-        Pr{let x ← hardRelationExperiment hr reduction}[x = true] +
-          ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      Pr{let b ←
+          hardRelationExperiment hr (cmaReduction ids hr M maxAttempts sim recover adv qH)}[
+        b = true] +
+        ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   let _ := hc
   let _ := hζ
   let _ := hhvzk
   let _ := hcr
+  let _ := hε
+  let _ := hp0
+  let _ := hδ
   let _ := hQ
   sorry
 
 /-- Perfect-HVZK special case of `euf_cma_bound`, where the simulator contributes no
 `qS · ζ_zk` loss term.
 
-**WARNING: this is a placeholder statement with no security content.** It inherits both
-defects of `euf_cma_bound` (existentially quantified reduction; unconstrained `ε`, `p_abort`,
-`δ : ℝ`); see that theorem's docstring. -/
+**WARNING: this is a placeholder statement.** It inherits the placeholder reduction and the
+remaining defect of `euf_cma_bound` (`ε`, `p_abort` and `δ` as free nonnegative parameters);
+see that theorem's docstring. -/
 theorem euf_cma_bound_perfectHVZK
     (hc : ids.Complete)
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
@@ -144,20 +151,21 @@ theorem euf_cma_bound_perfectHVZK
     (hcr : ids.CommitmentRecoverable recover)
     (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort.inROM ids hr M maxAttempts))
-    (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1)
+    (qS qH : ℕ) (ε p_abort δ : ℝ) (hε : 0 ≤ ε) (hp0 : 0 ≤ p_abort) (hp : p_abort < 1)
+    (hδ : 0 ≤ δ)
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
-    ∃ reduction : Stmt → ProbComp Wit,
-      SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
-        Pr{let x ← hardRelationExperiment hr reduction}[x = true] +
-          ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
+    SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
+      Pr{let b ←
+          hardRelationExperiment hr (cmaReduction ids hr M maxAttempts sim recover adv qH)}[
+        b = true] +
+        ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
   euf_cma_bound (ids := ids) (M := M) (maxAttempts := maxAttempts)
     (hc := hc) (sim := sim) (ζ_zk := 0) (hζ := le_rfl)
-    (hhvzk := by
-      simpa only [ENNReal.ofReal_zero] using
-        (IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero ids sim).mp hhvzk)
+    (hhvzk := by simpa using (IdenSchemeWithAbort.perfectHVZK_iff_hvzk_zero ids sim).mp hhvzk)
     (recover := recover) (hcr := hcr) (adv := adv)
-    (qS := qS) (qH := qH) (ε := ε) (p_abort := p_abort) (δ := δ) (hp := hp) (hQ := hQ)
+    (qS := qS) (qH := qH) (ε := ε) (p_abort := p_abort) (δ := δ) (hε := hε) (hp0 := hp0)
+    (hp := hp) (hδ := hδ) (hQ := hQ)
 
 end EUF_CMA
 

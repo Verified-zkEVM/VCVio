@@ -385,7 +385,8 @@ theorem euf_cma_security
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
     (ζ_zk : ℝ) (_hζ : 0 ≤ ζ_zk)
     (_hhvzk : (identificationScheme p prims).HVZK sim (ENNReal.ofReal ζ_zk))
-    (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1) :
+    (qS qH : ℕ) (ε p_abort δ : ℝ) (_hε : 0 ≤ ε) (_hp0 : 0 ≤ p_abort) (hp : p_abort < 1)
+    (_hδ : 0 ≤ δ) :
     ∀ (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims)
         hr M maxAttempts)),
