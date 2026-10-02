@@ -45,8 +45,12 @@ theorem unconstrainedRealParameter_accepted (ε : ℝ) (_hε : 0 ≤ ε) :
 /-- Accepted: `ε` is not clamped. -/
 theorem unconstrainedRealParameter_unclamped (ε : ℝ) : ε ≤ ε := le_rfl
 
+/-- Accepted: an equality fixes the role of `ε`; only an upper bound is linted. -/
+theorem unconstrainedRealParameter_equality (ε : ℝ) : ENNReal.ofReal ε = ENNReal.ofReal ε :=
+  rfl
+
 /--
-error: -- Found 3 errors in 6 declarations (plus 0 automatically generated ones) in the current
+error: -- Found 3 errors in 7 declarations (plus 0 automatically generated ones) in the current
 file with 2 linters
 
 /- The `existentialReduction` linter reports:
@@ -61,7 +65,8 @@ This linter can be disabled with `@[nolint existentialReduction]`. -/
 SECURITY THEOREMS WITH AN UNCONSTRAINED REAL PARAMETER.
 This linter can be disabled with `@[nolint unconstrainedRealParameter]`. -/
 #check unconstrainedRealParameter_flagged /- the real parameter(s) [ε] are clamped by
-`ENNReal.ofReal` or `Real.toNNReal` in the conclusion and bounded by no hypothesis -/
+`ENNReal.ofReal` or `Real.toNNReal` in the conclusion's upper bound and bounded by no
+hypothesis -/
 -/
 #guard_msgs (whitespace := lax) in
 set_option linter.securityStatements.everywhere true in

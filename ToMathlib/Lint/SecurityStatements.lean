@@ -20,10 +20,12 @@ holds for every scheme:
   `StateT`. Nested existentials are searched through. Such a witness carries no resource bound
   and can be chosen classically, so the statement proves nothing; a security theorem names its
   reduction instead. A witness bundled in a structure is not recognized.
-* `unconstrainedRealParameter`: a theorem with a parameter in `ℝ` that reaches the conclusion
-  through `ENNReal.ofReal` or `Real.toNNReal` and is bounded by no hypothesis, so a negative
-  value drives the clamped term, such as a loss, to zero and the bound becomes trivial. A
-  parameter in `ℝ≥0` or `ℝ≥0∞` is nonnegative by type and is not reported.
+* `unconstrainedRealParameter`: a theorem whose conclusion is an upper bound (`≤`, `<`, `≥` or
+  `>`) with a parameter in `ℝ` that reaches the bounding side through `ENNReal.ofReal` or
+  `Real.toNNReal` and is bounded by no hypothesis, so a negative value drives the clamped term,
+  such as a loss, to zero and the bound becomes trivial. An equality fixes the role of its
+  parameters, so the real parameters of a distribution, such as a Gaussian's center, are not
+  reported, and a parameter in `ℝ≥0` or `ℝ≥0∞` is nonnegative by type and is not reported.
 
 Definitions are not linted. Exceptions are maintained by the repository's exact `nolints.json`
 baseline. The option `linter.securityStatements.everywhere` lints every module, for the linters'
@@ -103,8 +105,17 @@ private def clampsFVar (fvar : FVarId) (e : Expr) : Bool :=
   (e.isAppOfArity `ENNReal.ofReal 1 || e.isAppOfArity `Real.toNNReal 1) &&
     (e.getArg! 0).containsFVar fvar
 
-/-- Report theorems of the security libraries with a parameter in `ℝ` that reaches the
-conclusion through `ENNReal.ofReal` or `Real.toNNReal` and is bounded by no hypothesis. -/
+/-- The bounding side of a conclusion that bounds a quantity from above: `b` in `a ≤ b`, `a < b`,
+`b ≥ a` and `b > a`. -/
+private def upperSide? (body : Expr) : Option Expr :=
+  let body := body.cleanupAnnotations
+  if body.isAppOfArity ``LE.le 4 || body.isAppOfArity ``LT.lt 4 then some (body.getArg! 3)
+  else if body.isAppOfArity ``GE.ge 4 || body.isAppOfArity ``GT.gt 4 then some (body.getArg! 2)
+  else none
+
+/-- Report theorems of the security libraries whose conclusion is an upper bound with a parameter
+in `ℝ` that reaches the bounding side through `ENNReal.ofReal` or `Real.toNNReal` and is bounded
+by no hypothesis. -/
 @[env_linter] def unconstrainedRealParameter : Linter where
   noErrorsFound := "No security theorem has an unconstrained real parameter."
   errorsFound := "SECURITY THEOREMS WITH AN UNCONSTRAINED REAL PARAMETER."
@@ -113,11 +124,12 @@ conclusion through `ENNReal.ofReal` or `Real.toNNReal` and is bounded by no hypo
     let .thmInfo info ← getConstInfo declName | return none
     unless ← inScope declName do return none
     let flagged ← forallTelescope info.type fun xs body => do
+      let some upper := upperSide? body | return #[]
       let mut flagged := #[]
       for x in xs do
         unless (← inferType x).cleanupAnnotations.isConstOf `Real do continue
         let fvar := x.fvarId!
-        unless (body.find? (clampsFVar fvar)).isSome do continue
+        unless (upper.find? (clampsFVar fvar)).isSome do continue
         let mut constrained := false
         for y in xs do
           if y != x then
@@ -129,6 +141,6 @@ conclusion through `ENNReal.ofReal` or `Real.toNNReal` and is bounded by no hypo
       return flagged
     if flagged.isEmpty then return none
     return m!"the real parameter(s) {flagged} are clamped by `ENNReal.ofReal` or \
-      `Real.toNNReal` in the conclusion and bounded by no hypothesis"
+      `Real.toNNReal` in the conclusion's upper bound and bounded by no hypothesis"
 
 end ToMathlib.Lint

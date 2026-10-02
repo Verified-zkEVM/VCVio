@@ -443,6 +443,13 @@ jobs:
         run: python3 scripts/test-spec-coverage.py
       - name: Spec coverage
         run: python3 scripts/spec-coverage.py --check
+      # The event and expectation laws of the flat interpretation and their `OptionT` / `ExceptT`
+      # twins, with the twins' rewriting attributes, gated against
+      # `scripts/lifted_law_parity_baseline.json`, which only shrinks. It reads the sources only.
+      - name: Test the lifted-law parity ratchet
+        run: python3 scripts/test-lifted-law-parity.py
+      - name: Lifted-law parity
+        run: python3 scripts/check-lifted-law-parity.py --check
       - name: Record module times
         run: |
           python3 scripts/module_times.py update .lake/build/vcvio-module-times.json \
