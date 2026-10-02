@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Expectation
+public import VCVio.EvalDist.ProbabilityNotation
 
 /-!
 # Selecting the measure interpretation
@@ -114,5 +115,14 @@ registered, since it applies to every program. -/
 theorem Spec.ofWp (mx : m α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
     Triple mx (toDual (wp⟦mx⟧ fun a => ofDual (post a))) post epost := by
   rw [triple_iff, ofDual_toDual]
+
+/-- An opaque sub-program's expectation is at most the largest value of the postcondition: the
+rule `OracleComp.Upper` registers for a draw, for any monad with lawful measure semantics. Not
+registered, since it applies to every program; `vcgen [Spec.ofSup mx]` leaves a verification
+condition for each value of `mx`. -/
+theorem Spec.ofSup (mx : m α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    Triple mx (Lean.Order.iInf post) post epost := by
+  rw [triple_iff]
+  exact wp_le_of_forall_le mx fun x => Lean.Order.iInf_le post x
 
 end ExpectationWP.Upper

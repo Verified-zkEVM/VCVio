@@ -53,7 +53,10 @@ families must be measurable; the allowance need not be. The reachable version us
 attachment and the actual continuation-measure observer, leaving hidden source and result types
 unmeasured. `wp_le_sum_add_mul_mass_of_support` retains the allowance times the prefix's
 successful mass. The weaker constant-allowance and disagreement/bad-world rules specialize the
-same argument.
+same argument. `prEvent_bind_le_prEvent_add_lintegral_ae` is the bad-event form: a bad draw is
+charged in full, and a bound on the continuation's event holding almost everywhere off the bad
+event is integrated over the good draws, with the discrete σ-algebra on the draw, so no
+measurable structure is assumed.
 
 `AddWriterT.expectedCost` integrates the cost marginal on the chosen cost space. Weighted
 query-cost and CostModel expectations use this same definition. Pathwise expectation bounds

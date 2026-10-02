@@ -488,7 +488,8 @@ scope selects one carrier per program type:
 the per-call one (as it opens `ExpectationWP.Lower` for a generic lower bound), so that the rules
 passed for its sub-programs elaborate in it. Core's `pure` and `bind` rules read the program, and
 an opaque draw passes through `ExpectationWP.Upper.Spec.ofWp`, which leaves its expectation for a
-hypothesis to bound. The scope sits below `OracleComp.Upper`, so an oracle computation keeps its
+hypothesis to bound, or `ExpectationWP.Upper.Spec.ofSup`, which bounds it by the postcondition's
+largest value and leaves one condition per value, as a guessing game needs for its prover. The scope sits below `OracleComp.Upper`, so an oracle computation keeps its
 own reading beside it (`VCVioTest/ProgramLogic/ReadingScopes.lean`).
 
 The positivity and probability-one bridges need answers of positive mass; the `_of_fullSupport`

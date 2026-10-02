@@ -354,6 +354,16 @@ example (challenge : m ℕ) (ε : ℝ≥0∞) (hs : ∀ guess, Pr{let s ← chal
   prvcgen [ExpectationWP.Upper.Spec.ofWp challenge]
   simpa using hs guess
 
+/-- A guess drawn by an opaque prover, then an opaque challenge: the prover's draw is bounded by
+its largest value (`ExpectationWP.Upper.Spec.ofSup`), leaving one condition per guess for the
+challenge's per-guess bound. -/
+example (prover challenge : m ℕ) (ε : ℝ≥0∞)
+    (hs : ∀ guess, Pr{let s ← challenge}[guess = s] ≤ ε) :
+    Pr{let guess ← prover; let s ← challenge}[guess = s] ≤ ε := by
+  prvcgen [ExpectationWP.Upper.Spec.ofSup prover, ExpectationWP.Upper.Spec.ofWp challenge]
+  rename_i guess
+  simpa using hs guess
+
 end GenericMonad
 
 end VCVioTest.ProgramLogic.UpperVCGen

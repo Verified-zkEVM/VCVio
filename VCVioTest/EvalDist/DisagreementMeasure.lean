@@ -43,6 +43,18 @@ example {m : Type → Type v} [Monad m] [LawfulMonad m]
   prEvent_bind_le_sum_add_lintegral_ae mx f (fun y ↦ y ≤ 0) (fun i x ↦ Pr{let q ← g i x}[q]) hf
     (fun i ↦ measurable_prEvent (by simpa only [id_map'] using hg i)) bound h
 
+/-- A bad draw is charged in full and a bound off it, holding almost everywhere, is integrated
+over the good draws, with no measurable structure assumed on the draw. -/
+example {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
+    (mx : m α) (f : α → m Bool) (bad : α → Prop) (bound : α → ENNReal)
+    (h : letI : MeasurableSpace α := ⊤
+      ∀ᵐ a ∂𝒟[mx], ¬ bad a → Pr{let b ← f a}[b = true] ≤ bound a) :
+    letI : MeasurableSpace α := ⊤
+    Pr{let a ← mx; let b ← f a}[b = true] ≤
+      Pr{let a ← mx}[bad a] + ∫⁻ a in {a | ¬ bad a}, bound a ∂𝒟[mx] :=
+  prEvent_bind_le_prEvent_add_lintegral_ae mx f bad (· = true) bound h
+
 example (κ : Kernel ℝ ℝ) (η : Fin 2 → Kernel ℝ Bool) (bound : ℝ → ENNReal)
     (h : ∀ᵐ x ∂gaussianReal 0 1, κ x (Set.Iic 0) ≤
       (∑ i, η i x {true}) + bound x) :

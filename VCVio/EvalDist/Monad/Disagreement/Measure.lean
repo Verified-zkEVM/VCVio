@@ -55,6 +55,26 @@ theorem prEvent_bind_le_sum_add_lintegral_ae [Fintype ι] [MeasurableSpace α]
     Pr{let a ← mx; let b ← f a}[p b] ≤ (∑ i, wp⟦mx⟧ (F i)) + ∫⁻ a, bound a ∂𝒟[mx] :=
   wp_le_sum_add_lintegral_ae mx F (measurable_prEvent hf) hF bound h
 
+/-- A continuation's event after a draw is at most the probability of a bad draw plus the
+integral, over the good draws, of a bound on the event that holds almost everywhere off the bad
+event. The integral is not normalized: neither computation has to return with probability one. -/
+theorem prEvent_bind_le_prEvent_add_lintegral_ae (mx : m α) (f : α → m β) (bad : α → Prop)
+    (p : β → Prop) (bound : α → ℝ≥0∞)
+    (h : letI : MeasurableSpace α := ⊤
+      ∀ᵐ a ∂𝒟[mx], ¬ bad a → Pr{let b ← f a}[p b] ≤ bound a) :
+    letI : MeasurableSpace α := ⊤
+    Pr{let a ← mx; let b ← f a}[p b] ≤
+      Pr{let a ← mx}[bad a] + ∫⁻ a in {a | ¬ bad a}, bound a ∂𝒟[mx] := by
+  classical
+  let : MeasurableSpace α := ⊤
+  have hsum := prEvent_bind_le_sum_add_lintegral_ae mx f p (fun _ : Unit => predInd bad)
+    Measurable.of_discrete (fun _ => Measurable.of_discrete) ({a | ¬ bad a}.indicator bound) (by
+      refine h.mono fun a ha => ?_
+      by_cases hbad : bad a
+      · simp [hbad]
+      · simpa [hbad] using ha hbad)
+  simpa only [Fintype.sum_unique, lintegral_indicator MeasurableSet.of_discrete] using hsum
+
 variable [MonadAttach m] [WeaklyLawfulMonadAttach m]
 
 /-- A reachable comparison with finitely many reference observations holds between their
