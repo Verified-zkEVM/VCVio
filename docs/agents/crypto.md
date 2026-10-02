@@ -328,16 +328,50 @@ such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a funct
 `reduce : Adv → Adv'` with an efficiency hypothesis `isPPT A → isPPT' (reduce A)`. That hypothesis
 cannot be stated for an adversary that exists only inside an existential.
 
-When the reduction is not implemented yet, do not fall back to `∃`. Either:
-
-- define it as a `sorry` placeholder and state the bound for that definition, as
-  `GPVHashAndSign.reduction` does; or
-- leave the theorem as a placeholder whose docstring warns that the statement has no security
-  content until a reduction is named, as `FiatShamirWithAbort.euf_cma_bound` does.
+When the reduction is not implemented yet, do not fall back to `∃`: define it as a `sorry`
+placeholder and state the bound for that definition, as `GPVHashAndSign.reduction` and
+`FiatShamirWithAbort.cmaReduction` do, with a docstring that says the proof is deferred. The
+placeholder is carried by `scripts/axiom_baseline.json`, and the `existentialReduction` linter
+(below) reports the existential form.
 
 `∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key
 generation.
+
+### Hypothesis bundles with kernel-checked witnesses
+
+The structures below carry the object a security argument runs, a generator, simulator,
+extractor or reduction, as data, with the property that checks it stated beside it or as a
+separate proposition over the same field. A theorem that consumes one names the field it runs
+(`GenerableRelation.gen`, `SigmaProtocol.extract`, `SecurityGame.ReductionWithCost.reduce`)
+instead of quantifying over it, and
+`VCVioTest/CryptoFoundations/HypothesisWitnesses.lean` keeps one example per row projecting the
+witness out as a program or function.
+
+| Structure | Witness as data | What checks it |
+|---|---|---|
+| `GenerableRelation X W r` | `gen : ProbComp (X × W)` | `gen_sound`, a field |
+| `SigmaProtocol` | `sim`, `extract : Chal → Resp → Chal → Resp → ProbComp Wit` | `SigmaProtocol.SpeciallySound`, `ChallengeVerifyProtocol.HVZK` |
+| `CommitmentScheme.TrapdoorExtractor PP TD C M` | `setupExtract`, `extract : TD → C → ProbComp M` | `TrapdoorExtractor.SetupConsistent`, bounds on `CommitmentScheme.extractExperiment` |
+| `PreimageSampleableFunction PK SK Domain Range` | `trapdoorSample : PK → SK → Range → ProbComp Domain` | `PreimageSampleableFunction.Correct` |
+| `OneWay.TrapdoorPermutation PK SK X` | `keygen`, `inverse : SK → X → X` | `OneWay.TrapdoorPermutation.Correct` |
+| `RoundByRound.KnowledgeTransitionFamily Round Context` | `extractBefore` | `KnowledgeTransitionFamily.IsBounded` |
+| `RoundByRound.KnowledgeExtractionFamily rounds` | `extract : … → Witness` (total; see its field docstring) | `KnowledgeExtractionFamily.ExtractionCondition` |
+| `SecurityGame.ReductionWithCost cost cost'` | `reduce : Adv → Adv'`, `transform` | `cost_bound`, a field |
+
+Reductions that are not bundled are named definitions, proved or placeholders:
+`FiatShamir.cmaReduction` (built from `cmaToNmaAdv` and `nmaReduction`), and the `sorry`
+placeholders `GPVHashAndSign.reduction` and `FiatShamirWithAbort.cmaReduction`, each carried by
+`scripts/axiom_baseline.json` until it is constructed.
+
+Two environment linters in `ToMathlib/Lint/SecurityStatements.lean` guard the statements of
+the security libraries (`VCVio.CryptoFoundations`, `LatticeCrypto`, `HashSig`, `Examples`):
+`existentialReduction` reports a theorem whose conclusion existentially quantifies a function
+into an oracle computation, and `unconstrainedRealParameter` reports a theorem with a parameter
+in `ℝ` that reaches the conclusion through `ENNReal.ofReal` or `Real.toNNReal` and is bounded by
+no hypothesis, so that a negative value clamps a loss to zero. Their findings are
+held in `scripts/nolints.json` like every other environment linter's, and their fixtures are
+`VCVioTest/Lint/SecurityStatements.lean`.
 
 ### Hybrid Argument Pattern
 

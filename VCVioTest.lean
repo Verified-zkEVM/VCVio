@@ -8,6 +8,7 @@ public import VCVioTest.CryptoFoundations.ComplexityTactics
 public import VCVioTest.CryptoFoundations.ComputationalComplexitySoundness
 public import VCVioTest.CryptoFoundations.CslibPPolyUniverses
 public import VCVioTest.CryptoFoundations.FiatShamirStateSteps
+public import VCVioTest.CryptoFoundations.HypothesisWitnesses
 public import VCVioTest.CryptoFoundations.KEMDEMMeasure
 public import VCVioTest.CryptoFoundations.OracleClosure
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
@@ -42,6 +43,7 @@ public import VCVioTest.Foundations
 public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
+public import VCVioTest.Lint.SecurityStatements
 public import VCVioTest.ListCache
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
