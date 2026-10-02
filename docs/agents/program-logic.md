@@ -541,7 +541,12 @@ instead (`trace.Elab.Tactic.Do.vcgen` shows the attempt); a draw from a type wit
 `SampleableType` takes the averaging rule after `haveI := Fintype.ofFinite β`. With `prvcgen (errorOnMissingSpec := false)`, a program
 without a rule is left as a verification condition stating its weakest precondition,
 `pre ≤ wp oa k`, whose continuation `k` holds the rest of the program;
-`simp only [expect_norm, le_refl]` closes it when `pre` is that expectation.
+`simp only [expect_norm, le_refl]` closes it when `pre` is that expectation. If `vcgen` reports
+that `Std.WP.Spec.bind` is not applicable to a `do` block that a rewrite produced, in particular
+one stated under `backward.isDefEq.respectTransparency false`, reduce the block's projections and
+redexes first: `dsimp only` before `prvcgen` (ArkLib's sumcheck first-round bounds);
+`VCVioTest/ProgramLogic/VCGenShapes.lean` pins that a literal pair's projections alone are read
+through.
 
 **Loops.** A loop takes an invariant: `List.foldlM` through core's rule, as
 `prvcgen invariants · fun _ _ s => I s`, `List.mapM` through `Std.WP.Spec.mapM_list`
