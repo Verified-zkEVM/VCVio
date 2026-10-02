@@ -35,6 +35,9 @@ rules for queries need uniform response measures.
 - `Examples/ProgramLogic/HandlerInvariants.lean`: `Spec.simulateQ` with a handler invariant
   through `prvcgen invariants`, a union bound over adaptive random-oracle queries as a ranked
   potential (`simulateQ_triple_ranked`), and a triple read against the support of its run.
+- `Examples/ProgramLogic/TransformerEvents.lean`: events of `OptionT` and `ExceptT` programs in
+  the four readings, where a failure is worth nothing under the bound readings and forbidden
+  under the necessary and possible ones, and the `OptionT.mk` shape.
 - `Examples/ProgramLogic/RelationalStep.lean`: step-by-step relational tactic examples.
 - `Examples/ProgramLogic/RelationalDerived.lean`: derived relational patterns and automation examples.
 - `Examples/ProgramLogic/ProofMode.lean`: proof-mode entry points and small end-to-end examples.
@@ -383,6 +386,7 @@ Bridges:
 | `𝒟[mx] {true} = 1` (uniform answers; `PerfectlyCorrect`, `PerfectlyComplete`) | `⦃ True ⦄ mx ⦃ (· = true) ⦄` | `evalDist_true_eq_one_iff_triple` |
 | `Pr{let x ← mx}[p x] = 0` (uniform answers) | `⦃ True ⦄ mx ⦃ fun x => ¬ p x ⦄` | `prEvent_eq_zero_iff_triple` |
 | `Pr{let x ← mx}[p x] = 1` (any answer measures, one direction) | from `⦃ True ⦄ mx ⦃ p ⦄` | `prEvent_eq_one_of_triple` |
+| `Pr{let x ← mx}[p x] = 1`, `mx : OptionT (OracleComp spec) α` or `ExceptT E …` (uniform answers) | `⦃ True ⦄ mx ⦃ p; (fun _ => False, ⊥) ⦄` (necessary, lifted: failure forbidden) | `OracleComp.Necessary.OptionT.prEvent_eq_one_iff_triple`, `OracleComp.Necessary.ExceptT.prEvent_eq_one_iff_triple` |
 | `r ≤ Pr{let x ← oa}[p x]` | `⦃ r ⦄ oa ⦃ predInd p ⦄` (quantitative) | `OracleComp.ProgramLogic.le_prEvent_iff_triple` |
 | `r ≤ wp⟦oa⟧ g` | `⦃ r ⦄ oa ⦃ g ⦄` | `le_wp_iff_triple` |
 
@@ -453,6 +457,34 @@ condition it leaves, and `simp only [upper_readback]` after a bare `vcgen` does 
 | `∀ x ∈ support oa, p x` | `⦃ True ⦄ oa ⦃ p ⦄` (necessary) | `OracleComp.Necessary.forall_mem_support_iff_triple` |
 | `wp⟦oa⟧ g = 1`, `g ≤ 1` (uniform answers) | `wp oa (fun a => g a = 1) ⊥` (necessary) | `OracleComp.Necessary.wp_eq_one_eq_wp` |
 | `0 < wp⟦oa⟧ g` (uniform answers) | `wp oa (fun a => 0 < g a) ⊥` (possible) | `OracleComp.Possible.pos_wp_eq_wp` |
+| `0 < Pr{let x ← mx}[p x]`, `mx : OptionT (OracleComp spec) α` or `ExceptT E …` (uniform answers) | `⦃ True ⦄ mx ⦃ p; (fun _ => False, ⊥) ⦄` (possible, lifted: failure forbidden) | `OracleComp.Possible.OptionT.prEvent_pos_iff_triple`, `OracleComp.Possible.ExceptT.prEvent_pos_iff_triple` |
+| `wp⟦mx⟧ g = 1`, `0 < wp⟦mx⟧ g` over a stack (uniform answers) | the lifted `wp` of `g a = 1`, `0 < g a` with failure forbidden | `OracleComp.Necessary.OptionT.wp_eq_one_eq_wp`, `OracleComp.Possible.OptionT.pos_wp_eq_wp`, and the `ExceptT` twins |
+| `wp⟦mx⟧ g ≤ ε`, any monad with lawful measure semantics | `⦃ toDual ε ⦄ mx ⦃ fun a => toDual (g a) ⦄` (the generic dual reading `ExpectationWP.Upper`) | `ExpectationWP.Upper.wp_le_iff_triple` |
+| the lifted upper reading of a stack, failure worth `0` | `wp mx post (fun _ => toDual 0, ⊥) = toDual (wp⟦mx⟧ (ofDual ∘ post))` | `OracleComp.Upper.OptionT.wp_eq`, `OracleComp.Upper.ExceptT.wp_eq` |
+
+**What each reading means, against the others.** The readings of one statement agree, and
+`Unary/WP/Coherence.lean` proves it with each side stated under its reading's instance
+(`OracleComp.Lower.wpInst`, `OracleComp.Upper.wpInst`, `OracleComp.Possible.wpInst`), since a
+scope selects one carrier per program type:
+
+| Reading | Statement | Equals | Lemma |
+|---|---|---|---|
+| lower | `⦃ 1 ⦄ oa ⦃ predInd p ⦄` | the necessary `⦃ True ⦄ oa ⦃ p ⦄` (uniform answers) | `OracleComp.Necessary.triple_one_iff_triple` |
+| upper | `⦃ toDual 0 ⦄ oa ⦃ fun x => toDual (propInd (¬ p x)) ⦄` | the necessary `⦃ True ⦄ oa ⦃ p ⦄` (uniform answers) | `OracleComp.Necessary.triple_zero_not_iff_triple` |
+| possible | `⦃ True ⦄ oa ⦃ p ⦄` | from the necessary one, on a nonempty support | `OracleComp.Possible.triple_of_necessary` |
+| necessary, lifted | `⦃ True ⦄ mx ⦃ p; (fun _ => False, ⊥) ⦄` | `Pr{let x ← mx}[p x] = 1` over the stack | `OracleComp.Necessary.OptionT.prEvent_eq_one_iff_triple` |
+| possible, lifted | `⦃ True ⦄ mx ⦃ p; (fun _ => False, ⊥) ⦄` | `0 < Pr{let x ← mx}[p x]` over the stack | `OracleComp.Possible.OptionT.prEvent_pos_iff_triple` |
+| upper, lifted | `wp mx post (fun _ => toDual 0, ⊥)` | `toDual (wp⟦mx⟧ (ofDual ∘ post))` | `OracleComp.Upper.OptionT.wp_eq` |
+
+**The generic dual reading.** A bound over a monad with lawful measure semantics other than
+`OracleComp` (an interaction run over an abstract `m`, say) is read by `ExpectationWP.Upper`
+(`Unary/WP/Measure.lean`), the dual of `ExpectationWP.Lower`: `prvcgen` states it with
+`ExpectationWP.Upper.wp_le_iff_triple` once the oracle bridges fail, and opens that scope beside
+the per-call one (as it opens `ExpectationWP.Lower` for a generic lower bound), so that the rules
+passed for its sub-programs elaborate in it. Core's `pure` and `bind` rules read the program, and
+an opaque draw passes through `ExpectationWP.Upper.Spec.ofWp`, which leaves its expectation for a
+hypothesis to bound. The scope sits below `OracleComp.Upper`, so an oracle computation keeps its
+own reading beside it (`VCVioTest/ProgramLogic/ReadingScopes.lean`).
 
 The positivity and probability-one bridges need answers of positive mass; the `_of_fullSupport`
 forms (`OracleComp.Possible.pos_wp_iff_of_fullSupport`,
@@ -499,9 +531,14 @@ constructor, run and `guard` rules match, with the exception postcondition that 
 `0` (the lower reading's bottom supplies it). The lemmas matter because the lifted expectation
 is only *propositionally* the base expectation over `mx.run` (`OptionT.wp_eq_run`): a bridge
 that relied on unfolding it works in a legacy file and fails in a `module`, where the instance
-is opaque to importers. `ExpectationWP.le_wp_iff_triple` is the generic fallback for a stack
-whose base is not an oracle computation; the triple it states is over the stack's own
-interpretation, which core's transformer rules do not match, so it is not a route into `vcgen`. The readback unfolds
+is opaque to importers. The necessary and possible readings have the same bridges
+(`OracleComp.Necessary.OptionT.prEvent_eq_one_iff_triple`,
+`OracleComp.Possible.OptionT.prEvent_pos_iff_triple`, and their `ExceptT` twins, with the nested
+forms `wp_eq_one_eq_wp` and `pos_wp_eq_wp`), whose exception assertion `fun _ => False` forbids a
+failure, so a guard's condition becomes a verification condition of a `= 1` or `0 <` event.
+`ExpectationWP.le_wp_iff_triple` is the generic fallback for a stack whose base is not an oracle
+computation; the triple it states is over the stack's own interpretation, which core's
+transformer rules do not match, so it is not a route into `vcgen`. The readback unfolds
 `pushOption`/`pushExcept` and, in the lower reading, the stack's bottom (`ExpectationWP.bot_fst`,
 `bot_snd`, `bot_eq_zero`). A comparison `Pr{A}[p] ≤ Pr{B}[q]` is read as an upper bound on the
 left-hand side with the right-hand side as the bound.

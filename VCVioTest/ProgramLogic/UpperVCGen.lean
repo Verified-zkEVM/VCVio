@@ -336,4 +336,24 @@ example : ⦃ toDual 0 ⦄ (do let b ← $ᵗ Bool; pure (b && !b) : ProbComp Bo
   prvcgen
   simp [propInd_eq_ite]
 
+/-! ## The generic dual reading
+
+A bound over a monad with lawful measure semantics other than `OracleComp` is read by
+`ExpectationWP.Upper`: the bridge states the triple with the scope's instance, core's rules read
+`pure` and `bind`, and an opaque draw passes through `ExpectationWP.Upper.Spec.ofWp`. -/
+
+section GenericMonad
+
+variable {m : Type → Type} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m]
+
+/-- A guess against an opaque challenge, over any monad with measure semantics. -/
+example (challenge : m ℕ) (ε : ℝ≥0∞) (hs : ∀ guess, Pr{let s ← challenge}[guess = s] ≤ ε)
+    (guess : ℕ) :
+    Pr{let s ← challenge; let _ ← (pure () : m Unit)}[guess = s] ≤ ε := by
+  prvcgen [ExpectationWP.Upper.Spec.ofWp challenge]
+  simpa using hs guess
+
+end GenericMonad
+
 end VCVioTest.ProgramLogic.UpperVCGen

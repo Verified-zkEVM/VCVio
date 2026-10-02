@@ -274,6 +274,13 @@ theorem prEvent_mono_of_support (mx : OptionT m α) (p q : α → Prop)
   simp only [← wp_ofMeasure_eq]
   exact _root_.prEvent_mono_of_support mx p q h
 
+/-- Comparing observations on the reachable outputs compares their expectations. -/
+@[gcongr]
+theorem wp_mono_of_support (mx : OptionT m α) {f g : α → ℝ≥0∞}
+    (h : ∀ a ∈ support mx, f a ≤ g a) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
+  simp only [← wp_ofMeasure_eq]
+  exact _root_.wp_mono_of_support mx h
+
 /-- An upper bound on the wrapped continuation event over reachable prefixes. -/
 theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (q : β → Prop)
     {ε : ENNReal} (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[q y] ≤ ε) :

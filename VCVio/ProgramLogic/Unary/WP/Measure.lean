@@ -14,9 +14,11 @@ public import VCVio.EvalDist.Expectation
 measure semantics, `ExpectationWP.wpMonad` (`VCVio.EvalDist.Expectation`), the core
 weakest-precondition instance of every such monad, so `wp mx post ⊥` and core triples read
 expectations. Its laws are stated on `wp⟦mx⟧ post` in `VCVio.EvalDist.Expectation` and
-`VCVio.EvalDist.ProbabilityNotation`.
+`VCVio.EvalDist.ProbabilityNotation`. `open scoped ExpectationWP.Upper` selects its dual, under
+which a triple states an upper bound on an expectation, as `OracleComp.Upper` does for oracle
+computations.
 
-Opening the scope selects the quantitative carrier before core instances whose carrier is
+Opening either scope selects the quantitative carrier before core instances whose carrier is
 `Prop`.
 -/
 
@@ -56,3 +58,61 @@ noncomputable scoped instance (priority := 1050) wpInst [LawfulMonad m] {α : Ty
   (wpMonad m).toWP α
 
 end ExpectationWP.Lower
+
+namespace ExpectationWP.Upper
+
+open OrderDual
+
+variable (m : Type → Type v) [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m]
+
+open scoped ExpectationWP.Lower in
+/-- Select the dual of the expectation interpretation: a triple states an upper bound on an
+expectation. The scope's priority sits above core's direct instances and below the upper-bound
+reading of `OracleComp` (`OracleComp.Upper`), so the oracle reading is never outranked by this
+generic one. -/
+noncomputable scoped instance (priority := 1050) instWP : WPMonad m ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
+  ExactWPMonad.dual
+
+/-- The dual expectation interpretation as a direct `WP` instance on programs. -/
+noncomputable scoped instance (priority := 1050) wpInst {α : Type} :
+    WP (m α) α ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
+  (instWP m).toWP α
+
+variable {m} {α : Type}
+
+/-- The weakest precondition of the dual reading is the expectation of the postcondition, read
+in `ℝ≥0∞`. -/
+theorem wp_eq (mx : m α) (post : α → ℝ≥0∞ᵒᵈ) (epost : EStack⟨⟩ᵒᵈ) :
+    wp mx post epost = toDual (wp⟦mx⟧ fun a => ofDual (post a)) :=
+  rfl
+
+/-- A residual weakest precondition of the dual reading, read in `ℝ≥0∞`, is an expectation. -/
+theorem ofDual_wp (mx : m α) (post : α → ℝ≥0∞ᵒᵈ) (epost : EStack⟨⟩ᵒᵈ) :
+    ofDual (wp mx post epost) = wp⟦mx⟧ fun a => ofDual (post a) :=
+  rfl
+
+/-- An expectation moved into the dual reading. -/
+theorem toDual_wp (mx : m α) (g : α → ℝ≥0∞) :
+    toDual (wp⟦mx⟧ g) = wp mx (fun a => toDual (g a)) Lean.Order.bot :=
+  rfl
+
+/-- A triple of the dual reading is an upper bound on the expectation. -/
+theorem triple_iff (mx : m α) (pre : ℝ≥0∞ᵒᵈ) (post : α → ℝ≥0∞ᵒᵈ) (epost : EStack⟨⟩ᵒᵈ) :
+    Triple mx pre post epost ↔ wp⟦mx⟧ (fun a => ofDual (post a)) ≤ ofDual pre :=
+  Triple.iff
+
+/-- An upper bound on an expectation is a triple of the dual reading, for every monad with lawful
+measure semantics. -/
+theorem wp_le_iff_triple (mx : m α) (g : α → ℝ≥0∞) (ε : ℝ≥0∞) :
+    wp⟦mx⟧ g ≤ ε ↔ ⦃ toDual ε ⦄ mx ⦃ fun a => toDual (g a) ⦄ :=
+  (triple_iff mx _ _ _).symm
+
+/-- An opaque sub-program's expectation, as its own upper bound: `vcgen [Spec.ofWp mx]` leaves
+the expectation of `mx` in the verification condition, for a hypothesis on it to bound. Not
+registered, since it applies to every program. -/
+theorem Spec.ofWp (mx : m α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    Triple mx (toDual (wp⟦mx⟧ fun a => ofDual (post a))) post epost := by
+  rw [triple_iff, ofDual_toDual]
+
+end ExpectationWP.Upper

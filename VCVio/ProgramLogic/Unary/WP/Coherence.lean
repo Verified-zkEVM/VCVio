@@ -9,6 +9,7 @@ module
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import VCVio.ProgramLogic.Unary.WP.Possible
+public import VCVio.ProgramLogic.Unary.WP.Upper
 
 /-!
 # Coherence of unary assertion carriers
@@ -189,3 +190,137 @@ theorem wp_eq_one_eq_wp (mx : OracleComp spec α) (g : α → ℝ≥0∞) (hg : 
     (fun t u => OracleSpec.UniformAnswerMeasure.toMeasure_singleton_pos t u) mx g hg)
 
 end OracleComp.Necessary
+
+/-! ## Events of transformer stacks
+
+An event of an `OptionT` or `ExceptT` program over an oracle computation is read through core's
+lift of the reading, with failure and exceptions forbidden: the exception assertion is
+`fun _ => False`. The bridges mirror the flat ones, through the run of the stack. -/
+
+namespace OracleComp.Necessary
+
+open Std.WP
+
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} {α : Type}
+
+/-- A structural weakest precondition of an optional computation, with failure forbidden, is a
+triple of core's `OptionT` lift of the necessary reading from `True`. -/
+theorem OptionT.wp_iff_triple (mx : OptionT (OracleComp spec) α) (post : α → Prop) :
+    Std.WP.wp mx post (fun _ => False, Lean.Order.bot) ↔
+      ⦃ True ⦄ mx ⦃ post; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [Triple.iff]
+  exact ⟨fun h _ => h, fun h => h trivial⟩
+
+/-- A structural weakest precondition of an exceptional computation, with exceptions forbidden,
+is a triple of core's `ExceptT` lift of the necessary reading from `True`. -/
+theorem ExceptT.wp_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α)
+    (post : α → Prop) :
+    Std.WP.wp mx post (fun _ => False, Lean.Order.bot) ↔
+      ⦃ True ⦄ mx ⦃ post; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [Triple.iff]
+  exact ⟨fun h _ => h, fun h => h trivial⟩
+
+variable [OracleSpec.UniformAnswerMeasure spec]
+
+/-- Under uniform answers, an event of an optional computation has probability one exactly when
+every run succeeds with an output satisfying it: a triple of core's `OptionT` lift of the
+necessary reading from `True`, with failure forbidden. -/
+theorem OptionT.prEvent_eq_one_iff_triple (mx : OptionT (OracleComp spec) α) (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 1 ↔ ⦃ True ⦄ mx ⦃ p; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [_root_.OptionT.prEvent_eq_run, OracleComp.Necessary.prEvent_eq_one_iff_triple, Triple.iff,
+    Triple.iff]
+  simp only [Std.WP.OptionT.wp_apply_eq]
+  exact imp_congr_right fun _ => Iff.of_eq (congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun o => by cases o <;> rfl))
+
+/-- Under uniform answers, an event of an exceptional computation has probability one exactly
+when every run returns an output satisfying it: a triple of core's `ExceptT` lift of the
+necessary reading from `True`, with exceptions forbidden. -/
+theorem ExceptT.prEvent_eq_one_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α)
+    (p : α → Prop) :
+    Pr{let x ← mx}[p x] = 1 ↔ ⦃ True ⦄ mx ⦃ p; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [_root_.ExceptT.prEvent_eq_run, OracleComp.Necessary.prEvent_eq_one_iff_triple, Triple.iff,
+    Triple.iff]
+  simp only [Std.WP.ExceptT.wp_apply_eq]
+  exact imp_congr_right fun _ => Iff.of_eq (congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun r => by cases r <;> rfl))
+
+/-- Under uniform answers, an expectation over an optional computation of an observation bounded
+by `1` equal to `1` is the structural weakest precondition, with failure forbidden, of the
+observation equal to `1`. -/
+theorem OptionT.wp_eq_one_eq_wp (mx : OptionT (OracleComp spec) α) (g : α → ℝ≥0∞)
+    (hg : ∀ a, g a ≤ 1) :
+    (wp⟦mx⟧ g = 1) = Std.WP.wp mx (fun a => g a = 1) (fun _ => False, Lean.Order.bot) := by
+  rw [_root_.OptionT.wp_eq_run,
+    OracleComp.Necessary.wp_eq_one_eq_wp _ _ fun o => by cases o <;> simp [hg]]
+  simp only [Std.WP.OptionT.wp_apply_eq]
+  exact congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun o => by cases o <;> simp [Lean.Order.pushOption])
+
+/-- Under uniform answers, an expectation over an exceptional computation of an observation
+bounded by `1` equal to `1` is the structural weakest precondition, with exceptions forbidden,
+of the observation equal to `1`. -/
+theorem ExceptT.wp_eq_one_eq_wp {E : Type} (mx : ExceptT E (OracleComp spec) α) (g : α → ℝ≥0∞)
+    (hg : ∀ a, g a ≤ 1) :
+    (wp⟦mx⟧ g = 1) = Std.WP.wp mx (fun a => g a = 1) (fun _ => False, Lean.Order.bot) := by
+  rw [_root_.ExceptT.wp_eq_run,
+    OracleComp.Necessary.wp_eq_one_eq_wp _ _ fun r => by cases r <;> simp [hg, Except.toOption]]
+  simp only [Std.WP.ExceptT.wp_apply_eq]
+  exact congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun r => by cases r <;> simp [Lean.Order.pushExcept, Except.toOption])
+
+end OracleComp.Necessary
+
+/-! ## What each reading means, against the others
+
+The readings of one statement agree: the lower-bound triple from `1` of an event's indicator,
+the upper-bound triple from `0` of the indicator of its negation, and the necessary triple of the
+event are one statement, and a necessary triple gives a possible one wherever some outcome is
+possible. A scope selects one carrier per program type, so each side names its reading's
+instance. -/
+
+namespace OracleComp.Necessary
+
+open Std.WP OrderDual
+
+variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.UniformAnswerMeasure spec]
+  {α : Type}
+
+/-- Under uniform answers, the lower-bound triple from `1` of an event's indicator is the
+necessary triple of the event. -/
+theorem triple_one_iff_triple (oa : OracleComp spec α) (p : α → Prop) :
+    @Std.WP.Triple ℝ≥0∞ EStack⟨⟩ (OracleComp spec α) α _ _ oa OracleComp.Lower.wpInst 1
+      (predInd p) Lean.Order.bot ↔ ⦃ True ⦄ oa ⦃ p ⦄ := by
+  rw [← OracleComp.ProgramLogic.le_prEvent_iff_triple, ← prEvent_eq_one_iff_triple]
+  exact ⟨fun h => le_antisymm (prEvent_le_one _) h, fun h => h.ge⟩
+
+/-- Under uniform answers, the upper-bound triple from `0` of the indicator of an event's
+negation is the necessary triple of the event. -/
+theorem triple_zero_not_iff_triple (oa : OracleComp spec α) (p : α → Prop) :
+    @Std.WP.Triple ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ (OracleComp spec α) α _ _ oa OracleComp.Upper.wpInst
+      (toDual 0) (fun x => toDual (propInd (¬ p x))) Lean.Order.bot ↔ ⦃ True ⦄ oa ⦃ p ⦄ := by
+  rw [← OracleComp.Upper.wp_le_iff_triple, nonpos_iff_eq_zero,
+    show wp⟦oa⟧ (fun x => propInd (¬ p x)) = Pr{let x ← oa}[¬ p x] from rfl,
+    prEvent_eq_zero_iff_triple, Triple.iff, Triple.iff]
+  simp only [not_not]
+
+end OracleComp.Necessary
+
+namespace OracleComp.Possible
+
+open Std.WP
+
+variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
+
+/-- A necessary triple from `True` gives a possible one wherever some outcome is possible. -/
+theorem triple_of_necessary (oa : OracleComp spec α) (p : α → Prop)
+    (hne : (support oa).Nonempty)
+    (h : @Std.WP.Triple Prop EStack⟨⟩ (OracleComp spec α) α _ _ oa
+      (@Std.WP.instWPOfWPMonad _ _ _ _ _ _ _ OracleComp.Necessary.instWP) True p
+      Lean.Order.bot) :
+    ⦃ True ⦄ oa ⦃ p ⦄ := by
+  obtain ⟨hle⟩ := h
+  obtain ⟨x, hx⟩ := hne
+  exact ⟨fun _ => ⟨x, hx, hle trivial x hx⟩⟩
+
+end OracleComp.Possible

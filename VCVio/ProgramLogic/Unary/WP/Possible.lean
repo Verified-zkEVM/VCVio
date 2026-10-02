@@ -11,6 +11,8 @@ public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Constructions.Replicate
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.EvalDist.Monad.Option
+public import VCVio.EvalDist.Monad.Except
 
 /-!
 # The angelic reading of oracle computations
@@ -103,6 +105,23 @@ which `vcgen` continues through. -/
 theorem wp_iff_triple (oa : OracleComp spec α) (post : α → Prop) :
     Std.WP.wp oa post Lean.Order.bot ↔ ⦃ True ⦄ oa ⦃ post ⦄ :=
   exists_mem_support_iff_triple oa post
+
+/-- An angelic weakest precondition of an optional computation, with failure forbidden, is a
+triple of core's `OptionT` lift of the reading from `True`. -/
+theorem OptionT.wp_iff_triple (mx : OptionT (OracleComp spec) α) (post : α → Prop) :
+    Std.WP.wp mx post (fun _ => False, Lean.Order.bot) ↔
+      ⦃ True ⦄ mx ⦃ post; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [Triple.iff]
+  exact ⟨fun h _ => h, fun h => h trivial⟩
+
+/-- An angelic weakest precondition of an exceptional computation, with exceptions forbidden, is
+a triple of core's `ExceptT` lift of the reading from `True`. -/
+theorem ExceptT.wp_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α)
+    (post : α → Prop) :
+    Std.WP.wp mx post (fun _ => False, Lean.Order.bot) ↔
+      ⦃ True ⦄ mx ⦃ post; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [Triple.iff]
+  exact ⟨fun h _ => h, fun h => h trivial⟩
 
 /-! ## Rules -/
 
@@ -238,6 +257,47 @@ theorem pos_wp_eq_wp (oa : OracleComp spec α) (g : α → ℝ≥0∞) :
     (0 < wp⟦oa⟧ g) = Std.WP.wp oa (fun a => 0 < g a) Lean.Order.bot :=
   propext (pos_wp_iff_of_fullSupport
     (fun t u => OracleSpec.UniformAnswerMeasure.toMeasure_singleton_pos t u) oa g)
+
+/-- Under uniform answers, an event of an optional computation is positive exactly when some run
+succeeds with an output satisfying it: a triple of core's `OptionT` lift of the angelic reading
+from `True`, with failure forbidden. -/
+theorem OptionT.prEvent_pos_iff_triple (mx : OptionT (OracleComp spec) α) (p : α → Prop) :
+    0 < Pr{let x ← mx}[p x] ↔ ⦃ True ⦄ mx ⦃ p; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [_root_.OptionT.prEvent_eq_run, OracleComp.Possible.prEvent_pos_iff_triple, Triple.iff,
+    Triple.iff]
+  simp only [Std.WP.OptionT.wp_apply_eq]
+  exact imp_congr_right fun _ => Iff.of_eq (congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun o => by cases o <;> rfl))
+
+/-- Under uniform answers, an event of an exceptional computation is positive exactly when some
+run returns an output satisfying it: a triple of core's `ExceptT` lift of the angelic reading
+from `True`, with exceptions forbidden. -/
+theorem ExceptT.prEvent_pos_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α)
+    (p : α → Prop) :
+    0 < Pr{let x ← mx}[p x] ↔ ⦃ True ⦄ mx ⦃ p; (fun _ => False, Lean.Order.bot) ⦄ := by
+  rw [_root_.ExceptT.prEvent_eq_run, OracleComp.Possible.prEvent_pos_iff_triple, Triple.iff,
+    Triple.iff]
+  simp only [Std.WP.ExceptT.wp_apply_eq]
+  exact imp_congr_right fun _ => Iff.of_eq (congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun r => by cases r <;> rfl))
+
+/-- Under uniform answers, positivity of an expectation over an optional computation is the
+angelic weakest precondition, with failure forbidden, of positivity. -/
+theorem OptionT.pos_wp_eq_wp (mx : OptionT (OracleComp spec) α) (g : α → ℝ≥0∞) :
+    (0 < wp⟦mx⟧ g) = Std.WP.wp mx (fun a => 0 < g a) (fun _ => False, Lean.Order.bot) := by
+  rw [_root_.OptionT.wp_eq_run, OracleComp.Possible.pos_wp_eq_wp]
+  simp only [Std.WP.OptionT.wp_apply_eq]
+  exact congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun o => by cases o <;> simp [Lean.Order.pushOption])
+
+/-- Under uniform answers, positivity of an expectation over an exceptional computation is the
+angelic weakest precondition, with exceptions forbidden, of positivity. -/
+theorem ExceptT.pos_wp_eq_wp {E : Type} (mx : ExceptT E (OracleComp spec) α) (g : α → ℝ≥0∞) :
+    (0 < wp⟦mx⟧ g) = Std.WP.wp mx (fun a => 0 < g a) (fun _ => False, Lean.Order.bot) := by
+  rw [_root_.ExceptT.wp_eq_run, OracleComp.Possible.pos_wp_eq_wp]
+  simp only [Std.WP.ExceptT.wp_apply_eq]
+  exact congrArg (fun q => Std.WP.wp mx.run q Lean.Order.bot)
+    (funext fun r => by cases r <;> simp [Lean.Order.pushExcept, Except.toOption])
 
 end OracleComp.Possible
 

@@ -180,6 +180,19 @@ theorem prEvent_dite (c : Prop) [Decidable c] (mx : c → m α) (my : ¬c → m 
       if h : c then Pr{let x ← mx h}[p x] else Pr{let x ← my h}[p x] := by
   split <;> rfl
 
+/-- Pointwise equivalent predicates have the same probability after a common computation. -/
+theorem prEvent_congr (mx : m α) (p q : α → Prop) (h : ∀ x, p x ↔ q x) :
+    Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
+  rw [show p = q from funext fun x ↦ propext (h x)]
+
+/-- Pointwise equality of observed continuation probabilities gives equality after a common
+draw. -/
+theorem prEvent_bind_congr (mx : m α) (f : α → m β) {γ : Type} (g : α → m γ) (p : β → Prop)
+    (q : γ → Prop)
+    (h : ∀ x, Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
+    Pr{let x ← mx; let y ← f x}[p y] = Pr{let x ← mx; let z ← g x}[q z] :=
+  ExpectationWP.wp_congr mx h
+
 end Structure
 
 /-! ## Constants and indicators -/
@@ -315,11 +328,6 @@ theorem prEvent_ne_top (mx : m α) {p : α → Prop} : Pr{let x ← mx}[p x] ≠
 @[simp]
 theorem prEvent_lt_top (mx : m α) {p : α → Prop} : Pr{let x ← mx}[p x] < ⊤ :=
   (prEvent_ne_top mx).lt_top
-
-/-- Pointwise equivalent predicates have the same probability after a common computation. -/
-theorem prEvent_congr (mx : m α) (p q : α → Prop) (h : ∀ x, p x ↔ q x) :
-    Pr{let x ← mx}[p x] = Pr{let x ← mx}[q x] := by
-  rw [show p = q from funext fun x ↦ propext (h x)]
 
 /-- A true constant event after a lossless draw has probability one. -/
 theorem prEvent_const_of_lossless (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1) {c : Prop}
@@ -470,13 +478,6 @@ theorem prEvent_bind_congr_ae [MeasurableSpace α] (mx : m α) (f : α → m β)
     Pr{let x ← mx; let y ← f x}[p y] = Pr{let x ← mx; let z ← g x}[q z] := by
   rw [prEvent_bind_eq_lintegral mx f p hf, prEvent_bind_eq_lintegral mx g q hg]
   exact lintegral_congr_ae h
-
-/-- Pointwise equality of observed continuation probabilities gives equality after a common
-draw. -/
-theorem prEvent_bind_congr (mx : m α) (f : α → m β) (g : α → m γ) (p : β → Prop) (q : γ → Prop)
-    (h : ∀ x, Pr{let y ← f x}[p y] = Pr{let z ← g x}[q z]) :
-    Pr{let x ← mx; let y ← f x}[p y] = Pr{let x ← mx; let z ← g x}[q z] :=
-  ExpectationWP.wp_congr mx h
 
 /-- After a draw from a finite type, an event is the finite sum of the draw's point masses times
 the conditional event probabilities. -/

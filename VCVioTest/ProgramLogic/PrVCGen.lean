@@ -396,6 +396,37 @@ example : Pr{let b ← (OptionT.lift ($ᵗ Bool) : OptionT ProbComp Bool)}[(b &&
   prvcgen
   simp [propInd_eq_ite]
 
+/-- An event of an `OptionT` program with probability one: the necessary bridge forbids
+failure, so the guard's condition is a verification condition. -/
+example : Pr{let b ← (do guard (1 < 2); OptionT.lift ($ᵗ Bool) : OptionT ProbComp Bool)}[
+    (b || !b) = true] = 1 := by
+  prvcgen
+  all_goals simp_all
+
+/-- A positive event of an `OptionT` program: the possible bridge asks for a successful run. -/
+example : 0 < Pr{let b ← (do guard (1 < 2); OptionT.lift ($ᵗ Bool) : OptionT ProbComp Bool)}[
+    b = true] := by
+  prvcgen
+  all_goals simp_all
+
+/-- An event of an `ExceptT` program with probability one: the necessary bridge forbids
+exceptions. -/
+example : Pr{let b ← (do
+      let b ← ExceptT.lift ($ᵗ Bool)
+      if b then pure b else pure (!b) : ExceptT String ProbComp Bool)}[b = true] = 1 := by
+  prvcgen
+  all_goals simp_all
+
+/-- A positive event of an `ExceptT` program: the possible bridge asks for a run without an
+exception. -/
+example : 0 < Pr{let b ← (do
+      let b ← ExceptT.lift ($ᵗ Bool)
+      if b then pure b else throw "stop" : ExceptT String ProbComp Bool)}[b = true] := by
+  prvcgen
+  refine ⟨true, ?_⟩
+  simp only [binderNameHint, ite_true]
+  prvcgen
+
 /-- An event of an `ExceptT` program, bounded below. -/
 example : (1 : ℝ≥0∞) ≤ Pr{let b ← (ExceptT.lift ($ᵗ Bool) : ExceptT String ProbComp Bool)}[
     (b || !b) = true] := by

@@ -86,4 +86,46 @@ example (oa : ProbComp Nat) (post : Nat → Prob) :
 
 end Probabilistic
 
+/-! ## What each reading means, against the others -/
+
+section Coherence
+
+open OrderDual
+
+variable {α : Type}
+
+/-- The lower-bound triple from `1` of an event's indicator is the necessary triple. -/
+example (oa : ProbComp α) (p : α → Prop) (h : ⦃ True ⦄ oa ⦃ p ⦄) :
+    @Triple ℝ≥0∞ EStack⟨⟩ (ProbComp α) α _ _ oa OracleComp.Lower.wpInst 1 (predInd p)
+      Lean.Order.bot :=
+  (OracleComp.Necessary.triple_one_iff_triple oa p).2 h
+
+/-- The upper-bound triple from `0` of the indicator of an event's negation is the necessary
+triple. -/
+example (oa : ProbComp α) (p : α → Prop) (h : ⦃ True ⦄ oa ⦃ p ⦄) :
+    @Triple ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ (ProbComp α) α _ _ oa OracleComp.Upper.wpInst (toDual 0)
+      (fun x => toDual (propInd (¬ p x))) Lean.Order.bot :=
+  (OracleComp.Necessary.triple_zero_not_iff_triple oa p).2 h
+
+/-- A necessary triple gives a possible one, since every oracle computation has a possible
+outcome. -/
+example (oa : ProbComp α) (p : α → Prop) (h : ⦃ True ⦄ oa ⦃ p ⦄) :
+    @Triple Prop EStack⟨⟩ (ProbComp α) α _ _ oa OracleComp.Possible.wpInst True p
+      Lean.Order.bot :=
+  OracleComp.Possible.triple_of_necessary oa p (OracleComp.support_nonempty oa) h
+
+/-- The necessary triple of an `OptionT` event forbids failure. -/
+example (mx : OptionT ProbComp α) (p : α → Prop) (h : Pr{let x ← mx}[p x] = 1) :
+    ⦃ True ⦄ mx ⦃ p; (fun _ => False, Lean.Order.bot) ⦄ :=
+  (OracleComp.Necessary.OptionT.prEvent_eq_one_iff_triple mx p).1 h
+
+open scoped OracleComp.Upper in
+/-- The lifted upper-bound reading of an `OptionT` program, with a failure worth `0`, is the
+dual of its expectation. -/
+example (mx : OptionT ProbComp α) (g : α → ℝ≥0∞) :
+    wp mx (fun a => toDual (g a)) (fun _ => toDual 0, Lean.Order.bot) = toDual (wp⟦mx⟧ g) :=
+  OracleComp.Upper.OptionT.wp_eq mx _
+
+end Coherence
+
 end VCVioTest.ProgramLogic.CoreWP

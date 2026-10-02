@@ -166,6 +166,24 @@ theorem ExceptT.wp_le_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α
   simp only [Std.WP.ExceptT.wp_apply_eq, rel_iff, ofDual_toDual, ofDual_wp]
   exact Iff.of_eq (congrArg (· ≤ ε) (ExpectationWP.wp_congr _ fun r => by cases r <;> rfl))
 
+/-- Core's `OptionT` lift of the upper-bound reading, with a failure worth `0`, is the dual of
+the expectation over the optional computation. -/
+theorem OptionT.wp_eq (mx : OptionT (OracleComp spec) α) (post : α → ℝ≥0∞ᵒᵈ) :
+    wp mx post (fun _ => toDual 0, Lean.Order.bot) =
+      toDual (wp⟦mx⟧ fun a => ofDual (post a)) := by
+  rw [_root_.OptionT.wp_eq_run]
+  simp only [Std.WP.OptionT.wp_apply_eq, OracleComp.Upper.wp_eq]
+  exact congrArg toDual (ExpectationWP.wp_congr _ fun o => by cases o <;> rfl)
+
+/-- Core's `ExceptT` lift of the upper-bound reading, with an exception worth `0`, is the dual
+of the expectation over the exceptional computation. -/
+theorem ExceptT.wp_eq {E : Type} (mx : ExceptT E (OracleComp spec) α) (post : α → ℝ≥0∞ᵒᵈ) :
+    wp mx post (fun _ => toDual 0, Lean.Order.bot) =
+      toDual (wp⟦mx⟧ fun a => ofDual (post a)) := by
+  rw [_root_.ExceptT.wp_eq_run]
+  simp only [Std.WP.ExceptT.wp_apply_eq, OracleComp.Upper.wp_eq]
+  exact congrArg toDual (ExpectationWP.wp_congr _ fun r => by cases r <;> rfl)
+
 /-- Mathlib's order on the dual carrier is the reversed order of `ℝ≥0∞`. -/
 theorem le_iff_ofDual (a b : ℝ≥0∞ᵒᵈ) : a ≤ b ↔ ofDual b ≤ ofDual a :=
   Iff.rfl

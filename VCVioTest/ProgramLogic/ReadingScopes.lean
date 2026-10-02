@@ -114,6 +114,36 @@ example : True := by
 
 end ProbabilisticBesideGeneric
 
+/-! ## The generic dual scope -/
+
+section GenericUpper
+open scoped ExpectationWP.Upper
+
+noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ := inferInstance
+
+example : True := by
+  fail_if_success
+    let _ := (inferInstance : WP (ProbComp Bool) Bool ℝ≥0∞ EStack⟨⟩)
+  trivial
+
+example (oa : ProbComp Bool) (post : Bool → ℝ≥0∞ᵒᵈ) :
+    wp oa post Lean.Order.bot = OrderDual.toDual (wp⟦oa⟧ fun a => OrderDual.ofDual (post a)) :=
+  rfl
+
+end GenericUpper
+
+section UpperBesideGenericUpper
+open scoped ExpectationWP.Upper OracleComp.Upper
+
+noncomputable example : WP (ProbComp Bool) Bool ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ := inferInstance
+
+example : True := by
+  fail_if_success
+    let _ := (inferInstance : WP (ProbComp Bool) Bool ℝ≥0∞ EStack⟨⟩)
+  trivial
+
+end UpperBesideGenericUpper
+
 /-! ## A per-call scope above a file-level reading -/
 
 section Dispatch

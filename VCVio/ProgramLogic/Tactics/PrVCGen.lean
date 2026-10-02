@@ -192,8 +192,12 @@ def tripleReading? (goal : Expr) : MetaM (Option Reading) := do
 def bridgeEqOne : TacticM Unit := do
   evalTactic (← `(tactic| (
     simp (disch := prvcgen_le_one) only
-      [OracleComp.Necessary.wp_eq_one_eq_wp, predInd_apply, propInd_eq_one_iff]
-    rw [OracleComp.Necessary.wp_iff_triple])))
+      [OracleComp.Necessary.wp_eq_one_eq_wp, OracleComp.Necessary.OptionT.wp_eq_one_eq_wp,
+        OracleComp.Necessary.ExceptT.wp_eq_one_eq_wp, predInd_apply, propInd_eq_one_iff]
+    first
+      | rw [OracleComp.Necessary.wp_iff_triple]
+      | rw [OracleComp.Necessary.OptionT.wp_iff_triple]
+      | rw [OracleComp.Necessary.ExceptT.wp_iff_triple])))
 
 /-- State the main goal as a triple of the reading it belongs to, or split an equation. -/
 partial def bridge (goal : Expr) : TacticM Plan := do
@@ -241,6 +245,7 @@ partial def bridge (goal : Expr) : TacticM Plan := do
           | rw [OracleComp.Upper.wp_le_iff_triple]
           | rw [OracleComp.Upper.OptionT.wp_le_iff_triple]
           | rw [OracleComp.Upper.ExceptT.wp_le_iff_triple]
+          | rw [ExpectationWP.Upper.wp_le_iff_triple]
         try simp only [OracleComp.Upper.toDual_wp])))
       return .single .upper
     evalTactic (← `(tactic| refine le_antisymm ?_ ?_))
@@ -261,9 +266,12 @@ partial def bridge (goal : Expr) : TacticM Plan := do
     unless isNumeral (goal.getArg! 2) 0 do
       throwError "prvcgen: a strict inequality must be `0 < Pr\{…}[…]`"
     evalTactic (← `(tactic| (
-      simp only [OracleComp.Possible.pos_wp_eq_wp, predInd_apply, propInd_pos_iff]
+      simp only [OracleComp.Possible.pos_wp_eq_wp, OracleComp.Possible.OptionT.pos_wp_eq_wp,
+        OracleComp.Possible.ExceptT.pos_wp_eq_wp, predInd_apply, propInd_pos_iff]
       first
         | rw [OracleComp.Possible.wp_iff_triple]
+        | rw [OracleComp.Possible.OptionT.wp_iff_triple]
+        | rw [OracleComp.Possible.ExceptT.wp_iff_triple]
         | fail "prvcgen: the possible bridge for `0 < …` needs uniform answers \
             (`UniformAnswerMeasure`); otherwise use \
             `OracleComp.Possible.prEvent_pos_iff_triple_of_fullSupport`")))
@@ -276,11 +284,14 @@ partial def bridge (goal : Expr) : TacticM Plan := do
   if let some (lhs, rhs, isGe) := ineq? then
     if isGe then evalTactic (← `(tactic| rw [ge_iff_le]))
     if isWpApp lhs then
+      -- the generic dual reading last: it states the triple with its own instance, so a bound
+      -- over any monad with measure semantics is read without a scope
       evalTactic (← `(tactic| (
         first
           | rw [OracleComp.Upper.wp_le_iff_triple]
           | rw [OracleComp.Upper.OptionT.wp_le_iff_triple]
           | rw [OracleComp.Upper.ExceptT.wp_le_iff_triple]
+          | rw [ExpectationWP.Upper.wp_le_iff_triple]
         try simp only [OracleComp.Upper.toDual_wp])))
       return .single .upper
     if isWpApp rhs then
@@ -355,8 +366,23 @@ syntax (name := prvcgenStx) "prvcgen" Lean.Parser.Tactic.optConfig
 
 namespace OracleComp.ProgramLogic.PrVCGen
 
+/-- The generic measure scope a bridged triple needs beside the reading's per-call scope, read
+off the triple's instance: a bound over a monad other than `OracleComp` is stated with the
+instance of `ExpectationWP.Upper` or of `ExpectationWP`'s interpretation, and the rules passed
+for its sub-programs elaborate under that scope. -/
+def genericScope? (goal : Expr) : Option Name :=
+  let goal := goal.cleanupAnnotations
+  if !goal.isAppOfArity ``Std.WP.Triple 11 then none else
+  let inst := (goal.getArg! 7).cleanupAnnotations
+  if inst.isAppOf ``ExpectationWP.Upper.wpInst then some `ExpectationWP.Upper
+  else if inst.isAppOfArity ``Std.WP.instWPOfWPMonad 8 &&
+      (inst.getArg! 7).cleanupAnnotations.isAppOf ``ExpectationWP.toWPMonad then
+    some `ExpectationWP.Lower
+  else none
+
 /-- Run `vcgen` with `prvcgen`'s arguments, or the user's tactic, on the main goal inside the
-scope of `reading`, then normalize the verification conditions. -/
+scope of `reading` (and the generic measure scope its instance asks for), then normalize the
+verification conditions. -/
 def runReading (reading : Reading) (stx : Syntax)
     (tac? : Option (TSyntax ``Lean.Parser.Tactic.tacticSeq)) : TacticM Unit := focus do
   let tail : TSyntax ``Lean.Parser.Tactic.tacticSeq ← match tac? with
@@ -366,9 +392,12 @@ def runReading (reading : Reading) (stx : Syntax)
       let t := mkNode ``Lean.Parser.Tactic.vcgen
         #[mkAtom "vcgen", stx[1], stx[2], stx[3], stx[4], stx[5], stx[6], stx[7]]
       `(tacticSeq| $(⟨t⟩):tactic)
-  let scope := mkIdent reading.scope
+  let scopes : Array Ident :=
+    match genericScope? (← instantiateMVars (← getMainTarget)) with
+    | some generic => #[mkIdent reading.scope, mkIdent generic]
+    | none => #[mkIdent reading.scope]
   evalTactic (← `(tactic|
-    open scoped $scope:ident in set_option experimental.vcgen true in ($tail)))
+    open scoped $scopes* in set_option experimental.vcgen true in ($tail)))
   normalizeVCs reading
 
 @[tactic prvcgenStx, inherit_doc prvcgenStx]
