@@ -83,6 +83,49 @@ example (gen : OracleComp spec ℕ) (hg : ∀ n ∈ support gen, n ≤ 3) :
   rename_i n
   simp [propInd_eq_ite, Nat.not_le.mpr (Nat.lt_succ_of_le (hg n.1 n.2))]
 
+/-- `Spec.ofNecessary`, passed with a fact about the support in place of the support itself. -/
+example (gen : OracleComp spec ℕ) (hg : ∀ n ∈ support gen, n ≤ 3) :
+    ⦃ toDual 0 ⦄ (do let n ← gen; pure n : OracleComp spec ℕ)
+      ⦃ fun n => toDual (propInd (4 ≤ n)) ⦄ := by
+  vcgen [OracleComp.Upper.Spec.ofNecessary gen (· ≤ 3) hg]
+  rename_i n
+  simp [propInd_eq_ite, Nat.not_le.mpr (Nat.lt_succ_of_le n.2)]
+
+/-- `Spec.ofNecessary_stateT`, passed with a handler triple of the necessary reading read on the
+support: from a cache above `cache₀`, the answer is cached with certainty. -/
+example [DecidableEq ι] (t : spec.Domain) (cache₀ : QueryCache spec) :
+    ⦃ fun cache => toDual (propInd (¬ cache₀ ≤ cache)) ⦄
+      (do let v ← cachingOracle t; pure v :
+        StateT (QueryCache spec) (OracleComp spec) (spec.Range t))
+      ⦃ fun v cache' => toDual (propInd (cache' t ≠ some v)) ⦄ := by
+  vcgen [OracleComp.Upper.Spec.ofNecessary_stateT (cachingOracle t)
+    (fun cache v cache' => cache₀ ≤ cache → cache' t = some v)
+    (fun cache z hz hle => ((triple_stateT_iff_forall_support _ _ _ ⟨⟩).1
+      (cachingOracle_triple t cache₀) cache hle z.1 z.2 hz).2)]
+  rename_i s z
+  simp only [upper_readback]
+  by_cases hle : cache₀ ≤ s
+  · simp [z.2 hle]
+  · simpa [hle] using propInd_le_one _
+
+/-- `Spec.liftComp` into a sum: the inclusion preserves the answer measures, so neither
+specification needs uniform answers. -/
+example {τ : Type} {spec₂ : OracleSpec.{0, 0} τ} [spec₂.AnswerMeasure] (oa : OracleComp spec ℕ)
+    (ε : ℝ≥0∞) (h : Pr{let n ← oa}[n = 0] ≤ ε) :
+    Pr{let n ← liftComp oa (spec + spec₂)}[n = 0] ≤ ε := by
+  prvcgen [OracleComp.Upper.Spec.ofWp oa]
+  simpa using h
+
+/-- `wp_liftComp` into a sum, as an expectation equation. -/
+example {τ : Type} {spec₂ : OracleSpec.{0, 0} τ} [spec₂.AnswerMeasure] (oa : OracleComp spec ℕ)
+    (g : ℕ → ℝ≥0∞) : wp⟦liftComp oa (spec + spec₂)⟧ g = wp⟦oa⟧ g := by
+  simp only [expect_eval]
+
+/-- The output measure of a lift into a sum. -/
+example {τ : Type} {spec₂ : OracleSpec.{0, 0} τ} [spec₂.AnswerMeasure] (oa : OracleComp spec ℕ) :
+    𝒟[liftComp oa (spec + spec₂)] = 𝒟[oa] :=
+  evalDist_liftComp oa
+
 /-- `Spec.ofWp`, passed for an opaque draw: its expectation stays in the condition, for the
 hypothesis on it to close. -/
 example (gen : OracleComp spec ℕ) (ε : ℝ≥0∞) (hg : Pr{let n ← gen}[n = 0] ≤ ε) :

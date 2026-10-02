@@ -80,13 +80,14 @@ theorem wp_liftComp_of_evalDistEq {ι' : Type*} {superSpec : OracleSpec ι'}
 
 end MeasureSpec
 
-/-- Cartesian lifting between uniform specifications preserves quantitative WP. -/
-@[expect_eval] theorem wp_liftComp [OracleSpec.UniformAnswerMeasure spec]
-    {ι' : Type*} {superSpec : OracleSpec ι'}
-    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
+/-- A measure-preserving inclusion preserves quantitative WP. -/
+@[expect_eval] theorem wp_liftComp [OracleSpec.AnswerMeasure spec]
+    {ι' : Type*} {superSpec : OracleSpec ι'} [OracleSpec.AnswerMeasure superSpec]
+    [spec ⊂ₒ superSpec] [OracleSpec.SubSpec.PreservesAnswerMeasure spec superSpec]
     (mx : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦liftComp mx superSpec⟧ post = wp⟦mx⟧ post :=
-  wp_liftComp_of_evalDistEq (fun t ↦ evalDistEq_liftM_query_uniform t) mx post
+  wp_liftComp_of_evalDistEq
+    (fun t ↦ OracleSpec.SubSpec.PreservesAnswerMeasure.evalDistEq_liftM_query t) mx post
 
 section MeasureSpec
 

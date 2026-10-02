@@ -263,6 +263,7 @@ regenerates this table; `--check` fails when it is stale):
 <!-- BEGIN AUTO:specRules -->
 | Namespace | Rule | Attribute | Defined in |
 |-----------|------|-----------|------------|
+| `Std.WP.Spec` | `Std.WP.Spec.mOfFn` | `@[spec]` | `ToMathlib/Control/Monad/Fold/WP.lean` |
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.monadLift_liftComp` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
 | `OracleComp.Lower.Spec` | `OracleComp.Lower.Spec.monadLift_query` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/LowerSpecs.lean` |
@@ -358,8 +359,10 @@ with `Lean.Order.iInf`, which `vcgen` splits into one condition per outcome:
 | `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨅ u, post u` |
 | `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨅ x, post x` |
 | `oa.replicate n` | `Spec.replicate` | `⨅ xs : {xs // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa}, post xs.1` |
-| `liftComp oa superSpec`, `liftM oa` (uniform answers on both specifications) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
+| `liftComp oa superSpec`, `liftM oa` (a measure-preserving inclusion, `OracleSpec.SubSpec.PreservesAnswerMeasure`) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨅ a : {a // a ∈ support oa}, post a.1` |
+| any `oa` with `h : ∀ a ∈ support oa, q a` (not registered) | `Spec.ofNecessary oa q h` | `⨅ a : {a // q a}, post a.1` |
+| any `mx : StateT σ (OracleComp spec) α` with `h : ∀ s, ∀ z ∈ support (mx.run s), Q s z.1 z.2` (not registered) | `Spec.ofNecessary_stateT mx Q h` | `fun s => ⨅ z : {z // Q s z.1 z.2}, post z.1.1 z.1.2` |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_sum` | `(∑ x, post x) / card β` |
 | `query t`, uniform (not registered) | `Spec.query_uniform` | `∑ u, (card)⁻¹ * post u` |
 
@@ -402,8 +405,10 @@ Upper-bound rules (`VCVio/ProgramLogic/Unary/WP/Upper.lean`, namespace `OracleCo
 | `query t` (both spellings) | `Spec.query`, `Spec.monadLift_query` | `⨆ u, post u` (core's `Lean.Order.iInf` of the dual) |
 | `$ᵗ β`, `$[0..n]` | `Spec.uniformSample`, `Spec.uniformFin` | `⨆ x, post x` |
 | `oa.replicate n` | `Spec.replicate` | `⨆ xs : {xs // xs.length = n ∧ ∀ x ∈ xs, x ∈ support oa}, post xs.1` |
-| `liftComp oa superSpec`, `liftM oa` (uniform answers on both specifications) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
+| `liftComp oa superSpec`, `liftM oa` (a measure-preserving inclusion, `OracleSpec.SubSpec.PreservesAnswerMeasure`) | `Spec.liftComp`, `Spec.monadLift_liftComp` | `wp oa post` |
 | any `oa` (not registered) | `Spec.ofSupport` | `⨆ a : {a // a ∈ support oa}, post a.1` |
+| any `oa` with `h : ∀ a ∈ support oa, q a` (not registered) | `Spec.ofNecessary oa q h` | `⨆ a : {a // q a}, post a.1` |
+| any `mx : StateT σ (OracleComp spec) α` with `h : ∀ s, ∀ z ∈ support (mx.run s), Q s z.1 z.2` (not registered) | `Spec.ofNecessary_stateT mx Q h` | `fun s => ⨆ z : {z // Q s z.1 z.2}, post z.1.1 z.1.2` |
 | any `oa` (not registered) | `Spec.ofWp` | `wp⟦oa⟧ post`, for a hypothesis to bound |
 | `oa >>= f` with a bad event (not registered) | `Spec.bind_of_bad oa f bad` | `Pr{let a ← oa}[bad a] + ε`, with `⦃ toDual ε ⦄ f a ⦃ post ⦄` off the event on the support and `post ≤ 1` as conditions |
 | `$ᵗ β`, finite (not registered) | `Spec.uniformSample_avg` | `(∑ x, post x) / card β` |
@@ -418,7 +423,14 @@ steps, carried by a loop invariant (`Spec.foldlM_list`) or by a ranked handler i
 (`OracleComp.ProgramLogic.simulateQ_triple_ranked`, which spends one unit of budget per query of a
 computation with `IsTotalQueryBound`; its budget is a proof-side fact, so it is not a registered
 rule: apply it by hand or pass it instantiated in brackets). `vcgen` then leaves one averaging
-inequality per step and an entry condition comparing the initial budget with the bound.
+inequality per step and an entry condition comparing the initial budget with the bound. The
+ranked invariant is generic in the budget: `simulateQ_triple_ranked_of_isQueryBound` takes the
+budget type, admission test and cost of an `IsQueryBound`, and
+`simulateQ_triple_ranked_of_queryBoundP` (one unit per query at an index satisfying `p`, the
+other queries keep the potential) and `simulateQ_triple_ranked_of_perIndexQueryBound` (one unit
+of the index's own budget) are its instances at `IsQueryBoundP` and `IsPerIndexQueryBound`. Two
+bounds on one computation combine into a product budget by `IsQueryBound.prod`, a family by
+`IsQueryBound.pi`.
 
 An assertion of the upper-bound reading has type `ℝ≥0∞ᵒᵈ`. Write the precondition as `toDual ε`:
 the triple notation elaborates its precondition before it looks up the interpretation, so an
@@ -514,13 +526,19 @@ turn lower bounds into triples.
 `OracleComp.Necessary.Spec.ofSupport`, `OracleComp.Possible.Spec.ofSupport`), bounds `oa` by its
 continuation's precondition over its support. With `h : ∀ x ∈ support oa, ⦃ r ⦄ f x ⦃ post ⦄`,
 `prvcgen [OracleComp.Lower.Spec.ofSupport oa, h]` proves `⦃ r ⦄ (oa >>= f) ⦃ post ⦄` up to
-the support membership, which it leaves. `OracleComp.Upper.Spec.ofWp oa` keeps the expectation
+the support membership, which it leaves. `Spec.ofNecessary oa q h` (lower and upper readings)
+is the same rule with a fact `h : ∀ a ∈ support oa, q a` about the support in place of the
+support itself, so the condition quantifies over the outputs satisfying `q`; its stateful form
+`Spec.ofNecessary_stateT mx Q h` takes `h : ∀ s, ∀ z ∈ support (mx.run s), Q s z.1 z.2`, the
+form `triple_stateT_iff_forall_support` reads a handler triple of the necessary reading, so the
+handler specifications of `Unary/HandlerSpecs.lean` serve the bound readings through it. `OracleComp.Upper.Spec.ofWp oa` keeps the expectation
 of `oa` itself in the condition, under `toDual`, for a hypothesis such as a per-draw bound to
 close, where the support rule would take the largest value and an averaging rule needs the finite
 average (the lower reading has no such rule: its precondition would be the weakest precondition
 `vcgen` just stepped from, which it would step again). A passed rule whose instance arguments
 cannot be synthesized at the site is skipped without a message, and the registered rule applies
-instead (`trace.Elab.Tactic.Do.vcgen` shows the attempt). With `prvcgen (errorOnMissingSpec := false)`, a program
+instead (`trace.Elab.Tactic.Do.vcgen` shows the attempt); a draw from a type with only
+`SampleableType` takes the averaging rule after `haveI := Fintype.ofFinite β`. With `prvcgen (errorOnMissingSpec := false)`, a program
 without a rule is left as a verification condition stating its weakest precondition,
 `pre ≤ wp oa k`, whose continuation `k` holds the rest of the program;
 `simp only [expect_norm, le_refl]` closes it when `pre` is that expectation.
@@ -529,6 +547,10 @@ without a rule is left as a verification condition stating its weakest precondit
 `prvcgen invariants · fun _ _ s => I s`, `List.mapM` through `Std.WP.Spec.mapM_list`
 (PolyFun's `Control/Do/Spec.lean`), whose invariant ranges over the elements consumed, the elements
 remaining and the outputs so far, as `prvcgen invariants · fun pref _ bs => bs.length = pref.length`,
+`Fin.mOfFn` through `Std.WP.Spec.mOfFn` (`ToMathlib/Control/Monad/Fold/WP.lean`), whose
+invariant ranges over the number of results collected and those results, as
+`prvcgen invariants · fun k v => toDual (propInd (∃ i, bad (v i)) + (n - k : ℕ) * ε)` for a union
+bound over a family of `n` draws,
 and `replicate` through `Spec.replicate` in every reading (its precondition ranges over the
 lists of possible outputs), or through the invariant rules of `Unary/HoareTriple.lean` passed
 explicitly, as `prvcgen [triple_replicate_inv hstep]` (`triple_replicate_inv`, `triple_replicate`,

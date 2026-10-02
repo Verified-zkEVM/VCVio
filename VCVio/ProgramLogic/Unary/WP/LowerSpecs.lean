@@ -169,6 +169,33 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epo
     iInf_le (fun a : {a // a ∈ support oa} => post a.1) ⟨x, hx⟩)⟩
   rw [ExpectationWP.wp_const_of_oracle]
 
+/-- A lower bound at every output satisfying a predicate that holds on the support bounds the
+expectation: `Spec.ofSupport` with the support replaced by a fact about it, such as the
+conclusion of a triple of the necessary reading. Not registered, for the reason given at
+`Spec.ofSupport`; `vcgen [Spec.ofNecessary oa q h]` splits the infimum over the outputs
+satisfying `q`. -/
+theorem Spec.ofNecessary (oa : OracleComp spec α) (q : α → Prop) (h : ∀ a ∈ support oa, q a)
+    (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
+    Triple oa (Lean.Order.iInf fun a : {a // q a} => post a.1) post epost := by
+  rw [MAlgOrdered.iInf_eq_iInf]
+  refine ⟨le_trans (le_of_eq ?_) (wp_mono_of_support oa fun x hx =>
+    iInf_le (fun a : {a // q a} => post a.1) ⟨x, h x hx⟩)⟩
+  rw [ExpectationWP.wp_const_of_oracle]
+
+/-- `Spec.ofNecessary` for a stateful program: a fact about every value-state pair reachable
+from a state, in the form `triple_stateT_iff_forall_support` reads a triple of the necessary
+reading, gives the lower bound at every such pair. -/
+theorem Spec.ofNecessary_stateT {σ : Type} (mx : StateT σ (OracleComp spec) α)
+    (Q : σ → α → σ → Prop) (h : ∀ s, ∀ z ∈ support (mx.run s), Q s z.1 z.2)
+    (post : α → σ → ℝ≥0∞) {epost : EStack⟨⟩} :
+    Triple mx (fun s => Lean.Order.iInf fun z : {z : α × σ // Q s z.1 z.2} => post z.1.1 z.1.2)
+      post epost :=
+  ⟨fun s => by
+    rw [StateT.wp_apply_eq, MAlgOrdered.iInf_eq_iInf]
+    exact le_trans (le_of_eq (ExpectationWP.wp_const_of_oracle _ _).symm)
+      (wp_mono_of_support _ fun z hz => iInf_le (fun z : {z : α × σ // Q s z.1 z.2} =>
+        post z.1.1 z.1.2) ⟨z, h s z hz⟩)⟩
+
 /-- The expectation of `oa.replicate n` is at least its smallest value on a list of `n` possible
 outputs of `oa`. -/
 @[spec]
@@ -204,6 +231,24 @@ theorem ExceptT.le_wp_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α
   cases e <;> simp [Lean.Order.pushExcept, Except.toOption, ExpectationWP.bot_fst,
     Lean.Order.bot_apply, ExpectationWP.bot_eq_zero]
 
+/-- Lifting along a measure-preserving inclusion keeps the expectation. The precondition is the
+expectation of the lifted program, so `vcgen` continues into it. -/
+@[spec]
+theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ} [OracleSpec.AnswerMeasure superSpec]
+    [spec ⊂ₒ superSpec] [OracleSpec.SubSpec.PreservesAnswerMeasure spec superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
+    ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ :=
+  ⟨(OracleComp.ProgramLogic.wp_liftComp oa post).ge⟩
+
+/-- `Spec.liftComp` for the lift written as `liftM oa`. -/
+@[spec]
+theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [OracleSpec.AnswerMeasure superSpec] [spec ⊂ₒ superSpec]
+    [OracleSpec.SubSpec.PreservesAnswerMeasure spec superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
+    ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
+  Spec.liftComp oa post
+
 /-! The readback of this reading's verification conditions; the sets are registered in
 `VCVio.ProgramLogic.Unary.WP.Readback`. -/
 attribute [lower_readback] Lean.Order.rel_eq_le binderNameHint Lean.Order.pushOption
@@ -223,23 +268,6 @@ theorem Spec.query_uniform (t : spec.Domain) [Fintype (spec.Range t)]
     Triple (HasQuery.query t : OracleComp spec (spec.Range t))
       (∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * post u) post epost :=
   ⟨(OracleComp.ProgramLogic.wp_query_uniform t post).ge⟩
-
-/-- Lifting between uniform oracle worlds keeps the expectation. The precondition is the
-expectation of the lifted program, so `vcgen` continues into it. -/
-@[spec]
-theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
-    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
-    ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ :=
-  ⟨(OracleComp.ProgramLogic.wp_liftComp oa post).ge⟩
-
-/-- `Spec.liftComp` for the lift written as `liftM oa`. -/
-@[spec]
-theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
-    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞) {epost : EStack⟨⟩} :
-    ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
-  Spec.liftComp oa post
 
 end OracleComp.Lower
 

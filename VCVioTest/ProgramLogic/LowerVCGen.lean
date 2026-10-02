@@ -78,6 +78,23 @@ example (gen : OracleComp spec ℕ) (hg : ∀ n ∈ support gen, n ≤ 3) :
   rename_i n
   simp [Lean.Order.rel_eq_le, propInd_eq_ite, hg n.1 n.2]
 
+/-- `Spec.ofNecessary`, passed with a fact about the support in place of the support itself. -/
+example (gen : OracleComp spec ℕ) (hg : ∀ n ∈ support gen, n ≤ 3) :
+    ⦃ 1 ⦄ (do let n ← gen; pure (n ≤ 3 : Bool) : OracleComp spec Bool)
+      ⦃ fun b => propInd (b = true) ⦄ := by
+  vcgen [OracleComp.Lower.Spec.ofNecessary gen (· ≤ 3) hg]
+  rename_i n
+  simp [Lean.Order.rel_eq_le, propInd_eq_ite, n.2]
+
+/-- `Spec.liftComp` into a sum: the inclusion preserves the answer measures, so neither
+specification needs uniform answers. -/
+example {τ : Type} {spec₂ : OracleSpec.{0, 0} τ} [spec₂.AnswerMeasure] (oa : OracleComp spec ℕ)
+    (hg : ∀ n ∈ support oa, n ≤ 3) :
+    1 ≤ Pr{let n ← liftComp oa (spec + spec₂)}[n ≤ 3] := by
+  prvcgen [OracleComp.Lower.Spec.ofSupport oa]
+  rename_i n
+  simp [hg n.1 n.2]
+
 end Rules
 
 section Uniform

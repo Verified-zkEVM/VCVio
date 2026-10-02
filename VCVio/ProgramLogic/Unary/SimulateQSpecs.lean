@@ -176,6 +176,29 @@ theorem simulateQ_triple_preserves_invariant {m : Type → Type} [Monad m] {Pred
     ⦃ I ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => I ⦄ :=
   Spec.simulateQ handler oa I hhandler
 
+/-- A handler invariant ranked by a query budget: a call admitted at budget `b` ends at budget
+`cost t b`, the potential of every budget drops to the final potential `Φ₀`, and a simulation of
+a computation whose queries are bounded at budget `b` ends at `Φ₀`. The budget type, the
+admission test and the cost are those of `IsQueryBound`; `simulateQ_triple_ranked`,
+`simulateQ_triple_ranked_of_queryBoundP` and `simulateQ_triple_ranked_of_perIndexQueryBound`
+are its instances at the total, predicate and per-index bounds. Not registered: a bound is a
+proof fact, so the theorem is applied by hand and its triple bridged by `Triple.le_wp`. -/
+theorem simulateQ_triple_ranked_of_isQueryBound {m : Type → Type} [Monad m] {Pred EPred : Type _}
+    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] {σ α : Type} {B : Type*}
+    (handler : QueryImpl spec (StateT σ m)) {canQuery : spec.Domain → B → Prop}
+    {cost : spec.Domain → B → B} (Φ : B → σ → Pred) (Φ₀ : σ → Pred)
+    (hstep : ∀ (t : spec.Domain) (b : B), canQuery t b →
+      ⦃ Φ b ⦄ handler t ⦃ fun _ => Φ (cost t b) ⦄)
+    (hdrop : ∀ b, Lean.Order.PartialOrder.rel (Φ b) Φ₀) (oa : OracleComp spec α) (b : B)
+    (hq : oa.IsQueryBound b canQuery cost) :
+    ⦃ Φ b ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => Φ₀ ⦄ := by
+  induction oa using OracleComp.inductionOn generalizing b with
+  | pure x => exact Std.WP.Triple.pure x (hdrop b)
+  | query_bind t oa ih =>
+    rw [isQueryBound_query_bind_iff] at hq
+    rw [simulateQ_query_bind]
+    exact Std.WP.Triple.bind _ _ _ (hstep t b hq.1) fun u => ih u (cost t b) (hq.2 u)
+
 /-- A handler invariant ranked by the remaining query budget: if a call from a state with budget
 `k + 1` ends in a state with budget `k`, and an unspent budget can be dropped, then a simulation
 of a computation making at most `k` queries ends in budget `0`. Under the upper-bound reading
@@ -187,14 +210,46 @@ theorem simulateQ_triple_ranked {m : Type → Type} [Monad m] {Pred EPred : Type
     (hstep : ∀ (t : spec.Domain) (k : ℕ), ⦃ Φ (k + 1) ⦄ handler t ⦃ fun _ => Φ k ⦄)
     (hdrop : ∀ k, Lean.Order.PartialOrder.rel (Φ k) (Φ 0)) (oa : OracleComp spec α) (k : ℕ)
     (hq : oa.IsTotalQueryBound k) :
-    ⦃ Φ k ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => Φ 0 ⦄ := by
-  induction oa using OracleComp.inductionOn generalizing k with
-  | pure x => exact Std.WP.Triple.pure x (hdrop k)
-  | query_bind t oa ih =>
-    rw [isTotalQueryBound_query_bind_iff] at hq
-    obtain ⟨j, rfl⟩ : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
-    rw [simulateQ_query_bind]
-    exact Std.WP.Triple.bind _ _ _ (hstep t j) fun u => ih u j (by simpa using hq.2 u)
+    ⦃ Φ k ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => Φ 0 ⦄ :=
+  simulateQ_triple_ranked_of_isQueryBound handler (canQuery := fun _ b => 0 < b)
+    (cost := fun _ b => b - 1) Φ (Φ 0)
+    (fun t k hk => by
+      obtain ⟨j, rfl⟩ : ∃ j, k = j + 1 := ⟨k - 1, by omega⟩
+      exact hstep t j)
+    hdrop oa k hq
+
+/-- `simulateQ_triple_ranked_of_isQueryBound` at a bound on the queries satisfying `p`: a call
+at such an index spends one unit of the budget, any other call keeps it. -/
+theorem simulateQ_triple_ranked_of_queryBoundP {m : Type → Type} [Monad m] {Pred EPred : Type _}
+    [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred] {σ α : Type}
+    (handler : QueryImpl spec (StateT σ m)) (p : spec.Domain → Prop) [DecidablePred p]
+    (Φ : ℕ → σ → Pred)
+    (hstep : ∀ (t : spec.Domain) (k : ℕ), p t → ⦃ Φ (k + 1) ⦄ handler t ⦃ fun _ => Φ k ⦄)
+    (hskip : ∀ (t : spec.Domain) (k : ℕ), ¬ p t → ⦃ Φ k ⦄ handler t ⦃ fun _ => Φ k ⦄)
+    (hdrop : ∀ k, Lean.Order.PartialOrder.rel (Φ k) (Φ 0)) (oa : OracleComp spec α) (n : ℕ)
+    (hq : oa.IsQueryBoundP p n) :
+    ⦃ Φ n ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => Φ 0 ⦄ :=
+  simulateQ_triple_ranked_of_isQueryBound handler Φ (Φ 0)
+    (fun t k hk => by
+      by_cases ht : p t
+      · obtain ⟨j, rfl⟩ : ∃ j, k = j + 1 :=
+          ⟨k - 1, by have := hk.resolve_left (not_not.mpr ht); omega⟩
+        simpa [ht] using hstep t j ht
+      · simpa [ht] using hskip t k ht)
+    hdrop oa n hq
+
+/-- `simulateQ_triple_ranked_of_isQueryBound` at a per-index bound: a call at `t` spends one unit
+of the budget of `t`. -/
+theorem simulateQ_triple_ranked_of_perIndexQueryBound {m : Type → Type} [Monad m]
+    {Pred EPred : Type _} [Assertion Pred] [Assertion EPred] [WPMonad m Pred EPred]
+    [DecidableEq ι] {σ α : Type}
+    (handler : QueryImpl spec (StateT σ m)) (Φ : (spec.Domain → ℕ) → σ → Pred)
+    (hstep : ∀ (t : spec.Domain) (qb : spec.Domain → ℕ), 0 < qb t →
+      ⦃ Φ qb ⦄ handler t ⦃ fun _ => Φ (Function.update qb t (qb t - 1)) ⦄)
+    (hdrop : ∀ qb, Lean.Order.PartialOrder.rel (Φ qb) (Φ 0)) (oa : OracleComp spec α)
+    (qb : spec.Domain → ℕ) (hq : oa.IsPerIndexQueryBound qb) :
+    ⦃ Φ qb ⦄ (simulateQ handler oa : StateT σ m α) ⦃ fun _ => Φ 0 ⦄ :=
+  simulateQ_triple_ranked_of_isQueryBound handler Φ (Φ 0) hstep hdrop oa qb hq
 
 /-- Specialized simulation triple: combine a starting-state precondition `s = s₀` with an
 invariant that holds of `s₀`. The invariant is threaded through the entire simulation. -/

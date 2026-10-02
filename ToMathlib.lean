@@ -13,6 +13,7 @@ public import ToMathlib.Control.Lawful.MonadState
 public import ToMathlib.Control.Monad.Algebra
 public import ToMathlib.Control.Monad.Dijkstra
 public import ToMathlib.Control.Monad.Fold
+public import ToMathlib.Control.Monad.Fold.WP
 public import ToMathlib.Control.Monad.Graded
 public import ToMathlib.Control.Monad.Ordered
 public import ToMathlib.Control.Monad.RelWP

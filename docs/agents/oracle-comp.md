@@ -180,13 +180,20 @@ When lifting `OracleComp spec α` to `OracleComp superSpec α` (e.g., a sub-comp
 
 ### Measure lemmas (`VCVio/OracleComp/Coercions/SubSpec/Measure.lean`)
 
-The uniform lemmas additionally require `[spec ˡ⊂ₒ superSpec]` and
-`[OracleSpec.UniformAnswerMeasure _]` on both specs.
+An inclusion whose translated queries are distributed as the originals is
+`[OracleSpec.SubSpec.PreservesAnswerMeasure spec superSpec]`, a `Prop` class on top of
+`[spec ⊂ₒ superSpec]` and an `AnswerMeasure` on each specification. Lawful inclusions between
+uniform specifications (`[spec ˡ⊂ₒ superSpec]`, `[OracleSpec.UniformAnswerMeasure _]` on both)
+and the two inclusions into a sum `spec₁ + spec₂` are instances. The program logic's
+`Spec.liftComp` rules and `wp_liftComp` are stated on it, so a lift into a sum needs no uniform
+answers.
 
 | Lemma | Signature |
 |-------|-----------|
-| `evalDist_liftComp_uniform` | `𝒟[liftComp mx superSpec] = 𝒟[mx]` |
-| `evalDistEq_liftComp_uniform` | `liftComp mx superSpec =ᵈ mx` |
+| `evalDist_liftComp` | `𝒟[liftComp mx superSpec] = 𝒟[mx]` for a measure-preserving inclusion |
+| `evalDistEq_liftComp` | `liftComp mx superSpec =ᵈ mx` for a measure-preserving inclusion |
+| `evalDist_liftComp_uniform` | `𝒟[liftComp mx superSpec] = 𝒟[mx]` for a lawful inclusion between uniform specifications |
+| `evalDistEq_liftComp_uniform` | `liftComp mx superSpec =ᵈ mx` for a lawful inclusion between uniform specifications |
 | `evalDist_liftComp_of_evalDistEq` | `𝒟[liftComp mx superSpec] = 𝒟[mx]` for arbitrary `AnswerMeasure`s, given that each lifted query is `=ᵈ` the original |
 
 ## QueryImpl and simulateQ

@@ -219,6 +219,31 @@ theorem Spec.ofSupport (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ
   exact OracleComp.ProgramLogic.wp_le_const_of_support oa fun x hx =>
     le_iSup (fun a : {a // a ∈ support oa} => ofDual (post a.1)) ⟨x, hx⟩
 
+/-- An opaque sub-program's expectation is at most the largest value on the outputs satisfying a
+predicate that holds on its support: `Spec.ofSupport` with the support replaced by a fact about
+it, such as the conclusion of a triple of the necessary reading. Not registered, for the reason
+given at `Spec.ofSupport`; `vcgen [Spec.ofNecessary oa q h]` splits the supremum over the
+outputs satisfying `q`. -/
+theorem Spec.ofNecessary (oa : OracleComp spec α) (q : α → Prop) (h : ∀ a ∈ support oa, q a)
+    (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    Triple oa (Lean.Order.iInf fun a : {a // q a} => post a.1) post epost := by
+  rw [triple_iff, iInf_eq, ofDual_toDual]
+  exact OracleComp.ProgramLogic.wp_le_const_of_support oa fun x hx =>
+    le_iSup (fun a : {a // q a} => ofDual (post a.1)) ⟨x, h x hx⟩
+
+/-- `Spec.ofNecessary` for a stateful program: a fact about every value-state pair reachable
+from a state, in the form `triple_stateT_iff_forall_support` reads a triple of the necessary
+reading, gives the upper bound at every such pair. -/
+theorem Spec.ofNecessary_stateT {σ : Type} (mx : StateT σ (OracleComp spec) α)
+    (Q : σ → α → σ → Prop) (h : ∀ s, ∀ z ∈ support (mx.run s), Q s z.1 z.2)
+    (post : α → σ → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    Triple mx (fun s => Lean.Order.iInf fun z : {z : α × σ // Q s z.1 z.2} => post z.1.1 z.1.2)
+      post epost :=
+  ⟨fun s => by
+    rw [rel_iff, StateT.wp_apply_eq, ofDual_wp, iInf_eq, ofDual_toDual]
+    exact OracleComp.ProgramLogic.wp_le_const_of_support _ fun z hz =>
+      le_iSup (fun z : {z : α × σ // Q s z.1 z.2} => ofDual (post z.1.1 z.1.2)) ⟨z, h s z hz⟩⟩
+
 /-- An opaque sub-program's expectation, as its own upper bound. Not registered, since it applies
 to every program; `vcgen [Spec.ofWp oa]` leaves the expectation of `oa` in the verification
 condition, for a hypothesis on it to bound, where `Spec.ofSupport` takes the largest value and
@@ -265,6 +290,25 @@ theorem triple_add_frame {oa : OracleComp spec α} {ε : ℝ≥0∞} {post : α 
   simp only [ofDual_toDual] at h ⊢
   rw [ExpectationWP.wp_add]
   exact add_le_add (OracleComp.ProgramLogic.wp_le_const_of_support oa fun _ _ => le_rfl) h
+
+/-- Lifting along a measure-preserving inclusion keeps the expectation. The precondition is the
+upper-bound weakest precondition of the lifted program, so `vcgen` continues into it. -/
+@[spec]
+theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ} [OracleSpec.AnswerMeasure superSpec]
+    [spec ⊂ₒ superSpec] [OracleSpec.SubSpec.PreservesAnswerMeasure spec superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ := by
+  rw [triple_iff, ofDual_wp]
+  exact (OracleComp.ProgramLogic.wp_liftComp oa _).le
+
+/-- `Spec.liftComp` for the lift written as `liftM oa`. -/
+@[spec]
+theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
+    [OracleSpec.AnswerMeasure superSpec] [spec ⊂ₒ superSpec]
+    [OracleSpec.SubSpec.PreservesAnswerMeasure spec superSpec]
+    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
+    ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
+  Spec.liftComp oa post
 
 /-- Scaling an upper-bound triple by a constant. -/
 theorem triple_const_mul {oa : OracleComp spec α} {ε : ℝ≥0∞} {post : α → ℝ≥0∞ᵒᵈ} (c : ℝ≥0∞)
@@ -318,24 +362,6 @@ theorem Spec.monadLift_query_avg (t : spec.Domain) [Fintype (spec.Range t)]
         OracleComp spec (spec.Range t))
       (toDual (∑ u, (Fintype.card (spec.Range t) : ℝ≥0∞)⁻¹ * ofDual (post u))) post epost :=
   (triple_iff _ _ _ _).2 (OracleComp.ProgramLogic.wp_query_uniform t _).le
-
-/-- Lifting between uniform oracle worlds keeps the expectation. The precondition is the
-upper-bound weakest precondition of the lifted program, so `vcgen` continues into it. -/
-@[spec]
-theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
-    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
-    ⦃ wp oa post epost ⦄ liftComp oa superSpec ⦃ post; epost ⦄ := by
-  rw [triple_iff, ofDual_wp]
-  exact (OracleComp.ProgramLogic.wp_liftComp oa _).le
-
-/-- `Spec.liftComp` for the lift written as `liftM oa`. -/
-@[spec]
-theorem Spec.monadLift_liftComp {τ : Type u'} {superSpec : OracleSpec τ}
-    [OracleSpec.UniformAnswerMeasure superSpec] [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec]
-    {α : Type} (oa : OracleComp spec α) (post : α → ℝ≥0∞ᵒᵈ) {epost : EStack⟨⟩ᵒᵈ} :
-    ⦃ wp oa post epost ⦄ (MonadLift.monadLift oa : OracleComp superSpec α) ⦃ post; epost ⦄ :=
-  Spec.liftComp oa post
 
 end OracleComp.Upper
 

@@ -130,6 +130,32 @@ lemma IsQueryBound.proj
     IsQueryBound oa (proj b) canQuery' cost' :=
   PFunctor.FreeM.IsRollBound.proj proj h_can h_cost h
 
+/-- Two bounds on one computation combine into a bound with a product budget: a query is admitted
+when both admit it, and each component is charged by its own cost. -/
+lemma IsQueryBound.prod {B' : Type*} {oa : OracleComp spec α} {b : B} {b' : B'}
+    {canQuery : ι → B → Prop} {cost : ι → B → B}
+    {canQuery' : ι → B' → Prop} {cost' : ι → B' → B'}
+    (h : IsQueryBound oa b canQuery cost) (h' : IsQueryBound oa b' canQuery' cost') :
+    IsQueryBound oa (b, b') (fun t p => canQuery t p.1 ∧ canQuery' t p.2)
+      (fun t p => (cost t p.1, cost' t p.2)) := by
+  induction oa using OracleComp.inductionOn generalizing b b' with
+  | pure x => exact isQueryBound_pure x _ _ _
+  | query_bind t mx ih =>
+    rw [isQueryBound_query_bind_iff] at h h' ⊢
+    exact ⟨⟨h.1, h'.1⟩, fun u => ih u (h.2 u) (h'.2 u)⟩
+
+/-- A family of bounds on one computation combines into a bound with a budget for each member: a
+query is admitted when every member admits it, and each budget is charged by its own cost. -/
+lemma IsQueryBound.pi {κ : Type*} {B : κ → Type*} {oa : OracleComp spec α} {b : ∀ i, B i}
+    {canQuery : ∀ i, ι → B i → Prop} {cost : ∀ i, ι → B i → B i}
+    (h : ∀ i, IsQueryBound oa (b i) (canQuery i) (cost i)) :
+    IsQueryBound oa b (fun t p => ∀ i, canQuery i t (p i)) (fun t p i => cost i t (p i)) := by
+  induction oa using OracleComp.inductionOn generalizing b with
+  | pure x => exact isQueryBound_pure x _ _ _
+  | query_bind t mx ih =>
+    simp only [isQueryBound_query_bind_iff] at h ⊢
+    exact ⟨fun i => (h i).1, fun u => ih u fun i => (h i).2 u⟩
+
 /-- Generic bind composition for `IsQueryBound` parameterised by an arbitrary budget type
 `B` and a binary `combine` operation on it. The natural-number versions
 (`isTotalQueryBound_bind`, `isQueryBoundP_bind`, `isPerIndexQueryBound_bind`) are special

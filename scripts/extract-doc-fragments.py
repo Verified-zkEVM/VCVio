@@ -38,7 +38,11 @@ SIMP_LEMMA_RE = re.compile(
     r'(?:protected\s+)?(?:theorem|lemma|def)\s+(\w+)'
 )
 
-SPEC_RULE_DIRS = [PROGRAM_LOGIC_DIR, REPO_ROOT / "ToMathlib" / "Control" / "WriterT"]
+SPEC_RULE_DIRS = [
+    PROGRAM_LOGIC_DIR,
+    REPO_ROOT / "ToMathlib" / "Control" / "WriterT",
+    REPO_ROOT / "ToMathlib" / "Control" / "Monad" / "Fold",
+]
 SPEC_ATTR_RE = re.compile(
     r'@\[([^\]]*)\]\s*(?:protected\s+)?(?:theorem|lemma)\s+([\w.\'!?₀-₉ₐ-ₜᵢ-ᵪ]+)'
 )

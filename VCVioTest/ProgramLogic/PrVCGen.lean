@@ -129,6 +129,32 @@ example (n q : ℕ) : Pr{let b ← hits n q}[b = true] ≤ q * (n + 1 : ℝ≥0�
     refine (avg_or_le (fun x : Fin (n + 1) => x = 0) _ _).trans_eq ?_
     simp [add_mul, add_comm, Finset.filter_eq']
 
+/-- `avg_or_le` with the flag as a proposition. -/
+theorem avg_or_le' {β : Type} [Fintype β] [Nonempty β] (P : β → Prop) [DecidablePred P]
+    (Q : Prop) (c : ℝ≥0∞) :
+    (∑ x, (propInd (Q ∨ P x) + c)) / (Fintype.card β : ℝ≥0∞) ≤
+      propInd Q + ((Finset.univ.filter P).card / (Fintype.card β : ℝ≥0∞) + c) := by
+  classical
+  simpa using avg_or_le P (decide Q) c
+
+/-- The union bound over a finite family of draws through `Spec.mOfFn`: the invariant is the
+flag's indicator plus the budget of the remaining members. -/
+example (n q : ℕ) :
+    Pr{let v ← Fin.mOfFn q fun _ => ($ᵗ Fin (n + 1) : ProbComp (Fin (n + 1)))}[∃ i, v i = 0] ≤
+      q * (n + 1 : ℝ≥0∞)⁻¹ := by
+  prvcgen =>
+    vcgen [OracleComp.Upper.Spec.uniformSample_avg] invariants
+    · fun k v => toDual (propInd (∃ i, v i = 0) + (q - k : ℕ) * (n + 1 : ℝ≥0∞)⁻¹)
+  case vc1 => simp
+  case vc2 => simp
+  case vc3 =>
+    rename_i k hk v
+    simp only [Fin.exists_fin_succ', Fin.snoc_castSucc, Fin.snoc_last]
+    refine (avg_or_le' (fun x : Fin (n + 1) => x = 0) _ _).trans_eq ?_
+    rw [show q - k = q - (k + 1) + 1 by omega]
+    push_cast
+    simp [add_mul, add_comm, Finset.filter_eq']
+
 section RankedPotential
 
 open scoped OracleComp.Upper
@@ -171,6 +197,42 @@ example [Nonempty R] (T : Finset R) {α : Type} (adv : OracleComp (D →ₒ R) �
     Pr{let z ← (simulateQ (hitOracle T) adv).run (fun _ => none, false)}[z.2.2 = true] ≤
       q * (T.card / Fintype.card R) := by
   have h := (simulateQ_triple_ranked (hitOracle T) (potential T) (hitOracle_step T)
+    (fun k st => by simp only [OracleComp.Upper.rel_iff, potential, ofDual_toDual]; simp) adv q
+    hq).le_wp (fun _ => none, false)
+  rw [OracleComp.Upper.rel_iff] at h
+  simpa [potential, StateT.wp_apply_eq, OracleComp.Upper.wp_eq] using h
+
+/-- The hit oracle's state. -/
+abbrev HS (D R : Type) := (D → Option R) × Bool
+
+/-- A uniform oracle beside the random oracle, forwarded without touching the state. -/
+def unifFwd (σ : Type) : QueryImpl unifSpec (StateT σ ProbComp) :=
+  fun n => StateT.lift (query (spec := unifSpec) n)
+
+omit [DecidableEq D] [SampleableType R] [DecidableEq R] in
+/-- A forwarded query keeps the potential. -/
+theorem unifFwd_step (T : Finset R) (n k : ℕ) :
+    ⦃ potential T k ⦄ unifFwd ((D → Option R) × Bool) n ⦃ fun _ => potential T k ⦄ := by
+  unfold unifFwd
+  vcgen
+
+/-- Only the random-oracle queries are counted: with `q` of them, and any number of uniform
+draws, the fresh answers land in `T` with probability at most `q * |T| / |R|`. -/
+example [Nonempty R] (T : Finset R) {α : Type} (adv : OracleComp (unifSpec + (D →ₒ R)) α) (q : ℕ)
+    (hq : adv.IsQueryBoundP (· matches .inr _) q) :
+    Pr{let z ← (simulateQ (unifFwd (HS D R) + hitOracle (D := D) T) adv :
+      StateT (HS D R) ProbComp α).run (fun _ => none, false)}[z.2.2 = true] ≤
+      q * (T.card / Fintype.card R) := by
+  have h := (simulateQ_triple_ranked_of_queryBoundP (unifFwd (HS D R) + hitOracle (D := D) T) _
+    (potential T)
+    (fun t k ht => by
+      rcases t with n | d
+      · exact absurd ht (by simp)
+      · vcgen [hitOracle_step T d k])
+    (fun t k ht => by
+      rcases t with n | d
+      · vcgen [unifFwd_step T n k]
+      · exact absurd (by simp) ht)
     (fun k st => by simp only [OracleComp.Upper.rel_iff, potential, ofDual_toDual]; simp) adv q
     hq).le_wp (fun _ => none, false)
   rw [OracleComp.Upper.rel_iff] at h
