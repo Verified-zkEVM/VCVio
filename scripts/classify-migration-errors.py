@@ -10,8 +10,8 @@ the file's scope, and the first line of the message. The scope tells a migration
 error of the automatic merge: `pr` for a file only the pull request touched, `shared` for one this
 branch touched as well since `main`, where the merge took the pull request's side of a conflicting
 hunk, and `other` for a file the pull request did not touch, which fails because of one it did.
-An unknown name is looked up in the codemod's `RENAMES` and `LEGACY_HINTS`, so a name the codemod
-knows but did not rewrite is told apart from a name it has no entry for. OUT/summary.md counts the
+An unknown name is looked up in the codemod's renames, its hints and its report patterns, so a name
+the codemod knows but did not rewrite is told apart from a name it has no entry for. OUT/summary.md counts the
 rows by pull request, kind and scope, and lists the unknown names and modules.
 """
 

@@ -17,11 +17,14 @@ record is `docs/reading/denotational-probability-semantics.md`.
 2. Run the codemod over your sources, from the VCVio checkout Lake placed in your project:
    `python3 .lake/packages/VCVio/scripts/migrate-native-probability.py <source directories>`
    (`--dry-run` prints the diff instead of writing). It rewrites what the tables below convert
-   mechanically: legacy events and bare draws in `Pr{…}`, `GameEquiv` and `≡ₚ`, oracle
-   answer-type binders, the spec classes, renamed declarations, imports of removed modules, and
-   `open`s of removed namespaces.
+   mechanically: legacy events and bare draws in `Pr{…}`, `GameEquiv`, `≡ₚ` and equations of
+   output distributions `𝒮[A] = 𝒮[B]`, oracle answer-type binders, the spec classes, renamed
+   declarations, imports of removed modules, and `open`s of removed namespaces.
    Every site it leaves is reported as `path:line:` with the entry of this guide that converts
-   it; for the most used discrete lemmas the report names the replacement.
+   it; for the most used discrete lemmas the report names the replacement. Pass all of a
+   project's sources in one run: a lemma one of them declares under a discrete-style name
+   (`probOutput_…`) is the project's own and is not reported at its uses, and a local copy of a
+   lemma VCVio replaces is reported once, at its declaration.
 3. Build. Work through the reported sites and the remaining errors with the *Symptoms* table.
 4. Check that definitions fix their σ-algebras (see *Semantic contract*).
 

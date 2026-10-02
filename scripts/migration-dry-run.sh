@@ -60,8 +60,9 @@ for pr in "${prs[@]}"; do
   mkdir -p "$dir"
   echo "== pr $pr: $(date +%T)"
 
-  git -C "$repo" fetch -q -f origin "pull/$pr/head:refs/dryrun/pr-$pr"
-  head="$(git -C "$repo" rev-parse "refs/dryrun/pr-$pr")"
+  # Outside `refs/heads/dryrun/`, so the result branch `dryrun/pr-N` stays an unambiguous name.
+  git -C "$repo" fetch -q -f origin "pull/$pr/head:refs/dryrun-heads/pr-$pr"
+  head="$(git -C "$repo" rev-parse "refs/dryrun-heads/pr-$pr")"
   pr_base="$(git -C "$repo" merge-base origin/main "$head")"
   git -C "$repo" diff --name-only --diff-filter=d "$pr_base" "$head" > "$dir/pr-files.txt"
   grep -Fxf <(printf '%s\n' "$ours_changed") "$dir/pr-files.txt" > "$dir/shared-files.txt" || true

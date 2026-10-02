@@ -26,8 +26,11 @@ Rewrites:
 - renamed declarations (`RENAMES`) and removed modules (`MODULES`).
 
 Everything the script cannot rewrite is reported as `path:line: …` with a pointer into
-`docs/agents/probability-migration.md`. The exit status is 0 whether or not anything was
-reported; the build is the judge of the result.
+`docs/agents/probability-migration.md`. A name in the discrete API's style (`probOutput_…`,
+`evalSPMF_…`) that one of the given files declares is the project's own and is not reported at its
+uses; a declaration of such a name that VCVio has a replacement for is reported once, where it is
+declared. The exit status is 0 whether or not anything was reported; the build is the judge of the
+result.
 """
 
 from __future__ import annotations
@@ -1023,12 +1026,34 @@ def rewrite_opens(text: str) -> str:
     return "\n".join(out)
 
 
-def report_legacy(text: str, report: Report, path: str) -> None:
+DECLARATION = re.compile(
+    r"^[ \t]*(?:@\[[^\]\n]*\][ \t]*)?(?:(?:private|protected|noncomputable|nonrec|partial)\s+)*"
+    r"(?:theorem|lemma|def|abbrev|instance|structure|class|inductive)\s+([^\s:({\[]+)", re.M)
+
+
+def declared_names(texts: list[str]) -> frozenset[str]:
+    """The last components of the names the given sources declare."""
+    return frozenset(m.group(1).rsplit(".", 1)[-1]
+                     for text in texts for m in DECLARATION.finditer(text))
+
+
+def report_legacy(text: str, report: Report, path: str,
+                  local: frozenset[str] = frozenset()) -> None:
+    """Report the legacy forms left in `text`. A name in `local`, which the migrated sources declare
+    themselves, is reported only where `text` declares it, and only when VCVio has a replacement."""
     spans = comment_spans(text)
+    declared_at = {m.start(1) + len(m.group(1)) - len(m.group(1).rsplit(".", 1)[-1])
+                   for m in DECLARATION.finditer(text)}
     for regex, hint in LEGACY_TOKENS:
         for m in re.finditer(regex, text):
             if not in_spans(m.start(), spans):
                 name = m.group(0).rsplit(".", 1)[-1]
+                if name in local:
+                    start = m.start() + len(m.group(0)) - len(name)
+                    if start in declared_at and name in LEGACY_HINTS:
+                        report.add(path, text, m.start(),
+                                   f"`{name}` is declared here; VCVio has {LEGACY_HINTS[name]}")
+                    continue
                 report.add(path, text, m.start(),
                            f"`{m.group(0)}`: {LEGACY_HINTS.get(name, hint)}")
     for name, hint in REPORT_NAMES.items():
@@ -1040,7 +1065,7 @@ def report_legacy(text: str, report: Report, path: str) -> None:
                 report.add(path, text, m.start(), f"`{name}`: {hint}")
 
 
-def migrate(text: str, path: str, report: Report) -> str:
+def migrate(text: str, path: str, report: Report, local: frozenset[str] = frozenset()) -> str:
     text = rewrite_imports(text)
     text = rewrite_opens(text)
     text = rewrite_legacy_events(text, report, path)
@@ -1050,7 +1075,7 @@ def migrate(text: str, path: str, report: Report) -> str:
     text = delete_answer_binders(text)
     text = rewrite_classes(text, report, path)
     text = rewrite_names(text)
-    report_legacy(text, report, path)
+    report_legacy(text, report, path, local)
     return text
 
 
@@ -1071,9 +1096,12 @@ def main(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     report = Report()
     changed = 0
-    for path in lean_files(args.paths):
-        old = path.read_text()
-        new = migrate(old, str(path), report)
+    files = lean_files(args.paths)
+    sources = {path: path.read_text() for path in files}
+    local = declared_names(list(sources.values()))
+    for path in files:
+        old = sources[path]
+        new = migrate(old, str(path), report, local)
         if new == old:
             continue
         changed += 1

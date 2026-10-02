@@ -233,6 +233,30 @@ class NameTests(unittest.TestCase):
         _, items = migrate("exact tvDist_bind_right_le f mx my")
         self.assertIn("tvDist_bind_le mx my f", items[0][2])
 
+    def test_names_the_sources_declare_are_not_reported(self):
+        source = ("theorem probOutput_mine (mx : ProbComp α) : True := trivial\n"
+                  "example : True := probOutput_mine mx\n"
+                  "example : True := probOutput_theirs mx\n")
+        local = codemod.declared_names([source])
+        self.assertIn("probOutput_mine", local)
+        report = codemod.Report()
+        codemod.migrate(source, "Fixture.lean", report, local)
+        self.assertEqual([line for _, line, _ in report.items], [3])
+        # Across files: a use in one file of a lemma another given file declares.
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "A.lean").write_text("lemma evalSPMF_mine : True := trivial\n")
+            (Path(tmp) / "B.lean").write_text("example : True := evalSPMF_mine\n")
+            result = subprocess.run(["python3", str(SCRIPT), "--dry-run", tmp],
+                                    capture_output=True, text=True, check=True)
+        self.assertIn("0 site(s) to finish by hand", result.stderr)
+        # A local copy of a lemma VCVio replaces is reported once, at its declaration.
+        source = ("lemma probOutput_bind_eq_tsum : True := trivial\n"
+                  "example : True := probOutput_bind_eq_tsum\n")
+        report = codemod.Report()
+        codemod.migrate(source, "Fixture.lean", report, codemod.declared_names([source]))
+        self.assertEqual([line for _, line, _ in report.items], [1])
+        self.assertIn("prEvent_bind_eq_tsum", report.items[0][2])
+
     def test_legacy_names_are_reported_with_hints(self):
         _, items = migrate("theorem t : True := by\n  rw [probOutput_bind_eq_tsum]\n  exact h")
         self.assertEqual(len(items), 1)
