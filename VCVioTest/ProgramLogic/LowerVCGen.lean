@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.ProgramLogic.Unary.WP.LowerSpecs
-public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
+public import PolyFun.Control.Do.Spec
 public import VCVio.ProgramLogic.Unary.HandlerSpecs
 public import VCVio.ProgramLogic.Tactics.PrVCGen
 

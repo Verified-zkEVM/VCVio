@@ -383,7 +383,6 @@ public import VCVio.ProgramLogic.Unary.WP.Possible
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic
 public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 public import VCVio.ProgramLogic.Unary.WP.Readback
-public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
 public import VCVio.ProgramLogic.Unary.WP.Upper
 public import VCVio.StateSeparating.Advantage.Measure
 public import VCVio.StateSeparating.CellRef

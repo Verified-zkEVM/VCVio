@@ -7,7 +7,6 @@ Authors: Devon Tuma
 module
 
 public import PolyFun.Control.Do.Spec
-public import VCVio.ProgramLogic.Unary.WP.TransformerSpecs
 public import VCVio.ProgramLogic.Unary.WP.Necessary
 public import VCVio.OracleComp.SimSemantics.Append.Core
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic

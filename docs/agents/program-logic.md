@@ -301,18 +301,6 @@ regenerates this table; `--check` fails when it is stale):
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.replicate` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.uniformFin` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
 | `OracleComp.Upper.Spec` | `OracleComp.Upper.Spec.uniformSample` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/Upper.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.guard_OptionT_iInf` | `@[spec low]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.lift_ExceptT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.lift_StateT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.mapM_list` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.mk_ExceptT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.mk_OptionT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.mk_StateT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.run'_StateT` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.run_ExceptT'` | `@[spec high]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.run_OptionT'` | `@[spec high]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.seqLeft` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
-| `Std.WP.Spec` | `Std.WP.Spec.seqRight` | `@[spec]` | `VCVio/ProgramLogic/Unary/WP/TransformerSpecs.lean` |
 | `WriterT.AppendWP.Spec` | `WriterT.AppendWP.Spec.monadLift` | `@[spec]` | `ToMathlib/Control/WriterT/WP.lean` |
 | `WriterT.AppendWP.Spec` | `WriterT.AppendWP.Spec.tell` | `@[spec]` | `ToMathlib/Control/WriterT/WP.lean` |
 <!-- END AUTO:specRules -->
@@ -539,7 +527,7 @@ without a rule is left as a verification condition stating its weakest precondit
 
 **Loops.** A loop takes an invariant: `List.foldlM` through core's rule, as
 `prvcgen invariants · fun _ _ s => I s`, `List.mapM` through `Std.WP.Spec.mapM_list`
-(`Unary/WP/TransformerSpecs.lean`), whose invariant ranges over the elements consumed, the elements
+(PolyFun's `Control/Do/Spec.lean`), whose invariant ranges over the elements consumed, the elements
 remaining and the outputs so far, as `prvcgen invariants · fun pref _ bs => bs.length = pref.length`,
 and `replicate` through `Spec.replicate` in every reading (its precondition ranges over the
 lists of possible outputs), or through the invariant rules of `Unary/HoareTriple.lean` passed
@@ -579,8 +567,9 @@ half, and definitions to unfold go to both. Where the split works:
   `rvcstep` / `rvcgen`, and the `=ᵈ` lemmas.
 
 **Adding rules for a reading.** A rule that holds in every `WPMonad` (the transformers'
-constructors, lifts and runners, `List.mapM`, `<*` and `*>`: `Unary/WP/TransformerSpecs.lean`) is
-stated once, in the `Std.WP` namespace, and serves every reading. A rule of one reading is stated
+constructors, lifts and runners, `List.mapM`, `<*` and `*>`: PolyFun's `Control/Do/Spec.lean`,
+which VCVio's `PrVCGen.lean` imports) is stated once, in the `Std.WP` namespace, and serves every
+reading, so it belongs upstream. A rule of one reading is stated
 as a triple of that reading, in its namespace, with
 the precondition built from lattice connectives so that `vcgen` continues through it (gotcha 36):
 `Lean.Order.iInf` for every outcome in the lower-bound reading and the largest outcome in the
@@ -662,7 +651,7 @@ Two things are not lifts and must not be confused with them:
   `OracleComp.Upper.OptionT.wp_le_iff_triple` does (gotcha 37).
 
 Observing a stack differently is a run, not another instance: `Spec.run'_StateT`,
-`Spec.run_OptionT'` and `Spec.run_ExceptT'` (`Unary/WP/TransformerSpecs.lean`) read a program
+`Spec.run_OptionT'` and `Spec.run_ExceptT'` (PolyFun's `Control/Do/Spec.lean`) read a program
 through its state, option or result. `WriterT ω m` has no expectation interpretation of its own
 (its lift interprets assertions over the log, not expectations of outputs): observe a writer
 program through its run. `AddWriterT.expectedCost_eq_wp_run` states an expected cost as the
