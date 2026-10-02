@@ -45,11 +45,16 @@ FIELDS = ["pr", "file", "line", "scope", "kind", "name", "known", "message"]
 
 
 def load_codemod_tables() -> tuple[dict[str, str], dict[str, str]]:
+    """The codemod's renames, and every name it reports with a hint: its hint table, the names it
+    reports by name, and the report patterns (kept as patterns, under the key `"/regex/"`)."""
     spec = importlib.util.spec_from_file_location("codemod", HERE / "migrate-native-probability.py")
     module = importlib.util.module_from_spec(spec)
     sys.modules["codemod"] = module
     spec.loader.exec_module(module)
-    return module.RENAMES, module.LEGACY_HINTS
+    hints = dict(module.LEGACY_HINTS)
+    hints.update(module.REPORT_NAMES)
+    hints.update({f"/{regex}/": hint for regex, hint in module.LEGACY_TOKENS})
+    return module.RENAMES, hints
 
 
 def classify(message: str) -> tuple[str, str]:
@@ -69,6 +74,8 @@ def known(name: str, renames: dict[str, str], hints: dict[str, str]) -> str:
     for table, label in ((renames, "rename"), (hints, "hint")):
         if name in table or short in table or any(key.endswith("." + short) for key in table):
             return label
+    if any(key.startswith("/") and re.search(key[1:-1], name) for key in hints):
+        return "hint"
     return ""
 
 

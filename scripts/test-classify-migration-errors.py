@@ -45,6 +45,9 @@ class ClassifyTests(unittest.TestCase):
         self.assertEqual(classify.known("evalDist_x", renames, hints), "rename")
         self.assertEqual(classify.known("IsUniformSpec", renames, hints), "hint")
         self.assertEqual(classify.known("brandNew", renames, hints), "")
+        self.assertEqual(classify.known("tvDist_bind_left_le", renames,
+                                        {r"/(?<![\w'.])tvDist_bind_left_le(?![\w'])/": "x"}),
+                         "hint")
 
     def test_rows_csv_and_summary(self):
         with tempfile.TemporaryDirectory() as tmp:
