@@ -344,27 +344,24 @@ theorem queryLog_length_le_of_nmaHashQueryBound
     (st : SimState M Commit Chal) {z : α × SimState M Commit Chal}
     (hz : z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) oa).run st)) :
     z.2.2.length ≤ st.2.length + Q := by
-  induction oa using OracleComp.inductionOn generalizing Q st z with
-  | pure x =>
-      obtain rfl : z = (x, st) := by
-        simpa [simulateQ_pure, StateT.run_pure, support_pure] using hz
-      simp
-  | query_bind t mx ih =>
-      rw [nmaHashQueryBound_query_bind_iff (M := M) (Commit := Commit) (Chal := Chal)] at hQ
-      simp only [simulateQ_query_bind, OracleQuery.input_query, OracleQuery.cont_query,
-        StateT.run_bind, mem_support_bind_iff] at hz
-      obtain ⟨us, hus, hz'⟩ := hz
+  have h := simulateQ_triple_ranked_of_queryBoundP
+    (unifForward M Commit Chal + roImpl M Commit Chal) _
+    (fun k (s : SimState M Commit Chal) => s.2.length + k ≤ st.2.length + Q)
+    (fun t k ht => by
       rcases t with n | mc
-      · simpa [(mem_support_unifForward_run_iff (M := M) (Commit := Commit) (Chal := Chal)
-          n st us).1 hus] using ih us.1 (hQ.2 us.1) us.2 hz'
-      · have hstep := (triple_stateT_iff_forall_support _ (· = st)
-          (fun _ s' => s'.2.length ≤ st.2.length + 1) ⊥).1 (by
-            vcgen [roImpl, Spec.lift_StateT,
-              Necessary.Spec.ofSupport (wrappedChallengeQuery Chal)] <;> simp_all)
-          st rfl _ _ hus
-        have := ih us.1 (Q := Q - 1) (hQ.2 us.1) us.2 hz'
-        have := hQ.1
-        omega
+      · exact absurd ht (by simp)
+      · vcgen [roImpl, Spec.lift_StateT, Necessary.Spec.ofSupport (wrappedChallengeQuery Chal)]
+        all_goals simp_all
+        all_goals omega)
+    (fun t k ht => by
+      rcases t with n | mc
+      · refine (triple_stateT_iff_forall_support _ _ _ ⊥).2 fun s hs a s' hmem => ?_
+        have hs' : s' = s := (mem_support_unifForward_run_iff (M := M) (Commit := Commit)
+          (Chal := Chal) n s (a, s')).1 hmem
+        exact hs' ▸ hs
+      · exact absurd (by simp) ht)
+    (fun k s hs => by simp only at hs ⊢; omega) oa Q hQ
+  simpa using (triple_stateT_iff_forall_support _ _ _ ⊥).1 h st (by simp) z.1 z.2 hz
 
 end HandlerTriples
 

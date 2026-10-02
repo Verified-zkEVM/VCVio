@@ -12,6 +12,8 @@ import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Extraction
 public import VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Potential
 import all VCVio.CryptoFoundations.Fischlin.KnowledgeSoundness.Potential
 import VCVio.ProgramLogic.Unary.HoareTriple
+import VCVio.ProgramLogic.Unary.SimulateQSpecs
+import VCVio.ProgramLogic.Unary.WP.Upper
 
 /-!
 # Fischlin supermartingale induction and knowledge soundness
@@ -27,7 +29,8 @@ namespace Fischlin
 
 variable {Stmt Wit Commit PrvState Chal Resp : Type} {rel : Stmt → Wit → Bool}
 
-open ENNReal OracleComp.ProgramLogic
+open ENNReal OracleComp.ProgramLogic OrderDual Std.WP
+open scoped OracleComp.Upper
 
 variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
   (hr : GenerableRelation Stmt Wit rel)
@@ -35,13 +38,176 @@ variable (σ : SigmaProtocol Stmt Wit Commit PrvState Chal Resp rel)
 
 /-! ### Generic supermartingale induction and log elimination -/
 
-/-- **The generalized supermartingale induction (multi-record cells).** The induction tracks
+/-- The potential of a cache at budget `q`, as a bound through every ghost state coupled to it:
+the infimum, over the touched keys and slot states satisfying `INV'`, of `q·μ + Φ + μ`. The
+ghost state is folded into the potential, so the ranked simulation triple
+`simulateQ_triple_ranked_of_queryBoundP` carries it through the cache alone. -/
+private noncomputable def ghostPotential {T K : Type} (relevant : T → Prop) (key : T → K)
+    (coord : T → Fin ρ) (dead : (T →ₒ Fin (2 ^ b)).QueryCache → K → Prop)
+    [∀ c, DecidablePred (dead c)] (q : ℕ) (cache : (T →ₒ Fin (2 ^ b)).QueryCache) : ℝ≥0∞ :=
+  ⨅ (keys : Finset K) (st : K → Fin ρ → Option (Fin (2 ^ b)))
+    (_ : INV' ρ b relevant key coord (dead cache) cache keys st),
+    (q : ℝ≥0∞) * slotPsi ρ b S (fun _ => none) + Phi ρ b S keys st (dead cache)
+      + slotPsi ρ b S (fun _ => none)
+
+private lemma ghostPotential_le {T K : Type} {relevant : T → Prop} {key : T → K}
+    {coord : T → Fin ρ} {dead : (T →ₒ Fin (2 ^ b)).QueryCache → K → Prop}
+    [∀ c, DecidablePred (dead c)] {q : ℕ} {cache : (T →ₒ Fin (2 ^ b)).QueryCache}
+    {keys : Finset K} {st : K → Fin ρ → Option (Fin (2 ^ b))}
+    (hINV : INV' ρ b relevant key coord (dead cache) cache keys st) :
+    ghostPotential ρ b S relevant key coord dead q cache ≤
+      (q : ℝ≥0∞) * slotPsi ρ b S (fun _ => none) + Phi ρ b S keys st (dead cache)
+        + slotPsi ρ b S (fun _ => none) :=
+  (iInf₂_le keys st).trans (iInf_le _ hINV)
+
+private lemma le_ghostPotential {T K : Type} {relevant : T → Prop} {key : T → K}
+    {coord : T → Fin ρ} {dead : (T →ₒ Fin (2 ^ b)).QueryCache → K → Prop}
+    [∀ c, DecidablePred (dead c)] {q : ℕ} {cache : (T →ₒ Fin (2 ^ b)).QueryCache} {x : ℝ≥0∞}
+    (h : ∀ keys st, INV' ρ b relevant key coord (dead cache) cache keys st →
+      x ≤ (q : ℝ≥0∞) * slotPsi ρ b S (fun _ => none) + Phi ρ b S keys st (dead cache)
+        + slotPsi ρ b S (fun _ => none)) :
+    x ≤ ghostPotential ρ b S relevant key coord dead q cache :=
+  le_iInf₂ fun keys st => le_iInf fun hINV => h keys st hINV
+
+/-- A random-oracle query from a cache at budget `k + 1` ends at a cache at budget `k`. On a
+hit nothing changes. On a miss at a fresh cell of a live slot, the sampled value is revealed in
+the ghost state, and the average over the sample is the martingale step (`Phi_extend_le`) or
+opens a slot (`Phi_open_le`); on any other miss the ghost state is unchanged, since the slot is
+irrelevant, dead, or killed by a second relevant record at a revealed cell. -/
+private theorem roImpl_hash_step {T K C : Type} [DecidableEq T]
+    (relevant : T → Prop)
+    (key : T → K) (coord : T → Fin ρ) (chalOf : T → C)
+    (hcell : ∀ t₁ t₂, relevant t₁ → relevant t₂ → key t₁ = key t₂ → coord t₁ = coord t₂ →
+      chalOf t₁ = chalOf t₂ → t₁ = t₂)
+    (dead : (T →ₒ Fin (2 ^ b)).QueryCache → K → Prop)
+    [∀ c, DecidablePred (dead c)]
+    (hdead_mono : ∀ c (t : T) (u : Fin (2 ^ b)) k, dead c k → dead (c.cacheQuery t u) k)
+    (hdead_kill : ∀ (cache : (T →ₒ Fin (2 ^ b)).QueryCache) (t t' : T) (u u' : Fin (2 ^ b)),
+      relevant t → relevant t' → key t = key t' → coord t = coord t' →
+      chalOf t ≠ chalOf t' → cache t' = some u' → dead (cache.cacheQuery t u) (key t))
+    (s : T) (k : ℕ) :
+    ⦃ fun c => toDual (ghostPotential ρ b S relevant key coord dead (k + 1) c) ⦄
+      roImpl b T (Sum.inr s)
+    ⦃ fun _ c => toDual (ghostPotential ρ b S relevant key coord dead k c) ⦄ := by
+  classical
+  refine ⟨fun cache => ?_⟩
+  rw [OracleComp.Upper.rel_iff, StateT.wp_apply_eq, OracleComp.Upper.ofDual_wp, ofDual_toDual]
+  simp only [ofDual_toDual]
+  refine le_ghostPotential ρ b S fun keys st hINV => ?_
+  change wp⟦(randomOracle (spec := T →ₒ Fin (2 ^ b)) s).run cache⟧
+    (fun z => ghostPotential ρ b S relevant key coord dead k z.2) ≤ _
+  rcases hc : cache s with _ | u
+  · -- cache miss: fresh uniform sample
+    rw [QueryImpl.withCaching_run_none uniformSampleImpl hc, ExpectationWP.wp_map]
+    change wp⟦($ᵗ Fin (2 ^ b) : ProbComp (Fin (2 ^ b)))⟧
+      (fun u => ghostPotential ρ b S relevant key coord dead k (cache.cacheQuery s u)) ≤ _
+    rw [Nat.cast_succ, add_mul, one_mul]
+    by_cases hlive : relevant s ∧ ¬ dead cache (key s) ∧ st (key s) (coord s) = none
+    · -- REVEAL: relevant record at a fresh cell of a live slot — martingale step
+      obtain ⟨hrel, hdd, hstn⟩ := hlive
+      set μ := slotPsi ρ b S (fun _ => none) with hμdef
+      set k₀ := key s with hk₀
+      set i₀ := coord s with hi₀
+      have hΨ : ∀ u : Fin (2 ^ b),
+          ghostPotential ρ b S relevant key coord dead k (cache.cacheQuery s u)
+            ≤ (k : ℝ≥0∞) * μ
+              + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache) + μ := by
+        intro u
+        refine (ghostPotential_le ρ b S
+          (hINV.cacheQuery_reveal (hdead_mono cache s u) s hc hrel hstn u)).trans ?_
+        gcongr
+        exact Phi_mono_dead ρ b S _ _ _ _ (hdead_mono cache s u)
+      calc wp⟦$ᵗ Fin (2 ^ b)⟧ (fun u =>
+              ghostPotential ρ b S relevant key coord dead k (cache.cacheQuery s u))
+          ≤ wp⟦$ᵗ Fin (2 ^ b)⟧ (fun u =>
+              (k : ℝ≥0∞) * μ
+                + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache) + μ) :=
+            wp_mono _ hΨ
+        _ = ∑ u : Fin (2 ^ b), ((2 ^ b : ℕ) : ℝ≥0∞)⁻¹
+              * ((k : ℝ≥0∞) * μ + μ
+                + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache)) := by
+            rw [wp_eq_tsum, tsum_fintype]
+            refine Finset.sum_congr rfl fun u _ => ?_
+            rw [SampleableType.prEvent_uniformSample_eq_singleton, Fintype.card_fin,
+              add_right_comm]
+        _ = ((2 ^ b : ℕ) : ℝ≥0∞)⁻¹
+              * ((2 ^ b) • ((k : ℝ≥0∞) * μ + μ)
+                + ∑ u : Fin (2 ^ b),
+                    Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache)) := by
+            rw [← Finset.mul_sum, Finset.sum_add_distrib, Finset.sum_const,
+              Finset.card_univ, Fintype.card_fin]
+        _ = ((k : ℝ≥0∞) * μ + μ)
+              + (∑ u : Fin (2 ^ b),
+                  Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache))
+                / ((2 ^ b : ℕ) : ℝ≥0∞) := by
+            rw [mul_add, nsmul_eq_mul, ← mul_assoc,
+              ENNReal.inv_mul_cancel (by positivity) (by finiteness), one_mul, mul_comm
+                (((2 ^ b : ℕ) : ℝ≥0∞))⁻¹, ← div_eq_mul_inv]
+        _ ≤ (k : ℝ≥0∞) * μ + μ + Phi ρ b S keys st (dead cache) + μ := ?_
+      by_cases hkmem : k₀ ∈ keys
+      · -- extend an already-open slot: martingale step
+        rw [show insert k₀ keys = keys from Finset.insert_eq_self.mpr hkmem]
+        exact (add_le_add le_rfl (Phi_extend_le ρ b S keys st (dead cache) k₀ i₀ hkmem hstn)).trans
+          le_self_add
+      · -- open a fresh slot: pay one μ
+        rw [add_assoc ((k : ℝ≥0∞) * μ + μ)]
+        exact add_le_add le_rfl (Phi_open_le ρ b S keys st (dead cache) k₀ i₀ hkmem
+          (hINV.untouched k₀ hkmem))
+    · -- INERT: irrelevant record, dead slot, or kill — ghost state unchanged,
+      -- potential non-increasing, average over the sampled value is trivial.
+      have hinert : ∀ u : Fin (2 ^ b),
+          relevant s → dead (cache.cacheQuery s u) (key s) := by
+        intro u hrel
+        by_cases hdd : dead cache (key s)
+        · exact hdead_mono cache s u _ hdd
+        · rcases hcv : st (key s) (coord s) with _ | u'
+          · exact absurd ⟨hrel, hdd, hcv⟩ hlive
+          · -- KILL: the cell was revealed by an earlier relevant record `t'`;
+            -- by `hcell` its challenge tag differs, so `hdead_kill` applies.
+            obtain ⟨t', ht'rel, ht'k, ht'i, ht'c⟩ :=
+              hINV.revealed_has_record (key s) (coord s) u' hdd hcv
+            have hts : t' ≠ s := fun h => by
+              rw [h, hc] at ht'c; simp at ht'c
+            have hchal : chalOf s ≠ chalOf t' := fun h =>
+              hts.symm (hcell s t' hrel ht'rel ht'k.symm ht'i.symm h)
+            exact hdead_kill cache s t' u u' hrel ht'rel ht'k.symm ht'i.symm
+              hchal ht'c
+      refine wp_le_const_of_support _ fun u _ => ?_
+      refine (ghostPotential_le ρ b S
+        (hINV.cacheQuery_inert (hdead_mono cache s u) s hc u (hinert u))).trans ?_
+      gcongr
+      · exact le_self_add
+      · exact Phi_mono_dead ρ b S _ _ _ _ (hdead_mono cache s u)
+  · -- cache hit: no sampling, state unchanged, budget decremented
+    rw [QueryImpl.withCaching_run_some uniformSampleImpl hc, ExpectationWP.wp_pure]
+    refine (ghostPotential_le ρ b S hINV).trans ?_
+    gcongr
+    exact Nat.cast_le.mpr (Nat.le_succ k)
+
+/-- A forwarded uniform query leaves the cache, hence the potential, unchanged. -/
+private theorem roImpl_unif_step {T K : Type} [DecidableEq T]
+    (relevant : T → Prop) (key : T → K) (coord : T → Fin ρ)
+    (dead : (T →ₒ Fin (2 ^ b)).QueryCache → K → Prop) [∀ c, DecidablePred (dead c)]
+    (n k : ℕ) :
+    ⦃ fun c => toDual (ghostPotential ρ b S relevant key coord dead k c) ⦄
+      roImpl b T (Sum.inl n)
+    ⦃ fun _ c => toDual (ghostPotential ρ b S relevant key coord dead k c) ⦄ := by
+  refine ⟨fun cache => ?_⟩
+  rw [OracleComp.Upper.rel_iff, StateT.wp_apply_eq, OracleComp.Upper.ofDual_wp, ofDual_toDual]
+  simp only [ofDual_toDual]
+  change wp⟦(unifFwdImpl (T →ₒ Fin (2 ^ b)) n).run cache⟧ _ ≤ _
+  rw [unifFwdImpl.eq_toQueryImpl]
+  simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply]
+  rw [OracleComp.liftM_run_StateT, ExpectationWP.wp_bind]
+  exact wp_le_const_of_support _ fun a _ => by rw [ExpectationWP.wp_pure]
+
+/-- **The generalized supermartingale induction (multi-record cells).** The bound tracks
 only *relevant* records, and within a cell relevant records are separated by an abstract
 challenge tag `chalOf` (`hcell`). Caching a second relevant record at an already-revealed cell
-kills
-the slot (`hdead_kill`); all other relevant/live cache misses are martingale reveal steps;
-irrelevant and dead-slot misses leave the potential unchanged. The bound is unchanged:
-`q·μ + Φ + μ`. -/
+kills the slot (`hdead_kill`); all other relevant/live cache misses are martingale reveal steps;
+irrelevant and dead-slot misses leave the potential unchanged. The bound is `q·μ + Φ + μ`,
+carried by the ranked potential `ghostPotential` over the cache, through
+`simulateQ_triple_ranked_of_queryBoundP` with one unit of budget per hash query. -/
 private theorem main_induction_gen {T K C : Type} [DecidableEq T]
     (relevant : T → Prop)
     (key : T → K) (coord : T → Fin ρ) (chalOf : T → C)
@@ -64,165 +230,32 @@ private theorem main_induction_gen {T K C : Type} [DecidableEq T]
       ≤ (q : ℝ≥0∞) * slotPsi ρ b S (fun _ => none)
         + Phi ρ b S keys st (dead cache) + slotPsi ρ b S (fun _ => none) := by
   classical
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-      intro q _ cache keys st hINV
-      rw [simulateQ_pure, StateT.run_pure, ExpectationWP.wp_pure]
-      exact (hleaf x cache keys st hINV).trans (add_le_add le_add_self le_rfl)
-  | query_bind t mx ih =>
-      intro q hq cache keys st hINV
-      rw [isQueryBoundP_query_bind_iff] at hq
-      obtain ⟨hcan, hrest⟩ := hq
-      rw [simulateQ_query_bind, StateT.run_bind]
-      simp only [OracleQuery.input_query, monadLift_self]
+  intro q hq cache keys st hINV
+  have h := (simulateQ_triple_ranked_of_queryBoundP (roImpl b T) _
+    (fun k c => toDual (ghostPotential ρ b S relevant key coord dead k c))
+    (fun t k ht => by
       rcases t with n | s
-      · -- unifSpec query: forwarded, cache unchanged, budget unchanged
-        have hbud : (if (Sum.inl n : ℕ ⊕ T) matches Sum.inr _ then q - 1 else q) = q :=
-          ite_eq_right (by simp)
-        rw [hbud] at hrest
-        change wp⟦(unifFwdImpl (T →ₒ Fin (2 ^ b)) n).run cache >>=
-            fun p : unifSpec.Range n × (T →ₒ Fin (2 ^ b)).QueryCache =>
-              (simulateQ (roImpl b T) (mx p.1)).run p.2⟧ (fun z => leaf z.1 z.2) ≤ _
-        have hrun : ((unifFwdImpl (T →ₒ Fin (2 ^ b)) n).run cache >>=
-            fun p : unifSpec.Range n × (T →ₒ Fin (2 ^ b)).QueryCache =>
-              (simulateQ (roImpl b T) (mx p.1)).run p.2)
-            = (HasQuery.query (spec := unifSpec) (m := ProbComp) n) >>=
-              fun a => (simulateQ (roImpl b T) (mx a)).run cache := by
-          rw [unifFwdImpl.eq_toQueryImpl]
-          simp only [QueryImpl.liftTarget_apply, HasQuery.toQueryImpl_apply]
-          rw [OracleComp.liftM_run_StateT, bind_assoc]
-          simp only [pure_bind]
-        rw [hrun]
-        rw [ExpectationWP.wp_bind]
-        exact wp_le_const_of_support _ fun a _ => ih a q (hrest a) cache keys st hINV
-      · -- hash query
-        have hp : ((Sum.inr s : ℕ ⊕ T) matches Sum.inr _) := rfl
-        have hq0 : 0 < q := hcan.resolve_left (by simp)
-        have hbud : (if (Sum.inr s : ℕ ⊕ T) matches Sum.inr _ then q - 1 else q) = q - 1 :=
-          ite_eq_left hp
-        rw [hbud] at hrest
-        have hμ : ((q - 1 : ℕ) : ℝ≥0∞) * slotPsi ρ b S (fun _ => none)
-            + slotPsi ρ b S (fun _ => none)
-            = (q : ℝ≥0∞) * slotPsi ρ b S (fun _ => none) := by
-          have hcast : ((q - 1 : ℕ) : ℝ≥0∞) + 1 = (q : ℝ≥0∞) := by
-            exact_mod_cast Nat.succ_pred_eq_of_pos hq0
-          rw [← hcast, add_mul, one_mul]
-        change wp⟦(randomOracle (spec := T →ₒ Fin (2 ^ b)) s).run cache >>=
-            fun p : Fin (2 ^ b) × (T →ₒ Fin (2 ^ b)).QueryCache =>
-              (simulateQ (roImpl b T) (mx p.1)).run p.2⟧ (fun z => leaf z.1 z.2) ≤ _
-        rcases hc : cache s with _ | u
-        · -- cache miss: fresh uniform sample
-          have hrun : ((randomOracle (spec := T →ₒ Fin (2 ^ b)) s).run cache >>=
-              fun p : Fin (2 ^ b) × (T →ₒ Fin (2 ^ b)).QueryCache =>
-                (simulateQ (roImpl b T) (mx p.1)).run p.2)
-              = ($ᵗ Fin (2 ^ b)) >>= fun u =>
-                  (simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u) := by
-            rw [QueryImpl.withCaching_run_none uniformSampleImpl hc, bind_map_left]
-            rfl
-          rw [hrun]
-          by_cases hlive : relevant s ∧ ¬ dead cache (key s) ∧ st (key s) (coord s) = none
-          · -- REVEAL: relevant record at a fresh cell of a live slot — martingale step
-            obtain ⟨hrel, hdd, hstn⟩ := hlive
-            set μ := slotPsi ρ b S (fun _ => none) with hμdef
-            set k₀ := key s with hk₀
-            set i₀ := coord s with hi₀
-            have hIH : ∀ u : Fin (2 ^ b),
-                wp⟦(simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u)⟧
-                    (fun z => leaf z.1 z.2)
-                  ≤ ((q - 1 : ℕ) : ℝ≥0∞) * μ
-                    + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache) + μ := by
-              intro u
-              refine (ih u (q - 1) (hrest u) (cache.cacheQuery s u) (insert k₀ keys)
-                (updateSlot st k₀ i₀ u)
-                (hINV.cacheQuery_reveal (hdead_mono cache s u) s hc hrel hstn u)).trans ?_
-              gcongr
-              exact Phi_mono_dead ρ b S _ _ _ _ (hdead_mono cache s u)
-            rw [ExpectationWP.wp_bind]
-            calc wp⟦$ᵗ Fin (2 ^ b)⟧ (fun u =>
-                    wp⟦(simulateQ (roImpl b T) (mx u)).run (cache.cacheQuery s u)⟧
-                      (fun z => leaf z.1 z.2))
-                ≤ wp⟦$ᵗ Fin (2 ^ b)⟧ (fun u =>
-                    ((q - 1 : ℕ) : ℝ≥0∞) * μ
-                      + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache) + μ) :=
-                  wp_mono _ hIH
-              _ = ∑ u : Fin (2 ^ b), ((2 ^ b : ℕ) : ℝ≥0∞)⁻¹
-                    * (((q - 1 : ℕ) : ℝ≥0∞) * μ + μ
-                      + Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache)) := by
-                  rw [wp_eq_tsum, tsum_fintype]
-                  refine Finset.sum_congr rfl fun u _ => ?_
-                  rw [SampleableType.prEvent_uniformSample_eq_singleton, Fintype.card_fin,
-                    add_right_comm]
-              _ = ((2 ^ b : ℕ) : ℝ≥0∞)⁻¹
-                    * ((2 ^ b) • (((q - 1 : ℕ) : ℝ≥0∞) * μ + μ)
-                      + ∑ u : Fin (2 ^ b),
-                          Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache)) := by
-                  rw [← Finset.mul_sum, Finset.sum_add_distrib, Finset.sum_const,
-                    Finset.card_univ, Fintype.card_fin]
-              _ = (((q - 1 : ℕ) : ℝ≥0∞) * μ + μ)
-                    + (∑ u : Fin (2 ^ b),
-                        Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache))
-                      / ((2 ^ b : ℕ) : ℝ≥0∞) := by
-                  rw [mul_add, nsmul_eq_mul, ← mul_assoc,
-                    ENNReal.inv_mul_cancel (by positivity) (by finiteness), one_mul, mul_comm
-                      (((2 ^ b : ℕ) : ℝ≥0∞))⁻¹, ← div_eq_mul_inv]
-              _ ≤ (q : ℝ≥0∞) * μ + Phi ρ b S keys st (dead cache) + μ := ?_
-            rw [hμ]
-            by_cases hkmem : k₀ ∈ keys
-            · -- extend an already-open slot: martingale step
-              rw [show insert k₀ keys = keys from Finset.insert_eq_self.mpr hkmem]
-              have hstep := Phi_extend_le ρ b S keys st (dead cache) k₀ i₀ hkmem hstn
-              calc (q : ℝ≥0∞) * μ + (∑ u : Fin (2 ^ b),
-                      Phi ρ b S keys (updateSlot st k₀ i₀ u) (dead cache))
-                      / ((2 ^ b : ℕ) : ℝ≥0∞)
-                  ≤ (q : ℝ≥0∞) * μ + Phi ρ b S keys st (dead cache) :=
-                    add_le_add le_rfl hstep
-                _ ≤ (q : ℝ≥0∞) * μ + Phi ρ b S keys st (dead cache) + μ := le_self_add
-            · -- open a fresh slot: pay one μ
-              have hstep := Phi_open_le ρ b S keys st (dead cache) k₀ i₀ hkmem
-                (hINV.untouched k₀ hkmem)
-              calc (q : ℝ≥0∞) * μ + (∑ u : Fin (2 ^ b),
-                      Phi ρ b S (insert k₀ keys) (updateSlot st k₀ i₀ u) (dead cache))
-                      / ((2 ^ b : ℕ) : ℝ≥0∞)
-                  ≤ (q : ℝ≥0∞) * μ + (Phi ρ b S keys st (dead cache) + μ) :=
-                    add_le_add le_rfl hstep
-                _ = (q : ℝ≥0∞) * μ + Phi ρ b S keys st (dead cache) + μ := by
-                    rw [add_assoc]
-          · -- INERT: irrelevant record, dead slot, or kill — ghost state unchanged,
-            -- potential non-increasing, average over the sampled value is trivial.
-            have hinert : ∀ u : Fin (2 ^ b),
-                relevant s → dead (cache.cacheQuery s u) (key s) := by
-              intro u hrel
-              by_cases hdd : dead cache (key s)
-              · exact hdead_mono cache s u _ hdd
-              · rcases hcv : st (key s) (coord s) with _ | u'
-                · exact absurd ⟨hrel, hdd, hcv⟩ hlive
-                · -- KILL: the cell was revealed by an earlier relevant record `t'`;
-                  -- by `hcell` its challenge tag differs, so `hdead_kill` applies.
-                  obtain ⟨t', ht'rel, ht'k, ht'i, ht'c⟩ :=
-                    hINV.revealed_has_record (key s) (coord s) u' hdd hcv
-                  have hts : t' ≠ s := fun h => by
-                    rw [h, hc] at ht'c; simp at ht'c
-                  have hchal : chalOf s ≠ chalOf t' := fun h =>
-                    hts.symm (hcell s t' hrel ht'rel ht'k.symm ht'i.symm h)
-                  exact hdead_kill cache s t' u u' hrel ht'rel ht'k.symm ht'i.symm
-                    hchal ht'c
-            rw [ExpectationWP.wp_bind]
-            refine wp_le_const_of_support _ fun u _ => ?_
-            refine (ih u (q - 1) (hrest u) (cache.cacheQuery s u) keys st
-              (hINV.cacheQuery_inert (hdead_mono cache s u) s hc u (hinert u))).trans ?_
-            gcongr
-            · exact Nat.sub_le q 1
-            · exact Phi_mono_dead ρ b S _ _ _ _ (hdead_mono cache s u)
-        · -- cache hit: no sampling, state unchanged, budget decremented
-          have hrun : ((randomOracle (spec := T →ₒ Fin (2 ^ b)) s).run cache >>=
-              fun p : Fin (2 ^ b) × (T →ₒ Fin (2 ^ b)).QueryCache =>
-                (simulateQ (roImpl b T) (mx p.1)).run p.2)
-              = (simulateQ (roImpl b T) (mx u)).run cache := by
-            rw [QueryImpl.withCaching_run_some uniformSampleImpl hc, pure_bind]
-          rw [hrun]
-          refine (ih u (q - 1) (hrest u) cache keys st hINV).trans ?_
-          gcongr
-          exact Nat.sub_le q 1
+      · exact absurd ht (by simp)
+      · exact roImpl_hash_step ρ b S relevant key coord chalOf hcell dead hdead_mono hdead_kill
+          s k)
+    (fun t k ht => by
+      rcases t with n | s
+      · exact roImpl_unif_step ρ b S relevant key coord dead n k
+      · exact absurd (by simp) ht)
+    (fun k c => by
+      rw [OracleComp.Upper.rel_iff, ofDual_toDual, ofDual_toDual]
+      refine le_ghostPotential ρ b S fun keys st hINV => ?_
+      refine (ghostPotential_le ρ b S hINV).trans ?_
+      gcongr
+      simp)
+    oa q hq).le_wp cache
+  rw [OracleComp.Upper.rel_iff, StateT.wp_apply_eq, OracleComp.Upper.ofDual_wp, ofDual_toDual]
+    at h
+  simp only [ofDual_toDual] at h
+  refine le_trans (wp_mono _ fun z => le_ghostPotential ρ b S fun keys' st' hINV' => ?_)
+    (h.trans (ghostPotential_le ρ b S hINV))
+  rw [Nat.cast_zero, zero_mul, zero_add]
+  exact hleaf z.1 z.2 keys' st' hINV'
 
 /-- Initial-state specialization of `main_induction_gen`: from the empty cache the
 expected leaf payoff is at most `(q + 1)·μ`. -/
