@@ -41,7 +41,9 @@ Optional checks:
   --lint    Batteries environment linters, one process per proof library as in CI
   --test    lake test (test libraries, the SLH-DSA test executables, the smoke test), then
             scripts/spec-coverage.py --check (the registered @[spec] rules each fire in
-            some program-logic test, against scripts/spec_coverage_baseline.json)
+            some program-logic test, against scripts/spec_coverage_baseline.json), and
+            scripts/check-lifted-law-parity.py --check (the event laws' OptionT and ExceptT
+            twins and their attributes, against scripts/lifted_law_parity_baseline.json)
   --ffi     with --test: also the native ML-KEM / ML-DSA / Falcon executables
             (initialises the third_party/ submodules; slow)
   --axioms  ./scripts/test-axiomsweep.sh, then lake exe axiomsweep --check
@@ -161,6 +163,8 @@ if (( run_test )); then
   echo "# Checking the coverage of the registered @[spec] rules"
   python3 ./scripts/test-spec-coverage.py
   python3 ./scripts/spec-coverage.py --check
+  python3 ./scripts/test-lifted-law-parity.py
+  python3 ./scripts/check-lifted-law-parity.py --check
 fi
 
 if (( run_axioms )); then

@@ -118,6 +118,51 @@ def namespace_at(text: str, position: int) -> str:
     return ".".join(stack)
 
 
+EXPECT_SETS = ("expect_norm", "expect_eval", "expect_arith")
+EXPECT_SET_DIRS = [VCVIO_DIR, REPO_ROOT / "ToMathlib"]
+EXPECT_ATTR_RE = re.compile(
+    r'@\[([^\]]*)\]\s*(?:protected\s+)?(?:theorem|lemma|def)\s+([\w.\'!?₀-₉ₐ-ₜᵢ-ᵪ]+)')
+EXPECT_ATTRIBUTE_CMD_RE = re.compile(
+    r'^attribute\s+\[([^\]]*)\]((?:[^\n]*)(?:\n[ \t]+[^\n]+)*)', re.M)
+
+
+def extract_expect_sets() -> dict[str, list[tuple[str, str]]]:
+    """The members of the expectation simp sets, as tagged in the sources: set ↦ [(name, file)]."""
+    sets: dict[str, list[tuple[str, str]]] = {name: [] for name in EXPECT_SETS}
+    for base in EXPECT_SET_DIRS:
+        for lean_file in sorted(base.rglob("*.lean")):
+            text = lean_file.read_text()
+            rel_path = str(lean_file.relative_to(REPO_ROOT))
+            for m in EXPECT_ATTR_RE.finditer(text):
+                tokens = [t.strip().split(" ")[0] for t in m.group(1).split(",")]
+                ns = namespace_at(text, m.start())
+                raw = m.group(2)
+                name = raw.removeprefix("_root_.") if raw.startswith("_root_.") else (
+                    f"{ns}.{raw}" if ns else raw)
+                for token in tokens:
+                    if token in sets:
+                        sets[token].append((name, rel_path))
+            for m in EXPECT_ATTRIBUTE_CMD_RE.finditer(text):
+                tokens = [t.strip().split(" ")[0] for t in m.group(1).split(",")]
+                names = [n for n in re.split(r"\s+", m.group(2).strip()) if n]
+                for token in tokens:
+                    if token in sets:
+                        sets[token].extend((name, rel_path) for name in names)
+    return {name: sorted(set(members)) for name, members in sets.items()}
+
+
+def format_expect_sets(sets: dict[str, list[tuple[str, str]]]) -> str:
+    lines = []
+    for name in EXPECT_SETS:
+        lines.append(f"`{name}` ({len(sets[name])} lemmas):\n")
+        lines.append("| Lemma | Tagged in |")
+        lines.append("|-------|-----------|")
+        for lemma, source in sets[name]:
+            lines.append(f"| `{lemma}` | `{source}` |")
+        lines.append("")
+    return "\n".join(lines).rstrip("\n")
+
+
 def extract_spec_rules() -> list[tuple[str, str, str, str]]:
     """Registered `@[spec]` rules: (namespace, full name, attribute, source file)."""
     rules = []
@@ -200,6 +245,7 @@ def main():
         "notationTable": format_notation_table(notations),
         "simpCatalog": format_simp_catalog(simp_lemmas),
         "specRules": format_spec_rules(spec_rules),
+        "expectSets": format_expect_sets(extract_expect_sets()),
     }
 
     if write_mode:

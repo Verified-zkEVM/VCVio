@@ -19,6 +19,7 @@ public import VCVioTest.EvalDist.Deterministic
 public import VCVioTest.EvalDist.DisagreementMeasure
 public import VCVioTest.EvalDist.EvalDistTV
 public import VCVioTest.EvalDist.EventBounds
+public import VCVioTest.EvalDist.ExpectNormalForm
 public import VCVioTest.EvalDist.Failure
 public import VCVioTest.EvalDist.FinRatPMF
 public import VCVioTest.EvalDist.IndepProductMeasure

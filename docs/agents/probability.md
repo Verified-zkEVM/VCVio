@@ -211,6 +211,67 @@ expectations, and its events are stated on `𝒟[…]`. A product of indicators 
 indicator of the conjunction (`propInd_mul_propInd`), so an expectation that multiplies
 indicators, as a guard does, folds back into an event.
 
+The members of the three sets, as tagged in the sources (`VCVioTest/EvalDist/ExpectNormalForm.lean`
+pins the lists that the attribute registers, with the normal form of each shape):
+
+<!-- BEGIN AUTO:expectSets -->
+`expect_norm` (11 lemmas):
+
+| Lemma | Tagged in |
+|-------|-----------|
+| `ExactWPMonad.wp_bind` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_dite` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_ite` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_map` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_option_elim` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_pure` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_seq` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_seqLeft` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_seqRight` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `ExactWPMonad.wp_sum_elim` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+| `predInd_apply` | `VCVio/EvalDist/ProbabilityNotation.lean` |
+
+`expect_eval` (28 lemmas):
+
+| Lemma | Tagged in |
+|-------|-----------|
+| `Function.comp_def` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `List.foldlM_cons` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `List.foldlM_nil` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `List.mapM_cons` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `List.mapM_nil` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_HasQuery_query` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_liftComp` | `VCVio/ProgramLogic/Unary/SimulateQ.lean` |
+| `OracleComp.ProgramLogic.wp_list_foldlM_cons` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_list_foldlM_nil` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_list_mapM_cons` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_list_mapM_nil` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_query` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_replicate_succ` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_replicate_zero` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.ProgramLogic.wp_simulateQ_eq` | `VCVio/ProgramLogic/Unary/SimulateQ.lean` |
+| `OracleComp.ProgramLogic.wp_simulateQ_run'_eq` | `VCVio/ProgramLogic/Unary/SimulateQ.lean` |
+| `OracleComp.ProgramLogic.wp_uniformSample` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.replicate_succ_bind` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `OracleComp.replicate_zero` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `evalDist_pure` | `VCVio/EvalDist/Defs/Measure/Core.lean` |
+| `le_refl` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `simulateQ_bind` | `VCVio/OracleComp/SimSemantics/SimulateQ.lean` |
+| `simulateQ_pure` | `VCVio/OracleComp/SimSemantics/SimulateQ.lean` |
+| `simulateQ_query` | `VCVio/OracleComp/SimSemantics/SimulateQ.lean` |
+| `wp_HasQuery_query` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `wp_liftM_query` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `wp_query` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `wp_uniformSample` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+
+`expect_arith` (2 lemmas):
+
+| Lemma | Tagged in |
+|-------|-----------|
+| `ExpectationWP.wp_add` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+| `ExpectationWP.wp_const_mul` | `VCVio/ProgramLogic/Unary/HoareTriple.lean` |
+<!-- END AUTO:expectSets -->
+
 `prEvent_bind`, `prEvent_map`, `prEvent_pure`, `prEvent_ite` and `prEvent_dite` state what those
 equations give for a literal event `wp⟦mx >>= f⟧ (predInd p)`; `simp` uses the `wp` equations
 themselves. Leaf laws are stated for every observation (`Option.wp_none`, `wp_failure`, `wp_lift`,
