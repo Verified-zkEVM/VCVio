@@ -149,6 +149,38 @@ theorem eRelWP_pure_le (a : α) (b : β) (post : α → β → ℝ≥0∞) :
     post a b ≤ eRelWP (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) post :=
   (eRelWP_pure a b post).ge
 
+/-- Scaling a coupled expectation by a finite constant. -/
+theorem eRelWP_const_mul (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
+    (post : α → β → ℝ≥0∞) {c : ℝ≥0∞} (hc : c ≠ ⊤) :
+    c * eRelWP oa ob post = eRelWP oa ob fun a b => c * post a b := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  change c * ⨆ k : Measure.Coupling 𝒟[oa] 𝒟[ob], ∫⁻ z, post z.1 z.2 ∂k.joint =
+    ⨆ k : Measure.Coupling 𝒟[oa] 𝒟[ob], ∫⁻ z, c * post z.1 z.2 ∂k.joint
+  rw [ENNReal.mul_iSup]
+  exact iSup_congr fun k => (lintegral_const_mul' c _ hc).symm
+
+/-! ## Approximate relational triples -/
+
+/-- Returned values related by `R` are related with any error. -/
+theorem approxRelTriple_pure (a : α) (b : β) {R : RelPost α β} (h : R a b) (ε : ℝ≥0∞) :
+    ApproxRelTriple ε (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) R := by
+  unfold ApproxRelTriple
+  rw [eRelWP_pure]
+  simp [RelPost.indicator, h]
+
+/-- Weakening the relation and the error. -/
+theorem approxRelTriple_mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {R R' : RelPost α β} {ε ε' : ℝ≥0∞} (h : ApproxRelTriple ε oa ob R)
+    (hR : ∀ a b, R a b → R' a b) (hε : ε ≤ ε') : ApproxRelTriple ε' oa ob R' :=
+  (tsub_le_tsub_left hε 1).trans (h.trans (eRelWP_mono fun a b => by
+    unfold RelPost.indicator
+    split_ifs with h₁ h₂
+    · exact le_rfl
+    · exact absurd (hR a b h₁) h₂
+    · exact zero_le
+    · exact le_rfl))
+
 section finite
 
 variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
@@ -287,6 +319,41 @@ theorem approxRelTriple_eqRel_iff_etvDist_le {oa : OracleComp spec₁ α}
 theorem evalDistEq_of_approxRelTriple_zero {oa : OracleComp spec₁ α}
     {ob : OracleComp spec₂ α} (h : ApproxRelTriple 0 oa ob (EqRel α)) : oa =ᵈ ob :=
   (etvDist_eq_zero_iff oa ob).1 (nonpos_iff_eq_zero.1 (approxRelTriple_eqRel_iff_etvDist_le.1 h))
+
+private lemma one_tsub_add_le_mul (a b : ℝ≥0∞) : 1 - (a + b) ≤ (1 - b) * (1 - a) := by
+  rw [add_comm, ← tsub_tsub, ENNReal.mul_sub fun _ _ => ENNReal.sub_ne_top ENNReal.one_ne_top,
+    mul_one]
+  exact tsub_le_tsub_left (mul_le_of_le_one_left zero_le tsub_le_self) _
+
+/-- Sequential composition of approximate relational triples: the errors add. The error of the
+continuations is paid on the coupled mass where the prefixes are related. -/
+theorem approxRelTriple_bind {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {fa : α → OracleComp spec₁ γ} {fb : β → OracleComp spec₂ δ} {R : RelPost α β}
+    {S : RelPost γ δ} {ε₁ ε₂ : ℝ≥0∞} (h₁ : ApproxRelTriple ε₁ oa ob R)
+    (h₂ : ∀ a b, R a b → ApproxRelTriple ε₂ (fa a) (fb b) S) :
+    ApproxRelTriple (ε₁ + ε₂) (oa >>= fa) (ob >>= fb) S := by
+  unfold ApproxRelTriple at *
+  refine le_trans ?_ (eRelWP_bind_le oa ob fa fb (RelPost.indicator S))
+  calc 1 - (ε₁ + ε₂) ≤ (1 - ε₂) * (1 - ε₁) := one_tsub_add_le_mul ε₁ ε₂
+    _ ≤ (1 - ε₂) * eRelWP oa ob (RelPost.indicator R) := mul_le_mul_right h₁ _
+    _ = eRelWP oa ob (fun a b => (1 - ε₂) * RelPost.indicator R a b) :=
+        eRelWP_const_mul oa ob _ (ENNReal.sub_ne_top ENNReal.one_ne_top)
+    _ ≤ eRelWP oa ob (fun a b => eRelWP (fa a) (fb b) (RelPost.indicator S)) :=
+        eRelWP_mono fun a b => by
+          rw [RelPost.indicator]
+          split_ifs with hab
+          · simpa using h₂ a b hab
+          · simp
+
+/-- Approximate equality is transitive, with the errors adding. -/
+theorem approxRelTriple_eqRel_trans {ι₃ : Type u} {spec₃ : OracleSpec.{u, 0} ι₃}
+    [AnswerMeasure spec₃] [∀ t, Finite (spec₃.Range t)]
+    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} {oc : OracleComp spec₃ α}
+    {ε₁ ε₂ : ℝ≥0∞} (h₁ : ApproxRelTriple ε₁ oa ob (EqRel α))
+    (h₂ : ApproxRelTriple ε₂ ob oc (EqRel α)) :
+    ApproxRelTriple (ε₁ + ε₂) oa oc (EqRel α) := by
+  rw [approxRelTriple_eqRel_iff_etvDist_le] at *
+  exact (etvDist_triangle oa ob oc).trans (add_le_add h₁ h₂)
 
 /-! ## Relational algebra instance -/
 

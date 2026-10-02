@@ -299,6 +299,13 @@ by_dist                     -- enters TV distance mode
 by_dist ε₂
 ```
 
+```lean
+-- A hybrid argument over a chain `games : ℕ → OracleComp spec Bool` of length `n`:
+-- Goal: AdvBound (games 0) (ε + ∑ i ∈ Finset.range n, step i)
+by_dist hybrid games n
+-- now need AdvBound (games n) ε and ∀ i < n, etvDist (games i) (games (i + 1)) ≤ step i
+```
+
 ## Reusing `preInsert` / `postInsert` Theory
 
 When a goal mentions `simulateQ` of a `QueryImpl` wrapper from `QueryTracking/`

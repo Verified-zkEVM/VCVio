@@ -35,6 +35,9 @@ rules for queries need uniform response measures.
 - `Examples/ProgramLogic/HandlerInvariants.lean`: `Spec.simulateQ` with a handler invariant
   through `prvcgen invariants`, a union bound over adaptive random-oracle queries as a ranked
   potential (`simulateQ_triple_ranked`), and a triple read against the support of its run.
+- `Examples/ProgramLogic/TotalVariation.lean`: the distance between two programs, a bad-event
+  bound on corrected continuations, a hybrid argument with `by_dist hybrid`, and approximate
+  couplings composed by sequencing and entered with `by_approx`.
 - `Examples/ProgramLogic/TransformerEvents.lean`: events of `OptionT` and `ExceptT` programs in
   the four readings, where a failure is worth nothing under the bound readings and forbidden
   under the necessary and possible ones, and the `OptionT.mk` shape.
@@ -106,6 +109,8 @@ candidate registrations are experimental.
 | `by_equiv` | `g₁ =ᵈ g₂` or `𝒟[g₁] = 𝒟[g₂]` | Enters relational proof mode (`RelTriple`) |
 | `game_trans g₂` | `g₁ =ᵈ g₃` | Splits into `g₁ =ᵈ g₂` and `g₂ =ᵈ g₃` |
 | `by_dist` | `AdvBound game ε` | Splits into a second game's bound and an `etvDist` bound |
+| `by_dist hybrid games n` | `AdvBound (games 0) (ε + ∑ i ∈ range n, step i)` | Splits into the bound of `games n` and the distance of each consecutive pair (`AdvBound.of_hybrid`) |
+| `by_approx` | `ApproxRelTriple ε oa ob R` | Leaves the quantitative `RelTriple` of the indicator from an open precondition, for `rvcgen`, then the comparison of that precondition with `1 - ε` |
 | `by_upto bad` | identical-until-bad `etvDist` goals | Applies the `simulateQ` up-to-bad bound |
 | `by_hoare` | `Pr{let x ← oa}[p x] = ...` | Enters quantitative WP reasoning, including conditional branches |
 
@@ -1014,6 +1019,19 @@ pRHL is the special case where `ε = 0` (exact coupling). On equality,
 `approxRelTriple_eqRel_iff_etvDist_le` identifies `ApproxRelTriple ε` with a total variation bound
 `ε` between the output measures, through the maximal coupling of
 `ToMathlib/MeasureTheory/Measure/Coupling/Maximal.lean`.
+
+Approximate triples compose (`Relational/Quantitative.lean`): returned values related by `R` are
+related with any error (`approxRelTriple_pure`), the relation and the error weaken
+(`approxRelTriple_mono`), sequencing adds the errors, the continuations' error being paid on the
+coupled mass where the prefixes are related (`approxRelTriple_bind`, through `eRelWP_bind_le` and
+`eRelWP_const_mul`), and approximate equality is transitive (`approxRelTriple_eqRel_trans`).
+`by_approx` applies `OracleComp.Rel.Quantitative.approxRelTriple_of_relTriple`: the quantitative
+rules compute their own precondition, so the triple is left with an open precondition, first, for
+`rvcgen`, and the comparison of the computed precondition with `1 - ε` second. A chain of games is
+within the sum of its consecutive distances (`etvDist_le_sum_etvDist_succ`,
+`etvDist_le_of_forall_etvDist_succ_le`, `tvDist_le_sum_tvDist_succ`), which
+`AdvBound.of_hybrid` and `by_dist hybrid games n` apply to an advantage bound;
+`Examples/ProgramLogic/TotalVariation.lean` shows each rule.
 
 ### Design target
 

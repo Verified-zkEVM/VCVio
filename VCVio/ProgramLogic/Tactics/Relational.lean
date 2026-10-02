@@ -341,8 +341,13 @@ macro_rules
       refine EvalDistEq.trans (my := $g) ?_ ?_)
 
 /-- `by_dist` transforms an advantage bound goal into an advantage bound for a second game
-together with a total variation bound between the two games. -/
+together with a total variation bound between the two games. `by_dist hybrid games n` runs a
+hybrid argument instead: the bound of `games n` and the distance of each consecutive pair
+`games i`, `games (i + 1)` for `i < n`, through `AdvBound.of_hybrid`. -/
 syntax "by_dist" (term)? : tactic
+
+@[inherit_doc tacticBy_dist_, tactic_alt tacticBy_dist_]
+syntax (priority := high) "by_dist" &"hybrid" term:max term:max : tactic
 
 macro_rules
   | `(tactic| by_dist) =>
@@ -351,6 +356,17 @@ macro_rules
   | `(tactic| by_dist $eps) =>
     `(tactic|
       (apply OracleComp.ProgramLogic.AdvBound.of_etvDist (ε₂ := $eps)))
+  | `(tactic| by_dist hybrid $games $n) =>
+    `(tactic|
+      (apply OracleComp.ProgramLogic.AdvBound.of_hybrid (games := $games) (n := $n)))
+
+/-- `by_approx` reduces an approximate relational triple `ApproxRelTriple ε oa ob R` to two
+goals: the quantitative `RelTriple` of the indicator postcondition from an open precondition,
+which `rvcstep` / `rvcgen` decompose with the rules of the quantitative carrier and so compute,
+then the comparison of that precondition with `1 - ε`
+(`OracleComp.Rel.Quantitative.approxRelTriple_of_relTriple`). -/
+macro (name := byApprox) "by_approx" : tactic =>
+  `(tactic| apply OracleComp.Rel.Quantitative.approxRelTriple_of_relTriple)
 
 /-- `by_upto bad` applies the "identical until bad" total-variation theorem for `simulateQ`.
 It leaves the standard three subgoals: agreement off bad states, and bad-state monotonicity for

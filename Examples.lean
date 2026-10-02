@@ -76,6 +76,7 @@ public import Examples.ProgramLogic.Relational
 public import Examples.ProgramLogic.RelationalAnchored
 public import Examples.ProgramLogic.RelationalDerived
 public import Examples.ProgramLogic.RelationalStep
+public import Examples.ProgramLogic.TotalVariation
 public import Examples.ProgramLogic.TransformerEvents
 public import Examples.ProgramLogic.Unary
 public import Examples.ProgramLogic.UnaryProbability

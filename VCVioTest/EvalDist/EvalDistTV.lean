@@ -68,4 +68,26 @@ example (mx my : ProbComp α) (p : α → Prop) :
     Pr{let x ← mx}[p x] ≤ Pr{let y ← my}[p y] + ENNReal.ofReal (tvDist mx my) :=
   prEvent_le_prEvent_add_ofReal_tvDist mx my p
 
+/-- A hybrid chain is within the sum of its steps' distances. -/
+example (f : ℕ → ProbComp α) (n : ℕ) :
+    etvDist (f 0) (f n) ≤ ∑ i ∈ Finset.range n, etvDist (f i) (f (i + 1)) :=
+  etvDist_le_sum_etvDist_succ f n
+
+/-- Steps each within `ε` end within `n * ε`. -/
+example (f : ℕ → ProbComp α) (n : ℕ) (ε : ℝ≥0∞)
+    (h : ∀ i < n, etvDist (f i) (f (i + 1)) ≤ ε) : etvDist (f 0) (f n) ≤ n * ε :=
+  etvDist_le_of_forall_etvDist_succ_le f n ε h
+
+/-- The real distance of a chain is within the sum of its steps' real distances. -/
+example (f : ℕ → ProbComp α) (n : ℕ) :
+    tvDist (f 0) (f n) ≤ ∑ i ∈ Finset.range n, tvDist (f i) (f (i + 1)) :=
+  tvDist_le_sum_tvDist_succ f n
+
+/-- Two sequences are within the distance of their prefixes plus the expected distance of the
+continuations, on the support of the second prefix. -/
+example (mx my : ProbComp α) (f g : α → ProbComp β) (bound : α → ℝ≥0∞)
+    (h : ∀ a ∈ support my, etvDist (f a) (g a) ≤ bound a) :
+    etvDist (mx >>= f) (my >>= g) ≤ etvDist mx my + wp⟦my⟧ bound :=
+  etvDist_bind_bind_le_add_wp_of_support mx my f g bound h
+
 end VCVioTest.EvalDistTV

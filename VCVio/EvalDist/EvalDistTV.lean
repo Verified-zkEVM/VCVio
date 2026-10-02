@@ -260,6 +260,35 @@ theorem etvDist_bind_bind_le_of_bad (mx : m α) (f g : α → m β) (bad : α �
   · rw [ExpectationWP.wp_add, ExpectationWP.wp_const_mul]
     rfl
 
+/-- Two sequences are within the distance of their prefixes plus the expected distance of their
+continuations, which only the reachable outputs of the second prefix need to satisfy. -/
+theorem etvDist_bind_bind_le_add_wp_of_support [MonadAttach m] [ExactMonadAttach m]
+    (mx my : m α) (f g : α → m β) (bound : α → ℝ≥0∞)
+    (h : ∀ a ∈ support my, etvDist (f a) (g a) ≤ bound a) :
+    etvDist (mx >>= f) (my >>= g) ≤ etvDist mx my + wp⟦my⟧ bound :=
+  (etvDist_triangle (mx >>= f) (my >>= f) (my >>= g)).trans
+    (add_le_add (etvDist_bind_le mx my f) (etvDist_bind_bind_le_wp_of_support my f g bound h))
+
+/-! ## Hybrid arguments -/
+
+/-- A chain of computations is within the sum of the distances of its consecutive members. -/
+theorem etvDist_le_sum_etvDist_succ (f : ℕ → m α) (n : ℕ) :
+    etvDist (f 0) (f n) ≤ ∑ i ∈ Finset.range n, etvDist (f i) (f (i + 1)) := by
+  induction n with
+  | zero => simp [etvDist_self]
+  | succ n ih =>
+    rw [Finset.sum_range_succ]
+    exact (etvDist_triangle (f 0) (f n) (f (n + 1))).trans (add_le_add ih le_rfl)
+
+/-- A chain of `n` steps, each within `ε`, ends within `n * ε`. -/
+theorem etvDist_le_of_forall_etvDist_succ_le (f : ℕ → m α) (n : ℕ) (ε : ℝ≥0∞)
+    (h : ∀ i < n, etvDist (f i) (f (i + 1)) ≤ ε) :
+    etvDist (f 0) (f n) ≤ n * ε :=
+  (etvDist_le_sum_etvDist_succ f n).trans <|
+    calc ∑ i ∈ Finset.range n, etvDist (f i) (f (i + 1))
+        ≤ ∑ _ ∈ Finset.range n, ε := Finset.sum_le_sum fun i hi => h i (Finset.mem_range.1 hi)
+      _ = n * ε := by simp
+
 /-! ## Identical until bad -/
 
 /-- Computations that agree on every event away from a bad event are, after any post-processing,
@@ -326,6 +355,14 @@ theorem tvDist_eq_zero_iff (mx : m α) (my : m' α) : tvDist mx my = 0 ↔ mx =�
 theorem tvDist_map_le (mx : m α) (my : m' α) (f : α → β) :
     tvDist (f <$> mx) (f <$> my) ≤ tvDist mx my :=
   ENNReal.toReal_mono (etvDist_ne_top mx my) (etvDist_map_le mx my f)
+
+/-- The real distance of a chain is within the sum of the real distances of its steps. -/
+theorem tvDist_le_sum_tvDist_succ (f : ℕ → m α) (n : ℕ) :
+    tvDist (f 0) (f n) ≤ ∑ i ∈ Finset.range n, tvDist (f i) (f (i + 1)) := by
+  unfold tvDist
+  rw [← ENNReal.toReal_sum fun i _ => etvDist_ne_top _ _]
+  exact ENNReal.toReal_mono (ENNReal.sum_ne_top.2 fun i _ => etvDist_ne_top _ _)
+    (etvDist_le_sum_etvDist_succ f n)
 
 theorem tvDist_bind_le (mx my : m α) (f : α → m β) :
     tvDist (mx >>= f) (my >>= f) ≤ tvDist mx my :=

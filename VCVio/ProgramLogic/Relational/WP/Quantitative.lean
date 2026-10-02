@@ -85,6 +85,16 @@ theorem relTriple_iff_eRelWP_le
       pre ≤ OracleComp.ProgramLogic.Relational.eRelWP oa ob post :=
   Iff.rfl
 
+/-- An approximate relational triple from a quantitative one: a lower bound `pre` on the coupled
+probability of the relation that is at least `1 - ε`. `by_approx` applies it, so the quantitative
+triple comes first, for `rvcgen` to compute its precondition, and the comparison second. -/
+theorem approxRelTriple_of_relTriple {ε pre : ℝ≥0∞} {oa : OracleComp spec₁ α}
+    {ob : OracleComp spec₂ β} {R : OracleComp.ProgramLogic.Relational.RelPost α β}
+    (h : VCVio.ProgramLogic.RelTriple pre oa ob
+      (OracleComp.ProgramLogic.Relational.RelPost.indicator R) Lean.Order.bot Lean.Order.bot)
+    (hpre : 1 - ε ≤ pre) : OracleComp.ProgramLogic.Relational.ApproxRelTriple ε oa ob R :=
+  hpre.trans ((relTriple_iff_eRelWP_le pre oa ob _).1 h)
+
 /-! ## Quantitative `RelTriple` rules -/
 
 /-- Pure rule for the quantitative `VCVio.ProgramLogic.RelTriple` carrier. -/

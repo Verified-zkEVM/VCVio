@@ -180,6 +180,16 @@ theorem AdvBound.of_etvDist {game₁ game₂ : OracleComp spec₁ Bool} {ε₁ �
       exact (absDiff_prEvent_le_etvDist game₁ game₂ _).trans htv
     _ = ε₁ + ε₂ := add_comm _ _
 
+/-- Advantage bound through a hybrid chain of games: the bound of the last game plus the
+distances of the consecutive steps. -/
+theorem AdvBound.of_hybrid {games : ℕ → OracleComp spec₁ Bool} {n : ℕ} {ε : ℝ≥0∞}
+    (hbound : AdvBound (games n) ε) {step : ℕ → ℝ≥0∞}
+    (hstep : ∀ i < n, etvDist (games i) (games (i + 1)) ≤ step i) :
+    AdvBound (games 0) (ε + ∑ i ∈ Finset.range n, step i) :=
+  hbound.of_etvDist <| (etvDist_comm _ _).trans_le <|
+    (etvDist_le_sum_etvDist_succ games n).trans
+      (Finset.sum_le_sum fun i hi => hstep i (Finset.mem_range.1 hi))
+
 /-- Transfer advantage bounds across games equal in distribution. -/
 theorem AdvBound.of_evalDistEq
     {g₁ g₂ : OracleComp spec₁ Bool} {ε : ℝ≥0∞}
