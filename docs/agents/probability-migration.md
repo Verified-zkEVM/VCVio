@@ -45,7 +45,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
 | `spec₁ ++ₒ spec₂` | `spec₁ + spec₂` |
-| `GameEquiv g₁ g₂`, `g₁ ≡ₚ g₂`, `letI : MeasurableSpace α := ⊤; 𝒟[g₁] = 𝒟[g₂]` | `g₁ =ᵈ g₂` (`EvalDistEq`); `EvalDistEq.of_evalDist_eq` and `evalDistEq_iff_evalDist_eq` relate it to output measures |
+| `GameEquiv g₁ g₂`, `g₁ ≡ₚ g₂`, `𝒮[g₁] = 𝒮[g₂]`, `letI : MeasurableSpace α := ⊤; 𝒟[g₁] = 𝒟[g₂]` | `g₁ =ᵈ g₂` (`EvalDistEq`; the codemod rewrites the first three); `EvalDistEq.of_evalDist_eq` and `evalDistEq_iff_evalDist_eq` relate it to output measures |
 
 ## Classes and binders
 
@@ -288,6 +288,10 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | an event transported between monads (`ProbComp` and `OracleComp spec`) | take `.prEvent_eq p` of an equality in distribution such as `uniformSampleImpl.evalDistEq_simulateQ` or `OracleComp.evalDistEq_liftComp_uniform` |
 | `x ∈ support mx ↔ 0 < mass` needs a uniform specification | use `mem_support_iff_evalDist_singleton_pos_of_fullSupport` with a full-support hypothesis for other answer measures |
 | probability one from reachability | `prEvent_eq_one_of_forall_mem_support`; the converse `prEvent_eq_one_iff` needs uniform answers |
+| `Application type mismatch` at `prEvent_mono_of_support … fun x hx h => …` | the predicates are explicit: `prEvent_mono_of_support mx p q h` |
+| `cannot determine the monad of the draw` in a converted `Pr{let x ← e}[…]` | ascribe the computation, `Pr{let x ← (e : ProbComp α)}[…]`: the event elaborates its draws first, so a polymorphic `e` needs its monad |
+| `unknown identifier 'tvDist'`, or `tvDist_triangle`, after the codemod rewrote `import VCVio.EvalDist.TVDist` | the event-keyed distance `etvDist` and its real form `tvDist` are in `VCVio.EvalDist.EvalDistTV`, which the current codemod imports |
+| `SPMFSemantics`, `ProbCompRuntime.toSPMFSemantics` | `MeasureSemanticsVia` (the codemod renames `SPMFSemantics.withStateOracle` to `MeasureSemanticsVia.withStateOracle`); a runtime gives the field `toMeasureSemanticsVia` and the law `evalDist_map_eq` |
 | heartbeat timeout on raw `PFunctor.FreeM` terms | normalize with `FreeM.bind_eq_bind`, `FreeM.map_eq_map`, `FreeM.pure_eq_pure`, or state the helper at the `OracleComp` level |
 | unknown identifier `SPMF`, `probOutput`, `evalSPMF`, … or unknown `Pr[…]` syntax | run the codemod, then convert with the tables above |
 | failed to synthesize `MeasurableSpace α` at `prEvent_true_eq_evalDist_apply_univ` | it takes the output's measurable space as an instance: `let : MeasurableSpace α := ⊤` first, or use `OracleComp.prEvent_true_eq_one` for an oracle computation |

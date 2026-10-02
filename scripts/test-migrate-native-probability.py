@@ -210,6 +210,29 @@ class NameTests(unittest.TestCase):
         self.assertEqual(len(items), 1)
         self.assertIn("etvDist_bind_left_le_tsum", items[0][2])
 
+    def test_distribution_equations(self):
+        # An equation of two output distributions is an equality in distribution.
+        self.assertEqual(migrate("(h : 𝒮[oa >>= f] = 𝒮[ob])")[0], "(h : (oa >>= f) =ᵈ ob)")
+        self.assertEqual(migrate("(h : ∀ a, 𝒮[f a] = 𝒮[g a]) : 𝒮[mx] = 𝒮[my] ∧ True")[0],
+                         "(h : ∀ a, f a =ᵈ g a) : mx =ᵈ my ∧ True")
+        # A pointwise mass, or a distribution passed as an argument, is left and reported.
+        for source in ("𝒮[mx] x = 𝒮[my] x", "foo 𝒮[mx] = 𝒮[my]"):
+            out, items = migrate(source)
+            self.assertEqual(out, source)
+            self.assertEqual(len(items), 1)
+
+    def test_namespaced_counterparts_and_measure_semantics(self):
+        self.assertEqual(migrate("exact tsum_probOutput_bind_mul mx g f")[0],
+                         "exact OracleComp.tsum_prEvent_bind_mul mx g f")
+        self.assertEqual(migrate("rw [probEvent_uniformSample]")[0],
+                         "rw [SampleableType.prEvent_uniformSample]")
+        self.assertEqual(migrate("(SPMFSemantics.withStateOracle h s).evalDist mx")[0],
+                         "(MeasureSemanticsVia.withStateOracle h s).evalDist mx")
+        _, items = migrate("def sem : SPMFSemantics m := s")
+        self.assertIn("MeasureSemanticsVia", items[0][2])
+        _, items = migrate("exact tvDist_bind_right_le f mx my")
+        self.assertIn("tvDist_bind_le mx my f", items[0][2])
+
     def test_legacy_names_are_reported_with_hints(self):
         _, items = migrate("theorem t : True := by\n  rw [probOutput_bind_eq_tsum]\n  exact h")
         self.assertEqual(len(items), 1)
@@ -240,6 +263,9 @@ class ImportTests(unittest.TestCase):
                     "import VCVio.OracleComp.Constructions.Fork.Basic\n"
                     "import VCVio.OracleComp.OracleComp\n")
         self.assertEqual(migrate(source)[0], expected)
+        # The event-keyed distances live beside their real form.
+        self.assertEqual(migrate("module\n\npublic import VCVio.EvalDist.TVDist\n")[0],
+                         "module\n\npublic import VCVio.EvalDist.EvalDistTV\n")
 
     def test_removed_namespaces_leave_open_commands(self):
         self.assertEqual(migrate("open ENNReal OracleComp.EvalDist OracleComp.ProgramLogic\n")[0],

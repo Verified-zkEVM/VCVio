@@ -31,7 +31,7 @@ class ValidationTests(unittest.TestCase):
                      "check-reading-citations.py", "test-check-reading-citations.py",
                      "check-doc-names.py", "spec-coverage.py", "test-spec-coverage.py",
                      "check-lifted-law-parity.py", "test-lifted-law-parity.py",
-                     "test-module-times.py"):
+                     "test-module-times.py", "test-classify-migration-errors.py"):
             (scripts / name).write_text("pass\n")
         # Not a no-op stub: the default pass has to be shown to reach it.
         (scripts / "check-comment-fences.py").write_text(

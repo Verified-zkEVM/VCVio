@@ -92,6 +92,9 @@ jobs:
       # The compile-time tables, their budget comparison and the timing report's budget section.
       - name: Test the build timing scripts
         run: python3 scripts/test-module-times.py
+      # The classifier of a migration dry run (`scripts/migration-dry-run.sh`).
+      - name: Test the migration error classifier
+        run: python3 scripts/test-classify-migration-errors.py
 
       # Regenerates every umbrella with scripts/update-lib.sh and fails if any of them changes.
       - name: Check generated umbrella modules

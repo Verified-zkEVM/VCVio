@@ -14,7 +14,9 @@ Rewrites:
 - singleton events `Pr{mx}[= a]` of earlier versions become `Pr{let x ← mx}[x = a]`;
 - bare draws `Pr{x ← e}[…]` become the `do` statements `Pr{let x ← e}[…]`, parenthesizing a
   right-hand side that spans several lines;
-- `GameEquiv` becomes `EvalDistEq` and `≡ₚ` becomes `=ᵈ`;
+- `GameEquiv` becomes `EvalDistEq` and `≡ₚ` becomes `=ᵈ`, and an equation of output
+  distributions `𝒮[A] = 𝒮[B]` becomes `A =ᵈ B`, parenthesizing a side that is not an
+  application;
 - oracle answer-type binders `[∀ t, MeasurableSpace (spec.Range t)]`,
   `[∀ t, DiscreteMeasurableSpace (spec.Range t)]` and `[∀ t, MeasurableSingletonClass …]` are
   deleted, with the `omit … in` and `variable` lines they leave empty;
@@ -136,6 +138,17 @@ RENAMES: dict[str, str] = {
     "probOutput_xor_uniform": "evalDist_xor_uniform",
     "probOutput_pair_xor_uniform": "evalDist_pair_xor_uniform",
     "sum_probEvent_option_map_eq_some_le_isSome": "sum_prEvent_option_map_eq_some_le_isSome",
+    # Root-level lemmas of the discrete API whose counterparts are stated for oracle computations
+    # or uniform draws, in those namespaces; same arguments.
+    "tsum_probOutput_bind_mul": "OracleComp.tsum_prEvent_bind_mul",
+    "tsum_probOutput_pure_mul": "OracleComp.tsum_prEvent_pure_mul",
+    "tsum_probOutput_map_mul": "OracleComp.tsum_prEvent_map_mul",
+    "probOutput_ne_zero_of_mem_support": "OracleComp.prEvent_ne_zero_of_mem_support",
+    "probEvent_uniformSample": "SampleableType.prEvent_uniformSample",
+    "probEvent_or_le": "prEvent_or_le",
+    "probEvent_le_of_eq_bind_hiddenReadList": "prEvent_le_of_eq_bind_hiddenReadList",
+    "probEvent_bind_fire_le_of_gen": "prEvent_bind_fire_le_of_gen",
+    "SPMFSemantics.withStateOracle": "MeasureSemanticsVia.withStateOracle",
     "triple_probEvent_eq_one": "triple_prEvent_eq_one",
     "triple_probEvent_indicator": "triple_prEvent_indicator",
     "triple_probOutput_eq_one": "triple_prEvent_eq_one",
@@ -327,7 +340,7 @@ MODULES: dict[str, list[str]] = {
         ["VCVio.CryptoFoundations.ReplayFork", "VCVio.CryptoFoundations.SeededFork"],
     "VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility":
         ["VCVio.CryptoFoundations.SymmEncAlg"],
-    "VCVio.EvalDist.TVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
+    "VCVio.EvalDist.TVDist": ["VCVio.EvalDist.EvalDistTV"],
     "VCVio.EvalDist.TVDist.Positivity": ["VCVio.EvalDist.MeasureTVDist.Positivity"],
     "VCVio.EvalDist.MeasureTVDist": ["VCVio.EvalDist.MeasureTVDist.Basic"],
     "VCVio.ProgramLogic.Relational.SimulateQ.Epsilon":
@@ -450,6 +463,45 @@ LEGACY_HINTS: dict[str, str] = {
     "probOutput_bind_const": "`evalDist_bind_const` (`OracleComp.evalDist_bind_const` for a "
                              "lossless oracle computation); for an event, "
                              "`simp only [expect_norm, wp_const]`",
+    "evalSPMF_bind_congr": "`evalDist_bind_congr_of_support` for a hypothesis on the support, "
+                           "`evalDist_bind_congr mx f g h` for one at every output, or "
+                           "`EvalDistEq.bind_congr_of_support` for `=ᵈ`",
+    "evalSPMF_bind_congr'": "`evalDist_bind_congr mx f g h`: the continuations are explicit",
+    "evalSPMF_bind_congr_left": "`evalDist_bind_congr oa f g h`, or "
+                                "`EvalDistEq.bind_congr_of_support` for `=ᵈ`",
+    "evalSPMF_bind_const_neverFails": "`EvalDistEq.bind_const`: an oracle computation never "
+                                      "fails, so the failure-mass hypothesis goes",
+    "evalSPMF_bind_comm": "`evalDist_bind_bind_swap`, or `EvalDistEq.bind_bind_swap` for `=ᵈ`; "
+                          "`prrw` swaps adjacent binds inside an event",
+    "evalSPMF_map_eq_of_evalSPMF_eq": "`EvalDistEq.map h f` for `h : mx =ᵈ my`",
+    "probOutput_bind_mono": "`prEvent_bind_mono_of_forall_le_of_support mx f g p q h`, with the "
+                            "events as predicates",
+    "probFailure_uniformSample": "`OracleComp.prFail_eq_zero`: an oracle computation never fails",
+    "tsum_probOutput_mul_of_const_on_support":
+        "`OracleComp.tsum_prEvent_mul_of_const_on_support oa h`: the failure-mass argument goes",
+    "tsum_probOutput_mul_le_add_of_le": "`OracleComp.tsum_prEvent_mul_le_add_of_le`, which VCVio "
+                                        "provides",
+    "probEvent_bind_le_of_forall_le": "`prEvent_bind_le_of_forall_le_of_support mx f q h` for a "
+                                      "hypothesis on the support; the arguments are explicit",
+    "probEvent_bind_congr": "`prEvent_bind_congr mx f g p q h` for a hypothesis at every output; "
+                            "on the support, `wp_congr_of_support` after `prEvent_bind`",
+    "probOutput_bind_congr": "`prEvent_bind_congr mx f g (· = y) (· = y) h` for a hypothesis at "
+                             "every output; on the support, `wp_congr_of_support`",
+    "probOutput_bind_eq_sum_fintype": "`prEvent_bind_eq_sum_fintype mx f (· = y)`: the event is a "
+                                      "predicate",
+    "withStateOracle_evalSPMF_bind_pure": "`withStateOracle_evalDist_bind_pure`, with measurable "
+                                          "spaces on the outputs and the map's measurability",
+    "withStateOracle_evalSPMF_map": "`withStateOracle_evalDist_map`, with the map's measurability",
+    "abs_probOutput_toReal_sub_le_tvDist": "`absDiff_prEvent_le_etvDist`: the difference of two "
+                                           "events' probabilities, in `ℝ≥0∞`",
+    "tvDist_bind_right_le": "`tvDist_bind_le mx my f` (`etvDist_bind_le` in `ℝ≥0∞`): the "
+                            "continuation is the last argument",
+    "tvDist_bind_left_le_const": "`etvDist_bind_bind_le_wp_of_support` with a constant bound, "
+                                 "then `wp_le_of_forall_le`",
+    "tvDist_bind_left_le_const'": "`etvDist_bind_bind_le_wp` with a constant bound, then "
+                                  "`wp_le_of_forall_le`",
+    "SPMFSemantics": "`MeasureSemanticsVia`, bundled successful-output measure semantics",
+    "toSPMFSemantics": "the field `toMeasureSemanticsVia`, together with `evalDist_map_eq`",
 }
 
 # Legacy forms left for a person, with the guide section that converts them.
@@ -457,6 +509,10 @@ LEGACY_TOKENS: list[tuple[str, str]] = [
     (r"(?<![\w'])evalSPMF(?![\w'])|𝒮\[", "`𝒟[mx]`; see *Notation and definitions*"),
     (r"(?<![\w'.])probOutput(?![\w'])", "`Pr{let y ← mx}[y = x]` or `𝒟[mx] {x}`"),
     (r"(?<![\w'.])probEvent(?![\w'])", "`Pr{let x ← mx}[p x]`"),
+    (r"(?<![\w'.])(?:tvDist_bind_left_le_const'?|tvDist_bind_right_le)(?![\w'])",
+     "an `etvDist` bound; see *Lemma names*"),
+    (r"(?<![\w'.])(?:SPMFSemantics|toSPMFSemantics)(?![\w'])",
+     "the measure semantics; see *Classes and binders*"),
     (r"(?<![\w'.])tvDist_bind_left_le(?![\w'])",
      "`OracleComp.etvDist_bind_left_le_tsum`, with `etvDist` in place of `ENNReal.ofReal (tvDist …)`"),
     (r"(?<![\w'.])expectedValue(?![\w'])", "`∫⁻ x, f x ∂𝒟[mx]`"),
@@ -654,6 +710,60 @@ def convert_legacy_event(event: str, comp: str, prose: bool = False) -> str | No
     x = fresh_name(event, comp)
     pred = event if is_atomic(event) else f"({event})"
     return f"Pr{{{draw(x, comp)}}}[{pred} {x}]"
+
+
+def plain_application(term: str) -> bool:
+    """Whether `term` is an identifier applied to identifiers and bracketed groups, which binds
+    tighter than `=ᵈ` and needs no parentheses."""
+    term = term.strip()
+    if is_atomic(term):
+        return True
+    rest, j = [], 0
+    while j < len(term):
+        if term[j] in OPEN:
+            try:
+                j = match_close(term, j) + 1
+            except ValueError:
+                return False
+            rest.append(" ")
+            continue
+        rest.append(term[j])
+        j += 1
+    return re.fullmatch(r"@?[^\W\d][\w'.!?₀-₉ₐ-ₜᵢ-ᵪ]*(?:\s+[\w'.!?₀-₉ₐ-ₜᵢ-ᵪ@]*)*",
+                        "".join(rest).strip()) is not None
+
+
+def rewrite_spmf_equations(text: str) -> str:
+    """`𝒮[A] = 𝒮[B]` becomes `A =ᵈ B`, unless a side is applied to an argument (a pointwise mass)
+    or the left side is itself an argument; a side that is not an application is parenthesized."""
+    out: list[str] = []
+    i = 0
+    while True:
+        k = text.find("𝒮[", i)
+        if k < 0:
+            out.append(text[i:])
+            return "".join(out)
+        try:
+            close = match_close(text, k + 1)
+            m = re.match(r"\s*=\s*𝒮\[", text[close + 1:])
+            close2 = match_close(text, close + 1 + m.end() - 1) if m else -1
+        except ValueError:
+            close2 = -1
+        before = text[:k].rstrip()
+        argument = bool(before) and (before[-1] in ")]}⟩" or re.match(r"[\w'!?₀-₉]", before[-1]))
+        after = text[close2 + 1:close2 + 2] if close2 >= 0 else ""
+        applied = bool(re.match(r"[ \t]+[\w(⟨@'!?]", text[close2 + 1:close2 + 3])) or after == "("
+        if close2 < 0 or argument or applied:
+            out.append(text[i:k + 2])
+            i = k + 2
+            continue
+        sides = []
+        for term in (text[k + 2:close], text[close + 1 + m.end():close2]):
+            term = term.strip()
+            sides.append(term if plain_application(term) else f"({term})")
+        out.append(text[i:k])
+        out.append(f"{sides[0]} =ᵈ {sides[1]}")
+        i = close2 + 1
 
 
 def rewrite_eq_events(text: str) -> str:
@@ -935,6 +1045,7 @@ def migrate(text: str, path: str, report: Report) -> str:
     text = rewrite_opens(text)
     text = rewrite_legacy_events(text, report, path)
     text = rewrite_eq_events(text)
+    text = rewrite_spmf_equations(text)
     text = rewrite_draw_items(text, report, path)
     text = delete_answer_binders(text)
     text = rewrite_classes(text, report, path)
