@@ -16,7 +16,7 @@ import VCVio.ProgramLogic.Tactics.PrVCGen
 A challenge map changes the verifier's challenge policy while keeping the commitment and
 response algorithms. Completeness and unique responses survive any map; special soundness
 requires injectivity, since the original extractor needs distinct original challenges.
-Full-transcript simulation requires a separate argument for the new challenge distribution.
+Full-transcript simulation requires a separate argument for the mapped challenge distribution.
 -/
 
 public section

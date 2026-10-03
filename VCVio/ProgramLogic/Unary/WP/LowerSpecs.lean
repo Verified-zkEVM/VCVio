@@ -14,14 +14,14 @@ public import VCVio.ProgramLogic.Unary.WP.Readback
 public import VCVio.OracleComp.Constructions.Replicate
 
 /-!
-# `vcgen` rules for the quantitative reading of oracle computations
+# `vcgen` rules for the lower reading of oracle computations
 
-The expectation interpretation is the scoped core instance of `OracleComp spec`
-(`OracleComp.Lower.instWP`, under `open scoped OracleComp.Lower`), so a triple `⦃ r ⦄ oa ⦃ post ⦄`
+The lower reading is the expectation interpretation of `OracleComp spec`, a scoped core instance
+(`OracleComp.Lower.instWP`, under `open scoped OracleComp.Lower`): a triple `⦃ r ⦄ oa ⦃ post ⦄`
 states the lower bound `r ≤ wp⟦oa⟧ post`. With the indicator postcondition of an event it is a lower
-bound on the event: `le_prEvent_iff_triple` states `r ≤ Pr{let x ← oa}[p x]` as `⦃ r ⦄ oa ⦃ predInd
-p ⦄`, and `le_wp_iff_triple` reads any lower bound on an expectation, including the nested
-expectations of an event's normal form, as a triple.
+bound on the event: `le_prEvent_iff_triple` states `r ≤ Pr{let x ← oa}[p x]` as
+`⦃ r ⦄ oa ⦃ predInd p ⦄`, and `le_wp_iff_triple` reads any lower bound on an expectation, including
+the nested expectations of an event's normal form, as a triple.
 
 ## Rules
 
@@ -33,7 +33,8 @@ infimum `Lean.Order.iInf`, which `vcgen` splits into one verification condition 
   query;
 * `Spec.uniformSample`, `Spec.uniformFin`: uniform draws;
 * `Spec.replicate`: a replicated draw, over the lists of possible outputs;
-* `Spec.liftComp`, `Spec.monadLift_liftComp`: lifts between specifications with uniform answers.
+* `Spec.liftComp`, `Spec.monadLift_liftComp`: lifts along an inclusion that preserves the answer
+  measures (`OracleSpec.SubSpec.PreservesAnswerMeasure`).
 
 These rules establish probability-one events and lower bounds that hold on every path. They lose
 the averaging of a fractional event: the exact values of queries and draws are sums, which
@@ -44,8 +45,8 @@ The remaining rules are applied explicitly rather than registered:
 
 * `Spec.ofSupport` bounds an opaque sub-program on its support; `vcgen [Spec.ofSupport keygen]`
   exposes the support hypothesis in each verification condition.
-* `triple_const_mul` scales a lower-bound triple, the quantitative frame rule for composing an
-  adversary's success bound with a later draw: `vcgen [triple_const_mul 2⁻¹ hadv]`.
+* `triple_const_mul` scales a lower-bound triple, a frame rule for composing an adversary's
+  success bound with a later draw: `vcgen [triple_const_mul 2⁻¹ hadv]`.
 * `Spec.uniformSample_sum` and `Spec.query_uniform` are the exact rules, averages over the
   outcomes; they end `vcgen`'s descent, so they serve for the last draw of a program.
 
@@ -53,7 +54,7 @@ The verification conditions are inequalities in `ℝ≥0∞`; `simp` reads core'
 (`Lean.Order.rel_eq_le`) and an indicator reaching `1` as its proposition
 (`one_le_propInd_iff`).
 
-`OracleComp.Lower.Dispatch` registers the expectation reading at a priority above every
+`OracleComp.Lower.Dispatch` registers the lower reading at a priority above every
 reading a file opens, for per-call use (`open scoped OracleComp.Lower.Dispatch in vcgen`).
 Upper bounds have their own reading, `OracleComp.Upper` (`VCVio.ProgramLogic.Unary.WP.Upper`).
 -/
@@ -275,14 +276,14 @@ namespace OracleComp.Lower.Dispatch
 
 variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec]
 
-/-- The expectation reading at the priority of a per-call scope, above every reading a file opens:
+/-- The lower reading at the priority of a per-call scope, above every reading a file opens:
 `open scoped OracleComp.Lower.Dispatch in vcgen`. -/
 noncomputable scoped instance (priority := 1200) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
   OracleComp.Lower.instWP
 
-/-- The per-call expectation reading as a direct `WP` instance, which outranks direct instances
-of other readings. -/
+/-- The per-call lower reading as a direct `WP` instance, which outranks direct instances of
+other readings. -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α ℝ≥0∞ EStack⟨⟩ :=
   (OracleComp.Lower.instWP (spec := spec)).toWP α

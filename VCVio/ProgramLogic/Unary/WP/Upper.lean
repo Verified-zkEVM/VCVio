@@ -37,9 +37,8 @@ assertion type to `ℝ≥0∞`, for which this scope has no interpretation.
 The registered rules bound the expectation of a query or a uniform draw by its largest value, with
 core's indexed infimum `Lean.Order.iInf` of the dual, which `vcgen` splits into one verification
 condition per outcome: `Spec.query` and `Spec.monadLift_query` (with the global `HasQuery.query`
-unfold),
-`Spec.uniformSample`, `Spec.uniformFin`, `Spec.replicate`, and the lifts `Spec.liftComp` and
-`Spec.monadLift_liftComp`. They prove events of probability zero and bounds that hold on every
+unfold), `Spec.uniformSample`, `Spec.uniformFin`, `Spec.replicate`, and the lifts `Spec.liftComp`
+and `Spec.monadLift_liftComp`. They prove events of probability zero and bounds that hold on every
 path.
 
 The averaging rules state the exact expectation of a finite uniform draw or a uniform query as a
@@ -90,8 +89,8 @@ namespace OracleComp.Upper
 variable {ι : Type u} {spec : OracleSpec ι} [OracleSpec.AnswerMeasure spec] {α : Type}
 
 open scoped OracleComp.Lower in
-/-- Core weakest preconditions of the expectation reading over the order duals: a triple states
-an upper bound on the expectation. Opening the scope selects it over the structural reading. -/
+/-- Core weakest preconditions of the expectation over the order duals: a triple states an upper
+bound on the expectation. Opening the scope selects it over the global necessary reading. -/
 noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ᵒᵈ EStack⟨⟩ᵒᵈ :=
   ExactWPMonad.dual

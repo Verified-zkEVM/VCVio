@@ -12,9 +12,9 @@ public meta import Batteries.Tactic.Lint.Basic
 
 VCVio's probability semantics are Mathlib measures. This environment linter reports declarations
 whose types or values refer directly to Mathlib's `PMF`, the countably supported distributions,
-so that probability stays measure-valued. Exceptions are maintained by the repository's exact
-`nolints.json` baseline. `VCVio.Prelude.Core` imports this module, so the linter is available to
-every VCVio library.
+so that probability stays measure-valued. The repository's exact `nolints.json` baseline holds no
+exception for it. `VCVio.Prelude.Core` imports this module, so the linter is available to every
+VCVio library.
 -/
 
 public meta section

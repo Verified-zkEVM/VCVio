@@ -31,11 +31,11 @@ model is strictly alternating: at every interaction round the prover sends one m
 verifier then samples one fresh uniform challenge, so a partial transcript is
 `(m₁, c₁, …, m_i, c_i)`. Schedules that are not message/challenge alternating (for example two
 consecutive prover messages, or a challenge-first round) are represented in this model by padding
-the appropriate message or challenge type with `Unit`; this is a faithful encoding, not a claim
-that arbitrary scheduling has been added. Its transcript context and prover message are fixed
-before sampling a fresh uniform challenge. The API records the all-inputs initial doomed condition
-and the terminal doomed-implies-rejection condition separately from the strict extraction
-condition.
+the appropriate message or challenge type with `Unit`; the padding encodes such schedules
+faithfully, and the model itself stays strictly alternating. In each round the transcript context
+and the prover message are fixed before the fresh uniform challenge is sampled. The API records the
+all-inputs initial doomed condition and the terminal doomed-implies-rejection condition separately
+from the strict extraction condition.
 
 This layer is **extensional**: `extract` is data returning a candidate witness and
 `ExtractionCondition` only asserts that this witness is valid whenever the strict escape trigger
@@ -43,9 +43,9 @@ This layer is **extensional**: `extract` is data returning a candidate witness a
 3.12, **not** the paper's full computational round-by-round knowledge claim; it carries no security
 parameter, encoding, runtime bound, or polynomial-time predicate on the extractor.
 
-TODO: the deferred computational layer needs a security-indexed family of encoded polynomial-time
-extractors together with negligible per-round error, and lives behind the separate polytime
-framework. This module deliberately does not add that layer or depend on an unmerged branch.
+TODO: the computational layer is open. It needs a security-indexed family of encoded
+polynomial-time extractors together with negligible per-round error, and belongs with the separate
+polynomial-time framework rather than in this module.
 -/
 
 @[expose] public section

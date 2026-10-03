@@ -248,7 +248,7 @@ def juxtapose {ι₁ : Type u} {spec₁ : OracleSpec.{u, v} ι₁} {ι₂ : Type
 
 /-! ## Probabilistic Kleisli run
 
-When the handler is randomized (`ProbHandler spec`), closing a strategy no longer gives a pure state
+When the handler is randomized (`ProbHandler spec`), closing a strategy gives not a pure state
 endofunction but a **Markov chain on states**: `kleisliStep` samples an answer and advances, and its
 Kleisli iterate is the distribution over states (equivalently transcripts) after `n` adaptive
 queries. The deterministic run embeds as the Dirac special case (`ofHandler`). -/
@@ -452,9 +452,9 @@ end Probabilistic
 
 /-! ## Subsumption: the program transcript *is* the logging-oracle output
 
-The coalgebraic transcript is not a new notion: running a program against a deterministic handler
-with the existing `QueryImpl.withLogging` instrumentation produces exactly `(simulated value,
-transcript)`. So the new layer reuses — rather than duplicates — VCVio's `QueryLog` machinery. -/
+The coalgebraic transcript is no separate notion: running a program against a deterministic handler
+with the `QueryImpl.withLogging` instrumentation produces exactly `(simulated value, transcript)`.
+The coalgebraic layer therefore reuses VCVio's `QueryLog` machinery rather than duplicating it. -/
 
 variable {α : Type v}
 
@@ -473,7 +473,7 @@ theorem transcript_queryBind (h : OracleHandler spec) (t : spec.Domain)
 /-! ### Denotational query bounds
 
 Because `transcript` lands in `QueryLog spec`, its length is the number of handler-answered steps
-(`stepsToHalt`), and the existing `IsTotalQueryBound` becomes a *denotational* bound on the run:
+(`stepsToHalt`), and `IsTotalQueryBound` becomes a *denotational* bound on the run:
 a program that makes at most `n` queries has a transcript of length at most `n`. -/
 
 /-- The transcript length is exactly the number of handler-answered query steps. -/
@@ -652,8 +652,8 @@ section Subsumption
 variable {spec : OracleSpec.{u, u} ι} {α : Type u}
 
 /-- **Subsumption bridge.** Running a program against the deterministic handler `ofFn h` through the
-existing `QueryImpl.withLogging` instrumentation yields exactly the simulated value paired with the
-coalgebraic `transcript`. The new transcript is the established logging-oracle output. -/
+`QueryImpl.withLogging` instrumentation yields exactly the simulated value paired with the
+coalgebraic `transcript`, so the coalgebraic transcript is the logging-oracle output. -/
 theorem run_simulateQ_ofFn_withLogging (h : OracleHandler spec) (oa : OracleComp spec α) :
     (simulateQ ((QueryImpl.ofFn h).withLogging) oa).run =
       (evalWithAnswerFn (QueryImpl.ofFn h) oa, transcript h oa) := by

@@ -112,9 +112,9 @@ def VCSpecEntry.declName? (entry : VCSpecEntry) : Option Name :=
   | .global n => some n
   | _ => none
 
-/-- Extract the global declaration name, assuming the entry was registered
-via `@[vcspec]` on a global theorem. Panics on local / stx proofs; intended
-for legacy call sites that pre-date local-hypothesis support. -/
+/-- The global declaration name of an entry registered via `@[vcspec]` on a
+global theorem, and `Name.anonymous` for an entry backed by a local hypothesis
+or a raw proof expression. -/
 def VCSpecEntry.theoremName! (entry : VCSpecEntry) : Name :=
   entry.declName?.getD Name.anonymous
 

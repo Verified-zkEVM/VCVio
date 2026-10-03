@@ -17,7 +17,7 @@ public import VCVio.OracleComp.Coercions.SubSpec.Measure
 # Measure equivalence of stateful handlers
 
 Two handlers are equivalent when every adaptive client has the same successful-output measure.
-The interpretation can be weighted and need not assign positive mass to each structurally possible
+The interpretation can be weighted and need not assign positive mass to each possible
 answer. Local contracts retain the joint response/state measure because later calls may observe
 private state.
 -/

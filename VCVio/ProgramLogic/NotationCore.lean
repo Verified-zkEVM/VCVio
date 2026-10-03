@@ -31,8 +31,8 @@ The canonical proof mode lives in `VCVio/ProgramLogic/Tactics.lean`.
 Unary triples additionally require `open scoped Std.WP`.
 - `wp⟦c⟧ post` — expectation of `post` over the outputs of `c` (global, from
   `VCVio.EvalDist.Expectation`)
-- `⦃ P ⦄ c ⦃ Q ⦄` — core's quantitative Hoare triple `Std.WP.Triple c P Q ⊥`
-  (`P ≤ wp⟦c⟧ Q`)
+- `⦃ P ⦄ c ⦃ Q ⦄` — core's Hoare triple `Std.WP.Triple c P Q ⊥`, which states `P ≤ wp⟦c⟧ Q`
+  under the lower reading (`open scoped OracleComp.Lower`)
 
 ### Game-level
 - `g₁ =ᵈ g₂` — equality in distribution, from `VCVio.EvalDist.EvalDistEq`
@@ -101,7 +101,7 @@ macro_rules
   | `(⦃$f⦄ $c₁ ≈ₑ $c₂ ⦃$g⦄) =>
       `(VCVio.ProgramLogic.RelTriple $f $c₁ $c₂ $g Lean.Order.bot Lean.Order.bot)
 
-/-! ## Bridge lemmas: numeric indicators and existing API -/
+/-! ## Bridge lemmas: numeric indicators and events -/
 
 /-- `RelPost.indicator` is pointwise `𝟙⟦_⟧`. -/
 lemma Relational.RelPost.indicator_eq_propInd {α β : Type}

@@ -134,10 +134,10 @@ variable {α β γ δ : Type u}
 /-!
 ## Derived Lemmas
 
-One-directional consequences of the `RelWP` axioms for `pure`, `bind`,
-monotonicity, and weakening, mirroring `Std.WP.WP.{wp_pure, wp_bind,
-wp_consequence, wp_econs, …}` in
-`Std.WP.WP`.
+One-directional consequences of the `RelWP` axioms for `pure`, `bind`, monotonicity and
+weakening. They mirror core's unary laws `Std.WP.WPMonad.pure_le_wp_pure`,
+`Std.WP.WPMonad.bind_le_wp_bind`, `Std.WP.WP.wp_consequence`, `Std.WP.WP.wp_consequence_econs`
+and `Std.WP.WP.wp_econs`.
 -/
 
 /-- Pure rule: the joint postcondition at `(a, b)` is below the

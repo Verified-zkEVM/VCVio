@@ -86,8 +86,8 @@ example : MAlgRelOrdered.RelWP (weightedSpec.query 0 : OracleComp weightedSpec B
     AnswerMeasure.toMeasure, PFunctor.AnswerMeasure.toMeasure]
   exact ExpectationWP.couplingPost_refl (MeasureTheory.Measure.dirac false)
 
-/-- The zero-mass reachable answer `true` does not obstruct the coupling, so the anchoring rules
-relating couplings to structural support need uniform response measures. -/
+/-- The possible answer `true` has mass zero and does not obstruct the coupling, so the anchoring
+rules relating couplings to the support need uniform answer measures. -/
 example : RelTriple (pure false : OracleComp weightedSpec Bool)
       (weightedSpec.query 0 : OracleComp weightedSpec Bool) (· = ·) ∧
     true ∈ support (weightedSpec.query 0 : OracleComp weightedSpec Bool) := by
@@ -102,7 +102,7 @@ example : RelTriple (pure false : OracleComp weightedSpec Bool)
     fun _ _ h ↦ h.symm)
 
 /-- A pure side anchors the coupled expectation to the unary expectation, which gives the
-zero-mass reachable answer no weight. -/
+possible answer of mass zero no weight. -/
 example (post : Bool → Bool → ENNReal) :
     eRelWP (pure false : OracleComp weightedSpec Bool)
         (weightedSpec.query 0 : OracleComp weightedSpec Bool) post =

@@ -35,8 +35,8 @@ variable [UniformAnswerMeasure spec] [∀ t, Fintype (spec.Range t)]
 
 /-! ## Per-Pair Collision Bound (Textbook Step 3)
 
-For each pair (i,j) of positions in the log with distinct inputs,
-Pr[outputs equal] ≤ 1/|C|, because each query returns an independent uniform sample. -/
+For each pair (i,j) of positions in the log with distinct inputs, the outputs are equal with
+probability at most 1/|C|, because each query returns an independent uniform sample. -/
 
 /-- A single uniform query hits a fixed sigma-typed entry with probability at most the inverse
 cardinality of that entry's response type. -/

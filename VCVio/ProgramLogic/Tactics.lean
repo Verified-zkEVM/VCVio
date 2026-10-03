@@ -17,9 +17,9 @@ public meta import VCVio.ProgramLogic.Tactics.PrVCGen
 
 This is the canonical user-facing umbrella import for tactic-based program-logic proofs.
 
-- `VCVio.ProgramLogic.Tactics.PrVCGen` contains `prvcgen`, which states a statement about one
+- `VCVio.ProgramLogic.Tactics.PrVCGen` contains `prvcgen`, which restates a goal about one
   program (a bound, probability one, a possible or necessary outcome, or a core triple) as a
-  triple of the reading it belongs to (structural, angelic, expectation lower or upper bound) and
+  triple of the reading it belongs to (the necessary, possible, lower or upper reading) and
   runs core's `vcgen` in that reading. Rules are core `@[spec]` theorems.
 - `VCVio.ProgramLogic.Tactics.Unary` contains `prrw`, which rewrites an equality between the
   probabilities of two programs by bind swaps (`prrw`, `prrw under n`), shared prefixes
@@ -29,8 +29,8 @@ This is the canonical user-facing umbrella import for tactic-based program-logic
   `rvcstep`, `rvcgen`, `by_equiv`, `rel_dist`, `game_trans`, `by_dist`, and `by_upto`;
   `@[vcspec]` registers a relational rule for their bounded lookup.
 
-An equation between an expectation of one program and its value is `simp only [expect_norm,
-expect_eval]`. For relational tactic-choice debugging, enable
+An equation between an expectation of one program and its value is proved by
+`simp only [expect_norm, expect_eval]`. To trace the choices of the relational tactics, enable
 `set_option vcvio.vcgen.traceSteps true`.
 
 For normal proof work, import `VCVio.ProgramLogic.Tactics` and treat it as the default

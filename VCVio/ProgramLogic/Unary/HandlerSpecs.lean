@@ -19,8 +19,8 @@ public import VCVio.OracleComp.QueryTracking.SeededOracle
 Core `Std.WP` Hoare triples for the query-tracking handlers `cachingOracle`, `seededOracle`,
 `loggingOracle`, `countingOracle`, `costOracle`, and `cachingLoggingOracle`, under the
 necessary reading of `OracleComp` (the global instance): a triple
-`⦃ pre ⦄ handler t ⦃ post ⦄` says that from every state satisfying `pre`, every reachable
-result and final state satisfy `post`. Core's `StateT` interpretation lifts the structural
+`⦃ pre ⦄ handler t ⦃ post ⦄` says that from every state satisfying `pre`, every possible
+result and final state satisfy `post`. Core's `StateT` interpretation lifts the necessary
 reading to the stateful handlers. The writer handlers read their log as accumulated state:
 `WriterT.MonoidWP` for the monoid logs of `countingOracle` and `costOracle`, and
 `WriterT.AppendWP` for the list log of `loggingOracle`.
@@ -37,7 +37,7 @@ reading to the stateful handlers. The writer handlers read their log as accumula
 * *Whole simulations* go through the generic layer `VCVio.ProgramLogic.Unary.SimulateQSpecs`:
   `Spec.simulateQ` with a handler invariant, the whole-program lifts
   `simulateQ_triple_preserves_invariant` and their `WriterT` analogues, the ranked
-  `simulateQ_triple_ranked`, the sum-handler rules and the readings of a triple against the
+  `simulateQ_triple_ranked`, the sum-handler rules and the statements of a triple against the
   support of its run.
 
 ## Ghost parameters

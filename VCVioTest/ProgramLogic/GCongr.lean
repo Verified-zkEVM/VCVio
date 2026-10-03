@@ -12,7 +12,7 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 # `gcongr` through `wp`
 
 Canaries for the `@[gcongr]` tag on `wp_mono`: `gcongr` descends through `wp` into the
-postcondition and structural support, also under a finite sum. Measurable assertions use
+postcondition and the support, also under a finite sum. Measurable assertions use
 `wp_eq_lintegral` in the chosen output space.
 -/
 
@@ -70,7 +70,7 @@ example (oa : OracleComp spec α) (f g : Fin 3 → α → ℝ≥0∞)
   gcongr with i _ x hx
   exact h i x hx
 
-/-- Public normalization exposes structural support to core WP congruence. -/
+/-- Public normalization exposes the support to core WP congruence. -/
 example (oa : OracleComp spec α) (f g : α → ℝ≥0∞)
     (h : ∀ x ∈ support oa, f x ≤ g x) :
     Std.WP.wp oa f Lean.Order.bot ≤ Std.WP.wp oa g Lean.Order.bot := by

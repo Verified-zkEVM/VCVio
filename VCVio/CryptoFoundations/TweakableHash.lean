@@ -26,7 +26,7 @@ must withhold from the adversary during target selection.
 
 With `Tweak := Unit` this is definitionally a keyed hash family
 (`seedGen : ProbComp PkSeed`, `eval : PkSeed → M → Y`), so nothing is lost relative to the
-existing `KeyedHashFamily` surface.
+`KeyedHashFamily` surface.
 
 ## Collections
 
@@ -121,8 +121,8 @@ variable {ι PkSeed Tweak M Y : Type} {th : TweakableHash PkSeed Tweak M Y}
 @[simp] theorem cons_eval_some (i : ι) : (cons th thColl).eval (some i) = thColl.eval i := rfl
 
 /-- Deliberately not `@[simp]`: `Msg` occurs inside the query type of the collection oracle's
-`OracleSpec`, so rewriting it under a `simulateQ` strands the goal in a form the query lemmas can
-no longer match. -/
+`OracleSpec`, so rewriting it under a `simulateQ` strands the goal in a form the query lemmas
+cannot match. -/
 theorem cons_Msg_none : (cons th thColl).Msg none = M := rfl
 
 /-- Not `@[simp]`, for the reason given on `cons_Msg_none`. -/

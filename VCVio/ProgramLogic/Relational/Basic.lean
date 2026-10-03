@@ -21,10 +21,9 @@ instantiated for `OracleComp` with measure coupling semantics: `CouplingPost oa 
 coupling of the two output measures, each observed in the discrete structure on its output type,
 under which `R` holds almost everywhere.
 
-Finite oracle response types make every output measure concentrate on the finite structural
-support, which supplies the countable choice behind the sequential rule. The anchoring and
-bijection rules additionally need uniform response measures, under which every structurally
-reachable output has positive mass.
+Finite oracle answer types make every output measure concentrate on the finite support, which
+supplies the countable choice behind the sequential rule. The anchoring and bijection rules also
+need uniform answer measures, under which every possible output has positive mass.
 -/
 
 @[expose] public section
@@ -86,14 +85,13 @@ theorem couplingPost_pure_pure_iff (a : α) (b : β) (R : RelPost α β) :
     CouplingPost (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) R ↔ R a b := by
   simp [CouplingPost]
 
-/-- The output measure of a computation concentrates on its structural support. -/
+/-- The output measure of a computation concentrates on its support. -/
 theorem ae_mem_support (oa : OracleComp spec₁ α) :
     letI : MeasurableSpace α := ⊤; ∀ᵐ a ∂𝒟[oa], a ∈ support oa := by
   let : MeasurableSpace α := ⊤
   exact evalDist.ae_of_forall_mem_support oa _ MeasurableSet.of_discrete fun _ h ↦ h
 
-/-- A coupling of two output measures concentrates on the product of their structural
-supports. -/
+/-- A coupling of two output measures concentrates on the product of their supports. -/
 theorem ae_mem_support_prod {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     (c : letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
       Measure.Coupling 𝒟[oa] 𝒟[ob]) :
@@ -108,8 +106,8 @@ section finite
 
 variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
-/-- Sequential composition of couplings. Finite response types discharge the countable choice
-and concentration obligations of the measure-level rule; no positivity of response masses is
+/-- Sequential composition of couplings. Finite answer types discharge the countable choice
+and concentration obligations of the measure-level rule; no positivity of answer masses is
 required. -/
 theorem CouplingPost.bind {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {fa : α → OracleComp spec₁ γ} {fb : β → OracleComp spec₂ δ} {post : RelPost γ δ}
@@ -525,15 +523,15 @@ end finite
 
 end measureSpec
 
-/-! ## Anchoring and bijection rules under uniform response measures -/
+/-! ## Anchoring and bijection rules under uniform answer measures -/
 
 section uniformMeasureSpec
 
 variable [UniformAnswerMeasure spec₁] [UniformAnswerMeasure spec₂]
 
 /-- A coupling with a Dirac first marginal forces the first coordinate, so an almost-sure
-relation holds between that value and every structurally reachable output of the second
-computation, each of which has positive mass under uniform response measures. -/
+relation holds between that value and every possible output of the second computation, each of
+which has positive mass under uniform answer measures. -/
 private theorem forall_mem_support_of_couplingPost_pure_left {a : α} {y : OracleComp spec₂ β}
     {post : RelPost α β} (h : CouplingPost (pure a : OracleComp spec₁ α) y post) :
     ∀ b ∈ support y, post a b := by
@@ -560,7 +558,7 @@ private theorem forall_mem_support_of_couplingPost_pure_left {a : α} {y : Oracl
   rw [← c.isCoupling.snd_eq, Measure.snd_apply (measurableSet_singleton b), hnull] at hpos
   exact lt_irrefl 0 hpos
 
-/-- A pure first computation is coupled with any computation whose reachable outputs all
+/-- A pure first computation is coupled with any computation whose possible outputs all
 satisfy the relation with its value. -/
 private theorem couplingPost_pure_left_of_forall_mem_support {a : α} {y : OracleComp spec₂ β}
     {post : RelPost α β} (h : ∀ b ∈ support y, post a b) :
@@ -576,15 +574,15 @@ private theorem couplingPost_pure_left_of_forall_mem_support {a : α} {y : Oracl
 
 variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
-/-- Anchoring instance for the qualitative `Prop`-valued relational logic on `OracleComp`.
+/-- Anchoring instance for the `Prop`-valued relational logic on `OracleComp`.
 
 When one of the two computations is `pure`, the relational coupling logic collapses to the
-unary support-based logic of the other side. Every reachable output has positive mass under
-uniform response measures, so an almost-sure relation holds on the whole structural support.
+necessary reading of the other side. Every possible output has positive mass under uniform
+answer measures, so an almost-sure relation holds on the whole support.
 
-The unary sides are the qualitative support readings (`MonadAttach.toWPMonadDemonic`,
-`VCVio/ProgramLogic/Unary/HoarePropTriple.lean`); `open scoped OracleComp.Necessary` installs
-them. -/
+The unary sides are PolyFun's demonic support interpretation `MonadAttach.toWPMonadDemonic`
+(`VCVio/ProgramLogic/Unary/HoarePropTriple.lean`), which `OracleComp.Necessary.instWP` installs
+as the global necessary reading. -/
 instance instAnchored :
     @MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) Prop _ _ _
       MonadAttach.toWPMonadDemonic MonadAttach.toWPMonadDemonic _ :=
@@ -605,7 +603,7 @@ instance instAnchored :
         exact relTriple_iff_relWP.1 (relTriple_symm (spec₁ := spec₂) (spec₂ := spec₁)
           (relTriple_iff_relWP.2 (couplingPost_pure_left_of_forall_mem_support h))) }
 
-/-- The graph of a bijection on a query's responses couples the query with itself. -/
+/-- The graph of a bijection on a query's answers couples the query with itself. -/
 theorem isCoupling_query_graph (t : spec₁.Domain) {f : spec₁.Range t → spec₁.Range t}
     (hf : Function.Bijective f) :
     letI : MeasurableSpace (spec₁.Range t) := ⊤

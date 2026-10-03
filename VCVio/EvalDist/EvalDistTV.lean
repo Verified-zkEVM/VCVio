@@ -16,18 +16,18 @@ public import ToMathlib.MeasureTheory.Measure.TotalVariation.Bind
 # Total variation between computations, keyed on events
 
 `etvDist mx my` is the largest discrepancy between the probabilities of an event under two
-computations, over all events: the extended total variation distance of their successful-output
-measures on the discrete σ-algebra, stated with no measurable structure on the outputs and across
-monads, as `mx =ᵈ my` is (`etvDist_eq_zero_iff`). `tvDist` is its real value. Every event and every
-bounded expectation moves by at most the distance (`prEvent_le_prEvent_add_etvDist`,
-`absDiff_wp_le_etvDist`); post-processing and a common continuation do not increase it
-(`etvDist_map_le`, `etvDist_bind_le`); two continuations of one prefix are within the expected
-pointwise distance (`etvDist_bind_bind_le_wp`), or within the probability of a bad prefix plus a
-bound on the good ones (`etvDist_bind_bind_le_of_bad`).
+computations, over all events. It is the extended total variation distance of their
+successful-output measures on the discrete σ-algebra, stated across monads and with no measurable
+structure on the outputs, as `mx =ᵈ my` is (`etvDist_eq_zero_iff`), and `tvDist` is its real value.
+Every event and every bounded expectation moves by at most the distance
+(`prEvent_le_prEvent_add_etvDist`, `absDiff_wp_le_etvDist`). Post-processing and a common
+continuation do not increase it (`etvDist_map_le`, `etvDist_bind_le`). Two continuations of one
+prefix are within their expected pointwise distance (`etvDist_bind_bind_le_wp`), or within the
+probability of a bad prefix plus a bound on the good ones (`etvDist_bind_bind_le_of_bad`).
 
-`measureETVDist` remains for statements about a chosen σ-algebra and almost-everywhere
-hypotheses: `etvDist_eq_measureETVDist` identifies the two on a discrete output space, and
-`measureETVDist_le_etvDist` bounds the distance on any coarser one.
+`measureETVDist` is the distance for statements about a chosen σ-algebra and almost-everywhere
+hypotheses. `etvDist_eq_measureETVDist` identifies the two distances on a discrete output space,
+and `measureETVDist_le_etvDist` bounds `measureETVDist` by `etvDist` on any other σ-algebra.
 -/
 
 public section

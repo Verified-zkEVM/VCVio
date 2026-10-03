@@ -30,10 +30,10 @@ by a caller-specific terminal theorem, normally a finite-target fresh-hit bound 
 of a given size. This separation keeps Merkle-specific extraction invariants out of the generic
 random-oracle stopping argument.
 
-The theorem currently lives in `Type` because the birthday-bound primitive
-`card_responses_creating_cacheCollision_le` is specialized to `OracleSpec.{0, 0}`. Lifting that
-infrastructure to independent universes is deferred; the restriction is inherited rather than
-mathematical.
+The theorem lives in `Type` because the birthday-bound primitive
+`card_responses_creating_cacheCollision_le` is specialized to `OracleSpec.{0, 0}`. The restriction
+is inherited from that primitive rather than mathematical; lifting the primitive to independent
+universes is open.
 -/
 
 @[expose] public section

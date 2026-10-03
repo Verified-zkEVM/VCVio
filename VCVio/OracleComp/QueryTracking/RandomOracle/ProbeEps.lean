@@ -33,7 +33,7 @@ is valid in every state.
 ## Main results
 
 * `hiddenReadMany` / `prEvent_hiddenReadMany_le` : the single-target adaptive read game and its
-  first-fire union bound `Pr[fire] ≤ q · ε`.
+  first-fire union bound: it fires with probability at most `q · ε`.
 * `hiddenReadList` / `prEvent_hiddenReadList_le` : the per-attempt-fresh-target list game and
   its union bound.
 * `prEvent_bind_fire_le_of_gen` : the deferred-sampling fire bound whose marginal is a
@@ -52,10 +52,10 @@ variable {R : Type}
 
 /-! ## Iterated draws: the explicit front-block key list
 
-Stage A defers a *single* output-irrelevant draw. `drawList` lifts this to `n` interleaved draws
-by collecting them into an explicit front block: draw a list of `n` independent keys up front,
-against which a run's hidden draws can be exhibited and then charged by the abstract
-`hiddenReadList` union bound. -/
+The deferral primitive defers a *single* output-irrelevant draw. `drawList` lifts this to `n`
+interleaved draws by collecting them into an explicit front block: draw a list of `n` independent
+keys up front, against which a run's hidden draws can be exhibited and then charged by the
+abstract `hiddenReadList` union bound. -/
 
 /-- Draw a list of `n` independent keys from `oa` (the front block of the deferred-sampling
 factorization). The keys are the hidden targets; the list length is the key count `n`. -/
@@ -232,7 +232,7 @@ theorem prEvent_le_of_eq_bind_hiddenReadList {β : Type} {run : ProbComp β} {ba
 /-! ## Single output-irrelevant draw deferral
 
 The lemmas above take the read strategy `σ` (and, in `hiddenReadList`, the key count) as already
-*extracted* data. The genuine new content of the sound route is the **deferral primitive**: lifting
+*extracted* data. The substantive content of the sound route is the **deferral primitive**: lifting
 a single hidden draw out of an arbitrary run when that draw is used *only output-irrelevantly* —
 i.e. it influences neither the run's visible output nor the read points, only the boolean "fire"
 flag computed by membership tests against an adaptive read sequence.

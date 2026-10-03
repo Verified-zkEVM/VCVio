@@ -36,7 +36,7 @@ developments will reach for.
   async execution: the residual process state plus the env-action
   bookkeeping state.
 * `ProcessScheduler` / `EnvScheduler` — the two sibling samplers
-  driving the async runtime. The process scheduler reuses the existing
+  driving the async runtime. The process scheduler reuses
   `TypeTree.Sampler m` from `Runtime.lean`; the env scheduler is a separate
   monadic choice over `RuntimeEvent`.
 * `Concurrent.runStepsAsync` — the recursive engine. Mirrors
@@ -147,8 +147,8 @@ end AsyncRuntimeState
 A process scheduler picks a process-side `TypeTree.Sampler` at each step,
 parameterized by the joint async-runtime state.
 
-The sampler-side type `TypeTree.Sampler m (specOf st)` is the existing one
-from `Runtime.lean`, unchanged. The extra `AsyncRuntimeState`-dependent
+The sampler-side type `TypeTree.Sampler m (specOf st)` is the one from
+`Runtime.lean`. The extra `AsyncRuntimeState`-dependent
 argument lets a scheduler refuse to schedule, e.g., a corrupted
 machine's tick.
 -/
@@ -206,8 +206,8 @@ final joint state and the observable runtime trace.
 Mirrors the recursion shape of `Concurrent.ProcessOver.runSteps` with
 explicit env-event interleaving. The env reaction lives in the same
 runtime monad `m` (`EnvAction.react : Event → State → m State`). The
-process sampler type is unchanged from the synchronous runtime: the
-`ProcessScheduler` carries the existing `TypeTree.Sampler m` from
+process sampler type is that of the synchronous runtime: the
+`ProcessScheduler` carries the `TypeTree.Sampler m` of
 `Runtime.lean`.
 -/
 noncomputable def runStepsAsync

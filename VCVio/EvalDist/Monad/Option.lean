@@ -18,7 +18,7 @@ interpretation (`ExpectationWP.optionT`): `wp⟦mx⟧ g` is the expectation of `
 values of the run, `wp⟦mx.run⟧ fun o => o.elim 0 g` (`wp_eq_run`), so a failure contributes
 nothing. The measure interpretation of the stack agrees (`wp_ofMeasure_eq`), which carries the
 laws of successful-output measures over. A sampled guard is a condition on the sampled value, and
-sequencing a lossless prefix with continuations that succeed on its reachable outputs preserves
+sequencing a lossless prefix with continuations that succeed at its possible outputs preserves
 probability-one events.
 -/
 
@@ -237,7 +237,7 @@ theorem mk_bind_eq_lift_bind (mx : m α) (f : α → m (Option β)) :
 
 variable [MonadAttach m] [ExactMonadAttach m]
 
-/-- Reachable outputs of a lifted computation are reachable in the computation. -/
+/-- A possible output of a lifted computation is a possible output of the computation. -/
 theorem mem_support_of_mem_support_lift {mx : m α} {a : α}
     (ha : a ∈ support (OptionT.lift mx)) : a ∈ support mx := by
   rw [MonadAttach.mem_support, MonadAttach.OptionT.canReturn_iff, OptionT.run_lift,
@@ -249,7 +249,7 @@ theorem mem_support_of_mem_support_lift {mx : m α} {a : α}
 variable [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-- A lossless prefix followed by continuations that each satisfy an event with probability one
-on the prefix's reachable outputs satisfies the event with probability one. -/
+at the prefix's possible outputs satisfies the event with probability one. -/
 theorem prEvent_mk_bind_eq_one_of_support (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
     (f : α → m (Option β)) (p : β → Prop)
     (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[p y] = 1) :
@@ -259,8 +259,8 @@ theorem prEvent_mk_bind_eq_one_of_support (mx : m α) (hmx : Pr{let _ ← mx}[Tr
   exact le_prEvent_bind_of_forall_le_of_support mx hmx _ _ fun a ha ↦
     ((prEvent_mk (f a) p).symm.trans (h a ha)).ge
 
-/-- An event after a continuation is at most as likely as a prefix event outside of which, on
-the reachable prefix outputs, the continuation never satisfies it. -/
+/-- If the continuation's event vanishes at every possible output of the prefix that fails a
+predicate, the event after the prefix has at most the predicate's probability. -/
 theorem prEvent_bind_le_prEvent_of_support {β : Type} (mx : OptionT m α) (f : α → OptionT m β)
     (p : α → Prop) (q : β → Prop)
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] = 0) :
@@ -268,20 +268,22 @@ theorem prEvent_bind_le_prEvent_of_support {β : Type} (mx : OptionT m α) (f : 
   simp only [← wp_ofMeasure_eq] at h ⊢
   exact _root_.prEvent_bind_le_prEvent_of_support mx f p q h
 
-/-- Implication between events on the reachable outputs bounds their probabilities. -/
+/-- An event that implies another at every possible output has at most the other's
+probability. -/
 theorem prEvent_mono_of_support (mx : OptionT m α) (p q : α → Prop)
     (h : ∀ a ∈ support mx, p a → q a) : Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := by
   simp only [← wp_ofMeasure_eq]
   exact _root_.prEvent_mono_of_support mx p q h
 
-/-- Comparing observations on the reachable outputs compares their expectations. -/
+/-- An observation bounded by another at every possible output has at most its expectation. -/
 @[gcongr]
 theorem wp_mono_of_support (mx : OptionT m α) {f g : α → ℝ≥0∞}
     (h : ∀ a ∈ support mx, f a ≤ g a) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
   simp only [← wp_ofMeasure_eq]
   exact _root_.wp_mono_of_support mx h
 
-/-- An upper bound on the wrapped continuation event over reachable prefixes. -/
+/-- A bound on the wrapped continuation's event at every possible output of the prefix bounds
+the event after the prefix. -/
 theorem prEvent_mk_bind_le_of_forall_le (mx : m α) (f : α → m (Option β)) (q : β → Prop)
     {ε : ENNReal} (h : ∀ a ∈ support mx, Pr{let y ← OptionT.mk (f a)}[q y] ≤ ε) :
     Pr{let y ← OptionT.mk (mx >>= f)}[q y] ≤ ε := by

@@ -114,8 +114,8 @@ section uniformSelect
 /-- Typeclass to implement the notation `$ xs` for selecting an object uniformly from a collection.
 The container type is given by `cont` with the resulting type given by `β`.
 `β` is marked as an `outParam` so that Lean will first pick the output type before synthesizing.
-NOTE: This current implementation doesn't impose any "correctness" conditions,
-it purely exists to provide the notation, could revisit that in the future. -/
+The class imposes no correctness condition on `uniformSelect`; it exists only to provide the
+notation. -/
 class HasUniformSelect (cont : Type u) (β : outParam Type) where
   uniformSelect : cont → OptionT ProbComp β
 

@@ -36,7 +36,7 @@ be bounded at all is one named summand rather than an unquantified caveat.
   which is the `by_cases` of `HashSig.SLHDSA.Security.SufResidual`'s `itsrFresh_or_sameRandomizer`.
   With the library's own exact partition `strongUnforgeableAdvantage_eq_euf_add_sameMessage` this
   gives `strongAdvantage_le_halves`: the SUF-CMA advantage is bounded by four named terms, of which
-  `sameRandomizerHalf` is the one this lane holds out of scope and now holds out of scope *by name*.
+  `sameRandomizerHalf` is the one this lane holds out of scope, and holds out of scope *by name*.
 
 ## What the two selectors read, and what they cannot read
 

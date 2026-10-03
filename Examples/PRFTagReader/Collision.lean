@@ -103,7 +103,8 @@ section StepTriples
 
 open Std.WP OracleComp.ProgramLogic
 
-/-- A structural triple preserving `I` is the support statement `StateT.PreservesInv`. -/
+/-- A triple of the necessary reading that preserves `I` gives the support statement
+`StateT.PreservesInv`. -/
 private theorem preservesInv_of_triple {σ α : Type} {mx : StateT σ ProbComp α} {I : σ → Prop}
     (h : ⦃ I ⦄ mx ⦃ fun _ => I ⦄) : StateT.PreservesInv mx I :=
   fun s hs _ hz => (triple_stateT_iff_forall_support _ _ _ ⊥).1 h s hs _ _ hz

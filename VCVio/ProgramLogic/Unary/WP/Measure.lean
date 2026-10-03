@@ -19,7 +19,7 @@ expectations. Its laws are stated on `wp⟦mx⟧ post` in `VCVio.EvalDist.Expect
 which a triple states an upper bound on an expectation, as `OracleComp.Upper` does for oracle
 computations.
 
-Opening either scope selects the quantitative carrier before core instances whose carrier is
+Opening either scope selects its expectation carrier over core's instances whose carrier is
 `Prop`.
 -/
 

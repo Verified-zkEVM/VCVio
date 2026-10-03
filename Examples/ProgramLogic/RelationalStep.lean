@@ -387,11 +387,11 @@ example {oa : OracleComp spec α} {f : α → OracleComp spec β} {g : β → Or
 Not an idiomatic-usage example. The deliberately unfocused `rvcstep` below
 exercises the corner case where `rvcstep` is invoked with sibling goals visible
 in the goal list (the pattern `linter.style.multiGoal` discourages on style
-grounds, but which must still behave *correctly* when used). Previously, when
-the sample subgoal of `relTriple_bind` auto-closed, an unconditional
-swap-and-close pass could pull a trailing sibling ahead of the bind continuation
-and silently discharge it. The fix in `closeSampleAndReorderBindGoals` keeps
-`rest` untouched at the tail. -/
+grounds, but which must still behave *correctly* when used). When the sample
+subgoal of `relTriple_bind` closes by itself, `closeSampleAndReorderBindGoals`
+keeps the sibling goals `rest` untouched at the tail, so no swap-and-close pass
+pulls a trailing sibling ahead of the bind continuation and discharges it
+silently. -/
 
 example {oa : OracleComp spec α} {f g : α → OracleComp spec β}
     (ob : OracleComp spec α)

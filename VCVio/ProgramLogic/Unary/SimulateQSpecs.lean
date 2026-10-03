@@ -135,7 +135,8 @@ The lifts take a handler from the simulated oracles `spec` into a state or write
 oracle world `spec'`: the simulated world itself for the query-tracking handlers of this file, and
 typically `ProbComp` for the handlers of security games. The `StateT` lifts
 `simulateQ_triple_preserves_invariant` and `simulateQ_triple_ranked` take any monad with a core
-reading, so they serve the structural, expectation and upper-bound readings alike. -/
+interpretation, so they serve the necessary, possible, lower and upper readings and the
+probability-valued `OracleComp.Probabilistic` alike. -/
 
 section simulateQ
 
@@ -148,7 +149,7 @@ def HandlerInvariant (σ : Type) (Pred : Type _) := σ → Pred
 
 /-- Generic simulation triple: if every handler call `handler t` preserves an invariant `I` on
 the simulation state, then `simulateQ handler oa` preserves `I` for any `oa : OracleComp spec α`.
-It holds for every reading of the handler's monad `m`: under the structural reading `I` is a
+It holds for every reading of the handler's monad `m`: under the necessary reading `I` is a
 predicate on states, under the upper-bound reading (`OracleComp.Upper`) a potential. The
 per-query triples are verification conditions, one for each query kind, which `vcgen` continues
 into when the handler unfolds. -/

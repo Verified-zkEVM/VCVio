@@ -42,8 +42,8 @@ open OracleSpec OracleComp ENNReal
 
 /-! ## Cost Model, Cost Oracle, Cost Distribution
 
-All definitions below operate at `Type` (= `Type 0`), matching the program logic and structural
-support API.
+All definitions below operate at `Type` (= `Type 0`), matching the program logic and the support
+API.
 -/
 
 variable {ι : Type} {spec : OracleSpec ι} {α : Type} {ω : Type}

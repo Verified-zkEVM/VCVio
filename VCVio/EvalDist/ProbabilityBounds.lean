@@ -18,9 +18,9 @@ Union bounds, event splitting, and conditioning on a common draw are stated for 
 in `Prop`, so intermediate types need no measurable-space arguments in the public statements. The
 common draw may lose mass; lower bounds ask for its losslessness as the trivially true event.
 An observation bounded by one has expectation one exactly when it equals one almost surely, which
-passes a probability-one event through the nested normal form of a bind. Bounds that only need to
-hold on structurally reachable outputs go through core attachment. Conditional independent draws
-bound the squared probability of a single event.
+passes a probability-one event through the nested normal form of a bind. Bounds that need to hold
+only at the possible outputs go through core attachment. Two independent runs of a continuation
+after a common draw bound the squared probability of an event of one run.
 -/
 
 public section
@@ -326,10 +326,10 @@ theorem wp_eq_one_iff_prEvent_eq_one (mx : m α) {g : α → ℝ≥0∞} (hg : �
 
 end probabilityOne
 
-/-! ## Reachable continuations through core attachment
+/-! ## Bounds at the possible outputs through core attachment
 
-Bounds that only hold on structurally reachable outputs of the common draw factor the bind
-through `MonadAttach.attach`, whose outputs carry their reachability proof. -/
+A bound that holds only at the possible outputs of the common draw factors the bind through
+`MonadAttach.attach`, whose outputs carry a proof that they are possible. -/
 
 section attach
 
@@ -356,21 +356,21 @@ theorem wp_eq_wp_attach (mx : m α) (g : α → ℝ≥0∞) :
   conv_lhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   exact ExpectationWP.wp_map _ _ _
 
-/-- Comparing observations on the structurally reachable outputs compares their expectations. -/
+/-- An observation bounded by another at every possible output has at most its expectation. -/
 @[gcongr]
 theorem wp_mono_of_support (mx : m α) {f g : α → ℝ≥0∞}
     (h : ∀ a ∈ support mx, f a ≤ g a) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
   rw [wp_eq_wp_attach mx f, wp_eq_wp_attach mx g]
   exact ExpectationWP.wp_mono _ fun a ↦ h a.1 a.2
 
-/-- Observations that agree on the structurally reachable outputs have equal expectations. -/
+/-- Observations that agree at every possible output have equal expectations. -/
 theorem wp_congr_of_support (mx : m α) {f g : α → ℝ≥0∞}
     (h : ∀ a ∈ support mx, f a = g a) : wp⟦mx⟧ f = wp⟦mx⟧ g :=
   le_antisymm (wp_mono_of_support mx fun a ha ↦ (h a ha).le)
     (wp_mono_of_support mx fun a ha ↦ (h a ha).ge)
 
-/-- Implication between events only on the structurally reachable outputs bounds their
-probabilities. -/
+/-- An event that implies another at every possible output has at most the other's
+probability. -/
 theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
     (h : ∀ a ∈ support mx, p a → q a) :
     Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] := by
@@ -379,32 +379,32 @@ theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
   rw [prEvent_map, prEvent_map]
   exact prEvent_mono _ _ _ fun a ha ↦ h a.1 a.2 ha
 
-/-- Events that agree on every structurally reachable output have equal probability. -/
+/-- Events that agree at every possible output have equal probability. -/
 theorem prEvent_congr_of_support (mx : m α) (p q : α → Prop)
     (h : ∀ a ∈ support mx, p a ↔ q a) :
     Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] :=
   le_antisymm (prEvent_mono_of_support mx p q fun a ha ↦ (h a ha).1)
     (prEvent_mono_of_support mx q p fun a ha ↦ (h a ha).2)
 
-/-- An event avoiding every structurally reachable output has probability zero. -/
+/-- An event that holds at no possible output has probability zero. -/
 theorem prEvent_eq_zero_of_forall_mem_support (mx : m α) (p : α → Prop)
     (h : ∀ a ∈ support mx, ¬ p a) : Pr{let a ← mx}[p a] = 0 :=
   (prEvent_congr_of_support mx p (fun _ ↦ False) fun a ha ↦ iff_false_intro (h a ha)).trans
     (prEvent_eq_zero_of_forall_not mx _ fun _ ↦ id)
 
-/-- An unreachable output has probability zero. -/
+/-- An impossible output has probability zero. -/
 theorem prEvent_eq_zero_of_not_mem_support (mx : m α) {x : α} (hx : x ∉ support mx) :
     Pr{let y ← mx}[y = x] = 0 :=
   prEvent_eq_zero_of_forall_mem_support mx _ fun _ hy h ↦ hx (h ▸ hy)
 
-/-- A bound on the event of every reachable continuation bounds the event after the draw. -/
+/-- A bound on the continuation's event at every possible output bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)
     {ε : ℝ≥0∞} (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :
     Pr{let x ← mx; let y ← f x}[q y] ≤ ε := by
   rw [wp_eq_wp_attach]
   exact wp_le_of_forall_le _ fun a ↦ h a.1 a.2
 
-/-- A comparison of continuation events on the structurally reachable outputs survives a common
+/-- A comparison of continuation events at every possible output of a common draw survives the
 draw. -/
 theorem prEvent_bind_mono_of_forall_le_of_support {γ : Type} (mx : m α) (f : α → m β)
     (g : α → m γ) (p : β → Prop) (q : γ → Prop)
@@ -412,8 +412,8 @@ theorem prEvent_bind_mono_of_forall_le_of_support {γ : Type} (mx : m α) (f : �
     Pr{let x ← mx; let y ← f x}[p y] ≤ Pr{let x ← mx; let y ← g x}[q y] :=
   wp_mono_of_support mx h
 
-/-- A lower bound on the event of every reachable continuation bounds the event after a lossless
-draw. -/
+/-- A lower bound on the continuation's event at every possible output of a lossless draw bounds
+the event after the draw. -/
 theorem le_prEvent_bind_of_forall_le_of_support (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
     (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ε ≤ Pr{let y ← f a}[q y]) :
@@ -421,7 +421,9 @@ theorem le_prEvent_bind_of_forall_le_of_support (mx : m α) (hmx : Pr{let _ ← 
   rw [wp_eq_wp_attach]
   exact le_wp_of_forall_le _ (by rwa [prEvent_true_attach]) fun a ↦ h a.1 a.2
 
-/-- Conditioning on a predicate of the reachable common draw. -/
+/-- Conditioning on a predicate of the common draw: if the continuation's event has probability at
+most `ε` at every possible output that fails the predicate, the event after the draw has
+probability at most that of the predicate plus `ε` times that of its negation. -/
 theorem prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
@@ -432,8 +434,8 @@ theorem prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support (mx : m α) (f : 
   · simp [hpa]
   · simpa [hpa] using h a ha hpa
 
-/-- A continuation event vanishing outside a predicate of the reachable draw is bounded by the
-predicate's probability. -/
+/-- If the continuation's event vanishes at every possible output of the draw that fails a
+predicate, the event after the draw has at most the predicate's probability. -/
 theorem prEvent_bind_le_prEvent_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop)
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] = 0) :
@@ -470,7 +472,9 @@ theorem wp_le_prEvent_add_of_support (mx : m α) (bad : α → Prop) (g : α →
         rw [wp_const]
         exact mul_le_of_le_one_right' (prEvent_le_one mx)
 
-/-- A continuation event bounded outside a predicate of the reachable draw. -/
+/-- If the continuation's event has probability at most `ε` at every possible output of the draw
+that fails a predicate, the event after the draw has probability at most that of the predicate
+plus `ε`. -/
 theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :

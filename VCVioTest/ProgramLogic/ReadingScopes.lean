@@ -10,12 +10,12 @@ public import VCVio.ProgramLogic.Tactics
 /-!
 # Reading scopes of oracle computations
 
-The structural reading is the global `WP` instance of `OracleComp`. The other readings are
-scoped, each registering its `WPMonad` and a direct `WP` instance at priority `1100`, above the
-generic measure scopes (`ExpectationWP.Lower`, `ExpectationWP.Probabilistic`,
-priority `1050`) and below the per-call `Dispatch` scopes (`1200`). Core's assertion carriers are
-output parameters, so exactly one reading is live per program type in a scope; these checks pin
-which one it is under each combination of open scopes, on `ProbComp`.
+The necessary reading is the global `WP` instance of `OracleComp`. The other readings and the
+probability-valued `OracleComp.Probabilistic` are scoped, each registering its `WPMonad` and a
+direct `WP` instance at priority `1100`, above the generic measure scopes (`ExpectationWP.Lower`,
+`ExpectationWP.Probabilistic`, priority `1050`) and below the per-call `Dispatch` scopes (`1200`).
+Core's assertion carriers are output parameters, so exactly one reading is live per program type
+in a scope; these checks pin which one it is under each combination of open scopes, on `ProbComp`.
 -/
 
 public section
@@ -25,7 +25,7 @@ open scoped ENNReal
 
 namespace VCVioTest.ProgramLogic.ReadingScopes
 
-/-! ## No scope: the structural reading -/
+/-! ## No scope: the necessary reading -/
 
 noncomputable example : WP (ProbComp Bool) Bool Prop EStack⟨⟩ := inferInstance
 
@@ -38,7 +38,7 @@ example (oa : ProbComp Bool) (post : Bool → Prop) :
     wp oa post Lean.Order.bot ↔ ∀ a ∈ support oa, post a :=
   Iff.rfl
 
-/-! ## The expectation scope -/
+/-! ## The scope of the lower reading -/
 
 section Quantitative
 open scoped OracleComp.Lower

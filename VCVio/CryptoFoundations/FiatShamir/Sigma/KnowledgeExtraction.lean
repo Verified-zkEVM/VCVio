@@ -16,7 +16,7 @@ import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 An ordinary prover receives its statement and context before running against an empty
 random oracle. Appending the final verification query makes its accepting output forkable.
-The named reduction is the existing replay extractor, including its uniform-witness fallback.
+The named reduction reuses the replay extractor, including its uniform-witness fallback.
 -/
 
 public section

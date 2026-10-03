@@ -33,7 +33,7 @@ The Falcon scheme is an instantiation of the GPV hash-and-sign framework over NT
   `‖(s₁, s₂)‖₂² ≤ ⌊β²⌋`.
 
 The signing flow follows the Falcon+ convention (fresh salt per retry, pk-bound hashing),
-matching the concrete executable signer in `LatticeCrypto.Falcon.Concrete.Sign`.
+matching the concrete executable signer in `Extern.Falcon.Sign`.
 
 ## References
 

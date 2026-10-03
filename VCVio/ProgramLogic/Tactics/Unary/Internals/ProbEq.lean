@@ -60,8 +60,8 @@ def runProbEqSwap : TacticM Bool := do
       | (rw [OracleComp.evalDist_bind_bind_swap_of_uniform]; done))))
 
 /-- Reduce an equality of composed event masses, or of composed output measures, to the
-continuations on the structural support of the shared prefix. The goal left behind quantifies
-over a reachable prefix output and its support hypothesis. -/
+continuations on the support of the shared prefix. The goal left behind quantifies over a
+possible output of the prefix and its support hypothesis. -/
 private def runProbEqCongrCore : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
     first

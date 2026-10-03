@@ -19,9 +19,9 @@ Every challenge and collection query is answered and recorded. The target cap, d
 tweaks, and target/collection disjointness are checked by a sticky final-validity monitor and enter
 the final winning condition.
 
-`TweakableHash.SM_DT_TCR_Experiment` is the live rejection-on-arrival experiment. The declarations
-in `TweakableHash.SM_DT_TCR_SourceFinalValidity` name a distinct adaptive game and do not alter that
-experiment's oracle result types or winning condition, with a proved bridge between the two views:
+`TweakableHash.SM_DT_TCR_Experiment` is the rejection-on-arrival experiment. The declarations
+in `TweakableHash.SM_DT_TCR_SourceFinalValidity` name a distinct adaptive game, with its own oracle
+result types and winning condition, and a proved bridge between the two views:
 `TweakableHash.SM_DT_TCR_advantage_toSourceFinalValidity` converts an adversary against that
 experiment into one against this game at the same advantage.
 

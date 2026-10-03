@@ -20,7 +20,7 @@ is chosen.
 
 This module denotes those instrumented programs directly as Mathlib measures. The canonical
 complexity observer is `queryCountMeasure : Measure ℕ`, which needs no measurable-space choice
-for the dependent path type. A full `pathMeasure` remains available when a caller supplies that
+for the dependent path type. A full `pathMeasure` is available when a caller supplies that
 choice explicitly; no global measurable-space instance on paths is installed.
 -/
 

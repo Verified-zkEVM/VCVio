@@ -31,7 +31,7 @@ The state of `withProgramming` is `(QueryCache × Bool)`:
   same value (so the adversary cannot detect programming via repeat queries).
 * The `Bool` flag is set the **first time** the policy fires on an uncached query — i.e. when
   the programming would be observable relative to standard caching semantics. This is the
-  canonical bad event for the identical-until-bad bound coming in a follow-up PR.
+  canonical bad event of the identical-until-bad bound (see *Auxiliary tracker* below).
 
 The flag is monotone (`bad_monotone`): once set, it stays set throughout execution. With the
 empty policy, the flag stays `false` and the impl is structurally an `extendState`-lift of

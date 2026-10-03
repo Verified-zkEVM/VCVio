@@ -107,30 +107,29 @@ end SingleWorldResourceBad
 
 /-! ## Averaged-state-measure bad accumulator
 
-The single-world accumulator charges a flip cost `R s · ε` **at a fixed reachable state** `s`.
-That is the right shape for a handler that *draws the hidden randomness at the read* (the lazy /
-deferred-sampling handler), where the per-state read charge is the averaged guessing mass
+The single-world accumulator charges a flip cost `R s · ε` at a fixed reachable state `s`. That
+suits a handler that draws the hidden randomness at the read, such as a lazy or
+deferred-sampling handler: there the read charge at each state is the averaged guessing mass
 `R s · ε < 1`.
 
-It is the *wrong* shape for an **eager** handler that *commits the hidden draw upstream*
-(at signing time) and then reads it back deterministically: at a committed state `s` the
-read-hit indicator `1_{mc ∈ slot(s)}` is `0` or `1`, never `ε`. The averaging that produces `ε`
-happened earlier, at the commit draw, and cannot be localized to any fixed read state.
+It does not suit an eager handler, which commits the hidden draw upstream (at signing time) and
+reads it back deterministically. At a committed state `s` the read-hit indicator
+`1_{mc ∈ slot(s)}` is `0` or `1`, never `ε`: the averaging that produces `ε` takes place earlier,
+at the commit draw, and no single read state carries it.
 
-The fix carried here is to average not over a single fixed state but over a **state measure**
-`ν : σ × Bool → ℝ≥0∞`, the law of the eager handler's slot under the pending upstream draws.
+This section therefore averages over a state measure `ν : σ × Bool → ℝ≥0∞`, the law of the eager
+handler's slot under the pending upstream draws, rather than over a single fixed state.
 The averaged bad mass
 
   `avgBadM impl ν oa := ∑' p, ν p · Pr{let z ← (simulateQ impl oa).run p}[z.2.2 = true]`
 
-telescopes through the free monad like `expectedQuerySlack`, but the read step's charge is now
+telescopes through the free monad like `expectedQuerySlack`, with the read step charged
 `∑' p, ν p · 1_{mc ∈ slot(p)}`, a probability over the state law.
 
-The scaffold is stated over a **bare measure** `ν`: the telescoping identities and the
-free-monad induction only use `ν p` as an `ℝ≥0∞` weight, so an **aborting** signing step, whose
-post-step state law loses the rejection mass, is carried as it is. The telescoping splits a
-query step over its answers and successor states, so it assumes countable answer and state
-types. -/
+The results are stated over a bare measure `ν`: the telescoping identities and the free-monad
+induction use `ν p` only as an `ℝ≥0∞` weight, so an aborting signing step, whose post-step state
+law loses the rejection mass, needs no renormalization. The telescoping splits a query step over
+its answers and successor states, so it assumes countable answer and state types. -/
 
 section AveragedStateMeasureBad
 
@@ -271,8 +270,8 @@ lemma avgBadM_query_bind_eq_tsum_output
 
 /-- **Weighted post-step rearrangement.** Summing any post-state functional `F` against the
 post-step measure (over output `u` and post-state `s`) equals the `ν`-average of the per-state
-expected value of `F` after one step. The Fubini bridge used to push a per-state charge bound
-(e.g. ghost-size or membership-charge growth) through the post-step measure.
+expected value of `F` after one step. This Fubini step carries a per-state charge bound, such
+as the growth of a ghost size or of a membership charge, through the post-step measure.
 
 Unlike `avgBadM_query_bind_eq_tsum_output`, which regroups the bad mass of one specific
 continuation, this carries an arbitrary `ℝ≥0∞`-valued functional `F` of the post-state and

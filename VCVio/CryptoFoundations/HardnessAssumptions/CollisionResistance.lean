@@ -133,7 +133,7 @@ For any `t`-query ROM-CR adversary the advantage is bounded by the birthday
 term `(t+2) * (t+1) / (2 * |Y|)` — a `(t+2)`-query game once the two
 verification queries are accounted for.
 
-Closes one of the layers requested in
+This is one of the layers requested in
 [Verified-zkEVM/VCVio#284](https://github.com/Verified-zkEVM/VCVio/issues/284).
 -/
 

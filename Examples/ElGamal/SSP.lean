@@ -305,10 +305,9 @@ Under `dhTripleRand`, the DDH-challenge oracle returns a fresh, uniform third co
 element of `G` and acts as a one-time pad additively masking `m₀` or `m₁`. Pointwise,
 `(b • gen, c • gen + m₀)` and `(b • gen, c • gen + m₁)` therefore have the same distribution.
 
-This is the state-separating analogue of
-`Examples.ElGamal.Basic.IND_CPA_OneTime_DDHReduction_rand_half`: a handler-level
-uniform-masking argument lifted across the whole adversary via
-`OracleComp.evalDist_simulateQ_run_congr`. -/
+This is the state-separating analogue of `IND_CPA_OneTime_DDHReduction_rand_half` in
+`Examples.ElGamal.Basic`: a handler-level uniform-masking argument lifted across the whole
+adversary via `OracleComp.evalDist_simulateQ_run_congr`. -/
 
 section RandSwapSymmetry
 

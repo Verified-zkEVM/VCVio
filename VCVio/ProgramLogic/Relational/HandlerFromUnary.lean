@@ -19,8 +19,8 @@ This file generalizes the unary-to-relational bridge in
 handlers*. It bridges the gap between
 
 * core `Std.WP` triples for `QueryImpl spec (StateT σ (OracleComp spec'))` under the
-  structural reading (`open scoped OracleComp.Necessary`), proved by core `vcgen` and
-  registered via `@[spec]` (e.g. `cachingOracle_triple`, `seededOracle_triple`,
+  necessary reading (the global instance of `OracleComp`), proved by core `vcgen` and
+  registered with `@[spec]` (e.g. `cachingOracle_triple`, `seededOracle_triple`,
   `loggingOracle_triple`), and
 * `RelTriple` couplings on the `.run` distributions of those handlers,
   consumed by `relTriple_simulateQ_run` for whole-program reasoning.
@@ -50,7 +50,7 @@ the underlying unary triples are independent, an external sync argument
 to upgrade pairwise postconditions to output equality plus a state
 invariant.
 
-The lifts fix `OracleSpec.{0, 0}` because the support readings
+The lifts fix `OracleSpec.{0, 0}` because the support characterizations
 `triple_stateT_iff_forall_support` and its writer analogues in
 `VCVio.ProgramLogic.Unary.HandlerSpecs` are stated at that universe.
 -/

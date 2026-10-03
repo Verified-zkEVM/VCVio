@@ -23,9 +23,9 @@ The core idea (from Avanzini-Barthe-Gregoire-Davoli, POPL 2025) is to make pre/p
 `ℝ≥0∞`-valued instead of `Prop`-valued. This subsumes both pRHL (exact coupling, via indicator
 postconditions) and apRHL (ε-approximate coupling, via threshold preconditions).
 
-Output measures of oracle computations with finite response types concentrate on finite
-structural supports, so coupled expectations are finite sums; this supplies the exchange of the
-coupling supremum with the sum behind the bind rule.
+Output measures of oracle computations with finite answer types concentrate on their finite
+supports, so coupled expectations are finite sums; this supplies the exchange of the coupling
+supremum with the sum behind the bind rule.
 
 ## Main results in this file
 

@@ -15,11 +15,11 @@ import Mathlib.Data.Fin.VecNotation
 /-!
 # Additive comparison of observed continuations
 
-Expectations after a common prefix satisfy finite-sum comparison rules: a comparison of an
-observation with finitely many reference observations and an allowance, on the reachable outputs
-of the prefix, holds between their expectations. Measurable observations admit AE premises on a
-chosen prefix law instead. Constant allowances retain the prefix's success mass. Arbitrary hidden
-payloads need no measurable space.
+Expectations after a common prefix satisfy finite-sum comparison rules: if an observation is at
+most a finite sum of reference observations plus an allowance at every possible output of the
+prefix, its expectation is at most the sum of theirs plus the expected allowance. Measurable
+observations admit almost-everywhere premises on a chosen prefix law instead, and a constant
+allowance is weighted by the prefix's success mass. Hidden payloads need no measurable space.
 
 The disagreement rules charge an exceptional event or an observed bad world while sharing this
 argument.
@@ -77,16 +77,16 @@ theorem prEvent_bind_le_prEvent_add_lintegral_ae (mx : m α) (f : α → m β) (
 
 variable [MonadAttach m] [WeaklyLawfulMonadAttach m]
 
-/-- A reachable comparison with finitely many reference observations holds between their
-expectations, retaining the allowance's successful-mass factor. -/
+/-- A comparison with finitely many reference observations at every possible output holds between
+their expectations, with the allowance weighted by the successful mass. -/
 theorem wp_le_sum_add_mul_mass_of_support [Fintype ι] (mx : m α) {f : α → ℝ≥0∞}
     (F : ι → α → ℝ≥0∞) (ε : ℝ≥0∞) (h : ∀ a ∈ support mx, f a ≤ (∑ i, F i a) + ε) :
     wp⟦mx⟧ f ≤ (∑ i, wp⟦mx⟧ (F i)) + ε * Pr{let _ ← mx}[True] :=
   (wp_mono_of_support mx h).trans_eq <| by
     rw [ExpectationWP.wp_add, ExpectationWP.wp_finsetSum, wp_const]
 
-/-- A reachable comparison with finitely many reference observations and a uniform allowance
-holds between their expectations. -/
+/-- A comparison with finitely many reference observations and a constant allowance at every
+possible output holds between their expectations. -/
 theorem wp_le_sum_add_of_support [Fintype ι] (mx : m α) {f : α → ℝ≥0∞} (F : ι → α → ℝ≥0∞)
     (ε : ℝ≥0∞) (h : ∀ a ∈ support mx, f a ≤ (∑ i, F i a) + ε) :
     wp⟦mx⟧ f ≤ (∑ i, wp⟦mx⟧ (F i)) + ε :=
@@ -95,8 +95,8 @@ theorem wp_le_sum_add_of_support [Fintype ι] (mx : m α) {f : α → ℝ≥0∞
 
 variable {γ : Type}
 
-/-- A reachable comparison of a bounded observation with two others outside a disagreement
-event charges the event's probability and a uniform allowance. -/
+/-- A comparison of a bounded observation with two others, at every possible output outside a
+disagreement event, charges the event's probability and a constant allowance. -/
 theorem wp_le_add_add_of_disagree {mx : m α} {f g h : α → ℝ≥0∞} {D : α → Prop}
     {ε₁ ε₂ : ℝ≥0∞} (hD : Pr{let x ← mx}[D x] ≤ ε₁) (hf : ∀ x, f x ≤ 1)
     (hfgh : ∀ x ∈ support mx, ¬D x → f x ≤ g x + h x + ε₂) :
@@ -114,8 +114,8 @@ theorem wp_le_add_add_of_disagree {mx : m α} {f g h : α → ℝ≥0∞} {D : �
         exact add_le_add le_rfl (mul_le_of_le_one_right' (prEvent_le_one _))
     _ ≤ _ := by gcongr
 
-/-- A reachable conditional comparison outside a disagreement event charges its probability
-and a uniform allowance. -/
+/-- A comparison of continuation events, at every possible output outside a disagreement event,
+charges the event's probability and a constant allowance. -/
 theorem prEvent_bind_le_add_of_disagree {mx : m α} {my oc : α → m β}
     {q : β → Prop} {D : α → Prop} {ε₁ ε₂ : ℝ≥0∞}
     (hD : Pr{let x ← mx}[D x] ≤ ε₁)

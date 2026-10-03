@@ -105,7 +105,7 @@ theorem map_replayPathResult_replayFirstPath (main : OracleComp spec α) :
     PFunctor.FreeM.map (replayPathResult main) (replayFirstPath main) = replayFirstRun main :=
   map_pathLogResult_withPath main
 
-/-- A supported intrinsic path erases to a supported legacy first-run result. -/
+/-- A supported intrinsic path erases to a supported result of the first run `replayFirstRun`. -/
 lemma replayPathResult_mem_support_replayFirstRun
     (main : OracleComp spec α) (path : PFunctor.FreeM.Path main)
     (hpath : path ∈ support (replayFirstPath main)) :

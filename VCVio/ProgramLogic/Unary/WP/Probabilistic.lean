@@ -19,7 +19,7 @@ public import VCVio.ProgramLogic.Unary.WP.Probabilistic.Measure
 algebra to this interval gives a core `WPMonad` interpretation with probability-valued
 assertions. `open scoped OracleComp.Probabilistic` selects it.
 
-The underlying value agrees with the quantitative expectation by `wp_val_eq_wp`.
+Its value is the expectation of the postcondition's values in `ℝ≥0∞`, by `wp_val_eq_wp`.
 -/
 
 @[expose] public section
@@ -56,7 +56,7 @@ noncomputable scoped instance (priority := 1100) wpInst :
     Std.WP.WP (OracleComp spec α) α Prob EStack⟨⟩ :=
   (instWP_prob (spec := spec)).toWP α
 
-/-- Forgetting the bound recovers quantitative expectation. -/
+/-- Forgetting the bound recovers the expectation in `ℝ≥0∞`. -/
 theorem wp_val_eq_wp (oa : OracleComp spec α) (post : α → Prob) (epost : EStack⟨⟩) :
     (Std.WP.wp oa post epost).val =
       wp⟦oa⟧ (fun a => (post a).val) :=

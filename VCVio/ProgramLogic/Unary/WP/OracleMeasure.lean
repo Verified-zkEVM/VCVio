@@ -11,8 +11,9 @@ public import VCVio.OracleComp.EvalDist.Measure
 /-!
 # Quantitative correctness from possible oracle outputs
 
-Structural postcondition bounds imply almost-everywhere bounds under the chosen response
-measures. Discrete answers suffice; uniformity and positive answer masses are unnecessary.
+A bound on a postcondition at every possible output bounds its expectation under the chosen
+answer measures. Discrete answers suffice: neither uniform answers nor answers of positive mass
+are needed.
 -/
 
 public section

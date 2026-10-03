@@ -27,7 +27,7 @@ per-step invariant triple to any number of steps by induction on the fuel, with
 Every statement is for an arbitrary monad `m` under an arbitrary `WPMonad m Pred EPred` reading,
 which covers `m = ProbComp` for coin-flip-only protocols and `m = OracleComp superSpec` for
 protocols with a shared random oracle or CRS, under any reading of `OracleComp` such as the
-structural one of `VCVio.ProgramLogic.Unary.WP.Necessary`.
+necessary reading of `VCVio.ProgramLogic.Unary.WP.Necessary`.
 -/
 
 public section
@@ -111,7 +111,7 @@ end Concurrent.ProcessOver
 
 An always-increment process over `Proc := ℕ`: every step advances the counter by one without
 consuming any moves. The per-step triple keeps the counter above a threshold, and
-`runSteps_triple_preserves_invariant` extends it to the whole execution under the structural
+`runSteps_triple_preserves_invariant` extends it to the whole execution under the necessary
 reading of `ProbComp`. -/
 
 namespace Concurrent.ProcessOver.Example

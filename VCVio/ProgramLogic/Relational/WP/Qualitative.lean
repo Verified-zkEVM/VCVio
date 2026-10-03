@@ -14,7 +14,7 @@ public import VCVio.ProgramLogic.Relational.Basic
 
 `OracleComp.Rel.Qualitative` supplies a scoped interpretation of pairs of computations
 by `CouplingPost`, the measure coupling judgment of
-`VCVio.ProgramLogic.Relational.Basic`. It is distinct from unary structural reachability.
+`VCVio.ProgramLogic.Relational.Basic`. It is distinct from the unary necessary reading.
 
 Use `open scoped OracleComp.Rel.Qualitative` to select this carrier.
 -/
@@ -53,19 +53,19 @@ noncomputable scoped instance instRelWP :
 
 /-! ## Definitional alignment with `CouplingPost`
 
-The keystone lemma confirms `VCVio.ProgramLogic.rwp` agrees with `CouplingPost` on
-the nose, so every existing pRHL theorem in
-`VCVio/ProgramLogic/Relational/Basic.lean` transports for free when the
-user rewrites `VCVio.ProgramLogic.rwp _ _ _ _ _ ↦ CouplingPost _ _ _`. -/
+`rwp_eq_couplingPost` states that `VCVio.ProgramLogic.rwp` is `CouplingPost` by
+definition, so every pRHL theorem of `VCVio/ProgramLogic/Relational/Basic.lean`
+applies once `VCVio.ProgramLogic.rwp _ _ _ _ _` is rewritten to
+`CouplingPost _ _ _`. -/
 
 theorem rwp_eq_couplingPost (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → Prop) :
     VCVio.ProgramLogic.rwp oa ob post Lean.Order.bot Lean.Order.bot =
       OracleComp.ProgramLogic.Relational.CouplingPost oa ob post := rfl
 
-/-- `VCVio.ProgramLogic.RelTriple` agrees with the qualitative `RelTriple`
-propositionally. With `pre := True` and the two exception slots set to
-`Lean.Order.bot`, the new triple is exactly the existing one. -/
+/-- With precondition `True` and both exception postconditions `Lean.Order.bot`,
+`VCVio.ProgramLogic.RelTriple` of this carrier is the coupling triple
+`OracleComp.ProgramLogic.Relational.RelTriple`. -/
 theorem relTriple_iff_relTriple_basic
     (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (R : OracleComp.ProgramLogic.Relational.RelPost α β) :

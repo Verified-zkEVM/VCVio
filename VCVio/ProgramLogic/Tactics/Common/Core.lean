@@ -319,11 +319,11 @@ key agrees with the patterns produced by `Sym.mkPatternFromDeclWithKey`.
 structure constructor.
 
 Do not use the more general `Sym.preprocessType` here. Besides being intended
-for declaration types rather than terms, in Lean 4.33 it also unfolds reducible
+for declaration types rather than terms, it also unfolds reducible
 user programs. A program containing a matcher can then make later
 definitional equality reduce a matcher with loose de Bruijn variables and
-panic in `whnfEasyCases`. The wrappers below are the only newly
-reducible declarations whose shapes registry lookup needs to expose. -/
+panic in `whnfEasyCases`. Registry lookup needs to expose the shapes of the three
+wrappers below, the reducible aliases of their PolyFun counterparts. -/
 def symMatchKey (e : Expr) : MetaM Expr := do
   let e ← instantiateMVars e
   Meta.transform e (pre := fun e => do

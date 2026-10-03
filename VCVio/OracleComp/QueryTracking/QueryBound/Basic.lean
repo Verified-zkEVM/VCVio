@@ -464,9 +464,9 @@ end IsQueryBoundP
 `oa` may query without counting queries at all.  `allQueriesSatisfy_def` recovers the generic
 form, and `isQueryBoundP_zero_iff` identifies it with `IsQueryBoundP` at budget zero, so the
 predicate-targeted API applies to it as well.  The structural laws below restate the generic
-`@[simp]` lemmas at the new head symbol; `allQueriesSatisfy_bind` and `allQueriesSatisfy_ofFnM`
-additionally discharge the `combine` side conditions of `isQueryBound_bind`, which the unit
-budget makes trivial. -/
+`@[simp]` lemmas at the head symbol `AllQueriesSatisfy`; `allQueriesSatisfy_bind` and
+`allQueriesSatisfy_ofFnM` additionally discharge the `combine` side conditions of
+`isQueryBound_bind`, which the unit budget makes trivial. -/
 
 section AllQueriesSatisfy
 

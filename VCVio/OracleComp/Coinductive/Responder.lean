@@ -33,7 +33,7 @@ transcript form lives here rather than upstream.
 
 Memoryless oracles embed as responders with trivial (`ProbResponder.ofHandler`) or
 constant (`ProbResponder.ofHandlerFamily`) state, and the wired run then collapses to
-the existing memoryless runs `OracleStrategy.kleisliStep` / `kleisliIterate`
+the memoryless runs `OracleStrategy.kleisliStep` / `kleisliIterate`
 (`stepAgainst_ofHandler` and companions) — the setup-indexed family form of the upstream
 stateless collapses `PFunctor.DynSystem.stepWith_lift` / `iterWith_lift`. The
 per-run-sampled oracle of a one-shot security game is exactly the constant-state case.
@@ -641,7 +641,7 @@ theorem stepAgainst_ofDet (A : OracleStrategy S spec) {σ : Type}
 
 /-! ## Memoryless recovery
 
-Against a constant-state responder the wired run is the existing memoryless Kleisli
+Against a constant-state responder the wired run is the memoryless Kleisli
 run against the selected handler, with the setup carried along unchanged — the
 setup-indexed family form of the upstream `PFunctor.DynSystem.stepWith_lift` /
 `iterWith_lift` collapses (the family handler is state-dependent, so it is not literally

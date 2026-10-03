@@ -73,7 +73,7 @@ to `spec.query t` (because `(spec.query t).cont = id`). That artifact is
 harmless when `spec.Range t` is concrete (it disappears under definitional
 reduction), but in *parametric* sum-spec contexts (`(E₁ + E₂).Range (Sum.inl t)`
 vs `E₁.Range t`, both abstract atoms) the type annotations diverge and
-`id_map` no longer fires under `simp only`. This lemma sidesteps the artifact
+`id_map` does not fire under `simp only`. This lemma sidesteps the artifact
 entirely and is the canonical entry point for simplifying `simulateQ` over an
 explicit `spec.query t`. -/
 @[grind =]

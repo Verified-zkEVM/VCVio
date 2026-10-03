@@ -12,11 +12,11 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.OracleComp.Coercions.SubSpec.Basic
 
 /-!
-# `vcgen` rules for the structural reading of oracle computations
+# `vcgen` rules for the necessary reading of oracle computations
 
-Under `open scoped OracleComp.Necessary` a triple `⦃ pre ⦄ oa ⦃ post ⦄` says that every
-structurally reachable output of `oa` satisfies `post` when `pre` holds. The rules below let core's
-`vcgen` step through the common primitives of oracle computations in that reading:
+Under the necessary reading, the global instance of `OracleComp`, a triple `⦃ pre ⦄ oa ⦃ post ⦄`
+says that every possible output of `oa` satisfies `post` when `pre` holds. The rules below let
+core's `vcgen` step through the common primitives of oracle computations in that reading:
 
 * `Spec.uniformSample` and `Spec.uniformFin`: a uniform draw (`$ᵗ β`, `$[0..n]`) may return any
   value;
@@ -30,10 +30,10 @@ applies to every program, so it is not registered; passing it for an opaque sub-
 `vcgen [Spec.ofSupport keygen]`, exposes the support hypothesis in the verification condition.
 
 The query rules `Spec.query` and `Spec.monadLift_query`, with the `HasQuery.query` unfold, are in
-`VCVio.ProgramLogic.Unary.WP.Necessary`. The bridges between structural triples and events of
-probability one or zero are in `VCVio.ProgramLogic.Unary.WP.Coherence`.
+`VCVio.ProgramLogic.Unary.WP.Necessary`. The bridges between triples of this reading and events
+of probability one or zero are in `VCVio.ProgramLogic.Unary.WP.Coherence`.
 
-`OracleComp.Necessary.Dispatch` registers the structural reading at a priority above every
+`OracleComp.Necessary.Dispatch` registers the necessary reading at a priority above every
 reading a file opens, for per-call use (`open scoped OracleComp.Necessary.Dispatch in vcgen`).
 -/
 
@@ -77,7 +77,7 @@ theorem Spec.replicate (n : ℕ) (oa : OracleComp spec α) (post : List α → P
     exact h xs hxs.1 hxs.2⟩
 
 /-- Lifting to a larger oracle world keeps the possible outputs. The precondition is the
-structural weakest precondition of the lifted program, so `vcgen` continues into it. -/
+necessary weakest precondition of the lifted program, so `vcgen` continues into it. -/
 @[spec]
 theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
     [spec ⊂ₒ superSpec] [spec ˡ⊂ₒ superSpec] (oa : OracleComp spec α) (post : α → Prop)
@@ -101,13 +101,13 @@ namespace OracleComp.Necessary.Dispatch
 
 variable {ι : Type u} {spec : OracleSpec ι}
 
-/-- The structural reading at the priority of a per-call scope, above every reading a file opens:
+/-- The necessary reading at the priority of a per-call scope, above every reading a file opens:
 `open scoped OracleComp.Necessary.Dispatch in vcgen`. -/
 noncomputable scoped instance (priority := 1200) instWP :
     Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
   OracleComp.Necessary.instWP
 
-/-- The per-call structural reading as a direct `WP` instance, which outranks direct instances of
+/-- The per-call necessary reading as a direct `WP` instance, which outranks direct instances of
 other readings. -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α Prop EStack⟨⟩ :=

@@ -22,7 +22,7 @@ state machine; what is genuinely generic — and lives here — is:
 
 * **i.i.d. bind-commutation**: an answer-irrelevant draw commutes past its continuation at the
   level of output measures (`OracleComp.evalDist_bind_bind_swap`), a lossless value-irrelevant
-  prefix can be dropped, and continuations with equal output measures on every reachable value
+  prefix can be dropped, and continuations with equal output measures at every possible value
   give equal output measures after a draw (`OracleComp.evalDist_bind_congr_of_support`).
 * **The list-multiplicity ε-kernel** (`lintegral_count_le`): one fresh draw, independent of a
   value-free list `rl`, contributes expected multiplicity `E[rl.count key] ≤ ε · rl.length`

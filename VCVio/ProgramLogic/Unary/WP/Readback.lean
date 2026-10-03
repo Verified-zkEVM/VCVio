@@ -11,11 +11,11 @@ public import VCVio.Prelude.Core
 /-!
 # Readback of the bound readings' verification conditions
 
-Core's `vcgen` leaves the verification conditions of a quantitative triple in the vocabulary of
-its lattice: `Lean.Order.PartialOrder.rel` for the order, `binderNameHint` on continuations, the
-`pushOption`/`pushExcept` of a transformer's postcondition, the reading's bottom, and, under the
-upper-bound reading, everything inside `OrderDual.toDual`. The two simp sets registered here read
-those conditions back into `≤` on `ℝ≥0∞`:
+Core's `vcgen` leaves the verification conditions of a triple of the lower or upper reading in the
+vocabulary of its lattice: `Lean.Order.PartialOrder.rel` for the order, `binderNameHint` on
+continuations, the `pushOption`/`pushExcept` of a transformer's postcondition, the reading's
+bottom, and, under the upper reading, everything inside `OrderDual.toDual`. The two simp sets
+registered here read those conditions back into `≤` on `ℝ≥0∞`:
 
 * `lower_readback`: `rel` is `≤`, the bottom is `0`, a predicate indicator is an indicator;
 * `upper_readback`: `rel` is `≤` with its sides swapped (`OracleComp.Upper.rel_iff`), and

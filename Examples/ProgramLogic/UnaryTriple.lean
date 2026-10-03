@@ -10,9 +10,9 @@ public import VCVio.ProgramLogic.Tactics.PrVCGen
 public import VCVio.OracleComp.Constructions.Replicate.Basic
 
 /-!
-# Quantitative triples with `prvcgen`
+# Lower-bound triples with `prvcgen`
 
-`prvcgen` runs core's `vcgen` on a quantitative triple `⦃ pre ⦄ oa ⦃ post ⦄` of an oracle
+`prvcgen` runs core's `vcgen` on a triple `⦃ pre ⦄ oa ⦃ post ⦄` of the lower reading of an oracle
 computation, whose assertions are expectations in `ℝ≥0∞`. `vcgen` steps through binds, branches
 and matches, applies triples of sub-programs found in the local context, and uses the registered
 `@[spec]` rules; a loop takes an invariant, as an explicit rule such as `triple_replicate` or as

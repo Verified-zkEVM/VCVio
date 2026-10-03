@@ -17,20 +17,20 @@ public import PolyFun.Control.Monad.Algebra.WP
 public import PolyFun.Control.Do.Spec
 
 /-!
-# Quantitative weakest preconditions
+# The lower reading: expectations as weakest preconditions
 
 The expectation algebra on `OracleComp spec` is a core `WPMonad` interpretation with `ℝ≥0∞`
-assertions, selected by `open scoped OracleComp.Lower`: under it, `wp oa post ⊥`, core
-triples and `vcgen` read expectations, with lower-bound triples `pre ≤ wp⟦oa⟧ post`. The
-notations `Pr{…}[…]`, `𝔼{…}[…]` and `wp⟦oa⟧ g` name this interpretation explicitly, so they mean
-the expectation in every scope. The algebra-to-WP bridge and lattice instances come from PolyFun.
-The transformer lemmas describe expectation after running state, reader, option, exception, and
-writer layers.
+assertions. `open scoped OracleComp.Lower` selects it as the lower reading: `wp oa post ⊥`, core
+triples and `vcgen` then read expectations, and a triple `⦃ pre ⦄ oa ⦃ post ⦄` states the lower
+bound `pre ≤ wp⟦oa⟧ post`. The notations `Pr{…}[…]`, `𝔼{…}[…]` and `wp⟦oa⟧ g` name this
+interpretation explicitly, so they mean the expectation in every scope. The algebra-to-WP bridge
+and lattice instances come from PolyFun. The transformer lemmas describe expectation after running
+state, reader, option, exception, and writer layers.
 
 Core selects one interpretation per program type, since its assertion carriers are output
-parameters: the global reading of `OracleComp` is the structural one
-(`OracleComp.Necessary`), and this scope, like `OracleComp.Upper` and
-`OracleComp.Probabilistic`, takes precedence while it is open.
+parameters: the global reading of `OracleComp` is the necessary one (`OracleComp.Necessary`), and
+this scope, like `OracleComp.Possible`, `OracleComp.Upper` and `OracleComp.Probabilistic`, takes
+precedence while it is open.
 -/
 
 public section
@@ -75,8 +75,8 @@ noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
   ExpectationWP.wpMonad (OracleComp spec)
 
-/-- The expectation reading as a direct `WP` instance on programs, at the scope's priority, so
-that no direct instance of another scope outranks it while this one is open. -/
+/-- The lower reading as a direct `WP` instance on programs, at the scope's priority, so that no
+direct instance of another scope outranks it while this one is open. -/
 noncomputable scoped instance (priority := 1100) wpInst :
     Std.WP.WP (OracleComp spec α) α ℝ≥0∞ EStack⟨⟩ :=
   (instWP (spec := spec)).toWP α

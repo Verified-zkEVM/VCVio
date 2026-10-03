@@ -17,10 +17,10 @@ public import Mathlib.Tactic.GRewrite
 # Generalized congruence and rewriting
 
 Ordinary-import tests for probability, equality in distribution, support, cost predicates, and
-measure bind. Terminal
-examples exercise `gcongr`, `grw`, and `rel`; interactive examples pin the obligations exposed by
-congruence and rewrite normalization. Dated gap pairs distinguish partial progress from closure.
-The companion `GeneralizedRelationsExperiments` module isolates proposed registrations.
+measure bind. Terminal examples exercise `gcongr`, `grw`, and `rel`; interactive examples pin the
+obligations exposed by congruence and rewrite normalization. Dated gap pairs distinguish partial
+progress from closure. The companion `GeneralizedRelationsExperiments` module isolates proposed
+registrations.
 -/
 
 public section
@@ -36,7 +36,7 @@ run_cmd do
 
 namespace VCVioTest.GeneralizedRelations
 
-/-! ## Existing expectation and event rules -/
+/-! ## Expectation and event rules -/
 
 section Probability
 

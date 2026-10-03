@@ -13,12 +13,13 @@ public import VCVio.ProgramLogic.Unary.WP.Lower
 /-!
 # Quantitative relational weakest preconditions
 
-The local relational WP interface interprets pairs of oracle computations through `eRelWP`.
-It shares core's assertion lattices and exception-postcondition types. Its coupling
-semantics and asymmetric bind rules belong to VCVio's relational logic.
+VCVio's relational WP interface `VCVio.ProgramLogic.RelWP` interprets pairs of oracle
+computations through `eRelWP`. It shares core's assertion lattices and exception-postcondition
+types; its coupling semantics and asymmetric bind rules are VCVio's own.
 
-Enable the quantitative carrier with `open scoped OracleComp.Rel.Quantitative`.
-The qualitative and probability-bounded carriers have separate scopes.
+`open scoped OracleComp.Rel.Quantitative` selects this `ℝ≥0∞`-valued carrier. The `Prop`-valued
+and probability-bounded carriers have their own scopes, `OracleComp.Rel.Qualitative` and
+`OracleComp.Rel.Probabilistic`.
 -/
 
 @[expose] public section
@@ -42,11 +43,10 @@ variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
 /-- Quantitative `VCVio.ProgramLogic.RelWP` interpretation of pairs of `OracleComp`
 programs valued in `ℝ≥0∞`.
 
-The `rwpTrans` is the existing `eRelWP` (the supremum over couplings
-of expected values); the two `EStack⟨⟩` arguments are ignored since
-neither side of an `OracleComp` pair has a first-class exception slot.
-The three `RelWP` axioms reduce to the existing `eRelWP_pure`,
-`eRelWP_bind_le`, `eRelWP_mono` lemmas. -/
+Its `rwpTrans` is `eRelWP`, the supremum over couplings of the expected
+value. The two `EStack⟨⟩` arguments are ignored, since an `OracleComp`
+computation raises no exceptions. The three `RelWP` axioms are the
+lemmas `eRelWP_pure_le`, `eRelWP_bind_le` and `eRelWP_mono`. -/
 noncomputable scoped instance instRelWP :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) ℝ≥0∞
       EStack⟨⟩ EStack⟨⟩ where
@@ -67,17 +67,17 @@ noncomputable scoped instance instRelWP :
 
 /-! ## Definitional alignment with `eRelWP`
 
-The keystone lemma confirms `VCVio.ProgramLogic.rwp` agrees with `eRelWP` on the
-nose, so every existing eRHL theorem in
-`VCVio/ProgramLogic/Relational/Quantitative.lean` transports for free
-when the user rewrites `VCVio.ProgramLogic.rwp _ _ _ _ _ ↦ eRelWP _ _ _`. -/
+`rwp_eq_eRelWP` states that `VCVio.ProgramLogic.rwp` is `eRelWP` by definition,
+so every eRHL theorem of `VCVio/ProgramLogic/Relational/Quantitative.lean`
+applies once `VCVio.ProgramLogic.rwp _ _ _ _ _` is rewritten to
+`eRelWP _ _ _`. -/
 
 theorem rwp_eq_eRelWP (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → ℝ≥0∞) :
     VCVio.ProgramLogic.rwp oa ob post Lean.Order.bot Lean.Order.bot =
       OracleComp.ProgramLogic.Relational.eRelWP oa ob post := rfl
 
-/-- `VCVio.ProgramLogic.RelTriple` agrees with the raw quantitative lower-bound form. -/
+/-- A triple of this carrier is the lower bound `pre ≤ eRelWP oa ob post`. -/
 theorem relTriple_iff_eRelWP_le
     (pre : ℝ≥0∞) (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → ℝ≥0∞) :

@@ -13,7 +13,7 @@ public import VCVio.EvalDist.MeasureSemantics
 # Measure semantics of resumptions
 
 PolyFun's `PFunctor.Resumption` represents computations that may expose infinitely many visible
-queries and never return. The primitive denotational observations here follow its existing
+queries and never return. The primitive denotational observations here follow its
 `Resumption.truncate` surface:
 
 * `truncateMeasure k computation` is a probability measure on `Option β`; `none` records that the

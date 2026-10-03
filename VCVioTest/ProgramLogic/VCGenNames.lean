@@ -20,7 +20,7 @@ leading token with core's. This file pins that state:
   `prvcgen` and `prrw` to VCVio's;
 * `prvcgen` closes quantitative core triples over oracle computations, including `StateT` state
   operations and lifted oracle computations;
-* a bare `vcgen` elaborates core's tactic on `Prop`-valued triples under the structural reading
+* a bare `vcgen` elaborates core's tactic on `Prop`-valued triples under the necessary reading
   `OracleComp.Necessary`, with VCVio's tactics imported.
 -/
 

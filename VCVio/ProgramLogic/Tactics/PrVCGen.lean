@@ -60,7 +60,7 @@ a simpler route:
 * `= 1` is the necessary triple when uniform answers are available, whose verification
   conditions are the event itself at every possible output and whose rule catalogue is the
   largest; otherwise it splits, the upper half closes on the range of the indicator
-  (`wp_le_of_forall_le`), and the lower half is run in the expectation reading.
+  (`wp_le_of_forall_le`), and the lower half is run in the lower reading.
 
 The split settles both halves outright with the every-outcome rules, and with a loop invariant or
 handler potential that pins the value exactly. With the averaging rules each half ends in a sum,
@@ -81,7 +81,7 @@ An invariant shared by the two halves is written without a carrier ascription, a
 `fun _ suff c => ↑c + ↑suff.length`, so that each half elaborates it in its own carrier.
 `prvcgen => tac` runs `tac` in place of `vcgen`, on each half of an equation.
 
-The verification conditions of the expectation readings are read back into `ℝ≥0∞`
+The verification conditions of the lower and upper readings are read back into `ℝ≥0∞`
 (`Lean.Order.rel_eq_le`; `OracleComp.Upper.rel_iff`, `ofDual_toDual`,
 `OracleComp.Upper.ofDual_wp`, and Mathlib's `ofDual_add`, …), and those an indicator's range
 settles or that are reflexive are closed (`propInd_le_one`, `one_le_propInd_iff`, `le_refl`).
@@ -335,8 +335,8 @@ partial def bridge (goal : Expr) : TacticM Plan := do
     with `𝔼\{…}[…]` or `wp⟦…⟧ …`), `∀ x ∈ support oa, p x`, `∃ x ∈ support oa, p x`, or a \
     triple `⦃ pre ⦄ oa ⦃ post ⦄`"
 
-/-- Read the verification conditions of the expectation readings back into `ℝ≥0∞`, closing those
-that an indicator's range settles. -/
+/-- Read the verification conditions of the lower and upper readings back into `ℝ≥0∞`, closing
+those that an indicator's range settles. -/
 def normalizeVCs : Reading → TacticM Unit
   | .lower => do
     evalTactic (← `(tactic| all_goals simp -failIfUnchanged only [lower_readback]))
@@ -366,10 +366,11 @@ syntax (name := prvcgenStx) "prvcgen" Lean.Parser.Tactic.optConfig
 
 namespace OracleComp.ProgramLogic.PrVCGen
 
-/-- The generic measure scope a bridged triple needs beside the reading's per-call scope, read
-off the triple's instance: a bound over a monad other than `OracleComp` is stated with the
-instance of `ExpectationWP.Upper` or of `ExpectationWP`'s interpretation, and the rules passed
-for its sub-programs elaborate under that scope. -/
+/-- The scope of the generic expectation interpretation behind a triple, opened beside the
+reading's per-call scope. A bound over a monad other than `OracleComp` is stated with
+`ExpectationWP.Upper`'s instance or with `ExpectationWP`'s own interpretation; under the matching
+scope (`ExpectationWP.Upper` or `ExpectationWP.Lower`), the rules passed for its sub-programs
+elaborate in the same interpretation. Any other triple needs no such scope. -/
 def genericScope? (goal : Expr) : Option Name :=
   let goal := goal.cleanupAnnotations
   if !goal.isAppOfArity ``Std.WP.Triple 11 then none else

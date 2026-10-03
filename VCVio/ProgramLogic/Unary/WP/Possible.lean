@@ -15,12 +15,12 @@ public import VCVio.EvalDist.Monad.Option
 public import VCVio.EvalDist.Monad.Except
 
 /-!
-# The angelic reading of oracle computations
+# The possible reading of oracle computations
 
-The angelic interpretation of `OracleComp spec` (PolyFun's `MonadAttach.toWPMonadAngelic`) reads
-`wp oa post ⊥` as "some structurally reachable output of `oa` satisfies `post`". Under
+PolyFun's angelic interpretation `MonadAttach.toWPMonadAngelic` gives the possible reading of
+`OracleComp spec`: `wp oa post ⊥` states that some possible output of `oa` satisfies `post`. Under
 `open scoped OracleComp.Possible` a triple `⦃ True ⦄ oa ⦃ p ⦄` states that `p` is possible, and
-core's `vcgen` decomposes it. Like the structural reading it needs no probability interpretation.
+core's `vcgen` decomposes it. Like the necessary reading it needs no probability interpretation.
 
 ## Bridges
 
@@ -31,8 +31,8 @@ core's `vcgen` decomposes it. Like the structural reading it needs no probabilit
 * `pos_wp_iff_of_fullSupport` and `pos_wp_eq_wp`: positivity of an expectation, the form the nested
   expectations of an event's normal form take.
 
-A possible outcome of positive probability needs answers of positive mass: without them a
-structurally reachable output can carry no mass.
+The bridges to a positive probability need answers of positive mass: without them a possible
+output can carry no mass.
 
 ## Rules and the witness pattern
 
@@ -47,8 +47,8 @@ rw [OracleComp.Possible.wp_iff_triple]
 open scoped OracleComp.Possible in vcgen
 ```
 
-or with `prvcgen` (`VCVio.ProgramLogic.Tactics.PrVCGen`), which recognizes the remaining angelic
-weakest precondition. The angelic reading is not conjunctive: core's `Triple.and` does not apply.
+or with `prvcgen` (`VCVio.ProgramLogic.Tactics.PrVCGen`), which recognizes the remaining possible
+weakest precondition. The possible reading is not conjunctive: core's `Triple.and` does not apply.
 
 `OracleComp.Possible.Dispatch` registers the same reading at a priority above every reading a file
 opens, for per-call use (`open scoped OracleComp.Possible.Dispatch in vcgen`).
@@ -71,42 +71,42 @@ namespace OracleComp.Possible
 
 variable {ι : Type u} {spec : OracleSpec ι} {α : Type}
 
-/-- Core weakest preconditions for some structurally reachable output. Opening the scope selects
-it over the structural reading. -/
+/-- Core weakest preconditions for some possible output. Opening the scope selects it over the
+global necessary reading. -/
 noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
   MonadAttach.toWPMonadAngelic
 
-/-- The angelic reading as a direct `WP` instance on programs, at the scope's priority, so that
+/-- The possible reading as a direct `WP` instance on programs, at the scope's priority, so that
 no direct instance of another scope outranks it while this one is open. -/
 noncomputable scoped instance (priority := 1100) wpInst :
     Std.WP.WP (OracleComp spec α) α Prop EStack⟨⟩ :=
   (instWP (spec := spec)).toWP α
 
-/-- The angelic weakest precondition holds exactly when some possible output satisfies the
+/-- A possible weakest precondition holds exactly when some possible output satisfies the
 postcondition. -/
 theorem wp_iff_exists_support (oa : OracleComp spec α) (post : α → Prop) :
     Std.WP.wp oa post Lean.Order.bot ↔ ∃ a ∈ support oa, post a :=
   Iff.rfl
 
-/-- A triple of the angelic reading: from its precondition, some possible output satisfies the
+/-- A triple of the possible reading: from its precondition, some possible output satisfies the
 postcondition. -/
 theorem triple_iff (oa : OracleComp spec α) (pre : Prop) (post : α → Prop) :
     ⦃ pre ⦄ oa ⦃ post ⦄ ↔ (pre → ∃ a ∈ support oa, post a) :=
   Triple.iff
 
-/-- A possible outcome is an angelic triple from `True`. -/
+/-- A possible outcome is a triple of the possible reading from `True`. -/
 theorem exists_mem_support_iff_triple (oa : OracleComp spec α) (p : α → Prop) :
     (∃ x ∈ support oa, p x) ↔ ⦃ True ⦄ oa ⦃ p ⦄ :=
   ⟨fun h => ⟨fun _ => h⟩, fun h => h.le_wp trivial⟩
 
-/-- An angelic weakest precondition left by `vcgen` after a witness is named is again a triple,
+/-- A possible weakest precondition left by `vcgen` after a witness is named is again a triple,
 which `vcgen` continues through. -/
 theorem wp_iff_triple (oa : OracleComp spec α) (post : α → Prop) :
     Std.WP.wp oa post Lean.Order.bot ↔ ⦃ True ⦄ oa ⦃ post ⦄ :=
   exists_mem_support_iff_triple oa post
 
-/-- An angelic weakest precondition of an optional computation, with failure forbidden, is a
+/-- A possible weakest precondition of an optional computation, with failure forbidden, is a
 triple of core's `OptionT` lift of the reading from `True`. -/
 theorem OptionT.wp_iff_triple (mx : OptionT (OracleComp spec) α) (post : α → Prop) :
     Std.WP.wp mx post (fun _ => False, Lean.Order.bot) ↔
@@ -114,7 +114,7 @@ theorem OptionT.wp_iff_triple (mx : OptionT (OracleComp spec) α) (post : α →
   rw [Triple.iff]
   exact ⟨fun h _ => h, fun h => h trivial⟩
 
-/-- An angelic weakest precondition of an exceptional computation, with exceptions forbidden, is
+/-- A possible weakest precondition of an exceptional computation, with exceptions forbidden, is
 a triple of core's `ExceptT` lift of the reading from `True`. -/
 theorem ExceptT.wp_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α)
     (post : α → Prop) :
@@ -159,7 +159,7 @@ theorem Spec.replicate (n : ℕ) (oa : OracleComp spec α) (post : List α → P
   ⟨fun ⟨xs, hlen, hmem, h⟩ =>
     ⟨xs, show xs ∈ support (oa.replicate n) by rw [support_replicate]; exact ⟨hlen, hmem⟩, h⟩⟩
 
-/-- Lifting to a larger oracle world keeps the possible outputs. The precondition is the angelic
+/-- Lifting to a larger oracle world keeps the possible outputs. The precondition is the possible
 weakest precondition of the lifted program, so `vcgen` continues into it. -/
 @[spec]
 theorem Spec.liftComp {τ : Type u'} {superSpec : OracleSpec τ}
@@ -233,7 +233,7 @@ theorem prEvent_pos_iff_of_fullSupport
   rw [pos_wp_iff_of_fullSupport hfull]
   simp only [predInd_apply, propInd_pos_iff]
 
-/-- When every answer of every query has positive mass, a positive probability is an angelic
+/-- When every answer of every query has positive mass, a positive probability is a possible
 triple from `True`. -/
 theorem prEvent_pos_iff_triple_of_fullSupport
     (hfull : ∀ t (u : spec.Range t), 0 < OracleSpec.AnswerMeasure.toMeasure t {u})
@@ -244,13 +244,13 @@ theorem prEvent_pos_iff_triple_of_fullSupport
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι} [OracleSpec.UniformAnswerMeasure spec]
   {α : Type}
 
-/-- Under uniform answers, a positive probability is an angelic triple from `True`. -/
+/-- Under uniform answers, a positive probability is a possible triple from `True`. -/
 theorem prEvent_pos_iff_triple (oa : OracleComp spec α) (p : α → Prop) :
     0 < Pr{let x ← oa}[p x] ↔ ⦃ True ⦄ oa ⦃ p ⦄ :=
   prEvent_pos_iff_triple_of_fullSupport
     (fun t u => OracleSpec.UniformAnswerMeasure.toMeasure_singleton_pos t u) oa p
 
-/-- Under uniform answers, positivity of an expectation is the angelic weakest precondition of
+/-- Under uniform answers, positivity of an expectation is the possible weakest precondition of
 positivity. As an equation of propositions it rewrites the nested expectations of an event's
 normal form. -/
 theorem pos_wp_eq_wp (oa : OracleComp spec α) (g : α → ℝ≥0∞) :
@@ -259,7 +259,7 @@ theorem pos_wp_eq_wp (oa : OracleComp spec α) (g : α → ℝ≥0∞) :
     (fun t u => OracleSpec.UniformAnswerMeasure.toMeasure_singleton_pos t u) oa g)
 
 /-- Under uniform answers, an event of an optional computation is positive exactly when some run
-succeeds with an output satisfying it: a triple of core's `OptionT` lift of the angelic reading
+succeeds with an output satisfying it: a triple of core's `OptionT` lift of the possible reading
 from `True`, with failure forbidden. -/
 theorem OptionT.prEvent_pos_iff_triple (mx : OptionT (OracleComp spec) α) (p : α → Prop) :
     0 < Pr{let x ← mx}[p x] ↔ ⦃ True ⦄ mx ⦃ p; (fun _ => False, Lean.Order.bot) ⦄ := by
@@ -270,7 +270,7 @@ theorem OptionT.prEvent_pos_iff_triple (mx : OptionT (OracleComp spec) α) (p : 
     (funext fun o => by cases o <;> rfl))
 
 /-- Under uniform answers, an event of an exceptional computation is positive exactly when some
-run returns an output satisfying it: a triple of core's `ExceptT` lift of the angelic reading
+run returns an output satisfying it: a triple of core's `ExceptT` lift of the possible reading
 from `True`, with exceptions forbidden. -/
 theorem ExceptT.prEvent_pos_iff_triple {E : Type} (mx : ExceptT E (OracleComp spec) α)
     (p : α → Prop) :
@@ -282,7 +282,7 @@ theorem ExceptT.prEvent_pos_iff_triple {E : Type} (mx : ExceptT E (OracleComp sp
     (funext fun r => by cases r <;> rfl))
 
 /-- Under uniform answers, positivity of an expectation over an optional computation is the
-angelic weakest precondition, with failure forbidden, of positivity. -/
+possible weakest precondition, with failure forbidden, of positivity. -/
 theorem OptionT.pos_wp_eq_wp (mx : OptionT (OracleComp spec) α) (g : α → ℝ≥0∞) :
     (0 < wp⟦mx⟧ g) = Std.WP.wp mx (fun a => 0 < g a) (fun _ => False, Lean.Order.bot) := by
   rw [_root_.OptionT.wp_eq_run, OracleComp.Possible.pos_wp_eq_wp]
@@ -291,7 +291,7 @@ theorem OptionT.pos_wp_eq_wp (mx : OptionT (OracleComp spec) α) (g : α → ℝ
     (funext fun o => by cases o <;> simp [Lean.Order.pushOption])
 
 /-- Under uniform answers, positivity of an expectation over an exceptional computation is the
-angelic weakest precondition, with exceptions forbidden, of positivity. -/
+possible weakest precondition, with exceptions forbidden, of positivity. -/
 theorem ExceptT.pos_wp_eq_wp {E : Type} (mx : ExceptT E (OracleComp spec) α) (g : α → ℝ≥0∞) :
     (0 < wp⟦mx⟧ g) = Std.WP.wp mx (fun a => 0 < g a) (fun _ => False, Lean.Order.bot) := by
   rw [_root_.ExceptT.wp_eq_run, OracleComp.Possible.pos_wp_eq_wp]
@@ -305,13 +305,13 @@ namespace OracleComp.Possible.Dispatch
 
 variable {ι : Type u} {spec : OracleSpec ι}
 
-/-- The angelic reading at the priority of a per-call scope, above every reading a file opens:
+/-- The possible reading at the priority of a per-call scope, above every reading a file opens:
 `open scoped OracleComp.Possible.Dispatch in vcgen`. -/
 noncomputable scoped instance (priority := 1200) instWP :
     Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
   OracleComp.Possible.instWP
 
-/-- The per-call angelic reading as a direct `WP` instance, which outranks direct instances of
+/-- The per-call possible reading as a direct `WP` instance, which outranks direct instances of
 other readings. -/
 noncomputable scoped instance (priority := 1200) wpInst {α : Type} :
     Std.WP.WP (OracleComp spec α) α Prop EStack⟨⟩ :=

@@ -140,7 +140,7 @@ def IND_CPA_queryImpl' (encAlg : AsymmEncAlg ProbComp M PK SK C)
       (fun mm => if b then mm.1 else mm.2))
 
 /-- The cached left/right oracle as a probabilistic responder. This is a thin wrapper around
-`IND_CPA_queryImpl'`; the existing `StateT ProbComp` implementation remains the source of truth. -/
+`IND_CPA_queryImpl'`, whose `StateT ProbComp` implementation is the source of truth. -/
 @[reducible] noncomputable def IND_CPA_responder (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (b : Bool) : ProbResponder encAlg.IND_CPA_oracleSpec :=
   .ofQueryImpl (encAlg.IND_CPA_queryImpl' pk b)
@@ -148,7 +148,7 @@ def IND_CPA_queryImpl' (encAlg : AsymmEncAlg ProbComp M PK SK C)
 @[simp] theorem IND_CPA_responder_state (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (b : Bool) : (encAlg.IND_CPA_responder pk b).State = encAlg.IND_CPA_Cache := rfl
 
-/-- Machine-level reading of the existing IND-CPA oracle execution: any machine implementing
+/-- Machine-level reading of the IND-CPA oracle execution: any machine implementing
 the program adversary within fuel `k` runs exactly the program's cached interpretation, jointly in
 its output and final cache. -/
 theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C)
@@ -255,8 +255,8 @@ def IND_CPA_LR_hybrid
     (∅, 0)
 
 /-- One-step counter monotonicity for the counted real IND-CPA implementation. A uniform query
-leaves the state unchanged; a challenge query is stepped by core `vcgen` as a structural triple,
-read against the support by `triple_stateT_iff_forall_support`. -/
+leaves the state unchanged. A challenge query is stepped by core `vcgen` as a triple of the
+necessary reading, which `triple_stateT_iff_forall_support` reads against the support. -/
 lemma IND_CPA_queryImpl'_counted_counter_le_succ
     (pk : PK) (b : Bool)
     (t : encAlg'.IND_CPA_oracleSpec.Domain)
@@ -503,7 +503,7 @@ lemma IND_CPA_hybridLR_counted_run_eq_of_le
       (by simp [show ¬(st.2 < k) from by omega, show ¬(st.2 < k + 1) from by omega])
 
 /-- Counter monotonicity for the hybrid LR counted oracle: the counter never decreases. A
-challenge query is stepped by core `vcgen` as a structural triple. -/
+challenge query is stepped by core `vcgen` as a triple of the necessary reading. -/
 lemma IND_CPA_hybridLR_counted_counter_le
     (pk : PK) (k : ℕ)
     (t : encAlg'.IND_CPA_oracleSpec.Domain)

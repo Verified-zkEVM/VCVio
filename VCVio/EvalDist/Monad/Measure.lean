@@ -154,7 +154,7 @@ theorem evalDist_bind_apply_le_add_of_disagree (mx : m α) (f g : α → m β)
   rw [evalDist_bind mx f hf, evalDist_bind mx g hg]
   exact Measure.bind_apply_le_add_of_disagree _ _ _ hf hg hbad hevent hgood
 
-/-! ## Reachability and measurable observations -/
+/-! ## Possible outputs and measurable observations -/
 
 namespace evalDist
 

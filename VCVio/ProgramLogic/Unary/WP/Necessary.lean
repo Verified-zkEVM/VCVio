@@ -11,16 +11,17 @@ public import Std.WP
 public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
 /-!
-# Structural weakest preconditions
+# The necessary reading of oracle computations
 
-The structural core `WPMonad` interpretation quantifies over every structurally reachable
-output of `OracleComp spec`, independently of a probability interpretation. It is the global
-instance of `OracleComp`, as core's own `Prop`-valued instances are for its monads: a triple
+The necessary reading is the core `WPMonad` interpretation of `OracleComp spec` that quantifies
+over every possible output, with no probability interpretation. It is the global instance of
+`OracleComp`, as core's own `Prop`-valued instances are for its monads: a triple
 `⦃ pre ⦄ oa ⦃ post ⦄` with no scope open says that every possible output satisfies `post`. The
-expectation readings are selected by their scopes (`OracleComp.Lower`, `OracleComp.Upper`).
+other readings (`OracleComp.Possible`, `OracleComp.Lower`, `OracleComp.Upper`) and the
+probability-valued `OracleComp.Probabilistic` are scoped; each takes precedence while it is open.
 
-`wp_iff_forall_support` states it against the structural support. Probability-one coherence
-additionally needs the uniform, finite-support assumptions stated in `Unary/WP/Coherence.lean`.
+`wp_iff_forall_support` states it against the support. Reading an event of probability one as a
+triple also needs uniform answers, or answers of positive mass (`Unary/WP/Coherence.lean`).
 -/
 
 public section

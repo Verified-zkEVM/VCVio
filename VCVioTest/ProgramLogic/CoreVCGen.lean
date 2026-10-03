@@ -21,7 +21,7 @@ sample of the lower-reading rules and the transformer rules are exercised with a
 * necessary reading (the global instance): uniform draws `$ᵗ` and `$[0..n]`,
   `replicate`, `liftComp`, an opaque sub-program through `Spec.ofSupport`, a sum handler lifted to
   a whole simulation into `ProbComp`, and an append-log handler lifted to a whole simulation;
-* events as structural triples: probability one, mass one on `true`, and probability zero;
+* events as necessary triples: probability one, mass one on `true`, and probability zero;
 * lower reading (`open scoped OracleComp.Lower`): lower bounds through queries and `$ᵗ`, an event
   normal form, a support-conditioned bind, and a scaled adversary spec;
 * the transformers' constructors, lifts and runners, `List.mapM` with an invariant, the sequence
@@ -35,7 +35,7 @@ open OracleSpec OracleComp Std.WP ENNReal OracleComp.ProgramLogic
 
 namespace VCVioTest.ProgramLogic.CoreVCGen
 
-/-! ## Structural reading -/
+/-! ## Necessary reading -/
 
 section Structural
 
@@ -121,7 +121,7 @@ example {α : Type} (log₀ : QueryLog spec) (oa : OracleComp spec α) :
 
 end Structural
 
-/-! ## Events as structural triples -/
+/-! ## Events as necessary triples -/
 
 section Bridges
 
@@ -156,7 +156,7 @@ example (α : Type) [SampleableType α] (f : α → ℕ) :
 
 end Bridges
 
-/-! ## Quantitative reading -/
+/-! ## Lower reading -/
 
 section Quantitative
 

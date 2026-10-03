@@ -317,8 +317,8 @@ example : Pr{let b ← $ᵗ Bool}[b = true] < 1 := by
 
 /-! ## Equations, by antisymmetry
 
-An equation `Pr{…}[p] = c` splits into the upper bound (dual reading) and the lower bound
-(expectation reading); the rules, invariants and tail go to both halves, each half keeping the
+An equation `Pr{…}[p] = c` splits into the upper bound (upper reading) and the lower bound
+(lower reading); the rules, invariants and tail go to both halves, each half keeping the
 rules stated in its reading. -/
 
 /-- Every-outcome rules settle both halves. -/

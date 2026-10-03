@@ -21,7 +21,7 @@ providing rules that let program logic proofs pass through oracle simulation bou
 ## Main results
 
 - `wp_simulateQ_eq`: If an oracle implementation preserves distributions, then `wp` is preserved.
-- `wp_liftComp`: Lifting a computation to a larger oracle spec preserves `wp`.
+- `wp_liftComp`: Lifting a computation along a measure-preserving inclusion keeps `wp`.
 - `wp_simulateQ_run'_eq`: Stateful oracle implementations that preserve distributions
   preserve `wp`.
 -/

@@ -12,8 +12,8 @@ public import Mathlib.InformationTheory.KullbackLeibler.DataProcessing
 /-!
 # Kullback-Leibler divergence between denoted programs
 
-The measure denotation of `VCVio.EvalDist.PFunctorMeasure` puts VCVio programs inside Mathlib's
-probability library, and this module spends that access on the Kullback-Leibler divergence.
+The measure denotation of `VCVio.EvalDist.PFunctorMeasure.Core` places VCVio programs in Mathlib's
+probability library. This module applies it to the Kullback-Leibler divergence.
 
 Nothing here is a port. `Measure.bind` *is* composition of a measure with a kernel — Mathlib
 writes it `κ ∘ₘ μ` — so a program's `>>=` is already the object

@@ -23,11 +23,11 @@ attribute [local instance] Fintype.ofFinite
 
 /-! ## Support and counting invariants
 
-Structural facts about reachable states of the counting handler; none needs any structure on
-the commitment type `C`. Per-query facts are structural triples for `hidingImplCountAll`, proved
-by core `vcgen` and read against the support with `triple_stateT_iff_forall_support`; facts about
-whole runs lift a per-query invariant with `simulateQ_triple_preserves_invariant` or, for a
-query-budgeted count, `simulateQ_triple_ranked`. -/
+Facts about the reachable states of the counting handler, none of which needs any structure on
+the commitment type `C`. Per-query facts are triples of the necessary reading for
+`hidingImplCountAll`, proved by core `vcgen` and read against the support with
+`triple_stateT_iff_forall_support`. Facts about whole runs lift a per-query invariant with
+`simulateQ_triple_preserves_invariant` or, for a query-budgeted count, `simulateQ_triple_ranked`. -/
 
 section HandlerInvariants
 

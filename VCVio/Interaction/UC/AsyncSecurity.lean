@@ -61,8 +61,8 @@ Process tickets are the only ticket category lifted in this file.
 Env tickets reduce to `Event` itself, but their fairness story is
 governed entirely by the env scheduler (i.e. by the `isFair`
 predicate the user supplies). Lifting a unified ticket type
-carrying both process and env tickets is a deliberate non-goal at
-this stage: the two sides have different enable conditions and
+carrying both process and env tickets is a deliberate non-goal:
+the two sides have different enable conditions and
 different adversary-control attributions and are easier to reason
 about separately.
 

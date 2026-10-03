@@ -16,9 +16,9 @@ public import VCVio.OracleComp.Constructions.SampleableType.Basic
 # KEM + DEM Composition
 
 This file defines the textbook KEM+DEM public-key encryption construction and the proof-ladders A1
-reduction skeleton against the repo's existing KEM and one-time IND-CPA interfaces. Correctness of
-the composition follows from that of its components, on reachable outputs and with probability
-one, in any monad with the corresponding semantics.
+reduction skeleton against the repository's KEM and one-time IND-CPA interfaces. Correctness of
+the composition follows from that of its components, at every possible output and with
+probability one, in any monad with the corresponding semantics.
 -/
 
 @[expose] public section

@@ -60,7 +60,7 @@ noncomputable scoped instance (priority := 1050) wpInst {α : Type} : WP (m α) 
 
 variable {m} {α : Type}
 
-/-- The bounded interpretation's values are the quantitative algebra's expectations. -/
+/-- The bounded interpretation's values are the expectations of the `ℝ≥0∞`-valued algebra. -/
 @[simp]
 theorem wp_val (mx : m α) (post : α → Prob) (epost : EStack⟨⟩) :
     (wp mx post epost).val =

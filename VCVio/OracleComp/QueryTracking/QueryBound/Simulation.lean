@@ -1075,7 +1075,8 @@ lemma QueryUpperBound.apply [DecidableEq ι]
 means that for each oracle index there is a polynomial function `qb` of the security parameter,
 such that the number of queries to that oracle is bounded by the corresponding polynomial.
 
-Currently used only in `CostModel.lean`; retained as scaffolding for future asymptotic analyses. -/
+It is one efficiency notion to which the asymptotic security games of
+`VCVio.CryptoFoundations.Asymptotics.Security` can specialize their abstract `isPPT` predicate. -/
 structure PolyQueries {ι : Type} [DecidableEq ι] {spec : ℕ → OracleSpec ι}
     {α β : ℕ → Type} (oa : (n : ℕ) → α n → OracleComp (spec n) (β n)) where
   /-- `qb i` is a polynomial bound on the queries made to oracle `i`. -/

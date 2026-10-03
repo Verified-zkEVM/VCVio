@@ -22,10 +22,10 @@ weakest-precondition API for `OracleComp`. The laws below specialize the generic
 computations, which are lossless, and add the oracle-specific ones: queries, uniform sampling,
 replication and traversals.
 
-The expectation interpretation is the scoped core instance of `OracleComp spec`
-(`OracleComp.Lower.instWP`, under `open scoped OracleComp.Lower`), so core's `⦃ pre ⦄ program ⦃ post
-⦄` notation, available through `open scoped Std.WP`, states these triples: it is `Std.WP.Triple
-program pre post ⊥`, with the empty exception postcondition.
+The lower reading (`OracleComp.Lower.instWP`, selected by `open scoped OracleComp.Lower`) is the
+expectation interpretation as a core instance of `OracleComp spec`, so core's triple notation
+`⦃ pre ⦄ program ⦃ post ⦄`, available through `open scoped Std.WP`, states these triples: it is
+`Std.WP.Triple program pre post ⊥`, with the empty exception postcondition.
 -/
 
 @[expose] public section
@@ -68,11 +68,11 @@ theorem wp_eq_lintegral_map (oa : OracleComp spec α) (post : α → ℝ≥0∞)
 
 /-! ## `wp` lemmas (against `wp _ _`)
 
-The structural equations of an expectation are the generic ones, `ExpectationWP.wp_pure`,
-`wp_bind`, `wp_map` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite` (the `expect_norm` set);
-linearity, `wp_add` and `wp_const_mul`, is the `expect_arith` set; a constant observation of an
-oracle computation is `ExpectationWP.wp_const_of_oracle`. The rules below unfold the loop
-combinators (`expect_eval`). -/
+An expectation passes through the monad operations by the generic equations
+`ExpectationWP.wp_pure`, `wp_bind`, `wp_map` and PolyFun's `ExactWPMonad.wp_ite` / `wp_dite`
+(the `expect_norm` set). Linearity, `wp_add` and `wp_const_mul`, is the `expect_arith` set, and a
+constant observation of an oracle computation is `ExpectationWP.wp_const_of_oracle`. The rules
+below unfold the loop combinators (`expect_eval`). -/
 
 attribute [expect_arith] ExpectationWP.wp_add ExpectationWP.wp_const_mul
 
@@ -186,8 +186,8 @@ lemma prEvent_eq_wp_propInd {ι : Type u} {spec : OracleSpec ι}
     Pr{let x ← oa}[p x] = wp⟦oa⟧ (fun x => propInd (p x)) := rfl
 
 open scoped Classical in
-/-- Finite-response computations integrate assertions by a finite partition of reachable outputs.
-The output labels need no measurable-space instance. -/
+/-- A computation with finite answer types integrates an assertion as a finite sum over its
+possible outputs. The output type needs no measurable-space instance. -/
 theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (oa : OracleComp spec α)
     (post : α → ℝ≥0∞) :
     wp⟦oa⟧ post = ∑ x ∈ finSupport oa, Pr{let y ← oa}[y = x] * post x := by
@@ -208,7 +208,7 @@ theorem wp_eq_sum_finSupport [∀ t, Fintype (spec.Range t)] [DecidableEq α] (o
       split_ifs <;> simp
 
 open scoped Classical in
-/-- The finite reachable-output partition extends to an event-weighted sum. -/
+/-- The finite sum over the possible outputs extends to an event-weighted sum over all outputs. -/
 theorem wp_eq_tsum [∀ t, Finite (spec.Range t)] (oa : OracleComp spec α) (post : α → ℝ≥0∞) :
     wp⟦oa⟧ post = ∑' x, Pr{let y ← oa}[y = x] * post x := by
   let : DecidableEq α := Classical.decEq α

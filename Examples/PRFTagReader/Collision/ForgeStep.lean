@@ -15,12 +15,12 @@ import VCVio.ProgramLogic.Unary.WP.Upper
 /-!
 # PRF Tag/Reader Protocol — Collision Bound, Per-Step Forge Infrastructure
 
-Per-step random-oracle infrastructure for the random-function authentication world: cache
-monotonicity of `authRFLookup` (the `StateT.PreservesInv` lemmas, each a structural triple proved
-by core `vcgen`), single-point miss bounds for
-fresh lookups, the per-query step core, and the per-reader-step forge bound
-`authRFReaderStep_forge_le` together with the reader lookup pass `authRFReaderLookups` and its
-log characterization `authRFLookup_mapM_logs_eq`.
+Per-step random-oracle infrastructure for the random-function authentication world. It contains
+the cache monotonicity of `authRFLookup` (the `StateT.PreservesInv` lemmas, each a triple of the
+necessary reading proved by core `vcgen`), single-point miss bounds for fresh lookups, the
+per-query step core, and the per-reader-step forge bound `authRFReaderStep_forge_le`, together
+with the reader lookup pass `authRFReaderLookups` and its log characterization
+`authRFLookup_mapM_logs_eq`.
 
 The collision-bound theorems built on this infrastructure live in the parent module
 `Examples.PRFTagReader.Collision`.
@@ -41,7 +41,8 @@ section Triples
 
 open Std.WP OracleComp.ProgramLogic
 
-/-- A structural triple preserving `I` is the support statement `StateT.PreservesInv`. -/
+/-- A triple of the necessary reading that preserves `I` gives the support statement
+`StateT.PreservesInv`. -/
 private theorem preservesInv_of_triple {σ α : Type} {mx : StateT σ ProbComp α} {I : σ → Prop}
     (h : ⦃ I ⦄ mx ⦃ fun _ => I ⦄) : StateT.PreservesInv mx I :=
   fun s hs _ hz => (triple_stateT_iff_forall_support _ _ _ ⊥).1 h s hs _ _ hz

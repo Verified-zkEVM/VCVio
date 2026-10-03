@@ -14,9 +14,9 @@ public import VCVio.ProgramLogic.Tactics.Unary
 `prrw` proves equalities between the `Pr{…}[…]` events of two programs: `prrw` swaps adjacent
 independent binds, `prrw under n` swaps them under `n` shared prefixes, `prrw congr` and
 `prrw congr'` reduce a shared prefix, and `prrw normalize` searches for a sequence of these steps
-that closes the goal. Oracle responses carry a chosen discrete measure specification; swaps use
-countable responses, and congruence leaves the continuations on the structural support of the
-shared prefix.
+that closes the goal. The oracle answers carry chosen answer measures (`OracleSpec.AnswerMeasure`);
+swaps need countable answer types, and congruence leaves the continuations to compare on the
+support of the shared prefix.
 -/
 
 @[expose] public section

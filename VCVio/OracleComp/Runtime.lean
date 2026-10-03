@@ -71,7 +71,8 @@ def resume (previous : RunResult Γ α) (next : α → OracleComp Surface β) :
   (fun result => RunResult.mk result.output result.state
     (previous.trace ++ result.trace)) <$> Γ.runFrom previous.state (next previous.output)
 
-/-- Membership in structural runner support, not positive probability for arbitrary specs. -/
+/-- Membership in the runner's support: a possible result, not necessarily one of positive
+probability for arbitrary specs. -/
 def GeneratedBy (program : OracleComp Surface α) (result : RunResult Γ α) : Prop :=
   result ∈ support (Γ.run program)
 
@@ -122,9 +123,9 @@ theorem run_bind (program : OracleComp Surface α)
       Γ.run program >>= fun a => Γ.resume a next := by
   simp only [run, runFrom_bind, bind_assoc]
 
-/-- A generated result's output and surface log belong to the original logged program's
-structural support. Stateful interpretation may restrict possible answers, but cannot invent a
-surface execution. No probability-spec assumption is required. -/
+/-- A generated result's output and surface log form a possible output of the original logged
+program. Stateful interpretation may restrict possible answers, but cannot invent a surface
+execution. No probability-spec assumption is required. -/
 theorem mem_support_logged_of_generatedBy (program : OracleComp Surface α)
     (result : RunResult Γ α) (generated : Γ.GeneratedBy program result) :
     (result.output, result.trace) ∈ support program.withQueryLog := by

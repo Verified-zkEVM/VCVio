@@ -19,7 +19,7 @@ that type. This module states that identity, the expectation form `wp_eq_tsum`, 
 of the bind, `pure`, map and total variation laws, for arguments that are clearest as weighted sums
 over outputs.
 
-Expectations `wp⟦oa⟧ f` and integrals `∫⁻ x, f x ∂𝒟[oa]` remain the primary API; these sums are
+Expectations `wp⟦oa⟧ f` and integrals `∫⁻ x, f x ∂𝒟[oa]` are the primary API; these sums are
 equal to them.
 -/
 

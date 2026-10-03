@@ -16,8 +16,9 @@ import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 Structural `query_bind`-decomposition lemmas for the composed ideal handlers (turning the
 coupling induction into a sequence of `bind`-decomposition steps), together with per-query
-reductions and `bad` monotonicity for `unlinkBadQueryImpl`. The monotonicity is a structural
-triple proved by core `vcgen` and lifted to whole runs by `simulateQ_triple_preserves_invariant`.
+reductions and `bad` monotonicity for `unlinkBadQueryImpl`. The monotonicity is a triple of the
+necessary reading, proved by core `vcgen` and lifted to whole runs by
+`simulateQ_triple_preserves_invariant`.
 -/
 
 @[expose] public section
@@ -140,8 +141,8 @@ section BadMonotone
 
 open Std.WP OracleComp.ProgramLogic
 
-/-- The `bad` flag of `unlinkBadQueryImpl` is monotone, as a structural triple: a query answered
-from a state with `bad = true` ends in a state with `bad = true`. -/
+/-- The `bad` flag of `unlinkBadQueryImpl` is monotone, as a triple of the necessary reading: a
+query answered from a state with `bad = true` ends in a state with `bad = true`. -/
 theorem unlinkBadQueryImpl_triple_bad (t : (UnlinkOracleSpec TagId Nonce Digest).Domain) :
     ⦃ fun s => s.bad = true ⦄
       unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)

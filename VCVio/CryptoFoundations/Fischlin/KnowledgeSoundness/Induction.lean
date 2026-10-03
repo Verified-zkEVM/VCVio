@@ -754,10 +754,9 @@ theorem knowledgeSoundness
 /-! ### EUF-CMA Security
 
 A tight EUF-CMA corollary for the Fischlin signature scheme requires an explicit
-simulation of signing queries inside a hard-relation experiment. The previous
-placeholder theorem overclaimed by bounding forgery probability solely by the
-knowledge-soundness error, so we intentionally leave that corollary unstated
-until the signing-simulation reduction is formalized. -/
+simulation of signing queries inside a hard-relation experiment. Bounding the forgery
+probability by the knowledge-soundness error alone would overclaim, so the corollary
+is left unstated until the signing-simulation reduction is formalized. -/
 
 end security
 

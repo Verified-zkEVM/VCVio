@@ -19,8 +19,8 @@ interface retains service state in its premise because later adaptive calls may 
 hidden from the immediate response.
 
 Stateful simulation from a sampled initial state satisfies an event with probability one
-whenever every structurally possible output of the original computation does: simulation only
-shrinks operational support, so no property of the handler is needed.
+whenever every possible output of the original computation does: simulation only shrinks the
+support, so no property of the handler is needed.
 -/
 
 public section

@@ -64,9 +64,8 @@ bounded traversals, bind decomposition, or random/query coupling.
 - `simulateQ` state relation
 
 `rvcstep left` and `rvcstep right` expose controlled one-sided bind steps for
-raw `VCVio.ProgramLogic.rwp` and folded `VCVio.ProgramLogic.RelTriple` goals. They do not
-run as part
-of default relational automation, because choosing an asynchronous split fixes a
+raw `VCVio.ProgramLogic.rwp` and folded `VCVio.ProgramLogic.RelTriple` goals. They are not part
+of the default relational automation, because choosing an asynchronous split fixes a
 coupling frontier.
 
 `rvcstep sym` swaps the two sides of a qualitative `RelTriple` goal and swaps

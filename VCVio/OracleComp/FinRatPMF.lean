@@ -15,8 +15,8 @@ public import VCVio.EvalDist.ProbabilityNotation
 # Executable `FinRatPMF` Semantics for `OracleComp`
 
 The computable oracle evaluator uses `FinRatPMF.Raw`. Its output measure agrees with uniform
-oracle semantics, and its positive-weight outputs are exactly the oracle program's structurally
-reachable outputs.
+oracle semantics, and its positive-weight outputs are exactly the oracle program's possible
+outputs.
 -/
 
 @[expose] public section

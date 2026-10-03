@@ -30,8 +30,8 @@ holds for every scheme:
 Definitions are not linted. Exceptions are maintained by the repository's exact `nolints.json`
 baseline. `VCVio.Prelude.Core` imports this module so that the linters are available to every
 VCVio library, which is why it sits below the framework although it names VCVio's module roots and
-computation types. The option `linter.securityStatements.everywhere` lints every module, for the linters'
-own fixtures.
+computation types. The option `linter.securityStatements.everywhere` lints every module, for the
+linters' own fixtures.
 -/
 
 public meta section

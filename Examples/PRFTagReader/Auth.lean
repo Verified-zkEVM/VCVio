@@ -620,8 +620,8 @@ section IdealUnwinnable
 open Std.WP OracleComp.ProgramLogic
 
 /-- In the ideal authentication world, a forged reader acceptance never occurs. Every query keeps
-the forgery log empty while every cached digest belongs to an honest transcript, a structural
-triple lifted to the whole run by `simulateQ_triple_preserves_invariant`. -/
+the forgery log empty while every cached digest belongs to an honest transcript, a triple of the
+necessary reading lifted to the whole run by `simulateQ_triple_preserves_invariant`. -/
 theorem authIdealExperiment_eq_zero
     (adversary : AuthAdversary TagId Nonce Digest) :
     𝒟[authIdealExperiment adversary] {true} = 0 := by
