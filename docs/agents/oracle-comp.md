@@ -8,9 +8,12 @@ An oracle specification maps index types to response types:
 def OracleSpec (ι : Type u) : Type _ := ι → Type v
 ```
 
-Concretely, `spec t` is the response type at query index `t : ι`. `OracleSpec ι` is the `B`-component of a polynomial functor with position type `A := ι`; `spec.toPFunctor` packages the two together, and `OracleSpec.ofPFunctor` is its inverse (both `rfl`-invertible). This is the connection that makes `OracleComp` a free monad: see [`OracleComp`](#oraclecomp) below.
+Concretely, `spec t` is the response type at query index `t : ι`. `OracleSpec ι` is the
+`B`-component of a polynomial functor with position type `A := ι`; `spec.toPFunctor` packages the
+two together, and `OracleSpec.ofPFunctor` is its inverse (both `rfl`-invertible). This is the
+connection that makes `OracleComp` a free monad: see [`OracleComp`](#oraclecomp) below.
 
-`OracleSpec` remains a parameterized family rather than becoming a structure
+`OracleSpec` is a parameterized family rather than a structure
 alias for `PFunctor`: function application and the `Domain` / `Range` façade
 give dependent oracle code useful expected types, while `toPFunctor` exposes
 the generic algebra without a data conversion. In particular, `spec₁ + spec₂`
@@ -41,9 +44,9 @@ Required typeclass instances for probability reasoning:
 - `𝒟[…]` needs a `MeasurableSpace` on the result type; `Pr{…}[…]` observes a `Prop` and needs
   none on intermediate results.
 
-Structural support, handler composition, instrumentation, and query bounds need no probability
-interpretation. Finite uniform queries are a sampling specialization, not a requirement of the
-measure API.
+The support (the set of possible outputs), handler composition, instrumentation and query bounds
+need no probability interpretation. Finite uniform queries are a sampling specialization, not a
+requirement of the measure API.
 
 ## OracleComp
 
@@ -78,25 +81,22 @@ ordinary-execution equality and the distinguishing replay observation together.
 
 ### Possible outputs and `MonadAttach`
 
-Use `OracleComp.reachableWhen possibleOutputs oa` when possible query responses
-depend on the oracle interface. It is the `Set` view of PolyFun's
-`FreeM.reachableUnder`, obtained by folding the angelic per-operation predicate
-transformer over the free tree. The pure, query, bind, and monotonicity laws are
-available as `reachableWhen_pure`, `reachableWhen_query`,
-`reachableWhen_bind`, and `reachableWhen_mono`. Use `reachableWhen` rather than the deprecated
-`supportWhen`.
+Use `OracleComp.reachableWhen possibleOutputs oa` when the oracles' answers are restricted: it is
+the set of outputs of `oa` when each query `t` is answered only from `possibleOutputs t`. It is
+PolyFun's `FreeM.reachableUnder`, the set view of PolyFun's angelic predicate transformer folded
+over the free tree with each operation restricted to the allowed answers. The `pure`, query,
+bind and monotonicity laws are `reachableWhen_pure`, `reachableWhen_query`, `reachableWhen_bind`
+and `reachableWhen_mono`. Use `reachableWhen` rather than the deprecated `supportWhen`.
 
-`support oa` admits every typed response; `reachableWhen_univ_eq_support`
-connects it to the operation-indexed construction. The generic `support` name
-is re-exported from PolyFun's `MonadAttach.support` for existing value-level
-proofs. `MonadAttach.CanReturn` certifies what a computation can return; the
-additional `ExactMonadAttach` laws justify the familiar pure and bind support
-equations. They do not supply an oracle policy or an initial state. In
-particular, use a state-indexed execution or handler semantics for state
-monads, where a flattened value-level support loses the relation between the
-initial and final states. The operation-indexed API lives in PolyFun because
-it is a property of free programs, independently of VCVio's probability
-interpretation.
+`support oa` admits every answer, and `reachableWhen_univ_eq_support` identifies it with
+`reachableWhen` for the policy that allows every answer. `support` is PolyFun's
+`MonadAttach.support`, which VCVio exports under that name. `MonadAttach.CanReturn` certifies
+what a computation can return, and the additional `ExactMonadAttach` laws give the familiar
+equations of the support for `pure` and bind. Neither fixes a policy for answering queries or an
+initial state: for a state monad, reason with an execution indexed by the initial state or with
+the handler's semantics, since the support of the flattened computation loses the relation
+between initial and final states. The answer-indexed API lives in PolyFun because it is a
+property of free programs, independent of VCVio's probability interpretation.
 
 ### Key lemmas
 
@@ -107,7 +107,12 @@ interpretation.
 
 ### `query` resolution: `HasQuery.query` (monadic) vs `spec.query` (primitive)
 
-The bare identifier `query` is the `export`ed `HasQuery.query`, so `query t : OracleComp spec _` (or any `m` with `HasQuery spec m`) returns the result in the ambient monad and supports `𝒟[(query t : OracleComp spec _)]` directly. Use `spec.query t` (or `OracleSpec.query t`) when you need the primitive single-query syntax `OracleQuery spec _` for `liftM`, `OracleQuery.cont`, structural induction, etc. The `OracleSpec.query` definition is `protected`; the dot-notation form `spec.query t` works regardless.
+The bare identifier `query` is the `export`ed `HasQuery.query`, so `query t : OracleComp spec _` (or
+any `m` with `HasQuery spec m`) returns the result in the ambient monad and supports
+`𝒟[(query t : OracleComp spec _)]` directly. Use `spec.query t` (or `OracleSpec.query t`) when you
+need the primitive single-query syntax `OracleQuery spec _` for `liftM`, `OracleQuery.cont`,
+structural induction, etc. The `OracleSpec.query` definition is `protected`; the dot-notation form
+`spec.query t` works regardless.
 
 ### Elimination pattern
 
@@ -121,7 +126,8 @@ induction oa using OracleComp.inductionOn with
 
 ## SubSpec (⊂ₒ)
 
-`spec ⊂ₒ superSpec` means every query in `spec` can be simulated in the larger specification without changing the distribution.
+`spec ⊂ₒ superSpec` means every query in `spec` can be simulated in the larger specification without
+changing the distribution.
 
 ```lean
 class SubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
@@ -135,41 +141,70 @@ class SubSpec (spec : OracleSpec.{u, w} ι) (superSpec : OracleSpec.{v, w} τ)
 
 ### Lens semantics
 
-`onQuery` and `onResponse` together package a `PFunctor.Lens spec.toPFunctor superSpec.toPFunctor` (call it `h.toLens`):
+`onQuery` and `onResponse` together package a `PFunctor.Lens spec.toPFunctor superSpec.toPFunctor`
+(call it `h.toLens`):
 
 | Class field | Lens field |
 |-------------|------------|
 | `onQuery : spec.Domain → superSpec.Domain` | `toFunA : P.A → Q.A` |
 | `onResponse t : superSpec.Range (onQuery t) → spec.Range t` | `toFunB t : Q.B (toFunA t) → P.B t` |
 
-By the Yoneda lemma for polynomial functors this lens data is in bijection with natural transformations `OracleQuery spec ⟹ OracleQuery superSpec`. The `MonadLift` parent records that natural transformation; the `liftM_eq_lift` field is the propositional coherence axiom forcing it to agree with the lens. Concrete `SubSpec` instances spell `monadLift` out *by hand* (rather than letting it default from the lens data), so that the lifted query reduces fully under `isDefEq` — this lets pattern-matching equations about lifted queries, such as `liftComp_query`, apply through their registered automation or explicitly by name.
+By the Yoneda lemma for polynomial functors this lens data is in bijection with natural
+transformations `OracleQuery spec ⟹ OracleQuery superSpec`. The `MonadLift` parent records that
+natural transformation; the `liftM_eq_lift` field is the propositional coherence axiom forcing it to
+agree with the lens. Concrete `SubSpec` instances spell `monadLift` out *by hand* (rather than
+letting it default from the lens data), so that the lifted query reduces fully under `isDefEq` —
+this lets pattern-matching equations about lifted queries, such as `liftComp_query`, apply through
+their registered automation or explicitly by name.
 
-`SubSpec.toLens` exposes the underlying lens; `SubSpec.trans` is composition of these lenses; Lean's reflexive `MonadLiftT` instance covers the identity.
+`SubSpec.toLens` exposes the underlying lens; `SubSpec.trans` is composition of these lenses; Lean's
+reflexive `MonadLiftT` instance covers the identity.
 
 #### Why `SubSpec` extends `MonadLift` rather than `PFunctor.Lens`
 
 The fields *are* a lens. We extend `MonadLift` for two pragmatic reasons:
 
-1. **Typeclass synthesis.** Lifting `OracleComp spec α → OracleComp superSpec α` is plumbed through the `MonadLift` / `MonadLiftT` mechanism; bridging through `PFunctor.Lens` separately would require an instance of the form `PFunctor.Lens A B → MonadLift (Obj A) (Obj B)`, which Lean cannot synthesize from `OracleQuery spec` because `OracleQuery` is a `def` (and `def`-headed instance heads cannot be matched).
-2. **Reducibility under `rw` / `simp`.** A defaulted `monadLift` field becomes opaque to `isDefEq` during pattern matching. Hand-written `monadLift` per instance keeps the lifted query fully reducible.
+1. **Typeclass synthesis.** Lifting `OracleComp spec α → OracleComp superSpec α` is plumbed through
+   the `MonadLift` / `MonadLiftT` mechanism; bridging through `PFunctor.Lens` separately would
+   require an instance of the form `PFunctor.Lens A B → MonadLift (Obj A) (Obj B)`, which Lean
+   cannot synthesize from `OracleQuery spec` because `OracleQuery` is a `def` (and `def`-headed
+   instance heads cannot be matched).
+2. **Reducibility under `rw` / `simp`.** A defaulted `monadLift` field becomes opaque to `isDefEq`
+   during pattern matching. Hand-written `monadLift` per instance keeps the lifted query fully
+   reducible.
 
 ### LawfulSubSpec ↔ cartesian lens
 
-`LawfulSubSpec spec superSpec` (notation `spec ˡ⊂ₒ superSpec`) is a `Prop`-valued class over an instance `[spec ⊂ₒ superSpec]` requiring that **every backward fiber `onResponse t` is a bijection** (`onResponse_bijective`). This is *exactly* the `PFunctor.Lens.IsCartesian` predicate from `PolyFun.PFunctor.Lens.Cartesian`:
+`LawfulSubSpec spec superSpec` (notation `spec ˡ⊂ₒ superSpec`) is a `Prop`-valued class over an
+instance `[spec ⊂ₒ superSpec]` requiring that **every backward fiber `onResponse t` is a bijection**
+(`onResponse_bijective`). This is *exactly* the `PFunctor.Lens.IsCartesian` predicate from
+`PolyFun.PFunctor.Lens.Cartesian`:
 
 ```lean
 def Lens.IsCartesian (l : Lens P Q) : Prop := ∀ a, Function.Bijective (l.toFunB a)
 ```
 
-The bridge lemma `LawfulSubSpec.toLens_isCartesian` is the one-line statement that the underlying lens of a `LawfulSubSpec` is cartesian.
+The bridge lemma `LawfulSubSpec.toLens_isCartesian` is the one-line statement that the underlying
+lens of a `LawfulSubSpec` is cartesian.
 
-A *cartesian* lens is a fiberwise isomorphism over an arbitrary forward map on positions. This is **strictly weaker** than `PFunctor.Lens.Equiv` (an isomorphism in the lens category), which would *also* require `onQuery` to be a bijection. We intentionally only require fiberwise bijectivity because the basic `SubSpec` instances embed a small spec into a larger one (e.g. `spec₁ ⊂ₒ (spec₁ + spec₂)` with `onQuery = Sum.inl`); these embeddings are essential and would be ruled out by `Equiv`.
+A *cartesian* lens is a fiberwise isomorphism over an arbitrary forward map on positions. This is
+**strictly weaker** than `PFunctor.Lens.Equiv` (an isomorphism in the lens category), which would
+*also* require `onQuery` to be a bijection. We intentionally only require fiberwise bijectivity
+because the basic `SubSpec` instances embed a small spec into a larger one (e.g.
+`spec₁ ⊂ₒ (spec₁ + spec₂)` with `onQuery = Sum.inl`); these embeddings are essential and would be
+ruled out by `Equiv`.
 
-Cartesianness is the precise condition needed to push uniform measures through the lift: `evalDistEq_liftM_query_uniform` shows that pulling the uniform measure on `superSpec.Range (onQuery t)` back through `onResponse t` recovers the uniform measure on `spec.Range t`. Preservation of arbitrary weighted answer measures is a separate contract, supplied per query to `evalDist_liftComp_of_evalDistEq`.
+Cartesianness is the precise condition needed to push uniform measures through the lift:
+`evalDistEq_liftM_query_uniform` shows that pulling the uniform measure on
+`superSpec.Range (onQuery t)` back through `onResponse t` recovers the uniform measure on
+`spec.Range t`. Preservation of arbitrary weighted answer measures is a separate contract: the class
+`OracleSpec.SubSpec.PreservesAnswerMeasure` states it once for an inclusion, and
+`evalDist_liftComp_of_evalDistEq` takes it per query.
 
 ### When you need SubSpec
 
-When lifting `OracleComp spec α` to `OracleComp superSpec α` (e.g., a sub-computation uses fewer oracles than the enclosing computation).
+When lifting `OracleComp spec α` to `OracleComp superSpec α` (e.g., a sub-computation uses fewer
+oracles than the enclosing computation).
 
 ### Structural lemmas (require `[MonadLiftT (OracleQuery spec) (OracleQuery superSpec)]`)
 
@@ -238,14 +273,23 @@ Substitutes every `query t` in a computation with `impl t`:
 def simulateQ [Monad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) : r α
 ```
 
-**Universal property.** `simulateQ impl` is the *unique* monad morphism `OracleComp spec →ᵐ r` that agrees with `impl` on queries. Internally it is `PFunctor.FreeM.mapM impl`, i.e. the fold of the free-monad syntax tree into `r`. Every way of "running" an `OracleComp` in another monad factors through `simulateQ`.
+**Universal property.** `simulateQ impl` is the *unique* monad morphism `OracleComp spec →ᵐ r` that
+agrees with `impl` on queries. Internally it is `PFunctor.FreeM.mapM impl`, i.e. the fold of the
+free-monad syntax tree into `r`. Every way of "running" an `OracleComp` in another monad factors
+through `simulateQ`.
 
 **Handler vs denotation.** The target monad `r` determines how `simulateQ impl` reads:
 
-- `r` effectful (`StateT`, `WriterT`, `OptionT`, another `OracleComp`, `IO`, …) — `simulateQ impl` is an **effect handler**: caching, logging, query counting, lazy sampling, simulating a hash oracle, embedding one game in a richer oracle context.
-- `r` semantic (`SetM`, `Finset`) — `simulateQ impl` is a **denotation**; `support` agrees with the fold into `SetM` that admits every answer.
+- `r` effectful (`StateT`, `WriterT`, `OptionT`, another `OracleComp`, `IO`, …) — `simulateQ impl`
+  is an **effect handler**: caching, logging, query counting, lazy sampling, simulating a hash
+  oracle, embedding one game in a richer oracle context.
+- `r` semantic (`SetM`, `Finset`) — `simulateQ impl` is a **denotation**; `support` agrees with the
+  fold into `SetM` that admits every answer.
 
-So "operational vs denotational" is not a primitive split for monad-valued interpretations: both are `simulateQ` parameterized by the target monad. The measure semantics is the one exception, because `Measure α` needs a `MeasurableSpace α` and is not a Lean monad (see [Output measures and support](#output-measures-and-support) below).
+So "operational vs denotational" is not a primitive split for monad-valued interpretations: both are
+`simulateQ` parameterized by the target monad. The measure semantics is the one exception, because
+`Measure α` needs a `MeasurableSpace α` and is not a Lean monad (see [Output measures and
+support](#output-measures-and-support) below).
 
 ### Key lemmas (all `@[simp, grind =]`)
 
@@ -270,7 +314,10 @@ Key lemma: `simulateQ (so' ∘ₛ so) oa = simulateQ so' (simulateQ so oa)`
 
 ### Wrapping a QueryImpl with a per-query side effect (`preInsert` / `postInsert`)
 
-**Prefer these combinators (or their downstream wrappers) over hand-rolling a new `QueryImpl`** whenever the wrapper has the shape "for each query, run a side effect and then delegate to a base implementation". They are defined in `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`:
+**Prefer these combinators (or their downstream wrappers) over hand-rolling a new `QueryImpl`**
+whenever the wrapper has the shape "for each query, run a side effect and then delegate to a base
+implementation". They are defined in
+`VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean`:
 
 ```lean
 def preInsert  (so : QueryImpl spec m) (nx : spec.Domain → n α) :
@@ -289,8 +336,8 @@ def postInsert (so : QueryImpl spec m) (nx : (t : spec.Domain) → spec.Range t 
 (`simulateQ_preInsert.induct` / `simulateQ_postInsert.induct`), projection equations
 (`proj_simulateQ_preInsert`, `proj_simulateQ_postInsert`), and support/finite-support laws.
 The projection equations transport output measures and events directly by equality. Query-bound
-transfer lives in `QueryBound.lean`. Define instrumentation through these combinators so the generic
-structural and observation theory applies without duplicating wrapper-specific proofs.
+transfer lives in `QueryBound.lean`. Define instrumentation through these combinators, so that
+the generic theory of supports and observations applies without wrapper-specific proofs.
 
 #### Already in the repo (use these directly when applicable)
 
@@ -304,22 +351,29 @@ structural and observation theory applies without duplicating wrapper-specific p
 | `withLogging` | `QueryTracking/LoggingOracle/Core.lean` | `withTraceAppend` |
 | `appendInputLog` (StateT input log) | `QueryTracking/LoggingOracle/Core.lean` | `preInsert` |
 
-If a new wrapper looks like one of these, add it as a small specialization rather than starting from `fun t => ...` from scratch.
+If a new wrapper looks like one of these, add it as a small specialization rather than starting from
+`fun t => ...` from scratch.
 
 #### When `preInsert` / `postInsert` is *not* the right shape
 
-The combinators assume the underlying handler **always runs**. They are not the right tool when the wrapper's control flow is conditional on external state or on the would-be response — for instance:
+The combinators assume the underlying handler **always runs**. They are not the right tool when the
+wrapper's control flow is conditional on external state or on the would-be response — for instance:
 
-- **Cache-on-hit logic** (`withCaching` in `CachingOracle.lean`): a cache hit replaces the query body entirely.
-- **Fallback-style seeding** (`withPregen` in `SeededOracle.lean`): consumes a pre-generated value when available, otherwise queries.
-- **Budget gating** (`enforceOracle` in `Enforcement.lean`): if the budget is exhausted, returns `default` and skips the handler.
+- **Cache-on-hit logic** (`withCaching` in `CachingOracle.lean`): a cache hit replaces the query
+  body entirely.
+- **Fallback-style seeding** (`withPregen` in `SeededOracle.lean`): consumes a pre-generated value
+  when available, otherwise queries.
+- **Budget gating** (`enforceOracle` in `Enforcement.lean`): if the budget is exhausted, returns
+  `default` and skips the handler.
 - **Game-state handlers** that branch on session state, gating flags, or bad-event flags.
 
-These are genuinely custom and stay as hand-written `QueryImpl` definitions. If you find yourself reaching for `preInsert` / `postInsert` and discovering that you need to inspect external state to decide *whether* to query, you are in this category — write the impl directly.
+These are genuinely custom and stay as hand-written `QueryImpl` definitions. If you find yourself
+reaching for `preInsert` / `postInsert` and discovering that you need to inspect external state to
+decide *whether* to query, you are in this category — write the impl directly.
 
 ### Output measures and support
 
-For `OracleComp`, `support` is always available. It is PolyFun's structural
+For `OracleComp`, `support` is always available. It is the set of possible outputs, PolyFun's
 `MonadAttach.support` on the free monad, and `PFunctor.FreeM.support_eq_liftM_univ` identifies it
 with the fold into `SetM` that interprets each query by `Set.univ`.
 
@@ -347,7 +401,7 @@ def uniformSampleImpl [∀ i, SampleableType (spec.Range i)] :
 Preservation of the output measure through `uniformSampleImpl` is a **lemma**, not definitional:
 `uniformSampleImpl.evalDist_simulateQ : 𝒟[simulateQ uniformSampleImpl oa] = 𝒟[oa]` under
 `[OracleSpec.UniformAnswerMeasure spec]`, with `uniformSampleImpl.evalDistEq_simulateQ` for `=ᵈ`
-(`VCVio/OracleComp/Constructions/SampleableType/Measure.lean`). The structural companions
+(`VCVio/OracleComp/Constructions/SampleableType/Measure.lean`). The support companions
 `uniformSampleImpl.support_simulateQ` and `uniformSampleImpl.finSupport_simulateQ` live in
 `VCVio/OracleComp/Constructions/SampleableType/Basic.lean`. For an arbitrary handler,
 `evalDist_simulateQ_eq_of_forall` preserves the output measure when each query's implementation

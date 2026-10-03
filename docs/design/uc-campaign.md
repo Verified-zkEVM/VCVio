@@ -1,15 +1,17 @@
 # Static computational UC campaign
 
-> The September 14, 2026 checkpoint evidence from VCVio [#721](https://github.com/Verified-zkEVM/VCVio/pull/721)
-> is preserved below. Its dependency revisions, restoration commands, and validation counts describe
-> that dated spike. The final v4.34 adoption is integrated through [#710](https://github.com/Verified-zkEVM/VCVio/pull/710);
-> use the current manifests and `CONTRIBUTING.md` for builds. The remaining UC adequacy and
-> computational-admission obligations below remain separate from the toolchain adoption.
+Status: implementation in progress since September 13, 2026. The semantic requirements in
+[uc-semantics.md](uc-semantics.md) govern this campaign. The
+[composition evidence ledger](polynomial-composition-evidence.md) records the foundation it
+builds on and that foundation's counterexamples. Each checkpoint below records dated evidence.
 
-Status: implementation in progress, September 13, 2026. The semantic requirements in
-[uc-semantics.md](uc-semantics.md) govern this campaign. The earlier
-[composition evidence ledger](polynomial-composition-evidence.md) records the completed
-foundation and its counterexamples.
+> The September 14, 2026 evidence from VCVio
+> [#721](https://github.com/Verified-zkEVM/VCVio/pull/721) is preserved below. Its dependency
+> revisions, restoration commands, and validation counts describe that dated spike. VCVio
+> adopted Lean v4.34 through [#710](https://github.com/Verified-zkEVM/VCVio/pull/710) and
+> builds on `v4.35.0-rc3`; use the current manifests and `CONTRIBUTING.md` for builds. The
+> remaining UC adequacy and computational-admission obligations below are separate from the
+> toolchain adoption.
 
 ## Completion contract
 
@@ -65,7 +67,7 @@ against the published dependency: 18,688 declarations across 623 modules, the sa
 sorry-tainted declarations, and zero nonstandard-axiom taint. Log:
 `/private/tmp/uc-composition-vcvio-validation.log`.
 
-The implementation now compiles `OpenSyntax.Raw` into finite `ReactiveNetwork.Assembly`
+The implementation compiles `OpenSyntax.Raw` into finite `ReactiveNetwork.Assembly`
 values, with component polynomial interfaces retained and the global environment chosen at
 closure. `Diagram` has exact map/plug transport, plug symmetry, and the four parallel/wired
 closure factorizations under explicit component bijections. Network versions retain the
@@ -128,7 +130,7 @@ Full `./scripts/validate.sh --lint --test --axioms` passes: 18,896 declarations 
 629 production modules, the same 40 existing sorry-tainted declarations, and zero
 nonstandard-axiom taint. Log: `/private/tmp/uc-separated-validation.log`.
 
-`Examples/OneTimePad/Separated` now defines six distinct polynomial machines for the
+`Examples/OneTimePad/Separated` defines six distinct polynomial machines for the
 environment, private setup, sender, authenticated public channel, delivery adversary,
 and receiver. The setup samples locally and distributes private shares only on internal
 routes. The public channel retains its original ciphertext and accepts a Boolean delivery

@@ -1,5 +1,8 @@
 # UC campaign checkpoint — 2026-09-14
 
+Status: historical record of the September 14, 2026 Lean v4.34.0-rc2 dependency-adoption spike
+and the UC campaign handoff that accompanied it.
+
 > Archived September 14, 2026 evidence from VCVio [#721](https://github.com/Verified-zkEVM/VCVio/pull/721).
 > Dependency revisions, restoration commands, and validation counts below describe that dated
 > spike. The final v4.34 adoption is integrated through [#710](https://github.com/Verified-zkEVM/VCVio/pull/710);

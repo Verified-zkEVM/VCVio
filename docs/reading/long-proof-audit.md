@@ -1,5 +1,8 @@
 # Long proofs: automation, extraction, and mathematical structure
 
+> Status: historical source audit, September 2026, with the follow-up implementation results of
+> that month. Its names, line counts and source links describe the source as it was then.
+
 The largest immediate opportunity is **reusing semantic normalization**, followed by **factoring
 state-transition invariants**. More generalized-congruence registrations help at comparison leaves,
 but they do not account for most of the length of the largest proofs. Several long proofs already
@@ -156,8 +159,9 @@ This is a proof of reuse in the then-current compatibility layer (since removed)
 require a new congruence attribute. Production placement should reuse the existing
 probability/semantic equation API and respect the retiring PMF/SPMF boundary; it should not
 introduce another semantic representation.
-A direct `pvcstep` trial on these raw `𝒮[…] = 𝒮[…]` goals failed because that is not a supported
-entry shape. This does not rule out a probability-level or relational reformulation.
+A direct trial of `vcstep`, VCVio's unary step tactic at the audited revision, on these raw
+`𝒮[…] = 𝒮[…]` goals failed because that is not a supported entry shape. This does not rule out a
+probability-level or relational reformulation.
 
 ### Cache/log coherence: a verified extraction boundary
 
@@ -443,7 +447,7 @@ The following temporary modules were checked using `lake env lean -DautoImplicit
 imports: the generic draw-rotation helper; the two complete tag modules using it; the complete
 positive-slot module with the separate `gcongr` cleanup; the cache/log helper; and the complete
 adaptive-prefix and online-bound modules using that helper. All these successful variants compiled
-without new holes or increased options. The direct `pvcstep` experiment failed on the raw semantic
+without new holes or increased options. The direct `vcstep` experiment failed on the raw semantic
 equality entry shape and was not retained as a proposed replacement.
 
 The source census and experimental module copies are local analysis artifacts under

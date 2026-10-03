@@ -1,9 +1,12 @@
 # Linter cleanup and remaining migration groups
 
-This records the suppression audit and the first implementation pass against the pinned
-Lean/Mathlib v4.33.1 dependencies. The implementation unifies lint execution, removes the
-active file-length overrides, and reduces declaration exceptions without widening the
-baseline. Remaining declaration migrations are grouped below by their effect on callers.
+Status: historical record of the suppression audit and first cleanup pass of #702, against the
+pinned Lean/Mathlib v4.33.1 dependencies, and of the migration groups planned then. Its counts
+date from that pass; `scripts/nolints.json` holds the current exceptions.
+
+The implementation unifies lint execution, removes the active file-length overrides, and reduces
+declaration exceptions without widening the baseline. Remaining declaration migrations are
+grouped below by their effect on callers.
 
 ## Audit and results
 
@@ -117,9 +120,10 @@ of baseline additions.
    `instNeverFailOfLawfulMonadLiftTPMF` lawfulness premise once listed here was resolved by
    removing that instance with the `NeverFail` class; deleting such a premise directly had left
    unresolved monad metavariables in downstream instance inference. For the remaining
-   instances, validate a replacement against `SubSpec`, `StateT.Basic`, and Loom coherence,
-   rather than treating the unused-argument report as a purely textual deletion. Also check
-   explicit `@declaration` applications when reducing public binders.
+   instances, validate a replacement against `SubSpec`, `StateT.Basic`, and the coherence of the
+   weakest-precondition instances, rather than treating the unused-argument report as a purely
+   textual deletion. Also check explicit `@declaration` applications when reducing public
+   binders.
 
 4. **Definition and namespace naming (345 findings).** Migrate contained arithmetic families
    such as `BigInt31` and `SmallPrimeNTT` with their callers first. The larger groups in

@@ -1,8 +1,9 @@
 # Computational-complexity feasibility record
 
-Status: reviewer checkpoint, updated 2026-08-28. This record evaluates whether the current
-interaction-first design is mathematically sound and whether it is ready for ordinary
-cryptographic use. The answer is deliberately split:
+Status: historical record of the reviewer audit of 2026-08-28, whose candidate source is merged;
+the [computational-complexity design](computational-complexity.md) describes the present.
+This record evaluates whether the interaction-first design is mathematically sound and whether it
+is ready for ordinary cryptographic use. The answer is deliberately split:
 
 - the committed foundation is an honest backend-relative definition of strict oracle PPT;
 - the current candidate source interprets syntactic paths directly as Mathlib measures, adds

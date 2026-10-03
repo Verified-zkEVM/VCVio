@@ -71,16 +71,23 @@ and the
 ### Sigma protocols (`SigmaProtocol`)
 
 ```lean
-structure SigmaProtocol
+structure ChallengeVerifyProtocol
     (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool) where
   commit (stmt : Stmt) (wit : Wit) : ProbComp (Commit × PrvState)
   respond (stmt : Stmt) (wit : Wit) (prvState : PrvState) (chal : Chal) : ProbComp Resp
   verify (stmt : Stmt) (commit : Commit) (chal : Chal) (resp : Resp) : Bool
+
+structure SigmaProtocol
+    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
+    extends ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel where
   sim (stmt : Stmt) : ProbComp Commit
   extract (chal₁ : Chal) (resp₁ : Resp) (chal₂ : Chal) (resp₂ : Resp) : ProbComp Wit
 ```
 
-Every `SigmaProtocol` coerces to `IdenSchemeWithAbort` via `toIdenSchemeWithAbort` (wraps `respond` with `some`).
+A `ChallengeVerifyProtocol` is the interaction alone; a `SigmaProtocol` adds the simulator and the
+witness extractor that special soundness refers to. Every `ChallengeVerifyProtocol` coerces to an
+`IdenSchemeWithAbort` through `ChallengeVerifyProtocol.toIdenSchemeWithAbort`, which wraps
+`respond` with `some`.
 
 ### Identification scheme with aborts (`IdenSchemeWithAbort`)
 
@@ -99,8 +106,10 @@ Used by ML-DSA and the Fiat-Shamir with Aborts transform.
 ### Key difference: monad-parametric algorithm surfaces
 
 - `SymmEncAlg`, `AsymmEncAlg`, and `SignatureAlg` are plain structures over an abstract monad `m`.
-- Instantiate them with `ProbComp`, `OracleComp spec`, `OptionT (OracleComp spec)`, or another monad at the security surface that needs those effects.
-- Probability and failure semantics are supplied by the surrounding experiment or semantic class, not by parent classes on the algorithm structure.
+- Instantiate them with `ProbComp`, `OracleComp spec`, `OptionT (OracleComp spec)`, or another monad
+  at the security surface that needs those effects.
+- Probability and failure semantics are supplied by the surrounding experiment or semantic class,
+  not by parent classes on the algorithm structure.
 
 ### Instantiation pattern
 
@@ -238,7 +247,8 @@ Uses additive / EC-style notation: `a • g` means scalar multiplication (textbo
 | CDH | `CDHAdversary F G` (= `G → G → G → ProbComp G`) | `cdhExperiment g adversary` |
 | DDH | `DDHAdversary F G` (= `G → G → G → G → ProbComp Bool`) | `ddhGame g adversary` |
 
-`CDHAdversary` and `DDHAdversary` carry a phantom `_F` parameter so Lean can infer the scalar field at call sites.
+`CDHAdversary` and `DDHAdversary` carry a phantom `_F` parameter so Lean can infer the scalar field
+at call sites.
 
 Defined in `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`.
 
@@ -268,7 +278,8 @@ def myReduction (adversary : ...) : DDHAdversary F G := fun g A B T => do
   return result
 ```
 
-2. **Prove the probability identity**: show that the reduction's advantage equals (or bounds) the scheme adversary's advantage.
+2. **Prove the probability identity**: show that the reduction's advantage equals (or bounds) the
+   scheme adversary's advantage.
 
 3. **Key technique**: hybrid arguments for multi-query reductions.
 
@@ -306,10 +317,12 @@ The reasons are specific to how adversaries are represented here.
   `fun x => pure (if h : ∃ w, r x w then h.choose else default)` wins `hardRelationExperiment` with
   probability exactly `1`. Any bound of the form `∃ B, f ≤ 𝒟[hardRelationExperiment hr B] {true}`
   with `f ≤ 1` is then provable without looking at the scheme.
-- **No existing check catches it.** The vacuous theorem is true, `sorry`-free, and depends only
-  on the standard axioms, so `#print axioms` does not flag it. Checking that the hypotheses are
-  satisfiable ([gotcha 14](gotchas.md#14-hypothesis-satisfiability-is-a-proof-obligation)) does
-  not help either, because the defect is in the conclusion.
+- **Neither the kernel nor the axiom sweep catches it.** The vacuous theorem is true,
+  `sorry`-free, and depends only on the standard axioms, so `#print axioms` does not flag it.
+  Checking that the hypotheses are satisfiable
+  ([gotcha 14](gotchas.md#14-hypothesis-satisfiability-is-a-proof-obligation)) does not help
+  either, because the defect is in the conclusion. The check that reports the form is the
+  `existentialReduction` linter described below.
 
 The same applies to every object that the security argument requires to be efficient or
 independent of a secret:
@@ -329,24 +342,25 @@ such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a funct
 cannot be stated for an adversary that exists only inside an existential.
 
 When the reduction is not implemented yet, do not fall back to `∃`: define it as a `sorry`
-placeholder and state the bound for that definition, as `GPVHashAndSign.reduction` and
-`FiatShamirWithAbort.cmaReduction` do, with a docstring that says the proof is deferred. The
+placeholder and state the bound for that definition, as `GPVHashAndSign.reduction` and the
+with-aborts EUF-NMA forger `FiatShamirWithAbort.cmaToNmaAdv` do, with a docstring that says the
+proof is deferred. The
 placeholder is carried by `scripts/axiom_baseline.json`, and the `existentialReduction` linter
 (below) reports the existential form.
 
-`∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
+`∃` is appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key
 generation.
 
 ### Hypothesis bundles with kernel-checked witnesses
 
-The structures below carry the object a security argument runs, a generator, simulator,
-extractor or reduction, as data, with the property that checks it stated beside it or as a
-separate proposition over the same field. A theorem that consumes one names the field it runs
-(`GenerableRelation.gen`, `SigmaProtocol.extract`, `SecurityGame.ReductionWithCost.reduce`)
-instead of quantifying over it, and
-`VCVioTest/CryptoFoundations/HypothesisWitnesses.lean` keeps one example per row projecting the
-witness out as a program or function.
+Each structure below carries, as data, an object that a security argument runs: a generator, a
+simulator, an extractor or a reduction. The property that checks the object is either a field
+beside it or a separate proposition about the same field. A theorem that consumes such a
+structure names the field it runs (`GenerableRelation.gen`, `SigmaProtocol.extract`,
+`SecurityGame.ReductionWithCost.reduce`) instead of quantifying over it, and
+`VCVioTest/CryptoFoundations/HypothesisWitnesses.lean` keeps one example per row that projects
+the witness out as a program or function.
 
 | Structure | Witness as data | What checks it |
 |---|---|---|
@@ -361,7 +375,7 @@ witness out as a program or function.
 
 Reductions that are not bundled are named definitions, proved or placeholders:
 `FiatShamir.cmaReduction` (built from `cmaToNmaAdv` and `nmaReduction`), and the `sorry`
-placeholders `GPVHashAndSign.reduction` and `FiatShamirWithAbort.cmaReduction`, each carried by
+placeholders `GPVHashAndSign.reduction` and `FiatShamirWithAbort.cmaToNmaAdv`, each carried by
 `scripts/axiom_baseline.json` until it is constructed.
 
 Two environment linters in `ToMathlib/Lint/SecurityStatements.lean` guard the statements of
@@ -382,8 +396,8 @@ For a hand-written q-query IND-CPA → DDH hybrid proof:
 3. Per-step reduction: `stepDDHReduction adversary k` maps DDH challenge to hybrid k vs k+1
 4. Telescope: `advantage ≤ q * max_per_step_advantage`
 
-`Examples/ElGamal/Basic.lean` currently obtains its q-query bound by instantiating
-the generic one-time IND-CPA lift in `VCVio/CryptoFoundations/AsymmEncAlg/INDCPA/GenericLift.lean`.
+`Examples/ElGamal/Basic.lean` obtains its q-query bound by instantiating the generic one-time
+IND-CPA lift in `VCVio/CryptoFoundations/AsymmEncAlg/INDCPA/GenericLift.lean`.
 
 ### Oracle Wiring for Stateful Reductions
 
@@ -463,8 +477,12 @@ Key results: `fst_map_costDist` (instrumentation is transparent) and
 
 ## Common Gotchas
 
-1. **Avoid `guard`**: use `return (b == b')` or `return decide (r x w)` instead. `guard` requires `OptionT` / `Alternative`.
+1. **Avoid `guard`**: use `return (b == b')` or `return decide (r x w)` instead. `guard` requires
+   `OptionT` / `Alternative`.
 
-2. **`SymmEncAlg` vs `AsymmEncAlg`**: both are monad-parametric, but symmetric schemes carry a single key type while asymmetric schemes split public and secret keys. Pick the monad at the experiment boundary.
+2. **`SymmEncAlg` vs `AsymmEncAlg`**: both are monad-parametric, but symmetric schemes carry a
+   single key type while asymmetric schemes split public and secret keys. Pick the monad at the
+   experiment boundary.
 
-3. **`ddhGame` uses `$ᵗ Bool`**: the game samples a bit `b`, returns real or random based on `b`, then checks `b == b'`.
+3. **`ddhGame` uses `$ᵗ Bool`**: the game samples a bit `b`, returns real or random based on `b`,
+   then checks `b == b'`.

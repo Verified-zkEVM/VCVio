@@ -10,11 +10,11 @@ An end-to-end EUF-CMA reduction for the Schnorr digital signature lives in
 illustration of how the main composition layers of the framework fit together
 on a single concrete scheme. Reading order:
 
-1. **Σ-protocol:** [`Examples/Schnorr/SigmaProtocol.lean`](../../Examples/Schnorr/SigmaProtocol.lean)
-   defines `Schnorr.sigma` and proves perfect completeness, special soundness,
-   and perfect HVZK, plus the two simulator-distribution facts the
-   Fiat-Shamir reduction needs (`sigma_simCommitPredictability` and
-   `sigma_simChalUniformGivenCommit`).
+1. **Σ-protocol:**
+   [`Examples/Schnorr/SigmaProtocol.lean`](../../Examples/Schnorr/SigmaProtocol.lean) defines
+   `Schnorr.sigma` and proves perfect completeness, special soundness, and perfect HVZK, plus the
+   two simulator-distribution facts the Fiat-Shamir reduction needs (`sigma_simCommitPredictability`
+   and `sigma_simChalUniformGivenCommit`).
 2. **Generic Fiat-Shamir transform:**
    [`VCVio/CryptoFoundations/FiatShamir/Sigma.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma.lean)
    builds a signature scheme `FiatShamir σ hr M` from any Σ-protocol `σ` and
@@ -67,7 +67,7 @@ for keys on which verification is independent of the challenge.
 starts with an ordinary prover given its statement and message before execution. Its named
 adapter appends the final verification query to an initially empty cached oracle and proves
 that forkable acceptance equals acceptance of the actual verifier. `knowledgeExtractor_success`
-then gives the existing replay reduction's valid-witness bound at that fixed statement.
+then gives the replay reduction's valid-witness bound at that fixed statement.
 Failed forks retain the reduction's uniform-witness fallback.
 
 [`FiatShamir/Sigma/ExtractionCost.lean`](../../VCVio/CryptoFoundations/FiatShamir/Sigma/ExtractionCost.lean)
@@ -172,7 +172,7 @@ two named PRF advantages and four explicit losses:
 `named_reduction_budgets` gives the actual distinguishers' PRF-query bounds:
 `qTag + qReader · |TagId|` and `qTag + qReader · |TagId| · sessionsPerTag`. These are
 pathwise oracle-query counts, not machine-time or PPT certificates.
-The FIFO service model and its derived schedule remain those of `Network.lean`.
+The FIFO service model and its derived schedule are those of `Network.lean`.
 The free-program uniform-sampling model supplies probability measures for the real runs;
 there is no additional losslessness assumption.
 
@@ -226,6 +226,6 @@ hypothesis. The theorems name their actual extractors and preserve the generic e
 Fiat–Shamir uses a finite, sampleable challenge type and has a pathwise replay budget of
 `2 * (Q + 1)` fresh challenge requests. Fischlin additionally enumerates challenges for its
 honest signing search and inherits the exact finite-geometric expected hash-call formula.
-Completeness uses the existing bundled Fischlin runtime over actual keygen/sign/verify code.
+Completeness uses the bundled Fischlin runtime over actual keygen/sign/verify code.
 `VCVioTest/SchnorrTransforms.lean` checks these interfaces with three challenges in `ZMod 7`,
 including a concrete accepting transcript pair that recovers scalar `3` after one log inspection.

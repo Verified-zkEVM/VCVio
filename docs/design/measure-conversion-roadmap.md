@@ -1,5 +1,12 @@
 # Measure and kernel conversion checkpoints
 
+Status: historical record of the conversion of VCVio's probability semantics to Mathlib measures
+and kernels, checkpoint by checkpoint, through the removal of the discrete layer in PR #821. Each
+section describes the code at its checkpoint. The
+[probability guide](../agents/probability.md) describes the present, and the
+[migration guide](../agents/probability-migration.md) converts code written against the removed
+layer.
+
 Mathlib measures are the probability semantics. Closed successful computations denote
 subprobability measures; measurably parameterized computations denote kernels. Executable finite
 samplers retain their algorithms and carry measure certificates. Operational reachability is a
@@ -168,10 +175,11 @@ observations and pathwise WP comparisons. Fiat–Shamir correctness and quantita
 walkthroughs use those laws. Native import guards check both the Hoare surface and a nonuniform
 oracle regression; regression proofs also use real observations and hidden function states.
 
-Retiring relational coupling, scalar probability-equality automation, seeded forking, and the
-commitment example's TV theorem remain distinct theorem families. Their required connections
-use the existing explicit coherence theorem in their compatibility owners. The native Hoare
-and simulation modules do not import PMF/SPMF or probability compatibility classes.
+At this checkpoint the relational coupling rules, the scalar probability-equality automation,
+seeded forking, and the commitment example's total-variation theorem are still on the retiring
+discrete layer, each a separate theorem family. Where one of them meets the native Hoare layer,
+it goes through the explicit coherence theorem in its compatibility module. The native Hoare and
+simulation modules import neither `PMF`/`SPMF` nor a probability compatibility class.
 
 ## Dead and orphaned retiring-probability checkpoint
 
@@ -233,10 +241,11 @@ Modules that import a retiring hub (`SampleableType`, `ProbComp`, `OracleComp.Ev
 `LoggingOracle`, `SubSpec`, `Replicate`, `UniformCompatibility`, the bundled-semantics and
 random-oracle simulation modules, `SecExp`) but use none of its declarations import the hub's
 native owners instead. `SecExp` itself imports only what `BoundedAdversary` needs, and its clients
-import the scalar modules they use explicitly. `scripts/check-spmf-closure.py` keeps the exact set
-of modules whose imports reach the SPMF backend; this checkpoint takes it from 455 to 390 of the
-tracked proof-library modules. Final removal deletes the modules in that closure's core and
-regenerates the umbrellas.
+import the scalar modules they use explicitly. The import-closure ratchet
+`scripts/check-spmf-closure.py`, removed with the discrete layer, keeps the exact set of modules
+whose imports reach the SPMF backend; this checkpoint takes it from 455 to 390 of the tracked
+proof-library modules. Final removal deletes the modules in that closure's core and regenerates
+the umbrellas.
 
 ## Leaf example checkpoint
 
@@ -391,7 +400,8 @@ measures in the discrete structure, and the advantage bound measures the distanc
 mass from one half, transported by measure total variation. Trace noninterference, trace leakage
 freedom and leakage bounds are native, as are the coupling rules for simulated computations and
 the stochastic-dominance rules for bad-state events; identical-until-bad bounds stay on the
-discrete layer for now. Coupling-existence coherence with `eRelWP` returns with its rebase.
+discrete layer until the identical-until-bad checkpoint below. Coupling-existence coherence with
+`eRelWP` returns with its rebase.
 
 ## Quantitative relational checkpoint
 
@@ -505,10 +515,11 @@ Jensen marginal of `expectedValue`. The measure-transport module for the old bou
 ## Uniform sampling compatibility checkpoint
 
 Uniform sampling has a single measure law, `SampleableType.evalDist_uniformSample`, taken from
-the class certificate; the copy that went through the discrete adapter is gone, and
-`SampleableType.MeasureCompatibility` now holds only the `ProbComp.DiscreteCompatibility`
-scope. Importers that used it or the retiring sampling, `ProbComp`, uniform-compatibility and
-subspec hubs only for native declarations import the native modules directly.
+the class certificate; the copy that went through the discrete adapter is removed, and
+`SampleableType.MeasureCompatibility` holds only the `ProbComp.DiscreteCompatibility` scope
+until *Final removal* deletes the module. Importers that used it or the retiring sampling,
+`ProbComp`, uniform-compatibility and subspec hubs only for native declarations import the
+native modules directly.
 
 ## Retirement preparation checkpoint
 

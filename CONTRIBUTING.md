@@ -143,8 +143,10 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
 `lake update` idempotent (see the comment above the PolyFun `require` in `lakefile.lean`):
 
 1. `lean-toolchain`, then the Mathlib tag in `lakefile.lean`.
-2. The `cslib` and `PolyFun` revisions, each to a commit built against that Mathlib. Program
-   logic uses the pinned Lean core WP interface through PolyFun.
+2. The `PolyFun` revision in `lakefile.lean`, to a commit built against that Mathlib. `cslib`
+   arrives through PolyFun's own requirement, so a `cslib` bump lands in PolyFun first. The
+   program logic is built on core Lean's `Std.WP`, directly and through PolyFun, so it moves
+   with the toolchain.
 3. `lake update --keep-toolchain`, then `lake exe cache get`.
 4. `./scripts/validate.sh --lint --test --axioms`; fix what the new toolchain flags rather than
    silencing it (`docs/agents/gotchas.md` §23), and update `scripts/axiom_baseline.json` only for
@@ -152,6 +154,11 @@ The toolchain and Mathlib move together, and the other pins follow them. The ord
 5. Re-verify the upstream-alignment ledger (`docs/reading/upstream-alignment.md`): every row is
    checked against the newly pinned trees, never diffed against the previous ledger.
 6. Update the version mentions in `AGENTS.md` (*Building*) and `docs/agents/gotchas.md` §26.
+7. Move the optional package in `VCVioComplexity/` to the same pins: its `lean-toolchain`, the
+   Mathlib requirement in its `lakefile.lean`, and the toolchain its
+   `scripts/compatibility-preflight.sh` expects. Run `lake update --keep-toolchain` in
+   `VCVioComplexity/`, then its `scripts/test.sh` and `scripts/compatibility-preflight.sh`, and
+   update the versions in its `README.md` and `PROVENANCE.md`.
 
 ## Style Notes
 

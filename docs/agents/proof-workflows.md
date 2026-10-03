@@ -8,13 +8,18 @@
    → `by_equiv` to enter relational mode, then use `rvcstep` / `rvcgen`
    → Add `using ...` when the current relational step needs an explicit witness
 
-2. **Advantage is bounded** (`advantage ≤ ε`):
-   → `by_dist` to enter TV distance reasoning
-   → Use `by_dist ε₂` when you want to pin the TV-distance contribution explicitly
+2. **An advantage is bounded** (`AdvBound game ε`):
+   → `by_dist` to split the bound into a second game's bound and the total variation distance
+    between the two games (`AdvBound.of_etvDist`)
+   → Use `by_dist ε₂` when you want to pin the distance contribution explicitly
+   → Use `by_dist hybrid games n` for a hybrid argument over a chain of games
    → For identical-until-bad: use `by_upto` or
      `etvDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
+   → For two programs related except with probability `ε` (`⟪oa ≈[ε] ob | R⟫`): `by_approx`,
+    then `rvcgen` on the quantitative relational triple it leaves
 
-3. **Probability equals a specific value** (`Pr{let y ← oa}[y = x] = ...` or `Pr{let x ← oa}[p x] = ...`):
+3. **Probability equals a specific value** (`Pr{let y ← oa}[y = x] = ...` or
+   `Pr{let x ← oa}[p x] = ...`):
    → Use `prvcgen` when the value holds on every outcome (`= 0`, `= 1`) or a loop invariant pins
     it; it splits `= c` into an upper and a lower bound, and proves bounds `r ≤ Pr{…}[…]`,
     `Pr{…}[…] ≤ ε` and core triples the same way
@@ -38,8 +43,8 @@
 The canonical way to normalize monadic expressions in this codebase is Mathlib's
 `monad_norm` simp set (declared in `Mathlib.Tactic.Attr.Register`). It bundles
 `pure_bind`, `bind_assoc`, `bind_pure`, `map_pure`, `pure_seq`, `seq_assoc`,
-`seq_eq_bind_map`, and `map_eq_bind_pure_comp`, which between them push goals
-toward an associated bind-canonical form.
+`seq_eq_bind_map`, `seqLeft_eq_bind`, `seqRight_eq_bind` and `map_eq_bind_pure_comp`, which
+between them push goals toward an associated bind-canonical form.
 
 Prefer `simp [monad_norm]` (or `simp […, monad_norm]`) over hand-rolled lemma
 lists like `simp [bind_assoc, pure_bind, …]`. It documents intent, keeps proofs
@@ -50,10 +55,9 @@ When it isn't feasible:
 
 - **Direction-flipping conflicts.** `monad_norm` rewrites `f <$> x` toward
   `x >>= pure ∘ f`. Proofs that deliberately use `bind_pure_comp` /
-  `map_pure` to keep the goal in `<$>` form (common in StateT-heavy proofs in
-  `Examples/CommitmentScheme/Hiding/*` and large stretches of
-  `VCVio/CryptoFoundations/ReplayFork.lean`) will break, because a downstream
-  `rw [some_lemma_about_<$>]` no longer matches. Keep the explicit lemma list
+  `map_pure` to keep the goal in `<$>` form (common in `StateT`-heavy proofs such as
+  `Examples/PRFTagReader/Auth.lean` and `Examples/CommitmentScheme/Hiding/*`) break under it,
+  because a later `rw [some_lemma_about_<$>]` then fails to match. Keep the explicit lemma list
   at those sites.
 - **Tightly tuned `simp only` chains.** When a proof relies on a *specific*
   partial-rewrite state between two `simp only` calls (e.g. peeling structure
@@ -61,10 +65,9 @@ When it isn't feasible:
   can over-rewrite. Leave the two-pass structure alone.
 - **`rw` and `simp_rw` lemma lists.** These take individual lemmas, not simp
   sets — `monad_norm` doesn't apply.
-- **Files that don't import `Mathlib.Tactic.Attr.Register`.** A few low-level
-  files in `ToMathlib/Control/Monad/` (e.g. `Indexed.lean`, `Graded.lean`)
-  import only `Mathlib.Algebra.…` and don't see `monad_norm`. Don't widen
-  imports just to use it; spelling out `bind_assoc` is fine there.
+- **Files whose imports do not reach `Mathlib.Tactic.Attr.Register`.** A low-level file such
+  as `ToMathlib/Control/Monad/Relation.lean`, which imports only Batteries, does not see
+  `monad_norm`. Don't widen imports just to use it; spelling out `bind_assoc` is fine there.
 
 Treat `monad_norm` as the default and the manual lemma list as the exception.
 When you do choose the manual list, the choice is usually load-bearing — leave
@@ -221,9 +224,12 @@ prrw congr as ⟨x, hx⟩
 ### `prvcgen` on bounds and triples
 
 ```lean
--- Goal: r ≤ Pr{let x ← oa}[p x], with h : ⦃ r ⦄ oa ⦃ fun x => 𝟙⟦p x⟧ ⦄ in context
-prvcgen                     -- lower-bound reading; `vcgen` uses `h`
+-- Goal: r ≤ Pr{let x ← oa}[p x], with h : ⦃ r ⦄ oa ⦃ predInd p ⦄ in context
+prvcgen                     -- lower reading (`le_prEvent_iff_triple`); `vcgen` uses `h`
 ```
+
+`predInd p` is the indicator `fun x => 𝟙⟦p x⟧` (`predInd_apply`), the postcondition that
+`le_prEvent_iff_triple` states.
 
 A continuation specified only on the support of the first program uses `Spec.ofSupport`, which
 leaves the support membership:
@@ -289,13 +295,13 @@ set_option vcvio.vcgen.traceSteps true in
 ### `by_dist` for advantage bounds
 
 ```lean
--- Goal: AdvBound game ε
-by_dist                     -- enters TV distance mode
--- now need to show etvDist ... ≤ ε
+-- Goal: AdvBound game (ε₁ + ε₂)
+by_dist                     -- applies AdvBound.of_etvDist
+-- leaves AdvBound game' ε₁ for a second game game', and etvDist game' game ≤ ε₂
 ```
 
 ```lean
--- Same shape, but fix the TV-distance contribution first:
+-- Same shape, with the distance contribution fixed to ε₂ first:
 by_dist ε₂
 ```
 
@@ -401,16 +407,28 @@ before changing definitions or tactics for eRHL, pRHL, or apRHL.
 ## Debugging Common Stuck States
 
 ### "typeclass instance problem ... HasQuery spec ?m" or "Monad (OracleQuery spec)"
-After the `HasQuery` cutover, the bare `query t` is `HasQuery.query t` and needs an expected type so Lean can pick the ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form `spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting `OracleQuery.cont`).
+The bare `query t` is `HasQuery.query t`, which needs an expected type so that Lean can pick the
+ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form
+`spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting
+`OracleQuery.cont`).
 
 ### "failed to synthesize ... OracleSpec.AnswerMeasure spec"
-For `OracleComp spec`, add answer measures with `[OracleSpec.AnswerMeasure spec]` when you need `𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.UniformAnswerMeasure spec]` for uniform answers and cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics, install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec`. `𝒟[...]` also needs a `MeasurableSpace` on the result type.
+For `OracleComp spec`, add answer measures with `[OracleSpec.AnswerMeasure spec]` when you need
+`𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.UniformAnswerMeasure spec]` for uniform answers and
+cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics,
+install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec`. `𝒟[...]` also needs a
+`MeasurableSpace` on the result type.
 
 ### Universe mismatch around `SubSpec`
-`OracleComp` has 3 universe parameters, `SubSpec` has 3. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
+`OracleComp` has 3 universe parameters, and so has `SubSpec`. Use `{ι : Type*}` instead of
+`{ι : Type u}` to let universes resolve independently.
 
 ### `simp` does not integrate an event over a bind
-`prEvent_bind_eq_lintegral` is not a `simp` lemma. Use `rw [prEvent_bind_eq_lintegral_of_discrete]` when the common draw has a discrete measurable space, or `prEvent_bind_eq_lintegral` with a measurability proof for the continuation.
+`prEvent_bind_eq_lintegral` is not a `simp` lemma. Use `rw [prEvent_bind_eq_lintegral_of_discrete]`
+when the common draw has a discrete measurable space, or `prEvent_bind_eq_lintegral` with a
+measurability proof for the continuation.
 
 ### Aggressive unfolding of `OracleComp`
-Core types are `@[reducible]`. Lean may unfold `OracleComp` to `PFunctor.FreeM`. Use `OracleComp.inductionOn` as the canonical eliminator, not pattern matching on `PFunctor.FreeM.pure`/`roll`.
+The core types are `@[reducible]`, so Lean may unfold `OracleComp` to `PFunctor.FreeM`. Use
+`OracleComp.inductionOn` as the canonical eliminator, not pattern matching on
+`PFunctor.FreeM.pure`/`roll`.

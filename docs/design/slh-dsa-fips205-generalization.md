@@ -706,7 +706,7 @@ The program-level validation set includes, as applicable:
 - `./scripts/build-project.sh` or the equivalent full project gate;
 - `./scripts/test-axiomsweep.sh` and `lake exe axiomsweep --check`;
 - library-import registration checks after adding modules;
-- the retired-`PMF` environment-linter baseline;
+- the retired-`PMF` environment linter, which admits no baseline exception;
 - Interop and Extern isolation checks;
 - agent-documentation and generated-documentation checks;
 - `git diff --check`; and

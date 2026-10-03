@@ -2,7 +2,7 @@
 
 This guide explains the query-tracking stack in `VCVio/OracleComp/QueryTracking/`.
 
-The current design is intentionally **weighted-first**:
+The design is deliberately **weighted-first**:
 
 - `QueryCost[...]` and `ExpectedQueryCost[...]` are the primary notions.
 - `Queries[...]` and `ExpectedQueries[...]` are the unit-cost specializations.
@@ -14,14 +14,14 @@ The stack is also intentionally split into:
 - a thin `OracleComp` facade
 - a small `ToMathlib` probability layer for reusable tail-sum facts
 
-The structural instrumentation owners are `Tracing.Core`, `CountingOracle.Core`, and
-`LoggingOracle.Core`. Query bounds, cache/programming handlers, and enforcement build on the same
-handler machinery; their structural laws need no probability specification. `VCVio.Foundations`
-imports these owners together with the measure semantics.
+Instrumentation lives in `Tracing.Core`, `CountingOracle.Core` and `LoggingOracle.Core`. Query
+bounds, caching and programming handlers, and enforcement build on the same handler machinery,
+and their laws about programs and supports need no probability interpretation.
+`VCVio.Foundations` imports these modules together with the measure semantics.
 
-Enforcement event laws use `Pr{...}[...]` and a chosen `AnswerMeasure`, with discrete query-answer
-spaces to interpret arbitrary oracle continuations. They do not require uniform sampling or
-discrete result, budget, or state spaces.
+The event laws of enforcement are stated with `Pr{…}[…]` under a chosen `AnswerMeasure`; the
+discrete σ-algebra on answers makes every oracle continuation measurable. They need neither
+uniform answers nor discrete measurable spaces on results, budgets or states.
 
 `AdaptivePrefix.lean` is separate from the cost semantics above. It owns the probabilistic
 stopping-time argument used when an adaptive prefix and a transcript-dependent suffix share one
@@ -35,15 +35,15 @@ uniform oracle answer measures. The online-target counterpart is
 `MerkleTreeMultiExtractability.measure_onlineAdaptivePrefixRunFrom_logged_le`; its target set
 is evaluated on the pre-query log.
 
-The structural `QueryCache.log_consistent_append`, `log_consistent_cacheQuery_append`,
-`cache_covered_append`, `cache_covered_cacheQuery_append`, and `domain_bound_cacheQuery` lemmas
+The lemmas `QueryCache.log_consistent_append`, `log_consistent_cacheQuery_append`,
+`cache_covered_append`, `cache_covered_cacheQuery_append`, and `domain_bound_cacheQuery`
 in `CachingLoggingOracle.lean` transport cache/log hypotheses without probability assumptions
 or decidable equality on responses.
 
 ## Cache carrier
 
 `QueryCache spec` has its own carrier and extension order: every recorded answer must
-remain identical when moving upward in that order. Applying a cache still performs lookup.
+remain identical when moving upward in that order. Applying a cache performs a lookup.
 Use `QueryCache.ofFn` to construct one from a dependent optional function and `.toFn` to
 extract that function. The round-trip, extensionality, lookup, update, and sum-projection
 laws form the public API. Ordinary functions into `Option` retain their pointwise order.
@@ -51,10 +51,10 @@ laws form the public API. Ordinary functions into `Option` retain their pointwis
 ## Per-index counting
 
 `QueryCount ι` is an ordinary function `ι → ℕ`, with the standard pointwise instances.
-`QueryImpl.withCounting` and `countingOracle` use `AddWriterT (QueryCount ι)`.
-Use `.runAdd : m (α × QueryCount ι)` to observe counts; raw `.run` exposes the writer's
-`Multiplicative` tag. `countingOracle.simulate` retains its ordinary-count result and initial offset.
-Writer WP predicates inspect `Multiplicative.toAdd` when using the generic monoid bridge.
+`QueryImpl.withCounting` and `countingOracle` use `AddWriterT (QueryCount ι)`. Use
+`.runAdd : m (α × QueryCount ι)` to observe counts; raw `.run` exposes the writer's `Multiplicative`
+tag. `countingOracle.simulate` retains its ordinary-count result and initial offset. Writer WP
+predicates inspect `Multiplicative.toAdd` when using the generic monoid bridge.
 
 A count is emitted before the handler, but failure in the base monad can discard the complete
 writer result. `WriterT ω Option` loses the log on `none`; `OptionT (WriterT ω Id)` can retain
@@ -91,7 +91,7 @@ no running-time claim about association-list lookup or the network schedule.
 [`RandomOracle/Routing.lean`](../../VCVio/OracleComp/QueryTracking/RandomOracle/Routing.lean)
 proves that injective input encodings preserve the full output measure of every adaptive
 client of an initially empty finite random oracle. The eager-table and lazy-cache forms
-share the same structural routing operation. Disjoint injective encodings of two domains
+share one routing operation. Disjoint injective encodings of two domains
 use Mathlib's `Function.Injective.sumElim` to discharge the routing condition.
 
 [`Examples/ProgramLogic/RandomOracleRouting.lean`](../../Examples/ProgramLogic/RandomOracleRouting.lean)
@@ -99,8 +99,8 @@ shows why the condition matters: comparing distinct Boolean cells accepts with p
 `1/2`, whereas routing both inputs to one target cell accepts with probability `1`.
 The ordinary-import tests in
 [`VCVioTest/RandomOracleRouting.lean`](../../VCVioTest/RandomOracleRouting.lean)
-also cover adaptive and repeated queries, disjoint domains, and structural routing in `Type 1`.
-The measure laws use the existing table-sampling API in `Type 0`; arbitrary preloaded caches
+also cover adaptive and repeated queries, disjoint domains, and the routing operation in
+`Type 1`. The measure laws use the table-sampling API in `Type 0`; arbitrary preloaded caches
 require their own consistency condition.
 
 ## Instrumentation Pattern: `preInsert` / `postInsert`
@@ -122,13 +122,19 @@ preInsert / postInsert  (generic combinators + bridge theory)
 
 Read this top-down before adding a new instrumentation wrapper. The rule of thumb:
 
-- **If the wrapper's shape is "for each query, accumulate a value, then delegate"**, define it as a one-liner over `withTraceBefore` / `withCost` (i.e. through `preInsert`).
-- **If it's "delegate, then record query+response"**, route it through `withTrace` / `withTraceAppend` / `withLogging` (i.e. through `postInsert`).
-- **If the wrapper genuinely needs to inspect external state to decide whether or not to query** (cache-on-hit, seed fallback, budget gate, bad-event gating), write a custom `QueryImpl` — `preInsert` / `postInsert` cannot express this. Existing examples: `withCaching` (`CachingOracle.lean`), `withPregen` (`SeededOracle.lean`), `enforceOracle` (`Enforcement.lean`).
+- **If the wrapper's shape is "for each query, accumulate a value, then delegate"**, define it as a
+  one-liner over `withTraceBefore` / `withCost` (i.e. through `preInsert`).
+- **If it's "delegate, then record query+response"**, route it through `withTrace` /
+  `withTraceAppend` / `withLogging` (i.e. through `postInsert`).
+- **If the wrapper genuinely needs to inspect external state to decide whether or not to query**
+  (cache-on-hit, seed fallback, budget gate, bad-event gating), write a custom `QueryImpl` —
+  `preInsert` / `postInsert` cannot express this. Examples: `withCaching` (`CachingOracle.lean`),
+  `withPregen` (`SeededOracle.lean`), `enforceOracle` (`Enforcement.lean`).
 
-Defining the wrapper through this chain provides structural projection and support equations,
-including `proj_simulateQ_*` and `support_proj_simulateQ_*`, plus query-bound transfer. These
-equations preserve any observation of the projected program, including its chosen-space measure.
+Defining the wrapper through this chain provides the projection and support equations,
+`proj_simulateQ_*` and `support_proj_simulateQ_*`, and query-bound transfer. These equations
+preserve every observation of the projected program, its measure on a chosen measurable space
+included.
 
 See `docs/agents/oracle-comp.md` for the full table of combinators and the underlying theory.
 
@@ -196,13 +202,13 @@ second independent cost semantics.
 The important design point is:
 
 - `QueryImpl`, `HasQuery.Program`, and `AddWriterT` are the semantic core
-- `CostModel` is now a thin facade for `OracleComp`-specific theorems and asymptotic packaging
+- `CostModel` is a thin facade for `OracleComp`-specific theorems and asymptotic packaging
 
 Use `CostModel` when you want:
 
 - the free-oracle viewpoint
 - `OracleComp`-specific reductions
-- the older asymptotic query-cost packaging
+- its asymptotic query-cost packaging
 
 Use `QueryCost` when you want:
 
@@ -221,14 +227,16 @@ measurable Nat observables under arbitrary measures. The query-cost layer specia
 - `∫⁻ a, T a ∂μ = ∑' i, μ {a | i < T a}` (`MeasureTheory.lintegral_coe_nat_eq_tsum`)
 - tail domination implies expectation domination
 
-WriterCost, QueryCost, and CostModel respect the chosen cost measurable space and share the
-same cost-marginal integral. `CostsAs` gives an output integral under a measurable cost function
-and valuation; countable output sums need actual countability and measurable singletons.
-Pathwise expectation bounds need a measurable valuation. Upper bounds permit failure; lower
-and exact bounds use Mathlib `IsProbabilityMeasure` on the cost marginal. Exact cost needs no
-order or monotone valuation. `expectedCost_eq_mul_costMass_of_hasCost` also needs no attachment
-and retains successful mass for computations that can fail; the support-based variant handles
-valuations constant on reachable costs. Markov bounds observe only the cost marginal. Discarded outputs need no measurable space.
+`WriterCost`, `QueryCost` and `CostModel` use the chosen measurable space on costs and share one
+integral of the cost marginal. `CostsAs` gives the expectation as an integral over the outputs
+when the cost function and the valuation are measurable; a sum over the outputs needs a
+countable output type with measurable singletons. A pathwise expectation bound needs a
+measurable valuation: an upper bound allows failure, while a lower or exact bound uses Mathlib's
+`IsProbabilityMeasure` of the cost marginal. An exact cost needs no order and no monotone
+valuation. `expectedCost_eq_mul_costMass_of_hasCost` needs no attachment either, and keeps the
+success mass for computations that can fail; its support-based variant
+`expectedCost_eq_mul_costMass_of_support` handles valuations constant on the possible costs.
+Markov bounds observe only the cost marginal, and discarded outputs need no measurable space.
 
 Measurably parameterized cost measures are families accepted by `evalDistKernel`.
 `AddWriterT.measurable_expectedCost` certifies their measurable expected valuations. Algebraic
@@ -237,7 +245,7 @@ writer tags carry their underlying measurable space through
 
 ## Three Cost Notions
 
-There are three distinct notions in the current API.
+The API has three distinct cost notions.
 
 ### Pathwise cost
 
@@ -382,8 +390,8 @@ the two cost predicates.
 The rule also applies to function-valued cost vectors: `gcongr` leaves the pointwise order goal,
 which can be supplied with `exact h`. Normalize equal bounds with `simpa only` when no weakening
 is needed.
-Lower-bound registrations remain local experiments; use `pathwiseCostAtLeast_mono` or
-`queryBoundedBelowBy_mono` explicitly. The
+The lower-bound monotonicity lemmas `pathwiseCostAtLeast_mono` and `queryBoundedBelowBy_mono`
+are not registered with `gcongr`; apply them by name. The
 [generalized-relation investigation](../reading/generalized-relation-automation.md) records the
 tests and the promotion criteria for additional rules.
 
@@ -459,14 +467,14 @@ This is the main reference for:
 
 ## Typeclass Hygiene
 
-The query-tracking files now try to keep theorem signatures narrow.
+The query-tracking files keep theorem signatures narrow.
 
 Preferred pattern:
 
 - put only genuinely shared assumptions in section variable blocks
 - localize lawful attachment, `LawfulMonad`, measure semantics, chosen measurable spaces,
   measurability proofs, and cost-marginal probability certificates to the declarations that
-  need them; structural cost proofs require no probability interpretation
+  need them; pathwise cost proofs need no probability interpretation
 - if a proof needs extra decidability or classical choice, install it locally with `classical` or
   a local instance
 

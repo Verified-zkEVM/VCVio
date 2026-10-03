@@ -1,9 +1,10 @@
 # Compile time of the core-WP program logic
 
-**Status:** measurement record, 2026-10-02. Base: `main` at `f5119c64` (Lean and Mathlib
-`v4.34.0`). Head: #821 at `720116af` (`v4.35.0-rc3`, after the follow-up checkpoints 1–7: the
-readings, `prvcgen`, `prrw`, the pilots, the tests and the gallery). The question is whether the
-program logic made the library slower to build, and where the time goes.
+**Status:** historical measurement record, 2026-10-02. Base: `main` at `f5119c64` (Lean and
+Mathlib `v4.34.0`). Head: #821 at `720116af` (`v4.35.0-rc3`), which has the four readings of
+`OracleComp`, the `prvcgen` and `prrw` tactics, the proofs converted to them, their tests and the
+example walkthroughs. The question is whether the program logic made the library slower to build,
+and where the time goes.
 
 ## Method
 
@@ -47,8 +48,8 @@ toolchain and Mathlib bump, which speeds up untouched modules as much; the modul
 logic rewrote are no slower than that, and slightly faster.
 
 No module grows by more than 1.1 s. The largest growths are small modules of the probability
-layer that now carry the event notation and PolyFun's exact weakest preconditions, each by under
-a second, mostly in interpretation: `V:VCVio/EvalDist/ProbabilityBounds.lean` (2.7 s → 3.5 s),
+layer that carry the event notation and PolyFun's exact weakest preconditions at the head, each by
+under a second, mostly in interpretation: `V:VCVio/EvalDist/ProbabilityBounds.lean` (2.7 s → 3.5 s),
 `V:VCVio/Interaction/UC/ReactiveSecurity.lean` (2.2 s → 2.9 s), PolyFun's
 `P:PolyFun/Control/Do/Spec.lean` (1.2 s → 1.8 s, the transformer rules it absorbed) and
 `V:VCVio/EvalDist/ProbabilityNotation.lean` (2.0 s → 2.6 s). The one larger growth outside them,
@@ -57,8 +58,9 @@ change and is mostly type checking.
 
 The 61 modules the head adds cost 116 s of CPU time in all, against the 297 s saved on the modules
 in both trees. The most expensive is the `prvcgen` test file `V:VCVioTest/ProgramLogic/PrVCGen.lean`
-at 3.3 s; the reading tests, the gallery files and the new rule files are each between 1.9 s and
-2.6 s, most of which is importing.
+at 3.3 s. The tests of the readings, the example walkthroughs added under `Examples/ProgramLogic/`
+and the rule files added beside the readings each take between 1.7 s and 2.6 s, most of it
+importing.
 
 ## Where the time goes
 
@@ -74,11 +76,11 @@ and a `-Dtrace.profiler=true` profile of a typical module is the next measuremen
 a twenty-nine-step reactive network (7.0 s of `simp` at head, 8.0 s at base); the floating-point
 certificates of `V:Extern/Falcon/FPR/Add.lean` (7.6 s of interpretation); and the encoding lemmas
 of `V:LatticeCrypto/MLKEM/Concrete/Encoding.lean` (2.7 s of type checking). A declaration-level
-profile at the checkpoint-0 head (`-Dprofiler.threshold=200` over the probability notation tests,
-`V:VCVioTest/ProbabilityTactics.lean`, the `simulateQ` up-to-bad rules and the `prvcgen` tests)
-found the event notation's elaborator and `prvcgen` under a second in every declaration; the only
-second-scale step there was `simp [coinPadded]` at `V:VCVioTest/ProbabilityTactics.lean:327`
-(1.3 s).
+profile of an earlier head of #821, `1f2e34e9` (2026-10-01), with `-Dprofiler.threshold=200` over
+the probability notation tests, `V:VCVioTest/ProbabilityTactics.lean`, the `simulateQ` up-to-bad
+rules and the `prvcgen` tests, found the event notation's elaborator and `prvcgen` under a second
+in every declaration; the only second-scale step there was `simp [coinPadded]` at
+`V:VCVioTest/ProbabilityTactics.lean:327` (1.3 s).
 
 ## Gating
 

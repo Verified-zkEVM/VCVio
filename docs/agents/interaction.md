@@ -8,16 +8,21 @@ Use this page for VCV-specific runtime, computational, and example integration o
 
 Generic protocol theory lives in PolyFun:
 
-- Sequential specs, transcripts, decorations, strategies, append, replicate, and state chains: `PolyFun.Interaction.Basic.*`
-- Two-party, multiparty, and concurrent interaction layers: `PolyFun.Interaction.TwoParty.*`, `PolyFun.Interaction.Multiparty.*`, `PolyFun.Interaction.Concurrent.*`
-- Generic UC interfaces, open processes, structural boundary traces, open theory, notation, environment actions, and leakage scaffolding: `PolyFun.Interaction.UC.*`
+- Sequential specs, transcripts, decorations, strategies, append, replicate, and state chains:
+  `PolyFun.Interaction.Basic.*`
+- Two-party, multiparty, and concurrent interaction layers: `PolyFun.Interaction.TwoParty.*`,
+  `PolyFun.Interaction.Multiparty.*`, `PolyFun.Interaction.Concurrent.*`
+- Generic UC interfaces, open processes, structural boundary traces, open theory, notation,
+  environment actions, and leakage scaffolding: `PolyFun.Interaction.Open.*`
+- Reactive processes, networks, and their execution: `PolyFun.Interaction.Execution.*`
 
-For conceptual background, read PolyFun's `docs/wiki/interaction.md` and the module docstrings in the PolyFun dependency.
-VCVio should only document how those generic APIs are instantiated with probabilistic semantics, oracle computations, and crypto examples.
+For conceptual background, read PolyFun's `docs/guides/interaction.md` and the module docstrings in
+the PolyFun dependency. VCVio should only document how those generic APIs are instantiated with
+probabilistic semantics, oracle computations, and crypto examples.
 
 ## VCV-Specific Layers
 
-VCVio retains the computational and runtime interpretation of PolyFun's generic UC layer:
+VCVio provides the computational and runtime interpretation of PolyFun's generic UC layer:
 
 | File | Purpose |
 |------|---------|
@@ -38,7 +43,7 @@ VCVio retains the computational and runtime interpretation of PolyFun's generic 
 | `VCVio/Interaction/UC/WP.lean` | Core `Std.WP` triples for the UC runtime: the run equations of `StepOver.sample` / `ProcessOver.runSteps` and the fuel-indexed invariant lemma `runSteps_triple_preserves_invariant`, lattice-generic. |
 
 These files may import PolyFun interaction modules.
-Generic interaction modules should not be reintroduced under `VCVio/Interaction` or `ToMathlib`.
+Generic interaction modules belong in PolyFun, not under `VCVio/Interaction` or `ToMathlib`.
 
 ## Runtime Semantics
 
@@ -72,17 +77,21 @@ import VCVio.Interaction.UC.Runtime
 
 - `processSemantics` runs in an arbitrary surface monad `m` with bundled `MeasureSemanticsVia m`.
 - `processSemanticsProbComp` specializes to coin-flip-only `ProbComp` protocols.
-- `processSemanticsOracle` specializes to `OracleComp superSpec`, interpreting shared oracle access through `simulateQ'`.
+- `processSemanticsOracle` specializes to `OracleComp superSpec`, interpreting shared oracle access
+  through `simulateQ'`.
 
-Use the asynchronous entry points in `VCVio/Interaction/UC/AsyncRuntime.lean` when the environment can interleave direct events with process steps:
+Use the asynchronous entry points in `VCVio/Interaction/UC/AsyncRuntime.lean` when the environment
+can interleave direct events with process steps:
 
 ```lean
 import VCVio.Interaction.UC.AsyncRuntime
 ```
 
 - `RuntimeEvent Event` distinguishes `processTick` from `envTick e`.
-- `EnvAction m Event State` is provided by PolyFun and reacts in the same surface monad as the runtime.
-- `processSemanticsAsync` and `processSemanticsAsyncProbComp` are the main async semantic constructors.
+- `EnvAction m Event State` is provided by PolyFun and reacts in the same surface monad as the
+  runtime.
+- `processSemanticsAsync` and `processSemanticsAsyncProbComp` are the main async semantic
+  constructors.
 
 ## Computational Security
 
@@ -119,7 +128,7 @@ Start concrete reactive execution work with `Examples/OneTimePad/Reactive.lean` 
 `Reactive/Security.lean`. They derive both runners from an actual input/output conversation
 and prove single-use OTP simulation for ciphertext-only delivery adversaries, including
 environments retaining countable private auxiliary state across the exchange. The actor and
-access restrictions are explicit; this is not yet a general UC composition theorem.
+access restrictions are explicit; this is not a general UC composition theorem.
 `Reactive/Separation.lean` proves that plaintext leakage defeats every allowed simulator
 and that uniform ciphertext marginals do not justify key reuse.
 `VCVioTest/ReactiveNetworkAdversarial.lean` checks insufficient fuel, missing deliveries,
@@ -154,17 +163,18 @@ only on internal routes; every local interpreter remains stateless outside its d
 sampling computation. `Separated/Execution.lean` derives the complete conversation from
 29 token activations, including one ciphertext/advice backchannel round. `Separated/Security.lean`
 proves OTP simulation with advice depending on the environment's private input and memory.
-`Separated/Aggregate.lean` relates this execution to the earlier 9-activation aggregate model
-when advice depends only on ciphertext. The different costs remain explicit.
+`Separated/Aggregate.lean` relates this execution to the 9-activation aggregate model of
+`Reactive.lean` when advice depends only on the ciphertext; the two activation counts stay
+explicit.
 `VCVioTest/SeparatedOTP.lean` separates short prefixes, ignored advice, and incorrect receivers
-at the level of actual observation laws. This is still a fixed single-use conversation;
-arbitrary context composition, static multisession execution, and computational admission
-require the subsequent campaign results.
+at the level of actual observation laws. This is a fixed single-use conversation; it does not
+cover arbitrary context composition, static multisession execution, or computational
+admission.
 
-`Examples/OneTimePad/UC.lean` remains an observation-interface smoke test. Its chosen observer
-makes arbitrary systems indistinguishable, so its `ObservedCompEmulates 0` theorem is not
-evidence of network execution adequacy.
-For lower-level probabilistic and oracle examples, see `docs/agents/probability.md` and `docs/agents/oracle-comp.md`.
+`Examples/OneTimePad/UC.lean` is an observation-interface smoke test. Its chosen observer makes
+arbitrary systems indistinguishable, so its `ObservedCompEmulates 0` theorem is not evidence of
+network execution adequacy. For lower-level probabilistic and oracle examples, see
+`docs/agents/probability.md` and `docs/agents/oracle-comp.md`.
 
 ## Import Guide
 
@@ -177,8 +187,8 @@ import PolyFun.Interaction.Basic.Strategy
 import PolyFun.Interaction.Basic.Sampler           -- nodewise monadic choices
 import PolyFun.Interaction.Basic.TypeTreeFintype   -- finite/nonempty branching ornaments
 import PolyFun.Interaction.Concurrent.Process
-import PolyFun.Interaction.UC.OpenProcess
-import PolyFun.Interaction.UC.OpenProcessModel
+import PolyFun.Interaction.Open.OpenProcess
+import PolyFun.Interaction.Open.OpenProcessModel
 
 -- VCV-specific runtime and security interpretation
 import VCVio.Interaction.UC.Runtime
@@ -188,7 +198,8 @@ import VCVio.Interaction.UC.Computational
 import VCVio.Interaction.UC.Standard
 ```
 
-When editing VCVio, prefer importing the specific PolyFun module you need rather than re-exporting large generic surfaces through VCVio.
+When editing VCVio, prefer importing the specific PolyFun module you need rather than re-exporting
+large generic surfaces through VCVio.
 
 For explicit FIFO oracle clients, `OracleNetwork.run` consumes a finite list of client and delivery
 activations. `run_serialSchedule` proves that an all-branch bound of `n` queries suffices for
@@ -218,7 +229,7 @@ cost of atomic handlers, routing, queues, parsing, randomness, initialization, o
 The canonical semantic direction is [the reactive UC contract](../design/uc-semantics.md).
 PolyFun's `ReactiveProcess`/`ReactiveNetwork` modules supply actual typed input reactions,
 token passing and FIFO delivery, prefix and identity-transport laws, and exact cofree-behavior
-adequacy. The existing `OpenProcess` model has a different, activation/output-only scope.
+adequacy. The `OpenProcess` model has a narrower scope: activations and outputs only.
 
 [`ReactiveRuntime`](../../VCVio/Interaction/UC/ReactiveRuntime.lean) samples shared setup and
 reads the actual environment outcome after finite execution. Its Measure equations and

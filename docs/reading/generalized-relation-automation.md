@@ -1,5 +1,10 @@
 # Generalized relation automation in VCVio
 
+> Status: historical investigation record, 2026-09-08. The candidate ledger carries later
+> dispositions; the rest describes the investigated revision, and some of its names have since
+> changed. The [probability guide](../agents/probability.md) and the
+> [program-logic guide](../agents/program-logic.md) describe the current use of `gcongr` and `grw`.
+
 Investigated on 2026-09-08 against VCVio
 `bda0be2da973b1304e016589bb794b22ca299f45`, Lean `v4.33.1`, and Mathlib
 `0df444a360eaa60ab8c11dca51a86af692955474`. The experiments and production pilots accompany

@@ -1,6 +1,7 @@
 # Measure-Native Denotation: Spike Findings
 
-> Snapshot date: 2026-08-21. Toolchain `v4.33.0`, Mathlib `v4.33.0`, PolyFun `v4.33.1`.
+> Status: historical implementation record, 2026-08-21. Toolchain `v4.33.0`, Mathlib `v4.33.0`,
+> PolyFun `v4.33.1`.
 >
 > Companion to [`probability-semantics-landscape.md`](probability-semantics-landscape.md).
 > That document surveys the options; this one records what happened when one was built. The
@@ -59,10 +60,10 @@ crypto proof had to change, and none had to be reproved.
   `Measure` is not a monad. It is replaced by a three-line structural recursion over `pure` /
   `liftBind` — the same shape `instEvalDistCompatible` already inducts over. This was the cheapest
   part, not the most expensive.
-- **Instance-indexing.** `denote` carries `[∀ a, MeasurableSpace (P.B a)]` and `[MeasurableSpace α]`;
-  downstream statements add `[MeasurableSingletonClass α]` where they mention singletons. On the
-  OTP gate this cost two binders on one helper theorem and zero extra proof steps, because
-  `DiscreteInstances` supplies what `BitVec` was missing.
+- **Instance-indexing.** `denote` carries `[∀ a, MeasurableSpace (P.B a)]` and
+  `[MeasurableSpace α]`; downstream statements add `[MeasurableSingletonClass α]` where they
+  mention singletons. On the OTP gate this cost two binders on one helper theorem and zero extra
+  proof steps, because `DiscreteInstances` supplies what `BitVec` was missing.
 - **Local Mathlib-facing gaps.** `PMF.toMeasure_bind`, `BitVec` measurability, coproduct measurable
   spaces for `Option`/`Except`, and the option success submeasure are staged in `ToMathlib`. They
   deliberately stay local during the design phase and track Mathlib's idiom closely.

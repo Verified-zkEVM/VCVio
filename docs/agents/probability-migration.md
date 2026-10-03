@@ -30,7 +30,7 @@ record is `docs/reading/denotational-probability-semantics.md`.
 
 The codemod is textual: it never needs a build and is idempotent, so it can be rerun after a
 further repin. It does not convert proofs; a proof that computed with `probOutput` sums, `SPMF`
-equalities or `tvDist` follows the *Standard proof conversion* table of the roadmap.
+equalities or the discrete `tvDist` follows the *Standard proof conversion* table of the roadmap.
 
 ## Notation and definitions
 
@@ -43,7 +43,7 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 | `Pr{mx}[= a]` (earlier measure API) | `Pr{let x ← mx}[x = a]` |
 | `Pr{x ← mx}[p x]` (a bare draw) | `Pr{let x ← mx}[p x]`: the braces hold an ordinary `do` sequence |
 | `evalSPMF mx`, `𝒮[mx]`, `SPMF α` | `𝒟[mx] : Measure α`; `evalDistWithFailure mx : Measure (Option α)` records the failure mass at `none` |
-| `tvDist mx my` | `etvDist mx my` (`ℝ≥0∞`, keyed on events, across monads) or `tvDist mx my` (its real form); `measureETVDist mx my` on a chosen σ-algebra, `Measure.etvDist` on measures |
+| the discrete `tvDist mx my` of the output `SPMF`s | `tvDist mx my` keeps its name as the real value of `etvDist mx my`, the event-keyed distance (`ℝ≥0∞`, the largest discrepancy between the two computations' probabilities of an event, across monads); a bound on `ENNReal.ofReal (tvDist …)` becomes a bound on `etvDist`. `measureETVDist mx my` is the distance on a chosen σ-algebra, and `Measure.etvDist` the distance between measures |
 | `expectedValue mx f` | `∫⁻ x, f x ∂𝒟[mx]` |
 | `NeverFail mx` | nothing on `OracleComp`; `IsProbabilityMeasure 𝒟[mx]` for failing monads |
 | `RelTriple'` | `RelTriple` |
@@ -71,8 +71,9 @@ equalities or `tvDist` follows the *Standard proof conversion* table of the road
 whose answer types are abstract, such as `unifSpec + (Unit →ₒ Chal)` with `[Fintype Chal]
 [Inhabited Chal]`, declare
 `local instance : UniformAnswerMeasure (Unit →ₒ Chal) := .ofFiniteNonempty _` on the component
-once per file. The sum then gets its instance from `UniformAnswerMeasure.add`. Do not declare an
-instance on the sum itself, since it would compete with that one.
+once per file. The sum then gets its instance from `UniformAnswerMeasure.add`, which is built on
+`AnswerMeasure.add`. Do not declare an instance on the sum itself, since it would compete with
+that one.
 
 ## Query and handler laws
 
@@ -96,7 +97,7 @@ Replacement lemmas keep the removed name with the probability head replaced:
 
 | Removed name part | Replacement name part | Example |
 |---|---|---|
-| `open scoped OracleComp.Qualitative` / `.Angelic` / `.Quantitative` | `open scoped OracleComp.Necessary` / `.Possible` / `.Lower` (the readings are named by what a triple states; `OracleComp.Upper` and `.Probabilistic` are unchanged, and the `Dispatch` scopes follow) |
+| `open scoped OracleComp.Qualitative` / `.Angelic` / `.Quantitative` | `open scoped OracleComp.Necessary` / `.Possible` / `.Lower`. The readings are named by what a triple states. The necessary reading is the global instance of `OracleComp`, so the `open` the codemod writes for it changes nothing and can be deleted; `OracleComp.Upper` and `OracleComp.Probabilistic` keep their names, and the `Dispatch` scopes follow the readings |
 | `open scoped ExpectationWP.Quantitative` | `open scoped ExpectationWP.Lower` |
 | `exp_norm` (tactic) | `expect_arith` |
 | `simp only [game_rule]`, `@[game_rule]` | `simp only [expect_norm, expect_eval]`; loop unfoldings, values and simulation steps are `@[expect_eval]`, linearity is `@[expect_arith]` |
@@ -105,14 +106,14 @@ Replacement lemmas keep the removed name with the probability head replaced:
 | `evalSPMF_` | `evalDist_` | `evalSPMF_simulateQ_run_congr` → `evalDist_simulateQ_run_congr` |
 | `tvDist_` (bounds stated on `ENNReal.ofReal (tvDist …)`) | `etvDist_` | `tvDist_simulateQ_le_probEvent_bad` → `etvDist_simulateQ_run'_le_prEvent_bad` |
 
-Other renames: `MeasureProgramLogic` → `ExpectationWP` (`measureWP` → `wpMonad`, `toMAlgOrdered`
-→ `algebra`; the reading `Quantitative` → `Lower`); `AdvBound.of_tvDist` → `AdvBound.of_etvDist` (and `AdvBound` takes an
-`ℝ≥0∞` bound); root `evalDist_uniformSample` → `SampleableType.evalDist_uniformSample`;
-`relTriple_eqRel_of_evalSPMF_eq` → `relTriple_eqRel_of_evalDistEq`;
-`evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`; in the identical-until-bad
-family `_plus_probEvent_bad` → `_add_prEvent_bad` (for example
-`advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved`) and `tvDist_simulateQ_…` →
-the `etvDist_simulateQ_run…` lemmas in `Relational/SimulateQ/UntilBad.lean`;
+Other renames: `MeasureProgramLogic` → `ExpectationWP` (`measureWP` → `wpMonad`, `toMAlgOrdered` →
+`algebra`; the reading `Quantitative` → `Lower`); `AdvBound.of_tvDist` → `AdvBound.of_etvDist` (and
+`AdvBound` takes an `ℝ≥0∞` bound); root `evalDist_uniformSample` →
+`SampleableType.evalDist_uniformSample`; `relTriple_eqRel_of_evalSPMF_eq` →
+`relTriple_eqRel_of_evalDistEq`; `evalSPMF_eq_of_relTriple_eqRel` → `evalDistEq_of_relTriple_eqRel`;
+in the identical-until-bad family `_plus_probEvent_bad` → `_add_prEvent_bad` (for example
+`advantage_le_expectedQuerySlack_add_prEvent_bad_of_inv_preserved`) and `tvDist_simulateQ_…` → the
+`etvDist_simulateQ_run…` lemmas in `Relational/SimulateQ/UntilBad.lean`;
 `wpProp_iff_probEvent_eq_one` → `OracleComp.Necessary.prEvent_eq_one_iff_triple` (a core triple in
 the necessary reading in place of the proposition-valued weakest precondition).
 
@@ -125,10 +126,12 @@ directly:
 - `probOutput_bind_eq_tsum`, `probEvent_bind_eq_tsum` → `prEvent_bind_eq_lintegral` (with
   `_of_discrete` for a discrete draw), then `lintegral_fintype` for a finite sum.
 
-Statements of equality in distribution now use `=ᵈ`:
+Statements of equality in distribution use `=ᵈ`:
 - `prEvent_congr_of_evalDist_eq mx my h p` → `(EvalDistEq.of_evalDist_eq h).prEvent_eq p`;
-- `evalDist_bind_congr_of_evalDist_eq mx my h f` → `((EvalDistEq.of_evalDist_eq h).bind_left f).evalDist_eq`;
-- `evalDist_map_congr_of_evalDist_eq mx my h f` → `((EvalDistEq.of_evalDist_eq h).map f).evalDist_eq`;
+- `evalDist_bind_congr_of_evalDist_eq mx my h f` →
+  `((EvalDistEq.of_evalDist_eq h).bind_left f).evalDist_eq`;
+- `evalDist_map_congr_of_evalDist_eq mx my h f` →
+  `((EvalDistEq.of_evalDist_eq h).map f).evalDist_eq`;
 - lemmas named `…_of_evalDist_eq` whose hypothesis was a discrete measure equality become
   `…_of_evalDistEq`, e.g. `relTriple_of_evalDistEq_left`, `support_eq_of_evalDistEq`,
   `etvDist_simulateQ_run'_le_prEvent_bad_of_evalDistEq`;
@@ -178,8 +181,8 @@ callers restate the hypotheses they supply.
 | `discreteGaussianDist σ μ hσ : PMF ℤ` | pointwise mass | `discreteGaussianMeasure σ μ : Measure ℤ`, with `discreteGaussianMeasure_singleton` and `isProbabilityMeasure_discreteGaussianMeasure` |
 
 The Fiat–Shamir extraction bounds `nma_to_hard_relation_bound`, `euf_nma_bound` and
-`euf_cma_bound` no longer take the extractor-failure hypothesis `hss_nf`, which holds for every
-`OracleComp`; drop that argument at call sites. Their conclusions and `Fork.advantage` are
+`euf_cma_bound` take no extractor-failure hypothesis `hss_nf`: it holds for every `OracleComp`, so
+drop that argument at call sites. Their conclusions and `Fork.advantage` are
 `Pr{let x ← …}[x = true]` events.
 
 For an aborting identification scheme whose loss is a real-valued formula, keep `ζ_zk : ℝ` and
@@ -187,8 +190,8 @@ pass `ENNReal.ofReal ζ_zk` to `HVZK`, as `FiatShamirWithAbort.euf_cma_bound` do
 
 ## Removed and narrowed statements
 
-Statements of the discrete layer that have no literal counterpart, with what states the same
-fact now.
+Statements of the discrete layer that have no literal counterpart, each with the statement that
+expresses the same fact.
 
 | Removed or narrowed | Current |
 |---|---|
@@ -210,11 +213,12 @@ fact now.
 | `VCVio.ProgramLogic.Unary.WP.Qualitative`, `….QualitativeSpecs` | `VCVio.ProgramLogic.Unary.WP.Necessary`, `….NecessarySpecs` |
 | `VCVio.ProgramLogic.Unary.WP.Angelic` | `VCVio.ProgramLogic.Unary.WP.Possible` |
 | `VCVio.ProgramLogic.Unary.WP.Quantitative`, `….QuantitativeSpecs` | `VCVio.ProgramLogic.Unary.WP.Lower`, `….LowerSpecs` |
-| `VCVio.Prelude.Core` | `VCVio.Prelude.Core` (the `expect_norm`, `expect_eval` and `expect_arith` simp sets) |
+| `VCVio.EvalDist.ProbabilityNotation.Attr` | `VCVio.Prelude.Core` (the `expect_norm`, `expect_eval` and `expect_arith` simp sets) |
 | `ToMathlib.ProbabilityTheory.SPMF`, `ToMathlib.Probability.ProbabilityMassFunction.Measure` | nothing; state facts with Mathlib measures |
 | `ToMathlib.Probability.ProbabilityMassFunction.Lemmas` | `Mathlib.Probability.Distributions.Uniform` |
 | `VCVio.EvalDist.Defs.Basic` | `VCVio.EvalDist.Defs.Measure`, `VCVio.EvalDist.ProbabilityNotation` |
-| `VCVio.EvalDist.Defs.AlternativeMonad`, `VCVio.EvalDist.Defs.NeverFails` | `VCVio.EvalDist.Defs.Support.Failure`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.Defs.AlternativeMonad` | `VCVio.EvalDist.Defs.Support.Failure`, `VCVio.EvalDist.ProbabilityNotation` |
+| `VCVio.EvalDist.Defs.NeverFails` | `VCVio.EvalDist.Defs.Support.Failure`, `VCVio.EvalDist.Monad.Seq` |
 | `VCVio.EvalDist.FailureMeasure` | `VCVio.EvalDist.Defs.Measure` (`OptionT.evalDist_eq_dropNone`), `VCVio.EvalDist.WithFailure` |
 | `VCVio.EvalDist.Bool`, `VCVio.EvalDist.BitVec`, `VCVio.EvalDist.Option` | `VCVio.EvalDist.Monad.Map`; event laws live in `VCVio.EvalDist.ProbabilityNotation` |
 | `VCVio.EvalDist.Fintype` | `VCVio.EvalDist.Monad.Basic` |
@@ -233,11 +237,13 @@ fact now.
 | `VCVio.OracleComp.Constructions.Fork` | `VCVio.OracleComp.Constructions.Fork.Basic` |
 | `VCVio.CryptoFoundations.ForkMeasure` | `VCVio.CryptoFoundations.ReplayFork`, `VCVio.CryptoFoundations.SeededFork` |
 | `VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility` | `VCVio.CryptoFoundations.SymmEncAlg` |
-| `VCVio.EvalDist.TVDist`, `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
+| `VCVio.EvalDist.TVDist` | `VCVio.EvalDist.EvalDistTV` (the event-keyed `etvDist` and its real value `tvDist`) |
+| `VCVio.EvalDist.MeasureTVDist` | `VCVio.EvalDist.MeasureTVDist.Basic` (with `.Bind` and `.Event` for composition rules) |
 | `VCVio.EvalDist.TVDist.Positivity` | `VCVio.EvalDist.MeasureTVDist.Positivity` (`positivity` on `measureTVDist`) |
 | `VCVio.ProgramLogic.Relational.SimulateQ.Epsilon` | `VCVio.ProgramLogic.Relational.SimulateQ.UntilBad` |
 | `VCVio.EvalDist.ExpectationMeasure` | `VCVio.ProgramLogic.Unary.HoareTriple` (`wp`) or `VCVio.EvalDist.Defs.Measure.Core` (`∫⁻` laws) |
-| `VCVio.EvalDist.RenyiDivergence`, `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`, `ToMathlib.Probability.Divergence.RenyiDiscrete`, `ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym` | `ToMathlib.Probability.Divergence.Renyi` |
+| `VCVio.EvalDist.RenyiDivergence`, `ToMathlib.Probability.ProbabilityMassFunction.RenyiDivergence`, `ToMathlib.Probability.ProbabilityMassFunction.RadonNikodym` | `ToMathlib.Probability.Divergence.Renyi` |
+| `ToMathlib.Probability.Divergence.RenyiDiscrete` | `ToMathlib.Probability.Divergence.RenyiTotalVariation` (the Rényi comparisons with total variation) |
 | `ToMathlib.Probability.ProbabilityMassFunction.TotalVariation` | `ToMathlib.MeasureTheory.Measure.TotalVariation`; `ToMathlib.Probability.Divergence.RenyiTotalVariation` for the Rényi comparisons |
 | `VCVio.StateSeparating.DistEquiv` | `VCVio.StateSeparating.MeasureDistEquiv` |
 | `VCVio.StateSeparating.Advantage` | `VCVio.StateSeparating.Advantage.Measure` |
@@ -264,18 +270,18 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | failed to synthesize `OracleSpec.AnswerMeasure spec` | add the binder from *Classes and binders*, or the local instance for a concrete specification |
 | failed to synthesize `MeasurableSpace (spec.Range t)` inside a proof | `let : MeasurableSpace (spec.Range t) := ⊤` (use `let`, not `letI`, in a proposition-valued goal); in a statement, state the fact with `=ᵈ` or `Pr{…}[…]`, or take `{_ : MeasurableSpace (spec.Range t)}` |
 | `rw`/`simp` does not find a query law such as `evalDist_liftM_query_apply` when the answer type appears reduced (`Bool` rather than `spec.Range t`) | name the specification: `evalDist_liftM_query_apply (spec := S) t hs` |
-| two instances for a sum specification disagree (e.g. a local `UniformAnswerMeasure (A + B)`) | declare the local instance on the components and let `AnswerMeasure.add` build the sum |
+| two instances for a sum specification disagree (e.g. a local `UniformAnswerMeasure (A + B)`) | declare the local instance on the components and let `UniformAnswerMeasure.add` (built on `AnswerMeasure.add`) build the sum's |
 | failed to synthesize `MeasurableSingletonClass α` for `𝒟[mx] {x}` | state the event as `Pr{let y ← mx}[y = x]` |
 | `rw` fails on a `𝒟[…]` term whose measurable-space instance is equal but spelled differently (e.g. Mathlib's `Fin` instance against a local `⊤`) | close with `exact`, `.trans` or `convert`, which unify up to definitional equality |
 | a goal shows `(toMeasure t).trim le_top` | `MeasureTheory.trim_eq_self` when the answer's measurable space is `⊤` by definition; otherwise evaluate measurable sets with `evalDist_liftM_query_apply` or `trim_measurableSet_eq` |
 | `unexpected …; expected '}['` in a `Pr{…}` whose action continues on the next line | the braces hold a `do` sequence: indent the continuation past its `let`, start the sequence on its own line as in a `do` block, or parenthesize the action |
 | two events that should agree differ only in how their binds and maps are arranged | `simp only [expect_norm]` brings both into the normal form of `Pr{…}[…]` |
 | an explicit `prEvent (p <$> mx)`, `prEvent mx p`, or `prEvent (mx >>= fun x => …)` | an event is the expectation of its indicator: `Pr{let x ← mx}[p x]`; a literal non-normal program is `wp⟦mx >>= f⟧ (predInd p)` |
-| `rw` with a lemma about `Pr{let y ← mx >>= f}[q y]` does not find its left side | the notation stores it as `wp⟦mx⟧ fun x => wp⟦f x⟧ fun y => 𝟙⟦q y⟧`; a goal holding a literal `wp (mx >>= f) g ⊥` (after unfolding a definition, say) needs `rw [prEvent_bind]`, `ExpectationWP.wp_bind` or `simp only [expect_norm]` first |
-| `rw` with an equation between whole computations no longer finds them inside an event | turn it into the equation of the events: `congrArg (fun mx => Pr{let x ← mx}[p x]) h`, then `simp only [expect_norm] at …` |
+| `rw` with a lemma about `Pr{let y ← mx >>= f}[q y]` does not find its left side | the notation keeps the draw as written, so the lemma's left side is `wp⟦mx >>= f⟧ (predInd q)`, while the goal may draw in sequence, `Pr{let x ← mx; let y ← f x}[q y]`; `rw [prEvent_bind]` (or `ExpectationWP.wp_bind`) turns the first form into the second, and `simp only [expect_norm]` brings both to the normal form |
+| `rw` with an equation between whole computations does not find them inside an event that draws their steps in sequence | turn it into the equation of the events: `congrArg (fun mx => Pr{let x ← mx}[p x]) h`, then `simp only [expect_norm] at …` |
 | a proof relied on `Pr{…}[…]` unfolding to `𝒟[… >>= fun x => pure …] {True}` | `prEvent_eq_evalDist_map : Pr{let x ← mx}[p x] = 𝒟[p <$> mx] {True}` rewrites a single event to its measure |
 | `prEvent_bind_of_discrete`, a `lintegral` over the events of `f x` | the notation gives the expectation `wp⟦mx⟧ fun x => Pr{let y ← f x}[p y]`; `ExpectationWP.wp_eq_lintegral mx _ .of_discrete` gives the integral |
-| `prEvent_pure_prop` | `Pr{let y ← pure a}[p y]` elaborates to `𝟙⟦p a⟧`; `propInd_eq_ite` gives the `if` form |
+| `prEvent_pure_prop` | `Pr{let y ← pure a}[p y]` is `𝟙⟦p a⟧`, that is `propInd (p a)`, by `prEvent_pure` or `simp`; `propInd_eq_ite` gives the `if` form |
 | `prEvent_eq_wp`, `wp_propInd`, `OracleComp.wp_prEvent_swap` | an event is an expectation, so the first two are identities (drop the rewrite) and `OracleComp.wp_swap` covers the third |
 | `OracleComp.ProgramLogic.wp oa post`, `OracleComp.ProgramLogic.propInd` | `wp⟦oa⟧ post`, core's `wp` under the measure interpretation; `propInd` at the root |
 | `ExpectationWP.Lower.wp_*` | `ExpectationWP.wp_*`, stated on `wp⟦·⟧` and without measurability hypotheses except for `wp_eq_lintegral`, `wp_mono_ae`, `wp_iSup` and the `_mass` bounds |
@@ -283,9 +289,9 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | `simp only [f]` leaves a partially applied predicate `f a b` in an event | the event selector is eta-reduced; `unfold f` instead |
 | an event selector `p ∘ f` does not match `fun x => p (f x)` | the selector is eta-reduced; `simp only [Function.comp_def]` |
 | `OracleComp.prEvent_bind_mono_of_support`, `OracleComp.prEvent_bind_congr_of_support` | `wp_mono_of_support mx h`, `wp_congr_of_support mx h` on the expectation over the shared draw |
-| `prEvent_le_one mx p` no longer applies | the predicate is implicit: `prEvent_le_one mx`; a nest of expectations is bounded by `wp_le_of_forall_le _ fun _ => prEvent_le_one _` |
+| `prEvent_le_one mx p` fails to apply | the predicate is implicit: `prEvent_le_one mx`; a nest of expectations is bounded by `wp_le_of_forall_le _ fun _ => prEvent_le_one _` |
 | `OracleComp.prEvent_bind_bind_swap` (continuation of type `m Prop`) | `OracleComp.wp_swap`, or `prEvent_bind_bind_swap` with a continuation and predicate |
-| `simp` leaves `Pr{let a ← mx; let b ← f a}[True]` on `OracleComp` | `simp` evaluates it through `wp_const` and `OracleComp.prEvent_true_eq_one` |
+| `simp` leaves `Pr{let a ← mx; let b ← f a}[True]` on `OracleComp` | `simp` evaluates it through `wp_const` and `OracleComp.prEvent_true_eq_one`; supply both to a `simp only` call, and import `VCVio.OracleComp.EvalDist.Measure` for the second |
 | laws about `pure` (`prEvent_pure`, `map_pure`) do not fire on `pure v` written with an `OracleComp` ascription | that `pure` elaborates through `PFunctor.FreeM.instPure` rather than the monad; `erw [prEvent_pure]`, or state the term through the `do` block that produced it |
 | measurability hypotheses of the `_ae` and `lintegral` event laws | they take the map form `Measurable fun x => 𝒟[p <$> f x]` |
 | an event transported between monads (`ProbComp` and `OracleComp spec`) | take `.prEvent_eq p` of an equality in distribution such as `uniformSampleImpl.evalDistEq_simulateQ` or `OracleComp.evalDistEq_liftComp_uniform` |
@@ -293,13 +299,13 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
 | probability one from reachability | `prEvent_eq_one_of_forall_mem_support`; the converse `prEvent_eq_one_iff` needs uniform answers |
 | `Application type mismatch` at `prEvent_mono_of_support … fun x hx h => …` | the predicates are explicit: `prEvent_mono_of_support mx p q h` |
 | `cannot determine the monad of the draw` in a converted `Pr{let x ← e}[…]` | ascribe the computation, `Pr{let x ← (e : ProbComp α)}[…]`: the event elaborates its draws first, so a polymorphic `e` needs its monad |
-| `unknown identifier 'tvDist'`, or `tvDist_triangle`, after the codemod rewrote `import VCVio.EvalDist.TVDist` | the event-keyed distance `etvDist` and its real form `tvDist` are in `VCVio.EvalDist.EvalDistTV`, which the current codemod imports |
+| `unknown identifier 'tvDist'`, or `tvDist_triangle`, after the codemod rewrote `import VCVio.EvalDist.TVDist` | the event-keyed distance `etvDist` and its real form `tvDist` are in `VCVio.EvalDist.EvalDistTV`, which the codemod imports in place of the removed module |
 | `SPMFSemantics`, `ProbCompRuntime.toSPMFSemantics` | `MeasureSemanticsVia` (the codemod renames `SPMFSemantics.withStateOracle` to `MeasureSemanticsVia.withStateOracle`); a runtime gives the field `toMeasureSemanticsVia` and the law `evalDist_map_eq` |
 | heartbeat timeout on raw `PFunctor.FreeM` terms | normalize with `FreeM.bind_eq_bind`, `FreeM.map_eq_map`, `FreeM.pure_eq_pure`, or state the helper at the `OracleComp` level |
 | unknown identifier `SPMF`, `probOutput`, `evalSPMF`, … or unknown `Pr[…]` syntax | run the codemod, then convert with the tables above |
 | failed to synthesize `MeasurableSpace α` at `prEvent_true_eq_evalDist_apply_univ` | it takes the output's measurable space as an instance: `let : MeasurableSpace α := ⊤` first, or use `OracleComp.prEvent_true_eq_one` for an oracle computation |
 | unknown namespace `OracleComp.EvalDist` in an `open` | delete it from the `open`; the codemod does this |
-| failed to synthesize `EvalDistSemantics ProbComp` or `EvalDistSemantics (OracleComp spec)` | import `VCVio.OracleComp.EvalDist.Measure`; removed hubs used to supply it transitively |
+| failed to synthesize `EvalDistSemantics ProbComp` or `EvalDistSemantics (OracleComp spec)` | import `VCVio.OracleComp.EvalDist.Measure`, which the removed hubs imported transitively |
 | failed to synthesize `EvalDistSemantics (ExceptT ε m)` | the error type needs a measurable space: supply `MeasurableSpace ε` (e.g. `⊤`) or use an error type that has one |
 | a measure lemma does not fire on `liftM mx : OptionT m α` | `OptionT.evalDist_liftM` (a `simp` lemma) |
 
@@ -314,9 +320,9 @@ the oracle and probability foundations whose import closure excludes Mathlib's `
   `SymmEncAlg.perfectSecrecyAt`, puts `letI : MeasurableSpace α := ⊤` inside.
 - **Events need no measurable space; singletons do.** `Pr{…}[…]` works on any output type,
   while `𝒟[mx] {x}` needs measurable singletons.
-- **Support is operational.** `support mx` is the set of structurally reachable outputs. It
-  coincides with the positive-mass outputs only when every answer has positive mass, which the
-  uniform specifications provide.
+- **Support is operational.** `support mx` is the set of possible outputs, with no probability
+  interpretation. It coincides with the outputs of positive mass only when every answer has
+  positive mass, as under the uniform specifications.
 - **Discrete answers.** `OracleSpec` answer measures live on the discrete σ-algebra, so
   oracle programs carry no measurable-space hypotheses on answers. Continuous answer measures
   belong at the `PFunctor.FreeM` level, where `PFunctor.AnswerMeasure` takes any measurable

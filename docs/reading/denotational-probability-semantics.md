@@ -11,8 +11,8 @@
 
 ## Decision
 
-VCVio will use a stratified semantics rather than search for one carrier that imitates every
-property of `SPMF`:
+VCVio uses a stratified semantics rather than one carrier that imitates every property of a
+discrete subprobability distribution (the retired `SPMF` type):
 
 | Need | Canonical semantic object |
 |---|---|
@@ -23,9 +23,9 @@ property of `SPMF`:
 | Returned values of a possibly nonterminating computation | Subprobability `Measure α` obtained by discarding cutoff mass |
 | Finite and infinite execution traces | Probability measure on paths, constructed from measurable kernels |
 | Executable exact finite sampling | `FinRatPMF.Raw`; this is an implementation representation, not the denotation |
-| Proof-facing probability notation | `Pr{...}[...]` backed by `evalDist`; the discrete `Pr[...]` compatibility façade has been removed |
+| Proof-facing probability notation | `Pr{...}[...]`, the expectation of an event's indicator under the measure interpretation `ExpectationWP`; `prEvent_eq_evalDist_map` relates it to `𝒟[...]` |
 
-Plain Mathlib measures and kernels are the semantic boundary. VCVio will not introduce a global
+Plain Mathlib measures and kernels are the semantic boundary. VCVio does not introduce a global
 `Monad Measure`, nor wrap measures merely to make unrestricted Lean functions look measurable.
 Where a missing general-purpose lemma or measurable-space instance is needed, it is staged in
 `ToMathlib` for now.
@@ -36,17 +36,18 @@ Where a missing general-purpose lemma or measurable-space instance is needed, it
 
 [`VCVio/EvalDist/PFunctorMeasure/Core.lean`](../../VCVio/EvalDist/PFunctorMeasure/Core.lean) provides:
 
-- `PFunctor.IsMeasureSpec`, assigning a probability measure to each operation's answer type;
+- `PFunctor.AnswerMeasure`, assigning a probability measure to each operation's answer type;
 - `PFunctor.FreeM.denote`, with `pure` interpreted by `Measure.dirac` and an operation interpreted
   by `Measure.bind`;
-- an unconditional bind law for discrete operation answers;
+- a bind law for discrete operation answers, which needs a measurable continuation unless the
+  intermediate result type is discrete as well;
 - a one-operation continuous composition theorem whose measurability and probability hypotheses
   are explicit;
 - `IsProbabilityMeasure` for every discrete-answer program.
 
-During the migration, `IsProbabilitySpec`, its induced `IsMeasureSpec`, and an agreement theorem
-with the legacy PMF fold formed the compatibility route. They were removed with the discrete
-layer; semantic definitions take `IsMeasureSpec` directly.
+Semantic definitions take `PFunctor.AnswerMeasure` directly. An oracle specification's answer
+measures, `OracleSpec.AnswerMeasure`, are this class on the discrete σ-algebra of each answer type,
+and `OracleSpec.UniformAnswerMeasure` adds that each of them is uniform.
 
 ### Monad transformer stacks
 
@@ -126,7 +127,7 @@ fragment. At Mathlib `e06eff5f95374108acfaf19f1ff7473aa7771df2`,
 assigns an arbitrary Dirac mass to a non-almost-everywhere-measurable pushforward of a nonzero
 measure. When the codomain is itself a space of measures, that convention alone supplies no
 subprobability bound after `Measure.join`. The guarded fold and its finite counterexample were
-spike-tested on both the current 4.33.1 dependencies and that isolated 4.34.0-rc2 candidate.
+spike-tested on both the 4.33.1 dependencies of the time and that isolated 4.34.0-rc2 candidate.
 
 This is also why merely fixing the output type does not solve the coalgebraic problem. The state
 transition itself must be measurable. Kernel construction sites expose that obligation, and the
@@ -140,7 +141,9 @@ The migration was denotation-first, not notation-first:
    during migration under a deprecated finite probability API, which has since been removed.
 2. `Pr{...}[...]` and `evalDist` are the default proof-facing probability surface.
 3. Correspondence lemmas reinterpreted old finite theorems as facts about `Measure` until each
-   consumer was converted.
+   consumer was converted. Each discrete statement was deleted with its last consumer rather than
+   kept as a compatibility layer (gotcha 18), so expectation, total variation and Rényi
+   divergence are stated on measures.
 4. Continuous, conditional, stateful, or process semantics use `Measure`/`Kernel` directly.
 
 The current gates cover a continuous Gaussian query and continuation, effect-preserving
@@ -155,10 +158,9 @@ New code follows these rules:
 1. Use `Measure`, `ProbabilityMeasure`, and `Kernel` names from Mathlib in semantic statements.
 2. Use `Measure.sum` and `Measure.dirac` for new discrete distributions unless an executable
    representation is the actual subject.
-3. Keep Mathlib's `PMF` only in existing declarations while they migrate (the local `SPMF` layer
-   has been removed); do not build new foundational APIs around it, and prefer to leave a file's
-   coupling lower than you found it. This is a floor and a direction: the surface is retiring,
-   not merely frozen.
+3. Do not use Mathlib's `PMF` in a declaration. No declaration in the libraries uses it
+   directly, and the `usesRetiredProbability` linter reports any that does (see *Deprecation and
+   migration tracking*).
 4. Keep `FinRatPMF.Raw` for computation. Its native denotation is a finite sum of weighted Dirac
    measures, with pure, measurable bind, rational event evaluation, and total mass laws.
 5. Put missing general measurable-space instances and Mathlib-facing lemmas in `ToMathlib`.
@@ -169,31 +171,30 @@ New code follows these rules:
 ## Deprecation and migration tracking
 
 Upstream is retiring `PMF`, and this is visible in the pinned tree rather than only in a proposal:
-`Mathlib/Probability/ProbabilityMassFunction/` already deprecates `PMF.bernoulli` and
-`PMF.binomial` in favour of `ProbabilityTheory.bernoulliMeasure` and `ProbabilityTheory.binomial`.
-The core, `toOuterMeasure`, and `toMeasure` are not yet marked, but the family is being dismantled
-construction by construction. The direction is settled; only pacing is open.
+`Mathlib/Probability/ProbabilityMassFunction/` deprecates `PMF.bernoulli` and `PMF.binomial` in
+favour of `ProbabilityTheory.bernoulliMeasure` and `ProbabilityTheory.binomial`. The core,
+`toOuterMeasure`, and `toMeasure` are not marked at the `v4.35.0-rc3` pin; mathlib4#42821
+("chore: deprecate PMF") was open on 2026-10-03. The direction is settled; only pacing is open.
 
-The locally owned `SPMF` type, `evalSPMF`, the legacy scalar evaluation functions, and the
-classes that interpreted them (`IsProbabilitySpec`, `IsUniformSpec`, `NeverFail`,
-`EvalDistCompatible`, and `DiscreteEvalDistCompatible`) were deprecated during the migration
-and have since been removed. Mathlib owns `PMF`, so a downstream module
-cannot add a `deprecated` attribute to that declaration. VCVio's
-`usesRetiredProbability` environment linter checks declarations for direct
-references to `PMF`. Existing uses are recorded
-by declaration in [`scripts/nolints.json`](../../scripts/nolints.json); its exact
-baseline fails on a new use or an obsolete exception.
+VCVio's own discrete layer is retired. The `SPMF` type, `evalSPMF`, the scalar evaluation
+functions and the classes that interpreted them were deprecated during the migration and then
+removed; the [migration guide](../agents/probability-migration.md) maps each retired name to its
+replacement. Mathlib owns `PMF`, so a downstream module cannot add a `deprecated` attribute to it.
+Instead, VCVio's `usesRetiredProbability` environment linter
+(`ToMathlib/Lint/LegacyProbability.lean`) reports every declaration whose type or value refers to
+`PMF` directly. No declaration does, and [`scripts/nolints.json`](../../scripts/nolints.json) holds
+no exception for this linter, so a new use fails `lake lint`.
 
-The former source-count guard has been removed. Declaration-based tracking is closer to the actual
-semantic dependency: changing the spelling of a type or moving a line does not
-clear a lint finding, while replacing the old constant in a theorem does.
+The tracking is by declaration rather than by source text, which is closer to the actual semantic
+dependency: changing the spelling of a type or moving a line does not clear a finding, while
+removing `PMF` from a theorem does.
 
 ## Local Mathlib-facing utilities
 
 The `ToMathlib` surface is intentionally small. Each entry below was checked against the pinned
 Mathlib tree, and each carries the condition under which it should be deleted.
 
-| Local declaration | Upstream status (checked 2026-08-22) | Delete when |
+| Local declaration | Upstream status (checked 2026-10-03, Mathlib `v4.35.0-rc3`) | Delete when |
 |---|---|---|
 | `BitVec` discrete instances | `MeasurableSpace/Instances.lean` covers `Bool`, `ℕ`, `ℤ`, `ℚ`, `Fin n`, `ZMod n`; not `BitVec` | `BitVec` joins that file |
 | `Option` coproduct measurable space | Mathlib has `Sum.instMeasurableSpace`; no `Option` counterpart found | an `Option` instance lands upstream |
@@ -218,20 +219,21 @@ policy belongs in this layer.
   total outcome measure; success-only and termination observations use a submeasure.
 - **Failure or divergence?** Returned failure is data. Divergence is missing output mass. Cutoff is
   an approximation marker, not either one.
-- **Point distribution or measure-valued query specification?** Measure-valued is the general
-  semantic capability. The pointwise PMF capability, once a discrete compatibility input, has
-  been removed.
+- **Point distribution or measure-valued query specification?** Measure-valued
+  (`PFunctor.AnswerMeasure`) is the general semantic capability; there is no pointwise `PMF`
+  specification.
 - **Discrete measurable spaces?** Install concrete lawful instances, such as `BitVec`, and
   coproduct/product constructions. Do not install a blanket finite-type instance that could
   compete with Borel structures.
 - **How does state compose?** As a kernel retaining final state, not by fixing an initial state and
   pretending that evaluation is a monad morphism.
-- **Does proof notation change now?** `Pr{...}[...]` is measure-backed; `Pr[...]` remained available
-  during migration with deprecation diagnostics and measure correspondence theorems, and has since
-  been removed.
+- **Does proof notation change?** `Pr{...}[...]` is the proof notation, and the measure
+  interpretation gives it its meaning. The discrete `Pr[...]` stayed available during the
+  migration, with deprecation diagnostics and measure correspondence theorems, and was removed at
+  its end.
 - **What owns infinite computation structure?** PolyFun owns probability-free resumptions,
-  truncation, and coalgebra. VCVio supplies probabilistic readings; Mathlib supplies kernels and
-  measure extension theorems.
+  truncation, and coalgebra. VCVio supplies their probabilistic interpretation; Mathlib supplies
+  kernels and measure extension theorems.
 
 ## Remaining work
 
@@ -240,14 +242,12 @@ The following are implementation questions, not reasons to reopen the architectu
 1. prove the returned-measure fixpoint/continuity laws and formulate almost-sure termination;
 2. formulate the smallest measurable-coalgebra interface that yields finite prefix kernels and an
    Ionescu--Tulcea trace law;
-3. (done) port expectation, total-variation, and Rényi statements to measure-first
-   foundations; each discrete statement was deleted with its last consumer rather than kept as a
-   compatibility layer (gotcha 18);
-4. connect indicator integrals and kernel composition to the evolving `Std.WP`/`vcgen` surface;
-5. extend the native finite rational measure API to distributional quotient semantics and further
-   executable samplers; the raw sampler and uniform oracle evaluator already have direct measure
+3. relate the reader and state kernels (`readerTKernel`, `stateTKernel`) to core `wp`, through
+   which events and expectations are read under `ExpectationWP`;
+4. extend the native finite rational measure API to distributional quotient semantics and further
+   executable samplers; the raw sampler and uniform oracle evaluator have direct measure
    denotations and final-event agreement laws;
-6. reassess local utilities at every Mathlib/PolyFun/cslib/toolchain update and delete them as soon
+5. reassess local utilities at every Mathlib/PolyFun/cslib/toolchain update and delete them as soon
    as stable upstream surfaces subsume them.
 
 Higher design churn is acceptable while completing these items. Compatibility is required at the
