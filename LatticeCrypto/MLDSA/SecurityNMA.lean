@@ -850,18 +850,8 @@ private theorem stmsis_tail_le
         (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p) _) (msg, w') :=
       roSim.simulateQ_liftM_spec_query _ _
     rw [hquery] at hcc
-    have hcache : cc.2 (msg, w') = some cc.1 := by
-      cases hc0 : cache0 (msg, w') with
-      | some u =>
-        rw [randomOracle, QueryImpl.withCaching_run_some _ hc0, support_pure,
-          Set.mem_singleton_iff] at hcc
-        subst hcc; exact hc0
-      | none =>
-        rw [randomOracle, QueryImpl.withCaching_run_none _ hc0, support_map] at hcc
-        obtain ⟨u, _, hu⟩ := hcc
-        subst hu
-        exact QueryCache.cacheQuery_self _ (msg, w') u
-    rw [hcache]
+    rw [randomOracle] at hcc
+    rw [QueryImpl.withCaching_run_caches _ _ _ _ hcc]
     -- An accepted NMA forgery is a valid STMSIS solution. The self-target binding
     -- `hashInput.2 = w'` holds because the queried preimage is exactly `(msg, w')`, so the binding
     -- reduces to `decide (w' = w') = true`; commitment recoverability is the middle conjunct of
@@ -1163,18 +1153,8 @@ private theorem stmsis_tail_le_short
         (randomOracle : QueryImpl (M × Commitment p prims →ₒ CommitHashBytes p) _) (msg, w') :=
       roSim.simulateQ_liftM_spec_query _ _
     rw [hquery] at hcc
-    have hcache : cc.2 (msg, w') = some cc.1 := by
-      cases hc0 : cache0 (msg, w') with
-      | some u =>
-        rw [randomOracle, QueryImpl.withCaching_run_some _ hc0, support_pure,
-          Set.mem_singleton_iff] at hcc
-        subst hcc; exact hc0
-      | none =>
-        rw [randomOracle, QueryImpl.withCaching_run_none _ hc0, support_map] at hcc
-        obtain ⟨u, _, hu⟩ := hcc
-        subst hu
-        exact QueryCache.cacheQuery_self _ (msg, w') u
-    rw [hcache]
+    rw [randomOracle] at hcc
+    rw [QueryImpl.withCaching_run_caches _ _ _ _ hcc]
     -- An accepted NMA forgery is a valid STMSIS solution: the middle conjunct of `verify`
     -- says the recomputed commitment equals the forgery's `w'`, which is the commitment
     -- component of the extractor's preimage `(msg, w')` — exactly the self-target binding

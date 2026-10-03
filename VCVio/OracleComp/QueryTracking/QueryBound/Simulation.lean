@@ -322,6 +322,44 @@ theorem IsTotalQueryBound.residual_of_mem_support_run_simulateQ_le_cost [Finite 
       (spec := spec) (ι := ι) (oa := oa) (ob := ob) (n := n) (z := (z.1, qc)) h hqc
   exact hres.mono (by omega)
 
+/-- Let `impl : QueryImpl spec (StateT σ (OracleComp spec'))`, `p : ι → Prop` and `f : σ → ℕ`
+satisfy, for every query `t`, every state `s` and every outcome `(_, s')` of `(impl t).run s`:
+
+* `f s' ≤ f s + 1` if `p t`;
+* `f s' ≤ f s` if `¬ p t`.
+
+If `oa` makes at most `n` queries satisfying `p`, then `f s' ≤ f s + n` for every outcome
+`(_, s')` of `(simulateQ impl oa).run s`. The index type `ι` need not be finite. -/
+theorem IsQueryBoundP.cost_le_of_mem_support_run_simulateQ
+    {ι' : Type u} {spec' : OracleSpec ι'} {σ : Type u}
+    {p : ι → Prop} [DecidablePred p]
+    {impl : QueryImpl spec (StateT σ (OracleComp spec'))} (f : σ → ℕ)
+    (hstep_p : ∀ t, p t → ∀ s, ∀ z ∈ support ((impl t).run s), f z.2 ≤ f s + 1)
+    (hstep_np : ∀ t, ¬ p t → ∀ s, ∀ z ∈ support ((impl t).run s), f z.2 ≤ f s)
+    {oa : OracleComp spec α} {n : ℕ} (h : IsQueryBoundP oa p n) (s : σ) :
+    ∀ z ∈ support ((simulateQ impl oa).run s), f z.2 ≤ f s + n := by
+  induction oa using OracleComp.inductionOn generalizing n s with
+  | pure x =>
+    intro z hz
+    simp only [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+    subst hz
+    simp
+  | query_bind t oa ih =>
+    intro z hz
+    rw [isQueryBoundP_query_bind_iff] at h
+    simp only [simulateQ_bind, simulateQ_query, OracleQuery.input_query,
+      OracleQuery.cont_query, id_map, StateT.run_bind, mem_support_bind_iff] at hz
+    obtain ⟨x, hx, hzx⟩ := hz
+    have hrec := ih x.1 (h.2 x.1) x.2 z hzx
+    by_cases hpt : p t
+    · have h1 := hstep_p t hpt s x hx
+      have h2 : 0 < n := h.1.resolve_left (not_not_intro hpt)
+      simp only [hpt, ↓reduceIte] at hrec
+      omega
+    · have h1 := hstep_np t hpt s x hx
+      simp only [hpt, ↓reduceIte] at hrec
+      omega
+
 /-- Per-index bound implies total bound (sum over indices). -/
 theorem IsTotalQueryBound.of_perIndex [DecidableEq ι] [Fintype ι]
      {oa : OracleComp spec α}

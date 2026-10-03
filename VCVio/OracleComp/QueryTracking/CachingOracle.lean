@@ -192,6 +192,22 @@ lemma withCaching_cache_le [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
     obtain ⟨v, _, rfl⟩ := hz
     exact QueryCache.le_cacheQuery cache₀ ht
 
+/-- Let `t` be a query, and consider any possible outcome of a `withCaching` step
+on `t`. Then the final cache maps `t` to the returned answer. -/
+lemma withCaching_run_caches [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+    (so : QueryImpl spec m) (t : spec.Domain) (cache₀ : QueryCache spec)
+    (z) (hz : z ∈ support ((so.withCaching t).run cache₀)) :
+    z.2 t = some z.1 := by
+  cases ht : cache₀ t with
+  | some u =>
+    rw [withCaching_run_some so ht, support_pure, Set.mem_singleton_iff] at hz
+    rw [hz]
+    exact ht
+  | none =>
+    rw [withCaching_run_none so ht, support_map] at hz
+    obtain ⟨v, _, rfl⟩ := hz
+    exact QueryCache.cacheQuery_self cache₀ t v
+
 /-- `withCaching` preserves the invariant `(cache₀ ≤ ·)` (the cache only grows). -/
 lemma PreservesInv.withCaching_le {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
     [DecidableEq ι₀]
@@ -468,19 +484,7 @@ theorem cachingOracle_query_caches (t : spec.Domain)
     (cache₀ : QueryCache spec)
     (v : spec.Range t) (cache₁ : QueryCache spec)
     (hmem : (v, cache₁) ∈ support ((cachingOracle t).run cache₀)) :
-    cache₁ t = some v := by
-  simp only [cachingOracle.apply_eq, StateT.run_bind, StateT.run_get, pure_bind] at hmem
-  cases hc : cache₀ t with
-  | some u =>
-    simp only [hc, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hmem
-    obtain ⟨rfl, rfl⟩ := hmem
-    exact hc
-  | none =>
-    simp only [hc, StateT.run_bind, StateT.run_monadLift, monad_norm] at hmem
-    rw [mem_support_bind_iff] at hmem
-    obtain ⟨u, _, hmem⟩ := hmem
-    simp only [StateT.run_modifyGet, support_pure, Set.mem_singleton_iff] at hmem
-    obtain ⟨rfl, rfl⟩ := hmem
-    exact QueryCache.cacheQuery_self cache₀ t v
+    cache₁ t = some v :=
+  QueryImpl.withCaching_run_caches _ t cache₀ _ hmem
 
 end OracleComp
