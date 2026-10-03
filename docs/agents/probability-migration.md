@@ -145,6 +145,16 @@ Expectation laws have `wp` and `∫⁻` forms: `expectedValue_bind` → `wp_bind
 `wp_ne_top_of_finite`; `expectedValue_finsetSum` → `wp_finsetSum`; `expectedValue_iSup` →
 `lintegral_iSup`; the `WithoutReplacement` length equations → `lintegral_evalDist_length_…`.
 
+The expectation of a scalar observation is `wp⟦mx⟧ f`, which `ExpectationWP.wp_eq_lintegral_map`
+identifies with `∫⁻ r, r ∂𝒟[f <$> mx]`, so the laws stated for the second form are `wp` laws:
+`lintegral_id_evalDist_map_le_of_le` → `wp_le_of_forall_le`; `lintegral_id_evalDist_map_mono` →
+`ExpectationWP.wp_mono`; `lintegral_id_evalDist_map_add` → `ExpectationWP.wp_add`;
+`lintegral_id_evalDist_map_zero` → `ExpectationWP.wp_zero`; `lintegral_id_evalDist_map_bind` →
+`ExpectationWP.wp_bind`; `lintegral_id_evalDist_map_le_of_le_of_mem_support` →
+`wp_mono_of_support` followed by `wp_le_of_forall_le`. `OracleComp.expectedSimulatedQueryCount`
+takes its expectations in this form, and its resource bound is
+`OracleComp.wp_resource_le_add_expectedSimulatedQueryCount`.
+
 Proofs that compute with sums of point masses convert to `VCVio.OracleComp.EvalDist.Sum`. For
 oracle computations with finite answer types, `lintegral_evalDist_eq_tsum` identifies
 `∫⁻ x, f x ∂𝒟[oa]` with `∑' x, Pr{let y ← oa}[y = x] * f x`, with no countability assumption on

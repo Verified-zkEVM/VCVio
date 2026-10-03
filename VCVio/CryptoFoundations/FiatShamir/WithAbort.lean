@@ -199,18 +199,8 @@ lemma fsAbortSignLoop_cache_invariant
       rw [roSim.run_liftM, support_map] at h_respond
       obtain ⟨_, h_rsp_mem, rfl, rfl⟩ := h_respond
       refine ⟨c_q, ?_, ?_⟩
-      · simp only [randomOracle, QueryImpl.withCaching_apply,
-          StateT.run_bind, StateT.run_get, pure_bind] at h_query
-        cases hs : s₀ (msg, w_c) with
-        | some c_cached =>
-          simp only [hs, StateT.run_pure, support_pure,
-            Set.mem_singleton_iff, Prod.mk.injEq] at h_query
-          rw [h_query.2, hs, h_query.1]
-        | none =>
-          simp only [hs, StateT.run_bind, mem_support_bind_iff, StateT.run_modifyGet,
-            support_pure, Set.mem_singleton_iff, Prod.mk.injEq] at h_query
-          obtain ⟨x, -, rfl, rfl⟩ := h_query
-          exact QueryCache.cacheQuery_self _ (msg, w_c) x.1
+      · rw [randomOracle] at h_query
+        exact QueryImpl.withCaching_run_caches _ _ _ _ h_query
       · apply ids.verify_of_complete hc hrel
         rw [IdenSchemeWithAbort.honestExecution, support_bind]
         refine Set.mem_iUnion₂.mpr ⟨(w_c, st_c), h_cm_mem, ?_⟩

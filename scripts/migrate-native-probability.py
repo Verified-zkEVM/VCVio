@@ -317,6 +317,25 @@ REPORT_NAMES: dict[str, str] = {
     "evalDist_apply_univ":
         "targets the removed `Pr[⊥ | mx]`; `prFail_eq_one_sub_evalDist_univ` relates "
         "`prFail mx` and `𝒟[mx] Set.univ`",
+    "lintegral_id_evalDist_map":
+        "state the expectation as `wp⟦mx⟧ f`; `ExpectationWP.wp_eq_lintegral_map` relates it "
+        "to `∫⁻ r, r ∂𝒟[f <$> mx]`",
+    "lintegral_id_evalDist_map_le_of_le":
+        "state the expectation as `wp⟦mx⟧ f` and use `wp_le_of_forall_le`",
+    "lintegral_id_evalDist_map_le_of_le_of_mem_support":
+        "state the expectation as `wp⟦mx⟧ f` and use `wp_mono_of_support`, then "
+        "`wp_le_of_forall_le`",
+    "lintegral_id_evalDist_map_mono":
+        "state the expectation as `wp⟦mx⟧ f` and use `ExpectationWP.wp_mono`",
+    "lintegral_id_evalDist_map_add":
+        "state the expectation as `wp⟦mx⟧ f` and use `ExpectationWP.wp_add`",
+    "lintegral_id_evalDist_map_zero":
+        "state the expectation as `wp⟦mx⟧ f` and use `ExpectationWP.wp_zero`",
+    "lintegral_id_evalDist_map_bind":
+        "state the expectation as `wp⟦mx⟧ f` and use `ExpectationWP.wp_bind`",
+    "lintegral_resource_le_add_expectedSimulatedQueryCount":
+        "use `OracleComp.wp_resource_le_add_expectedSimulatedQueryCount`, which states the "
+        "expectation as `𝔼{let z ← mx}[f z]`",
 }
 
 # Modules removed from VCVio, keyed by the old module name.
