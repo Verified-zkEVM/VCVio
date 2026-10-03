@@ -156,6 +156,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TweakableHash
+public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Bool
