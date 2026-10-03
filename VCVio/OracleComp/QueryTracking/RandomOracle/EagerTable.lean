@@ -6,6 +6,7 @@ Authors: Oleksandr Vovkotrub
 
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
 public import VCVio.OracleComp.Constructions.SampleableType
 public import VCVio.EvalDist.Monad.UniformTable
 
@@ -106,81 +107,6 @@ lemma evalDist_uniformSample_bind_update_two_map {α : Type}
   exact evalDist_bind_bind_bind_update_two_map ($ᵗ R) ($ᵗ (D → R))
     hValue hTable hne ψ
 
-omit [Finite D] [Finite R] [Nonempty R] in
-/-- Pure-case base step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`: running
-`pure a` under the lazy oracle ignores the table, so its distribution is the constant `pure a`,
-matching the eager side after the (discarded) uniform table draw. -/
-private lemma evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending
-    {α : Type} [MeasurableSpace α] (a : α) (c : (D →ₒ R).QueryCache) :
-    𝒟[(simulateQ randomOracle (pure a : OracleComp (D →ₒ R) α)).run' c] =
-      𝒟[do let g ← $ᵗ (D → R);
-            pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) (pure a))] := by
-  let : MeasurableSpace (D → R) := ⊤
-  simp only [simulateQ_pure, StateT.run'_eq, StateT.run_pure, map_pure,
-    evalWithAnswerFn_pure]
-  rw [OracleComp.evalDist_bind_const]
-
-/-- Inductive `query`/`bind` step for `evalDist_simulateQ_randomOracle_run'_eq_tableExtending`:
-given the eager-table identity for every continuation `k u`, it holds for `liftM (query t) >>= k`.
-On a cache miss the fresh uniform draw is absorbed into the table by
-`evalDist_uniformSample_bind_update_map`; on a cache hit the table already answers with `c t`. -/
-private lemma evalDist_simulateQ_randomOracle_run'_query_bind_eq_tableExtending
-    {α : Type} [MeasurableSpace α] (t : D)
-    (k : R → OracleComp (D →ₒ R) α)
-    (ih : ∀ (u : R) (c : (D →ₒ R).QueryCache),
-      𝒟[(simulateQ randomOracle (k u)).run' c] =
-        𝒟[do let g ← $ᵗ (D → R);
-              pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) (k u))])
-    (c : (D →ₒ R).QueryCache) :
-    𝒟[(simulateQ randomOracle (liftM ((D →ₒ R).query t) >>= k)).run' c] =
-      𝒟[do let g ← $ᵗ (D → R);
-            pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g))
-              (liftM ((D →ₒ R).query t) >>= k))] := by
-  classical
-  let := Fintype.ofFinite R
-  have : Nonempty (D → R) := ⟨fun _ => Classical.arbitrary R⟩
-  let : MeasurableSpace R := ⊤
-  have hred :
-      (simulateQ randomOracle (liftM ((D →ₒ R).query t) >>= k)).run' c
-        = ((randomOracle (spec := (D →ₒ R)) t).run c) >>=
-          fun p : R × (D →ₒ R).QueryCache =>
-            (simulateQ randomOracle (k p.1)).run' p.2 := by
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq, StateT.run_bind, map_bind]
-    rfl
-  have heval : ∀ g : D → R,
-      evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) (liftM ((D →ₒ R).query t) >>= k)
-        = evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g))
-            (k (tableExtending c g t)) := by
-    intro g
-    rw [evalWithAnswerFn_bind]
-    simp only [evalWithAnswerFn, simulateQ_spec_query, QueryImpl.ofFn_apply]
-  rw [hred]
-  simp_rw [heval]
-  rcases hc : c t with _ | u
-  · rw [QueryImpl.withCaching_run_none _ hc, map_eq_bind_pure_comp]
-    simp only [Function.comp, bind_assoc, pure_bind]
-    set ψ : (D → R) → α := fun g' =>
-      evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g')) (k (tableExtending c g' t))
-      with hψ
-    have hfun : ∀ u : R, (fun g : D → R =>
-          evalWithAnswerFn (QueryImpl.ofFn (tableExtending (c.cacheQuery t u) g)) (k u))
-        = fun g : D → R => ψ (Function.update g t u) := by
-      intro u
-      funext g
-      simp only [hψ]
-      rw [tableExtending_cacheQuery, ← tableExtending_update_of_none c g hc u]
-      simp only [Function.update_self]
-    trans 𝒟[do let u ← $ᵗ R; let g ← $ᵗ (D → R); pure (ψ (Function.update g t u))]
-    · rw [evalDist_bind_of_discrete, evalDist_bind_of_discrete]
-      apply Measure.bind_congr_right
-      filter_upwards [] with u
-      rw [ih u (c.cacheQuery t u), bind_pure_comp, bind_pure_comp, hfun u]
-    · exact evalDist_uniformSample_bind_update_map SampleableType.evalDist_uniformSample
-        SampleableType.evalDist_uniformSample t ψ
-  · rw [QueryImpl.withCaching_run_some _ hc, pure_bind, ih u c]
-    have h : ∀ g : D → R, tableExtending c g t = u := fun g => by simp [tableExtending, hc]
-    simp_rw [h]
-
 /-- **Lazy random oracle equals eager full-table sampling — cache-parametrized form.**
 
 Running `oa` under the lazy random oracle starting from cache `c` yields the same output
@@ -195,10 +121,7 @@ theorem evalDist_simulateQ_randomOracle_run'_eq_tableExtending
     𝒟[(simulateQ randomOracle oa).run' c] =
       𝒟[do let g ← $ᵗ (D → R);
             pure (evalWithAnswerFn (QueryImpl.ofFn (tableExtending c g)) oa)] := by
-  induction oa using OracleComp.inductionOn generalizing c with
-  | pure a => exact evalDist_simulateQ_randomOracle_run'_pure_eq_tableExtending a c
-  | query_bind t k ih =>
-    exact evalDist_simulateQ_randomOracle_run'_query_bind_eq_tableExtending t k ih c
+  exact evalDist_simulateQ_randomOracle_run'_eq_completeTable oa c
 
 omit [DecidableEq D] [Finite D] [Finite R] [Nonempty R] [SampleableType R]
   [SampleableType (D → R)] in
