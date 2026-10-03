@@ -23,7 +23,7 @@ value, and therefore retains its log, cache, and charge.
 -/
 
 public section
-open OracleComp OracleSpec
+open OracleComp OracleSpec MeasureTheory
 namespace OracleComp
 variable {D α : Type} {R : D → Type}
 
@@ -310,5 +310,31 @@ theorem fixedTableLoggedRun_restrictCache [DecidableEq D]
         fixedTableLoggedRun oa g cache := by
   simpa only [extendCache_restrictCache] using
     fixedTableLoggedRun_restrict S g oa h cache (restrictCache S cache)
+
+@[simp] theorem restrictCache_empty (S : Finset D) :
+    restrictCache S (∅ : (ofFn R).QueryCache) = ∅ := by
+  ext t
+  simp [restrictCache]
+
+/-- Restricting to possible hash keys preserves the expected distinct-query charge of the
+actual empty-cache run, including optional failures returned as values. -/
+theorem expectedFreshQueryCharge_restrict [DecidableEq D]
+    [∀ d, SampleableType (R d)] (S : Finset D)
+    (oa : OracleComp (unifSpec + ofFn R) α)
+    (h : AllQueriesSatisfy oa (Sum.elim (fun _ => True) (· ∈ S)))
+    (error : D → ENNReal) :
+    expectedFreshQueryCharge (restrictRandomOracleQueries S oa h)
+      (fun t : S => error t.val) = expectedFreshQueryCharge oa error := by
+  let : MeasurableSpace ((α × QueryLog (ofFn R)) × (ofFn R).QueryCache) := ⊤
+  let : MeasurableSpace ((α × QueryLog (ofFn (fun t : S => R t.val))) ×
+    (ofFn (fun t : S => R t.val)).QueryCache) := ⊤
+  unfold expectedFreshQueryCharge
+  have hr := randomOracleLoggedRun_restrictCache S oa h ∅
+  simp only [restrictCache_empty] at hr
+  rw [← hr, evalDist_map_of_discrete]
+  rw [lintegral_map Measurable.of_discrete Measurable.of_discrete]
+  apply lintegral_congr
+  intro z
+  exact (freshQueryCharge_extendLog S error z.1.2).symm
 
 end OracleComp
