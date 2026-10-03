@@ -396,8 +396,12 @@ theorem prEvent_tableFreshKey_bad_le
         bad t (Function.update g t u)] ≤
       ({g' | t ∈ tableFreshKeys oa g'}.indicator (fun _ => error t)) g := by
     by_cases hq : t ∈ tableFreshKeys oa g
-    · simpa [Set.indicator, hq] using hbad g
-    · simp [Set.indicator, hq]
+    · rw [Set.indicator_of_mem (show g ∈ {g' | t ∈ tableFreshKeys oa g'} from hq)]
+      simpa only [hq, true_and] using hbad g
+    · rw [Set.indicator_of_notMem (show g ∉ {g' | t ∈ tableFreshKeys oa g'} from hq)]
+      exact le_of_eq (prEvent_eq_zero_of_forall_not ($ᵗ (R t))
+        (fun u => t ∈ tableFreshKeys oa g ∧ bad t (Function.update g t u))
+        (fun _ h => hq h.1))
   have hbind := prEvent_bind_eq_lintegral_of_discrete
     ($ᵗ (∀ d, R d))
     (fun g => do let u ← $ᵗ (R t)
