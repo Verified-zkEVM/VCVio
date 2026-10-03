@@ -14,6 +14,7 @@ public import VCVioTest.CryptoFoundations.OracleClosure
 public import VCVioTest.CryptoFoundations.PRFTableMeasure
 public import VCVioTest.CryptoFoundations.SignatureAlg
 public import VCVioTest.CryptoFoundations.SymmEncAlgMeasure
+public import VCVioTest.CryptoFoundations.UniversalHash
 public import VCVioTest.ENNRealNumerals
 public import VCVioTest.EvalDist.BundledSemantics
 public import VCVioTest.EvalDist.Deterministic
@@ -98,6 +99,7 @@ public import VCVioTest.ProgramLogic.VCGenShapes
 public import VCVioTest.QueryBounds
 public import VCVioTest.QueryHom
 public import VCVioTest.RandomOracleControls
+public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.ReactiveBudget
 public import VCVioTest.ReactiveKernel

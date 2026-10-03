@@ -46,7 +46,7 @@ All definitions below operate at `Type` (= `Type 0`), matching the program logic
 API.
 -/
 
-variable {ι : Type} {spec : OracleSpec ι} {α : Type} {ω : Type}
+variable {ι : Type} {spec : OracleSpec ι} {α β : Type} {ω : Type}
 
 /-- Oracle that tracks additive cost. Wraps `costOracle` with `Multiplicative`
 to get additive accumulation through the existing `WriterT` infrastructure. -/
@@ -161,6 +161,48 @@ theorem worstCaseCostBound_iff_support_bound [AddCommMonoid ω] [Preorder ω]
       ∀ z ∈ support (costDist oa cm), Multiplicative.toAdd z.2 ≤ bound := by
   unfold WorstCaseCostBound costDist instrumentedRun AddWriterT.PathwiseCostAtMost
   rfl
+
+/-- The actual instrumented query charges its key before the continuation. -/
+theorem costDist_query_bind [AddCommMonoid ω]
+    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) :
+    costDist ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm =
+      (spec.query t : OracleComp spec (spec.Range t)) >>= fun u =>
+        (fun z => (z.1, Multiplicative.ofAdd (cm.queryCost t + Multiplicative.toAdd z.2))) <$>
+          costDist (k u) cm := by
+  simp [costDist, instrumentedRun, simulateQ_bind, simulateQ_query,
+    QueryImpl.withAddCost, WriterT.run_bind, bind_assoc]
+
+/-- A pure computation has zero pathwise cost. -/
+@[simp] theorem worstCaseCostBound_pure [AddCommMonoid ω] [Preorder ω]
+    (a : α) (cm : CostModel spec ω) (B : ω) :
+    WorstCaseCostBound (pure a) cm B ↔ 0 ≤ B := by
+  simp [worstCaseCostBound_iff_support_bound, costDist, instrumentedRun]
+
+/-- A query budget bounds the key charge plus every supported continuation cost. -/
+theorem worstCaseCostBound_query_bind_iff [AddCommMonoid ω] [Preorder ω]
+    (t : spec.Domain) (k : spec.Range t → OracleComp spec α) (cm : CostModel spec ω) (B : ω) :
+    WorstCaseCostBound ((spec.query t : OracleComp spec (spec.Range t)) >>= k) cm B ↔
+      ∀ u z, z ∈ support (costDist (k u) cm) →
+        cm.queryCost t + Multiplicative.toAdd z.2 ≤ B := by
+  rw [worstCaseCostBound_iff_support_bound, costDist_query_bind]
+  simp only [support_bind, support_liftM_query, Set.mem_iUnion, Set.mem_univ,
+    support_map, Set.mem_image]
+  constructor
+  · intro h u z hz
+    exact h _ ⟨u, trivial, z, hz, rfl⟩
+  · intro h z hz
+    obtain ⟨u, _, w, hw, rfl⟩ := hz
+    exact h u w hw
+
+/-- Pathwise budgets add under sequencing of the actual instrumented computations. -/
+theorem WorstCaseCostBound.bind [AddCommMonoid ω] [PartialOrder ω] [IsOrderedAddMonoid ω]
+    {oa : OracleComp spec α} {k : α → OracleComp spec β} {cm : CostModel spec ω} {A B : ω}
+    (ha : WorstCaseCostBound oa cm A) (hb : ∀ a, WorstCaseCostBound (k a) cm B) :
+    WorstCaseCostBound (oa >>= k) cm (A + B) := by
+  unfold WorstCaseCostBound instrumentedRun at *
+  rw [simulateQ_bind]
+  exact AddWriterT.pathwiseCostAtMost_bind ha hb
+
 
 /-! ## Cost Bounds -/
 

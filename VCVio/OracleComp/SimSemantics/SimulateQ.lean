@@ -144,6 +144,24 @@ theorem evalWithAnswerFn_query {ι} {spec : OracleSpec ι} (f : QueryImpl spec I
     evalWithAnswerFn f (query t : OracleComp spec _) = f t := by
   simp [evalWithAnswerFn]
 
+/-- A primitive query lifted into the free computation receives the given table answer. -/
+@[simp]
+theorem evalWithAnswerFn_liftM_query {ι} {spec : OracleSpec ι}
+    (f : QueryImpl spec Id) (t : spec.Domain) :
+    evalWithAnswerFn f (liftM (spec.query t) : OracleComp spec (spec.Range t)) = f t := rfl
+
+/-- Deterministic evaluation after simulation uses the same table for each query implementation. -/
+theorem evalWithAnswerFn_simulateQ {ι' : Type u} {spec' : OracleSpec ι'}
+    (f : QueryImpl spec' Id) (impl : QueryImpl spec (OracleComp spec'))
+    (oa : OracleComp spec α) :
+    evalWithAnswerFn f (simulateQ impl oa) =
+      evalWithAnswerFn (fun t => evalWithAnswerFn f (impl t)) oa := by
+  induction oa using OracleComp.inductionOn with
+  | pure a => simp
+  | query_bind t k ih =>
+      simp only [simulateQ_bind, simulateQ_spec_query, evalWithAnswerFn_bind,
+        evalWithAnswerFn_liftM_query, ih]
+
 lemma simulateQ_query_bind [LawfulMonad r] (q : OracleQuery spec α)
     (ou : α → OracleComp spec β) : simulateQ impl (liftM q >>= ou) =
       liftM (impl q.input) >>= fun u => simulateQ impl (ou (q.cont u)) := by aesop

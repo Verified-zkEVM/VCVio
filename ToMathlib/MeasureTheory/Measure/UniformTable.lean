@@ -32,34 +32,37 @@ theorem uniformOn_univ_bind_apply {α β : Type*} [Fintype α] [MeasurableSpace 
   rw [Measure.bind_apply hs Measurable.of_discrete.aemeasurable, lintegral_fintype]
   simp [uniformOn_univ, mul_comm]
 
-/-- Replace one cell of a uniform table by an independent uniform value. -/
-theorem uniformOn_univ_bind_map_update {D R : Type*} [Finite D] [DecidableEq D]
-    [Finite R] [Nonempty R] [MeasurableSpace R] [MeasurableSingletonClass R] (t : D) :
-    (uniformOn Set.univ : Measure R).bind (fun u =>
-      (uniformOn Set.univ : Measure (D → R)).map (fun g => Function.update g t u)) =
+/-- Resampling one coordinate of a finite dependent table preserves its uniform measure.
+Each coordinate may have a different finite nonempty answer space. -/
+theorem uniformOn_univ_bind_map_update_dependent {D : Type*} {R : D → Type*}
+    [Finite D] [DecidableEq D]
+    [∀ d, Finite (R d)] [∀ d, Nonempty (R d)]
+    [∀ d, MeasurableSpace (R d)] [∀ d, MeasurableSingletonClass (R d)] (t : D) :
+    (uniformOn Set.univ : Measure (R t)).bind (fun u =>
+      (uniformOn Set.univ : Measure ((d : D) → R d)).map (fun g => Function.update g t u)) =
       uniformOn Set.univ := by
   classical
   let : Fintype D := Fintype.ofFinite D
-  let : Fintype R := Fintype.ofFinite R
+  let : ∀ d, Fintype (R d) := fun d => Fintype.ofFinite (R d)
   apply Measure.ext_of_singleton
   intro h
   rw [uniformOn_univ_bind_apply _ _ (MeasurableSet.singleton h)]
-  have hinner : ∀ u : R,
-      ((uniformOn Set.univ : Measure (D → R)).map (fun g => Function.update g t u)) {h}
+  have hinner : ∀ u : R t,
+      ((uniformOn Set.univ : Measure ((d : D) → R d)).map (fun g => Function.update g t u)) {h}
         = if u = h t then
-            (Fintype.card R : ENNReal) * (Fintype.card (D → R) : ENNReal)⁻¹ else 0 := by
+            (Fintype.card (R t) : ENNReal) * (Fintype.card ((d : D) → R d) : ENNReal)⁻¹ else 0 := by
     intro u
     rw [Measure.map_apply .of_discrete (MeasurableSet.singleton h)]
-    change (uniformOn Set.univ : Measure (D → R)) {g | Function.update g t u = h} = _
+    change (uniformOn Set.univ : Measure ((d : D) → R d)) {g | Function.update g t u = h} = _
     rw [show {g | Function.update g t u = h} = {g | h = Function.update g t u} by
       ext; exact eq_comm]
     rw [uniformOn_univ_apply_setOf]
     have hcard :
-        ((Finset.univ.filter fun g : D → R => h = Function.update g t u).card : ENNReal)
-          = if u = h t then (Fintype.card R : ENNReal) else 0 := by
+        ((Finset.univ.filter fun g : (d : D) → R d => h = Function.update g t u).card : ENNReal)
+          = if u = h t then (Fintype.card (R t) : ENNReal) else 0 := by
       by_cases hu : u = h t
-      · have hset : (Finset.univ.filter fun g : D → R => h = Function.update g t u)
-            = Finset.univ.image (fun r : R => Function.update h t r) := by
+      · have hset : (Finset.univ.filter fun g : (d : D) → R d => h = Function.update g t u)
+            = Finset.univ.image (fun r : R t => Function.update h t r) := by
           ext g
           simp only [Finset.mem_filter, Finset.mem_univ, true_and, Finset.mem_image]
           constructor
@@ -78,6 +81,16 @@ theorem uniformOn_univ_bind_map_update {D R : Type*} [Finite D] [DecidableEq D]
     ← mul_assoc, ENNReal.inv_mul_cancel (by simp [Fintype.card_ne_zero])
       (ENNReal.natCast_ne_top _), one_mul]
   simp [uniformOn_univ]
+
+
+
+/-- Replace one cell of a uniform table by an independent uniform value. -/
+theorem uniformOn_univ_bind_map_update {D R : Type*} [Finite D] [DecidableEq D]
+    [Finite R] [Nonempty R] [MeasurableSpace R] [MeasurableSingletonClass R] (t : D) :
+    (uniformOn Set.univ : Measure R).bind (fun u =>
+      (uniformOn Set.univ : Measure (D → R)).map (fun g => Function.update g t u)) =
+      uniformOn Set.univ :=
+  uniformOn_univ_bind_map_update_dependent t
 
 /-- A bijection transports a finite uniform measure to the uniform measure on its codomain. -/
 theorem uniformOn_univ_map_equiv {α β : Type*} [Finite α] [Finite β]
@@ -134,5 +147,6 @@ theorem uniformOn_univ_map_comp_injective {A B R : Type*} [Finite A] [Finite B] 
     _ = (uniformOn Set.univ : Measure ((A → R) × (C → R))).map Prod.fst := by
       rw [uniformOn_univ_map_equiv]
     _ = _ := by rw [uniformOn_univ_prod, Measure.map_fst_prod, measure_univ, one_smul]
+
 
 end ProbabilityTheory
