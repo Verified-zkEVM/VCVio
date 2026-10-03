@@ -2,13 +2,19 @@
 """Check the declaration names the documentation cites.
 
 Two checks over the agent guides (`docs/agents/*.md`, `AGENTS.md`, `CONTRIBUTING.md`,
-`README.md`) and the design notes (`docs/design/*.md`):
+`README.md`), the design notes (`docs/design/*.md`) and the reading documents
+(`docs/reading/*.md`), the first also over the docstrings and comments of the Lean libraries:
 
 1. Retired names (needs no build). A name the downstream codemod renames or removes
    (`scripts/migrate-native-probability.py`: `RENAMES`, `MODULES`, `LEGACY_HINTS`,
-   `LEGACY_TOKENS`) may appear only in the migration guide, the design notes, and a line that
+   `LEGACY_TOKENS`), or a retired label of a reading of `OracleComp` ("structural reading",
+   "angelic triple", "structural support", "structurally reachable"), may appear only in the
+   migration guide, in a
+   document whose status line calls it historical (a record of past work), and on a line that
    says it is retired (one mentioning the migration guide, the codemod, or a legacy, retired or
-   removed name).
+   removed name). A label is also allowed on a line that mentions PolyFun, whose own API names
+   its readings demonic and angelic, and inside a code span. In Lean sources, the check reads
+   only docstrings and comments.
 2. Resolution (`--resolve`, after `lake build`). Every inline code span that looks like a
    declaration name — an identifier path with a dot, an underscore or a capital letter — must
    resolve in the compiled environment of the proof libraries: `lake exe docnames` accepts a
@@ -60,6 +66,14 @@ LAKE_TARGET_RE = re.compile(
     r"^(?:@\[[^\]]*\]\s*)?(?:lean_lib|lean_exe|extern_lib|input_file|input_dir)\s+(\S+)", re.M)
 RESOLUTION_EXEMPT = {REPO_ROOT / "docs" / "agents" / "interop.md"}
 RETIRED_CONTEXT_RE = re.compile(r"migration guide|codemod|legacy|retired|removed", re.I)
+READING_DIR = REPO_ROOT / "docs" / "reading"
+STATUS_RE = re.compile(r"^\W*status\W", re.I)
+RETIRED_LABEL_RE = re.compile(
+    r"\b(?:structural|angelic|demonic)\s+(?:readings?|interpretations?|triples?|WP|"
+    r"weakest\s+preconditions?)\b|\bstructural\s+support\b|\bstructurally\s+"
+    r"(?:reachable|possible)\b", re.I)
+LEAN_ROOTS = ("ToMathlib/", "VCVio/", "VCVioCslib/", "LatticeCrypto/", "HashSig/", "Examples/",
+              "Extern/", "VCVioWidgets/", "VCVioTest/", "LatticeCryptoTest/", "HashSigTest/")
 
 
 def default_docs() -> tuple[list[Path], list[Path]]:
@@ -68,7 +82,52 @@ def default_docs() -> tuple[list[Path], list[Path]]:
         REPO_ROOT / "AGENTS.md", REPO_ROOT / "CONTRIBUTING.md", REPO_ROOT / "README.md"]
     guides = [doc for doc in guides if doc.is_file()]
     designs = sorted(DESIGN_DIR.glob("*.md"))
-    return guides + designs, guides
+    readings = sorted(READING_DIR.glob("*.md"))
+    return guides + designs + readings, guides
+
+
+def historical(text: str) -> bool:
+    """Whether a document's status line, among its first fifteen lines, calls it historical."""
+    for line in text.splitlines()[:15]:
+        if STATUS_RE.match(line):
+            return "historical" in line.lower()
+    return False
+
+
+def lean_sources() -> list[Path]:
+    """The tracked Lean sources of the libraries and test libraries."""
+    listed = subprocess.run(["git", "ls-files", "*.lean"], cwd=REPO_ROOT, capture_output=True,
+                            text=True, encoding="utf-8").stdout.split()
+    return [REPO_ROOT / name for name in listed if name.startswith(LEAN_ROOTS)]
+
+
+def lean_prose(text: str):
+    """(line number, text) of the docstring and comment parts of each line of a Lean source."""
+    depth = 0
+    for number, line in enumerate(text.splitlines(), 1):
+        prose = []
+        j = 0
+        while j < len(line):
+            if line.startswith("/-", j):
+                depth += 1
+                j += 2
+            elif depth and line.startswith("-/", j):
+                depth -= 1
+                j += 2
+            elif not depth and line.startswith("--", j):
+                prose.append(line[j:])
+                break
+            elif not depth and line[j] == '"':
+                j += 1
+                while j < len(line) and line[j] != '"':
+                    j += 2 if line[j] == "\\" else 1
+                j += 1
+            else:
+                if depth:
+                    prose.append(line[j])
+                j += 1
+        if prose:
+            yield number, "".join(prose)
 
 
 def declaration_like(token: str) -> bool:
@@ -207,19 +266,32 @@ def retired_patterns() -> list[tuple[re.Pattern[str], str]]:
     return patterns
 
 
+def retired_in(line: str, patterns) -> str | None:
+    """The retired name or reading label a line uses, if it does not say it is retired."""
+    if RETIRED_CONTEXT_RE.search(line):
+        return None
+    for pattern, name in patterns:
+        if pattern.search(line):
+            return f"retired name `{name}`"
+    if "PolyFun" not in line:
+        label = RETIRED_LABEL_RE.search(CODE_SPAN_RE.sub("", line))
+        if label:
+            return f"retired reading label \"{label.group(0)}\""
+    return None
+
+
 def check_retired(docs: list[Path], patterns) -> list[str]:
     failures = []
     for doc in docs:
-        if doc == MIGRATION_GUIDE or DESIGN_DIR in doc.parents:
+        if doc == MIGRATION_GUIDE:
             continue
-        for number, line in enumerate(doc.read_text(encoding="utf-8").splitlines(), 1):
-            if RETIRED_CONTEXT_RE.search(line):
-                continue
-            for pattern, name in patterns:
-                if pattern.search(line):
-                    failures.append(f"{rel(doc)}:{number}: retired name `{name}` (see the "
-                                    f"migration guide)")
-                    break
+        text = doc.read_text(encoding="utf-8")
+        lines = (lean_prose(text) if doc.suffix == ".lean"
+                 else [] if historical(text) else enumerate(text.splitlines(), 1))
+        for number, line in lines:
+            found = retired_in(line, patterns)
+            if found:
+                failures.append(f"{rel(doc)}:{number}: {found} (see the migration guide)")
     return failures
 
 
@@ -269,7 +341,8 @@ def rel(path: Path) -> str:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
     parser.add_argument("files", nargs="*", type=Path,
-                        help="documents to check (default: the guides and design notes)")
+                        help="documents or Lean sources to check (default: the guides, design "
+                             "notes, reading documents and library sources)")
     parser.add_argument("--resolve", action="store_true",
                         help="also resolve the tokens with `lake exe docnames`")
     parser.add_argument("--emit", type=Path, metavar="FILE",
@@ -278,9 +351,11 @@ def main() -> int:
                         help="tokens that may stay unresolved")
     args = parser.parse_args()
     if args.files:
-        retired_docs = resolve_docs = [doc.resolve() for doc in args.files]
+        retired_docs = [doc.resolve() for doc in args.files]
+        resolve_docs = [doc for doc in retired_docs if doc.suffix != ".lean"]
     else:
         retired_docs, resolve_docs = default_docs()
+        retired_docs = retired_docs + lean_sources()
     patterns = retired_patterns()
     sites = collect_tokens(resolve_docs, patterns)
     if not args.files:

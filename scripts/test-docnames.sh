@@ -67,6 +67,46 @@ expect_status 1 retired "${CHECK[@]}" --allowlist "$EMPTY_ALLOWLIST" "$FIXTURE_T
 expect_line retired 'retired name `IsUniformMeasureSpec`'
 expect_status 0 retired-clean "${CHECK[@]}" --allowlist "$EMPTY_ALLOWLIST" "$FIXTURE_TMP/dead.md"
 
+cat > "$FIXTURE_TMP/living.md" <<'DOC'
+> Status: living ledger.
+
+`IsUniformMeasureSpec` appears in a document that describes the present.
+The structural reading of `oa` describes the present too.
+PolyFun's angelic reading is PolyFun's own name.
+DOC
+
+cat > "$FIXTURE_TMP/historical.md" <<'DOC'
+> Status: historical record, 2026-08-21.
+
+`IsUniformMeasureSpec` and the structural reading were current when this was written.
+DOC
+
+cat > "$FIXTURE_TMP/Prose.lean" <<'DOC'
+/-- The angelic reading of a computation. -/
+def fixtureAngelic : Nat := 1
+
+-- `IsUniformMeasureSpec` in a comment.
+/-- PolyFun's demonic weakest precondition, and `structural reading` inside a code span. -/
+def fixtureClean : Nat := "-- structural reading in a string is not prose".length
+DOC
+
+expect_status 1 living "${CHECK[@]}" --allowlist "$EMPTY_ALLOWLIST" "$FIXTURE_TMP/living.md"
+expect_line living 'living.md:3: retired name `IsUniformMeasureSpec`'
+expect_line living 'living.md:4: retired reading label "structural reading"'
+if grep -q 'living.md:5:' "$FIXTURE_TMP/living.log"; then
+  echo "ERROR: living flagged a line that names PolyFun's own reading" >&2
+  exit 1
+fi
+expect_status 0 historical "${CHECK[@]}" --allowlist "$EMPTY_ALLOWLIST" \
+  "$FIXTURE_TMP/historical.md"
+expect_status 1 prose "${CHECK[@]}" --allowlist "$EMPTY_ALLOWLIST" "$FIXTURE_TMP/Prose.lean"
+expect_line prose 'Prose.lean:1: retired reading label "angelic reading"'
+expect_line prose 'Prose.lean:4: retired name `IsUniformMeasureSpec`'
+if grep -q 'Prose.lean:[56]:' "$FIXTURE_TMP/prose.log"; then
+  echo "ERROR: prose flagged a PolyFun label, a code span or a string" >&2
+  exit 1
+fi
+
 expect_status 0 good "${CHECK[@]}" --resolve --allowlist "$EMPTY_ALLOWLIST" "$FIXTURE_TMP/good.md"
 expect_line good 'Documentation names: OK'
 expect_status 1 dead "${CHECK[@]}" --resolve --allowlist "$EMPTY_ALLOWLIST" \
