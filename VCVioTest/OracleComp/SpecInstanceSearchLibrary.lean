@@ -142,4 +142,31 @@ Hint: Type class instance resolution failures can be inspected with the `set_opt
 set_option synthInstance.maxHeartbeats 2000 in
 example {α : Type} {β : α → Type} (a : α) : Nonempty (β a) := inferInstance
 
+/-! ## Answer measures
+
+Each answer measure is a probability measure by an instance concluding
+`IsProbabilityMeasure (toMeasure t)` on the answer type. The measure's head `toMeasure` keys that
+instance, so it serves goals about answer measures and is never a candidate for another measure on
+an answer type. -/
+
+/-- The answer measure of a query is a probability measure. -/
+example {ι : Type} (spec : OracleSpec ι) [OracleSpec.AnswerMeasure spec] (t : ι) :
+    @MeasureTheory.IsProbabilityMeasure (spec.Range t) ⊤
+      (OracleSpec.AnswerMeasure.toMeasure t) :=
+  inferInstance
+
+/--
+error: failed to synthesize instance of type class
+  MeasureTheory.IsProbabilityMeasure μ
+
+Hint: Type class instance resolution failures can be inspected with the `set_option trace.Meta.synthInstance true` command.
+-/
+#guard_msgs in
+set_option synthInstance.maxHeartbeats 2000 in
+-- Another measure on an answer type is not routed through the answer-measure instances.
+example {ι : Type} (spec : OracleSpec ι) [OracleSpec.AnswerMeasure spec] (t : ι)
+    (μ : @MeasureTheory.Measure (spec.Range t) ⊤) :
+    @MeasureTheory.IsProbabilityMeasure (spec.Range t) ⊤ μ :=
+  inferInstance
+
 end VCVioTest.OracleComp.SpecInstanceSearchLibrary

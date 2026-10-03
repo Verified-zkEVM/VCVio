@@ -20,7 +20,7 @@ The example samples a Boolean uniformly and `guard`s on heads: half of the runs 
 the other half of the mass is missing.
 -/
 
-@[expose] public section
+public section
 
 open OracleComp MeasureTheory ENNReal
 

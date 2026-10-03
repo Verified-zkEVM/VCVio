@@ -28,7 +28,9 @@ holds for every scheme:
   reported, and a parameter in `ℝ≥0` or `ℝ≥0∞` is nonnegative by type and is not reported.
 
 Definitions are not linted. Exceptions are maintained by the repository's exact `nolints.json`
-baseline. The option `linter.securityStatements.everywhere` lints every module, for the linters'
+baseline. `VCVio.Prelude.Core` imports this module so that the linters are available to every
+VCVio library, which is why it sits below the framework although it names VCVio's module roots and
+computation types. The option `linter.securityStatements.everywhere` lints every module, for the linters'
 own fixtures.
 -/
 

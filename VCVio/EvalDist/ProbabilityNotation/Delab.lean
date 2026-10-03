@@ -25,7 +25,7 @@ public meta section Delaboration
 
 open Lean Meta PrettyPrinter Delaborator SubExpr
 
-namespace ProbabilityNotation
+namespace VCVio.ProbabilityNotation
 
 /-- Whether an ordered algebra is the expectation algebra of successful-output measures. -/
 partial def isExpectationAlgebra (a : Expr) : MetaM Bool := do
@@ -123,6 +123,6 @@ def delabExpectation : Delab := whenPPOption getPPNotation <| withOverApp 10 do
   let (draws, t, event) ← delabDraws
   if event then `(Pr{$draws*}[$t]) else `(𝔼{$draws*}[$t])
 
-end ProbabilityNotation
+end VCVio.ProbabilityNotation
 
 end Delaboration

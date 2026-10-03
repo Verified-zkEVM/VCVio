@@ -129,11 +129,12 @@ macro (name := expectArith) "expect_arith" : tactic =>
     propInd_not, propInd_le_one,
     propInd,
     ExpectationWP.wp_const_of_oracle, OracleComp.ProgramLogic.wp_eq_tsum,
-    ite_true, ite_false, ite_true, ite_false, dite_true, dite_false,
+    ite_true, ite_false, dite_true, dite_false,
     one_mul, mul_one, zero_mul, mul_zero, zero_add, add_zero,
     expect_norm, expect_eval, expect_arith])
 
-/-- `by_hoare` transforms a probability goal into a quantitative WP goal. -/
+/-- `by_hoare` states a probability goal as an expectation: it splits events and output measures
+over `if` branches and writes each event as the expectation of its indicator. -/
 macro (name := byHoare) "by_hoare" : tactic =>
   `(tactic|
     simp only [prEvent_ite, prEvent_dite, evalDist_ite_apply, evalDist_dite_apply,

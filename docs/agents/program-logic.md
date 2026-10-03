@@ -521,6 +521,9 @@ per-call scope with `experimental.vcgen` set, and reads the verification conditi
 | `⦃ pre ⦄ oa ⦃ post ⦄`, or its unfolded form `pre ⊑ wp oa post epost` | the reading of its interpretation |
 | a `Prop`-valued `wp oa post epost` | the reading of its interpretation |
 
+The necessary bridge on an event's normal form has the side condition `∀ a, g a ≤ 1`. `prvcgen`
+discharges it with `prvcgen_le_one`, which a proof can also call on a goal of that shape.
+
 `𝔼{…}[g]` and `wp⟦oa⟧ g` stand wherever `Pr{…}[p]` does, and an equation may have the expectation
 on either side. A triple, an unfolded triple and a `Prop`-valued weakest precondition are shapes
 `vcgen` reads itself, so `prvcgen` only classifies them and hands them over: the reading is read

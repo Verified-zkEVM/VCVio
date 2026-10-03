@@ -8,7 +8,7 @@
 
 **Symptom**: "failed to synthesize instance" mentioning `OracleSpec.AnswerMeasure`, `UniformAnswerMeasure`, `EvalDistSemantics`, or `MeasurableSpace`.
 
-**Fix**: Add `[OracleSpec.AnswerMeasure spec]` for arbitrary per-query answer measures, or `[OracleSpec.UniformAnswerMeasure spec]` for uniform answers. Answer measures live on the discrete σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite, nonempty answer types, install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec` on that spec; a sum of specs gets its instance from `AnswerMeasure.add`, so do not declare one on the sum. To convert code written against the removed discrete `Pr[…]` API, see [`probability-migration.md`](probability-migration.md).
+**Fix**: Add `[OracleSpec.AnswerMeasure spec]` for arbitrary per-query answer measures, or `[OracleSpec.UniformAnswerMeasure spec]` for uniform answers. Answer measures live on the discrete σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite, nonempty answer types, install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec` on that spec; a sum of specs gets its instance from `UniformAnswerMeasure.add`, so do not declare one on the sum. To convert code written against the removed discrete `Pr[…]` API, see [`probability-migration.md`](probability-migration.md).
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 
@@ -124,6 +124,12 @@ unconstrained `DecidableEq α` (VCVio#772). In the `Range` form the unifier's fi
 approximation assigns `?spec := β` at a goal `DecidableEq (β a)`, so whenever the exact
 instances fail and only a `classical` fallback remains, the elaborated term silently routed
 through oracle-specification data.
+
+The hazard is the key, not the mention of an answer type. An instance whose conclusion also
+contains a head that is not reducible is indexed by that head, and is a candidate only for goals
+that contain it. `OracleSpec.AnswerMeasure.isProbabilityMeasure_toMeasure`, which concludes
+`IsProbabilityMeasure (toMeasure t)` on `spec.Range t`, is of this kind: its key is `toMeasure`,
+so a goal about any other measure on an answer type never tries it.
 
 VCVio has no such instances. Write `[DecidableEq ι]` for index equality, and
 `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` — or

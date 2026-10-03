@@ -72,12 +72,16 @@ theorem trans {mx : m α} {my : m' α} {mz : m'' α} (h₁ : mx =ᵈ my) (h₂ :
     mx =ᵈ mz :=
   fun p ↦ (h₁ p).trans (h₂ p)
 
+/-- Equalities in distribution chain in `calc` blocks, across monads. -/
 instance : @Trans (m α) (m' α) (m'' α) EvalDistEq EvalDistEq EvalDistEq := ⟨trans⟩
 
+/-- Equality in distribution is reflexive. -/
 instance : Std.Refl (α := m α) EvalDistEq := ⟨refl⟩
 
+/-- Equality in distribution is symmetric. -/
 instance : Std.Symm (α := m α) EvalDistEq := ⟨fun _ _ ↦ symm⟩
 
+/-- Equality in distribution is transitive. -/
 instance : IsTrans (m α) EvalDistEq := ⟨fun _ _ _ ↦ trans⟩
 
 /-- A common map preserves equality in distribution. -/

@@ -107,7 +107,9 @@ instance evalDist.instIsSubprobabilityMeasure (sem : MeasureSemanticsVia m)
     [MeasurableSpace α] (mx : m α) : IsSubprobabilityMeasure (sem.evalDist mx) :=
   ⟨sem.evalDist_apply_univ_le_one mx⟩
 
-/-- Failure probability is the mass missing from the successful-output measure. -/
+/-- The failure probability of `mx`: the mass its successful-output measure misses. A bundled
+semantics chooses an observation for each σ-algebra on the output and relates no two of them, so
+the mass is taken on the σ-algebra in scope. -/
 @[expose]
 noncomputable def prFail (sem : MeasureSemanticsVia m) [MeasurableSpace α]
     (mx : m α) : ENNReal :=

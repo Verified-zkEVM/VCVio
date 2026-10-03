@@ -229,7 +229,8 @@ noncomputable instance exceptT (m : Type → Type v) [Monad m] {ε : Type} {EPre
 /-- The expectation carrier is a chain-complete partial order, as core's assertion lattices are:
 the bottom exception assertion of a transformer stack over `ℝ≥0∞` elaborates without opening
 `Std.WP`'s scope. -/
-noncomputable instance : Lean.Order.CCPO ℝ≥0∞ := Lean.Order.instCCPOOfCompleteLattice
+noncomputable instance instCCPOENNReal : Lean.Order.CCPO ℝ≥0∞ :=
+  Lean.Order.instCCPOOfCompleteLattice
 
 /-- The exactness of an expectation interpretation, for instance search. -/
 instance instExactWPMonad (m : Type → Type v) [Monad m] {EPred : Type} [Assertion EPred]

@@ -83,7 +83,8 @@ noncomputable def evalDist (runtime : ProbCompRuntime m) [MeasurableSpace α]
     (mx : m α) : Measure α :=
   runtime.toMeasureSemanticsVia.evalDist mx
 
-/-- Failure probability of an ambient computation under the runtime's bundled semantics. -/
+/-- The failure probability of an ambient computation under the runtime's bundled semantics, on
+the σ-algebra in scope (see `MeasureSemanticsVia.prFail`). -/
 noncomputable def prFail (runtime : ProbCompRuntime m) [MeasurableSpace α]
     (mx : m α) : ENNReal :=
   runtime.toMeasureSemanticsVia.prFail mx

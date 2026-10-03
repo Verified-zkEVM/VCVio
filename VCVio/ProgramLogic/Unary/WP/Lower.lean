@@ -33,7 +33,7 @@ parameters: the global reading of `OracleComp` is the structural one
 `OracleComp.Probabilistic`, takes precedence while it is open.
 -/
 
-@[expose] public section
+public section
 
 open ENNReal MeasureTheory
 open Lean.Order
@@ -55,7 +55,7 @@ noncomputable instance instMAlgOrdered : MAlgOrdered (OracleComp spec) ℝ≥0�
   ExpectationWP.algebra (OracleComp spec)
 
 /-- The expectation of the identity under the configured oracle answer measures. -/
-noncomputable def μ (oa : OracleComp spec ℝ≥0∞) : ℝ≥0∞ :=
+@[expose] noncomputable def μ (oa : OracleComp spec ℝ≥0∞) : ℝ≥0∞ :=
   MAlgOrdered.μ oa
 
 end OracleComp.ProgramLogic
@@ -70,7 +70,7 @@ variable {α β : Type}
 
 /-- Core weakest preconditions under the configured oracle answer measures: the expectation
 interpretation `ExpectationWP.wpMonad`, so `wp oa post ⊥` is `wp⟦oa⟧ post`. Opening the
-scope selects it over the structural reading. -/
+scope selects it over the global necessary reading. -/
 noncomputable scoped instance (priority := 1100) instWP :
     Std.WP.WPMonad (OracleComp spec) ℝ≥0∞ EStack⟨⟩ :=
   ExpectationWP.wpMonad (OracleComp spec)

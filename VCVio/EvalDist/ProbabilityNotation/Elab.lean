@@ -99,7 +99,7 @@ public meta section Elaboration
 
 open Lean Elab Term Meta
 
-namespace ProbabilityNotation
+namespace VCVio.ProbabilityNotation
 
 /-- Internal form of the expectation notation, with the monad of the sequence once a draw has
 determined it. -/
@@ -415,13 +415,13 @@ where
     if event then `(predInd fun z => match z with | $pat:term => ($body : Prop))
     else `(fun z => match z with | $pat:term => ($body : ENNReal))
 
-end ProbabilityNotation
+end VCVio.ProbabilityNotation
 
 elab_rules : term
   | `(expect% $[(m := $h)]? {$items*}[$b]) => do
-    ProbabilityNotation.elabSeq (← h.mapM (elabTerm · none)) items b (event := false)
+    VCVio.ProbabilityNotation.elabSeq (← h.mapM (elabTerm · none)) items b (event := false)
   | `(prEvent% $[(m := $h)]? {$items*}[$t]) => do
-    ProbabilityNotation.elabSeq (← h.mapM (elabTerm · none)) items t (event := true)
+    VCVio.ProbabilityNotation.elabSeq (← h.mapM (elabTerm · none)) items t (event := true)
 
 end Elaboration
 

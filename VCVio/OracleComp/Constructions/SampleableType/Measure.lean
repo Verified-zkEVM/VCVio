@@ -124,7 +124,7 @@ theorem wp_uniformSample_eq_sum {α : Type} [SampleableType α] [_root_.Fintype 
   rw [wp_eq_sum_fintype, ENNReal.div_eq_inv_mul, Finset.mul_sum]
   exact Finset.sum_congr rfl fun a _ ↦ by rw [prEvent_uniformSample_eq_singleton]
 
-open Lean Meta Simp ProbabilityNotation in
+open Lean Meta Simp VCVio.ProbabilityNotation in
 /-- `wp_uniformSample_eq_sum` for an observation that is not an event, `predInd p` or an
 indicator that normalization folds into one. -/
 simproc [simp] wp_uniformSample_sum (@Std.WP.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do

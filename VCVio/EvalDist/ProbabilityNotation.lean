@@ -58,7 +58,7 @@ public meta section Rewriting
 
 open Lean Meta
 
-namespace ProbabilityNotation
+namespace VCVio.ProbabilityNotation
 
 /-- Rewrite `e` with the equation `thm`, whose instance arguments not determined by unification
 are synthesized. Returns the right side and the proof. -/
@@ -94,11 +94,11 @@ def namedStep (thm : Name) (e : Expr) (i : Nat) (src : Array Expr) : SimpM Simp.
   let rhs := renameArg rhs i ((src.findSome? lamName?).getD `x)
   return .visit { expr := ← Core.betaReduce rhs, proof? := pf }
 
-end ProbabilityNotation
+end VCVio.ProbabilityNotation
 
 end Rewriting
 
-open Lean Meta Simp ProbabilityNotation in
+open Lean Meta Simp VCVio.ProbabilityNotation in
 /-- `ExactWPMonad.wp_bind`, naming the new binder after the continuation's. -/
 simproc ↓ [simp, expect_norm] wp_bind_named
     (@Std.WP.WP.wp _ _ _ _ _ _ ?_ (_ >>= _) _ _) := fun e => do
@@ -107,7 +107,7 @@ simproc ↓ [simp, expect_norm] wp_bind_named
   unless mb.isAppOfArity ``Bind.bind 6 do return .continue
   namedStep ``ExactWPMonad.wp_bind e 8 #[mb.getArg! 5]
 
-open Lean Meta Simp ProbabilityNotation in
+open Lean Meta Simp VCVio.ProbabilityNotation in
 /-- `ExactWPMonad.wp_map`, naming the observation's binder after the map's. -/
 simproc ↓ [simp, expect_norm] wp_map_named
     (@Std.WP.WP.wp _ _ _ _ _ _ ?_ (_ <$> _) _ _) := fun e => do
@@ -124,7 +124,7 @@ equal by definition. -/
 simproc [simp, expect_norm] wp_predInd_fold
     (@Std.WP.WP.wp _ _ _ _ _ _ ?_ _ _ _) := fun e => do
   unless e.isAppOfArity ``Std.WP.WP.wp 10 do return .continue
-  let some pred := ProbabilityNotation.indicatorPred? (e.getArg! 8) | return .continue
+  let some pred := VCVio.ProbabilityNotation.indicatorPred? (e.getArg! 8) | return .continue
   let obs ← mkAppM ``predInd #[pred]
   return .visit { expr := mkAppN e.getAppFn (e.getAppArgs.set! 8 obs) }
 

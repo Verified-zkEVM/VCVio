@@ -177,6 +177,8 @@ structures; it does not install blanket measurable-space instances on the underl
     exact evalDistKernelOfDiscrete fun s => impl t s
   answerKernel_isSubprobability t := by infer_instance
 
+/-- A stateful `ProbComp` handler is executable: each answer is computed by running the handler
+from the current state. -/
 instance ofQueryImpl.instIsExecutable {σ : Type}
     (impl : QueryImpl spec (StateT σ ProbComp)) : (ofQueryImpl impl).IsExecutable where
   answerComp s t := impl t s

@@ -70,7 +70,7 @@ noncomputable def cmaToNmaLoss (qS qH : ℕ) (ε p ζ_zk δ : ℝ) (_hp : p < 1)
 /-- The CMA-to-witness reduction of the with-aborts transform: the composite of the CMA-to-NMA
 simulation, through the HVZK simulator `sim` and the commitment recovery `recover`, with the
 NMA-to-witness forking reduction, as `FiatShamir.cmaReduction` composes them for the plain
-transform. It is not constructed yet: a named placeholder, carried by the axiom baseline, so that
+transform. Its body is a named `sorry` placeholder, recorded in the axiom baseline, so that
 `euf_cma_bound` names the reduction it bounds. -/
 noncomputable def cmaReduction
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))

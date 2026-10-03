@@ -42,7 +42,7 @@ The specifications of the concrete handlers (`cachingOracle`, `seededOracle`, `l
 `VCVio.ProgramLogic.Unary.HandlerSpecs`, which imports this file.
 -/
 
-@[expose] public section
+public section
 
 open OracleSpec OracleComp Std.WP
 
@@ -143,7 +143,7 @@ variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
 
 /-- The type of handler invariants used by the specification of `simulateQ`: an assertion on
 the handler's state that every query preserves. `vcgen`'s `invariants` clause fills it. -/
-@[spec_invariant_type, simp, grind =]
+@[expose, spec_invariant_type, simp, grind =]
 def HandlerInvariant (σ : Type) (Pred : Type _) := σ → Pred
 
 /-- Generic simulation triple: if every handler call `handler t` preserves an invariant `I` on

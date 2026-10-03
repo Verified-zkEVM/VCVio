@@ -23,7 +23,7 @@ expectation readings are selected by their scopes (`OracleComp.Lower`, `OracleCo
 additionally needs the uniform, finite-support assumptions stated in `Unary/WP/Coherence.lean`.
 -/
 
-@[expose] public section
+public section
 
 universe u
 
@@ -34,13 +34,14 @@ namespace OracleComp.Necessary
 variable {ι : Type u} {spec : OracleSpec ι}
 variable {α β : Type}
 
-/-- Core weakest preconditions for all structurally reachable outputs: the global reading of
+/-- Core weakest preconditions over every possible output: the global necessary reading of
 `OracleComp`, which needs no probability interpretation. -/
 noncomputable instance instWP :
     Std.WP.WPMonad (OracleComp spec) Prop EStack⟨⟩ :=
   MonadAttach.toWPMonadDemonic
 
-/-- Structural weakest preconditions hold precisely on every possible output. -/
+/-- A necessary weakest precondition holds exactly when the postcondition holds on every possible
+output. -/
 theorem wp_iff_forall_support (oa : OracleComp spec α) (post : α → Prop) :
     Std.WP.wp oa post Lean.Order.bot ↔ ∀ a ∈ support oa, post a :=
   Iff.rfl
