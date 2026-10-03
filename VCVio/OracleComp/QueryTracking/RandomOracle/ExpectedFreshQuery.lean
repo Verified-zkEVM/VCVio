@@ -423,11 +423,11 @@ theorem prEvent_tableFreshKey_bad_le
         rw [prEvent_eq_evalDist_of_discrete]
         exact mul_comm _ _
 
-omit [Finite D] in
+omit [DecidableEq D] [Finite D] in
 /-- A finite union of key-specific bad events is charged by the expected sum of the weights
 of the keys that actually appear. -/
 private theorem prEvent_bad_in_freshKeys_le_expectedCharge
-    {β : Type} [Fintype D] [MeasurableSpace β] [DiscreteMeasurableSpace β]
+    {β : Type} [Finite D] [MeasurableSpace β] [DiscreteMeasurableSpace β]
     (mx : ProbComp β) (keys : β → Finset D) (bad : D → β → Prop)
     (error : D → ENNReal)
     (hkey : ∀ t, Pr{let a ← mx}[t ∈ keys a ∧ bad t a] ≤
@@ -435,6 +435,7 @@ private theorem prEvent_bad_in_freshKeys_le_expectedCharge
     Pr{let a ← mx}[∃ t ∈ keys a, bad t a] ≤
       ∫⁻ a, ∑ t ∈ keys a, error t ∂𝒟[mx] := by
   classical
+  let : Fintype D := Fintype.ofFinite D
   have h : Pr{let a ← mx}[∃ t, t ∈ keys a ∧ bad t a] ≤
       ∫⁻ a, ∑ t, ({x | t ∈ keys x}.indicator (fun _ => error t)) a ∂𝒟[mx] := by
     calc
