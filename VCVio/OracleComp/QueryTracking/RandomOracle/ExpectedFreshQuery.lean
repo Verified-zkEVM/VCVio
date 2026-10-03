@@ -145,7 +145,206 @@ theorem evalDist_randomOracleLoggedRun_eq_fixedTable_finite
             rw [ih u cache]
             rw [← evalDist_map_of_discrete]
             simp only [map_bind]
-            trace_state
+
+end OracleComp
+
+
+
+/-! ## Query-occurrence invariance under one-cell resampling -/
+
+namespace OracleComp
+
+variable {D α : Type} {R : D → Type}
+
+/-- The probability of ever querying a key is unaffected by changing that key's table answer,
+even when private uniform draws are interleaved with hash queries. -/
+theorem prEvent_fixedTableLoggedRun_queries_mem_update [DecidableEq D]
+    (oa : OracleComp (unifSpec + ofFn R) α) (g : ∀ d, R d)
+    (t : D) (u : R t) (cache : (ofFn R).QueryCache) :
+    Pr{let z ← (fixedTableLoggedRun oa (Function.update g t u) cache)}[t ∈ freshKeysOfLog z.1.2] =
+    Pr{let z ← (fixedTableLoggedRun oa g cache)}[t ∈ freshKeysOfLog z.1.2] := by
+  induction oa using OracleComp.inductionOn generalizing cache with
+  | pure a =>
+      simp [fixedTableLoggedRun]
+  | query_bind q k ih =>
+      cases q with
+      | inl n =>
+          have hrun (G : ∀ d, R d) :
+              fixedTableLoggedRun (liftM ((unifSpec + ofFn R).query (.inl n)) >>= k)
+                G cache =
+              (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) n) >>= fun x =>
+                fixedTableLoggedRun (k x) G cache := by
+            rw [fixedTableLoggedRun_bind, fixedTableLoggedRun_uniformQuery]
+            simp only [bind_map_left, List.nil_append, Prod.mk.eta]
+            simp
+          rw [hrun, hrun]
+          apply prEvent_bind_congr
+          intro x
+          exact ih x cache
+      | inr s =>
+          have hrun (G : ∀ d, R d) :
+              fixedTableLoggedRun (liftM ((unifSpec + ofFn R).query (.inr s)) >>= k)
+                G cache =
+              (((QueryImpl.ofFn G).liftTarget ProbComp).withCaching s).run cache >>= fun p =>
+                (fun z => ((z.1.1, [⟨s, p.1⟩] ++ z.1.2), z.2)) <$>
+                  fixedTableLoggedRun (k p.1) G p.2 := by
+            rw [fixedTableLoggedRun_bind, fixedTableLoggedRun_hashQuery]
+            simp only [bind_map_left]
+          by_cases hst : s = t
+          · subst s
+            have hcase (G : ∀ d, R d) :
+                Pr{let z ← (fixedTableLoggedRun
+                  (liftM ((unifSpec + ofFn R).query (.inr t)) >>= k) G cache)}[t ∈ freshKeysOfLog z.1.2] = 1 := by
+              let run := fixedTableLoggedRun
+                (liftM ((unifSpec + ofFn R).query (.inr t)) >>= k) G cache
+              calc
+                Pr{let z ← run}[t ∈ freshKeysOfLog z.1.2] =
+                    Pr{let z ← run}[True] := by
+                  dsimp [run]
+                  rw [hrun]
+                  apply prEvent_bind_congr
+                  intro p
+                  simp
+                _ = 1 := by
+                  dsimp [run]
+                  let : MeasurableSpace
+                      ((α × QueryLog (ofFn R)) × (ofFn R).QueryCache) := ⊤
+                  rw [prEvent_true_eq_evalDist_apply_univ]
+                  exact OracleComp.evalDist_apply_univ_eq_one _
+            exact (hcase (Function.update g t u)).trans (hcase g).symm
+          · rw [hrun, hrun]
+            have hanswer : Function.update g t u s = g s :=
+              Function.update_of_ne hst u g
+            have hhandler :
+                (((QueryImpl.ofFn (Function.update g t u)).liftTarget ProbComp).withCaching s).run cache =
+                  (((QueryImpl.ofFn g).liftTarget ProbComp).withCaching s).run cache := by
+              rcases hc : cache s with _ | v
+              · rw [QueryImpl.withCaching_run_none _ hc,
+                  QueryImpl.withCaching_run_none _ hc]
+                simp [QueryImpl.ofFn_apply, hanswer]
+              · rw [QueryImpl.withCaching_run_some _ hc,
+                  QueryImpl.withCaching_run_some _ hc]
+            rw [hhandler]
+            apply prEvent_bind_congr
+            intro p
+            rw [prEvent_map, prEvent_map]
+            have hts : t ≠ s := Ne.symm hst
+            simp only [List.singleton_append, freshKeysOfLog_cons,
+              Finset.mem_insert, hts, false_or]
+            exact ih p.1 p.2
+
+end OracleComp
+
+/-! ## Expected charge for interleaved private randomness -/
+
+namespace OracleComp
+
+variable {D α : Type} {R : D → Type}
+variable [DecidableEq D] [Finite D]
+  [∀ d, SampleableType (R d)] [SampleableType (∀ d, R d)]
+
+/-- If the conditional chance of a query event is constant across an outer draw, the joint
+event factors into that query chance and the bad-answer chance. -/
+theorem prEvent_bind_and_factor {A B : Type} (mx : ProbComp A) (my : A → ProbComp B)
+    (queried : B → Prop) (bad : A → Prop) (q : ENNReal)
+    (hq : ∀ a, Pr{let z ← my a}[queried z] = q) :
+    Pr{let a ← mx; let z ← my a}[queried z ∧ bad a] =
+      q * Pr{let a ← mx}[bad a] := by
+  let : MeasurableSpace A := ⊤
+  have hinner (a : A) :
+      Pr{let z ← my a}[queried z ∧ bad a] =
+        {a | bad a}.indicator (fun _ => q) a := by
+    by_cases ha : bad a
+    · simpa only [ha, and_true, Set.indicator_of_mem (show a ∈ {a | bad a} from ha)]
+        using hq a
+    · simp [ha, Set.indicator_of_notMem]
+  have hbind := prEvent_bind_eq_lintegral_of_discrete mx
+    (fun a => do let z ← my a; pure (queried z ∧ bad a)) id
+  have hbind' :
+      Pr{let a ← mx; let z ← my a}[queried z ∧ bad a] =
+        ∫⁻ a, Pr{let z ← my a}[queried z ∧ bad a] ∂𝒟[mx] := by
+    simpa only [bind_assoc, pure_bind, id_eq] using hbind
+  rw [hbind']
+  simp_rw [hinner]
+  rw [lintegral_indicator_const MeasurableSet.of_discrete]
+  rw [prEvent_eq_evalDist_of_discrete]
+
+/-- A particular bad key is charged by the probability it appears in the fixed-table log,
+including all interleaved private draws. -/
+theorem prEvent_interleavedFreshKey_bad_le
+    (oa : OracleComp (unifSpec + ofFn R) α) (t : D)
+    (bad : D → (∀ d, R d) → Prop) (error : D → ENNReal)
+    (hbad : ∀ g, Pr{let u ← $ᵗ (R t)}[bad t (Function.update g t u)] ≤ error t) :
+    Pr{let g ← $ᵗ (∀ d, R d); let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2 ∧ bad t g] ≤
+      Pr{let g ← $ᵗ (∀ d, R d); let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2] * error t := by
+  let : ∀ d, Fintype (R d) := fun d => Fintype.ofFinite (R d)
+  have : Nonempty (∀ d, R d) := ⟨fun d => Classical.arbitrary (R d)⟩
+  let : ∀ d, MeasurableSpace (R d) := fun _ => ⊤
+  let f : (∀ d, R d) → ProbComp Prop := fun g => do
+    let z ← fixedTableLoggedRun oa g ∅
+    pure (t ∈ freshKeysOfLog z.1.2 ∧ bad t g)
+  have hresample :
+      𝒟[do
+        let g ← $ᵗ (∀ d, R d)
+        let z ← fixedTableLoggedRun oa g ∅
+        pure (t ∈ freshKeysOfLog z.1.2 ∧ bad t g)] {True} =
+      𝒟[do
+        let u ← $ᵗ (R t)
+        let g ← $ᵗ (∀ d, R d)
+        let z ← fixedTableLoggedRun oa (Function.update g t u) ∅
+        pure (t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u))] {True} := by
+    have h := evalDist_bind_bind_update_dependent t ($ᵗ (R t))
+      ($ᵗ (∀ d, R d)) SampleableType.evalDist_uniformSample
+      SampleableType.evalDist_uniformSample f
+    simpa only [f, bind_assoc] using congrArg (fun μ : Measure Prop => μ {True}) h.symm
+  have hcell (g : ∀ d, R d) :
+      Pr{let u ← $ᵗ (R t); let z ← (fixedTableLoggedRun oa (Function.update g t u) ∅)}[t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u)] ≤
+      Pr{let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2] * error t := by
+    have hfactor := prEvent_bind_and_factor ($ᵗ (R t))
+      (fun u => fixedTableLoggedRun oa (Function.update g t u) ∅)
+      (fun z => t ∈ freshKeysOfLog z.1.2)
+      (fun u => bad t (Function.update g t u))
+      (Pr{let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2])
+      (fun u => prEvent_fixedTableLoggedRun_queries_mem_update oa g t u ∅)
+    rw [hfactor]
+    gcongr
+    exact hbad g
+  have hswap := evalDist_bind_bind_swap_of_countable
+    ($ᵗ (R t)) ($ᵗ (∀ d, R d))
+    (fun u g => do
+      let z ← fixedTableLoggedRun oa (Function.update g t u) ∅
+      pure (t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u)))
+  rw [hresample, hswap]
+  let : MeasurableSpace (∀ d, R d) := ⊤
+  have hleft :
+      (𝒟[do
+        let g ← $ᵗ (∀ d, R d)
+        let u ← $ᵗ (R t)
+        let z ← fixedTableLoggedRun oa (Function.update g t u) ∅
+        pure (t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u))]) {True} =
+      ∫⁻ g, Pr{let u ← $ᵗ (R t); let z ← (fixedTableLoggedRun oa (Function.update g t u) ∅)}[t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u)] ∂𝒟[$ᵗ (∀ d, R d)] := by
+    simpa only [bind_assoc, pure_bind, id_eq] using
+      (prEvent_bind_eq_lintegral_of_discrete ($ᵗ (∀ d, R d))
+        (fun g => do
+          let u ← $ᵗ (R t)
+          let z ← fixedTableLoggedRun oa (Function.update g t u) ∅
+          pure (t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u))) id)
+  have hright :
+      Pr{let g ← $ᵗ (∀ d, R d); let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2] =
+      ∫⁻ g, Pr{let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2] ∂𝒟[$ᵗ (∀ d, R d)] := by
+    simpa only [bind_assoc, pure_bind, id_eq] using
+      (prEvent_bind_eq_lintegral_of_discrete ($ᵗ (∀ d, R d))
+        (fun g => do
+          let z ← fixedTableLoggedRun oa g ∅
+          pure (t ∈ freshKeysOfLog z.1.2)) id)
+  rw [hleft, hright]
+  calc
+    ∫⁻ g, Pr{let u ← $ᵗ (R t); let z ← (fixedTableLoggedRun oa (Function.update g t u) ∅)}[t ∈ freshKeysOfLog z.1.2 ∧ bad t (Function.update g t u)] ∂𝒟[$ᵗ (∀ d, R d)]
+      ≤ ∫⁻ g, Pr{let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2] * error t ∂𝒟[$ᵗ (∀ d, R d)] :=
+        lintegral_mono hcell
+    _ = (∫⁻ g, Pr{let z ← (fixedTableLoggedRun oa g ∅)}[t ∈ freshKeysOfLog z.1.2] ∂𝒟[$ᵗ (∀ d, R d)]) * error t := by
+      rw [lintegral_mul_const]
+      exact Measurable.of_discrete
 
 end OracleComp
 
@@ -209,9 +408,10 @@ theorem prEvent_tableFreshKey_bad_le
         rw [prEvent_eq_evalDist_of_discrete]
         exact mul_comm _ _
 
+omit [Finite D] in
 /-- A finite union of key-specific bad events is charged by the expected sum of the weights
 of the keys that actually appear. -/
-private theorem prEvent_bad_in_freshKeys_le_expectedCharge
+theorem prEvent_bad_in_freshKeys_le_expectedCharge
     {β : Type} [Fintype D] [MeasurableSpace β] [DiscreteMeasurableSpace β]
     (mx : ProbComp β) (keys : β → Finset D) (bad : D → β → Prop)
     (error : D → ENNReal)
@@ -253,5 +453,73 @@ theorem prEvent_tableFresh_bad_le_expectedCharge
   exact prEvent_bad_in_freshKeys_le_expectedCharge ($ᵗ (∀ d, R d))
     (tableFreshKeys oa) bad error
     (fun t => prEvent_tableFreshKey_bad_le oa t bad error (hbad t))
+
+end OracleComp
+
+/-! ## Interleaved finite-domain expected fresh-query bound -/
+
+namespace OracleComp
+
+/-- A bad event witnessed by a genuinely queried key in every fixed-table trace is bounded by
+the expected sum of per-key errors over the distinct keys in the actual cached run. -/
+theorem prEvent_interleavedFreshBad_le_expectedCharge
+    {D α : Type} {R : D → Type} [DecidableEq D] [Finite D]
+    [∀ d, SampleableType (R d)] [SampleableType (∀ d, R d)]
+    (oa : OracleComp (unifSpec + ofFn R) α)
+    (event : α → Prop) (bad : D → (∀ d, R d) → Prop) (error : D → ENNReal)
+    (htrace : ∀ g z, z ∈ support (fixedTableLoggedRun oa g ∅) →
+      event z.1.1 → ∃ t ∈ freshKeysOfLog z.1.2, bad t g)
+    (hbad : ∀ t g, Pr{let u ← $ᵗ (R t)}[bad t (Function.update g t u)] ≤ error t) :
+    Pr{let z ← randomOracleLoggedRun oa ∅}[event z.1.1] ≤
+      expectedFreshQueryCharge oa error := by
+  classical
+  let : Fintype D := Fintype.ofFinite D
+  let : MeasurableSpace ((α × QueryLog (ofFn R)) × (ofFn R).QueryCache) := ⊤
+  let : MeasurableSpace (∀ d, R d) := ⊤
+  let : MeasurableSpace ((∀ d, R d) ×
+    ((α × QueryLog (ofFn R)) × (ofFn R).QueryCache)) := ⊤
+  let mx : ProbComp ((∀ d, R d) ×
+    ((α × QueryLog (ofFn R)) × (ofFn R).QueryCache)) := do
+      let g ← $ᵗ (∀ d, R d)
+      let z ← fixedTableLoggedRun oa g ∅
+      pure (g, z)
+  have hkey (t : D) :
+      Pr{let p ← mx}[t ∈ freshKeysOfLog p.2.1.2 ∧ bad t p.1] ≤
+      Pr{let p ← mx}[t ∈ freshKeysOfLog p.2.1.2] * error t := by
+    simpa only [mx, bind_assoc, pure_bind] using
+      prEvent_interleavedFreshKey_bad_le oa t bad error (hbad t)
+  have hunion := prEvent_bad_in_freshKeys_le_expectedCharge mx
+    (fun p => freshKeysOfLog p.2.1.2) (fun t p => bad t p.1) error hkey
+  have htarget :
+      Pr{let p ← mx}[event p.2.1.1] ≤
+      Pr{let p ← mx}[∃ t ∈ freshKeysOfLog p.2.1.2, bad t p.1] := by
+    apply prEvent_mono_of_support
+    intro p hp he
+    obtain ⟨g, _, hp'⟩ := mem_support_bind_peel ($ᵗ (∀ d, R d))
+      (fun g => do
+        let z ← fixedTableLoggedRun oa g ∅
+        pure (g, z)) hp
+    obtain ⟨z, hz, hp''⟩ := mem_support_bind_peel (fixedTableLoggedRun oa g ∅)
+      (fun z => pure (g, z)) hp'
+    have hp_eq : p = (g, z) := eq_of_mem_support_pure (g, z) hp''
+    subst p
+    exact htrace g z hz he
+  have heager : 𝒟[randomOracleLoggedRun oa ∅] = 𝒟[Prod.snd <$> mx] := by
+    rw [evalDist_randomOracleLoggedRun_eq_fixedTable_finite oa ∅]
+    simp only [completeTable_empty]
+    simp only [mx, map_bind, map_pure, bind_pure]
+  have hevent :
+      Pr{let z ← randomOracleLoggedRun oa ∅}[event z.1.1] =
+      Pr{let p ← mx}[event p.2.1.1] := by
+    rw [prEvent_congr_of_evalDist_eq _ _ heager]
+    rw [prEvent_map]
+  have hcharge :
+      (∫⁻ p, ∑ t ∈ freshKeysOfLog p.2.1.2, error t ∂𝒟[mx]) =
+      expectedFreshQueryCharge oa error := by
+    unfold expectedFreshQueryCharge freshQueryCharge
+    rw [heager, evalDist_map_of_discrete]
+    rw [lintegral_map Measurable.of_discrete Measurable.of_discrete]
+  rw [hevent, ← hcharge]
+  exact htarget.trans hunion
 
 end OracleComp
