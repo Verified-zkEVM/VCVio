@@ -487,6 +487,4 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
 - **All notation**: [`docs/agents/notation.md`](docs/agents/notation.md)
 - **Proof workflows (game-hopping, reductions)**: [`docs/agents/proof-workflows.md`](docs/agents/proof-workflows.md)
 - **Gotchas and troubleshooting**: [`docs/agents/gotchas.md`](docs/agents/gotchas.md)
-- **Module visibility and the PolyFun façade**: [`docs/agents/module-system.md`](docs/agents/module-system.md)
-- **Upstream alignment ledger (what Mathlib/core/cslib/PolyFun already own, with verdicts)**:
-  [`docs/reading/upstream-alignment.md`](docs/reading/upstream-alignment.md)
+- **Falcon faithfulness/soundness remediation** (active, branch `falcon-faithfulness-review`): [`docs/agents/falcon-review.md`](docs/agents/falcon-review.md) — canonical bootstrap doc + session protocol; paired harness `scripts/falcon_review.mjs`.

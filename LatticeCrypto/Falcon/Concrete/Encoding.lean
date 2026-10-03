@@ -59,283 +59,53 @@ coefficients are packed most significant first and the output is zero-padded to 
 bytes; the decoder accepts exactly that length and only zero padding. Both directions are written
 over the bit stream, which is what the round-trip theorem `decompress_compress` reasons about. -/
 
-/-- The `k`-bit big-endian representation of `v` (bits `k-1` down to `0`). -/
-def natBits : ℕ → ℕ → List Bool
-  | 0, _ => []
-  | k + 1, v => v.testBit k :: natBits k v
+/-- Decompress a Falcon signature polynomial from its compressed byte representation.
 
-/-- The number whose big-endian bits are `bits`. -/
-def natOfBits : List Bool → ℕ
-  | [] => 0
-  | b :: bs => (if b then 2 ^ bs.length else 0) + natOfBits bs
-
-/-- The bits of a byte, most significant first. -/
-def byteBits (b : UInt8) : List Bool := natBits 8 b.toNat
-
-/-- The bit stream of a byte string, most significant bit of each byte first. -/
-def bytesToBits (d : List UInt8) : List Bool := d.flatMap byteBits
-
-/-- Pack a bit stream into bytes, most significant bit first; the last byte is zero-padded. -/
-def bitsToBytes (bits : List Bool) : List UInt8 :=
-  if bits.isEmpty then []
-  else
-    (natOfBits (bits.take 8 ++ List.replicate (8 - (bits.take 8).length) false)).toUInt8 ::
-      bitsToBytes (bits.drop 8)
-termination_by bits.length
-decreasing_by
-  simp only [List.length_drop]
-  have : bits.length ≠ 0 := by simpa [List.isEmpty_iff_length_eq_zero] using ‹¬bits.isEmpty›
-  omega
-
-/-- The code of one coefficient: sign, seven low bits of `|x|`, `|x| / 128` zeros, a one. -/
-def coeffBits (x : ℤ) : List Bool :=
-  decide (x < 0) :: (natBits 7 (x.natAbs % 128) ++ List.replicate (x.natAbs / 128) false ++ [true])
-
-/-- Compress a Falcon signature polynomial into exactly `dlen` bytes, or `none` when a
-coefficient is out of range or the code does not fit. -/
-def compress (n : ℕ) (s : IntPoly n) (dlen : ℕ) : Option (List UInt8) :=
-  if ∀ i : Fin n, -2047 ≤ s.get i ∧ s.get i ≤ 2047 then
-    let bits := (List.finRange n).flatMap fun i => coeffBits (s.get i)
-    if 8 * dlen < bits.length then none
-    else some (bitsToBytes bits ++ List.replicate (dlen - (bitsToBytes bits).length) 0)
-  else none
-
-/-- Read the unary part of a coefficient code: each zero adds `128` to the magnitude `m`, a one
-terminates. Fails past `2047`, on the negative zero `-0`, and at the end of the stream. -/
-def parseUnary (t : Bool) : ℕ → List Bool → Option (ℤ × List Bool)
-  | m, true :: rest => if m = 0 ∧ t then none else some (if t then -(m : ℤ) else (m : ℤ), rest)
-  | m, false :: rest => if 2047 < m + 128 then none else parseUnary t (m + 128) rest
-  | _, [] => none
-
-/-- Read one coefficient code from the bit stream. -/
-def parseCoeff : List Bool → Option (ℤ × List Bool)
-  | t :: rest =>
-    if 7 ≤ rest.length then parseUnary t (natOfBits (rest.take 7)) (rest.drop 7) else none
-  | [] => none
-
-/-- Read `k` coefficient codes from the bit stream. -/
-def parseCoeffs : ℕ → List Bool → Option (List ℤ × List Bool)
-  | 0, bits => some ([], bits)
-  | k + 1, bits => do
-    let (x, rest) ← parseCoeff bits
-    let (xs, rest') ← parseCoeffs k rest
-    pure (x :: xs, rest')
-
-/-- Decompress a fixed-length Falcon signature polynomial.
-
-`compress` pads every successful output to exactly `dlen` bytes. Accordingly, this decoder
-accepts exactly that length and rejects any nonzero padding; the optional unpadded Falcon
-representation is outside its format. -/
-def decompress (n : ℕ) (d : List UInt8) (dlen : ℕ) : Option (IntPoly n) :=
-  if d.length ≠ dlen then none
-  else
-    match parseCoeffs n (bytesToBits d) with
-    | none => none
-    | some (vals, rest) =>
-      if rest.all (fun b => !b) then some (Vector.ofFn fun i => vals.getD i.val 0) else none
-
-@[simp] theorem decompress_eq_none_of_length_ne (n d dlen) (h : d.length ≠ dlen) :
-    decompress n d dlen = none := by
-  simp [decompress, h]
-
-/-! ### Bit-level lemmas -/
-
-theorem natBits_length (k v : ℕ) : (natBits k v).length = k := by
-  induction k generalizing v with
-  | zero => rfl
-  | succ k ih => simp [natBits, ih]
-
-theorem natOfBits_lt (bs : List Bool) : natOfBits bs < 2 ^ bs.length := by
-  induction bs with
-  | nil => simp [natOfBits]
-  | cons b bs ih =>
-    simp only [natOfBits, List.length_cons, pow_succ]
-    split <;> omega
-
-/-- `natBits k` reads only the low `k` bits. -/
-theorem natBits_congr {k v w : ℕ} (h : ∀ j, j < k → v.testBit j = w.testBit j) :
-    natBits k v = natBits k w := by
-  induction k with
-  | zero => rfl
-  | succ k ih =>
-    simp only [natBits, h k (Nat.lt_succ_self k)]
-    congr 1
-    exact ih fun j hj => h j (Nat.lt_succ_of_lt hj)
-
-theorem natBits_natOfBits (bs : List Bool) : natBits bs.length (natOfBits bs) = bs := by
-  induction bs with
-  | nil => rfl
-  | cons b bs ih =>
-    have hlt := natOfBits_lt bs
-    have hval : natOfBits (b :: bs) = 2 ^ bs.length * (if b then 1 else 0) + natOfBits bs := by
-      simp only [natOfBits]; split <;> simp
-    simp only [List.length_cons, natBits, hval]
-    rw [List.cons.injEq]
-    refine ⟨?_, ?_⟩
-    · rw [Nat.testBit_two_pow_mul_add _ hlt]
-      simp
-      cases b <;> simp
-    · refine (natBits_congr fun j hj => ?_).trans ih
-      rw [Nat.testBit_two_pow_mul_add _ hlt, ite_eq_left hj]
-
-theorem natOfBits_natBits {k v : ℕ} (h : v < 2 ^ k) : natOfBits (natBits k v) = v := by
-  induction k generalizing v with
-  | zero => simp [natBits, natOfBits]; omega
-  | succ k ih =>
-    have hmod : natBits k v = natBits k (v % 2 ^ k) :=
-      natBits_congr fun j hj => by rw [Nat.testBit_mod_two_pow]; simp [hj]
-    simp only [natBits, natOfBits, natBits_length, hmod, ih (Nat.mod_lt _ (by positivity))]
-    rw [Nat.testBit_eq_decide_div_mod_eq]
-    have hdiv : v / 2 ^ k < 2 := by
-      rw [Nat.div_lt_iff_lt_mul (by positivity)]; rw [pow_succ] at h; omega
-    have := Nat.div_add_mod v (2 ^ k)
-    have hcases : v / 2 ^ k = 0 ∨ v / 2 ^ k = 1 :=
-      Nat.le_one_iff_eq_zero_or_eq_one.mp (Nat.lt_succ_iff.mp hdiv)
-    rcases hcases with h0 | h0 <;> simp [h0] at this ⊢ <;> omega
-
-theorem byteBits_toUInt8 (bs : List Bool) (h : bs.length = 8) :
-    byteBits (natOfBits bs).toUInt8 = bs := by
-  have hlt : natOfBits bs < 256 := by have := natOfBits_lt bs; rw [h] at this; exact this
-  have : (natOfBits bs).toUInt8.toNat = natOfBits bs := by
-    change (UInt8.ofNat _).toNat = _
-    rw [UInt8.toNat_ofNat']; exact Nat.mod_eq_of_lt hlt
-  rw [byteBits, this, ← h, natBits_natOfBits]
-
-theorem bytesToBits_append (a b : List UInt8) :
-    bytesToBits (a ++ b) = bytesToBits a ++ bytesToBits b := by
-  simp [bytesToBits, List.flatMap_append]
-
-theorem bytesToBits_replicate_zero (k : ℕ) :
-    bytesToBits (List.replicate k 0) = List.replicate (8 * k) false := by
-  induction k with
-  | zero => rfl
-  | succ k ih =>
-    rw [List.replicate_succ, bytesToBits, List.flatMap_cons, ← bytesToBits, ih,
-      show byteBits 0 = List.replicate 8 false from rfl, List.replicate_append_replicate]
-    congr 1
-    omega
-
-theorem bytesToBits_bitsToBytes (bits : List Bool) :
-    bytesToBits (bitsToBytes bits) =
-      bits ++ List.replicate ((8 - bits.length % 8) % 8) false := by
-  fun_induction bitsToBytes bits with
-  | case1 bits hempty =>
-    rw [List.isEmpty_iff] at hempty
-    subst hempty
-    rfl
-  | case2 bits hempty ih =>
-    rw [bytesToBits, List.flatMap_cons, ← bytesToBits, ih,
-      byteBits_toUInt8 _ (by simp [List.length_take])]
-    have hne : bits.length ≠ 0 := by simpa [List.isEmpty_iff_length_eq_zero] using hempty
-    rcases Nat.lt_or_ge bits.length 8 with hlt | hge
-    · rw [List.drop_of_length_le (by omega), List.take_of_length_le (by omega)]
-      simp only [List.length_nil, Nat.zero_mod, Nat.sub_zero, Nat.mod_self, List.replicate_zero,
-        List.append_nil]
-      congr 2
-      rw [Nat.mod_eq_of_lt hlt, Nat.mod_eq_of_lt (by omega)]
-    · rw [List.length_take, min_eq_left hge, Nat.sub_self, List.replicate_zero, List.append_nil,
-        ← List.append_assoc, List.take_append_drop, List.length_drop]
-      congr 3
-      omega
-
-theorem bitsToBytes_length (bits : List Bool) :
-    (bitsToBytes bits).length = (bits.length + 7) / 8 := by
-  fun_induction bitsToBytes bits with
-  | case1 bits hempty =>
-    rw [List.isEmpty_iff] at hempty
-    subst hempty
-    rfl
-  | case2 bits hempty ih =>
-    rw [List.length_cons, ih, List.length_drop]
-    have hne : bits.length ≠ 0 := by simpa [List.isEmpty_iff_length_eq_zero] using hempty
-    omega
-
-/-! ### Coefficient-level lemmas -/
-
-theorem parseUnary_replicate (t : Bool) (m q : ℕ) (rest : List Bool)
-    (hle : m + 128 * q ≤ 2047) (hz : ¬ (m + 128 * q = 0 ∧ t = true)) :
-    parseUnary t m (List.replicate q false ++ true :: rest) =
-      some (if t then -((m + 128 * q : ℕ) : ℤ) else ((m + 128 * q : ℕ) : ℤ), rest) := by
-  induction q generalizing m with
-  | zero =>
-    simp only [List.replicate_zero, List.nil_append, parseUnary, Nat.mul_zero, Nat.add_zero] at *
-    rw [ite_eq_right hz]
-  | succ q ih =>
-    rw [List.replicate_succ, List.cons_append, parseUnary, ite_eq_right (by omega)]
-    rw [ih (m + 128) (by omega) (by omega), show m + 128 + 128 * q = m + 128 * (q + 1) by ring]
-
-theorem parseCoeff_coeffBits (x : ℤ) (hx : -2047 ≤ x ∧ x ≤ 2047) (rest : List Bool) :
-    parseCoeff (coeffBits x ++ rest) = some (x, rest) := by
-  have habs : x.natAbs ≤ 2047 := by omega
-  simp only [coeffBits, List.cons_append, parseCoeff, List.append_assoc]
-  rw [ite_eq_left (by simp [natBits_length]),
-    List.take_append_of_le_length (by simp [natBits_length]),
-    List.take_of_length_le (by simp [natBits_length]),
-    List.drop_append_of_le_length (by simp [natBits_length]),
-    List.drop_of_length_le (by simp [natBits_length]), List.nil_append,
-    natOfBits_natBits (k := 7)
-      (by have := Nat.mod_lt x.natAbs (by norm_num : 0 < 128); simpa using this),
-    List.nil_append,
-    parseUnary_replicate _ _ _ _ (by rw [Nat.mod_add_div]; exact habs)]
-  · rw [Nat.mod_add_div]
-    congr 2
-    split_ifs with hneg <;> simp only [decide_eq_true_eq] at hneg <;> omega
-  · rw [Nat.mod_add_div]
-    rintro ⟨h0, ht⟩
-    have : x < 0 := by simpa using ht
-    omega
-
-theorem parseCoeffs_flatMap (xs : List ℤ) (hxs : ∀ x ∈ xs, -2047 ≤ x ∧ x ≤ 2047)
-    (tail : List Bool) :
-    parseCoeffs xs.length (xs.flatMap coeffBits ++ tail) = some (xs, tail) := by
-  induction xs with
-  | nil => rfl
-  | cons x xs ih =>
-    simp [List.flatMap_cons, parseCoeffs, parseCoeff_coeffBits x (hxs x (List.mem_cons_self ..)),
-      ih (fun y hy => hxs y (List.mem_cons_of_mem _ hy))]
-
-/-! ### The round-trip -/
-
-/-- **Decompression inverts compression**: every byte string `compress` produces decodes back to
-the polynomial it came from. This is the `compress_decompress` law of `Primitives.Laws` for the
-concrete codec. -/
-theorem decompress_compress (n : ℕ) (s : IntPoly n) (dlen : ℕ) (d : List UInt8)
-    (h : compress n s dlen = some d) : decompress n d dlen = some s := by
-  unfold compress at h
-  dsimp only at h
-  split_ifs at h with hbound hfit
-  rw [Option.some.injEq] at h
-  subst h
-  set bits := (List.finRange n).flatMap fun i => coeffBits (s.get i) with hbits
-  set L := bits.length with hL
-  set NB := (bitsToBytes bits).length with hNB
-  have hnb : NB ≤ dlen := by
-    rw [hNB, bitsToBytes_length]; omega
-  have hlen : (bitsToBytes bits ++ List.replicate (dlen - NB) 0).length = dlen := by
-    simp only [List.length_append, List.length_replicate, ← hNB]; omega
-  set T := List.replicate ((8 - L % 8) % 8) false ++ List.replicate (8 * (dlen - NB)) false
-    with hT
-  have hstream : bytesToBits (bitsToBytes bits ++ List.replicate (dlen - NB) 0) = bits ++ T := by
-    rw [bytesToBits_append, bytesToBits_bitsToBytes, bytesToBits_replicate_zero, List.append_assoc]
-  set xs := (List.finRange n).map fun i => s.get i with hxsdef
-  have hxs : bits = xs.flatMap coeffBits := by
-    rw [hbits, hxsdef, List.flatMap_map]
-  have hparse : parseCoeffs n (xs.flatMap coeffBits ++ T) = some (xs, T) := by
-    have h := parseCoeffs_flatMap xs
-      (fun x hx => by
-        obtain ⟨i, -, rfl⟩ := List.mem_map.mp hx
-        exact hbound i) T
-    rwa [hxsdef, List.length_map, List.length_finRange, ← hxsdef] at h
-  unfold decompress
-  rw [ite_eq_right (by rw [hlen]; exact fun h => h rfl), hstream, hxs, hparse]
-  dsimp only
-  rw [ite_eq_left (by simp [hT, List.all_replicate])]
-  congr 1
-  apply LatticeCrypto.Poly.ext_get_eq
-  intro i
-  rw [Vector.get_ofFn, List.getD_eq_getElem?_getD, hxsdef, List.getElem?_map,
-    List.getElem?_eq_getElem (by simp [List.length_finRange]), Option.map_some, Option.getD_some]
-  simp [List.getElem_finRange]
+Falcon signatures are fixed-length: `compress` pads its output to exactly `dlen` bytes, so a
+canonical compressed `s` has length exactly `dlen`. We reject any input whose length differs from
+`dlen` (not merely shorter ones): accepting trailing bytes would make signatures **malleable** —
+a verifier reads only the first `dlen` bytes, so appended garbage would verify identically
+(B9 / ENC-3). This enforces the spec's fixed-bitlength requirement (Falcon §3.11.2–3 / FN-DSA). -/
+def decompress (n : ℕ) (d : List UInt8) (dlen : ℕ) : Option (IntPoly n) := Id.run do
+  if d.length ≠ dlen then return none
+  let bytes := d.toArray
+  let mut acc : UInt32 := 0
+  let mut accLen : UInt32 := 0
+  let mut j := 0
+  let mut result : Array ℤ := Array.replicate n 0
+  for i in [0:n] do
+    if j ≥ dlen then return none
+    acc := (acc <<< 8) ||| bytes[j]!.toUInt32
+    j := j + 1
+    let full := acc >>> accLen
+    let t := (full >>> 7) &&& 1
+    let mut m : UInt32 := full &&& 0x7F
+    let mut done := false
+    while !done do
+      if accLen == 0 then
+        if j ≥ dlen then return none
+        acc := (acc <<< 8) ||| bytes[j]!.toUInt32
+        j := j + 1
+        accLen := 8
+      accLen := accLen - 1
+      if ((acc >>> accLen) &&& 1) != 0 then
+        done := true
+      else
+        m := m + 0x80
+        if m > 2047 then return none
+    if m == 0 && t != 0 then return none
+    let val : UInt32 := (m ^^^ (0 - t)) + t
+    let signedVal : ℤ :=
+      if val &&& 0x80000000 != 0 then -(((~~~val) + 1).toNat : ℤ)
+      else (val.toNat : ℤ)
+    result := result.set! i signedVal
+  if accLen > 0 then
+    if (acc &&& ((1 <<< accLen) - 1)) != 0 then
+      return none
+  while j < dlen do
+    if bytes[j]! != 0 then return none
+    j := j + 1
+  return some (Vector.ofFn fun ⟨i, _⟩ => result.getD i 0)
 
 /-! ## Public key encoding (14 bits per coefficient) -/
 
@@ -558,9 +328,10 @@ private theorem pkEncode_eq_E (n : ℕ) (h : Rq n) (hn : n % 4 = 0) :
     pkEncode n h = E n h (n / 4) := by
   unfold pkEncode E
   have hb : (n % 4 != 0) = false := by simp [hn]
-  simp only [Id.run, Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size, Nat.sub_zero,
-    Nat.div_one, Nat.add_sub_cancel, hb, Bool.false_eq_true, ite_false]
-  simp only [List.forIn_pure_yield_eq_foldl, bind_pure]
+  simp only [Id.run, bind_pure_comp, Std.Legacy.Range.forIn_eq_forIn_range',
+    Std.Legacy.Range.size, Nat.sub_zero, Nat.div_one, map_pure,
+    Nat.add_sub_cancel, hb, Bool.false_eq_true, if_false]
+  simp only [List.forIn_pure_yield_eq_foldl, pure_bind, bind_pure]
   rfl
 
 -- explicit bytes of gblock
@@ -636,13 +407,6 @@ private theorem toList_loop_eq (a : ByteArray) :
 private theorem byteArray_toList_eq (a : ByteArray) : a.toList = a.data.toList := by
   rw [ByteArray.toList, toList_loop_eq]; simp
 
-/-- `ByteArray` `getElem!` agrees with the underlying data array's `getElem!`. -/
-private theorem byteArray_getElem!_data (a : ByteArray) (i : ℕ) : a[i]! = a.data[i]! := by
-  by_cases hi : i < a.size
-  · rw [getElem!_pos a i hi, getElem!_pos a.data i (by rwa [← ByteArray.size])]
-    rfl
-  · rw [getElem!_neg a i hi, getElem!_neg a.data i (by rwa [← ByteArray.size])]
-
 /-- Round-trip: decoding an encoded signature recovers the original salt and compressed bytes.
 A nonempty compressed payload guarantees the encoded length passes the `42`-byte minimum check,
 so the header, salt, and payload segments all decode back to their inputs. -/
@@ -661,20 +425,30 @@ theorem sigDecode_sigEncode (salt : Bytes 40) (compSig : List UInt8) (logn : ℕ
         = 41 + compSig.length
     rw [ByteArray.size_append, ByteArray.size_append, hb1, hss, hcs]
   have hguard : ¬ (sigEncode salt compSig logn).size < 42 := by rw [hesize]; omega
-  have hdata : (sigEncode salt compSig logn).data = #[hdr] ++ salt.toArray ++ compSig.toArray := by
-    simp only [sigEncode, ByteArray.data_append, hhdr]
   have hhead : (sigEncode salt compSig logn)[0]! = hdr := by
-    rw [byteArray_getElem!_data, hdata, getElem!_pos _ 0 (by simp),
-      Array.getElem_append_left (by simp), Array.getElem_append_left (by simp)]
-    rfl
+    have h0 : (0:Nat) < (sigEncode salt compSig logn).size := by rw [hesize]; omega
+    rw [getElem!_pos _ 0 h0]
+    change (ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray ++ ByteArray.mk compSig.toArray)[0]'_
+        = hdr
+    rw [ByteArray.getElem_eq_getElem_data]
+    simp only [ByteArray.data_append]
+    simp [Array.getElem_append_left]
   have hsalt : (Vector.ofFn fun (i : Fin 40) => (sigEncode salt compSig logn)[i.val + 1]!)
       = salt := by
     apply Vector.ext
     intro i hi
-    rw [Vector.getElem_ofFn, byteArray_getElem!_data, hdata,
-      getElem!_pos _ (i + 1) (by simp; omega), Array.getElem_append_left (by simp; omega),
-      Array.getElem_append_right (by simp)]
-    simp [Vector.getElem_toArray]
+    rw [Vector.getElem_ofFn]
+    have hfull : i + 1 < (sigEncode salt compSig logn).size := by rw [hesize]; omega
+    rw [getElem!_pos _ (i+1) hfull]
+    change (ByteArray.mk #[hdr] ++ ByteArray.mk salt.toArray
+        ++ ByteArray.mk compSig.toArray)[i+1]'_ = salt[i]
+    rw [ByteArray.getElem_eq_getElem_data]
+    simp only [ByteArray.data_append]
+    rw [Array.getElem_append_left (by simp; omega)]
+    rw [Array.getElem_append_right (by simp)]
+    simp only [Array.size_singleton]
+    rw [Vector.getElem_toArray]
+    congr 1
   have hcomp : ((sigEncode salt compSig logn).extract 41
       (sigEncode salt compSig logn).size).toList = compSig := by
     rw [hesize]
@@ -685,11 +459,18 @@ theorem sigDecode_sigEncode (salt : Bytes 40) (compSig : List UInt8) (logn : ℕ
       (by rw [ByteArray.size_append, hb1, hss]) (by rw [ByteArray.size_append, hb1, hss, hcs])]
     rw [byteArray_toList_eq]
   unfold sigDecode
-  simp only [Id.run, hguard, hhead, hhdr, ite_false, bne_self_eq_false, Bool.false_eq_true,
-    hsalt, hcomp]
+  simp only [Id.run, hguard, hhead, hhdr, if_false, bne_self_eq_false, Bool.false_eq_true,
+    pure_bind, hsalt, hcomp]
   rfl
 
 /-! ### Public key decode round-trip -/
+
+/-- `ByteArray` `getElem!` agrees with the underlying data array's `getElem!`. -/
+private theorem byteArray_getElem!_data (a : ByteArray) (i : ℕ) : a[i]! = a.data[i]! := by
+  by_cases hi : i < a.size
+  · rw [getElem!_pos a i hi, getElem!_pos a.data i (by rwa [← ByteArray.size])]
+    rfl
+  · rw [getElem!_neg a i hi, getElem!_neg a.data i (by rwa [← ByteArray.size])]
 
 /-- The seven bytes of `pkEncode n h` at group `b` are exactly the bytes of `gblock n h b`. -/
 private theorem pkEncode_group_byte (n : ℕ) (h : Rq n) (hn4 : n % 4 = 0)
@@ -779,8 +560,8 @@ private theorem getD_set!_ne' (out : Array Coeff) (k k' : ℕ) (v : Coeff) (h : 
 
 /-- The decoder loop body (in `Id`) over a single group index. -/
 private def decBody (n : ℕ) (g : ByteArray) :
-    ℕ → Option (Option (Rq n)) × Array Coeff →
-      Id (ForInStep (Option (Option (Rq n)) × Array Coeff)) :=
+    ℕ → MProd (Option (Option (Rq n))) (Array Coeff) →
+      Id (ForInStep (MProd (Option (Option (Rq n))) (Array Coeff))) :=
   fun b r =>
     let d0 := g[7 * b]!.toNat
     let d1 := g[7 * b + 1]!.toNat
@@ -794,11 +575,11 @@ private def decBody (n : ℕ) (g : ByteArray) :
     let h2 := ((d3 <<< 10) ||| (d4 <<< 2) ||| (d5 >>> 6)) &&& 0x3FFF
     let h3 := ((d5 <<< 8) ||| d6) &&& 0x3FFF
     if h0 ≥ modulus || h1 ≥ modulus || h2 ≥ modulus || h3 ≥ modulus then
-      pure (ForInStep.done (some none, r.2))
+      pure (ForInStep.done ⟨some none, r.snd⟩)
     else
-      pure (ForInStep.yield (none,
-        (((r.2.set! (4 * b) (h0 : Coeff)).set! (4 * b + 1) (h1 : Coeff)).set!
-          (4 * b + 2) (h2 : Coeff)).set! (4 * b + 3) (h3 : Coeff)))
+      pure (ForInStep.yield ⟨none,
+        (((r.snd.set! (4 * b) (h0 : Coeff)).set! (4 * b + 1) (h1 : Coeff)).set!
+          (4 * b + 2) (h2 : Coeff)).set! (4 * b + 3) (h3 : Coeff)⟩)
 
 /-- The reject predicate for group `b`: at least one of the four decoded coefficients is out of
 range. The loop's `done` branch fires exactly when this holds. -/
@@ -820,8 +601,8 @@ private theorem decode_loop_invariant (n : ℕ) (g : ByteArray) :
       (∀ b, s ≤ b → b < s + m → ¬ decReject g b) →
       ∃ R : Array Coeff,
         forIn (m := Id) (List.range' s m)
-            ((none, R0) : Option (Option (Rq n)) × Array Coeff) (decBody n g)
-          = ((none, R) : Option (Option (Rq n)) × Array Coeff) ∧
+            (⟨none, R0⟩ : MProd (Option (Option (Rq n))) (Array Coeff)) (decBody n g)
+          = (⟨none, R⟩ : MProd (Option (Option (Rq n))) (Array Coeff)) ∧
         R.size = n ∧
         (∀ b k', s ≤ b → b < s + m → k' < 4 → R.getD (4 * b + k') 0 = decVal g b k') ∧
         (∀ k, k < 4 * s ∨ 4 * (s + m) ≤ k → R.getD k 0 = R0.getD k 0) := by
@@ -854,19 +635,19 @@ private theorem decode_loop_invariant (n : ℕ) (g : ByteArray) :
       obtain ⟨e0, e1, e2, e3⟩ := h4
       simp only [Bool.or_eq_false_iff, decide_eq_false_iff_not, ge_iff_le, not_le]
       exact ⟨⟨⟨e0, e1⟩, e2⟩, e3⟩
-    have hstep : (decBody n g s (none, R0) : Id _)
-        = ForInStep.yield (none, R1) := by
+    have hstep : (decBody n g s ⟨none, R0⟩ : Id _)
+        = ForInStep.yield ⟨none, R1⟩ := by
       change (if (g[7 * s]!.toNat <<< 6 ||| g[7 * s + 1]!.toNat >>> 2 ≥ modulus ||
           (g[7 * s + 1]!.toNat <<< 12 ||| g[7 * s + 2]!.toNat <<< 4 |||
             g[7 * s + 3]!.toNat >>> 4) &&& 0x3FFF ≥ modulus ||
           (g[7 * s + 3]!.toNat <<< 10 ||| g[7 * s + 4]!.toNat <<< 2 |||
             g[7 * s + 5]!.toNat >>> 6) &&& 0x3FFF ≥ modulus ||
           (g[7 * s + 5]!.toNat <<< 8 ||| g[7 * s + 6]!.toNat) &&& 0x3FFF ≥ modulus) then
-          (pure (ForInStep.done ((some none, R0) : Option (Option (Rq n)) × Array Coeff))
+          (pure (ForInStep.done (⟨some none, R0⟩ : MProd (Option (Option (Rq n))) (Array Coeff)))
             : Id _)
-        else pure (ForInStep.yield ((none, R1) : Option (Option (Rq n)) × Array Coeff)))
-          = ForInStep.yield ((none, R1) : Option (Option (Rq n)) × Array Coeff)
-      rw [ite_eq_right (by rw [hcondfalse]; exact Bool.false_ne_true)]
+        else pure (ForInStep.yield (⟨none, R1⟩ : MProd (Option (Option (Rq n))) (Array Coeff))))
+          = ForInStep.yield (⟨none, R1⟩ : MProd (Option (Option (Rq n))) (Array Coeff))
+      rw [if_neg (by rw [hcondfalse]; exact Bool.false_ne_true)]
       rfl
     rw [hstep]
     have hR1sz : R1.size = n := by rw [hR1]; simp [hsz0]
@@ -935,8 +716,8 @@ private theorem decVal_pkEncode (n : ℕ) (h : Rq n) (hn4 : n % 4 = 0)
     rw [v3, hcoeff (4 * b + 3) (by omega)]
 
 /-- Round-trip: decoding an encoded Falcon public key recovers the original polynomial.
-Requires `4 ∣ n` (true for every supported Falcon degree); for `n % 4 ≠ 0` the encoder
-panics and the decoder rejects. -/
+Requires `4 ∣ n` (true for every Falcon degree); for `n % 4 ≠ 0` the encoder pads to a
+non-canonical length and the decoder rejects. -/
 theorem pkDecode_pkEncode (n : ℕ) (h : Rq n) (hn4 : 4 ∣ n) :
     pkDecode n (pkEncode n h) = some h := by
   have hmod : n % 4 = 0 := by omega
@@ -951,12 +732,12 @@ theorem pkDecode_pkEncode (n : ℕ) (h : Rq n) (hn4 : 4 ∣ n) :
   -- unfold pkDecode and reduce to the post-loop assembly
   unfold pkDecode
   have hb : (n % 4 != 0) = false := by simp [hmod]
-  simp only [Id.run, hb, Bool.false_eq_true, ite_false, hguard,
+  simp only [Id.run, hb, Bool.false_eq_true, if_false, hguard, bind_pure_comp,
     Std.Legacy.Range.forIn_eq_forIn_range', Std.Legacy.Range.size, Nat.sub_zero, Nat.div_one,
     Nat.add_sub_cancel]
   -- the forIn body is definitionally `decBody`, so rewrite using the invariant result
   have hforIn' : (forIn (m := Id) (List.range' 0 (n / 4))
-        ((none, Array.replicate n 0) : Option (Option (Rq n)) × Array Coeff)
+        (⟨none, Array.replicate n 0⟩ : MProd (Option (Option (Rq n))) (Array Coeff))
         (fun b r =>
           let d0 := (pkEncode n h)[7 * b]!.toNat
           let d1 := (pkEncode n h)[7 * b + 1]!.toNat
@@ -970,12 +751,12 @@ theorem pkDecode_pkEncode (n : ℕ) (h : Rq n) (hn4 : 4 ∣ n) :
           let h2 := ((d3 <<< 10) ||| (d4 <<< 2) ||| (d5 >>> 6)) &&& 0x3FFF
           let h3 := ((d5 <<< 8) ||| d6) &&& 0x3FFF
           if h0 ≥ modulus || h1 ≥ modulus || h2 ≥ modulus || h3 ≥ modulus then
-            pure (ForInStep.done (some none, r.2))
+            pure (ForInStep.done ⟨some none, r.snd⟩)
           else
-            pure (ForInStep.yield (none,
-              (((r.2.set! (4 * b) (h0 : Coeff)).set! (4 * b + 1) (h1 : Coeff)).set!
-                (4 * b + 2) (h2 : Coeff)).set! (4 * b + 3) (h3 : Coeff)))))
-      = ((none, R) : Option (Option (Rq n)) × Array Coeff) := hforIn
+            pure (ForInStep.yield ⟨none,
+              (((r.snd.set! (4 * b) (h0 : Coeff)).set! (4 * b + 1) (h1 : Coeff)).set!
+                (4 * b + 2) (h2 : Coeff)).set! (4 * b + 3) (h3 : Coeff)⟩)))
+      = (⟨none, R⟩ : MProd (Option (Option (Rq n))) (Array Coeff)) := hforIn
   erw [hforIn']
   -- the status is `none`, so the assembly returns `some (Vector.ofFn (R.getD · 0))`
   change some (Vector.ofFn fun x : Fin n => R.getD x.val 0) = some h
