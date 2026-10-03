@@ -315,6 +315,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ExpectedFreshQueryInfinite
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FiniteSupport
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
+public import VCVio.OracleComp.QueryTracking.RandomOracle.InitialCacheExpectedQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.LoggedRun
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
