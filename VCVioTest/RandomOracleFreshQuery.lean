@@ -59,10 +59,20 @@ namespace FreshQueryConsumer
   | false => Bool
   | true => Fin 3
 
-instance (b : Bool) : SampleableType (Answer b) := by
+instance (b : Bool) : Finite (Answer b) := by
   cases b with
-  | false => exact inferInstanceAs (SampleableType Bool)
-  | true => exact inferInstanceAs (SampleableType (Fin 3))
+  | false => exact inferInstanceAs (Finite Bool)
+  | true => exact inferInstanceAs (Finite (Fin 3))
+
+instance (b : Bool) : Nonempty (Answer b) := by
+  cases b with
+  | false => exact inferInstanceAs (Nonempty Bool)
+  | true => exact inferInstanceAs (Nonempty (Fin 3))
+
+-- This proof-only dependent sampler must not build an enumeration at module initialization.
+noncomputable instance (b : Bool) : SampleableType (Answer b) :=
+  letI : Fintype (Answer b) := Fintype.ofFinite _
+  SampleableType.ofFintype _
 
 /-- Read a later coordinate, then an earlier one, then repeat the first query. -/
 @[expose] def differentAnswers : OracleComp (ofFn Answer) (Fin 3 × Bool × Fin 3) := do
