@@ -345,6 +345,7 @@ theorem euf_cma_security
     (hSamplerLoss : HasUniformSamplerLoss p prims samplerLoss)
     (adv : SignatureAlg.UnforgeableAdversary
       (falconSignatureAlg p prims Salt hr))
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
     (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
       (M := List Byte) (Salt := Salt) (Range := Rq p.n)
       (S' := Salt × (Rq p.n × Rq p.n))
@@ -354,24 +355,26 @@ theorem euf_cma_security
         (GPVHashAndSign.runtime
           (Range := Rq p.n) (List Byte) Salt) adv ≤
       SIS.advantage (ntruPSFCollisionProblem p prims hr)
-          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) Salt adv) +
+          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) Salt adv
+            domainSample) +
         ((qSign + qHash : ℕ) : ENNReal) *
           GPVHashAndSign.programmedPreimageAdvantage (falconPSF p prims) hr
             (GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte) Salt
-              adv) +
-        GPVHashAndSign.collisionBound Salt qSign +
+              adv domainSample qSign qHash) +
+        GPVHashAndSign.collisionBound Salt qSign qHash +
         samplerLoss := by
   let _ := qSign
   let _ := qHash
   let _ := hSamplerLoss
   let _ := hQ
+  let _ := domainSample
   sorry
 
 /-- Concrete instantiation of `euf_cma_security` with the Falcon-specified 40-byte
 (320-bit) salt.
 
-The collision term specializes to `qSign² / (2 · 2^320)`. For the Falcon-specified
-maximum of `qSign = 2^64` signing queries, this is `≤ 2^{-193}`. -/
+The collision term specializes to `(qSign + qHash)² / (2 · 2^320)`; for the Falcon-specified
+maximum of `qSign = 2^64` signing queries it remains negligible. -/
 theorem euf_cma_security_bytes40
     [DecidableEq (Rq p.n)]
     (hr : GenerableRelation (PublicKey p) (SecretKey p)
@@ -381,6 +384,7 @@ theorem euf_cma_security_bytes40
     (hSamplerLoss : HasUniformSamplerLoss p prims samplerLoss)
     (adv : SignatureAlg.UnforgeableAdversary
       (falconSignatureAlg p prims (Bytes 40) hr))
+    (domainSample : PublicKey p → ProbComp (Rq p.n × Rq p.n))
     (hQ : ∀ pk, GPVHashAndSign.signHashQueryBound
       (M := List Byte) (Salt := Bytes 40) (Range := Rq p.n)
       (S' := Bytes 40 × (Rq p.n × Rq p.n))
@@ -390,13 +394,14 @@ theorem euf_cma_security_bytes40
         (GPVHashAndSign.runtime
           (Range := Rq p.n) (List Byte) (Bytes 40)) adv ≤
       SIS.advantage (ntruPSFCollisionProblem p prims hr)
-          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) (Bytes 40) adv) +
+          (GPVHashAndSign.reduction (falconPSF p prims) hr (List Byte) (Bytes 40) adv
+            domainSample) +
         ((qSign + qHash : ℕ) : ENNReal) *
           GPVHashAndSign.programmedPreimageAdvantage (falconPSF p prims) hr
             (GPVHashAndSign.programmedPreimageReduction (falconPSF p prims) hr (List Byte)
-              (Bytes 40) adv) +
-        GPVHashAndSign.collisionBound (Bytes 40) qSign +
+              (Bytes 40) adv domainSample qSign qHash) +
+        GPVHashAndSign.collisionBound (Bytes 40) qSign qHash +
         samplerLoss :=
-  euf_cma_security p prims (Bytes 40) hr qSign qHash samplerLoss hSamplerLoss adv hQ
+  euf_cma_security p prims (Bytes 40) hr qSign qHash samplerLoss hSamplerLoss adv domainSample hQ
 
 end Falcon
