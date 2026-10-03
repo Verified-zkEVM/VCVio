@@ -102,7 +102,7 @@ Private uniform draws remain independent sampling operations during the computat
 
 /-- The writer and cache handoff for a logged oracle interpreter. The continuation receives
 the exact prefix cache, and its ordered log is appended after the prefix log. -/
-private theorem loggedRun_bind [DecidableEq D]
+private theorem loggedRun_bind
     (impl : QueryImpl (unifSpec + ofFn R)
       (WriterT (QueryLog (ofFn R)) (StateT (ofFn R).QueryCache ProbComp)))
     (oa : OracleComp (unifSpec + ofFn R) α)
@@ -146,8 +146,7 @@ theorem randomOracleLoggedRun_bind [DecidableEq D]
           OracleComp (unifSpec + ofFn R) (Fin (n + 1))) cache =
       (fun u => ((u, ([] : QueryLog (ofFn R))), cache)) <$>
         (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) n) := by
-  simp [randomOracleLoggedRun, QueryImpl.passthrough_add,
-    QueryImpl.add_apply_inl]
+  simp only [HasQuery.toQueryImpl_apply, HasQuery.instOfMonadLift_query]
   have hfirst :
       ((unifSpec.passthrough : QueryImpl unifSpec
         (WriterT (QueryLog (ofFn R)) (StateT (ofFn R).QueryCache ProbComp))) n).run.run cache =
@@ -228,27 +227,57 @@ theorem randomOracleLoggedRun_project [DecidableEq D]
   | query_bind t k ih =>
       cases t with
       | inl n =>
-          simp [randomOracleLoggedRun, simulateQ_bind, WriterT.run_bind,
-            StateT.run_bind]
+          have hleft :
+              (fun z => (z.1.1, z.2)) <$>
+                  randomOracleLoggedRun (liftM ((unifSpec + ofFn R).query (.inl n)) >>= k)
+                    cache =
+                ((unifSpec.passthrough : QueryImpl unifSpec
+                  (WriterT (QueryLog (ofFn R))
+                    (StateT (ofFn R).QueryCache ProbComp))) n).run.run cache >>= fun p =>
+                  (fun z => (z.1.1, z.2)) <$> randomOracleLoggedRun (k p.1.1) p.2 := by
+            simp [randomOracleLoggedRun, simulateQ_bind, WriterT.run_bind,
+              StateT.run_bind]
+          have hright :
+              (simulateQ (ofFn R).romImpl
+                (liftM ((unifSpec + ofFn R).query (.inl n)) >>= k)).run cache =
+                (unifFwdImpl (ofFn R) n).run cache >>= fun p =>
+                  (simulateQ (ofFn R).romImpl (k p.1)).run p.2 := by
+            simp [simulateQ_bind, StateT.run_bind]
+          rw [hleft, hright]
           have hfirst :
               ((unifSpec.passthrough : QueryImpl unifSpec
-                (WriterT (QueryLog (ofFn R)) (StateT (ofFn R).QueryCache ProbComp))) n).run.run cache =
+                (WriterT (QueryLog (ofFn R))
+                  (StateT (ofFn R).QueryCache ProbComp))) n).run.run cache =
                 (fun u => ((u, ([] : QueryLog (ofFn R))), cache)) <$>
                   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) n) := rfl
           simp only [QueryImpl.liftTarget_apply, QueryImpl.id'_apply] at hfirst
+          simp only [QueryImpl.liftTarget_apply, QueryImpl.id'_apply]
           rw [hfirst]
-          have hright :
+          have hforward :
               (unifFwdImpl (ofFn R) n).run cache =
                 (fun u => (u, cache)) <$>
                   (HasQuery.toQueryImpl (spec := unifSpec) (m := ProbComp) n) := rfl
-          rw [hright]
+          rw [hforward]
           simp only [bind_map_left]
           apply bind_congr
           intro u
           simpa only [randomOracleLoggedRun, QueryImpl.passthrough_add] using ih u cache
       | inr t =>
-          simp [randomOracleLoggedRun, simulateQ_bind, WriterT.run_bind,
-            StateT.run_bind]
+          have hleft :
+              (fun z => (z.1.1, z.2)) <$>
+                  randomOracleLoggedRun (liftM ((unifSpec + ofFn R).query (.inr t)) >>= k)
+                    cache =
+                ((ofFn R).randomOracle t).run cache >>= fun p =>
+                  (fun z => (z.1.1, z.2)) <$> randomOracleLoggedRun (k p.1) p.2 := by
+            simp [randomOracleLoggedRun, simulateQ_bind, WriterT.run_bind,
+              StateT.run_bind]
+          have hright :
+              (simulateQ (ofFn R).romImpl
+                (liftM ((unifSpec + ofFn R).query (.inr t)) >>= k)).run cache =
+                ((ofFn R).randomOracle t).run cache >>= fun p =>
+                  (simulateQ (ofFn R).romImpl (k p.1)).run p.2 := by
+            simp [simulateQ_bind, StateT.run_bind]
+          rw [hleft, hright]
           apply bind_congr
           intro p
           exact ih p.1 p.2
