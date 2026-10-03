@@ -14,7 +14,7 @@ public import Examples.CommitmentScheme.Hiding.Main
 # Hiding security for the random-oracle commitment scheme
 
 Re-exports the four submodules that together prove the textbook
-hiding bound `tvDist(real, sim) ≤ t / |S|` (averaged over the salt
+hiding bound `etvDist real sim ≤ t / |S|` (averaged over the salt
 `s ← $ᵗ S`) for the ROM commitment scheme `Commit(m) = (H(m, s), s)`.
 
 The main result is `hiding_bound_finite` in `Hiding.Main`.
@@ -42,7 +42,7 @@ The main result is `hiding_bound_finite` in `Hiding.Main`.
 Identical-until-bad with the bad event `saltCount(s) ≥ 2`. For each fixed
 salt `s`, the real game `hidingImpl₁ s` and the simulator `hidingImplSim s`
 agree until the adversary makes a second salt-`s` query (the first being
-the mandatory challenge query). The TVD between real and simulator games
+the mandatory challenge query). The total variation between real and simulator games
 is therefore bounded by `Pr[bad(s)]`. Averaging `Pr[bad(s)]` over `s` and
 using the fact that the adversary makes at most `t` total salt-bearing
 queries gives the `t / |S|` bound. The bound is *intrinsically averaged*:

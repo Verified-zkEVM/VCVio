@@ -6,14 +6,15 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.EvalDist.MeasureSpec
 public import VCVio.OracleComp.OracleComp
 public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.IndepProductMeasure
 public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.Constructions.ReplicateMeasure
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 import Mathlib.Tactic.GCongr
 import Mathlib.Tactic.GRewrite
 
@@ -30,26 +31,35 @@ open MeasureTheory ProbabilityTheory
 
 namespace VCVioTest.UniformMeasureSpec
 
-section DerivedMeasureSpec
+/-! ### One measure semantics per specification
 
-variable {ι : Type} {spec : OracleSpec ι}
-  [∀ t, MeasurableSpace (spec.Range t)]
-  [∀ t, DiscreteMeasurableSpace (spec.Range t)] [OracleSpec.IsUniformSpec spec]
+Every instance path to the measure semantics of `ProbComp`, and to the answer measures of a sum
+of the built-in specifications, agrees at instance transparency, so `rw` and `simp` never meet two
+spellings of one instance. -/
 
-noncomputable example : OracleSpec.IsUniformMeasureSpec spec := inferInstance
+example : (inferInstance : EvalDistSemantics ProbComp) =
+    @OracleComp.instEvalDistSemantics ℕ unifSpec
+      OracleSpec.UniformAnswerMeasure.unifSpec.toAnswerMeasure := by
+  with_reducible_and_instances rfl
 
-end DerivedMeasureSpec
+example : (inferInstance : OracleSpec.AnswerMeasure (unifSpec + coinSpec)) =
+    OracleSpec.AnswerMeasure.add (spec := unifSpec) coinSpec := by
+  with_reducible_and_instances rfl
 
-example : OracleSpec.IsMeasureSpec.toMeasure (spec := coinSpec) () =
+example : (inferInstance : OracleSpec.AnswerMeasure (unifSpec + coinSpec)) =
+    (OracleSpec.UniformAnswerMeasure.add (spec := unifSpec) coinSpec).toAnswerMeasure := by
+  with_reducible_and_instances rfl
+
+example : OracleSpec.AnswerMeasure.toMeasure (spec := coinSpec) () =
     (uniformOn Set.univ : Measure Bool) :=
-  OracleSpec.IsUniformMeasureSpec.toMeasure_eq_uniform ()
+  OracleSpec.UniformAnswerMeasure.toMeasure_eq_uniform ()
 
 example : 𝒟[(pure true : OracleComp coinSpec Bool)] = Measure.dirac true := by
   simp
 
 example : 𝒟[(HasQuery.query (spec := coinSpec) (m := OracleComp coinSpec) ())] =
-    (uniformOn Set.univ : Measure Bool) := by
-  simp
+    (uniformOn Set.univ : Measure Bool) :=
+  OracleComp.evalDist_query_uniform (spec := coinSpec) ()
 
 example (mx : OracleComp coinSpec Bool) :
     Pr{let b ← mx}[b] = 𝒟[mx] {true} := by

@@ -8,7 +8,7 @@ module
 
 public import Examples.PRFTagReader.UnlinkReduction
 public import VCVio.CryptoFoundations.Asymptotics.Security
-import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Asymptotic Unlinkability

@@ -5,7 +5,7 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.SimSemantics.OptionT.Basic
@@ -28,9 +28,8 @@ open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native event bounds unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "event bounds unexpectedly import PMF"
 
 namespace VCVioTest.EventBounds
 
@@ -54,14 +53,14 @@ example (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] ≤ 1 := by simp
 /-- Conditioning on a bad event of the common draw. -/
 example (mx : m α) (f : α → m β) (bad : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ bad a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[bad a] + ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[bad a] + ε :=
   prEvent_bind_le_prEvent_add mx f bad q h
 
 /-- The conditional bound only needs to hold on reachable draws. -/
 example [MonadAttach m] [WeaklyLawfulMonadAttach m]
     (mx : m α) (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ ε :=
   prEvent_bind_le_of_forall_le_of_support mx f q h
 
 end monad
@@ -110,8 +109,8 @@ example (init : ProbComp Nat) :
 assumption or a measurable space on the payload. -/
 example {α : Type} (mx : OptionT ProbComp α) (p q : α → Prop)
     (h : ∀ a ∈ support mx, p a → q a) :
-    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] :=
-  prEvent_mono_of_support mx p q h
+    Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] := by
+  simpa only [OptionT.wp_ofMeasure_eq] using prEvent_mono_of_support mx p q h
 
 /-- A potentially failing optional prefix preserves the honest product lower bound: only the
 mass of the prefix event contributes, and every continuation reached under that event satisfies
@@ -120,8 +119,10 @@ example {α β : Type} (mx : OptionT ProbComp α) (f : α → OptionT ProbComp �
     (p : α → Prop) (q : β → Prop) {r r' : ℝ≥0∞}
     (h : r ≤ Pr{let a ← mx}[p a])
     (h' : ∀ a, p a → r' ≤ Pr{let b ← f a}[q b]) :
-    r * r' ≤ Pr{let b ← mx >>= f}[q b] :=
-  mul_le_prEvent_bind_of_forall mx f p q h h'
+    r * r' ≤ Pr{let a ← mx; let b ← f a}[q b] := by
+  simpa only [OptionT.wp_ofMeasure_eq] using mul_le_prEvent_bind_of_forall mx f p q
+    (by simpa only [OptionT.wp_ofMeasure_eq] using h)
+    (fun a ha => by simpa only [OptionT.wp_ofMeasure_eq] using h' a ha)
 
 /-- Two reductions share the adversary's draw; the draw's payload needs no measurable space. -/
 example {α : Type} (mx : ProbComp α) (win left right : α → Bool)
@@ -141,10 +142,9 @@ section oracleUniverse
 universe u w
 
 variable {ι : Type u} {spec : OracleSpec.{u, w + 1} ι}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
 
 /-- The AE sequencing API accepts oracle answers and results strictly above `Type 0`. -/
-example [OracleSpec.IsMeasureSpec spec]
+example [OracleSpec.AnswerMeasure spec]
     {α β : Type (w + 1)} [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
     (mx : OracleComp spec α) (f : α → OracleComp spec β)
     {event : Set β} (hevent : MeasurableSet event)
@@ -153,7 +153,7 @@ example [OracleSpec.IsMeasureSpec spec]
   evalDist_bind_apply_eq_one_of_ae mx f hevent h
 
 /-- The support characterization also accepts oracle answers and results above `Type 0`. -/
-example [OracleSpec.IsUniformMeasureSpec spec]
+example [OracleSpec.UniformAnswerMeasure spec]
     {α : Type (w + 1)} [MeasurableSpace α] [DiscreteMeasurableSpace α]
     (mx : OracleComp spec α) (p : α → Prop) :
     𝒟[mx] {x | p x} = 1 ↔ ∀ x ∈ support mx, p x :=
@@ -230,5 +230,19 @@ noncomputable example : SampleableType (∀ _i : Fin 0, Empty) := by
   exact SampleableType.piOfFintype _
 
 end uniform
+
+/-! ### Splitting an expectation along an event
+
+The observation is charged in full on the event and kept off it; with a bound off the event on
+the support, the expectation is at most the event's probability plus the bound. -/
+
+example (mx : ProbComp Bool) (bad : Bool → Prop) (g : Bool → ℝ≥0∞) (hle : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) :=
+  wp_le_prEvent_add_wp mx bad g hle
+
+example (mx : ProbComp Bool) (bad : Bool → Prop) (g : Bool → ℝ≥0∞) (ε : ℝ≥0∞)
+    (hg : ∀ x ∈ support mx, ¬bad x → g x ≤ ε) (hle : ∀ x ∈ support mx, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + ε :=
+  wp_le_prEvent_add_of_support mx bad g hg hle
 
 end VCVioTest.EventBounds

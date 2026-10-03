@@ -15,91 +15,84 @@ public import ToMathlib.Control.Monad.Algebra
 
 Lawful successful-output measure semantics give bounded probability assertions by restricting
 the expectation algebra to `Prob`. Enable this interpretation with
-`open scoped MeasureProgramLogic.Probabilistic`.
+`open scoped ExpectationWP.Probabilistic`.
 -/
 
 public section
 
-open MeasureTheory Std.Internal.Do
+open MeasureTheory Std.WP
 open scoped ENNReal
 
 universe v
 
-namespace MeasureProgramLogic.Probabilistic
+namespace ExpectationWP.Probabilistic
 
 variable (m : Type → Type v) [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
-attribute [local instance] MeasureProgramLogic.Quantitative.instMAlgOrdered
+attribute [local instance] ExpectationWP.Lower.instMAlgOrdered
 
-omit [LawfulMonad m] in
 /-- Subprobability expectations preserve the upper bound one. -/
-theorem wp_one_le {α : Type} (mx : m α) :
-    MAlgOrdered.wp mx (fun _ ↦ (1 : ENNReal)) ≤ 1 := by
+theorem μ_one_le {α : Type} (mx : m α) :
+    MAlgOrdered.μ (mx >>= fun _ ↦ pure (1 : ENNReal)) ≤ 1 := by
   let : MeasurableSpace α := MeasurableSpace.comap (fun _ : α ↦ (1 : ENNReal)) inferInstance
-  exact Quantitative.wp_le_const mx measurable_const
+  exact ExpectationWP.wp_le_const mx measurable_const
     (Filter.Eventually.of_forall fun _ ↦ le_rfl)
 
-
-/-- The native expectation algebra restricted to bounded probability assertions. -/
+/-- The expectation algebra restricted to bounded probability assertions. -/
 @[expose, instance_reducible]
-noncomputable def toMAlgOrdered : MAlgOrdered m Prob :=
-  MAlgOrdered.restrictIic 1 (fun {_} mx ↦ wp_one_le m mx)
+noncomputable def algebra : MAlgOrdered m Prob :=
+  MAlgOrdered.restrictIic 1 (fun {_} mx ↦ μ_one_le m mx)
 
-/-- Select probability-bounded measure expectations. -/
-noncomputable scoped instance (priority := 1100) instMAlgOrdered : MAlgOrdered m Prob :=
-  toMAlgOrdered m
+/-- Select probability-bounded measure expectations, at the priority of the generic scopes
+(above core's direct instances, below the reading scopes of `OracleComp`). -/
+noncomputable scoped instance (priority := 1050) instMAlgOrdered : MAlgOrdered m Prob :=
+  algebra m
 
 /-- Core WP with bounded probability assertions and no exception postcondition. -/
-noncomputable scoped instance (priority := 1100) instWP : WPMonad m Prob EPost.Nil :=
+noncomputable scoped instance (priority := 1050) instWP : WPMonad m Prob EStack⟨⟩ :=
   MAlgOrdered.toWPMonad
+
+/-- The bounded interpretation as a direct `WP` instance on programs, which outranks core's direct
+instances for its concrete monads (`Id`, `Option`, `Except`, …) while the scope is open. -/
+noncomputable scoped instance (priority := 1050) wpInst {α : Type} : WP (m α) α Prob EStack⟨⟩ :=
+  (instWP m).toWP α
 
 variable {m} {α : Type}
 
-/-- The bounded algebra's values are the quantitative algebra's expectations. -/
+/-- The bounded interpretation's values are the expectations of the `ℝ≥0∞`-valued algebra. -/
 @[simp]
-theorem mAlgOrdered_wp_val (mx : m α) (post : α → Prob) :
-    (MAlgOrdered.wp mx post).val = MAlgOrdered.wp mx (fun a ↦ (post a).val) :=
-  MAlgOrdered.wp_restrictIic_val (m := m) 1 (fun {_} mx ↦ wp_one_le m mx) mx post
-
-/-- Forgetting the bound recovers the native quantitative expectation. -/
-theorem wp_val_eq_mAlgOrdered_wp (mx : m α) (post : α → Prob) :
-    (wp mx post (Lean.Order.bot : EPost.Nil)).val =
-      MAlgOrdered.wp mx (fun a ↦ (post a).val) :=
-  mAlgOrdered_wp_val mx post
-
-/-- A pure computation evaluates its bounded assertion. -/
-theorem wp_pure (a : α) (post : α → Prob) :
-    wp (pure a : m α) post (Lean.Order.bot : EPost.Nil) = post a := by
-  simpa only [MAlgOrdered.toWPMonad_wp] using
-    MAlgOrdered.wp_pure (m := m) (l := Prob) a post
-
-/-- Bounded weakest preconditions compose through bind. -/
-theorem wp_bind {β : Type} (mx : m α) (f : α → m β) (post : β → Prob) :
-    wp (mx >>= f) post (Lean.Order.bot : EPost.Nil) =
-      wp mx (fun a ↦ wp (f a) post (Lean.Order.bot : EPost.Nil))
-        (Lean.Order.bot : EPost.Nil) := by
-  simpa only [MAlgOrdered.toWPMonad_wp] using
-    MAlgOrdered.wp_bind (m := m) (l := Prob) mx f post
+theorem wp_val (mx : m α) (post : α → Prob) (epost : EStack⟨⟩) :
+    (wp mx post epost).val =
+      MAlgOrdered.μ (mx >>= fun a ↦ pure (post a).val) := by
+  change (MAlgOrdered.μ (Subtype.val <$> (mx >>= fun a ↦ pure (post a))) : ENNReal) = _
+  simp only [map_bind, map_pure]
+  rfl
 
 /-- Pointwise bounded assertion comparisons are understood by generalized congruence. -/
 @[gcongr low]
-theorem wp_mono (mx : m α) {f g : α → Prob} (hfg : ∀ a, f a ≤ g a) :
-    wp mx f (Lean.Order.bot : EPost.Nil) ≤ wp mx g (Lean.Order.bot : EPost.Nil) := by
-  simpa only [MAlgOrdered.toWPMonad_wp] using
-    MAlgOrdered.wp_mono (m := m) (l := Prob) mx hfg
+theorem wp_mono (mx : m α) {f g : α → Prob} (hfg : ∀ a, f a ≤ g a) (epost : EStack⟨⟩) :
+    wp mx f epost ≤ wp mx g epost :=
+  MAlgOrdered.μ_bind_pure_mono (l := Prob) mx hfg
+
+/-- A bounded expectation integrates the assertion's underlying value. -/
+theorem wp_val_eq_lintegral_map (mx : m α) (post : α → Prob) :
+    (wp mx post (Lean.Order.bot : EStack⟨⟩)).val = ∫⁻ y, y ∂𝒟[(fun a ↦ (post a).val) <$> mx] := by
+  rw [wp_val, bind_pure_comp]
+  exact μ_algebra _
 
 variable [MeasurableSpace α]
 
 /-- A bounded expectation is the integral of the assertion's underlying value. -/
 theorem wp_val_eq_lintegral (mx : m α) (post : α → Prob)
     (hpost : Measurable fun a ↦ (post a).val) :
-    (wp mx post (Lean.Order.bot : EPost.Nil)).val = ∫⁻ a, (post a).val ∂𝒟[mx] := by
-  rw [wp_val_eq_mAlgOrdered_wp, Quantitative.wp_eq_lintegral mx _ hpost]
+    (wp mx post (Lean.Order.bot : EStack⟨⟩)).val = ∫⁻ a, (post a).val ∂𝒟[mx] := by
+  rw [wp_val]
+  exact ExpectationWP.wp_eq_lintegral mx _ hpost
 
 /-- Constant assertions retain the successful-output mass. -/
 theorem wp_const (mx : m α) (p : Prob) :
-    (wp mx (fun _ ↦ p) (Lean.Order.bot : EPost.Nil)).val = p.val * 𝒟[mx] Set.univ := by
+    (wp mx (fun _ ↦ p) (Lean.Order.bot : EStack⟨⟩)).val = p.val * 𝒟[mx] Set.univ := by
   rw [wp_val_eq_lintegral mx _ measurable_const, lintegral_const]
 
-end MeasureProgramLogic.Probabilistic
+end ExpectationWP.Probabilistic

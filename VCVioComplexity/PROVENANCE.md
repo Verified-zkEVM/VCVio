@@ -3,21 +3,21 @@
 - Upstream: <https://github.com/SamuelSchlesinger/complexitylib>
 - Revision: `b6738219a3a3c50967d6bd16cba9487887ca6b66`
 - Upstream toolchain at that revision: Lean `v4.30.0`
-- VCVio validation toolchain: Lean and Mathlib `v4.34.0`
+- VCVio validation toolchain: Lean and Mathlib `v4.35.0-rc3`
 
 The direct Git dependency is tested with VCVio as a path dependency and with the nested package's
-direct Mathlib `v4.34.0` requirement taking precedence over inherited pins. The direct compatibility
-canary imports:
+direct Mathlib `v4.35.0-rc3` requirement taking precedence over inherited pins. The direct
+compatibility canary imports:
 
 - `Complexitylib.Models.TuringMachine`;
 - `Complexitylib.Classes.P.Cobham.Defs`.
 
-Both modules compile unchanged at Lean/Mathlib 4.34. The transitive import
+Both modules compile unchanged at Lean/Mathlib `v4.35.0-rc3`. The transitive import
 `Complexitylib.Asymptotics` does not: its imports do not expose `Polynomial.natDegree` or
-`Polynomial.eval_eq_sum_range` under Mathlib 4.34. The earlier `Norm.ext` and coercion
-proof failures no longer occur. The preflight checks exactly six polynomial diagnostics.
-Consequently, `Complexitylib.Classes.P.Defs` and the full Cobham equivalence theorem remain outside
-the compiling canary because they transitively depend on that asymptotics module; the syntax-only
+`Polynomial.eval_eq_sum_range` under that Mathlib. It fails with exactly six diagnostics at this
+polynomial boundary and no other errors, which the preflight checks. Consequently,
+`Complexitylib.Classes.P.Defs` and the full Cobham equivalence theorem remain outside the
+compiling canary because they transitively depend on that asymptotics module; the syntax-only
 `Complexitylib.Classes.P.Cobham.Defs` module does compile.
 
 `VCVioComplexity.Asymptotics.PolyBound` is therefore the sole adapted upstream module. It retains
@@ -38,12 +38,12 @@ coexist with the direct implementation.
 
 ## Concrete TM adapter compatibility
 
-`Complexitylib.Models.TuringMachine` compiles unchanged on Lean and Mathlib 4.34. It supplies the
-concrete deterministic TM, exact `TM.reachesIn`, delimited `Tape.HasOutput`, and
+`Complexitylib.Models.TuringMachine` compiles unchanged on Lean and Mathlib `v4.35.0-rc3`. It
+supplies the concrete deterministic TM, exact `TM.reachesIn`, delimited `Tape.HasOutput`, and
 `TM.ComputesInTime` used by `VCVioComplexity.Backend.TuringMachine`.
 
-The higher compositional stack does not currently compile. `TuringMachine.Internal` fails at
-upstream lines 54 and 71 because Lean 4.34's `split` no longer selects the exposed conditional;
+The higher compositional stack does not compile. `TuringMachine.Internal` fails at upstream
+lines 54 and 71 because `split`, from Lean 4.34 on, does not select the exposed conditional;
 `TuringMachine.Combinators` fails similarly at upstream lines 328 and 341. `Hoare.Defs` imports
 the failing internal module, while `Composition.Defs` and `Subroutines.CopyOutput` transitively
 import the failing combinator stack. Consequently this package exposes exact per-machine
@@ -74,14 +74,14 @@ proved by complexitylib; the resulting local cost remains the selected run's act
 complexitylib output-bound proof into the adapter namespace. It uses only the compiling
 `Complexitylib.Models.TuringMachine` API and proves that a word of length `m` requires at least `m`
 actual transitions. This supplies `PolynomialCode.toPolyRealizerFromTime` without importing or
-patching the blocked upstream `TuringMachine.Internal` module. The new file preserves upstream
+patching the blocked upstream `TuringMachine.Internal` module. The file preserves upstream
 attribution; no declaration is copied into the `Complexity` namespace.
 
 The direct identity/composition acceptance test is PolyFun's
 `polynomialQuantitativeStepClass.HasCategory` mixin itself. It has no exported inhabitant. Filling
 it requires total exact machines on all words, represented semantic correctness, polynomial run
-certificates, and a proved inequality for connection overhead. The currently failing upstream
-modules prevent reusing `copyInputToOutputTM` and `compositionTM` at Lean 4.34; no closure witness
+certificates, and a proved inequality for connection overhead. The failing upstream modules
+prevent reusing `copyInputToOutputTM` and `compositionTM` at this toolchain; no closure witness
 is inferred from their source definitions alone.
 
 The closed adapter codec and complexitylib's canonical pairing are not definitionally compatible:
@@ -105,7 +105,8 @@ All compatibility work remains local to VCVio and PolyFun for this phase. No PR 
 in complexitylib, CSLib, or Mathlib.
 
 Run `scripts/compatibility-preflight.sh` from this package to reproduce the supported build and
-classify both the four current composition failures and the current `Asymptotics.lean` failures.
+classify both the four recorded composition failures and the six recorded `Asymptotics.lean`
+failures.
 Its default reporting mode accepts only the recorded source diagnostics;
 `--require-upstream-stack` exits nonzero while either surface remains unavailable. That strict
 mode tests upstream compatibility only: it does not construct VCVio's closure gates or resolve

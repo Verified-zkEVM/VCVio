@@ -13,8 +13,8 @@ public import Mathlib.MeasureTheory.Integral.Lebesgue.Markov
 # Losslessness of measure-valued computations
 
 Losslessness is Mathlib's `IsProbabilityMeasure` on the successful-output measure. Bind preserves
-this property when its continuation is lossless almost everywhere. Structurally possible
-zero-probability branches impose no additional obligation.
+this property when its continuation is lossless almost everywhere. Possible branches of
+probability zero impose no additional obligation.
 -/
 
 public section

@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 public import Examples.OneTimePad.Reactive.Separation
-public import PolyFun.Interaction.UC.ReactiveNetwork.Serial
+public import PolyFun.Interaction.Execution.ReactiveNetwork.Serial
 
 /-!
 # Adversarial execution checks
@@ -20,7 +20,8 @@ public section
 
 namespace VCVioTest.ReactiveNetworkAdversarial
 
-open PFunctor Interaction.UC ReactiveProcess ReactiveNetwork ReactiveRuntime
+open PFunctor Interaction Interaction.UC Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork ReactiveRuntime
   OneTimePad.Reactive OracleComp
 
 attribute [local implicit_reducible] signature Response network effects ports
@@ -108,7 +109,7 @@ theorem serialRound_ne_token_with_pending :
   have projected := congrArg
     (fun program => (fun state => state.pending.length) <$> program) equal
   rw [serialRound_without_empty_queue.1, serialRound_without_empty_queue.2] at projected
-  have distinguish := congrArg (fun program : ProbComp ℕ => Pr[= 0 | program]) projected
+  have distinguish := congrArg (fun program : ProbComp ℕ => 0 ∈ support program) projected
   simp at distinguish
 
 /-- The finite-policy theorem also needs the empty-queue premise, even for one round. -/

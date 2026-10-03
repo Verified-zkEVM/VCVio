@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.Interaction.UC.OracleNetwork
-public import PolyFun.Interaction.UC.RequestNetwork.Transport
+public import PolyFun.Interaction.Execution.RequestNetwork.Transport
 
 /-!
 # Transporting oracle FIFO executions
@@ -20,6 +20,8 @@ preserves the service's monadic effects and their ordering.
 public section
 
 namespace Interaction.UC.OracleNetwork
+
+open Interaction.Execution
 
 export RequestNetwork (emit_rename accept_rename deliver_rename step_rename run_rename)
 

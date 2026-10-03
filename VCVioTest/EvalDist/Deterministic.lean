@@ -12,10 +12,10 @@ public import VCVio.EvalDist.Defs.Measure.ExceptT
 /-!
 # Deterministic measure semantics canaries
 
-Total, optional, and exceptional deterministic computations have native measures on arbitrary
-output spaces. Successful constructors infer probability instances; failure has zero mass.
-Exceptional events need no measurable structure on their error type. The native import surface
-contains no finite-distribution backend.
+Total, optional, and exceptional deterministic computations have measures on arbitrary output
+spaces. Successful constructors infer probability instances; failure has zero mass. Exceptional
+events need no measurable structure on their error type. The import surface contains no
+finite-distribution backend.
 -/
 
 public section
@@ -24,9 +24,8 @@ open MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "deterministic measure semantics unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "deterministic measure semantics unexpectedly import PMF"
 
 namespace VCVioTest.Deterministic
 
@@ -69,7 +68,7 @@ end measures
 
 section events
 
-variable {ε α : Type} (x : α) (p : α → Prop) [DecidablePred p]
+variable {ε α : Type} (x : α) (p : α → Prop)
 
 example {m : Type → Type v} [Monad m] [EvalDistSemantics m]
     [LawfulPureEvalDistSemantics m] (q : Prop) [Decidable q] :
@@ -77,23 +76,21 @@ example {m : Type → Type v} [Monad m] [EvalDistSemantics m]
 
 example (q : Prop) [Decidable q] : Measure.dirac q {True} = if q then 1 else 0 := by grind
 
-example : Pr{let value ← (pure x : Id α)}[p value] = if p x then 1 else 0 := by simp
+example : Pr{let y ← (pure x : Id α)}[p y] = propInd (p x) := by simp
 
-example : Pr{let value ← (pure x : Id α)}[p value] = if p x then 1 else 0 := by grind
+example : Pr{let value ← (pure x : Id α)}[p value] = propInd (p x) := by grind
 
-example : Pr{let value ← (some x : Option α)}[p value] = if p x then 1 else 0 := by simp
+example : Pr{let value ← (some x : Option α)}[p value] = propInd (p x) := by simp
 
-example : Pr{let value ← (some x : Option α)}[p value] = if p x then 1 else 0 := by grind
+example : Pr{let value ← (some x : Option α)}[p value] = propInd (p x) := by grind
 
 example : Pr{let value ← (none : Option α)}[p value] = 0 := by simp
 
 example : Pr{let value ← (none : Option α)}[p value] = 0 := by grind
 
-example : Pr{let value ← (Except.ok x : Except ε α)}[p value] =
-    if p x then 1 else 0 := by simp
+example : Pr{let value ← (Except.ok x : Except ε α)}[p value] = propInd (p x) := by simp
 
-example : Pr{let value ← (Except.ok x : Except ε α)}[p value] =
-    if p x then 1 else 0 := by grind
+example : Pr{let value ← (Except.ok x : Except ε α)}[p value] = propInd (p x) := by grind
 
 example (error : ε) : Pr{let value ← (Except.error error : Except ε α)}[p value] = 0 := by
   simp

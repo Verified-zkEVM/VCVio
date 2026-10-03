@@ -68,14 +68,12 @@ abbrev Range (spec : OracleSpec ι) (t : ι) : Type _ := spec t
 `C (spec.Range t)` for a generic `spec` is indexed as `C ι`, respectively `C (?spec ?t)`: a
 candidate for every `C _` goal, with `spec` undetermined. Instance search then invents a
 specification through `ofFn`, and either times out (VCVio#772) or answers an ordinary
-`DecidableEq`, `Fintype`, or `Inhabited` goal through oracle-specification data. The only such
-instances left are the `fintype` and `inhabited` projections of the retiring `IsUniformSpec`.
-Index equality is an ordinary `[DecidableEq ι]` hypothesis, and data on answer
-types are ordinary `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, or
-`[Inhabited (spec.Range t)]` hypotheses, quantified over `t` when a statement ranges over
-arbitrary queries. Specifications built with `ofFn` reduce to their answer types, so
-`unifSpec`, `coinSpec`, and `A →ₒ B` need no instances of their own; `+` combines the
-per-branch instances of its summands. -/
+`DecidableEq`, `Fintype`, or `Inhabited` goal through oracle-specification data. Index
+equality is an ordinary `[DecidableEq ι]` hypothesis, and data on answer types are ordinary
+`[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, or `[Inhabited (spec.Range t)]`
+hypotheses, quantified over `t` when a statement ranges over arbitrary queries. Specifications
+built with `ofFn` reduce to their answer types, so `unifSpec`, `coinSpec`, and `A →ₒ B` need no
+instances of their own; `+` combines the per-branch instances of its summands. -/
 
 section ofFn
 
@@ -111,7 +109,7 @@ lemma add_def {ι ι'} (spec : OracleSpec ι) (spec' : OracleSpec ι') :
 
 /-- Deliberately not `@[simp]`: `toPFunctor` occurs inside the (instance-carrying)
 type of an `OracleComp`, so rewriting with this under a `simulateQ`/`liftM` strands
-the goal in a form the `simulateQ_query` family can no longer match. -/
+the goal in a form the `simulateQ_query` family cannot match. -/
 lemma toPFunctor_add {ι : Type u} {ι' : Type u'}
     (spec : OracleSpec ι) (spec' : OracleSpec ι') :
     (spec + spec').toPFunctor = spec.toPFunctor + spec'.toPFunctor := rfl

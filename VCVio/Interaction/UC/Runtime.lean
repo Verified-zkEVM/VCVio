@@ -7,9 +7,9 @@ Authors: Quang Dao
 module
 public import PolyFun.Interaction.Basic.Sampler
 public import PolyFun.Interaction.Basic.TypeTreeFintype
-public import PolyFun.Interaction.UC.OpenProcessModel
+public import PolyFun.Interaction.Open.OpenProcessModel
 public import VCVio.Interaction.UC.Computational
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # Runtime execution semantics for open processes
@@ -169,7 +169,7 @@ end Concurrent
 
 namespace UC
 
-open Concurrent
+open Concurrent Interaction.Open
 
 abbrev RuntimeClosed (Party : Type u) (m : Type → Type) (schedulerSampler : m (ULift Bool)) :=
   (openTheory.{u, 0, 0, 0} Party m schedulerSampler).Closed
@@ -247,9 +247,9 @@ noncomputable def processSemanticsOracle (Party : Type u) {ι : Type}
     { Sem := StateT σ ProbComp
       instMonadSem := inferInstance
       interpret := simulateQ' impl
-      observe := fun {_} {_} mx => (liftM (mx.run' initOracle) : SPMF _).toMeasure
+      observe := fun {_} {_} mx => 𝒟[mx.run' initOracle]
       observe_apply_univ_le_one := fun {_} {_} mx =>
-        SPMF.toMeasure_apply_univ_le_one (liftM (mx.run' initOracle) : SPMF _) }
+        EvalDistSemantics.apply_univ_le_one (mx.run' initOracle) }
   processSemantics Party (m := OracleComp superSpec) schedulerSampler oracleSem
     init fuel observe
 

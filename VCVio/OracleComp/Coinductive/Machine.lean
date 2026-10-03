@@ -49,7 +49,7 @@ What this file adds is the `OracleSpec`-side reading of that theory:
 * `OracleMachine.implements_iff_behavior_eq` — implementation = behavior equality.
 * `DynComputation.ImplementsWithin.simulateQ_run_eq` — implementing machines compute the
   program under any lawful `QueryImpl`.
-* `DynComputation.ImplementsWithin.probOutput_none_runWithInput` — no probability mass on
+* `DynComputation.ImplementsWithin.prEvent_none_runWithInput` — no probability mass on
   fuel exhaustion under a probabilistic handler.
 -/
 
@@ -144,11 +144,11 @@ theorem runWithInput_ofFn_eq {M : OracleMachine spec α β}
 
 /-- Probabilistic reading: an implementing machine puts no probability mass on fuel
 exhaustion — the `none` branch of the fuelled run through a probabilistic handler is null. -/
-theorem probOutput_none_runWithInput {M : OracleMachine spec α β}
-    {program : α → OracleComp spec β} {k : ℕ}
+theorem prEvent_none_runWithInput {ι : Type} {spec : OracleSpec.{0, 0} ι} {α β : Type}
+    {M : OracleMachine spec α β} {program : α → OracleComp spec β} {k : ℕ}
     (h : M.ImplementsWithin program k) (impl : ProbHandler spec) (x : α) :
-    Pr[= none | M.runWithInput impl k x] = 0 := by
+    Pr{let y ← M.runWithInput impl k x}[y = none] = 0 := by
   rw [h.simulateQ_run_eq impl x]
-  exact probOutput_some_map_none _
+  simp [expect_norm]
 
 end PFunctor.DynSystem.DynComputation.ImplementsWithin

@@ -90,11 +90,11 @@ theorem runJoint_ae (program : FreeM P α) {state : S × T} (hstate : R state.1 
 include contract in
 /-- Initial coupled state laws compose with every adaptive program using only local contracts. -/
 theorem bind_state_laws {μ : Measure S} {ν : Measure T}
-    (hinit : MeasureProgramLogic.CouplingPost μ ν R) (program : FreeM P α)
+    (hinit : ExpectationWP.CouplingPost μ ν R) (program : FreeM P α)
     {post : (α × S) → (α × T) → Prop}
     (hpost : MeasurableSet {out : (α × S) × (α × T) | post out.1 out.2})
     (hresult : ∀ x s t, R s t → post (x, s) (x, t)) :
-    MeasureProgramLogic.CouplingPost (μ.bind (FreeM.runKernel left program))
+    ExpectationWP.CouplingPost (μ.bind (FreeM.runKernel left program))
       (ν.bind (FreeM.runKernel right program)) post := by
   exact hinit.bind (FreeM.runKernel left program).measurable
     (FreeM.runKernel right program).measurable (contract.runJoint program).measurable hpost

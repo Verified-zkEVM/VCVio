@@ -54,11 +54,11 @@ theorem bind_state_laws
     {output : PFunctor.{uB, uB}}
     (wiring : Wiring Boxes Arity Dom Cod Inputs inputInterface output)
     (a : output.A) [MeasurableSpace (output.B a)]
-    {μ : Measure S} {ν : Measure T} (hinit : MeasureProgramLogic.CouplingPost μ ν R)
+    {μ : Measure S} {ν : Measure T} (hinit : ExpectationWP.CouplingPost μ ν R)
     {post : (output.B a × S) → (output.B a × T) → Prop}
     (hpost : MeasurableSet {out : (output.B a × S) × (output.B a × T) | post out.1 out.2})
     (hresult : ∀ x s t, R s t → post (x, s) (x, t)) :
-    MeasureProgramLogic.CouplingPost (μ.bind (runKernel implementation left wiring a))
+    ExpectationWP.CouplingPost (μ.bind (runKernel implementation left wiring a))
       (ν.bind (runKernel implementation right wiring a)) post := by
   simpa only [runKernel_eq] using
     contract.bind_state_laws hinit (eval implementation wiring a) hpost hresult

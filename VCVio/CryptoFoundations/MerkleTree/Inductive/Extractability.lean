@@ -147,10 +147,11 @@ theorem extractabilityExperiment_isTotalQueryBound [DecidableEq α]
 def extractabilityROMErrorNumerator (s : Skeleton) (qb : ℕ) : ℕ :=
   MerkleTreeExtractability.extractabilityROMErrorNumerator s qb
 
-theorem extractability_rom_bound [DecidableEq α] [Fintype α] [Inhabited α]
-    [IsUniformSpec (spec α)] {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
+theorem extractability_rom_bound [DecidableEq α] [Fintype α]
+    [UniformAnswerMeasure (spec α)]
+    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[OpeningExtractionFailure | extractabilityExperiment 𝒜] ≤
+    Pr{let z ← extractabilityExperiment 𝒜}[OpeningExtractionFailure z] ≤
       (extractabilityROMErrorNumerator s qb : ENNReal) *
     (Fintype.card α : ENNReal)⁻¹ := by
   rw [openingExtractionFailure_eq_generic]
@@ -159,10 +160,11 @@ theorem extractability_rom_bound [DecidableEq α] [Fintype α] [Inhabited α]
     MerkleTreeExtractability.extractability_rom_bound
       unitAddressQueryModel (fun _ => ()) 𝒜.toGeneric qb h
 
-theorem extractability_rom_bound_coarse [DecidableEq α] [Fintype α] [Inhabited α]
-    [IsUniformSpec (spec α)] {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
+theorem extractability_rom_bound_coarse [DecidableEq α] [Fintype α]
+    [UniformAnswerMeasure (spec α)]
+    {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb) :
-    Pr[OpeningExtractionFailure | extractabilityExperiment 𝒜] ≤
+    Pr{let z ← extractabilityExperiment 𝒜}[OpeningExtractionFailure z] ≤
       ((max ((2 * s.leafCount - 1) * qb) (qb.choose 2) +
         (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card α : ENNReal)⁻¹ := by
@@ -173,11 +175,12 @@ theorem extractability_rom_bound_coarse [DecidableEq α] [Fintype α] [Inhabited
       unitAddressQueryModel (fun _ => ()) 𝒜.toGeneric qb h
 
 theorem extractability_rom_bound_birthday_dominates
-    [DecidableEq α] [Fintype α] [Inhabited α] [IsUniformSpec (spec α)]
+    [DecidableEq α] [Fintype α]
+    [UniformAnswerMeasure (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hqb : 2 * (2 * s.leafCount - 1) + 1 ≤ qb) :
-    Pr[OpeningExtractionFailure | extractabilityExperiment 𝒜] ≤
+    Pr{let z ← extractabilityExperiment 𝒜}[OpeningExtractionFailure z] ≤
       ((qb.choose 2 + (2 * s.leafCount - 1) * s.depth : ℕ) : ENNReal) *
         (Fintype.card α : ENNReal)⁻¹ := by
   rw [openingExtractionFailure_eq_generic]
@@ -187,12 +190,13 @@ theorem extractability_rom_bound_birthday_dominates
       unitAddressQueryModel (fun _ => ()) 𝒜.toGeneric qb h hqb
 
 theorem extractability_rom_bound_quadratic
-    [DecidableEq α] [Fintype α] [Inhabited α] [IsUniformSpec (spec α)]
+    [DecidableEq α] [Fintype α]
+    [UniformAnswerMeasure (spec α)]
     {s : Skeleton} (𝒜 : Adversary α s) (qb : ℕ)
     (h : 𝒜.IsTwoPhaseTotalQueryBound qb)
     (hdominance : 2 * (2 * s.leafCount - 1) + 1 ≤ qb)
     (hdepth : 2 * (2 * s.leafCount - 1) * s.depth ≤ qb) :
-    Pr[OpeningExtractionFailure | extractabilityExperiment 𝒜] ≤
+    Pr{let z ← extractabilityExperiment 𝒜}[OpeningExtractionFailure z] ≤
       (qb : ENNReal) ^ 2 / (2 * Fintype.card α) := by
   rw [openingExtractionFailure_eq_generic]
   simpa [extractabilityExperiment, extractabilityInner,

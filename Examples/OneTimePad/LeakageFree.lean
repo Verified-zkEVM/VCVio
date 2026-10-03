@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 public import Examples.OneTimePad.Basic
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.ProgramLogic.Relational.Leakage
 
 /-!
@@ -59,8 +59,7 @@ theorem tracedEncrypt_eq (sp : ℕ) (msg : BitVec sp) :
 produces identical observation traces. -/
 theorem otp_traceNoninterference (sp : ℕ) (msg₀ msg₁ : BitVec sp) :
     Leakage.TraceNoninterference (tracedEncrypt sp msg₀) (tracedEncrypt sp msg₁) := by
-  simp only [tracedEncrypt_eq, Leakage.TraceNoninterference,
-    ProgramLogic.Relational.relTriple'_iff_relTriple]
+  simp only [tracedEncrypt_eq, Leakage.TraceNoninterference]
   rvcgen
 
 /-- The traced OTP is probabilistically leak-free: the trace distribution is independent

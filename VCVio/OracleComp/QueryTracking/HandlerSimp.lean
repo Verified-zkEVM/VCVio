@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import PolyFun.PFunctor.Handler.Normalization
 public import VCVio.OracleComp.QueryTracking.CachingLoggingOracle
-public import VCVio.OracleComp.QueryTracking.CountingOracle
+public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.SeededOracle
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
@@ -20,7 +20,7 @@ compatibility equations.
 
 The goal is not to create a second proof mode; it is just the shared "open the
 handler one step" surface that proof scripts can use before handing control
-back to `mvcgen`, `vcstep`, `rvcstep`, or ordinary support reasoning.
+back to `vcgen`, `prvcgen`, `rvcstep`, or ordinary support reasoning.
 -/
 
 @[expose] public section

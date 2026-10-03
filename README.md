@@ -5,8 +5,8 @@ protocols, and implementations. The core framework provides:
 
 * A monadic syntax for representing computations with oracle access (`OracleComp`), with probabilistic computations (`ProbComp`) as a special case of having uniform selection oracles.
 * A measure-valued denotational semantics (`evalDist` / `𝒟[…]`) for probabilistic computations,
-  with an explicit finite adapter (`evalSPMF` / `𝒮[…]`) and scalar tools for output, event, and
-  failure probabilities (`probOutput`/`probEvent`/`probFailure`).
+  with event probabilities `Pr{let x ← comp}[p x]`, equality in distribution `mx =ᵈ my`, and total
+  variation distance.
 * An operational semantics (`simulateQ`) for implementing/simulating the behavior of a computation's oracles, including implementations of random oracles, query logging, reductions, etc.
 * A program logic with relational (pRHL-style) and unary (Hoare-style) proof modes, with interactive tactics for stepping through game-based proofs.
 
@@ -29,7 +29,7 @@ checks locally; add `--lint`, `--test`, or `--axioms` for those CI passes. `lake
 test libraries and runs the test executables, and `lake lint` runs source-style and environment checks
 (see `AGENTS.md`, *Building*).
 
-CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`,
+CI's timed build covers the non-test Lean libraries `ToMathlib`, `VCVio`, `VCVioCslib`,
 `LatticeCrypto`, `Extern`, `HashSig`, `Examples`, and `VCVioWidgets`.
 CI starts from the newest cached build, so Lake rebuilds only the modules a change invalidated;
 a nightly run builds from scratch. The build timing report compares each rebuilt module, including
@@ -89,8 +89,9 @@ proofs of binding, extractability, and hiding.
 
 ## Acknowledgments
 
-Parts of the current program-logic refactor use an ordered monad-algebra perspective adapted from
-the Loom project (see [LOOM-REPO](REFERENCES.md#loom-repo) and [LOOM26](REFERENCES.md#loom26)).
+VCVio's program logic is built on core Lean's `Std.WP` weakest preconditions, which follow the
+ordered monad-algebra perspective of the Loom project (see [LOOM-REPO](REFERENCES.md#loom-repo)
+and [LOOM26](REFERENCES.md#loom26)).
 
 ## Contributions
 
@@ -130,20 +131,22 @@ This provides a mechanism to implement oracle behaviors, but can also be used to
 
 ## Probabilities of Outputs and Events
 
-Semantics for probability calculations come from using `simulateQ` to interpret the computation in another monad.
-`support` can be used to embed in the `Set` monad to get the possible outputs of a computation.
+`support` gives the possible outputs of a computation as a `Set`, with no probabilistic
+interpretation.
 
-`evalDist` exposes the successful-output law as a Mathlib `Measure`; missing mass represents
-failure or nontermination. `evalSPMF` is the explicit `OptionT PMF` compatibility and executable
-backend. For `ProbComp` (i.e. `OracleComp unifSpec`), `evalSPMF` is definitionally equal to
-`simulateQ` with uniform implementations.
+`evalDist` (notation `𝒟[comp]`) exposes the successful-output law as a Mathlib `Measure`; missing
+mass represents failure or nontermination. On `OracleComp spec` it composes the answer measures
+chosen by `[OracleSpec.AnswerMeasure spec]`; `ProbComp` (i.e. `OracleComp unifSpec`) answers each
+query uniformly.
 We introduce notation:
 
-* `Pr[= x | comp]` - probability of output `x`
-* `Pr[p | comp]` - probability of event `p`
-* `Pr[⊥ | comp]` - probability of the computation failing
+* `Pr{let y ← comp}[y = x]` - probability of output `x`
+* `Pr{let x ← comp}[p x]` - probability of event `p`
+* `prFail comp` - probability of the computation failing
+* `mx =ᵈ my` - equality in distribution
 
-The typeclass `NeverFail mx` asserts that `Pr[⊥ | mx] = 0`, and is used to propagate non-failure guarantees through monadic combinators.
+A computation is lossless when `IsProbabilityMeasure 𝒟[mx]`; bind preserves losslessness when
+its continuation is lossless almost everywhere.
 
 ## Automatic Coercions
 
@@ -157,17 +160,25 @@ The second case includes things like `spec₁ ⊂ₒ (spec₁ + spec₂)` and `s
 
 ## Program Logic
 
-The library includes a program logic (`VCVio.ProgramLogic`) inspired by pRHL and ordered monad-algebra approaches. It provides:
+The library includes a program logic (`VCVio.ProgramLogic`) built on core Lean's `Std.WP`
+weakest preconditions and inspired by pRHL and ordered monad-algebra approaches. It provides:
 
-* **Relational proof mode** (`by_equiv`): Coupling-based reasoning via `RelTriple` for proving game equivalence or bounding advantage between two computations.
-* **Unary proof mode** (`by_hoare`): Quantitative Hoare triples for bounding probabilities of events in a single computation.
-* **Interactive tactics**: `rvcstep`, `rvcgen`, `vcstep`, `game_trans`, and explicit probability-equality controls such as `vcstep rw` / `vcstep rw congr'` for stepping through game-based proofs.
+* **Relational proof mode** (`by_equiv`): coupling-based reasoning via `RelTriple` for proving
+  game equivalence or bounding the advantage between two computations.
+* **Unary reasoning**: a statement about the outcomes of one computation (a probability bound, an
+  event of probability one, or a possible or necessary outcome) is a core triple
+  `⦃ pre ⦄ oa ⦃ post ⦄` under the reading of `OracleComp` it belongs to. `by_hoare` states a
+  probability goal as an expectation: it splits `if` branches and writes each event as the
+  expectation of its indicator.
+* **Interactive tactics**: `prvcgen` (core `vcgen` on probability bounds and quantitative
+  triples), `prrw` / `prrw congr` / `prrw normalize` for equalities between two programs'
+  probabilities, `rvcstep`, `rvcgen`, and `game_trans` for stepping through game-based proofs.
 
 ## Other Useful Definitions
 
 Predicates and tools for computations:
 
-* `allWhen`/`someWhen` - recursively check predicates on a computation's syntax tree given allowed query outputs
+* `reachableWhen` - the outputs a computation can reach when each query may return only an allowed set of answers
 * `IsQueryBound` - bound the number of queries a computation makes (with per-index variant `IsPerIndexQueryBound`)
 * `QueryImpl.withLogging`/`withCaching`/`withPregen` - modifiers that wrap a query implementation with logging, caching, or pre-generated answers
 

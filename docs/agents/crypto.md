@@ -71,16 +71,23 @@ and the
 ### Sigma protocols (`SigmaProtocol`)
 
 ```lean
-structure SigmaProtocol
+structure ChallengeVerifyProtocol
     (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool) where
   commit (stmt : Stmt) (wit : Wit) : ProbComp (Commit × PrvState)
   respond (stmt : Stmt) (wit : Wit) (prvState : PrvState) (chal : Chal) : ProbComp Resp
   verify (stmt : Stmt) (commit : Commit) (chal : Chal) (resp : Resp) : Bool
+
+structure SigmaProtocol
+    (Stmt Wit Commit PrvState Chal Resp : Type) (rel : Stmt → Wit → Bool)
+    extends ChallengeVerifyProtocol Stmt Wit Commit PrvState Chal Resp rel where
   sim (stmt : Stmt) : ProbComp Commit
   extract (chal₁ : Chal) (resp₁ : Resp) (chal₂ : Chal) (resp₂ : Resp) : ProbComp Wit
 ```
 
-Every `SigmaProtocol` coerces to `IdenSchemeWithAbort` via `toIdenSchemeWithAbort` (wraps `respond` with `some`).
+A `ChallengeVerifyProtocol` is the interaction alone; a `SigmaProtocol` adds the simulator and the
+witness extractor that special soundness refers to. Every `ChallengeVerifyProtocol` coerces to an
+`IdenSchemeWithAbort` through `ChallengeVerifyProtocol.toIdenSchemeWithAbort`, which wraps
+`respond` with `some`.
 
 ### Identification scheme with aborts (`IdenSchemeWithAbort`)
 
@@ -99,8 +106,10 @@ Used by ML-DSA and the Fiat-Shamir with Aborts transform.
 ### Key difference: monad-parametric algorithm surfaces
 
 - `SymmEncAlg`, `AsymmEncAlg`, and `SignatureAlg` are plain structures over an abstract monad `m`.
-- Instantiate them with `ProbComp`, `OracleComp spec`, `OptionT (OracleComp spec)`, or another monad at the security surface that needs those effects.
-- Probability and failure semantics are supplied by the surrounding experiment or semantic class, not by parent classes on the algorithm structure.
+- Instantiate them with `ProbComp`, `OracleComp spec`, `OptionT (OracleComp spec)`, or another monad
+  at the security surface that needs those effects.
+- Probability and failure semantics are supplied by the surrounding experiment or semantic class,
+  not by parent classes on the algorithm structure.
 
 ### Instantiation pattern
 
@@ -183,10 +192,12 @@ so programs the oracle at the cached points. `romImpl` is reducibly
 
 `VCVio.CryptoFoundations.KEMDEM.Measure` defines the preparation, encapsulation, and final
 observation games independently of probability. `KEMDEM.bias_compose_le` proves the
-composition bound with native measures. Both KEM message branches use `evalDist_kemGame`;
+composition bound on output measures. Both KEM message branches use `evalDist_kemGame`;
 `evalDist_demGame` performs independent-key interchange. Supply a fair coin, a lossless key
 sampler, and total Boolean hybrid outputs explicitly. Preparation and encapsulation effects
-retain their order. The `ProbCompRuntime` theorem in `KEMDEM.lean` is a compatibility adapter.
+retain their order. `KEMScheme.ind_cpa_one_time_bias_advantage_compose_with_dem_le` in
+`KEMDEM.lean` calibrates the bound to a `ProbCompRuntime` under explicit runtime coherence
+hypotheses.
 
 `ToMathlib.MeasureTheory.Measure.Bool` provides Boolean event distance and bias algebra.
 `Measure.boolBias_bind_coin` requires total branches: missing mass is distinct from returning
@@ -206,12 +217,12 @@ adapter.
 ### Forking bounds and measure semantics
 
 `VCVio/CryptoFoundations/SeededFork.lean` and `ReplayFork.lean` prove the
-seeded and context-fork success bounds through the established `Pr[...]`
-surface. `ForkMeasure.lean` states the same final bounds as the Mathlib measure
-of the `Option.isSome` event, using the canonical measure semantics induced by
-the oracle specification's existing per-query probability interpretation.
-These are transport corollaries; the forking arguments remain in the two
-original modules.
+seeded and context-fork success bounds as `Pr{…}` bounds on the
+`Option.isSome` event under uniform answer measures
+(`OracleSpec.UniformAnswerMeasure`). `FiatShamir/Sigma/Fork.lean` specializes the
+replay bound to the managed random-oracle trace, with the measure instances of
+`wrappedSpec` taken as hypotheses so each caller fixes its own discrete answer
+spaces.
 
 The stateful Fiat–Shamir chain in `FiatShamir/Sigma/Stateful/Chain.lean` classifies each
 logged handler step with the private `ForkStateStep` relation before proving invariants.
@@ -236,7 +247,8 @@ Uses additive / EC-style notation: `a • g` means scalar multiplication (textbo
 | CDH | `CDHAdversary F G` (= `G → G → G → ProbComp G`) | `cdhExperiment g adversary` |
 | DDH | `DDHAdversary F G` (= `G → G → G → G → ProbComp Bool`) | `ddhGame g adversary` |
 
-`CDHAdversary` and `DDHAdversary` carry a phantom `_F` parameter so Lean can infer the scalar field at call sites.
+`CDHAdversary` and `DDHAdversary` carry a phantom `_F` parameter so Lean can infer the scalar field
+at call sites.
 
 Defined in `VCVio/CryptoFoundations/HardnessAssumptions/DiffieHellman.lean`.
 
@@ -266,7 +278,8 @@ def myReduction (adversary : ...) : DDHAdversary F G := fun g A B T => do
   return result
 ```
 
-2. **Prove the probability identity**: show that the reduction's advantage equals (or bounds) the scheme adversary's advantage.
+2. **Prove the probability identity**: show that the reduction's advantage equals (or bounds) the
+   scheme adversary's advantage.
 
 3. **Key technique**: hybrid arguments for multi-query reductions.
 
@@ -278,7 +291,7 @@ adversary:
 ```lean
 theorem signature_euf_cma ... :
     eps * (eps / (qH + 1) - challengeSpaceInv F) ≤
-      Pr[= true | dlogExperiment g (dlogReduction F G g M adv qH)]
+      𝒟[dlogExperiment g (dlogReduction F G g M adv qH)] {true}
 ```
 
 Do not quantify over the target adversary:
@@ -287,7 +300,7 @@ Do not quantify over the target adversary:
 -- Do not write this.
 theorem signature_euf_cma ... :
     ∃ reduction : DLogAdversary F G,
-      eps * (eps / (qH + 1) - challengeSpaceInv F) ≤ Pr[= true | dlogExperiment g reduction]
+      eps * (eps / (qH + 1) - challengeSpaceInv F) ≤ 𝒟[dlogExperiment g reduction] {true}
 ```
 
 The existential form holds for every source adversary, so it says nothing about the scheme.
@@ -302,18 +315,20 @@ The reasons are specific to how adversaries are represented here.
   adversary does not even need to search. For a `GenerableRelation`, `gen_sound` gives a
   witness for every statement in the support of `gen`, and the reduction
   `fun x => pure (if h : ∃ w, r x w then h.choose else default)` wins `hardRelationExperiment` with
-  probability exactly `1`. Any bound of the form `∃ B, f ≤ Pr[= true | hardRelationExperiment hr B]`
+  probability exactly `1`. Any bound of the form `∃ B, f ≤ 𝒟[hardRelationExperiment hr B] {true}`
   with `f ≤ 1` is then provable without looking at the scheme.
-- **No existing check catches it.** The vacuous theorem is true, `sorry`-free, and depends only
-  on the standard axioms, so `#print axioms` does not flag it. Checking that the hypotheses are
-  satisfiable ([gotcha 14](gotchas.md#14-hypothesis-satisfiability-is-a-proof-obligation)) does
-  not help either, because the defect is in the conclusion.
+- **Neither the kernel nor the axiom sweep catches it.** The vacuous theorem is true,
+  `sorry`-free, and depends only on the standard axioms, so `#print axioms` does not flag it.
+  Checking that the hypotheses are satisfiable
+  ([gotcha 14](gotchas.md#14-hypothesis-satisfiability-is-a-proof-obligation)) does not help
+  either, because the defect is in the conclusion. The check that reports the form is the
+  `existentialReduction` linter described below.
 
 The same applies to every object that the security argument requires to be efficient or
 independent of a secret:
 
-- simulators: `∃ sim ζ_zk, 0 ≤ ζ_zk ∧ HVZK sim ζ_zk` holds with `ζ_zk := 1`, since
-  `tvDist ≤ 1`;
+- simulators: `∃ sim ζ_zk, HVZK sim ζ_zk` holds with `ζ_zk := 1`, since
+  `etvDist ≤ 1`;
 - extractors, distinguishers, collision finders, and preimage finders.
 
 Name each one with a definition (`cmaReduction`, `hvzkSimulatorReal`,
@@ -326,16 +341,51 @@ such as `SecurityGame.secureAgainst_of_reduction`, take the reduction as a funct
 `reduce : Adv → Adv'` with an efficiency hypothesis `isPPT A → isPPT' (reduce A)`. That hypothesis
 cannot be stated for an adversary that exists only inside an existential.
 
-When the reduction is not implemented yet, do not fall back to `∃`. Either:
+When the reduction is not implemented yet, do not fall back to `∃`: define it as a `sorry`
+placeholder and state the bound for that definition, as `GPVHashAndSign.reduction` and the
+with-aborts EUF-NMA forger `FiatShamirWithAbort.cmaToNmaAdv` do, with a docstring that says the
+proof is deferred. The
+placeholder is carried by `scripts/axiom_baseline.json`, and the `existentialReduction` linter
+(below) reports the existential form.
 
-- define it as a `sorry` placeholder and state the bound for that definition, as
-  `GPVHashAndSign.reduction` does; or
-- leave the theorem as a placeholder whose docstring warns that the statement has no security
-  content until a reduction is named, as `FiatShamirWithAbort.euf_cma_bound` does.
-
-`∃` remains appropriate for mathematical objects that the argument does not need to be efficient,
+`∃` is appropriate for mathematical objects that the argument does not need to be efficient,
 such as a witness in a relation, an index in a support, or a key pair in the image of key
 generation.
+
+### Hypothesis bundles with kernel-checked witnesses
+
+Each structure below carries, as data, an object that a security argument runs: a generator, a
+simulator, an extractor or a reduction. The property that checks the object is either a field
+beside it or a separate proposition about the same field. A theorem that consumes such a
+structure names the field it runs (`GenerableRelation.gen`, `SigmaProtocol.extract`,
+`SecurityGame.ReductionWithCost.reduce`) instead of quantifying over it, and
+`VCVioTest/CryptoFoundations/HypothesisWitnesses.lean` keeps one example per row that projects
+the witness out as a program or function.
+
+| Structure | Witness as data | What checks it |
+|---|---|---|
+| `GenerableRelation X W r` | `gen : ProbComp (X × W)` | `gen_sound`, a field |
+| `SigmaProtocol` | `sim`, `extract : Chal → Resp → Chal → Resp → ProbComp Wit` | `SigmaProtocol.SpeciallySound`, `ChallengeVerifyProtocol.HVZK` |
+| `CommitmentScheme.TrapdoorExtractor PP TD C M` | `setupExtract`, `extract : TD → C → ProbComp M` | `TrapdoorExtractor.SetupConsistent`, bounds on `CommitmentScheme.extractExperiment` |
+| `PreimageSampleableFunction PK SK Domain Range` | `trapdoorSample : PK → SK → Range → ProbComp Domain` | `PreimageSampleableFunction.Correct` |
+| `OneWay.TrapdoorPermutation PK SK X` | `keygen`, `inverse : SK → X → X` | `OneWay.TrapdoorPermutation.Correct` |
+| `RoundByRound.KnowledgeTransitionFamily Round Context` | `extractBefore` | `KnowledgeTransitionFamily.IsBounded` |
+| `RoundByRound.KnowledgeExtractionFamily rounds` | `extract : … → Witness` (total; see its field docstring) | `KnowledgeExtractionFamily.ExtractionCondition` |
+| `SecurityGame.ReductionWithCost cost cost'` | `reduce : Adv → Adv'`, `transform` | `cost_bound`, a field |
+
+Reductions that are not bundled are named definitions, proved or placeholders:
+`FiatShamir.cmaReduction` (built from `cmaToNmaAdv` and `nmaReduction`), and the `sorry`
+placeholders `GPVHashAndSign.reduction` and `FiatShamirWithAbort.cmaToNmaAdv`, each carried by
+`scripts/axiom_baseline.json` until it is constructed.
+
+Two environment linters in `ToMathlib/Lint/SecurityStatements.lean` guard the statements of
+the security libraries (`VCVio.CryptoFoundations`, `LatticeCrypto`, `HashSig`, `Examples`):
+`existentialReduction` reports a theorem whose conclusion existentially quantifies a function
+into an oracle computation, and `unconstrainedRealParameter` reports a theorem with a parameter
+in `ℝ` that reaches the conclusion through `ENNReal.ofReal` or `Real.toNNReal` and is bounded by
+no hypothesis, so that a negative value clamps a loss to zero. Their findings are
+held in `scripts/nolints.json` like every other environment linter's, and their fixtures are
+`VCVioTest/Lint/SecurityStatements.lean`.
 
 ### Hybrid Argument Pattern
 
@@ -346,8 +396,8 @@ For a hand-written q-query IND-CPA → DDH hybrid proof:
 3. Per-step reduction: `stepDDHReduction adversary k` maps DDH challenge to hybrid k vs k+1
 4. Telescope: `advantage ≤ q * max_per_step_advantage`
 
-`Examples/ElGamal/Basic.lean` currently obtains its q-query bound by instantiating
-the generic one-time IND-CPA lift in `VCVio/CryptoFoundations/AsymmEncAlg/INDCPA/GenericLift.lean`.
+`Examples/ElGamal/Basic.lean` obtains its q-query bound by instantiating the generic one-time
+IND-CPA lift in `VCVio/CryptoFoundations/AsymmEncAlg/INDCPA/GenericLift.lean`.
 
 ### Oracle Wiring for Stateful Reductions
 
@@ -385,8 +435,9 @@ structure SecurityGame (Adv : Type*) where
   advantage : Adv → ℕ → ℝ≥0∞
 ```
 
-- `SecurityGame.secureAgainst isPPT`: every adversary satisfying `isPPT` has negligible advantage.
-- The predicate `isPPT` is abstract — specialize to `PolyQueries` or custom efficiency notions.
+- `SecurityGame.secureAgainst isPPT`: every adversary in the class has negligible advantage.
+- The adversary-class predicate is abstract: specialize it to `PolyQueries` or a custom
+  efficiency notion.
 
 ### Key reduction/game-hopping lemmas
 
@@ -421,14 +472,17 @@ structure CostModel (spec : OracleSpec ι) (ω : Type) [AddCommMonoid ω] where
 | `WorstCasePolyTime family cm val` | Worst-case poly bound over security parameter |
 | `ExpectedPolyTime family cm val` | Expected poly bound over security parameter |
 
-Key results: `fst_map_costDist` (instrumentation is transparent),
-`probEvent_cost_gt_le_expectedCost_div` (Markov's inequality),
-`WorstCasePolyTime.toExpectedPolyTime`.
+Key results: `fst_map_costDist` (instrumentation is transparent) and
+`prEvent_costDist_gt_le_expectedCost_div` (Markov's inequality).
 
 ## Common Gotchas
 
-1. **Avoid `guard`**: use `return (b == b')` or `return decide (r x w)` instead. `guard` requires `OptionT` / `Alternative`.
+1. **Avoid `guard`**: use `return (b == b')` or `return decide (r x w)` instead. `guard` requires
+   `OptionT` / `Alternative`.
 
-2. **`SymmEncAlg` vs `AsymmEncAlg`**: both are monad-parametric, but symmetric schemes carry a single key type while asymmetric schemes split public and secret keys. Pick the monad at the experiment boundary.
+2. **`SymmEncAlg` vs `AsymmEncAlg`**: both are monad-parametric, but symmetric schemes carry a
+   single key type while asymmetric schemes split public and secret keys. Pick the monad at the
+   experiment boundary.
 
-3. **`ddhGame` uses `$ᵗ Bool`**: the game samples a bit `b`, returns real or random based on `b`, then checks `b == b'`.
+3. **`ddhGame` uses `$ᵗ Bool`**: the game samples a bit `b`, returns real or random based on `b`,
+   then checks `b == b'`.

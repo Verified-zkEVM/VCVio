@@ -6,7 +6,7 @@ Authors: Elias Judin
 
 module
 
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 
 /-!
 # Independent obligations in product extraction

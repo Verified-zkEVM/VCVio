@@ -1,14 +1,29 @@
 # Gotchas and Troubleshooting
 
+The sections are numbered for reference. The guides in `docs/agents/` cite section N as
+"gotcha N", linked to the section, or as `gotchas.md` §N. `AGENTS.md` keeps its own short list,
+*Critical Gotchas*, whose numbers are independent of these sections.
+
 ## Critical (Will Bite You Immediately)
 
 ### 1. Probability semantics require the right spec class
 
-Any file using `evalSPMF`, `probOutput`, `probEvent`, or `Pr[...]` on `OracleComp spec` needs `[IsProbabilitySpec spec]`. `evalDist` / `𝒟[…]` also needs a `MeasurableSpace` on the result type. Lemmas that use uniform cardinalities, `PMF.uniformOfFintype`, or connect `support` to nonzero probability need `[IsUniformSpec spec]`. Plain `support` works on arbitrary `OracleComp spec`.
+`evalDist` / `𝒟[…]` and `Pr{…}[…]` on `OracleComp spec` need `[OracleSpec.AnswerMeasure spec]`,
+and `𝒟[…]` also needs a `MeasurableSpace` on the result type. Uniform answer measures are
+`[OracleSpec.UniformAnswerMeasure spec]`; uniform cardinality lemmas additionally take
+`[Fintype (spec.Range t)]` for the queries they mention. `unifSpec` and `coinSpec` have global
+instances. Plain `support` works on arbitrary `OracleComp spec`.
 
-**Symptom**: "failed to synthesize instance" mentioning `MonadLiftT (OracleComp spec) SPMF`, `IsProbabilitySpec`, `IsUniformSpec`, or `EvalDistCompatible`.
+**Symptom**: "failed to synthesize instance" mentioning `OracleSpec.AnswerMeasure`,
+`UniformAnswerMeasure`, `EvalDistSemantics`, or `MeasurableSpace`.
 
-**Fix**: Add `[IsProbabilitySpec spec]` for arbitrary per-query probability semantics, or `[IsUniformSpec spec]` for uniform oracle semantics. If you already have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and want uniform sampling, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`; for the measure-native surface, `IsUniformMeasureSpec.ofFiniteNonempty spec` needs only `[∀ t, Finite (spec.Range t)] [∀ t, Nonempty (spec.Range t)]`.
+**Fix**: Add `[OracleSpec.AnswerMeasure spec]` for arbitrary per-query answer measures, or
+`[OracleSpec.UniformAnswerMeasure spec]` for uniform answers. Answer measures live on the discrete
+σ-algebra, so answer types need no measurable-space hypotheses. For a concrete spec with finite,
+nonempty answer types, install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec`
+on that spec; a sum of specs gets its instance from `UniformAnswerMeasure.add`, so do not declare
+one on the sum. To convert code written against the removed discrete `Pr[…]` API, see
+[`probability-migration.md`](probability-migration.md).
 
 ### 2. `autoImplicit = false` is set globally in `lakefile.lean`
 
@@ -17,20 +32,36 @@ and do not add `set_option autoImplicit false` in individual files.
 
 **Symptom**: "unknown identifier" for variables you expected Lean to infer.
 
-### 3. `evalSPMF` is `simulateQ`; `evalDist` is measure-valued
+### 3. `evalDist` is the measure fold; `support` needs no measure
 
-`evalSPMF` is `simulateQ` with `m = PMF` and the `IsProbabilitySpec.toPMF` query implementation. Under `[IsUniformSpec spec]`, those query distributions are propositionally the uniform distributions. The `evalSPMF_eq_simulateQ` identity is definitional (`rfl`). The primary `evalDist` is the successful-output measure façade; on discrete free programs it agrees with the direct `FreeM.denote` fold.
+On `OracleComp spec`, `𝒟[mx]` is the successful-output measure of `PFunctor.FreeM.denote`, the
+recursive fold that composes the answer measures chosen by `[OracleSpec.AnswerMeasure spec]` with
+`Measure.bind`; `PFunctor.FreeM.evalDist_eq_denote` states the identity, which holds by `rfl`.
+`Pr{…}[…]` is the expectation of the event's indicator, core's `wp` under the measure
+interpretation; `prEvent_eq_evalDist_map` identifies it with the mass `𝒟[p <$> mx]` puts on
+`True`. `support` is PolyFun's `MonadAttach.support`, the set of possible outputs, and needs no
+measure; `PFunctor.FreeM.support_eq_liftM_univ` identifies it with the fold of the
+every-answer-possible handler into `SetM`.
 
-Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`evalSPMF`/`simulateQ`/`support`/`probOutput`; everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests) cross the boundary through the public equation lemmas (`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`, `PFunctor.FreeM.evalDist_eq_denote`), so the semantics can be re-implemented without touching downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public definitions and definitional equality* in [`module-system.md`](module-system.md).
+Those definitional identities are an implementation detail of `VCVio/EvalDist/**` and
+`VCVio/OracleComp/**`. A proof there may close by `rfl` across `evalDist`/`denote`/`support`.
+Everywhere else (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests),
+proofs cross the boundary through the public equation lemmas
+(`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_eq_evalDist_map`,
+`PFunctor.FreeM.support_eq_liftM_univ`), so the semantics can be re-implemented without touching
+downstream proofs. Existing downstream `rfl` uses are grandfathered, not a precedent. See *Public
+definitions and definitional equality* in [`module-system.md`](module-system.md).
 
 ### 4. `++ₒ` is dead — use `+`
 
-The README and large amounts of commented-out code use `++ₒ` for combining oracle specs. The current API uses standard `+` (`HAdd`).
+`++ₒ` is not defined in VCVio: oracle specifications combine with `+` (`HAdd`), the coproduct of
+their polynomial functors (*OracleSpec Notations* in [`notation.md`](notation.md)). Where an
+example or another development writes `spec₁ ++ₒ spec₂`, write `spec₁ + spec₂`.
 
 ### 5. Delete obsolete commented-out code
 
 Do not keep large commented-out Lean blocks around as reference material,
-especially if they use obsolete patterns (`[= x | ...]`, `++ₒ`, `simulate'`,
+especially if they use obsolete patterns (`Pr[= x | ...]`, `[= x | ...]`, `++ₒ`, `simulate'`,
 `getM`, `guard` via `Alternative`). Delete them instead. This is distinct from
 unfinished live proof attempts, which should be preserved with `stop`.
 Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current style.
@@ -39,7 +70,12 @@ Use `Examples/OneTimePad/Basic.lean` as the canonical reference for current styl
 
 ### 6. `query` resolves to `HasQuery.query`; use `spec.query` for the primitive
 
-The bare `query` identifier is the `export`ed `HasQuery.query`, so writing `query t : OracleComp spec _` produces a monadic value directly and works with `evalSPMF`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked `protected`); reach it via dot notation `spec.query t` (or the fully qualified `OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or pattern-match on the query structure.
+The bare `query` identifier is the `export`ed `HasQuery.query`, so writing
+`query t : OracleComp spec _` produces a monadic value directly and works with `𝒟[…]` and
+`support`. The primitive single-query syntax `OracleQuery spec _` is `OracleSpec.query` (marked
+`protected`); reach it via dot notation `spec.query t` (or the fully qualified
+`OracleSpec.query t`) when you need to apply `liftM`, project `OracleQuery.cont`, or
+pattern-match on the query structure.
 
 ### 7. Core types are thin wrappers with deliberate reducibility
 
@@ -53,10 +89,21 @@ rather than pattern matching on `PFunctor.FreeM.pure`/`roll`.
 
 Two failure modes to recognize under this regime:
 
-- **Dot notation on monadic results fails.** The inferred type of `oa >>= ob` or `liftM (query t)` has head `PFunctor.FreeM`, not `OracleComp`, so `(query t >>= oa).myOracleCompLemma` reports `Invalid field … PFunctor.FreeM.myOracleCompLemma`. State such lemmas in prefix form (`myOracleCompLemma … (query t >>= oa)`); dot notation on plain variables of ascribed type `OracleComp spec α` still works.
-- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance discrimination-tree keys are computed at declaration site; changing transparency locally makes queries normalize differently and instances like `MonadLiftT (OracleComp spec) SetM` silently vanish (`support`, `evalSPMF`, `Pr[…]` all stop elaborating). `toPFunctor` is globally reducible for exactly this consistency reason.
+- **Dot notation on monadic results fails.** The inferred type of `oa >>= ob` or
+  `liftM (query t)` has head `PFunctor.FreeM`, not `OracleComp`, so
+  `(query t >>= oa).myOracleCompLemma` reports `Invalid field … PFunctor.FreeM.myOracleCompLemma`.
+  State such lemmas in prefix form (`myOracleCompLemma … (query t >>= oa)`); dot notation on
+  plain variables of ascribed type `OracleComp spec α` still works.
+- **Never `attribute [local reducible]` a definition that instance keys mention.** Instance
+  discrimination-tree keys are computed at the declaration site; changing transparency locally
+  makes queries normalize differently, and the instances found for `OracleComp spec` silently
+  vanish (`support`, `𝒟[…]`, `Pr{…}[…]` all stop elaborating). `toPFunctor` is globally
+  reducible for exactly this consistency reason.
 
-Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor` under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family can no longer match (typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
+Relatedly, `OracleSpec.toPFunctor_add` is deliberately **not** `@[simp]`: `toPFunctor` occurs
+inside the instance-carrying type of an `OracleComp`, and rewriting `(spec + spec').toPFunctor`
+under a `simulateQ`/`liftM` strands goals in a form the `simulateQ_query` family cannot match
+(typically visible as `simulateQ impl (liftM (query (Sum.inl t)))` refusing to simplify).
 
 Nested sums are a dedicated implicit-transparency boundary. `PFunctor.sum`
 uses the primitive dependent `Sum.rec`, and the OracleSpec `HAdd` instance
@@ -117,8 +164,13 @@ the reducible `ofFn` layer. In the `Domain` form that looped until the heartbeat
 unconstrained `DecidableEq α` (VCVio#772). In the `Range` form the unifier's first-order
 approximation assigns `?spec := β` at a goal `DecidableEq (β a)`, so whenever the exact
 instances fail and only a `classical` fallback remains, the elaborated term silently routed
-through oracle-specification data; `UniformCompatibility.instCompatible` once depended on
-that detour for a `Finset.filter_eq'` rewrite to fire.
+through oracle-specification data.
+
+The hazard is the key, not the mention of an answer type. An instance whose conclusion also
+contains a head that is not reducible is indexed by that head, and is a candidate only for goals
+that contain it. `OracleSpec.AnswerMeasure.isProbabilityMeasure_toMeasure`, which concludes
+`IsProbabilityMeasure (toMeasure t)` on `spec.Range t`, is of this kind: its key is `toMeasure`,
+so a goal about any other measure on an answer type never tries it.
 
 VCVio has no such instances. Write `[DecidableEq ι]` for index equality, and
 `[DecidableEq (spec.Range t)]`, `[Fintype (spec.Range t)]`, `[Inhabited (spec.Range t)]` — or
@@ -128,9 +180,10 @@ built with `ofFn` (`unifSpec`, `coinSpec`, `A →ₒ B`) reduce to their answer 
 combines per-branch instances; a specification defined by a `match` on the query keeps a
 per-query instance proved by `cases` (see `cmaSpec`). The spellings `spec.Range t`, `spec t`, and
 `spec.toPFunctor.B t` are one type at reducible transparency, so a hypothesis in any of them
-serves goals in the others. `IsUniformMeasureSpec` is a proposition
-and derives `finite_range`/`nonempty_range` as theorems, never instances.
-`VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchNative.lean` guard all of
+serves goals in the others. `UniformAnswerMeasure` bundles the answer measures with their
+uniformity, so it is never assumed beside `[AnswerMeasure spec]`, and it derives
+`finite_range`/`nonempty_range` as theorems, never instances.
+`VCVioTest/OracleComp/SpecInstanceSearch.lean` and `SpecInstanceSearchLibrary.lean` guard all of
 this with heartbeat-bounded canaries and an elaborated-term dependency check.
 
 A wildcard-keyed instance over a plain type variable is a different matter when its class is a
@@ -145,7 +198,10 @@ answers for types whose finiteness is known through nothing else (`spec.Range t`
 
 ### 9. Universe polymorphism
 
-`OracleComp` has 3 universe parameters, `SubSpec` has 3 (`u, v, w`: indices `ι : Type u`, `τ : Type v`, shared response universe `w`). Universe unification errors are still common when composing specs or building reductions because the lens-style `MonadLift` parent can drag extra metavariables in.
+`OracleComp` has 3 universe parameters, and so has `SubSpec` (`u, v, w`: indices `ι : Type u`,
+`τ : Type v`, shared response universe `w`). Universe unification errors are common when
+composing specs or building reductions, because the lens-style `MonadLift` parent can drag extra
+metavariables in.
 
 **Fix**: Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
 
@@ -161,78 +217,89 @@ answers for types whose finiteness is known through nothing else (`spec.Range t`
 
 The composition surface already spells the shape to copy: `QueryImpl.parallelStateT`
 (`VCVio/OracleComp/SimSemantics/StateT/Basic.lean`), `QueryImpl.addReaderT`
-(`.../ReaderT/Basic.lean`), `QueryImpl.parallelWriterT` (`.../WriterT/Basic.lean`), and
+(`.../ReaderT/Basic.lean`), `QueryImpl.parallelWriterT` (`.../WriterT/Core.lean`), and
 `VCVio/OracleComp/SimSemantics/Append.lean`. The constraint is always the same: **arbitrary
 index universes, one shared response universe, and `α` in that response universe** —
 `spec₁ + spec₂` goes through a dependent `Sum.rec`, which forces the response universes to agree but
 leaves the index universes free, and `simulateQ` forces `α` into the target monad's source
 universe.
 
-When adding such a law, add a nonzero-universe consumer alongside it. `VCVioTest/UniversePolymorphism.lean`
-is the in-repo canary, and the downstream scratch-consumer CI job builds one from outside
-the package.
+When adding such a law, add a nonzero-universe consumer alongside it.
+`VCVioTest/UniversePolymorphism.lean` is the in-repo canary, and the downstream scratch-consumer
+CI job builds one from outside the package.
 
 ## Proof Patterns
 
-### 10. `grind`/`simp` tagging is split deliberately on probability lemmas
+### 10. Support characterizations stay out of the default `grind` set
 
-`probOutput_bind_eq_tsum` is `@[grind =]` but NOT `@[simp]`: `simp` won't unfold `probOutput` of a
-bind, so use `rw [probOutput_bind_eq_tsum]` or `grind`.
+Bind decomposition of an event is an explicit rewrite, not a default `simp` or `grind` rule:
+`prEvent_bind_eq_lintegral` (or `prEvent_bind_eq_lintegral_of_discrete` when the common draw has a
+discrete measurable space) turns `Pr{let x ← mx; let y ← f x}[p y]` into
+`∫⁻ x, Pr{let y ← f x}[p y] ∂𝒟[mx]`. A draw written as a bind, `Pr{let y ← mx >>= f}[p y]`,
+takes that form under `simp only [expect_norm]`.
 
-Conversely, the support-*characterization* lemmas (`Pr[…] = 0/1 ↔ ∃/∀ x ∈ support …`,
-`support = {x}`, `support = ∅`: `probEvent_eq_zero_iff`, `probEvent_eq_one_iff`, `probOutput_eq_one_iff`,
-`probFailure_eq_one_iff`, `mem_support_bind_iff`, …) are `@[simp]` but deliberately **NOT** `@[grind]`.
-Their RHS introduces an unbounded support quantifier that `grind` Skolemizes into fresh witnesses with
-no finite grounding; tagged *together* they form a re-trigger cycle so a naive `grind` on a probability
-value/event goal would *saturate and time out*. The saturation is **combinatorial** — no single lemma
-saturates alone (a few that sit outside the cycle, e.g. `probEvent_pos_iff` and
-`probFailure_bind_eq_zero_iff`, keep `@[grind =]`); the `probEvent_eq_one_iff` family is the cycle's
-hub. Dropped from the default `grind` set, `grind` instead fails fast. If a `grind` proof genuinely
-needs one, re-supply it: `grind [probEvent_eq_zero_iff]`. The directed single-variable membership
-bridges (`probOutput_eq_zero_iff`, `probOutput_pos_iff`, `mem_finSupport_iff`) stay `@[grind =]`. See
-*`grind` vs `simp` on Probability Goals* in [`probability.md`](probability.md) and the benchmarks
+The support-*characterization* lemmas (`Pr{…}[…] = 0/1 ↔ ∀ x ∈ support …`, `0 < Pr{…}[…] ↔ ∃ x ∈
+support …`: `OracleComp.prEvent_eq_zero_iff`, `OracleComp.prEvent_eq_one_iff`,
+`OracleComp.prEvent_pos_iff`, `OracleComp.evalDist_apply_setOf_eq_one_iff_forall_mem_support`)
+are deliberately **not** `@[grind]`. Their RHS introduces an unbounded support quantifier that
+`grind` Skolemizes into fresh witnesses with no finite grounding, so as default rules they make a
+naive `grind` on a probability goal *saturate and time out* instead of failing fast. They hold
+under `[OracleSpec.UniformAnswerMeasure spec]`, where every possible output has positive mass. If
+a `grind` proof genuinely needs one, re-supply it: `grind [OracleComp.prEvent_eq_zero_iff]`. The
+directed membership bridges (`support_bind`, `mem_support_bind_iff`,
+`mem_finSupport_iff_mem_support`) stay `@[grind =]`. See the benchmarks
 `VCVioTest/ProbabilityTactics.lean` / `VCVioTest/LongChainPrograms.lean`;
-`VCVioTest/GrindFailFast.lean` gates that each dropped lemma stays dropped (and that the opt-in
-still works).
+`VCVioTest/GrindFailFast.lean` gates that each characterization stays out of the default set (and
+that the opt-in still works).
 
 Downstream escape hatches, since these tags are inherited by importing projects: `grind [-lemma]`
 (disable per call), `grind only [...]` (ignore the default set), `attribute [-grind] lemma`
 (unset for a file), and `grind?` (print a minimal `grind only` call).
 
 Tagging discipline, so the split stays deliberate: an unconditional equation tagged `@[simp]` in
-`VCVio/EvalDist/**` or `VCVio/OracleComp/SimSemantics/**` also carries `grind =`, unless it is one
-of the characterization lemmas above (the ratio in those directories is about one to one and the
-gates check both closers). `@[simp, grind]` without `=` is for definitions, where `grind` uses the
+`VCVio/EvalDist/**` or `VCVio/OracleComp/SimSemantics/**` also carries `grind =`, unless its RHS
+introduces an unbounded support quantifier like the characterization lemmas above (the gates
+check both closers). `@[simp, grind]` without `=` is for definitions, where `grind` uses the
 equation lemmas to unfold, not for stated equations. `grind_pattern` and `[grind hom]` are not used
 yet; adopt them per lemma with a gate entry, not as a sweep.
 
-### 11. Plain `vcstep` may solve a probability equality when you only wanted a rewrite
+### 11. `prrw normalize` closes a program equality or fails; `prrw` takes one step
 
-On `Pr[...] = Pr[...]` goals, plain `vcstep` heuristically tries swap, congruence, and
-small bounded compositions. If you need to rewrite and continue, use `vcstep rw` for a
-top-level swap, `vcstep rw under 1` under one shared bind prefix, or
-`vcstep rw congr` / `vcstep rw congr'` to expose a shared outer bind. The manual pattern is:
-```lean
-simp only [← probEvent_eq_eq_probOutput ...]
-rw [probEvent_bind_bind_swap]
-simp only [probEvent_eq_eq_probOutput]
-```
+On `Pr{…}[…] = Pr{…}[…]`, `𝔼{…}[…] = 𝔼{…}[…]` and `𝒟[oa] = 𝒟[ob]` goals, `prrw normalize`
+searches bounded sequences of swaps and congruence steps and succeeds only with one that closes
+the goal; it never leaves a partial rewrite. To rewrite and continue, use `prrw` for a top-level
+swap, `prrw under 1` under one shared bind prefix, or `prrw congr` / `prrw congr'` to expose a
+shared outer bind. `prrw` closes the goal when the swap makes both sides equal, and on events
+and expectations every form leaves the remaining goal in the normal form of `Pr{…}[…]`
+(`simp only [expect_norm]`), stated with nested expectations. The underlying rewrites are
+`OracleComp.wp_swap` / `OracleComp.evalDist_bind_bind_swap` (countable answer types;
+`_of_uniform` variants under `UniformAnswerMeasure`) and `wp_congr_of_support`. A multi-draw
+`Pr{…}[…]` is nested expectations `wp⟦mx⟧ fun x => wp⟦my x⟧ (predInd p)`, so a draw is swapped
+by rewriting under the expectations it is nested in (`conv => arg 2; ext; rw [OracleComp.wp_swap]`);
+a draw written as a bind, `Pr{let y ← mx >>= f}[q y]`, or a literal `wp⟦mx >>= f⟧ g`, is brought
+to that form with `rw [ExpectationWP.wp_bind]` or `simp only [expect_norm]`. Two events
+that read the same but differ in how a draw is written are therefore not the same term until
+one of them is normalized: `simpa only [expect_norm] using h` is the one-line repair.
 
 ### 12. Avoid `guard` in experiments
 
-Use `return (b == b')` or `return decide (r x w)` instead. `guard` requires `OptionT` / `Alternative`.
+Use `return (b == b')` or `return decide (r x w)` instead. `guard` requires `OptionT` /
+`Alternative`.
 
 ### 13. `do`-notation bind uses a different `Bind` instance (Lean 4.29+)
 
-Lean 4.29 changed `do`-block elaboration so the desugared bind may use a `Bind` instance
-that differs syntactically from `Monad.toBind`. This means `pure_bind`, `bind_assoc`, and
-`bind_pure` won't fire via `simp` or `rw` on goals produced by `do` notation in special cases of using more non-standard instances.
+A `do` block elaborates its binds through the `Bind` instance of the monad it is elaborated at.
+When a program is written at a transformer stack, a structure field or a type synonym whose
+instance is not reducibly `Monad.toBind` of the lawful monad, `pure_bind`, `bind_assoc` and
+`bind_pure` may not match the desugared binds.
 
-**Symptom**: `simp [pure_bind]` or `rw [bind_assoc]` does nothing on a `do`-block goal.
+**Symptom**: `simp only [pure_bind]` or `rw [bind_assoc]` does nothing on a `do`-block goal, and
+`set_option pp.explicit true` shows two different `Bind` instances.
 
-**Fix**: Use the restated lemmas from `ToMathlib.Control.Lawful.Basic` (namespace `LawfulMonad`):
-`do_pure_bind`, `do_bind_pure`, `do_bind_assoc`, `do_bind_pure_comp`, `do_map_bind`,
-`do_bind_map_left`. All are `@[simp]`.
+**Fix**: canonicalize the definition (state it at the monad whose instance is the lawful one, or
+`change` the goal to that instance) rather than adding restated monad laws. For `OracleComp`
+programs the standard laws fire; `prrw normalize` and `simp only [expect_norm]` normalize binds
+with `map_eq_bind_pure_comp` and `bind_assoc` before searching.
 
 ### 14. Hypothesis satisfiability is a proof obligation
 
@@ -261,7 +328,8 @@ cryptographically strong or achievable at real parameters.
 The conclusion can be vacuous too. `∃ reduction, bound ≤ advantage reduction` holds for every
 scheme, because adversary types carry no resource bound and `Classical.choice` can pick a
 witness. State such bounds for a named reduction; see
-[Name the reduction in the theorem statement](crypto.md#name-the-reduction-in-the-theorem-statement).
+[Name the reduction in the theorem
+statement](crypto.md#name-the-reduction-in-the-theorem-statement).
 
 ## Module Structure
 
@@ -276,7 +344,8 @@ ToMathlib → Prelude → EvalDist/Defs → OracleComp core → EvalDist bridge
 
 ### 16. Preserve partial proof attempts with `stop`
 
-When a proof attempt is not finished or is currently broken, insert a local `stop` marker instead of deleting large proof blocks. This preserves search context for later agents.
+When a proof attempt is not finished or is broken, insert a local `stop` marker instead of
+deleting large proof blocks. This preserves search context for later agents.
 
 ### 17. `OracleComp.inductionOn` is the canonical eliminator
 
@@ -297,15 +366,15 @@ whose only content is a chain of `import X.A; import X.B`. Each caller imports t
 specific submodule it actually uses.
 
 **Allowed umbrellas** (strictly top-level roots only): root imports such as
-`VCVio.lean`, `ToMathlib.lean`, `Extern.lean`, `HashSig.lean`, `Examples.lean`,
-`LatticeCrypto.lean`, `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
+`VCVio.lean`, `ToMathlib.lean`, `VCVioCslib.lean`, `Extern.lean`, `HashSig.lean`,
+`Examples.lean`, `LatticeCrypto.lean`, `Interop.lean`, `VCVioWidgets.lean`, `VCVioTest.lean`, and
 `LatticeCryptoTest.lean`.
 When a new top-level root is added, extend this list alongside it.
 
 **Not allowed**: umbrellas inside a subdirectory (e.g. a top-level
 `VCVio.CryptoFoundations.FiatShamir` umbrella beside the `VCVio/CryptoFoundations/FiatShamir/`
-folder, or a `VCVio.OracleComp` umbrella beside the `VCVio/OracleComp/` folder). Even if a module "feels
-cohesive", callers must import the specific submodule they use.
+folder, or a `VCVio.OracleComp` umbrella beside the `VCVio/OracleComp/` folder). Even if a module
+"feels cohesive", callers must import the specific submodule they use.
 
 ## Build and Tooling
 
@@ -365,24 +434,25 @@ diacritics in cited author names, which the Mathlib allowlist would otherwise re
 
 The active libraries fit within the 1500-line limit without file-local overrides. Split files
 by responsibility before crossing the limit, preserving established import paths with public
-import façades. `scripts/nolints.json` grandfathers the
-environment-linter findings (`lake lint`) that predate the gate; entries leave it when the finding
-is fixed, and nothing is added to it to silence a new one. The shared driver checks an exact
-baseline and reports stale entries as errors. Run `lake lint -- --prune-baseline` after fixing
-findings: it uses Batteries' update mode in separate temporary directories, collects all seven
-libraries, refuses additions, and atomically writes the reduced file. Never invoke upstream
-`runLinter --update` against the repository baseline directly: it overwrites the file once per
-root module. `-- --style-only` checks source files without building proof libraries;
-`-- --env-only --no-build` uses already-built oleans, one library per process, as CI does.
+import façades. `scripts/nolints.json` grandfathers the environment-linter findings (`lake lint`)
+that predate the gate; entries leave it when the finding is fixed, and nothing is added to it to
+silence a new one. The shared driver checks an exact baseline and reports stale entries as
+errors. Run `lake lint -- --prune-baseline` after fixing findings: it uses Batteries' update mode
+in separate temporary directories, collects all eight checked libraries (the seven default proof
+libraries and `VCVioCslib`), refuses additions, and atomically writes the reduced file. Never
+invoke upstream `runLinter --update` against the repository baseline directly: it overwrites the
+file once per root module. `-- --style-only` checks source files without building proof
+libraries; `-- --env-only --no-build` uses already-built oleans, one library per process, as CI
+does.
 The [linter cleanup ledger](../design/linter-cleanup.md) records the audit, completed groups,
 and remaining migrations by their effect on callers.
 
 ### 24. After adding new `.lean` files, run `./scripts/update-lib.sh`
 
 This regenerates the active module root files covered by the build import check:
-`ToMathlib.lean`, `VCVio.lean`, `LatticeCrypto.lean`, `Extern.lean`,
+`ToMathlib.lean`, `VCVio.lean`, `VCVioCslib.lean`, `LatticeCrypto.lean`, `Extern.lean`,
 `HashSig.lean`, `Examples.lean`, `VCVioWidgets.lean`, and `VCVioTest.lean`.
-It also updates the legacy `Interop.lean` umbrella without enabling module mode.
+It also updates the dormant `Interop.lean` umbrella without enabling module mode.
 CI runs `scripts/check-imports.sh`, which regenerates the umbrellas and fails if any differs
 from the committed file; `Interop` remains dormant and is migrated separately.
 
@@ -393,10 +463,9 @@ Start active source files with `module`, use public imports deliberately, and pu
 for downstream compatibility; new files use plain `public section` with per-declaration `@[expose]`
 where unfolding is part of the API, and `scripts/check-expose-boundary.sh` keeps the per-library
 count of broadly exposed files from growing. Executable and runtime implementation modules should
-use opaque `public section` when downstream code does not need definitional unfolding. Never reach for
-`backward.privateInPublic` or
-`backward.proofsInPublic`; make helper visibility explicit or give proof terms enough type
-information to avoid public metavariables.
+use opaque `public section` when downstream code does not need definitional unfolding. Never
+reach for `backward.privateInPublic` or `backward.proofsInPublic`; make helper visibility
+explicit or give proof terms enough type information to avoid public metavariables.
 
 The dormant `Interop` library is intentionally excluded until its separate migration.
 `LatticeCryptoTest.lean` remains a curated umbrella and `HashSigTest` has no root umbrella because
@@ -404,8 +473,8 @@ their executable modules contain colliding root-level `main` declarations.
 
 ### 26. Lean toolchain and Mathlib version must stay in sync
 
-Both currently `v4.34.0`: `lean-toolchain` pins `leanprover/lean4:v4.34.0` and
-`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.34.0"`.
+Both currently `v4.35.0-rc3`: `lean-toolchain` pins `leanprover/lean4:v4.35.0-rc3` and
+`lakefile.lean` has `require "leanprover-community" / "mathlib" @ git "v4.35.0-rc3"`.
 When upgrading, update both lines simultaneously.
 
 ### 27. Use public references in shared docs
@@ -420,7 +489,8 @@ For relational program logic, start with
 
 ### 29. Agent guidance files must be committed
 
-Agents dispatched to `git worktree` clones need to read `AGENTS.md`, `docs/agents/`, and any other guidance files. Ensure these are committed so all worktrees see them.
+Agents dispatched to `git worktree` clones need to read `AGENTS.md`, `docs/agents/`, and any
+other guidance files. Ensure these are committed so all worktrees see them.
 
 ### 30. Restack with `--onto` after folding commits into a base branch
 
@@ -474,3 +544,131 @@ The fix is source organisation, not an option (`deprecated.oldSectionVars` is de
 `variable` line states only what the theorems in its scope share, per-declaration binders or a
 narrower `section` carry the rest, derivable assumptions are derived in proofs, and `omit` marks
 the genuine exception. See *Section Variables* in `CONTRIBUTING.md`.
+
+### 32. An expectation carries its answer type in its instance
+
+An event or expectation is core's `wp prog post ⊥`, and the answer type of `prog` appears three
+times: in the program, in the observation's domain, and in the interpretation instance
+`instWPOfWPMonad … (wpMonad m)`. `simp` and `dsimp` never rewrite instance arguments, so a
+type-level rewrite such as `unlinkOracleSpec_range_inl`, which identifies an answer type with its
+unfolding, cannot repair an equation whose two sides differ in type only up to that unfolding:
+the exact `wp` laws then fail to match. Normalize while the goal is still well-typed
+(`simp only [expect_norm]`), then restate the answer type with
+`change Pr{let r ← (show ProbComp (T × _) from prog)}[…] ≤ _`, and only then rewrite with the
+type-changing equation (`Examples/PRFTagReader/MultipleBadCollision.lean`).
+
+### 33. Core's concrete monads carry direct `WP` instances
+
+Core interprets `Id`, `Option`, `Except ε`, `EStateM ε σ` and the `StateT`, `ReaderT`, `ExceptT`,
+`OptionT` lifts through direct instances (`Option.wpInst`, `StateT.wpInst`, …), and instance
+search tries them before the low-priority instance it derives from a `WPMonad`. The assertion
+and exception types are output parameters, so the first instance found fixes them: a `letI` or
+local `WPMonad` on one of these monads, or a lemma hypothesis `[WPMonad Option Pred EPred]`, does
+not reach `wp` on that monad. Pass the interpretation explicitly with dot notation,
+`(inst.toWP α).wp x post epost`, as core's `WP.wp` documents
+(`ToMathlib/Control/Monad/Algebra.lean`, `VCVioTest/Foundations.lean`). Every scoped
+interpretation therefore registers a direct `WP` instance beside its `WPMonad`, and the
+priorities order the scopes. The generic measure scopes (`ExpectationWP.Lower.wpInst`,
+`ExpectationWP.Upper.wpInst`, `ExpectationWP.Probabilistic.wpInst`) sit at `1050`, above core's
+direct instances. The scoped readings of `OracleComp` (`OracleComp.Possible`, `OracleComp.Lower`,
+`OracleComp.Upper`) and its probability-valued interpretation `OracleComp.Probabilistic` sit at
+`1100`, and the `Dispatch` sub-scopes of the four readings at `1200`. `OracleComp` has no direct
+core instance: its global reading is the necessary one, reached through core's low-priority
+derivation, and a generic scope opened beside an `OracleComp` reading never outranks it
+(`VCVioTest/ProgramLogic/ReadingScopes.lean`). The notations `Pr{…}[…]`, `𝔼{…}[…]` and
+`wp⟦oa⟧ g` spell the measure interpretation for each draw themselves, so a draw in `Option` or
+`Id` reads that interpretation and not core's direct instance.
+
+### 34. Write the absent exception postcondition as `Lean.Order.bot`
+
+The empty exception stack `EStack⟨⟩` is `Unit`, which also carries Mathlib's `Bot`. Under
+`open Lean.Order`, a bare `⊥` of that type is ambiguous; without the `open`, it elaborates to
+Mathlib's `⊥`, a different head from the one `simp` lemmas are stated with. Core's triple notation
+`⦃ P ⦄ x ⦃ Q ⦄` expands to `Lean.Order.bot`, and so do `Pr{…}[…]` and `𝔼{…}[…]`: write
+`Lean.Order.bot` in statements, and `estack⟨e₁, …⟩` for an explicit stack of postconditions.
+
+### 35. `vcgen` is core's tactic; VCVio's unary tactics are `prvcgen` and `prrw`
+
+Core Lean's `vcgen` is in scope in every file that imports `VCVio`. It walks `Std.WP` triples
+through the `@[spec]` catalogue, is experimental in v4.35 (acknowledged once for the package in
+`lakefile.lean`), and runs in the reading of `OracleComp` that the file's scopes select:
+`Prop`-valued triples under the global necessary reading, such as the handler specifications in
+`Unary/HandlerSpecs.lean`, and lower-bound triples under `open scoped OracleComp.Lower`
+(`Unary/WP/LowerSpecs.lean`). It does not lower `Pr{…}[…]` goals, which enter through the
+bridge lemmas of *Core `vcgen` on oracle computations* in `program-logic.md`.
+
+VCVio's unary tactics are `prvcgen`, which picks the bridge and the reading from the goal and runs
+core `vcgen` in that reading's `Dispatch` scope with the experimental option set, and `prrw`, which
+rewrites equalities between the probabilities of two programs; `rvcgen` / `rvcstep` are the
+relational ones. Unary rules are core `@[spec]` theorems: `@[vcspec]` registers relational rules
+only and rejects a triple of one program. `Spec.simulateQ` (`Unary/SimulateQSpecs.lean`) steps
+through `simulateQ handler oa` with a handler invariant passed as
+`prvcgen invariants · fun s => I s`. The alternatives are a whole-program lift such as
+`simulateQ_triple_preserves_invariant`, or `wp_simulateQ_eq` to carry an expectation across.
+None of VCVio's tactics shares a leading token with core's, so a bare `vcgen` always elaborates
+core's tactic; `VCVioTest/ProgramLogic/VCGenNames.lean` pins this. The `vcvio.vcgen.*` options
+(`maxPasses`, `traceSteps`, `time`, `traceCachedRules`) configure the planner of `rvcgen` (and
+`time` also that of `prrw normalize`), not core's `vcgen`.
+
+### 36. Core `vcgen` splits lattice connectives only
+
+`vcgen` continues through a rule's precondition only where it is built from lattice connectives
+(`⊓`, `⇨`, `⌜·⌝`, `⊤`, `Lean.Order.iInf`); with `Prop` assertions it also introduces `∀` and `→`.
+Anything else (`∑`, `if`, `∧`) is left as a verification condition as it stands, and in `ℝ≥0∞`
+the programs inside a sum stay unprocessed there. A rule meant to be stepped through states
+its precondition with these connectives, as `OracleComp.Lower.Spec.monadLift_query` does
+with `Lean.Order.iInf` and PolyFun's `Spec.guard_OptionT` does with `⊓` and `⇨`. `Lean.Order.iInf`
+takes a `Type`-indexed binder, so a condition such as `a ∈ support oa` is expressed through the
+subtype `{a // a ∈ support oa}`. Exact rules stated as averages (`Spec.uniformSample_sum`) belong
+at the last draw of a program; exact values in general are computed by `simp` on the normal form
+of `Pr{…}[…]` (`simp only [expect_norm, expect_eval]`).
+
+### 37. An upper-bound triple's assertions have type `ℝ≥0∞ᵒᵈ`
+
+Under `OracleComp.Upper` a triple `⦃ pre ⦄ oa ⦃ post ⦄` states `wp⟦oa⟧ post ≤ pre` through the
+order duals, so its assertions have type `ℝ≥0∞ᵒᵈ`. The triple notation elaborates the
+precondition before it looks up the interpretation: `⦃ ε ⦄ oa ⦃ … ⦄` with `ε : ℝ≥0∞` selects the
+carrier `ℝ≥0∞`, which the scope does not interpret, and even `(ε : ℝ≥0∞ᵒᵈ)` keeps the inferred
+type. Write `toDual ε` (the bridges `OracleComp.Upper.wp_le_iff_triple` and
+`prEvent_le_iff_triple` produce this form), or leave arithmetic unascribed so that it elaborates
+in `ℝ≥0∞ᵒᵈ`. A term elaborated in `ℝ≥0∞` and placed in `ℝ≥0∞ᵒᵈ` by unfolding `OrderDual`
+type-checks, but `simp` then matches its subterms against the wrong carrier and leaves the
+verification conditions unsimplified. Read a verification condition in `ℝ≥0∞` with
+`simp only [upper_readback]`, whose lemmas include `OracleComp.Upper.rel_iff`,
+`OrderDual.ofDual_toDual`, `OracleComp.Upper.ofDual_wp` and `ofDual_add`, before the default
+`simp` set, which distributes `toDual` over arithmetic (`toDual_add`) first and leaves
+`toDual a ≤ toDual b + toDual c`. `prvcgen` applies the set to the conditions it leaves.
+
+On a stack the dual reading's default exception postcondition charges a failure the dual's bottom,
+`toDual ⊤`: a raw `⦃ toDual ε ⦄ x ⦃ post ⦄` for `x : OptionT (OracleComp spec) α` holds only when
+`x` never fails. State the exception postcondition that charges a failure `0`,
+`⦃ toDual ε ⦄ x ⦃ post; (fun _ => toDual 0, Lean.Order.bot) ⦄`; the bridges
+`OracleComp.Upper.OptionT.wp_le_iff_triple` and `….ExceptT.wp_le_iff_triple`, which `prvcgen`
+uses, produce that form from `Pr{…}[…] ≤ ε` (*Transformer stacks* in `program-logic.md`).
+
+### 38. One reading per `vcgen` call; `Dispatch` scopes outrank file-level readings
+
+Core `vcgen` rebuilds each rule for the interpretation that instance search finds for the
+program's type. A triple of one reading is therefore decomposed only while that reading is the
+highest-priority one: with `OracleComp.Upper` or `OracleComp.Lower` opened at file level, a
+necessary triple fails to build its rules, and a bridged lower- or upper-bound triple fails with
+no scope open. The failure is loud ("failed to synthesize WP …"); no other reading is
+substituted. Each reading has a `Dispatch` sub-scope at priority `1200`, with a direct `WP`
+instance that also outranks `ExpectationWP.Lower.wpInst`, so
+`open scoped OracleComp.Upper.Dispatch in vcgen` runs `vcgen` in that reading whatever the file
+opens; `prvcgen` uses these scopes.
+
+### 39. Readings are installed at the base; a reading constructor at a stack type is not the lift
+
+A reading of `OracleComp spec` lifts to `OptionT (OracleComp spec)`, `ExceptT ε (OracleComp spec)`
+and `StateT σ (OracleComp spec)` through core's transformer instances, one equation each
+(`OptionT.wp_apply_eq`, …). The transformer contributes the case split on the outcome and the
+base reading the modality, so a failure is a violation under the necessary reading, no witness
+under the possible one, and worth the exception assertion under the expectation (`0` for
+`Pr{…}`). A reading constructor applied *at the stack type* is a different interpretation:
+`MonadAttach.toWPMonadDemonic` at `OptionT m` quantifies over the present outputs and ignores
+failures, so a triple under it is weaker than the lifted one and is not what `Pr{…} = 1` states.
+Install a reading at the base only (`attribute [local instance] MonadAttach.toWPMonadDemonic`
+also catches the stack; see *Generic monads* in `program-logic.md`), and read a stack through
+its run with `OptionT.wp_eq_run`, `Spec.run_OptionT'` and their `ExceptT`/`StateT` forms
+(*Transformer stacks* in `program-logic.md`).

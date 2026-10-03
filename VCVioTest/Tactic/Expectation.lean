@@ -6,44 +6,44 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.EvalDist.Expectation
+public import VCVio.EvalDist.Defs.Measure.Core
 
 /-!
 # Structural simplification of expectations
 
-Mapping a computation precomposes the payoff without expanding an expectation into a sum.
-These ordinary-import tests require only a lawful subprobability lift, with no support semantics
-or losslessness assumptions. The negative probe isolates the contribution of the map rule.
+An expectation is an integral against the output measure. Mapping a computation precomposes the
+payoff without unfolding the integral. These tests need only discrete measurable structures on the
+outputs, with no support semantics or losslessness assumptions. The negative probe isolates the
+contribution of the map rule.
 -/
 
 public section
 
-open OracleComp.EvalDist
+open MeasureTheory
 open scoped ENNReal
 
 namespace VCVioTest.Tactic.Expectation
 
 universe u v
 
-variable {m : Type u → Type v} [Monad m] [LawfulMonad m]
-  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF] {α β γ : Type u}
+variable {m : Type u → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α β γ : Type u}
+  [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β] [DiscreteMeasurableSpace β]
+  [MeasurableSpace γ] [DiscreteMeasurableSpace γ]
 
 example (mx : m α) (f : α → β) (g : β → ℝ≥0∞) :
-    expectedValue (f <$> mx) g = expectedValue mx (fun x => g (f x)) := by simp
+    ∫⁻ y, g y ∂𝒟[f <$> mx] = ∫⁻ x, g (f x) ∂𝒟[mx] := by simp
 
 example (mx : m α) (f : α → β) (g : β → γ) (h : γ → ℝ≥0∞) :
-    expectedValue (g <$> (f <$> mx)) h = expectedValue mx (fun x => h (g (f x))) := by simp
+    ∫⁻ z, h z ∂𝒟[g <$> (f <$> mx)] = ∫⁻ x, h (g (f x)) ∂𝒟[mx] := by simp
 
 example (mx : m α) (f : Fin 3 → α → β) (g : β → ℝ≥0∞) :
-    ∑ i, expectedValue (f i <$> mx) g = ∑ i, expectedValue mx (fun x => g (f i x)) := by simp
-
-example (mx : SPMF Empty) (f : Empty → Unit) (g : Unit → ℝ≥0∞) :
-    expectedValue (f <$> mx) g = expectedValue mx (fun x => g (f x)) := by simp
+    ∑ i, ∫⁻ y, g y ∂𝒟[f i <$> mx] = ∑ i, ∫⁻ x, g (f i x) ∂𝒟[mx] := by simp
 
 /-- Without the map rule, a generic mapped expectation is not simplified. -/
 example (mx : m α) (f : α → β) (g : β → ℝ≥0∞) :
-    expectedValue (f <$> mx) g = expectedValue mx (fun x => g (f x)) := by
-  fail_if_success solve | simp [-expectedValue_map]
+    ∫⁻ y, g y ∂𝒟[f <$> mx] = ∫⁻ x, g (f x) ∂𝒟[mx] := by
+  fail_if_success solve | simp [-lintegral_evalDist_map_of_discrete]
   simp
 
 end VCVioTest.Tactic.Expectation

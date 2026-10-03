@@ -14,7 +14,7 @@ public import PolyFun.PFunctor.Handler.Normalization
 
 `OracleMachine.runAgainst` runs a machine adversary against a stateful probabilistic
 responder (`ProbResponder`): the machine's monad-parametric run `runWith` at
-`m := StateT R.State SPMF`, fed the responder's handler and run from the responder
+`m := StateT R.State ProbComp`, fed the responder's handler and run from the responder
 state (`runAgainst_eq_runWith_run` is the definitional canary). The responder state
 comes first in the input pair, matching `OracleStrategy.stepAgainst`; the output pair
 is `(readout, final responder state)` in `StateT.run` order, value first.
@@ -24,9 +24,11 @@ lemmas rather than re-proven: a returned state is Dirac on its value at every fu
 (`runAgainst_of_view_return`, from `runWith_return`), zero fuel cuts an unresolved
 query off (`runAgainst_zero_of_view_query`, from `runWith_query_zero`), and the wired
 step law `runAgainst_succ_of_view_query` is `runWith_query_succ_stateT` read at
-`m := SPMF`: one unit of fuel jointly samples the answer and next responder state,
-then continues. VCVio contributes the `SPMF` semantics; the constant-state collapse
-`runAgainst_ofHandlerFamily` recovers the memoryless run against the selected handler.
+`m := ProbComp`: one unit of fuel jointly samples the answer and next responder state,
+then continues. VCVio contributes the measure semantics of `ProbComp`; the constant-state collapse
+`runAgainst_ofHandlerFamily` recovers the memoryless run against the selected handler, and
+`runAgainst_evalDistEq` shows that the run's distribution does not depend on which executable
+realization of the responder drives it.
 
 `runAgainst` is deliberately *not* an image of `OracleStrategy.iterateAgainst` in
 general: early stopping matters. Against a stateful responder, running past the
@@ -50,18 +52,18 @@ open OracleSpec PFunctor PFunctor.DynSystem
 
 namespace OracleComp.OracleMachine
 
-variable {ι : Type u} {spec : OracleSpec.{u, u} ι} {α β : Type u}
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι} {α β : Type}
 
 /-! ## The wired run -/
 
 /-- The fuelled run of a machine against a stateful responder: the machine's
-monad-parametric run `runWith` at `m := StateT R.State SPMF`, fed the responder's
+monad-parametric run `runWith` at `m := StateT R.State ProbComp`, fed the responder's
 handler and run from the responder state. Input pair is responder-state-first
 (matching `OracleStrategy.stepAgainst`); output pair is `(readout, final responder
 state)` in `StateT.run` order. Early stopping at the first returned value is
 inherited from `runWith`. -/
 noncomputable def runAgainst (M : OracleMachine spec α β) (R : ProbResponder spec)
-    [R.IsExecutable] (k : ℕ) (p : R.State × M.State) : SPMF (Option β × R.State) :=
+    [R.IsExecutable] (k : ℕ) (p : R.State × M.State) : ProbComp (Option β × R.State) :=
   (M.runWith R.toQueryImpl k p.2).run p.1
 
 /-- Regression canary: the wired run is definitionally the stateful `runWith` in
@@ -90,13 +92,13 @@ theorem runAgainst_zero_of_view_query (M : OracleMachine spec α β)
 
 /-- **The wired step law**: on a querying state, one unit of fuel of the wired run
 jointly samples the responder's answer and next state, then continues — PolyFun's
-`runWith_query_succ_stateT` read at `m := SPMF`. -/
+`runWith_query_succ_stateT` read at `m := ProbComp`. -/
 theorem runAgainst_succ_of_view_query (M : OracleMachine spec α β)
     (R : ProbResponder spec) [R.IsExecutable] {s : M.State} {t : spec.Domain}
     {next : spec.Range t → M.State} (hview : M.view s = Sum.inr ⟨t, next⟩)
     (k : ℕ) (r : R.State) :
     M.runAgainst R (k + 1) (r, s) =
-      ProbResponder.IsExecutable.answerSPMF (R := R) r t >>= fun q =>
+      ProbResponder.IsExecutable.answerComp (R := R) r t >>= fun q =>
         M.runAgainst R k (q.2, next q.1) :=
   M.runWith_query_succ_stateT R.toQueryImpl k s t next hview r
 
@@ -105,7 +107,7 @@ theorem runAgainst_succ_of_view_query (M : OracleMachine spec α β)
 /-- Against a constant-state responder the wired run is the memoryless machine run
 against the selected handler, with the setup carried along unchanged: the machine-run
 form of `OracleStrategy.iterateAgainst_ofHandlerFamily`. -/
-@[simp] theorem runAgainst_ofHandlerFamily {Γ : Type u} (h : Γ → ProbHandler spec)
+@[simp] theorem runAgainst_ofHandlerFamily {Γ : Type} (h : Γ → ProbHandler spec)
     (M : OracleMachine spec α β) (k : ℕ) (s : M.State) (γ : Γ) :
     M.runAgainst (.ofHandlerFamily h) k (γ, s) =
       (fun ob => (ob, γ)) <$> M.runWith (h γ) k s := by
@@ -126,17 +128,48 @@ form of `OracleStrategy.iterateAgainst_ofHandlerFamily`. -/
     | inr q =>
       obtain ⟨t, next⟩ := q
       calc M.runAgainst (.ofHandlerFamily h) (k + 1) (γ, s)
-          = ProbResponder.IsExecutable.answerSPMF
+          = ProbResponder.IsExecutable.answerComp
               (R := ProbResponder.ofHandlerFamily h) γ t >>= fun p =>
               M.runAgainst (.ofHandlerFamily h) k (p.2, next p.1) :=
             M.runAgainst_succ_of_view_query (.ofHandlerFamily h) hview k γ
         _ = h γ t >>= fun a =>
               (fun ob => (ob, γ)) <$> M.runWith (h γ) k (next a) := by
-            rw [ProbResponder.answerSPMF_ofSPMF]
+            rw [ProbResponder.answerComp_ofQueryImpl]
             simp only [ProbResponder.ofHandlerFamily, bind_map_left]
             exact bind_congr fun a => ih (next a)
         _ = (fun ob => (ob, γ)) <$> M.runWith (h γ) (k + 1) s := by
             rw [M.runWith_query_succ (h γ) k s t next hview, map_bind]
+
+/-! ## Independence of the executable realization -/
+
+/-- The wired run has the same distribution under every executable realization of the
+responder: the kernel determines each realization up to equality in distribution
+(`ProbResponder.IsExecutable.answerComp_evalDistEq`), and the run only samples it. The two
+realizations are explicit arguments selected with `letI`, the instance binder of `runAgainst`
+being anonymous. -/
+theorem runAgainst_evalDistEq (M : OracleMachine spec α β) (R : ProbResponder spec)
+    (E₁ E₂ : R.IsExecutable) (k : ℕ) (r : R.State) (s : M.State) :
+    (letI := E₁; M.runAgainst R k (r, s)) =ᵈ (letI := E₂; M.runAgainst R k (r, s)) := by
+  induction k generalizing r s with
+  | zero =>
+    cases hview : M.view s with
+    | inl b =>
+      rw [@runAgainst_of_view_return _ _ _ _ M R E₁ _ _ hview,
+        @runAgainst_of_view_return _ _ _ _ M R E₂ _ _ hview]
+    | inr q =>
+      rw [@runAgainst_zero_of_view_query _ _ _ _ M R E₁ _ _ _ hview,
+        @runAgainst_zero_of_view_query _ _ _ _ M R E₂ _ _ _ hview]
+  | succ k ih =>
+    cases hview : M.view s with
+    | inl b =>
+      rw [@runAgainst_of_view_return _ _ _ _ M R E₁ _ _ hview,
+        @runAgainst_of_view_return _ _ _ _ M R E₂ _ _ hview]
+    | inr q =>
+      obtain ⟨t, next⟩ := q
+      rw [@runAgainst_succ_of_view_query _ _ _ _ M R E₁ _ _ _ hview,
+        @runAgainst_succ_of_view_query _ _ _ _ M R E₂ _ _ _ hview]
+      exact (ProbResponder.IsExecutable.answerComp_evalDistEq R E₁ E₂ r t).bind_congr
+        fun q => ih q.2 (next q.1)
 
 /-! ## Interface wrapping: reductions as lenses
 
@@ -145,7 +178,7 @@ Installing an interface translation on a machine adversary is PolyFun's
 same lens: wrapping the adversary forward equals pulling the challenger's responder
 back. -/
 
-variable {ι' : Type u} {spec' : OracleSpec.{u, u} ι'}
+variable {ι' : Type} {spec' : OracleSpec.{0, 0} ι'}
 
 /-- **The run-level interface-wrapping adjunction**: running the wrapped machine
 against a `spec'`-responder equals running the original machine against the responder

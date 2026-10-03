@@ -24,10 +24,14 @@ class ValidationTests(unittest.TestCase):
                      "check-expose-boundary", "test-complexity-backend-isolation",
                      "check-complexity-backend-isolation", "check-extern-isolation",
                      "check-interop-isolation", "test-axiomsweep",
-                     "test-comment-fences", "test-initsweep"):
+                     "test-comment-fences", "test-initsweep", "test-docnames"):
             self.script(scripts / f"{name}.sh", 'exit 0\n')
         for name in ("test-check-imports.py", "test-validation.py", "test-lint.py", "check-agent-docs.py",
-                     "extract-doc-fragments.py"):
+                     "extract-doc-fragments.py", "test-migrate-native-probability.py",
+                     "check-reading-citations.py", "test-check-reading-citations.py",
+                     "check-doc-names.py", "spec-coverage.py", "test-spec-coverage.py",
+                     "check-lifted-law-parity.py", "test-lifted-law-parity.py",
+                     "test-module-times.py", "test-classify-migration-errors.py"):
             (scripts / name).write_text("pass\n")
         # Not a no-op stub: the default pass has to be shown to reach it.
         (scripts / "check-comment-fences.py").write_text(

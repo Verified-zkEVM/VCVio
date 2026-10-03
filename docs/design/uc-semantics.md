@@ -1,10 +1,10 @@
 # Reactive UC semantics over polynomial interfaces
 
-Status: accepted implementation direction, September 13, 2026. The implementation ledger is
-[polynomial-composition-evidence.md](polynomial-composition-evidence.md); unchecked milestones
-there remain obligations. This document consolidates the semantic review of VCVio #494 and #633.
-The [static computational UC campaign](uc-campaign.md) gives the next implementation sequence
-and the source-backed complexity adoption decision.
+Status: accepted implementation direction, September 13, 2026. The
+[composition evidence ledger](polynomial-composition-evidence.md) records the first milestones;
+its unchecked items remain obligations. This document consolidates the semantic review of
+VCVio #494 and #633. The [static computational UC campaign](uc-campaign.md) gives the next
+implementation sequence and the source-backed complexity adoption decision.
 
 ## Semantic contract
 
@@ -91,7 +91,7 @@ A context-transforming function does not become an operational simulator just by
 name. Constant-zero and constant-one services must be distinguishable, and leaking plaintext must
 invalidate the OTP security claim.
 
-The first operational spike is now `Examples/OneTimePad/Reactive{,/Security,/Separation}.lean`.
+The first operational spike is `Examples/OneTimePad/Reactive{,/Security,/Separation}.lean`.
 Its environment chooses a message jointly with private auxiliary state and observes the actual
 reply while retaining that state. The auxiliary state stays in the environment's continuation;
 only the message crosses the packet boundary. A separate
@@ -104,8 +104,10 @@ The ideal service stores the message; the simulator's ciphertext sampler has no 
 
 This is a restricted single-use authenticated service model. The delivery adversary is an atomic
 effectful program, and sender, channel, and receiver are aggregated in the service actor. The
-result does not yet supply separate adversary/channel processes, arbitrary side interactions,
-graph/plug factorization, or PPT closure. Those remain the next gates for the broader UC claim.
+result does not supply separate adversary/channel processes, arbitrary side interactions,
+graph/plug factorization, or PPT closure. The [UC campaign](uc-campaign.md) adds a separated
+single-use OTP and the routed graph/plug factorizations; arbitrary side interactions and PPT
+closure remain gates for the broader UC claim.
 
 ## Adversarial evidence
 

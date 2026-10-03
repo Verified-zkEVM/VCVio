@@ -50,18 +50,15 @@ lemma prEvent_forall_coord_mOfFn {α : Type} {m : Type → Type v}
     (n : ℕ) (g : Fin n → m α) (p : (i : Fin n) → α → Prop) :
     Pr{let v ← Fin.mOfFn n g}[∀ i, p i (v i)] = ∏ i, Pr{let x ← g i}[p i x] := by
   induction n with
-  | zero => simp [Fin.mOfFn, evalDist_pure]
+  | zero => simp [Fin.mOfFn]
   | succ n ih =>
-      simpa only [Fin.mOfFn, bind_assoc, pure_bind, Fin.forall_fin_succ,
-        Fin.cons_zero, Fin.cons_succ, Fin.prod_univ_succ, ih] using
-        prEvent_bind_bind_and (g 0) (Fin.mOfFn n fun i ↦ g i.succ)
-          (p 0) (fun rest ↦ ∀ i, p i.succ (rest i))
+      simp [Fin.mOfFn, Fin.forall_fin_succ, Fin.prod_univ_succ, ih]
 
 private lemma prEvent_coord_eq_mul_of_forall {α ι : Type} {m : Type → Type v}
-    [Monad m] [EvalDistSemantics m]
+    [Monad m] [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     [Fintype ι] [DecidableEq ι] (joint : m (ι → α)) (g : ι → m α)
     (hjoint : ∀ p : ι → α → Prop,
-      Pr{let v ← joint}[∀ j, p j (v j)] = ∏ j, Pr{let x ← g j}[p j x])
+      Pr{let v ← joint}[∀ j, p j (v j)] = ∏ j, Pr{let x ← g j}[(p j) x])
     (i : ι) (p : α → Prop) :
     Pr{let v ← joint}[p (v i)] =
       Pr{let x ← g i}[p x] * ∏ j ∈ Finset.univ.erase i, Pr{let _ ← g j}[True] := by
@@ -95,8 +92,7 @@ lemma prEvent_coord_mOfFn_le {α : Type} {m : Type → Type v}
     (n : ℕ) (g : Fin n → m α) (i : Fin n) (p : α → Prop) :
     Pr{let v ← Fin.mOfFn n g}[p (v i)] ≤ Pr{let x ← g i}[p x] := by
   rw [prEvent_coord_mOfFn_eq_mul]
-  exact mul_le_of_le_one_right bot_le (Finset.prod_le_one fun _ _ ↦
-    MeasureTheory.measure_le_one _ _)
+  exact mul_le_of_le_one_right bot_le (Finset.prod_le_one fun _ _ ↦ prEvent_le_one _)
 
 /-- A coordinate marginal is exact when every other factor has full success mass. -/
 lemma prEvent_coord_mOfFn {α : Type} {m : Type → Type v}
@@ -169,8 +165,7 @@ lemma prEvent_coord_mPi_le {α ι : Type} {m : Type → Type v}
     Pr{let v ← Fintype.mPi g}[p (v i)] ≤ Pr{let x ← g i}[p x] := by
   classical
   rw [prEvent_coord_mPi_eq_mul]
-  exact mul_le_of_le_one_right bot_le (Finset.prod_le_one fun _ _ ↦
-    MeasureTheory.measure_le_one _ _)
+  exact mul_le_of_le_one_right bot_le (Finset.prod_le_one fun _ _ ↦ prEvent_le_one _)
 
 /-- Other factors with full success mass give an exact coordinate event marginal. -/
 lemma prEvent_coord_mPi {α ι : Type} {m : Type → Type v}

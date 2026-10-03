@@ -34,11 +34,11 @@ def simulateQ {ι} {spec : OracleSpec ι} {r : Type u → Type _} [Monad r]
 variable {ι} {spec : OracleSpec ι} {r m n : Type u → Type*}
     [Monad r] (impl : QueryImpl spec r)
 
-@[simp, grind =, game_rule]
+@[simp, grind =, expect_eval]
 lemma simulateQ_pure (x : α) :
     simulateQ impl (pure x : OracleComp spec α) = pure x := rfl
 
-@[simp, grind =, game_rule]
+@[simp, grind =, expect_eval]
 lemma simulateQ_bind [LawfulMonad r] (mx : OracleComp spec α) (my : α → OracleComp spec β) :
     simulateQ impl (mx >>= my) = simulateQ impl mx >>= fun x => simulateQ impl (my x) := by
   unfold simulateQ; exact PFunctor.FreeM.liftM_bind impl mx my
@@ -59,7 +59,7 @@ theorem simulateQ_isMonadHom [LawfulMonad r] (impl : QueryImpl spec r) :
 lemma simulateQ'_apply [LawfulMonad r] (impl : QueryImpl spec r) (mx : OracleComp spec α) :
     simulateQ' impl mx = simulateQ impl mx := rfl
 
-@[simp, grind =, game_rule]
+@[simp, grind =, expect_eval]
 lemma simulateQ_query [LawfulMonad r] (q : OracleQuery spec α) :
     simulateQ impl (liftM q) = q.cont <$> (impl q.input) := by
   simp [simulateQ, OracleComp.liftM_def, OracleQuery.cont,
@@ -73,7 +73,7 @@ to `spec.query t` (because `(spec.query t).cont = id`). That artifact is
 harmless when `spec.Range t` is concrete (it disappears under definitional
 reduction), but in *parametric* sum-spec contexts (`(E₁ + E₂).Range (Sum.inl t)`
 vs `E₁.Range t`, both abstract atoms) the type annotations diverge and
-`id_map` no longer fires under `simp only`. This lemma sidesteps the artifact
+`id_map` does not fire under `simp only`. This lemma sidesteps the artifact
 entirely and is the canonical entry point for simplifying `simulateQ` over an
 explicit `spec.query t`. -/
 @[grind =]

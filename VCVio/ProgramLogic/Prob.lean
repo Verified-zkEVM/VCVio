@@ -29,10 +29,10 @@ follows for free since every element is already `≤ 1`).
 
 /-- The closed unit interval `[0, 1]` as a subtype of `ℝ≥0∞`.
 
-Used as the carrier for the probabilistic `Std.Internal.Do.WP` interpretation of
-`OracleComp` (see `OracleComp.Probabilistic.instWP_prob`). The
-`Subtype.val` coercion to `ℝ≥0∞` is free, so probabilistic statements
-re-export to the quantitative carrier without duplication. -/
+It is the carrier of the probability-valued interpretation of `OracleComp`
+(`OracleComp.Probabilistic.instWP_prob`). The coercion `Subtype.val` to
+`ℝ≥0∞` is free, so statements about probability-valued assertions carry over
+to `ℝ≥0∞` without being restated. -/
 abbrev Prob : Type := Set.Iic (1 : ℝ≥0∞)
 
 namespace Prob
@@ -54,9 +54,9 @@ instance : One Prob := ⟨⟨(1 : ℝ≥0∞), show (1 : ℝ≥0∞) ≤ 1 from 
 @[simp] theorem val_one : (1 : Prob).val = 1 := rfl
 
 /-- Indicator coercion from a decidable proposition to `Prob`: `1` if `p`
-holds, `0` otherwise. Used to lift a qualitative post `α → Prop` into a
-probabilistic post `α → Prob`, as in
-`OracleComp.WP.Coherence.wp_qual_iff_wp_prob_indicator_eq_one`. -/
+holds, `0` otherwise. It lifts a postcondition `α → Prop` to a
+probability-valued postcondition `α → Prob`, as in
+`OracleComp.WP.Coherence.wp_qual_iff_wp_prob_indicator_val_eq_one`. -/
 @[expose] def indicator (p : Prop) [Decidable p] : Prob :=
   ⟨if p then 1 else 0, by split_ifs <;> simp⟩
 

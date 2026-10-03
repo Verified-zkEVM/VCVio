@@ -1,12 +1,19 @@
 # Measure and kernel conversion checkpoints
 
+Status: historical record of the conversion of VCVio's probability semantics to Mathlib measures
+and kernels, checkpoint by checkpoint, through the removal of the discrete layer in PR #821. Each
+section describes the code at its checkpoint. The
+[probability guide](../agents/probability.md) describes the present, and the
+[migration guide](../agents/probability-migration.md) converts code written against the removed
+layer.
+
 Mathlib measures are the probability semantics. Closed successful computations denote
 subprobability measures; measurably parameterized computations denote kernels. Executable finite
 samplers retain their algorithms and carry measure certificates. Operational reachability is a
 separate structural notion.
 
 Current upstream already supplies the native sampling, unary/relational WP, measure-coupling,
-stateful security, and `Std.Internal.Do` foundations. Continue from those owners rather than
+stateful security, and `Std.WP` foundations. Continue from those owners rather than
 introducing competing assertion carriers, coupling structures, or handler representations.
 
 ## First integrated conversion
@@ -14,7 +21,7 @@ introducing competing assertion carriers, coupling structures, or handler repres
 The initial slice moves structural handler composition, instrumentation, tracing, counting,
 logging, finite support, and uniform query implementation into native owners. Cache/programming
 handlers, query bounds, enforcement, state invariants/projections, and the signature/MAC/KEM/DEM
-definition layer use them directly. `VCVio.Native` exports this surface, and `VCVioTest.Native`
+definition layer use them directly. `VCVio.Foundations` exports this surface, and `VCVioTest.Foundations`
 rejects imports of PMF/SPMF and retired compatibility classes.
 
 Core `MonadAttach` and the native measure map law turn pathwise predicates into AE predicates
@@ -66,7 +73,7 @@ families, and a failing handler whose zero query-tail mass differs from the zero
 
 ## Independent-product checkpoint
 
-`EvalDist/IndepProduct` is a native event/reachability owner exported by `VCVio.Native`.
+`EvalDist/IndepProduct` is a native event/reachability owner exported by `VCVio.Foundations`.
 Finite product measures, observable products, lossy coordinate marginals and integrals, and
 measurable product families use Mathlib's `Measure.pi` and kernel products. Coordinate event
 equality needs full success mass only in the other factors. Reachability elimination uses
@@ -116,7 +123,7 @@ continuation-measure observation; arbitrary hidden source and continuation paylo
 measurable space. Constant allowances retain the prefix's success mass. The two-world and
 bad-world disagreement rules share this finite-sum argument.
 
-The API is exported by `VCVio.Native` and has an independent native import guard, chosen real
+The API is exported by `VCVio.Foundations` and has an independent native import guard, chosen real
 source examples, a Gaussian common measure with real/Boolean kernels, arbitrary AE continuations
 under a Dirac measure, unmeasured source/result types, and mixed observed output types.
 It is a prerequisite checkpoint for the full PRFTagReader direct-coupling conversion. Existing
@@ -151,7 +158,7 @@ The public native facade exports the composition API and checks its retired-impo
 
 Quantitative Hoare triples, simulation and oracle-signature lifting now interpret configured
 answer measures directly. The expectation carrier and transformer laws use core
-`Std.Internal.Do`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
+`Std.WP`; bounded expectations restrict the existing algebra to `Set.Iic 1`.
 The qualitative oracle WP remains structural and requires no probability interpretation.
 
 Chosen-space assertion integrals require measurable postconditions. Mapped assertion integrals,
@@ -168,33 +175,455 @@ observations and pathwise WP comparisons. Fiat–Shamir correctness and quantita
 walkthroughs use those laws. Native import guards check both the Hoare surface and a nonuniform
 oracle regression; regression proofs also use real observations and hidden function states.
 
-Retiring relational coupling, scalar probability-equality automation, seeded forking, and the
-commitment example's TV theorem remain distinct theorem families. Their required connections
-use the existing explicit coherence theorem in their compatibility owners. The native Hoare
-and simulation modules do not import PMF/SPMF or probability compatibility classes.
+At this checkpoint the relational coupling rules, the scalar probability-equality automation,
+seeded forking, and the commitment example's total-variation theorem are still on the retiring
+discrete layer, each a separate theorem family. Where one of them meets the native Hoare layer,
+it goes through the explicit coherence theorem in its compatibility module. The native Hoare and
+simulation modules import neither `PMF`/`SPMF` nor a probability compatibility class.
+
+## Dead and orphaned retiring-probability checkpoint
+
+The retirement surface kept for compatibility is the façade itself: `SPMF`, `evalSPMF`/`𝒮[…]`,
+`probOutput`/`probEvent`/`probFailure` with their `Pr[…]` notation, and the equations crossing
+between `Pr[…]` and `𝒟[…]`. Scalar lemmas survive only while an unconverted consumer uses them.
+
+Declarations with no remaining consumer are deleted rather than deprecated: unused scalar
+twins of native lemmas, the unused `SPMFSemantics`/`PMFSemantics` bundles, the ReaderT and
+`FinRatPMF.Raw` PMF lifts, the deprecated fork façade, and orphaned lemmas of the scalar
+EvalDist, SPMF, uniform-selection, tracing, and query-tracking APIs. Consumers are counted
+through proof terms, including the auxiliary declarations that `simp` generates for its lemmas.
+Lemmas carrying `simp`, `grind`, `gcongr`, or `aesop` attributes are kept even when orphaned,
+since automation can use them without a recorded reference; they retire with the scalar
+automation benchmarks. The executable `FinRatPMF.Raw` sampler and its native denotation are
+unaffected.
+
+## Measure normal form checkpoint
+
+`simp` keeps measure goals in measure normal form. The façade equations
+`evalDist_apply_singleton`, `evalDist_apply_setOf`, and `evalDist_apply_univ` are explicit
+rewrites rather than simp rules, so a native proof is never silently turned into a scalar one;
+a proof that still reasons in `Pr[…]` crosses with `rw`. The `game_rule` set normalizes
+`evalDist_pure` instead of the scalar `pure`/`bind` evaluations. The native support
+characterization of probability-one events follows the scalar ones out of the default `grind`
+set. The native import guard also rejects `evalSPMF`, the scalar evaluation functions, and the
+PMF-backed specification classes.
+
+## Native simulation and congruence checkpoint
+
+`OracleComp.SimSemantics.Measure` states the simulation laws natively for any lawful target
+semantics: implementations with equal answer measures simulate every computation to the same
+measure, and an implementation denoting each query's configured answer measure preserves the
+computation's denotation. The stateful form constrains only the answer marginal from every
+state; the service state needs no measurable space, and a warm cache is correctly excluded.
+The canonical uniform sampler is such an implementation.
+
+Event and measure congruence after a common oracle computation compare continuations on
+structural support, including continuations with different unmeasured output types. Uniform
+specifications supply the countability that the bind-swap law needs. Event masses do not depend
+on the measurable structure that makes the event measurable, so results proved under the discrete
+structure `⊤` apply under any chosen space, such as a Borel structure. Native regressions cover a
+hidden counter state, real-valued outputs, and different continuation output types.
+
+## Native probability-equality planner checkpoint
+
+The probability-equality planner of `pvcstep`, whose steps are the `prrw` family today,
+recognizes native goals: equalities of `Pr{…}[…]` events, of applied `𝒟[…]` masses, and of output
+measures. Swaps rewrite with the native bind-swap laws, under shared prefixes through measure
+congruence, and congruence leaves the continuations on the structural support of the shared
+prefix. The retiring scalar goals keep their existing
+actions. Native Hoare lowering lemmas use `prEvent` names, and the singleton-output variants,
+which are the events `(· = x)`, are removed. `VCVioTest/ProbabilityTactics.lean` gates the
+native `simp` and planner contract and records the remaining `simp` gaps.
+
+## Import-closure checkpoint
+
+Modules that import a retiring hub (`SampleableType`, `ProbComp`, `OracleComp.EvalDist`,
+`LoggingOracle`, `SubSpec`, `Replicate`, `UniformCompatibility`, the bundled-semantics and
+random-oracle simulation modules, `SecExp`) but use none of its declarations import the hub's
+native owners instead. `SecExp` itself imports only what `BoundedAdversary` needs, and its clients
+import the scalar modules they use explicitly. The import-closure ratchet
+`scripts/check-spmf-closure.py`, removed with the discrete layer, keeps the exact set of modules
+whose imports reach the SPMF backend; this checkpoint takes it from 455 to 390 of the tracked
+proof-library modules. Final removal deletes the modules in that closure's core and regenerates
+the umbrellas.
+
+## Leaf example checkpoint
+
+Self-contained examples are native end to end: ElGamal and hashed ElGamal (correctness, the
+real-branch game identity, the uniform-masking random branch, and the IND-CPA bounds), BR93,
+the reactive OTP separation tests, the UC observation success probabilities, and the optional
+failure example. Their game hops use the native bind-swap and support-congruence laws on output
+measures, and several hop lemmas are strengthened from `true`-event equalities to equalities of
+output measures. `simp` evaluates the Boolean sample space `{false, true}` under any probability
+measure. Scalar lemmas that only these examples used are removed with them.
+
+The stream PRG built from a PRF is native as well. Its switching argument bounds the lazy
+random-oracle output chain against a uniform output vector in measure total variation, observed
+in the discrete structure on output vectors, by the state-collision mass, pushing the random seed
+and each fresh block through `measureETVDist_bind_bind_le_lintegral`. The birthday bound reads
+collision masses off output measures, and the uniform-key hypothesis is an equality of key
+measures.
+
+## Symmetric-encryption checkpoint
+
+`SymmEncAlg` states correctness and perfect secrecy with output measures over any lawful measure
+semantics. Correctness is a Dirac round trip; perfect secrecy has the channel form (equal
+ciphertext rows) and the independence form (the joint law of a lossless message sampler is the
+product of its marginals), and equal rows imply independence. Shannon's theorem is ported: a
+uniform key and deterministic encryption that is bijective in the key give uniform, hence equal,
+ciphertext rows. The posterior and joint-factorization restatements of independence are removed,
+as is the compatibility bridge to the scalar predicates. The one-time pad proves both forms
+directly from its measure laws.
+
+## State-separating equivalence checkpoint
+
+State-separating packages compare handlers by `MeasureDistEquiv`: equal output measures for
+every client, with the `≡ᵈ` and `≡ᵈ₀` notation. A handler step that agrees with another after
+transporting its state along a bijection gives an equivalence (`of_step_bij`), and parallel
+composition is congruent in both components under uniform measure specifications
+(`parSum_congr`). Distinguishing advantages are read off equivalences directly, so the scalar
+equivalence and advantage modules are removed. The heap one-time pad proves its single and paired
+encryption equivalences from the uniform-mask bijection, and the ElGamal state-separating proof
+states its random-branch swap as a measure equivalence.
+
+## Cell-frame and instrumentation checkpoint
+
+Support-level cell frames determine event probabilities under any lawful measure semantics:
+a preserved cell changes with probability zero and keeps its value with the full successful
+mass, and the except-event, relational and measured frames give the corresponding event
+bounds. Interpreted handlers reach these through the support frame of the simulation, so the
+per-handler probability restatements are removed. Support-reachability congruence and zero
+events are generic over monads with lawful attachment, replacing their oracle-computation
+copies. The instrumentation combinators document their transfer principle at the projection
+equation, and the scalar corollaries of that equation are removed with their façade module.
+
+## Query-instrumentation checkpoint
+
+Counting, logging and trace instrumentation are covered by their native core modules: the
+projection equations identify the uninstrumented execution, so output measures and events
+transfer by rewriting, and the scalar failure, output and event corollaries are removed with
+their compatibility modules. The lazy random oracle's probability-one characterizations are
+stated as `Pr{…}` events: an event holds almost surely exactly when it holds for every total
+answer table extending the starting cache, and the mixed form keeps uniform queries
+probabilistic. Merkle-tree completeness is stated in that form. The combined-signature
+coercion façade is removed, so modules that only need the canonical inclusions no longer
+import the discrete hubs; the two consumers that use discrete lemmas import them directly.
+
+## Random-oracle collision checkpoint
+
+The random-oracle collision family is native under uniform measure specifications. A single
+uniform query assigns an event the proportion of satisfying answers, which drives the log and
+cache birthday bounds, fresh-query uniformity, and the cache preimage and finite-target hit
+bounds. Collision resistance in the random-oracle model fixes the discrete answer space and the
+uniform specification inside its advantage. The adaptive-prefix, Merkle extractability,
+multi-checkpoint extractability, and commitment binding and extractability bounds are stated as
+`Pr{…}` events with measurable-answer binders. Unpredictability of a sampler is a pointwise
+`Pr{…}` bound. The universe-polymorphic statements are specialized to `Type`, where the event
+form lives, and the vacuous single-oracle collision bounds are removed.
+
+## Diffie-Hellman checkpoint
+
+The discrete-logarithm, CDH and DDH relations are native. The DDH game is a uniform-bit branch
+over its real and random experiments at the level of output measures, the CDH-to-DDH reduction
+runs the CDH experiment exactly in the real branch, and in the random branch it hits the target
+with the uniform baseline probability. The DLog-to-CDH bound squares the success probability
+through two independent DLog attempts. A continuation event with a constant probability keeps it
+after any lossless draw.
+
+## Primitive-notion checkpoint
+
+Correctness spread, commitment hiding and extractor setup consistency are stated with output
+measures: δ-correctness bounds the mass of a failed round trip, γ-spread bounds each ciphertext
+event, and hiding and setup consistency compare distributions under the discrete measurable
+structure. KEM–DEM correctness composes at the level of reachable outputs and transfers to
+probability one under uniform oracle semantics. The Pedersen commitment is perfectly hiding by
+the uniform bijection law and binding by a DLog reduction on a shared base program; the PRF-based
+MAC bound and Falcon's discrete-Gaussian sampler law use native events. The lattice sampling
+instances import only the sampling class, which removes the lattice stack from the discrete
+import closure.
+
+## Second import-closure checkpoint
+
+Modules that use no discrete declarations import the native layer directly. The stateful
+simulation compatibility module is removed, since its one congruence has a native twin; query
+morphisms, bit-vector sampling, and the clean importers of the remaining hubs no longer pull in
+the discrete layer. Together with the lattice sampling change this takes the SPMF import closure
+from 357 to 227 modules, including the random-oracle simulation and the SLH-DSA stack.
+
+## Scheduling checkpoint
+
+Proportional UC scheduling is native: the output relation compares measures under the discrete
+measurable structure and reads, on countable outputs, as pointwise agreement of `Pr{…}` point
+events; slot draws, binary and flat choices, and the coherence laws are computed with finite
+bind sums. The oracle runtime observes the native output measure of the simulated run. Events of
+pure computations and of binds over finite draws have native equations.
+
+## Deferred-sampling checkpoint
+
+The first-fire and deferred-sampling kernels are native. A hidden target probed by `q` adaptive
+reads fires with probability at most `q · ε` by an event union bound, the multi-key game adds one
+such term per key, and averaging over a random key count integrates the count against its output
+measure. The output-irrelevant draw deferral is an instance of the bind-swap law. The list
+multiplicity kernel integrates the count against the key marginal, tape factorization compares
+output measures under the discrete structure, and state-relation transfer is stated for
+lintegrals through simulated runs. Discrete bind laws already covered by native swap, lossless
+prefix and congruence laws are removed.
+
+## Uniform-selection checkpoint
+
+Uniform selection has native event formulas: selecting from a nonempty vector or list vector,
+and through the optional monad from a list, finset or multiset, gives an event its proportion of
+entries, an empty collection contributing no successful mass; a uniform range and a fair coin
+give an event its proportion of admissible values. The discrete selection lemmas remain only
+while the legacy tactic benchmarks exercise them. Two orphaned scalar lemmas are removed.
+
+## Indicator-triple checkpoint
+
+The indicator-postcondition relational triple, which restated the coupling-based `RelTriple`
+through `eRelWP`, is removed together with its bridges, its effect rules and the finite-support
+compactness development that proved its equivalence with coupling existence. Trace
+noninterference is stated with `RelTriple`. The zero-error approximate equality coupling
+identifies output distributions through the total-variation characterization, and the coherence
+file keeps the direction in which a supported coupling gives the indicator full relational mass.
+The converse returns with the measure-backed rebase of `eRelWP`.
+
+## Qualitative relational checkpoint
+
+`CouplingPost` is a measure coupling of the two output laws, each observed in the discrete
+structure on its output type, under which the relation holds almost everywhere; `RelWP` and
+`RelTriple` keep their names and the sequential rule needs finite response types. The anchoring
+instance and the query bijection rule assume uniform response measures, under which every
+reachable output has positive mass. The second oracle-level coupling interface is folded into
+this one. Equality couplings give equal output measures and equal event probabilities, and an
+implication along a coupling bounds one event by another. Game equivalence compares output
+measures in the discrete structure, and the advantage bound measures the distance of the `true`
+mass from one half, transported by measure total variation. Trace noninterference, trace leakage
+freedom and leakage bounds are native, as are the coupling rules for simulated computations and
+the stochastic-dominance rules for bad-state events; identical-until-bad bounds stay on the
+discrete layer until the identical-until-bad checkpoint below. Coupling-existence coherence with
+`eRelWP` returns with its rebase.
+
+## Quantitative relational checkpoint
+
+`eRelWP` is the supremum of coupled `lintegral` expectations over couplings of the two output
+measures observed in the discrete structure. A coupling of oracle computations concentrates on the
+finite product of their supports, so its expectation is a finite sum; exchanging the supremum with
+that sum and choosing conditional couplings on the support gives the bind rule. A `pure` side
+collapses `eRelWP` to the unary expectation of the other side, and the graph of a bijection
+couples a uniform sample or query with itself, with the unary expectation along the bijection as
+its value. The total-variation characterization of `eRelWP` on equality returns once the maximal
+coupling of output measures is available. The discrete subprobability coupling module is removed,
+and the public-projection total-variation bound used by the stateful Fiat–Shamir hops sits beside
+the discrete event bound it refines.
+
+## Maximal-coupling checkpoint
+
+Two probability measures concentrated on a common finite set have total variation equal to one
+minus their overlap `∑ a, min (μ {a}) (ν {a})`. No coupling puts more than the overlap on a
+diagonal point, and the maximal coupling, which puts the overlap on the diagonal and spreads the
+residual masses independently, attains it. For oracle computations this identifies measure total
+variation with the complement of the best coupled probability of equal outputs, so an approximate
+equality coupling with error `ε` is exactly a total variation bound `ε`, and a zero-error one gives
+game equivalence.
+
+## Identical-until-bad checkpoint
+
+The fundamental lemma of game playing is native. Two stateful handlers that give every event the
+same probability on steps between good states, and that keep bad states bad, produce simulations
+that agree on every event away from a bad final state; their output-state pairs, and hence their
+outputs, are within the probability of ending in a bad state in measure total variation. The
+handlers may disagree on the step that sets a bad flag, and they may run in a different oracle
+specification than the simulated program; agreement off bad input states, as equal runs or equal
+output measures, is a special case. Two computations that agree on every event away from a bad
+event are within its probability after any post-processing, with no measurable structure on the
+outputs. The programmable-oracle bounds, the random-oracle bridge and the query-bounded
+exact-output transport are native, and `by_upto` targets the native bound.
+
+Per-query slack is native as well. When the two handlers are within total variation `ε` on each
+charged query from a good state and coincide elsewhere, a computation making at most `q` charged
+queries keeps the runs within `q * ε` plus the bad-event mass, and dropping the bad state leaves
+the pure per-query budget. The random-oracle commitment hiding proof uses the native lemma, so
+the discrete identical-until-bad module has been removed. The state-dependent expected slack is
+native too: `expectedQuerySlack` is a unary `wp` expectation, charged steps are compared by
+`measureETVDist` on the discrete σ-algebra of the step output, and the constant-slack
+corollaries, the state-separating advantage bounds and the Fiat–Shamir H3 hop are stated on it.
+
+## PRF tag/reader checkpoint
+
+The PRF tag/reader protocol is native. The authentication bounds are stated in `ℝ≥0∞` on output
+measures: the forged-acceptance collision bound, its uniform-digest specializations and the
+end-to-end PRF-plus-collision bound. The single-cell collision argument is an expectation
+bound on a one-cell potential, discharged through quantitative `wp`. The unlinkability chain's
+session-collision union bounds, eagerizations, cell-swap bridge and direct coupling rewrite
+event probabilities through equalities of output measures and the native disagreement bound,
+and the network-level transport reads verdict masses off output measures. The discrete
+disagreement module and the scalar wrappers the coupling used have been removed.
+
+## Fischlin checkpoint
+
+The Fischlin transform is native. Completeness compares the random-oracle game with its
+pure-probability model through equalities of output measures in the discrete structure: each
+repetition's lazy search couples to fresh uniform draws together with its cached hash, the
+repetitions thread the cache without collisions, and the verifier's re-queries become cache hits.
+The rejection bound unions per-repetition tail events on the model's independent product.
+Knowledge soundness bounds the bad event by the verifier accepting while the extractor's scan
+misses, then runs the supermartingale induction over the lazy random oracle in quantitative `wp`;
+each leaf is the verifier's acceptance mass on a partially cached oracle, computed from the
+independent product of hits and fresh draws. Bind and map congruence along equal discrete output
+measures, and the matching support transfer, are part of the general measure API.
+
+## Oracle IND-CPA checkpoint
+
+The oracle IND-CPA hybrid argument is native. The counted-hybrid transports, the endpoint
+identifications of the left/right hybrids and the uniform-bit branch decomposition are equalities
+of output measures, and the one-time-to-many-time lift no longer assumes a finite or inhabited
+ciphertext type. The machine-level responder readings remain on the discrete coinductive
+handler.
+
+## Native tactic gate checkpoint
+
+The discrete probability tactic benchmarks have measure-side twins over `ProbComp`, an abstract
+lawful monad, and the `Id`, `OptionT` and `ExceptT` carriers, covering outcome and event masses,
+uniform draws, independence, success mass, the support bridge, `do`-shapes and long chains. Their
+dated guards list the native automation gaps: `grind` lacks Dirac, uniform and success-mass rules;
+product singletons, `Set.univ` on `Bool`, the uniform event law after pushforward normalisation,
+and the support bridges need explicit steps. The discrete benchmarks remain until the lemma
+families they gate are retired.
+
+## Seeded forking checkpoint
+
+The Bellare–Neven seeded forking lemma is native. Uniform seed generation has an exact point
+mass on its support and splits off a uniform head answer at any oracle with a positive count.
+Running against the seeded oracle on such a seed has the output measure of the computation
+itself, resampling an appended answer is invisible, and truncating the seed keeps the joint law
+of the truncated prefix and the output. The forking bound follows as events: the squared success
+probability is the Jensen bound over the truncated seed, the resampled second run matches a run on
+the truncated seed, and collisions with the seeded answer cost `acc / h`. The eager random oracle
+averaged over a generated seed has the output measure of fresh independent queries.
+
+## Replay forking checkpoint
+
+The replay forking lemma is native under uniform answer measures. Each fork-index component is
+bounded by the pair event after the Cauchy–Schwarz squaring step, less a collision term of
+`acc / h` that the uniform focused answer contributes, so the squared-sum estimate follows from
+events on the canonical context fork alone. The Fiat–Shamir replay bound takes the measure
+instances of `wrappedSpec` as hypotheses, and the NMA extraction bound consumes it through a
+native simulation of the challenge oracle by uniform sampling; only the expectation-level
+aggregation over key generation remains on the discrete layer, since it goes through the
+Jensen marginal of `expectedValue`. The measure-transport module for the old bound is gone.
+
+## Uniform sampling compatibility checkpoint
+
+Uniform sampling has a single measure law, `SampleableType.evalDist_uniformSample`, taken from
+the class certificate; the copy that went through the discrete adapter is removed, and
+`SampleableType.MeasureCompatibility` holds only the `ProbComp.DiscreteCompatibility` scope
+until *Final removal* deletes the module. Importers that used it or the retiring sampling,
+`ProbComp`, uniform-compatibility and subspec hubs only for native declarations import the
+native modules directly.
+
+## Retirement preparation checkpoint
+
+The per-query `PMF` interpretations are deprecated: `OracleSpec.IsProbabilitySpec`,
+`OracleSpec.IsUniformSpec`, and its `ofFintypeInhabited` constructor point to
+`OracleSpec.IsMeasureSpec`, `OracleSpec.IsUniformMeasureSpec`, and
+`IsUniformMeasureSpec.ofFiniteNonempty`; the polynomial-functor forms point to
+`PFunctor.IsMeasureSpec` and `PFunctor.IsMeasureSpec.uniformOfFiniteNonempty`. `NeverFail`, `EvalDistCompatible`, and
+`DiscreteEvalDistCompatible` were already deprecated. The `usesRetiredProbability` linter now
+reports direct uses of all seven classes as well as the scalar API, which enrolled thirty
+declarations that used a class without the scalar functions: the class fields and
+constructors themselves, the uniform instances and the bridge instance they feed, the
+polynomial-functor measure-compatibility class, the query-slack expectation of the until-bad
+family, the Fiat–Shamir challenge instances, and ML-DSA's `ExpandA` idealization. Two unused
+uniform instances and one unused binder were removed instead of enrolled. The local warning
+budget matches CI: nothing uses the deprecated support API, so its exclusion is gone. The
+`SPMF` import closure stands at 194 modules.
+
+## Slack and zero-knowledge checkpoint
+
+The per-query slack family, `SigmaProtocol.HVZK` and `IdenSchemeWithAbort.HVZK`, and their
+clients are native. Zero-knowledge errors are `ℝ≥0∞`, measured by `measureETVDist` on the
+discrete transcript σ-algebra, and perfect zero knowledge is `=ᵈ`. The Fiat–Shamir H3 hop, the
+stateful chain and its security statements carry `qS * ζ_zk` directly, and the Schnorr and ML-DSA
+zero-knowledge proofs go through `OracleComp.evalDist_bind_bind_swap`, uniform transport along
+bijections and `measureETVDist_bind_bind_le_of_bad`. The program-logic tactic stack no longer
+imports the discrete layer, so the legacy `Pr[…]` rewrite examples became `Pr{…}` examples. The
+`SPMF` import closure stands at 167 modules.
+
+## Fiat–Shamir forking checkpoint
+
+The Fiat–Shamir chain is native end to end. `Fork.advantage` is a `Pr{…}` event, the H5 forking
+bridge compares continuations on structural support, and the NMA-to-extraction bound averages the
+per-statement replay bound over key generation as a `lintegral` against the native Jensen
+inequality. One public equation, `Fork.simulateQ_uniformImpl_evalDistEq`, identifies the uniform
+challenge simulation with the forkable computation. The discrete total-variation modules and
+their measure bridges are deleted; `positivity` covers `measureTVDist`. The retired-probability
+ledger stands at 715 entries and the `SPMF` import closure at 158 modules.
+
+## Expectation checkpoint
+
+Expectations are `∫⁻` against `𝒟[mx]`, or the oracle `wp` that `wp_eq_lintegral` identifies with
+it. The discrete expectation modules and their measure bridge are deleted; `gcongr`, `simp` and
+`finiteness` act on the native forms (`wp_mono_of_support`, `lintegral_evalDist_map_of_discrete`,
+`wp_ne_top_of_finite`). The scalar `expectedValue` remains only inside the discrete façade that the
+removal deletes. The retired-probability ledger stands at 701 entries and the `SPMF` import
+closure at 155 modules.
+
+## Rényi checkpoint
+
+The Rényi divergence is the measure-level `InformationTheory.renyiDiv`. Its security-facing
+theory is native: probability preservation (`measure_rpow_div_renyiDiv_le`), bounded likelihood
+ratios (`renyiDiv_le_of_le_smul`), tensorization (`renyiDiv_prod`), the max-divergence `maxDiv`
+with `renyiDiv_le_maxDiv`, and the total-variation bounds of `Divergence/RenyiTotalVariation`
+through Scheffé's bound. Falcon's sampler quality compares the samplers' output measures, and the
+discrete Gaussian is a probability measure on `ℤ`. The `PMF` Rényi, total-variation and
+Radon–Nikodym modules, the discrete bridge between them and the `SPMF` wrapper are deleted. The
+retired-probability ledger stands at 627 entries and the `SPMF` import closure at 153 modules.
+
+## Coinductive checkpoint
+
+Randomized oracles and executable responders are `ProbComp` programs read through `𝒟`: a
+`ProbHandler` is a `QueryImpl spec ProbComp`, `ProbResponder.IsExecutable` carries `answerComp`
+whose output measures are the stored kernel, and `ProbResponder.ofQueryImpl` turns a stateful
+`ProbComp` handler into a responder whose handler is the original one, so the machine-level
+IND-CPA run needs no distribution transport. The kernel bridges of the wired runs are
+`stepAgainstKernel_eq_evalDist` and `iterateAgainstKernel_eq_evalDist`. The executable layer lives
+in `Type`, where the measure semantics of `ProbComp` does; kernel responders keep their universe.
+The retired-probability ledger stands at 565 entries and the `SPMF` import closure at 136 modules.
+
+## Final removal
+
+The discrete layer is deleted. Removed:
+
+- `ToMathlib`: `ProbabilityTheory/SPMF` and `Probability/ProbabilityMassFunction/{Lemmas,Measure}`.
+- `VCVio/EvalDist`: `Defs/{Basic,NeverFails,AlternativeMonad}`, `Option`, `Bool`, `BitVec`,
+  `Fintype`, `PFunctor`, `FailureMeasure` and `PFunctorMeasure`, with the discrete bridges of
+  `Defs/Measure` and its priority-10 `SPMF` fallback instance.
+- `VCVio/OracleComp`: `EvalDist/UniformCompatibility` and
+  `Constructions/SampleableType/MeasureCompatibility`.
+- The `Pr[…]` and `𝒮[…]` notation, `SPMF`, `evalSPMF`, `probOutput`, `probEvent`,
+  `probFailure`, and the classes `IsProbabilitySpec`, `IsUniformSpec` (oracle and polynomial),
+  `NeverFail`, `EvalDistCompatible` and `DiscreteEvalDistCompatible`.
+
+The modules whose support lemmas are part of the operational API keep them: `Defs/Instances`,
+`Monad/{Basic,Map,Seq}`, `List`, `Prod` and `Instances/{OptionT,ErrorT}`. The `OracleComp` hubs
+`EvalDist`, `ProbComp`, `Constructions/SampleableType` and `Coercions/SubSpec` remain as
+umbrellas of the measure semantics of their areas, and `Defs/Measure` as the umbrella of the
+measure-semantics instances. The transitional module names became permanent ones:
+`VCVio.Native` is `VCVio.Foundations`, `SampleableType.NativeMeasure` is
+`SampleableType.Measure`, and `StateT.Basic.Native` is `StateT.Basic`.
+
+`Pr{…}[…]` is the only event syntax: its braces hold an ordinary `do` sequence, as in
+`Pr{let x ← mx}[x = a]`, and `prFail mx` is the failure probability. The retired-probability linter
+reports direct use of Mathlib's `PMF` and its ledger is empty; the `SPMF` import-closure ratchet is
+deleted. The dormant `Interop` library still refers to the
+discrete layer and is converted when it is revived. Downstream code converts with the codemod
+and `docs/agents/probability-migration.md`.
 
 ## Next conversion batch
 
 The canonical campaign tracker is [issue #532](https://github.com/Verified-zkEVM/VCVio/issues/532).
-Shared integration is published in #758; quantitative WP in #761; native TV composition in #762.
-Compact native event formatting is published in #763. The observed continuation comparison API
-is published in #764 as a separate prerequisite for the next complete reader conversion.
-Continue with independently validated PRs:
-
-1. Convert the complete PRFTagReader direct-coupling reader/slot/composition families and their
-   table/cache dependencies through the native disagreement API, then delete unused scalar
-   disagreement declarations.
-2. Convert abort-aware HVZK, ML-DSA simulator/pregate/gating, and affected aborting Fiat–Shamir
-   security clients, preserving observable `none` outcomes.
-3. Convert Sigma HVZK, exact transcripts, predictability, and challenge uniformity, with Schnorr
-   and affected Fiat–Shamir simulation/stateful-hop/security families.
-4. Convert Fischlin search/runtime/model/completeness using native products and projections.
-5. Convert Fischlin extraction/potential/supermartingale/soundness and delete unused expectation
-   declarations.
-
-Independent products (#756), exact expected signing costs (#752), and reader cache representation
-(#760) have landed. Preserve their algorithms and Schnorr transform guarantees in #755. These feature algorithms are not duplicated by conversions.
-Record each published checkpoint and its remaining compatibility consumers here and in #532.
+Open pull requests written against the discrete layer convert through the codemod and the
+migration guide; migration branches rebase them onto the measure API.
 
 ## Subsequent campaign work
 
@@ -205,10 +634,9 @@ Record each published checkpoint and its remaining compatibility consumers here 
 | Program logic | Finish direct core predicate-transformer integration and measurable fixed-program WP; quantitative and relational rules use native measures and explicit measurable joint kernels. |
 | Security and games | Convert reductions, games, advantages, asymptotic packaging, and necessary lattice/hash/example clients by theorem family. |
 | Statistics | Native total variation, divergence, expectations, concentration, and independent product rules through Mathlib owners. |
-| Forking | Seeded and replay forking after their tracking and relational prerequisites pass validation. |
+| Forking | Seeded and replay forking and the Fiat–Shamir NMA aggregation are native. |
 | Fiat–Shamir | Convert complete theorem families, including abort bounds and their downstream scheme proofs. |
-| Fischlin | Convert cost, completeness, and soundness together with all affected clients. |
-| Retirement | Delete unused scalar backends, compatibility classes, and fallback instances; finish required downstream conversions and empty the retired-probability ledger. |
+| Retirement | Done: see *Final removal*. |
 
 PRs may cover broad independent theorem families once their shared APIs are established. Validate
 each family before expanding to another subsystem. Publish a complete checkpoint before opening

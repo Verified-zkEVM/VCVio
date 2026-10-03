@@ -21,8 +21,9 @@ Usage: ./scripts/validate.sh [--lint] [--test] [--ffi] [--axioms]
 Default fast checks (shared with per-PR CI):
   - lake build of the seven default proof libraries and the optional P/poly facade, with the non-sorry warning budget
   - ./scripts/check-imports.sh (generated umbrella modules are current)
-  - the boundary checks: PolyFun, broad expose, complexity backend,
-    Extern and Interop isolation
+  - the boundary checks: PolyFun, broad expose, complexity backend, Extern and
+    Interop isolation
+  - the fixture tests of the downstream probability codemod
   - the comment-fence rule over every Lean source the repository tracks or would
     track, `third_party/` excluded and both lakefiles included
 
@@ -31,10 +32,18 @@ Default fast checks (shared with per-PR CI):
     modules, once lake test has built them
   - lake lint -- --style-only on every library and test module
   - python3 ./scripts/check-agent-docs.py and extract-doc-fragments.py --check
+  - python3 ./scripts/check-reading-citations.py --require-upstream (the source
+    citations of docs/reading against the checked-out pins)
+  - scripts/test-docnames.sh, then python3 ./scripts/check-doc-names.py --resolve
+    (the declaration names the guides cite, against the oleans the build produced)
 
 Optional checks:
   --lint    Batteries environment linters, one process per proof library as in CI
-  --test    lake test (test libraries, the SLH-DSA test executables, the smoke test)
+  --test    lake test (test libraries, the SLH-DSA test executables, the smoke test), then
+            scripts/spec-coverage.py --check (the registered @[spec] rules each fire in
+            some program-logic test, against scripts/spec_coverage_baseline.json), and
+            scripts/check-lifted-law-parity.py --check (the event laws' OptionT and ExceptT
+            twins and their attributes, against scripts/lifted_law_parity_baseline.json)
   --ffi     with --test: also the native ML-KEM / ML-DSA / Falcon executables
             (initialises the third_party/ submodules; slow)
   --axioms  ./scripts/test-axiomsweep.sh, then lake exe axiomsweep --check
@@ -74,7 +83,6 @@ done
 python3 ./scripts/check-warning-log.py "$BUILD_LOG" "${warning_args[@]}" \
   --exclude-substring 'declaration uses `sorry`' \
   --exclude-substring 'VCVio retiring probability API' \
-  --exclude-substring 'VCVio retiring support API' \
   --label 'repository non-sorry warnings'
 
 echo ""
@@ -92,6 +100,10 @@ if [[ -f scripts/check-expose-boundary.sh ]]; then
   bash scripts/test-expose-boundary.sh
   bash scripts/check-expose-boundary.sh
 fi
+python3 ./scripts/test-migrate-native-probability.py
+python3 ./scripts/test-check-reading-citations.py
+python3 ./scripts/test-module-times.py
+python3 ./scripts/test-classify-migration-errors.py
 bash scripts/test-complexity-backend-isolation.sh
 bash scripts/check-complexity-backend-isolation.sh
 bash scripts/check-extern-isolation.sh
@@ -112,6 +124,9 @@ echo ""
 echo "# Checking the agent documentation"
 python3 ./scripts/check-agent-docs.py
 python3 ./scripts/extract-doc-fragments.py --check
+python3 ./scripts/check-reading-citations.py --require-upstream
+bash scripts/test-docnames.sh
+python3 ./scripts/check-doc-names.py --resolve
 
 if (( run_lint )); then
   echo ""
@@ -133,7 +148,6 @@ if (( run_test )); then
     --path-prefix LatticeCryptoTest/ --path-prefix LatticeCryptoTest.lean \
     --path-prefix HashSigTest/ \
     --exclude-substring 'VCVio retiring probability API' \
-    --exclude-substring 'VCVio retiring support API' \
     --label 'test-library warnings'
 
 
@@ -144,6 +158,15 @@ if (( run_test )); then
   echo ""
   echo "# Checking eagerly-initialised constants in the test libraries"
   lake exe initsweep --check --root VCVioTest --root LatticeCryptoTest
+
+  # Every registered `@[spec]` rule fires in some program-logic test: the trace of core's
+  # `vcgen` over the test files, against the list of rules known to be uncovered.
+  echo ""
+  echo "# Checking the coverage of the registered @[spec] rules"
+  python3 ./scripts/test-spec-coverage.py
+  python3 ./scripts/spec-coverage.py --check
+  python3 ./scripts/test-lifted-law-parity.py
+  python3 ./scripts/check-lifted-law-parity.py --check
 fi
 
 if (( run_axioms )); then

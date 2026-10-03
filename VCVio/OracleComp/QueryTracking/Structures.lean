@@ -370,15 +370,15 @@ A `QueryLog spec` is morally a free monoid on `Idx spec.toPFunctor`, with
 identity `[]` and product `(++)`. By Mathlib reducibility this is exactly
 `FreeMonoid (Idx spec.toPFunctor) = TraceList spec.toPFunctor`, so a
 trace-valued boundary description such as `BoundaryAction.emit` (in
-`PolyFun/Interaction/UC/OpenProcess.lean`) and a per-call `QueryLog`-valued
+`PolyFun/Interaction/Open/OpenProcess.lean`) and a per-call `QueryLog`-valued
 writer share the same underlying free-monoid carrier.
 
 We do *not* declare a global `Monoid (QueryLog spec)` instance: doing so
 would conflict with the `[EmptyCollection ω] [Append ω] → Monad (WriterT ω M)`
 instance Mathlib already provides for `WriterT (QueryLog spec) M`, which the
-existing `WriterTBridge`/`mvcgen` proof infrastructure relies on. The
-`QueryImpl.withTrace`/`withLogging` API instead uses the Append-based
-`Monad (WriterT _ _)` directly via `QueryImpl.withTraceAppend`. -/
+append-based reading `WriterT.AppendWP` relies on. The `QueryImpl.withTrace`/`withLogging`
+API instead uses the Append-based `Monad (WriterT _ _)` directly via
+`QueryImpl.withTraceAppend`. -/
 @[reducible] def QueryLog (spec : OracleSpec.{u, v} ι) : Type (max u v) :=
   List ((t : spec.Domain) × spec.Range t)
 

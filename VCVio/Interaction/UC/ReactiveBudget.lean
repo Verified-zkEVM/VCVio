@@ -6,7 +6,7 @@ Authors: Devon Tuma
 
 module
 
-public import PolyFun.Interaction.UC.ReactiveNetwork.Budget
+public import PolyFun.Interaction.Execution.ReactiveNetwork.Budget
 public import VCVio.Interaction.UC.ReactiveRuntime
 public import VCVio.OracleComp.CanReturn
 import VCVio.OracleComp.EvalDist.Measure
@@ -24,7 +24,8 @@ public section
 
 namespace Interaction.UC.ReactiveRuntime
 
-open PFunctor ReactiveProcess ReactiveNetwork OracleComp
+open PFunctor Interaction.Execution Interaction.Execution.ReactiveProcess
+  Interaction.Execution.ReactiveNetwork OracleComp
 
 variable {Node result S : Type} {boundary : PortBoundary}
   {network : Network Node boundary result} [DecidableEq Node]

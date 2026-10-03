@@ -10,7 +10,7 @@ public import VCVio.ProgramLogic.Relational.Measure.Deterministic
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Measure-native relational proof canaries
+# Measure-theoretic relational proof canaries
 
 Coupling judgments and their quantitative postconditions are available without a discrete
 probability backend. Pointwise postcondition bounds support generalized congruence and rewriting.
@@ -18,14 +18,13 @@ probability backend. Pointwise postcondition bounds support generalized congruen
 
 public section
 
-open MeasureTheory MeasureProgramLogic
+open MeasureTheory ExpectationWP
 open scoped ENNReal
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native relational WP unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "relational WP unexpectedly imports PMF"
 
 universe u v w
 

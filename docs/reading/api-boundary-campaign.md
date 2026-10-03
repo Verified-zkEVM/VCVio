@@ -1,5 +1,10 @@
 # API boundaries and definitional equality
 
+> Status: historical campaign record, September 2026, from VCVio `c2085a1a` to the repairs merged
+> on 2026-09-18. The policy below is the contract the campaign applied; the
+> [module-system guide](../agents/module-system.md) states the current rules for exposure and
+> definitional equality.
+
 ## Contract and evidence
 
 The campaign starts at VCVio `c2085a1a3a367c0b1ff33f5cb32d2673d5dbbeae`,
@@ -107,9 +112,11 @@ from adopting #239's trace observations; #239 remains open at
 ## Reviewable repairs
 
 - [#740](https://github.com/Verified-zkEVM/VCVio/pull/740): opaque SLH-DSA scheme bundle.
-- [#743](https://github.com/Verified-zkEVM/VCVio/pull/743): additive counting without function-instance leakage.
+- [#743](https://github.com/Verified-zkEVM/VCVio/pull/743): additive counting without
+  function-instance leakage.
 - [#745](https://github.com/Verified-zkEVM/VCVio/pull/745): cache carrier and extension order.
-- [#746](https://github.com/Verified-zkEVM/VCVio/pull/746): final-validity equations and HashSig game identities.
+- [#746](https://github.com/Verified-zkEVM/VCVio/pull/746): final-validity equations and HashSig
+  game identities.
 
 The counting/cache repairs form one stack; the final-validity repair is independent of them.
 All four pass the full local validation gate. Their individual branches record the exact
@@ -142,8 +149,9 @@ The separate ordinary-import consumer also builds and runs. All existing structu
 proofs and handler specifications compile. The old additive `Monoid (QueryCount ι)` cannot be
 retained as compatibility: its instance also changed unrelated function multiplication.
 Clients of raw writer state use `Multiplicative.toAdd`; clients of results use `runAdd`.
-The deprecated probability bridges remain; their shared compatibility constraints reduce the
-syntactic source count without claiming removal of the discrete semantic dependency.
+The deprecated probability bridges remained at that revision (they have since been removed);
+their shared compatibility constraints reduced the syntactic source count without claiming
+removal of the discrete semantic dependency.
 
 ### Final-validity conversion validation
 

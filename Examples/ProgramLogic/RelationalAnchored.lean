@@ -29,12 +29,12 @@ universe u
 
 namespace OracleComp.ProgramLogic.AnchoredExamples
 
-open ENNReal MAlgRelOrdered MAlgRelOrdered.Anchored
+open ENNReal MAlgRelOrdered MAlgRelOrdered.Anchored Std.WP
+open scoped OracleComp.Lower
 
-variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
-  [∀ t, MeasurableSpace (spec₁.Range t)] [∀ t, DiscreteMeasurableSpace (spec₁.Range t)]
-  [∀ t, MeasurableSpace (spec₂.Range t)] [∀ t, DiscreteMeasurableSpace (spec₂.Range t)]
+variable {ι₁ ι₂ : Type u} {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
+  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 /-! ## Pure-pure base cases -/
 
@@ -71,13 +71,13 @@ example {α β ε₁ ε₂ : Type} (e₁ : ε₁) (e₂ : ε₂)
 /-! ## Anchored pure-side reductions -/
 
 /-- When the left side is a literal `pure ok`, the relational WP reduces to a unary
-honest exception WP on the right side. -/
+core honest `ExceptT` weakest precondition on the right side. -/
 example {α β ε₁ ε₂ : Type} (a : α) (y : ExceptT ε₂ (OracleComp spec₂) β)
     (postOO : α → β → ℝ≥0∞) (postEO : ε₁ → β → ℝ≥0∞)
     (postOE : α → ε₂ → ℝ≥0∞) (postEE : ε₁ → ε₂ → ℝ≥0∞) :
     rwpExcCases (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (pure a : ExceptT ε₁ (OracleComp spec₁) α) y postOO postEO postOE postEE =
-      MAlgOrdered.wpExc y (postOO a) (postOE a) :=
+      Std.WP.wp y (postOO a) estack⟨postOE a⟩ :=
   rwpExcCases_pure_left a y postOO postEO postOE postEE
 
 /-- A `throw` on the left collapses the relational WP to a unary WP that ignores the
@@ -87,7 +87,7 @@ example {α β ε₁ ε₂ : Type} (e : ε₁) (y : ExceptT ε₂ (OracleComp sp
     (postOE : α → ε₂ → ℝ≥0∞) (postEE : ε₁ → ε₂ → ℝ≥0∞) :
     rwpExcCases (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (throw e : ExceptT ε₁ (OracleComp spec₁) α) y postOO postEO postOE postEE =
-      MAlgOrdered.wpExc y (postEO e) (postEE e) :=
+      Std.WP.wp y (postEO e) estack⟨postEE e⟩ :=
   rwpExcCases_throw_left e y postOO postEO postOE postEE
 
 /-! ## One-sided combinators -/
@@ -97,7 +97,7 @@ example {α β ε : Type} (a : α) (y : OracleComp spec₂ β)
     (postOk : α → β → ℝ≥0∞) (postErr : ε → β → ℝ≥0∞) :
     rwpExcLeft (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (pure a : ExceptT ε (OracleComp spec₁) α) y postOk postErr =
-      MAlgOrdered.wp y (postOk a) :=
+      wp⟦y⟧ (postOk a) :=
   rwpExcLeft_pure_left a y postOk postErr
 
 /-- A `throw` on the left in `rwpExcLeft` collapses to a unary WP using the error
@@ -106,7 +106,7 @@ example {α β ε : Type} (e : ε) (y : OracleComp spec₂ β)
     (postOk : α → β → ℝ≥0∞) (postErr : ε → β → ℝ≥0∞) :
     rwpExcLeft (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (throw e : ExceptT ε (OracleComp spec₁) α) y postOk postErr =
-      MAlgOrdered.wp y (postErr e) :=
+      wp⟦y⟧ (postErr e) :=
   rwpExcLeft_throw_left e y postOk postErr
 
 /-! ## OptionT combinators -/
@@ -118,7 +118,7 @@ example {α β : Type} (y : OptionT (OracleComp spec₂) β)
     (postNS : β → ℝ≥0∞) (postNN : ℝ≥0∞) :
     rwpOpt (m₁ := OracleComp spec₁) (m₂ := OracleComp spec₂) (l := ℝ≥0∞)
         (OptionT.mk (pure none) : OptionT (OracleComp spec₁) α) y postSS postSN postNS postNN =
-      MAlgOrdered.wpOpt y postNS postNN :=
+      Std.WP.wp y postNS estack⟨fun _ => postNN⟩ :=
   rwpOpt_fail_left y postSS postSN postNS postNN
 
 end OracleComp.ProgramLogic.AnchoredExamples

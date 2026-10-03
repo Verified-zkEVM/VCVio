@@ -6,7 +6,8 @@ Authors: Devon Tuma
 
 module
 
-public import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Ordinary execution does not determine a replay experiment
@@ -44,14 +45,9 @@ theorem ordinary_execution_equal :
 
 /-- A draw before the checkpoint is shared by both resumptions. -/
 theorem shared_agreement : 𝒟[agreement ($ᵗ Bool) pure] {true} = 1 := by
-  have hprogram : agreement ($ᵗ Bool) pure = (fun _ : Bool => true) <$> ($ᵗ Bool) := by
-    simp [agreement]
-  rw [hprogram, evalDist_map_apply_of_discrete _ _ (MeasurableSet.singleton true)]
-  have hevent : (fun _ : Bool => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
-    ext b
-    simp
-  rw [hevent]
-  exact OracleComp.evalDist_apply_univ_eq_one ($ᵗ Bool : ProbComp Bool)
+  rw [← prEvent_eq_evalDist_singleton]
+  prvcgen [agreement]
+  simp
 
 /-- Draws after the checkpoint are fresh in each resumption. -/
 theorem fresh_agreement :

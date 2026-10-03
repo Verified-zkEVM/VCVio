@@ -7,14 +7,20 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.CryptoFoundations.AsymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SecExp.Measure
-public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
+public import VCVio.OracleComp.Coercions.SubSpec.Measure
 public import VCVio.OracleComp.Coinductive.WiredRun
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.SimSemantics.Append
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import ToMathlib.Control.StateT
 public import ToMathlib.Data.ENNReal.Gauss
+import VCVio.OracleComp.EvalDist.MeasureSpec
+import VCVio.OracleComp.Constructions.SampleableType.Basic
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # Asymmetric Encryption Schemes: IND-CPA Oracle Games
@@ -60,34 +66,17 @@ def IND_CPA_swapLens (encAlg : AsymmEncAlg ProbComp M PK SK C) :
 @[simp] theorem IND_CPA_swapLens_query_right (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (mm : M × M) : encAlg.IND_CPA_swapLens.toFunA (.inr mm) = .inr (mm.2, mm.1) := rfl
 
-/-- Message swapping leaves response values unchanged, so pullback preserves the
-point-separating answer spaces required for executable responder coherence. -/
+/-- Message swapping leaves response values unchanged, so pulling an executable responder
+back along the swap lens keeps its answer σ-algebras point-separating, as executable
+responder pullback requires. -/
 instance IND_CPA_swapLens_pullback.instMeasurableSingletonClassRange
     (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (R : ProbResponder encAlg.IND_CPA_oracleSpec) [R.IsExecutable] : ∀ t,
     letI := (R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange t
-    MeasurableSingletonClass (encAlg.IND_CPA_oracleSpec.Range t)
-  | .inl t => by
-      let hSingleton : @MeasurableSingletonClass (unifSpec.Range t)
-          (R.instMeasurableSpaceRange (.inl t)) :=
-        ProbResponder.IsExecutable.instMeasurableSingletonClassRange (R := R) (.inl t)
-      exact @MeasurableSingletonClass.mk _
-        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inl t))
-        (fun x => by
-          change @MeasurableSet (unifSpec.Range t) (R.instMeasurableSpaceRange (.inl t))
-            (id ⁻¹' {x})
-          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
-  | .inr mm => by
-      let hSingleton : @MeasurableSingletonClass C
-          (R.instMeasurableSpaceRange (.inr (mm.2, mm.1))) :=
-        ProbResponder.IsExecutable.instMeasurableSingletonClassRange
-          (R := R) (.inr (mm.2, mm.1))
-      exact @MeasurableSingletonClass.mk _
-        ((R.pullback encAlg.IND_CPA_swapLens).instMeasurableSpaceRange (.inr mm))
-        (fun x => by
-          change @MeasurableSet C (R.instMeasurableSpaceRange (.inr (mm.2, mm.1)))
-            (id ⁻¹' {x})
-          simpa only [Set.preimage_id] using hSingleton.measurableSet_singleton x)
+    MeasurableSingletonClass (encAlg.IND_CPA_oracleSpec.Range t) :=
+  ProbResponder.pullback.measurableSingletonClass_range_of_forall_injective _ R fun
+    | .inl _ => Function.injective_id
+    | .inr _ => Function.injective_id
 
 /-- Wrapping an IND-CPA machine with message swapping is exactly executable responder
 pullback along the same PolyFun lens: a one-line specialization of the generic
@@ -151,26 +140,17 @@ def IND_CPA_queryImpl' (encAlg : AsymmEncAlg ProbComp M PK SK C)
       (fun mm => if b then mm.1 else mm.2))
 
 /-- The cached left/right oracle as a probabilistic responder. This is a thin wrapper around
-`IND_CPA_queryImpl'`; the existing `StateT ProbComp` implementation remains the source of truth. -/
+`IND_CPA_queryImpl'`, whose `StateT ProbComp` implementation is the source of truth. -/
 @[reducible] noncomputable def IND_CPA_responder (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (b : Bool) : ProbResponder encAlg.IND_CPA_oracleSpec :=
-  .ofStateQueryImpl (encAlg.IND_CPA_queryImpl' pk b)
+  .ofQueryImpl (encAlg.IND_CPA_queryImpl' pk b)
 
 @[simp] theorem IND_CPA_responder_state (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (pk : PK) (b : Bool) : (encAlg.IND_CPA_responder pk b).State = encAlg.IND_CPA_Cache := rfl
 
-/-- Running a program against the responder is the evaluation distribution of the existing
-cached `StateT ProbComp` interpretation. -/
-theorem run_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C)
-    (pk : PK) (b : Bool) {γ : Type} (oa : OracleComp encAlg.IND_CPA_oracleSpec γ)
-    (cache : encAlg.IND_CPA_Cache) :
-    (simulateQ (encAlg.IND_CPA_responder pk b).toQueryImpl oa).run cache =
-      𝒮[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) oa).run cache] :=
-  ProbResponder.run_simulateQ_toQueryImpl_ofStateQueryImpl
-    (encAlg.IND_CPA_queryImpl' pk b) oa cache
-
-/-- Machine-level reading of the existing IND-CPA oracle execution: any machine implementing
-the program adversary within fuel `k` has exactly the same joint output/cache distribution. -/
+/-- Machine-level reading of the IND-CPA oracle execution: any machine implementing
+the program adversary within fuel `k` runs exactly the program's cached interpretation, jointly in
+its output and final cache. -/
 theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C)
     (adversary : encAlg.IND_CPA_Adversary)
     (machine : OracleMachine encAlg.IND_CPA_oracleSpec PK Bool) {k : ℕ}
@@ -178,16 +158,16 @@ theorem runAgainst_IND_CPA_responder_eq (encAlg : AsymmEncAlg ProbComp M PK SK C
     (cache : encAlg.IND_CPA_Cache) :
     machine.runAgainst (encAlg.IND_CPA_responder pk b) k (cache, machine.init pk) =
       (fun p => (some p.1, p.2)) <$>
-        𝒮[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache] :=
+        (simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache :=
   calc machine.runAgainst (encAlg.IND_CPA_responder pk b) k (cache, machine.init pk)
       = (machine.runWithInput (encAlg.IND_CPA_responder pk b).toQueryImpl k pk).run cache :=
         rfl
-    _ = (some <$> simulateQ (encAlg.IND_CPA_responder pk b).toQueryImpl
-          (adversary pk)).run cache := by
+    _ = (some <$> simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache := by
         rw [himp.simulateQ_run_eq (encAlg.IND_CPA_responder pk b).toQueryImpl pk]
+        rfl
     _ = (fun p => (some p.1, p.2)) <$>
-          𝒮[(simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache] := by
-        rw [StateT.run_map, run_IND_CPA_responder_eq]
+          (simulateQ (encAlg.IND_CPA_queryImpl' pk b) (adversary pk)).run cache :=
+        StateT.run_map _ _ _
 
 /-! ## Left/right message swapping as a PolyFun reduction -/
 
@@ -274,7 +254,9 @@ def IND_CPA_LR_hybrid
   (simulateQ (encAlg'.IND_CPA_queryImpl_hybridLR_counted pk leftUntil) (adversary pk)).run'
     (∅, 0)
 
-/-- One-step counter monotonicity for the counted real IND-CPA implementation. -/
+/-- One-step counter monotonicity for the counted real IND-CPA implementation. A uniform query
+leaves the state unchanged. A challenge query is stepped by core `vcgen` as a triple of the
+necessary reading, which `triple_stateT_iff_forall_support` reads against the support. -/
 lemma IND_CPA_queryImpl'_counted_counter_le_succ
     (pk : PK) (b : Bool)
     (t : encAlg'.IND_CPA_oracleSpec.Domain)
@@ -282,29 +264,14 @@ lemma IND_CPA_queryImpl'_counted_counter_le_succ
     (p : encAlg'.IND_CPA_oracleSpec.Range t × encAlg'.IND_CPA_CountedState)
     (hp : p ∈ support ((encAlg'.IND_CPA_queryImpl'_counted pk b t).run st)) :
     p.2.2 ≤ st.2 + 1 := by
-  cases t with
-  | inl tu =>
-      change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at p
-      simp only [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
-        QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
-        liftM, monadLift] at hp
-      change p ∈ support ((StateT.lift _).run st) at hp
-      rw [StateT.run_lift, mem_support_bind_iff] at hp
-      obtain ⟨a, _, rfl⟩ := hp
-      simp
-  | inr mm =>
-      change C × encAlg'.IND_CPA_CountedState at p
-      change p ∈ support ((encAlg'.IND_CPA_challengeOracle'_counted pk b mm).run st) at hp
-      revert hp
-      rcases hcache : st.1 mm with _ | c <;> intro hp
-      · simp only [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle, hcache,
-          StateT.run_bind, StateT.run_get, pure_bind] at hp
-        rw [mem_support_bind_iff] at hp
-        obtain ⟨c, _, hp⟩ := hp
-        simp only [StateT.run_set, StateT.run_pure] at hp
-        subst p
-        simp
-      · simp_all [IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle]
+  rcases t with tu | mm
+  · simp [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge] at hp
+    grind
+  · refine (ProgramLogic.triple_stateT_iff_forall_support _ (· = st)
+      (fun _ st' => st'.2 ≤ st.2 + 1) ⊥).1 ?_ st rfl _ _ hp
+    vcgen [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
+      IND_CPA_challengeOracle'_counted, IND_CPA_countedChallengeOracle,
+      Necessary.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
 
 private lemma IND_CPA_countedChallengeOracle_proj_eq_cached
     (pk : PK)
@@ -349,7 +316,7 @@ lemma IND_CPA_queryImpl_hybridLR_counted_proj_eq_queryImpl'_false
 /-- The counted real IND-CPA implementation preserves the budget-indexed invariant
 `st.2 + budget ≤ q`: after answering a query that the structural bound permits, the spent counter
 plus the decremented budget still fits under `q`. This is the per-query preservation obligation
-fed to `probOutput_simulateQ_run_eq_of_impl_eq_queryBound`. -/
+fed to `evalDistEq_simulateQ_run_of_impl_eq_queryBound`. -/
 private lemma IND_CPA_queryImpl'_counted_run_invariant_le
     (pk : PK) (b : Bool) (q : ℕ) (t : encAlg'.IND_CPA_oracleSpec.Domain)
     (st : encAlg'.IND_CPA_CountedState) (budget : ℕ) (hInv : st.2 + budget ≤ q)
@@ -357,26 +324,18 @@ private lemma IND_CPA_queryImpl'_counted_run_invariant_le
     (z : encAlg'.IND_CPA_oracleSpec.Range t × encAlg'.IND_CPA_CountedState)
     (hz : z ∈ support ((encAlg'.IND_CPA_queryImpl'_counted pk b t).run st)) :
     z.2.2 + (if Sum.isRight t = true then budget - 1 else budget) ≤ q := by
-  cases t with
-  | inl tu =>
-      change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at z
-      simp only [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge,
-        QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
-        liftM, monadLift] at hz
-      change z ∈ support ((StateT.lift _).run st) at hz
-      rw [StateT.run_lift, mem_support_bind_iff] at hz
-      obtain ⟨a, _, rfl⟩ := hz
-      simpa using hInv
-  | inr mm =>
-      have hsucc :=
-        encAlg'.IND_CPA_queryImpl'_counted_counter_le_succ pk b (Sum.inr mm) st z hz
-      simp only [Sum.isRight, not_true, reduceIte, false_or] at hcan ⊢
-      omega
+  rcases t with tu | mm
+  · simp [IND_CPA_queryImpl'_counted, IND_CPA_queryImplFromChallenge] at hz
+    grind
+  · have hsucc :=
+      encAlg'.IND_CPA_queryImpl'_counted_counter_le_succ pk b (Sum.inr mm) st z hz
+    simp only [Sum.isRight, not_true, reduceIte, false_or] at hcan ⊢
+    omega
 
 /-- If a counted IND-CPA hybrid implementation agrees with the counted real implementation
 through the first `q` fresh LR queries, then any adversary making at most `q` LR queries sees
 the same output distribution as in the real IND-CPA game. -/
-theorem IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited C]
+theorem IND_CPA_run'_evalDistEq_queryImpl'_of_bounded
     (implCounted : PK → Bool → ℕ →
       QueryImpl encAlg'.IND_CPA_oracleSpec (StateT encAlg'.IND_CPA_CountedState ProbComp))
     (hsame : ∀ (pk : PK) (b : Bool) (realUntil : ℕ)
@@ -389,13 +348,11 @@ theorem IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited 
     (budget : ℕ)
     (hbound : comp.IsQueryBoundP (· matches .inr _) budget)
     (cache : (M × M →ₒ C).QueryCache) (n : ℕ) (hn : n + budget ≤ q) :
-    𝒮[(simulateQ (implCounted pk b q) comp).run' (cache, n)] =
-      𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl' pk b) comp).run' cache] := by
-  have hrun :
-      𝒮[(simulateQ (implCounted pk b q) comp).run (cache, n)] =
-      𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run (cache, n)] := by
-    refine evalSPMF_ext fun z =>
-      OracleComp.ProgramLogic.Relational.probOutput_simulateQ_run_eq_of_impl_eq_queryBound
+    (simulateQ (implCounted pk b q) comp).run' (cache, n) =ᵈ
+      (simulateQ (encAlg'.IND_CPA_queryImpl' pk b) comp).run' cache := by
+  refine evalDistEq_iff_evalDist_eq.mpr ?_
+  let : MeasurableSpace α := ⊤
+  have hrun := OracleComp.ProgramLogic.Relational.evalDistEq_simulateQ_run_of_impl_eq_queryBound
         (impl₁ := implCounted pk b q) (impl₂ := encAlg'.IND_CPA_queryImpl'_counted pk b)
         (Inv := fun st budget => st.2 + budget ≤ q)
         (canQuery := fun t n => ¬ (Sum.isRight t = true) ∨ 0 < n)
@@ -407,15 +364,15 @@ theorem IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited 
           | inl _ => trivial
           | inr _ => simp only [Sum.isRight, not_true, false_or] at hcan; omega)).symm)
         (hpres₂ := IND_CPA_queryImpl'_counted_run_invariant_le pk b q)
-        (s := (cache, n)) (hs := hn) (z := z)
+        (s := (cache, n)) (hs := hn)
   have hcounted_run' :
-      𝒮[(simulateQ (implCounted pk b q) comp).run' (cache, n)] =
-      𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run'
+      𝒟[(simulateQ (implCounted pk b q) comp).run' (cache, n)] =
+      𝒟[(simulateQ (encAlg'.IND_CPA_queryImpl'_counted pk b) comp).run'
         (cache, n)] := by
-    simp only [StateT.run'_eq, evalSPMF_map]
-    exact congrArg (fun p => Prod.fst <$> p) hrun
+    simp only [StateT.run'_eq]
+    exact (hrun.map Prod.fst).evalDist_eq
   refine hcounted_run'.trans ?_
-  simpa using congrArg evalSPMF (OracleComp.run'_simulateQ_eq_of_query_map_eq
+  simpa using congrArg (fun mx => 𝒟[mx]) (OracleComp.run'_simulateQ_eq_of_query_map_eq
       (impl₁ := encAlg'.IND_CPA_queryImpl'_counted pk b)
       (impl₂ := encAlg'.IND_CPA_queryImpl' pk b)
       (proj := Prod.fst)
@@ -425,7 +382,7 @@ theorem IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq [Finite C] [Inhabited 
 /-- A counted IND-CPA hybrid game agrees with the real IND-CPA experiment whenever the hybrid
 implementation matches the real counted implementation on all states that stay below the query
 budget. -/
-theorem IND_CPA_countedGame_eq_game_of_MakesAtMostQueries [Finite C] [Inhabited C]
+theorem IND_CPA_countedGame_eq_game_of_MakesAtMostQueries
     (implCounted : PK → Bool → ℕ →
       QueryImpl encAlg'.IND_CPA_oracleSpec (StateT encAlg'.IND_CPA_CountedState ProbComp))
     (hsame : ∀ (pk : PK) (b : Bool) (realUntil : ℕ)
@@ -435,20 +392,16 @@ theorem IND_CPA_countedGame_eq_game_of_MakesAtMostQueries [Finite C] [Inhabited 
         (implCounted pk b realUntil t).run st)
     (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
-    (Pr[= true | do
+    𝒟[do
       let b ← ($ᵗ Bool)
       let (pk, _sk) ← encAlg'.keygen
       let b' ← (simulateQ (implCounted pk b q) (adversary pk)).run' (∅, 0)
-      pure (b == b')]).toReal =
-    (Pr[= true | IND_CPA_Game (encAlg := encAlg') adversary]).toReal := by
-  congr 1
-  have hinner : ∀ (pk : PK) (b : Bool),
-      𝒮[(simulateQ (implCounted pk b q) (adversary pk)).run' (∅, 0)] =
-      𝒮[(simulateQ (encAlg'.IND_CPA_queryImpl' pk b) (adversary pk)).run' ∅] := fun pk b =>
-    IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq (encAlg' := encAlg')
-      implCounted hsame pk b q (adversary pk) q (hq pk) ∅ 0 (by omega)
-  exact probOutput_congr rfl <| evalSPMF_bind_congr' _ fun b =>
-    evalSPMF_bind_congr' _ fun pksk => by simp only [evalSPMF_bind, hinner pksk.1 b]
+      pure (b == b')] =
+    𝒟[IND_CPA_Game (encAlg := encAlg') adversary] := by
+  unfold IND_CPA_Game
+  refine evalDist_bind_congr _ _ _ fun b => evalDist_bind_congr _ _ _ fun ⟨pk, _sk⟩ => ?_
+  exact ((IND_CPA_run'_evalDistEq_queryImpl'_of_bounded (encAlg' := encAlg')
+      implCounted hsame pk b q (adversary pk) q (hq pk) ∅ 0 (by omega)).bind_left _).evalDist_eq
 
 /-- IND-CPA advantage of an oracle adversary: the Boolean bias `Measure.boolBias`
 `|Pr[b = b'] - Pr[b ≠ b']|` of the oracle IND-CPA game. An adversary that always guesses
@@ -465,14 +418,13 @@ variable [DecidableEq M]
 variable {encAlg' : AsymmEncAlg ProbComp M PK SK C}
 
 /-- The `leftUntil = 0` LR-hybrid is the all-right endpoint game. -/
-theorem IND_CPA_LR_hybrid_zero_evalSPMF_eq_right
+theorem IND_CPA_LR_hybrid_zero_evalDist_eq_right
     (adversary : encAlg'.IND_CPA_Adversary) :
-    𝒮[encAlg'.IND_CPA_LR_hybrid adversary 0] =
-      𝒮[encAlg'.IND_CPA_LR_Experiment adversary false] := by
-  simp only [IND_CPA_LR_hybrid, IND_CPA_LR_Experiment, evalSPMF_bind]
-  congr 1
-  funext ⟨pk, _sk⟩
-  simpa using congrArg evalSPMF (OracleComp.run'_simulateQ_eq_of_query_map_eq
+    𝒟[encAlg'.IND_CPA_LR_hybrid adversary 0] =
+      𝒟[encAlg'.IND_CPA_LR_Experiment adversary false] := by
+  unfold IND_CPA_LR_hybrid IND_CPA_LR_Experiment
+  refine evalDist_bind_congr _ _ _ fun ⟨pk, _sk⟩ => ?_
+  simpa using congrArg (fun mx => 𝒟[mx]) (OracleComp.run'_simulateQ_eq_of_query_map_eq
       (impl₁ := encAlg'.IND_CPA_queryImpl_hybridLR_counted pk 0)
       (impl₂ := encAlg'.IND_CPA_queryImpl' pk false)
       (proj := Prod.fst)
@@ -481,15 +433,15 @@ theorem IND_CPA_LR_hybrid_zero_evalSPMF_eq_right
 
 /-- If an adversary makes at most `q` fresh LR queries, then the `leftUntil = q` LR-hybrid is the
 all-left endpoint game. -/
-theorem IND_CPA_LR_hybrid_q_evalSPMF_eq_left_of_MakesAtMostQueries [Finite C] [Inhabited C]
+theorem IND_CPA_LR_hybrid_q_evalDist_eq_left_of_MakesAtMostQueries
     (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
     (hq : adversary.MakesAtMostQueries q) :
-    𝒮[encAlg'.IND_CPA_LR_hybrid adversary q] =
-      𝒮[encAlg'.IND_CPA_LR_Experiment adversary true] := by
-  simp only [IND_CPA_LR_hybrid, IND_CPA_LR_Experiment, evalSPMF_bind]
-  congr 1
-  funext ⟨pk, _sk⟩
-  exact IND_CPA_run'_evalSPMF_eq_queryImpl'_of_bounded_eq
+    𝒟[encAlg'.IND_CPA_LR_hybrid adversary q] =
+      𝒟[encAlg'.IND_CPA_LR_Experiment adversary true] := by
+  unfold IND_CPA_LR_hybrid IND_CPA_LR_Experiment
+  refine evalDist_bind_congr _ _ _ fun ⟨pk, _sk⟩ => ?_
+  refine EvalDistEq.evalDist_eq ?_
+  exact IND_CPA_run'_evalDistEq_queryImpl'_of_bounded
     (encAlg' := encAlg')
     (implCounted := fun pk b realUntil =>
       if b then encAlg'.IND_CPA_queryImpl_hybridLR_counted pk realUntil
@@ -512,38 +464,18 @@ theorem IND_CPA_LR_hybrid_q_evalSPMF_eq_left_of_MakesAtMostQueries [Finite C] [I
               (by simp [hcond']))
     pk true q (adversary pk) q (hq pk) ∅ 0 (by omega)
 
-/-- The `leftUntil = 0` LR-hybrid has the same success probability as the all-right endpoint. -/
-theorem IND_CPA_LR_hybrid_zero_probOutput_eq_right
-    (adversary : encAlg'.IND_CPA_Adversary) :
-    Pr[= true | encAlg'.IND_CPA_LR_hybrid adversary 0] =
-      Pr[= true | encAlg'.IND_CPA_LR_Experiment adversary false] :=
-  (evalSPMF_ext_iff.mp
-    (IND_CPA_LR_hybrid_zero_evalSPMF_eq_right (encAlg' := encAlg') adversary)) true
-
-/-- If an adversary makes at most `q` fresh LR queries, then the `leftUntil = q` LR-hybrid has
-the same success probability as the all-left endpoint. -/
-theorem IND_CPA_LR_hybrid_q_probOutput_eq_left_of_MakesAtMostQueries
-    [Finite C] [Inhabited C]
-    (adversary : encAlg'.IND_CPA_Adversary) (q : ℕ)
-    (hq : adversary.MakesAtMostQueries q) :
-    Pr[= true | encAlg'.IND_CPA_LR_hybrid adversary q] =
-      Pr[= true | encAlg'.IND_CPA_LR_Experiment adversary true] :=
-  (evalSPMF_ext_iff.mp
-    (IND_CPA_LR_hybrid_q_evalSPMF_eq_left_of_MakesAtMostQueries
-      (encAlg' := encAlg') adversary q hq)) true
-
 /-- The standard random-bit IND-CPA experiment is the uniform-bit branch over the all-left and
 all-right endpoint games. -/
-private lemma IND_CPA_Game_probOutput_eq_branch
-    (adversary : encAlg'.IND_CPA_Adversary) (x : Bool) :
-    Pr[= x | IND_CPA_Game (encAlg := encAlg') adversary] =
-      Pr[= x | do
+private lemma IND_CPA_Game_evalDist_eq_branch
+    (adversary : encAlg'.IND_CPA_Adversary) :
+    𝒟[IND_CPA_Game (encAlg := encAlg') adversary] =
+      𝒟[do
         let bit ← ($ᵗ Bool)
         let z ← if bit then encAlg'.IND_CPA_LR_Experiment adversary true
                  else encAlg'.IND_CPA_LR_Experiment adversary false
         pure (bit == z)] := by
   unfold IND_CPA_Game IND_CPA_LR_Experiment
-  refine probOutput_bind_congr' ($ᵗ Bool) x ?_
+  refine evalDist_bind_congr _ _ _ ?_
   rintro (_ | _) <;> simp
 
 /-- The IND-CPA advantage is the distinguishing advantage between the all-left and all-right
@@ -552,9 +484,7 @@ theorem IND_CPA_Advantage_eq_boolDist_LR (adversary : encAlg'.IND_CPA_Adversary)
     IND_CPA_Advantage (encAlg := encAlg') adversary =
       𝒟[encAlg'.IND_CPA_LR_Experiment adversary true].boolDist
         𝒟[encAlg'.IND_CPA_LR_Experiment adversary false] := by
-  rw [IND_CPA_Advantage, ← evalDist_boolBias_bind_uniformBool]
-  simp only [MeasureTheory.Measure.boolBias, evalDist_apply_singleton,
-    IND_CPA_Game_probOutput_eq_branch]
+  rw [IND_CPA_Advantage, IND_CPA_Game_evalDist_eq_branch, evalDist_boolBias_bind_uniformBool]
 
 /-- When the counter is above both thresholds, two hybrid LR counted oracles agree pointwise. -/
 lemma IND_CPA_hybridLR_counted_run_eq_of_le
@@ -572,7 +502,8 @@ lemma IND_CPA_hybridLR_counted_run_eq_of_le
       (fun n mm => if n < k + 1 then mm.1 else mm.2) mm st
       (by simp [show ¬(st.2 < k) from by omega, show ¬(st.2 < k + 1) from by omega])
 
-/-- Counter monotonicity for the hybrid LR counted oracle: the counter never decreases. -/
+/-- Counter monotonicity for the hybrid LR counted oracle: the counter never decreases. A
+challenge query is stepped by core `vcgen` as a triple of the necessary reading. -/
 lemma IND_CPA_hybridLR_counted_counter_le
     (pk : PK) (k : ℕ)
     (t : encAlg'.IND_CPA_oracleSpec.Domain)
@@ -580,26 +511,14 @@ lemma IND_CPA_hybridLR_counted_counter_le
     (p : encAlg'.IND_CPA_oracleSpec.Range t × encAlg'.IND_CPA_CountedState)
     (hp : p ∈ support ((encAlg'.IND_CPA_queryImpl_hybridLR_counted pk k t).run st)) :
     st.2 ≤ p.2.2 := by
-  cases t with
-  | inl tu =>
-    change unifSpec.Range tu × encAlg'.IND_CPA_CountedState at p
-    simp only [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge,
-      QueryImpl.add_apply_inl, QueryImpl.liftTarget_apply, QueryImpl.ofLift_apply,
-      liftM, monadLift] at hp
-    change p ∈ support ((StateT.lift _).run st) at hp
-    rw [StateT.run_lift, mem_support_bind_iff] at hp
-    obtain ⟨a, _, rfl⟩ := hp
-    simp
-  | inr mm =>
-    change C × encAlg'.IND_CPA_CountedState at p
-    change p ∈ support
-      ((IND_CPA_hybridChallengeOracleLR_counted (encAlg' := encAlg') pk k mm).run st) at hp
-    revert hp
-    simp only [IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle]
-    rcases hcache : st.1 mm with _ | c <;> intro hp <;> simp_all
-    obtain ⟨x, _, hp⟩ := hp
-    subst p
-    simp
+  rcases t with tu | mm
+  · simp [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge] at hp
+    grind
+  · refine (ProgramLogic.triple_stateT_iff_forall_support _ (· = st)
+      (fun _ st' => st.2 ≤ st'.2) ⊥).1 ?_ st rfl _ _ hp
+    vcgen [IND_CPA_queryImpl_hybridLR_counted, IND_CPA_queryImplFromChallenge,
+      IND_CPA_hybridChallengeOracleLR_counted, IND_CPA_countedChallengeOracle,
+      Necessary.Spec.ofSupport (encAlg'.encrypt _ _)] <;> simp_all
 
 /-- Behavior of the hybrid challenge oracle on a cache miss. -/
 lemma IND_CPA_hybridChallengeOracleLR_counted_run_none

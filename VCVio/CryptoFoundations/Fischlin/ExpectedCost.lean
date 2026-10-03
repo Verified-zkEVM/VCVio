@@ -168,13 +168,14 @@ private theorem searchQueryCount_cons (pk : Stmt) (sk : Wit) (sc : PrvState) (ms
   intro h
   by_cases hh : h.val = 0 <;> simp [hh]
 
-private theorem integral_count_succ (run : ProbComp ℕ) :
-    ∫⁻ (n : ℕ), (n : ℝ≥0∞) ∂𝒟[(fun n : ℕ => 1 + n) <$> run] =
-      1 + ∫⁻ n, (n : ℝ≥0∞) ∂𝒟[run] := by
-  rw [lintegral_evalDist_map run Measurable.of_discrete Measurable.of_discrete]
-  simp only [Nat.cast_add, Nat.cast_one]
-  rw [lintegral_add_left measurable_const]
-  simp only [lintegral_const, OracleComp.evalDist_apply_univ_eq_one, mul_one]
+/-- The expected queries as the expectation of the query count. -/
+theorem searchExpectedQueries_eq_wp (pk : Stmt) (sk : Wit) (sc : PrvState) (msg : M)
+    (comList : List Commit) (i : Fin ρ) (cs : List Chal)
+    (best : Option (Chal × Resp × Fin (2 ^ b)))
+    (cache : (fischlinROSpec Stmt Commit Chal Resp ρ b M).QueryCache) :
+    searchExpectedQueries σ ρ b M pk sk sc msg comList i cs best cache =
+      𝔼{let n ← searchQueryCount σ ρ b M pk sk sc msg comList i cs best cache}[(n : ℝ≥0∞)] :=
+  (ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete).symm
 
 private theorem uniform_nonzero_mass :
     𝒟[$ᵗ Fin (2 ^ b)] {h | h.val ≠ 0} = 1 - (2 ^ b : ℝ≥0∞)⁻¹ := by
@@ -186,9 +187,11 @@ private theorem uniform_nonzero_mass :
   · simp
   · exact measure_ne_top _ _
 
-private theorem integral_zero_continue (t : ℝ≥0∞) :
-    ∫⁻ h : Fin (2 ^ b), (if h.val = 0 then 1 else 1 + t) ∂𝒟[$ᵗ Fin (2 ^ b)] =
+/-- A fresh hash stops at zero and otherwise continues: the expectation of the two branches. -/
+private theorem wp_zero_continue (t : ℝ≥0∞) :
+    𝔼{let h ← $ᵗ Fin (2 ^ b)}[if h.val = 0 then 1 else 1 + t] =
       1 + (1 - (2 ^ b : ℝ≥0∞)⁻¹) * t := by
+  rw [ExpectationWP.wp_eq_lintegral _ _ Measurable.of_discrete]
   have hf : (fun h : Fin (2 ^ b) => if h.val = 0 then (1 : ℝ≥0∞) else 1 + t) =
       (fun h => 1 + {h : Fin (2 ^ b) | h.val ≠ 0}.indicator (fun _ => t) h) := by
     funext h
@@ -226,41 +229,16 @@ theorem searchExpectedQueries_eq_sum (pk : Stmt) (sk : Wit) (sc : PrvState) (msg
         exact (List.nodup_cons.mp hcs).1 (hcc ▸ hc')
       rw [QueryCache.cacheQuery_of_ne _ _ hne]
       exact hfresh c' (List.mem_cons_of_mem c hc') r'
-    rw [searchExpectedQueries, searchQueryCount_cons σ ρ b M pk sk sc msg comList i c cs
+    have ih' : ∀ (best' : Option (Chal × Resp × Fin (2 ^ b))) (r : Resp) (h : Fin (2 ^ b)),
+        𝔼{let n ← (searchQueryCount σ ρ b M pk sk sc msg comList i cs best'
+          (cache.cacheQuery ⟨pk, msg, comList, i, c, r⟩ h) : ProbComp ℕ)}[(n : ℝ≥0∞)] =
+          ∑ j ∈ Finset.range cs.length, (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j :=
+      fun best' r h => (searchExpectedQueries_eq_wp σ ρ b M pk sk sc msg comList i cs best'
+        _).symm.trans (ih (List.nodup_cons.mp hcs).2 best' _ (hfresh' r h))
+    rw [searchExpectedQueries_eq_wp, searchQueryCount_cons σ ρ b M pk sk sc msg comList i c cs
       best cache (fun r => hfresh c (by simp) r)]
-    rw [lintegral_evalDist_bind _ _ Measurable.of_discrete Measurable.of_discrete]
-    have hinner (r : Resp) :
-        (∫⁻ (n : ℕ), (n : ℝ≥0∞) ∂𝒟[do
-          let h ← $ᵗ Fin (2 ^ b)
-          let cache' := cache.cacheQuery ⟨pk, msg, comList, i, c, r⟩ h
-          if h.val = 0 then return (1 : ℕ)
-          else
-            let best' := match best with
-              | none => some (c, r, h)
-              | some (c', r', h') =>
-                  if h.val < h'.val then some (c, r, h) else some (c', r', h')
-            (fun n : ℕ => 1 + n) <$>
-              searchQueryCount σ ρ b M pk sk sc msg comList i cs best' cache']) =
-        1 + (1 - (2 ^ b : ℝ≥0∞)⁻¹) *
-          ∑ j ∈ Finset.range cs.length, (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j := by
-      rw [lintegral_evalDist_bind _ _ Measurable.of_discrete Measurable.of_discrete]
-      calc
-        _ = ∫⁻ h : Fin (2 ^ b),
-            (if h.val = 0 then 1 else 1 +
-              ∑ j ∈ Finset.range cs.length, (1 - (2 ^ b : ℝ≥0∞)⁻¹) ^ j)
-            ∂𝒟[$ᵗ Fin (2 ^ b)] := by
-          apply lintegral_congr
-          intro h
-          by_cases hh : h.val = 0
-          · simp [hh]
-          · simp only [hh, ite_false]
-            rw [integral_count_succ]
-            congr 1
-            exact ih (List.nodup_cons.mp hcs).2 _ _ (hfresh' r h)
-        _ = _ := integral_zero_continue b _
-    simp_rw [hinner]
-    simp only [lintegral_const, OracleComp.evalDist_apply_univ_eq_one,
-      mul_one, List.length_cons]
+    simp only [expect_norm, Nat.cast_add, Nat.cast_one, ExpectationWP.wp_add,
+      ExpectationWP.wp_const_of_oracle, ih', wp_zero_continue b, List.length_cons]
     rw [Finset.sum_range_succ']
     simp only [pow_zero, ← Finset.mul_sum, pow_succ', add_comm]
 

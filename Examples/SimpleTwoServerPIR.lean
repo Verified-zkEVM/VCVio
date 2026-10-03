@@ -5,10 +5,13 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.ProgramLogic.Tactics.Relational
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Information-Theoretic Private Information Retrieval (PIR)
@@ -124,55 +127,6 @@ private lemma pirResponse_cons (a : Fin N → W) (j : Fin N) (s : List (Fin N)) 
     pirResponse a (j :: s) = a j + pirResponse a s := by
   simp only [pirResponse, List.foldl_cons, zero_add]; exact foldl_add_shift _ (a j) s
 
-/-- For any output in the support of the foldlM, the sum of responses accumulates `a i₀`
-exactly when `i₀` appears in the fold list. -/
-private lemma pirQuery_foldl_support
-    (hchar : ∀ x : W, x + x = 0) (a : Fin N → W) (i₀ : Fin N)
-    (l : List (Fin N)) (hl : l.Nodup)
-    (init ss : List (Fin N) × List (Fin N))
-    (hss : ss ∈ support (l.foldlM (fun acc j => do
-      let b ← $ᵗ Bool
-      if j = i₀ then
-        return if b then (j :: acc.1, acc.2) else (acc.1, j :: acc.2)
-      else
-        return if b then (j :: acc.1, j :: acc.2) else acc) init)) :
-    pirResponse a ss.1 + pirResponse a ss.2 =
-      pirResponse a init.1 + pirResponse a init.2 + if i₀ ∈ l then a i₀ else 0 := by
-  induction l generalizing init with
-  | nil => simp only [List.foldlM, support_pure, Set.mem_singleton_iff] at hss; subst hss; simp
-  | cons j rest ih =>
-    rw [List.foldlM_cons] at hss
-    rw [mem_support_bind_iff] at hss
-    obtain ⟨mid, hmid, hss⟩ := hss
-    have hnodup := hl
-    rw [List.nodup_cons] at hnodup
-    have := ih hnodup.2 mid hss
-    rw [this]; clear this
-    -- Now show: mid response sum = init response sum + (if j = i₀ then a i₀ else 0)
-    -- and combine with the rest-of-list contribution
-    simp only [support_bind, Set.mem_iUnion] at hmid
-    obtain ⟨b, _, hmid⟩ := hmid
-    by_cases hj : j = i₀
-    · subst hj
-      simp only [↓reduceIte, support_pure, Set.mem_singleton_iff] at hmid
-      simp only [hnodup.1, ↓reduceIte, add_zero, List.mem_cons, or_false]
-      -- mid is either (j :: init.1, init.2) or (init.1, j :: init.2)
-      rcases b with _ | _  <;> simp only [Bool.false_eq_true, ↓reduceIte] at hmid
-        <;> subst hmid <;> simp [pirResponse_cons] <;> abel
-    · have hij : i₀ ≠ j := Ne.symm hj
-      simp only [hj, hij, ↓reduceIte, false_or, List.mem_cons] at hmid ⊢
-      rcases b with _ | _
-      · -- b = false: mid = init, unchanged
-        simp only [Bool.false_eq_true, ↓reduceIte, support_pure, Set.mem_singleton_iff] at hmid
-        subst hmid; rfl
-      · -- b = true: mid = (j :: init.1, j :: init.2)
-        simp only [↓reduceIte, support_pure, Set.mem_singleton_iff] at hmid
-        subst hmid; simp only [pirResponse_cons]; congr 1
-        have h := hchar (a j)
-        calc _ = (a j + a j) + (pirResponse a init.1 + pirResponse a init.2) := by abel
-          _ = 0 + _ := by rw [h]
-          _ = _ := by rw [zero_add]
-
 /-- Correctness: the PIR protocol always returns `a[i₀]`, assuming `W` has
 characteristic 2 (i.e. `x + x = 0` for all `x`). This ensures that database
 entries appearing in both query sets cancel out.
@@ -182,20 +136,29 @@ in `s` plus the XOR of entries in `s'` equals the sum of `a[k]` for all
 `k ≤ j` in the symmetric difference of `s` and `s'`, which is `{i₀} ∩ {0..j}`. -/
 theorem pir_correct (hchar : ∀ x : W, x + x = 0)
     (a : Fin N → W) (i₀ : Fin N) :
-    Pr[= a i₀ | pirMain a i₀] = 1 := by
-  -- Every output of pirMain a i₀ equals a i₀
-  have huniq : ∀ y ∈ support (pirMain a i₀), y = a i₀ := by
-    intro y hy
-    rw [pirMain, pirQuery] at hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨ss, hss, hy⟩ := hy
-    rw [support_pure, Set.mem_singleton_iff] at hy
-    have h := pirQuery_foldl_support hchar a i₀ (List.finRange N)
-      (List.nodup_finRange N) ([], []) ss hss
-    simp only [pirResponse, List.foldl_nil, add_zero, List.mem_finRange, ↓reduceIte, zero_add] at h
-    exact hy.trans h
-  exact probOutput_eq_one_of_support_subset_singleton
-    (NeverFail.probFailure_eq_zero (mx := pirMain a i₀)) huniq
+    Pr{let y ← pirMain a i₀}[y = a i₀] = 1 := by
+  prvcgen [pirMain, pirQuery] invariants
+  · fun pref _ acc => pirResponse a acc.1 + pirResponse a acc.2 = if i₀ ∈ pref then a i₀ else 0
+  case vc1 => simp [pirResponse]
+  case vc2 => rename_i h; simpa using h
+  case vc3 =>
+    rename_i pref cur suff hxs s s' hinv hcur
+    subst hcur
+    have hnot : cur ∉ pref := fun h =>
+      (List.nodup_append.mp (hxs ▸ List.nodup_finRange N)).2.2 _ h _ List.mem_cons_self rfl
+    cases b <;> simp only [hnot, ↓reduceIte, Bool.false_eq_true, pirResponse_cons,
+      List.mem_append, List.mem_cons, List.not_mem_nil, or_false, or_true] at hinv ⊢
+    · rw [add_left_comm, hinv, add_zero]
+    · rw [add_assoc, hinv, add_zero]
+  case vc4 =>
+    rename_i pref cur suff hxs s s' hinv hcur
+    cases b
+    · simpa [Ne.symm hcur] using hinv
+    · simp only [pirResponse_cons, List.mem_append, List.mem_singleton, Ne.symm hcur, or_false,
+        ↓reduceIte] at hinv ⊢
+      rw [← hinv]
+      calc _ = (a cur + a cur) + (pirResponse a s + pirResponse a s') := by abel
+        _ = _ := by rw [hchar, zero_add]
 
 /-- Privacy of the first server view: the distribution of the first query set `s`
 is independent of which index is being queried. Intuitively, each index `j` appears in `s` with
@@ -206,8 +169,7 @@ probability 1/2 regardless of whether `j = i₀` or not:
 This is one half of the information-theoretic privacy guarantee; the second
 server view is handled by `pir_private_snd`. -/
 theorem pir_private (i₁ i₂ : Fin N) :
-    𝒮[Prod.fst <$> pirQuery i₁] =
-    𝒮[Prod.fst <$> pirQuery i₂] := by
+    Prod.fst <$> pirQuery i₁ =ᵈ Prod.fst <$> pirQuery i₂ := by
   simp only [pirQuery]
   by_equiv
   rvcstep -- handle map
@@ -234,8 +196,7 @@ The proof uses a coupling argument with four cases depending on whether `j` equa
 both, or neither. When `j` equals exactly one of them, the coupling negates the coin (`b ↦ !b`),
 exploiting the symmetry of the uniform distribution on `Bool`. -/
 theorem pir_private_snd (i₁ i₂ : Fin N) :
-    𝒮[Prod.snd <$> pirQuery i₁] =
-    𝒮[Prod.snd <$> pirQuery i₂] := by
+    Prod.snd <$> pirQuery i₁ =ᵈ Prod.snd <$> pirQuery i₂ := by
   simp only [pirQuery]
   by_equiv
   rvcstep -- handle map

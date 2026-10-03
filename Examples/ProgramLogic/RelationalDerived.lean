@@ -28,7 +28,8 @@ open scoped OracleComp.ProgramLogic OracleComp.Rel.Quantitative
 universe u
 
 variable {ι : Type u} {spec : OracleSpec ι}
-variable [IsUniformSpec spec]
+variable [∀ t, Finite (spec.Range t)]
+variable [OracleSpec.AnswerMeasure spec]
 variable {α β γ : Type}
 
 /-! ## `rel_conseq` / `rel_inline` / `rel_dist` -/
@@ -95,14 +96,14 @@ example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦wrappedTrueLeft (spec := spec) ~ wrappedTrueRight (spec := spec) |
         (fun x y => if x = y then (1 : ℝ≥0∞) else 0);
-        Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
+        estack⟨⟩, estack⟨⟩⟧ := by
   unfold wrappedTrueLeft wrappedTrueRight
   rvcstep
 
 example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦wrappedTrueLeft (spec := spec) ~ wrappedTrueRight (spec := spec) |
-        (fun _ _ => (1 : ℝ≥0∞)); Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
+        (fun _ _ => (1 : ℝ≥0∞)); estack⟨⟩, estack⟨⟩⟧ := by
   rvcstep
   intro a b
   split_ifs <;> simp
@@ -114,14 +115,14 @@ example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦rawAuxLeft (spec := spec) ~ rawAuxRight (spec := spec) |
         (fun x y => if x = y then (1 : ℝ≥0∞) else 0);
-        Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
+        estack⟨⟩, estack⟨⟩⟧ := by
   unfold rawAuxLeft rawAuxRight
   rvcstep
 
 example :
     (1 : ℝ≥0∞) ⊑
       rwp⟦rawAuxLeft (spec := spec) ~ rawAuxRight (spec := spec) |
-        (fun _ _ => (1 : ℝ≥0∞)); Std.Internal.Do.EPost.Nil.mk, Std.Internal.Do.EPost.Nil.mk⟧ := by
+        (fun _ _ => (1 : ℝ≥0∞)); estack⟨⟩, estack⟨⟩⟧ := by
   rvcstep
   intro a b
   split_ifs <;> simp

@@ -9,7 +9,7 @@ public import VCVio.ProgramLogic.Unary.WP.OracleMeasure
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Native operational and quantitative oracle reasoning
+# Operational and quantitative oracle reasoning
 
 These canaries require only the chosen response measures, including weighted measures with
 zero-mass possible answers. No discrete probability backend is imported.
@@ -17,14 +17,13 @@ zero-mass possible answers. No discrete probability backend is imported.
 
 public section
 
-open MeasureTheory
-open scoped ENNReal MeasureProgramLogic.Quantitative
+open MeasureTheory Std.WP
+open scoped ENNReal ExpectationWP.Lower
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native support/measure bridge unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "support/measure bridge unexpectedly imports PMF"
 
 universe u
 
@@ -33,23 +32,22 @@ namespace VCVioTest.OracleComp.SupportMeasure
 section Generic
 
 variable {ι : Type u} {spec : OracleSpec.{u, 0} ι}
-  [∀ t, MeasurableSpace (spec.Range t)] [∀ t, DiscreteMeasurableSpace (spec.Range t)]
-  [OracleSpec.IsMeasureSpec spec]
+  [OracleSpec.AnswerMeasure spec]
   {α : Type} [MeasurableSpace α] [DiscreteMeasurableSpace α]
 
 example (mx : OracleComp spec α) (f g : α → ENNReal)
-    (hfg : ∀ x ∈ support mx, f x ≤ g x) : MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
+    (hfg : ∀ x ∈ support mx, f x ≤ g x) : wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
   gcongr with x hx
   exact hfg x hx
 
 example (mx : OracleComp spec α) (f g : α → ENNReal)
-    (hfg : ∀ x ∈ support mx, f x ≤ g x) : MAlgOrdered.wp mx f ≤ MAlgOrdered.wp mx g := by
-  grw [MeasureProgramLogic.Quantitative.wp_mono_of_support mx hfg]
+    (hfg : ∀ x ∈ support mx, f x ≤ g x) : wp mx f Lean.Order.bot ≤ wp mx g Lean.Order.bot := by
+  grw [wp_mono_of_support mx hfg]
 
 example (mx : OracleComp spec α) (f g : α → ENNReal) (c : ENNReal)
     (hfg : ∀ x ∈ support mx, f x ≤ c + g x) :
-    MAlgOrdered.wp mx f ≤ c + MAlgOrdered.wp mx g :=
-  MeasureProgramLogic.Quantitative.wp_le_const_add_of_support mx hfg
+    wp mx f Lean.Order.bot ≤ c + wp mx g Lean.Order.bot :=
+  ExpectationWP.wp_le_const_add_of_support mx hfg
 
 end Generic
 
@@ -57,7 +55,7 @@ end Generic
 
 abbrev WeightedSpec : OracleSpec (Fin 1) := Fin 1 →ₒ Bool
 
-noncomputable instance weightedMeasureSpec : OracleSpec.IsMeasureSpec WeightedSpec where
+noncomputable instance weightedMeasureSpec : OracleSpec.AnswerMeasure WeightedSpec where
   toMeasure _ := Measure.dirac false
   isProbabilityMeasure _ := inferInstance
 
@@ -65,6 +63,7 @@ example : true ∈ support (liftM (WeightedSpec.query 0) : OracleComp WeightedSp
   OracleComp.mem_support_query (spec := WeightedSpec) 0 true
 
 example : 𝒟[(liftM (WeightedSpec.query 0) : OracleComp WeightedSpec Bool)] {true} = 0 := by
-  simp [OracleSpec.IsMeasureSpec.toMeasure, PFunctor.IsMeasureSpec.toMeasure]
+  rw [OracleComp.evalDist_liftM_query_apply (spec := WeightedSpec) 0 (MeasurableSet.singleton _)]
+  simp [OracleSpec.AnswerMeasure.toMeasure, PFunctor.AnswerMeasure.toMeasure]
 
 end VCVioTest.OracleComp.SupportMeasure

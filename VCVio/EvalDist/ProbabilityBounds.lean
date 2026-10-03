@@ -9,6 +9,7 @@ public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Integral.Quadratic
 public import ToMathlib.MeasureTheory.Measure.Option
+import Mathlib.MeasureTheory.Integral.Lebesgue.Sub
 
 /-!
 # Probability bounds for computation observations
@@ -16,8 +17,10 @@ public import ToMathlib.MeasureTheory.Measure.Option
 Union bounds, event splitting, and conditioning on a common draw are stated for events observed
 in `Prop`, so intermediate types need no measurable-space arguments in the public statements. The
 common draw may lose mass; lower bounds ask for its losslessness as the trivially true event.
-Bounds that only need to hold on structurally reachable outputs go through core attachment.
-Conditional independent draws bound the squared probability of a single event.
+An observation bounded by one has expectation one exactly when it equals one almost surely, which
+passes a probability-one event through the nested normal form of a bind. Bounds that need to hold
+only at the possible outputs go through core attachment. Two independent runs of a continuation
+after a common draw bound the squared probability of an event of one run.
 -/
 
 public section
@@ -32,21 +35,14 @@ theorem prEvent_bind_sq_le_bind_pair
     {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     {α β : Type} (source : m α) (f : α → m β) (p : β → Prop) :
-    Pr{let y ← source >>= f}[p y] ^ 2 ≤
+    Pr{let x ← source; let y ← f x}[p y] ^ 2 ≤
       Pr{let x ← source; let a ← f x; let b ← f x}[p a ∧ p b] := by
   let : MeasurableSpace α := ⊤
   have hpair :
       Pr{let x ← source; let a ← f x; let b ← f x}[p a ∧ p b] =
         ∫⁻ x, Pr{let a ← f x}[p a] ^ 2 ∂𝒟[source] := by
-    calc
-      _ = Pr{let z ← (source >>= fun x ↦ do
-              let a ← f x
-              let b ← f x
-              return (a, b))}[p z.1 ∧ p z.2] := by
-        simp only [bind_assoc, pure_bind]
-      _ = _ := by
-        rw [prEvent_bind_eq_lintegral_of_discrete]
-        simp only [bind_assoc, pure_bind, prEvent_bind_bind_and, sq]
+    rw [ExpectationWP.wp_eq_lintegral source _ Measurable.of_discrete]
+    simp only [prEvent_bind_bind_and, sq]
   rw [prEvent_bind_eq_lintegral_of_discrete, hpair]
   exact ENNReal.sq_lintegral_le_lintegral_sq Measurable.of_discrete.aemeasurable
 
@@ -85,6 +81,24 @@ theorem prEvent_exists_finset_le {ι : Type} (s : Finset ι) (mx : m α) (p : ι
   intro x hx
   obtain ⟨i, hi, hp⟩ := hx
   exact Set.mem_biUnion hi hp
+
+/-- Over a finite type of values, the event that an optional observation is present has the total
+probability of its individual values. -/
+theorem prEvent_isSome_eq_sum {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
+    Pr{let x ← mx}[(f x).isSome] = ∑ k, Pr{let x ← mx}[f x = some k] := by
+  let : MeasurableSpace α := ⊤
+  simp only [prEvent_eq_evalDist_of_discrete]
+  rw [← measure_biUnion_finset (fun i _ j _ hij ↦ Set.disjoint_left.mpr fun _ hi hj ↦
+      hij (Option.some.inj (hi.symm.trans hj))) fun _ _ ↦ MeasurableSet.of_discrete]
+  congr 1
+  ext x
+  simp [Option.isSome_iff_exists]
+
+/-- Disjoint selector events of one computation have total probability at most one. -/
+theorem sum_prEvent_eq_some_le_one {γ : Type} [Fintype γ] (mx : m α) (f : α → Option γ) :
+    ∑ k, Pr{let x ← mx}[f x = some k] ≤ 1 := by
+  rw [← prEvent_isSome_eq_sum]
+  exact prEvent_le_one _
 
 /-- Union bound over a finite type. -/
 theorem prEvent_exists_le {ι : Type} [Fintype ι] (mx : m α) (p : ι → α → Prop) :
@@ -139,7 +153,7 @@ theorem prEvent_le_prEvent_add_of_prEvent_not_and_not_le {β : Type} (mx : m α)
     (h : Pr{let x ← mx}[¬p x ∧ ¬bad x] ≤ Pr{let y ← my}[¬q y]) :
     Pr{let y ← my}[q y] ≤ Pr{let x ← mx}[bad x] + Pr{let x ← mx}[p x] := by
   refine ENNReal.le_of_add_le_add_right (a := Pr{let y ← my}[¬q y])
-    (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one my _)) ?_
+    (ne_top_of_le_ne_top ENNReal.one_ne_top (prEvent_le_one _)) ?_
   rw [prEvent_add_prEvent_not_eq_prEvent_true]
   calc Pr{let _ ← my}[True] ≤ Pr{let _ ← mx}[True] := hmass
     _ = Pr{let x ← mx}[p x] + Pr{let x ← mx}[¬p x] :=
@@ -171,25 +185,52 @@ variable {m : Type → Type v} [Monad m] [LawfulMonad m]
 No losslessness of the draw is needed. -/
 theorem prEvent_bind_le_of_forall_le (mx : m α) (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ ε := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete]
-  calc ∫⁻ a, Pr{let y ← f a}[q y] ∂𝒟[mx]
-      ≤ ∫⁻ _, ε ∂𝒟[mx] := lintegral_mono h
-    _ = ε * 𝒟[mx] Set.univ := lintegral_const ε
-    _ ≤ ε := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
+    Pr{let x ← mx; let y ← f x}[q y] ≤ ε :=
+  wp_le_of_forall_le mx h
+
+/-- A pointwise comparison of continuation events survives a common draw. -/
+theorem prEvent_bind_mono_of_forall_le {γ : Type} (mx : m α) (f : α → m β) (g : α → m γ)
+    (p : β → Prop) (q : γ → Prop) (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
+    Pr{let x ← mx; let y ← f x}[p y] ≤ Pr{let x ← mx; let y ← g x}[q y] :=
+  ExpectationWP.wp_mono mx h
+
+/-- A continuation event bounded by `ε` where `p` holds, and null where it fails, is bounded after
+a common draw by the probability of `p` times `ε`. -/
+theorem prEvent_bind_le_prEvent_mul_of_forall_le (mx : m α) (f : α → m β) (p : α → Prop)
+    (q : β → Prop) {ε : ℝ≥0∞} (h₁ : ∀ a, p a → Pr{let y ← f a}[q y] ≤ ε)
+    (h₂ : ∀ a, ¬ p a → Pr{let y ← f a}[q y] = 0) :
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] * ε := by
+  rw [← wp_propInd_mul]
+  refine ExpectationWP.wp_mono mx fun a ↦ ?_
+  by_cases hp : p a
+  · simpa [hp] using h₁ a hp
+  · simp [hp, h₂ a hp]
+
+/-- A pointwise split of a continuation event into two other continuation events survives a
+common draw. -/
+theorem prEvent_bind_le_add_of_forall_le {γ δ : Type} (mx : m α) (f : α → m β)
+    (g : α → m γ) (k : α → m δ) (p : β → Prop) (q : γ → Prop) (r : δ → Prop)
+    (h : ∀ a, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y] + Pr{let y ← k a}[r y]) :
+    Pr{let x ← mx; let y ← f x}[p y] ≤
+      Pr{let x ← mx; let y ← g x}[q y] + Pr{let x ← mx; let y ← k x}[r y] :=
+  (ExpectationWP.wp_mono mx h).trans_eq (ExpectationWP.wp_add mx _ _)
 
 /-- A uniform lower bound on the event of every continuation bounds the event after a lossless
 common draw. -/
 theorem le_prEvent_bind_of_forall_le (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
     (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ε ≤ Pr{let y ← f a}[q y]) :
-    ε ≤ Pr{let y ← mx >>= f}[q y] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_true_eq_evalDist_apply_univ] at hmx
-  rw [prEvent_bind_eq_lintegral_of_discrete]
-  calc ε = ∫⁻ _, ε ∂𝒟[mx] := by rw [lintegral_const, hmx, mul_one]
-    _ ≤ _ := lintegral_mono h
+    ε ≤ Pr{let x ← mx; let y ← f x}[q y] :=
+  le_wp_of_forall_le mx hmx h
+
+/-- A continuation event with the same probability after every draw keeps that probability after a
+lossless draw. -/
+theorem prEvent_bind_eq_of_forall_eq (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
+    (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
+    (h : ∀ a, Pr{let y ← f a}[q y] = ε) :
+    Pr{let x ← mx; let y ← f x}[q y] = ε :=
+  le_antisymm (prEvent_bind_le_of_forall_le mx f q fun a ↦ (h a).le)
+    (le_prEvent_bind_of_forall_le mx hmx f q fun a ↦ (h a).ge)
 
 /-- Multiplying a lower bound for a prefix event by a uniform conditional lower bound gives a
 lower bound for the event after the bind. -/
@@ -197,24 +238,14 @@ theorem mul_le_prEvent_bind_of_forall (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {r r' : ℝ≥0∞}
     (h : r ≤ Pr{let x ← mx}[p x])
     (h' : ∀ x, p x → r' ≤ Pr{let y ← f x}[q y]) :
-    r * r' ≤ Pr{let y ← mx >>= f}[q y] := by
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete] at h
+    r * r' ≤ Pr{let x ← mx; let y ← f x}[q y] := by
   calc
-    r * r' ≤ 𝒟[mx] {x | p x} * r' := by gcongr
-    _ = ∫⁻ x, ({x | p x} : Set α).indicator (fun _ ↦ r') x ∂𝒟[mx] := by
-      rw [lintegral_indicator MeasurableSet.of_discrete, setLIntegral_const]
-      exact mul_comm _ _
-    _ ≤ ∫⁻ x, Pr{let y ← f x}[q y] ∂𝒟[mx] := by
-      apply lintegral_mono
-      intro x
+    r * r' ≤ Pr{let x ← mx}[p x] * r' := by gcongr
+    _ = wp⟦mx⟧ fun x ↦ propInd (p x) * r' := (wp_propInd_mul mx p r').symm
+    _ ≤ _ := ExpectationWP.wp_mono mx fun x ↦ by
       by_cases hx : p x
-      · rw [Set.indicator_of_mem (show x ∈ {x | p x} from hx)]
-        simpa only [map_eq_bind_pure_comp, Function.comp_def] using h' x hx
-      · rw [Set.indicator_of_notMem (show x ∉ {x | p x} from hx)]
-        exact zero_le
-    _ = Pr{let y ← mx >>= f}[q y] := (prEvent_bind_eq_lintegral_of_discrete mx f q).symm
-    _ ≤ _ := by rfl
+      · simpa [hx] using h' x hx
+      · simp [hx]
 
 /-- Conditioning on a predicate of the common draw: the continuation event is bounded by the
 predicate's probability plus the conditional bound weighted by the predicate's complement.
@@ -223,37 +254,19 @@ is `1 - Pr{let a ← mx}[p a]` by `prEvent_add_prEvent_not`. -/
 theorem prEvent_bind_le_prEvent_add_mul_prEvent_not (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
-  classical
-  let : MeasurableSpace α := ⊤
-  rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_eq_evalDist_of_discrete,
-    prEvent_eq_evalDist_of_discrete]
-  have hpt : ∀ a, Pr{let y ← f a}[q y] ≤
-      ({a | p a} : Set α).indicator (fun _ ↦ 1) a +
-        ({a | ¬ p a} : Set α).indicator (fun _ ↦ ε) a := by
-    intro a
-    by_cases hpa : p a
-    · rw [Set.indicator_of_mem (show a ∈ {a | p a} from hpa),
-        Set.indicator_of_notMem (show a ∉ {a | ¬ p a} from not_not.mpr hpa), add_zero]
-      exact prEvent_le_one _ _
-    · rw [Set.indicator_of_notMem (show a ∉ {a | p a} from hpa),
-        Set.indicator_of_mem (show a ∈ {a | ¬ p a} from hpa), zero_add]
-      exact h a hpa
-  calc ∫⁻ a, Pr{let y ← f a}[q y] ∂𝒟[mx]
-      ≤ ∫⁻ a, ({a | p a} : Set α).indicator (fun _ ↦ 1) a +
-          ({a | ¬ p a} : Set α).indicator (fun _ ↦ ε) a ∂𝒟[mx] := lintegral_mono hpt
-    _ = 𝒟[mx] {a | p a} + ε * 𝒟[mx] {a | ¬ p a} := by
-      rw [lintegral_add_left (Measurable.of_discrete),
-        lintegral_indicator MeasurableSet.of_discrete,
-        lintegral_indicator MeasurableSet.of_discrete]
-      simp [lintegral_const]
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
+  rw [← wp_mul_propInd, ← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_mono mx fun a ↦ ?_
+  by_cases hpa : p a
+  · simp [hpa]
+  · simpa [hpa] using h a hpa
 
 /-- A continuation event vanishing outside a predicate of the common draw is bounded by the
 predicate's probability. -/
 theorem prEvent_bind_le_prEvent_of_forall_eq_zero (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop)
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] = 0) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] := by
   simpa using prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q (ε := 0)
     fun a ha ↦ (h a ha).le
 
@@ -262,16 +275,61 @@ predicate's probability plus `ε`. -/
 theorem prEvent_bind_le_prEvent_add (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not mx f p q h).trans
-    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one mx fun a ↦ ¬ p a)) _)
+    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 end conditioning
 
-/-! ## Reachable continuations through core attachment
+/-! ## Conditioning on a probability-one event
 
-Bounds that only hold on structurally reachable outputs of the common draw factor the bind
-through `MonadAttach.attach`, whose outputs carry their reachability proof. -/
+An observation bounded by one has expectation one exactly when it equals one almost surely. In the
+nested normal form of an event, a probability-one event of the whole computation is a
+probability-one event of the first draw under which every continuation's event has probability
+one, with no losslessness or support hypothesis on the draw. -/
+
+section probabilityOne
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m]
+  [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
+
+/-- An observation bounded by one that equals one wherever a probability-one event holds has
+expectation one. -/
+theorem wp_eq_one_of_prEvent_eq_one (mx : m α) {q : α → Prop} {g : α → ℝ≥0∞}
+    (hq : Pr{let x ← mx}[q x] = 1) (hg : ∀ x, q x → g x = 1) (hg1 : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g = 1 :=
+  le_antisymm (wp_le_of_forall_le mx hg1) <| hq.symm.trans_le <|
+    ExpectationWP.wp_mono mx fun x => by
+      by_cases hx : q x <;> simp [propInd, hx, hg]
+
+/-- An observation bounded by one with expectation one equals one almost surely. -/
+theorem prEvent_eq_one_of_wp_eq_one (mx : m α) {g : α → ℝ≥0∞} (hg : ∀ x, g x ≤ 1)
+    (h : wp⟦mx⟧ g = 1) : Pr{let x ← mx}[g x = 1] = 1 := by
+  let : MeasurableSpace α := ⊤
+  rw [ExpectationWP.wp_eq_lintegral mx g Measurable.of_discrete] at h
+  have hmass : 𝒟[mx] Set.univ = 1 :=
+    le_antisymm (evalDist_apply_univ_le_one mx) <| by
+      calc (1 : ℝ≥0∞) = ∫⁻ x, g x ∂𝒟[mx] := h.symm
+        _ ≤ ∫⁻ _, 1 ∂𝒟[mx] := lintegral_mono hg
+        _ = 𝒟[mx] Set.univ := by simp
+  have : IsProbabilityMeasure 𝒟[mx] := ⟨hmass⟩
+  rw [prEvent_eq_evalDist_of_discrete, ← ae_iff_prob_eq_one Measurable.of_discrete]
+  exact ae_eq_of_ae_le_of_lintegral_le (Filter.Eventually.of_forall hg)
+    (ne_top_of_le_ne_top ENNReal.one_ne_top h.le) measurable_const.aemeasurable (by simp [h])
+
+/-- An observation bounded by one has expectation one exactly when it equals one almost
+surely. -/
+theorem wp_eq_one_iff_prEvent_eq_one (mx : m α) {g : α → ℝ≥0∞} (hg : ∀ x, g x ≤ 1) :
+    wp⟦mx⟧ g = 1 ↔ Pr{let x ← mx}[g x = 1] = 1 :=
+  ⟨prEvent_eq_one_of_wp_eq_one mx hg,
+    fun h => wp_eq_one_of_prEvent_eq_one mx h (fun _ hx => hx) hg⟩
+
+end probabilityOne
+
+/-! ## Bounds at the possible outputs through core attachment
+
+A bound that holds only at the possible outputs of the common draw factors the bind through
+`MonadAttach.attach`, whose outputs carry a proof that they are possible. -/
 
 section attach
 
@@ -284,7 +342,7 @@ theorem bind_eq_attach_bind (mx : m α) (f : α → m β) :
   conv_lhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [bind_map_left]
 
-variable [EvalDistSemantics m]
+variable [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-- The trivially true event is unchanged by attachment. -/
 theorem prEvent_true_attach (mx : m α) :
@@ -292,10 +350,27 @@ theorem prEvent_true_attach (mx : m α) :
   conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
   rw [prEvent_map]
 
-variable [LawfulEvalDistSemantics m]
+/-- An expectation is the expectation over the attached outputs. -/
+theorem wp_eq_wp_attach (mx : m α) (g : α → ℝ≥0∞) :
+    wp⟦mx⟧ g = wp⟦MonadAttach.attach mx⟧ fun a ↦ g a.1 := by
+  conv_lhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
+  exact ExpectationWP.wp_map _ _ _
 
-/-- Implication between events only on the structurally reachable outputs bounds their
-probabilities. -/
+/-- An observation bounded by another at every possible output has at most its expectation. -/
+@[gcongr]
+theorem wp_mono_of_support (mx : m α) {f g : α → ℝ≥0∞}
+    (h : ∀ a ∈ support mx, f a ≤ g a) : wp⟦mx⟧ f ≤ wp⟦mx⟧ g := by
+  rw [wp_eq_wp_attach mx f, wp_eq_wp_attach mx g]
+  exact ExpectationWP.wp_mono _ fun a ↦ h a.1 a.2
+
+/-- Observations that agree at every possible output have equal expectations. -/
+theorem wp_congr_of_support (mx : m α) {f g : α → ℝ≥0∞}
+    (h : ∀ a ∈ support mx, f a = g a) : wp⟦mx⟧ f = wp⟦mx⟧ g :=
+  le_antisymm (wp_mono_of_support mx fun a ha ↦ (h a ha).le)
+    (wp_mono_of_support mx fun a ha ↦ (h a ha).ge)
+
+/-- An event that implies another at every possible output has at most the other's
+probability. -/
 theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
     (h : ∀ a ∈ support mx, p a → q a) :
     Pr{let a ← mx}[p a] ≤ Pr{let a ← mx}[q a] := by
@@ -304,49 +379,136 @@ theorem prEvent_mono_of_support (mx : m α) (p q : α → Prop)
   rw [prEvent_map, prEvent_map]
   exact prEvent_mono _ _ _ fun a ha ↦ h a.1 a.2 ha
 
-/-- A bound on the event of every reachable continuation bounds the event after the draw. -/
+/-- Events that agree at every possible output have equal probability. -/
+theorem prEvent_congr_of_support (mx : m α) (p q : α → Prop)
+    (h : ∀ a ∈ support mx, p a ↔ q a) :
+    Pr{let a ← mx}[p a] = Pr{let a ← mx}[q a] :=
+  le_antisymm (prEvent_mono_of_support mx p q fun a ha ↦ (h a ha).1)
+    (prEvent_mono_of_support mx q p fun a ha ↦ (h a ha).2)
+
+/-- An event that holds at no possible output has probability zero. -/
+theorem prEvent_eq_zero_of_forall_mem_support (mx : m α) (p : α → Prop)
+    (h : ∀ a ∈ support mx, ¬ p a) : Pr{let a ← mx}[p a] = 0 :=
+  (prEvent_congr_of_support mx p (fun _ ↦ False) fun a ha ↦ iff_false_intro (h a ha)).trans
+    (prEvent_eq_zero_of_forall_not mx _ fun _ ↦ id)
+
+/-- An impossible output has probability zero. -/
+theorem prEvent_eq_zero_of_not_mem_support (mx : m α) {x : α} (hx : x ∉ support mx) :
+    Pr{let y ← mx}[y = x] = 0 :=
+  prEvent_eq_zero_of_forall_mem_support mx _ fun _ hy h ↦ hx (h ▸ hy)
+
+/-- A bound on the continuation's event at every possible output bounds the event after the draw. -/
 theorem prEvent_bind_le_of_forall_le_of_support (mx : m α) (f : α → m β) (q : β → Prop)
     {ε : ℝ≥0∞} (h : ∀ a ∈ support mx, Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ ε := by
-  rw [bind_eq_attach_bind mx f]
-  exact prEvent_bind_le_of_forall_le _ _ q fun a ↦ h a.1 a.2
+    Pr{let x ← mx; let y ← f x}[q y] ≤ ε := by
+  rw [wp_eq_wp_attach]
+  exact wp_le_of_forall_le _ fun a ↦ h a.1 a.2
 
-/-- A lower bound on the event of every reachable continuation bounds the event after a lossless
+/-- A comparison of continuation events at every possible output of a common draw survives the
 draw. -/
+theorem prEvent_bind_mono_of_forall_le_of_support {γ : Type} (mx : m α) (f : α → m β)
+    (g : α → m γ) (p : β → Prop) (q : γ → Prop)
+    (h : ∀ a ∈ support mx, Pr{let y ← f a}[p y] ≤ Pr{let y ← g a}[q y]) :
+    Pr{let x ← mx; let y ← f x}[p y] ≤ Pr{let x ← mx; let y ← g x}[q y] :=
+  wp_mono_of_support mx h
+
+/-- A lower bound on the continuation's event at every possible output of a lossless draw bounds
+the event after the draw. -/
 theorem le_prEvent_bind_of_forall_le_of_support (mx : m α) (hmx : Pr{let _ ← mx}[True] = 1)
     (f : α → m β) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ε ≤ Pr{let y ← f a}[q y]) :
-    ε ≤ Pr{let y ← mx >>= f}[q y] := by
-  rw [bind_eq_attach_bind mx f]
-  exact le_prEvent_bind_of_forall_le _ (by rwa [prEvent_true_attach]) _ q fun a ↦ h a.1 a.2
+    ε ≤ Pr{let x ← mx; let y ← f x}[q y] := by
+  rw [wp_eq_wp_attach]
+  exact le_wp_of_forall_le _ (by rwa [prEvent_true_attach]) fun a ↦ h a.1 a.2
 
-/-- Conditioning on a predicate of the reachable common draw. -/
+/-- Conditioning on a predicate of the common draw: if the continuation's event has probability at
+most `ε` at every possible output that fails the predicate, the event after the draw has
+probability at most that of the predicate plus `ε` times that of its negation. -/
 theorem prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
-  rw [bind_eq_attach_bind mx f]
-  have := prEvent_bind_le_prEvent_add_mul_prEvent_not (MonadAttach.attach mx) (fun a ↦ f a.1)
-    (fun a ↦ p a.1) q fun a ha ↦ h a.1 a.2 ha
-  refine this.trans (le_of_eq ?_)
-  conv_rhs => rw [← WeaklyLawfulMonadAttach.map_attach (x := mx)]
-  rw [prEvent_map, prEvent_map]
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε * Pr{let a ← mx}[¬ p a] := by
+  rw [← wp_mul_propInd, ← ExpectationWP.wp_add]
+  refine wp_mono_of_support mx fun a ha ↦ ?_
+  by_cases hpa : p a
+  · simp [hpa]
+  · simpa [hpa] using h a ha hpa
 
-/-- A continuation event vanishing outside a predicate of the reachable draw is bounded by the
-predicate's probability. -/
+/-- If the continuation's event vanishes at every possible output of the draw that fails a
+predicate, the event after the draw has at most the predicate's probability. -/
 theorem prEvent_bind_le_prEvent_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop)
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] = 0) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] := by
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] := by
   simpa using prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q (ε := 0)
     fun a ha hp ↦ (h a ha hp).le
 
-/-- A continuation event bounded outside a predicate of the reachable draw. -/
+/-- An expectation splits along an event, with the observation bounded by one on the support
+only. -/
+theorem wp_le_prEvent_add_wp_of_support (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞)
+    (hle : ∀ x ∈ support mx, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) := by
+  classical
+  calc wp⟦mx⟧ g ≤ wp⟦mx⟧ fun x => propInd (bad x) + propInd (¬bad x) * g x :=
+        wp_mono_of_support mx fun x hx => by
+          by_cases h : bad x
+          · simpa [h] using hle x hx
+          · simp [h]
+    _ = _ := ExpectationWP.wp_add mx _ _
+
+/-- An expectation is at most the probability of an event plus a bound holding off the event on
+the support, for an observation bounded by one on the support. -/
+theorem wp_le_prEvent_add_of_support (mx : m α) (bad : α → Prop) (g : α → ℝ≥0∞) {ε : ℝ≥0∞}
+    (hg : ∀ x ∈ support mx, ¬bad x → g x ≤ ε) (hle : ∀ x ∈ support mx, g x ≤ 1) :
+    wp⟦mx⟧ g ≤ Pr{let x ← mx}[bad x] + ε := by
+  classical
+  refine (wp_le_prEvent_add_wp_of_support mx bad g hle).trans (add_le_add le_rfl ?_)
+  calc wp⟦mx⟧ (fun x => propInd (¬bad x) * g x) ≤ wp⟦mx⟧ (fun _ => ε) :=
+        wp_mono_of_support mx fun x hx => by
+          by_cases h : bad x
+          · simp [h]
+          · simpa [h] using hg x hx h
+    _ ≤ ε := by
+        rw [wp_const]
+        exact mul_le_of_le_one_right' (prEvent_le_one mx)
+
+/-- If the continuation's event has probability at most `ε` at every possible output of the draw
+that fails a predicate, the event after the draw has probability at most that of the predicate
+plus `ε`. -/
 theorem prEvent_bind_le_prEvent_add_of_support (mx : m α) (f : α → m β)
     (p : α → Prop) (q : β → Prop) {ε : ℝ≥0∞}
     (h : ∀ a ∈ support mx, ¬ p a → Pr{let y ← f a}[q y] ≤ ε) :
-    Pr{let y ← mx >>= f}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
+    Pr{let x ← mx; let y ← f x}[q y] ≤ Pr{let a ← mx}[p a] + ε :=
   (prEvent_bind_le_prEvent_add_mul_prEvent_not_of_support mx f p q h).trans
-    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one mx fun a ↦ ¬ p a)) _)
+    (add_le_add_right (mul_le_of_le_one_right' (prEvent_le_one _)) _)
 
 end attach
+
+/-! ## Failure of a bind -/
+
+section prFail
+
+variable {m : Type → Type v} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m] {α β : Type}
+
+/-- A bind fails when its prefix fails, or when the continuation fails after a successful prefix
+output. -/
+theorem prFail_bind_eq_add_lintegral_of_discrete [MeasurableSpace α] [DiscreteMeasurableSpace α]
+    (mx : m α) (f : α → m β) :
+    prFail (mx >>= f) = prFail mx + ∫⁻ x, prFail (f x) ∂𝒟[mx] := by
+  have hbind : Pr{let x ← mx; let _ ← f x}[True] = ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] :=
+    prEvent_bind_eq_lintegral_of_discrete mx f (fun _ ↦ True)
+  have hle : ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ 𝒟[mx] Set.univ :=
+    calc ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] ≤ ∫⁻ _, 1 ∂𝒟[mx] :=
+          lintegral_mono fun x ↦ prEvent_le_one _
+      _ = 𝒟[mx] Set.univ := by simp
+  have hsub : ∫⁻ x, prFail (f x) ∂𝒟[mx] =
+      𝒟[mx] Set.univ - ∫⁻ x, Pr{let _ ← f x}[True] ∂𝒟[mx] := by
+    simp only [prFail_def]
+    rw [lintegral_sub Measurable.of_discrete (ne_top_of_le_ne_top (measure_ne_top _ _) hle)
+      (Filter.Eventually.of_forall fun x ↦ prEvent_le_one _)]
+    simp
+  rw [prFail_def, prEvent_bind, prFail_eq_one_sub_evalDist_univ, hsub, hbind]
+  exact (tsub_add_tsub_cancel (evalDist_apply_univ_le_one mx) hle).symm
+
+end prFail

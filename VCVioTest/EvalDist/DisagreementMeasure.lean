@@ -10,7 +10,7 @@ public import VCVio.EvalDist.Defs.Measure.Deterministic
 public import Mathlib.Probability.Distributions.Gaussian.Real
 
 /-!
-# Native observed continuation comparison regressions
+# Observed continuation comparison regressions
 
 Chosen real source spaces admit AE continuation comparisons. Finite references may observe
 different payload types; hidden function-valued prefixes need no measurable space. Lossy
@@ -24,9 +24,8 @@ open scoped ENNReal ProbabilityTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF, `NeverFail, `EvalDistCompatible, `DiscreteEvalDistCompatible] do
-    if env.contains name then
-      throwError "native disagreement unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "disagreement unexpectedly imports PMF"
 
 namespace VCVioTest.DisagreementMeasure
 
@@ -35,13 +34,26 @@ universe v
 example {m : Type → Type v} [Monad m] [LawfulMonad m]
     [EvalDistSemantics m] [LawfulEvalDistSemantics m]
     (mx : m ℝ) (f : ℝ → m ℝ) (g : Fin 2 → ℝ → m Prop)
-    (hf : Measurable fun x ↦ 𝒟[do let y ← f x; return y ≤ 0])
+    (hf : Measurable fun x ↦ 𝒟[(· ≤ 0) <$> f x])
     (hg : ∀ i, Measurable fun x ↦ 𝒟[g i x]) (bound : ℝ → ENNReal)
     (h : ∀ᵐ x ∂𝒟[mx], Pr{let y ← f x}[y ≤ 0] ≤
       (∑ i, Pr{let q ← g i x}[q]) + bound x) :
-    Pr{let y ← mx >>= f}[y ≤ 0] ≤
-      (∑ i, Pr{let q ← mx >>= g i}[q]) + ∫⁻ x, bound x ∂𝒟[mx] :=
-  prEvent_bind_le_sum_add_lintegral_ae mx f (fun y ↦ y ≤ 0) g hf hg bound h
+    Pr{let x ← mx; let y ← f x}[y ≤ 0] ≤
+      (∑ i, Pr{let x ← mx; let q ← g i x}[q]) + ∫⁻ x, bound x ∂𝒟[mx] :=
+  prEvent_bind_le_sum_add_lintegral_ae mx f (fun y ↦ y ≤ 0) (fun i x ↦ Pr{let q ← g i x}[q]) hf
+    (fun i ↦ measurable_prEvent (by simpa only [id_map'] using hg i)) bound h
+
+/-- A bad draw is charged in full and a bound off it, holding almost everywhere, is integrated
+over the good draws, with no measurable structure assumed on the draw. -/
+example {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α : Type}
+    (mx : m α) (f : α → m Bool) (bad : α → Prop) (bound : α → ENNReal)
+    (h : letI : MeasurableSpace α := ⊤
+      ∀ᵐ a ∂𝒟[mx], ¬ bad a → Pr{let b ← f a}[b = true] ≤ bound a) :
+    letI : MeasurableSpace α := ⊤
+    Pr{let a ← mx; let b ← f a}[b = true] ≤
+      Pr{let a ← mx}[bad a] + ∫⁻ a in {a | ¬ bad a}, bound a ∂𝒟[mx] :=
+  prEvent_bind_le_prEvent_add_lintegral_ae mx f bad (· = true) bound h
 
 example (κ : Kernel ℝ ℝ) (η : Fin 2 → Kernel ℝ Bool) (bound : ℝ → ENNReal)
     (h : ∀ᵐ x ∂gaussianReal 0 1, κ x (Set.Iic 0) ≤
@@ -65,17 +77,17 @@ example {α β : Type} (mx : Option α) (f : α → Option β) (p : β → Prop)
     (g : Fin 2 → α → Option Prop) (ε : ENNReal)
     (h : ∀ x ∈ support mx, Pr{let y ← f x}[p y] ≤
       (∑ i, Pr{let q ← g i x}[q]) + ε) :
-    Pr{let y ← mx >>= f}[p y] ≤ (∑ i, Pr{let q ← mx >>= g i}[q]) +
+    Pr{let x ← mx; let y ← f x}[p y] ≤ (∑ i, Pr{let x ← mx; let q ← g i x}[q]) +
       ε * Pr{let _x ← mx}[True] :=
-  prEvent_bind_le_sum_add_mul_mass_of_support mx f p g ε h
+  wp_le_sum_add_mul_mass_of_support mx (fun i x ↦ Pr{let q ← g i x}[q]) ε h
 
 example (mx : Option (Nat → Nat)) (f g : (Nat → Nat) → Option ℝ)
     (bad : (Nat → Nat) → Option (ℝ × ℝ)) (D : (Nat → Nat) → Prop) (ε₁ ε₂ : ENNReal)
     (hD : Pr{let x ← mx}[D x] ≤ ε₁)
     (h : ∀ x ∈ support mx, ¬D x → Pr{let y ← f x}[y ≤ 0] ≤
       Pr{let y ← g x}[y ≤ 0] + Pr{let z ← bad x}[z.1 ≤ z.2] + ε₂) :
-    Pr{let y ← mx >>= f}[y ≤ 0] ≤ Pr{let y ← mx >>= g}[y ≤ 0] +
-      Pr{let z ← mx >>= bad}[z.1 ≤ z.2] + ε₁ + ε₂ :=
+    Pr{let x ← mx; let y ← f x}[y ≤ 0] ≤ Pr{let x ← mx; let y ← g x}[y ≤ 0] +
+      Pr{let x ← mx; let z ← bad x}[z.1 ≤ z.2] + ε₁ + ε₂ :=
   prEvent_bind_le_add_bad_disagree hD h
 
 end VCVioTest.DisagreementMeasure

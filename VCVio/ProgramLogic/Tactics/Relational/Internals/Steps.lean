@@ -53,7 +53,7 @@ attribute [vcspec]
   OracleComp.Rel.Quantitative.relTriple_uniformSample_refl
   OracleComp.Rel.Quantitative.relTriple_query_bij
   OracleComp.Rel.Quantitative.relTriple_query_refl
-  -- Raw relational WP rule from the Std.Do bridge
+  -- Raw relational WP rule of the quantitative `VCVio.ProgramLogic.RelTriple`
   VCVio.ProgramLogic.RelWP.rwp_pure
   -- `simulateQ`-aware rules from `Relational/SimulateQ.lean`
   OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run_eqRel_of_impl_eq_preservesInv
@@ -65,13 +65,13 @@ private def mkRVCGenPlannedStep (label replayText : String) (run : TacticM Bool)
 private structure RelGoalShape where
   oa : Expr
   ob : Expr
-  isStdDo : Bool
+  isQuantitative : Bool
 
 private def relGoalShape? (target : Expr) : Option RelGoalShape := do
-  if let some (_pre, oa, ob, _post) := stdDoRelTripleGoalParts? target then
-    some { oa, ob, isStdDo := true }
+  if let some (_pre, oa, ob, _post) := quantRelTripleGoalParts? target then
+    some { oa, ob, isQuantitative := true }
   else if let some (oa, ob, _post) := relTripleGoalParts? target then
-    some { oa, ob, isStdDo := false }
+    some { oa, ob, isQuantitative := false }
   else
     none
 
@@ -140,7 +140,7 @@ def tryCloseRelGoalImmediate : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
   let relTriplePost? := relTripleGoalParts? target |>.map (fun (_, _, post) => post)
   let some shape ← currentRelGoalShape? | return false
-  if shape.isStdDo then
+  if shape.isQuantitative then
     if isPureExpr shape.oa && isPureExpr shape.ob then
       return (← tryEvalTacticSyntax (← `(tactic|
         exact OracleComp.Rel.Quantitative.relTriple_pure _ _ _)))
@@ -183,14 +183,14 @@ def tryCloseRelGoalImmediate : TacticM Bool := do
   let saved ← saveState
   if ← tryEvalTacticSyntax (← `(tactic| subst_vars)) then
     let some shape ← currentRelGoalShape? | saved.restore; return false
-    if !shape.isStdDo && (← relCompsDefEq shape.oa shape.ob) then
+    if !shape.isQuantitative && (← relCompsDefEq shape.oa shape.ob) then
       if ← tryEvalTacticSyntax (← `(tactic|
           exact OracleComp.ProgramLogic.Relational.relTriple_refl _)) then
         return true
       if ← tryEvalTacticSyntax (← `(tactic|
           exact OracleComp.ProgramLogic.Relational.relTriple_eqRel_of_eq rfl)) then
         return true
-    if !shape.isStdDo && isPureExpr shape.oa && isPureExpr shape.ob then
+    if !shape.isQuantitative && isPureExpr shape.oa && isPureExpr shape.ob then
       if ← tryEvalTacticSyntax (← `(tactic|
           exact OracleComp.ProgramLogic.Relational.relTriple_pure_pure rfl)) then
         return true
@@ -201,7 +201,7 @@ def tryCloseRelGoalImmediate : TacticM Bool := do
           refine OracleComp.ProgramLogic.Relational.relTriple_pure_pure ?_ <;>
             first | rfl | assumption | symm; assumption)) then
         return true
-    if shape.isStdDo && isPureExpr shape.oa && isPureExpr shape.ob then
+    if shape.isQuantitative && isPureExpr shape.oa && isPureExpr shape.ob then
       if ← tryEvalTacticSyntax (← `(tactic|
           exact OracleComp.Rel.Quantitative.relTriple_pure _ _ _)) then
         return true
@@ -215,12 +215,12 @@ private def relationalGoalParts? (target : Expr) : Option (Expr × Expr × Expr)
       match relWPGoalParts? target with
       | some parts => some parts
       | none =>
-          match stdDoRelTripleGoalParts? target with
+          match quantRelTripleGoalParts? target with
           | some (_, oa, ob, post) => some (oa, ob, post)
           | none => none
 
-private def isStdDoRelTripleGoal (target : Expr) : Bool :=
-  (stdDoRelTripleGoalParts? target).isSome
+private def isQuantRelTripleGoal (target : Expr) : Bool :=
+  (quantRelTripleGoalParts? target).isSome
 
 private def sameMVarId (x y : MVarId) : Bool :=
   x.name == y.name
@@ -245,17 +245,17 @@ private def ownedSubgoalsAfterMainStep (before after : List MVarId) : List MVarI
       | some owned => (owned, rest)
       | none => (after, [])
 
-/-- Lower game equivalence or distribution equality to a relational proof goal. -/
+/-- Lower an equality in distribution or of output measures to a relational proof goal. -/
 def tryLowerRelGoal : TacticM Bool := withMainContext do
   let target ← instantiateMVars (← getMainTarget)
   if relationalGoalParts? target |>.isSome then
     return false
-  if isGameEquivGoal target then
+  if isEqualInDistGoal target then
     tryEvalTacticSyntax (← `(tactic|
-      apply OracleComp.ProgramLogic.GameEquiv.of_relTriple))
+      apply OracleComp.ProgramLogic.Relational.evalDistEq_of_relTriple_eqRel))
   else if isEvalDistEqGoal target then
     tryEvalTacticSyntax (← `(tactic|
-      apply OracleComp.ProgramLogic.Relational.evalSPMF_eq_of_relTriple_eqRel))
+      apply OracleComp.ProgramLogic.Relational.evalDist_eq_of_relTriple_eqRel))
   else
     return false
 
@@ -292,9 +292,9 @@ def runERelBindRuleUsing (cut : TSyntax `term) : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
     refine OracleComp.Rel.Quantitative.relTriple_bind (cut := $cut) ?_ ?_))
 
-private def runStdDoRelTripleBindLeftRule : TacticM Bool := do
+private def runQuantRelTripleBindLeftRule : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
-  let some (_pre, oa, ob, _post) := stdDoRelTripleGoalParts? target
+  let some (_pre, oa, ob, _post) := quantRelTripleGoalParts? target
     | return false
   let oa ← whnfReducible (← instantiateMVars oa)
   let ob ← whnfReducible (← instantiateMVars ob)
@@ -304,9 +304,9 @@ private def runStdDoRelTripleBindLeftRule : TacticM Bool := do
     refine Lean.Order.PartialOrder.rel_trans ?_
       (VCVio.ProgramLogic.RelWP.rwp_bind_left_le _ _ _ _ _ _)))
 
-private def runStdDoRelTripleBindRightRule : TacticM Bool := do
+private def runQuantRelTripleBindRightRule : TacticM Bool := do
   let target ← instantiateMVars (← getMainTarget)
-  let some (_pre, oa, ob, _post) := stdDoRelTripleGoalParts? target
+  let some (_pre, oa, ob, _post) := quantRelTripleGoalParts? target
     | return false
   let oa ← whnfReducible (← instantiateMVars oa)
   let ob ← whnfReducible (← instantiateMVars ob)
@@ -636,7 +636,7 @@ def runRelCondRule : TacticM Bool := do
   if ← tryEvalTacticSyntax (← `(tactic|
       apply OracleComp.ProgramLogic.Relational.relTriple_if <;> intro _)) <||>
       tryEvalTacticSyntax (← `(tactic|
-        (simp only [game_rule]
+        (simp only [expect_norm, expect_eval]
          apply OracleComp.ProgramLogic.Relational.relTriple_if <;> intro _))) then
     let after ← getGoals
     let (owned, rest) := ownedSubgoalsAfterMainStep before after
@@ -648,7 +648,7 @@ def runRelCondRule : TacticM Bool := do
 /-- Bound simulation distance by the probability of the supplied bad predicate. -/
 def runByUptoRule (bad : TSyntax `term) : TacticM Bool := do
   tryEvalTacticSyntax (← `(tactic|
-    apply OracleComp.ProgramLogic.Relational.tvDist_simulateQ_le_probEvent_bad
+    apply OracleComp.ProgramLogic.Relational.etvDist_simulateQ_run'_le_prEvent_bad_of_run_eq
       (bad := $bad)))
 
 /-- Swap the two computations in a relational triple. -/
@@ -739,7 +739,7 @@ def runRelSimDistRule : TacticM Bool := withMainContext do
       if !(hasSimulateQRunLike oa) || !(hasSimulateQRunLike ob) || !isEqRelPost post then
         return false
       tryEvalTacticSyntax (← `(tactic|
-        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalSPMF_eq))
+        apply OracleComp.ProgramLogic.Relational.relTriple_simulateQ_run'_of_impl_evalDistEq))
   | none => return false
 
 private def rawRelWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) := do
@@ -757,7 +757,7 @@ private def rawRelWPGoalParts? (target : Expr) : Option (Expr × Expr × Expr) :
   let #[oa, ob, post, _epost₁, _epost₂] := args | none
   some (oa, ob, post)
 
-private def isRawStdDoRelWPGoal (target : Expr) : Bool :=
+private def isRawRelWPGoal (target : Expr) : Bool :=
   (rawRelWPGoalParts? target).isSome ||
     (findAppWithHead? ``VCVio.ProgramLogic.rwp target).isSome
 
@@ -880,7 +880,7 @@ private def runRawRelWPBindRightRule : TacticM Bool := do
 /-- Try direct-hit registered `@[vcspec]` rules against a raw relational WP goal. -/
 private def runRawRelWPTheoremConseq (thm : TSyntax `term)
     (requireClosed : Bool := false) : TacticM Bool := do
-  unless isRawStdDoRelWPGoal (← instantiateMVars (← getMainTarget)) do
+  unless isRawRelWPGoal (← instantiateMVars (← getMainTarget)) do
     return false
   let saved ← saveState
   let ok ←

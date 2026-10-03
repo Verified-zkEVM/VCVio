@@ -1,5 +1,9 @@
 # Polynomial composition as cryptographic evidence
 
+Status: historical record of the September 2026 composition milestones, the pull-request
+consolidation that preceded them, and their validated checkpoints. Its unchecked items remain
+obligations; the [static computational UC campaign](uc-campaign.md) sequences the remaining work.
+
 The [UC semantic contract](uc-semantics.md) incorporates the September 13 review and governs the
 execution and security milestones below. A milestone is complete only when its concrete
 consumer uses the new theorem, the stated assumptions are checked, and validation passes.
@@ -217,7 +221,7 @@ obligations here before updating paper snippets or pins.
 
 `Coupling/Bind.lean` composes explicit measurable joint families under almost-everywhere marginal
 laws. `Coupling/Residual.lean` propagates unmatched left mass and proves one-sided event bounds
-with a separate joint bad event. `MeasureProgramLogic.CouplingPost.bind` and `relWP_bind` expose
+with a separate joint bad event. `ExpectationWP.CouplingPost.bind` and `relWP_bind` expose
 this through the existing relational logic without assuming measurable choice.
 
 `Examples/ProgramLogic/MeasureCoupling.lean` applies the rule to shared Gaussian noise and

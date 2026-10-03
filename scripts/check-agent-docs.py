@@ -31,7 +31,7 @@ LEAN_PATH_RE = re.compile(
     r'|(?:VCVio|Examples|ToMathlib|LibSodium)/[A-Za-z0-9_/]+\.lean'
 )
 
-TACTIC_MACRO_RE = re.compile(r'(?:macro|syntax)\s+"([\w\']+)".*:\s*tactic')
+TACTIC_MACRO_RE = re.compile(r'(?:macro|syntax)(?:\s+\([^()]*\))*\s+"([\w\']+)".*:\s*tactic')
 
 NOTATION_RE = re.compile(
     r'(?:scoped\s+)?notation(?:\s*:\s*\d+)?\s+'

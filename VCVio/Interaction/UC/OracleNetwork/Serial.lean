@@ -7,7 +7,7 @@ Authors: Devon Tuma
 module
 
 public import VCVio.Interaction.UC.OracleNetwork
-public import PolyFun.Interaction.UC.RequestNetwork.Serial
+public import PolyFun.Interaction.Execution.RequestNetwork.Serial
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 
 /-!
@@ -22,6 +22,8 @@ result, service state, and transcript agree with the ordinary traced oracle fold
 public section
 
 namespace Interaction.UC.OracleNetwork
+
+open Interaction.Execution
 
 export RequestNetwork (serialSchedule serialSchedule_length loggedRun loggedRun_pure
   loggedRun_liftBind run_serialSchedule_return run_serialSchedule initial result

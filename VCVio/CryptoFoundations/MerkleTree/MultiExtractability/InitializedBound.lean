@@ -38,9 +38,10 @@ def SequentialCommitter.runFromEmptyThen
 The single hypothesis at `queryBound` accounts for every commitment phase and the final
 log-dependent accounting computation. The executable runner still ends in the independent
 `finish`, and the empty initial cache turns the safe potential into the finite-max numerator. -/
-theorem SequentialCommitter.probEvent_runFromEmptyThen_logged_le
+theorem SequentialCommitter.prEvent_runFromEmptyThen_logged_le
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (committer : SequentialCommitter Cfg Query Y)
     (view : MerkleTreeExtractor.QueryView Query Address Y)
     (config : Configuration Cfg Address)
@@ -67,8 +68,8 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_logged_le
       state.StableAt view log →
       state.totalNodeBudget ≤ nodeBudget →
       state.checkpoints.length ≤ checkpointCount →
-      Pr[ fun z => win z.1 |
-        (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run cache] ≤
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (finish privateState state)).run
+             cache}[win z.1] ≤
         (multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
           terminalRemaining terminalCached : ENNReal) *
             (Nat.card Y : ENNReal)⁻¹)
@@ -79,12 +80,11 @@ theorem SequentialCommitter.probEvent_runFromEmptyThen_logged_le
         (ExtractorState.empty : ExtractorState Cfg Query Address Y config) []) queryBound)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ fun z => win z.1 |
-      (simulateQ (Query →ₒ Y).cachingOracle
-        (committer.runFromEmptyThen config rounds finish)).run ∅] ≤
+    Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (committer.runFromEmptyThen config rounds
+           finish)).run ∅}[win z.1] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount verifierOverhead
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
-  have hraw := committer.probEvent_runCommitmentsThen_logged_le view finish accountingFinish win
+  have hraw := committer.prEvent_runCommitmentsThen_logged_le view finish accountingFinish win
     nodeBudget checkpointCount verifierOverhead perCheckpoint hconfig hfinish
     rounds 0 committer.initialState
     (ExtractorState.empty : ExtractorState Cfg Query Address Y config)

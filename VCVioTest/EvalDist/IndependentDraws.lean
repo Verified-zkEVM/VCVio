@@ -23,9 +23,8 @@ open MeasureTheory ProbabilityTheory PFunctor
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "measure-only imports unexpectedly include {name}"
+  if env.contains `PMF then
+    throwError "measure-only imports unexpectedly include PMF"
 
 namespace VCVioTest.IndependentDraws
 
@@ -57,11 +56,11 @@ example (ν : Measure ℝ) :
     (0 : Measure ℝ).bind (fun a => ν.bind (fun b => Measure.dirac (a + b))) = 0 := by
   simp
 
-/-- A finite-answer interface whose semantics is a native uniform measure. -/
+/-- A finite-answer interface whose semantics is a uniform measure. -/
 @[expose, reducible] def coinSpec : PFunctor.{0, 0} := ⟨Unit, fun _ => Bool⟩
 
-noncomputable instance : coinSpec.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable instance : coinSpec.AnswerMeasure :=
+  AnswerMeasure.uniformOfFiniteNonempty _
 
 example (mx : FreeM coinSpec Bool) (my : FreeM coinSpec (Fin 3))
     (mz : FreeM coinSpec Unit) (f : Bool → Fin 3 → Unit → FreeM coinSpec ℝ) :

@@ -6,7 +6,7 @@ Authors: Quang Dao
 
 module
 
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 
 /-!
 # Allowed-query predicates and adaptive response paths
@@ -46,5 +46,18 @@ example :
       ((fun _ => false) : QueryImpl flagSpec Id)) adaptive).run.run =
     (false, ([⟨true, false⟩] : QueryLog flagSpec)) := by
   simp [adaptive, show Id.run false = false from rfl]
+
+/-- Two bounds on one computation combine into one with a product budget. -/
+example (htotal : adaptive.IsTotalQueryBound 2)
+    (hper : adaptive.IsPerIndexQueryBound fun _ => 1) :
+    IsQueryBound adaptive (2, fun _ : Bool => 1) (fun t p => 0 < p.1 ∧ 0 < p.2 t)
+      (fun t p => (p.1 - 1, Function.update p.2 t (p.2 t - 1))) :=
+  IsQueryBound.prod htotal hper
+
+/-- A family of bounds on one computation combines into one with a budget for each member. -/
+example (h : ∀ b : Bool, adaptive.IsTotalQueryBound (if b then 2 else 3)) :
+    IsQueryBound adaptive (fun b : Bool => if b then 2 else 3) (fun _ p => ∀ i, 0 < p i)
+      (fun _ p i => p i - 1) :=
+  IsQueryBound.pi h
 
 end VCVioTest.QueryBounds

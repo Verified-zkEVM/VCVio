@@ -4,15 +4,20 @@
 > use [`denotational-probability-semantics.md`](denotational-probability-semantics.md) and
 > [`docs/agents/probability.md`](../agents/probability.md).
 >
-> Current v4.34 implementation: Loom2 has been removed; unary carriers use core WP,
-> shared algebra/transformer constructions come from PolyFun, and coupling remains local.
-> See [upstream alignment](upstream-alignment.md) and the
+> Current v4.35 implementation: Loom2 has been removed; unary carriers use core `Std.WP`, public
+> since v4.35, and core `vcgen` (`mvcgen` is deprecated); shared algebra/transformer constructions
+> come from PolyFun; coupling remains local, with no relational program logic upstream or
+> planned as of 2026-09-30. See [upstream alignment](upstream-alignment.md) and the
 > [program-logic guide](../agents/program-logic.md) for the implemented boundary.
 >
 > Original snapshot: 2026-08-21. Section 19 preserves that audit in its original time context.
 > Section 20 records the focused 2026-08-30 recheck against current VCVio `main`, VCVio's pinned
 > PolyFun checkout, and PolyFun's canonical `main`. Unless §20 explicitly supersedes a volatile
 > fact, read it as a claim about the original snapshot rather than current upstream state.
+>
+> The discrete layer the survey treats as current — `SPMF`, `evalSPMF`, `probOutput`/`probEvent`/
+> `probFailure` with `Pr[…]`, `IsProbabilitySpec`/`IsUniformSpec`, and `EvalDistCompatible` — has
+> since been removed; VCVio's probability API is now the Mathlib-measure one.
 >
 > The original repository snapshot used Mathlib/PolyFun `v4.32.2`; implementation findings were
 > rechecked on the then-current Mathlib `v4.33.0` and PolyFun `v4.33.2` pins. Open-PR descriptions
@@ -41,7 +46,7 @@ several meanings of “probability semantics”:
 - expectations, costs, couplings, and divergences;
 - measure-theoretic independence and conditioning for Bluebell;
 - bounded and unbounded execution for PolyFun's coalgebraic computations;
-- a semantic base that can be exposed through `mvcgen`, VCVio's `vcgen`, and Iris-style
+- a semantic base that can be exposed through `mvcgen`, VCVio's `pvcgen`, and Iris-style
   weakest preconditions.
 
 The central conclusion of this survey is that no single upstream type is a drop-in
@@ -132,8 +137,7 @@ for discrete compatible semantics, not the definition of support in the general 
 
 ### 2.1 `SPMF` and observable probabilities
 
-[`ToMathlib/ProbabilityTheory/SPMF.lean`](../../ToMathlib/ProbabilityTheory/SPMF.lean)
-defines
+`ToMathlib/ProbabilityTheory/SPMF.lean` (since removed) defined
 
 ```lean
 def SPMF := OptionT PMF
@@ -154,8 +158,8 @@ This encoding has two useful readings that coincide for finite computations:
 They stop coinciding as explanations once `none` must distinguish explicit failure from
 bounded-run cutoff or divergence.
 
-[`VCVio/EvalDist/Defs/Basic.lean`](../../VCVio/EvalDist/Defs/Basic.lean) exposes the
-current public observation layer. Given `[MonadLiftT m SPMF]`, it provides:
+`VCVio/EvalDist/Defs/Basic.lean` (since removed) exposed the
+then-current public observation layer. Given `[MonadLiftT m SPMF]`, it provided:
 
 - `evalDist mx : SPMF α`;
 - `probOutput mx x` and `Pr[= x | mx]`;
@@ -169,7 +173,7 @@ acknowledges measure semantics.
 
 ### 2.2 `SemanticsVia` is an existing abstraction seam
 
-[`VCVio/EvalDist/Defs/Semantics.lean`](../../VCVio/EvalDist/Defs/Semantics.lean)
+[`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
 defines `SemanticsVia m Obs`. It separates:
 
 - an internal semantic monad `Sem`;
@@ -178,7 +182,7 @@ defines `SemanticsVia m Obs`. It separates:
 
 The observation does not have to be a monad morphism. This matters for stateful or
 instrumented computations whose hidden state is discarded only at the observation
-boundary. `SPMFSemantics` and `PMFSemantics` are current specializations.
+boundary. `MeasureSemanticsVia` is its measure-valued specialization.
 
 This is a better migration seam than requiring every source monad to lift directly into
 every future probability representation. A measure-oriented design should preserve the
@@ -203,22 +207,22 @@ tied to deprecated PMF APIs.
 
 ### 2.4 Existing quantitative theory
 
-The current SPMF layer is not only an evaluator. It supports a significant body of
-theory that a replacement must either preserve or deliberately supersede.
+At the snapshot, the SPMF layer was not only an evaluator. It supported a significant body of
+theory that a replacement had to either preserve or deliberately supersede; the table lists
+where that theory now lives.
 
 | Capability | Representative source | Backend-sensitive content |
 |---|---|---|
 | Point/event/failure algebra | [`EvalDist/Monad`](../../VCVio/EvalDist/Monad) | Countable sums and point masses |
 | Finite support | [`EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean) | Enumeration and membership bridges |
-| Expectations | [`EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean) | `ℝ≥0∞` sums, increasingly close to `lintegral` |
+| Expectations | [`ProgramLogic/Unary/HoareTriple.lean`](../../VCVio/ProgramLogic/Unary/HoareTriple.lean) | `wp` and `∫⁻` against the output measure |
 | Independent products | [`EvalDist/IndepProduct.lean`](../../VCVio/EvalDist/IndepProduct.lean) | Product distributions and factorization |
-| Total variation | [`EvalDist/TVDist.lean`](../../VCVio/EvalDist/TVDist.lean) | Discrete pointwise definition |
-| Rényi divergence | [`EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean) | Discrete density ratios |
-| Couplings | [`ToMathlib/ProbabilityTheory/Coupling.lean`](../../ToMathlib/ProbabilityTheory/Coupling.lean) | An SPMF on a product with fixed marginals |
-| Optimal finite couplings | [`ToMathlib/ProbabilityTheory/OptimalCoupling.lean`](../../ToMathlib/ProbabilityTheory/OptimalCoupling.lean) | Finite-dimensional compactness |
+| Total variation | [`EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean) | Total variation of output measures |
+| Rényi divergence | [`Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean) | Measure-level, via `Measure.rnDeriv` |
+| Couplings | [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean) | A joint measure with fixed marginals |
 | Expected query cost | [`QueryCost.lean`](../../VCVio/OracleComp/QueryTracking/QueryCost.lean) and [`WriterCost.lean`](../../VCVio/OracleComp/QueryTracking/WriterCost.lean) | Expectations of instrumented runs |
 | Relational logic | [`ProgramLogic/Relational`](../../VCVio/ProgramLogic/Relational) | Coupling existence and quantitative relational WP |
-| Executable finite distributions | [`FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean), [`EvalDist/Instances/FinRatPMF.lean`](../../VCVio/EvalDist/Instances/FinRatPMF.lean) | Array-backed `Raw` representation and its `SameDist` quotient |
+| Executable finite distributions | [`FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean), [`FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean) | Array-backed `Raw` representation and its `SameDist` quotient |
 
 The last row deserves emphasis, because it is easy to forget when reasoning about
 "the" backend. `FinRatPMF` is a **third** discrete representation already in tree:
@@ -254,7 +258,7 @@ quantitative mass, and probability is a bounded presentation of the quantitative
 families:
 
 - Lean core `mvcgen`, built around `Std.Do`, `WPSound`, and `MonadAttach`;
-- VCVio `vcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
+- VCVio `pvcgen`/`rvcgen`, which understands probability notation, raw expectation `wp`,
   oracle simulation, coupling rules, and VCVio-specific registries.
 
 The long-term goal should not be to make probability semantics depend on a particular
@@ -262,7 +266,7 @@ tactic. Instead:
 
 1. semantic laws should be stated at the appropriate carrier;
 2. `WPSound`/`MonadAttach` should provide the common qualitative adequacy boundary;
-3. `mvcgen` and `vcgen` should consume shared laws where their proof modes overlap;
+3. `mvcgen` and `pvcgen` should consume shared laws where their proof modes overlap;
 4. VCVio should retain domain-specific quantitative and relational automation.
 
 #### 2.5.1 The upstream side of this picture is moving
@@ -315,9 +319,10 @@ support/indicator leaf closure, and the `@[vcspec]` / `@[wpStep]` registries. Co
 expose extension points for these (the `@[spec]` database, `vcgen [terms]`, and
 `mvcgen_trivial_extensible`).
 
-One immediate consequence is a name collision rather than a semantic one: core already
-declares a bare `vcgen` tactic token at `v4.33.0`, so VCVio's `vcgen` now shares a
-leading token with it and survives only by careful syntax-kind splitting.
+Core owns the `vcgen` name. VCVio's unary tactics are `prvcgen`, which runs core `vcgen` under
+the reading of `OracleComp` a goal belongs to, and `prrw`, alongside the relational `rvcgen` and
+`rvcstep`; none shares a leading token with core's, so a bare `vcgen` in a VCVio file is core's
+(`VCVioTest/ProgramLogic/VCGenNames.lean`).
 
 ## 3. Consumers at the Original Snapshot
 
@@ -327,7 +332,7 @@ Representative canaries cover different parts of the API:
 
 - [`Examples/OneTimePad/Basic.lean`](../../Examples/OneTimePad/Basic.lean) exercises
   finite uniform sampling, distribution equality, support, and privacy;
-- [`Examples/EvalDistCompatible/Basic.lean`](../../Examples/EvalDistCompatible/Basic.lean)
+- [`Examples/OptionalFailure/Basic.lean`](../../Examples/OptionalFailure/Basic.lean)
   demonstrates why qualitative and quantitative interpretations must be separately
   supplied through transformers;
 - [`Examples/ProgramLogic/UnaryProbability.lean`](../../Examples/ProgramLogic/UnaryProbability.lean)
@@ -381,7 +386,8 @@ Current VCVio main contains the bridge to PolyFun dynamical computations in
 [`OracleComp/Coinductive`](../../VCVio/OracleComp/Coinductive):
 
 - `Machine.lean` identifies oracle machines with returning `DynComputation`s;
-- `Responder.lean` gives stateful randomized handlers in `SPMF`;
+- `Responder.lean` gave stateful randomized handlers in `SPMF` (now joint subprobability
+  kernels with an optional `ProbComp` handler presentation);
 - `WiredRun.lean` evaluates a machine for a finite fuel budget;
 - `Bridge.lean` embeds finite `OracleComp` syntax into `ITree`.
 
@@ -642,8 +648,8 @@ at the call site, composed, passed around — it is PolyFun's bundled `MonadHom`
 (`m →ᵐ n`), with `MonadHom.ofLift` as the one-way bridge and deliberately no converse
 instance.
 
-That is precisely the shape VCVio's semantics layer already has.
-[`EvalDist/Defs/Basic.lean`](../../VCVio/EvalDist/Defs/Basic.lean) argues at length for
+That is precisely the shape VCVio's semantics layer already had.
+`EvalDist/Defs/Basic.lean` (since removed) argued at length for
 declaring the `SPMF` and `SetM` lifts as `MonadLiftT` rather than `MonadLift`, and
 `SemanticsVia.interpret : m →ᵐ Sem` is the bundled case. §2.2's claim that
 `SemanticsVia` is the right migration seam therefore stops being a local convention and
@@ -658,8 +664,9 @@ VCVio-visible rename.
 ### 5.3 loom2
 
 VCVio depends on [`loom2`](https://github.com/quangvdao/loom2) for `Std.Do'`,
-`PredTrans`, `EPost`, `RelTriple`, and `rwp` — the substrate under
-`VCVio/ProgramLogic/{Unary,Relational}/WP/`. It is omitted from the layering picture
+`PredTrans`, and `EPost` — the substrate under `VCVio/ProgramLogic/{Unary,Relational}/WP/`;
+`RelTriple` and `rwp` are VCVio's own, declared in `ToMathlib/Control/Monad/RelWP.lean` on top
+of `Loom.WP.Basic`. It is omitted from the layering picture
 above, and it should not be: it is the least stable link in the chain.
 
 - It is pinned to a single commit and targets a Lean **v4.32.0** toolchain, while VCVio
@@ -679,9 +686,10 @@ review than either alone.
 The surface is narrower than the dependency's prominence suggests. VCVio imports exactly
 four loom2 modules — `Loom.WP.Basic`, `Loom.ExceptPost`, `Loom.Triple.Basic`, and
 `Loom.Triple.SpecLemmas` — and does so from only five files
-([`Unary/WP/{Qualitative,Probabilistic,Quantitative}.lean`](../../VCVio/ProgramLogic/Unary/WP),
-[`Tactics/Unary/Internals.lean`](../../VCVio/ProgramLogic/Tactics/Unary/Internals.lean),
-and [`ToMathlib/Control/Monad/RelWP.lean`](../../ToMathlib/Control/Monad/RelWP.lean)).
+([`Unary/Loom/{Qualitative,Probabilistic,Quantitative}.lean`][loom-unary],
+[`Tactics/Unary/Internals.lean`][loom-internals],
+and [`ToMathlib/Control/Monad/RelWP.lean`][loom-relwp]; the links show the files as they were
+when this survey was committed).
 Everything else reaches Loom through the `Std.Do'` namespace, which is mentioned in 22
 files — so the *import* boundary is already tight, and it is the namespace, not the
 dependency graph, that would have to be swept.
@@ -693,8 +701,13 @@ dependency graph, that would have to be swept.
 | `Triple`, `Triple.iff`, `Triple.bind` | 54 | `structure Triple` | `Std/WP/Triple/` | **Rename.** |
 | `Spec.get_StateT`, `set_StateT`, `read_ReaderT`, `modifyGet_StateT`, `monadLift_*` | 12 | `StateT.instWPMonad`, `ReaderT.instWPMonad` | `Std/WP/Monad/Instances.lean` | **Rename**, but re-derive against upstream's instance shape rather than porting the lemmas. |
 | `EPost.nil`, `EPost.nil.mk`, `EPost.cons`, `EPost.cons.mk`, `EPost.cons.pushOption` | 74 | `EPost.Nil`, `EPost.Cons` (capitalised) | **Restructured to `EStack`** | **Reshape — the one substantial item.** |
-| `WriterT.apply_wp`, `wp_tell`, `wp_pure` | 6 | absent | absent | **VCVio-owned already** — declared inside `namespace Std.Do'` in [`Unary/WP/Quantitative.lean`](../../VCVio/ProgramLogic/Unary/WP/Quantitative.lean). Moves with VCVio; only the enclosing namespace changes. |
+| `WriterT.apply_wp`, `wp_tell`, `wp_pure` | 6 | absent | absent | **VCVio-owned already** — declared inside `namespace Std.Do'` in [`Unary/Loom/Quantitative.lean`][loom-quantitative]. Moves with VCVio; only the enclosing namespace changes. |
 | `RelTriple`, `rwp`, `RelWP` and their rules | 99 | absent | absent | **Stays downstream.** No relational layer upstream in either tree. |
+
+[loom-unary]: https://github.com/Verified-zkEVM/VCVio/tree/89e482107752b251d17c8255f87f33794b00f81f/VCVio/ProgramLogic/Unary/Loom
+[loom-internals]: https://github.com/Verified-zkEVM/VCVio/blob/89e482107752b251d17c8255f87f33794b00f81f/VCVio/ProgramLogic/Tactics/Unary/Internals.lean
+[loom-relwp]: https://github.com/Verified-zkEVM/VCVio/blob/89e482107752b251d17c8255f87f33794b00f81f/ToMathlib/Control/Monad/RelWP.lean
+[loom-quantitative]: https://github.com/Verified-zkEVM/VCVio/blob/89e482107752b251d17c8255f87f33794b00f81f/VCVio/ProgramLogic/Unary/Loom/Quantitative.lean
 
 **The `EPost` → `EStack` reshape is the only part that is not a rename.** Upstream has
 replaced the nil/cons *structures* with a right-nested product chain terminated by
@@ -997,8 +1010,8 @@ target explicitly as `@Measure α ⊤`. Its laws can include:
 - atomic support agrees with `MonadAttach.support` under an explicit compatibility
   assumption.
 
-This is the measure analogue of the current `MonadLiftT m SPMF` plus
-`EvalDistCompatible` stack.
+This is the measure analogue of the then-current `MonadLiftT m SPMF` plus
+`EvalDistCompatible` stack (since removed).
 
 ### 10.3 General measure capability
 
@@ -1118,7 +1131,7 @@ The division of labor should be:
 
 - upstream `vcgen` (and `mvcgen` while it lasts): generic structural reasoning justified
   by `WPSound` and `MonadAttach`;
-- VCVio's unary tactic: event/expectation normalization, oracle-query rules, support
+- VCVio's unary `pvcgen`: event/expectation normalization, oracle-query rules, support
   bridges, loops, and probability arithmetic;
 - VCVio `rvcgen`: coupling and quantitative relational rules;
 - Iris proof mode: resource-sensitive reasoning after a VCVio/Bluebell WP instance is
@@ -1135,14 +1148,13 @@ in favour of `vcgen`, which dispatches on `Std.WP.wp` rather than `Std.Do`'s
 bridge — will need retargeting, and the natural time to do it is the same cycle in which
 `Std.WP` becomes public.
 
-**`vcgen` is already a taken name.** Lean `v4.33.0` declares a bare `vcgen` tactic token
-in `Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`. VCVio's
-own `vcgen` therefore shares a leading token with a core tactic that is under active
-development and is about to become *the* VC generator. Renaming VCVio's is cheap now and
-gets steadily less so; more importantly, once VCVio's domain tactic is layered *on top
-of* core's, having two tactics named `vcgen` in scope stops being merely confusing.
+**`vcgen` is core's name.** Lean declares a bare `vcgen` tactic token in
+`Std/Tactic/Do/Syntax.lean`, plus a low-priority stub in `Init/Tactics.lean`, and that tactic
+is *the* VC generator. VCVio's unary tactics are `prvcgen` and `prrw`, so they never share a
+leading token with it, and `prvcgen` is layered *on top of* core's tactic: it runs `vcgen` under
+the reading of `OracleComp` a goal belongs to, with both in scope.
 
-This does not change the division of labor above. It changes who owns the name.
+This does not change the division of labor above. It settles who owns the name.
 
 ## 13. No-Regret Roadmap
 
@@ -1176,8 +1188,9 @@ In the original staging, this phase was intended not to change `evalDist`.
 ### Phase 2: measure bridge without backend replacement
 
 **Current disposition (2026-08-30):** the measure-primary surface and its discrete compatibility
-bridge are on `main`. The bullets below are the original acceptance goals, retained to explain what
-the bridge was required to demonstrate.
+bridge are on `main` (the discrete bridge was later removed with the discrete layer). The
+bullets below are the original acceptance goals, retained to explain what the bridge was
+required to demonstrate.
 
 - Add canonical total-measure and output-submeasure views of SPMF. At the original snapshot, the
   PMF/FreeM measure bridge, point/event correspondence, and option success observer were already
@@ -1197,9 +1210,9 @@ main API during the spikes.
 
 ### Phase 4: backend decision
 
-The accepted design chooses a stratified Measure/Kernel denotational boundary while retaining the
-discrete proof façade. The following remain migration gates rather than reasons to reopen that
-boundary:
+The accepted design chooses a stratified Measure/Kernel denotational boundary; the discrete proof
+façade it initially retained has since been removed. The following remain migration gates rather
+than reasons to reopen that boundary:
 
 - the Mathlib PMF/discrete-measure PRs have a stable outcome;
 - the finite proof and ArkLib canaries are no worse than the current surface;
@@ -1334,27 +1347,24 @@ users retain ordinary discrete probability notation.
 
 ### VCVio and examples
 
-- [`ToMathlib/ProbabilityTheory/SPMF.lean`](../../ToMathlib/ProbabilityTheory/SPMF.lean)
-- [`VCVio/EvalDist/Defs/Basic.lean`](../../VCVio/EvalDist/Defs/Basic.lean)
-- [`VCVio/EvalDist/Defs/Semantics.lean`](../../VCVio/EvalDist/Defs/Semantics.lean)
+- [`VCVio/EvalDist/Defs/Semantics/Core.lean`](../../VCVio/EvalDist/Defs/Semantics/Core.lean)
 - [`VCVio/EvalDist/Defs/Support.lean`](../../VCVio/EvalDist/Defs/Support.lean)
 - [`VCVio/OracleComp/EvalDist.lean`](../../VCVio/OracleComp/EvalDist.lean)
-- [`VCVio/EvalDist/Expectation.lean`](../../VCVio/EvalDist/Expectation.lean)
-- [`VCVio/EvalDist/TVDist.lean`](../../VCVio/EvalDist/TVDist.lean)
-- [`VCVio/EvalDist/RenyiDivergence.lean`](../../VCVio/EvalDist/RenyiDivergence.lean)
-- [`ToMathlib/ProbabilityTheory/Coupling.lean`](../../ToMathlib/ProbabilityTheory/Coupling.lean)
-- [`ToMathlib/ProbabilityTheory/OptimalCoupling.lean`](../../ToMathlib/ProbabilityTheory/OptimalCoupling.lean)
+- [`VCVio/ProgramLogic/Unary/HoareTriple.lean`](../../VCVio/ProgramLogic/Unary/HoareTriple.lean)
+- [`VCVio/EvalDist/MeasureTVDist/Basic.lean`](../../VCVio/EvalDist/MeasureTVDist/Basic.lean)
+- [`ToMathlib/Probability/Divergence/Renyi.lean`](../../ToMathlib/Probability/Divergence/Renyi.lean)
+- [`ToMathlib/MeasureTheory/Measure/Coupling.lean`](../../ToMathlib/MeasureTheory/Measure/Coupling.lean)
 - [`ToMathlib/ProbabilityTheory/FinRatPMF.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF.lean)
-- [`VCVio/EvalDist/Instances/FinRatPMF.lean`](../../VCVio/EvalDist/Instances/FinRatPMF.lean)
-- [`ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/TotalVariation.lean)
-- [`ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean`](../../ToMathlib/Probability/ProbabilityMassFunction/RenyiDivergence.lean)
+- [`ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean`](../../ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean)
+- [`ToMathlib/MeasureTheory/Measure/TotalVariation.lean`](../../ToMathlib/MeasureTheory/Measure/TotalVariation.lean)
+- [`ToMathlib/Probability/Divergence/RenyiTotalVariation.lean`](../../ToMathlib/Probability/Divergence/RenyiTotalVariation.lean)
 - [`ToMathlib/Probability/TailSums.lean`](../../ToMathlib/Probability/TailSums.lean)
 - [`VCVio/ProgramLogic`](../../VCVio/ProgramLogic)
 - [`VCVio/ProgramLogic/Unary/WP`](../../VCVio/ProgramLogic/Unary/WP)
 - [`VCVio/ProgramLogic/Relational/WP`](../../VCVio/ProgramLogic/Relational/WP)
 - [`VCVio/OracleComp/Coinductive`](../../VCVio/OracleComp/Coinductive)
 - [`Examples/OneTimePad/Basic.lean`](../../Examples/OneTimePad/Basic.lean)
-- [`Examples/EvalDistCompatible/Basic.lean`](../../Examples/EvalDistCompatible/Basic.lean)
+- [`Examples/OptionalFailure/Basic.lean`](../../Examples/OptionalFailure/Basic.lean)
 - [`Examples/OneTimePad/UC.lean`](../../Examples/OneTimePad/UC.lean)
 
 ### Mathlib
@@ -1455,7 +1465,7 @@ read through the GitHub API rather than from PR prose.
 | Claim | Method |
 |---|---|
 | `SPMF := OptionT PMF`, its `FunLike`, and the `SPMF.mk`/`toPMF` round-trips | Read `ToMathlib/ProbabilityTheory/SPMF.lean` |
-| `SemanticsVia` / `SPMFSemantics` / `PMFSemantics` as described in §2.2 | Read `VCVio/EvalDist/Defs/Semantics.lean` in full |
+| `SemanticsVia` / `MeasureSemanticsVia` as described in §2.2 | Read `VCVio/EvalDist/Defs/Semantics/Core.lean` in full |
 | `probEvent` is defined through `PMF.toOuterMeasure` | Read `VCVio/EvalDist/Defs/Basic.lean` |
 | `IsProbabilitySpec.toPMF` is PMF-valued; `IsUniformSpec` adds `Fintype`/`Inhabited`/uniformity | Read `VCVio/OracleComp/EvalDist.lean` |
 | `support` is `MonadLiftT m SetM`-based | Read `VCVio/EvalDist/Defs/Support.lean`; `SetM` located at `Mathlib/Data/Set/Functor.lean` |
@@ -1479,7 +1489,7 @@ read through the GitHub API rather than from PR prose.
 | C4 | §2.5/§12.4 treat `mvcgen` as the upstream tactic | `mvcgen` is deprecated on Lean master in favour of `vcgen` (since 2026-08-21); **not** deprecated at `v4.34.0-rc2`, so it lands in v4.35 | Fetched `Std/Tactic/Do/Syntax.lean` at tag `v4.34.0-rc2` and at master; lean4 PR list for `mvcgen`/`vcgen` |
 | C5 | — (omitted) | `Std.Internal.Do` exists at v4.33/v4.34 with a lattice-generic `WP`; public as `Std.WP` on master, which core's `vcgen` dispatches on | Read `Std/Internal/Do/{Assertion,WP/Basic}.lean` in the toolchain; fetched `Lean/Elab/Tactic/VCGen/WPApp.lean` from master |
 | C6 | — (omitted) | `loom2` is pinned at a Lean `v4.32.0` toolchain and supplies the `Std.Do'` substrate; its design is the one core is absorbing | Read the loom2 checkout's `lean-toolchain` and `Loom/WP/Basic.lean`; compared authorship with `Std/Internal/Do/Assertion.lean` |
-| C7 | — (omitted) | `FinRatPMF` is a third, executable discrete backend with its own lifts | Read `ToMathlib/ProbabilityTheory/FinRatPMF.lean` and `VCVio/EvalDist/Instances/FinRatPMF.lean` |
+| C7 | — (omitted) | `FinRatPMF` is a third, executable discrete backend with its own lifts | Read `ToMathlib/ProbabilityTheory/FinRatPMF.lean` and `ToMathlib/ProbabilityTheory/FinRatPMF/Measure.lean` |
 | C8 | §3.2 understates ArkLib's coupling | ArkLib's `Pr_{…}[…]` *elaborates into* `PMF` do-notation; it also pins VCVio `v4.32.2` | Fetched `ArkLib/Data/Probability/Notation.lean` and `lakefile.toml` |
 | C9 | — (omitted) | PolyFun#141–#144 are the companion survey and its follow-through | GitHub API; read each PR body and file list |
 | C10 | §17 omits several in-tree sources | Added `FinRatPMF`, the `ToMathlib/Probability/ProbabilityMassFunction/` files, the `Loom` subtrees, and the Lean-core/loom2 section | Directory listing of the repo |

@@ -13,7 +13,7 @@ public import PolyFun.Control.Monad.Algebra.WP
 `VCVio.ProgramLogic.RelWP` interprets pairs of monadic programs in an assertion lattice,
 with independent exception postconditions for each side. It uses core's assertion and
 exception interfaces. Coupling semantics needs an asymmetric bind inequality, so it is
-specified separately from the unary `Std.Internal.Do.WPMonad` class.
+specified separately from the unary `Std.WP.WPMonad` class.
 
 The interface provides consequence, pure, and bind rules and coherence with unary WP
 when one side is pure. Oracle-specific interpretations live in
@@ -28,7 +28,7 @@ Loom2 (`verse-lab/loom2`).
 
 universe u v₁ v₂ w w₁ w₂
 
-open Lean.Order Std.Internal.Do
+open Lean.Order Std.WP
 
 namespace VCVio.ProgramLogic
 
@@ -134,10 +134,10 @@ variable {α β γ δ : Type u}
 /-!
 ## Derived Lemmas
 
-One-directional consequences of the `RelWP` axioms for `pure`, `bind`,
-monotonicity, and weakening, mirroring `Std.Internal.Do.WP.{wp_pure, wp_bind,
-wp_consequence, wp_econs, …}` in
-`Std.Internal.Do.WP`.
+One-directional consequences of the `RelWP` axioms for `pure`, `bind`, monotonicity and
+weakening. They mirror core's unary laws `Std.WP.WPMonad.pure_le_wp_pure`,
+`Std.WP.WPMonad.bind_le_wp_bind`, `Std.WP.WP.wp_consequence`, `Std.WP.WP.wp_consequence_econs`
+and `Std.WP.WP.wp_econs`.
 -/
 
 /-- Pure rule: the joint postcondition at `(a, b)` is below the

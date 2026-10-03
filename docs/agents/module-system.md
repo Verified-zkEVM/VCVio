@@ -35,23 +35,26 @@ VCVio owns cryptographic specialization:
 
 - `OracleSpec`, `OracleQuery`, `OracleComp`, `QueryImpl`, and established
   oracle notation;
-- PMF/SPMF and support semantics, probability lemmas, uniform-oracle policy,
+- measure and support semantics, probability lemmas, uniform-oracle policy,
   query accounting, and program logic;
 - cryptographic games, reductions, and examples; and
 - compatibility names that keep existing oracle-facing developments stable.
 
 Generic code should accept `PFunctor`, `PFunctor.Handler`, or
 `PFunctor.FreeM` directly. Oracle- and cryptography-facing code should use the
-VCVio names. `OracleComp spec` remains definitionally the free monad on
+VCVio names. `OracleComp spec` is definitionally the free monad on
 `spec.toPFunctor`, and `QueryImpl` compatibility operations are thin aliases
 of the generic handler operations.
 
-Probability semantics are PFunctor-parametric but remain in VCVio: PolyFun is
-domain-independent and should not acquire VCVio's PMF/SPMF policy. The
-`OracleSpec.IsProbabilitySpec` name is a definitional façade over
-`PFunctor.IsProbabilitySpec`; the stronger oracle uniformity bundle keeps its
-existing finite/inhabited oracle instances and has an explicit
-`IsUniformSpec.toPFunctor` conversion.
+Probability semantics are PFunctor-parametric but live in VCVio: PolyFun is
+domain-independent and should not acquire VCVio's measure policy. The
+`OracleSpec.AnswerMeasure` name is a definitional abbreviation of
+`PFunctor.AnswerMeasure` on `spec.toPFunctor` with the discrete σ-algebra on
+answers. `OracleSpec.UniformAnswerMeasure` bundles such measures with the law
+that each is uniform, so it is never assumed beside `[AnswerMeasure spec]`; it
+carries no finite or inhabited data, and oracle-level uniform interpretations are
+explicit (`UniformAnswerMeasure.ofFiniteNonempty`) rather than derived from
+finiteness.
 
 Do not add a conversion instance whose target is headed by the reducible
 expression `spec.toPFunctor`. Such an instance can unify with unrelated
@@ -66,10 +69,9 @@ implementation detail, add an intrinsic public law or a deliberately exposed
 definition to PolyFun, then use a plain or public import. The script
 `scripts/check-polyfun-boundary.sh` enforces this package boundary.
 
-Within one package, `import all` is still available for a proof module that
-proves a public API theorem about a private implementation in a sibling
-module. It is not a substitute for an application theorem that ordinary
-consumers will also need.
+Within one package, a proof module may use `import all` to prove a public API
+theorem about a private implementation in a sibling module. It is not a
+substitute for an application theorem that ordinary consumers will also need.
 
 Choose imports as follows:
 
@@ -88,8 +90,8 @@ and characterization `…_iff` theorems. Mark a definition `@[expose]` only when
 downstream definitional equality is an intentional part of the API and a
 theorem would materially obstruct ordinary use.
 
-In Lean 4.34 a theorem written with syntactic `:= rfl` requests automatic
-definitional-equality registration. For an exported theorem, that registration
+A theorem written with syntactic `:= rfl` requests automatic registration as a
+definitional equality (`@[defeq]`). For an exported theorem, that registration
 requires the unfolded definitions to be exposed. An ordinary theorem proof
 such as `:= by unfold operation; rfl` can instead prove a public propositional
 equation while keeping `operation` opaque to importers. Choose which contract
@@ -100,14 +102,15 @@ through an ordinary import after narrowing the boundary.
 The [API-boundary campaign ledger](../reading/api-boundary-campaign.md) records
 consumer evidence, intentional reducers, instance leaks, and upstream blockers.
 
-The definitional identities among the semantic façades (`evalDist`,
-`evalSPMF`, `simulateQ`, `support`, `probOutput`) are an implementation
+The definitional identities among the semantic definitions (`evalDist`,
+`PFunctor.FreeM.denote`, `support`) are an implementation
 detail of `VCVio/EvalDist/**` and `VCVio/OracleComp/**`. Proofs inside those
 directories may close by `rfl` across them; everywhere else
 (`CryptoFoundations/`, `Examples/`, `LatticeCrypto/`, `HashSig/`, the tests)
 crosses the boundary through the public equation lemmas
-(`evalSPMF_eq_simulateQ`, `probOutput_def`, `support_def`, `PFunctor.FreeM.evalDist_eq_denote`),
-so the semantics can be re-implemented without touching downstream proofs.
+(`PFunctor.FreeM.evalDist_eq_denote`, `prEvent_eq_evalDist_map`,
+`PFunctor.FreeM.support_eq_liftM_univ`), so the semantics can be re-implemented
+without touching downstream proofs.
 Existing downstream `rfl` uses are grandfathered rather than a precedent; a
 review may ask a new one to go through the equation lemma.
 
@@ -154,15 +157,15 @@ that determine typeclass discrimination keys must not be made locally
 reducible after their instances have been indexed. Prefer the narrowest stable
 normal form that makes the intended dependent types well-formed.
 
-### Implicit transparency in Lean 4.33
+### Implicit transparency
 
-With `backward.isDefEq.respectTransparency.types` enabled, the type of a value
-assigned to a metavariable must itself check at `.implicit` transparency. A
-goal can therefore elaborate at `.default`, yet be unusable by `rw`, `simp`,
-or a tactic-generated metavariable because a dependent type still needs an
-ordinary semireducible wrapper to unfold. This is a useful invariant: it finds
-terms whose apparent type correctness depended on proof automation silently
-using a much stronger transparency mode.
+With `backward.isDefEq.respectTransparency.types` enabled (core's default), the
+type of a value assigned to a metavariable must itself check at `.implicit`
+transparency. A goal can therefore elaborate at `.default`, yet be unusable by
+`rw`, `simp`, or a tactic-generated metavariable because a dependent type still
+needs an ordinary semireducible wrapper to unfold. This is a useful invariant:
+it finds terms whose apparent type correctness depended on proof automation
+silently using a much stronger transparency mode.
 
 For a focused diagnosis, put the smallest reproducer under:
 
@@ -189,57 +192,57 @@ instance-implicit argument is checked at `.implicit`, and the comment on the
 attribute names the library proofs that fail without it. It is not there for
 instance synthesis, which finds the semantics instances at the erased
 `PFunctor.mk` literal on its own (`VCVioTest/PFunctorFacade.lean` checks
-this). The `attribute [local implicit_reducible]` lines on `PFunctor.Obj`,
-`PFunctor.Idx`, `FreeMonoid`, `SetM`, and `SPMF` in individual files are the
-same device applied where a single proof needs it; each one was checked to be
-load-bearing before being kept.
+this). The `attribute [local implicit_reducible]` lines on `PFunctor.Idx`,
+`PFunctor.sigma`, `PFunctor.FreeM.bind`, and `FreeMonoid` in individual files
+are the same device applied where a single proof needs it; each one was checked
+to be load-bearing before being kept.
 
 Use `#guard_msgs` only when the test is meant to preserve an expected
 diagnostic; do not wrap a passing regression canary with it.
 
 ### The PolyFun–OracleSpec coproduct seam
 
-`OracleSpec ι` intentionally remains the dependent family `ι → Type`, while
+`OracleSpec ι` is deliberately the dependent family `ι → Type`, while
 `spec.toPFunctor` packages the same data as `⟨ι, spec⟩`. This middle ground is
-useful: oracle code gets `Domain`, `Range`, function application, and existing
+useful: oracle code gets `Domain`, `Range`, function application and its
 typeclass indices, while generic code gets the actual `PFunctor`. The
-`toPFunctor` / `ofPFunctor` round trips are definitionally equal, so a new
-wrapper structure or a wholesale conversion to `PFunctor` would add migration
-cost without strengthening the abstraction boundary.
+`toPFunctor` / `ofPFunctor` round trips are definitionally equal, so a wrapper
+structure or a wholesale conversion to `PFunctor` would add migration cost
+without strengthening the abstraction boundary.
 
-The sensitive operation is coproduct. A nested handler response contains a
+The sensitive operation is the coproduct. A nested handler response contains a
 type such as
 
 ```lean
 ((spec₁ + spec₂) + spec₃).Range (.inl (.inr t))
 ```
 
-PolyFun previously represented its direction family through the ordinary
-wrapper `Sum.elim P.B Q.B`. Reducing the displayed type then crossed the
-oracle `HAdd` projection, the PFunctor `HAdd` projection, and `Sum.elim` before
-reaching the primitive dependent recursor. The last wrapper is semireducible,
-so the chain could stop at `.implicit`.
+If `PFunctor.sum` represented its direction family through the ordinary wrapper
+`Sum.elim P.B Q.B`, reducing this type would cross the oracle `HAdd`
+projection, the PFunctor `HAdd` projection and `Sum.elim` before reaching the
+primitive dependent recursor. The last wrapper is semireducible, so the chain
+could stop at `.implicit`.
 
-`PFunctor.sum` now writes `Sum.rec` directly and publishes its position and
-branch-direction equations. The OracleSpec `HAdd` is a plain instance, so the
-`instance` command gives it `instance_reducible`, and its body calls
+`PFunctor.sum` therefore writes `Sum.rec` directly and publishes its position
+and branch-direction equations. The OracleSpec `HAdd` is a plain instance, so
+the `instance` command gives it `instance_reducible`, and its body calls
 `PFunctor.sum` by name. Using the overloaded `+` inside that instance would
 insert another `HAdd.hAdd` projection into the instance's own dependent type;
 naming the construction directly keeps the instance well-typed at
 `.implicit`.
 
-The instance's exact status matters. Explicitly changing it to
-`@[implicit_reducible]` removes the `instance_reducible` status used during
-instance unification, while changing it to `@[reducible]` makes ordinary
-`simp` matching unfold combined specs and destabilizes established support
-normal forms. The default instance status occupies the required middle
-ground. No global attribute on `Sum.elim`, `Sum.rec`, or `HAdd.hAdd` is needed.
+The instance's exact status matters. Marking it `@[implicit_reducible]` would
+remove the `instance_reducible` status used during instance unification, while
+marking it `@[reducible]` would make ordinary `simp` matching unfold combined
+specifications and destabilize the established normal forms of supports. The
+default instance status occupies the required middle ground, and no global
+attribute on `Sum.elim`, `Sum.rec`, or `HAdd.hAdd` is needed.
 
-This change is deliberately limited to binary coproduct. `PFunctor.sigma`,
+Only the binary coproduct writes its recursor directly. `PFunctor.sigma`,
 `PFunctor.pi`, products, and their OracleSpec façades also build dependent
-families and should be audited with concrete canaries when they appear in
-implicit-transparency diagnostics. They are not changed merely because their
-definitions look structurally similar.
+families; audit them with concrete canaries when they appear in
+implicit-transparency diagnostics, and otherwise leave them as they are, since
+a definition that merely looks structurally similar is no reason for a change.
 
 ### How Lean core and Mathlib handle similar cases
 
@@ -263,18 +266,19 @@ linter used by the canaries here.
 pointwise reduction changes only the target monad, and dependent handler
 result types need that reduction during elaboration; an application theorem
 alone leaves casts that Lean's rewriting tactics cannot always normalize.
-The effectful `preInsert` / `postInsert` and tracing combinators remain opaque
-and are consumed through their public application and factorization laws.
+The effectful `preInsert` / `postInsert` and tracing combinators are opaque and
+are consumed through their public application and factorization laws.
 
-The compatibility migration uses broad `@[expose] public section`s so current
-downstream proofs continue to elaborate. New code should expose individual
-definitions instead. Over time, replace broad exposure with explicit laws and
-opaque boundaries, module by module, with downstream canaries in place.
+Most source files open a broad `@[expose] public section`, which keeps available
+the definitional equalities that downstream proofs rely on; a file added to a
+library opens a plain `public section` and exposes individual definitions.
+Replace broad exposure with explicit laws and opaque boundaries module by
+module, with downstream canaries in place.
 
-When a former `rfl` proof stops working after an import is made public-only,
-do not reach immediately for `import all`. First determine which public law is
-missing. A small `apply`, `…_iff`, or constructor equation usually documents
-the abstraction better and makes all downstream users independent of the
+When an `rfl` proof stops working because an import was made public-only, do
+not reach for `import all` first: determine which public law is missing. A
+small `apply`, `…_iff`, or constructor equation usually documents the
+abstraction better and makes all downstream users independent of the
 implementation.
 
 Treat a terminal `rfl` immediately after a boundary `rw` or `change` as the
@@ -286,25 +290,32 @@ intentional documented API may still use `rfl` directly.
 
 ## The program-logic import boundary
 
-Unary carrier interpretations live in `VCVio/ProgramLogic/Unary/WP/` and consume core's
-`Std.Internal.Do` API through PolyFun's algebra bridge. Relational carrier interpretations
-live in `VCVio/ProgramLogic/Relational/WP/` and use VCVio's coupling interface. Carrier
-instances are scoped, so importing either layer does not choose a global semantics.
+The unary readings of `OracleComp` live in `VCVio/ProgramLogic/Unary/WP/` and are
+core `Std.WP` interpretations built with PolyFun's bridges. The necessary
+reading (`OracleComp.Necessary`) is the global instance of `OracleComp`, as
+core's own `Prop`-valued instances are for its monads. The possible, lower and
+upper readings and the probability-valued interpretation (`OracleComp.Possible`,
+`OracleComp.Lower`, `OracleComp.Upper`, `OracleComp.Probabilistic`) are scoped
+instances, selected with `open scoped`. The relational carriers live in
+`VCVio/ProgramLogic/Relational/WP/`, use VCVio's coupling interface, and are all
+scoped (`OracleComp.Rel.Qualitative`, `OracleComp.Rel.Quantitative`,
+`OracleComp.Rel.Probabilistic`). Importing a layer therefore selects no
+semantics beyond the necessary reading.
 
-The legacy `Std.Do` handler bridge and the lattice-generic core WP API coexist.
+Every program-logic layer is stated on the lattice-generic core `Std.WP` API.
 See [program-logic.md](program-logic.md#core-wp-and-the-symbolic-rewriter-boundary) for
-selection, tactic boundaries, and the v4.35 tracking links.
+selection, tactic boundaries, and the upstream changes to track at the next
+toolchain bump.
 
 ## Restoring `private` correctly
 
-The module migration changed the meaning of `private`: a public exposed body
-cannot retain a reference to a private declaration. Classify each affected
-declaration before changing visibility.
+Under the module system, a public exposed body cannot refer to a private
+declaration. Classify each affected declaration before changing visibility.
 
 1. If it appears in a public type, theorem statement, default argument, or
    deliberately exposed body, it is part of the public dependency closure.
    Give it an intentional public name and docstring, or redesign the public
-   declaration so the helper no longer appears.
+   declaration so that the helper does not appear in it.
 2. If it is used only in proofs, keep it `private`. Public theorem proofs are
    private module data and may use private proof helpers.
 3. If it is an executable helper used only by a public runtime entry point,
@@ -353,8 +364,8 @@ whose public proofs intentionally unfold nearly every definition may retain
 is not apparent from the contents. Runtime execution alone (including `main`)
 does not require exposing definition bodies to proof reduction.
 
-Changes that add PolyFun API and consume it from VCVio require two coordinated
-repository changes:
+A change that adds PolyFun API and consumes it from VCVio needs coordinated
+changes in the two repositories:
 
 1. merge and release the PolyFun public API;
 2. update VCVio's PolyFun revision;

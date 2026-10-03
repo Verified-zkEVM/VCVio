@@ -10,13 +10,15 @@ public import VCVio.CryptoFoundations.DataEncapMech
 public import VCVio.CryptoFoundations.KeyEncapMech
 public import VCVio.CryptoFoundations.AsymmEncAlg.INDCPA.OneTime
 public import VCVio.CryptoFoundations.KEMDEM.Measure
-public import VCVio.OracleComp.Constructions.SampleableType.MeasureCompatibility
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 
 /-!
 # KEM + DEM Composition
 
 This file defines the textbook KEM+DEM public-key encryption construction and the proof-ladders A1
-reduction skeleton against the repo's existing KEM and one-time IND-CPA interfaces.
+reduction skeleton against the repository's KEM and one-time IND-CPA interfaces. Correctness of
+the composition follows from that of its components, at every possible output and with
+probability one, in any monad with the corresponding semantics.
 -/
 
 @[expose] public section
@@ -46,46 +48,61 @@ def composeWithDEM [Monad m]
 
 section Correct
 
-variable [DecidableEq K] [DecidableEq M] [Monad m] [MonadLiftT m SPMF]
-  [MonadAttach m] [ExactMonadAttach m] [EvalDistCompatible m]
+variable [DecidableEq K] [DecidableEq M] [Monad m] [LawfulMonad m]
 
-/-- From KEM correctness at the monadic probability level, every reachable decapsulation of an
-honest ciphertext returns the encapsulated key. -/
-private lemma kem_decaps_mem_support
-    [LawfulMonad m]
-    {kem : KEMScheme m K PK SK CKEM}
-    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
-    {pk : PK} {sk : SK} (hks : (pk, sk) ∈ support kem.keygen)
-    {c : CKEM} {k : K} (hck : (c, k) ∈ support (kem.encaps pk))
-    {kOpt : Option K} (hkOpt : kOpt ∈ support (kem.decaps sk c)) :
-    kOpt = some k := by
-  have hmem : decide (kOpt = some k) ∈ support kem.correctnessExperiment := by
-    simp only [KEMScheme.correctnessExperiment, mem_support_bind_iff, support_pure,
-      Set.mem_singleton_iff, decide_eq_decide, Prod.exists]
-    exact ⟨pk, sk, hks, c, k, hck, kOpt, hkOpt, Iff.rfl⟩
-  simpa [((probOutput_eq_one_iff (mx := kem.correctnessExperiment) (x := true)).mp hkem).2]
-    using hmem
-
-variable [LawfulMonadLiftT m SPMF]
-
-/-- If a KEM and externally keyed DEM are both perfectly correct in the concrete probabilistic
-semantics of `m`, then their composition is also perfectly correct. -/
-theorem perfectlyCorrect_composeWithDEM
-    [LawfulMonad m]
+/-- Reachable KEM and DEM round trips that always succeed make every reachable round trip of the
+composed scheme succeed. -/
+theorem support_correctnessExperiment_composeWithDEM [MonadAttach m] [ExactMonadAttach m]
     (kem : KEMScheme m K PK SK CKEM) (dem : DEMScheme m K M CDEM)
-    (hkem : Pr[= true | kem.correctnessExperiment] = 1)
-    (hdem : ∀ k : K, ∀ msg : M, Pr[= true | dem.correctnessExperiment k msg] = 1) :
-    ∀ msg, Pr[= true | (kem.composeWithDEM dem).correctnessExperiment msg] = 1 := by
-  intro msg
-  rw [← hkem]
+    (hkem : ∀ b ∈ support kem.correctnessExperiment, b = true)
+    (hdem : ∀ k msg, ∀ b ∈ support (dem.correctnessExperiment k msg), b = true)
+    (msg : M) :
+    ∀ b ∈ support ((kem.composeWithDEM dem).correctnessExperiment msg), b = true := by
+  intro b hb
+  simp only [AsymmEncAlg.correctnessExperiment, composeWithDEM, mem_support_bind_iff,
+    mem_support_pure_iff, Prod.exists] at hb
+  obtain ⟨pk, sk, hks, c₁, c₂, ⟨c₁', k, hck, c₂', hc₂, hc⟩, msg', ⟨kOpt, hkOpt, hmsg'⟩, rfl⟩ := hb
+  obtain ⟨rfl, rfl⟩ := Prod.ext_iff.mp hc
+  have hk : kOpt = some k := by
+    have hmem : decide (kOpt = some k) ∈ support kem.correctnessExperiment := by
+      simp only [KEMScheme.correctnessExperiment, mem_support_bind_iff, mem_support_pure_iff,
+        Prod.exists]
+      exact ⟨pk, sk, hks, c₁, k, hck, kOpt, hkOpt, rfl⟩
+    simpa using hkem _ hmem
+  subst hk
+  simp only [mem_support_bind_iff, mem_support_pure_iff] at hmsg'
+  obtain ⟨m', hm', rfl⟩ := hmsg'
+  have hmem : decide (m' = msg) ∈ support (dem.correctnessExperiment k msg) := by
+    simp only [DEMScheme.correctnessExperiment, mem_support_bind_iff, mem_support_pure_iff]
+    exact ⟨c₂, hc₂, m', hm', rfl⟩
+  simpa using hdem k msg _ hmem
+
+/-- Perfect correctness composes under any lawful measure semantics: a KEM and an externally
+keyed DEM that each succeed with probability `1` give a composed scheme that succeeds with
+probability `1`. -/
+theorem perfectlyCorrect_composeWithDEM [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    (kem : KEMScheme m K PK SK CKEM) (dem : DEMScheme m K M CDEM)
+    (hkem : Pr{let b ← kem.correctnessExperiment}[b = true] = 1)
+    (hdem : ∀ k msg, Pr{let b ← dem.correctnessExperiment k msg}[b = true] = 1) (msg : M) :
+    Pr{let b ← (kem.composeWithDEM dem).correctnessExperiment msg}[b = true] = 1 := by
   simp only [AsymmEncAlg.correctnessExperiment, composeWithDEM, KEMScheme.correctnessExperiment,
-    monad_norm]
-  refine probOutput_bind_congr fun ⟨pk, sk⟩ hks => ?_
-  refine probOutput_bind_congr fun ⟨kc, k⟩ hck => ?_
-  rw [probOutput_bind_bind_swap (mx := dem.encrypt k msg) (my := kem.decaps sk kc)]
-  refine probOutput_bind_congr fun kOpt hkOpt => ?_
-  obtain rfl := kem_decaps_mem_support hkem hks hck hkOpt
-  simpa [DEMScheme.correctnessExperiment, probOutput_pure, monad_norm] using hdem k msg
+    DEMScheme.correctnessExperiment, bind_assoc, pure_bind, expect_norm, decide_eq_true_eq]
+    at hkem hdem ⊢
+  refine wp_eq_one_of_prEvent_eq_one kem.keygen
+    (prEvent_eq_one_of_wp_eq_one _ (fun _ => wp_le_of_forall_le _ fun _ => prEvent_le_one _) hkem)
+    (fun keys hkeys => ?_) fun _ => wp_le_of_forall_le _ fun _ => wp_le_of_forall_le _ fun _ =>
+      wp_le_of_forall_le _ fun _ => prEvent_le_one _
+  refine wp_eq_one_of_prEvent_eq_one (kem.encaps keys.1)
+    (prEvent_eq_one_of_wp_eq_one _ (fun _ => prEvent_le_one _) hkeys)
+    (fun ck hck => ?_) fun _ => wp_le_of_forall_le _ fun _ => wp_le_of_forall_le _ fun _ =>
+      prEvent_le_one _
+  refine wp_eq_one_of_prEvent_eq_one (dem.encrypt ck.2 msg)
+    (prEvent_eq_one_of_wp_eq_one _ (fun _ => prEvent_le_one _) (hdem ck.2 msg))
+    (fun c hc => ?_) fun _ => wp_le_of_forall_le _ fun _ => prEvent_le_one _
+  refine wp_eq_one_of_prEvent_eq_one (kem.decaps keys.2 ck.1) hck (fun k hk => ?_)
+    fun _ => prEvent_le_one _
+  subst hk
+  simpa only [expect_norm, Option.some.injEq] using hc
 
 end Correct
 
@@ -189,11 +206,11 @@ theorem ind_cpa_one_time_bias_advantage_compose_with_dem_le
     let dc ← dem.encrypt k (if side then p.2.1 else p.2.2.1)
     adversary.distinguish p.2.2.2 (kc, dc)
   have hcoin (b : Bool) : 𝒟[runtime.liftProbComp ($ᵗ Bool)] {b} = 1 / 2 := by
-    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample,
+    rw [evalDist_eq_runtime, heval_liftProbComp, SampleableType.evalDist_uniformSample,
       ProbabilityTheory.uniformOn_univ_apply_singleton]
     simp [Fintype.card_bool]
   have hkey : 𝒟[runtime.liftProbComp ($ᵗ K)] Set.univ = 1 := by
-    rw [evalDist_eq_runtime, heval_liftProbComp, evalDist_uniformSample]
+    rw [evalDist_eq_runtime, heval_liftProbComp, SampleableType.evalDist_uniformSample]
     simp
   have htotal (real side : Bool) :
       𝒟[KEMDEM.hybrid prepare encaps finish (runtime.liftProbComp ($ᵗ K)) real side] {true} +

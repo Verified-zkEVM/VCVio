@@ -15,7 +15,7 @@ public import VCVio.ProgramLogic.Relational.Quantitative
 
 `OracleComp.Rel.Probabilistic` supplies a scoped interpretation of `eRelWP` in
 `Prob`, Mathlib's interval `Set.Iic (1 : ℝ≥0∞)`. A coupling expectation of a
-probability-valued postcondition stays below one.
+probability-valued postcondition is at most one.
 
 Use `open scoped OracleComp.Rel.Probabilistic` to select this carrier.
 -/
@@ -25,13 +25,13 @@ Use `open scoped OracleComp.Rel.Probabilistic` to select this carrier.
 universe u
 
 open VCVio.ProgramLogic
-open ENNReal Std.Internal.Do OracleComp.Quantitative
+open ENNReal Std.WP OracleComp.Lower
 
 namespace OracleComp.Rel.Probabilistic
 
 variable {ι₁ ι₂ : Type u}
-variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
+variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{u, 0} ι₂}
+variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
 variable {α β γ δ : Type}
 
 /-! ## Bound: `eRelWP` on a `Prob`-valued post is always `≤ 1`
@@ -43,13 +43,8 @@ postcondition is `≤ 1`. -/
 private lemma eRelWP_le_one_of_post_le_one
     (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β)
     (post : α → β → ℝ≥0∞) (hpost : ∀ a b, post a b ≤ 1) :
-    OracleComp.ProgramLogic.Relational.eRelWP oa ob post ≤ 1 := by
-  unfold OracleComp.ProgramLogic.Relational.eRelWP
-  refine iSup_le fun c => ?_
-  calc ∑' z : α × β, Pr[= z | c.1] * post z.1 z.2
-      ≤ ∑' z : α × β, Pr[= z | c.1] :=
-        ENNReal.tsum_le_tsum fun z => by simpa using mul_le_mul' le_rfl (hpost z.1 z.2)
-    _ ≤ 1 := tsum_probOutput_le_one
+    OracleComp.ProgramLogic.Relational.eRelWP oa ob post ≤ 1 :=
+  OracleComp.ProgramLogic.Relational.eRelWP_le oa ob post 1 hpost
 
 /-- The underlying `ℝ≥0∞`-valued relational WP, packaged for use inside
 the `Prob` constructor. -/
@@ -62,11 +57,13 @@ private theorem rwpVal_le_one (oa : OracleComp spec₁ α) (ob : OracleComp spec
     (post : α → β → Prob) : rwpVal oa ob post ≤ 1 :=
   eRelWP_le_one_of_post_le_one oa ob _ (fun a b => (post a b).val_le_one)
 
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+
 /-- Relational coupling expectations restricted to probability-valued assertions.
 Enable with `open scoped OracleComp.Rel.Probabilistic`. -/
 noncomputable scoped instance instRelWP_prob :
     VCVio.ProgramLogic.RelWP (OracleComp spec₁) (OracleComp spec₂) Prob
-      Std.Internal.Do.EPost.Nil Std.Internal.Do.EPost.Nil where
+      EStack⟨⟩ EStack⟨⟩ where
   rwpTrans oa ob post _epost₁ _epost₂ :=
     ⟨rwpVal oa ob post, by exact rwpVal_le_one oa ob post⟩
   rwp_trans_pure a b := by
@@ -90,9 +87,9 @@ noncomputable scoped instance instRelWP_prob :
 
 /-! ## Definitional alignment with `eRelWP` (Prob)
 
-The keystone lemma confirms that the underlying `ℝ≥0∞` value of
-`VCVio.ProgramLogic.rwp` agrees with the quantitative `eRelWP` on the nose, so
-quantitative theorems still apply after coercing through `.val`. -/
+`rwp_val_eq_eRelWP` states that the `ℝ≥0∞` value of `VCVio.ProgramLogic.rwp` is
+`eRelWP` by definition, so the theorems about `eRelWP` apply after coercing
+through `.val`. -/
 
 theorem rwp_val_eq_eRelWP
     (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (post : α → β → Prob) :

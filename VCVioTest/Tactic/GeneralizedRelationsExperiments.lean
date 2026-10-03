@@ -17,52 +17,43 @@ public import Mathlib.Tactic.CongrM
 # Experiments with generalized relations
 
 Local registrations separate feasible extensions from the production tactic contract. These
-examples cover game equivalence, postconditions, support-restricted equality, and alternative
-congruence tactics. Local instances and attributes do not escape their sections.
+examples cover support-aware equality in distribution, postconditions, support-restricted
+equality, and alternative congruence tactics. Local instances and attributes do not escape their
+sections.
 -/
 
 public section
 
-open OracleComp OracleComp.EvalDist OracleComp.ProgramLogic OracleSpec MeasureTheory
+open OracleComp OracleComp.ProgramLogic OracleSpec MeasureTheory
 open scoped ENNReal
 
 namespace VCVioTest.GeneralizedRelationsExperiments
 
-/-! ## Game equivalence needs congruence and transitivity -/
+/-! ## Support-aware congruence for equality in distribution is local
+
+`EvalDistEq.bind_congr` is the registered congruence. Registering the support-aware form in its
+place keeps the reachable output in context for the continuation goal. -/
 
 section Games
 
-variable {α β γ : Type} {oa ob oc : ProbComp α}
-variable {f g : α → ProbComp β} {k l : β → ProbComp γ}
+/-- A coin whose negation is taken only on the reachable outputs of the draw. -/
+def negatedCoin : ProbComp Bool := do
+  let b ← $ᵗ Bool
+  pure !b
 
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by
-  -- gap(gcongr, 2026-09-08): bind congruence is available but not registered globally.
-  fail_if_success gcongr
-  exact GameEquiv.bind_congr h fun _ => GameEquiv.rfl
+attribute [local gcongr] OracleComp.EvalDistEq.bind_congr_of_support
 
-attribute [local gcongr] GameEquiv.bind_congr GameEquiv.map_congr
+example {f g : Bool → ProbComp Bool} (h : ∀ b ∈ support ($ᵗ Bool : ProbComp Bool), f b =ᵈ g b) :
+    ($ᵗ Bool : ProbComp Bool) >>= f =ᵈ ($ᵗ Bool : ProbComp Bool) >>= g := by
+  gcongr with b hb
+  guard_hyp hb : b ∈ support ($ᵗ Bool : ProbComp Bool)
+  exact h b hb
 
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by gcongr
-
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by
-  -- gap(grw, 2026-09-08): bind congruence does not supply transitivity of the outer relation.
-  fail_if_success grw [h]
-  gcongr
-
-local instance : IsTrans (ProbComp α) GameEquiv := ⟨fun _ _ _ => GameEquiv.trans⟩
-
-example (h : GameEquiv oa ob) (hbc : GameEquiv ob oc) : GameEquiv oa oc := by grw [h, hbc]
-
-example (h : GameEquiv oa ob) : GameEquiv (oa >>= f) (ob >>= f) := by grw [h]
-
-example (h : GameEquiv oa ob) (p : α → β) : GameEquiv (p <$> oa) (p <$> ob) := by grw [h]
-
-example (h : GameEquiv oa ob) (hfg : ∀ x, GameEquiv (f x) (g x))
-    (hkl : ∀ y, GameEquiv (k y) (l y)) :
-    GameEquiv ((oa >>= f) >>= k) ((ob >>= g) >>= l) := by grw [h, hfg, hkl]
-
-example (h : GameEquiv oa ob) (hfg : ∀ x, GameEquiv (f x) (g x)) :
-    GameEquiv (oa >>= f) (ob >>= g) := by grw [h, hfg]
+example : negatedCoin =ᵈ ($ᵗ Bool : ProbComp Bool) := by
+  unfold negatedCoin
+  simpa only [bind_pure_comp] using
+    SampleableType.map_uniformSample_evalDistEq_of_bijective
+      (Function.Involutive.bijective (f := not) Bool.not_not)
 
 end Games
 
@@ -72,39 +63,37 @@ section Equality
 
 variable {α : Type} (mx : ProbComp α) (f g : α → ℝ≥0∞)
 
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   -- gap(gcongr, 2026-09-08): support-aware equality congruence is not registered globally.
   fail_if_success gcongr
   exact wp_congr_of_support mx h
 
 attribute [local gcongr] wp_congr_of_support
 
-attribute [local congr] wp_congr_of_support
-
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   gcongr with x hx
   guard_hyp hx : x ∈ support mx
   guard_target = f x = g x
   exact h x hx
 
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   -- gap(grw, 2026-09-08): equality rules use ordinary rewriting without support context.
   fail_if_success grw [h]
   exact wp_congr_of_support mx h
 
-example (h : ∀ x, f x = g x) : wp mx f = wp mx g := by
-  congrm wp mx ?_
+example (h : ∀ x, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
+  congrm wp⟦mx⟧ ?_
   guard_target = f = g
   exact funext h
 
-example (h : ∀ x, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   congr! 1
-  guard_target = f _ = g _
-  exact h _
+  guard_target = f = g
+  exact funext h
 
-example (h : ∀ x ∈ support mx, f x = g x) : wp mx f = wp mx g := by
+example (h : ∀ x ∈ support mx, f x = g x) : wp⟦mx⟧ f = wp⟦mx⟧ g := by
   conv_lhs =>
-    apply_congr (wp_congr_of_support (oa := mx) (f := f) (g := g))
+    apply_congr (wp_congr_of_support (mx := mx) (f := f) (g := g))
     tactic => exact h _ (by assumption)
 
 end Equality
@@ -128,7 +117,7 @@ example {α β : Type} (oa : ProbComp α) (ob : ProbComp β) (R S : α → β �
 
 end Relational
 
-/-! ## Measure-native postconditions and almost-everywhere bounds -/
+/-! ## Measure postconditions and almost-everywhere bounds -/
 
 section MeasurePosts
 
@@ -140,18 +129,18 @@ This means that the `@[gcongr]` lemma cannot be used in the `grw` tactic. Please
 #guard_msgs in
 attribute [local gcongr] Measure.bind_mono_right
 
-attribute [local gcongr] MeasureProgramLogic.eRelWP_mono MeasureProgramLogic.CouplingPost.mono
+attribute [local gcongr] ExpectationWP.eRelWP_mono ExpectationWP.CouplingPost.mono
 
 example {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
     {m : Type → Type} [EvalDistSemantics m]
     (mx : m α) (my : m β) (g h : α → β → ℝ≥0∞)
     (hgh : ∀ a b, g a b ≤ h a b) :
-    MeasureProgramLogic.eRelWP mx my g ≤ MeasureProgramLogic.eRelWP mx my h := by grw [hgh]
+    ExpectationWP.eRelWP mx my g ≤ ExpectationWP.eRelWP mx my h := by grw [hgh]
 
 example {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
     (μ : Measure α) (ν : Measure β) (R S : α → β → Prop)
     (h : ∀ a b, R a b → S a b) :
-    MeasureProgramLogic.CouplingPost μ ν R → MeasureProgramLogic.CouplingPost μ ν S := by
+    ExpectationWP.CouplingPost μ ν R → ExpectationWP.CouplingPost μ ν S := by
   gcongr with a b
   guard_target = R a b → S a b
   exact h a b

@@ -41,18 +41,13 @@ theorem evalDist_bind_prop {β : Type} [MeasurableSpace β]
 
 variable [LawfulMonad m]
 
-/-- An impossible final observation has zero mass, including after a failed computation. -/
-@[simp↓ high, grind norm↓]
-theorem prEvent_false {α : Type} (mx : m α) : Pr{let _ ← mx}[False] = 0 :=
-  prEvent_eq_zero_of_forall_not mx (fun _ ↦ False) (fun _ ↦ id)
-
 /-- An observation's negation is the false mass of the same propositional selector. -/
 theorem prEvent_not_eq_apply_false {α : Type} (mx : m α) (p : α → Prop) :
     Pr{let x ← mx}[¬p x] = 𝒟[p <$> mx] {False} := by
-  calc
-    _ = Pr{let b ← p <$> mx}[¬b] := by simp only [bind_map_left]
-    _ = 𝒟[p <$> mx] {b | ¬b} := prEvent_eq_evalDist_of_discrete _ _
-    _ = _ := by congr 1; ext b; simp
+  rw [← prEvent_map mx p fun b ↦ ¬b, prEvent_eq_evalDist_of_discrete (p <$> mx) fun b ↦ ¬b]
+  congr 1
+  ext b
+  simp
 
 /-- An event and its negation partition the selector's successful mass, including lossy draws. -/
 theorem prEvent_add_prEvent_not {α : Type} (mx : m α) (p : α → Prop) :
@@ -80,8 +75,7 @@ theorem evalDist_bind_ite {α β : Type} [MeasurableSpace β]
       intro x
       by_cases hx : p x <;> simp [hx]
     _ = _ := by
-      rw [evalDist_bind_prop, prEvent_not_eq_apply_false]
-      simp only [map_eq_bind_pure_comp, Function.comp_def]
+      rw [evalDist_bind_prop, prEvent_not_eq_apply_false, prEvent_eq_evalDist_map]
 
 /-- Measurable selector measures and branch measures give a measurable conditional family.
 The family can be bundled by `evalDistKernel`; discarded source values need no measurable space.
@@ -117,13 +111,12 @@ theorem evalDist.isProbabilityMeasure_bind_ite {α β : Type} [MeasurableSpace �
 event probabilities. Each weight retains successful mass. -/
 theorem prEvent_bind_ite {α β : Type} (mx : m α) (p : α → Prop) [DecidablePred p]
     (yes no : m β) (q : β → Prop) :
-    Pr{let y ← mx >>= fun x ↦ if p x then yes else no}[q y] =
+    Pr{let x ← mx; let y ← if p x then yes else no}[q y] =
       Pr{let x ← mx}[p x] * Pr{let y ← yes}[q y] +
         Pr{let x ← mx}[¬p x] * Pr{let y ← no}[q y] := by
-  rw [bind_assoc]
-  simp_rw [apply_ite (fun x ↦ x >>= fun y ↦ pure (q y))]
-  rw [evalDist_bind_ite]
-  simp
+  rw [← wp_propInd_mul, ← wp_propInd_mul, ← ExpectationWP.wp_add]
+  refine ExpectationWP.wp_congr mx fun x ↦ ?_
+  by_cases hx : p x <;> simp [hx]
 
 /-- A continuation event that is constant on an observed condition and zero otherwise factors
 through that condition's probability. The reference event may have a different output type. -/
@@ -134,16 +127,7 @@ theorem prEvent_bind_eq_mul_of_ite {α β γ : Type}
       Pr{
         let y ← f x}[q y] = if p x then Pr{
         let z ← my}[r z] else 0) :
-    Pr{let y ← mx >>= f}[q y] = Pr{let x ← mx}[p x] * Pr{let z ← my}[r z] := by
-  calc
-    _ = Pr{let b ← mx >>= fun x ↦ if p x then r <$> my else pure False}[b] := by
-      simpa only [id, bind_pure] using
-        prEvent_bind_congr mx f (fun x ↦ if p x then r <$> my else pure False) q id (by
-          intro x
-          rw [h]
-          split_ifs <;> simp)
-    _ = _ := by
-      rw [evalDist_bind_ite]
-      simp only [Measure.add_apply, Measure.smul_apply, smul_eq_mul]
-      rw [← prEvent_eq_evalDist_map]
-      simp
+    Pr{let x ← mx; let y ← f x}[q y] = Pr{let x ← mx}[p x] * Pr{let z ← my}[r z] := by
+  rw [ExpectationWP.wp_congr mx h, ← wp_propInd_mul]
+  refine ExpectationWP.wp_congr mx fun x ↦ ?_
+  by_cases hx : p x <;> simp [hx]

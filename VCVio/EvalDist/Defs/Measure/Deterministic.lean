@@ -6,8 +6,10 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.Failure
+public import VCVio.EvalDist.ProbabilityNotation
 public import ToMathlib.Control.Except
 public import ToMathlib.Control.Option
+public import ToMathlib.Control.Monad.Algebra
 
 /-!
 # Successful-output measures for deterministic computations
@@ -113,3 +115,54 @@ instance (priority := 20) instLawfulEvalDistSemanticsExcept {ε : Type u} :
     cases mx with
     | error _ => exact (Measure.bind_zero_left fun x ↦ 𝒟[f x]).symm
     | ok x => exact (Measure.dirac_bind hf x).symm
+
+/-! ## Expectations and events of deterministic computations
+
+The expectation laws are stated for every observation, so `simp` applies them to events too; the
+event forms follow. -/
+
+/-- An absent optional result has expectation zero. -/
+@[simp, grind =]
+theorem Option.wp_none {α : Type} (g : α → ENNReal) : wp⟦(none : Option α)⟧ g = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete, Option.evalDist_none,
+    lintegral_zero_measure]
+
+/-- An absent optional result makes every event impossible. -/
+theorem Option.prEvent_none {α : Type} (p : α → Prop) : Pr{let x ← (none : Option α)}[p x] = 0 :=
+  Option.wp_none _
+
+/-- The expectation of a present optional result is the observation at that result. `simp`
+applies PolyFun's `ExactWPMonad.wp_some`. -/
+@[grind =]
+theorem Option.wp_some {α : Type} (x : α) (g : α → ENNReal) : wp⟦some x⟧ g = g x :=
+  ExpectationWP.wp_pure (m := Option) x g
+
+/-- An event of a present optional result is the indicator of the event at that result. -/
+theorem Option.prEvent_some {α : Type} (x : α) (p : α → Prop) :
+    Pr{let y ← some x}[p y] = propInd (p x) :=
+  Option.wp_some x _
+
+/-- An exceptional result has expectation zero. -/
+@[simp, grind =]
+theorem Except.wp_error {ε : Type u} {α : Type} (error : ε) (g : α → ENNReal) :
+    wp⟦(Except.error error : Except ε α)⟧ g = 0 := by
+  let : MeasurableSpace α := ⊤
+  rw [ExpectationWP.wp_eq_lintegral _ g Measurable.of_discrete, Except.evalDist_error,
+    lintegral_zero_measure]
+
+/-- An exceptional result makes every event impossible. -/
+theorem Except.prEvent_error {ε : Type u} {α : Type} (error : ε) (p : α → Prop) :
+    Pr{let x ← (Except.error error : Except ε α)}[p x] = 0 :=
+  Except.wp_error error _
+
+/-- The expectation of a successful exceptional result is the observation at that result. -/
+@[simp, grind =]
+theorem Except.wp_ok {ε : Type u} {α : Type} (x : α) (g : α → ENNReal) :
+    wp⟦(Except.ok x : Except ε α)⟧ g = g x :=
+  ExpectationWP.wp_pure (m := Except ε) x g
+
+/-- An event of a successful exceptional result is the indicator of the event at that result. -/
+theorem Except.prEvent_ok {ε : Type u} {α : Type} (x : α) (p : α → Prop) :
+    Pr{let y ← (Except.ok x : Except ε α)}[p y] = propInd (p x) :=
+  Except.wp_ok x _

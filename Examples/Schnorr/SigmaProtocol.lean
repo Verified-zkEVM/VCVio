@@ -6,8 +6,11 @@ Authors: Quang Dao
 
 module
 public import VCVio.CryptoFoundations.SigmaProtocol
+public import VCVio.EvalDist.Monad.Branch
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.ProgramLogic.Tactics.Unary
 public import VCVio.ProgramLogic.Tactics.Relational
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Schnorr Σ-protocol
@@ -101,12 +104,10 @@ an accepting transcript. Follows from `add_smul` and `mul_smul`. -/
 theorem sigma_complete (g : G) :
     (sigma F G g).PerfectlyComplete := by
   intro pk sk h
-  rw [evalDist_apply_singleton]
-  have h_eq : sk • g = pk := of_decide_eq_true h
-  simp only [sigma, monad_norm]
-  have hverify : ∀ (r c : F), (r + c * sk) • g = r • g + c • pk := by
-    intro r c; rw [add_smul, mul_smul, h_eq]
-  simp [hverify]
+  rw [← prEvent_eq_evalDist_singleton]
+  dsimp only [sigma]
+  prvcgen
+  simp_all [add_smul, mul_smul]
 
 /-- Special soundness: from two accepting transcripts `(R, c₁, z₁)` and `(R, c₂, z₂)` with
 `c₁ ≠ c₂`, the extracted witness `(z₁ - z₂) * (c₁ - c₂)⁻¹` satisfies the relation. -/
@@ -133,39 +134,6 @@ def simTranscript (g : G) (pk : G) : ProbComp (G × F × F) := do
   let z ← $ᵗ F
   return (z • g - c • pk, c, z)
 
-open OracleComp.ProgramLogic OracleComp.ProgramLogic.Relational in
-/-- Honest-verifier zero-knowledge: the real transcript distribution equals the simulated one.
-The proof swaps sampling order and uses uniformity of `F` to reindex via the bijection
-`r ↦ r + c * sk`. -/
-theorem sigma_hvzk (g : G) [Finite F] :
-    (sigma F G g).PerfectHVZK (simTranscript F G g) := by
-  let _ : Fintype F := Fintype.ofFinite F
-  intro pk sk h_sk
-  have h_eq : sk • g = pk := of_decide_eq_true h_sk
-  apply evalSPMF_ext
-  intro t
-  trans Pr[= t | do
-    let c ← ($ᵗ F)
-    let r ← ($ᵗ F)
-    pure (((r + c * sk) • g - c • pk, c, r + c * sk) : G × F × F)]
-  · simp only [ChallengeVerifyProtocol.realTranscript, sigma]
-    vcstep rw
-    simp [h_eq, add_smul, mul_smul, add_sub_cancel_right]
-  · show _ = Pr[= t | simTranscript F G g pk]
-    unfold simTranscript
-    apply probOutput_eq_of_relTriple_eqRel (x := t)
-    rvcstep
-    intro c _ hc; subst hc
-    rvcstep using (· + c * sk)
-    exact ⟨fun _ _ h => add_right_cancel h, fun z => ⟨z - c * sk, sub_add_cancel z _⟩⟩
-
-/-! ## Companion facts for the Fiat-Shamir reduction
-
-Two additional properties that the FS CMA-to-NMA reduction needs (on top of
-HVZK) to bound the probability that the signing-simulator collides with the
-random oracle when programming a hash entry. They concern the shape of the
-*simulator transcript distribution*, not the σ-protocol itself. -/
-
 /-- Closed-form for the Schnorr `realTranscript`: the real transcript is the joint
 distribution of `(r • g, c, r + c * sk)` where `r, c ← $ᵗ F` are sampled *independently*.
 This is the form in which the commitment `r • g` and the challenge `c` are literally
@@ -177,6 +145,38 @@ private lemma realTranscript_eq_indep (g : G) (pk : G) (sk : F) :
         let c ← $ᵗ F
         pure ((r • g, c, r + c * sk) : G × F × F)) := by
   simp only [ChallengeVerifyProtocol.realTranscript, sigma, monad_norm]
+
+open OracleComp.ProgramLogic OracleComp.ProgramLogic.Relational in
+/-- Honest-verifier zero-knowledge: the real transcript distribution equals the simulated one.
+The proof swaps the two independent samples of the real transcript and reindexes the
+response by the bijection `r ↦ r + c * sk`. -/
+theorem sigma_hvzk (g : G) :
+    (sigma F G g).PerfectHVZK (simTranscript F G g) := by
+  intro pk sk h_sk
+  have h_eq : sk • g = pk := of_decide_eq_true h_sk
+  let : MeasurableSpace (G × F × F) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
+  calc 𝒟[(sigma F G g).realTranscript pk sk]
+      = 𝒟[do
+          let c ← $ᵗ F
+          let r ← $ᵗ F
+          pure (((r + c * sk) • g - c • pk, c, r + c * sk) : G × F × F)] := by
+        rw [realTranscript_eq_indep, OracleComp.evalDist_bind_bind_swap]
+        simp [← h_eq, add_smul, mul_smul]
+    _ = 𝒟[simTranscript F G g pk] := by
+        unfold simTranscript
+        refine evalDist_eq_of_relTriple_eqRel (spec₁ := unifSpec) (spec₂ := unifSpec) ?_
+        rvcstep
+        intro c _ hc; subst hc
+        rvcstep using (· + c * sk)
+        exact ⟨fun _ _ h => add_right_cancel h, fun z => ⟨z - c * sk, sub_add_cancel z _⟩⟩
+
+/-! ## Companion facts for the Fiat-Shamir reduction
+
+Two additional properties that the FS CMA-to-NMA reduction needs (on top of
+HVZK) to bound the probability that the signing-simulator collides with the
+random oracle when programming a hash entry. They concern the shape of the
+*simulator transcript distribution*, not the σ-protocol itself. -/
 
 /-- **Simulator commit-predictability for Schnorr.** With the standard bijection
 hypothesis `hg : Function.Bijective (· • g : F → G)` (`F` acts simply transitively on
@@ -190,8 +190,8 @@ at most `β`.
 
 Proof: for any fixed challenge `c`, the response map `z ↦ z • g - c • pk : F → G` is
 a bijection (composition of `· • g` with translation), so `(z • g - c • pk)` is uniform
-on `G` when `z ← $ᵗ F`. Averaging over `c ← $ᵗ F` preserves uniformity, and uniformity
-on `G` gives probability `1/|G| = 1/|F|` for any specific output. -/
+on `G` when `z ← $ᵗ F` and hits any specific commitment with probability
+`1/|G| = 1/|F|`. The bound survives averaging over `c ← $ᵗ F`. -/
 theorem sigma_simCommitPredictability [Fintype F] (g : G)
     (hg : Function.Bijective (· • g : F → G)) :
     (sigma F G g).simCommitPredictability (simTranscript F G g)
@@ -200,35 +200,15 @@ theorem sigma_simCommitPredictability [Fintype F] (g : G)
   let : Fintype G := Fintype.ofBijective _ hg
   intro pk c₀
   have hcard_FG : Fintype.card G = Fintype.card F := (Fintype.card_of_bijective hg).symm
-  have hinv_eq : (Fintype.card F : ℝ≥0∞)⁻¹ = (Fintype.card G : ℝ≥0∞)⁻¹ := by rw [hcard_FG]
-  have hbij_c : ∀ c : F, Function.Bijective (fun z : F => z • g - c • pk) := fun c =>
-    (Equiv.subRight (c • pk)).bijective.comp hg
-  have h_commit_uniform :
-      𝒮[Prod.fst <$> simTranscript F G g pk] = 𝒮[$ᵗ G] := by
-    apply evalSPMF_ext
-    intro x
-    have h_rewrite : (Prod.fst <$> simTranscript F G g pk) =
-        (do let c ← ($ᵗ F); let z ← ($ᵗ F); pure (z • g - c • pk) : ProbComp G) := by
-      simp [simTranscript, map_bind]
-    rw [h_rewrite, probOutput_bind_eq_tsum]
-    have h_inner_const : ∀ c : F,
-        Pr[= x | (do let z ← ($ᵗ F); pure (z • g - c • pk) : ProbComp G)] =
-          (Fintype.card G : ℝ≥0∞)⁻¹ := by
-      intro c
-      have h_map : (do let z ← ($ᵗ F); pure (z • g - c • pk) : ProbComp G) =
-          (fun z : F => z • g - c • pk) <$> ($ᵗ F) := by
-        simp [monad_norm]
-      rw [h_map,
-        probOutput_map_bijective_uniform_cross F (f := fun z : F => z • g - c • pk) (hbij_c c),
-        probOutput_uniformSample (α := G)]
-    simp_rw [h_inner_const]
-    rw [ENNReal.tsum_mul_right, tsum_probOutput_of_liftM_PMF, one_mul,
-      probOutput_uniformSample (α := G)]
-  have h_eq : probOutput (Prod.fst <$> simTranscript F G g pk) c₀ =
-      (Fintype.card F : ℝ≥0∞)⁻¹ := by
-    rw [probOutput_def, h_commit_uniform, ← probOutput_def,
-      probOutput_uniformSample (α := G), hcard_FG]
-  exact h_eq.le
+  have h_inner : ∀ c : F,
+      Pr{let z ← $ᵗ F}[z • g - c • pk = c₀] = (Fintype.card F : ℝ≥0∞)⁻¹ := fun c =>
+    (SampleableType.prEvent_uniformSample_comp_of_bijective
+      (f := fun z : F => z • g - c • pk) ((Equiv.subRight (c • pk)).bijective.comp hg)
+      (· = c₀)).trans
+      ((SampleableType.prEvent_uniformSample_eq_singleton c₀).trans (by rw [hcard_FG]))
+  rw [simTranscript, prEvent_bind]
+  refine prEvent_bind_le_of_forall_le ($ᵗ F) _ (fun t : G × F × F => t.1 = c₀) fun c => ?_
+  simpa only [expect_norm] using (h_inner c).le
 
 /-- **Simulator-challenge uniformity given commit, for Schnorr.** For any commit value
 `c₀ : G` and challenge value `ch₀ : F`, the simulator's joint marginal on
@@ -239,69 +219,26 @@ coupling needs: it asserts that conditional on any commit value, the simulator's
 challenge is uniform on `F`. The proof reduces to the explicit independent product
 `(do r ← $ᵗ F; c ← $ᵗ F; pure (r • g, c, r + c · sk))` via perfect HVZK and the
 closed form `realTranscript_eq_indep`; in that form the commit `r • g` and challenge
-`c` are literally independent (by sampling order), so the factoring is immediate. -/
+`c` are literally independent (by sampling order), so both events factor through
+`Pr{let r ← $ᵗ F}[r • g = c₀]`. -/
 theorem sigma_simChalUniformGivenCommit [Fintype F] (g : G) :
     (sigma F G g).simChalUniformGivenCommit (simTranscript F G g) := by
   classical
   intro pk sk hsk c₀ ch₀
   have hHVZK := sigma_hvzk F G g pk sk hsk
-  have hReal := realTranscript_eq_indep F G g pk sk
-  set ind : ProbComp (G × F × F) := do
-    let r ← $ᵗ F
+  rw [← hHVZK.prEvent_eq, ← hHVZK.prEvent_eq, realTranscript_eq_indep, prEvent_bind,
+    prEvent_bind]
+  let cont : F → ProbComp (G × F × F) := fun r => do
     let c ← $ᵗ F
-    pure (r • g, c, r + c * sk) with hind_def
-  have hSimEqIndep : 𝒮[simTranscript F G g pk] = 𝒮[ind] := by
-    rw [← hHVZK, hReal]
-  rw [probEvent_congr' (fun _ _ => Iff.rfl) hSimEqIndep,
-      probEvent_congr' (fun _ _ => Iff.rfl) hSimEqIndep]
-  -- Now both sides are `probEvent` over the explicit independent form.
-  have hcard_ne_zero : (Fintype.card F : ℝ≥0∞) ≠ 0 := by
-    exact_mod_cast Fintype.card_ne_zero (α := F)
-  have hcard_ne_top : (Fintype.card F : ℝ≥0∞) ≠ ⊤ := ENNReal.natCast_ne_top _
-  -- Define `M` = the per-`r` commit-marginal sum.
-  set M : ℝ≥0∞ := ∑' r : F, (Fintype.card F : ℝ≥0∞)⁻¹ *
-      (if r • g = c₀ then (1 : ℝ≥0∞) else 0) with hM_def
-  -- Compute the joint probability.
-  have hjoint :
-      Pr[fun t : G × F × F => t.1 = c₀ ∧ t.2.1 = ch₀ | ind] =
-        (Fintype.card F : ℝ≥0∞)⁻¹ * M := by
-    rw [hind_def, probEvent_bind_eq_tsum, hM_def, ← ENNReal.tsum_mul_left]
-    refine tsum_congr fun r => ?_
-    rw [probOutput_uniformSample, probEvent_bind_eq_tsum]
-    rw [show (∑' c : F,
-              Pr[= c | $ᵗ F] *
-                Pr[fun t : G × F × F => t.1 = c₀ ∧ t.2.1 = ch₀ |
-                  (pure ((r • g, c, r + c * sk) : G × F × F) : ProbComp _)]) =
-            (Fintype.card F : ℝ≥0∞)⁻¹ *
-              (if r • g = c₀ then (1 : ℝ≥0∞) else 0) by
-      simp_rw [probOutput_uniformSample, probEvent_pure]
-      rw [ENNReal.tsum_mul_left]
-      congr 1
-      by_cases hr : r • g = c₀
-      · simp only [hr, true_and]
-        rw [tsum_eq_single ch₀]
-        · simp
-        · intro c hc
-          simp [hc]
-      · simp [hr]]
-  -- Compute the marginal probability.
-  have hmarg :
-      Pr[fun t : G × F × F => t.1 = c₀ | ind] = M := by
-    rw [hind_def, probEvent_bind_eq_tsum, hM_def]
-    refine tsum_congr fun r => ?_
-    rw [probOutput_uniformSample, probEvent_bind_eq_tsum]
-    rw [show (∑' c : F,
-              Pr[= c | $ᵗ F] *
-                Pr[fun t : G × F × F => t.1 = c₀ |
-                  (pure ((r • g, c, r + c * sk) : G × F × F) : ProbComp _)]) =
-            (if r • g = c₀ then (1 : ℝ≥0∞) else 0) by
-      simp_rw [probOutput_uniformSample, probEvent_pure]
-      by_cases hr : r • g = c₀
-      · simp only [hr, ite_true]
-        rw [ENNReal.tsum_mul_left, ENNReal.tsum_const,
-          ENat.card_eq_coe_fintype_card, mul_one, ENat.toENNReal_coe,
-          ENNReal.inv_mul_cancel hcard_ne_zero hcard_ne_top]
-      · simp [hr]]
-  rw [hjoint, hmarg, mul_comm]
+    pure (r • g, c, r + c * sk)
+  have hjoint := prEvent_bind_eq_mul_of_ite ($ᵗ F) cont (fun r => r • g = c₀)
+    (fun t => t.1 = c₀ ∧ t.2.1 = ch₀) ($ᵗ F) (· = ch₀) fun r => by
+      by_cases hr : r • g = c₀ <;> simp [cont, hr]
+  have hmarg := prEvent_bind_eq_mul_of_ite ($ᵗ F) cont (fun r => r • g = c₀)
+    (fun t => t.1 = c₀) (pure () : ProbComp Unit) (fun _ => True) fun r => by
+      by_cases hr : r • g = c₀ <;> simp [cont, hr]
+  simp only [cont] at hjoint hmarg
+  rw [hjoint, hmarg, SampleableType.prEvent_uniformSample_eq_singleton]
+  simp
 
 end Schnorr

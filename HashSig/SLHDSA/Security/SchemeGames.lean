@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 public import HashSig.SLHDSA.Security.SufResidual
 public import ToMathlib.MeasureTheory.Measure.Bool
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # The SLH-DSA scheme games, and the two experiment splits
@@ -35,7 +36,7 @@ be bounded at all is one named summand rather than an unquantified caveat.
   which is the `by_cases` of `HashSig.SLHDSA.Security.SufResidual`'s `itsrFresh_or_sameRandomizer`.
   With the library's own exact partition `strongUnforgeableAdvantage_eq_euf_add_sameMessage` this
   gives `strongAdvantage_le_halves`: the SUF-CMA advantage is bounded by four named terms, of which
-  `sameRandomizerHalf` is the one this lane holds out of scope and now holds out of scope *by name*.
+  `sameRandomizerHalf` is the one this lane holds out of scope, and holds out of scope *by name*.
 
 ## What the two selectors read, and what they cannot read
 
@@ -447,22 +448,9 @@ The whole computation reduces to four uniform samples followed by `pure true`, b
 theorem generalAlg_perfectlyComplete :
     (generalAlg prims).PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
-  have hbody : (do
-      let (pk, sk) ← (generalAlg prims).keygen
-      let sig ← (generalAlg prims).sign pk sk msg
-      (generalAlg prims).verify pk msg sig) = (do
-      let _skSeed ← $ᵗ prims.SkSeed
-      let _skPrf ← $ᵗ prims.SkPrf
-      let _pkSeed ← $ᵗ prims.PkSeed
-      let _addrnd ← $ᵗ prims.Y
-      pure true) := by
-    rw [generalAlg_keygen]
-    simp only [generalAlg_sign, generalAlg_verify, bind_assoc, pure_bind]
-    refine bind_congr fun skSeed => bind_congr fun skPrf => bind_congr fun pkSeed => ?_
-    refine bind_congr fun addrnd => ?_
-    rw [GeneralScheme.verifyInternal_signInternal]
-  rw [hbody]
-  simp
+  rw [ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_singleton]
+  prvcgen [generalAlg_keygen, generalAlg_sign, generalAlg_verify]
+  exact GeneralScheme.verifyInternal_signInternal ..
 
 /-- **The honest key pair, read off the support.**  On every run of key generation the published key
 is the honest one for the secret key that run produced: its seed is the secret key's public seed and

@@ -6,14 +6,14 @@ Authors: Devon Tuma
 module
 
 public import VCVio.EvalDist.Kernel
-public import VCVio.EvalDist.PFunctorMeasure
+public import VCVio.EvalDist.PFunctorMeasure.Core
 public import Mathlib.InformationTheory.KullbackLeibler.DataProcessing
 
 /-!
 # Kullback-Leibler divergence between denoted programs
 
-The measure denotation of `VCVio.EvalDist.PFunctorMeasure` puts VCVio programs inside Mathlib's
-probability library, and this module spends that access on the Kullback-Leibler divergence.
+The measure denotation of `VCVio.EvalDist.PFunctorMeasure.Core` places VCVio programs in Mathlib's
+probability library. This module applies it to the Kullback-Leibler divergence.
 
 Nothing here is a port. `Measure.bind` *is* composition of a measure with a kernel — Mathlib
 writes it `κ ∘ₘ μ` — so a program's `>>=` is already the object
@@ -31,12 +31,11 @@ information the two distributions do not already distinguish.
 `klDiv_denote_bind_congr` is the corresponding exact statement — binding the same continuation to
 a common prefix leaves the divergence unchanged — which is Mathlib's `klDiv_compProd_left`.
 
-## Divergences and the discrete layer
+## Divergences of program denotations
 
-VCVio's existing quantitative theory (`VCVio.EvalDist.TVDist`,
-`VCVio.EvalDist.RenyiDivergence`) is stated over `SPMF` and reaches only countably supported
-distributions. Kullback-Leibler is not available there at all. The statements below hold for any
-measurable output type, so they apply to programs whose answers are continuous.
+The statements below hold for any measurable output type, so they apply to programs whose answers
+are continuous, as do total variation (`measureETVDist`) and the Renyi divergence
+(`InformationTheory.renyiDiv`) of the output measures.
 -/
 
 @[expose] public section
@@ -47,7 +46,7 @@ universe u uA
 
 namespace PFunctor.FreeM
 
-variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec] {α β : Type u}
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.AnswerMeasure] {α β : Type u}
   [MeasurableSpace α] [DiscreteMeasurableSpace α] [MeasurableSpace β]
 
 /-! ### A continuation as a Markov kernel -/

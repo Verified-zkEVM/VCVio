@@ -6,11 +6,12 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Monad.Option
+public import VCVio.EvalDist.Monad.Except
 public import VCVio.EvalDist.Defs.Measure.ExceptT
 public import VCVio.EvalDist.ProbabilityBounds
 
 /-!
-# Native measure laws for optional and exceptional computations
+# Measure laws for optional and exceptional computations
 
 Pure laws inherit only the base pure certificate. Bind laws require measurability of successful
 output measures rather than full run measures. Events of independent transformer computations
@@ -24,9 +25,8 @@ open MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native transformer laws unexpectedly import {name}"
+  if env.contains `PMF then
+    throwError "transformer laws unexpectedly import PMF"
 
 namespace VCVioTest.Transformers
 
@@ -149,12 +149,14 @@ example (mx : ExceptT ε m α) (my : ExceptT ε m β) (p : α → Prop) (q : β 
 
 example (mx : OptionT m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) {bound : ENNReal}
     (h : Pr{let x ← mx}[q x] ≤ bound) : Pr{let x ← mx}[p x] ≤ bound := by
-  grw [prEvent_mono mx p q hpq, h]
+  have hmono := prEvent_mono mx p q hpq
+  simp only [OptionT.wp_ofMeasure_eq] at hmono
+  grw [hmono, h]
 
 example (mx : ExceptT ε m α) (p q : α → Prop) (hpq : ∀ x, p x → q x) :
     Pr{let x ← mx}[p x] ^ 2 ≤ Pr{let x ← mx}[q x] ^ 2 := by
   gcongr ?_ ^ 2
-  exact prEvent_mono mx p q hpq
+  simpa only [ExceptT.wp_ofMeasure_eq] using prEvent_mono mx p q hpq
 
 end events
 

@@ -12,8 +12,9 @@ namespace GameHop
 
 open Lean Meta
 
-private def gameEquivConst : Name :=
-  Name.str (Name.str (Name.str .anonymous "OracleComp") "ProgramLogic") "GameEquiv"
+/-- Equality in distribution, `mx =ᵈ my`: the relation of a game-equivalence hop. -/
+private def evalDistEqConst : Name :=
+  Name.mkSimple "EvalDistEq"
 
 /-- Failure to choose a unique root or infer a diagram from its proof. -/
 inductive DiagramInferenceError where
@@ -205,9 +206,9 @@ private def extractGeneralCompRefs (rootModule : Name) (target : Expr) :
       return TransformStep.continue)
   return uniqueCompRefs refs
 
-private def extractGameEquivSides? (rootModule : Name) (target : Expr) :
+private def extractEvalDistEqSides? (rootModule : Name) (target : Expr) :
     MetaM (Option (CompRef × CompRef)) := do
-  let some app := findAppWithHead? gameEquivConst target
+  let some app := findAppWithHead? evalDistEqConst target
     | return none
   let some args := trailingArgs? app 2
     | return none
@@ -256,7 +257,7 @@ private def scoreNameBonus (declName : Name) : Nat :=
 
 private def classifyCandidateKind (target : Expr) (targetText : String) (compRefs : Array CompRef) :
     CandidateKind :=
-  if (findAppWithHead? gameEquivConst target).isSome then
+  if (findAppWithHead? evalDistEqConst target).isSome then
     .equivalence
   else if compRefs.size ≤ 1 && targetText.contains "1 / 2" then
     .endpoint
@@ -316,7 +317,7 @@ private def analyzeCandidate (rootModule : Name) (declName : Name) (depth : Nat)
   let (xs, _, target) ← forallMetaTelescopeReducing info.type
   let targetText ← ppExprString target
   let compRefs ←
-    match (← extractGameEquivSides? rootModule target) with
+    match (← extractEvalDistEqSides? rootModule target) with
     | some (lhs, rhs) => pure #[lhs, rhs]
     | none => do
         let mut refs := #[]
@@ -436,7 +437,7 @@ private def applyCandidate (candidate : CandidateDecl) : BuildM Unit := do
         let lhsId ← buildCompNode candidate.compRefs[0]!
         let rhsId ← buildCompNode candidate.compRefs[1]!
         let anchor? ← liftM <| anchorRefForDecl candidate.declName
-        addEdge lhsId rhsId .equivalence "GameEquiv" anchor?
+        addEdge lhsId rhsId .equivalence "=ᵈ" anchor?
         recordPrimaryNode candidate.declName rhsId
   | .endpoint =>
       let anchor? ← liftM <| anchorRefForDecl candidate.declName

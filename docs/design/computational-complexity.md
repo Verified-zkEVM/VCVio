@@ -4,22 +4,19 @@ Status: implemented and tested backend-relative foundation plus staged adequacy 
 audited 2026-08-28. The completed usability spike concludes that the foundation is sound and
 replaceable but not yet broadly usable because bounded iteration, quantitative handler
 substitution, and concrete-backend adequacy are missing. Bounded sequencing and output recovery
-now live in PolyFun's generic resource layer and pass the VCVio root validation gates.
+live in PolyFun's generic resource layer and pass the VCVio root validation gates.
 This document fixes the intended meanings, trust boundary, layer ownership, and acceptance
-criteria. It distinguishes declarations that exist in the current branches from reserved names
-and later adequacy work.
+criteria. It distinguishes declarations that exist from reserved names and later adequacy work.
 
-The measured workload matrix, ergonomics score, and promotion decision are in the
-[computational-complexity usability spike](computational-complexity-spike.md).
-The current reviewer-facing evidence classification and promotion gates are in the
-[computational-complexity feasibility record](computational-complexity-feasibility.md).
+The [computational-complexity usability spike](computational-complexity-spike.md) records the
+measured workload matrix, ergonomics score, and promotion decision of 2026-08-24. The
+[computational-complexity feasibility record](computational-complexity-feasibility.md) records
+the evidence classification and promotion gates of the 2026-08-28 reviewer audit.
 
 ## Implementation snapshot
 
-The current branches contain the following machine-checked slice:
-
-Here, "landed" means present in these implementation branches; it does not
-claim that a pull request has been opened or merged.
+VCVio, its optional packages, and its pinned PolyFun contain the following machine-checked slice.
+Here, "landed" means present in that source.
 
 - PolyFun has `SecondOrderPolynomial`, deterministic first-order polynomial syntax,
   `QuantitativeStepClass`, `PolyRealizer`, `QuantitativeRealization`,
@@ -86,8 +83,8 @@ claim that a pull request has been opened or merged.
   input, with derived `2n + 7` work and linear state/readout sizes. This is a specialized exact
   realization, not the general handler compiler. It does not yet export an inhabitant of the general machine-level
   closure gates or compile arbitrary PolyFun machines to complexitylib machines.
-- The optional `PolyFunCslib` library now owns a separate cslib-backed,
-  parameter-indexed P/poly model: pinned encodings, polynomial description
+- PolyFun's optional `ComplexityBackends` library (its `CslibSingleTape` backend) owns a
+  separate cslib-backed, parameter-indexed P/poly model: pinned encodings, polynomial description
   bounds, nonvacuous progress, generic execution traces, closure operations,
   and a counting nontriviality theorem. The optional `VCVioCslib` library is a
   thin crypto-facing facade over that model, adding oracle specialization, a
@@ -139,7 +136,7 @@ The separate cslib library integration is:
 
 ```text
 VCVioCslib ----> VCVio
-      `----> PolyFunCslib ----> PolyFun ----> Mathlib
+      `----> ComplexityBackends ----> PolyFun ----> Mathlib
                          `----> ToCslib ----> cslib ----> Mathlib
 ```
 
@@ -173,8 +170,8 @@ The design treats the following as attacks on the complexity definition:
   double the represented state at each round.
 - **Representation escape:** a theorem changes to an incompatible encoding at
   an existential boundary or assumes a decoder without proving its cost.
-- **Sampling escape:** an arbitrary `PMF` or a finite uniform distribution is
-  declared efficient without an implementation from random bits.
+- **Sampling escape:** an arbitrary probability measure or a finite uniform
+  distribution is declared efficient without an implementation from random bits.
 - **Expected-time composition escape:** two expected-time components are
   composed despite adversarial correlation invalidating the expected bound.
 - **Reactive ping-pong:** every node is locally polynomial per activation, but
@@ -247,7 +244,7 @@ relation at a reachable query merely to make the path quantification vacuous.
 ### Uniform security families
 
 An arbitrary Lean family `n -> machine n` is not a uniform implementation.
-VCVio now provides a `SecurityFamily` packing layer with the following behavior:
+VCVio provides a `SecurityFamily` packing layer with the following behavior:
 
 - `SecurityFamily.Spec` tags all interfaces `spec n` by the security parameter.
 - `packProgram` tags the inputs and outputs of
@@ -491,14 +488,14 @@ reachable empty response type refutes `RunsWithinUnder`. The following bridge
 theorems remain staged:
 
 - quantitative erasure agrees with `simulateQ` and existing support semantics;
-- under `IsProbabilitySpec`, interpreting response events agrees with
-  `evalDist` and `Pr[...]`;
+- under `[OracleSpec.AnswerMeasure spec]`, interpreting response events agrees
+  with `evalDist` and `Pr{...}[...]`;
 - current query-bound and weighted-cost results are trace projections;
 - `simulateQ`/interface replacement transforms resource contracts
   compositionally.
 
-`IsProbabilitySpec` says how to interpret a query probabilistically; it says
-nothing about efficient sampling. The staged `EfficientSampler` certificates
+`OracleSpec.AnswerMeasure` says how to interpret a query probabilistically; it
+says nothing about efficient sampling. The staged `EfficientSampler` certificates
 have separate constructors for strict, expected-time, and statistically
 approximate coin implementations. Exact finite uniform sampling for a
 non-power-of-two cardinality must not acquire strict bit-PPT through rejection
@@ -556,7 +553,7 @@ young complexity library and avoids a dependency cycle.
 
 The audited source is complexitylib commit
 [`b6738219a3a3c50967d6bd16cba9487887ca6b66`](https://github.com/SamuelSchlesinger/complexitylib/tree/b6738219a3a3c50967d6bd16cba9487887ca6b66).
-At Lean/Mathlib 4.34, direct imports of
+At Lean/Mathlib `v4.35.0-rc3`, direct imports of
 `Complexitylib.Models.TuringMachine` and
 `Complexitylib.Classes.P.Cobham.Defs` compile unchanged. The package builds an
 exact certificate layer on that machine model and inhabited PolyFun
@@ -571,21 +568,21 @@ capable of realizing arbitrary PolyFun structure. The conventional aliases
 This import direction is conceptually sound: VCVio-specific interaction is an
 instantiation over a general concrete machine library. Compatibility of the
 higher machine-combinator stack is a blocker for general closure, not a layering
-problem. The cited complexitylib revision pins Lean and Mathlib 4.30, while
-VCVio pins 4.34. The completed preflight used VCVio's toolchain and made the
-direct Mathlib 4.34 pin authoritative. No file in the checked-out complexitylib
-dependency was edited.
+problem. The cited complexitylib revision pins Lean and Mathlib `v4.30.0`, while
+VCVio pins `v4.35.0-rc3`. The preflight uses VCVio's toolchain and makes the
+package's direct Mathlib `v4.35.0-rc3` requirement authoritative. It edits no
+file in the checked-out complexitylib dependency.
 
-The preflight found two separate incompatibilities. The upstream asymptotics
-module fails at its polynomial import boundary (`Polynomial.natDegree` and
-`Polynomial.eval_eq_sum_range` are unavailable from its imports). Its earlier
-`Norm.ext` failures no longer occur on v4.34. The package contains one attributed adaptation,
-`VCVioComplexity.Asymptotics.PolyBound`, omitting only the `BigO` bridge. The
-higher Turing-machine combinator stack also fails, so the package exposes
-PolyFun's category, exact-category, product, sum, option, and distributivity mixins as explicit
-requirements but has no exported inhabitants
-for those general machine-level gates. Future machine combinators must inhabit those PolyFun
-interfaces directly; VCVio does not maintain parallel wrapper contracts or conditional adapters.
+The preflight finds two separate incompatibilities. The upstream asymptotics
+module fails only at its polynomial import boundary (`Polynomial.natDegree` and
+`Polynomial.eval_eq_sum_range` are unavailable from its imports). The package
+contains one attributed adaptation, `VCVioComplexity.Asymptotics.PolyBound`,
+omitting only the `BigO` bridge. The higher Turing-machine combinator stack also
+fails, so the package exposes PolyFun's category, exact-category, product, sum,
+option, and distributivity mixins as explicit requirements but has no exported
+inhabitants for those general machine-level gates. Future machine combinators must
+inhabit those PolyFun interfaces directly; VCVio does not maintain parallel wrapper
+contracts or conditional adapters.
 Direct and adapted implementations of the same declaration are not maintained simultaneously;
 `PROVENANCE.md` records the exact source and removal condition. Any future
 snapshot must remain minimal, use a distinct VCVio namespace, preserve upstream
@@ -607,7 +604,7 @@ Mathlib polynomial work bound to `PolyRealizer`. Its representation grammar
 prevents callers from smuggling an arbitrary cached encoding into the backend
 boundary.
 
-`VCVioComplexity.Backend.PureCanary` is a small complete instantiation rather
+`VCVioComplexityTest.Backend.PureCanary` is a small complete instantiation rather
 than another abstract cost meter. It supplies the exact complexitylib runs for
 unit initialization, a two-step machine that writes the resolved-left sum tag,
 and the unreachable transition; packages their work and output-size
@@ -750,10 +747,10 @@ prove both directions feasible.
 
 ### CSLib
 
-At VCVio's current pin, CSLib has a single-tape
-[`PolyTimeComputable`](https://github.com/leanprover/cslib/blob/3951377e5a3f5772737f11cd62bc5bb6a72f95d1/Cslib/Computability/Machines/Turing/SingleTape/Deterministic.lean)
+At VCVio's pin, CSLib has a single-tape
+[`PolyTimeComputable`](https://github.com/leanprover/cslib/blob/a91aaaf96a72419b399c41c974a171749bf5b929/Cslib/Computability/Machines/Turing/SingleTape/Deterministic.lean)
 with identity and composition, and a multi-tape
-[`ComputableInTimeAndSpace`](https://github.com/leanprover/cslib/blob/3951377e5a3f5772737f11cd62bc5bb6a72f95d1/Cslib/Computability/Machines/Turing/MultiTape/Deterministic.lean).
+[`ComputableInTimeAndSpace`](https://github.com/leanprover/cslib/blob/a91aaaf96a72419b399c41c974a171749bf5b929/Cslib/Computability/Machines/Turing/MultiTape/Deterministic.lean).
 Its [complexity-theory roadmap](https://github.com/leanprover/cslib/issues/611)
 explicitly favors several concrete machine models connected by resource-aware
 simulations and discusses oracle/path tapes and a higher-level functional
@@ -761,7 +758,7 @@ machine. That is compatible with this design.
 
 The current integration deliberately requires no CSLib change. Low-level
 cslib/mathlib-only compatibility material lives in PolyFun's `ToCslib`
-library, the reusable quantitative P/poly backend lives in `PolyFunCslib`, and
+library, the reusable quantitative P/poly backend lives in `ComplexityBackends`, and
 VCVio's optional `VCVioCslib` library adds only the crypto-facing facade. This
 establishes a narrow backend-relative nonuniform model; it does not claim a
 strict-uniform adequacy theorem or equivalence with the complexitylib backend.
@@ -769,9 +766,10 @@ No CSLib PR is part of this work.
 
 ### Mathlib
 
-Mathlib currently exposes encoding-relative
-[`TM2ComputableInPolyTime`](https://github.com/leanprover-community/mathlib4/blob/db584cd6d46c92f209a44c0f1c829460d327499d/Mathlib/Computability/TuringMachine/Computable.lean),
-but its composition theorem remains `proof_wanted` at the VCVio pin. Mathlib's
+Mathlib exposes encoding-relative
+[`TM2ComputableInPolyTime`](https://github.com/leanprover-community/mathlib4/blob/c55e6e786f49471c72fbddbec5415808896aec1e/Mathlib/Computability/TuringMachine/Computable.lean),
+but at the VCVio pin its composition theorem is still a `proof_wanted`, kept in
+Mathlib's `Wanted` directory. Mathlib's
 idiomatic long-term contribution is model-independent mathematics: explicit
 encodings and retractions, polynomial/asymptotic algebra, counting, trace folds,
 and probability. VCVio should not build its immediate end-to-end adequacy story
@@ -780,8 +778,8 @@ on an incomplete Mathlib TM API, and no Mathlib PR is planned now.
 ## Delivery phases
 
 Any eventual review-sized PRs are limited to PolyFun or VCVio; no PR or issue is
-opened in complexitylib, CSLib, or Mathlib. The present work is kept on those
-two implementation branches. The
+opened in complexitylib, CSLib, or Mathlib. The present work lives in those two
+repositories. The
 status annotations below describe this implementation snapshot; compatibility
 preflight was intentionally performed early and does not bypass the adequacy
 gate.
@@ -882,8 +880,8 @@ reply. The other bullets remain acceptance targets.
   when the numeric query budget is positive.
 - An unbounded answer length prevents a closed PPT theorem unless supplied
   `OracleContract` bounds control it.
-- An arbitrary `PMF` and an unsupported finite uniform sampler do not receive
-  `EfficientSampler` instances.
+- An arbitrary probability measure and an unsupported finite uniform sampler do
+  not receive `EfficientSampler` instances.
 - Expected-time components do not compose through an unrestricted oracle
   substitution theorem.
 - Locally PPT reactive nodes can exhibit a rejected superpolynomial ping-pong

@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
 
 /-!
@@ -125,17 +125,16 @@ theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
   induction oa using OracleComp.inductionOn with
   | pure a =>
     intro s hs
-    simp only [simulateQ_pure, StateT.run_pure, pure_bind]
+    simp only [simulateQ_pure, StateT.run_pure]
     by_cases hE : E a <;> simp [hE, hs]
   | query_bind q k ih =>
     intro s hs
-    simp only [simulateQ_bind, StateT.run_bind, bind_assoc, simulateQ_query,
+    simp only [simulateQ_bind, StateT.run_bind, simulateQ_query,
       OracleQuery.input_query, OracleQuery.cont_query, id_map]
     cases q with
     | inl n =>
-      simp only [run_apply_inl, bind_map_left]
-      exact OracleComp.evalDist_bind_apply_mono_of_support _ _ _
-        (measurableSet_singleton True) fun v _ => ih v s hs
+      simp only [run_apply_inl, bind_map_left, prEvent_bind]
+      exact ExpectationWP.wp_mono _ fun v => ih v s hs
     | inr x =>
       simp only [QueryImpl.add_apply_inr, randomOracle.run_eq]
       by_cases hxt : x = t
@@ -143,14 +142,9 @@ theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
         refine le_of_eq_of_le ?_ bot_le
         rw [hs]
         simp only [bind_assoc, pure_bind]
-        refine evalDist.apply_eq_zero_of_disjoint_support _ (measurableSet_singleton True) ?_
-        intro p hp
-        rw [mem_support_bind_iff] at hp
-        obtain ⟨v, _, hp⟩ := hp
-        rw [mem_support_bind_iff] at hp
-        obtain ⟨z, hz, hp⟩ := hp
-        rw [support_pure, Set.mem_singleton_iff] at hp
-        subst hp
+        refine prEvent_eq_zero_of_forall_mem_support _ _ fun z hz => ?_
+        rw [mem_support_bind_iff] at hz
+        obtain ⟨v, _, hz⟩ := hz
         have hcached := le_of_mem_support_run (k v) (s.cacheQuery x v) z hz
           (QueryCache.cacheQuery_self s x v)
         simp [hcached]
@@ -160,9 +154,8 @@ theorem prEvent_run_uncached_le_run_cacheQuery {α : Type}
           simp only [pure_bind]
           exact ih v s hs
         | none =>
-          simp only [bind_assoc, pure_bind]
-          refine OracleComp.evalDist_bind_apply_mono_of_support _ _ _
-            (measurableSet_singleton True) fun v _ => ?_
+          simp only [bind_assoc, pure_bind, prEvent_bind]
+          refine ExpectationWP.wp_mono _ fun v => ?_
           rw [QueryCache.cacheQuery_comm s (Ne.symm hxt) u v]
           exact ih v (s.cacheQuery x v)
             (by rw [QueryCache.cacheQuery_of_ne _ _ (Ne.symm hxt)]; exact hs)

@@ -23,7 +23,7 @@ public section
 
 namespace OneTimePad.Separated
 
-open PFunctor Interaction.UC OracleComp MeasureTheory ProbabilityTheory
+open PFunctor Interaction Interaction.Open Interaction.UC OracleComp MeasureTheory ProbabilityTheory
 
 variable {Message Cipher Key Memory Advice : Type}
 
@@ -94,7 +94,7 @@ theorem oneTimePad_experiment_simulation (width : ℕ)
       ⟨fun key => key ^^^ message, fun key => key ^^^ message,
         fun key => by simp [BitVec.xor_assoc], fun key => by simp [BitVec.xor_assoc]⟩
     simpa only [bind_pure, ← map_eq_pure_bind, Reactive.oneTimePad, e, Equiv.coe_fn_mk] using
-      (evalDist_bind_uniform_equiv ($ᵗ BitVec width) evalDist_uniformSample e
+      (evalDist_bind_uniform_equiv ($ᵗ BitVec width) SampleableType.evalDist_uniformSample e
         (fun ciphertext => (pure ciphertext : ProbComp (BitVec width)))).symm
 
 end OneTimePad.Separated

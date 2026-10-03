@@ -5,11 +5,12 @@ Authors: Devon Tuma, Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.Coercions.SubSpec
+public import VCVio.OracleComp.Coercions.SubSpec.Basic
 public import VCVio.OracleComp.Constructions.GenerateSeed
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.QueryTracking.Structures
-public import ToMathlib.Data.ENNReal.SumSquares
+
+import VCVio.OracleComp.Coercions.SubSpec.Measure
 
 /-!
 # Pre-computing Results of Oracle Queries
@@ -185,18 +186,6 @@ lemma run_nil {t : spec.Domain} {seed : QuerySeed spec} (h : seed t = []) :
     (seededOracle t).run seed = (·, seed) <$> (liftM (query t) : OracleComp spec _) := by
   rw [eq_withPregen, QueryImpl.withPregen_run_nil _ h, QueryImpl.ofLift_apply]
 
-/-- The probability that a lifted uniform sample equals a fixed value is `(card α)⁻¹`. -/
-lemma probEvent_liftComp_uniformSample_eq_of_eq
-    {ι : Type} {spec : OracleSpec ι}
-    [(i : ι) → SampleableType (spec.Range i)]
-    [unifSpec ⊂ₒ spec] [unifSpec ˡ⊂ₒ spec]
-    [IsUniformSpec spec]
-    {i : ι} (u₀ : spec.Range i) :
-    probEvent (liftComp (uniformSample (spec.Range i)) spec)
-      (fun u => u₀ = u) =
-      (↑(Fintype.card (spec.Range i)) : ENNReal)⁻¹ := by
-  rw [probEvent_eq_eq_probOutput', probOutput_liftComp, probOutput_uniformSample]
-
 @[simp]
 lemma apply_eq (t : spec.Domain) :
     seededOracle t = StateT.mk fun seed =>
@@ -231,169 +220,77 @@ lemma run'_bind_query_eq_pop {α : Type u}
   | none => simp [map_bind]
   | some p => rfl
 
-/-- For any weight `g`, the support of `s ↦ Pr[= s | generateSeed …] * g s` lands in the range
-of `prependValues` with a single head value at `t`, provided `t` is queried at least once.
-Used to reparametrize seed sums over `generateSeed` by a popped head value. -/
-private lemma support_generateSeed_mul_subset_range_prependValues_aux {ι₀ : Type}
-    {spec₀ : OracleSpec ι₀} [DecidableEq ι₀] [∀ i, SampleableType (spec₀.Range i)]
-    [unifSpec ⊂ₒ spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (t : ι₀) (hcount : 0 < qc t * js.count t)
-    (g : QuerySeed spec₀ → ENNReal) :
-    Function.support (fun s => Pr[= s | generateSeed spec₀ qc js] * g s) ⊆
-      Set.range (fun (p : spec₀.Range t × QuerySeed spec₀) => p.2.prependValues [p.1]) := by
-  intro s hs
-  simp only [Function.mem_support] at hs
-  have hmem : s ∈ support (generateSeed spec₀ qc js) := by
-    by_contra hc; exact hs (by simp [(probOutput_eq_zero_iff _ _).2 hc])
-  obtain ⟨u, us, hcons⟩ := List.exists_cons_of_ne_nil
-    (ne_nil_of_mem_support_generateSeed (spec := spec₀) (qc := qc) (js := js) s t hmem hcount)
-  exact ⟨(u, Function.update s t us),
-    QuerySeed.eq_prependValues_of_pop_eq_some (QuerySeed.pop_eq_some_of_cons s t u us hcons)⟩
+/-- A uniform answer draw lifted into the oracle computation keeps its uniform measure. -/
+private lemma evalDist_liftComp_uniformSample {ι₀ : Type} {spec₀ : OracleSpec ι₀}
+    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
+    [OracleSpec.UniformAnswerMeasure spec₀] (t : ι₀) [MeasurableSpace (spec₀.Range t)]
+    [DiscreteMeasurableSpace (spec₀.Range t)] :
+    𝒟[liftComp ($ᵗ spec₀.Range t) spec₀] = ProbabilityTheory.uniformOn Set.univ :=
+  (evalDist_liftComp_uniform _).trans SampleableType.evalDist_uniformSample
 
-private lemma evalSPMF_liftComp_generateSeed_bind_simulateQ_run'
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀)
-    {α : Type} (oa : OracleComp spec₀ α) :
-    𝒮[(do
+section uniformSeeds
+
+variable {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
+  [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀] [unifSpec ˡ⊂ₒ spec₀]
+  [OracleSpec.UniformAnswerMeasure spec₀]
+
+/-- The lifted seed distribution splits off a uniform head answer at `t` whenever `t` has a
+positive answer count, as `evalDistEq_generateSeed_prependValues` does before lifting. -/
+private lemma evalDistEq_liftComp_generateSeed_prependValues (qc : ι₀ → ℕ) (js : List ι₀)
+    {t : ι₀} (hpos : 0 < qc t * js.count t) :
+    liftComp (generateSeed spec₀ qc js) spec₀ =ᵈ (do
+      let u ← liftComp ($ᵗ spec₀.Range t) spec₀
+      let s' ← liftComp (generateSeed spec₀
+        (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup) spec₀
+      return s'.prependValues [u]) := by
+  refine evalDistEq_iff_evalDist_eq.mpr ?_
+  let : MeasurableSpace (QuerySeed spec₀) := ⊤
+  have hlift : (liftComp (do
+      let u ← $ᵗ spec₀.Range t
+      let s' ← generateSeed spec₀
+        (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup
+      return s'.prependValues [u]) spec₀ : OracleComp spec₀ (QuerySeed spec₀)) = (do
+      let u ← liftComp ($ᵗ spec₀.Range t) spec₀
+      let s' ← liftComp (generateSeed spec₀
+        (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup) spec₀
+      return s'.prependValues [u]) := by
+    simp only [liftComp_bind, liftComp_pure]
+  rw [← hlift, evalDist_liftComp_uniform, evalDist_liftComp_uniform]
+  exact evalDistEq_iff_evalDist_eq.mp (evalDistEq_generateSeed_prependValues spec₀ qc js hpos)
+
+/-- Running a computation against the seeded oracle on a uniformly generated seed has the output
+measure of the computation itself: pre-generated answers are fresh uniform answers. -/
+theorem evalDist_liftComp_generateSeed_bind_simulateQ_run' (qc : ι₀ → ℕ) (js : List ι₀)
+    {α : Type} [MeasurableSpace α] (oa : OracleComp spec₀ α) :
+    𝒟[(do
       let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-      (simulateQ seededOracle oa).run' seed : OracleComp spec₀ α)] =
-    𝒮[oa] := by
+      (simulateQ seededOracle oa).run' seed : OracleComp spec₀ α)] = 𝒟[oa] := by
   classical
   revert qc js
   induction oa using OracleComp.inductionOn with
-  | pure x =>
-    intro qc js
-    apply evalSPMF_ext; intro a
-    simp
+  | pure x => intro qc js; simp
   | query_bind t mx ih =>
+    let : MeasurableSpace (spec₀.Range t) := ⊤
     intro qc js
-    have hrun' : ∀ s : QuerySeed spec₀,
-        (do let u ← seededOracle t; simulateQ seededOracle (mx u) :
-          StateT _ (OracleComp spec₀) α).run' s =
-        match s.pop t with
-        | none => liftM (query t) >>= fun u => (simulateQ seededOracle (mx u)).run' s
-        | some (u, s') => (simulateQ seededOracle (mx u)).run' s' :=
-      run'_bind_query_eq_pop t mx
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query, OracleQuery.input_query,
       id_map]
-    apply evalSPMF_ext; intro x
-    simp_rw [hrun']
-    rw [probOutput_bind_eq_tsum]
-    simp_rw [probOutput_liftComp]
+    simp_rw [run'_bind_query_eq_pop t mx]
     by_cases hcount : qc t * js.count t = 0
-    · have hpop : ∀ s ∈ support (generateSeed spec₀ qc js), s.pop t = none := by
-        intro s hs; rw [QuerySeed.pop_eq_none_iff]
-        rw [support_generateSeed (spec := spec₀)] at hs
-        have hlen : (s t).length = qc t * js.count t := hs t
-        exact List.eq_nil_of_length_eq_zero (hlen.trans hcount)
-      have step1 : ∀ s,
-          Pr[= s | generateSeed spec₀ qc js] *
-            Pr[= x | match s.pop t with
-              | none => liftM (query t) >>= fun u => (simulateQ seededOracle (mx u)).run' s
-              | some (u, s') => (simulateQ seededOracle (mx u)).run' s'] =
-          Pr[= s | generateSeed spec₀ qc js] *
-            Pr[= x | liftM (query t) >>= fun u => (simulateQ seededOracle (mx u)).run' s] := by
-        intro s
-        by_cases hs : s ∈ support (generateSeed spec₀ qc js)
-        · simp [hpop s hs]
-        · simp [(probOutput_eq_zero_iff _ _).2 hs]
-      simp_rw [step1, probOutput_bind_eq_tsum (liftM (query t))]
-      simp_rw [← ENNReal.tsum_mul_left, mul_left_comm]
-      rw [ENNReal.tsum_comm]
-      simp_rw [ENNReal.tsum_mul_left]
-      congr 1; ext u; congr 1
-      have hih : Pr[= x | (liftComp (generateSeed spec₀ qc js) spec₀ >>= fun seed =>
-          (simulateQ seededOracle (mx u)).run' seed)] = Pr[= x | mx u] :=
-        by simpa only [probOutput_def] using
-          congrFun (congrArg DFunLike.coe (ih u qc js)) x
-      rw [probOutput_bind_eq_tsum] at hih
-      simp_rw [probOutput_liftComp] at hih
-      exact hih
-    · push Not at hcount
-      have hpop_some : ∀ s ∈ support (generateSeed spec₀ qc js),
-          ∃ u s', s.pop t = some (u, s') := by
-        intro s hs
-        have hne : s t ≠ [] :=
-          ne_nil_of_mem_support_generateSeed (spec := spec₀) (qc := qc) (js := js) s t hs
-            (Nat.pos_of_ne_zero (by lia))
-        obtain ⟨u, us, hcons⟩ := List.exists_cons_of_ne_nil hne
-        exact ⟨u, Function.update s t us, QuerySeed.pop_eq_some_of_cons s t u us hcons⟩
-      have step1 : ∀ s,
-          Pr[= s | generateSeed spec₀ qc js] *
-            Pr[= x | match s.pop t with
-              | none => liftM (query t) >>= fun u => (simulateQ seededOracle (mx u)).run' s
-              | some (u, s') => (simulateQ seededOracle (mx u)).run' s'] =
-          Pr[= s | generateSeed spec₀ qc js] *
-            (match s.pop t with
-              | none => 0
-              | some (u, s') =>
-                  Pr[= x | (simulateQ seededOracle (mx u)).run' s']) := by
-        intro s
-        by_cases hs : s ∈ support (generateSeed spec₀ qc js)
-        · obtain ⟨u, s', hpop⟩ := hpop_some s hs; simp [hpop]
-        · simp [(probOutput_eq_zero_iff _ _).2 hs]
-      simp_rw [step1]
-      have hpos : 0 < qc t * js.count t := Nat.pos_of_ne_zero (by lia)
-      rw [← (QuerySeed.prependValues_singleton_injective t).tsum_eq
-        (support_generateSeed_mul_subset_range_prependValues_aux qc js t hpos _)]
-      simp only [QuerySeed.pop_prependValues_singleton]
-      rw [ENNReal.tsum_prod', probOutput_bind_eq_tsum]
-      congr 1; ext u
-      have hfact := fun s' => probOutput_generateSeed_prependValues spec₀ qc js u s' hpos
-      simp_rw [hfact, mul_assoc]
-      rw [ENNReal.tsum_mul_left]
-      congr 1
-      · exact (probOutput_query t u).symm
-      · suffices h : Pr[= x | (do
-            let seed ← liftComp (generateSeed spec₀
-                (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1))
-                js.dedup) spec₀
-            (simulateQ seededOracle (mx u)).run' seed)] = Pr[= x | mx u] by
-          rw [probOutput_bind_eq_tsum] at h
-          simp_rw [probOutput_liftComp] at h
-          exact h
-        simpa only [probOutput_def] using
-          congrFun (congrArg DFunLike.coe (ih u _ js.dedup)) x
-
-lemma probOutput_generateSeed_bind_simulateQ_bind
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀)
-    {α β : Type} (oa : OracleComp spec₀ α) (ob : α → OracleComp spec₀ β) (y : β) :
-    Pr[= y | do
-      let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-      let x ← Prod.fst <$> (simulateQ seededOracle oa).run seed
-      ob x] = Pr[= y | oa >>= ob] := by
-  rw [show (do
-    let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-    let x ← Prod.fst <$> (simulateQ seededOracle oa).run seed
-    ob x) = ((do
-    let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-    (simulateQ seededOracle oa).run' seed) >>= ob) from by simp [monad_norm],
-    probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-  congr 1; ext x; congr 1
-  simpa only [probOutput_def] using congrFun (congrArg DFunLike.coe
-    (evalSPMF_liftComp_generateSeed_bind_simulateQ_run' qc js oa)) x
-
-lemma probOutput_generateSeed_bind_map_simulateQ
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀)
-    {α β : Type} (oa : OracleComp spec₀ α) (f : α → β) (y : β) :
-    Pr[= y | (do
-      let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-      f <$> Prod.fst <$> (simulateQ seededOracle oa).run seed : OracleComp spec₀ β)] =
-      Pr[= y | f <$> oa] := by
-  simpa [monad_norm, Function.comp] using
-    probOutput_generateSeed_bind_simulateQ_bind (qc := qc) (js := js)
-      (oa := oa) (ob := fun x => pure (f x)) (y := y)
+    · -- Every generated seed is empty at `t`, so the query goes to the oracle.
+      rw [evalDist_bind_congr_of_support _ _
+          (fun s => (liftM (query t) : OracleComp spec₀ _) >>= fun u =>
+            (simulateQ seededOracle (mx u)).run' s) fun s hs => by
+          rw [support_liftComp] at hs
+          rw [(QuerySeed.pop_eq_none_iff s t).mpr
+            (eq_nil_of_mem_support_generateSeed spec₀ qc js s t hs hcount)],
+        OracleComp.evalDist_bind_bind_swap]
+      exact evalDist_bind_congr _ _ _ fun u => ih u qc js
+    · -- Every generated seed starts with a uniform answer at `t`, consumed by the query.
+      have hpos : 0 < qc t * js.count t := Nat.pos_of_ne_zero hcount
+      rw [((evalDistEq_liftComp_generateSeed_prependValues qc js hpos).bind_left _).evalDist_eq]
+      simp only [bind_assoc, pure_bind, QuerySeed.pop_prependValues_singleton]
+      exact evalDist_bind_eq_query_bind_of_uniform t _
+        (evalDist_liftComp_uniformSample t) _ _ fun u => ih u _ js.dedup
 
 private lemma pop_addValue_self_nil_aux {seed : QuerySeed spec} {i : ι} (h : seed i = [])
     (v : spec.Range i) : (seed.addValue i v).pop i = some (v, seed) := by
@@ -428,269 +325,43 @@ private lemma pop_addValue_of_ne_cons_aux {seed : QuerySeed spec} {i t : ι} {u�
   exact congrArg (fun next => some (u₀, next)) <|
     QuerySeed.update_addValues_comm seed (Ne.symm hti) [v] rest
 
-/-- Adding a uniform value at index `i` to a seed does not change the distribution of
-running a computation with the seeded oracle. This is because the extra value replaces
-what would otherwise be a fresh uniform oracle response. -/
-lemma evalSPMF_liftComp_uniformSample_bind_simulateQ_run'_addValue
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ j, SampleableType (spec₀.Range j)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (σ : QuerySeed spec₀) (i : ι₀) {α : Type} (oa : OracleComp spec₀ α) :
-    𝒮[(do
+/-- Adding a uniform value at index `i` to a seed does not change the output measure of running
+a computation with the seeded oracle: the extra value replaces what would otherwise be a fresh
+uniform oracle response. -/
+theorem evalDist_liftComp_uniformSample_bind_simulateQ_run'_addValue
+    (σ : QuerySeed spec₀) (i : ι₀) {α : Type} [MeasurableSpace α] (oa : OracleComp spec₀ α) :
+    𝒟[(do
       let u ← liftComp ($ᵗ spec₀.Range i) spec₀
       (simulateQ seededOracle oa).run' (σ.addValue i u) : OracleComp spec₀ α)] =
-    𝒮[((simulateQ seededOracle oa).run' σ : OracleComp spec₀ α)] := by
+    𝒟[((simulateQ seededOracle oa).run' σ : OracleComp spec₀ α)] := by
   revert σ
   induction oa using OracleComp.inductionOn with
-  | pure x =>
-    intro σ
-    have hrun' : ∀ s, (simulateQ seededOracle (pure x : OracleComp spec₀ α)).run' s =
-        (pure x : OracleComp spec₀ α) := fun s => by simp
-    apply evalSPMF_ext; intro a
-    simp_rw [hrun']
-    rw [probOutput_bind_const]
-    simp
+  | pure x => intro σ; simp
   | query_bind t mx ih =>
+    let : MeasurableSpace (spec₀.Range t) := ⊤
     intro σ
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query,
       OracleQuery.input_query, id_map]
-    apply evalSPMF_ext; intro a
     simp_rw [run'_bind_query_eq_pop t mx]
     by_cases hti : t = i
-    · cases hti
-      cases hσi : σ i with
+    · subst hti
+      cases hσt : σ t with
       | nil =>
-        simp_rw [pop_addValue_self_nil_aux hσi, (QuerySeed.pop_eq_none_iff σ i).mpr hσi]
-        rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-        congr 1; ext v; congr 1
-        simp only [probOutput_liftComp, probOutput_uniformSample, probOutput_query]
+        simp_rw [pop_addValue_self_nil_aux hσt, (QuerySeed.pop_eq_none_iff σ t).mpr hσt]
+        exact evalDist_bind_eq_query_bind_of_uniform t _
+          (evalDist_liftComp_uniformSample t) _ _ fun _ => rfl
       | cons u₀ rest =>
-        simp_rw [pop_addValue_self_cons_aux hσi,
-          QuerySeed.pop_eq_some_of_cons σ i u₀ rest hσi]
-        simpa only [probOutput_def] using
-          congrFun (congrArg DFunLike.coe (ih u₀ (σ.update i rest))) a
+        simp_rw [pop_addValue_self_cons_aux hσt, QuerySeed.pop_eq_some_of_cons σ t u₀ rest hσt]
+        exact ih u₀ (σ.update t rest)
     · cases hσt : σ t with
       | nil =>
         simp_rw [pop_addValue_of_ne_nil_aux hti hσt, (QuerySeed.pop_eq_none_iff σ t).mpr hσt]
-        rw [probOutput_bind_eq_tsum, probOutput_bind_eq_tsum]
-        simp_rw [probOutput_bind_eq_tsum, ← ENNReal.tsum_mul_left, mul_left_comm]
-        rw [ENNReal.tsum_comm]
-        simp_rw [ENNReal.tsum_mul_left]
-        congr 1; ext r; congr 1
-        rw [← probOutput_bind_eq_tsum]
-        simpa only [probOutput_def] using
-          congrFun (congrArg DFunLike.coe (ih r σ)) a
+        rw [OracleComp.evalDist_bind_bind_swap]
+        exact evalDist_bind_congr _ _ _ fun r => ih r σ
       | cons u₀ rest =>
         simp_rw [pop_addValue_of_ne_cons_aux hti hσt,
           QuerySeed.pop_eq_some_of_cons σ t u₀ rest hσt]
-        simpa only [probOutput_def] using congrFun (congrArg DFunLike.coe
-          (ih u₀ (σ.update t rest))) a
-
-lemma evalSPMF_liftComp_replicate_uniformSample_bind_simulateQ_run'_addValues
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ j, SampleableType (spec₀.Range j)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (i : ι₀) {α : Type} (oa : OracleComp spec₀ α) (n : ℕ) :
-    ∀ (σ : QuerySeed spec₀),
-    𝒮[(do
-      let us ← liftComp (replicate n ($ᵗ spec₀.Range i)) spec₀
-      (simulateQ seededOracle oa).run' (σ.addValues us) : OracleComp spec₀ α)] =
-    𝒮[((simulateQ seededOracle oa).run' σ : OracleComp spec₀ α)] := by
-  induction n with
-  | zero => intro σ; simp [replicate_zero, QuerySeed.addValues_nil]
-  | succ n ih =>
-    intro σ
-    simp only [replicate_succ, monad_norm, liftComp_bind, liftComp_pure, Function.comp]
-    have hrew : (do
-        let u ← liftComp ($ᵗ spec₀.Range i) spec₀
-        let us ← liftComp (replicate n ($ᵗ spec₀.Range i)) spec₀
-        (simulateQ seededOracle oa).run' (σ.addValues (u :: us)) : OracleComp spec₀ α) =
-      (do
-        let u ← liftComp ($ᵗ spec₀.Range i) spec₀
-        let us ← liftComp (replicate n ($ᵗ spec₀.Range i)) spec₀
-        (simulateQ seededOracle oa).run' ((σ.addValues [u]).addValues us) :
-          OracleComp spec₀ α) := by
-      congr 1; ext u; congr 1; ext us
-      rw [QuerySeed.addValues_cons]
-    rw [congrArg evalSPMF hrew, evalSPMF_bind]
-    simp_rw [ih]
-    rw [← evalSPMF_bind]
-    exact evalSPMF_liftComp_uniformSample_bind_simulateQ_run'_addValue σ i oa
-
-private lemma probOutput_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex_eq_tsum
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (i₀ : ι₀) (k : ℕ)
-    {α : Type} (oa : OracleComp spec₀ α) (x : α) :
-    Pr[= x | (do
-      let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-      (simulateQ seededOracle oa).run' (seed.takeAtIndex i₀ k) : OracleComp spec₀ α)] =
-    ∑' s, Pr[= s | generateSeed spec₀ qc js] *
-      Pr[= x | (simulateQ seededOracle oa).run' (s.takeAtIndex i₀ k)] := by
-  rw [probOutput_bind_eq_tsum]
-  simp_rw [probOutput_liftComp]
-
-private lemma probOutput_prependValues_takeAtIndex_tsum_eq_query_mul
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (t : ι₀) (i₀ : ι₀) (k : ℕ)
-    {α : Type} (ob : OracleComp spec₀ α) (u : spec₀.Range t) (x : α)
-    (hcount : 0 < qc t * js.count t)
-    (h : 𝒮[(do
-      let seed ← liftComp (generateSeed spec₀
-        (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup) spec₀
-      (simulateQ seededOracle ob).run' (seed.takeAtIndex i₀ k) : OracleComp spec₀ α)] = 𝒮[ob]) :
-    ∑' s : QuerySeed spec₀, Pr[= s.prependValues [u] | generateSeed spec₀ qc js] *
-        Pr[= x | (simulateQ seededOracle ob).run' (s.takeAtIndex i₀ k)] =
-      Pr[= u | (liftM (query t) : OracleComp spec₀ _)] * Pr[= x | ob] := by
-  simp_rw [probOutput_generateSeed_prependValues spec₀ qc js u _ hcount, mul_assoc]
-  rw [ENNReal.tsum_mul_left]
-  congr 1
-  · exact (probOutput_query _ u).symm
-  · rw [← probOutput_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex_eq_tsum]
-    simpa only [probOutput_def] using congrFun (congrArg DFunLike.coe h) x
-
-/-- Truncating the seed at oracle `i₀` to only the first `k` entries does not change
-the distribution when averaging over seeds from `generateSeed`. -/
-lemma evalSPMF_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (i₀ : ι₀) (k : ℕ)
-    {α : Type} (oa : OracleComp spec₀ α) :
-    𝒮[(do
-      let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-      (simulateQ seededOracle oa).run' (seed.takeAtIndex i₀ k) : OracleComp spec₀ α)] =
-    𝒮[oa] := by
-  classical
-  revert qc js k
-  induction oa using OracleComp.inductionOn with
-  | pure x =>
-    intro qc js k; apply evalSPMF_ext; intro a; simp
-  | query_bind t mx ih =>
-    intro qc js k
-    simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query,
-      OracleQuery.input_query, id_map]
-    apply evalSPMF_ext; intro x
-    have hrun' : ∀ s : QuerySeed spec₀,
-        (do let u ← seededOracle t; simulateQ seededOracle (mx u) :
-          StateT _ (OracleComp spec₀) α).run' s =
-        match s.pop t with
-        | none => liftM (query t) >>= fun u => (simulateQ seededOracle (mx u)).run' s
-        | some (u, s') => (simulateQ seededOracle (mx u)).run' s' :=
-      run'_bind_query_eq_pop t mx
-    simp_rw [hrun']
-    rw [probOutput_bind_eq_tsum]
-    simp_rw [probOutput_liftComp]
-    by_cases hpop_none : qc t * js.count t = 0 ∨ (t = i₀ ∧ k = 0)
-    · have hpop : ∀ s ∈ support (generateSeed spec₀ qc js),
-          (s.takeAtIndex i₀ k).pop t = none := by
-        intro s hs; rw [QuerySeed.pop_eq_none_iff]
-        rw [support_generateSeed (spec := spec₀)] at hs
-        rcases hpop_none with hcount | ⟨rfl, rfl⟩
-        · have hlen : (s t).length = qc t * js.count t := hs t
-          have hnil := List.eq_nil_of_length_eq_zero (hlen.trans hcount)
-          by_cases hti : t = i₀
-          · subst hti; simp [QuerySeed.takeAtIndex, hnil]
-          · rw [QuerySeed.takeAtIndex_apply_of_ne _ _ _ _ hti]; exact hnil
-        · simp [QuerySeed.takeAtIndex]
-      have step1 : ∀ s,
-          Pr[= s | generateSeed spec₀ qc js] *
-            Pr[= x | match (s.takeAtIndex i₀ k).pop t with
-              | none => liftM (query t) >>= fun u =>
-                  (simulateQ seededOracle (mx u)).run' (s.takeAtIndex i₀ k)
-              | some (u, s') => (simulateQ seededOracle (mx u)).run' s'] =
-          Pr[= s | generateSeed spec₀ qc js] *
-            Pr[= x | liftM (query t) >>= fun u =>
-                (simulateQ seededOracle (mx u)).run' (s.takeAtIndex i₀ k)] := by
-        intro s
-        by_cases hs : s ∈ support (generateSeed spec₀ qc js)
-        · simp [hpop s hs]
-        · simp [(probOutput_eq_zero_iff _ _).2 hs]
-      simp_rw [step1, probOutput_bind_eq_tsum (liftM (query t))]
-      simp_rw [← ENNReal.tsum_mul_left, mul_left_comm]
-      rw [ENNReal.tsum_comm]
-      simp_rw [ENNReal.tsum_mul_left]
-      congr 1; ext u; congr 1
-      rw [← probOutput_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex_eq_tsum]
-      simpa only [probOutput_def] using
-        congrFun (congrArg DFunLike.coe (ih u qc js k)) x
-    · push Not at hpop_none
-      obtain ⟨hcount_ne, htk⟩ := hpop_none
-      have hcount : 0 < qc t * js.count t := Nat.pos_of_ne_zero (by lia)
-      have hpop_take : ∀ s ∈ support (generateSeed spec₀ qc js),
-          ∃ u s', (s.takeAtIndex i₀ k).pop t = some (u, s') := by
-        intro s hs
-        have hne : s t ≠ [] :=
-          ne_nil_of_mem_support_generateSeed (spec := spec₀) (qc := qc) (js := js) s t hs hcount
-        by_cases hti : t = i₀
-        · have hk : 0 < k := Nat.pos_of_ne_zero (htk hti)
-          have htake_ne : (s.takeAtIndex i₀ k) t ≠ [] := by
-            rw [hti, QuerySeed.takeAtIndex_apply_self]
-            obtain ⟨a, l, hl⟩ := List.exists_cons_of_ne_nil (hti ▸ hne)
-            rw [hl, show k = (k - 1) + 1 from (Nat.succ_pred_eq_of_pos hk).symm,
-              List.take_succ_cons]
-            exact List.cons_ne_nil _ _
-          obtain ⟨u, us, hcons⟩ := List.exists_cons_of_ne_nil htake_ne
-          exact ⟨u, Function.update (s.takeAtIndex i₀ k) t us,
-            QuerySeed.pop_eq_some_of_cons _ _ u us hcons⟩
-        · obtain ⟨u, us, hcons⟩ := List.exists_cons_of_ne_nil hne
-          exact ⟨u, Function.update (s.takeAtIndex i₀ k) t us,
-            QuerySeed.pop_eq_some_of_cons _ _ u us
-              ((QuerySeed.takeAtIndex_apply_of_ne s i₀ k t hti).trans hcons)⟩
-      have step1 : ∀ s,
-          Pr[= s | generateSeed spec₀ qc js] *
-            Pr[= x | match (s.takeAtIndex i₀ k).pop t with
-              | none => liftM (query t) >>= fun u =>
-                  (simulateQ seededOracle (mx u)).run' (s.takeAtIndex i₀ k)
-              | some (u, s') => (simulateQ seededOracle (mx u)).run' s'] =
-          Pr[= s | generateSeed spec₀ qc js] *
-            (match (s.takeAtIndex i₀ k).pop t with
-              | none => 0
-              | some (u, s') =>
-                  Pr[= x | (simulateQ seededOracle (mx u)).run' s']) := by
-        intro s
-        by_cases hs : s ∈ support (generateSeed spec₀ qc js)
-        · obtain ⟨u, s', hpop⟩ := hpop_take s hs; simp [hpop]
-        · simp [(probOutput_eq_zero_iff _ _).2 hs]
-      simp_rw [step1]
-      rw [← (QuerySeed.prependValues_singleton_injective t).tsum_eq
-        (support_generateSeed_mul_subset_range_prependValues_aux qc js t hcount _)]
-      by_cases hti : t = i₀
-      · subst hti
-        have hk : 0 < k := Nat.pos_of_ne_zero (htk rfl)
-        simp only [QuerySeed.pop_takeAtIndex_prependValues_self _ _ _ hk]
-        rw [ENNReal.tsum_prod', probOutput_bind_eq_tsum]
-        congr 1; ext u
-        exact probOutput_prependValues_takeAtIndex_tsum_eq_query_mul qc js t t (k - 1)
-          (mx u) u x hcount (ih u _ js.dedup (k - 1))
-      · simp only [QuerySeed.pop_takeAtIndex_prependValues_of_ne _ _ _ _ hti]
-        rw [ENNReal.tsum_prod', probOutput_bind_eq_tsum]
-        congr 1; ext u
-        exact probOutput_prependValues_takeAtIndex_tsum_eq_query_mul qc js t i₀ k
-          (mx u) u x hcount (ih u _ js.dedup k)
-
-lemma probOutput_generateSeed_bind_map_simulateQ_takeAtIndex
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [unifSpec ˡ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (i₀ : ι₀) (k : ℕ)
-    {α β : Type} (oa : OracleComp spec₀ α) (f : α → β) (y : β) :
-    Pr[= y | (do
-      let seed ← liftComp (generateSeed spec₀ qc js) spec₀
-      f <$> (simulateQ seededOracle oa).run' (seed.takeAtIndex i₀ k) : OracleComp spec₀ β)] =
-      Pr[= y | f <$> oa] := by
-  rw [← map_bind]
-  exact probOutput_map_eq_of_evalSPMF_eq
-    (evalSPMF_liftComp_generateSeed_bind_simulateQ_run'_takeAtIndex qc js i₀ k oa) f y
+        exact ih u₀ (σ.update t rest)
 
 private lemma takeAtIndex_prependValues_singleton_self_aux {ι₀ : Type} {spec₀ : OracleSpec ι₀}
     [DecidableEq ι₀] (t : ι₀) (k : ℕ) (hk : 0 < k) (u₀ : spec₀.Range t) (s' : QuerySeed spec₀) :
@@ -722,209 +393,97 @@ private lemma takeAtIndex_zero_prependValues_singleton_aux {ι₀ : Type} {spec�
   · subst hj; simp [QuerySeed.takeAtIndex_apply_self]
   · simp [QuerySeed.takeAtIndex_apply_of_ne _ _ _ _ hj, QuerySeed.prependValues_of_ne _ _ hj]
 
-private lemma tsum_probOutput_generateSeed_prependValues_weight_aux {ι₀ : Type}
-    {spec₀ : OracleSpec ι₀} [DecidableEq ι₀] [∀ i, SampleableType (spec₀.Range i)]
-    [unifSpec ⊂ₒ spec₀] [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (t : ι₀) (i₀ jdx : ι₀) (k jk : ℕ)
-    {α : Type} (ob : OracleComp spec₀ α) (u₀ : spec₀.Range t) (x : α)
-    (hcount : 0 < qc t * js.count t)
-    (htake : ∀ b : QuerySeed spec₀, (b.prependValues [u₀]).takeAtIndex i₀ k =
-      (b.takeAtIndex jdx jk).prependValues [u₀])
-    (hih : ∀ g : QuerySeed spec₀ → ENNReal,
-      ∑' σ, Pr[= σ | generateSeed spec₀ (Function.update (fun i => qc i * js.count i) t
-            (qc t * js.count t - 1)) js.dedup] *
-          (g (σ.takeAtIndex jdx jk) * Pr[= x | (simulateQ seededOracle ob).run' σ]) =
-        ∑' σ, Pr[= σ | generateSeed spec₀ (Function.update (fun i => qc i * js.count i) t
-            (qc t * js.count t - 1)) js.dedup] *
-          (g (σ.takeAtIndex jdx jk) *
-            Pr[= x | (simulateQ seededOracle ob).run' (σ.takeAtIndex jdx jk)]))
-    (h : QuerySeed spec₀ → ENNReal) :
-    ∑' b : QuerySeed spec₀, Pr[= b.prependValues [u₀] | generateSeed spec₀ qc js] *
-        (h ((b.prependValues [u₀]).takeAtIndex i₀ k) *
-          Pr[= x | (simulateQ seededOracle ob).run' b]) =
-      ∑' b : QuerySeed spec₀, Pr[= b.prependValues [u₀] | generateSeed spec₀ qc js] *
-        (h ((b.prependValues [u₀]).takeAtIndex i₀ k) *
-          Pr[= x | (simulateQ seededOracle ob).run' (b.takeAtIndex jdx jk)]) := by
-  simp_rw [htake, probOutput_generateSeed_prependValues spec₀ qc js u₀ _ hcount, mul_assoc]
-  rw [ENNReal.tsum_mul_left]
-  conv_rhs => rw [ENNReal.tsum_mul_left]
-  congr 1
-  exact hih (fun σ => h (σ.prependValues [u₀]))
-
-/-- Weighted takeAtIndex faithfulness: a prefix-dependent weight `h` preserves the
-faithfulness equality between full-seed and truncated-seed simulation.
-This generalizes the basic takeAtIndex faithfulness by allowing multiplication
-by an arbitrary function of the seed prefix `σ.takeAtIndex i₀ k`. -/
-lemma tsum_probOutput_generateSeed_weight_takeAtIndex
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (i₀ : ι₀) (k : ℕ)
-    {α : Type} (oa : OracleComp spec₀ α) (x : α)
-    (h : QuerySeed spec₀ → ENNReal) :
-    ∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
-      (h (σ.takeAtIndex i₀ k) *
-        Pr[= x | (simulateQ seededOracle oa).run' σ]) =
-    ∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
-      (h (σ.takeAtIndex i₀ k) *
-        Pr[= x | (simulateQ seededOracle oa).run' (σ.takeAtIndex i₀ k)]) := by
+/-- Truncating a uniformly generated seed after the `k`-th answer at `i₀` does not change the joint
+distribution of that prefix and the seeded run's output: the discarded answers are fresh uniform
+values, exactly as the oracle would answer after the truncated seed runs out. -/
+theorem evalDistEq_liftComp_generateSeed_takeAtIndex_run' (qc : ι₀ → ℕ) (js : List ι₀)
+    (i₀ : ι₀) (k : ℕ) {α : Type} (oa : OracleComp spec₀ α) :
+    (do
+      let σ ← liftComp (generateSeed spec₀ qc js) spec₀
+      let z ← (simulateQ seededOracle oa).run' σ
+      return (σ.takeAtIndex i₀ k, z) : OracleComp spec₀ (QuerySeed spec₀ × α)) =ᵈ
+    (do
+      let σ ← liftComp (generateSeed spec₀ qc js) spec₀
+      let z ← (simulateQ seededOracle oa).run' (σ.takeAtIndex i₀ k)
+      return (σ.takeAtIndex i₀ k, z) : OracleComp spec₀ (QuerySeed spec₀ × α)) := by
   classical
-  revert qc js k h
+  let : MeasurableSpace (QuerySeed spec₀ × α) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
+  revert qc js k
   induction oa using OracleComp.inductionOn with
-  | pure a =>
-    intro qc js k h; simp
+  | pure a => intro qc js k; simp
   | query_bind t mx ih =>
-    intro qc js k h
+    let : MeasurableSpace (spec₀.Range t) := ⊤
+    intro qc js k
     simp only [simulateQ_bind, simulateQ_query, OracleQuery.cont_query,
       OracleQuery.input_query, id_map]
-    have hrun' : ∀ s : QuerySeed spec₀,
-        (do let u ← seededOracle t; simulateQ seededOracle (mx u) :
-          StateT _ (OracleComp spec₀) α).run' s =
-        match s.pop t with
-        | none => liftM (query t) >>= fun u => (simulateQ seededOracle (mx u)).run' s
-        | some (u, s') => (simulateQ seededOracle (mx u)).run' s' :=
-      run'_bind_query_eq_pop t mx
-    simp_rw [hrun']
-    have hcomm : ∀ (g : spec₀.Range t → QuerySeed spec₀ → OracleComp spec₀ α),
-        ∑' s, Pr[= s | generateSeed spec₀ qc js] *
-          (h (s.takeAtIndex i₀ k) *
-            ∑' u, Pr[= u | (spec₀.query t : OracleComp spec₀ _)] *
-              Pr[= x | g u s]) =
-        ∑' u, Pr[= u | (spec₀.query t : OracleComp spec₀ _)] *
-          ∑' s, Pr[= s | generateSeed spec₀ qc js] *
-            (h (s.takeAtIndex i₀ k) * Pr[= x | g u s]) := by
-      intro g
-      simp_rw [ENNReal.tsum_mul_left.symm]
-      rw [ENNReal.tsum_comm]
-      congr 1; ext u; congr 1; ext s; ring
-    by_cases hcount_zero : qc t * js.count t = 0
-    · -- Case 1: no seed entries at oracle t — both pop to none
-      have hpop_full : ∀ s ∈ support (generateSeed spec₀ qc js), s.pop t = none := by
-        intro s hs; rw [QuerySeed.pop_eq_none_iff]
-        rw [support_generateSeed (spec := spec₀)] at hs
-        exact List.eq_nil_of_length_eq_zero ((hs t).trans hcount_zero)
-      have hpop_take : ∀ s ∈ support (generateSeed spec₀ qc js),
-          (s.takeAtIndex i₀ k).pop t = none := by
-        intro s hs; rw [QuerySeed.pop_eq_none_iff]
-        have hnil := List.eq_nil_of_length_eq_zero (((support_generateSeed
-          (spec := spec₀) (qc := qc) (js := js) ▸ hs : _) t).trans hcount_zero)
+    simp_rw [run'_bind_query_eq_pop t mx]
+    by_cases hcount : qc t * js.count t = 0
+    · -- No generated seed has an answer at `t`, before or after truncation.
+      have hnil : ∀ s ∈ support (liftComp (generateSeed spec₀ qc js) spec₀), s t = [] :=
+        fun s hs => eq_nil_of_mem_support_generateSeed spec₀ qc js s t
+          (by rwa [support_liftComp] at hs) hcount
+      have htake : ∀ s ∈ support (liftComp (generateSeed spec₀ qc js) spec₀),
+          (s.takeAtIndex i₀ k) t = [] := by
+        intro s hs
         by_cases hti : t = i₀
-        · subst hti; simp [QuerySeed.takeAtIndex, hnil]
-        · rw [QuerySeed.takeAtIndex_apply_of_ne _ _ _ _ hti]; exact hnil
-      have step : ∀ (σ : QuerySeed spec₀ → QuerySeed spec₀)
-          (hpop : ∀ s ∈ support (generateSeed spec₀ qc js), (σ s).pop t = none) s,
-          Pr[= s | generateSeed spec₀ qc js] *
-            (h (s.takeAtIndex i₀ k) * Pr[= x | match (σ s).pop t with
-              | none => liftM (query t) >>= fun u =>
-                  (simulateQ seededOracle (mx u)).run' (σ s)
-              | some (u, s') => (simulateQ seededOracle (mx u)).run' s']) =
-          Pr[= s | generateSeed spec₀ qc js] *
-            (h (s.takeAtIndex i₀ k) * Pr[= x | liftM (query t) >>= fun u =>
-                (simulateQ seededOracle (mx u)).run' (σ s)]) := by
-        intro σ hpop s
-        by_cases hs : s ∈ support (generateSeed spec₀ qc js)
-        · simp [hpop s hs]
-        · simp [(probOutput_eq_zero_iff _ _).2 hs]
-      simp_rw [step (fun s => s) hpop_full, step _ hpop_take,
-        probOutput_bind_eq_tsum (liftM (query t))]
-      rw [hcomm, hcomm]
-      congr 1; ext u; congr 1
-      exact ih u qc js k h
-    · -- Case 2+3: seed has entries at oracle t
-      push Not at hcount_zero
-      have hcount : 0 < qc t * js.count t := Nat.pos_of_ne_zero (by lia)
-      rw [← (QuerySeed.prependValues_singleton_injective t).tsum_eq
-          (support_generateSeed_mul_subset_range_prependValues_aux qc js t hcount _),
-        ← (QuerySeed.prependValues_singleton_injective t).tsum_eq
-          (support_generateSeed_mul_subset_range_prependValues_aux qc js t hcount _)]
-      simp only [QuerySeed.pop_prependValues_singleton]
+        · subst hti; simp [QuerySeed.takeAtIndex, hnil s hs]
+        · rw [QuerySeed.takeAtIndex_apply_of_ne _ _ _ _ hti]; exact hnil s hs
+      refine Eq.trans (evalDist_bind_congr_of_support _ _
+          (fun s => (liftM (query t) : OracleComp spec₀ _) >>= fun u =>
+            (simulateQ seededOracle (mx u)).run' s >>= fun z => pure (s.takeAtIndex i₀ k, z))
+          fun s hs => by rw [(QuerySeed.pop_eq_none_iff s t).mpr (hnil s hs), bind_assoc])
+        (Eq.trans ?_ (evalDist_bind_congr_of_support _ _
+          (fun s => (liftM (query t) : OracleComp spec₀ _) >>= fun u =>
+            (simulateQ seededOracle (mx u)).run' (s.takeAtIndex i₀ k) >>= fun z =>
+              pure (s.takeAtIndex i₀ k, z))
+          fun s hs => by
+            rw [(QuerySeed.pop_eq_none_iff _ t).mpr (htake s hs), bind_assoc]).symm)
+      rw [OracleComp.evalDist_bind_bind_swap]
+      conv_rhs => rw [OracleComp.evalDist_bind_bind_swap]
+      exact evalDist_bind_congr _ _ _ fun u => by simpa only [bind_assoc] using ih u qc js k
+    · -- Every generated seed starts with a uniform answer at `t`.
+      have hpos : 0 < qc t * js.count t := Nat.pos_of_ne_zero hcount
+      rw [((evalDistEq_liftComp_generateSeed_prependValues qc js hpos).bind_left _).evalDist_eq,
+        ((evalDistEq_liftComp_generateSeed_prependValues qc js hpos).bind_left _).evalDist_eq]
+      simp only [bind_assoc, pure_bind, QuerySeed.pop_prependValues_singleton]
+      set qc' := Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)
+      -- Transport the inductive hypothesis along a relabelling of the observed prefix.
+      have hmap : ∀ (u : spec₀.Range t) (k' : ℕ) (F : QuerySeed spec₀ → QuerySeed spec₀),
+          𝒟[liftComp (generateSeed spec₀ qc' js.dedup) spec₀ >>= fun s' =>
+            (simulateQ seededOracle (mx u)).run' s' >>= fun z =>
+              pure (F (s'.takeAtIndex i₀ k'), z)] =
+          𝒟[liftComp (generateSeed spec₀ qc' js.dedup) spec₀ >>= fun s' =>
+            (simulateQ seededOracle (mx u)).run' (s'.takeAtIndex i₀ k') >>= fun z =>
+              pure (F (s'.takeAtIndex i₀ k'), z)] := by
+        intro u k' F
+        have h := ((EvalDistEq.of_evalDist_eq (ih u qc' js.dedup k')).map
+          (fun p : QuerySeed spec₀ × α => (F p.1, p.2))).evalDist_eq
+        simpa only [map_bind, map_pure] using h
       by_cases hti : t = i₀
       · subst hti
         by_cases hk : k = 0
-        · -- Case 3: t = i₀, k = 0 — LHS pop some, RHS pop none
+        · -- The truncated seed has no answer at `t`: the query goes to the oracle.
           subst hk
-          have hpop_rhs : ∀ (s' : QuerySeed spec₀),
-              (QuerySeed.takeAtIndex s' t 0).pop t = none := fun s' => by
-            rw [QuerySeed.pop_eq_none_iff]; simp [QuerySeed.takeAtIndex]
-          simp_rw [takeAtIndex_zero_prependValues_singleton_aux t, hpop_rhs]
-          rw [ENNReal.tsum_prod']; conv_rhs => rw [ENNReal.tsum_prod']
-          simp_rw [probOutput_generateSeed_prependValues spec₀ qc js _ _ hcount,
-            mul_assoc, ENNReal.tsum_mul_left]
-          congr 1
-          conv_lhs =>
-            arg 1
-            intro u₀
-            rw [ih u₀ _ js.dedup 0 h]
-          rw [ENNReal.tsum_comm]; conv_rhs => rw [ENNReal.tsum_comm]
-          congr 1; ext s'
-          simp_rw [ENNReal.tsum_mul_left]
-          congr 2
-          conv_rhs => rw [probOutput_bind_eq_tsum (spec₀.query t : OracleComp spec₀ _)]
-          conv_rhs => simp [probOutput_query]
-          conv_rhs => rw [← Finset.mul_sum]
-          have hcard_ne_zero : (↑(Fintype.card (spec₀.Range t)) : ENNReal) ≠ 0 := by
-            exact_mod_cast Fintype.card_pos.ne'
-          have hcard_ne_top : (↑(Fintype.card (spec₀.Range t)) : ENNReal) ≠ ⊤ :=
-            ENNReal.natCast_ne_top (n := Fintype.card (spec₀.Range t))
-          rw [← mul_assoc, ENNReal.mul_inv_cancel hcard_ne_zero hcard_ne_top, one_mul]
-          simp
-        · -- Case 2a: t = i₀, k > 0 — both pop some, k decreases
-          have hk_pos : 0 < k := Nat.pos_of_ne_zero hk
-          simp only [QuerySeed.pop_takeAtIndex_prependValues_self _ _ _ hk_pos]
-          rw [ENNReal.tsum_prod']
-          conv_rhs => rw [ENNReal.tsum_prod']
-          congr 1; ext u₀
-          exact tsum_probOutput_generateSeed_prependValues_weight_aux qc js t t t k (k - 1)
-            (mx u₀) u₀ x hcount (takeAtIndex_prependValues_singleton_self_aux t k hk_pos u₀)
-            (ih u₀ _ js.dedup (k - 1)) h
-      · -- Case 2b: t ≠ i₀ — both pop some, k unchanged
-        simp only [QuerySeed.pop_takeAtIndex_prependValues_of_ne _ _ _ _ hti]
-        rw [ENNReal.tsum_prod']
-        conv_rhs => rw [ENNReal.tsum_prod']
-        congr 1; ext u₀
-        exact tsum_probOutput_generateSeed_prependValues_weight_aux qc js t i₀ i₀ k k
-          (mx u₀) u₀ x hcount (takeAtIndex_prependValues_singleton_of_ne_aux t i₀ hti k u₀)
-          (ih u₀ _ js.dedup k) h
+          have hpop0 : ∀ s' : QuerySeed spec₀, (s'.takeAtIndex t 0).pop t = none := fun s' =>
+            (QuerySeed.pop_eq_none_iff _ t).mpr (by simp [QuerySeed.takeAtIndex])
+          simp only [takeAtIndex_zero_prependValues_singleton_aux, hpop0, bind_assoc]
+          conv_rhs => rw [OracleComp.evalDist_bind_const, OracleComp.evalDist_bind_bind_swap]
+          exact evalDist_bind_eq_query_bind_of_uniform t _
+            (evalDist_liftComp_uniformSample t) _ _ fun u =>
+            hmap u 0 id
+        · -- Both runs consume the head answer; the prefix shortens by one.
+          have hk' : 0 < k := Nat.pos_of_ne_zero hk
+          simp only [takeAtIndex_prependValues_singleton_self_aux t k hk',
+            QuerySeed.pop_prependValues_singleton]
+          exact evalDist_bind_congr _ _ _ fun u =>
+            hmap u (k - 1) fun τ => τ.prependValues [u]
+      · -- Both runs consume the head answer at `t ≠ i₀`; the prefix is unchanged.
+        simp only [takeAtIndex_prependValues_singleton_of_ne_aux t i₀ hti k,
+          QuerySeed.pop_prependValues_singleton]
+        exact evalDist_bind_congr _ _ _ fun u => hmap u k fun τ => τ.prependValues [u]
 
-/-- Conditional-square bound for seeded replay. The full-seed and truncated-seed
-executions have the same weighted marginal, while the weighted faithfulness law
-identifies the second moment with their product. -/
-lemma sq_tsum_probOutput_generateSeed_le_tsum_mul_takeAtIndex
-    {ι₀ : Type} {spec₀ : OracleSpec ι₀} [DecidableEq ι₀]
-    [∀ i, SampleableType (spec₀.Range i)] [unifSpec ⊂ₒ spec₀]
-    [IsUniformSpec spec₀]
-    (qc : ι₀ → ℕ) (js : List ι₀) (i₀ : ι₀) (k : ℕ)
-    {α : Type} (oa : OracleComp spec₀ α) (x : α) :
-    (∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
-      Pr[= x | (simulateQ seededOracle oa).run' σ]) ^ 2 ≤
-      ∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
-        (Pr[= x | (simulateQ seededOracle oa).run' σ] *
-          Pr[= x | (simulateQ seededOracle oa).run' (σ.takeAtIndex i₀ k)]) := by
-  let w : QuerySeed spec₀ → ENNReal := fun σ ↦ Pr[= σ | generateSeed spec₀ qc js]
-  let Q : QuerySeed spec₀ → ENNReal := fun σ ↦
-    Pr[= x | (simulateQ seededOracle oa).run' (σ.takeAtIndex i₀ k)]
-  have hmean :
-      ∑' σ, w σ * Pr[= x | (simulateQ seededOracle oa).run' σ] =
-        ∑' σ, w σ * Q σ := by
-    simpa [w, Q] using tsum_probOutput_generateSeed_weight_takeAtIndex
-      qc js i₀ k oa x (fun _ ↦ 1)
-  have hsecond :
-      ∑' σ, w σ *
-          (Q σ * Pr[= x | (simulateQ seededOracle oa).run' σ]) =
-        ∑' σ, w σ * (Q σ * Q σ) := by
-    simpa [w, Q] using tsum_probOutput_generateSeed_weight_takeAtIndex
-      qc js i₀ k oa x
-        (fun τ ↦ Pr[= x | (simulateQ seededOracle oa).run' τ])
-  rw [show (∑' σ, Pr[= σ | generateSeed spec₀ qc js] *
-      Pr[= x | (simulateQ seededOracle oa).run' σ]) =
-        ∑' σ, w σ * Q σ by simpa [w] using hmean]
-  refine (ENNReal.sq_tsum_le_tsum_sq w Q
-    (tsum_probOutput_le_one (mx := generateSeed spec₀ qc js))).trans_eq ?_
-  rw [show (∑' σ, w σ * Q σ ^ 2) =
-      ∑' σ, w σ * (Q σ * Q σ) by simp [sq], ← hsecond]
-  refine tsum_congr fun σ ↦ ?_
-  simp only [w, Q]
-  ring
+end uniformSeeds
 
 section queryBounds
 
@@ -1074,7 +633,6 @@ theorem isQueryBoundP_run_simulateQ {ι₀ : Type} [DecidableEq ι₀] {spec₀ 
     seed
 
 theorem isPerIndexQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec ι₀}
-    [IsUniformSpec spec₀]
     {α : Type} {oa : OracleComp spec₀ α} {qb : ι₀ → ℕ}
     (h : OracleComp.IsPerIndexQueryBound oa qb) (seed : QuerySeed spec₀) :
     OracleComp.IsPerIndexQueryBound ((simulateQ spec₀.seededOracle oa).run seed) qb := by
@@ -1088,7 +646,7 @@ theorem isPerIndexQueryBound_run_simulateQ {ι₀ : Type} [DecidableEq ι₀] {s
 /-- State-preserving variant of `isPerIndexQueryBound_run'_zero`: when the seed covers `qb`
 at every index, the simulation makes zero further queries even with the seed in scope. -/
 theorem isPerIndexQueryBound_run_simulateQ_zero
-    {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec ι₀} [IsUniformSpec spec₀]
+    {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec ι₀}
     {α : Type}
     {oa : OracleComp spec₀ α} {qb : ι₀ → ℕ} {seed : QuerySeed spec₀}
     (hqb : OracleComp.IsPerIndexQueryBound oa qb)
@@ -1101,7 +659,7 @@ theorem isPerIndexQueryBound_run_simulateQ_zero
 /-- State-preserving variant of `isPerIndexQueryBound_run'_of_seedCoverage`: any uncovered
 suffix of the seed becomes the residual budget in the result spec. -/
 theorem isPerIndexQueryBound_run_simulateQ_of_seedCoverage
-    {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec ι₀} [IsUniformSpec spec₀]
+    {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec ι₀}
     {α : Type}
     {oa : OracleComp spec₀ α} {qb residual : ι₀ → ℕ} {seed : QuerySeed spec₀}
     (hqb : OracleComp.IsPerIndexQueryBound oa qb)

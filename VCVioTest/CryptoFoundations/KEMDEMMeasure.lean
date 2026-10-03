@@ -11,9 +11,9 @@ public import VCVio.EvalDist.WithFailure
 import Mathlib.Tactic.NormNum
 
 /-!
-# Native KEM–DEM and Boolean-bias checks
+# KEM–DEM and Boolean-bias checks
 
-The native hybrid proof imports no discrete probability backend. A direct free-program
+The hybrid proof imports no discrete probability backend. A direct free-program
 interpretation exercises the whole bound; a lossy branch demonstrates why the hidden-bit
 identity needs its totality hypotheses.
 -/
@@ -24,17 +24,16 @@ open MeasureTheory ProbabilityTheory PFunctor
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native KEM–DEM imports unexpectedly include {name}"
+  if env.contains `PMF then
+    throwError "KEM–DEM imports unexpectedly include PMF"
 
 namespace VCVioTest.KEMDEMMeasure
 
-/-- A native fair-coin query interface. -/
+/-- A fair-coin query interface. -/
 @[expose, reducible] def coinSpec : PFunctor.{0, 0} := ⟨Unit, fun _ => Bool⟩
 
-noncomputable instance : coinSpec.IsMeasureSpec :=
-  IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable instance : coinSpec.AnswerMeasure :=
+  AnswerMeasure.uniformOfFiniteNonempty _
 
 example (mx : FreeM coinSpec Bool) : IsProbabilityMeasure (evalDistWithFailure mx) := inferInstance
 

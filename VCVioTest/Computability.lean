@@ -18,7 +18,7 @@ through `PMF`, `Classical.decEq`, or `Fintype.ofFinite`), this file fails to com
 
 The dividing line this file locks is: *programs* (`OracleComp` values, `QueryImpl` handlers,
 `StateT`/`WriterT` simulators, `ProbComp` runs) are computable, while *semantics*
-(`evalSPMF`, `Pr[⋯]`, `SPMF`, expected costs) remain noncomputable. Executability lets
+(`𝒟[⋯]`, `Pr{⋯}[⋯]`, expected costs) remain noncomputable. Executability lets
 library users smoke-test security reductions by actually running them via
 `OracleComp.runIO`, turning "efficient by inspection" into inspection plus execution.
 
@@ -65,14 +65,14 @@ def roMixedFixed (f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id) : ProbC
 
 /-- API canary for the probability-one bridge on a computation containing both query kinds. -/
 example (p : Bool → Prop) :
-    Pr[fun v => p v.1 | (simulateQ roSimPipeline roMixedToy).run
-      (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)] = 1
+    Pr{let v ← (simulateQ roSimPipeline roMixedToy).run
+          (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)}[p v.1] = 1
     ↔
     ∀ f : QueryImpl ((ℕ →ₒ Bool) : OracleSpec ℕ) Id,
       (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache).AgreesWithFn f →
-        Pr[p | roMixedFixed f] = 1 := by
+        Pr{let x ← roMixedFixed f}[p x] = 1 := by
   simpa only [roSimPipeline, roMixedFixed] using
-    (OracleComp.probEvent_eq_one_simulateQ_romImpl_run_iff
+    (OracleComp.prEvent_eq_one_simulateQ_romImpl_run_iff
       (oa := roMixedToy) (preexisting_cache :=
         (∅ : ((ℕ →ₒ Bool) : OracleSpec ℕ).QueryCache)) p)
 

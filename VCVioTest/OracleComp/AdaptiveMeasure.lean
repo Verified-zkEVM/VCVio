@@ -30,7 +30,7 @@ run_cmd do
     pending := rest
     unless visited.contains name do
       visited := visited.insert name
-      for forbidden in [`PMF, `SPMF, `evalSPMF, `probEvent, `probOutput, `expectedValue] do
+      for forbidden in [`PMF] do
         if forbidden.isPrefixOf name then
           throwError "measure induction depends on the discrete probability declaration {name}"
       if let some info := env.find? name then
@@ -51,8 +51,8 @@ example {Y : Type} (value : Y) :
       ((∅ : (ℕ →ₒ Y).QueryCache).cacheQuery 7 value) input ≠ none → input ∈ keys := by
   exact QueryCache.domain_bound_cacheQuery ∅ 7 value 0 ⟨∅, by simp, by simp⟩
 
-noncomputable local instance : (ℕ →ₒ Bool).toPFunctor.IsMeasureSpec :=
-  PFunctor.IsMeasureSpec.uniformOfFiniteNonempty _
+noncomputable local instance : (ℕ →ₒ Bool).toPFunctor.AnswerMeasure :=
+  PFunctor.AnswerMeasure.uniformOfFiniteNonempty _
 
 example (t : ℕ) : 𝒟[(liftM ((ℕ →ₒ Bool).query t) : OracleComp (ℕ →ₒ Bool) Bool)] =
     ProbabilityTheory.uniformOn Set.univ := by

@@ -465,7 +465,7 @@ theorem holds_of_mem_run_simulateQ_withLogging
 
 /-- A predicate-only query bound controls every entry of every `loggingOracle` trace in support:
 if every query `oa` can make is to an index satisfying `P`, then each entry of each support
-point's log records a `P`-index at its input. Structural reachability bounds the possible traces
+point's log records a `P`-index at its input. The support alone bounds the possible traces,
 without choosing query measures. -/
 theorem holds_of_mem_log_of_mem_support_run_simulateQ
     {ι : Type} {spec : OracleSpec.{0, 0} ι} {α : Type} {P : ι → Prop}

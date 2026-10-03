@@ -8,7 +8,7 @@ module
 
 public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.ProbComp
-public import VCVio.EvalDist.Monad.Measure
+public import VCVio.EvalDist.ProbabilityBounds
 public import VCVio.OracleComp.EvalDist.MeasureSpec
 
 /-!
@@ -21,8 +21,8 @@ successful-output measure semantics. It is defined by structural recursion on `o
 interpreted step contributes the indicator of its index plus the expectation, under the step's
 successful-output measure, of the count of the continuation. The implementation need not be
 lossless; a run that fails contributes the charged queries made up to and including the failing
-step. Expectations are written `∫⁻ r, r ∂𝒟[f <$> mx]`, so no statement places a measurable-space
-instance on the state type, the output type or the query ranges.
+step. Expectations are written `𝔼{let z ← mx}[f z]`, which places no measurable space on the state
+type, the output type or the query ranges.
 
 ## Main results
 
@@ -30,7 +30,7 @@ instance on the state type, the output type or the query ranges.
   bounds the expected count by `q` under every implementation and from every initial state.
 * `expectedSimulatedQueryCount_bind`: the expected count of a bind is the count of its head plus
   the expected count of its continuation over the head's interpreted run.
-* `lintegral_resource_le_add_expectedSimulatedQueryCount`: a resource on the state that grows by
+* `wp_resource_le_add_expectedSimulatedQueryCount`: a resource on the state that grows by
   at most one on each charged step and not at all on an uncharged one has expected final value at
   most its initial value plus the expected count.
 * `expectedSimulatedQueryCount_mono` and `expectedSimulatedQueryCount_or_of_disjoint`:
@@ -49,7 +49,7 @@ The construction follows `formal/xmss/XmssSecurity/Proof/ExpectedQueryCount.lean
 
 public section
 
-open MeasureTheory OracleSpec
+open OracleSpec
 open scoped ENNReal
 
 universe v
@@ -57,7 +57,7 @@ universe v
 namespace OracleComp
 
 variable {ι : Type} {spec : OracleSpec ι} {α β σ : Type} {m : Type → Type v} [Monad m]
-  [EvalDistSemantics m]
+  [LawfulMonad m] [EvalDistSemantics m] [LawfulEvalDistSemantics m]
 
 /-! ## The expected charged-query count -/
 
@@ -71,8 +71,7 @@ noncomputable def expectedSimulatedQueryCount (so : QueryImpl spec (StateT σ m)
     (s : σ) : ℝ≥0∞ :=
   OracleComp.recOn (motive := fun _ => σ → ℝ≥0∞) oa (fun _ _ => 0)
     (fun t _ tail s' =>
-      (if charged t then 1 else 0) +
-        ∫⁻ r, r ∂𝒟[(fun z => tail z.1 z.2) <$> (so t).run s']) s
+      (if charged t then 1 else 0) + 𝔼{let z ← (so t).run s'}[tail z.1 z.2]) s
 
 variable (so : QueryImpl spec (StateT σ m)) (charged : spec.Domain → Prop)
   [DecidablePred charged]
@@ -90,11 +89,8 @@ theorem expectedSimulatedQueryCount_query_bind (t : spec.Domain)
     (k : spec.Range t → OracleComp spec α) (s : σ) :
     expectedSimulatedQueryCount so charged (liftM (spec.query t) >>= k) s =
       (if charged t then 1 else 0) +
-        ∫⁻ r, r ∂𝒟[(fun z => expectedSimulatedQueryCount so charged (k z.1) z.2) <$>
-          (so t).run s] :=
+        𝔼{let z ← (so t).run s}[expectedSimulatedQueryCount so charged (k z.1) z.2] :=
   rfl
-
-variable [LawfulMonad m] [LawfulEvalDistSemantics m]
 
 /-- The expected count of a single query is the indicator of its index. -/
 @[simp]
@@ -104,7 +100,7 @@ theorem expectedSimulatedQueryCount_query (t : spec.Domain) (s : σ) :
       if charged t then 1 else 0 := by
   rw [← bind_pure (liftM (spec.query t) : OracleComp spec (spec.Range t)),
     expectedSimulatedQueryCount_query_bind]
-  simp only [expectedSimulatedQueryCount_pure, lintegral_id_evalDist_map_zero, add_zero]
+  simp only [expectedSimulatedQueryCount_pure, ExpectationWP.wp_zero, add_zero]
 
 /-- A pathwise bound of `q` charged queries on `oa` bounds its expected charged-query count by `q`
 under every stateful implementation and from every initial state. -/
@@ -121,10 +117,9 @@ theorem expectedSimulatedQueryCount_le_of_isQueryBoundP (oa : OracleComp spec α
       · exact absurd (hq.1.resolve_left (not_not_intro ht)) (lt_irrefl 0)
       simp only [ht, ↓reduceIte, Nat.add_sub_cancel] at hq ⊢
       rw [Nat.cast_succ, add_comm (q : ℝ≥0∞)]
-      exact add_le_add le_rfl
-        (lintegral_id_evalDist_map_le_of_le _ fun z => ih z.1 z.2 q (hq.2 z.1))
+      exact add_le_add le_rfl (wp_le_of_forall_le _ fun z => ih z.1 z.2 q (hq.2 z.1))
     · simp only [ht, ↓reduceIte, zero_add] at hq ⊢
-      exact lintegral_id_evalDist_map_le_of_le _ fun z => ih z.1 z.2 q (hq.2 z.1)
+      exact wp_le_of_forall_le _ fun z => ih z.1 z.2 q (hq.2 z.1)
 
 /-- The expected charged-query count is monotone in the charged predicate. -/
 theorem expectedSimulatedQueryCount_mono {left right : spec.Domain → Prop} [DecidablePred left]
@@ -134,7 +129,7 @@ theorem expectedSimulatedQueryCount_mono {left right : spec.Domain → Prop} [De
   | pure x => simp
   | query_bind t k ih =>
     rw [expectedSimulatedQueryCount_query_bind, expectedSimulatedQueryCount_query_bind]
-    refine add_le_add ?_ (lintegral_id_evalDist_map_mono _ fun z => ih z.1 z.2)
+    refine add_le_add ?_ (ExpectationWP.wp_mono _ fun z => ih z.1 z.2)
     by_cases hl : left t
     · simp [hl, hsub t hl]
     · simp [hl]
@@ -145,16 +140,16 @@ theorem expectedSimulatedQueryCount_bind (oa : OracleComp spec α) (ob : α → 
     (s : σ) :
     expectedSimulatedQueryCount so charged (oa >>= ob) s =
       expectedSimulatedQueryCount so charged oa s +
-        ∫⁻ r, r ∂𝒟[(fun z => expectedSimulatedQueryCount so charged (ob z.1) z.2) <$>
-          (simulateQ so oa).run s] := by
+        𝔼{let z ← (simulateQ so oa).run s}[
+          expectedSimulatedQueryCount so charged (ob z.1) z.2] := by
   induction oa using OracleComp.inductionOn generalizing s with
   | pure x => simp [simulateQ_pure]
   | query_bind t k ih =>
     rw [bind_assoc, expectedSimulatedQueryCount_query_bind,
       expectedSimulatedQueryCount_query_bind, simulateQ_bind, simulateQ_spec_query,
-      StateT.run_bind, lintegral_id_evalDist_map_bind]
+      StateT.run_bind, ExpectationWP.wp_bind]
     simp only [ih]
-    rw [lintegral_id_evalDist_map_add, add_assoc]
+    rw [ExpectationWP.wp_add, add_assoc]
 
 /-- Mapping over the output does not change the expected count. -/
 @[simp]
@@ -162,39 +157,38 @@ theorem expectedSimulatedQueryCount_map (f : α → β) (oa : OracleComp spec α
     expectedSimulatedQueryCount so charged (f <$> oa) s =
       expectedSimulatedQueryCount so charged oa s := by
   rw [map_eq_bind_pure_comp, expectedSimulatedQueryCount_bind]
-  simp only [Function.comp_apply, expectedSimulatedQueryCount_pure,
-    lintegral_id_evalDist_map_zero, add_zero]
+  simp only [Function.comp_apply, expectedSimulatedQueryCount_pure, ExpectationWP.wp_zero,
+    add_zero]
 
 /-- A resource on the state that grows by at most one on each interpreted charged step, and not
 at all on an uncharged one, has expected value on the final state of the interpreted run at most
 its value on the initial state plus the expected charged-query count. -/
-theorem lintegral_resource_le_add_expectedSimulatedQueryCount [MonadAttach m]
+theorem wp_resource_le_add_expectedSimulatedQueryCount [MonadAttach m]
     [WeaklyLawfulMonadAttach m] (resource : σ → ℝ≥0∞)
     (hstep : ∀ (t : spec.Domain) (s : σ), ∀ z ∈ support ((so t).run s),
       resource z.2 ≤ resource s + if charged t then 1 else 0)
     (oa : OracleComp spec α) (s : σ) :
-    ∫⁻ r, r ∂𝒟[(fun z => resource z.2) <$> (simulateQ so oa).run s] ≤
+    𝔼{let z ← (simulateQ so oa).run s}[resource z.2] ≤
       resource s + expectedSimulatedQueryCount so charged oa s := by
   induction oa using OracleComp.inductionOn generalizing s with
   | pure x => simp [simulateQ_pure]
   | query_bind t k ih =>
-    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
-      lintegral_id_evalDist_map_bind, expectedSimulatedQueryCount_query_bind]
-    calc ∫⁻ r, r ∂𝒟[(fun z => ∫⁻ r, r
-              ∂𝒟[(fun w => resource w.2) <$> (simulateQ so (k z.1)).run z.2]) <$> (so t).run s]
-        ≤ ∫⁻ r, r ∂𝒟[(fun z => resource z.2 +
-            expectedSimulatedQueryCount so charged (k z.1) z.2) <$> (so t).run s] :=
-          lintegral_id_evalDist_map_mono _ fun z => ih z.1 z.2
-      _ = (∫⁻ r, r ∂𝒟[(fun z => resource z.2) <$> (so t).run s]) +
-            ∫⁻ r, r ∂𝒟[(fun z => expectedSimulatedQueryCount so charged (k z.1) z.2) <$>
-              (so t).run s] := lintegral_id_evalDist_map_add _ _ _
+    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, ExpectationWP.wp_bind,
+      expectedSimulatedQueryCount_query_bind]
+    calc 𝔼{let z ← (so t).run s}[𝔼{let w ← (simulateQ so (k z.1)).run z.2}[resource w.2]]
+        ≤ 𝔼{let z ← (so t).run s}[resource z.2 +
+            expectedSimulatedQueryCount so charged (k z.1) z.2] :=
+          ExpectationWP.wp_mono _ fun z => ih z.1 z.2
+      _ = 𝔼{let z ← (so t).run s}[resource z.2] +
+            𝔼{let z ← (so t).run s}[expectedSimulatedQueryCount so charged (k z.1) z.2] :=
+          ExpectationWP.wp_add _ _ _
       _ ≤ (resource s + if charged t then 1 else 0) +
-            ∫⁻ r, r ∂𝒟[(fun z => expectedSimulatedQueryCount so charged (k z.1) z.2) <$>
-              (so t).run s] :=
-          add_le_add (lintegral_id_evalDist_map_le_of_le_of_mem_support _ (hstep t s)) le_rfl
+            𝔼{let z ← (so t).run s}[expectedSimulatedQueryCount so charged (k z.1) z.2] :=
+          add_le_add ((wp_mono_of_support _ (hstep t s)).trans
+            (wp_le_of_forall_le _ fun _ => le_rfl)) le_rfl
       _ = resource s + ((if charged t then 1 else 0) +
-            ∫⁻ r, r ∂𝒟[(fun z => expectedSimulatedQueryCount so charged (k z.1) z.2) <$>
-              (so t).run s]) := add_assoc _ _ _
+            𝔼{let z ← (so t).run s}[expectedSimulatedQueryCount so charged (k z.1) z.2]) :=
+          add_assoc _ _ _
 
 /-- The expected count for the disjunction of two disjoint charged predicates is the sum of
 their expected counts. -/
@@ -214,7 +208,7 @@ theorem expectedSimulatedQueryCount_or_of_disjoint (left right : spec.Domain →
       · exact absurd ⟨hl, hr⟩ (hdisj t)
       all_goals simp [hl, hr]
     simp only [ih, hind]
-    rw [lintegral_id_evalDist_map_add]
+    rw [ExpectationWP.wp_add]
     ac_rfl
 
 end OracleComp

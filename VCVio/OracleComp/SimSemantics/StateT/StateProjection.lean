@@ -7,15 +7,15 @@ Authors: Quang Dao
 module
 
 public import VCVio.OracleComp.ProbComp.Basic
-public import VCVio.OracleComp.SimSemantics.StateT.Basic.Native
+public import VCVio.OracleComp.SimSemantics.StateT.Basic
 
 /-!
 # State-Projection Lemmas for `simulateQ`
 
 This file collects the *equational* state-projection theorems for `simulateQ` over `StateT`-valued
 query implementations. They are pure equalities on distributions, with no relational, coupling, or
-TV-distance content, and so live at the `SimSemantics` layer alongside `StateT.lean` rather than in
-`ProgramLogic`.
+TV-distance content, and so live at the `SimSemantics` layer alongside `StateT/Basic.lean` rather
+than in `ProgramLogic`.
 
 ## Main results
 

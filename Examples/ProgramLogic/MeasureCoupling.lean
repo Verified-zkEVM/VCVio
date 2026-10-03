@@ -20,7 +20,7 @@ computation and propagates its residual through the same sequential composition 
 
 public section
 
-open MeasureTheory ProbabilityTheory MeasureProgramLogic
+open MeasureTheory ProbabilityTheory ExpectationWP
 open scoped NNReal
 
 namespace Examples.MeasureCoupling

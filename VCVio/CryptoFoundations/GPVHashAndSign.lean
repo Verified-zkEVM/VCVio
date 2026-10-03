@@ -10,8 +10,9 @@ public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.CryptoFoundations.HardnessAssumptions.HardRelation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.Coercions.Add
-public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.Coercions.Add.Basic
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.EvalDist.Defs.Semantics.Core
 
 /-!
 # GPV Hash-and-Sign Framework
@@ -55,7 +56,7 @@ The proof decomposes into:
 - `GPVHashAndSign.forgery_yields_collision_or_exact_match`: the explicit split bound
 
 The reductions `reduction` and `programmedPreimageReduction`, and the two game-hop lemmas, are
-currently `sorry` placeholders. The public bounds `euf_cma_collision_bound` and
+`sorry` placeholders. The public bounds `euf_cma_collision_bound` and
 `euf_cma_split_bound` are stated for these named reductions: an existentially quantified
 collision finder or preimage finder would make the bounds trivially satisfiable by an adversary
 that outputs a valid solution chosen classically.
@@ -198,7 +199,7 @@ def collisionFindingExperiment [DecidableEq Domain]
 noncomputable def collisionFindingAdvantage [DecidableEq Domain]
     (adversary : CollisionAdversary (PK := PK) (Domain := Domain)) :
     ℝ≥0∞ :=
-  Pr[= true | collisionFindingExperiment (psf := psf) (hr := hr) adversary]
+  𝒟[collisionFindingExperiment (psf := psf) (hr := hr) adversary] {true}
 
 /-- A programmed-preimage adversary receives a public key and a programmed target `y`,
 and tries to reproduce the challenger's hidden short preimage sampled for `y`. -/
@@ -224,7 +225,7 @@ noncomputable def programmedPreimageAdvantage [DecidableEq Domain]
     (adversary : ProgrammedPreimageAdversary
       (PK := PK) (Domain := Domain) (Range := Range)) :
     ℝ≥0∞ :=
-  Pr[= true | programmedPreimageExperiment (psf := psf) (hr := hr) adversary]
+  𝒟[programmedPreimageExperiment (psf := psf) (hr := hr) adversary] {true}
 
 /-! ## Proof Decomposition
 

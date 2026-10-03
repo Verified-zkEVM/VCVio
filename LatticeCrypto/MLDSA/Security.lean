@@ -9,6 +9,7 @@ public import LatticeCrypto.MLDSA.Scheme
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.Security
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
 public import LatticeCrypto.HardnessAssumptions.LearningWithErrors
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # ML-DSA Security
@@ -149,28 +150,14 @@ from the key generation identity, NTT linearity, and `Primitives.Laws`, but is i
 here to separate the probabilistic argument from the algebraic one. -/
 theorem idsWithAbort_complete' :
     (identificationScheme p prims).Complete := by
-  classical
   intro pk sk hvalid
-  rw [probOutput_eq_one_iff_forall]
-  refine ⟨probFailure_of_liftM_PMF _, fun b hb => ?_⟩
-  rw [support_bind] at hb
-  simp only [Set.mem_iUnion] at hb
-  obtain ⟨t?, ht?, hb⟩ := hb
-  rw [support_pure] at hb
-  simp only [Set.mem_singleton_iff] at hb
-  subst hb
-  match t? with
+  prvcgen [IdenSchemeWithAbort.honestExecution,
+    OracleComp.Necessary.Spec.ofSupport ((identificationScheme p prims).commit pk sk),
+    OracleComp.Necessary.Spec.ofSupport ((identificationScheme p prims).respond pk sk _ _)]
+  rename_i x hx hoz
+  cases oz with
   | none => rfl
-  | some (w1, cTilde, zh) =>
-    simp only [IdenSchemeWithAbort.honestExecution, support_bind, Set.mem_iUnion,
-      support_pure, Set.mem_singleton_iff] at ht?
-    obtain ⟨⟨w1', st⟩, hw1st, cTilde', hcTilde, oz, hoz, heq⟩ := ht?
-    cases oz with
-    | none => simp only [Option.map, reduceCtorEq] at heq
-    | some zh' =>
-      simp only [Option.map, Option.some.injEq, Prod.mk.injEq] at heq
-      obtain ⟨rfl, rfl, rfl⟩ := heq
-      exact hRespondVerify pk sk hvalid w1 st cTilde hw1st _ hoz
+  | some zh => exact hRespondVerify pk sk hvalid x.1 x.2 c hx zh hoz
 
 end conditional
 
@@ -178,22 +165,18 @@ end conditional
 the verifier always accepts. This follows from the correctness of the rounding operations
 and the norm bounds satisfied by honest responses.
 
-The proof requires deriving the `hRespondVerify` algebraic fact from `Primitives.Laws`;
-see `idsWithAbort_complete'` for the conditional version. -/
+On each accepting branch the proof derives, from `Primitives.Laws`, the `hRespondVerify`
+algebraic fact that the conditional version `idsWithAbort_complete'` assumes. -/
 theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
     (identificationScheme p prims).Complete := by
-  classical
-  refine idsWithAbort_complete' p prims ?_
-  intro pk sk hvalid w1 st cTilde hw1st zh hzh
+  intro pk sk hvalid
   obtain ⟨seed, hkeygen⟩ := (validKeyPair_eq_true_iff p prims pk sk).mp hvalid
-  simp only [identificationScheme, support_bind, support_pure, Set.mem_iUnion,
-    Set.mem_singleton_iff, Prod.mk.injEq] at hw1st
-  simp only [identificationScheme] at hzh
-  obtain ⟨y, -, hw1, hst⟩ := hw1st
-  subst hst hw1
-  split_ifs at hzh with hc1 hc2
-  · rw [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hzh
-    subst hzh
+  dsimp only [IdenSchemeWithAbort.honestExecution, identificationScheme]
+  prvcgen
+  case vc2 | vc3 => rfl
+  case vc1 =>
+    rename' c => cTilde
+    rename_i hc1 hc2
     dsimp only at hc1 hc2 ⊢
     obtain ⟨hz_norm, hr0_norm⟩ := hc1
     obtain ⟨hct0_norm, hweight⟩ := hc2
@@ -238,17 +221,16 @@ theorem idsWithAbort_complete (h_laws : Primitives.Laws prims nttOps) :
     -- The key-generation identity for `wApprox`.
     have hwa := keyGenFromSeed_wApprox_eq p prims h_laws seed hkeygen c y
     -- Discharge `verify`.
-    simp only [identificationScheme, Bool.and_eq_true, decide_eq_true_eq]
+    simp only [Option.map, Bool.and_eq_true, decide_eq_true_eq]
     refine ⟨⟨hz_norm, ?_⟩, hweight⟩
     rw [hwa, useHintVec_makeHintVec p prims h_laws (-(c • sk.t0))
         (aHat * y - c • sk.s2 + c • sk.t0) hcond_t0, harith1, hhide]
-  all_goals (rw [support_pure, Set.mem_singleton_iff] at hzh; exact absurd hzh (by simp))
 
 /-! ### Honest-Verifier Zero-Knowledge
 
 The HVZK theorem `MLDSA.idsWithAbort_hvzk` is proven downstream in
 `LatticeCrypto.MLDSA.SecurityHVZK`, where the concrete simulator `hvzkSimulatorReal` and the
-extra-rejection-mass bound `hvzkBoundReal` are defined. The simulator reproduces the honest
+extra-rejection-mass bound `hvzkBound` are defined. The simulator reproduces the honest
 transcript pointwise on the accept event, so the total-variation distance is bounded by the
 honest prover's extra-rejection mass; see that file for the quantitative statement. -/
 
@@ -298,11 +280,11 @@ variable [nttOps : NTTRingOps] [DecidableEq prims.High] {M : Type}
 open scoped Classical in
 /-- MLWE distinguisher of the ML-DSA EUF-CMA reduction (Theorem 4 with Lemma 7, CRYPTO 2023).
 
-**Placeholder.** The intended construction answers the adversary's signing queries with the HVZK
-simulator `sim` (the with-aborts CMA-to-NMA step) and feeds the resulting NMA forger to the key-swap
-distinguisher `distinguisherBShort` of `LatticeCrypto.MLDSA.SecurityNMA`. That construction is
-typed against the concrete problem `mldsaMLWEShort`, so the problem argument here will be
-specialized once the with-aborts CMA-to-NMA simulator exists. -/
+**Placeholder.** The intended construction turns the adversary into an NMA forger with the
+with-aborts CMA-to-NMA step (`FiatShamirWithAbort.cmaToNmaAdv`, answering signing queries with the
+HVZK simulator `sim`) and feeds that forger to the key-swap distinguisher `distinguisherBShort` of
+`LatticeCrypto.MLDSA.SecurityNMA`. That distinguisher is typed against the concrete problem
+`mldsaMLWEShort`, so the problem argument here is specialized together with the forger. -/
 noncomputable def eufCmaMLWEReduction
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (maxAttempts : ℕ)
@@ -320,11 +302,11 @@ open scoped Classical in
 /-- SelfTargetMSIS adversary of the ML-DSA EUF-CMA reduction (Theorem 4 with Lemma 7,
 CRYPTO 2023).
 
-**Placeholder.** The intended construction answers the adversary's signing queries with the HVZK
-simulator `sim` (the with-aborts CMA-to-NMA step) and runs the extractor `extractorC` of
-`LatticeCrypto.MLDSA.SecurityNMA` on the resulting NMA forger. That extractor is typed against the
-concrete problem `mldsaSTMSIS`, so the problem argument here will be specialized once the
-with-aborts CMA-to-NMA simulator exists. -/
+**Placeholder.** The intended construction turns the adversary into an NMA forger with the
+with-aborts CMA-to-NMA step (`FiatShamirWithAbort.cmaToNmaAdv`, answering signing queries with the
+HVZK simulator `sim`) and runs the extractor `extractorC` of `LatticeCrypto.MLDSA.SecurityNMA` on
+that forger. The extractor is typed against the concrete problem `mldsaSTMSIS`, so the problem
+argument here is specialized together with the forger. -/
 noncomputable def eufCmaSTMSISReduction
     (stmsis : SelfTargetMSIS.Problem
       (TqMatrix p.k p.l) (Response p prims)
@@ -350,15 +332,12 @@ fixed before it is proved:
    `eufCmaSTMSISReduction`, which are `sorry` placeholders over arbitrary MLWE and
    SelfTargetMSIS problems. The final statement must specialize the problems to `mldsaMLWEShort`
    and `mldsaSTMSIS` of `LatticeCrypto.MLDSA.SecurityNMA` and define the reductions as
-   `distinguisherBShort` and `extractorC` applied to an explicit with-aborts CMA-to-NMA
-   simulator, which does not exist yet.
-2. `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only `hp : p_abort < 1` is
-   assumed). Inherited from `FiatShamirWithAbort.cmaToNmaLoss`, the loss term
-   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
-   by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`. In the final
-   statement `ε`, `p_abort`, `δ` should be nonnegative and identified with the concrete
-   commitment guessing probability, abort probability, and regularity failure probability of
-   the ML-DSA identification scheme.
+   `distinguisherBShort` and `extractorC` applied to the with-aborts CMA-to-NMA forger
+   `FiatShamirWithAbort.cmaToNmaAdv`, itself a named placeholder.
+2. `ε`, `p_abort` and `δ` are nonnegative parameters, with `p_abort < 1`, but they are not
+   identified with the commitment-guessing probability, abort probability and regularity failure
+   probability of the ML-DSA identification scheme. The final statement takes them as those
+   probabilities rather than as free parameters.
 
 The proof is intentionally deferred. The statement also needs to be specialized to the
 actual ML-DSA parameters (eliminating the explicit quantitative HVZK simulator hypothesis)
@@ -376,7 +355,7 @@ where:
 - `ε` is the commitment guessing probability
 - `p` is the effective abort probability
 - `sim` is an HVZK simulator for the underlying identification scheme
-- `ζ_zk` is a nonnegative bound such that `HVZK sim ζ_zk`
+- `ζ_zk` is a nonnegative bound such that `HVZK sim (ENNReal.ofReal ζ_zk)`
 - `δ` is the regularity failure probability
 - `ζ = max(γ₁ - β, 2γ₂ + 1 + τ · 2^{d-1})`
 
@@ -402,8 +381,9 @@ theorem euf_cma_security
     (sim : PublicKey p prims →
       ProbComp (Option (Commitment p prims × CommitHashBytes p × Response p prims)))
     (ζ_zk : ℝ) (_hζ : 0 ≤ ζ_zk)
-    (_hhvzk : (identificationScheme p prims).HVZK sim ζ_zk)
-    (qS qH : ℕ) (ε p_abort δ : ℝ) (hp : p_abort < 1) :
+    (_hhvzk : (identificationScheme p prims).HVZK sim (ENNReal.ofReal ζ_zk))
+    (qS qH : ℕ) (ε p_abort δ : ℝ) (_hε : 0 ≤ ε) (_hp0 : 0 ≤ p_abort) (hp : p_abort < 1)
+    (_hδ : 0 ≤ δ) :
     ∀ (adv : SignatureAlg.UnforgeableAdversary
       (FiatShamirWithAbort (identificationScheme p prims)
         hr M maxAttempts)),

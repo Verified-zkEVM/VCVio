@@ -1,8 +1,9 @@
 # Computational-complexity feasibility record
 
-Status: reviewer checkpoint, updated 2026-08-28. This record evaluates whether the current
-interaction-first design is mathematically sound and whether it is ready for ordinary
-cryptographic use. The answer is deliberately split:
+Status: historical record of the reviewer audit of 2026-08-28, whose candidate source is merged;
+the [computational-complexity design](computational-complexity.md) describes the present.
+This record evaluates whether the interaction-first design is mathematically sound and whether it
+is ready for ordinary cryptographic use. The answer is deliberately split:
 
 - the committed foundation is an honest backend-relative definition of strict oracle PPT;
 - the current candidate source interprets syntactic paths directly as Mathlib measures, adds
@@ -153,8 +154,8 @@ The OTP example uses the product and pushforward equalities exactly this way. Re
 construct the random tape law, and the XOR map for a fixed message is a measurable bijection that
 preserves the entire uniform measure. This proof reasons about the complete ciphertext law,
 rather than recovering it from a collection of scalar probability calculations. PMF/evaluation
-lemmas remain a useful compatibility surface for existing discrete proofs, not the semantic
-foundation of the new path.
+lemmas were then a compatibility surface for existing discrete proofs (since removed), not the
+semantic foundation of the new path.
 
 The candidate symmetric-encryption layer packages denotations through a `MeasureSemantics`:
 
@@ -280,7 +281,6 @@ lake env lean VCVioTest/UniformOn.lean
 lake env lean VCVio/EvalDist/PFunctorPath.lean
 lake env lean VCVio/CryptoFoundations/SymmEncAlg/Measure.lean
 lake env lean Examples/OneTimePad/ComputationalComplexity.lean
-lake env lean VCVioTest/CryptoFoundations/MeasureSemantics.lean
 lake env lean VCVioTest/CryptoFoundations/OracleClosure.lean
 lake env lean VCVioTest/OracleComp/SecurityFamily.lean
 lake exe mk_all --lib VCVio --module --check

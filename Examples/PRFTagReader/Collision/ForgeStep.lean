@@ -7,15 +7,20 @@ Authors: Oleksandr Vovkotrub
 module
 
 public import Examples.PRFTagReader.Auth
+public import VCVio.ProgramLogic.Unary.HoareTriple
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
+import VCVio.ProgramLogic.Unary.WP.Upper
 
 /-!
 # PRF Tag/Reader Protocol — Collision Bound, Per-Step Forge Infrastructure
 
-Per-step random-oracle infrastructure for the random-function authentication world: cache
-monotonicity of `authRFLookup` (the `StateT.PreservesInv` lemmas), single-point miss bounds for
-fresh lookups, the per-query step core, and the per-reader-step forge bound
-`authRFReaderStep_forge_le` together with the reader lookup pass `authRFReaderLookups` and its
-log characterization `authRFLookup_mapM_logs_eq`.
+Per-step random-oracle infrastructure for the random-function authentication world. It contains
+the cache monotonicity of `authRFLookup` (the `StateT.PreservesInv` lemmas, each a triple of the
+necessary reading proved by core `vcgen`), single-point miss bounds for fresh lookups, the
+per-query step core, and the per-reader-step forge bound `authRFReaderStep_forge_le`, together
+with the reader lookup pass `authRFReaderLookups` and its log characterization
+`authRFLookup_mapM_logs_eq`.
 
 The collision-bound theorems built on this infrastructure live in the parent module
 `Examples.PRFTagReader.Collision`.
@@ -32,6 +37,16 @@ section Theorems
 variable {TagId Nonce Digest K : Type} {sessionsPerTag : ℕ}
   [DecidableEq TagId] [DecidableEq Nonce] [SampleableType Digest]
 
+section Triples
+
+open Std.WP OracleComp.ProgramLogic
+
+/-- A triple of the necessary reading that preserves `I` gives the support statement
+`StateT.PreservesInv`. -/
+private theorem preservesInv_of_triple {σ α : Type} {mx : StateT σ ProbComp α} {I : σ → Prop}
+    (h : ⦃ I ⦄ mx ⦃ fun _ => I ⦄) : StateT.PreservesInv mx I :=
+  fun s hs _ hz => (triple_stateT_iff_forall_support _ _ _ ⊥).1 h s hs _ _ hz
+
 /-- One `authRFLookup` step preserves the invariant `responses t₀ = some d`: a cache hit leaves the
 table unchanged, and a cache miss only writes a fresh entry at the looked-up point, which is
 necessarily distinct from `t₀` since `t₀` is already cached. -/
@@ -39,22 +54,8 @@ private lemma authRFLookup_responses_some_preservesInv
     (t₀ : TagId × Nonce) (d : Digest) (tag : TagId) (nonce : Nonce) :
     StateT.PreservesInv
       (authRFLookup Digest tag nonce)
-      (fun st => st.responses t₀ = some d) := by
-  unfold authRFLookup
-  refine StateT.preservesInv_get_bind _ fun st hst => ?_
-  cases hresp : st.responses (tag, nonce) with
-  | some out => exact StateT.preservesInv_pure _ _
-  | none =>
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun i => ?_
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ ?_) fun _ =>
-      StateT.preservesInv_pure _ _
-    have hkey : t₀ ≠ (tag, nonce) := by
-      rintro rfl
-      rw [hresp] at hst
-      simp at hst
-    change (st.responses.cacheQuery (tag, nonce) i) t₀ = some d
-    rw [QueryCache.cacheQuery_of_ne _ _ hkey]
-    exact hst
+      (fun st => st.responses t₀ = some d) :=
+  preservesInv_of_triple (by vcgen [authRFLookup]; grind)
 
 /-- The reader's `mapM` of `authRFLookup` over a list of tags preserves the invariant
 `responses t₀ = some d`, by iterating `authRFLookup_responses_some_preservesInv`. -/
@@ -76,31 +77,8 @@ private lemma authIdealTagQueryImpl_responses_some_preservesInv [SampleableType 
     (t₀ : TagId × Nonce) (d : Digest) :
     QueryImpl.PreservesInv
       (authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest))
-      (fun st => st.responses t₀ = some d) := by
-  intro tag
-  unfold authIdealTagQueryImpl
-  refine StateT.preservesInv_get_bind _ fun st hst => ?_
-  refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun nonce => ?_
-  dsimp only
-  cases hresp : st.responses (tag, nonce) with
-  | some out =>
-    dsimp only
-    rw [pure_bind]
-    exact StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ hst) fun _ =>
-      StateT.preservesInv_pure _ _
-  | none =>
-    dsimp only
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun out => ?_
-    rw [pure_bind]
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ ?_) fun _ =>
-      StateT.preservesInv_pure _ _
-    have hkey : t₀ ≠ (tag, nonce) := by
-      rintro rfl
-      rw [hresp] at hst
-      simp at hst
-    change (st.responses.cacheQuery (tag, nonce) out) t₀ = some d
-    rw [QueryCache.cacheQuery_of_ne _ _ hkey]
-    exact hst
+      (fun st => st.responses t₀ = some d) :=
+  fun _ => preservesInv_of_triple (by vcgen [authIdealTagQueryImpl] <;> grind)
 
 /-- The lazy random-oracle cache threaded by `authRFQueryImpl` only grows: once a point `t₀`
 holds a digest `d`, every reachable later state still has `t₀ ↦ d`. -/
@@ -124,18 +102,8 @@ private lemma authRFLookup_responses_none_preservesInv
     (t₀ : TagId × Nonce) (tag : TagId) (nonce : Nonce) (hne : (tag, nonce) ≠ t₀) :
     StateT.PreservesInv
       (authRFLookup Digest tag nonce)
-      (fun st => st.responses t₀ = none) := by
-  unfold authRFLookup
-  refine StateT.preservesInv_get_bind _ fun st hst => ?_
-  cases hresp : st.responses (tag, nonce) with
-  | some out => exact StateT.preservesInv_pure _ _
-  | none =>
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_monadLift _ _) fun i => ?_
-    refine StateT.preservesInv_bind _ _ _ (StateT.preservesInv_set_of _ ?_) fun _ =>
-      StateT.preservesInv_pure _ _
-    change (st.responses.cacheQuery (tag, nonce) i) t₀ = none
-    rw [QueryCache.cacheQuery_of_ne _ _ (fun h => hne h.symm)]
-    exact hst
+      (fun st => st.responses t₀ = none) :=
+  preservesInv_of_triple (by vcgen [authRFLookup]; grind)
 
 /-- The reader's `mapM` of `authRFLookup` at a nonce different from `t₀.2` preserves
 `responses t₀ = none`: every looked-up point `(tag, nonce)` differs from `t₀`. -/
@@ -150,20 +118,29 @@ private lemma authRFLookup_mapM_responses_none_preservesInv
     (authRFLookup_responses_none_preservesInv t₀ tag nonce fun h => hne (congrArg Prod.snd h))
     fun _ => StateT.preservesInv_pure _ _) tags
 
+end Triples
+
+/-- A weighted sum of two event probabilities is the expectation of the weighted indicators. -/
+private lemma prEvent_add_mul_prEvent_eq_wp {α : Type} (oa : ProbComp α) (A B : α → Prop)
+    [DecidablePred A] [DecidablePred B] (ε : ℝ≥0∞) :
+    Pr{let x ← oa}[A x] + ε * Pr{let x ← oa}[B x] =
+      wp⟦oa⟧ (fun x => (if A x then 1 else 0) + ε * (if B x then 1 else 0)) := by
+  rw [ExpectationWP.wp_add, ExpectationWP.wp_const_mul,
+    ← ProgramLogic.prEvent_eq_wp_indicator,
+    ← ProgramLogic.prEvent_eq_wp_indicator]
+
 /-- One `authRFLookup tag nonce` step at the point `t₀` itself, starting from `responses t₀ = none`
 (so it is a genuine cache miss), draws a single fresh uniform digest into `t₀`: the probability that
 `t₀` ends holding any fixed `v₀` is at most `maxDigestProb`, and it never stays `none`. -/
 private lemma authRFLookup_miss_bound
     (maxDigestProb : ℝ≥0∞)
-    (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
+    (hmax : ∀ v : Digest, Pr{let d ← ($ᵗ Digest : ProbComp Digest)}[d = v] ≤ maxDigestProb)
     (t₀ : TagId × Nonce) (v₀ : Digest)
     (st : AuthIdealState TagId Nonce Digest)
     (hnone : st.responses t₀ = none) :
-    Pr[fun p => p.2.responses t₀ = some v₀ |
-        (authRFLookup Digest t₀.1 t₀.2).run st] ≤
+    Pr{let p ← (authRFLookup Digest t₀.1 t₀.2).run st}[p.2.responses t₀ = some v₀] ≤
       maxDigestProb ∧
-    Pr[fun p => p.2.responses t₀ = none |
-        (authRFLookup Digest t₀.1 t₀.2).run st] = 0 := by
+    Pr{let p ← (authRFLookup Digest t₀.1 t₀.2).run st}[p.2.responses t₀ = none] = 0 := by
   classical
   have hrun : (authRFLookup Digest t₀.1 t₀.2).run st =
       ((fun d => (d, ({ st with responses := st.responses.cacheQuery t₀ d } :
@@ -173,189 +150,71 @@ private lemma authRFLookup_miss_bound
     rw [show st.responses (t₀.1, t₀.2) = none from (Prod.mk.eta ▸ hnone)]
     simp only [StateT.run_bind, StateT.run_monadLift, monadLift_eq_self, bind_pure_comp,
       StateT.run_map, StateT.run_set, map_pure, Functor.map_map]
-  rw [hrun]
-  rw [probEvent_map, probEvent_map]
-  refine ⟨?_, ?_⟩
-  · have hext : Pr[((fun p => p.2.responses t₀ = some v₀) ∘ fun d =>
-          (d, ({ st with responses := st.responses.cacheQuery t₀ d } :
-            AuthIdealState TagId Nonce Digest))) | ($ᵗ Digest : ProbComp Digest)] =
-        Pr[fun d => d = v₀ | ($ᵗ Digest : ProbComp Digest)] := by
-      refine probEvent_ext fun d _ => ?_
-      change (st.responses.cacheQuery t₀ d) t₀ = some v₀ ↔ d = v₀
-      rw [QueryCache.cacheQuery_self]
-      exact Option.some_inj
-    rw [hext, probEvent_eq_eq_probOutput]
-    exact hmax v₀
-  · rw [probEvent_eq_zero_iff]
-    intro d _
+  rw [hrun, prEvent_map, prEvent_map]
+  refine ⟨le_of_eq_of_le (prEvent_congr _ _ (fun d => d = v₀) fun d => ?_) (hmax v₀), ?_⟩
+  · change (st.responses.cacheQuery t₀ d) t₀ = some v₀ ↔ d = v₀
+    rw [QueryCache.cacheQuery_self]
+    exact Option.some_inj
+  · refine prEvent_eq_zero_of_forall_not _ _ fun d => ?_
     change ¬ (st.responses.cacheQuery t₀ d) t₀ = none
     rw [QueryCache.cacheQuery_self]
     exact Option.some_ne_none d
 
-/-- A `responses`-only event of the reader's lookup `mapM` over `hd :: tl` factors as the head
-lookup followed by the tail `mapM`: the accumulated tag list never affects the `responses` table,
-so the event depends only on the threaded state. -/
-private lemma authRFLookup_mapM_cons_responses
-    (hd : TagId) (tl : List TagId) (nonce : Nonce)
-    (st : AuthIdealState TagId Nonce Digest)
-    (P : ((TagId × Nonce) →ₒ Digest).QueryCache → Prop) :
-    Pr[fun p => P p.2.responses |
-        ((hd :: tl).mapM (fun tag => do
-          let dg ← authRFLookup Digest tag nonce
-          pure (tag, dg))).run st] =
-      Pr[fun p => P p.2.responses |
-        (authRFLookup Digest hd nonce).run st >>=
-          fun q => (tl.mapM (fun tag => do
-            let dg ← authRFLookup Digest tag nonce
-            pure (tag, dg))).run q.2] := by
-  classical
-  rw [List.mapM_cons]
-  simp only [bind_pure_comp, StateT.run_bind, StateT.run_map, bind_map_left]
-  rw [probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
-  refine tsum_congr fun q => ?_
-  congr 1
-  rw [probEvent_map]
-  rfl
-
+open Std.WP in
+open scoped OracleComp.Upper in
 /-- The reader's `mapM` of `authRFLookup` over a nodup list of tags that contains `t₀.1`, run at
 nonce `t₀.2`, fills the cache point `t₀` with exactly one fresh uniform draw: starting from
 `responses t₀ = none`, the probability the final state has `t₀ ↦ v₀` plus `maxDigestProb` times the
 probability `t₀` is still `none` is at most `maxDigestProb`. -/
 private lemma authRFLookup_mapM_miss_bound
     (maxDigestProb : ℝ≥0∞)
-    (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
+    (hmax : ∀ v : Digest, Pr{let d ← ($ᵗ Digest : ProbComp Digest)}[d = v] ≤ maxDigestProb)
     (t₀ : TagId × Nonce) (v₀ : Digest) :
     ∀ (tags : List TagId), tags.Nodup → t₀.1 ∈ tags →
       ∀ (st : AuthIdealState TagId Nonce Digest), st.responses t₀ = none →
-        Pr[fun p => p.2.responses t₀ = some v₀ |
-            (tags.mapM (fun tag => do
-              let dg ← authRFLookup Digest tag t₀.2
-              pure (tag, dg))).run st] +
+        Pr{let p ← (tags.mapM (fun tag => do
+            let dg ← authRFLookup Digest tag t₀.2
+            pure (tag, dg))).run st}[p.2.responses t₀ = some v₀] +
           maxDigestProb *
-            Pr[fun p => p.2.responses t₀ = none |
-              (tags.mapM (fun tag => do
-                let dg ← authRFLookup Digest tag t₀.2
-                pure (tag, dg))).run st] ≤
+            Pr{let p ← (tags.mapM (fun tag => do
+              let dg ← authRFLookup Digest tag t₀.2
+              pure (tag, dg))).run st}[p.2.responses t₀ = none] ≤
         maxDigestProb := by
   classical
-  intro tags
-  induction tags with
-  | nil => intro _ hmem; exact absurd hmem (List.not_mem_nil)
-  | cons hd tl ih =>
-    intro hnodup hmem st hnone
-    rw [authRFLookup_mapM_cons_responses (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        hd tl t₀.2 st (fun c => c t₀ = some v₀),
-      authRFLookup_mapM_cons_responses (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        hd tl t₀.2 st (fun c => c t₀ = none)]
-    rw [probEvent_bind_eq_tsum, probEvent_bind_eq_tsum]
-    set f := fun tag => do
-      let dg ← authRFLookup (TagId := TagId) Digest tag t₀.2
-      pure (tag, dg) with hf
-    by_cases hhd : hd = t₀.1
-    · -- Head lookup is at `t₀` itself: a cache miss that draws the single fresh digest.
-      subst hhd
-      have hlook := authRFLookup_miss_bound (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-        maxDigestProb hmax t₀ v₀ st hnone
-      -- After the head lookup `t₀` is pinned, so the tail `mapM` keeps `t₀` filled.
-      have hpin : ∀ q ∈ support
-          ((authRFLookup Digest t₀.1 t₀.2).run st),
-          ∃ d, q.2.responses t₀ = some d := by
-        intro q hq
-        unfold authRFLookup at hq
-        simp only [StateT.run_bind, StateT.run_get, pure_bind] at hq
-        rw [show st.responses (t₀.1, t₀.2) = none from hnone] at hq
-        simp only [StateT.run_bind, StateT.run_monadLift, monadLift_eq_self, bind_pure_comp,
-          StateT.run_map, StateT.run_set, support_bind, support_uniformSample, Set.mem_univ,
-          Set.mem_iUnion, support_map, Set.mem_image, support_pure, Set.mem_singleton_iff] at hq
-        obtain ⟨i, -, x, rfl, rfl⟩ := hq
-        exact ⟨i.1, QueryCache.cacheQuery_self _ _ _⟩
-      have hnone0 :
-          ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-            Pr[= q | (authRFLookup Digest t₀.1 t₀.2).run st] *
-              Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2] = 0 := by
-        refine ENNReal.tsum_eq_zero.mpr fun q => ?_
-        by_cases hsupp : q ∈ support
-            ((authRFLookup Digest t₀.1 t₀.2).run st)
-        · obtain ⟨d, hqd⟩ := hpin q hsupp
-          have hz : Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2] = 0 := by
-            rw [probEvent_eq_zero_iff]
-            intro p hp
-            have hpp := authRFLookup_mapM_responses_some_preservesInv (TagId := TagId)
-              (Nonce := Nonce) (Digest := Digest) t₀ d t₀.2 tl q.2 hqd p hp
-            simp [hpp]
-          rw [hz, mul_zero]
-        · rw [probOutput_eq_zero _ q hsupp, zero_mul]
-      have hsome_le :
-          ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-            Pr[= q | (authRFLookup Digest t₀.1 t₀.2).run st] *
-              Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2] ≤
-            Pr[fun p => p.2.responses t₀ = some v₀ |
-              (authRFLookup Digest t₀.1 t₀.2).run st] := by
-        rw [probEvent_eq_tsum_ite]
-        refine ENNReal.tsum_le_tsum fun q => ?_
-        by_cases hsupp : q ∈ support
-            ((authRFLookup Digest t₀.1 t₀.2).run st)
-        · obtain ⟨d, hqd⟩ := hpin q hsupp
-          by_cases hdv : d = v₀
-          · subst hdv
-            rw [ite_eq_left hqd]
-            exact le_trans (mul_le_mul' le_rfl probEvent_le_one) (le_of_eq (mul_one _))
-          · have hz : Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2] = 0 := by
-              rw [probEvent_eq_zero_iff]
-              intro p hp
-              have hpp := authRFLookup_mapM_responses_some_preservesInv (TagId := TagId)
-                (Nonce := Nonce) (Digest := Digest) t₀ d t₀.2 tl q.2 hqd p hp
-              rw [hpp]
-              simp [hdv]
-            rw [hz, mul_zero]
-            exact zero_le
-        · rw [probOutput_eq_zero _ q hsupp, zero_mul]
-          exact zero_le
-      rw [hnone0, mul_zero, add_zero]
-      exact le_trans hsome_le hlook.1
-    · -- Head lookup is at a tag `≠ t₀.1`: the point `(hd, t₀.2) ≠ t₀`, so `t₀` stays `none`.
-      have hmemtl : t₀.1 ∈ tl := by
-        rcases List.mem_cons.1 hmem with h | h
-        · exact absurd h.symm hhd
-        · exact h
-      have hnoduptl : tl.Nodup := (List.nodup_cons.1 hnodup).2
-      have hne : (hd, t₀.2) ≠ t₀ := by
-        intro hc
-        exact hhd (congrArg Prod.fst hc)
-      have hpres := authRFLookup_responses_none_preservesInv (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) t₀ hd t₀.2 hne
-      calc (∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup Digest hd t₀.2).run st] *
-                Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2]) +
-            maxDigestProb *
-              ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-                Pr[= q | (authRFLookup Digest hd t₀.2).run st] *
-                  Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2]
-          = ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup Digest hd t₀.2).run st] *
-                (Pr[fun p => p.2.responses t₀ = some v₀ | (tl.mapM f).run q.2] +
-                  maxDigestProb *
-                    Pr[fun p => p.2.responses t₀ = none | (tl.mapM f).run q.2]) := by
-            rw [← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
-            refine tsum_congr fun q => ?_
-            rw [mul_add]
-            congr 1
-            rw [mul_left_comm]
-        _ ≤ ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup Digest hd t₀.2).run st] * maxDigestProb := by
-            refine ENNReal.tsum_le_tsum fun q => ?_
-            by_cases hsupp : q ∈ support
-                ((authRFLookup Digest hd t₀.2).run st)
-            · have hqn : q.2.responses t₀ = none := hpres st hnone q hsupp
-              exact mul_le_mul' le_rfl (ih hnoduptl hmemtl q.2 hqn)
-            · rw [probOutput_eq_zero _ q hsupp, zero_mul, zero_mul]
-        _ = maxDigestProb * ∑' q : Digest × AuthIdealState TagId Nonce Digest,
-              Pr[= q | (authRFLookup Digest hd t₀.2).run st] := by
-            rw [← ENNReal.tsum_mul_left]
-            refine tsum_congr fun q => ?_
-            rw [mul_comm]
-        _ ≤ maxDigestProb :=
-            le_trans (mul_le_mul' le_rfl tsum_probOutput_le_one) (le_of_eq (mul_one _))
+  intro tags _ _ st hnone
+  rw [prEvent_add_mul_prEvent_eq_wp]
+  -- the potential: the target already hit, plus one draw's budget while the point is unfilled;
+  -- every lookup preserves it, so the `mapM` keeps it from the initial state
+  have h : ⦃ fun st : AuthIdealState TagId Nonce Digest =>
+        OrderDual.toDual ((if st.responses t₀ = some v₀ then 1 else 0) +
+          maxDigestProb * (if st.responses t₀ = none then 1 else 0)) ⦄
+      (tags.mapM (fun tag => do
+        let dg ← authRFLookup Digest tag t₀.2
+        pure (tag, dg)) : StateT (AuthIdealState TagId Nonce Digest) ProbComp _)
+      ⦃ fun _ st => OrderDual.toDual ((if st.responses t₀ = some v₀ then 1 else 0) +
+          maxDigestProb * (if st.responses t₀ = none then 1 else 0)) ⦄ := by
+    vcgen [authRFLookup, OracleComp.Upper.Spec.ofWp ($ᵗ Digest : ProbComp Digest)] invariants
+      · fun _ _ _ st => OrderDual.toDual ((if st.responses t₀ = some v₀ then 1 else 0) +
+          maxDigestProb * (if st.responses t₀ = none then 1 else 0))
+    all_goals simp only [upper_readback, StateT.wp_apply_eq, StateT.run_bind, StateT.run_set,
+      StateT.run_pure, ExactWPMonad.wp_bind, ExactWPMonad.wp_pure]
+    rename_i _ _ cur _ _ _ hcur
+    by_cases hcur₀ : cur = t₀.1
+    · -- the lookup at `t₀` itself: one fresh draw fills it
+      subst hcur₀
+      have ht₀ : (t₀.1, t₀.2) = t₀ := rfl
+      rw [ht₀] at hcur ⊢
+      simp only [QueryCache.cacheQuery_self, hcur, Option.some.injEq, reduceCtorEq, ite_false,
+        ite_true, mul_zero, add_zero, mul_one, zero_add]
+      exact (ProgramLogic.prEvent_eq_wp_indicator _ _).symm.trans_le (hmax v₀)
+    · -- a lookup at another point leaves `t₀` as it is
+      have hne : t₀ ≠ (cur, t₀.2) := fun h => hcur₀ (congrArg Prod.fst h).symm
+      simp only [QueryCache.cacheQuery_of_ne _ _ hne]
+      exact le_of_eq (ExpectationWP.wp_const_of_oracle _ _)
+  have hrun := h.le_wp st
+  rw [OracleComp.Upper.rel_iff, StateT.wp_apply_eq, OracleComp.Upper.ofDual_wp] at hrun
+  refine hrun.trans (le_of_eq ?_)
+  simp [hnone]
 
 /-- Single-step random-oracle bound for a cache point `t₀` that is not yet filled: after one
 `authRFQueryImpl` query step, the probability that `t₀` ends holding `v₀` plus `maxDigestProb`
@@ -363,21 +222,20 @@ times the probability that `t₀` is still unfilled is at most `maxDigestProb`.
 
 A query step fills `t₀` (if at all) with a single fresh uniform `Digest` draw, so the event
 `t₀ ↦ v₀` is dominated by `maxDigestProb` times the probability that the step touched `t₀`. -/
-private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableType Nonce]
+private lemma prEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableType Nonce]
     [DecidableEq Digest]
     (maxDigestProb : ℝ≥0∞)
-    (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
+    (hmax : ∀ v : Digest, Pr{let d ← ($ᵗ Digest : ProbComp Digest)}[d = v] ≤ maxDigestProb)
     (t₀ : TagId × Nonce) (v₀ : Digest)
     (t : AuthOracleSpec TagId Nonce Digest |>.Domain)
     (st : AuthIdealState TagId Nonce Digest)
     (hnone : st.responses t₀ = none) :
-    Pr[fun p => p.2.responses t₀ = some v₀ |
-        (authRFQueryImpl TagId Nonce Digest t).run st] +
+    Pr{let p ← (authRFQueryImpl TagId Nonce Digest t).run st}[p.2.responses t₀ = some v₀] +
       maxDigestProb *
-        Pr[fun p => p.2.responses t₀ = none |
-          (authRFQueryImpl TagId Nonce Digest t).run st] ≤
+        Pr{let p ← (authRFQueryImpl TagId Nonce Digest t).run st}[p.2.responses t₀ = none] ≤
       maxDigestProb := by
   classical
+  rw [prEvent_add_mul_prEvent_eq_wp]
   cases t with
   | inl tag =>
     have htag : (authRFQueryImpl TagId Nonce Digest (Sum.inl tag)).run st =
@@ -418,188 +276,55 @@ private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableTyp
       | none =>
         simp only [StateT.run_bind, StateT.run_monadLift, monadLift_eq_self, bind_pure_comp,
           StateT.run_map, StateT.run_set, map_pure, Functor.map_map]
-    rw [hrun]
-    -- Per-`nonce` bounds on the two events.
-    have hkey : ∀ nonce : Nonce, (tag, nonce) = t₀ ↔ (tag = t₀.1 ∧ nonce = t₀.2) := by
-      intro nonce
-      constructor
-      · intro h; exact ⟨congrArg Prod.fst h, congrArg Prod.snd h⟩
-      · intro ⟨h1, h2⟩; exact Prod.ext h1 h2
-    -- Probability of `t₀ ↦ v₀` after the bind, bounded per `nonce`.
-    have hsome :
-        Pr[fun p => p.2.responses t₀ = some v₀ |
-            (($ᵗ Nonce : ProbComp Nonce) >>= fun nonce =>
-              (match st.responses (tag, nonce) with
-                | some out => pure
-                    (({ nonce := nonce, auth := out } : TagTranscript Nonce Digest),
-                      ({ responses := st.responses,
-                         honestOutputs :=
-                           insert (tag,
-                             ({ nonce := nonce, auth := out } : TagTranscript Nonce Digest))
-                             st.honestOutputs,
-                         readerForged := st.readerForged } :
-                        AuthIdealState TagId Nonce Digest))
-                | none => (($ᵗ Digest : ProbComp Digest) >>= fun out => pure
-                    (({ nonce := nonce, auth := out } : TagTranscript Nonce Digest),
-                      ({ responses := st.responses.cacheQuery (tag, nonce) out,
-                         honestOutputs :=
-                           insert (tag,
-                             ({ nonce := nonce, auth := out } : TagTranscript Nonce Digest))
-                             st.honestOutputs,
-                         readerForged := st.readerForged } :
-                        AuthIdealState TagId Nonce Digest)))) :
-                ProbComp (TagTranscript Nonce Digest × AuthIdealState TagId Nonce Digest))] ≤
-          ∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-            (if (tag, nonce) = t₀ then maxDigestProb else 0) := by
-      rw [probEvent_bind_eq_tsum]
-      refine ENNReal.tsum_le_tsum fun nonce => mul_le_mul' le_rfl ?_
+    have key : wp⟦(authIdealTagQueryImpl (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) tag).run st⟧
+        (fun p : TagTranscript Nonce Digest × AuthIdealState TagId Nonce Digest =>
+          (if p.2.responses t₀ = some v₀ then 1 else 0) +
+            maxDigestProb * (if p.2.responses t₀ = none then 1 else 0)) ≤ maxDigestProb := by
+      rw [hrun, ExpectationWP.wp_bind]
+      refine ProgramLogic.wp_le_const_of_support _ fun nonce _ => ?_
       by_cases hk : (tag, nonce) = t₀
-      · rw [ite_eq_left hk]
-        rw [show st.responses (tag, nonce) = none from hk ▸ hnone]
-        rw [probEvent_bind_eq_tsum]
-        calc ∑' out : Digest, Pr[= out | ($ᵗ Digest : ProbComp Digest)] *
-                Pr[fun p => p.2.responses t₀ = some v₀ |
-                  (pure (({ nonce := nonce, auth := out } : TagTranscript Nonce Digest),
-                    ({ responses := st.responses.cacheQuery (tag, nonce) out,
-                       honestOutputs :=
-                         insert (tag,
-                           ({ nonce := nonce, auth := out } : TagTranscript Nonce Digest))
-                           st.honestOutputs,
-                       readerForged := st.readerForged } :
-                      AuthIdealState TagId Nonce Digest)) :
-                    ProbComp (TagTranscript Nonce Digest × AuthIdealState TagId Nonce Digest))]
-            = ∑' out : Digest,
-                (if out = v₀ then Pr[= out | ($ᵗ Digest : ProbComp Digest)] else 0) := by
-              refine tsum_congr fun out => ?_
-              rw [probEvent_pure]
-              have hco : (st.responses.cacheQuery (tag, nonce) out) t₀ = some out := by
-                rw [← hk, QueryCache.cacheQuery_self]
-              by_cases hov : out = v₀
-              · subst hov
-                simp [hco]
-              · simp only [hco]
-                rw [ite_eq_right (by simp [hov]), ite_eq_right hov, mul_zero]
-          _ = Pr[= v₀ | ($ᵗ Digest : ProbComp Digest)] := by
-              rw [tsum_ite_eq]
-          _ ≤ maxDigestProb := hmax v₀
-      · rw [ite_eq_right hk]
+      · -- The tag step draws the fresh digest at `t₀` itself.
+        subst hk
+        simp only [hnone, ExpectationWP.wp_bind, ExpectationWP.wp_pure,
+          QueryCache.cacheQuery_self, Option.some_inj, reduceCtorEq, ite_false, mul_zero,
+          add_zero]
+        rw [← ProgramLogic.prEvent_eq_wp_indicator]
+        exact hmax v₀
+      · -- Any other point leaves `t₀` unfilled.
         have hne : t₀ ≠ (tag, nonce) := fun h => hk h.symm
         cases hresp : st.responses (tag, nonce) with
         | some out =>
-          rw [probEvent_pure]
           simp [hnone]
         | none =>
-          rw [probEvent_bind_eq_tsum]
-          refine le_of_le_of_eq (le_refl _) ?_
-          refine ENNReal.tsum_eq_zero.mpr fun out => ?_
-          rw [probEvent_pure]
+          simp only [ExpectationWP.wp_bind, ExpectationWP.wp_pure]
+          refine ProgramLogic.wp_le_const_of_support _ fun out _ => ?_
           simp [QueryCache.cacheQuery_of_ne _ _ hne, hnone]
-    -- Probability of `t₀` staying `none` after the bind, bounded per `nonce`.
-    have hnoneEv :
-        Pr[fun p => p.2.responses t₀ = none |
-            (($ᵗ Nonce : ProbComp Nonce) >>= fun nonce =>
-              (match st.responses (tag, nonce) with
-                | some out => pure
-                    (({ nonce := nonce, auth := out } : TagTranscript Nonce Digest),
-                      ({ responses := st.responses,
-                         honestOutputs :=
-                           insert (tag,
-                             ({ nonce := nonce, auth := out } : TagTranscript Nonce Digest))
-                             st.honestOutputs,
-                         readerForged := st.readerForged } :
-                        AuthIdealState TagId Nonce Digest))
-                | none => (($ᵗ Digest : ProbComp Digest) >>= fun out => pure
-                    (({ nonce := nonce, auth := out } : TagTranscript Nonce Digest),
-                      ({ responses := st.responses.cacheQuery (tag, nonce) out,
-                         honestOutputs :=
-                           insert (tag,
-                             ({ nonce := nonce, auth := out } : TagTranscript Nonce Digest))
-                             st.honestOutputs,
-                         readerForged := st.readerForged } :
-                        AuthIdealState TagId Nonce Digest)))) :
-                ProbComp (TagTranscript Nonce Digest × AuthIdealState TagId Nonce Digest))] ≤
-          ∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-            (if (tag, nonce) = t₀ then (0 : ℝ≥0∞) else 1) := by
-      rw [probEvent_bind_eq_tsum]
-      refine ENNReal.tsum_le_tsum fun nonce => mul_le_mul' le_rfl ?_
-      by_cases hk : (tag, nonce) = t₀
-      · rw [ite_eq_left hk]
-        rw [show st.responses (tag, nonce) = none from hk ▸ hnone]
-        rw [probEvent_bind_eq_tsum]
-        refine le_of_le_of_eq (le_refl _) ?_
-        refine ENNReal.tsum_eq_zero.mpr fun out => ?_
-        rw [probEvent_pure]
-        have hcache : (st.responses.cacheQuery (tag, nonce) out) t₀ = some out := by
-          rw [← hk, QueryCache.cacheQuery_self]
-        simp [hcache]
-      · rw [ite_eq_right hk]
-        exact probEvent_le_one
-    -- Combine: total `≤ maxDigestProb * ∑' nonce, Pr[= nonce] ≤ maxDigestProb`.
-    refine le_trans (add_le_add hsome (mul_le_mul' le_rfl hnoneEv)) ?_
-    have hcollapse :
-        (∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-            (if (tag, nonce) = t₀ then maxDigestProb else 0)) +
-          maxDigestProb * ∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-            (if (tag, nonce) = t₀ then (0 : ℝ≥0∞) else 1) =
-          maxDigestProb * ∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] := by
-      have hterm : ∀ nonce : Nonce,
-          (Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-              (if (tag, nonce) = t₀ then maxDigestProb else 0)) +
-            maxDigestProb * (Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-              (if (tag, nonce) = t₀ then (0 : ℝ≥0∞) else 1)) =
-            maxDigestProb * Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] := by
-        intro nonce
-        by_cases hk : (tag, nonce) = t₀ <;> simp [hk, mul_comm]
-      calc (∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-              (if (tag, nonce) = t₀ then maxDigestProb else 0)) +
-            maxDigestProb * ∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-              (if (tag, nonce) = t₀ then (0 : ℝ≥0∞) else 1)
-          = (∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-                (if (tag, nonce) = t₀ then maxDigestProb else 0)) +
-              ∑' nonce : Nonce, maxDigestProb *
-                (Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-                  (if (tag, nonce) = t₀ then (0 : ℝ≥0∞) else 1)) := by
-            rw [ENNReal.tsum_mul_left]
-        _ = ∑' nonce : Nonce,
-              ((Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-                  (if (tag, nonce) = t₀ then maxDigestProb else 0)) +
-                maxDigestProb * (Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-                  (if (tag, nonce) = t₀ then (0 : ℝ≥0∞) else 1))) := by
-            rw [ENNReal.tsum_add]
-        _ = ∑' nonce : Nonce, maxDigestProb * Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] :=
-            tsum_congr hterm
-        _ = maxDigestProb * ∑' nonce : Nonce, Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] := by
-            rw [ENNReal.tsum_mul_left]
-    rw [hcollapse]
-    exact le_trans (mul_le_mul' le_rfl tsum_probOutput_le_one) (le_of_eq (mul_one _))
+    exact key
   | inr transcript =>
     have hrd : (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st =
         (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
           transcript).run st :=
       rfl
-    rw [hrd]
+    change wp⟦(authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce)
+        (Digest := Digest) transcript).run st⟧ _ ≤ _
     -- The reader handler runs the lookup `mapM`, then a `get`/`set` that only touches
-    -- `readerForged`; hence the `responses`-field events factor through the `mapM`.
-    have hmapM_run : ∀ (P : ((TagId × Nonce) →ₒ Digest).QueryCache → Prop),
-        Pr[fun p => P p.2.responses |
-            (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              transcript).run st] =
-          Pr[fun p => P p.2.responses |
-            ((Finset.univ : Finset TagId).toList.mapM (fun tag => do
+    -- `readerForged`; hence the `responses`-field expectation factors through the `mapM`.
+    have hmapM_run :
+        wp⟦(authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce)
+            (Digest := Digest) transcript).run st⟧
+          (fun p => (if p.2.responses t₀ = some v₀ then 1 else 0) +
+            maxDigestProb * (if p.2.responses t₀ = none then 1 else 0)) =
+          wp⟦((Finset.univ : Finset TagId).toList.mapM (fun tag => do
               let dg ← authRFLookup Digest tag transcript.nonce
-              pure (tag, dg))).run st] := by
-      intro P
+              pure (tag, dg))).run st⟧
+            (fun p => (if p.2.responses t₀ = some v₀ then 1 else 0) +
+              maxDigestProb * (if p.2.responses t₀ = none then 1 else 0)) := by
       unfold authRFReaderQueryImpl
-      simp only [bind_pure_comp, StateT.run_bind]
-      rw [probEvent_bind_eq_tsum, probEvent_eq_tsum_ite]
-      refine tsum_congr fun p => ?_
-      rw [mul_comm]
-      simp only [StateT.run_get, pure_bind, StateT.run_map, StateT.run_set, map_pure,
-        probEvent_pure]
-      by_cases hP : P p.2.responses <;> simp [hP]
-    have heq1 := hmapM_run (fun c => c t₀ = some v₀)
-    have heq2 := hmapM_run (fun c => c t₀ = none)
-    refine heq1 ▸ heq2 ▸ ?_
+      simp only [bind_pure_comp, StateT.run_bind, StateT.run_get, StateT.run_map,
+        StateT.run_set, map_pure, ExpectationWP.wp_map]
+    refine le_of_eq_of_le hmapM_run ?_
+    rw [← prEvent_add_mul_prEvent_eq_wp]
     by_cases hnonce : transcript.nonce = t₀.2
     · -- Here `transcript.nonce = t₀.2`, so the lookup `mapM` over `Finset.univ.toList` includes a
       -- cache-miss lookup at `t₀ = (t₀.1, t₀.2)`, drawing one fresh uniform digest that pins `t₀`.
@@ -611,39 +336,23 @@ private lemma probEvent_authRFQueryImpl_step_core [Fintype TagId] [SampleableTyp
       have hpres :=
         authRFLookup_mapM_responses_none_preservesInv (TagId := TagId) (Nonce := Nonce)
           (Digest := Digest) t₀ transcript.nonce hnonce (Finset.univ : Finset TagId).toList
-      have hsome0 :
-          Pr[fun p => p.2.responses t₀ = some v₀ |
-            ((Finset.univ : Finset TagId).toList.mapM (fun tag => do
-              let dg ← authRFLookup Digest tag transcript.nonce
-              pure (tag, dg))).run st] = 0 := by
-        rw [probEvent_eq_zero_iff]
-        intro p hp
-        have hpn := hpres st hnone p hp
-        rw [hpn]
-        simp
-      have hnone1 :
-          Pr[fun p => p.2.responses t₀ = none |
-            ((Finset.univ : Finset TagId).toList.mapM (fun tag => do
-              let dg ← authRFLookup Digest tag transcript.nonce
-              pure (tag, dg))).run st] ≤ 1 := probEvent_le_one
-      rw [hsome0, zero_add]
-      exact le_trans (mul_le_mul' le_rfl hnone1) (le_of_eq (mul_one _))
+      rw [(prEvent_eq_zero_iff _ _).2 fun p hp h => by simp [hpres st hnone p hp] at h, zero_add]
+      exact mul_le_of_le_one_right' (prEvent_le_one _)
 
 /-- Single-point random-oracle bound: a fixed cache point `t₀` is filled by at most one uniform
 draw over the whole `authRFQueryImpl` simulation, so it ends holding any fixed digest `v₀` with
 probability at most `maxDigestProb`. -/
-private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [SampleableType Nonce]
+private lemma prEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [SampleableType Nonce]
     [DecidableEq Digest]
     {α : Type}
     (maxDigestProb : ℝ≥0∞)
-    (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
+    (hmax : ∀ v : Digest, Pr{let d ← ($ᵗ Digest : ProbComp Digest)}[d = v] ≤ maxDigestProb)
     (adversary : OracleComp (AuthOracleSpec TagId Nonce Digest) α)
     (t₀ : TagId × Nonce) (v₀ : Digest)
     (st : AuthIdealState TagId Nonce Digest)
     (hnone : st.responses t₀ = none) :
-    Pr[fun z => z.2.responses t₀ = some v₀ |
-        (simulateQ (authRFQueryImpl TagId Nonce Digest)
-          adversary).run st] ≤ maxDigestProb := by
+    Pr{let z ← (simulateQ (authRFQueryImpl TagId Nonce Digest) adversary).run st}[
+      z.2.responses t₀ = some v₀] ≤ maxDigestProb := by
   classical
   -- State-indexed bound: `1` once `t₀ ↦ v₀`, `maxDigestProb` while `t₀` is unfilled, `0` otherwise.
   set stbound : AuthIdealState TagId Nonce Digest → ℝ≥0∞ := fun st =>
@@ -652,62 +361,29 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
   -- General claim: the win probability from any reachable state is bounded by `stbound`.
   have hgen : ∀ (adv : OracleComp (AuthOracleSpec TagId Nonce Digest) α)
       (s : AuthIdealState TagId Nonce Digest),
-      Pr[fun z => z.2.responses t₀ = some v₀ |
-          (simulateQ (authRFQueryImpl TagId Nonce Digest)
-            adv).run s] ≤ stbound s := by
+      wp⟦(simulateQ (authRFQueryImpl TagId Nonce Digest) adv).run s⟧
+        (fun z => if z.2.responses t₀ = some v₀ then 1 else 0) ≤ stbound s := by
     intro adv
     induction adv using OracleComp.inductionOn with
     | pure x =>
       intro s
-      simp only [simulateQ_pure, StateT.run_pure, probEvent_pure]
-      by_cases hv : s.responses t₀ = some v₀
-      · simp only [hv, ite_true, hstbound]
-        simp
-      · simp only [hv, ite_false]
-        simp only [hstbound]
-        positivity
+      simp only [simulateQ_pure, StateT.run_pure, ExpectationWP.wp_pure, hstbound]
+      split_ifs <;> simp
     | query_bind t oa ih =>
       intro s
-      simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self]
-      rw [probEvent_bind_eq_tsum]
-      -- Bound each continuation by the inductive hypothesis, then bound the step sum.
-      have hstep_le :
-          ∑' p, Pr[= p |
-              (authRFQueryImpl TagId Nonce Digest t).run s] *
-            Pr[fun z => z.2.responses t₀ = some v₀ |
-              (simulateQ (authRFQueryImpl TagId Nonce Digest)
-                (oa p.1)).run p.2] ≤
-            ∑' p, Pr[= p |
-              (authRFQueryImpl TagId Nonce Digest t).run s] *
-              stbound p.2 := by
-        refine ENNReal.tsum_le_tsum fun p => mul_le_mul' le_rfl (ih p.1 p.2)
-      refine le_trans hstep_le ?_
+      simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self,
+        ExpectationWP.wp_bind]
+      refine le_trans (ProgramLogic.wp_mono _ fun p => ih p.1 p.2) ?_
       -- Three cases on the value held at `t₀` in the pre-state `s`.
       by_cases hsv : s.responses t₀ = some v₀
-      · -- `t₀` already holds `v₀`: `stbound s = 1`; LEMMA 1 keeps it so, sum `≤ 1`.
+      · -- `t₀` already holds `v₀`, and every step keeps it so.
         have hpres :=
           authRFQueryImpl_responses_some_preservesInv (TagId := TagId) (Nonce := Nonce)
             (Digest := Digest) t₀ v₀ t s hsv
-        have hbound : ∀ p ∈ support
-            ((authRFQueryImpl TagId Nonce Digest t).run s),
-            stbound p.2 = 1 := by
-          intro p hp
-          simp only [hstbound, hpres p hp, ite_true]
-        calc ∑' p, Pr[= p |
-                (authRFQueryImpl TagId Nonce Digest t).run s] *
-              stbound p.2
-            = ∑' p, Pr[= p |
-                (authRFQueryImpl TagId Nonce Digest t).run s] *
-                1 := by
-              refine tsum_congr fun p => ?_
-              by_cases hp : p ∈ support
-                  ((authRFQueryImpl TagId Nonce Digest t).run s)
-              · rw [hbound p hp]
-              · rw [probOutput_eq_zero_of_not_mem_support hp]; simp
-          _ ≤ 1 := by simp only [mul_one]; exact tsum_probOutput_le_one
-          _ = stbound s := by simp only [hstbound, hsv, ite_true]
+        refine ProgramLogic.wp_le_const_of_support _ fun p hp => ?_
+        simp [hstbound, hpres p hp, hsv]
       · by_cases hsn : s.responses t₀ = none
-        · -- `t₀` is unfilled: `stbound s = maxDigestProb`; this is the core per-step bound.
+        · -- `t₀` is unfilled: this is the core per-step bound.
           have hsplit : ∀ p : (AuthOracleSpec TagId Nonce Digest).Range t ×
               AuthIdealState TagId Nonce Digest, stbound p.2 ≤
               (if p.2.responses t₀ = some v₀ then (1 : ℝ≥0∞) else 0) +
@@ -719,42 +395,12 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
             · by_cases h2 : p.2.responses t₀ = none
               · simp [h2]
               · simp [h1, h2]
-          have hsum_le :
-              ∑' p, Pr[= p |
-                  (authRFQueryImpl TagId Nonce Digest t).run s] * stbound p.2 ≤
-                ∑' p, Pr[= p |
-                  (authRFQueryImpl TagId Nonce Digest t).run s] *
-                  ((if p.2.responses t₀ = some v₀ then (1 : ℝ≥0∞) else 0) +
-                    maxDigestProb * (if p.2.responses t₀ = none then (1 : ℝ≥0∞) else 0)) :=
-            ENNReal.tsum_le_tsum fun p => mul_le_mul' le_rfl (hsplit p)
-          refine le_trans hsum_le ?_
-          -- Distribute the sum into the two probability events.
-          have hdist :
-              ∑' p, Pr[= p |
-                  (authRFQueryImpl TagId Nonce Digest t).run s] *
-                  ((if p.2.responses t₀ = some v₀ then (1 : ℝ≥0∞) else 0) +
-                    maxDigestProb * (if p.2.responses t₀ = none then (1 : ℝ≥0∞) else 0)) =
-                Pr[fun p => p.2.responses t₀ = some v₀ |
-                    (authRFQueryImpl TagId Nonce Digest t).run s] +
-                  maxDigestProb *
-                    Pr[fun p => p.2.responses t₀ = none |
-                      (authRFQueryImpl TagId Nonce Digest t).run s] := by
-            rw [probEvent_eq_tsum_ite, probEvent_eq_tsum_ite,
-              ← ENNReal.tsum_mul_left, ← ENNReal.tsum_add]
-            refine tsum_congr fun p => ?_
-            by_cases h1 : p.2.responses t₀ = some v₀ <;>
-              by_cases h2 : p.2.responses t₀ = none <;>
-              simp [h1, h2, mul_comm]
-          rw [hdist]
-          have hcore :=
-            probEvent_authRFQueryImpl_step_core (TagId := TagId) (Nonce := Nonce)
+          refine le_trans (ProgramLogic.wp_mono _ hsplit) ?_
+          rw [← prEvent_add_mul_prEvent_eq_wp]
+          simpa [hstbound, hsn] using
+            prEvent_authRFQueryImpl_step_core (TagId := TagId) (Nonce := Nonce)
               (Digest := Digest) maxDigestProb hmax t₀ v₀ t s hsn
-          have hgoal : stbound s = maxDigestProb := by
-            simp only [hstbound, hsn]
-            simp
-          rw [hgoal]
-          exact hcore
-        · -- `t₀` holds some `d ≠ v₀`: `stbound s = 0`; LEMMA 1 keeps `t₀ ↦ d`, sum `= 0`.
+        · -- `t₀` holds some `d ≠ v₀`, and every step keeps it so.
           obtain ⟨d, hd⟩ : ∃ d, s.responses t₀ = some d := by
             cases hc : s.responses t₀ with
             | none => exact absurd hc hsn
@@ -762,32 +408,14 @@ private lemma probEvent_authRFQueryImpl_responses_eq_le [Fintype TagId] [Samplea
           have hpres :=
             authRFQueryImpl_responses_some_preservesInv (TagId := TagId) (Nonce := Nonce)
               (Digest := Digest) t₀ d t s hd
-          have hzero : ∀ p ∈ support
-              ((authRFQueryImpl TagId Nonce Digest t).run s), stbound p.2 = 0 := by
-            intro p hp
-            have hpd := hpres p hp
-            have hdv : d ≠ v₀ := by
-              rintro rfl
-              exact hsv hd
-            have hne : p.2.responses t₀ ≠ some v₀ := by
-              rw [hpd]
-              simp [hdv]
-            simp only [hstbound, hpd]
-            simp [hdv]
-          have hsum0 :
-              ∑' p, Pr[= p |
-                  (authRFQueryImpl TagId Nonce Digest t).run s] * stbound p.2 = 0 := by
-            refine ENNReal.tsum_eq_zero.mpr fun p => ?_
-            by_cases hp : p ∈ support
-                ((authRFQueryImpl TagId Nonce Digest t).run s)
-            · rw [hzero p hp, mul_zero]
-            · rw [probOutput_eq_zero_of_not_mem_support hp, zero_mul]
-          rw [hsum0]
-          exact zero_le
-  have hfinal : stbound st = maxDigestProb := by
-    simp only [hstbound, hnone]
-    simp
-  exact (hgen adversary st).trans (le_of_eq hfinal)
+          have hdv : d ≠ v₀ := by
+            rintro rfl
+            exact hsv hd
+          refine ProgramLogic.wp_le_const_of_support _ fun p hp => ?_
+          simp [hstbound, hpres p hp, hdv]
+  rw [ProgramLogic.prEvent_eq_wp_indicator]
+  refine (hgen adversary st).trans (le_of_eq ?_)
+  simp [hstbound, hnone]
 
 /-- The reader's per-tag lookup pass: run `authRFLookup` at `nonce` for every tag in `tags`,
 collecting each looked-up `(tag, digest)` pair. This is the `responses`-touching core of
@@ -798,6 +426,10 @@ noncomputable def authRFReaderLookups
   tags.mapM (fun tag => do
     let dg ← authRFLookup Digest tag nonce
     pure (tag, dg))
+
+section LookupTriples
+
+open Std.WP OracleComp.ProgramLogic
 
 /-- Every looked-up pair produced by `authRFReaderLookups` lands in the final cache: if `(tag, d)`
 occurs in the result list, the final `responses` table holds `(tag, nonce) ↦ d`. Each lookup pins
@@ -822,21 +454,10 @@ private lemma authRFLookup_mapM_pairs_responses
       Set.mem_iUnion, Set.mem_image] at hz
     obtain ⟨r, ⟨lk, hlk, rfl⟩, w, hw, rfl⟩ := hz
     -- The head lookup at `hd` pins `(hd, nonce) ↦ lk.1` in `lk.2`.
-    have hlook : lk.2.responses (hd, nonce) = some lk.1 := by
-      unfold authRFLookup at hlk
-      simp only [StateT.run_bind, StateT.run_get, pure_bind] at hlk
-      cases hresp : st.responses (hd, nonce) with
-      | some out =>
-        simp only [hresp, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hlk
-        rcases hlk with rfl
-        exact hresp
-      | none =>
-        simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self,
-          bind_pure_comp, StateT.run_map, StateT.run_set, support_bind, support_uniformSample,
-          Set.mem_univ, Set.mem_iUnion, support_map, Set.mem_image, support_pure,
-          Set.mem_singleton_iff] at hlk
-        obtain ⟨i, -, x, rfl, rfl⟩ := hlk
-        exact QueryCache.cacheQuery_self _ _ _
+    have hlook : lk.2.responses (hd, nonce) = some lk.1 :=
+      (triple_stateT_iff_forall_support _ (· = st)
+        (fun d s => s.responses (hd, nonce) = some d) ⊥).1
+        (by vcgen [authRFLookup] <;> grind) st rfl _ _ hlk
     intro p hp
     rcases List.mem_cons.1 hp with rfl | hp'
     · -- `p` is the head pair `(hd, lk.1)`: the tail `mapM` keeps `(hd, nonce)` pinned.
@@ -851,37 +472,14 @@ lemma authRFLookup_mapM_logs_eq
     (nonce : Nonce) (tags : List TagId) (st : AuthIdealState TagId Nonce Digest) :
     ∀ z ∈ support ((authRFReaderLookups (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
         nonce tags).run st),
-      z.2.honestOutputs = st.honestOutputs ∧ z.2.readerForged = st.readerForged := by
-  unfold authRFReaderLookups
-  induction tags generalizing st with
-  | nil =>
-    intro z hz
-    simp only [List.mapM_nil, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
-    rcases hz with rfl
-    exact ⟨rfl, rfl⟩
-  | cons hd tl ih =>
-    intro z hz
-    rw [List.mapM_cons] at hz
-    simp only [bind_pure_comp, StateT.run_bind, StateT.run_map, support_bind, support_map,
-      Set.mem_iUnion, Set.mem_image] at hz
-    obtain ⟨r, ⟨lk, hlk, rfl⟩, w, hw, rfl⟩ := hz
-    have hhead : lk.2.honestOutputs = st.honestOutputs ∧ lk.2.readerForged = st.readerForged := by
-      unfold authRFLookup at hlk
-      simp only [StateT.run_bind, StateT.run_get, pure_bind] at hlk
-      cases hresp : st.responses (hd, nonce) with
-      | some out =>
-        simp only [hresp, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hlk
-        rcases hlk with rfl
-        exact ⟨rfl, rfl⟩
-      | none =>
-        simp only [hresp, StateT.run_bind, StateT.run_monadLift, monadLift_eq_self,
-          bind_pure_comp, StateT.run_map, StateT.run_set, support_bind, support_uniformSample,
-          Set.mem_univ, Set.mem_iUnion, support_map, Set.mem_image, support_pure,
-          Set.mem_singleton_iff] at hlk
-        obtain ⟨i, -, x, rfl, rfl⟩ := hlk
-        exact ⟨rfl, rfl⟩
-    obtain ⟨htail₁, htail₂⟩ := ih lk.2 w hw
-    exact ⟨htail₁.trans hhead.1, htail₂.trans hhead.2⟩
+      z.2.honestOutputs = st.honestOutputs ∧ z.2.readerForged = st.readerForged :=
+  StateT.preservesInv_mapM (fun s => s.honestOutputs = st.honestOutputs ∧
+      s.readerForged = st.readerForged)
+    (fun _ => StateT.preservesInv_bind _ _ _
+      (preservesInv_of_triple (by vcgen [authRFLookup]; grind))
+      fun _ => StateT.preservesInv_pure _ _) tags st ⟨rfl, rfl⟩
+
+end LookupTriples
 
 /-- Per-reader-step collision bound. When the pre-state has no recorded forgeries and every cached
 cell in the queried nonce's column belongs to `honestOutputs`, one `authRFReaderQueryImpl` step
@@ -895,14 +493,13 @@ lemma authRFReaderStep_forge_le [Fintype TagId] [SampleableType Nonce] [Decidabl
     (transcript : TagTranscript Nonce Digest)
     (st : AuthIdealState TagId Nonce Digest)
     (maxDigestProb : ℝ≥0∞)
-    (hmax : ∀ v : Digest, Pr[= v | ($ᵗ Digest : ProbComp Digest)] ≤ maxDigestProb)
+    (hmax : ∀ v : Digest, Pr{let d ← ($ᵗ Digest : ProbComp Digest)}[d = v] ≤ maxDigestProb)
     (hforged : st.readerForged = ∅)
     (hcol : ∀ tag : TagId, ∀ d : Digest,
       st.responses (tag, transcript.nonce) = some d →
         (tag, ⟨transcript.nonce, d⟩) ∈ st.honestOutputs) :
-    Pr[fun z => z.2.readerForged ≠ ∅ |
-        (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-          transcript).run st] ≤
+    Pr{let z ← (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+        transcript).run st}[z.2.readerForged ≠ ∅] ≤
       (Fintype.card TagId : ℝ≥0∞) * maxDigestProb := by
   classical
   -- Abbreviate the per-tag lookup pass and the forged-tag set extracted from its result.
@@ -913,49 +510,36 @@ lemma authRFReaderStep_forge_le [Fintype TagId] [SampleableType Nonce] [Decidabl
       (p.1, transcript) ∉ st.honestOutputs)).map Prod.fst).toFinset with hnewForged
   -- The reader run is the lookup pass followed by a pure log update; push the event through.
   have hmap :
-      Pr[fun z => z.2.readerForged ≠ ∅ |
-          (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            transcript).run st] =
-        Pr[fun mp : List (TagId × Digest) × AuthIdealState TagId Nonce Digest =>
-            (mp.2.readerForged ∪
-              (((mp.1.filter fun p => decide (p.2 = transcript.auth ∧
-                (p.1, transcript) ∉ mp.2.honestOutputs)).map Prod.fst).toFinset.image
-                  (·, transcript))) ≠ ∅ | lookups] := by
+      Pr{let z ← (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
+          transcript).run st}[z.2.readerForged ≠ ∅] =
+        Pr{let mp ← lookups}[(mp.2.readerForged ∪
+          (((mp.1.filter fun p : TagId × Digest => decide (p.2 = transcript.auth ∧
+            (p.1, transcript) ∉ mp.2.honestOutputs)).map Prod.fst).toFinset.image
+              (·, transcript))) ≠ ∅] := by
     rw [hlookups]
     unfold authRFReaderQueryImpl authRFReaderLookups
     simp only [bind_pure_comp, StateT.run_bind, StateT.run_get, StateT.run_map,
-      StateT.run_set, map_pure]
-    rw [probEvent_map]
-    rfl
+      StateT.run_set, map_pure, prEvent_map]
   rw [hmap]
   -- Forge ⇒ some tag lies in `newForged`, which forces a cached-or-fresh match at its column.
-  have hstep :
-      Pr[fun mp : List (TagId × Digest) × AuthIdealState TagId Nonce Digest =>
-          (mp.2.readerForged ∪
-            (((mp.1.filter fun p => decide (p.2 = transcript.auth ∧
-              (p.1, transcript) ∉ mp.2.honestOutputs)).map Prod.fst).toFinset.image
-                (·, transcript))) ≠ ∅ | lookups] ≤
-        Pr[fun mp => ∃ tag ∈ (Finset.univ : Finset TagId), tag ∈ newForged mp.1 | lookups] := by
-    refine probEvent_mono fun mp hmp hne => ?_
-    obtain ⟨hho, hrf⟩ := authRFLookup_mapM_logs_eq (TagId := TagId) (Nonce := Nonce)
+  refine le_trans (prEvent_mono_of_support _ _
+    (fun mp => ∃ tag ∈ (Finset.univ : Finset TagId), tag ∈ newForged mp.1) fun mp hmp hne => ?_) ?_
+  · obtain ⟨hho, hrf⟩ := authRFLookup_mapM_logs_eq (TagId := TagId) (Nonce := Nonce)
       (Digest := Digest) transcript.nonce (Finset.univ : Finset TagId).toList st mp hmp
     rw [hho, hrf, hforged, Finset.empty_union] at hne
     obtain ⟨x, hx⟩ := Finset.nonempty_iff_ne_empty.mpr hne
     obtain ⟨tag, htag, rfl⟩ := Finset.mem_image.mp hx
     exact ⟨tag, Finset.mem_univ tag, htag⟩
-  refine le_trans hstep ?_
-  refine le_trans (probEvent_exists_finset_le_sum (Finset.univ : Finset TagId) lookups
+  refine le_trans (prEvent_exists_finset_le (Finset.univ : Finset TagId) lookups
     (fun tag mp => tag ∈ newForged mp.1)) ?_
   -- Per-tag: cached cells cannot forge; uncached cells match with probability ≤ maxDigestProb.
   have hper : ∀ tag : TagId,
-      Pr[fun mp => tag ∈ newForged mp.1 | lookups] ≤ maxDigestProb := by
+      Pr{let mp ← lookups}[tag ∈ newForged mp.1] ≤ maxDigestProb := by
     intro tag
     by_cases hcached : ∃ d, st.responses (tag, transcript.nonce) = some d
     · -- Cached column cell: a match would land in `honestOutputs`, so it is never forged.
       obtain ⟨d, hd⟩ := hcached
-      refine le_trans (le_of_eq ?_) zero_le
-      rw [probEvent_eq_zero_iff]
-      intro mp hmp hmem
+      refine le_of_eq_of_le ((prEvent_eq_zero_iff _ _).2 fun mp hmp hmem => ?_) zero_le
       simp only [hnewForged, List.mem_toFinset, List.mem_map, List.mem_filter,
         decide_eq_true_eq] at hmem
       obtain ⟨p, ⟨hpmem, hpauth, hpnh⟩, rfl⟩ := hmem
@@ -980,31 +564,29 @@ lemma authRFReaderStep_forge_le [Fintype TagId] [SampleableType Nonce] [Decidabl
         cases hc : st.responses (tag, transcript.nonce) with
         | none => rfl
         | some d => exact absurd hc (hcached d)
-      have hstepcore := probEvent_authRFQueryImpl_step_core (TagId := TagId) (Nonce := Nonce)
+      have hstepcore := prEvent_authRFQueryImpl_step_core (TagId := TagId) (Nonce := Nonce)
         (Digest := Digest) maxDigestProb hmax (tag, transcript.nonce) transcript.auth
         (Sum.inr transcript) st hnone
       have hreaderResp :
-          Pr[fun mp : List (TagId × Digest) × AuthIdealState TagId Nonce Digest =>
-              mp.2.responses (tag, transcript.nonce) = some transcript.auth | lookups] ≤
+          Pr{let mp ← lookups}[mp.2.responses (tag, transcript.nonce) = some transcript.auth] ≤
             maxDigestProb := by
-        have hrun : (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st =
-            (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-              transcript).run st := rfl
         have hpush :
-            Pr[fun p => p.2.responses (tag, transcript.nonce) = some transcript.auth |
-                (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-                  transcript).run st] =
-              Pr[fun mp : List (TagId × Digest) × AuthIdealState TagId Nonce Digest =>
-                mp.2.responses (tag, transcript.nonce) = some transcript.auth | lookups] := by
+            Pr{let p ← (authRFQueryImpl TagId Nonce Digest (Sum.inr transcript)).run st}[
+                p.2.responses (tag, transcript.nonce) = some transcript.auth] =
+              Pr{let mp ← lookups}[
+                mp.2.responses (tag, transcript.nonce) = some transcript.auth] := by
+          change Pr{let p ← (authRFReaderQueryImpl (TagId := TagId) (Nonce := Nonce)
+            (Digest := Digest) transcript).run st}[_] = _
           rw [hlookups]
           unfold authRFReaderQueryImpl authRFReaderLookups
           simp only [bind_pure_comp, StateT.run_bind, StateT.run_get, StateT.run_map,
-            StateT.run_set, map_pure]
-          rw [probEvent_map]
-          rfl
-        rw [← hpush, ← hrun]
+            StateT.run_set, map_pure, expect_norm]
+          -- The observations agree once the handler's state update is unfolded; the `change`
+          -- above left the event's binder typed at `AuthOracleSpec`, which `simp` does not unfold.
+          exact ExpectationWP.wp_congr _ fun _ => rfl
+        rw [← hpush]
         exact le_trans (le_add_right le_rfl) hstepcore
-      refine le_trans (probEvent_mono fun mp hmp hmem => ?_) hreaderResp
+      refine le_trans (prEvent_mono_of_support _ _ _ fun mp hmp hmem => ?_) hreaderResp
       simp only [hnewForged, List.mem_toFinset, List.mem_map, List.mem_filter,
         decide_eq_true_eq] at hmem
       obtain ⟨p, ⟨hpmem, hpauth, _⟩, rfl⟩ := hmem

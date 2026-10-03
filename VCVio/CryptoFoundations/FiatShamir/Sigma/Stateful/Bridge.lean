@@ -9,7 +9,7 @@ public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Stateful.Games
 public import VCVio.CryptoFoundations.SignatureAlg
-public import VCVio.OracleComp.QueryTracking.LoggingOracle
+public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.SubSpec
 

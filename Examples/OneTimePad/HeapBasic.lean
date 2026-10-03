@@ -5,8 +5,20 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.StateSeparating.DistEquiv
+public import VCVio.StateSeparating.MeasureDistEquiv
 public import VCVio.OracleComp.Constructions.BitVec
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.EvalDist.Monad.UniformTable
+public import ToMathlib.Probability.UniformOn
+public import ToMathlib.Data.FinEnum
+public import Init.Data.UInt.Lemmas
+public import Mathlib.Data.FinEnum
+public import Mathlib.Data.Fintype.Perm
+public import Mathlib.Data.Fintype.Pi
+public import Mathlib.Data.Fintype.Vector
 public import ToMathlib.Data.Heap
 
 /-!
@@ -45,8 +57,8 @@ adversaries.
 A second SSProve-style choice: the real handler's key is **not** sampled
 at `init` and stored in the heap. Instead, both `init`s are
 `pure Heap.empty`, and the real handler samples its key locally on the
-first call. This keeps the two `init`s `evalSPMF`-equal (so the simple
-"per-handler" `DistEquiv.of_step` constructor applies) without any heap
+first call. This keeps the two `init`s measure-equal (so the simple
+"per-handler" `MeasureDistEquiv.of_step` constructor applies) without any heap
 bijection bookkeeping, and is observationally equivalent for OTP
 because the key is single-use anyway.
 
@@ -58,12 +70,12 @@ because the key is single-use anyway.
   shared by both handlers.
 * `realImpl sp` and `idealImpl sp` are the gated real and ideal handlers
   on `UsedFlag`.
-* `realImpl_distEquiv_idealImpl : realImpl sp ≡ᵈ idealImpl sp` is the
-  unconditional `DistEquiv` headline, proved via
-  `QueryImpl.Stateful.DistEquiv.of_step`.
+* `realImpl_distEquiv_idealImpl : realImpl sp ≡ᵈ₀ idealImpl sp` is the
+  unconditional measure-equivalence headline, proved via
+  `QueryImpl.Stateful.MeasureDistEquiv.of_step`.
 * `encOnce sp m` is the canonical single-call adversary; the
-  `evalSPMF_run_encOnce_eq` corollary on it is now a one-line
-  consequence of the distributional equivalence.
+  `evalDist_run_encOnce_eq` corollary on it is a one-line
+  consequence of the equivalence.
 
 ## Comparison with `Examples.OneTimePad.Basic`
 
@@ -71,9 +83,8 @@ because the key is single-use anyway.
 `perfectSecrecyExperiment`, `Complete`, `perfectSecrecyAt`); it does not use
 the SSP handler layer. This file uses the state-separating handler layer
 directly, in the SSProve-style "handler as bounded-query gate" idiom.
-The arithmetic core, "XOR with a uniform key is uniform", is shared
-verbatim via `evalSPMF_map_bijective_uniform_cross` against the XOR
-involution. -/
+The arithmetic core, "XOR with a uniform key is uniform", is the uniform
+reindexing law `evalDist_bind_bijective_of_uniform` against the XOR involution. -/
 
 @[expose] public section
 
@@ -141,7 +152,7 @@ def realImpl (sp : ℕ) : QueryImpl.Stateful unifSpec (otpSpec sp) (Heap UsedFla
 
 The same identifier set as `realImpl` is shared on purpose: it lets the
 proof `realImpl_distEquiv_idealImpl` use the simple
-`QueryImpl.Stateful.DistEquiv.of_step` constructor (per-handler `evalSPMF`
+`QueryImpl.Stateful.MeasureDistEquiv.of_step` constructor (per-handler measure
 equality), avoiding any heap bijection bookkeeping. -/
 def idealImpl (sp : ℕ) : QueryImpl.Stateful unifSpec (otpSpec sp) (Heap UsedFlag)
   | .enc _ => StateT.mk fun (h : Heap UsedFlag) =>
@@ -168,14 +179,14 @@ private lemma bitVec_xor_right_bijective (sp : ℕ) (m : BitVec sp) :
 
 The arithmetic core of OTP perfect secrecy at the handler layer:
 on every (query, heap) pair, `realImpl`'s and `idealImpl`'s handlers
-have the same `evalSPMF`. Exposed as a stand-alone lemma so that
+have the same output measure. Exposed as a stand-alone lemma so that
 parallel-channel cutovers (e.g. `Examples.OneTimePad.HeapPar`) can
-feed it to `QueryImpl.Stateful.DistEquiv.parSum_congr` without re-running the
-case-split. -/
+feed it to `QueryImpl.Stateful.MeasureDistEquiv.parSum_congr` without re-running
+the case-split. -/
 
-/-- **Per-handler `evalSPMF` equality** between `realImpl sp` and
+/-- **Per-handler equality in distribution** between `realImpl sp` and
 `idealImpl sp`. On every input `(query, heap)`, the two handlers
-produce the same output distribution.
+produce the same distribution on replies and updated heaps.
 
 Splits on `h .used`:
 
@@ -184,31 +195,29 @@ Splits on `h .used`:
 * `h .used = false` (live): both handlers sample a uniform value
   before tagging the heap; the inner `do`-blocks differ only by an
   XOR-with-`m` on the sampled value, which `(· ^^^ m)` being a
-  bijection on `BitVec sp` makes distributionally invisible (via
-  `probOutput_bind_bijective_uniform_cross`). -/
-theorem realImpl_impl_evalSPMF_idealImpl (sp : ℕ) (q : (otpSpec sp).Domain)
+  bijection on `BitVec sp` makes invisible to the output measure (via
+  `evalDist_bind_bijective_of_uniform`). -/
+theorem realImpl_impl_evalDistEq_idealImpl (sp : ℕ) (q : (otpSpec sp).Domain)
     (h : Heap UsedFlag) :
-    𝒮[((realImpl sp) q).run h] =
-      𝒮[((idealImpl sp) q).run h] := by
+    ((realImpl sp) q).run h =ᵈ ((idealImpl sp) q).run h := by
+  let : MeasurableSpace ((otpSpec sp).Range q × Heap UsedFlag) := ⊤
+  refine EvalDistEq.of_evalDist_eq ?_
   cases q with
   | enc m =>
-    change 𝒮[if h .used then (pure (0#sp, h) : OracleComp unifSpec _)
+    change 𝒟[if h .used then (pure (0#sp, h) : OracleComp unifSpec _)
          else do let k ← ($ᵗ BitVec sp : ProbComp (BitVec sp));
                  pure (k ^^^ m, h.update .used true)] =
-      𝒮[if h .used then (pure (0#sp, h) : OracleComp unifSpec _)
+      𝒟[if h .used then (pure (0#sp, h) : OracleComp unifSpec _)
          else do let c ← ($ᵗ BitVec sp : ProbComp (BitVec sp));
                  pure (c, h.update .used true)]
     by_cases hused : h .used
     · rw [ite_eq_left hused, ite_eq_left hused]
     · rw [ite_eq_right hused, ite_eq_right hused]
-      -- `evalSPMF` of the two `do`-blocks coincide pointwise via the
-      -- XOR-by-`m` bijection on the uniform sample.
-      apply evalSPMF_ext
-      intro z
-      exact probOutput_bind_bijective_uniform_cross
-        (α := BitVec sp) (β := BitVec sp)
-        (· ^^^ m) (bitVec_xor_right_bijective sp m)
-        (fun y => pure (y, h.update .used true)) z
+      -- The two `do`-blocks have the same measure via the XOR-by-`m`
+      -- bijection on the uniform sample.
+      exact evalDist_bind_bijective_of_uniform ($ᵗ BitVec sp : ProbComp (BitVec sp))
+        (SampleableType.evalDist_bitVec sp) (· ^^^ m) (bitVec_xor_right_bijective sp m)
+        (fun y => pure (y, h.update .used true))
 
 /-! ## Unconditional distributional equivalence
 
@@ -221,12 +230,12 @@ single-call gate baked into both handlers, the real and ideal OTP
 handlers produce identical output distributions against every
 adversary, on every output type.
 
-Proof shape: `QueryImpl.Stateful.DistEquiv.of_step` from the default initial
+Proof shape: `QueryImpl.Stateful.MeasureDistEquiv.of_step` from the default initial
 heap state, using the per-(query, heap) handler equivalence
-`realImpl_impl_evalSPMF_idealImpl`. -/
+`realImpl_impl_evalDistEq_idealImpl`. -/
 theorem realImpl_distEquiv_idealImpl (sp : ℕ) :
     realImpl sp ≡ᵈ₀ idealImpl sp :=
-  QueryImpl.Stateful.DistEquiv.of_step (realImpl_impl_evalSPMF_idealImpl sp) Heap.empty
+  QueryImpl.Stateful.MeasureDistEquiv.of_step (realImpl_impl_evalDistEq_idealImpl sp) Heap.empty
 
 /-! ## Single-call adversary and corollary -/
 
@@ -245,16 +254,15 @@ def encOnce (sp : ℕ) (m : BitVec sp) : OracleComp (otpSpec sp) (BitVec sp) :=
 of `realImpl_distEquiv_idealImpl` by specialising the universal `≡ᵈ` to
 the canonical single-call adversary `encOnce sp m`.
 
-The same content, framed as `SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment`
-equivalence, is proved as `cipherGivenMsg_equiv` in
+The same content, framed as equality in distribution of
+`SymmEncAlg.perfectSecrecyCipherGivenMsgExperiment` rows, is proved as `ciphertextRowsEqual` in
 `Examples.OneTimePad.Basic`. The state-separating framing replaces the
 "reductive bijection" of that proof with the "per-call gate" idiom: a
 direct existence statement at the handler level rather than a
 per-message reduction. -/
-theorem evalSPMF_run_encOnce_eq (sp : ℕ) (m : BitVec sp) :
-    𝒮[(realImpl sp).runProb₀ (encOnce sp m)] =
-      𝒮[(idealImpl sp).runProb₀ (encOnce sp m)] :=
-  QueryImpl.Stateful.DistEquiv.runProb₀_evalSPMF_eq
-    (realImpl_distEquiv_idealImpl sp) (encOnce sp m)
+theorem evalDist_run_encOnce_eq (sp : ℕ) (m : BitVec sp) :
+    𝒟[(realImpl sp).runProb₀ (encOnce sp m)] =
+      𝒟[(idealImpl sp).runProb₀ (encOnce sp m)] :=
+  realImpl_distEquiv_idealImpl sp (encOnce sp m)
 
 end VCVio.StateSeparating.OneTimePad

@@ -7,8 +7,11 @@ Authors: Quang Dao
 module
 public import LatticeCrypto.Falcon.Scheme
 public import LatticeCrypto.HardnessAssumptions.ShortIntegerSolution
-public import VCVio.EvalDist.RenyiDivergence
-public import VCVio.OracleComp.Constructions.SampleableType
+public import ToMathlib.Probability.Divergence.Renyi
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.EvalDist.Measure
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Falcon Security
@@ -125,63 +128,39 @@ theorem verify_sign_correct (pk : PublicKey p) (sk : SecretKey p) (msg : List By
         (falconPSF p prims).eval pk x = c)
     (hsig : some sig ∈ support (sign p prims pk sk msg maxAttempts)) :
     verify p prims pk msg sig = true := by
+  suffices h : ∀ r ∈ support (sign p prims pk sk msg maxAttempts), ∀ sig, r = some sig →
+      verify p prims pk msg sig = true from h _ hsig sig rfl
+  clear sig hsig
   induction maxAttempts with
-  | zero =>
-    simp only [sign, support_pure, Set.mem_singleton_iff] at hsig
-    exact absurd hsig (by simp)
+  | zero => simp [sign]
   | succ k ih =>
-    rw [sign, mem_support_bind_iff] at hsig
-    obtain ⟨salt, _hsalt, hsig⟩ := hsig
-    rw [mem_support_bind_iff] at hsig
-    obtain ⟨r, hr, hsig⟩ := hsig
-    match r, hr, hsig with
-    | none, _hr, hsig => exact ih hsig
-    | some (s₁, s₂), hr, hsig =>
-      dsimp only at hsig
-      cases hcomp : prims.compress (rqToIntPolyCentered s₂) p.sbytelen with
-      | none =>
-        rw [hcomp] at hsig
-        exact ih hsig
-      | some comp =>
-        rw [hcomp] at hsig
-        simp only [support_pure, Set.mem_singleton_iff, Option.some.injEq] at hsig
-        subst hsig
-        -- The accepting attempt is a `trapdoorSample` output that passed the norm check.
-        set c := prims.hashToPointForPublicKey pk.h salt msg with hc
-        rw [signAttempt, mem_support_bind_iff] at hr
-        obtain ⟨x, hx, hr⟩ := hr
-        have hshort_eval :
-            (s₁, s₂) ∈ support ((falconPSF p prims).trapdoorSample pk sk c) ∧
-              (falconPSF p prims).isShort (s₁, s₂) = true := by
-          by_cases hshort : (falconPSF p prims).isShort x = true
-          · rw [ite_eq_left hshort, support_pure, Set.mem_singleton_iff, Option.some.injEq] at hr
-            subst hr
-            exact ⟨hx, hshort⟩
-          · rw [ite_eq_right hshort, support_pure, Set.mem_singleton_iff] at hr
-            exact absurd hr (by simp)
-        obtain ⟨hmem, hshort⟩ := hshort_eval
-        have heval : (falconPSF p prims).eval pk (s₁, s₂) = c := hpreimage c (s₁, s₂) hmem
-        -- `verify` decompresses to the same `s₂`, recomputes the same `s₁`, and runs the norm
-        -- check the attempt already passed.
-        have hdec := hcompress _ _ _ hcomp
-        unfold verify
-        simp only [hdec]
-        rw [toRq_rqToIntPolyCentered]
-        have hs1 : c - negacyclicMul s₂ pk.h = s₁ := by
-          rw [← heval]
-          change s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h = s₁
-          apply LatticeCrypto.Poly.ext_get_eq
-          intro i
-          calc (s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h).get i
-              = (s₁ + negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
-                LatticeCrypto.NegacyclicRing.coeff_sub (coeffRing p.n) _ _ i
-            _ = s₁.get i + (negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
-                congrArg (· - (negacyclicMul s₂ pk.h).get i)
-                  (LatticeCrypto.NegacyclicRing.coeff_add (coeffRing p.n) _ _ i)
-            _ = s₁.get i := add_sub_cancel_right _ _
-        change decide (pairL2NormSq (c - negacyclicMul s₂ pk.h) s₂ ≤ p.betaSquared) = true
-        rw [hs1]
-        exact hshort
+    prvcgen [sign, signAttempt, OracleComp.Necessary.Spec.ofSupport (sign p prims pk sk msg k),
+      OracleComp.Necessary.Spec.ofSupport ((falconPSF p prims).trapdoorSample pk sk _)]
+    -- A rejected attempt, or one that does not compress, retries.
+    case vc2 | vc3 => rename_i r hr sig hsig; exact ih r hr sig hsig
+    -- The accepting attempt is a `trapdoorSample` output that passed the norm check.
+    rename_i hx hshort comp hcomp sig hsig
+    cases hsig
+    obtain ⟨s₁, s₂⟩ := x
+    set c := prims.hashToPointForPublicKey pk.h salt msg
+    -- `verify` decompresses to the same `s₂`, recomputes the same `s₁`, and runs the norm
+    -- check the attempt already passed.
+    have hs1 : c - negacyclicMul s₂ pk.h = s₁ := by
+      rw [← hpreimage c (s₁, s₂) hx]
+      change s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h = s₁
+      apply LatticeCrypto.Poly.ext_get_eq
+      intro i
+      calc (s₁ + negacyclicMul s₂ pk.h - negacyclicMul s₂ pk.h).get i
+          = (s₁ + negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
+            LatticeCrypto.NegacyclicRing.coeff_sub (coeffRing p.n) _ _ i
+        _ = s₁.get i + (negacyclicMul s₂ pk.h).get i - (negacyclicMul s₂ pk.h).get i :=
+            congrArg (· - (negacyclicMul s₂ pk.h).get i)
+              (LatticeCrypto.NegacyclicRing.coeff_add (coeffRing p.n) _ _ i)
+        _ = s₁.get i := add_sub_cancel_right _ _
+    simp only [verify, hcompress _ _ _ hcomp, toRq_rqToIntPolyCentered]
+    change decide (pairL2NormSq (c - negacyclicMul s₂ pk.h) s₂ ≤ p.betaSquared) = true
+    rw [hs1]
+    exact hshort
 
 /-! ### NTRU-SIS Hardness Assumption -/
 
@@ -283,7 +262,9 @@ structure SamplerQuality (pk : PublicKey p) (sk : SecretKey p) where
   /-- Rényi divergence bound: for every target `c`, the Rényi divergence of order `a`
   between the concrete sampler and the ideal Gaussian is at most `R`. -/
   quality : ∀ c : Rq p.n,
-    renyiDiv renyiOrder ((falconPSF p prims).trapdoorSample pk sk c) (idealSampler c) ≤ bound
+    letI : MeasurableSpace (Rq p.n × Rq p.n) := ⊤
+    InformationTheory.renyiDiv renyiOrder 𝒟[(falconPSF p prims).trapdoorSample pk sk c]
+      𝒟[idealSampler c] ≤ bound
   /-- Ideal sampler correctness: the ideal Gaussian always produces valid short preimages.
   This follows from the lattice geometry when `σ ≥ η_ε(Λ^⊥) · ‖B̃‖_GS`. -/
   idealCorrect : ∀ c : Rq p.n,

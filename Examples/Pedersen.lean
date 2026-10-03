@@ -7,7 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.CryptoFoundations.CommitmentScheme
 public import VCVio.CryptoFoundations.HardnessAssumptions.DiffieHellman
-public import VCVio.ProgramLogic.NotationCore
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Pedersen Commitment Scheme
@@ -60,13 +60,9 @@ variable {g : G}
 
 theorem correct [SampleableType F] [DecidableEq G] :
     (pedersenCommit (F := F) g).PerfectlyCorrect := by
-  intro pp _hpp m cd hmem
-  have hmem' : cd ∈ support (do
-      let d ← ($ᵗ F); pure ((d : F) • g + m • pp, d)) := hmem
-  simp only [support_bind, support_pure, Set.mem_iUnion,
-             Set.mem_singleton_iff] at hmem'
-  obtain ⟨d', -, rfl, rfl⟩ := hmem'
-  change decide ((d' : F) • g + m • pp = d' • g + m • pp) = true
+  intro pp _hpp m
+  dsimp only [pedersenCommit]
+  prvcgen
   simp
 
 /-! ## Perfect hiding -/
@@ -94,14 +90,20 @@ the generator bijection `d ↦ d • g` with translation `· + c` gives a biject
 theorem perfectlyHiding [SampleableType F] [SampleableType G] [DecidableEq G]
     [Finite F] (hg : Function.Bijective (· • g : F → G)) :
     (pedersenCommit (F := F) g).PerfectlyHiding := by
-  let _ : Fintype F := Fintype.ofFinite F
+  let : MeasurableSpace F := ⊤
+  let : MeasurableSpace G := ⊤
+  have : Finite G := Finite.of_surjective _ hg.2
+  have : Nonempty F := ⟨0⟩
+  have : Nonempty G := ⟨0⟩
+  have huniform (m : F) (pp : G) :
+      𝒟[(fun d : F => d • g + m • pp) <$> ($ᵗ F)] = 𝒟[$ᵗ G] := by
+    simpa only [map_eq_bind_pure_comp, Function.comp_def, bind_pure] using
+      evalDist_bind_bijective_uniform_cross ($ᵗ F) ($ᵗ G)
+        SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
+        _ (commit_fst_bijective hg pp m) pure
   intro pp _hpp m₁ m₂
   rw [commit_fst_eq_map, commit_fst_eq_map]
-  have h₁ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
-    (fun d => d • g + m₁ • pp) (commit_fst_bijective hg pp m₁)
-  have h₂ := evalSPMF_map_bijective_uniform_cross (α := F) (β := G)
-    (fun d => d • g + m₂ • pp) (commit_fst_bijective hg pp m₂)
-  exact h₁.trans h₂.symm
+  exact EvalDistEq.of_evalDist_eq ((huniform m₁ pp).trans (huniform m₂ pp).symm)
 
 /-! ## Computational binding reduces to DLog -/
 
@@ -157,8 +159,8 @@ successful DLog solver. Specifically, `Pr[binding wins] ≤ Pr[DLog wins]`. -/
 theorem binding_le_dlog [DecidableEq F] [SampleableType F] [DecidableEq G]
     (hg : Function.Bijective (· • g : F → G))
     (binder : BindingAdversary G F G F) :
-    Pr[= true | (pedersenCommit g).bindingExperiment binder] ≤
-    Pr[= true | dlogExperiment g (dlogReduction binder)] := by
+    𝒟[(pedersenCommit g).bindingExperiment binder] {true} ≤
+    𝒟[dlogExperiment g (dlogReduction binder)] {true} := by
   let base : ProbComp (F × (G × F × F × F × F)) := do
     let x ← $ᵗ F
     let out ← binder (x • g)
@@ -172,19 +174,21 @@ theorem binding_le_dlog [DecidableEq F] [SampleableType F] [DecidableEq G]
           (d₁ - d₂) / (m₂ - m₁)
         else 0) = x
   have hbinding :
-      Pr[= true | (pedersenCommit g).bindingExperiment binder] = Pr[ bindingWin | base] := by
+      𝒟[(pedersenCommit g).bindingExperiment binder] {true} = Pr{let z ← base}[bindingWin z] := by
     rw [show (pedersenCommit g).bindingExperiment binder =
         (fun z => decide (bindingWin z)) <$> base by
-      simp [CommitmentScheme.bindingExperiment, pedersenCommit, base, bindingWin, Bool.and_assoc]]
-    grind
+      simp [CommitmentScheme.bindingExperiment, pedersenCommit, base, bindingWin, Bool.and_assoc],
+      ← prEvent_eq_evalDist_singleton _ true, prEvent_map]
+    simp only [decide_eq_true_eq]
   have hdlog :
-      Pr[= true | dlogExperiment g (dlogReduction binder)] = Pr[ dlogWin | base] := by
+      𝒟[dlogExperiment g (dlogReduction binder)] {true} = Pr{let z ← base}[dlogWin z] := by
     rw [show dlogExperiment g (dlogReduction binder) = (fun z => decide (dlogWin z)) <$> base by
-      simp [DiffieHellman.dlogExperiment, dlogReduction, base, dlogWin]]
-    grind
+      simp [DiffieHellman.dlogExperiment, dlogReduction, base, dlogWin],
+      ← prEvent_eq_evalDist_singleton _ true, prEvent_map]
+    simp only [decide_eq_true_eq]
   rw [hbinding, hdlog]
-  exact _root_.probEvent_mono (mx := base) (fun z _ hwin => by
+  exact prEvent_mono _ _ _ fun z hwin => by
     rcases z with ⟨x, ⟨c, m₁, d₁, m₂, d₂⟩⟩
-    simpa [bindingWin, dlogWin] using bindingWin_implies_dlogWin (g := g) hg hwin)
+    simpa [bindingWin, dlogWin] using bindingWin_implies_dlogWin (g := g) hg hwin
 
 end pedersenCommit

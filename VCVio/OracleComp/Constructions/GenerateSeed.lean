@@ -6,7 +6,8 @@ Authors: Devon Tuma, Quang Dao
 
 module
 public import VCVio.OracleComp.Constructions.Replicate
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import VCVio.OracleComp.QueryTracking.Structures
 public import VCVio.OracleComp.QueryTracking.CostModel
 
@@ -159,56 +160,39 @@ lemma tail_length_of_mem_support_generateSeed
   simp only [hus, List.length_cons, List.tail_cons] at hlen ⊢
   omega
 
-lemma probOutput_pop_none_eq_zero_of_count_pos [IsUniformSpec spec]
-    (i : ι) (hpos : 0 < qc i * js.count i) :
-    Pr[= none | (fun seed => seed.pop i) <$> generateSeed spec qc js] = 0 := by
-  rw [probOutput_eq_zero_iff]
-  intro hmem
-  simp only [support_map] at hmem
-  obtain ⟨seed, hseed, hpop⟩ := hmem
-  exact ne_nil_of_mem_support_generateSeed spec qc js seed i hseed hpos
-    (by simpa [QuerySeed.pop_eq_none_iff] using hpop)
-
-lemma probOutput_pop_some_eq_probOutput_prepend
-    (i : ι) (u : spec.Range i) (rest : QuerySeed spec) :
-    Pr[= some (u, rest) | (fun seed => seed.pop i) <$> generateSeed spec qc js] =
-      Pr[= rest.prependValues [u] | generateSeed spec qc js] := by
-  simp only [map_eq_bind_pure_comp, Function.comp_def]
-  rw [probOutput_bind_eq_mul (rest.prependValues [u]) fun seed' _ hs =>
-    (QuerySeed.eq_prependValues_of_pop_eq_some ((mem_support_pure_iff' _ _).mp hs)).symm]
-  simp
-
 @[simp] lemma finSupport_generateSeed_ne_empty [DecidableEq (QuerySeed spec)] :
-    finSupport (generateSeed spec qc js) ≠ ∅ :=
-  (finSupport_nonempty_of_liftM_PMF _).ne_empty
+    finSupport (generateSeed spec qc js) ≠ ∅ := by
+  rw [← Finset.nonempty_iff_ne_empty, ← Finset.coe_nonempty, coe_finSupport]
+  exact OracleComp.support_nonempty _
 
 /-- Factor the probability of sampling a fixed `seed` for `j :: js` into the probability of its
 leading `qc j` answers at `j` times the probability of the remaining seed for `js`. The split
 `rest.prependValues xs = seed` is unique because `prependValues` of a length-`qc j` block is
-injective, so the outer and inner binds each collapse to a single summand. -/
-private lemma probOutput_generateSeed_cons_eq_mul (seed rest : QuerySeed spec)
+injective, so each bind has a single intermediate value leading to `seed`. -/
+private lemma prEvent_generateSeed_cons_eq_mul (seed rest : QuerySeed spec)
     (xs : List (spec.Range j)) (hxs_len : xs.length = qc j)
     (hseed_eq : rest.prependValues xs = seed) :
-    Pr[= seed | generateSeed spec qc (j :: js)] =
-      Pr[= xs | replicate (qc j) ($ᵗ spec.Range j)] *
-        Pr[= rest | generateSeed spec qc js] := by
+    Pr{let s ← generateSeed spec qc (j :: js)}[s = seed] =
+      Pr{let v ← replicate (qc j) ($ᵗ spec.Range j)}[v = xs] *
+        Pr{let s ← generateSeed spec qc js}[s = rest] := by
+  classical
   obtain ⟨hxs_eq, hrest_eq⟩ := QuerySeed.eq_of_prependValues_eq seed rest xs hxs_len hseed_eq
-  have hinner : Pr[= seed | generateSeed spec qc js >>=
-      fun rest' => (return rest'.prependValues xs : ProbComp (QuerySeed spec))] =
-      Pr[= rest | generateSeed spec qc js] :=
-    (probOutput_bind_eq_mul (y := seed) rest fun rest' _ hs => hrest_eq ▸
-      (QuerySeed.eq_of_prependValues_eq seed rest' xs hxs_len
-        ((mem_support_pure_iff' (m := ProbComp) _ _).mp hs)).2).trans (by simp [hseed_eq])
-  rw [generateSeed_cons, ← hinner]
-  refine probOutput_bind_eq_mul (y := seed) xs fun xs' hxs' hseed' => ?_
+  have hinner : Pr{let s ← generateSeed spec qc js}[s.prependValues xs = seed] =
+      Pr{let s ← generateSeed spec qc js}[s = rest] :=
+    prEvent_congr _ _ _ fun s => ⟨fun hs => hrest_eq ▸
+      (QuerySeed.eq_of_prependValues_eq seed s xs hxs_len hs).2, fun hs => hs ▸ hseed_eq⟩
+  rw [generateSeed_cons, prEvent_bind, ← hinner]
+  refine (prEvent_bind_eq_mul_of_unique _ _ xs seed fun xs' hxs' hseed' => ?_).trans (by simp)
   obtain ⟨rest', _, hpure⟩ := (mem_support_bind_iff _ _ _).mp hseed'
   exact (QuerySeed.eq_of_prependValues_eq seed rest' xs'
     (support_replicate .. ▸ hxs').1 ((mem_support_pure_iff' (m := ProbComp) _ _).mp hpure)).1.trans
     hxs_eq.symm
 
-lemma probOutput_generateSeed [∀ t, Fintype (spec.Range t)] (seed : QuerySeed spec)
+/-- Every seed in the support of `generateSeed spec qc js` is drawn with probability the inverse
+of the number of such seeds, `∏ j ∈ js, |spec.Range j| ^ qc j`. -/
+lemma prEvent_generateSeed [∀ t, Fintype (spec.Range t)] (seed : QuerySeed spec)
     (h : seed ∈ support (generateSeed spec qc js)) :
-    Pr[= seed | generateSeed spec qc js] =
+    Pr{let s ← generateSeed spec qc js}[s = seed] =
       (↑(js.map (fun j => (Fintype.card (spec.Range j)) ^ qc j)).prod)⁻¹ := by
   induction js generalizing seed with
   | nil =>
@@ -222,37 +206,39 @@ lemma probOutput_generateSeed [∀ t, Fintype (spec.Range t)] (seed : QuerySeed 
       exists_split_of_length_cons spec qc j js hlen
     have hrest_mem : rest ∈ support (generateSeed spec qc js) := by
       simpa [support_generateSeed spec qc js] using hrest_len
-    rw [probOutput_generateSeed_cons_eq_mul spec qc j js seed rest xs hxs_len hseed_eq,
-      probOutput_replicate_uniformSample hxs_len, ih rest hrest_mem,
+    rw [prEvent_generateSeed_cons_eq_mul spec qc j js seed rest xs hxs_len hseed_eq,
+      SampleableType.prEvent_replicate_uniformSample hxs_len, ih rest hrest_mem,
       inv_natCast_pow_mul_inv_list_prod qc j js fun j => Fintype.card (spec.Range j)]
 
-lemma probOutput_generateSeed' [∀ t, Finite (spec.Range t)] [DecidableEq (QuerySeed spec)]
-    (seed : QuerySeed spec) (h : seed ∈ support (generateSeed spec qc js)) :
-    Pr[= seed | generateSeed spec qc js] =
-      1 / (finSupport (generateSeed spec qc js)).card := by
-  have := fun t => Fintype.ofFinite (spec.Range t)
-  rw [probOutput_generateSeed spec qc js seed h]
-  exact probOutput_eq_inv_finSupport_card_of_liftM_PMF fun s hs =>
-    probOutput_generateSeed spec qc js s hs
-
-lemma evalSPMF_generateSeed_eq_of_countEq
+/-- The seed distribution depends only on the per-oracle answer counts `qc i * js.count i`. -/
+lemma evalDistEq_generateSeed_of_countEq
     (qc' : ι → ℕ) (js' : List ι)
     (hcount : ∀ i, qc i * js.count i = qc' i * js'.count i) :
-    𝒮[generateSeed spec qc js] = 𝒮[generateSeed spec qc' js'] := by
+    generateSeed spec qc js =ᵈ generateSeed spec qc' js' := by
   classical
-  let _ : DecidableEq (QuerySeed spec) := Classical.decEq _
+  let : ∀ t, Fintype (spec.Range t) := fun t => Fintype.ofFinite _
   have hsupp : support (generateSeed spec qc js) = support (generateSeed spec qc' js') := by
     simp only [support_generateSeed, hcount]
-  ext seed
-  rw [← probOutput_def, ← probOutput_def]
+  -- The number of seeds is a product over any finite set of oracles containing the list.
+  have hprod : ∀ (q : ι → ℕ) (l : List ι) (U : Finset ι), l.toFinset ⊆ U →
+      (l.map fun j => Fintype.card (spec.Range j) ^ q j).prod =
+        ∏ i ∈ U, Fintype.card (spec.Range i) ^ (q i * l.count i) := by
+    intro q l U hU
+    rw [Finset.prod_list_map_count]
+    refine Finset.prod_subset hU (fun i _ hi => ?_) |>.symm.trans ?_ |>.symm
+    · rw [List.count_eq_zero_of_not_mem (by simpa using hi), mul_zero, pow_zero]
+    · exact Finset.prod_congr rfl fun i _ => by rw [← pow_mul]
+  refine evalDistEq_of_forall_prEvent_eq_output fun seed => ?_
   by_cases hmem : seed ∈ support (generateSeed spec qc js)
-  · have hfin : finSupport (generateSeed spec qc js) = finSupport (generateSeed spec qc' js') :=
-      finSupport_eq_of_support_eq_coe (by rw [hsupp, coe_finSupport])
-    rw [probOutput_generateSeed' spec qc js seed hmem,
-      probOutput_generateSeed' spec qc' js' seed (hsupp ▸ hmem)]
-    simp [hfin]
-  · rw [(probOutput_eq_zero_iff (generateSeed spec qc js) seed).2 hmem,
-      (probOutput_eq_zero_iff (generateSeed spec qc' js') seed).2 (hsupp ▸ hmem)]
+  · rw [prEvent_generateSeed spec qc js seed hmem,
+      prEvent_generateSeed spec qc' js' seed (hsupp ▸ hmem),
+      hprod qc js (js.toFinset ∪ js'.toFinset) Finset.subset_union_left,
+      hprod qc' js' (js.toFinset ∪ js'.toFinset)
+        Finset.subset_union_right]
+    simp only [hcount]
+  · rw [prEvent_eq_zero_of_forall_mem_support _ (· = seed) fun s hs hs' => hmem (hs' ▸ hs),
+      prEvent_eq_zero_of_forall_mem_support _ (· = seed) fun s hs hs' =>
+        hmem (hsupp ▸ hs' ▸ hs)]
 
 /-- Prepending one answer `u` at `t` and decrementing the budget at `t` is a support-preserving
 bijection: the seed `s'.prependValues [u]` lies in the support of `generateSeed spec qc js` exactly
@@ -294,14 +280,16 @@ private lemma inv_natCast_list_prod_map_eq_inv_mul {ι : Type*} [DecidableEq ι]
     Nat.cast_mul, Nat.cast_mul, ENNReal.mul_inv (Or.inr (ENNReal.mul_ne_top
       (ENNReal.natCast_ne_top _) (ENNReal.natCast_ne_top _))) (Or.inl (ENNReal.natCast_ne_top _))]
 
-lemma probOutput_generateSeed_prependValues [IsUniformSpec spec]
+/-- Prepending one answer `u` at `t` to a seed multiplies its probability by `|spec.Range t|⁻¹`
+against the seed distribution with the answer count at `t` decremented. -/
+lemma prEvent_generateSeed_prependValues [∀ t, Fintype (spec.Range t)]
     {t : ι} (u : spec.Range t) (s' : QuerySeed spec)
     (hpos : 0 < qc t * js.count t) :
-    Pr[= s'.prependValues [u] | generateSeed spec qc js] =
+    Pr{let s ← generateSeed spec qc js}[s = s'.prependValues [u]] =
       (↑(Fintype.card (spec.Range t)))⁻¹ *
-        Pr[= s' | generateSeed spec
+        Pr{let s ← (generateSeed spec
           (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1))
-          js.dedup] := by
+          js.dedup)}[s = s'] := by
   set N : ι → ℕ := fun i => qc i * js.count i
   set qc_red := Function.update N t (N t - 1)
   have ht_mem : t ∈ js := List.count_pos_iff.mp (Nat.pos_of_mul_pos_left hpos)
@@ -313,15 +301,49 @@ lemma probOutput_generateSeed_prependValues [IsUniformSpec spec]
     have hmem_canon : s'.prependValues [u] ∈ support (generateSeed spec N js.dedup) := by
       rw [support_generateSeed, Set.mem_ofPred_eq] at hmem ⊢
       exact fun i => (hmem i).trans (hcount i)
-    rw [probOutput_congr rfl (evalSPMF_generateSeed_eq_of_countEq spec qc js N js.dedup hcount),
-      probOutput_generateSeed spec N js.dedup _ hmem_canon,
-      probOutput_generateSeed spec qc_red js.dedup _ hmem_red]
+    rw [(evalDistEq_generateSeed_of_countEq spec qc js N js.dedup hcount).prEvent_eq _,
+      prEvent_generateSeed spec N js.dedup _ hmem_canon,
+      prEvent_generateSeed spec qc_red js.dedup _ hmem_red]
     refine inv_natCast_list_prod_map_eq_inv_mul js.dedup
       (List.mem_dedup.mpr ht_mem) _ _ _ ?_ fun j hj => ?_
     · simpa only [qc_red, Function.update_self] using (mul_pow_sub_one hpos.ne' _).symm
     · simp only [qc_red, Function.update_of_ne ((List.nodup_dedup js).mem_erase_iff.mp hj).1]
-  · rw [(probOutput_eq_zero_iff _ _).2 hmem,
-      (probOutput_eq_zero_iff _ _).2 (mt supp_iff.mpr hmem), mul_zero]
+  · rw [prEvent_eq_zero_of_forall_mem_support _ (· = s'.prependValues [u])
+        fun s hs hs' => hmem (hs' ▸ hs),
+      prEvent_eq_zero_of_forall_mem_support _ (· = s') fun s hs hs' =>
+        hmem (supp_iff.mpr (hs' ▸ hs)), mul_zero]
+
+/-- When oracle `t` has a positive answer count, a generated seed is a uniform head answer at `t`
+prepended to an independently generated seed whose count at `t` is decremented. -/
+lemma evalDistEq_generateSeed_prependValues {t : ι}
+    (hpos : 0 < qc t * js.count t) :
+    generateSeed spec qc js =ᵈ (do
+      let u ← $ᵗ spec.Range t
+      let s' ← generateSeed spec
+        (Function.update (fun i => qc i * js.count i) t (qc t * js.count t - 1)) js.dedup
+      return s'.prependValues [u]) := by
+  classical
+  let : ∀ t, Fintype (spec.Range t) := fun t => Fintype.ofFinite _
+  refine evalDistEq_of_forall_prEvent_eq_output fun seed => ?_
+  rcases hst : seed t with _ | ⟨u, us⟩
+  · rw [prEvent_eq_zero_of_forall_mem_support _ (· = seed) fun s hs hss => ?_,
+      prEvent_eq_zero_of_forall_mem_support _ (· = seed) fun s hs hss => ?_]
+    · obtain ⟨u', _, s', _, rfl⟩ := by simpa using hs
+      simp [← hss] at hst
+    · exact ne_nil_of_mem_support_generateSeed spec qc js s t hs hpos (hss ▸ hst)
+  · obtain ⟨s₀, rfl⟩ : ∃ s₀ : QuerySeed spec, s₀.prependValues [u] = seed :=
+      ⟨_, QuerySeed.eq_prependValues_of_pop_eq_some
+        (QuerySeed.pop_eq_some_of_cons seed t u us hst)⟩
+    rw [prEvent_generateSeed_prependValues spec qc js u _ hpos, prEvent_bind,
+      prEvent_bind_eq_mul_of_unique _ _ u _ fun u' _ hs => ?_,
+      SampleableType.prEvent_uniformSample_eq_singleton]
+    · simp only [expect_norm]
+      exact congrArg _ (prEvent_congr _ _ _ fun s' => ⟨fun h => h ▸ rfl, fun h =>
+        (Prod.ext_iff.mp (QuerySeed.prependValues_singleton_injective t (a₁ := (u, s'))
+          (a₂ := (u, s₀)) h)).2⟩)
+    · obtain ⟨s', _, hpure⟩ := (mem_support_bind_iff _ _ _).mp hs
+      exact (Prod.ext_iff.mp (QuerySeed.prependValues_singleton_injective t (a₁ := (u', s'))
+        (a₂ := (u, s₀)) ((mem_support_pure_iff' (m := ProbComp) _ _).mp hpure))).1
 
 end lemmas
 

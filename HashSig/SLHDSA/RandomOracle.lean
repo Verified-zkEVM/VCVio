@@ -9,7 +9,9 @@ module
 public import HashSig.SLHDSA.Scheme
 public import VCVio.CryptoFoundations.SignatureAlg
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
-public import VCVio.OracleComp.SimSemantics.StateT.BundledSemantics
+public import VCVio.OracleComp.ProbCompLift
+public import VCVio.EvalDist.Defs.Semantics.Core
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # SLH-DSA in the public-hash random-oracle model
@@ -188,42 +190,11 @@ theorem slhdsaConcreteAlg_perfectlyComplete (prims : Primitives p)
     [SampleableType prims.PkSeed] [SampleableType prims.Y] [DecidableEq prims.Y] :
     (slhdsaConcreteAlg hd prims).PerfectlyComplete ProbCompRuntime.probComp := by
   intro msg
-  set mx : ProbComp Bool := do
-    let (pk, sk) ← (slhdsaConcreteAlg hd prims).keygen
-    let sig ← (slhdsaConcreteAlg hd prims).sign pk sk msg
-    (slhdsaConcreteAlg hd prims).verify pk msg sig with hmx
-  have huniq : ∀ y ∈ support mx, y = true := by
-    intro y hy
-    rw [hmx] at hy
-    rw [slhdsaConcreteAlg_components hd prims] at hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨⟨pk, sk⟩, hpksk, hy⟩ := hy
-    rw [mem_support_bind_iff] at hy
-    obtain ⟨sig, hsig, hy⟩ := hy
-    simp only [support_pure, Set.mem_singleton_iff] at hy
-    subst hy
-    rw [mem_support_bind_iff] at hpksk
-    obtain ⟨skSeed, -, hpksk⟩ := hpksk
-    rw [mem_support_bind_iff] at hpksk
-    obtain ⟨skPrf, -, hpksk⟩ := hpksk
-    rw [mem_support_bind_iff] at hpksk
-    obtain ⟨pkSeed, -, hpksk⟩ := hpksk
-    simp only [support_pure, Set.mem_singleton_iff] at hpksk
-    rw [mem_support_bind_iff] at hsig
-    obtain ⟨addrnd, -, hsig⟩ := hsig
-    simp only [support_pure, Set.mem_singleton_iff] at hsig
-    subst hsig
-    have hpk : pk = (slhKeygenInternal hd prims skSeed skPrf pkSeed).1 :=
-      congrArg Prod.fst hpksk
-    have hsk : sk = (slhKeygenInternal hd prims skSeed skPrf pkSeed).2 :=
-      congrArg Prod.snd hpksk
-    subst hpk; subst hsk
-    exact slhVerifyInternal_slhSignInternal hd prims (emptyContextMessage msg)
-      skSeed skPrf pkSeed addrnd
-  rw [ProbCompRuntime.probComp_evalDist]
-  exact (MeasureTheory.ae_iff_prob_eq_one (p := fun y ↦ y = true)
-    Measurable.of_discrete).mp
-      (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete huniq)
+  rw [ProbCompRuntime.probComp_evalDist, ← prEvent_eq_evalDist_singleton,
+    slhdsaConcreteAlg_components hd prims]
+  dsimp only
+  prvcgen
+  exact slhVerifyInternal_slhSignInternal hd prims _ _ _ _ _
 
 /-! ### One shared lazy-random-oracle runtime -/
 

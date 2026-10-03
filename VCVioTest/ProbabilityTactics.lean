@@ -5,344 +5,264 @@ Authors: Devon Tuma
 -/
 
 module
+
 public import VCVio
 
 /-!
-# Probability tactic benchmark
+# Probability tactic gate
 
-A curated, deliberately broad corpus of "high-school / intro-crypto-prerequisite" facts about
-**outcome probabilities, event probabilities, failure probabilities, support, and evaluation
-distributions**, each discharged by a single *terminal* tactic — `simp` or `grind`. The file
-**gates `simp` and `grind` as stable terminal tactics** over this surface, so a regression in
-either surfaces here in isolation rather than deep inside a downstream proof.
+Families of outcome, event, success-mass and distribution facts, stated with `𝒟[…]` and
+`Pr{…}[…]` over `ProbComp`, each closed by one terminal tactic under the rules of *Normal forms
+and the tactic contract* in `docs/agents/probability.md`. Where a fact closes by both `simp` and
+`grind` both are kept; where only one closes, a dated `fail_if_success` guard records the gap and
+expires when the set improves. One guard covers a family of same-shaped entries when the family is
+named in the section note. Bind-swap and shared-prefix congruence go through `prrw`.
 
-Conventions (see *Normal forms and the tactic contract* in `docs/agents/probability.md`):
-* **Mirrors.** Where a fact is closed by *both* `simp` and `grind`, both are kept, so each tactic
-  stays exercised on that shape. This is the bulk of the file.
-* **Gap pairs.** Where only one tactic closes a goal, the entry is a *gap pair*: a
-  `fail_if_success (tac; done)` guard on its own line, then the working closer, with a dated
-  `gap(tac, date): reason` comment. The guard errors the moment the set improves, so the PR that
-  closes a gap retires the guard. One guard covers a family of same-shaped entries when the
-  family is named in the section note.
-* **One terminal call.** A `;`/multi-line script appears only as the closer of a gap pair.
-* **Only stable tactics.** No example hangs or explodes. `grind` reasons well about symbolic /
-  atomic / membership / equiprobability / `pure`+`bind`-normalised goals; computing a concrete value
-  or factoring a structured computation (`<*>`, a non-trivial `<$>`/`if`) is `simp`'s job.
-
-`grind` normalises monadic structure (`bind_pure`, `pure_bind`, `bind_assoc`, `map_pure` are
-`@[grind =]`), so `bind`-`pure`-shaped goals close by `grind`; `Set.Nonempty` bridges
-(`probFailure_eq_one_iff_not_nonempty`, `support_uniformSample_nonempty`) keep `Pr[⊥]=1` reasoning
-reachable. `ProbComp` itself never fails — interesting `Pr[⊥ | _]` lives in `OptionT ProbComp`.
+Two gaps recur across the file and are named once here. `grind` does no `ℝ≥0∞` or cardinality
+arithmetic and has no measure-side rules for Dirac or uniform masses, so beyond the lossless
+event it closes only the symbolic families (equiprobability after a rewrite, pushforward of an
+event, structural `bind`/`pure` collapse). Finite counting leaves `#{x | p x} / n` unevaluated;
+`simp [Finset.filter_eq']` evaluates singleton filters and `rfl` the rest.
 -/
 
 public section
 
-open OracleComp ProbComp ENNReal
+open MeasureTheory ProbabilityTheory OracleComp OracleSpec
+open scoped ENNReal
 
 namespace VCVioTest.ProbabilityTactics
 
-/-! # 1. Outcome probability — `Pr[= x | _]` -/
+/-! ## 1. Outcome masses — `𝒟[mx] {x}`
 
-/-! ## Deterministic outcomes
-A `pure` computation puts all of its mass on its value. -/
+### Deterministic outcomes
+A `pure` computation is the Dirac measure at its value.
 
-example (x : Bool) : Pr[= x | (pure x : ProbComp Bool)] = 1 := by simp
-example (x : Bool) : Pr[= x | (pure x : ProbComp Bool)] = 1 := by grind
+gap(simp): a Dirac singleton normalises to `Pi.single x 1 y`, which `simp` does not turn back into
+an `if`. -/
 
-example (x y : Bool) : Pr[= x | (pure y : ProbComp Bool)] = if x = y then 1 else 0 := by simp
-example (x y : Bool) : Pr[= x | (pure y : ProbComp Bool)] = if x = y then 1 else 0 := by grind
-
-example (x : Bool) : Pr[= x | (pure x : ProbComp Bool)] ≠ 0 := by simp
-example (x : Bool) : Pr[= x | (pure x : ProbComp Bool)] ≠ 0 := by grind
-
-/-! ## Uniform draws
-Every outcome of a uniform draw over an `n`-element type has probability `1 / n`.
-
-gap(grind): computing a concrete value needs `Fintype.card`/`ℝ≥0∞` arithmetic `grind` does not do
-(it fails fast); `simp` evaluates it. The first entry carries the guard for the family. Symbolic
-facts (`≠ 0`, equiprobability) close by both. -/
-
-example : Pr[= true | $ᵗ Bool] = 2⁻¹ := by
-  fail_if_success grind  -- gap(grind, 2026-09-03): concrete values, covers this section
+example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] {x} = 1 := by
+  fail_if_success grind  -- gap(grind, 2026-09-26): Dirac masses, covers the section
   simp
-example : Pr[= (0 : Fin 6) | $ᵗ (Fin 6)] = 6⁻¹ := by simp
+example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] = Measure.dirac x := by simp
+example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] {x} ≠ 0 := by simp
+example (x : Bool) : Pr{let y ← (pure x : ProbComp Bool)}[y = x] = 1 := by simp
 
-example : Pr[= true | $ᵗ Bool] ≠ 0 := by simp
-example : Pr[= true | $ᵗ Bool] ≠ 0 := by grind
+example (x y : Bool) : 𝒟[(pure y : ProbComp Bool)] {x} = if x = y then 1 else 0 := by
+  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): stops at `Pi.single y 1 x`
+  simp [Pi.single_apply, eq_comm]
 
-example (x y : Fin 6) : Pr[= x | $ᵗ (Fin 6)] = Pr[= y | $ᵗ (Fin 6)] := by simp
-example (x y : Fin 6) : Pr[= x | $ᵗ (Fin 6)] = Pr[= y | $ᵗ (Fin 6)] := by grind
+/-! ### Uniform draws
+Every outcome of a uniform draw over an `n`-element type has mass `1 / n`. `Sum` carries no
+`MeasurableSingletonClass` instance, so its outcome is stated as a `Pr{…}` event. -/
 
-example : Pr[= true | $ᵗ Bool] = Pr[= false | $ᵗ Bool] := by simp
-example : Pr[= true | $ᵗ Bool] = Pr[= false | $ᵗ Bool] := by grind
-
-example : Pr[= (3 : ZMod 5) | $ᵗ (ZMod 5)] = 5⁻¹ := by simp
-example : Pr[= (0 : BitVec 4) | $ᵗ (BitVec 4)] = 16⁻¹ := by simp
-
-example : Pr[= (0 : Fin 3) | $ᵗ (Fin 3)] ≠ 0 := by simp
-example : Pr[= (0 : Fin 3) | $ᵗ (Fin 3)] ≠ 0 := by grind
-
-example (x : Bool ⊕ Bool) : Pr[= x | $ᵗ (Bool ⊕ Bool)] ≠ 0 := by simp
-example (x : Bool ⊕ Bool) : Pr[= x | $ᵗ (Bool ⊕ Bool)] ≠ 0 := by grind
-
-/-! ## Bounds
-An outcome probability lies in `[0, 1]` and is never `⊤`.
-
-gap(grind): `0 ≤ _` in `ℝ≥0∞` is just `zero_le`, but `grind` routes through the support machinery
-and fails; `simp` closes it. -/
-
-example (mx : ProbComp Bool) (x : Bool) : Pr[= x | mx] ≤ 1 := by simp
-example (mx : ProbComp Bool) (x : Bool) : Pr[= x | mx] ≤ 1 := by grind
-
-example (mx : ProbComp Bool) (x : Bool) : Pr[= x | mx] ≠ ⊤ := by simp
-example (mx : ProbComp Bool) (x : Bool) : Pr[= x | mx] ≠ ⊤ := by grind
-
-example (mx : ProbComp Bool) (x : Bool) : 0 ≤ Pr[= x | mx] := by
-  fail_if_success grind  -- gap(grind, 2026-09-03): `zero_le` behind the support machinery
+example : 𝒟[($ᵗ Bool : ProbComp Bool)] {true} = 2⁻¹ := by
+  fail_if_success grind  -- gap(grind, 2026-09-26): concrete values, covers this section
+  simp
+example : 𝒟[($ᵗ (Fin 6) : ProbComp (Fin 6))] {0} = 6⁻¹ := by simp
+example (x : Fin 6) : 𝒟[$ᵗ Fin 6] {x} = 6⁻¹ := by simp
+example : 𝒟[($ᵗ Bool : ProbComp Bool)] {true} ≠ 0 := by simp
+example : 𝒟[($ᵗ (Fin 3) : ProbComp (Fin 3))] {0} ≠ 0 := by simp
+example (x : Bool ⊕ Bool) : Pr{let y ← ($ᵗ (Bool ⊕ Bool) : ProbComp (Bool ⊕ Bool))}[y = x] ≠ 0 := by
   simp
 
-/-! ## `bind`/`pure`-normalised computations
-`grind` normalises monadic structure, so a redundant `bind`/`pure` collapses and the outcome
-probability matches the underlying draw. -/
+example (x y : Fin 6) :
+    𝒟[($ᵗ (Fin 6) : ProbComp (Fin 6))] {x} = 𝒟[($ᵗ (Fin 6) : ProbComp (Fin 6))] {y} := by simp
+example (x y : Fin 6) :
+    𝒟[($ᵗ (Fin 6) : ProbComp (Fin 6))] {x} = 𝒟[($ᵗ (Fin 6) : ProbComp (Fin 6))] {y} := by grind
+example : 𝒟[($ᵗ Bool : ProbComp Bool)] {true} = 𝒟[($ᵗ Bool : ProbComp Bool)] {false} := by simp
+example : 𝒟[($ᵗ Bool : ProbComp Bool)] {true} = 𝒟[($ᵗ Bool : ProbComp Bool)] {false} := by grind
 
-example : Pr[= true | do let b ← $ᵗ Bool; pure b] = Pr[= true | $ᵗ Bool] := by simp
-example : Pr[= true | do let b ← $ᵗ Bool; pure b] = Pr[= true | $ᵗ Bool] := by grind
+example : Pr{let y ← ($ᵗ (ZMod 5) : ProbComp (ZMod 5))}[y = 3] = 5⁻¹ := by
+  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): the singleton filter card, see header
+  simp [Finset.filter_eq']
+example : Pr{let y ← ($ᵗ (BitVec 4) : ProbComp (BitVec 4))}[y = 0] = 16⁻¹ := by
+  simp [Finset.filter_eq']
 
-example (mx : ProbComp Bool) (x : Bool) :
-    Pr[= x | do let y ← mx; pure y] = Pr[= x | mx] := by simp
-example (mx : ProbComp Bool) (x : Bool) :
-    Pr[= x | do let y ← mx; pure y] = Pr[= x | mx] := by grind
+/-! ### Bounds
+An outcome mass lies in `[0, 1]` and is never `⊤`. -/
 
-example (x : Bool) : Pr[= x | (do let _ ← $ᵗ Bool; pure x : ProbComp Bool)] = 1 := by simp
-example (x : Bool) : Pr[= x | (do let _ ← $ᵗ Bool; pure x : ProbComp Bool)] = 1 := by grind
+example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} ≤ 1 := by
+  fail_if_success grind  -- gap(grind, 2026-09-26): no measure-side bound rules, covers the section
+  simp
+example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} ≠ ⊤ := by simp
+example (mx : ProbComp Bool) (x : Bool) : 0 ≤ 𝒟[mx] {x} := by simp
 
-/-! ## Independence and the multiplication rule
+/-! ### `bind`/`pure`-normalised computations -/
+
+example : 𝒟[(do let b ← $ᵗ Bool; pure b : ProbComp Bool)] {true} =
+    𝒟[($ᵗ Bool : ProbComp Bool)] {true} := by simp
+example : 𝒟[(do let b ← $ᵗ Bool; pure b : ProbComp Bool)] {true} =
+    𝒟[($ᵗ Bool : ProbComp Bool)] {true} := by grind
+example (mx : ProbComp Bool) (x : Bool) : 𝒟[do let y ← mx; pure y] {x} = 𝒟[mx] {x} := by simp
+example (mx : ProbComp Bool) (x : Bool) : 𝒟[do let y ← mx; pure y] {x} = 𝒟[mx] {x} := by grind
+
+example (x : Bool) : 𝒟[(do let _ ← $ᵗ Bool; pure x : ProbComp Bool)] {x} = 1 := by
+  fail_if_success grind  -- gap(grind, 2026-09-26): discarding a lossless draw
+  simp
+
+-- target(simp): over a discarded `Bool`, Mathlib's `simp` rewrites `(Set.univ : Set Bool)` to
+-- `{false, true}` before the lossless-mass rule sees it; the oracle-specific law closes the goal.
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) : 𝒟[mx >>= fun _ => my] = 𝒟[my] :=
+  OracleComp.evalDist_bind_const mx my
+example (mx : ProbComp (Fin 2)) (my : ProbComp (Fin 3)) : 𝒟[mx >>= fun _ => my] = 𝒟[my] := by
+  simp
+example (mx : ProbComp (Fin 2)) (b : Fin 3) : 𝒟[(fun _ => b) <$> mx] = Measure.dirac b := by
+  simp
+
+/-! ### Independence and the multiplication rule
 Two independent uniform draws factor: the joint mass is the product of the marginals.
 
-The applicative (`<$> … <*>`) spelling factors under `grind` via the `@[grind norm]` rule
-`probOutput_seq_map_prod_mk_eq_mul` (the `Seq.seq` thunk is unindexable for E-matching, but
-`grind`'s normalization phase handles it).
-
-gap(grind): the `bind`-spelled product — the second draw sits under `bind`'s continuation, which
-neither E-matching nor the seq-keyed norm rule reaches; `simp` factors it. The first entry carries
-the guard. -/
+gap(simp): the singleton of a product measure is not split into a rectangle, so the factorization
+goes through `evalDist_pair` and `Measure.prod_prod` by hand. -/
 
 example (a b : Bool) :
-    Pr[= (a, b) | do let x ← $ᵗ Bool; let y ← $ᵗ Bool; pure (x, y)]
-      = Pr[= a | $ᵗ Bool] * Pr[= b | $ᵗ Bool] := by
-  fail_if_success grind  -- gap(grind, 2026-09-03): bind-spelled product, covers this section
-  simp
-
+    𝒟[(do let x ← $ᵗ Bool; let y ← $ᵗ Bool; pure (x, y) : ProbComp (Bool × Bool))] {(a, b)} =
+      𝒟[($ᵗ Bool : ProbComp Bool)] {a} * 𝒟[($ᵗ Bool : ProbComp Bool)] {b} := by
+  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): product singletons, covers the section
+  fail_if_success grind  -- gap(grind, 2026-09-26): product singletons, covers the section
+  rw [evalDist_pair, ← Set.singleton_prod_singleton, Measure.prod_prod]
 example :
-    Pr[= ((5 : Fin 6), (5 : Fin 6)) | do let x ← $ᵗ (Fin 6); let y ← $ᵗ (Fin 6); pure (x, y)]
-      = 6⁻¹ * 6⁻¹ := by simp
-
+    𝒟[(do let x ← $ᵗ (Fin 6); let y ← $ᵗ (Fin 6); pure (x, y) : ProbComp (Fin 6 × Fin 6))]
+      {((5 : Fin 6), (5 : Fin 6))} = 6⁻¹ * 6⁻¹ := by
+  rw [evalDist_pair, ← Set.singleton_prod_singleton, Measure.prod_prod]
+  simp
 example (z : Bool × Bool) :
-    Pr[= z | (·, ·) <$> ($ᵗ Bool) <*> ($ᵗ Bool)]
-      = Pr[= z.1 | $ᵗ Bool] * Pr[= z.2 | $ᵗ Bool] := by simp
-example (z : Bool × Bool) :
-    Pr[= z | (·, ·) <$> ($ᵗ Bool) <*> ($ᵗ Bool)]
-      = Pr[= z.1 | $ᵗ Bool] * Pr[= z.2 | $ᵗ Bool] := by grind
+    𝒟[((·, ·) <$> ($ᵗ Bool) <*> ($ᵗ Bool) : ProbComp (Bool × Bool))] {z} =
+      𝒟[($ᵗ Bool : ProbComp Bool)] {z.1} * 𝒟[($ᵗ Bool : ProbComp Bool)] {z.2} := by
+  rw [evalDist_seq_map_prod_mk, ← Set.singleton_prod_singleton, Measure.prod_prod]
 
-/-! # 2. Event probability — `Pr[ p | _]` -/
+example (f : Bool → ProbComp (Fin 3)) (v : Bool → Fin 3) :
+    𝒟[Fintype.mPi f] {v} = ∏ i, 𝒟[f i] {v i} := by
+  simp [evalDist_mPi]
 
-/-! ## Bounds
-A probability is at most one and never `⊤`. -/
+/-! ## 2. Event probability — `Pr{…}[…]` -/
 
-example (mx : ProbComp Bool) (p : Bool → Prop) : Pr[p | mx] ≤ 1 := by simp
-example (mx : ProbComp Bool) (p : Bool → Prop) : Pr[p | mx] ≤ 1 := by grind
+/-! ### Bounds and constant events -/
 
-example (mx : ProbComp Bool) (p : Bool → Prop) : Pr[p | mx] ≠ ⊤ := by simp
-example (mx : ProbComp Bool) (p : Bool → Prop) : Pr[p | mx] ≠ ⊤ := by grind
+example (mx : ProbComp Bool) (p : Bool → Prop) : Pr{let x ← mx}[p x] ≤ 1 := by
+  fail_if_success grind  -- gap(grind, 2026-09-26): no measure-side bound rules
+  simp
+example (mx : ProbComp Bool) (p : Bool → Prop) : Pr{let x ← mx}[p x] ≠ ⊤ := by simp
+example (mx : ProbComp Bool) : Pr{let _ ← mx}[False] = 0 := by simp
+example (mx : ProbComp Bool) : Pr{let _ ← mx}[False] = 0 := by grind
 
--- The impossible event has probability zero; a single fair outcome has probability one half.
-example (mx : ProbComp Bool) : Pr[fun _ => False | mx] = 0 := by simp
-example (mx : ProbComp Bool) : Pr[fun _ => False | mx] = 0 := by grind
-example : Pr[fun b => b = true | $ᵗ Bool] = 2⁻¹ := by simp
-example : Pr[fun n => n < 3 | $ᵗ (Fin 6)] = 3 / 6 := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): the filter card is not evaluated
-  fail_if_success grind  -- gap(grind, 2026-09-03): counting
+/-! ### Counting (favourable / total)
+The uniform event law reduces to a filtered cardinality over the sample space, which is left
+unevaluated (see the header). -/
+
+example : Pr{let b ← ($ᵗ Bool : ProbComp Bool)}[b = true] = 2⁻¹ := by
+  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): counting, covers this section
+  fail_if_success grind  -- gap(grind, 2026-09-26): counting, covers this section
+  simp [Finset.filter_eq']
+example : Pr{let b ← ($ᵗ Bool : ProbComp Bool)}[b ≠ true] = 2⁻¹ := by
+  simp [Finset.filter_eq']
+example : Pr{let n ← ($ᵗ (Fin 6) : ProbComp (Fin 6))}[n < 3] = 3 / 6 := by
+  simp; rfl
+example : Pr{let n ← ($ᵗ (Fin 6) : ProbComp (Fin 6))}[n = 0 ∨ n = 1] = 2 / 6 := by
+  simp; rfl
+example : Pr{let p ← ($ᵗ (Bool × Bool) : ProbComp (Bool × Bool))}[p.1 = true ∨ p.2 = true] =
+    3 / 4 := by
   simp; rfl
 
-/-! ## Monotonicity and complement
-An event implies a wider event; the complement subtracts from one. -/
+/-! ### Monotonicity and map pushforward
+An event implies a wider event; the event of a map is the pulled-back event. -/
 
 example (mx : ProbComp Bool) (p q : Bool → Prop) (h : ∀ x, p x → q x) :
-    Pr[p | mx] ≤ Pr[q | mx] := probEvent_mono'' h
-
-example : Pr[fun b => b ≠ true | $ᵗ Bool] = 2⁻¹ := by simp  -- concrete value, see §uniform draws
-
-/-! ## Counting (favourable / total)
-gap: the favourable count over a concrete finite type is left as `↑{…}.card / n`; `rfl`/`congr`
-evaluates it afterwards, `simp +decide` does not, and `grind` fails. -/
-
-example : Pr[fun n => n = 0 ∨ n = 1 | $ᵗ (Fin 6)] = 2 / 6 := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): the filter card is not evaluated
-  fail_if_success grind  -- gap(grind, 2026-09-03): counting
-  simp; rfl
-example : Pr[fun p => p.1 = true ∨ p.2 = true | $ᵗ (Bool × Bool)] = 3 / 4 := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): the filter card is not evaluated
-  fail_if_success grind  -- gap(grind, 2026-09-03): counting
-  simp; congr 1
-
-/-! ## Map pushforward
-The event-probability of a map is the pulled-back event. -/
+    Pr{let x ← mx}[p x] ≤ Pr{let x ← mx}[q x] := prEvent_mono mx p q h
 
 example (mx : ProbComp Bool) (q : Fin 6 → Prop) (f : Bool → Fin 6) :
-    Pr[q | f <$> mx] = Pr[q ∘ f | mx] := by simp
+    Pr{let y ← f <$> mx}[q y] = Pr{let x ← mx}[q (f x)] := by simp
 example (mx : ProbComp Bool) (q : Fin 6 → Prop) (f : Bool → Fin 6) :
-    Pr[q | f <$> mx] = Pr[q ∘ f | mx] := by grind
+    Pr{let y ← f <$> mx}[q y] = Pr{let x ← mx}[q (f x)] := by grind
 
-/-! # 3. Failure probability — `Pr[⊥ | _]` -/
+/-! ## 3. Success mass
+A `ProbComp` is lossless; failure in `OptionT ProbComp` is missing mass. -/
 
-/-! ## `ProbComp` never fails
-A bare `ProbComp` computation — `pure`, a uniform draw, or any `bind` of them — fails with
-probability zero. -/
+example (x : Bool) : 𝒟[(pure x : ProbComp Bool)] Set.univ = 1 := by
+  fail_if_success grind  -- gap(grind, 2026-09-26): losslessness, covers the section
+  simp
+example : 𝒟[($ᵗ Bool : ProbComp Bool)] Set.univ = 1 := by simp
+example : 𝒟[(do let x ← $ᵗ Bool; let y ← $ᵗ Bool; pure (x && y) : ProbComp Bool)] Set.univ =
+    1 := by simp
+example (mx : ProbComp (Fin 3)) : 𝒟[mx] Set.univ = 1 := by simp
+example (mx : ProbComp Bool) : 𝒟[mx] Set.univ ≠ 0 := by simp
+example (α : Type) [SampleableType α] : Pr{let _ ← ($ᵗ α : ProbComp α)}[True] = 1 := by simp
+example (α : Type) [SampleableType α] : Pr{let _ ← ($ᵗ α : ProbComp α)}[True] ≠ 0 := by simp
+example (mx : ProbComp (Fin 3)) : IsProbabilityMeasure 𝒟[mx] := inferInstance
 
-example (x : Bool) : Pr[⊥ | (pure x : ProbComp Bool)] = 0 := by simp
-example (x : Bool) : Pr[⊥ | (pure x : ProbComp Bool)] = 0 := by grind
+example : Pr{let _ ← ($ᵗ Bool : ProbComp Bool)}[True] = 1 := by simp
 
-example : Pr[⊥ | $ᵗ Bool] = 0 := by simp
-example : Pr[⊥ | $ᵗ Bool] = 0 := by grind
+/-! ### Selection and abort (`OptionT ProbComp`)
+Selecting from the empty list and `failure` carry no successful mass.
 
-example : Pr[⊥ | do let x ← $ᵗ Bool; let y ← $ᵗ Bool; pure (x && y)] = 0 := by simp
-example : Pr[⊥ | do let x ← $ᵗ Bool; let y ← $ᵗ Bool; pure (x && y)] = 0 := by grind
+gap(simp): the success mass of a selection from a nonempty list stays unevaluated. -/
 
-example (α : Type) [SampleableType α] : Pr[⊥ | $ᵗ α] = 0 := by simp
-example (α : Type) [SampleableType α] : Pr[⊥ | $ᵗ α] = 0 := by grind
+example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by simp
+example : 𝒟[(failure : OptionT ProbComp Bool)] = 0 := by grind
+example : 𝒟[(($ ([] : List Bool)) : OptionT ProbComp Bool)] = 0 := by simp
+example : 𝒟[(($ ([] : List Bool)) : OptionT ProbComp Bool)] = 0 := by grind
+example (mx : OptionT ProbComp Bool) :
+    𝒟[mx >>= fun _ => (failure : OptionT ProbComp Bool)] = 0 := by simp
 
-/-! ## Selection and abort (`OptionT ProbComp`)
-Selecting from the empty list fails with probability one; from a nonempty list it never fails. A
-nonempty support means the computation does not certainly fail (`grind` via the `Set.Nonempty`
-bridge). -/
+example : Pr{let _ ← (($ ([true, false] : List Bool)) : OptionT ProbComp Bool)}[True] = 1 := by
+  rw [ProbComp.prEvent_uniformSelectList]; simp [ENNReal.div_self]
 
-example : Pr[⊥ | ($ ([] : List Bool) : OptionT ProbComp Bool)] = 1 := by simp
-example : Pr[⊥ | ($ ([] : List Bool) : OptionT ProbComp Bool)] = 1 := by grind
+/-- Selecting from a list counts entries with multiplicity. -/
+example : Pr{let x ← ($ ([1, 2, 2] : List ℕ) : OptionT ProbComp ℕ)}[x = 2] = 2 / 3 := by
+  rw [ProbComp.prEvent_uniformSelectList]
+  norm_num
 
-example : Pr[⊥ | (failure : OptionT ProbComp Bool)] = 1 := by simp
-example : Pr[⊥ | (failure : OptionT ProbComp Bool)] = 1 := by grind
-
-example : Pr[⊥ | ($ ([true, false] : List Bool) : OptionT ProbComp Bool)] = 0 := by simp
-example : Pr[⊥ | ($ ([true, false] : List Bool) : OptionT ProbComp Bool)] = 0 := by grind
-
-example (mx : OptionT ProbComp Bool) (h : (support mx).Nonempty) : Pr[⊥ | mx] ≠ 1 := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): stops at `¬support mx = ∅`
-  grind
-example (mx : ProbComp Bool) : Pr[⊥ | mx] ≠ 1 := by
-  fail_if_success grind  -- gap(grind, 2026-09-03): `≠ 1` from `Pr[⊥] = 0` needs `0 ≠ 1` in `ℝ≥0∞`
+/-- Selecting from an empty list fails, so its events carry no successful mass. -/
+example : Pr{let x ← ($ ([] : List ℕ) : OptionT ProbComp ℕ)}[x = 2] = 0 := by
+  rw [ProbComp.prEvent_uniformSelectList]
   simp
 
-example (α : Type) [SampleableType α] : Pr[⊥ | $ᵗ α] ≠ 1 := by simp
-example (α : Type) [SampleableType α] : Pr[⊥ | $ᵗ α] ≠ 1 := by grind
+/-! ## 4. The support ↔ mass bridge
+A value has zero mass exactly when it is outside the support; an event has positive probability
+exactly when a reachable output satisfies it.
 
-/-! # 4. Support and finite support -/
+gap(simp+grind): these bridges are not in either default set; they are applied by name. -/
 
-/-! ## Singletons and universes
-A `pure` computation is supported on its value; a uniform draw is supported everywhere. -/
-
-example (x : Bool) : support (pure x : ProbComp Bool) = {x} := by simp
-example (x : Bool) : support (pure x : ProbComp Bool) = {x} := by grind
-
-example : support ($ᵗ Bool) = Set.univ := by simp
-example : support ($ᵗ Bool) = Set.univ := by grind
-
-example : finSupport ($ᵗ (Fin 6)) = Finset.univ := by simp
-example : finSupport ($ᵗ (Fin 6)) = Finset.univ := by grind
-
-example : finSupport (pure true : ProbComp Bool) = {true} := by simp
-example : finSupport (pure true : ProbComp Bool) = {true} := by grind
-
-example : support ($ᵗ (Bool × Bool)) = Set.univ := by simp
-example : support ($ᵗ (Bool × Bool)) = Set.univ := by grind
-
-example : support ($ᵗ (Vector Bool 2)) = Set.univ := by simp
-example : support ($ᵗ (Vector Bool 2)) = Set.univ := by grind
-
-example : support (do let b ← $ᵗ Bool; pure b) = Set.univ := by simp
-example : support (do let b ← $ᵗ Bool; pure b) = Set.univ := by grind
-
-/-! ## Membership
-Every value is a possible outcome of a uniform draw. -/
-
-example (x : Bool) : x ∈ support ($ᵗ Bool) := by simp
-example (x : Bool) : x ∈ support ($ᵗ Bool) := by grind
-
-example (x : Bool) : x ∈ finSupport ($ᵗ Bool) := by simp
-example (x : Bool) : x ∈ finSupport ($ᵗ Bool) := by grind
-
-example (x : Bool) : x ∈ support (pure x : ProbComp Bool) := by simp
-example (x : Bool) : x ∈ support (pure x : ProbComp Bool) := by grind
-
-example (α : Type) [SampleableType α] (x : α) : x ∈ support ($ᵗ α) := by simp
-example (α : Type) [SampleableType α] (x : α) : x ∈ support ($ᵗ α) := by grind
-
-example (α : Type) [SampleableType α] : (support ($ᵗ α)).Nonempty := by simp
-example (α : Type) [SampleableType α] : (support ($ᵗ α)).Nonempty := by grind
-
-/-! ## The support ↔ probability bridge
-A value has zero probability exactly when it is outside the support.
-
-gap(simp): `simp` rewrites the `= 0` side to `x ∉ finSupport mx` and stops. Tagging
-`mem_finSupport_iff_mem_support` `@[simp]` is not the fix: library proofs use `a ∈ finSupport oa`
-as a *decidable* condition inside `dite` (`ProgramLogic/Relational/Quantitative.lean`), which the
-`support` form loses. -/
-
-example (mx : ProbComp Bool) (x : Bool) : Pr[= x | mx] = 0 ↔ x ∉ support mx := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): stops at the `finSupport` form
-  grind
-
-example (mx : ProbComp Bool) (x : Bool) : 0 < Pr[= x | mx] ↔ x ∈ support mx := by simp
-example (mx : ProbComp Bool) (x : Bool) : 0 < Pr[= x | mx] ↔ x ∈ support mx := by grind
-
-/-! ## Event support via `Set.Nonempty`
-An *event* has (non)zero probability exactly when some / no reachable output satisfies it. The
-`grind`-friendly companions phrase this with `Set.Nonempty` of the filtered support
-`{x ∈ support mx | p x}`, keeping the witness atomic where the `simp`-only `∃`/`∀ x ∈ support` forms
-would saturate. -/
-
+example (mx : ProbComp Bool) (x : Bool) : 𝒟[mx] {x} = 0 ↔ x ∉ support mx := by
+  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): the bridge is not a simp rule
+  fail_if_success grind  -- gap(grind, 2026-09-26): the bridge is not a grind rule
+  rw [mem_support_iff_evalDist_singleton_pos, pos_iff_ne_zero, not_not]
+example (mx : ProbComp Bool) (x : Bool) : 0 < 𝒟[mx] {x} ↔ x ∈ support mx :=
+  (mem_support_iff_evalDist_singleton_pos mx x).symm
 example (mx : ProbComp Bool) (p : Bool → Prop) :
-    Pr[ p | mx] ≠ 0 ↔ {x ∈ support mx | p x}.Nonempty := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): `Set.Nonempty` companion, `grind`-shaped
-  grind
+    Pr{let x ← mx}[p x] ≠ 0 ↔ {x ∈ support mx | p x}.Nonempty := by
+  rw [← pos_iff_ne_zero, prEvent_pos_iff]; rfl
 example (mx : ProbComp Bool) (p : Bool → Prop) :
-    Pr[ p | mx] = 0 ↔ ¬ {x ∈ support mx | p x}.Nonempty := by grind
+    Pr{let x ← mx}[p x] = 0 ↔ ¬ {x ∈ support mx | p x}.Nonempty := by
+  rw [prEvent_eq_zero_iff, Set.not_nonempty_iff_eq_empty, Set.eq_empty_iff_forall_notMem]; simp
+example (mx : OptionT ProbComp Bool) (h : (support mx).Nonempty) : Pr{let _ ← mx}[True] ≠ 0 := by
+  obtain ⟨x, hx⟩ := h
+  exact ((OptionT.prEvent_mk_pos_iff mx.run (fun _ => True)).2
+    ⟨x, by simpa [OptionT.support_def] using hx, trivial⟩).ne'
 
-/-! ## Structured supports
-gap: a non-trivial `<$>`/`do` support equality needs `simp`'s computation normalisation and a set
-extensionality; `grind` would expand it instead, and `simp` stops at the image of the set
-literal. -/
+/-! ## 5. Output measures — `𝒟[_]` -/
 
-example : support (do let b ← $ᵗ Bool; pure (!b)) = Set.univ := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): the image of a finite set literal
-  fail_if_success grind  -- gap(grind, 2026-09-03): structured support
-  ext b; cases b <;> simp
+example (mx : ProbComp Bool) : 𝒟[do let x ← mx; pure x] = 𝒟[mx] := by simp
+example (mx : ProbComp Bool) : 𝒟[do let x ← mx; pure x] = 𝒟[mx] := by grind
+example (mx : ProbComp Bool) : 𝒟[mx >>= pure] = 𝒟[mx] := by simp
+example (mx : ProbComp Bool) : 𝒟[mx >>= pure] = 𝒟[mx] := by grind
 
-/-! # 5. Evaluation distribution — `𝒮[_]` -/
+/-! ### One-time-pad secrecy
+Adding a uniform key makes the ciphertext independent of the message.
 
-/-! ## `bind`/`pure` normalisation
-A redundant `bind`/`pure` does not change the distribution. -/
+gap(simp+grind): translation invariance of a uniform draw is transported along the equivalence
+by name. -/
 
-example (mx : ProbComp Bool) : 𝒮[do let x ← mx; pure x] = 𝒮[mx] := by simp
-example (mx : ProbComp Bool) : 𝒮[do let x ← mx; pure x] = 𝒮[mx] := by grind
+example (msg k : ZMod 2) :
+    Pr{let c ← ((msg + ·) <$> ($ᵗ (ZMod 2)) : ProbComp (ZMod 2))}[c = k] =
+      Pr{let c ← ($ᵗ (ZMod 2) : ProbComp (ZMod 2))}[c = k] := by
+  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): translation invariance
+  fail_if_success grind  -- gap(grind, 2026-09-26): translation invariance
+  exact SampleableType.prEvent_uniformSample_equiv (Equiv.addLeft msg) (· = k)
 
-example (mx : ProbComp Bool) : 𝒮[mx >>= pure] = 𝒮[mx] := by simp
-example (mx : ProbComp Bool) : 𝒮[mx >>= pure] = 𝒮[mx] := by grind
-
-/-! ## One-time-pad secrecy
-Adding a uniform key makes the ciphertext distribution independent of the message (`ZMod 2` — a
-one-bit XOR pad).
-
-gap: this needs the translation-invariance lemma to fire before `evalSPMF_uniformSample` unfolds
-the uniform draw, so it is `simp only`-terminal. -/
-
-example (msg : ZMod 2) : 𝒮[(msg + ·) <$> ($ᵗ (ZMod 2))] = 𝒮[$ᵗ (ZMod 2)] := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): the uniform draw unfolds first
-  fail_if_success grind  -- gap(grind, 2026-09-03): translation invariance is not a grind rule
-  simp only [evalSPMF_add_left_uniform]
-
-/-! # 6. The shape of `do`
-The automation should see through the full surface syntax of `do`-notation: a pure `let :=`, nested
-blocks, pattern-matching binds, `if`/`then`/`else`, and long chains. None of these can fail. -/
+/-! ## 6. The shape of `do`
+Pure `let :=` steps, nested blocks, pattern-matching binds, branches and long chains, over
+`ProbComp` and the failing carrier `OptionT ProbComp`. -/
 
 /-- A pure `let :=` step inside `do`. -/
 def coinThenNeg : ProbComp Bool := do
@@ -366,82 +286,155 @@ def branchToFin : ProbComp (Fin 2) := do
   let b ← $ᵗ Bool
   if b then pure 0 else pure 1
 
-/-- A five-step chain of independent coins. -/
-def fiveCoins : ProbComp Bool := do
-  let a ← $ᵗ Bool; let b ← $ᵗ Bool; let c ← $ᵗ Bool; let d ← $ᵗ Bool; let e ← $ᵗ Bool
-  pure (a && b && c && d && e)
+/-- A twelve-step chain of independent uniform draws. -/
+def chain12 : ProbComp Bool := do
+  let a ← $ᵗ Bool; let b ← $ᵗ Bool; let c ← $ᵗ Bool; let d ← $ᵗ Bool
+  let e ← $ᵗ Bool; let f ← $ᵗ Bool; let g ← $ᵗ Bool; let h ← $ᵗ Bool
+  let i ← $ᵗ Bool; let j ← $ᵗ Bool; let k ← $ᵗ Bool; let l ← $ᵗ Bool
+  pure (a && b && c && d && e && f && g && h && i && j && k && l)
 
-example : Pr[⊥ | coinThenNeg] = 0 := by simp [coinThenNeg]
-example : Pr[⊥ | twoThenAnd] = 0 := by simp [twoThenAnd]
-example : Pr[⊥ | nestedDraw] = 0 := by simp [nestedDraw]
-example : Pr[⊥ | branchToFin] = 0 := by simp [branchToFin]
-example : Pr[⊥ | fiveCoins] = 0 := by simp [fiveCoins]
+/-- The same twelve-step chain over the failing carrier `OptionT ProbComp`; it never fails. -/
+def chain12Opt : OptionT ProbComp Bool := do
+  let a ← $ᵗ Bool; let b ← $ᵗ Bool; let c ← $ᵗ Bool; let d ← $ᵗ Bool
+  let e ← $ᵗ Bool; let f ← $ᵗ Bool; let g ← $ᵗ Bool; let h ← $ᵗ Bool
+  let i ← $ᵗ Bool; let j ← $ᵗ Bool; let k ← $ᵗ Bool; let l ← $ᵗ Bool
+  pure (a && b && c && d && e && f && g && h && i && j && k && l)
 
-example : Pr[⊥ | coinThenNeg] = 0 := by grind [coinThenNeg]
-example : Pr[⊥ | twoThenAnd] = 0 := by grind [twoThenAnd]
-example : Pr[⊥ | nestedDraw] = 0 := by grind [nestedDraw]
-example : Pr[⊥ | branchToFin] = 0 := by grind [branchToFin]
-example : Pr[⊥ | fiveCoins] = 0 := by grind [fiveCoins]
+/-- A ten-deep tower of redundant `pure` binds that is `$ᵗ Bool`. -/
+def coinPadded : ProbComp Bool := do
+  let a ← $ᵗ Bool
+  let b ← pure a; let c ← pure b; let d ← pure c; let e ← pure d
+  let f ← pure e; let g ← pure f; let h ← pure g; let i ← pure h
+  let j ← pure i; let k ← pure j
+  pure k
 
-example : Pr[= false | coinThenNeg] = Pr[= true | $ᵗ Bool] := by
-  fail_if_success grind [coinThenNeg]  -- gap(grind, 2026-09-03): a `let :=` step under `do`
-  simp [coinThenNeg]
+/-! ### Losslessness through `do` structure
 
-/-- Abort unless the coin comes up `true`: fails with probability one half. -/
-def abortOnFalse : OptionT ProbComp Bool := do
-  let b ← $ᵗ Bool
-  if b then pure true else failure
+The lossless-mass law closes an oracle computation's true event without unfolding it; a failing
+carrier is unfolded into its lifted draws. -/
 
-example : Pr[⊥ | abortOnFalse] = 2⁻¹ := by
-  fail_if_success (simp [abortOnFalse]; done)  -- gap(simp, 2026-09-03): bind expansion, not simp
-  simp [abortOnFalse, probFailure_bind_eq_add_tsum]
+example : Pr{let _ ← coinThenNeg}[True] = 1 := by grind
+example : Pr{let _ ← coinThenNeg}[True] = 1 := by simp
+example : Pr{let _ ← twoThenAnd}[True] = 1 := by simp
+example : Pr{let _ ← nestedDraw}[True] = 1 := by simp
+example : Pr{let _ ← chain12}[True] = 1 := by simp
+example : 𝒟[chain12] Set.univ = 1 := by simp [chain12]
+example : Pr{let _ ← chain12Opt}[True] = 1 := by simp [chain12Opt]
+example : Pr{let _ ← branchToFin}[True] = 1 := by simp
 
-/-! # 7. Cryptography prerequisites
-The kind of facts an intro-to-cryptography course assumes: guessing a uniform secret, collision
-probability, and outcome probabilities summing to one. -/
+/-! ### Structural normalization of a deep chain -/
 
-example (guess : Fin 6) : Pr[= guess | $ᵗ (Fin 6)] = 6⁻¹ := by simp
+example : 𝒟[coinPadded] = 𝒟[($ᵗ Bool : ProbComp Bool)] := by simp [coinPadded]
+example : 𝒟[coinPadded] = 𝒟[($ᵗ Bool : ProbComp Bool)] := by grind [coinPadded]
+example : 𝒟[coinPadded] {true} = 𝒟[($ᵗ Bool : ProbComp Bool)] {true} := by simp [coinPadded]
+example : support coinPadded = support ($ᵗ Bool : ProbComp Bool) := by simp [coinPadded]
+example : (false : Bool) ∈ support chain12 := by simp [chain12]
 
-example : Pr[fun p => p.1 = p.2 | $ᵗ (Fin 6 × Fin 6)] = 6 / 36 := by
-  fail_if_success (simp; done)  -- gap(simp, 2026-09-03): the filter card is not evaluated
-  fail_if_success grind  -- gap(grind, 2026-09-03): counting
+/-! ### Outcome values of multi-step programs
+
+An event of a derived uniform program such as `coinThenNeg` normalizes to an event of its one
+draw, which the uniform event law counts (the counting gap of the header). A long chain stops at a
+nest of expectations over its uniform draws, which neither set evaluates: concrete outcome values
+of long chains (`𝒟[chain12] {true} = (2 ^ 12)⁻¹`) and the abort mass of a guarded `OptionT`
+program are recorded here as `target(simp+grind)` rather than carried as multi-step proofs. -/
+
+example : Pr{let x ← coinThenNeg}[x = true] = 2⁻¹ := by
+  fail_if_success (simp [coinThenNeg]; done)  -- gap(simp, 2026-09-30): counting, see header
+  fail_if_success grind [coinThenNeg]  -- gap(grind, 2026-09-30): counting, see header
+  simp [coinThenNeg, Finset.filter_eq']
+
+/-! ## 7. Cryptography prerequisites
+Guessing a uniform secret, collision probability, and masses summing to one. -/
+
+example (guess : Fin 6) : 𝒟[($ᵗ (Fin 6) : ProbComp (Fin 6))] {guess} = 6⁻¹ := by simp
+example : Pr{let p ← ($ᵗ (Fin 6 × Fin 6) : ProbComp (Fin 6 × Fin 6))}[p.1 = p.2] = 6 / 36 := by
+  fail_if_success (simp; done)  -- gap(simp, 2026-09-26): counting
+  fail_if_success grind  -- gap(grind, 2026-09-26): counting
   simp; rfl
+example : ∑ k : Fin 6, 𝒟[($ᵗ (Fin 6) : ProbComp (Fin 6))] {k} = 1 := by
+  simp [ENNReal.mul_inv_cancel]
 
-example : ∑ k : Fin 6, Pr[= k | $ᵗ (Fin 6)] = 1 := sum_probOutput_eq_one (by simp)
+/-! ## 8. Abstract carriers
+The same facts over an arbitrary `SampleableType` carrier, which carries no measurable space and
+need not be finite, so outcomes are `Pr{…}` events.
 
-/-! # 8. Abstract carriers
-The same facts over an arbitrary `SampleableType` carrier. `grind` handles the symbolic ones
-(equiprobability, never-fails, nonempty support) and, through the `@[grind norm]` factorization
-rule, the applicative product. -/
+gap(simp+grind): equiprobability transports along a swap of the sample space, and a product
+event factors through `prEvent_bind_bind_and`, both by name. -/
 
 section abstract
+
 variable (α β : Type) [SampleableType α] [SampleableType β]
 
-example (x y : α) : Pr[= x | $ᵗ α] = Pr[= y | $ᵗ α] := by
-  fail_if_success simp  -- gap(simp, 2026-09-03): no progress on abstract equiprobability
-  grind
-
-example : support ($ᵗ α) = Set.univ := by simp
-example : support ($ᵗ α) = Set.univ := by grind
+example (x y : α) :
+    Pr{let z ← ($ᵗ α : ProbComp α)}[z = x] = Pr{let z ← ($ᵗ α : ProbComp α)}[z = y] := by
+  fail_if_success simp  -- gap(simp, 2026-09-26): abstract equiprobability
+  fail_if_success grind  -- gap(grind, 2026-09-26): abstract equiprobability
+  classical
+  refine Eq.trans ?_ (SampleableType.prEvent_uniformSample_equiv (Equiv.swap x y) (· = y))
+  simp [Equiv.swap_apply_eq_iff]
 
 example (z : α × β) :
-    Pr[= z | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] = Pr[= z.1 | $ᵗ α] * Pr[= z.2 | $ᵗ β] := by simp
-example (z : α × β) :
-    Pr[= z | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] = Pr[= z.1 | $ᵗ α] * Pr[= z.2 | $ᵗ β] := by grind
-
--- equiprobability of a uniform product: the `@[grind norm]` factorization rule lets bare `grind`
--- factor the applicative product, then close the equal factors
-example (x y : α × β) :
-    Pr[= x | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] = Pr[= y | (·, ·) <$> ($ᵗ α) <*> ($ᵗ β)] := by grind
+    Pr{let w ← ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β) : ProbComp (α × β))}[w = z] =
+      Pr{let a ← ($ᵗ α : ProbComp α)}[a = z.1] * Pr{let b ← ($ᵗ β : ProbComp β)}[b = z.2] := by
+  simp only [expect_norm, Prod.ext_iff]
+  exact prEvent_bind_bind_and _ _ _ _
 
 end abstract
 
-/-! # 9. Library-shape sentinels
-Small facts in the shape of goals discharged throughout the library, to catch silent regressions of
-the probability automation in isolation. -/
+/-! ## 9. Swaps and congruence through `prrw` -/
 
-example (α : Type) [SampleableType α] (x : α) : x ∈ support ($ᵗ α) := by grind
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → ProbComp Bool) :
+    Pr{let r ← mx >>= fun a => my >>= fun b => f a b}[r = true] =
+      Pr{let r ← my >>= fun b => mx >>= fun a => f a b}[r = true] := by
+  prrw
 
-example (mx : ProbComp Bool) (x : Bool) : Pr[= x | mx] = 0 ↔ x ∉ support mx := by grind
+example (mx : ProbComp Bool) (f g : Bool → ProbComp (Fin 3)) (y : Fin 3)
+    (h : ∀ b ∈ support mx, 𝒟[f b] {y} = 𝒟[g b] {y}) :
+    𝒟[mx >>= f] {y} = 𝒟[mx >>= g] {y} := by
+  prrw congr
+  exact h _ ‹_›
+
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (f : Bool → Fin 3 → ProbComp Bool) :
+    𝒟[mx >>= fun a => my >>= fun b => f a b] = 𝒟[my >>= fun b => mx >>= fun a => f a b] := by
+  prrw
+
+/-- `prrw move i j` sinks the draw at depth `i` of the left-hand side to depth `j` by adjacent
+swaps, and closes the goal once the sides agree. -/
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    𝒟[do let a ← mx; let b ← my; let c ← mz; f a b c] =
+      𝒟[do let b ← my; let c ← mz; let a ← mx; f a b c] := by
+  prrw move 0 2
+
+/-- A lift: the draw at depth `2` rises to the top. -/
+example (mx : ProbComp Bool) (my : ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    Pr{let r ← do let b ← my; let c ← mz; let a ← mx; f a b c}[r = true] =
+      Pr{let r ← do let a ← mx; let b ← my; let c ← mz; f a b c}[r = true] := by
+  prrw move 2 0
+
+/-- A move stops at a draw that depends on the one being moved. -/
+example (mx : ProbComp Bool) (my : Bool → ProbComp (Fin 3)) (mz : ProbComp (Fin 5))
+    (f : Bool → Fin 3 → Fin 5 → ProbComp Bool) :
+    𝒟[do let a ← mx; let b ← my a; let c ← mz; f a b c] =
+      𝒟[do let a ← mx; let c ← mz; let b ← my a; f a b c] := by
+  fail_if_success prrw move 0 2
+  prrw under 1
+
+/-! ## 10. Events whose continuation destructures its input
+
+The notation turns a destructuring draw into projections of the drawn pair, so the event is a
+predicate on the draw and implication between the returned propositions is `prEvent_mono`. A draw
+of a destructuring `do` block normalizes to the same event. -/
+
+example (mx : ProbComp (Bool × Bool)) :
+    Pr{let (a, b) ← mx}[a = true ∧ b = true] ≤ Pr{let (a, _) ← mx}[a = true] :=
+  prEvent_mono mx _ _ fun _ => And.left
+
+example (mx : ProbComp (Bool × Bool)) :
+    Pr{let b ← do let (a, b) ← mx; pure (a = true ∧ b = true)}[b] ≤
+      Pr{let b ← do let (a, _) ← mx; pure (a = true)}[b] := by
+  simp only [expect_norm]
+  exact prEvent_mono mx _ _ fun _ => And.left
 
 end VCVioTest.ProbabilityTactics

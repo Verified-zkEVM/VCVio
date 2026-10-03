@@ -12,13 +12,15 @@ public import VCVio.ProgramLogic.Unary.HoareTriple
 # Seed-Based Forking Lemma — Program Logic Bridge
 
 Wraps the probabilistic seeded forking lemma bounds from
-`CryptoFoundations/SeededFork.lean` as quantitative Hoare triples (`Triple`) for use in the
-program logic framework.
+`CryptoFoundations/SeededFork.lean` as quantitative Hoare triples (core's `Std.WP.Triple`) for use
+in the program logic framework.
 -/
 
 @[expose] public section
 
 open OracleSpec OracleComp ENNReal
+open scoped Std.WP
+open scoped OracleComp.Lower
 
 namespace OracleComp.ProgramLogic
 
@@ -28,23 +30,18 @@ variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι}
 
 variable (main : OracleComp spec α) (qb : ι → ℕ)
     (js : List ι) (i : ι) (cf : α → Option (Fin (qb i + 1)))
-    [IsUniformSpec spec] [unifSpec ˡ⊂ₒ spec]
-    [∀ t, MeasurableSpace (spec.Range t)]
-    [∀ t, DiscreteMeasurableSpace (spec.Range t)]
+    [unifSpec ˡ⊂ₒ spec]
+    [OracleSpec.UniformAnswerMeasure spec]
 
 /-- Seeded forking lemma as a quantitative Hoare triple for the fork-success event. -/
-theorem triple_seededFork :
-    Triple (spec := spec)
-      (let acc : ℝ≥0∞ := ∑ s, Pr[= some s | cf <$> main]
-       let h : ℝ≥0∞ := Fintype.card (spec.Range i)
-       let q := qb i + 1
-       acc * (acc / q - h⁻¹))
-      (seededFork main qb js i cf)
-      (fun r => if r.isSome then 1 else 0) :=
-  triple_ofLE <| le_trans
-    (OracleComp.le_probEvent_isSome_seededFork main qb js i cf)
-    (by
-      rw [← probOutput_true_eq_probEvent]
-      exact triple_toLE (triple_probEvent_indicator (seededFork main qb js i cf) fun r ↦ r.isSome))
+theorem triple_seededFork [Fintype (spec.Range i)] :
+    ⦃ let acc : ℝ≥0∞ := ∑ s, Pr{let x ← main}[cf x = some s]
+      let h : ℝ≥0∞ := Fintype.card (spec.Range i)
+      let q := qb i + 1
+      acc * (acc / q - h⁻¹) ⦄
+      seededFork main qb js i cf
+      ⦃ fun r => if r.isSome then 1 else 0 ⦄ :=
+  ⟨le_trans (OracleComp.le_prEvent_isSome_seededFork main qb js i cf)
+    (triple_prEvent_indicator (seededFork main qb js i cf) fun r ↦ r.isSome).le_wp⟩
 
 end OracleComp.ProgramLogic

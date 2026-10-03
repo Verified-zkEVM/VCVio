@@ -17,6 +17,9 @@ computations, probability semantics, program logic, and lattice- and hash-based 
     ⟨`weak.linter.redundantVisibility, true⟩,
     -- Use Mathlib's 1500-line limit downstream too; split files before exceeding it.
     ⟨`weak.linter.style.longFile, .ofNat 1500⟩,
+    -- Core's `vcgen` is experimental in Lean v4.35 and warns unless acknowledged; the
+    -- program logic runs on it, so the package acknowledges it once. Drop when core does.
+    ⟨`experimental.vcgen, true⟩,
     -- Disable the unicode allowlist linter: VCVio docstrings legitimately use
     -- FIPS-204 math notation (combining tilde `c̃`) and cited author names with
     -- diacritics (e.g. `Cătălin Hriţcu`).
@@ -39,14 +42,14 @@ script lint (args) do
   child.wait
 
 /-
-Interop backends are intentionally disabled for the Lean 4.34 baseline. Their
+Interop backends are intentionally disabled for the repository's toolchain. Their
 source remains under `Interop/`, isolated from the trusted libraries by
 `scripts/check-interop-isolation.sh`, but the aggregate module and CI do not
 build it. Re-enable a backend only once its upstream Lean library supports the
 repository's Lean version without a local compatibility layer.
 
-The pinned Hax revision still targets Lean 4.29.0-rc1 and is not part of the
-Lean 4.34 build. Subdirectory: `hax-lib/proof-libs/lean`.
+The pinned Hax revision targets Lean 4.29.0-rc1 and is not part of the build.
+Subdirectory: `hax-lib/proof-libs/lean`.
 -/
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
@@ -70,9 +73,9 @@ idempotent.
 -/
 require PolyFun from git
   "https://github.com/Verified-zkEVM/PolyFun" @
-  "3710d71b28404a151b8d1f0ce080ea448778dec0"
+  "559cd9857da50cf6f4f113c60702bf3176c9541d"
 
-require "leanprover-community" / "mathlib" @ git "v4.34.0"
+require "leanprover-community" / "mathlib" @ git "v4.35.0-rc3"
 
 /-- Main library. -/
 @[default_target] lean_lib VCVio
@@ -106,7 +109,7 @@ Peer of `LatticeCrypto`; may depend on `VCVio`/`ToMathlib` (and Mathlib), but no
 /-- Dormant Interop bridges to Rust verification frontends (hax, aeneas).
 Strict TCB isolation: no other `lean_lib` may import from `Interop`. See
 `Interop/README.md` and `docs/agents/interop.md`. This target is intentionally
-excluded from the Lean 4.34 baseline build. -/
+excluded from the default build. -/
 lean_lib Interop
 
 /-
@@ -692,6 +695,15 @@ what the *binary* does at start-up. Runtime-imports built oleans, so run it afte
 lean_exe initsweep where
   srcDir := "scripts"
   root := `InitSweep
+  supportInterpreter := true
+
+/-- Resolution of the declaration names the agent documentation cites against the compiled
+environment of the proof libraries: the second half of `scripts/check-doc-names.py`, which
+extracts the tokens and applies `scripts/doc_names_allowlist.txt`. Runtime-imports built
+oleans, so run it after `lake build`. See `scripts/DocNames.lean`. -/
+lean_exe docnames where
+  srcDir := "scripts"
+  root := `DocNames
   supportInterpreter := true
 
 /-- Isolated fixtures for the init-sweep ratchet, exercised by `scripts/test-initsweep.sh`.

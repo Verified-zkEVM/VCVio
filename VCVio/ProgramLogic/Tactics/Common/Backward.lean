@@ -42,14 +42,10 @@ rather than reused. -/
 private abbrev VCSpecBackwardRuleCacheKey := Name × Bool × Nat
 
 private def VCSpecKind.cacheKey : VCSpecKind → Nat
-  | .unaryTriple => 0
-  | .unaryWP => 1
-  | .relTriple => 2
-  | .relWP => 3
+  | .relTriple => 0
+  | .relWP => 1
 
 private def VCSpecKind.traceLabel : VCSpecKind → String
-  | .unaryTriple => "unaryTriple"
-  | .unaryWP => "unaryWP"
   | .relTriple => "relTriple"
   | .relWP => "relWP"
 
@@ -66,33 +62,6 @@ private def traceVCSpecCacheEvent (event : String) (entry : VCSpecEntry)
     let source := entry.declName?.map Name.toString |>.getD "<local>"
     logInfo m!"[vcspec cache] {event} `{source}` \
       ({rawGoalTraceLabel rawGoal}, {entry.kind.traceLabel})"
-
-private def instantiateProofNoBridge (proof : Lean.Elab.Tactic.Do.SpecAttr.SpecProof) :
-    MetaM (Array Expr × Array BinderInfo × Expr × Expr) := do
-  let prf ←
-    match proof with
-    | .global declName => mkConstWithFreshMVarLevels declName
-    | .local fvarId => pure <| mkFVar fvarId
-    | .stx _ _ proof => pure proof
-  let type ← instantiateMVars (← inferType prf)
-  let (xs, bis, type) ← forallMetaTelescope type
-  let prf := prf.beta xs
-  return (xs, bis, prf, type)
-
-/--
-If `(prf, type)` proves a `Std.Internal.Do.Triple`, return the corresponding
-`pre ⊑ wp ...` proof via `Std.Internal.Do.Triple.le_wp`.
-Relational `VCVio.ProgramLogic.RelTriple` is a reducible definition, so later raw
-normalization sees it by weak-head reducing the type to `pre ⊑ rwp ...`.
-Otherwise return the proof unchanged.
--/
-private def bridgeTriple? (prf type : Expr) : MetaM (Expr × Expr) := do
-  let type ← whnfR type
-  if type.isAppOfArity ``Std.Internal.Do.Triple 11 then
-    let prf' ← mkAppM ``Std.Internal.Do.Triple.le_wp #[prf]
-    let type' ← instantiateMVars (← inferType prf')
-    return (prf', type')
-  return (prf, type)
 
 /-- Extract the predicate carrier from a raw order relation. -/
 private def rawOrderCarrier? (type : Expr) : MetaM (Option Expr) := do
@@ -122,17 +91,7 @@ private def rawRelParts? (type : Expr) : MetaM (Option (Expr × Expr)) := do
     return some (type.getArg! 2, type.getArg! 3)
   return none
 
-private def stdDoWpParts? (rhs : Expr) : Option (Expr × Expr × Expr) := do
-  let rhs := rhs.consumeMData
-  unless rhs.getAppFn.isConstOf ``Std.Internal.Do.wp do none
-  let args := rhs.getAppArgs
-  unless args.size ≥ 3 do none
-  let oa := args[args.size - 3]!
-  let post := args[args.size - 2]!
-  let epost := args[args.size - 1]!
-  some (oa, post, epost)
-
-private def stdDoRelWpParts? (rhs : Expr) : Option (Expr × Expr × Expr × Expr × Expr) := do
+private def rawRelWpParts? (rhs : Expr) : Option (Expr × Expr × Expr × Expr × Expr) := do
   let rhs := rhs.consumeMData
   unless rhs.getAppFn.isConstOf ``VCVio.ProgramLogic.rwp do none
   let args := rhs.getAppArgs
@@ -144,25 +103,9 @@ private def stdDoRelWpParts? (rhs : Expr) : Option (Expr × Expr × Expr × Expr
   let epost₂ := args[args.size - 1]!
   some (oa, ob, post, epost₁, epost₂)
 
-private def unaryTripleParts? (type : Expr) : Option (Expr × Expr × Expr) := do
-  let type := type.consumeMData
-  if type.getAppFn.isConstOf ``OracleComp.ProgramLogic.Triple then
-    let args := type.getAppArgs
-    unless args.size ≥ 3 do none
-    return (args[args.size - 3]!, args[args.size - 2]!, args[args.size - 1]!)
-  if type.getAppFn.isConstOf ``Std.Internal.Do.Triple then
-    let args := type.getAppArgs
-    unless args.size ≥ 5 do none
-    return (args[args.size - 3]!, args[args.size - 5]!, args[args.size - 2]!)
-  none
-
 private def mkOrderRel (lhs rhs : Expr) : MetaM Expr := do
   let pred ← inferType lhs
   mkAppOptM ``Lean.Order.PartialOrder.rel #[some pred, none, some lhs, some rhs]
-
-private def mkLE (lhs rhs : Expr) : MetaM Expr := do
-  let α ← inferType lhs
-  mkAppOptM ``LE.le #[some α, none, some lhs, some rhs]
 
 private def rawOrderParts? (type : Expr) : MetaM (Option (Expr × Expr × Expr)) := do
   let type ← whnfR type
@@ -181,18 +124,6 @@ private def mkOrderRelTrans (hxy hyz : Expr) : MetaM Expr := do
   mkAppOptM ``Lean.Order.PartialOrder.rel_trans
     #[some pred, none, some x, some y, some z, some hxy, some hyz]
 
-/-- Build the pointwise postcondition premise used when a concrete unary post
-from a spec theorem is generalized to the goal's postcondition. -/
-private def mkUnaryPostPointwisePremise (postSpec postTarget postTy : Expr) :
-    MetaM Expr := do
-  let .forallE _ α _ _ := postTy.consumeMData
-    | throwError "expected a unary postcondition, got:{indentExpr postTy}"
-  withLocalDeclD `a α fun a => do
-    let lhs := mkApp postSpec a
-    let rhs := mkApp postTarget a
-    let rel ← mkOrderRel lhs rhs
-    mkForallFVars #[a] rel
-
 /-- Build the pointwise relational-postcondition premise used when a concrete
 relational post from a spec theorem is generalized to the goal's postcondition. -/
 private def mkRelPostPointwisePremise (postSpec postTarget postTy : Expr) :
@@ -208,92 +139,12 @@ private def mkRelPostPointwisePremise (postSpec postTarget postTy : Expr) :
       let rel ← mkOrderRel lhs rhs
       mkForallFVars #[a, b] rel
 
-/-- Build the pointwise postcondition premise used when a concrete folded unary
-`Triple` theorem is generalized to the goal's postcondition. -/
-private def mkUnaryPostLEPremise (postSpec postTarget postTy : Expr) :
-    MetaM Expr := do
-  let .forallE _ α _ _ := postTy.consumeMData
-    | throwError "expected a unary postcondition, got:{indentExpr postTy}"
-  withLocalDeclD `a α fun a => do
-    let lhs := mkApp postSpec a
-    let rhs := mkApp postTarget a
-    let rel ← mkLE lhs rhs
-    mkForallFVars #[a] rel
-
-private def mkUnaryPostLERfl (post postTy : Expr) : MetaM Expr := do
-  let .forallE _ α _ _ := postTy.consumeMData
-    | throwError "expected a unary postcondition, got:{indentExpr postTy}"
-  withLocalDeclD `a α fun a => do
-    let lhs := mkApp post a
-    let h ← mkAppOptM ``le_rfl #[none, none, some lhs]
-    mkLambdaFVars #[a] h
-
-private def mkTripleConseqApp (hpre hpost specProof : Expr) : MetaM Expr := do
-  let type ← whnfR (← inferType specProof)
-  unless type.isAppOfArity ``Std.Internal.Do.Triple 11 do
-    throwError "expected a core triple, got:{indentExpr type}"
-  let args := type.getAppArgs
-  -- Retain the source proof's assertion and WP instances while its program is abstract.
-  let assertionArgs : Array (Option Expr) := (args.extract 0 6).map some
-  let h ← mkAppOptM ``Std.Internal.Do.Triple.entails_wp_of_pre_post
-    (assertionArgs ++ #[some args[7]!, some args[6]!, none, some args[8]!, none,
-      some args[9]!, some args[10]!, some specProof, some hpre, some hpost])
-  mkAppOptM ``Std.Internal.Do.Triple.intro
-    (assertionArgs ++ #[some args[6]!, some args[7]!, none, none, some args[10]!, some h])
-
-/-- Generalize a folded unary `Triple pre prog post` proof into a reusable
-backward-rule source by abstracting concrete `post` and always abstracting
-`pre` through core's consequence rule. -/
-private def mkUnaryTripleBackwardProof (pre postSpec specProof : Expr) :
-    MetaM Expr := do
-  let mut postAbstract := postSpec.consumeMData
-  unless postAbstract.isMVar do
-    let postTy ← inferType postSpec
-    postAbstract ← mkFreshExprMVar (userName := `post) postTy
-    let hpostTy ← mkUnaryPostLEPremise postSpec postAbstract postTy
-    let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
-    let preTy ← inferType pre
-    let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
-    let hpreTy ← mkLE preAbstract pre
-    let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
-    return (← mkTripleConseqApp hpre hpost specProof)
-  let preTy ← inferType pre
-  let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
-  let hpreTy ← mkLE preAbstract pre
-  let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
-  let postTy ← inferType postAbstract
-  let hpost ← mkUnaryPostLERfl postAbstract postTy
-  mkTripleConseqApp hpre hpost specProof
-
-/-- Generalize a raw unary `pre ⊑ wp prog post epost` proof into a reusable
-backward rule source by abstracting concrete `post` and always abstracting
-`pre` through transitivity. This is the unary, flat-carrier subset of Loom2's
-`mkSpecBackwardProof`. -/
-private def mkUnarySpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := do
-  let some (prog, postSpec, epostSpec) := stdDoWpParts? rhs
-    | throwError "expected a Std.Internal.Do.wp RHS, got:{indentExpr rhs}"
-  let mut postAbstract := postSpec.consumeMData
-  let mut specApplied := specProof
-  unless postAbstract.isMVar do
-    let postTy ← inferType postSpec
-    postAbstract ← mkFreshExprMVar (userName := `post) postTy
-    let hpostTy ← mkUnaryPostPointwisePremise postSpec postAbstract postTy
-    let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
-    specApplied ←
-      mkAppM ``Std.Internal.Do.WP.wp_consequence_le
-        #[prog, postSpec, postAbstract, epostSpec, hpost, specApplied]
-  let preTy ← inferType pre
-  let preAbstract ← mkFreshExprMVar (userName := `pre) preTy
-  let hpreTy ← mkOrderRel preAbstract pre
-  let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
-  mkOrderRelTrans hpre specApplied
-
 /-- Generalize a raw relational `pre ⊑ rwp left right post epost₁ epost₂`
-proof into a reusable backward rule source. This is the relational analogue of
-`mkUnarySpecBackwardProof`; qualitative and quantitative carriers share this
-path once they are expressed as `VCVio.ProgramLogic.RelTriple` / raw `VCVio.ProgramLogic.rwp`. -/
+proof into a reusable backward rule source by abstracting concrete `post` and always abstracting
+`pre` through transitivity; qualitative and quantitative carriers share this path once they are
+expressed as `VCVio.ProgramLogic.RelTriple` / raw `VCVio.ProgramLogic.rwp`. -/
 private def mkRelSpecBackwardProof (pre rhs specProof : Expr) : MetaM Expr := do
-  let some (oa, ob, postSpec, epost₁, epost₂) := stdDoRelWpParts? rhs
+  let some (oa, ob, postSpec, epost₁, epost₂) := rawRelWpParts? rhs
     | throwError "expected a VCVio.ProgramLogic.rwp RHS, got:{indentExpr rhs}"
   let mut postAbstract := postSpec.consumeMData
   let mut specApplied := specProof
@@ -321,15 +172,12 @@ private def mkBackwardRuleFromProofExpr (prf : Expr) :
   return (res, decl, rule)
 
 /-- Normalize a `pre ⊑ rhs` / `pre ≤ rhs` proof into a reusable backward-rule
-source by dispatching on the `rhs` weakest-precondition shape: raw `Std.Internal.Do.wp`
-goes through `mkUnarySpecBackwardProof`, raw `VCVio.ProgramLogic.rwp` through
-`mkRelSpecBackwardProof`, and anything else is returned unchanged. -/
+source when `rhs` is a raw `VCVio.ProgramLogic.rwp` (through `mkRelSpecBackwardProof`); anything
+else is returned unchanged. -/
 private def normalizeRawRelProof (prf type : Expr) : MetaM Expr := do
   match ← rawRelParts? type with
   | some (pre, rhs) =>
-      if (stdDoWpParts? rhs).isSome then
-        mkUnarySpecBackwardProof pre rhs prf
-      else if (stdDoRelWpParts? rhs).isSome then
+      if (rawRelWpParts? rhs).isSome then
         mkRelSpecBackwardProof pre rhs prf
       else
         pure prf
@@ -337,23 +185,8 @@ private def normalizeRawRelProof (prf type : Expr) : MetaM Expr := do
 
 private def mkVCSpecBackwardRule (entry : VCSpecEntry) (rawGoal : Bool) :
     MetaM VCSpecBackwardRule := do
-  let (_xsNoBridge, _bisNoBridge, prfNoBridge, typeNoBridge) ←
-    instantiateProofNoBridge entry.proof
   let (_xs, _bis, prf, type) ← entry.proof.instantiate
-  let (prf, type) ←
-    if rawGoal then
-      bridgeTriple? prf type
-    else
-      pure (prf, type)
-  let prf ←
-    if !rawGoal then
-      match unaryTripleParts? typeNoBridge with
-      | some (pre, _prog, post) =>
-          mkUnaryTripleBackwardProof pre post prfNoBridge
-      | none =>
-          normalizeRawRelProof prf type
-    else
-      normalizeRawRelProof prf type
+  let prf ← normalizeRawRelProof prf type
   let (proof, declName, rule) ← mkBackwardRuleFromProofExpr prf
   return { source := entry, rawGoal, proof, declName, rule }
 
@@ -399,51 +232,6 @@ def VCSpecEntry.hasProofPremise (entry : VCSpecEntry) : MetaM Bool := do
         return true
   return false
 
-/-- Apply a raw unary `@[vcspec]` theorem under consequence, constructing the
-proof directly against the current target. This is the unary analogue of the
-direct raw relational path and covers raw `Std.Internal.Do.wp` goals with `epost⟨⟩`
-without going through theorem-syntax replay. -/
-def VCSpecEntry.tryApplyRawUnaryConsequence (entry : VCSpecEntry) (mvarId : MVarId) :
-    MetaM (Option (List MVarId)) := do
-  let goalTy ← instantiateMVars (← mvarId.getType)
-  let some (preTarget, rhsTarget) ← rawRelParts? goalTy
-    | return none
-  let some (progTarget, postTarget, _epostTarget) := stdDoWpParts? rhsTarget
-    | return none
-  let (_xs, _bis, specProof, specType) ← entry.proof.instantiate
-  let some (preSpec, rhsSpec) ← rawRelParts? specType
-    | return none
-  let some (progSpec, postSpec, epostSpec) := stdDoWpParts? rhsSpec
-    | return none
-  unless ← isDefEq progSpec progTarget do
-    return none
-  let postTy ← inferType postSpec
-  let hpostTy ← mkUnaryPostPointwisePremise postSpec postTarget postTy
-  let hpost ← mkFreshExprMVar (userName := `postImpl) hpostTy
-  let specApplied ←
-    mkAppM ``Std.Internal.Do.WP.wp_consequence_le
-      #[progSpec, postSpec, postTarget, epostSpec, hpost, specProof]
-  let hpreTy ← mkOrderRel preTarget preSpec
-  let hpre ← mkFreshExprMVar (userName := `vc) hpreTy
-  let prf ← mkOrderRelTrans hpre specApplied
-  try
-    let subgoals ← mvarId.apply prf
-    return some subgoals
-  catch _ =>
-    return none
-
-/-- Apply a raw unary consequence proof for a `@[vcspec]` entry to the current
-main goal, preserving tail goals. -/
-def runVCSpecEntryRawUnaryConsequence (entry : VCSpecEntry) : TacticM Bool := do
-  match ← getGoals with
-  | [] => return false
-  | goal :: rest =>
-      match ← liftMetaM <| entry.tryApplyRawUnaryConsequence goal with
-      | none => return false
-      | some subgoals =>
-          setGoals (subgoals ++ rest)
-          return true
-
 /-- Apply a raw relational `@[vcspec]` theorem under consequence, constructing
 the consequence proof against the current target directly. This avoids asking
 elaboration to infer the target `rwp` shape from an underscore-heavy `refine`
@@ -454,13 +242,13 @@ def VCSpecEntry.tryApplyRawRelConsequence (entry : VCSpecEntry) (mvarId : MVarId
   let some (preTarget, rhsTarget) ← rawRelParts? goalTy
     | return none
   let some (oaTarget, obTarget, postTarget, _epostTarget₁, _epostTarget₂) :=
-      stdDoRelWpParts? rhsTarget
+      rawRelWpParts? rhsTarget
     | return none
   let (_xs, _bis, specProof, specType) ← entry.proof.instantiate
   let some (preSpec, rhsSpec) ← rawRelParts? specType
     | return none
   let some (oaSpec, obSpec, postSpec, epostSpec₁, epostSpec₂) :=
-      stdDoRelWpParts? rhsSpec
+      rawRelWpParts? rhsSpec
     | return none
   unless (← isDefEq oaSpec oaTarget) && (← isDefEq obSpec obTarget) do
     return none
@@ -503,14 +291,19 @@ private def VCSpecBackwardRule.applyProof (rule : VCSpecBackwardRule) (mvarId : 
     return none
 
 /-- Try to apply a cached symbolic backward rule for a registered `@[vcspec]`
-entry. Unary and relational rules are normalized through raw `wp` / `rwp`
-sources when their theorem statements expose those forms definitionally. -/
+entry. Rules are normalized through raw `rwp` sources when their theorem statements expose that
+form definitionally. -/
 def VCSpecEntry.tryApplyCachedBackward (entry : VCSpecEntry) (mvarId : MVarId) :
     MetaM (Option (List MVarId)) := do
   let goalTy ← instantiateMVars (← mvarId.getType)
   let rawGoal ← isRawBackwardGoal goalTy
   let rule ← getVCSpecBackwardRuleCached entry rawGoal
   if rawGoal then
+    return (← rule.applyProof mvarId goalTy)
+  -- The cache outlives environments: a rule built during a speculative application that was
+  -- rolled back, or in an earlier `example`, names an auxiliary lemma the current environment no
+  -- longer declares. Its abstracted proof source still applies.
+  unless (← getEnv).contains rule.declName do
     return (← rule.applyProof mvarId goalTy)
   let symResult ←
     try
@@ -528,20 +321,13 @@ def VCSpecEntry.tryApplyCachedBackward (entry : VCSpecEntry) (mvarId : MVarId) :
 
 /-- Try to apply a registered `@[vcspec]` entry directly to a goal metavariable.
 
-This instantiates the stored `SpecProof`, bridges `Triple` proofs when the goal
-is already in raw weakest-precondition form, applies with fresh metavariables,
-and returns the generated subgoals. Goal-specific close passes remain in the
-unary and relational planners because they know which leaf rules are cheap and
-valid for their logic. -/
+This instantiates the stored `SpecProof`, applies with fresh metavariables, and returns the
+generated subgoals. Goal-specific close passes remain in the relational planner, which knows
+which leaf rules are cheap and valid for its logic. -/
 def VCSpecEntry.tryApplyBackward (entry : VCSpecEntry) (mvarId : MVarId) :
     MetaM (Option (List MVarId)) := do
   let (_xs, _bis, prf, type) ← entry.proof.instantiate
   let goalTy ← instantiateMVars (← mvarId.getType)
-  let (prf, type) ←
-    if ← isRawBackwardGoal goalTy then
-      bridgeTriple? prf type
-    else
-      pure (prf, type)
   fixPredFromGoal? type goalTy
   try
     let subgoals ← mvarId.apply prf
@@ -574,31 +360,5 @@ def runVCSpecEntryCachedBackward (entry : VCSpecEntry) : TacticM Bool := do
       | some subgoals =>
           setGoals (subgoals ++ rest)
           return true
-
-/-! ## VCSpec simp dispatch -/
-
-/-- Run the cached `vcspec_simp` simp set on the main goal target, swallowing
-errors and unchanged-goal failures.
-
-This is the single replacement for the previous open-coded `simp only [...]`
-blocks that peeled transformer `wp` layers (`apply_wp`, `*.run`, lifts,
-`Std.Internal.Do.EPost.Cons.push*`, `MAlgOrdered.wp_*`, the `Quantitative.wp_eq_mAlgOrdered_wp`
-bridges, and the assorted monad/algebra rewrites). Tag a new normalization
-lemma with `@[vcspec_simp]` (or rely on the `@[vcspec]` fallback) instead of
-appending it to a tactic-local simp list. -/
-def runVCSpecSimp : TacticM Unit := withMainContext do
-  let goal ← getMainGoal
-  let thms ← liftMetaM getVCSpecSimpTheorems
-  let ctx ← Simp.mkContext
-    (config := { failIfUnchanged := false })
-    (simpTheorems := #[thms])
-    (congrTheorems := (← getSimpCongrTheorems))
-  try
-    let (result?, _) ← Lean.Meta.simpTarget goal ctx
-    match result? with
-    | none => replaceMainGoal []
-    | some goal' => replaceMainGoal [goal']
-  catch _ =>
-    pure ()
 
 end OracleComp.ProgramLogic

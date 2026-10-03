@@ -10,14 +10,14 @@ public import Mathlib.Topology.Algebra.InfiniteSum.ENNReal
 /-!
 # Distributivity of weighted `tsum`s over addition in `ℝ≥0∞`
 
-Two algebraic identities about infinite sums
-`∑' i, w i * (f i [+ c] [+ g i])` in the unweighted sense that, whenever the
-weights `w` sum to one (the standard PMF normalisation), any constant added
-*inside* the weighted sum can be pulled *outside*.
+Two algebraic identities about the weighted infinite sums `∑' i, w i * (f i + c)` and
+`∑' i, w i * (f i + c + g i)`: whenever the weights `w` sum to one, as the point masses of a
+discrete probability distribution do, a constant `c` added *inside* the weighted sum can be pulled
+*outside*.
 
 These are the building blocks for weighted game-hopping identities of the form
-`∑' pksk, evalSPMF gen pksk * (Pr[good | …] + slack)` that show up in the
-integrated Fiat-Shamir EUF-CMA reductions.
+`∑' pksk, w pksk * (Pr{…}[good] + slack)`, which average a per-key probability bound plus a
+constant slack over the point masses `w` of a key generator.
 
 ## Main results
 

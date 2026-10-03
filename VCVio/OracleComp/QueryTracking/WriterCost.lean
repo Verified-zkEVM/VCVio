@@ -208,9 +208,10 @@ variable {ω : Type} [Monad m] [EvalDistSemantics m]
 
 /-- An event depending only on cost can observe either the cost marginal or the joint run.
 No measurable space on the discarded outputs is required. -/
-lemma prEvent_costs [LawfulMonad m] (oa : AddWriterT ω m α) (p : ω → Prop) :
-    Pr{let c ← oa.costs}[p c] = Pr{let z ← oa.run}[p (Multiplicative.toAdd z.2)] := by
-  simp only [costs_def, bind_map_left]
+lemma prEvent_costs [LawfulMonad m] [LawfulEvalDistSemantics m] (oa : AddWriterT ω m α)
+    (p : ω → Prop) :
+    Pr{let x ← oa.costs}[p x] = Pr{let z ← oa.run}[p (Multiplicative.toAdd z.2)] := by
+  rw [costs_def, prEvent_map]
 
 variable [MeasurableSpace ω]
 
@@ -253,6 +254,19 @@ lemma expectedCost_eq_lintegral_run
   exact lintegral_evalDist_map oa.run
     (f := fun z ↦ Multiplicative.toAdd z.2)
     (Multiplicative.measurable_toAdd.comp measurable_snd) hval
+
+/-- The expected cost is the expectation of the valued cost marginal. -/
+lemma expectedCost_eq_wp_costs [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (oa : AddWriterT ω m α) (val : ω → ENNReal) (hval : Measurable val) :
+    expectedCost oa val = wp⟦oa.costs⟧ val :=
+  (ExpectationWP.wp_eq_lintegral _ _ hval).symm
+
+/-- The expected cost is the expectation of the valued cost of the run: the form `prvcgen` enters
+through the transformer rules of `WriterT`, bounding the cost `tell` by `tell` along the program. -/
+lemma expectedCost_eq_wp_run [LawfulMonad m] [LawfulEvalDistSemantics m]
+    (oa : AddWriterT ω m α) (val : ω → ENNReal) (hval : Measurable val) :
+    expectedCost oa val = wp⟦oa.run⟧ fun z => val (Multiplicative.toAdd z.2) := by
+  rw [expectedCost_eq_wp_costs oa val hval, costs_def, ExpectationWP.wp_map]
 
 /-- A measurable family of cost measures has a measurable expected valuation. Such a family
 is exactly the data needed by `evalDistKernel` on the cost marginal. -/

@@ -12,7 +12,7 @@ public import VCVio.EvalDist.PFunctorPath
 /-!
 # Expected path bounds for strict PPT witnesses
 
-This module connects VCVio's strict oracle-complexity witnesses to the native measure observer in
+This module connects VCVio's strict oracle-complexity witnesses to the measure observer in
 `VCVio.EvalDist.PFunctorPath`. The underlying path measure, output marginal, exact-length law, and
 worst-case-to-expectation theorem are independent of the selected complexity backend.
 -/
@@ -44,7 +44,7 @@ The all-answers premise is explicit because `StrictPPTWitness` can also describe
 contracts which intentionally exclude some typed replies. A later support-aware theorem may
 weaken it to almost-sure conformance without changing the syntactic definition. -/
 theorem expectedQueryCount_le [∀ position, MeasurableSpace (p.B position)]
-    [p.IsMeasureSpec] [∀ position, DiscreteMeasurableSpace (p.B position)]
+    [p.AnswerMeasure] [∀ position, DiscreteMeasurableSpace (p.B position)]
     (witness : StrictPPTWitness Q bd contract program) (model : contract.Model)
     (hAllows : ∀ position answer, model.resourceModel.allows position answer)
     (value : input) :

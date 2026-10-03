@@ -22,7 +22,7 @@ open MeasureTheory
 
 universe u v w₁ w₂ x y
 
-namespace MeasureProgramLogic
+namespace ExpectationWP
 
 variable {α γ : Type u} {β δ : Type v}
 variable [MeasurableSpace α] [MeasurableSpace β] [MeasurableSpace γ] [MeasurableSpace δ]
@@ -159,4 +159,4 @@ theorem lintegral_le_eRelWP_bind {m₁ : Type u → Type w₁} {m₂ : Type v �
     ⟨c.joint.bind j, c.isCoupling.bind_of_aemeasurable hf hg hj hstep⟩
   simpa only [Measure.lintegral_bind hj hpost.aemeasurable] using h
 
-end MeasureProgramLogic
+end ExpectationWP

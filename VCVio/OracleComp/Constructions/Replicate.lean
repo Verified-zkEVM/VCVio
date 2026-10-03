@@ -6,10 +6,11 @@ Authors: Devon Tuma
 
 module
 public import VCVio.OracleComp.Constructions.Replicate.Basic
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import VCVio.OracleComp.EvalDist
 public import VCVio.EvalDist.List
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import Init.Data.Vector.Lemmas
 
 /-!
@@ -18,7 +19,8 @@ public import Init.Data.Vector.Lemmas
 This file defines a function `replicate oa n` that runs the computation `oa` a total of `n` times,
 returning the result as a list of length `n`.
 
-Note that while the executions are independent, they may no longer be after calling `simulate`.
+The executions are independent, though simulating them with a stateful handler through
+`simulateQ` can correlate them.
 -/
 
 @[expose] public section
@@ -46,57 +48,11 @@ lemma support_replicate :
     | nil => simp
     | cons x xs => rw [cons_mem_support_seq_map_cons_iff, ih]; aesop
 
-section probability
-
-variable [IsUniformSpec spec]
-
-lemma probFailure_replicate :
-    Pr[⊥ | oa.replicate n] = 1 - (1 - Pr[⊥ | oa]) ^ n := by
-  induction n with
-  | zero => simp
-  | succ n ih => simp
-
-/-- The probability of getting a list from `replicate` is the product of the chances of
-getting each of the individual elements. -/
 @[simp]
-lemma probOutput_replicate (xs : List α) :
-    Pr[= xs | oa.replicate n] = if xs.length = n then (xs.map (Pr[= · | oa])).prod else 0 := by
-  have : DecidableEq α := Classical.decEq α
-  induction n generalizing xs with
-  | zero => cases xs <;> simp [probOutput_eq_zero_of_not_mem_support]
-  | succ n ih =>
-    cases xs with
-    | nil => simp
-    | cons y ys =>
-      rw [replicate_succ, probOutput_cons_seq_map_cons_eq_mul oa (replicate n oa) y ys, ih]
-      simp
-
-lemma probEvent_replicate_of_probEvent_cons
-    (p : List α → Prop) (hp : p []) (q : α → Prop) (hq : ∀ x xs, p (x :: xs) ↔ q x ∧ p xs) :
-    Pr[ p | oa.replicate n] = Pr[ q | oa] ^ n := by
-  induction n with
-  | zero => simp [hp]
-  | succ n ih =>
-    rw [replicate_succ,
-      probEvent_seq_map_eq_mul oa (replicate n oa) List.cons p q p
-        (fun x _ xs _ => hq x xs),
-      ih, pow_succ, mul_comm]
-
-@[simp]
-lemma mem_finSupport_replicate [DecidableEq α]
+lemma mem_finSupport_replicate [∀ t, Fintype (spec.Range t)] [DecidableEq α]
     (xs : List α) : xs ∈ finSupport (oa.replicate n) ↔
       xs.length = n ∧ ∀ x ∈ xs, x ∈ finSupport oa := by
   simp [mem_finSupport_iff_mem_support]
-
-lemma probOutput_replicate_uniformSample {α : Type} [Fintype α] [SampleableType α]
-    {n : ℕ} {xs : List α} (hlen : xs.length = n) :
-    Pr[= xs | replicate n ($ᵗ α)] = (↑(Fintype.card α ^ n) : ENNReal)⁻¹ := by
-  simp only [probOutput_replicate, hlen, ite_true, probOutput_uniformSample]
-  rw [List.prod_map_const, hlen]
-  simpa [Nat.cast_pow] using
-    (ENNReal.inv_pow (a := (Fintype.card α : ENNReal)) (n := n)).symm
-
-end probability
 
 /-! ## SimulateQ distributivity -/
 

@@ -5,9 +5,12 @@ Authors: Quang Dao, Oleksandr Vovkotrub
 -/
 
 module
-public import VCVio.CryptoFoundations.SecExp
-public import VCVio.OracleComp.ProbComp
-public import VCVio.OracleComp.Constructions.SampleableType
+public import VCVio.CryptoFoundations.SecExp.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
 public import Mathlib.LinearAlgebra.Matrix.DotProduct
 import VCVio.EvalDist.ProbabilityNotation
 
@@ -36,8 +39,8 @@ assumptions:
 The experiments (`experiment`, `advantage`, `searchExperiment`,
 `searchAdvantage`) are stated once, generically. Lattice-specific
 instantiations live downstream (e.g. `LatticeCrypto.HardnessAssumptions`,
-which re-exports this namespace under its historical `LearningWithErrors`
-name).
+which re-exports this namespace as the `LearningWithErrors` namespace of the
+lattice schemes' security statements).
 -/
 
 @[expose] public section

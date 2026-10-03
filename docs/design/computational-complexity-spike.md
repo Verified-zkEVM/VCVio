@@ -1,7 +1,9 @@
 # Computational-complexity usability spike
 
-Status: completed on `dtumad/complexity-usability-spike` and
-`dtumad/quantitative-usability-spike`, audited 2026-08-24.
+Status: historical record of the usability spike completed on
+`dtumad/complexity-usability-spike` and `dtumad/quantitative-usability-spike`, audited
+2026-08-24. Its revisions, toolchain results and blockers are those of that date; the
+[computational-complexity design](computational-complexity.md) describes the present.
 
 ## Question and method
 

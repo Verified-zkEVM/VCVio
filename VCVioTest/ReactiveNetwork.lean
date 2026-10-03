@@ -18,7 +18,8 @@ public section
 
 namespace VCVioTest.ReactiveNetwork
 
-open PFunctor Interaction.UC ReactiveNetwork ReactiveProcess ReactiveRuntime MeasureTheory
+open PFunctor Interaction Interaction.UC Interaction.Execution.ReactiveNetwork
+  Interaction.Execution.ReactiveProcess ReactiveRuntime MeasureTheory
 
 @[expose] def returnedNetwork (value : Bool) : Network Unit PortBoundary.empty Bool where
   effect _ := ⟨Empty, Empty.elim⟩

@@ -13,7 +13,7 @@ public import Mathlib.Tactic.GCongr
 public import Mathlib.Tactic.GRewrite
 
 /-!
-# Native applicative and finite-product canaries
+# Applicative and finite-product canaries
 
 Sequencing laws preserve successful mass on arbitrary measurable spaces. Lossless factors
 propagate their probability certificates, while potentially failing factors retain their mass
@@ -27,9 +27,8 @@ open MeasureTheory
 
 run_cmd do
   let env ← Lean.getEnv
-  for name in [`PMF, `SPMF] do
-    if env.contains name then
-      throwError "native sequencing unexpectedly imports {name}"
+  if env.contains `PMF then
+    throwError "sequencing unexpectedly imports PMF"
 
 namespace VCVioTest.SeqMeasure
 
@@ -89,27 +88,36 @@ section events
 variable {m : Type → Type v} [Monad m] [LawfulMonad m]
   [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type}
 
+example (mx : m α) (my : m β) (p : α → Prop) :
+    Pr{let x ← mx <* my}[p x] = Pr{let x ← mx}[p x] * Pr{let _ ← my}[True] := by
+  simp
+
+example (mx : m α) (my : m β) (p : α → Prop) :
+    Pr{let x ← mx <* my}[p x] = Pr{let x ← mx}[p x] * Pr{let _ ← my}[True] := by
+  grind
+
+example (mx : m α) (my : m β) (p : β → Prop) :
+    Pr{let y ← mx *> my}[p y] = Pr{let y ← my}[p y] * Pr{let _ ← mx}[True] := by
+  simp
+
+example (mx : m α) (my : m β) (p : β → Prop) :
+    Pr{let y ← mx *> my}[p y] = Pr{let y ← my}[p y] * Pr{let _ ← mx}[True] := by
+  grind
+
+/-- The retained success mass is the output measure's total mass in any measurable structure. -/
 example [MeasurableSpace β] (mx : m α) (my : m β) (p : α → Prop) :
-    Pr{let x ← mx <* my}[p x] = 𝒟[my] Set.univ * Pr{let x ← mx}[p x] := by simp
+    Pr{let x ← mx <* my}[p x] = Pr{let x ← mx}[p x] * 𝒟[my] Set.univ := by
+  rw [prEvent_seqLeft, prEvent_true_eq_evalDist_apply_univ]
 
-example [MeasurableSpace β] (mx : m α) (my : m β) (p : α → Prop) :
-    Pr{let x ← mx <* my}[p x] = 𝒟[my] Set.univ * Pr{let x ← mx}[p x] := by grind
-
-example [MeasurableSpace α] (mx : m α) (my : m β) (p : β → Prop) :
-    Pr{let y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{let y ← my}[p y] := by simp
-
-example [MeasurableSpace α] (mx : m α) (my : m β) (p : β → Prop) :
-    Pr{let y ← mx *> my}[p y] = 𝒟[mx] Set.univ * Pr{let y ← my}[p y] := by grind
-
-example [MeasurableSpace β] (mx : m α) (my : m β) (p : α → Prop) {r : ENNReal}
+example (mx : m α) (my : m β) (p : α → Prop) {r : ENNReal}
     (h : Pr{
-      let x ← mx}[p x] ≤ r) : Pr{let x ← mx <* my}[p x] ≤ 𝒟[my] Set.univ * r := by
+      let x ← mx}[p x] ≤ r) : Pr{let x ← mx <* my}[p x] ≤ r * Pr{let _ ← my}[True] := by
   simp only [prEvent_seqLeft]
   gcongr
 
-example [MeasurableSpace β] (mx : m α) (my : m β) (p : α → Prop) {r : ENNReal}
+example (mx : m α) (my : m β) (p : α → Prop) {r : ENNReal}
     (h : Pr{
-      let x ← mx}[p x] ≤ r) : Pr{let x ← mx <* my}[p x] ≤ 𝒟[my] Set.univ * r := by
+      let x ← mx}[p x] ≤ r) : Pr{let x ← mx <* my}[p x] ≤ r * Pr{let _ ← my}[True] := by
   rw [prEvent_seqLeft]
   grw [h]
 

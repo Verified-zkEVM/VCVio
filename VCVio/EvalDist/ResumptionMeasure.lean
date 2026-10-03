@@ -13,7 +13,7 @@ public import VCVio.EvalDist.MeasureSemantics
 # Measure semantics of resumptions
 
 PolyFun's `PFunctor.Resumption` represents computations that may expose infinitely many visible
-queries and never return. The primitive denotational observations here follow its existing
+queries and never return. The primitive denotational observations here follow its
 `Resumption.truncate` surface:
 
 * `truncateMeasure k computation` is a probability measure on `Option β`; `none` records that the
@@ -38,7 +38,7 @@ universe u uA
 
 namespace PFunctor.Resumption
 
-variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.IsMeasureSpec]
+variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)] [P.AnswerMeasure]
   {β : Type u}
 
 /-- The measure of the `k`-query truncation of a possibly nonterminating computation. -/
@@ -79,7 +79,7 @@ theorem outputMeasure_query_succ [∀ a, DiscreteMeasurableSpace (P.B a)]
     [MeasurableSpace β] (k : ℕ) (position : P.A)
     (next : P.B position → Resumption P β) :
     outputMeasure (k + 1) (query position next) =
-      Measure.bind (IsMeasureSpec.toMeasure position) fun direction =>
+      Measure.bind (AnswerMeasure.toMeasure position) fun direction =>
         outputMeasure k (next direction) := by
   rw [outputMeasure, truncateMeasure, truncate_query_succ,
     FreeM.denote_liftBind _ _ Measurable.of_discrete.aemeasurable]
@@ -177,7 +177,7 @@ theorem returnedMeasure_apply_univ_le_one [∀ a, DiscreteMeasurableSpace (P.B a
 section FinitePrograms
 
 variable {P : PFunctor.{uA, u}} [∀ a, MeasurableSpace (P.B a)]
-  [∀ a, DiscreteMeasurableSpace (P.B a)] [P.IsMeasureSpec]
+  [∀ a, DiscreteMeasurableSpace (P.B a)] [P.AnswerMeasure]
   {α : Type u} [MeasurableSpace α]
 
 /-- Truncation beyond a total query bound returns the finite program with no cutoff. -/

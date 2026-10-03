@@ -9,7 +9,7 @@ module
 public import VCVio.CryptoFoundations.FiatShamir.WithAbort.ExpectedCost
 
 /-!
-# Native aborting Fiat-Shamir regressions
+# Aborting Fiat-Shamir regressions
 
 Retry analysis observes only abort markers and query counts. Its exact identities require a
 lossless abort observation, while its upper bounds also apply to failing handlers.

@@ -5,21 +5,22 @@ Authors: Devon Tuma
 -/
 
 module
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 
 /-!
 # Hard Relations
 
-This file defines a typeclass `HardRelation X W r` for relations `r : X → W → Prop`
-that are "hard" in the sense that given `x : X` no polynomial adversary can find `w : W`
-such that `r x w` holds.
-
-In the actual implementation all of these are indexed by some security parameter.
+This file defines generable relations and the experiment that measures how hard they are. A
+`GenerableRelation X W r` packages an algorithm `gen` that produces instance-witness pairs
+satisfying a relation `r : X → W → Bool`. In `hardRelationExperiment` an adversary receives a
+generated instance and wins if it returns a witness for it; the relation is hard when every
+efficient adversary wins with small probability.
 
 ## Implementation notes
 
-This is a simplified version without the asymptotic security parameter framework.
-A full asymptotic version needs `OracleAlg` to be redesigned.
+The relation and the experiment carry no security parameter, unlike the asymptotic games of
+`VCVio.CryptoFoundations.Asymptotics.Security`.
 -/
 
 @[expose] public section

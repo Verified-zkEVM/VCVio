@@ -8,6 +8,7 @@ module
 
 public import VCVio.CryptoFoundations.MerkleTree.MultiExtractability.DelayedObservation
 import VCVio.EvalDist.Monad.UniformTable
+import VCVio.ProgramLogic.Tactics.PrVCGen
 
 /-!
 # Merkle checkpoint and cache-reset counterexamples
@@ -32,8 +33,8 @@ namespace MerkleCheckpoints
 abbrev Query := Bool × Bool
 
 /-- Each fresh oracle address receives a uniform Boolean response. -/
-noncomputable local instance nativeUniform : IsUniformMeasureSpec (Query →ₒ Bool) :=
-  IsUniformMeasureSpec.ofFiniteNonempty (Query →ₒ Bool)
+noncomputable local instance uniformResponses : UniformAnswerMeasure (Query →ₒ Bool) :=
+  UniformAnswerMeasure.ofFiniteNonempty (Query →ₒ Bool)
 
 /-- Addressed binary-node query interface with one address. -/
 @[expose]
@@ -215,60 +216,42 @@ local instance transcriptDiscrete :
 
 theorem game_law : 𝒟[extractabilityExperiment model config 1 adversary] =
     (uniformOn (Set.univ : Set Bool)).map outcome := by
-  rw [game_eq, bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
+  rw [game_eq, bind_pure_comp, evalDist_map_of_discrete,
+    evalDist_query_uniform (spec := Query →ₒ Bool)]
 
 theorem publicFailure_probability :
     𝒟[extractabilityExperiment model config 1 adversary]
       {tr | tr.HasOpeningOrEqualRootDisagreement model} = (1 : ENNReal) / 2 := by
-  rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
-  have hevent : outcome ⁻¹' {tr | tr.HasOpeningOrEqualRootDisagreement model} = {false} := by
-    ext reply
-    exact publicFailure_outcome reply
-  rw [hevent, uniformOn_univ_apply_singleton]
-  simp
+  rw [← prEvent_eq_evalDist_of_discrete, game_eq]
+  prvcgen [OracleComp.Upper.Spec.query_avg, OracleComp.Lower.Spec.query_uniform]
+  all_goals simp [publicFailure_outcome, propInd_eq_ite, one_div]
 
 theorem lateFailure_probability :
     𝒟[extractabilityExperiment model config 1 adversary]
       {tr | LateOpeningFailure model.view tr} = 0 := by
-  rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
-  have hevent : outcome ⁻¹' {tr | LateOpeningFailure model.view tr} = ∅ := by
-    ext reply
-    exact iff_false_intro (no_lateFailure_outcome reply)
-  rw [hevent, measure_empty]
+  rw [← prEvent_eq_evalDist_of_discrete, game_eq]
+  prvcgen [OracleComp.Upper.Spec.query_avg]
+  simp [no_lateFailure_outcome, propInd_eq_ite]
 
 theorem drift_probability :
     𝒟[extractabilityExperiment model config 1 adversary] {tr | Drift model.view tr} =
       (1 : ENNReal) / 2 := by
-  rw [game_law, Measure.map_apply (measurable_of_countable _) (by trivial)]
-  have hevent : outcome ⁻¹' {tr | Drift model.view tr} = {false} := by
-    ext reply
-    cases reply <;> simp [drift_outcome_false, no_drift_outcome_true]
-  rw [hevent, uniformOn_univ_apply_singleton]
-  simp
+  rw [← prEvent_eq_evalDist_of_discrete, game_eq]
+  prvcgen [OracleComp.Upper.Spec.query_avg, OracleComp.Lower.Spec.query_uniform]
+  all_goals simp [drift_outcome_false, no_drift_outcome_true, propInd_eq_ite, one_div]
 
 theorem honestShared_probability : 𝒟[honestShared] {true} = 1 := by
-  rw [honestShared_eq, bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
-  rw [Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
-  have hevent : (fun _ : Bool => true) ⁻¹' ({true} : Set Bool) = Set.univ := by
-    ext reply
-    simp
-  rw [hevent, measure_univ]
+  rw [← prEvent_eq_evalDist_singleton, honestShared_eq]
+  prvcgen
 
 theorem honestReset_probability : 𝒟[honestReset] {true} = (1 : ENNReal) / 2 := by
-  rw [honestReset_eq]
-  rw [evalDist_bind_of_discrete]
-  simp only [bind_pure_comp, evalDist_map_of_discrete, evalDist_query_uniform]
-  rw [Measure.bind_apply (MeasurableSet.singleton true) (measurable_of_countable _).aemeasurable]
-  have hinner (root : Bool) :
-      (uniformOn (Set.univ : Set Bool)).map (fun reply => reply == root) {true} =
-        (1 : ENNReal) / 2 := by
-    rw [Measure.map_apply (measurable_of_countable _) (MeasurableSet.singleton true)]
-    have hevent : (fun reply : Bool => reply == root) ⁻¹' {true} = {root} := by
-      ext reply
-      simp
-    rw [hevent, uniformOn_univ_apply_singleton]
-    simp
-  simp only [hinner, lintegral_const, measure_univ, mul_one]
-
+  rw [← prEvent_eq_evalDist_singleton, honestReset_eq]
+  simp only [expect_norm, OracleComp.ProgramLogic.wp_HasQuery_query_uniform]
+  simp only [InductiveMerkleTree.domain_def, InductiveMerkleTree.range_def, Fintype.univ_bool,
+    Fintype.card_bool, Nat.cast_ofNat, beq_iff_eq, propInd_eq_ite, mul_ite, mul_one, mul_zero,
+    Finset.sum_ite_eq', Finset.mem_insert, Finset.mem_singleton, Bool.eq_true_or_eq_false_self,
+    ↓reduceIte, Finset.sum_const, Bool.true_eq_false, not_false_eq_true,
+    Finset.card_insert_of_notMem, Finset.card_singleton, Nat.reduceAdd, nsmul_eq_mul, one_div]
+  rw [← mul_assoc, ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top, one_mul]
 
 end MerkleCheckpoints

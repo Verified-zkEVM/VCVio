@@ -3,13 +3,18 @@
 `Interop/` is an experimental sibling to `LatticeCrypto/` whose job is to
 let VCVio reason about Lean code emitted by Rust verification frontends:
 
-- [hax](https://github.com/cryspen/hax): MIR → Lean/F\*/Coq/EasyCrypt/ProVerif/SSProve via a 35-phase OCaml engine. Lean target produces code in the `Hax.RustM := ExceptT Error Option` monad.
-- [aeneas](https://github.com/AeneasVerif/aeneas): MIR → Lean/Coq/F\* via Charon's LLBC + functional translation. Lean target produces code in an inductive `Aeneas.Std.Result α := ok | fail | div`.
+- [hax](https://github.com/cryspen/hax): MIR → Lean/F\*/Coq/EasyCrypt/ProVerif/SSProve via a
+  35-phase OCaml engine. Lean target produces code in the `Hax.RustM := ExceptT Error Option` monad.
+- [aeneas](https://github.com/AeneasVerif/aeneas): MIR → Lean/Coq/F\* via Charon's LLBC + functional
+  translation. Lean target produces code in an inductive `Aeneas.Std.Result α := ok | fail | div`.
 
-**Current baseline (Lean 4.33):** both integrations are dormant and the
-aggregate `Interop` target is excluded from CI. Hax is not yet Lean
-4.33-compatible. Aeneas publishes a Lean 4.31 build, so its VCVio bridge must
-be ported and revalidated independently before being enabled.
+**Status:** both integrations are dormant, and the aggregate `Interop` target
+is excluded from CI. The pinned hax revision targets Lean `v4.29.0-rc1` and the
+pinned aeneas revision Lean `v4.31.0`, both older than VCVio's toolchain
+(`lean-toolchain`). As `lakefile.lean` records, a backend is enabled only once
+its upstream library supports VCVio's Lean version without a local
+compatibility layer, and only after its bridge is ported and revalidated on its
+own.
 
 Both backends collapse panic + divergence into the same shape; VCVio adds
 oracle access on top. The framework-side target monad is
@@ -58,7 +63,7 @@ Interop/
 │   ├── Bridge.lean       ← `liftRustM`, `errorOfHax`, `@[spec]` bridge lemmas
 │   ├── Examples.lean     ← hand-crafted hax bridge demos
 │   └── *.lean            ← emitted hax examples and proofs
-└── Aeneas/               ← bridge to `Aeneas.Std.Result` (currently disabled)
+└── Aeneas/               ← bridge to `Aeneas.Std.Result` (disabled)
     └── README.md
 ```
 
@@ -77,16 +82,16 @@ oracle-aware Rust target monad for both backends.
 
 ## Git-pinned Backend Requires
 
-`lakefile.lean` carries explicit git pins for both backends. Current
-state:
+`lakefile.lean` carries explicit git pins for both backends, both commented
+out:
 
 ```lean
--- Disabled: upstream Hax does not build under Lean 4.33.
+-- Disabled: the pinned Hax revision targets Lean v4.29.0-rc1.
 -- require Hax from git
 --   "https://github.com/cryspen/hax" @
 --   "492a34e3" / "hax-lib/proof-libs/lean"
 
--- Disabled pending a Lean 4.33 port; upstream pin uses Lean 4.31.
+-- Disabled: the pinned Aeneas revision targets Lean v4.31.0.
 -- require aeneas from git
 --   "https://github.com/AeneasVerif/aeneas" @
 --   "15b968482b0dcd7aae45020b6d1bca39b5024af5" / "backends/lean"
@@ -98,35 +103,31 @@ isolation check runs regardless of whether the requires are active, so
 the contract holds even mid-experiment.
 
 **Require-order rule.** `require Hax` (and any future backend require) must
-appear *before* `require "leanprover-community" / "mathlib"`. Hax transitively pins `Qq` at
-`v4.29.0-rc1`, Mathlib pins it at the final release. Lake's conflict resolver
-takes the *last* `require` of each package, so Mathlib must be last. Wrong
-order produces `mathlib: failed to fetch cache` on `lake update`, with a clear
-warning from Lake.
+appear *before* `require "leanprover-community" / "mathlib"`. Hax transitively
+pins `Qq` at its own Lean version, which differs from the one Mathlib pins.
+Lake's conflict resolver takes the *last* `require` of each package, so Mathlib
+must be last. The wrong order produces `mathlib: failed to fetch cache` on
+`lake update`, with a clear warning from Lake.
 
-## Toolchain Status (empirical, as of 2026-04-17)
+## Toolchain Status
 
-- **VCVio**: `leanprover/lean4:v4.29.0` + Mathlib `v4.29.0`.
-- **hax `492a34e3`** (upstream: `v4.29.0-rc1`): `lake build Hax`
-  succeeds in 91 jobs. Two harmless `@[reducible]` warnings in
-  `Hax/rust_primitives/USize64.lean`; nothing blocks us.
-- **aeneas `ba600392`** (upstream: `v4.28.0-rc1`): `lake update` resolves
-  cleanly under our root Mathlib/Lean pins, but `lake build Aeneas`
-  reaches only 1625/1662 jobs before **three** source-level regressions
-  propagate:
-  - `Aeneas/Std/Primitives.lean:168:44` — kernel type mismatch in
-    `CCPO (Result α) := inferInstanceAs (CCPO (FlatOrder .div))`. This is
-    inside the one file we need.
-  - `Aeneas/Tactic/Simproc/ReduceZMod/ReduceZMod.lean:83:10` — Mathlib
-    removed / renamed `Monoid.toNatPow` in v4.29.
-  - `Aeneas/Tactic/Simp/RingEqNF/Tests.lean:113:11` — `ring_nf`
-    normalization differs; tests-only.
+VCVio builds with the Lean and Mathlib versions pinned in `lean-toolchain` and
+`lakefile.lean`. The backend pins target older toolchains:
 
-  Because regression #1 is the file that defines `Result α`, there is no
-  partial-import workaround. Unblock by waiting for upstream to ship a
-  v4.29 build, or by maintaining a short patch series on a fork.
+- **hax `492a34e3`** targets Lean `v4.29.0-rc1`.
+- **aeneas `15b96848`** (its published `nightly-2026.07.11-15b9684`) pins Lean
+  and Mathlib `v4.31.0`.
 
-Bump the hax pin (or un-comment aeneas once fixed) by editing the
+The last build attempt recorded here (2026-04-17) ran against VCVio on Lean
+and Mathlib `v4.29.0`. Hax `492a34e3` built in 91 jobs, with two harmless
+`@[reducible]` warnings in `Hax/rust_primitives/USize64.lean`. Aeneas, then
+pinned at `ba600392`, stopped at 1625 of 1662 jobs on three source-level
+regressions: a kernel type mismatch in `Aeneas/Std/Primitives.lean`, the file
+that defines `Result α`, so that no partial import could avoid it; Mathlib's
+removal of `Monoid.toNatPow`; and a `ring_nf` normalization difference in a
+test file.
+
+Bump the hax pin (or un-comment aeneas once it builds) by editing the
 `require` line(s) in `lakefile.lean` and running `lake update Hax`
 (resp. `aeneas`).
 
@@ -150,7 +151,8 @@ hax's WP shape (`.except Error (.except PUnit .pure)`) inside the
 equivalent VCVio shape, since `ExceptT Error (OptionT _)` composes to
 exactly that PostShape.
 
-For aeneas, `Interop/Aeneas/Bridge.lean` will pattern-match on `Result`:
+For aeneas, the planned `Interop/Aeneas/Bridge.lean`, which is not written yet, would
+pattern-match on `Result`:
 
 ```lean
 def errorOfAeneas : Aeneas.Std.Error → Interop.Rust.Error := ...
@@ -173,19 +175,24 @@ maps from the upstream isomorphic enum.
   `Interop.Rust.Error` and convert at the boundary to avoid littering
   proofs with three-way coercions.
 - **Hax `Std.Do` `@[spec]` `DiscrTree`**. Both hax and VCVio register
-  `@[spec]` lemmas with `mvcgen`. Quarantine hax tactic imports to
-  `Interop/Hax/**` so the global key set is loaded only when an Interop
-  module asks for it.
+  `@[spec]` lemmas; hax's go to the deprecated `mvcgen` database, VCVio's
+  to core `vcgen`'s. Quarantine hax tactic imports to `Interop/Hax/**` so
+  the global key set is loaded only when an Interop module asks for it.
+  `Interop/Hax` and `Interop/Rust` import a `Std.Do` bridge module,
+  `VCVio.ProgramLogic.Unary.StdDoBridge`, that the built libraries do not
+  contain. Restating Interop on core `Std.WP` belongs to Interop's own port,
+  together with moving its pinned frontends to VCVio's toolchain.
 - **Notation collisions**. The `⦃ ⦄ ⦃ ⦄` Hoare-triple notation is
   shared. Practice has been fine because both notations resolve through
   `Std.Do.Triple`, but be alert to `local notation` overrides in hax
   modules.
 - **Loop combinators**. Hax's `RustM` has `Loop.MonoLoopCombinator`
-  instances for `partial_fixpoint`. `RustOracleComp` doesn't yet, and
-  may not need to if the lift comes after partial-fixpoint resolution
-  on the hax side.
+  instances for `partial_fixpoint`. `RustOracleComp` has none, and may
+  not need them if the lift comes after partial-fixpoint resolution on
+  the hax side.
 - **Aeneas tactic infrastructure** (`@[step]`, `step!`) cannot be reused
-  on the VCVio side. Drive proofs with VCVio's `mvcgen` after lifting.
+  on the VCVio side. Drive proofs with core `vcgen` (`prvcgen` for
+  probability goals) after lifting.
 - **Verification Facade / Theatre concerns**. Both Charon and the hax
   engine are part of the TCB once a backend is enabled. Document any
   trusted assumption in `Interop/{Hax,Aeneas}/README.md`. See

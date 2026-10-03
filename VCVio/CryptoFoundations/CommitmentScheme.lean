@@ -5,10 +5,16 @@ Authors: Quang Dao
 -/
 
 module
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.OracleComp.EvalDist
-public import VCVio.OracleComp.EvalDist.UniformCompatibility
-public import VCVio.OracleComp.ProbComp
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Measure
+public import VCVio.OracleComp.ReachableWhen
+public import VCVio.OracleComp.Support
+public import PolyFun.PFunctor.Free.WP
+public import VCVio.OracleComp.SimSemantics.SimulateQ
+public import ToMathlib.Data.Set.Functor
+public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.OracleComp.ProbComp.Basic
+public import VCVio.OracleComp.Constructions.UniformFinMeasure
 public import ToMathlib.MeasureTheory.Measure.Bool
 
 /-!
@@ -57,11 +63,10 @@ def PerfectlyCorrect (cs : CommitmentScheme PP M C D) : Prop :=
 
 /-- A commitment scheme is perfectly hiding if, for every honestly generated
 public parameter, the commitment (first component) has the same distribution
-regardless of the committed message. -/
+regardless of the committed message: the two commitments agree on every event. -/
 def PerfectlyHiding (cs : CommitmentScheme PP M C D) : Prop :=
   ∀ pp, pp ∈ support cs.setup →
-    ∀ m₁ m₂, 𝒮[Prod.fst <$> cs.commit pp m₁] =
-      𝒮[Prod.fst <$> cs.commit pp m₂]
+    ∀ m₁ m₂, Prod.fst <$> cs.commit pp m₁ =ᵈ Prod.fst <$> cs.commit pp m₂
 
 /-! ### Computational hiding -/
 
@@ -130,14 +135,14 @@ the scheme's normal setup. Required for reductions that swap in the
 trapdoor setup without the adversary noticing. -/
 def TrapdoorExtractor.SetupConsistent {TD : Type} (extractor : TrapdoorExtractor PP TD C M)
     (cs : CommitmentScheme PP M C D) : Prop :=
-  𝒮[Prod.fst <$> extractor.setupExtract] = 𝒮[cs.setup]
+  Prod.fst <$> extractor.setupExtract =ᵈ cs.setup
 
 /-- Extraction experiment: generate parameters with trapdoor, honestly commit
 to message `m`, then check whether the extractor recovers `m` from the commitment.
 
 Downstream code decides how much error to tolerate:
-- Perfect extraction: `∀ m, Pr[= true | extractExperiment cs ext m] = 1`
-- Computational: bound `1 - Pr[= true | extractExperiment cs ext m]` -/
+- Perfect extraction: `∀ m, 𝒟[extractExperiment cs ext m] {true} = 1`
+- Computational: bound `1 - 𝒟[extractExperiment cs ext m] {true}` -/
 def extractExperiment [DecidableEq M] (cs : CommitmentScheme PP M C D) {TD : Type}
     (extractor : TrapdoorExtractor PP TD C M) (m : M) : ProbComp Bool := do
   let (pp, td) ← extractor.setupExtract

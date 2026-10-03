@@ -10,6 +10,8 @@ public import VCVio.CryptoFoundations.FiatShamir.QueryBounds
 public import VCVio.CryptoFoundations.FiatShamir.Sigma
 public import VCVio.CryptoFoundations.ReplayFork
 public import VCVio.CryptoFoundations.SeededFork
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # Fiat-Shamir forking infrastructure
@@ -326,6 +328,10 @@ lemma mem_support_simulateQ_unifForward_add_roImpl_query_inr_run_none_iff
   · rintro ⟨v, hz⟩
     exact ⟨v, support_wrapped_query_inr ▸ Set.mem_univ v, hz⟩
 
+section HandlerTriples
+
+open Std.WP OracleComp.ProgramLogic
+
 /-- Running the inner `unifForward + roImpl` simulator against a source computation with
 an `nmaHashQueryBound Q` can grow the internal `queryLog` by at most `Q`.
 
@@ -338,55 +344,26 @@ theorem queryLog_length_le_of_nmaHashQueryBound
     (st : SimState M Commit Chal) {z : α × SimState M Commit Chal}
     (hz : z ∈ support ((simulateQ (unifForward M Commit Chal + roImpl M Commit Chal) oa).run st)) :
     z.2.2.length ≤ st.2.length + Q := by
-  induction oa using OracleComp.inductionOn generalizing Q st z with
-  | pure x =>
-      obtain rfl : z = (x, st) := by
-        simpa [simulateQ_pure, StateT.run_pure, support_pure] using hz
-      simp
-  | query_bind t mx ih =>
-      rw [nmaHashQueryBound_query_bind_iff (M := M) (Commit := Commit) (Chal := Chal)] at hQ
-      rw [simulateQ_query_bind, StateT.run_bind, support_bind] at hz
-      simp only [Set.mem_iUnion] at hz
-      obtain ⟨us, hus, hz'⟩ := hz
-      cases t with
-      | inl n =>
-          change unifSpec.Range n × SimState M Commit Chal at us
-          rcases st with ⟨cache, log⟩
-          rcases us with ⟨u, usState⟩
-          have hstate := (mem_support_unifForward_run_iff
-            (M := M) (Commit := Commit) (Chal := Chal)
-            n (cache, log) (u, usState)).mp hus
-          change usState = (cache, log) at hstate
-          subst usState
-          simpa using ih u (hQ.2 u) (cache, log) hz'
-      | inr mc =>
-          change Chal × SimState M Commit Chal at us
-          rcases st with ⟨cache, log⟩
-          cases hcache : cache mc with
-          | some v =>
-              have hus' : us ∈ ({(v, cache, log)} : Set _) := by
-                change us ∈ support ((roImpl M Commit Chal mc).run (cache, log)) at hus
-                rw [roImpl_run_some (M := M) (Commit := Commit) (Chal := Chal)
-                  mc cache log v hcache] at hus
-                simpa only [support_pure] using hus
-              obtain rfl := Set.mem_singleton_iff.mp hus'
-              have hrec : z.2.2.length ≤ log.length + (Q - 1) := by
-                simpa using ih v (hQ.2 v) (cache, log) hz'
-              exact le_trans hrec (Nat.add_le_add_left (Nat.sub_le _ _) _)
-          | none =>
-              obtain ⟨u, rfl⟩ : us ∈ Set.range (fun u : Chal =>
-                  (u, cache.cacheQuery mc u, log ++ [mc])) := by
-                change us ∈ support ((roImpl M Commit Chal mc).run (cache, log)) at hus
-                rw [roImpl_run_none (M := M) (Commit := Commit) (Chal := Chal)
-                  mc cache log hcache, support_bind, support_wrapped_query_inr] at hus
-                simpa [support_bind] using hus
-              have hrec : z.2.2.length ≤ (log ++ [mc]).length + (Q - 1) := by
-                simpa using
-                  ih u (hQ.2 u)
-                    ((cache.cacheQuery mc u : (M × Commit →ₒ Chal).QueryCache), log ++ [mc]) hz'
-              have hQpos : 0 < Q := hQ.1
-              simp only [List.length_append, List.length_singleton] at hrec ⊢
-              lia
+  have h := simulateQ_triple_ranked_of_queryBoundP
+    (unifForward M Commit Chal + roImpl M Commit Chal) _
+    (fun k (s : SimState M Commit Chal) => s.2.length + k ≤ st.2.length + Q)
+    (fun t k ht => by
+      rcases t with n | mc
+      · exact absurd ht (by simp)
+      · vcgen [roImpl, Spec.lift_StateT, Necessary.Spec.ofSupport (wrappedChallengeQuery Chal)]
+        all_goals simp_all
+        all_goals omega)
+    (fun t k ht => by
+      rcases t with n | mc
+      · refine (triple_stateT_iff_forall_support _ _ _ ⊥).2 fun s hs a s' hmem => ?_
+        have hs' : s' = s := (mem_support_unifForward_run_iff (M := M) (Commit := Commit)
+          (Chal := Chal) n s (a, s')).1 hmem
+        exact hs' ▸ hs
+      · exact absurd (by simp) ht)
+    (fun k s hs => by simp only at hs ⊢; omega) oa Q hQ
+  simpa using (triple_stateT_iff_forall_support _ _ _ ⊥).1 h st (by simp) z.1 z.2 hz
+
+end HandlerTriples
 
 /-- Replay a managed-RO NMA adversary against a single counted challenge oracle, keeping both
 the adversary-returned cache and the live query log that the forking lemma can rewind.
@@ -435,7 +412,23 @@ noncomputable def advantage [DecidableEq M] [DecidableEq Commit] [SampleableType
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) : ENNReal :=
-  Pr[= true | experiment σ hr M nmaAdv qH]
+  Pr{let x ← experiment σ hr M nmaAdv qH}[x = true]
+
+/-- Forwarding uniform selection and answering the challenge oracle by uniform sampling
+preserves the distribution of every computation over `wrappedSpec Chal`. -/
+theorem simulateQ_uniformImpl_evalDistEq [SampleableType Chal]
+    [UniformAnswerMeasure (Unit →ₒ Chal)] {α : Type} (oa : OracleComp (wrappedSpec Chal) α) :
+    simulateQ (QueryImpl.ofLift unifSpec ProbComp +
+      uniformSampleImpl (spec := (Unit →ₒ Chal))) oa =ᵈ oa := by
+  let : MeasurableSpace α := ⊤
+  refine EvalDistEq.of_evalDist_eq (evalDist_simulateQ_eq_of_forall _ (fun t => ?_) oa)
+  rw [OracleSpec.AnswerMeasure.toMeasure_eq_uniformOn]
+  rcases t with n | u
+  · simp only [QueryImpl.add_apply_inl, QueryImpl.ofLift_eq_id', QueryImpl.id'_apply]
+    exact evalDist_liftM_query_uniform (spec := unifSpec) n
+  · let : MeasurableSpace Chal := ⊤
+    simp only [QueryImpl.add_apply_inr, uniformSampleImpl_apply]
+    exact SampleableType.evalDist_uniformSample
 
 section Coupling
 
@@ -1206,7 +1199,7 @@ end Coupling
 /-- If two successful contextual forks select the same fork index, their
 forgery targets agree. -/
 lemma runTrace_target_eq_of_mem_contextFork
-    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal] [SampleableType Chal] [Inhabited Chal]
+    [DecidableEq M] [DecidableEq Commit] [DecidableEq Chal] [SampleableType Chal]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
@@ -1218,9 +1211,6 @@ lemma runTrace_target_eq_of_mem_contextFork
     (h₁ : forkPoint Commit Chal Resp M qH x₁ = some s)
     (h₂ : forkPoint Commit Chal Resp M qH x₂ = some s) :
     x₁.target = x₂.target := by
-  let : Fintype Chal := Fintype.ofFinite Chal
-  let : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-    IsUniformSpec.ofFintypeInhabited _
   let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
   let cf := forkPoint Commit Chal Resp M qH
   let main := runTrace σ hr M nmaAdv pk
@@ -1327,7 +1317,7 @@ postcondition-transfer facts for the wrapped managed random-oracle trace experim
 
 **On the level of the statement.** We state the bound at the `OracleComp` level rather than
 lifting through `simulateQ` to `ProbComp`. Each caller (e.g. `euf_nma_bound`) can bridge to
-`ProbComp` in one line using `uniformSampleImpl.probEvent_simulateQ` when needed, keeping this
+`ProbComp` in one line using `uniformSampleImpl.evalDist_simulateQ` when needed, keeping this
 lemma focused on the forking-lemma content.
 
 **On the target-equality conjunct.** A maximally-informative version would also conclude
@@ -1349,7 +1339,8 @@ into the trace's list corresponds to the same physical position in the outer log
 discharge `hreach` by establishing this correspondence at the level of `runTrace`. -/
 theorem replayForkingBound
     [DecidableEq M] [DecidableEq Commit]
-    [DecidableEq Chal] [SampleableType Chal] [Fintype Chal] [Inhabited Chal]
+    [DecidableEq Chal] [SampleableType Chal] [Fintype Chal]
+    [UniformAnswerMeasure (wrappedSpec Chal)]
     (nmaAdv : SignatureAlg.ManagedRoNmaAdversary
       (FiatShamir.inROM σ hr M))
     (qH : ℕ) (pk : Stmt)
@@ -1361,16 +1352,12 @@ theorem replayForkingBound
     (hreach : CfReachable (runTrace σ hr M nmaAdv pk)
       (fun j : ℕ ⊕ Unit => match j with | .inl _ => 0 | .inr () => qH) (Sum.inr ())
       (forkPoint Commit Chal Resp M qH)) :
-    letI : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-      IsUniformSpec.ofFintypeInhabited _
     let wrappedMain := runTrace σ hr M nmaAdv pk
     let cf := forkPoint Commit Chal Resp M qH
     let qb : ℕ ⊕ Unit → ℕ := fun j => match j with | .inl _ => 0 | .inr () => qH
-    let acc := Pr[ fun x => (cf x).isSome | wrappedMain]
+    let acc := Pr{let x ← wrappedMain}[(cf x).isSome]
     acc * (acc / (qH + 1 : ENNReal) - challengeSpaceInv Chal) ≤
-      Pr[
-        fun r : Option
-            (Trace Commit Chal Resp M × Trace Commit Chal Resp M) =>
+      Pr{let r ← contextFork wrappedMain qb (Sum.inr ()) cf}[
           ∃ (x₁ x₂ : Trace Commit Chal Resp M)
             (s : Fin (qH + 1)) (log₁ log₂ : QueryLog (unifSpec + (Unit →ₒ Chal))),
             r = some (x₁, x₂) ∧
@@ -1379,25 +1366,16 @@ theorem replayForkingBound
             QueryLog.getQueryValue? log₁ (Sum.inr ()) ↑s ≠
               QueryLog.getQueryValue? log₂ (Sum.inr ()) ↑s ∧
             P_out x₁ log₁ ∧
-            P_out x₂ log₂
-        | contextFork wrappedMain qb (Sum.inr ()) cf] := by
-  let : IsUniformSpec ((Unit →ₒ Chal) : OracleSpec _) :=
-    IsUniformSpec.ofFintypeInhabited _
+            P_out x₂ log₂] := by
   intro wrappedMain cf qb acc
   classical
-  have hAcc_sum : acc = ∑ s, Pr[= some s | cf <$> wrappedMain] := by
-    simp only [acc]
-    rw [show (fun x => (cf x).isSome = true) =
-        (fun x : _ => (Option.isSome x = true)) ∘ cf from rfl,
-      ← probEvent_map (q := fun r => Option.isSome r = true),
-      probEvent_isSome_eq_tsum_probOutput_some, tsum_fintype]
-  rw [hAcc_sum]
-  have hH_inv : (Fintype.card ((unifSpec + (Unit →ₒ Chal)).Range (Sum.inr ())) : ENNReal)⁻¹ =
+  have hH_inv : (Fintype.card ((wrappedSpec Chal).Range (Sum.inr ())) : ENNReal)⁻¹ =
       challengeSpaceInv Chal := rfl
-  refine (?_ : _ ≤ Pr[ fun r => r.isSome | contextFork wrappedMain qb (Sum.inr ()) cf]).trans
-    (probEvent_mono fun r hr hisSome => ?_)
-  · simpa only [show qb (Sum.inr ()) = qH from rfl, hH_inv, Nat.cast_add, Nat.cast_one] using
-      le_probEvent_isSome_contextFork (main := wrappedMain) (qb := qb) (i := Sum.inr ())
+  refine (?_ : _ ≤ Pr{let r ← contextFork wrappedMain qb (Sum.inr ()) cf}[r.isSome]).trans
+    (prEvent_mono_of_support _ _ _ fun r hr hisSome => ?_)
+  · simpa only [acc, prEvent_isSome_eq_sum, show qb (Sum.inr ()) = qH from rfl, hH_inv,
+      Nat.cast_add, Nat.cast_one] using
+      le_prEvent_isSome_contextFork (main := wrappedMain) (qb := qb) (i := Sum.inr ())
         (cf := cf) hreach.toPathCfReachable
   · rcases r with _ | ⟨x₁, x₂⟩
     · simp at hisSome

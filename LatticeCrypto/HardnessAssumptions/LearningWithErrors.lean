@@ -13,9 +13,9 @@ public import VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning
 LWE-style experiments for the lattice schemes. The definitions live in
 `VCVio.CryptoFoundations.HardnessAssumptions.NoisyLearning` as the generic
 noisy-learning problem family (`NoisyLearning.Problem` covers LWE, module-LWE,
-ring-LWE, and LPN); this module re-exports them under the historical
-`LearningWithErrors` namespace used by the lattice schemes' security
-statements.
+ring-LWE, and LPN); this module re-exports them under the
+`LearningWithErrors` namespace that the lattice schemes' security
+statements use.
 -/
 
 @[expose] public section

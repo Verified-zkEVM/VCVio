@@ -199,53 +199,33 @@ each matchable with probability at most `maxNonceProb`. -/
 private lemma unlinkBadTagStep_bad_le
     (tag : TagId) (st : UnlinkBadState TagId Nonce Digest)
     (maxNonceProb : ℝ≥0∞)
-    (hmax : ∀ n : Nonce, Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ maxNonceProb)
+    (hmax : ∀ n : Nonce, Pr{let x ← ($ᵗ Nonce : ProbComp Nonce)}[x = n] ≤ maxNonceProb)
     (hbad : st.bad = false)
     (hbounded : unlinkBadCacheBounded st) :
-    Pr[fun z : Option (TagTranscript Nonce Digest) × UnlinkBadState TagId Nonce Digest =>
-        z.2.bad = true |
-      (unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st] ≤
-      (st.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
+    Pr{let z ← (unlinkBadTagQueryImpl (sessionsPerTag := sessionsPerTag) tag).run st}[
+      z.2.bad = true] ≤ (st.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
   by_cases hslot : st.sessionsUsed tag < sessionsPerTag
-  · rw [unlinkBadTagQueryImpl_run_of_lt (sessionsPerTag := sessionsPerTag) tag st hslot,
-      probEvent_bind_eq_tsum]
-    have hinner : ∀ nonce : Nonce,
-        Pr[fun z : Option (TagTranscript Nonce Digest) × UnlinkBadState TagId Nonce Digest =>
-            z.2.bad = true |
-          ($ᵗ Digest : ProbComp Digest) >>= fun auth =>
-            pure (some ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest),
-              unlinkBadTagNext tag st nonce auth)] =
-          if (st.responses (tag, nonce)).isSome then 1 else 0 := by
-      intro nonce
-      by_cases hcached : (st.responses (tag, nonce)).isSome = true <;>
-        simp [unlinkBadTagNext, hbad, hcached]
-    simp_rw [hinner]
+  · rw [unlinkBadTagQueryImpl_run_of_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
+    simp only [expect_norm]
+    -- `bad` fires exactly when the fresh nonce is already cached for this tag.
+    have hinner : ∀ nonce, ¬ (st.responses (tag, nonce)).isSome = true →
+        Pr{let auth ← ($ᵗ Digest : ProbComp Digest)}[
+          (unlinkBadTagNext tag st nonce auth).bad = true] ≤ 0 := fun nonce hcached =>
+      le_of_eq <| prEvent_eq_zero_of_forall_not _ _ fun _ => by
+        simp [unlinkBadTagNext, hbad, Bool.eq_false_iff.mpr hcached]
+    refine (wp_le_prEvent_add _ _ _ hinner fun _ => prEvent_le_one _).trans ?_
+    rw [add_zero]
     obtain ⟨S, hScard, hS⟩ := hbounded tag
-    calc
-      ∑' nonce : Nonce,
-          Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-            (if (st.responses (tag, nonce)).isSome then 1 else 0)
-          = Pr[fun nonce : Nonce => (st.responses (tag, nonce)).isSome = true |
-              ($ᵗ Nonce : ProbComp Nonce)] := by
-            simp only [probEvent_eq_tsum_ite]
-            refine tsum_congr fun nonce => ?_
-            by_cases hcached : (st.responses (tag, nonce)).isSome = true <;>
-              simp [hcached]
-      _ ≤ Pr[fun nonce : Nonce => ∃ n ∈ S, nonce = n |
-              ($ᵗ Nonce : ProbComp Nonce)] := by
-            apply probEvent_mono
-            intro nonce _ hcached
-            exact ⟨nonce, hS nonce hcached, rfl⟩
-      _ ≤ ∑ n ∈ S, Pr[fun nonce : Nonce => nonce = n |
-              ($ᵗ Nonce : ProbComp Nonce)] :=
-            probEvent_exists_finset_le_sum S ($ᵗ Nonce : ProbComp Nonce)
-              (fun n nonce => nonce = n)
-      _ ≤ ∑ _n ∈ S, maxNonceProb :=
-            Finset.sum_le_sum fun n _ => by simpa [probEvent_eq_eq_probOutput] using hmax n
+    calc Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[(st.responses (tag, nonce)).isSome = true]
+        ≤ Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[∃ n ∈ S, nonce = n] :=
+          prEvent_mono _ _ _ fun nonce hcached => ⟨nonce, hS nonce hcached, rfl⟩
+      _ ≤ ∑ n ∈ S, Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[nonce = n] :=
+          prEvent_exists_finset_le S ($ᵗ Nonce : ProbComp Nonce) (fun n nonce => nonce = n)
+      _ ≤ ∑ _n ∈ S, maxNonceProb := Finset.sum_le_sum fun n _ => hmax n
       _ = (S.card : ℝ≥0∞) * maxNonceProb := by
-            simp [Finset.sum_const, nsmul_eq_mul]
+          simp [Finset.sum_const, nsmul_eq_mul]
       _ ≤ (st.sessionsUsed tag : ℝ≥0∞) * maxNonceProb :=
-            mul_le_mul' (Nat.cast_le.mpr hScard) le_rfl
+          mul_le_mul' (Nat.cast_le.mpr hScard) le_rfl
   · rw [unlinkBadTagQueryImpl_run_of_not_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
     simp [hbad]
 
@@ -257,22 +237,23 @@ the probability that bad fires is at most
 private lemma simulateQ_unlinkBad_prob_le
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (maxNonceProb : ℝ≥0∞)
-    (hmax : ∀ n : Nonce, Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ maxNonceProb)
+    (hmax : ∀ n : Nonce, Pr{let x ← ($ᵗ Nonce : ProbComp Nonce)}[x = n] ≤ maxNonceProb)
     (st : UnlinkBadState TagId Nonce Digest)
     (hbounded : unlinkBadCacheBounded st)
     (hbad : st.bad = false)
     (hused : ∀ tag, st.sessionsUsed tag ≤ sessionsPerTag) :
-    Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-        (simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run st] ≤
+    Pr{let z ← ((simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
+      st)}[z.2.bad = true] ≤
       (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st : ℝ≥0∞) *
         ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
   induction adversary using OracleComp.inductionOn generalizing st with
   | pure b =>
-    simp only [simulateQ_pure, StateT.run_pure, probEvent_pure, hbad, Bool.false_eq_true,
-      ite_false]
+    simp only [simulateQ_pure, StateT.run_pure, prEvent_pure, hbad, Bool.false_eq_true,
+      propInd_false]
     exact zero_le
   | query_bind t oa ih =>
-    simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self]
+    simp only [simulateQ_query_bind, OracleQuery.input_query, StateT.run_bind, monadLift_self,
+      prEvent_bind]
     cases t with
     | inl tag =>
       simp only [unlinkBadQueryImpl, QueryImpl.add_apply_inl]
@@ -282,18 +263,15 @@ private lemma simulateQ_unlinkBad_prob_le
             UnlinkBadState TagId Nonce Digest =>
           (simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) (oa z.1)).run z.2
         have hstep :
-            Pr[fun z : Option (TagTranscript Nonce Digest) ×
-                  UnlinkBadState TagId Nonce Digest => ¬ z.2.bad = false | step] ≤
-              (sessionsPerTag : ℝ≥0∞) * maxNonceProb := by
-          simpa [step] using (unlinkBadTagStep_bad_le (sessionsPerTag := sessionsPerTag)
+            Pr{let z ← step}[z.2.bad = true] ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb :=
+          (unlinkBadTagStep_bad_le (sessionsPerTag := sessionsPerTag)
             tag st maxNonceProb hmax hbad hbounded).trans
               (mul_le_mul' (Nat.cast_le.mpr (hused tag)) le_rfl)
         have hRpos := unlinkBadRemaining_pos_of_slot
           (sessionsPerTag := sessionsPerTag) tag st hslot
         have hcont :
-            ∀ z ∈ support step, z.2.bad = false →
-              Pr[fun y : Bool × UnlinkBadState TagId Nonce Digest => ¬ y.2.bad = false |
-                  cont z] ≤
+            ∀ z ∈ support step, ¬ z.2.bad = true →
+              Pr{let y ← cont z}[y.2.bad = true] ≤
                 ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st - 1 : ℕ) : ℝ≥0∞) *
                   ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
           intro z hz hzbad
@@ -304,20 +282,17 @@ private lemma simulateQ_unlinkBad_prob_le
             tag st nonce auth hslot] using
             ih (some ({ nonce := nonce, auth := auth } : TagTranscript Nonce Digest))
               (unlinkBadTagNext tag st nonce auth)
-              (unlinkBadTagNext_cacheBounded tag st nonce auth hbounded) hzbad
+              (unlinkBadTagNext_cacheBounded tag st nonce auth hbounded)
+              (Bool.eq_false_iff.mpr hzbad)
               (unlinkBadTagNext_sessionsUsed_le (sessionsPerTag := sessionsPerTag)
                 tag st nonce auth hslot hused)
         calc
-          Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-              step >>= cont]
+          Pr{let x ← step; let z ← cont x}[z.2.bad = true]
               ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb +
                   ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st - 1 : ℕ) :
-                    ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
-                simpa [step, cont] using probEvent_bind_le_add (mx := step) (my := cont)
-                  (p := fun z : Option (TagTranscript Nonce Digest) ×
-                    UnlinkBadState TagId Nonce Digest => z.2.bad = false)
-                  (q := fun y : Bool × UnlinkBadState TagId Nonce Digest => y.2.bad = false)
-                  hstep hcont
+                    ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) :=
+                (prEvent_bind_le_prEvent_add_of_support step cont _ _ hcont).trans
+                  (add_le_add_left hstep _)
           _ = (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st : ℝ≥0∞) *
                 ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
                 have hRcast : (1 : ℝ≥0∞) +
@@ -326,78 +301,41 @@ private lemma simulateQ_unlinkBad_prob_le
                   exact_mod_cast Nat.add_sub_cancel' (Nat.succ_le_iff.mpr hRpos)
                 nth_rw 1 [← one_mul ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)]
                 rw [← add_mul, hRcast]
-      · change Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-            ((unlinkBadTagQueryImpl tag).run st >>= fun p =>
-              (simulateQ unlinkBadQueryImpl (oa p.1)).run p.2)] ≤ _
+      · change Pr{let p ← (unlinkBadTagQueryImpl tag).run st;
+                  let z ← (simulateQ unlinkBadQueryImpl (oa p.1)).run p.2}[z.2.bad = true] ≤ _
         rw [unlinkBadTagQueryImpl_run_of_not_lt (sessionsPerTag := sessionsPerTag) tag st hslot]
         simpa using ih none st hbounded hbad hused
     | inr transcript =>
       simp only [unlinkBadQueryImpl, QueryImpl.add_apply_inr]
-      rw [probEvent_bind_eq_tsum]
-      calc ∑' z, Pr[= z | (unlinkBadReaderQueryImpl transcript).run st] *
-              Pr[fun w => w.2.bad | (simulateQ unlinkBadQueryImpl (oa z.1)).run z.2]
-          ≤ ∑' z, Pr[= z | (unlinkBadReaderQueryImpl transcript).run st] *
-              ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st : ℝ≥0∞) *
-                ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
-            apply ENNReal.tsum_le_tsum
-            intro z
-            by_cases hmem : z ∈ support ((unlinkBadReaderQueryImpl transcript).run st)
-            · rw [unlinkBadReaderQueryImpl_state_eq transcript st z hmem]
-              exact mul_le_mul' le_rfl (ih z.1 st hbounded hbad hused)
-            · rw [probOutput_eq_zero_of_not_mem_support hmem]
-              simp
-        _ = (∑' z, Pr[= z | (unlinkBadReaderQueryImpl transcript).run st]) *
-              ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st : ℝ≥0∞) *
-                ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
-            rw [ENNReal.tsum_mul_right]
-        _ ≤ 1 * ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st : ℝ≥0∞) *
-              ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
-            gcongr
-            exact tsum_probOutput_le_one
-        _ = (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) st : ℝ≥0∞) *
-              ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := one_mul _
+      refine prEvent_bind_le_of_forall_le_of_support _ _ _ fun z hmem => ?_
+      rw [unlinkBadReaderQueryImpl_state_eq transcript st z hmem]
+      exact ih z.1 st hbounded hbad hused
 
 /-- A pointwise bound on the nonce sampler turns the bad-event probability into an explicit session
 collision bound. -/
 theorem unlinkBadExperiment_le_sessionCollisionBound
     (adversary : UnlinkAdversary TagId Nonce Digest)
-    (maxNonceProb : ℝ)
-    (hmax : ∀ nonce : Nonce,
-      (Pr[= nonce | ($ᵗ Nonce)]).toReal ≤ maxNonceProb) :
-    (Pr[= true | unlinkBadExperiment (sessionsPerTag := sessionsPerTag) adversary]).toReal ≤
-      ((sessionsPerTag ^ 2 * Fintype.card TagId : ℕ) : ℝ) * maxNonceProb := by
-  have hmax_ENNReal : ∀ n : Nonce,
-      Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ ENNReal.ofReal maxNonceProb := by
-    intro n
-    rw [← ENNReal.ofReal_toReal (ne_top_of_le_ne_top one_ne_top probOutput_le_one)]
-    exact ENNReal.ofReal_le_ofReal (hmax n)
-  have hlhs : Pr[= true | unlinkBadExperiment (sessionsPerTag := sessionsPerTag) adversary] =
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-        (simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
-          UnlinkBadState.init] := by
-    rw [← probEvent_eq_eq_probOutput, unlinkBadExperiment, probEvent_bind_eq_tsum,
-      probEvent_eq_tsum_ite]
-    simp
+    (maxNonceProb : ℝ≥0∞)
+    (hmax : ∀ n : Nonce, Pr{let x ← ($ᵗ Nonce : ProbComp Nonce)}[x = n] ≤ maxNonceProb) :
+    𝒟[unlinkBadExperiment (sessionsPerTag := sessionsPerTag) adversary] {true} ≤
+      ((sessionsPerTag ^ 2 * Fintype.card TagId : ℕ) : ℝ≥0∞) * maxNonceProb := by
+  have hlhs : 𝒟[unlinkBadExperiment (sessionsPerTag := sessionsPerTag) adversary] {true} =
+      Pr{let z ← ((simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
+        UnlinkBadState.init)}[z.2.bad = true] := by
+    rw [← prEvent_eq_evalDist_singleton, unlinkBadExperiment]
+    simp only [expect_norm]
   rw [hlhs]
-  have hcore := simulateQ_unlinkBad_prob_le (sessionsPerTag := sessionsPerTag)
-    adversary (ENNReal.ofReal maxNonceProb)
-    hmax_ENNReal UnlinkBadState.init unlinkBadCacheBounded_init (by simp [UnlinkBadState.init])
-    (by simp [UnlinkBadState.init])
-  have hconv := ENNReal.toReal_mono (a := Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest =>
-      z.2.bad | (simulateQ (unlinkBadQueryImpl (sessionsPerTag := sessionsPerTag)) adversary).run
-        UnlinkBadState.init]) (by simp [ENNReal.mul_eq_top]) hcore
   have hremaining :
       unlinkBadRemaining (sessionsPerTag := sessionsPerTag)
         (UnlinkBadState.init (TagId := TagId) (Nonce := Nonce) (Digest := Digest)) =
           sessionsPerTag * Fintype.card TagId := by
     simp [unlinkBadRemaining, UnlinkBadState.init, Finset.sum_const, Finset.card_univ, mul_comm]
-  have hsupp : (support ($ᵗ Nonce : ProbComp Nonce)).Nonempty := by
-    rw [Set.nonempty_iff_ne_empty, ne_eq, ← probFailure_eq_one_iff]; simp
-  have hmax_nonneg : 0 ≤ maxNonceProb := ENNReal.toReal_nonneg.trans (hmax hsupp.choose)
-  simp only [
-    hremaining, Nat.cast_mul, toReal_mul, toReal_natCast, ENNReal.toReal_ofReal hmax_nonneg
-  ] at hconv
-  grind
+  refine (simulateQ_unlinkBad_prob_le (sessionsPerTag := sessionsPerTag)
+    adversary maxNonceProb hmax UnlinkBadState.init unlinkBadCacheBounded_init
+    (by simp [UnlinkBadState.init]) (by simp [UnlinkBadState.init])).trans (le_of_eq ?_)
+  rw [hremaining]
+  push_cast
+  ring
 
 end Theorems
 

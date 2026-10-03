@@ -277,7 +277,7 @@ variable {ι : Type u} {τ : Type v}
 
 /-- Support is preserved by `liftComp`: lifting a computation to a larger oracle spec
 does not change which outputs are reachable. This is the support analogue of
-the native uniform-measure lifting law. -/
+the uniform-measure lifting law. -/
 lemma support_liftComp (mx : OracleComp spec α) :
     support (liftComp mx superSpec) = support mx := by
   simp only [liftComp]
@@ -307,8 +307,8 @@ Registered as a low-priority `MonadLift` (not `MonadLiftT`) so that:
 
 * For `spec = superSpec`, Lean's built-in `MonadLiftT.refl` (which is
   definitionally `id`) wins typeclass resolution. This is what
-  `Std.Do.Spec.UnfoldLift.monadLift_refl` (a `rfl`-based lemma) needs in
-  order to peel off spurious self-lifts inside `mvcgen`-elaborated terms.
+  `Std.WP.Spec.UnfoldLift.monadLift_refl` (a `rfl`-based lemma) needs in
+  order to peel off spurious self-lifts inside terms `vcgen` walks.
 
 * For `MonadLiftT (OracleQuery spec) (OracleComp superSpec)`, the built-in
   high-priority `MonadLift (OracleQuery superSpec) (OracleComp superSpec)` is

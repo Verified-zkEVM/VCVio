@@ -20,7 +20,6 @@ public import Examples.ElGamal.HandlerExecution
 public import Examples.ElGamal.Hash
 public import Examples.ElGamal.ReductionCost
 public import Examples.ElGamal.SSP
-public import Examples.EvalDistCompatible.Basic
 public import Examples.MerkleCheckpoints
 public import Examples.OneTimePad.Basic
 public import Examples.OneTimePad.ComputationalComplexity
@@ -35,6 +34,7 @@ public import Examples.OneTimePad.Separated.Aggregate
 public import Examples.OneTimePad.Separated.Execution
 public import Examples.OneTimePad.Separated.Security
 public import Examples.OneTimePad.UC
+public import Examples.OptionalFailure.Basic
 public import Examples.PRFTagReader
 public import Examples.PRFTagReader.Asymptotic
 public import Examples.PRFTagReader.Auth
@@ -66,6 +66,7 @@ public import Examples.PRFTagReader.UnlinkReduction
 public import Examples.PRGfromPRF
 public import Examples.Pedersen
 public import Examples.ProgramLogic.GaussianWiring
+public import Examples.ProgramLogic.HandlerInvariants
 public import Examples.ProgramLogic.MeasureCoupling
 public import Examples.ProgramLogic.Probability
 public import Examples.ProgramLogic.ProofMode
@@ -75,10 +76,14 @@ public import Examples.ProgramLogic.Relational
 public import Examples.ProgramLogic.RelationalAnchored
 public import Examples.ProgramLogic.RelationalDerived
 public import Examples.ProgramLogic.RelationalStep
+public import Examples.ProgramLogic.TotalVariation
+public import Examples.ProgramLogic.TransformerEvents
 public import Examples.ProgramLogic.Unary
 public import Examples.ProgramLogic.UnaryProbability
+public import Examples.ProgramLogic.UnaryReadings
 public import Examples.ProgramLogic.UnaryStep
 public import Examples.ProgramLogic.UnaryTriple
+public import Examples.ProgramLogic.UnaryUpper
 public import Examples.ReplayCheckpoint
 public import Examples.ResumptionRejection
 public import Examples.Schnorr.BoundedChallenges

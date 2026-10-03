@@ -195,7 +195,7 @@ sys.exit(23)
             collect.assert_not_called()
         self.assertEqual(lint.BASELINE.read_bytes(), before)
 
-    def test_retired_probability_findings_are_reviewed_in_baseline_diff(self):
+    def test_retired_probability_additions_are_rejected(self):
         subprocess.run(["git", "init", "-q"], check=True)
         lint.BASELINE.parent.mkdir()
         lint.BASELINE.write_text('[["docBlame", "A.f"]]\n')
@@ -207,7 +207,8 @@ sys.exit(23)
                                  '["usesRetiredProbability", "A.legacy"]]\n')
         findings = {("docBlame", "A.f"), ("usesRetiredProbability", "A.legacy")}
         with patch.object(lint, "collect", return_value=findings), \
-                patch.object(lint, "executable", return_value="fake-linter"):
+                patch.object(lint, "executable", return_value="fake-linter"), \
+                self.assertRaisesRegex(ValueError, "additions relative to the merge base"):
             lint.environment(["A"], no_build=True, prune=False, base_ref="HEAD")
 
 

@@ -19,9 +19,7 @@ between the multiple- and single-session random-function worlds of the headline 
 * `multipleBadStep_*` lemmas track the per-step bad-flag bound and the session counter;
 * `simulateQ_multipleBad_prob_le` unrolls those step lemmas to a union bound, yielding
   `multipleBad_bad_le_sessionCollisionBound`;
-* the bad-event bridge `probOutput_unlinkBadExperiment_eq` connects `unlinkBadExperiment` to the bad
-  flag of the instrumented multiple-bad handler, and `unlinkPRFIdeal_boolDist_le_unlinkBad` packages
-  the middle hop of the headline reduction.
+* `unlinkPRFIdeal_boolDist_le_unlinkBad` packages the middle hop of the headline reduction.
 -/
 
 @[expose] public section
@@ -64,109 +62,41 @@ lemma multipleBadStep_bad_le
     (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
     (sB : UnlinkBadState TagId Nonce Digest)
     (maxNonceProb : ℝ≥0∞)
-    (hmax : ∀ n : Nonce, Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ maxNonceProb)
+    (hmax : ∀ n : Nonce, Pr{let x ← ($ᵗ Nonce : ProbComp Nonce)}[x = n] ≤ maxNonceProb)
     (hbad : sB.bad = false)
     (hbounded : unlinkBadCacheBounded sB) :
-    Pr[fun z :
-        Option (TagTranscript Nonce Digest) ×
-          ((UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache) ×
-            UnlinkBadState TagId Nonce Digest) => z.2.2.bad |
-      (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag)) ((s, c), sB)] ≤
-      (sB.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
+    Pr{let z ← ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag))
+      ((s, c), sB))}[z.2.2.bad = true] ≤ (sB.sessionsUsed tag : ℝ≥0∞) * maxNonceProb := by
+  rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
+  simp only [expect_norm]
+  -- The tag oracle answers in `Option (TagTranscript Nonce Digest)` only up to unfolding the
+  -- specification; restating the event at that type keeps the step rewrites well-typed.
+  change Pr{let r ← (show ProbComp (Option _ × _) from
+    multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag) (Sum.inl tag) (s, c))}[
+      (multipleBadAdvance tag sB r.1).bad = true] ≤ _
   by_cases hslot : s.sessionsUsed tag < sessionsPerTag
-  · rw [multipleBadQueryImpl_tag_run tag ((s, c), sB)]
-    -- The wrapper is `(multipleIdealQueryImpl tag (s,c)) >>= pure ∘ f` for
-    -- `f r := (r.1, (r.2.1, r.2.2), multipleBadAdvance tag sB r.1)`. Push the bad bit through.
-    change Pr[fun z :
-        Option (TagTranscript Nonce Digest) ×
-          ((UnlinkState TagId × ((TagId × Nonce) →ₒ Digest).QueryCache) ×
-            UnlinkBadState TagId Nonce Digest) => z.2.2.bad |
-        (multipleIdealQueryImpl (TagId := TagId) (Nonce := Nonce) (Digest := Digest)
-            (sessionsPerTag := sessionsPerTag) (Sum.inl tag)) (s, c) >>=
-          pure ∘ fun r => (r.1, (r.2.1, r.2.2), multipleBadAdvance tag sB r.1)] ≤ _
-    rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
-    simp only [unlinkOracleSpec_range_inl]
-    rw [probEvent_bind_pure_comp]
-    -- Now the event is `(multipleBadAdvance tag sB r.1).bad = true`, evaluated on the multiple-
-    -- ideal tag step. Unfold the tag step to its `idealCacheStep` form, factoring the structure
-    -- update through a `set` to sidestep the 4.29 rewrite/elaboration quirk on `{ s with … }`.
-    set advU := ({ sessionsUsed :=
-        Function.update s.sessionsUsed tag (s.sessionsUsed tag + 1) } : UnlinkState TagId)
-    change probEvent (($ᵗ Nonce : ProbComp Nonce) >>= fun nonce =>
-        idealCacheStep c (tag, nonce) >>= fun r =>
-          pure (some (⟨nonce, r.1⟩ : TagTranscript Nonce Digest), advU, r.2)) _ ≤ _
-    rw [probEvent_bind_eq_tsum]
-    -- For each nonce, the inner bind `idealCacheStep c (tag, nonce) >>= fun r => pure (…)`'s bad
-    -- bit only depends on `(sB.responses (tag, nonce)).isSome`.
-    -- After `probEvent_bind_pure_comp`, the event is the composition; simplify per nonce.
-    simp_rw [Function.comp_def]
-    have hinner : ∀ x : Nonce,
-        probEvent (idealCacheStep c (tag, x) >>= fun r =>
-            pure (some (⟨x, r.1⟩ : TagTranscript Nonce Digest), advU, r.2))
-          (fun x => (multipleBadAdvance tag sB x.1).bad = true) =
-          if (sB.responses (tag, x)).isSome then 1 else 0 := by
-      intro x
-      rw [probEvent_bind_eq_tsum]
-      by_cases hcached : (sB.responses (tag, x)).isSome = true
-      · simp only [hcached, ite_true]
-        have hkey : ∀ r : Digest × ((TagId × Nonce) →ₒ Digest).QueryCache,
-            probEvent
-              (pure (some (⟨x, r.1⟩ : TagTranscript Nonce Digest), advU, r.2) : ProbComp _)
-              (fun y => (multipleBadAdvance tag sB y.1).bad = true) = 1 := by
-          intro r
-          simp [probEvent_pure, multipleBadAdvance, hbad, hcached]
-        simp_rw [hkey, mul_one]
-        exact tsum_probOutput_eq_one' (by simp)
-      · have hcached' : (sB.responses (tag, x)).isSome = false := Bool.eq_false_iff.mpr hcached
-        rw [ite_eq_right (by simp [hcached'])]
-        have hkey : ∀ r : Digest × ((TagId × Nonce) →ₒ Digest).QueryCache,
-            probEvent
-              (pure (some (⟨x, r.1⟩ : TagTranscript Nonce Digest), advU, r.2) : ProbComp _)
-              (fun y => (multipleBadAdvance tag sB y.1).bad = true) = 0 := by
-          intro r
-          simp [multipleBadAdvance, hbad, hcached']
-        simp_rw [hkey, mul_zero, tsum_zero]
-    -- Replace the inner probEvent at each nonce with the explicit `if`.
-    refine (tsum_congr (g := fun x => Pr[= x | ($ᵗ Nonce : ProbComp Nonce)] *
-        (if (sB.responses (tag, x)).isSome then 1 else 0)) fun x => ?_).trans_le ?_
-    · exact congrArg (Pr[= x | ($ᵗ Nonce : ProbComp Nonce)] * ·) (hinner x)
-    -- The remaining inequality is the classic union bound, identical to `unlinkBadTagStep_bad_le`.
-    -- Now mirror the proof of `unlinkBadTagStep_bad_le`.
+  · rw [multipleIdealQueryImpl_tag_run_of_lt tag s c hslot]
+    simp only [expect_norm]
+    -- `bad` fires exactly when the fresh nonce is already cached for this tag.
+    refine (wp_le_prEvent_add _ (fun nonce => (sB.responses (tag, nonce)).isSome = true) _
+      (fun nonce hcached => le_of_eq (prEvent_eq_zero_of_forall_not _ _ fun _ => by
+        simp [multipleBadAdvance, hbad, Bool.eq_false_iff.mpr hcached]))
+      fun _ => prEvent_le_one _).trans ?_
+    rw [add_zero]
     obtain ⟨S, hScard, hS⟩ := hbounded tag
-    calc
-      ∑' nonce : Nonce,
-          Pr[= nonce | ($ᵗ Nonce : ProbComp Nonce)] *
-            (if (sB.responses (tag, nonce)).isSome then 1 else 0)
-          = Pr[fun nonce : Nonce => (sB.responses (tag, nonce)).isSome = true |
-              ($ᵗ Nonce : ProbComp Nonce)] := by
-            simp only [probEvent_eq_tsum_ite]
-            refine tsum_congr fun nonce => ?_
-            by_cases hcached : (sB.responses (tag, nonce)).isSome = true <;> simp [hcached]
-      _ ≤ Pr[fun nonce : Nonce => ∃ n ∈ S, nonce = n |
-              ($ᵗ Nonce : ProbComp Nonce)] := by
-            apply probEvent_mono
-            intro nonce _ hcached
-            exact ⟨nonce, hS nonce hcached, rfl⟩
-      _ ≤ ∑ n ∈ S, Pr[fun nonce : Nonce => nonce = n |
-              ($ᵗ Nonce : ProbComp Nonce)] :=
-            probEvent_exists_finset_le_sum S ($ᵗ Nonce : ProbComp Nonce)
-              (fun n nonce => nonce = n)
-      _ ≤ ∑ _n ∈ S, maxNonceProb := by
-            apply Finset.sum_le_sum
-            intro n _
-            simpa [probEvent_eq_eq_probOutput] using hmax n
+    calc Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[(sB.responses (tag, nonce)).isSome = true]
+        ≤ Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[∃ n ∈ S, nonce = n] :=
+          prEvent_mono _ _ _ fun nonce hcached => ⟨nonce, hS nonce hcached, rfl⟩
+      _ ≤ ∑ n ∈ S, Pr{let nonce ← ($ᵗ Nonce : ProbComp Nonce)}[nonce = n] :=
+          prEvent_exists_finset_le S ($ᵗ Nonce : ProbComp Nonce) (fun n nonce => nonce = n)
+      _ ≤ ∑ _n ∈ S, maxNonceProb := Finset.sum_le_sum fun n _ => hmax n
       _ = (S.card : ℝ≥0∞) * maxNonceProb := by
-            simp [Finset.sum_const, nsmul_eq_mul]
+          simp [Finset.sum_const, nsmul_eq_mul]
       _ ≤ (sB.sessionsUsed tag : ℝ≥0∞) * maxNonceProb :=
-            mul_le_mul' (Nat.cast_le.mpr hScard) le_rfl
+          mul_le_mul' (Nat.cast_le.mpr hScard) le_rfl
   · -- Slot exhausted: the tag oracle returns `none`, bad stays `false`.
-    rw [multipleBadQueryImpl_tag_run tag ((s, c), sB),
-      multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot]
-    have h0 : (probEvent ((pure (none, s, c) : ProbComp _) >>= fun r =>
-        pure (r.1, (r.2.1, r.2.2), multipleBadAdvance tag sB r.1))
-        (fun z : _ × _ × UnlinkBadState TagId Nonce Digest => z.2.2.bad = true)) = 0 := by
-      simp [multipleBadAdvance, hbad]
-    exact h0 ▸ zero_le
+    rw [multipleIdealQueryImpl_tag_run_of_not_lt tag s c hslot]
+    simp [multipleBadAdvance, hbad]
 
 /-- Bad-bit invariant: in any reachable state of `multipleBadQueryImpl`, the bad-world component's
 session counters equal the multiple-ideal state's session counters. Used to swap the slot check
@@ -275,7 +205,7 @@ bad flag unset, the probability that bad fires under any adversary is at most
 lemma simulateQ_multipleBad_prob_le
     (adversary : UnlinkAdversary TagId Nonce Digest)
     (maxNonceProb : ℝ≥0∞)
-    (hmax : ∀ n : Nonce, Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ maxNonceProb)
+    (hmax : ∀ n : Nonce, Pr{let x ← ($ᵗ Nonce : ProbComp Nonce)}[x = n] ≤ maxNonceProb)
     (s : UnlinkState TagId)
     (c : ((TagId × Nonce) →ₒ Digest).QueryCache)
     (sB : UnlinkBadState TagId Nonce Digest)
@@ -283,15 +213,14 @@ lemma simulateQ_multipleBad_prob_le
     (hbad : sB.bad = false)
     (hused : ∀ tag, sB.sessionsUsed tag ≤ sessionsPerTag)
     (hsync : sB.sessionsUsed = s.sessionsUsed) :
-    Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-        (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
-          ((s, c), sB)] ≤
+    Pr{let z ← ((simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag)
+      adversary).run ((s, c), sB))}[z.2.2.bad = true] ≤
       (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
         ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
   induction adversary using OracleComp.inductionOn generalizing s c sB with
   | pure b =>
-    simp only [simulateQ_pure, StateT.run_pure, probEvent_pure, hbad, Bool.false_eq_true,
-      ite_false]
+    simp only [simulateQ_pure, StateT.run_pure, prEvent_pure, hbad, Bool.false_eq_true,
+      propInd_false]
     exact zero_le
   | query_bind t oa ih =>
     rw [multipleBad_run_query_bind' t (fun r => oa r) ((s, c), sB)]
@@ -307,21 +236,19 @@ lemma simulateQ_multipleBad_prob_le
             MultipleBadState TagId Nonce Digest sessionsPerTag =>
           (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) (oa p.1)).run p.2
         have hstepBound :
-            Pr[fun z : Option (TagTranscript Nonce Digest) ×
-                  MultipleBadState TagId Nonce Digest sessionsPerTag => ¬ z.2.2.bad = false |
-              step] ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb := by
-          simpa [step] using (multipleBadStep_bad_le (sessionsPerTag := sessionsPerTag) tag s c sB
+            Pr{let z ← step}[z.2.2.bad = true] ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb :=
+          (multipleBadStep_bad_le (sessionsPerTag := sessionsPerTag) tag s c sB
             maxNonceProb hmax hbad hbounded).trans
             (mul_le_mul' (Nat.cast_le.mpr (hused tag)) le_rfl)
         have hRpos : 0 < unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB :=
           unlinkBadRemaining_pos_of_slot (sessionsPerTag := sessionsPerTag) tag sB (hsync ▸ hslot)
         have hcontBound :
-            ∀ p ∈ support step, p.2.2.bad = false →
-              Pr[fun y : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-                  ¬ y.2.2.bad = false | cont p] ≤
+            ∀ p ∈ support step, ¬ p.2.2.bad = true →
+              Pr{let y ← cont p}[y.2.2.bad = true] ≤
                 ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB - 1 : ℕ) : ℝ≥0∞) *
                   ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
           intro p hp hpbad
+          replace hpbad := Bool.eq_false_iff.mpr hpbad
           have hp_real : p ∈ support
               (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inl tag)
                 ((s, c), sB)) := by
@@ -347,22 +274,14 @@ lemma simulateQ_multipleBad_prob_le
             ih p.1 p.2.1.1 p.2.1.2 p.2.2 hinvs.1 hpbad hinvs.2.1 hinvs.2.2
           simpa [cont, hRdec, Prod.eq_iff_fst_eq_snd_eq, show (p.2.1.1, p.2.1.2) = p.2.1 from rfl]
             using hih
-        have hcombine := probEvent_bind_le_add (mx := step) (my := cont)
-          (p := fun z : Option (TagTranscript Nonce Digest) ×
-            MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad = false)
-          (q := fun y : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag =>
-            y.2.2.bad = false)
-          (ε₁ := (sessionsPerTag : ℝ≥0∞) * maxNonceProb)
-          (ε₂ := ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB - 1 : ℕ) :
-              ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb))
-          hstepBound hcontBound
+        rw [prEvent_bind]
         calc
-          Pr[fun z : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => z.2.2.bad |
-              step >>= cont]
+          Pr{let p ← step; let z ← cont p}[z.2.2.bad = true]
               ≤ (sessionsPerTag : ℝ≥0∞) * maxNonceProb +
                   ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB - 1 : ℕ) :
-                    ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
-                simpa [step, cont] using hcombine
+                    ℝ≥0∞) * ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) :=
+                (prEvent_bind_le_prEvent_add_of_support step cont _ _ hcontBound).trans
+                  (add_le_add_left hstepBound _)
           _ = (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
                 ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := by
                 have hR : (1 : ℝ≥0∞) +
@@ -377,45 +296,15 @@ lemma simulateQ_multipleBad_prob_le
         exact ih none s c sB hbounded hbad hused hsync
     | inr transcript =>
       -- Reader branch: bad-world component untouched; induct on the continuation.
-      rw [probEvent_bind_eq_tsum]
-      calc ∑' z,
-              Pr[= z | (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inr transcript))
-                ((s, c), sB)] *
-              Pr[fun y : Bool × MultipleBadState TagId Nonce Digest sessionsPerTag => y.2.2.bad |
-                (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) (oa z.1)).run
-                  z.2]
-          ≤ ∑' z,
-              Pr[= z | (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inr transcript))
-                ((s, c), sB)] *
-              ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
-                ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
-            apply ENNReal.tsum_le_tsum
-            intro z
-            by_cases hmem :
-                z ∈ support ((multipleBadQueryImpl TagId Nonce Digest sessionsPerTag
-                  (Sum.inr transcript)) ((s, c), sB))
-            · have hzeq := multipleBadStep_reader_state_eq (sessionsPerTag := sessionsPerTag)
-                transcript s c sB z hmem
-              have hinvs := multipleBadStep_preserves (sessionsPerTag := sessionsPerTag)
-                (Sum.inr transcript) s c sB hbounded hused hsync z hmem
-              have hih := ih z.1 z.2.1.1 z.2.1.2 z.2.2 hinvs.1
-                (by rw [hzeq]; exact hbad) hinvs.2.1 hinvs.2.2
-              refine mul_le_mul' le_rfl (hzeq ▸ ?_)
-              convert hih using 4
-            · rw [probOutput_eq_zero_of_not_mem_support hmem]
-              simp
-        _ = (∑' z,
-              Pr[= z | (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag (Sum.inr transcript))
-                ((s, c), sB)]) *
-              ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
-                ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
-            rw [ENNReal.tsum_mul_right]
-        _ ≤ 1 * ((unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
-              ((sessionsPerTag : ℝ≥0∞) * maxNonceProb)) := by
-            gcongr
-            exact tsum_probOutput_le_one
-        _ = (unlinkBadRemaining (sessionsPerTag := sessionsPerTag) sB : ℝ≥0∞) *
-              ((sessionsPerTag : ℝ≥0∞) * maxNonceProb) := one_mul _
+      rw [prEvent_bind]
+      refine prEvent_bind_le_of_forall_le_of_support _ _ _ fun z hmem => ?_
+      have hzeq := multipleBadStep_reader_state_eq (sessionsPerTag := sessionsPerTag)
+        transcript s c sB z hmem
+      have hinvs := multipleBadStep_preserves (sessionsPerTag := sessionsPerTag)
+        (Sum.inr transcript) s c sB hbounded hused hsync z hmem
+      rcases z with ⟨u, ⟨s', c'⟩, sB'⟩
+      subst hzeq
+      exact ih u s' c' sB' hinvs.1 hbad hinvs.2.1 hinvs.2.2
 
 /-- **Final session-collision bound** for the multiple-bad handler. Chains
 `simulateQ_multipleBad_prob_le` at the initial state, where the `unlinkBadRemaining` collapses to
@@ -429,14 +318,11 @@ theorem multipleBad_bad_le_sessionCollisionBound
         (simulateQ (multipleBadQueryImpl TagId Nonce Digest sessionsPerTag) adversary).run
           ((UnlinkState.init, ∅), UnlinkBadState.init)] {true}).toReal ≤
       ((sessionsPerTag ^ 2 * Fintype.card TagId : ℕ) : ℝ) * maxNonceProb := by
-  let : MeasurableSpace Nonce := ⊤
-  simp_rw [prEvent_eq_evalDist_singleton] at hmax
-  simp only [evalDist_apply_singleton] at hmax
-  simp only [evalDist_apply_singleton, probOutput_map]
   have hmax_ENNReal : ∀ n : Nonce,
-      Pr[= n | ($ᵗ Nonce : ProbComp Nonce)] ≤ ENNReal.ofReal maxNonceProb := fun n => by
-    rw [← ENNReal.ofReal_toReal (ne_top_of_le_ne_top one_ne_top probOutput_le_one)]
-    exact ENNReal.ofReal_le_ofReal (hmax n)
+      Pr{let x ← ($ᵗ Nonce : ProbComp Nonce)}[x = n] ≤ ENNReal.ofReal maxNonceProb := fun n =>
+    (ENNReal.le_ofReal_iff_toReal_le (ne_top_of_le_ne_top one_ne_top (prEvent_le_one _))
+      (ENNReal.toReal_nonneg.trans (hmax n))).2 (hmax n)
+  rw [← prEvent_eq_evalDist_singleton, prEvent_map]
   have hcore := simulateQ_multipleBad_prob_le (sessionsPerTag := sessionsPerTag)
     adversary (ENNReal.ofReal maxNonceProb) hmax_ENNReal UnlinkState.init ∅
     UnlinkBadState.init unlinkBadCacheBounded_init
@@ -455,20 +341,6 @@ theorem multipleBad_bad_le_sessionCollisionBound
   grind
 
 /-! ### Multiple-vs-single bound: bad-event bridge -/
-
-/-- `unlinkBadExperiment` outputs `true` exactly with the probability that the bad flag fires. -/
-lemma probOutput_unlinkBadExperiment_eq
-    (adversary : UnlinkAdversary TagId Nonce Digest) :
-    Pr[= true | unlinkBadExperiment (TagId := TagId) (Nonce := Nonce)
-        (Digest := Digest) (sessionsPerTag := sessionsPerTag) adversary] =
-      Pr[fun z : Bool × UnlinkBadState TagId Nonce Digest => z.2.bad |
-        (simulateQ (unlinkBadQueryImpl (TagId := TagId) (Nonce := Nonce)
-          (Digest := Digest) (sessionsPerTag := sessionsPerTag)) adversary).run
-          UnlinkBadState.init] := by
-  rw [← probEvent_eq_eq_probOutput, unlinkBadExperiment, probEvent_bind_eq_tsum,
-    probEvent_eq_tsum_ite]
-  refine tsum_congr fun z => ?_
-  by_cases hz : z.2.bad <;> simp [hz]
 
 /-- Coupling bound for the two random-function worlds (the ideal-PRF experiments of the multiple-
 and single-session reductions): their Boolean distance is bounded by the within-tag
@@ -502,10 +374,13 @@ theorem unlinkPRFIdeal_boolDist_le_unlinkBad [NeZero sessionsPerTag] [Fintype No
         (Fintype.card Digest : ℝ≥0∞) := by
   refine MeasureTheory.Measure.boolDist_le_of_apply_le _ _ fun out => ?_
   rw [prfIdealExperiment_unlinkToMultiplePRFReduction_eq_run' adversary,
-    prfIdealExperiment_unlinkToSinglePRFReduction_eq_run' adversary]
-  simp only [evalDist_apply_singleton, probOutput_map]
-  simpa only [add_assoc] using UnlinkReduction.multipleIdeal_le_singleIdeal_add_bad_DC
+    prfIdealExperiment_unlinkToSinglePRFReduction_eq_run' adversary,
+    ← prEvent_eq_evalDist_singleton ((fun z : Bool × MultipleBadState TagId Nonce Digest
+      sessionsPerTag => z.2.2.bad) <$> _), prEvent_map]
+  have h := UnlinkReduction.multipleIdeal_le_singleIdeal_add_bad_DC
     (sessionsPerTag := sessionsPerTag) out adversary qReader qTag hqReader hqTag
+  rw [prEvent_eq_evalDist_singleton, prEvent_eq_evalDist_singleton] at h
+  simpa only [add_assoc] using h
 
 end UnlinkReduction
 

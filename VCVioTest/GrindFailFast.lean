@@ -10,13 +10,12 @@ public import VCVio
 /-!
 # Fail-fast and opt-in gates for `grind` on probability goals
 
-Companion to the three probability benchmarks (`VCVioTest/ProbabilityTactics.lean`,
-`VCVioTest/MonadProbability.lean`, `VCVioTest/LongChainPrograms.lean`), which gate what `grind`
-*solves*. This file gates the other half of the design: what `grind` deliberately does **not**
-solve, and that it fails **fast** when it doesn't.
+Companion to the probability benchmarks (`VCVioTest/ProbabilityTactics.lean`,
+`VCVioTest/MonadProbability.lean`, `VCVioTest/LongChainPrograms.lean`), which gate what
+`grind` *solves*. This file gates the other half of the design: what `grind` deliberately does
+**not** solve, and that it fails **fast** when it doesn't.
 
-Each support-characterization lemma dropped from the default `grind` set gets one example of the
-form
+Each support characterization kept out of the default `grind` set gets one example of the form
 
 ```
 example : <the lemma's own statement> := by
@@ -24,18 +23,14 @@ example : <the lemma's own statement> := by
   grind [<the lemma>]     -- and the documented opt-in really closes the goal
 ```
 
-stated over a generic monad `m`, where the drop actually bites (over `ProbComp` the kept
-`finSupport`-singleton route lets bare `grind` reach several of these shapes — those are recorded
-as mirrors at the end). The gate is loud in both failure directions:
+The gate is loud in both failure directions:
 
-* If someone re-tags a dropped lemma `@[grind]`, bare `grind` starts *succeeding* on its statement
+* If someone tags one of these lemmas `@[grind]`, bare `grind` starts *succeeding* on its statement
   and `fail_if_success` fails the build.
 * If a change to the default set makes bare `grind` *saturate* instead of failing fast on one of
   these statements, the resulting `(deterministic) timeout` is a runtime exception that escapes
-  `fail_if_success` and fails the build. (This is exactly how the saturation cycle among the three
-  `Set.Nonempty` companions was caught: with all three tagged, the `probEvent_eq_one_iff`-shaped
-  gate below times out rather than failing fast, which is why `probEvent_ne_zero_iff_nonempty` is
-  not in the default set.)
+  `fail_if_success` and fails the build. The unbounded support quantifiers in these statements are
+  why they stay opt-in.
 -/
 
 public section
@@ -44,79 +39,56 @@ open OracleComp ProbComp ENNReal
 
 namespace VCVioTest.GrindFailFast
 
-/-! ## Dropped-lemma gates over a generic monad
+/-! ## Support characterizations under uniform answers
 
 Bare `grind` must fail (fast); the documented opt-in `grind [<lemma>]` must close the goal. -/
 
-section generic
+section uniform
 
-variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
-  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
-  [EvalDistCompatible m]
-  (p : α → Prop) (mx : m α) (x : α)
+variable {ι : Type} {spec : OracleSpec ι} [OracleSpec.UniformAnswerMeasure spec] {α : Type}
+  (p : α → Prop) (mx : OracleComp spec α) (x : α)
 
-example : Pr[ p | mx] = 0 ↔ ∀ y ∈ support mx, ¬ p y := by
+example : Pr{let y ← mx}[p y] = 0 ↔ ∀ y ∈ support mx, ¬ p y := by
   fail_if_success grind
-  grind [probEvent_eq_zero_iff]
+  grind [OracleComp.prEvent_eq_zero_iff]
 
-example : Pr[ p | mx] ≠ 0 ↔ ∃ y ∈ support mx, p y := by
+example : Pr{let y ← mx}[p y] ≠ 0 ↔ ∃ y ∈ support mx, p y := by
   fail_if_success grind
-  grind [probEvent_ne_zero_iff]
+  grind [OracleComp.prEvent_eq_zero_iff]
 
-example : Pr[ p | mx] = 1 ↔ Pr[⊥ | mx] = 0 ∧ ∀ y ∈ support mx, p y := by
+example : 0 < Pr{let y ← mx}[p y] ↔ ∃ y ∈ support mx, p y := by
   fail_if_success grind
-  grind [probEvent_eq_one_iff]
+  grind [OracleComp.prEvent_pos_iff]
 
-example : 1 = Pr[ p | mx] ↔ Pr[⊥ | mx] = 0 ∧ ∀ y ∈ support mx, p y := by
+example : Pr{let y ← mx}[p y] = 1 ↔ ∀ y ∈ support mx, p y := by
   fail_if_success grind
-  grind [one_eq_probEvent_iff]
+  grind [OracleComp.prEvent_eq_one_iff]
 
-example : Pr[= x | mx] = 1 ↔ Pr[⊥ | mx] = 0 ∧ support mx = {x} := by
+example : 1 = Pr{let y ← mx}[p y] ↔ ∀ y ∈ support mx, p y := by
   fail_if_success grind
-  grind [probOutput_eq_one_iff]
+  grind [OracleComp.prEvent_eq_one_iff]
 
-example : 1 = Pr[= x | mx] ↔ Pr[⊥ | mx] = 0 ∧ support mx = {x} := by
+example : Pr{let y ← mx}[y = x] = 1 ↔ ∀ y ∈ support mx, y = x := by
   fail_if_success grind
-  grind [one_eq_probOutput_iff]
+  grind [OracleComp.prEvent_eq_one_iff]
 
-example : Pr[⊥ | mx] = 1 ↔ support mx = ∅ := by
-  fail_if_success grind
-  grind [probFailure_eq_one_iff]
-
-/-! ## The `Set.Nonempty` companions
-
-`probEvent_ne_zero_iff_nonempty` is deliberately out of the default set (the trio of companions
-saturates the `probEvent_eq_one_iff`-shaped gate above; see its docstring). Nothing is lost: bare
-`grind` recovers its content from the kept `probEvent_eq_zero_iff_not_nonempty` sibling by
-classical negation, so all three companion statements are bare-`grind` mirrors. -/
-
-example : Pr[ p | mx] ≠ 0 ↔ {y ∈ support mx | p y}.Nonempty := by grind
-example : Pr[ p | mx] = 0 ↔ ¬ {y ∈ support mx | p y}.Nonempty := by grind
-example : Pr[⊥ | mx] = 1 ↔ ¬ (support mx).Nonempty := by grind
-
--- `mem_support_bind_iff` is untagged, but bare `grind` reaches the shape through `support_bind`.
-example (my : α → m α) (y : α) :
+-- mirror: `mem_support_bind_iff` is a default `grind` rule.
+example (my : α → OracleComp spec α) (y : α) :
     y ∈ support (mx >>= my) ↔ ∃ z ∈ support mx, y ∈ support (my z) := by grind
 
-end generic
+end uniform
 
 /-! ## `finSupport` gates and `ProbComp` mirrors -/
 
 section probComp
 
-variable (p : Bool → Prop) [DecidablePred p] (mx : ProbComp Bool) (x : Bool)
+variable (p : Bool → Prop) [DecidablePred p] (mx : ProbComp Bool)
 
-example : Pr[ p | mx] = 0 ↔ ∀ y ∈ finSupport mx, ¬ p y := by
+example : Pr{let y ← mx}[p y] = 0 ↔ ∀ y ∈ finSupport mx, ¬ p y := by
   fail_if_success grind
-  grind [probEvent_eq_zero_iff']
+  grind [OracleComp.prEvent_eq_zero_iff]
 
-example : Pr[ p | mx] = 1 ↔ Pr[⊥ | mx] = 0 ∧ ∀ y ∈ finSupport mx, p y := by
-  fail_if_success grind
-  grind [probEvent_eq_one_iff']
-
--- mirrors: over `ProbComp` the kept `finSupport`-singleton route closes these under bare `grind`
-example : Pr[= x | mx] = 1 ↔ Pr[⊥ | mx] = 0 ∧ support mx = {x} := by grind
+-- mirror: the kept `finSupport` bind rule closes this under bare `grind`
 example (my : Bool → ProbComp Bool) (y : Bool) :
     y ∈ finSupport (mx >>= my) ↔ ∃ z ∈ finSupport mx, y ∈ finSupport (my z) := by grind
 
@@ -124,11 +96,11 @@ end probComp
 
 /-! ## Structural additions to the default `grind` set
 
-Capability gates for the confluent structural rewrites tagged `@[grind =]` beyond the original
-monad-law block: `replicate` unfolds, `Functor.map_map`, and the `simulateQ` routing layer
-(`QueryImpl.add` / instrumentation wrappers). Each example is a shape bare `grind` could not close
-before the corresponding tag (the routing example previously *saturated* — it is also a fail-fast
-gate). -/
+Capability gates for the confluent structural rewrites tagged `@[grind =]` beyond the monad-law
+block: `replicate` unfolds, `Functor.map_map`, and the `simulateQ` routing layer
+(`QueryImpl.add` / instrumentation wrappers). Each example is a shape that bare `grind` closes only
+through the corresponding tag. Without its tags `grind` *saturates* on the routing example, which
+is therefore also a fail-fast gate. -/
 
 section structural
 
@@ -141,13 +113,12 @@ example : oa.replicateTR 1 = (do let x ← oa; pure [x]) := by grind
 
 section mapMap
 
-variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m]
-  [MonadLiftT m SPMF] [LawfulMonadLiftT m SPMF]
-  [MonadLiftT m SetM] [LawfulMonadLiftT m SetM] [MonadAttach m] [ExactMonadAttach m]
-  [EvalDistCompatible m]
+variable {α : Type} {m : Type → Type} [Monad m] [LawfulMonad m] [EvalDistSemantics m]
+  [LawfulEvalDistSemantics m]
 
 example (mx : m α) (f g : α → α) : g <$> (f <$> mx) = (fun x => g (f x)) <$> mx := by grind
-example (mx : m α) (f g : α → α) : Pr[⊥ | g <$> (f <$> mx)] = Pr[⊥ | mx] := by grind
+example (mx : m α) (f g : α → α) :
+    Pr{let _ ← g <$> (f <$> mx)}[True] = Pr{let _ ← mx}[True] := by grind
 
 end mapMap
 
@@ -157,8 +128,8 @@ variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec
   {m : Type → Type} [Monad m] [LawfulMonad m]
   (impl₁ : QueryImpl spec₁ m) (impl₂ : QueryImpl spec₂ m)
 
--- formerly a saturating shape: bare `grind` timed out here before
--- `simulateQ_add_liftComp_left` was tagged `@[grind =]`
+-- a saturating shape: bare `grind` times out here unless
+-- `simulateQ_add_liftComp_left` is tagged `@[grind =]`
 example (oa : OracleComp spec₁ α) :
     simulateQ (impl₁ + impl₂) (do let x ← liftComp oa (spec₁ + spec₂); pure x) =
       simulateQ impl₁ oa := by grind

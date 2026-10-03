@@ -73,7 +73,9 @@ namespace DijkstraMonad
 
 def dDite {w d} [Monad w] [DijkstraMonad w d] {α} (c : Prop) [h : Decidable c] {t : c → w α}
     {e : ¬c → w α} : ((c' : c) → d (t c')) → ((c' : ¬c) → d (e c')) → d (dite c t e) :=
-  fun dt de => Decidable.casesOn h (fun h => de h) (fun h => dt h)
+  fun dt de => match h with
+    | isTrue hc => dt hc
+    | isFalse hc => de hc
 
 def dIte {w d} [Monad w] [DijkstraMonad w d] {α} (c : Prop) [Decidable c] {t e : w α} :
     d t → d e → d (ite c t e) :=

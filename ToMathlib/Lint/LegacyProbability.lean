@@ -8,11 +8,13 @@ module
 public meta import Batteries.Tactic.Lint.Basic
 
 /-!
-# Retiring probability declarations
+# Direct uses of `PMF`
 
-This environment linter records declarations whose types or values still refer directly
-to the deprecated finite-distribution types or VCVio evaluation functions. Exceptions
-are maintained by the repository's exact `nolints.json` baseline.
+VCVio's probability semantics are Mathlib measures. This environment linter reports declarations
+whose types or values refer directly to Mathlib's `PMF`, the countably supported distributions,
+so that probability stays measure-valued. The repository's exact `nolints.json` baseline holds no
+exception for it. `VCVio.Prelude.Core` imports this module, so the linter is available to every
+VCVio library.
 -/
 
 public meta section
@@ -22,23 +24,23 @@ open Lean Meta Batteries.Tactic.Lint
 namespace ToMathlib.Lint
 
 private def retiredProbabilityName (name : Name) : Bool :=
-  #[`PMF, `SPMF, `evalSPMF, `probOutput, `probEvent, `probFailure].contains name
+  name == `PMF
 
-/-- Report declarations that directly depend on the retiring probability API. -/
+/-- Report declarations that directly depend on Mathlib's `PMF`. -/
 @[env_linter] def usesRetiredProbability : Linter where
-  noErrorsFound := "No direct use of retiring probability declarations."
-  errorsFound := "DIRECT USE OF RETIRING PROBABILITY DECLARATIONS."
+  noErrorsFound := "No direct use of `PMF`."
+  errorsFound := "DIRECT USE OF `PMF`."
   test declName := do
     if ← isAutoDecl declName then return none
     let info ← getConstInfo declName
     if info.type.getUsedConstants.any retiredProbabilityName then
-      return m!"type refers to the retiring probability API"
+      return m!"type refers to `PMF`"
     let value? := match info with
       | .defnInfo { value, .. } | .thmInfo { value, .. } => some value
       | _ => none
     if let some value := value? then
       if value.getUsedConstants.any retiredProbabilityName then
-        return m!"value refers to the retiring probability API"
+        return m!"value refers to `PMF`"
     return none
 
 end ToMathlib.Lint

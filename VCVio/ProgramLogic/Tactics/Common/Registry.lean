@@ -15,14 +15,12 @@ public meta import VCVio.ProgramLogic.Tactics.Common.SpecIR
 /-!
 # VCSpec Registry
 
-Discrimination-tree backed registry for `@[vcspec]` lemmas used by the unary and relational
-program-logic tactics.
+Discrimination-tree backed registry for the `@[vcspec]` lemmas of the relational program-logic
+tactics `rvcstep` / `rvcgen`.
 
-The registry indexes each registered theorem by the *computation* sub-expression
-of its conclusion: for unary triples / `wp` goals this is the `OracleComp` argument,
-and for relational triples / `RelWP` goals this is the left-hand computation. A separate
-constant-name filter on the right-hand head keeps relational lookups precise without
-paying for two structural matches.
+The registry indexes each registered theorem by the left-hand computation of its conclusion, a
+relational triple or `RelWP` goal. A separate constant-name filter on the right-hand head keeps
+lookups precise without paying for two structural matches.
 
 ## Implementation notes
 
@@ -34,9 +32,8 @@ of the preprocessed body. The resulting `Sym.Pattern` is then inserted into a
 `Lean.Meta.DiscrTree` via `Sym.insertPattern`, which wildcards proof / instance
 arguments and bound variables in the key sequence.
 
-Because `Sym.preprocessType` unfolds the user-facing abbreviations
-(`Triple`, `wp`, `RelTriple`, `RelWP`) into their `MAlgOrdered.*` /
-`MAlgRelOrdered.*` cores, the selector matches on the unfolded heads (plus the
+Because `Sym.preprocessType` unfolds the relational abbreviations (`RelTriple`, `RelWP`) into
+their `MAlgRelOrdered.*` cores, the selector matches on the unfolded relational heads (plus the
 folded abbreviations as a safety net). On the lookup side we apply
 `withReducible <| whnf` to the goal's computation before querying, matching the
 normalization performed during pattern preprocessing.
@@ -48,9 +45,9 @@ wherever possible:
 
 * `proof : SpecProof` is reused directly, so entries can be global
   declarations (the common case for `@[vcspec]`), local hypotheses, or raw
-  proof expressions. This anticipates the Phase F bridge where a subset of
-  our entries (the `Triple`-shaped ones) is exposed to `mvcgen'` via the
-  core `SpecExtension`.
+  proof expressions, as core's `vcgen` records the origin of its `@[spec]`
+  rules; a triple of one program is a core `@[spec]` rule, which the
+  attribute redirects to.
 * `pattern : Sym.Pattern` is the Sym-side analogue of the combined
   `SpecTheorem.{prog, keys}` pair; it carries the program sub-expression,
   ∀-binder types, level parameters, and proof/instance slot metadata.
@@ -60,11 +57,10 @@ wherever possible:
 ## Future-proofing note
 
 `Lean.Meta.Sym` is under active development upstream; minor shape changes to
-`Sym.Pattern`, `Sym.insertPattern`, or `Sym.DiscrTree.getMatch` between Lean
+`Sym.Pattern`, `Sym.insertPattern`, or `Sym.getMatch` between Lean
 releases should be expected. If a toolchain bump breaks the registry, the
 affected surface is confined to the selector in `buildVCSpecEntry` and the
-lookup path in `getRegisteredUnaryVCSpecEntries` /
-`getRegisteredRelationalVCSpecEntries`; downstream tactic dispatch works
+lookup path in `getRegisteredRelationalVCSpecEntries`; downstream tactic dispatch works
 through `VCSpecEntry.declName?` / `VCSpecEntry.theoremName!` and is
 insulated from `Sym` API churn.
 -/
@@ -100,8 +96,7 @@ structure VCSpecEntry where
   /-- Normalized IR summary attached for diagnostics and planner ranking.
   Not consumed by the discrimination-tree layer. -/
   spec : NormalizedVCSpec
-  /-- Right-hand head constant used as a secondary filter for relational
-  entries. `none` for unary entries. -/
+  /-- Right-hand head constant used as a secondary filter at lookup. -/
   rightHead? : Option Name := none
   /-- User-supplied priority; same default as `SpecTheorem.priority`. -/
   priority : Nat := eval_prio default
@@ -117,13 +112,13 @@ def VCSpecEntry.declName? (entry : VCSpecEntry) : Option Name :=
   | .global n => some n
   | _ => none
 
-/-- Extract the global declaration name, assuming the entry was registered
-via `@[vcspec]` on a global theorem. Panics on local / stx proofs; intended
-for legacy call sites that pre-date local-hypothesis support. -/
+/-- The global declaration name of an entry registered via `@[vcspec]` on a
+global theorem, and `Name.anonymous` for an entry backed by a local hypothesis
+or a raw proof expression. -/
 def VCSpecEntry.theoremName! (entry : VCSpecEntry) : Name :=
   entry.declName?.getD Name.anonymous
 
-/-- Broad rule category (`Triple` / `wp` / `RelTriple` / `RelWP`) of the entry,
+/-- Broad rule category (`RelTriple` / `RelWP`) of the entry,
 read off the `kind` field of its `NormalizedVCSpec` (`VCSpecEntry.spec`). -/
 def VCSpecEntry.kind (entry : VCSpecEntry) : VCSpecKind :=
   entry.spec.kind
@@ -136,12 +131,10 @@ def VCSpecEntry.lookupKey (entry : VCSpecEntry) : VCSpecLookupKey :=
 /-- Persistent state for the `@[vcspec]` registry.
 
 * `all` retains insertion order, used by `kind`-indexed iteration helpers.
-* `unary` indexes unary entries by their `comp` `Sym.Pattern`.
-* `relational` indexes relational entries by their `oa` `Sym.Pattern`;
-  the right-hand head check happens at lookup time. -/
+* `relational` indexes entries by their `oa` `Sym.Pattern`; the right-hand head check happens
+  at lookup time. -/
 structure VCSpecRegistry where
   all : Array VCSpecEntry := #[]
-  unary : DiscrTree VCSpecEntry := .empty
   relational : DiscrTree VCSpecEntry := .empty
   deriving Inhabited
 
@@ -155,54 +148,19 @@ initialize vcSpecRegistry :
       VCSpecRegistry ←
   registerSimpleScopedEnvExtension {
     addEntry := fun registry entry =>
-      let registry := { registry with all := registry.all.push entry }
-      match entry.lookupKey with
-      | .unary _ =>
-          { registry with unary := VCSpecRegistry.addToTree registry.unary entry }
-      | .relational _ _ =>
-          { registry with
-              relational := VCSpecRegistry.addToTree registry.relational entry }
+      { registry with
+          all := registry.all.push entry
+          relational := VCSpecRegistry.addToTree registry.relational entry }
     initial := {}
   }
 
-/-! ### `vcspec_simp` simp set
-
-Auxiliary simp set used internally by the unary and relational tactics for
-transformer-layer normalization (peeling `apply_wp`, running monadic `*.run`
-projections, normalizing lifts, and so on). Mirror of `Loom.Tactic.lspecSimpExt`.
-
-Users should write `@[vcspec]`; the attribute first tries to register the
-declaration as a spec theorem and on failure falls back to inserting it into
-`vcspec_simp`. This lets a single attribute handle both spec lemmas and the
-normalization rewrites needed to massage a goal into spec-applicable shape.
-
-This attribute is not intended to be used directly. -/
-initialize vcSpecSimpExt : Meta.SimpExtension ←
-  Meta.registerSimpAttr `vcspec_simp
-    "simp theorems internally used by VCVio program-logic tactics"
-
-/-- The accumulated simp set behind the `vcspec_simp` fallback layer of
-`@[vcspec]`. Used by `runVCSpecSimp` to normalize transformer-stack `wp` goals
-before spec dispatch. -/
-def getVCSpecSimpTheorems : CoreM Meta.SimpTheorems :=
-  vcSpecSimpExt.getTheorems
-
 /-! ### Preprocessed-body head matchers
 
-`Sym.preprocessType` aggressively unfolds reducible abbreviations (including our
-own `Triple`, `wp`, `RelTriple`, `RelWP` wrappers) before handing the body to
-the selector. These helpers match on both the folded (`OracleComp.ProgramLogic.…`)
-and unfolded (`MAlgOrdered.…` / `MAlgRelOrdered.…`) heads so registrations are
-robust to future reducibility shifts.
+`Sym.preprocessType` aggressively unfolds reducible abbreviations (including the
+relational `RelTriple` and `RelWP` wrappers) before handing the body to the selector. The helpers
+match on both the folded (`OracleComp.ProgramLogic.…`) and unfolded (`MAlgRelOrdered.…`) heads so
+registrations are robust to future reducibility shifts.
 -/
-
-/-- Unfolded cores of the unary triple / wp abbreviations; matched on the
-preprocessed theorem body alongside the folded heads. -/
-private def unaryTripleHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.Triple, ``MAlgOrdered.Triple, ``Std.Internal.Do.Triple]
-
-private def unaryWpHeadNames : Array Name :=
-  #[``OracleComp.ProgramLogic.wp, ``MAlgOrdered.wp, ``Std.Internal.Do.wp]
 
 private def relTripleHeadNames : Array Name :=
   #[``OracleComp.ProgramLogic.Relational.RelTriple, ``MAlgRelOrdered.Triple,
@@ -229,48 +187,6 @@ private def trailingArgsN? (e : Expr) (n : Nat) : Option (Array Expr) :=
     some <| args.extract (args.size - n) args.size
   else
     none
-
-/-- Preprocessed-body variant of `tripleGoalParts?` that also matches the
-unfolded `MAlgOrdered.Triple` head and core's `Std.Internal.Do.Triple`, whose
-program argument precedes its WP evidence and assertion arguments. Returns
-`(pre, oa, post)`. -/
-private def tripleBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
-  let body := body.consumeMData
-  unless headIsOneOf body unaryTripleHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.Internal.Do.Triple then 5 else 3
-  let args ← trailingArgsN? body n
-  if n == 5 then
-    let #[oa, _wp, pre, post, _epost] := args | none
-    some (pre, oa, post)
-  else
-    let #[pre, oa, post] := args | none
-    some (pre, oa, post)
-
-/-- Preprocessed-body variant of `wpGoalParts?` that also matches the unfolded
-`MAlgOrdered.wp` head and core's `Std.Internal.Do.wp` (which carries a trailing
-exception postcondition). Returns `(oa, post)`. -/
-private def wpBodyParts? (body : Expr) : Option (Expr × Expr) := do
-  let body := body.consumeMData
-  unless headIsOneOf body unaryWpHeadNames do none
-  let n := if body.getAppFn.isConstOf ``Std.Internal.Do.wp then 3 else 2
-  let args ← trailingArgsN? body n
-  if n == 3 then
-    let #[oa, post, _epost] := args | none
-    some (oa, post)
-  else
-    let #[oa, post] := args | none
-    some (oa, post)
-
-/-- Preprocessed-body variant of `rawWPGoalParts?` that also matches the
-unfolded `MAlgOrdered.wp` head under `≤`. Returns `(pre, oa, post)`. -/
-private def rawWpBodyParts? (body : Expr) : Option (Expr × Expr × Expr) := do
-  let body := body.consumeMData
-  unless body.isAppOfArity ``LE.le 4 || body.isAppOfArity ``Lean.Order.PartialOrder.rel 4 do
-    none
-  let pre := body.getArg! 2
-  let rhs := body.getArg! 3
-  let (oa, post) ← wpBodyParts? rhs
-  some (pre, oa, post)
 
 /-- Preprocessed-body variant of `relTripleGoalParts?` that also matches the
 unfolded `MAlgRelOrdered.Triple` head and `VCVio.ProgramLogic.RelTriple`.
@@ -322,40 +238,14 @@ private def rawRelWpBodyParts? (body : Expr) : Option (Expr × Expr × Expr × E
   some (pre, oa, ob, post)
 
 /-- Selector fed to `Sym.mkPatternFromDeclWithKey`. Given the preprocessed body
-of a `@[vcspec]` theorem, returns the computation expression to use as the
-pattern key, together with the normalized spec description and (for relational
-entries) the right-hand head constant used as a secondary filter.
+of a `@[vcspec]` theorem, returns the left computation to use as the pattern key, together with
+the normalized spec description and the right-hand head constant used as a secondary filter.
 
-Handles both the folded (`Triple`, `wp`, `RelTriple`, `RelWP`) and unfolded
-(`MAlgOrdered.Triple`, `MAlgOrdered.wp`, `MAlgRelOrdered.Triple`,
-`MAlgRelOrdered.rwp`) heads because `Sym.preprocessType` aggressively unfolds
-the abbreviations in the source theorem before we see the body. -/
+Bodies are matched in both folded (`RelTriple`, `RelWP`) and unfolded (`MAlgRelOrdered.Triple`,
+`MAlgRelOrdered.rwp`) form because `Sym.preprocessType` aggressively unfolds the abbreviations
+in the source theorem before we see the body. -/
 private def selectVCSpecKey (body : Expr) : MetaM (Expr × NormalizedVCSpec × Option Name) := do
   let body := body.consumeMData
-  if let some (_pre, oa, _post) := tripleBodyParts? body then
-    let head ← headConstNameOrUnary oa
-    let spec : NormalizedVCSpec := {
-      kind := .unaryTriple
-      lookupKey := .unary head
-      compPattern := classifyUnaryCompPattern oa
-    }
-    return (oa, spec, none)
-  if let some (_pre, oa, _post) := rawWpBodyParts? body then
-    let head ← headConstNameOrUnary oa
-    let spec : NormalizedVCSpec := {
-      kind := .unaryWP
-      lookupKey := .unary head
-      compPattern := classifyUnaryCompPattern oa
-    }
-    return (oa, spec, none)
-  if let some (oa, _post) := wpBodyParts? body then
-    let head ← headConstNameOrUnary oa
-    let spec : NormalizedVCSpec := {
-      kind := .unaryWP
-      lookupKey := .unary head
-      compPattern := classifyUnaryCompPattern oa
-    }
-    return (oa, spec, none)
   if let some (oa, ob, _post) := relTripleBodyParts? body then
     let (leftHead, rightHead) ← relationalHeads oa ob
     let spec : NormalizedVCSpec := {
@@ -381,23 +271,10 @@ private def selectVCSpecKey (body : Expr) : MetaM (Expr × NormalizedVCSpec × O
     }
     return (oa, spec, some rightHead)
   throwError
-    m!"@[vcspec] expects a theorem whose target is one of:\n\
-    - a unary `Triple`\n\
-    - a unary raw `wp` goal\n\
-    - a relational `RelTriple`\n\
-    - a relational raw `RelWP`\n\
-    got:{indentExpr body}"
+    m!"@[vcspec] expects a theorem whose target is a relational `RelTriple` or a relational \
+    raw `RelWP` goal. A triple of one program is a core `@[spec]` rule, used by `vcgen` and \
+    `prvcgen`. Got:{indentExpr body}"
 where
-  /-- Extract the head constant of a preprocessed computation expression,
-  tolerating `whnf`-reducible layers. -/
-  headConstNameOrUnary (comp : Expr) : MetaM Name := do
-    let comp ← whnfReducible (← instantiateMVars comp)
-    match headConstName? comp with
-    | some h => return h
-    | none =>
-        throwError
-          m!"@[vcspec] only supports unary computations with a constant head symbol, got:\
-          {indentExpr comp}"
   relationalHeads (oa ob : Expr) : MetaM (Name × Name) := do
     let oa ← whnfReducible (← instantiateMVars oa)
     let ob ← whnfReducible (← instantiateMVars ob)
@@ -420,51 +297,17 @@ private def buildVCSpecEntry (decl : Name) (priority : Nat) : MetaM VCSpecEntry 
 
 initialize registerBuiltinAttribute {
   name := `vcspec
-  descr := "Register a unary or relational program-logic theorem for vcgen/rvcgen \
-    lookup, or a normalization simp lemma for the internal `vcspec_simp` set."
+  descr := "Register a relational program-logic theorem for rvcstep/rvcgen lookup."
   applicationTime := AttributeApplicationTime.afterCompilation
   add := fun decl stx kind => MetaM.run' do
     let prio ← getAttrParamOptPrio stx[1]
-    try
-      let entry ← buildVCSpecEntry decl prio
-      vcSpecRegistry.add entry kind
-    catch specErr =>
-      let env ← getEnv
-      match getAttributeImpl env `vcspec_simp with
-      | .error _ => throw specErr
-      | .ok impl =>
-          try
-            let newStx ← `(attr| vcspec_simp)
-            let newStx := newStx.raw.setArg 3 stx[1]
-            impl.add decl newStx kind
-          catch simpErr =>
-            throwError "@[vcspec] failed to register `{decl}`:\n\
-              - as a spec theorem: {specErr.toMessageData}\n\
-              - as a `vcspec_simp` lemma: {simpErr.toMessageData}"
+    let entry ← buildVCSpecEntry decl prio
+    vcSpecRegistry.add entry kind
 }
 
 private def headOfWhnf (e : Expr) : MetaM (Option Name) := do
   let e ← whnfReducible (← instantiateMVars e)
   return headConstName? e
-
-/-- Unary `@[vcspec]` entries whose `comp` pattern matches `comp`, queried from the
-`unary` discrimination tree after reducing `comp` with reducible `whnf`. The
-`whnf`-free counterpart is `getRegisteredUnaryVCSpecEntriesNoWhnf`. -/
-def getRegisteredUnaryVCSpecEntries (comp : Expr) : MetaM (Array VCSpecEntry) := do
-  let comp ← whnfReducible (← instantiateMVars comp)
-  let comp ← symMatchKey comp
-  let registry := vcSpecRegistry.getState (← getEnv)
-  return Lean.Meta.Sym.getMatch (← getMCtx) registry.unary comp
-
-/-- Retrieve unary `@[vcspec]` entries without reducible `whnf` on the computation.
-
-This is only for raw `wp` structural dispatch, where the syntactic head is already
-the surface we want to step and reducing zero/nil iterator terms can unfold into
-larger monadic expressions. -/
-def getRegisteredUnaryVCSpecEntriesNoWhnf (comp : Expr) : MetaM (Array VCSpecEntry) := do
-  let comp ← symMatchKey comp
-  let registry := vcSpecRegistry.getState (← getEnv)
-  return Lean.Meta.Sym.getMatch (← getMCtx) registry.unary comp
 
 /-- Relational `@[vcspec]` entries whose `oa` pattern matches the left computation `oa`
 and whose `rightHead?` equals the head constant of the right computation `ob`, queried
@@ -478,12 +321,6 @@ def getRegisteredRelationalVCSpecEntries (oa ob : Expr) : MetaM (Array VCSpecEnt
     match entry.rightHead? with
     | some h => h == rightHead
     | none => false
-
-/-- Declaration names of the unary `@[vcspec]` entries matching `comp`; the
-`declName?` projection of `getRegisteredUnaryVCSpecEntries`, dropping entries
-backed by a local hypothesis or raw proof. -/
-def getRegisteredUnaryVCSpecTheorems (comp : Expr) : MetaM (Array Name) := do
-  return (← getRegisteredUnaryVCSpecEntries comp).filterMap (·.declName?)
 
 /-- Declaration names of the relational `@[vcspec]` entries matching `(oa, ob)`; the
 `declName?` projection of `getRegisteredRelationalVCSpecEntries`, dropping entries

@@ -64,7 +64,7 @@ def uniformSample (β : Type) [h : SampleableType β] : ProbComp β := h.selectE
 samples from a collection. -/
 notation:90 "$ᵗ " α:91 => uniformSample α
 
-/-- The canonical sample has uniform output measure under native oracle semantics. -/
+/-- The canonical sample has the uniform output measure. -/
 theorem SampleableType.evalDist_uniformSample {β : Type} [SampleableType β]
     [MeasurableSpace β] [MeasurableSingletonClass β] :
     𝒟[$ᵗ β] = uniformOn Set.univ :=
@@ -147,6 +147,15 @@ instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType
       SampleableType.evalDist_uniformSample SampleableType.evalDist_uniformSample
       (@Measurable.of_discrete (α × β) (α × β) Prod.instMeasurableSpace outputSpace
         inferInstance _) ⟨Function.injective_id, Function.surjective_id⟩
+
+/-- A uniform pair is a uniform first coordinate followed by an independent uniform second
+coordinate. -/
+theorem SampleableType.uniformSample_prod_eq_bind (α β : Type) [SampleableType α]
+    [SampleableType β] :
+    ($ᵗ (α × β)) = (do let a ← $ᵗ α; let b ← $ᵗ β; pure (a, b)) := by
+  rw [uniformSample]
+  change ((·, ·) <$> ($ᵗ α) <*> ($ᵗ β)) = _
+  simp [seq_eq_bind_map, map_eq_bind_pure_comp, bind_assoc]
 
 /-- Transport a uniform sampler along an equivalence. -/
 @[expose, reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :

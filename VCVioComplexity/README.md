@@ -4,10 +4,10 @@
 complexity-theory backend substrate. It is not imported by VCVio's root library and therefore
 does not add complexitylib to ordinary VCVio consumers.
 
-The current package provides:
+The package provides:
 
 - direct compatibility canaries for `Complexitylib.Models.TuringMachine` and
-  `Complexitylib.Classes.P.Cobham.Defs` at VCVio's Lean/Mathlib 4.34 pin;
+  `Complexitylib.Classes.P.Cobham.Defs` at VCVio's Lean/Mathlib `v4.35.0-rc3` pin;
 - a closed grammar of word, empty, unit, Boolean, unary-natural, fixed-width `BitVec`, product,
   dependent-pair, sum, and option representations, with proved codecs rather than
   caller-selected injective encodings;
@@ -66,11 +66,10 @@ extensional Lean composition or a synthetic cost counter. Any future implementat
 PolyFun's `QuantitativeStepClass.HasCategory` mixin directly; the specialized unit machines do not
 establish that universally quantified interface.
 
-The representation grammar's pairing codec is intentionally unchanged by this spike. It encodes
-the empty pair as `[true]`, whereas complexitylib's canonical pairing used by its split and emit
-machines encodes it as `[false, true]`. Reusing those machines therefore requires a proved total
-translation or a deliberate representation migration; definitional compatibility must not be
-assumed.
+The representation grammar keeps its own pairing codec. It encodes the empty pair as `[true]`,
+whereas complexitylib's canonical pairing used by its split and emit machines encodes it as
+`[false, true]`. Reusing those machines therefore requires a proved total translation or a
+deliberate representation migration; definitional compatibility must not be assumed.
 
 See [PROVENANCE.md](PROVENANCE.md) for the exact upstream revision and compatibility result.
 See the [computational-complexity design](../docs/design/computational-complexity.md) for the trust
@@ -92,7 +91,7 @@ lake build VCVioComplexityTest
 
 `./scripts/compatibility-preflight.sh` checks the pinned revision, builds the supported base API,
 and classifies both the upstream composition stack and `Complexitylib.Asymptotics`. By default,
-recorded compatibility blockers are reported without failing the spike; changed or unexpected
+recorded compatibility blockers are reported without failing the check; changed or unexpected
 source diagnostics fail. Pass `--require-upstream-stack` to fail while either upstream surface
 remains unavailable. This is a compatibility gate, not proof of VCVio closure: the representation
 translation and PolyFun closure witnesses remain separate obligations. The script never patches

@@ -26,40 +26,28 @@ open OracleComp OracleSpec MeasureTheory
 
 variable {TagId Nonce Digest S : Type}
   [DecidableEq TagId] [DecidableEq Nonce] [DecidableEq Digest]
-  [MeasurableSpace S]
-  [∀ operation : (UnlinkOracleSpec TagId Nonce Digest).Domain,
-    MeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range operation)]
-  [∀ operation : (UnlinkOracleSpec TagId Nonce Digest).Domain,
-    DiscreteMeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range operation × S)]
 
 /-- Local joint-kernel replacement preserves the actual bounded FIFO verdict law. -/
 theorem verdict_law_congr
     (left right : QueryImpl (UnlinkOracleSpec TagId Nonce Digest) (StateT S ProbComp))
-    (hlocal : ∀ operation state,
-      𝒟[(left operation).run state] = 𝒟[(right operation).run state])
+    (hlocal : ∀ operation state, (left operation).run state =ᵈ (right operation).run state)
     (budget : ℕ) (adversary : UnlinkAdversary TagId Nonce Digest)
     (hbound : IsTotalQueryBound adversary budget) (state : S) :
-    𝒟[verdict left budget adversary state] = 𝒟[verdict right budget adversary state] := by
+    verdict left budget adversary state =ᵈ verdict right budget adversary state := by
   rw [verdict_eq _ _ _ hbound, verdict_eq _ _ _ hbound]
   simp only [StateT.run'_eq]
-  rw [evalDist_map _ measurable_fst, evalDist_map _ measurable_fst,
-    evalDist_simulateQ_run_congr left right hlocal]
+  exact (evalDistEq_simulateQ_run left right hlocal adversary state).map Prod.fst
 
 /-- Local replacement preserves the bad-state event as well as the protocol's verdict. -/
 theorem stateEvent_law_congr
     (left right : QueryImpl (UnlinkOracleSpec TagId Nonce Digest) (StateT S ProbComp))
-    (hlocal : ∀ operation state,
-      𝒟[(left operation).run state] = 𝒟[(right operation).run state])
+    (hlocal : ∀ operation state, (left operation).run state =ᵈ (right operation).run state)
     (budget : ℕ) (adversary : UnlinkAdversary TagId Nonce Digest)
-    (hbound : IsTotalQueryBound adversary budget) (state : S)
-    (event : S → Bool) (hevent : Measurable event) :
-    𝒟[stateEvent left budget adversary state event] =
-      𝒟[stateEvent right budget adversary state event] := by
+    (hbound : IsTotalQueryBound adversary budget) (state : S) (event : S → Bool) :
+    stateEvent left budget adversary state event =ᵈ
+      stateEvent right budget adversary state event := by
   rw [stateEvent_eq _ _ _ hbound, stateEvent_eq _ _ _ hbound]
-  change 𝒟[(event ∘ Prod.snd) <$> (simulateQ left adversary).run state] =
-    𝒟[(event ∘ Prod.snd) <$> (simulateQ right adversary).run state]
-  rw [evalDist_map _ (hevent.comp measurable_snd),
-    evalDist_map _ (hevent.comp measurable_snd), evalDist_simulateQ_run_congr left right hlocal]
+  exact (evalDistEq_simulateQ_run left right hlocal adversary state).map (event ∘ Prod.snd)
 
 end PRFTagReader.Network
 
@@ -80,22 +68,6 @@ abbrev MultipleServiceState (TagId Nonce Digest : Type) :=
 abbrev SingleServiceState (TagId Nonce Digest : Type) (sessionsPerTag : ℕ) :=
   UnlinkState TagId × (((TagId × Fin sessionsPerTag) × Nonce) →ₒ Digest).QueryCache
 
-variable
-  [MeasurableSpace (MultipleServiceState TagId Nonce Digest)]
-  [MeasurableSpace (SingleServiceState TagId Nonce Digest sessionsPerTag)]
-  [MeasurableSpace (MultipleBadState TagId Nonce Digest sessionsPerTag)]
-  [∀ operation : (UnlinkOracleSpec TagId Nonce Digest).Domain,
-    MeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range operation)]
-  [∀ operation : (UnlinkOracleSpec TagId Nonce Digest).Domain,
-    DiscreteMeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range operation ×
-      MultipleServiceState TagId Nonce Digest)]
-  [∀ operation : (UnlinkOracleSpec TagId Nonce Digest).Domain,
-    DiscreteMeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range operation ×
-      SingleServiceState TagId Nonce Digest sessionsPerTag)]
-  [∀ operation : (UnlinkOracleSpec TagId Nonce Digest).Domain,
-    DiscreteMeasurableSpace ((UnlinkOracleSpec TagId Nonce Digest).Range operation ×
-      MultipleBadState TagId Nonce Digest sessionsPerTag)]
-
 /-- Joint local contracts transport the direct-coupling bound, for either verdict `out`, with all
 three loss terms intact. The bad-world contract retains the final private state needed by the
 original reduction. -/
@@ -106,14 +78,12 @@ theorem multiple_le_single_add_bad_of_joint_law
       (StateT (SingleServiceState TagId Nonce Digest sessionsPerTag) ProbComp))
     (bad : QueryImpl (UnlinkOracleSpec TagId Nonce Digest)
       (StateT (MultipleBadState TagId Nonce Digest sessionsPerTag) ProbComp))
-    (hmultiple : ∀ operation state, 𝒟[(multiple operation).run state] =
-      𝒟[(multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag) operation).run state])
-    (hsingle : ∀ operation state, 𝒟[(single operation).run state] =
-      𝒟[(singleIdealQueryImpl (sessionsPerTag := sessionsPerTag) operation).run state])
-    (hbad : ∀ operation state, 𝒟[(bad operation).run state] =
-      𝒟[(multipleBadQueryImpl _ _ _ sessionsPerTag operation).run state])
-    (hmeas : Measurable (fun state : MultipleBadState TagId Nonce Digest sessionsPerTag =>
-      state.2.bad))
+    (hmultiple : ∀ operation state, (multiple operation).run state =ᵈ
+      (multipleIdealQueryImpl (sessionsPerTag := sessionsPerTag) operation).run state)
+    (hsingle : ∀ operation state, (single operation).run state =ᵈ
+      (singleIdealQueryImpl (sessionsPerTag := sessionsPerTag) operation).run state)
+    (hbad : ∀ operation state, (bad operation).run state =ᵈ
+      (multipleBadQueryImpl _ _ _ sessionsPerTag operation).run state)
     (out : Bool) (adversary : UnlinkAdversary TagId Nonce Digest) (qReader qTag : ℕ)
     (hReader : IsQueryBoundP adversary (·.isRight) qReader)
     (hTag : IsQueryBoundP adversary (·.isLeft) qTag) :
@@ -126,11 +96,10 @@ theorem multiple_le_single_add_bad_of_joint_law
     ((qReader * Fintype.card TagId * sessionsPerTag : ℕ) : ℝ≥0∞) /
       (Fintype.card Digest : ℝ≥0∞) := by
   have hbound := totalQueryBound adversary qReader qTag hReader hTag
-  rw [verdict_law_congr _ _ hmultiple _ _ hbound,
-    verdict_law_congr _ _ hsingle _ _ hbound,
-    stateEvent_law_congr _ _ hbad _ _ hbound _ _ hmeas]
-  simpa only [evalDist_apply_singleton] using
-    multiple_le_single_add_bad (sessionsPerTag := sessionsPerTag)
-      out adversary qReader qTag hReader hTag
+  rw [(verdict_law_congr _ _ hmultiple _ _ hbound _).evalDist_eq,
+    (verdict_law_congr _ _ hsingle _ _ hbound _).evalDist_eq,
+    (stateEvent_law_congr _ _ hbad _ _ hbound _ _).evalDist_eq]
+  exact multiple_le_single_add_bad (sessionsPerTag := sessionsPerTag)
+    out adversary qReader qTag hReader hTag
 
 end PRFTagReader.Network

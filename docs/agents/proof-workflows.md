@@ -4,37 +4,47 @@
 
 **What are you trying to prove?**
 
-1. **Two games have the same distribution** (`g₁ ≡ₚ g₂`):
+1. **Two games have the same distribution** (`g₁ =ᵈ g₂`):
    → `by_equiv` to enter relational mode, then use `rvcstep` / `rvcgen`
    → Add `using ...` when the current relational step needs an explicit witness
 
-2. **Advantage is bounded** (`advantage ≤ ε`):
-   → `by_dist` to enter TV distance reasoning
-   → Use `by_dist ε₂` when you want to pin the TV-distance contribution explicitly
-   → For identical-until-bad: use `tvDist_simulateQ_le_probEvent_bad`
+2. **An advantage is bounded** (`AdvBound game ε`):
+   → `by_dist` to split the bound into a second game's bound and the total variation distance
+    between the two games (`AdvBound.of_etvDist`)
+   → Use `by_dist ε₂` when you want to pin the distance contribution explicitly
+   → Use `by_dist hybrid games n` for a hybrid argument over a chain of games
+   → For identical-until-bad: use `by_upto` or
+     `etvDist_simulateQ_run'_le_prEvent_bad` (`Relational/SimulateQ/UntilBad.lean`)
+   → For two programs related except with probability `ε` (`⟪oa ≈[ε] ob | R⟫`): `by_approx`,
+    then `rvcgen` on the quantitative relational triple it leaves
 
-3. **Probability equals a specific value** (`Pr[= x | oa] = ...`):
-   → Start with `vcstep` if the goal should lower or decompose automatically
-   → Use `vcstep?` when you want the explicit script, binder names, rewrite form, or an
-    explicit `using` / `inv` / `with` step surfaced
-   → Otherwise use `probOutput_bind_eq_tsum` to decompose binds manually
+3. **Probability equals a specific value** (`Pr{let y ← oa}[y = x] = ...` or
+   `Pr{let x ← oa}[p x] = ...`):
+   → Use `prvcgen` when the value holds on every outcome (`= 0`, `= 1`) or a loop invariant pins
+    it; it splits `= c` into an upper and a lower bound, and proves bounds `r ≤ Pr{…}[…]`,
+    `Pr{…}[…] ≤ ε` and core triples the same way
+   → Use `simp only [expect_norm, expect_eval]` to state the expectation through the program's
+    unfolding and the values of its draws; `simp` averages finite uniform draws
+   → Otherwise use `prEvent_bind_eq_lintegral_of_discrete` (or `prEvent_bind_eq_lintegral`) to
+    decompose binds manually into `∫⁻ x, … ∂𝒟[oa]`
    → Use `simp` with project simp lemmas
-   → Use `vcstep`, `vcstep rw`, or `vcstep rw congr'` for probability equalities
+   → Use `prrw`, `prrw congr`, or `prrw normalize` when the value is another program's probability
 
-4. **Multi-hop security proof** (`g₁ ≡ₚ gₙ`):
+4. **Multi-hop security proof** (`g₁ =ᵈ gₙ`):
    → `game_trans g₂` to split into two goals, repeat
 
 5. **Need to swap sampling order**:
-   → Use `vcstep` if the swap should close the goal
-   → Use `vcstep rw` (or `vcstep rw under n`) if you need to continue after rewriting
+   → Use `prrw` (or `prrw under n` below shared binds) for one swap; it closes the goal when the
+    two sides then agree
+   → Use `prrw normalize` to search for a sequence of swaps and shared-prefix steps that closes it
 
 ## Monadic Normalization with `monad_norm`
 
 The canonical way to normalize monadic expressions in this codebase is Mathlib's
 `monad_norm` simp set (declared in `Mathlib.Tactic.Attr.Register`). It bundles
 `pure_bind`, `bind_assoc`, `bind_pure`, `map_pure`, `pure_seq`, `seq_assoc`,
-`seq_eq_bind_map`, and `map_eq_bind_pure_comp`, which between them push goals
-toward an associated bind-canonical form.
+`seq_eq_bind_map`, `seqLeft_eq_bind`, `seqRight_eq_bind` and `map_eq_bind_pure_comp`, which
+between them push goals toward an associated bind-canonical form.
 
 Prefer `simp [monad_norm]` (or `simp […, monad_norm]`) over hand-rolled lemma
 lists like `simp [bind_assoc, pure_bind, …]`. It documents intent, keeps proofs
@@ -45,10 +55,9 @@ When it isn't feasible:
 
 - **Direction-flipping conflicts.** `monad_norm` rewrites `f <$> x` toward
   `x >>= pure ∘ f`. Proofs that deliberately use `bind_pure_comp` /
-  `map_pure` to keep the goal in `<$>` form (common in StateT-heavy proofs in
-  `Examples/CommitmentScheme/Hiding/*` and large stretches of
-  `VCVio/CryptoFoundations/ReplayFork.lean`) will break, because a downstream
-  `rw [some_lemma_about_<$>]` no longer matches. Keep the explicit lemma list
+  `map_pure` to keep the goal in `<$>` form (common in `StateT`-heavy proofs such as
+  `Examples/PRFTagReader/Auth.lean` and `Examples/CommitmentScheme/Hiding/*`) break under it,
+  because a later `rw [some_lemma_about_<$>]` then fails to match. Keep the explicit lemma list
   at those sites.
 - **Tightly tuned `simp only` chains.** When a proof relies on a *specific*
   partial-rewrite state between two `simp only` calls (e.g. peeling structure
@@ -56,10 +65,9 @@ When it isn't feasible:
   can over-rewrite. Leave the two-pass structure alone.
 - **`rw` and `simp_rw` lemma lists.** These take individual lemmas, not simp
   sets — `monad_norm` doesn't apply.
-- **Files that don't import `Mathlib.Tactic.Attr.Register`.** A few low-level
-  files in `ToMathlib/Control/Monad/` (e.g. `Indexed.lean`, `Graded.lean`)
-  import only `Mathlib.Algebra.…` and don't see `monad_norm`. Don't widen
-  imports just to use it; spelling out `bind_assoc` is fine there.
+- **Files whose imports do not reach `Mathlib.Tactic.Attr.Register`.** A low-level file such
+  as `ToMathlib/Control/Monad/Relation.lean`, which imports only Batteries, does not see
+  `monad_norm`. Don't widen imports just to use it; spelling out `bind_assoc` is fine there.
 
 Treat `monad_norm` as the default and the manual lemma list as the exception.
 When you do choose the manual list, the choice is usually load-bearing — leave
@@ -86,7 +94,7 @@ def hybrid (adversary : ...) (k : ℕ) : ProbComp Bool := do
 
 ```lean
   game_trans (hybrid adversary 1)
-  · -- prove hybrid 0 ≡ₚ hybrid 1
+  · -- prove hybrid 0 =ᵈ hybrid 1
     by_equiv
     ...
   · game_trans (hybrid adversary 2)
@@ -113,19 +121,23 @@ Show that DDH-real corresponds to hybrid k and DDH-random corresponds to hybrid 
 
 From `Examples/OneTimePad/Basic.lean` — the canonical complete proof.
 
-**Setup**: OTP encrypts by XOR with a random key.
+**Setup**: OTP encrypts by XOR with a uniformly random `BitVec` key.
 
 ```lean
-def OTP_keyGen : ProbComp (Fin n → Bool) := $ᵗ (Fin n → Bool)
-def OTP_encrypt (k m : Fin n → Bool) : ProbComp (Fin n → Bool) := pure (k + m)
+def oneTimePad (sp : ℕ) :
+    SymmEncAlg ProbComp (BitVec sp) (BitVec sp) (BitVec sp) :=
+  oneTimePadOfKeygen sp ($ᵗ BitVec sp)   -- encrypt k m := return k ^^^ m
 ```
 
 **Privacy proof sketch**:
-1. The ciphertext `c = k + m` where `k` is uniform
-2. By group theory, `k + m` is uniform for any fixed `m`
-3. So `Pr[= c | encrypt k m₁] = Pr[= c | encrypt k m₂]` for all `c`
+1. The ciphertext is `c = k ^^^ m` where `k` is uniform
+2. XOR with a fixed `m` is a bijection, so `k ^^^ m` is uniform for every `m`
+3. So every message has the same ciphertext measure, `uniformOn Set.univ`, and the rows are
+   equal in distribution (`=ᵈ`)
 
-**Key technique**: `probOutput_map_injective` — if the encryption map is injective (which XOR is), the probability is preserved.
+**Key technique**: `evalDist_xor_uniformSample` (`VCVio/OracleComp/Constructions/BitVec.lean`)
+computes `𝒟[(· ^^^ msg) <$> $ᵗ BitVec sp] = uniformOn Set.univ`; `EvalDistEq.of_evalDist_eq`
+turns the equal measures into `=ᵈ`.
 
 ## Worked Example: ElGamal IND-CPA
 
@@ -146,7 +158,7 @@ examples under `Examples/ProgramLogic/`.
 ### `by_equiv` + relational decomposition
 
 ```lean
--- Goal: g₁ ≡ₚ g₂
+-- Goal: g₁ =ᵈ g₂
 by_equiv                    -- now: ⟪g₁ ~ g₂ | EqRel α⟫
 rvcstep using R         -- if needed, provide the bind cut relation
 · rvcstep using f       -- couples the sampling step with a bijection
@@ -184,132 +196,120 @@ use `rvcfinish` or `rvcgen!` when residual consequence/search is intended.
 rvcstep?
 ```
 
-On bind goals, the replay can now surface the full tuple naming form:
+On bind goals, the replay can surface the full tuple naming form:
 
 ```lean
 rvcstep using S as ⟨a1, a2, hrel⟩
 ```
 
-### `vcstep` on probability equalities
+### `prrw` on probability equalities
 
 ```lean
--- Goal: Pr[= true | do let x ← $ᵗ P; let b ← $ᵗ Bool; f x b]
---     = Pr[= true | do let b ← $ᵗ Bool; let x ← $ᵗ P; f x b]
-vcstep                -- closes the goal automatically
+-- Goal: Pr{let x ← $ᵗ P; let b ← $ᵗ Bool; let z ← f x b}[z = true]
+--     = Pr{let b ← $ᵗ Bool; let x ← $ᵗ P; let z ← f x b}[z = true]
+prrw                  -- swaps the first two draws, which closes the goal
 ```
 
 ```lean
--- Same shape, but keep going after one rewrite:
-vcstep rw
-```
-
-### Naming and suggestion modes
-
-```lean
--- Ask for the explicit next script and binder names:
-vcstep?
-```
-
-The surfaced script may now include:
-
-```lean
-vcstep using cut
-vcstep inv I
-vcstep with triple_wrappedTrue
+-- Alternatives: the swap below one shared draw, or a search for a closing sequence of steps
+prrw under 1
+prrw normalize
 ```
 
 ```lean
--- Keep the step, but force stable names for the new binders:
-vcstep as ⟨x⟩
+-- Expose a shared prefix, naming the value and its support hypothesis:
+prrw congr as ⟨x, hx⟩
 ```
+
+### `prvcgen` on bounds and triples
 
 ```lean
--- Same idea on the relational side:
-rvcstep using S as ⟨a₁, a₂, hrel⟩
+-- Goal: r ≤ Pr{let x ← oa}[p x], with h : ⦃ r ⦄ oa ⦃ predInd p ⦄ in context
+prvcgen                     -- lower reading (`le_prEvent_iff_triple`); `vcgen` uses `h`
 ```
 
-### `vcgen` driver variants
+`predInd p` is the indicator `fun x => 𝟙⟦p x⟧` (`predInd_apply`), the postcondition that
+`le_prEvent_iff_triple` states.
 
-Use `vcgen using cut` to perform one explicit bind step with an intermediate
-postcondition, then continue with exhaustive decomposition:
+A continuation specified only on the support of the first program uses `Spec.ofSupport`, which
+leaves the support membership:
 
 ```lean
--- Goal: ⦃1⦄ (do let x ← oa; let y ← f x; g y) ⦃post⦄
--- with hoa : ⦃1⦄ oa ⦃cut⦄ in context
-vcgen using cut            -- splits at first bind with `cut`, then auto-decomposes
+-- Goal: ⦃ 1 ⦄ (do let x ← oa; f x) ⦃ fun y => if y = true then 1 else 0 ⦄
+-- with h' : ∀ x ∈ support oa, ⦃ 1 ⦄ f x ⦃ fun y => if y = true then 1 else 0 ⦄
+prvcgen [OracleComp.Lower.Spec.ofSupport oa, h']
+exact Subtype.property _
 ```
 
-Use `vcgen inv I` to apply an explicit loop invariant to the first
-`replicate`/`foldlM`/`mapM` goal, then continue:
+A loop takes an invariant, as an explicit rule or through `invariants`:
 
 ```lean
--- Goal: ⦃pre⦄ oa.replicate n ⦃post⦄
--- with hstep : ⦃I⦄ oa ⦃fun _ => I⦄ in context
-vcgen inv I                -- applies invariant I, then auto-decomposes
+-- Goal: ⦃ pre ⦄ oa.replicate n ⦃ post ⦄, with hstep : ⦃ I ⦄ oa ⦃ fun _ => I ⦄
+prvcgen [triple_replicate_inv hstep]
+all_goals simp_all          -- pre ≤ I and I ≤ post xs
+
+-- Goal: ⦃ I s₀ ⦄ l.foldlM f s₀ ⦃ I ⦄, with hstep : ∀ s x, x ∈ l → ⦃ I s ⦄ f s x ⦃ I ⦄
+prvcgen invariants · fun _ _ s => I s
+all_goals simp_all
 ```
 
-### Support-cut synthesis
-
-When decomposing a bind `oa >>= f`, if no explicit spec is available in context,
-`vcstep` and `vcgen` will automatically try a support-based intermediate
-postcondition. This applies `triple_bind` with `triple_support` as the spec for `oa`,
-unifying the cut to `fun x => ⌜x ∈ support oa⌝`:
+A sub-program without a rule is left as its weakest precondition:
 
 ```lean
--- Goal: ⦃1⦄ (do let x ← oa; f x) ⦃post⦄
--- No spec for oa, but h : ∀ x ∈ support oa, ⦃...⦄ f x ⦃post⦄
-vcgen                      -- auto-inserts support cut, then decomposes f
+prvcgen (errorOnMissingSpec := false)
+simp only [expect_norm, le_refl]
 ```
 
-### Opt-in unary theorem lookup
+### Rules for opaque programs
 
-When a computation head is user-defined and not one of the built-in structural cases, register a
-unary `Triple` lemma explicitly:
+An `@[irreducible]` program is opaque to `vcgen`. State its triple as a core `@[spec]` rule
+(`@[local spec]` for one file):
 
 ```lean
 @[irreducible] def wrappedTrue : OracleComp spec Bool := pure true
 
-@[vcspec] theorem triple_wrappedTrue :
-    ⦃1⦄ wrappedTrue (spec := spec) ⦃fun y => if y = true then 1 else 0⦄ := by
+@[local spec] theorem triple_wrappedTrue :
+    ⦃ 1 ⦄ wrappedTrue (spec := spec) ⦃ fun y => if y = true then 1 else 0 ⦄ := by
   simpa [wrappedTrue] using
-    (triple_pure (spec := spec) true (fun y => if y = true then 1 else 0))
+    (Std.WP.Spec.pure (m := OracleComp spec) (post := fun y => if y = true then 1 else 0) true)
 ```
 
-After that, `vcstep` can use the theorem when the goal head symbol is `wrappedTrue`.
-The lookup is step-level and bounded: it runs after the built-in structural rules and only over
-registered head-matching theorems.
+`prvcgen` then uses the rule wherever `wrappedTrue` occurs; without the attribute,
+`prvcgen [triple_wrappedTrue]` passes it for one call. Relational rules register with `@[vcspec]`
+instead.
 
-You can also force a specific theorem or local assumption explicitly:
-
-```lean
-vcstep with triple_wrappedTrue
-```
-
-If an exhaustive `vcgen` / `rvcgen` run stops too early, raise the local pass budget with:
+If an exhaustive `rvcgen` run stops too early, raise the local pass budget with:
 
 ```lean
 set_option vcvio.vcgen.maxPasses 128 in
-  vcgen
+  rvcgen
 ```
 
 For tactic-choice debugging, enable the planned-step trace locally:
 
 ```lean
 set_option vcvio.vcgen.traceSteps true in
-  vcstep
+  rvcstep
 ```
 
 ### `by_dist` for advantage bounds
 
 ```lean
--- Goal: AdvBound game ε
-by_dist                     -- enters TV distance mode
--- now need to show tvDist ... ≤ ε
+-- Goal: AdvBound game (ε₁ + ε₂)
+by_dist                     -- applies AdvBound.of_etvDist
+-- leaves AdvBound game' ε₁ for a second game game', and etvDist game' game ≤ ε₂
 ```
 
 ```lean
--- Same shape, but fix the TV-distance contribution first:
+-- Same shape, with the distance contribution fixed to ε₂ first:
 by_dist ε₂
+```
+
+```lean
+-- A hybrid argument over a chain `games : ℕ → OracleComp spec Bool` of length `n`:
+-- Goal: AdvBound (games 0) (ε + ∑ i ∈ Finset.range n, step i)
+by_dist hybrid games n
+-- now need AdvBound (games n) ε and ∀ i < n, etvDist (games i) (games (i + 1)) ≤ step i
 ```
 
 ## Reusing `preInsert` / `postInsert` Theory
@@ -317,18 +317,16 @@ by_dist ε₂
 When a goal mentions `simulateQ` of a `QueryImpl` wrapper from `QueryTracking/`
 (`countingOracle`, `loggingOracle`, `withCost`, `withLogging`, `withTraceBefore`, etc.) or
 any custom wrapper built on `preInsert` / `postInsert`, **prefer the generic bridge lemmas
-from `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions.lean` over re-proving the
+from `VCVio/OracleComp/SimSemantics/QueryImpl/Constructions/Core.lean` over re-proving the
 specific instance.** The bridges are parameterised over a projection
 `proj : ∀ {γ}, n γ → m γ` (typically `Prod.fst <$> WriterT.run ·` for a writer-style
-wrapper, or `(·.run s) >>= ...` for a state-style wrapper), and they exist for every
-distribution-side observable:
+wrapper, or `(·.run s) >>= ...` for a state-style wrapper). The projection equation is an
+equality of computations, so output measures `𝒟[…]` and events `Pr{…}[…]` transfer by
+rewriting with it:
 
 | Lemma family | What it gives you |
 |---|---|
 | `proj_simulateQ_preInsert` / `proj_simulateQ_postInsert` | Strip the instrumentation: `proj (simulateQ (so.preInsert nx) oa) = simulateQ so oa`. |
-| `probFailure_proj_simulateQ_*` | Failure probability is preserved by the wrapper. |
-| `NeverFail_proj_simulateQ_*_iff` | `NeverFail` lifts through the wrapper iff it holds on the base. |
-| `evalSPMF_proj_simulateQ_*` / `probOutput_proj_simulateQ_*` | Output-marginal distribution / probability is unchanged. |
 | `support_proj_simulateQ_*` / `finSupport_proj_simulateQ_*` | Output-marginal support / `Finset` support is unchanged. |
 | `simulateQ_preInsert.induct` / `simulateQ_postInsert.induct` (`@[elab_as_elim]`) | Induction principle parametric in the projection — useful when the bridges above are too rigid. |
 
@@ -336,10 +334,10 @@ For query-bound transfer through a wrapper, see
 `isTotalQueryBound_simulateQ_preInsert` / `…_postInsert` (and the predicated
 `IsQueryBoundP` versions) in `QueryTracking/QueryBound.lean`.
 
-If you find yourself writing an inductive proof that "running my wrapper preserves
-`probOutput`" and the wrapper is built on `preInsert` / `postInsert`, the proof is almost
-certainly already a one-line specialisation of `probOutput_proj_simulateQ_preInsert` (or
-its `postInsert` sibling) with the right projection. Reach for the bridge before reaching
+If you find yourself writing an inductive proof that "running my wrapper preserves the
+output measure" and the wrapper is built on `preInsert` / `postInsert`, the proof is almost
+certainly a one-line rewrite with `proj_simulateQ_preInsert` (or its `postInsert` sibling)
+under the right projection. Reach for the bridge before reaching
 for `OracleComp.inductionOn`.
 
 ## Asymptotic Security Reductions
@@ -409,16 +407,28 @@ before changing definitions or tactics for eRHL, pRHL, or apRHL.
 ## Debugging Common Stuck States
 
 ### "typeclass instance problem ... HasQuery spec ?m" or "Monad (OracleQuery spec)"
-After the `HasQuery` cutover, the bare `query t` is `HasQuery.query t` and needs an expected type so Lean can pick the ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form `spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting `OracleQuery.cont`).
+The bare `query t` is `HasQuery.query t`, which needs an expected type so that Lean can pick the
+ambient monad. Either ascribe `(query t : OracleComp spec _)`, or use the primitive form
+`spec.query t : OracleQuery spec _` (e.g. when applying `liftM` or projecting
+`OracleQuery.cont`).
 
-### "failed to synthesize ... MonadLiftT (OracleComp spec) SPMF"
-For `OracleComp spec`, add `[IsProbabilitySpec spec]` when you need `evalSPMF` or `Pr[...]`. Add `[IsUniformSpec spec]` when you need uniform/cardinality facts or lemmas relating `support` to nonzero probability. If you have `[∀ t, Fintype (spec.Range t)] [∀ t, Inhabited (spec.Range t)]` and intend uniform semantics, install a local instance with `IsUniformSpec.ofFintypeInhabited spec`.
+### "failed to synthesize ... OracleSpec.AnswerMeasure spec"
+For `OracleComp spec`, add answer measures with `[OracleSpec.AnswerMeasure spec]` when you need
+`𝒟[...]` or `Pr{...}[...]`, and `[OracleSpec.UniformAnswerMeasure spec]` for uniform answers and
+cardinality facts. If the answer types are finite and nonempty and you intend uniform semantics,
+install a local instance with `UniformAnswerMeasure.ofFiniteNonempty spec`. `𝒟[...]` also needs a
+`MeasurableSpace` on the result type.
 
 ### Universe mismatch around `SubSpec`
-`OracleComp` has 3 universe parameters, `SubSpec` has 6. Use `{ι : Type*}` instead of `{ι : Type u}` to let universes resolve independently.
+`OracleComp` has 3 universe parameters, and so has `SubSpec`. Use `{ι : Type*}` instead of
+`{ι : Type u}` to let universes resolve independently.
 
-### `simp` makes no progress on `probOutput`
-`probOutput_bind_eq_tsum` is `@[grind =]` but not `@[simp]`. Use `rw [probOutput_bind_eq_tsum]` or `grind` instead of `simp`.
+### `simp` does not integrate an event over a bind
+`prEvent_bind_eq_lintegral` is not a `simp` lemma. Use `rw [prEvent_bind_eq_lintegral_of_discrete]`
+when the common draw has a discrete measurable space, or `prEvent_bind_eq_lintegral` with a
+measurability proof for the continuation.
 
 ### Aggressive unfolding of `OracleComp`
-Core types are `@[reducible]`. Lean may unfold `OracleComp` to `PFunctor.FreeM`. Use `OracleComp.inductionOn` as the canonical eliminator, not pattern matching on `PFunctor.FreeM.pure`/`roll`.
+The core types are `@[reducible]`, so Lean may unfold `OracleComp` to `PFunctor.FreeM`. Use
+`OracleComp.inductionOn` as the canonical eliminator, not pattern matching on
+`PFunctor.FreeM.pure`/`roll`.

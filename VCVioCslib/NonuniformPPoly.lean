@@ -7,7 +7,7 @@ Authors: Devon Tuma, Quang Dao
 module
 public import VCVio.CryptoFoundations.Asymptotics.Security
 public import VCVio.OracleComp.Coinductive.SecurityFamily
-public import PolyFunCslib.Nontriviality
+public import ComplexityBackends.CslibSingleTape.Nontriviality
 
 /-!
 # Non-uniform P/poly oracle adversaries backed by cslib
@@ -25,7 +25,7 @@ public section
 
 universe u
 
-open OracleSpec ToCslib.Computability ENNReal
+open OracleSpec ComplexityBackends.CslibSingleTape ENNReal
 
 namespace OracleComp.Complexity
 
@@ -35,7 +35,7 @@ variable {index input output : ℕ → Type u}
 generic PolyFun P/poly boundary of its underlying polynomial functors. -/
 abbrev NonuniformBoundary (spec : (n : ℕ) → OracleSpec.{u, u} (index n))
     (input output : ℕ → Type u) :=
-  PFunctor.CslibPPoly.Boundary (fun n ↦ (spec n).toPFunctor) input output
+  PPoly.Boundary (fun n ↦ (spec n).toPFunctor) input output
 
 namespace NonuniformBoundary
 
@@ -44,12 +44,12 @@ variable {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
 /-- Replace the canonical input representation. -/
 abbrev withInput (boundary : NonuniformBoundary spec input output)
     {nextInput : ℕ → Type u} (encoding : BitEncFam nextInput) :=
-  PFunctor.CslibPPoly.Boundary.withInput boundary encoding
+  PPoly.Boundary.withInput boundary encoding
 
 /-- Replace the canonical returned-value representation. -/
 abbrev withOutput (boundary : NonuniformBoundary spec input output)
     {nextOutput : ℕ → Type u} (encoding : BitEncFam nextOutput) :=
-  PFunctor.CslibPPoly.Boundary.withOutput boundary encoding
+  PPoly.Boundary.withOutput boundary encoding
 
 end NonuniformBoundary
 
@@ -87,14 +87,14 @@ variable {spec : (n : ℕ) → OracleSpec.{u, u} (index n)}
 abbrev NonuniformPPTWitness
     (boundary : NonuniformBoundary spec input output)
     (program : (n : ℕ) → input n → OracleComp (spec n) (output n)) :=
-  PFunctor.CslibPPoly.Witness boundary fun n value ↦ (program n value).toFreeM
+  PPoly.Witness boundary fun n value ↦ (program n value).toFreeM
 
 /-- An oracle-program family has non-uniform polynomial-size machine
 certificates at the pinned canonical boundary. -/
 def IsNonuniformPPTBy
     (boundary : NonuniformBoundary spec input output)
     (program : (n : ℕ) → input n → OracleComp (spec n) (output n)) : Prop :=
-  PFunctor.CslibPPoly.IsPPolyBy boundary fun n value ↦ (program n value).toFreeM
+  PPoly.IsPPolyBy boundary fun n value ↦ (program n value).toFreeM
 
 /-- Explicit synonym exposing the underlying complexity class name. -/
 abbrev IsOraclePPolyBy := @IsNonuniformPPTBy
@@ -115,19 +115,19 @@ namespace IsNonuniformPPTBy
 /-- A concrete machine witness supplies the non-uniform polynomial certificate. -/
 theorem intro (witness : NonuniformPPTWitness boundary program) :
     IsNonuniformPPTBy boundary program :=
-  PFunctor.CslibPPoly.IsPPolyBy.intro witness
+  PPoly.IsPPolyBy.intro witness
 
 /-- Recover an actual machine witness from the propositional certificate. -/
 theorem toNonempty (certificate : IsNonuniformPPTBy boundary program) :
     Nonempty (NonuniformPPTWitness boundary program) :=
-  PFunctor.CslibPPoly.IsPPolyBy.toNonempty certificate
+  PPoly.IsPPolyBy.toNonempty certificate
 
 /-- Transport a non-uniform certificate along pointwise equality. -/
 theorem congr {program' : (n : ℕ) → input n → OracleComp (spec n) (output n)}
     (equality : ∀ n value, program n value = program' n value)
     (certificate : IsNonuniformPPTBy boundary program) :
     IsNonuniformPPTBy boundary program' :=
-  PFunctor.CslibPPoly.IsPPolyBy.congr
+  PPoly.IsPPolyBy.congr
     (fun n value ↦ congrArg OracleComp.toFreeM (equality n value)) certificate
 
 end IsNonuniformPPTBy
@@ -139,12 +139,12 @@ canonical one-position Boolean-answer counting interface. Keeping this bridge in
 VCVio lets the backend theorem be stated for actual `OracleComp` programs without
 duplicating its machine-counting proof. -/
 abbrev countingCoinSpec (_n : ℕ) : OracleSpec PUnit :=
-  OracleSpec.ofPFunctor PFunctor.CslibPPoly.Coin
+  OracleSpec.ofPFunctor PPoly.Coin
 
 /-- The pinned counting boundary, viewed as a VCVio oracle boundary. -/
 noncomputable abbrev NonuniformBoundary.countingCoin :
     NonuniformBoundary countingCoinSpec (fun n ↦ BitVec n) (fun _ ↦ Bool) :=
-  PFunctor.CslibPPoly.coinBoundary
+  PPoly.coinBoundary
 
 /-- The VCVio non-uniform class is non-trivial: some Boolean predicate family
 cannot be implemented, even by pure oracle programs, at the pinned counting
@@ -154,7 +154,7 @@ theorem exists_not_isNonuniformPPTBy_pure :
       ¬ IsNonuniformPPTBy NonuniformBoundary.countingCoin
         (fun n value ↦ pure (function n value)) := by
   simpa [IsNonuniformPPTBy, NonuniformBoundary.countingCoin, countingCoinSpec] using
-    PFunctor.CslibPPoly.exists_not_isPPolyBy_pure
+    PPoly.exists_not_isPPolyBy_pure
 
 end OracleComp.Complexity
 

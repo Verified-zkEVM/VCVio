@@ -63,7 +63,7 @@ def Adversary.openingAccountingFinish
   let _claims ← adversary.opening privateState extractorState
   pure ()
 
-/-- The residual accounting runner is exactly the previously exposed whole-adversary prefix
+/-- The residual accounting runner is exactly the exposed whole-adversary prefix
 program. Consequently, clients state one ordinary global query bound and never mention the
 proof-only logged runner. -/
 theorem Adversary.runCommitmentsThenAccounting_opening_eq_prefixProgram
@@ -423,9 +423,10 @@ private theorem Adversary.terminalFreshTargetProperty_of_openingEvidence
 /-- Pointwise terminal ROM estimate at the exact residual adversarial budget.  This is the
 terminal interface needed by global sequential accounting: earlier commitment phases may leave a
 different residual budget on every supported branch. -/
-private theorem Adversary.probEvent_terminalExecution_le_of_freshTarget
+private theorem Adversary.prEvent_terminalExecution_le_of_freshTarget
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     {config : Configuration Cfg Address}
     (adversary : Adversary Cfg Query Address Y config)
@@ -446,9 +447,9 @@ private theorem Adversary.probEvent_terminalExecution_le_of_freshTarget
     (hstable : state.StableAt model.view log)
     (hnodeBudget : state.totalNodeBudget ≤ nodeBudget)
     (hcheckpointCount : state.checkpoints.length ≤ checkpointCount) :
-    Pr[ fun z => Transcript.HasAnyCheckpointExtractionDisagreement model z.1 |
-      (simulateQ (Query →ₒ Y).cachingOracle
-        (adversary.terminalExecution model privateState state)).run cache] ≤
+    Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (adversary.terminalExecution model
+           privateState state)).run
+             cache}[Transcript.HasAnyCheckpointExtractionDisagreement model z.1] ≤
       (multiCheckpointErrorNumerator nodeBudget checkpointCount verifierOverhead
         terminalRemaining terminalCached : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ := by
@@ -462,19 +463,19 @@ private theorem Adversary.probEvent_terminalExecution_le_of_freshTarget
         cache_keys := hkeysMem }).trans
     exact sharedExtractedLabelCountBound_mono_budget hnodeBudget hcheckpointCount
   have hhit :
-      Pr[ fun z => Transcript.HasAnyCheckpointExtractionDisagreement model z.1 |
-        (simulateQ (Query →ₒ Y).cachingOracle
-          (adversary.terminalExecution model privateState state)).run cache] ≤
-        Pr[ fun z => ∃ target ∈ targets, ∃ input : Query, ∃ value : Y,
-          z.2 input = some value ∧ cache input = none ∧ value = target |
-          (simulateQ (Query →ₒ Y).cachingOracle
-            (adversary.terminalExecution model privateState state)).run cache] := by
-    apply probEvent_mono
+      Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (adversary.terminalExecution model
+             privateState state)).run
+               cache}[Transcript.HasAnyCheckpointExtractionDisagreement model z.1] ≤
+        Pr{let z ← (simulateQ (Query →ₒ Y).cachingOracle (adversary.terminalExecution model
+               privateState state)).run
+                 cache}[∃ target ∈ targets, ∃ input : Query, ∃ value : Y,
+              z.2 input = some value ∧ cache input = none ∧ value = target] := by
+    refine prEvent_mono_of_support _ _ _ ?_
     intro z hz hfailure
     obtain ⟨target, htarget, input, hfinal, hinitial⟩ :=
       hfresh privateState state cache log z hstateLog hno hlogCache hcacheLog hstable hz hfailure
     exact ⟨target, htarget, input, target, hfinal, hinitial, rfl⟩
-  have hprob := OracleComp.probEvent_cache_hits_targets_le_of_noCollision_homogeneous
+  have hprob := OracleComp.prEvent_cache_hits_targets_le_of_noCollision_homogeneous
     (adversary.terminalExecution model privateState state)
     (terminalRemaining + verifierOverhead) hbound targets cache hno
   refine hhit.trans (hprob.trans ?_)
@@ -514,7 +515,8 @@ and charged separately through `verifierOverhead`. The conclusion bounds the ful
 strong failure event under one shared cached homogeneous random oracle. -/
 theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -524,11 +526,11 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount verifierOverhead
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ := by
-  have hraw := adversary.committer.probEvent_runFromEmptyThen_logged_le model.view config
+  have hraw := adversary.committer.prEvent_runFromEmptyThen_logged_le model.view config
     (adversary.terminalExecution model) adversary.openingAccountingFinish
     (Transcript.HasAnyCheckpointExtractionDisagreement model) nodeBudget checkpointCount
     verifierOverhead perCheckpoint hconfig
@@ -542,7 +544,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
           simpa [Adversary.openingAccountingFinish, map_eq_bind_pure_comp] using hopening
         exact (isQueryBound_map_iff (adversary.opening privateState state) (fun _ => ())
           terminalRemaining _ _).mp hmapped
-      exact adversary.probEvent_terminalExecution_le_of_freshTarget model nodeBudget
+      exact adversary.prEvent_terminalExecution_le_of_freshTarget model nodeBudget
         checkpointCount verifierOverhead terminalRemaining terminalCached privateState state cache
         log
         (adversary.terminalExecution_isTotalQueryBound_of_opening model privateState state
@@ -556,7 +558,7 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound
       exact hquery)
     hnodes hcheckpoints
   rw [extractabilityExperiment, OracleSpec.withCacheOverlay, StateT.run'_eq,
-    extractabilityInner_eq_runFromEmptyThen, probEvent_map]
+    extractabilityInner_eq_runFromEmptyThen, prEvent_map]
   simpa [Function.comp_def] using hraw
 
 /-- Finite-opening specialization of the global theorem. At most `openingCount` claims whose
@@ -564,7 +566,8 @@ paths cost at most `perClaim` yield the explicit verifier overhead
 `openingCount * perClaim`. -/
 theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -575,8 +578,8 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCount
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount
         (openingCount * perClaim) queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config rounds adversary queryBound
@@ -589,7 +592,8 @@ theorem anyCheckpointDisagreement_rom_bound_of_prefixQueryBound_and_openingCount
 `perCheckpoint` nodes contributed by each selected configuration. -/
 theorem anyCheckpointDisagreement_rom_bound_uniformShape
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -597,8 +601,8 @@ theorem anyCheckpointDisagreement_rom_bound_uniformShape
     (hquery : adversary.IsAdversaryPrefixQueryBound rounds queryBound)
     (hverifier : adversary.HasVerifierQueryBound verifierOverhead)
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint) :
-    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤
       (multiCheckpointROMErrorNumerator (rounds * perCheckpoint) rounds verifierOverhead
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config rounds adversary
@@ -609,7 +613,8 @@ theorem anyCheckpointDisagreement_rom_bound_uniformShape
 and terminal opening bound. -/
 theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -624,8 +629,8 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount verifierOverhead
         (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ := by
@@ -641,7 +646,8 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds
 `perClaim`, gives verifier overhead `openingCount * perClaim`. -/
 theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds_and_openingCountBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -657,8 +663,8 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds_and_openingCount
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount (openingCount * perClaim)
         (commitmentQueryBudget phaseQueryBound rounds 0 + terminalQueryBound) : ENNReal) *
           (Nat.card Y : ENNReal)⁻¹ :=
@@ -673,7 +679,8 @@ theorem anyCheckpointDisagreement_rom_bound_of_phaseQueryBounds_and_openingCount
 theorem. -/
 theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -683,8 +690,8 @@ theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ Transcript.HasOpeningOrEqualRootDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasOpeningOrEqualRootDisagreement model z] ≤
       (multiCheckpointROMErrorNumerator nodeBudget checkpointCount verifierOverhead
         queryBound : ENNReal) * (Nat.card Y : ENNReal)⁻¹ :=
   openingOrEqualRootDisagreement_bound_of_anyCheckpointExtractionDisagreement_bound model config
@@ -696,7 +703,8 @@ theorem openingOrEqualRootDisagreement_rom_bound_of_prefixQueryBound
 /-- Coarse binomial relaxation of the global-adversarial-`q` theorem. -/
 theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -706,8 +714,8 @@ theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤
       ((queryBound.choose 2 + nodeBudget * (queryBound + verifierOverhead) : ℕ) : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
   refine (anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config
@@ -719,7 +727,8 @@ theorem anyCheckpointDisagreement_binomial_bound_of_prefixQueryBound
 /-- Quadratic relaxation of the global-adversarial-`q` theorem. -/
 theorem anyCheckpointDisagreement_quadratic_bound_of_prefixQueryBound
     [DecidableEq Query] [DecidableEq Address] [DecidableEq Y]
-    [Finite Y] [Inhabited Y] [IsUniformSpec (Query →ₒ Y)]
+    [Finite Y]
+    [UniformAnswerMeasure (Query →ₒ Y)]
     (model : MerkleTreeExtractability.NodeQueryModel Query Address Y)
     (config : Configuration Cfg Address) (rounds : ℕ)
     (adversary : Adversary Cfg Query Address Y config)
@@ -729,8 +738,8 @@ theorem anyCheckpointDisagreement_quadratic_bound_of_prefixQueryBound
     (hconfig : ∀ tag, config.nodeBudget tag ≤ perCheckpoint)
     (hnodes : rounds * perCheckpoint ≤ nodeBudget)
     (hcheckpoints : rounds ≤ checkpointCount) :
-    Pr[ Transcript.HasAnyCheckpointExtractionDisagreement model |
-      extractabilityExperiment model config rounds adversary] ≤
+    Pr{let z ← extractabilityExperiment model config rounds
+           adversary}[Transcript.HasAnyCheckpointExtractionDisagreement model z] ≤
       ((queryBound * queryBound + nodeBudget * (queryBound + verifierOverhead) : ℕ) : ENNReal) *
         (Nat.card Y : ENNReal)⁻¹ := by
   refine (anyCheckpointDisagreement_rom_bound_of_prefixQueryBound model config

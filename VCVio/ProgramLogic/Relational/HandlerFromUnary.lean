@@ -6,27 +6,28 @@ Authors: Quang Dao
 
 module
 
+public import VCVio.OracleComp.SimSemantics.WriterT.PreservesInv
 public import VCVio.ProgramLogic.Relational.FromUnary
 public import VCVio.ProgramLogic.Relational.SimulateQ
 public import VCVio.ProgramLogic.Unary.HandlerSpecs
 
 /-!
-# Lifting `Std.Do` handler triples to relational triples
+# Lifting handler triples to relational triples
 
 This file generalizes the unary-to-relational bridge in
 `Relational.FromUnary` from pure `OracleComp` computations to *stateful
 handlers*. It bridges the gap between
 
-* `Std.Do.Triple` specs for `QueryImpl spec (StateT σ (OracleComp spec'))`,
-  produced by `mvcgen` and registered via `@[spec]` (e.g.
-  `cachingOracle_triple`, `seededOracle_triple`, `loggingOracle_triple`),
-  and
+* core `Std.WP` triples for `QueryImpl spec (StateT σ (OracleComp spec'))` under the
+  necessary reading (the global instance of `OracleComp`), proved by core `vcgen` and
+  registered with `@[spec]` (e.g. `cachingOracle_triple`, `seededOracle_triple`,
+  `loggingOracle_triple`), and
 * `RelTriple` couplings on the `.run` distributions of those handlers,
   consumed by `relTriple_simulateQ_run` for whole-program reasoning.
 
 ## Main results
 
-* `relTriple_run_of_triple` — *per-call lift*: two unary `Std.Do.Triple`s
+* `relTriple_run_of_triple` — *per-call lift*: two unary triples
   on `StateT σᵢ (OracleComp specᵢ)` give a `RelTriple` on the products
   of the two `.run` distributions, with the relational postcondition the
   pairwise conjunction of the unary postconditions. This is the stateful
@@ -36,10 +37,10 @@ handlers*. It bridges the gap between
   condition relating their postconditions, yielding a `RelTriple` for the
   entire `simulateQ`-driven simulation.
 * `relTriple_simulateQ_run_of_impl_eq_triple` — *identical-up-to-invariant
-  lift*: takes a unary invariant-preservation `Std.Do.Triple` on one
+  lift*: takes a unary invariant-preservation triple on one
   handler plus pointwise-equality-on-Inv with the other, and yields an
   `EqRel` whole-program coupling. This is the direct bridge from the
-  `mvcgen` proof style to the support-based
+  `vcgen` proof style to the support-based
   `relTriple_simulateQ_run_of_impl_eq_preservesInv`.
 
 The `hsync` argument is what bridges product (independent) reasoning to
@@ -49,25 +50,30 @@ the underlying unary triples are independent, an external sync argument
 to upgrade pairwise postconditions to output equality plus a state
 invariant.
 
-The whole-program lift fixes `OracleSpec.{0, 0}` because the unary
-`triple_stateT_iff_forall_support` bridge in
-`VCVio.ProgramLogic.Unary.HandlerSpecs` is stated at that universe.
+The lifts fix `OracleSpec.{0, 0}` because the support characterizations
+`triple_stateT_iff_forall_support` and its writer analogues in
+`VCVio.ProgramLogic.Unary.HandlerSpecs` are stated at that universe.
 -/
 
 @[expose] public section
 
 open ENNReal OracleSpec OracleComp
-open Std.Do
+open Std.WP
+open scoped WriterT.MonoidWP WriterT.AppendWP
 
 namespace OracleComp.ProgramLogic.Relational
 
 variable {ι₁ ι₂ : Type} {spec₁ : OracleSpec.{0, 0} ι₁} {spec₂ : OracleSpec.{0, 0} ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
 variable {σ₁ σ₂ α β : Type}
+
+section lifts
+
+variable [OracleSpec.AnswerMeasure spec₁] [OracleSpec.AnswerMeasure spec₂]
+  [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
 
 /-! ### Per-call lifts (one transformer layer) -/
 
-/-- Per-call lift from two unary `Std.Do.Triple`s to a relational product
+/-- Per-call lift from two unary triples to a relational product
 coupling on the `.run` distributions.
 
 Each triple's postcondition is interpreted as a property of the
@@ -81,15 +87,11 @@ theorem relTriple_run_of_triple
     (P₁ : σ₁ → Prop) (P₂ : σ₂ → Prop)
     (Q₁ : α → σ₁ → Prop) (Q₂ : β → σ₂ → Prop)
     (hP₁ : P₁ s₁) (hP₂ : P₂ s₂)
-    (h₁ : Std.Do.Triple mx₁
-      (spred(fun s => ⌜P₁ s⌝))
-      (⇓a s' => ⌜Q₁ a s'⌝))
-    (h₂ : Std.Do.Triple mx₂
-      (spred(fun s => ⌜P₂ s⌝))
-      (⇓b s' => ⌜Q₂ b s'⌝)) :
+    (h₁ : ⦃ P₁ ⦄ mx₁ ⦃ Q₁ ⦄)
+    (h₂ : ⦃ P₂ ⦄ mx₂ ⦃ Q₂ ⦄) :
     RelTriple (mx₁.run s₁) (mx₂.run s₂)
       (fun p₁ p₂ => Q₁ p₁.1 p₁.2 ∧ Q₂ p₂.1 p₂.2) := by
-  rw [OracleComp.ProgramLogic.StdDo.triple_stateT_iff_forall_support] at h₁ h₂
+  rw [triple_stateT_iff_forall_support] at h₁ h₂
   refine relTriple_prod
     (P := fun (p : α × σ₁) => Q₁ p.1 p.2)
     (Q := fun (p : β × σ₂) => Q₂ p.1 p.2)
@@ -98,10 +100,10 @@ theorem relTriple_run_of_triple
 
 /-- `WriterT` analogue of `relTriple_run_of_triple`.
 
-Two unary `Std.Do.Triple`s on `WriterT ωᵢ (OracleComp specᵢ)` lift to a
-product coupling on the `(value, accumulated_log)` pairs of the underlying
-`OracleComp`. The starting log of each side is fixed at `s₁ : ω₁` and
-`s₂ : ω₂` and the postconditions are read at `Q₁ a (s₁ ++ w)` /
+Two unary triples on `WriterT ωᵢ (OracleComp specᵢ)`, read by
+`WriterT.AppendWP`, lift to a product coupling on the `(value, accumulated_log)`
+pairs of the underlying `OracleComp`. The starting log of each side is fixed
+at `s₁ : ω₁` and `s₂ : ω₂` and the postconditions are read at `Q₁ a (s₁ ++ w)` /
 `Q₂ b (s₂ ++ w)` where `w` is the writer increment produced by the run.
 
 The starting logs default to `∅` for the typical `WriterT.run` call but
@@ -117,15 +119,11 @@ theorem relTriple_run_writerT_of_triple
     (P₁ : ω₁ → Prop) (P₂ : ω₂ → Prop)
     (Q₁ : α → ω₁ → Prop) (Q₂ : β → ω₂ → Prop)
     (hP₁ : P₁ s₁) (hP₂ : P₂ s₂)
-    (h₁ : Std.Do.Triple mx₁
-      (spred(fun s => ⌜P₁ s⌝))
-      (⇓a s' => ⌜Q₁ a s'⌝))
-    (h₂ : Std.Do.Triple mx₂
-      (spred(fun s => ⌜P₂ s⌝))
-      (⇓b s' => ⌜Q₂ b s'⌝)) :
+    (h₁ : ⦃ P₁ ⦄ mx₁ ⦃ Q₁ ⦄)
+    (h₂ : ⦃ P₂ ⦄ mx₂ ⦃ Q₂ ⦄) :
     RelTriple mx₁.run mx₂.run
       (fun p₁ p₂ => Q₁ p₁.1 (s₁ ++ p₁.2) ∧ Q₂ p₂.1 (s₂ ++ p₂.2)) := by
-  rw [OracleComp.ProgramLogic.StdDo.triple_writerT_iff_forall_support] at h₁ h₂
+  rw [triple_writerT_iff_forall_support] at h₁ h₂
   refine relTriple_prod
     (P := fun (p : α × ω₁) => Q₁ p.1 (s₁ ++ p.2))
     (Q := fun (p : β × ω₂) => Q₂ p.1 (s₂ ++ p.2))
@@ -135,8 +133,8 @@ theorem relTriple_run_writerT_of_triple
 /-- `Monoid`-variant of `relTriple_run_writerT_of_triple`.
 
 For `WriterT ωᵢ (OracleComp specᵢ)` with `[Monoid ωᵢ]`, two unary
-`Std.Do.Triple`s lift to a product coupling on the `(value,
-accumulated_log)` pairs where each postcondition is read at
+triples, read by `WriterT.MonoidWP`, lift to a product coupling on the
+`(value, accumulated_log)` pairs where each postcondition is read at
 `Q₁ a (s₁ * w)` / `Q₂ b (s₂ * w)` (monoid multiplication). Used by
 `countingOracle` / `costOracle` reasoning. -/
 theorem relTriple_run_writerT_of_triple_monoid
@@ -147,15 +145,11 @@ theorem relTriple_run_writerT_of_triple_monoid
     (P₁ : ω₁ → Prop) (P₂ : ω₂ → Prop)
     (Q₁ : α → ω₁ → Prop) (Q₂ : β → ω₂ → Prop)
     (hP₁ : P₁ s₁) (hP₂ : P₂ s₂)
-    (h₁ : Std.Do.Triple mx₁
-      (spred(fun s => ⌜P₁ s⌝))
-      (⇓a s' => ⌜Q₁ a s'⌝))
-    (h₂ : Std.Do.Triple mx₂
-      (spred(fun s => ⌜P₂ s⌝))
-      (⇓b s' => ⌜Q₂ b s'⌝)) :
+    (h₁ : ⦃ P₁ ⦄ mx₁ ⦃ Q₁ ⦄)
+    (h₂ : ⦃ P₂ ⦄ mx₂ ⦃ Q₂ ⦄) :
     RelTriple mx₁.run mx₂.run
       (fun p₁ p₂ => Q₁ p₁.1 (s₁ * p₁.2) ∧ Q₂ p₂.1 (s₂ * p₂.2)) := by
-  rw [OracleComp.ProgramLogic.StdDo.triple_writerT_iff_forall_support_monoid] at h₁ h₂
+  rw [triple_writerT_iff_forall_support_monoid] at h₁ h₂
   refine relTriple_prod
     (P := fun (p : α × ω₁) => Q₁ p.1 (s₁ * p.2))
     (Q := fun (p : β × ω₂) => Q₂ p.1 (s₂ * p.2))
@@ -173,21 +167,19 @@ extracts output equality and the state-relation invariant from a paired
 instance of the two unary postconditions, which is exactly the bridge
 needed by `relTriple_simulateQ_run`. -/
 theorem relTriple_simulateQ_run_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
     (R_state : σ₁ → σ₂ → Prop)
     (oa : OracleComp spec α)
     (Q₁ : ∀ (t : spec.Domain), σ₁ → spec.Range t → σ₁ → Prop)
     (Q₂ : ∀ (t : spec.Domain), σ₂ → spec.Range t → σ₂ → Prop)
-    (h₁ : ∀ (t : spec.Domain) (s : σ₁), Std.Do.Triple
-      (impl₁ t : StateT σ₁ (OracleComp spec₁) (spec.Range t))
-      (spred(fun s' => ⌜s' = s⌝))
-      (⇓a s' => ⌜Q₁ t s a s'⌝))
-    (h₂ : ∀ (t : spec.Domain) (s : σ₂), Std.Do.Triple
-      (impl₂ t : StateT σ₂ (OracleComp spec₂) (spec.Range t))
-      (spred(fun s' => ⌜s' = s⌝))
-      (⇓a s' => ⌜Q₂ t s a s'⌝))
+    (h₁ : ∀ (t : spec.Domain) (s : σ₁),
+      ⦃ fun s' => s' = s ⦄ (impl₁ t : StateT σ₁ (OracleComp spec₁) (spec.Range t))
+      ⦃ fun a s' => Q₁ t s a s' ⦄)
+    (h₂ : ∀ (t : spec.Domain) (s : σ₂),
+      ⦃ fun s' => s' = s ⦄ (impl₂ t : StateT σ₂ (OracleComp spec₂) (spec.Range t))
+      ⦃ fun a s' => Q₂ t s a s' ⦄)
     (hsync : ∀ (t : spec.Domain) (s₁' : σ₁) (s₂' : σ₂),
       R_state s₁' s₂' →
       ∀ a₁ s₁'' a₂ s₂'',
@@ -209,7 +201,7 @@ theorem relTriple_simulateQ_run_of_triples
 
 /-- `WriterT` analogue of `relTriple_simulateQ_run_of_triples` (monoid variant).
 
-Given matching unary `Std.Do.Triple` specs for two `WriterT`-based
+Given matching unary triples for two `WriterT`-based
 handlers, a monoid-congruent writer relation `R_writer` (via `hR_one` and
 `hR_mul`), and a synchronization condition on per-query postconditions,
 derive a whole-program `RelTriple` on the full `(output, writer)` outputs
@@ -221,7 +213,7 @@ are evaluated at the resulting step writer. Typical instantiations are
 `countingOracle_triple` and `costOracle_triple` with `qc₀ = 0` /
 `s₀ = 1`. -/
 theorem relTriple_simulateQ_run_writerT_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {ω₁ ω₂ : Type} [Monoid ω₁] [Monoid ω₂]
     (impl₁ : QueryImpl spec (WriterT ω₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (WriterT ω₂ (OracleComp spec₂)))
@@ -232,14 +224,12 @@ theorem relTriple_simulateQ_run_writerT_of_triples
     (oa : OracleComp spec α)
     (Q₁ : ∀ (t : spec.Domain), spec.Range t → ω₁ → Prop)
     (Q₂ : ∀ (t : spec.Domain), spec.Range t → ω₂ → Prop)
-    (h₁ : ∀ (t : spec.Domain), Std.Do.Triple
-      (impl₁ t : WriterT ω₁ (OracleComp spec₁) (spec.Range t))
-      (spred(fun s => ⌜s = 1⌝))
-      (⇓a s' => ⌜Q₁ t a s'⌝))
-    (h₂ : ∀ (t : spec.Domain), Std.Do.Triple
-      (impl₂ t : WriterT ω₂ (OracleComp spec₂) (spec.Range t))
-      (spred(fun s => ⌜s = 1⌝))
-      (⇓a s' => ⌜Q₂ t a s'⌝))
+    (h₁ : ∀ (t : spec.Domain),
+      ⦃ fun s => s = 1 ⦄ (impl₁ t : WriterT ω₁ (OracleComp spec₁) (spec.Range t))
+      ⦃ fun a s' => Q₁ t a s' ⦄)
+    (h₂ : ∀ (t : spec.Domain),
+      ⦃ fun s => s = 1 ⦄ (impl₂ t : WriterT ω₂ (OracleComp spec₂) (spec.Range t))
+      ⦃ fun a s' => Q₂ t a s' ⦄)
     (hsync : ∀ (t : spec.Domain) a₁ w₁ a₂ w₂,
       Q₁ t a₁ w₁ → Q₂ t a₂ w₂ → a₁ = a₂ ∧ R_writer w₁ w₂) :
     RelTriple
@@ -263,7 +253,7 @@ theorem relTriple_simulateQ_run_writerT_of_triples
 
 Drops the writer component, leaving only `EqRel α` on outputs. -/
 theorem relTriple_simulateQ_run_writerT'_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {ω₁ ω₂ : Type} [Monoid ω₁] [Monoid ω₂]
     (impl₁ : QueryImpl spec (WriterT ω₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (WriterT ω₂ (OracleComp spec₂)))
@@ -274,14 +264,12 @@ theorem relTriple_simulateQ_run_writerT'_of_triples
     (oa : OracleComp spec α)
     (Q₁ : ∀ (t : spec.Domain), spec.Range t → ω₁ → Prop)
     (Q₂ : ∀ (t : spec.Domain), spec.Range t → ω₂ → Prop)
-    (h₁ : ∀ (t : spec.Domain), Std.Do.Triple
-      (impl₁ t : WriterT ω₁ (OracleComp spec₁) (spec.Range t))
-      (spred(fun s => ⌜s = 1⌝))
-      (⇓a s' => ⌜Q₁ t a s'⌝))
-    (h₂ : ∀ (t : spec.Domain), Std.Do.Triple
-      (impl₂ t : WriterT ω₂ (OracleComp spec₂) (spec.Range t))
-      (spred(fun s => ⌜s = 1⌝))
-      (⇓a s' => ⌜Q₂ t a s'⌝))
+    (h₁ : ∀ (t : spec.Domain),
+      ⦃ fun s => s = 1 ⦄ (impl₁ t : WriterT ω₁ (OracleComp spec₁) (spec.Range t))
+      ⦃ fun a s' => Q₁ t a s' ⦄)
+    (h₂ : ∀ (t : spec.Domain),
+      ⦃ fun s => s = 1 ⦄ (impl₂ t : WriterT ω₂ (OracleComp spec₂) (spec.Range t))
+      ⦃ fun a s' => Q₂ t a s' ⦄)
     (hsync : ∀ (t : spec.Domain) a₁ w₁ a₂ w₂,
       Q₁ t a₁ w₁ → Q₂ t a₂ w₂ → a₁ = a₂ ∧ R_writer w₁ w₂) :
     RelTriple
@@ -295,24 +283,22 @@ theorem relTriple_simulateQ_run_writerT'_of_triples
 
 Drops the final state from both sides, leaving only a relational equality
 on the return values. This is the canonical shape needed for probability
-transport (via `probOutput_eq_of_relTriple_eqRel`), matching
+transport (via `prEvent_eq_of_relTriple_eqRel`), matching
 `relTriple_simulateQ_run'` at the handler-triple layer. -/
 theorem relTriple_simulateQ_run'_of_triples
-    {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+    {ι : Type} {spec : OracleSpec.{0, 0} ι}
     (impl₁ : QueryImpl spec (StateT σ₁ (OracleComp spec₁)))
     (impl₂ : QueryImpl spec (StateT σ₂ (OracleComp spec₂)))
     (R_state : σ₁ → σ₂ → Prop)
     (oa : OracleComp spec α)
     (Q₁ : ∀ (t : spec.Domain), σ₁ → spec.Range t → σ₁ → Prop)
     (Q₂ : ∀ (t : spec.Domain), σ₂ → spec.Range t → σ₂ → Prop)
-    (h₁ : ∀ (t : spec.Domain) (s : σ₁), Std.Do.Triple
-      (impl₁ t : StateT σ₁ (OracleComp spec₁) (spec.Range t))
-      (spred(fun s' => ⌜s' = s⌝))
-      (⇓a s' => ⌜Q₁ t s a s'⌝))
-    (h₂ : ∀ (t : spec.Domain) (s : σ₂), Std.Do.Triple
-      (impl₂ t : StateT σ₂ (OracleComp spec₂) (spec.Range t))
-      (spred(fun s' => ⌜s' = s⌝))
-      (⇓a s' => ⌜Q₂ t s a s'⌝))
+    (h₁ : ∀ (t : spec.Domain) (s : σ₁),
+      ⦃ fun s' => s' = s ⦄ (impl₁ t : StateT σ₁ (OracleComp spec₁) (spec.Range t))
+      ⦃ fun a s' => Q₁ t s a s' ⦄)
+    (h₂ : ∀ (t : spec.Domain) (s : σ₂),
+      ⦃ fun s' => s' = s ⦄ (impl₂ t : StateT σ₂ (OracleComp spec₂) (spec.Range t))
+      ⦃ fun a s' => Q₂ t s a s' ⦄)
     (hsync : ∀ (t : spec.Domain) (s₁' : σ₁) (s₂' : σ₂),
       R_state s₁' s₂' →
       ∀ a₁ s₁'' a₂ s₂'',
@@ -326,66 +312,62 @@ theorem relTriple_simulateQ_run'_of_triples
   exact relTriple_map (relTriple_post_mono (relTriple_simulateQ_run_of_triples
     impl₁ impl₂ R_state oa Q₁ Q₂ h₁ h₂ hsync s₁ s₂ hs) (fun _ _ hp => hp.1))
 
+end lifts
+
 /-! ### Bridge to support-based simulation lemmas
 
-The lemmas below convert `Std.Do.Triple` invariant specs produced by
-`mvcgen` into the `support`-based hypotheses that the existing
-`Relational/SimulateQ.lean` infrastructure consumes. They're the
-recommended entry point from the `mvcgen` proof style into whole-program
+The lemmas below convert invariant triples proved by core `vcgen` into the
+`support`-based hypotheses that the `Relational/SimulateQ.lean` infrastructure
+consumes. They are the entry point from the `vcgen` proof style into whole-program
 relational reasoning. -/
 
-omit [IsUniformSpec spec₁] in
-/-- Convert a unary `Std.Do.Triple` invariant-preservation spec into the
+/-- Convert a unary invariant-preservation triple into the
 `support`-based preservation hypothesis consumed by
 `relTriple_simulateQ_run_of_impl_eq_preservesInv` and friends.
 
-The `mvcgen` proof style produces invariant-preservation specs as
-`Std.Do.Triple` judgments; most of the existing `SimulateQ.lean`
-relational infrastructure is phrased in terms of `support`. This lemma
-is the direct translator, lifting over `triple_stateT_iff_forall_support`. -/
+The `vcgen` proof style produces invariant-preservation specifications as
+triples; most of the `SimulateQ.lean` relational infrastructure is phrased
+in terms of `support`. This lemma is the direct translator, through
+`triple_stateT_iff_forall_support`. -/
 theorem support_preservesInv_of_triple
     {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {σ : Type}
     (impl : QueryImpl spec (StateT σ (OracleComp spec₁)))
     (Inv : σ → Prop)
-    (h : ∀ (t : spec.Domain), Std.Do.Triple
-      (impl t : StateT σ (OracleComp spec₁) (spec.Range t))
-      (spred(fun s' => ⌜Inv s'⌝))
-      (⇓_ s' => ⌜Inv s'⌝)) :
+    (h : ∀ (t : spec.Domain),
+      ⦃ fun s' => Inv s' ⦄ (impl t : StateT σ (OracleComp spec₁) (spec.Range t))
+      ⦃ fun _ s' => Inv s' ⦄) :
     ∀ (t : spec.Domain) (s : σ), Inv s →
       ∀ z ∈ support ((impl t).run s), Inv z.2 := by
   intro t s hs z hz
-  exact (OracleComp.ProgramLogic.StdDo.triple_stateT_iff_forall_support ..).mp
-    (h t) s hs z.1 z.2 hz
+  exact (triple_stateT_iff_forall_support ..).mp (h t) s hs z.1 z.2 hz
 
 /-- `WriterT` analogue of `support_preservesInv_of_triple`. Converts a
-unary `Std.Do.Triple` invariant-preservation spec for a `WriterT`-based
+unary invariant-preservation triple for a `WriterT`-based
 handler (with `[Monoid ω]`) into the `WriterPreservesInv` hypothesis
 consumed by `OracleComp.simulateQ_run_writerPreservesInv`.
 
 Use this whenever a writer-invariant-preservation proof is available as
-an `mvcgen`-style `Std.Do.Triple`, and the downstream consumer is a
-`support`-based whole-program lemma. -/
+a triple, and the downstream consumer is a `support`-based whole-program
+lemma. -/
 theorem writerPreservesInv_of_triple
     {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {ω : Type} [Monoid ω]
     (impl : QueryImpl spec (WriterT ω (OracleComp spec)))
     (Inv : ω → Prop)
-    (h : ∀ (t : spec.Domain), Std.Do.Triple
-      (impl t : WriterT ω (OracleComp spec) (spec.Range t))
-      (spred(fun s => ⌜Inv s⌝))
-      (⇓_ s' => ⌜Inv s'⌝)) :
+    (h : ∀ (t : spec.Domain),
+      ⦃ fun s => Inv s ⦄ (impl t : WriterT ω (OracleComp spec) (spec.Range t))
+      ⦃ fun _ s' => Inv s' ⦄) :
     QueryImpl.WriterPreservesInv impl Inv := by
   intro t s₀ hs₀ z hz
-  exact (OracleComp.ProgramLogic.StdDo.triple_writerT_iff_forall_support_monoid ..).mp
-    (h t) s₀ hs₀ z.1 z.2 hz
+  exact (triple_writerT_iff_forall_support_monoid ..).mp (h t) s₀ hs₀ z.1 z.2 hz
 
 /-- Whole-program equality coupling when two handlers agree pointwise on
 an invariant `Inv` and the target handler preserves `Inv`. This is the
-`Std.Do.Triple`-fronted version of
+triple-fronted version of
 `relTriple_simulateQ_run_of_impl_eq_preservesInv`: the preservation
-hypothesis is supplied via `mvcgen`-style `Std.Do.Triple`s rather than a
-`support`-based quantifier. -/
+hypothesis is supplied as triples rather than a `support`-based
+quantifier. -/
 theorem relTriple_simulateQ_run_of_impl_eq_triple
     {ι : Type} {spec : OracleSpec.{0, 0} ι}
     {σ : Type}
@@ -393,10 +375,9 @@ theorem relTriple_simulateQ_run_of_impl_eq_triple
     (Inv : σ → Prop)
     (oa : OracleComp spec α)
     (himpl_eq : ∀ (t : spec.Domain) (s : σ), Inv s → (impl₁ t).run s = (impl₂ t).run s)
-    (hpres₂ : ∀ (t : spec.Domain), Std.Do.Triple
-      (impl₂ t : StateT σ ProbComp (spec.Range t))
-      (spred(fun s' => ⌜Inv s'⌝))
-      (⇓_ s' => ⌜Inv s'⌝))
+    (hpres₂ : ∀ (t : spec.Domain),
+      ⦃ fun s' => Inv s' ⦄ (impl₂ t : StateT σ ProbComp (spec.Range t))
+      ⦃ fun _ s' => Inv s' ⦄)
     (s : σ) (hs : Inv s) :
     RelTriple
       ((simulateQ impl₁ oa).run s)
@@ -411,7 +392,9 @@ theorem relTriple_simulateQ_run_of_impl_eq_triple
 
 section SmokeTests
 
-variable {ι : Type} {spec : OracleSpec.{0, 0} ι} [IsUniformSpec spec]
+variable {ι : Type} {spec : OracleSpec.{0, 0} ι}
+  [OracleSpec.AnswerMeasure spec]
+  [∀ t, Finite (spec.Range t)]
 variable [DecidableEq ι]
 
 /-- Smoke test: independent product coupling for two `cachingOracle` runs
@@ -436,8 +419,8 @@ private example
     (Q₁ := fun v cache' => cache_a ≤ cache' ∧ cache' t = some v)
     (Q₂ := fun v cache' => cache_b ≤ cache' ∧ cache' t = some v)
     (hP₁ := le_refl _) (hP₂ := le_refl _)
-    (h₁ := OracleComp.ProgramLogic.StdDo.cachingOracle_triple t cache_a)
-    (h₂ := OracleComp.ProgramLogic.StdDo.cachingOracle_triple t cache_b)
+    (h₁ := cachingOracle_triple t cache_a)
+    (h₂ := cachingOracle_triple t cache_b)
 
 /-- Smoke test: synchronized coupling for two `seededOracle` runs starting
 from the same seed `seed₀` with `seed₀ t = u :: us`. By
@@ -460,8 +443,8 @@ private example
       (Q₁ := fun v seed' => v = u ∧ seed' = Function.update seed₀ t us)
       (Q₂ := fun v seed' => v = u ∧ seed' = Function.update seed₀ t us)
       rfl rfl
-      (OracleComp.ProgramLogic.StdDo.seededOracle_triple_of_cons t u us seed₀ h)
-      (OracleComp.ProgramLogic.StdDo.seededOracle_triple_of_cons t u us seed₀ h))
+      (seededOracle_triple_of_cons t u us seed₀ h)
+      (seededOracle_triple_of_cons t u us seed₀ h))
     (fun _ _ ⟨⟨hv₁, hseed₁'⟩, hv₂, hseed₂'⟩ =>
       Prod.ext (hv₁.trans hv₂.symm) (hseed₁'.trans hseed₂'.symm))
 
@@ -487,8 +470,8 @@ private example
     (Q₁ := fun v log' => log' = log_a ++ [⟨t, v⟩])
     (Q₂ := fun v log' => log' = log_b ++ [⟨t, v⟩])
     rfl rfl ?_ ?_
-  · exact OracleComp.ProgramLogic.StdDo.loggingOracle_triple t log_a
-  · exact OracleComp.ProgramLogic.StdDo.loggingOracle_triple t log_b
+  · exact loggingOracle_triple t log_a
+  · exact loggingOracle_triple t log_b
 
 /-- Smoke test: independent product coupling for two `countingOracle`
 runs. Each side's count increments by `QueryCount.single t` via
@@ -514,8 +497,8 @@ private example
       (Q₁ := fun _v qc' => Multiplicative.toAdd qc' = qc_a + QueryCount.single t)
       (Q₂ := fun _v qc' => Multiplicative.toAdd qc' = qc_b + QueryCount.single t)
       rfl rfl
-      (OracleComp.ProgramLogic.StdDo.countingOracle_triple t qc_a)
-      (OracleComp.ProgramLogic.StdDo.countingOracle_triple t qc_b))
+      (countingOracle_triple t qc_a)
+      (countingOracle_triple t qc_b))
     (fun ⟨_, w₁⟩ ⟨_, w₂⟩ ⟨h₁, h₂⟩ => by
       simpa only [toAdd_mul, toAdd_ofAdd] using And.intro h₁ h₂)
 
@@ -538,8 +521,8 @@ private example {ω : Type} [Monoid ω]
     (Q₁ := fun _v s' => s' = s_a * costFn t)
     (Q₂ := fun _v s' => s' = s_b * costFn t)
     rfl rfl
-    (OracleComp.ProgramLogic.StdDo.costOracle_triple costFn t s_a)
-    (OracleComp.ProgramLogic.StdDo.costOracle_triple costFn t s_b)
+    (costOracle_triple costFn t s_a)
+    (costOracle_triple costFn t s_b)
 
 /-! ### Whole-program `WriterT` smoke tests -/
 

@@ -8,13 +8,15 @@ module
 
 public import VCVio.CryptoFoundations.FiatShamir.Sigma.Reductions
 public import VCVio.OracleComp.EvalDist.Measure
+import VCVio.ProgramLogic.Unary.HandlerSpecs
+import VCVio.ProgramLogic.Unary.WP.NecessarySpecs
 
 /-!
 # Fixed-statement Fiat–Shamir extraction
 
 An ordinary prover receives its statement and context before running against an empty
 random oracle. Appending the final verification query makes its accepting output forkable.
-The named reduction is the existing replay extractor, including its uniform-witness fallback.
+The named reduction reuses the replay extractor, including its uniform-witness fallback.
 -/
 
 public section
@@ -52,6 +54,10 @@ def knowledgeVerifyRun (prover : KnowledgeProver Stmt Commit Chal Resp M) (pk : 
       let proof ← prover pk msg
       (FiatShamir σ hr M).verify pk msg proof).run' (∅, []))
 
+section HandlerTriples
+
+open Std.WP OracleComp.ProgramLogic
+
 private theorem cache_mem_log {α : Type}
     (oa : OracleComp (unifSpec + (M × Commit →ₒ Chal)) α)
     (st : Fork.SimState M Commit Chal)
@@ -59,39 +65,16 @@ private theorem cache_mem_log {α : Type}
     {z : α × Fork.SimState M Commit Chal}
     (hz : z ∈ support
       ((simulateQ (Fork.unifForward M Commit Chal + Fork.roImpl M Commit Chal) oa).run st)) :
-    ∀ t v, z.2.1 t = some v → t ∈ z.2.2 := by
-  induction oa using OracleComp.inductionOn generalizing st z with
-  | pure a =>
-    obtain rfl : z = (a, st) := by simpa using hz
-    exact hinv
-  | query_bind t k ih =>
-    rw [simulateQ_query_bind, StateT.run_bind, mem_support_bind_iff] at hz
-    obtain ⟨us, hus, hz⟩ := hz
-    apply ih us.1 us.2 _ hz
-    cases t with
-    | inl n =>
-      have heq := (Fork.mem_support_unifForward_run_iff
-        (M := M) (Commit := Commit) (Chal := Chal) n st us).mp hus
-      simpa only [heq] using hinv
-    | inr mc =>
-      change Chal × Fork.SimState M Commit Chal at us
-      rcases st with ⟨cache, log⟩
-      change us ∈ support ((Fork.roImpl M Commit Chal mc).run (cache, log)) at hus
-      cases hc : cache mc with
-      | some v =>
-        rw [Fork.roImpl_run_some M mc cache log v hc, mem_support_pure_iff] at hus
-        obtain rfl := hus
-        exact hinv
-      | none =>
-        rw [Fork.roImpl_run_none M mc cache log hc, mem_support_bind_iff] at hus
-        obtain ⟨v, _, hus⟩ := hus
-        obtain rfl : us = (v, cache.cacheQuery mc v, log ++ [mc]) := by simpa using hus
-        intro t v' ht
-        by_cases heq : t = mc
-        · simp [heq]
-        · have ht' : cache t = some v' :=
-            (QueryCache.cacheQuery_of_ne cache v heq).symm.trans ht
-          exact List.mem_append_left _ (hinv t v' ht')
+    ∀ t v, z.2.1 t = some v → t ∈ z.2.2 :=
+  (triple_stateT_iff_forall_support _ _ _ ⊥).1 (simulateQ_triple_preserves_invariant _
+    (fun st : Fork.SimState M Commit Chal => ∀ t v, st.1 t = some v → t ∈ st.2) (fun t => by
+      rcases t with n | mc <;>
+        vcgen [Fork.unifForward, Fork.roImpl, Spec.lift_StateT,
+          Necessary.Spec.ofSupport (Fork.wrappedUniformQuery Chal _),
+          Necessary.Spec.ofSupport (Fork.wrappedChallengeQuery Chal)] <;> grind) oa)
+    st hinv _ _ hz
+
+end HandlerTriples
 
 private def finishTrace (pk : Stmt) (msg : M) (proof : Commit × Resp)
     (st : Fork.SimState M Commit Chal) : OracleComp (Fork.wrappedSpec Chal)
@@ -189,15 +172,9 @@ section probability
 
 variable [SampleableType Chal]
 
-/-- Replay's finite response spaces carry their discrete measurable structure. -/
-local instance : ∀ t, MeasurableSpace ((Fork.wrappedSpec Chal).Range t) := fun _ => ⊤
-
-local instance : ∀ t, DiscreteMeasurableSpace ((Fork.wrappedSpec Chal).Range t) :=
-  fun _ => inferInstance
-
 /-- The singleton replay challenge oracle uses uniform challenges. -/
-noncomputable local instance : IsUniformMeasureSpec (Fork.wrappedSpec Chal) :=
-  IsUniformMeasureSpec.ofFiniteNonempty _
+noncomputable local instance : UniformAnswerMeasure (Unit →ₒ Chal) :=
+  UniformAnswerMeasure.ofFiniteNonempty _
 
 /-- Forkable acceptance equals acceptance of the actual verifier for a bounded ordinary prover. -/
 theorem forkable_acceptance_eq_verification
@@ -207,11 +184,8 @@ theorem forkable_acceptance_eq_verification
       let t ← Fork.runTrace σ hr M (proverWithFinalQuery σ hr M prover msg) pk
     }[(Fork.forkPoint _ _ _ M Q t).isSome] =
       Pr{let accepted ← knowledgeVerifyRun σ hr M prover pk msg}[accepted = true] := by
-  rw [knowledgeVerifyRun_eq_trace]
-  simp only [bind_map_left]
-  apply congrArg (fun μ : MeasureTheory.Measure Prop => μ {True})
-  apply evalDist_bind_congr_of_support
-  intro t ht
+  rw [knowledgeVerifyRun_eq_trace, prEvent_map]
+  refine prEvent_congr_of_support _ _ _ fun t ht => ?_
   rw [proverWithFinalQuery_forkable σ hr M prover pk msg Q hQ ht]
 
 /-- The concrete witness finder: execute the existing replay reduction on the ordinary prover
@@ -222,7 +196,7 @@ def knowledgeExtractor [DecidableEq Chal] [SampleableType Wit]
     (msg : M) (Q : ℕ) : Stmt → ProbComp Wit :=
   nmaReduction σ hr M (proverWithFinalQuery σ hr M prover msg) Q
 
-/-- Acceptance of the actual verifier under the chosen native uniform replay-oracle semantics. -/
+/-- Acceptance of the actual verifier under the chosen uniform replay-oracle semantics. -/
 @[expose]
 noncomputable def knowledgeAcceptance
     (prover : KnowledgeProver Stmt Commit Chal Resp M)

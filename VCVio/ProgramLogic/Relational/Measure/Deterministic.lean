@@ -20,7 +20,7 @@ public section
 
 open scoped ENNReal
 
-namespace MeasureProgramLogic
+namespace ExpectationWP
 
 variable {α β : Type} [MeasurableSpace α] [MeasurableSpace β]
   [MeasurableSingletonClass α] [MeasurableSingletonClass β]
@@ -49,4 +49,4 @@ theorem relWP_ok_ok_iff {ε δ : Type} (a : α) (b : β) (R : α → β → Prop
     RelWP (Except.ok a : Except ε α) (Except.ok b : Except δ β) R ↔ R a b :=
   relWP_pure_pure_iff a b R
 
-end MeasureProgramLogic
+end ExpectationWP

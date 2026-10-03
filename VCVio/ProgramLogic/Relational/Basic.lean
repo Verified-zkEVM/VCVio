@@ -7,115 +7,35 @@ Authors: Quang Dao
 module
 
 public import ToMathlib.Control.Monad.RelationalAlgebra
-public import ToMathlib.ProbabilityTheory.Coupling
-public import VCVio.EvalDist.Defs.Instances
-public import VCVio.EvalDist.Defs.NeverFails
-public import VCVio.EvalDist.Monad.Basic
-public import VCVio.EvalDist.Monad.Map
-public import VCVio.OracleComp.Constructions.Replicate
-public import VCVio.OracleComp.Constructions.SampleableType
-public import VCVio.OracleComp.EvalDist
+public import VCVio.ProgramLogic.Relational.Measure.Bind
+public import VCVio.OracleComp.EvalDist.Measure
+public import VCVio.OracleComp.Constructions.Replicate.Basic
+public import VCVio.OracleComp.Constructions.SampleableType.Basic
 public import VCVio.ProgramLogic.Unary.HoarePropTriple
 
 /-!
 # Relational program-logic baseline
 
-This file defines `RelTriple` via the generic two-monad algebra interface
-`MAlgRelOrdered`, instantiated for `OracleComp` using coupling semantics.
+This file defines `RelTriple` via the generic two-monad algebra interface `MAlgRelOrdered`,
+instantiated for `OracleComp` with measure coupling semantics: `CouplingPost oa ob R` asks for a
+coupling of the two output measures, each observed in the discrete structure on its output type,
+under which `R` holds almost everywhere.
 
-`HasCoupling` and coupling lemmas remain as semantic bridge lemmas.
+Finite oracle answer types make every output measure concentrate on the finite support, which
+supplies the countable choice behind the sequential rule. The anchoring and bijection rules also
+need uniform answer measures, under which every possible output has positive mass.
 -/
 
 @[expose] public section
 
 universe u v w x
 
+open MeasureTheory ProbabilityTheory
 open scoped OracleSpec.PrimitiveQuery
 
 namespace OracleComp.ProgramLogic.Relational
 
-variable {ι₁ : Type u} {ι₂ : Type v}
-variable {spec₁ : OracleSpec ι₁} {spec₂ : OracleSpec ι₂}
-variable [IsUniformSpec spec₁] [IsUniformSpec spec₂]
-variable {α β γ δ : Type}
-
-/-- Successful outputs of a legacy subprobability bind. -/
-lemma mem_spmf_support_bind_iff (p : SPMF α) (f : α → SPMF β) (z : β) :
-    z ∈ (p >>= f).support ↔ ∃ x ∈ p.support, z ∈ (f x).support := by
-  rw [SPMF.support_bind]
-  constructor
-  · intro hz
-    obtain ⟨x, hx⟩ := Set.mem_iUnion.mp hz
-    obtain ⟨hx, hz⟩ := Set.mem_iUnion.mp hx
-    exact ⟨x, hx, hz⟩
-  · rintro ⟨x, hx, hz⟩
-    exact Set.mem_iUnion.mpr ⟨x, Set.mem_iUnion.mpr ⟨hx, hz⟩⟩
-
-/-- Support of a mapped legacy subprobability distribution. -/
-lemma spmf_support_map (p : SPMF α) (f : α → β) :
-    (f <$> p).support = f '' p.support := by
-  rw [map_eq_bind_pure_comp, SPMF.support_bind]
-  ext z
-  constructor
-  · intro hz
-    obtain ⟨x, hx, hz⟩ := Set.mem_iUnion₂.mp hz
-    simp only [Function.comp_apply, SPMF.support_pure, Set.mem_singleton_iff] at hz
-    exact ⟨x, hx, hz.symm⟩
-  · rintro ⟨x, hx, rfl⟩
-    apply Set.mem_iUnion₂.mpr
-    refine ⟨x, hx, ?_⟩
-    simp only [Function.comp_apply, SPMF.support_pure, Set.mem_singleton_iff]
-
-lemma spmf_probEvent_mono (p : SPMF α) {q r : α → Prop}
-    (h : ∀ x ∈ p.support, q x → r x) : Pr[q | p] ≤ Pr[r | p] := by
-  classical
-  simp only [probEvent_eq_tsum_ite, SPMF.probOutput_eq_apply]
-  refine ENNReal.tsum_le_tsum fun x => ?_
-  by_cases hq : q x
-  · by_cases hr : r x
-    · simp [hq, hr]
-    · have hnot : x ∉ p.support := fun hx => hr (h x hx hq)
-      have hzero : p x = 0 := by
-        by_contra hn
-        exact hnot ((SPMF.mem_support_iff p x).2 hn)
-      simp [hq, hr, hzero]
-  · simp [hq]
-
-/-- Events agreeing on the positive-mass support have equal probability. -/
-lemma spmf_probEvent_ext (p : SPMF α) {q r : α → Prop}
-    (h : ∀ x ∈ p.support, q x ↔ r x) : Pr[q | p] = Pr[r | p] :=
-  le_antisymm
-    (spmf_probEvent_mono p (fun x hx hq => (h x hx).1 hq))
-    (spmf_probEvent_mono p (fun x hx hr => (h x hx).2 hr))
-
-private lemma spmf_probEvent_eq_zero_iff (p : SPMF α) (q : α → Prop) :
-    Pr[q | p] = 0 ↔ ∀ x ∈ p.support, ¬q x := by
-  classical
-  simp only [probEvent_eq_tsum_ite, SPMF.probOutput_eq_apply, ENNReal.tsum_eq_zero]
-  constructor
-  · intro h x hx hq
-    have hx0 := h x
-    simp only [hq, ↓reduceIte] at hx0
-    exact (SPMF.mem_support_iff p x).1 hx hx0
-  · intro h x
-    by_cases hq : q x
-    · have hxnot : x ∉ p.support := fun hx => h x hx hq
-      have hx0 : p x = 0 := by
-        by_contra hn
-        exact hxnot ((SPMF.mem_support_iff p x).2 hn)
-      simp [hq, hx0]
-    · simp [hq]
-
-/-- Full-mass events in a legacy subprobability distribution hold on its positive-mass support. -/
-lemma spmf_probEvent_eq_one_iff (p : SPMF α) (q : α → Prop) :
-    Pr[q | p] = 1 ↔ Pr[⊥ | p] = 0 ∧ ∀ x ∈ p.support, q x := by
-  rw [show (∀ x ∈ p.support, q x) ↔ Pr[fun x => ¬q x | p] = 0 by
-    simpa only [not_not] using (spmf_probEvent_eq_zero_iff p (fun x => ¬q x)).symm]
-  have hadd : Pr[q | p] + (Pr[fun x => ¬q x | p] + Pr[⊥ | p]) = 1 := by
-    rw [← add_assoc, probEvent_compl p q, tsub_add_cancel_of_le probFailure_le_one]
-  refine ⟨fun h => ?_, fun ⟨hf, hb⟩ => by simpa [hf, hb] using hadd⟩
-  rw [h] at hadd
-  exact and_comm.1 (add_eq_zero.1 (by simpa using hadd))
+open OracleSpec ExpectationWP
 
 /-- Relational postconditions over two output spaces. -/
 abbrev RelPost (α : Sort w) (β : Sort x) := α → β → Prop
@@ -123,99 +43,101 @@ abbrev RelPost (α : Sort w) (β : Sort x) := α → β → Prop
 /-- Equality relation helper for same-type outputs. -/
 def EqRel (α : Sort w) : RelPost α α := Eq
 
-/-- Coupling-based semantic relational WP for `OracleComp`. -/
-def CouplingPost (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) : Prop :=
-  ∃ c : _root_.SPMF.Coupling (𝒮[oa]) (𝒮[ob]),
-    ∀ z ∈ c.1.support, R z.1 z.2
+/-- Almost-sure properties transport along a measurable map out of a measure concentrated on a
+countable set, even when the property is not measurable in the target. -/
+theorem ae_map_of_ae_mem_countable {X Y : Type*} [MeasurableSpace X] [MeasurableSpace Y]
+    [MeasurableSingletonClass Y] {μ : Measure X} {f : X → Y} (hf : Measurable f)
+    {s : Set X} (hs : s.Countable) {p : Y → Prop} (h : ∀ᵐ x ∂μ, x ∈ s ∧ p (f x)) :
+    ∀ᵐ y ∂μ.map f, p y := by
+  have hT : MeasurableSet (f '' {x | x ∈ s ∧ p (f x)}) :=
+    ((hs.mono fun _ hx ↦ hx.1).image f).measurableSet
+  filter_upwards [(ae_map_iff hf.aemeasurable hT).2 (h.mono fun x hx ↦ ⟨x, hx, rfl⟩)] with y hy
+  obtain ⟨x, hx, rfl⟩ := hy
+  exact hx.2
 
-/-- Relational algebra instance for `OracleComp`, based on coupling semantics. -/
+variable {ι₁ : Type u} {ι₂ : Type v}
+variable {spec₁ : OracleSpec.{u, 0} ι₁} {spec₂ : OracleSpec.{v, 0} ι₂}
+variable {α β γ δ : Type}
+
+section measureSpec
+
+variable [AnswerMeasure spec₁] [AnswerMeasure spec₂]
+
+/-- Coupling-based semantic relational WP for `OracleComp`: some coupling of the two output
+measures, each observed in the discrete structure on its output type, satisfies `R` almost
+everywhere. -/
+def CouplingPost (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) : Prop :=
+  letI : MeasurableSpace α := ⊤
+  letI : MeasurableSpace β := ⊤
+  ExpectationWP.RelWP oa ob R
+
+/-- Implication of postconditions preserves a coupling. -/
+theorem CouplingPost.mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {R S : RelPost α β} (h : CouplingPost oa ob R) (hRS : ∀ a b, R a b → S a b) :
+    CouplingPost oa ob S := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  exact relWP_mono h hRS
+
+/-- Pure computations are coupled exactly on the relation between their values. -/
+@[simp]
+theorem couplingPost_pure_pure_iff (a : α) (b : β) (R : RelPost α β) :
+    CouplingPost (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) R ↔ R a b := by
+  simp [CouplingPost]
+
+/-- The output measure of a computation concentrates on its support. -/
+theorem ae_mem_support (oa : OracleComp spec₁ α) :
+    letI : MeasurableSpace α := ⊤; ∀ᵐ a ∂𝒟[oa], a ∈ support oa := by
+  let : MeasurableSpace α := ⊤
+  exact evalDist.ae_of_forall_mem_support oa _ MeasurableSet.of_discrete fun _ h ↦ h
+
+/-- A coupling of two output measures concentrates on the product of their supports. -/
+theorem ae_mem_support_prod {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    (c : letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
+      Measure.Coupling 𝒟[oa] 𝒟[ob]) :
+    letI : MeasurableSpace α := ⊤; letI : MeasurableSpace β := ⊤;
+      ∀ᵐ z ∂c.joint, z.1 ∈ support oa ∧ z.2 ∈ support ob := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  exact c.isCoupling.ae_mem_prod MeasurableSet.of_discrete MeasurableSet.of_discrete
+    (ae_mem_support oa) (ae_mem_support ob)
+
+section finite
+
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+
+/-- Sequential composition of couplings. Finite answer types discharge the countable choice
+and concentration obligations of the measure-level rule; no positivity of answer masses is
+required. -/
+theorem CouplingPost.bind {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {fa : α → OracleComp spec₁ γ} {fb : β → OracleComp spec₂ δ} {post : RelPost γ δ}
+    (h : CouplingPost oa ob fun a b ↦ CouplingPost (fa a) (fb b) post) :
+    CouplingPost (oa >>= fa) (ob >>= fb) post := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  let : MeasurableSpace γ := ⊤
+  let : MeasurableSpace δ := ⊤
+  rw [CouplingPost, RelWP, evalDist_bind_of_discrete, evalDist_bind_of_discrete]
+  rw [CouplingPost, RelWP] at h
+  exact h.bind_of_countable_of_ae_mem
+    (PFunctor.FreeM.support_finite oa).countable
+    (PFunctor.FreeM.support_finite ob).countable
+    (PFunctor.FreeM.support_finite (oa >>= fa)).countable
+    (PFunctor.FreeM.support_finite (ob >>= fb)).countable
+    (ae_mem_support oa) (ae_mem_support ob) .of_discrete .of_discrete
+    (fun a ha ↦ evalDist.ae_of_forall_mem_support (fa a) _ MeasurableSet.of_discrete
+      fun x hx ↦ MonadAttach.mem_support_bind.mpr ⟨a, ha, hx⟩)
+    (fun b hb ↦ evalDist.ae_of_forall_mem_support (fb b) _ MeasurableSet.of_discrete
+      fun y hy ↦ MonadAttach.mem_support_bind.mpr ⟨b, hb, hy⟩)
+    (fun _ _ _ _ h ↦ by simpa only [CouplingPost, RelWP] using h)
+
+/-- Relational algebra instance for `OracleComp`, based on measure coupling semantics. -/
 noncomputable instance instMAlgRelOrdered :
     MAlgRelOrdered (OracleComp spec₁) (OracleComp spec₂) Prop where
   rwp := CouplingPost
-  rwp_pure a b R := by
-    apply propext
-    constructor
-    · rintro ⟨c, hc⟩
-      have hcEq : c.1 = (pure (a, b) : SPMF (_ × _)) :=
-        _root_.SPMF.IsCoupling.pure_iff.1 (by simpa [evalSPMF_pure] using c.2)
-      exact hc (a, b) (by simp [hcEq])
-    · intro hR
-      refine ⟨⟨(pure (a, b) : SPMF (_ × _)), ?_⟩, fun z hz => ?_⟩
-      · simpa [evalSPMF_pure] using _root_.SPMF.IsCoupling.pure_iff.2 rfl
-      · obtain rfl : z = (a, b) := by simpa using hz
-        exact hR
-  rwp_mono hpost := fun ⟨c, hc⟩ => ⟨c, fun z hz => hpost z.1 z.2 (hc z hz)⟩
-  rwp_bind_le {α β γ δ} oa ob fa fb post := by
-    rintro ⟨c, hcCut⟩
-    classical
-    let d : α → β → SPMF (γ × δ) := fun a b =>
-      if hcut : CouplingPost (fa a) (fb b) post then (Classical.choose hcut).1 else failure
-    have hd : ∀ a b, c.1.1 (some (a, b)) ≠ 0 →
-        _root_.SPMF.IsCoupling (d a b) (𝒮[fa a]) (𝒮[fb b]) := fun a b hmass => by
-      have hab : (a, b) ∈ c.1.support := by
-        apply (_root_.SPMF.mem_support_iff c.1 (a, b)).2
-        exact hmass
-      have hcut : CouplingPost (fa a) (fb b) post := hcCut (a, b) hab
-      simpa only [d, dite_eq_left hcut] using (Classical.choose hcut).2
-    refine ⟨⟨c.1 >>= fun p => d p.1 p.2, ?_⟩, fun z hz => ?_⟩
-    · simpa [evalSPMF_bind] using _root_.SPMF.IsCoupling.bind c d hd
-    · rcases (mem_spmf_support_bind_iff c.1 (fun p => d p.1 p.2) z).1 hz with
-        ⟨ab, hab, hz'⟩
-      have hcut : CouplingPost (fa ab.1) (fb ab.2) post := hcCut ab hab
-      exact Classical.choose_spec hcut z (by simpa only [d, dite_eq_left hcut] using hz')
-
-/-- Anchoring instance for the qualitative `Prop`-valued relational logic on `OracleComp`.
-
-When one of the two computations is `pure`, the relational coupling logic collapses to the
-unary support-based logic of the other side. This is the relational analogue of the
-*Dirac coupling* identity `c (a, b) = (evalSPMF y) b` whenever `c` couples `pure a` with `y`.
-
-Together with the unary `Prop` algebra in `VCVio/ProgramLogic/Unary/HoarePropTriple.lean`,
-this lets `wpExc` / `rwpExc`-style honest exception combinators (in
-`ToMathlib/Control/Monad/RelationalAlgebraAnchored.lean`) be derived uniformly. -/
-instance instAnchored : MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) Prop where
-  rwp_pure_left {α β} a y post := by
-    refine propext ⟨fun ⟨c, hc⟩ => ?_, fun hwp => ?_⟩
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
-      intro b hb
-      have hcPure : _root_.SPMF.IsCoupling c.1 (pure a) (𝒮[y]) := by
-        simpa [evalSPMF_pure] using c.2
-      have hmass : c.1 (a, b) ≠ 0 := by
-        rw [hcPure.apply_pure_left_eq b]
-        exact (mem_support_iff_evalSPMF_apply_ne_zero y b).1 hb
-      apply hc (a, b)
-      exact (SPMF.mem_support_iff c.1 (a, b)).2 hmass
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at hwp
-      refine ⟨⟨((a, ·) : β → α × β) <$> 𝒮[y], ?_⟩, ?_⟩
-      · simpa [evalSPMF_pure] using
-          _root_.SPMF.IsCoupling.dirac_left a (by
-            simpa only [← SPMF.run_eq_toPMF, probFailure_def] using
-              probFailure_eq_zero (mx := y))
-      · intro z hz
-        rw [spmf_support_map] at hz
-        obtain ⟨b, hb, rfl⟩ := hz
-        exact hwp b ((mem_support_iff_evalSPMF_apply_ne_zero y b).2 hb)
-  rwp_pure_right {α β} x b post := by
-    refine propext ⟨fun ⟨c, hc⟩ => ?_, fun hwp => ?_⟩
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
-      intro a ha
-      have hcPure : _root_.SPMF.IsCoupling c.1 (𝒮[x]) (pure b) := by
-        simpa [evalSPMF_pure] using c.2
-      have hmass : c.1 (a, b) ≠ 0 := by
-        rw [hcPure.apply_pure_right_eq a]
-        exact (mem_support_iff_evalSPMF_apply_ne_zero x a).1 ha
-      apply hc (a, b)
-      exact (SPMF.mem_support_iff c.1 (a, b)).2 hmass
-    · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at hwp
-      refine ⟨⟨((·, b) : α → α × β) <$> 𝒮[x], ?_⟩, ?_⟩
-      · simpa [evalSPMF_pure] using
-          _root_.SPMF.IsCoupling.dirac_right b (by
-            simpa only [← SPMF.run_eq_toPMF, probFailure_def] using
-              probFailure_eq_zero (mx := x))
-      · intro z hz
-        rw [spmf_support_map] at hz
-        obtain ⟨a, ha, rfl⟩ := hz
-        exact hwp a ((mem_support_iff_evalSPMF_apply_ne_zero x a).2 ha)
+  rwp_pure a b R := propext (couplingPost_pure_pure_iff a b R)
+  rwp_mono hpost h := h.mono hpost
+  rwp_bind_le _ _ _ _ _ h := CouplingPost.bind h
 
 /-- Relational weakest precondition induced by `MAlgRelOrdered` for `OracleComp`. -/
 abbrev RelWP (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : RelPost α β) : Prop :=
@@ -234,33 +156,26 @@ abbrev RelTriple (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) (R : 
     {R : RelPost α β} :
     RelWP oa ob R ↔ CouplingPost oa ob R := Iff.rfl
 
-/-- Existence of an `SPMF` coupling witness between two computations. -/
-def HasCoupling (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) : Prop :=
-  Nonempty (_root_.SPMF.Coupling (𝒮[oa]) (𝒮[ob]))
-
-/-- Any relational triple yields a coupling witness. -/
-lemma hasCoupling_of_relTriple {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
-    {R : RelPost α β} (h : RelTriple oa ob R) : HasCoupling oa ob :=
-  ⟨(relTriple_iff_relWP.1 h).choose⟩
-
 /-- Pure values on both sides: `R a b` implies the coupling. -/
 lemma relTriple_pure_pure {a : α} {b : β} {R : RelPost α β} (h : R a b) :
-    RelTriple (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) R := by
-  refine relTriple_iff_relWP.2 ⟨⟨pure (a, b), ?_⟩, fun z hz => ?_⟩
-  · simpa [evalSPMF_pure] using _root_.SPMF.IsCoupling.pure_iff.mpr rfl
-  · obtain rfl : z = (a, b) := by simpa using hz
-    exact h
+    RelTriple (pure a : OracleComp spec₁ α) (pure b : OracleComp spec₂ β) R :=
+  relTriple_iff_relWP.2 ((couplingPost_pure_pure_iff a b R).2 h)
 
 /-- A computation is related to itself by every postcondition that is reflexive on its support. -/
 lemma relTriple_refl_of_mem_support (oa : OracleComp spec₁ α) {R : RelPost α α}
     (hR : ∀ a ∈ support oa, R a a) :
     RelTriple (spec₁ := spec₁) (spec₂ := spec₁) oa oa R := by
-  refine relTriple_iff_relWP.2 ⟨_root_.SPMF.Coupling.refl (𝒮[oa]), fun z hz => ?_⟩
-  obtain ⟨a, ha, hz'⟩ := (mem_spmf_support_bind_iff _ _ z).1 hz
-  obtain rfl : z = (a, a) := by simpa using hz'
-  apply hR a
-  exact (mem_support_iff_evalSPMF_apply_ne_zero oa a).2
-    ((SPMF.mem_support_iff _ _).1 ha)
+  let : MeasurableSpace α := ⊤
+  refine relTriple_iff_relWP.2 ⟨Measure.Coupling.refl 𝒟[oa], ?_⟩
+  rw [Measure.Coupling.refl_joint]
+  exact ae_map_of_ae_mem_countable (measurable_id.prodMk measurable_id)
+    (PFunctor.FreeM.support_finite oa).countable
+    ((ae_mem_support oa).mono fun a ha ↦ ⟨ha, hR a ha⟩)
+
+/-- Every computation is coupled with itself on equality of outputs. -/
+@[simp]
+theorem couplingPost_refl (oa : OracleComp spec₁ α) : CouplingPost oa oa (· = ·) :=
+  relTriple_iff_relWP.1 (relTriple_refl_of_mem_support (R := (· = ·)) oa fun _ _ => rfl)
 
 /-- Reflexivity rule for relational triples on equality. -/
 lemma relTriple_refl (oa : OracleComp spec₁ α) :
@@ -271,24 +186,29 @@ lemma relTriple_refl (oa : OracleComp spec₁ α) :
 lemma relTriple_post_mono {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {R R' : RelPost α β}
     (h : RelTriple oa ob R) (hpost : ∀ ⦃x y⦄, R x y → R' x y) :
     RelTriple oa ob R' :=
-  relTriple_iff_relWP.2 ((relTriple_iff_relWP.1 h).imp fun _ hc z hz => hpost (hc z hz))
+  relTriple_iff_relWP.2 ((relTriple_iff_relWP.1 h).mono fun _ _ hR => hpost hR)
 
-/-- The trivial product coupling always exists for `OracleComp`, so any pair of computations
-satisfies the constantly-true postcondition.
+/-- Two computations whose outputs satisfy independent support-wide postconditions are related
+by their conjunction, through the independent product coupling. -/
+theorem relTriple_prod {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    {P : α → Prop} {Q : β → Prop} (hP : ∀ a ∈ support oa, P a) (hQ : ∀ b ∈ support ob, Q b) :
+    RelTriple oa ob (fun a b => P a ∧ Q b) := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have : IsProbabilityMeasure 𝒟[oa] := ⟨evalDist_apply_univ_eq_one oa⟩
+  have : IsProbabilityMeasure 𝒟[ob] := ⟨evalDist_apply_univ_eq_one ob⟩
+  let c := Measure.Coupling.prod 𝒟[oa] 𝒟[ob]
+  exact relTriple_iff_relWP.2 ⟨c, (ae_mem_support_prod c).mono fun z hz ↦
+    ⟨hP z.1 hz.1, hQ z.2 hz.2⟩⟩
 
-The witness is the product coupling `evalSPMF oa ⊗ evalSPMF ob`, which is well-defined because
-`OracleComp` computations have no failure mass. This discharges any `RelTriple` goal whose
-postcondition is structurally `fun _ _ => True` and is the foundation of the trivial-leaf
-closer in `tryCloseRelGoalImmediate`. -/
+/-- The independent product coupling relates any two computations by the constantly true
+postcondition. This discharges any `RelTriple` goal whose postcondition is structurally
+`fun _ _ => True` and is the foundation of the trivial-leaf closer in
+`tryCloseRelGoalImmediate`. -/
 lemma relTriple_true (oa : OracleComp spec₁ α) (ob : OracleComp spec₂ β) :
     RelTriple oa ob (fun _ _ => True) :=
-  relTriple_iff_relWP.2
-    ⟨_root_.SPMF.Coupling.prod
-        (by simpa only [← SPMF.run_eq_toPMF, probFailure_def] using
-          probFailure_eq_zero (mx := oa))
-        (by simpa only [← SPMF.run_eq_toPMF, probFailure_def] using
-          probFailure_eq_zero (mx := ob)),
-      fun _ _ => trivial⟩
+  relTriple_post_mono (relTriple_prod (P := fun _ ↦ True) (Q := fun _ ↦ True)
+    (fun _ _ ↦ trivial) fun _ _ ↦ trivial) fun _ _ _ ↦ trivial
 
 /-- Any postcondition that is unconditionally true gives a valid relational triple,
 via the product coupling. Useful as a closing rule for vacuous postconditions. -/
@@ -301,32 +221,42 @@ lemma relTriple_post_const {oa : OracleComp spec₁ α} {ob : OracleComp spec₂
 lemma relTriple_symm {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β} {R : RelPost α β}
     (h : RelTriple oa ob R) :
     RelTriple ob oa (fun b a => R a b) := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
   obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
-  refine relTriple_iff_relWP.2 ⟨⟨Prod.swap <$> c.1, ?_, ?_⟩, fun z hz => ?_⟩
-  · simpa [Functor.map_map] using c.2.map_snd
-  · simpa [Functor.map_map] using c.2.map_fst
-  · obtain ⟨z', hz', rfl⟩ := spmf_support_map c.1 Prod.swap ▸ hz
-    exact hc z' hz'
+  refine relTriple_iff_relWP.2 ⟨c.swap, ?_⟩
+  exact (MeasurableEquiv.prodComm (α := α) (β := β)).measurableEmbedding.ae_map_iff.2 hc
 
-/-- Transport a relational triple across equality of the left output distribution. -/
-lemma relTriple_of_evalSPMF_eq_left
-    {ι₃ : Type w} {spec₃ : OracleSpec ι₃} [IsUniformSpec spec₃]
+/-- Transport a relational triple across equality in distribution of the left computation. -/
+lemma relTriple_of_evalDistEq_left
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [AnswerMeasure spec₃]
+    [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {oa' : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
-    (heq : 𝒮[oa] = 𝒮[oa']) (h : RelTriple oa' ob R) :
+    (heq : oa =ᵈ oa') (h : RelTriple oa' ob R) :
     RelTriple oa ob R := by
-  rcases relTriple_iff_relWP.1 h with ⟨c, hc⟩
-  exact relTriple_iff_relWP.2 ⟨⟨c.1, by simpa [heq] using c.2.map_fst, c.2.map_snd⟩, hc⟩
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
+  exact relTriple_iff_relWP.2
+    ⟨⟨c.joint, ⟨c.isCoupling.fst_eq.trans heq.evalDist_eq.symm,
+      c.isCoupling.snd_eq⟩⟩, hc⟩
 
-/-- Transport a relational triple across equality of the right output distribution. -/
-lemma relTriple_of_evalSPMF_eq_right
-    {ι₃ : Type w} {spec₃ : OracleSpec ι₃} [IsUniformSpec spec₃]
+/-- Transport a relational triple across equality in distribution of the right computation. -/
+lemma relTriple_of_evalDistEq_right
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [AnswerMeasure spec₃]
+    [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {ob' : OracleComp spec₃ β} {R : RelPost α β}
-    (heq : 𝒮[ob] = 𝒮[ob']) (h : RelTriple oa ob R) :
+    (heq : ob =ᵈ ob') (h : RelTriple oa ob R) :
     RelTriple oa ob' R := by
-  rcases relTriple_iff_relWP.1 h with ⟨c, hc⟩
-  exact relTriple_iff_relWP.2 ⟨⟨c.1, c.2.map_fst, by simpa [heq] using c.2.map_snd⟩, hc⟩
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
+  exact relTriple_iff_relWP.2
+    ⟨⟨c.joint, ⟨c.isCoupling.fst_eq, c.isCoupling.snd_eq.trans heq.evalDist_eq⟩⟩, hc⟩
 
 /-- Bind composition rule for relational triples. -/
 lemma relTriple_bind
@@ -341,24 +271,16 @@ lemma relTriple_eqRel_of_eq {oa ob : OracleComp spec₁ α}
     (h : oa = ob) : RelTriple (spec₁ := spec₁) (spec₂ := spec₁) oa ob (EqRel α) :=
   h ▸ relTriple_refl oa
 
-/-- Equality of evaluation distributions gives an equality-relation relational triple. -/
-lemma relTriple_eqRel_of_evalSPMF_eq {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
-    (h : 𝒮[oa] = 𝒮[ob]) :
-    RelTriple oa ob (EqRel α) :=
-  relTriple_of_evalSPMF_eq_right h (relTriple_refl oa)
+/-- Equality in distribution gives an equality-relation relational triple. -/
+lemma relTriple_eqRel_of_evalDistEq {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
+    (h : oa =ᵈ ob) : RelTriple oa ob (EqRel α) :=
+  relTriple_of_evalDistEq_right h (relTriple_refl oa)
 
-/-- If two computations have equal output distributions, any reflexive postcondition holds. -/
-lemma relTriple_of_evalSPMF_eq
+/-- If two computations are equal in distribution, any reflexive postcondition holds. -/
+lemma relTriple_of_evalDistEq
     {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α} {R : RelPost α α}
-    (h : 𝒮[oa] = 𝒮[ob]) (hR : ∀ x, R x x) :
-    RelTriple oa ob R :=
-  relTriple_post_mono (relTriple_eqRel_of_evalSPMF_eq h) fun x _ hxy => hxy ▸ hR x
-
-/-- Pointwise output-probability equality gives an equality-relation relational triple. -/
-lemma relTriple_eqRel_of_probOutput_eq {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
-    (h : ∀ x : α, Pr[= x | oa] = Pr[= x | ob]) :
-    RelTriple oa ob (EqRel α) :=
-  relTriple_eqRel_of_evalSPMF_eq (evalSPMF_ext h)
+    (h : oa =ᵈ ob) (hR : ∀ x, R x x) : RelTriple oa ob R :=
+  relTriple_post_mono (relTriple_eqRel_of_evalDistEq h) fun x _ hxy => hxy ▸ hR x
 
 /-- Swapping two adjacent independent binds preserves the output distribution. -/
 lemma relTriple_bind_bind_swap_eqRel
@@ -367,77 +289,82 @@ lemma relTriple_bind_bind_swap_eqRel
     RelTriple
       (oa >>= fun a => ob >>= fun b => f a b)
       (ob >>= fun b => oa >>= fun a => f a b)
-      (EqRel γ) :=
-  relTriple_eqRel_of_probOutput_eq (probOutput_bind_bind_swap oa ob f)
+      (EqRel γ) := by
+  let : MeasurableSpace γ := ⊤
+  exact relTriple_eqRel_of_evalDistEq
+    (EvalDistEq.of_evalDist_eq (OracleComp.evalDist_bind_bind_swap oa ob f))
 
-/-- Equality-relation relational triples imply equality of point output probabilities. -/
-lemma probOutput_eq_of_relTriple_eqRel {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
-    (h : RelTriple oa ob (EqRel α)) (x : α) : Pr[= x | oa] = Pr[= x | ob] := by
-  rcases (relTriple_iff_relWP (oa := oa) (ob := ob) (R := EqRel α)).1 h with ⟨c, hc⟩
-  have hfst : Pr[= x | Prod.fst <$> c.1] = Pr[= x | oa] := by grind [c.2.map_fst]
-  have hsnd : Pr[= x | Prod.snd <$> c.1] = Pr[= x | ob] := by grind [c.2.map_snd]
-  have hevent : Pr[ (fun z : α × α => z.1 = x) | c.1] = Pr[ (fun z : α × α => z.2 = x) | c.1] :=
-    spmf_probEvent_ext c.1 fun z hz => by rw [hc z hz]
-  grind
+/-- Computations related by an equality-relation relational triple are equal in distribution. -/
+lemma evalDistEq_of_relTriple_eqRel {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
+    (h : RelTriple oa ob (EqRel α)) : oa =ᵈ ob := by
+  let : MeasurableSpace α := ⊤
+  obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
+  refine EvalDistEq.of_evalDist_eq ?_
+  calc 𝒟[oa] = c.joint.map Prod.fst := c.isCoupling.fst_eq.symm
+    _ = c.joint.map Prod.snd := Measure.map_congr hc
+    _ = 𝒟[ob] := c.isCoupling.snd_eq
 
-/-- Equality-relation relational triples imply equality of evaluation distributions. -/
-lemma evalSPMF_eq_of_relTriple_eqRel {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
-    (h : RelTriple oa ob (EqRel α)) :
-    𝒮[oa] = 𝒮[ob] :=
-  evalSPMF_ext (probOutput_eq_of_relTriple_eqRel h)
+/-- Equality-relation relational triples identify the output measures in every measurable
+structure. -/
+lemma evalDist_eq_of_relTriple_eqRel [MeasurableSpace α] {oa : OracleComp spec₁ α}
+    {ob : OracleComp spec₂ α} (h : RelTriple oa ob (EqRel α)) : 𝒟[oa] = 𝒟[ob] :=
+  (evalDistEq_of_relTriple_eqRel h).evalDist_eq
 
-/-- `probEvent` monotonicity from a relational triple: if `RelTriple oa ob R` and `R a b` forces
-`p a → q b`, then `Pr[p | oa] ≤ Pr[q | ob]`. Routing both events through the coupling's marginals
-(`c.2.map_fst`/`map_snd`) reduces the bound to `probEvent_mono` on the joint distribution. The
-inequality-from-implication, event-level companion of `probOutput_eq_of_relTriple_eqRel`, for events
-tracked over different output spaces. -/
-lemma probEvent_le_of_relTriple {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+/-- Equality-relation relational triples give every event the same probability. -/
+lemma prEvent_eq_of_relTriple_eqRel {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ α}
+    (h : RelTriple oa ob (EqRel α)) (p : α → Prop) :
+    Pr{let a ← oa}[p a] = Pr{let b ← ob}[p b] :=
+  (evalDistEq_of_relTriple_eqRel h).prEvent_eq p
+
+/-- Event monotonicity from a relational triple: if `RelTriple oa ob R` and `R a b` forces
+`p a → q b`, then `Pr{let a ← oa}[p a] ≤ Pr{let b ← ob}[q b]`. Both events are read through the
+coupling's marginals, where the implication holds almost everywhere. -/
+lemma prEvent_le_of_relTriple {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
     {R : RelPost α β} (h : RelTriple oa ob R)
     {p : α → Prop} {q : β → Prop} (himp : ∀ a b, R a b → p a → q b) :
-    Pr[p | oa] ≤ Pr[q | ob] := by
-  obtain ⟨c, hc⟩ := (relTriple_iff_relWP).1 h
-  have hfst : Pr[p | oa] = Pr[(p ∘ Prod.fst) | c.1] := by
-    rw [show Pr[p | oa] = Pr[p | (𝒮[oa] : SPMF α)] by
-          rw [probEvent_evalSPMF],
-      ← probEvent_map, c.2.map_fst]
-  have hsnd : Pr[q | ob] = Pr[(q ∘ Prod.snd) | c.1] := by
-    rw [show Pr[q | ob] = Pr[q | (𝒮[ob] : SPMF β)] by
-          rw [probEvent_evalSPMF],
-      ← probEvent_map, c.2.map_snd]
-  rw [hfst, hsnd]
-  exact spmf_probEvent_mono c.1 fun z hz hpz => himp z.1 z.2 (hc z hz) hpz
+    Pr{let a ← oa}[p a] ≤ Pr{let b ← ob}[q b] := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  obtain ⟨c, hc⟩ := relTriple_iff_relWP.1 h
+  rw [prEvent_eq_evalDist_of_discrete, prEvent_eq_evalDist_of_discrete]
+  calc 𝒟[oa] {a | p a} = c.joint.fst {a | p a} := by rw [c.isCoupling.fst_eq]
+    _ = c.joint (Prod.fst ⁻¹' {a | p a}) := Measure.fst_apply MeasurableSet.of_discrete
+    _ ≤ c.joint (Prod.snd ⁻¹' {b | q b}) :=
+      measure_mono_ae (hc.mono fun z hR hp ↦ himp z.1 z.2 hR hp)
+    _ = c.joint.snd {b | q b} := (Measure.snd_apply MeasurableSet.of_discrete).symm
+    _ = 𝒟[ob] {b | q b} := by rw [c.isCoupling.snd_eq]
 
 /-- Transitivity through an intermediate computation related to the left side by `EqRel`. -/
 lemma relTriple_trans_eqRel_left
-    {ι₃ : Type w} {spec₃ : OracleSpec ι₃} [IsUniformSpec spec₃]
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [AnswerMeasure spec₃]
+    [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
     (hleft : RelTriple oa mid (EqRel α)) (hright : RelTriple mid ob R) :
     RelTriple oa ob R :=
-  relTriple_of_evalSPMF_eq_left (evalSPMF_eq_of_relTriple_eqRel hleft) hright
+  relTriple_of_evalDistEq_left (evalDistEq_of_relTriple_eqRel hleft) hright
 
 /-- Transitivity through an intermediate computation related to the right side by `EqRel`. -/
 lemma relTriple_trans_eqRel_right
-    {ι₃ : Type w} {spec₃ : OracleSpec ι₃} [IsUniformSpec spec₃]
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [AnswerMeasure spec₃]
+    [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ β}
     {ob : OracleComp spec₃ β} {R : RelPost α β}
     (hleft : RelTriple oa mid R) (hright : RelTriple mid ob (EqRel β)) :
     RelTriple oa ob R :=
-  relTriple_of_evalSPMF_eq_right (evalSPMF_eq_of_relTriple_eqRel hright) hleft
+  relTriple_of_evalDistEq_right (evalDistEq_of_relTriple_eqRel hright) hleft
 
 /-- Transitivity of equality-relation relational triples through an intermediate computation. -/
 lemma relTriple_trans_eqRel
-    {ι₃ : Type w} {spec₃ : OracleSpec ι₃} [IsUniformSpec spec₃]
+    {ι₃ : Type w} {spec₃ : OracleSpec.{w, 0} ι₃}
+    [AnswerMeasure spec₃]
+    [∀ t, Finite (spec₃.Range t)]
     {oa : OracleComp spec₁ α} {mid : OracleComp spec₂ α} {ob : OracleComp spec₃ α}
     (hleft : RelTriple oa mid (EqRel α)) (hright : RelTriple mid ob (EqRel α)) :
     RelTriple oa ob (EqRel α) :=
   relTriple_trans_eqRel_left hleft hright
-
-/-- Bool-specialized bridge from relational triples to game success equality. -/
-lemma probOutput_true_eq_of_relTriple_eqRel
-    {oa : OracleComp spec₁ Bool} {ob : OracleComp spec₂ Bool} (h : RelTriple oa ob (EqRel Bool)) :
-    Pr[= true | oa] = Pr[= true | ob] :=
-  probOutput_eq_of_relTriple_eqRel h true
 
 /-! ## Oracle query coupling rules (pRHL level) -/
 
@@ -450,45 +377,6 @@ lemma relTriple_query (t : spec₁.Domain) :
       (EqRel (spec₁.Range t)) :=
   relTriple_refl (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
 
-/-- Bijection coupling (the "rnd" rule from EasyCrypt):
-querying the same oracle on both sides, related by a bijection `f`. -/
-lemma relTriple_query_bij (t : spec₁.Domain)
-    {f : spec₁.Range t → spec₁.Range t}
-    (hf : Function.Bijective f) :
-    RelTriple
-      (spec₁ := spec₁) (spec₂ := spec₁)
-      (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
-      (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
-      (fun a b => f a = b) := by
-  refine relTriple_iff_relWP.2
-    ⟨⟨𝒮[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] >>= fun a => pure (a, f a),
-      by simp, ?_⟩, fun z hz => ?_⟩
-  · simp only [map_bind, map_pure, evalSPMF_query]
-    change f <$> (liftM (PMF.uniformOfFintype (spec₁.Range t)) : SPMF _) = _
-    rw [← liftM_map]
-    exact congrArg liftM (PMF.uniformOfFintype_map_of_bijective f hf)
-  · obtain ⟨a, -, ha⟩ := (mem_spmf_support_bind_iff _ _ z).1 hz
-    obtain rfl : z = (a, f a) := by simpa using ha
-    rfl
-
-/-- Bind rule specialized to two equal oracle queries coupled by a bijection.
-
-The continuation is stated over the left sample only, with the right sample
-already rewritten to `f a`. This is the stable continuation shape used by
-the relational tactic for unary bijection hints. -/
-lemma relTriple_bind_query_bij (t : spec₁.Domain)
-    {f : spec₁.Range t → spec₁.Range t} {fa : spec₁.Range t → OracleComp spec₁ γ}
-    {fb : spec₁.Range t → OracleComp spec₁ δ} {S : RelPost γ δ}
-    (hfg : ∀ a, RelTriple (fa a) (fb (f a)) S)
-    (hf : Function.Bijective f) :
-    RelTriple
-      ((liftM (query t) : OracleComp spec₁ (spec₁.Range t)) >>= fa)
-      ((liftM (query t) : OracleComp spec₁ (spec₁.Range t)) >>= fb)
-      S :=
-  relTriple_bind (R := fun a b => b = f a)
-    (relTriple_post_mono (relTriple_query_bij t hf) fun _ _ h => h.symm)
-    fun a b hb => by simpa [hb] using hfg a
-
 /-- Mapping both sides of a relational triple by `f` and `g` transports the
 postcondition along `f` and `g`. -/
 lemma relTriple_map {R : RelPost γ δ} {f : α → γ} {g : β → δ}
@@ -499,11 +387,12 @@ lemma relTriple_map {R : RelPost γ δ} {f : α → γ} {g : β → δ}
     (MAlgRelOrdered.relWP_map_left f oa (g <$> ob) _))
 
 /-- If a relational triple holds for `fun a b => f a = g b`, then mapping by `f` and `g`
-produces equal distributions. Generalizes `evalSPMF_eq_of_relTriple_eqRel`. -/
-lemma evalSPMF_map_eq_of_relTriple {σ : Type} {f : α → σ} {g : β → σ} {oa : OracleComp spec₁ α}
-    {ob : OracleComp spec₂ β} (h : RelTriple oa ob (fun a b => f a = g b)) :
-    𝒮[f <$> oa] = 𝒮[g <$> ob] :=
-  evalSPMF_eq_of_relTriple_eqRel (relTriple_map h)
+gives computations equal in distribution. Generalizes `evalDistEq_of_relTriple_eqRel`. -/
+lemma evalDistEq_map_of_relTriple {σ : Type} {f : α → σ} {g : β → σ}
+    {oa : OracleComp spec₁ α} {ob : OracleComp spec₂ β}
+    (h : RelTriple oa ob (fun a b => f a = g b)) :
+    f <$> oa =ᵈ g <$> ob :=
+  evalDistEq_of_relTriple_eqRel (relTriple_map h)
 
 private lemma list_eq_of_forall₂_eqRel {xs ys : List α}
     (hxy : List.Forall₂ (EqRel α) xs ys) : xs = ys := by
@@ -630,9 +519,156 @@ lemma relTriple_pure_right {oa : OracleComp spec₁ α} {b : β}
     RelTriple oa (pure b : OracleComp spec₂ β) R :=
   relTriple_post_mono h (fun _ _ ⟨_, hr⟩ => hr)
 
+end finite
+
+end measureSpec
+
+/-! ## Anchoring and bijection rules under uniform answer measures -/
+
+section uniformMeasureSpec
+
+variable [UniformAnswerMeasure spec₁] [UniformAnswerMeasure spec₂]
+
+/-- A coupling with a Dirac first marginal forces the first coordinate, so an almost-sure
+relation holds between that value and every possible output of the second computation, each of
+which has positive mass under uniform answer measures. -/
+private theorem forall_mem_support_of_couplingPost_pure_left {a : α} {y : OracleComp spec₂ β}
+    {post : RelPost α β} (h : CouplingPost (pure a : OracleComp spec₁ α) y post) :
+    ∀ b ∈ support y, post a b := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  obtain ⟨c, hc⟩ := h
+  intro b hb
+  by_contra hpost
+  have hmeas : MeasurableSet {x : α | x = a} := measurableSet_singleton a
+  have hfst : ∀ᵐ z ∂c.joint, z.1 = a := by
+    refine (ae_map_iff measurable_fst.aemeasurable hmeas).1 ?_
+    rw [show c.joint.map Prod.fst = 𝒟[(pure a : OracleComp spec₁ α)] from c.isCoupling.fst_eq,
+      evalDist_pure]
+    exact (ae_dirac_iff hmeas).2 rfl
+  have hbad : c.joint {z | ¬(z.1 = a ∧ post z.1 z.2)} = 0 := ae_iff.1 (hfst.and hc)
+  have hnull : c.joint (Prod.snd ⁻¹' {b}) = 0 := by
+    refine measure_mono_null (t := {z | ¬(z.1 = a ∧ post z.1 z.2)}) ?_ hbad
+    intro z hz hgood
+    refine hpost ?_
+    obtain ⟨h₁, h₂⟩ := hgood
+    have h₃ : z.2 = b := hz
+    rwa [h₁, h₃] at h₂
+  have hpos := (mem_support_iff_evalDist_singleton_pos y b).1 hb
+  rw [← c.isCoupling.snd_eq, Measure.snd_apply (measurableSet_singleton b), hnull] at hpos
+  exact lt_irrefl 0 hpos
+
+/-- A pure first computation is coupled with any computation whose possible outputs all
+satisfy the relation with its value. -/
+private theorem couplingPost_pure_left_of_forall_mem_support {a : α} {y : OracleComp spec₂ β}
+    {post : RelPost α β} (h : ∀ b ∈ support y, post a b) :
+    CouplingPost (pure a : OracleComp spec₁ α) y post := by
+  let : MeasurableSpace α := ⊤
+  let : MeasurableSpace β := ⊤
+  have : IsProbabilityMeasure 𝒟[y] := ⟨evalDist_apply_univ_eq_one y⟩
+  let c := Measure.Coupling.prod 𝒟[(pure a : OracleComp spec₁ α)] 𝒟[y]
+  refine ⟨c, (ae_mem_support_prod c).mono fun z hz ↦ ?_⟩
+  obtain ⟨hz₁, hz₂⟩ := hz
+  have hz₁ : z.1 = a := by simpa using hz₁
+  exact hz₁ ▸ h z.2 hz₂
+
+variable [∀ t, Finite (spec₁.Range t)] [∀ t, Finite (spec₂.Range t)]
+
+/-- Anchoring instance for the `Prop`-valued relational logic on `OracleComp`.
+
+When one of the two computations is `pure`, the relational coupling logic collapses to the
+necessary reading of the other side. Every possible output has positive mass under uniform
+answer measures, so an almost-sure relation holds on the whole support.
+
+The unary sides are PolyFun's demonic support interpretation `MonadAttach.toWPMonadDemonic`
+(`VCVio/ProgramLogic/Unary/HoarePropTriple.lean`), which `OracleComp.Necessary.instWP` installs
+as the global necessary reading. -/
+instance instAnchored :
+    @MAlgRelOrdered.Anchored (OracleComp spec₁) (OracleComp spec₂) Prop _ _ _
+      MonadAttach.toWPMonadDemonic MonadAttach.toWPMonadDemonic _ :=
+  letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec₁)
+  letI := MonadAttach.toWPMonadDemonic (m := OracleComp spec₂)
+  { rwp_pure_left := fun {α β} a y post => by
+      refine propext ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
+        exact forall_mem_support_of_couplingPost_pure_left h
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at h
+        exact couplingPost_pure_left_of_forall_mem_support h
+    rwp_pure_right := fun {α β} x b post => by
+      refine propext ⟨fun h ↦ ?_, fun h ↦ ?_⟩
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support]
+        exact forall_mem_support_of_couplingPost_pure_left
+          (relTriple_iff_relWP.1 (relTriple_symm (relTriple_iff_relWP.2 h)))
+      · rw [OracleComp.ProgramLogic.PropLogic.wp_iff_forall_support] at h
+        exact relTriple_iff_relWP.1 (relTriple_symm (spec₁ := spec₂) (spec₂ := spec₁)
+          (relTriple_iff_relWP.2 (couplingPost_pure_left_of_forall_mem_support h))) }
+
+/-- The graph of a bijection on a query's answers couples the query with itself. -/
+theorem isCoupling_query_graph (t : spec₁.Domain) {f : spec₁.Range t → spec₁.Range t}
+    (hf : Function.Bijective f) :
+    letI : MeasurableSpace (spec₁.Range t) := ⊤
+    Measure.IsCoupling
+      (𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))].map fun a ↦ (a, f a))
+      𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))]
+      𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] := by
+  have := UniformAnswerMeasure.nonempty_range (spec := spec₁) t
+  let : MeasurableSpace (spec₁.Range t) := ⊤
+  have hq : 𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))] = uniformOn Set.univ :=
+    OracleComp.evalDist_liftM_query_uniform t
+  have h := Measure.IsCoupling.graph 𝒟[(liftM (query t) : OracleComp spec₁ (spec₁.Range t))]
+    (Measurable.of_discrete (f := f))
+  rwa [hq, map_uniformOn_univ_of_bijective Measurable.of_discrete hf, ← hq] at h
+
+/-- Bijection coupling (the "rnd" rule from EasyCrypt):
+querying the same oracle on both sides, related by a bijection `f`. -/
+lemma relTriple_query_bij (t : spec₁.Domain)
+    {f : spec₁.Range t → spec₁.Range t}
+    (hf : Function.Bijective f) :
+    RelTriple
+      (spec₁ := spec₁) (spec₂ := spec₁)
+      (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
+      (liftM (query t) : OracleComp spec₁ (spec₁.Range t))
+      (fun a b => f a = b) := by
+  let : MeasurableSpace (spec₁.Range t) := ⊤
+  have hgraph : Measurable fun a : spec₁.Range t ↦ (a, f a) := Measurable.of_discrete
+  refine relTriple_iff_relWP.2 ⟨⟨_, isCoupling_query_graph t hf⟩, ?_⟩
+  exact (ae_map_iff hgraph.aemeasurable (Set.to_countable _).measurableSet).2
+    (Filter.Eventually.of_forall fun _ ↦ rfl)
+
+/-- Bind rule specialized to two equal oracle queries coupled by a bijection.
+
+The continuation is stated over the left sample only, with the right sample
+already rewritten to `f a`. This is the stable continuation shape used by
+the relational tactic for unary bijection hints. -/
+lemma relTriple_bind_query_bij (t : spec₁.Domain)
+    {f : spec₁.Range t → spec₁.Range t} {fa : spec₁.Range t → OracleComp spec₁ γ}
+    {fb : spec₁.Range t → OracleComp spec₁ δ} {S : RelPost γ δ}
+    (hfg : ∀ a, RelTriple (fa a) (fb (f a)) S)
+    (hf : Function.Bijective f) :
+    RelTriple
+      ((liftM (query t) : OracleComp spec₁ (spec₁.Range t)) >>= fa)
+      ((liftM (query t) : OracleComp spec₁ (spec₁.Range t)) >>= fb)
+      S :=
+  relTriple_bind (R := fun a b => b = f a)
+    (relTriple_post_mono (relTriple_query_bij t hf) fun _ _ h => h.symm)
+    fun a b hb => by simpa [hb] using hfg a
+
+end uniformMeasureSpec
+
 section Sampling
 
 variable [SampleableType α]
+
+/-- The graph of a bijection couples a uniform sample with itself. -/
+theorem isCoupling_uniformSample_graph {f : α → α} (hf : Function.Bijective f) :
+    letI : MeasurableSpace α := ⊤
+    Measure.IsCoupling (𝒟[($ᵗ α : ProbComp α)].map fun a ↦ (a, f a))
+      𝒟[($ᵗ α : ProbComp α)] 𝒟[($ᵗ α : ProbComp α)] := by
+  let : MeasurableSpace α := ⊤
+  have h := Measure.IsCoupling.graph 𝒟[($ᵗ α : ProbComp α)] (Measurable.of_discrete (f := f))
+  rwa [SampleableType.evalDist_uniformSample,
+    map_uniformOn_univ_of_bijective Measurable.of_discrete hf,
+    ← SampleableType.evalDist_uniformSample] at h
 
 /-- Relational coupling for uniform sampling via bijection.
 Given a bijection `f : α → α` such that `R x (f x)` for all `x`,
@@ -641,18 +677,11 @@ lemma relTriple_uniformSample_bij
     {f : α → α} (hf : Function.Bijective f) (R : RelPost α α)
     (hR : ∀ x, R x (f x)) :
     RelTriple ($ᵗ α) ($ᵗ α) R := by
-  refine relTriple_iff_relWP.2
-    ⟨⟨𝒮[($ᵗ α : ProbComp α)] >>= fun a => pure (a, f a), by simp, ?_⟩, fun z hz => ?_⟩
-  · simp only [map_bind, map_pure]
-    change f <$> 𝒮[($ᵗ α : ProbComp α)] = _
-    rw [← evalSPMF_map]
-    refine evalSPMF_ext fun x => ?_
-    obtain ⟨x', rfl⟩ := hf.surjective x
-    rw [probOutput_map_injective ($ᵗ α) hf.injective x']
-    simpa [uniformSample] using SampleableType.probOutput_selectElem_eq (β := α) x' (f x')
-  · obtain ⟨a, -, ha⟩ := (mem_spmf_support_bind_iff _ _ z).1 hz
-    obtain rfl : z = (a, f a) := by simpa using ha
-    simpa using hR a
+  let : MeasurableSpace α := ⊤
+  have hgraph : Measurable fun a : α ↦ (a, f a) := Measurable.of_discrete
+  refine relTriple_iff_relWP.2 ⟨⟨_, isCoupling_uniformSample_graph hf⟩, ?_⟩
+  exact (ae_map_iff hgraph.aemeasurable (Set.to_countable _).measurableSet).2
+    (Filter.Eventually.of_forall hR)
 
 /-- Bind rule specialized to two uniform samples coupled by a bijection.
 
