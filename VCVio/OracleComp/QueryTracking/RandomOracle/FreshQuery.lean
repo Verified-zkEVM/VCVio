@@ -328,27 +328,29 @@ end OracleComp
 namespace OracleComp
 variable {D α : Type} {R : D → Type}
 
-private noncomputable def queryKeys [DecidableEq D] [∀ d, Finite (R d)]
+/-- A finite set containing every key that can occur on any response branch of a program. -/
+@[expose] noncomputable def possibleQueryKeys [DecidableEq D] [∀ d, Finite (R d)]
     (oa : OracleComp (ofFn R) α) : Finset D := by
   classical
   letI : ∀ d, Fintype (R d) := fun d => Fintype.ofFinite (R d)
   exact OracleComp.construct (C := fun _ => Finset D)
     (fun _ => ∅) (fun t _ rest => insert t (Finset.univ.biUnion rest)) oa
 
-@[simp] private theorem queryKeys_pure [DecidableEq D] [∀ d, Finite (R d)] (a : α) :
-    queryKeys (pure a : OracleComp (ofFn R) α) = ∅ := rfl
+@[simp] theorem possibleQueryKeys_pure [DecidableEq D] [∀ d, Finite (R d)] (a : α) :
+    possibleQueryKeys (pure a : OracleComp (ofFn R) α) = ∅ := rfl
 
-@[simp] private theorem queryKeys_query_bind [DecidableEq D] [∀ d, Finite (R d)]
+@[simp] theorem possibleQueryKeys_query_bind [DecidableEq D] [∀ d, Finite (R d)]
     (t : D) (k : R t → OracleComp (ofFn R) α) :
-    queryKeys (liftM ((ofFn R).query t) >>= k) =
+    possibleQueryKeys (liftM ((ofFn R).query t) >>= k) =
       insert t (Set.Finite.toFinset
-        (Set.finite_iUnion fun u => (queryKeys (k u)).finite_toSet)) := by
+        (Set.finite_iUnion fun u => (possibleQueryKeys (k u)).finite_toSet)) := by
   classical
   ext q
-  simp [queryKeys]
+  simp [possibleQueryKeys]
 
-private theorem allQueriesSatisfy_queryKeys [DecidableEq D] [∀ d, Finite (R d)]
-    (oa : OracleComp (ofFn R) α) : AllQueriesSatisfy oa (· ∈ queryKeys oa) := by
+/-- Every query is in the finite key support determined by the program syntax. -/
+theorem allQueriesSatisfy_possibleQueryKeys [DecidableEq D] [∀ d, Finite (R d)]
+    (oa : OracleComp (ofFn R) α) : AllQueriesSatisfy oa (· ∈ possibleQueryKeys oa) := by
   classical
   induction oa using OracleComp.inductionOn with
   | pure a => exact allQueriesSatisfy_pure _ _
@@ -366,11 +368,12 @@ private theorem allQueriesSatisfy_queryKeys [DecidableEq D] [∀ d, Finite (R d)
                 fun v => ihr v (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 v)⟩
       apply mono _ _ _ (ih u)
       intro d hd
-      simp only [queryKeys_query_bind, Finset.mem_insert, Set.Finite.mem_toFinset,
+      simp only [possibleQueryKeys_query_bind, Finset.mem_insert, Set.Finite.mem_toFinset,
         Set.mem_iUnion, Finset.mem_coe]
       exact Or.inr ⟨u, hd⟩
 
-private noncomputable def restrictQueries (S : Finset D) :
+/-- Retype a computation to a finite key set containing all its possible queries. -/
+@[expose] noncomputable def restrictQueries (S : Finset D) :
     (oa : OracleComp (ofFn R) α) → AllQueriesSatisfy oa (· ∈ S) →
       OracleComp (ofFn (fun d : S => R d.val)) α
   | .pure a, _ => pure a
@@ -379,10 +382,10 @@ private noncomputable def restrictQueries (S : Finset D) :
         ⟨t, ((allQueriesSatisfy_query_bind_iff _ _ _).mp h).1⟩) >>=
         fun u => restrictQueries S (k u) (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 u)
 
-@[simp] private theorem restrictQueries_pure (S : Finset D) (a : α) (h) :
+@[simp] theorem restrictQueries_pure (S : Finset D) (a : α) (h) :
     restrictQueries S (pure a : OracleComp (ofFn R) α) h = pure a := rfl
 
-@[simp] private theorem restrictQueries_query_bind (S : Finset D) (t : D)
+@[simp] theorem restrictQueries_query_bind (S : Finset D) (t : D)
     (k : R t → OracleComp (ofFn R) α) (h) :
     restrictQueries S (liftM ((ofFn R).query t) >>= k) h =
       liftM ((ofFn (fun d : S => R d.val)).query
@@ -419,7 +422,8 @@ private theorem restrictQueries_costBound [∀ d, Nonempty (R d)]
         _ ≤ error t + (B - error t) := add_le_add (le_refl (error t)) hzle
         _ = B := by rw [add_comm, tsub_add_cancel_of_le he]
 
-private theorem evalWithAnswerFn_restrictQueries (S : Finset D) (oa : OracleComp (ofFn R) α)
+/-- Restricting keys and the answer table preserves deterministic execution. -/
+theorem evalWithAnswerFn_restrictQueries (S : Finset D) (oa : OracleComp (ofFn R) α)
     (h : AllQueriesSatisfy oa (· ∈ S)) (g : ∀ d, R d) :
     evalWithAnswerFn (QueryImpl.ofFn (fun d : S => g d.val)) (restrictQueries S oa h) =
       evalWithAnswerFn (QueryImpl.ofFn g) oa := by
@@ -430,7 +434,8 @@ private theorem evalWithAnswerFn_restrictQueries (S : Finset D) (oa : OracleComp
         evalWithAnswerFn_liftM_query, QueryImpl.ofFn_apply]
       exact ih _ (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 _)
 
-private theorem tableQueryLog_restrictQueries (S : Finset D) (oa : OracleComp (ofFn R) α)
+/-- Re-embedding the restricted query log recovers the complete ordered query log. -/
+theorem tableQueryLog_restrictQueries (S : Finset D) (oa : OracleComp (ofFn R) α)
     (h : AllQueriesSatisfy oa (· ∈ S)) (g : ∀ d, R d) :
     (tableQueryLog (restrictQueries S oa h) (fun d : S => g d.val)).map
       (fun q => (⟨q.1.val, q.2⟩ : Σ d, R d)) = tableQueryLog oa g := by
@@ -440,11 +445,13 @@ private theorem tableQueryLog_restrictQueries (S : Finset D) (oa : OracleComp (o
       simp only [restrictQueries_query_bind, tableQueryLog_query_bind, List.map_cons]
       exact congrArg (List.cons _) (ih _ (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 _))
 
-private def restrictCache (S : Finset D) (c : (ofFn R).QueryCache) :
+/-- Restrict a cached answer assignment to a finite key set. -/
+@[expose] def restrictCache (S : Finset D) (c : (ofFn R).QueryCache) :
     (ofFn (fun d : S => R d.val)).QueryCache :=
   QueryCache.ofFn (fun d => c d.val)
 
-private theorem restrictCache_update [DecidableEq D] (S : Finset D) (c : (ofFn R).QueryCache)
+/-- Restriction commutes with updating a key in the retained set. -/
+theorem restrictCache_update [DecidableEq D] (S : Finset D) (c : (ofFn R).QueryCache)
     (t : S) (u : R t.val) :
     restrictCache S (c.cacheQuery t.val u) = (restrictCache S c).cacheQuery t u := by
   apply QueryCache.ext
@@ -464,7 +471,8 @@ private theorem randomOracle_query_bind_run' [DecidableEq D] [∀ d, SampleableT
   rw [simulateQ_bind, simulateQ_spec_query, StateT.run'_eq, StateT.run_bind, map_bind]
   rfl
 
-private theorem randomOracle_restrictQueries [DecidableEq D] [∀ d, SampleableType (R d)]
+/-- Retyping possible keys preserves the actual cached output computation. -/
+theorem randomOracle_restrictQueries [DecidableEq D] [∀ d, SampleableType (R d)]
     (S : Finset D) (oa : OracleComp (ofFn R) α)
     (h : AllQueriesSatisfy oa (· ∈ S)) (c : (ofFn R).QueryCache) :
     (simulateQ randomOracle (restrictQueries S oa h)).run' (restrictCache S c) =
@@ -487,16 +495,18 @@ private theorem randomOracle_restrictQueries [DecidableEq D] [∀ d, SampleableT
           rw [← restrictCache_update]
           exact ih u (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 u) (c.cacheQuery t u)
 
-private noncomputable def extendTable [∀ d, Nonempty (R d)] (S : Finset D)
+/-- Extend a finite answer table with fixed arbitrary answers outside its key set. -/
+@[expose] noncomputable def extendTable [∀ d, Nonempty (R d)] (S : Finset D)
     (g : (d : S) → R d.val) : ∀ d, R d := by
   classical
   exact fun d => if h : d ∈ S then g ⟨d, h⟩ else Classical.arbitrary (R d)
 
-@[simp] private theorem extendTable_subtype [∀ d, Nonempty (R d)] (S : Finset D)
+@[simp] theorem extendTable_subtype [∀ d, Nonempty (R d)] (S : Finset D)
     (g : (d : S) → R d.val) (d : S) : extendTable S g d.val = g d := by
   simp [extendTable, d.property]
 
-private theorem extendTable_update [DecidableEq D] [∀ d, Nonempty (R d)] (S : Finset D)
+/-- Updating a retained answer cell commutes with extension to all keys. -/
+theorem extendTable_update [DecidableEq D] [∀ d, Nonempty (R d)] (S : Finset D)
     (g : (d : S) → R d.val) (t : S) (u : R t.val) :
     extendTable S (Function.update g t u) = Function.update (extendTable S g) t.val u := by
   classical
@@ -523,8 +533,8 @@ theorem prEvent_randomOracle_le_of_bad_queries [DecidableEq D]
       ∃ q ∈ tableQueryLog oa g, bad q.1 g) :
     Pr{let result ← (simulateQ randomOracle oa).run' ∅}[event result] ≤ n * error := by
   classical
-  let S := queryKeys oa
-  have hS : AllQueriesSatisfy oa (· ∈ S) := allQueriesSatisfy_queryKeys oa
+  let S := possibleQueryKeys oa
+  have hS : AllQueriesSatisfy oa (· ∈ S) := allQueriesSatisfy_possibleQueryKeys oa
   let small := restrictQueries S oa hS
   let : ∀ d : S, Fintype (R d.val) := fun d => Fintype.ofFinite (R d.val)
   let : Nonempty ((d : S) → R d.val) := ⟨fun d => Classical.arbitrary (R d.val)⟩
@@ -565,8 +575,8 @@ theorem prEvent_randomOracle_le_of_bad_queries_weighted [DecidableEq D]
       ∃ q ∈ tableQueryLog oa g, bad q.1 g) :
     Pr{let result ← (simulateQ randomOracle oa).run' ∅}[event result] ≤ B := by
   classical
-  let S := queryKeys oa
-  have hS : AllQueriesSatisfy oa (· ∈ S) := allQueriesSatisfy_queryKeys oa
+  let S := possibleQueryKeys oa
+  have hS : AllQueriesSatisfy oa (· ∈ S) := allQueriesSatisfy_possibleQueryKeys oa
   let small := restrictQueries S oa hS
   let : ∀ d : S, Fintype (R d.val) := fun d => Fintype.ofFinite (R d.val)
   let : Nonempty ((d : S) → R d.val) := ⟨fun d => Classical.arbitrary (R d.val)⟩
