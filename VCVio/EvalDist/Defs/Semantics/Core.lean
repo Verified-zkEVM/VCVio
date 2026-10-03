@@ -107,19 +107,6 @@ instance evalDist.instIsSubprobabilityMeasure (sem : MeasureSemanticsVia m)
     [MeasurableSpace α] (mx : m α) : IsSubprobabilityMeasure (sem.evalDist mx) :=
   ⟨sem.evalDist_apply_univ_le_one mx⟩
 
-/-- The failure probability of `mx`: the mass its successful-output measure misses. A bundled
-semantics chooses an observation for each σ-algebra on the output and relates no two of them, so
-the mass is taken on the σ-algebra in scope. -/
-@[expose]
-noncomputable def prFail (sem : MeasureSemanticsVia m) [MeasurableSpace α]
-    (mx : m α) : ENNReal :=
-  1 - sem.evalDist mx Set.univ
-
-@[simp]
-theorem prFail_le_one (sem : MeasureSemanticsVia m) [MeasurableSpace α]
-    (mx : m α) : sem.prFail mx ≤ 1 :=
-  tsub_le_self
-
 /-- Package a global `EvalDistSemantics` instance as a local bundled semantics. -/
 @[expose]
 protected noncomputable def ofEvalDistSemantics (m : Type u → Type v) [Monad m]

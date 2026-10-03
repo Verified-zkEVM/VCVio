@@ -134,7 +134,8 @@ theorem IsCoupling.apply_diag_le {μ ν : Measure α} {c : Measure (α × α)}
       _ = ν {a} := by rw [← Measure.snd_apply (measurableSet_singleton a), hc.snd_eq]
 
 /-- The maximal coupling of two measures on a finite set: the overlap `min (μ {a}) (ν {a})` sits
-on the diagonal, and the residual masses are spread independently. -/
+on the diagonal, and the residual masses are spread independently. It is a coupling of `μ` and `ν`
+when both are probability measures concentrated on `F` (`isCoupling_maximalCoupling`). -/
 def maximalCoupling (F : Finset α) (μ ν : Measure α) : Measure (α × α) :=
   (∑ a ∈ F, min (μ {a}) (ν {a}) • dirac (a, a)) +
     ∑ a ∈ F, ∑ b ∈ F,

@@ -280,11 +280,11 @@ variable [nttOps : NTTRingOps] [DecidableEq prims.High] {M : Type}
 open scoped Classical in
 /-- MLWE distinguisher of the ML-DSA EUF-CMA reduction (Theorem 4 with Lemma 7, CRYPTO 2023).
 
-**Placeholder.** The intended construction answers the adversary's signing queries with the HVZK
-simulator `sim` (the with-aborts CMA-to-NMA step) and feeds the resulting NMA forger to the key-swap
-distinguisher `distinguisherBShort` of `LatticeCrypto.MLDSA.SecurityNMA`. That construction is
-typed against the concrete problem `mldsaMLWEShort`, so the problem argument here will be
-specialized once the with-aborts CMA-to-NMA simulator exists. -/
+**Placeholder.** The intended construction turns the adversary into an NMA forger with the
+with-aborts CMA-to-NMA step (`FiatShamirWithAbort.cmaToNmaAdv`, answering signing queries with the
+HVZK simulator `sim`) and feeds that forger to the key-swap distinguisher `distinguisherBShort` of
+`LatticeCrypto.MLDSA.SecurityNMA`. That distinguisher is typed against the concrete problem
+`mldsaMLWEShort`, so the problem argument here is specialized together with the forger. -/
 noncomputable def eufCmaMLWEReduction
     (mlwe : LearningWithErrors.Problem (TqMatrix p.k p.l) (RqVec p.l) (RqVec p.k))
     (maxAttempts : ℕ)
@@ -302,11 +302,11 @@ open scoped Classical in
 /-- SelfTargetMSIS adversary of the ML-DSA EUF-CMA reduction (Theorem 4 with Lemma 7,
 CRYPTO 2023).
 
-**Placeholder.** The intended construction answers the adversary's signing queries with the HVZK
-simulator `sim` (the with-aborts CMA-to-NMA step) and runs the extractor `extractorC` of
-`LatticeCrypto.MLDSA.SecurityNMA` on the resulting NMA forger. That extractor is typed against the
-concrete problem `mldsaSTMSIS`, so the problem argument here will be specialized once the
-with-aborts CMA-to-NMA simulator exists. -/
+**Placeholder.** The intended construction turns the adversary into an NMA forger with the
+with-aborts CMA-to-NMA step (`FiatShamirWithAbort.cmaToNmaAdv`, answering signing queries with the
+HVZK simulator `sim`) and runs the extractor `extractorC` of `LatticeCrypto.MLDSA.SecurityNMA` on
+that forger. The extractor is typed against the concrete problem `mldsaSTMSIS`, so the problem
+argument here is specialized together with the forger. -/
 noncomputable def eufCmaSTMSISReduction
     (stmsis : SelfTargetMSIS.Problem
       (TqMatrix p.k p.l) (Response p prims)
@@ -332,15 +332,12 @@ fixed before it is proved:
    `eufCmaSTMSISReduction`, which are `sorry` placeholders over arbitrary MLWE and
    SelfTargetMSIS problems. The final statement must specialize the problems to `mldsaMLWEShort`
    and `mldsaSTMSIS` of `LatticeCrypto.MLDSA.SecurityNMA` and define the reductions as
-   `distinguisherBShort` and `extractorC` applied to an explicit with-aborts CMA-to-NMA
-   simulator, which does not exist yet.
-2. `ε`, `p_abort`, and `δ : ℝ` are unconstrained signed reals (only `hp : p_abort < 1` is
-   assumed). Inherited from `FiatShamirWithAbort.cmaToNmaLoss`, the loss term
-   `2qS(qH+1)ε/(1-p) + qS·ε(qS+1)/(2(1-p)²) + qS·ζ_zk + δ` can be made arbitrarily negative
-   by taking `ε`, `δ` very negative; `ENNReal.ofReal` then clamps it to `0`. In the final
-   statement `ε`, `p_abort`, `δ` should be nonnegative and identified with the concrete
-   commitment guessing probability, abort probability, and regularity failure probability of
-   the ML-DSA identification scheme.
+   `distinguisherBShort` and `extractorC` applied to the with-aborts CMA-to-NMA forger
+   `FiatShamirWithAbort.cmaToNmaAdv`, itself a named placeholder.
+2. `ε`, `p_abort` and `δ` are nonnegative parameters, with `p_abort < 1`, but they are not
+   identified with the commitment-guessing probability, abort probability and regularity failure
+   probability of the ML-DSA identification scheme. The final statement takes them as those
+   probabilities rather than as free parameters.
 
 The proof is intentionally deferred. The statement also needs to be specialized to the
 actual ML-DSA parameters (eliminating the explicit quantitative HVZK simulator hypothesis)

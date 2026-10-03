@@ -14,8 +14,10 @@ public import VCVio.CryptoFoundations.FiatShamir.WithAbort
 
 Statistical CMA-to-NMA reduction for the Fiat-Shamir-with-aborts transform,
 matching Theorem 3 of Barbosa et al. (CRYPTO 2023). Instantiates
-`FiatShamir.signHashQueryBound` at the with-aborts signature type and exposes
-`cmaToNmaLoss` plus `euf_cma_bound` / `euf_cma_bound_perfectHVZK`.
+`FiatShamir.signHashQueryBound` at the with-aborts signature type and exposes the loss
+`cmaToNmaLoss`, the EUF-NMA forger `cmaToNmaAdv`, and `euf_cma_bound` /
+`euf_cma_bound_perfectHVZK`, which bound an adversary's EUF-CMA advantage by the forger's EUF-NMA
+advantage (`SignatureAlg.eufNmaAdvantage`) plus the loss.
 
 The scheme-specific NMA-to-hard-problem reduction lives with each concrete
 scheme (e.g. the ML-DSA MLWE + SelfTargetMSIS reduction).
@@ -67,28 +69,28 @@ noncomputable def cmaToNmaLoss (qS qH : ℕ) (ε p ζ_zk δ : ℝ) (_hp : p < 1)
   qS * ζ_zk +
   δ
 
-/-- The CMA-to-witness reduction of the with-aborts transform: the composite of the CMA-to-NMA
-simulation, through the HVZK simulator `sim` and the commitment recovery `recover`, with the
-NMA-to-witness forking reduction, as `FiatShamir.cmaReduction` composes them for the plain
-transform. Its body is a named `sorry` placeholder, recorded in the axiom baseline, so that
-`euf_cma_bound` names the reduction it bounds. -/
-noncomputable def cmaReduction
+/-- The EUF-NMA forger of the with-aborts CMA-to-NMA reduction (Barbosa et al., CRYPTO 2023,
+Theorem 3): it runs `adv`, answers each signing query with a transcript of the HVZK simulator
+`sim`, recovers the commitment with `recover`, and reprograms the random oracle at the signed
+point. Its body is a named `sorry` placeholder, recorded in the axiom baseline, so that
+`euf_cma_bound` names the forger it bounds. -/
+noncomputable def cmaToNmaAdv
     (sim : Stmt → ProbComp (Option (Commit × Chal × Resp)))
     (recover : Stmt → Chal → Resp → Commit)
     (adv : SignatureAlg.UnforgeableAdversary
-      (FiatShamirWithAbort.inROM ids hr M maxAttempts))
-    (qH : ℕ) : Stmt → ProbComp Wit :=
+      (FiatShamirWithAbort.inROM ids hr M maxAttempts)) :
+    SignatureAlg.EufNmaAdversary (FiatShamirWithAbort.inROM ids hr M maxAttempts) :=
   sorry
 
 /-- **CMA-to-NMA reduction for Fiat-Shamir with aborts (Theorem 3, CRYPTO 2023).**
 
 For any EUF-CMA adversary `A` making at most `qS` signing-oracle queries and `qH`
-random-oracle queries, the reduction `cmaReduction` finds a witness with probability at least
-the advantage of `A` less the statistical loss `L`:
+random-oracle queries, the EUF-NMA forger `cmaToNmaAdv A` forges with probability at least the
+advantage of `A` less the statistical loss `L`:
 
-  `Adv^{EUF-CMA}(A) ≤ Pr[cmaReduction A finds a witness] + L`
+  `Adv^{EUF-CMA}(A) ≤ Adv^{EUF-NMA}(cmaToNmaAdv A) + L`
 
-The reduction uses:
+The forger uses:
 1. The quantitative HVZK simulator `sim` to answer signing queries without the secret key
 2. Commitment recoverability `recover` to map between the standard and commitment-recoverable
    variants of the signature scheme
@@ -103,7 +105,7 @@ The scheme-specific reduction from NMA to computational assumptions (e.g., MLWE 
 SelfTargetMSIS for ML-DSA) is stated separately with each scheme; see
 `MLDSA.euf_cma_security`.
 
-**WARNING: this is a placeholder statement.** Its reduction `cmaReduction` is a named placeholder
+**WARNING: this is a placeholder statement.** Its forger `cmaToNmaAdv` is a named placeholder
 and its proof is deferred. One defect of the statement remains: `ε`, `p_abort` and `δ` are not
 identified with the commitment-guessing probability, abort probability and regularity failure
 probability of `ids`, which `IdenSchemeWithAbort` does not define yet; the final statement takes
@@ -123,9 +125,8 @@ theorem euf_cma_bound
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
-      Pr{let b ←
-          hardRelationExperiment hr (cmaReduction ids hr M maxAttempts sim recover adv qH)}[
-        b = true] +
+      SignatureAlg.eufNmaAdvantage (runtime M)
+          (cmaToNmaAdv ids hr M maxAttempts sim recover adv) +
         ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort ζ_zk δ hp) := by
   let _ := hc
   let _ := hζ
@@ -156,9 +157,8 @@ theorem euf_cma_bound_perfectHVZK
     (hQ : ∀ pk, FiatShamir.signHashQueryBound M
       (S' := Option (Commit × Resp)) (oa := adv.main pk) qS qH) :
     SignatureAlg.unforgeableAdvantage (runtime M) adv ≤
-      Pr{let b ←
-          hardRelationExperiment hr (cmaReduction ids hr M maxAttempts sim recover adv qH)}[
-        b = true] +
+      SignatureAlg.eufNmaAdvantage (runtime M)
+          (cmaToNmaAdv ids hr M maxAttempts sim recover adv) +
         ENNReal.ofReal (cmaToNmaLoss qS qH ε p_abort 0 δ hp) :=
   euf_cma_bound (ids := ids) (M := M) (maxAttempts := maxAttempts)
     (hc := hc) (sim := sim) (ζ_zk := 0) (hζ := le_rfl)

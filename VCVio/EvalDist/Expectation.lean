@@ -24,10 +24,10 @@ The laws need no measurable structure on the outputs: when an argument integrate
 the σ-algebra that the observation itself induces. `wp_eq_lintegral` states the integral form
 for a chosen output space.
 
-`ExpectationWP m EPred` names the expectation interpretation of a monad: the measure
-interpretation `wpMonad m` for a monad with lawful measure semantics, and core's lift of the base
-monad's interpretation for `OptionT m` and `ExceptT ε m`, so that a stack has one `wp`, the one
-core's transformer rules decompose, with the exception assertions of its layers.
+`ExpectationWP m EPred` names the expectation interpretation of a monad. A monad with lawful
+measure semantics is interpreted by `wpMonad m`, and `OptionT m` and `ExceptT ε m` by core's lift
+of the base monad's interpretation. A transformer stack therefore has a single `wp`, which core's
+transformer rules decompose and whose exception assertions are those of the stack's layers.
 -/
 
 public section
@@ -144,12 +144,18 @@ end ExpectationWP
 `ℝ≥0∞` whose exception assertions `EPred` are those of `m`'s transformer stack. A monad with
 lawful measure semantics is interpreted by its successful-output measures (`ofMeasure`, the
 interpretation `wpMonad m`, with no exception layer). `OptionT m` and `ExceptT ε m` are
-interpreted by core's lifts of `m`'s interpretation, which outrank the measure interpretation of
-the stack: `wp⟦x⟧ g` on a stack is the weakest precondition core's transformer rules decompose,
-and `OptionT.wp_apply_eq` / `ExceptT.wp_apply_eq` read it as an expectation over the run. -/
+interpreted by core's lifts of `m`'s interpretation, which take precedence over the stack's own
+measure interpretation. On a stack, `wp⟦x⟧ g` is the weakest precondition that core's transformer
+rules decompose, and `OptionT.wp_apply_eq` and `ExceptT.wp_apply_eq` read it as an expectation
+over the run. -/
 
 /-- The expectation interpretation of `m`: exact core weakest preconditions over `ℝ≥0∞`, with the
-exception assertions `EPred` of `m`'s stack. -/
+exception assertions `EPred` of `m`'s stack.
+
+The class states no law relating `wp` to an output measure, so the instance found for a monad is
+what fixes the meaning of `Pr{…}[…]` and `𝔼{…}[…]` there. `ofMeasure` is the successful-output
+measure of a monad with lawful measure semantics, and on `OptionT` and `ExceptT` the lifts, which
+take precedence, agree with it by `OptionT.wp_ofMeasure_eq` and `ExceptT.wp_ofMeasure_eq`. -/
 class ExpectationWP (m : Type → Type v) [Monad m] (EPred : outParam Type) [Assertion EPred] where
   /-- The interpretation. -/
   toWPMonad : WPMonad m ℝ≥0∞ EPred
@@ -165,11 +171,11 @@ noncomputable instance (priority := low) ofMeasure (m : Type → Type v) [Monad 
   exact := letI := wpMonad m; inferInstance
 
 set_option warn.classDefReducibility false in
-/-- Core's `OptionT` lift of an interpretation over `ℝ≥0∞`, as a definition of its own: `simp`
-keeps a lifted expectation in the lifted language (core's `OptionT.wp_apply_eq` does not see
-through it), and `wp_liftOptionT_apply` opens it on request. It is semireducible on purpose:
-`vcgen` unifies core's rules with it by definitional unfolding, while `simp` matches instances
-up to instance reducibility only. -/
+/-- Core's `OptionT` lift of an interpretation over `ℝ≥0∞`, wrapped in a definition so that
+`simp` keeps a lifted expectation over the `OptionT` computation: core's `OptionT.wp_apply_eq`
+does not fire on it, and `wp_liftOptionT_apply` rewrites it to an expectation over the run on
+request. The definition is semireducible on purpose. `vcgen` unfolds it to match core's rules,
+while `simp` matches instances only up to instance reducibility and so leaves it folded. -/
 noncomputable def liftOptionT (m : Type → Type v) [Monad m] {EPred : Type} [Assertion EPred]
     (base : WPMonad m ℝ≥0∞ EPred) : WPMonad (OptionT m) ℝ≥0∞ ((Unit → ℝ≥0∞) × EPred) :=
   @OptionT.instWPMonad m EPred ℝ≥0∞ _ _ _ base
@@ -186,8 +192,7 @@ theorem wp_liftOptionT_apply (m : Type → Type v) [Monad m] {EPred : Type} [Ass
   exact OptionT.wp_apply_eq x post epost
 
 set_option warn.classDefReducibility false in
-/-- Core's `ExceptT` lift of an interpretation over `ℝ≥0∞`, as a definition of its own (see
-`liftOptionT`). -/
+/-- Core's `ExceptT` lift of an interpretation over `ℝ≥0∞`, wrapped as `liftOptionT` is. -/
 noncomputable def liftExceptT (m : Type → Type v) [Monad m] (ε : Type) {EPred : Type}
     [Assertion EPred] (base : WPMonad m ℝ≥0∞ EPred) :
     WPMonad (ExceptT ε m) ℝ≥0∞ ((ε → ℝ≥0∞) × EPred) :=
@@ -273,9 +278,9 @@ end ExpectationWP
 expectation interpretation `ExpectationWP` of `mx`'s monad. Standalone, `wp⟦mx⟧ ` is the
 function `fun g => wp⟦mx⟧ g`.
 
-The interpretation is written as core's bridge from a `WPMonad` to program instances applied to
-the interpretation: that is the instance term core's generic `wp` laws produce on their
-right-hand sides, so a literal expectation and a normalized one carry the same instance. -/
+The notation writes its `WP` instance as `Std.WP.instWPOfWPMonad` applied to the interpretation.
+Core's generic `wp` laws produce that instance term on their right-hand sides, so an expectation
+written with the notation and one produced by normalization carry the same instance. -/
 syntax:max (name := measureWpStx) "wp⟦" term "⟧ " : term
 
 @[inherit_doc measureWpStx]

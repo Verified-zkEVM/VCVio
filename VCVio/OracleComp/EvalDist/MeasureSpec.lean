@@ -13,11 +13,11 @@ import ToMathlib.Probability.UniformOn
 /-!
 # Measure-valued oracle specifications
 
-An oracle specification assigns a probability measure to each query's response type.
-A uniform specification identifies each chosen response measure with the uniform measure on
-its response type; this is a proposition about the chosen measures, and finiteness and
-inhabitedness of the response types follow from it rather than being carried as data. These
-certificates are explicit: finiteness alone does not select a probabilistic interpretation.
+An oracle specification assigns a probability measure to each query's answer type. A uniform
+specification bundles answer measures that are each the uniform measure on its answer type, and
+finiteness and inhabitedness of the answer types follow from that rather than being carried as
+data. Both are explicit choices: finiteness alone does not select a probabilistic
+interpretation.
 -/
 
 public section
@@ -33,8 +33,9 @@ variable {ι : Type u} {spec : OracleSpec.{u, v} ι}
 
 /-- A probability measure on the answers to each query of an oracle specification.
 
-Oracle answers carry the discrete measurable structure, so a chosen measure is determined by the
-mass of single answers and no measurable-space arguments appear on answer types. Answer types
+Oracle answers carry the discrete measurable structure, so no measurable-space arguments appear
+on answer types, and on a countable answer type a chosen measure is determined by the mass of
+single answers. Answer types
 with another measurable structure are modeled by `PFunctor.AnswerMeasure` on the underlying
 polynomial functor. -/
 abbrev AnswerMeasure (spec : OracleSpec.{u, v} ι) :=
@@ -69,8 +70,10 @@ noncomputable instance AnswerMeasure.add {ι' : Type*} (spec' : OracleSpec.{_, v
 
 /-- A chosen measure interpretation that samples uniformly from each answer type.
 
-This is a proposition about the chosen answer measures: each one is the uniform measure on its
-answer type. It carries no finiteness or inhabitedness data. `uniformOn Set.univ` is a
+The class bundles the answer measures (it extends `AnswerMeasure spec`) with the fact that each
+one is the uniform measure on its answer type, so it is never assumed beside an
+`[AnswerMeasure spec]` binder, which would make the two measures unrelated. It carries no
+finiteness or inhabitedness data. `uniformOn Set.univ` is a
 probability measure exactly on a finite, nonempty type, which
 `AnswerMeasure.isProbabilityMeasure` records, so `UniformAnswerMeasure.finite_range` and
 `UniformAnswerMeasure.nonempty_range` recover both facts. Statements about cardinalities take

@@ -44,7 +44,7 @@ open MeasureTheory
 open scoped ENNReal
 
 /-- Probability of a successful event after a `do`-style sequence of draws, as in
-`Pr{let x ← mx; let y ← my x}[p y]`: the expectation `𝔼{let x ← mx; let y ← my x}[𝟙⟦p y⟧]` of
+`Pr{let x ← mx; let y ← my x}[p y]`: the expectation `𝔼{let x ← mx; let y ← my x}[propInd (p y)]` of
 the event's indicator. -/
 syntax (name := prEventStx) "Pr{" doSeq "}[" term "]" : term
 

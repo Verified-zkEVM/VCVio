@@ -16,8 +16,8 @@ public import Mathlib.Tactic.Basify
 
 `𝔼{…}[…]` is the expectation of a nonnegative value after a `do`-style sequence of draws, and
 `Pr{…}[…]` the probability of an event, the expectation of its indicator: `Pr{items}[t]` is
-`𝔼{items}[𝟙⟦t⟧]`, and `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`. Both are
-translations of the sequence into nested core weakest preconditions under the expectation
+`𝔼{items}[propInd t]`, and `Pr{let x ← mx}[x = a]` is the probability that `mx` returns `a`.
+Both are translations of the sequence into nested core weakest preconditions under the expectation
 interpretation `ExpectationWP` of each draw's monad
 (`VCVio.EvalDist.ProbabilityNotation.Elab`):
 ```
@@ -136,8 +136,6 @@ theorem wp_fun_propInd {m : Type → Type v} [Monad m] {EPred : Type} [Std.WP.As
     wp⟦mx⟧ (fun a => propInd (p a)) = wp⟦mx⟧ (predInd p) := rfl
 
 attribute [expect_norm] ExactWPMonad.wp_pure ExactWPMonad.wp_bind ExactWPMonad.wp_map
-  ExactWPMonad.wp_seq ExactWPMonad.wp_seqLeft ExactWPMonad.wp_seqRight ExactWPMonad.wp_ite
-  ExactWPMonad.wp_dite ExactWPMonad.wp_option_elim ExactWPMonad.wp_sum_elim predInd_apply
   ExactWPMonad.wp_seq ExactWPMonad.wp_seqLeft ExactWPMonad.wp_seqRight ExactWPMonad.wp_ite
   ExactWPMonad.wp_dite ExactWPMonad.wp_option_elim ExactWPMonad.wp_sum_elim predInd_apply
 
@@ -511,6 +509,29 @@ measure is missing, under the expectation interpretation of its monad. -/
 
 theorem prFail_def (mx : m α) : prFail mx = 1 - Pr{let _ ← mx}[True] := rfl
 
+@[simp]
+theorem prFail_le_one (mx : m α) : prFail mx ≤ 1 := tsub_le_self
+
+@[simp, aesop (rule_sets := [finiteness]) safe apply]
+theorem prFail_ne_top (mx : m α) : prFail mx ≠ ⊤ :=
+  ne_top_of_le_ne_top ENNReal.one_ne_top (prFail_le_one mx)
+
+/-- A pure computation never fails. -/
+@[simp, grind =]
+theorem prFail_pure (a : α) : prFail (pure a : m α) = 0 := by
+  simp [prFail_def]
+
+/-- The failure probability of a branch is that of the branch taken. -/
+@[simp]
+theorem prFail_ite (c : Prop) [Decidable c] (mx my : m α) :
+    prFail (if c then mx else my) = if c then prFail mx else prFail my := by
+  split_ifs <;> rfl
+
+/-- Mapping the outputs does not change the failure probability. -/
+@[simp, grind =]
+theorem prFail_map {β : Type} (f : α → β) (mx : m α) : prFail (f <$> mx) = prFail mx := by
+  rw [prFail_def, prFail_def, prEvent_map]
+
 end prFail
 
 section prFailMeasure
@@ -529,13 +550,6 @@ theorem prEvent_true_add_prFail (mx : m α) : Pr{let _ ← mx}[True] + prFail mx
 theorem prFail_add_prEvent_true (mx : m α) : prFail mx + Pr{let _ ← mx}[True] = 1 := by
   rw [add_comm, prEvent_true_add_prFail]
 
-@[simp]
-theorem prFail_le_one (mx : m α) : prFail mx ≤ 1 := tsub_le_self
-
-@[simp, aesop (rule_sets := [finiteness]) safe apply]
-theorem prFail_ne_top (mx : m α) : prFail mx ≠ ⊤ :=
-  ne_top_of_le_ne_top ENNReal.one_ne_top (prFail_le_one mx)
-
 /-- A computation never fails exactly when it succeeds with probability one. -/
 theorem prFail_eq_zero_iff (mx : m α) : prFail mx = 0 ↔ Pr{let _ ← mx}[True] = 1 := by
   rw [prFail_def, tsub_eq_zero_iff_le]
@@ -546,22 +560,6 @@ theorem prFail_eq_one_iff (mx : m α) : prFail mx = 1 ↔ Pr{let _ ← mx}[True]
   refine ⟨fun h ↦ ?_, fun h ↦ by rw [prFail_def, h, tsub_zero]⟩
   by_contra hne
   exact (ENNReal.sub_lt_self ENNReal.one_ne_top one_ne_zero hne).ne h
-
-/-- A pure computation never fails. -/
-@[simp, grind =]
-theorem prFail_pure (a : α) : prFail (pure a : m α) = 0 := by
-  simp [prFail_def]
-
-/-- The failure probability of a branch is that of the branch taken. -/
-@[simp]
-theorem prFail_ite (c : Prop) [Decidable c] (mx my : m α) :
-    prFail (if c then mx else my) = if c then prFail mx else prFail my := by
-  split_ifs <;> rfl
-
-/-- Mapping the outputs does not change the failure probability. -/
-@[simp, grind =]
-theorem prFail_map {β : Type} (f : α → β) (mx : m α) : prFail (f <$> mx) = prFail mx := by
-  rw [prFail_def, prFail_def, prEvent_map]
 
 /-- The failure probability is the mass missing from the output measure. -/
 theorem prFail_eq_one_sub_evalDist_univ [MeasurableSpace α] (mx : m α) :

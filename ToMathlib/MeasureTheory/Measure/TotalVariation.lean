@@ -32,7 +32,9 @@ namespace MeasureTheory.Measure
 
 variable {α : Type u} {β : Type v} [MeasurableSpace α] [MeasurableSpace β]
 
-/-- Extended total variation: the largest mass discrepancy on a measurable event. -/
+/-- Extended total variation: the largest mass discrepancy on a measurable event. For measures of
+different total mass it counts the missing mass in full, as the total variation of the two laws
+with their missing mass on an added failure point does: `dirac a` and `0` are at distance `1`. -/
 protected noncomputable def etvDist (μ ν : Measure α) : ℝ≥0∞ :=
   ⨆ s : {s : Set α // MeasurableSet s}, ENNReal.absDiff (μ s.1) (ν s.1)
 
