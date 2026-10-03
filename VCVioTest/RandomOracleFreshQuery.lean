@@ -118,3 +118,82 @@ theorem infiniteKeys_consistent :
   simpa only [mul_zero] using bound
 
 end FreshQueryConsumer
+
+namespace FreshQueryConsumer
+
+/-- Query a three-valued cell, then query the Boolean cell only when needed. -/
+@[expose] noncomputable def nonuniformAdaptive : OracleComp (ofFn Answer) Bool := by
+  classical
+  exact (liftM ((ofFn Answer).query true) : OracleComp (ofFn Answer) (Answer true)) >>=
+    fun first => if first = (0 : Fin 3) then pure true else
+      (liftM ((ofFn Answer).query false) : OracleComp (ofFn Answer) (Answer false)) >>=
+        fun second => pure (!second)
+
+/-- The Boolean and three-valued cells have different failure charges. -/
+@[expose] noncomputable def keyError (t : Bool) : ENNReal := if t then 1 / 3 else 1 / 2
+
+private theorem query_weight (t : Bool) :
+    WorstCaseCostBound (liftM ((ofFn Answer).query t) : OracleComp (ofFn Answer) (Answer t))
+      ⟨keyError⟩ (keyError t) := by
+  have h : WorstCaseCostBound
+      ((liftM ((ofFn Answer).query t) : OracleComp (ofFn Answer) (Answer t)) >>= pure)
+      ⟨keyError⟩ (keyError t) := by
+    rw [worstCaseCostBound_query_bind_iff]
+    simp [costDist, instrumentedRun]
+  simpa using h
+
+/-- The actual instrumented adaptive client spends at most the sum of its two key charges. -/
+theorem nonuniformAdaptive_budget :
+    WorstCaseCostBound nonuniformAdaptive ⟨keyError⟩ (1 / 3 + 1 / 2) := by
+  unfold nonuniformAdaptive
+  classical
+  apply WorstCaseCostBound.bind (A := 1 / 3) (B := 1 / 2)
+  · simpa [keyError] using query_weight true
+  · intro first
+    split
+    · simp
+    · have h := WorstCaseCostBound.bind (query_weight false)
+        (fun second : Answer false => (worstCaseCostBound_pure (!second) ⟨keyError⟩ 0).mpr le_rfl)
+      simpa [keyError] using h
+
+/-- The actual cached failure event is bounded by `5 / 6`; a uniform two-query bound
+using the larger local error would give only `1`. -/
+theorem nonuniformAdaptive_bound :
+    Pr{let result ← (simulateQ randomOracle nonuniformAdaptive).run' ∅}[result = true] ≤
+      1 / 3 + 1 / 2 := by
+  classical
+  let bad (t : Bool) (g : ∀ b, Answer b) : Prop :=
+    if t then g true = (0 : Fin 3) else g false = false
+  apply prEvent_randomOracle_le_of_bad_queries_weighted nonuniformAdaptive keyError _
+    nonuniformAdaptive_budget (· = true) bad
+  · intro t g
+    cases t with
+    | false =>
+        simp only [bad, Bool.false_eq_true, ite_false, Function.update_self, keyError]
+        let : MeasurableSpace (Answer false) := ⊤
+        rw [prEvent_eq_evalDist_of_discrete, SampleableType.evalDist_uniformSample]
+        change (ProbabilityTheory.uniformOn Set.univ : Measure Bool) {false} ≤ _
+        rw [ProbabilityTheory.uniformOn_univ_apply_singleton]
+        norm_num
+    | true =>
+        simp only [bad, ite_true, Function.update_self, keyError]
+        let : MeasurableSpace (Answer true) := ⊤
+        rw [prEvent_eq_evalDist_of_discrete, SampleableType.evalDist_uniformSample]
+        change (ProbabilityTheory.uniformOn Set.univ : Measure (Fin 3)) {0} ≤ _
+        rw [ProbabilityTheory.uniformOn_univ_apply_singleton]
+        norm_num
+  · intro g h
+    by_cases hfirst : g true = (0 : Fin 3)
+    · refine ⟨⟨true, g true⟩, ?_, ?_⟩
+      · simp [nonuniformAdaptive, tableQueryLog_query_bind, hfirst]
+      · simpa [bad] using hfirst
+    · refine ⟨⟨false, g false⟩, ?_, ?_⟩
+      · simp [nonuniformAdaptive, tableQueryLog_query_bind, hfirst]
+      · change g false = false
+        have hn : (!(g false : Bool)) = true := by
+          simpa [nonuniformAdaptive, hfirst, evalWithAnswerFn_bind,
+            evalWithAnswerFn_liftM_query] using h
+        exact Bool.eq_false_of_not_eq_true' hn
+
+
+end FreshQueryConsumer

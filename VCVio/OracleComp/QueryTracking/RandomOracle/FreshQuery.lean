@@ -7,6 +7,7 @@ Authors: Quang Dao
 module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
 public import VCVio.OracleComp.QueryTracking.LoggingOracle.Core
+public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.EvalDist.ProbabilityBounds
 
 /-!
@@ -85,6 +86,21 @@ theorem tableQueryLog_simulateQ {D' : Type} {R' : D' → Type} (g : ∀ d, R' d)
       simp only [simulateQ_bind, simulateQ_spec_query, tableQueryLog_bind,
         tableQueryLog_query, evalWithAnswerFn_liftM_query, QueryImpl.ofFn_apply,
         List.flatMap_append, List.flatMap_cons, List.flatMap_nil, List.append_nil, ih]
+
+
+private theorem query_budget_tail [∀ d, Nonempty (R d)]
+    (t : D) (k : R t → OracleComp (ofFn R) α) (error : D → ENNReal) (B : ENNReal)
+    (hB : B ≠ ⊤)
+    (hb : WorstCaseCostBound (liftM ((ofFn R).query t) >>= k) ⟨error⟩ B) :
+    error t ≤ B ∧ ∀ u, WorstCaseCostBound (k u) ⟨error⟩ (B - error t) := by
+  have h := (worstCaseCostBound_query_bind_iff t k ⟨error⟩ B).mp hb
+  obtain ⟨u⟩ : Nonempty (R t) := inferInstance
+  obtain ⟨z, hz⟩ := support_nonempty (costDist (k u) ⟨error⟩)
+  have he : error t ≤ B := (le_add_right (le_refl _)).trans (h u z hz)
+  refine ⟨he, fun u => ?_⟩
+  rw [worstCaseCostBound_iff_support_bound]
+  intro z hz
+  exact ENNReal.le_sub_of_add_le_left (ne_top_of_le_ne_top hB he) (h u z hz)
 
 
 variable [DecidableEq D]
@@ -252,6 +268,60 @@ theorem prEvent_randomOracle_le_of_bad_queries_finite (oa : OracleComp (ofFn R) 
     (prEvent_tableQueryLog_bad_le oa n hbound bad ε hbad)
 
 
+/-- A pathwise weighted query budget bounds encounters with initially uncached bad cells.
+Each key has its own all-background-table resampling bound; repeated calls still incur
+their key charge in the cost model, even though the cache preserves their answer. -/
+theorem prEvent_freshBadQuery_le_weighted (oa : OracleComp (ofFn R) α)
+    (error : D → ENNReal) (B : ENNReal)
+    (hbound : WorstCaseCostBound oa ⟨error⟩ B) (c : (ofFn R).QueryCache)
+    (bad : D → (∀ d, R d) → Prop)
+    (hbad : ∀ t g, Pr{let u ← $ᵗ (R t)}[bad t (Function.update g t u)] ≤ error t) :
+    Pr{let g ← $ᵗ (∀ d, R d)}[freshBadQuery oa c g bad] ≤ B := by
+  induction oa using OracleComp.inductionOn generalizing B c with
+  | pure a => simp [freshBadQuery]
+  | query_bind t k ih =>
+      by_cases hB : B = ⊤
+      · simp [hB]
+      obtain ⟨he, hk⟩ := query_budget_tail t k error B hB hbound
+      cases hc : c t with
+      | some u =>
+          simp_rw [freshBadQuery_query_bind_of_some t k c _ bad hc]
+          exact (ih u (B - error t) (hk u) c).trans tsub_le_self
+      | none =>
+          simp_rw [freshBadQuery_query_bind_of_none t k c _ bad hc]
+          apply (prEvent_or_le _ _ _).trans
+          have hfirst := prEvent_completeTable_cell_le c t hc bad (error t) (hbad t)
+          have hrest : Pr{let g ← $ᵗ (∀ d, R d)}[freshBadQuery (k (completeTable c g t))
+              (c.cacheQuery t (completeTable c g t)) g bad] ≤ B - error t := by
+            rw [prEvent_freshBadQuery_suffix t k c hc bad]
+            simpa only [map_eq_bind_pure_comp, Function.comp_def, bind_assoc,
+              pure_bind, id_eq] using
+              (prEvent_bind_le_of_forall_le ($ᵗ (R t))
+              (fun u => (fun g => freshBadQuery (k u) (c.cacheQuery t u) g bad) <$>
+                ($ᵗ (∀ d, R d))) id
+              (fun u => by simpa using ih u (B - error t) (hk u) (c.cacheQuery t u)))
+          calc
+            _ ≤ error t + (B - error t) := add_le_add hfirst hrest
+            _ = B := by rw [add_comm, tsub_add_cancel_of_le he]
+
+/-- The weighted bad-query bound for the actual cached execution on a finite key domain. -/
+theorem prEvent_randomOracle_le_of_bad_queries_weighted_finite (oa : OracleComp (ofFn R) α)
+    (error : D → ENNReal) (B : ENNReal)
+    (hbound : WorstCaseCostBound oa ⟨error⟩ B) (event : α → Prop)
+    (bad : D → (∀ d, R d) → Prop)
+    (hbad : ∀ t g, Pr{let u ← $ᵗ (R t)}[bad t (Function.update g t u)] ≤ error t)
+    (htrace : ∀ g, event (evalWithAnswerFn (QueryImpl.ofFn g) oa) →
+      ∃ q ∈ tableQueryLog oa g, bad q.1 g) :
+    Pr{let result ← (simulateQ randomOracle oa).run' ∅}[event result] ≤ B := by
+  let : MeasurableSpace α := ⊤
+  have heager := evalDist_simulateQ_randomOracle_run'_eq_completeTable oa ∅
+  simp only [completeTable_empty] at heager
+  rw [prEvent_congr_of_evalDist_eq _ _ heager event]
+  simp only [bind_assoc, pure_bind]
+  refine (prEvent_mono ($ᵗ (∀ d, R d)) _ _ htrace).trans ?_
+  simpa [freshBadQuery, completeTable_empty] using
+    prEvent_freshBadQuery_le_weighted oa error B hbound ∅ bad hbad
+
 end OracleComp
 
 /-! ## Removing the finite key-domain restriction -/
@@ -329,6 +399,26 @@ private theorem restrictQueries_queryBound (S : Finset D) (oa : OracleComp (ofFn
   | query_bind t k ih =>
       exact ⟨hb.1, fun u => ih u
         (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 u) _ (hb.2 u)⟩
+
+private theorem restrictQueries_costBound [∀ d, Nonempty (R d)]
+    (S : Finset D) (oa : OracleComp (ofFn R) α) (h : AllQueriesSatisfy oa (· ∈ S))
+    (error : D → ENNReal) (B : ENNReal) (hb : WorstCaseCostBound oa ⟨error⟩ B) :
+    WorstCaseCostBound (restrictQueries S oa h) ⟨fun t => error t.val⟩ B := by
+  induction oa using OracleComp.inductionOn generalizing B with
+  | pure a => simp [restrictQueries_pure]
+  | query_bind t k ih =>
+      by_cases hB : B = ⊤
+      · rw [worstCaseCostBound_iff_support_bound]
+        simp [hB]
+      obtain ⟨he, hk⟩ := query_budget_tail t k error B hB hb
+      rw [restrictQueries_query_bind, worstCaseCostBound_query_bind_iff]
+      intro u z hz
+      have hku := ih u (((allQueriesSatisfy_query_bind_iff _ _ _).mp h).2 u)
+        (B - error t) (hk u)
+      have hzle := (worstCaseCostBound_iff_support_bound _ _ _).mp hku z hz
+      calc
+        _ ≤ error t + (B - error t) := add_le_add (le_refl (error t)) hzle
+        _ = B := by rw [add_comm, tsub_add_cancel_of_le he]
 
 private theorem evalWithAnswerFn_restrictQueries (S : Finset D) (oa : OracleComp (ofFn R) α)
     (h : AllQueriesSatisfy oa (· ∈ S)) (g : ∀ d, R d) :
@@ -446,6 +536,48 @@ theorem prEvent_randomOracle_le_of_bad_queries [DecidableEq D]
   apply prEvent_randomOracle_le_of_bad_queries_finite small n
     (restrictQueries_queryBound S oa hS n hbound) event
     (fun t g => bad t.val (extendTable S g)) error
+  · intro t g
+    simp_rw [extendTable_update]
+    exact hbad t.val (extendTable S g)
+  · intro g hevent
+    have hrestrict : (fun d : S => extendTable S g d.val) = g := by
+      funext d
+      exact extendTable_subtype S g d
+    have heval := evalWithAnswerFn_restrictQueries S oa hS (extendTable S g)
+    rw [hrestrict] at heval
+    obtain ⟨q, hq, hb⟩ := htrace (extendTable S g) (heval ▸ hevent)
+    have hlog := tableQueryLog_restrictQueries S oa hS (extendTable S g)
+    rw [hrestrict] at hlog
+    rw [← hlog] at hq
+    obtain ⟨smallq, hsmallq, rfl⟩ := List.mem_map.mp hq
+    exact ⟨smallq, hsmallq, hb⟩
+
+/-- An all-table, key-dependent resampling bound and an actual bad-query trace implication
+bound the event in the empty-cache random-oracle execution by its pathwise weighted budget.
+The key domain may be infinite. Queries may be adaptive, repeated, and out of order, and
+the bad predicate may inspect unqueried cells. Weights are probability charges. -/
+theorem prEvent_randomOracle_le_of_bad_queries_weighted [DecidableEq D]
+    [∀ d, Finite (R d)] [∀ d, Nonempty (R d)] [∀ d, SampleableType (R d)]
+    (oa : OracleComp (ofFn R) α) (error : D → ENNReal) (B : ENNReal)
+    (hbound : WorstCaseCostBound oa ⟨error⟩ B) (event : α → Prop)
+    (bad : D → (∀ d, R d) → Prop)
+    (hbad : ∀ t g, Pr{let u ← $ᵗ (R t)}[bad t (Function.update g t u)] ≤ error t)
+    (htrace : ∀ g, event (evalWithAnswerFn (QueryImpl.ofFn g) oa) →
+      ∃ q ∈ tableQueryLog oa g, bad q.1 g) :
+    Pr{let result ← (simulateQ randomOracle oa).run' ∅}[event result] ≤ B := by
+  classical
+  let S := queryKeys oa
+  have hS : AllQueriesSatisfy oa (· ∈ S) := allQueriesSatisfy_queryKeys oa
+  let small := restrictQueries S oa hS
+  let : ∀ d : S, Fintype (R d.val) := fun d => Fintype.ofFinite (R d.val)
+  let : Nonempty ((d : S) → R d.val) := ⟨fun d => Classical.arbitrary (R d.val)⟩
+  let : SampleableType ((d : S) → R d.val) := SampleableType.ofFintype _
+  have hrun : (simulateQ randomOracle small).run' ∅ =
+      (simulateQ randomOracle oa).run' ∅ := randomOracle_restrictQueries S oa hS ∅
+  rw [← hrun]
+  apply prEvent_randomOracle_le_of_bad_queries_weighted_finite small (fun t => error t.val) B
+    (restrictQueries_costBound S oa hS error B hbound) event
+    (fun t g => bad t.val (extendTable S g))
   · intro t g
     simp_rw [extendTable_update]
     exact hbad t.val (extendTable S g)
