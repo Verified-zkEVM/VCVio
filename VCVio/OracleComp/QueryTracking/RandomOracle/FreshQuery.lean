@@ -556,7 +556,7 @@ bound the event in the empty-cache random-oracle execution by its pathwise weigh
 The key domain may be infinite. Queries may be adaptive, repeated, and out of order, and
 the bad predicate may inspect unqueried cells. Weights are probability charges. -/
 theorem prEvent_randomOracle_le_of_bad_queries_weighted [DecidableEq D]
-    [∀ d, Finite (R d)] [∀ d, Nonempty (R d)] [∀ d, SampleableType (R d)]
+    [∀ d, SampleableType (R d)]
     (oa : OracleComp (ofFn R) α) (error : D → ENNReal) (B : ENNReal)
     (hbound : WorstCaseCostBound oa ⟨error⟩ B) (event : α → Prop)
     (bad : D → (∀ d, R d) → Prop)
