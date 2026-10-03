@@ -208,7 +208,7 @@ theorem fixedTableLoggedRun_hashQuery [DecidableEq D]
   ∑ t ∈ freshKeysOfLog log, error t
 
 /-- Expected actual distinct-query charge, including all returned failure branches. -/
-noncomputable def expectedFreshQueryCharge [DecidableEq D]
+@[expose] noncomputable def expectedFreshQueryCharge [DecidableEq D]
     [∀ d, SampleableType (R d)]
     (oa : OracleComp (unifSpec + ofFn R) α) (error : D → ENNReal) : ENNReal :=
   letI : MeasurableSpace ((α × QueryLog (ofFn R)) × (ofFn R).QueryCache) := ⊤
