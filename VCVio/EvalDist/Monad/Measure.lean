@@ -6,6 +6,7 @@ Authors: Devon Tuma
 
 module
 public import VCVio.EvalDist.Defs.Measure.Core
+public import VCVio.EvalDist.ProbabilityNotation
 public import VCVio.EvalDist.Monad.Support
 public import ToMathlib.MeasureTheory.Measure.IndependentDraws
 public import ToMathlib.MeasureTheory.Measure.Bounds
@@ -17,6 +18,7 @@ import ToMathlib.Probability.UniformOn
 The Giry composition laws transport measure-level independence to computation syntax.
 The general interchange theorem requires joint measurability; the three-draw law
 specializes to discrete intermediate results and leaves the final result space arbitrary.
+Inside an event, a draw with countable outputs commutes with any other draw.
 Uniform finite draws can be reindexed by a bijection before an arbitrary continuation.
 A bound on a scalar observation over the support bounds its expectation.
 -/
@@ -92,6 +94,17 @@ theorem evalDist_bind_bind_swap_of_countable [Countable α] [Countable β]
     𝒟[mx >>= fun a => my >>= fun b => f a b] =
       𝒟[my >>= fun b => mx >>= fun a => f a b] := by
   exact evalDist_bind_bind_swap mx my f Measurable.of_discrete
+
+/-- Independent draws commute inside an event when the first draw has a countable output type.
+The second output type is arbitrary and needs no measurable structure. -/
+theorem prEvent_bind_bind_swap_of_countable {m : Type → Type v} [Monad m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] {α β : Type} [Countable α] (mx : m α) (my : m β)
+    (p : α → β → Prop) :
+    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] := by
+  let _ : MeasurableSpace α := ⊤
+  let _ : MeasurableSpace β := ⊤
+  exact congrArg (· {True}) <| evalDist_bind_bind_swap mx my (fun a b ↦ pure (p a b))
+    (measurable_from_prod_countable_right fun _ ↦ Measurable.of_discrete)
 
 /-- Move the third independent discrete draw to the front of a computation. -/
 theorem evalDist_bind_bind_bind_rotate [DiscreteMeasurableSpace α]
