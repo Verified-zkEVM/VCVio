@@ -76,19 +76,6 @@ namespace QueryImpl
 variable {ι : Type u} [DecidableEq ι] {spec : OracleSpec ι} {m : Type u → Type v} [Monad m]
   [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m] {α : Type u}
 
-/-- A cached step settles its query at the value it returns. -/
-lemma snd_apply_of_mem_support_run_withCaching (so : QueryImpl spec m) {t : spec.Domain}
-    {cache : spec.QueryCache} {z : spec.Range t × spec.QueryCache}
-    (hz : z ∈ support ((so.withCaching t).run cache)) : z.2 t = some z.1 := by
-  cases ht : cache t with
-  | some u =>
-    rw [withCaching_run_some so ht, support_pure, Set.mem_singleton_iff] at hz
-    exact hz ▸ ht
-  | none =>
-    rw [withCaching_run_none so ht, support_map] at hz
-    obtain ⟨v, _, rfl⟩ := hz
-    exact QueryCache.cacheQuery_self cache t v
-
 /-- The final cache of a cached run extends the initial one. -/
 theorem le_snd_of_mem_support_run_simulateQ_withCaching (so : QueryImpl spec m)
     (oa : OracleComp spec α) {cache : spec.QueryCache} {z : α × spec.QueryCache}
@@ -116,7 +103,7 @@ theorem simulateQ_toPartialImpl_snd_of_mem_support_run_simulateQ_withCaching (so
     obtain ⟨⟨u, c₁⟩, h₁, h₂⟩ := hz
     rw [simulateQ_bind, simulateQ_spec_query, QueryCache.toPartialImpl_apply,
       le_snd_of_mem_support_run_simulateQ_withCaching so (k u) h₂
-        (snd_apply_of_mem_support_run_withCaching so h₁)]
+        (withCaching_run_caches so t cache _ h₁)]
     exact ih u h₂
 
 end QueryImpl
@@ -163,8 +150,8 @@ theorem simulateQ_toPartialImpl_snd_fst_of_mem_support_run_romImpl (oa : OracleC
         liftM ((unifSpec + (spec₁ + spec₂)).query (.inr (.inl t))) from rfl,
       simulateQ_spec_query] at h₁
     have hc₁ : c₁ (.inl t) = some u :=
-      QueryImpl.snd_apply_of_mem_support_run_withCaching (t := .inl t)
-        (uniformSampleImpl (spec := spec₁ + spec₂)) (z := (u, c₁)) (cache := cache) h₁
+      QueryImpl.withCaching_run_caches (uniformSampleImpl (spec := spec₁ + spec₂)) (.inl t)
+        cache (u, c₁) h₁
     have hle := le_snd_of_mem_support_run_unifFwdImpl_add_withCaching uniformSampleImpl _ h₂
     rw [simulateQ_bind, simulateQ_spec_query, QueryCache.toPartialImpl_apply,
       QueryCache.fst_apply, hle hc₁]
