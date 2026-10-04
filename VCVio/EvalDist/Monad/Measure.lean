@@ -18,6 +18,7 @@ The Giry composition laws transport measure-level independence to computation sy
 The general interchange theorem requires joint measurability; the three-draw law
 specializes to discrete intermediate results and leaves the final result space arbitrary.
 Uniform finite draws can be reindexed by a bijection before an arbitrary continuation.
+A bound on a scalar observation over the support bounds its expectation.
 -/
 
 public section
@@ -189,3 +190,17 @@ theorem apply_eq_zero_of_disjoint_support (mx : m α) {event : Set α}
     ae_of_forall_mem_support mx (fun x ↦ x ∉ event) hevent.compl h
 
 end evalDist
+
+/-! ## Expectations bounded on the support -/
+
+/-- A bound on a scalar observation at every output in the support bounds its expectation. -/
+theorem lintegral_id_evalDist_map_le_of_le_of_mem_support {m : Type → Type v} [Monad m]
+    [LawfulMonad m] [MonadAttach m] [WeaklyLawfulMonadAttach m] [EvalDistSemantics m]
+    [LawfulEvalDistSemantics m] {α : Type} (mx : m α) {f : α → ENNReal} {c : ENNReal}
+    (hf : ∀ x ∈ support mx, f x ≤ c) : ∫⁻ r, r ∂𝒟[f <$> mx] ≤ c := by
+  let _ : MeasurableSpace α := ⊤
+  rw [lintegral_id_evalDist_map]
+  calc ∫⁻ x, f x ∂𝒟[mx] ≤ ∫⁻ _, c ∂𝒟[mx] :=
+        lintegral_mono_ae (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hf)
+    _ = c * 𝒟[mx] Set.univ := lintegral_const c
+    _ ≤ c := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)

@@ -152,6 +152,20 @@ theorem run_liftTarget_map_eq {ι : Type _} {spec : OracleSpec ι}
       ((impl.liftTarget (StateT σ₂ m)) t).run (f s) := by
   simp [Functor.map_map]
 
+/-- Running `(outer.mapStateTBase inner).flattenStateT t` from `(s, q)` simulates
+`(inner t).run s` with `outer` from state `q`, then maps
+`((u, s'), q')` to `(u, (s', q'))`. -/
+@[simp, grind =] theorem flattenStateT_mapStateTBase_apply_run {ι₀ ι₁ : Type _}
+    {spec₀ : OracleSpec ι₀} {spec₁ : OracleSpec ι₁}
+    {m : Type u → Type v} [Monad m] {σ τ : Type u}
+    (outer : QueryImpl spec₁ (StateT τ m))
+    (inner : QueryImpl spec₀ (StateT σ (OracleComp spec₁)))
+    (t : spec₀.Domain) (s : σ) (q : τ) :
+    ((outer.mapStateTBase inner).flattenStateT t).run (s, q) =
+      (fun y : (spec₀.Range t × σ) × τ => (y.1.1, (y.1.2, y.2))) <$>
+        (simulateQ outer ((inner t).run s)).run q :=
+  rfl
+
 /-- Indexed version of `QueryImpl.parallelStateT`. Note that `m` cannot vary with `t`.
 dtumad: The `Function.update` thing is nice but forces `DecidableEq`. -/
 @[expose]

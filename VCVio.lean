@@ -165,6 +165,7 @@ public import VCVio.CryptoFoundations.SymmEncAlg.Measure
 public import VCVio.CryptoFoundations.SymmEncAlg.MeasureCompatibility
 public import VCVio.CryptoFoundations.SymmEncAlg.OneTimeINDCPA
 public import VCVio.CryptoFoundations.TweakableHash
+public import VCVio.CryptoFoundations.UniversalHash
 public import VCVio.EvalDist.BitVec
 public import VCVio.EvalDist.BitVec.Measure
 public import VCVio.EvalDist.Bool
@@ -205,6 +206,7 @@ public import VCVio.EvalDist.MeasureTVDist.Bind
 public import VCVio.EvalDist.Monad.Basic
 public import VCVio.EvalDist.Monad.Bool
 public import VCVio.EvalDist.Monad.Branch
+public import VCVio.EvalDist.Monad.DependentTable
 public import VCVio.EvalDist.Monad.Disagreement
 public import VCVio.EvalDist.Monad.Disagreement.Measure
 public import VCVio.EvalDist.Monad.Discard
@@ -301,6 +303,7 @@ public import VCVio.OracleComp.QueryTracking.CostModel
 public import VCVio.OracleComp.QueryTracking.CountingOracle
 public import VCVio.OracleComp.QueryTracking.CountingOracle.Core
 public import VCVio.OracleComp.QueryTracking.Enforcement
+public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
 public import VCVio.OracleComp.QueryTracking.HandlerSimp
 public import VCVio.OracleComp.QueryTracking.Iter
 public import VCVio.OracleComp.QueryTracking.ListCache
@@ -319,9 +322,11 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.Basic
 public import VCVio.OracleComp.QueryTracking.RandomOracle.CachePartial
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.DeferredSampling
+public import VCVio.OracleComp.QueryTracking.RandomOracle.DependentTable
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Eager
 public import VCVio.OracleComp.QueryTracking.RandomOracle.EagerTable
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
+public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Joint
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
