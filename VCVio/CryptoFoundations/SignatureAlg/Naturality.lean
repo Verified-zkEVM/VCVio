@@ -28,7 +28,8 @@ with a left inverse. `SignatureAlg.Tagged` uses this to re-read an experiment wi
 tagged by the party that issued it.
 
 `UnforgeableAdversary` records only its program, not the scheme it indexes, so `mapOracles`
-produces an adversary for any scheme over `spec'`; the target scheme is fixed by the context.
+produces an adversary for any scheme over `spec'`, whatever its secret-key type; the target scheme
+is fixed by the context.
 -/
 
 public section
@@ -38,7 +39,7 @@ open OracleSpec OracleComp
 namespace SignatureAlg
 
 variable {ι ι' ι'' : Type} {spec : OracleSpec ι} {spec' : OracleSpec ι'}
-  {spec'' : OracleSpec ι''} {M PK SK S : Type}
+  {spec'' : OracleSpec ι''} {M PK SK SK' SK'' S : Type}
 
 /-! ## Mapping a scheme along composed interpretations -/
 
@@ -57,18 +58,20 @@ lemma map_simulateQ'_id' (sigAlg : SignatureAlg (OracleComp spec) M PK SK S) :
 /-! ## Interpreting the oracles of an adversary -/
 
 /-- The adversary whose ambient queries are answered through `G` and whose signing queries are
-passed on unchanged. It is an adversary against any scheme `sigAlg'` over `spec'`. -/
+passed on unchanged. It is an adversary against any scheme `sigAlg'` over `spec'` with the same
+messages, public keys and signatures; the secret keys may differ, since the adversary never sees
+one. -/
 def UnforgeableAdversary.mapOracles (G : QueryImpl spec (OracleComp spec'))
     {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-    {sigAlg' : SignatureAlg (OracleComp spec') M PK SK S}
+    {sigAlg' : SignatureAlg (OracleComp spec') M PK SK' S}
     (adv : UnforgeableAdversary sigAlg) : UnforgeableAdversary sigAlg' where
   main pk := simulateQ (G.addLift (QueryImpl.id' (M →ₒ S))) (adv.main pk)
 
 namespace UnforgeableAdversary
 
 variable {sigAlg : SignatureAlg (OracleComp spec) M PK SK S}
-  {sigAlg' : SignatureAlg (OracleComp spec') M PK SK S}
-  {sigAlg'' : SignatureAlg (OracleComp spec'') M PK SK S}
+  {sigAlg' : SignatureAlg (OracleComp spec') M PK SK' S}
+  {sigAlg'' : SignatureAlg (OracleComp spec'') M PK SK'' S}
 
 @[simp]
 lemma mapOracles_main (G : QueryImpl spec (OracleComp spec')) (adv : UnforgeableAdversary sigAlg)
@@ -97,10 +100,11 @@ lemma mapOracles_mapOracles (G : QueryImpl spec (OracleComp spec'))
   funext pk
   rw [← QueryImpl.simulateQ_compose, key]
 
-/-- Interpreting the oracles of an adversary through the identity handler leaves it unchanged. -/
-@[simp]
-lemma mapOracles_id' (adv : UnforgeableAdversary sigAlg) :
-    adv.mapOracles (QueryImpl.id' spec) = adv := by
+/-- Interpreting the oracles of an adversary through the identity handler gives the same program,
+as an adversary against any scheme over `spec`. -/
+lemma mapOracles_id'_eq_mk {sigAlg₁ : SignatureAlg (OracleComp spec) M PK SK' S}
+    (adv : UnforgeableAdversary sigAlg) :
+    adv.mapOracles (QueryImpl.id' spec) (sigAlg' := sigAlg₁) = ⟨adv.main⟩ := by
   obtain ⟨main⟩ := adv
   have key : ((QueryImpl.id' spec).addLift (QueryImpl.id' (M →ₒ S)) :
       QueryImpl _ (OracleComp (spec + (M →ₒ S)))) = QueryImpl.id' (spec + (M →ₒ S)) := by
@@ -109,6 +113,12 @@ lemma mapOracles_id' (adv : UnforgeableAdversary sigAlg) :
   simp only [mk.injEq]
   funext pk
   rw [key, simulateQ_id']
+
+/-- Interpreting the oracles of an adversary through the identity handler leaves it unchanged. -/
+@[simp]
+lemma mapOracles_id' (adv : UnforgeableAdversary sigAlg) :
+    adv.mapOracles (QueryImpl.id' spec) = adv :=
+  mapOracles_id'_eq_mk adv
 
 end UnforgeableAdversary
 

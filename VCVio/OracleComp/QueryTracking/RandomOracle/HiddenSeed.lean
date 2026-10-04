@@ -79,6 +79,10 @@ game's output, split state and auxiliary state by the same event of the extended
   flag probability of the flagged ideal game.
 - `SecretEncoding.agreeUntilBad_coupledImpl_flaggedIdealImpl`: the coupled real game and the
   flagged ideal game agree until the flag.
+- `SecretEncoding.deriveImpl_comp_withDerivationsLift` and
+  `SecretEncoding.simulateQ_deriveImpl_liftM`: `E.deriveImpl s` undoes the lift of sampling and
+  public queries into the derivation world (`OracleSpec.withDerivationsLift`) and the lift of a
+  probabilistic computation.
 - `SecretEncoding.map_run_simulateQ_coupledImpl` and
   `SecretEncoding.map_run_simulateQ_flaggedIdealImpl`: the coupled and flagged games project onto
   the real and ideal games.
@@ -96,6 +100,12 @@ variable {ι : Type} (pub : OracleSpec ι) (X R : Type)
 /-- Programs with uniform sampling, a public random oracle `pub`, and derivation queries
 `X →ₒ R`. -/
 abbrev withDerivations : OracleSpec ((ℕ ⊕ ι) ⊕ X) := unifSpec + pub + (X →ₒ R)
+
+/-- The handler forwarding each sampling and public query unchanged into
+`pub.withDerivations X R`. -/
+@[expose] def withDerivationsLift :
+    QueryImpl (unifSpec + pub) (OracleComp (pub.withDerivations X R)) :=
+  fun t => (pub.withDerivations X R).query (.inl t)
 
 end OracleSpec
 
@@ -221,6 +231,26 @@ variable [∀ t, SampleableType (pub.Range t)]
     QueryImpl (pub.withDerivations X R) (OracleComp (unifSpec + pub)) := fun
   | .inl t => (unifSpec + pub).query t
   | .inr x => cast (E.range_eq s x) <$> (unifSpec + pub).query (.inr (E.enc s x))
+
+omit [DecidableEq ι] [∀ t, SampleableType (pub.Range t)] in
+/-- Lifting sampling and public queries into the derivation world and then answering through
+`E.deriveImpl s` is the identity handler: a lifted program makes no derivation query. -/
+theorem deriveImpl_comp_withDerivationsLift (s : S) :
+    E.deriveImpl s ∘ₛ pub.withDerivationsLift X R = QueryImpl.id' (unifSpec + pub) := by
+  funext t
+  rcases t with n | t <;> rfl
+
+omit [DecidableEq ι] [∀ t, SampleableType (pub.Range t)] in
+/-- Answering a lifted probabilistic computation through `E.deriveImpl s` gives the same
+computation, lifted into sampling and public queries. -/
+theorem simulateQ_deriveImpl_liftM (s : S) {α : Type} (oa : ProbComp α) :
+    simulateQ (E.deriveImpl s) (liftM oa : OracleComp (pub.withDerivations X R) α) =
+      (liftM oa : OracleComp (unifSpec + pub) α) := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp only [liftM_pure, simulateQ_pure]
+  | query_bind t k ih =>
+    simp only [liftM_bind, simulateQ_bind, ih]
+    rfl
 
 /-- The real game: derivations and public queries share one lazily sampled public cache. -/
 @[expose] noncomputable def realImpl (s : S) :
