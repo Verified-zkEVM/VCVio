@@ -7,6 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.OracleComp.SimSemantics.StateT.PreservesInv
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 public import VCVio.EvalDist.ProbabilityBounds
 
 /-!
@@ -40,6 +41,12 @@ invariant of the run whose bad mass it charges; the equalities need both.
   `QueryImpl.AgreeUntilBad.prEvent_simulateQ_run_le_add_bad_right`: an event of the first run
   exceeds the same event of the second by at most the bad mass of the first, respectively the
   second, run.
+- `QueryImpl.AgreeUntilBad.extendState`: agreement until `bad` under a shared passive extension.
+
+Both agreement until `bad` and preservation of `bad` survive extending the two handlers by the
+same passive auxiliary state (`QueryImpl.AgreeUntilBad.extendState`,
+`QueryImpl.PreservesInv.extendState`), with `bad` read on the base state; bookkeeping such as
+counters or logs can therefore be added to both runs before applying the bounds.
 
 The same idea, for handlers into `OracleComp spec` and with the output-marginal total-variation
 distance, is `OracleComp.ProgramLogic.Relational.identical_until_bad_with_flag`
@@ -86,6 +93,15 @@ theorem of_run_eq_or_bad (h : ∀ t s, ¬bad s → (impl₁ t).run s = (impl₂ 
 theorem of_run_eq (h : ∀ t s, ¬bad s → (impl₁ t).run s = (impl₂ t).run s) :
     AgreeUntilBad impl₁ impl₂ bad :=
   of_run_eq_or_bad fun t s hs ↦ .inl (h t s hs)
+
+/-- Handlers that agree until `bad` still agree until `bad`, read on the base state, after both
+are extended by the same passive auxiliary state. -/
+theorem extendState {Q : Type} (h : AgreeUntilBad impl₁ impl₂ bad)
+    (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q) :
+    AgreeUntilBad (impl₁.extendState aux) (impl₂.extendState aux) fun st ↦ bad st.1 := by
+  intro t st hst P
+  simp only [QueryImpl.extendState_apply, bind_assoc, pure_bind]
+  exact h t st.1 hst fun z ↦ P (z.1, (z.2, aux t st.1 z.1 z.2 st.2))
 
 /-- If two handlers agree until `bad` and the first preserves `bad`, an event conjoined with a
 non-bad final state of the first run has at most the mass of the event in the second run. -/
@@ -178,5 +194,17 @@ theorem prEvent_simulateQ_run_le_add_bad_right (h : AgreeUntilBad impl₁ impl�
   rw [prEvent_true_eq_one, prEvent_true_eq_one]
 
 end AgreeUntilBad
+
+/-- A handler preserving an invariant still preserves it, read on the base state, after being
+extended by a passive auxiliary state. -/
+theorem PreservesInv.extendState {Q : Type} {impl : QueryImpl spec (StateT σ ProbComp)}
+    {inv : σ → Prop} (h : PreservesInv impl inv)
+    (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q) :
+    PreservesInv (impl.extendState aux) fun st ↦ inv st.1 := by
+  intro t st hst z hz
+  rw [extendState_apply, mem_support_bind_iff] at hz
+  obtain ⟨w, hw, hz⟩ := hz
+  rw [support_pure, Set.mem_singleton_iff] at hz
+  exact hz ▸ h t st.1 hst w hw
 
 end QueryImpl
