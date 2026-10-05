@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.ComponentTraces
-public import HashSig.SLHDSA.Security.KeyDiscipline
+public import HashSig.SLHDSA.Security.HonestEntryUnique
 
 /-!
 # The key discipline at the FIPS SHA-2 bundles
@@ -28,7 +28,8 @@ signature.
 
 The statements below also pin the resulting discharges: key separation at every FIPS SHA-2
 bundle, and the key discipline at every FIPS 205 parameter set, at the limited SHA2-128-24 profile
-and at the compatibility bundle.
+and at the compatibility bundle. At every FIPS 205 parameter set an honest entry exists, and the
+hypotheses of the honest-input uniqueness theorem `honestEntry_input_unique` are discharged.
 -/
 
 public section
@@ -64,18 +65,6 @@ theorem sha2AdrsKey_wotsPrf_layer300_ne_zero :
 /-- The fallback key of a type at most `4` is the all-zero string with `7` at the type byte. -/
 theorem sha2FallbackKey_zero_toList :
     (sha2FallbackKey 0).toList = List.replicate 9 0 ++ [7] ++ List.replicate 12 0 := by decide
-
-/-- Every address in the union ledger carries the address facts. -/
-theorem addressFacts_of_mem_constructionAddresses {vp : ValidatedParams}
-    (hb : CanonicalAddressBounds vp.params) {a : Adrs} (ha : a ∈ constructionAddresses vp) :
-    AddressFacts vp a := by
-  rcases (mem_constructionAddresses_iff a).1 ha with h | h | h | h | h | h
-  · exact addressFacts_forsLeafAddresses vp hb a h
-  · exact addressFacts_forsTreeAddresses vp hb a h
-  · exact addressFacts_forsRootAddresses vp hb a h
-  · exact addressFacts_wotsStepAddresses vp hb a h
-  · exact addressFacts_wotsPkAddresses vp hb a h
-  · exact addressFacts_xmssNodeAddresses vp hb a h
 
 /-- Under the compressed `ADRSc` widths, the tweak of every construction-reachable `thash` query at
 FIPS SHA-2 is the checked `ADRSc` of a ledger address. -/
@@ -147,5 +136,41 @@ example : (sha2Primitives slhdsaSha2_128_24).core.KeyDiscipline
 example : shaPrimitives.core.KeyDiscipline
     (LimitedParameterSet.validatedParams .SLHDSA_SHA2_128_24) :=
   keyDiscipline_shaPrimitives
+
+/-- At every FIPS 205 parameter set an honest entry exists: a FORS leaf of the first tree at the
+first bottom position, over a provider that returns `y` everywhere, for every cache. -/
+example (ps : FipsParameterSet) (c : PublicHash.Cache (approvedPrimitives ps).core)
+    (pk : (approvedPrimitives ps).core.PkSeed) (y : (approvedPrimitives ps).core.Y) :
+    let pos : BottomPosition ps.validatedParams := ⟨⟨0, by positivity⟩, ⟨0, by positivity⟩⟩
+    HonestEntry (vp := ps.validatedParams) (fun _ => pure y) pk c
+      (.thash pk ((approvedPrimitives ps).core.adrsToKey (forsNodeAdrs pos.forsAdrs 0 0)) [y]) :=
+  .forsLeaf _ 0 y
+    (forsLeafAdrs_mem_constructionAddresses _ ⟨0, ps.validatedParams.valid.k_pos⟩
+      (Nat.zero_div _))
+    (by rw [simulateQ_pure]; rfl)
+
+/-- At every FIPS 205 parameter set an oracle key carries at most one honest input: the key
+injectivity and address-width hypotheses are discharged by the approved bundle. -/
+example (ps : FipsParameterSet)
+    {secret : Adrs → OracleComp (publicHashSpec (approvedPrimitives ps).core)
+      (approvedPrimitives ps).core.Y}
+    {pk : (approvedPrimitives ps).core.PkSeed} {c : PublicHash.Cache (approvedPrimitives ps).core}
+    {key : (approvedPrimitives ps).core.AdrsKey} {xs xs' : List (approvedPrimitives ps).core.Y}
+    (h : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs))
+    (h' : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs')) :
+    xs = xs' :=
+  honestEntry_input_unique (keyInjective_approvedPrimitives ps)
+    (fipsApprovedAddressBounds ps).toCanonicalAddressBounds h h'
+
+/-- The same through the key discipline of the approved bundle. -/
+example (ps : FipsParameterSet)
+    {secret : Adrs → OracleComp (publicHashSpec (approvedPrimitives ps).core)
+      (approvedPrimitives ps).core.Y}
+    {pk : (approvedPrimitives ps).core.PkSeed} {c : PublicHash.Cache (approvedPrimitives ps).core}
+    {key : (approvedPrimitives ps).core.AdrsKey} {xs xs' : List (approvedPrimitives ps).core.Y}
+    (h : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs))
+    (h' : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs')) :
+    xs = xs' :=
+  (keyDiscipline_approvedPrimitives ps).honestEntry_input_unique h h'
 
 end SLHDSA.KeyDisciplineTest

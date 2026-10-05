@@ -227,9 +227,10 @@ WOTS+ hash step at hash address `t < w - 1` on chain `i < len` of a reachable in
 of a reachable instance at global index `t < k * 2 ^ a`; a FORS node at height `1 ≤ h ≤ a` and
 index `i < k * 2 ^ (a - h)`; the root compression of a reachable FORS instance.  The range is on
 addresses: where the key encoding `core.adrsToKey` is not injective on these addresses, one key
-can still carry several honest inputs.  In `forsNode`, `hh : 0 < h` keeps a two-input node off the
-key of a FORS leaf, since the height-0 addresses of a FORS tree are ledger addresses (its leaves);
-in `xmssNode` the bound `0 < h` already follows from `hmem`. -/
+can still carry several honest inputs; where it is injective on the in-range addresses, one key
+carries at most one (`honestEntry_input_unique`).  In `forsNode`, `hh : 0 < h` keeps a two-input
+node off the key of a FORS leaf, since the height-0 addresses of a FORS tree are ledger addresses
+(its leaves); in `xmssNode` the bound `0 < h` already follows from `hmem`. -/
 inductive HonestEntry (secret : Adrs → OracleComp (publicHashSpec core) core.Y)
     (pk : core.PkSeed) (c : PublicHash.Cache core) : (publicHashSpec core).Domain → Prop
   | xmssNode (adrs : Adrs) (h i : ℕ) (l r : core.Y) (hh : 0 < h)
