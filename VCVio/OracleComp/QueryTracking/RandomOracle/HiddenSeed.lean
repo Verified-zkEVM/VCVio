@@ -62,6 +62,9 @@ derivation table) and its own previous value, but not the flag. The extended for
 `SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul` and
 `SecretEncoding.prEvent_coupledImpl_extendState_le_add` bound an event of the extended coupled
 game's output, split state and auxiliary state by the same event of the extended ideal game.
+Forgetting the auxiliary state and merging, the extended coupled game is the real game
+(`SecretEncoding.map_run_simulateQ_coupledImpl_extendState`), so an event of the real game is an
+event of the extended coupled game.
 
 ## Main statements
 
@@ -87,7 +90,8 @@ game's output, split state and auxiliary state by the same event of the extended
   query of a budget whose predicate no uniform-sampling query satisfies.
 - `SecretEncoding.map_run_simulateQ_coupledImpl` and
   `SecretEncoding.map_run_simulateQ_flaggedIdealImpl`: the coupled and flagged games project onto
-  the real and ideal games.
+  the real and ideal games; `SecretEncoding.map_run_simulateQ_coupledImpl_extendState` projects
+  the coupled game extended by an auxiliary state onto the real game.
 -/
 
 public section
@@ -375,6 +379,20 @@ theorem map_run_simulateQ_coupledImpl (s : S) {α : Type}
       refine bind_congr fun u ↦ ?_
       rw [← merge_cacheQuery_table]
       rfl
+
+/-- Forgetting a passive auxiliary state and the flag and merging the split state turns the
+extended coupled game into the real one. -/
+theorem map_run_simulateQ_coupledImpl_extendState (s : S) {Q : Type}
+    (aux : (t : (pub.withDerivations X R).Domain) → SplitCache pub X R × Bool →
+      (pub.withDerivations X R).Range t → SplitCache pub X R × Bool → Q → Q)
+    {α : Type} (oa : OracleComp (pub.withDerivations X R) α) (st : SplitCache pub X R × Bool)
+    (r : Q) :
+    Prod.map id (fun st' : (SplitCache pub X R × Bool) × Q ↦ E.merge s st'.1.1) <$>
+        (simulateQ ((E.coupledImpl s).extendState aux) oa).run (st, r) =
+      (simulateQ (E.realImpl s) oa).run (E.merge s st.1) := by
+  rw [← E.map_run_simulateQ_coupledImpl s oa st,
+    ← extendState_run_proj_eq (E.coupledImpl s) aux oa st r, Functor.map_map]
+  rfl
 
 /-! ## The ideal game and its flagged form -/
 

@@ -153,6 +153,25 @@ theorem prEvent_uniformSample_eq_singleton {α : Type} [SampleableType α] [_roo
   let : MeasurableSpace α := ⊤
   rw [prEvent_eq_evalDist_singleton, evalDist_uniformSample_singleton]
 
+/-- The probability of drawing one particular element uniformly, with the `Nat.card`
+denominator that the `Finite` yielded by `SampleableType` supports. -/
+theorem prEvent_uniformSample_eq_singleton_natCard {α : Type} [SampleableType α] (a : α) :
+    Pr{let x ← $ᵗ α}[x = a] = (Nat.card α : ℝ≥0∞)⁻¹ := by
+  let : _root_.Fintype α := Fintype.ofFinite α
+  rw [prEvent_uniformSample_eq_singleton, Nat.card_eq_fintype_card]
+
+/-- An injective image of a uniform sample takes any one value with probability at most the
+reciprocal of the cardinality of the sample space. -/
+theorem prEvent_uniformSample_apply_eq_le {α β : Type} [SampleableType α] {f : α → β}
+    (hf : Function.Injective f) (b : β) :
+    Pr{let x ← $ᵗ α}[f x = b] ≤ (Nat.card α : ℝ≥0∞)⁻¹ := by
+  by_cases h : ∃ a, f a = b
+  · obtain ⟨a, rfl⟩ := h
+    rw [← prEvent_uniformSample_eq_singleton_natCard a]
+    exact prEvent_mono _ _ _ fun _ hx ↦ hf hx
+  · rw [(prEvent_uniformSample_eq_zero_iff _).2 fun x hx ↦ h ⟨x, hx⟩]
+    exact zero_le
+
 section counting
 
 variable {α : Type} [SampleableType α] [_root_.Fintype α] (p : α → Prop) [DecidablePred p]
