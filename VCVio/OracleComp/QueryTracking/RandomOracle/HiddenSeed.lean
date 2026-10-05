@@ -75,6 +75,9 @@ derivation table) and its own previous value, but not the flag. The extended for
 `SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul` and
 `SecretEncoding.prEvent_coupledImpl_extendState_le_add` bound an event of the extended coupled
 game's output, split state and auxiliary state by the same event of the extended ideal game.
+The averaged form charges the count of the unextended ideal game. A passive auxiliary state does
+not change the count (`OracleComp.expectedSimulatedQueryCount_extendState`), so it is also the
+count of the extended ideal game, and bounds proved in that game share it.
 Forgetting the auxiliary state and merging, the extended coupled game is the real game
 (`SecretEncoding.map_run_simulateQ_coupledImpl_extendState`), so an event of the real game is an
 event of the extended coupled game.
@@ -90,7 +93,9 @@ event of the extended coupled game.
   game samples independently.
 - `SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul_expectedSimulatedQueryCount`: the
   same bound for the coupled and ideal games extended by a shared passive auxiliary state; the
-  count is of the unextended ideal game.
+  count is of the unextended ideal game, which is also the count of every extension of it
+  (`OracleComp.expectedSimulatedQueryCount_extendState`), so bounds proved in an extended ideal
+  game share it.
 - `SecretEncoding.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount`: the flag bound
   `ε` times the expected count.
 - `SecretEncoding.prEvent_realImpl_le_add_mul`, `SecretEncoding.prEvent_coupledImpl_le_add_mul`,
@@ -691,16 +696,6 @@ theorem lintegral_encard_inter_setOf_isSome_le_expectedSimulatedQueryCount {D : 
 
 /-! ## Averaging over the secret -/
 
-/-- Under a query budget `q`, `ε` times the expected number of charged queries of the ideal game
-is at most `q * ε`. -/
-private theorem mul_expectedSimulatedQueryCount_idealImpl_le
-    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p] {α : Type}
-    {oa : OracleComp (pub.withDerivations X R) α} {q : ℕ} (h : IsQueryBoundP oa p q) (ε : ℝ≥0∞) :
-    ε * expectedSimulatedQueryCount (idealImpl pub X R) p oa (∅, ∅) ≤ q * ε := by
-  rw [mul_comm]
-  gcongr
-  exact expectedSimulatedQueryCount_le_of_isQueryBoundP _ p oa _ q h
-
 /-- The flagged ideal game run under a secret drawn from `ms` raises its flag with probability at
 most `ε` times the expected number of `p`-queries of the ideal game, where `ε` bounds, for every
 public point, the chance that it encodes some derivation under the secret, and `p` holds at every
@@ -780,7 +775,7 @@ theorem prEvent_flaggedIdealImpl_le_mul {ms : ProbComp S} {ε : ℝ≥0∞}
       let z ← (simulateQ (E.flaggedIdealImpl s) oa).run ((∅, ∅), false)}[z.2.2 = true] ≤
       q * ε :=
   (E.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount hε hp oa).trans <|
-    mul_expectedSimulatedQueryCount_idealImpl_le h ε
+    mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 /-- Coupled real game against the ideal game, for a secret drawn from `ms`: an event of the secret
 and of the coupled game's output and split state, with the flag forgotten, is at most the same
@@ -822,7 +817,7 @@ theorem prEvent_coupledImpl_le_add_mul {ms : ProbComp S} {ε : ℝ≥0∞}
         q * ε :=
   (E.prEvent_coupledImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa P).trans <|
     add_le_add le_rfl <|
-      mul_expectedSimulatedQueryCount_idealImpl_le h ε
+      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 /-- Coupled real game against the ideal game, both extended by the same passive auxiliary state,
 for a secret drawn from `ms`: an event of the secret and of the extended coupled game's output,
@@ -881,7 +876,7 @@ theorem prEvent_coupledImpl_extendState_le_add_mul {Q : Type} (r₀ : Q)
         P s z] + q * ε :=
   (E.prEvent_coupledImpl_extendState_le_add_mul_expectedSimulatedQueryCount r₀ aux hε hp oa
     P).trans <| add_le_add le_rfl <|
-      mul_expectedSimulatedQueryCount_idealImpl_le h ε
+      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 /-- Real game against the ideal game, for a secret drawn from `ms`: an event of the secret and of
 the real game is at most the event, read on the merged cache, in the ideal game, plus `ε` times
@@ -923,7 +918,7 @@ theorem prEvent_realImpl_le_add_mul {ms : ProbComp S} {ε : ℝ≥0∞}
         q * ε :=
   (E.prEvent_realImpl_le_add_mul_expectedSimulatedQueryCount hε hp oa P).trans <|
     add_le_add le_rfl <|
-      mul_expectedSimulatedQueryCount_idealImpl_le h ε
+      mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ p h _ ε
 
 end SecretEncoding
 

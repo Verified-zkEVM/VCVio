@@ -10,6 +10,7 @@ public import VCVio.OracleComp.QueryTracking.QueryBound
 public import VCVio.OracleComp.ProbComp
 public import VCVio.EvalDist.Monad.Measure
 public import VCVio.OracleComp.EvalDist.MeasureSpec
+public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
 
 /-!
 # Expected charged-query count of a simulated computation
@@ -27,12 +28,16 @@ instance on the state type, the output type or the query ranges.
 ## Main results
 
 * `expectedSimulatedQueryCount_le_of_isQueryBoundP`: a pathwise bound `IsQueryBoundP oa charged q`
-  bounds the expected count by `q` under every implementation and from every initial state.
+  bounds the expected count by `q` under every implementation and from every initial state;
+  `mul_expectedSimulatedQueryCount_le_of_isQueryBoundP` is its form for a loss `ε` per query.
 * `expectedSimulatedQueryCount_bind`: the expected count of a bind is the count of its head plus
   the expected count of its continuation over the head's interpreted run.
 * `lintegral_resource_le_add_expectedSimulatedQueryCount`: a resource on the state that grows by
   at most one on each charged step and not at all on an uncharged one has expected final value at
   most its initial value plus the expected count.
+* `expectedSimulatedQueryCount_extendState`: extending the implementation by a passive auxiliary
+  state (`QueryImpl.extendState`) does not change the expected count, so a count of the extended
+  implementation is the count of the base one.
 * `expectedSimulatedQueryCount_mono` and `expectedSimulatedQueryCount_or_of_disjoint`:
   monotonicity in the charged predicate, and additivity over disjoint charged predicates.
 
@@ -126,6 +131,15 @@ theorem expectedSimulatedQueryCount_le_of_isQueryBoundP (oa : OracleComp spec α
     · simp only [ht, ↓reduceIte, zero_add] at hq ⊢
       exact lintegral_id_evalDist_map_le_of_le _ fun z => ih z.1 z.2 q (hq.2 z.1)
 
+/-- Under a pathwise bound of `q` charged queries on `oa`, `ε` times its expected charged-query
+count under any stateful implementation and from any initial state is at most `q * ε`. -/
+theorem mul_expectedSimulatedQueryCount_le_of_isQueryBoundP {oa : OracleComp spec α} {q : ℕ}
+    (hq : oa.IsQueryBoundP charged q) (s : σ) (ε : ℝ≥0∞) :
+    ε * expectedSimulatedQueryCount so charged oa s ≤ q * ε := by
+  rw [mul_comm]
+  gcongr
+  exact expectedSimulatedQueryCount_le_of_isQueryBoundP so charged oa s q hq
+
 /-- The expected charged-query count is monotone in the charged predicate. -/
 theorem expectedSimulatedQueryCount_mono {left right : spec.Domain → Prop} [DecidablePred left]
     [DecidablePred right] (hsub : ∀ t, left t → right t) (oa : OracleComp spec α) (s : σ) :
@@ -164,6 +178,25 @@ theorem expectedSimulatedQueryCount_map (f : α → β) (oa : OracleComp spec α
   rw [map_eq_bind_pure_comp, expectedSimulatedQueryCount_bind]
   simp only [Function.comp_apply, expectedSimulatedQueryCount_pure,
     lintegral_id_evalDist_map_zero, add_zero]
+
+omit [LawfulEvalDistSemantics m] in
+/-- Extending the implementation by a passive auxiliary state does not change the expected
+charged-query count: under `so.extendState aux`, from any auxiliary value `r`, it is the count
+under `so` from the base state. -/
+theorem expectedSimulatedQueryCount_extendState {Q : Type}
+    (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q) (oa : OracleComp spec α) (s : σ)
+    (r : Q) :
+    expectedSimulatedQueryCount (so.extendState aux) charged oa (s, r) =
+      expectedSimulatedQueryCount so charged oa s := by
+  induction oa using OracleComp.inductionOn generalizing s r with
+  | pure x => simp only [expectedSimulatedQueryCount_pure]
+  | query_bind t k ih =>
+    rw [expectedSimulatedQueryCount_query_bind, expectedSimulatedQueryCount_query_bind,
+      QueryImpl.extendState_apply]
+    congr 1
+    simp only [map_bind, map_pure, ih]
+    rw [map_eq_bind_pure_comp]
+    rfl
 
 /-- A resource on the state that grows by at most one on each interpreted charged step, and not
 at all on an uncharged one, has expected value on the final state of the interpreted run at most

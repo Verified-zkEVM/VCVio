@@ -20,7 +20,10 @@ charged public query, one free public query and one derivation query.
 A secret `s : Bool` hiding a single derivation at the public point `s` of a random oracle on
 `Bool` shows that the flag bound `q * ε` is attained. Each public point is encoded under one of
 the two secrets (`ε = 2⁻¹`), and a single public query at `true` (`q = 1`) raises the flag
-exactly under the secret `true`, so with probability `2⁻¹ = q * ε`.
+exactly under the secret `true`, so with probability `2⁻¹ = q * ε`. That program makes one
+public query on every run, so its expected count is `1` and the flag bound `ε` times the expected
+count is attained as well. That bound needs no query budget: it applies as stated to a program
+that makes its public query only on one outcome of a coin.
 -/
 
 public section
@@ -162,5 +165,35 @@ example :
       (1 : ℕ) * 2⁻¹ :=
   E.prEvent_flaggedIdealImpl_le_mul prEvent_mem_range_enc_le (fun _ _ ↦ trivial)
     isQueryBoundP_prog
+
+/-- The expected number of public queries of the program is `1`, so the flag bound `ε` times the
+expected count gives `2⁻¹`, which by `prEvent_flaggedIdealImpl_eq` holds with equality. -/
+example :
+    Pr{
+      let s ← $ᵗ Bool
+      let z ← (simulateQ (E.flaggedIdealImpl s) prog).run ((∅, ∅), false)}[z.2.2 = true] ≤
+      2⁻¹ := by
+  have h := E.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount
+    prEvent_mem_range_enc_le (p := IsPub) (fun _ _ ↦ trivial) prog
+  have hc : expectedSimulatedQueryCount (SecretEncoding.idealImpl (Bool →ₒ Bool) Unit Bool)
+      IsPub prog (∅, ∅) = 1 := by
+    simp only [prog, expectedSimulatedQueryCount_query]
+    rfl
+  rwa [hc, mul_one] at h
+
+/-- A program that makes its public query only on one outcome of a fair coin. -/
+def progCoin : OracleComp spec Bool := do
+  let b : Fin 2 ← liftM (spec.query (.inl (.inl 1)))
+  if b = 0 then liftM (spec.query (.inl (.inr true))) else pure true
+
+/-- The flag bound `ε` times the expected count needs no query budget. -/
+example :
+    Pr{
+      let s ← $ᵗ Bool
+      let z ← (simulateQ (E.flaggedIdealImpl s) progCoin).run ((∅, ∅), false)}[z.2.2 = true] ≤
+      2⁻¹ * expectedSimulatedQueryCount (SecretEncoding.idealImpl (Bool →ₒ Bool) Unit Bool)
+        IsPub progCoin (∅, ∅) :=
+  E.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount prEvent_mem_range_enc_le
+    (fun _ _ ↦ trivial) progCoin
 
 end HiddenSeedTight

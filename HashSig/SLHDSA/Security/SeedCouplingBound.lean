@@ -18,8 +18,8 @@ hidden-seed game of the secret-free experiment, averaged over uniform secret see
 `VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed` to it: an event of the run is at most the
 same event of the *ideal* game, in which the secret values and randomizers are entries of a table
 sampled independently of every public answer, plus `1 / |Y|` times the expected number of
-derivable public queries (`IsDerivablePublicQuery core pkSeed`) of the ideal run, and so plus
-`qh / |Y|` for a forger with hash budget `qh`.
+derivable public queries (`IsDerivablePublicQuery core pkSeed`) of the ideal run, and so, under
+key separation, plus `qh / |Y|` for a forger with hash budget `qh`.
 
 * `prEvent_mem_range_secretEncoding_enc_le`: under uniform secret seeds, a public point encodes a
   derivation with probability at most `1 / |Y|`, when `|Y| ≤ |SK.prf|`. A tweakable-hash point
@@ -28,9 +28,11 @@ derivable public queries (`IsDerivablePublicQuery core pkSeed`) of the ideal run
 * `prEvent_romSchemeRun_pure_le_add_mul_expectedSimulatedQueryCount`: an event of the run and its
   final cache is at most the event, read on the rebuilt transcript and the merged cache, in the
   ideal game under uniform secret seeds, plus `1 / |Y|` times the expected number of derivable
-  public queries of the transcript experiment in the ideal game. It needs neither key separation
-  nor a query budget: the count is of the secret-free ideal run, so further losses charged against
-  the queries of that run share it.
+  public queries of the transcript experiment in the ideal game. The count is of every derivable
+  public query of the experiment, honest ones included; under key separation only the forger
+  makes them (`isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary`). It needs neither
+  key separation nor a query budget: the count is of the secret-free ideal run, so further losses
+  charged against the queries of that run share it.
 * `prEvent_romSchemeRun_pure_le_add`: under key separation and the hash budget `qh`, the same
   bound with the loss `qh / |Y|`.
 
@@ -93,8 +95,10 @@ variable [SampleableType core.Y] [DecidableEq core.Y] [SampleableType core.SkSee
 `|Y| ≤ |SK.prf|`, an event of the run and its final cache is at most the event, read on the
 transcript rebuilt with the secret seeds `s` and on the merged cache, when `s` is drawn uniformly
 and the secret-free experiment runs in the ideal game, plus `1 / |Y|` times the expected number
-of derivable public queries of that ideal run. In the ideal game every secret value and randomizer
-is an entry of a table sampled independently of the public answers. -/
+of derivable public queries of that ideal run. The count is of every derivable public query of
+the experiment, honest ones included; under key separation only the forger makes them
+(`isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary`). In the ideal game every secret
+value and randomizer is an entry of a table sampled independently of the public answers. -/
 theorem prEvent_romSchemeRun_pure_le_add_mul_expectedSimulatedQueryCount
     (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (e : core.SkSeed ≃ core.Y)
     (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
@@ -135,9 +139,7 @@ theorem prEvent_romSchemeRun_pure_le_add (hsep : core.KeySeparated)
         qh * (Nat.card core.Y : ℝ≥0∞)⁻¹ := by
   refine (prEvent_romSchemeRun_pure_le_add_mul_expectedSimulatedQueryCount hcard e optRand
     pkSeed adv Q).trans (add_le_add le_rfl ?_)
-  rw [mul_comm]
-  gcongr
-  exact expectedSimulatedQueryCount_le_of_isQueryBoundP _ _ _ _ qh
-    (isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary hsep pkSeed hadv)
+  exact mul_expectedSimulatedQueryCount_le_of_isQueryBoundP _ _
+    (isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary hsep pkSeed hadv) _ _
 
 end SLHDSA.Security
