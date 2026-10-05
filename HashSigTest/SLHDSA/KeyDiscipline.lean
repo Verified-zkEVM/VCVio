@@ -29,7 +29,7 @@ signature.
 The statements below also pin the resulting discharges: key separation at every FIPS SHA-2
 bundle, and the key discipline at every FIPS 205 parameter set, at the limited SHA2-128-24 profile
 and at the compatibility bundle. At every FIPS 205 parameter set an honest entry exists, and the
-hypotheses of the honest-input uniqueness theorem `honestEntry_input_unique` are discharged.
+hypotheses of the honest-input uniqueness theorem `HonestEntry.input_unique` are discharged.
 -/
 
 public section
@@ -159,8 +159,8 @@ example (ps : FipsParameterSet)
     (h : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs))
     (h' : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs')) :
     xs = xs' :=
-  honestEntry_input_unique (keyInjective_approvedPrimitives ps)
-    (fipsApprovedAddressBounds ps).toCanonicalAddressBounds h h'
+  h.input_unique (keyInjective_approvedPrimitives ps)
+    (fipsApprovedAddressBounds ps).toCanonicalAddressBounds h'
 
 /-- The same through the key discipline of the approved bundle. -/
 example (ps : FipsParameterSet)
