@@ -26,15 +26,6 @@ sampled independently of every public answer, plus `qh / |Y|` for a forger with 
 * `prEvent_romSchemeRun_pure_le_add`: under key separation and the hash budget `qh`, an event of
   the run and its final cache is at most the event, read on the rebuilt transcript and the merged
   cache, in the ideal game under uniform secret seeds, plus `qh / |Y|`.
-* `prEvent_romSchemeRun_pure_eq_coupledImpl_extendState`: an event of the run is the same event of
-  the coupled real game extended by any passive auxiliary state, read on the rebuilt transcript
-  and the merged split state.
-* `prEvent_coupledImpl_extendState_deriveAdversary_le_add`: an event of the extended coupled
-  game's output, split state and auxiliary state is at most the same event of the ideal game
-  extended by the same auxiliary state, plus `qh / |Y|`.
-
-The last two together bound events that read bookkeeping carried alongside the run, such as a log
-of the queries and of the derivation table at each query, which the run itself does not expose.
 
 ## Scope
 
@@ -114,92 +105,5 @@ theorem prEvent_romSchemeRun_pure_le_add (hsep : core.KeySeparated)
       (prEvent_mem_range_secretEncoding_enc_le e pkSeed hcard)
       (isDerivablePublicQuery_enc core e pkSeed)
       (isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary hsep pkSeed hadv) _)
-
-/-! ## Events that read an auxiliary state -/
-
-/-- **The run of SLH-DSA at a public seed is the extended coupled game, projected.** For any
-passive auxiliary state with update `aux s`, which may read the secret seeds, the query, its
-answer, the split state before and after the step and its own previous value, the run draws the
-secret seeds `s` uniformly, runs the secret-free experiment in the coupled real game at `s`
-extended by `aux s`, and rebuilds the transcript with `s` and the cache by merging the final
-split state. -/
-theorem romSchemeRun_pure_eq_coupledImpl_extendState (e : core.SkSeed ≃ core.Y)
-    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
-    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))) {Q : Type} (r₀ : Q)
-    (aux : core.SkSeed × core.SkPrf → (t : (deriveSpec core).Domain) →
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y →
-      (deriveSpec core).Range t →
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y → Q → Q) :
-    romSchemeRun core e optRand (pure pkSeed) adv = do
-      let s ← $ᵗ (core.SkSeed × core.SkPrf)
-      let z ← (simulateQ (((secretEncoding core e pkSeed).coupledImpl s).extendState
-        fun t st u st' r ↦ aux s t st.1 u st'.1 r)
-          (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run
-            (((∅, ∅), false), r₀)
-      return (DeriveOutcome.fill core s z.1, (secretEncoding core e pkSeed).merge s z.2.1.1) := by
-  rw [romSchemeRun_pure_eq]
-  refine bind_congr fun s ↦ ?_
-  have h := (secretEncoding core e pkSeed).map_run_simulateQ_coupledImpl_extendState s
-    (fun t st u st' r ↦ aux s t st.1 u st'.1 r)
-    (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed)) ((∅, ∅), false) r₀
-  rw [SecretEncoding.merge_empty] at h
-  rw [← h, bind_map_left]
-  rfl
-
-/-- An event of the run of SLH-DSA at a public seed has the probability of the event, read on the
-rebuilt transcript and the merged split state, in the coupled real game extended by any passive
-auxiliary state, under uniform secret seeds. -/
-theorem prEvent_romSchemeRun_pure_eq_coupledImpl_extendState (e : core.SkSeed ≃ core.Y)
-    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
-    (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))) {Q : Type} (r₀ : Q)
-    (aux : core.SkSeed × core.SkPrf → (t : (deriveSpec core).Domain) →
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y →
-      (deriveSpec core).Range t →
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y → Q → Q)
-    (P : RomOutcome vp core × (hashSpec core).QueryCache → Prop) :
-    Pr{let z ← romSchemeRun core e optRand (pure pkSeed) adv}[P z] =
-      Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)
-         let z ← (simulateQ (((secretEncoding core e pkSeed).coupledImpl s).extendState
-           fun t st u st' r ↦ aux s t st.1 u st'.1 r)
-             (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run
-               (((∅, ∅), false), r₀)}[
-        P (DeriveOutcome.fill core s z.1, (secretEncoding core e pkSeed).merge s z.2.1.1)] := by
-  rw [romSchemeRun_pure_eq_coupledImpl_extendState e optRand pkSeed adv r₀ aux]
-  simp only [bind_assoc, pure_bind]
-
-/-- **The extended coupled game of SLH-DSA at a public seed against the extended ideal game.**
-Under key separation, for a forger with hash budget `qh` and `|Y| ≤ |SK.prf|`, and for any
-passive auxiliary state with update `aux s`, which may read the secret seeds, the query, its
-answer, the split state before and after the step (including the derivation table) and its own
-previous value: an event of the secret seeds and of the extended coupled game's output, split
-state and auxiliary state is at most the same event of the ideal game extended by `aux s`, under
-uniform secret seeds, plus `qh / |Y|`. -/
-theorem prEvent_coupledImpl_extendState_deriveAdversary_le_add (hsep : core.KeySeparated)
-    (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (e : core.SkSeed ≃ core.Y)
-    (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
-    {adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))} {qh qs : ℕ}
-    (hadv : adv.RomQueryBound qh qs) {Q : Type} (r₀ : Q)
-    (aux : core.SkSeed × core.SkPrf → (t : (deriveSpec core).Domain) →
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y →
-      (deriveSpec core).Range t →
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y → Q → Q)
-    (P : core.SkSeed × core.SkPrf → DeriveOutcome core ×
-      SecretEncoding.SplitCache (hashSpec core) (DeriveQuery core) core.Y × Q → Prop) :
-    Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)
-       let z ← (simulateQ (((secretEncoding core e pkSeed).coupledImpl s).extendState
-         fun t st u st' r ↦ aux s t st.1 u st'.1 r)
-           (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run
-             (((∅, ∅), false), r₀)}[P s (z.1, z.2.1.1, z.2.2)] ≤
-      Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)
-         let z ← (simulateQ
-           ((SecretEncoding.idealImpl (hashSpec core) (DeriveQuery core) core.Y).extendState
-             (aux s))
-           (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run
-             ((∅, ∅), r₀)}[P s z] +
-        qh * (Nat.card core.Y : ℝ≥0∞)⁻¹ :=
-  (secretEncoding core e pkSeed).prEvent_coupledImpl_extendState_le_add_mul r₀ aux
-    (prEvent_mem_range_secretEncoding_enc_le e pkSeed hcard)
-    (isDerivablePublicQuery_enc core e pkSeed)
-    (isQueryBoundP_unforgeableTranscriptExperiment_deriveAdversary hsep pkSeed hadv) P
 
 end SLHDSA.Security

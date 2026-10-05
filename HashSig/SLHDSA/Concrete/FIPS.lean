@@ -330,6 +330,28 @@ def shakePrimitives (p : Params) : Primitives p where
   Hmsg := shakeHmsg p
   yToBytes := id
 
+/-! ### Carrier instances of the SHAKE bundle
+
+Every carrier of `shakePrimitives p` is a byte vector, but instance synthesis does not unfold the
+structure projections, so the instances are supplied explicitly. -/
+
+instance (p : Params) : SampleableType (shakePrimitives p).PkSeed :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : SampleableType (shakePrimitives p).SkSeed :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : SampleableType (shakePrimitives p).SkPrf :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : SampleableType (shakePrimitives p).Y :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : DecidableEq (shakePrimitives p).PkSeed :=
+  inferInstanceAs (DecidableEq (Bytes p.n))
+instance (p : Params) : DecidableEq (shakePrimitives p).SkPrf :=
+  inferInstanceAs (DecidableEq (Bytes p.n))
+instance (p : Params) : DecidableEq (shakePrimitives p).Y :=
+  inferInstanceAs (DecidableEq (Bytes p.n))
+instance (p : Params) : DecidableEq (shakePrimitives p).AdrsKey :=
+  inferInstanceAs (DecidableEq (Bytes 32))
+
 /-! ## All approved profiles and byte coherence -/
 
 /-- Select the exact FIPS primitive family for one of the twelve approved parameter names. -/

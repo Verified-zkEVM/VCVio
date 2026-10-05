@@ -181,6 +181,9 @@ instance : SampleableType shaPrimitives.SkPrf := inferInstanceAs (SampleableType
 instance : SampleableType shaPrimitives.PkSeed := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.Y := inferInstanceAs (SampleableType (Bytes 16))
 instance : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
+instance : DecidableEq shaPrimitives.PkSeed := inferInstanceAs (DecidableEq (Bytes 16))
+instance : DecidableEq shaPrimitives.SkPrf := inferInstanceAs (DecidableEq (Bytes 16))
+instance : DecidableEq shaPrimitives.AdrsKey := inferInstanceAs (DecidableEq (Bytes 22))
 
 /-- **Perfect completeness at the concrete SHA2-128-24 bundle.** This specializes the
 definitional concrete-function interpretation of the canonical oracle-parametric scheme to the
