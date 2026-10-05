@@ -16,7 +16,8 @@ public import PolyFun.Control.Monad.Hom
 
 Commutation lemmas for `Vector.mapM` against pure post-processing maps, index-wise
 extraction lemmas for sequencing `Option`-valued vectors, and the naturality of `Vector.ofFnM`
-under a monad morphism.
+under a monad morphism and its preservation of any predicate on programs closed under `pure` and
+`bind`.
 -/
 
 @[expose] public section
@@ -124,5 +125,17 @@ theorem ofFnM_natural {m n : Type → Type*} [Monad m] [LawfulMonad m]
       funext xs
       rw [F.mmap_bind, h (Fin.last k)]
       simp [F.mmap_pure]
+
+/-- A predicate on monadic programs that holds of every `pure` and is preserved by `bind` holds of
+`Vector.ofFnM f` when it holds of every component `f i`. -/
+theorem ofFnM_pred {m : Type u → Type v} [Monad m] [LawfulMonad m]
+    (Q : ∀ {α : Type u}, m α → Prop) (hpure : ∀ {α : Type u} (x : α), Q (pure x))
+    (hbind : ∀ {α β : Type u} (oa : m α) (ob : α → m β), Q oa → (∀ x, Q (ob x)) → Q (oa >>= ob))
+    {α : Type u} {k : ℕ} (f : Fin k → m α) (h : ∀ i, Q (f i)) : Q (Vector.ofFnM f) := by
+  induction k with
+  | zero => rw [Vector.ofFnM_zero]; exact hpure _
+  | succ k ih =>
+      rw [Vector.ofFnM_succ]
+      exact hbind _ _ (ih _ fun i => h i.castSucc) fun _ => hbind _ _ (h _) fun _ => hpure _
 
 end Vector

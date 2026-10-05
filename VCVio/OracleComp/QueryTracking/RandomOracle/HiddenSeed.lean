@@ -730,3 +730,25 @@ theorem prEvent_realImpl_le_add_mul {ms : ProbComp S} {ε : ℝ≥0∞}
   exact E.prEvent_coupledImpl_le_add_mul hε hp h fun s z ↦ P s (z.1, E.merge s z.2)
 
 end SecretEncoding
+
+/-! ## Query budgets in the derivation world
+
+A probabilistic computation lifted into the derivation world makes only uniform-sampling queries,
+so it spends nothing of a budget for a predicate that no sampling query satisfies. -/
+
+namespace OracleComp
+
+/-- A probabilistic computation lifted into `pub.withDerivations X R` makes no `p`-query when no
+uniform-sampling query satisfies `p`. -/
+theorem isQueryBoundP_liftM_withDerivations {ι : Type} {pub : OracleSpec ι} {X R : Type}
+    {p : (pub.withDerivations X R).Domain → Prop} [DecidablePred p]
+    (hp : ∀ n, ¬ p (.inl (.inl n))) {α : Type} (oa : ProbComp α) :
+    IsQueryBoundP (liftM oa : OracleComp (pub.withDerivations X R) α) p 0 := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => simp only [liftM_pure, isQueryBoundP_pure]
+  | query_bind t k ih =>
+      simp only [liftM_bind]
+      refine isQueryBoundP_bind ?_ fun x _ => ih x
+      exact (isQueryBoundP_query_iff _ _ _).2 fun h => (hp t h).elim
+
+end OracleComp
