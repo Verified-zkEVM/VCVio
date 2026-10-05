@@ -264,6 +264,27 @@ theorem prEvent_map
     Pr{let y ← f <$> mx}[p y] = Pr{let x ← mx}[p (f x)] := by
   rw [bind_map_left]
 
+/-- Two output maps of one computation: an event of the first map is at most an event of the
+second when, at every output, the first event implies the second. -/
+theorem prEvent_map_le_map
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {γ α β : Type} (mx : m γ) (f : γ → α) (g : γ → β) (p : α → Prop) (q : β → Prop)
+    (h : ∀ x, p (f x) → q (g x)) :
+    Pr{let y ← f <$> mx}[p y] ≤ Pr{let z ← g <$> mx}[q z] := by
+  rw [prEvent_map, prEvent_map]
+  exact prEvent_mono _ _ _ h
+
+/-- An event of a pure computation is at most an event of another pure computation when the
+first event implies the second. -/
+theorem prEvent_pure_le_pure
+    {m : Type → Type v} [Monad m] [LawfulMonad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m]
+    {α β : Type} (a : α) (b : β) (p : α → Prop) (q : β → Prop) (h : p a → q b) :
+    Pr{let y ← (pure a : m α)}[p y] ≤ Pr{let z ← (pure b : m β)}[q z] := by
+  simpa only [map_pure] using
+    prEvent_map_le_map (pure () : m Unit) (fun _ ↦ a) (fun _ ↦ b) p q fun _ ↦ h
+
 /-- Events of independent draws have the product of their probabilities. -/
 @[simp↓ high, grind norm↓]
 theorem prEvent_bind_bind_and

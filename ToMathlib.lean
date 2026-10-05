@@ -39,6 +39,7 @@ public import ToMathlib.Data.IndexedBinaryTree.Equiv
 public import ToMathlib.Data.IndexedBinaryTree.Lemmas
 public import ToMathlib.Data.IndexedBinaryTree.Perfect
 public import ToMathlib.Data.List.Count
+public import ToMathlib.Data.List.MapM
 public import ToMathlib.Data.Set.Functor
 public import ToMathlib.Data.Vector
 public import ToMathlib.Data.Vector.Count

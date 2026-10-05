@@ -434,6 +434,28 @@ both lazily sampled; no secret enters it. -/
   | .inr x => StateT.mk fun st =>
       (fun z => (z.1, (st.1, z.2))) <$> ((X →ₒ R).randomOracle x).run st.2
 
+/-- The ideal game reads a drawn derivation from its table. -/
+theorem idealImpl_run_derive_some {x : X} {st : SplitCache pub X R} {v : R}
+    (h : st.2 x = some v) : (idealImpl pub X R (.inr x)).run st = pure (v, st) := by
+  simp [idealImpl, h]
+
+/-- The ideal game draws an undrawn derivation uniformly and stores it in its table. -/
+theorem idealImpl_run_derive_none {x : X} {st : SplitCache pub X R} (h : st.2 x = none) :
+    (idealImpl pub X R (.inr x)).run st =
+      (fun u ↦ (u, (st.1, st.2.cacheQuery x u))) <$> ($ᵗ R) := by
+  simp [idealImpl, h]
+
+/-- The ideal game reads a cached public answer from its public cache. -/
+theorem idealImpl_run_pub_some {t : ι} {st : SplitCache pub X R} {v : pub.Range t}
+    (h : st.1 t = some v) : (idealImpl pub X R (.inl (.inr t))).run st = pure (v, st) := by
+  simp [idealImpl, h]
+
+/-- The ideal game draws an uncached public answer uniformly and caches it. -/
+theorem idealImpl_run_pub_none {t : ι} {st : SplitCache pub X R} (h : st.1 t = none) :
+    (idealImpl pub X R (.inl (.inr t))).run st =
+      (fun u ↦ (u, (st.1.cacheQuery t u, st.2))) <$> ($ᵗ pub.Range t) := by
+  simp [idealImpl, h]
+
 /-- The ideal game with a flag, raised by every public query at a point encoded under `s`. -/
 @[expose] noncomputable def flaggedIdealImpl (s : S) :
     QueryImpl (pub.withDerivations X R) (StateT (SplitCache pub X R × Bool) ProbComp) :=
