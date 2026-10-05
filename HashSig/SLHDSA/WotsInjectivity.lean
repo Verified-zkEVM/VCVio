@@ -27,6 +27,9 @@ counterpart of the `two_encodings` axiom of the EasyCrypt SPHINCS+ proof (`WOTS_
 which is the only fact about the message encoding that proof assumes; here it is proved for the
 concrete FIPS 205 encoding, under `p.Valid` and `core.ByteLaws`.
 
+The same incomparability, applied against a second message-digit vector, shows that every node has
+a chain whose step count is strictly below the top step `w - 1` (`exists_chainStepsCore_lt_top`).
+
 ## References
 
 - NIST FIPS 205, §5.2–5.3 (Algorithms 7 and 8)
@@ -90,5 +93,39 @@ theorem chainStepsCore_two_encodings (valid : p.Valid) (laws : core.ByteLaws)
       rw [← List.getD_eq_get (l := chainLengthsCore core msg') (d := 0) ⟨i, hi⟩,
         ← List.getD_eq_get (l := chainLengthsCore core msg) (d := 0) ⟨i, hi'⟩]
       exact hle i (by simpa using hi))
+
+/-- Every node has a chain index whose step count is strictly below the top step `w - 1`.  Were
+every step at the top, the full digit vector of any other message-digit vector would be pointwise
+below it, against `WotsChecksum.wots_fullDigits_incomparable`; a second message-digit vector
+exists because `len1` is positive and `w` is at least `2`. -/
+theorem exists_chainStepsCore_lt_top (valid : p.Valid) (msg : core.Y) :
+    ∃ i, i < p.len ∧ chainStepsCore core msg i < p.w - 1 := by
+  by_contra hnot
+  have htop : ∀ i, i < p.len → p.w - 1 ≤ chainStepsCore core msg i :=
+    fun i hi => Nat.le_of_not_lt fun hlt => hnot ⟨i, hi, hlt⟩
+  have hw : 1 < p.w := Nat.one_lt_two_pow (Nat.ne_of_gt valid.lgw_pos)
+  have hl1 : 0 < p.len1 := Nat.div_pos (by have := valid.n_pos; omega) valid.lgw_pos
+  set dig := wotsMsgDigitsCore core msg
+  obtain ⟨dig', hlen', hlt', hne⟩ : ∃ dig' : List ℕ,
+      dig'.length = p.len1 ∧ (∀ d ∈ dig', d < p.w) ∧ dig' ≠ dig := by
+    by_cases h0 : dig = List.replicate p.len1 0
+    · refine ⟨List.replicate p.len1 1, List.length_replicate, fun d hd => ?_, fun h => ?_⟩
+      · rw [List.eq_of_mem_replicate hd]
+        exact hw
+      · rw [h0] at h
+        have := congrArg List.sum h
+        simp only [List.sum_replicate, smul_eq_mul, mul_one, mul_zero] at this
+        omega
+    · exact ⟨List.replicate p.len1 0, List.length_replicate,
+        fun d hd => (List.eq_of_mem_replicate hd).symm ▸ Params.w_pos p, Ne.symm h0⟩
+  refine (wots_fullDigits_incomparable hlen' (wotsMsgDigitsCore_length core msg) hlt'
+    (wotsMsgDigitsCore_mem_lt core msg) valid.len1_mul_pred_w_lt_pow_len2 hne).1 ?_
+  rw [← chainLengthsCore_eq_wotsFullDigits valid, ← fullDigits_eq_wotsFullDigits valid _ hlen' hlt']
+  refine List.forall₂_of_length_eq_of_get (by simp [hlen']) fun i hi hi' => ?_
+  have hd := fullDigits_lt p dig' hlt' _ (List.getElem_mem hi)
+  have hs := htop i (by simpa using hi')
+  rw [chainStepsCore, List.getD_eq_getElem _ _ hi'] at hs
+  simp only [List.get_eq_getElem]
+  omega
 
 end SLHDSA

@@ -6,6 +6,7 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Security.CacheSecret
+public import HashSig.SLHDSA.Security.ComponentTraces
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.WotsInjectivity
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Collision
@@ -25,14 +26,17 @@ Algorithms 19 and 20, with no context wrapper, so they apply to the outcomes of 
 run of `HashSig.SLHDSA.Security.RomSchemeRun`, which signs and verifies internal messages.
 
 **Same-address target collision** (`TargetCollision`).  Two cache entries at one tweakable-hash
-key with equal answers and different inputs, one of them an honest entry (`HonestEntry`).  The two
-secret-consuming constructors, a WOTS+ chain entry and a FORS leaf, carry the settled secret they
-start from as a premise, so an honest entry never rests on a secret the cache does not record.
-The honest relation reads only the provider, the public seed and the cache, and is monotone in the
-cache (`HonestEntry.mono`).
+key with equal answers and different inputs, one of them an honest entry (`HonestEntry`).  Every
+honest entry sits at an address of the union ledger `constructionAddresses` of
+`HashSig.SLHDSA.Security.TraceTargets`, so in particular a WOTS+ chain entry is at a hash address
+below `w - 1`.  The two secret-consuming constructors, a WOTS+ chain entry and a FORS leaf, carry
+the settled secret they start from as a premise, so an honest entry never rests on a secret the
+cache does not record.  The honest relation reads only the provider, the public seed and the
+cache, and is monotone in the cache (`HonestEntry.mono`).
 
-**Hidden-value hit** (`HiddenHit`).  The forgery's verification replay reaches a WOTS+ chain value
-at a step the honest message at that leaf does not reveal, from the forger's own signature entry;
+**Hidden-value hit** (`HiddenHit`).  The forgery's WOTS+ signature entry on some chain of the leaf
+the verification replay enters is the honest chain value at the step its message selects, that
+step is one the honest message at that leaf does not reveal, and it is below the top step `w - 1`;
 or the forgery carries, at a FORS coordinate no logged signature opened, the settled secret there.
 
 **Interleaved-target coverage** (`ItsrCovered`).  Every FORS coordinate the forgery's digest
@@ -40,10 +44,14 @@ selects is selected by the digest of some logged signature.
 
 The case analyses `xmssPkFromSig?_cases`, `wotsChain_cases`, `wotsLeaf_cases`, `xmssLayer_cases`
 and `fors_cases` split a settled verification step into these events or the next step of the
-descent.  The positional facts draw no secret: `childTreeAdrs` and `forsInstanceAdrs` name the
-tree and FORS instance a hypertree position signs, `forgerMessage?` is the message the verification
-replay presents to each layer, and `forgerLayers_of_recoverFromPositionM` reads every layer of a
-settled Algorithm 13 run off the cache.
+descent.  The first three take the ledger membership of the addresses they may name as
+hypotheses; `xmssLayer_cases` and `fors_cases` discharge it from the hypertree position and the
+digest-derived FORS instance through the membership lemmas of
+`HashSig.SLHDSA.Security.ComponentTraces`.  The positional facts draw no secret: `childTreeAdrs`
+and `forsInstanceAdrs` name the tree and FORS instance a hypertree position signs,
+`forgerMessage?` is the message the verification replay presents to each layer, and
+`forgerLayers_of_recoverFromPositionM` reads every layer of a settled Algorithm 13 run off the
+cache.
 
 ## Scope
 
@@ -204,30 +212,45 @@ theorem forgerLayers_of_recoverFromPositionM (c : PublicHash.Cache core) (pk : c
 /-- A `thash` query whose input is a value the key holder computes from the provider `secret` at
 public seed `pk`, read off the cache.  Each constructor names the honest values that must be
 settled for the input to be the honest one; the two that consume a secret, `wotsChain` and
-`forsLeaf`, name the settled secret.  Addresses are unconstrained; the height bound keeps the
-two-element node entries off the height-`0` keys. -/
+`forsLeaf`, name the settled secret.
+
+Each constructor also requires its entry address, the address whose key the query is at, to be in
+the union ledger `constructionAddresses vp`.  That ranges every entry over the addresses an honest
+run of the construction hashes at: an XMSS node at height `1 ≤ h ≤ hp` and index
+`i < 2 ^ (hp - h)` of a reachable tree; the public-key compression of a reachable WOTS+ instance; a
+WOTS+ hash step at hash address `t < w - 1` on chain `i < len` of a reachable instance; a FORS leaf
+of a reachable instance at global index `t < k * 2 ^ a`; a FORS node at height `1 ≤ h ≤ a` and
+index `i < k * 2 ^ (a - h)`; the root compression of a reachable FORS instance.  The range is on
+addresses: where the key encoding `core.adrsToKey` is not injective on these addresses, one key
+can still carry several honest inputs. -/
 inductive HonestEntry (secret : Adrs → OracleComp (publicHashSpec core) core.Y)
     (pk : core.PkSeed) (c : PublicHash.Cache core) : (publicHashSpec core).Domain → Prop
   | xmssNode (adrs : Adrs) (h i : ℕ) (l r : core.Y) (hh : 0 < h)
+      (hmem : xmssNodeAdrs adrs h i ∈ constructionAddresses vp)
       (hl : xmssNodeWithSecret? core c secret pk adrs (h - 1) (2 * i) = some l)
       (hr : xmssNodeWithSecret? core c secret pk adrs (h - 1) (2 * i + 1) = some r) :
       HonestEntry secret pk c (.thash pk (core.adrsToKey (xmssNodeAdrs adrs h i)) [l, r])
   | wotsPk (adrs : Adrs) (tops : Vector core.Y vp.params.len)
+      (hmem : wotsPkAdrs adrs ∈ constructionAddresses vp)
       (h : wotsPkGenTopsWithSecret? core c secret pk adrs = some tops) :
       HonestEntry secret pk c (.thash pk (core.adrsToKey (wotsPkAdrs adrs)) tops.toList)
   | wotsChain (adrs : Adrs) (i t : ℕ) (x v : core.Y)
+      (hmem : (wotsChainAdrs adrs i).setHashAddress t ∈ constructionAddresses vp)
       (hx : simulateQ c.toPartialImpl (secret (wotsSkAdrs adrs i)) = some x)
       (h : chain? core c pk (wotsChainAdrs adrs i) x 0 t = some v) :
       HonestEntry secret pk c
         (.thash pk (core.adrsToKey ((wotsChainAdrs adrs i).setHashAddress t)) [v])
   | forsLeaf (adrs : Adrs) (t : ℕ) (x : core.Y)
+      (hmem : forsNodeAdrs adrs 0 t ∈ constructionAddresses vp)
       (hx : simulateQ c.toPartialImpl (secret (forsSkAdrs adrs t)) = some x) :
       HonestEntry secret pk c (.thash pk (core.adrsToKey (forsNodeAdrs adrs 0 t)) [x])
   | forsNode (adrs : Adrs) (h i : ℕ) (l r : core.Y) (hh : 0 < h)
+      (hmem : forsNodeAdrs adrs h i ∈ constructionAddresses vp)
       (hl : forsNodeWithSecret? core c secret pk adrs (h - 1) (2 * i) = some l)
       (hr : forsNodeWithSecret? core c secret pk adrs (h - 1) (2 * i + 1) = some r) :
       HonestEntry secret pk c (.thash pk (core.adrsToKey (forsNodeAdrs adrs h i)) [l, r])
   | forsRoots (adrs : Adrs) (roots : Vector core.Y vp.params.k)
+      (hmem : forsPkAdrs adrs ∈ constructionAddresses vp)
       (h : ∀ i : Fin vp.params.k,
         forsNodeWithSecret? core c secret pk adrs vp.params.a i.val = some roots[i]) :
       HonestEntry secret pk c (.thash pk (core.adrsToKey (forsPkAdrs adrs)) roots.toList)
@@ -238,21 +261,23 @@ theorem HonestEntry.mono {secret : Adrs → OracleComp (publicHashSpec core) cor
     {t : (publicHashSpec core).Domain} (ht : HonestEntry secret pk c t) :
     HonestEntry secret pk c' t := by
   induction ht with
-  | xmssNode adrs height i l r hheight hl hr =>
-    exact .xmssNode adrs height i l r hheight (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
+  | xmssNode adrs height i l r hheight hmem hl hr =>
+    exact .xmssNode adrs height i l r hheight hmem
+      (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
       (QueryCache.simulateQ_toPartialImpl_mono h _ hr)
-  | wotsPk adrs tops hw =>
-    exact .wotsPk adrs tops (QueryCache.simulateQ_toPartialImpl_mono h _ hw)
-  | wotsChain adrs i steps x v hx hv =>
-    exact .wotsChain adrs i steps x v (QueryCache.simulateQ_toPartialImpl_mono h _ hx)
+  | wotsPk adrs tops hmem hw =>
+    exact .wotsPk adrs tops hmem (QueryCache.simulateQ_toPartialImpl_mono h _ hw)
+  | wotsChain adrs i steps x v hmem hx hv =>
+    exact .wotsChain adrs i steps x v hmem (QueryCache.simulateQ_toPartialImpl_mono h _ hx)
       (QueryCache.simulateQ_toPartialImpl_mono h _ hv)
-  | forsLeaf adrs leaf x hx =>
-    exact .forsLeaf adrs leaf x (QueryCache.simulateQ_toPartialImpl_mono h _ hx)
-  | forsNode adrs height i l r hheight hl hr =>
-    exact .forsNode adrs height i l r hheight (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
+  | forsLeaf adrs leaf x hmem hx =>
+    exact .forsLeaf adrs leaf x hmem (QueryCache.simulateQ_toPartialImpl_mono h _ hx)
+  | forsNode adrs height i l r hheight hmem hl hr =>
+    exact .forsNode adrs height i l r hheight hmem
+      (QueryCache.simulateQ_toPartialImpl_mono h _ hl)
       (QueryCache.simulateQ_toPartialImpl_mono h _ hr)
-  | forsRoots adrs roots hr =>
-    exact .forsRoots adrs roots fun i => QueryCache.simulateQ_toPartialImpl_mono h _ (hr i)
+  | forsRoots adrs roots hmem hr =>
+    exact .forsRoots adrs roots hmem fun i => QueryCache.simulateQ_toPartialImpl_mono h _ (hr i)
 
 /-- Two cache entries at one `thash` key with equal answers and different inputs, one of which is
 an honest entry for the provider `secret` at public seed `pk`. -/
@@ -322,23 +347,22 @@ layer `j`. -/
       some m
 
 /-- The forgery's replay under the cache produces a hidden honest value for the provider
-`secret`.  Either a WOTS+ chain value at a hidden step `t` of chain `i` of the leaf the replay
-enters at layer `j`, on the honest chain from the settled secret `x`, reached by the forger's chain
-from its own signature entry at the step its message selects; or, at a FORS coordinate no logged
-signature opened, the forgery carries the settled secret there. -/
+`secret`.  Either the forgery's WOTS+ signature entry on chain `i` of the leaf the replay enters at
+layer `j` with message `m` is the honest chain value from the settled secret `x` at the step
+`t = chainStepsCore core m i` that `m` selects, that step is hidden, and it is below the top step,
+`t < w - 1`; or, at a FORS coordinate no logged signature opened, the forgery carries the settled
+secret there. -/
 @[expose] def HiddenHit (secret : Adrs → OracleComp (publicHashSpec core) core.Y)
     (o : RomOutcome vp core) (c : PublicHash.Cache core) : Prop :=
   (∃ (j : Fin vp.params.d) (pos : LayerPosition vp) (m : core.Y) (i : Fin vp.params.len)
-      (t : ℕ) (x v : core.Y),
-    ForgerLayer o c j pos m ∧ HiddenChainValue secret o c j pos i.val t ∧
+      (x : core.Y),
+    ForgerLayer o c j pos m ∧
+    HiddenChainValue secret o c j pos i.val (chainStepsCore core m i.val) ∧
+    chainStepsCore core m i.val < vp.params.w - 1 ∧
     simulateQ c.toPartialImpl
       (secret (wotsSkAdrs (wotsLeafAdrs pos.toAdrs pos.leaf.val) i.val)) = some x ∧
-    chain? core c o.pk.pkSeed (wotsChainAdrs (wotsLeafAdrs pos.toAdrs pos.leaf.val) i.val) x 0 t =
-      some v ∧
-    chainStepsCore core m i.val ≤ t ∧
-    chain? core c o.pk.pkSeed (wotsChainAdrs (wotsLeafAdrs pos.toAdrs pos.leaf.val) i.val)
-      (o.sig.hypertree[j]).wots[i] (chainStepsCore core m i.val)
-      (t - chainStepsCore core m i.val) = some v) ∨
+    chain? core c o.pk.pkSeed (wotsChainAdrs (wotsLeafAdrs pos.toAdrs pos.leaf.val) i.val) x 0
+      (chainStepsCore core m i.val) = some (o.sig.hypertree[j]).wots[i]) ∨
   (∃ (digest : Bytes vp.params.m) (i : Fin vp.params.k),
     ForgerDigest o c digest ∧
     UnopenedCoord o c (splitDigest vp.params digest).forsAdrs
@@ -362,9 +386,14 @@ variable (secret : Adrs → OracleComp (publicHashSpec core) core.Y)
 
 /-- An XMSS signature at leaf `idx` whose recovered root is settled at the settled honest root of
 the same tree yields either a same-address target collision, or settled forger chain tops equal
-to the settled honest chain tops at that leaf. -/
+to the settled honest chain tops at that leaf.  The hypotheses `hnode` and `hpk` place the tree's
+internal nodes and the leaf's public-key compression in the union ledger. -/
 theorem xmssPkFromSig?_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adrs : Adrs)
-    (idx : ℕ) (hidx : idx < 2 ^ vp.params.hp) (sig : XmssSig vp.params core) (msg : core.Y)
+    (idx : ℕ) (hidx : idx < 2 ^ vp.params.hp)
+    (hnode : ∀ h i, 0 < h → h ≤ vp.params.hp → i < 2 ^ (vp.params.hp - h) →
+      xmssNodeAdrs adrs h i ∈ constructionAddresses vp)
+    (hpk : wotsPkAdrs (wotsLeafAdrs adrs idx) ∈ constructionAddresses vp)
+    (sig : XmssSig vp.params core) (msg : core.Y)
     {r : core.Y} (hforge : xmssPkFromSig? core c idx sig msg pk adrs = some r)
     (hhonest : xmssRootWithSecret? core c secret pk adrs = some r) :
     TargetCollision secret pk c ∨
@@ -376,7 +405,7 @@ theorem xmssPkFromSig?_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adr
     (simulateQ_toPartialImpl_xmssPkFromSigM_eq_some_iff core c idx sig msg pk adrs).mp hforge
   rcases PerfectMerkleTree.climbM_merkleRootM_cases c.toPartialImpl _ _ idx vp.params.hp 0
       (Nat.div_eq_of_lt hidx) leaf' sig.auth.toList (by simp) hclimb hhonest with
-    hleaf | ⟨h, l, rr, l', r', v, hh, -, hne, hl, hr, hq, hq'⟩
+    hleaf | ⟨h, l, rr, l', r', v, hh, hhp, hne, hl, hr, hq, hq'⟩
   · simp only [xmssLeafWithSecret, wotsPkGenWithSecret, simulateQ_bind_eq_some_iff,
       simulateQ_toPartialImpl_tl] at hleaf
     obtain ⟨tops, htops, hTl⟩ := hleaf
@@ -384,18 +413,25 @@ theorem xmssPkFromSig?_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adr
     · subst heq
       exact Or.inr ⟨tops, htops', htops⟩
     · exact Or.inl ⟨core.adrsToKey (wotsPkAdrs (wotsLeafAdrs adrs idx)), tops.toList,
-        tops'.toList, leaf', HonestEntry.wotsPk _ tops htops, mt Vector.toList_inj.mp heq, hTl,
-        hTl'⟩
+        tops'.toList, leaf', HonestEntry.wotsPk _ tops hpk htops, mt Vector.toList_inj.mp heq,
+        hTl, hTl'⟩
   · simp only [xmssNodeHashM, xmssNodeHashWith, simulateQ_toPartialImpl_h] at hq hq'
+    have hi : idx / 2 ^ h < 2 ^ (vp.params.hp - h) := by
+      rw [Nat.div_lt_iff_lt_mul (by positivity), ← pow_add, Nat.sub_add_cancel hhp]
+      exact hidx
     refine Or.inl ⟨core.adrsToKey (xmssNodeAdrs adrs h (idx / 2 ^ h)), [l, rr], [l', r'], v,
-      HonestEntry.xmssNode adrs h (idx / 2 ^ h) l rr hh hl hr, fun hlist => hne ?_, hq, hq'⟩
+      HonestEntry.xmssNode adrs h (idx / 2 ^ h) l rr hh (hnode h _ hh hhp hi) hl hr,
+      fun hlist => hne ?_, hq, hq'⟩
     simp only [List.cons.injEq, and_true] at hlist
     exact Prod.ext hlist.1 hlist.2
 
 /-- A settled forger chain from `x` at step `a` that reaches the settled honest chain top of
 chain `i`, whose settled secret is `x₀`, either collides with the honest chain (a same-address `F`
-target collision, both entries cached) or starts at the honest chain value at step `a`. -/
+target collision, both entries cached) or starts at the honest chain value at step `a`.  The
+hypothesis `hmem` places the chain's hash steps below `w - 1` in the union ledger. -/
 theorem wotsChain_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adrs : Adrs) (i a : ℕ)
+    (hmem : ∀ s, s < vp.params.w - 1 →
+      (wotsChainAdrs adrs i).setHashAddress s ∈ constructionAddresses vp)
     (ha : a ≤ vp.params.w - 1) (x x₀ top : core.Y)
     (hx₀ : simulateQ c.toPartialImpl (secret (wotsSkAdrs adrs i)) = some x₀)
     (hforge : chain? core c pk (wotsChainAdrs adrs i) x a (vp.params.w - 1 - a) = some top)
@@ -409,7 +445,8 @@ theorem wotsChain_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adrs : A
     h | ⟨j, hj, u', v', w', hne, hu', hv', hqu, hqv⟩
   · exact Or.inr (h ▸ hva)
   · refine Or.inl ⟨core.adrsToKey ((wotsChainAdrs adrs i).setHashAddress (a + j)), [v'], [u'],
-      w', HonestEntry.wotsChain adrs i (a + j) x₀ v' hx₀ ?_, fun h => hne ?_, hqv, hqu⟩
+      w', HonestEntry.wotsChain adrs i (a + j) x₀ v' (hmem _ (by omega)) hx₀ ?_,
+      fun h => hne ?_, hqv, hqu⟩
     · rw [chain?_add_eq_some_iff]
       exact ⟨va, hva, by rwa [Nat.zero_add]⟩
     · simp only [List.cons.injEq, and_true] at h
@@ -417,8 +454,11 @@ theorem wotsChain_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adrs : A
 
 /-- Forger chain tops settled at the settled honest chain tops yield either a same-address
 target collision, or, on every chain, the secret is settled and the forger's WOTS+ signature entry
-is the honest chain value at the step its message selects. -/
+is the honest chain value at the step its message selects.  The hypothesis `hmem` places every
+chain's hash steps below `w - 1` in the union ledger. -/
 theorem wotsLeaf_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adrs : Adrs)
+    (hmem : ∀ i, i < vp.params.len → ∀ s, s < vp.params.w - 1 →
+      (wotsChainAdrs adrs i).setHashAddress s ∈ constructionAddresses vp)
     (sig : WotsSig vp.params core) (m' : core.Y) (tops : Vector core.Y vp.params.len)
     (hforge : simulateQ c.toPartialImpl (wotsPkFromSigTopsM core sig m' pk adrs) = some tops)
     (hhonest : wotsPkGenTopsWithSecret? core c secret pk adrs = some tops) :
@@ -431,13 +471,17 @@ theorem wotsLeaf_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adrs : Ad
   rw [wotsPkGenTopsWithSecret?_eq_some_iff] at hhonest
   refine or_iff_not_imp_left.mpr fun hcoll i => ?_
   obtain ⟨x₀, hx₀, hchain⟩ := hhonest i
-  exact ⟨x₀, hx₀, (wotsChain_cases secret pk c adrs i.val _ (chainStepsCore_le core m' i.val)
-    sig[i.val] x₀ tops[i] hx₀ (hforge i) hchain).resolve_left hcoll⟩
+  exact ⟨x₀, hx₀, (wotsChain_cases secret pk c adrs i.val _ (hmem i.val i.isLt)
+    (chainStepsCore_le core m' i.val) sig[i.val] x₀ tops[i] hx₀ (hforge i) hchain).resolve_left
+    hcoll⟩
 
 /-- One XMSS layer of the descent.  At a position the forger's replay enters at layer `j` with
 message `m'`, if the forger's XMSS recovery is settled at the settled honest root there, then
 either a same-address target collision, or a hidden-value hit, or the leaf is used and `m'` is its
-honest message.  The hypothesis `hmsg` supplies the settled honest message of a used leaf. -/
+honest message.  The hypothesis `hmsg` supplies the settled honest message of a used leaf.  At a
+used leaf with a different honest message the hit is on a chain where `m'` selects a smaller step
+(`chainStepsCore_two_encodings`); at an unused leaf it is on a chain where `m'` selects a step
+below the top (`exists_chainStepsCore_lt_top`). -/
 theorem xmssLayer_cases (laws : core.ByteLaws) (o : RomOutcome vp core)
     (c : PublicHash.Cache core) (j : Fin vp.params.d) (pos : LayerPosition vp) (m' : core.Y)
     {r : core.Y} (hlayer : ForgerLayer o c j pos m')
@@ -447,10 +491,13 @@ theorem xmssLayer_cases (laws : core.ByteLaws) (o : RomOutcome vp core)
     (hmsg : UsedLeaf o c j pos → ∃ m, honestMessage? c secret o.pk.pkSeed pos = some m) :
     TargetCollision secret o.pk.pkSeed c ∨ HiddenHit secret o c ∨
       (UsedLeaf o c j pos ∧ honestMessage? c secret o.pk.pkSeed pos = some m') := by
-  rcases xmssPkFromSig?_cases secret o.pk.pkSeed c pos.toAdrs pos.leaf.val pos.leaf.isLt _ m'
-      hforge hhonest with h | ⟨tops, htops', htops⟩
+  rcases xmssPkFromSig?_cases secret o.pk.pkSeed c pos.toAdrs pos.leaf.val pos.leaf.isLt
+      (fun _ _ hh hhp hi => xmssNodeAdrs_mem_constructionAddresses_of_position pos hh hhp hi)
+      (wotsPkAdrs_mem_constructionAddresses pos) _ m' hforge hhonest with h | ⟨tops, htops', htops⟩
   · exact Or.inl h
-  rcases wotsLeaf_cases secret o.pk.pkSeed c _ _ m' tops htops' htops with h | hall
+  rcases wotsLeaf_cases secret o.pk.pkSeed c _
+      (fun i hi _ hs => wotsChainAdrs_setHashAddress_mem_constructionAddresses pos ⟨i, hi⟩ hs) _
+      m' tops htops' htops with h | hall
   · exact Or.inl h
   by_cases hused : UsedLeaf o c j pos
   · obtain ⟨m, hm⟩ := hmsg hused
@@ -458,11 +505,12 @@ theorem xmssLayer_cases (laws : core.ByteLaws) (o : RomOutcome vp core)
     · exact Or.inr (Or.inr ⟨hused, hmm ▸ hm⟩)
     · obtain ⟨i, hi, hlt⟩ := chainStepsCore_two_encodings (core := core) vp.valid laws (Ne.symm hmm)
       obtain ⟨x₀, hx₀, hchain⟩ := hall ⟨i, hi⟩
-      exact Or.inr (Or.inl (Or.inl ⟨j, pos, m', ⟨i, hi⟩, chainStepsCore core m' i, x₀, _, hlayer,
-        fun _ => ⟨m, hm, hlt⟩, hx₀, hchain, le_rfl, by simp⟩))
-  · obtain ⟨x₀, hx₀, hchain⟩ := hall ⟨0, Params.len_pos _⟩
-    exact Or.inr (Or.inl (Or.inl ⟨j, pos, m', ⟨0, Params.len_pos _⟩, chainStepsCore core m' 0, x₀,
-      _, hlayer, fun h => absurd h hused, hx₀, hchain, le_rfl, by simp⟩))
+      exact Or.inr (Or.inl (Or.inl ⟨j, pos, m', ⟨i, hi⟩, x₀, hlayer, fun _ => ⟨m, hm, hlt⟩,
+        lt_of_lt_of_le hlt (chainStepsCore_le core m i), hx₀, hchain⟩))
+  · obtain ⟨i, hi, htop⟩ := exists_chainStepsCore_lt_top (core := core) vp.valid m'
+    obtain ⟨x₀, hx₀, hchain⟩ := hall ⟨i, hi⟩
+    exact Or.inr (Or.inl (Or.inl ⟨j, pos, m', ⟨i, hi⟩, x₀, hlayer, fun h => absurd h hused, htop,
+      hx₀, hchain⟩))
 
 /-- Algorithm 12 over a provider at two equal positions, with the layer-count proof transported
 along the equality: the proof depends on the position, so the position cannot be rewritten in
@@ -514,6 +562,23 @@ theorem fors_cases (o : RomOutcome vp core) (c : PublicHash.Cache core)
     (hhonest : forsPkGenWithSecret? core c secret o.pk.pkSeed
       (splitDigest vp.params digest).forsAdrs = some forsPk) :
     TargetCollision secret o.pk.pkSeed c ∨ HiddenHit secret o c ∨ ItsrCovered o c := by
+  have hrootMem :
+      forsPkAdrs (splitDigest vp.params digest).forsAdrs ∈ constructionAddresses vp := by
+    rw [← BottomPosition.forsAdrs_ofDigestParts]
+    exact forsRootAdrs_mem_constructionAddresses _
+  have hleafMem : ∀ i : Fin vp.params.k, forsNodeAdrs (splitDigest vp.params digest).forsAdrs 0
+      (i.val * 2 ^ vp.params.a + forsIdx vp.params (splitDigest vp.params digest).md.toList i.val)
+        ∈ constructionAddresses vp := fun i => by
+    rw [← BottomPosition.forsAdrs_ofDigestParts]
+    exact forsLeafAdrs_mem_constructionAddresses _ i (forsLeafIndex_div vp.params _ i.val)
+  have hnodeMem : ∀ (i : Fin vp.params.k) (h : ℕ), 0 < h → h ≤ vp.params.a →
+      forsNodeAdrs (splitDigest vp.params digest).forsAdrs h ((i.val * 2 ^ vp.params.a +
+        forsIdx vp.params (splitDigest vp.params digest).md.toList i.val) / 2 ^ h) ∈
+          constructionAddresses vp := fun i h hh hha => by
+    rw [← BottomPosition.forsAdrs_ofDigestParts]
+    refine forsTreeAdrs_mem_constructionAddresses _ i hh hha ?_
+    rw [Nat.div_div_eq_div_mul, ← pow_add, Nat.add_sub_cancel' hha]
+    exact forsLeafIndex_div vp.params _ i.val
   set md := (splitDigest vp.params digest).md.toList
   set adrs := (splitDigest vp.params digest).forsAdrs
   rw [forsPkFromSig?, simulateQ_toPartialImpl_forsPkFromSigM_eq_some_iff] at hforge
@@ -523,7 +588,7 @@ theorem fors_cases (o : RomOutcome vp core) (c : PublicHash.Cache core)
   by_cases hroots : roots = roots'
   swap
   · exact Or.inl ⟨core.adrsToKey (forsPkAdrs adrs), roots.toList, roots'.toList, forsPk,
-      HonestEntry.forsRoots adrs roots hper, mt Vector.toList_inj.mp hroots, hTk, hTk'⟩
+      HonestEntry.forsRoots adrs roots hrootMem hper, mt Vector.toList_inj.mp hroots, hTk, hTk'⟩
   subst hroots
   suffices hsk : TargetCollision secret o.pk.pkSeed c ∨ ∀ i : Fin vp.params.k,
       simulateQ c.toPartialImpl (secret (forsSkAdrs adrs (forsSigLeafIndex vp.params md i.val))) =
@@ -544,19 +609,20 @@ theorem fors_cases (o : RomOutcome vp core) (c : PublicHash.Cache core)
       (i.val * 2 ^ vp.params.a + forsIdx vp.params md i.val) vp.params.a i.val
       (by rw [← forsSigLeafIndex_eq]; exact forsSigLeafIndex_div_pow_a vp.params md i.val) leaf'
       (o.sig.fors[i.val]).auth.toList (by simp) hclimb (hper i) with
-    hleaf | ⟨h, l, rr, l', r', v, hh, -, hne, hl, hr, hq, hq'⟩
+    hleaf | ⟨h, l, rr, l', r', v, hh, hha, hne, hl, hr, hq, hq'⟩
   · simp only [forsLeafWithSecret, simulateQ_bind_eq_some_iff, simulateQ_toPartialImpl_f]
       at hleaf
     obtain ⟨x, hx, hleaf⟩ := hleaf
     refine ⟨core.adrsToKey (forsNodeAdrs adrs 0
       (i.val * 2 ^ vp.params.a + forsIdx vp.params md i.val)), [x], [(o.sig.fors[i.val]).sk],
-      leaf', HonestEntry.forsLeaf adrs _ x hx, fun h => hi ?_, hleaf, hF'⟩
+      leaf', HonestEntry.forsLeaf adrs _ x (hleafMem i) hx, fun h => hi ?_, hleaf, hF'⟩
     simp only [List.cons.injEq, and_true] at h
     rw [forsSigLeafIndex_eq, ← h]
     exact hx
   · simp only [forsNodeHashWith, simulateQ_toPartialImpl_h] at hq hq'
     refine ⟨core.adrsToKey (forsNodeAdrs adrs h _), [l, rr], [l', r'], v,
-      HonestEntry.forsNode adrs h _ l rr hh hl hr, fun hlist => hne ?_, hq, hq'⟩
+      HonestEntry.forsNode adrs h _ l rr hh (hnodeMem i h hh hha) hl hr, fun hlist => hne ?_, hq,
+      hq'⟩
     simp only [List.cons.injEq, and_true] at hlist
     exact Prod.ext hlist.1 hlist.2
 
