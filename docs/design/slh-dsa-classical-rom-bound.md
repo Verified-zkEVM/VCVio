@@ -76,6 +76,12 @@ the exact probability instead, the coverage costs drop to 0.10 (128f), 0.11 (192
 0.01. At `q_s ≤ 2^62` the coverage term is negligible at every set, and the two-hazard limit is
 `8n − 1`.
 
+The levels are those of the three-oracle model. The byte-level statement over a single SHAKE256
+adds the losses of the faithfulness step. At `n = 32` one of them, a forger string that reads as
+two different typed queries, costs about `2^{−172}` if bounded directly, which would bring the
+256-bit sets down to about 236 bits; the `n = 32` rows assume the randomised routing argument that
+removes it.
+
 ## leanVM's 127-bit proof
 
 `sphincs_has_127_bits_of_classical_security` (`formal/sphincs/SphincsSecurity.lean`) proves

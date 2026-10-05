@@ -17,8 +17,8 @@ Regression checks for the address premise of `Security.HonestEntry.wotsChain`, a
 parameter set SLH-DSA-SHAKE-128s (`w = 16`, `len = 35`).
 
 The premise places the entry address `(wotsChainAdrs adrs i).setHashAddress t` in the union ledger
-`Security.constructionAddresses`.  That forces the hash address below the top step, `t < w - 1`,
-and the chain index below `len` (`wotsChain_hmem_range`).  The FIPS 205 address encodes the hash
+`Security.constructionAddresses`. That forces the hash address below the top step, `t < w - 1`,
+and the chain index below `len` (`wotsChain_hmem_range`). The FIPS 205 address encodes the hash
 address in a 32-bit word, so the lapped step address `t + 2 ^ 32` shares its key with step `t`;
 the premise excludes it, because the lapped address is not in the ledger (`lap_not_mem`).
 -/
