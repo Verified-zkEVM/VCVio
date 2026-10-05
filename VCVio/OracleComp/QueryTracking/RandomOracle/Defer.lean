@@ -7,6 +7,8 @@ Authors: Alexander Hicks
 module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Commute
+public import VCVio.OracleComp.SimSemantics.StateT.Measure
 
 /-!
 # Deferred touches of a relabelled lazy random oracle
@@ -15,10 +17,9 @@ In the eager game `CanonicalGraph.eagerImpl` of a canonical graph `G`, a `touch 
 `c` and discards it. The deferred game `CanonicalGraph.deferredImpl` instead records `c` in a
 pending list and leaves it undrawn; every other query is answered as in the eager game, so a public
 query at a node point whose children include an undrawn touched cell is answered by the public
-cache. The end fill `CanonicalGraph.endFill` then touches every pending cell in the eager game,
-which draws the cells still undrawn. It is a run of `G.eagerImpl` on the program
-`pub.touchAll X K R cs` touching the pending cells `cs` in turn, so it is made of the handler's
-own oracle steps.
+cache. The end fill `RelabelState.endFill` then runs the random oracle on the cell cache at every
+pending cell, which draws the cells still undrawn and leaves the public cache unchanged. Its steps
+are random-oracle queries whose answers are the drawn values.
 
 Deferring a touch changes the run only through the public queries that would have read a label
 completed by touched cells: in the deferred game such a query is cached as a public answer, and
@@ -38,232 +39,28 @@ drawn only by touches hidden from the public queries until they are drawn by a r
 * The masked game, with the hidden cells forgotten, is dominated by the eager game until a
   conflict (`CanonicalGraph.dominatedUntilBad_maskedImpl`): a public query that the two games
   answer differently completes, in the masked game, a node whose point it caches.
-* The end fill with its cells hidden, `CanonicalGraph.maskedFill`, intertwines the deferred game
+* The end fill with its cells hidden, `RelabelState.maskedFill`, intertwines the deferred game
   with the masked game (`CanonicalGraph.intertwines_maskedFill`): drawing a touched cell when it is
   touched or after the run has the same distribution, because queries to the lazy random oracle
   commute (`randomOracle.evalDist_run_bind_simulateQ_run_swap`).
   `QueryImpl.Intertwines.evalDist_simulateQ_run` carries a step-wise intertwining to whole runs,
   which gives an equality of final-state distributions
-  (`CanonicalGraph.prEvent_deferredImpl_endFill_eq`).
+  (`CanonicalGraph.prEvent_deferredImpl_endFill_eq_maskedFill_bind_maskedImpl`).
 
 ## Main statements
 
-- `CanonicalGraph.prEvent_eagerImpl_le_deferredImpl`: the eager game is at most the deferred game
-  after the end fill, or a conflict.
-- `CanonicalGraph.prEvent_deferredImpl_endFill_eq` and
+- `CanonicalGraph.prEvent_eagerImpl_le_deferredImpl`: from a state with no pending cell, the eager
+  game is at most the deferred game after the end fill, or a conflict.
+- `CanonicalGraph.prEvent_deferredImpl_endFill_eq_maskedFill_bind_maskedImpl` and
   `CanonicalGraph.prEvent_deferredImpl_endFill_eq_maskedImpl`: the deferred game after the end fill
   has the final-state distribution of the masked game.
 - `CanonicalGraph.prEvent_eagerImpl_le_maskedImpl`: the eager game is at most the masked game, or a
   conflict.
-- `QueryImpl.Intertwines.evalDist_simulateQ_run`: a probabilistic state map intertwining two
-  handlers step by step intertwines their runs.
-- `randomOracle.evalDist_run_bind_simulateQ_run_swap`: a lazy random-oracle query commutes with
-  every computation run against the same oracle.
 -/
 
 public section
 
 open OracleComp OracleSpec MeasureTheory
-
-namespace OracleSpec
-
-section uncached
-
-variable {ι : Type} {spec : OracleSpec ι} [DecidableEq ι]
-
-/-- The indices listed in `ts` that a cache does not hold. -/
-def QueryCache.uncached (cache : spec.QueryCache) (ts : List ι) : Finset ι :=
-  ts.toFinset.filter fun t ↦ (cache t).isNone
-
-theorem QueryCache.mem_uncached {cache : spec.QueryCache} {ts : List ι} {t : ι} :
-    t ∈ cache.uncached ts ↔ t ∈ ts ∧ cache t = none := by
-  simp only [uncached, Option.isNone_iff_eq_none, Finset.mem_filter, List.mem_toFinset]
-
-end uncached
-
-variable {ι : Type} (spec : OracleSpec ι)
-
-
-/-- The program querying each index of `ts` in turn, discarding the answers. -/
-def queryAll (ts : List ι) : OracleComp spec Unit :=
-  ts.forM fun t ↦ do let _ ← spec.query t; pure ()
-
-@[simp] theorem queryAll_nil : spec.queryAll [] = pure () := by
-  simp only [queryAll, bind_pure_comp, List.forM_eq_forM, List.forM_nil]
-
-@[simp] theorem queryAll_cons (t : ι) (ts : List ι) :
-    spec.queryAll (t :: ts) = (do let _ ← spec.query t; spec.queryAll ts) := by
-  simp only [queryAll, bind_pure_comp, List.forM_eq_forM, List.forM_cons, bind_map_left]
-
-theorem queryAll_append (ts ts' : List ι) :
-    spec.queryAll (ts ++ ts') = (do spec.queryAll ts; spec.queryAll ts') := by
-  simp only [queryAll, bind_pure_comp, List.forM_eq_forM, List.forM_append]
-
-end OracleSpec
-
-namespace randomOracle
-
-variable {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec.{0, 0} ι₀}
-  [∀ t : spec₀.Domain, SampleableType (spec₀.Range t)]
-
-/-- Two queries to the lazy random oracle commute: their answers and the final cache have the
-same joint distribution in either order. -/
-theorem evalDist_run_bind_run_swap {γ : Type} [MeasurableSpace γ] (t t' : ι₀)
-    (cache : spec₀.QueryCache)
-    (f : spec₀.Range t → spec₀.Range t' → spec₀.QueryCache → ProbComp γ) :
-    𝒟[(spec₀.randomOracle t).run cache >>= fun z ↦
-        (spec₀.randomOracle t').run z.2 >>= fun y ↦ f z.1 y.1 y.2] =
-      𝒟[(spec₀.randomOracle t').run cache >>= fun y ↦
-        (spec₀.randomOracle t).run y.2 >>= fun z ↦ f z.1 y.1 z.2] := by
-  -- After a query at `t`, a query at `t` is answered from the cache.
-  have hit : ∀ {t : ι₀} {c : spec₀.QueryCache} {z}, z ∈ support ((spec₀.randomOracle t).run c) →
-      (spec₀.randomOracle t).run z.2 = pure z := fun {t c z} hz ↦ by
-    rw [QueryImpl.withCaching_run_some _ (QueryImpl.withCaching_run_caches _ _ _ _ hz)]
-  have keep : ∀ {t t' : ι₀} {c : spec₀.QueryCache} {v : spec₀.Range t'} {z},
-      z ∈ support ((spec₀.randomOracle t).run c) → c t' = some v →
-      (spec₀.randomOracle t').run z.2 = pure (v, z.2) := fun {t t' c v z} hz hv ↦
-    QueryImpl.withCaching_run_some _ (QueryImpl.withCaching_cache_le _ _ _ _ hz hv)
-  by_cases htt : t = t'
-  · subst htt
-    calc _ = 𝒟[(spec₀.randomOracle t).run cache >>= fun z ↦ f z.1 z.1 z.2] :=
-          evalDist_bind_congr_of_support _ _ _ fun z hz ↦ by rw [hit hz, pure_bind]
-      _ = _ := evalDist_bind_congr_of_support _ _ _ fun z hz ↦ by rw [hit hz, pure_bind]
-  cases ht : cache t with
-  | some v =>
-    calc _ = 𝒟[(spec₀.randomOracle t').run cache >>= fun y ↦ f v y.1 y.2] := by
-          rw [QueryImpl.withCaching_run_some _ ht, pure_bind]
-      _ = _ := evalDist_bind_congr_of_support _ _ _ fun z hz ↦ by rw [keep hz ht, pure_bind]
-  | none =>
-    cases ht' : cache t' with
-    | some v' =>
-      calc _ = 𝒟[(spec₀.randomOracle t).run cache >>= fun z ↦ f z.1 v' z.2] :=
-            evalDist_bind_congr_of_support _ _ _ fun z hz ↦ by rw [keep hz ht', pure_bind]
-        _ = _ := by rw [QueryImpl.withCaching_run_some _ ht', pure_bind]
-    | none =>
-      have h₁ : ∀ u, (cache.cacheQuery t u) t' = none := fun u ↦
-        (QueryCache.cacheQuery_of_ne _ _ (Ne.symm htt)).trans ht'
-      have h₂ : ∀ u', (cache.cacheQuery t' u') t = none := fun u' ↦
-        (QueryCache.cacheQuery_of_ne _ _ htt).trans ht
-      simp only [QueryImpl.withCaching_run_none _ ht, QueryImpl.withCaching_run_none _ ht',
-        QueryImpl.withCaching_run_none _ (h₁ _), QueryImpl.withCaching_run_none _ (h₂ _),
-        bind_map_left, uniformSampleImpl_apply]
-      rw [OracleComp.evalDist_bind_bind_swap]
-      simp only [QueryCache.cacheQuery_comm _ htt]
-
-/-- A query to the lazy random oracle commutes with any computation run against the same
-oracle: the answer, the computation's output and the final cache have the same joint
-distribution in either order. -/
-theorem evalDist_run_bind_simulateQ_run_swap {α γ : Type} [MeasurableSpace γ] (t : ι₀)
-    (oa : OracleComp spec₀ α) (cache : spec₀.QueryCache)
-    (f : spec₀.Range t → α → spec₀.QueryCache → ProbComp γ) :
-    𝒟[(spec₀.randomOracle t).run cache >>= fun z ↦
-        (simulateQ spec₀.randomOracle oa).run z.2 >>= fun w ↦ f z.1 w.1 w.2] =
-      𝒟[(simulateQ spec₀.randomOracle oa).run cache >>= fun w ↦
-        (spec₀.randomOracle t).run w.2 >>= fun z ↦ f z.1 w.1 z.2] := by
-  induction oa using OracleComp.inductionOn generalizing cache with
-  | pure a => simp only [simulateQ_pure, StateT.run_pure, pure_bind]
-  | query_bind t' k ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
-    rw [evalDist_run_bind_run_swap t t' cache fun u u' c ↦
-      (simulateQ spec₀.randomOracle (k u')).run c >>= fun w ↦ f u w.1 w.2]
-    exact evalDist_bind_congr_of_support _ _ _ fun y _ ↦ ih y.1 y.2
-
-/-- A query to the lazy random oracle removes its index from the uncached indices of a list. -/
-theorem uncached_of_mem_support {t : ι₀} {cache : spec₀.QueryCache} {z}
-    (hz : z ∈ support ((spec₀.randomOracle t).run cache)) (ts : List ι₀) :
-    z.2.uncached ts = (cache.uncached ts).erase t := by
-  ext t'
-  rw [Finset.mem_erase, QueryCache.mem_uncached, QueryCache.mem_uncached,
-    ← Option.not_isSome_iff_eq_none, ← Option.not_isSome_iff_eq_none,
-    QueryImpl.withCaching_run_isSome_apply_iff _ hz]
-  tauto
-
-/-- Querying the lazy random oracle at each index of `ts` only extends the cache, and caches
-exactly the indices cached before or listed in `ts`. -/
-theorem le_and_isSome_iff_of_mem_support_queryAll {ts : List ι₀} {cache : spec₀.QueryCache}
-    {w : Unit × spec₀.QueryCache}
-    (hw : w ∈ support ((simulateQ spec₀.randomOracle (spec₀.queryAll ts)).run cache)) :
-    cache ≤ w.2 ∧ ∀ t, (w.2 t).isSome ↔ (cache t).isSome ∨ t ∈ ts := by
-  induction ts generalizing cache with
-  | nil =>
-    simp only [OracleSpec.queryAll_nil, simulateQ_pure, StateT.run_pure, support_pure,
-      Set.mem_singleton_iff] at hw
-    subst hw
-    simp only [le_rfl, List.not_mem_nil, or_false, implies_true, and_self]
-  | cons t ts ih =>
-    simp only [OracleSpec.queryAll_cons, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
-      mem_support_bind_iff] at hw
-    obtain ⟨y, hy, hw⟩ := hw
-    obtain ⟨hle, hiff⟩ := ih hw
-    refine ⟨(QueryImpl.withCaching_cache_le _ _ _ _ hy).trans hle, fun t' ↦ ?_⟩
-    rw [hiff, QueryImpl.withCaching_run_isSome_apply_iff _ hy, List.mem_cons]
-    tauto
-
-/-- After querying the lazy random oracle at each index of `ts`, the indices of `ts ++ [t]`
-uncached before are those of `ts`, together with `t` when it is still uncached. -/
-theorem uncached_append_singleton_of_mem_support_queryAll {ts : List ι₀}
-    {cache : spec₀.QueryCache} {w : Unit × spec₀.QueryCache}
-    (hw : w ∈ support ((simulateQ spec₀.randomOracle (spec₀.queryAll ts)).run cache)) (t : ι₀) :
-    cache.uncached (ts ++ [t]) =
-      if (w.2 t).isNone then insert t (cache.uncached ts) else cache.uncached ts := by
-  have ht := (le_and_isSome_iff_of_mem_support_queryAll hw).2 t
-  ext t'
-  rcases eq_or_ne t' t with rfl | h'
-  · cases hc : cache t' <;> cases hw' : w.2 t' <;> simp_all [QueryCache.mem_uncached]
-  · cases hw' : w.2 t <;> simp [QueryCache.mem_uncached, h']
-
-end randomOracle
-
-namespace QueryImpl
-
-variable {ι : Type} {spec : OracleSpec ι} {σ₁ σ₂ : Type}
-
-/-- A probabilistic state map `fill` intertwines `impl₁` with `impl₂`: from every state, a step
-of `impl₁` followed by `fill` of its post-state has, before any continuation, the distribution of
-`fill` followed by the step of `impl₂`. -/
-@[expose] def Intertwines (fill : σ₁ → ProbComp σ₂)
-    (impl₁ : QueryImpl spec (StateT σ₁ ProbComp)) (impl₂ : QueryImpl spec (StateT σ₂ ProbComp)) :
-    Prop :=
-  ∀ t s {γ : Type} [MeasurableSpace γ] (f : spec.Range t → σ₂ → ProbComp γ),
-    𝒟[(impl₁ t).run s >>= fun z ↦ fill z.2 >>= f z.1] =
-      𝒟[fill s >>= fun s' ↦ (impl₂ t).run s' >>= fun z ↦ f z.1 z.2]
-
-/-- If `fill` intertwines `impl₁` with `impl₂` step by step, it intertwines their runs of every
-oracle computation. -/
-theorem Intertwines.evalDist_simulateQ_run {fill : σ₁ → ProbComp σ₂}
-    {impl₁ : QueryImpl spec (StateT σ₁ ProbComp)} {impl₂ : QueryImpl spec (StateT σ₂ ProbComp)}
-    (h : Intertwines fill impl₁ impl₂) {α γ : Type} [MeasurableSpace γ]
-    (oa : OracleComp spec α) (s : σ₁) (f : α → σ₂ → ProbComp γ) :
-    𝒟[(simulateQ impl₁ oa).run s >>= fun z ↦ fill z.2 >>= f z.1] =
-      𝒟[fill s >>= fun s' ↦ (simulateQ impl₂ oa).run s' >>= fun z ↦ f z.1 z.2] := by
-  induction oa using OracleComp.inductionOn generalizing s with
-  | pure a => simp only [simulateQ_pure, StateT.run_pure, pure_bind]
-  | query_bind t k ih =>
-    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, bind_assoc]
-    calc _ = 𝒟[(impl₁ t).run s >>= fun z ↦ fill z.2 >>= fun s' ↦
-          (simulateQ impl₂ (k z.1)).run s' >>= fun w ↦ f w.1 w.2] :=
-          evalDist_bind_congr_of_support _ _ _ fun z _ ↦ ih z.1 z.2
-      _ = _ := h t s fun u s' ↦ (simulateQ impl₂ (k u)).run s' >>= fun w ↦ f w.1 w.2
-
-end QueryImpl
-
-namespace OracleSpec
-
-variable {ι : Type} (pub : OracleSpec ι) (X K R : Type)
-
-/-- The program touching each cell of `cs` in turn. -/
-def touchAll (cs : List (X ⊕ K)) : OracleComp (pub.withLabels X K R) Unit :=
-  cs.forM fun c ↦ (pub.withLabels X K R).query (.inr (.inl c))
-
-@[simp] theorem touchAll_nil : pub.touchAll X K R [] = pure () := by
-  simp only [touchAll, add_apply_inr, add_apply_inl, List.forM_eq_forM, List.forM_nil]
-
-@[simp] theorem touchAll_cons (c : X ⊕ K) (cs : List (X ⊕ K)) :
-    pub.touchAll X K R (c :: cs) =
-      (do let _ ← (pub.withLabels X K R).query (.inr (.inl c)); pub.touchAll X K R cs) := by
-  simp only [touchAll, add_apply_inr, add_apply_inl, List.forM_eq_forM, List.forM_cons]
-
-end OracleSpec
 
 namespace RelabelState
 
@@ -295,6 +92,80 @@ theorem revealCell_run (c : X ⊕ K) (s : RelabelState pub X K R × Finset (X �
     (revealCell c).run s = (fun z ↦ (z.1, (z.2, s.2.erase c))) <$> (drawCell c).run s.1 := by
   simp only [revealCell, StateT.run_mk]
 
+/-! ## The end fill -/
+
+/-- **The end fill.** Run the random oracle on the cell cache at each pending cell in turn,
+drawing the undrawn ones; the public cache is unchanged. -/
+noncomputable def endFill (s : RelabelState pub X K R × List (X ⊕ K)) :
+    ProbComp (RelabelState pub X K R) :=
+  (fun w ↦ (s.1.1, w.2)) <$>
+    (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll s.2)).run s.1.2
+
+/-- The end fill with the cells it draws hidden. -/
+noncomputable def maskedFill (s : RelabelState pub X K R × List (X ⊕ K)) :
+    ProbComp (RelabelState pub X K R × Finset (X ⊕ K)) :=
+  (fun st ↦ (st, s.1.2.uncached s.2)) <$> endFill s
+
+/-- The end fill runs the random oracle on the cell cache at the pending cells, keeping the public
+cache. -/
+theorem endFill_eq (st : RelabelState pub X K R) (cs : List (X ⊕ K)) :
+    endFill (st, cs) = (fun w ↦ (st.1, w.2)) <$>
+      (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2 := by
+  simp only [endFill]
+
+/-- The masked end fill runs the random oracle on the cell cache at the pending cells, and hides
+the pending cells undrawn before it. -/
+theorem maskedFill_eq (st : RelabelState pub X K R) (cs : List (X ⊕ K)) :
+    maskedFill (st, cs) = (fun w ↦ ((st.1, w.2), st.2.uncached cs)) <$>
+      (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2 := by
+  rw [maskedFill, endFill_eq, Functor.map_map]
+
+/-- The end fill of an empty pending list leaves the state unchanged. -/
+@[simp] theorem endFill_nil (st : RelabelState pub X K R) : endFill (st, []) = pure st := by
+  simp only [endFill_eq, queryAll_nil, simulateQ_pure, StateT.run_pure, map_pure, Prod.mk.eta]
+
+/-- The masked end fill of an empty pending list leaves the state unchanged and hides nothing. -/
+@[simp] theorem maskedFill_nil (st : RelabelState pub X K R) :
+    maskedFill (st, []) = pure (st, ∅) := by
+  simp only [maskedFill_eq, QueryCache.uncached, List.toFinset_nil, Finset.filter_empty,
+    queryAll_nil, simulateQ_pure, StateT.run_pure, map_pure, Prod.mk.eta]
+
+/-- Read with its hidden cells undrawn, a state produced by the masked end fill is the state
+before the fill. -/
+theorem mask_eq_of_mem_support_maskedFill {st : RelabelState pub X K R} {cs : List (X ⊕ K)}
+    {s'} (hs : s' ∈ support (maskedFill (st, cs))) : mask s' = st := by
+  rw [maskedFill_eq, support_map] at hs
+  obtain ⟨w, hw, rfl⟩ := hs
+  obtain ⟨hle, hiff⟩ := QueryImpl.withCaching_queryAll_le_and_isSome_iff _ hw
+  refine Prod.ext rfl (QueryCache.ext fun c ↦ ?_)
+  rw [mask_apply]
+  by_cases hc : c ∈ st.2.uncached cs
+  · simp only [hc, ↓reduceIte, (QueryCache.mem_uncached.1 hc).2]
+  · simp only [hc, ↓reduceIte]
+    cases h : st.2 c with
+    | some v => exact hle h
+    | none =>
+      have hcs : c ∉ cs := fun hcs ↦ hc (QueryCache.mem_uncached.2 ⟨hcs, h⟩)
+      refine Option.not_isSome_iff_eq_none.1 fun hw' ↦ ?_
+      rcases (hiff c).1 hw' with h' | h'
+      · rw [h] at h'; exact Bool.false_ne_true h'
+      · exact hcs h'
+
+/-- Drawing a cell and then filling commutes with filling and then revealing the cell. -/
+theorem evalDist_drawCell_bind_maskedFill (c : X ⊕ K) (st : RelabelState pub X K R)
+    (cs : List (X ⊕ K)) {γ : Type} [MeasurableSpace γ]
+    (f : R → RelabelState pub X K R × Finset (X ⊕ K) → ProbComp γ) :
+    𝒟[(drawCell c).run st >>= fun z ↦ maskedFill (z.2, cs) >>= f z.1] =
+      𝒟[maskedFill (st, cs) >>= fun s' ↦ (revealCell c).run s' >>= fun z ↦ f z.1 z.2] := by
+  simp only [drawCell_run, maskedFill_eq, revealCell_run, bind_map_left]
+  calc _ = 𝒟[(((X ⊕ K) →ₒ R).randomOracle c).run st.2 >>= fun z ↦
+        (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run z.2 >>= fun w ↦
+          f z.1 ((st.1, w.2), (st.2.uncached cs).erase c)] :=
+        evalDist_bind_congr_of_support _ _ _ fun z hz ↦ by
+          rw [QueryImpl.withCaching_run_uncached _ hz]
+    _ = _ := randomOracle.evalDist_run_bind_simulateQ_run_swap c _ st.2
+        fun u _ D ↦ f u ((st.1, D), (st.2.uncached cs).erase c)
+
 end RelabelState
 
 namespace CanonicalGraph
@@ -311,11 +182,6 @@ noncomputable def deferredImpl : QueryImpl (pub.withLabels X K R)
   | .inr (.inl c) => StateT.mk fun s ↦ pure ((), (s.1, s.2 ++ [c]))
   | .inr (.inr k) => StateT.mk fun s ↦
       (fun z ↦ (z.1, (z.2, s.2))) <$> (RelabelState.drawCell (.inr k)).run s.1
-
-/-- **The end fill.** Touch every pending cell in the eager game, drawing the undrawn ones. -/
-noncomputable def endFill (s : RelabelState pub X K R × List (X ⊕ K)) :
-    ProbComp (RelabelState pub X K R) :=
-  Prod.snd <$> (simulateQ G.eagerImpl (pub.touchAll X K R s.2)).run s.1
 
 open Classical in
 /-- The eager game with the cells drawn only by touches hidden: a set of hidden cells is kept
@@ -336,71 +202,6 @@ noncomputable def maskedImpl : QueryImpl (pub.withLabels X K R)
       (fun z ↦ ((), (z.2, if (s.1.2 c).isNone then insert c s.2 else s.2))) <$>
         (RelabelState.drawCell c).run s.1
   | .inr (.inr k) => RelabelState.revealCell (.inr k)
-
-/-- The end fill with the cells it draws hidden. -/
-noncomputable def maskedFill (s : RelabelState pub X K R × List (X ⊕ K)) :
-    ProbComp (RelabelState pub X K R × Finset (X ⊕ K)) :=
-  (fun st ↦ (st, s.1.2.uncached s.2)) <$> G.endFill s
-
-/-! ## The end fill as the random oracle on the cell cache -/
-
-/-- Touching a list of cells in the eager game runs the random oracle on the cell cache at those
-cells. -/
-theorem simulateQ_eagerImpl_touchAll_run (cs : List (X ⊕ K)) (st : RelabelState pub X K R) :
-    (simulateQ G.eagerImpl (pub.touchAll X K R cs)).run st =
-      (fun w ↦ ((), (st.1, w.2))) <$>
-        (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2 := by
-  induction cs generalizing st with
-  | nil => simp only [touchAll_nil, simulateQ_pure, StateT.run_pure, queryAll_nil, map_pure,
-    Prod.mk.eta]
-  | cons c cs ih =>
-    simp only [OracleSpec.touchAll_cons, OracleSpec.queryAll_cons, simulateQ_bind,
-      simulateQ_spec_query, StateT.run_bind, eagerImpl_apply_inr, RelabelState.labelImpl,
-      RelabelState.drawCell_run, ih, bind_map_left, map_bind]
-
-/-- The end fill runs the random oracle on the cell cache at the pending cells. -/
-theorem endFill_eq (st : RelabelState pub X K R) (cs : List (X ⊕ K)) :
-    G.endFill (st, cs) = (fun w ↦ (st.1, w.2)) <$>
-      (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2 := by
-  rw [endFill, simulateQ_eagerImpl_touchAll_run, Functor.map_map]
-
-/-- The masked end fill runs the random oracle on the cell cache at the pending cells, and hides
-the pending cells undrawn before it. -/
-theorem maskedFill_eq (st : RelabelState pub X K R) (cs : List (X ⊕ K)) :
-    G.maskedFill (st, cs) = (fun w ↦ ((st.1, w.2), st.2.uncached cs)) <$>
-      (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2 := by
-  rw [maskedFill, endFill_eq, Functor.map_map]
-
-/-- The end fill of an empty pending list leaves the state unchanged. -/
-@[simp] theorem endFill_nil (st : RelabelState pub X K R) : G.endFill (st, []) = pure st := by
-  simp only [endFill_eq, queryAll_nil, simulateQ_pure, StateT.run_pure, map_pure, Prod.mk.eta]
-
-/-- The masked end fill of an empty pending list leaves the state unchanged and hides nothing. -/
-@[simp] theorem maskedFill_nil (st : RelabelState pub X K R) :
-    G.maskedFill (st, []) = pure (st, ∅) := by
-  simp only [maskedFill_eq, QueryCache.uncached, List.toFinset_nil, Finset.filter_empty,
-    queryAll_nil, simulateQ_pure, StateT.run_pure, map_pure, Prod.mk.eta]
-
-/-- Read with its hidden cells undrawn, a state produced by the masked end fill is the state
-before the fill. -/
-theorem mask_eq_of_mem_support_maskedFill {st : RelabelState pub X K R} {cs : List (X ⊕ K)}
-    {s'} (hs : s' ∈ support (G.maskedFill (st, cs))) : RelabelState.mask s' = st := by
-  rw [maskedFill_eq, support_map] at hs
-  obtain ⟨w, hw, rfl⟩ := hs
-  obtain ⟨hle, hiff⟩ := randomOracle.le_and_isSome_iff_of_mem_support_queryAll hw
-  refine Prod.ext rfl (QueryCache.ext fun c ↦ ?_)
-  rw [RelabelState.mask_apply]
-  by_cases hc : c ∈ st.2.uncached cs
-  · simp only [hc, ↓reduceIte, (QueryCache.mem_uncached.1 hc).2]
-  · simp only [hc, ↓reduceIte]
-    cases h : st.2 c with
-    | some v => exact hle h
-    | none =>
-      have hcs : c ∉ cs := fun hcs ↦ hc (QueryCache.mem_uncached.2 ⟨hcs, h⟩)
-      refine Option.not_isSome_iff_eq_none.1 fun hw' ↦ ?_
-      rcases (hiff c).1 hw' with h' | h'
-      · rw [h] at h'; exact Bool.false_ne_true h'
-      · exact hcs h'
 
 /-! ## Run equations -/
 
@@ -458,26 +259,9 @@ theorem maskedImpl_run_pub_of_not_exists {s : RelabelState pub X K R × Finset (
 
 /-! ## The masked end fill intertwines the deferred and masked games -/
 
-/-- Drawing a cell and then filling commutes with filling and then revealing the cell. -/
-theorem evalDist_drawCell_bind_maskedFill (c : X ⊕ K) (st : RelabelState pub X K R)
-    (cs : List (X ⊕ K)) {γ : Type} [MeasurableSpace γ]
-    (f : R → RelabelState pub X K R × Finset (X ⊕ K) → ProbComp γ) :
-    𝒟[(RelabelState.drawCell c).run st >>= fun z ↦ G.maskedFill (z.2, cs) >>= f z.1] =
-      𝒟[G.maskedFill (st, cs) >>= fun s' ↦
-        (RelabelState.revealCell c).run s' >>= fun z ↦ f z.1 z.2] := by
-  simp only [RelabelState.drawCell_run, maskedFill_eq, RelabelState.revealCell_run,
-    bind_map_left]
-  calc _ = 𝒟[(((X ⊕ K) →ₒ R).randomOracle c).run st.2 >>= fun z ↦
-        (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run z.2 >>= fun w ↦
-          f z.1 ((st.1, w.2), (st.2.uncached cs).erase c)] :=
-        evalDist_bind_congr_of_support _ _ _ fun z hz ↦ by
-          rw [randomOracle.uncached_of_mem_support hz]
-    _ = _ := randomOracle.evalDist_run_bind_simulateQ_run_swap c _ st.2
-        fun u _ D ↦ f u ((st.1, D), (st.2.uncached cs).erase c)
-
 /-- The masked end fill intertwines the deferred game with the masked game. -/
 theorem intertwines_maskedFill :
-    QueryImpl.Intertwines G.maskedFill G.deferredImpl G.maskedImpl := by
+    QueryImpl.Intertwines RelabelState.maskedFill G.deferredImpl G.maskedImpl := by
   rintro (((n | t) | x) | (c | k)) ⟨st, cs⟩ γ _ f
   · rw [deferredImpl_run_inl, relabelImpl_run_unif]
     simp only [maskedImpl_run_unif, bind_map_left]
@@ -486,37 +270,37 @@ theorem intertwines_maskedFill :
     · obtain ⟨k, vs, hk, rfl⟩ := h
       rw [deferredImpl_run_inl, G.relabelImpl_run_pt hk]
       simp only [bind_map_left, Prod.map_fst, Prod.map_snd, id_eq]
-      refine (G.evalDist_drawCell_bind_maskedFill (.inr k) st cs
+      refine (RelabelState.evalDist_drawCell_bind_maskedFill (.inr k) st cs
         fun u s' ↦ f (cast (G.range_eq k vs).symm u) s').trans ?_
       refine evalDist_bind_congr_of_support _ _ _ fun s' hs' ↦ ?_
-      rw [G.maskedImpl_run_pt (by rw [G.mask_eq_of_mem_support_maskedFill hs']; exact hk),
-        bind_map_left]
+      rw [G.maskedImpl_run_pt
+        (by rw [RelabelState.mask_eq_of_mem_support_maskedFill hs']; exact hk), bind_map_left]
       rfl
     · rw [deferredImpl_run_inl, G.relabelImpl_run_pub_of_not_exists h]
       set F := (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2
       calc _ = 𝒟[(pub.randomOracle t).run st.1 >>= fun y ↦ F >>= fun w ↦
             f y.1 ((y.2, w.2), st.2.uncached cs)] := by
-            simp only [Functor.map_map, bind_map_left, maskedFill_eq, F]
+            simp only [Functor.map_map, bind_map_left, RelabelState.maskedFill_eq, F]
         _ = 𝒟[F >>= fun w ↦ (pub.randomOracle t).run st.1 >>= fun y ↦
             f y.1 ((y.2, w.2), st.2.uncached cs)] := OracleComp.evalDist_bind_bind_swap _ _ _
         _ = _ := by
-          rw [maskedFill_eq, bind_map_left]
+          rw [RelabelState.maskedFill_eq, bind_map_left]
           refine evalDist_bind_congr_of_support _ _ _ fun w hw ↦ ?_
-          have hm := G.mask_eq_of_mem_support_maskedFill (st := st) (cs := cs)
+          have hm := RelabelState.mask_eq_of_mem_support_maskedFill (st := st) (cs := cs)
             (s' := ((st.1, w.2), st.2.uncached cs))
-            (by rw [maskedFill_eq, support_map]; exact ⟨w, hw, rfl⟩)
+            (by rw [RelabelState.maskedFill_eq, support_map]; exact ⟨w, hw, rfl⟩)
           rw [G.maskedImpl_run_pub_of_not_exists (by rw [hm]; exact h), bind_map_left]
   · rw [deferredImpl_run_inl, relabelImpl_apply_inr, bind_map_left, maskedImpl_apply_derive]
-    exact G.evalDist_drawCell_bind_maskedFill (.inl x) st cs f
-  · rw [deferredImpl_run_touch, pure_bind, maskedFill_eq, maskedFill_eq,
+    exact RelabelState.evalDist_drawCell_bind_maskedFill (.inl x) st cs f
+  · rw [deferredImpl_run_touch, pure_bind, RelabelState.maskedFill_eq, RelabelState.maskedFill_eq,
       OracleSpec.queryAll_append, simulateQ_bind, StateT.run_bind]
     simp only [bind_map_left, map_bind, maskedImpl_run_touch, RelabelState.drawCell_run,
       OracleSpec.queryAll_cons, OracleSpec.queryAll_nil, simulateQ_bind, simulateQ_spec_query,
       simulateQ_pure, StateT.run_bind, StateT.run_pure, pure_bind, bind_assoc]
     refine evalDist_bind_congr_of_support _ _ _ fun w hw ↦ ?_
-    rw [randomOracle.uncached_append_singleton_of_mem_support_queryAll hw c]
+    rw [QueryImpl.withCaching_queryAll_uncached_append_singleton _ hw c]
   · rw [deferredImpl_run_read, bind_map_left, maskedImpl_apply_read]
-    exact G.evalDist_drawCell_bind_maskedFill (.inr k) st cs f
+    exact RelabelState.evalDist_drawCell_bind_maskedFill (.inr k) st cs f
 
 /-! ## The masked game is dominated by the eager game until a conflict -/
 
@@ -605,25 +389,29 @@ theorem dominatedUntilBad_maskedImpl :
 /-- **Deferred decision for touched cells.** From any state of the deferred game, its run
 followed by the end fill has the distribution of the masked game run from the masked end fill of
 that state, with the hidden cells forgotten. -/
-theorem prEvent_deferredImpl_endFill_eq {α : Type} (oa : OracleComp (pub.withLabels X K R) α)
-    (s : RelabelState pub X K R × List (X ⊕ K)) (P : α × RelabelState pub X K R → Prop) :
+theorem prEvent_deferredImpl_endFill_eq_maskedFill_bind_maskedImpl {α : Type}
+    (oa : OracleComp (pub.withLabels X K R) α) (s : RelabelState pub X K R × List (X ⊕ K))
+    (P : α × RelabelState pub X K R → Prop) :
     Pr{let z ← (simulateQ G.deferredImpl oa).run s
-       let st ← G.endFill z.2}[P (z.1, st)] =
-      Pr{let s' ← G.maskedFill s
+       let st ← RelabelState.endFill z.2}[P (z.1, st)] =
+      Pr{let s' ← RelabelState.maskedFill s
          let z ← (simulateQ G.maskedImpl oa).run s'}[P (z.1, z.2.1)] := by
   have h := G.intertwines_maskedFill.evalDist_simulateQ_run oa s
     fun a s' ↦ (pure (P (a, s'.1)) : ProbComp Prop)
-  simp only [maskedFill, bind_map_left] at h ⊢
+  simp only [RelabelState.maskedFill, bind_map_left] at h ⊢
   rw [h]
 
-/-- **Deferred decision for touched cells, from the empty state.** The deferred game followed by
-the end fill has the distribution of the masked game, with the hidden cells forgotten. -/
+/-- **Deferred decision for touched cells, with nothing pending.** From a state with no pending
+cell, the deferred game followed by the end fill has the distribution of the masked game from the
+same state with nothing hidden, with the hidden cells forgotten. -/
 theorem prEvent_deferredImpl_endFill_eq_maskedImpl {α : Type}
-    (oa : OracleComp (pub.withLabels X K R) α) (P : α × RelabelState pub X K R → Prop) :
-    Pr{let z ← (simulateQ G.deferredImpl oa).run ((∅, ∅), [])
-       let st ← G.endFill z.2}[P (z.1, st)] =
-      Pr{let z ← (simulateQ G.maskedImpl oa).run ((∅, ∅), ∅)}[P (z.1, z.2.1)] := by
-  rw [prEvent_deferredImpl_endFill_eq, maskedFill_nil, pure_bind]
+    (oa : OracleComp (pub.withLabels X K R) α) (st : RelabelState pub X K R)
+    (P : α × RelabelState pub X K R → Prop) :
+    Pr{let z ← (simulateQ G.deferredImpl oa).run (st, [])
+       let st' ← RelabelState.endFill z.2}[P (z.1, st')] =
+      Pr{let z ← (simulateQ G.maskedImpl oa).run (st, ∅)}[P (z.1, z.2.1)] := by
+  rw [prEvent_deferredImpl_endFill_eq_maskedFill_bind_maskedImpl, RelabelState.maskedFill_nil,
+    pure_bind]
 
 /-- An event of the eager game is at most the same event of the masked game, with the hidden
 cells forgotten, or a conflict. -/
@@ -634,14 +422,23 @@ theorem prEvent_eagerImpl_le_maskedImpl {α : Type} (oa : OracleComp (pub.withLa
   G.dominatedUntilBad_maskedImpl.prEvent_simulateQ_run_le_map_or_bad
     (QueryImpl.PreservesInv.trivial _) G.preservesInv_conflict_maskedImpl oa s trivial P
 
-/-- **Touch deferral.** An event of the eager game is at most the same event of the deferred
-game after the end fill, or a conflict. -/
+/-- **Touch deferral.** From a state with no pending cell, an event of the eager game is at most
+the same event of the deferred game after the end fill, or a conflict. -/
 theorem prEvent_eagerImpl_le_deferredImpl {α : Type} (oa : OracleComp (pub.withLabels X K R) α)
-    (P : α × RelabelState pub X K R → Prop) :
+    (st : RelabelState pub X K R) (P : α × RelabelState pub X K R → Prop) :
+    Pr{let z ← (simulateQ G.eagerImpl oa).run st}[P z] ≤
+      Pr{let z ← (simulateQ G.deferredImpl oa).run (st, [])
+         let st' ← RelabelState.endFill z.2}[P (z.1, st') ∨ G.Conflict st'] :=
+  (G.prEvent_eagerImpl_le_maskedImpl oa (st, ∅) P).trans_eq
+    (G.prEvent_deferredImpl_endFill_eq_maskedImpl oa st fun z ↦ P z ∨ G.Conflict z.2).symm
+
+/-- **Touch deferral from the empty state.** An event of the eager game is at most the same event
+of the deferred game after the end fill, or a conflict. -/
+theorem prEvent_eagerImpl_le_deferredImpl_empty {α : Type}
+    (oa : OracleComp (pub.withLabels X K R) α) (P : α × RelabelState pub X K R → Prop) :
     Pr{let z ← (simulateQ G.eagerImpl oa).run (∅, ∅)}[P z] ≤
       Pr{let z ← (simulateQ G.deferredImpl oa).run ((∅, ∅), [])
-         let st ← G.endFill z.2}[P (z.1, st) ∨ G.Conflict st] :=
-  (G.prEvent_eagerImpl_le_maskedImpl oa ((∅, ∅), ∅) P).trans_eq
-    (G.prEvent_deferredImpl_endFill_eq_maskedImpl oa fun z ↦ P z ∨ G.Conflict z.2).symm
+         let st ← RelabelState.endFill z.2}[P (z.1, st) ∨ G.Conflict st] :=
+  G.prEvent_eagerImpl_le_deferredImpl oa (∅, ∅) P
 
 end CanonicalGraph

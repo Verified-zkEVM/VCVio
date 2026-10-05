@@ -307,6 +307,16 @@ lemma isCached_cacheQuery_of_ne {t' t : spec.Domain} (u : spec.Range t) (h : t' 
     (cache.cacheQuery t u).isCached t' = cache.isCached t' := by
   simp [isCached, cacheQuery_of_ne cache u h]
 
+/-- The indices listed in `ts` that the cache does not hold. -/
+def uncached (ts : List spec.Domain) : Finset spec.Domain :=
+  ts.toFinset.filter fun t ↦ !cache.isCached t
+
+variable {cache} in
+lemma mem_uncached {ts : List spec.Domain} {t : spec.Domain} :
+    t ∈ cache.uncached ts ↔ t ∈ ts ∧ cache t = none := by
+  simp only [uncached, isCached, Bool.not_eq_true', Option.isSome_eq_false_iff,
+    Option.isNone_iff_eq_none, Finset.mem_filter, List.mem_toFinset]
+
 /-! ### Sum spec projections -/
 
 section sum

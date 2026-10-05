@@ -230,6 +230,59 @@ lemma withCaching_run_isSome_apply_iff [LawfulMonad m] [MonadAttach m] [ExactMon
       simp only [QueryCache.cacheQuery_self, Option.isSome_some, or_true]
     · simp only [QueryCache.cacheQuery_of_ne _ _ h, h, or_false]
 
+/-- After a `withCaching` step on `t`, the indices of `ts` left uncached are those uncached before
+the step, other than `t`. -/
+lemma withCaching_run_uncached [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+    (so : QueryImpl spec m) {t : spec.Domain} {cache₀ : QueryCache spec}
+    {z : spec.Range t × QueryCache spec} (hz : z ∈ support ((so.withCaching t).run cache₀))
+    (ts : List spec.Domain) : z.2.uncached ts = (cache₀.uncached ts).erase t := by
+  ext t'
+  rw [Finset.mem_erase, QueryCache.mem_uncached, QueryCache.mem_uncached,
+    ← Option.not_isSome_iff_eq_none, ← Option.not_isSome_iff_eq_none,
+    withCaching_run_isSome_apply_iff so hz]
+  tauto
+
+section queryAll
+
+variable {ι₀ : Type} [DecidableEq ι₀] {spec₀ : OracleSpec.{0, 0} ι₀} {m₀ : Type → Type v}
+  [Monad m₀] [LawfulMonad m₀] [MonadAttach m₀] [ExactMonadAttach m₀] (so : QueryImpl spec₀ m₀)
+
+/-- Querying `so.withCaching` at each index of `ts` only extends the cache, and caches exactly
+the indices cached before or listed in `ts`. -/
+lemma withCaching_queryAll_le_and_isSome_iff {ts : List ι₀} {cache₀ : QueryCache spec₀}
+    {w : Unit × QueryCache spec₀}
+    (hw : w ∈ support ((simulateQ so.withCaching (spec₀.queryAll ts)).run cache₀)) :
+    cache₀ ≤ w.2 ∧ ∀ t, (w.2 t).isSome ↔ (cache₀ t).isSome ∨ t ∈ ts := by
+  induction ts generalizing cache₀ with
+  | nil =>
+    simp only [OracleSpec.queryAll_nil, simulateQ_pure, StateT.run_pure, support_pure,
+      Set.mem_singleton_iff] at hw
+    subst hw
+    simp only [le_rfl, List.not_mem_nil, or_false, implies_true, and_self]
+  | cons t ts ih =>
+    simp only [OracleSpec.queryAll_cons, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+      mem_support_bind_iff] at hw
+    obtain ⟨y, hy, hw⟩ := hw
+    obtain ⟨hle, hiff⟩ := ih hw
+    refine ⟨(withCaching_cache_le so _ _ _ hy).trans hle, fun t' ↦ ?_⟩
+    rw [hiff, withCaching_run_isSome_apply_iff so hy, List.mem_cons]
+    tauto
+
+/-- After querying `so.withCaching` at each index of `ts`, the indices of `ts ++ [t]` uncached
+before are those of `ts`, together with `t` when it is still uncached. -/
+lemma withCaching_queryAll_uncached_append_singleton {ts : List ι₀}
+    {cache₀ : QueryCache spec₀} {w : Unit × QueryCache spec₀}
+    (hw : w ∈ support ((simulateQ so.withCaching (spec₀.queryAll ts)).run cache₀)) (t : ι₀) :
+    cache₀.uncached (ts ++ [t]) =
+      if (w.2 t).isNone then insert t (cache₀.uncached ts) else cache₀.uncached ts := by
+  have ht := (withCaching_queryAll_le_and_isSome_iff so hw).2 t
+  ext t'
+  rcases eq_or_ne t' t with rfl | h'
+  · cases hc : cache₀ t' <;> cases hw' : w.2 t' <;> simp_all [QueryCache.mem_uncached]
+  · cases hw' : w.2 t <;> simp [QueryCache.mem_uncached, h']
+
+end queryAll
+
 /-- `withCaching` preserves the invariant `(cache₀ ≤ ·)` (the cache only grows). -/
 lemma PreservesInv.withCaching_le {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
     [DecidableEq ι₀]
