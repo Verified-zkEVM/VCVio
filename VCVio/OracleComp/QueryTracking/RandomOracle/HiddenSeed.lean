@@ -83,6 +83,8 @@ game's output, split state and auxiliary state by the same event of the extended
   `SecretEncoding.simulateQ_deriveImpl_liftM`: `E.deriveImpl s` undoes the lift of sampling and
   public queries into the derivation world (`OracleSpec.withDerivationsLift`) and the lift of a
   probabilistic computation.
+- `OracleComp.isQueryBoundP_liftM_withDerivations`: a lifted probabilistic computation makes no
+  query of a budget whose predicate no uniform-sampling query satisfies.
 - `SecretEncoding.map_run_simulateQ_coupledImpl` and
   `SecretEncoding.map_run_simulateQ_flaggedIdealImpl`: the coupled and flagged games project onto
   the real and ideal games.

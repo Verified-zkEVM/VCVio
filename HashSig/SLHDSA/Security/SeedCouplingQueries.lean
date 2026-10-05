@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.SeedCoupling
-import HashSig.SLHDSA.AddressDiscipline
+public import HashSig.SLHDSA.AddressDiscipline
 
 /-!
 # Derivable public queries of the secret-free run of SLH-DSA
@@ -19,11 +19,11 @@ public query `(secretEncoding core e pkSeed).enc s x`. Every such public query i
 This module bounds the derivable public queries of the transcript experiment of `deriveScheme`
 against a lifted forger by the forger's hash budget.
 
-* `CorePrimitives.KeySeparated core` says that no address of type at most `4` shares its oracle key
-  with a secret-key address. The bundles that satisfy it are in
-  `HashSig.SLHDSA.Security.KeySeparation`.
-* Under key separation, key generation, signing and verification of `deriveScheme` make no
-  derivable public query (`isQueryBoundP_deriveScheme_keygen`, `isQueryBoundP_deriveScheme_sign`,
+* Under key separation (`CorePrimitives.KeySeparated core`, from
+  `HashSig.SLHDSA.AddressDiscipline`: no address of type at most `4` shares its oracle key with a
+  secret-key address; the bundles that satisfy it are in `HashSig.SLHDSA.Security.KeySeparation`),
+  key generation, signing and verification of `deriveScheme` make no derivable public query
+  (`isQueryBoundP_deriveScheme_keygen`, `isQueryBoundP_deriveScheme_sign`,
   `isQueryBoundP_deriveScheme_verify`). They are instances of the address discipline of
   `HashSig.SLHDSA.AddressDiscipline`: a tweakable-hash query at an address of type at most `4` is
   not derivable under key separation, `H_msg` is never derivable, and the secret values and the
@@ -39,12 +39,6 @@ public section
 open OracleComp OracleSpec SignatureAlg
 
 namespace SLHDSA
-
-/-- The oracle key of a secret-key address is the key of no address of type at most `4`, the
-types of the `WOTS_HASH`, `WOTS_PK`, `TREE`, `FORS_TREE` and `FORS_ROOTS` addresses at which
-SLH-DSA evaluates the tweakable hash. -/
-@[expose] def CorePrimitives.KeySeparated {p : Params} (core : CorePrimitives p) : Prop :=
-  ∀ a b : Adrs, a.IsSecretKey → b.type ≤ 4 → core.adrsToKey a ≠ core.adrsToKey b
 
 namespace Security
 
@@ -110,8 +104,11 @@ private theorem isQueryBoundP_deriveSecret (pkSeed : core.PkSeed) (a : Adrs) (ha
   exact (isQueryBoundP_query_iff _ _ _).2 False.elim
 
 variable [DecidableEq core.Y] (hsep : core.KeySeparated) (pkSeed : core.PkSeed)
-  (optRand : PublicKeyCore core → ProbComp core.Y)
 include hsep
+
+section Programs
+
+variable (optRand : PublicKeyCore core → ProbComp core.Y)
 
 /-- Key generation of `deriveScheme` makes no derivable public query. -/
 theorem isQueryBoundP_deriveScheme_keygen :
@@ -119,8 +116,8 @@ theorem isQueryBoundP_deriveScheme_keygen :
       (IsDerivablePublicQuery core pkSeed) 0 :=
   isQueryBoundP_bind_zero _ _ (GeneralScheme.keygenInternalWithSecretM_pred
     (IsQueryBoundP · (IsDerivablePublicQuery core pkSeed) 0) (isQueryBoundP_pure _ · 0)
-    isQueryBoundP_bind_zero core (isQueryBoundP_publicHash_tl hsep pkSeed)
-    (isQueryBoundP_deriveSecret pkSeed) pkSeed) fun _ => isQueryBoundP_pure _ _ _
+    isQueryBoundP_bind_zero core (isQueryBoundP_deriveSecret pkSeed) pkSeed
+    (isQueryBoundP_publicHash_tl hsep pkSeed pkSeed)) fun _ => isQueryBoundP_pure _ _ _
 
 /-- Signing with `deriveScheme` makes no derivable public query: the randomizer is a derivation
 query, every secret value a derivation query, and every public query an `H_msg` query or a
@@ -132,8 +129,8 @@ theorem isQueryBoundP_deriveScheme_sign (pk sk : PublicKeyCore core) (msg : List
     isQueryBoundP_bind_zero _ _ ((isQueryBoundP_query_iff _ _ _).2 False.elim) fun _ =>
       GeneralScheme.signInternalWithSecretRandomizerM_pred
         (IsQueryBoundP · (IsDerivablePublicQuery core pkSeed) 0) (isQueryBoundP_pure _ · 0)
-        isQueryBoundP_bind_zero core (isQueryBoundP_publicHash_tl hsep pkSeed)
-        (isQueryBoundP_publicHash_hmsg pkSeed) (isQueryBoundP_deriveSecret pkSeed) _ _ _ _
+        isQueryBoundP_bind_zero core (isQueryBoundP_deriveSecret pkSeed) _ _ _ _
+        (isQueryBoundP_publicHash_tl hsep pkSeed _) (isQueryBoundP_publicHash_hmsg pkSeed _ _ _ _)
 
 /-- Verification with `deriveScheme` makes no derivable public query. -/
 theorem isQueryBoundP_deriveScheme_verify (pk : PublicKeyCore core) (msg : List Byte)
@@ -141,8 +138,10 @@ theorem isQueryBoundP_deriveScheme_verify (pk : PublicKeyCore core) (msg : List 
     IsQueryBoundP ((deriveScheme core optRand pkSeed).verify pk msg sig)
       (IsDerivablePublicQuery core pkSeed) 0 :=
   GeneralScheme.verifyInternalM_pred (IsQueryBoundP · (IsDerivablePublicQuery core pkSeed) 0)
-    (isQueryBoundP_pure _ · 0) isQueryBoundP_bind_zero core
-    (isQueryBoundP_publicHash_tl hsep pkSeed) (isQueryBoundP_publicHash_hmsg pkSeed) msg sig pk
+    (isQueryBoundP_pure _ · 0) isQueryBoundP_bind_zero core msg sig pk
+    (isQueryBoundP_publicHash_tl hsep pkSeed _) (isQueryBoundP_publicHash_hmsg pkSeed _ _ _ _)
+
+end Programs
 
 /-- **Every derivable public query of the secret-free experiment is a forger hash query.** If the
 forger makes at most `qh` hash queries, the transcript experiment of `deriveScheme` against the

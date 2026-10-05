@@ -6,7 +6,7 @@ Authors: Alexander Hicks
 
 module
 
-public import HashSig.SLHDSA.Security.SeedCouplingQueries
+public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.Concrete.FIPS
 public import HashSig.SLHDSA.Concrete.Instance
 import HashSig.SLHDSA.Security.AddressKeys
