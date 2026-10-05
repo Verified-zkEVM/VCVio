@@ -28,7 +28,8 @@ which is the only fact about the message encoding that proof assumes; here it is
 concrete FIPS 205 encoding, under `p.Valid` and `core.ByteLaws`.
 
 The same incomparability, applied against a second message-digit vector, shows that every node has
-a chain whose step count is strictly below the top step `w - 1` (`exists_chainStepsCore_lt_top`).
+a chain whose step count is strictly below the top step `w - 1`
+(`exists_chainStepsCore_lt_pred_w`).
 
 ## References
 
@@ -94,12 +95,10 @@ theorem chainStepsCore_two_encodings (valid : p.Valid) (laws : core.ByteLaws)
         ← List.getD_eq_get (l := chainLengthsCore core msg) (d := 0) ⟨i, hi'⟩]
       exact hle i (by simpa using hi))
 
-/-- Every node has a chain index whose step count is strictly below the top step `w - 1`.  Were
-every step at the top, the full digit vector of any other message-digit vector would be pointwise
-below it, against `WotsChecksum.wots_fullDigits_incomparable`; a second message-digit vector
-exists because `len1` is positive and `w` is at least `2`. -/
-theorem exists_chainStepsCore_lt_top (valid : p.Valid) (msg : core.Y) :
-    ∃ i, i < p.len ∧ chainStepsCore core msg i < p.w - 1 := by
+/-- Every node has a chain index `i < len` whose step count is strictly below the top step
+`w - 1`, at every validated parameter set and with no hypothesis on the node type `core.Y`. -/
+theorem exists_chainStepsCore_lt_pred_w (valid : p.Valid) (msg : core.Y) :
+    ∃ i < p.len, chainStepsCore core msg i < p.w - 1 := by
   by_contra hnot
   have htop : ∀ i, i < p.len → p.w - 1 ≤ chainStepsCore core msg i :=
     fun i hi => Nat.le_of_not_lt fun hlt => hnot ⟨i, hi, hlt⟩

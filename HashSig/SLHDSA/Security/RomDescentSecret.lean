@@ -6,10 +6,11 @@ Authors: Alexander Hicks
 
 module
 public import HashSig.SLHDSA.Security.CacheSecret
-public import HashSig.SLHDSA.Security.ComponentTraces
 public import HashSig.SLHDSA.Security.HmsgWitnesses
+public import HashSig.SLHDSA.Security.TraceTargets
 public import HashSig.SLHDSA.WotsInjectivity
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.Collision
+import HashSig.SLHDSA.Security.ComponentTraces
 
 /-!
 # The random-oracle bad events at a secret provider, and the descent from the cached root
@@ -45,9 +46,13 @@ selects is selected by the digest of some logged signature.
 The case analyses `xmssPkFromSig?_cases`, `wotsChain_cases`, `wotsLeaf_cases`, `xmssLayer_cases`
 and `fors_cases` split a settled verification step into these events or the next step of the
 descent.  The first three take the ledger membership of the addresses they may name as
-hypotheses; `xmssLayer_cases` and `fors_cases` discharge it from the hypertree position and the
-digest-derived FORS instance through the membership lemmas of
-`HashSig.SLHDSA.Security.ComponentTraces`.  The positional facts draw no secret: `childTreeAdrs`
+hypotheses; `xmssLayer_cases` and `fors_cases` discharge the ledger memberships from the hypertree
+position and the digest-derived FORS instance through the membership lemmas of
+`HashSig.SLHDSA.Security.ComponentTraces`.  In `xmssLayer_cases` the hidden-value hit at a used
+leaf with a different honest message is on a chain where the forgery's message selects a smaller
+step (`chainStepsCore_two_encodings`), and at an unused leaf it is on a chain where that message
+selects a step below the top (`exists_chainStepsCore_lt_pred_w`).  The positional facts draw no
+secret: `childTreeAdrs`
 and `forsInstanceAdrs` name the tree and FORS instance a hypertree position signs,
 `forgerMessage?` is the message the verification replay presents to each layer, and
 `forgerLayers_of_recoverFromPositionM` reads every layer of a settled Algorithm 13 run off the
@@ -222,7 +227,9 @@ WOTS+ hash step at hash address `t < w - 1` on chain `i < len` of a reachable in
 of a reachable instance at global index `t < k * 2 ^ a`; a FORS node at height `1 ≤ h ≤ a` and
 index `i < k * 2 ^ (a - h)`; the root compression of a reachable FORS instance.  The range is on
 addresses: where the key encoding `core.adrsToKey` is not injective on these addresses, one key
-can still carry several honest inputs. -/
+can still carry several honest inputs.  In `forsNode`, `hh : 0 < h` keeps a two-input node off the
+key of a FORS leaf, since the height-0 addresses of a FORS tree are ledger addresses (its leaves);
+in `xmssNode` the bound `0 < h` already follows from `hmem`. -/
 inductive HonestEntry (secret : Adrs → OracleComp (publicHashSpec core) core.Y)
     (pk : core.PkSeed) (c : PublicHash.Cache core) : (publicHashSpec core).Domain → Prop
   | xmssNode (adrs : Adrs) (h i : ℕ) (l r : core.Y) (hh : 0 < h)
@@ -478,10 +485,7 @@ theorem wotsLeaf_cases (pk : core.PkSeed) (c : PublicHash.Cache core) (adrs : Ad
 /-- One XMSS layer of the descent.  At a position the forger's replay enters at layer `j` with
 message `m'`, if the forger's XMSS recovery is settled at the settled honest root there, then
 either a same-address target collision, or a hidden-value hit, or the leaf is used and `m'` is its
-honest message.  The hypothesis `hmsg` supplies the settled honest message of a used leaf.  At a
-used leaf with a different honest message the hit is on a chain where `m'` selects a smaller step
-(`chainStepsCore_two_encodings`); at an unused leaf it is on a chain where `m'` selects a step
-below the top (`exists_chainStepsCore_lt_top`). -/
+honest message.  The hypothesis `hmsg` supplies the settled honest message of a used leaf. -/
 theorem xmssLayer_cases (laws : core.ByteLaws) (o : RomOutcome vp core)
     (c : PublicHash.Cache core) (j : Fin vp.params.d) (pos : LayerPosition vp) (m' : core.Y)
     {r : core.Y} (hlayer : ForgerLayer o c j pos m')
@@ -507,7 +511,7 @@ theorem xmssLayer_cases (laws : core.ByteLaws) (o : RomOutcome vp core)
       obtain ⟨x₀, hx₀, hchain⟩ := hall ⟨i, hi⟩
       exact Or.inr (Or.inl (Or.inl ⟨j, pos, m', ⟨i, hi⟩, x₀, hlayer, fun _ => ⟨m, hm, hlt⟩,
         lt_of_lt_of_le hlt (chainStepsCore_le core m i), hx₀, hchain⟩))
-  · obtain ⟨i, hi, htop⟩ := exists_chainStepsCore_lt_top (core := core) vp.valid m'
+  · obtain ⟨i, hi, htop⟩ := exists_chainStepsCore_lt_pred_w (core := core) vp.valid m'
     obtain ⟨x₀, hx₀, hchain⟩ := hall ⟨i, hi⟩
     exact Or.inr (Or.inl (Or.inl ⟨j, pos, m', ⟨i, hi⟩, x₀, hlayer, fun h => absurd h hused, htop,
       hx₀, hchain⟩))
