@@ -6,8 +6,9 @@ Authors: Alexander Hicks
 
 module
 
-public import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
+public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.SimSemantics.StateT.StateProjection
+import VCVio.OracleComp.QueryTracking.QueryBound.Simulation
 
 /-!
 # Query bounds as pathwise counters
@@ -20,7 +21,8 @@ then on every output in the support of the extended run, the counter has grown b
 (`IsQueryBoundP.cnt_le_of_mem_support_run_extendState`). The handler itself is arbitrary: it
 may answer queries from a cache, a tape or any other state, and may make its own queries. The
 counter is the cost `Prod.snd` of `IsQueryBoundP.cost_le_of_mem_support_run_simulateQ`, which
-bounds any natural-number cost of the state that grows by at most one on each `p`-query.
+bounds any natural-number cost of the state that grows by at most one on a `p`-query and not at
+all on any other query.
 -/
 
 public section

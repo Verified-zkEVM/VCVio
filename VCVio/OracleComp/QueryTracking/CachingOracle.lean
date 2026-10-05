@@ -208,6 +208,28 @@ lemma withCaching_run_caches [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m
     obtain ⟨v, _, rfl⟩ := hz
     exact QueryCache.cacheQuery_self cache₀ t v
 
+/-- After a `withCaching` step on `t`, a point is cached exactly when it was cached before the
+step or is `t`. -/
+lemma withCaching_run_isSome_apply_iff [LawfulMonad m] [MonadAttach m] [ExactMonadAttach m]
+    (so : QueryImpl spec m) {t : spec.Domain} {cache₀ : QueryCache spec}
+    {z : spec.Range t × QueryCache spec} (hz : z ∈ support ((so.withCaching t).run cache₀))
+    (t' : spec.Domain) : (z.2 t').isSome ↔ (cache₀ t').isSome ∨ t' = t := by
+  cases ht : cache₀ t with
+  | some u =>
+    rw [withCaching_run_some so ht, support_pure, Set.mem_singleton_iff] at hz
+    subst hz
+    refine ⟨Or.inl, ?_⟩
+    rintro (h | rfl)
+    · exact h
+    · rw [ht, Option.isSome_some]
+  | none =>
+    rw [withCaching_run_none so ht, support_map] at hz
+    obtain ⟨v, -, rfl⟩ := hz
+    by_cases h : t' = t
+    · subst h
+      simp only [QueryCache.cacheQuery_self, Option.isSome_some, or_true]
+    · simp only [QueryCache.cacheQuery_of_ne _ _ h, h, or_false]
+
 /-- `withCaching` preserves the invariant `(cache₀ ≤ ·)` (the cache only grows). -/
 lemma PreservesInv.withCaching_le {ι₀ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
     [DecidableEq ι₀]

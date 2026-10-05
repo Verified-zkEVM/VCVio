@@ -31,6 +31,12 @@ state of the first run has at most the mass of the event in the second
 follows from this one. Since a `ProbComp` has total mass one, each one-sided bound needs only the
 invariant of the run whose bad mass it charges; the equalities need both.
 
+Agreement until `bad` survives extending the two handlers by the same passive auxiliary state
+(`QueryImpl.AgreeUntilBad.extendState`), with `bad` read on the base state, and so does
+preservation of `bad` (`QueryImpl.PreservesInv.extendState`, in
+`VCVio/OracleComp/SimSemantics/StateT/PreservesInv.lean`); bookkeeping such as counters or logs
+can therefore be added to both runs before applying the bounds.
+
 ## Main statements
 
 - `QueryImpl.AgreeUntilBad`: agreement of two handlers on non-bad post-states.
@@ -42,11 +48,6 @@ invariant of the run whose bad mass it charges; the equalities need both.
   exceeds the same event of the second by at most the bad mass of the first, respectively the
   second, run.
 - `QueryImpl.AgreeUntilBad.extendState`: agreement until `bad` under a shared passive extension.
-
-Both agreement until `bad` and preservation of `bad` survive extending the two handlers by the
-same passive auxiliary state (`QueryImpl.AgreeUntilBad.extendState`,
-`QueryImpl.PreservesInv.extendState`), with `bad` read on the base state; bookkeeping such as
-counters or logs can therefore be added to both runs before applying the bounds.
 
 The same idea, for handlers into `OracleComp spec` and with the output-marginal total-variation
 distance, is `OracleComp.ProgramLogic.Relational.identical_until_bad_with_flag`
@@ -194,17 +195,5 @@ theorem prEvent_simulateQ_run_le_add_bad_right (h : AgreeUntilBad impl₁ impl�
   rw [prEvent_true_eq_one, prEvent_true_eq_one]
 
 end AgreeUntilBad
-
-/-- A handler preserving an invariant still preserves it, read on the base state, after being
-extended by a passive auxiliary state. -/
-theorem PreservesInv.extendState {Q : Type} {impl : QueryImpl spec (StateT σ ProbComp)}
-    {inv : σ → Prop} (h : PreservesInv impl inv)
-    (aux : (t : spec.Domain) → σ → spec.Range t → σ → Q → Q) :
-    PreservesInv (impl.extendState aux) fun st ↦ inv st.1 := by
-  intro t st hst z hz
-  rw [extendState_apply, mem_support_bind_iff] at hz
-  obtain ⟨w, hw, hz⟩ := hz
-  rw [support_pure, Set.mem_singleton_iff] at hz
-  exact hz ▸ h t st.1 hst w hw
 
 end QueryImpl

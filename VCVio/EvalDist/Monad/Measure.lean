@@ -95,17 +95,6 @@ theorem evalDist_bind_bind_swap_of_countable [Countable α] [Countable β]
       𝒟[my >>= fun b => mx >>= fun a => f a b] := by
   exact evalDist_bind_bind_swap mx my f Measurable.of_discrete
 
-/-- Independent draws commute inside an event when the first draw has a countable output type.
-The second output type is arbitrary and needs no measurable structure. -/
-theorem prEvent_bind_bind_swap_of_countable {m : Type → Type v} [Monad m] [EvalDistSemantics m]
-    [LawfulEvalDistSemantics m] {α β : Type} [Countable α] (mx : m α) (my : m β)
-    (p : α → β → Prop) :
-    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] := by
-  let _ : MeasurableSpace α := ⊤
-  let _ : MeasurableSpace β := ⊤
-  exact congrArg (· {True}) <| evalDist_bind_bind_swap mx my (fun a b ↦ pure (p a b))
-    (measurable_from_prod_countable_right fun _ ↦ Measurable.of_discrete)
-
 /-- Move the third independent discrete draw to the front of a computation. -/
 theorem evalDist_bind_bind_bind_rotate [DiscreteMeasurableSpace α]
     [DiscreteMeasurableSpace β] [DiscreteMeasurableSpace γ]
@@ -208,3 +197,20 @@ theorem lintegral_id_evalDist_map_le_of_le_of_mem_support {m : Type → Type v} 
         lintegral_mono_ae (evalDist.ae_of_forall_mem_support mx _ MeasurableSet.of_discrete hf)
     _ = c * 𝒟[mx] Set.univ := lintegral_const c
     _ ≤ c := mul_le_of_le_one_right' (evalDist_apply_univ_le_one mx)
+
+/-! ## Commuting draws inside an event -/
+
+section EventSwap
+
+/-- Independent draws commute inside an event when the first draw has a countable output type.
+The second output type is arbitrary and needs no measurable structure. -/
+theorem prEvent_bind_bind_swap_of_countable_left {m : Type → Type v} [Monad m]
+    [EvalDistSemantics m] [LawfulEvalDistSemantics m] {α β : Type} [Countable α] (mx : m α)
+    (my : m β) (p : α → β → Prop) :
+    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] := by
+  let _ : MeasurableSpace α := ⊤
+  let _ : MeasurableSpace β := ⊤
+  exact congrArg (· {True}) <| evalDist_bind_bind_swap mx my (fun a b ↦ pure (p a b))
+    (measurable_from_prod_countable_right fun _ ↦ Measurable.of_discrete)
+
+end EventSwap

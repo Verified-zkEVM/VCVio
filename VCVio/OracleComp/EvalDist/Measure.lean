@@ -89,6 +89,18 @@ theorem evalDist_bind_bind_swap
         evalDist_bind_congr_of_support (query t) _ _ fun v _ ↦ ih v
       _ = _ := evalDist_query_bind_bind_swap t my (fun v b ↦ k v >>= fun a ↦ f a b)
 
+/-- Independent oracle computations commute inside an event. Only the actual query answers must
+be countable; the two output types require neither countability nor measurable-space
+instances. -/
+theorem prEvent_bind_bind_swap
+    {ι : Type u} {α β : Type} {spec : OracleSpec.{u, 0} ι}
+    [∀ t, MeasurableSpace (spec.Range t)]
+    [∀ t, DiscreteMeasurableSpace (spec.Range t)] [∀ t, Countable (spec.Range t)]
+    [OracleSpec.IsMeasureSpec spec]
+    (mx : OracleComp spec α) (my : OracleComp spec β) (p : α → β → Prop) :
+    Pr{let a ← mx; let b ← my}[p a b] = Pr{let b ← my; let a ← mx}[p a b] :=
+  congrArg (· {True}) <| evalDist_bind_bind_swap mx my fun a b ↦ pure (p a b)
+
 /-- Compare measurable valuations of continuation outputs on structural support. The common
 computation's unobserved intermediate result needs no measurable-space instance. -/
 theorem lintegral_evalDist_bind_mono_of_support
