@@ -30,8 +30,8 @@ So `⟨0, 0, 3, 0, 0, 0⟩` and `⟨0, 0, 3, 0, 0, 2 ^ 32⟩` — two FORS leaf 
 differing only in the leaf index — have the same 32-byte serialization (`toBytes_collision`) and
 the same 22-byte `ADRSc` compression (`compressSha2_collision`).  The FIPS SHA-2 tweak map
 `SLHDSA.Concrete.sha2AdrsKey` routes through the *checked* compression instead, and is
-non-injective for a different reason: it maps every address it rejects to the same zero key
-(`sha2AdrsKey_toList_collision`).  Hence `not_injective_adrsToKey_shake`,
+non-injective for a different reason: it maps every rejected address of one type class to one
+fallback key (`sha2AdrsKey_toList_collision`).  Hence `not_injective_adrsToKey_shake`,
 `not_injective_adrsToKey_sha` and `not_injective_adrsToKey_sha2`, stated at the field each bundle
 installs, with the carrier-level `not_injective_toBytes`, `not_injective_compressSha2` and
 `not_injective_sha2AdrsKey` underneath.  `SLHDSA.Adrs.compressSha2_injective_of_fits` carries
@@ -55,26 +55,29 @@ function reads the address through the same encoding that collides.
 ## The FIPS SHA-2 checked domain
 
 `SLHDSA.Concrete.sha2AdrsKey` and the checked `PRF` reject on the same conditions
-(`sha2AdrsKey_eq_zero_of_not_sha2Domain`, `prf_eq_zero_of_not_sha2Domain`), a key equal to the
-zero key on the domain forces the all-zero address (`eq_zero_of_key_eq_zeroBytes`), and the
+(`sha2AdrsKey_eq_sha2FallbackKey_of_not_sha2Domain`, `prf_eq_zero_of_not_sha2Domain`), a key equal
+to the zero key on the domain forces the all-zero address (`eq_zero_of_key_eq_zeroBytes`), and the
 encoding is injective on the domain (`injOn_adrsToKey_sha2`).  A `FORS_TREE` role address and its
 secret-key address lie in the domain together (`sha2Domain_forsSkAdrs_iff`), and so do the FORS
 node and zero-step WOTS+ chain addresses of a base address in the domain
 (`sha2Domain_forsNodeAdrs`, `sha2Domain_wotsChainStepZero`).
 
-Outside the domain the zero-key fallback aliases `SLHDSA.Adrs.zero`, a `WOTS_HASH` address:
-`⟨0, 0, 0, 0, 0, 0⟩` (accepted, `zero_isCanonical`) and `⟨0, 0, 0, 0, 2 ^ 32, 0⟩` (rejected,
-`outOfRange_isCanonical`, `not_sha2Domain_outOfRange`) share a key
-(`sha2AdrsKey_wots_collision`) while their WOTS+ secret-key addresses do not
-(`sha2AdrsKey_wotsSk_ne`), and the second takes the zero fallback
-(`sha2_prf_wotsSk_out_of_range`).  The same pair also collides under the SHAKE encoding
-(`shake_wots_collision`).  Its chain index is far outside `len`, so no conformant run reaches it.
+Outside the domain the fallback key collapses addresses that differ in a field the secret-key
+address keeps: the `WOTS_HASH` addresses `⟨0, 0, 0, 0, 0, 2 ^ 32⟩` and `⟨0, 0, 0, 0, 1, 2 ^ 32⟩`,
+at chains `0` and `1` with an out-of-range hash address, are rejected
+(`outOfRange_isCanonical`, `not_sha2Domain_outOfRange`) and share the fallback key
+(`sha2AdrsKey_wots_collision`), while their WOTS+ secret-key addresses, which drop the hash
+address, are accepted and do not share a key (`sha2AdrsKey_wotsSk_ne`).  Their hash address is
+far outside `w`, so no conformant run reaches them.  The all-zero `WOTS_HASH` address is accepted
+(`zero_isCanonical`); under the SHAKE encoding it collides with the rejected address at chain
+`2 ^ 32` by truncation (`shake_wots_collision`), and the checked `PRF` takes its zero fallback at
+the secret-key address of that chain (`sha2_prf_wotsSk_out_of_range`).
 
 At the two byte-oriented bundles, two role addresses with equal keys have secret-key addresses
 (at each role's own index) with equal keys (`SLHDSA.Security.toBytes_wotsSkAdrs_congr` and its
 companions in `HashSig.SLHDSA.Security.AddressKeys`).  At FIPS SHA-2 that implication fails
 (`sha2AdrsKey_wots_collision`, `sha2AdrsKey_wotsSk_ne`), so a separator bound of `1` there needs
-the checked-domain restriction or a change to the zero-key fallback.
+the checked-domain restriction.
 
 ## The leaf-index range of a subtree
 
@@ -103,8 +106,8 @@ theorem toBytes_collision :
 theorem compressSha2_collision :
     Adrs.compressSha2 ⟨0, 0, 3, 0, 0, 0⟩ = Adrs.compressSha2 ⟨0, 0, 3, 0, 0, 2 ^ 32⟩ := by decide
 
-/-- The FIPS SHA-2 tweak map sends every address the checked compression rejects to one zero
-key. -/
+/-- The FIPS SHA-2 tweak map sends two FORS leaf addresses the checked compression rejects to one
+fallback key. -/
 theorem sha2AdrsKey_toList_collision : (sha2AdrsKey ⟨0, 0, 3, 0, 0, 2 ^ 32⟩).toList =
     (sha2AdrsKey ⟨0, 0, 3, 0, 0, 2 ^ 32 + 1⟩).toList := by decide
 
@@ -194,9 +197,9 @@ theorem forsSkGenCore_sha2_eq (p : Params) (sk pk : Bytes p.n) :
 
 /-! ## The FIPS SHA-2 checked-compression domain -/
 
-/-- Outside the checked domain the FIPS SHA-2 tweak map takes its zero fallback. -/
-theorem sha2AdrsKey_eq_zero_of_not_sha2Domain {a : Adrs} (h : ¬ Sha2Domain a) :
-    sha2AdrsKey a = zeroBytes 22 := by
+/-- Outside the checked domain the FIPS SHA-2 tweak map takes its type-tagged fallback. -/
+theorem sha2AdrsKey_eq_sha2FallbackKey_of_not_sha2Domain {a : Adrs} (h : ¬ Sha2Domain a) :
+    sha2AdrsKey a = sha2FallbackKey a.type := by
   unfold Sha2Domain at h
   simp only [sha2AdrsKey, Adrs.compressSha2Checked]
   by_cases hc : a.isCanonical = true
@@ -219,8 +222,8 @@ theorem prf_eq_zero_of_not_sha2Domain {p : Params} (pk sk : Bytes p.n) {a : Adrs
     · simp [hc, hl, checkedNodeOrZero]
   · simp [hc, checkedNodeOrZero]
 
-/-- The zero key of the FIPS SHA-2 fallback is also the genuine `ADRSc` of exactly one
-checked-domain address: the all-zero `WOTS_HASH` address. -/
+/-- The all-zero key is the `ADRSc` of exactly one checked-domain address: the all-zero `WOTS_HASH`
+address. -/
 theorem eq_zero_of_key_eq_zeroBytes {a : Adrs} (h : Sha2Domain a)
     (hk : sha2AdrsKey a = zeroBytes 22) : a = Adrs.zero := by
   rw [sha2AdrsKey_eq_compressed a h.1 h.2.1 h.2.2] at hk
@@ -268,44 +271,46 @@ theorem sha2Domain_wotsChainStepZero {adrs : Adrs} (hbase : Sha2Domain adrs) {i 
       (XmssConformance.wotsLeafAdrs_isCanonical adrs i hbase.1 hi) (by decide) (by decide),
     hbase.2.1, hbase.2.2⟩
 
-/-! ## The one collision the checked domain does not cover -/
+/-! ## A collision the checked domain does not cover -/
 
-/-- The all-zero `WOTS_HASH` address and the same address with an out-of-range chain index share
-the FIPS SHA-2 key: the second is rejected and collapses onto the first's genuine `ADRSc`. -/
+/-- Two `WOTS_HASH` addresses at chains `0` and `1` with an out-of-range hash address share the
+FIPS SHA-2 key: both are rejected and take the fallback key of their type. -/
 theorem sha2AdrsKey_wots_collision :
-    sha2AdrsKey ⟨0, 0, 0, 0, 0, 0⟩ = sha2AdrsKey ⟨0, 0, 0, 0, 2 ^ 32, 0⟩ :=
+    sha2AdrsKey ⟨0, 0, 0, 0, 0, 2 ^ 32⟩ = sha2AdrsKey ⟨0, 0, 0, 0, 1, 2 ^ 32⟩ :=
   Vector.toList_inj.mp (by decide)
 
-/-- Their two WOTS+ secret-key addresses do not share it. -/
+/-- Their two WOTS+ secret-key addresses do not share a key: they drop the hash address, so both
+are accepted, and their chains differ. -/
 theorem sha2AdrsKey_wotsSk_ne :
-    sha2AdrsKey (wotsSkAdrs ⟨0, 0, 0, 0, 0, 0⟩ 0) ≠
-      sha2AdrsKey (wotsSkAdrs ⟨0, 0, 0, 0, 2 ^ 32, 0⟩ (2 ^ 32)) := by
+    sha2AdrsKey (wotsSkAdrs ⟨0, 0, 0, 0, 0, 2 ^ 32⟩ 0) ≠
+      sha2AdrsKey (wotsSkAdrs ⟨0, 0, 0, 0, 1, 2 ^ 32⟩ 1) := by
   simp only [wotsSkAdrs_eq]
   intro h
   exact absurd (congrArg Vector.toList h) (by decide)
 
-/-- The WOTS+ secret-key address at the out-of-range chain index takes the zero fallback. -/
+/-- The WOTS+ secret-key address at an out-of-range chain index takes the zero fallback of the
+checked `PRF`. -/
 theorem sha2_prf_wotsSk_out_of_range (p : Params) (pk sk : Bytes p.n) :
     (sha2Primitives p).core.PRF pk sk (wotsSkAdrs ⟨0, 0, 0, 0, 2 ^ 32, 0⟩ (2 ^ 32)) =
       zeroBytes p.n :=
   prf_eq_zero_of_not_sha2Domain pk sk (by simp only [Sha2Domain, wotsSkAdrs_eq]; decide)
 
-/-- The all-zero `WOTS_HASH` address is in the checked SHA-2 compression domain, so its key is a
-genuine `ADRSc` and not the fallback. -/
+/-- The all-zero `WOTS_HASH` address is canonical. -/
 theorem zero_isCanonical : (⟨0, 0, 0, 0, 0, 0⟩ : Adrs).isCanonical = true := by decide
 
-/-- Its colliding partner is rejected, `SLHDSA.Adrs.Fits 4` failing on `word2`. -/
-theorem outOfRange_isCanonical : (⟨0, 0, 0, 0, 2 ^ 32, 0⟩ : Adrs).isCanonical = false := by decide
+/-- The colliding `WOTS_HASH` address at chain `0` is rejected, `SLHDSA.Adrs.Fits 4` failing on
+`word3`. -/
+theorem outOfRange_isCanonical : (⟨0, 0, 0, 0, 0, 2 ^ 32⟩ : Adrs).isCanonical = false := by decide
 
-/-- **The colliding partner is outside the checked domain**, hence outside the addresses
+/-- **The colliding address is outside the checked domain**, hence outside the addresses
 `SLHDSA.Security.sha2Domain_of_addressFacts` puts every reachable target address in, so an
 address property that holds on the checked domain says nothing about it. -/
-theorem not_sha2Domain_outOfRange : ¬ Sha2Domain (⟨0, 0, 0, 0, 2 ^ 32, 0⟩ : Adrs) := by
+theorem not_sha2Domain_outOfRange : ¬ Sha2Domain (⟨0, 0, 0, 0, 0, 2 ^ 32⟩ : Adrs) := by
   simp only [Sha2Domain, outOfRange_isCanonical]
   simp
 
-/-- The same pair collides under the SHAKE encoding as well, there by four-byte truncation of
-`word2`. -/
+/-- Under the SHAKE encoding the all-zero `WOTS_HASH` address collides with the address at chain
+`2 ^ 32`, by four-byte truncation of `word2`. -/
 theorem shake_wots_collision :
     Adrs.toVector ⟨0, 0, 0, 0, 0, 0⟩ = Adrs.toVector ⟨0, 0, 0, 0, 2 ^ 32, 0⟩ :=
   Vector.toList_inj.mp (by decide)

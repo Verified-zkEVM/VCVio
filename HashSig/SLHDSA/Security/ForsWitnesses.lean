@@ -88,7 +88,7 @@ lists in the `forsTl` ledger; that lemma is used directly rather than restated.
 
 The three encoded-distinctness lemmas consume `EncodedTargetLedgerConditions` rather than assuming
 a fresh injectivity hypothesis, so a concrete profile discharges them through
-`approvedEncodedTargetLedgerConditions`; the SHA-2 zero fallback is therefore never treated as
+`approvedEncodedTargetLedgerConditions`; the SHA-2 key fallback is therefore never treated as
 unreachable.
 
 ## The case analysis
@@ -715,7 +715,7 @@ tweaks: two `fPreimage` witnesses at different `(position, tree, leaf)` triples 
 tweaks of `forsFOpenPreProblem`.
 
 The conditions are consumed, not assumed afresh: `approvedEncodedTargetLedgerConditions` discharges
-them for every approved profile, so the SHA-2 zero fallback is never treated as unreachable. -/
+them for every approved profile, so the SHA-2 key fallback is never treated as unreachable. -/
 theorem forsLeafAdrsKey_injective {prims : Primitives vp.params}
     (conditions : EncodedTargetLedgerConditions vp prims) :
     Function.Injective fun coord : (BottomPosition vp × Fin vp.params.k) × Fin vp.params.t =>

@@ -16,9 +16,9 @@ import HashSig.SLHDSA.ForsConformance
 primitive bundle derives from a reachable address ledger are still pairwise distinct.  Structural
 distinctness does not give this: a concrete encoder has narrower field domains than
 `ValidatedParams` imposes, and outside those domains both approved encoders collapse distinct
-addresses onto one key.  SHA-2's total projection returns the all-zero key, which is the genuine
-key of the all-zero WOTS-hash address rather than a sentinel; SHAKE's serialization truncates each
-field to its width.
+addresses onto one key.  SHA-2's total projection returns the fallback key of the address type,
+which is the key of no address in its domain but is shared by every rejected address of one type
+class; SHAKE's serialization truncates each field to its width.
 
 The two encoders need different amounts of the parameter set:
 
@@ -152,7 +152,7 @@ structure AddressFacts (vp : ValidatedParams) (a : Adrs) : Prop where
   /-- The address sits in a tree reachable at some layer of this hypertree. -/
   tree_lt : a.tree < 2 ^ ((vp.params.d - 1) * vp.params.hp)
 
-/-- Structural addresses that the SHA-2 instantiation compresses without its zero fallback. -/
+/-- Structural addresses that the SHA-2 instantiation compresses without its fallback. -/
 @[expose] def Sha2Domain (a : Adrs) : Prop :=
   a.isCanonical = true ∧ Adrs.Fits 1 a.layer = true ∧ Adrs.Fits 8 a.tree = true
 
@@ -441,7 +441,7 @@ theorem addressFacts_wotsPkAddresses (vp : ValidatedParams)
 /-! ## Approved instantiations -/
 
 /-- On a duplicate-free ledger inside the SHA-2 address domain, the compressed `ADRSc` tweaks of
-`sha2Primitives` stay duplicate-free.  The hypothesis is what rules out the zero fallback: every
+`sha2Primitives` stay duplicate-free.  The hypothesis is what rules out the fallback: every
 listed address compresses successfully, so its key is its own `ADRSc`. -/
 theorem encodeTargets_sha2_nodup {p : Params} {addresses : List Adrs}
     (hnodup : addresses.Nodup) (hdomain : ∀ a ∈ addresses, Sha2Domain a) :

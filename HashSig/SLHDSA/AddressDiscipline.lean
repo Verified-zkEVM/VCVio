@@ -31,7 +31,10 @@ same at every layer; the type of each address a program builds is checked by eva
 as the addresses a program visits, does not meet them.
 
 The key-level counterpart is `CorePrimitives.KeySeparated`: no address of type at most `4` shares
-its oracle key with a secret-key address.
+its oracle key with a secret-key address. Every shipped bundle satisfies it
+(`HashSig.SLHDSA.Security.KeySeparation`), and `CorePrimitives.KeyDiscipline`
+(`HashSig.SLHDSA.Security.KeyDiscipline`) bundles it with injectivity of the oracle key on in-range
+addresses and the parameter set's address width bounds.
 
 ## Labels
 

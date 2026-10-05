@@ -20,8 +20,9 @@ and `PRF_msg`. Every SHAKE-family function uses the distinct FIPS SHAKE256 XOF.
 SHA2 address compression is exposed through `Sha2Address`, a proof-carrying result of the
 rejecting `Adrs.compressSha2Checked` boundary. The checked primitive entry points return errors for
 noncanonical or too-wide addresses. The total `Primitives` bundle maps that out-of-domain case to
-the all-zero node because the generic construction interface is total; on the stated
-FIPS address domain it is definitionally the checked grammar.
+the all-zero node because the generic construction interface is total, and keys the tweakable hash
+of such an address by `sha2FallbackKey`, which is zero except for a tag of the address type in the
+type byte; on the stated FIPS address domain it is definitionally the checked grammar.
 
 ## References
 
@@ -191,22 +192,40 @@ def checkedNodeOrZero {n : ℕ} (result : Except CodecError (Bytes n)) : Bytes n
   | .ok value => value
   | .error _ => zeroBytes n
 
-/-- Canonical SHA2 address key for the total abstract interface. Checked public entry points
-retain the rejection result; this projection maps out-of-domain structural addresses to zero.
+/-- The SHA2 address key of an address outside the checked `ADRSc` domain: the all-zero 22-byte
+string except at offset `9`, the type byte of `ADRSc`, which is `7` for an address type at most `4`
+and `8` otherwise.  Neither `7` nor `8` is a FIPS 205 address type code, so this is the key of no
+checked-domain address (`sha2AdrsKey_ne_sha2FallbackKey`), and it keeps the hash-target types (at
+most `4`) apart from the secret-key types (`5` and `6`), which makes the SHA2 bundles key-separated
+at every address (`keySeparated_sha2Primitives`). -/
+def sha2FallbackKey (type : ℕ) : Bytes 22 :=
+  (zeroBytes 22).set 9 (if type ≤ 4 then 7 else 8)
 
-Caution: the all-zero 22-byte key is also the genuine `ADRSc` of the canonical all-zero
-WOTS-hash address, and no 22-byte value lies outside the compressed image, so an out-of-domain
-address aliases a legitimate reachable key rather than a distinguished sentinel. Security
-arguments must carry the `isCanonical`/`Fits` domain hypotheses of
-`sha2AdrsKey_injective_of_domain`; the fallback may not be treated as unreachable or harmless
-without them. -/
+/-- Canonical SHA2 address key for the total abstract interface. On the checked domain it is the
+compressed address `ADRSc`; outside it, where FIPS 205 never evaluates `ADRSc`, it is the
+type-tagged `sha2FallbackKey`.
+
+The fallback still sends distinct out-of-domain addresses of one type class to one key, so
+injectivity arguments must carry the `isCanonical`/`Fits` domain hypotheses of
+`sha2AdrsKey_injective_of_domain`. -/
 def sha2AdrsKey (address : Adrs) : Bytes 22 :=
   match address.compressSha2Checked with
   | .ok value => value
-  | .error _ => zeroBytes 22
+  | .error _ => sha2FallbackKey address.type
 
-/-- On the checked SHA-2 address domain, the total primitive key is exactly `ADRSc`; the zero-key
-fallback is unreachable. -/
+/-- Wherever the checked compression succeeds, the key is the value it returns. -/
+theorem sha2AdrsKey_of_compressSha2Checked_eq_ok {address : Adrs} {value : Bytes 22}
+    (h : address.compressSha2Checked = .ok value) : sha2AdrsKey address = value := by
+  simp [sha2AdrsKey, h]
+
+/-- Wherever the checked compression rejects, the key is the type-tagged fallback. -/
+theorem sha2AdrsKey_of_compressSha2Checked_eq_error {address : Adrs} {error : CodecError}
+    (h : address.compressSha2Checked = .error error) :
+    sha2AdrsKey address = sha2FallbackKey address.type := by
+  simp [sha2AdrsKey, h]
+
+/-- On the checked SHA-2 address domain, the total primitive key is exactly `ADRSc`; the fallback
+is unreachable. -/
 theorem sha2AdrsKey_eq_compressed (address : Adrs)
     (hcanonical : address.isCanonical = true)
     (hlayer : Adrs.Fits 1 address.layer = true)
@@ -257,7 +276,7 @@ def sha2Thash (p : Params) (pkSeed : Bytes p.n) (address : Bytes 22)
 
 /-- The SHA2 primitive bundle at byte width `p.n`. FIPS-approved callers select it through
 `approvedPrimitives`; checked-domain theorems establish that reachable construction addresses do
-not take the all-zero fallback. -/
+not take the out-of-domain fallbacks. -/
 def sha2Primitives (p : Params) : Primitives p where
   PkSeed := Bytes p.n
   SkSeed := Bytes p.n

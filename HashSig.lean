@@ -55,6 +55,7 @@ public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
+public import HashSig.SLHDSA.Security.KeyDiscipline
 public import HashSig.SLHDSA.Security.KeySeparation
 public import HashSig.SLHDSA.Security.LimitedProfile
 public import HashSig.SLHDSA.Security.OpenPreBound

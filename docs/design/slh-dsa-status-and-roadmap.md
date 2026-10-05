@@ -173,10 +173,11 @@ hypotheses and resource/domain conditions not encoded by the current theorem:
 - the same-randomizer half of the strong-unforgeability residual, which has no counterpart in the
   source at all and no bound anywhere in this repository.
 
-Reduction traps recorded in issue #629 apply to every slice from 6 onward: the zero fallbacks of
-`sha2AdrsKey` and `checkedNodeOrZero` alias reachable values, so future reductions must establish
-approved query domains before using `sha2AdrsKey_injective_of_domain`; and `SameMessageBinding` is
-unbounded, so the SUF residual uses `advantage_eq_euf_add_sameMessage`.
+Reduction traps recorded in issue #629 apply to every slice from 6 onward: the zero fallback of
+`checkedNodeOrZero` aliases reachable values, and the type-tagged fallback of `sha2AdrsKey` is the
+key of no checked-domain address but collapses rejected addresses of one type class, so future
+reductions must establish approved query domains before using `sha2AdrsKey_injective_of_domain`;
+and `SameMessageBinding` is unbounded, so the SUF residual uses `advantage_eq_euf_add_sameMessage`.
 
 ### Conventions the lane follows
 

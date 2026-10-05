@@ -145,7 +145,7 @@ injectivity lemma, and the leaf and internal-node ones additionally reshape the 
 into the `i * t + j` and `i * 2 ^ (a - z) + j` forms those two ledgers list.
 
 The three encoded-distinctness lemmas consume `EncodedTargetLedgerConditions`, so a concrete profile
-discharges them through `approvedEncodedTargetLedgerConditions` and the SHA-2 zero fallback is never
+discharges them through `approvedEncodedTargetLedgerConditions` and the SHA-2 key fallback is never
 treated as unreachable.
 
 **No cross-role claim is made, and none is available.**  The `fors` arm attacks the `forsF`,

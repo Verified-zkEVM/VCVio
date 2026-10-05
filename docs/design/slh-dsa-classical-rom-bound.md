@@ -148,11 +148,17 @@ implementation does depend on are:
 - **Signing mode.** Deterministic signing carries the extra `q_s / 2^{8n}` term.
 - **Signature count.** The bound is a function of `q_s`; a deployment that signs fewer than `2^64`
   messages per key obtains the corresponding smaller coverage term.
-- **Address encoding.** The key hypotheses, injectivity of the address-to-key encoding on in-range
-  addresses and the address width bounds (`CanonicalAddressBounds`, and `ApprovedAddressBounds`
-  for SHA-2's compressed `ADRSc`), are facts about the encoding. They are discharged for the twelve
-  parameter sets. An implementation is covered when its encoding agrees with the specification's,
-  which the known-answer tests check on fixed inputs and a refinement proof would check for all.
+- **Address encoding.** The key hypothesis `CorePrimitives.KeyDiscipline` bundles injectivity of
+  the address-to-key encoding on in-range addresses (`CorePrimitives.KeyInjective`), the address
+  width bounds (`CanonicalAddressBounds`; SHA-2's compressed `ADRSc` needs `ApprovedAddressBounds`
+  for injectivity), and key separation of secret-key addresses from hash addresses at every address
+  (`CorePrimitives.KeySeparated`). These are facts about the encoding, and they are discharged for
+  the twelve parameter sets and the compatibility bundle. At SHA-2, key separation holds because
+  the model keys an address outside the checked `ADRSc` domain, which FIPS 205 never compresses, by
+  a type-tagged fallback that is the key of no checked-domain address; on the checked domain the
+  key is `ADRSc`, so every address FIPS 205 evaluates is keyed as the standard prescribes. An
+  implementation is covered when its encoding agrees with the specification's, which the
+  known-answer tests check on fixed inputs and a refinement proof would check for all.
 - **Interface.** The statement covers the internal functions; implementations expose the external
   functions (Algorithms 21–25), which the theorem reaches only once the external layer is added.
 - **Hash functions.** SHAKE256 and SHA-2 are idealized as random oracles. The SHA-2 instantiation,

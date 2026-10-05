@@ -32,7 +32,7 @@ why `findWotsWitness_sound` carries the public-key hypothesis.
 The `example`s pin the theorem statements at that bundle and at approved profiles.  The last group
 is kernel-checked rather than run: on a profile whose layer-zero tree indices overflow SHA-2's
 compressed eight-byte tree field, two distinct listed chain-step targets encode to the same
-all-zero key, so `wotsStepAdrsKey_injective`'s `EncodedTargetLedgerConditions` hypothesis is
+SHA-2 fallback key, so `wotsStepAdrsKey_injective`'s `EncodedTargetLedgerConditions` hypothesis is
 load-bearing rather than decorative.
 -/
 
@@ -456,11 +456,11 @@ example (select : WotsChainCoord twoLayer → Option (Fin (twoLayerParams.w - 1)
 
 /-! ## The encoded-distinctness hypothesis is load-bearing
 
-`Concrete.sha2AdrsKey` sends every address outside its checked domain to the all-zero key, which is
-the genuine key of the all-zero WOTS-hash address rather than a sentinel.  On a profile whose
-layer-zero tree indices overflow the compressed eight-byte tree field, two distinct listed
-chain-step targets therefore share a tweak, and `wotsStepAdrsKey_injective` is false without its
-`EncodedTargetLedgerConditions` argument. -/
+`Concrete.sha2AdrsKey` sends every address outside its checked domain to the fallback key of its
+type, `Concrete.sha2FallbackKey`, so distinct out-of-domain addresses of one type share a key.  On a
+profile whose layer-zero tree indices overflow the compressed eight-byte tree field, two distinct
+listed chain-step targets therefore share a tweak, and `wotsStepAdrsKey_injective` is false without
+its `EncodedTargetLedgerConditions` argument. -/
 
 example : layerTreeHeight deep 0 = 90 := by decide
 example : deep.params.len = 35 := by decide
@@ -480,9 +480,9 @@ hold.  The profile itself, its tree-index bound, and the SHA-2 out-of-domain fal
 theorem deepCoord_tree (t : ℕ) (ht : t < 2 ^ 64 + 2) :
     (wotsStepAdrs (deepCoord t ht).1 (deepCoord t ht).2).tree = t := rfl
 
-/-- Two distinct listed chain-step targets of the `deep` profile carry the same encoded SHA-2
-tweak, namely the all-zero key: their layer-zero tree indices exceed the compressed eight-byte
-tree field, and the checked compression falls back to that key rather than to a sentinel. -/
+/-- Two distinct listed chain-step targets of the `deep` profile carry the same encoded SHA-2 tweak,
+namely the fallback key of their type: their layer-zero tree indices exceed the compressed
+eight-byte tree field, so the checked compression rejects both. -/
 theorem deep_wotsStep_sha2_alias :
     ∃ c₁ c₂ : WotsChainCoord deep × Fin (deep.params.w - 1),
       wotsStepAdrs c₁.1 c₁.2 ∈ wotsStepAddresses deep ∧
@@ -504,8 +504,9 @@ theorem deep_wotsStep_sha2_alias :
       norm_num
       omega
     rw [adrsToKey_sha2, adrsToKey_sha2,
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (hfits (2 ^ 64) (le_refl _) _),
-      sha2AdrsKey_eq_zero_of_tree_overflow _ (hfits (2 ^ 64 + 1) (by norm_num) _)]
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (hfits (2 ^ 64) (le_refl _) _),
+      sha2AdrsKey_eq_sha2FallbackKey_of_tree_overflow _ (hfits (2 ^ 64 + 1) (by norm_num) _)]
+    rfl
 
 /-- Consequently `wotsStepAdrsKey_injective` is false for the SHA-2 bundle at this profile: its
 `EncodedTargetLedgerConditions` hypothesis is load-bearing. -/
