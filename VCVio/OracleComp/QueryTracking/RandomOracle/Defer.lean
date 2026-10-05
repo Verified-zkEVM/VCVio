@@ -113,6 +113,24 @@ theorem endFill_eq (st : RelabelState pub X K R) (cs : List (X ⊕ K)) :
       (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2 := by
   simp only [endFill]
 
+/-- The cell oracle on the whole relabelled state: a query of a cell draws it if it is undrawn
+and keeps the public cache. -/
+noncomputable def cellImpl :
+    QueryImpl ((X ⊕ K) →ₒ R) (StateT (RelabelState pub X K R) ProbComp) :=
+  fun c ↦ drawCell c
+
+/-- The end fill is the cell oracle on the whole relabelled state, run at the pending cells. -/
+theorem endFill_eq_simulateQ_cellImpl (s : RelabelState pub X K R × List (X ⊕ K)) :
+    endFill s =
+      Prod.snd <$> (simulateQ (cellImpl (pub := pub)) (((X ⊕ K) →ₒ R).queryAll s.2)).run s.1 := by
+  obtain ⟨st, cs⟩ := s
+  rw [endFill_eq]
+  induction cs generalizing st with
+  | nil => simp only [OracleSpec.queryAll_nil, simulateQ_pure, StateT.run_pure, map_pure]
+  | cons c cs ih =>
+    simp only [OracleSpec.queryAll_cons, simulateQ_bind, simulateQ_spec_query, StateT.run_bind,
+      map_bind, cellImpl, drawCell_run, bind_map_left, ← ih]
+
 /-- The masked end fill runs the random oracle on the cell cache at the pending cells, and hides
 the pending cells undrawn before it. -/
 theorem maskedFill_eq (st : RelabelState pub X K R) (cs : List (X ⊕ K)) :
