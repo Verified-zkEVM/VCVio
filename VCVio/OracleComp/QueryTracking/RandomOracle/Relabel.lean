@@ -141,6 +141,12 @@ variable [SampleableType R]
 noncomputable def drawCell (c : X ⊕ K) : StateT (RelabelState pub X K R) ProbComp R :=
   StateT.mk fun st ↦ (fun z ↦ (z.1, (st.1, z.2))) <$> (((X ⊕ K) →ₒ R).randomOracle c).run st.2
 
+/-- Drawing a cell runs the random oracle on the cell cache. -/
+theorem drawCell_run (c : X ⊕ K) (st : RelabelState pub X K R) :
+    (drawCell c).run st =
+      (fun z ↦ (z.1, (st.1, z.2))) <$> (((X ⊕ K) →ₒ R).randomOracle c).run st.2 := by
+  simp only [drawCell, StateT.run_mk]
+
 theorem drawCell_run_of_cell_eq_some {c : X ⊕ K} {st : RelabelState pub X K R} {v : R}
     (h : st.2 c = some v) : (drawCell c).run st = pure (v, st) := by
   simp [drawCell, h]
