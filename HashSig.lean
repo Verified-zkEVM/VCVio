@@ -1,6 +1,7 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import HashSig.SLHDSA.Address
+public import HashSig.SLHDSA.AddressDiscipline
 public import HashSig.SLHDSA.C13.Concrete
 public import HashSig.SLHDSA.C13.ForsC
 public import HashSig.SLHDSA.C13.Hypertree
@@ -54,6 +55,7 @@ public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
+public import HashSig.SLHDSA.Security.KeySeparation
 public import HashSig.SLHDSA.Security.LimitedProfile
 public import HashSig.SLHDSA.Security.OpenPreBound
 public import HashSig.SLHDSA.Security.PrfHops
