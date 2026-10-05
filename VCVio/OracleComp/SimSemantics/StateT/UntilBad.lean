@@ -37,6 +37,14 @@ preservation of `bad` (`QueryImpl.PreservesInv.extendState`, in
 `VCVio/OracleComp/SimSemantics/StateT/PreservesInv.lean`); bookkeeping such as counters or logs
 can therefore be added to both runs before applying the bounds.
 
+Two handlers on different state spaces `σ₂` and `σ₁` are compared through a map `f : σ₂ → σ₁`.
+If, from every non-bad state satisfying an invariant, each step of the second handler, read
+through `f` and restricted to non-bad post-states, puts on every event at most the mass of the
+first handler's step from the mapped state, then so do whole runs
+(`QueryImpl.prEvent_simulateQ_run_map_and_not_bad_le`); passing to complements, an event of the
+first run is at most the same event, read through `f`, or `bad`, in the second
+(`QueryImpl.prEvent_simulateQ_run_le_map_or_bad`).
+
 ## Main statements
 
 - `QueryImpl.AgreeUntilBad`: agreement of two handlers on non-bad post-states.
@@ -48,6 +56,10 @@ can therefore be added to both runs before applying the bounds.
   exceeds the same event of the second by at most the bad mass of the first, respectively the
   second, run.
 - `QueryImpl.AgreeUntilBad.extendState`: agreement until `bad` under a shared passive extension.
+- `QueryImpl.prEvent_simulateQ_run_map_and_not_bad_le` and
+  `QueryImpl.prEvent_simulateQ_run_le_map_or_bad`: the comparison of two handlers on different
+  state spaces, when each step of the second, read through a state map `f`, is dominated off
+  `bad` by the step of the first from the mapped state.
 
 The same idea, for handlers into `OracleComp spec` and with the output-marginal total-variation
 distance, is `OracleComp.ProgramLogic.Relational.identical_until_bad_with_flag`
@@ -195,5 +207,93 @@ theorem prEvent_simulateQ_run_le_add_bad_right (h : AgreeUntilBad impl₁ impl�
   rw [prEvent_true_eq_one, prEvent_true_eq_one]
 
 end AgreeUntilBad
+
+/-! ## Projection onto a second handler until bad -/
+
+section Projection
+
+variable {σ₁ σ₂ : Type} {impl₁ : QueryImpl spec (StateT σ₁ ProbComp)}
+  {impl₂ : QueryImpl spec (StateT σ₂ ProbComp)}
+
+/-- **Projection until bad.** Let `impl₂` preserve a state invariant `inv` and a state predicate
+`bad`. If, from every non-bad state satisfying `inv`, each step of `impl₂`, with its post-state
+mapped through `f` and conjoined with a non-bad post-state, puts on every event at most the mass
+of the step of `impl₁` from the mapped state, then the same holds for whole runs from a state
+satisfying `inv`. -/
+theorem prEvent_simulateQ_run_map_and_not_bad_le (f : σ₂ → σ₁) {inv bad : σ₂ → Prop}
+    (hinv : PreservesInv impl₂ inv) (hbad : PreservesInv impl₂ bad)
+    (h : ∀ t s, inv s → ¬bad s → ∀ Q : spec.Range t × σ₁ → Prop,
+      Pr{let z ← (impl₂ t).run s}[Q (z.1, f z.2) ∧ ¬bad z.2] ≤
+        Pr{let z ← (impl₁ t).run (f s)}[Q z])
+    (oa : OracleComp spec α) (s : σ₂) (hs : inv s) (P : α × σ₁ → Prop) :
+    Pr{let z ← (simulateQ impl₂ oa).run s}[P (z.1, f z.2) ∧ ¬bad z.2] ≤
+      Pr{let z ← (simulateQ impl₁ oa).run (f s)}[P z] := by
+  induction oa using OracleComp.inductionOn generalizing s with
+  | pure x =>
+    simp only [simulateQ_pure, StateT.run_pure]
+    refine le_trans (le_of_eq ?_) (prEvent_mono (pure (x, f s) : ProbComp _)
+      (fun z ↦ P z ∧ ¬bad s) P fun _ hz ↦ hz.1)
+    simp only [pure_bind]
+  | query_bind t k ih =>
+    by_cases hb : bad s
+    · rw [prEvent_eq_zero_of_forall_mem_support _ _ fun z hz hz' ↦
+          hz'.2 (simulateQ_run_preservesInv impl₂ bad hbad _ s hb z hz)]
+      exact zero_le
+    simp only [simulateQ_bind, simulateQ_spec_query, StateT.run_bind]
+    let _ : MeasurableSpace (spec.Range t × σ₂) := ⊤
+    let _ : MeasurableSpace (spec.Range t × σ₁) := ⊤
+    rw [prEvent_bind_eq_lintegral_of_discrete, prEvent_bind_eq_lintegral_of_discrete]
+    let g : spec.Range t × σ₁ → ENNReal := fun y ↦
+      Pr{let w ← (simulateQ impl₁ (k y.1)).run y.2}[P w]
+    have hsupp : (fun z : spec.Range t × σ₂ ↦
+        Pr{let w ← (simulateQ impl₂ (k z.1)).run z.2}[P (w.1, f w.2) ∧ ¬bad w.2]).support ⊆
+          {z | ¬bad z.2} := fun z hz hb ↦
+      hz (prEvent_eq_zero_of_forall_mem_support _ _ fun w hw hw' ↦
+        hw'.2 (simulateQ_run_preservesInv impl₂ bad hbad _ z.2 hb w hw))
+    have hae : ∀ᵐ z ∂𝒟[(impl₂ t).run s], inv z.2 :=
+      evalDist.ae_of_forall_mem_support _ _ MeasurableSet.of_discrete fun z hz ↦ hinv t s hs z hz
+    have hμ : Measure.map (fun z : spec.Range t × σ₂ ↦ (z.1, f z.2))
+        ((𝒟[(impl₂ t).run s]).restrict {z | ¬bad z.2}) ≤ 𝒟[(impl₁ t).run (f s)] := by
+      refine Measure.le_iff.2 fun A _ ↦ ?_
+      rw [Measure.map_apply Measurable.of_discrete MeasurableSet.of_discrete,
+        Measure.restrict_apply MeasurableSet.of_discrete]
+      have := h t s hs hb (· ∈ A)
+      simpa only [prEvent_eq_evalDist_of_discrete, Set.inter_def, Set.mem_ofPred_eq,
+        Set.mem_preimage, Set.ofPred_mem_eq] using this
+    calc _ = ∫⁻ z in {z | ¬bad z.2}, Pr{let w ← (simulateQ impl₂ (k z.1)).run z.2}[
+            P (w.1, f w.2) ∧ ¬bad w.2] ∂𝒟[(impl₂ t).run s] :=
+          (setLIntegral_eq_of_support_subset hsupp).symm
+      _ ≤ ∫⁻ z in {z | ¬bad z.2}, g (z.1, f z.2) ∂𝒟[(impl₂ t).run s] :=
+          setLIntegral_mono_ae Measurable.of_discrete.aemeasurable
+            (hae.mono fun z hz _ ↦ ih z.1 z.2 hz)
+      _ = ∫⁻ y, g y ∂(Measure.map (fun z : spec.Range t × σ₂ ↦ (z.1, f z.2))
+            ((𝒟[(impl₂ t).run s]).restrict {z | ¬bad z.2})) :=
+          (lintegral_map Measurable.of_discrete Measurable.of_discrete).symm
+      _ ≤ _ := lintegral_mono' hμ le_rfl
+
+/-- **Projection until bad, event form.** Under the hypotheses of
+`QueryImpl.prEvent_simulateQ_run_map_and_not_bad_le`, an event of the run of `impl₁` from the
+mapped state is at most the same event, read through `f`, or `bad`, in the run of `impl₂`. -/
+theorem prEvent_simulateQ_run_le_map_or_bad (f : σ₂ → σ₁) {inv bad : σ₂ → Prop}
+    (hinv : PreservesInv impl₂ inv) (hbad : PreservesInv impl₂ bad)
+    (h : ∀ t s, inv s → ¬bad s → ∀ Q : spec.Range t × σ₁ → Prop,
+      Pr{let z ← (impl₂ t).run s}[Q (z.1, f z.2) ∧ ¬bad z.2] ≤
+        Pr{let z ← (impl₁ t).run (f s)}[Q z])
+    (oa : OracleComp spec α) (s : σ₂) (hs : inv s) (P : α × σ₁ → Prop) :
+    Pr{let z ← (simulateQ impl₁ oa).run (f s)}[P z] ≤
+      Pr{let z ← (simulateQ impl₂ oa).run s}[P (z.1, f z.2) ∨ bad z.2] := by
+  have hcore := prEvent_simulateQ_run_map_and_not_bad_le f hinv hbad h oa s hs fun z ↦ ¬P z
+  have e₁ := prEvent_add_prEvent_not_eq_prEvent_true ((simulateQ impl₁ oa).run (f s)) P
+  have e₂ := prEvent_add_prEvent_not_eq_prEvent_true ((simulateQ impl₂ oa).run s)
+    fun z ↦ P (z.1, f z.2) ∨ bad z.2
+  rw [prEvent_true_eq_one] at e₁ e₂
+  refine ENNReal.le_of_add_le_add_right
+    (ne_top_of_le_ne_top ENNReal.one_ne_top
+      (prEvent_le_one ((simulateQ impl₁ oa).run (f s)) fun z ↦ ¬P z)) ?_
+  rw [e₁, ← e₂]
+  refine add_le_add le_rfl (le_trans (le_of_eq ?_) hcore)
+  exact prEvent_congr _ _ _ fun z ↦ not_or
+
+end Projection
 
 end QueryImpl
