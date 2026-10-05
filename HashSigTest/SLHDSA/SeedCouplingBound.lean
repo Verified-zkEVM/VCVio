@@ -13,11 +13,13 @@ public import HashSig.SLHDSA.Concrete.Codec
 /-!
 # The hidden-seed bound at the shipped bundles
 
-`prEvent_romSchemeRun_pure_le_add` holds at every SHAKE bundle and at the SHA2-128-24
-compatibility bundle `Concrete.shaPrimitives`, with both of its side conditions discharged: key
-separation by `Concrete.keySeparated_shakePrimitives` and `Concrete.keySeparated_shaPrimitives`,
-and `|Y| ≤ |SK.prf|` because both carriers are byte vectors of the same width. The loss is
-`qh / 256 ^ n` (`natCard_shakePrimitives_y`), and `qh / 256 ^ 16` at the compatibility bundle
+`prEvent_romSchemeRun_pure_le_add` holds at every SHAKE bundle, at every FIPS SHA-2 bundle and at
+the SHA2-128-24 compatibility bundle `Concrete.shaPrimitives`, with both of its side conditions
+discharged: key separation by `Concrete.keySeparated_shakePrimitives`,
+`Concrete.keySeparated_sha2Primitives` and `Concrete.keySeparated_shaPrimitives`, and
+`|Y| ≤ |SK.prf|` because both carriers are byte vectors of the same width. The loss is
+`qh / 256 ^ n` at the SHAKE and FIPS SHA-2 bundles (`natCard_shakePrimitives_y`,
+`natCard_sha2Primitives_y`), and `qh / 256 ^ 16` at the compatibility bundle
 (`natCard_shaPrimitives_y`), so the bound is not vacuous.
 -/
 
@@ -70,6 +72,47 @@ theorem prEvent_romSchemeRun_pure_le_add_shake (vp : ValidatedParams)
   rw [← natCard_shakePrimitives_y]
   exact prEvent_romSchemeRun_pure_le_add
     (Concrete.keySeparated_shakePrimitives vp.params) le_rfl e optRand pkSeed hadv Q
+
+/-- The node type of the FIPS SHA-2 bundle has `256 ^ n` elements. -/
+theorem natCard_sha2Primitives_y (p : Params) :
+    Nat.card (Concrete.sha2Primitives p).core.Y = 256 ^ p.n := by
+  change Nat.card (Vector UInt8 p.n) = 256 ^ p.n
+  rw [Nat.card_congr (arrayVectorEquivFin UInt8 p.n), Nat.card_fun, Nat.card_eq_fintype_card,
+    ← FinEnum.card_eq_fintypeCard, FinEnum.card_UInt8, Nat.card_eq_fintype_card,
+    Fintype.card_fin]
+  norm_num
+
+/-- The hidden-seed bound at a FIPS SHA-2 bundle, with key separation and `|Y| ≤ |SK.prf|`
+discharged: the loss is `qh / 256 ^ n`. -/
+theorem prEvent_romSchemeRun_pure_le_add_sha2 (vp : ValidatedParams)
+    (e : (Concrete.sha2Primitives vp.params).core.SkSeed ≃
+      (Concrete.sha2Primitives vp.params).core.Y)
+    (optRand : PublicKeyCore (Concrete.sha2Primitives vp.params).core →
+      ProbComp (Concrete.sha2Primitives vp.params).core.Y)
+    (pkSeed : (Concrete.sha2Primitives vp.params).core.PkSeed)
+    {adv : UnforgeableAdversary
+      (romScheme (Concrete.sha2Primitives vp.params).core e optRand (pure pkSeed))}
+    {qh qs : ℕ} (hadv : adv.RomQueryBound qh qs)
+    (Q : RomOutcome vp (Concrete.sha2Primitives vp.params).core ×
+      (hashSpec (Concrete.sha2Primitives vp.params).core).QueryCache → Prop) :
+    Pr{let z ← romSchemeRun (Concrete.sha2Primitives vp.params).core e optRand (pure pkSeed)
+        adv}[Q z] ≤
+      Pr{let s ← $ᵗ ((Concrete.sha2Primitives vp.params).core.SkSeed ×
+            (Concrete.sha2Primitives vp.params).core.SkPrf)
+         let z ← (simulateQ (SecretEncoding.idealImpl
+             (hashSpec (Concrete.sha2Primitives vp.params).core)
+             (DeriveQuery (Concrete.sha2Primitives vp.params).core)
+             (Concrete.sha2Primitives vp.params).core.Y)
+           (unforgeableTranscriptExperiment
+             (deriveAdversary (Concrete.sha2Primitives vp.params).core adv
+               pkSeed))).run (∅, ∅)}[
+        Q (DeriveOutcome.fill (Concrete.sha2Primitives vp.params).core s z.1,
+          (secretEncoding (Concrete.sha2Primitives vp.params).core e pkSeed).merge s
+            z.2)] +
+        qh * ((256 ^ vp.params.n : ℕ) : ℝ≥0∞)⁻¹ := by
+  rw [← natCard_sha2Primitives_y]
+  exact prEvent_romSchemeRun_pure_le_add
+    (Concrete.keySeparated_sha2Primitives vp.params) le_rfl e optRand pkSeed hadv Q
 
 /-- The core of the SHA2-128-24 compatibility bundle, indexed by its validated parameters. -/
 abbrev shaCore : CorePrimitives Concrete.sha128_24Vp.params := Concrete.shaPrimitives.core

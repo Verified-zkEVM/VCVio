@@ -13,14 +13,22 @@ public import HashSig.SLHDSA.Security.KeySeparation
 # The key discipline of the SLH-DSA address encoding
 
 The tweakable-hash oracle is keyed by `core.adrsToKey`, a finite encoding of an unbounded address
-type, so no shipped encoding is injective on every address. `CorePrimitives.KeyDiscipline vp core`
-collects the three facts about the encoding that a reduction to the random oracle uses:
+type, so no shipped encoding is injective on every address. In the random-oracle model the PRF
+is keyed by the same encoding: its key is `core.adrsToKey` of a secret-key address
+(`Security.PrfKey`), and a PRF evaluation is the `F` query at that key. A PRF query and a
+tweakable-hash query are therefore kept apart only by their keys, which is what key separation
+below guarantees.
+
+`CorePrimitives.KeyDiscipline vp core` collects the three facts about the encoding that a
+reduction to the random oracle uses:
 
 * `CorePrimitives.KeyInjective vp core`: the encoding is injective on the in-range addresses of
   `vp`, those satisfying `Security.AddressFacts vp`;
 * `Security.CanonicalAddressBounds vp.params`: the parameter set's address fields fit their
   FIPS 205 widths, which is what places the construction's addresses in that range (every
-  `Security.addressFacts_*` ledger lemma takes it);
+  `Security.addressFacts_*` lemma takes it: the ledger lemmas for the tweakable-hash targets, and
+  `Security.addressFacts_wotsSkAdrs` and `Security.addressFacts_forsSkAdrs` for the secret-key
+  addresses at reachable positions);
 * `CorePrimitives.KeySeparated core`: no address of type at most `4` shares its key with a
   secret-key address, at every address, in range or not.
 
@@ -35,6 +43,9 @@ address is injective on the in-range addresses and not key-separated.
   addresses; `Concrete.keyDiscipline_shakePrimitives` under `CanonicalAddressBounds`.
 * FIPS SHA-2 (`Concrete.sha2Primitives`): `Concrete.keyInjective_sha2Primitives` under
   `ApprovedAddressBounds`, the compressed `ADRSc` widths; `Concrete.keyDiscipline_sha2Primitives`.
+  Under the same widths the key of every in-range address is the value the checked `ADRSc`
+  compression returns (`Concrete.compressSha2Checked_eq_ok_sha2AdrsKey_of_addressFacts`), so the
+  type-tagged fallback key is never the key of an in-range address.
 * The SLH-DSA-SHA2-128-24 compatibility bundle (`Concrete.shaPrimitives`):
   `Concrete.injOn_shaAdrsKey` for every parameter set under `ApprovedAddressBounds`, and
   `Concrete.keyDiscipline_shaPrimitives` at the bundle's own parameter set.
@@ -79,6 +90,15 @@ theorem keyInjective_shakePrimitives (vp : ValidatedParams) :
     congrArg Adrs.fromVector hkey
   rwa [Adrs.fromVector_toVector_of_isCanonical a ha.canonical,
     Adrs.fromVector_toVector_of_isCanonical b hb.canonical] at hvec
+
+/-- Under the compressed `ADRSc` widths every in-range address lies in the checked domain, so its
+FIPS SHA-2 key is the compressed address `ADRSc` that the checked compression returns. -/
+theorem compressSha2Checked_eq_ok_sha2AdrsKey_of_addressFacts {vp : ValidatedParams}
+    (hb : ApprovedAddressBounds vp.params) {a : Adrs} (h : AddressFacts vp a) :
+    a.compressSha2Checked = .ok (sha2AdrsKey a) := by
+  obtain ⟨hc, hl, ht⟩ := sha2Domain_of_addressFacts hb h
+  rw [sha2AdrsKey_eq_compressed a hc hl ht]
+  simp [Adrs.compressSha2Checked, hc, hl, ht]
 
 /-- Under the compressed `ADRSc` widths the FIPS SHA-2 encoding is injective on the in-range
 addresses: they lie in its checked domain, where the key is `ADRSc`. -/

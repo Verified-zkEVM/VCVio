@@ -25,8 +25,8 @@ keeps enough of the address type apart:
 * `Concrete.keySeparated_sha2Primitives`: the FIPS SHA-2 bundles, whose oracle key
   `Concrete.sha2AdrsKey` is `ADRSc` on the checked domain and the type-tagged
   `Concrete.sha2FallbackKey` outside it. Byte `9` of the key is the type byte: the low byte of the
-  type on the checked domain (`Concrete.toNat_sha2AdrsKey_getElem_nine_of_ok`), and `7` or `8`
-  outside it (`Concrete.toNat_sha2AdrsKey_getElem_nine_of_error`), according as the type is at
+  type on the checked domain (`Concrete.toNat_getElem_sha2AdrsKey_nine_of_ok`), and `7` or `8`
+  outside it (`Concrete.toNat_getElem_sha2AdrsKey_nine_of_error`), according as the type is at
   most `4` or not. The same byte shows that the fallback is the key of no checked-domain address
   (`Concrete.sha2AdrsKey_ne_sha2FallbackKey`).
 -/
@@ -73,30 +73,31 @@ theorem keySeparated_shaPrimitives : shaPrimitives.core.KeySeparated := by
   rcases ha.type_eq with h | h <;> omega
 
 /-- Offset `9` of the compressed address `ADRSc` is the low byte of the address type. -/
-theorem _root_.SLHDSA.Adrs.compressSha2_getElem_nine (a : Adrs) :
+theorem _root_.SLHDSA.Adrs.getElem_compressSha2_nine (a : Adrs) :
     a.compressSha2[9]'(by simp) = UInt8.ofNat (a.type % 256) := by
   simp [Adrs.compressSha2, List.getElem_append_right, Adrs.toBytesBE, toByte]
 
 /-- Offset `9` of the fallback key is its type tag. -/
-theorem sha2FallbackKey_getElem_nine (type : ℕ) :
+theorem getElem_sha2FallbackKey_nine (type : ℕ) :
     (sha2FallbackKey type)[9] = if type ≤ 4 then 7 else 8 := by
   simp [sha2FallbackKey]
 
 /-- On the checked domain, byte `9` of the SHA-2 key is the low byte of the address type. -/
-theorem toNat_sha2AdrsKey_getElem_nine_of_ok {a : Adrs} {value : Bytes 22}
+theorem toNat_getElem_sha2AdrsKey_nine_of_ok {a : Adrs} {value : Bytes 22}
     (h : a.compressSha2Checked = .ok value) : (sha2AdrsKey a)[9].toNat = a.type % 256 := by
-  rw [sha2AdrsKey_of_compressSha2Checked_eq_ok h]
+  rw [sha2AdrsKey_eq_of_compressSha2Checked_eq_ok h]
   unfold Adrs.compressSha2Checked at h
   split_ifs at h
   cases h
-  simp [Adrs.compressSha2_getElem_nine]
+  simp [Adrs.getElem_compressSha2_nine]
 
 /-- Outside the checked domain, byte `9` of the SHA-2 key is `7` for a type at most `4` and `8`
 otherwise. -/
-theorem toNat_sha2AdrsKey_getElem_nine_of_error {a : Adrs} {error : CodecError}
+theorem toNat_getElem_sha2AdrsKey_nine_of_error {a : Adrs} {error : CodecError}
     (h : a.compressSha2Checked = .error error) :
     (sha2AdrsKey a)[9].toNat = if a.type ≤ 4 then 7 else 8 := by
-  rw [sha2AdrsKey_of_compressSha2Checked_eq_error h, sha2FallbackKey_getElem_nine]
+  rw [sha2AdrsKey_eq_sha2FallbackKey_of_compressSha2Checked_eq_error h,
+    getElem_sha2FallbackKey_nine]
   split_ifs <;> rfl
 
 /-- The SHA-2 fallback key is the key of no checked-domain address: the type byte of a
@@ -105,8 +106,8 @@ theorem sha2AdrsKey_ne_sha2FallbackKey {a : Adrs} {value : Bytes 22}
     (h : a.compressSha2Checked = .ok value) (type : ℕ) :
     sha2AdrsKey a ≠ sha2FallbackKey type := by
   intro hkey
-  have h9 := toNat_sha2AdrsKey_getElem_nine_of_ok h
-  rw [hkey, sha2FallbackKey_getElem_nine] at h9
+  have h9 := toNat_getElem_sha2AdrsKey_nine_of_ok h
+  rw [hkey, getElem_sha2FallbackKey_nine] at h9
   have hcanonical : a.isCanonical = true := by
     unfold Adrs.compressSha2Checked at h
     by_contra hc
@@ -123,11 +124,11 @@ theorem keySeparated_sha2Primitives (p : Params) : (sha2Primitives p).core.KeySe
   have := ha.type_eq
   rcases hA : a.compressSha2Checked with _ | _ <;> rcases hB : b.compressSha2Checked with _ | _
   all_goals first
-    | rw [toNat_sha2AdrsKey_getElem_nine_of_ok hA] at h9
-    | rw [toNat_sha2AdrsKey_getElem_nine_of_error hA] at h9
+    | rw [toNat_getElem_sha2AdrsKey_nine_of_ok hA] at h9
+    | rw [toNat_getElem_sha2AdrsKey_nine_of_error hA] at h9
   all_goals first
-    | rw [toNat_sha2AdrsKey_getElem_nine_of_ok hB] at h9
-    | rw [toNat_sha2AdrsKey_getElem_nine_of_error hB] at h9
+    | rw [toNat_getElem_sha2AdrsKey_nine_of_ok hB] at h9
+    | rw [toNat_getElem_sha2AdrsKey_nine_of_error hB] at h9
   all_goals (try split_ifs at h9) <;> omega
 
 end Concrete

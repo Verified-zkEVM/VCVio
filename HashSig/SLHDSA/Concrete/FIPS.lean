@@ -214,13 +214,13 @@ def sha2AdrsKey (address : Adrs) : Bytes 22 :=
   | .error _ => sha2FallbackKey address.type
 
 /-- Wherever the checked compression succeeds, the key is the value it returns. -/
-theorem sha2AdrsKey_of_compressSha2Checked_eq_ok {address : Adrs} {value : Bytes 22}
+theorem sha2AdrsKey_eq_of_compressSha2Checked_eq_ok {address : Adrs} {value : Bytes 22}
     (h : address.compressSha2Checked = .ok value) : sha2AdrsKey address = value := by
   simp [sha2AdrsKey, h]
 
 /-- Wherever the checked compression rejects, the key is the type-tagged fallback. -/
-theorem sha2AdrsKey_of_compressSha2Checked_eq_error {address : Adrs} {error : CodecError}
-    (h : address.compressSha2Checked = .error error) :
+theorem sha2AdrsKey_eq_sha2FallbackKey_of_compressSha2Checked_eq_error {address : Adrs}
+    {error : CodecError} (h : address.compressSha2Checked = .error error) :
     sha2AdrsKey address = sha2FallbackKey address.type := by
   simp [sha2AdrsKey, h]
 
@@ -370,6 +370,28 @@ instance (p : Params) : DecidableEq (shakePrimitives p).Y :=
   inferInstanceAs (DecidableEq (Bytes p.n))
 instance (p : Params) : DecidableEq (shakePrimitives p).AdrsKey :=
   inferInstanceAs (DecidableEq (Bytes 32))
+
+/-! ### Carrier instances of the FIPS SHA-2 bundle
+
+Every carrier of `sha2Primitives p` is a byte vector, its oracle key the twenty-two byte `ADRSc`,
+and as for the SHAKE bundle the instances are supplied explicitly. -/
+
+instance (p : Params) : SampleableType (sha2Primitives p).PkSeed :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : SampleableType (sha2Primitives p).SkSeed :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : SampleableType (sha2Primitives p).SkPrf :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : SampleableType (sha2Primitives p).Y :=
+  inferInstanceAs (SampleableType (Bytes p.n))
+instance (p : Params) : DecidableEq (sha2Primitives p).PkSeed :=
+  inferInstanceAs (DecidableEq (Bytes p.n))
+instance (p : Params) : DecidableEq (sha2Primitives p).SkPrf :=
+  inferInstanceAs (DecidableEq (Bytes p.n))
+instance (p : Params) : DecidableEq (sha2Primitives p).Y :=
+  inferInstanceAs (DecidableEq (Bytes p.n))
+instance (p : Params) : DecidableEq (sha2Primitives p).AdrsKey :=
+  inferInstanceAs (DecidableEq (Bytes 22))
 
 /-! ## All approved profiles and byte coherence -/
 

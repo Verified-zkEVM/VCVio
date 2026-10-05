@@ -156,9 +156,17 @@ implementation does depend on are:
   the twelve parameter sets and the compatibility bundle. At SHA-2, key separation holds because
   the model keys an address outside the checked `ADRSc` domain, which FIPS 205 never compresses, by
   a type-tagged fallback that is the key of no checked-domain address; on the checked domain the
-  key is `ADRSc`, so every address FIPS 205 evaluates is keyed as the standard prescribes. An
-  implementation is covered when its encoding agrees with the specification's, which the
-  known-answer tests check on fixed inputs and a refinement proof would check for all.
+  key is `ADRSc`, so every address FIPS 205 evaluates is keyed as the standard prescribes. That
+  the honest keys are unchanged by the fallback is a theorem: under `ApprovedAddressBounds` every
+  in-range address is keyed by its checked `ADRSc`
+  (`compressSha2Checked_eq_ok_sha2AdrsKey_of_addressFacts`), and the construction-trace theorems
+  place every `thash` query of honest key generation, signing and verification at such an address.
+  The SHA-2 known-answer test runs the compatibility bundle, whose unchecked `ADRSc` key agrees
+  with the FIPS SHA-2 key on the checked domain but which never evaluates the latter; the FIPS
+  SHA-2 bundle is exercised at runtime by the primitive vectors, the SHA2-128f round trips and the
+  trace-target tests. An implementation is covered when its encoding agrees with the
+  specification's, which these tests check on fixed inputs and a refinement proof would check for
+  all.
 - **Interface.** The statement covers the internal functions; implementations expose the external
   functions (Algorithms 21–25), which the theorem reaches only once the external layer is added.
 - **Hash functions.** SHAKE256 and SHA-2 are idealized as random oracles. The SHA-2 instantiation,
