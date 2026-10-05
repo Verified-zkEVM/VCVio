@@ -246,11 +246,8 @@ computation, lifted into sampling and public queries. -/
 theorem simulateQ_deriveImpl_liftM (s : S) {α : Type} (oa : ProbComp α) :
     simulateQ (E.deriveImpl s) (liftM oa : OracleComp (pub.withDerivations X R) α) =
       (liftM oa : OracleComp (unifSpec + pub) α) := by
-  induction oa using OracleComp.inductionOn with
-  | pure x => simp only [liftM_pure, simulateQ_pure]
-  | query_bind t k ih =>
-    simp only [liftM_bind, simulateQ_bind, ih]
-    rfl
+  rw [QueryImpl.simulateQ_liftM_eq_of_query _ (fun t => liftM (unifSpec.query t)) fun _ => rfl]
+  rfl
 
 /-- The real game: derivations and public queries share one lazily sampled public cache. -/
 @[expose] noncomputable def realImpl (s : S) :

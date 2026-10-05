@@ -148,6 +148,11 @@ instance (α β : Type) [SampleableType α] [SampleableType β] : SampleableType
       (@Measurable.of_discrete (α × β) (α × β) Prod.instMeasurableSpace outputSpace
         inferInstance _) ⟨Function.injective_id, Function.surjective_id⟩
 
+/-- The canonical sampler of `α × β` samples from `α`, then from `β`, and pairs the results. -/
+lemma uniformSample_prod (α β : Type) [SampleableType α] [SampleableType β] :
+    $ᵗ (α × β) = (·, ·) <$> ($ᵗ α) <*> ($ᵗ β) :=
+  rfl
+
 /-- Transport a uniform sampler along an equivalence. -/
 @[expose, reducible] def SampleableType.ofEquiv {α β : Type} [SampleableType α] (e : α ≃ β) :
     SampleableType β where

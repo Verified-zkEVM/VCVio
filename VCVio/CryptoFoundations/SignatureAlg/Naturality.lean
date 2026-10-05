@@ -100,25 +100,23 @@ lemma mapOracles_mapOracles (G : QueryImpl spec (OracleComp spec'))
   funext pk
   rw [← QueryImpl.simulateQ_compose, key]
 
-/-- Interpreting the oracles of an adversary through the identity handler gives the same program,
-as an adversary against any scheme over `spec`. -/
-lemma mapOracles_id'_eq_mk {sigAlg₁ : SignatureAlg (OracleComp spec) M PK SK' S}
+/-- Interpreting the oracles of an adversary through the identity handler, as an adversary against
+any scheme over `spec`, leaves its program unchanged. -/
+@[simp]
+lemma mapOracles_id'_main {sigAlg' : SignatureAlg (OracleComp spec) M PK SK' S}
     (adv : UnforgeableAdversary sigAlg) :
-    adv.mapOracles (QueryImpl.id' spec) (sigAlg' := sigAlg₁) = ⟨adv.main⟩ := by
-  obtain ⟨main⟩ := adv
+    (adv.mapOracles (QueryImpl.id' spec) (sigAlg' := sigAlg')).main = adv.main := by
   have key : ((QueryImpl.id' spec).addLift (QueryImpl.id' (M →ₒ S)) :
       QueryImpl _ (OracleComp (spec + (M →ₒ S)))) = QueryImpl.id' (spec + (M →ₒ S)) := by
     ext (t | msg) <;> rfl
-  unfold mapOracles
-  simp only [mk.injEq]
   funext pk
-  rw [key, simulateQ_id']
+  rw [mapOracles_main, key, simulateQ_id']
 
 /-- Interpreting the oracles of an adversary through the identity handler leaves it unchanged. -/
 @[simp]
 lemma mapOracles_id' (adv : UnforgeableAdversary sigAlg) :
     adv.mapOracles (QueryImpl.id' spec) = adv :=
-  mapOracles_id'_eq_mk adv
+  congrArg mk (mapOracles_id'_main (sigAlg' := sigAlg) adv)
 
 end UnforgeableAdversary
 

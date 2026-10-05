@@ -20,13 +20,15 @@ everything the experiment computed.
 
 The transcript experiment commutes with oracle interpretation: interpreting the ambient oracles
 of the whole experiment through `G` is the transcript experiment of the interpreted scheme against
-the interpreted adversary (`simulateQ_unforgeableTranscriptExperiment`). A scheme whose key
-generation draws a value `s` and then runs the key generation of a scheme `A s` whose secret keys
-re-encode, through `g s`, into its own, while signing and verification agree under the
-re-encoding, has as transcript experiment the draw followed by the transcript experiment of `A s`
-with its secret key re-encoded (`unforgeableTranscriptExperiment_eq_bind_mapSk`). When the key
-generation of `A s` is a computation of key pairs from a generator, signing need only agree at the
-generated key pairs (`unforgeableTranscriptExperiment_eq_bind_mapSk_of_keygen_eq_map`).
+the interpreted adversary (`simulateQ_unforgeableTranscriptExperiment`).
+
+A scheme `B` whose key generation draws a value `s` and then generates a key pair of a scheme
+`A s`, with the secret key re-encoded through `g s`, has as transcript experiment the draw
+followed by the transcript experiment of `A s` with its secret key re-encoded. The general form,
+`unforgeableTranscriptExperiment_eq_bind_mapSk_of_keygen_eq_map`, presents the key generation of
+`A s` as a map `kp s` of a generator `gen s`, and needs signing to agree only at the generated
+key pairs. `unforgeableTranscriptExperiment_eq_bind_mapSk` is its special case with `gen s` the
+key generation of `A s`, where signing agrees at every key.
 
 Under a stateful interpretation of the ambient oracles, a transcript arises from the three stages
 of the experiment in sequence, each run from the state the previous one left
@@ -113,34 +115,12 @@ theorem simulateQ_unforgeableTranscriptExperiment (G : QueryImpl spec (OracleCom
   · simp [QueryImpl.simulateQ_add_liftM_left, writerT_run_simulateQ_liftTarget]
   · simp [QueryImpl.simulateQ_add_liftM_right, signingOracle]
 
-/-- If the key generation of `B` draws `s` from `draw`, runs the key generation of `A s` and
-re-encodes its secret key through `g s`, and `B` signs a re-encoded key and verifies as `A s` does,
-then the transcript experiment of `B` draws `s` and runs the transcript experiment of `A s`,
-re-encoding the transcript's secret key through `g s`. -/
-theorem unforgeableTranscriptExperiment_eq_bind_mapSk
-    (B : SignatureAlg (OracleComp spec) M PK SK S)
-    (A : Sec → SignatureAlg (OracleComp spec) M PK SK' S)
-    (draw : OracleComp spec Sec) (g : Sec → SK' → SK)
-    (hkg : B.keygen = do let s ← draw; let kp ← (A s).keygen; return (kp.1, g s kp.2))
-    (hsign : ∀ s pk sk' m, B.sign pk (g s sk') m = (A s).sign pk sk' m)
-    (hver : ∀ s, B.verify = (A s).verify)
-    (adv : UnforgeableAdversary B) :
-    unforgeableTranscriptExperiment adv = (draw >>= fun s =>
-      UnforgeableTranscript.mapSk (g s) <$>
-        unforgeableTranscriptExperiment (sigAlg := A s) ⟨adv.main⟩) := by
-  simp only [unforgeableTranscriptExperiment, hkg, bind_assoc, pure_bind, map_bind, map_pure,
-    UnforgeableTranscript.mapSk]
-  refine bind_congr fun s => bind_congr fun kp => ?_
-  have hso : B.signingOracle kp.1 (g s kp.2) = (A s).signingOracle kp.1 kp.2 := by
-    funext m; simp [signingOracle, hsign]
-  simp only [runWithSigningOracle, hso, hver s]
-
-/-- If the key generation of `B` draws `s` from `draw`, then `t` from `gen s`, and outputs the key
-pair `kp s t` with its secret key re-encoded through `g s`, the key generation of `A s` outputs
-`kp s t` for `t` drawn from `gen s`, and `B` signs a re-encoded generated key and verifies as
-`A s` does, then the transcript experiment of `B` draws `s` and runs the transcript experiment of
-`A s`, re-encoding the transcript's secret key through `g s`. Signing need only agree at the
-generated key pairs. -/
+/-- Suppose the key generation of `B` draws `s` from `draw` and `t` from `gen s`, and outputs the
+key pair `kp s t` with its secret key re-encoded through `g s`. Suppose the key generation of
+`A s` outputs `kp s t` for `t` drawn from `gen s`, that `B` signs at every generated key pair,
+re-encoded, as `A s` signs at that key pair, and that `B` verifies as `A s` does. Then the
+transcript experiment of `B` draws `s` and runs the transcript experiment of `A s`, re-encoding
+the transcript's secret key through `g s`. -/
 theorem unforgeableTranscriptExperiment_eq_bind_mapSk_of_keygen_eq_map {T : Type}
     (B : SignatureAlg (OracleComp spec) M PK SK S)
     (A : Sec → SignatureAlg (OracleComp spec) M PK SK' S)
@@ -164,6 +144,24 @@ theorem unforgeableTranscriptExperiment_eq_bind_mapSk_of_keygen_eq_map {T : Type
       (A s).signingOracle (kp s t).1 (kp s t).2 := by
     simp only [signingOracle, funext (hsign s t)]
   simp only [runWithSigningOracle, hso, hver s]
+
+/-- If the key generation of `B` draws `s` from `draw`, runs the key generation of `A s` and
+re-encodes its secret key through `g s`, and `B` signs a re-encoded key and verifies as `A s` does,
+then the transcript experiment of `B` draws `s` and runs the transcript experiment of `A s`,
+re-encoding the transcript's secret key through `g s`. -/
+theorem unforgeableTranscriptExperiment_eq_bind_mapSk
+    (B : SignatureAlg (OracleComp spec) M PK SK S)
+    (A : Sec → SignatureAlg (OracleComp spec) M PK SK' S)
+    (draw : OracleComp spec Sec) (g : Sec → SK' → SK)
+    (hkg : B.keygen = do let s ← draw; let kp ← (A s).keygen; return (kp.1, g s kp.2))
+    (hsign : ∀ s pk sk' m, B.sign pk (g s sk') m = (A s).sign pk sk' m)
+    (hver : ∀ s, B.verify = (A s).verify)
+    (adv : UnforgeableAdversary B) :
+    unforgeableTranscriptExperiment adv = (draw >>= fun s =>
+      UnforgeableTranscript.mapSk (g s) <$>
+        unforgeableTranscriptExperiment (sigAlg := A s) ⟨adv.main⟩) :=
+  unforgeableTranscriptExperiment_eq_bind_mapSk_of_keygen_eq_map B A draw (fun s => (A s).keygen)
+    (fun _ => id) g hkg (fun _ => (id_map _).symm) (fun s _ m => hsign s _ _ m) hver adv
 
 /-- Under a stateful interpretation of the ambient oracles, a transcript arises from key
 generation run from the initial state, the adversary under the logged signing oracle run from

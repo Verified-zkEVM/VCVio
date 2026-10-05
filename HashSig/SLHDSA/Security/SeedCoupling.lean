@@ -29,15 +29,18 @@ answers a derivation by a public query.
   pkSeed` is SLH-DSA at public seed `pkSeed` with every secret value drawn from it and every
   randomizer drawn as a derivation. Its secret key is the public key: the scheme holds no secret.
 * `deriveAdversary core adv` is a forger of `romScheme` lifted into the derivation world, and
-  `fill core s` rebuilds the transcript of `romScheme` from the transcript of `deriveScheme` and
-  the secret seeds `s`.
+  `DeriveOutcome.fill core s` rebuilds the transcript of `romScheme` from the transcript of
+  `deriveScheme` and the secret seeds `s`; `fillSecretKey core s` builds its secret key from the
+  public key.
 
 `romSchemeRun_pure_eq` is the resulting equation: the run at public seed `pkSeed` draws the
 secret seeds `s` uniformly, runs the transcript experiment of `deriveScheme` against
 `deriveAdversary core adv` in the real game `(secretEncoding core e pkSeed).realImpl s` from the
-empty cache, and rebuilds the transcript with `fill core s`. `prEvent_romSchemeRun_pure_eq` is
-its form for the probability of an event, the shape `SecretEncoding.prEvent_realImpl_le_add`
-consumes at each fixed `s`.
+empty cache, and rebuilds the transcript with `DeriveOutcome.fill core s`.
+`prEvent_romSchemeRun_pure_eq` is its form for the probability of an event. Its right side,
+with the draw of `s` outside the real game, is the left side of the averaged real-game bound
+`SecretEncoding.prEvent_realImpl_le_add_mul` at `ms := $ᵗ (core.SkSeed × core.SkPrf)` and the
+event `fun s z => Q (DeriveOutcome.fill core s z.1, z.2)`.
 
 ## Scope
 
@@ -48,9 +51,10 @@ consumes at each fixed `s`.
 ## Labels
 
 *Derivations*: `PrfKey`, `DeriveQuery`, `deriveSpec`, `secretEncoding`, `secretEncoding_enc_inl`,
-`secretEncoding_enc_inr`, `deriveSecret`, `deriveHom`, `simulateQ_deriveImpl_deriveSecret`.
+`secretEncoding_enc_inr`, `deriveSecret`, `simulateQ_deriveImpl_deriveSecret`.
 
-*The secret-free scheme*: `DeriveOutcome`, `fillSk`, `fill`, `deriveScheme`, `deriveAdversary`.
+*The secret-free scheme*: `DeriveOutcome`, `fillSecretKey`, `DeriveOutcome.fill`, `deriveScheme`,
+`deriveAdversary`.
 
 *The experiment*: `mapOracles_deriveImpl_deriveAdversary`,
 `unforgeableTranscriptExperiment_romScheme_pure_eq`.
@@ -121,7 +125,8 @@ other address the provider draws a uniform node. -/
 
 /-- Answering derivations through the encoding at secret seeds `s`, as a morphism that preserves
 the public hash queries. -/
-def deriveHom (e : core.SkSeed ≃ core.Y) (pkSeed : core.PkSeed) (s : core.SkSeed × core.SkPrf) :
+private def deriveHom (e : core.SkSeed ≃ core.Y) (pkSeed : core.PkSeed)
+    (s : core.SkSeed × core.SkPrf) :
     HasQuery.QueryHom (publicHashSpec core) (OracleComp (deriveSpec core))
       (OracleComp (unifSpec + hashSpec core)) where
   toMonadHom := simulateQ' ((secretEncoding core e pkSeed).deriveImpl s)
@@ -133,7 +138,7 @@ theorem simulateQ_deriveImpl_deriveSecret (e : core.SkSeed ≃ core.Y) (pkSeed :
     (s : core.SkSeed × core.SkPrf) {a : Adrs} (ha : a.IsSecretKey) :
     simulateQ ((secretEncoding core e pkSeed).deriveImpl s) (deriveSecret core a) =
       oracleSecret core e pkSeed s.1 a := by
-  simp only [deriveSecret, ha, dite_true, oracleSecret, PublicHash.f]
+  simp only [deriveSecret, ha, ↓reduceDIte, oracleSecret, PublicHash.f]
   rfl
 
 /-! ## The secret-free scheme -/
@@ -145,14 +150,15 @@ abbrev DeriveOutcome : Type :=
     (GeneralScheme.SignatureCore vp core)
 
 /-- The secret key with secret seeds `s` and public part `pk`. -/
-@[expose] def fillSk (s : core.SkSeed × core.SkPrf) (pk : PublicKeyCore core) :
+@[expose] def fillSecretKey (s : core.SkSeed × core.SkPrf) (pk : PublicKeyCore core) :
     SecretKeyCore core :=
   ⟨s.1, s.2, pk.pkSeed, pk.pkRoot⟩
 
 /-- The transcript of `romScheme` rebuilt from a transcript of `deriveScheme` and the secret
 seeds `s`: its secret key carries `s` and the public part of the transcript's key. -/
-@[expose] def fill (s : core.SkSeed × core.SkPrf) (z : DeriveOutcome core) : RomOutcome vp core :=
-  z.mapSk (fillSk core s)
+@[expose] def DeriveOutcome.fill (s : core.SkSeed × core.SkPrf) (z : DeriveOutcome core) :
+    RomOutcome vp core :=
+  z.mapSk (fillSecretKey core s)
 
 variable [DecidableEq core.Y]
 
@@ -199,20 +205,22 @@ theorem mapOracles_deriveImpl_deriveAdversary (e : core.SkSeed ≃ core.Y)
           (simulateQ' ((secretEncoding core e pkSeed).deriveImpl s))) =
       ⟨adv.main⟩ := by
   rw [deriveAdversary, UnforgeableAdversary.mapOracles_mapOracles,
-    SecretEncoding.deriveImpl_comp_withDerivationsLift, UnforgeableAdversary.mapOracles_id'_eq_mk]
+    SecretEncoding.deriveImpl_comp_withDerivationsLift]
+  exact congrArg UnforgeableAdversary.mk (UnforgeableAdversary.mapOracles_id'_main adv)
 
 /-- **The experiment of `romScheme` at a public seed is the secret-free experiment with its
 derivations answered at uniform secret seeds.** The transcript experiment draws the secret
 seeds `s` uniformly, runs the transcript experiment of `deriveScheme` against the lifted forger
 with every derivation answered through the encoding at `s`, and rebuilds the transcript with
-`fill core s`. -/
+`DeriveOutcome.fill core s`. -/
 theorem unforgeableTranscriptExperiment_romScheme_pure_eq (e : core.SkSeed ≃ core.Y)
     (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
     (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))) :
     unforgeableTranscriptExperiment adv =
       (liftM ($ᵗ (core.SkSeed × core.SkPrf)) : OracleComp (unifSpec + hashSpec core) _) >>=
-        fun s => fill core s <$> simulateQ ((secretEncoding core e pkSeed).deriveImpl s)
-          (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed)) := by
+        fun s => DeriveOutcome.fill core s <$>
+          simulateQ ((secretEncoding core e pkSeed).deriveImpl s)
+            (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed)) := by
   rw [unforgeableTranscriptExperiment_eq_bind_mapSk_of_keygen_eq_map _
     (fun s => (deriveScheme core optRand pkSeed).map
       (simulateQ' ((secretEncoding core e pkSeed).deriveImpl s)))
@@ -220,16 +228,14 @@ theorem unforgeableTranscriptExperiment_romScheme_pure_eq (e : core.SkSeed ≃ c
     (fun s => GeneralScheme.keygenInternalWithSecretM core (oracleSecret core e pkSeed s.1) pkSeed)
     (fun _ pkRoot => ((⟨pkSeed, pkRoot⟩ : PublicKeyCore core),
       (⟨pkSeed, pkRoot⟩ : PublicKeyCore core)))
-    (fun s => fillSk core s) ?hkg ?hkgA ?hsign ?hver adv]
+    (fun s => fillSecretKey core s) ?hkg ?hkgA ?hsign ?hver adv]
   · refine bind_congr fun s => ?_
     rw [simulateQ_unforgeableTranscriptExperiment, mapOracles_deriveImpl_deriveAdversary]
     rfl
   case hkg =>
-    have hprod : ($ᵗ (core.SkSeed × core.SkPrf) : ProbComp _) =
-        (·, ·) <$> ($ᵗ core.SkSeed) <*> ($ᵗ core.SkPrf) := rfl
-    rw [romScheme_keygen, hprod]
+    rw [romScheme_keygen, uniformSample_prod]
     simp only [seq_eq_bind_map, map_eq_bind_pure_comp, liftM_bind, liftM_pure, bind_assoc,
-      pure_bind, Function.comp_apply, fillSk]
+      pure_bind, Function.comp_apply, fillSecretKey]
   case hkgA =>
     intro s
     rw [map_keygen]
@@ -252,7 +258,7 @@ theorem unforgeableTranscriptExperiment_romScheme_pure_eq (e : core.SkSeed ≃ c
         (deriveSecret core) (oracleSecret core e pkSeed s.1)
         (fun _ ha => simulateQ_deriveImpl_deriveSecret core e pkSeed s ha) msg pkSeed pkRoot R
     rw [romScheme_sign, map_sign]
-    simp only [deriveScheme, fillSk, simulateQ_bind, hnat,
+    simp only [deriveScheme, fillSecretKey, simulateQ_bind, hnat,
       SecretEncoding.simulateQ_deriveImpl_liftM]
     rfl
   case hver =>
@@ -271,7 +277,7 @@ variable [SampleableType (Bytes vp.params.m)] [DecidableEq core.PkSeed] [Decidab
 experiment, averaged over the secret seeds.** The run draws the secret seeds `s` uniformly, runs
 the transcript experiment of `deriveScheme` against the lifted forger in the real game
 `(secretEncoding core e pkSeed).realImpl s` from the empty cache, and rebuilds the transcript with
-`fill core s`, keeping the final cache. -/
+`DeriveOutcome.fill core s`, keeping the final cache. -/
 theorem romSchemeRun_pure_eq (e : core.SkSeed ≃ core.Y)
     (optRand : PublicKeyCore core → ProbComp core.Y) (pkSeed : core.PkSeed)
     (adv : UnforgeableAdversary (romScheme core e optRand (pure pkSeed))) :
@@ -279,7 +285,7 @@ theorem romSchemeRun_pure_eq (e : core.SkSeed ≃ core.Y)
       let s ← $ᵗ (core.SkSeed × core.SkPrf)
       let z ← (simulateQ ((secretEncoding core e pkSeed).realImpl s)
         (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run ∅
-      return (fill core s z.1, z.2) := by
+      return (DeriveOutcome.fill core s z.1, z.2) := by
   rw [romSchemeRun, unforgeableTranscriptExperiment_romScheme_pure_eq, simulateQ_bind,
     StateT.run_bind, simulateQ_romImpl_liftM_run, bind_map_left]
   refine bind_congr fun s => ?_
@@ -298,7 +304,7 @@ theorem prEvent_romSchemeRun_pure_eq (e : core.SkSeed ≃ core.Y)
       Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)
          let z ← (simulateQ ((secretEncoding core e pkSeed).realImpl s)
            (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))).run ∅}[
-        Q (fill core s z.1, z.2)] := by
+        Q (DeriveOutcome.fill core s z.1, z.2)] := by
   rw [romSchemeRun_pure_eq]
   simp only [bind_assoc, pure_bind]
 
