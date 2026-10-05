@@ -171,10 +171,11 @@ def verifyInternalBytes (pkSeed pkRoot : Bytes 16) (msg : List Byte)
   letI : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16))
   slhVerifyInternal shaParams_d_eq_one shaPrimitives msg (decodeSignature sigBytes) ⟨pkSeed, pkRoot⟩
 
-/-! ### Completeness transfers to the concrete bundle
+/-! ### Carrier instances
 
-The carrier instances are supplied explicitly: the structure projections `shaPrimitives.SkSeed`
-… are definitionally `Bytes 16`, but instance synthesis does not unfold them automatically. -/
+The carrier instances are supplied explicitly: the structure projections `shaPrimitives.SkSeed`,
+`shaPrimitives.AdrsKey`, … are definitionally byte vectors (`Bytes 16`, and `Bytes 22` for the
+address key), but instance synthesis does not unfold them automatically. -/
 
 instance : SampleableType shaPrimitives.SkSeed := inferInstanceAs (SampleableType (Bytes 16))
 instance : SampleableType shaPrimitives.SkPrf := inferInstanceAs (SampleableType (Bytes 16))
@@ -184,6 +185,8 @@ instance : DecidableEq shaPrimitives.Y := inferInstanceAs (DecidableEq (Bytes 16
 instance : DecidableEq shaPrimitives.PkSeed := inferInstanceAs (DecidableEq (Bytes 16))
 instance : DecidableEq shaPrimitives.SkPrf := inferInstanceAs (DecidableEq (Bytes 16))
 instance : DecidableEq shaPrimitives.AdrsKey := inferInstanceAs (DecidableEq (Bytes 22))
+
+/-! ### Completeness transfers to the concrete bundle -/
 
 /-- **Perfect completeness at the concrete SHA2-128-24 bundle.** This specializes the
 definitional concrete-function interpretation of the canonical oracle-parametric scheme to the
