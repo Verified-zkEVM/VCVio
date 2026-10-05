@@ -428,6 +428,8 @@ Before working in a specific area, read the relevant guide in `docs/agents/`:
   [`docs/design/slh-dsa-fips205-generalization.md`](docs/design/slh-dsa-fips205-generalization.md)
 - **SLH-DSA implementation status, stale-plan corrections, and remaining slices**:
   [`docs/design/slh-dsa-status-and-roadmap.md`](docs/design/slh-dsa-status-and-roadmap.md)
+- **SLH-DSA classical random-oracle bound, its accounting, and leanVM's 127-bit proof**:
+  [`docs/design/slh-dsa-classical-rom-bound.md`](docs/design/slh-dsa-classical-rom-bound.md)
 - **Probability reasoning (EvalDist, ProbComp)**: [`docs/agents/probability.md`](docs/agents/probability.md)
 - **Crypto primitives and reductions**: [`docs/agents/crypto.md`](docs/agents/crypto.md)
 - **End-to-end crypto examples**: [`docs/agents/end-to-end-examples.md`](docs/agents/end-to-end-examples.md)

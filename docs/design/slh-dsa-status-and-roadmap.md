@@ -5,7 +5,10 @@ the plan in [`slh-dsa-fips205-generalization.md`](slh-dsa-fips205-generalization
 the target architecture, milestone definitions, acceptance gates, and merge protocol established
 on 2026-08-30. This document records what has merged since, what is open, where the plan's snapshot
 statements are now stale, and the ordered slices that remain. For the `main` snapshot identified in
-the milestone ledger below, use this document rather than the plan's older status statements.
+the milestone ledger below, use this document rather than the plan's older status statements. The
+accounting of the classical random-oracle bound, and its relation to the 127-bit proof in
+`leanEthereum/leanVM`, are recorded in
+[`slh-dsa-classical-rom-bound.md`](slh-dsa-classical-rom-bound.md).
 
 A capability is listed as DONE only when its source and validation are on `main`. Open pull
 requests are named as such. Conditional EUF-CMA composition, the SUF residual bound and the
@@ -295,7 +298,8 @@ longer true on `main`:
   §10 external functions (21–25), §11 parameter sets (§11.2 compressed address `ADRSc`,
   Figure 18, Table 3).
 - M. Barbosa, F. Dupressoir, A. Hülsing, M. Meijers, P.-Y. Strub, *A Tight Security Proof for
-  SPHINCS+, Formally Verified*, ASIACRYPT 2023; EasyCrypt development `FV-SPHINCSPLUS-EC`.
+  SPHINCS+, Formally Verified*, Cryptology ePrint Archive, Report 2024/910; EasyCrypt
+  development `FV-SPHINCSPLUS-EC`.
 - D. J. Bernstein, A. Hülsing, S. Kölbl, R. Niederhagen, J. Rijneveld, P. Schwabe, *The SPHINCS+
   Signature Framework*, CCS 2019; SPHINCS+ round-3.1 specification (2022) and NIST submission
   package (reference implementation).
