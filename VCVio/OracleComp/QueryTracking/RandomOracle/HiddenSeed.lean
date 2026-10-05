@@ -57,9 +57,9 @@ single public query at a point encoded under half of the secrets raises the flag
 Bookkeeping that an event must read alongside the games, such as a log or a record of where each
 answer came from, is carried through the bounds by extending the coupled real game and the ideal
 game by the same passive auxiliary state (`QueryImpl.extendState`). Its update may read the
-secret and the split state before and after each step, including the derivation table, but not
-the flag. The extended
-forms `SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul` and
+secret, the query, its answer, the split state before and after the step (including the
+derivation table) and its own previous value, but not the flag. The extended forms
+`SecretEncoding.prEvent_coupledImpl_extendState_le_add_mul` and
 `SecretEncoding.prEvent_coupledImpl_extendState_le_add` bound an event of the extended coupled
 game's output, split state and auxiliary state by the same event of the extended ideal game.
 
@@ -465,8 +465,9 @@ theorem prEvent_realImpl_le_add (s : S) {α : Type} (oa : OracleComp (pub.withDe
 /-- Coupled real game against the ideal game, both extended by the same passive auxiliary state,
 for a fixed secret: an event of the extended coupled game's output, split state and auxiliary
 state, with the flag forgotten, is at most the same event in the extended ideal game plus the
-chance that the flagged ideal game raises its flag. The auxiliary update `aux` reads the split
-state before and after each step, but not the flag. -/
+chance that the flagged ideal game raises its flag. The auxiliary update `aux` reads the query,
+its answer, the split state before and after the step and its own previous value, but not the
+flag. -/
 theorem prEvent_coupledImpl_extendState_le_add (s : S) {Q : Type} (r₀ : Q)
     (aux : (t : (pub.withDerivations X R).Domain) → SplitCache pub X R →
       (pub.withDerivations X R).Range t → SplitCache pub X R → Q → Q)
@@ -654,8 +655,8 @@ for a secret drawn from `ms` and under a query budget charging every public quer
 encodable point: an event of the secret and of the extended coupled game's output, split state
 and auxiliary state is at most the same event in the extended ideal game plus `q * ε`, where `ε`
 bounds, for every public point, the chance that it encodes some derivation under the secret. The
-auxiliary update `aux s` may read the secret and the split state before and after each step, but
-not the flag. -/
+auxiliary update `aux s` may read the secret, the query, its answer, the split state before and
+after the step and its own previous value, but not the flag. -/
 theorem prEvent_coupledImpl_extendState_le_add_mul {Q : Type} (r₀ : Q)
     (aux : S → (t : (pub.withDerivations X R).Domain) → SplitCache pub X R →
       (pub.withDerivations X R).Range t → SplitCache pub X R → Q → Q)
