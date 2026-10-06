@@ -49,6 +49,20 @@ example (mx : m α) (p : Fin 5 → α → Prop) {ε : ℝ≥0∞} (h : ∀ i, Pr
     Pr{let x ← mx}[∃ i, p i x] ≤ 5 * ε := by
   simpa using prEvent_exists_le_card_mul mx p h
 
+/-- A candidate set of size at most three, fixed before the draw: only incorrect candidates need a
+bound, and the union is at most three times that bound. -/
+example (mx : m α) (incorrect : ℕ → Prop) (event : ℕ → α → Prop) {ε : ℝ≥0∞}
+    (h : ∀ i ∈ ({0, 1, 2} : Finset ℕ), incorrect i → Pr{let x ← mx}[event i x] ≤ ε) :
+    Pr{let x ← mx}[∃ i ∈ ({0, 1, 2} : Finset ℕ), incorrect i ∧ event i x] ≤ 3 * ε :=
+  prEvent_exists_mem_and_le_mul mx incorrect event _ h (by decide)
+
+/-- With at most one valid candidate, the bound is a single `ε`. -/
+example (mx : m α) (event : ℕ → α → Prop) (incorrect : ℕ → Prop) {ε : ℝ≥0∞}
+    (h : incorrect 7 → Pr{let x ← mx}[event 7 x] ≤ ε) :
+    Pr{let x ← mx}[∃ i, i = 7 ∧ incorrect i ∧ event i x] ≤ ε :=
+  prEvent_exists_and_and_le_of_subsingleton mx (· = 7) incorrect event
+    (by rintro i rfl; exact h) (fun _ ha _ hb => ha.trans hb.symm)
+
 example (mx : m α) (p : α → Prop) : Pr{let x ← mx}[p x] ≤ 1 := by simp
 
 /-- Conditioning on a bad event of the common draw. -/

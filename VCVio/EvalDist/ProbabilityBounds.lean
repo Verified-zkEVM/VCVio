@@ -98,6 +98,39 @@ theorem prEvent_exists_le_card_mul {ι : Type} [Fintype ι] (mx : m α) (p : ι 
   (prEvent_exists_le mx p).trans (by
     simpa using Finset.sum_le_card_nsmul Finset.univ _ ε (fun i _ ↦ h i))
 
+/-- Union bound over a candidate set of size at most `L`, fixed before the draw: if each
+incorrect candidate's event has probability at most `ε`, some incorrect candidate's event has
+probability at most `L * ε`. Correct candidates need no bound. -/
+theorem prEvent_exists_mem_and_le_mul {ι : Type} (mx : m α) (incorrect : ι → Prop)
+    (event : ι → α → Prop) {ε : ℝ≥0∞} (S : Finset ι)
+    (hε : ∀ i ∈ S, incorrect i → Pr{let x ← mx}[event i x] ≤ ε)
+    {L : ℕ} (hS : S.card ≤ L) :
+    Pr{let x ← mx}[∃ i ∈ S, incorrect i ∧ event i x] ≤ L * ε :=
+  calc
+    _ ≤ ∑ i ∈ S, Pr{let x ← mx}[incorrect i ∧ event i x] := prEvent_exists_finset_le _ _ _
+    _ ≤ ∑ _i ∈ S, ε := Finset.sum_le_sum fun i hiS ↦ by
+      by_cases hi : incorrect i
+      · exact (prEvent_mono _ _ _ fun _ h ↦ h.2).trans (hε i hiS hi)
+      · rw [prEvent_eq_zero_of_forall_not _ _ fun _ h ↦ hi h.1]
+        exact bot_le
+    _ ≤ L * ε := by
+      rw [Finset.sum_const, nsmul_eq_mul]
+      gcongr
+
+/-- The case of `prEvent_exists_mem_and_le_mul` with at most one valid candidate. -/
+theorem prEvent_exists_and_and_le_of_subsingleton {ι : Type} (mx : m α)
+    (valid incorrect : ι → Prop) (event : ι → α → Prop) {ε : ℝ≥0∞}
+    (hε : ∀ i, valid i → incorrect i → Pr{let x ← mx}[event i x] ≤ ε)
+    (hvalid : {i | valid i}.Subsingleton) :
+    Pr{let x ← mx}[∃ i, valid i ∧ incorrect i ∧ event i x] ≤ ε := by
+  have hS : hvalid.finite.toFinset.card ≤ 1 :=
+    Finset.card_le_one.mpr fun a ha b hb ↦
+      hvalid (hvalid.finite.mem_toFinset.mp ha) (hvalid.finite.mem_toFinset.mp hb)
+  refine (prEvent_mono _ _ (fun x ↦ ∃ i ∈ hvalid.finite.toFinset, incorrect i ∧ event i x)
+    fun _ ⟨i, hi, h⟩ ↦ ⟨i, hvalid.finite.mem_toFinset.mpr hi, h⟩).trans ?_
+  simpa using prEvent_exists_mem_and_le_mul mx incorrect event _
+    (fun i hi ↦ hε i (hvalid.finite.mem_toFinset.mp hi)) hS
+
 /-- An event splits along a second predicate. -/
 theorem prEvent_eq_prEvent_and_add_prEvent_and_not (mx : m α) (p q : α → Prop) :
     Pr{let x ← mx}[p x] = Pr{let x ← mx}[p x ∧ q x] + Pr{let x ← mx}[p x ∧ ¬ q x] := by
