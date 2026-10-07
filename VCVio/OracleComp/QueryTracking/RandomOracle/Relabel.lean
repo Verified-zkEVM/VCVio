@@ -42,6 +42,13 @@ matching step of the ideal game (`CanonicalGraph.dominatedUntilBad_relabelImpl`)
 Along the way, every drawn label belongs to a node whose children are drawn
 (`CanonicalGraph.LabelsComplete`).
 
+A key map `CanonicalGraph.NodeKeys` assigns to a public point the node, if any, at whose key it
+is; every point of a node is at its key, at children values of the right length. A target
+collision at a node key, `CanonicalGraph.NodeKeys.TCHazard`, is a public entry at a node's key,
+at any input, equal to the node's drawn label. Like a conflict, it persists along every
+extension; the public entries at node keys, `CanonicalGraph.NodeKeys.keyEntries`, are the only
+entries either hazard can involve.
+
 The eager game `CanonicalGraph.eagerImpl` extends the relabelled game by the label operations
 `OracleSpec.labelOps`: `touch c` draws the cell `c` and discards it, and `read k` draws the label
 of `k`. A program lifted from `pub.withDerivations X R` makes neither.
@@ -208,6 +215,11 @@ theorem length_eq_of_childVals_eq_some {st : RelabelState pub X K R} {k : K} {vs
     (h : G.childVals st k = some vs) : vs.length = (G.ch k).length :=
   ((G.childVals_eq_some_iff.1 h).length_eq).symm
 
+/-- The children of `k` are all drawn exactly when each of them is. -/
+theorem isSome_childVals_iff {st : RelabelState pub X K R} {k : K} :
+    (G.childVals st k).isSome ↔ ∀ c ∈ G.ch k, (st.2 c).isSome :=
+  List.isSome_mapM_iff
+
 /-- Children drawn at some values stay drawn at those values in every extension. -/
 theorem childVals_mono {st st' : RelabelState pub X K R} (hle : st ≤ st') {k : K}
     {vs : List R} (h : G.childVals st k = some vs) : G.childVals st' k = some vs :=
@@ -286,6 +298,10 @@ theorem Conflict.mono {st st' : RelabelState pub X K R} (hle : st ≤ st') (h : 
   obtain ⟨k, vs, hk, hc⟩ := h
   exact ⟨k, vs, G.childVals_mono hle hk, QueryCache.isSome_mono hle.1 hc⟩
 
+theorem not_conflict_empty : ¬G.Conflict ((∅, ∅) : RelabelState pub X K R) := by
+  rintro ⟨k, vs, -, h⟩
+  simp only [QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true] at h
+
 /-- Every drawn label belongs to a node whose children are all drawn. -/
 @[expose] def LabelsComplete (st : RelabelState pub X K R) : Prop :=
   ∀ k, (st.2 (.inr k)).isSome → (G.childVals st k).isSome
@@ -327,6 +343,59 @@ theorem merge_apply_eq_of_le {st st' : RelabelState pub X K R} (hle : st ≤ st'
   · have ht : ¬∃ k vs, G.childVals st k = some vs ∧ G.pt k vs = t := fun ⟨k, vs, hk, hpt⟩ ↦
       ht' ⟨k, vs, G.childVals_mono hle hk, hpt⟩
     rw [G.merge_apply_of_not_exists ht', G.merge_apply_of_not_exists ht, hcache]
+
+/-! ## Node keys -/
+
+/-- A key map of the graph: the node, if any, whose key a public point is at. Every point of a
+node at children values of the right length is at its key, and every point at a node's key is
+answered in `R`; a point at a node's key need not be a point of that node, for instance at
+children values of another length. -/
+structure NodeKeys (G : CanonicalGraph pub X K R) where
+  /-- The node at whose key a public point is, if any. -/
+  node : ι → Option K
+  /-- A node's points at children values of the right length are at its key. -/
+  node_pt : ∀ {k : K} {vs : List R}, vs.length = (G.ch k).length → node (G.pt k vs) = some k
+  /-- Every point at a node's key is answered in `R`. -/
+  range_eq : ∀ {t : ι} {k : K}, node t = some k → pub.Range t = R
+
+namespace NodeKeys
+
+variable {G} (nk : G.NodeKeys)
+
+/-- A target collision at a node key: the public cache holds, at some point at the key of a node
+`k`, the drawn label of `k`. The point may be at any input, including children values of another
+length than `k`'s children. -/
+@[expose] def TCHazard (st : RelabelState pub X K R) : Prop :=
+  ∃ t k ℓ, ∃ h : nk.node t = some k, st.2 (.inr k) = some ℓ ∧
+    st.1 t = some (cast (nk.range_eq h).symm ℓ)
+
+/-- The public entries at node keys. -/
+@[expose] def keyEntries (C : pub.QueryCache) : Set ι :=
+  {t | (C t).isSome ∧ (nk.node t).isSome}
+
+variable {nk}
+
+/-- A target collision at a node key persists in every extension. -/
+theorem TCHazard.mono {st st' : RelabelState pub X K R} (hle : st ≤ st') (h : nk.TCHazard st) :
+    nk.TCHazard st' := by
+  obtain ⟨t, k, ℓ, hk, hℓ, hC⟩ := h
+  exact ⟨t, k, ℓ, hk, hle.2 hℓ, hle.1 hC⟩
+
+theorem not_tcHazard_empty : ¬nk.TCHazard ((∅, ∅) : RelabelState pub X K R) := by
+  rintro ⟨t, k, ℓ, -, hℓ, -⟩
+  simp only [QueryCache.empty_apply, reduceCtorEq] at hℓ
+
+/-- The public entries at node keys only grow with the public cache. -/
+theorem keyEntries_mono {C C' : pub.QueryCache} (hle : C ≤ C') :
+    nk.keyEntries C ⊆ nk.keyEntries C' :=
+  fun _ ⟨hC, hk⟩ ↦ ⟨QueryCache.isSome_mono hle hC, hk⟩
+
+@[simp] theorem keyEntries_empty : nk.keyEntries (∅ : pub.QueryCache) = ∅ := by
+  ext t
+  simp only [keyEntries, QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true,
+    false_and, Set.ofPred_false, Set.mem_empty_iff_false]
+
+end NodeKeys
 
 /-! ## The relabelled game -/
 

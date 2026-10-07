@@ -113,11 +113,30 @@ theorem endFill_eq (st : RelabelState pub X K R) (cs : List (X ⊕ K)) :
       (simulateQ ((X ⊕ K) →ₒ R).randomOracle (((X ⊕ K) →ₒ R).queryAll cs)).run st.2 := by
   simp only [endFill]
 
+/-- The end fill keeps the public cache. -/
+theorem fst_eq_of_mem_support_endFill {s : RelabelState pub X K R × List (X ⊕ K)}
+    {st : RelabelState pub X K R} (hst : st ∈ support (endFill s)) : st.1 = s.1.1 := by
+  rw [endFill, support_map] at hst
+  obtain ⟨w, -, rfl⟩ := hst
+  rfl
+
+/-- The end fill extends the state. -/
+theorem le_of_mem_support_endFill {s : RelabelState pub X K R × List (X ⊕ K)}
+    {st : RelabelState pub X K R} (hst : st ∈ support (endFill s)) : s.1 ≤ st := by
+  rw [endFill, support_map] at hst
+  obtain ⟨w, hw, rfl⟩ := hst
+  exact ⟨le_rfl, (QueryImpl.withCaching_queryAll_le_and_isSome_iff _ hw).1⟩
+
 /-- The cell oracle on the whole relabelled state: a query of a cell draws it if it is undrawn
 and keeps the public cache. -/
 noncomputable def cellImpl :
     QueryImpl ((X ⊕ K) →ₒ R) (StateT (RelabelState pub X K R) ProbComp) :=
   fun c ↦ drawCell c
+
+/-- A query of a cell to the cell oracle draws it. -/
+theorem cellImpl_apply (c : X ⊕ K) :
+    (cellImpl c : StateT (RelabelState pub X K R) ProbComp R) = drawCell c := by
+  rfl
 
 /-- The end fill is the cell oracle on the whole relabelled state, run at the pending cells. -/
 theorem endFill_eq_simulateQ_cellImpl (s : RelabelState pub X K R × List (X ⊕ K)) :

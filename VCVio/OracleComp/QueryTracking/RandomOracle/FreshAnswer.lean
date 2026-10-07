@@ -35,10 +35,12 @@ at most `K - Φ`, and never lowers the potential.  Taking `g` to be a second run
 handler and with its own bad predicate and potential on its own state, gives the two-phase bound
 `evalDist_bind_run_apply_setOf_and_le_of_potential`: both phases are charged against one budget,
 the second through the engine itself, provided the handover from the first final state to the
-second start state keeps the bad predicate failing and does not lower the potential.  The
-continuation and two-phase forms take the engine's step condition as one hypothesis
-`IsPotentialStep so P Φ`, which `IsPotentialStep.of_evalDist` builds from the engine's two
-unfolded hypotheses.
+second start state keeps the bad predicate failing and does not lower the potential.  Taking
+`g` to be an independent draw `x ← mx`, whose hazard `H x` fires at each final state with
+probability at most a weight `c`, gives `prEvent_bind_draw_and_le_of_potential`, which charges
+the draw `c` on top of the potential.  The continuation, two-phase and draw forms take the
+engine's step condition as one hypothesis `IsPotentialStep so P Φ`, which
+`IsPotentialStep.of_evalDist` builds from the engine's two unfolded hypotheses.
 
 ## Scope
 
@@ -76,7 +78,7 @@ unfolded hypotheses.
 
 ## Labels
 
-Fourteen declarations.
+Fifteen declarations.
 
 *The potential engine*:
 
@@ -84,7 +86,8 @@ Fourteen declarations.
   `OracleComp.IsPotentialStep.of_evalDist`,
   `OracleComp.evalDist_bind_apply_setOf_and_le_of_potential`,
   `OracleComp.evalDist_apply_setOf_and_le_of_potential`,
-  `OracleComp.prEvent_and_le_of_potential`, `OracleComp.prEvent_bind_and_le_of_potential`.
+  `OracleComp.prEvent_and_le_of_potential`, `OracleComp.prEvent_bind_and_le_of_potential`,
+  `OracleComp.prEvent_bind_draw_and_le_of_potential`.
 
 *Two phases*:
 
@@ -252,6 +255,33 @@ theorem prEvent_bind_and_le_of_potential {so : QueryImpl spec (StateT σ ProbCom
     s hs
   rw [← prEvent_eq_evalDist_of_discrete]
   exact hg z hz
+
+/-- **The potential-charged first-fire bound with a terminal draw.**  The handler `so` charges
+the bad predicate `P` to the potential `Φ` (`IsPotentialStep`).  The run is followed by an
+independent draw `x ← mx`, and a hazard `H x` of the final state fires with probability at most
+`c` of that state.  Then from a state where `P` fails, the run and the draw fire `P` or the
+hazard, with `Φ + c ≤ K` at the final state, with probability at most `K - Φ s`: the draw is
+charged its weight `c` on top of the potential. -/
+theorem prEvent_bind_draw_and_le_of_potential {so : QueryImpl spec (StateT σ ProbComp)}
+    {P : σ → Prop} {Φ : σ → ℝ≥0∞} (h : IsPotentialStep so P Φ) {S : Type} (mx : ProbComp S)
+    (H : S → σ → Prop) (c : σ → ℝ≥0∞) (hH : ∀ s, Pr{let x ← mx}[H x s] ≤ c s) (K : ℝ≥0∞)
+    (hK' : K ≠ ⊤) (oa : OracleComp spec α) (s : σ) (hs : ¬ P s) :
+    Pr{let z ← (simulateQ so oa).run s; let x ← mx}[(P z.2 ∨ H x z.2) ∧ Φ z.2 + c z.2 ≤ K] ≤
+      K - Φ s := by
+  have key := prEvent_bind_and_le_of_potential h (fun z => (fun x => (z, x)) <$> mx)
+    (fun y => P y.1.2 ∨ H y.2 y.1.2) (fun y => Φ y.1.2 + c y.1.2) K hK' (fun z y hy => ?_)
+    (fun z hz => ?_) oa s hs
+  · simpa only [bind_map_left] using key
+  · rw [support_map] at hy
+    obtain ⟨x, -, rfl⟩ := hy
+    exact le_self_add
+  · rw [prEvent_map]
+    by_cases hle : Φ z.2 + c z.2 ≤ K
+    · refine (prEvent_mono _ _ (fun x => H x z.2) fun x hx => hx.1.resolve_left hz).trans
+        ((hH z.2).trans (ENNReal.le_sub_of_add_le_left
+          (ne_top_of_le_ne_top hK' (le_self_add.trans hle)) hle))
+    · rw [prEvent_eq_zero_of_forall_not _ _ fun x hx => hle hx.2]
+      exact zero_le
 
 /-- **The potential-charged first-fire bound.**  `P` is a predicate on the state and `Φ` a
 potential that never decreases along a step.  If every step out of a state where `P` fails is

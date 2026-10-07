@@ -86,6 +86,7 @@ public import VCVioTest.RandomOracleControls
 public import VCVioTest.RandomOracleDefer
 public import VCVioTest.RandomOracleFreshQuery
 public import VCVioTest.RandomOracleHiddenSeed
+public import VCVioTest.RandomOracleJointPotential
 public import VCVioTest.RandomOracleRelabel
 public import VCVioTest.RandomOracleRouting
 public import VCVioTest.RandomOracleTwoPhase
