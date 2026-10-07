@@ -25,6 +25,9 @@ key separation, plus `qh / |Y|` for a forger with hash budget `qh`.
   derivation with probability at most `1 / |Y|`, when `|Y| ≤ |SK.prf|`. A tweakable-hash point
   `thash _ _ [y]` pins `SK.seed` to `e.symm y`; a `PRF_msg` point pins `SK.prf`; no other point
   encodes a derivation.
+* `prEvent_exists_isSome_apply_secretEncoding_enc_le`: under uniform secret seeds, a public cache
+  holds a point encoding a derivation with probability at most its number of cached derivable
+  points divided by `|Y|`, when `|Y| ≤ |SK.prf|`.
 * `prEvent_romSchemeRun_pure_le_add_mul_expectedSimulatedQueryCount`: an event of the run and its
   final cache is at most the event, read on the rebuilt transcript and the merged cache, in the
   ideal game under uniform secret seeds, plus `1 / |Y|` times the expected number of derivable
@@ -84,6 +87,20 @@ theorem prEvent_mem_range_secretEncoding_enc_le [SampleableType core.SkSeed]
       _ = (Nat.card core.SkPrf : ℝ≥0∞)⁻¹ :=
           SampleableType.prEvent_uniformSample_eq_singleton_natCard sp
       _ ≤ _ := ENNReal.inv_le_inv.2 (by exact_mod_cast hcard)
+
+/-- **A public cache holds a point encoding a derivation under uniform secret seeds with
+probability at most `1 / |Y|` per cached derivable point**, when `|Y| ≤ |SK.prf|`. -/
+theorem prEvent_exists_isSome_apply_secretEncoding_enc_le [SampleableType core.SkSeed]
+    [SampleableType core.SkPrf] (e : core.SkSeed ≃ core.Y) (pkSeed : core.PkSeed)
+    (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf) (C : (hashSpec core).QueryCache) :
+    Pr{let s ← $ᵗ (core.SkSeed × core.SkPrf)}[
+      ∃ x, (C ((secretEncoding core e pkSeed).enc s x)).isSome] ≤
+      ({t | (C t).isSome ∧ IsDerivablePublicQuery core pkSeed (.inl (.inr t))}.encard : ℝ≥0∞) /
+        Nat.card core.Y := by
+  rw [ENNReal.div_eq_inv_mul, Set.ofPred_and, Set.inter_comm]
+  exact (secretEncoding core e pkSeed).prEvent_exists_isSome_apply_enc_le
+    (prEvent_mem_range_secretEncoding_enc_le e pkSeed hcard)
+    (isDerivablePublicQuery_enc core e pkSeed) C
 
 /-! ## The bound for the run -/
 

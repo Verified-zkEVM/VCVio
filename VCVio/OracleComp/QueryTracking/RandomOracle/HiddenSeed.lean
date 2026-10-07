@@ -43,9 +43,14 @@ From empty states the flag is a function of the final public cache: it is raised
 that cache holds an encoded point
 (`SecretEncoding.flag_eq_true_iff_of_mem_support_flaggedIdealImpl`). Without its flag the flagged
 ideal game does not depend on the secret, so for a secret drawn independently of the run the flag
-probability is bounded by exchanging the secret draw with the run and applying a union bound over
-the cached points, of which every run has finitely many
-(`SecretEncoding.finite_setOf_isSome_of_mem_support_idealImpl`). The points that can be encoded
+probability is bounded by exchanging the secret draw with the run and applying, to each final
+public cache, a union bound over its cached points
+(`SecretEncoding.prEvent_exists_isSome_apply_enc_le`, which holds for every cache; the final
+public cache of every run holds finitely many points,
+`SecretEncoding.finite_setOf_isSome_of_mem_support_idealImpl`). The same reading of the flag
+gives the event form of the coupling, with no loss term: an event of the real game is at most the
+event, read on the merged cache, or an encoded point in the final public cache, in the ideal game
+(`SecretEncoding.prEvent_realImpl_le_or`). The points that can be encoded
 under some secret, `D = ⋃ s, Set.range (E.enc s)`, are charged by a predicate `p` that holds at
 every public query at a point of `D`; every other query (public queries at points outside `D`,
 derivation queries and uniform draws) may be left free. A step of the ideal game caches at most
@@ -96,6 +101,13 @@ event of the extended coupled game.
   count is of the unextended ideal game, which is also the count of every extension of it
   (`OracleComp.expectedSimulatedQueryCount_extendState`), so bounds proved in an extended ideal
   game share it.
+- `SecretEncoding.prEvent_realImpl_le_or` and `SecretEncoding.prEvent_bind_realImpl_le_or`: the
+  event form, for a fixed secret and for a secret drawn from any distribution: an event of the
+  real game is at most the same event of the ideal game, read on the merged cache, or a public
+  point encoded under the secret in the ideal game's final public cache.
+- `SecretEncoding.prEvent_exists_isSome_apply_enc_le`: for a secret drawn from `ms`, a public
+  cache holds an encoded point with probability at most `ε` times its number of cached points in
+  a set containing every encoded point.
 - `SecretEncoding.prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount`: the flag bound
   `ε` times the expected count.
 - `SecretEncoding.prEvent_realImpl_le_add_mul`, `SecretEncoding.prEvent_coupledImpl_le_add_mul`,
@@ -157,6 +169,36 @@ variable {ι : Type} {pub : OracleSpec ι} {S X R : Type} (E : SecretEncoding pu
 /-- Every point witnessed as an encoding is answered in `R`. -/
 theorem range_eq_of_enc_eq {s : S} {x : X} {t : ι} (h : E.enc s x = t) : pub.Range t = R :=
   h ▸ E.range_eq s x
+
+/-! ## Encoded points of a public cache -/
+
+/-- **Union bound over the cached points.** For a secret drawn from `ms`, a public cache holds a
+point encoded under the secret with probability at most `ε` times the number of its cached points
+in `D`, where `D` contains every encoded point and `ε` bounds, for every public point, the chance
+that it encodes some derivation under the secret. -/
+theorem prEvent_exists_isSome_apply_enc_le {ms : ProbComp S} {ε : ℝ≥0∞}
+    (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε) {D : Set ι}
+    (hD : ∀ s x, E.enc s x ∈ D) (C : pub.QueryCache) :
+    Pr{let s ← ms}[∃ x, (C (E.enc s x)).isSome] ≤
+      ε * ((D ∩ {t | (C t).isSome}).encard : ℝ≥0∞) := by
+  by_cases hfin : (D ∩ {t | (C t).isSome}).Finite
+  · calc Pr{let s ← ms}[∃ x, (C (E.enc s x)).isSome]
+        ≤ Pr{let s ← ms}[∃ t ∈ hfin.toFinset, t ∈ Set.range (E.enc s)] :=
+          prEvent_mono _ _ _ fun s ⟨x, hx⟩ ↦
+            ⟨E.enc s x, hfin.mem_toFinset.2 ⟨hD s x, hx⟩, x, rfl⟩
+      _ ≤ ∑ t ∈ hfin.toFinset, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] :=
+          prEvent_exists_finset_le _ _ _
+      _ ≤ hfin.toFinset.card • ε := Finset.sum_le_card_nsmul _ _ _ fun t _ ↦ hε t
+      _ = ε * ((D ∩ {t | (C t).isSome}).encard : ℝ≥0∞) := by
+          rw [nsmul_eq_mul, mul_comm, hfin.encard_eq_coe_toFinset_card]
+          simp only [ENat.toENNReal_coe]
+  rcases eq_or_ne ε 0 with rfl | hε₀
+  · refine ((prEvent_eq_zero_iff ms _).2 fun s hs hx ↦ ?_).trans_le zero_le
+    obtain ⟨x, -⟩ := hx
+    exact ((prEvent_pos_iff ms fun s' ↦ E.enc s x ∈ Set.range (E.enc s')).2
+      ⟨s, hs, x, rfl⟩).ne' (nonpos_iff_eq_zero.1 (hε _))
+  · rw [Set.Infinite.encard_eq hfin, ENat.toENNReal_top, ENNReal.mul_top hε₀]
+    exact le_top
 
 /-! ## Split state: public cache, derivation table, flag -/
 
@@ -716,6 +758,41 @@ theorem lintegral_encard_inter_setOf_isSome_le_expectedSimulatedQueryCount {D : 
   · simp only [QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true, Set.ofPred_false,
       Set.inter_empty, Set.encard_empty, ENat.toENNReal_zero, zero_add]
 
+/-! ## Real game against ideal game, event form -/
+
+/-- Real game against the ideal game, event form, for a fixed secret: an event of the real game
+is at most the event, read on the merged cache, or a public point encoded under `s` in the final
+public cache, in the ideal game. -/
+theorem prEvent_realImpl_le_or (s : S) {α : Type} (oa : OracleComp (pub.withDerivations X R) α)
+    (P : α × pub.QueryCache → Prop) :
+    Pr{let z ← (simulateQ (E.realImpl s) oa).run ∅}[P z] ≤
+      Pr{let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[
+        P (z.1, E.merge s z.2) ∨ ∃ x, (z.2.1 (E.enc s x)).isSome] := by
+  have h := E.map_run_simulateQ_coupledImpl s oa ((∅, ∅), false)
+  rw [merge_empty] at h
+  rw [← h, prEvent_map]
+  refine ((E.agreeUntilBad_coupledImpl_flaggedIdealImpl s).symm.dominatedUntilBad
+    |>.prEvent_simulateQ_run_le_map_or_bad (QueryImpl.PreservesInv.trivial _)
+      (E.flaggedIdealImpl_preservesInv s) oa ((∅, ∅), false) trivial
+      fun z ↦ P (z.1, E.merge s z.2.1)).trans_eq ?_
+  rw [← E.map_run_simulateQ_flaggedIdealImpl s oa (∅, ∅) false, prEvent_map]
+  exact prEvent_congr_of_support _ _ _ fun z hz ↦
+    or_congr Iff.rfl (E.flag_eq_true_iff_of_mem_support_flaggedIdealImpl s oa hz)
+
+/-- Real game against the ideal game, event form, for a secret drawn from `ms`: an event of the
+secret and of the real game is at most the event, read on the merged cache, or a public point
+encoded under the secret in the final public cache, in the ideal game. -/
+theorem prEvent_bind_realImpl_le_or {ms : ProbComp S} {α : Type}
+    (oa : OracleComp (pub.withDerivations X R) α) (P : S → α × pub.QueryCache → Prop) :
+    Pr{let s ← ms; let z ← (simulateQ (E.realImpl s) oa).run ∅}[P s z] ≤
+      Pr{
+        let s ← ms
+        let z ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[
+        P s (z.1, E.merge s z.2) ∨ ∃ x, (z.2.1 (E.enc s x)).isSome] := by
+  let _ : MeasurableSpace S := ⊤
+  simp only [prEvent_bind_bind_eq_lintegral_of_discrete]
+  exact lintegral_mono fun s ↦ E.prEvent_realImpl_le_or s oa (P s)
+
 /-! ## Averaging over the secret -/
 
 /-- The flagged ideal game run under a secret drawn from `ms` raises its flag with probability at
@@ -735,6 +812,7 @@ theorem prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount {ms : ProbCo
   have hD : ∀ t ∈ D, p (.inl (.inr t)) := fun t ht ↦ by
     obtain ⟨s, x, rfl⟩ := Set.mem_iUnion.1 ht
     exact hp s x
+  have hencD : ∀ s x, E.enc s x ∈ D := fun s x ↦ Set.mem_iUnion.2 ⟨s, x, rfl⟩
   have hflag : ∀ s, Pr{let z ← (simulateQ (E.flaggedIdealImpl s) oa).run ((∅, ∅), false)}[
       z.2.2 = true] = Pr{let w ← (simulateQ (idealImpl pub X R) oa).run (∅, ∅)}[
       ∃ x, (w.2.1 (E.enc s x)).isSome] := fun s ↦ by
@@ -753,27 +831,12 @@ theorem prEvent_flaggedIdealImpl_le_mul_expectedSimulatedQueryCount {ms : ProbCo
     exact lintegral_congr hflag
   rw [hswap, OracleComp.prEvent_bind_bind_swap]
   let run := (simulateQ (idealImpl pub X R) oa).run (∅, ∅)
-  -- for each final state, a union bound over its finitely many cached points of `D`
-  have hper : ∀ w ∈ support run, Pr{let s ← ms}[∃ x, (w.2.1 (E.enc s x)).isSome] ≤
-      ε * ((D ∩ {t | (w.2.1 t).isSome}).encard : ℝ≥0∞) := fun w hw ↦ by
-    have hfin := (finite_setOf_isSome_of_mem_support_idealImpl hw).subset
-      (Set.inter_subset_right (s := D))
-    calc Pr{let s ← ms}[∃ x, (w.2.1 (E.enc s x)).isSome]
-        ≤ Pr{let s ← ms}[∃ t ∈ hfin.toFinset, t ∈ Set.range (E.enc s)] :=
-          prEvent_mono _ _ _ fun s ⟨x, hx⟩ ↦
-            ⟨E.enc s x, hfin.mem_toFinset.2 ⟨Set.mem_iUnion.2 ⟨s, x, rfl⟩, hx⟩, x, rfl⟩
-      _ ≤ ∑ t ∈ hfin.toFinset, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] :=
-          prEvent_exists_finset_le _ _ _
-      _ ≤ hfin.toFinset.card • ε := Finset.sum_le_card_nsmul _ _ _ fun t _ ↦ hε t
-      _ = ε * ((D ∩ {t | (w.2.1 t).isSome}).encard : ℝ≥0∞) := by
-          rw [nsmul_eq_mul, mul_comm, hfin.encard_eq_coe_toFinset_card]
-          simp only [ENat.toENNReal_coe]
   let _ : MeasurableSpace (α × SplitCache pub X R) := ⊤
   calc Pr{let w ← run; let s ← ms}[∃ x, (w.2.1 (E.enc s x)).isSome]
       = ∫⁻ w, Pr{let s ← ms}[∃ x, (w.2.1 (E.enc s x)).isSome] ∂𝒟[run] :=
         prEvent_bind_bind_eq_lintegral_of_discrete _ _ _
     _ ≤ ∫⁻ w, ε * ((D ∩ {t | (w.2.1 t).isSome}).encard : ℝ≥0∞) ∂𝒟[run] :=
-        lintegral_mono_ae (evalDist.ae_of_forall_mem_support run _ MeasurableSet.of_discrete hper)
+        lintegral_mono fun w ↦ E.prEvent_exists_isSome_apply_enc_le hε hencD w.2.1
     _ = ε * ∫⁻ w, ((D ∩ {t | (w.2.1 t).isSome}).encard : ℝ≥0∞) ∂𝒟[run] :=
         lintegral_const_mul _ Measurable.of_discrete
     _ = ε * ∫⁻ r, r ∂𝒟[(fun w : α × SplitCache pub X R ↦
