@@ -9,6 +9,7 @@ module
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Commute
 public import VCVio.OracleComp.SimSemantics.StateT.Measure
+public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
 
 /-!
 # Deferred touches of a relabelled lazy random oracle
@@ -56,6 +57,10 @@ drawn only by touches hidden from the public queries until they are drawn by a r
   has the final-state distribution of the masked game.
 - `CanonicalGraph.prEvent_eagerImpl_le_maskedImpl`: the eager game is at most the masked game, or a
   conflict.
+- `CanonicalGraph.deferredImpl_cachesOnlyQueryPoint` and
+  `CanonicalGraph.encard_inter_setOf_isSome_le_add_of_mem_support_deferredImpl`: the deferred game
+  caches a public point only on a public query at it, so under a budget charging every public query
+  at a point of `D`, a run adds at most the budget's number of points of `D` to the public cache.
 -/
 
 public section
@@ -338,6 +343,67 @@ theorem intertwines_maskedFill :
     rw [QueryImpl.withCaching_queryAll_uncached_append_singleton _ hw c]
   · rw [deferredImpl_run_read, bind_map_left, maskedImpl_apply_read]
     exact RelabelState.evalDist_drawCell_bind_maskedFill (.inr k) st cs f
+
+/-! ## Cached public points
+
+The deferred game caches a public point only on a public query at that point which no node
+answers from its label. A query budget charging every public query at a point of a set `D`
+therefore bounds the points of `D` the run adds to the public cache. -/
+
+/-- The relabelled game caches only the point of a public query: a public query answered by a
+node's label, a sampling query and a derivation leave the public cache unchanged. -/
+theorem relabelImpl_cachesOnlyQueryPoint :
+    QueryImpl.CachesOnlyQueryPoint G.relabelImpl (fun st ↦ {t | (st.1 t).isSome})
+      (Sum.elim (Sum.elim (fun _ ↦ none) some) fun _ ↦ none) := by
+  rintro ((n | t) | x) st w hw t' ht'
+  · rw [relabelImpl_run_unif, support_map] at hw
+    obtain ⟨_, -, rfl⟩ := hw
+    exact Or.inl ht'
+  · by_cases ht : ∃ k vs, G.childVals st k = some vs ∧ G.pt k vs = t
+    · obtain ⟨k, vs, hk, rfl⟩ := ht
+      rw [G.relabelImpl_run_pt hk, support_map] at hw
+      obtain ⟨w, hw, rfl⟩ := hw
+      rw [RelabelState.drawCell_run, support_map] at hw
+      obtain ⟨w, -, rfl⟩ := hw
+      exact Or.inl ht'
+    · rw [G.relabelImpl_run_pub_of_not_exists ht, support_map] at hw
+      obtain ⟨w, hw, rfl⟩ := hw
+      exact ((QueryImpl.withCaching_run_isSome_apply_iff _ hw t').1 ht').imp id fun h ↦ by
+        subst h
+        rfl
+  · rw [relabelImpl_apply_inr, RelabelState.drawCell_run, support_map] at hw
+    obtain ⟨w, -, rfl⟩ := hw
+    exact Or.inl ht'
+
+/-- The deferred game caches only the point of a public query: touches and reads leave the public
+cache unchanged, and every other query is a step of the relabelled game. -/
+theorem deferredImpl_cachesOnlyQueryPoint :
+    QueryImpl.CachesOnlyQueryPoint G.deferredImpl (fun s ↦ {t | (s.1.1 t).isSome})
+      (Sum.elim (Sum.elim (Sum.elim (fun _ ↦ none) some) fun _ ↦ none) fun _ ↦ none) := by
+  rintro (t | c | k) s w hw
+  · rw [deferredImpl_run_inl, support_map] at hw
+    obtain ⟨w, hw, rfl⟩ := hw
+    exact G.relabelImpl_cachesOnlyQueryPoint t s.1 w hw
+  · rw [deferredImpl_run_touch, support_pure, Set.mem_singleton_iff] at hw
+    subst hw
+    exact Set.subset_union_left
+  · rw [deferredImpl_run_read, support_map] at hw
+    obtain ⟨w, hw, rfl⟩ := hw
+    rw [RelabelState.drawCell_run, support_map] at hw
+    obtain ⟨w, -, rfl⟩ := hw
+    exact Set.subset_union_left
+
+/-- Under a query budget charging every public query at a point of a set `D`, a run of the
+deferred game adds at most `q` points of `D` to the public cache. -/
+theorem encard_inter_setOf_isSome_le_add_of_mem_support_deferredImpl {D : Set ι}
+    {p : (pub.withLabels X K R).Domain → Prop} [DecidablePred p]
+    (hp : ∀ t ∈ D, p (.inl (.inl (.inr t)))) {α : Type} {oa : OracleComp (pub.withLabels X K R) α}
+    {q : ℕ} (h : IsQueryBoundP oa p q) {s : RelabelState pub X K R × List (X ⊕ K)}
+    {z : α × RelabelState pub X K R × List (X ⊕ K)}
+    (hz : z ∈ support ((simulateQ G.deferredImpl oa).run s)) :
+    (D ∩ {t | (z.2.1.1 t).isSome}).encard ≤ (D ∩ {t | (s.1.1 t).isSome}).encard + q :=
+  G.deferredImpl_cachesOnlyQueryPoint.encard_inter_le_add_of_mem_support_simulateQ
+    (by rintro (((n | t) | x) | c) k ht hk <;> cases ht; exact hp _ hk) h hz
 
 /-! ## The masked game is dominated by the eager game until a conflict -/
 

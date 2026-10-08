@@ -1,6 +1,7 @@
 module  -- shake: keep-all --deprecated_module: ignore
 
 public import VCVioTest.Asymptotics.Negligible
+public import VCVioTest.CachedPointsBound
 public import VCVioTest.Computability
 public import VCVioTest.CryptoFoundations.BR93Measure
 public import VCVioTest.CryptoFoundations.ComplexityAdapters

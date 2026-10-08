@@ -12,8 +12,8 @@ public import VCVio.OracleComp.SimSemantics.QueryImpl.Compose
 public import VCVio.OracleComp.QueryTracking.QueryBound.Basic
 public import VCVio.OracleComp.QueryTracking.ExpectedQueryCount
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
+public import VCVio.OracleComp.QueryTracking.QueryBound.Counter
 import VCVio.OracleComp.Constructions.SampleableType.NativeMeasure
-import VCVio.OracleComp.QueryTracking.QueryBound.Counter
 import VCVio.OracleComp.EvalDist.Measure
 
 /-!
@@ -48,9 +48,10 @@ public cache, a union bound over its cached points
 (`SecretEncoding.prEvent_exists_isSome_apply_enc_le`, which holds for every cache). The points
 that can be encoded under some secret, `D = ⋃ s, Set.range (E.enc s)`, are charged by a predicate
 `p` that holds at every public query at a point of `D`; every other query (public queries at
-points outside `D`, derivation queries and uniform draws) may be left free. A step of the ideal
-game caches at most one new point of `D`, and none unless it is a `p`-query
-(`SecretEncoding.encard_inter_setOf_isSome_le_add_of_mem_support_idealImpl`), so the expected
+points outside `D`, derivation queries and uniform draws) may be left free. The ideal game caches
+only the point of a public query (`SecretEncoding.idealImpl_cachesOnlyQueryPoint`), so a step
+caches at most one new point of `D`, and none unless it is a `p`-query
+(`SecretEncoding.encard_inter_setOf_isSome_le_add_of_mem_support_idealImpl`), and the expected
 number of points of `D` in the final public cache is at most the expected number of `p`-queries,
 `expectedSimulatedQueryCount (idealImpl pub X R) p oa (∅, ∅)`
 (`SecretEncoding.lintegral_encard_inter_setOf_isSome_le_expectedSimulatedQueryCount`). If every
@@ -649,6 +650,16 @@ theorem flag_eq_true_iff_of_mem_support_flaggedIdealImpl (s : S) {α : Type}
     exact or_congr hinv Iff.rfl
   · simp only [Bool.false_eq_true, QueryCache.empty_apply, Option.isSome_none, exists_false]
 
+/-- The ideal game caches only the point of a public query: no other query touches its public
+cache. -/
+theorem idealImpl_cachesOnlyQueryPoint :
+    QueryImpl.CachesOnlyQueryPoint (idealImpl pub X R) (fun st ↦ {t | (st.1 t).isSome})
+      (Sum.elim (Sum.elim (fun _ ↦ none) some) fun _ ↦ none) := by
+  intro t st w hw t' ht'
+  refine ((isSome_fst_apply_iff_of_mem_support_idealImpl hw t').1 ht').imp id fun h ↦ ?_
+  subst h
+  rfl
+
 /-- A step of the ideal game caches at most one new point of a set `D`, and none unless the step is
 a query of a predicate `p` holding at every public query at a point of `D`. -/
 theorem encard_inter_setOf_isSome_le_add_of_mem_support_idealImpl {D : Set ι}
@@ -657,20 +668,9 @@ theorem encard_inter_setOf_isSome_le_add_of_mem_support_idealImpl {D : Set ι}
     {st : SplitCache pub X R} {w : (pub.withDerivations X R).Range t × SplitCache pub X R}
     (hw : w ∈ support ((idealImpl pub X R t).run st)) :
     (D ∩ {t' | (w.2.1 t').isSome}).encard ≤
-      (D ∩ {t' | (st.1 t').isSome}).encard + if p t then 1 else 0 := by
-  have hsub : D ∩ {t' | (w.2.1 t').isSome} ⊆
-      D ∩ {t' | (st.1 t').isSome} ∪ D ∩ {t' | .inl (.inr t') = t} :=
-    fun t' ⟨hD, ht'⟩ ↦
-      ((isSome_fst_apply_iff_of_mem_support_idealImpl hw t').1 ht').imp (⟨hD, ·⟩) (⟨hD, ·⟩)
-  refine (Set.encard_le_encard hsub).trans ((Set.encard_union_le _ _).trans ?_)
-  by_cases hpt : p t
-  · have hone : (D ∩ {t' | .inl (.inr t') = t}).encard ≤ 1 :=
-      Set.encard_le_one_iff.2 fun a b ha hb ↦ Sum.inr.inj (Sum.inl.inj (ha.2.trans hb.2.symm))
-    simp only [hpt, ↓reduceIte]
-    exact add_le_add le_rfl hone
-  · have hemp : D ∩ {t' | .inl (.inr t') = t} = ∅ :=
-      Set.eq_empty_of_forall_notMem fun t' ht' ↦ hpt (ht'.2 ▸ hp t' ht'.1)
-    simp only [hpt, ↓reduceIte, hemp, Set.encard_empty, add_zero, le_refl]
+      (D ∩ {t' | (st.1 t').isSome}).encard + if p t then 1 else 0 :=
+  idealImpl_cachesOnlyQueryPoint.encard_inter_le_add_of_mem_support
+    (by rintro ((n | t) | x) k ht hk <;> cases ht; exact hp _ hk) hw
 
 /-- Under a query budget charging every public query at a point of a set `D`, the final public
 cache of the ideal game, run from empty states, holds at most `q` points of `D`. -/
@@ -680,30 +680,10 @@ theorem encard_inter_setOf_isSome_le_of_mem_support_idealImpl {D : Set ι}
     {q : ℕ} (h : IsQueryBoundP oa p q) {z : α × SplitCache pub X R}
     (hz : z ∈ support ((simulateQ (idealImpl pub X R) oa).run (∅, ∅))) :
     (D ∩ {t | (z.2.1 t).isSome}).encard ≤ q := by
-  let aux : (t : (pub.withDerivations X R).Domain) → SplitCache pub X R →
-      (pub.withDerivations X R).Range t → SplitCache pub X R → ℕ → ℕ :=
-    fun t _ _ _ n ↦ if p t then n + 1 else n
-  rw [← extendState_run_proj_eq (idealImpl pub X R) aux oa (∅, ∅) 0, support_map] at hz
-  obtain ⟨z, hz, rfl⟩ := hz
-  have hcnt := h.cnt_le_of_mem_support_run_extendState (idealImpl pub X R)
-    (fun t _ _ _ n ↦ by by_cases hpt : p t <;> simp only [aux, hpt, ↓reduceIte, add_zero, le_refl])
-    hz
-  refine (simulateQ_run_preservesInv ((idealImpl pub X R).extendState aux)
-    (fun st ↦ (D ∩ {t | (st.1.1 t).isSome}).encard ≤ st.2) ?_ oa _ ?_ z hz).trans ?_
-  · rintro t ⟨st, n⟩ hinv w hw
-    rw [QueryImpl.extendState_apply, mem_support_bind_iff] at hw
-    obtain ⟨v, hv, hw⟩ := hw
-    rw [support_pure, Set.mem_singleton_iff] at hw
-    subst hw
-    refine (encard_inter_setOf_isSome_le_add_of_mem_support_idealImpl hp hv).trans ?_
-    by_cases hpt : p t
-    · simp only [aux, hpt, ↓reduceIte, Nat.cast_add, Nat.cast_one]
-      exact add_le_add hinv le_rfl
-    · simp only [aux, hpt, ↓reduceIte, add_zero]
-      exact hinv
-  · simp only [QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true, Set.ofPred_false,
-      Set.inter_empty, Set.encard_empty, Nat.cast_zero, le_refl]
-  · exact_mod_cast hcnt.trans_eq (zero_add q)
+  simpa only [QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true, Set.ofPred_false,
+    Set.inter_empty, Set.encard_empty, zero_add] using
+    idealImpl_cachesOnlyQueryPoint.encard_inter_le_add_of_mem_support_simulateQ
+      (by rintro ((n | t) | x) k ht hk <;> cases ht; exact hp _ hk) h hz
 
 /-- Under a charged predicate holding at every public query at a point of a set `D`, the expected
 number of points of `D` in the final public cache of the ideal game, run from empty states, is at
