@@ -46,6 +46,8 @@ cache with probability at most `c` at each cache is charged `c` on top of the po
   `2 · #keyEntries / |R| + c ≤ B` at the final state, with probability at most `B`.
 - `CanonicalGraph.NodeKeys.prEvent_deferredFillDraw_le_of_budget`: the same bound without the
   truncation, when `2 · #keyEntries / |R| + c ≤ B` holds at the end of every deferred run.
+- `CanonicalGraph.mem_support_deferredFillDraw_iff`: a point of the three phases is a deferred run,
+  an end fill of its final state and a draw.
 -/
 
 public section
@@ -71,6 +73,20 @@ variable (G : CanonicalGraph pub X K R) [DecidableEq ι] [DecidableEq X] [Decida
   let st ← RelabelState.endFill z.2
   let s ← ms
   return (z, st, s)
+
+/-- A point of `deferredFillDraw` is a run of the deferred game from the empty state, an end fill
+of its final state, and a draw. -/
+theorem mem_support_deferredFillDraw_iff {S α : Type} {ms : ProbComp S}
+    {oa : OracleComp (pub.withLabels X K R) α}
+    {w : (α × RelabelState pub X K R × List (X ⊕ K)) × RelabelState pub X K R × S} :
+    w ∈ support (G.deferredFillDraw ms oa) ↔
+      w.1 ∈ support ((simulateQ G.deferredImpl oa).run ((∅, ∅), [])) ∧
+        w.2.1 ∈ support (RelabelState.endFill w.1.2) ∧ w.2.2 ∈ support ms := by
+  simp only [deferredFillDraw, mem_support_bind_iff, support_pure, Set.mem_singleton_iff]
+  constructor
+  · rintro ⟨z, hz, st, hst, s, hs, rfl⟩
+    exact ⟨hz, hst, hs⟩
+  · exact fun ⟨hz, hst, hs⟩ ↦ ⟨w.1, hz, w.2.1, hst, w.2.2, hs, rfl⟩
 
 end DeferredFillDraw
 

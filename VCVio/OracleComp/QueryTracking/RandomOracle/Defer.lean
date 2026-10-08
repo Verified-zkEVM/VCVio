@@ -65,6 +65,11 @@ drawn only by touches hidden from the public queries until they are drawn by a r
 - `CanonicalGraph.le_of_mem_support_deferredImpl` and
   `CanonicalGraph.le_of_mem_support_simulateQ_deferredImpl`: a step, and a run, of the deferred
   game extends the relabelled state.
+- `CanonicalGraph.conflict_of_isSome_merge_pt`: a point of a node held by the merged cache of a
+  state in which a child of the node is undrawn is a conflict of every state with a larger public
+  cache that draws the node's children at that point's values.
+- `SecretEncoding.merge_toSplitCache_le_merge_toSplitCache`: off a conflict, extending the state
+  only adds entries to the real cache rebuilt from its split state.
 -/
 
 public section
@@ -213,6 +218,41 @@ theorem evalDist_drawCell_bind_maskedFill (c : X ⊕ K) (st : RelabelState pub X
         fun u _ D ↦ f u ((st.1, D), (st.2.uncached cs).erase c)
 
 end RelabelState
+
+namespace CanonicalGraph
+
+variable {ι : Type} {pub : OracleSpec ι} {X K R : Type} (G : CanonicalGraph pub X K R)
+
+/-- **A completed public miss is a conflict.** Let a child `c` of the node `k` be undrawn in
+`st₀`, so that the merged cache of `st₀` reads the public cache at every point of `k`. If it holds
+the point of `k` at the values `vs`, then every state `st` whose public cache extends that of `st₀`
+and which draws the children of `k` at `vs` is a conflict. -/
+theorem conflict_of_isSome_merge_pt {st₀ st : RelabelState pub X K R} (hfst : st₀.1 ≤ st.1)
+    {k : K} {c : X ⊕ K} (hc : c ∈ G.ch k) (h₀ : st₀.2 c = none) {vs : List R}
+    (h : G.childVals st k = some vs) (hpt : (G.merge st₀ (G.pt k vs)).isSome) :
+    G.Conflict st := by
+  refine ⟨k, vs, h, QueryCache.isSome_mono hfst ?_⟩
+  rwa [G.merge_apply_of_not_exists] at hpt
+  rintro ⟨k', vs', hk', hpt'⟩
+  obtain ⟨rfl, rfl⟩ := G.eq_of_childVals_of_pt_eq hk' h hpt'
+  simpa [h₀] using G.isSome_childVals_iff.1 (Option.isSome_of_eq_some hk') c hc
+
+/-- Off a conflict of `st`, the real cache rebuilt under a secret encoding from the split state of
+a state `st₀ ≤ st` is below the one rebuilt from the split state of `st`. -/
+theorem _root_.SecretEncoding.merge_toSplitCache_le_merge_toSplitCache {S : Type}
+    (E : SecretEncoding pub S X R) (s : S) {st₀ st : RelabelState pub X K R} (hle : st₀ ≤ st)
+    (hc : ¬G.Conflict st) : E.merge s (G.toSplitCache st₀) ≤ E.merge s (G.toSplitCache st) := by
+  intro t u h
+  by_cases ht : ∃ x, E.enc s x = t
+  · obtain ⟨x, rfl⟩ := ht
+    rw [E.merge_toSplitCache_apply_enc] at h ⊢
+    obtain ⟨v, hv, rfl⟩ := Option.map_eq_some_iff.1 h
+    rw [hle.2 hv]
+    rfl
+  · rw [E.merge_apply_of_not_exists s _ ht] at h ⊢
+    exact G.merge_le_merge hle hc h
+
+end CanonicalGraph
 
 namespace CanonicalGraph
 
