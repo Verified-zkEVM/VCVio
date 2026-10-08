@@ -22,7 +22,8 @@ normal form over these operations. For a sequence of cells `cell : ℕ → Optio
 In the eager game `CanonicalGraph.eagerImpl` a read draws its cell and a touch draws its cell and
 discards the value (`CanonicalGraph.eagerImpl_readCell_run`,
 `CanonicalGraph.eagerImpl_touchCell_run`), so there a touch-then-read over cells that all exist
-draws cells `0, …, s` and returns the value of cell `s`.
+draws cells `0, …, s` and returns the value of cell `s`
+(`CanonicalGraph.eagerImpl_touchRead_succ_run`).
 
 The `_pred` lemmas carry a predicate on programs, closed under `pure` and `bind`, from the touches
 and reads of cells to these programs.
@@ -121,5 +122,15 @@ theorem eagerImpl_touchCell_run (c : X ⊕ K) (st : RelabelState pub X K R) :
       (fun z => ((), z.2)) <$> (RelabelState.drawCell c).run st := by
   simp only [touchCell, simulateQ_HasQuery_query, eagerImpl_apply_inr]
   simp [RelabelState.labelImpl]
+
+/-- In the eager game, when cells `s` and `s + 1` exist, reading cell `s + 1` after touching cells
+`0, …, s` is the touch-then-read of cell `s` followed by a draw of cell `s + 1`. -/
+theorem eagerImpl_touchRead_succ_run (cell : ℕ → Option (X ⊕ K)) (s : ℕ) {c c' : X ⊕ K}
+    (hc : cell s = some c) (hc' : cell (s + 1) = some c') (st : RelabelState pub X K R) :
+    (simulateQ G.eagerImpl (touchRead cell (s + 1))).run st =
+      (simulateQ G.eagerImpl (touchRead cell s)).run st >>= fun z =>
+        (RelabelState.drawCell c').run z.2 := by
+  simp only [touchRead, touchUpTo, hc, hc', simulateQ_bind, StateT.run_bind, bind_assoc,
+    G.eagerImpl_readCell_run, G.eagerImpl_touchCell_run, bind_map_left]
 
 end CanonicalGraph
