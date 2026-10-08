@@ -39,7 +39,7 @@ canonical relabelling of `VCVio.OracleComp.QueryTracking.RandomOracle.Relabel`.
 
 * **Points**: the point of `κ` at values `vs` is `T(PK.seed, κ, vs)`, the `thash` query at the
   public seed `pkSeed` and the key `κ`. The graph depends on the public seed only through its
-  points (`slhGraph_ch` does not mention it).
+  points: the children of a node do not depend on the public seed (`slhGraph_ch`).
 
 Three facts make the graph the honest one.
 
@@ -273,7 +273,8 @@ one (`nodeAdrs_eq_of_adrsToKey_eq`). -/
 noncomputable def nodeAdrs (κ : NodeKey core) : Adrs := Classical.choose κ.2
 
 /-- The address of a node is in the union ledger. -/
-theorem nodeAdrs_mem (κ : NodeKey core) : nodeAdrs core κ ∈ constructionAddresses vp :=
+theorem nodeAdrs_mem_constructionAddresses (κ : NodeKey core) :
+    nodeAdrs core κ ∈ constructionAddresses vp :=
   (Classical.choose_spec κ.2).1
 
 /-- The address of a node has the node's key. -/
@@ -286,7 +287,8 @@ of a node is every ledger address with its key. -/
 theorem nodeAdrs_eq_of_adrsToKey_eq (hinj : core.KeyInjective vp)
     (hb : CanonicalAddressBounds vp.params) {κ : NodeKey core} {a : Adrs}
     (ha : a ∈ constructionAddresses vp) (hκ : core.adrsToKey a = κ.1) : nodeAdrs core κ = a :=
-  hinj (addressFacts_of_mem_constructionAddresses hb (nodeAdrs_mem core κ))
+  hinj
+    (addressFacts_of_mem_constructionAddresses hb (nodeAdrs_mem_constructionAddresses core κ))
     (addressFacts_of_mem_constructionAddresses hb ha) (by rw [adrsToKey_nodeAdrs, hκ])
 
 /-- The derivation key of a secret-key address, and `none` at every other address. -/
@@ -306,6 +308,15 @@ theorem prfKeyOf_of_isSecretKey {a : Adrs} (h : a.IsSecretKey) :
 theorem nodeKeyOf_of_mem {a : Adrs} (h : a ∈ constructionAddresses vp) :
     nodeKeyOf core a = some ⟨core.adrsToKey a, a, h, rfl⟩ := by
   simp [nodeKeyOf, h]
+
+/-- An address has derivation key `k` exactly when it is a secret-key address with key `k`. -/
+theorem prfKeyOf_eq_some_iff {a : Adrs} {k : PrfKey core} :
+    prfKeyOf core a = some k ↔ a.IsSecretKey ∧ core.adrsToKey a = k.1 := by
+  unfold prfKeyOf
+  split_ifs with h
+  · simp only [Option.some.injEq, h, true_and]
+    exact ⟨fun h' => by rw [← h'], fun h' => Subtype.ext h'⟩
+  · simp [h]
 
 /-- An address has node key `κ` exactly when it is a ledger address with key `κ`. -/
 theorem nodeKeyOf_eq_some_iff {a : Adrs} {κ : NodeKey core} :
@@ -398,7 +409,7 @@ structural child is dropped. -/
 theorem map_some_slhGraph_ch (pkSeed : core.PkSeed) (κ : NodeKey core) :
     ((slhGraph core pkSeed).ch κ).map some =
       (childAdrs vp (nodeAdrs core κ)).map (childCell core) :=
-  map_some_filterMap_childCell core (nodeAdrs_mem core κ)
+  map_some_filterMap_childCell core (nodeAdrs_mem_constructionAddresses core κ)
 
 /-- A node has as many children as its address has structural children. -/
 theorem length_slhGraph_ch (pkSeed : core.PkSeed) (κ : NodeKey core) :
