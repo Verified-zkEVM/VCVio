@@ -80,7 +80,13 @@ inductive Cls
   | N
   deriving DecidableEq
 
-instance : Fintype Cls := ⟨{.F, .S, .N}, by rintro (_ | _ | _) <;> simp⟩
+/-- There are three tape classes. -/
+instance : Finite Cls :=
+  Finite.of_surjective ![Cls.F, .S, .N] fun | .F => ⟨0, rfl⟩ | .S => ⟨1, rfl⟩ | .N => ⟨2, rfl⟩
+
+/-- The tape classes as a finite type, obtained from `Finite` so that no enumeration is
+compiled. -/
+noncomputable instance : Fintype Cls := Fintype.ofFinite Cls
 
 /-- The answer type of each tape class: a digest for the two `H_msg` classes, a node otherwise. -/
 abbrev ClsR : Cls → Type
