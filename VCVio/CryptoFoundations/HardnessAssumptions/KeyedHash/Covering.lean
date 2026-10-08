@@ -54,7 +54,9 @@ number of *distinct* coverers the assignment uses.  The `r` in the leaf exponent
 content of the accounting: a coordinate covering several digits pays for its leaf once and for
 each of those digits, so `evalDist_multiFiber_le` charges `2 ^ (-h - a * m)` for `m` digits and
 not `(2 ^ (-h - a)) ^ m`.  The summand for one witness is `evalDist_answerTape_coverWitness_le`,
-stated on its own so that a union bound weighting each witness differently can use it.
+which is `evalDist_answerTape_roleSet_le` summed over the target value; it is stated on its own so
+that a union bound weighting each witness differently can use it, and
+`evalDist_answerTape_tapeCoveredSplit_le` takes it as its summand too.
 
 A coverer must differ from the target: `tapeCoveredNoFresh_of_pos` shows that without that
 requirement every nonempty tuple is covered.
@@ -515,10 +517,7 @@ theorem evalDist_answerTape_roleSet_le {q : ℕ} (j₀ : Fin q) (g : Fin k → F
 /-- **The per-witness bound.**  Among `q` independent uniform digests, the event that, for
 every digit `i`, coordinate `g i` agrees with coordinate `j₀` on the leaf and on digit `i` has
 mass at most `(2 ^ h)⁻¹ ^ r * ((2 ^ a)⁻¹) ^ k`, where `r` is the number of distinct coordinates
-`g` uses.  The hypothesis is freshness: no coverer sits on the target.  This is the summand of
-the union bounds over coverage witnesses, `evalDist_answerTape_tapeCoveredReuse_le` and
-`evalDist_answerTape_tapeCoveredSplit_le`; it is
-`evalDist_answerTape_roleSet_le` summed over the target value. -/
+`g` uses.  The hypothesis is freshness: no coverer sits on the target. -/
 theorem evalDist_answerTape_coverWitness_le {q : ℕ} (j₀ : Fin q) (g : Fin k → Fin q)
     (hg : ∀ i, g i ≠ j₀) :
     𝒟[answerTape (Digest h a k) q]

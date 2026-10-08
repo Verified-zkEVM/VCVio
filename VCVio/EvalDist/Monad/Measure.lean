@@ -206,9 +206,8 @@ theorem prEvent_le_lintegral_id_evalDist_map {m : Type → Type v} [Monad m] [La
     {f : α → ENNReal} (hpf : ∀ x, p x → 1 ≤ f x) :
     Pr{let x ← mx}[p x] ≤ ∫⁻ r, r ∂𝒟[f <$> mx] := by
   let _ : MeasurableSpace α := ⊤
-  rw [prEvent_eq_evalDist_of_discrete, lintegral_id_evalDist_map,
-    ← lintegral_indicator_one MeasurableSet.of_discrete]
-  exact lintegral_mono (Set.indicator_le fun x hx => hpf x hx)
+  rw [prEvent_eq_evalDist_of_discrete, lintegral_id_evalDist_map]
+  exact meas_le_lintegral₀ Measurable.of_discrete.aemeasurable hpf
 
 /-! ## Commuting draws inside an event -/
 

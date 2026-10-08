@@ -40,11 +40,16 @@ instance on the state type, the output type or the query ranges.
   implementation is the count of the base one.
 * `expectedSimulatedQueryCount_mono` and `expectedSimulatedQueryCount_or_of_disjoint`:
   monotonicity in the charged predicate, and additivity over disjoint charged predicates.
-* `lintegral_run_le_of_budget`: a potential `Φ n` on the state, indexed by a remaining budget `n`
-  of charged queries, whose expectation a charged step raises by at most one budget level and an
-  uncharged step not at all, has expected final `Φ 0` at most `Φ n` of the initial state when
-  the computation makes at most `n` charged queries. `prEvent_run_le_of_budget` is its Markov
-  form, for an event on which `Φ 0` is at least `1`. It bounds products of per-query lotteries,
+* `lintegral_run_le_of_isQueryBoundP`: a potential `Φ n` on the state, indexed by a remaining
+  budget `n` of charged queries, whose expectation a charged step raises by at most one budget
+  level and an uncharged step not at all, has expected final `Φ 0` at most `Φ n` of the initial
+  state when the computation makes at most `n` charged queries.
+  `prEvent_run_le_of_isQueryBoundP` is its Markov form, for an event on which `Φ 0` is at least
+  `1`. A potential that does not depend on `n` gives the plain supermartingale bound, and
+  `Φ n s = resource s + n` gives the expected-resource bound that
+  `lintegral_resource_le_add_expectedSimulatedQueryCount` and
+  `expectedSimulatedQueryCount_le_of_isQueryBoundP` combine to. It bounds products of per-query
+  lotteries,
   such as the probability that `u` designated values are all hit by at most `n` fresh uniform
   draws from `Y`: the potential is `n ^ u / |Y| ^ u` with `u` the number of values still
   pending, and its step inequality `n ^ u + u * n ^ (u - 1) ≤ (n + 1) ^ u` is
@@ -272,11 +277,9 @@ expected `Φ 0` on the final state of its interpreted run at most `Φ n s`.
 
 The potential is spent along the run: each charged step may raise the expectation by the
 difference between two consecutive budget levels, and an uncharged step may not raise it at all.
-A potential that does not depend on `n` gives the plain supermartingale bound, and
-`Φ n s = resource s + n` gives the expected-resource bound that
-`lintegral_resource_le_add_expectedSimulatedQueryCount` and
-`expectedSimulatedQueryCount_le_of_isQueryBoundP` combine to. -/
-theorem lintegral_run_le_of_budget (Φ : ℕ → σ → ℝ≥0∞) (hmono : ∀ s, Monotone fun n => Φ n s)
+-/
+theorem lintegral_run_le_of_isQueryBoundP (Φ : ℕ → σ → ℝ≥0∞)
+    (hmono : ∀ s, Monotone fun n => Φ n s)
     (hstep : ∀ (t : spec.Domain) (s : σ) (n : ℕ),
       ∫⁻ r, r ∂𝒟[(fun z => Φ n z.2) <$> (so t).run s] ≤
         Φ (n + if charged t then 1 else 0) s)
@@ -300,11 +303,14 @@ theorem lintegral_run_le_of_budget (Φ : ℕ → σ → ℝ≥0∞) (hmono : ∀
         ih z.1 n (hq.2 z.1) z.2).trans ?_
       simpa only [ht, ↓reduceIte, add_zero] using hstep t s n
 
-/-- **The budgeted expected-potential bound, as an event probability.**  Under the hypotheses of
-`lintegral_run_le_of_budget`, an event `E` of the output and final state on which `Φ 0` is at
-least `1` has probability at most `Φ n s` after a computation making at most `n` charged
-queries. -/
-theorem prEvent_run_le_of_budget (Φ : ℕ → σ → ℝ≥0∞) (hmono : ∀ s, Monotone fun n => Φ n s)
+/-- **The budgeted expected-potential bound, as an event probability.**  `Φ n s` is a potential
+on the state, indexed by a remaining budget `n` of charged queries and monotone in it, whose
+expectation one interpreted step raises from `Φ n` to at most `Φ (n + 1)` when its index is
+charged and not at all otherwise.  Then an event `E` of the output and final state on which
+`Φ 0` is at least `1` has probability at most `Φ n s` after a computation making at most `n`
+charged queries. -/
+theorem prEvent_run_le_of_isQueryBoundP (Φ : ℕ → σ → ℝ≥0∞)
+    (hmono : ∀ s, Monotone fun n => Φ n s)
     (hstep : ∀ (t : spec.Domain) (s : σ) (n : ℕ),
       ∫⁻ r, r ∂𝒟[(fun z => Φ n z.2) <$> (so t).run s] ≤
         Φ (n + if charged t then 1 else 0) s)
@@ -312,6 +318,6 @@ theorem prEvent_run_le_of_budget (Φ : ℕ → σ → ℝ≥0∞) (hmono : ∀ s
     (oa : OracleComp spec α) (n : ℕ) (hq : oa.IsQueryBoundP charged n) (s : σ) :
     Pr{let z ← (simulateQ so oa).run s}[E z] ≤ Φ n s :=
   (prEvent_le_lintegral_id_evalDist_map _ hE).trans
-    (lintegral_run_le_of_budget so charged Φ hmono hstep oa n hq s)
+    (lintegral_run_le_of_isQueryBoundP so charged Φ hmono hstep oa n hq s)
 
 end OracleComp
