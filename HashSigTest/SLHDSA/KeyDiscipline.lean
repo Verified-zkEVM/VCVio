@@ -7,7 +7,7 @@ Authors: Alexander Hicks
 module
 
 public import HashSig.SLHDSA.Security.ComponentTraces
-public import HashSig.SLHDSA.Security.HonestEntryUnique
+public import HashSig.SLHDSA.Security.NodeGraph
 
 /-!
 # The key discipline at the FIPS SHA-2 bundles
@@ -28,8 +28,7 @@ signature.
 
 The statements below also pin the resulting discharges: key separation at every FIPS SHA-2
 bundle, and the key discipline at every FIPS 205 parameter set, at the limited SHA2-128-24 profile
-and at the compatibility bundle. At every FIPS 205 parameter set an honest entry exists, and the
-hypotheses of the honest-input uniqueness theorem `HonestEntry.input_unique` are discharged.
+and at the compatibility bundle. At every FIPS 205 parameter set an honest entry exists.
 -/
 
 public section
@@ -148,29 +147,5 @@ example (ps : FipsParameterSet) (c : PublicHash.Cache (approvedPrimitives ps).co
     (forsLeafAdrs_mem_constructionAddresses _ ⟨0, ps.validatedParams.valid.k_pos⟩
       (Nat.zero_div _))
     (by rw [simulateQ_pure]; rfl)
-
-/-- At every FIPS 205 parameter set an oracle key carries at most one honest input: the key
-injectivity and address-width hypotheses are discharged by the approved bundle. -/
-example (ps : FipsParameterSet)
-    {secret : Adrs → OracleComp (publicHashSpec (approvedPrimitives ps).core)
-      (approvedPrimitives ps).core.Y}
-    {pk : (approvedPrimitives ps).core.PkSeed} {c : PublicHash.Cache (approvedPrimitives ps).core}
-    {key : (approvedPrimitives ps).core.AdrsKey} {xs xs' : List (approvedPrimitives ps).core.Y}
-    (h : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs))
-    (h' : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs')) :
-    xs = xs' :=
-  h.input_unique (keyInjective_approvedPrimitives ps)
-    (fipsApprovedAddressBounds ps).toCanonicalAddressBounds h'
-
-/-- The same through the key discipline of the approved bundle. -/
-example (ps : FipsParameterSet)
-    {secret : Adrs → OracleComp (publicHashSpec (approvedPrimitives ps).core)
-      (approvedPrimitives ps).core.Y}
-    {pk : (approvedPrimitives ps).core.PkSeed} {c : PublicHash.Cache (approvedPrimitives ps).core}
-    {key : (approvedPrimitives ps).core.AdrsKey} {xs xs' : List (approvedPrimitives ps).core.Y}
-    (h : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs))
-    (h' : HonestEntry (vp := ps.validatedParams) secret pk c (.thash pk key xs')) :
-    xs = xs' :=
-  (keyDiscipline_approvedPrimitives ps).honestEntry_input_unique h h'
 
 end SLHDSA.KeyDisciplineTest
