@@ -53,6 +53,7 @@ public import HashSig.SLHDSA.Security.Composition
 public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
+public import HashSig.SLHDSA.Security.HiddenCells
 public import HashSig.SLHDSA.Security.HmsgWitnesses
 public import HashSig.SLHDSA.Security.HonestEntryUnique
 public import HashSig.SLHDSA.Security.HypertreeWitnesses
@@ -62,6 +63,7 @@ public import HashSig.SLHDSA.Security.LabBudget
 public import HashSig.SLHDSA.Security.LabEquiv.Experiment
 public import HashSig.SLHDSA.Security.LabEquiv.Path
 public import HashSig.SLHDSA.Security.LabEquiv.Tree
+public import HashSig.SLHDSA.Security.LabReadSet
 public import HashSig.SLHDSA.Security.LabScheme
 public import HashSig.SLHDSA.Security.LabelReaders
 public import HashSig.SLHDSA.Security.LimitedProfile
