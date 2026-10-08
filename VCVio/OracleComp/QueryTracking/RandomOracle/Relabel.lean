@@ -71,6 +71,9 @@ of `k`. A program lifted from `pub.withDerivations X R` makes neither.
   persists.
 - `CanonicalGraph.merge_apply_pt`, `CanonicalGraph.merge_apply_of_not_exists` and
   `CanonicalGraph.merge_apply_eq_of_le`: the merged cache, point by point.
+- `SecretEncoding.merge_toSplitCache_apply_enc`, `SecretEncoding.merge_toSplitCache_apply_pt` and
+  `SecretEncoding.merge_toSplitCache_apply_of_not_exists`: the split state merged under a secret
+  encoding, at an encoded point, at a node point and elsewhere.
 -/
 
 public section
@@ -291,6 +294,32 @@ the derivation table. -/
 @[simp] theorem toSplitCache_empty :
     G.toSplitCache ((∅, ∅) : RelabelState pub X K R) = (∅, ∅) := by
   simp only [toSplitCache, merge_empty, RelabelState.table_empty]
+
+/-- The merge of the split state under a secret encoding reads the derivation cell at an encoded
+point. -/
+theorem _root_.SecretEncoding.merge_toSplitCache_apply_enc {S : Type}
+    (E : SecretEncoding pub S X R) (s : S) (st : RelabelState pub X K R) (x : X) :
+    E.merge s (G.toSplitCache st) (E.enc s x) = (st.2 (.inl x)).map (cast (E.range_eq s x).symm) :=
+  E.merge_apply_enc s _ x
+
+/-- The merge of the split state under a secret encoding reads the label of a node at the node's
+point at its drawn children values, when no derivation is encoded there. -/
+theorem _root_.SecretEncoding.merge_toSplitCache_apply_pt {S : Type}
+    (E : SecretEncoding pub S X R) (s : S) {st : RelabelState pub X K R} {k : K} {vs : List R}
+    (hne : ∀ x, E.enc s x ≠ G.pt k vs) (h : G.childVals st k = some vs) :
+    E.merge s (G.toSplitCache st) (G.pt k vs) =
+      (st.2 (.inr k)).map (cast (G.range_eq k vs).symm) := by
+  rw [E.merge_apply_of_not_exists s _ fun ⟨x, hx⟩ ↦ hne x hx]
+  exact G.merge_apply_pt h
+
+/-- The merge of the split state under a secret encoding reads the public cache at a point that
+encodes no derivation and is the point of no node at drawn children values. -/
+theorem _root_.SecretEncoding.merge_toSplitCache_apply_of_not_exists {S : Type}
+    (E : SecretEncoding pub S X R) (s : S) {st : RelabelState pub X K R} {t : ι}
+    (hne : ∀ x, E.enc s x ≠ t) (ht : ¬∃ k vs, G.childVals st k = some vs ∧ G.pt k vs = t) :
+    E.merge s (G.toSplitCache st) t = st.1 t := by
+  rw [E.merge_apply_of_not_exists s _ fun ⟨x, hx⟩ ↦ hne x hx]
+  exact G.merge_apply_of_not_exists ht
 
 /-! ## Conflicts -/
 

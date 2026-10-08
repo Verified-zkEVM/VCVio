@@ -23,6 +23,9 @@ at the derivation's value, once the derivation is drawn, by the node's label.
 * The conflict cannot be dropped from the bound: in the second program the ideal game caches the
   point `true` with probability `1`, while the relabelled game, read on the merged state, does so
   only with probability `2⁻¹`.
+* Under the secret encoding that reads the derivation at the public point named by the secret, the
+  split state merged under the encoding reads the derivation there, the node's label at the
+  node's point, and the public cache elsewhere.
 -/
 
 public section
@@ -211,5 +214,33 @@ example : ¬∀ P : Bool × SecretEncoding.SplitCache (Bool →ₒ Bool) Unit Bo
   have h' := h fun z ↦ (z.2.1 true).isSome
   rw [prEvent_idealImpl_isSome_forgerFirst, prEvent_relabelImpl_isSome_forgerFirst] at h'
   exact absurd h' (not_le.2 (ENNReal.inv_lt_one.2 ENNReal.one_lt_two))
+
+/-! ## Merging under a secret encoding -/
+
+/-- The derivation under secret `s` is read at the public point `s`. -/
+def E : SecretEncoding (Bool →ₒ Bool) Bool Unit Bool where
+  enc s _ := s
+  range_eq _ _ := rfl
+  injective _ _ _ _ := rfl
+
+/-- At the point named by the secret, the merged split state reads the derivation. -/
+example (s : Bool) (st : RelabelState (Bool →ₒ Bool) Unit Unit Bool) :
+    E.merge s (G.toSplitCache st) s = st.2 (.inl ()) :=
+  (E.merge_toSplitCache_apply_enc G s st ()).trans (by cases st.2 (.inl ()) <;> rfl)
+
+/-- With the derivation drawn at `v` and the secret `!v`, the node's point `v` reads the node's
+label. -/
+example (v : Bool) {st : RelabelState (Bool →ₒ Bool) Unit Unit Bool}
+    (h : st.2 (.inl ()) = some v) :
+    E.merge (!v) (G.toSplitCache st) v = st.2 (.inr ()) :=
+  (E.merge_toSplitCache_apply_pt G (!v) (k := ()) (vs := [v]) (by cases v <;> decide)
+    ((childVals_eq st).trans (by rw [h]; rfl))).trans (by cases st.2 (.inr ()) <;> rfl)
+
+/-- With the derivation undrawn, the point other than the secret reads the public cache. -/
+example (s : Bool) {st : RelabelState (Bool →ₒ Bool) Unit Unit Bool}
+    (h : st.2 (.inl ()) = none) :
+    E.merge s (G.toSplitCache st) (!s) = st.1 (!s) :=
+  E.merge_toSplitCache_apply_of_not_exists G s (by cases s <;> decide)
+    fun ⟨_, _, hk, _⟩ ↦ by rw [childVals_eq, h] at hk; cases hk
 
 end RelabelToy
