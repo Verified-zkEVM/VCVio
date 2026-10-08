@@ -44,7 +44,8 @@ potential charges them.
   revealed secret of every FORS leaf its digest selects (`isSome_thash_of_forgerDigest`).
 * **Hidden values.** A node point held by the cache of a state in which a child of the node is
   undrawn is a public entry; once a larger state draws the children at that point's values, it is
-  a conflict (`CanonicalGraph.conflict_of_isSome_merge_pt`). At SLH-DSA: if a forgery's WOTS+
+  a conflict (`CanonicalGraph.conflict_of_isSome_merge_pt`); at SLH-DSA such a node's key reads
+  the public cache (`merge_fst_thash_of_childVals_eq_none`). If a forgery's WOTS+
   value is the honest chain value at the step that the replay's message selects, or a revealed
   FORS secret is the honest one, read after the fill, while that cell was undrawn when
   verification ran, the filled state is a conflict (`conflict_of_forgerLayer_of_cell_eq_none`,
@@ -164,6 +165,18 @@ theorem merge_fst_thash_eq_merge (hsep : core.KeySeparated) (κ : NodeKey core)
       (slhGraph core pkSeed).merge st ((slhGraph core pkSeed).pt κ vs) :=
   (secretEncoding core e pkSeed).merge_apply_of_not_exists s _ fun ⟨x, hx⟩ ↦
     secretEncoding_enc_ne_slhGraph_pt core hsep e pkSeed pkSeed s x κ vs hx
+
+/-- Under key separation, at the key of a node whose children are not all drawn, the cache a
+relabelled state stands for reads the public cache, at every input list. -/
+theorem merge_fst_thash_of_childVals_eq_none (hsep : core.KeySeparated) {κ : NodeKey core}
+    (h : (slhGraph core pkSeed).childVals st κ = none) (vs : List core.Y) :
+    𝒞[e, pkSeed, s, st] (.thash pkSeed κ.1 vs) = st.1 (.inl (.thash pkSeed κ.1 vs)) := by
+  rw [merge_fst_thash_eq_merge hsep]
+  refine (slhGraph core pkSeed).merge_apply_of_not_exists ?_
+  rintro ⟨κ', vs', hκ', hpt⟩
+  obtain ⟨rfl, rfl⟩ := slhGraph_pt_inj core pkSeed hpt
+  rw [h] at hκ'
+  cases hκ'
 
 /-- **A hidden WOTS+ chain value met by the verifier is a conflict.** Let the cell of step `t` of
 WOTS+ chain `i` be undrawn in `st₀`, and let the cache that `st₀` stands for hold the `F` point of
