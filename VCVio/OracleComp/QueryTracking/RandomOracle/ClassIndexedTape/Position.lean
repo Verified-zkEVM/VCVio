@@ -145,6 +145,18 @@ def classPosAux (R : J → Type) (τ : (spec + spec).Domain → J) :
   | .inl t => classPosStep R (τ (Sum.inl t)) t
   | .inr t => classPosStep R (τ (Sum.inr t)) t
 
+omit [Fintype J] [∀ j, SampleableType (R j)] [∀ t : spec.Domain, SampleableType (spec.Range t)] in
+/-- The bookkeeping at the left copy is the step of its call-site class. -/
+@[simp] theorem classPosAux_inl (R : J → Type) (τ : (spec + spec).Domain → J) (t : spec.Domain) :
+    classPosAux R τ (.inl t) = classPosStep R (τ (.inl t)) t := by
+  simp only [classPosAux]
+
+omit [Fintype J] [∀ j, SampleableType (R j)] [∀ t : spec.Domain, SampleableType (spec.Range t)] in
+/-- The bookkeeping at the right copy is the step of its call-site class. -/
+@[simp] theorem classPosAux_inr (R : J → Type) (τ : (spec + spec).Domain → J) (t : spec.Domain) :
+    classPosAux R τ (.inr t) = classPosStep R (τ (.inr t)) t := by
+  simp only [classPosAux]
+
 /-- The invariant maintained by the position instrumentation of a class-indexed tape run on
 the tape family `Lfam`, relating the answer cache `c`, the unconsumed tapes `l`, and the four
 components of the bookkeeping. -/
