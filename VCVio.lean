@@ -337,6 +337,7 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Relabel
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Routing
+public import VCVio.OracleComp.QueryTracking.RandomOracle.Settled
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Simulation
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Tape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Wiring
