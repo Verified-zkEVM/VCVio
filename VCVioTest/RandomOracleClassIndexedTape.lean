@@ -27,8 +27,10 @@ of class `false`. The position lemma at `T = {true}` needs only the budget of cl
 still reads the cached answer at `true` off the first entry of tape `true`.
 
 A third program queries `true` through each copy in turn, beside a hit set written at fresh draws
-at `true`. The second query hits the cache, so it writes nothing: the hit set stays empty
-although that query's answer equals the cached value at `true`.
+at `true`. The first draw finds no other point cached, and the second query hits the cache and
+writes nothing, so the hit set stays empty. A fourth program caches `false` through the left
+copy and then draws `true` fresh through the right copy: that draw records `false` exactly when
+its answer is `false`.
 -/
 
 public section
@@ -169,8 +171,9 @@ def prog₃ : OracleComp (unifSpec + (pts + pts)) Bool := do
   let _ ← liftM ((unifSpec + (pts + pts)).query (Sum.inr (Sum.inl true)))
   liftM ((unifSpec + (pts + pts)).query (Sum.inr (Sum.inr true)))
 
-/-- The second query of `true` hits the cache and writes nothing, so the hit set stays empty
-although that query's answer equals the cached value at `true`. -/
+/-- Neither query of `true` records a hit. The first is a fresh draw, but no other point is
+cached before it. The second satisfies the trigger, but `true` is cached by then, and a cache hit
+writes nothing. So the hit set stays empty. -/
 theorem hits_prog₃ {z : Bool × ((pts.QueryCache × ((k : Bool) → List (Ans k))) ×
       (ClassPos Bool Bool × Set Bool))}
     (hz : z ∈ support ((simulateQ (classPosImplFwd Ans site site_range hitAux) prog₃).run
@@ -179,7 +182,7 @@ theorem hits_prog₃ {z : Bool × ((pts.QueryCache × ((k : Bool) → List (Ans 
   rw [prog₃, simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
   obtain ⟨y, hy, hz⟩ := hz
   rw [simulateQ_spec_query] at hy hz
-  obtain ⟨hy, hyq⟩ := (mem_support_run_classPosImplFwd_iff site site_range _ _ _ _).1 hy
+  obtain ⟨hy, hyq⟩ := (QueryImpl.mem_support_extendState_run_iff _ _ _ _ _).1 hy
   have hc : y.2.1.1 true ≠ none := by
     rw [tapeImplFwd, QueryImpl.add_apply_inr, tapeCachingImplClass_apply_inl,
       tapeStep_run_nil (QueryCache.empty_apply true) rfl, support_map] at hy
@@ -193,9 +196,40 @@ theorem hits_prog₃ {z : Bool × ((pts.QueryCache × ((k : Bool) → List (Ans 
     · simp at h
     · obtain rfl : true = x := by simpa using h
       exact absurd hx hc
-  rw [hits_eq_of_mem_support_run_classPosImplFwd _ _ site site_range _ _ hfresh _ hz, hyq]
+  rw [hits_eq_self_of_mem_support_classPosImplFwd_run _ _ site site_range _ _ hfresh _ hz, hyq]
   ext y
-  simp [hitAux, freshHitStep]
+  simp [hitAux, freshHitAux, freshHitStep]
+
+/-- Query the point `false` through the left copy, then the point `true` through the right
+copy. -/
+def prog₄ : OracleComp (unifSpec + (pts + pts)) Bool := do
+  let _ ← liftM ((unifSpec + (pts + pts)).query (Sum.inr (Sum.inl false)))
+  liftM ((unifSpec + (pts + pts)).query (Sum.inr (Sum.inr true)))
+
+/-- The fresh draw at `true` through the right copy records the point `false`, cached through the
+left copy, exactly when its answer is `false`. -/
+theorem hits_prog₄ {z : Bool × ((pts.QueryCache × ((k : Bool) → List (Ans k))) ×
+      (ClassPos Bool Bool × Set Bool))}
+    (hz : z ∈ support ((simulateQ (classPosImplFwd Ans site site_range hitAux) prog₄).run
+      ((∅, fun _ => []), (ClassPos.init, ∅)))) :
+    z.2.2.2 = {y | y = false ∧ z.1 = false} := by
+  rw [prog₄, simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
+  obtain ⟨y, hy, hz⟩ := hz
+  rw [simulateQ_spec_query] at hy hz
+  obtain ⟨hy, hyq⟩ := (QueryImpl.mem_support_extendState_run_iff _ _ _ _ _).1 hy
+  obtain ⟨hz, hzq⟩ := (QueryImpl.mem_support_extendState_run_iff _ _ _ _ _).1 hz
+  rw [tapeImplFwd, QueryImpl.add_apply_inr, tapeCachingImplClass_apply_inl,
+    tapeStep_run_nil (QueryCache.empty_apply false) rfl, support_map] at hy
+  obtain ⟨u₁, -, hu₁⟩ := hy
+  have hc₁ : y.2.1 = ((∅ : pts.QueryCache).cacheQuery false u₁, fun _ => []) :=
+    (Prod.mk.inj hu₁).2.symm
+  rw [tapeImplFwd, QueryImpl.add_apply_inr, tapeCachingImplClass_apply_inr,
+    hc₁, tapeStep_run_nil (by simp) rfl, support_map] at hz
+  obtain ⟨u, -, hu⟩ := hz
+  obtain rfl : u = z.1 := (Prod.mk.inj hu).1
+  rw [hzq, hyq]
+  ext p
+  cases p <;> simp [hitAux, freshHitAux, freshHitStep, hc₁]
 
 /-- A fresh answer `false` at `true` hits the cached point `false`. -/
 example : freshHitStep (spec := pts) (· = true) (fun _ u y => y = u)
@@ -212,7 +246,7 @@ example {L : (k : Bool) → List (Ans k)}
     (hz : z ∈ support ((simulateQ (classPosImplFwd Ans site site_range hitAux) prog).run
       ((∅, L), (ClassPos.init, ∅)))) :
     (∀ p ∈ z.2.2.2, z.2.1.1 p ≠ none) ∧ ∅ ≤ z.2.1.1 :=
-  ⟨ne_none_of_mem_hits_of_mem_support_run _ _ site site_range prog
+  ⟨ne_none_of_mem_hits_of_mem_support_run_classPosImplFwd _ _ site site_range prog
     ((∅, L), (ClassPos.init, ∅)) (fun _ h => h.elim) hz,
     (mono_of_mem_support_run_classPosImplFwd_freshHitAux _ _ site site_range prog _ hz).1⟩
 
