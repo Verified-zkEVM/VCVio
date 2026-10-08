@@ -53,7 +53,8 @@ the coverer assignment, each contributing `(2 ^ h)⁻¹ ^ r * ((2 ^ a)⁻¹) ^ k
 number of *distinct* coverers the assignment uses.  The `r` in the leaf exponent is the whole
 content of the accounting: a coordinate covering several digits pays for its leaf once and for
 each of those digits, so `evalDist_multiFiber_le` charges `2 ^ (-h - a * m)` for `m` digits and
-not `(2 ^ (-h - a)) ^ m`.
+not `(2 ^ (-h - a)) ^ m`.  The summand for one witness is `evalDist_answerTape_coverWitness_le`,
+stated on its own so that a union bound weighting each witness differently can use it.
 
 A coverer must differ from the target: `tapeCoveredNoFresh_of_pos` shows that without that
 requirement every nonempty tuple is covered.
@@ -127,8 +128,8 @@ or with signature positions.
 
 ## Labels
 
-Forty-seven declarations, six of them `private` and internal to the proofs: the five canonical
-representative helpers and `evalDist_answerTape_roleSet_le`.
+Forty-eight declarations, five of them `private` and internal to the proofs: the canonical
+representative helpers.
 
 *The model*: `Digest`, `Covered`.
 
@@ -143,7 +144,7 @@ representative helpers and `evalDist_answerTape_roleSet_le`.
 
 *The tuple bound*: `TapeCoveredReuse`, `TapeCoveredNoFresh`, `tapeCoveredNoFresh_of_pos`,
 `roleAssign`, `roleSet`, `image_roleAssign`, `evalDist_answerTape_roleSet_le`,
-`evalDist_answerTape_tapeCoveredReuse_le`.
+`evalDist_answerTape_coverWitness_le`, `evalDist_answerTape_tapeCoveredReuse_le`.
 
 *Canonical coverer representatives*: `rep`, `cov_rep`, `rep_eq_of`, `rep_idem`,
 `injOn_cov_rep`.
@@ -456,11 +457,14 @@ theorem image_roleAssign {m q : ℕ} (j₀ : Fin q) (f : Fin m → Fin q) :
     · exact ⟨0, by simp [roleAssign]⟩
     · exact ⟨i.succ, by simpa [roleAssign] using hi⟩
 
-/-- **The per-witness product bound.**  A tuple whose coordinate `j₀` holds `w` and whose
-coordinate `g i` agrees with `w` on the leaf and on digit `i`, for every digit `i`, has mass at
-most `|Digest|⁻¹ * ((2 ^ h)⁻¹ ^ r * ((2 ^ a)⁻¹) ^ k)`, where `r` is the number of distinct
-coordinates `g` uses.  The hypothesis is freshness: no coverer sits on the target. -/
-private theorem evalDist_answerTape_roleSet_le {q : ℕ} (j₀ : Fin q) (g : Fin k → Fin q)
+/-- **The per-witness product bound at a fixed target value.**  Among `q` independent uniform
+digests, the event that coordinate `j₀` equals `w` and that, for every digit `i`, coordinate
+`g i` agrees with `w` on the leaf and on digit `i`, has mass at most
+`|Digest|⁻¹ * ((2 ^ h)⁻¹ ^ r * ((2 ^ a)⁻¹) ^ k)`, where `r` is the number of distinct
+coordinates `g` uses.  The hypothesis `j₀ ∉ image g` is freshness: no coverer sits on the
+target.  The factor `|Digest|⁻¹` pays for the target value; a coordinate covering several digits
+pays for its leaf once and for each of its digits (`evalDist_multiFiber_le`). -/
+theorem evalDist_answerTape_roleSet_le {q : ℕ} (j₀ : Fin q) (g : Fin k → Fin q)
     (hj₀ : j₀ ∉ Finset.univ.image g) (w : Digest h a k) :
     𝒟[answerTape (Digest h a k) q] {v | ∀ i, v (roleAssign j₀ g i) ∈ roleSet h a k w i} ≤
       (Fintype.card (Digest h a k) : ℝ≥0∞)⁻¹ *
@@ -508,6 +512,45 @@ private theorem evalDist_answerTape_roleSet_le {q : ℕ} (j₀ : Fin q) (g : Fin
     Finset.prod_congr rfl (fun j hj => hδn j (fun hjj => hj₀ (hjj ▸ hj))),
     prod_image_mul_pow_card_filter h a k g]
 
+/-- **The per-witness bound.**  Among `q` independent uniform digests, the event that, for
+every digit `i`, coordinate `g i` agrees with coordinate `j₀` on the leaf and on digit `i` has
+mass at most `(2 ^ h)⁻¹ ^ r * ((2 ^ a)⁻¹) ^ k`, where `r` is the number of distinct coordinates
+`g` uses.  The hypothesis is freshness: no coverer sits on the target.  This is the summand of
+the union bounds over coverage witnesses, `evalDist_answerTape_tapeCoveredReuse_le` and
+`evalDist_answerTape_tapeCoveredSplit_le`; it is
+`evalDist_answerTape_roleSet_le` summed over the target value. -/
+theorem evalDist_answerTape_coverWitness_le {q : ℕ} (j₀ : Fin q) (g : Fin k → Fin q)
+    (hg : ∀ i, g i ≠ j₀) :
+    𝒟[answerTape (Digest h a k) q]
+        {v | ∀ i, (v (g i)).1 = (v j₀).1 ∧ (v (g i)).2 i = (v j₀).2 i} ≤
+      (((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image g).card * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k := by
+  classical
+  have hN0 : (Fintype.card (Digest h a k) : ℝ≥0∞) ≠ 0 := by
+    simp only [ne_eq, Nat.cast_eq_zero]
+    exact Fintype.card_ne_zero
+  have hNt : (Fintype.card (Digest h a k) : ℝ≥0∞) ≠ ⊤ := by finiteness
+  have hj₀ : j₀ ∉ Finset.univ.image g := by
+    simp only [Finset.mem_image, Finset.mem_univ, true_and, not_exists]
+    exact fun i hi => hg i hi
+  refine (evalDist_answerTape_le_sum_of_subset_biUnion (Finset.univ : Finset (Digest h a k))
+    {v | ∀ i, (v (g i)).1 = (v j₀).1 ∧ (v (g i)).2 i = (v j₀).2 i}
+    (fun w => {v | ∀ i, v (roleAssign j₀ g i) ∈ roleSet h a k w i})
+    (fun _ => (Fintype.card (Digest h a k) : ℝ≥0∞)⁻¹ *
+      ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image g).card * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k))
+    ?_ (fun w _ => evalDist_answerTape_roleSet_le h a k j₀ g hj₀ w)).trans (le_of_eq ?_)
+  · intro v hv
+    refine Set.mem_biUnion (x := v j₀) (Finset.mem_coe.mpr (Finset.mem_univ _)) fun i => ?_
+    rcases Fin.eq_zero_or_eq_succ i with rfl | ⟨i', rfl⟩
+    · simp [roleAssign, roleSet]
+    · simp only [roleAssign, Fin.cons_succ, roleSet]
+      rw [Finset.mem_coe, mem_multiFiber]
+      refine ⟨(hv i').1, fun i'' hi'' => ?_⟩
+      rw [Finset.mem_singleton] at hi''
+      rw [hi'']
+      exact (hv i').2
+  · simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
+    rw [← mul_assoc, ENNReal.mul_inv_cancel hN0 hNt, one_mul]
+
 /-- **The coverage bound on a tuple of independent uniform digests.**  The mass of the event is
 at most the sum, over the target coordinate and the coverer assignment, of
 `(2 ^ h)⁻¹ ^ r * ((2 ^ a)⁻¹) ^ k`, where `r` is the number of *distinct* coverers the assignment
@@ -517,39 +560,12 @@ theorem evalDist_answerTape_tapeCoveredReuse_le (q : ℕ) :
       ∑ c ∈ Finset.univ.filter (fun c : Fin q × (Fin k → Fin q) => ∀ i, c.2 i ≠ c.1),
         (((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image c.2).card * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k := by
   classical
-  have hN0 : (Fintype.card (Digest h a k) : ℝ≥0∞) ≠ 0 := by
-    simp only [ne_eq, Nat.cast_eq_zero]
-    exact Fintype.card_ne_zero
-  have hNt : (Fintype.card (Digest h a k) : ℝ≥0∞) ≠ ⊤ := by finiteness
-  refine (evalDist_answerTape_le_sum_of_subset_biUnion
-    ((Finset.univ.filter (fun c : Fin q × (Fin k → Fin q) => ∀ i, c.2 i ≠ c.1)) ×ˢ
-      (Finset.univ : Finset (Digest h a k)))
-    {v | TapeCoveredReuse h a k q v}
-    (fun c => {v | ∀ i, v (roleAssign c.1.1 c.1.2 i) ∈ roleSet h a k c.2 i})
-    (fun c => (Fintype.card (Digest h a k) : ℝ≥0∞)⁻¹ *
-      ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image c.1.2).card *
-        (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k)) ?_ ?_).trans ?_
-  · rintro v ⟨j₀, f, hne, hcov⟩
-    refine Set.mem_biUnion (x := ((j₀, f), v j₀))
-      (Finset.mem_coe.mpr (Finset.mem_product.mpr
-        ⟨Finset.mem_filter.mpr ⟨Finset.mem_univ _, hne⟩, Finset.mem_univ _⟩)) fun i => ?_
-    rcases Fin.eq_zero_or_eq_succ i with rfl | ⟨i', rfl⟩
-    · simp [roleAssign, roleSet]
-    · simp only [roleAssign, Fin.cons_succ, roleSet]
-      rw [Finset.mem_coe, mem_multiFiber]
-      refine ⟨(hcov i').1, fun i'' hi'' => ?_⟩
-      rw [Finset.mem_singleton] at hi''
-      rw [hi'']
-      exact (hcov i').2
-  · rintro ⟨⟨j₀, f⟩, w⟩ hc
-    have hne : ∀ i, f i ≠ j₀ := (Finset.mem_filter.mp (Finset.mem_product.mp hc).1).2
-    refine evalDist_answerTape_roleSet_le h a k j₀ f ?_ w
-    simp only [Finset.mem_image, Finset.mem_univ, true_and, not_exists]
-    exact fun i hi => hne i hi
-  · rw [Finset.sum_product]
-    refine le_of_eq (Finset.sum_congr rfl fun c _ => ?_)
-    simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-    rw [← mul_assoc, ENNReal.mul_inv_cancel hN0 hNt, one_mul]
+  refine evalDist_answerTape_le_sum_of_subset_biUnion _ _
+    (fun c => {v | ∀ i, (v (c.2 i)).1 = (v c.1).1 ∧ (v (c.2 i)).2 i = (v c.1).2 i}) _ ?_
+    fun c hc => evalDist_answerTape_coverWitness_le h a k c.1 c.2 (Finset.mem_filter.mp hc).2
+  rintro v ⟨j₀, f, hne, hcov⟩
+  exact Set.mem_biUnion (x := (j₀, f))
+    (Finset.mem_coe.mpr (Finset.mem_filter.mpr ⟨Finset.mem_univ _, hne⟩)) hcov
 
 /-! ## Coverage with the two roles at separate positions -/
 
@@ -623,10 +639,6 @@ theorem evalDist_answerTape_tapeCoveredSplit_le (q qh qs : ℕ) (tgt : Fin qh �
       ∑ c : Fin qh × (Fin k → Fin qs),
         (((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image c.2).card * (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k := by
   classical
-  have hN0 : (Fintype.card (Digest h a k) : ℝ≥0∞) ≠ 0 := by
-    simp only [ne_eq, Nat.cast_eq_zero]
-    exact Fintype.card_ne_zero
-  have hNt : (Fintype.card (Digest h a k) : ℝ≥0∞) ≠ ⊤ := by finiteness
   set C : Finset (Fin qh × (Fin k → Fin qs)) :=
     Finset.univ.filter fun c => ∀ i, rep cov (c.2 i) = c.2 i
   have himg : ∀ f : Fin k → Fin qs, (∀ i, rep cov (f i) = f i) →
@@ -640,38 +652,24 @@ theorem evalDist_answerTape_tapeCoveredSplit_le (q qh qs : ℕ) (tgt : Fin qh �
     obtain ⟨iy, -, rfl⟩ := Finset.mem_image.mp hy
     rw [← hf ix, ← hf iy] at hxy ⊢
     exact injOn_cov_rep cov hxy
-  refine (evalDist_answerTape_le_sum_of_subset_biUnion
-    (C ×ˢ (Finset.univ : Finset (Digest h a k)))
+  refine (evalDist_answerTape_le_sum_of_subset_biUnion C
     {v | TapeCoveredSplit h a k q qh qs tgt cov v}
-    (fun c => {v | ∀ i, v (roleAssign (tgt c.1.1) (fun i => cov (c.1.2 i)) i) ∈
-      roleSet h a k c.2 i})
-    (fun c => (Fintype.card (Digest h a k) : ℝ≥0∞)⁻¹ *
-      ((((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image c.1.2).card *
-        (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k)) ?_ ?_).trans ?_
+    (fun c => {v | ∀ i, (v (cov (c.2 i))).1 = (v (tgt c.1)).1 ∧
+      (v (cov (c.2 i))).2 i = (v (tgt c.1)).2 i})
+    (fun c => (((2 : ℝ≥0∞) ^ h)⁻¹) ^ (Finset.univ.image c.2).card *
+      (((2 : ℝ≥0∞) ^ a)⁻¹) ^ k) ?_ ?_).trans
+    (Finset.sum_le_sum_of_subset (Finset.subset_univ C))
   · rintro v ⟨n, f, hcovv⟩
-    refine Set.mem_biUnion (x := ((n, fun i => rep cov (f i)), v (tgt n)))
-      (Finset.mem_coe.mpr (Finset.mem_product.mpr ⟨?_, Finset.mem_univ _⟩)) fun i => ?_
-    · exact Finset.mem_filter.mpr ⟨Finset.mem_univ _, fun i => rep_idem cov (f i)⟩
-    · rcases Fin.eq_zero_or_eq_succ i with rfl | ⟨i', rfl⟩
-      · simp [roleAssign, roleSet]
-      · simp only [roleAssign, Fin.cons_succ, roleSet]
-        rw [Finset.mem_coe, mem_multiFiber, cov_rep cov (f i')]
-        refine ⟨(hcovv i').1, fun i'' hi'' => ?_⟩
-        rw [Finset.mem_singleton] at hi''
-        rw [hi'']
-        exact (hcovv i').2
-  · rintro ⟨⟨n, f⟩, w⟩ hc
-    have hf : ∀ i, rep cov (f i) = f i :=
-      (Finset.mem_filter.mp (Finset.mem_product.mp hc).1).2
-    refine (evalDist_answerTape_roleSet_le h a k (tgt n) (fun i => cov (f i)) ?_ w).trans ?_
-    · simp only [Finset.mem_image, Finset.mem_univ, true_and, not_exists]
-      exact fun i hi => hdisj n (f i) hi.symm
-    · rw [himg f hf]
-  · rw [Finset.sum_product]
-    refine le_trans (le_of_eq ?_) (Finset.sum_le_sum_of_subset (Finset.subset_univ C))
-    refine Finset.sum_congr rfl fun c _ => ?_
-    simp only [Finset.sum_const, Finset.card_univ, nsmul_eq_mul]
-    rw [← mul_assoc, ENNReal.mul_inv_cancel hN0 hNt, one_mul]
+    refine Set.mem_biUnion (x := (n, fun i => rep cov (f i)))
+      (Finset.mem_coe.mpr (Finset.mem_filter.mpr
+        ⟨Finset.mem_univ _, fun i => rep_idem cov (f i)⟩)) fun i => ?_
+    rw [cov_rep cov (f i)]
+    exact hcovv i
+  · rintro ⟨n, f⟩ hc
+    have hf : ∀ i, rep cov (f i) = f i := (Finset.mem_filter.mp hc).2
+    refine (evalDist_answerTape_coverWitness_le h a k (tgt n) (fun i => cov (f i))
+      fun i hi => hdisj n (f i) hi.symm).trans ?_
+    rw [himg f hf]
 
 /-! ## The closed form of the split bound -/
 
