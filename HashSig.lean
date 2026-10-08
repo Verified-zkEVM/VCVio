@@ -59,6 +59,7 @@ public import HashSig.SLHDSA.Security.HypertreeWitnesses
 public import HashSig.SLHDSA.Security.KeyDiscipline
 public import HashSig.SLHDSA.Security.KeySeparation
 public import HashSig.SLHDSA.Security.LabBudget
+public import HashSig.SLHDSA.Security.LabEquiv.Experiment
 public import HashSig.SLHDSA.Security.LabEquiv.Path
 public import HashSig.SLHDSA.Security.LabEquiv.Tree
 public import HashSig.SLHDSA.Security.LabScheme
