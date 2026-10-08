@@ -483,7 +483,6 @@ theorem slhNodeKeys_node_eq_none_of_forall_ne_thash {pkSeed : core.PkSeed}
 
 end NodeKeys
 
-
 /-! ## Node keys and derivation keys -/
 
 section Separation
