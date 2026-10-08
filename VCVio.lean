@@ -158,6 +158,7 @@ public import VCVio.CryptoFoundations.SignatureAlg.Naturality
 public import VCVio.CryptoFoundations.SignatureAlg.RomQueryCount
 public import VCVio.CryptoFoundations.SignatureAlg.Tagged
 public import VCVio.CryptoFoundations.SignatureAlg.Transcript
+public import VCVio.CryptoFoundations.SignatureAlg.TranscriptCongr
 public import VCVio.CryptoFoundations.SymmEncAlg
 public import VCVio.CryptoFoundations.SymmEncAlg.Defs
 public import VCVio.CryptoFoundations.SymmEncAlg.Deterministic
