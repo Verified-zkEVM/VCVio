@@ -11,10 +11,16 @@ bound `verifyInternalQueryBound` and the seed guess charged inside it, is proved
 fixed public seed (`prEvent_romSchemeRun_runTargetCollision_or_runHiddenHit_le`,
 `HashSig/SLHDSA/Security/JointBound.lean`; stated over `|Y|`, which is `2^{8n}` at the FIPS 205
 bundles), under the key discipline and `|Y| ≤ |SK.prf|`, both discharged at every FIPS 205 bundle.
-With the grouped union bound it gives, per public seed, a forging advantage of at most that term
-plus the probability of interleaved-target coverage (`unforgeableAdvantage_romScheme_pure_le_add`).
-The coverage term and the faithfulness step are not yet proved, so no full bound below is proved;
-the levels are evaluations of the target formula, not Lean results.
+With the union bound split after the first game hop, it gives, per public seed, a forging
+advantage of at most that term plus the probability of interleaved-target coverage in the ideal
+hidden-seed game (`unforgeableAdvantage_romScheme_pure_le_add_idealDraw`), in which every secret
+value and randomizer is sampled independently of the public answers. The same bound with the
+coverage probability of the run in place of the ideal one
+(`unforgeableAdvantage_romScheme_pure_le_add`) also holds, but for deterministic signing its
+coverage term is not bounded at the size of the target's coverage term
+([Coverage after the seed hop](#coverage-after-the-seed-hop)). The coverage term and the
+faithfulness step are not yet proved, so no full bound below is proved; the levels are evaluations
+of the target formula, not Lean results.
 
 ## The statement
 
@@ -76,6 +82,26 @@ signing mode: signing queries enter only through the coverage term. For determin
 byte-level statement adds `q_s / 2^{8n}`, the faithfulness event for the signer's strings: a
 signing query whose randomizer equals `SK.prf`, so that its `H_msg` string begins with `SK.prf`.
 That event is to be joined into the same joint potential, not added as a separate probability.
+
+### Coverage after the seed hop
+
+With deterministic signing the randomizer of a signature is `PRF_msg(SK.prf, PK.seed, M)`. A forger
+that guesses `SK.prf` through its `PRF_msg` queries therefore predicts the randomizer of every
+message it will have signed, grinds `H_msg` over candidate messages, and has signed only messages
+whose digests cover the digest of a target it has queried. Coverage in the run is then at least
+about as likely as that guess, about `q_h / |SK.prf|`: at 128s, about `2^{−28}` after `2^{100}`
+`PRF_msg` queries, against a coverage term of about `2^{−127}`. So at the FIPS 205 parameter sets
+the coverage probability of the run is not bounded by the coverage term of `securityBound`. The
+guess itself is a seed guess, which the joint term already charges.
+
+A proof that bounds coverage as a separate summand therefore takes it after the seed hop, in the
+ideal hidden-seed game, as `unforgeableAdvantage_romScheme_pure_le_add_idealDraw` does. There the
+coverage event reads only the `H_msg` answers of the public cache, and its probability does not
+depend on the secret seeds (`prEvent_idealDraw_runItsrCovered_eq`). A forger can still query a
+signer's `H_msg` point before the signer does, by guessing the signer's fresh randomizer, so a
+coverage bound proved in that game carries a term for forger pre-queries hitting signer points.
+Whether the coverage form of `securityBound`, `(q_h + 1) · targetCoverBound h a k q_s`, holds in
+the ideal game is open.
 
 ### Levels
 
