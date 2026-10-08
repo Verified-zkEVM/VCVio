@@ -14,12 +14,12 @@ public import HashSigTest.SLHDSA.SeedCouplingBound
 /-!
 # The budget of the lab experiment at the SHAKE bundles
 
-At every SHAKE bundle the budget `two_mul_encard_keyEntries_div_add_seedCharge_le` holds with key
-separation discharged by `Concrete.keySeparated_shakePrimitives`, and it is the pathwise budget of
-`CanonicalGraph.NodeKeys.prEvent_deferredFillDraw_le_of_budget` at the hazard charge `seedCharge`:
-the deferred game of the lab experiment, its end fill and a uniform draw of the secret seeds fire a
-conflict, a target collision at a node key, or a cached encoding of a derivation under the drawn
-seeds, with probability at most `2 (qh + V) / 256 ^ n`.
+At every SHAKE bundle the budget `two_mul_encard_keyEntries_div_add_seedCharge_le_of_mem_support`
+holds with key separation discharged by `Concrete.keySeparated_shakePrimitives`, and it is the
+pathwise budget of `CanonicalGraph.NodeKeys.prEvent_deferredFillDraw_le_of_budget` at the hazard
+charge `seedCharge`: the deferred game of the lab experiment, its end fill and a uniform draw of
+the secret seeds fire a conflict, a target collision at a node key, or a cached encoding of a
+derivation under the drawn seeds, with probability at most `2 (qh + V) / 256 ^ n`.
 -/
 
 public section
@@ -48,7 +48,7 @@ example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
       2 * ((qh : ℝ≥0∞) + GeneralScheme.verifyInternalQueryBound vp.params) /
         ((256 ^ vp.params.n : ℕ) : ℝ≥0∞) := by
   rw [← natCard_shakePrimitives_y]
-  exact two_mul_encard_keyEntries_div_add_seedCharge_le pkSeed
+  exact two_mul_encard_keyEntries_div_add_seedCharge_le_of_mem_support
     (Concrete.keySeparated_shakePrimitives vp.params) hadv hz
 
 /-- **The joint potential over the lab experiment at a SHAKE bundle.** The deferred game of the
@@ -72,8 +72,8 @@ example (vp : ValidatedParams) (e : (shakeCore vp).SkSeed ≃ (shakeCore vp).Y)
   refine (slhNodeKeys (shakeCore vp) pkSeed).prEvent_deferredFillDraw_le_of_budget _
     (fun s C => ∃ x, (C ((secretEncoding (shakeCore vp) e pkSeed).enc s x)).isSome)
     (seedCharge (shakeCore vp) pkSeed)
-    (prEvent_exists_isSome_apply_secretEncoding_enc_le_seedCharge e pkSeed le_rfl) _ _ ?_
-    fun z hz => two_mul_encard_keyEntries_div_add_seedCharge_le pkSeed
+    (prEvent_exists_isSome_apply_secretEncoding_enc_le e pkSeed le_rfl) _ _ ?_
+    fun z hz => two_mul_encard_keyEntries_div_add_seedCharge_le_of_mem_support
       (Concrete.keySeparated_shakePrimitives vp.params) hadv hz
   rw [natCard_shakePrimitives_y]
   exact ENNReal.div_ne_top (by finiteness) (by positivity)
