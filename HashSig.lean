@@ -52,6 +52,7 @@ public import HashSig.SLHDSA.Security.ComponentTraces
 public import HashSig.SLHDSA.Security.Composition
 public import HashSig.SLHDSA.Security.CoverageHits
 public import HashSig.SLHDSA.Security.CoverageRoles
+public import HashSig.SLHDSA.Security.CoverageRun
 public import HashSig.SLHDSA.Security.DigestTransport
 public import HashSig.SLHDSA.Security.EncodedTargets
 public import HashSig.SLHDSA.Security.ForsWitnesses
