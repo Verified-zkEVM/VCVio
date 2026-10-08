@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.Security.LabScheme
 public import VCVio.OracleComp.SimSemantics.StateT.EqDistTriple.Simulate
+import ToMathlib.Data.List.Forall2
 
 /-!
 # Honest and lab steps in the eager game
@@ -29,7 +30,9 @@ steps and of hash paths.
   drawn children values, which the relabelled game answers by drawing the node's label; the lab
   program reads that label. Both runs are the same draw, and the node's cell then holds the
   output. This uses the key discipline: the children of the node at the key of `a` are those of
-  `a` (`CorePrimitives.KeyDiscipline.slhGraph_ch_of_nodeKeyOf_eq_some`).
+  `a` (`CorePrimitives.KeyDiscipline.slhGraph_ch_of_nodeKeyOf_eq_some`). At an address with one
+  or two structural children the step is `F` or `H` (`f_labTriple`, `h_labTriple`), from a state
+  in which the children's cells hold its inputs.
 * **A secret read** (`labSecret_labTriple`) draws the derivation at the secret's key.
 * **WOTS+ chains.** `chainWith_labTriple` runs `s` honest `F` steps against `s` lab steps from any
   input held by chain cell `j` (`wotsChainCell`); the result is held by chain cell `j + s`. In the
@@ -55,7 +58,7 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 abbrev LabState : Type := RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y
 
 /-- The optional cell `c` exists and holds `y` in the state `st`. -/
-def CellHolds (st : LabState core) (c : Option (DeriveQuery core ⊕ NodeKey core))
+@[expose] def CellHolds (st : LabState core) (c : Option (DeriveQuery core ⊕ NodeKey core))
     (y : core.Y) : Prop :=
   ∃ c', c = some c' ∧ st.2 c' = some y
 
@@ -72,21 +75,6 @@ theorem CellHolds.mono {st st' : LabState core} (hle : st ≤ st')
     {c : Option (DeriveQuery core ⊕ NodeKey core)} {y : core.Y} (h : CellHolds core st c y) :
     CellHolds core st' c y :=
   h.imp fun _ h' ↦ ⟨h'.1, hle.2 h'.2⟩
-
-/-- Cells holding the entries of `xs`, read through an optional cell map, are drawn at `xs`
-along the cells that exist. -/
-private theorem forall₂_filterMap_of_forall₂_map {st : LabState core} {α : Type}
-    (f : α → Option (DeriveQuery core ⊕ NodeKey core)) :
-    ∀ {l : List α} {xs : List core.Y}, List.Forall₂ (CellHolds core st) (l.map f) xs →
-      List.Forall₂ (fun c y ↦ st.2 c = some y) (l.filterMap f) xs
-  | [], _, h => by
-    rw [List.map_nil, List.forall₂_nil_left_iff] at h
-    exact h ▸ .nil
-  | a :: l, _, h => by
-    rw [List.map_cons, List.forall₂_cons_left_iff] at h
-    obtain ⟨y, ys, ⟨c, hc, hy⟩, h, rfl⟩ := h
-    rw [List.filterMap_cons, hc]
-    exact .cons hy (forall₂_filterMap_of_forall₂_map f h)
 
 /-! ## WOTS+ chain cells -/
 
@@ -137,7 +125,7 @@ theorem tl_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed) {a : Ad
   have hch : (slhGraph core pkSeed).childVals st κ = some xs := by
     rw [CanonicalGraph.childVals_eq_some_iff,
       hd.slhGraph_ch_of_nodeKeyOf_eq_some pkSeed (nodeKeyOf_of_mem core ha)]
-    exact forall₂_filterMap_of_forall₂_map core _ hst
+    exact List.forall₂_filterMap_of_forall₂ (List.forall₂_map_left_iff.1 hst)
   have hlab : (simulateQ (slhGraph core pkSeed).eagerImpl (labNode core a)).run st =
       (RelabelState.drawCell (.inr κ)).run st := by
     rw [labNode_of_mem core ha, CanonicalGraph.eagerImpl_readCell_run]
@@ -152,6 +140,29 @@ theorem tl_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed) {a : Ad
   rw [hlab] at hz
   obtain ⟨hle, hc⟩ := RelabelState.le_and_cell_eq_of_mem_support_drawCell hz
   exact ⟨hle, _, childCell_inr core ha, hc⟩
+
+/-- **A one-input step.** At a ledger address `a` with a single structural child, whose cell is
+`c`, from a state in which `c` holds `x`, the honest `F(PK.seed, a, x)` and the lab `F` are one
+draw of the node's label, which its cell then holds. -/
+theorem f_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed) {a : Adrs}
+    (ha : a ∈ constructionAddresses vp) {c : Option (DeriveQuery core ⊕ NodeKey core)}
+    (hch : (childAdrs vp a).map (childCell core) = [c]) (x : core.Y) :
+    LabTriple core pkSeed (fun st ↦ CellHolds core st c x)
+      (PublicHash.f core pkSeed a x) (labF core a x)
+      fun y st ↦ CellHolds core st (childCell core (.inr a)) y :=
+  (tl_labTriple core hd pkSeed ha [x]).mono (fun _ h ↦ hch ▸ .cons h .nil) fun _ _ h ↦ h
+
+/-- **A two-input step.** At a ledger address `a` with two structural children, whose cells are
+`c₁` and `c₂`, from a state in which they hold `l` and `r`, the honest `H(PK.seed, a, l, r)` and
+the lab `H` are one draw of the node's label, which its cell then holds. -/
+theorem h_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed) {a : Adrs}
+    (ha : a ∈ constructionAddresses vp) {c₁ c₂ : Option (DeriveQuery core ⊕ NodeKey core)}
+    (hch : (childAdrs vp a).map (childCell core) = [c₁, c₂]) (l r : core.Y) :
+    LabTriple core pkSeed (fun st ↦ CellHolds core st c₁ l ∧ CellHolds core st c₂ r)
+      (PublicHash.h core pkSeed a l r) (labH core a l r)
+      fun y st ↦ CellHolds core st (childCell core (.inr a)) y :=
+  (tl_labTriple core hd pkSeed ha [l, r]).mono (fun _ h ↦ hch ▸ .cons h.1 (.cons h.2 .nil))
+    fun _ _ h ↦ h
 
 /-- **The secret read.** At a secret-key address the lab secret draws the derivation at its key,
 which its cell then holds. -/
@@ -180,11 +191,9 @@ theorem chainWith_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed)
   | s + 1, hs => by
     simp only [chainWith]
     refine (chainWith_labTriple hd pkSeed pos i x j s (by omega)).bind fun y ↦ ?_
-    have ha := wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i
-      (t := j + s) (by omega)
-    refine (tl_labTriple core hd pkSeed ha [y]).mono (fun st h ↦ ?_) fun _ _ h ↦ h
-    rw [map_childCell_childAdrs_wotsChainAdrs]
-    exact .cons h .nil
+    exact f_labTriple core hd pkSeed
+      (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i (t := j + s) (by omega))
+      (map_childCell_childAdrs_wotsChainAdrs core _ i _) y
 
 variable (G : CanonicalGraph (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y)
 
@@ -249,9 +258,7 @@ theorem labForsLeaf_labTriple (hd : core.KeyDiscipline vp) (pkSeed : core.PkSeed
   refine QueryImpl.EqDistTriple.of_simulateQ_eq_right ?_
     (simulateQ_eagerImpl_labForsLeaf core _ _ _).symm
   refine (labSecret_labTriple core pkSeed (Adrs.isSecretKey_forsSkAdrs _ _)).bind fun x ↦ ?_
-  refine (tl_labTriple core hd pkSeed (forsLeafAdrs_mem_constructionAddresses pos tree hi)
-    [x]).mono (fun st h ↦ ?_) fun _ _ h ↦ h
-  rw [childAdrs_forsNodeAdrs_zero]
-  exact .cons h .nil
+  exact f_labTriple core hd pkSeed (forsLeafAdrs_mem_constructionAddresses pos tree hi)
+    (by rw [childAdrs_forsNodeAdrs_zero]; rfl) x
 
 end SLHDSA.Security

@@ -8,6 +8,7 @@ module
 
 public import HashSig.SLHDSA.Security.LabEquiv.Path
 public import VCVio.CryptoFoundations.MerkleTree.Addressed.NatIndexed.EqDistTriple
+import ToMathlib.Data.List.Forall2
 
 /-!
 # Honest and lab WOTS+, XMSS and FORS in the eager game
@@ -39,19 +40,11 @@ namespace SLHDSA.Security
 
 variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
-/-- Values satisfying `R` against the entries of `v` satisfy `List.Forall₂ R` against
-`v.toList`, read along `List.range`. -/
-private theorem forall₂_map_range_toList {α β : Type} {R : α → β → Prop} {n : ℕ} (f : ℕ → α)
-    (v : Vector β n) (h : ∀ i : Fin n, R (f i) v[i]) :
-    List.Forall₂ R ((List.range n).map f) v.toList :=
-  List.forall₂_iff_get.2 ⟨by simp, fun i h₁ h₂ ↦ by
-    simpa using h ⟨i, by simpa using h₁⟩⟩
-
 /-! ## Cells of the trees -/
 
 /-- The address whose cell holds node `(h, i)` of the XMSS tree at `adrs`: the WOTS+ public key
 of leaf `i` at height `0`, and the tree node above. -/
-def xmssCellAdrs (adrs : Adrs) : ℕ → ℕ → Adrs
+@[expose] def xmssCellAdrs (adrs : Adrs) : ℕ → ℕ → Adrs
   | 0, i => wotsPkAdrs (wotsLeafAdrs adrs i)
   | h + 1, i => xmssNodeAdrs adrs (h + 1) i
 
@@ -106,21 +99,17 @@ abbrev ForsHolds (adrs : Adrs) (h i : ℕ) (y : core.Y) (st : LabState core) : P
 /-- The state holds an XMSS signature at a reachable position on `msg`: each WOTS+ chain value at
 the chain cell of its step count, and each authentication-path entry at the cell of its sibling
 node. -/
-def XmssSigHolds (pos : LayerPosition vp) (msg : core.Y) (sig : XmssSig vp.params core)
+@[expose] def XmssSigHolds (pos : LayerPosition vp) (msg : core.Y) (sig : XmssSig vp.params core)
     (st : LabState core) : Prop :=
   (∀ i : Fin vp.params.len, CellHolds core st
     (wotsChainCell core (wotsInstanceAdrs pos) i (chainStepsCore core msg i)) sig.wots[i]) ∧
   ∀ j (hj : j < vp.params.hp),
     XmssHolds core pos.toAdrs j (sibling (pos.leaf.val / 2 ^ j)) sig.auth[j] st
 
-/-- The global index of the leaf of FORS tree `i` that the digest `md` opens. -/
-abbrev forsLeafIndex (p : Params) (md : List Byte) (i : ℕ) : ℕ :=
-  i * 2 ^ p.a + forsIdx p md i
-
 /-- The state holds a FORS signature on `md` at a reachable bottom position: for each tree, the
 opened secret at its cell, and each authentication-path entry at the cell of its sibling node. -/
-def ForsSigHolds (pos : BottomPosition vp) (md : List Byte) (sig : ForsSigCore vp.params core)
-    (st : LabState core) : Prop :=
+@[expose] def ForsSigHolds (pos : BottomPosition vp) (md : List Byte)
+    (sig : ForsSigCore vp.params core) (st : LabState core) : Prop :=
   ∀ i : Fin vp.params.k,
     CellHolds core st (childCell core (.inl (forsSkAdrs pos.forsAdrs
       (forsLeafIndex vp.params md i)))) sig[i].sk ∧
@@ -152,6 +141,24 @@ section Wots
 variable (pos : LayerPosition vp)
 
 include hd in
+/-- **WOTS+ chain vectors.** For step counts `steps i ≤ w - 1`, the honest chains of `steps i`
+steps from the secrets are related to the lab chains, and each chain cell at its step count then
+holds its value. -/
+theorem ofFnM_labChain_labTriple (steps : Fin vp.params.len → ℕ)
+    (hs : ∀ i, steps i ≤ vp.params.w - 1) :
+    LabTriple core pkSeed (fun _ ↦ True)
+      (Vector.ofFnM fun i : Fin vp.params.len ↦ do
+        let x ← labSecret core (wotsSkAdrs (wotsInstanceAdrs pos) i)
+        chainWith (PublicHash.f core pkSeed) (wotsChainAdrs (wotsInstanceAdrs pos) i) x 0
+          (steps i))
+      (Vector.ofFnM fun i : Fin vp.params.len ↦ labChain core (wotsInstanceAdrs pos) i (steps i))
+      fun v st ↦ ∀ i : Fin vp.params.len, CellHolds core st
+        (wotsChainCell core (wotsInstanceAdrs pos) i (steps i)) v[i] :=
+  (QueryImpl.EqDistTriple.ofFnM (fun _ ↦ True) _ (fun _ _ _ _ hle h ↦ h.mono hle) fun i ↦
+    (labChain_labTriple core hd pkSeed pos i (hs i)).mono (fun _ h ↦ h)
+      fun _ _ h ↦ ⟨trivial, h⟩).mono (fun _ h ↦ h) fun _ _ h ↦ h.2
+
+include hd in
 /-- **WOTS+ chain tops.** The honest chain tops from the secrets are related to the lab tops, and
 each chain cell at `w - 1` then holds its top. -/
 theorem wotsPkGenTopsWithSecret_labTriple :
@@ -161,9 +168,7 @@ theorem wotsPkGenTopsWithSecret_labTriple :
       (labWotsPkGenTops core (wotsInstanceAdrs pos))
       fun tops st ↦ ∀ i : Fin vp.params.len, CellHolds core st
         (wotsChainCell core (wotsInstanceAdrs pos) i (vp.params.w - 1)) tops[i] :=
-  (QueryImpl.EqDistTriple.ofFnM (fun _ ↦ True) _ (fun _ _ _ _ hle h ↦ h.mono hle) fun i ↦
-    (labChain_labTriple core hd pkSeed pos i le_rfl).mono (fun _ h ↦ h)
-      fun _ _ h ↦ ⟨trivial, h⟩).mono (fun _ h ↦ h) fun _ _ h ↦ h.2
+  ofFnM_labChain_labTriple core hd pkSeed pos (fun _ ↦ _) fun _ ↦ le_rfl
 
 include hd in
 /-- **WOTS+ signing.** Honest WOTS+ signing from the secrets is related to lab signing, and each
@@ -175,9 +180,7 @@ theorem wotsSignWithSecret_labTriple (msg : core.Y) :
       (labWotsSign core msg (wotsInstanceAdrs pos))
       fun sig st ↦ ∀ i : Fin vp.params.len, CellHolds core st
         (wotsChainCell core (wotsInstanceAdrs pos) i (chainStepsCore core msg i)) sig[i] :=
-  (QueryImpl.EqDistTriple.ofFnM (fun _ ↦ True) _ (fun _ _ _ _ hle h ↦ h.mono hle) fun i ↦
-    (labChain_labTriple core hd pkSeed pos i (chainStepsCore_le core msg i)).mono (fun _ h ↦ h)
-      fun _ _ h ↦ ⟨trivial, h⟩).mono (fun _ h ↦ h) fun _ _ h ↦ h.2
+  ofFnM_labChain_labTriple core hd pkSeed pos _ fun i ↦ chainStepsCore_le core msg i
 
 include hd in
 /-- **The WOTS+ public key.** The honest WOTS+ public key from the secrets is related to the lab
@@ -192,7 +195,7 @@ theorem wotsPkGenWithSecret_labTriple :
     (tl_labTriple core hd pkSeed (wotsPkAdrs_mem_constructionAddresses pos) _).mono
       (fun st h ↦ by
         rw [map_childCell_childAdrs_wotsPkAdrs]
-        exact forall₂_map_range_toList _ tops h) fun _ _ h ↦ h
+        exact Vector.forall₂_map_range_toList_iff.2 h) fun _ _ h ↦ h
 
 include hd in
 /-- **WOTS+ recovery.** From a state holding each signature value at the chain cell of its step
@@ -220,7 +223,7 @@ theorem wotsPkFromSigWith_labTriple (sig : WotsSig vp.params core) (msg : core.Y
   · exact (tl_labTriple core hd pkSeed (wotsPkAdrs_mem_constructionAddresses pos) _).mono
       (fun st h ↦ by
         rw [map_childCell_childAdrs_wotsPkAdrs]
-        exact forall₂_map_range_toList _ tops h.2) fun _ _ h ↦ h
+        exact Vector.forall₂_map_range_toList_iff.2 h.2) fun _ _ h ↦ h
 
 end Wots
 
@@ -254,11 +257,10 @@ theorem xmssNodeHashWith_labTriple {h i : ℕ} (hh : h < vp.params.hp)
       (xmssNodeHashWith (PublicHash.h core pkSeed) coord.toAdrs (h + 1) i l r)
       (xmssNodeHashWith (labH core) coord.toAdrs (h + 1) i l r)
       fun y st ↦ True ∧ XmssHolds core coord.toAdrs (h + 1) i y st :=
-  (tl_labTriple core hd pkSeed
-    (xmssNodeAdrs_mem_constructionAddresses coord (by omega) (by omega) hi) [l, r]).mono
-    (fun _ h ↦ by
-      rw [map_childCell_childAdrs_xmssNodeAdrs]
-      exact .cons h.2.1 (.cons h.2.2 .nil)) fun _ _ h ↦ ⟨trivial, h⟩
+  (h_labTriple core hd pkSeed
+    (xmssNodeAdrs_mem_constructionAddresses coord (by omega) (by omega) hi)
+    (map_childCell_childAdrs_xmssNodeAdrs core _ h i) l r).mono (fun _ h ↦ h.2)
+    fun _ _ h ↦ ⟨trivial, h⟩
 
 include hd in
 /-- **An XMSS root.** The honest root of a reachable tree from the secrets is related to the lab
@@ -364,11 +366,10 @@ theorem forsNodeHashWith_labTriple (tree : Fin vp.params.k) {h i : ℕ} (hh : h 
       (forsNodeHashWith (PublicHash.h core pkSeed) pos.forsAdrs (h + 1) i l r)
       (forsNodeHashWith (labH core) pos.forsAdrs (h + 1) i l r)
       fun y st ↦ True ∧ ForsHolds core pos.forsAdrs (h + 1) i y st :=
-  (tl_labTriple core hd pkSeed
-    (forsTreeAdrs_mem_constructionAddresses pos tree (by omega) (by omega) hi) [l, r]).mono
-    (fun _ h ↦ by
-      rw [map_childCell_childAdrs_forsNodeAdrs]
-      exact .cons h.2.1 (.cons h.2.2 .nil)) fun _ _ h ↦ ⟨trivial, h⟩
+  (h_labTriple core hd pkSeed
+    (forsTreeAdrs_mem_constructionAddresses pos tree (by omega) (by omega) hi)
+    (map_childCell_childAdrs_forsNodeAdrs core _ h i) l r).mono (fun _ h ↦ h.2)
+    fun _ _ h ↦ ⟨trivial, h⟩
 
 include hd in
 /-- **A FORS authentication path.** For the leaf of tree `i` that the digest `md` opens, at a
@@ -431,8 +432,8 @@ theorem forsPkFromSigWith_labTriple (sig : ForsSigCore vp.params core) (md : Lis
       ForsHolds core pos.forsAdrs vp.params.a i y) (fun _ _ _ _ hle h ↦ h.mono hle)
     fun i ↦ ?_).bind fun roots ↦ ?_
   · have hdiv := forsLeafIndex_div vp.params md i
-    have hleaf := tl_labTriple core hd pkSeed
-      (forsLeafAdrs_mem_constructionAddresses pos i hdiv) [sig[i].sk]
+    have hleaf := f_labTriple core hd pkSeed (forsLeafAdrs_mem_constructionAddresses pos i hdiv)
+      (by rw [childAdrs_forsNodeAdrs_zero]; rfl) sig[i].sk
     have climb := fun leaf ↦ QueryImpl.EqDistTriple.climbM (fun _ ↦ True)
       (ForsHolds core pos.forsAdrs) (fun _ _ _ _ _ hle h ↦ h.mono hle)
       (forsLeafIndex vp.params md i) leaf sig[i].auth.toList
@@ -441,9 +442,7 @@ theorem forsPkFromSigWith_labTriple (sig : ForsSigCore vp.params core) (md : Lis
           simp only [Vector.length_toList] at hh
           rw [Nat.div_div_eq_div_mul, ← pow_add, Nat.add_sub_cancel' hh, hdiv]) l r
     refine ((hleaf.frame (F := ForsSigHolds core pos md sig) fun _ _ ↦ ForsSigHolds.mono).mono
-      (fun st h ↦ ⟨?_, h⟩) fun _ _ h ↦ h).bind fun leaf ↦ ?_
-    · rw [childAdrs_forsNodeAdrs_zero]
-      exact .cons (h i).1 .nil
+      (fun st h ↦ ⟨(h i).1, h⟩) fun _ _ h ↦ h).bind fun leaf ↦ ?_
     refine ((climb leaf).frame (F := ForsSigHolds core pos md sig)
       fun _ _ ↦ ForsSigHolds.mono).mono (fun st h ↦ ⟨⟨trivial, h.1, ?_⟩, h.2⟩)
         fun _ _ h ↦ ⟨h.2, ?_⟩
@@ -452,7 +451,7 @@ theorem forsPkFromSigWith_labTriple (sig : ForsSigCore vp.params core) (md : Lis
   · exact (tl_labTriple core hd pkSeed (forsRootAdrs_mem_constructionAddresses pos) _).mono
       (fun st h ↦ by
         rw [map_childCell_childAdrs_forsPkAdrs]
-        exact forall₂_map_range_toList _ roots h.2) fun _ _ h ↦ h
+        exact Vector.forall₂_map_range_toList_iff.2 h.2) fun _ _ h ↦ h
 
 end Fors
 

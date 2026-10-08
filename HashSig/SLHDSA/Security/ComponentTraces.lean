@@ -130,10 +130,14 @@ theorem QueriesWithinConstructionTargets.climbM {Y : Type}
 
 /-! ## FORS addresses of a reachable bottom position -/
 
+/-- The global index of the leaf of FORS tree `i` that the digest `md` opens. -/
+abbrev forsLeafIndex (p : Params) (md : List Byte) (i : ℕ) : ℕ :=
+  i * 2 ^ p.a + forsIdx p md i
+
 /-- The height-`a` tree containing the leaf `forsSignWith` selects in FORS tree `i` is tree `i`. -/
 theorem forsLeafIndex_div (p : Params) (md : List Byte) (i : ℕ) :
-    (i * 2 ^ p.a + forsIdx p md i) / 2 ^ p.a = i := by
-  rw [Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity),
+    forsLeafIndex p md i / 2 ^ p.a = i := by
+  rw [forsLeafIndex, Nat.add_comm, Nat.add_mul_div_right _ _ (by positivity),
     Nat.div_eq_of_lt (forsIdx_lt p md i), Nat.zero_add]
 
 /-- Every leaf of FORS tree `tree` at a reachable bottom position is a union-ledger target. -/
