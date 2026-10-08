@@ -30,11 +30,12 @@ The forging advantage is then bounded in two forms, both per public seed:
   joint term, and the coverage term is a probability of a game in which every secret value and
   randomizer is a table entry sampled independently of the public answers.
 * `unforgeableAdvantage_romScheme_pure_le_add`: at most `2 (qh + V) / |Y|` plus the probability of
-  `RunItsrCovered` in the run itself. For deterministic signing this coverage probability is not
-  of the size of a coverage bound: a forger that finds `SK.prf` through its `PRF_msg` queries
-  predicts every randomizer and so chooses which `H_msg` digests get signed, which makes coverage
-  in the run about as likely as that seed guess. The coverage term to bound separately is the one
-  in the ideal hidden-seed game.
+  `RunItsrCovered` in the run itself. For deterministic signing this run-level coverage term
+  cannot be bounded at the size of the coverage term of the security target: a forger that guesses
+  `SK.prf` through its `PRF_msg` queries predicts every randomizer and grinds `H_msg` until the
+  digests it gets signed cover its target, so coverage in the run is about as likely as that
+  guess, which the joint term already charges. The coverage term to bound separately is the one in
+  the ideal hidden-seed game.
 
 ## The chain of games
 
@@ -302,8 +303,11 @@ with `V` the verifier's query bound, plus the probability that the run fires int
 coverage with a fresh forged message (`RunItsrCovered`). The statement is per public seed; the
 coverage term remains a probability of the run and is not bounded here; the faithfulness step
 relating the three-oracle model to the byte-level scheme is not included. For deterministic
-signing the coverage probability of the run includes the forger guessing `SK.prf`, which
-`unforgeableAdvantage_romScheme_pure_le_add_idealDraw` charges inside the first term instead. -/
+signing this run-level coverage term cannot be bounded at the size of the coverage term of the
+security target: a forger that guesses `SK.prf` through its `PRF_msg` queries predicts every
+randomizer and grinds `H_msg` until the digests it gets signed cover its target, so coverage in the
+run is about as likely as that guess, which the first term already charges. The form whose
+coverage term is to be bounded is `unforgeableAdvantage_romScheme_pure_le_add_idealDraw`. -/
 theorem unforgeableAdvantage_romScheme_pure_le_add (laws : core.ByteLaws)
     (hd : core.KeyDiscipline vp) (hcard : Nat.card core.Y ≤ Nat.card core.SkPrf)
     (e : core.SkSeed ≃ core.Y) (optRand : PublicKeyCore core → ProbComp core.Y)
