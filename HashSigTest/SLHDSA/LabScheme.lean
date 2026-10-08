@@ -125,7 +125,8 @@ example (pkSeed : (shakeCore vp128s).PkSeed) (pos : LayerPosition vp128s)
     (slhGraph (shakeCore vp128s) pkSeed).ch ⟨_, _,
         wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 1) pos i (by decide), rfl⟩ =
       [.inr ⟨_, _,
-        wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 0) pos i (by decide), rfl⟩] := by
+        wotsChainAdrs_setHashAddress_mem_constructionAddresses (t := 0) pos i (by decide),
+        rfl⟩] := by
   rw [slhGraph_ch_wotsChainAdrs_setHashAddress _
       (Concrete.keyDiscipline_shakePrimitives _
         (fipsApprovedAddressBounds .SLHDSA_SHAKE_128s).toCanonicalAddressBounds) pkSeed
