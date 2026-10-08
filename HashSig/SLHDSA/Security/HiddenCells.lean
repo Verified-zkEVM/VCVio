@@ -37,11 +37,11 @@ that no hidden cell of the signed digests of `log` is drawn in `st`.
 
 * **Monotonicity** (`hiddenCells_anti`). More digests and a larger state hide fewer cells: using a
   position or opening a coordinate only reveals, and a drawn label never changes.
-* **Down-closure** (`HiddenChainStep.of_le`). Below a hidden chain step every step is hidden. A
+* **Down-closure** (`HiddenChainStep.of_step_le`). Below a hidden chain step every step is hidden. A
   public query draws the label of a node only when its children are drawn, and the only child of
   hash step `t` is step `t - 1`, so a public query never draws a hidden cell over a state where
   the hidden cells are undrawn (`hiddenUndrawn_of_mem_support_deferredImpl`).
-* **Reading unhidden children** (`not_mem_hiddenCells_of_childCell_eq_some`). Under the key
+* **Reading unhidden children** (`notMem_hiddenCells_of_childCell_eq_some`). Under the key
   discipline distinct in-range structural children have distinct cells, so the cell of an
   in-range child that is not hidden is not a hidden cell. The tops of the chains and every node
   of another type (`not_hiddenChild_inr`), the chain steps at and above the selected step of a
@@ -171,13 +171,10 @@ variable (core) in
 @[expose] def msgCell (pos : LayerPosition vp) : DeriveQuery core ⊕ NodeKey core :=
   .inr ⟨core.adrsToKey (msgAdrs pos), msgAdrs pos, msgAdrs_mem_constructionAddresses pos, rfl⟩
 
-/-- The cell of the honest message at `pos` is the label of the node at any address equal to
-`msgAdrs pos`. -/
-theorem msgCell_eq_of_msgAdrs_eq {pos : LayerPosition vp} {a : Adrs} (h : msgAdrs pos = a)
-    (ha : a ∈ constructionAddresses vp) :
-    msgCell core pos = .inr ⟨core.adrsToKey a, a, ha, rfl⟩ := by
-  subst h
-  rfl
+/-- The cell of the honest message at `pos` is the cell of the node child at `msgAdrs pos`. -/
+theorem childCell_msgAdrs (pos : LayerPosition vp) :
+    childCell core (.inr (msgAdrs pos)) = some (msgCell core pos) :=
+  childCell_inr core (msgAdrs_mem_constructionAddresses pos)
 
 /-- At the layer-zero position of a digest, the honest message is at the FORS roots compression of
 the digest's FORS instance. -/
@@ -249,26 +246,16 @@ theorem mem_hiddenCells_forsSkAdrs (bp : BottomPosition vp) {t : ℕ}
   ⟨_, .inr ⟨bp, t, ht, rfl, h⟩, hc⟩
 
 /-- **Down-closure.** Below a hidden chain step, every step is hidden. -/
-theorem HiddenChainStep.of_le {pos : LayerPosition vp} {i t t' : ℕ}
+theorem HiddenChainStep.of_step_le {pos : LayerPosition vp} {i t t' : ℕ}
     (h : HiddenChainStep core U st pos i t) (ht : t' ≤ t) : HiddenChainStep core U st pos i t' :=
   ⟨by have := h.1; omega, fun hpos m hm ↦ by have := h.2 hpos m hm; omega⟩
 
-/-- More digests and a larger state hide no more chain steps. -/
-theorem HiddenChainStep.anti (hU : ∀ d, U d → U' d) (hle : st ≤ st') {pos : LayerPosition vp}
-    {i t : ℕ} (h : HiddenChainStep core U' st' pos i t) : HiddenChainStep core U st pos i t :=
-  ⟨h.1, fun hpos m hm ↦ h.2 (hpos.mono hU) m (hle.2 hm)⟩
-
-/-- More digests and a larger state hide no more structural children. -/
-theorem HiddenChild.anti (hU : ∀ d, U d → U' d) (hle : st ≤ st') {b : Adrs ⊕ Adrs}
-    (h : HiddenChild core U' st' b) : HiddenChild core U st b := by
-  rcases h with ⟨pos, i, t, rfl, h⟩ | ⟨bp, t, ht, rfl, h⟩
-  · exact .inl ⟨pos, i, t, rfl, h.anti hU hle⟩
-  · exact .inr ⟨bp, t, ht, rfl, fun ho ↦ h (ho.mono hU)⟩
-
 /-- **Monotonicity.** More digests and a larger state hide no more cells. -/
 theorem hiddenCells_anti (hU : ∀ d, U d → U' d) (hle : st ≤ st') :
-    hiddenCells core U' st' ⊆ hiddenCells core U st :=
-  fun _ ⟨b, hb, hc⟩ ↦ ⟨b, hb.anti hU hle, hc⟩
+    hiddenCells core U' st' ⊆ hiddenCells core U st := by
+  rintro _ ⟨_, ⟨pos, i, t, rfl, ht, h⟩ | ⟨bp, t, ht, rfl, h⟩, hc⟩
+  · exact ⟨_, .inl ⟨pos, i, t, rfl, ht, fun hpos m hm ↦ h (hpos.mono hU) m (hle.2 hm)⟩, hc⟩
+  · exact ⟨_, .inr ⟨bp, t, ht, rfl, fun ho ↦ h (ho.mono hU)⟩, hc⟩
 
 /-- A hidden structural child is an in-range address. -/
 theorem addressFacts_of_hiddenChild (hb : CanonicalAddressBounds vp.params) {b : Adrs ⊕ Adrs}
@@ -316,7 +303,7 @@ theorem hiddenUndrawn_of_mem_support_deferredImpl [SampleableType core.Y] [Decid
         obtain ⟨c', hc'⟩ := Option.isSome_iff_exists.1
           (isSome_childCell_chainChild (core := core) pos i (t := t) (by have := hstep.1; omega))
         have hpred : c' ∈ hiddenCells core (SignedDigest core pk log z.2.1.1) z.2.1 :=
-          ⟨_, .inl ⟨pos, i, t, rfl, hstep.of_le (Nat.le_succ t)⟩, hc'⟩
+          ⟨_, .inl ⟨pos, i, t, rfl, hstep.of_step_le (Nat.le_succ t)⟩, hc'⟩
         have hnone := hs c' (hiddenCells_anti hU hle hpred)
         rw [CanonicalGraph.childVals_eq_some_iff, hch, hc'] at hκ
         rcases hκ with _ | ⟨hv, -⟩
@@ -375,7 +362,7 @@ theorem hiddenChainStep_of_le (hle : st ≤ st') {pos : LayerPosition vp} {i t :
 
 /-- **Reading unhidden children.** Under the key discipline, the cell of an in-range structural
 child that is not hidden is not a hidden cell. -/
-theorem not_mem_hiddenCells_of_childCell_eq_some (hd : core.KeyDiscipline vp) {b : Adrs ⊕ Adrs}
+theorem notMem_hiddenCells_of_childCell_eq_some (hd : core.KeyDiscipline vp) {b : Adrs ⊕ Adrs}
     {c : DeriveQuery core ⊕ NodeKey core} (hc : childCell core b = some c)
     (hb : AddressFacts vp (b.elim id id)) (h : ¬HiddenChild core U st b) :
     c ∉ hiddenCells core U st := by
@@ -392,7 +379,7 @@ theorem addressFacts_of_childCell_inr_eq_some (hb : CanonicalAddressBounds vp.pa
   exact addressFacts_of_mem_constructionAddresses hb ha
 
 /-- A derivation that is not a secret, such as a randomizer, is not a hidden cell. -/
-theorem inl_inr_not_mem_hiddenCells (x : core.Y × List Byte) :
+theorem inl_inr_notMem_hiddenCells (x : core.Y × List Byte) :
     (.inl (.inr x) : DeriveQuery core ⊕ NodeKey core) ∉ hiddenCells core U st := by
   rintro ⟨b, -, hb⟩
   rcases b with a | a <;> simp [childCell_inl_eq_some_iff, childCell_inr_eq_some_iff] at hb

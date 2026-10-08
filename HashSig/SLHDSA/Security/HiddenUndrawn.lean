@@ -24,17 +24,17 @@ secret. The transcript's public key carries the graph's public seed `pkSeed`
 The invariant `HiddenUndrawn pk log st` is carried through the three stages of the experiment by
 `SignatureAlg.holds_of_mem_support_run_unforgeableTranscriptExperiment`.
 
-* **Key generation** reads no hidden cell at all (`readsUnhidden_labKeygen`), so from the empty
+* **Key generation** reads no hidden cell at all (`readsUnhidden_labXmssNode`), so from the empty
   state it draws none.
 * **The forger and verification** make only sampling and public queries, and a public query draws
   only the label of a node whose children are drawn (`hiddenUndrawn_of_mem_support_deferredImpl`).
 * **Signing** a message `M` with randomizer `R` adds the digest `d` of `H_msg(R, PK.seed, PK.root,
   M)` to the signed digests. It reads the secrets `d` opens, the FORS nodes, and, at each layer,
-  WOTS+ chain steps at and above the ones the layer's message selects: that message is the drawn
-  label of the honest message's node at the layer's position: the FORS public key at layer `0`
-  (`cell_eq_of_mem_support_forsPkFromSigWith`) and, above it, the root recovered at the layer
-  below (`cell_eq_of_mem_support_xmssPkFromSigWith`). Every cell it draws is therefore visible
-  for the signed digests with `d` added (`hiddenKept_of_mem_support_labSignFromPosition`).
+  WOTS+ chain steps at and above the ones the layer's message selects. That message is the drawn
+  label of the honest message's node at the layer's position. At layer `0` it is the FORS public
+  key (`cell_eq_of_mem_support_forsPkFromSigWith`), and above it the root recovered at the layer
+  below (`cell_eq_of_mem_support_xmssPkFromSigWith`). Every cell signing draws is therefore
+  visible for the signed digests with `d` added (`hiddenKept_of_mem_support_labSignFromPosition`).
 
 ## References
 
@@ -61,12 +61,6 @@ theorem HiddenKept.trans {U : Bytes vp.params.m → Prop}
     (h₁ : HiddenKept core U st st₁) (h₂ : HiddenKept core U st₁ st₂) (hle : st₁ ≤ st₂) :
     HiddenKept core U st st₂ :=
   fun c hc ↦ (h₂ c hc).trans (h₁ c (hiddenCells_anti (fun _ h ↦ h) hle hc))
-
-/-- Every state keeps its own hidden cells. -/
-theorem HiddenKept.refl (U : Bytes vp.params.m → Prop)
-    (st : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y) :
-    HiddenKept core U st st :=
-  fun _ _ ↦ rfl
 
 /-! ## The queries of the forger and of verification -/
 
@@ -119,51 +113,40 @@ theorem hiddenKept_of_readsUnhidden {U : Bytes vp.params.m → Prop} {α : Type}
 /-- After FORS public-key recovery at the lab callbacks, the recovered public key is the drawn
 label of the FORS roots compression. -/
 theorem cell_eq_of_mem_support_forsPkFromSigWith (sig : ForsSigCore vp.params core)
-    (md : List Byte) {adrs : Adrs} (hmem : forsPkAdrs adrs ∈ constructionAddresses vp)
+    (md : List Byte) {adrs : Adrs} {c : DeriveQuery core ⊕ NodeKey core}
+    (hc : childCell core (.inr (forsPkAdrs adrs)) = some c)
     {s : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y ×
       List (DeriveQuery core ⊕ NodeKey core)} {z}
     (hz : z ∈ support ((simulateQ (slhGraph core pkSeed).deferredImpl
       (forsPkFromSigWith core (labF core) (labH core) (labTl core) sig md adrs)).run s)) :
-    z.2.1.2 (.inr ⟨core.adrsToKey (forsPkAdrs adrs), _, hmem, rfl⟩) = some z.1 := by
+    z.2.1.2 c = some z.1 := by
   simp only [forsPkFromSigWith, simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
   obtain ⟨w, -, hz⟩ := hz
-  rw [labTl, labNode_of_mem core hmem] at hz
+  rw [labTl, labNode, hc] at hz
   exact (slhGraph core pkSeed).cell_eq_of_mem_support_simulateQ_deferredImpl_readCell hz
 
 /-- After XMSS root recovery at the lab callbacks from a leaf of the tree at `adrs`, the recovered
 root is the drawn label of the tree's root. -/
 theorem cell_eq_of_mem_support_xmssPkFromSigWith {idx : ℕ} (hidx : idx < 2 ^ vp.params.hp)
     (sig : XmssSig vp.params core) (msg : core.Y) {adrs : Adrs}
-    (hmem : xmssNodeAdrs adrs vp.params.hp 0 ∈ constructionAddresses vp)
+    {c : DeriveQuery core ⊕ NodeKey core}
+    (hc : childCell core (.inr (xmssNodeAdrs adrs vp.params.hp 0)) = some c)
     {s : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y ×
       List (DeriveQuery core ⊕ NodeKey core)} {z}
     (hz : z ∈ support ((simulateQ (slhGraph core pkSeed).deferredImpl
       (xmssPkFromSigWith core (labF core) (labTl core) (labH core) idx sig msg adrs)).run s)) :
-    z.2.1.2 (.inr ⟨core.adrsToKey (xmssNodeAdrs adrs vp.params.hp 0), _, hmem, rfl⟩) =
-      some z.1 := by
+    z.2.1.2 c = some z.1 := by
   simp only [xmssPkFromSigWith, simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
   obtain ⟨w, -, hz⟩ := hz
-  have hlen : sig.auth.toList.length = vp.params.hp := by simp
-  rcases List.eq_nil_or_concat sig.auth.toList with hnil | ⟨l, a, hl⟩
-  · rw [hnil] at hlen
-    exact absurd hlen.symm vp.valid.hp_pos.ne'
-  rw [hl, List.concat_eq_append, PerfectMerkleTree.climbM_concat, simulateQ_bind, StateT.run_bind,
-    mem_support_bind_iff] at hz
-  obtain ⟨w', -, hz⟩ := hz
-  have hl' : l.length + 1 = vp.params.hp := by simpa [hl] using hlen
-  have haddr : xmssNodeAdrs adrs (l.length + 1) (idx / 2 ^ (l.length + 1)) =
-      xmssNodeAdrs adrs vp.params.hp 0 := by
-    rw [hl', Nat.div_eq_of_lt hidx]
-  have key : ∀ {z} (hz : z ∈ support ((simulateQ (slhGraph core pkSeed).deferredImpl
-      (labNode core (xmssNodeAdrs adrs (l.length + 1) (idx / 2 ^ (l.length + 1))))).run w'.2)),
-      z.2.1.2 (.inr ⟨core.adrsToKey (xmssNodeAdrs adrs vp.params.hp 0), _, hmem, rfl⟩) =
-        some z.1 := by
-    intro z hz
-    rw [haddr, labNode_of_mem core hmem] at hz
+  refine PerfectMerkleTree.climbM_pred_of_last (fun oa ↦ ∀ s (z : core.Y × _),
+      z ∈ support ((simulateQ (slhGraph core pkSeed).deferredImpl oa).run s) → z.2.1.2 c = some z.1)
+    (fun _ _ h s z hz ↦ ?_) _ idx _ (by simpa using vp.valid.hp_pos.ne')
+    (fun _ _ s z hz ↦ ?_) _ _ hz
+  · simp only [simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
+    obtain ⟨w, -, hz⟩ := hz
+    exact h _ _ _ hz
+  · rw [Vector.length_toList, Nat.div_eq_of_lt hidx, xmssNodeHashWith, labH, labNode, hc] at hz
     exact (slhGraph core pkSeed).cell_eq_of_mem_support_simulateQ_deferredImpl_readCell hz
-  split_ifs at hz
-  · exact key hz
-  · exact key hz
 
 /-! ## Hypertree signing -/
 
@@ -185,7 +168,7 @@ theorem hiddenKept_of_mem_support_labSignFromPosition (hd : core.KeyDiscipline v
       simp only [labSignFromPosition, simulateQ_pure, StateT.run_pure, support_pure,
         Set.mem_singleton_iff] at hz
       subst hz
-      exact HiddenKept.refl _ _
+      exact fun _ _ ↦ rfl
   | 1, pos, h, msg, s, z, hpos, hmsg, hz => by
       rw [labSignFromPosition, simulateQ_bind, StateT.run_bind, mem_support_bind_iff] at hz
       obtain ⟨w, hw, hz⟩ := hz
@@ -213,12 +196,9 @@ theorem hiddenKept_of_mem_support_labSignFromPosition (hd : core.KeyDiscipline v
       have hle₂ := (slhGraph core pkSeed).le_of_mem_support_simulateQ_deferredImpl _ hw₂
       have hle₃ := (slhGraph core pkSeed).le_of_mem_support_simulateQ_deferredImpl _ hw₃
       have hn : pos.layer.val + 1 < vp.params.d := by omega
-      have hmem := xmssNodeAdrs_mem_constructionAddresses_of_position (i := 0) pos
-        vp.valid.hp_pos le_rfl (by simp)
-      have hroot := cell_eq_of_mem_support_xmssPkFromSigWith pkSeed pos.leaf.isLt _ _ hmem hw₂
-      have hnext : w₂.2.1.2 (msgCell core (pos.next hn)) = some w₂.1 := by
-        rw [msgCell_eq_of_msgAdrs_eq (msgAdrs_next pos hn) hmem]
-        exact hroot
+      have hnext : w₂.2.1.2 (msgCell core (pos.next hn)) = some w₂.1 :=
+        cell_eq_of_mem_support_xmssPkFromSigWith pkSeed pos.leaf.isLt _ _
+          (by rw [← msgAdrs_next pos hn]; exact childCell_msgAdrs _) hw₂
       have h₁ := hiddenKept_of_readsUnhidden pkSeed hw₁
         (readsUnhidden_labXmssSign pkSeed hpos (hle₁.2 hmsg) hd)
       have h₂ := hiddenKept_of_readsUnhidden pkSeed hw₂
@@ -273,13 +253,9 @@ theorem hiddenUndrawn_of_mem_support_labScheme_sign (hd : core.KeyDiscipline vp)
     rw [hpk]
     exact hle₄.1 (hle₃.1 (hle₂.1
       (fst_apply_hmsg_of_mem_support_deferredImpl pkSeed _ _ _ _ hw₁)))
-  have hmemF : forsPkAdrs (splitDigest vp.params w₁.1).forsAdrs ∈ constructionAddresses vp := by
-    simpa using forsRootAdrs_mem_constructionAddresses
-      (BottomPosition.ofDigestParts vp (splitDigest vp.params w₁.1))
   have hinit : w₃.2.1.2 (msgCell core (LayerPosition.initial vp (splitDigest vp.params w₁.1))) =
-      some w₃.1 := by
-    rw [msgCell_eq_of_msgAdrs_eq (msgAdrs_initial _) hmemF]
-    exact cell_eq_of_mem_support_forsPkFromSigWith pkSeed _ _ hmemF hw₃
+      some w₃.1 := cell_eq_of_mem_support_forsPkFromSigWith pkSeed _ _
+        (by rw [← msgAdrs_initial]; exact childCell_msgAdrs _) hw₃
   have huse : UsedPosition U (LayerPosition.initial vp (splitDigest vp.params w₁.1)) :=
     ⟨w₁.1, hdig, LayerPosition.atLayer_zero_eq_initial _ _⟩
   have h₀ := hiddenKept_of_readsUnhidden (U := U) pkSeed hw₀
@@ -325,8 +301,8 @@ theorem hiddenUndrawn_of_mem_support_deferredImpl_labExperiment [SampleableType 
       StateT.run_pure, support_pure, Set.mem_singleton_iff] at hw
     obtain ⟨w', hw', rfl⟩ := hw
     refine ⟨rfl, rfl, fun c hc ↦ ?_⟩
-    exact (hiddenKept_of_readsUnhidden pkSeed hw' (readsUnhidden_labKeygen pkSeed hd) c hc).trans
-      rfl
+    exact (hiddenKept_of_readsUnhidden pkSeed hw' (readsUnhidden_labXmssNode pkSeed hd _ _ _) c
+      hc).trans rfl
   · rintro ((t | _) | _) ht pk sk log s ⟨hsk, hpk, hs⟩ w hw
     · exact ⟨hsk, hpk, hiddenUndrawn_of_mem_support_deferredImpl hd pkSeed hs hw⟩
     · exact ht.elim

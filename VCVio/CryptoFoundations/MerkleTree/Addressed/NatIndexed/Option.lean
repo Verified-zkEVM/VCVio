@@ -23,7 +23,7 @@ The climb lemmas rest on monad-generic equations for `climbM`: `climbM_concat` p
 leaf-level hash.  Because the node addresses of `climbM` are relative to the leaf, splitting a
 climb re-bases the upper part: it climbs from leaf index `idx / 2 ^ k` with the heights of
 `nodeHash` shifted by `k`.  In particular the leaf-first step does **not** continue with the same
-`nodeHash`.
+`nodeHash`.  `climbM_pred_of_last` carries a property of the final hash to the whole climb.
 -/
 
 public section
@@ -83,6 +83,19 @@ theorem climbM_concat (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx : ℕ) (
   · have hodd : 2 * (idx / 2 ^ (auth.length + 1)) + 1 = idx / 2 ^ auth.length := by omega
     simp only [getPutativeRootAddressedM, SkeletonInternalIndex.natAddr, hodd, h, ↓reduceIte]
     rfl
+
+/-- The last step of a climb along a nonempty path is a hash at height `auth.length` and index
+`idx / 2 ^ auth.length`, so the climb satisfies a predicate that every program ending in such a
+hash satisfies. -/
+theorem climbM_pred_of_last (Q : m Y → Prop)
+    (hbind : ∀ (oa : m Y) (ob : Y → m Y), (∀ x, Q (ob x)) → Q (oa >>= ob))
+    (nodeHash : ℕ → ℕ → Y → Y → m Y) (idx : ℕ) (node : Y) {auth : List Y} (hauth : auth ≠ [])
+    (hnode : ∀ l r, Q (nodeHash auth.length (idx / 2 ^ auth.length) l r)) :
+    Q (climbM nodeHash idx node auth) := by
+  obtain ⟨auth, a, rfl⟩ := (List.eq_nil_or_concat auth).resolve_left hauth
+  simp only [List.concat_eq_append, List.length_append, List.length_singleton] at hnode ⊢
+  rw [climbM_concat]
+  exact hbind _ _ fun _ ↦ by split_ifs <;> exact hnode _ _
 
 variable [LawfulMonad m]
 

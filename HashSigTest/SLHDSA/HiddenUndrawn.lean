@@ -86,7 +86,8 @@ theorem fors_cell_undrawn
   refine ⟨_, childCell_inl core (Adrs.isSecretKey_forsSkAdrs _ _), h5 _ ?_⟩
   simpa using mem_hiddenCells_forsSkAdrs (core := core) (st := st₀)
     (BottomPosition.ofDigestParts vp (splitDigest vp.params digest))
-    (forsSigLeafIndex_lt _ _ i.isLt) (not_openedCoord_of_unopenedCoord (o := o) hc (by simpa using hUC))
+    (forsSigLeafIndex_lt _ _ i.isLt)
+    (not_openedCoord_of_unopenedCoord (o := o) hc (by simpa using hUC))
     (childCell_inl core (Adrs.isSecretKey_forsSkAdrs _ _))
 
 /-- The core of the SHAKE bundle at validated parameters `vp`. -/

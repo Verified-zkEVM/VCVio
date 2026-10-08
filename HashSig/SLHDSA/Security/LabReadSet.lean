@@ -22,8 +22,7 @@ signs.
 * **Always visible.** Key generation, the XMSS leaves and nodes, the XMSS authentication paths,
   the FORS leaves and nodes, and FORS public-key recovery read the tops of the WOTS+ chains and
   nodes of other types, never a hidden cell, for every set of digests and every state
-  (`readsUnhidden_labKeygen`, `readsUnhidden_intrinsicAuthPathM_labXmssLeaf`,
-  `readsUnhidden_forsPkFromSigWith`).
+  (`readsUnhidden_labXmssNode`, `readsUnhidden_forsPkFromSigWith`).
 * **WOTS+ at a used position.** At a position some digest uses, whose honest message `m` is drawn,
   WOTS+ signing on `m` reads step `chainStepsCore core m i` of chain `i`, and recovery from a
   signature on `m` reads the steps above it (`readsUnhidden_labXmssSign`,
@@ -81,7 +80,7 @@ theorem readsUnhidden_randomizer (pkSeed : core.PkSeed) {U : Bytes vp.params.m �
   refine AllQueriesSatisfy.simulateQ
     (P := fun t ↦ (slhGraph core pkSeed).ReadsWithin (hiddenCells core U st)ᶜ (.inl t)) ?_ ?_
   · refine allQueriesSatisfy_bind ?_ fun _ ↦
-      (allQueriesSatisfy_query_iff _ _).2 (inl_inr_not_mem_hiddenCells _)
+      (allQueriesSatisfy_query_iff _ _).2 (inl_inr_notMem_hiddenCells _)
     classical
     rw [← isQueryBoundP_zero_iff]
     exact isQueryBoundP_liftM_withDerivations (fun _ h ↦ h trivial) _
@@ -99,7 +98,7 @@ theorem readsUnhidden_readCell_childCell (hd : core.KeyDiscipline vp) {b : Adrs 
       ¬HiddenChild core U st b) :
     ReadsUnhidden core pkSeed U st (readCell (childCell core b)) :=
   (slhGraph core pkSeed).allQueriesSatisfy_readsWithin_readCell fun c hc ↦
-    not_mem_hiddenCells_of_childCell_eq_some hd hc (h c hc).1 (h c hc).2
+    notMem_hiddenCells_of_childCell_eq_some hd hc (h c hc).1 (h c hc).2
 
 /-- The node value at an address that is not hidden reads no hidden cell. -/
 theorem readsUnhidden_labNode (hd : core.KeyDiscipline vp) {a : Adrs}
@@ -121,7 +120,7 @@ theorem readsUnhidden_touchRead (hd : core.KeyDiscipline vp)
       ¬HiddenChild core U st b) :
     ReadsUnhidden core pkSeed U st (touchRead cell s) :=
   (slhGraph core pkSeed).allQueriesSatisfy_readsWithin_touchRead fun c hc ↦
-    not_mem_hiddenCells_of_childCell_eq_some hd (hcell ▸ hc) (h c (hcell ▸ hc)).1
+    notMem_hiddenCells_of_childCell_eq_some hd (hcell ▸ hc) (h c (hcell ▸ hc)).1
       (h c (hcell ▸ hc)).2
 
 /-! ## Components that read no hidden cell at any state -/
@@ -138,16 +137,12 @@ theorem readsUnhidden_labChain_top (hd : core.KeyDiscipline vp) (adrs : Adrs) (i
       ⟨addressFacts_of_childCell_inr_eq_some hd.canonicalAddressBounds hc,
         not_hiddenChild_inr (.inr (by rw [wotsChainAdrs_setHashAddress_eq]))⟩
 
-/-- The lab WOTS+ chain tops read no hidden cell. -/
-theorem readsUnhidden_labWotsPkGenTops (hd : core.KeyDiscipline vp) (adrs : Adrs) :
-    ReadsUnhidden core pkSeed U st (labWotsPkGenTops core adrs) :=
-  allQueriesSatisfy_ofFnM _ fun _ ↦ readsUnhidden_labChain_top pkSeed hd _ _
-
 /-- A lab XMSS leaf reads no hidden cell. -/
 theorem readsUnhidden_labXmssLeaf (hd : core.KeyDiscipline vp) (adrs : Adrs) (t : ℕ) :
     ReadsUnhidden core pkSeed U st (labXmssLeaf core adrs t) :=
-  allQueriesSatisfy_bind (readsUnhidden_labWotsPkGenTops pkSeed hd _) fun _ ↦
-    readsUnhidden_labNode_of_type_ne_zero pkSeed hd (by simp [wotsPkAdrs_eq])
+  allQueriesSatisfy_bind (allQueriesSatisfy_ofFnM _ fun _ ↦
+    readsUnhidden_labChain_top pkSeed hd _ _) fun _ ↦
+      readsUnhidden_labNode_of_type_ne_zero pkSeed hd (by simp [wotsPkAdrs_eq])
 
 /-- An XMSS node hash at the lab callbacks reads no hidden cell. -/
 theorem readsUnhidden_xmssNodeHashWith (hd : core.KeyDiscipline vp) (adrs : Adrs) (z t : ℕ)
@@ -168,38 +163,6 @@ theorem readsUnhidden_labXmssNode (hd : core.KeyDiscipline vp) (adrs : Adrs) (z 
     (fun _ _ ↦ allQueriesSatisfy_bind) _ _ z t
     (fun _ _ ↦ readsUnhidden_labXmssLeaf pkSeed hd _ _)
     fun _ _ _ _ _ _ _ ↦ readsUnhidden_xmssNodeHashWith pkSeed hd _ _ _ _ _
-
-/-- Lab key generation reads no hidden cell. -/
-theorem readsUnhidden_labKeygen (hd : core.KeyDiscipline vp) :
-    ReadsUnhidden core pkSeed U st (labKeygen core) :=
-  readsUnhidden_labXmssNode pkSeed hd _ _ _
-
-/-- An XMSS authentication path through the lab tree reads no hidden cell. -/
-theorem readsUnhidden_intrinsicAuthPathM_labXmssLeaf (hd : core.KeyDiscipline vp) (adrs : Adrs)
-    (idx z : ℕ) :
-    ReadsUnhidden core pkSeed U st (PerfectMerkleTree.intrinsicAuthPathM (labXmssLeaf core adrs)
-      (xmssNodeHashWith (labH core) adrs) idx z) :=
-  PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree (ReadsUnhidden core pkSeed U st)
-    (fun _ ↦ allQueriesSatisfy_pure _ _) (fun _ _ ↦ allQueriesSatisfy_bind) _ _ idx z
-    (fun _ _ ↦ readsUnhidden_labXmssLeaf pkSeed hd _ _)
-    fun _ _ _ _ _ _ _ ↦ readsUnhidden_xmssNodeHashWith pkSeed hd _ _ _ _ _
-
-/-- A lab FORS leaf reads no hidden cell. -/
-theorem readsUnhidden_labForsLeaf (hd : core.KeyDiscipline vp) (adrs : Adrs) (t : ℕ) :
-    ReadsUnhidden core pkSeed U st (labForsLeaf core adrs t) :=
-  readsUnhidden_touchRead pkSeed hd (b := .inr (forsNodeAdrs adrs 0 t)) rfl fun _ hc ↦
-    ⟨addressFacts_of_childCell_inr_eq_some hd.canonicalAddressBounds hc,
-      not_hiddenChild_inr (.inl (by simp [forsNodeAdrs_eq]))⟩
-
-/-- A FORS authentication path through the lab tree reads no hidden cell. -/
-theorem readsUnhidden_intrinsicAuthPathM_labForsLeaf (hd : core.KeyDiscipline vp) (adrs : Adrs)
-    (idx z : ℕ) :
-    ReadsUnhidden core pkSeed U st (PerfectMerkleTree.intrinsicAuthPathM (labForsLeaf core adrs)
-      (forsNodeHashWith (labH core) adrs) idx z) :=
-  PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree (ReadsUnhidden core pkSeed U st)
-    (fun _ ↦ allQueriesSatisfy_pure _ _) (fun _ _ ↦ allQueriesSatisfy_bind) _ _ idx z
-    (fun _ _ ↦ readsUnhidden_labForsLeaf pkSeed hd _ _)
-    fun _ _ _ _ _ _ _ ↦ readsUnhidden_forsNodeHashWith pkSeed hd _ _ _ _ _
 
 /-- FORS public-key recovery at the lab callbacks reads no hidden cell. -/
 theorem readsUnhidden_forsPkFromSigWith (hd : core.KeyDiscipline vp)
@@ -236,7 +199,10 @@ include hpos hmsg in
 at that position reads no hidden cell. -/
 theorem readsUnhidden_labXmssSign (hd : core.KeyDiscipline vp) :
     ReadsUnhidden core pkSeed U st (labXmssSign core msg pos.toAdrs pos.leaf.val) :=
-  allQueriesSatisfy_bind (readsUnhidden_intrinsicAuthPathM_labXmssLeaf pkSeed hd _ _ _) fun _ ↦
+  allQueriesSatisfy_bind (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree
+    (ReadsUnhidden core pkSeed U st) (fun _ ↦ allQueriesSatisfy_pure _ _)
+    (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ _ (fun _ _ ↦ readsUnhidden_labXmssLeaf pkSeed hd _ _)
+    fun _ _ _ _ _ _ _ ↦ readsUnhidden_xmssNodeHashWith pkSeed hd _ _ _ _ _) fun _ ↦
     allQueriesSatisfy_bind (readsUnhidden_labWotsSign pkSeed hpos hmsg hd) fun _ ↦
       allQueriesSatisfy_pure _ _
 
@@ -272,11 +238,6 @@ end Used
 
 /-! ## FORS signing on a digest of the set -/
 
-/-- The lab secret at a secret-key address reads the cell of that address. -/
-theorem labSecret_eq_readCell_childCell {a : Adrs} (h : a.IsSecretKey) :
-    labSecret core a = readCell (childCell core (.inl a)) := by
-  rw [labSecret_of_isSecretKey core h, childCell_inl core h]
-
 /-- FORS signing in the lab on a digest of `U` reads no hidden cell: it reads the secrets that
 digest opens. -/
 theorem readsUnhidden_labForsSign (hd : core.KeyDiscipline vp) {d : Bytes vp.params.m}
@@ -284,9 +245,17 @@ theorem readsUnhidden_labForsSign (hd : core.KeyDiscipline vp) {d : Bytes vp.par
     ReadsUnhidden core pkSeed U st (labForsSign core (splitDigest vp.params d).md.toList
       (splitDigest vp.params d).forsAdrs) := by
   refine allQueriesSatisfy_ofFnM _ fun i ↦ allQueriesSatisfy_bind
-    (readsUnhidden_intrinsicAuthPathM_labForsLeaf pkSeed hd _ _ _) fun _ ↦
+    (PerfectMerkleTree.intrinsicAuthPathM_pred_of_tree (ReadsUnhidden core pkSeed U st)
+      (fun _ ↦ allQueriesSatisfy_pure _ _) (fun _ _ ↦ allQueriesSatisfy_bind) _ _ _ _
+      (fun _ _ ↦ readsUnhidden_touchRead pkSeed hd (b := .inr (forsNodeAdrs _ 0 _)) rfl fun _ hc ↦
+        ⟨addressFacts_of_childCell_inr_eq_some hd.canonicalAddressBounds hc,
+          not_hiddenChild_inr (.inl (by simp [forsNodeAdrs_eq]))⟩)
+      fun _ _ _ _ _ _ _ ↦ readsUnhidden_forsNodeHashWith pkSeed hd _ _ _ _ _) fun _ ↦
       allQueriesSatisfy_bind ?_ fun _ ↦ allQueriesSatisfy_pure _ _
-  rw [labSecret_eq_readCell_childCell (Adrs.isSecretKey_forsSkAdrs _ _), ← forsSigLeafIndex_eq]
+  have h := Adrs.isSecretKey_forsSkAdrs (splitDigest vp.params d).forsAdrs
+    (forsSigLeafIndex vp.params (splitDigest vp.params d).md.toList i.val)
+  rw [forsSigLeafIndex_eq] at h
+  rw [labSecret_of_isSecretKey core h, ← childCell_inl core h, ← forsSigLeafIndex_eq]
   exact readsUnhidden_readCell_childCell pkSeed hd fun _ _ ↦
     ⟨by simpa using (addressFacts_forsSkAdrs hd.canonicalAddressBounds
         (BottomPosition.ofDigestParts vp (splitDigest vp.params d))
