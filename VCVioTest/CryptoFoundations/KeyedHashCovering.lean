@@ -37,8 +37,9 @@ and the `Nat.descFactorial` variant of its statement is refuted.
 The two-family count `card_filter_card_image_card_toRight_eq` is checked against a brute-force
 count, and its hypothesis `r₁ ≤ r` is shown necessary.  `weightedTargetCoverBound` is evaluated at
 `h = a = 1`, `k = 2`, `qs = qw = 1`, where it equals `2 ^ (-2) * E[(X + Y) ^ 2]` for independent
-`X ~ Bernoulli(1/2)` and `Y ~ Bernoulli(w/2)`, and the witness sum of
-`sum_pow_card_image_eq_weightedTargetCoverBound` takes the same value there.
+`X ~ Bernoulli(1/2)` and `Y ~ Bernoulli(w/2)`, and the witness sum
+of `sum_pow_card_image_eq_weightedTargetCoverBound`, evaluated term by term, takes the same value
+there.  The two-family count is also checked at `qw = 0`, `qs = 0`, `n = r = 0` and `r₁ = 0`.
 -/
 
 public section
@@ -243,13 +244,59 @@ theorem weightedTargetCoverBound_1_1_2_1_1 (w : ℝ≥0∞) :
   calc _ = ((2 : ℝ≥0∞)⁻¹) ^ 3 + w * 2⁻¹ ^ 3 + w * 2⁻¹ ^ 3 * (2 * 2⁻¹) := by ring
     _ = _ := by rw [hx]; ring
 
-/-- The weighted witness sum over the four assignments `Fin 2 → Fin 1 ⊕ Fin 1` takes the same
-value. -/
+/-- **The witness sum evaluated directly.**  Summing the per-witness cost over the four
+assignments `Fin 2 → Fin 1 ⊕ Fin 1` by hand gives the value of
+`weightedTargetCoverBound_1_1_2_1_1`: the two constant assignments cost `2 ^ (-3)` and
+`2 ^ (-3) * w`, and the two others `2 ^ (-4) * w` each. -/
 theorem sum_witness_1_1_2_1_1 (w : ℝ≥0∞) :
     ∑ f : Fin 2 → Fin 1 ⊕ Fin 1,
         (((2 : ℝ≥0∞) ^ 1)⁻¹) ^ (Finset.univ.image f).card * (((2 : ℝ≥0∞) ^ 1)⁻¹) ^ 2 *
           w ^ (Finset.univ.filter fun p : Fin 1 => ∃ i, f i = .inr p).card =
       ((2 : ℝ≥0∞)⁻¹) ^ 3 * (1 + 2 * w) := by
-  rw [sum_pow_card_image_eq_weightedTargetCoverBound, weightedTargetCoverBound_1_1_2_1_1]
+  have himg : ∀ x : (Fin 1 ⊕ Fin 1) × (Fin 1 ⊕ Fin 1),
+      (Finset.univ.image ((piFinTwoEquiv fun _ => Fin 1 ⊕ Fin 1).symm x)).card =
+        if x.1 = x.2 then 1 else 2 := by decide
+  have hinr : ∀ x : (Fin 1 ⊕ Fin 1) × (Fin 1 ⊕ Fin 1),
+      (Finset.univ.filter fun p : Fin 1 =>
+          ∃ i, (piFinTwoEquiv fun _ => Fin 1 ⊕ Fin 1).symm x i = .inr p).card =
+        if x.1 = .inr 0 ∨ x.2 = .inr 0 then 1 else 0 := by decide
+  have hx : (2 : ℝ≥0∞) * 2⁻¹ = 1 := ENNReal.mul_inv_cancel two_ne_zero ENNReal.ofNat_ne_top
+  rw [← Equiv.sum_comp (piFinTwoEquiv fun _ => Fin 1 ⊕ Fin 1).symm, Fintype.sum_prod_type]
+  simp only [Fintype.sum_sum_type, Fin.sum_univ_one, himg, hinr]
+  norm_num
+  calc _ = ((2 : ℝ≥0∞)⁻¹) ^ 3 + w * 2⁻¹ ^ 3 + w * 2⁻¹ ^ 3 * (2 * 2⁻¹) := by ring
+    _ = _ := by rw [hx]; ring
+
+/-- The two-family count with no weighted positions (`qw = 0`). -/
+theorem card_filter_card_image_card_toRight_eq_qw_zero :
+    (Finset.univ.filter fun f : Fin 2 → Fin 2 ⊕ Fin 0 =>
+        (Finset.univ.image f).card = 2 ∧ (Finset.univ.image f).toRight.card = 0).card =
+      (2 : ℕ).choose (2 - 0) * (0 : ℕ).choose 0 *
+        (Finset.univ.filter fun s : Fin 2 → Fin 2 => Function.Surjective s).card := by
+  decide
+
+/-- The two-family count with no weight-one positions (`qs = 0`). -/
+theorem card_filter_card_image_card_toRight_eq_qs_zero :
+    (Finset.univ.filter fun f : Fin 2 → Fin 0 ⊕ Fin 2 =>
+        (Finset.univ.image f).card = 2 ∧ (Finset.univ.image f).toRight.card = 2).card =
+      (0 : ℕ).choose (2 - 2) * (2 : ℕ).choose 2 *
+        (Finset.univ.filter fun s : Fin 2 → Fin 2 => Function.Surjective s).card := by
+  decide
+
+/-- The two-family count at `n = r = 0`: the empty assignment alone. -/
+theorem card_filter_card_image_card_toRight_eq_n_zero :
+    (Finset.univ.filter fun f : Fin 0 → Fin 2 ⊕ Fin 1 =>
+        (Finset.univ.image f).card = 0 ∧ (Finset.univ.image f).toRight.card = 0).card =
+      (2 : ℕ).choose (0 - 0) * (1 : ℕ).choose 0 *
+        (Finset.univ.filter fun s : Fin 0 → Fin 0 => Function.Surjective s).card := by
+  decide
+
+/-- The two-family count at `r₁ = 0`: the assignments into the weight-one positions only. -/
+theorem card_filter_card_image_card_toRight_eq_r₁_zero :
+    (Finset.univ.filter fun f : Fin 2 → Fin 2 ⊕ Fin 2 =>
+        (Finset.univ.image f).card = 1 ∧ (Finset.univ.image f).toRight.card = 0).card =
+      (2 : ℕ).choose (1 - 0) * (2 : ℕ).choose 0 *
+        (Finset.univ.filter fun s : Fin 2 → Fin 1 => Function.Surjective s).card := by
+  decide
 
 end CoveringTest
