@@ -62,6 +62,9 @@ drawn only by touches hidden from the public queries until they are drawn by a r
   deferred game caches a public point only on a public query at it, so under a budget charging
   every public query at a point of `D`, a run adds at most the budget's number of points of `D` to
   the public cache.
+- `CanonicalGraph.le_of_mem_support_deferredImpl` and
+  `CanonicalGraph.le_of_mem_support_simulateQ_deferredImpl`: a step, and a run, of the deferred
+  game extends the relabelled state.
 -/
 
 public section
@@ -405,6 +408,30 @@ theorem encard_inter_setOf_isSome_le_add_of_mem_support_simulateQ_deferredImpl {
     (D ∩ {t | (z.2.1.1 t).isSome}).encard ≤ (D ∩ {t | (s.1.1 t).isSome}).encard + q :=
   G.deferredImpl_cachesOnlyQueryPoint.encard_inter_le_add_of_mem_support_simulateQ
     (by rintro (((n | t) | x) | c) k ht hk <;> cases ht; exact hp _ hk) h hz
+
+/-! ## The deferred game extends the state -/
+
+/-- Every step of the deferred game extends the relabelled state. -/
+theorem le_of_mem_support_deferredImpl {t : (pub.withLabels X K R).Domain}
+    {s : RelabelState pub X K R × List (X ⊕ K)} {z}
+    (hz : z ∈ support ((G.deferredImpl t).run s)) : s.1 ≤ z.2.1 := by
+  rcases t with t | c | k
+  · rw [deferredImpl_run_inl, support_map] at hz
+    obtain ⟨w, hw, rfl⟩ := hz
+    exact G.le_of_mem_support_relabelImpl hw
+  · rw [deferredImpl_run_touch, support_pure, Set.mem_singleton_iff] at hz
+    exact hz ▸ le_rfl
+  · rw [deferredImpl_run_read, support_map] at hz
+    obtain ⟨w, hw, rfl⟩ := hz
+    exact (RelabelState.le_and_cell_eq_of_mem_support_drawCell hw).1
+
+/-- A run of the deferred game extends the relabelled state. -/
+theorem le_of_mem_support_simulateQ_deferredImpl {α : Type}
+    (oa : OracleComp (pub.withLabels X K R) α) {s : RelabelState pub X K R × List (X ⊕ K)}
+    {z : α × (RelabelState pub X K R × List (X ⊕ K))}
+    (hz : z ∈ support ((simulateQ G.deferredImpl oa).run s)) : s.1 ≤ z.2.1 :=
+  simulateQ_run_preservesInv _ (fun s' ↦ s.1 ≤ s'.1)
+    (fun _ _ h _ hz ↦ h.trans (G.le_of_mem_support_deferredImpl hz)) oa s le_rfl z hz
 
 /-! ## The masked game is dominated by the eager game until a conflict -/
 

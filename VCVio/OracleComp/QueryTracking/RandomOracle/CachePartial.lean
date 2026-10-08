@@ -23,6 +23,11 @@ value of every total answer function agreeing with the cache
 (`QueryCache.evalWithAnswerFn_eq_of_agreesWithFn`).  The cache of a run that also answers
 uniform queries through `unifFwdImpl` only grows
 (`OracleComp.le_snd_of_mem_support_run_unifFwdImpl_add_withCaching`).
+
+The same replay holds for a run of any stateful handler, read on any cache from a family of
+caches admissible at each state, when admissibility is closed backwards along each step and
+every cache admissible after a step answers that step's query with its output
+(`OracleComp.simulateQ_toPartialImpl_of_mem_support_run_simulateQ`).
 -/
 
 public section
@@ -109,6 +114,28 @@ theorem simulateQ_toPartialImpl_snd_of_mem_support_run_simulateQ_withCaching (so
 end QueryImpl
 
 namespace OracleComp
+
+/-- A run of a stateful handler `so` replays on every cache of a family `A` admissible at its
+final state, when admissibility is closed backwards along each step and every cache admissible
+after a step answers that step's query with its output. -/
+theorem simulateQ_toPartialImpl_of_mem_support_run_simulateQ {ι σ : Type} {spec : OracleSpec ι}
+    (so : QueryImpl spec (StateT σ ProbComp)) (A : σ → Set spec.QueryCache)
+    (hstep : ∀ t s z, z ∈ support ((so t).run s) → ∀ c ∈ A z.2, c ∈ A s ∧ c t = some z.1)
+    {α : Type} (oa : OracleComp spec α) {s : σ} {z : α × σ}
+    (hz : z ∈ support ((simulateQ so oa).run s)) {c : spec.QueryCache} (hc : c ∈ A z.2) :
+    simulateQ c.toPartialImpl oa = some z.1 := by
+  induction oa using OracleComp.inductionOn generalizing s with
+  | pure x =>
+    rw [simulateQ_pure, StateT.run_pure, support_pure, Set.mem_singleton_iff] at hz
+    exact hz ▸ rfl
+  | query_bind t k ih =>
+    rw [simulateQ_bind, simulateQ_spec_query, StateT.run_bind, mem_support_bind_iff] at hz
+    obtain ⟨z₁, h₁, h₂⟩ := hz
+    have hA : A z.2 ⊆ A z₁.2 := simulateQ_run_preservesInv so (A · ⊆ A z₁.2)
+      (fun _ _ h _ hz c hc ↦ h (hstep _ _ _ hz c hc).1) (k z₁.1) z₁.2 subset_rfl z h₂
+    rw [simulateQ_bind, simulateQ_spec_query, QueryCache.toPartialImpl_apply,
+      (hstep t s z₁ h₁ c (hA hc)).2]
+    exact ih z₁.1 h₂
 
 variable {ι : Type} [DecidableEq ι] {spec : OracleSpec ι} {α : Type}
 

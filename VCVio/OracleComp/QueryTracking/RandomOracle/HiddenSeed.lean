@@ -222,6 +222,17 @@ theorem merge_apply_of_not_exists (s : S) (st : SplitCache pub X R) {t : ι}
     (ht : ¬∃ x, E.enc s x = t) : (E.merge s st) t = st.1 t := by
   simp only [merge, QueryCache.ofFn_apply, ht, ↓reduceDIte]
 
+/-- A public cache that holds no point encoded under `s` is below the real cache rebuilt from it
+and any derivation table. -/
+theorem le_merge_of_not_exists_isSome {s : S} {C : pub.QueryCache} (D : (X →ₒ R).QueryCache)
+    (h : ¬∃ x, (C (E.enc s x)).isSome) : C ≤ E.merge s (C, D) := by
+  intro t u ht
+  by_cases hx : ∃ x, E.enc s x = t
+  · obtain ⟨x, rfl⟩ := hx
+    exact absurd ⟨x, by rw [ht]; rfl⟩ h
+  · rw [E.merge_apply_of_not_exists s _ hx]
+    exact ht
+
 /-- Merging two empty caches gives the empty cache. -/
 @[simp] theorem merge_empty (s : S) : E.merge s ((∅, ∅) : SplitCache pub X R) = ∅ := by
   refine QueryCache.ext fun t ↦ ?_

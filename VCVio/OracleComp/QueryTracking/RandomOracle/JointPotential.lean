@@ -404,17 +404,7 @@ potential. -/
 theorem isPotentialStep_deferredImpl :
     IsPotentialStep G.deferredImpl (fun s ↦ G.Conflict s.1 ∨ nk.TCHazard s.1)
       (fun s ↦ nk.potential s.1) where
-  mono := by
-    rintro (t | (c | k)) ⟨st, cs⟩ z hz
-    · rw [G.deferredImpl_run_inl, support_map] at hz
-      obtain ⟨w, hw, rfl⟩ := hz
-      exact potential_mono (G.le_of_mem_support_relabelImpl hw)
-    · rw [G.deferredImpl_run_touch, support_pure, Set.mem_singleton_iff] at hz
-      subst hz
-      exact le_rfl
-    · rw [G.deferredImpl_run_read, support_map] at hz
-      obtain ⟨w, hw, rfl⟩ := hz
-      exact potential_mono (RelabelState.le_and_cell_eq_of_mem_support_drawCell hw).1
+  mono _ _ _ hz := potential_mono (G.le_of_mem_support_deferredImpl hz)
   step := by
     rintro (((n | t) | x) | (c | k)) ⟨st, cs⟩ hst
     · refine Or.inr ⟨(unifSpec.query n : ProbComp _), fun _ ↦ (st, cs), 0, ?_,

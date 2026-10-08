@@ -319,7 +319,8 @@ theorem labelsComplete_empty : G.LabelsComplete ((∅, ∅) : RelabelState pub X
 
 /-- Off a conflict, a state extending `st` merges to the same value as `st` at a point `t`
 where the public cache is unchanged and no node at `t` with drawn children has a new label, when
-every label drawn in `st` belongs to a node with drawn children. -/
+every label drawn in `st` belongs to a node with drawn children. For the one-sided order of the
+merged caches, with no condition on the labels, see `CanonicalGraph.merge_le_merge`. -/
 theorem merge_apply_eq_of_le {st st' : RelabelState pub X K R} (hle : st ≤ st')
     (hinv : G.LabelsComplete st) (hc : ¬G.Conflict st') {t : ι} (hcache : st'.1 t = st.1 t)
     (hlab : ∀ k vs, G.childVals st' k = some vs → G.pt k vs = t →
@@ -350,6 +351,25 @@ theorem merge_apply_eq_of_le {st st' : RelabelState pub X K R} (hle : st ≤ st'
   · have ht : ¬∃ k vs, G.childVals st k = some vs ∧ G.pt k vs = t := fun ⟨k, vs, hk, hpt⟩ ↦
       ht' ⟨k, vs, G.childVals_mono hle hk, hpt⟩
     rw [G.merge_apply_of_not_exists ht', G.merge_apply_of_not_exists ht, hcache]
+
+/-- Off a conflict of `st`, the merged cache of a state `st₀ ≤ st` is below the merged cache of
+`st`. Unlike `CanonicalGraph.merge_apply_eq_of_le`, which also rules out new entries at a point,
+this needs no condition on the labels drawn in `st₀`. -/
+theorem merge_le_merge {st₀ st : RelabelState pub X K R} (hle : st₀ ≤ st)
+    (hc : ¬G.Conflict st) : G.merge st₀ ≤ G.merge st := by
+  intro t v h₀
+  by_cases ht₀ : ∃ k vs, G.childVals st₀ k = some vs ∧ G.pt k vs = t
+  · obtain ⟨k, vs, hk, rfl⟩ := ht₀
+    rw [G.merge_apply_pt hk] at h₀
+    rw [G.merge_apply_pt (G.childVals_mono hle hk)]
+    obtain ⟨ℓ, hℓ, rfl⟩ := Option.map_eq_some_iff.1 h₀
+    rw [hle.2 hℓ]
+    rfl
+  · rw [G.merge_apply_of_not_exists ht₀] at h₀
+    by_cases ht : ∃ k vs, G.childVals st k = some vs ∧ G.pt k vs = t
+    · obtain ⟨k, vs, hk, rfl⟩ := ht
+      exact absurd ⟨k, vs, hk, by rw [hle.1 h₀]; rfl⟩ hc
+    · rw [G.merge_apply_of_not_exists ht, hle.1 h₀]
 
 /-! ## Node keys -/
 
