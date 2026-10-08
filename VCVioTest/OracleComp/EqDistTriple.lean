@@ -204,9 +204,11 @@ end VCVioTest.EqDistTripleCompose
 A perfect tree over a canonical graph: leaf `i` is the derivation `sec i`, and internal node
 `(h + 1, i)` is the graph node `key (h + 1) i`, whose children are the cells of `(h, 2 * i)` and
 `(h, 2 * i + 1)`. The honest tree answers each internal node by a public query at the node's
-point; the labelled tree reads the node's label. Along the order of relabelling states, with the
-relation "the value is the drawn cell", the honest tree under the relabelled handler and the
-labelled tree under the eager handler have equal measures from every state.
+point; the labelled tree reads the node's label. Both run under the eager handler, the honest
+callbacks lifted to the label operations. Along the order of relabelling states, with the
+relation "the value is the drawn cell", the step triples (`QueryImpl.EqDistTriple`) combine by
+`QueryImpl.EqDistTriple.merkleRootM` into a triple of the trees, so the two trees have equal
+measures from every state.
 -/
 
 namespace VCVioTest.EqDistTripleRelabel
@@ -247,12 +249,11 @@ omit [DecidableEq ι] [DecidableEq X] [DecidableEq K] [SampleableType R]
 theorem Rel_mono (h i : ℕ) (y : R) (st st' : RelabelState pub X K R) (hle : st ≤ st')
     (hy : Rel cell h i y st) : Rel cell h i y st' := hle.2 hy
 
-/-- From drawn children, the honest node step is the label read. -/
+/-- From drawn children, the lifted honest node step is the label read. -/
 theorem node_triple (hS : TreeShape G sec key cell q) (h i : ℕ) (l r : R) :
-    EqDistTriple (· ≤ ·)
+    G.eagerImpl.EqDistTriple (· ≤ ·)
       (fun st ↦ True ∧ Rel cell h (2 * i) l st ∧ Rel cell h (2 * i + 1) r st)
-      (simulateQ G.relabelImpl (honestNode q hq (h + 1) i l r))
-      (simulateQ G.eagerImpl (labNode key (h + 1) i l r))
+      (liftComp (honestNode (X := X) q hq (h + 1) i l r) _) (labNode key (h + 1) i l r)
       fun y st ↦ True ∧ Rel cell (h + 1) i y st := by
   rintro st ⟨-, hl, hr⟩
   have hch : G.childVals st (key (h + 1) i) = some [l, r] :=
@@ -261,9 +262,10 @@ theorem node_triple (hS : TreeShape G sec key cell q) (h i : ℕ) (l r : R) :
       (RelabelState.drawCell (.inr (key (h + 1) i))).run st := by
     simp only [labNode, simulateQ_HasQuery_query, CanonicalGraph.eagerImpl_apply_inr]
     rfl
-  have hhon : (simulateQ G.relabelImpl (honestNode q hq (h + 1) i l r)).run st =
+  have hhon : (simulateQ G.eagerImpl (liftComp (honestNode (X := X) q hq (h + 1) i l r) _)).run st =
       (RelabelState.drawCell (.inr (key (h + 1) i))).run st := by
-    rw [honestNode, simulateQ_map, simulateQ_HasQuery_query, StateT.run_map]
+    rw [CanonicalGraph.simulateQ_eagerImpl_liftComp, honestNode, simulateQ_map,
+      simulateQ_HasQuery_query, StateT.run_map]
     generalize hq (h + 1) i l r = e
     revert e
     rw [hS.q_eq h i l r]
@@ -278,33 +280,55 @@ theorem node_triple (hS : TreeShape G sec key cell q) (h i : ℕ) (l r : R) :
   obtain ⟨hle, hc⟩ := RelabelState.le_and_cell_eq_of_mem_support_drawCell hz
   exact ⟨hle, trivial, by rw [Rel, hS.cell_succ]; exact hc⟩
 
-/-- The derivation leaf under both handlers. -/
+/-- The lifted derivation leaf draws its cell. -/
 theorem leaf_triple (hS : TreeShape G sec key cell q) (i : ℕ) :
-    EqDistTriple (· ≤ ·) (fun _ ↦ True)
-      (simulateQ G.relabelImpl (honestLeaf (pub := pub) (R := R) sec i))
-      (simulateQ G.eagerImpl
-        (liftComp (honestLeaf (pub := pub) (R := R) sec i) (pub.withLabels X K R)))
+    G.eagerImpl.EqDistTriple (· ≤ ·) (fun _ ↦ True)
+      (liftComp (honestLeaf (pub := pub) (R := R) sec i) _)
+      (liftComp (honestLeaf (pub := pub) (R := R) sec i) _)
       fun y st ↦ True ∧ Rel cell 0 i y st := by
-  rw [CanonicalGraph.simulateQ_eagerImpl_liftComp]
   refine .of_support fun st _ z hz ↦ ?_
-  simp only [honestLeaf, simulateQ_HasQuery_query, CanonicalGraph.relabelImpl_apply_inr] at hz
+  simp only [CanonicalGraph.simulateQ_eagerImpl_liftComp, honestLeaf, simulateQ_HasQuery_query,
+    CanonicalGraph.relabelImpl_apply_inr] at hz
   obtain ⟨hle, hc⟩ := RelabelState.le_and_cell_eq_of_mem_support_drawCell hz
   exact ⟨hle, trivial, by rw [Rel, hS.cell_zero]; exact hc⟩
+
+/-- The honest tree over the lifted callbacks and the labelled tree are related under the eager
+handler, and the right-hand root is the drawn cell of `(z, t)`. -/
+theorem tree_triple (hS : TreeShape G sec key cell q) (z t : ℕ) :
+    G.eagerImpl.EqDistTriple (· ≤ ·) (fun _ ↦ True)
+      (merkleRootM (fun i ↦ liftComp (honestLeaf (pub := pub) (R := R) sec i) _)
+        (fun h i l r ↦ liftComp (honestNode (X := X) q hq h i l r) _) z t)
+      (merkleRootM (fun i ↦ liftComp (honestLeaf (pub := pub) (R := R) sec i) _) (labNode key)
+        z t)
+      fun y st ↦ True ∧ Rel cell z t y st :=
+  .merkleRootM (fun _ ↦ True) (Rel cell) (Rel_mono cell) z t
+    (fun i _ ↦ leaf_triple G sec key cell q hS i)
+    fun h i _ _ l r ↦ node_triple G sec key cell q hq hS h i l r
 
 /-- The honest root and the labelled root have equal measures under the eager handler. -/
 example (hS : TreeShape G sec key cell q) (z t : ℕ) (st : RelabelState pub X K R)
     [MeasurableSpace (R × RelabelState pub X K R)] :
-    𝒟[(simulateQ G.eagerImpl (liftComp (merkleRootM (honestLeaf (pub := pub) (R := R) sec)
-        (honestNode q hq) z t) (pub.withLabels X K R))).run st] =
-      𝒟[(simulateQ G.eagerImpl (merkleRootM
-        (fun i ↦ liftComp (honestLeaf (pub := pub) (R := R) sec i) _) (labNode key) z t)).run
-          st] := by
-  rw [CanonicalGraph.simulateQ_eagerImpl_liftComp, ← simulateQ'_apply G.relabelImpl,
-    merkleRootM_natural (simulateQ' G.relabelImpl) _ _ _ _ (fun _ ↦ rfl) (fun _ _ _ _ ↦ rfl),
-    ← simulateQ'_apply G.eagerImpl,
-    merkleRootM_natural (simulateQ' G.eagerImpl) _ _ _ _ (fun _ ↦ rfl) (fun _ _ _ _ ↦ rfl)]
-  exact (merkleRootM_eqDistTriple (r := (· ≤ ·)) (fun _ ↦ True) (Rel cell) (Rel_mono cell) z t
-    (fun i _ ↦ leaf_triple G sec key cell q hS i)
-    fun h i _ _ l r ↦ node_triple G sec key cell q hq hS h i l r).evalDist_run_eq trivial
+    𝒟[(simulateQ G.eagerImpl
+        (merkleRootM (fun i ↦ liftComp (honestLeaf (pub := pub) (R := R) sec i) _)
+          (fun h i l r ↦ liftComp (honestNode (X := X) q hq h i l r) _) z t)).run st] =
+      𝒟[(simulateQ G.eagerImpl
+        (merkleRootM (fun i ↦ liftComp (honestLeaf (pub := pub) (R := R) sec i) _) (labNode key)
+          z t)).run st] :=
+  (tree_triple G sec key cell q hq hS z t).evalDist_run_eq trivial
+
+/-- After any program over the labels, the honest and labelled roots still have equal measures:
+the eager handler only grows the state, so the program is related to itself
+(`QueryImpl.EqDistTriple.refl_of_step`), and `bind` sequences it with the trees. -/
+example (hS : TreeShape G sec key cell q) {α : Type} (oa : OracleComp (pub.withLabels X K R) α)
+    (z t : ℕ) (st : RelabelState pub X K R) [MeasurableSpace (R × RelabelState pub X K R)] :
+    𝒟[(simulateQ G.eagerImpl (oa >>= fun _ ↦
+        merkleRootM (fun i ↦ liftComp (honestLeaf (pub := pub) (R := R) sec i) _)
+          (fun h i l r ↦ liftComp (honestNode (X := X) q hq h i l r) _) z t)).run st] =
+      𝒟[(simulateQ G.eagerImpl (oa >>= fun _ ↦
+        merkleRootM (fun i ↦ liftComp (honestLeaf (pub := pub) (R := R) sec i) _) (labNode key)
+          z t)).run st] :=
+  ((QueryImpl.EqDistTriple.refl_of_step (P := fun _ ↦ True)
+    (fun _ _ _ ↦ G.le_of_mem_support_eagerImpl) oa).bind
+    fun _ ↦ tree_triple G sec key cell q hq hS z t).evalDist_run_eq trivial
 
 end VCVioTest.EqDistTripleRelabel
