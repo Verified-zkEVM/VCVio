@@ -15,7 +15,8 @@ public import VCVio.CryptoFoundations.SignatureAlg.TranscriptCongr
 The transcript experiment of the secret-free scheme `deriveScheme` against `deriveAdversary`,
 lifted to `labSpec core`, and the lab experiment `labExperiment` have the same output-and-state
 measure in the eager game of the canonical graph, from every state
-(`evalDist_eagerImpl_liftComp_eq_labExperiment`).
+(`evalDist_eagerImpl_liftComp_eq_labExperiment`), so every event on the output and the final
+state has the same probability under both (`prEvent_eagerImpl_liftComp_eq_labExperiment`).
 
 The lifted experiment is the experiment of the lifted scheme against the program of
 `labAdversary` (`liftComp_unforgeableTranscriptExperiment_deriveAdversary`), whose key generation
@@ -146,5 +147,22 @@ theorem evalDist_eagerImpl_liftComp_eq_labExperiment {e : core.SkSeed ≃ core.Y
       intros
       rfl)
     _ fun _ ↦ allQueriesSatisfy_of_forall (by rintro (_ | _) <;> trivial) _
+
+include hd in
+/-- **The lab experiment in the eager game, for events.** In the eager game of the canonical graph
+at `pkSeed`, from every state, every event on the output and the final state has the same
+probability under the lifted transcript experiment of the secret-free scheme against
+`deriveAdversary` and under the lab experiment. -/
+theorem prEvent_eagerImpl_liftComp_eq_labExperiment {e : core.SkSeed ≃ core.Y}
+    {optRand : PublicKeyCore core → ProbComp core.Y} {pkSeedDist : ProbComp core.PkSeed}
+    (adv : UnforgeableAdversary (romScheme core e optRand pkSeedDist)) (st : LabState core)
+    (P : DeriveOutcome core × LabState core → Prop) :
+    Pr{let z ← (simulateQ (slhGraph core pkSeed).eagerImpl
+        (liftComp (unforgeableTranscriptExperiment (deriveAdversary core adv pkSeed))
+          (labSpec core))).run st}[P z] =
+      Pr{let z ← (simulateQ (slhGraph core pkSeed).eagerImpl
+          (labExperiment core adv pkSeed)).run st}[P z] :=
+  congrArg (· {True}) (evalDist_bind_congr_left_of_forall
+    (fun {_} ↦ evalDist_eagerImpl_liftComp_eq_labExperiment core hd pkSeed adv st) _)
 
 end SLHDSA.Security
