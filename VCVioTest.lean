@@ -42,6 +42,7 @@ public import VCVioTest.GrindFailFast
 public import VCVioTest.ITSR
 public import VCVioTest.KernelSemantics
 public import VCVioTest.ListCache
+public import VCVioTest.LoggedRunInvariant
 public import VCVioTest.LongChainPrograms
 public import VCVioTest.MeasurabilityBoundary
 public import VCVioTest.MeasureSemantics

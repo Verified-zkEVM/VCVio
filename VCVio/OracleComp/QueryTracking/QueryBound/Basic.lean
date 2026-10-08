@@ -515,6 +515,13 @@ lemma allQueriesSatisfy_ofFnM {n : ℕ} (f : Fin n → OracleComp spec α) {P : 
       exact allQueriesSatisfy_bind (ih (fun i => f i.castSucc) (fun i => h i.castSucc))
         fun _ => allQueriesSatisfy_bind (h (Fin.last n)) fun _ => allQueriesSatisfy_pure _ _
 
+/-- Every computation satisfies a predicate-only bound whose predicate holds at every index. -/
+lemma allQueriesSatisfy_of_forall {P : ι → Prop} (hP : ∀ t, P t) (oa : OracleComp spec α) :
+    AllQueriesSatisfy oa P := by
+  induction oa using OracleComp.inductionOn with
+  | pure x => exact allQueriesSatisfy_pure x P
+  | query_bind t mx ih => exact (allQueriesSatisfy_query_bind_iff t mx P).2 ⟨hP t, ih⟩
+
 end AllQueriesSatisfy
 
 section IsPerIndexQueryBound
