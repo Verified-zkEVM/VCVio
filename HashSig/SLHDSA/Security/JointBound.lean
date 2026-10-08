@@ -309,8 +309,8 @@ theorem prEvent_idealDraw_runItsrCovered_eq (e : core.SkSeed ≃ core.Y)
   rw [prEvent_congr _ _ _ hev, prEvent_idealDraw_eq e optRand pkSeed adv
     fun _ z ↦ RunItsrCovered core (DeriveOutcome.fill core s₀ z.1, z.2.1)]
   let _ : MeasurableSpace (core.SkSeed × core.SkPrf) := ⊤
-  rw [prEvent_bind_bind_eq_lintegral_of_discrete, lintegral_const]
-  simp
+  rw [prEvent_bind_bind_eq_lintegral_of_discrete, lintegral_const,
+    OracleComp.evalDist_apply_univ_eq_one, mul_one]
 
 /-- **The forging advantage per public seed, up to coverage in the run.** Under the byte laws, the
 key discipline and `|Y| ≤ |SK.prf|`, the forging advantage against SLH-DSA in the random-oracle
