@@ -22,7 +22,8 @@ If every query answer has positive singleton mass, a second induction identifies
 support with positive output mass. Native uniform oracle specifications satisfy that condition,
 so their events of probability one, zero, or positive probability are exactly the events holding
 on all, none, or some structurally reachable outputs; wrapped optional computations are observed
-through their present values.
+through their present values. In particular a union of events indexed by an arbitrary set, each of
+probability at most `ε`, has probability at most `ε` times the cardinality of the set.
 -/
 
 public section
@@ -397,6 +398,28 @@ theorem prEvent_pos_iff (mx : OracleComp spec α) (p : α → Prop) :
   rw [pos_iff_ne_zero, ne_eq, prEvent_eq_zero_iff]
   push Not
   rfl
+
+/-- **Union bound over a set of indices.** Under native uniform oracle semantics, a uniform bound
+`ε` on each event indexed by `T` bounds their union by `ε` times the cardinality of `T`, with no
+finiteness hypothesis: an infinite `T` makes the bound trivial unless `ε = 0`, and then no
+structurally reachable output satisfies any of the events. -/
+theorem prEvent_exists_mem_le_encard_mul {κ : Type} (mx : OracleComp spec α) (T : Set κ)
+    (p : κ → α → Prop) {ε : ℝ≥0∞} (h : ∀ i ∈ T, Pr{let x ← mx}[p i x] ≤ ε) :
+    Pr{let x ← mx}[∃ i ∈ T, p i x] ≤ ε * (T.encard : ℝ≥0∞) := by
+  by_cases hfin : T.Finite
+  · calc Pr{let x ← mx}[∃ i ∈ T, p i x]
+        = Pr{let x ← mx}[∃ i ∈ hfin.toFinset, p i x] := by simp only [Set.Finite.mem_toFinset]
+      _ ≤ ∑ i ∈ hfin.toFinset, Pr{let x ← mx}[p i x] := prEvent_exists_finset_le _ _ _
+      _ ≤ hfin.toFinset.card • ε :=
+          Finset.sum_le_card_nsmul _ _ _ fun i hi ↦ h i (hfin.mem_toFinset.1 hi)
+      _ = ε * (T.encard : ℝ≥0∞) := by
+          rw [nsmul_eq_mul, mul_comm, hfin.encard_eq_coe_toFinset_card]
+          simp only [ENat.toENNReal_coe]
+  rcases eq_or_ne ε 0 with rfl | hε₀
+  · refine ((prEvent_eq_zero_iff mx _).2 fun x hx ⟨i, hi, hp⟩ ↦ ?_).trans_le zero_le
+    exact ((prEvent_pos_iff mx (p i)).2 ⟨x, hx, hp⟩).ne' (nonpos_iff_eq_zero.1 (h i hi))
+  · rw [Set.Infinite.encard_eq hfin, ENat.toENNReal_top, ENNReal.mul_top hε₀]
+    exact le_top
 
 /-- A wrapped optional oracle computation has a probability-one event exactly when every
 structurally reachable output is a present value satisfying the event. -/

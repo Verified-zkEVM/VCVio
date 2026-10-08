@@ -45,16 +45,11 @@ that cache holds an encoded point
 ideal game does not depend on the secret, so for a secret drawn independently of the run the flag
 probability is bounded by exchanging the secret draw with the run and applying, to each final
 public cache, a union bound over its cached points
-(`SecretEncoding.prEvent_exists_isSome_apply_enc_le`, which holds for every cache; the final
-public cache of every run holds finitely many points,
-`SecretEncoding.finite_setOf_isSome_of_mem_support_idealImpl`). The same reading of the flag
-gives the event form of the coupling, with no loss term: an event of the real game is at most the
-event, read on the merged cache, or an encoded point in the final public cache, in the ideal game
-(`SecretEncoding.prEvent_realImpl_le_or`). The points that can be encoded
-under some secret, `D = ⋃ s, Set.range (E.enc s)`, are charged by a predicate `p` that holds at
-every public query at a point of `D`; every other query (public queries at points outside `D`,
-derivation queries and uniform draws) may be left free. A step of the ideal game caches at most
-one new point of `D`, and none unless it is a `p`-query
+(`SecretEncoding.prEvent_exists_isSome_apply_enc_le`, which holds for every cache). The points
+that can be encoded under some secret, `D = ⋃ s, Set.range (E.enc s)`, are charged by a predicate
+`p` that holds at every public query at a point of `D`; every other query (public queries at
+points outside `D`, derivation queries and uniform draws) may be left free. A step of the ideal
+game caches at most one new point of `D`, and none unless it is a `p`-query
 (`SecretEncoding.encard_inter_setOf_isSome_le_add_of_mem_support_idealImpl`), so the expected
 number of points of `D` in the final public cache is at most the expected number of `p`-queries,
 `expectedSimulatedQueryCount (idealImpl pub X R) p oa (∅, ∅)`
@@ -69,7 +64,10 @@ expected count by `q` and gives the flag bound `q * ε`
 holds at most `q` points of `D`
 (`SecretEncoding.encard_inter_setOf_isSome_le_of_mem_support_idealImpl`). The bound `q * ε` is
 attained: a single public query at a point encoded under half of the secrets raises the flag with
-probability `1 / 2 = q * ε`.
+probability `1 / 2 = q * ε`. The same reading of the flag gives the event form of the coupling,
+with no loss term: an event of the real game is at most the event, read on the merged cache, or
+an encoded point in the final public cache, in the ideal game
+(`SecretEncoding.prEvent_realImpl_le_or`).
 
 Bookkeeping that an event must read alongside the games, such as a log or a record of where each
 answer came from, is carried through the bounds by extending the coupled real game and the ideal
@@ -180,25 +178,9 @@ theorem prEvent_exists_isSome_apply_enc_le {ms : ProbComp S} {ε : ℝ≥0∞}
     (hε : ∀ t, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] ≤ ε) {D : Set ι}
     (hD : ∀ s x, E.enc s x ∈ D) (C : pub.QueryCache) :
     Pr{let s ← ms}[∃ x, (C (E.enc s x)).isSome] ≤
-      ε * ((D ∩ {t | (C t).isSome}).encard : ℝ≥0∞) := by
-  by_cases hfin : (D ∩ {t | (C t).isSome}).Finite
-  · calc Pr{let s ← ms}[∃ x, (C (E.enc s x)).isSome]
-        ≤ Pr{let s ← ms}[∃ t ∈ hfin.toFinset, t ∈ Set.range (E.enc s)] :=
-          prEvent_mono _ _ _ fun s ⟨x, hx⟩ ↦
-            ⟨E.enc s x, hfin.mem_toFinset.2 ⟨hD s x, hx⟩, x, rfl⟩
-      _ ≤ ∑ t ∈ hfin.toFinset, Pr{let s ← ms}[t ∈ Set.range (E.enc s)] :=
-          prEvent_exists_finset_le _ _ _
-      _ ≤ hfin.toFinset.card • ε := Finset.sum_le_card_nsmul _ _ _ fun t _ ↦ hε t
-      _ = ε * ((D ∩ {t | (C t).isSome}).encard : ℝ≥0∞) := by
-          rw [nsmul_eq_mul, mul_comm, hfin.encard_eq_coe_toFinset_card]
-          simp only [ENat.toENNReal_coe]
-  rcases eq_or_ne ε 0 with rfl | hε₀
-  · refine ((prEvent_eq_zero_iff ms _).2 fun s hs hx ↦ ?_).trans_le zero_le
-    obtain ⟨x, -⟩ := hx
-    exact ((prEvent_pos_iff ms fun s' ↦ E.enc s x ∈ Set.range (E.enc s')).2
-      ⟨s, hs, x, rfl⟩).ne' (nonpos_iff_eq_zero.1 (hε _))
-  · rw [Set.Infinite.encard_eq hfin, ENat.toENNReal_top, ENNReal.mul_top hε₀]
-    exact le_top
+      ε * ((D ∩ {t | (C t).isSome}).encard : ℝ≥0∞) :=
+  (prEvent_mono _ _ _ fun _ ⟨x, hx⟩ ↦ ⟨_, ⟨hD _ x, hx⟩, x, rfl⟩).trans
+    (prEvent_exists_mem_le_encard_mul ms _ _ fun t _ ↦ hε t)
 
 /-! ## Split state: public cache, derivation table, flag -/
 
@@ -722,20 +704,6 @@ theorem encard_inter_setOf_isSome_le_of_mem_support_idealImpl {D : Set ι}
   · simp only [QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true, Set.ofPred_false,
       Set.inter_empty, Set.encard_empty, Nat.cast_zero, le_refl]
   · exact_mod_cast hcnt.trans_eq (zero_add q)
-
-/-- The final public cache of the ideal game, run from empty states, holds finitely many
-points. -/
-theorem finite_setOf_isSome_of_mem_support_idealImpl {α : Type}
-    {oa : OracleComp (pub.withDerivations X R) α} {z : α × SplitCache pub X R}
-    (hz : z ∈ support ((simulateQ (idealImpl pub X R) oa).run (∅, ∅))) :
-    {t | (z.2.1 t).isSome}.Finite := by
-  refine simulateQ_run_preservesInv (idealImpl pub X R)
-    (fun st ↦ {t | (st.1 t).isSome}.Finite) (fun t st hst w hw ↦ ?_) oa _ ?_ z hz
-  · refine (hst.union (Set.Subsingleton.finite fun a ha b hb ↦ ?_)).subset fun t' ht' ↦
-      (isSome_fst_apply_iff_of_mem_support_idealImpl hw t').1 ht'
-    exact Sum.inr.inj (Sum.inl.inj ((ha : Sum.inl (Sum.inr a) = t).trans hb.symm))
-  · simp only [QueryCache.empty_apply, Option.isSome_none, Bool.false_eq_true, Set.ofPred_false,
-      Set.finite_empty]
 
 /-- Under a charged predicate holding at every public query at a point of a set `D`, the expected
 number of points of `D` in the final public cache of the ideal game, run from empty states, is at
