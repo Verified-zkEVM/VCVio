@@ -30,9 +30,10 @@ at the oracle-backed provider `oracleSecret core e pkSeed s.1`, return drawn cel
 * Bottom-up, every value a reader returns is the drawn cell of the corresponding node: the
   children of the node are drawn at the values the reader hashed, so its point is the point at its
   children values, and the merge reads its label there. This gives the children of a WOTS+ chain
-  step (`childVals_eq_some_of_chain?`) and of a WOTS+ public-key compression
-  (`childVals_eq_some_of_wotsPkGenTopsWithSecret?`), and the labels of XMSS leaves, nodes and
-  roots (`label_of_xmssNodeWithSecret?_zero`, `label_of_xmssNodeWithSecret?`,
+  step (`childVals_eq_some_of_chain?`), of a WOTS+ public-key compression
+  (`childVals_eq_some_of_wotsPkGenTopsWithSecret?`) and of a FORS leaf
+  (`childVals_eq_some_of_forsSkAdrs`), and the labels of XMSS leaves, nodes and roots
+  (`label_of_xmssNodeWithSecret?_zero`, `label_of_xmssNodeWithSecret?`,
   `label_of_xmssRootWithSecret?`), FORS nodes (`label_of_forsNodeWithSecret?`) and FORS public
   keys (`label_of_forsPkGenWithSecret?`).
 * Every honest entry is the point of a node at its drawn children values
@@ -60,7 +61,8 @@ absence of a conflict (`CanonicalGraph.Conflict`) nor completeness of the drawn 
 
 *Readers*: `childVals_eq_some_of_chain?`, `childVals_eq_some_of_wotsPkGenTopsWithSecret?`,
 `label_of_xmssNodeWithSecret?_zero`, `label_of_xmssNodeWithSecret?`,
-`label_of_xmssRootWithSecret?`, `label_of_forsNodeWithSecret?`, `label_of_forsPkGenWithSecret?`.
+`label_of_xmssRootWithSecret?`, `childVals_eq_some_of_forsSkAdrs`, `label_of_forsNodeWithSecret?`,
+`label_of_forsPkGenWithSecret?`.
 
 *Honest entries*: `exists_childVals_eq_some_of_honestEntry`, `tcHazard_of_targetCollision`.
 -/
@@ -323,6 +325,19 @@ theorem label_of_xmssRootWithSecret? (hd : core.KeyDiscipline vp) {adrs : Adrs} 
 
 /-! ## FORS -/
 
+/-- **FORS leaf.** If the secret of global leaf `t` at `adrs` reads `x`, the children of the leaf
+at `forsNodeAdrs adrs 0 t` are drawn at `[x]`. -/
+theorem childVals_eq_some_of_forsSkAdrs (hd : core.KeyDiscipline vp) {adrs : Adrs} {t : ℕ}
+    {x : core.Y} (hmem : forsNodeAdrs adrs 0 t ∈ constructionAddresses vp)
+    (hx : simulateQ ((secretEncoding core e pkSeed).merge s
+        ((slhGraph core pkSeed).toSplitCache st)).fst.toPartialImpl
+      (oracleSecret core e pkSeed s.1 (forsSkAdrs adrs t)) = some x) :
+    (slhGraph core pkSeed).childVals st ⟨core.adrsToKey (forsNodeAdrs adrs 0 t), _, hmem, rfl⟩ =
+      some [x] := by
+  refine childVals_of_forall₂ hd hmem ?_
+  rw [childAdrs_forsNodeAdrs_zero]
+  exact .cons (cellValue_inl_of_oracleSecret (Adrs.isSecretKey_forsSkAdrs adrs t) hx) .nil
+
 private theorem cellValue_of_forsNodeWithSecret? (hd : core.KeyDiscipline vp) {adrs : Adrs} :
     ∀ {z t : ℕ} {v : core.Y}, forsNodeAdrs adrs z t ∈ constructionAddresses vp →
       forsNodeWithSecret? core ((secretEncoding core e pkSeed).merge s
@@ -333,9 +348,8 @@ private theorem cellValue_of_forsNodeWithSecret? (hd : core.KeyDiscipline vp) {a
     simp only [forsNodeWithSecret?, PerfectMerkleTree.merkleRootM, forsLeafWithSecret,
       simulateQ_bind_eq_some_iff, simulateQ_toPartialImpl_f] at h
     obtain ⟨x, hx, hv⟩ := h
-    refine (merge_fst_thash_of_forall₂ hd hmem ?_).symm.trans hv
-    rw [childAdrs_forsNodeAdrs_zero]
-    exact .cons (cellValue_inl_of_oracleSecret (Adrs.isSecretKey_forsSkAdrs adrs t) hx) .nil
+    exact (cellValue_inr hmem).trans ((merge_fst_thash_of_childVals_eq_some hd e s
+      (childVals_eq_some_of_forsSkAdrs hd hmem hx)).symm.trans hv)
   | z + 1, t, v, hmem, h => by
     obtain ⟨l, r, hl, hr, hv⟩ :=
       (PerfectMerkleTree.simulateQ_merkleRootM_succ_eq_some_iff _ _ _ z t).1 h
@@ -397,10 +411,7 @@ theorem exists_childVals_eq_some_of_honestEntry (hd : core.KeyDiscipline vp)
   | .wotsPk adrs tops hmem htops =>
       ⟨_, _, childVals_eq_some_of_wotsPkGenTopsWithSecret? hd hmem htops, rfl⟩
   | .wotsChain adrs i t x v hmem hx hv => ⟨_, _, childVals_eq_some_of_chain? hd hmem hx hv, rfl⟩
-  | .forsLeaf adrs t x hmem hx => ⟨_, _, childVals_of_forall₂ hd hmem (by
-      rw [childAdrs_forsNodeAdrs_zero]
-      exact .cons (cellValue_inl_of_oracleSecret (Adrs.isSecretKey_forsSkAdrs adrs t) hx) .nil),
-      rfl⟩
+  | .forsLeaf adrs t x hmem hx => ⟨_, _, childVals_eq_some_of_forsSkAdrs hd hmem hx, rfl⟩
   | .forsNode adrs (z + 1) i l r _ hmem hl hr => ⟨_, _, childVals_of_forall₂ hd hmem
       (forall₂_pair hmem (childAdrs_forsNodeAdrs vp (Nat.succ_pos z) adrs i)
         (fun hm ↦ cellValue_of_forsNodeWithSecret? hd hm hl)
