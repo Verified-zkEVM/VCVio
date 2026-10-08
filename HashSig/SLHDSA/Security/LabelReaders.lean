@@ -20,14 +20,16 @@ an encoded secret point `F(PK.seed, k, [e SK.seed])` reads the derivation cell a
 point of a node at its drawn children values reads the node's label, and every other point reads
 the public cache. This module shows that the honest readers of
 `HashSig.SLHDSA.Security.CacheReaders` and `HashSig.SLHDSA.Security.CacheSecret`, run on that cache
-at the oracle-backed provider `oracleSecret core e pkSeed s.1`, return drawn cells.
+at the oracle-backed provider `oracleSecret core e pkSeed s.1`, return drawn cells. The scoped
+notations `𝒞[e, pkSeed, s, st]` for that cache and `𝒮[e, pkSeed, s]` for that provider are opened
+by `open scoped SLHDSA.Security.MergedCache`.
 
 * The secret at a secret-key address reads its derivation cell
   (`simulateQ_toPartialImpl_oracleSecret_merge`).
 * The point of a node at its drawn children values reads its label
   (`merge_fst_thash_of_childVals_eq_some`); at any other input list it reads the public cache
-  (`merge_fst_thash_of_childVals_eq_some_of_ne`), and so does every `H_msg` point
-  (`merge_fst_hmsg`).
+  (`merge_fst_thash_of_childVals_ne`), and so does every `H_msg` point (`merge_fst_hmsg`,
+  `merge_fst_hmsg_of_fst_eq`).
 * Bottom-up, every value a reader returns is the drawn cell of the corresponding node: the
   children of the node are drawn at the values the reader hashed, so its point is the point at its
   children values, and the merge reads its label there. This gives the children of a WOTS+ chain
@@ -58,8 +60,8 @@ drawn labels (`CanonicalGraph.LabelsComplete`) is needed.
 ## Labels
 
 *Points of the merged cache*: `simulateQ_toPartialImpl_oracleSecret_merge`,
-`merge_fst_thash_of_childVals_eq_some`, `merge_fst_thash_of_childVals_eq_some_of_ne`,
-`merge_fst_hmsg`.
+`merge_fst_thash_of_childVals_eq_some`, `merge_fst_thash_of_childVals_ne`, `merge_fst_hmsg`,
+`merge_fst_hmsg_of_fst_eq`.
 
 *Readers*: `childVals_eq_some_of_chain?`, `label_of_xmssRootWithSecret?`,
 `childVals_eq_some_of_forsSkAdrs`, `label_of_forsPkGenWithSecret?`, `label_of_honestMessage?`.
@@ -75,16 +77,22 @@ open OracleComp OracleSpec
 
 variable {vp : ValidatedParams} {core : CorePrimitives vp.params} {e : core.SkSeed ≃ core.Y}
   {pkSeed : core.PkSeed} {s : core.SkSeed × core.SkPrf}
-  {st : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y}
+  {st : LabState core}
+
+namespace MergedCache
 
 /-- The public-hash cache that the relabelled state `st` stands for at the secret seeds `s`, under
 the secret encoding of `e` at the public seed `pkSeed`. -/
-local notation "𝒞[" e ", " pkSeed ", " s ", " st "]" =>
+scoped notation "𝒞[" e ", " pkSeed ", " s ", " st "]" =>
   QueryCache.fst (SecretEncoding.merge (secretEncoding _ e pkSeed) s
     (CanonicalGraph.toSplitCache (slhGraph _ pkSeed) st))
 
 /-- The oracle-backed secret provider at the first secret seed of `s`. -/
-local notation "𝒮[" e ", " pkSeed ", " s "]" => oracleSecret _ e pkSeed (Prod.fst s)
+scoped notation "𝒮[" e ", " pkSeed ", " s "]" => oracleSecret _ e pkSeed (Prod.fst s)
+
+end MergedCache
+
+open scoped MergedCache
 
 /-! ## Points of the merged cache -/
 
@@ -108,17 +116,18 @@ theorem merge_fst_thash_of_childVals_eq_some (hsep : core.KeySeparated) {κ : No
     (fun x ↦ secretEncoding_enc_ne_slhGraph_pt core hsep e pkSeed pkSeed s x κ vs)
     h).trans (map_cast_eq _)
 
-/-- At a node's key and an input list other than its drawn children values, the merged cache
-reads the public cache, at every length of the input list. -/
-theorem merge_fst_thash_of_childVals_eq_some_of_ne (hsep : core.KeySeparated) {κ : NodeKey core}
-    {xs ys : List core.Y} (h : (slhGraph core pkSeed).childVals st κ = some xs) (hne : xs ≠ ys) :
-    𝒞[e, pkSeed, s, st] (.thash pkSeed κ.1 ys) = st.1 (.inl (.thash pkSeed κ.1 ys)) := by
+/-- At a node's key and an input list at which the node's children are not drawn, because a child
+is undrawn or the children are drawn at other values, the merged cache reads the public cache, at
+every length of the input list. -/
+theorem merge_fst_thash_of_childVals_ne (hsep : core.KeySeparated) {κ : NodeKey core}
+    {vs : List core.Y} (h : (slhGraph core pkSeed).childVals st κ ≠ some vs) :
+    𝒞[e, pkSeed, s, st] (.thash pkSeed κ.1 vs) = st.1 (.inl (.thash pkSeed κ.1 vs)) := by
   refine (secretEncoding core e pkSeed).merge_toSplitCache_apply_of_not_exists
     (slhGraph core pkSeed) s
-    (fun x ↦ secretEncoding_enc_ne_slhGraph_pt core hsep e pkSeed pkSeed s x κ ys) ?_
-  rintro ⟨κ', vs, hκ', hpt⟩
+    (fun x ↦ secretEncoding_enc_ne_slhGraph_pt core hsep e pkSeed pkSeed s x κ vs) ?_
+  rintro ⟨κ', vs', hκ', hpt⟩
   obtain ⟨rfl, rfl⟩ := slhGraph_pt_inj core pkSeed hpt
-  exact hne (Option.some_inj.1 (h.symm.trans hκ'))
+  exact h hκ'
 
 /-- Every `H_msg` point of the merged cache reads the public cache. -/
 theorem merge_fst_hmsg (r : core.Y) (pk : core.PkSeed) (root : core.Y) (msg : List Byte) :
@@ -127,11 +136,17 @@ theorem merge_fst_hmsg (r : core.Y) (pk : core.PkSeed) (root : core.Y) (msg : Li
     (fun x ↦ by rcases x with _ | _ <;> simp [secretEncoding])
     (by rintro ⟨_, _, -, h⟩; simp [slhGraph_pt] at h)
 
+/-- Every `H_msg` point of the merged cache of `st` reads the public cache of any state `st₀` with
+the same public cache. -/
+theorem merge_fst_hmsg_of_fst_eq {st₀ : LabState core} (h : st.1 = st₀.1) (r : core.Y)
+    (pk : core.PkSeed) (root : core.Y) (msg : List Byte) :
+    𝒞[e, pkSeed, s, st] (.hmsg r pk root msg) = st₀.1 (.inl (.hmsg r pk root msg)) := by
+  rw [merge_fst_hmsg, h]
+
 /-! ## Structural children -/
 
 /-- The value drawn at the cell of a structural child. -/
-private def cellValue (st : RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y)
-    (b : Adrs ⊕ Adrs) : Option core.Y :=
+private def cellValue (st : LabState core) (b : Adrs ⊕ Adrs) : Option core.Y :=
   (childCell core b).bind fun c ↦ st.2 c
 
 private theorem cellValue_inr {a : Adrs} (ha : a ∈ constructionAddresses vp) :
@@ -393,6 +408,7 @@ theorem tcHazard_of_targetCollision (hd : core.KeyDiscipline vp)
   refine ⟨.inl (.thash pkSeed κ.1 ys), κ, v,
     (slhNodeKeys_node_thash_eq_some_iff core).2 ⟨rfl, rfl⟩, ?_, ?_⟩
   · exact (merge_fst_thash_of_childVals_eq_some hd.keySeparated hκ).symm.trans hx
-  · exact (merge_fst_thash_of_childVals_eq_some_of_ne hd.keySeparated hκ hne).symm.trans hy
+  · exact (merge_fst_thash_of_childVals_ne hd.keySeparated
+      fun h ↦ hne (Option.some_inj.1 (hκ.symm.trans h))).symm.trans hy
 
 end SLHDSA.Security

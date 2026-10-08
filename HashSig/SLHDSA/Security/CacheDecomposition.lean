@@ -40,9 +40,10 @@ find the first step at which they split into two cached `F` entries with one ans
 
 ## Labels
 
-Fifteen declarations.
+Sixteen declarations.
 
-*Algorithm 20*: `simulateQ_toPartialImpl_verifyInternalM_eq_some_true_iff`.
+*Algorithm 20*: `simulateQ_toPartialImpl_verifyInternalM_eq_some_true_iff`,
+`exists_of_simulateQ_toPartialImpl_verifyInternalM_eq_some`.
 
 *Hypertree layers*: `simulateQ_toPartialImpl_recoverFromPositionM_add_two_eq_some_iff`,
 `simulateQ_toPartialImpl_recoverFromPositionM_one_eq_some_iff`,
@@ -283,6 +284,24 @@ theorem simulateQ_toPartialImpl_verifyInternalM_eq_some_true_iff [DecidableEq co
   simp only [GeneralScheme.verifyInternalM, GeneralHypertree.verifyM, simulateQ_bind_eq_some_iff,
     simulateQ_pure_eq_some_iff, simulateQ_toPartialImpl_hmsg, decide_eq_true_eq,
     exists_eq_right, exists_and_left]
+
+variable {core c} in
+/-- Algorithm 20 settled at any verdict has its `H_msg` digest, its FORS public key and its
+hypertree recovery settled. -/
+theorem exists_of_simulateQ_toPartialImpl_verifyInternalM_eq_some [DecidableEq core.Y]
+    {msg : List Byte} {sig : GeneralScheme.SignatureCore vp core} {pk : PublicKeyCore core}
+    {b : Bool} (h : simulateQ c.toPartialImpl
+      (GeneralScheme.verifyInternalM (m := OracleComp (publicHashSpec core)) vp core msg sig pk) =
+        some b) :
+    ∃ digest forsPk root, c (.hmsg sig.randomness pk.pkSeed pk.pkRoot msg) = some digest ∧
+      forsPkFromSig? core c sig.fors (splitDigest vp.params digest).md.toList pk.pkSeed
+        (splitDigest vp.params digest).forsAdrs = some forsPk ∧
+      simulateQ c.toPartialImpl (GeneralHypertree.pkFromSigM vp core forsPk sig.hypertree
+        pk.pkSeed (splitDigest vp.params digest)) = some root := by
+  simp only [GeneralScheme.verifyInternalM, GeneralHypertree.verifyM, simulateQ_bind_eq_some_iff,
+    simulateQ_toPartialImpl_hmsg] at h
+  obtain ⟨digest, hd, forsPk, hf, root, hr, -⟩ := h
+  exact ⟨digest, forsPk, root, hd, hf, hr⟩
 
 end Hypertree
 

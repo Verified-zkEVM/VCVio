@@ -76,11 +76,11 @@ union-ledger targets (`xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses`,
 
 ## Labels
 
-Thirty declarations, none private.
+Thirty-one declarations, none private.
 
 *Positions and the verifier's replay*: `childTreeAdrs`, `childTreeAdrs_next`, `forsInstanceAdrs`,
 `forsInstanceAdrs_initial`, `forsPkAdrs_forsInstanceAdrs_mem_constructionAddresses`,
-`xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses`, `forgerMessage?`,
+`xmssNodeAdrs_childTreeAdrs_mem_constructionAddresses`, `forgerMessage?`, `forgerMessage?_mono`,
 `recoverFromPositionM_pos_congr`, `forgerLayers_of_recoverFromPositionM`.
 
 *Honest entries and the target collision*: `HonestEntry`, `HonestEntry.mono`, `TargetCollision`.
@@ -174,6 +174,18 @@ def forgerMessage? (c : PublicHash.Cache core) (pk : core.PkSeed) (parts : Diges
   | j + 1, hj => (forgerMessage? c pk parts sig forsPk j (by omega)).bind fun m =>
       xmssPkFromSig? core c (LayerPosition.atLayer vp parts ⟨j, by omega⟩).leaf.val sig[j] m pk
         (LayerPosition.atLayer vp parts ⟨j, by omega⟩).toAdrs
+
+/-- The message the verification replay presents to a layer only grows with the cache. -/
+theorem forgerMessage?_mono {c c' : PublicHash.Cache core} (hle : c ≤ c') (pk : core.PkSeed)
+    (parts : DigestParts vp.params) (sig : GeneralHypertree.Signature vp core) (forsPk : core.Y) :
+    ∀ (j : ℕ) (hj : j < vp.params.d) {m : core.Y},
+      forgerMessage? c pk parts sig forsPk j hj = some m →
+        forgerMessage? c' pk parts sig forsPk j hj = some m
+  | 0, _, _, h => h
+  | j + 1, hj, m, h => by
+    obtain ⟨m', hm', hx⟩ := Option.bind_eq_some_iff.1 h
+    exact Option.bind_eq_some_iff.2 ⟨m', forgerMessage?_mono hle pk parts sig forsPk j _ hm',
+      QueryCache.simulateQ_toPartialImpl_mono hle _ hx⟩
 
 /-- Algorithm 13 at two equal positions, with the layer-count proof transported along the
 equality: the proof depends on the position, so the position cannot be rewritten in place. -/

@@ -142,8 +142,8 @@ theorem merge_fst_stepKey_of_ne_chainState {ys : List core.Y} (hys : [x] ≠ ys)
     ((secretEncoding core e pkSeed).merge s
         ((slhGraph core pkSeed).toSplitCache (chainState core pos i x y))).fst
       (.thash pkSeed (stepKey core pos i 0 zero_lt_w_sub_one).1 ys) = none :=
-  (merge_fst_thash_of_childVals_eq_some_of_ne hd.keySeparated
-    (childVals_stepKey_zero_chainState core hd e pkSeed s pos i x y) hys).trans
+  (merge_fst_thash_of_childVals_ne hd.keySeparated fun h ↦ hys (Option.some_inj.1
+    ((childVals_stepKey_zero_chainState core hd e pkSeed s pos i x y).symm.trans h))).trans
     (QueryCache.empty_apply _)
 
 end ChainState

@@ -50,15 +50,13 @@ noncomputable def missCache (pkSeed : core.PkSeed) (pos : LayerPosition vp)
 
 /-- Before the fill: the public miss, and no drawn cell. -/
 noncomputable def missState (pkSeed : core.PkSeed) (pos : LayerPosition vp)
-    (i : Fin vp.params.len) (x y : core.Y) :
-    RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y :=
+    (i : Fin vp.params.len) (x y : core.Y) : LabState core :=
   (missCache core pkSeed pos i x y, ∅)
 
 open Classical in
 /-- After the fill: the same public cache, and the chain's secret drawn at `x`. -/
 noncomputable def filledState (pkSeed : core.PkSeed) (pos : LayerPosition vp)
-    (i : Fin vp.params.len) (x y : core.Y) :
-    RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y :=
+    (i : Fin vp.params.len) (x y : core.Y) : LabState core :=
   (missCache core pkSeed pos i x y,
     (∅ : ((DeriveQuery core ⊕ NodeKey core) →ₒ core.Y).QueryCache).cacheQuery
       (secretCell core pos i) x)
@@ -80,10 +78,10 @@ theorem merge_fst_missState (hd : core.KeyDiscipline vp) (e : core.SkSeed ≃ co
     ((secretEncoding core e pkSeed).merge s
       ((slhGraph core pkSeed).toSplitCache (missState core pkSeed pos i x y))).fst
         (.thash pkSeed (firstStep core pos i).1 [x]) = some y := by
-  refine (merge_fst_thash_of_childVals_eq_none hd.keySeparated ?_ [x]).trans
+  refine (merge_fst_thash_of_childVals_ne hd.keySeparated fun h ↦ ?_).trans
     (QueryCache.cacheQuery_self _ _ _)
-  refine Option.not_isSome_iff_eq_none.1 fun h ↦ ?_
-  have := (slhGraph core pkSeed).isSome_childVals_iff.1 h (secretCell core pos i) (by
+  have := (slhGraph core pkSeed).isSome_childVals_iff.1 (Option.isSome_of_eq_some h)
+    (secretCell core pos i) (by
     rw [firstStep, slhGraph_ch_wotsChainAdrs_setHashAddress core hd pkSeed
       (wotsChainAdrs_setHashAddress_mem_constructionAddresses pos i zero_lt_w_sub_one),
       pathCell_zero_eq_secretCell]
@@ -112,7 +110,9 @@ example (ps : FipsParameterSet) (e : (approvedPrimitives ps).core.SkSeed ≃
       (approvedPrimitives ps).core.Y) (pkSeed : (approvedPrimitives ps).core.PkSeed)
     (s : (approvedPrimitives ps).core.SkSeed × (approvedPrimitives ps).core.SkPrf)
     (pos : LayerPosition ps.validatedParams) (i : Fin ps.validatedParams.params.len)
-    (x y : (approvedPrimitives ps).core.Y) :=
+    (x y : (approvedPrimitives ps).core.Y) :
+    (slhGraph (vp := ps.validatedParams) (approvedPrimitives ps).core pkSeed).Conflict
+      (filledState (approvedPrimitives ps).core pkSeed pos i x y) :=
   conflict_filledState _ (keyDiscipline_approvedPrimitives ps) e pkSeed s pos i x y
 
 end SLHDSA.TransportTest

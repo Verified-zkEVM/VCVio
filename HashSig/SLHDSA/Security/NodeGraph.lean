@@ -421,6 +421,10 @@ address; the point of node `κ` at values `vs` is the tweakable hash `T(PK.seed,
     simp only [Sum.inl.injEq, PublicHashQuery.thash.injEq, true_and] at h
     exact ⟨Subtype.ext h.1, h.2⟩
 
+/-- The state of the relabelled games of `slhGraph`: the public cache and the cells, the
+derivations and the node labels. -/
+abbrev LabState : Type := RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y
+
 /-- The children of a node, at every public seed. -/
 theorem slhGraph_ch (pkSeed : core.PkSeed) (κ : NodeKey core) :
     (slhGraph core pkSeed).ch κ = (childAdrs vp (nodeAdrs core κ)).filterMap (childCell core) :=

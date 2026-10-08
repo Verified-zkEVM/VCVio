@@ -74,6 +74,9 @@ of `k`. A program lifted from `pub.withDerivations X R` makes neither.
 - `SecretEncoding.merge_toSplitCache_apply_enc`, `SecretEncoding.merge_toSplitCache_apply_pt` and
   `SecretEncoding.merge_toSplitCache_apply_of_not_exists`: the split state merged under a secret
   encoding, at an encoded point, at a node point and elsewhere.
+- `CanonicalGraph.merge_le_merge` and `SecretEncoding.merge_toSplitCache_mono`: off a conflict of
+  the larger state, extending a state only adds entries to its merged cache and to the real cache
+  rebuilt from its split state.
 -/
 
 public section
@@ -412,6 +415,21 @@ theorem merge_le_merge {st₀ st : RelabelState pub X K R} (hle : st₀ ≤ st)
     · obtain ⟨k, vs, hk, rfl⟩ := ht
       exact absurd ⟨k, vs, hk, by rw [hle.1 h₀]; rfl⟩ hc
     · rw [G.merge_apply_of_not_exists ht, hle.1 h₀]
+
+/-- Off a conflict of `st`, the real cache rebuilt under a secret encoding from the split state of
+a state `st₀ ≤ st` is below the one rebuilt from the split state of `st`. -/
+theorem _root_.SecretEncoding.merge_toSplitCache_mono {S : Type} (E : SecretEncoding pub S X R)
+    (s : S) {st₀ st : RelabelState pub X K R} (hle : st₀ ≤ st) (hc : ¬G.Conflict st) :
+    E.merge s (G.toSplitCache st₀) ≤ E.merge s (G.toSplitCache st) := by
+  intro t u h
+  by_cases ht : ∃ x, E.enc s x = t
+  · obtain ⟨x, rfl⟩ := ht
+    rw [E.merge_toSplitCache_apply_enc] at h ⊢
+    obtain ⟨v, hv, rfl⟩ := Option.map_eq_some_iff.1 h
+    rw [hle.2 hv]
+    rfl
+  · rw [E.merge_apply_of_not_exists s _ ht] at h ⊢
+    exact G.merge_le_merge hle hc h
 
 /-! ## Node keys -/
 

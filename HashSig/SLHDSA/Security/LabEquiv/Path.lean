@@ -54,9 +54,6 @@ variable {vp : ValidatedParams} (core : CorePrimitives vp.params)
 
 /-! ## The state relation -/
 
-/-- The state of the eager game of the canonical graph: the public cache and the cells. -/
-abbrev LabState : Type := RelabelState (hashSpec core) (DeriveQuery core) (NodeKey core) core.Y
-
 /-- The optional cell `c` exists and holds `y` in the state `st`. -/
 @[expose] def CellHolds (st : LabState core) (c : Option (DeriveQuery core ⊕ NodeKey core))
     (y : core.Y) : Prop :=
