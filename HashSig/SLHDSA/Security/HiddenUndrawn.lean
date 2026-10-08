@@ -30,14 +30,14 @@ The invariant `HiddenUndrawn pk log st` is carried through the three stages of t
 * **Signing** a message `M` with randomizer `R` adds the digest `d` of `H_msg(R, PK.seed, PK.root,
   M)` to the signed digests. It reads the secrets `d` opens, the FORS nodes, and, at each layer,
   WOTS+ chain steps at and above the ones the layer's message selects: that message is the drawn
-  label of the honest message's node at the layer's position, the FORS public key at layer `0`
-  (`cell_eq_of_mem_support_forsPkFromSigWith`) and the recovered root of the tree below above it
-  (`cell_eq_of_mem_support_xmssPkFromSigWith`). Every cell it draws is therefore visible for the
-  signed digests with `d` added (`hiddenKept_of_mem_support_labSignFromPosition`).
+  label of the honest message's node at the layer's position: the FORS public key at layer `0`
+  (`cell_eq_of_mem_support_forsPkFromSigWith`) and, above it, the root recovered at the layer
+  below (`cell_eq_of_mem_support_xmssPkFromSigWith`). Every cell it draws is therefore visible
+  for the signed digests with `d` added (`hiddenKept_of_mem_support_labSignFromPosition`).
 
 ## References
 
-- NIST FIPS 205, Algorithms 19–21 (internal key generation, signing and verification)
+- NIST FIPS 205, Algorithms 18–20 (internal key generation, signing and verification)
 -/
 
 public section
@@ -307,7 +307,7 @@ theorem hiddenUndrawn_of_mem_support_labScheme_sign (hd : core.KeyDiscipline vp)
 
 /-! ## The experiment -/
 
-/-- **H5: no hidden cell is drawn before the end fill.** On every run of the lab experiment in
+/-- **No hidden cell is drawn before the end fill.** On every run of the lab experiment in
 the deferred game over the SLH-DSA graph, from the empty state, the final state draws no cell that
 is hidden for the digests its transcript's log signs at its public key: no WOTS+ chain step below
 the one the drawn honest message selects at a used position, no chain step below the top at an

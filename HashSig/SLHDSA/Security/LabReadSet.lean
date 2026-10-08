@@ -39,7 +39,7 @@ run of `oa` in the deferred game then leaves every hidden cell as it found it.
 
 ## References
 
-- NIST FIPS 205, Algorithms 6–7 (WOTS+), 9–11 (XMSS), 15–17 (FORS)
+- NIST FIPS 205, Algorithms 6–8 (WOTS+), 9–11 (XMSS), 15–17 (FORS), 19 (`H_msg`)
 -/
 
 public section
