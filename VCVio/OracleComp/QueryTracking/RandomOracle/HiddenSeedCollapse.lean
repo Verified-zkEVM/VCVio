@@ -8,7 +8,6 @@ module
 
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ClassIndexedTape
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
-import VCVio.OracleComp.QueryTracking.RandomOracle.Joint
 
 /-!
 # The ideal hidden-seed game as one duplicated lazy random oracle

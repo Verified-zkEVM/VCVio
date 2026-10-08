@@ -28,6 +28,10 @@ Three arrangements of the two caches are covered and all three are identified:
 * `OracleSpec.nestedRandomOracleSwap spec₁ spec₂`, the same stack the other way round
   (`OracleComp.run_run_simulateQ_nestedRandomOracleSwap`).
 
+The run equalities fold the one-step identity of the product-cache handler,
+`QueryImpl.run_parallelStateT_randomOracle_map_eq` (`RandomOracle/Basic.lean`), over the
+simulation.
+
 The two nesting orders both hold because neither handler reads the other's state: a `spec₁` query
 is answered from `spec₁`'s cache alone and a `spec₂` query from `spec₂`'s cache alone, so the
 stack order only permutes where an untouched state sits and is removed by
@@ -64,7 +68,7 @@ and `OracleComp.evalDist_run_run_nested_setOf_le_of_fresh_bound`.
 
 ## Labels
 
-Seventeen declarations.
+Sixteen declarations.
 
 *The nested handlers*:
 
@@ -73,10 +77,6 @@ Seventeen declarations.
 *Flattening a sum of handlers*:
 
 * `QueryImpl.flattenStateT_add`.
-
-*One step*:
-
-* `QueryImpl.run_parallelStateT_randomOracle_map_eq`.
 
 *Flattening*:
 
@@ -157,7 +157,7 @@ theorem flattenStateT_add {ι₁ : Type u} {ι₂ : Type v}
 
 end QueryImpl
 
-/-! ## One step -/
+/-! ## Flattening the nested handlers -/
 
 namespace QueryImpl
 
@@ -166,24 +166,6 @@ variable {ι₀ ι₁ ι₂ : Type} {spec₀ : OracleSpec.{0, 0} ι₀}
   [DecidableEq ι₁] [DecidableEq ι₂]
   [∀ t : spec₁.Domain, SampleableType (spec₁.Range t)]
   [∀ t : spec₂.Domain, SampleableType (spec₂.Range t)]
-
-/-- One step of the two independent lazy random oracles on a product cache is one step of the
-lazy random oracle on the sum signature, transported along `OracleSpec.QueryCache.addEquiv`. -/
-lemma run_parallelStateT_randomOracle_map_eq (t : (spec₁ + spec₂).Domain)
-    (p : spec₁.QueryCache × spec₂.QueryCache) :
-    Prod.map id (addEquiv spec₁ spec₂) <$>
-        ((QueryImpl.parallelStateT spec₁.randomOracle spec₂.randomOracle) t).run p =
-      ((spec₁ + spec₂).randomOracle t).run (addEquiv spec₁ spec₂ p) := by
-  obtain ⟨c₁, c₂⟩ := p
-  cases t with
-  | inl t =>
-      rcases h : c₁ t with _ | u <;>
-        simp [QueryImpl.parallelStateT, h, addEquiv_cacheQuery_inl, Prod.map]
-  | inr t =>
-      rcases h : c₂ t with _ | u <;>
-        simp [QueryImpl.parallelStateT, h, addEquiv_cacheQuery_inr, Prod.map]
-
-/-! ## Flattening the nested handlers -/
 
 /-- Flattening the nested pair of lazy random oracles gives the parallel product-cache handler,
 with the left signature's cache as the first component. -/
