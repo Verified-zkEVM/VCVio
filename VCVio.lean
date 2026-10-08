@@ -335,7 +335,6 @@ public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshAnswer
 public import VCVio.OracleComp.QueryTracking.RandomOracle.FreshQuery
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeed
 public import VCVio.OracleComp.QueryTracking.RandomOracle.HiddenSeedCollapse
-public import VCVio.OracleComp.QueryTracking.RandomOracle.Joint
 public import VCVio.OracleComp.QueryTracking.RandomOracle.JointPotential
 public import VCVio.OracleComp.QueryTracking.RandomOracle.ProbeEps
 public import VCVio.OracleComp.QueryTracking.RandomOracle.Programming
